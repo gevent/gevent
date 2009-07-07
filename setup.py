@@ -8,7 +8,7 @@ from distutils.core import Extension
 
 name = 'gevent.core'
 sources = ['gevent/core.c']
-ev_dir = '/home/denis/tmp/libevent-1.4.11-stable'
+ev_dir = None
 
 if ev_dir is None and glob.glob('/usr/lib/libevent.*'):
     print 'found system libevent for', sys.platform
