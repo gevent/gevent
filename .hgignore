@@ -1,0 +1,11 @@
+syntax: glob
+*~
+*.pyc
+*.orig
+dist
+gevent.egg-info
+build
+htmlreports
+results.*.db
+gevent/core.so
+

@@ -1,0 +1,62 @@
+= eventlet =
+
+Eventlet is a networking library written in Python. It achieves high
+scalability by using non-blocking io while at the same time retaining
+high programmer usability by using coroutines to make the non-blocking
+io operations appear blocking at the source code level.
+
+The wiki at http://wiki.secondlife.com/wiki/Eventlet is likely to be a
+more current source of information than this README.  Questions,
+patches, and general discussion go to the eventlet mailing list:
+https://lists.secondlife.com/cgi-bin/mailman/listinfo/eventletdev
+
+== requirements ===
+
+Eventlet runs on Python version 2.3 or greater, with the following dependenceis:
+* http://cheeseshop.python.org/pypi/greenlet
+* (if running python versions < 2.4) collections.py from the 2.4 distribution or later
+
+== limitations ==
+
+* Not enough test coverage -- the goal is 100%, but we are not there yet.
+* Eventlet does not currently run on stackless using tasklets, though
+it is a goal to do so in the future.
+
+== getting started ==
+
+% python
+>>> from eventlet import api
+>>> help(api)
+
+Also, look at the examples in the examples directory.
+
+== eventlet history ==
+
+eventlet began life as Donovan Preston was talking to Bob Ippolito
+about coroutine-based non-blocking networking frameworks in
+Python. Most non-blocking frameworks require you to run the "main
+loop" in order to perform all network operations, but Donovan wondered
+if a library written using a trampolining style could get away with
+transparently running the main loop any time i/o was required,
+stopping the main loop once no more i/o was scheduled. Bob spent a few
+days during PyCon 2005 writing a proof-of-concept. He named it
+eventlet, after the coroutine implementation it used,
+[[greenlet]]. Donovan began using eventlet as a light-weight network
+library for his spare-time project Pavel, and also began writing some
+unittests.
+
+* http://svn.red-bean.com/bob/eventlet/trunk/
+* http://soundfarmer.com/Pavel/trunk/
+
+When Donovan started at Linden Lab in May of 2006, he added eventlet
+as an svn external in the indra/lib/python directory, to be a
+dependency of the yet-to-be-named [[backbone]] project (at the time,
+it was named restserv). However, including eventlet as an svn external
+meant that any time the externally hosted project had hosting issues,
+Linden developers were not able to perform svn updates. Thus, the
+eventlet source was imported into the linden source tree at the same
+location, and became a fork.
+
+Bob Ippolito has ceased working on eventlet and has stated his desire
+for Linden to take its fork forward to the open source world as "the"
+eventlet.
