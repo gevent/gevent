@@ -12,7 +12,7 @@ class Queue(object):
         if maxsize <= 0:
             self.q = coros.Queue()
         else:
-            self.q = coros.Channel(maxsize)
+            self.q = coros.Channel(maxsize-1)
 
     def qsize(self):
         """Return the size of the queue."""
