@@ -413,7 +413,7 @@ class Queue(object):
         # for consistency with Channel
         return False
 
-    def waitiing(self):
+    def waiting(self):
         return len(self._waiters)
 
 
