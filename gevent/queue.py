@@ -3,16 +3,18 @@ from Queue import Full, Empty
 import gevent
 from gevent import coros
 
+
 class Queue(object):
     """Create a queue object with a given maximum size.
 
-    If maxsize is <= 0, the queue size is infinite.
+    If maxsize is less than zero or None, the queue size is infinite.
+    NOTE: Queue(0) won't be infinite, like a standard Queue would be.
     """
-    def __init__(self, maxsize=0):
+    def __init__(self, maxsize=None):
         if maxsize <= 0:
             self.q = coros.Queue()
         else:
-            self.q = coros.Channel(maxsize-1)
+            self.q = coros.Channel(maxsize)
 
     def qsize(self):
         """Return the size of the queue."""
