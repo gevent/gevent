@@ -44,7 +44,9 @@ class Queue(object):
                 if timeout < 0:
                     raise ValueError("'timeout' must be a positive number")
                 with timeout(timeout, Full):
-                    return self.q.wait()
+                    # XXX even if timeout fires, item ends up in a queue anyway, because
+                    # Channel.send is not transactional
+                    return self.q.send(item)
         else:
             if self.q.full():
                 raise Full
