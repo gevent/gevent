@@ -31,7 +31,7 @@ else:
                 ev_dir = dir
                 break
     if not ev_dir:
-        raise "couldn't find libevent installation or build directory"
+        sys.exit("couldn't find libevent installation or build directory")
     
     print 'found libevent build directory', ev_dir
     ev_incdirs = [ev_dir, ev_dir + '/compat']
