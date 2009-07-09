@@ -18,15 +18,6 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
-from gevent import wait_reader, wait_writer, spawn
-
-BUFFER_SIZE = 4096
-
-import errno
-import os
-import time
-from errno import EAGAIN
-
 __all__ = ['GreenSocket', 'GreenFile', 'GreenPipe']
 
 import _socket
@@ -39,6 +30,15 @@ getaddrinfo = _socket.getaddrinfo # XXX implement this and others using libevent
 __socket__ = __import__('socket')
 _fileobject = __socket__._fileobject
 sslerror = __socket__.sslerror
+
+import errno
+import os
+import time
+from errno import EAGAIN
+
+from gevent.greenlet import wait_reader, wait_writer, spawn
+
+BUFFER_SIZE = 4096
 
 try:
     from OpenSSL import SSL

@@ -25,8 +25,8 @@ import collections
 import time
 import traceback
 
-import gevent
-from gevent import get_hub, spawn, getcurrent, sleep
+from gevent.core import timer
+from gevent.greenlet import get_hub, spawn, getcurrent, sleep
 
 
 class Cancelled(RuntimeError):
@@ -187,7 +187,7 @@ class event(object):
             exc = (exc, )
         self._exc = exc
         if self._waiters:
-            gevent.timer(0, self._do_send, self._result, self._exc, self._waiters.copy())
+            timer(0, self._do_send, self._result, self._exc, self._waiters.copy())
 
     def _do_send(self, result, exc, waiters):
         while waiters:
@@ -249,7 +249,7 @@ class Semaphore(object):
         # `blocking' parameter is for consistency with BoundedSemaphore and is ignored
         self.counter += 1
         if self._waiters:
-            gevent.timer(0, self._do_acquire)
+            timer(0, self._do_acquire)
         return True
 
     def _do_acquire(self):
@@ -373,7 +373,7 @@ class Queue(object):
             exc = (exc, )
         self.items.append((result, exc))
         if self._waiters and self._timer is None:
-            self._timer = gevent.timer(0, self._do_send)
+            self._timer = timer(0, self._do_send)
 
     def send_exception(self, *args):
         # the arguments are the same as for greenlet.throw
@@ -442,7 +442,7 @@ class Channel(object):
         if getcurrent() is get_hub().greenlet:
             self.items.append((result, exc))
             if self._waiters and self._timer is None:
-                self._timer = gevent.timer(0, self._do_switch)
+                self._timer = timer(0, self._do_switch)
         else:
             if self._waiters and self._senders:
                 sleep(0)
@@ -450,7 +450,7 @@ class Channel(object):
             # note that send() does not work well with timeouts. if your timeout fires
             # after this point, the item will remain in the queue
             if self._waiters and self._timer is None:
-                self._timer = gevent.timer(0, self._do_switch)
+                self._timer = timer(0, self._do_switch)
             if len(self.items) > self.max_size:
                 self._senders.add(getcurrent())
                 try:
@@ -487,14 +487,14 @@ class Channel(object):
         if self.items:
             result, exc = self.items.popleft()
             if len(self.items) <= self.max_size and self._timer is None:
-                self._timer = gevent.timer(0, self._do_switch)
+                self._timer = timer(0, self._do_switch)
             if exc is None:
                 return result
             else:
                 getcurrent().throw(*exc)
         else:
             if self._senders and self._timer is None:
-                self._timer = gevent.timer(0, self._do_switch)
+                self._timer = timer(0, self._do_switch)
             self._waiters.add(getcurrent())
             try:
                 result, exc = get_hub().switch()

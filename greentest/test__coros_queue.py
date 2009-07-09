@@ -21,7 +21,7 @@ class TestQueue(TestCase):
     def test_send_last(self):
         q = coros.Queue()
         def waiter(q):
-            timer = gevent.timeout(0.1, gevent.TimeoutError)
+            timer = gevent.Timeout(0.1, gevent.TimeoutError)
             self.assertEquals(q.wait(), 'hi2')
             timer.cancel()
 
@@ -90,7 +90,7 @@ class TestQueue(TestCase):
         results = set()
         def collect_pending_results():
             for i, e in enumerate(evts):
-                timer = gevent.timeout(0.001, gevent.TimeoutError)
+                timer = gevent.Timeout(0.001, gevent.TimeoutError)
                 try:
                     x = e.wait()
                     results.add(x)
@@ -110,7 +110,7 @@ class TestQueue(TestCase):
         q = coros.Queue()
 
         def do_receive(q, evt):
-            gevent.timeout(0, RuntimeError())
+            gevent.Timeout(0, RuntimeError())
             try:
                 result = q.wait()
                 evt.send(result)
@@ -138,7 +138,7 @@ class TestQueue(TestCase):
         def waiter(q, evt):
             evt.send(q.wait())
         def do_receive(q, evt):
-            gevent.timeout(0, RuntimeError())
+            gevent.Timeout(0, RuntimeError())
             try:
                 result = q.wait()
                 evt.send(result)
@@ -157,7 +157,7 @@ class TestQueue(TestCase):
 
     def test_two_bogus_waiters(self):
         def do_receive(q, evt):
-            gevent.timeout(0, RuntimeError())
+            gevent.Timeout(0, RuntimeError())
             try:
                 result = q.wait()
                 evt.send(result)

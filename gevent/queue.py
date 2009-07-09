@@ -1,6 +1,6 @@
 from __future__ import with_statement
 from Queue import Full, Empty
-import gevent
+from gevent.greenlet import Timeout
 from gevent import coros
 
 
@@ -45,7 +45,7 @@ class Queue(object):
             else:
                 if timeout < 0:
                     raise ValueError("'timeout' must be a positive number")
-                with gevent.timeout(timeout, Full):
+                with Timeout(timeout, Full):
                     # XXX even if timeout fires, item ends up in a queue anyway, because
                     # Channel.send is not transactional
                     return self.q.send(item)
@@ -80,7 +80,7 @@ class Queue(object):
             elif timeout < 0:
                 raise ValueError("'timeout' must be a positive number")
             else:
-                with gevent.timeout(timeout, Empty):
+                with Timeout(timeout, Empty):
                     return self.q.wait()
         else:
             if not self.q:

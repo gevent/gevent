@@ -24,6 +24,7 @@ import os.path
 from greentest import TestCase, main
 
 import gevent
+from gevent import greenlet
 from gevent import socket
 
 
@@ -119,7 +120,7 @@ class TestApi(TestCase):
         try:
             desc = socket.GreenSocket()
             desc.connect(('127.0.0.1', bound_port))
-            gevent.wait_reader(desc.fileno(), timeout=0.1)
+            greenlet.wait_reader(desc.fileno(), timeout=0.1)
         except gevent.TimeoutError:
             pass # test passed
         else:
@@ -138,7 +139,7 @@ class TestApi(TestCase):
             desc = socket.GreenSocket()
             desc.connect(('127.0.0.1', bound_port))
             try:
-                gevent.wait_reader(desc.fileno(), timeout=0.1)
+                greenlet.wait_reader(desc.fileno(), timeout=0.1)
             except gevent.TimeoutError:
                 assert False, "Timed out"
 
@@ -175,7 +176,7 @@ class TestApi(TestCase):
         try:
             # try and get some data off of this pipe
             # but bail before any is sent
-            gevent.timeout(0.01)
+            gevent.Timeout(0.01)
             _c = wrap_rfile.read(1)
             self.fail()
         except gevent.TimeoutError:

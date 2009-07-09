@@ -95,7 +95,7 @@ class TestCoroutinePool(TestCase):
             gevent.sleep(0)
             self.assertEqual(pool.free_count(), 1)
             # shouldn't block when trying to get
-            t = gevent.timeout(0.1)
+            t = gevent.Timeout(0.1)
             try:
                 pool.execute(gevent.sleep, 1)
             finally:

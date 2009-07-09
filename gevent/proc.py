@@ -67,7 +67,7 @@ fails then there's no way to complete the task so the parent must fail as well;
 >>> p = spawn(demofunc, 1, 0)
 >>> _ = p.link_exception()
 >>> try:
-...     gevent.sleep(1)
+...     greenlet.sleep(1)
 ... except LinkedFailed:
 ...     print 'LinkedFailed'
 LinkedFailed
@@ -76,8 +76,7 @@ One application of linking is `waitall' function: link to a bunch of coroutines
 and wait for all them to complete. Such function is provided by this module.
 """
 import sys
-import gevent
-from gevent import coros
+from gevent import coros, greenlet, core
 
 __all__ = ['LinkedExited',
            'LinkedFailed',
@@ -124,12 +123,12 @@ class LinkedKilled(LinkedFailed):
     msg = """%r was killed with %s"""
 
 def getLinkedFailed(name, typ, value=None, tb=None):
-    if issubclass(typ, gevent.GreenletExit):
+    if issubclass(typ, greenlet.GreenletExit):
         return LinkedKilled(name, typ, value, tb)
     return LinkedFailed(name, typ, value, tb)
 
 
-class ProcExit(gevent.GreenletExit):
+class ProcExit(greenlet.GreenletExit):
     """Raised when this proc is killed."""
 
 
@@ -210,17 +209,12 @@ class decorate_send(object):
         self._event.send((self._tag, value))
 
 
-def killall(procs, *throw_args, **kwargs):
+def killall(procs, *throw_args):
     if not throw_args:
         throw_args = (ProcExit, )
-    wait = kwargs.pop('wait', False)
-    if kwargs:
-        raise TypeError('Invalid keyword argument for proc.killall(): %s' % ', '.join(kwargs.keys()))
     for g in procs:
         if not g.dead:
-            gevent.timer(0, g.throw, *throw_args)
-    if wait and gevent.getcurrent() is not gevent.get_hub().greenlet:
-        gevent.sleep(0)
+            core.timer(0, g.throw, *throw_args)
 
 
 class NotUsed(object):
@@ -238,9 +232,9 @@ def spawn_greenlet(function, *args):
     The current greenlet won't be unscheduled. Keyword arguments aren't
     supported (limitation of greenlet), use spawn() to work around that.
     """
-    g = gevent.Greenlet(function)
-    g.parent = gevent.get_hub().greenlet
-    gevent.timer(0, g.switch, *args)
+    g = greenlet.Greenlet(function)
+    g.parent = greenlet.get_hub().greenlet
+    core.timer(0, g.switch, *args)
     return g
 
 
@@ -339,10 +333,10 @@ class Source(object):
         if self.ready() and self._exc is not None:
             return
         if listener is None:
-            listener = gevent.getcurrent()
+            listener = greenlet.getcurrent()
         if link is None:
             link = self.getLink(listener)
-        if self.ready() and listener is gevent.getcurrent():
+        if self.ready() and listener is greenlet.getcurrent():
             link(self)
         else:
             self._value_links[listener] = link
@@ -354,10 +348,10 @@ class Source(object):
         if self.value is not _NOT_USED and self._exc is None:
             return
         if listener is None:
-            listener = gevent.getcurrent()
+            listener = greenlet.getcurrent()
         if link is None:
             link = self.getLink(listener)
-        if self.ready() and listener is gevent.getcurrent():
+        if self.ready() and listener is greenlet.getcurrent():
             link(self)
         else:
             self._exception_links[listener] = link
@@ -367,10 +361,10 @@ class Source(object):
 
     def link(self, listener=None, link=None):
         if listener is None:
-            listener = gevent.getcurrent()
+            listener = greenlet.getcurrent()
         if link is None:
             link = self.getLink(listener)
-        if self.ready() and listener is gevent.getcurrent():
+        if self.ready() and listener is greenlet.getcurrent():
             if self._exc is None:
                 link(self)
             else:
@@ -387,7 +381,7 @@ class Source(object):
 
     def unlink(self, listener=None):
         if listener is None:
-            listener = gevent.getcurrent()
+            listener = greenlet.getcurrent()
         self._value_links.pop(listener, None)
         self._exception_links.pop(listener, None)
 
@@ -409,7 +403,7 @@ class Source(object):
         self._start_send()
 
     def _start_send(self):
-        gevent.timer(0, self._do_send, self._value_links.items(), self._value_links)
+        core.timer(0, self._do_send, self._value_links.items(), self._value_links)
 
     def send_exception(self, *throw_args):
         assert not self.ready(), "%s has been fired already" % self
@@ -418,7 +412,7 @@ class Source(object):
         self._start_send_exception()
 
     def _start_send_exception(self):
-        gevent.timer(0, self._do_send, self._exception_links.items(), self._exception_links)
+        core.timer(0, self._do_send, self._exception_links.items(), self._exception_links)
 
     def _do_send(self, links, consult):
         while links:
@@ -430,7 +424,7 @@ class Source(object):
                     finally:
                         consult.pop(listener, None)
             except:
-                gevent.timer(0, self._do_send, links, consult)
+                core.timer(0, self._do_send, links, consult)
                 raise
 
     def wait(self, timeout=None, *throw_args):
@@ -446,16 +440,16 @@ class Source(object):
             if self._exc is None:
                 return self.value
             else:
-                gevent.getcurrent().throw(*self._exc)
+                greenlet.getcurrent().throw(*self._exc)
         if timeout is not None:
-            timer = gevent.timeout(timeout, *throw_args)
+            timer = greenlet.Timeout(timeout, *throw_args)
             timer.__enter__()
             if timeout==0:
                 if timer.__exit__(None, None, None):
                     return
                 else:
                     try:
-                        gevent.getcurrent().throw(timer.exception)
+                        greenlet.getcurrent().throw(timer.exception)
                     except:
                         if not timer.__exit__(*sys.exc_info()):
                             raise
@@ -487,15 +481,15 @@ class Waiter(object):
         """Wake up the greenlet that is calling wait() currently (if there is one).
         Can only be called from get_hub().greenlet.
         """
-        assert gevent.getcurrent() is gevent.get_hub().greenlet
+        assert greenlet.getcurrent() is greenlet.get_hub().greenlet
         if self.greenlet is not None:
             self.greenlet.switch(value)
 
     def send_exception(self, *throw_args):
         """Make greenlet calling wait() wake up (if there is a wait()).
-        Can only be called from gevent.get_hub().greenlet.
+        Can only be called from greenlet.get_hub().greenlet.
         """
-        assert gevent.getcurrent() is gevent.get_hub().greenlet
+        assert greenlet.getcurrent() is greenlet.get_hub().greenlet
         if self.greenlet is not None:
             self.greenlet.throw(*throw_args)
 
@@ -504,11 +498,11 @@ class Waiter(object):
         into send() or raise exception passed into send_exception().
         """
         assert self.greenlet is None
-        current = gevent.getcurrent()
-        assert current is not gevent.get_hub().greenlet
+        current = greenlet.getcurrent()
+        assert current is not greenlet.get_hub().greenlet
         self.greenlet = current
         try:
-            return gevent.get_hub().switch()
+            return greenlet.get_hub().switch()
         finally:
             self.greenlet = None
 
@@ -598,9 +592,9 @@ class Proc(Source):
         if not self.dead:
             if not throw_args:
                 throw_args = (ProcExit, )
-            gevent.timer(0, self.greenlet.throw, *throw_args)
-            if gevent.getcurrent() is not gevent.get_hub().greenlet:
-                gevent.sleep(0)
+            core.timer(0, self.greenlet.throw, *throw_args)
+            if greenlet.getcurrent() is not greenlet.get_hub().greenlet:
+                greenlet.sleep(0)
 
     # QQQ maybe Proc should not inherit from Source (because its send() and send_exception()
     # QQQ methods are for internal use only)
@@ -693,7 +687,7 @@ class RunningProcSet(object):
         return len(self.procs)
 
     def __contains__(self, item):
-        if isinstance(item, gevent.Greenlet):
+        if isinstance(item, greenlet.Greenlet):
             # special case for "getcurrent() in running_proc_set" to work
             for x in self.procs:
                 if x.greenlet == item:
@@ -748,7 +742,7 @@ class Pool(object):
         """
         # if reentering an empty pool, don't try to wait on a coroutine freeing
         # itself -- instead, just execute in the current coroutine
-        if self.sem.locked() and gevent.getcurrent() in self.procs:
+        if self.sem.locked() and greenlet.getcurrent() in self.procs:
             p = spawn(func, *args, **kwargs)
             try:
                 p.wait()

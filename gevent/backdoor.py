@@ -26,7 +26,8 @@ import socket
 import sys
 from code import InteractiveConsole
 
-import gevent
+from gevent.greenlet import Greenlet
+from gevent import core
 
 try:
     sys.ps1
@@ -38,7 +39,7 @@ except AttributeError:
     sys.ps2 = '... '
 
 
-class SocketConsole(gevent.Greenlet):
+class SocketConsole(Greenlet):
     def __init__(self, desc, hostport, locals):
         self.hostport = hostport
         self.locals = locals
@@ -57,7 +58,7 @@ class SocketConsole(gevent.Greenlet):
                 self.old[key] = getattr(desc, key)
             setattr(desc, key, value)
 
-        gevent.Greenlet.__init__(self)
+        Greenlet.__init__(self)
 
     def run(self):
         try:
@@ -70,7 +71,7 @@ class SocketConsole(gevent.Greenlet):
     def switch(self, *args, **kw):
         self.saved = sys.stdin, sys.stderr, sys.stdout
         sys.stdin = sys.stdout = sys.stderr = self.desc
-        gevent.Greenlet.switch(self, *args, **kw)
+        Greenlet.switch(self, *args, **kw)
 
     def switch_out(self):
         sys.stdin, sys.stderr, sys.stdout = self.saved
@@ -100,7 +101,7 @@ def backdoor_server(server, locals=None):
                 fl = conn.makeGreenFile("rw")
                 fl.newlines = '\n'
                 greenlet = SocketConsole(fl, (host, port), locals)
-                gevent.timer(0, greenlet.switch)
+                core.timer(0, greenlet.switch)
         except socket.error, e:
             # Broken pipe means it was shutdown
             if e[0] != 32:
@@ -118,7 +119,7 @@ def backdoor((conn, addr), locals=None):
     fl = conn.makeGreenFile("rw")
     fl.newlines = '\n'
     greenlet = SocketConsole(fl, (host, port), locals)
-    gevent.timer(0, greenlet.switch)
+    core.timer(0, greenlet.switch)
 
 
 if __name__ == '__main__':

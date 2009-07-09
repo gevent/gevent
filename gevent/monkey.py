@@ -1,12 +1,12 @@
 import sys
 
 def patch_os():
-    from gevent import fork
+    from gevent.greenlet import fork
     import os
     os.fork = fork
 
 def patch_time():
-    from gevent import sleep
+    from gevent.greenlet import sleep
     _time = __import__('time')
     _time.sleep = sleep
 

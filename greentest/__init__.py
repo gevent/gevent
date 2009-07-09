@@ -25,6 +25,7 @@ import os
 import errno
 import unittest
 import gevent
+from gevent.greenlet import get_hub
 
 disabled_marker = '-*-*-*-*-*- disabled -*-*-*-*-*-'
 def exit_disabled():
@@ -38,6 +39,7 @@ class TestCase(unittest.TestCase):
 
     __timeout__ = 1
     __switch_check__ = True
+    _switch_count = None
 
     def disable_switch_check(self):
         self._switch_count = None
@@ -47,14 +49,16 @@ class TestCase(unittest.TestCase):
         gevent.sleep(0) # switch at least once to setup signal handlers
         if hasattr(core, '_event_count'):
             self._event_count = (core._event_count(), core._event_count_active())
-        self._switch_count = gevent.get_hub().switch_count
-        self._timer = gevent.timeout(self.__timeout__, RuntimeError('test is taking too long'))
+        if hasattr(get_hub(), 'switch_count'):
+            self._switch_count = get_hub().switch_count
+        self._timer = gevent.Timeout(self.__timeout__, RuntimeError('test is taking too long'))
 
     def tearDown(self):
         if hasattr(self, '_timer'):
             self._timer.cancel()
-            if self.__switch_check__ and self._switch_count is not None and gevent.get_hub().switch_count <= self._switch_count:
-                sys.stderr.write('WARNING: %s.%s did not switch\n' % (type(self).__name__, self._testMethodName))
+            if self.__switch_check__ and self._switch_count is not None and hasattr(get_hub(), 'switch_count') and get_hub().switch_count <= self._switch_count:
+                name = getattr(self, '_testMethodName', '') # 2.4 does not have it
+                sys.stderr.write('WARNING: %s.%s did not switch\n' % (type(self).__name__, name))
             from gevent import core
             if hasattr(core, '_event_count'):
                 event_count = (core._event_count(), core._event_count_active())
@@ -75,7 +79,7 @@ def find_command(command):
 
 main = unittest.main
 
-_original_Hub = gevent.Hub
+_original_Hub = gevent.greenlet.Hub
 
 class CountingHub(_original_Hub):
 
@@ -85,4 +89,4 @@ class CountingHub(_original_Hub):
         self.switch_count += 1
         return _original_Hub.switch(self)
 
-gevent.Hub = CountingHub
+gevent.greenlet.Hub = CountingHub

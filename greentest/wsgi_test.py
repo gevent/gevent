@@ -164,7 +164,7 @@ class TestHttpd(TestCase):
 
         fd = sock.makeGreenFile()
         fd.write('GET / HTTP/1.1\r\nHost: localhost\r\n\r\n')
-        cancel = gevent.timeout(1, RuntimeError)
+        cancel = gevent.Timeout(1, RuntimeError)
         self.assertRaises(TypeError, fd.read, "This shouldn't work")
         cancel.cancel()
         fd.close()
@@ -278,42 +278,6 @@ class TestHttpd(TestCase):
             chunklen = int(fd.readline(), 16)
         self.assert_(chunks > 1)
 
-    def test_012_ssl_server(self):
-        def wsgi_app(environ, start_response):
-            start_response('200 OK', {})
-            return [environ['wsgi.input'].read()]
-
-        certificate_file = os.path.join(os.path.dirname(__file__), 'test_server.crt')
-        private_key_file = os.path.join(os.path.dirname(__file__), 'test_server.key')
-
-        sock = socket.ssl_listener(('', 4201), certificate_file, private_key_file)
-
-        g = gevent.spawn(wsgi.server, sock, wsgi_app)
-        try:
-            req = HTTPRequest("https://localhost:4201/foo", method="POST", data='abc')
-            f = urllib2.urlopen(req)
-            result = f.read()
-            self.assertEquals(result, 'abc')
-        finally:
-            gevent.kill(g)
-
-    def test_013_empty_return(self):
-        def wsgi_app(environ, start_response):
-            start_response("200 OK", [])
-            return [""]
-
-        certificate_file = os.path.join(os.path.dirname(__file__), 'test_server.crt')
-        private_key_file = os.path.join(os.path.dirname(__file__), 'test_server.key')
-        sock = socket.ssl_listener(('', 4202), certificate_file, private_key_file)
-        g = gevent.spawn(wsgi.server, sock, wsgi_app)
-        try:
-            req = HTTPRequest("https://localhost:4202/foo")
-            f = urllib2.urlopen(req)
-            result = f.read()
-            self.assertEquals(result, '')
-        finally:
-            gevent.kill(g)
-
     def test_014_chunked_post(self):
         self.site.application = chunked_post
         sock = socket.connect_tcp(('127.0.0.1', 12346))
@@ -357,6 +321,46 @@ class TestHttpd(TestCase):
         response_line, headers, body = read_http(sock)
         self.assert_('transfer-encoding' in headers)
         self.assert_(headers['transfer-encoding'] == 'chunked')
+
+
+class TestHttps(TestCase):
+    mode = 'static'
+
+    def test_012_ssl_server(self):
+        def wsgi_app(environ, start_response):
+            start_response('200 OK', {})
+            return [environ['wsgi.input'].read()]
+
+        certificate_file = os.path.join(os.path.dirname(__file__), 'test_server.crt')
+        private_key_file = os.path.join(os.path.dirname(__file__), 'test_server.key')
+
+        sock = socket.ssl_listener(('', 4201), certificate_file, private_key_file)
+
+        g = gevent.spawn(wsgi.server, sock, wsgi_app)
+        try:
+            req = HTTPRequest("https://localhost:4201/foo", method="POST", data='abc')
+            f = urllib2.urlopen(req)
+            result = f.read()
+            self.assertEquals(result, 'abc')
+        finally:
+            gevent.kill(g)
+
+    def test_013_empty_return(self):
+        def wsgi_app(environ, start_response):
+            start_response("200 OK", [])
+            return [""]
+
+        certificate_file = os.path.join(os.path.dirname(__file__), 'test_server.crt')
+        private_key_file = os.path.join(os.path.dirname(__file__), 'test_server.key')
+        sock = socket.ssl_listener(('', 4202), certificate_file, private_key_file)
+        g = gevent.spawn(wsgi.server, sock, wsgi_app)
+        try:
+            req = HTTPRequest("https://localhost:4202/foo")
+            f = urllib2.urlopen(req)
+            result = f.read()
+            self.assertEquals(result, '')
+        finally:
+            gevent.kill(g)
 
 
 class HTTPRequest(urllib2.Request):

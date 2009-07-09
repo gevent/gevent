@@ -22,6 +22,7 @@
 import greentest
 import time
 import gevent
+from gevent import core
 from gevent import socket
 
 DELAY = 0.1
@@ -37,7 +38,7 @@ class TestScheduleCall(greentest.TestCase):
 
     def test_global(self):
         lst = [1]
-        gevent.spawn(gevent.timer, DELAY, lst.pop)
+        gevent.spawn(core.timer, DELAY, lst.pop)
         gevent.sleep(DELAY*2)
         assert lst == [], lst
 
@@ -47,7 +48,7 @@ class TestCloseSocketWhilePolling(greentest.TestCase):
     def test(self):
         try:
             sock = socket.socket()
-            gevent.timer(0, sock.close)
+            core.timer(0, sock.close)
             sock.connect(('python.org', 81))
         except Exception:
             gevent.sleep(0)
@@ -68,7 +69,7 @@ class TestExceptionInMainloop(greentest.TestCase):
         def fail():
             1/0
 
-        gevent.timer(0, fail)
+        core.timer(0, fail)
 
         start = time.time()
         gevent.sleep(DELAY)

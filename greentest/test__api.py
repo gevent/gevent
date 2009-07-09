@@ -21,6 +21,7 @@
 
 import greentest
 import gevent
+from gevent import core
 
 DELAY = 0.1
 
@@ -65,7 +66,7 @@ class TestTimers(greentest.TestCase):
     def test_timer_fired(self):
 
         def func():
-            gevent.timer(0.1, self.lst.pop)
+            core.timer(0.1, self.lst.pop)
             gevent.sleep(0.2)
 
         gevent.spawn(func)

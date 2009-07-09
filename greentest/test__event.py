@@ -21,7 +21,7 @@
 
 import greentest
 from gevent.coros import event
-from gevent import spawn, sleep, timeout, with_timeout
+from gevent import spawn, sleep, Timeout, with_timeout
 from greentest import TestCase
 
 DELAY= 0.01
@@ -50,7 +50,7 @@ class TestEvent(TestCase):
         event2 = event()
 
         spawn(event1.send, 'hello event1')
-        timeout(0, ValueError('interrupted'))
+        Timeout(0, ValueError('interrupted'))
         try:
             result = event1.wait()
         except ValueError:

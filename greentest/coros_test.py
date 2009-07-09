@@ -87,7 +87,7 @@ class TestEvent(TestCase):
         self.assertRaises(RuntimeError, evt.wait)
         evt.reset()
         # shouldn't see the RuntimeError again
-        gevent.timeout(0.001, gevent.TimeoutError('from test_double_exception'))
+        gevent.Timeout(0.001, gevent.TimeoutError('from test_double_exception'))
         self.assertRaises(gevent.TimeoutError, evt.wait)
 
 
