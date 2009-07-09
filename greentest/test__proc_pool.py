@@ -67,10 +67,10 @@ class TestCoroutinePool(TestCase):
 
         pool.execute_async(reenter_async)
         evt.wait()
-        
+
     def test_stderr_raising(self):
-        # testing that really egregious errors in the error handling code 
-        # (that prints tracebacks to stderr) don't cause the pool to lose 
+        # testing that really egregious errors in the error handling code
+        # (that prints tracebacks to stderr) don't cause the pool to lose
         # any members
         import sys
         pool = self.klass(size=1)
@@ -88,7 +88,7 @@ class TestCoroutinePool(TestCase):
             self.assertRaises(RuntimeError, waiter.wait)
             # the pool should have something free at this point since the
             # waiter returned
-            # pool.Pool change: if an exception is raised during execution of a link, 
+            # pool.Pool change: if an exception is raised during execution of a link,
             # the rest of the links are scheduled to be executed on the next hub iteration
             # this introduces a delay in updating pool.sem which makes pool.free_count() report 0
             # therefore, sleep:

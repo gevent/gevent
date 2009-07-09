@@ -46,7 +46,7 @@ class TestCase(unittest.TestCase):
         from gevent import core
         gevent.sleep(0) # switch at least once to setup signal handlers
         if hasattr(core, '_event_count'):
-            self._event_count = (core._event_count(), core._event_count_active()) 
+            self._event_count = (core._event_count(), core._event_count_active())
         self._switch_count = gevent.get_hub().switch_count
         self._timer = gevent.timeout(self.__timeout__, RuntimeError('test is taking too long'))
 

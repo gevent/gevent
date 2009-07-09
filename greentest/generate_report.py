@@ -141,7 +141,7 @@ class TestResult:
         if self.warnings():
             r += '\n' + '\n'.join(self.warnings()).replace(' ', '&nbsp;')
         return r
- 
+
     def format(self):
         text = self.text().replace('\n', '<br>\n')
         if self.id is None:

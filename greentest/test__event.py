@@ -27,7 +27,7 @@ from greentest import TestCase
 DELAY= 0.01
 
 class TestEvent(TestCase):
-    
+
     def test_send_exc(self):
         log = []
         e = event()

@@ -38,7 +38,7 @@ class TestSemaphore(TestCase):
         spawn(sem.acquire)
         sem.release()
         self.assertEqual(3, sem.balance)
-   
+
     def test_bounded_with_zero_limit(self):
         sem = coros.BoundedSemaphore(0, 0)
         spawn(sem.acquire)

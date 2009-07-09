@@ -49,7 +49,7 @@ def patch_all(socket=True, time=True, select=True, thread=True, os=True):
 
 # XXX patch unittest to count switches and detect event_count and run the standard tests                    2 hour
 # make makefile() return GreenFile. since it uses socket's buffer, while _fileobject creates a new one      2 hour
-# probably make GreenSocket be also a file and makefile() just increases refcount and returns self 
+# probably make GreenSocket be also a file and makefile() just increases refcount and returns self
 
 if __name__=='__main__':
     import sys

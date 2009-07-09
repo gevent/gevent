@@ -5,10 +5,10 @@
 # to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
 # copies of the Software, and to permit persons to whom the Software is
 # furnished to do so, subject to the following conditions:
-# 
+#
 # The above copyright notice and this permission notice shall be included in
 # all copies or substantial portions of the Software.
-# 
+#
 # THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 # IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 # FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -51,26 +51,26 @@ class TestGreenIo(TestCase):
                 self.assertRaises(socket.error, conn.send, 'b')
             finally:
                 listener.close()
-                
+
         def did_it_work(server):
             client = socket.connect_tcp(('127.0.0.1', server.getsockname()[1]))
             fd = client.makeGreenFile()
             client.close()
-            assert fd.readline() == 'hello\n'    
+            assert fd.readline() == 'hello\n'
             assert fd.read() == ''
             fd.close()
-            
+
         server = socket.tcp_listener(('0.0.0.0', 0))
         killer = gevent.spawn(accept_close_early, server)
         did_it_work(server)
         gevent.kill(killer)
-        
+
         server = socket.tcp_listener(('0.0.0.0', 0))
         killer = gevent.spawn(accept_close_late, server)
         did_it_work(server)
         gevent.kill(killer)
 
-        
+
     def test_del_closes_socket(self):
         timer = gevent.timeout(0.5)
         def accept_once(listener):
@@ -90,10 +90,10 @@ class TestGreenIo(TestCase):
         client = socket.connect_tcp(('127.0.0.1', server.getsockname()[1]))
         fd = client.makeGreenFile()
         client.close()
-        assert fd.read() == 'hello\n'    
+        assert fd.read() == 'hello\n'
         assert fd.read() == ''
-        
+
         timer.cancel()
-                
+
 if __name__ == '__main__':
     main()

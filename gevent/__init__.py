@@ -159,7 +159,7 @@ def _wait_helper(ev, fd, evtype):
 
 def wait_reader(fileno, timeout=-1, timeout_exc=TimeoutError):
     evt = core.read(fileno, _wait_helper, timeout, (getcurrent(), timeout_exc))
-    try: 
+    try:
         returned_ev = get_hub().switch()
         assert evt is returned_ev, (evt, returned_ev)
     finally:
@@ -180,7 +180,7 @@ class _SilentException:
 
 class timeout(object):
     """Schedule an exception to raise in the current greenlet (TimeoutError by default).
-    
+
     Raise an exception in the block after timeout.
 
     with timeout(seconds[, exc]):

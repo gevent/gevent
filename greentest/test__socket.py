@@ -6,10 +6,10 @@ def server():
     (client, addr) = listener.accept()
     # start reading, then, while reading, start writing. the reader should not hang forever
     N = 100000 # must be a big enough number so that sendall calls trampoline
-    proc.spawn_greenlet(client.sendall, 't' * N) 
+    proc.spawn_greenlet(client.sendall, 't' * N)
     result = client.recv(1000)
     assert result == 'hello world', result
-    
+
 #print '%s: client' % getcurrent()
 
 server_proc = proc.spawn(server)

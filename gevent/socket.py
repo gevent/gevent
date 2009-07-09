@@ -6,10 +6,10 @@
 # to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
 # copies of the Software, and to permit persons to whom the Software is
 # furnished to do so, subject to the following conditions:
-# 
+#
 # The above copyright notice and this permission notice shall be included in
 # all copies or substantial portions of the Software.
-# 
+#
 # THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 # IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 # FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -565,9 +565,9 @@ class GreenSSL(GreenSocket):
             self._refcount = RefCount()
 
     read = read
-    
+
     def sendall(self, data):
-        # overriding sendall because ssl sockets behave badly when asked to 
+        # overriding sendall because ssl sockets behave badly when asked to
         # send empty strings; 'normal' sockets don't have a problem
         if not data:
             return
@@ -591,7 +591,7 @@ class GreenSSL(GreenSocket):
     def makefile(self, *args, **kw):
         self._refcount.increment()
         return GreenFile(type(self)(self.fd, refcount = self._refcount))
-        
+
     makeGreenFile = makefile
 
     def close(self):
@@ -608,7 +608,7 @@ def socketpair(*args):
 
 def fromfd(*args):
     return GreenSocket(_original_fromfd(*args))
-    
+
 def socket_bind_and_listen(descriptor, addr=('', 0), backlog=50):
     set_reuse_addr(descriptor)
     descriptor.bind(addr)
@@ -684,7 +684,7 @@ def tcp_server(listensocket, server, *args, **kw):
     try:
         try:
             while True:
-                client_socket = listensocket.accept() 
+                client_socket = listensocket.accept()
                 spawn(server, client_socket, *args, **kw)
         except error, e:
             # Broken pipe means it was shutdown

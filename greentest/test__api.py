@@ -63,7 +63,7 @@ class TestTimers(greentest.TestCase):
         self.lst = [1]
 
     def test_timer_fired(self):
-        
+
         def func():
             gevent.timer(0.1, self.lst.pop)
             gevent.sleep(0.2)

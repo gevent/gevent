@@ -23,7 +23,7 @@ import greentest
 from gevent import socket
 
 class TestSocketErrors(greentest.TestCase):
-    
+
     def test_connection_refused(self):
         s = socket.GreenSocket()
         try:

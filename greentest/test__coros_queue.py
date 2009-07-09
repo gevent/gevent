@@ -174,12 +174,12 @@ class TestQueue(TestCase):
         self.assertEquals(e1.wait(), 'timed out')
         self.assertEquals(e2.wait(), 'timed out')
         self.assertEquals(q.wait(), 'sent')
-                
+
 #     def test_waiting(self):
 #         def do_wait(q, evt):
 #             result = q.wait()
 #             evt.send(result)
-# 
+#
 #         q = coros.Queue()
 #         e1 = coros.event()
 #         gevent.spawn(do_wait, q, e1)

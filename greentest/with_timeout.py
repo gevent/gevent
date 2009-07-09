@@ -144,7 +144,7 @@ def execf():
         greentest.TestCase = TestCase
     patch_greentest()
     execfile(filename, globals())
- 
+
 while True:
     #print 'before fork, %s' % disabled_tests
     try:
@@ -174,15 +174,15 @@ while True:
             except Exception:
                 pass
             print '\n===%s was killed after %s seconds' % (child, time.time()-start)
-            sys.stdout.flush() 
+            sys.stdout.flush()
             bad_test = None
             try:
                 bad_test = file(CURRENT_TEST_FILENAME).read()
             except IOError:
-               pass 
+               pass
             if bad_test in disabled_tests:
                 print '\n===%s was disabled but it still managed to fail?!' % bad_test
-                sys.stdout.flush()        
+                sys.stdout.flush()
                 break
             if bad_test is None:
                 sys.exit(7)

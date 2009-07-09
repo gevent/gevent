@@ -48,7 +48,7 @@ def parse_stdout(s):
     if reactor is not None:
         hub += '/%s' % reactor
     return testname, hub
-    
+
 greentest_delim = '----------------------------------------------------------------------'
 
 def parse_greentest_output(s):
@@ -87,7 +87,7 @@ def main(db):
     c.commit()
 
     parse_error = 0
-    
+
     SQL = ('select command_record.id, command, stdout, exitcode from command_record '
            'where not exists (select * from parsed_command_record where '
            'parsed_command_record.id=command_record.id)')

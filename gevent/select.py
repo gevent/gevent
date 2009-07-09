@@ -15,7 +15,7 @@ def get_fileno(obj):
 def select(read_list, write_list, error_list, t=None):
     hub = gevent.get_hub()
     t = None
-    current = gevent.getcurrent()    
+    current = gevent.getcurrent()
     assert hub.greenlet is not current, 'do not call blocking functions from the mainloop'
     allevents = []
 

@@ -32,13 +32,13 @@ else:
                 break
     if not ev_dir:
         sys.exit("couldn't find libevent installation or build directory")
-    
+
     print 'found libevent build directory', ev_dir
     ev_incdirs = [ev_dir, ev_dir + '/compat']
     ev_extargs = []
     ev_extobjs = []
     ev_libraries = ['event']
-    
+
     if sys.platform == 'win32':
         ev_incdirs.extend(['%s/WIN32-Code' % ev_dir,
                            '%s/compat' % ev_dir])

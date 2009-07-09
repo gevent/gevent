@@ -194,10 +194,10 @@ class BaseQueueTest(unittest.TestCase, BlockingTestMixin):
 
 class QueueTest(BaseQueueTest):
     type2test = Queue.Queue
- 
+
 # class LifoQueueTest(BaseQueueTest):
 #     type2test = Queue.LifoQueue
-# 
+#
 # class PriorityQueueTest(BaseQueueTest):
 #     type2test = Queue.PriorityQueue
 

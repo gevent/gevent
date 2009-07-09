@@ -760,7 +760,7 @@ class Pool(object):
             # assuming the above line cannot raise
             p.link(lambda p: self.sem.release())
         return p
-    
+
     def execute_async(self, func, *args, **kwargs):
         if self.sem.locked():
             return spawn_greenlet(self.execute, func, *args, **kwargs)
