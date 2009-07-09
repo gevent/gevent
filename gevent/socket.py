@@ -217,6 +217,9 @@ class GreenSocket(object):
         # act non-blocking
         self.act_non_blocking = False
 
+    def __repr__(self):
+        return '<%s at %s fileno=%s>' % (type(self).__name__, hex(id(self)), self.fileno())
+
     @property
     def family(self):
         return self.fd.family
