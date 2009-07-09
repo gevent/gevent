@@ -79,7 +79,12 @@ MONKEY OPTIONS: --verbose %s""" % ', '.join('--[no-]%s' % m for m in modules)
             sys.exit(script_help + '\n\n' + 'Cannot patch %r' % option)
         del argv[0]
     if verbose:
-        sys.stderr.write('gevent.monkey.patch_all(%s)\n' % ', '.join('%s=%s' % item for item in args.items()))
+        import pprint, os
+        print 'gevent.monkey.patch_all(%s)' % ', '.join('%s=%s' % item for item in args.items())
+        print 'sys.version=%s' % (sys.version.strip().replace('\n', ' '), )
+        print 'sys.path=%s' % pprint.pformat(sys.path)
+        print 'cwd=%s' % os.getcwd()
+
     patch_all(**args)
     if argv:
         sys.argv = argv
