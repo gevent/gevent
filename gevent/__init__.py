@@ -42,9 +42,6 @@ if libevent_version != libevent_headers_version:
 
 
 _threadlocal = None
-Greenlet = greenlet
-getcurrent = greenlet.getcurrent
-GreenletExit = greenlet.GreenletExit
 MAIN = greenlet.getcurrent()
 
 def timer(*args, **kwargs):
