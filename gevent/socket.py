@@ -726,17 +726,15 @@ def create_connection(address, timeout=_GLOBAL_DEFAULT_TIMEOUT):
     raise error, msg
 
 
-def wrap_ssl(sock, certificate=None, private_key=None): # XXX order of arguments is different from socket.ssl ?
+def wrap_ssl(sock, keyfile=None, certfile=None):
     from OpenSSL import SSL
     context = SSL.Context(SSL.SSLv23_METHOD)
-    if certificate is not None:
-        context.use_certificate_file(certificate)
-    if private_key is not None:
-        context.use_privatekey_file(private_key)
+    if certfile is not None:
+        context.use_certificate_file(certfile)
+    if keyfile is not None:
+        context.use_privatekey_file(keyfile)
     context.set_verify(SSL.VERIFY_NONE, lambda *x: True)
-
     connection = SSL.Connection(context, sock)
     connection.set_connect_state()
     return GreenSSL(connection)
-
 
