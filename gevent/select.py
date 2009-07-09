@@ -35,9 +35,10 @@ def select(read_list, write_list, error_list, t=None):
     if t is not None:
         t = gevent.timeout(t)
     try:
-        return hub.switch()
-    except gevent.TimeoutError:
-        return [], [], []
+        try:
+            return hub.switch()
+        except gevent.TimeoutError:
+            return [], [], []
     finally:
         for evt in allevents:
             evt.cancel()
