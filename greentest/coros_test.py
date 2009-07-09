@@ -25,12 +25,6 @@ from gevent import coros
 
 class TestEvent(TestCase):
     mode = 'static'
-    def setUp(self):
-        # raise an exception if we're waiting forever
-        self._cancel_timeout = gevent.timeout(1, RuntimeError('test takes too long'))
-
-    def tearDown(self):
-        self._cancel_timeout.cancel()
 
     def test_waiting_for_event(self):
         evt = coros.event()
