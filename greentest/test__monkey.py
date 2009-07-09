@@ -1,5 +1,5 @@
 from gevent import monkey
-monkey.patch_all(thread=True)
+monkey.patch_all()
 
 import time
 assert 'built-in' not in repr(time.sleep), repr(time.sleep)
