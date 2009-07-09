@@ -34,9 +34,6 @@ cdef extern from "libevent-internal.h":
 cdef extern from "sys/types.h":
     ctypedef unsigned char u_char
 
-cdef extern from "stdio.h":
-    void perror(char *s)
-
 cdef extern from "Python.h":
     void   Py_INCREF(object o)
     void   Py_DECREF(object o)
@@ -71,6 +68,12 @@ cdef extern from "event.h":
     int EVLOOP_ONCE
     int EVLOOP_NONBLOCK
     char* _EVENT_VERSION
+
+cdef extern from "string.h":
+    char* strerror(int errnum)
+
+cdef extern from "errno.h":
+    int errno
 
 IF EVENT_INTERNAL_AVAILABLE:
 
@@ -259,7 +262,7 @@ def dispatch():
     with nogil:
         ret = event_dispatch()
     if ret < 0:
-        perror("event_dispatch failed")
+        raise IOError(errno, strerror(errno))
     return ret
 
 def loop(nonblock=False):
@@ -272,7 +275,7 @@ def loop(nonblock=False):
     with nogil:
         ret = event_loop(flags)
     if ret < 0:
-        perror("event_loop failed")
+        raise IOError(errno, strerror(errno))
     return ret
 
 
