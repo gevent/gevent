@@ -1,3 +1,5 @@
+import sys
+
 def patch_os():
     from gevent import fork
     import os
@@ -28,13 +30,19 @@ def patch_socket():
     _socket.socketpair = socketpair
     # also gethostbyname, getaddrinfo
 
+def patch_ssl():
+    if sys.version_info[:2] >= (2, 6):
+        from gevent.socket import wrap_ssl
+        import ssl
+        ssl.wrap_socket = wrap_ssl
+
 def patch_select():
     from gevent.select import select
     _select = __import__('select')
     globals()['_select_select'] = _select.select
     _select.select = select
 
-def patch_all(socket=True, time=True, select=True, thread=True, os=True):
+def patch_all(socket=True, time=True, select=True, thread=True, os=True, ssl=True):
     # order is important
     if os:
         patch_os()
@@ -46,13 +54,10 @@ def patch_all(socket=True, time=True, select=True, thread=True, os=True):
         patch_socket()
     if select:
         patch_select()
-
-# XXX patch unittest to count switches and detect event_count and run the standard tests                    2 hour
-# make makefile() return GreenFile. since it uses socket's buffer, while _fileobject creates a new one      2 hour
-# probably make GreenSocket be also a file and makefile() just increases refcount and returns self
+    if ssl:
+        patch_ssl()
 
 if __name__=='__main__':
-    import sys
     modules = [x.replace('patch_', '') for x in globals().keys() if x.startswith('patch_') and x!='patch_all']
     script_help = """gevent.monkey - monkey patch the standard modules to use gevent.
 
