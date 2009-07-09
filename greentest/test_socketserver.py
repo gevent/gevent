@@ -1,11 +1,11 @@
 # Test suite for SocketServer.py
-# converted to greentest (Denis)
+# converted to unittest (Denis)
 from gevent import monkey
 monkey.patch_all()
 
 from greentest import test_support
 from greentest.test_support import (verbose, verify, TESTFN, TestSkipped,
-                               reap_children)
+                                    reap_children)
 test_support.requires('network')
 
 from SocketServer import *
@@ -16,7 +16,7 @@ import time
 import threading
 import sys
 import os
-import greentest
+import unittest
 
 NREQ = 3
 DELAY = 0.05
@@ -209,7 +209,7 @@ def testall():
         # client address so this cannot work:
         ##testloop(socket.AF_UNIX, dgramservers, MyDatagramHandler, testdgram)
 
-class Test(greentest.TestCase):
+class Test(unittest.TestCase):
 
     def tearDown(self):
         sloppy_cleanup()
