@@ -3,7 +3,16 @@ import os
 import traceback
 
 from gevent import core
-from py.magic import greenlet
+
+try:
+    from py.magic import greenlet
+    Greenlet = greenlet
+except ImportError:
+    import greenlet
+    Greenlet = greenlet.greenlet
+
+getcurrent = greenlet.getcurrent
+GreenletExit = greenlet.GreenletExit
 
 version_info = (0, 9, 0)
 __version__ = '0.9.0'
