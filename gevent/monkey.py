@@ -88,6 +88,7 @@ MONKEY OPTIONS: --verbose %s""" % ', '.join('--[no-]%s' % m for m in modules)
     patch_all(**args)
     if argv:
         sys.argv = argv
+        __package__ = None
         execfile(sys.argv[0])
     else:
         print script_help
