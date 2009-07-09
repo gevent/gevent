@@ -33,12 +33,17 @@ from time import sleep
 import weakref
 import gc
 
+from gevent.socket import _original_socket
+
+class Socket(_original_socket):
+    "Something we can have a weakref to"
+
 address = ('0.0.0.0', 7878)
 
 SOCKET_TIMEOUT = 0.1
 
 def init_server():
-    s = socket.socket()
+    s = socket.socket(Socket())
     s.settimeout(SOCKET_TIMEOUT)
     s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     s.bind(address)
@@ -64,7 +69,7 @@ def handle_request(s, raise_on_timeout):
 
 def make_request():
     #print 'make_request'
-    s = socket.socket()
+    s = socket.socket(Socket())
     s.connect(address)
     #print 'make_request - connected'
     res = s.send('hello')
