@@ -3,8 +3,6 @@ __thread = __import__('thread')
 from gevent import spawn, getcurrent, GreenletExit
 from gevent.coros import Semaphore as LockType
 
-error = __thread.error
-
 def get_ident(gr=None):
     if gr is None:
         return id(getcurrent())
