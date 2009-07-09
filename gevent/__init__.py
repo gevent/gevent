@@ -14,8 +14,8 @@ except ImportError:
 getcurrent = greenlet.getcurrent
 GreenletExit = greenlet.GreenletExit
 
-version_info = (0, 9, 0)
-__version__ = '0.9.0'
+version_info = (0, 9, 1)
+__version__ = '0.9.1'
 
 __all__ = ['Greenlet',
            'getcurrent',
