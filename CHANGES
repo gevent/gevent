@@ -1,0 +1,41 @@
+
+0.9.1
+-----
+
+gevent can now be compiled with libevent-1.3 (Thanks to Litao Wei for reporting this.)
+
+Hub now tries to silently recover after event_dispatch() failures (I've seen this happen
+even though event_reinit() is called as necessary). The end result is that fork() now works
+more reliably, as detected by test_socketserver.py - it used to fail occasionally, now it does not.
+
+The package was reorganized, most of the stuff from gevent/__init__.py was moved to gevent/greenlet.py.
+gevent/__init__.py imports some of it back but not everything.
+
+gevent.timeout was renamed to gevent.Timeout.
+
+Fixed a few bugs in queue.Queue.
+Add test_queue.py from standard tests to check how good is gevent.queue.Queue a replacement
+for a standard Queue (not good at all, timeouts in put() don't work yet)
+
+monkey: patches ssl module when on 2.6 (very limited support).
+
+Improved compatibility with Python 2.6 and Python 2.4.
+
+Greenlet installed from PyPI (without py.magic prefix) is properly recognized now.
+
+core.pyx was accidentally left out of the source package, it's included now.
+
+GreenSocket wraps a socket object from _socket module rather than from socket.
+
+
+0.9.0
+-----
+
+Started as eventlet 0.8.11 spin-off, with intention to support only libevent as a backend.
+Compared to eventlet, this version has a much simpler API and implementation and a few
+severe bugs fixed, namely
+ - full duplex in sockets, i.e. read() and write() on the same fd do not cancel one another
+ - GreenSocket.close() does not hang as it could with eventlet
+(there's a test in my repo of eventlet that reproduces both of them:
+http://bitbucket.org/denis/eventlet/src/tip/greentest/test__socket.py)
+
