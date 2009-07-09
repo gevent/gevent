@@ -147,10 +147,11 @@ class TestApi(TestCase):
 
         g = gevent.spawn(go)
         try:
-            socket.tcp_server(server, client_connected)
-        except:
-            gevent.kill(g)
-            raise
+            try:
+                socket.tcp_server(server, client_connected)
+            except:
+                gevent.kill(g)
+                raise
         finally:
             gevent.sleep(0)
 
