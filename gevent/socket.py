@@ -29,13 +29,16 @@ from errno import EAGAIN
 
 __all__ = ['GreenSocket', 'GreenFile', 'GreenPipe']
 
-_socket = __import__('socket')
+import _socket
 _original_socket = _socket.socket
 _original_fromfd = _socket.fromfd
 _original_socketpair = _socket.socketpair
 error = _socket.error
 timeout = _socket.timeout
 getaddrinfo = _socket.getaddrinfo # XXX implement this and others using libevent's dns
+__socket__ = __import__('socket')
+_fileobject = __socket__._fileobject
+sslerror = __socket__.sslerror
 
 try:
     from OpenSSL import SSL
@@ -320,7 +323,7 @@ class GreenSocket(object):
         return fn(*args, **kw)
 
     def makefile(self, mode='r', bufsize=-1):
-        return _socket._fileobject(self.dup(), mode, bufsize)
+        return _fileobject(self.dup(), mode, bufsize)
 
     def makeGreenFile(self, mode='r', bufsize=-1):
         return GreenFile(self.dup())
@@ -574,7 +577,7 @@ class GreenSSL(GreenSocket):
         try:
             return self.sendall(data)
         except SSL.Error, ex:
-            raise _socket.sslerror(str(ex))
+            raise sslerror(str(ex))
 
     def server(self):
         return self.fd.server()
