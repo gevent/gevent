@@ -19,7 +19,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 from gevent import monkey
-monkey.patch_socket()
+monkey.patch_all(thread=False)
 
 import cgi
 import os
