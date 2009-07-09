@@ -35,7 +35,7 @@ __all__ = ['Greenlet',
 
 libevent_version = core.get_version()
 libevent_headers_version = core.get_header_version()
-if libevent_version != libevent_headers_version:
+if libevent_headers_version is not None and libevent_version != libevent_headers_version:
     import warnings
     msg = "version mismatch: system libevent version is %r but this gevent is compiled against %r" % (libevent_version, libevent_headers_version)
     warnings.warn(msg, UserWarning, stacklevel=2)
