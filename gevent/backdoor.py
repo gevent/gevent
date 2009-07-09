@@ -122,6 +122,9 @@ def backdoor((conn, addr), locals=None):
 
 
 if __name__ == '__main__':
-    from gevent.socket import tcp_server, tcp_listener
-    tcp_server(tcp_listener(('127.0.0.1', 9000)), backdoor, {})
+    if not sys.argv[1:]:
+        print 'USAGE: %s PORT' % sys.argv[0]
+    else:
+        from gevent.socket import tcp_server, tcp_listener
+        tcp_server(tcp_listener(('127.0.0.1', int(sys.argv[1]))), backdoor, {})
 
