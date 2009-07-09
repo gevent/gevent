@@ -39,6 +39,9 @@ def select(read_list, write_list, error_list, t=None):
             return hub.switch()
         except gevent.TimeoutError:
             return [], [], []
+        if hasattr(result, '__len__') and len(result)==3:
+            return result
+        raise RuntimeError("Invalid switch into select: %r" % (result, ))
     finally:
         for evt in allevents:
             evt.cancel()
