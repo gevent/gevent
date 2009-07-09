@@ -334,7 +334,7 @@ class TestHttps(TestCase):
         certificate_file = os.path.join(os.path.dirname(__file__), 'test_server.crt')
         private_key_file = os.path.join(os.path.dirname(__file__), 'test_server.key')
 
-        sock = socket.ssl_listener(('', 4201), certificate_file, private_key_file)
+        sock = socket.ssl_listener(('', 4201), private_key_file, certificate_file)
 
         g = gevent.spawn(wsgi.server, sock, wsgi_app)
         try:
@@ -352,7 +352,7 @@ class TestHttps(TestCase):
 
         certificate_file = os.path.join(os.path.dirname(__file__), 'test_server.crt')
         private_key_file = os.path.join(os.path.dirname(__file__), 'test_server.key')
-        sock = socket.ssl_listener(('', 4202), certificate_file, private_key_file)
+        sock = socket.ssl_listener(('', 4202), private_key_file, certificate_file)
         g = gevent.spawn(wsgi.server, sock, wsgi_app)
         try:
             req = HTTPRequest("https://localhost:4202/foo")

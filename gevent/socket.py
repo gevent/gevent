@@ -638,7 +638,7 @@ def tcp_listener(address, backlog=50):
     socket_bind_and_listen(sock, address, backlog=backlog)
     return sock
 
-def ssl_listener(address, certificate, private_key):
+def ssl_listener(address, private_key, certificate):
     """Listen on the given (ip, port) *address* with a TCP socket that
     can do SSL.
 
@@ -652,7 +652,7 @@ def ssl_listener(address, certificate, private_key):
     which accepts connections forever and spawns greenlets for
     each incoming connection.
     """
-    sock = wrap_ssl(_original_socket(), certificate, private_key)
+    sock = wrap_ssl(_original_socket(), private_key, certificate)
     socket_bind_and_listen(sock, address)
     sock.is_secure = True
     return sock

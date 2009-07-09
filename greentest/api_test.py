@@ -74,9 +74,7 @@ class TestApi(TestCase):
             finally:
                 listenfd.close()
 
-        server = socket.ssl_listener(('0.0.0.0', 0),
-                                  self.certificate_file,
-                                  self.private_key_file)
+        server = socket.ssl_listener(('0.0.0.0', 0), self.private_key_file, self.certificate_file)
         gevent.spawn(accept_once, server)
 
         client = socket.wrap_ssl(
