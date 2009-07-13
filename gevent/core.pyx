@@ -256,7 +256,8 @@ def init():
 
 def dispatch():
     """Dispatch all events on the event queue.
-    Returns -1 on error, 0 on success, and 1 if no events are registered.
+    Returns 0 on success, and 1 if no events are registered.
+    May raise IOError.
     """
     cdef int ret
     with nogil:
@@ -267,7 +268,9 @@ def dispatch():
 
 def loop(nonblock=False):
     """Dispatch all pending events on queue in a single pass.
-    Returns -1 on error, 0 on success, and 1 if no events are registered."""
+    Returns 0 on success, and 1 if no events are registered.
+    May raise IOError.
+    """
     cdef int flags, ret
     flags = EVLOOP_ONCE
     if nonblock:
