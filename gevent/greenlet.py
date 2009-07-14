@@ -134,11 +134,13 @@ class Hub(object):
                     raise
                 sys.stderr.write('Restarting gevent.core.dispatch() after an error [%s]: %s\n' % (loop_count, ex))
                 continue
-            if result>0:
-                return 'Hub.run() has finished because there are no events registered'
-            elif result<0:
-                return 'Hub.run() has finished because there was an error'
-            return result
+            if result==1:
+                raise DispatchExit('No events registered')
+            raise DispatchExit('dispatch() exited with code %s' % (result, ))
+
+
+class DispatchExit(Exception):
+    pass
 
 
 def _wait_helper(ev, fd, evtype):
