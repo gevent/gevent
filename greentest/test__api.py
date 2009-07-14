@@ -37,18 +37,12 @@ class Test(greentest.TestCase):
                 state.append('except')
                 # catching GreenletExit
                 pass
-            # when switching to hub, hub makes itself the parent of this greenlet,
-            # thus after the function's done, the control will go to the parent
-            # QQQ why the first sleep is not enough?
-            gevent.sleep(0)
             state.append('finished')
         g = gevent.spawn(test)
         gevent.sleep(DELAY/2)
         assert state == ['start'], state
-        gevent.kill(g)
+        gevent.kill(g, wait=True)
         # will not get there, unless switching is explicitly scheduled by kill
-        assert state == ['start', 'except'], state
-        gevent.sleep(DELAY)
         assert state == ['start', 'except', 'finished'], state
 
     def test_nested_with_timeout(self):
