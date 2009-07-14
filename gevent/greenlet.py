@@ -45,18 +45,92 @@ def spawn_later(seconds, function, *args, **kwargs):
     return g
 
 
-def kill(g, *throw_args):
-    core.timer(0, g.throw, *throw_args)
-    if get_hub().greenlet is not getcurrent():
-        sleep()
+class Waiter(object):
+    """A low level synchronization class.
+
+    Wrapper around switch() and throw() calls that makes them safe.
+    Switching will occur only if the waiting greenlet is executing wait()
+    method currently. Otherwise, switch() and throw() are no-ops.
+    """
+    __slots__ = ['greenlet']
+
+    def __init__(self):
+        self.greenlet = None
+
+    def switch(self, value=None):
+        """Wake up the greenlet that is calling wait() currently (if there is one).
+        Can only be called from get_hub().greenlet.
+        """
+        assert greenlet.getcurrent() is get_hub().greenlet
+        if self.greenlet is not None:
+            self.greenlet.switch(value)
+
+    def throw(self, *throw_args):
+        """Make greenlet calling wait() wake up (if there is a wait()).
+        Can only be called from get_hub().greenlet.
+        """
+        assert greenlet.getcurrent() is get_hub().greenlet
+        if self.greenlet is not None:
+            self.greenlet.throw(*throw_args)
+
+    def wait(self):
+        """Wait until switch() or throw() is called.
+        """
+        assert self.greenlet is None, self.greenlet
+        current = greenlet.getcurrent()
+        assert current is not get_hub().greenlet
+        self.greenlet = current
+        try:
+            return get_hub().switch()
+        finally:
+            self.greenlet = None
 
 
-def killall(greenlets, *throw_args):
+def _kill(greenlet, exception, waiter):
+    try:
+        greenlet.throw(exception)
+    except:
+        traceback.print_exc()
+    waiter.switch()
+
+
+def kill(greenlet, exception=GreenletExit, wait=False, polling_period=1):
+    """Kill greenlet with exception (GreenletExit by default).
+    Wait for it to die if wait=True.
+    """
+    waiter = Waiter()
+    core.timer(0, _kill, greenlet, exception, waiter)
+    if wait:
+        waiter.wait()
+        while not greenlet.dead:
+            sleep(polling_period)
+
+
+def _killall(greenlets, exception, waiter):
+    diehards = []
     for g in greenlets:
         if not g.dead:
-            core.timer(0, g.throw, *throw_args)
-    if get_hub().greenlet is not getcurrent():
-        sleep()
+            try:
+                g.throw(exception)
+            except:
+                traceback.print_exc()
+            if not g.dead:
+                diehards.append(g)
+    waiter.switch(diehards)
+
+
+def killall(greenlets, exception=GreenletExit, wait=False, polling_period=1):
+    """Kill all the greenlets with exception (GreenletExit by default).
+    Wait for them to die if wait=True.
+    """
+    waiter = Waiter()
+    core.timer(0, _killall, greenlets, exception, waiter)
+    if wait:
+        alive = waiter.wait()
+        while alive:
+            sleep(polling_period)
+            while alive and alive[0].dead:
+                del alive[0]
 
 
 def sleep(seconds=0):
