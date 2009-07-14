@@ -130,7 +130,7 @@ class Hub(object):
                 result = core.dispatch()
             except IOError, ex:
                 loop_count += 1
-                if loop_count > 100:
+                if loop_count > 15:
                     raise
                 sys.stderr.write('Restarting gevent.core.dispatch() after an error [%s]: %s\n' % (loop_count, ex))
                 continue
