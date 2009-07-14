@@ -3,6 +3,7 @@ import os
 import traceback
 from gevent import core
 
+
 __all__ = ['getcurrent',
            'TimeoutError',
            'Timeout',
@@ -15,6 +16,7 @@ __all__ = ['getcurrent',
            'with_timeout',
            'fork']
 
+
 try:
     from py.magic import greenlet
     Greenlet = greenlet
@@ -26,6 +28,7 @@ getcurrent = greenlet.getcurrent
 GreenletExit = greenlet.GreenletExit
 MAIN = greenlet.getcurrent()
 _threadlocal = None
+
 
 class TimeoutError(Exception):
     """Exception raised if an asynchronous operation times out"""
@@ -160,7 +163,6 @@ def signal(signalnum, handler, *args, **kwargs):
         except:
             MAIN.throw(*sys.exc_info())
     return core.signal(signalnum, deliver_exception_to_MAIN)
-
 
 
 def get_hub():
