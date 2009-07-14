@@ -474,6 +474,8 @@ class GeneralModuleTests(greentest.TestCase):
         reuse = sock.getsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR)
         self.failIf(reuse == 0, "failed to set reuse mode")
 
+    __timeout__ = 2
+
     def testSendAfterClose(self):
         # testing send() after close() with timeout
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
