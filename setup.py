@@ -3,8 +3,7 @@ import sys
 import os
 import glob
 import re
-from setuptools import find_packages, setup
-from distutils.core import Extension
+from distutils.core import Extension, setup
 
 name = 'gevent.core'
 sources = ['gevent/core.c']
@@ -66,7 +65,7 @@ setup(
     description='Greenlet/Libevent-based networking library',
     author='Denis Bilenko',
     author_email='denis.bilenko@gmail.com',
-    packages=find_packages(exclude=['greentest']),
+    packages=['gevent'],
     ext_modules=[libevent],
     classifiers=[
     "License :: OSI Approved :: MIT License",
