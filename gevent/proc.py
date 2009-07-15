@@ -208,13 +208,8 @@ class decorate_send(object):
         self._event.send((self._tag, value))
 
 
-def killall(procs, *throw_args):
-    if not throw_args:
-        throw_args = (ProcExit, )
-    for g in procs:
-        if not g.dead:
-            core.timer(0, g.throw, *throw_args)
-
+# XXX this killall should actually be aware of link() and use it to avoid polling
+killall = greenlet.killall
 
 class NotUsed(object):
 
