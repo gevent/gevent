@@ -467,6 +467,7 @@ class Source(object):
 
 
 class Waiter(object):
+    # XXX: reuse Waiter from gevent and remove this one
 
     def __init__(self):
         self.greenlet = None
@@ -612,17 +613,7 @@ def spawn_link_exception(function, *args, **kwargs):
     return p
 
 
-def trap_errors(errors, func, *args, **kwargs):
-    """DEPRECATED; use wrap_errors"""
-    import warnings
-    warnings.warn("proc.trap_errors function is deprecated in favor of proc.wrap_errors class",
-                  DeprecationWarning, stacklevel=2)
-    try:
-        return func(*args, **kwargs)
-    except errors, ex:
-        return ex
-
-
+# not specific to proc module
 class wrap_errors(object):
     """Helper to make function return an exception, rather than raise it.
 
