@@ -706,6 +706,21 @@ class RunningProcSet(object):
         self.add(p)
         return p
 
+    def spawn_link(self, func, *args, **kwargs):
+        p = spawn_link(func, *args, **kwargs)
+        self.add(p)
+        return p
+
+    def spawn_link_value(self, func, *args, **kwargs):
+        p = spawn_link_value(func, *args, **kwargs)
+        self.add(p)
+        return p
+
+    def spawn_link_exception(self, func, *args, **kwargs):
+        p = spawn_link_exception(func, *args, **kwargs)
+        self.add(p)
+        return p
+
     def waitall(self, trap_errors=True):
         while self.procs:
             waitall(self.procs, trap_errors=trap_errors)
