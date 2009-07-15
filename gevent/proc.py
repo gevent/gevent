@@ -82,7 +82,6 @@ __all__ = ['LinkedExited',
            'LinkedFailed',
            'LinkedCompleted',
            'LinkedKilled',
-           'ProcExit',
            'waitall',
            'killall'
            'Source',
