@@ -10,11 +10,14 @@ __all__ = ['getcurrent',
            'sleep',
            'signal',
            'with_timeout',
-           'fork']
+           'fork',
+           'reinit']
 
 # add here Queue, Event, Pipe?, Socket?
 
 from gevent.greenlet import *
+from gevent import core
+reinit = core.reinit
 
 
 def timeout(*args, **kwargs):
