@@ -54,6 +54,10 @@ except ImportError:
         class SysCallError(object):
             pass
 
+        class Error(object):
+            pass
+
+
 CONNECT_ERR = (errno.EINPROGRESS, errno.EALREADY, errno.EWOULDBLOCK)
 CONNECT_SUCCESS = (0, errno.EISCONN)
 def socket_connect(descriptor, address):
