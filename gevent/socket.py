@@ -304,8 +304,7 @@ class GreenSSL(GreenSocket):
         if self.timeout!=0.0:
             wait_reader(self.fileno(), timeout=self.gettimeout(), timeout_exc=timeout)
         try:
-            while True:
-                return self.fd.recv(buflen)
+            return self.fd.recv(buflen)
         except SSL.ZeroReturnError:
             return ''
         except SSL.SysCallError, e:
