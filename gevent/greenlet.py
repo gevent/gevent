@@ -192,7 +192,7 @@ class Hub(object):
             try:
                 switch_out()
             except:
-                traceback.print_exception(*sys.exc_info())
+                traceback.print_exc()
         if self.greenlet.dead:
             self.greenlet = Greenlet(self.run)
         return self.greenlet.switch()
