@@ -190,9 +190,6 @@ cdef class event:
             event_del(&self.ev)
             Py_DECREF(self)
 
-    def __dealloc__(self):
-        self.cancel()
-
     def __repr__(self):
         if self.pending:
             pending = ' pending'
