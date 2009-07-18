@@ -27,7 +27,10 @@ except ImportError:
 getcurrent = greenlet.getcurrent
 GreenletExit = greenlet.GreenletExit
 MAIN = greenlet.getcurrent()
-_threadlocal = None
+
+thread = __import__('thread')
+threadlocal = thread._local
+_threadlocal = threadlocal()
 
 
 class TimeoutError(Exception):
@@ -168,14 +171,11 @@ def signal(signalnum, handler, *args, **kwargs):
 def get_hub():
     global _threadlocal
     try:
-        hub = _threadlocal.hub
+        return _threadlocal.hub
     except AttributeError:
-        # do not import anything that can be monkey-patched at top level
-        import threading
-        # XXX use _local directly from _thread or from _threadlocal
-        _threadlocal = threading.local()
-        hub = _threadlocal.hub = Hub()
-    return hub
+        # do not pretend to support multiple threads because it's not implemented properly by core.pyx
+        # this may change in the future, although currently I don't have a strong need for this
+        raise NotImplementedError('gevent is only usable from a single thread')
 
 
 class Hub(object):
@@ -213,6 +213,8 @@ class Hub(object):
             if result==1:
                 raise DispatchExit('No events registered')
             raise DispatchExit('dispatch() exited with code %s' % (result, ))
+
+_threadlocal.hub = Hub()
 
 
 class DispatchExit(Exception):
