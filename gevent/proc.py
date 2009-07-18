@@ -421,7 +421,7 @@ class Source(object):
                 core.timer(0, self._do_send, links, consult)
                 raise
 
-    def wait(self, timeout=None, *throw_args):
+    def wait(self, timeout=None, exception=greenlet.TimeoutError):
         """Wait until send() or send_exception() is called or `timeout' has
         expired. Return the argument of send or raise the argument of
         send_exception. If timeout has expired, None is returned.
@@ -435,35 +435,46 @@ class Source(object):
                 return self.value
             else:
                 greenlet.getcurrent().throw(*self._exc)
-        if timeout is not None:
-            timer = greenlet.Timeout(timeout, *throw_args)
-            timer.__enter__()
-            if timeout==0:
-                if timer.__exit__(None, None, None):
-                    return
-                else:
-                    try:
-                        greenlet.getcurrent().throw(timer.exception)
-                    except:
-                        if not timer.__exit__(*sys.exc_info()):
-                            raise
-                    return
-            EXC = True
-        try:
+        elif timeout is None:
+            waiter = Waiter()
+            self.link(waiter)
             try:
-                waiter = Waiter()
-                self.link(waiter)
+                return waiter.wait()
+            finally:
+                self.unlink(waiter)
+        elif timeout <= 0:
+            if exception is None:
+                return
+            else:
+                raise exception
+        else:
+            # what follows is:
+            # with greenlet.Timeout(timeout, *throw_args):
+            #     waiter = Waiter()
+            #     self.link(waiter)
+            #     try:
+            #         return waiter.wait()
+            #     finally:
+            #         self.unlink(waiter)
+            # however, with statement is hand decompiled to make it 2.4 compatible
+            timer = greenlet.Timeout(timeout, exception)
+            EXC = True
+            try:
                 try:
-                    return waiter.wait()
-                finally:
-                    self.unlink(waiter)
-            except:
-                EXC = False
-                if timeout is None or not timer.__exit__(*sys.exc_info()):
-                    raise
-        finally:
-            if timeout is not None and EXC:
-                timer.__exit__(None, None, None)
+                    waiter = Waiter()
+                    self.link(waiter)
+                    try:
+                        return waiter.wait()
+                    finally:
+                        self.unlink(waiter)
+                except:
+                    EXC = False
+                    if not timer.__exit__(*sys.exc_info()):
+                        raise
+            finally:
+                if EXC:
+                    timer.__exit__(None, None, None)
+    # QQQ allow exception to be a tuple?
 
 
 class Waiter(object):
@@ -677,6 +688,7 @@ class RunningProcSet(object):
             for x in self.procs:
                 if x.greenlet == item:
                     return True
+            # hack Proc's __hash__ and __eq__ to avoid special casing this?
         else:
             return item in self.procs
 
