@@ -31,6 +31,7 @@ MAIN = greenlet.getcurrent()
 thread = __import__('thread')
 threadlocal = thread._local
 _threadlocal = threadlocal()
+_threadlocal.Hub = None
 
 
 class TimeoutError(Exception):
@@ -173,9 +174,16 @@ def get_hub():
     try:
         return _threadlocal.hub
     except AttributeError:
-        # do not pretend to support multiple threads because it's not implemented properly by core.pyx
-        # this may change in the future, although currently I don't have a strong need for this
-        raise NotImplementedError('gevent is only usable from a single thread')
+        try:
+            hubtype = _threadlocal.Hub
+        except AttributeError:
+            # do not pretend to support multiple threads because it's not implemented properly by core.pyx
+            # this may change in the future, although currently I don't have a strong need for this
+            raise NotImplementedError('gevent is only usable from a single thread')
+        if hubtype is None:
+            hubtype = Hub
+        hub = _threadlocal.hub = hubtype()
+        return hub
 
 
 class Hub(object):
@@ -213,8 +221,6 @@ class Hub(object):
             if result==1:
                 raise DispatchExit('No events registered')
             raise DispatchExit('dispatch() exited with code %s' % (result, ))
-
-_threadlocal.hub = Hub()
 
 
 class DispatchExit(Exception):
