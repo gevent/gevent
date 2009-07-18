@@ -198,6 +198,12 @@ cdef class event:
         return '<%s flags=0x%x, handle=%s, callback=%s, arg=%s%s>' % \
                (type(self).__name__, self.ev.ev_flags, self.ev.ev_fd, self._callback, self._arg, pending)
 
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *exit_args):
+        self.cancel()
+
 
 cdef class read(event):
 
