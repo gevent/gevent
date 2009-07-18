@@ -25,7 +25,6 @@ import os
 import errno
 import unittest
 import gevent
-from gevent.greenlet import get_hub
 
 disabled_marker = '-*-*-*-*-*- disabled -*-*-*-*-*-'
 def exit_disabled():
@@ -45,23 +44,23 @@ class TestCase(unittest.TestCase):
         self._switch_count = None
 
     def setUp(self):
-        from gevent import core
         gevent.sleep(0) # switch at least once to setup signal handlers
-        if hasattr(core, '_event_count'):
-            self._event_count = (core._event_count(), core._event_count_active())
-        if hasattr(get_hub(), 'switch_count'):
-            self._switch_count = get_hub().switch_count
+        if hasattr(gevent.core, '_event_count'):
+            self._event_count = (gevent.core._event_count(), gevent.core._event_count_active())
+        hub = gevent.greenlet.get_hub()
+        if hasattr(hub, 'switch_count'):
+            self._switch_count = hub.switch_count
         self._timer = gevent.Timeout(self.__timeout__, RuntimeError('test is taking too long'))
 
     def tearDown(self):
         if hasattr(self, '_timer'):
             self._timer.cancel()
-            if self.__switch_check__ and self._switch_count is not None and hasattr(get_hub(), 'switch_count') and get_hub().switch_count <= self._switch_count:
+            hub = gevent.greenlet.get_hub()
+            if self.__switch_check__ and self._switch_count is not None and hasattr(hub, 'switch_count') and hub.switch_count <= self._switch_count:
                 name = getattr(self, '_testMethodName', '') # 2.4 does not have it
                 sys.stderr.write('WARNING: %s.%s did not switch\n' % (type(self).__name__, name))
-            from gevent import core
-            if hasattr(core, '_event_count'):
-                event_count = (core._event_count(), core._event_count_active())
+            if hasattr(gevent.core, '_event_count'):
+                event_count = (gevent.core._event_count(), gevent.core._event_count_active())
                 if event_count > self._event_count:
                     args = (type(self).__name__, self._testMethodName, self._event_count, event_count)
                     sys.stderr.write('WARNING: %s.%s event count was %s, now %s\n' % args)
