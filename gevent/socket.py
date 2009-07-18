@@ -205,11 +205,22 @@ class GreenSocket(object):
         return self.fd.send(*args)
 
     def sendall(self, data):
-        # XXX does not respect timeout
-        tail = self.send(data)
-        while tail < len(data):
-            wait_writer(self.fileno(), timeout_exc=timeout)
-            tail += self.send(data[tail:])
+        if self.timeout is None:
+            tail = 0
+            while tail < len(data):
+                wait_writer(self.fileno())
+                tail += self.fd.send(data[tail:])
+        elif not self.timeout:
+            return self.fd.sendall(data)
+        else:
+            end = time.time() + self.timeout
+            tail = 0
+            while tail < len(data):
+                left = end - time.time()
+                if left <= 0:
+                    raise timeout
+                wait_writer(self.fileno(), timeout=left, timeout_exc=timeout)
+                tail += self.fd.send(data[tail:])
 
     def sendto(self, *args):
         if self.timeout!=0.0:
