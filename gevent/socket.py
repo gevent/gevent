@@ -123,7 +123,7 @@ class GreenSocket(object):
             if res is not None:
                 client, addr = res
                 return type(self)(client), addr
-            wait_reader(fd.fileno(), timeout=self.gettimeout(), timeout_exc=timeout)
+            wait_reader(fd.fileno(), timeout=self.timeout, timeout_exc=timeout)
 
     def close(self):
         self.fd = _closedsocket()
@@ -135,11 +135,11 @@ class GreenSocket(object):
         if self.timeout==0.0:
             return self.fd.connect(address)
         fd = self.fd
-        if self.gettimeout() is None:
+        if self.timeout is None:
             while not socket_connect(fd, address):
                 wait_writer(fd.fileno(), timeout_exc=timeout)
         else:
-            end = time.time() + self.gettimeout()
+            end = time.time() + self.timeout
             while True:
                 if socket_connect(fd, address):
                     return
@@ -151,14 +151,14 @@ class GreenSocket(object):
         if self.timeout==0.0:
             return self.fd.connect_ex(address)
         fd = self.fd
-        if self.gettimeout() is None:
+        if self.timeout is None:
             while not socket_connect(fd, address):
                 try:
                     wait_writer(fd.fileno(), timeout_exc=timeout)
                 except error, ex:
                     return ex[0]
         else:
-            end = time.time() + self.gettimeout()
+            end = time.time() + self.timeout
             while True:
                 if socket_connect(fd, address):
                     return 0
@@ -180,28 +180,28 @@ class GreenSocket(object):
 
     def recv(self, *args):
         if self.timeout!=0.0:
-            wait_reader(self.fileno(), timeout=self.gettimeout(), timeout_exc=timeout)
+            wait_reader(self.fileno(), timeout=self.timeout, timeout_exc=timeout)
         res = self.fd.recv(*args)
         return res
 
     def recvfrom(self, *args):
         if self.timeout!=0.0:
-            wait_reader(self.fileno(), timeout=self.gettimeout(), timeout_exc=timeout)
+            wait_reader(self.fileno(), timeout=self.timeout, timeout_exc=timeout)
         return self.fd.recvfrom(*args)
 
     def recvfrom_into(self, *args):
         if self.timeout!=0.0:
-            wait_reader(self.fileno(), timeout=self.gettimeout(), timeout_exc=timeout)
+            wait_reader(self.fileno(), timeout=self.timeout, timeout_exc=timeout)
         return self.fd.recvfrom_into(*args)
 
     def recv_into(self, *args):
         if self.timeout!=0.0:
-            wait_reader(self.fileno(), timeout=self.gettimeout(), timeout_exc=timeout)
+            wait_reader(self.fileno(), timeout=self.timeout, timeout_exc=timeout)
         return self.fd.recv_into(*args)
 
     def send(self, *args):
         if self.timeout!=0.0:
-            wait_writer(self.fileno(), timeout=self.gettimeout(), timeout_exc=timeout)
+            wait_writer(self.fileno(), timeout=self.timeout, timeout_exc=timeout)
         return self.fd.send(*args)
 
     def sendall(self, data):
@@ -263,7 +263,7 @@ class GreenSSL(GreenSocket):
                 accepted = type(self)(client)
                 accepted.do_handshake() # XXX
                 return accepted, addr
-            wait_reader(fd.fileno(), timeout=self.gettimeout(), timeout_exc=timeout)
+            wait_reader(fd.fileno(), timeout=self.timeout, timeout_exc=timeout)
 
     def do_handshake(self):
         while True:
@@ -284,7 +284,7 @@ class GreenSSL(GreenSocket):
 
     def send(self, data):
         if self.timeout!=0.0:
-            wait_writer(self.fileno(), timeout=self.gettimeout(), timeout_exc=timeout)
+            wait_writer(self.fileno(), timeout=self.timeout, timeout_exc=timeout)
         try:
             return self.fd.send(data)
         except SSL.WantWriteError:
@@ -302,7 +302,7 @@ class GreenSSL(GreenSocket):
         if pending:
             return self.fd.recv(min(pending, buflen))
         if self.timeout!=0.0:
-            wait_reader(self.fileno(), timeout=self.gettimeout(), timeout_exc=timeout)
+            wait_reader(self.fileno(), timeout=self.timeout, timeout_exc=timeout)
         try:
             return self.fd.recv(buflen)
         except SSL.ZeroReturnError:
