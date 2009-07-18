@@ -246,7 +246,9 @@ def wait_writer(fileno, timeout=-1, timeout_exc=TimeoutError):
 
 
 class _SilentException:
-    pass
+    """Used internally by Timeout as an exception which is not raise outside of with-block,
+    and therefore is not visible by the user, unless she uses 'except:' construct.
+    """
 
 
 class Timeout(object):
@@ -254,14 +256,19 @@ class Timeout(object):
 
     Raise an exception in the block after timeout.
 
-    with Timeout(seconds[, exc]):
+    with Timeout(seconds[, exc]) as timeout:
         ... code block ...
 
     Assuming code block is yielding (i.e. gives up control to the hub),
     an exception provided in `exc' argument will be raised
-    (TimeoutError if `exc' is omitted).
+    (TimeoutError if `exc' is omitted). Although the timeout will be cancelled
+    upon the block exit, it is also possible to cancel it inside the block explicitly,
+    by calling timeout.cancel().
 
-    When exc is None, code block is interrupted silently.
+    When exc is None, code block is interrupted silently. (Which means that an
+    exception that is not a subclass of Exception is raised but silented before exiting
+    the block, thus giving the illusion that the block was interrupted. Catching
+    all exceptions with "except:" will catch that exception too)
     """
 
     def __init__(self, seconds, exception=TimeoutError):
