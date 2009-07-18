@@ -18,9 +18,3 @@ __all__ = ['getcurrent',
 from gevent.greenlet import *
 from gevent import core
 reinit = core.reinit
-
-
-def timeout(*args, **kwargs):
-    import warnings
-    warnings.warn("timeout is deprecated; use Timeout", DeprecationWarning, stacklevel=2)
-    return Timeout(*args, **kwargs)
