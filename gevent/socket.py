@@ -336,7 +336,7 @@ class GreenSSL(GreenSocket):
 
     def makefile(self, mode='r', bufsize=-1):
         self._makefile_refs += 1
-        return _fileobject(self, mode, bufsize)
+        return _fileobject(self, mode, bufsize, close=True)
 
     def close (self):
         if self._makefile_refs < 1:
