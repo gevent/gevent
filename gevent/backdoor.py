@@ -101,7 +101,7 @@ def backdoor_server(server, locals=None):
                 fl = conn.makeGreenFile("rw")
                 fl.newlines = '\n'
                 greenlet = SocketConsole(fl, (host, port), locals)
-                core.timer(0, greenlet.switch)
+                core.active_event(greenlet.switch)
         except socket.error, e:
             # Broken pipe means it was shutdown
             if e[0] != 32:
@@ -119,7 +119,7 @@ def backdoor((conn, addr), locals=None):
     fl = conn.makeGreenFile("rw")
     fl.newlines = '\n'
     greenlet = SocketConsole(fl, (host, port), locals)
-    core.timer(0, greenlet.switch)
+    core.active_event(greenlet.switch)
 
 
 if __name__ == '__main__':

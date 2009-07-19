@@ -228,7 +228,7 @@ def spawn_greenlet(function, *args):
     """
     g = greenlet.Greenlet(function)
     g.parent = greenlet.get_hub().greenlet
-    core.timer(0, g.switch, *args)
+    core.active_event(g.switch, *args)
     return g
 
 
@@ -397,7 +397,7 @@ class Source(object):
         self._start_send()
 
     def _start_send(self):
-        core.timer(0, self._do_send, self._value_links.items(), self._value_links)
+        core.active_event(self._do_send, self._value_links.items(), self._value_links)
 
     def send_exception(self, *throw_args):
         assert not self.ready(), "%s has been fired already" % self
@@ -406,7 +406,7 @@ class Source(object):
         self._start_send_exception()
 
     def _start_send_exception(self):
-        core.timer(0, self._do_send, self._exception_links.items(), self._exception_links)
+        core.active_event(self._do_send, self._exception_links.items(), self._exception_links)
 
     def _do_send(self, links, consult):
         while links:
@@ -418,7 +418,7 @@ class Source(object):
                     finally:
                         consult.pop(listener, None)
             except:
-                core.timer(0, self._do_send, links, consult)
+                core.active_event(self._do_send, links, consult)
                 raise
 
     def wait(self, timeout=None, exception=greenlet.TimeoutError):
@@ -598,7 +598,7 @@ class Proc(Source):
         if not self.dead:
             if not throw_args:
                 throw_args = (ProcExit, )
-            core.timer(0, self.greenlet.throw, *throw_args)
+            core.active_event(self.greenlet.throw, *throw_args)
             if greenlet.getcurrent() is not greenlet.get_hub().greenlet:
                 greenlet.sleep(0)
 

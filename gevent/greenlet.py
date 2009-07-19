@@ -41,7 +41,7 @@ class TimeoutError(Exception):
 def spawn(function, *args, **kwargs):
     g = Greenlet(lambda : function(*args, **kwargs))
     g.parent = get_hub().greenlet
-    core.timer(0, g.switch)
+    core.active_event(g.switch)
     return g
 
 
@@ -106,7 +106,7 @@ def kill(greenlet, exception=GreenletExit, wait=False, polling_period=1):
     Wait for it to die if wait=True.
     """
     waiter = Waiter()
-    core.timer(0, _kill, greenlet, exception, waiter)
+    core.active_event(_kill, greenlet, exception, waiter)
     if wait:
         waiter.wait()
         while not greenlet.dead:
@@ -131,7 +131,7 @@ def killall(greenlets, exception=GreenletExit, wait=False, polling_period=1):
     Wait for them to die if wait=True.
     """
     waiter = Waiter()
-    core.timer(0, _killall, greenlets, exception, waiter)
+    core.active_event(_killall, greenlets, exception, waiter)
     if wait:
         alive = waiter.wait()
         while alive:
