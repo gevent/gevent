@@ -50,6 +50,7 @@ cdef extern from "event.h":
 
     struct event_t "event":
         int   ev_fd
+        short ev_events
         int   ev_flags
         void *ev_arg
 
@@ -164,6 +165,38 @@ cdef class event:
 
         def __get__(self):
             return event_pending(&self.ev, EV_TIMEOUT|EV_SIGNAL|EV_READ|EV_WRITE, NULL)
+
+    property fd:
+
+        def __get__(self):
+            return self.ev.ev_fd
+
+    property events:
+
+        def __get__(self):
+            return self.ev.ev_events
+
+    property events_str:
+
+        def __get__(self):
+            result = []
+            cdef short events = self.ev.ev_events
+            cdef short c_event
+            for (event, txt) in ((EV_TIMEOUT, 'TIMEOUT'), (EV_READ, 'READ'), (EV_WRITE, 'WRITE'),
+                                 (EV_SIGNAL, 'SIGNAL'), (EV_PERSIST, 'PERSIST')):
+                c_event = event
+                if events & c_event:
+                    result.append(txt)
+                    c_event = c_event ^ 0xffffff
+                    events = events & c_event
+            if events:
+                result.append(hex(events))
+            return '|'.join(result)
+
+    property flags:
+
+        def __get__(self):
+            return self.ev.ev_flags
 
     def add(self, timeout=-1):
         """Add event to be executed after an optional timeout.
