@@ -65,6 +65,7 @@ cdef extern from "event.h":
     int  event_dispatch() nogil
     int  event_loop(int loop) nogil
     int  event_pending(event_t *ev, short, timeval *tv)
+    void event_active(event_t *ev, int res, short ncalls)
 
     int EVLOOP_ONCE
     int EVLOOP_NONBLOCK
@@ -285,6 +286,20 @@ cdef class signal(event):
         self._arg = (args, kwargs)
         event_set(&self.ev, signalnum, EV_SIGNAL|EV_PERSIST, __simple_handler, <void*>self)
         self.add(-1)
+
+
+cdef class active_event(event):
+    """An event that is scheduled to run in _this_ loop iteration"""
+
+    def __init__(self, callback, *args, **kwargs):
+        self._callback = callback
+        self._arg = (args, kwargs)
+        evtimer_set(&self.ev, __simple_handler, <void*>self)
+        Py_INCREF(self)
+        event_active(&self.ev, EV_TIMEOUT, 1)
+
+    def add(self, timeout=-1):
+        raise NotImplementedError
 
 
 def init():
