@@ -228,8 +228,8 @@ cdef class event:
             pending = ' pending'
         else:
             pending = ''
-        return '<%s flags=0x%x, handle=%s, callback=%s, arg=%s%s>' % \
-               (type(self).__name__, self.ev.ev_flags, self.ev.ev_fd, self._callback, self._arg, pending)
+        return '<%s%s fd=%s %s flags=0x%x cb=%s arg=%s>' % \
+               (type(self).__name__, pending, self.fd, self.events_str, self.flags, self._callback, self._arg)
 
     def __enter__(self):
         return self
