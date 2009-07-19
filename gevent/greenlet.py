@@ -227,7 +227,7 @@ class DispatchExit(Exception):
     pass
 
 
-def _wait_helper(ev, fd, evtype):
+def _wait_helper(ev, evtype):
     current, timeout_exc = ev.arg
     if evtype & core.EV_TIMEOUT:
         current.throw(timeout_exc)

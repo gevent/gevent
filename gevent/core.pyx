@@ -108,7 +108,7 @@ EV_PERSIST = 0x10
 cdef void __event_handler(int fd, short evtype, void *arg) with gil:
     cdef event ev = <event>arg
     try:
-        ev._callback(ev, fd, evtype)
+        ev._callback(ev, evtype)
     except:
         traceback.print_exc()
         try:

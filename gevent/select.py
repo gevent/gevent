@@ -18,7 +18,7 @@ def select(read_list, write_list, error_list, t=None):
     assert hub.greenlet is not current, 'do not call blocking functions from the mainloop'
     allevents = []
 
-    def callback(ev, fd, evtype):
+    def callback(ev, evtype):
         if evtype & core.EV_READ:
             current.switch(([ev.arg], [], []))
         elif evtype & core.EV_WRITE:
