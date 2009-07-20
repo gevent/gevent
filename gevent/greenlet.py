@@ -293,10 +293,7 @@ class Timeout(object):
             self.timeout.cancel()
 
     def __repr__(self):
-        if self.timeout is not None:
-            return repr(self.timeout)
-        else:
-            return '<fake timeout>'
+        return '<%s at %s timeout=%s exception=%s>' % (type(self).__name__, hex(id(self)), self.timeout, self.exception)
 
     def __enter__(self):
         return self
