@@ -20,17 +20,17 @@
 # THE SOFTWARE.
 
 import greentest
-from gevent.coros import event
-from gevent import spawn, sleep, Timeout, with_timeout
+import gevent
+from gevent import coros
 from greentest import TestCase
 
-DELAY= 0.01
+DELAY = 0.01
 
-class TestEvent(TestCase):
+class TestEvent(greentest.TestCase):
 
     def test_send_exc(self):
         log = []
-        e = event()
+        e = coros.event()
 
         def waiter():
             try:
@@ -38,25 +38,29 @@ class TestEvent(TestCase):
                 log.append(('received', result))
             except Exception, ex:
                 log.append(('catched', ex))
-        spawn(waiter)
-        sleep(0) # let waiter to block on e.wait()
+        gevent.spawn(waiter)
+        gevent.sleep(0) # let waiter to block on e.wait()
         obj = Exception()
         e.send(exc=obj)
-        sleep(0)
+        gevent.sleep(0)
         assert log == [('catched', obj)], log
 
     def test_send(self):
-        event1 = event()
-        event2 = event()
+        event1 = coros.event()
+        event2 = coros.event()
 
-        spawn(event1.send, 'hello event1')
-        Timeout(0, ValueError('interrupted'))
+        g = gevent.spawn_later(DELAY/2.0, event1.send, 'hello event1')
+        t = gevent.Timeout(0, ValueError('interrupted'))
         try:
-            result = event1.wait()
-        except ValueError:
-            X = object()
-            result = with_timeout(DELAY, event2.wait, timeout_value=X)
-            assert result is X, 'Nobody sent anything to event2 yet it received %r' % (result, )
+            try:
+                result = event1.wait()
+            except ValueError:
+                X = object()
+                result = gevent.with_timeout(DELAY, event2.wait, timeout_value=X)
+                assert result is X, 'Nobody sent anything to event2 yet it received %r' % (result, )
+        finally:
+            t.cancel()
+            gevent.kill(g, wait=True)
 
 
 if __name__=='__main__':
