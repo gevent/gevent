@@ -3,8 +3,9 @@
 import sys
 from time import time
 
-N = 20000
+N = 10000
 counter = 0
+
 
 def incr():
     global counter
