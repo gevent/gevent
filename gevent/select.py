@@ -38,9 +38,8 @@ def select(read_list, write_list, error_list, t=None):
             result = hub.switch()
         except greenlet.TimeoutError:
             return [], [], []
-        if hasattr(result, '__len__') and len(result)==3:
-            return result
-        raise RuntimeError("Invalid switch into select: %r" % (result, ))
+        assert hasattr(result, '__len__') and len(result)==3, "Invalid switch into select: %r" % (result, )
+        return result
     finally:
         for evt in allevents:
             evt.cancel()
