@@ -62,7 +62,7 @@ assert version, version
 setup(
     name='gevent',
     version=version,
-    description='Greenlet/Libevent-based networking library',
+    description='Python network library that uses greenlet and libevent for easy and scalable concurrency',
     author='Denis Bilenko',
     author_email='denis.bilenko@gmail.com',
     packages=['gevent'],
