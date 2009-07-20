@@ -358,9 +358,11 @@ class GreenSSL(GreenSocket):
             except SSL.Error, ex:
                 raise sslerror(str(ex))
 
-    # NOTE: read() in SSLObject does not have the semantics of file.read
-    # reading here until we have buflen bytes or hit EOF is an error
     def read(self, buflen=1024):
+        """
+        NOTE: read() in SSLObject does not have the semantics of file.read
+        reading here until we have buflen bytes or hit EOF is an error
+        """
         return self.recv(buflen)
 
     def write(self, data):
