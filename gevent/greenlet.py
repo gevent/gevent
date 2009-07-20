@@ -260,7 +260,7 @@ class _SilentException:
 
 
 class Timeout(object):
-    """Schedule an exception to raise in the current greenlet (TimeoutError by default).
+    """Schedule an exception to be raised in the current greenlet (TimeoutError by default).
 
     Raise an exception in the block after timeout.
 
