@@ -261,6 +261,13 @@ class GreenSSL(GreenSocket):
         else:
             self.fd.set_connect_state()
 
+    def __repr__(self):
+        try:
+            fileno = self.fileno()
+        except Exception, ex:
+            fileno = str(ex)
+        return '<%s at %s fileno=%s timeout=%s state_string=%r>' % (type(self).__name__, hex(id(self)), fileno, self.timeout, self.fd.state_string())
+
     def accept(self):
         if self.timeout==0.0:
             return self.fd.accept()
