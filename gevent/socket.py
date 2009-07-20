@@ -31,6 +31,7 @@ __socket__ = __import__('socket')
 _fileobject = __socket__._fileobject
 sslerror = __socket__.sslerror
 
+import sys
 import errno
 import time
 
@@ -56,6 +57,29 @@ except ImportError:
 
         class Error(object):
             pass
+
+
+if sys.version_info[:2]<=(2, 4):
+    # implement close argument to _fileobject that we require
+
+    realfileobject = _fileobject
+
+    class _fileobject(realfileobject):
+
+        __slots__ = realfileobject.__slots__ + ['_close']
+
+        def __init__(self, *args, **kwargs):
+            self._close = kwargs.pop('close', False)
+            realfileobject.__init__(self, *args, **kwargs)
+
+        def close(self):
+            try:
+                if self._sock:
+                    self.flush()
+            finally:
+                if self._close:
+                    self._sock.close()
+                self._sock = None
 
 
 CONNECT_ERR = (errno.EINPROGRESS, errno.EALREADY, errno.EWOULDBLOCK)
