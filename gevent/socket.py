@@ -250,6 +250,9 @@ class GreenSocket(object):
         return self.timeout
 
 
+SysCallError_code_mapping = {-1: 8}
+
+
 class GreenSSL(GreenSocket):
     is_secure = True
 
@@ -297,7 +300,8 @@ class GreenSSL(GreenSocket):
             except SSL.WantWriteError:
                 wait_writer(self.fileno())
             except SSL.SysCallError, ex:
-                # XXX fix ex[0]
+                raise sslerror(SysCallError_code_mapping.get(ex.args[0], ex.args[0]), ex.args[1])
+            except SSL.Error, ex:
                 raise sslerror(str(ex))
 
     def connect(self, *args):
@@ -332,7 +336,10 @@ class GreenSSL(GreenSocket):
         except SSL.SysCallError, e:
             if e[0] == -1 or e[0] > 0:
                 return ''
-            raise sslerror(str(e))
+            except SSL.SysCallError, ex:
+                raise sslerror(SysCallError_code_mapping.get(ex.args[0], ex.args[0]), ex.args[1])
+            except SSL.Error, ex:
+                raise sslerror(str(ex))
 
     # NOTE: read() in SSLObject does not have the semantics of file.read
     # reading here until we have buflen bytes or hit EOF is an error
