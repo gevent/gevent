@@ -80,6 +80,7 @@ class _closedsocket(object):
 
 _delegate_methods = ("recv", "recvfrom", "recv_into", "recvfrom_into", "send", "sendto", 'sendall')
 
+timeout_default = object()
 
 class GreenSocket(object):
     is_secure = False # XXX remove this
@@ -199,28 +200,29 @@ class GreenSocket(object):
             wait_reader(self.fileno(), timeout=self.timeout, timeout_exc=timeout)
         return self.fd.recv_into(*args)
 
-    def send(self, *args):
-        if self.timeout!=0.0:
-            wait_writer(self.fileno(), timeout=self.timeout, timeout_exc=timeout)
-        return self.fd.send(*args)
+    def send(self, data, timeout=timeout_default):
+        if timeout is timeout_default:
+            timeout = self.timeout
+        if timeout!=0.0:
+            wait_writer(self.fileno(), timeout=timeout, timeout_exc=_socket.timeout)
+        return self.fd.send(data)
 
     def sendall(self, data):
+        # this sendall is also reused by GreenSSL, so it must not call self.fd methods directly
         if self.timeout is None:
-            tail = 0
-            while tail < len(data):
-                wait_writer(self.fileno())
-                tail += self.fd.send(data[tail:])
+            data_sent = 0
+            while data_sent < len(data):
+                data_sent += self.send(data[data_sent:])
         elif not self.timeout:
             return self.fd.sendall(data)
         else:
             end = time.time() + self.timeout
-            tail = 0
-            while tail < len(data):
+            data_sent = 0
+            while data_sent < len(data):
                 left = end - time.time()
                 if left <= 0:
                     raise timeout
-                wait_writer(self.fileno(), timeout=left, timeout_exc=timeout)
-                tail += self.fd.send(data[tail:])
+                data_sent += self.send(data[data_sent:], timeout=left)
 
     def sendto(self, *args):
         if self.timeout!=0.0:
@@ -308,33 +310,48 @@ class GreenSSL(GreenSocket):
         GreenSocket.connect(self, *args)
         self.do_handshake()
 
-    def send(self, data):
-        if self.timeout!=0.0:
-            wait_writer(self.fileno(), timeout=self.timeout, timeout_exc=timeout)
-        try:
-            return self.fd.send(data)
-        except SSL.WantWriteError:
-            return 0
-        except SSL.WantReadError:
-            return 0
-        except SSL.SysCallError, e:
-            if e[0] == -1 and data == "":
-                # errors when writing empty strings are expected
-                # and can be ignored
-                return 0
+    def send(self, data, timeout=timeout_default):
+        if timeout is timeout_default:
+            timeout = self.timeout
+        while True:
+            try:
+                return self.fd.send(data)
+            except SSL.WantWriteError, ex:
+                if self.timeout==0.0:
+                    raise timeout(str(ex))
+                else:
+                    wait_writer(self.fileno(), timeout=timeout, timeout_exc=_socket.timeout)
+            except SSL.WantReadError, ex:
+                if self.timeout==0.0:
+                    raise timeout(str(ex))
+                else:
+                    wait_reader(self.fileno(), timeout=timeout, timeout_exc=_socket.timeout)
+            except SSL.SysCallError, e:
+                if e[0] == -1 and data == "":
+                    # errors when writing empty strings are expected and can be ignored
+                    return 0
+                raise sslerror(SysCallError_code_mapping.get(ex.args[0], ex.args[0]), ex.args[1])
+            except SSL.Error, ex:
+                raise sslerror(str(ex))
 
     def recv(self, buflen):
         pending = self.fd.pending()
         if pending:
             return self.fd.recv(min(pending, buflen))
-        if self.timeout!=0.0:
-            wait_reader(self.fileno(), timeout=self.timeout, timeout_exc=timeout)
-        try:
-            return self.fd.recv(buflen)
-        except SSL.ZeroReturnError:
-            return ''
-        except SSL.SysCallError, e:
-            if e[0] == -1 or e[0] > 0:
+        while True:
+            try:
+                return self.fd.recv(buflen)
+            except SSL.WantReadError, ex:
+                if self.timeout==0.0:
+                    raise timeout(str(ex))
+                else:
+                    wait_reader(self.fileno(), timeout=self.timeout, timeout_exc=timeout)
+            except SSL.WantWriteError, ex:
+                if self.timeout==0.0:
+                    raise timeout(str(ex))
+                else:
+                    wait_reader(self.fileno(), timeout=self.timeout, timeout_exc=timeout)
+            except SSL.ZeroReturnError:
                 return ''
             except SSL.SysCallError, ex:
                 raise sslerror(SysCallError_code_mapping.get(ex.args[0], ex.args[0]), ex.args[1])
