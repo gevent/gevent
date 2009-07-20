@@ -1,3 +1,42 @@
+0.9.2
+-----
+
+GreenSocket was simplified and GreenSSL was almost completely rewritten. This fixes
+SSL bug reported on eventletdev by Cesar Alaniz as well as failures in test_socket_ssl.py
+from Python's standard library. makeGreenFile is gone, makefile which returns _fileobject
+is available on both GreenSocket and GreenSSL. socket.py still a work in progress.
+
+New class core.active_event is added that takes advantage of libevent's event_active function.
+core.active_event(func) schedules func to be run in this event loop iteration as opposed
+to core.timer(0, ...) which schedules an event to be run in the next iteration. active_event
+is now used throughout the library wherever core.timer(0, ....) was previously used.
+This results in spawn() being at least 20% faster compared to 0.9.1 and twice as fast compared to
+eventlet. (The results are obtained with bench_spawn.py script in examples/ directory)
+
+kill() and killall() methods now have boolean parameter "wait". If set to True, it makes the
+function block until the greenlet(s) is actually dead. By default, kill and killall are asynchronous,
+i.e. they don't unschedule the current greenlet.
+
+core.event has got a few more properties: fd, events, events_str and flags. It also has
+__enter__ and __exit__ now, so it can be used as a context manager. event's callback signature
+has changed from (event, fd, evtype) to (event, evtype).
+
+Hub's mainloop will never return successfully as this will screw up main greenlet's switch() call.
+Instead of returning it raises DispatchExit.
+
+reinit function (wrapper for libevent's event_reinit) is now available as gevent.reinit. 
+This function is a must have at least for daemons, as it fixes epoll and some others eventloops
+to work after fork.
+
+Trying to use gevent in another thread will now raise an exception immediately,
+since it's not implemented.
+
+proc.RunningProcSet has a few more convenience methods spawn_link[exception/value].
+
+setup.py has been fixed not to depend on setuptools.
+
+gevent.timeout has been removed (use gevent.Timeout)
+
 
 0.9.1
 -----
