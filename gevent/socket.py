@@ -340,7 +340,8 @@ class GreenSSL(GreenSocket):
 
     def close (self):
         if self._makefile_refs < 1:
-            GreenSocket.close(self)
+            self.fd.shutdown()
+            # QQQ wait until shutdown completes?
         else:
             self._makefile_refs -= 1
 
