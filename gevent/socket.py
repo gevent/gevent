@@ -253,9 +253,13 @@ class GreenSocket(object):
 class GreenSSL(GreenSocket):
     is_secure = True
 
-    def __init__(self, fd, do_handshake_on_connect=True):
+    def __init__(self, fd, server_side=False):
         GreenSocket.__init__(self, fd)
         self._makefile_refs = 0
+        if server_side:
+            self.fd.set_accept_state()
+        else:
+            self.fd.set_connect_state()
 
     def accept(self):
         if self.timeout==0.0:
@@ -271,8 +275,8 @@ class GreenSSL(GreenSocket):
                     raise
             if res is not None:
                 client, addr = res
-                accepted = type(self)(client)
-                accepted.do_handshake() # XXX
+                accepted = type(self)(client, server_side=True)
+                accepted.do_handshake()
                 return accepted, addr
             wait_reader(fd.fileno(), timeout=self.timeout, timeout_exc=timeout)
 
@@ -508,7 +512,6 @@ def wrap_ssl000(sock, keyfile=None, certfile=None):
     context.set_verify(SSL.VERIFY_NONE, lambda *x: True)
     timeout = sock.gettimeout()
     connection = SSL.Connection(context, sock)
-    connection.set_connect_state()
     ssl_sock = GreenSSL(connection)
 
     try:
@@ -532,7 +535,6 @@ def wrap_ssl(sock, keyfile=None, certfile=None):
         context.use_privatekey_file(keyfile)
     context.set_verify(SSL.VERIFY_NONE, lambda *x: True)
     connection = SSL.Connection(context, sock.fd)
-    connection.set_connect_state()
     ssl_sock = GreenSSL(connection)
     ssl_sock.settimeout(sock.gettimeout())
 
