@@ -118,13 +118,25 @@ class Test(greentest.TestCase):
                 sleep(DELAY*3)
             raise AssertionError('should not get there')
 
+        with Timeout(DELAY) as t1:
+            with Timeout(DELAY*2) as t2:
+                try:
+                    sleep(DELAY*3)
+                except Timeout, ex:
+                    assert ex is t1, (ex, t1)
+                assert not t1.pending, t1
+                assert t2.pending, t2
+            assert not t2.pending, t2
 
-        # this case fails and there's no intent to fix it.
-        # just don't do it like that
-        #with Timeout(DELAY, _SilentException):
-        #    with Timeout(DELAY*2, _SilentException):
-        #        sleep(DELAY*3)
-        #    assert False, 'should not get there'
+        with Timeout(DELAY*2) as t1:
+            with Timeout(DELAY) as t2:
+                try:
+                    sleep(DELAY*3)
+                except Timeout, ex:
+                    assert ex is t2, (ex, t2)
+                assert t1.pending, t1
+                assert not t2.pending, t2
+        assert not t1.pending, t1
 
 
 if __name__=='__main__':
