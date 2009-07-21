@@ -7,7 +7,7 @@ N = 10000
 counter = 0
 
 
-def incr():
+def incr(**kwargs):
     global counter
     counter += 1
 
@@ -16,10 +16,15 @@ if not sys.argv[1:]:
 
 print sys.argv[1]
 
+kwargs = {}
+if sys.argv[-1]=='kwargs':
+    kwargs = {'foo': 1, 'bar': 'hello'}
+    del sys.argv[-1]
+
 if sys.argv[1]=='none':
     start = time()
     for _ in xrange(N):
-        incr()
+        incr(**kwargs)
     delta = time() - start
     assert counter == N, (counter, N)
     print '%.2f microseconds' % (delta*1000000.0/N)
@@ -29,7 +34,7 @@ elif sys.argv[1]=='gevent':
     from gevent import spawn, sleep
     start = time()
     for _ in xrange(N):
-        spawn(incr)
+        spawn(incr, **kwargs)
     delta = time() - start
     print 'spawning: %d microseconds' % (delta*1000000.0/N)
     assert counter == 0, counter
@@ -46,7 +51,7 @@ elif sys.argv[1]=='eventlet':
         use_hub(sys.argv[2])
     start = time()
     for _ in xrange(N):
-        spawn(incr)
+        spawn(incr, **kwargs)
     delta = time() - start
     print 'spawning: %d microseconds' % (delta*1000000.0/N)
     assert counter == 0, counter
@@ -62,7 +67,7 @@ elif sys.argv[1]=='eventletproc':
         use_hub(sys.argv[2])
     start = time()
     for _ in xrange(N):
-        spawn(incr)
+        spawn(incr, **kwargs)
     delta = time() - start
     print 'spawning: %d microseconds' % (delta*1000000.0/N)
     assert counter == 0, counter
