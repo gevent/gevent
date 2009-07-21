@@ -589,19 +589,14 @@ class Proc(Source):
                 throw_args = (ProcExit, )
             self.greenlet.throw(*throw_args)
 
-    def kill(self, *throw_args):
-        """Raise an exception in the greenlet. Unschedule the current greenlet
-        so that this Proc can handle the exception (or die).
-
-        The exception can be specified with throw_args. By default, ProcExit is
-        raised.
-        """
+    def kill(self, exception=ProcExit, wait=False):
         if not self.dead:
-            if not throw_args:
-                throw_args = (ProcExit, )
-            core.active_event(self.greenlet.throw, *throw_args)
-            if greenlet.getcurrent() is not greenlet.get_hub().greenlet:
-                greenlet.sleep(0)
+            core.active_event(self.greenlet.throw, exception)
+            if wait:
+                try:
+                    self.wait()
+                except:
+                    pass
 
     # QQQ maybe Proc should not inherit from Source (because its send() and send_exception()
     # QQQ methods are for internal use only)
