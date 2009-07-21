@@ -34,18 +34,34 @@ _threadlocal = threadlocal()
 _threadlocal.Hub = None
 
 
+def _switch_helper(function, args, kwargs):
+    return function(*args, **kwargs)
+
+
 def spawn(function, *args, **kwargs):
-    g = Greenlet(lambda : function(*args, **kwargs))
-    g.parent = get_hub().greenlet
-    core.active_event(g.switch)
-    return g
+    if kwargs:
+        g = Greenlet(_switch_helper)
+        g.parent = get_hub().greenlet
+        core.active_event(g.switch, function, args, kwargs)
+        return g
+    else:
+        g = Greenlet(function)
+        g.parent = get_hub().greenlet
+        core.active_event(g.switch, *args)
+        return g
 
 
 def spawn_later(seconds, function, *args, **kwargs):
-    g = Greenlet(lambda : function(*args, **kwargs))
-    g.parent = get_hub().greenlet
-    core.timer(seconds, g.switch)
-    return g
+    if kwargs:
+        g = Greenlet(_switch_helper)
+        g.parent = get_hub().greenlet
+        core.timer(0, g.switch, function, args, kwargs)
+        return g
+    else:
+        g = Greenlet(function)
+        g.parent = get_hub().greenlet
+        core.timer(0, g.switch, *args)
+        return g
 
 
 class Waiter(object):
