@@ -3,7 +3,7 @@
 import sys
 from time import time
 
-N = 10000
+N = 20000
 counter = 0
 
 
