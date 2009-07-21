@@ -24,7 +24,7 @@ import sys
 import greentest
 import weakref
 import time
-from gevent import sleep, Timeout, TimeoutError
+from gevent import sleep, Timeout
 from gevent.greenlet import _SilentException
 DELAY = 0.04
 
@@ -35,18 +35,22 @@ class Test(greentest.TestCase):
 
     def test_api(self):
         # Nothing happens if with-block finishes before the timeout expires
-        with Timeout(DELAY*2):
+        t = Timeout(DELAY*2)
+        assert t.pending, repr(t)
+        with t:
             sleep(DELAY)
-        sleep(DELAY*2) # check if timer was actually cancelled
+        # check if timer was actually cancelled
+        assert not t.pending, repr(t)
+        sleep(DELAY*2)
 
         # An exception will be raised if it's not
         try:
-            with Timeout(DELAY):
+            with Timeout(DELAY) as t:
                 sleep(DELAY*2)
-        except TimeoutError:
-            pass
+        except Timeout, ex:
+            assert ex is t, (ex, t)
         else:
-            raise AssertionError('must raise TimeoutError')
+            raise AssertionError('must raise Timeout')
 
         # You can customize the exception raised:
         try:

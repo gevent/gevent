@@ -48,7 +48,7 @@ class Test(greentest.TestCase):
     def test_nested_with_timeout(self):
         def func():
             return gevent.with_timeout(0.2, gevent.sleep, 2, timeout_value=1)
-        self.assertRaises(gevent.TimeoutError, gevent.with_timeout, 0.1, func)
+        self.assertRaises(gevent.Timeout, gevent.with_timeout, 0.1, func)
 
 
 class TestTimers(greentest.TestCase):

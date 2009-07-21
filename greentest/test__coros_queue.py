@@ -21,7 +21,7 @@ class TestQueue(TestCase):
     def test_send_last(self):
         q = coros.Queue()
         def waiter(q):
-            timer = gevent.Timeout(0.1, gevent.TimeoutError)
+            timer = gevent.Timeout(0.1)
             self.assertEquals(q.wait(), 'hi2')
             timer.cancel()
 
@@ -90,12 +90,12 @@ class TestQueue(TestCase):
         results = set()
         def collect_pending_results():
             for i, e in enumerate(evts):
-                timer = gevent.Timeout(0.001, gevent.TimeoutError)
+                timer = gevent.Timeout(0.001)
                 try:
                     x = e.wait()
                     results.add(x)
                     timer.cancel()
-                except gevent.TimeoutError:
+                except gevent.Timeout:
                     pass  # no pending result at that event
             return len(results)
         q.send(sendings[0])

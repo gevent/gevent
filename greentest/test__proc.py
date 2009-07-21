@@ -21,7 +21,7 @@
 
 import sys
 import greentest
-from gevent import sleep, with_timeout, TimeoutError, getcurrent
+from gevent import sleep, with_timeout, Timeout, getcurrent
 from gevent import proc, coros
 
 DELAY = 0.01
@@ -35,10 +35,10 @@ class TestLink_Signal(greentest.TestCase):
         s = proc.Source()
         q1, q2, q3 = coros.Queue(), coros.Queue(), coros.Queue()
         s.link_value(q1)
-        self.assertRaises(TimeoutError, s.wait, 0)
+        self.assertRaises(Timeout, s.wait, 0)
         assert s.wait(0, None) is None
         assert s.wait(0.001, None) is None
-        self.assertRaises(TimeoutError, s.wait, 0.001)
+        self.assertRaises(Timeout, s.wait, 0.001)
         s.send(1)
         assert not q1.ready()
         assert s.wait()==1
