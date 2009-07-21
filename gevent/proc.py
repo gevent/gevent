@@ -620,7 +620,7 @@ def spawn_link_exception(function, *args, **kwargs):
     return p
 
 
-# not specific to proc module
+# QQQ not specific to proc module: move to greenlet.py?
 class wrap_errors(object):
     """Helper to make function return an exception, rather than raise it.
 
@@ -665,18 +665,26 @@ class wrap_errors(object):
         return getattr(self.func, item)
 
 
-class RunningProcSet(object):
+class ProcSet(object):
     """Maintain a set of Procs that are still running, that is, automatically remove
     a proc when it's finished. Provide a way to wait/kill all of them"""
 
     def __init__(self, *args):
         self.procs = set(*args)
         if args:
-            for p in self.args[0]:
-                p.link(lambda p: self.procs.discard(p))
+            for p in args[0]:
+                p.link(self.discard)
+        self.dying = set()
+
+    def __repr__(self):
+        try:
+            classname = self.__class__.__name__
+        except AttributeError:
+            classname = 'ProcSet'
+        return '<%s at %s procs=%s dying=%s>' % (classname, hex(id(self)), self.procs, self.dying)
 
     def __len__(self):
-        return len(self.procs)
+        return len(self.procs) + len(self.dying)
 
     def __contains__(self, item):
         if isinstance(item, greenlet.Greenlet):
@@ -684,16 +692,24 @@ class RunningProcSet(object):
             for x in self.procs:
                 if x.greenlet == item:
                     return True
+            for x in self.dying:
+                if x.greenlet == item:
+                    return True
             # hack Proc's __hash__ and __eq__ to avoid special casing this?
         else:
-            return item in self.procs
+            return item in self.procs or item in self.dying
 
     def __iter__(self):
-        return iter(self.procs)
+        return iter(self.procs+self.dying)
 
     def add(self, p):
         self.procs.add(p)
-        p.link(lambda p: self.procs.discard(p))
+        p.link(self.discard)
+        # QQQ check if Proc can be fixed to support p.link(self.procs.discard)
+
+    def discard(self, p):
+        self.procs.discard(p)
+        self.dying.discard(p)
 
     def spawn(self, func, *args, **kwargs):
         p = spawn(func, *args, **kwargs)
@@ -719,8 +735,28 @@ class RunningProcSet(object):
         while self.procs:
             waitall(self.procs, trap_errors=trap_errors)
 
-    def killall(self, *throw_args, **kwargs):
-        return killall(self.procs, *throw_args, **kwargs)
+    def kill(self, p, exception=ProcExit, wait=False):
+        kill = p.kill
+        try:
+            self.procs.remove(p)
+        except KeyError:
+            return
+        self.dying.add(p)
+        return kill(exception=exception, wait=wait)
+
+    def killall(self, exception=ProcExit, wait=False):
+        while self.procs or self.dying:
+            for p in self.procs:
+                core.active_event(p.throw, exception)
+            self.dying.update(self.procs)
+            self.procs.clear()
+            if not wait:
+                break
+            if self.dying:
+                waitall(self.dying, trap_errors=True)
+
+
+RunningProcSet = ProcSet # XXX deprecated name, will be removed
 
 
 class Pool(object):
