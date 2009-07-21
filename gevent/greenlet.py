@@ -1,11 +1,11 @@
 import sys
 import os
 import traceback
+import _socket # for timeout
 from gevent import core
 
 
 __all__ = ['getcurrent',
-           'TimeoutError',
            'Timeout',
            'spawn',
            'spawn_later',
@@ -32,10 +32,6 @@ thread = __import__('thread')
 threadlocal = thread._local
 _threadlocal = threadlocal()
 _threadlocal.Hub = None
-
-
-class TimeoutError(Exception):
-    """Exception raised if an asynchronous operation times out"""
 
 
 def spawn(function, *args, **kwargs):
@@ -235,7 +231,7 @@ def _wait_helper(ev, evtype):
         current.switch(ev)
 
 
-def wait_reader(fileno, timeout=-1, timeout_exc=TimeoutError):
+def wait_reader(fileno, timeout=-1, timeout_exc=_socket.timeout):
     evt = core.read(fileno, _wait_helper, timeout, (getcurrent(), timeout_exc))
     try:
         returned_ev = get_hub().switch()
@@ -244,7 +240,7 @@ def wait_reader(fileno, timeout=-1, timeout_exc=TimeoutError):
         evt.cancel()
 
 
-def wait_writer(fileno, timeout=-1, timeout_exc=TimeoutError):
+def wait_writer(fileno, timeout=-1, timeout_exc=_socket.timeout):
     evt = core.write(fileno, _wait_helper, timeout, (getcurrent(), timeout_exc))
     try:
         returned_ev = get_hub().switch()
@@ -253,47 +249,107 @@ def wait_writer(fileno, timeout=-1, timeout_exc=TimeoutError):
         evt.cancel()
 
 
-class _SilentException:
-    """Used internally by Timeout as an exception which is not raise outside of with-block,
-    and therefore is not visible by the user, unless she uses 'except:' construct.
+try:
+    BaseException
+except NameError:
+    class BaseException:
+        pass
+
+
+class _SilentException(BaseException):
+    """Used internally by Timeout as an exception which is not raised outside of with-block,
+    and therefore is not visible by the user, unless she uses "except:" construct.
     """
+    __slots__ = []
 
 
-class Timeout(object):
-    """Schedule an exception to be raised in the current greenlet (TimeoutError by default).
+class Timeout(BaseException):
+    """Raise an exception in the current greenlet after timeout.
 
-    Raise an exception in the block after timeout.
+    timeout = Timeout(seconds[, exc])
+    try:
+        ... code block ...
+    finally:
+        timeout.cancel()
+
+    By default, the Timeout instance itself is raised. If exc is provided, then
+    it raised instead.
+
+    For Python starting with 2.5 'with' statement can be used:
 
     with Timeout(seconds[, exc]) as timeout:
         ... code block ...
 
     Assuming code block is yielding (i.e. gives up control to the hub),
-    an exception provided in `exc' argument will be raised
-    (TimeoutError if `exc' is omitted). Although the timeout will be cancelled
-    upon the block exit, it is also possible to cancel it inside the block explicitly,
-    by calling timeout.cancel().
+    an exception provided in `exc' argument will be raised. If exc is omitted
+    or True, the timeout object itself is raised. Although the timeout will be
+    cancelled upon the block exit, it is also possible to cancel it inside the
+    block explicitly, by calling timeout.cancel().
 
-    When exc is None, code block is interrupted silently. (Which means that an
-    exception that is not a subclass of Exception is raised but silented before exiting
-    the block, thus giving the illusion that the block was interrupted. Catching
-    all exceptions with "except:" will catch that exception too)
+    When exc is None, code block is interrupted silently. Under the hood, an
+    exception of a special type _SilentException (which is a subclass of BaseException
+    but not Exception) is raised but silented before exiting the block
+    in __exit__ method:
+
+    data = None
+    with Timeout(2, None):
+        data = sock.recv(1024)
+    if data is None:
+        #  2 seconds passed without sock receiving anything
+    else:
+        # sock has received some data
+
+    Note, that "except:" statement will still catch the exception thus breaking
+    the illusion.
     """
 
-    def __init__(self, seconds, exception=TimeoutError):
-        if exception is None:
-            exception = _SilentException()
-        self.exception = exception
+    def __init__(self, seconds=None, exception=True):
         if seconds is None:
-            self.timeout = None
+            self.timer = None
+            self.exception = None
+        elif exception is True:
+            self.exception = exception
+            self.timer = core.timer(seconds, getcurrent().throw, self)
+        elif exception is None:
+            self.exception = _SilentException()
+            self.timer = core.timer(seconds, getcurrent().throw, self.exception)
         else:
-            self.timeout = core.timer(seconds, getcurrent().throw, exception)
+            self.exception = exception
+            self.timer = core.timer(seconds, getcurrent().throw, exception)
+
+    @property
+    def pending(self):
+        if self.timer is not None:
+            return self.timer.pending
+        else:
+            return False
 
     def cancel(self):
-        if self.timeout is not None:
-            self.timeout.cancel()
+        if self.timer is not None:
+            self.timer.cancel()
 
     def __repr__(self):
-        return '<%s at %s timeout=%s exception=%s>' % (type(self).__name__, hex(id(self)), self.timeout, self.exception)
+        try:
+            classname = self.__class__.__name__
+        except AttributeError:
+            classname = 'Timeout'
+        return '<%s at %s timer=%s exception=%s>' % (classname, hex(id(self)), self.timer, self.exception)
+
+    def __str__(self):
+        """
+        >>> print Timeout()
+        <Timeout timer=None>
+        """
+        try:
+            classname = self.__class__.__name__
+        except AttributeError:
+            classname = 'Timeout'
+        if self.exception is True or self.exception is None:
+            # either timer is not None and exception is self or timer is None
+            # either way printing exception gives no useful information
+            return '<%s timer=%s>' % (classname, self.timer)
+        else:
+            return '<%s timer=%s exception=%s>' % (classname, self.timer, self.exception)
 
     def __enter__(self):
         return self
@@ -303,9 +359,16 @@ class Timeout(object):
         if typ is _SilentException and value is self.exception:
             return True
 
+
 # use this? less prone to errors (what if func has timeout_value argument or func is with_timeout itself?)
 # def with_timeout(seconds, func[, args[, kwds[, timeout_value]]]):
 # see what other similar standard library functions accept as params (start_new_thread, start new process)
+
+class _NONE(object):
+    __slots__ = []
+
+_NONE = _NONE()
+
 
 def with_timeout(seconds, func, *args, **kwds):
     """Wrap a call to some (yielding) function with a timeout; if the called
@@ -320,16 +383,16 @@ def with_timeout(seconds, func, *args, **kwds):
     \*args, \*\*kwds
       (positional, keyword) arguments to pass to *func*
     timeout_value=
-      value to return if timeout occurs (default raise ``TimeoutError``)
+      value to return if timeout occurs (default raise ``Timeout``)
 
     **Returns**:
 
     Value returned by *func* if *func* returns before *seconds*, else
-    *timeout_value* if provided, else raise ``TimeoutError``
+    *timeout_value* if provided, else raise ``Timeout``
 
     **Raises**:
 
-    Any exception raised by *func*, and ``TimeoutError`` if *func* times out
+    Any exception raised by *func*, and ``Timeout`` if *func* times out
     and no ``timeout_value`` has been provided.
 
     **Example**::
@@ -343,15 +406,13 @@ def with_timeout(seconds, func, *args, **kwds):
     # Recognize a specific keyword argument, while also allowing pass-through
     # of any other keyword arguments accepted by func. Use pop() so we don't
     # pass timeout_value through to func().
-    has_timeout_value = "timeout_value" in kwds
-    timeout_value = kwds.pop("timeout_value", None)
-    error = TimeoutError()
-    timeout = Timeout(seconds, error)
+    timeout_value = kwds.pop("timeout_value", _NONE)
+    timeout = Timeout(seconds)
     try:
         try:
             return func(*args, **kwds)
-        except TimeoutError, ex:
-            if ex is error and has_timeout_value:
+        except Timeout, t:
+            if t is timeout and timeout_value is not _NONE:
                 return timeout_value
             raise
     finally:

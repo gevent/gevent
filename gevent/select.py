@@ -11,9 +11,9 @@ def get_fileno(obj):
         return f()
 
 
-def select(read_list, write_list, error_list, t=None):
+def select(read_list, write_list, error_list, timeout=None):
     hub = greenlet.get_hub()
-    t = None
+    timeout = None
     current = greenlet.getcurrent()
     assert hub.greenlet is not current, 'do not call blocking functions from the mainloop'
     allevents = []
@@ -31,18 +31,18 @@ def select(read_list, write_list, error_list, t=None):
     for w in write_list:
         allevents.append(core.write(get_fileno(r), callback, arg=w))
 
-    if t is not None:
-        t = greenlet.Timeout(t)
+    timeout = greenlet.Timeout(timeout)
     try:
         try:
             result = hub.switch()
-        except greenlet.TimeoutError:
+        except greenlet.Timeout, t:
+            if t is not timeout:
+                raise
             return [], [], []
         assert hasattr(result, '__len__') and len(result)==3, "Invalid switch into select: %r" % (result, )
         return result
     finally:
         for evt in allevents:
             evt.cancel()
-        if t is not None:
-            t.cancel()
+        timeout.cancel()
 
