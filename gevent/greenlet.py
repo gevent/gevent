@@ -164,7 +164,6 @@ def sleep(seconds=0):
     nothing else will run.
     """
     hub = get_hub()
-    assert hub.greenlet is not greenlet.getcurrent(), 'do not call blocking functions from the mainloop'
     t = core.timer(seconds, greenlet.getcurrent().switch)
     try:
         hub.switch()
