@@ -77,6 +77,10 @@ class Waiter(object):
     def __init__(self):
         self.greenlet = None
 
+    @property
+    def waiting(self):
+        return self.greenlet is not None
+
     def switch(self, value=None):
         """Wake up the greenlet that is calling wait() currently (if there is one).
         Can only be called from get_hub().greenlet.
