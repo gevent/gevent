@@ -1,8 +1,8 @@
 # Some simple queue module tests, plus some failure conditions
 # to ensure the Queue locks remain stable.
-from __future__ import with_statement
-from gevent import queue as Queue
+#from __future__ import with_statement
 from gevent import monkey; monkey.patch_all()
+from gevent import queue as Queue
 import sys
 import threading
 import time
@@ -51,11 +51,11 @@ class BlockingTestMixin:
         self.t.start()
         self.result = block_func(*block_args)
         # If block_func returned before our thread made the call, we failed!
-        if not self.t.startedEvent.is_set():
+        if not self.t.startedEvent.isSet():
             self.fail("blocking function '%r' appeared not to block" %
                       block_func)
         self.t.join(10) # make sure the thread terminates
-        if self.t.is_alive():
+        if self.t.isAlive():
             self.fail("trigger function '%r' appeared to not return" %
                       trigger_func)
         return self.result
@@ -75,10 +75,10 @@ class BlockingTestMixin:
                                  expected_exception_class)
         finally:
             self.t.join(10) # make sure the thread terminates
-            if self.t.is_alive():
+            if self.t.isAlive():
                 self.fail("trigger function '%r' appeared to not return" %
                                  trigger_func)
-            if not self.t.startedEvent.is_set():
+            if not self.t.startedEvent.isSet():
                 self.fail("trigger thread ended but event never set")
 
 
@@ -144,8 +144,8 @@ class BaseQueueTest(unittest.TestCase, BlockingTestMixin):
             if x is None:
                 q.task_done()
                 return
-            with self.cumlock:
-                self.cum += x
+            #with self.cumlock:
+            self.cum += x
             q.task_done()
 
     def queue_join_test(self, q):
