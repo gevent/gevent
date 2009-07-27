@@ -77,6 +77,24 @@ class Waiter(object):
     def __init__(self):
         self.greenlet = None
 
+    def __repr__(self):
+        if self.waiting:
+            waiting = ' waiting'
+        else:
+            waiting = ''
+        return '<%s at %s%s greenlet=%r>' % (type(self).__name__, hex(id(self)), waiting, self.greenlet)
+
+    def __str__(self):
+        """
+        >>> print Waiter()
+        <Waiter greenlet=None>
+        """
+        if self.waiting:
+            waiting = ' waiting'
+        else:
+            waiting = ''
+        return '<%s%s greenlet=%s>' % (type(self).__name__, waiting, self.greenlet)
+
     @property
     def waiting(self):
         return self.greenlet is not None
