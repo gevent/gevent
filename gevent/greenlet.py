@@ -105,7 +105,10 @@ class Waiter(object):
         """
         assert greenlet.getcurrent() is get_hub().greenlet
         if self.greenlet is not None:
-            self.greenlet.switch(value)
+            try:
+                self.greenlet.switch(value)
+            except:
+                traceback.print_exc()
 
     def throw(self, *throw_args):
         """Make greenlet calling wait() wake up (if there is a wait()).
@@ -113,7 +116,10 @@ class Waiter(object):
         """
         assert greenlet.getcurrent() is get_hub().greenlet
         if self.greenlet is not None:
-            self.greenlet.throw(*throw_args)
+            try:
+                self.greenlet.throw(*throw_args)
+            except:
+                traceback.print_exc()
 
     def wait(self):
         """Wait until switch() or throw() is called.
