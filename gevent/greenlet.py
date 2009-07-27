@@ -355,19 +355,12 @@ class Timeout(BaseException):
 
     def __str__(self):
         """
-        >>> print Timeout()
-        <Timeout timer=None>
+        >>> raise Timeout
+        Traceback (most recent call last):
+            ...
+        Timeout
         """
-        try:
-            classname = self.__class__.__name__
-        except AttributeError:
-            classname = 'Timeout'
-        if self.exception is True or self.exception is None:
-            # either timer is not None and exception is self or timer is None
-            # either way printing exception gives no useful information
-            return '<%s timer=%s>' % (classname, self.timer)
-        else:
-            return '<%s timer=%s exception=%s>' % (classname, self.timer, self.exception)
+        return ''
 
     def __enter__(self):
         return self
