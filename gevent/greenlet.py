@@ -68,9 +68,13 @@ def spawn_later(seconds, function, *args, **kwargs):
 class Waiter(object):
     """A low level synchronization class.
 
-    Wrapper around switch() and throw() calls that makes them safe.
-    Switching will occur only if the waiting greenlet is executing wait()
-    method currently. Otherwise, switch() and throw() are no-ops.
+    Wrapper around switch() and throw() calls that makes them safe:
+    a) switching will occur only if the waiting greenlet is executing wait()
+       method currently. Otherwise, switch() and throw() are no-ops.
+    b) any error raised in the greenlet is handled inside switch() and throw()
+
+    switch and throw methods must only be called from the mainloop greenlet.
+    wait must be called from a greenlet other than mainloop.
     """
     __slots__ = ['greenlet']
 
@@ -103,7 +107,7 @@ class Waiter(object):
         """Wake up the greenlet that is calling wait() currently (if there is one).
         Can only be called from get_hub().greenlet.
         """
-        assert greenlet.getcurrent() is get_hub().greenlet
+        assert greenlet.getcurrent() is get_hub().greenlet, "Can only use Waiter.switch method from the mainloop"
         if self.greenlet is not None:
             try:
                 self.greenlet.switch(value)
@@ -114,7 +118,7 @@ class Waiter(object):
         """Make greenlet calling wait() wake up (if there is a wait()).
         Can only be called from get_hub().greenlet.
         """
-        assert greenlet.getcurrent() is get_hub().greenlet
+        assert greenlet.getcurrent() is get_hub().greenlet, "Can only use Waiter.switch method from the mainloop"
         if self.greenlet is not None:
             try:
                 self.greenlet.throw(*throw_args)
@@ -124,10 +128,8 @@ class Waiter(object):
     def wait(self):
         """Wait until switch() or throw() is called.
         """
-        assert self.greenlet is None, self.greenlet
-        current = greenlet.getcurrent()
-        assert current is not get_hub().greenlet
-        self.greenlet = current
+        assert self.greenlet is None, 'This Waiter is already used by %r' % (self.greenlet, )
+        self.greenlet = greenlet.getcurrent()
         try:
             return get_hub().switch()
         finally:
