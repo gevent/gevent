@@ -35,6 +35,7 @@ _threadlocal.Hub = None
 
 
 def _switch_helper(function, args, kwargs):
+    # work around the fact that greenlet.switch does not support keyword args
     return function(*args, **kwargs)
 
 
@@ -266,8 +267,10 @@ def wait_writer(fileno, timeout=-1, timeout_exc=_socket.timeout):
 
 try:
     BaseException
-except NameError:
+except NameError: # Python < 2.5
     class BaseException:
+        # not subclassing from object() intentionally, because in
+        # that case "raise Timeout" fails with TypeError.
         pass
 
 
@@ -301,7 +304,7 @@ class Timeout(BaseException):
     cancelled upon the block exit, it is also possible to cancel it inside the
     block explicitly, by calling timeout.cancel().
 
-    When exc is None, code block is interrupted silently. Under the hood, an
+    When exc is None, code block is interrupted "silently". Under the hood, an
     exception of a special type _SilentException (which is a subclass of BaseException
     but not Exception) is raised but silented before exiting the block
     in __exit__ method:
@@ -319,16 +322,16 @@ class Timeout(BaseException):
     """
 
     def __init__(self, seconds=None, exception=True):
-        if seconds is None:
+        if seconds is None: # the timeout that never expires
             self.timer = None
             self.exception = None
-        elif exception is True:
+        elif exception is True: # the timeout that raises self
             self.exception = exception
             self.timer = core.timer(seconds, getcurrent().throw, self)
-        elif exception is None:
+        elif exception is None: # the timeout that interrupts the with-block "silently"
             self.exception = _SilentException()
             self.timer = core.timer(seconds, getcurrent().throw, self.exception)
-        else:
+        else: # the regular timeout with user-provided exception
             self.exception = exception
             self.timer = core.timer(seconds, getcurrent().throw, exception)
 
@@ -346,7 +349,7 @@ class Timeout(BaseException):
     def __repr__(self):
         try:
             classname = self.__class__.__name__
-        except AttributeError:
+        except AttributeError: # Python < 2.5
             classname = 'Timeout'
         return '<%s at %s timer=%s exception=%s>' % (classname, hex(id(self)), self.timer, self.exception)
 
