@@ -1,5 +1,5 @@
-version_info = (0, 9, 2)
-__version__ = '0.9.2'
+version_info = (0, 9, 3)
+__version__ = '0.9.3'
 
 __all__ = ['getcurrent',
            'Timeout',
