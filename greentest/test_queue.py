@@ -195,11 +195,11 @@ class BaseQueueTest(unittest.TestCase, BlockingTestMixin):
 class QueueTest(BaseQueueTest):
     type2test = Queue.Queue
 
-# class LifoQueueTest(BaseQueueTest):
-#     type2test = Queue.LifoQueue
-#
-# class PriorityQueueTest(BaseQueueTest):
-#     type2test = Queue.PriorityQueue
+class LifoQueueTest(BaseQueueTest):
+    type2test = Queue.LifoQueue
+
+class PriorityQueueTest(BaseQueueTest):
+    type2test = Queue.PriorityQueue
 
 
 
@@ -315,7 +315,7 @@ class FailingQueueTest(unittest.TestCase, BlockingTestMixin):
 
 
 def test_main():
-    test_support.run_unittest(QueueTest, #LifoQueueTest, PriorityQueueTest,
+    test_support.run_unittest(QueueTest, LifoQueueTest, PriorityQueueTest,
                               FailingQueueTest)
 
 
