@@ -324,7 +324,6 @@ def with_timeout(seconds, func, *args, **kwds):
         timeout.cancel()
 
 
-
 def signal(signalnum, handler, *args, **kwargs):
     def deliver_exception_to_MAIN():
         try:
@@ -374,6 +373,9 @@ class Waiter(object):
             waiting = ''
         return '<%s%s greenlet=%s>' % (type(self).__name__, waiting, self.greenlet)
 
+    def __nonzero__(self):
+        return self.greenlet is not None
+
     @property
     def waiting(self):
         return self.greenlet is not None
@@ -409,7 +411,6 @@ class Waiter(object):
             return get_hub().switch()
         finally:
             self.greenlet = None
-
 
 
 def get_hub():
