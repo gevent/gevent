@@ -28,7 +28,7 @@ class _TriggerThread(threading.Thread):
         # sleep here (I aimed at 10 seconds for blocking functions --
         # they should never actually wait that long - they should make
         # progress as soon as we call self.fn()).
-        time.sleep(0.1)
+        time.sleep(0.01)
         self.startedEvent.set()
         self.fn(*self.args)
 
