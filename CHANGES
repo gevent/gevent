@@ -4,34 +4,36 @@
 All known bugs in the queue module were fixed and it is made 2.4-compatible.
 LifoQueue and PriorityQueue are implemented as well.
 
-gevent.queue.Queue has a few differences from the standard Queue:
- - Queue(0) means queue of size 0, in other words a channel, not a queue of infinite size.
-   Having size of 0 means that put() methods always block until the item is delivered.
- - Items that are awaiting a free slot participate in the order imposed by the queue.
+gevent.queue.Queue implement the standard Queue inteface with the only difference
+that Queue(0) means queue of size 0 (i.e. a channel), not a queue of infinite size.
+Having size of 0 means that put() methods always block until the item is delivered.
 
 gevent.queue will deprecate coros.Queue and coros.Channel.
 
 Timeout now raises itself by default. TimeoutError is gone.
-This makes it easy to check that a timeout catched is actually the one needed:
+This makes it easy to check that a timeout catched is actually the one raised:
 
-timeout = Timeout(1)
-try:
-    ...
-except Timeout, t:
-    if timeout is not t:
-        raise # this is timeout set up by someone else and not us; we do not want to catch it
+  timeout = Timeout(1)
+  try:
+      ...
+  except Timeout, t:
+      if timeout is not t:
+          raise # this is timeout set up by someone else and not us; we do not want to catch it
 
 select() function had a bug of this kind that was fixed.
 
-spawn and spawn_later were further optimized and spawning now takes 5-9 microseconds instead of 14.
+spawn and spawn_later were further optimized and spawning time drops down
+to 5 microseconds without kwargs / 9 with kwargs microseconds (from 14).
+
 
 0.9.2
 -----
 
-GreenSocket was simplified and GreenSSL was almost completely rewritten. This fixes
-SSL bug reported on eventletdev by Cesar Alaniz as well as failures in test_socket_ssl.py
-from Python's standard library. makeGreenFile is gone, makefile (which returns _fileobject)
-is available on both GreenSocket and GreenSSL. socket.py still a work in progress.
+gevent.socket implementation was simplified and GreenSSL was almost completely
+rewritten. This fixes SSL bug reported on eventletdev by Cesar Alaniz as well
+as failures in test_socket_ssl.py from Python's standard library.
+makeGreenFile is gone, makefile (which returns _fileobject) is available on
+both GreenSocket and GreenSSL. socket.py still a work in progress.
 
 New class core.active_event is added that takes advantage of libevent's event_active function.
 core.active_event(func) schedules func to be run in this event loop iteration as opposed
