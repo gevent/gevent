@@ -21,7 +21,7 @@
 
 import greentest
 import gevent
-from gevent import core
+from gevent import core, proc, greenlet
 
 DELAY = 0.1
 
@@ -49,6 +49,35 @@ class Test(greentest.TestCase):
         def func():
             return gevent.with_timeout(0.2, gevent.sleep, 2, timeout_value=1)
         self.assertRaises(gevent.Timeout, gevent.with_timeout, 0.1, func)
+
+    def test_killing_just_spawned(self):
+        def func():
+            pass
+        g = gevent.spawn_later(2, func)
+        assert not g.dead, g
+        gevent.kill(g, block=True)
+        assert g.dead, g
+
+    def test_sleep_invalid_switch(self):
+        p = proc.spawn(proc.wrap_errors(AssertionError, gevent.sleep), 2)
+        gevent.spawn(p.greenlet.switch, None)
+        result = p.wait()
+        assert isinstance(result, AssertionError), instance
+        assert 'Invalid switch' in str(result), repr(str(result))
+
+    def test_wait_reader_invalid_switch(self):
+        p = proc.spawn(proc.wrap_errors(AssertionError, greenlet.wait_reader), 0)
+        gevent.spawn(p.greenlet.switch, None)
+        result = p.wait()
+        assert isinstance(result, AssertionError), instance
+        assert 'Invalid switch' in str(result), repr(str(result))
+
+    def test_wait_writer_invalid_switch(self):
+        p = proc.spawn(proc.wrap_errors(AssertionError, greenlet.wait_writer), 1)
+        gevent.spawn(p.greenlet.switch, None)
+        result = p.wait()
+        assert isinstance(result, AssertionError), instance
+        assert 'Invalid switch' in str(result), repr(str(result))
 
 
 class TestTimers(greentest.TestCase):
