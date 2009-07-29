@@ -4,7 +4,7 @@
 All known bugs in the queue module were fixed and it is made 2.4-compatible.
 LifoQueue and PriorityQueue are implemented as well.
 
-gevent.queue.Queue implement the standard Queue inteface with the only difference
+gevent.queue.Queue implements the standard Queue inteface with the only difference
 that Queue(0) means queue of size 0 (i.e. a channel), not a queue of infinite size.
 Having size of 0 means that put() methods always block until the item is delivered.
 
@@ -22,9 +22,14 @@ This makes it easy to check that a timeout catched is actually the one raised:
 
 select() function had a bug of this kind that was fixed.
 
-spawn and spawn_later were further optimized and spawning time drops down
-to 5 microseconds without kwargs / 9 with kwargs microseconds (from 14).
+spawn and spawn_later were further optimized and spawning time has dropped down
+to 5 microseconds without kwargs / 9 with kwargs (from 14).
 
+kill and killall 'wait' argument was renamed to 'block'. The polling is now
+implemented by greenlet.join and greenlet.joinall functions and it become more
+responsive, with gradual increase of sleep time.
+
+proc.RunningProcSet was renamed to proc.ProcSet.
 
 0.9.2
 -----
