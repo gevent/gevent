@@ -296,61 +296,6 @@ class TestNoWait(TestCase):
         assert q.full(), q
         assert q.empty(), q
 
-N= 5
-
-class TestPutsParticipate(TestCase):
-    # test that even the items that still wait for a free slot in put() follow order of the
-    # queue instead of being delivered randomly
-
-    def test_priority_queue(self):
-        for size in xrange(N+1):
-            q = queue.PriorityQueue(N)
-            data = range(N)
-            random.shuffle(data)
-            greenlets = [proc.spawn(q.put, x) for x in data]
-            gevent.sleep(0)
-            results = []
-            for x in xrange(N):
-                received = q.get()
-                results.append(received)
-                assert x == received, (x, results)
-            ready = [x.ready() for x in greenlets] # XXX waitall with timeout=0 would help here
-            assert all(ready), ready
-
-    def test_queue(self):
-        for size in xrange(N+1):
-            q = queue.Queue(N)
-            data = range(N)
-            def put_after(seconds, x):
-                gevent.sleep(seconds)
-                q.put(x)
-            greenlets = [proc.spawn(put_after, x/10000.0, x) for x in data]
-            gevent.sleep(N/1000.0)
-            results = []
-            for x in xrange(N):
-                received = q.get()
-                results.append(received)
-                assert x == received, (x, results)
-            ready = [x.ready() for x in greenlets]
-            assert all(ready), ready
-
-    def test_lifo_queue(self):
-        for size in xrange(N+1):
-            q = queue.LifoQueue(N)
-            data = range(N)
-            def put_after(seconds, x):
-                gevent.sleep(seconds)
-                q.put(x)
-            greenlets = [proc.spawn(put_after, x/10000.0, x) for x in data]
-            gevent.sleep(N/1000.0)
-            results = []
-            for x in reversed(xrange(N)):
-                received = q.get()
-                results.append(received)
-                assert x == received, (x, results)
-            ready = [x.ready() for x in greenlets]
-            assert all(ready), ready
-
 
 if __name__=='__main__':
     main()
