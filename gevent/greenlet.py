@@ -152,8 +152,7 @@ def kill(greenlet, exception=GreenletExit, block=False, polling_period=0.2):
     core.active_event(_kill, greenlet, exception, waiter)
     if block:
         waiter.wait()
-        while not greenlet.dead:
-            sleep(polling_period)
+        join(greenlet, polling_period=polling_period)
 
 
 def _killall(greenlets, exception, waiter):
@@ -177,10 +176,36 @@ def killall(greenlets, exception=GreenletExit, block=False, polling_period=0.2):
     core.active_event(_killall, greenlets, exception, waiter)
     if block:
         alive = waiter.wait()
-        while alive:
-            sleep(polling_period)
-            while alive and alive[0].dead:
-                del alive[0]
+        if alive:
+            _joinall(alive, polling_period=polling_period)
+
+
+def join(greenlet, polling_period=0.2):
+    """Wait for a greenlet to finish by polling its status"""
+    delay = 0.002
+    while not greenlet.dead:
+        delay = min(polling_period, delay*2)
+        sleep(delay)
+
+
+def _joinall(greenlets, polling_period=0.2):
+    """Wait for the greenlets to finish by polling their status.
+
+    WARNING: greenlets argument is corrupted.
+    """
+    while greenlets and greenlets[0].dead:
+        del greenlets[0]
+    delay = 0.002
+    while greenlets:
+        delay = min(polling_period, delay*2)
+        sleep(delay)
+        while greenlets and greenlets[-1].dead:
+            del greenlets[-1]
+
+
+def joinall(greenlets, polling_period=0.2):
+    """Wait for the greenlets to finish by polling their status"""
+    return _joinall(list(greenlets), polling_period=polling_period)
 
 
 def sleep(seconds=0):
