@@ -620,6 +620,11 @@ def spawn_link_exception(function, *args, **kwargs):
     return p
 
 
+def spawn_later(seconds, function, *args, **kwargs):
+    # XXX implement properly, without scheduling 2 events instead of 1
+    core.timer(seconds, spawn, function, *args, **kwargs)
+
+
 # QQQ not specific to proc module: move to greenlet.py?
 class wrap_errors(object):
     """Helper to make function return an exception, rather than raise it.
