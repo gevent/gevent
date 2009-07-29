@@ -49,9 +49,11 @@ def sleep(seconds=0):
     nothing else will run.
     """
     hub = get_hub()
-    t = core.timer(seconds, greenlet.getcurrent().switch)
+    unique_mark = object()
+    t = core.timer(seconds, greenlet.getcurrent().switch, unique_mark)
     try:
-        hub.switch()
+        switch_result = hub.switch()
+        assert switch_result is unique_mark, 'Invalid switch into sleep(): %r' % (switch_result, )
     finally:
         t.cancel()
 
@@ -482,8 +484,8 @@ def _wait_helper(ev, evtype):
 def wait_reader(fileno, timeout=-1, timeout_exc=_socket.timeout):
     evt = core.read(fileno, _wait_helper, timeout, (getcurrent(), timeout_exc))
     try:
-        returned_ev = get_hub().switch()
-        assert evt is returned_ev, (evt, returned_ev)
+        switch_result = get_hub().switch()
+        assert evt is switch_result, 'Invalid switch into wait_reader(): %r' % (switch_result, )
     finally:
         evt.cancel()
 
@@ -491,8 +493,8 @@ def wait_reader(fileno, timeout=-1, timeout_exc=_socket.timeout):
 def wait_writer(fileno, timeout=-1, timeout_exc=_socket.timeout):
     evt = core.write(fileno, _wait_helper, timeout, (getcurrent(), timeout_exc))
     try:
-        returned_ev = get_hub().switch()
-        assert evt is returned_ev, (evt, returned_ev)
+        switch_result = get_hub().switch()
+        assert evt is switch_result, 'Invalid switch into wait_writer(): %r' % (switch_result, )
     finally:
         evt.cancel()
 
