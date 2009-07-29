@@ -352,16 +352,5 @@ class TestPutsParticipate(TestCase):
             assert all(ready), ready
 
 
-class TestItemProxy(TestCase):
-
-    def test(self):
-        _ItemProxy = queue._ItemProxy
-        assert 10 == _ItemProxy(10, None), repr(_ItemProxy(10, None))
-        assert _ItemProxy(10, None) == 10, repr(_ItemProxy(10, None))
-        assert 9 < _ItemProxy(10, None) < 11
-        assert hash(_ItemProxy(10, None)) == hash(10)
-        assert bool(_ItemProxy([], None)) == bool([])
-
-
 if __name__=='__main__':
     main()
