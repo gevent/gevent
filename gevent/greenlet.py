@@ -105,7 +105,7 @@ class Waiter(object):
 
     def switch(self, value=None):
         """Wake up the greenlet that is calling wait() currently (if there is one).
-        Can only be called from get_hub().greenlet.
+        Can only be called from Hub's greenlet.
         """
         assert greenlet.getcurrent() is get_hub().greenlet, "Can only use Waiter.switch method from the mainloop"
         if self.greenlet is not None:
@@ -116,7 +116,7 @@ class Waiter(object):
 
     def throw(self, *throw_args):
         """Make greenlet calling wait() wake up (if there is a wait()).
-        Can only be called from get_hub().greenlet.
+        Can only be called from Hub's greenlet.
         """
         assert greenlet.getcurrent() is get_hub().greenlet, "Can only use Waiter.switch method from the mainloop"
         if self.greenlet is not None:
