@@ -144,13 +144,13 @@ def _kill(greenlet, exception, waiter):
     waiter.switch()
 
 
-def kill(greenlet, exception=GreenletExit, wait=False, polling_period=1):
+def kill(greenlet, exception=GreenletExit, block=False, polling_period=0.2):
     """Kill greenlet with exception (GreenletExit by default).
-    Wait for it to die if wait=True.
+    Wait for it to die if block is true.
     """
     waiter = Waiter()
     core.active_event(_kill, greenlet, exception, waiter)
-    if wait:
+    if block:
         waiter.wait()
         while not greenlet.dead:
             sleep(polling_period)
@@ -169,13 +169,13 @@ def _killall(greenlets, exception, waiter):
     waiter.switch(diehards)
 
 
-def killall(greenlets, exception=GreenletExit, wait=False, polling_period=1):
+def killall(greenlets, exception=GreenletExit, block=False, polling_period=0.2):
     """Kill all the greenlets with exception (GreenletExit by default).
-    Wait for them to die if wait=True.
+    Wait for them to die if block is true.
     """
     waiter = Waiter()
     core.active_event(_killall, greenlets, exception, waiter)
-    if wait:
+    if block:
         alive = waiter.wait()
         while alive:
             sleep(polling_period)

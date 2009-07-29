@@ -48,7 +48,7 @@ class Test(greentest.TestCase):
         s.spawn(gevent.sleep, DELAY*2)
         assert len(s)==2, s
         start = time.time()
-        s.killall(wait=True)
+        s.killall(block=True)
         assert not s, s
         assert len(s)==0, s
         delta = time.time() - start
@@ -89,7 +89,17 @@ class Test(greentest.TestCase):
         assert u1.shot_count == 1, u1.shot_count
         assert u2.shot_count == 1, u2.shot_count
         X = object()
-        assert X is gevent.with_timeout(DELAY, s.killall, wait=True, timeout_value=X)
+        assert X is gevent.with_timeout(DELAY, s.killall, block=True, timeout_value=X)
+
+    def test_killall_subclass(self):
+        p1 = Proc1.spawn(lambda : 1/0)
+        p2 = Proc1.spawn(lambda : gevent.sleep(10))
+        s = proc.ProcSet([p1, p2])
+        s.killall(block=True)
+
+
+class Proc1(proc.Proc):
+    pass
 
 
 if __name__=='__main__':

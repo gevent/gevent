@@ -143,7 +143,7 @@ class TestHttpd(TestCase):
             socket.tcp_listener(('0.0.0.0', 12346)), self.site, max_size=128, log=self.logfile)
 
     def tearDown(self):
-        gevent.kill(self.killer, wait=True)
+        gevent.kill(self.killer, block=True)
         gevent.sleep(0) # XXX kill should be enough!
 
     def test_001_server(self):

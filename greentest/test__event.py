@@ -60,7 +60,7 @@ class TestEvent(greentest.TestCase):
                 assert result is X, 'Nobody sent anything to event2 yet it received %r' % (result, )
         finally:
             t.cancel()
-            gevent.kill(g, wait=True)
+            gevent.kill(g, block=True)
 
 
 if __name__=='__main__':

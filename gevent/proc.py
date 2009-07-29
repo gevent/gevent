@@ -589,10 +589,10 @@ class Proc(Source):
                 throw_args = (ProcExit, )
             self.greenlet.throw(*throw_args)
 
-    def kill(self, exception=ProcExit, wait=False):
+    def kill(self, exception=ProcExit, block=False):
         if not self.dead:
             core.active_event(self.greenlet.throw, exception)
-            if wait:
+            if block:
                 try:
                     self.wait()
                 except:
@@ -735,22 +735,22 @@ class ProcSet(object):
         while self.procs:
             waitall(self.procs, trap_errors=trap_errors)
 
-    def kill(self, p, exception=ProcExit, wait=False):
+    def kill(self, p, exception=ProcExit, block=False):
         kill = p.kill
         try:
             self.procs.remove(p)
         except KeyError:
             return
         self.dying.add(p)
-        return kill(exception=exception, wait=wait)
+        return kill(exception=exception, block=block)
 
-    def killall(self, exception=ProcExit, wait=False):
+    def killall(self, exception=ProcExit, block=False):
         while self.procs or self.dying:
             for p in self.procs:
                 core.active_event(p.throw, exception)
             self.dying.update(self.procs)
             self.procs.clear()
-            if not wait:
+            if not block:
                 break
             if self.dying:
                 waitall(self.dying, trap_errors=True)
