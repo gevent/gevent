@@ -226,7 +226,7 @@ class TestChannel(TestCase):
             channel.send('world')
             events.append('sent world')
 
-        g = proc.spawn_greenlet(another_greenlet)
+        g = proc.spawn(another_greenlet)
 
         events.append('waiting')
         events.append(channel.wait())
@@ -235,6 +235,7 @@ class TestChannel(TestCase):
         self.assertEqual(['waiting', 'sending hello', 'hello', 'sending world', 'world'], events)
         gevent.sleep(0)
         self.assertEqual(['waiting', 'sending hello', 'hello', 'sending world', 'world', 'sent world'], events)
+        g.wait(timeout=0)
 
 
 if __name__=='__main__':
