@@ -84,12 +84,12 @@ class Test(greentest.TestCase):
             timer.cancel()
             sleep(DELAY*2)
 
-        # To silent the exception, pass None as second parameter. The with-block
+        # To silent the exception, pass False as second parameter. The with-block
         # will be interrupted with _SilentException, but it won't be propagated
         # outside.
         XDELAY=0.1
         start = time.time()
-        with Timeout(XDELAY, None):
+        with Timeout(XDELAY, False):
             sleep(XDELAY*2)
         delta = (time.time()-start)
         assert delta<XDELAY*2, delta
@@ -108,8 +108,8 @@ class Test(greentest.TestCase):
         assert not err_ref(), repr(err_ref())
 
     def test_nested_timeout(self):
-        with Timeout(DELAY, None):
-            with Timeout(DELAY*2, None):
+        with Timeout(DELAY, False):
+            with Timeout(DELAY*2, False):
                 sleep(DELAY*3)
             raise AssertionError('should not get there')
 

@@ -424,7 +424,7 @@ class Source(object):
                 core.active_event(self._do_send, links, consult)
                 raise
 
-    def wait(self, timeout=None, exception=True):
+    def wait(self, timeout=None, exception=None):
         """Wait until send() or send_exception() is called or `timeout' has
         expired. Return the argument of send or raise the argument of
         send_exception. If timeout has expired, None is returned.
@@ -446,9 +446,9 @@ class Source(object):
             finally:
                 self.unlink(waiter)
         elif timeout <= 0:
-            if exception is None:
+            if exception is False:
                 return
-            if exception is True:
+            if exception is None:
                 exception = greenlet.Timeout()
             raise exception
         else:

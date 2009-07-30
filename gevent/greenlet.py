@@ -181,54 +181,66 @@ class _SilentException(BaseException):
 class Timeout(BaseException):
     """Raise an exception in the current greenlet after timeout.
 
-    timeout = Timeout(seconds[, exc])
+    timeout = Timeout(seconds[, exception])
     try:
         ... code block ...
     finally:
         timeout.cancel()
 
-    By default, the Timeout instance itself is raised. If exc is provided, then
-    it raised instead.
+    Assuming code block is yielding (i.e. gives up control to the hub),
+    an exception will be raised if code block has been running for more
+    than `seconds` seconds. By default (or when exception is None), the
+    Timeout instance itself is raised. If exception is provided, then it
+    is raised instead.
 
     For Python starting with 2.5 'with' statement can be used:
 
-    with Timeout(seconds[, exc]) as timeout:
+    with Timeout(seconds[, exception]) as timeout:
         ... code block ...
 
-    Assuming code block is yielding (i.e. gives up control to the hub),
-    an exception provided in `exc' argument will be raised. If exc is omitted
-    or True, the timeout object itself is raised. Although the timeout will be
-    cancelled upon the block exit, it is also possible to cancel it inside the
-    block explicitly, by calling timeout.cancel().
+    This is equivalent to try/finally block above with one additional feature:
+    if exception is False, code block will be interrupted "silently". Under the
+    hood, an exception of a type _SilentException (subclass of BaseException
+    but not Exception) is raised. If it exits the block it is suppressed by the
+    context manager, so that outside code won't see it.
 
-    When exc is None, code block is interrupted "silently". Under the hood, an
-    exception of a special type _SilentException (which is a subclass of BaseException
-    but not Exception) is raised but silented before exiting the block
-    in __exit__ method:
+    This is handy for adding a timeout feature to the functions that don't
+    implement it themselves:
 
     data = None
-    with Timeout(2, None):
-        data = sock.recv(1024)
+    with Timeout(5, False):
+        data = mysock.makefile().readline()
     if data is None:
-        #  2 seconds passed without sock receiving anything
+        # 5 seconds passed without reading a line
     else:
-        # sock has received some data
+        # a line was read within 5 seconds
 
-    Note, that "except:" statement will still catch the exception thus breaking
-    the illusion.
+    Note that, if readline() catches BaseException (or everything with 'except:'),
+    then your timeout is screwed.
+
+    When catching timeouts, keep in mind that the one you catch maybe not the
+    one you have set; if you going to silent a timeout, always check that it's
+    the one you need:
+
+    timeout = Timeout(1)
+    try:
+        ...
+    except Timeout, t:
+        if t is not timeout:
+            raise # not my timeout
     """
 
-    def __init__(self, seconds=None, exception=True):
-        if seconds is None: # the timeout that never expires
-            self.timer = None
+    def __init__(self, seconds=None, exception=None):
+        if seconds is None: # "fake" timeout (never expires)
             self.exception = None
-        elif exception is True: # the timeout that raises self
-            self.exception = exception
+            self.timer = None
+        elif exception is None: # timeout that raises self
+            self.exception = None
             self.timer = core.timer(seconds, getcurrent().throw, self)
-        elif exception is None: # the timeout that interrupts the with-block "silently"
+        elif exception is False: # timeout that interrupts the with-block "silently"
             self.exception = _SilentException()
             self.timer = core.timer(seconds, getcurrent().throw, self.exception)
-        else: # the regular timeout with user-provided exception
+        else: # regular timeout with user-provided exception
             self.exception = exception
             self.timer = core.timer(seconds, getcurrent().throw, exception)
 
@@ -248,7 +260,10 @@ class Timeout(BaseException):
             classname = self.__class__.__name__
         except AttributeError: # Python < 2.5
             classname = 'Timeout'
-        return '<%s at %s timer=%s exception=%s>' % (classname, hex(id(self)), self.timer, self.exception)
+        if self.exception is None:
+            return '<%s at %s timer=%s>' % (classname, hex(id(self)), self.timer)
+        else:
+            return '<%s at %s timer=%s exception=%s>' % (classname, hex(id(self)), self.timer, self.exception)
 
     def __str__(self):
         """
@@ -257,7 +272,10 @@ class Timeout(BaseException):
             ...
         Timeout
         """
-        return ''
+        if self.exception is None:
+            return ''
+        else:
+            return str(self.exception)
 
     def __enter__(self):
         return self

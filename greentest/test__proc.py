@@ -36,8 +36,8 @@ class TestLink_Signal(greentest.TestCase):
         q1, q2, q3 = coros.Queue(), coros.Queue(), coros.Queue()
         s.link_value(q1)
         self.assertRaises(Timeout, s.wait, 0)
-        assert s.wait(0, None) is None
-        assert s.wait(0.001, None) is None
+        assert s.wait(0, False) is None
+        assert s.wait(0.001, False) is None
         self.assertRaises(Timeout, s.wait, 0.001)
         s.send(1)
         assert not q1.ready()
