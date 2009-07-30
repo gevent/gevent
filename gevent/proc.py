@@ -148,25 +148,26 @@ class Link(object):
 class LinkToEvent(Link):
 
     def __call__(self, source):
-        if self.listener is None:
-            return
-        if source.has_value():
-            self.listener.send(source.value)
-        else:
-            self.listener.send_exception(*source.exc_info())
+        if self.listener is not None:
+            if source.has_value():
+                self.listener.send(source.value)
+            else:
+                self.listener.send_exception(*source.exc_info())
 
 class LinkToGreenlet(Link):
 
     def __call__(self, source):
-        if source.has_value():
-            self.listener.throw(LinkedCompleted(source.name))
-        else:
-            self.listener.throw(getLinkedFailed(source.name, *source.exc_info()))
+        if self.listener is not None:
+            if source.has_value():
+                self.listener.throw(LinkedCompleted(source.name))
+            else:
+                self.listener.throw(getLinkedFailed(source.name, *source.exc_info()))
 
 class LinkToCallable(Link):
 
     def __call__(self, source):
-        self.listener(source)
+        if self.listener is not None:
+            self.listener(source)
 
 
 def waitall(lst, trap_errors=False, queue=None):
