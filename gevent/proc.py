@@ -77,6 +77,7 @@ and wait for all them to complete. Such function is provided by this module.
 """
 import sys
 from gevent import coros, greenlet, core
+import traceback
 
 __all__ = ['LinkedExited',
            'LinkedFailed',
@@ -421,8 +422,7 @@ class Source(object):
                     finally:
                         consult.pop(listener, None)
             except:
-                core.active_event(self._do_send, links, consult)
-                raise
+                traceback.print_exc()
 
     def wait(self, timeout=None, exception=None):
         """Wait until send() or send_exception() is called or `timeout' has
