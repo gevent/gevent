@@ -262,6 +262,8 @@ class Timeout(BaseException):
         """
         if self.exception is None:
             return ''
+        elif self.exception is False:
+            return '(silent)'
         else:
             return str(self.exception)
 
