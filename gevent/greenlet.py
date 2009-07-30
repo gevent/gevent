@@ -101,11 +101,12 @@ def kill(greenlet, exception=GreenletExit, block=False, polling_period=0.2):
     """Kill greenlet with exception (GreenletExit by default).
     Wait for it to die if block is true.
     """
-    waiter = Waiter()
-    core.active_event(_kill, greenlet, exception, waiter)
-    if block:
-        waiter.wait()
-        join(greenlet, polling_period=polling_period)
+    if not greenlet.dead:
+        waiter = Waiter()
+        core.active_event(_kill, greenlet, exception, waiter)
+        if block:
+            waiter.wait()
+            join(greenlet, polling_period=polling_period)
 
 
 def _killall(greenlets, exception, waiter):
