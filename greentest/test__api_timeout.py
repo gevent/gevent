@@ -25,7 +25,6 @@ import greentest
 import weakref
 import time
 from gevent import sleep, Timeout
-from gevent.greenlet import _SilentException
 DELAY = 0.04
 
 class Error(Exception):
@@ -84,9 +83,7 @@ class Test(greentest.TestCase):
             timer.cancel()
             sleep(DELAY*2)
 
-        # To silent the exception, pass False as second parameter. The with-block
-        # will be interrupted with _SilentException, but it won't be propagated
-        # outside.
+        # To silent the exception before exiting the block, pass False as second parameter.
         XDELAY=0.1
         start = time.time()
         with Timeout(XDELAY, False):
@@ -110,11 +107,6 @@ class Test(greentest.TestCase):
     def test_nested_timeout(self):
         with Timeout(DELAY, False):
             with Timeout(DELAY*2, False):
-                sleep(DELAY*3)
-            raise AssertionError('should not get there')
-
-        with Timeout(DELAY, _SilentException()):
-            with Timeout(DELAY*2, _SilentException()):
                 sleep(DELAY*3)
             raise AssertionError('should not get there')
 

@@ -171,13 +171,6 @@ except NameError: # Python < 2.5
         pass
 
 
-class _SilentException(BaseException):
-    """Used internally by Timeout as an exception which is not raised outside of with-block,
-    and therefore is not visible by the user, unless she uses "except:" construct.
-    """
-    __slots__ = []
-
-
 class Timeout(BaseException):
     """Raise an exception in the current greenlet after timeout.
 
@@ -199,10 +192,8 @@ class Timeout(BaseException):
         ... code block ...
 
     This is equivalent to try/finally block above with one additional feature:
-    if exception is False, code block will be interrupted "silently". Under the
-    hood, an exception of a type _SilentException (subclass of BaseException
-    but not Exception) is raised. If it exits the block it is suppressed by the
-    context manager, so that outside code won't see it.
+    if exception is False, the timeout is still raised, but context manager
+    suppresses it, so surrounding code won't see it.
 
     This is handy for adding a timeout feature to the functions that don't
     implement it themselves:
@@ -234,12 +225,9 @@ class Timeout(BaseException):
         if seconds is None: # "fake" timeout (never expires)
             self.exception = None
             self.timer = None
-        elif exception is None: # timeout that raises self
-            self.exception = None
+        elif exception is None or exception is False: # timeout that raises self
+            self.exception = exception
             self.timer = core.timer(seconds, getcurrent().throw, self)
-        elif exception is False: # timeout that interrupts the with-block "silently"
-            self.exception = _SilentException()
-            self.timer = core.timer(seconds, getcurrent().throw, self.exception)
         else: # regular timeout with user-provided exception
             self.exception = exception
             self.timer = core.timer(seconds, getcurrent().throw, exception)
@@ -282,7 +270,7 @@ class Timeout(BaseException):
 
     def __exit__(self, typ, value, tb):
         self.cancel()
-        if typ is _SilentException and value is self.exception:
+        if value is self and self.exception is False:
             return True
 
 
