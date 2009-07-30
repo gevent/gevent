@@ -24,6 +24,7 @@ __version__ = '0.4+'
 
 import sys
 import traceback
+from pprint import pformat
 
 DEF EVENT_INTERNAL_AVAILABLE=False
 
@@ -114,7 +115,7 @@ cdef void __event_handler(int fd, short evtype, void *arg) with gil:
     except:
         traceback.print_exc()
         try:
-            sys.stderr.write('Failed to execute callback for %r\n' % (ev, ))
+            sys.stderr.write('Failed to execute callback for %s\n' % (ev, ))
         except:
             pass
     finally:
@@ -230,8 +231,26 @@ cdef class event:
             pending = ' pending'
         else:
             pending = ''
-        return '<%s%s fd=%s %s flags=0x%x cb=%s arg=%s>' % \
-               (type(self).__name__, pending, self.fd, self.events_str, self.flags, self._callback, self._arg)
+        if self.events_str:
+            event_str = ' %s' % self.events_str
+        else:
+            event_str = ''
+        return '<%s at %s%s fd=%s%s flags=0x%x cb=%s arg=%s>' % \
+               (type(self).__name__, hex(id(self)), pending, self.fd, self.events_str, self.flags, self._callback, self._arg)
+
+    def __str__(self):
+        if self.pending:
+            pending = ' pending'
+        else:
+            pending = ''
+        if self.events_str:
+            event_str = ' %s' % self.events_str
+        else:
+            event_str = ''
+        cb = str(self._callback).replace('\n', '\n' + ' ' * 8)
+        arg = pformat(self._arg, indent=2).replace('\n', '\n' + ' ' * 8)
+        return '%s%s fd=%s%s flags=0x%x\n  cb  = %s\n  arg = %s' % \
+               (type(self).__name__, pending, self.fd, self.events_str, self.flags, cb, arg)
 
     def __enter__(self):
         return self
@@ -262,7 +281,7 @@ cdef void __simple_handler(int fd, short evtype, void *arg) with gil:
     except:
         traceback.print_exc()
         try:
-            sys.stderr.write('Failed to execute callback for %r\n' % (ev, ))
+            sys.stderr.write('Failed to execute callback for %s\n' % (ev, ))
         except:
             pass
     finally:
