@@ -226,6 +226,8 @@ def spawn_greenlet(function, *args):
     The current greenlet won't be unscheduled. Keyword arguments aren't
     supported (limitation of greenlet), use spawn() to work around that.
     """
+    import warnings
+    warnings.warn("gevent.proc.spawn_greenlet is deprecated; use gevent.spawn", DeprecationWarning, stacklevel=2)
     g = greenlet.Greenlet(function)
     g.parent = greenlet.get_hub().greenlet
     core.active_event(g.switch, *args)
@@ -563,7 +565,7 @@ class Proc(Source):
         assert self.greenlet is None, "'run' can only be called once per instance"
         if self.name is None:
             self.name = str(function)
-        self.greenlet = spawn_greenlet(self._run, function, args, kwargs)
+        self.greenlet = greenlet.spawn(self._run, function, args, kwargs)
 
     def _run(self, function, args, kwargs):
         """Internal top level function.
@@ -806,7 +808,7 @@ class Pool(object):
 
     def execute_async(self, func, *args, **kwargs):
         if self.sem.locked():
-            return spawn_greenlet(self.execute, func, *args, **kwargs)
+            return greenlet.spawn(self.execute, func, *args, **kwargs)
         else:
             return self.execute(func, *args, **kwargs)
 
