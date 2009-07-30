@@ -77,6 +77,7 @@ and wait for all them to complete. Such function is provided by this module.
 """
 import sys
 from gevent import coros, greenlet, core
+from gevent.queue import Queue
 import traceback
 
 __all__ = ['LinkedExited',
@@ -171,47 +172,42 @@ class LinkToCallable(Link):
             self.listener(source)
 
 
-def waitall(lst, trap_errors=False, queue=None):
+# QQQ add timeout
+def joinall(sources, trap_errors=True, queue=None):
     if queue is None:
-        queue = coros.Queue()
-    index = -1
-    for (index, linkable) in enumerate(lst):
-        linkable.link(decorate_send(queue, index))
-    len = index + 1
-    results = [None] * len
-    count = 0
-    while count < len:
-        try:
-            index, value = queue.wait()
-        except Exception:
-            if not trap_errors:
-                raise
-        else:
-            results[index] = value
-        count += 1
-    return results
+        queue = Queue()
+    links = []
+    try:
+        for source in sources:
+            links.append(source.link(queue.put))
+        for _ in xrange(len(sources)):
+            completed = queue.get()
+            if not trap_errors and completed.has_exception():
+                greenlet.getcurrent().throw(*completed.exc_info())
+    finally:
+        for link in links:
+            link.cancel()
 
 
-class decorate_send(object):
-
-    def __init__(self, event, tag):
-        self._event = event
-        self._tag = tag
-
-    def __repr__(self):
-        params = (type(self).__name__, self._tag, self._event)
-        return '<%s tag=%r event=%r>' % params
-
-    def __getattr__(self, name):
-        assert name != '_event'
-        return getattr(self._event, name)
-
-    def send(self, value=None):
-        self._event.send((self._tag, value))
+def waitall(sources, trap_errors=False, queue=None):
+    joinall(sources, trap_errors=trap_errors, queue=queue)
+    return [source.value for source in sources]
 
 
-# XXX this killall should actually be aware of link() and use it to avoid polling
-killall = greenlet.killall
+def killall(sources, exception=ProcExit, block=False, polling_period=0.2):
+    waiter = Waiter()
+    core.active_event(greenlet._killall, sources, exception, waiter)
+    if block:
+        alive = waiter.wait()
+        if alive:
+            try:
+                joinall(alive, trap_errors=True)
+            except TypeError:
+                greenlet._joinall(alive, polling_period=polling_period)
+            # QQQ a) use links for all the greenlets we can and poll the others
+            # QQQ b) have only one unversal version of killall, waitall, joinall etc
+            # QQQ    the current dichotomy of greenlets and procs is confusing
+
 
 class NotUsed(object):
 
