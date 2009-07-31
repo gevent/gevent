@@ -195,7 +195,7 @@ def waitall(sources, trap_errors=False, queue=None):
 
 
 def killall(sources, exception=ProcExit, block=False, polling_period=0.2):
-    waiter = Waiter()
+    waiter = greenlet.Waiter()
     core.active_event(greenlet._killall, sources, exception, waiter)
     if block:
         alive = waiter.wait()
