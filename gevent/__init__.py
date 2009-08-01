@@ -2,17 +2,18 @@ version_info = (0, 9, 3)
 __version__ = '0.9.3'
 
 __all__ = ['getcurrent',
-           'Timeout',
+           'sleep',
            'spawn',
            'spawn_later',
            'kill',
-           'sleep',
-           'signal',
+           'killall',
+           'Timeout',
            'with_timeout',
+           'signal',
            'fork',
+           'shutdown',
            'reinit']
 
-# add here Queue, Event, Pipe?, Socket?
 
 from gevent.greenlet import *
 from gevent import core
