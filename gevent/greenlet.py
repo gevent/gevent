@@ -446,6 +446,10 @@ class Hub(object):
         self.greenlet = Greenlet(self.run)
         self.keyboard_interrupt_signal = None
 
+    @property
+    def dead(self):
+        return self.greenlet.dead
+
     def switch(self):
         cur = getcurrent()
         assert cur is not self.greenlet, 'Cannot switch to MAINLOOP from MAINLOOP'
