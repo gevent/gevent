@@ -1,0 +1,4 @@
+- try to use names from standard library where possible
+- if monkey patching thread module also patch threading.local
+- nonblocking DNS calls via libevent
+
