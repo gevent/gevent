@@ -210,15 +210,18 @@ cdef class event:
         """
         cdef timeval tv
         cdef double c_timeout
+        cdef int result
         if not event_pending(&self.ev, EV_READ|EV_WRITE|EV_SIGNAL|EV_TIMEOUT, NULL):
             Py_INCREF(self)
         if timeout >= 0.0:
             c_timeout = <double>timeout
             tv.tv_sec = <long>c_timeout
             tv.tv_usec = <unsigned int>((c_timeout - <double>tv.tv_sec) * 1000000.0)
-            event_add(&self.ev, &tv)
+            result = event_add(&self.ev, &tv)
         else:
-            event_add(&self.ev, NULL)
+            result = event_add(&self.ev, NULL)
+        if result < 0:
+            raise IOError(errno, strerror(errno))
 
     def cancel(self):
         """Remove event from the event queue."""
