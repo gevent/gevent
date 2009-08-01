@@ -16,7 +16,8 @@ __all__ = ['getcurrent',
            'Timeout',
            'with_timeout',
            'signal',
-           'fork']
+           'fork',
+           'shutdown']
 
 
 try:
