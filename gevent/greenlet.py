@@ -349,6 +349,14 @@ def fork():
     return result
 
 
+def shutdown():
+    """Cancel our CTRL-C handler and wait for core.dispatch() to return."""
+    global _threadlocal
+    hub = _threadlocal.__dict__.get('hub')
+    if hub is not None and not hub.greenlet.dead:
+        hub.shutdown()
+
+
 class Waiter(object):
     """A low level synchronization class.
 
@@ -482,6 +490,18 @@ class Hub(object):
                 self.keyboard_interrupt_signal.cancel()
             if _threadlocal.__dict__.get('hub') is self:
                 _threadlocal.__dict__.pop('hub')
+
+    def shutdown(self):
+        assert getcurrent() is MAIN, "Shutting down is only possible from MAIN greenlet"
+        if self.keyboard_interrupt_signal is not None:
+            self.keyboard_interrupt_signal.cancel()
+            self.keyboard_interrupt_signal = None
+        try:
+            get_hub().switch()
+        except DispatchExit, ex:
+            if ex.message == 1:
+                return
+            raise
 
 
 class DispatchExit(Exception):
