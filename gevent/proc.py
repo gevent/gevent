@@ -423,6 +423,10 @@ class Source(object):
                         consult.pop(listener, None)
             except:
                 traceback.print_exc()
+                try:
+                    sys.stderr.write('Failed to execute link %s to %s\n\n' % (listener, self))
+                except:
+                    pass
 
     def wait(self, timeout=None, exception=None):
         """Wait until send() or send_exception() is called or `timeout' has
