@@ -4,11 +4,11 @@
 All known bugs in the queue module were fixed and it is made 2.4-compatible.
 LifoQueue and PriorityQueue are implemented as well.
 
-gevent.queue.Queue implements the standard Queue inteface with the only difference
+gevent.queue.Queue implements the standard Queue interface with the only difference
 that Queue(0) means queue of size 0 (i.e. a channel), not a queue of infinite size.
 Having size of 0 means that put() methods always block until the item is delivered.
 
-gevent.queue will deprecate coros.Queue and coros.Channel.
+gevent.queue will deprecate both coros.Queue and coros.Channel.
 
 Timeout now raises itself by default. TimeoutError is gone.
 This makes it easy to check that a timeout catched is actually the one raised:
@@ -22,14 +22,31 @@ This makes it easy to check that a timeout catched is actually the one raised:
 
 select() function had a bug of this kind that was fixed.
 
-spawn and spawn_later were further optimized and spawning time has dropped down
-to 5 microseconds without kwargs / 9 with kwargs (from 14).
+To instruct a with-block to silent the timeout one must pass False as a second
+argument. In this case Timeout won't leave the with-block it belongs to (but
+it can still be catched inside)
+
+with Timeout(1, False):
+    read()
+print 'done reading'
+
+Even if read() does not return within a second, "done reading" will still be displayed.
+
+spawn and spawn_later now avoid creating a closure and this decreases spawning
+time by 50%.
 
 kill and killall 'wait' argument was renamed to 'block'. The polling is now
 implemented by greenlet.join and greenlet.joinall functions and it become more
 responsive, with gradual increase of sleep time.
 
 proc.RunningProcSet was renamed to proc.ProcSet.
+
+shutdown() function was added, which can be used from the main greenlet to
+wait until libevent has finished dispatching the events.
+
+core.pyx now checks the return value of event_add and event_del and raises
+IOError if they have failed.
+
 
 0.9.2
 -----
