@@ -98,8 +98,7 @@ def backdoor_server(server, locals=None):
             while True:
                 (conn, (host, port)) = server.accept()
                 print "backdoor connected to %s:%s" % (host, port)
-                fl = conn.makeGreenFile("rw")
-                fl.newlines = '\n'
+                fl = _fileobject(conn.dup(), "rw", bufsize=1)
                 greenlet = SocketConsole(fl, (host, port), locals)
                 core.active_event(greenlet.switch)
         except socket.error, e:
@@ -116,10 +115,15 @@ def backdoor((conn, addr), locals=None):
     """
     host, port = addr
     print "backdoor to %s:%s" % (host, port)
-    fl = conn.makeGreenFile("rw")
-    fl.newlines = '\n'
+    fl = _fileobject(conn.dup(), "rw", bufsize=1)
     greenlet = SocketConsole(fl, (host, port), locals)
     core.active_event(greenlet.switch)
+
+
+class _fileobject(socket._fileobject):
+    
+    def write(self, data):
+        self._sock.sendall(data)
 
 
 if __name__ == '__main__':
