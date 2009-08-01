@@ -219,6 +219,13 @@ class NotUsed(object):
 _NOT_USED = NotUsed()
 
 
+def limitrepr(obj, limit=50):
+    res = repr(obj)
+    if len(res)>limit:
+        res = res[:limit]+'...'
+    return res
+
+
 def spawn_greenlet(function, *args):
     """Create a new greenlet that will run `function(*args)'.
     The current greenlet won't be unscheduled. Keyword arguments aren't
@@ -286,12 +293,9 @@ class Source(object):
         result.append(repr(self.name))
         if self.value is not _NOT_USED:
             if self._exc is None:
-                res = repr(self.value)
-                if len(res)>50:
-                    res = res[:50]+'...'
-                result.append('result=%s' % res)
+                result.append('result=%s' % limitrepr(self.value))
             else:
-                result.append('raised=%s' % (self._exc, ))
+                result.append('raised=%s' % limitrepr(self.exc_info()[1]))
         result.append('{%s:%s}' % (len(self._value_links), len(self._exception_links)))
         return result
 
