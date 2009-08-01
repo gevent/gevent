@@ -459,26 +459,29 @@ class Hub(object):
                 switch_out()
             except:
                 traceback.print_exc()
-        if self.greenlet.dead:
-            self.greenlet = Greenlet(self.run)
         return self.greenlet.switch()
 
     def run(self):
-        if self.keyboard_interrupt_signal is None:
-            self.keyboard_interrupt_signal = signal(2, MAIN.throw, KeyboardInterrupt)
-        loop_count = 0
-        while True:
-            try:
-                result = core.dispatch()
-            except IOError, ex:
-                loop_count += 1
-                if loop_count > 15:
-                    raise
-                sys.stderr.write('Restarting gevent.core.dispatch() after an error [%s]: %s\n' % (loop_count, ex))
-                continue
-            if result==1:
-                raise DispatchExit('No events registered')
-            raise DispatchExit('dispatch() exited with code %s' % (result, ))
+        global _threadlocal
+        assert self.greenlet is getcurrent(), 'Do not call run() directly'
+        self.keyboard_interrupt_signal = signal(2, MAIN.throw, KeyboardInterrupt)
+        try:
+            loop_count = 0
+            while True:
+                try:
+                    result = core.dispatch()
+                except IOError, ex:
+                    loop_count += 1
+                    if loop_count > 15:
+                        raise
+                    sys.stderr.write('Restarting gevent.core.dispatch() after an error [%s]: %s\n' % (loop_count, ex))
+                    continue
+                raise DispatchExit(result)
+        finally:
+            if self.keyboard_interrupt_signal is not None:
+                self.keyboard_interrupt_signal.cancel()
+            if _threadlocal.__dict__.get('hub') is self:
+                _threadlocal.__dict__.pop('hub')
 
 
 class DispatchExit(Exception):
