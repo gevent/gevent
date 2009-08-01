@@ -20,6 +20,7 @@
 # THE SOFTWARE.
 
 import greentest
+import unittest
 import time
 import gevent
 from gevent import core
@@ -76,6 +77,42 @@ class TestExceptionInMainloop(greentest.TestCase):
         delay = time.time() - start
 
         assert delay >= DELAY*0.9, 'sleep returned after %s seconds (was scheduled for %s)' % (delay, DELAY)
+
+
+class TestShutdown(unittest.TestCase):
+
+    def _shutdown(self, seconds=0, fuzzy=0.01):
+        start = time.time()
+        gevent.greenlet.shutdown()
+        delta = time.time() - start
+        assert seconds - fuzzy < delta < seconds + fuzzy, (seconds-fuzzy, delta, seconds+fuzzy)
+
+    def assert_hub(self):
+        assert 'hub' in gevent.greenlet._threadlocal.__dict__
+
+    def assert_no_hub(self):
+        assert 'hub' not in gevent.greenlet._threadlocal.__dict__
+
+    def test(self):
+        assert not gevent.greenlet.get_hub().dead
+        self._shutdown()
+        self.assert_no_hub()
+
+        # shutting down dead hub is silent
+        self._shutdown()
+        self._shutdown()
+        self.assert_no_hub()
+
+        # ressurect
+        gevent.sleep(0)
+        self.assert_hub()
+
+        gevent.core.timer(0.1, lambda : None)
+        self.assert_hub()
+        self._shutdown(seconds=0.1)
+        self.assert_no_hub()
+        self._shutdown(seconds=0)
+        self.assert_no_hub()
 
 
 if __name__=='__main__':
