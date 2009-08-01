@@ -48,11 +48,10 @@ def sleep(seconds=0):
     methods, it's a good idea to call ``sleep(0)`` occasionally; otherwise
     nothing else will run.
     """
-    hub = get_hub()
     unique_mark = object()
-    t = core.timer(seconds, greenlet.getcurrent().switch, unique_mark)
+    t = core.timer(seconds, getcurrent().switch, unique_mark)
     try:
-        switch_result = hub.switch()
+        switch_result = get_hub().switch()
         assert switch_result is unique_mark, 'Invalid switch into sleep(): %r' % (switch_result, )
     finally:
         t.cancel()
