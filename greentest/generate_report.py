@@ -117,7 +117,7 @@ class TestResult:
                 warning = output.count('warning')
                 if warning:
                     r += ['%s warnings' % warning]
-                tracebacks = output.count('traceback')
+                tracebacks = output.count('traceback (most recent call last):')
                 if tracebacks:
                     r += ['%s tracebacks' % tracebacks]
         return r
