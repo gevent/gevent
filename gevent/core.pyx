@@ -225,8 +225,11 @@ cdef class event:
 
     def cancel(self):
         """Remove event from the event queue."""
+        cdef int result
         if event_pending(&self.ev, EV_TIMEOUT|EV_SIGNAL|EV_READ|EV_WRITE, NULL):
-            event_del(&self.ev)
+            result = event_del(&self.ev)
+            if result < 0:
+                raise IOError(errno, strerror(errno))
             Py_DECREF(self)
 
     def __repr__(self):
