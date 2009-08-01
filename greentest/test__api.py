@@ -73,7 +73,7 @@ class Test(greentest.TestCase):
         assert 'Invalid switch' in str(result), repr(str(result))
 
     def test_wait_writer_invalid_switch(self):
-        p = proc.spawn(proc.wrap_errors(AssertionError, greenlet.wait_writer), 1)
+        p = proc.spawn(proc.wrap_errors(AssertionError, greenlet.wait_writer), 0)
         gevent.spawn(p.greenlet.switch, None)
         result = p.wait()
         assert isinstance(result, AssertionError), instance
