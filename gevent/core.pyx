@@ -115,7 +115,7 @@ cdef void __event_handler(int fd, short evtype, void *arg) with gil:
     except:
         traceback.print_exc()
         try:
-            sys.stderr.write('Failed to execute callback for %s\n' % (ev, ))
+            sys.stderr.write('Failed to execute callback for %s\n\n' % (ev, ))
         except:
             pass
     finally:
@@ -281,7 +281,7 @@ cdef void __simple_handler(int fd, short evtype, void *arg) with gil:
     except:
         traceback.print_exc()
         try:
-            sys.stderr.write('Failed to execute callback for %s\n' % (ev, ))
+            sys.stderr.write('Failed to execute callback for %s\n\n' % (ev, ))
         except:
             pass
     finally:
