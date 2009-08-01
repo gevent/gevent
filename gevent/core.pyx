@@ -26,7 +26,7 @@ import sys
 import traceback
 from pprint import pformat
 
-DEF EVENT_INTERNAL_AVAILABLE=False
+DEF EVENT_INTERNAL_AVAILABLE = False
 
 cdef extern from "libevent-internal.h":
     pass
