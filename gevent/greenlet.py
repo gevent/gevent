@@ -127,7 +127,7 @@ def killall(greenlets, exception=GreenletExit, block=False, polling_period=0.2):
     if block:
         alive = waiter.wait()
         if alive:
-            _joinall(alive, polling_period=polling_period)
+            joinall(alive, polling_period=polling_period)
 
 
 def join(greenlet, polling_period=0.2):
@@ -138,24 +138,17 @@ def join(greenlet, polling_period=0.2):
         sleep(delay)
 
 
-def _joinall(greenlets, polling_period=0.2):
-    """Wait for the greenlets to finish by polling their status.
-
-    WARNING: greenlets argument is corrupted.
-    """
-    while greenlets and greenlets[0].dead:
-        del greenlets[0]
-    delay = 0.002
-    while greenlets:
-        delay = min(polling_period, delay*2)
-        sleep(delay)
-        while greenlets and greenlets[-1].dead:
-            del greenlets[-1]
-
-
 def joinall(greenlets, polling_period=0.2):
     """Wait for the greenlets to finish by polling their status"""
-    return _joinall(list(greenlets), polling_period=polling_period)
+    current = 0
+    while current < len(greenlets) and greenlets[current].dead:
+        current += 1
+    delay = 0.002
+    while current < len(greenlets):
+        delay = min(polling_period, delay*2)
+        sleep(delay)
+        while current < len(greenlets) and greenlets[current].dead:
+            current += 1
 
 
 try:
