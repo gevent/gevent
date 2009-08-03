@@ -489,13 +489,16 @@ class Hub(object):
         try:
             get_hub().switch()
         except DispatchExit, ex:
-            if ex.message == 1:
+            if ex.code == 1:
                 return
             raise
 
 
 class DispatchExit(Exception):
-    pass
+    
+    def __init__(self, code):
+        self.code = code
+        Exception.__init__(self, code)
 
 
 def _wait_helper(ev, evtype):
