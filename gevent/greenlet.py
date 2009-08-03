@@ -65,26 +65,22 @@ def _switch_helper(function, args, kwargs):
 
 def spawn(function, *args, **kwargs):
     if kwargs:
-        g = Greenlet(_switch_helper)
-        g.parent = get_hub().greenlet
+        g = Greenlet(_switch_helper, get_hub().greenlet)
         core.active_event(g.switch, function, args, kwargs)
         return g
     else:
-        g = Greenlet(function)
-        g.parent = get_hub().greenlet
+        g = Greenlet(function, get_hub().greenlet)
         core.active_event(g.switch, *args)
         return g
 
 
 def spawn_later(seconds, function, *args, **kwargs):
     if kwargs:
-        g = Greenlet(_switch_helper)
-        g.parent = get_hub().greenlet
+        g = Greenlet(_switch_helper, get_hub().greenlet)
         core.timer(seconds, g.switch, function, args, kwargs)
         return g
     else:
-        g = Greenlet(function)
-        g.parent = get_hub().greenlet
+        g = Greenlet(function, get_hub().greenlet)
         core.timer(seconds, g.switch, *args)
         return g
 
