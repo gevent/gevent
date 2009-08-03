@@ -6,7 +6,7 @@ LifoQueue and PriorityQueue are implemented as well.
 
 gevent.queue.Queue implements the standard Queue interface with the only difference
 that Queue(0) means queue of size 0 (i.e. a channel), not a queue of infinite size.
-Having size of 0 means that put() methods always block until the item is delivered.
+Having size of 0 means that put() method always blocks until the item is delivered.
 
 gevent.queue will deprecate both coros.Queue and coros.Channel.
 
@@ -22,7 +22,7 @@ This makes it easy to check that a timeout caught is actually the one raised:
 
 select() function had a bug of this kind that was fixed.
 
-To instruct a with-block to silent the timeout one must pass False as a second
+To instruct a with-block to silent the timeout one can pass False as a second
 argument. In this case Timeout won't leave the with-block it belongs to (but
 it can still be caught inside)
 
@@ -30,7 +30,8 @@ with Timeout(1, False):
     read()
 print 'done reading'
 
-Even if read() does not return within a second, "done reading" will still be displayed.
+Even if read() does not return within a second and will be interrupted with a
+timeout, "done reading" will still be displayed.
 
 spawn and spawn_later now avoid creating a closure and this decreases spawning
 time by 50%.
