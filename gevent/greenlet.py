@@ -1,7 +1,6 @@
 import sys
 import os
 import traceback
-import _socket # for timeout
 from gevent import core
 
 
@@ -499,31 +498,5 @@ class DispatchExit(Exception):
     def __init__(self, code):
         self.code = code
         Exception.__init__(self, code)
-
-
-def _wait_helper(ev, evtype):
-    current, timeout_exc = ev.arg
-    if evtype & core.EV_TIMEOUT:
-        current.throw(timeout_exc)
-    else:
-        current.switch(ev)
-
-
-def wait_reader(fileno, timeout=-1, timeout_exc=_socket.timeout):
-    evt = core.read(fileno, _wait_helper, timeout, (getcurrent(), timeout_exc))
-    try:
-        switch_result = get_hub().switch()
-        assert evt is switch_result, 'Invalid switch into wait_reader(): %r' % (switch_result, )
-    finally:
-        evt.cancel()
-
-
-def wait_writer(fileno, timeout=-1, timeout_exc=_socket.timeout):
-    evt = core.write(fileno, _wait_helper, timeout, (getcurrent(), timeout_exc))
-    try:
-        switch_result = get_hub().switch()
-        assert evt is switch_result, 'Invalid switch into wait_writer(): %r' % (switch_result, )
-    finally:
-        evt.cancel()
 
 
