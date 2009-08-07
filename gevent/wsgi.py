@@ -29,7 +29,7 @@ import traceback
 from urllib import unquote
 from gevent import socket
 import BaseHTTPServer
-from gevent.proc import Pool
+from gevent.pool import Pool
 
 
 DEFAULT_MAX_SIMULTANEOUS_REQUESTS = 1024
