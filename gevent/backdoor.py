@@ -41,6 +41,7 @@ except AttributeError:
 
 class SocketConsole(Greenlet):
     def __init__(self, desc, hostport, locals):
+        Greenlet.__init__(self)
         self.hostport = hostport
         self.locals = locals
         # mangle the socket
@@ -58,9 +59,7 @@ class SocketConsole(Greenlet):
                 self.old[key] = getattr(desc, key)
             setattr(desc, key, value)
 
-        Greenlet.__init__(self)
-
-    def run(self):
+    def _run(self):
         try:
             console = InteractiveConsole(self.locals)
             console.interact()

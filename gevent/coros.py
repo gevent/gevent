@@ -26,7 +26,8 @@ import time
 import traceback
 
 from gevent.core import active_event
-from gevent.greenlet import get_hub, spawn, getcurrent, sleep
+from gevent.hub import get_hub, getcurrent, sleep
+from gevent.rawgreenlet import spawn
 
 
 class Cancelled(RuntimeError):
@@ -439,7 +440,7 @@ class Channel(object):
     def send(self, result=None, exc=None):
         if exc is not None and not isinstance(exc, tuple):
             exc = (exc, )
-        if getcurrent() is get_hub().greenlet:
+        if getcurrent() is get_hub():
             self.items.append((result, exc))
             if self._waiters and self._timer is None:
                 self._timer = active_event(self._do_switch)

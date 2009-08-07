@@ -1,6 +1,7 @@
 """implements standard module 'thread' with greenlets"""
 __thread = __import__('thread')
-from gevent.greenlet import spawn, getcurrent, GreenletExit
+from gevent.hub import getcurrent, GreenletExit
+from gevent.rawgreenlet import spawn
 from gevent.coros import Semaphore as LockType
 
 def get_ident(gr=None):

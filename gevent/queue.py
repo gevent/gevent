@@ -3,7 +3,8 @@ import heapq
 import collections
 from Queue import Full, Empty
 
-from gevent.greenlet import Timeout, Waiter, get_hub, getcurrent, _NONE
+from gevent.timeout import Timeout, _NONE
+from gevent.hub import get_hub, Waiter, getcurrent
 from gevent import core
 
 
@@ -90,7 +91,7 @@ class Queue(object):
             self._put(item)
             if self.getters:
                 self._schedule_unlock()
-        elif not block and get_hub().greenlet is getcurrent():
+        elif not block and get_hub() is getcurrent():
             # we're in the mainloop, so we cannot wait; we can switch() to other greenlets though
             # find a getter and deliver an item to it
             while self.getters:
@@ -141,7 +142,7 @@ class Queue(object):
             if self.putters:
                 self._schedule_unlock()
             return self._get()
-        elif not block and get_hub().greenlet is getcurrent():
+        elif not block and get_hub() is getcurrent():
             # special case to make get_nowait() runnable in the mainloop greenlet
             # there are no items in the queue; try to fix the situation by unlocking putters
             while self.putters:

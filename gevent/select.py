@@ -1,4 +1,6 @@
-from gevent import core, greenlet
+from gevent import core
+from gevent.hub import get_hub, getcurrent
+from gevent.timeout import Timeout
 
 def get_fileno(obj):
     try:
@@ -12,10 +14,10 @@ def get_fileno(obj):
 
 
 def select(read_list, write_list, error_list, timeout=None):
-    hub = greenlet.get_hub()
+    hub = get_hub()
     timeout = None
-    current = greenlet.getcurrent()
-    assert hub.greenlet is not current, 'do not call blocking functions from the mainloop'
+    current = getcurrent()
+    assert hub is not current, 'do not call blocking functions from the mainloop'
     allevents = []
 
     def callback(ev, evtype):
@@ -31,11 +33,11 @@ def select(read_list, write_list, error_list, timeout=None):
     for w in write_list:
         allevents.append(core.write(get_fileno(r), callback, arg=w))
 
-    timeout = greenlet.Timeout(timeout)
+    timeout = Timeout(timeout)
     try:
         try:
             result = hub.switch()
-        except greenlet.Timeout, t:
+        except Timeout, t:
             if t is not timeout:
                 raise
             return [], [], []

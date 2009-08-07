@@ -67,7 +67,7 @@ fails then there's no way to complete the task so the parent must fail as well;
 >>> p = spawn(demofunc, 1, 0)
 >>> _ = p.link_exception()
 >>> try:
-...     greenlet.sleep(1)
+...     hub.sleep(1)
 ... except LinkedFailed:
 ...     print 'LinkedFailed'
 LinkedFailed
@@ -76,7 +76,8 @@ One application of linking is `waitall' function: link to a bunch of coroutines
 and wait for all them to complete. Such function is provided by this module.
 """
 import sys
-from gevent import coros, greenlet, core
+from gevent import coros, hub, core, rawgreenlet
+from gevent.timeout import Timeout
 from gevent.queue import Queue
 import traceback
 
@@ -124,12 +125,12 @@ class LinkedKilled(LinkedFailed):
     msg = """%r was killed with %s"""
 
 def getLinkedFailed(name, typ, value=None, tb=None):
-    if issubclass(typ, greenlet.GreenletExit):
+    if issubclass(typ, hub.GreenletExit):
         return LinkedKilled(name, typ, value, tb)
     return LinkedFailed(name, typ, value, tb)
 
 
-class ProcExit(greenlet.GreenletExit):
+class ProcExit(hub.GreenletExit):
     """Raised when this proc is killed."""
 
 
@@ -183,7 +184,7 @@ def joinall(sources, trap_errors=True, queue=None):
         for _ in xrange(len(sources)):
             completed = queue.get()
             if not trap_errors and completed.has_exception():
-                greenlet.getcurrent().throw(*completed.exc_info())
+                hub.getcurrent().throw(*completed.exc_info())
     finally:
         for link in links:
             link.cancel()
@@ -195,15 +196,15 @@ def waitall(sources, trap_errors=False, queue=None):
 
 
 def killall(sources, exception=ProcExit, block=False, polling_period=0.2):
-    waiter = greenlet.Waiter()
-    core.active_event(greenlet._killall, sources, exception, waiter)
+    waiter = hub.Waiter()
+    core.active_event(rawgreenlet._killall, sources, exception, waiter)
     if block:
         alive = waiter.wait()
         if alive:
             try:
                 joinall(alive, trap_errors=True)
             except TypeError:
-                greenlet._joinall(alive, polling_period=polling_period)
+                rawgreenlet._joinall(alive, polling_period=polling_period)
             # QQQ a) use links for all the greenlets we can and poll the others
             # QQQ b) have only one unversal version of killall, waitall, joinall etc
             # QQQ    the current dichotomy of greenlets and procs is confusing
@@ -233,8 +234,8 @@ def spawn_greenlet(function, *args):
     """
     import warnings
     warnings.warn("gevent.proc.spawn_greenlet is deprecated; use gevent.spawn", DeprecationWarning, stacklevel=2)
-    g = greenlet.Greenlet(function)
-    g.parent = greenlet.get_hub().greenlet
+    g = hub.greenlet(function)
+    g.parent = hub.get_hub()
     core.active_event(g.switch, *args)
     return g
 
@@ -331,10 +332,10 @@ class Source(object):
         if self.ready() and self._exc is not None:
             return
         if listener is None:
-            listener = greenlet.getcurrent()
+            listener = hub.getcurrent()
         if link is None:
             link = self.getLink(listener)
-        if self.ready() and listener is greenlet.getcurrent():
+        if self.ready() and listener is hub.getcurrent():
             link(self)
         else:
             self._value_links[listener] = link
@@ -346,10 +347,10 @@ class Source(object):
         if self.value is not _NOT_USED and self._exc is None:
             return
         if listener is None:
-            listener = greenlet.getcurrent()
+            listener = hub.getcurrent()
         if link is None:
             link = self.getLink(listener)
-        if self.ready() and listener is greenlet.getcurrent():
+        if self.ready() and listener is hub.getcurrent():
             link(self)
         else:
             self._exception_links[listener] = link
@@ -359,10 +360,10 @@ class Source(object):
 
     def link(self, listener=None, link=None):
         if listener is None:
-            listener = greenlet.getcurrent()
+            listener = hub.getcurrent()
         if link is None:
             link = self.getLink(listener)
-        if self.ready() and listener is greenlet.getcurrent():
+        if self.ready() and listener is hub.getcurrent():
             if self._exc is None:
                 link(self)
             else:
@@ -379,7 +380,7 @@ class Source(object):
 
     def unlink(self, listener=None):
         if listener is None:
-            listener = greenlet.getcurrent()
+            listener = hub.getcurrent()
         self._value_links.pop(listener, None)
         self._exception_links.pop(listener, None)
 
@@ -441,7 +442,7 @@ class Source(object):
             if self._exc is None:
                 return self.value
             else:
-                greenlet.getcurrent().throw(*self._exc)
+                hub.getcurrent().throw(*self._exc)
         elif timeout is None:
             waiter = Waiter()
             self.link(waiter)
@@ -453,11 +454,11 @@ class Source(object):
             if exception is False:
                 return
             if exception is None:
-                exception = greenlet.Timeout()
+                exception = Timeout()
             raise exception
         else:
             # what follows is:
-            # with greenlet.Timeout(timeout, *throw_args):
+            # with Timeout(timeout, *throw_args):
             #     waiter = Waiter()
             #     self.link(waiter)
             #     try:
@@ -465,7 +466,7 @@ class Source(object):
             #     finally:
             #         self.unlink(waiter)
             # however, with statement is hand decompiled to make it 2.4 compatible
-            timer = greenlet.Timeout(timeout, exception)
+            timer = Timeout(timeout, exception)
             EXC = True
             try:
                 try:
@@ -495,15 +496,15 @@ class Waiter(object):
         """Wake up the greenlet that is calling wait() currently (if there is one).
         Can only be called from get_hub().greenlet.
         """
-        assert greenlet.getcurrent() is greenlet.get_hub().greenlet
+        assert hub.getcurrent() is hub.get_hub()
         if self.greenlet is not None:
             self.greenlet.switch(value)
 
     def send_exception(self, *throw_args):
         """Make greenlet calling wait() wake up (if there is a wait()).
-        Can only be called from greenlet.get_hub().greenlet.
+        Can only be called from greenlet.get_hub().
         """
-        assert greenlet.getcurrent() is greenlet.get_hub().greenlet
+        assert hub.getcurrent() is hub.get_hub()
         if self.greenlet is not None:
             self.greenlet.throw(*throw_args)
 
@@ -512,11 +513,11 @@ class Waiter(object):
         into send() or raise exception passed into send_exception().
         """
         assert self.greenlet is None
-        current = greenlet.getcurrent()
-        assert current is not greenlet.get_hub().greenlet
+        current = hub.getcurrent()
+        assert current is not hub.get_hub()
         self.greenlet = current
         try:
-            return greenlet.get_hub().switch()
+            return hub.get_hub().switch()
         finally:
             self.greenlet = None
 
@@ -570,7 +571,7 @@ class Proc(Source):
         assert self.greenlet is None, "'run' can only be called once per instance"
         if self.name is None:
             self.name = str(function)
-        self.greenlet = greenlet.spawn(self._run, function, args, kwargs)
+        self.greenlet = rawgreenlet.spawn(self._run, function, args, kwargs)
 
     def _run(self, function, args, kwargs):
         """Internal top level function.
@@ -699,7 +700,7 @@ class ProcSet(object):
         return len(self.procs) + len(self.dying)
 
     def __contains__(self, item):
-        if isinstance(item, greenlet.Greenlet):
+        if isinstance(item, hub.greenlet):
             # special case for "getcurrent() in running_proc_set" to work
             for x in self.procs:
                 if x.greenlet == item:
@@ -798,7 +799,7 @@ class Pool(object):
         """
         # if reentering an empty pool, don't try to wait on a coroutine freeing
         # itself -- instead, just execute in the current coroutine
-        if self.sem.locked() and greenlet.getcurrent() in self.procs:
+        if self.sem.locked() and hub.getcurrent() in self.procs:
             p = spawn(func, *args, **kwargs)
             try:
                 p.wait()
@@ -813,7 +814,7 @@ class Pool(object):
 
     def execute_async(self, func, *args, **kwargs):
         if self.sem.locked():
-            return greenlet.spawn(self.execute, func, *args, **kwargs)
+            return rawgreenlet.spawn(self.execute, func, *args, **kwargs)
         else:
             return self.execute(func, *args, **kwargs)
 

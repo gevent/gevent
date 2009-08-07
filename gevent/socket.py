@@ -35,7 +35,8 @@ import sys
 import errno
 import time
 
-from gevent.greenlet import spawn, getcurrent, get_hub
+from gevent.hub import getcurrent, get_hub
+from gevent.rawgreenlet import spawn
 from gevent import core
 
 BUFFER_SIZE = 4096
