@@ -60,6 +60,8 @@ class event(object):
     """
     _result = None
     def __init__(self):
+        import warnings
+        warnings.warn("coros.event is deprecated", DeprecationWarning, stacklevel=2)
         self._waiters = set()
         self.reset()
 
@@ -355,6 +357,8 @@ def execute(func, *args, **kw):
 class Queue(object):
 
     def __init__(self):
+        import warnings
+        warnings.warn("coros.Queue is deprecated", DeprecationWarning, stacklevel=2)
         self.items = collections.deque()
         self._waiters = set()
         self._timer = None
@@ -421,6 +425,8 @@ class Queue(object):
 class Channel(object):
 
     def __init__(self, max_size=0):
+        import warnings
+        warnings.warn("coros.Channel is deprecated", DeprecationWarning, stacklevel=2)
         self.max_size = max_size
         self.items = collections.deque()
         self._waiters = set()

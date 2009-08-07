@@ -75,6 +75,10 @@ LinkedFailed
 One application of linking is `waitall' function: link to a bunch of coroutines
 and wait for all them to complete. Such function is provided by this module.
 """
+
+import warnings
+warnings.warn("gevent.proc is deprecated", DeprecationWarning, stacklevel=2)
+
 import sys
 from gevent import coros, hub, core, rawgreenlet
 from gevent.timeout import Timeout
