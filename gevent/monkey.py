@@ -20,6 +20,7 @@ def patch_thread():
     thread.exit = green_thread.exit
     if hasattr(green_thread, 'stack_size'):
         thread.stack_size = green_thread.stack_size
+    # XXX should also patch threadlocal
 
 def patch_socket():
     from gevent.socket import GreenSocket, fromfd, wrap_ssl, socketpair
@@ -28,7 +29,7 @@ def patch_socket():
     _socket.fromfd = fromfd
     _socket.ssl = wrap_ssl
     _socket.socketpair = socketpair
-    # also gethostbyname, getaddrinfo
+    # XXX also gethostbyname, getaddrinfo
 
 def patch_ssl():
     if sys.version_info[:2] >= (2, 6):
