@@ -17,7 +17,7 @@ class Test(greentest.TestCase):
         s.sendall('2+2\r\n')
         l = f.readline()
         assert l.strip() == '4', repr(l)
-        gevent.kill(g, block=True)
+        g.kill(block=True)
 
 
 if __name__ == '__main__':

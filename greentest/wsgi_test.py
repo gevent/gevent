@@ -138,12 +138,12 @@ class TestHttpd(TestCase):
     def setUp(self):
         self.logfile = StringIO()
         self.site = Site()
-        self.killer = gevent.spawn(
+        self.server = gevent.spawn(
             wsgi.server,
             socket.tcp_listener(('0.0.0.0', 12346)), self.site, max_size=128, log=self.logfile)
 
     def tearDown(self):
-        gevent.kill(self.killer, block=True)
+        self.server.kill(block=True)
         gevent.sleep(0) # XXX kill should be enough!
 
     def test_001_server(self):
@@ -325,7 +325,7 @@ class TestHttps(TestCase):
             result = f.read()
             self.assertEquals(result, 'abc')
         finally:
-            gevent.kill(g)
+            g.kill() # XXX use blocking kill
 
     def test_013_empty_return(self):
         def wsgi_app(environ, start_response):
@@ -342,7 +342,7 @@ class TestHttps(TestCase):
             result = f.read()
             self.assertEquals(result, '')
         finally:
-            gevent.kill(g)
+            g.kill()
 
 
 class HTTPRequest(urllib2.Request):

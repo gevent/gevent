@@ -47,7 +47,7 @@ class TestCase(unittest.TestCase):
         gevent.sleep(0) # switch at least once to setup signal handlers
         if hasattr(gevent.core, '_event_count'):
             self._event_count = (gevent.core._event_count(), gevent.core._event_count_active())
-        hub = gevent.greenlet.get_hub()
+        hub = gevent.hub.get_hub()
         if hasattr(hub, 'switch_count'):
             self._switch_count = hub.switch_count
         self._timer = gevent.Timeout(self.__timeout__, RuntimeError('test is taking too long'))
@@ -55,7 +55,7 @@ class TestCase(unittest.TestCase):
     def tearDown(self):
         if hasattr(self, '_timer'):
             self._timer.cancel()
-            hub = gevent.greenlet.get_hub()
+            hub = gevent.hub.get_hub()
             if self.__switch_check__ and self._switch_count is not None and hasattr(hub, 'switch_count') and hub.switch_count <= self._switch_count:
                 name = getattr(self, '_testMethodName', '') # 2.4 does not have it
                 sys.stderr.write('WARNING: %s.%s did not switch\n' % (type(self).__name__, name))
@@ -78,7 +78,7 @@ def find_command(command):
 
 main = unittest.main
 
-_original_Hub = gevent.greenlet.Hub
+_original_Hub = gevent.hub.Hub
 
 class CountingHub(_original_Hub):
 
@@ -88,4 +88,4 @@ class CountingHub(_original_Hub):
         self.switch_count += 1
         return _original_Hub.switch(self)
 
-gevent.greenlet.Hub = CountingHub
+gevent.hub.Hub = CountingHub

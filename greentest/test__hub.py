@@ -83,18 +83,18 @@ class TestShutdown(unittest.TestCase):
 
     def _shutdown(self, seconds=0, fuzzy=0.01):
         start = time.time()
-        gevent.greenlet.shutdown()
+        gevent.hub.shutdown()
         delta = time.time() - start
         assert seconds - fuzzy < delta < seconds + fuzzy, (seconds-fuzzy, delta, seconds+fuzzy)
 
     def assert_hub(self):
-        assert 'hub' in gevent.greenlet._threadlocal.__dict__
+        assert 'hub' in gevent.hub._threadlocal.__dict__
 
     def assert_no_hub(self):
-        assert 'hub' not in gevent.greenlet._threadlocal.__dict__
+        assert 'hub' not in gevent.hub._threadlocal.__dict__
 
     def test(self):
-        assert not gevent.greenlet.get_hub().dead
+        assert not gevent.hub.get_hub().dead
         self._shutdown()
         self.assert_no_hub()
 

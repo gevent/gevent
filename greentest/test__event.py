@@ -22,7 +22,6 @@
 import greentest
 import gevent
 from gevent import coros
-from greentest import TestCase
 
 DELAY = 0.01
 
@@ -60,7 +59,7 @@ class TestEvent(greentest.TestCase):
                 assert result is X, 'Nobody sent anything to event2 yet it received %r' % (result, )
         finally:
             t.cancel()
-            gevent.kill(g, block=True)
+            g.kill(block=True)
 
 
 if __name__=='__main__':

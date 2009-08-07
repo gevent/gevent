@@ -1,7 +1,7 @@
 from greentest import TestCase
 from greentest import main
 import gevent
-from gevent import coros, proc
+from gevent import coros
 
 
 class TestQueue(TestCase):
@@ -203,7 +203,7 @@ class TestChannel(TestCase):
             events.append(channel.wait())
             events.append(channel.wait())
 
-        g = proc.spawn(another_greenlet)
+        g = gevent.spawn(another_greenlet)
 
         events.append('sending')
         channel.send('hello')
@@ -226,7 +226,7 @@ class TestChannel(TestCase):
             channel.send('world')
             events.append('sent world')
 
-        g = proc.spawn(another_greenlet)
+        g = gevent.spawn(another_greenlet)
 
         events.append('waiting')
         events.append(channel.wait())
@@ -235,7 +235,7 @@ class TestChannel(TestCase):
         self.assertEqual(['waiting', 'sending hello', 'hello', 'sending world', 'world'], events)
         gevent.sleep(0)
         self.assertEqual(['waiting', 'sending hello', 'hello', 'sending world', 'world', 'sent world'], events)
-        g.wait(timeout=0)
+        g.get(block=False)
 
 
 if __name__=='__main__':

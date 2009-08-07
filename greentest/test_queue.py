@@ -3,11 +3,10 @@
 #from __future__ import with_statement
 from gevent import monkey; monkey.patch_all()
 from gevent import queue as Queue
-import sys
 import threading
 import time
 import unittest
-from test import test_support
+from greentest import test_support
 
 QUEUE_SIZE = 5
 

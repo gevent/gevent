@@ -1,9 +1,9 @@
 import time
 import greentest
 import gevent
-from gevent import proc
+from gevent import pool
 
-DELAY = 0.01
+DELAY = 0.1
 
 class Undead(object):
 
@@ -21,8 +21,9 @@ class Test(greentest.TestCase):
 
     def test_basic(self):
         DELAY = 0.05
-        s = proc.ProcSet()
+        s = pool.GreenletSet()
         s.spawn(gevent.sleep, DELAY)
+        assert len(s)==1, s
         s.spawn(gevent.sleep, DELAY*2.)
         assert len(s)==2, s
         gevent.sleep(DELAY*3./2.)
@@ -31,19 +32,19 @@ class Test(greentest.TestCase):
         assert not s, s
 
     def test_waitall(self):
-        s = proc.ProcSet()
+        s = pool.GreenletSet()
         s.spawn(gevent.sleep, DELAY)
         s.spawn(gevent.sleep, DELAY*2)
         assert len(s)==2, s
         start = time.time()
-        s.waitall()
+        s.joinall(raise_error=True)
         delta = time.time() - start
         assert not s, s
         assert len(s)==0, s
         assert DELAY*2 < delta < DELAY*2.5, delta
 
     def test_killall_wait(self):
-        s = proc.ProcSet()
+        s = pool.GreenletSet()
         s.spawn(gevent.sleep, DELAY)
         s.spawn(gevent.sleep, DELAY*2)
         assert len(s)==2, s
@@ -55,7 +56,7 @@ class Test(greentest.TestCase):
         assert delta < DELAY*0.5, delta
 
     def test_killall_nowait(self):
-        s = proc.ProcSet()
+        s = pool.GreenletSet()
         s.spawn(gevent.sleep, DELAY)
         s.spawn(gevent.sleep, DELAY*2)
         assert len(s)==2, s
@@ -68,9 +69,9 @@ class Test(greentest.TestCase):
     def test_kill_fires_once(self):
         u1 = Undead()
         u2 = Undead()
-        p1 = proc.spawn(u1)
-        p2 = proc.spawn(u2)
-        s = proc.ProcSet([p1, p2])
+        p1 = gevent.spawn(u1)
+        p2 = gevent.spawn(u2)
+        s = pool.GreenletSet([p1, p2])
         assert u1.shot_count == 0, u1.shot_count
         s.kill(p1)
         assert u1.shot_count == 0, u1.shot_count
@@ -92,13 +93,13 @@ class Test(greentest.TestCase):
         assert X is gevent.with_timeout(DELAY, s.killall, block=True, timeout_value=X)
 
     def test_killall_subclass(self):
-        p1 = Proc1.spawn(lambda : 1/0)
-        p2 = Proc1.spawn(lambda : gevent.sleep(10))
-        s = proc.ProcSet([p1, p2])
+        p1 = GreenletSubclass.spawn(lambda : 1/0)
+        p2 = GreenletSubclass.spawn(lambda : gevent.sleep(10))
+        s = pool.GreenletSet([p1, p2])
         s.killall(block=True)
 
 
-class Proc1(proc.Proc):
+class GreenletSubclass(gevent.Greenlet):
     pass
 
 

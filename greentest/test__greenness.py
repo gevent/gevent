@@ -30,7 +30,7 @@ import greentest
 from greentest import test_support
 import urllib2
 import BaseHTTPServer
-from gevent import spawn, kill
+from gevent import spawn
 
 def start_http_server():
     server_address = ('', 0)
@@ -51,7 +51,7 @@ class TestGreenness(greentest.TestCase):
 
     def tearDown(self):
         self.httpd.server_close()
-        kill(self.gthread)
+        self.gthread.kill(block=True)
 
     def test_urllib2(self):
         self.assertEqual(self.httpd.request_count, 0)

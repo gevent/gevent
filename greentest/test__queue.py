@@ -1,7 +1,6 @@
-import random
 from greentest import TestCase, main
 import gevent
-from gevent import proc, coros, core
+from gevent import util, coros, core
 from gevent import queue
 
 
@@ -23,11 +22,11 @@ class TestQueue(TestCase):
                 timer.cancel()
             return "OK"
 
-        p = proc.spawn(waiter, q)
+        p = gevent.spawn(waiter, q)
         gevent.sleep(0.01)
         q.put('hi2')
         gevent.sleep(0.01)
-        assert p.wait(timeout=0)=="OK"
+        assert p.get(timeout=0)=="OK"
 
     def test_max_size(self):
         q = queue.Queue(2)
@@ -42,7 +41,7 @@ class TestQueue(TestCase):
             results.append('c')
             return "OK"
 
-        p = proc.spawn(putter, q)
+        p = gevent.spawn(putter, q)
         gevent.sleep(0)
         self.assertEquals(results, ['a', 'b'])
         self.assertEquals(q.get(), 'a')
@@ -50,7 +49,7 @@ class TestQueue(TestCase):
         self.assertEquals(results, ['a', 'b', 'c'])
         self.assertEquals(q.get(), 'b')
         self.assertEquals(q.get(), 'c')
-        assert p.wait(timeout=0)=="OK"
+        assert p.get(timeout=0)=="OK"
 
     def test_zero_max_size(self):
         q = queue.Queue(0)
@@ -65,15 +64,15 @@ class TestQueue(TestCase):
         e1 = coros.event()
         e2 = coros.event()
 
-        p1 = proc.spawn(sender, e1, q)
+        p1 = gevent.spawn(sender, e1, q)
         gevent.sleep(0.001)
         self.assert_(not e1.ready())
-        p2 = proc.spawn(receiver, e2, q)
+        p2 = gevent.spawn(receiver, e2, q)
         self.assertEquals(e2.wait(),'hi')
         self.assertEquals(e1.wait(),'done')
         timeout = gevent.Timeout(0)
         try:
-            proc.waitall([p1, p2])
+            gevent.joinall([p1, p2])
         finally:
             timeout.cancel()
 
@@ -87,7 +86,7 @@ class TestQueue(TestCase):
         sendings = ['1', '2', '3', '4']
         evts = [coros.event() for x in sendings]
         for i, x in enumerate(sendings):
-            gevent.spawn(waiter, q, evts[i]) # use proc and waitall for them
+            gevent.spawn(waiter, q, evts[i]) # use waitall for them
 
         gevent.sleep(0.01) # get 'em all waiting
 
@@ -194,7 +193,7 @@ class TestChannel(TestCase):
             events.append(channel.get())
             events.append(channel.get())
 
-        g = proc.spawn(another_greenlet)
+        g = gevent.spawn(another_greenlet)
 
         events.append('sending')
         channel.put('hello')
@@ -203,7 +202,7 @@ class TestChannel(TestCase):
         events.append('sent world')
 
         self.assertEqual(['sending', 'hello', 'sent hello', 'world', 'sent world'], events)
-        g.wait()
+        g.get()
 
     def test_wait(self):
         channel = queue.Queue(0)
@@ -216,7 +215,7 @@ class TestChannel(TestCase):
             channel.put('world')
             events.append('sent world')
 
-        g = proc.spawn(another_greenlet)
+        g = gevent.spawn(another_greenlet)
 
         events.append('waiting')
         events.append(channel.get())
@@ -225,7 +224,7 @@ class TestChannel(TestCase):
         self.assertEqual(['waiting', 'sending hello', 'hello', 'sending world', 'world'], events)
         gevent.sleep(0)
         self.assertEqual(['waiting', 'sending hello', 'hello', 'sending world', 'world', 'sent world'], events)
-        g.wait()
+        g.get()
 
 
 class TestNoWait(TestCase):
@@ -235,8 +234,8 @@ class TestNoWait(TestCase):
         q = queue.Queue(1)
         def store_result(func, *args):
             result.append(func(*args))
-        core.active_event(store_result, proc.wrap_errors(Exception, q.put_nowait), 2)
-        core.active_event(store_result, proc.wrap_errors(Exception, q.put_nowait), 3)
+        core.active_event(store_result, util.wrap_errors(Exception, q.put_nowait), 2)
+        core.active_event(store_result, util.wrap_errors(Exception, q.put_nowait), 3)
         gevent.sleep(0)
         assert len(result)==2, result
         assert result[0]==None, result
@@ -248,8 +247,8 @@ class TestNoWait(TestCase):
         q.put(4)
         def store_result(func, *args):
             result.append(func(*args))
-        core.active_event(store_result, proc.wrap_errors(Exception, q.get_nowait))
-        core.active_event(store_result, proc.wrap_errors(Exception, q.get_nowait))
+        core.active_event(store_result, util.wrap_errors(Exception, q.get_nowait))
+        core.active_event(store_result, util.wrap_errors(Exception, q.get_nowait))
         gevent.sleep(0)
         assert len(result)==2, result
         assert result[0]==4, result
@@ -259,7 +258,7 @@ class TestNoWait(TestCase):
     def test_get_nowait_unlock(self):
         result = []
         q = queue.Queue(0)
-        p = proc.spawn(q.put, 5)
+        p = gevent.spawn(q.put, 5)
         def store_result(func, *args):
             result.append(func(*args))
         assert q.empty(), q
@@ -267,7 +266,7 @@ class TestNoWait(TestCase):
         gevent.sleep(0)
         assert not q.empty(), q
         assert q.full(), q
-        core.active_event(store_result, proc.wrap_errors(Exception, q.get_nowait))
+        core.active_event(store_result, util.wrap_errors(Exception, q.get_nowait))
         gevent.sleep(0)
         assert q.empty(), q
         assert q.full(), q
@@ -280,7 +279,7 @@ class TestNoWait(TestCase):
     def test_put_nowait_unlock(self):
         result = []
         q = queue.Queue(0)
-        p = proc.spawn(q.get)
+        p = gevent.spawn(q.get)
         def store_result(func, *args):
             result.append(func(*args))
         assert q.empty(), q
@@ -288,7 +287,7 @@ class TestNoWait(TestCase):
         gevent.sleep(0)
         assert q.empty(), q
         assert not q.full(), q
-        core.active_event(store_result, proc.wrap_errors(Exception, q.put_nowait), 10)
+        core.active_event(store_result, util.wrap_errors(Exception, q.put_nowait), 10)
         assert not p.ready(), p
         gevent.sleep(0)
         assert result == [None], result

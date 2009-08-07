@@ -21,7 +21,7 @@
 
 import greentest
 import gevent
-from gevent import core, proc, greenlet
+from gevent import core, util, socket
 
 DELAY = 0.1
 
@@ -41,7 +41,7 @@ class Test(greentest.TestCase):
         g = gevent.spawn(test)
         gevent.sleep(DELAY/2)
         assert state == ['start'], state
-        gevent.kill(g, block=True)
+        g.kill(block=True)
         # will not get there, unless switching is explicitly scheduled by kill
         assert state == ['start', 'except', 'finished'], state
 
@@ -50,33 +50,34 @@ class Test(greentest.TestCase):
             return gevent.with_timeout(0.2, gevent.sleep, 2, timeout_value=1)
         self.assertRaises(gevent.Timeout, gevent.with_timeout, 0.1, func)
 
-    def test_killing_just_spawned(self):
+    def test_killing_not_yet_started(self):
         def func():
             pass
-        g = gevent.spawn_later(2, func)
+        g = gevent.spawn_later(2000, func)
         assert not g.dead, g
-        gevent.kill(g, block=True)
+        g.kill(block=True)
         assert g.dead, g
+        self.assertRaises(Exception, g.get)
 
     def test_sleep_invalid_switch(self):
-        p = proc.spawn(proc.wrap_errors(AssertionError, gevent.sleep), 2)
-        gevent.spawn(p.greenlet.switch, None)
-        result = p.wait()
-        assert isinstance(result, AssertionError), instance
+        p = gevent.spawn(util.wrap_errors(AssertionError, gevent.sleep), 2)
+        gevent.spawn(p.switch, None)
+        result = p.get()
+        assert isinstance(result, AssertionError), result
         assert 'Invalid switch' in str(result), repr(str(result))
 
     def test_wait_reader_invalid_switch(self):
-        p = proc.spawn(proc.wrap_errors(AssertionError, greenlet.wait_reader), 0)
-        gevent.spawn(p.greenlet.switch, None)
-        result = p.wait()
-        assert isinstance(result, AssertionError), instance
+        p = gevent.spawn(util.wrap_errors(AssertionError, socket.wait_reader), 0)
+        gevent.spawn(p.switch, None)
+        result = p.get()
+        assert isinstance(result, AssertionError), result
         assert 'Invalid switch' in str(result), repr(str(result))
 
     def test_wait_writer_invalid_switch(self):
-        p = proc.spawn(proc.wrap_errors(AssertionError, greenlet.wait_writer), 0)
-        gevent.spawn(p.greenlet.switch, None)
-        result = p.wait()
-        assert isinstance(result, AssertionError), instance
+        p = gevent.spawn(util.wrap_errors(AssertionError, socket.wait_writer), 0)
+        gevent.spawn(p.switch, None)
+        result = p.get()
+        assert isinstance(result, AssertionError), result
         assert 'Invalid switch' in str(result), repr(str(result))
 
 

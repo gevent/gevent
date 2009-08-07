@@ -1,17 +1,20 @@
 import gevent
-from gevent import proc, coros
+from gevent import pool
+from gevent.event import Event
 from greentest import TestCase, main
 
 class TestCoroutinePool(TestCase):
-    klass = proc.Pool
+    klass = pool.Pool
 
     def test_execute_async(self):
-        done = coros.event()
-        def some_work():
-            done.send()
+        done = Event()
+        def some_work(x):
+            print 'puttin'
+            done.put()
+            print 'done putting'
         pool = self.klass(2)
-        pool.execute_async(some_work)
-        done.wait()
+        pool.execute_async(some_work, 'x')
+        done.get()
 
     def test_execute(self):
         value = 'return value'
@@ -19,24 +22,24 @@ class TestCoroutinePool(TestCase):
             return value
         pool = self.klass(2)
         worker = pool.execute(some_work)
-        self.assertEqual(value, worker.wait())
+        self.assertEqual(value, worker.get())
 
     def test_multiple_coros(self):
-        evt = coros.event()
+        evt = Event()
         results = []
         def producer():
             results.append('prod')
-            evt.send()
+            evt.put()
 
         def consumer():
             results.append('cons1')
-            evt.wait()
+            evt.get()
             results.append('cons2')
 
         pool = self.klass(2)
         done = pool.execute(consumer)
         pool.execute_async(producer)
-        done.wait()
+        done.get()
         self.assertEquals(['cons1', 'prod', 'cons2'], results)
 
     def dont_test_timer_cancel(self):
@@ -47,7 +50,7 @@ class TestCoroutinePool(TestCase):
             gevent.timer(0, fire_timer)
         pool = self.klass(2)
         worker = pool.execute(some_work)
-        worker.wait()
+        worker.get()
         gevent.sleep(0)
         self.assertEquals(timer_fired, [])
 
@@ -55,18 +58,18 @@ class TestCoroutinePool(TestCase):
         pool = self.klass(1)
         def reenter():
             waiter = pool.execute(lambda a: a, 'reenter')
-            self.assertEqual('reenter', waiter.wait())
+            self.assertEqual('reenter', waiter.get())
 
         outer_waiter = pool.execute(reenter)
-        outer_waiter.wait()
+        outer_waiter.get()
 
-        evt = coros.event()
+        evt = Event()
         def reenter_async():
             pool.execute_async(lambda a: a, 'reenter')
-            evt.send('done')
+            evt.put('done')
 
         pool.execute_async(reenter_async)
-        evt.wait()
+        evt.get()
 
     def test_stderr_raising(self):
         # testing that really egregious errors in the error handling code
@@ -85,7 +88,7 @@ class TestCoroutinePool(TestCase):
         try:
             sys.stderr = FakeFile()
             waiter = pool.execute(crash)
-            self.assertRaises(RuntimeError, waiter.wait)
+            self.assertRaises(RuntimeError, waiter.get)
             # the pool should have something free at this point since the
             # waiter returned
             # pool.Pool change: if an exception is raised during execution of a link,
@@ -105,7 +108,7 @@ class TestCoroutinePool(TestCase):
 
 
 class PoolBasicTests(TestCase):
-    klass = proc.Pool
+    klass = pool.Pool
 
     def test_execute_async(self):
         p = self.klass(size=2)
@@ -115,7 +118,7 @@ class PoolBasicTests(TestCase):
             r.append(a)
         evt = p.execute(foo, 1)
         self.assertEqual(p.free_count(), 1)
-        evt.wait()
+        evt.get()
         self.assertEqual(r, [1])
         gevent.sleep(0)
         self.assertEqual(p.free_count(), 2)
@@ -138,7 +141,7 @@ class PoolBasicTests(TestCase):
     def test_execute(self):
         p = self.klass()
         evt = p.execute(lambda a: ('foo', a), 1)
-        self.assertEqual(evt.wait(), ('foo', 1))
+        self.assertEqual(evt.get(), ('foo', 1))
 
 
 if __name__=='__main__':

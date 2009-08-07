@@ -38,10 +38,17 @@ from gevent.socket import _original_socket
 class Socket(_original_socket):
     "Something we can have a weakref to"
 
+import gevent
+gevent.socket._original_socket = Socket
+
+import socket
+socket._realsocket = Socket
+
+
 SOCKET_TIMEOUT = 0.1
 
 def init_server():
-    s = socket.socket(Socket())
+    s = socket.socket()
     s.settimeout(SOCKET_TIMEOUT)
     s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     s.bind(('127.0.0.1', 0))
@@ -67,7 +74,7 @@ def handle_request(s, raise_on_timeout):
 
 def make_request(port):
     #print 'make_request'
-    s = socket.socket(Socket())
+    s = socket.socket()
     s.connect(('127.0.0.1', port))
     #print 'make_request - connected'
     res = s.send('hello')
@@ -86,7 +93,7 @@ def run_interaction(run_client):
     sleep(0.1+SOCKET_TIMEOUT)
     #print sys.getrefcount(s.fd)
     #s.close()
-    return weakref.ref(s.fd)
+    return weakref.ref(s.fd) # XXX OR _sock depending on whether monkey patching is enabled. rename GreenSocket.fd to GreenSocket._sock ?
 
 def run_and_check(run_client):
     w = run_interaction(run_client=run_client)

@@ -1,6 +1,6 @@
 import os
 import gevent
-from gevent import proc, socket, coros
+from gevent import socket, coros
 import greentest
 import time
 
@@ -23,15 +23,15 @@ class TestTCP(greentest.TestCase):
             (client, addr) = self.listener.accept()
             # start reading, then, while reading, start writing. the reader should not hang forever
             N = 100000 # must be a big enough number so that sendall calls trampoline
-            proc.spawn_link_exception(client.sendall, 't' * N)
+            gevent.spawn_link_exception(client.sendall, 't' * N)
             result = client.recv(1000)
             assert result == 'hello world', result
 
         #print '%s: client' % getcurrent()
 
-        server_proc = proc.spawn_link_exception(server)
+        server_proc = gevent.spawn_link_exception(server)
         client = self.create_connection()
-        client_reader = proc.spawn_link_exception(client.makefile().read)
+        client_reader = gevent.spawn_link_exception(client.makefile().read)
         gevent.sleep(0.001)
         client.send('hello world')
 
@@ -39,9 +39,9 @@ class TestTCP(greentest.TestCase):
         client.close()
 
         # this tests "full duplex" bug;
-        server_proc.wait()
+        server_proc.get()
 
-        client_reader.wait()
+        client_reader.get()
 
     def test_recv_timeout(self):
         client = self.create_connection()
@@ -73,14 +73,14 @@ class TestTCP(greentest.TestCase):
             fd.write('hello\n')
             fd.close()
 
-        acceptor = proc.spawn(accept_once)
+        acceptor = gevent.spawn(accept_once)
         client = self.create_connection()
         fd = client.makefile()
         client.close()
         assert fd.readline() == 'hello\n'
         assert fd.read() == ''
         fd.close()
-        acceptor.wait()
+        acceptor.get()
 
     # this test was copied from api_test.py
     # using kill() like that is not good, so tcp_server should return an object
@@ -94,13 +94,14 @@ class TestTCP(greentest.TestCase):
             connected.append(True)
             conn.close()
             if len(connected) == 2:
-                gevent.kill(current, socket.error(32, 'broken pipe'))
+                #gevent.kill(current, socket.error(32, 'broken pipe'))
+                gevent.core.active_event(current.throw, socket.error(32, 'broken pipe'))
 
-        g1 = proc.spawn_link_exception(self.create_connection)
-        g2 = proc.spawn_link_exception(self.create_connection)
+        g1 = gevent.spawn_link_exception(self.create_connection)
+        g2 = gevent.spawn_link_exception(self.create_connection)
         socket.tcp_server(self.listener, accept_twice)
         assert len(connected) == 2
-        proc.waitall([g1, g2])
+        gevent.joinall([g1, g2])
 
 
 class TestSSL(TestTCP):
@@ -121,7 +122,7 @@ class TestSSL(TestTCP):
 
     def test_recv_timeout(self):
         incoming = coros.Queue() # preventing the incoming socket from being GCed before the test finished
-        acceptor = proc.spawn_link_exception(lambda : incoming.send(self.listener.accept()))
+        acceptor = gevent.spawn_link_exception(lambda : incoming.send(self.listener.accept()))
         client = self.create_connection()
         client.settimeout(0.1)
         start = time.time()
@@ -131,11 +132,11 @@ class TestSSL(TestTCP):
             assert time.time() - start >= 0.1, (time.time() - start)
         else:
             raise AssertionError('socket.timeout should have been raised, instead recv returned %r' % (data, ))
-        acceptor.wait()
+        acceptor.get()
 
     def test_sendall_timeout(self):
         incoming = coros.Queue() # preventing the incoming socket from being GCed before the test finished
-        acceptor = proc.spawn_link_exception(lambda : incoming.send(self.listener.accept()))
+        acceptor = gevent.spawn_link_exception(lambda : incoming.send(self.listener.accept()))
         client = self.create_connection()
         client.settimeout(0.1)
         start = time.time()
@@ -145,7 +146,7 @@ class TestSSL(TestTCP):
             assert time.time() - start >= 0.1, (time.time() - start)
         else:
             raise AssertionError('socket.timeout should have been raised, instead sendall returned %r' % (result, ))
-        acceptor.wait()
+        acceptor.get()
 
 
 if __name__=='__main__':
