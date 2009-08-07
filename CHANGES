@@ -6,7 +6,7 @@ LifoQueue and PriorityQueue are implemented as well.
 
 gevent.queue.Queue implements the standard Queue interface with the only difference
 that Queue(0) means queue of size 0 (i.e. a channel), not a queue of infinite size.
-Having size of 0 means that put() method always blocks until the item is delivered.
+Having size 0 means that put() method always blocks until the item is delivered.
 
 gevent.queue will deprecate both coros.Queue and coros.Channel.
 
@@ -30,7 +30,7 @@ with Timeout(1, False):
     read()
 print 'done reading'
 
-Even if read() does not return within a second and will be interrupted with a
+Even if read() does not return within a second and will be interrupted by a
 timeout, "done reading" will still be displayed.
 
 spawn and spawn_later now avoid creating a closure and this decreases spawning
