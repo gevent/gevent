@@ -406,7 +406,7 @@ def server(sock, site, log=None, environ=None, max_size=None, max_http_version=D
                 except socket.error, e:
                     if e[0] != errno.EPIPE and e[0] != errno.EBADF:
                         raise
-                pool.execute_async(serv.process_request, client_socket)
+                pool.spawn(serv.process_request, client_socket)
             except KeyboardInterrupt:
                 print "wsgi exiting"
                 break
