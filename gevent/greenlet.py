@@ -406,7 +406,7 @@ def joinall(greenlets, timeout=None, raise_error=False):
     put = queue.put
     try:
         for greenlet in greenlets:
-            greenlet.link(put)
+            greenlet.rawlink(put)
         for _ in xrange(len(greenlets)):
             greenlet = queue.get()
             if raise_error and not greenlet.successful():
