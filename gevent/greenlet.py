@@ -497,10 +497,11 @@ class LinkedFailed(LinkedExited):
     msg = "%r failed with %s"
 
     def __init__(self, source):
+        exception = source.exception
         try:
-            excname = source.exception.__name__
+            excname = exception.__class__.__name__
         except:
-            excname = str(source) or repr(source)
+            excname = str(exception) or repr(exception)
         LinkedExited.__init__(self, self.msg % (source, excname))
 
 
