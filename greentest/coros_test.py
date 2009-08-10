@@ -23,6 +23,9 @@ from greentest import TestCase, main
 import gevent
 from gevent import coros
 
+import warnings
+warnings.simplefilter('ignore', DeprecationWarning)
+
 class TestEvent(TestCase):
     mode = 'static'
 
