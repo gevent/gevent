@@ -37,11 +37,8 @@ def exit_unless_25():
 class TestCase(unittest.TestCase):
 
     __timeout__ = 1
-    __switch_check__ = True
+    switch_expected = True
     _switch_count = None
-
-    def disable_switch_check(self):
-        self._switch_count = None
 
     def setUp(self):
         gevent.sleep(0) # switch at least once to setup signal handlers
@@ -56,9 +53,15 @@ class TestCase(unittest.TestCase):
         if hasattr(self, '_timer'):
             self._timer.cancel()
             hub = gevent.hub.get_hub()
-            if self.__switch_check__ and self._switch_count is not None and hasattr(hub, 'switch_count') and hub.switch_count <= self._switch_count:
+            if self._switch_count is not None and hasattr(hub, 'switch_count'):
                 name = getattr(self, '_testMethodName', '') # 2.4 does not have it
-                sys.stderr.write('WARNING: %s.%s did not switch\n' % (type(self).__name__, name))
+                if hub.switch_count < self._switch_count:
+                    sys.stderr.write('WARNING: hub.switch_count decreased?\n')
+                if hub.switch_count == self._switch_count and self.switch_expected:
+                    sys.stderr.write('WARNING: %s.%s did not switch\n' % (type(self).__name__, name))
+                if hub.switch_count > self._switch_count and not self.switch_expected:
+                    sys.stderr.write('WARNING: %s.%s switched but expected not to\n' % (type(self).__name__, name))
+
             if hasattr(gevent.core, '_event_count'):
                 event_count = (gevent.core._event_count(), gevent.core._event_count_active())
                 if event_count > self._event_count:

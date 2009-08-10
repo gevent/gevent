@@ -7,7 +7,7 @@ from gevent import queue
 class TestQueue(TestCase):
 
     def test_send_first(self):
-        self.disable_switch_check()
+        self.switch_expected = False
         q = queue.Queue()
         q.put('hi')
         self.assertEquals(q.get(), 'hi')

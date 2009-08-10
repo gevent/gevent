@@ -7,13 +7,13 @@ from gevent import coros
 class TestQueue(TestCase):
 
     def test_send_first(self):
-        self.disable_switch_check()
+        self.switch_expected = False
         q = coros.Queue()
         q.send('hi')
         self.assertEquals(q.wait(), 'hi')
 
     def test_send_exception_first(self):
-        self.disable_switch_check()
+        self.switch_expected = False
         q = coros.Queue()
         q.send(exc=RuntimeError())
         self.assertRaises(RuntimeError, q.wait)
