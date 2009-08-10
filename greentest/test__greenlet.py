@@ -313,7 +313,6 @@ class TestReturn_link(LinksTestCase):
 
 
 class TestReturn_link_value(TestReturn_link):
-    sync = False
     link_method = 'link_value'
 
 
@@ -352,8 +351,8 @@ class TestRaise_link(LinksTestCase):
 
 class TestRaise_link_exception(TestRaise_link):
     link_method = 'link_exception'
-#
-#
+
+
 class TestStuff(greentest.TestCase):
 
     def test_wait_noerrors(self):
