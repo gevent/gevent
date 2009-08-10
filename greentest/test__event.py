@@ -48,7 +48,7 @@ class TestEvent(greentest.TestCase):
         event1 = coros.event()
         event2 = coros.event()
 
-        g = gevent.spawn_later(DELAY/2.0, event1.send, 'hello event1')
+        g, timer = gevent.spawn_later(DELAY/2.0, event1.send, 'hello event1')
         t = gevent.Timeout(0, ValueError('interrupted'))
         try:
             try:
@@ -60,6 +60,7 @@ class TestEvent(greentest.TestCase):
         finally:
             t.cancel()
             g.kill(block=True)
+            timer.cancel()
 
 
 if __name__=='__main__':
