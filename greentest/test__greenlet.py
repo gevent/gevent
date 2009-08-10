@@ -131,6 +131,7 @@ class TestLink(greentest.TestCase):
 class TestUnlink(greentest.TestCase):
 
     def setUp(self):
+        greentest.TestCase.setUp(self)
         self.p = gevent.spawn(test_func)
 
     def _test_func(self, link):
