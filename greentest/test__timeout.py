@@ -3,7 +3,8 @@ import gevent
 DELAY = 0.01
 
 
-class Test(greentest.TestCase):
+class TestDirectRaise(greentest.TestCase):
+    switch_expected = False
 
     def test_direct_raise_class(self):
         try:
@@ -18,6 +19,8 @@ class Test(greentest.TestCase):
         except gevent.Timeout, t:
             assert timeout is t, (timeout, t)
             assert not t.pending, repr(t)
+
+class Test(greentest.TestCase):
 
     def test_with_timeout(self):
         self.assertRaises(gevent.Timeout, gevent.with_timeout, DELAY, gevent.sleep, DELAY*2)

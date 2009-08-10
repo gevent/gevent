@@ -129,6 +129,7 @@ class TestLink(greentest.TestCase):
 
 
 class TestUnlink(greentest.TestCase):
+    switch_expected = False
 
     def setUp(self):
         greentest.TestCase.setUp(self)
@@ -484,6 +485,7 @@ class A(object):
 hexobj = re.compile('0x[0123456789abcdef]+')
 
 class TestStr(greentest.TestCase):
+    switch_expected = False
 
     def test(self):
         g1 = gevent.Greenlet(test_func)
