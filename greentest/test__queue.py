@@ -1,7 +1,8 @@
 from greentest import TestCase, main
 import gevent
-from gevent import util, coros, core
+from gevent import util, core
 from gevent import queue
+from gevent.event import Event
 
 
 class TestQueue(TestCase):
@@ -55,21 +56,21 @@ class TestQueue(TestCase):
         q = queue.Queue(0)
         def sender(evt, q):
             q.put('hi')
-            evt.send('done')
+            evt.put('done')
 
         def receiver(evt, q):
             x = q.get()
-            evt.send(x)
+            evt.put(x)
 
-        e1 = coros.event()
-        e2 = coros.event()
+        e1 = Event()
+        e2 = Event()
 
         p1 = gevent.spawn(sender, e1, q)
         gevent.sleep(0.001)
         self.assert_(not e1.ready())
         p2 = gevent.spawn(receiver, e2, q)
-        self.assertEquals(e2.wait(),'hi')
-        self.assertEquals(e1.wait(),'done')
+        self.assertEquals(e2.get(),'hi')
+        self.assertEquals(e1.get(),'done')
         timeout = gevent.Timeout(0)
         try:
             gevent.joinall([p1, p2])
@@ -81,10 +82,10 @@ class TestQueue(TestCase):
         q = queue.Queue()
 
         def waiter(q, evt):
-            evt.send(q.get())
+            evt.put(q.get())
 
         sendings = ['1', '2', '3', '4']
-        evts = [coros.event() for x in sendings]
+        evts = [Event() for x in sendings]
         for i, x in enumerate(sendings):
             gevent.spawn(waiter, q, evts[i]) # use waitall for them
 
@@ -95,7 +96,7 @@ class TestQueue(TestCase):
             for i, e in enumerate(evts):
                 timer = gevent.Timeout(0.001)
                 try:
-                    x = e.wait()
+                    x = e.get()
                     results.add(x)
                     timer.cancel()
                 except gevent.Timeout:
@@ -116,13 +117,13 @@ class TestQueue(TestCase):
             gevent.Timeout(0, RuntimeError())
             try:
                 result = q.get()
-                evt.send(result)
+                evt.put(result)
             except RuntimeError:
-                evt.send('timed out')
+                evt.put('timed out')
 
-        evt = coros.event()
+        evt = Event()
         gevent.spawn(do_receive, q, evt)
-        self.assertEquals(evt.wait(), 'timed out')
+        self.assertEquals(evt.get(), 'timed out')
 
         q.put('hi')
         self.assertEquals(q.get(), 'hi')
@@ -138,47 +139,47 @@ class TestQueue(TestCase):
 
     def test_two_waiters_one_dies(self):
         def waiter(q, evt):
-            evt.send(q.get())
+            evt.put(q.get())
         def do_receive(q, evt):
             timeout = gevent.Timeout(0, RuntimeError())
             try:
                 try:
                     result = q.get()
-                    evt.send(result)
+                    evt.put(result)
                 except RuntimeError:
-                    evt.send('timed out')
+                    evt.put('timed out')
             finally:
                 timeout.cancel()
 
         q = queue.Queue()
-        dying_evt = coros.event()
-        waiting_evt = coros.event()
+        dying_evt = Event()
+        waiting_evt = Event()
         gevent.spawn(do_receive, q, dying_evt)
         gevent.spawn(waiter, q, waiting_evt)
         gevent.sleep(0)
         q.put('hi')
-        self.assertEquals(dying_evt.wait(), 'timed out')
-        self.assertEquals(waiting_evt.wait(), 'hi')
+        self.assertEquals(dying_evt.get(), 'timed out')
+        self.assertEquals(waiting_evt.get(), 'hi')
 
     def test_two_bogus_waiters(self):
         def do_receive(q, evt):
             gevent.Timeout(0, RuntimeError())
             try:
                 result = q.get()
-                evt.send(result)
+                evt.put(result)
             except RuntimeError:
-                evt.send('timed out')
+                evt.put('timed out')
             # XXX finally = timeout
 
         q = queue.Queue()
-        e1 = coros.event()
-        e2 = coros.event()
+        e1 = Event()
+        e2 = Event()
         gevent.spawn(do_receive, q, e1)
         gevent.spawn(do_receive, q, e2)
         gevent.sleep(0)
         q.put('sent')
-        self.assertEquals(e1.wait(), 'timed out')
-        self.assertEquals(e2.wait(), 'timed out')
+        self.assertEquals(e1.get(), 'timed out')
+        self.assertEquals(e2.get(), 'timed out')
         self.assertEquals(q.get(), 'sent')
 
 
