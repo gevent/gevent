@@ -178,17 +178,20 @@ class Pool(GreenletSet):
             return 1
         return max(0, self.size - len(self) - len(self.waiting))
 
+    def schedule_switch(self, g, *args):
+        if self.size is not None and len(self) >= self.size:
+            self.waiting.append((g, args))
+        else:
+            g.schedule_switch(*args)
+            self.add(g)
+
     def spawn(self, function, *args, **kwargs):
         if kwargs:
             g = Greenlet(_switch_helper)
             args = (function, args, kwargs)
         else:
             g = Greenlet(function)
-        if self.size is not None and len(self) >= self.size:
-            self.waiting.append((g, args))
-        else:
-            g.schedule_switch(*args)
-            self.add(g)
+        self.schedule_switch(g, *args)
         return g
 
     def discard(self, p):
