@@ -2,13 +2,16 @@
 
 urls = ['http://www.google.com', 'http://www.yandex.ru', 'http://www.python.org']
 
-from gevent import monkey;
+from gevent import monkey
 monkey.patch_socket() # patches regular socket to yield to other greenlets
 
 import urllib2
 from gevent.pool import Pool
 
-pool = Pool() # optionally, pass a limit to number of concurrent coroutines
+# Pool accepts one optional argument - a maximum number of concurrent
+# coroutines that can be active at any given moment.
+# Try passing 1 or 2 here to see the effect.
+pool = Pool()
 
 def print_head(url):
     print 'Starting %s' % url
