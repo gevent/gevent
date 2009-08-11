@@ -1,3 +1,51 @@
+0.10.0
+------
+
+gevent.spawn now returns a subclass of greenlet which has a few useful methods:
+get, join, kill, link. The implementation is based on proc module, with a couple
+of proc's deficiencies fixed:
+ - Proc is not a subclass of greenlet which proved to be a design bug
+   (getcurrent() does not work, using Procs as keys in dict is impossible, etc).
+ - Proc executes links sequentially, so one could block the rest from being executed.
+   Greenlet executes each link in a new greenlet by default, unless it is set up with
+   rawlink() method.
+
+The following functions were added to gevent top level package:
+ - spawn_link
+ - spawn_link_value
+ - spawn_link_exception
+ - joinall
+ - killall
+
+Added gevent.pool.Pool with interface of multiprocessing.Pool.
+It also has spawn() method which is always async and returns a Greenlet instance.
+
+Added gevent.event.Event and gevent.event.AsyncResult which deprecate
+gevent.coros.Event.
+
+Added gevent.rawgreenlet module with some utility functions that work with
+the regular greenlets.
+
+gevent.proc module is deprecated; proc.wrap_errors was moved to
+gevent.util.wrap_errors.
+
+Internally, gevent.greenlet was split into a number of modules:
+ - gevent.hub provides Hub class and basic utilities, like sleep;
+   Hub is now a subclass of greenlet.
+ - gevent.timeout provides Timeout and with_timeout
+ - gevent.greenlet provides Greenlet class and helpers like joinall
+   and killall.
+ - gevent.rawgreenlet contains the old "polling" versions of
+   joinall and killall (they do not need link() functionality and work
+   with any greenlet by polling their status and sleeping in a loop)
+
+
+TODO: add start() method to Timeout; Timeout(5) does not start the timer immediatelly anymore
+TODO: Semaphore and BoundedSemaphore moved from coros to gevent.threading
+      BoundedSemaphore is fixed to behave like standard threading's BoundedSemaphore behaves:
+      raise ValueError if upper limit is reached instead of blocking.
+
+
 0.9.3
 -----
 
@@ -78,7 +126,7 @@ has changed from (event, fd, evtype) to (event, evtype).
 Hub's mainloop will never return successfully as this will screw up main greenlet's switch() call.
 Instead of returning it raises DispatchExit.
 
-reinit function (wrapper for libevent's event_reinit) is now available as gevent.reinit. 
+reinit function (wrapper for libevent's event_reinit) is now available as gevent.reinit.
 This function is a must have at least for daemons, as it fixes epoll and some others eventloops
 to work after fork.
 
