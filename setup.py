@@ -11,23 +11,23 @@ ev_dir = None
 
 if ev_dir is None and ( glob.glob('/usr/lib/libevent*') or glob.glob('/usr/lib64/libevent*') ):
     print 'found system libevent for', sys.platform
-    libevent = Extension(name=name,
-                         sources=sources,
-                         libraries=['event'])
+    gevent_core = Extension(name=name,
+                            sources=sources,
+                            libraries=['event'])
 elif ev_dir is None and glob.glob('%s/lib/libevent.*' % sys.prefix):
     print 'found installed libevent in', sys.prefix
-    libevent = Extension(name=name,
-                         sources=sources,
-                         include_dirs=['%s/include' % sys.prefix],
-                         library_dirs=['%s/lib' % sys.prefix],
-                         libraries=['event'])
+    gevent_core = Extension(name=name,
+                            sources=sources,
+                            include_dirs=['%s/include' % sys.prefix],
+                            library_dirs=['%s/lib' % sys.prefix],
+                            libraries=['event'])
 else:
     if ev_dir is None:
         l = glob.glob('../libevent*')
         l.reverse()
-        for dir in l:
-            if os.path.isdir(dir):
-                ev_dir = dir
+        for path in l:
+            if os.path.isdir(path):
+                ev_dir = path
                 break
     if ev_dir:
         print 'found libevent build directory', ev_dir
@@ -47,37 +47,38 @@ else:
         else:
             ev_extobjs = glob.glob('%s/*.o' % dir)
 
-        libevent = Extension(name=name,
-                             sources=sources,
-                             include_dirs=ev_incdirs,
-                             extra_compile_args=ev_extargs,
-                             extra_objects=ev_extobjs,
-                             libraries=ev_libraries)
+        gevent_core = Extension(name=name,
+                                sources=sources,
+                                include_dirs=ev_incdirs,
+                                extra_compile_args=ev_extargs,
+                                extra_objects=ev_extobjs,
+                                libraries=ev_libraries)
     else:
         sys.stderr.write("\nWARNING: couldn't find libevent installation or build directory: assuming system-wide libevent is installed.\n\n")
-        libevent = Extension(name=name,
-                             sources=sources,
-                             libraries=['event'])
+        gevent_core = Extension(name=name,
+                                sources=sources,
+                                libraries=['event'])
 
 version = re.search("__version__\s*=\s*'(.*)'", open('gevent/__init__.py').read(), re.M).group(1).strip()
 assert version, version
 
-setup(
-    name='gevent',
-    version=version,
-    description='Python network library that uses greenlet and libevent for easy and scalable concurrency',
-    author='Denis Bilenko',
-    author_email='denis.bilenko@gmail.com',
-    packages=['gevent'],
-    ext_modules=[libevent],
-    classifiers=[
-    "License :: OSI Approved :: MIT License",
-    "Programming Language :: Python",
-    "Operating System :: MacOS :: MacOS X",
-    "Operating System :: POSIX",
-    "Topic :: Internet",
-    "Topic :: Software Development :: Libraries :: Python Modules",
-    "Intended Audience :: Developers",
-    "Development Status :: 4 - Beta"]
-    )
+if __name__ == '__main__':
+    setup(
+        name='gevent',
+        version=version,
+        description='Python network library that uses greenlet and libevent for easy and scalable concurrency',
+        author='Denis Bilenko',
+        author_email='denis.bilenko@gmail.com',
+        packages=['gevent'],
+        ext_modules=[gevent_core],
+        classifiers=[
+        "License :: OSI Approved :: MIT License",
+        "Programming Language :: Python",
+        "Operating System :: MacOS :: MacOS X",
+        "Operating System :: POSIX",
+        "Topic :: Internet",
+        "Topic :: Software Development :: Libraries :: Python Modules",
+        "Intended Audience :: Developers",
+        "Development Status :: 4 - Beta"]
+        )
 
