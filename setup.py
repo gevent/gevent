@@ -29,32 +29,35 @@ else:
             if os.path.isdir(dir):
                 ev_dir = dir
                 break
-    if not ev_dir:
-        sys.exit("couldn't find libevent installation or build directory")
+    if ev_dir:
+        print 'found libevent build directory', ev_dir
+        ev_incdirs = [ev_dir, ev_dir + '/compat']
+        ev_extargs = []
+        ev_extobjs = []
+        ev_libraries = ['event']
 
-    print 'found libevent build directory', ev_dir
-    ev_incdirs = [ev_dir, ev_dir + '/compat']
-    ev_extargs = []
-    ev_extobjs = []
-    ev_libraries = ['event']
+        if sys.platform == 'win32':
+            ev_incdirs.extend(['%s/WIN32-Code' % ev_dir,
+                               '%s/compat' % ev_dir])
+            sources.extend(['%s/%s' % (ev_dir, x) for x in [
+                'WIN32-Code/misc.c', 'WIN32-Code/win32.c',
+                'log.c', 'event.c']])
+            ev_extargs = ['-DWIN32', '-DHAVE_CONFIG_H']
+            ev_libraries = ['wsock32']
+        else:
+            ev_extobjs = glob.glob('%s/*.o' % dir)
 
-    if sys.platform == 'win32':
-        ev_incdirs.extend(['%s/WIN32-Code' % ev_dir,
-                           '%s/compat' % ev_dir])
-        sources.extend(['%s/%s' % (ev_dir, x) for x in [
-            'WIN32-Code/misc.c', 'WIN32-Code/win32.c',
-            'log.c', 'event.c']])
-        ev_extargs = ['-DWIN32', '-DHAVE_CONFIG_H']
-        ev_libraries = ['wsock32']
+        libevent = Extension(name=name,
+                             sources=sources,
+                             include_dirs=ev_incdirs,
+                             extra_compile_args=ev_extargs,
+                             extra_objects=ev_extobjs,
+                             libraries=ev_libraries)
     else:
-        ev_extobjs = glob.glob('%s/*.o' % dir)
-
-    libevent = Extension(name=name,
-                         sources=sources,
-                         include_dirs=ev_incdirs,
-                         extra_compile_args=ev_extargs,
-                         extra_objects=ev_extobjs,
-                         libraries=ev_libraries)
+        sys.stderr.write("\nWARNING: couldn't find libevent installation or build directory: assuming system-wide libevent is installed.\n\n")
+        libevent = Extension(name=name,
+                             sources=sources,
+                             libraries=['event'])
 
 version = re.search("__version__\s*=\s*'(.*)'", open('gevent/__init__.py').read(), re.M).group(1).strip()
 assert version, version
