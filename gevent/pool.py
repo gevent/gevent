@@ -164,6 +164,8 @@ class GreenletSet(object):
 class Pool(GreenletSet):
 
     def __init__(self, size=None):
+        if size is not None and size < 0:
+            raise ValueError('Invalid size for pool (positive integer or None required): %r' % (size, ))
         GreenletSet.__init__(self)
         self.size = size
         self.waiting = deque()
