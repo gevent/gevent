@@ -48,6 +48,21 @@ def hello_world(env, start_response):
     return ["hello world"]
 
 
+def hello_world_explicit_content_length(env, start_response):
+    if env['PATH_INFO'] == 'notexist':
+        msg = 'not found'
+        start_response('404 Not Found',
+                       [('Content-type', 'text/plain'),
+                        ('Content-Length', len(msg))])
+        return [msg]
+
+    msg = 'hello world'
+    start_response('200 OK',
+                   [('Content-type', 'text/plain'),
+                    ('Content-Length', len(msg))])
+    return [msg]
+
+
 def hello_world_yield(env, start_response):
     if env['PATH_INFO'] == 'notexist':
         start_response('404 Not Found', [('Content-type', 'text/plain')])
@@ -249,6 +264,11 @@ class TestHttpdBasic(TestCase):
         response_line_test,_,_ = read_http(fd)
         self.assertEqual(response_line_200,response_line_test)
         fd.close()
+
+
+class TestExplicitContentLength(TestHttpdBasic):
+
+    application = staticmethod(hello_world_explicit_content_length)
 
 
 class TestYield(TestHttpdBasic):
