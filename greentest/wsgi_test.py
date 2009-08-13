@@ -348,7 +348,7 @@ class TestHttps(greentest.TestCase):
             result = f.read()
             self.assertEquals(result, 'abc')
         finally:
-            g.kill() # XXX use blocking kill
+            g.kill(block=True)
 
     def test_013_empty_return(self):
         certificate_file = os.path.join(os.path.dirname(__file__), 'test_server.crt')
@@ -361,7 +361,7 @@ class TestHttps(greentest.TestCase):
             result = f.read()
             self.assertEquals(result, '')
         finally:
-            g.kill()
+            g.kill(block=True)
 
 
 class HTTPRequest(urllib2.Request):
