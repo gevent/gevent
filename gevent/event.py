@@ -107,6 +107,10 @@ class Event(object):
                 self.unlink(switch)
             assert result is self, 'Invalid switch into Event.wait(): %r' % (result, )
 
+    # compatibility to threading.Event:
+    is_set = isSet = ready
+    set = put
+
 
 class AsyncResult(Event):
     """Like Greenlet, has 'value' and 'exception' properties, successful() method and get() can raise.
@@ -175,3 +179,4 @@ def waitall(events):
 
 
 _NONE = object()
+
