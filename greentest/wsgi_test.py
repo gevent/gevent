@@ -79,6 +79,7 @@ def chunked_post(env, start_response):
     elif env['PATH_INFO'] == '/c':
         return [x for x in iter(lambda: env['wsgi.input'].read(1), '')]
 
+
 class Site(object):
     def __init__(self):
         self.application = hello_world
@@ -89,14 +90,6 @@ class Site(object):
 
 CONTENT_LENGTH = 'content-length'
 
-
-"""
-HTTP/1.1 200 OK
-Date: foo
-Content-length: 11
-
-hello world
-"""
 
 class ConnectionClosed(Exception):
     pass
