@@ -428,7 +428,7 @@ class TestStuff(greentest.TestCase):
         sleep(DELAY*10)
         assert results in [[10, 20], [20, 10]], results
 
-    def _test_multiple_listeners_error_unlink(self, p):
+    def _test_multiple_listeners_error_unlink(self, p, link):
         # notification must not happen after unlink even
         # though notification process has been already started
         results = []
@@ -442,20 +442,24 @@ class TestStuff(greentest.TestCase):
             raise ExpectedError('listener2')
         def listener3(*args):
             raise ExpectedError('listener3')
-        p.link(listener1)
-        p.link(listener2)
-        p.link(listener3)
+        link(listener1)
+        link(listener2)
+        link(listener3)
         sleep(DELAY*10)
         assert results == [5], results
 
-    def test_multiple_listeners_error_unlink_Greenlet(self):
+    def test_multiple_listeners_error_unlink_Greenlet_link(self):
         p = gevent.spawn(lambda : 5)
-        self._test_multiple_listeners_error_unlink(p)
+        self._test_multiple_listeners_error_unlink(p, p.link)
 
-    def test_multiple_listeners_error_unlink_Event(self):
+    def test_multiple_listeners_error_unlink_Greenlet_rawlink(self):
+        p = gevent.spawn(lambda : 5)
+        self._test_multiple_listeners_error_unlink(p, p.rawlink)
+
+    def test_multiple_listeners_error_unlink_Event_rawlink(self):
         e = Event()
         gevent.spawn(e.put, 6)
-        self._test_multiple_listeners_error_unlink(e)
+        self._test_multiple_listeners_error_unlink(e, e.rawlink)
 
     def test_killing_unlinked(self):
         e = AsyncResult()
