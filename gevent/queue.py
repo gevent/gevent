@@ -253,3 +253,27 @@ class LifoQueue(Queue):
     def _get(self):
         return self.queue.pop()
 
+
+class JoinableQueue(Queue):
+
+    def __init__(self, maxsize=None):
+        from gevent.event import Event
+        Queue.__init__(self, maxsize)
+        self._unfinished_tasks = 0
+        self._cond = Event()
+
+    def put(self, item, block=True, timeout=None):
+        Queue.put(self, item, block, timeout)
+        self._unfinished_tasks += 1
+        self._cond.clear()
+
+    def task_done(self):
+        if self._unfinished_tasks <= 0:
+            raise ValueError('task_done() called too many times')
+        self._unfinished_tasks -= 1
+        if self._unfinished_tasks == 0:
+            self._cond.put()
+
+    def join(self):
+        self._cond.get()
+
