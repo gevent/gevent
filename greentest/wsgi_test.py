@@ -111,6 +111,8 @@ def read_headers(fd):
         except:
             print 'Failed to split: %r' % (line, )
             raise
+        key = key.lower()
+        assert key not in headers, 'Header %r is sent more than once' % key
         headers[key.lower()] = value
     return response_line, headers
 
