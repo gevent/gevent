@@ -48,6 +48,15 @@ def hello_world(env, start_response):
     return ["hello world"]
 
 
+def hello_world_yield(env, start_response):
+    if env['PATH_INFO'] == 'notexist':
+        start_response('404 Not Found', [('Content-type', 'text/plain')])
+        yield "not found"
+    else:
+        start_response('200 OK', [('Content-type', 'text/plain')])
+        yield "hello world"
+
+
 def chunked_app(env, start_response):
     start_response('200 OK', [('Content-type', 'text/plain')])
     yield "this"
@@ -240,6 +249,11 @@ class TestHttpdBasic(TestCase):
         response_line_test,_,_ = read_http(fd)
         self.assertEqual(response_line_200,response_line_test)
         fd.close()
+
+
+class TestYield(TestHttpdBasic):
+
+    application = staticmethod(hello_world_yield)
 
 
 class TestGetArg(TestCase):
