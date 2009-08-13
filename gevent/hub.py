@@ -44,8 +44,9 @@ def sleep(seconds=0):
     try:
         switch_result = get_hub().switch()
         assert switch_result is unique_mark, 'Invalid switch into sleep(): %r' % (switch_result, )
-    finally:
+    except:
         t.cancel()
+        raise
 
 
 def kill(greenlet, exception=GreenletExit):
