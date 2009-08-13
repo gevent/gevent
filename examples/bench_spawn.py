@@ -13,7 +13,7 @@ def incr(sleep, **kwargs):
     sleep(0)
 
 if not sys.argv[1:]:
-    sys.exit('USAGE: python bench_spawn.py none|gevent|eventlet [eventlet_hub]')
+    sys.exit('USAGE: python bench_spawn.py none|gevent|geventraw|geventpool|eventlet [eventlet_hub]')
 
 print sys.argv[1]
 
