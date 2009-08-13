@@ -117,6 +117,24 @@ def read_headers(fd):
     return response_line, headers
 
 
+def iread_chunks(fd):
+    while True:
+        chunk_size = fd.readline().strip()
+        try:
+            chunk_size = int(chunk_size, 16)
+        except:
+            print 'Failed to parse chunk size: %r' % chunk_size
+            raise
+        if chunk_size == 0:
+            crlf = fd.read(2)
+            assert crlf == '\r\n', repr(crlf)
+            break
+        data = fd.read(chunk_size)
+        yield data
+        crlf = fd.read(2)
+        assert crlf == '\r\n', repr(crlf)
+
+
 def read_http(fd):
     response_line, headers = read_headers(fd)
 
@@ -124,6 +142,8 @@ def read_http(fd):
         num = int(headers[CONTENT_LENGTH])
         body = fd.read(num)
         #print body
+    elif 'chunked' in headers.get('transfer-encoding', ''):
+        body = ''.join(iread_chunks(fd))
     else:
         body = None
 
