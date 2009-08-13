@@ -256,7 +256,7 @@ class Greenlet(greenlet):
                 raise self._exception
         if block:
             switch = getcurrent().switch
-            self.link(switch)
+            self.rawlink(switch)
             try:
                 t = Timeout(timeout)
                 try:
@@ -280,7 +280,7 @@ class Greenlet(greenlet):
             return
         else:
             switch = getcurrent().switch
-            self.link(switch)
+            self.rawlink(switch)
             try:
                 t = Timeout(timeout)
                 try:
