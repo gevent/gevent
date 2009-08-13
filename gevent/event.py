@@ -10,6 +10,7 @@ class Event(object):
     def __init__(self):
         self._links = set()
         self._value = _NONE
+        self._notifier = None
 
     def ready(self):
         return self._value is not _NONE
@@ -20,12 +21,11 @@ class Event(object):
             return self._value
 
     def rawlink(self, callback):
-        if self._value is _NONE:
-            self._links.add(callback)
-        else:
-            # QQQ switch won't work as a callback!
-            # QQQ should I schedule the callback here too, like Greenlet.rawlink does?
-            callback(self)
+        if not callable(callback):
+            raise TypeError('Expected callable: %r' % (callback, ))
+        self._links.add(callback)
+        if self.ready() and self._notifier is None:
+            self._notifier = core.active_event(self._notify_links)
 
     def unlink(self, callback):
         self._links.discard(callback)
@@ -38,22 +38,25 @@ class Event(object):
         oldvalue = self._value
         self._value = value
         if oldvalue is _NONE:
-            if self._links:
-                core.active_event(self._notify_links)
+            if self._links and self._notifier is None:
+                self._notifier = core.active_event(self._notify_links)
 
     def _notify_links(self):
-        assert getcurrent() is get_hub()
-        while self._links:
-            link = self._links.pop()
-            try:
-                link(self)
-            except:
-                traceback.print_exc()
+        try:
+            assert getcurrent() is get_hub()
+            while self._links:
+                link = self._links.pop()
                 try:
-                    sys.stderr.write('Failed to notify link %r of %r\n\n' % (link, self))
+                    link(self)
                 except:
-                    pass
-            # even if g is left unscheduled, it will be deallocated because there are no more references to it
+                    traceback.print_exc()
+                    try:
+                        sys.stderr.write('Failed to notify link %r of %r\n\n' % (link, self))
+                    except:
+                        pass
+                # even if g is left unscheduled, it will be deallocated because there are no more references to it
+        finally:
+            self._notifier = None
 
     def get(self, block=True, timeout=None):
         if self._value is not _NONE:
