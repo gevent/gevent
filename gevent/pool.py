@@ -87,7 +87,6 @@ class GreenletSet(object):
                 if not block:
                     break
                 joinall(self.greenlets)
-                joinall(self.dying)
         finally:
             t.cancel()
 
