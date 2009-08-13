@@ -30,9 +30,14 @@ class Event(object):
     def unlink(self, callback):
         self._links.discard(callback)
 
-#     def clear(self):
-#         self._value = _NONE
-#     need also make sure the current links receive the value but the new ones will wait
+    def clear(self):
+        """Reset the internal state. Subsequently, greenlets calling wait() or get()
+        will block until set() or put() is called.
+
+        Greenlets that called get() and wait() before clear() but were not yet notified
+        since the last put() call will _not_ be notified.
+        """
+        self._value = _NONE
 
     def put(self, value=None):
         oldvalue = self._value
