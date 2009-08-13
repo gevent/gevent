@@ -107,7 +107,7 @@ def read_headers(fd):
         try:
             key, value = line.split(': ', 1)
         except:
-            print 'bad line:', `line`
+            print 'Failed to split: %r' % (line, )
             raise
         headers[key.lower()] = value
     return response_line, headers
