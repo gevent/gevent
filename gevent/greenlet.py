@@ -192,11 +192,11 @@ class Greenlet(greenlet):
                     if self._links and self._notifier is None:
                         self._notifier = core.active_event(self._notify_links)
 
-    def schedule_switch(self, *args):
+    def start(self, *args):
         """Must be called _exactly_ once for a greenlet to become active"""
         return core.active_event(self.switch, *args)
 
-    def schedule_switch_later(self, seconds, *args):
+    def start_later(self, seconds, *args):
         """Must be called _exactly_ once for a greenlet to become active"""
         return core.timer(seconds, self.switch, *args)
 
@@ -204,22 +204,22 @@ class Greenlet(greenlet):
     def spawn(cls, function, *args, **kwargs):
         if kwargs:
             g = cls(_switch_helper)
-            g.schedule_switch(function, args, kwargs)
+            g.start(function, args, kwargs)
             return g
         else:
             g = cls(function)
-            g.schedule_switch(*args)
+            g.start(*args)
             return g
 
     @classmethod
     def spawn_later(cls, seconds, function, *args, **kwargs):
         if kwargs:
             g = cls(_switch_helper)
-            timer = g.schedule_switch_later(seconds, function, args, kwargs)
+            timer = g.start_later(seconds, function, args, kwargs)
             return g, timer
         else:
             g = cls(function)
-            timer = g.schedule_switch_later(seconds, *args)
+            timer = g.start_later(seconds, *args)
             return g, timer
 
     @classmethod
