@@ -134,6 +134,7 @@ class Hub(greenlet):
         finally:
             if self.keyboard_interrupt_signal is not None:
                 self.keyboard_interrupt_signal.cancel()
+                self.keyboard_interrupt_signal = None
             if _threadlocal.__dict__.get('hub') is self:
                 _threadlocal.__dict__.pop('hub')
 
