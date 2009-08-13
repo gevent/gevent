@@ -135,6 +135,7 @@ class FailureGreenletLink(GreenletLink):
         if not source.successful():
             return GreenletLink.__call__(self, source)
 
+
 class Greenlet(greenlet):
     # QQQ rename to Microthread
     """A greenlet subclass that adds a few features.
@@ -201,7 +202,7 @@ class Greenlet(greenlet):
         return core.timer(seconds, self.switch, *args)
 
     @classmethod
-    def spawn(cls, function, *args, **kwargs):
+    def spawn(cls, function=None, *args, **kwargs):
         if kwargs:
             g = cls(_switch_helper)
             g.start(function, args, kwargs)
@@ -212,7 +213,7 @@ class Greenlet(greenlet):
             return g
 
     @classmethod
-    def spawn_later(cls, seconds, function, *args, **kwargs):
+    def spawn_later(cls, seconds, function=None, *args, **kwargs):
         if kwargs:
             g = cls(_switch_helper)
             timer = g.start_later(seconds, function, args, kwargs)
