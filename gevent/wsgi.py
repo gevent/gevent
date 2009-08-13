@@ -75,7 +75,7 @@ class Input(object):
 
         if length is None and self.content_length is not None:
             length = self.content_length - self.position
-        if length and self.content_length is not None and length > self.content_length - self.position:
+        if length and length > self.content_length - self.position:
             length = self.content_length - self.position
         if not length:
             return ''
@@ -177,8 +177,6 @@ class HttpProtocol(BaseHTTPServer.BaseHTTPRequestHandler):
         start = time.time()
         headers_set = []
         headers_sent = []
-        # set of lowercase header names that were sent
-        header_dict = {}
 
         wfile = self.wfile
         result = None
@@ -193,19 +191,18 @@ class HttpProtocol(BaseHTTPServer.BaseHTTPRequestHandler):
             elif not headers_sent:
                 status, response_headers = headers_set
                 headers_sent.append(1)
-                for k, v in response_headers:
-                    header_dict[k.lower()] = k
+                header_list = [header[0].lower() for header in response_headers]
                 towrite.append('%s %s\r\n' % (self.protocol_version, status))
                 for header in response_headers:
                     towrite.append('%s: %s\r\n' % header)
 
                 # send Date header?
-                if 'date' not in header_dict:
+                if 'date' not in header_list:
                     towrite.append('Date: %s\r\n' % (format_date_time(time.time()),))
                 if self.request_version == 'HTTP/1.0':
                     towrite.append('Connection: close\r\n')
                     self.close_connection = 1
-                elif 'content-length' not in header_dict:
+                elif 'content-length' not in header_list:
                     use_chunked[0] = True
                     towrite.append('Transfer-Encoding: chunked\r\n')
                 towrite.append('\r\n')
@@ -249,16 +246,19 @@ class HttpProtocol(BaseHTTPServer.BaseHTTPRequestHandler):
         try:
             try:
                 result = self.application(self.environ, start_response)
-                if not headers_sent and hasattr(result, '__len__'):
-                    headers_set[1].append(('content-length', str(sum(map(len, result)))))
+                if not headers_sent and hasattr(result, '__len__') and \
+                        'Content-Length' not in [h for h, v in headers_set[1]]:
+                    headers_set[1].append(('Content-Length', str(sum(map(len, result)))))
                 towrite = []
                 for data in result:
-                    if data:
-                        write(data)
-                if not headers_sent:
+                    towrite.append(data)
+                    if sum(map(len, towrite)) >= self.minimum_chunk_size:
+                        write(''.join(towrite))
+                        towrite = []
+                if towrite:
+                    write(''.join(towrite))
+                if not headers_sent or use_chunked[0]:
                     write('')
-                if use_chunked[0]:
-                    wfile.write('0\r\n\r\n')
             except Exception, e:
                 self.close_connection = 1
                 exc = traceback.format_exc()
