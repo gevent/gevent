@@ -1,7 +1,7 @@
 import sys
 import traceback
 from gevent import core
-from gevent.hub import greenlet, get_hub, getcurrent
+from gevent.hub import get_hub, getcurrent
 from gevent.timeout import Timeout
 
 
