@@ -19,10 +19,12 @@ class Event(object):
         if self._value is not _NONE:
             return self._value
 
-    def link(self, callback):
+    def rawlink(self, callback):
         if self._value is _NONE:
             self._links.add(callback)
         else:
+            # QQQ switch won't work as a callback!
+            # QQQ should I schedule the callback here too, like Greenlet.rawlink does?
             callback(self)
 
     def unlink(self, callback):
@@ -43,9 +45,8 @@ class Event(object):
         assert getcurrent() is get_hub()
         while self._links:
             link = self._links.pop()
-            g = greenlet(link)
             try:
-                g.switch(self)
+                link(self)
             except:
                 traceback.print_exc()
                 try:
@@ -59,7 +60,7 @@ class Event(object):
             return self._value
         elif block:
             switch = getcurrent().switch
-            self.link(switch)
+            self.rawlink(switch)
             try:
 #                 result = None
 #                 if not isinstance(timeout, Timeout): # need Timeout.start() method to implement this
@@ -85,7 +86,7 @@ class Event(object):
             return
         else:
             switch = getcurrent().switch
-            self.link(switch)
+            self.rawlink(switch)
             try:
                 t = Timeout(timeout)
                 try:
@@ -157,7 +158,7 @@ def waitall(events):
     put = queue.put
     try:
         for event in events:
-            event.link(put)
+            event.rawlink(put)
         for _ in xrange(len(events)):
             queue.get()
     finally:
