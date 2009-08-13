@@ -160,9 +160,10 @@ class BaseQueueTest(unittest.TestCase, BlockingTestMixin):
             q.put(None)         # instruct the threads to close
         q.join()                # verify that you can join twice
 
-    def DISABLE_test_queue_task_done(self):
+    def test_queue_task_done(self):
         # Test to make sure a queue task completed successfully.
-        q = self.type2test()
+        q = Queue.JoinableQueue() # self.type2test()
+        # XXX the same test in subclasses
         try:
             q.task_done()
         except ValueError:
@@ -170,10 +171,11 @@ class BaseQueueTest(unittest.TestCase, BlockingTestMixin):
         else:
             self.fail("Did not detect task count going negative")
 
-    def DISABLE_test_queue_join(self):
+    def test_queue_join(self):
         # Test that a queue join()s successfully, and before anything else
         # (done twice for insurance).
-        q = self.type2test()
+        q = Queue.JoinableQueue() # self.type2test()
+        # XXX the same test in subclass
         self.queue_join_test(q)
         self.queue_join_test(q)
         try:
