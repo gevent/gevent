@@ -107,7 +107,7 @@ class GreenletSet(object):
             args = ()
         if kwds is None:
             kwds = {}
-        if self.full() and getcurrent() in self:
+        if getcurrent() in self:
             return func(*args, **kwds)
         else:
             return self.spawn(func, *args, **kwds).get()
