@@ -21,16 +21,17 @@
 from gevent import monkey
 monkey.patch_all(thread=False)
 
+import sys
 import cgi
 import os
-from greentest import TestCase, main
 import urllib2
+
+import greentest
 
 import gevent
 from gevent import wsgi
 from gevent import socket
 
-from greentest import find_command
 
 try:
     from cStringIO import StringIO
@@ -81,8 +82,9 @@ def chunked_post(env, start_response):
 
 
 class Site(object):
-    def __init__(self):
-        self.application = hello_world
+
+    def __init__(self, application):
+        self.application = application
 
     def __call__(self, env, start_response):
         return self.application(env, start_response)
@@ -126,21 +128,31 @@ def read_http(fd):
     return response_line, headers, body
 
 
-class TestHttpd(TestCase):
-    mode = 'static'
+class TestCase(greentest.TestCase):
+
+    def listen(self):
+        return socket.tcp_listener(('0.0.0.0', 0))
+
     def setUp(self):
-        self.logfile = StringIO()
-        self.site = Site()
+        self.logfile = sys.stderr # StringIO()
+        self.site = Site(self.application)
+        listener = self.listen()
+        self.port = listener.getsockname()[1]
         self.server = gevent.spawn(
-            wsgi.server,
-            socket.tcp_listener(('0.0.0.0', 12346)), self.site, max_size=128, log=self.logfile)
+            wsgi.server, listener, self.site, max_size=128, log=self.logfile)
 
     def tearDown(self):
         self.server.kill(block=True)
-        gevent.sleep(0) # XXX kill should be enough!
+        # XXX server should have 'close' method which closes everything reliably
+        # XXX currently listening socket is kept open
+
+
+class TestHttpdBasic(TestCase):
+
+    application = staticmethod(hello_world)
 
     def test_001_server(self):
-        sock = socket.connect_tcp(('127.0.0.1', 12346))
+        sock = socket.connect_tcp(('127.0.0.1', self.port))
         sock.sendall('GET / HTTP/1.0\r\nHost: localhost\r\n\r\n')
         result = sock.makefile().read()
         sock.close()
@@ -149,7 +161,7 @@ class TestHttpd(TestCase):
         self.assert_(result.endswith('hello world'))
 
     def test_002_keepalive(self):
-        fd = socket.connect_tcp(('127.0.0.1', 12346)).makefile(bufsize=1)
+        fd = socket.connect_tcp(('127.0.0.1', self.port)).makefile(bufsize=1)
         fd.write('GET / HTTP/1.1\r\nHost: localhost\r\n\r\n')
         read_http(fd)
         fd.write('GET / HTTP/1.1\r\nHost: localhost\r\n\r\n')
@@ -158,7 +170,7 @@ class TestHttpd(TestCase):
 
     def test_003_passing_non_int_to_read(self):
         # This should go in greenio_test
-        fd = socket.connect_tcp(('127.0.0.1', 12346)).makefile(bufsize=1)
+        fd = socket.connect_tcp(('127.0.0.1', self.port)).makefile(bufsize=1)
         fd.write('GET / HTTP/1.1\r\nHost: localhost\r\n\r\n')
         cancel = gevent.Timeout(1, RuntimeError)
         self.assertRaises(TypeError, fd.read, "This shouldn't work")
@@ -166,7 +178,7 @@ class TestHttpd(TestCase):
         fd.close()
 
     def test_004_close_keepalive(self):
-        fd = socket.connect_tcp(('127.0.0.1', 12346)).makefile(bufsize=1)
+        fd = socket.connect_tcp(('127.0.0.1', self.port)).makefile(bufsize=1)
         fd.write('GET / HTTP/1.1\r\nHost: localhost\r\n\r\n')
         read_http(fd)
         fd.write('GET / HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n')
@@ -176,15 +188,15 @@ class TestHttpd(TestCase):
         fd.close()
 
     def skip_test_005_run_apachebench(self):
-        url = 'http://localhost:12346/'
+        url = 'http://localhost:%s/' % self.port
         # ab is apachebench
         from gevent import processes
-        out = processes.Process(find_command('ab'),
+        out = processes.Process(greentest.find_command('ab'),
                                 ['-c','64','-n','1024', '-k', url])
         print out.read()
 
     def test_006_reject_long_urls(self):
-        fd = socket.connect_tcp(('127.0.0.1', 12346)).makefile(bufsize=1)
+        fd = socket.connect_tcp(('127.0.0.1', self.port)).makefile(bufsize=1)
         path_parts = []
         for ii in range(3000):
             path_parts.append('path')
@@ -196,15 +208,29 @@ class TestHttpd(TestCase):
         self.assertEqual(status, '414')
         fd.close()
 
+    def test_008_correctresponse(self):
+        fd = socket.connect_tcp(('127.0.0.1', self.port)).makefile(bufsize=1)
+        fd.write('GET / HTTP/1.1\r\nHost: localhost\r\n\r\n')
+        response_line_200,_,_ = read_http(fd)
+        fd.write('GET /notexist HTTP/1.1\r\nHost: localhost\r\n\r\n')
+        response_line_404,_,_ = read_http(fd)
+        fd.write('GET / HTTP/1.1\r\nHost: localhost\r\n\r\n')
+        response_line_test,_,_ = read_http(fd)
+        self.assertEqual(response_line_200,response_line_test)
+        fd.close()
+
+
+class TestGetArg(TestCase):
+
+    def application(self, env, start_response):
+        body = env['wsgi.input'].read()
+        a = cgi.parse_qs(body).get('a', [1])[0]
+        start_response('200 OK', [('Content-type', 'text/plain')])
+        return ['a is %s, body is %s' % (a, body)]
+
     def test_007_get_arg(self):
         # define a new handler that does a get_arg as well as a read_body
-        def new_app(env, start_response):
-            body = env['wsgi.input'].read()
-            a = cgi.parse_qs(body).get('a', [1])[0]
-            start_response('200 OK', [('Content-type', 'text/plain')])
-            return ['a is %s, body is %s' % (a, body)]
-        self.site.application = new_app
-        fd = socket.connect_tcp(('127.0.0.1', 12346)).makefile(bufsize=1)
+        fd = socket.connect_tcp(('127.0.0.1', self.port)).makefile(bufsize=1)
         request = '\r\n'.join((
             'POST / HTTP/1.0',
             'Host: localhost',
@@ -219,32 +245,28 @@ class TestHttpd(TestCase):
         self.assertEqual(body, 'a is a, body is a=a')
         fd.close()
 
-    def test_008_correctresponse(self):
-        fd = socket.connect_tcp(('127.0.0.1', 12346)).makefile(bufsize=1)
-        fd.write('GET / HTTP/1.1\r\nHost: localhost\r\n\r\n')
-        response_line_200,_,_ = read_http(fd)
-        fd.write('GET /notexist HTTP/1.1\r\nHost: localhost\r\n\r\n')
-        response_line_404,_,_ = read_http(fd)
-        fd.write('GET / HTTP/1.1\r\nHost: localhost\r\n\r\n')
-        response_line_test,_,_ = read_http(fd)
-        self.assertEqual(response_line_200,response_line_test)
-        fd.close()
+
+class TestChunkedApp(TestCase):
+
+    application = staticmethod(chunked_app)
 
     def test_009_chunked_response(self):
-        fd = socket.connect_tcp(('127.0.0.1', 12346)).makefile(bufsize=1)
-        self.site.application = chunked_app
+        fd = socket.connect_tcp(('127.0.0.1', self.port)).makefile(bufsize=1)
         fd.write('GET / HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n')
         self.assert_('Transfer-Encoding: chunked' in fd.read())
 
     def test_010_no_chunked_http_1_0(self):
-        self.site.application = chunked_app
-        fd = socket.connect_tcp(('127.0.0.1', 12346)).makefile(bufsize=1)
+        fd = socket.connect_tcp(('127.0.0.1', self.port)).makefile(bufsize=1)
         fd.write('GET / HTTP/1.0\r\nHost: localhost\r\nConnection: close\r\n\r\n')
         self.assert_('Transfer-Encoding: chunked' not in fd.read())
 
+
+class TestBigChunks(TestCase):
+        
+    application = staticmethod(big_chunks)
+
     def test_011_multiple_chunks(self):
-        self.site.application = big_chunks
-        fd = socket.connect_tcp(('127.0.0.1', 12346)).makefile(bufsize=1)
+        fd = socket.connect_tcp(('127.0.0.1', self.port)).makefile(bufsize=1)
         fd.write('GET / HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n')
         _, headers = read_headers(fd)
         assert ('transfer-encoding', 'chunked') in headers.items(), headers
@@ -257,9 +279,13 @@ class TestHttpd(TestCase):
             chunklen = int(fd.readline(), 16)
         self.assert_(chunks > 1)
 
+
+class TestChunkedPost(TestCase):
+
+    application = staticmethod(chunked_post)
+
     def test_014_chunked_post(self):
-        self.site.application = chunked_post
-        fd = socket.connect_tcp(('127.0.0.1', 12346)).makefile(bufsize=1)
+        fd = socket.connect_tcp(('127.0.0.1', self.port)).makefile(bufsize=1)
         fd.write('PUT /a HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n'
                  'Transfer-Encoding: chunked\r\n\r\n'
                  '2\r\noh\r\n4\r\n hai\r\n0\r\n\r\n')
@@ -267,7 +293,7 @@ class TestHttpd(TestCase):
         response = fd.read()
         self.assert_(response == 'oh hai', 'invalid response %s' % response)
 
-        fd = socket.connect_tcp(('127.0.0.1', 12346)).makefile(bufsize=1)
+        fd = socket.connect_tcp(('127.0.0.1', self.port)).makefile(bufsize=1)
         fd.write('PUT /b HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n'
                  'Transfer-Encoding: chunked\r\n\r\n'
                  '2\r\noh\r\n4\r\n hai\r\n0\r\n\r\n')
@@ -275,7 +301,7 @@ class TestHttpd(TestCase):
         response = fd.read()
         self.assert_(response == 'oh hai', 'invalid response %s' % response)
 
-        fd = socket.connect_tcp(('127.0.0.1', 12346)).makefile(bufsize=1)
+        fd = socket.connect_tcp(('127.0.0.1', self.port)).makefile(bufsize=1)
         fd.write('PUT /c HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n'
                  'Transfer-Encoding: chunked\r\n\r\n'
                  '2\r\noh\r\n4\r\n hai\r\n0\r\n\r\n')
@@ -284,34 +310,38 @@ class TestHttpd(TestCase):
         response = fd.read(8192)
         self.assert_(response == 'oh hai', 'invalid response %s' % response)
 
+
+class TestUseWrite(TestCase):
+
+    application = staticmethod(use_write)
+
     def test_015_write(self):
-        self.site.application = use_write
-        fd = socket.connect_tcp(('127.0.0.1', 12346)).makefile(bufsize=1)
+        fd = socket.connect_tcp(('127.0.0.1', self.port)).makefile(bufsize=1)
         fd.write('GET /a HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n')
         response_line, headers, body = read_http(fd)
         self.assert_('content-length' in headers)
 
-        fd = socket.connect_tcp(('127.0.0.1', 12346)).makefile(bufsize=1)
+        fd = socket.connect_tcp(('127.0.0.1', self.port)).makefile(bufsize=1)
         fd.write('GET /b HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n')
         response_line, headers, body = read_http(fd)
         self.assert_('transfer-encoding' in headers)
         self.assert_(headers['transfer-encoding'] == 'chunked')
 
 
-class TestHttps(TestCase):
-    mode = 'static'
+class TestHttps(greentest.TestCase):
+
+    def application(self, environ, start_response):
+        start_response('200 OK', {})
+        return [environ['wsgi.input'].read()]
 
     def test_012_ssl_server(self):
-        def wsgi_app(environ, start_response):
-            start_response('200 OK', {})
-            return [environ['wsgi.input'].read()]
 
         certificate_file = os.path.join(os.path.dirname(__file__), 'test_server.crt')
         private_key_file = os.path.join(os.path.dirname(__file__), 'test_server.key')
 
         sock = socket.ssl_listener(('', 4201), private_key_file, certificate_file)
 
-        g = gevent.spawn(wsgi.server, sock, wsgi_app)
+        g = gevent.spawn(wsgi.server, sock, self.application)
         try:
             req = HTTPRequest("https://localhost:4201/foo", method="POST", data='abc')
             f = urllib2.urlopen(req)
@@ -321,14 +351,10 @@ class TestHttps(TestCase):
             g.kill() # XXX use blocking kill
 
     def test_013_empty_return(self):
-        def wsgi_app(environ, start_response):
-            start_response("200 OK", [])
-            return [""]
-
         certificate_file = os.path.join(os.path.dirname(__file__), 'test_server.crt')
         private_key_file = os.path.join(os.path.dirname(__file__), 'test_server.key')
         sock = socket.ssl_listener(('', 4202), private_key_file, certificate_file)
-        g = gevent.spawn(wsgi.server, sock, wsgi_app)
+        g = gevent.spawn(wsgi.server, sock, self.application)
         try:
             req = HTTPRequest("https://localhost:4202/foo")
             f = urllib2.urlopen(req)
@@ -351,4 +377,4 @@ class HTTPRequest(urllib2.Request):
         return self.method
 
 if __name__ == '__main__':
-    main()
+    greentest.main()
