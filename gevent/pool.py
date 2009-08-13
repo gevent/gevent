@@ -98,9 +98,6 @@ class GreenletSet(object):
             if block:
                 p.join(timeout)
 
-    def full(self):
-        return False
-
     def apply(self, func, args=None, kwds=None):
         """Equivalent of the apply() builtin function. It blocks till the result is ready."""
         if args is None:
@@ -159,6 +156,9 @@ class GreenletSet(object):
             g.rawlink(q.put)
         for _ in xrange(len(greenlets)):
             yield q.get().get()
+    
+    def full(self):
+        return False
 
 
 class Pool(GreenletSet):
