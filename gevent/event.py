@@ -49,7 +49,7 @@ class Event(object):
     def _notify_links(self):
         try:
             assert getcurrent() is get_hub()
-            while self._links:
+            while self._links and self._value is not _NONE:
                 link = self._links.pop()
                 try:
                     link(self)
