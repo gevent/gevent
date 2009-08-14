@@ -200,6 +200,12 @@ class Pool(GreenletSet):
             g.start(*args)
             self.add(g)
 
+    def kill(self, exception=GreenletExit, block=False, timeout=None):
+        for g, args in self.waiting:
+            g.kill(exception)
+        self.waiting.clear()
+        return GreenletSet.kill(self, exception=exception, block=block, timeout=timeout)
+
 
 def get_values(greenlets):
     joinall(greenlets)
