@@ -11,9 +11,7 @@ class TestCoroutinePool(TestCase):
     def test_apply_async(self):
         done = Event()
         def some_work(x):
-            print 'puttin'
             done.put()
-            print 'done putting'
         pool = self.klass(2)
         pool.apply_async(some_work, ('x', ))
         done.get()
