@@ -25,13 +25,15 @@ def patch_thread():
     # XXX should also patch threadlocal
 
 def patch_socket():
-    from gevent.socket import GreenSocket, fromfd, wrap_ssl, socketpair
+    from gevent.socket import GreenSocket, fromfd, wrap_ssl, socketpair, getaddrinfo, getnameinfo
     _socket = __import__('socket')
     _socket.socket = GreenSocket
     _socket.fromfd = fromfd
     _socket.ssl = wrap_ssl
     _socket.socketpair = socketpair
     # XXX also gethostbyname, getaddrinfo
+    _socket.getaddrinfo = getaddrinfo
+    _socket.getnameinfo = getnameinfo
 
 def patch_ssl():
     if sys.version_info[:2] >= (2, 6):
