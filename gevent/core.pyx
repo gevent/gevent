@@ -395,6 +395,8 @@ def reinit():
     return event_reinit(current_base)
     emit_endif()
 
+include "evdns.pxi"
+
 # XXX - make sure event queue is always initialized.
 init()
 
