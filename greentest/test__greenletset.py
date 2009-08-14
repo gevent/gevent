@@ -73,13 +73,13 @@ class Test(greentest.TestCase):
         p2 = gevent.spawn(u2)
         s = pool.GreenletSet([p1, p2])
         assert u1.shot_count == 0, u1.shot_count
-        s.killonce(p1)
+        s.killone(p1)
         assert u1.shot_count == 0, u1.shot_count
         gevent.sleep(0)
         assert u1.shot_count == 1, u1.shot_count
-        s.killonce(p1)
+        s.killone(p1)
         assert u1.shot_count == 1, u1.shot_count
-        s.killonce(p1)
+        s.killone(p1)
         assert u2.shot_count == 0, u2.shot_count
         s.kill()
         s.kill()
