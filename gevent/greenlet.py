@@ -405,17 +405,21 @@ def joinall(greenlets, timeout=None, raise_error=False):
     from gevent.queue import Queue
     queue = Queue()
     put = queue.put
+    timeout = Timeout(timeout)
     try:
-        for greenlet in greenlets:
-            greenlet.rawlink(put)
-        for _ in xrange(len(greenlets)):
-            greenlet = queue.get()
-            if raise_error and not greenlet.successful():
-                getcurrent().throw(greenlet.exception)
-    except:
-        for greenlet in greenlets:
-            greenlet.unlink(put)
-        raise
+        try:
+            for greenlet in greenlets:
+                greenlet.rawlink(put)
+            for _ in xrange(len(greenlets)):
+                greenlet = queue.get()
+                if raise_error and not greenlet.successful():
+                    getcurrent().throw(greenlet.exception)
+        except:
+            for greenlet in greenlets:
+                greenlet.unlink(put)
+            raise
+    finally:
+        timeout.cancel()
 
 
 def _killall3(greenlets, exception, waiter):
