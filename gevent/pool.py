@@ -90,7 +90,7 @@ class GreenletSet(object):
         finally:
             t.cancel()
 
-    def killonce(self, p, exception=GreenletExit, block=False, timeout=None):
+    def killone(self, p, exception=GreenletExit, block=False, timeout=None):
         if p not in self.dying and p in self.greenlets:
             p.kill(exception)
             self.dying.add(p)
