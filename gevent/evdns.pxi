@@ -1,6 +1,25 @@
 cdef extern from "arpa/inet.h":
     struct in_addr
     char *inet_ntoa(in_addr n)
+cdef extern from "netinet/in.h":
+    cdef enum:
+        INET6_ADDRSTRLEN
+
+cdef extern from "sys/socket.h":
+    cdef enum:
+        AF_INET
+        AF_INET6
+
+cdef extern from "arpa/inet.h":
+    struct in_addr:
+        pass
+    struct in6_addr:
+        pass
+    ctypedef int socklen_t
+    char *inet_ntoa(in_addr n)
+    int inet_aton(char *cp, in_addr *inp)
+    int inet_pton(int af, char *src, void *dst)
+    char *inet_ntop(int af, void *src, char *dst, socklen_t size)
 
 cdef extern from "evdns.h":
     ctypedef void (*evdns_handler)(int result, char t, int count, int ttl,
@@ -12,9 +31,9 @@ cdef extern from "evdns.h":
                            void *arg)
     int evdns_resolve_ipv6(char *name, int flags, evdns_handler callback,
                            void *arg)
-    int evdns_resolve_reverse(char *ip, int flags, evdns_handler callback,
+    int evdns_resolve_reverse(in_addr *ip, int flags, evdns_handler callback,
                               void *arg)
-    int evdns_resolve_reverse_ipv6(char *ip, int flags, evdns_handler callback,
+    int evdns_resolve_reverse_ipv6(in6_addr *ip, int flags, evdns_handler callback,
                                    void *arg)
     void evdns_shutdown(int fail_requests)
 
