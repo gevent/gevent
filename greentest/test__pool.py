@@ -231,7 +231,7 @@ class TestPool(TestCase):
             )
         kill = TimingWrapper(self.pool.kill)
         kill(block=True)
-        assert kill.elapsed < 0.2, kill.elapsed
+        assert kill.elapsed < 0.5, kill.elapsed
 
 
 class TestPool2(TestPool):
