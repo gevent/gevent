@@ -28,19 +28,21 @@ _original_fromfd = _socket.fromfd
 _original_socketpair = _socket.socketpair
 error = _socket.error
 timeout = _socket.timeout
-getaddrinfo = _socket.getaddrinfo # XXX implement this and others using libevent's dns
 __socket__ = __import__('socket')
 _fileobject = __socket__._fileobject
 sslerror = __socket__.sslerror
+gaierror = __socket__.gaierror
 
 import sys
 import errno
 import time
 
-from gevent.hub import getcurrent, get_hub, spawn_raw
+from gevent.hub import getcurrent, get_hub, spawn_raw, Waiter
 from gevent import core
 
 BUFFER_SIZE = 4096
+
+core.dns_init()
 
 
 def _wait_helper(ev, evtype):
@@ -634,6 +636,49 @@ def wrap_ssl000(sock, keyfile=None, certfile=None):
         ssl_sock.do_handshake()
 
     return ssl_sock
+
+# TODO:
+# might need to map evdns errors to socket errors
+# for example, DNS_ERR_NOTEXIST(3) is:
+# socket.gaierror: [Errno -2] Name or service not known
+
+def _dns_helper(result, type, ttl, addrs, args):
+    (waiter,) = args
+    waiter.switch((result, type, ttl, addrs))
+
+def getaddrinfo(host, port, family=__socket__.AF_INET, socktype=__socket__.SOCK_STREAM, proto=0, flags=0):
+    waiter = Waiter()
+    if family == __socket__.AF_INET:
+        core.dns_resolve_ipv4(host, core.DNS_QUERY_NO_SEARCH, _dns_helper, waiter)
+    elif family == __socket__.AF_INET6:
+        core.dns_resolve_ipv6(host, core.DNS_QUERY_NO_SEARCH, _dns_helper, waiter)
+    else:
+        raise NotImplementedError
+    result, type, ttl, addrs = waiter.wait()
+    if result != core.DNS_ERR_NONE:
+        raise gaierror(result)
+    r = []
+    for addr in addrs:
+        r.append((family, socktype, proto, '', (addr, port)))
+    return r
+
+def getnameinfo(sockaddr, flags):
+    # http://svn.python.org/view/python/trunk/Modules/socketmodule.c?view=markup
+    # see socket_getnameinfo
+    try:
+        host, port = sockaddr[:2]
+        port = int(port)
+    except:
+        # make testRefCountGetNameInfo pass
+        del sockaddr
+        raise SystemError
+    waiter = Waiter()
+    core.dns_resolve_reverse(host, core.DNS_QUERY_NO_SEARCH, _dns_helper, waiter)
+    result, type, ttl, addrs = waiter.wait()
+    if result != core.DNS_ERR_NONE:
+        raise gaierror(result)
+    return (addrs, port)
+
 
 
 def wrap_ssl(sock, keyfile=None, certfile=None):
