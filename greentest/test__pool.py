@@ -98,11 +98,12 @@ class TestCoroutinePool(TestCase):
             # shouldn't block when trying to get
             t = gevent.Timeout(0.1)
             try:
-                pool.spawn(gevent.sleep, (1, ))
+                pool.apply(gevent.sleep, (0, ))
             finally:
                 t.cancel()
         finally:
             sys.stderr = normal_err
+            pool.join()
 
 
 class PoolBasicTests(TestCase):
