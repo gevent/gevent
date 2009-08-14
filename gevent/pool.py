@@ -210,3 +210,31 @@ class Pool(GreenletSet):
 def get_values(greenlets):
     joinall(greenlets)
     return [x.value for x in greenlets]
+
+
+class pass_value(object):
+    __slots__ = ['callback']
+
+    def __init__(self, callback):
+        self.callback = callback
+
+    def __call__(self, source):
+        if source.successful():
+            self.callback(source.value)
+
+    def __hash__(self):
+        return hash(self.callback)
+
+    def __eq__(self, other):
+        return self.callback == getattr(other, 'callback', other)
+
+    def __str__(self):
+        return str(self.callback)
+
+    def __repr__(self):
+        return repr(self.callback)
+
+    def __getattr__(self, item):
+        assert item != 'callback'
+        return getattr(self.callback, item)
+
