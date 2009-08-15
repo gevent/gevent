@@ -375,6 +375,7 @@ def get_method():
 
 cdef extern from *:
     cdef void emit_ifdef "#if defined(_EVENT_VERSION) //" ()
+    cdef void emit_else  "#else //" ()
     cdef void emit_endif "#endif //" ()
 
 
