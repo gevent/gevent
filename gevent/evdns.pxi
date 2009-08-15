@@ -1,6 +1,3 @@
-cdef extern from "arpa/inet.h":
-    struct in_addr
-    char *inet_ntoa(in_addr n)
 cdef extern from "netinet/in.h":
     cdef enum:
         INET6_ADDRSTRLEN
@@ -57,29 +54,34 @@ DNS_IPv6_AAAA		= 3
 # Flags
 DNS_QUERY_NO_SEARCH	= 1
 
+emit_evdns_ifdef()
+HAS_EVDNS = 1
+emit_else()
+HAS_EVDNS = 0
+emit_endif()
+
 def dns_init():
+    emit_evdns_ifdef()
     """Initialize async DNS resolver."""
     evdns_init()
-    #__evdns_cbargs.clear()
+    emit_endif()
 
 cdef void __evdns_callback(int result, char t, int count, int ttl,
                      void *addrs, void *arg) with gil:
     cdef int i
-    cdef in_addr *inaddrs
+    cdef char str[INET6_ADDRSTRLEN]
     ctx = <tuple>(arg)
     (callback, args) = ctx
     Py_DECREF(ctx)
 
     if t == DNS_IPv4_A:
         x = []
-        inaddrs = <in_addr *>addrs
         for i from 0 <= i < count:
-            #x.append(PyString_FromStringAndSize(<char *>addrs + (i * 4), 4))
-            x.append(PyString_FromString(inet_ntoa(inaddrs[i])))
+            x.append(PyString_FromString(inet_ntoa((<in_addr *>addrs)[i])))
     elif t == DNS_IPv6_AAAA:
         x = []
         for i from 0 <= i < count:
-            x.append(PyString_FromStringAndSize(<char *>addrs + (i * 16), 16))
+            x.append(PyString_FromString(inet_ntop(AF_INET6, <void *>&(<in6_addr *>addrs)[i], str, sizeof(str))))
     elif t == DNS_PTR and count == 1: # only 1 PTR possible
         x = PyString_FromString((<char **>addrs)[0])
     else:
@@ -87,8 +89,6 @@ cdef void __evdns_callback(int result, char t, int count, int ttl,
     try:
         callback(result, t, ttl, x, args)
     except:
-        # JJJ commented this out and added trackback print
-        #__event_abort()
         traceback.print_exc()
 
     
@@ -102,10 +102,11 @@ def dns_resolve_ipv4(char *name, int flags, callback, *args):
     callback -- callback with (result, type, ttl, addrs, *args) prototype
     args     -- option callback arguments
     """
-    cdef long long i
+    emit_evdns_ifdef()
     t = (callback, args)
     Py_INCREF(t)
     evdns_resolve_ipv4(name, flags, __evdns_callback, <void *>t)
+    emit_endif()
 
 def dns_resolve_ipv6(char *name, int flags, callback, *args):
     """Lookup an AAAA record for a given name.
@@ -117,10 +118,11 @@ def dns_resolve_ipv6(char *name, int flags, callback, *args):
     callback -- callback with (result, type, ttl, addrs, *args) prototype
     args     -- option callback arguments
     """
-    cdef long long i
+    emit_evdns_ifdef()
     t = (callback, args)
     Py_INCREF(t)
     evdns_resolve_ipv6(name, flags, __evdns_callback, <void *>t)
+    emit_endif()
 
 def dns_resolve_reverse(char *ip, int flags, callback, *args):
     """Lookup a PTR record for a given IPv4 address.
@@ -132,10 +134,13 @@ def dns_resolve_reverse(char *ip, int flags, callback, *args):
     callback -- callback with (result, type, ttl, addrs, *args) prototype
     args     -- option callback arguments
     """
-    cdef long long i
+    emit_evdns_ifdef()
     t = (callback, args)
     Py_INCREF(t)
-    evdns_resolve_reverse(ip, flags, __evdns_callback, <void *>t)
+    cdef in_addr addr
+    inet_aton(ip, &addr)
+    evdns_resolve_reverse(&addr, flags, __evdns_callback, <void *>t)
+    emit_endif()
 
 def dns_resolve_reverse_ipv6(char *ip, int flags, callback, *args):
     """Lookup a PTR record for a given IPv6 address.
@@ -147,12 +152,16 @@ def dns_resolve_reverse_ipv6(char *ip, int flags, callback, *args):
     callback -- callback with (result, type, ttl, addrs, *args) prototype
     args     -- option callback arguments
     """
-    cdef long long i
+    emit_evdns_ifdef()
     t = (callback, args)
     Py_INCREF(t)
-    evdns_resolve_reverse(ip, flags, __evdns_callback, <void *>t)
+    cdef in6_addr addr
+    inet_pton(AF_INET6, ip, &addr)
+    evdns_resolve_reverse_ipv6(&addr, flags, __evdns_callback, <void *>t)
+    emit_endif()
 
 def dns_shutdown(int fail_requests=0):
     """Shutdown the async DNS resolver and terminate all active requests."""
+    emit_evdns_ifdef()
     evdns_shutdown(fail_requests)
-
+    emit_endif()
