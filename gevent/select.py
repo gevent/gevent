@@ -15,7 +15,6 @@ def get_fileno(obj):
 
 def select(read_list, write_list, error_list, timeout=None):
     hub = get_hub()
-    timeout = None
     current = getcurrent()
     assert hub is not current, 'do not call blocking functions from the mainloop'
     allevents = []
