@@ -5,6 +5,7 @@ from gevent import core
 
 
 __all__ = ['getcurrent',
+           'GreenletExit',
            'sleep',
            'kill',
            'signal',

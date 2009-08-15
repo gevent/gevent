@@ -2,6 +2,7 @@ version_info = (0, 10, 0)
 __version__ = '0.10.0'
 
 __all__ = ['Greenlet',
+           'GreenletExit',
            'spawn',
            'spawn_later',
            'spawn_link',
