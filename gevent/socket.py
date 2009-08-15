@@ -51,7 +51,7 @@ def _wait_helper(ev, evtype):
 
 
 def wait_reader(fileno, timeout=-1, timeout_exc=_socket.timeout):
-    evt = core.read(fileno, _wait_helper, timeout, (getcurrent(), timeout_exc))
+    evt = core.read_event(fileno, _wait_helper, timeout, (getcurrent(), timeout_exc))
     try:
         switch_result = get_hub().switch()
         assert evt is switch_result, 'Invalid switch into wait_reader(): %r' % (switch_result, )
@@ -60,7 +60,7 @@ def wait_reader(fileno, timeout=-1, timeout_exc=_socket.timeout):
 
 
 def wait_writer(fileno, timeout=-1, timeout_exc=_socket.timeout):
-    evt = core.write(fileno, _wait_helper, timeout, (getcurrent(), timeout_exc))
+    evt = core.write_event(fileno, _wait_helper, timeout, (getcurrent(), timeout_exc))
     try:
         switch_result = get_hub().switch()
         assert evt is switch_result, 'Invalid switch into wait_writer(): %r' % (switch_result, )

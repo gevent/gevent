@@ -265,14 +265,14 @@ cdef class event:
         self.cancel()
 
 
-cdef class read(event):
+cdef class read_event(event):
 
     def __init__(self, int handle, callback, timeout=-1, arg=None):
         event.__init__(self, EV_READ, handle, callback, arg)
         self.add(timeout)
 
 
-cdef class write(event):
+cdef class write_event(event):
 
     def __init__(self, int handle, callback, timeout=-1, arg=None):
         event.__init__(self, EV_WRITE, handle, callback, arg)

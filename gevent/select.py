@@ -14,6 +14,7 @@ def get_fileno(obj):
 
 
 def select(read_list, write_list, error_list, timeout=None):
+    # QQQ error_list is ignored
     hub = get_hub()
     current = getcurrent()
     assert hub is not current, 'do not call blocking functions from the mainloop'
@@ -28,9 +29,9 @@ def select(read_list, write_list, error_list, timeout=None):
             current.switch(([], [], []))
 
     for r in read_list:
-        allevents.append(core.read(get_fileno(r), callback, arg=r))
+        allevents.append(core.read_event(get_fileno(r), callback, arg=r))
     for w in write_list:
-        allevents.append(core.write(get_fileno(r), callback, arg=w))
+        allevents.append(core.write_event(get_fileno(r), callback, arg=w))
 
     timeout = Timeout(timeout)
     try:
