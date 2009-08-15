@@ -29,5 +29,9 @@ spawn_link = Greenlet.spawn_link
 spawn_link_value = Greenlet.spawn_link_value
 spawn_link_exception = Greenlet.spawn_link_exception
 from gevent.timeout import Timeout, with_timeout
-from gevent.hub import getcurrent, sleep, kill, signal, fork, shutdown
+from gevent.hub import getcurrent, GreenletExit, sleep, kill, signal, shutdown
+try:
+    from gevent.hub import fork
+except ImportError:
+    __all__.remove('fork')
 from gevent.core import reinit

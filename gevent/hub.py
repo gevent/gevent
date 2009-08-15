@@ -26,7 +26,11 @@ thread = __import__('thread')
 threadlocal = thread._local
 _threadlocal = threadlocal()
 _threadlocal.Hub = None
-_original_fork = os.fork
+try:
+    _original_fork = os.fork
+except AttributeError:
+    _original_fork = None
+    __all__.remove('fork')
 
 
 def sleep(seconds=0):
@@ -69,10 +73,12 @@ def signal(signalnum, handler, *args, **kwargs):
     return core.signal(signalnum, deliver_exception_to_MAIN)
 
 
-def fork():
-    result = _original_fork()
-    core.reinit()
-    return result
+if _original_fork is not None:
+
+    def fork():
+        result = _original_fork()
+        core.reinit()
+        return result
 
 
 def shutdown():
