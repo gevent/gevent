@@ -639,69 +639,74 @@ def wrap_ssl000(sock, keyfile=None, certfile=None):
 
     return ssl_sock
 
-# TODO:
-# might need to map evdns errors to socket errors
-# for example, DNS_ERR_NOTEXIST(3) is:
-# socket.gaierror: [Errno -2] Name or service not known
+if core.HAS_EVDNS:
+    # TODO:
+    # might need to map evdns errors to socket errors
+    # for example, DNS_ERR_NOTEXIST(3) is:
+    # socket.gaierror: [Errno -2] Name or service not known
 
-def _dns_helper(result, type, ttl, addrs, args):
-    (waiter,) = args
-    waiter.switch((result, type, ttl, addrs))
+    def _dns_helper(result, type, ttl, addrs, args):
+        (waiter,) = args
+        waiter.switch((result, type, ttl, addrs))
 
-_ip_re = re.compile('[\d\.]+')
+    _ip_re = re.compile('[\d\.]+')
 
-def gethostbyname(hostname):
-    # TODO: this is supposed to iterate through all the addresses
-    # could use a global dict(hostname, iter)
-    # - fix these nasty hacks for localhost, ips, etc.
-    if hostname == 'localhost': # hack
-        return '127.0.0.1'
-    if _ip_re.match(hostname): # hack
-        return hostname
-    waiter = Waiter()
-    core.dns_resolve_ipv4(hostname, core.DNS_QUERY_NO_SEARCH, _dns_helper, waiter)
-    result, type, ttl, addrs = waiter.wait()
-    if result != core.DNS_ERR_NONE:
-        # hack to make testSockName pass
-        # should use /etc/hosts
-        if hostname == __socket__.gethostname():
-            return '0.0.0.0'
-        raise gaierror(result)
-    return random.choice(addrs)
+    def gethostbyname(hostname):
+        # TODO: this is supposed to iterate through all the addresses
+        # could use a global dict(hostname, iter)
+        # - fix these nasty hacks for localhost, ips, etc.
+        if hostname == 'localhost': # hack
+            return '127.0.0.1'
+        if _ip_re.match(hostname): # hack
+            return hostname
+        waiter = Waiter()
+        core.dns_resolve_ipv4(hostname, core.DNS_QUERY_NO_SEARCH, _dns_helper, waiter)
+        result, type, ttl, addrs = waiter.wait()
+        if result != core.DNS_ERR_NONE:
+            # hack to make testSockName pass
+            # should use /etc/hosts
+            if hostname == __socket__.gethostname():
+                return '0.0.0.0'
+            raise gaierror(result)
+        return random.choice(addrs)
 
-def getaddrinfo(host, port, family=__socket__.AF_INET, socktype=__socket__.SOCK_STREAM, proto=0, flags=0):
-    waiter = Waiter()
-    if family == __socket__.AF_INET:
-        core.dns_resolve_ipv4(host, core.DNS_QUERY_NO_SEARCH, _dns_helper, waiter)
-    elif family == __socket__.AF_INET6:
-        core.dns_resolve_ipv6(host, core.DNS_QUERY_NO_SEARCH, _dns_helper, waiter)
-    else:
-        raise NotImplementedError
-    result, type, ttl, addrs = waiter.wait()
-    if result != core.DNS_ERR_NONE:
-        raise gaierror(result)
-    r = []
-    for addr in addrs:
-        r.append((family, socktype, proto, '', (addr, port)))
-    return r
+    def getaddrinfo(host, port, family=__socket__.AF_INET, socktype=__socket__.SOCK_STREAM, proto=0, flags=0):
+        waiter = Waiter()
+        if family == __socket__.AF_INET:
+            core.dns_resolve_ipv4(host, core.DNS_QUERY_NO_SEARCH, _dns_helper, waiter)
+        elif family == __socket__.AF_INET6:
+            core.dns_resolve_ipv6(host, core.DNS_QUERY_NO_SEARCH, _dns_helper, waiter)
+        else:
+            raise NotImplementedError
+        result, type, ttl, addrs = waiter.wait()
+        if result != core.DNS_ERR_NONE:
+            raise gaierror(result)
+        r = []
+        for addr in addrs:
+            r.append((family, socktype, proto, '', (addr, port)))
+        return r
 
-def getnameinfo(sockaddr, flags):
-    # http://svn.python.org/view/python/trunk/Modules/socketmodule.c?view=markup
-    # see socket_getnameinfo
-    try:
-        host, port = sockaddr[:2]
-        port = int(port)
-    except:
-        # make testRefCountGetNameInfo pass
-        del sockaddr
-        raise SystemError
-    waiter = Waiter()
-    core.dns_resolve_reverse(host, core.DNS_QUERY_NO_SEARCH, _dns_helper, waiter)
-    result, type, ttl, addrs = waiter.wait()
-    if result != core.DNS_ERR_NONE:
-        raise gaierror(result)
-    return (addrs, port)
-
+    def getnameinfo(sockaddr, flags):
+        # http://svn.python.org/view/python/trunk/Modules/socketmodule.c?view=markup
+        # see socket_getnameinfo
+        try:
+            host, port = sockaddr[:2]
+            port = int(port)
+        except ValueError:
+            # make testRefCountGetNameInfo pass
+            del sockaddr
+            raise SystemError
+        waiter = Waiter()
+        core.dns_resolve_reverse(host, core.DNS_QUERY_NO_SEARCH, _dns_helper, waiter)
+        result, type, ttl, addrs = waiter.wait()
+        if result != core.DNS_ERR_NONE:
+            raise gaierror(result)
+        return (addrs, port)
+else:
+    # fallback to blocking versions
+    gethostbyname = __socket__.gethostbyname
+    getaddrinfo = __socket__.getaddrinfo
+    getnameinfo = __socket__.getnameinfo
 
 
 def wrap_ssl(sock, keyfile=None, certfile=None):
