@@ -76,12 +76,12 @@ class Event(object):
                 t = Timeout(timeout)
                 try:
                     result = get_hub().switch()
+                    assert result is self, 'Invalid switch into Event.get(): %r' % (result, )
                 finally:
                     t.cancel()
             except:
                 self.unlink(switch)
                 raise
-            assert result is self, 'Invalid switch into Event.get(): %r' % (result, )
             return self._value
         else:
             raise Timeout
@@ -99,13 +99,13 @@ class Event(object):
                 t = Timeout(timeout)
                 try:
                     result = get_hub().switch()
+                    assert result is self, 'Invalid switch into Event.wait(): %r' % (result, )
                 finally:
                     t.cancel()
             except Timeout, exc:
                 if exc is not t:
                     raise
                 self.unlink(switch)
-            assert result is self, 'Invalid switch into Event.wait(): %r' % (result, )
 
     # compatibility to threading.Event:
     is_set = isSet = ready
