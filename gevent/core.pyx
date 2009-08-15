@@ -314,7 +314,7 @@ cdef class signal(event):
 
 
 cdef class active_event(event):
-    """An event that is scheduled to run in _this_ loop iteration"""
+    """An event that is scheduled to run in the current loop iteration"""
 
     def __init__(self, callback, *args, **kwargs):
         self._callback = callback
@@ -331,6 +331,7 @@ def init():
     """Initialize event queue."""
     event_init()
 
+
 def dispatch():
     """Dispatch all events on the event queue.
     Returns 0 on success, and 1 if no events are registered.
@@ -342,6 +343,7 @@ def dispatch():
     if ret < 0:
         raise IOError(errno, strerror(errno))
     return ret
+
 
 def loop(nonblock=False):
     """Dispatch all pending events on queue in a single pass.
@@ -361,6 +363,7 @@ def loop(nonblock=False):
 
 def get_version():
     return event_get_version()
+
 
 def get_method():
     return event_get_method()
