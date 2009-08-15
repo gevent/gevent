@@ -187,7 +187,7 @@ def format_table(table, hubs, tests, hub_stats, changeset):
 def format_header(rev, changeset, pyversion):
     result = '<table width=99%%><tr><td>'
     url = '%s/changeset/%s' % (REPO_URL, changeset)
-    result += '<a href="%s">Eventlite changeset %s: %s</a>' % (url, rev, changeset)
+    result += '<a href="%s">gevent changeset %s: %s</a>' % (url, rev, changeset)
     result += '</td><tr><tr><td>Python version: %s</td><tr></table><p>' % pyversion
     return result
 
