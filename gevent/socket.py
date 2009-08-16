@@ -640,6 +640,8 @@ def wrap_ssl000(sock, keyfile=None, certfile=None):
     return ssl_sock
 
 if core.HAS_EVDNS:
+    # NOTE:
+    # use flags=core.DNS_QUERY_NO_SEARCH to avoid search, see comments in evdns.h
     # TODO:
     # might need to map evdns errors to socket errors
     # for example, DNS_ERR_NOTEXIST(3) is:
@@ -660,7 +662,7 @@ if core.HAS_EVDNS:
         if _ip_re.match(hostname): # hack
             return hostname
         waiter = Waiter()
-        core.dns_resolve_ipv4(hostname, core.DNS_QUERY_NO_SEARCH, _dns_helper, waiter)
+        core.dns_resolve_ipv4(hostname, 0, _dns_helper, waiter)
         result, type, ttl, addrs = waiter.wait()
         if result != core.DNS_ERR_NONE:
             # hack to make testSockName pass
@@ -673,9 +675,9 @@ if core.HAS_EVDNS:
     def getaddrinfo(host, port, family=__socket__.AF_INET, socktype=__socket__.SOCK_STREAM, proto=0, flags=0):
         waiter = Waiter()
         if family == __socket__.AF_INET:
-            core.dns_resolve_ipv4(host, core.DNS_QUERY_NO_SEARCH, _dns_helper, waiter)
+            core.dns_resolve_ipv4(host, flags, _dns_helper, waiter)
         elif family == __socket__.AF_INET6:
-            core.dns_resolve_ipv6(host, core.DNS_QUERY_NO_SEARCH, _dns_helper, waiter)
+            core.dns_resolve_ipv6(host, flags, _dns_helper, waiter)
         else:
             raise NotImplementedError
         result, type, ttl, addrs = waiter.wait()
@@ -697,7 +699,7 @@ if core.HAS_EVDNS:
             del sockaddr
             raise SystemError
         waiter = Waiter()
-        core.dns_resolve_reverse(host, core.DNS_QUERY_NO_SEARCH, _dns_helper, waiter)
+        core.dns_resolve_reverse(host, flags, _dns_helper, waiter)
         result, type, ttl, addrs = waiter.wait()
         if result != core.DNS_ERR_NONE:
             raise gaierror(result)
