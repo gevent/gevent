@@ -672,12 +672,16 @@ if core.HAS_EVDNS:
             raise gaierror(result)
         return random.choice(addrs)
 
-    def getaddrinfo(host, port, family=__socket__.AF_INET, socktype=__socket__.SOCK_STREAM, proto=0, flags=0):
+    def getaddrinfo(host, port, family=__socket__.AF_UNSPEC, socktype=__socket__.SOCK_STREAM, proto=0, flags=0):
         waiter = Waiter()
         if family == __socket__.AF_INET:
             core.dns_resolve_ipv4(host, flags, _dns_helper, waiter)
         elif family == __socket__.AF_INET6:
             core.dns_resolve_ipv6(host, flags, _dns_helper, waiter)
+        elif family == __socket__.AF_UNSPEC:
+            # TODO: AF_UNSPEC means try both AF_INET and AF_INET6
+            family = __socket__.AF_INET
+            core.dns_resolve_ipv4(host, flags, _dns_helper, waiter)
         else:
             raise NotImplementedError
         result, type, ttl, addrs = waiter.wait()
@@ -685,7 +689,8 @@ if core.HAS_EVDNS:
             raise gaierror(result)
         r = []
         for addr in addrs:
-            r.append((family, socktype, proto, '', (addr, port)))
+            for p in (6, 17, 0): # tcp, udp, ip protocols
+                r.append((family, socktype, p, '', (addr, port)))
         return r
 
     def getnameinfo(sockaddr, flags):
