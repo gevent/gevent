@@ -148,7 +148,7 @@ class HttpProtocol(BaseHTTPServer.BaseHTTPRequestHandler):
                 self.close_connection = 1
                 return
         except socket.error, e:
-            if e[0] != errno.EBADF:
+            if e[0] != errno.EBADF and e[0] != errno.ECONNRESET:
                 raise
             self.raw_requestline = ''
 
