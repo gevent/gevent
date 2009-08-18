@@ -1,6 +1,6 @@
 from collections import deque
 from gevent.hub import GreenletExit, getcurrent
-from gevent.greenlet import spawn, joinall, Greenlet
+from gevent.greenlet import joinall, Greenlet
 from gevent.timeout import Timeout
 
 
@@ -9,6 +9,7 @@ class GreenletSet(object):
     
     Links to each item and removes it upon notification.
     """
+    greenlet_class = Greenlet
 
     def __init__(self, *args):
         assert len(args)<=1, args
@@ -45,7 +46,7 @@ class GreenletSet(object):
 
     def spawn(self, func, *args, **kwargs):
         add = self.add
-        p = spawn(func, *args, **kwargs)
+        p = self.greenlet_class.spawn(func, *args, **kwargs)
         add(p)
         return p
 
@@ -134,7 +135,7 @@ class GreenletSet(object):
         single argument.
         """
         greenlets = [self.spawn(func, item) for item in iterable]
-        result = spawn(get_values, greenlets)
+        result = self.spawn(get_values, greenlets)
         if callback is not None:
             result.link(pass_value(callback))
         return result
