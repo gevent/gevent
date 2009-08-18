@@ -4,6 +4,41 @@ from gevent.event import AsyncResult
 
 DELAY = 0.01
 
+class TestAsyncResult(greentest.TestCase):
+
+    def test_set_exc(self):
+        log = []
+        e = AsyncResult()
+
+        def waiter():
+            try:
+                result = e.get()
+                log.append(('received', result))
+            except Exception, ex:
+                log.append(('catched', ex))
+        gevent.spawn(waiter)
+        obj = Exception()
+        e.set_exception(obj)
+        gevent.sleep(0)
+        assert log == [('catched', obj)], log
+
+    def test_set(self):
+        event1 = AsyncResult()
+        event2 = AsyncResult()
+
+        g = gevent.spawn_later(DELAY/2.0, event1.set, 'hello event1')
+        t = gevent.Timeout(0, ValueError('interrupted'))
+        try:
+            try:
+                result = event1.get()
+            except ValueError:
+                X = object()
+                result = gevent.with_timeout(DELAY, event2.get, timeout_value=X)
+                assert result is X, 'Nobody sent anything to event2 yet it received %r' % (result, )
+        finally:
+            t.cancel()
+            g.kill(block=True)
+
 
 class TestLink_Signal(greentest.TestCase):
 
