@@ -10,7 +10,14 @@ name = 'gevent.core'
 sources = ['gevent/core.c']
 ev_dir = None # override to skip searching for libevent
 
-if ev_dir is None and ( glob.glob('/usr/lib/libevent*') or glob.glob('/usr/lib64/libevent*') ):
+
+system_dirs = ['/usr/lib/libevent.*',
+               '/usr/lib64/libevent.*',
+               '/usr/local/lib/libevent.*',
+               '/usr/local/lib64/libevent.*']
+
+
+if ev_dir is None and any(glob.glob(system_dir) for system_dir in system_dirs):
     print 'found system libevent for', sys.platform
     gevent_core = Extension(name=name,
                             sources=sources,
