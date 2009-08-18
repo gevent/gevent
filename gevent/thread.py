@@ -1,7 +1,6 @@
 """implements standard module 'thread' with greenlets"""
 __thread = __import__('thread')
-from gevent.hub import getcurrent, GreenletExit
-from gevent.rawgreenlet import spawn
+from gevent.hub import getcurrent, GreenletExit, spawn_raw
 from gevent.coros import Semaphore as LockType
 
 def get_ident(gr=None):
@@ -11,7 +10,7 @@ def get_ident(gr=None):
         return id(gr)
 
 def start_new_thread(function, args=(), kwargs={}):
-    g = spawn(function, *args, **kwargs)
+    g = spawn_raw(function, *args, **kwargs)
     return get_ident(g)
 
 def allocate_lock():

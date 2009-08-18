@@ -1,43 +1,18 @@
-"""A few utilities for raw greenlets"""
+"""A few utilities for raw greenlets.
+
+# XXX these functions do not support 'timeout' parameter as gevent.greenlet API
+# XXX this module does seem to be useful and may be removed in the future
+"""
 
 import traceback
 from gevent import core
-from gevent.hub import greenlet, get_hub, GreenletExit, Waiter, sleep
+from gevent.hub import GreenletExit, Waiter, sleep
 
 
-__all__ = ['spawn',
-           'spawn_later',
-           'kill',
+__all__ = ['kill',
            'killall',
            'join',
            'joinall']
-
-
-def _switch_helper(function, args, kwargs):
-    # work around the fact that greenlet.switch does not support keyword args
-    return function(*args, **kwargs)
-
-
-def spawn(function, *args, **kwargs):
-    if kwargs:
-        g = greenlet(_switch_helper, get_hub())
-        core.active_event(g.switch, function, args, kwargs)
-        return g
-    else:
-        g = greenlet(function, get_hub())
-        core.active_event(g.switch, *args)
-        return g
-
-
-def spawn_later(seconds, function, *args, **kwargs):
-    if kwargs:
-        g = greenlet(_switch_helper, get_hub())
-        core.timer(seconds, g.switch, function, args, kwargs)
-        return g
-    else:
-        g = greenlet(function, get_hub())
-        core.timer(seconds, g.switch, *args)
-        return g
 
 
 def _kill(greenlet, exception, waiter):

@@ -26,8 +26,7 @@ import time
 import traceback
 
 from gevent.core import active_event
-from gevent.hub import get_hub, getcurrent, sleep
-from gevent.rawgreenlet import spawn
+from gevent.hub import get_hub, getcurrent, sleep, spawn_raw
 
 
 class Cancelled(RuntimeError):
@@ -54,7 +53,7 @@ class event(object):
     >>> def baz(b):
     ...     evt.send(b + 1)
     ...
-    >>> _ = spawn(baz, 3)
+    >>> _ = spawn_raw(baz, 3)
     >>> evt.wait()
     4
     """
@@ -138,7 +137,7 @@ class event(object):
         >>> def wait_on():
         ...    retval = evt.wait()
         ...    print "waited for", retval
-        >>> _ = spawn(wait_on)
+        >>> _ = spawn_raw(wait_on)
         >>> evt.send('result')
         >>> sleep(0)
         waited for result
@@ -168,7 +167,7 @@ class event(object):
         ...     print 'about to wait'
         ...     result = evt.wait()
         ...     print 'waited for', result
-        >>> _ = spawn(waiter)
+        >>> _ = spawn_raw(waiter)
         >>> sleep(0)
         about to wait
         >>> evt.send('a')
@@ -350,7 +349,7 @@ def execute(func, *args, **kw):
     evt = event()
     def _really_execute():
         evt.send(func(*args, **kw))
-    spawn(_really_execute)
+    spawn_raw(_really_execute)
     return evt
 
 

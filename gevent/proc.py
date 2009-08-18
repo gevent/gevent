@@ -575,7 +575,7 @@ class Proc(Source):
         assert self.greenlet is None, "'run' can only be called once per instance"
         if self.name is None:
             self.name = str(function)
-        self.greenlet = rawgreenlet.spawn(self._run, function, args, kwargs)
+        self.greenlet = hub.spawn_raw(self._run, function, args, kwargs)
 
     def _run(self, function, args, kwargs):
         """Internal top level function.
@@ -818,7 +818,7 @@ class Pool(object):
 
     def execute_async(self, func, *args, **kwargs):
         if self.sem.locked():
-            return rawgreenlet.spawn(self.execute, func, *args, **kwargs)
+            return hub.spawn_raw(self.execute, func, *args, **kwargs)
         else:
             return self.execute(func, *args, **kwargs)
 

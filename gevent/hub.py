@@ -6,6 +6,7 @@ from gevent import core
 
 __all__ = ['getcurrent',
            'GreenletExit',
+           'spawn_raw',
            'sleep',
            'kill',
            'signal',
@@ -31,6 +32,22 @@ try:
 except AttributeError:
     _original_fork = None
     __all__.remove('fork')
+
+
+def _switch_helper(function, args, kwargs):
+    # work around the fact that greenlet.switch does not support keyword args
+    return function(*args, **kwargs)
+
+
+def spawn_raw(function, *args, **kwargs):
+    if kwargs:
+        g = greenlet(_switch_helper, get_hub())
+        core.active_event(g.switch, function, args, kwargs)
+        return g
+    else:
+        g = greenlet(function, get_hub())
+        core.active_event(g.switch, *args)
+        return g
 
 
 def sleep(seconds=0):

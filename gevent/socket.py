@@ -35,8 +35,7 @@ import sys
 import errno
 import time
 
-from gevent.hub import getcurrent, get_hub
-from gevent.rawgreenlet import spawn
+from gevent.hub import getcurrent, get_hub, spawn_raw
 from gevent import core
 
 BUFFER_SIZE = 4096
@@ -520,7 +519,7 @@ def tcp_server(listensocket, server, *args, **kw):
         try:
             while True:
                 client_socket = listensocket.accept()
-                spawn(server, client_socket, *args, **kw)
+                spawn_raw(server, client_socket, *args, **kw)
         except error, e:
             # Broken pipe means it was shutdown
             if e[0] != 32:
