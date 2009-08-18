@@ -272,7 +272,7 @@ class JoinableQueue(Queue):
             raise ValueError('task_done() called too many times')
         self._unfinished_tasks -= 1
         if self._unfinished_tasks == 0:
-            self._cond.put()
+            self._cond.set()
 
     def join(self):
         self._cond.get()
