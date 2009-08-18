@@ -17,7 +17,7 @@ class _TriggerThread(threading.Thread):
         self.args = args
         #self.startedEvent = threading.Event()
         from gevent.event import Event
-        self.startedEvent = Event
+        self.startedEvent = Event()
         threading.Thread.__init__(self)
 
     def run(self):
