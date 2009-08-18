@@ -208,7 +208,7 @@ def killall(sources, exception=ProcExit, block=False, polling_period=0.2):
             try:
                 joinall(alive, trap_errors=True)
             except TypeError:
-                rawgreenlet._joinall(alive, polling_period=polling_period)
+                rawgreenlet.joinall(alive, polling_period=polling_period)
             # QQQ a) use links for all the greenlets we can and poll the others
             # QQQ b) have only one unversal version of killall, waitall, joinall etc
             # QQQ    the current dichotomy of greenlets and procs is confusing
