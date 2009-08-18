@@ -1,4 +1,8 @@
 - try to use names from standard library where possible
 - if monkey patching thread module also patch threading.local
 - nonblocking DNS calls via libevent
+- move Semaphore and BoundedSemaphore from coros to another module; deprecate coros
+- fix BoundedSemaphore to behave like standard threading's BoundedSemaphore behaves:
+  raise ValueError if upper limit is reached instead of blocking.
+- HUB and MAINLOOP - same thing, choose one name and use it everywhere
 
