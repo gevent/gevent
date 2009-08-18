@@ -673,6 +673,8 @@ if core.HAS_EVDNS:
         return random.choice(addrs)
 
     def getaddrinfo(host, port, family=__socket__.AF_UNSPEC, socktype=__socket__.SOCK_STREAM, proto=0, flags=0):
+        if _ip_re.match(host):
+            return [(__socket__.AF_INET, socktype, p, '', (host, port)) for p in (6, 17, 0)]
         waiter = Waiter()
         if family == __socket__.AF_INET:
             core.dns_resolve_ipv4(host, flags, _dns_helper, waiter)
