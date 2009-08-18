@@ -353,39 +353,39 @@ class Greenlet(greenlet):
         if self.ready() and self._notifier is None:
             self._notifier = core.active_event(self._notify_links)
 
-    def link(self, callback=None, GreenletLink=GreenletLink, SpawnedLink=SpawnedLink):
+    def link(self, receiver=None, GreenletLink=GreenletLink, SpawnedLink=SpawnedLink):
         """Link greenlet's completion to callable or another greenlet.
 
-        callback is None means link to the current greenlet.
-        Always asynchronous, unless callback is a current greenlet and the result is ready.
+        receiver is None means link to the current greenlet.
+        Always asynchronous, unless receiver is a current greenlet and the result is ready.
         """
         current = getcurrent()
-        if callback is None or callback is current:
-            callback = GreenletLink(current)
+        if receiver is None or receiver is current:
+            receiver = GreenletLink(current)
             if self.ready():
                 # special case : linking to current greenlet when link is ready
                 # raise LinkedExited immediatelly
-                callback(self)
+                receiver(self)
                 return
-        elif not callable(callback):
-            if isinstance(callback, greenlet):
-                callback = GreenletLink(callback)
+        elif not callable(receiver):
+            if isinstance(receiver, greenlet):
+                receiver = GreenletLink(receiver)
             else:
-                raise TypeError('Expected callable or greenlet: %r' % (callback, ))
+                raise TypeError('Expected callable or greenlet: %r' % (receiver, ))
         else:
-            callback = SpawnedLink(callback)
-        self.rawlink(callback)
+            receiver = SpawnedLink(receiver)
+        self.rawlink(receiver)
 
-    def unlink(self, callback=None):
-        if callback is None:
-            callback = getcurrent()
-        self._links.discard(callback)
+    def unlink(self, receiver=None):
+        if receiver is None:
+            receiver = getcurrent()
+        self._links.discard(receiver)
 
-    def link_value(self, callback=None, GreenletLink=SuccessGreenletLink, SpawnedLink=SuccessSpawnedLink):
-        self.link(callback=callback, GreenletLink=GreenletLink, SpawnedLink=SpawnedLink)
+    def link_value(self, receiver=None, GreenletLink=SuccessGreenletLink, SpawnedLink=SuccessSpawnedLink):
+        self.link(receiver=receiver, GreenletLink=GreenletLink, SpawnedLink=SpawnedLink)
 
-    def link_exception(self, callback=None, GreenletLink=FailureGreenletLink, SpawnedLink=FailureSpawnedLink):
-        self.link(callback=callback, GreenletLink=GreenletLink, SpawnedLink=SpawnedLink)
+    def link_exception(self, receiver=None, GreenletLink=FailureGreenletLink, SpawnedLink=FailureSpawnedLink):
+        self.link(receiver=receiver, GreenletLink=GreenletLink, SpawnedLink=SpawnedLink)
 
     def _notify_links(self):
         try:
