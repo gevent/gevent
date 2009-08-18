@@ -5,9 +5,10 @@ import glob
 import re
 from distutils.core import Extension, setup
 
+
 name = 'gevent.core'
 sources = ['gevent/core.c']
-ev_dir = None
+ev_dir = None # override to skip searching for libevent
 
 if ev_dir is None and ( glob.glob('/usr/lib/libevent*') or glob.glob('/usr/lib64/libevent*') ):
     print 'found system libevent for', sys.platform
