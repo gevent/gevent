@@ -171,7 +171,7 @@ class AsyncResult(Event):
     def put(self, value):
         import warnings
         warnings.warn("AsyncResult.put is deprecated; use AsyncResult.set", DeprecationWarning, stacklevel=2)
-        return self.set(self, value)
+        return self.set(value)
 
     def put_exception(self, exception):
         import warnings
