@@ -132,7 +132,42 @@ class FailureGreenletLink(GreenletLink):
 
 
 class Greenlet(greenlet):
-    """A greenlet subclass that adds a few features.
+    """A greenlet subclass that adds a few features:
+        - join  - wait for the greenlet to exit
+        - kill  - raise the exception in the greenlet
+        - get   - return the result of the greenlet
+        - link  - register a callable to notify upon greenlet exit
+        - ready
+        - successful
+
+    Additionally,
+        -'value' attribute holds the result of the greenlet or None if the greenlet has no result.
+        -'exception' attribute holds the exception instance that greenlet has raised or None
+
+    To start a function in another greenlet, pass it and its arguments to Greenlet constructor
+    and call start():
+      
+        >>> g = Greenlet(myfunction, arg1, arg2, kwarg1=1)
+        >>> g.start()
+
+    or use 'spawn' shortcut which does these 2 steps in one go:
+
+        >>> g = Greenlet.spawn(myfunction, arg1, arg2, kwarg1=1)
+
+    To subclass a Greenlet, override its _run method and don't forget
+    to call Greenlet.__init__(self) in your subclass' __init__:
+
+        >>> class MySleepGreenlet(Greenlet):
+        ...
+        ...     def __init__(self, seconds):
+        ...         Greenlet.__init__(self)
+        ...         self.seconds = seconds
+        ...
+        ...     def _run(self):
+        ...         gevent.sleep(self.seconds)
+
+    It also a good idea to override __str__: if the greenlet raises an exception,
+    its string representation will be printed after the traceback it generated.
     """
 
     args = ()
@@ -251,6 +286,13 @@ class Greenlet(greenlet):
         return g
 
     def kill(self, exception=GreenletExit, block=False, timeout=None):
+        """Raise the exception in the greenlet.
+
+        By default (block is False), the current greenlet is not unscheduled:
+        If block is True, wait for the greenlet to die or for the optional
+        timeout to expire. If the timeout expires before the greenlet has died,
+        stop waiting quietly.
+        """
         if not self.dead:
             waiter = Waiter()
             core.active_event(_kill, self, exception, waiter)
@@ -259,6 +301,12 @@ class Greenlet(greenlet):
                 self.join(timeout)
 
     def get(self, block=True, timeout=None):
+        """Return the result the greenlet has returned or re-raise the exception it has raised.
+
+        If block is False, raise Timeout if the greenlet is still alive.
+        If block is True, unschedule the current greenlet until the result is available
+        or the timeout expires. In the latter case, Timeout is raised.
+        """
         if self.ready():
             if self.successful():
                 return self.value
@@ -291,6 +339,10 @@ class Greenlet(greenlet):
             raise Timeout
 
     def join(self, timeout=None):
+        """Wait for the greenlet to complete or for timeout to expire.
+
+        Returns None, never raises anything.
+        """
         if self.ready():
             return
         else:
@@ -347,6 +399,10 @@ class Greenlet(greenlet):
             self.__dict__.pop('kwargs', None)
 
     def rawlink(self, callback):
+        """Register a callable to be executed when the greenlet finishes the execution.
+
+        WARNING: the callable will be called in the HUB greenlet.
+        """
         if not callable(callback):
             raise TypeError('Expected callable: %r' % (callback, ))
         self._links.add(callback)
@@ -457,7 +513,7 @@ def killall(greenlets, exception=GreenletExit, block=False, timeout=None):
         core.active_event(_killall3, greenlets, exception, waiter)
         if block:
             t = Timeout(timeout)
-            # t.start()
+            # XXX t.start()
             try:
                 alive = waiter.wait()
                 if alive:
