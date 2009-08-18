@@ -280,6 +280,11 @@ class Greenlet(greenlet):
                 finally:
                     t.cancel()
             except:
+                # unlinking in 'except' instead of finally is an optimization:
+                # if switch occurred normally then link was already removed in _notify_links
+                # and there's no need to touch the links set.
+                # Note, however, that if "Invalid switch" assert was removed and invalid switch
+                # did happen, the link would remain, causing another invalid switch later in this greenlet.
                 self.unlink(switch)
                 raise
             if self.ready():
