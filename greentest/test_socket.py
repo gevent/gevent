@@ -98,10 +98,18 @@ class ThreadableTest:
         self.server_ready.set()
 
     def _setUp(self):
-        self.server_ready = threading.Event()
-        self.client_ready = threading.Event()
-        self.done = threading.Event()
-        self.queue = Queue.Queue(1)
+        #self.server_ready = threading.Event()
+        #self.client_ready = threading.Event()
+        #self.done = threading.Event()
+        #self.queue = Queue.Queue(1)
+        # monkey-patched threading.Event and threading.Queue work fine here too
+        # but let's test gevent classes
+        from gevent.event import Event
+        from gevent.queue import Queue
+        self.server_ready = Event()
+        self.client_ready = Event()
+        self.done = Event()
+        self.queue = Queue(1)
 
         # Do some munging to start the client test.
         methodname = self.id()
