@@ -106,9 +106,12 @@ class Event(object):
                 finally:
                     t.cancel()
             except Timeout, exc:
+                self.unlink(switch)
                 if exc is not t:
                     raise
+            except:
                 self.unlink(switch)
+                raise
 
     def put(self, value=None):
         import warnings
