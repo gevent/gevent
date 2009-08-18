@@ -12,8 +12,11 @@ class Event(object):
         self._value = _NONE
         self._notifier = None
 
-    def ready(self):
+    def is_set(self):
         return self._value is not _NONE
+
+    isSet = is_set
+    ready = is_set
 
     @property
     def value(self):
@@ -39,7 +42,7 @@ class Event(object):
         """
         self._value = _NONE
 
-    def put(self, value=None):
+    def set(self, value=None):
         oldvalue = self._value
         self._value = value
         if oldvalue is _NONE:
@@ -107,10 +110,11 @@ class Event(object):
                     raise
                 self.unlink(switch)
 
-    # compatibility to threading.Event:
-    is_set = isSet = ready
-    set = put
-
+    def put(self, value=None):
+        import warnings
+        warnings.warn("Event.put is deprecated; use Event.set", DeprecationWarning, stacklevel=2)
+        return self.set(value=value)
+    
 
 class AsyncResult(Event):
     """Like Greenlet, has 'value' and 'exception' properties, successful() method and get() can raise.
@@ -149,18 +153,27 @@ class AsyncResult(Event):
         result, exception = self._value
         return exception is None
 
-    def put(self, item):
-        return Event.put(self, (item, None))
+    def set(self, value):
+        return Event.set(self, (value, None))
 
-    def put_exception(self, item):
-        return Event.put(self, (None, item))
+    def set_exception(self, exception):
+        return Event.set(self, (None, exception))
 
     def __call__(self, source):
         if source.successful():
-            self.put(source.value)
+            self.set(source.value)
         else:
-            self.put_exception(source.exception)
+            self.set_exception(source.exception)
 
+    def put(self, value):
+        import warnings
+        warnings.warn("AsyncResult.put is deprecated; use AsyncResult.set", DeprecationWarning, stacklevel=2)
+        return self.set(self, value)
+
+    def put_exception(self, exception):
+        import warnings
+        warnings.warn("AsyncResult.put_exception is deprecated; use AsyncResult.set_exception", DeprecationWarning, stacklevel=2)
+        return self.set_exception(self, exception)
     # QQQ add link_value and link_exception here?
 
 
