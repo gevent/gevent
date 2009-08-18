@@ -11,7 +11,7 @@ class TestCoroutinePool(TestCase):
     def test_apply_async(self):
         done = Event()
         def some_work(x):
-            done.put()
+            done.set()
         pool = self.klass(2)
         pool.apply_async(some_work, ('x', ))
         done.get()
@@ -29,7 +29,7 @@ class TestCoroutinePool(TestCase):
         results = []
         def producer():
             results.append('prod')
-            evt.put()
+            evt.set()
 
         def consumer():
             results.append('cons1')
@@ -64,7 +64,7 @@ class TestCoroutinePool(TestCase):
         evt = Event()
         def reenter_async():
             pool.apply_async(lambda a: a, ('reenter', ))
-            evt.put('done')
+            evt.set('done')
 
         pool.apply_async(reenter_async)
         evt.get()

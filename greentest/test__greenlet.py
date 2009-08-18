@@ -69,12 +69,12 @@ class TestLink(greentest.TestCase):
     def test_link_to_event(self):
         p = gevent.spawn(lambda : 100)
         event = Event()
-        p.link(event.put)
+        p.link(event.set)
         self.assertEqual(event.get().get(), 100)
 
         for i in xrange(3):
             event2 = Event()
-            p.link(event2.put)
+            p.link(event2.set)
             self.assertEqual(event2.get().get(), 100)
 
     def test_link_to_asyncresult(self):
@@ -458,7 +458,7 @@ class TestStuff(greentest.TestCase):
 
     def test_multiple_listeners_error_unlink_Event_rawlink(self):
         e = Event()
-        gevent.spawn(e.put, 6)
+        gevent.spawn(e.set, 6)
         self._test_multiple_listeners_error_unlink(e, e.rawlink)
 
     def test_killing_unlinked(self):
@@ -467,7 +467,7 @@ class TestStuff(greentest.TestCase):
             try:
                 raise ExpectedError('test_killing_unlinked')
             except:
-                e.put_exception(sys.exc_info()[1])
+                e.set_exception(sys.exc_info()[1])
         p = gevent.spawn_link(func)
         try:
             try:

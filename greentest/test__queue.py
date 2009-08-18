@@ -56,11 +56,11 @@ class TestQueue(TestCase):
         q = queue.Queue(0)
         def sender(evt, q):
             q.put('hi')
-            evt.put('done')
+            evt.set('done')
 
         def receiver(evt, q):
             x = q.get()
-            evt.put(x)
+            evt.set(x)
 
         e1 = Event()
         e2 = Event()
@@ -82,7 +82,7 @@ class TestQueue(TestCase):
         q = queue.Queue()
 
         def waiter(q, evt):
-            evt.put(q.get())
+            evt.set(q.get())
 
         sendings = ['1', '2', '3', '4']
         evts = [Event() for x in sendings]
@@ -117,9 +117,9 @@ class TestQueue(TestCase):
             gevent.Timeout(0, RuntimeError())
             try:
                 result = q.get()
-                evt.put(result)
+                evt.set(result)
             except RuntimeError:
-                evt.put('timed out')
+                evt.set('timed out')
 
         evt = Event()
         gevent.spawn(do_receive, q, evt)
@@ -139,15 +139,15 @@ class TestQueue(TestCase):
 
     def test_two_waiters_one_dies(self):
         def waiter(q, evt):
-            evt.put(q.get())
+            evt.set(q.get())
         def do_receive(q, evt):
             timeout = gevent.Timeout(0, RuntimeError())
             try:
                 try:
                     result = q.get()
-                    evt.put(result)
+                    evt.set(result)
                 except RuntimeError:
-                    evt.put('timed out')
+                    evt.set('timed out')
             finally:
                 timeout.cancel()
 
@@ -166,9 +166,9 @@ class TestQueue(TestCase):
             gevent.Timeout(0, RuntimeError())
             try:
                 result = q.get()
-                evt.put(result)
+                evt.set(result)
             except RuntimeError:
-                evt.put('timed out')
+                evt.set('timed out')
             # XXX finally = timeout
 
         q = queue.Queue()
