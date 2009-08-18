@@ -6,11 +6,6 @@ from gevent.timeout import Timeout
 
 
 __all__ = ['Greenlet',
-           'spawn',
-           'spawn_later',
-           'spawn_link',
-           'spawn_link_value',
-           'spawn_link_exception',
            'joinall',
            'killall']
 
@@ -406,12 +401,6 @@ class Greenlet(greenlet):
                         pass
         finally:
             self._notifier = None
-
-spawn = Greenlet.spawn
-spawn_later = Greenlet.spawn_later
-spawn_link = Greenlet.spawn_link
-spawn_link_value = Greenlet.spawn_link_value
-spawn_link_exception = Greenlet.spawn_link_exception
 
 
 def _kill(greenlet, exception, waiter):
