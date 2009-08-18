@@ -176,7 +176,7 @@ class AsyncResult(Event):
     def put_exception(self, exception):
         import warnings
         warnings.warn("AsyncResult.put_exception is deprecated; use AsyncResult.set_exception", DeprecationWarning, stacklevel=2)
-        return self.set_exception(self, exception)
+        return self.set_exception(exception)
     # QQQ add link_value and link_exception here?
 
 
