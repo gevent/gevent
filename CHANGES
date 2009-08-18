@@ -1,14 +1,21 @@
 0.10.0
 ------
 
-gevent.spawn now returns a subclass of greenlet which has a few useful methods:
-get, join, kill, link. The implementation is based on proc module, with a couple
-of proc's deficiencies fixed:
- - Proc is not a subclass of greenlet which proved to be a design bug
-   (getcurrent() does not work, using Procs as keys in dict is impossible, etc).
+Added gevent.Greenlet class which is a subclass of greenlet that adds a few
+useful methods join/get/kill/link. See the docstrings for details.
+
+gevent.spawn now returns Greenlet instance.
+The old gevent.spawn, which returns py.magic.greenlet instance, can be still
+accessed as gevent.spawn_raw.
+
+The implementation of Greenlet is based on proc module, with this bugs fixed:
+ - Proc is not a subclass of greenlet which makes getcurrent() useless and using
+   Procs as keys in dict impossible.
  - Proc executes links sequentially, so one could block the rest from being executed.
    Greenlet executes each link in a new greenlet by default, unless it is set up with
    rawlink() method.
+ - Proc cannot be easily subclassed.
+
 
 The following functions were added to gevent top level package:
  - spawn_link
@@ -20,14 +27,18 @@ The following functions were added to gevent top level package:
 Added gevent.pool.Pool with interface of multiprocessing.Pool.
 It also has spawn() method which is always async and returns a Greenlet instance.
 
-Added gevent.event.Event and gevent.event.AsyncResult which deprecate
-gevent.coros.Event.
+Added gevent.event.Event and gevent.event.AsyncResult:
+Event is a drop-in replacement for threading.Event, supporting set/wait/get methods.
+AsyncResult is an extension of Event that supports exception passing via set_exception method.
 
-Added gevent.rawgreenlet module with some utility functions that work with
-the regular greenlets.
+The following items marked as deprecated:
+ - gevent.proc module
+   - Greenlet implements all the features that Proc had
+   - Event implements all the features that Source had
+   - wrap_errors helper is moved to gevent.util module
+ - gevent.coros.event class
+ - gevent.coros.Queue/Channel
 
-gevent.proc module is deprecated; proc.wrap_errors was moved to
-gevent.util.wrap_errors.
 
 Internally, gevent.greenlet was split into a number of modules:
  - gevent.hub provides Hub class and basic utilities, like sleep;
@@ -40,10 +51,16 @@ Internally, gevent.greenlet was split into a number of modules:
    with any greenlet by polling their status and sleeping in a loop)
 
 
+core.read and core.write classes were renamed to core.read_event and core.write_event.
+
 TODO: add start() method to Timeout; Timeout(5) does not start the timer immediatelly anymore
-TODO: Semaphore and BoundedSemaphore moved from coros to gevent.threading
-      BoundedSemaphore is fixed to behave like standard threading's BoundedSemaphore behaves:
-      raise ValueError if upper limit is reached instead of blocking.
+wsgi: pulled Mike Barton's eventlet patches that fix double content-length issue.
+
+setup.py now searches in more places for system libevent installation.
+This fixes 64bit CentOS 5.3 installation issues, hopefully covers other platforms as well.
+
+Thanks to Jason Toffaletti for reporting installation issue and providing a test case
+for wsgi double content-length header bug.
 
 
 0.9.3
@@ -113,7 +130,7 @@ core.active_event(func) schedules func to be run in this event loop iteration as
 to core.timer(0, ...) which schedules an event to be run in the next iteration. active_event
 is now used throughout the library wherever core.timer(0, ....) was previously used.
 This results in spawn() being at least 20% faster compared to 0.9.1 and twice as fast compared to
-eventlet. (The results are obtained with bench_spawn.py script in examples/ directory)
+eventlet. (The results are obtained with bench_spawn.py script in greentest/ directory)
 
 kill() and killall() methods now have boolean parameter "wait". If set to True, it makes the
 function block until the greenlet(s) is actually dead. By default, kill and killall are asynchronous,
