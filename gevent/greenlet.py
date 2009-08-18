@@ -137,18 +137,25 @@ class FailureGreenletLink(GreenletLink):
 
 
 class Greenlet(greenlet):
-    # QQQ rename to Microthread
     """A greenlet subclass that adds a few features.
     """
 
-    def __init__(self, run=None):
-        if run is not None:
-            self._run = run # subclasses should override _run() (not run())
+    args = ()
+    kwargs = {}
+    
+    def __init__(self, run=None, *args, **kwargs):
         greenlet.__init__(self, parent=get_hub())
+        if run is not None:
+            self._run = run
+        if args:
+            self.args = args
+        if kwargs:
+            self.kwargs = kwargs
         self._links = set()
         self.value = None
         self._exception = _NONE
         self._notifier = None
+        self._start_event = None
 
     def ready(self):
         return self.dead or self._exception is not _NONE
@@ -158,16 +165,28 @@ class Greenlet(greenlet):
 
     def __repr__(self):
         classname = self.__class__.__name__
-        try:
-            funcname = getfuncname(self.__dict__['_run'])
-        except Exception:
-            funcname = None
-
         result = '<%s at %s' % (classname, hex(id(self)))
-        if funcname is not None:
-            result += ': %s' % funcname
-
+        formatted = self._formatted_info
+        if formatted is not None:
+            result += ': ' + formatted
         return result + '>'
+
+    @property
+    def _formatted_info(self):
+        try:
+            result = getfuncname(self.__dict__['_run'])
+        except Exception:
+            pass
+        else:
+            args = []
+            if self.args:
+                args = [repr(x) for x in self.args]
+            if self.kwargs:
+                args.extend(['%s=%r' % x for x in self.kwargs.items()])
+            if args:
+                result += '(' + ', '.join(args) + ')'
+            self.__dict__['_formatted_func'] = result
+            return result
 
     @property
     def exception(self):
@@ -176,11 +195,14 @@ class Greenlet(greenlet):
             return self._exception
 
     def throw(self, *args):
+        if self._start_event is not None:
+            self._start_event.cancel()
+            self._start_event = None
         if not self.dead:
             if self:
                 return greenlet.throw(self, *args)
             else:
-                # special case for when greenlet is not yet started
+                # special case for when greenlet is not yet started, because _report_error is not executed
                 if len(args)==1:
                     self._exception = args[0]
                 elif not args:
@@ -193,35 +215,27 @@ class Greenlet(greenlet):
                     if self._links and self._notifier is None:
                         self._notifier = core.active_event(self._notify_links)
 
-    def start(self, *args):
+    def start(self):
         """Must be called _exactly_ once for a greenlet to become active"""
-        return core.active_event(self.switch, *args)
+        assert self._start_event is None, 'Greenlet already started'
+        self._start_event = core.active_event(self.switch)
 
-    def start_later(self, seconds, *args):
+    def start_later(self, seconds):
         """Must be called _exactly_ once for a greenlet to become active"""
-        return core.timer(seconds, self.switch, *args)
+        assert self._start_event is None, 'Greenlet already started'
+        self._start_event = core.timer(seconds, self.switch)
 
     @classmethod
-    def spawn(cls, function=None, *args, **kwargs):
-        if kwargs:
-            g = cls(_switch_helper)
-            g.start(function, args, kwargs)
-            return g
-        else:
-            g = cls(function)
-            g.start(*args)
-            return g
+    def spawn(cls, *args, **kwargs):
+         g = cls(*args, **kwargs)
+         g.start()
+         return g
 
     @classmethod
-    def spawn_later(cls, seconds, function=None, *args, **kwargs):
-        if kwargs:
-            g = cls(_switch_helper)
-            timer = g.start_later(seconds, function, args, kwargs)
-            return g, timer
-        else:
-            g = cls(function)
-            timer = g.start_later(seconds, *args)
-            return g, timer
+    def spawn_later(cls, seconds, *args, **kwargs):
+         g = cls(*args, **kwargs)
+         g.start_later(seconds)
+         return g
 
     @classmethod
     def spawn_link(cls, function, *args, **kwargs):
@@ -293,40 +307,44 @@ class Greenlet(greenlet):
                 self.unlink(switch)
                 raise
 
-    def _report_result(self, result, args):
+    def _report_result(self, result):
         self._exception = None
         self.value = result
         if self._links and self._notifier is None:
             self._notifier = core.active_event(self._notify_links)
 
-    def _report_error(self, exc_info, args):
+    def _report_error(self, exc_info):
         try:
-            traceback.print_exception(*exc_info)
-            info = str(self)
+            if exc_info[0] is not None:
+                traceback.print_exception(*exc_info)
         finally:
             self._exception = exc_info[1]
             if self._links and self._notifier is None:
                 self._notifier = core.active_event(self._notify_links)
+        
+        info = str(self) + ' failed with '
 
-        # put the printed traceback in context
-        if args:
-            info += ' (' + ', '.join(repr(x) for x in args) + ')'
-        info += ' failed with '
         try:
             info += self._exception.__class__.__name__
-        except:
+        except Exception:
             info += str(self._exception) or repr(self._exception)
         sys.stderr.write(info + '\n\n')
 
-    def run(self, *args):
+    def run(self):
         try:
-            result = self._run(*args)
-        except GreenletExit, ex:
-            result = ex
-        except:
-            self._report_error(sys.exc_info(), args)
-            return
-        self._report_result(result, args)
+            self._start_event = None
+            try:
+                result = self._run(*self.args, **self.kwargs)
+            except GreenletExit, ex:
+                result = ex
+            except:
+                self._report_error(sys.exc_info())
+                return
+            self._report_result(result)
+        finally:
+            self.__dict__.pop('_run', None)
+            self.__dict__.pop('args', None)
+            self.__dict__.pop('kwargs', None)
 
     def rawlink(self, callback):
         if not callable(callback):
@@ -394,11 +412,6 @@ spawn_link_exception = Greenlet.spawn_link_exception
 def _kill(greenlet, exception, waiter):
     greenlet.throw(exception)
     waiter.switch()
-
-
-def _switch_helper(function, args, kwargs):
-    # work around the fact that greenlet.switch does not support keyword args
-    return function(*args, **kwargs)
 
 
 def joinall(greenlets, timeout=None, raise_error=False):

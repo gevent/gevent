@@ -59,12 +59,12 @@ class TestLink(greentest.TestCase):
 
     def test_link_to_inactive_greenlet(self):
         p = gevent.spawn(lambda : 100)
-        receiver, timer = gevent.spawn_later(10000, sleep, 1)
+        receiver = gevent.spawn_later(10000, sleep, 1)
         try:
             p.link(receiver)
             self.assertRaises(greenlet.LinkedCompleted, receiver.get)
         finally:
-            timer.cancel()
+            receiver.kill(block=True)
 
     def test_link_to_event(self):
         p = gevent.spawn(lambda : 100)

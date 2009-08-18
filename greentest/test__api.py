@@ -53,14 +53,14 @@ class Test(greentest.TestCase):
     def test_killing_not_yet_started(self):
         def func():
             pass
-        g, timer = gevent.spawn_later(2000, func)
+        g = gevent.spawn_later(2000, func)
         try:
             assert not g.dead, g
             g.kill(block=True)
             assert g.dead, g
             self.assertRaises(Exception, g.get)
         finally:
-            timer.cancel()
+            g.kill(block=True)
 
     def test_sleep_invalid_switch(self):
         p = gevent.spawn(util.wrap_errors(AssertionError, gevent.sleep), 2)

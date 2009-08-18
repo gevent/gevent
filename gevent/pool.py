@@ -1,6 +1,6 @@
 from collections import deque
 from gevent.hub import GreenletExit, getcurrent
-from gevent.greenlet import spawn, joinall, Greenlet, _switch_helper
+from gevent.greenlet import spawn, joinall, Greenlet
 from gevent.timeout import Timeout
 
 
@@ -177,31 +177,27 @@ class Pool(GreenletSet):
             return 1
         return max(0, self.size - len(self) - len(self.waiting))
 
-    def start(self, g, *args):
+    def start(self, g):
         if self.size is not None and len(self) >= self.size:
-            self.waiting.append((g, args))
+            self.waiting.append(g)
         else:
-            g.start(*args)
+            g.start()
             self.add(g)
 
     def spawn(self, function, *args, **kwargs):
-        if kwargs:
-            g = Greenlet(_switch_helper)
-            args = (function, args, kwargs)
-        else:
-            g = Greenlet(function)
-        self.start(g, *args)
+        g = Greenlet(function, *args, **kwargs)
+        self.start(g)
         return g
 
     def discard(self, p):
         GreenletSet.discard(self, p)
         while self.waiting and len(self) < self.size:
-            g, args = self.waiting.popleft()
-            g.start(*args)
+            g = self.waiting.popleft()
+            g.start()
             self.add(g)
 
     def kill(self, exception=GreenletExit, block=False, timeout=None):
-        for g, args in self.waiting:
+        for g in self.waiting:
             g.kill(exception)
         self.waiting.clear()
         return GreenletSet.kill(self, exception=exception, block=block, timeout=timeout)
