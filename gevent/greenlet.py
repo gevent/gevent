@@ -3,6 +3,7 @@ import traceback
 from gevent import core
 from gevent.hub import greenlet, getcurrent, get_hub, GreenletExit, Waiter, kill
 from gevent.timeout import Timeout
+from gevent.util import lazy_property
 
 
 __all__ = ['Greenlet',
@@ -201,7 +202,7 @@ class Greenlet(greenlet):
             result += ': ' + formatted
         return result + '>'
 
-    @property
+    @lazy_property
     def _formatted_info(self):
         try:
             result = getfuncname(self.__dict__['_run'])
@@ -215,7 +216,6 @@ class Greenlet(greenlet):
                 args.extend(['%s=%r' % x for x in self.kwargs.items()])
             if args:
                 result += '(' + ', '.join(args) + ')'
-            self.__dict__['_formatted_func'] = result
             return result
 
     @property
