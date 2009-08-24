@@ -27,6 +27,7 @@ import random
 from glob import glob
 from optparse import OptionParser
 from time import time
+import py_compile
 
 COMMAND = sys.executable + ' ./record_results.py ' + sys.executable + ' ./with_timeout.py %(test)s'
 PARSE_PERIOD = 10
@@ -62,6 +63,15 @@ def main():
 
     tests = list(tests)
     random.shuffle(tests)
+    for test in tests[:]:
+        try:
+            py_compile.compile(test, doraise=True)
+        except py_compile.PyCompileError, ex:
+            if "SyntaxError: invalid syntax" in str(ex) and " with " in str(ex):
+                print 'skipping %s' % test
+                tests.remove(test)
+            else:
+                raise
     print 'tests: %s' % ','.join(tests)
 
     if options.dry_run:
