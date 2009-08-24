@@ -1,6 +1,11 @@
 0.10.0
 ------
 
+Timeout API was changed in backward incompatible way:
+Timeout.__init__ does not start the timer immediately anymore; start() must be
+called explicitly. A shourtcut, Timeout.start_new is provided, that creates
+and starts a Timeout.
+
 Added gevent.Greenlet class which is a subclass of greenlet that adds a few
 useful methods join/get/kill/link. See the docstrings for details.
 
@@ -8,37 +13,31 @@ gevent.spawn now returns Greenlet instance.
 The old gevent.spawn, which returns py.magic.greenlet instance, can be still
 accessed as gevent.spawn_raw.
 
-The implementation of Greenlet is based on proc module, with this bugs fixed:
+The implementation of Greenlet is an improvement on proc module, with these bugs
+fixed:
  - Proc is not a subclass of greenlet which makes getcurrent() useless and using
    Procs as keys in dict impossible.
- - Proc executes links sequentially, so one could block the rest from being executed.
-   Greenlet executes each link in a new greenlet by default, unless it is set up with
-   rawlink() method.
- - Proc cannot be easily subclassed.
+ - Proc executes links sequentially, so one could block the rest from being
+   executed. Greenlet executes each link in a new greenlet by default, unless
+   it is set up with rawlink() method.
+ - Proc cannot be easily subclassed. To subclass Greenlet, override its _run
+   and __init__ methods.
 
-
-The following functions were added to gevent top level package:
- - spawn_link
- - spawn_link_value
- - spawn_link_exception
- - joinall
- - killall
-
-Added gevent.pool.Pool with interface of multiprocessing.Pool.
-It also has spawn() method which is always async and returns a Greenlet instance.
+Added gevent.pool.Pool class which supports a number of methods multiprocessing.Pool
+supports. In addition it also has spawn() method which is always async and
+returns a Greenlet instance.
 
 Added gevent.event.Event and gevent.event.AsyncResult:
 Event is a drop-in replacement for threading.Event, supporting set/wait/get methods.
-AsyncResult is an extension of Event that supports exception passing via set_exception method.
+AsyncResult is an extension of Event that supports exception passing via
+set_exception method.
 
-The following items marked as deprecated:
- - gevent.proc module
-   - Greenlet implements all the features that Proc had
-   - Event implements all the features that Source had
-   - wrap_errors helper is moved to gevent.util module
- - gevent.coros.event class
- - gevent.coros.Queue/Channel
+Added queue.JoinableQueue class with task_done() and join() methods.
 
+The following items were marked as deprecated:
+ - gevent.proc module (wrap_errors helper was moved to gevent.util module)
+ - gevent.coros.event
+ - gevent.coros.Queue and gevent.coros.Channel
 
 Internally, gevent.greenlet was split into a number of modules:
  - gevent.hub provides Hub class and basic utilities, like sleep;
@@ -50,17 +49,27 @@ Internally, gevent.greenlet was split into a number of modules:
    joinall and killall (they do not need link() functionality and work
    with any greenlet by polling their status and sleeping in a loop)
 
-
 core.read and core.write classes were renamed to core.read_event and core.write_event.
 
-TODO: add start() method to Timeout; Timeout(5) does not start the timer immediatelly anymore
 wsgi: pulled Mike Barton's eventlet patches that fix double content-length issue.
 
-setup.py now searches in more places for system libevent installation.
-This fixes 64bit CentOS 5.3 installation issues, hopefully covers other platforms as well.
+setup.py now searches more places for system libevent installation.
+This fixes 64bit CentOS 5.3 installation issues, hopefully covers other platforms
+as well.
 
-Thanks to Jason Toffaletti for reporting installation issue and providing a test case
-for wsgi double content-length header bug.
+The following items were added to the gevent top level package:
+ - spawn_link
+ - spawn_link_value
+ - spawn_link_exception
+ - spawn_raw
+ - joinall
+ - killall
+ - Greenlet
+ - GreenletExit
+ - core
+
+Thanks to Jason Toffaletti for reporting the installation issue and providing a
+test case for wsgi double content-length header bug.
 
 
 0.9.3
