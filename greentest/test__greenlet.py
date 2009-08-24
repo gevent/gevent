@@ -489,13 +489,34 @@ class A(object):
 hexobj = re.compile('0x[0123456789abcdef]+')
 
 class TestStr(greentest.TestCase):
-    switch_expected = False
 
-    def test(self):
-        g1 = gevent.Greenlet(test_func)
-        self.assertEqual(hexobj.sub('X', str(g1)), '<Greenlet at X: test_func>')
-        g2 = gevent.Greenlet(A().method)
-        self.assertEqual(hexobj.sub('X', str(g2)), '<Greenlet at X: <bound method A.method of <__main__.A object at X>>>')
+    def test_function(self):
+        g = gevent.Greenlet.spawn(test_func)
+        self.assertEqual(hexobj.sub('X', str(g)), '<Greenlet at X: test_func>')
+        assert_not_ready(g)
+        g.join()
+        assert_ready(g)
+        self.assertEqual(hexobj.sub('X', str(g)), '<Greenlet at X: test_func>')
+
+    def test_method(self):
+        g = gevent.Greenlet.spawn(A().method)
+        self.assertEqual(hexobj.sub('X', str(g)), '<Greenlet at X: <bound method A.method of <__main__.A object at X>>>')
+        assert_not_ready(g)
+        g.join()
+        assert_ready(g)
+        self.assertEqual(hexobj.sub('X', str(g)), '<Greenlet at X: <bound method A.method of <__main__.A object at X>>>')
+
+
+def assert_ready(g):
+    assert g.dead, g
+    assert g.ready(), g
+    assert not bool(g), g
+
+
+def assert_not_ready(g):
+    assert not g.dead, g
+    assert not g.ready(), g
+
 
 X = object()
 
