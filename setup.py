@@ -17,6 +17,15 @@ system_dirs = ['/usr/lib/libevent.*',
                '/usr/local/lib64/libevent.*']
 
 
+try:
+    any
+except NameError:
+    def any(iterable):
+        for i in iterable:
+            if i:
+                return True
+
+
 if ev_dir is None and any(glob.glob(system_dir) for system_dir in system_dirs):
     print 'found system libevent for', sys.platform
     gevent_core = Extension(name=name,
