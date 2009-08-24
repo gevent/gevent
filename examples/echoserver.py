@@ -42,13 +42,13 @@ def handle_socket(reader, writer):
         print "echoed", x
     print "client disconnected"
 
-print "server socket listening on port 6000"
-server = socket.tcp_listener(('0.0.0.0', 6000))
-while True:
-    try:
-        new_sock, address = server.accept()
-    except KeyboardInterrupt:
-        break
-    # handle every new connection with a new coroutine
-    gevent.spawn(handle_socket, new_sock.makefile('r'), new_sock.makefile('w'))
-
+if __name__ == '__main__':
+    print "server socket listening on port 6000"
+    server = socket.tcp_listener(('0.0.0.0', 6000))
+    while True:
+        try:
+            new_sock, address = server.accept()
+        except KeyboardInterrupt:
+            break
+        # handle every new connection with a new coroutine
+        gevent.spawn(handle_socket, new_sock.makefile('r'), new_sock.makefile('w'))
