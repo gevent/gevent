@@ -33,7 +33,7 @@ def select(read_list, write_list, error_list, timeout=None):
     for w in write_list:
         allevents.append(core.write_event(get_fileno(r), callback, arg=w))
 
-    timeout = Timeout(timeout)
+    timeout = Timeout.start_new(timeout)
     try:
         try:
             result = hub.switch()

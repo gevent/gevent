@@ -35,8 +35,9 @@ class Test(greentest.TestCase):
     def test_api(self):
         # Nothing happens if with-block finishes before the timeout expires
         t = Timeout(DELAY*2)
-        assert t.pending, repr(t)
+        assert not t.pending, repr(t)
         with t:
+            assert t.pending, repr(t)
             sleep(DELAY)
         # check if timer was actually cancelled
         assert not t.pending, repr(t)

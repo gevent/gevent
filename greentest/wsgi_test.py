@@ -218,7 +218,7 @@ class TestHttpdBasic(TestCase):
         # This should go in greenio_test
         fd = socket.connect_tcp(('127.0.0.1', self.port)).makefile(bufsize=1)
         fd.write('GET / HTTP/1.1\r\nHost: localhost\r\n\r\n')
-        cancel = gevent.Timeout(1, RuntimeError)
+        cancel = gevent.Timeout.start_new(1, RuntimeError)
         self.assertRaises(TypeError, fd.read, "This shouldn't work")
         cancel.cancel()
         fd.close()

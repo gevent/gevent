@@ -470,7 +470,7 @@ class Source(object):
             #     finally:
             #         self.unlink(waiter)
             # however, with statement is hand decompiled to make it 2.4 compatible
-            timer = Timeout(timeout, exception)
+            timer = Timeout.start_new(timeout, exception)
             EXC = True
             try:
                 try:

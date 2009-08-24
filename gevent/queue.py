@@ -105,7 +105,7 @@ class Queue(object):
         elif block:
             waiter = ItemWaiter(item)
             self.putters.add(waiter)
-            timeout = Timeout(timeout, Full)
+            timeout = Timeout.start_new(timeout, Full)
             try:
                 if self.getters:
                     self._schedule_unlock()
@@ -156,9 +156,9 @@ class Queue(object):
             raise Empty
         elif block:
             waiter = Waiter()
-            timeout = Timeout(timeout, Empty)
-            self.getters.add(waiter)
+            timeout = Timeout.start_new(timeout, Empty)
             try:
+                self.getters.add(waiter)
                 if self.putters:
                     self._schedule_unlock()
                 return waiter.wait()

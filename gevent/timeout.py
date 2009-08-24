@@ -18,6 +18,7 @@ class Timeout(BaseException):
     """Raise an exception in the current greenlet after timeout.
 
     timeout = Timeout(seconds[, exception])
+    timeout.start()
     try:
         ... code block ...
     finally:
@@ -57,6 +58,7 @@ class Timeout(BaseException):
     the one you need:
 
     timeout = Timeout(1)
+    timeout.start()
     try:
         ...
     except Timeout, t:
@@ -65,15 +67,27 @@ class Timeout(BaseException):
     """
 
     def __init__(self, seconds=None, exception=None):
-        if seconds is None: # "fake" timeout (never expires)
-            self.exception = None
+        self.seconds = seconds
+        self.exception = exception
+        self.timer = None
+
+    def start(self):
+        if self.pending:
+            raise AssertionError('%r is already started; to restart it, cancel it first' % self)
+        if self.seconds is None: # "fake" timeout (never expires)
             self.timer = None
-        elif exception is None or exception is False: # timeout that raises self
-            self.exception = exception
-            self.timer = core.timer(seconds, getcurrent().throw, self)
+        elif self.exception is None or self.exception is False: # timeout that raises self
+            self.timer = core.timer(self.seconds, getcurrent().throw, self)
         else: # regular timeout with user-provided exception
-            self.exception = exception
-            self.timer = core.timer(seconds, getcurrent().throw, exception)
+            self.timer = core.timer(self.seconds, getcurrent().throw, self.exception)
+
+    @classmethod
+    def start_new(cls, timeout=None, exception=None):
+        if isinstance(timeout, Timeout):
+            return timeout
+        timeout = cls(timeout, exception)
+        timeout.start()
+        return timeout
 
     @property
     def pending(self):
@@ -91,10 +105,15 @@ class Timeout(BaseException):
             classname = self.__class__.__name__
         except AttributeError: # Python < 2.5
             classname = 'Timeout'
-        if self.exception is None:
-            return '<%s at %s timer=%s>' % (classname, hex(id(self)), self.timer)
+        if self.pending:
+            pending = ' pending'
         else:
-            return '<%s at %s timer=%s exception=%s>' % (classname, hex(id(self)), self.timer, self.exception)
+            pending = ''
+        if self.exception is None:
+            exception = ''
+        else:
+            exception = ' exception=%r' % self.exception
+        return '<%s at %s seconds=%s%s%s>' % (classname, hex(id(self)), self.seconds, exception, pending)
 
     def __str__(self):
         """
@@ -103,14 +122,22 @@ class Timeout(BaseException):
             ...
         Timeout
         """
-        if self.exception is None:
+        if self.seconds is None:
             return ''
-        elif self.exception is False:
-            return '(silent)'
+        if self.seconds==1:
+            s = ''
         else:
-            return str(self.exception)
+            s = 's'
+        if self.exception is None:
+            return '%s second%s' % (self.seconds, s)
+        elif self.exception is False:
+            return '%s second%s (silent)' % (self.seconds, s)
+        else:
+            return '%s second%s (%s)' % (self.seconds, s, self.exception)
 
     def __enter__(self):
+        if self.timer is None:
+            self.start()
         return self
 
     def __exit__(self, typ, value, tb):
@@ -119,7 +146,6 @@ class Timeout(BaseException):
             return True
 
 
-# how about returning Timeout instance ?
 def with_timeout(seconds, func, *args, **kwds):
     """Wrap a call to some (yielding) function with a timeout; if the called
     function fails to return before the timeout, cancel it and return a flag
@@ -157,7 +183,7 @@ def with_timeout(seconds, func, *args, **kwds):
     # of any other keyword arguments accepted by func. Use pop() so we don't
     # pass timeout_value through to func().
     timeout_value = kwds.pop("timeout_value", _NONE)
-    timeout = Timeout(seconds)
+    timeout = Timeout.start_new(seconds)
     try:
         try:
             return func(*args, **kwds)

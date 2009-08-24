@@ -47,7 +47,7 @@ class TestCase(unittest.TestCase):
         hub = gevent.hub.get_hub()
         if hasattr(hub, 'switch_count'):
             self._switch_count = hub.switch_count
-        self._timer = gevent.Timeout(self.__timeout__, RuntimeError('test is taking too long'))
+        self._timer = gevent.Timeout.start_new(self.__timeout__, RuntimeError('test is taking too long'))
 
     def tearDown(self):
         if hasattr(self, '_timer'):

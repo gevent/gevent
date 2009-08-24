@@ -316,7 +316,7 @@ class Greenlet(greenlet):
             switch = getcurrent().switch
             self.rawlink(switch)
             try:
-                t = Timeout(timeout)
+                t = Timeout.start_new(timeout)
                 try:
                     result = get_hub().switch()
                     assert result is self, 'Invalid switch into Greenlet.get(): %r' % (result, )
@@ -349,7 +349,7 @@ class Greenlet(greenlet):
             switch = getcurrent().switch
             self.rawlink(switch)
             try:
-                t = Timeout(timeout)
+                t = Timeout.start_new(timeout)
                 try:
                     result = get_hub().switch()
                     assert result is self, 'Invalid switch into Greenlet.join(): %r' % (result, )
@@ -468,7 +468,7 @@ def joinall(greenlets, timeout=None, raise_error=False):
     from gevent.queue import Queue
     queue = Queue()
     put = queue.put
-    timeout = Timeout(timeout)
+    timeout = Timeout.start_new(timeout)
     try:
         try:
             for greenlet in greenlets:
@@ -512,8 +512,7 @@ def killall(greenlets, exception=GreenletExit, block=False, timeout=None):
         waiter = Waiter()
         core.active_event(_killall3, greenlets, exception, waiter)
         if block:
-            t = Timeout(timeout)
-            # XXX t.start()
+            t = Timeout.start_new(timeout)
             try:
                 alive = waiter.wait()
                 if alive:

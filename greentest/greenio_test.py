@@ -74,7 +74,7 @@ class TestGreenIo(TestCase):
 
 
     def test_del_closes_socket(self):
-        timer = gevent.Timeout(0.5)
+        timer = gevent.Timeout.start_new(0.5)
         def accept_once(listener):
             # delete/overwrite the original conn
             # object, only keeping the file object around

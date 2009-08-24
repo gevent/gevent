@@ -27,7 +27,7 @@ class TestAsyncResult(greentest.TestCase):
         event2 = AsyncResult()
 
         g = gevent.spawn_later(DELAY/2.0, event1.set, 'hello event1')
-        t = gevent.Timeout(0, ValueError('interrupted'))
+        t = gevent.Timeout.start_new(0, ValueError('interrupted'))
         try:
             try:
                 result = event1.get()

@@ -73,10 +73,7 @@ class Event(object):
             switch = getcurrent().switch
             self.rawlink(switch)
             try:
-#                 result = None
-#                 if not isinstance(timeout, Timeout): # need Timeout.start() method to implement this
-#                     t = Timeout(Timeout)
-                t = Timeout(timeout)
+                t = Timeout.start_new(timeout)
                 try:
                     result = get_hub().switch()
                     assert result is self, 'Invalid switch into Event.get(): %r' % (result, )
@@ -99,7 +96,7 @@ class Event(object):
             switch = getcurrent().switch
             self.rawlink(switch)
             try:
-                t = Timeout(timeout)
+                t = Timeout.start_new(timeout)
                 try:
                     result = get_hub().switch()
                     assert result is self, 'Invalid switch into Event.wait(): %r' % (result, )
