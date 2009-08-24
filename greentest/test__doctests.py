@@ -7,6 +7,11 @@ import gevent
 base = os.path.dirname(gevent.__file__)
 modules = set()
 
+def myfunction(*args, **kwargs):
+    pass
+
+globs = {'myfunction': myfunction}
+
 for path, dirs, files in os.walk(base):
     package = 'gevent' + path.replace(base, '').replace('/', '.')
     modules.add((package, os.path.join(path, '__init__.py')))
@@ -22,7 +27,7 @@ tests_count = 0
 modules_count = 0
 for m, path in modules:
     if re.search('^\s*>>> ', open(path).read(), re.M):
-        s = doctest.DocTestSuite(m)
+        s = doctest.DocTestSuite(m, extraglobs=globs)
         print '%s (from %s): %s tests' % (m, path, len(s._tests))
         suite.addTest(s)
         modules_count += 1
