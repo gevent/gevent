@@ -148,12 +148,12 @@ class Greenlet(greenlet):
     To start a function in another greenlet, pass it and its arguments to Greenlet constructor
     and call start():
       
-        >>> g = Greenlet(myfunction, arg1, arg2, kwarg1=1)
+        >>> g = Greenlet(myfunction, 'arg1', 'arg2', kwarg1=1)
         >>> g.start()
 
     or use 'spawn' shortcut which does these 2 steps in one go:
 
-        >>> g = Greenlet.spawn(myfunction, arg1, arg2, kwarg1=1)
+        >>> g = Greenlet.spawn(myfunction, 'arg1', 'arg2', kwarg1=1)
 
     To subclass a Greenlet, override its _run method and don't forget
     to call Greenlet.__init__(self) in your subclass' __init__:
