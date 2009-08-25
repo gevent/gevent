@@ -27,8 +27,9 @@ class wrap_errors(object):
         self.func = func
 
     def __call__(self, *args, **kwargs):
+        func = self.func
         try:
-            return self.func(*args, **kwargs)
+            return func(*args, **kwargs)
         except self.errors, ex:
             return ex
 
