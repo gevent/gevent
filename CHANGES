@@ -3,15 +3,14 @@
 
 Timeout API was changed in backward incompatible way:
 Timeout.__init__ does not start the timer immediately anymore; start() must be
-called explicitly. A shourtcut, Timeout.start_new is provided, that creates
+called explicitly. A shourtcut - Timeout.start_new - is provided that creates
 and starts a Timeout.
 
 Added gevent.Greenlet class which is a subclass of greenlet that adds a few
 useful methods join/get/kill/link. See the docstrings for details.
 
-gevent.spawn now returns Greenlet instance.
-The old gevent.spawn, which returns py.magic.greenlet instance, can be still
-accessed as gevent.spawn_raw.
+gevent.spawn now returns Greenlet instance. The old gevent.spawn, which returns
+py.magic.greenlet instance, can be still accessed as gevent.spawn_raw.
 
 The implementation of Greenlet is an improvement on proc module, with these bugs
 fixed:
@@ -23,14 +22,14 @@ fixed:
  - Proc cannot be easily subclassed. To subclass Greenlet, override its _run
    and __init__ methods.
 
-Added gevent.pool.Pool class which supports a number of methods multiprocessing.Pool
-supports. In addition it also has spawn() method which is always async and
-returns a Greenlet instance.
+Added gevent.pool.Pool class which supports a number of multiprocessing.Pool's
+methods: apply, map and others. It also has spawn() method which is always
+async and returns a Greenlet instance.
 
-Added gevent.event.Event and gevent.event.AsyncResult:
-Event is a drop-in replacement for threading.Event, supporting set/wait/get methods.
-AsyncResult is an extension of Event that supports exception passing via
-set_exception method.
+Added gevent.event module with 2 classes: Event and AsyncResult.
+Event is a drop-in replacement for threading.Event, supporting set/wait/get
+methods. AsyncResult is an extension of Event that supports exception passing
+via set_exception method.
 
 Added queue.JoinableQueue class with task_done() and join() methods.
 
