@@ -17,6 +17,7 @@ class wrap_errors(object):
 
     It also preserves __str__ and __repr__ of the original function.
     """
+    # QQQ could also support using wrap_errors as a decorator
 
     def __init__(self, errors, func):
         """Make a new function from `func', such that it catches `errors' (an
