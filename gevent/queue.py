@@ -30,7 +30,7 @@ class Queue(object):
         self._event_unlock = None
         self._init(maxsize)
 
-    # QQQ make maxsize a property whose setter schedules unlock if necessary
+    # QQQ make maxsize into a property with setter that schedules unlock if necessary
 
     def _init(self, maxsize):
         self.queue = collections.deque()
@@ -216,7 +216,7 @@ class Queue(object):
     def _schedule_unlock(self):
         if self._event_unlock is None:
             self._event_unlock = core.active_event(self._unlock)
-            # QQQ re-active event instead of creating a new one each time
+            # QQQ re-activate event (with event_active libevent call) instead of creating a new one each time
 
 
 class ItemWaiter(Waiter):
