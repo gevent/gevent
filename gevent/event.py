@@ -1,3 +1,5 @@
+# Copyright (c) 2009 Denis Bilenko. See LICENSE for details.
+
 import sys
 import traceback
 from gevent import core

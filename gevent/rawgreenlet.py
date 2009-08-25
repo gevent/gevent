@@ -1,3 +1,5 @@
+# Copyright (c) 2009 Denis Bilenko. See LICENSE for details.
+
 """A few utilities for raw greenlets.
 
 # XXX these functions do not support 'timeout' parameter as gevent.greenlet API

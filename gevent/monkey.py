@@ -1,3 +1,5 @@
+# Copyright (c) 2009 Denis Bilenko. See LICENSE for details.
+
 import sys
 
 def patch_os():
