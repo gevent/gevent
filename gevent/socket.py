@@ -154,11 +154,34 @@ class GreenSocket(object):
         self.fd.setblocking(0)
 
     def __repr__(self):
+        return '<%s at %s %s>' % (type(self).__name__, hex(id(self)), self._formatinfo())
+
+    def __str__(self):
+        return '<%s %s>' % (type(self).__name__, self._formatinfo())
+
+    def _formatinfo(self):
         try:
             fileno = self.fileno()
         except Exception, ex:
             fileno = str(ex)
-        return '<%s at %s fileno=%s timeout=%s>' % (type(self).__name__, hex(id(self)), fileno, self.timeout)
+        try:
+            sockname = self.getsockname()
+            sockname = '%s:%s' % sockname
+        except Exception:
+            sockname = None
+        try:
+            peername = self.getpeername()
+            peername = '%s:%s' % peername
+        except Exception:
+            peername = None
+        result = 'fileno=%s' % fileno
+        if sockname is not None:
+            result += ' sock=' + str(sockname)
+        if peername is not None:
+            result += ' peer=' + str(peername)
+        if self.timeout is not None:
+            result += ' timeout=' + str(self.timeout)
+        return result
 
     def __getattr__(self, item):
         return getattr(self.fd, item)
