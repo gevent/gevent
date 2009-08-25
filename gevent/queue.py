@@ -287,5 +287,5 @@ class JoinableQueue(Queue):
             self._cond.set()
 
     def join(self):
-        self._cond.get()
+        self._cond.wait()
 
