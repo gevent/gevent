@@ -111,6 +111,8 @@ class Event(object):
             except:
                 self.unlink(switch)
                 raise
+            # not calling unlink() in non-exception case, because if switch()
+            # finished normally, link was already removed in _notify_links
 
     def put(self, value=None):
         import warnings
