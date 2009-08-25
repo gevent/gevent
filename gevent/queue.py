@@ -264,6 +264,16 @@ class JoinableQueue(Queue):
         self._unfinished_tasks = 0
         self._cond = Event()
 
+    @property
+    def unfinished_tasks(self):
+        return self._unfinished_tasks
+
+    def _format(self):
+        result = Queue._format(self)
+        if self._unfinished_tasks:
+            result += ' tasks=%r' % self._unfinished_tasks
+        return result
+
     def put(self, item, block=True, timeout=None):
         Queue.put(self, item, block, timeout)
         self._unfinished_tasks += 1
