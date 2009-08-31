@@ -3,7 +3,7 @@
 
 Timeout API was changed in backward incompatible way:
 Timeout.__init__ does not start the timer immediately anymore; start() must be
-called explicitly. A shourtcut - Timeout.start_new - is provided that creates
+called explicitly. A shortcut - Timeout.start_new - is provided that creates
 and starts a Timeout.
 
 Added gevent.Greenlet class which is a subclass of greenlet that adds a few
