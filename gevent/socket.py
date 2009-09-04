@@ -654,6 +654,12 @@ if core.HAS_EVDNS:
     _ip_re = re.compile('[\d\.]+')
 
     def gethostbyname(hostname):
+        """gethostbyname implemented using EvDNS.
+        Differs in the following ways:
+        - raises gaierror with EvDNS error codes instead of standard socket error codes
+        - does not support /etc/hosts (see code for hacks to make localhost work)
+        - does not iterate through all addresses, instead picks a random one each time
+        """
         # TODO: this is supposed to iterate through all the addresses
         # could use a global dict(hostname, iter)
         # - fix these nasty hacks for localhost, ips, etc.
@@ -673,6 +679,16 @@ if core.HAS_EVDNS:
         return random.choice(addrs)
 
     def getaddrinfo(host, port, family=__socket__.AF_UNSPEC, socktype=__socket__.SOCK_STREAM, proto=0, flags=0):
+        """getaddrinfo implemented using EvDNS.
+        Differs in the following ways:
+        - raises gaierror with EvDNS error codes instead of standard socket error codes
+        - does not support /etc/hosts
+        - IPv6 support is untested.
+        - AF_UNSPEC only tries IPv4
+        - only supports TCP, UDP, IP protocols
+        - does not support services (port number to name mapping)
+        - only supported value for flags is core.DNS_QUERY_NO_SEARCH, see evdns.h
+        """
         if _ip_re.match(host):
             return [(__socket__.AF_INET, socktype, p, '', (host, port)) for p in (6, 17, 0)]
         waiter = Waiter()
@@ -696,6 +712,15 @@ if core.HAS_EVDNS:
         return r
 
     def getnameinfo(sockaddr, flags):
+        """getnameinfo implemented using EvDNS.
+        Differs in the following ways:
+        - raises gaierror with EvDNS error codes instead of standard socket error codes
+        - does not support /etc/hosts
+        - IPv6 support is untested.
+        - does not support services (port number to name mapping)
+        - only supported value for flags is core.DNS_QUERY_NO_SEARCH, see evdns.h
+        """
+
         # http://svn.python.org/view/python/trunk/Modules/socketmodule.c?view=markup
         # see socket_getnameinfo
         try:
