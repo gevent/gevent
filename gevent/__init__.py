@@ -25,6 +25,7 @@ __all__ = ['Greenlet',
            'reinit']
 
 
+from gevent.core import reinit
 from gevent.greenlet import Greenlet, joinall, killall
 spawn = Greenlet.spawn
 spawn_later = Greenlet.spawn_later
@@ -37,4 +38,3 @@ try:
     from gevent.hub import fork
 except ImportError:
     __all__.remove('fork')
-from gevent.core import reinit
