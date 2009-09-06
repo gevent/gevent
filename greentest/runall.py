@@ -67,8 +67,8 @@ def main():
         try:
             py_compile.compile(test, doraise=True)
         except py_compile.PyCompileError, ex:
-            if "SyntaxError: invalid syntax" in str(ex) and " with " in str(ex):
-                print 'skipping %s' % test
+            if "SyntaxError: invalid syntax" in str(ex):
+                print 'skipping %s:\n%s\n' % (test, ex)
                 tests.remove(test)
             else:
                 raise
