@@ -686,7 +686,7 @@ if core.HAS_EVDNS:
         - IPv6 support is untested.
         - AF_UNSPEC only tries IPv4
         - only supports TCP, UDP, IP protocols
-        - does not support services (port number to name mapping)
+        - port must be numeric, does not support string service names. see socket.getservbyname
         - only supported value for flags is core.DNS_QUERY_NO_SEARCH, see evdns.h
         """
         if _ip_re.match(host):
@@ -717,7 +717,7 @@ if core.HAS_EVDNS:
         - raises gaierror with EvDNS error codes instead of standard socket error codes
         - does not support /etc/hosts
         - IPv6 support is untested.
-        - does not support services (port number to name mapping)
+        - port must be numeric, does not support string service names. see socket.getservbyname
         - only supported value for flags is core.DNS_QUERY_NO_SEARCH, see evdns.h
         """
 
