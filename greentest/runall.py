@@ -54,7 +54,7 @@ def main():
     parser = OptionParser()
     parser.add_option('--skip', action='store_true', default=False,
                       help="Run all the tests except those provided on command line")
-    parser.add_option('--dry-run')
+    parser.add_option('--dry-run', action='store_true', default=False)
     options, tests = parser.parse_args()
     if options.skip:
         tests = enum_tests() - set(tests)
