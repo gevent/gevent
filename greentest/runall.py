@@ -51,6 +51,7 @@ def cmd(program):
     return res
 
 def main():
+    global cmd
     parser = OptionParser()
     parser.add_option('--skip', action='store_true', default=False,
                       help="Run all the tests except those provided on command line")
@@ -75,7 +76,10 @@ def main():
     print 'tests: %s' % ','.join(tests)
 
     if options.dry_run:
-       return
+        cmd = w
+        os.system = w
+    else:
+        cmd = cmd
 
     last_time = time()
 
