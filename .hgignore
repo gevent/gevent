@@ -8,4 +8,5 @@ build
 htmlreports
 results.*.db
 gevent/core.so
-
+gevent/core_d.so
+testresults
