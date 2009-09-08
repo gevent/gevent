@@ -403,3 +403,5 @@ if get_version() != get_header_version() and get_header_version() is not None:
     msg = "libevent version mismatch: system version is %r but this gevent is compiled against %r" % (get_version(), get_header_version())
     warnings.warn(msg, UserWarning, stacklevel=2)
 
+include "evbuffer.pxi"
+include "evhttp.pxi"
