@@ -123,17 +123,27 @@ cdef class http_request:
     def detach(self):
         self.__obj = NULL
 
+    def _format(self):
+        args = (self.typestr, self.uri, self.major, self.minor,
+                self.remote_host, self.remote_port)
+        res = '"%s %s HTTP/%s.%s" %s:%s' % args
+        if self.response_code:
+            res += 'response=%s' % self.response_code
+        if self.input_buffer:
+            res += 'input=%s' % len(self.input_buffer)
+        if self.output_buffer:
+            res += 'output=%s' % len(self.output_buffer)
+        return res
+
     def __str__(self):
         if self.__obj:
-            args = (self.__class__.__name__, self.typestr, self.uri, self.version, self.remote, self.response)
-            return '<%s %s %r ver=%s from %s response=%s>' % args
+            return '<%s %s>' % (self.__class__.__name__, self._format())
         else:
             return '<%s deleted>' % self.__class__.__name__
 
     def __repr__(self):
         if self.__obj:
-            args = (self.__class__.__name__, self._obj, self.typestr, self.uri, self.version, self.remote, self.response)
-            return '<%s _obj=0x%x %s %r ver=%s from %s response=%s>' % args
+            return '<%s _obj=0x%x %s>' % (self.__class__.__name__, self._obj, self._format())
         else:
             return '<%s _obj=0x%x>' % (self.__class__.__name__, self._obj)
 
