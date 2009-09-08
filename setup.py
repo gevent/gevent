@@ -1,88 +1,200 @@
 #!/usr/bin/env python
+"""
+gevent build & installation script
+----------------------------------
+
+If you have more than one libevent installed or it is installed in a
+non-standard location, use the options to point to the right dirs:
+
+    -Idir   add include dir
+    -Ldir   add library dir
+    -1      prefer libevent1
+    -2      prefer libevent2
+
+Alternatively,
+
+    setup.py build DIR
+
+is a shortcut for
+
+    setup.py build -IDIR -IDIR/include LDIR/.libs
+
+"""
 import sys
 import os
-import glob
 import re
 from distutils.core import Extension, setup
-
-
-name = 'gevent.core'
-sources = ['gevent/core.c']
-ev_dir = None # override to skip searching for libevent
-
-
-system_dirs = ['/usr/lib/libevent.*',
-               '/usr/lib64/libevent.*',
-               '/usr/local/lib/libevent.*',
-               '/usr/local/lib64/libevent.*']
-
-
+from os.path import join, exists, isdir
 try:
-    any
-except NameError:
-    def any(iterable):
-        for i in iterable:
-            if i:
-                return True
+    import ctypes
+except ImportError:
+    ctypes = None
 
 
-if ev_dir is None and any(glob.glob(system_dir) for system_dir in system_dirs):
-    print 'found system libevent for', sys.platform
-    gevent_core = Extension(name=name,
-                            sources=sources,
-                            libraries=['event'])
-elif ev_dir is None and glob.glob('%s/lib/libevent.*' % sys.prefix):
-    print 'found installed libevent in', sys.prefix
-    gevent_core = Extension(name=name,
-                            sources=sources,
-                            include_dirs=['%s/include' % sys.prefix],
-                            library_dirs=['%s/lib' % sys.prefix],
-                            libraries=['event'])
-else:
-    if ev_dir is None:
-        l = glob.glob('../libevent*')
-        l.reverse()
-        for path in l:
-            if os.path.isdir(path):
-                ev_dir = path
-                break
-    if ev_dir:
-        print 'found libevent build directory', ev_dir
-        ev_incdirs = [ev_dir, ev_dir + '/compat']
-        ev_extargs = []
-        ev_extobjs = []
-        ev_libraries = ['event']
+__version__ = re.search("__version__\s*=\s*'(.*)'", open('gevent/__init__.py').read(), re.M).group(1).strip()
+assert __version__
 
-        if sys.platform == 'win32':
-            ev_incdirs.extend(['%s/WIN32-Code' % ev_dir,
-                               '%s/compat' % ev_dir])
-            sources.extend(['%s/%s' % (ev_dir, x) for x in [
-                'WIN32-Code/misc.c', 'WIN32-Code/win32.c',
-                'log.c', 'event.c']])
-            ev_extargs = ['-DWIN32', '-DHAVE_CONFIG_H']
-            ev_libraries = ['wsock32']
-        else:
-            ev_extobjs = glob.glob('%s/*.o' % dir)
+include_dirs = []
+library_dirs = []
+extra_compile_args = []
+LIBEVENT_MAJOR = None # 1 or 2
+VERBOSE = '-v' in sys.argv
 
-        gevent_core = Extension(name=name,
-                                sources=sources,
-                                include_dirs=ev_incdirs,
-                                extra_compile_args=ev_extargs,
-                                extra_objects=ev_extobjs,
-                                libraries=ev_libraries)
+
+def check_dir(path, must_exist):
+    if not isdir(path):
+        msg = 'Not a directory: %s' % path
+        if must_exist:
+            sys.exit(msg)
+
+def add_include_dir(path, must_exist=True):
+    check_dir(path, must_exist)
+    include_dirs.append(path)
+
+def add_library_dir(path, must_exist=True):
+    check_dir(path, must_exist)
+    library_dirs.append(path)
+
+def get_version_from_include_path(d):
+    if VERBOSE:
+        print 'checking %s for event2/event.h (libevent 2) and event.h (libevent 1)' % d
+    event_h = join(d, 'event2', 'event.h')
+    if exists(event_h):
+        print 'Using libevent 2: %s' % event_h
+        return 2
+    event_h = join(d, 'event.h')
+    if exists(event_h):
+        print 'Using libevent 1: %s' % event_h
+        return 1
+
+def get_version_from_ctypes(cdll, path):
+    try:
+        get_version = cdll.event_get_version
+        get_version.restype = ctypes.c_char_p
+    except AttributeError:
+        pass
     else:
-        sys.stderr.write("\nWARNING: couldn't find libevent installation or build directory: assuming system-wide libevent is installed.\n\n")
-        gevent_core = Extension(name=name,
-                                sources=sources,
-                                libraries=['event'])
+        version = get_version()
+        print 'Using libevent %s: %s' % (version, path)
+        if version.startswith('1'):
+            return 1
+        elif version.startswith('2'):
+            return 2
+        else:
+            print 'Wierd response from %s get_version(): %r' % (path, version)
 
-version = re.search("__version__\s*=\s*'(.*)'", open('gevent/__init__.py').read(), re.M).group(1).strip()
-assert version, version
+def get_version_from_path(path):
+    v1 = re.search('[^\d]1\.', path)
+    v2 = re.search('[^\d]2\.', path)
+    if v1 is not None:
+        if v2 is None:
+            print 'Using libevent 1: "%s"' % path
+            return 1
+    elif v2 is not None:
+        print 'Using libevent 2: "%s"' % path
+        return 2
+
+def get_version_from_library_path(d):
+    if VERBOSE:
+        print 'checking %s for libevent.so' % d
+    libevent_so = join(d, 'libevent.so')
+    if exists(libevent_so):
+        if ctypes:
+            return get_version_from_ctypes( ctypes.CDLL(libevent_so), libevent_so )
+        else:
+            return get_version_from_path(d)
+
+def unique(lst):
+    result = []
+    for item in lst:
+        if item not in result:
+            result.append(item)
+    return result
+
+
+# parse options: -I name / Iname / -L name / -Lname / -1 / -2
+i = 1
+while i < len(sys.argv):
+    arg = sys.argv[i]
+    if arg == '-I':
+        del sys.argv[i]
+        add_include_dir(sys.argv[i])
+    elif arg.startswith('-I'):
+        add_include_dir(arg[2:])
+    elif arg == '-L':
+        del sys.argv[i]
+        add_library_dir(sys.argv[i])
+    elif arg.startswith('-L'):
+        add_library_dir(arg[2:])
+    elif arg == '-1':
+        LIBEVENT_MAJOR = 1
+    elif arg == '-2':
+        LIBEVENT_MAJOR = 2
+    else:
+        i = i+1
+        continue
+    del sys.argv[i]
+
+if len(sys.argv)>=3 and isdir(sys.argv[-1]):
+    libevent_source_path = sys.argv[-1]
+    del sys.argv[-1]
+    add_include_dir(join(libevent_source_path, 'include'), must_exist=False)
+    add_include_dir(libevent_source_path, must_exist=False)
+    add_library_dir(join(libevent_source_path, '.libs'), must_exist=False)
+
+
+if not sys.argv[1:] or '-h' in sys.argv or '--help' in sys.argv:
+    print __doc__
+else:
+    # try to figure out libevent version from -I and -L options
+    for d in include_dirs:
+        if LIBEVENT_MAJOR is not None:
+            break
+        LIBEVENT_MAJOR = get_version_from_include_path(d)
+
+    for d in library_dirs:
+        if LIBEVENT_MAJOR is not None:
+            break
+        LIBEVENT_MAJOR = get_version_from_library_path(d)
+
+    if LIBEVENT_MAJOR is None and ctypes:
+        libevent = ctypes.cdll.LoadLibrary('libevent.so')
+        LIBEVENT_MAJOR = get_version_from_ctypes(libevent, 'libevent.so')
+
+    # search system library dirs (unless explicit library directory was provided)
+    if LIBEVENT_MAJOR is None and not library_dirs:
+        library_paths = os.environ.get('LD_LIBRARY_PATH', '').split(':')
+        library_paths += ['%s/lib' % sys.prefix,
+                          '%s/lib64' % sys.prefix,
+                          '/usr/lib/',
+                          '/usr/lib64/',
+                          '/usr/local/lib/',
+                          '/usr/local/lib64/']
+
+        for x in unique(library_paths):
+            LIBEVENT_MAJOR = get_version_from_library_path(x)
+            if LIBEVENT_MAJOR is not None:
+                add_library_dir(x)
+                break
+
+    if LIBEVENT_MAJOR is None:
+        print 'Cannot guess the version of libevent installed on your system.'
+    else:
+        extra_compile_args.append( '-DUSE_LIBEVENT_%s' % LIBEVENT_MAJOR )
+
+
+gevent_core = Extension(name = 'gevent.core',
+                        sources=['gevent/core.c'],
+                        include_dirs=include_dirs,
+                        library_dirs=library_dirs,
+                        libraries=['event'],
+                        extra_compile_args=extra_compile_args)
+
 
 if __name__ == '__main__':
     setup(
         name='gevent',
-        version=version,
+        version=__version__,
         description='Python network library that uses greenlet and libevent for easy and scalable concurrency',
         author='Denis Bilenko',
         author_email='denis.bilenko@gmail.com',
