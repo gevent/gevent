@@ -257,12 +257,12 @@ class TestHttpdBasic(TestCase):
     def test_008_correctresponse(self):
         fd = socket.connect_tcp(('127.0.0.1', self.port)).makefile(bufsize=1)
         fd.write('GET / HTTP/1.1\r\nHost: localhost\r\n\r\n')
-        response_line_200,_,_ = read_http(fd)
+        response_line_200, _, _ = read_http(fd)
         fd.write('GET /notexist HTTP/1.1\r\nHost: localhost\r\n\r\n')
-        response_line_404,_,_ = read_http(fd)
+        response_line_404, _, _ = read_http(fd)
         fd.write('GET / HTTP/1.1\r\nHost: localhost\r\n\r\n')
-        response_line_test,_,_ = read_http(fd)
-        self.assertEqual(response_line_200,response_line_test)
+        response_line_test, _, _ = read_http(fd)
+        self.assertEqual(response_line_200, response_line_test)
         fd.close()
 
 
@@ -391,7 +391,6 @@ class TestHttps(greentest.TestCase):
         return [environ['wsgi.input'].read()]
 
     def test_012_ssl_server(self):
-
         certificate_file = os.path.join(os.path.dirname(__file__), 'test_server.crt')
         private_key_file = os.path.join(os.path.dirname(__file__), 'test_server.key')
 
