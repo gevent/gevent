@@ -27,6 +27,7 @@ Usage: %prog program [args]
 import sys
 import os
 import codecs
+from os.path import abspath, dirname, join, split
 try:
     import sqlite3
 except ImportError:
@@ -36,12 +37,17 @@ from greentest import disabled_marker
 
 warnings.simplefilter('ignore')
 
-PYTHON_VERSION = '%s.%s.%s' % sys.version_info[:3]
+def get_results_db():
+    path = join(join(*split(dirname(abspath(__file__)))[:-1]), 'testresults')
+    try:
+        os.makedirs(path)
+    except OSError:
+        pass
+    return join(path, 'results.db')
 
-COMMAND_CHANGESET = r"hg log -r tip 2> /dev/null | grep changeset"
-
-def record(changeset, argv, stdout, returncode):
-    c = sqlite3.connect('results.%s_%s.db' % (changeset, PYTHON_VERSION))
+def record(argv, stdout, returncode):
+    path = get_results_db()
+    c = sqlite3.connect(path)
     c.execute('''create table if not exists command_record
               (id integer primary key autoincrement,
                command text,
@@ -58,10 +64,6 @@ def main():
         del argv[0]
     else:
         debug = False
-    try:
-        changeset = os.popen(COMMAND_CHANGESET).readlines()[0].replace('changeset:', '').strip().replace(':', '_')
-    except Exception:
-        changeset = 'revision_unknown'
     output_name = os.tmpnam()
     arg = ' '.join(argv) + ' &> %s' % output_name
     print arg
@@ -74,7 +76,7 @@ def main():
         elif returncode==8 and disabled_marker in stdout:
             pass
         else:
-            record(changeset, argv, stdout, returncode)
+            record(argv, stdout, returncode)
             os.unlink(output_name)
     sys.exit(returncode)
 
