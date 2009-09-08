@@ -50,10 +50,11 @@ def parse_stdout(s):
     return testname, hub
 
 greentest_delim = '----------------------------------------------------------------------'
+unittest_re = re.compile('^Ran (\d+) test.*?$', re.M)
 
 def parse_greentest_output(s):
     s = s[s.rindex(greentest_delim)+len(greentest_delim):]
-    num = int(re.search('^Ran (\d+) test.*?$', s, re.M).group(1))
+    num = int(unittest_re.search(s).group(1))
     ok = re.search('^OK$', s, re.M)
     error, fail, timeout = 0, 0, 0
     failed_match = re.search(r'^FAILED \((?:failures=(?P<f>\d+))?,? ?(?:errors=(?P<e>\d+))?\)$', s, re.M)
