@@ -22,50 +22,97 @@
 
 import sys
 import os
-import sqlite3
-import glob
+import traceback
+try:
+    import sqlite3
+except ImportError:
+    import pysqlite2.dbapi2 as sqlite3
+from pprint import pprint
 
 REPO_URL = 'http://bitbucket.org/denis/gevent'
+row_def = ['testname']
+column_def = ['python', 'changeset', 'libevent_version', 'libevent_method']
 
-hubs_order = ['poll', 'selects', 'libevent', 'libev', 'twistedr/selectreactor', 'twistedr/pollreactor', 'twistedr/epollreactor']
+CSS = """
+a.x
+{
+  color: black;
+  text-decoration: none;
+}
 
-def make_table(database):
+a.x:hover
+{
+  text-decoration: underline;
+}
+
+td.nodata
+{
+  align: center;
+  bgcolor: gray;
+}
+
+
+table
+{
+  border: 1;
+}
+
+th
+{
+    font-weight: normal;
+}
+
+th.row
+{
+    text-align: left;
+}
+"""
+
+
+def make_table(database, row, column):
     c = sqlite3.connect(database)
-    res = c.execute(('select command_record.id, testname, hub, runs, errors, fails, '
-                     'timeouts, exitcode, stdout from parsed_command_record join '
-                     'command_record on parsed_command_record.id=command_record.id ')).fetchall()
-    table = {} # testname -> hub -> test_result (runs, errors, fails, timeouts)
-    tests = set()
-    for id, testname, hub, runs, errors, fails, timeouts, exitcode, stdout in res:
-        tests.add(testname)
-        test_result = TestResult(runs, errors, fails, timeouts, exitcode, id, stdout)
-        table.setdefault(testname, {})[hub] = test_result
-    return table, sorted(tests)
+    res = c.execute(('select * from parsed_command_record join command_record on parsed_command_record.id=command_record.id '))
+    columns = [x[0].lower() for x in res.description]
+    table = {}
+    row_set = set()
+    column_set = set()
+    VARIES = object()
+    common_fields = {}
+    for values in res.fetchall():
+        d = dict(zip(columns, values))
+        for k, v in d.items():
+            try:
+                current_value = common_fields[k]
+            except KeyError:
+                common_fields[k] = v
+            else:
+                if current_value != v:
+                    common_fields[k] = VARIES
+        row_params = tuple(d[k] for k in row)
+        column_params = tuple(d[k] for k in column)
+        test_result = TestResult(**d)
+        row_set.add(row_params)
+        column_set.add(column_params)
+        table.setdefault(row_params, {})[column_params] = test_result
 
-def calc_hub_stats(table):
-    hub_stats = {} # hub -> cumulative test_result
-    for testname in table:
-        for hub in table[testname]:
-            test_result = table[testname][hub]
-            hub_stats.setdefault(hub, TestResult(0,0,0,0)).__iadd__(test_result)
-    hubs = hub_stats.items()
-    hub_names = sorted(hub_stats.keys())
-    def get_order(hub):
-        try:
-            return hubs_order.index(hub)
-        except ValueError:
-            return 100 + hub_names.index(hub)
-    hubs.sort(key=lambda (hub, stats): get_order(hub))
-    return hub_stats, [x[0] for x in hubs]
+        # columns totals
+        table.setdefault(None, {}).setdefault(column_params, TestResult(0, 0, 0, 0)).__iadd__(test_result)
+
+        # row totals
+        table.setdefault(row_params, {}).setdefault(None, TestResult(0, 0, 0, 0)).__iadd__(test_result)
+
+    common_fields = dict((k, v) for (k, v) in common_fields.items() if v is not VARIES)
+    return table, sorted(row_set), sorted(column_set), common_fields
+
 
 class TestResult:
 
-    def __init__(self, runs, errors, fails, timeouts, exitcode=None, id=None, output=None):
-        self.runs = max(runs, 0)
-        self.errors = max(errors, 0)
-        self.fails = max(fails, 0)
-        self.timeouts = max(timeouts, 0)
-        self.exitcode = exitcode
+    def __init__(self, runs, errors, fails, timeouts, exitcode=None, id=None, output=None, **ignore_kwargs):
+        self.runs = max(int(runs), 0)
+        self.errors = max(int(errors), 0)
+        self.fails = max(int(fails), 0)
+        self.timeouts = max(int(timeouts), 0)
+        self.exitcode = int(exitcode) if exitcode is not None else None
         self.id = id
         self.output = output
 
@@ -142,7 +189,7 @@ class TestResult:
             r += '\n' + '\n'.join(self.warnings()).replace(' ', '&nbsp;')
         return r
 
-    def format(self):
+    def __str__(self):
         text = self.text().replace('\n', '<br>\n')
         if self.id is None:
             valign = 'bottom'
@@ -151,50 +198,83 @@ class TestResult:
             valign = 'center'
         return '<td align=center valign=%s bgcolor=%s>%s</td>' % (valign, self.color(), text)
 
-def format_testname(changeset, test):
-    return '<a href="%s/src/%s/greentest/%s">%s</a>' % (REPO_URL, changeset, test, test)
+def decorate_testname(testname, common_fields):
+    return '<a href="%s/src/%s/greentest/%s">%s</a>' % (REPO_URL, common_fields['changeset'].rstrip('+').split('_')[1], testname, testname)
 
-def format_table(table, hubs, tests, hub_stats, changeset):
-    r = '<table border=1>\n<tr>\n<td/>\n'
-    for hub in hubs:
-        r += '<td align=center>%s</td>\n' % hub
-    r += '</tr>\n'
+def decorate(field_name, field_value, common_fields):
+    d = globals().get('decorate_%s' % field_name)
+    if d is not None:
+        try:
+            return d(field_value, common_fields)
+        except KeyError:
+            pass
+        except Exception:
+            traceback.print_exc()
+    return field_value
 
-    r += '<tr><td>Total</td>'
-    for hub in hubs:
-        test_result = hub_stats.get(hub)
-        if test_result is None:
-            r += '<td align=center bgcolor=gray>no data</td>'
+
+def format_table(table, row_def, rows, column_def, columns, common_fields):
+    r = '<table border=1>\n'
+    for index, header_row in enumerate(column_def):
+        r += '<tr>\n'
+        r += '<th/>' * len(row_def)
+        for column in columns:
+            if column_def[index] not in common_fields:
+                r += '<th>%s</th>\n' % column[index]
+        r += '</tr>\n'
+    for row in [None, ] + rows:
+        r += '<tr>\n'
+        if row is None:
+            r += '<th class=row colspan=%s>Total</th>' % len(row_def)
         else:
-            r += test_result.format() + '\n'
-    r += '</tr>'
-
-    r += '<tr><td colspan=%s/></tr>' % (len(hubs)+1)
-
-    for test in tests:
-        r += '<tr><td>%s</td>' % format_testname(changeset, test)
-        for hub in hubs:
-            test_result = table[test].get(hub)
-            if test_result is None:
+            for row_def_item, row_item in zip(row_def, row):
+                row_item = decorate(row_def_item, row_item, common_fields)
+                r += '<th class=row>%s</th>\n' % row_item
+        for column in columns:
+            try:
+                r += '%s\n' % table[row][column]
+            except KeyError:
                 r += '<td align=center bgcolor=gray>no data</td>'
-            else:
-                r += test_result.format() + '\n'
-        r += '</tr>'
-
-    r += '</table>'
+        r += '</tr>\n'
+    r += '</table>\n'
     return r
 
-def format_header(rev, changeset, pyversion):
-    result = '<table width=99%%><tr><td>'
-    url = '%s/changeset/%s' % (REPO_URL, changeset)
-    result += '<a href="%s">gevent changeset %s: %s</a>' % (url, rev, changeset)
-    result += '</td><tr><tr><td>Python version: %s</td><tr></table><p>' % pyversion
+
+def decorate_changeset(changeset):
+    rev, hash = changeset.split('_')
+    text = 'gevent changeset %s: %s</a>' % (rev, hash)
+    url = '%s/changeset/%s' % (REPO_URL, hash.rstrip('+'))
+    text = '<a href="%s">%s</a>' % (url, text.replace('+', '<b>+</b>'))
+    return text
+
+def decorate_python(python):
+    return 'Python version: %s' % python
+
+
+def format_header_common_fields(fields):
+    result = ''
+    changeset = fields.get('changeset', None)
+    if changeset is not None:
+        result += decorate_changeset(changeset) + '<br>\n'
+    python = fields.get('python', None)
+    if python is not None:
+        result += decorate_python(python) + '<br><br>\n'
+    return result, ['changeset', 'python']
+
+def format_footer_common_fields(fields):
+    result = '<table class=common border=1>\n'
+    for k, v in sorted(fields.items()):
+        result += '<tr><th>%s</th><td>%s</td></tr>\n' % (k, v)
+    result += '</table>'
     return result
 
-def format_html(table, rev, changeset, pyversion):
-    r = '<html><head><style type="text/css">a.x {color: black; text-decoration: none;}  a.x:hover {text-decoration: underline;} </style></head><body>'
-    r += format_header(rev, changeset, pyversion)
+def format_html(table, common_fields):
+    r = '<html><head><style type="text/css">%s</style></head><body>' % CSS
+    x, ignore = format_header_common_fields(common_fields)
+    r += x
     r += table
+    r += '<br><br>'
+    r += format_footer_common_fields(dict((k, v) for (k, v) in common_fields.items() if k not in ignore))
     r += '</body></html>'
     return r
 
@@ -207,25 +287,31 @@ def generate_raw_results(path, database):
     sys.stderr.write('\n')
 
 def main(db):
-    full_changeset = '.'.join(db.split('.')[1:-1])
-    rev, changeset, pyversion = full_changeset.split('_')
-    table, tests = make_table(db)
-    hub_stats, hubs = calc_hub_stats(table)
-    report = format_html(format_table(table, hubs, tests, hub_stats, changeset), rev, changeset, pyversion)
-    path = '../htmlreports/%s' % full_changeset
+    table, rows, columns, common_fields = make_table(db, row=row_def, column=column_def)
+    if common_fields:
+        pprint(common_fields)
+    for field in ['runs', 'errors', 'fails', 'timeouts', 'exitcode', 'id', 'output']:
+        common_fields.pop(field, None)
+
+    table = format_table(table, row_def, rows, column_def, columns, common_fields)
+    report = format_html(table, common_fields)
+    path = '../testresults/'
+
     try:
         os.makedirs(path)
     except OSError, ex:
         if 'File exists' not in str(ex):
             raise
-    file(path + '/index.html', 'w').write(report)
+    file_path = os.path.join(path, 'index.html')
+    file(file_path, 'w').write(report)
+    print '%s: written %s' % (db, file_path)
     generate_raw_results(path, db)
 
 if __name__=='__main__':
     if not sys.argv[1:]:
-        latest_db = sorted(glob.glob('results.*.db'), key=lambda f: os.stat(f).st_mtime)[-1]
-        print latest_db
-        sys.argv.append(latest_db)
+        from greentest.record_results import get_results_db
+        db = get_results_db()
+        sys.argv.append(db)
     for db in sys.argv[1:]:
         main(db)
 
