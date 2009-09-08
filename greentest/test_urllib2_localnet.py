@@ -232,7 +232,7 @@ class FakeProxyHandler(BaseHTTPServer.BaseHTTPRequestHandler):
 class ProxyAuthTests(greentest.TestCase):
     URL = "http://www.foo.com"
 
-    PORT = 8080
+    PORT = 25086
     USER = "tester"
     PASSWD = "test123"
     REALM = "TestRealm"
