@@ -30,6 +30,7 @@ from urllib import unquote
 from gevent import socket
 import BaseHTTPServer
 from gevent.pool import Pool
+from gevent.greenlet import Greenlet
 
 
 DEFAULT_MAX_SIMULTANEOUS_REQUESTS = 1024
@@ -418,4 +419,27 @@ def server(sock, site, log=None, environ=None, max_size=None, max_http_version=D
         except socket.error, e:
             if e[0] != errno.EPIPE:
                 traceback.print_exc()
+
+
+# compatibilty with wsgi2 module, for tests
+class WSGIServer(object):
+
+    def __init__(self, address, application):
+        self.address = address
+        self.application = application
+
+    @property
+    def server_port(self):
+        return self.address[1]
+
+    def start(self):
+        self.socket = socket.tcp_listener(self.address)
+        self.address = self.socket.getsockname()
+        self.server = Greenlet.spawn(server, self.socket, self.application)
+
+    def stop(self):
+        self.server.kill(KeyboardInterrupt)
+        self.socket.close()
+        self.server.join()
+
 
