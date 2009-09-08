@@ -156,6 +156,32 @@ while True:
         print '===PYTHON=%s.%s.%s' % sys.version_info[:3]
         print '===ARGV=%s' % ' '.join(sys.argv)
         print '===TIMEOUT=%r' % TIMEOUT
+        import gevent
+        from gevent import __version__
+        from gevent import core
+        print '===VERSION=%s' % __version__
+        print '===PATH=%s' % gevent.__file__
+        try:
+            diffstat = os.popen(r"hg diff 2> /dev/null | diffstat -q").read().strip()
+        except:
+            diffstat = None
+        try:
+            changeset = os.popen(r"hg log -r tip 2> /dev/null | grep changeset").readlines()[0].replace('changeset:', '').strip().replace(':', '_')
+            if diffstat:
+                changeset += '+'
+            print '===CHANGESET=%s' % changeset
+        except:
+            changeset = ''
+        libevent_version = core.get_version()
+        if core.get_header_version() != core.get_version() and core.get_header_version() is not None:
+            libevent_version += '/headers=%s' % core.get_header_version()
+        print '===LIBEVENT_VERSION=%s' % libevent_version
+        print '===LIBEVENT_METHOD=%s' % core.get_method()
+        if diffstat:
+            print 'Non-clean working directory:'
+            print '-' * 80
+            print diffstat
+            print '-' * 80
         sys.stdout.flush()
         execf()
         break
