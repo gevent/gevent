@@ -396,6 +396,6 @@ init()
 
 if get_version() != get_header_version() and get_header_version() is not None:
     import warnings
-    msg = "version mismatch: system libevent version is %r but this gevent is compiled against %r" % (get_version(), get_header_version())
+    msg = "libevent version mismatch: system version is %r but this gevent is compiled against %r" % (get_version(), get_header_version())
     warnings.warn(msg, UserWarning, stacklevel=2)
 
