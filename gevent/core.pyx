@@ -44,7 +44,10 @@ cdef extern from "Python.h":
 
 ctypedef void (*event_handler)(int fd, short evtype, void *arg)
 
-cdef extern from "event.h":
+
+cdef extern from "libevent.h":
+
+    # event.h:
     struct timeval:
         unsigned int tv_sec
         unsigned int tv_usec
@@ -93,12 +96,13 @@ IF EVENT_INTERNAL_AVAILABLE:
         cdef event_base* c = current_base
         return c.event_count_active
 
+ELSE:
+
+    ctypedef void* event_base
+
 
 cdef extern from "libevent.h":
-    IF EVENT_INTERNAL_AVAILABLE:
-        event_base* current_base
-    ELSE:
-        void* current_base
+    event_base* current_base
 
 
 EV_TIMEOUT = 0x01
