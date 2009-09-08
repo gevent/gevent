@@ -66,10 +66,10 @@ if __name__=='__main__':
 
 USAGE: python -m gevent.monkey [MONKEY OPTIONS] script [SCRIPT OPTIONS]
 
-If no OPTIONS present, monkey patches the all modules it can patch.
+If no OPTIONS present, monkey patches all the modules it can patch.
 You can exclude a module with --no-module, e.g. --no-thread. You can
-specify a module to patch with --module, e.g. --socket. In this case
-only those mentioned on the command line will be patched.
+specify a module to patch with --module, e.g. --socket. In the latter
+case only the modules specified on the command line will be patched.
 
 MONKEY OPTIONS: --verbose %s""" % ', '.join('--[no-]%s' % m for m in modules)
     args = {}
