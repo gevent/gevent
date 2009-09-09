@@ -258,24 +258,19 @@ def format_header_common_fields(fields):
     python = fields.get('python')
     if python is not None:
         result += 'Python version: %s<br>\n' % python
+    if fields.get('libevent_version'):
+        result += 'Libevent version: %s<br>\n' % fields['libevent_version']
+    if fields.get('libevent_method'):
+        result += 'Libevent method: %s<br>\n' % fields['libevent_method']
     result += '<br>\n'
-    return result, ['changeset', 'python']
-
-def format_footer_common_fields(fields):
-    result = '<table class=common border=1>\n'
-    for k, v in sorted(fields.items()):
-        result += '<tr><th>%s</th><td>%s</td></tr>\n' % (k, v)
-    result += '</table>'
     return result
 
 def format_html(table, common_fields):
     r = '<html><head><style type="text/css">%s</style></head><body>' % CSS
-    x, ignore = format_header_common_fields(common_fields)
+    x = format_header_common_fields(common_fields)
     r += x
     r += table
-    r += '<br><br>'
-    r += format_footer_common_fields(dict((k, v) for (k, v) in common_fields.items() if k not in ignore))
-    r += '</body></html>'
+    r += '<br><br></body></html>'
     return r
 
 def generate_raw_results(path, database):
