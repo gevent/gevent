@@ -169,6 +169,7 @@ class Hub(greenlet):
         if self.keyboard_interrupt_signal is not None:
             self.keyboard_interrupt_signal.cancel()
             self.keyboard_interrupt_signal = None
+        core.dns_shutdown()
         try:
             self.switch()
         except DispatchExit, ex:
