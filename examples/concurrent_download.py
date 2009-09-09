@@ -10,7 +10,7 @@ monkey.patch_socket() # patches regular socket to yield to other greenlets
 import urllib2
 from gevent.pool import Pool
 
-# Pool accepts one optional argument - a maximum number of concurrent
+# Pool accepts one optional argument - maximum number of concurrent
 # coroutines that can be active at any given moment.
 # Try passing 1 or 2 here to see the effect.
 pool = Pool()
