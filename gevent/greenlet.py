@@ -482,7 +482,8 @@ def joinall(greenlets, timeout=None, raise_error=False):
         except:
             for greenlet in greenlets:
                 greenlet.unlink(put)
-            raise
+            if sys.exc_info()[1] is not timeout:
+                raise
     finally:
         timeout.cancel()
 
