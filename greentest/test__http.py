@@ -1,4 +1,3 @@
-from __future__ import with_statement
 from gevent import monkey; monkey.patch_socket()
 import gevent
 from gevent import http
@@ -32,8 +31,11 @@ class BoundTestCase(greentest.TestCase):
 
     def tearDown(self):
         #self.print_netstat('before stop')
-        with gevent.Timeout(0.1, False):
+        timeout = gevent.Timeout.start_new(0.1)
+        try:
             self.http.stop()
+        finally:
+            timeout.cancel()
         #self.print_netstat('after stop')
         self.check_refused()
 
