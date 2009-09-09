@@ -23,9 +23,9 @@
 __all__ = ['GreenSocket', 'GreenFile', 'GreenPipe']
 
 import _socket
-_original_socket = _socket.socket
-_original_fromfd = _socket.fromfd
-_original_socketpair = _socket.socketpair
+_original_socket = _socket.socket          # XXX remove it
+_original_fromfd = _socket.fromfd          # XXX remove it
+_original_socketpair = _socket.socketpair  # XXX remove it
 error = _socket.error
 timeout = _socket.timeout
 __socket__ = __import__('socket')
@@ -144,7 +144,7 @@ class GreenSocket(object):
 
     def __init__(self, family_or_realsock=_socket.AF_INET, *args, **kwargs):
         if isinstance(family_or_realsock, (int, long)):
-            self.fd = _original_socket(family_or_realsock, *args, **kwargs)
+            self.fd = _socket.socket(family_or_realsock, *args, **kwargs)
             self.timeout = _socket.getdefaulttimeout()
         else:
             if hasattr(family_or_realsock, '_sock'):
@@ -466,12 +466,12 @@ class GreenSSL(GreenSocket):
 
 
 def socketpair(*args):
-    one, two = _original_socketpair(*args)
+    one, two = _socket.socketpair(*args)
     return GreenSocket(one), GreenSocket(two)
 
 
 def fromfd(*args):
-    return GreenSocket(_original_fromfd(*args))
+    return GreenSocket(_socket.fromfd(*args))
 
 def socket_bind_and_listen(descriptor, addr=('', 0), backlog=50):
     set_reuse_addr(descriptor)
@@ -513,7 +513,7 @@ def ssl_listener(address, private_key, certificate):
     which accepts connections forever and spawns greenlets for
     each incoming connection.
     """
-    r = _original_socket()
+    r = _socket.socket()
     sock = wrap_ssl000(r, private_key, certificate)
     socket_bind_and_listen(sock, address)
     return sock
@@ -604,7 +604,7 @@ def create_connection_ssl(address, timeout=_GLOBAL_DEFAULT_TIMEOUT):
         af, socktype, proto, canonname, sa = res
         sock = None
         try:
-            _sock = _original_socket(af, socktype, proto)
+            _sock = _socket.socket(af, socktype, proto)
             sock = wrap_ssl000(_sock)
             if timeout is not _GLOBAL_DEFAULT_TIMEOUT:
                 sock.settimeout(timeout)
