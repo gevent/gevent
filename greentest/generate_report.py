@@ -200,29 +200,16 @@ class TestResult:
             valign = 'center'
         return '<td align=center valign=%s bgcolor=%s>%s</td>' % (valign, self.color(), text)
 
-def decorate_testname(testname, common_fields):
-    return '<a href="%s/src/%s/greentest/%s">%s</a>' % (REPO_URL, common_fields['changeset'].rstrip('+').split('_')[1], testname, testname)
-
-def decorate(field_name, field_value, common_fields):
-    d = globals().get('decorate_%s' % field_name)
-    if d is not None:
-        try:
-            return d(field_value, common_fields)
-        except KeyError:
-            pass
-        except Exception:
-            traceback.print_exc()
-    return field_value
-
-
 def format_table(table, row_def, rows, column_def, columns, common_fields):
     r = '<table border=1>\n'
     for index, header_row in enumerate(column_def):
         r += '<tr>\n'
         r += '<th/>' * len(row_def)
         for column in columns:
-            if column_def[index] not in common_fields:
-                r += '<th>%s</th>\n' % column[index]
+            field_name = column_def[index]
+            field_value = column[index]
+            if field_name not in common_fields:
+                r += '<th>%s</th>\n' % decorate(field_name, field_value, common_fields)
         r += '</tr>\n'
     for row in [None, ] + rows:
         r += '<tr>\n'
@@ -241,26 +228,37 @@ def format_table(table, row_def, rows, column_def, columns, common_fields):
     r += '</table>\n'
     return r
 
+def decorate(field_name, field_value, common_fields):
+    d = globals().get('decorate_%s' % field_name)
+    if d is not None:
+        try:
+            return d(field_value, common_fields)
+        except KeyError, ex:
+            pass
+        except Exception:
+            traceback.print_exc()
+    return field_value
 
-def decorate_changeset(changeset):
-    rev, hash = changeset.split('_')
-    text = 'gevent changeset %s: %s' % (rev, hash)
-    url = '%s/changeset/%s' % (REPO_URL, hash.rstrip('+'))
-    text = '<a href="%s">%s</a>' % (url, text.replace('+', '<b>+</b>'))
-    return text
+def decorate_testname(testname, common_fields):
+    return '<a href="%s/src/%s/greentest/%s">%s</a>' % (REPO_URL, common_fields['changeset'].rstrip('+').split('_')[1], testname, testname)
 
-def decorate_python(python):
-    return 'Python version: %s' % python
-
+def decorate_changeset(changeset, common_fields=None, frmt_text='%(rev)s%(nonclean)s'):
+    nonclean = changeset.endswith('+')
+    nonclean = '<b>+</b>' if nonclean else ''
+    rev, hash = changeset.rstrip('+').split('_')
+    url = '%s/changeset/%s' % (REPO_URL, hash)
+    text = frmt_text % locals()
+    return '<a href="%s">%s</a>' % (url, text)
 
 def format_header_common_fields(fields):
     result = ''
     changeset = fields.get('changeset', None)
     if changeset is not None:
-        result += decorate_changeset(changeset) + '<br>\n'
+        result += decorate_changeset(changeset, frmt_text='gevent_changeset: %(rev)s%(nonclean)s') + '<br>\n'
     python = fields.get('python', None)
     if python is not None:
-        result += decorate_python(python) + '<br><br>\n'
+        result += 'Python version: %s<br>\n' % python
+    result += '<br>\n'
     return result, ['changeset', 'python']
 
 def format_footer_common_fields(fields):
