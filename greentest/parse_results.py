@@ -135,7 +135,7 @@ if __name__=='__main__':
         db = get_results_db()
         args.append(db)
     for db in args:
-        main(db, options)
-        from greentest import generate_report
-        generate_report.main(db)
+        if main(db, options):
+            from greentest import generate_report
+            generate_report.main(db)
 
