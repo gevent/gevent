@@ -119,7 +119,11 @@ def main(db, options):
                 c.commit()
                 count += 1
     finally:
-        print '%s rows updated' % count
+        msg = '%s: %s row%s updated' % (db, count, 's' if count!=1 else '')
+        if parse_error:
+            msg += ', %s error%s' % (parse_error, 's' if parse_error!=1 else '')
+        print msg
+    return count
 
 if __name__=='__main__':
     import optparse
