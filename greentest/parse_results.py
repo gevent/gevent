@@ -25,9 +25,10 @@ import traceback
 import sqlite3
 import re
 
+PARSER_VERSION=1
 param_re = re.compile('^===(\w+)=(.*)$', re.M)
 
-def parse_stdout(s):
+def parse_output(s):
     argv = re.search('^===ARGV=(.*?)$', s, re.M).group(1)
     argv = argv.split()
     testname = argv[-1]
@@ -63,56 +64,64 @@ def parse_greentest_output(s):
 def main(db, options):
     print '%s: parsing output' % db
     c = sqlite3.connect(db)
-    c.execute('''create table if not exists parsed_command_record (id integer not null unique)''')
-    c.commit()
+    try:
+        c.execute('''alter table testresult add column parser_version integer default -1''')
+        c.commit()
+    except sqlite3.OperationalError, ex:
+        if 'duplicate column' not in str(ex).lower():
+            raise
 
     parse_error = 0
 
-    SQL = 'select command_record.id, command, stdout, exitcode from command_record'
+    SQL = 'select id, command, output, exitcode from testresult'
     if not options.redo:
-        SQL += ' where not exists (select * from parsed_command_record where parsed_command_record.id=command_record.id)'
-    for row in c.execute(SQL).fetchall():
-        id, command, stdout, exitcode = row
-        try:
-            params = parse_stdout(stdout)
-            if greentest_delim in stdout and unittest_re.search(stdout) is not None:
-                runs, errors, fails, timeouts = parse_greentest_output(stdout)
+        SQL += ' where parser_version!=%s' % PARSER_VERSION
+    count = 0
+    try:
+        for row in c.execute(SQL).fetchall():
+            id, command, output, exitcode = row
+            try:
+                params = parse_output(output)
+                if greentest_delim in output and unittest_re.search(output) is not None:
+                    runs, errors, fails, timeouts = parse_greentest_output(output)
+                else:
+                    if exitcode == 0:
+                        runs, errors, fails, timeouts = 1,0,0,0
+                    if exitcode == 7:
+                        runs, errors, fails, timeouts = 0,0,0,1
+                    elif exitcode:
+                        runs, errors, fails, timeouts = 1,1,0,0
+            except Exception:
+                parse_error += 1
+                sys.stderr.write('Failed to parse id=%s\n' % id)
+                print repr(output)
+                traceback.print_exc()
             else:
-                if exitcode == 0:
-                    runs, errors, fails, timeouts = 1,0,0,0
-                if exitcode == 7:
-                    runs, errors, fails, timeouts = 0,0,0,1
-                elif exitcode:
-                    runs, errors, fails, timeouts = 1,1,0,0
-        except Exception:
-            parse_error += 1
-            sys.stderr.write('Failed to parse id=%s\n' % id)
-            print repr(stdout)
-            traceback.print_exc()
-        else:
-            added_columns = set()
-            #print id, runs, errors, fails, timeouts, params
-            params['id'] = id
-            params['runs'] = runs
-            params['errors'] = errors
-            params['fails'] = fails
-            params['timeouts'] = timeouts
-            items = params.items()
-            keys = [x[0].lower() for x in items]
-            values = [x[1] for x in items]
-            for key in keys:
-                if key not in added_columns:
-                    added_columns.add(key)
-                    try:
-                        c.execute('''alter table parsed_command_record add column %s text''' % key)
-                        c.commit()
-                    except sqlite3.OperationalError, ex:
-                        if 'duplicate column' not in str(ex).lower():
-                            raise
-            sql = 'insert or replace into parsed_command_record (%s) values (%s)' % (', '.join(keys), ', '.join(['?']*len(items)))
-            #print sql
-            c.execute(sql, values)
-            c.commit()
+                added_columns = set()
+                #print id, runs, errors, fails, timeouts, params
+                params['parser_version'] = PARSER_VERSION
+                params['runs'] = runs
+                params['errors'] = errors
+                params['fails'] = fails
+                params['timeouts'] = timeouts
+                items = params.items()
+                keys = [x[0].lower() for x in items]
+                values = [x[1] for x in items]
+                for key in keys:
+                    if key not in added_columns:
+                        added_columns.add(key)
+                        try:
+                            c.execute('''alter table testresult add column %s text''' % key)
+                            c.commit()
+                        except sqlite3.OperationalError, ex:
+                            if 'duplicate column' not in str(ex).lower():
+                                raise
+                sql = 'update testresult set %s where id=%s' % (', '.join('%s=?' % x for x in keys), id)
+                c.execute(sql, values)
+                c.commit()
+                count += 1
+    finally:
+        print '%s rows updated' % count
 
 if __name__=='__main__':
     import optparse

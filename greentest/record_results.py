@@ -45,16 +45,16 @@ def get_results_db():
         pass
     return join(path, 'results.db')
 
-def record(argv, stdout, returncode):
+def record(argv, output, returncode):
     path = get_results_db()
     c = sqlite3.connect(path)
-    c.execute('''create table if not exists command_record
+    c.execute('''create table if not exists testresult
               (id integer primary key autoincrement,
                command text,
-               stdout text,
+               output text,
                exitcode integer)''')
-    c.execute('insert into command_record (command, stdout, exitcode)'
-              'values (?, ?, ?)', (`argv`, stdout, returncode))
+    c.execute('insert into testresult (command, output, exitcode)'
+              'values (?, ?, ?)', (`argv`, output, returncode))
     c.commit()
 
 def main():
@@ -69,14 +69,14 @@ def main():
     print arg
     returncode = os.system(arg)>>8
     print arg, 'finished with code', returncode
-    stdout = codecs.open(output_name, mode='r', encoding='utf-8', errors='replace').read().replace('\x00', '?')
+    output = codecs.open(output_name, mode='r', encoding='utf-8', errors='replace').read().replace('\x00', '?')
     if not debug:
         if returncode==1:
             pass
-        elif returncode==8 and disabled_marker in stdout:
+        elif returncode==8 and disabled_marker in output:
             pass
         else:
-            record(argv, stdout, returncode)
+            record(argv, output, returncode)
             os.unlink(output_name)
     sys.exit(returncode)
 

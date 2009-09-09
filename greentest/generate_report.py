@@ -71,7 +71,7 @@ th.row
 
 def make_table(database, row, column):
     c = sqlite3.connect(database)
-    res = c.execute(('select * from parsed_command_record join command_record on parsed_command_record.id=command_record.id '))
+    res = c.execute(('select * from testresult where output!=""'))
     columns = [x[0].lower() for x in res.description]
     table = {}
     row_set = set()
@@ -194,7 +194,7 @@ class TestResult:
         if self.id is None:
             valign = 'bottom'
         else:
-            text = '<a class="x" href="%s.txt">%s</a>' % (self.id, text)
+            text = '<a class="x" href="output-%s.txt">%s</a>' % (self.id, text)
             valign = 'center'
         return '<td align=center valign=%s bgcolor=%s>%s</td>' % (valign, self.color(), text)
 
@@ -280,10 +280,12 @@ def format_html(table, common_fields):
 
 def generate_raw_results(path, database):
     c = sqlite3.connect(database)
-    res = c.execute('select id, stdout from command_record').fetchall()
+    res = c.execute('select id, output from testresult').fetchall()
     for id, out in res:
-        file(os.path.join(path, '%s.txt' % id), 'w').write(out.encode('utf-8'))
-        sys.stderr.write('.')
+        filename = os.path.join(path, 'output-%s.txt' % id)
+        if not os.path.exists(filename):
+            file(filename, 'w').write(out.encode('utf-8'))
+            sys.stderr.write('.')
     sys.stderr.write('\n')
 
 def main(db):
