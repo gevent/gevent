@@ -244,7 +244,7 @@ def format_table(table, row_def, rows, column_def, columns, common_fields):
 
 def decorate_changeset(changeset):
     rev, hash = changeset.split('_')
-    text = 'gevent changeset %s: %s</a>' % (rev, hash)
+    text = 'gevent changeset %s: %s' % (rev, hash)
     url = '%s/changeset/%s' % (REPO_URL, hash.rstrip('+'))
     text = '<a href="%s">%s</a>' % (url, text.replace('+', '<b>+</b>'))
     return text
