@@ -5,8 +5,7 @@ from gevent.greenlet import Greenlet
 from gevent.event import Event
 from gevent.util import wrap_errors
 from gevent.timeout import Timeout
-socket = __import__('socket')
-from gevent.socket import _original_socket as Socket
+import _socket as socket
 
 class HTTPServer(object):
 
@@ -41,7 +40,7 @@ class HTTPServer(object):
     def make_listener(self, address, backlog=None):
         if backlog is None:
             backlog = self.backlog
-        s = Socket()
+        s = socket.socket()
         try:
             s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, s.getsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR) | 1)
         except socket.error:
