@@ -1,4 +1,6 @@
 #!/usr/bin/python
+"""Drop the records of the tests that were made against non-clean copy (i.e. with uncommitted changes)
+"""
 from record_results import get_results_db, sqlite3
 
 if __name__=='__main__':
