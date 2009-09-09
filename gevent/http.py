@@ -69,10 +69,11 @@ class HTTPServer(object):
                 self._done_event = Event()
             t = Timeout.start_new(timeout)
             try:
-                self._done_event.wait(timeout=timeout)
-            except Timeout, ex:
-                if t is not ex:
-                    raise
+                try:
+                    self._done_event.wait(timeout=timeout)
+                except Timeout, ex:
+                    if t is not ex:
+                        raise
             finally:
                 t.cancel()
         #4. forcefull close all the connections
@@ -141,8 +142,6 @@ class HTTPServer(object):
             if self._serve_forever_event is None:
                 self._serve_forever_event = Event()
             self._serve_forever_event.wait()
-        except KeyboardInterrupt:
-            pass
         finally:
             Greenlet.spawn(self.stop, timeout=stop_timeout).join()
 
