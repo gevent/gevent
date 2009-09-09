@@ -667,15 +667,13 @@ if core.HAS_EVDNS:
             return '127.0.0.1'
         if _ip_re.match(hostname): # hack
             return hostname
+        if hostname == _socket.gethostname():
+            return _socket.gethostbyname(hostname)
         waiter = Waiter()
         core.dns_resolve_ipv4(hostname, 0, _dns_helper, waiter)
         result, type, ttl, addrs = waiter.wait()
         if result != core.DNS_ERR_NONE:
-            # hack to make testSockName pass
-            # should use /etc/hosts
-            if hostname == __socket__.gethostname():
-                return '0.0.0.0'
-            raise gaierror(result)
+            raise gaierror('dns_resolve_ipv4 returned %s' % result)
         return random.choice(addrs)
 
     def getaddrinfo(host, port, family=__socket__.AF_UNSPEC, socktype=__socket__.SOCK_STREAM, proto=0, flags=0):
