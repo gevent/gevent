@@ -213,6 +213,8 @@ class GreenSocket(object):
             setattr(self, method, dummy)
 
     def connect(self, address):
+        if isinstance(address, tuple) and len(address)==2:
+            address = gethostbyname(address[0]), address[1]
         if self.timeout==0.0:
             return self.fd.connect(address)
         fd = self.fd
