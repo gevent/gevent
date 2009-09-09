@@ -9,7 +9,7 @@ for path in glob.glob('../examples/*.py'):
 
 assert modules
 
-error = 0
+errors = []
 
 for path in modules:
     if path.endswith('server.py'):
@@ -19,10 +19,11 @@ for path in modules:
         sys.stdout.flush()
         res = os.system('%s %s' % (sys.executable, path))
         if res:
-            error = 1
             print path, 'failed'
+            errors.append(path)
     print '-----'
 
-if error:
+if errors:
+    print '\n\nFailures: %s' % ', '.join(errors)
     sys.exit(1)
 
