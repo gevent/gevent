@@ -252,10 +252,10 @@ def decorate_changeset(changeset, common_fields=None, frmt_text='%(rev)s%(noncle
 
 def format_header_common_fields(fields):
     result = ''
-    changeset = fields.get('changeset', None)
+    changeset = fields.get('changeset')
     if changeset is not None:
         result += decorate_changeset(changeset, frmt_text='gevent_changeset: %(rev)s%(nonclean)s') + '<br>\n'
-    python = fields.get('python', None)
+    python = fields.get('python')
     if python is not None:
         result += 'Python version: %s<br>\n' % python
     result += '<br>\n'
