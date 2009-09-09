@@ -1,8 +1,19 @@
 import greentest
 import gevent
-from gevent.event import AsyncResult
+from gevent.event import Event, AsyncResult
 
 DELAY = 0.01
+
+class TestEventWait(greentest.GenericWaitTestCase):
+
+    def wait(self, timeout):
+        Event().wait(timeout=timeout)
+
+class TestAsyncResultWait(greentest.GenericWaitTestCase):
+
+    def wait(self, timeout):
+        AsyncResult().wait(timeout=timeout)
+
 
 class TestAsyncResult(greentest.TestCase):
 
