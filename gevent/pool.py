@@ -72,12 +72,16 @@ class GreenletSet(object):
 #         self.add = RaiseException("This %s has been closed" % self.__class__.__name__)
 
     def join(self, timeout=None, raise_error=False):
-        t = Timeout.start_new(timeout)
+        timeout = Timeout.start_new(timeout)
         try:
-            while self.greenlets:
-                joinall(self.greenlets, raise_error=raise_error)
+            try:
+                while self.greenlets:
+                    joinall(self.greenlets, raise_error=raise_error)
+            except Timeout, ex:
+                if ex is not timeout:
+                    raise
         finally:
-            t.cancel()
+            timeout.cancel()
 
     def kill(self, exception=GreenletExit, block=False, timeout=None):
         t = Timeout.start_new(timeout)
