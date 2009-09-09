@@ -3,13 +3,10 @@ from gevent import select
 import greentest
 
 
-class TestSelect(greentest.TestCase):
+class TestSelect(greentest.GenericWaitTestCase):
 
-    def test_timeout(self):
-        start = time()
-        select.select([], [], [], 0.1)
-        delay = time() - start
-        assert 0.1 - 0.02 < delay < 0.1 + 0.02, delay
+    def wait(self, timeout):
+        select.select([], [], [], timeout)
 
 
 if __name__=='__main__':
