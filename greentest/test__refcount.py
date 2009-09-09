@@ -27,19 +27,18 @@ monkey.patch_all()
 #import sys
 import greentest
 from pprint import pformat
-import socket
 from thread import start_new_thread
 from time import sleep
 import weakref
 import gc
 
-from gevent.socket import _original_socket
+from _socket import socket
 
-class Socket(_original_socket):
+class Socket(socket):
     "Something we can have a weakref to"
 
-import gevent
-gevent.socket._original_socket = Socket
+import _socket
+_socket.socket = Socket
 
 import socket
 socket._realsocket = Socket
