@@ -23,6 +23,7 @@ import sys
 import greentest
 import gevent
 import re
+import time
 from gevent import sleep, with_timeout, getcurrent
 from gevent import greenlet
 from gevent.event import Event, AsyncResult
@@ -505,6 +506,27 @@ class TestStr(greentest.TestCase):
         g.join()
         assert_ready(g)
         self.assertEqual(hexobj.sub('X', str(g)), '<Greenlet at X: <bound method A.method of <__main__.A object at X>>>')
+
+
+class TestJoinAll(greentest.TestCase):
+
+    def test_outer_timeout_is_not_lost(self):
+        t = gevent.Timeout.start_new(0.01)
+        try:
+            gevent.joinall([gevent.spawn(gevent.sleep, 10)], timeout=0.02)
+        except gevent.Timeout, ex:
+            assert ex is t, (ex, t)
+        else:
+            raise AssertionError('must raise Timeout')
+        gevent.sleep(0.02)
+
+    def test_returns_after_timeout(self):
+        start = time.time()
+        gevent.joinall([gevent.spawn(gevent.sleep, 10)], timeout=0.01)
+        # joinall simply returns after timeout expires
+        delay = time.time() - start
+        assert 0.01 <= delay < 0.01 + 0.01, delay
+
 
 
 def assert_ready(g):
