@@ -37,8 +37,9 @@ from greentest import disabled_marker
 
 warnings.simplefilter('ignore')
 
+path = join(join(*split(dirname(abspath(__file__)))[:-1]), 'testresults')
+
 def get_results_db():
-    path = join(join(*split(dirname(abspath(__file__)))[:-1]), 'testresults')
     try:
         os.makedirs(path)
     except OSError:
