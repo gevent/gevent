@@ -43,8 +43,7 @@ from gevent.hub import getcurrent, get_hub, spawn_raw, Waiter
 from gevent import core
 
 BUFFER_SIZE = 4096
-
-core.dns_init()
+_ip_re = re.compile('^[\d\.]+$')
 
 
 def _wait_helper(ev, evtype):
@@ -640,6 +639,7 @@ def wrap_ssl000(sock, keyfile=None, certfile=None):
     return ssl_sock
 
 if core.HAS_EVDNS:
+    core.dns_init()
     # NOTE:
     # use flags=core.DNS_QUERY_NO_SEARCH to avoid search, see comments in evdns.h
     # TODO:
@@ -650,8 +650,6 @@ if core.HAS_EVDNS:
     def _dns_helper(result, type, ttl, addrs, args):
         (waiter,) = args
         waiter.switch((result, type, ttl, addrs))
-
-    _ip_re = re.compile('[\d\.]+')
 
     def gethostbyname(hostname):
         """gethostbyname implemented using EvDNS.
