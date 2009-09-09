@@ -2,10 +2,10 @@ from time import time
 import gevent
 from gevent import pool
 from gevent.event import Event
-from greentest import TestCase, main
+import greentest
 
 
-class TestCoroutinePool(TestCase):
+class TestCoroutinePool(greentest.TestCase):
     klass = pool.Pool
 
     def test_apply_async(self):
@@ -106,7 +106,7 @@ class TestCoroutinePool(TestCase):
             pool.join()
 
 
-class PoolBasicTests(TestCase):
+class PoolBasicTests(greentest.TestCase):
     klass = pool.Pool
 
     def test_execute_async(self):
@@ -165,7 +165,7 @@ def sqr(x, wait=0.0):
 
 TIMEOUT1, TIMEOUT2, TIMEOUT3 = 0.082, 0.035, 0.14
 
-class TestPool(TestCase):
+class TestPool(greentest.TestCase):
     size = 1
 
     def setUp(self):
@@ -246,6 +246,15 @@ class TestPool10(TestPool):
 class TestPoolUnlimit(TestPool):
     size = None
 
+
+class TestJoin(greentest.GenericWaitTestCase):
+
+    def wait(self, timeout):
+        p = pool.Pool()
+        p.spawn(gevent.sleep, 10)
+        p.join(timeout=timeout)
+
+
 if __name__=='__main__':
-    main()
+    greentest.main()
 
