@@ -20,10 +20,11 @@ finished = 0
 def job(url):
     global succeed, finished
     try:
-        ip = socket.gethostbyname(url)
-        print '%s = %s' % (url, ip)
-    except socket.gaierror, ex:
-        print '%s failed with %s' % (url, ex)
+        try:
+            ip = socket.gethostbyname(url)
+            print '%s = %s' % (url, ip)
+        except socket.gaierror, ex:
+            print '%s failed with %s' % (url, ex)
     finally:
         finished += 1
 
