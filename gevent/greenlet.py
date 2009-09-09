@@ -144,8 +144,8 @@ class Greenlet(greenlet):
         - successful
 
     Additionally,
-        -'value' attribute holds the result of the greenlet or None if the greenlet has no result.
-        -'exception' attribute holds the exception instance that greenlet has raised or None
+        - 'value' attribute holds the result of the greenlet or None if the greenlet has no result.
+        - 'exception' attribute holds the exception instance that greenlet has raised or None
 
     To start a function in another greenlet, pass it and its arguments to Greenlet constructor
     and call start():
