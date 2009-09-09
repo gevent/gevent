@@ -115,6 +115,12 @@ class TestShutdown(unittest.TestCase):
         self.assert_no_hub()
 
 
+class TestSleep(greentest.GenericWaitTestCase):
+
+    def wait(self, timeout):
+        gevent.sleep(timeout)
+
+
 if __name__=='__main__':
     greentest.main()
 
