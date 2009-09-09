@@ -291,24 +291,25 @@ def generate_raw_results(path, database):
     sys.stderr.write('\n')
 
 def main(db):
+    path = os.path.dirname(db)
+    file_path = os.path.join(path, 'index.html')
+    print '%s: generating %s' % (db, file_path)
     table, rows, columns, common_fields = make_table(db, row=row_def, column=column_def)
     if common_fields:
-        pprint(common_fields)
+        pprint(common_fields) # this fields are the same for every item processed
     for field in ['runs', 'errors', 'fails', 'timeouts', 'exitcode', 'id', 'output']:
         common_fields.pop(field, None)
 
     table = format_table(table, row_def, rows, column_def, columns, common_fields)
     report = format_html(table, common_fields)
-    path = '../testresults/'
 
     try:
         os.makedirs(path)
     except OSError, ex:
         if 'File exists' not in str(ex):
             raise
-    file_path = os.path.join(path, 'index.html')
     file(file_path, 'w').write(report)
-    print '%s: written %s' % (db, file_path)
+    print '%s: written %s: %s rows x %s columns' % (db, file_path, len(rows), len(columns))
     generate_raw_results(path, db)
 
 if __name__=='__main__':
