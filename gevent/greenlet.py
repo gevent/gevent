@@ -357,6 +357,10 @@ class Greenlet(greenlet):
                     assert result is self, 'Invalid switch into Greenlet.join(): %r' % (result, )
                 finally:
                     t.cancel()
+            except Timeout, ex:
+                self.unlink(switch)
+                if ex is not t:
+                    raise
             except:
                 self.unlink(switch)
                 raise
