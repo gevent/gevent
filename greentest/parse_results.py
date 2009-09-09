@@ -92,13 +92,11 @@ def main(db, options):
                     elif exitcode:
                         runs, errors, fails, timeouts = 1,1,0,0
             except Exception:
-                parse_error += 1
-                sys.stderr.write('Failed to parse id=%s\n' % id)
-                print repr(output)
                 traceback.print_exc()
+                sys.stderr.write('Failed to parse id=%s\n\n' % id)
+                parse_error += 1
             else:
                 added_columns = set()
-                #print id, runs, errors, fails, timeouts, params
                 params['parser_version'] = PARSER_VERSION
                 params['runs'] = runs
                 params['errors'] = errors
