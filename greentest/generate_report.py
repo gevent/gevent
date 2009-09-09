@@ -32,6 +32,8 @@ from pprint import pprint
 REPO_URL = 'http://bitbucket.org/denis/gevent'
 row_def = ['testname']
 column_def = ['python', 'changeset', 'libevent_version', 'libevent_method']
+SQL = 'select * from testresult'
+
 
 CSS = """
 a.x
@@ -71,7 +73,7 @@ th.row
 
 def make_table(database, row, column):
     c = sqlite3.connect(database)
-    res = c.execute(('select * from testresult where output!=""'))
+    res = c.execute((SQL))
     columns = [x[0].lower() for x in res.description]
     table = {}
     row_set = set()
