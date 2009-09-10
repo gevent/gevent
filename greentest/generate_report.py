@@ -31,7 +31,7 @@ from pprint import pprint
 
 REPO_URL = 'http://bitbucket.org/denis/gevent'
 row_def = ['testname']
-column_def = ['python', 'changeset', 'libevent_version', 'libevent_method']
+column_def = ['changeset', 'python', 'libevent_version', 'libevent_method']
 SQL = 'select * from testresult'
 
 
