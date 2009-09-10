@@ -104,6 +104,7 @@ MONKEY OPTIONS: --verbose %s""" % ', '.join('--[no-]%s' % m for m in modules)
         print 'gevent.monkey.patch_all(%s)' % ', '.join('%s=%s' % item for item in args.items())
         print 'sys.version=%s' % (sys.version.strip().replace('\n', ' '), )
         print 'sys.path=%s' % pprint.pformat(sys.path)
+        print 'sys.modules=%s' % pprint.pformat(sorted(sys.modules.keys()))
         print 'cwd=%s' % os.getcwd()
 
     patch_all(**args)
