@@ -30,4 +30,4 @@ if hasattr(__thread, 'stack_size'):
             pass
             # not going to decrease stack_size, because otherwise other greenlets in this thread will suffer
 
-# XXX interrupt_main
+# XXX interrupt_main, _local
