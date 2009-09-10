@@ -2,6 +2,8 @@
 
 import sys
 
+noisy = True
+
 def patch_os():
     from gevent.hub import fork
     import os
@@ -13,6 +15,8 @@ def patch_time():
     _time.sleep = sleep
 
 def patch_thread():
+    if noisy and 'threading' in sys.modules:
+        sys.stderr.write("gevent.monkey's warning: 'threading' is already imported\n\n")
     from gevent import thread as green_thread
     thread = __import__('thread')
     thread.get_ident = green_thread.get_ident
