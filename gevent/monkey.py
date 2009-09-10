@@ -26,7 +26,12 @@ def patch_thread():
     thread.exit = green_thread.exit
     if hasattr(green_thread, 'stack_size'):
         thread.stack_size = green_thread.stack_size
-    # XXX should also patch threadlocal
+    # built-in thread._local object won't work as greenlet-local
+    if '_threading_local' not in sys.modules:
+        import _threading_local
+        thread._local = _threading_local.local
+    elif noisy:
+        sys.stderr.write("gevent.monkey's warning: '_threading_local' is already imported\n\n")
 
 def patch_socket(dns=True):
     from gevent.socket import GreenSocket, fromfd, wrap_ssl, socketpair
