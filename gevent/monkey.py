@@ -24,14 +24,19 @@ def patch_thread():
         thread.stack_size = green_thread.stack_size
     # XXX should also patch threadlocal
 
-def patch_socket():
-    from gevent.socket import GreenSocket, fromfd, wrap_ssl, socketpair, getaddrinfo, getnameinfo, gethostbyname
+def patch_socket(dns=True):
+    from gevent.socket import GreenSocket, fromfd, wrap_ssl, socketpair
     _socket = __import__('socket')
     _socket.socket = GreenSocket
     _socket.fromfd = fromfd
     _socket.ssl = wrap_ssl
     _socket.socketpair = socketpair
-    # dns
+    if dns:
+        patch_dns()
+
+def patch_dns():
+    from gevent.socket import getaddrinfo, getnameinfo, gethostbyname
+    _socket = __import__('socket')
     _socket.getaddrinfo = getaddrinfo
     _socket.getnameinfo = getnameinfo
     _socket.gethostbyname = gethostbyname
@@ -48,7 +53,7 @@ def patch_select():
     globals()['_select_select'] = _select.select
     _select.select = select
 
-def patch_all(socket=True, time=True, select=True, thread=True, os=True, ssl=True):
+def patch_all(socket=True, dns=True, time=True, select=True, thread=True, os=True, ssl=True):
     # order is important
     if os:
         patch_os()
@@ -57,11 +62,12 @@ def patch_all(socket=True, time=True, select=True, thread=True, os=True, ssl=Tru
     if thread:
         patch_thread()
     if socket:
-        patch_socket()
+        patch_socket(dns=dns)
     if select:
         patch_select()
     if ssl:
         patch_ssl()
+
 
 if __name__=='__main__':
     modules = [x.replace('patch_', '') for x in globals().keys() if x.startswith('patch_') and x!='patch_all']
