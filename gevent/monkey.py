@@ -15,23 +15,24 @@ def patch_time():
     _time.sleep = sleep
 
 def patch_thread():
-    if noisy and 'threading' in sys.modules:
-        sys.stderr.write("gevent.monkey's warning: 'threading' is already imported\n\n")
     from gevent import thread as green_thread
     thread = __import__('thread')
-    thread.get_ident = green_thread.get_ident
-    thread.start_new_thread = green_thread.start_new_thread
-    thread.LockType = green_thread.LockType
-    thread.allocate_lock = green_thread.allocate_lock
-    thread.exit = green_thread.exit
-    if hasattr(green_thread, 'stack_size'):
-        thread.stack_size = green_thread.stack_size
-    # built-in thread._local object won't work as greenlet-local
-    if '_threading_local' not in sys.modules:
-        import _threading_local
-        thread._local = _threading_local.local
-    elif noisy:
-        sys.stderr.write("gevent.monkey's warning: '_threading_local' is already imported\n\n")
+    if thread.exit is not green_thread.exit:
+        thread.get_ident = green_thread.get_ident
+        thread.start_new_thread = green_thread.start_new_thread
+        thread.LockType = green_thread.LockType
+        thread.allocate_lock = green_thread.allocate_lock
+        thread.exit = green_thread.exit
+        if hasattr(green_thread, 'stack_size'):
+            thread.stack_size = green_thread.stack_size
+        if noisy and 'threading' in sys.modules:
+            sys.stderr.write("gevent.monkey's warning: 'threading' is already imported\n\n")
+        # built-in thread._local object won't work as greenlet-local
+        if '_threading_local' not in sys.modules:
+            import _threading_local
+            thread._local = _threading_local.local
+        elif noisy:
+            sys.stderr.write("gevent.monkey's warning: '_threading_local' is already imported\n\n")
 
 def patch_socket(dns=True):
     from gevent.socket import GreenSocket, fromfd, wrap_ssl, socketpair
