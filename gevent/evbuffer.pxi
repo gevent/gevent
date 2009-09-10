@@ -52,7 +52,10 @@ cdef class buffer:
         return result
 
     def readline(self):
-        return evbuffer_readline(self.__obj) or ''
+        cdef char* res = evbuffer_readline(self.__obj)
+        if res:
+            return res
+        return ''
 
     def readlines(self, hint=-1):
         return list(self.__iter__())
