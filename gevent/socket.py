@@ -640,8 +640,14 @@ def wrap_ssl000(sock, keyfile=None, certfile=None):
 
     return ssl_sock
 
-if core.HAS_EVDNS:
+try:
     core.dns_init()
+except:
+    # fallback to blocking versions
+    gethostbyname = __socket__.gethostbyname
+    getaddrinfo = __socket__.getaddrinfo
+    getnameinfo = __socket__.getnameinfo
+else:
     # NOTE:
     # use flags=core.DNS_QUERY_NO_SEARCH to avoid search, see comments in evdns.h
     # TODO:
@@ -734,11 +740,6 @@ if core.HAS_EVDNS:
         if result != core.DNS_ERR_NONE:
             raise gaierror(result)
         return (addrs, port)
-else:
-    # fallback to blocking versions
-    gethostbyname = __socket__.gethostbyname
-    getaddrinfo = __socket__.getaddrinfo
-    getnameinfo = __socket__.getnameinfo
 
 
 def wrap_ssl(sock, keyfile=None, certfile=None):
