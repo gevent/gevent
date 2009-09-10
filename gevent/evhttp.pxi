@@ -9,6 +9,9 @@ EVHTTP_REQ_DELETE   = 4
 
 HTTP_method2name = { 0: 'GET', 1: 'POST', 2: 'HEAD', 3: 'PUT', 4: 'DELETE' }
 
+cdef extern from *:
+    ctypedef char* const_char_ptr "const char*"
+
 cdef extern from "libevent.h":
 
     ctypedef unsigned short ev_uint16_t
@@ -329,14 +332,14 @@ cdef class http_request:
     def find_input_header(self, char* key):
         if not self.__obj:
             raise HttpRequestDeleted
-        cdef char* val = evhttp_find_header(self.__obj.input_headers, key)
+        cdef const_char_ptr val = evhttp_find_header(self.__obj.input_headers, key)
         if val:
             return val
 
     def find_output_header(self, char* key):
         if not self.__obj:
             raise HttpRequestDeleted
-        cdef char* val = evhttp_find_header(self.__obj.output_headers, key)
+        cdef const_char_ptr val = evhttp_find_header(self.__obj.output_headers, key)
         if val:
             return val
 
