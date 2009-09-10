@@ -12,6 +12,8 @@
 #include "event2/http_struct.h"
 #include "event2/buffer.h"
 #include "event2/buffer_compat.h"
+#include "event2/dns.h"
+#include "event2/dns_compat.h"
 
 #define EVBUFFER_DRAIN evbuffer_drain
 #define EVHTTP_SET_CB  evhttp_set_cb
@@ -22,6 +24,7 @@
 
 #include "event.h"
 #include "evhttp.h"
+#include "evdns.h"
 
 /* compatibility */
 

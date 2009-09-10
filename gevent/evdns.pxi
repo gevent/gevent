@@ -18,7 +18,7 @@ cdef extern from "arpa/inet.h":
     int inet_pton(int af, char *src, void *dst)
     char *inet_ntop(int af, void *src, char *dst, socklen_t size)
 
-cdef extern from "evdns.h":
+cdef extern from "libevent.h":
     ctypedef void (*evdns_handler)(int result, char t, int count, int ttl,
                                    void *addrs, void *arg)
 
