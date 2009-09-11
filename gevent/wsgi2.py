@@ -49,14 +49,17 @@ class WSGIHandler(object):
         self.request.send_reply(code, reason, data)
         self.log_request(len(data))
 
-    def log_request(self, length='-'):
+    def format_request(self, length='-'):
         r = self.request
         referer = r.find_input_header('Referer') or '-'
         agent = r.find_input_header('User-Agent') or '-'
         # QQQ fix datetime format
         now = datetime.now().replace(microsecond=0)
         args = (r.remote_host, now, r.typestr, r.uri, r.major, r.minor, r.response_code, length, referer, agent)
-        print '%s - - [%s] "%s %s HTTP/%s.%s" %s %s "%s" "%s"' % args
+        return '%s - - [%s] "%s %s HTTP/%s.%s" %s %s "%s" "%s"' % args
+
+    def log_request(self, *args):
+        print self.format_request(*args)
 
     def prepare_env(self, req, server):
         env = server.base_env.copy()
