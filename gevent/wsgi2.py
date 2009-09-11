@@ -106,7 +106,7 @@ class WSGIHandler(object):
 
 class WSGIServer(HTTPServer):
 
-    WSGIHandler = WSGIHandler
+    handler_class = WSGIHandler
 
     base_env = {'SCRIPT_NAME': '',
                 'GATEWAY_INTERFACE': 'CGI/1.1',
@@ -118,6 +118,9 @@ class WSGIServer(HTTPServer):
                 'wsgi.run_once': False}
 
     def __init__(self, socket_or_address, application, **kwargs):
+        handler_class = kwargs.pop('handler_class', None)
+        if handler_class is not None:
+            self.handler_class = handler_class
         HTTPServer.__init__(self, **kwargs)
         self.address = socket_or_address
         self.application = application
@@ -142,7 +145,7 @@ class WSGIServer(HTTPServer):
         return sock
 
     def handle(self, req):
-        handler = self.WSGIHandler(req)
+        handler = self.handler_class(req)
         handler.handle(self)
 
 
