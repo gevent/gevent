@@ -83,15 +83,14 @@ def kill(greenlet, exception=GreenletExit):
         core.active_event(greenlet.throw, exception)
 
 
-def _deliver_exception_to_MAIN(g):
-    if not g.successful():
-        MAIN.throw(*g.exc_info())
+def _wrap_signal_handler(handler, args, kwargs):
+    try:
+        handler(*args, **kwargs)
+    except:
+        core.active_event(MAIN.throw, *sys.exc_info())
 
 def signal(signalnum, handler, *args, **kwargs):
-    from gevent.greenlet import Greenlet
-    def wrapper():
-        Greenlet.spawn(handler, *args, **kwargs).rawlink(_deliver_exception_to_MAIN)
-    return core.signal(signalnum, wrapper)
+    return core.signal(signalnum, lambda : spawn_raw(_wrap_signal_handler, handler, args, kwargs))
 
 
 if _original_fork is not None:
