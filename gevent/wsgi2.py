@@ -96,7 +96,7 @@ class WSGIHandler(object):
                     sys.stderr.write('Failed to handle request:\n  request = %s\n  application = %s\n\n' % (req, server.application))
                 except:
                     pass
-                self.server.reply_error(self.request)
+                server.reply_error(self.request)
                 self = None
                 return
         finally:
