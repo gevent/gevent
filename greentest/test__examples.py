@@ -12,7 +12,7 @@ assert modules
 errors = []
 
 for path in modules:
-    if path.endswith('server.py'):
+    if path.endswith('server.py') or path.endswith('proxy.py'):
         print path, 'skipping'
     else:
         print path, 'running'
