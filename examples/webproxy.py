@@ -1,5 +1,5 @@
 #!/usr/bin/python
-from gevent import monkey; monkey.patch_all(dns=True)
+from gevent import monkey; monkey.patch_all()
 from gevent import wsgi2
 import sys
 import re
