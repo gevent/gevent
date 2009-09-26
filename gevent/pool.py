@@ -116,7 +116,7 @@ class GreenletSet(object):
             return self.spawn(func, *args, **kwds).get()
 
     def apply_async(self, func, args=None, kwds=None, callback=None):
-        """A variant of the apply() method which returns a result object.
+        """A variant of the apply() method which returns a Greenlet object.
 
         If callback is specified then it should be a callable which accepts a single argument. When the result becomes ready
         callback is applied to it (unless the call failed)."""
@@ -135,7 +135,7 @@ class GreenletSet(object):
 
     def map_async(self, func, iterable, callback=None):
         """
-        A variant of the map() method which returns a result object.
+        A variant of the map() method which returns a Greenlet object.
 
         If callback is specified then it should be a callable which accepts a
         single argument.
