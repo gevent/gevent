@@ -14,8 +14,8 @@ class HTTPServer(object):
 
     def __init__(self, handle=None, spawn='default'):
         self.listeners = []
-        self._serve_forever_event = None
-        self._done_event = None
+        self._stopped_event = Event()
+        self._no_connections_event = Event()
         self._requests = {} # maps connection -> list of requests
         self.http = core.http()
         self.http.set_gencb(self._cb_request)
@@ -35,6 +35,11 @@ class HTTPServer(object):
             fd = s.fileno()
         self.http.accept(fd)
         self.listeners.append(s)
+        self._stopped_event.clear()
+        if self._requests:
+            self._no_connections_event.clear()
+        else:
+            self._no_connections_event.set()
         return s
 
     def make_listener(self, address, backlog=None):
@@ -65,12 +70,10 @@ class HTTPServer(object):
         # TODO
         #3. Wait until every connection is closed or timeout expires
         if self._requests:
-            if self._done_event is None:
-                self._done_event = Event()
             t = Timeout.start_new(timeout)
             try:
                 try:
-                    self._done_event.wait(timeout=timeout)
+                    self._no_connections_event.wait(timeout=timeout)
                 except Timeout, ex:
                     if t is not ex:
                         raise
@@ -81,8 +84,7 @@ class HTTPServer(object):
         #5. free http instance
         self.http = None
         #6. notify event created in serve_forever()
-        if self._serve_forever_event is not None:
-            self._serve_forever_event.set()
+        self._stopped_event.set()
 
     def handle(self, request):
         request.send_reply(200, 'OK', 'It works!')
@@ -93,8 +95,8 @@ class HTTPServer(object):
         requests = self._requests.pop(connection._obj, [])
         for r in requests:
             r.detach()
-        if not self._requests and self._done_event is not None:
-            self._done_event.set()
+        if not self._requests:
+            self._no_connections_event.set()
 
     def _cb_request_processed(self, g):
         request = g._request
@@ -139,9 +141,7 @@ class HTTPServer(object):
         stop_timeout = kwargs.pop('stop_timeout', 0)
         self.start(*args, **kwargs)
         try:
-            if self._serve_forever_event is None:
-                self._serve_forever_event = Event()
-            self._serve_forever_event.wait()
+            self._stopped_event.wait()
         finally:
             Greenlet.spawn(self.stop, timeout=stop_timeout).join()
 
