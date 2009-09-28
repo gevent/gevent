@@ -29,7 +29,7 @@ def message_new(request):
     name = request.META.get('REMOTE_ADDR') or 'Anonymous'
     msg = new_message(name, request.POST['body'])
     messages.append(msg)
-    if len(messages)>MESSAGES_SIZE:
+    if len(messages) > MESSAGES_SIZE:
         del messages[0]
     new_message_event.set()
     new_message_event.clear()
@@ -37,9 +37,9 @@ def message_new(request):
 
 def message_updates(request):
     cursor = request.session.get('cursor')
-    if cursor==last_message_id():
+    if cursor == last_message_id():
         new_message_event.wait()
-    assert cursor!=last_message_id(), cursor
+    assert cursor != last_message_id(), cursor
     try:
         for index, m in enumerate(messages):
             if m['id'] == cursor:
