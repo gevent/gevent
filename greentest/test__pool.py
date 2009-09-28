@@ -14,7 +14,7 @@ class TestCoroutinePool(greentest.TestCase):
             done.set()
         pool = self.klass(2)
         pool.apply_async(some_work, ('x', ))
-        done.get()
+        done.wait()
 
     def test_apply(self):
         value = 'return value'
@@ -33,7 +33,7 @@ class TestCoroutinePool(greentest.TestCase):
 
         def consumer():
             results.append('cons1')
-            evt.get()
+            evt.wait()
             results.append('cons2')
 
         pool = self.klass(2)
@@ -64,10 +64,10 @@ class TestCoroutinePool(greentest.TestCase):
         evt = Event()
         def reenter_async():
             pool.apply_async(lambda a: a, ('reenter', ))
-            evt.set('done')
+            evt.set()
 
         pool.apply_async(reenter_async)
-        evt.get()
+        evt.wait()
 
     def test_stderr_raising(self):
         # testing that really egregious errors in the error handling code

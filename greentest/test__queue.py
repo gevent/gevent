@@ -2,7 +2,7 @@ from greentest import TestCase, main
 import gevent
 from gevent import util, core
 from gevent import queue
-from gevent.event import Event
+from gevent.event import AsyncResult
 
 
 class TestQueue(TestCase):
@@ -62,8 +62,8 @@ class TestQueue(TestCase):
             x = q.get()
             evt.set(x)
 
-        e1 = Event()
-        e2 = Event()
+        e1 = AsyncResult()
+        e2 = AsyncResult()
 
         p1 = gevent.spawn(sender, e1, q)
         gevent.sleep(0.001)
@@ -85,7 +85,7 @@ class TestQueue(TestCase):
             evt.set(q.get())
 
         sendings = ['1', '2', '3', '4']
-        evts = [Event() for x in sendings]
+        evts = [AsyncResult() for x in sendings]
         for i, x in enumerate(sendings):
             gevent.spawn(waiter, q, evts[i]) # use waitall for them
 
@@ -121,7 +121,7 @@ class TestQueue(TestCase):
             except RuntimeError:
                 evt.set('timed out')
 
-        evt = Event()
+        evt = AsyncResult()
         gevent.spawn(do_receive, q, evt)
         self.assertEquals(evt.get(), 'timed out')
 
@@ -152,8 +152,8 @@ class TestQueue(TestCase):
                 timeout.cancel()
 
         q = queue.Queue()
-        dying_evt = Event()
-        waiting_evt = Event()
+        dying_evt = AsyncResult()
+        waiting_evt = AsyncResult()
         gevent.spawn(do_receive, q, dying_evt)
         gevent.spawn(waiter, q, waiting_evt)
         gevent.sleep(0)
@@ -172,8 +172,8 @@ class TestQueue(TestCase):
             # XXX finally = timeout
 
         q = queue.Queue()
-        e1 = Event()
-        e2 = Event()
+        e1 = AsyncResult()
+        e2 = AsyncResult()
         gevent.spawn(do_receive, q, e1)
         gevent.spawn(do_receive, q, e2)
         gevent.sleep(0)

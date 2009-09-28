@@ -14,6 +14,10 @@ class TestAsyncResultWait(greentest.GenericWaitTestCase):
     def wait(self, timeout):
         AsyncResult().wait(timeout=timeout)
 
+class TestAsyncResultGet(greentest.GenericGetTestCase):
+
+    def wait(self, timeout):
+        AsyncResult().get(timeout=timeout)
 
 class TestAsyncResult(greentest.TestCase):
 
@@ -51,9 +55,9 @@ class TestAsyncResult(greentest.TestCase):
             g.kill(block=True)
 
 
-class TestLink_Signal(greentest.TestCase):
+class TestAsync_ResultAsLinkTarget(greentest.TestCase):
 
-    def test_put(self):
+    def test_set(self):
         g = gevent.spawn(lambda : 1)
         s1, s2, s3 = AsyncResult(), AsyncResult(), AsyncResult()
         g.link(s1)
@@ -63,7 +67,7 @@ class TestLink_Signal(greentest.TestCase):
         assert s2.get() == 1
         assert gevent.with_timeout(DELAY, s3.get, timeout_value=X) is X
 
-    def test_put_exception(self):
+    def test_set_exception(self):
         g = gevent.spawn(lambda : 1/0)
         s1, s2, s3 = AsyncResult(), AsyncResult(), AsyncResult()
         g.link(s1)

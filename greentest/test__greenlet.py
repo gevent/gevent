@@ -66,17 +66,6 @@ class TestLink(greentest.TestCase):
         finally:
             receiver.kill(block=True)
 
-    def test_link_to_event(self):
-        p = gevent.spawn(lambda : 100)
-        event = Event()
-        p.link(event.set)
-        self.assertEqual(event.get().get(), 100)
-
-        for i in xrange(3):
-            event2 = Event()
-            p.link(event2.set)
-            self.assertEqual(event2.get().get(), 100)
-
     def test_link_to_asyncresult(self):
         p = gevent.spawn(lambda : 100)
         event = AsyncResult()
@@ -456,8 +445,8 @@ class TestStuff(greentest.TestCase):
         p = gevent.spawn(lambda : 5)
         self._test_multiple_listeners_error_unlink(p, p.rawlink)
 
-    def test_multiple_listeners_error_unlink_Event_rawlink(self):
-        e = Event()
+    def test_multiple_listeners_error_unlink_AsyncResult_rawlink(self):
+        e = AsyncResult()
         gevent.spawn(e.set, 6)
         self._test_multiple_listeners_error_unlink(e, e.rawlink)
 
@@ -511,6 +500,11 @@ class TestJoin(greentest.GenericWaitTestCase):
 
     def wait(self, timeout):
         gevent.spawn(gevent.sleep, 10).join(timeout=timeout)
+
+class TestGet(greentest.GenericGetTestCase):
+
+    def wait(self, timeout):
+        gevent.spawn(gevent.sleep, 10).get(timeout=timeout)
 
 class TestJoinAll(greentest.GenericWaitTestCase):
 
