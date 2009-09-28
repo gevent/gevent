@@ -95,25 +95,65 @@ class CountingHub(_original_Hub):
 
 gevent.hub.Hub = CountingHub
 
+
+def test_outer_timeout_is_not_lost(self):
+    t = gevent.Timeout.start_new(0.01)
+    try:
+        self.wait(timeout=0.02)
+    except gevent.Timeout, ex:
+        assert ex is t, (ex, t)
+    else:
+        raise AssertionError('must raise Timeout')
+    gevent.sleep(0.02)
+
+
 class GenericWaitTestCase(TestCase):
 
     def wait(self, timeout):
         raise NotImplementedError('override me in subclass')
 
-    def test_outer_timeout_is_not_lost(self):
-        t = gevent.Timeout.start_new(0.01)
+    test_outer_timeout_is_not_lost = test_outer_timeout_is_not_lost
+
+    def test_returns_none_after_timeout(self):
+        start = time.time()
+        result = self.wait(timeout=0.01)
+        # join and wait simply returns after timeout expires
+        delay = time.time() - start
+        assert 0.01 <= delay < 0.01 + 0.01, delay
+        assert result is None, repr(result)
+
+class GenericGetTestCase(TestCase):
+
+    def wait(self, timeout):
+        raise NotImplementedError('override me in subclass')
+
+    test_outer_timeout_is_not_lost = test_outer_timeout_is_not_lost
+
+    def test_raises_timeout_number(self):
+        start = time.time()
+        self.assertRaises(gevent.Timeout, self.wait, timeout=0.01)
+        # get raises Timeout after timeout expired
+        delay = time.time() - start
+        assert 0.01 <= delay < 0.01 + 0.01, delay
+
+    def test_raises_timeout_Timeout(self):
+        start = time.time()
+        t = gevent.Timeout(0.01)
         try:
-            self.wait(timeout=0.02)
+            self.wait(timeout=t)
         except gevent.Timeout, ex:
             assert ex is t, (ex, t)
-        else:
-            raise AssertionError('must raise Timeout')
-        gevent.sleep(0.02)
+        delay = time.time() - start
+        assert 0.01 <= delay < 0.01 + 0.01, delay
 
-    def test_returns_after_timeout(self):
+    def test_raises_timeout_Timeout_exc_customized(self):
         start = time.time()
-        self.wait(timeout=0.01)
-        # join simply returns after timeout expires
+        error = RuntimeError('expected error')
+        t = gevent.Timeout(0.01, exception=error)
+        try:
+            self.wait(timeout=t)
+        except RuntimeError, ex:
+            assert ex is error, (ex, error)
         delay = time.time() - start
         assert 0.01 <= delay < 0.01 + 0.01, delay
 
