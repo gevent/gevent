@@ -86,6 +86,8 @@ class Timeout(BaseException):
     @classmethod
     def start_new(cls, timeout=None, exception=None):
         if isinstance(timeout, Timeout):
+            if not timeout.pending:
+                timeout.start()
             return timeout
         timeout = cls(timeout, exception)
         timeout.start()
