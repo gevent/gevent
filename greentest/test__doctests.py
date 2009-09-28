@@ -10,7 +10,7 @@ modules = set()
 def myfunction(*args, **kwargs):
     pass
 
-globs = {'myfunction': myfunction}
+globs = {'myfunction': myfunction, 'gevent': gevent}
 
 for path, dirs, files in os.walk(base):
     package = 'gevent' + path.replace(base, '').replace('/', '.')
