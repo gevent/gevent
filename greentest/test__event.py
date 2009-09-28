@@ -77,6 +77,26 @@ class TestAsync_ResultAsLinkTarget(greentest.TestCase):
         assert gevent.with_timeout(DELAY, s2.get, timeout_value=X) is X
         self.assertRaises(ZeroDivisionError, s3.get)
 
+
+class TestEvent_SetThenClear(greentest.TestCase):
+    N = 1
+
+    def test(self):
+        e = Event()
+        waiters = [gevent.spawn(e.wait) for i in xrange(self.N)]
+        gevent.sleep(0.001)
+        e.set()
+        e.clear()
+        for t in waiters:
+            t.join()
+
+class TestEvent_SetThenClear100(TestEvent_SetThenClear):
+    N = 100
+
+class TestEvent_SetThenClear1000(TestEvent_SetThenClear):
+    N = 1000
+
+
 X = object()
 
 if __name__=='__main__':
