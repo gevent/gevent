@@ -83,6 +83,8 @@ class TestStop(BoundTestCase):
         s.close()
         self.http.stop()
         gevent.sleep(0.02)
+        # stopping what already stopped is OK
+        self.http.stop()
 
 
 class TestSendReply(BoundTestCase):
