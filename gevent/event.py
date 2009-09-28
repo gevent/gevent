@@ -4,7 +4,7 @@ import sys
 import traceback
 from gevent import core
 from gevent.hub import get_hub, getcurrent
-from gevent.timeout import Timeout
+from gevent.timeout import Timeout, _NONE
 
 
 class Event(object):
@@ -193,7 +193,4 @@ def waitall(events):
     finally:
         for event in events:
             event.unlink(put)
-
-
-_NONE = object()
 
