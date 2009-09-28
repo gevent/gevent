@@ -170,5 +170,9 @@ def with_timeout(seconds, func, *args, **kwds):
         timeout.cancel()
 
 
-_NONE = object()
+class _NONE(object):
+    __slots__ = []
+    def __repr__(self):
+        return '<_NONE>'
 
+_NONE = _NONE()
