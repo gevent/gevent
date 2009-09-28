@@ -261,29 +261,25 @@ class JoinableQueue(Queue):
     def __init__(self, maxsize=None):
         from gevent.event import Event
         Queue.__init__(self, maxsize)
-        self._unfinished_tasks = 0
+        self.unfinished_tasks = 0
         self._cond = Event()
-
-    @property
-    def unfinished_tasks(self):
-        return self._unfinished_tasks
 
     def _format(self):
         result = Queue._format(self)
-        if self._unfinished_tasks:
-            result += ' tasks=%r' % self._unfinished_tasks
+        if self.unfinished_tasks:
+            result += ' tasks=%s _cond=%s' % (self.unfinished_tasks, self._cond)
         return result
 
     def put(self, item, block=True, timeout=None):
         Queue.put(self, item, block, timeout)
-        self._unfinished_tasks += 1
+        self.unfinished_tasks += 1
         self._cond.clear()
 
     def task_done(self):
-        if self._unfinished_tasks <= 0:
+        if self.unfinished_tasks <= 0:
             raise ValueError('task_done() called too many times')
-        self._unfinished_tasks -= 1
-        if self._unfinished_tasks == 0:
+        self.unfinished_tasks -= 1
+        if self.unfinished_tasks == 0:
             self._cond.set()
 
     def join(self):
