@@ -1,7 +1,7 @@
 # Copyright (c) 2009 Denis Bilenko. See LICENSE for details.
 
-version_info = (0, 10, 0)
-__version__ = '0.10.0'
+version_info = (0, 11, 0)
+__version__ = '0.11.0'
 
 __all__ = ['Greenlet',
            'GreenletExit',
