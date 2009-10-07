@@ -25,7 +25,7 @@ from gevent import socket
 class TestSocketErrors(greentest.TestCase):
 
     def test_connection_refused(self):
-        s = socket.GreenSocket()
+        s = socket.socket()
         try:
             s.connect(('127.0.0.1', 81))
         except socket.error, ex:

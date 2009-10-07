@@ -19,7 +19,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
-"""This test checks that socket instances (not GreenSockets but underlying sockets)
+"""This test checks that socket instances (not gevent.socket.socket but underlying sockets)
 are not leaked by the hub.
 """
 from gevent import monkey

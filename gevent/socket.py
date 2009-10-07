@@ -139,7 +139,7 @@ _delegate_methods = ("recv", "recvfrom", "recv_into", "recvfrom_into", "send", "
 
 timeout_default = object()
 
-class GreenSocket(object):
+class socket(object):
     is_secure = False # XXX remove this
 
     def __init__(self, family_or_realsock=_socket.AF_INET, *args, **kwargs):
@@ -333,15 +333,16 @@ class GreenSocket(object):
     def gettimeout(self):
         return self.timeout
 
+GreenSocket = socket # XXX this alias will be removed
 
 SysCallError_code_mapping = {-1: 8}
 
 
-class GreenSSL(GreenSocket):
+class GreenSSL(socket):
     is_secure = True
 
     def __init__(self, fd, server_side=False):
-        GreenSocket.__init__(self, fd)
+        socket.__init__(self, fd)
         self._makefile_refs = 0
         if server_side:
             self.fd.set_accept_state()
@@ -389,7 +390,7 @@ class GreenSSL(GreenSocket):
                 raise sslerror(str(ex))
 
     def connect(self, *args):
-        GreenSocket.connect(self, *args)
+        socket.connect(self, *args)
         self.do_handshake()
 
     def send(self, data, timeout=timeout_default):
@@ -467,11 +468,11 @@ class GreenSSL(GreenSocket):
 
 def socketpair(*args):
     one, two = _socket.socketpair(*args)
-    return GreenSocket(one), GreenSocket(two)
+    return socket(one), socket(two)
 
 
 def fromfd(*args):
-    return GreenSocket(_socket.fromfd(*args))
+    return socket(_socket.fromfd(*args))
 
 def socket_bind_and_listen(descriptor, addr=('', 0), backlog=50):
     set_reuse_addr(descriptor)
@@ -495,7 +496,7 @@ def tcp_listener(address, backlog=50):
     which accepts connections forever and spawns greenlets for
     each incoming connection.
     """
-    sock = GreenSocket()
+    sock = socket()
     socket_bind_and_listen(sock, address, backlog=backlog)
     return sock
 
@@ -524,7 +525,7 @@ def connect_tcp(address, localaddr=None):
     Create a TCP connection to address (host, port) and return the socket.
     Optionally, bind to localaddr (host, port) first.
     """
-    desc = GreenSocket()
+    desc = socket()
     if localaddr is not None:
         desc.bind(localaddr)
     desc.connect(address)
@@ -576,7 +577,7 @@ def create_connection(address, timeout=_GLOBAL_DEFAULT_TIMEOUT):
         af, socktype, proto, canonname, sa = res
         sock = None
         try:
-            sock = GreenSocket(af, socktype, proto)
+            sock = socket(af, socktype, proto)
             if timeout is not _GLOBAL_DEFAULT_TIMEOUT:
                 sock.settimeout(timeout)
             sock.connect(sa)
