@@ -69,15 +69,15 @@ class Test(greentest.TestCase):
         assert isinstance(result, AssertionError), result
         assert 'Invalid switch' in str(result), repr(str(result))
 
-    def test_wait_reader_invalid_switch(self):
-        p = gevent.spawn(util.wrap_errors(AssertionError, socket.wait_reader), 0)
+    def test_wait_read_invalid_switch(self):
+        p = gevent.spawn(util.wrap_errors(AssertionError, socket.wait_read), 0)
         gevent.spawn(p.switch, None)
         result = p.get()
         assert isinstance(result, AssertionError), result
         assert 'Invalid switch' in str(result), repr(str(result))
 
-    def test_wait_writer_invalid_switch(self):
-        p = gevent.spawn(util.wrap_errors(AssertionError, socket.wait_writer), 0)
+    def test_wait_write_invalid_switch(self):
+        p = gevent.spawn(util.wrap_errors(AssertionError, socket.wait_write), 0)
         gevent.spawn(p.switch, None)
         result = p.get()
         assert isinstance(result, AssertionError), result

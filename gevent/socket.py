@@ -54,20 +54,20 @@ def _wait_helper(ev, evtype):
         current.switch(ev)
 
 
-def wait_reader(fileno, timeout=-1, timeout_exc=_socket.timeout):
+def wait_read(fileno, timeout=-1, timeout_exc=_socket.timeout):
     evt = core.read_event(fileno, _wait_helper, timeout, (getcurrent(), timeout_exc))
     try:
         switch_result = get_hub().switch()
-        assert evt is switch_result, 'Invalid switch into wait_reader(): %r' % (switch_result, )
+        assert evt is switch_result, 'Invalid switch into wait_read(): %r' % (switch_result, )
     finally:
         evt.cancel()
 
 
-def wait_writer(fileno, timeout=-1, timeout_exc=_socket.timeout):
+def wait_write(fileno, timeout=-1, timeout_exc=_socket.timeout):
     evt = core.write_event(fileno, _wait_helper, timeout, (getcurrent(), timeout_exc))
     try:
         switch_result = get_hub().switch()
-        assert evt is switch_result, 'Invalid switch into wait_writer(): %r' % (switch_result, )
+        assert evt is switch_result, 'Invalid switch into wait_write(): %r' % (switch_result, )
     finally:
         evt.cancel()
 
@@ -204,7 +204,7 @@ class GreenSocket(object):
             if res is not None:
                 client, addr = res
                 return type(self)(client), addr
-            wait_reader(fd.fileno(), timeout=self.timeout, timeout_exc=timeout)
+            wait_read(fd.fileno(), timeout=self.timeout, timeout_exc=timeout)
 
     def close(self):
         self.fd = _closedsocket()
@@ -220,7 +220,7 @@ class GreenSocket(object):
         fd = self.fd
         if self.timeout is None:
             while not socket_connect(fd, address):
-                wait_writer(fd.fileno(), timeout_exc=timeout)
+                wait_write(fd.fileno(), timeout_exc=timeout)
         else:
             end = time.time() + self.timeout
             while True:
@@ -228,7 +228,7 @@ class GreenSocket(object):
                     return
                 if time.time() >= end:
                     raise timeout
-                wait_writer(fd.fileno(), timeout=end-time.time(), timeout_exc=timeout)
+                wait_write(fd.fileno(), timeout=end-time.time(), timeout_exc=timeout)
 
     def connect_ex(self, address):
         if self.timeout==0.0:
@@ -237,7 +237,7 @@ class GreenSocket(object):
         if self.timeout is None:
             while not socket_connect(fd, address):
                 try:
-                    wait_writer(fd.fileno(), timeout_exc=timeout)
+                    wait_write(fd.fileno(), timeout_exc=timeout)
                 except error, ex:
                     return ex[0]
         else:
@@ -248,7 +248,7 @@ class GreenSocket(object):
                 if time.time() >= end:
                     raise timeout
                 try:
-                    wait_writer(fd.fileno(), timeout=end-time.time(), timeout_exc=timeout)
+                    wait_write(fd.fileno(), timeout=end-time.time(), timeout_exc=timeout)
                 except error, ex:
                     return ex[0]
 
@@ -263,30 +263,30 @@ class GreenSocket(object):
 
     def recv(self, *args):
         if self.timeout!=0.0:
-            wait_reader(self.fileno(), timeout=self.timeout, timeout_exc=timeout)
+            wait_read(self.fileno(), timeout=self.timeout, timeout_exc=timeout)
         res = self.fd.recv(*args)
         return res
 
     def recvfrom(self, *args):
         if self.timeout!=0.0:
-            wait_reader(self.fileno(), timeout=self.timeout, timeout_exc=timeout)
+            wait_read(self.fileno(), timeout=self.timeout, timeout_exc=timeout)
         return self.fd.recvfrom(*args)
 
     def recvfrom_into(self, *args):
         if self.timeout!=0.0:
-            wait_reader(self.fileno(), timeout=self.timeout, timeout_exc=timeout)
+            wait_read(self.fileno(), timeout=self.timeout, timeout_exc=timeout)
         return self.fd.recvfrom_into(*args)
 
     def recv_into(self, *args):
         if self.timeout!=0.0:
-            wait_reader(self.fileno(), timeout=self.timeout, timeout_exc=timeout)
+            wait_read(self.fileno(), timeout=self.timeout, timeout_exc=timeout)
         return self.fd.recv_into(*args)
 
     def send(self, data, timeout=timeout_default):
         if timeout is timeout_default:
             timeout = self.timeout
         if timeout!=0.0:
-            wait_writer(self.fileno(), timeout=timeout, timeout_exc=_socket.timeout)
+            wait_write(self.fileno(), timeout=timeout, timeout_exc=_socket.timeout)
         return self.fd.send(data)
 
     def sendall(self, data):
@@ -308,7 +308,7 @@ class GreenSocket(object):
 
     def sendto(self, *args):
         if self.timeout!=0.0:
-            wait_writer(self.fileno(), timeout=self.timeout, timeout_exc=timeout)
+            wait_write(self.fileno(), timeout=self.timeout, timeout_exc=timeout)
         return self.fd.sendto(*args)
 
     def setblocking(self, flag):
@@ -372,7 +372,7 @@ class GreenSSL(GreenSocket):
                 accepted = type(self)(client, server_side=True)
                 accepted.do_handshake()
                 return accepted, addr
-            wait_reader(fd.fileno(), timeout=self.timeout, timeout_exc=timeout)
+            wait_read(fd.fileno(), timeout=self.timeout, timeout_exc=timeout)
 
     def do_handshake(self):
         while True:
@@ -380,9 +380,9 @@ class GreenSSL(GreenSocket):
                 self.fd.do_handshake()
                 break
             except SSL.WantReadError:
-                wait_reader(self.fileno())
+                wait_read(self.fileno())
             except SSL.WantWriteError:
-                wait_writer(self.fileno())
+                wait_write(self.fileno())
             except SSL.SysCallError, ex:
                 raise sslerror(SysCallError_code_mapping.get(ex.args[0], ex.args[0]), ex.args[1])
             except SSL.Error, ex:
@@ -402,12 +402,12 @@ class GreenSSL(GreenSocket):
                 if self.timeout==0.0:
                     raise timeout(str(ex))
                 else:
-                    wait_writer(self.fileno(), timeout=timeout, timeout_exc=_socket.timeout)
+                    wait_write(self.fileno(), timeout=timeout, timeout_exc=_socket.timeout)
             except SSL.WantReadError, ex:
                 if self.timeout==0.0:
                     raise timeout(str(ex))
                 else:
-                    wait_reader(self.fileno(), timeout=timeout, timeout_exc=_socket.timeout)
+                    wait_read(self.fileno(), timeout=timeout, timeout_exc=_socket.timeout)
             except SSL.SysCallError, e:
                 if e[0] == -1 and data == "":
                     # errors when writing empty strings are expected and can be ignored
@@ -427,12 +427,12 @@ class GreenSSL(GreenSocket):
                 if self.timeout==0.0:
                     raise timeout(str(ex))
                 else:
-                    wait_reader(self.fileno(), timeout=self.timeout, timeout_exc=timeout)
+                    wait_read(self.fileno(), timeout=self.timeout, timeout_exc=timeout)
             except SSL.WantWriteError, ex:
                 if self.timeout==0.0:
                     raise timeout(str(ex))
                 else:
-                    wait_reader(self.fileno(), timeout=self.timeout, timeout_exc=timeout)
+                    wait_read(self.fileno(), timeout=self.timeout, timeout_exc=timeout)
             except SSL.ZeroReturnError:
                 return ''
             except SSL.SysCallError, ex:
