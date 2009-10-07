@@ -265,7 +265,7 @@ class TestNoWait(TestCase):
         assert q.empty(), q
         assert q.full(), q
         gevent.sleep(0)
-        assert not q.empty(), q
+        assert q.empty(), q
         assert q.full(), q
         core.active_event(store_result, util.wrap_errors(Exception, q.get_nowait))
         gevent.sleep(0)
@@ -287,7 +287,7 @@ class TestNoWait(TestCase):
         assert q.full(), q
         gevent.sleep(0)
         assert q.empty(), q
-        assert not q.full(), q
+        assert q.full(), q
         core.active_event(store_result, util.wrap_errors(Exception, q.put_nowait), 10)
         assert not p.ready(), p
         gevent.sleep(0)

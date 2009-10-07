@@ -64,18 +64,15 @@ class Queue(object):
         return len(self.queue)
 
     def empty(self):
-        """Return True if the queue is empty, False otherwise.
-
-        Queue is not empty if there are greenlets blocking on put()
-        """
-        return not self.qsize() and not self.putters
+        """Return ``True`` if the queue is empty, ``False`` otherwise."""
+        return not self.qsize()
 
     def full(self):
         """Return True if the queue is full, False otherwise.
 
         Queue(None) is never full.
         """
-        return self.qsize() + len(self.putters) - len(self.getters) >= self.maxsize
+        return self.qsize() >= self.maxsize
 
     def put(self, item, block=True, timeout=None):
         """Put an item into the queue.
