@@ -1,3 +1,5 @@
+__all__ += ['http_request', 'http_connection', 'http']
+
 EVHTTP_REQUEST      = 0
 EVHTTP_RESPONSE     = 1
 

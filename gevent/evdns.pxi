@@ -1,3 +1,6 @@
+__all__ += ['dns_init', 'dns_shutdown', 'dns_resolve_ipv4', 'dns_resolve_ipv6',
+            'dns_resolve_reverse', 'dns_resolve_reverse_ipv6', 'dns_shutdown']
+
 cdef extern from "netinet/in.h":
     cdef enum:
         INET6_ADDRSTRLEN
@@ -139,3 +142,4 @@ def dns_resolve_reverse_ipv6(char *ip, int flags, callback, *args):
 def dns_shutdown(int fail_requests=0):
     """Shutdown the async DNS resolver and terminate all active requests."""
     evdns_shutdown(fail_requests)
+

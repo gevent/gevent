@@ -1,3 +1,5 @@
+__all__ += ['buffer']
+
 cdef extern from "libevent.h":
     struct evbuffer:
         char *buf "buffer"

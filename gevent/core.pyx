@@ -35,6 +35,10 @@ __license__ = 'BSD'
 __url__ = 'http://monkey.org/~dugsong/pyevent/'
 __version__ = '0.4+'
 
+__all__ = ['event', 'read_event', 'write_event', 'timer', 'signal', 'active_event',
+           'init', 'dispatch', 'loop', 'get_version', 'get_method', 'get_header_version']
+# note, that .pxi files append stuff to __all__
+
 import sys
 import traceback
 from pprint import pformat
