@@ -56,15 +56,11 @@ def spawn_raw(function, *args, **kwargs):
 
 
 def sleep(seconds=0):
-    """Yield control to another eligible coroutine until at least *seconds* have
-    elapsed.
+    """Put the current greenlet to sleep for at least *seconds*.
 
     *seconds* may be specified as an integer, or a float if fractional seconds
     are desired. Calling sleep with *seconds* of 0 is the canonical way of
-    expressing a cooperative yield. For example, if one is looping over a
-    large list performing an expensive calculation without calling any socket
-    methods, it's a good idea to call ``sleep(0)`` occasionally; otherwise
-    nothing else will run.
+    expressing a cooperative yield.
     """
     unique_mark = object()
     t = core.timer(seconds, getcurrent().switch, unique_mark)
@@ -79,8 +75,9 @@ def sleep(seconds=0):
 def kill(greenlet, exception=GreenletExit):
     """Kill greenlet asynchronously. The current greenlet is not unscheduled.
 
-    Note, that Greenlet's kill() method does the same and more. However, MAIN
-    greenlet does not have kill() method so you have to use this function.
+    Note, that :meth:`gevent.Greenlet.kill` method does the same and more. However,
+    MAIN greenlet - the one that exists initially - does not have ``kill()`` method
+    so you have to use this function.
     """
     if not greenlet.dead:
         core.active_event(greenlet.throw, exception)
@@ -130,6 +127,10 @@ def get_hub():
 
 
 class Hub(greenlet):
+    """A greenlet that runs the event loop.
+
+    It is created automatically by :func:`get_hub`.
+    """
 
     def __init__(self):
         self.keyboard_interrupt_signal = None
@@ -192,13 +193,14 @@ class DispatchExit(Exception):
 class Waiter(object):
     """A low level synchronization class.
 
-    Wrapper around switch() and throw() calls that makes them safe:
-    a) switching will occur only if the waiting greenlet is executing wait()
-       method currently. Otherwise, switch() and throw() are no-ops.
-    b) any error raised in the greenlet is handled inside switch() and throw()
+    Wrapper around greenlet's ``switch()`` and ``throw()`` calls that makes them safe:
 
-    switch and throw methods must only be called from the mainloop greenlet.
-    wait must be called from a greenlet other than mainloop.
+    * switching will occur only if the waiting greenlet is executing :meth:`wait`
+      method currently. Otherwise, :meth:`switch` and :meth:`throw` are no-ops.
+    * any error raised in the greenlet is handled inside :meth:`switch` and :meth:`throw`
+
+    The :meth:`switch` and :meth:`throw` methods must only be called from the :class:`Hub` greenlet.
+    The :meth:`wait` method must be called from a greenlet other than :class:`Hub`.
     """
     __slots__ = ['greenlet']
 
@@ -252,7 +254,7 @@ class Waiter(object):
             except:
                 traceback.print_exc()
 
-    # QQQ should be renamed to get() ? and the whole class is called Receiver?
+    # XXX should be renamed to get() ? and the whole class is called Receiver?
     def wait(self):
         """Wait until switch() or throw() is called.
         """
@@ -262,4 +264,7 @@ class Waiter(object):
             return get_hub().switch()
         finally:
             self.greenlet = None
+
+    # can also have a debugging version, that wraps the value in a tuple (self, value) in switch()
+    # and unwraps it in wait() thus checking that switch() was indeed called
 
