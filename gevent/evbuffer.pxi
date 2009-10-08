@@ -13,6 +13,10 @@ cdef extern from "libevent.h":
 
 
 cdef class buffer:
+    """file-like wrapper for libevent's :class:`evbuffer` structure.
+
+    Note, that the wrapper does not own the structure, libevent does.
+    """
     cdef evbuffer* __obj
 
     def __init__(self, size_t _obj):
@@ -35,6 +39,10 @@ cdef class buffer:
     #        yield self.readline()
 
     def read(self, long size=-1):
+        """Drain the first *size* bytes from the buffer (or what's left if there are less than *size* bytes).
+
+        If *size* is negative, drain the whole buffer.
+        """
         cdef long length = evbuffer_get_length(self.__obj)
         if size < 0:
             size = length
@@ -60,4 +68,3 @@ cdef class buffer:
     def readlines(self, hint=-1):
         return list(self.__iter__())
 
- 

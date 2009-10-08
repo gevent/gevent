@@ -7,11 +7,24 @@
 # Copyright (c) 2003 Martin Murray <murrayma@citi.umich.edu>
 #
 
-"""event library
+"""Wrappers around libevent API.
 
 This module provides a mechanism to execute a function when a
 specific event on a file handle, file descriptor, or signal occurs,
-or after a given time has passed.
+or after a given time has passed. It also provides wrappers around
+structures and functions from libevent-dns and libevent-http.
+
+This module does not work with the greenlets. A callback passed
+to a method from this module will be executed in the event loop,
+which is running in the :class:`Hub <gevent.hub.Hub>` greenlet.
+Therefore it must not use any synchronous gevent API,
+that is, the functions that switch to the Hub. It's OK to call asynchronous
+stuff like :func:`gevent.spawn`, :meth:`Event.set <gevent.event.Event.set` or
+:meth:`Queue.put_nowait <gevent.queue.Queue.put_nowait>`.
+
+The code is based on pyevent_.
+
+.. _pyevent: http://code.google.com/p/pyevent/
 """
 
 __author__ = ( 'Dug Song <dugsong@monkey.org>',
@@ -128,17 +141,12 @@ cdef void __event_handler(int fd, short evtype, void *arg) with gil:
 
 
 cdef class event:
-    """event(callback, arg=None, evtype=0, handle=None) -> event object
+    """Create a new event object with a user callback.
 
-    Create a new event object with a user callback.
-
-    Arguments:
-
-    callback -- user callback with (ev, handle, evtype, arg) prototype
-    arg      -- optional callback arguments
-    evtype   -- bitmask of EV_READ or EV_WRITE, or EV_SIGNAL
-    handle   -- for EV_READ or EV_WRITE, a file handle, descriptor, or socket
-                for EV_SIGNAL, a signal number
+    - *evtype*   -- bitmask of EV_READ or EV_WRITE, or EV_SIGNAL
+    - *handle*   -- a file handle, descriptor, or socket for EV_READ or EV_WRITE; a signal number for EV_SIGNAL
+    - *callback* -- user callback with ``(event, evtype)`` prototype
+    - *arg*      -- optional object, which will be made available as :attr:`arg` property.
     """
     cdef event_t ev
     cdef object _callback, _arg
@@ -153,6 +161,10 @@ cdef class event:
             event_set(&self.ev, handle, evtype, __event_handler, c_self)
 
     property callback:
+        """User callback that will be called once the event is signalled.
+
+        The prototype: ``callback(event instance, evtype)``.
+        """
 
         def __get__(self):
             return self._callback
@@ -161,6 +173,7 @@ cdef class event:
             self._callback = new
 
     property arg:
+        """Optional object set and read only by the user."""
 
         def __get__(self):
             return self._arg
@@ -169,6 +182,7 @@ cdef class event:
             self._arg = new
 
     property pending:
+        """Return True if the event is still scheduled to run."""
 
         def __get__(self):
             return event_pending(&self.ev, EV_TIMEOUT|EV_SIGNAL|EV_READ|EV_WRITE, NULL)
@@ -206,12 +220,8 @@ cdef class event:
             return self.ev.ev_flags
 
     def add(self, timeout=-1):
-        """Add event to be executed after an optional timeout.
-
-        Arguments:
-
-        timeout -- seconds after which the event will be executed
-        """
+        """Add event to be executed after an optional *timeout* - number of seconds
+        after which the event will be executed."""
         cdef timeval tv
         cdef double c_timeout
         cdef int result
@@ -270,6 +280,7 @@ cdef class event:
 
 
 cdef class read_event(event):
+    """Create a new scheduled event with evtype=EV_READ"""
 
     def __init__(self, int handle, callback, timeout=-1, arg=None):
         event.__init__(self, EV_READ, handle, callback, arg)
@@ -277,6 +288,7 @@ cdef class read_event(event):
 
 
 cdef class write_event(event):
+    """Create a new scheduled event with evtype=EV_WRITE"""
 
     def __init__(self, int handle, callback, timeout=-1, arg=None):
         event.__init__(self, EV_WRITE, handle, callback, arg)
@@ -300,6 +312,7 @@ cdef void __simple_handler(int fd, short evtype, void *arg) with gil:
 
 
 cdef class timer(event):
+    """Create a new scheduled timer"""
 
     def __init__(self, float seconds, callback, *args, **kwargs):
         self._callback = callback
@@ -309,6 +322,7 @@ cdef class timer(event):
 
 
 cdef class signal(event):
+    """Create a new persistent signal event"""
 
     def __init__(self, int signalnum, callback, *args, **kwargs):
         self._callback = callback
@@ -366,10 +380,12 @@ def loop(nonblock=False):
 
 
 def get_version():
+    """Wrapper for :meth:`event_get_version`"""
     return event_get_version()
 
 
 def get_method():
+    """Wrapper for :meth:`event_get_method`"""
     return event_get_method()
 
 
@@ -382,6 +398,7 @@ cdef extern from *:
 # _EVENT_VERSION is available since libevent 1.4.0-beta
 
 def get_header_version():
+    """Return _EVENT_VERSION"""
     emit_ifdef()
     return _EVENT_VERSION
     emit_endif()
@@ -392,6 +409,7 @@ def get_header_version():
 # which will work in every version other than 1.4.0-beta
 
 def reinit():
+    """Wrapper for :meth:`event_reinit`."""
     emit_ifdef()
     return event_reinit(current_base)
     emit_endif()

@@ -87,12 +87,10 @@ cdef void __evdns_callback(int result, char t, int count, int ttl,
 def dns_resolve_ipv4(char *name, int flags, callback, *args):
     """Lookup an A record for a given name.
 
-    Arguments:
-
-    name     -- DNS hostname
-    flags    -- either 0 or DNS_QUERY_NO_SEARCH
-    callback -- callback with (result, type, ttl, addrs, *args) prototype
-    args     -- option callback arguments
+    - *name*     -- DNS hostname
+    - *flags*    -- either 0 or DNS_QUERY_NO_SEARCH
+    - *callback* -- callback with ``(result, type, ttl, addrs, *args)`` prototype
+    - *args*     -- option callback arguments
     """
     t = (callback, args)
     Py_INCREF(t)
@@ -101,12 +99,10 @@ def dns_resolve_ipv4(char *name, int flags, callback, *args):
 def dns_resolve_ipv6(char *name, int flags, callback, *args):
     """Lookup an AAAA record for a given name.
 
-    Arguments:
-
-    name     -- DNS hostname
-    flags    -- either 0 or DNS_QUERY_NO_SEARCH
-    callback -- callback with (result, type, ttl, addrs, *args) prototype
-    args     -- option callback arguments
+    - *name*     -- DNS hostname
+    - *flags*    -- either 0 or DNS_QUERY_NO_SEARCH
+    - *callback* -- callback with ``(result, type, ttl, addrs, *args)`` prototype
+    - *args*     -- option callback arguments
     """
     t = (callback, args)
     Py_INCREF(t)
@@ -115,12 +111,10 @@ def dns_resolve_ipv6(char *name, int flags, callback, *args):
 def dns_resolve_reverse(char *ip, int flags, callback, *args):
     """Lookup a PTR record for a given IPv4 address.
 
-    Arguments:
-
-    name     -- IPv4 address (as 4-byte binary string)
-    flags    -- either 0 or DNS_QUERY_NO_SEARCH
-    callback -- callback with (result, type, ttl, addrs, *args) prototype
-    args     -- option callback arguments
+    - *name*     -- IPv4 address (as 4-byte binary string)
+    - *flags*    -- either 0 or DNS_QUERY_NO_SEARCH
+    - *callback* -- callback with ``(result, type, ttl, addrs, *args)`` prototype
+    - *args*     -- option callback arguments
     """
     t = (callback, args)
     Py_INCREF(t)
@@ -131,12 +125,10 @@ def dns_resolve_reverse(char *ip, int flags, callback, *args):
 def dns_resolve_reverse_ipv6(char *ip, int flags, callback, *args):
     """Lookup a PTR record for a given IPv6 address.
 
-    Arguments:
-
-    name     -- IPv6 address (as 16-byte binary string)
-    flags    -- either 0 or DNS_QUERY_NO_SEARCH
-    callback -- callback with (result, type, ttl, addrs, *args) prototype
-    args     -- option callback arguments
+    - *name*     -- IPv6 address (as 16-byte binary string)
+    - *flags*    -- either 0 or DNS_QUERY_NO_SEARCH
+    - *callback* -- callback with ``(result, type, ttl, addrs, *args)`` prototype
+    - *args*     -- option callback arguments
     """
     t = (callback, args)
     Py_INCREF(t)
