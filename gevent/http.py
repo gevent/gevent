@@ -55,12 +55,7 @@ class HTTPServer(object):
         return s
 
     def stop(self, timeout=0):
-        """Shutdown the server.
-
-        1. Close all the listening sockets.
-        TODO: 2. Set "keep-alive" connections to "close"; reply with "Connection: close";
-        3. Wait until every connection is closed or timeout expires
-        """
+        """Shutdown the server."""
         for s in self.listeners:
             s.close()
         self.socket = []
