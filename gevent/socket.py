@@ -20,7 +20,15 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
-__all__ = ['GreenSocket', 'GreenFile', 'GreenPipe']
+"""Cooperative socket module.
+
+This module provides socket operations and some related functions.
+The API of the functions and classes matches the API of the corresponding
+items in standard :mod:`socket` module exactly, but the synchronous functions
+in this module only block the current greenlet and let the others run.
+"""
+
+__all__ = ['socket', 'socketpair', 'fromfd', 'gethostbyname', 'getaddrinfo', 'getnameinfo', 'wrap_ssl']
 
 import _socket
 _original_socket = _socket.socket          # XXX remove it
@@ -662,17 +670,19 @@ else:
 
     def gethostbyname(hostname):
         """gethostbyname implemented using EvDNS.
+
         Differs in the following ways:
-        - raises gaierror with EvDNS error codes instead of standard socket error codes
-        - does not support /etc/hosts (see code for hacks to make localhost work)
-        - does not iterate through all addresses, instead picks a random one each time
+
+        * raises gaierror with EvDNS error codes instead of standard socket error codes
+        * does not support /etc/hosts (see code for hacks to make localhost work)
+        * does not iterate through all addresses, instead picks a random one each time
         """
         # TODO: this is supposed to iterate through all the addresses
         # could use a global dict(hostname, iter)
         # - fix these nasty hacks for localhost, ips, etc.
-        if hostname == 'localhost': # hack
+        if hostname == 'localhost': # QQQ should use /etc/hosts
             return '127.0.0.1'
-        if _ip_re.match(hostname): # hack
+        if _ip_re.match(hostname):
             return hostname
         if hostname == _socket.gethostname():
             return _socket.gethostbyname(hostname)
@@ -685,14 +695,16 @@ else:
 
     def getaddrinfo(host, port, family=__socket__.AF_UNSPEC, socktype=__socket__.SOCK_STREAM, proto=0, flags=0):
         """getaddrinfo implemented using EvDNS.
+
         Differs in the following ways:
-        - raises gaierror with EvDNS error codes instead of standard socket error codes
-        - does not support /etc/hosts
-        - IPv6 support is untested.
-        - AF_UNSPEC only tries IPv4
-        - only supports TCP, UDP, IP protocols
-        - port must be numeric, does not support string service names. see socket.getservbyname
-        - only supported value for flags is core.DNS_QUERY_NO_SEARCH, see evdns.h
+
+        * raises gaierror with EvDNS error codes instead of standard socket error codes
+        * does not support /etc/hosts
+        * IPv6 support is untested.
+        * AF_UNSPEC only tries IPv4
+        * only supports TCP, UDP, IP protocols
+        * port must be numeric, does not support string service names. see socket.getservbyname
+        * only supported value for flags is core.DNS_QUERY_NO_SEARCH, see evdns.h
         """
         if _ip_re.match(host):
             return [(__socket__.AF_INET, socktype, p, '', (host, port)) for p in (6, 17, 0)]
@@ -718,12 +730,14 @@ else:
 
     def getnameinfo(sockaddr, flags):
         """getnameinfo implemented using EvDNS.
+
         Differs in the following ways:
-        - raises gaierror with EvDNS error codes instead of standard socket error codes
-        - does not support /etc/hosts
-        - IPv6 support is untested.
-        - port must be numeric, does not support string service names. see socket.getservbyname
-        - only supported value for flags is core.DNS_QUERY_NO_SEARCH, see evdns.h
+
+        * raises gaierror with EvDNS error codes instead of standard socket error codes
+        * does not support /etc/hosts
+        * IPv6 support is untested.
+        * port must be numeric, does not support string service names. see socket.getservbyname
+        * only supported value for flags is core.DNS_QUERY_NO_SEARCH, see evdns.h
         """
 
         # http://svn.python.org/view/python/trunk/Modules/socketmodule.c?view=markup
