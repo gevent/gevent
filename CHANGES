@@ -1,207 +1,219 @@
-0.10.0
-------
+Changelog
+=========
 
-Timeout API was changed in backward incompatible way:
-Timeout.__init__ does not start the timer immediately anymore; start() must be
-called explicitly. A shortcut - Timeout.start_new - is provided that creates
-and starts a Timeout.
+Version 0.10.0
+--------------
 
-Added gevent.Greenlet class which is a subclass of greenlet that adds a few
-useful methods join/get/kill/link. See the docstrings for details.
+.. currentmodule:: gevent
 
-gevent.spawn now returns Greenlet instance. The old gevent.spawn, which returns
-py.magic.greenlet instance, can be still accessed as gevent.spawn_raw.
+* Changed :class:`Timeout` API in a backward-incompatible way:
+  :meth:`Timeout.__init__` does not start the timer immediately anymore;
+  :meth:`Timeout.start` must be called explicitly.
+  A shortcut - :meth:`Timeout.start_new` - is provided that creates and starts
+  a :class:`Timeout`.
 
-The implementation of Greenlet is an improvement on proc module, with these bugs
-fixed:
- - Proc is not a subclass of greenlet which makes getcurrent() useless and using
-   Procs as keys in dict impossible.
- - Proc executes links sequentially, so one could block the rest from being
-   executed. Greenlet executes each link in a new greenlet by default, unless
-   it is set up with rawlink() method.
- - Proc cannot be easily subclassed. To subclass Greenlet, override its _run
-   and __init__ methods.
+* Added :class:`gevent.Greenlet` class which is a subclass of greenlet that adds a few
+  useful methods :meth:`join <Greenlet.join>`/:meth:`get <Greenlet.get>`/:meth:`kill <Greenlet.kill>`/:meth:`link <Greenlet.link>`.
 
-Added gevent.pool.Pool class which supports a number of multiprocessing.Pool's
-methods: apply, map and others. It also has spawn() method which is always
-async and returns a Greenlet instance.
+* :func:`gevent.spawn` now returns :class:`gevent.Greenlet` instance. The old ``gevent.spawn``,
+  which returns py.magic.greenlet instance, can be still accessed as :meth:`gevent.spawn_raw`.
 
-Added gevent.event module with 2 classes: Event and AsyncResult.
-Event is a drop-in replacement for threading.Event, supporting set/wait/get
-methods. AsyncResult is an extension of Event that supports exception passing
-via set_exception method.
+  .. note::
 
-Added queue.JoinableQueue class with task_done() and join() methods.
+     The implementation of :class:`Greenlet` is an improvement on ``proc`` module, with these bugs fixed:
 
-The following items were marked as deprecated:
- - gevent.proc module (wrap_errors helper was moved to gevent.util module)
- - gevent.coros.event
- - gevent.coros.Queue and gevent.coros.Channel
+     * Proc was not a subclass of greenlet which makes :func:`getcurrent` useless and using
+       Procs as keys in dict impossible.
+     * Proc executes links sequentially, so one could block the rest from being
+       executed. :class:`Greenlet` executes each link in a new greenlet by default, unless
+       it is set up with :class:`Greenlet.rawlink` method.
+     * Proc cannot be easily subclassed. To subclass :class:`Greenlet`, override its _run
+       and __init__ methods.
 
-Internally, gevent.greenlet was split into a number of modules:
- - gevent.hub provides Hub class and basic utilities, like sleep;
-   Hub is now a subclass of greenlet.
- - gevent.timeout provides Timeout and with_timeout
- - gevent.greenlet provides Greenlet class and helpers like joinall
-   and killall.
- - gevent.rawgreenlet contains the old "polling" versions of
-   joinall and killall (they do not need link() functionality and work
-   with any greenlet by polling their status and sleeping in a loop)
+* Added :class:`pool.Pool` class with the methods compatible to the standard :mod:`multiprocessing.pool`:
+  :meth:`apply <pool.Pool.apply>`, :meth:`map <pool.Pool.map>` and others.
+  It also has :meth:`spawn <pool.Pool.spawn>` method which is always async and returns a
+  :class:`gevent.Greenlet` instance.
 
-core.read and core.write classes were renamed to core.read_event and core.write_event.
+.. currentmodule:: gevent.event
 
-wsgi: pulled Mike Barton's eventlet patches that fix double content-length issue.
+* Added :mod:`gevent.event` module with 2 classes: :class:`Event` and :class:`AsyncResult`.
+  :class:`Event` is a drop-in replacement for :class:`threading.Event`, supporting
+  :meth:`set <Event.set>`/:meth:`wait <Event.wait>`/:meth:`get <Event.wait>` methods. :class:`AsyncResult`
+  is an extension of :class:`Event` that supports exception passing via :meth:`set_exception` method.
 
-setup.py now searches more places for system libevent installation.
-This fixes 64bit CentOS 5.3 installation issues, hopefully covers other platforms
-as well.
+.. currentmodule:: gevent
+
+* Added :class:`queue.JoinableQueue` class with :meth:`task_done <queue.JoinableQueue.task_done>`
+  and :meth:`join <queue.JoinableQueue.join>` methods.
+
+* Renamed ``core.read`` and ``core.write`` classes to :class:`core.read_event` and :class:`core.write_event`.
+
+* :mod:`gevent.wsgi`: pulled **Mike Barton's** eventlet patches that fix double content-length issue.
+
+* Fixed setup.py to searches more places for system libevent installation.
+  This fixes 64bit CentOS 5.3 installation issues, hopefully covers other platforms
+  as well.
 
 The following items were added to the gevent top level package:
- - spawn_link
- - spawn_link_value
- - spawn_link_exception
- - spawn_raw
- - joinall
- - killall
- - Greenlet
- - GreenletExit
- - core
 
-Thanks to Jason Toffaletti for reporting the installation issue and providing a
+- :func:`spawn_link`
+- :func:`spawn_link_value`
+- :func:`spawn_link_exception`
+- :func:`spawn_raw`
+- :func:`joinall`
+- :func:`killall`
+- :class:`Greenlet`
+- :exc:`GreenletExit`
+- :mod:`core <gevent.core>`
+
+The following items were marked as deprecated:
+
+- gevent.proc module (:func:`wrap_errors <gevent.util.wrap_errors>` helper was moved to :mod:`gevent.util` module)
+- gevent.coros.event
+- gevent.coros.Queue and gevent.coros.Channel
+
+Internally, ``gevent.greenlet`` was split into a number of modules:
+
+- :mod:`gevent.hub` provides :class:`Hub` class and basic utilities, like :func:`sleep`;
+  :class:`Hub` is now a subclass of greenlet.
+- :mod:`gevent.timeout` provides :class:`Timeout` and :func:`with_timeout`
+- :mod:`gevent.greenlet` provides :class:`gevent.Greenlet` class and helpers like :func:`joinall`
+  and :func:`killall`.
+- :mod:`gevent.rawgreenlet` contains the old "polling" versions of
+  :func:`rawgreenlet.joinall` and :func:`rawgreenlet.killall` (they do not need :meth:`Greenlet.link`
+  functionality and work with any greenlet by polling their status and sleeping in a loop)
+
+
+Thanks to **Jason Toffaletti** for reporting the installation issue and providing a
 test case for wsgi double content-length header bug.
 
 
-0.9.3
------
+Version 0.9.3
+-------------
 
-All known bugs in the queue module were fixed and it is made 2.4-compatible.
-LifoQueue and PriorityQueue are implemented as well.
+* Fixed all known bugs in the :mod:`gevent.queue` module made it 2.4-compatible.
+  :class:`LifoQueue <queue.LifoQueue>` and :class:`PriorityQueue <queue.PriorityQueue>`
+  are implemented as well.
 
-gevent.queue.Queue implements the standard Queue interface with the only difference
-that Queue(0) means queue of size 0 (i.e. a channel), not a queue of infinite size.
-Having size 0 means that put() method always blocks until the item is delivered.
+  :mod:`gevent.queue` will deprecate both ``coros.Queue`` and ``coros.Channel``.
 
-gevent.queue will deprecate both coros.Queue and coros.Channel.
+* Fixed to :class:`Timeout` to raise itself by default. ``TimeoutError`` is gone.
+  Silent timeout is now created by passing ``False`` instead of ``None``.
 
-Timeout now raises itself by default. TimeoutError is gone.
-This makes it easy to check that a timeout caught is actually the one raised:
+* Fixed bug in :func:`gevent.select.select` where it could silent the wrong timeout.
 
-  timeout = Timeout(1)
-  try:
-      ...
-  except Timeout, t:
-      if timeout is not t:
-          raise # this is timeout set up by someone else and not us; we do not want to catch it
+* :func:`spawn` and :func:`spawn_later` now avoid creating a closure and this decreases spawning
+  time by 50%.
 
-select() function had a bug of this kind that was fixed.
+* ``kill``'s and ``killall``'s *wait* argument was renamed to *block*. The polling is now
+  implemented by ``greenlet.join`` and ``greenlet.joinall`` functions and it become more
+  responsive, with gradual increase of sleep time.
 
-To instruct a with-block to silent the timeout one can pass False as a second
-argument. In this case Timeout won't leave the with-block it belongs to (but
-it can still be caught inside)
+* Renamed ``proc.RunningProcSet`` to ``proc.ProcSet``.
 
-with Timeout(1, False):
-    read()
-print 'done reading'
+* Added :func:`shutdown` function, which blocks until libevent has finished dispatching the events.
 
-Even if read() does not return within a second and will be interrupted by a
-timeout, "done reading" will still be displayed.
+* The return value of ``event_add`` and ``event_del`` in core.pyx are now checked properly
+  and :exc:`IOError` is raised if they have failed.
 
-spawn and spawn_later now avoid creating a closure and this decreases spawning
-time by 50%.
-
-kill and killall 'wait' argument was renamed to 'block'. The polling is now
-implemented by greenlet.join and greenlet.joinall functions and it become more
-responsive, with gradual increase of sleep time.
-
-proc.RunningProcSet was renamed to proc.ProcSet.
-
-shutdown() function was added, which can be used from the main greenlet to
-wait until libevent has finished dispatching the events.
-
-core.pyx now checks the return value of event_add and event_del and raises
-IOError if they have failed.
-
-backdoor.py, accidentally broken in the previous release, was fixed.
+* Fixed backdoor.py, accidentally broken in the previous release.
 
 
-0.9.2
------
+Version 0.9.2
+-------------
 
-gevent.socket implementation was simplified and GreenSSL was almost completely
-rewritten. This fixes SSL bug reported on eventletdev by Cesar Alaniz as well
-as failures in test_socket_ssl.py from Python's standard library.
-makeGreenFile is gone, makefile (which returns _fileobject) is available on
-both GreenSocket and GreenSSL. socket.py still a work in progress.
+* Simplified :mod:`gevent.socket`'s implementation and fixed SSL
+  bug reported on eventletdev by **Cesar Alaniz** as well as failures
+  in test_socket_ssl.py.
 
-New class core.active_event is added that takes advantage of libevent's event_active function.
-core.active_event(func) schedules func to be run in this event loop iteration as opposed
-to core.timer(0, ...) which schedules an event to be run in the next iteration. active_event
-is now used throughout the library wherever core.timer(0, ....) was previously used.
-This results in spawn() being at least 20% faster compared to 0.9.1 and twice as fast compared to
-eventlet. (The results are obtained with bench_spawn.py script in greentest/ directory)
+* Removed ``GreenSocket.makeGreenFile``, :meth:`socket.socket.makefile` (which returns _fileobject)
+  is available on both GreenSocket and GreenSSL. socket.py still a work in progress.
 
-kill() and killall() methods now have boolean parameter "wait". If set to True, it makes the
-function block until the greenlet(s) is actually dead. By default, kill and killall are asynchronous,
-i.e. they don't unschedule the current greenlet.
+* Added new :class:`core.active_event` class that takes advantage of libevent's event_active function.
+  ``core.active_event(func)`` schedules func to be run in this event loop iteration as opposed
+  to ``core.timer(0, ...)`` which schedules an event to be run in the next iteration.
+  :class:`active_event <core.active_event>` is now used throughout the library wherever ``core.timer(0, ....)`` was previously used.
+  This results in :func:`spawn` being at least 20% faster compared to `Version 0.9.1`_ and twice as fast compared to
+  eventlet. (The results are obtained with bench_spawn.py script in ``greentest/`` directory)
 
-core.event has got a few more properties: fd, events, events_str and flags. It also has
-__enter__ and __exit__ now, so it can be used as a context manager. event's callback signature
-has changed from (event, fd, evtype) to (event, evtype).
+* Added boolean parameter *wait* to :func:`kill` and :func:`killall` functions. If set to ``True``, it makes the
+  function block until the greenlet(s) is actually dead. By default, :func:`kill` and :func:`killall` are asynchronous,
+  i.e. they don't unschedule the current greenlet.
 
-Hub's mainloop will never return successfully as this will screw up main greenlet's switch() call.
-Instead of returning it raises DispatchExit.
+.. currentmodule:: gevent.core
 
-reinit function (wrapper for libevent's event_reinit) is now available as gevent.reinit.
-This function is a must have at least for daemons, as it fixes epoll and some others eventloops
-to work after fork.
+* Added a few new properties to :class:`gevent.core.event`: :attr:`fd <event.fd>`, :attr:`events <event.events>`,
+  :attr:`events_str <event.events_str>`and `:attr:flags <event.flags>`. It also has
+  :meth:`__enter__ <event.__enter__>` and :meth:`__exit__ <event.__exit__>` now, so it can be used as a context manager. :class:`event`'s
+  :attr:`callback <event.callback>` signature has changed from ``(event, fd, evtype)`` to ``(event, evtype)``.
 
-Trying to use gevent in another thread will now raise an exception immediately,
-since it's not implemented.
+.. currentmodule:: gevent.hub
 
-proc.RunningProcSet has a few more convenience methods spawn_link[exception/value].
+* Fixed :class:`Hub`'s mainloop to never return successfully as this will screw up main greenlet's ``switch()`` call.
+  Instead of returning it raises :class:`DispatchExit`.
 
-setup.py has been fixed not to depend on setuptools.
+.. currentmodule:: gevent
 
-gevent.timeout has been removed (use gevent.Timeout)
+* Added :func:`reinit` function - wrapper for libevent's ``event_reinit``.
+  This function is a must have at least for daemons, as it fixes ``epoll`` and some others
+  eventloops to work after ``fork``.
 
+* Trying to use gevent in another thread will now raise an exception immediately,
+  since it's not implemented.
 
-0.9.1
------
+* Added a few more convenience methods ``spawn_link[exception/value]`` to ``proc.RunningProcSet``.
 
-gevent can now be compiled with libevent-1.3 (Thanks to Litao Wei for reporting the problem.)
+* Fixed setup.py not to depend on setuptools.
 
-Hub now tries to silently recover after event_dispatch() failures (I've seen this happen
-even though event_reinit() is called as necessary). The end result is that fork() now works
-more reliably, as detected by test_socketserver.py - it used to fail occasionally, now it does not.
-
-The package was reorganized, most of the stuff from gevent/__init__.py was moved to gevent/greenlet.py.
-gevent/__init__.py imports some of it back but not everything.
-
-gevent.timeout was renamed to gevent.Timeout.
-
-Fixed a few bugs in queue.Queue.
-Add test_queue.py from standard tests to check how good is gevent.queue.Queue a replacement
-for a standard Queue (not good at all, timeouts in put() don't work yet)
-
-monkey: patches ssl module when on 2.6 (very limited support).
-
-Improved compatibility with Python 2.6 and Python 2.4.
-
-Greenlet installed from PyPI (without py.magic prefix) is properly recognized now.
-
-core.pyx was accidentally left out of the source package, it's included now.
-
-GreenSocket now wraps a socket object from _socket module rather than from socket.
+* Removed ``gevent.timeout`` (use :class:`gevent.Timeout`)
 
 
-0.9.0
------
+Version 0.9.1
+-------------
 
-Started as eventlet 0.8.11 spin-off, with intention to support only libevent as a backend.
+* Fixed compilation with gevent libevent-1.3 (Thanks to **Litao Wei** for reporting the problem.)
+
+* Fixed :class:`Hub <hub.Hub>` to recover silently after ``event_dispatch()`` failures (I've seen this
+  happen after ``fork`` even though ``event_reinit()`` is called as necessary). The end result is that :func:`fork`
+  now works more reliably, as detected by ``test_socketserver.py`` - it used to fail occasionally, now it does not.
+
+* Reorganized the package, most of the stuff from gevent/__init__.py was moved to gevent/greenlet.py.
+  gevent/__init__.py imports some of it back but not everything.
+
+* Renamed ``gevent.timeout`` to :class:`gevent.Timeout`. The old name is available as an alias.
+
+* Fixed a few bugs in :class:`queue.Queue`.
+  Added test_queue.py from standard tests to check how good is :class:`gevent.queue.Queue` a replacement
+  for a standard :mod:`Queue` (not good at all, timeouts in :meth:`queue.Queue.put` don't work yet)
+
+* :mod:`monkey` now patches ssl module when on 2.6 (very limited support).
+
+* Improved compatibility with Python 2.6 and Python 2.4.
+
+* Greenlet installed from PyPI (without py.magic prefix) is properly recognized now.
+
+* core.pyx was accidentally left out of the source package, it's included now.
+
+* :class:`GreenSocket <socket.socket>` now wraps a ``socket`` object from _socket module rather
+  than from :mod:`socket`.
+
+
+Version 0.9.0
+-------------
+
+Started as eventlet_ 0.8.11 fork, with the intention to support only libevent as a backend.
 Compared to eventlet, this version has a much simpler API and implementation and a few
 severe bugs fixed, namely
- - full duplex in sockets, i.e. read() and write() on the same fd do not cancel one another
- - GreenSocket.close() does not hang as it could with eventlet
-(there's a test in my repo of eventlet that reproduces both of them:
-http://bitbucket.org/denis/eventlet/src/tip/greentest/test__socket.py)
 
+* full duplex in sockets, i.e. ``read()`` and ``write()`` on the same fd do not cancel one another
+* :meth:`GreenSocket.close <socket.socket.close>` does not hang as it could with eventlet
+  (there's a test in my repo of eventlet that reproduces both of them:
+  http://bitbucket.org/denis/eventlet/src/tip/greentest/test__socket.py)
+
+Besides having less bugs and less code to care about the goals of the fork are:
+
+* piggy-back on libevent as much as possible (use its http and dns code)
+* use the interfaces and conventions from the standard Python library where possible
+
+.. _eventlet: http://eventlet.net
