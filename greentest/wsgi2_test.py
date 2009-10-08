@@ -1,10 +1,10 @@
 import sys
-from gevent import wsgi2
+from gevent import wsgi
 from wsgi_test import *
 
 del TestHttps, TestChunkedApp, TestBigChunks
 
-TestCase.get_wsgi_module = lambda *args: wsgi2
+TestCase.get_wsgi_module = lambda *args: wsgi
 
 class Expected(Exception):
     pass
