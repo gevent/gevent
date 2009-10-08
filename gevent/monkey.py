@@ -35,9 +35,9 @@ def patch_thread():
             sys.stderr.write("gevent.monkey's warning: '_threading_local' is already imported\n\n")
 
 def patch_socket(dns=True):
-    from gevent.socket import GreenSocket, fromfd, wrap_ssl, socketpair
+    from gevent.socket import socket, fromfd, wrap_ssl, socketpair
     _socket = __import__('socket')
-    _socket.socket = GreenSocket
+    _socket.socket = socket
     _socket.fromfd = fromfd
     _socket.ssl = wrap_ssl
     _socket.socketpair = socketpair
