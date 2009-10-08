@@ -1,6 +1,6 @@
 #!/usr/bin/python
 from gevent import monkey; monkey.patch_all()
-from gevent import wsgi2
+from gevent.wsgi import WSGIServer
 import os
 import traceback
 from django.core.handlers.wsgi import WSGIHandler
@@ -16,5 +16,5 @@ got_request_exception.connect(exception_printer)
 
 call_command('syncdb')
 print 'Serving on 8088...'
-wsgi2.WSGIServer(('', 8088), WSGIHandler()).serve_forever()
+WSGIServer(('', 8088), WSGIHandler()).serve_forever()
 

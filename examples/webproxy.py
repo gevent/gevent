@@ -1,6 +1,6 @@
 #!/usr/bin/python
 from gevent import monkey; monkey.patch_all()
-from gevent import wsgi2
+from gevent import wsgi
 import sys
 import re
 import traceback
@@ -109,5 +109,5 @@ if __name__ == '__main__':
     #import doctest
     #doctest.testmod()
     print 'Serving on 8088...'
-    wsgi2.WSGIServer(('', 8088), application).serve_forever()
+    wsgi.WSGIServer(('', 8088), application).serve_forever()
 

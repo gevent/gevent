@@ -1,7 +1,7 @@
 #!/usr/bin/python
 """WSGI server example"""
 
-from gevent import wsgi2
+from gevent import wsgi
 
 def hello_world(env, start_response):
     if env['PATH_INFO'] == '/':
@@ -12,5 +12,5 @@ def hello_world(env, start_response):
         return ['Not Found\r\n']
 
 print 'Serving on 8088...'
-wsgi2.WSGIServer(('', 8088), hello_world).serve_forever()
+wsgi.WSGIServer(('', 8088), hello_world).serve_forever()
 
