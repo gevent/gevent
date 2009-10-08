@@ -1,4 +1,8 @@
 # Copyright (c) 2009 Denis Bilenko. See LICENSE for details.
+"""
+gevent is a coroutine-based Python networking library that uses greenlet
+to provide a high-level synchronous API on top of libevent event loop.
+"""
 
 version_info = (0, 11, 0)
 __version__ = '0.11.0'
