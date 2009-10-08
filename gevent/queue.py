@@ -10,6 +10,9 @@ from gevent.hub import get_hub, Waiter, getcurrent
 from gevent import core
 
 
+__all__ = ['Queue', 'PriorityQueue', 'LifoQueue', 'JoinableQueue']
+
+
 class Queue(object):
     """Create a queue object with a given maximum size.
 
