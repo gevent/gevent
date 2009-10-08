@@ -101,8 +101,8 @@ def read_http(fd):
 class TestCase(greentest.TestCase):
 
     def get_wsgi_module(self):
-        from gevent import wsgi
-        return wsgi
+        from gevent import pywsgi
+        return pywsgi
 
     def setUp(self):
         self.server = self.get_wsgi_module().WSGIServer(('127.0.0.1', 0), self.application)
