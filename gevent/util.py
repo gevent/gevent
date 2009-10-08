@@ -1,3 +1,5 @@
+__all__ = ['wrap_errors', 'lazy_property']
+
 class wrap_errors(object):
     """Helper to make function return an exception, rather than raise it.
 
