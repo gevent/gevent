@@ -31,9 +31,6 @@ in this module only block the current greenlet and let the others run.
 __all__ = ['socket', 'socketpair', 'fromfd', 'gethostbyname', 'getaddrinfo', 'getnameinfo', 'wrap_ssl']
 
 import _socket
-_original_socket = _socket.socket          # XXX remove it
-_original_fromfd = _socket.fromfd          # XXX remove it
-_original_socketpair = _socket.socketpair  # XXX remove it
 error = _socket.error
 timeout = _socket.timeout
 __socket__ = __import__('socket')
