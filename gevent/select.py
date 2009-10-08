@@ -18,6 +18,7 @@ def get_fileno(obj):
 
 
 def select(read_list, write_list, error_list, timeout=None):
+    """An implementation of :meth:`select.select` that blocks only the current greenlet."""
     # QQQ error_list is ignored
     hub = get_hub()
     current = getcurrent()
