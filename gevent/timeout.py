@@ -1,4 +1,17 @@
 # Copyright (c) 2009 Denis Bilenko. See LICENSE for details.
+"""Timeouts.
+
+Many functions in :mod:`gevent` have a *timeout* argument that allows
+to limit function's execution time. When that is not enough, the :class:`Timeout`
+class and :func:`with_timeout` function in this module add timeouts
+to arbitrary code.
+
+.. warning::
+
+    Timeouts can only work when the greenlet switches to the hub.
+    If a blocking function is called or an intense calculation is ongoing during
+    which no switches occur, :class:`Timeout` is powerless.
+"""
 
 from gevent import core
 from gevent.hub import getcurrent
@@ -17,55 +30,56 @@ except NameError: # Python < 2.5
 
 
 class Timeout(BaseException):
-    """Raise an exception in the current greenlet after timeout.
+    """Raise *exception* in the current greenlet after *timeout* seconds::
 
-    timeout = Timeout(seconds[, exception])
-    timeout.start()
-    try:
-        ... code block ...
-    finally:
-        timeout.cancel()
+        timeout = Timeout(seconds, exception)
+        timeout.start()
+        try:
+            ... # execution here is limited by timeout
+        finally:
+            timeout.cancel()
 
-    Assuming code block is yielding (i.e. gives up control to the hub),
-    an exception will be raised if code block has been running for more
-    than `seconds` seconds. By default (or when exception is None), the
-    Timeout instance itself is raised. If exception is provided, then it
-    is raised instead.
+    When *exception* is omitted or ``None``, :class:`Timeout` instance itself is raised:
 
-    For Python starting with 2.5 'with' statement can be used:
+        >>> Timeout(0.1).start()
+        >>> gevent.sleep(0.2)
+        Traceback (most recent call last):
+         ...
+        Timeout: 0.1 seconds
 
-    with Timeout(seconds[, exception]) as timeout:
-        ... code block ...
+    For Python starting with 2.5 ``with`` statement can be used::
+
+        with Timeout(seconds, exception) as timeout:
+            pass # ... code block ...
 
     This is equivalent to try/finally block above with one additional feature:
-    if exception is False, the timeout is still raised, but context manager
-    suppresses it, so surrounding code won't see it.
+    if *exception* is ``False``, the timeout is still raised, but context manager
+    suppresses it, so the code outside the with-block won't see it.
 
-    This is handy for adding a timeout feature to the functions that don't
-    implement it themselves:
+    This is handy for adding a timeout to the functions that don't support *timeout* parameter themselves::
 
-    data = None
-    with Timeout(5, False):
-        data = mysock.makefile().readline()
-    if data is None:
-        # 5 seconds passed without reading a line
-    else:
-        # a line was read within 5 seconds
+        data = None
+        with Timeout(5, False):
+            data = mysock.makefile().readline()
+        if data is None:
+            ... # 5 seconds passed without reading a line
+        else:
+            ... # a line was read within 5 seconds
 
-    Note that, if readline() catches BaseException (or everything with 'except:'),
-    then your timeout is screwed.
+    Note that, if ``readline()`` above catches and doesn't re-raise :class:`BaseException`
+    (for example, with ``except:``), then your timeout is screwed.
 
     When catching timeouts, keep in mind that the one you catch maybe not the
     one you have set; if you going to silent a timeout, always check that it's
-    the one you need:
+    the one you need::
 
-    timeout = Timeout(1)
-    timeout.start()
-    try:
-        ...
-    except Timeout, t:
-        if t is not timeout:
-            raise # not my timeout
+        timeout = Timeout(1)
+        timeout.start()
+        try:
+            ...
+        except Timeout, t:
+            if t is not timeout:
+                raise # not my timeout
     """
 
     def __init__(self, seconds=None, exception=None):
@@ -150,20 +164,20 @@ class Timeout(BaseException):
             return True
 
 
-def with_timeout(seconds, func, *args, **kwds):
-    """Wrap a call to some (yielding) function with a timeout; if the called
-    function fails to return before the timeout, cancel it and return a flag
-    value, provided by 'timeout_value' keyword argument.
+def with_timeout(seconds, function, *args, **kwds):
+    """Wrap a call to *function* with a timeout; if the called
+    function fails to return before the timeout, cancel it and return a
+    flag value, provided by *timeout_value* keyword argument.
 
-    If timeout expires but 'timeout_value' is not provided, raise Timeout.
+    If timeout expires but *timeout_value* is not provided, raise :class:`Timeout`.
 
-    Keyword argument 'timeout_value', is not passed to func.
+    Keyword argument *timeout_value* is not passed to *function*.
     """
     timeout_value = kwds.pop("timeout_value", _NONE)
     timeout = Timeout.start_new(seconds)
     try:
         try:
-            return func(*args, **kwds)
+            return function(*args, **kwds)
         except Timeout, t:
             if t is timeout and timeout_value is not _NONE:
                 return timeout_value
@@ -178,3 +192,4 @@ class _NONE(object):
         return '<_NONE>'
 
 _NONE = _NONE()
+
