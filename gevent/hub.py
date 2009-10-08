@@ -13,7 +13,10 @@ __all__ = ['getcurrent',
            'kill',
            'signal',
            'fork',
-           'shutdown']
+           'shutdown',
+           'get_hub',
+           'Hub',
+           'Waiter']
 
 
 try:
