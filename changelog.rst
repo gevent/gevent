@@ -1,6 +1,47 @@
 Changelog
 =========
 
+Version 0.11.0
+--------------
+
+.. currentmodule:: gevent
+
+* Fixed timeout bug in :func:`joinall`, :meth:`Greenlet.join`, :meth:`pool.Pool.join`: if timeout has expired
+  it used to raise :class:`Timeout`; now it returns silently.
+* Fixed :func:`signal` to run the signal handler in a new greenlet; it was run in the :class:`Hub <hub.Hub>` greenlet before.
+* Fixed :meth:`Timeout.start_new`: if passed a :class:`Timeout` instance, it now calls its :meth:`start <Timeout.start>`
+  method before returning it.
+* Fixed :mod:`monkey <gevent.monkey>` to patch :class:`threading.local` properly.
+* Fixed :meth:`Queue.empty <queue.Queue.empty>` and :meth:`Queue.full <queue.Queue.full>` to be compatible
+  with the standard :mod:`Queue`. It tried to take into account the greenlets currently blocking on
+  :meth:`get <queue.Queue.get>`/:meth:`put <queue.Queue.put>` which
+  was not useful and hard to reason about. Now it simply compares :meth:`qsize <queue.Queue.qsize>` to *maxsize*,
+  which what the standard :mod:`Queue` does too.
+* Fixed :class:`Event <event.Event>` to behave exactly like the standard :class:`threading.Event`:
+
+  * :meth:`Event.set <event.Event.set>` does not accept a parameter anymore; it's now either set or not.
+  * ``Event.set(); Event.clear()`` used to be a no-op; now it properly wakes up all the waiters.
+
+  :class:`AsyncResult <event.AsyncResult>` behaves exactly like before, but it does not inherit from :class:`Event <event.Event>` anymore
+  and does miss ``clear()`` method.
+
+* Renamed internal helpers :meth:`socket.wait_reader`/:meth:`socket.wait_writer` to :meth:`socket.wait_read`/:meth:`socket.wait_write`.
+* Renamed :class:`gevent.socket.GreenSocket` to :class:`gevent.socket.socket`. ``GreenSocket`` is still available
+  as an alias but will be removed in the future.
+
+* :mod:`gevent.core` now includes wrappers for evbuffer, evdns, evhttp.
+
+* Renamed the old ``gevent.wsgi`` to :mod:`gevent.pywsgi`.
+* Added a new HTTP server :mod:`gevent.http` module based on libevent-http wrappers.
+* Added a new WSGI server :mod:`gevent.wsgi` module based on :mod:`gevent.http`.
+* Added evdns wrappers to :mod:`gevent.core` and DNS functions to :mod:`socket <gevent.socket>` module. Contributed by **Jason Toffaletti.**.
+
+* Added a few a few options to ``setup.py`` to select a libevent library to compile against. Check them out with ``setup.py -h``.
+* Added ``__all__`` to many modules that missed it.
+* Converted the docstrings and the changelog to sphinx/rst markup.
+* Added sphinx/rst documentation. It is available online at http://gevent.org.
+
+
 Version 0.10.0
 --------------
 
