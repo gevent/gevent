@@ -3,21 +3,21 @@ __all__ = ['wrap_errors', 'lazy_property']
 class wrap_errors(object):
     """Helper to make function return an exception, rather than raise it.
 
-    Because every exception that is unhandled by greenlet will be logged by the hub,
+    Because every exception that is unhandled by greenlet will be logged,
     it is desirable to prevent non-error exceptions from leaving a greenlet.
-    This can done with simple try/except construct:
+    This can done with simple ``try``/``except`` construct::
 
-    def func1(*args, **kwargs):
-        try:
-            return func(*args, **kwargs)
-        except (A, B, C), ex:
-            return ex
+        def wrapped_func(*args, **kwargs):
+            try:
+                return func(*args, **kwargs)
+            except (A, B, C), ex:
+                return ex
 
-    wrap_errors provides a shortcut to write that in one line:
+    :class:`wrap_errors` provides a shortcut to write that in one line::
 
-    func1 = wrap_errors((A, B, C), func)
+        wrapped_func = wrap_errors((A, B, C), func)
 
-    It also preserves __str__ and __repr__ of the original function.
+    It also preserves ``__str__`` and ``__repr__`` of the original function.
     """
     # QQQ could also support using wrap_errors as a decorator
 
@@ -47,9 +47,10 @@ class wrap_errors(object):
 
 
 class lazy_property(object):
+    '''A decorator similar to :meth:`property` that only calls the *function* once.'''
 
-    def __init__(self, calculate_function):
-        self._calculate = calculate_function
+    def __init__(self, function):
+        self._calculate = function
 
     def __get__(self, obj, _=None):
         if obj is None:
