@@ -5,6 +5,8 @@ from gevent.hub import GreenletExit, getcurrent
 from gevent.greenlet import joinall, Greenlet
 from gevent.timeout import Timeout
 
+__all__ = ['GreenletSet', 'Pool']
+
 
 class GreenletSet(object):
     """Maintain a set of greenlets that are still running.
