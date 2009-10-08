@@ -1,9 +1,5 @@
 # Copyright (c) 2009 Denis Bilenko. See LICENSE for details.
-"""Basic synchronization primitives: Event and AsyncResult.
-
-Event implements threading.Event interface but works across greenlets not threads.
-AsyncResult is a one-time Event that stores a result: value or exception.
-"""
+"""Basic synchronization primitives: Event and AsyncResult"""
 
 import sys
 import traceback
@@ -15,7 +11,13 @@ __all__ = ['Event', 'AsyncResult']
 
 
 class Event(object):
-    """A synchronization primitive that allows one greenlet to wake up one or more others"""
+    """A synchronization primitive that allows one greenlet to wake up one or more others.
+    It has the same interface as :class:`threading.Event` but works across greenlets.
+
+    An event object manages an internal flag that can be set to true with the
+    :meth:`set` method and reset to false with the :meth:`clear` method. The :meth:`wait` method
+    blocks until the flag is true.
+    """
 
     def __init__(self):
         self._links = []
@@ -25,34 +27,75 @@ class Event(object):
         return '<%s %s>' % (self.__class__.__name__, (self._flag and 'set') or 'clear')
 
     def is_set(self):
+        """Return true if and only if the internal flag is true."""
         return self._flag
 
     isSet = is_set # makes it a better drop-in replacement for threading.Event
 
-    def rawlink(self, callback):
-        if not callable(callback):
-            raise TypeError('Expected callable: %r' % (callback, ))
-        self._links.append(callback)
-        if self._flag:
-            core.active_event(self._notify_links, list(self._links))
-
-    def unlink(self, callback):
-        try:
-            self._links.remove(callback)
-        except ValueError:
-            pass
-
-    def clear(self):
-        """Clear the internal flag.
-        Subsequently, greenlets calling wait() will block until set() is called.
-        """
-        self._flag = False
-
     def set(self):
+        """Set the internal flag to true. All greenlets waiting for it to become true are awakened.
+        Greenlets that call :meth:`wait` once the flag is true will not block at all.
+        """
         self._flag = True
         if self._links:
             # schedule a job to notify the links already set
             core.active_event(self._notify_links, list(self._links))
+
+    def clear(self):
+        """Reset the internal flag to false.
+        Subsequently, threads calling :meth:`wait`
+        will block until :meth:`set` is called to set the internal flag to true again.
+        """
+        self._flag = False
+
+    def wait(self, timeout=None):
+        """Block until the internal flag is true.
+        If the internal flag is true on entry, return immediately. Otherwise,
+        block until another thread calls :meth:`set` to set the flag to true,
+        or until the optional timeout occurs.
+
+        When the *timeout* argument is present and not ``None``, it should be a
+        floating point number specifying a timeout for the operation in seconds
+        (or fractions thereof).
+        """
+
+        if self._flag:
+            return
+        else:
+            switch = getcurrent().switch
+            self.rawlink(switch)
+            try:
+                t = Timeout.start_new(timeout)
+                try:
+                    try:
+                        result = get_hub().switch()
+                        assert result is self, 'Invalid switch into Event.wait(): %r' % (result, )
+                    except Timeout, exc:
+                        if exc is not t:
+                            raise
+                finally:
+                    t.cancel()
+            finally:
+                self.unlink(switch)
+
+    def rawlink(self, callback):
+        """Register a callback to call when the internal flag is set to true.
+
+        *callback* will be called in the HUB, so it must not use blocking gevent API.
+        *callback* will be passed one argument: this instance.
+        """
+        if not callable(callback):
+            raise TypeError('Expected callable: %r' % (callback, ))
+        self._links.append(callback)
+        if self._flag:
+            core.active_event(self._notify_links, list(self._links)) # XXX just pass [callback]
+
+    def unlink(self, callback):
+        """Remove the callback set by :meth:`rawlink`"""
+        try:
+            self._links.remove(callback)
+        except ValueError:
+            pass
 
     def _notify_links(self, links):
         assert getcurrent() is get_hub()
@@ -67,39 +110,23 @@ class Event(object):
                     except:
                         pass
 
-    def wait(self, timeout=None):
-        if self._flag:
-            return
-        else:
-            switch = getcurrent().switch
-            self.rawlink(switch)
-            try:
-                t = Timeout.start_new(timeout)
-                try:
-                    result = get_hub().switch()
-                    assert result is self, 'Invalid switch into Event.wait(): %r' % (result, )
-                except Timeout, exc:
-                    if exc is not t:
-                        raise
-                finally:
-                    t.cancel()
-            finally:
-                self.unlink(switch)
-
 
 class AsyncResult(object):
-    """A one-time Event that stores a value or an exception.
+    """A one-time event that stores a value or an exception.
+
+    Like :class:`Event` it wakes up all the waiters when :meth:`set` or :meth:`set_exception` method
+    is called. Waiters may receive the passed value or exception by calling :meth:`get`
+    method instead of :meth:`wait`. :class:`AsyncResult` instance cannot be reset.
     
-    AsyncResult can be used to pass a value or exception to one or more waiters.
-    Its set() method accepts an argument - value to store. The sequential calls
-    to get() method will return the value passed:
+    To pass a value call :meth:`set`. Calls to :meth:`get` (those that currently blocking as well as
+    those made in the future) will return the value:
 
         >>> result = AsyncResult()
         >>> result.set(100)
         >>> result.get()
         100
 
-    Additionally, it has set_exception() method, that causes get() to raise an error:
+    To pass an exception call :meth:`set_exception`. :meth:`get` will raise that exception:
 
         >>> result = AsyncResult()
         >>> result.set_exception(RuntimeError('failure'))
@@ -108,10 +135,7 @@ class AsyncResult(object):
          ...
         RuntimeError: failure
 
-    Similar to multiprocessing.AsyncResult, ready() and successful() methods are available.
-    Similar to Greenlet, AsyncResult has 'value' and 'exception' properties.
-    
-    AsyncResult instance can be used as link() target:
+    :class:`AsyncResult` implements :meth:`__call__` and thus can be used as :meth:`link` target:
 
         >>> result = AsyncResult()
         >>> gevent.spawn(lambda : 1/0).link(result)
@@ -127,54 +151,51 @@ class AsyncResult(object):
         self._notifier = None
 
     def ready(self):
+        """Return true if and only if it holds a value or an exception"""
         return self._exception is not _NONE
 
     def successful(self):
+        """Return true if and only if it is ready and holds a value"""
         return self._exception is None
 
     @property
     def exception(self):
+        "Holds the exception passed to :meth:`set_exception` if :meth:`set_exception` was called. Otherwise ``None``."
         if self._exception is not _NONE:
             return self._exception
 
-    def rawlink(self, callback):
-        if not callable(callback):
-            raise TypeError('Expected callable: %r' % (callback, ))
-        self._links.add(callback)
-        if self.ready() and self._notifier is None:
-            self._notifier = core.active_event(self._notify_links)
-
-    def unlink(self, callback):
-        self._links.discard(callback)
-
     def set(self, value=None):
+        """Store the value. Wake up the waiters.
+
+        All greenlets blocking on :meth:`get` or :meth:`wait` are woken up.
+        Sequential calls to :meth:`wait` and :meth:`get` will not block at all.
+        """
         self.value = value
         self._exception = None
         if self._links and self._notifier is None:
             self._notifier = core.active_event(self._notify_links)
 
     def set_exception(self, exception):
+        """Store the exception. Wake up the waiters.
+
+        All greenlets blocking on :meth:`get` or :meth:`wait` are woken up.
+        Sequential calls to :meth:`wait` and :meth:`get` will not block at all.
+        """
         self._exception = exception
         if self._links and self._notifier is None:
             self._notifier = core.active_event(self._notify_links)
 
-    def _notify_links(self):
-        try:
-            assert getcurrent() is get_hub()
-            while self._links:
-                link = self._links.pop()
-                try:
-                    link(self)
-                except:
-                    traceback.print_exc()
-                    try:
-                        sys.stderr.write('Failed to notify link %r of %r\n\n' % (link, self))
-                    except:
-                        pass
-        finally:
-            self._notifier = None
-
     def get(self, block=True, timeout=None):
+        """Return the stored value or raise the exception.
+
+        If this instance already holds a value / an exception, return / raise it immediatelly.
+        Otherwise, block until another greenlet calls :meth:`set` or :meth:`set_exception` or
+        until the optional timeout occurs.
+
+        When the *timeout* argument is present and not ``None``, it should be a
+        floating point number specifying a timeout for the operation in seconds
+        (or fractions thereof).
+        """
         if self._exception is not _NONE:
             if self._exception is None:
                 return self.value
@@ -199,9 +220,27 @@ class AsyncResult(object):
             raise Timeout
 
     def get_nowait(self):
+        """Return the value or raise the exception without blocking.
+
+        If nothing is available, raise :class:`gevent.Timeout` immediatelly.
+        """
         return self.get(block=False)
 
     def wait(self, timeout=None):
+        """Block until the instance is ready.
+
+        If this instance already holds a value / an exception, return immediatelly.
+        Otherwise, block until another thread calls :meth:`set` or :meth:`set_exception` or
+        until the optional timeout occurs.
+
+        When the *timeout* argument is present and not ``None``, it should be a
+        floating point number specifying a timeout for the operation in seconds
+        (or fractions thereof).
+
+        This method always returns ``None`` regardless of the reason it returns.
+        To find out out what happened, use :meth:`ready` and :meth:`successful` methods
+        or :attr:`value` and :attr:`exception` properties.
+        """
         if self._exception is not _NONE:
             return
         else:
@@ -223,6 +262,38 @@ class AsyncResult(object):
                 raise
             # not calling unlink() in non-exception case, because if switch()
             # finished normally, link was already removed in _notify_links
+
+    def _notify_links(self):
+        try:
+            assert getcurrent() is get_hub()
+            while self._links:
+                link = self._links.pop()
+                try:
+                    link(self)
+                except:
+                    traceback.print_exc()
+                    try:
+                        sys.stderr.write('Failed to notify link %r of %r\n\n' % (link, self))
+                    except:
+                        pass
+        finally:
+            self._notifier = None
+
+    def rawlink(self, callback):
+        """Register a callback to call when a value or an exception is set.
+
+        *callback* will be called in the HUB, so it must not use blocking gevent API.
+        *callback* will be passed one argument: this instance.
+        """
+        if not callable(callback):
+            raise TypeError('Expected callable: %r' % (callback, ))
+        self._links.add(callback)
+        if self.ready() and self._notifier is None:
+            self._notifier = core.active_event(self._notify_links)
+
+    def unlink(self, callback):
+        """Remove the callback set by :meth:`rawlink`"""
+        self._links.discard(callback)
 
     # link protocol
     def __call__(self, source):
