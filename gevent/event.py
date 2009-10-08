@@ -11,6 +11,8 @@ from gevent import core
 from gevent.hub import get_hub, getcurrent
 from gevent.timeout import Timeout, _NONE
 
+__all__ = ['Event', 'AsyncResult']
+
 
 class Event(object):
     """A synchronization primitive that allows one greenlet to wake up one or more others"""
