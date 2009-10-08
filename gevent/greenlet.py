@@ -135,47 +135,11 @@ class FailureGreenletLink(GreenletLink):
 
 
 class Greenlet(greenlet):
-    """A greenlet subclass that adds a few features:
-        - join  - wait for the greenlet to exit
-        - kill  - raise the exception in the greenlet
-        - get   - return the result of the greenlet
-        - link  - register a callable to notify upon greenlet exit
-        - ready
-        - successful
-
-    Additionally,
-        - 'value' attribute holds the result of the greenlet or None if the greenlet has no result.
-        - 'exception' attribute holds the exception instance that greenlet has raised or None
-
-    To start a function in another greenlet, pass it and its arguments to Greenlet constructor
-    and call start():
-      
-        >>> g = Greenlet(myfunction, 'arg1', 'arg2', kwarg1=1)
-        >>> g.start()
-
-    or use 'spawn' shortcut which does these 2 steps in one go:
-
-        >>> g = Greenlet.spawn(myfunction, 'arg1', 'arg2', kwarg1=1)
-
-    To subclass a Greenlet, override its _run method and don't forget
-    to call Greenlet.__init__(self) in your subclass' __init__:
-
-        >>> class MySleepGreenlet(Greenlet):
-        ...
-        ...     def __init__(self, seconds):
-        ...         Greenlet.__init__(self)
-        ...         self.seconds = seconds
-        ...
-        ...     def _run(self):
-        ...         gevent.sleep(self.seconds)
-
-    It also a good idea to override __str__: if the greenlet raises an exception,
-    its string representation will be printed after the traceback it generated.
-    """
+    """A light-weight cooperatively-scheduled execution unit."""
 
     args = ()
     kwargs = {}
-    
+
     def __init__(self, run=None, *args, **kwargs):
         greenlet.__init__(self, parent=get_hub())
         if run is not None:
@@ -191,9 +155,13 @@ class Greenlet(greenlet):
         self._start_event = None
 
     def ready(self):
+        """Return true if and only if the greenlet has finished execution."""
         return self.dead or self._exception is not _NONE
 
     def successful(self):
+        """Return true if and only if the greenlet has finished execution successfully,
+        that is, without raising an error.
+        """
         return self._exception is None
 
     def __repr__(self):
@@ -222,11 +190,18 @@ class Greenlet(greenlet):
 
     @property
     def exception(self):
-        """If greenlet has failed, 'exception' property holds the exception instance."""
+        """Holds the exception instance raised by the function if the greenlet has finished with an error.
+        Otherwise ``None``.
+        """
         if self._exception is not _NONE:
             return self._exception
 
     def throw(self, *args):
+        """Immediatelly switch into the greenlet and raise an exception in it.
+
+        Can only be called from the HUB, otherwise the current greenlet is left unscheduled forever.
+        To raise an exception in a safely manner, use :meth:`kill`.
+        """
         if self._start_event is not None:
             self._start_event.cancel()
             self._start_event = None
@@ -248,26 +223,34 @@ class Greenlet(greenlet):
                         self._notifier = core.active_event(self._notify_links)
 
     def start(self):
-        """Must be called _exactly_ once for a greenlet to become active"""
+        """Schedule the greenlet to run in this loop iteration"""
         assert self._start_event is None, 'Greenlet already started'
         self._start_event = core.active_event(self.switch)
 
     def start_later(self, seconds):
-        """Must be called _exactly_ once for a greenlet to become active"""
+        """Schedule the greenlet to run in the future loop iteration *seconds* later"""
         assert self._start_event is None, 'Greenlet already started'
         self._start_event = core.timer(seconds, self.switch)
 
     @classmethod
     def spawn(cls, *args, **kwargs):
-         g = cls(*args, **kwargs)
-         g.start()
-         return g
+        """Return a new :class:`Greenlet` object, scheduled to start.
+
+        The arguments are passed to :meth:`Greenlet.__init__`.
+        """
+        g = cls(*args, **kwargs)
+        g.start()
+        return g
 
     @classmethod
     def spawn_later(cls, seconds, *args, **kwargs):
-         g = cls(*args, **kwargs)
-         g.start_later(seconds)
-         return g
+        """Return a Greenlet object, scheduled to start *seconds* later.
+
+        The arguments are passed to :meth:`Greenlet.__init__`.
+        """
+        g = cls(*args, **kwargs)
+        g.start_later(seconds)
+        return g
 
     @classmethod
     def spawn_link(cls, function, *args, **kwargs):
@@ -290,10 +273,10 @@ class Greenlet(greenlet):
     def kill(self, exception=GreenletExit, block=False, timeout=None):
         """Raise the exception in the greenlet.
 
-        By default (block is False), the current greenlet is not unscheduled:
-        If block is True, wait for the greenlet to die or for the optional
-        timeout to expire. If the timeout expires before the greenlet has died,
-        stop waiting quietly.
+        If block is ``False`` (the default), the current greenlet is not unscheduled.
+        If block is ``True``, wait until the greenlet dies or the optional timeout expires.
+
+        Return ``None``.
         """
         if not self.dead:
             waiter = Waiter()
@@ -305,9 +288,9 @@ class Greenlet(greenlet):
     def get(self, block=True, timeout=None):
         """Return the result the greenlet has returned or re-raise the exception it has raised.
 
-        If block is False, raise Timeout if the greenlet is still alive.
-        If block is True, unschedule the current greenlet until the result is available
-        or the timeout expires. In the latter case, Timeout is raised.
+        If block is ``False``, raise :class:`gevent.Timeout` if the greenlet is still alive.
+        If block is ``True``, unschedule the current greenlet until the result is available
+        or the timeout expires. In the latter case, :class:`gevent.Timeout` is raised.
         """
         if self.ready():
             if self.successful():
@@ -341,9 +324,8 @@ class Greenlet(greenlet):
             raise Timeout
 
     def join(self, timeout=None):
-        """Wait for the greenlet to complete or for timeout to expire.
-
-        Returns None, never raises anything.
+        """Wait until the greenlet dies or *timeout* expires.
+        Return ``None`` regardless.
         """
         if self.ready():
             return
@@ -379,7 +361,7 @@ class Greenlet(greenlet):
             self._exception = exc_info[1]
             if self._links and self._notifier is None:
                 self._notifier = core.active_event(self._notify_links)
-        
+
         info = str(self) + ' failed with '
 
         try:
@@ -418,8 +400,17 @@ class Greenlet(greenlet):
     def link(self, receiver=None, GreenletLink=GreenletLink, SpawnedLink=SpawnedLink):
         """Link greenlet's completion to callable or another greenlet.
 
-        receiver is None means link to the current greenlet.
+        If *receiver* is a callable then it will be called and passed this instance
+        once this greenlet's dead. A callable is called in its own greenlet.
+
+        If *receiver* is a greenlet then an :class:`LinkedExited` exception will be
+        raised in it once this greenlet's dead.
+
+        If *receiver* is ``None``, link to the current greenlet.
+
         Always asynchronous, unless receiver is a current greenlet and the result is ready.
+        If this greenlet is already dead, then notification will performed in this loop
+        iteration as soon as this greenlet switches to the hub.
         """
         current = getcurrent()
         if receiver is None or receiver is current:
@@ -439,14 +430,17 @@ class Greenlet(greenlet):
         self.rawlink(receiver)
 
     def unlink(self, receiver=None):
+        """Remove the receiver set by :meth:`link` or :meth:`rawlink`"""
         if receiver is None:
             receiver = getcurrent()
         self._links.discard(receiver)
 
     def link_value(self, receiver=None, GreenletLink=SuccessGreenletLink, SpawnedLink=SuccessSpawnedLink):
+        """Like :meth:`link` but *receiver* is only notified when the greenlet has completed successfully"""
         self.link(receiver=receiver, GreenletLink=GreenletLink, SpawnedLink=SpawnedLink)
 
     def link_exception(self, receiver=None, GreenletLink=FailureGreenletLink, SpawnedLink=FailureSpawnedLink):
+        """Like :meth:`link` but *receiver* is only notified when the greenlet dies because of unhandled exception"""
         self.link(receiver=receiver, GreenletLink=GreenletLink, SpawnedLink=SpawnedLink)
 
     def _notify_links(self):
