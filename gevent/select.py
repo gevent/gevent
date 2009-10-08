@@ -4,6 +4,8 @@ from gevent import core
 from gevent.hub import get_hub, getcurrent
 from gevent.timeout import Timeout
 
+__all__ = ['select']
+
 def get_fileno(obj):
     try:
         f = obj.fileno
