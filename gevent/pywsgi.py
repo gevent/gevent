@@ -421,7 +421,7 @@ def server(sock, site, log=None, environ=None, max_size=None, max_http_version=D
                 traceback.print_exc()
 
 
-# compatibilty with wsgi2 module, for tests
+# compatibilty with wsgi module, for tests
 class WSGIServer(object):
 
     def __init__(self, address, application):
