@@ -1,0 +1,19 @@
+@import url("default.css");
+
+body.homepage {
+    background-color: #ffffff;
+    margin: 40px 230px 20px 230px;
+}
+
+div.body h1,
+div.body h2,
+div.body h3,
+div.body h4,
+div.body h5,
+div.body h6 {
+    background-color: #ffffff;
+}
+
+em {
+    font-style: normal;
+}
