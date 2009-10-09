@@ -6,7 +6,10 @@ dist
 gevent.egg-info
 build
 htmlreports
-results.*.db
 gevent/core.so
 gevent/core_d.so
 testresults
+doc/_build
+doc/postbuild.py
+doc/_templates/ga.html
+doc/_templates/layout.html
