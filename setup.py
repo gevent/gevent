@@ -11,9 +11,9 @@ non-standard location, use the options to point to the right dirs:
     -1      prefer libevent1
     -2      prefer libevent2
 
-Alternatively,
+Also,
 
-    setup.py build DIR
+    setup.py build --libevent DIR
 
 is a shortcut for
 
@@ -130,17 +130,16 @@ while i < len(sys.argv):
         LIBEVENT_MAJOR = 1
     elif arg == '-2':
         LIBEVENT_MAJOR = 2
+    elif arg == '--libevent':
+        del sys.argv[i]
+        libevent_source_path = sys.argv[i]
+        add_include_dir(join(libevent_source_path, 'include'), must_exist=False)
+        add_include_dir(libevent_source_path, must_exist=False)
+        add_library_dir(join(libevent_source_path, '.libs'), must_exist=False)
     else:
         i = i+1
         continue
     del sys.argv[i]
-
-if len(sys.argv)>=3 and isdir(sys.argv[-1]):
-    libevent_source_path = sys.argv[-1]
-    del sys.argv[-1]
-    add_include_dir(join(libevent_source_path, 'include'), must_exist=False)
-    add_include_dir(libevent_source_path, must_exist=False)
-    add_library_dir(join(libevent_source_path, '.libs'), must_exist=False)
 
 
 if not sys.argv[1:] or '-h' in sys.argv or '--help' in sys.argv:
