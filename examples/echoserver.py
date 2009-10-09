@@ -44,7 +44,9 @@ def handle_socket(f):
 
 if __name__ == '__main__':
     print "server socket listening on port 6000"
-    server = socket.tcp_listener(('0.0.0.0', 6000))
+    server = socket.socket()
+    server.bind(('0.0.0.0', 6000))
+    server.listen(5)
     while True:
         try:
             new_sock, address = server.accept()
