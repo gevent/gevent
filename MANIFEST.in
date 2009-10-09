@@ -1,5 +1,5 @@
-recursive-include greentest *.py *.crt *.key
-recursive-include examples *.py
-recursive-include gevent *.pyx libevent.h libevent-internal.h
+recursive-include greentest *
+recursive-include examples *
+recursive-include gevent *
 recursive-include doc *
 include MANIFEST.in CHANGES README.eventlet LICENSE LICENSE.pyevent
