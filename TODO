@@ -5,4 +5,5 @@
 - grep for XXX and QQQ
 - classes in core should not crash even if improperly used
 - use libevent 2.x's bufferevent for socket implemenation (or only for _fileobject?)
+- do not include the standard tests in greentest/; run the standard tests unchanged through monkey patcher
 
