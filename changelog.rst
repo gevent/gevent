@@ -1,28 +1,29 @@
 Changelog
 =========
 
+.. currentmodule:: gevent
+
 Version 0.11.0
 --------------
 
-.. currentmodule:: gevent
-
 * Fixed timeout bug in :func:`joinall`, :meth:`Greenlet.join`, :meth:`pool.Pool.join`: if timeout has expired
   it used to raise :class:`Timeout`; now it returns silently.
-* Fixed :func:`signal` to run the signal handler in a new greenlet; it was run in the :class:`Hub <hub.Hub>` greenlet before.
+* Fixed :func:`signal` to run the signal handler in a new greenlet; it was run in the :class:`Hub` greenlet before.
 * Fixed :meth:`Timeout.start_new`: if passed a :class:`Timeout` instance, it now calls its :meth:`start <Timeout.start>`
   method before returning it.
-* Fixed :mod:`monkey <gevent.monkey>` to patch :class:`threading.local` properly.
-* Fixed :meth:`Queue.empty <queue.Queue.empty>` and :meth:`Queue.full <queue.Queue.full>` to be compatible
+* Fixed :mod:`gevent.monkey` to patch :class:`threading.local` properly.
+* Fixed :meth:`Queue.empty` and :meth:`Queue.full` to be compatible
   with the standard :mod:`Queue`. It tried to take into account the greenlets currently blocking on
-  :meth:`get <queue.Queue.get>`/:meth:`put <queue.Queue.put>` which
-  was not useful and hard to reason about. Now it simply compares :meth:`qsize <queue.Queue.qsize>` to *maxsize*,
+  :meth:`get <Queue.get>`/:meth:`put <Queue.put>` which
+  was not useful and hard to reason about. Now it simply compares :meth:`qsize <Queue.qsize>` to *maxsize*,
   which what the standard :mod:`Queue` does too.
-* Fixed :class:`Event <event.Event>` to behave exactly like the standard :class:`threading.Event`:
+* Fixed :class:`Event` to behave exactly like the standard :class:`threading.Event`:
 
-  * :meth:`Event.set <event.Event.set>` does not accept a parameter anymore; it's now either set or not.
+  * :meth:`Event.set` does not accept a parameter anymore; it's now either set or not.
+  * ``Event.get`` method is gone.
   * ``Event.set(); Event.clear()`` used to be a no-op; now it properly wakes up all the waiters.
 
-  :class:`AsyncResult <event.AsyncResult>` behaves exactly like before, but it does not inherit from :class:`Event <event.Event>` anymore
+  :class:`AsyncResult` behaves exactly like before, but it does not inherit from :class:`Event` anymore
   and does miss ``clear()`` method.
 
 * Renamed internal helpers :meth:`socket.wait_reader`/:meth:`socket.wait_writer` to :meth:`socket.wait_read`/:meth:`socket.wait_write`.
@@ -34,7 +35,7 @@ Version 0.11.0
 * Renamed the old ``gevent.wsgi`` to :mod:`gevent.pywsgi`.
 * Added a new HTTP server :mod:`gevent.http` module based on libevent-http wrappers.
 * Added a new WSGI server :mod:`gevent.wsgi` module based on :mod:`gevent.http`.
-* Added evdns wrappers to :mod:`gevent.core` and DNS functions to :mod:`socket <gevent.socket>` module. Contributed by **Jason Toffaletti.**.
+* Added evdns wrappers to :mod:`gevent.core` and DNS functions to :mod:`gevent.socket` module. Contributed by **Jason Toffaletti.**.
 
 * Added a few a few options to ``setup.py`` to select a libevent library to compile against. Check them out with ``setup.py -h``.
 * Added ``__all__`` to many modules that missed it.
@@ -45,8 +46,6 @@ Version 0.11.0
 Version 0.10.0
 --------------
 
-.. currentmodule:: gevent
-
 * Changed :class:`Timeout` API in a backward-incompatible way:
   :meth:`Timeout.__init__` does not start the timer immediately anymore;
   :meth:`Timeout.start` must be called explicitly.
@@ -56,8 +55,8 @@ Version 0.10.0
 * Added :class:`gevent.Greenlet` class which is a subclass of greenlet that adds a few
   useful methods :meth:`join <Greenlet.join>`/:meth:`get <Greenlet.get>`/:meth:`kill <Greenlet.kill>`/:meth:`link <Greenlet.link>`.
 
-* :func:`gevent.spawn` now returns :class:`gevent.Greenlet` instance. The old ``gevent.spawn``,
-  which returns py.magic.greenlet instance, can be still accessed as :meth:`gevent.spawn_raw`.
+* :func:`spawn` now returns :class:`Greenlet` instance. The old ``spawn``, which returns ``py.magic.greenlet``
+  instance, can be still accessed as :meth:`spawn_raw`.
 
   .. note::
 
@@ -72,18 +71,14 @@ Version 0.10.0
        and __init__ methods.
 
 * Added :class:`pool.Pool` class with the methods compatible to the standard :mod:`multiprocessing.pool`:
-  :meth:`apply <pool.Pool.apply>`, :meth:`map <pool.Pool.map>` and others.
-  It also has :meth:`spawn <pool.Pool.spawn>` method which is always async and returns a
-  :class:`gevent.Greenlet` instance.
-
-.. currentmodule:: gevent.event
+  :meth:`apply <Pool.apply>`, :meth:`map <Pool.map>` and others.
+  It also has :meth:`spawn <Pool.spawn>` method which is always async and returns a
+  :class:`Greenlet` instance.
 
 * Added :mod:`gevent.event` module with 2 classes: :class:`Event` and :class:`AsyncResult`.
   :class:`Event` is a drop-in replacement for :class:`threading.Event`, supporting
-  :meth:`set <Event.set>`/:meth:`wait <Event.wait>`/:meth:`get <Event.wait>` methods. :class:`AsyncResult`
-  is an extension of :class:`Event` that supports exception passing via :meth:`set_exception` method.
-
-.. currentmodule:: gevent
+  :meth:`set <Event.set>`/:meth:`wait <Event.wait>`/``get`` methods. :class:`AsyncResult`
+  is an extension of :class:`Event` that supports exception passing via :meth:`set_exception <AsyncResult.set_exception>` method.
 
 * Added :class:`queue.JoinableQueue` class with :meth:`task_done <queue.JoinableQueue.task_done>`
   and :meth:`join <queue.JoinableQueue.join>` methods.
@@ -92,7 +87,7 @@ Version 0.10.0
 
 * :mod:`gevent.wsgi`: pulled **Mike Barton's** eventlet patches that fix double content-length issue.
 
-* Fixed setup.py to searches more places for system libevent installation.
+* Fixed ``setup.py`` to search more places for system libevent installation.
   This fixes 64bit CentOS 5.3 installation issues, hopefully covers other platforms
   as well.
 
@@ -106,11 +101,11 @@ The following items were added to the gevent top level package:
 - :func:`killall`
 - :class:`Greenlet`
 - :exc:`GreenletExit`
-- :mod:`core <gevent.core>`
+- :mod:`core`
 
 The following items were marked as deprecated:
 
-- gevent.proc module (:func:`wrap_errors <gevent.util.wrap_errors>` helper was moved to :mod:`gevent.util` module)
+- gevent.proc module (:class:`wrap_errors` helper was moved to :mod:`util` module)
 - gevent.coros.event
 - gevent.coros.Queue and gevent.coros.Channel
 
@@ -119,10 +114,10 @@ Internally, ``gevent.greenlet`` was split into a number of modules:
 - :mod:`gevent.hub` provides :class:`Hub` class and basic utilities, like :func:`sleep`;
   :class:`Hub` is now a subclass of greenlet.
 - :mod:`gevent.timeout` provides :class:`Timeout` and :func:`with_timeout`
-- :mod:`gevent.greenlet` provides :class:`gevent.Greenlet` class and helpers like :func:`joinall`
+- :mod:`gevent.greenlet` provides :class:`Greenlet` class and helpers like :func:`joinall`
   and :func:`killall`.
 - :mod:`gevent.rawgreenlet` contains the old "polling" versions of
-  :func:`rawgreenlet.joinall` and :func:`rawgreenlet.killall` (they do not need :meth:`Greenlet.link`
+  :func:`joinall <rawgreenlet.joinall>` and :func:`killall <rawgreenlet.killall>` (they do not need :meth:`link <Greenlet.link>`
   functionality and work with any greenlet by polling their status and sleeping in a loop)
 
 
@@ -134,7 +129,7 @@ Version 0.9.3
 -------------
 
 * Fixed all known bugs in the :mod:`gevent.queue` module made it 2.4-compatible.
-  :class:`LifoQueue <queue.LifoQueue>` and :class:`PriorityQueue <queue.PriorityQueue>`
+  :class:`LifoQueue` and :class:`PriorityQueue`
   are implemented as well.
 
   :mod:`gevent.queue` will deprecate both ``coros.Queue`` and ``coros.Channel``.
@@ -168,13 +163,14 @@ Version 0.9.2
   bug reported on eventletdev by **Cesar Alaniz** as well as failures
   in test_socket_ssl.py.
 
-* Removed ``GreenSocket.makeGreenFile``, :meth:`socket.socket.makefile` (which returns _fileobject)
-  is available on both GreenSocket and GreenSSL. socket.py still a work in progress.
+* Removed ``GreenSocket.makeGreenFile``; Use :meth:`socket.socket.makefile` that returns _fileobject
+  and is available on both :class:`GreenSocket <gevent.socket.socket>` and :class:`GreenSSL <gevent.socket.GreenSSL>`.
+  socket.py still a work in progress.
 
 * Added new :class:`core.active_event` class that takes advantage of libevent's event_active function.
   ``core.active_event(func)`` schedules func to be run in this event loop iteration as opposed
   to ``core.timer(0, ...)`` which schedules an event to be run in the next iteration.
-  :class:`active_event <core.active_event>` is now used throughout the library wherever ``core.timer(0, ....)`` was previously used.
+  :class:`active_event` is now used throughout the library wherever ``core.timer(0, ....)`` was previously used.
   This results in :func:`spawn` being at least 20% faster compared to `Version 0.9.1`_ and twice as fast compared to
   eventlet. (The results are obtained with bench_spawn.py script in ``greentest/`` directory)
 
@@ -182,19 +178,13 @@ Version 0.9.2
   function block until the greenlet(s) is actually dead. By default, :func:`kill` and :func:`killall` are asynchronous,
   i.e. they don't unschedule the current greenlet.
 
-.. currentmodule:: gevent.core
-
 * Added a few new properties to :class:`gevent.core.event`: :attr:`fd <event.fd>`, :attr:`events <event.events>`,
   :attr:`events_str <event.events_str>`and `:attr:flags <event.flags>`. It also has
   :meth:`__enter__ <event.__enter__>` and :meth:`__exit__ <event.__exit__>` now, so it can be used as a context manager. :class:`event`'s
   :attr:`callback <event.callback>` signature has changed from ``(event, fd, evtype)`` to ``(event, evtype)``.
 
-.. currentmodule:: gevent.hub
-
 * Fixed :class:`Hub`'s mainloop to never return successfully as this will screw up main greenlet's ``switch()`` call.
   Instead of returning it raises :class:`DispatchExit`.
-
-.. currentmodule:: gevent
 
 * Added :func:`reinit` function - wrapper for libevent's ``event_reinit``.
   This function is a must have at least for daemons, as it fixes ``epoll`` and some others
@@ -215,17 +205,17 @@ Version 0.9.1
 
 * Fixed compilation with gevent libevent-1.3 (Thanks to **Litao Wei** for reporting the problem.)
 
-* Fixed :class:`Hub <hub.Hub>` to recover silently after ``event_dispatch()`` failures (I've seen this
+* Fixed :class:`Hub` to recover silently after ``event_dispatch()`` failures (I've seen this
   happen after ``fork`` even though ``event_reinit()`` is called as necessary). The end result is that :func:`fork`
   now works more reliably, as detected by ``test_socketserver.py`` - it used to fail occasionally, now it does not.
 
-* Reorganized the package, most of the stuff from gevent/__init__.py was moved to gevent/greenlet.py.
-  gevent/__init__.py imports some of it back but not everything.
+* Reorganized the package, most of the stuff from ``gevent/__init__.py`` was moved to ``gevent/greenlet.py``.
+  ``gevent/__init__.py`` imports some of it back but not everything.
 
 * Renamed ``gevent.timeout`` to :class:`gevent.Timeout`. The old name is available as an alias.
 
 * Fixed a few bugs in :class:`queue.Queue`.
-  Added test_queue.py from standard tests to check how good is :class:`gevent.queue.Queue` a replacement
+  Added test_queue.py from standard tests to check how good is :class:`queue.Queue` a replacement
   for a standard :mod:`Queue` (not good at all, timeouts in :meth:`queue.Queue.put` don't work yet)
 
 * :mod:`monkey` now patches ssl module when on 2.6 (very limited support).
@@ -236,7 +226,7 @@ Version 0.9.1
 
 * core.pyx was accidentally left out of the source package, it's included now.
 
-* :class:`GreenSocket <socket.socket>` now wraps a ``socket`` object from _socket module rather
+* :class:`GreenSocket <socket.socket>` now wraps a ``socket`` object from ``_socket`` module rather
   than from :mod:`socket`.
 
 
