@@ -32,14 +32,14 @@ and then 'quit')
 import gevent
 from gevent import socket
 
-def handle_socket(reader, writer):
-    print "client connected"
+def handle_socket(f):
     while True:
-        # pass through every non-eof line
-        x = reader.readline()
-        if not x: break
-        writer.write(x)
-        print "echoed", x
+        x = f.readline()
+        if not x:
+            break
+        f.write(x)
+        f.flush()
+        print "echoed", repr(x)
     print "client disconnected"
 
 if __name__ == '__main__':
@@ -51,4 +51,4 @@ if __name__ == '__main__':
         except KeyboardInterrupt:
             break
         # handle every new connection with a new coroutine
-        gevent.spawn(handle_socket, new_sock.makefile('r'), new_sock.makefile('w'))
+        gevent.spawn(handle_socket, new_sock.makefile())
