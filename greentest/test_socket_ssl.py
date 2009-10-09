@@ -3,7 +3,7 @@ from gevent import monkey
 monkey.patch_all()
 
 import sys
-from greentest import test_support
+import test_support
 import socket
 import errno
 import greentest

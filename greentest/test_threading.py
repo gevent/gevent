@@ -5,8 +5,8 @@ monkey.patch_all(thread=True)
 import thread
 print thread.start_new_thread
 
-import greentest.test_support
-from greentest.test_support import verbose
+import test_support
+from test_support import verbose
 import random
 import sys
 import threading
@@ -304,8 +304,8 @@ class ThreadJoinOnShutdown(greentest.TestCase):
 
 
 def test_main():
-    greentest.test_support.run_unittest(ThreadTests,
-                                        ThreadJoinOnShutdown)
+    test_support.run_unittest(ThreadTests,
+                              ThreadJoinOnShutdown)
 
 if __name__ == "__main__":
     test_main()

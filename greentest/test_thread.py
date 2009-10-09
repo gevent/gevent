@@ -5,7 +5,7 @@
 from gevent import monkey
 monkey.patch_all()
 
-from greentest.test_support import verbose
+from test_support import verbose
 import random
 import thread
 import time

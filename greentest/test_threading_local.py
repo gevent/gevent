@@ -3,7 +3,7 @@ monkey.patch_all()
 import greentest
 import unittest
 from doctest import DocTestSuite
-from greentest import test_support
+import test_support
 
 class ThreadingLocalTest(greentest.TestCase):
     def test_derived(self):

@@ -307,7 +307,7 @@ def main(db):
 
 if __name__=='__main__':
     if not sys.argv[1:]:
-        from greentest.record_results import get_results_db
+        from record_results import get_results_db
         db = get_results_db()
         sys.argv.append(db)
     for db in sys.argv[1:]:

@@ -3,9 +3,9 @@
 from gevent import monkey
 monkey.patch_all()
 
-from greentest import test_support
-from greentest.test_support import (verbose, verify, TESTFN, TestSkipped,
-                                    reap_children)
+import test_support
+from test_support import (verbose, verify, TESTFN, TestSkipped,
+                          reap_children)
 test_support.requires('network')
 
 from SocketServer import *

@@ -98,7 +98,7 @@ elif sys.argv[1:]==['--selftest1']:
             pass
         def test_long(self):
             time.sleep(10)
-    from greentest import test_support
+    import test_support
     test_support.run_unittest(Test)
     sys.exit(0)
 elif sys.argv[1:]==['--selftest2']:
@@ -108,7 +108,7 @@ elif sys.argv[1:]==['--selftest2']:
             fail
         def test_long(self):
             time.sleep(10)
-    from greentest import test_support
+    import test_support
     test_support.run_unittest(Test)
     sys.exit(0)
 

@@ -131,11 +131,11 @@ if __name__=='__main__':
     parser.add_option('--redo', action='store_true', default=False)
     options, args = parser.parse_args()
     if not args:
-        from greentest.record_results import get_results_db
+        from record_results import get_results_db
         db = get_results_db()
         args.append(db)
     for db in args:
         if main(db, options):
-            from greentest import generate_report
+            import generate_report
             generate_report.main(db)
 

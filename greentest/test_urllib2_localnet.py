@@ -8,7 +8,7 @@ import sys
 import urlparse
 import greentest
 import hashlib
-from greentest import test_support
+import test_support
 import threading
 import socket
 import urllib2

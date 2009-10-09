@@ -2,7 +2,7 @@ from gevent import monkey
 monkey.patch_all()
 
 import greentest
-from greentest import test_support
+import test_support
 
 import os
 import socket
