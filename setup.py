@@ -40,6 +40,9 @@ extra_compile_args = []
 LIBEVENT_MAJOR = None # 1 or 2
 VERBOSE = '-v' in sys.argv
 
+libevent_fn = 'libevent.so'
+if sys.platform == 'darwin':
+    libevent_fn = 'libevent.dylib'
 
 def check_dir(path, must_exist):
     if not isdir(path):
@@ -96,11 +99,11 @@ def get_version_from_path(path):
 
 def get_version_from_library_path(d):
     if VERBOSE:
-        print 'checking %s for libevent.so' % d
-    libevent_so = join(d, 'libevent.so')
-    if exists(libevent_so):
+        print 'checking %s for %s' % (d, libevent_fn)
+    libevent_fpath = join(d, libevent_fn)
+    if exists(libevent_fpath):
         if ctypes:
-            return get_version_from_ctypes( ctypes.CDLL(libevent_so), libevent_so )
+            return get_version_from_ctypes( ctypes.CDLL(libevent_fpath), libevent_fpath )
         else:
             return get_version_from_path(d)
 
@@ -157,8 +160,8 @@ else:
         LIBEVENT_MAJOR = get_version_from_library_path(d)
 
     if LIBEVENT_MAJOR is None and ctypes:
-        libevent = ctypes.cdll.LoadLibrary('libevent.so')
-        LIBEVENT_MAJOR = get_version_from_ctypes(libevent, 'libevent.so')
+        libevent = ctypes.cdll.LoadLibrary(libevent_fn)
+        LIBEVENT_MAJOR = get_version_from_ctypes(libevent, libevent_fn)
 
     # search system library dirs (unless explicit library directory was provided)
     if LIBEVENT_MAJOR is None and not library_dirs:
