@@ -11,7 +11,7 @@ Features include:
 * socket module that cooperates (gevent.socket)
 * WSGI server on top of libevent-http (gevent.wsgi2)
 * DNS requests done through libevent-dns
-* Monkey patching utility to get pure Python modules to cooperate
+* monkey patching utility to get pure Python modules to cooperate
 
 .. _coroutine: http://en.wikipedia.org/wiki/Coroutine
 .. _Python: http://www.python.org
@@ -69,9 +69,11 @@ similar projects
 feedback
 --------
 
-Use `Issue Tracker on Google Code`__ for the bug reports.
+Use `Issue Tracker on Google Code`__ for the bug reports / feature requests.
+
+Send your questions and suggestions to the `eventletdev mailing list`_.
+
+Contact me directly at denis.bilenko@gmail.com.
 
 __ http://code.google.com/p/gevent/issues/list
-
-Contact me directly at denis.bilenko at gmail.com.
-
+.. _eventletdev mailing list: https://lists.secondlife.com/cgi-bin/mailman/listinfo/eventletdev

@@ -11,7 +11,7 @@ Features include:
 * :doc:`socket module that cooperates <gevent.socket>`
 * :doc:`WSGI server on top of libevent-http <gevent.wsgi>`
 * DNS requests done through libevent-dns
-* :ref:`Monkey patching utility to get pure Python modules to cooperate <monkey-patching>`
+* :ref:`monkey patching utility to get pure Python modules to cooperate <monkey-patching>`
 
 __ gevent.html#gevent.Greenlet
 .. _gevent: http://gevent.org
@@ -71,8 +71,12 @@ similar projects
 feedback
 --------
 
-Use `Issue Tracker on Google Code`__ for the bug reports.
+Use `Issue Tracker on Google Code`__ for the bug reports / feature requests.
 
-Contact me directly at Denis.Bilenko@gmail.com.
+Send your questions and suggestions to the `eventletdev mailing list`_.
+
+Contact me directly at denis.bilenko@gmail.com.
 
 __ http://code.google.com/p/gevent/issues/list
+.. _eventletdev mailing list: https://lists.secondlife.com/cgi-bin/mailman/listinfo/eventletdev
+
