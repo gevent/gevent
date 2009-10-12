@@ -18,7 +18,7 @@ p = pool.Pool(10)
 finished = 0
 
 def job(url):
-    global succeed, finished
+    global finished
     try:
         try:
             ip = socket.gethostbyname(url)
