@@ -1,4 +1,4 @@
-from django.conf.urls.defaults import patterns
+from django.conf.urls.defaults import *
 from webchat import settings
 
 urlpatterns = patterns('webchat.chat.views',
