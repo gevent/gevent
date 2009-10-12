@@ -14,8 +14,11 @@ class WSGIHandler(object):
         self.headers = None
         self.data = []
 
-    def start_response(self, status, headers):
-        assert self.reason is None, 'start_response was already called'
+    def start_response(self, status, headers, exc_info=None):
+        if not exc_info:
+            assert self.reason is None, 'start_response was already called'
+        else:
+            self.data = []
         code, self.reason = status.split(' ', 1)
         self.code = int(code)
         self.headers = headers
