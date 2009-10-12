@@ -51,6 +51,7 @@ td {
 }
 
 #nav {
+  text-align: right;
   float: right;
   z-index: 99;
 }

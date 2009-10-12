@@ -6,6 +6,10 @@
     <link rel="stylesheet" href="{{ MEDIA_URL }}chat.css" type="text/css"/>
   </head>
   <body>
+    <div id="nav">
+      <a href="http://prg10001.blogspot.com/2009/09/simpler-long-polling-with-django-and.html">Explanation</a><br>
+      <a href="http://bitbucket.org/denis/gevent/src/tip/examples/webchat/">Source Code</a><br>
+    </div>
     <div id="body">
       <div id="inbox">
 	{% for message in messages %}
