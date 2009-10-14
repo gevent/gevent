@@ -6,12 +6,12 @@ a high-level synchronous API on top of libevent_ event loop.
 
 Features include:
 
-* convenient API around greenlets
+* convenient API around greenlets (gevent.Greenlet)
 * familiar synchronization primitives (gevent.event, gevent.queue)
 * socket module that cooperates (gevent.socket)
 * WSGI server on top of libevent-http (gevent.wsgi)
 * DNS requests done through libevent-dns
-* monkey patching utility to get pure Python modules to cooperate
+* monkey patching utility to get pure Python modules to cooperate (gevent.monkey)
 
 .. _coroutine: http://en.wikipedia.org/wiki/Coroutine
 .. _Python: http://www.python.org
