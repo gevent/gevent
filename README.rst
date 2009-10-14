@@ -9,7 +9,7 @@ Features include:
 * convenient API around greenlets
 * familiar synchronization primitives (gevent.event, gevent.queue)
 * socket module that cooperates (gevent.socket)
-* WSGI server on top of libevent-http (gevent.wsgi2)
+* WSGI server on top of libevent-http (gevent.wsgi)
 * DNS requests done through libevent-dns
 * monkey patching utility to get pure Python modules to cooperate
 
