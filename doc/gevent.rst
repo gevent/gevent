@@ -55,7 +55,7 @@ It also a good idea to override __str__(): if _run() raises an exception, its st
 
 
 Being a greenlet__ subclass, :class:`Greenlet` also has ``switch()`` and ``throw()`` methods.
-However, these should not be used at application level. Prefer higher-level safe
+However, these should not be used at the application level. Prefer higher-level safe
 classes, like :class:`Event <gevent.event.Event>` and :class:`Queue <gevent.queue.Queue>`, instead.
 
 __ http://codespeak.net/py/0.9.2/greenlet.html

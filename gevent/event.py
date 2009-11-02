@@ -81,7 +81,7 @@ class Event(object):
     def rawlink(self, callback):
         """Register a callback to call when the internal flag is set to true.
 
-        *callback* will be called in the HUB, so it must not use blocking gevent API.
+        *callback* will be called in the :class:`Hub <gevent.hub.Hub>`, so it must not use blocking gevent API.
         *callback* will be passed one argument: this instance.
         """
         if not callable(callback):
@@ -116,7 +116,7 @@ class AsyncResult(object):
 
     Like :class:`Event` it wakes up all the waiters when :meth:`set` or :meth:`set_exception` method
     is called. Waiters may receive the passed value or exception by calling :meth:`get`
-    method instead of :meth:`wait`. :class:`AsyncResult` instance cannot be reset.
+    method instead of :meth:`wait`. An :class:`AsyncResult` instance cannot be reset.
     
     To pass a value call :meth:`set`. Calls to :meth:`get` (those that currently blocking as well as
     those made in the future) will return the value:
@@ -160,7 +160,7 @@ class AsyncResult(object):
 
     @property
     def exception(self):
-        "Holds the exception passed to :meth:`set_exception` if :meth:`set_exception` was called. Otherwise ``None``."
+        "Holds the exception instance passed to :meth:`set_exception` if :meth:`set_exception` was called. Otherwise ``None``."
         if self._exception is not _NONE:
             return self._exception
 
@@ -282,7 +282,7 @@ class AsyncResult(object):
     def rawlink(self, callback):
         """Register a callback to call when a value or an exception is set.
 
-        *callback* will be called in the HUB, so it must not use blocking gevent API.
+        *callback* will be called in the :class:`Hub <gevent.hub.Hub>`, so it must not use blocking gevent API.
         *callback* will be passed one argument: this instance.
         """
         if not callable(callback):

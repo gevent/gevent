@@ -179,7 +179,7 @@ Version 0.9.2
   i.e. they don't unschedule the current greenlet.
 
 * Added a few new properties to :class:`gevent.core.event`: :attr:`fd <event.fd>`, :attr:`events <event.events>`,
-  :attr:`events_str <event.events_str>`and `:attr:flags <event.flags>`. It also has
+  :attr:`events_str <event.events_str>` and :attr:`flags <event.flags>`. It also has
   :meth:`__enter__ <event.__enter__>` and :meth:`__exit__ <event.__exit__>` now, so it can be used as a context manager. :class:`event`'s
   :attr:`callback <event.callback>` signature has changed from ``(event, fd, evtype)`` to ``(event, evtype)``.
 
