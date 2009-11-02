@@ -112,7 +112,7 @@ def unique(lst):
     return result
 
 
-# parse options: -I name / Iname / -L name / -Lname / -1 / -2
+# parse options: -I name / -Iname / -L name / -Lname / -1 / -2
 i = 1
 while i < len(sys.argv):
     arg = sys.argv[i]
