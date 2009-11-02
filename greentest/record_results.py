@@ -26,6 +26,7 @@ Usage: %prog program [args]
 """
 import sys
 import os
+import subprocess
 import codecs
 from os.path import abspath, dirname, join, split
 try:
@@ -65,20 +66,20 @@ def main():
         del argv[0]
     else:
         debug = False
-    output_name = os.tmpnam()
-    arg = ' '.join(argv) + ' &> %s' % output_name
+    arg = ' '.join(argv)
     print arg
-    returncode = os.system(arg)>>8
+    p = subprocess.Popen(argv, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+    returncode = p.wait()
     print arg, 'finished with code', returncode
-    output = codecs.open(output_name, mode='r', encoding='utf-8', errors='replace').read().replace('\x00', '?')
+    output = p.stdout.read()
     if not debug:
         if returncode==1:
             pass
         elif returncode==8 and disabled_marker in output:
             pass
         else:
+            print "saving %s bytes of output" % len(output)
             record(argv, output, returncode)
-            os.unlink(output_name)
     sys.exit(returncode)
 
 if __name__=='__main__':
