@@ -2,7 +2,7 @@
 """HTTP server example.
 
 Uses libevent API directly and thus may be dangerous.
-WSGI interface is probably a safer choice, see examples/wsgiserver.py.
+WSGI interface is a safer choice, see examples/wsgiserver.py.
 """
 from gevent import http
 
