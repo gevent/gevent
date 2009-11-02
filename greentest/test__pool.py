@@ -196,6 +196,7 @@ class TestPool(greentest.TestCase):
         get = TimingWrapper(res.get)
         self.assertEqual(get(), 49)
         self.assertAlmostEqual(get.elapsed, TIMEOUT1, 1)
+        gevent.sleep(0) # let's the callback run
         assert result == [49], result
 
     def test_async_timeout(self):
