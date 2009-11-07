@@ -36,7 +36,7 @@ def select(read_list, write_list, error_list, timeout=None):
     for r in read_list:
         allevents.append(core.read_event(get_fileno(r), callback, arg=r))
     for w in write_list:
-        allevents.append(core.write_event(get_fileno(r), callback, arg=w))
+        allevents.append(core.write_event(get_fileno(w), callback, arg=w))
 
     timeout = Timeout.start_new(timeout)
     try:
