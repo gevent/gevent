@@ -11,7 +11,7 @@ def get_fileno(obj):
         f = obj.fileno
     except AttributeError:
         if not isinstance(obj, int):
-            raise TypeError("Must be int of have file() method: %r" % (obj, ))
+            raise TypeError("Must be int or have file() method: %r" % (obj, ))
         return obj
     else:
         return f()
