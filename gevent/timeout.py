@@ -88,8 +88,7 @@ class Timeout(BaseException):
         self.timer = None
 
     def start(self):
-        if self.pending:
-            raise AssertionError('%r is already started; to restart it, cancel it first' % self)
+        assert not self.pending, '%r is already started; to restart it, cancel it first' % self
         if self.seconds is None: # "fake" timeout (never expires)
             self.timer = None
         elif self.exception is None or self.exception is False: # timeout that raises self
