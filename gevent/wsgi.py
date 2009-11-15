@@ -5,6 +5,10 @@ from gevent.http import HTTPServer
 socket = __import__('socket')
 
 
+__all__ = ['WSGIServer',
+           'WSGIHandler']
+
+
 class WSGIHandler(object):
 
     def __init__(self, request):
