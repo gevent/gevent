@@ -3,6 +3,18 @@ Changelog
 
 .. currentmodule:: gevent
 
+Version 0.11.1
+--------------
+
+* Fixed bug in :func:`select.select` function. Passing non-empty list of write descriptors used to cause this function to fail.
+* Changed setup.py to go ahead with the compilation even if the actual version of libevent cannot be determined (version 1.x.x is assumed in that case).
+
+Contributed by **Ludvig Ericson**:
+
+* Fixed :mod:`wsgi`'s ``start_response`` to recognize *exc_info* argument.
+* Fixed setup.py to look for libevent.dylib rather than .so on Darwin platforms.
+
+
 Version 0.11.0
 --------------
 
