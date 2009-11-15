@@ -13,3 +13,4 @@ doc/_build
 doc/postbuild.py
 doc/_templates/ga.html
 doc/_templates/layout.html
+push
