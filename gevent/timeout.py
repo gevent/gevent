@@ -88,6 +88,7 @@ class Timeout(BaseException):
         self.timer = None
 
     def start(self):
+        """Schedule the timeout."""
         assert not self.pending, '%r is already started; to restart it, cancel it first' % self
         if self.seconds is None: # "fake" timeout (never expires)
             self.timer = None
@@ -98,6 +99,16 @@ class Timeout(BaseException):
 
     @classmethod
     def start_new(cls, timeout=None, exception=None):
+        """Create a started :class:`Timeout`.
+
+        This is a shortcut, the exact action depends on *timeout*'s type:
+
+        * If *timeout* is a :class:`Timeout`, then call its :meth:`start` method.
+        * Otherwise, create a new :class:`Timeout` instance, passing (*timeout*, *exception*) as
+          arguments, then call its :meth:`start` method.
+
+        Returns the :class:`Timeout` instance.
+        """
         if isinstance(timeout, Timeout):
             if not timeout.pending:
                 timeout.start()
@@ -108,12 +119,14 @@ class Timeout(BaseException):
 
     @property
     def pending(self):
+        """Return True if the timeout is pending, that is, scheduled to be raised."""
         if self.timer is not None:
             return self.timer.pending
         else:
             return False
 
     def cancel(self):
+        """If the timeout is pending, cancel it. Otherwise, do nothing."""
         if self.timer is not None:
             self.timer.cancel()
 
