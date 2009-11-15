@@ -2,7 +2,8 @@
 
 body.homepage {
     background-color: #ffffff;
-    margin: 40px 230px 20px 230px;
+    width: 805px;
+    margin: 40px auto 20px auto;
 }
 
 div.body h1,
