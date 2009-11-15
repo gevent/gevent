@@ -1,7 +1,7 @@
-gevent_
-=======
+gevent
+======
 
-gevent_ is a coroutine_-based Python_ networking library that uses greenlet_ to provide
+gevent is a coroutine_-based Python_ networking library that uses greenlet_ to provide
 a high-level synchronous API on top of libevent_ event loop.
 
 Features include:
@@ -14,7 +14,6 @@ Features include:
 * :ref:`monkey patching utility to get pure Python modules to cooperate <monkey-patching>`
 
 __ gevent.html#gevent.Greenlet
-.. _gevent: http://gevent.org
 .. _coroutine: http://en.wikipedia.org/wiki/Coroutine
 .. _Python: http://www.python.org
 .. _greenlet: http://codespeak.net/py/0.9.2/greenlet.html
