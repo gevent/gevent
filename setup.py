@@ -180,9 +180,10 @@ else:
                 break
 
     if LIBEVENT_MAJOR is None:
-        print 'Cannot guess the version of libevent installed on your system.'
-    else:
-        extra_compile_args.append( '-DUSE_LIBEVENT_%s' % LIBEVENT_MAJOR )
+        print 'Cannot guess the version of libevent installed on your system. DEFAULTING TO 1.'
+        LIBEVENT_MAJOR = 1
+    
+    extra_compile_args.append( '-DUSE_LIBEVENT_%s' % LIBEVENT_MAJOR )
 
 
 gevent_core = Extension(name = 'gevent.core',
