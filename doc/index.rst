@@ -72,10 +72,13 @@ feedback
 
 Use `Issue Tracker on Google Code`__ for the bug reports / feature requests.
 
+Comment on the `blog`_.
+
 Send your questions and suggestions to the `eventletdev mailing list`_.
 
 Contact me directly at denis.bilenko@gmail.com.
 
 __ http://code.google.com/p/gevent/issues/list
+.. _blog: http://blog.gevent.org
 .. _eventletdev mailing list: https://lists.secondlife.com/cgi-bin/mailman/listinfo/eventletdev
 
