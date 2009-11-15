@@ -37,7 +37,7 @@ Read the documentation online at http://gevent.org
 get gevent
 ----------
 
-The latest release (0.11.0) is available on the `Python Package Index.`_
+The latest release (0.11.1) is available on the `Python Package Index.`_
 
 .. _Python Package Index.: http://pypi.python.org/pypi/gevent
 
@@ -52,7 +52,7 @@ installation
 
 Install the dependencies:
 
-* greenlet: http://pypi.python.org/pypi/greenlet  (it can be installed with ``easy_install greenlet``)
+* greenlet: http://pypi.python.org/pypi/greenlet (it can be installed with ``easy_install greenlet``)
 * libevent 1.4.x: http://monkey.org/~provos/libevent/
 
 gevent runs on Python 2.4 and higher.
