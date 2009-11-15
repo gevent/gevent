@@ -54,11 +54,11 @@ __ http://bitbucket.org/denis/gevent/src/tip/examples/concurrent_download.py
 Usage notes
 -----------
 
-Note, that greenlets are cooperatively scheduled. This means that a greenlet
-must give up control or all other greenlets won't get a chance to execute.
-This typically is not an issue for I/O bound app, but one should be aware
-of that if doing something CPU intensive or that otherwise does blocking I/O
-bypassing libevent loop.
+Note, that greenlets are cooperatively scheduled. This means that until a
+particular greenlet gives up control, other greenlets won't get a chance to run.
+It is typically not an issue for an I/O bound app, but one should be aware
+of this when doing something CPU intensive or calling blocking I/O functions
+that bypass libevent event loop.
 
 .. currentmodule:: gevent.hub
 
@@ -72,8 +72,8 @@ instance yet, one is created on the fly.
 .. currentmodule:: gevent
 
 The blocking gevent API does not work in the :class:`Hub <hub.Hub>` greenlet. Typically
-it's not a problem as most of the library takes care not to run the user-supplied
-callback in the :class:`Hub <hub.Hub>`. The exception is :meth:`Greenlet.rawlink`
+it's not a problem as most of the library takes care not to run user-supplied
+callbacks in the :class:`Hub <hub.Hub>`. The exception is :meth:`Greenlet.rawlink`
 and :meth:`Event.rawlink <event.Event.rawlink>` methods as well as everything
 in the :mod:`gevent.core` module.
 

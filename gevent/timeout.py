@@ -47,7 +47,7 @@ class Timeout(BaseException):
          ...
         Timeout: 0.1 seconds
 
-    For Python starting with 2.5 ``with`` statement can be used::
+    For Python 2.5 and newer ``with`` statement can be used::
 
         with Timeout(seconds, exception) as timeout:
             pass # ... code block ...
