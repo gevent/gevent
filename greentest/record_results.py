@@ -31,7 +31,11 @@ from os.path import abspath, dirname, join, split
 try:
     import sqlite3
 except ImportError:
-    import pysqlite2.dbapi2 as sqlite3
+    try:
+        import pysqlite2.dbapi2 as sqlite3
+    except ImportError:
+        sqlite3 = None
+        print "sqlite3 not installed, won't record the results in the database"
 import warnings
 from greentest import disabled_marker
 
@@ -46,17 +50,26 @@ def get_results_db():
         pass
     return join(path, 'results.db')
 
-def record(argv, output, returncode):
-    path = get_results_db()
-    c = sqlite3.connect(path)
-    c.execute('''create table if not exists testresult
-              (id integer primary key autoincrement,
-               command text,
-               output text,
-               exitcode integer)''')
-    c.execute('insert into testresult (command, output, exitcode)'
-              'values (?, ?, ?)', (`argv`, output, returncode))
-    c.commit()
+if sqlite3 is None:
+
+    def record(argv, output, returncode):
+        print output
+        print 'returncode=%s' % returncode
+
+else:
+
+    def record(argv, output, returncode):
+        print "saving %s bytes of output; returncode=%s" % (len(output), returncode)
+        path = get_results_db()
+        c = sqlite3.connect(path)
+        c.execute('''create table if not exists testresult
+                  (id integer primary key autoincrement,
+                   command text,
+                   output text,
+                   exitcode integer)''')
+        c.execute('insert into testresult (command, output, exitcode)'
+                  'values (?, ?, ?)', (`argv`, output, returncode))
+        c.commit()
 
 def main():
     argv = sys.argv[1:]
@@ -69,7 +82,6 @@ def main():
     print arg
     p = subprocess.Popen(argv, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
     returncode = p.wait()
-    print arg, 'finished with code', returncode
     output = p.stdout.read()
     if not debug:
         if returncode==1:
@@ -77,7 +89,6 @@ def main():
         elif returncode==8 and disabled_marker in output:
             pass
         else:
-            print "saving %s bytes of output" % len(output)
             record(argv, output, returncode)
     sys.exit(returncode)
 
