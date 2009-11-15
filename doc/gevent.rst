@@ -112,9 +112,9 @@ Useful general functions
 
 .. autofunction:: sleep
 
-.. autofunction:: kill
+.. autofunction:: kill(greenlet, exception=GreenletExit)
 
-.. autofunction:: killall
+.. autofunction:: killall(greenlets, exception=GreenletExit, block=False, timeout=None)
 
 .. autofunction:: joinall
 

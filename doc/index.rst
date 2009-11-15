@@ -13,7 +13,7 @@ Features include:
 * DNS requests done through libevent-dns
 * :ref:`monkey patching utility to get pure Python modules to cooperate <monkey-patching>`
 
-__ gevent.html#gevent.Greenlet
+__ gevent.html
 .. _coroutine: http://en.wikipedia.org/wiki/Coroutine
 .. _Python: http://www.python.org
 .. _greenlet: http://codespeak.net/py/0.9.2/greenlet.html
@@ -53,7 +53,7 @@ installation
 
 Install the dependencies:
 
-* greenlet: http://pypi.python.org/pypi/greenlet  (it can be installed with ``easy_install greenlet``)
+* greenlet: http://pypi.python.org/pypi/greenlet (it can be installed with ``easy_install greenlet``)
 * libevent 1.4.x: http://monkey.org/~provos/libevent/
 
 gevent runs on Python 2.4 and higher.
