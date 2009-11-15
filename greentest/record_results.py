@@ -27,7 +27,6 @@ Usage: %prog program [args]
 import sys
 import os
 import subprocess
-import codecs
 from os.path import abspath, dirname, join, split
 try:
     import sqlite3
