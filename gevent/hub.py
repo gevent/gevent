@@ -133,6 +133,7 @@ class Hub(greenlet):
     """
 
     def __init__(self):
+        greenlet.__init__(self)
         self.keyboard_interrupt_signal = None
 
     def switch(self):
