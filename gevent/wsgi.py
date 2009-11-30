@@ -180,7 +180,7 @@ def extract_application(filename):
 if __name__ == '__main__':
     import optparse
     parser = optparse.OptionParser()
-    parser.add_option('--port', default='8080', type='int')
+    parser.add_option('-p', '--port', default='8080', type='int')
     parser.add_option('--interface', default='127.0.0.1')
     parser.add_option('--no-spawn', dest='spawn', default=True, action='store_false')
     options, args = parser.parse_args()
