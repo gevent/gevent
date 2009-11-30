@@ -2,8 +2,10 @@ import sys
 import traceback
 from urllib import unquote
 from datetime import datetime
-from gevent.http import HTTPServer
 socket = __import__('socket')
+
+import gevent
+from gevent.http import HTTPServer
 
 
 __all__ = ['WSGIServer',
@@ -32,7 +34,7 @@ class WSGIHandler(object):
     def write(self, data):
         self.data.append(data)
 
-    def end(self):
+    def end(self, env):
         assert self.headers is not None, 'Application did not call start_response'
         has_content_length = False
         for k, v in self.headers:
@@ -50,6 +52,10 @@ class WSGIHandler(object):
             self.request.remove_output_header('Content-Length')
         # QQQ end of work around
         # QQQ when this is fixed, add version guard
+
+        SERVER_SOFTWARE = env.get('SERVER_SOFTWARE')
+        if SERVER_SOFTWARE and not self.request.find_output_header('Server'):
+            self.request.add_output_header('Server', SERVER_SOFTWARE)
 
         self.send_reply(self.code, self.reason, data)
 
@@ -110,15 +116,16 @@ class WSGIHandler(object):
                 return
         finally:
             if self is not None:
-                self.end()
+                self.end(env)
 
 
 class WSGIServer(HTTPServer):
 
     handler_class = WSGIHandler
 
-    base_env = {'SCRIPT_NAME': '',
-                'GATEWAY_INTERFACE': 'CGI/1.1',
+    base_env = {'GATEWAY_INTERFACE': 'CGI/1.1',
+                'SERVER_SOFTWARE': 'gevent/%d.%d Python/%d.%d' % (gevent.version_info[:2] + sys.version_info[:2]),
+                'SCRIPT_NAME': '',
                 'wsgi.version': (1, 0),
                 'wsgi.url_scheme': 'http',
                 'wsgi.errors': sys.stderr,
