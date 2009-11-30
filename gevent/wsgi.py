@@ -1,5 +1,6 @@
 import sys
 import traceback
+from urllib import unquote
 from datetime import datetime
 from gevent.http import HTTPServer
 socket = __import__('socket')
@@ -74,6 +75,7 @@ class WSGIHandler(object):
             path, query = req.uri.split('?',1)
         else:
             path, query = req.uri, ''
+        path = unquote(path)
         env.update({'REQUEST_METHOD': req.typestr,
                     'PATH_INFO': path,
                     'QUERY_STRING': query,
