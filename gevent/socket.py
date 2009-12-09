@@ -35,7 +35,10 @@ error = _socket.error
 timeout = _socket.timeout
 __socket__ = __import__('socket')
 _fileobject = __socket__._fileobject
-sslerror = __socket__.sslerror
+try:
+    sslerror = __socket__.sslerror
+except AttributeError:
+    pass
 gaierror = __socket__.gaierror
 
 import sys
