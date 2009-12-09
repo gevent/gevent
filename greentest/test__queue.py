@@ -227,6 +227,16 @@ class TestChannel(TestCase):
         self.assertEqual(['waiting', 'sending hello', 'hello', 'sending world', 'world', 'sent world'], events)
         g.get()
 
+    def test_task_done(self):
+        channel = queue.JoinableQueue(0)
+        X = object()
+        gevent.spawn(channel.put, X)
+        result = channel.get()
+        assert result is X, (result, X)
+        assert channel.unfinished_tasks == 1, channel.unfinished_tasks
+        channel.task_done()
+        assert channel.unfinished_tasks == 0, channel.unfinished_tasks
+
 
 class TestNoWait(TestCase):
 
