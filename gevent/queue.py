@@ -284,8 +284,8 @@ class JoinableQueue(Queue):
             result += ' tasks=%s _cond=%s' % (self.unfinished_tasks, self._cond)
         return result
 
-    def put(self, item, block=True, timeout=None):
-        Queue.put(self, item, block, timeout)
+    def _put(self, item):
+        Queue._put(self, item)
         self.unfinished_tasks += 1
         self._cond.clear()
 
