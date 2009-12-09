@@ -164,11 +164,9 @@ class Queue(object):
             while self.putters:
                 putter = self.putters.pop()
                 if putter:
-                    # obtain the item directly from putter bypassing the queue
-                    item = putter.item
-                    putter.item = _NONE
                     putter.switch(putter)
-                    return item
+                    if self.qsize():
+                        return self._get()
             raise Empty
         elif block:
             waiter = Waiter()
@@ -209,9 +207,10 @@ class Queue(object):
                     if putter:
                         getter = self.getters.pop()
                         if getter:
-                            # deliver the item from putter to getter bypassing the queue
                             item = putter.item
-                            putter.item = _NONE
+                            putter.item = _NONE # this makes greenlet calling put() not to call _put() again
+                            self._put(item)
+                            item = self._get()
                             getter.switch(item)
                             putter.switch(putter)
                         else:
