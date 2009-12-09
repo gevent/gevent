@@ -272,8 +272,7 @@ class socket(object):
     def recv(self, *args):
         if self.timeout!=0.0:
             wait_read(self.fileno(), timeout=self.timeout, timeout_exc=timeout)
-        res = self.fd.recv(*args)
-        return res
+        return self.fd.recv(*args)
 
     def recvfrom(self, *args):
         if self.timeout!=0.0:
