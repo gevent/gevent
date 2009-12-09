@@ -120,7 +120,7 @@ def backdoor((conn, addr), locals=None):
 
 
 class _fileobject(socket._fileobject):
-    
+
     def write(self, data):
         self._sock.sendall(data)
 

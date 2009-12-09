@@ -188,7 +188,7 @@ class Hub(greenlet):
 
 
 class DispatchExit(Exception):
-    
+
     def __init__(self, code):
         self.code = code
         Exception.__init__(self, code)

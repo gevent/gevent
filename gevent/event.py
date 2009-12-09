@@ -117,7 +117,7 @@ class AsyncResult(object):
     Like :class:`Event` it wakes up all the waiters when :meth:`set` or :meth:`set_exception` method
     is called. Waiters may receive the passed value or exception by calling :meth:`get`
     method instead of :meth:`wait`. An :class:`AsyncResult` instance cannot be reset.
-    
+
     To pass a value call :meth:`set`. Calls to :meth:`get` (those that currently blocking as well as
     those made in the future) will return the value:
 

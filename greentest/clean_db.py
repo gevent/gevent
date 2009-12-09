@@ -8,4 +8,4 @@ if __name__=='__main__':
     c.execute('delete from testresult where changeset glob "*+"')
     c.commit()
 
- 
+

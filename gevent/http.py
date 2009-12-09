@@ -102,11 +102,10 @@ class HTTPServer(object):
             requests = self._requests.get(request.connection._obj)
             if requests is not None:
                 requests.remove(request)
-        
+
     def _cb_request(self, request):
         try:
             spawn = self.spawn
-            # we're setting the callback here anyway, because 
             request.connection.set_closecb(self)
             self._requests.setdefault(request.connection._obj, []).append(request)
             if spawn is None:

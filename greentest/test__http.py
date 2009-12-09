@@ -40,7 +40,7 @@ class BoundTestCase(greentest.TestCase):
         self.check_refused()
 
     def print_netstat(self, comment=''):
-        cmd ='sudo netstat -anp | grep %s' % self.port 
+        cmd ='sudo netstat -anp | grep %s' % self.port
         print cmd, ' # %s' % comment
         os.system(cmd)
 
@@ -157,14 +157,14 @@ class TestSendReplyLater(BoundTestCase):
 
 # class TestSendReplyStartChunk(BoundTestCase):
 #     spawn = True
-# 
+#
 #     def handle(self, r):
 #         r.send_reply_start(200, 'OK')
 #         gevent.sleep(0.2)
 #         print 'handler sending chunk'
 #         r.send_reply_chunk('hi')
 #         print 'handler done'
-# 
+#
 #     def test(self):
 #         response = urlopen(self.url)
 #         print 'connected to %s' % self.url
@@ -179,7 +179,7 @@ class TestSendReplyLater(BoundTestCase):
 #         print 123
 #         gevent.sleep(0.5)
 #         print 1234
-# 
+#
 #     def test_client_closes(self):
 #         s = self.connect()
 #         s.sendall('GET / HTTP/1.0\r\n\r\n')

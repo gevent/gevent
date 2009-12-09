@@ -10,7 +10,7 @@ __all__ = ['GreenletSet', 'Pool']
 
 class GreenletSet(object):
     """Maintain a set of greenlets that are still running.
-    
+
     Links to each item and removes it upon notification.
     """
     greenlet_class = Greenlet
@@ -164,7 +164,7 @@ class GreenletSet(object):
             g.rawlink(q.put)
         for _ in xrange(len(greenlets)):
             yield q.get().get()
-    
+
     def full(self):
         return False
 

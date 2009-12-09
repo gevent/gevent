@@ -151,7 +151,7 @@ class TestUnlink(greentest.TestCase):
         assert len(p._links)==1, p._links
         p.unlink(getcurrent())
         assert not p._links, p._links
-        
+
         g = gevent.Greenlet()
         link(g)
         assert len(p._links)==1, p._links

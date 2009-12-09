@@ -131,7 +131,7 @@ class Input(object):
 class HttpProtocol(BaseHTTPServer.BaseHTTPRequestHandler):
     protocol_version = 'HTTP/1.1'
     minimum_chunk_size = MINIMUM_CHUNK_SIZE
-    
+
     def handle_one_request(self):
         if self.server.max_http_version:
             self.protocol_version = self.server.max_http_version
@@ -381,10 +381,10 @@ class Server(BaseHTTPServer.HTTPServer):
         self.log.write(message + '\n')
 
 
-def server(sock, site, log=None, environ=None, max_size=None, max_http_version=DEFAULT_MAX_HTTP_VERSION, 
+def server(sock, site, log=None, environ=None, max_size=None, max_http_version=DEFAULT_MAX_HTTP_VERSION,
            protocol=HttpProtocol, minimum_chunk_size=None):
-    serv = Server(sock, sock.getsockname(), site, log, environ=None, 
-                  max_http_version=max_http_version, protocol=protocol, 
+    serv = Server(sock, sock.getsockname(), site, log, environ=None,
+                  max_http_version=max_http_version, protocol=protocol,
                   minimum_chunk_size=minimum_chunk_size)
     if max_size is None:
         max_size = DEFAULT_MAX_SIMULTANEOUS_REQUESTS

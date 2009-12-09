@@ -142,7 +142,7 @@ class PoolBasicTests(greentest.TestCase):
         result = p.apply(lambda a: ('foo', a), (1, ))
         self.assertEqual(result, ('foo', 1))
 
-# 
+#
 # tests from standard library test/test_multiprocessing.py
 
 class TimingWrapper(object):
