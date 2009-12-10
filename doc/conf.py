@@ -204,7 +204,6 @@ latex_documents = [
 # prevent some stuff from showing up in docs
 import gevent.queue
 import gevent.http
-del gevent.queue.JoinableQueue.put # it's already covered in the parent
 del gevent.http.HTTPServer.spawn   # it's a parameter, not a method
 del gevent.Greenlet.throw
 
