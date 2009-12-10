@@ -3,6 +3,16 @@ Changelog
 
 .. currentmodule:: gevent
 
+Version 0.11.2
+--------------
+
+* Fixed :mod:`wsgi` to unquote ``environ['PATH_INFO']`` before passing to application.
+* Added ``SERVER_SOFTWARE`` variable to :mod:`wsgi` environ.
+
+* Fixed bug in :meth:`JoinableQueue.task_done` that caused :class:`ValueError` to be raised incorrectly here.
+* Fixed :mod:`gevent.socket` not to fail with :class:`ImportError` if Python was not built with ssl support.
+
+
 Version 0.11.1
 --------------
 
