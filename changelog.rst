@@ -97,7 +97,7 @@ Version 0.10.0
 * Added :class:`queue.JoinableQueue` class with :meth:`task_done <queue.JoinableQueue.task_done>`
   and :meth:`join <queue.JoinableQueue.join>` methods.
 * Renamed ``core.read`` and ``core.write`` classes to :class:`core.read_event` and :class:`core.write_event`.
-* :mod:`gevent.wsgi`: pulled **Mike Barton's** eventlet patches that fix double content-length issue.
+* :mod:`gevent.pywsgi`: pulled **Mike Barton's** eventlet patches that fix double content-length issue.
 * Fixed ``setup.py`` to search more places for system libevent installation.
   This fixes 64bit CentOS 5.3 installation issues, hopefully covers other platforms
   as well.
@@ -133,7 +133,7 @@ Internally, ``gevent.greenlet`` was split into a number of modules:
 
 
 Thanks to **Jason Toffaletti** for reporting the installation issue and providing a
-test case for wsgi double content-length header bug.
+test case for WSGI double content-length header bug.
 
 
 Version 0.9.3
