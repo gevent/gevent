@@ -84,7 +84,7 @@ def get_version_from_ctypes(cdll, path):
         elif version.startswith('2'):
             return 2
         else:
-            print 'Wierd response from %s get_version(): %r' % (path, version)
+            print 'Weird response from %s get_version(): %r' % (path, version)
 
 def get_version_from_path(path):
     v1 = re.search('[^\d]1\.', path)
