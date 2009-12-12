@@ -119,7 +119,7 @@ class Timeout(BaseException):
 
     @property
     def pending(self):
-        """Return True if the timeout is pending, that is, scheduled to be raised."""
+        """Return True if the timeout is scheduled to be raised."""
         if self.timer is not None:
             return self.timer.pending
         else:
