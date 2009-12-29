@@ -129,7 +129,7 @@ class TestSSL(TestTCP):
         try:
             data = client.recv(1024)
         except socket.timeout:
-            assert time.time() - start >= 0.1, (time.time() - start)
+            assert time.time() - start >= 0.1 - 0.01, (time.time() - start)
         else:
             raise AssertionError('socket.timeout should have been raised, instead recv returned %r' % (data, ))
         acceptor.get()
@@ -143,7 +143,7 @@ class TestSSL(TestTCP):
         try:
             result = client.sendall('h'*1000000)
         except socket.timeout:
-            assert time.time() - start >= 0.1, (time.time() - start)
+            assert time.time() - start >= 0.1 - 0.01, (time.time() - start)
         else:
             raise AssertionError('socket.timeout should have been raised, instead sendall returned %r' % (result, ))
         acceptor.get()
