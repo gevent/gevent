@@ -41,6 +41,21 @@ except AttributeError:
     pass
 gaierror = __socket__.gaierror
 
+# Import public constants from the standard socket (called __socket__ here) into this module.
+
+for name in __socket__.__all__:
+    if name[:1].isupper():
+        value = getattr(__socket__, name)
+        if isinstance(value, (int, basestring)):
+            globals()[name] = value
+            __all__.append(name)
+
+del name, value
+
+# XXX: import other non-blocking stuff, like ntohl
+# XXX: implement blocking functions that are not yet implemented
+# XXX: add test that checks that socket.__all__ matches gevent.socket.__all__ on all supported platforms
+
 import sys
 import errno
 import time
