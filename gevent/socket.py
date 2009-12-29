@@ -28,7 +28,18 @@ items in standard :mod:`socket` module exactly, but the synchronous functions
 in this module only block the current greenlet and let the others run.
 """
 
-__all__ = ['socket', 'socketpair', 'fromfd', 'gethostbyname', 'getaddrinfo', 'getnameinfo', 'wrap_ssl']
+
+__all__ = ['create_connection',
+           'error',
+           'fromfd',
+           'gaierror',
+           'getaddrinfo',
+           'gethostbyname',
+           'getnameinfo',
+           'socket',
+           'socketpair',
+           'timeout',
+           'ssl']
 
 import _socket
 error = _socket.error
@@ -37,6 +48,7 @@ __socket__ = __import__('socket')
 _fileobject = __socket__._fileobject
 try:
     sslerror = __socket__.sslerror
+    __all__.append('sslerror')
 except AttributeError:
     pass
 gaierror = __socket__.gaierror
@@ -775,7 +787,7 @@ else:
         return (addrs, port)
 
 
-def wrap_ssl(sock, keyfile=None, certfile=None):
+def ssl(sock, keyfile=None, certfile=None):
     from OpenSSL import SSL
     context = SSL.Context(SSL.SSLv23_METHOD)
     if certfile is not None:
@@ -798,3 +810,4 @@ def wrap_ssl(sock, keyfile=None, certfile=None):
 
     return ssl_sock
 
+wrap_ssl = ssl # XXX this is deprecated and will be removed
