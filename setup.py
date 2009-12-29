@@ -160,8 +160,11 @@ else:
         LIBEVENT_MAJOR = get_version_from_library_path(d)
 
     if LIBEVENT_MAJOR is None and ctypes:
-        libevent = ctypes.cdll.LoadLibrary(libevent_fn)
-        LIBEVENT_MAJOR = get_version_from_ctypes(libevent, libevent_fn)
+        try:
+            libevent = ctypes.cdll.LoadLibrary(libevent_fn)
+            LIBEVENT_MAJOR = get_version_from_ctypes(libevent, libevent_fn)
+        except OSError:
+            pass
 
     # search system library dirs (unless explicit library directory was provided)
     if LIBEVENT_MAJOR is None and not library_dirs:
