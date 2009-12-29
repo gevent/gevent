@@ -1,3 +1,4 @@
+#!/usr/bin/python
 # Copyright (c) 2009 Denis Bilenko. See LICENSE for details.
 
 """Spawn multiple workers and wait for them to complete"""
