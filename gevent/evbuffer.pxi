@@ -33,7 +33,8 @@ cdef class buffer:
         return evbuffer_get_length(self.__obj)
 
     def __nonzero__(self):
-        return self.__obj and evbuffer_get_length(self.__obj)
+        if self.__obj:
+            return evbuffer_get_length(self.__obj)
 
     # cython does not implement generators
     #def __iter__(self):
