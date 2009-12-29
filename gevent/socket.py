@@ -194,6 +194,10 @@ class socket(object):
             result += ' timeout=' + str(self.timeout)
         return result
 
+    @property
+    def _sock(self):
+        return self.fd
+
     def __getattr__(self, item):
         return getattr(self.fd, item)
 
