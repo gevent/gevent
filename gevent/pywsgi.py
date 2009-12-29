@@ -442,4 +442,7 @@ class WSGIServer(object):
         self.socket.close()
         self.server.join()
 
+    def serve_forever(self):
+        self.start()
+        self.server.join()
 
