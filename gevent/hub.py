@@ -25,7 +25,7 @@ except ImportError:
     try:
         from py.magic import greenlet
     except ImportError:
-        raise ImportError('gevent requires greenlet library: http://pypi.python.org/pypi/greenlet/')
+        raise ImportError('gevent requires greenlet: http://pypi.python.org/pypi/greenlet/')
 
 getcurrent = greenlet.getcurrent
 GreenletExit = greenlet.GreenletExit
