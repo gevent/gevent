@@ -19,8 +19,8 @@ class GreenletSet(object):
         assert len(args)<=1, args
         self.greenlets = set(*args)
         if args:
-            for p in args[0]:
-                p.rawlink(self.discard)
+            for greenlet in args[0]:
+                greenlet.rawlink(self.discard)
         # each item we kill we place in dying, to avoid killing the same greenlet twice
         self.dying = set()
 
@@ -40,34 +40,34 @@ class GreenletSet(object):
     def __iter__(self):
         return iter(self.greenlets)
 
-    def add(self, p):
-        p.rawlink(self.discard)
-        self.greenlets.add(p)
+    def add(self, greenlet):
+        greenlet.rawlink(self.discard)
+        self.greenlets.add(greenlet)
 
-    def discard(self, p):
-        self.greenlets.discard(p)
-        self.dying.discard(p)
+    def discard(self, greenlet):
+        self.greenlets.discard(greenlet)
+        self.dying.discard(greenlet)
 
     def spawn(self, func, *args, **kwargs):
         add = self.add
-        p = self.greenlet_class.spawn(func, *args, **kwargs)
-        add(p)
-        return p
+        greenlet = self.greenlet_class.spawn(func, *args, **kwargs)
+        add(greenlet)
+        return greenlet
 
     def spawn_link(self, func, *args, **kwargs):
-        p = self.spawn(func, *args, **kwargs)
-        p.link()
-        return p
+        greenlet = self.spawn(func, *args, **kwargs)
+        greenlet.link()
+        return greenlet
 
     def spawn_link_value(self, func, *args, **kwargs):
-        p = self.spawn(func, *args, **kwargs)
-        p.link_value()
-        return p
+        greenlet = self.spawn(func, *args, **kwargs)
+        greenlet.link_value()
+        return greenlet
 
     def spawn_link_exception(self, func, *args, **kwargs):
-        p = self.spawn(func, *args, **kwargs)
-        p.link_exception()
-        return p
+        greenlet = self.spawn(func, *args, **kwargs)
+        greenlet.link_exception()
+        return greenlet
 
 #     def close(self):
 #         """Prevents any more tasks from being submitted to the pool"""
@@ -86,25 +86,25 @@ class GreenletSet(object):
             timeout.cancel()
 
     def kill(self, exception=GreenletExit, block=False, timeout=None):
-        t = Timeout.start_new(timeout)
+        timer = Timeout.start_new(timeout)
         try:
             while self.greenlets:
-                for p in self.greenlets:
-                    if p not in self.dying:
-                        p.kill(exception)
-                        self.dying.add(p)
+                for greenlet in self.greenlets:
+                    if greenlet not in self.dying:
+                        greenlet.kill(exception)
+                        self.dying.add(greenlet)
                 if not block:
                     break
                 joinall(self.greenlets)
         finally:
-            t.cancel()
+            timer.cancel()
 
-    def killone(self, p, exception=GreenletExit, block=False, timeout=None):
-        if p not in self.dying and p in self.greenlets:
-            p.kill(exception)
-            self.dying.add(p)
+    def killone(self, greenlet, exception=GreenletExit, block=False, timeout=None):
+        if greenlet not in self.dying and greenlet in self.greenlets:
+            greenlet.kill(exception)
+            self.dying.add(greenlet)
             if block:
-                p.join(timeout)
+                greenlet.join(timeout)
 
     def apply(self, func, args=None, kwds=None):
         """Equivalent of the apply() builtin function. It blocks till the result is ready."""
@@ -126,14 +126,14 @@ class GreenletSet(object):
             args = ()
         if kwds is None:
             kwds = {}
-        p = self.spawn(func, *args, **kwds)
+        greenlet = self.spawn(func, *args, **kwds)
         if callback is not None:
-            p.link(pass_value(callback))
-        return p
+            greenlet.link(pass_value(callback))
+        return greenlet
 
     def map(self, func, iterable):
         greenlets = [self.spawn(func, item) for item in iterable]
-        return [g.get() for g in greenlets]
+        return [greenlet.get() for greenlet in greenlets]
 
     def map_async(self, func, iterable, callback=None):
         """
@@ -151,8 +151,8 @@ class GreenletSet(object):
     def imap(self, func, iterable):
         """An equivalent of itertools.imap()"""
         greenlets = [self.spawn(func, item) for item in iterable]
-        for g in greenlets:
-            yield g.get()
+        for greenlet in greenlets:
+            yield greenlet.get()
 
     def imap_unordered(self, func, iterable):
         """The same as imap() except that the ordering of the results from the
@@ -160,8 +160,8 @@ class GreenletSet(object):
         from gevent.queue import Queue
         q = Queue()
         greenlets = [self.spawn(func, item) for item in iterable]
-        for g in greenlets:
-            g.rawlink(q.put)
+        for greenlet in greenlets:
+            greenlet.rawlink(q.put)
         for _ in xrange(len(greenlets)):
             yield q.get().get()
 
@@ -186,28 +186,28 @@ class Pool(GreenletSet):
             return 1
         return max(0, self.size - len(self) - len(self.waiting))
 
-    def start(self, g):
+    def start(self, greenlet):
         if self.size is not None and len(self) >= self.size:
-            self.waiting.append(g)
+            self.waiting.append(greenlet)
         else:
-            g.start()
-            self.add(g)
+            greenlet.start()
+            self.add(greenlet)
 
     def spawn(self, function, *args, **kwargs):
-        g = Greenlet(function, *args, **kwargs)
-        self.start(g)
-        return g
+        greenlet = Greenlet(function, *args, **kwargs)
+        self.start(greenlet)
+        return greenlet
 
-    def discard(self, p):
-        GreenletSet.discard(self, p)
+    def discard(self, greenlet):
+        GreenletSet.discard(self, greenlet)
         while self.waiting and len(self) < self.size:
-            g = self.waiting.popleft()
-            g.start()
-            self.add(g)
+            greenlet = self.waiting.popleft()
+            greenlet.start()
+            self.add(greenlet)
 
     def kill(self, exception=GreenletExit, block=False, timeout=None):
-        for g in self.waiting:
-            g.kill(exception)
+        for greenlet in self.waiting:
+            greenlet.kill(exception)
         self.waiting.clear()
         return GreenletSet.kill(self, exception=exception, block=block, timeout=timeout)
 
