@@ -26,6 +26,8 @@ This module provides socket operations and some related functions.
 The API of the functions and classes matches the API of the corresponding
 items in standard :mod:`socket` module exactly, but the synchronous functions
 in this module only block the current greenlet and let the others run.
+
+In addition, all the constants from :mod:`socket` are imported into this module.
 """
 
 
