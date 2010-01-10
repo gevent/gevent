@@ -66,12 +66,12 @@ def sleep(seconds=0):
     expressing a cooperative yield.
     """
     unique_mark = object()
-    t = core.timer(seconds, getcurrent().switch, unique_mark)
+    timer = core.timer(seconds, getcurrent().switch, unique_mark)
     try:
         switch_result = get_hub().switch()
         assert switch_result is unique_mark, 'Invalid switch into sleep(): %r' % (switch_result, )
     except:
-        t.cancel()
+        timer.cancel()
         raise
 
 
