@@ -65,16 +65,16 @@ class Event(object):
             switch = getcurrent().switch
             self.rawlink(switch)
             try:
-                t = Timeout.start_new(timeout)
+                timer = Timeout.start_new(timeout)
                 try:
                     try:
                         result = get_hub().switch()
                         assert result is self, 'Invalid switch into Event.wait(): %r' % (result, )
-                    except Timeout, exc:
-                        if exc is not t:
+                    except Timeout, ex:
+                        if ex is not timer:
                             raise
                 finally:
-                    t.cancel()
+                    timer.cancel()
             finally:
                 self.unlink(switch)
 
@@ -160,7 +160,8 @@ class AsyncResult(object):
 
     @property
     def exception(self):
-        "Holds the exception instance passed to :meth:`set_exception` if :meth:`set_exception` was called. Otherwise ``None``."
+        """Holds the exception instance passed to :meth:`set_exception` if :meth:`set_exception` was called.
+        Otherwise ``None``."""
         if self._exception is not _NONE:
             return self._exception
 
@@ -204,12 +205,12 @@ class AsyncResult(object):
             switch = getcurrent().switch
             self.rawlink(switch)
             try:
-                t = Timeout.start_new(timeout)
+                timer = Timeout.start_new(timeout)
                 try:
                     result = get_hub().switch()
                     assert result is self, 'Invalid switch into AsyncResult.get(): %r' % (result, )
                 finally:
-                    t.cancel()
+                    timer.cancel()
             except:
                 self.unlink(switch)
                 raise
@@ -247,15 +248,15 @@ class AsyncResult(object):
             switch = getcurrent().switch
             self.rawlink(switch)
             try:
-                t = Timeout.start_new(timeout)
+                timer = Timeout.start_new(timeout)
                 try:
                     result = get_hub().switch()
                     assert result is self, 'Invalid switch into AsyncResult.wait(): %r' % (result, )
                 finally:
-                    t.cancel()
+                    timer.cancel()
             except Timeout, exc:
                 self.unlink(switch)
-                if exc is not t:
+                if exc is not timer:
                     raise
             except:
                 self.unlink(switch)
