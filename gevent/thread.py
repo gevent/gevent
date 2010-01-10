@@ -10,8 +10,8 @@ def get_ident(gr=None):
         return id(gr)
 
 def start_new_thread(function, args=(), kwargs={}):
-    g = spawn_raw(function, *args, **kwargs)
-    return get_ident(g)
+    greenlet = spawn_raw(function, *args, **kwargs)
+    return get_ident(greenlet)
 
 def allocate_lock():
     return LockType(1)
