@@ -17,9 +17,9 @@ def get_fileno(obj):
         return fileno_f()
 
 
-def select(read_list, write_list, error_list, timeout=None):
+def select(rlist, wlist, xlist, timeout=None):
     """An implementation of :meth:`select.select` that blocks only the current greenlet."""
-    # QQQ error_list is ignored
+    # QQQ xlist is ignored
     hub = get_hub()
     current = getcurrent()
     assert hub is not current, 'do not call blocking functions from the mainloop'
@@ -33,10 +33,10 @@ def select(read_list, write_list, error_list, timeout=None):
         else:
             current.switch(([], [], []))
 
-    for r in read_list:
-        allevents.append(core.read_event(get_fileno(r), callback, arg=r))
-    for w in write_list:
-        allevents.append(core.write_event(get_fileno(w), callback, arg=w))
+    for readfd in rlist:
+        allevents.append(core.read_event(get_fileno(readfd), callback, arg=readfd))
+    for writefd in wlist:
+        allevents.append(core.write_event(get_fileno(writefd), callback, arg=writefd))
 
     timeout = Timeout.start_new(timeout)
     try:
