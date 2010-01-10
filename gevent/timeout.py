@@ -154,16 +154,16 @@ class Timeout(BaseException):
         """
         if self.seconds is None:
             return ''
-        if self.seconds==1:
-            s = ''
+        if self.seconds == 1:
+            suffix = ''
         else:
-            s = 's'
+            suffix = 's'
         if self.exception is None:
-            return '%s second%s' % (self.seconds, s)
+            return '%s second%s' % (self.seconds, suffix)
         elif self.exception is False:
-            return '%s second%s (silent)' % (self.seconds, s)
+            return '%s second%s (silent)' % (self.seconds, suffix)
         else:
-            return '%s second%s (%s)' % (self.seconds, s, self.exception)
+            return '%s second%s (%s)' % (self.seconds, suffix, self.exception)
 
     def __enter__(self):
         if self.timer is None:
@@ -190,8 +190,8 @@ def with_timeout(seconds, function, *args, **kwds):
     try:
         try:
             return function(*args, **kwds)
-        except Timeout, t:
-            if t is timeout and timeout_value is not _NONE:
+        except Timeout, ex:
+            if ex is timeout and timeout_value is not _NONE:
                 return timeout_value
             raise
     finally:
