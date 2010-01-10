@@ -1,5 +1,6 @@
-__all__ += ['dns_init', 'dns_shutdown', 'dns_resolve_ipv4', 'dns_resolve_ipv6',
-            'dns_resolve_reverse', 'dns_resolve_reverse_ipv6', 'dns_shutdown']
+__all__ += ['dns_init', 'dns_shutdown', 'dns_err_to_string',
+            'dns_resolve_ipv4', 'dns_resolve_ipv6',
+            'dns_resolve_reverse', 'dns_resolve_reverse_ipv6']
 
 cdef extern from "netinet/in.h":
     cdef enum:
@@ -22,19 +23,14 @@ cdef extern from "arpa/inet.h":
     char *inet_ntop(int af, void *src, char *dst, socklen_t size)
 
 cdef extern from "libevent.h":
-    ctypedef void (*evdns_handler)(int result, char t, int count, int ttl,
-                                   void *addrs, void *arg)
+    ctypedef void (*evdns_handler)(int result, char t, int count, int ttl, void *addrs, void *arg)
 
     int evdns_init()
     char *evdns_err_to_string(int err)
-    int evdns_resolve_ipv4(char *name, int flags, evdns_handler callback,
-                           void *arg)
-    int evdns_resolve_ipv6(char *name, int flags, evdns_handler callback,
-                           void *arg)
-    int evdns_resolve_reverse(in_addr *ip, int flags, evdns_handler callback,
-                              void *arg)
-    int evdns_resolve_reverse_ipv6(in6_addr *ip, int flags, evdns_handler callback,
-                                   void *arg)
+    int evdns_resolve_ipv4(char *name, int flags, evdns_handler callback, void *arg)
+    int evdns_resolve_ipv6(char *name, int flags, evdns_handler callback, void *arg)
+    int evdns_resolve_reverse(in_addr *ip, int flags, evdns_handler callback, void *arg)
+    int evdns_resolve_reverse_ipv6(in6_addr *ip, int flags, evdns_handler callback, void *arg)
     void evdns_shutdown(int fail_requests)
 
 # Result codes
@@ -50,19 +46,29 @@ DNS_ERR_TIMEOUT		= 67
 DNS_ERR_SHUTDOWN	= 68
 
 # Types
-DNS_IPv4_A		= 1
-DNS_PTR			= 2
-DNS_IPv6_AAAA		= 3
+DNS_IPv4_A      = 1
+DNS_PTR         = 2
+DNS_IPv6_AAAA   = 3
 
 # Flags
 DNS_QUERY_NO_SEARCH	= 1
+
 
 def dns_init():
     """Initialize async DNS resolver."""
     evdns_init()
 
-cdef void __evdns_callback(int result, char t, int count, int ttl,
-                     void *addrs, void *arg) with gil:
+
+def dns_shutdown(int fail_requests=0):
+    """Shutdown the async DNS resolver and terminate all active requests."""
+    evdns_shutdown(fail_requests)
+
+
+def dns_err_to_string(int err):
+    return evdns_err_to_string(err)
+
+
+cdef void __evdns_callback(int result, char t, int count, int ttl, void *addrs, void *arg) with gil:
     cdef int i
     cdef char str[INET6_ADDRSTRLEN]
     ctx = <tuple>(arg)
@@ -82,11 +88,11 @@ cdef void __evdns_callback(int result, char t, int count, int ttl,
     else:
         x = None
     try:
-        callback(result, t, ttl, x, args)
+        callback(result, t, ttl, x, *args)
     except:
         traceback.print_exc()
 
-    
+
 def dns_resolve_ipv4(char *name, int flags, callback, *args):
     """Lookup an A record for a given name.
 
@@ -96,8 +102,11 @@ def dns_resolve_ipv4(char *name, int flags, callback, *args):
     - *args*     -- option callback arguments
     """
     t = (callback, args)
+    cdef int result = evdns_resolve_ipv4(name, flags, __evdns_callback, <void *>t)
+    if result:
+        raise IOError('evdns_resolve_ipv4(%r, %r) returned %s' % (name, flags, result, ))
     Py_INCREF(t)
-    evdns_resolve_ipv4(name, flags, __evdns_callback, <void *>t)
+
 
 def dns_resolve_ipv6(char *name, int flags, callback, *args):
     """Lookup an AAAA record for a given name.
@@ -108,8 +117,11 @@ def dns_resolve_ipv6(char *name, int flags, callback, *args):
     - *args*     -- option callback arguments
     """
     t = (callback, args)
+    cdef int result = evdns_resolve_ipv6(name, flags, __evdns_callback, <void *>t)
+    if result:
+        raise IOError('evdns_resolve_ip6(%r, %r) returned %s' % (name, flags, result, ))
     Py_INCREF(t)
-    evdns_resolve_ipv6(name, flags, __evdns_callback, <void *>t)
+
 
 def dns_resolve_reverse(char *ip, int flags, callback, *args):
     """Lookup a PTR record for a given IPv4 address.
@@ -120,10 +132,13 @@ def dns_resolve_reverse(char *ip, int flags, callback, *args):
     - *args*     -- option callback arguments
     """
     t = (callback, args)
-    Py_INCREF(t)
     cdef in_addr addr
     inet_aton(ip, &addr)
-    evdns_resolve_reverse(&addr, flags, __evdns_callback, <void *>t)
+    cdef int result = evdns_resolve_reverse(&addr, flags, __evdns_callback, <void *>t)
+    if result:
+        raise IOError('evdns_resolve_reverse(%r, %r) returned %s' % (ip, flags, result, ))
+    Py_INCREF(t)
+
 
 def dns_resolve_reverse_ipv6(char *ip, int flags, callback, *args):
     """Lookup a PTR record for a given IPv6 address.
@@ -134,12 +149,10 @@ def dns_resolve_reverse_ipv6(char *ip, int flags, callback, *args):
     - *args*     -- option callback arguments
     """
     t = (callback, args)
-    Py_INCREF(t)
     cdef in6_addr addr
     inet_pton(AF_INET6, ip, &addr)
-    evdns_resolve_reverse_ipv6(&addr, flags, __evdns_callback, <void *>t)
-
-def dns_shutdown(int fail_requests=0):
-    """Shutdown the async DNS resolver and terminate all active requests."""
-    evdns_shutdown(fail_requests)
+    cdef int result = evdns_resolve_reverse_ipv6(&addr, flags, __evdns_callback, <void *>t)
+    if result:
+        raise IOError('evdns_resolve_reverse_ipv6(%r, %r) returned %s' % (ip, flags, result, ))
+    Py_INCREF(t)
 
