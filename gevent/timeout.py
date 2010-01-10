@@ -14,7 +14,7 @@ to arbitrary code.
 """
 
 from gevent import core
-from gevent.hub import getcurrent
+from gevent.hub import getcurrent, _NONE
 
 __all__ = ['Timeout',
            'with_timeout']
@@ -196,12 +196,4 @@ def with_timeout(seconds, function, *args, **kwds):
             raise
     finally:
         timeout.cancel()
-
-
-class _NONE(object):
-    __slots__ = []
-    def __repr__(self):
-        return '<_NONE>'
-
-_NONE = _NONE()
 

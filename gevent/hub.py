@@ -272,3 +272,12 @@ class Waiter(object):
     # can also have a debugging version, that wraps the value in a tuple (self, value) in switch()
     # and unwraps it in wait() thus checking that switch() was indeed called
 
+
+class _NONE(object):
+    "A special thingy you must never pass to any of gevent API"
+    __slots__ = []
+    def __repr__(self):
+        return '<_NONE>'
+
+_NONE = _NONE()
+
