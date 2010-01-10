@@ -10,8 +10,11 @@ from cgi import escape
 from urllib import unquote
 
 
+PORT = 8088
+PROXY_URL = 'http://127.0.0.1:%s/' % PORT
+
+
 def application(env, start_response):
-    proxy_url = 'http://127.0.0.1:%(SERVER_PORT)s/' % env
     method = env['REQUEST_METHOD']
     path = env['PATH_INFO']
     if env['QUERY_STRING']:
@@ -21,39 +24,42 @@ def application(env, start_response):
         start_response('200 OK', [('Content-Type', 'text/html')])
         return [FORM]
     elif method == 'GET':
-        if '://' not in path:
-            path = 'http://' + path
-        try:
-            try:
-                r = urllib2.urlopen(path)
-            except urllib2.HTTPError, ex:
-                r = ex
-            print '%s: %s %s' % (path, r.code, r.msg)
-            headers = [(k, v) for (k, v) in r.headers.items() if k not in drop_headers]
-            parsed_path = urlparse(path)
-            host = (parsed_path.scheme or 'http') + '://' + parsed_path.netloc
-        except Exception, ex:
-            sys.stderr.write('error while reading %s:\n' % path)
-            traceback.print_exc()
-            tb = traceback.format_exc()
-            start_response('502 Bad Gateway', [('Content-Type', 'text/html')])
-            return ['<h1>%s</h1><h2>%s</h2><pre>%s</pre>' % (escape(str(ex) or ex.__class__.__name__ or 'Error'), escape(path), escape(tb))]
-        #for key, value in r.headers:
-        else:
-            start_response('%s %s' % (r.code, r.msg), headers)
-            data = r.read()
-            data = fix_links(data, proxy_url, host)
-            return [data]
+        return proxy(path, start_response)
     elif (method, path) == ('POST', ''):
         key, value = env['wsgi.input'].read().strip().split('=')
         assert key == 'url', repr(key)
-        start_response('302 Found', [('Location', join(proxy_url, unquote(value)))])
+        start_response('302 Found', [('Location', join(PROXY_URL, unquote(value)))])
     elif method == 'POST':
         start_response('404 Not Found', [])
     else:
         start_response('501 Not Implemented', [])
     return []
 
+
+def proxy(path, start_response):
+    if '://' not in path:
+        path = 'http://' + path
+    try:
+        try:
+            response = urllib2.urlopen(path)
+        except urllib2.HTTPError, ex:
+            response = ex
+        print '%s: %s %s' % (path, response.code, response.msg)
+        headers = [(k, v) for (k, v) in response.headers.items() if k not in drop_headers]
+        parsed_path = urlparse(path)
+        host = (parsed_path.scheme or 'http') + '://' + parsed_path.netloc
+    except Exception, ex:
+        sys.stderr.write('error while reading %s:\n' % path)
+        traceback.print_exc()
+        tb = traceback.format_exc()
+        start_response('502 Bad Gateway', [('Content-Type', 'text/html')])
+        error_str = escape(str(ex) or ex.__class__.__name__ or 'Error')
+        return ['<h1>%s</h1><h2>%s</h2><pre>%s</pre>' % (error_str, escape(path), escape(tb))]
+    else:
+        start_response('%s %s' % (response.code, response.msg), headers)
+        data = response.read()
+        data = fix_links(data, PROXY_URL, host)
+        return [data]
 
 
 def join(url1, *rest):
@@ -108,6 +114,6 @@ FORM = """<html><head>
 if __name__ == '__main__':
     #import doctest
     #doctest.testmod()
-    print 'Serving on 8088...'
-    wsgi.WSGIServer(('', 8088), application).serve_forever()
+    print 'Serving on %s...' % PORT
+    wsgi.WSGIServer(('', PORT), application).serve_forever()
 

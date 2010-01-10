@@ -8,12 +8,12 @@ results faster.
 """
 
 from gevent import socket
-from gevent import pool
+from gevent.pool import Pool
 
 N = 1000
 
 # limit ourselves to max 10 simultaneous outstanding requests
-p = pool.Pool(10)
+pool = Pool(10)
 
 finished = 0
 
@@ -29,7 +29,7 @@ def job(url):
         finished += 1
 
 for x in xrange(10, N):
-    p.spawn(job, '%s.com' % x)
+    pool.spawn(job, '%s.com' % x)
 
-p.join(timeout=2)
+pool.join(timeout=2)
 print 'finished within 2 seconds: %s/%s' % (finished, N)

@@ -32,14 +32,14 @@ and then 'quit')
 import gevent
 from gevent import socket
 
-def handle_socket(f):
+def handle_socket(fileobj):
     while True:
-        x = f.readline()
-        if not x:
+        line = fileobj.readline()
+        if not line:
             break
-        f.write(x)
-        f.flush()
-        print "echoed", repr(x)
+        fileobj.write(line)
+        fileobj.flush()
+        print "echoed", repr(line)
     print "client disconnected"
 
 if __name__ == '__main__':
