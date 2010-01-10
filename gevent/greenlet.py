@@ -80,7 +80,10 @@ class GreenletLink(object):
 
     def __call__(self, source):
         if source.successful():
-            error = getLinkedCompleted(source)
+            if isinstance(source.value, GreenletExit):
+                error = LinkedKilled(source)
+            else:
+                error = LinkedCompleted(source)
         else:
             error = LinkedFailed(source)
         current = getcurrent()
@@ -550,13 +553,6 @@ class LinkedKilled(LinkedCompleted):
         except:
             result = str(source) or repr(source)
         LinkedExited.__init__(self, self.msg % (source, result))
-
-
-def getLinkedCompleted(source):
-    if isinstance(source.value, GreenletExit):
-        return LinkedKilled(source)
-    else:
-        return LinkedCompleted(source)
 
 
 class LinkedFailed(LinkedExited):
