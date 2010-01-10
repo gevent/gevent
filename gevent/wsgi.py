@@ -37,9 +37,9 @@ class WSGIHandler(object):
     def end(self, env):
         assert self.headers is not None, 'Application did not call start_response'
         has_content_length = False
-        for k, v in self.headers:
-            self.request.add_output_header(k, str(v))
-            if k == 'Content-Length':
+        for header, value in self.headers:
+            self.request.add_output_header(header, str(value))
+            if header == 'Content-Length':
                 has_content_length = True
         data = ''.join(self.data)
         if not has_content_length:
@@ -64,12 +64,13 @@ class WSGIHandler(object):
         self.log_request(len(data))
 
     def format_request(self, length='-'):
-        r = self.request
-        referer = r.find_input_header('Referer') or '-'
-        agent = r.find_input_header('User-Agent') or '-'
+        req = self.request
+        referer = req.find_input_header('Referer') or '-'
+        agent = req.find_input_header('User-Agent') or '-'
         # QQQ fix datetime format
         now = datetime.now().replace(microsecond=0)
-        args = (r.remote_host, now, r.typestr, r.uri, r.major, r.minor, r.response_code, length, referer, agent)
+        args = (req.remote_host, now, req.typestr, req.uri,
+                req.major, req.minor, req.response_code, length, referer, agent)
         return '%s - - [%s] "%s %s HTTP/%s.%s" %s %s "%s" "%s"' % args
 
     def log_request(self, *args):
@@ -78,7 +79,7 @@ class WSGIHandler(object):
     def prepare_env(self, req, server):
         env = server.base_env.copy()
         if '?' in req.uri:
-            path, query = req.uri.split('?',1)
+            path, query = req.uri.split('?', 1)
         else:
             path, query = req.uri, ''
         path = unquote(path)
@@ -89,13 +90,11 @@ class WSGIHandler(object):
                     'REMOTE_ADDR': req.remote_host,
                     'REMOTE_PORT': req.remote_port,
                     'wsgi.input': req.input_buffer})
-        for k, v in req.get_input_headers():
-            k = 'HTTP_%s' % k.replace('-', '_').upper()
-            if k == 'HTTP_CONTENT_LENGTH':
-                k = 'CONTENT_LENGTH'
-            elif k == 'HTTP_CONTENT_TYPE':
-                k = 'CONTENT_TYPE'
-            env[k] = v
+        for header, value in req.get_input_headers():
+            header = header.replace('-', '_').upper()
+            if header not in ('CONTENT_LENGTH', 'CONTENT_TYPE'):
+                header = 'HTTP_' + header
+            env[header] = value
         return env
 
     def handle(self, server):
