@@ -8,13 +8,13 @@ __all__ = ['select']
 
 def get_fileno(obj):
     try:
-        f = obj.fileno
+        fileno_f = obj.fileno
     except AttributeError:
         if not isinstance(obj, int):
             raise TypeError("Must be int or have fileno() method: %r" % (obj, ))
         return obj
     else:
-        return f()
+        return fileno_f()
 
 
 def select(read_list, write_list, error_list, timeout=None):
@@ -42,8 +42,8 @@ def select(read_list, write_list, error_list, timeout=None):
     try:
         try:
             result = hub.switch()
-        except Timeout, t:
-            if t is not timeout:
+        except Timeout, ex:
+            if ex is not timeout:
                 raise
             return [], [], []
         assert hasattr(result, '__len__') and len(result)==3, "Invalid switch into select: %r" % (result, )
