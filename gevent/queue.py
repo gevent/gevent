@@ -20,8 +20,8 @@ import heapq
 import collections
 from Queue import Full, Empty
 
-from gevent.timeout import Timeout, _NONE
-from gevent.hub import get_hub, Waiter, getcurrent
+from gevent.timeout import Timeout
+from gevent.hub import get_hub, Waiter, getcurrent, _NONE
 from gevent import core
 
 

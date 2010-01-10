@@ -4,8 +4,8 @@
 import sys
 import traceback
 from gevent import core
-from gevent.hub import get_hub, getcurrent
-from gevent.timeout import Timeout, _NONE
+from gevent.hub import get_hub, getcurrent, _NONE
+from gevent.timeout import Timeout
 
 __all__ = ['Event', 'AsyncResult']
 
