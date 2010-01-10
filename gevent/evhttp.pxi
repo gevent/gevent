@@ -109,7 +109,7 @@ class HttpConnectionDeleted(ObjectDeleted):
 
 cdef class http_request:
     """Wrapper around libevent's :class:`evhttp_request` structure."""
- 
+
     # It is possible to crash the process by using it directly.
     # prefer gevent.http and gevent.wsgi which should be safe
 
