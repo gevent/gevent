@@ -39,14 +39,14 @@ def kill(greenlet, exception=GreenletExit, block=False, polling_period=0.2):
 
 def _killall(greenlets, exception, waiter):
     diehards = []
-    for g in greenlets:
-        if not g.dead:
+    for greenlet in greenlets:
+        if not greenlet.dead:
             try:
-                g.throw(exception)
+                greenlet.throw(exception)
             except:
                 traceback.print_exc()
-            if not g.dead:
-                diehards.append(g)
+            if not greenlet.dead:
+                diehards.append(greenlet)
     waiter.switch(diehards)
 
 
