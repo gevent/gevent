@@ -180,7 +180,7 @@ timeout_default = object()
 class socket(object):
     is_secure = False # XXX remove this
 
-    def __init__(self, family_or_realsock=_socket.AF_INET, *args, **kwargs):
+    def __init__(self, family_or_realsock=AF_INET, *args, **kwargs):
         if isinstance(family_or_realsock, (int, long)):
             self.fd = _socket.socket(family_or_realsock, *args, **kwargs)
             self.timeout = _socket.getdefaulttimeout()
@@ -523,7 +523,7 @@ def socket_bind_and_listen(descriptor, addr=('', 0), backlog=50):
 
 def set_reuse_addr(descriptor):
     try:
-        descriptor.setsockopt(_socket.SOL_SOCKET, _socket.SO_REUSEADDR, descriptor.getsockopt(_socket.SOL_SOCKET, _socket.SO_REUSEADDR) | 1)
+        descriptor.setsockopt(SOL_SOCKET, SO_REUSEADDR, descriptor.getsockopt(SOL_SOCKET, SO_REUSEADDR) | 1)
     except error:
         pass
 
@@ -614,8 +614,8 @@ def create_connection(address, timeout=_GLOBAL_DEFAULT_TIMEOUT):
 
     msg = "getaddrinfo returns an empty list"
     host, port = address
-    for res in getaddrinfo(host, port, 0, _socket.SOCK_STREAM):
-        af, socktype, proto, canonname, sa = res
+    for res in getaddrinfo_approx(host, port, 0, SOCK_STREAM):
+        af, socktype, proto, _canonname, sa = res
         sock = None
         try:
             sock = socket(af, socktype, proto)
@@ -642,8 +642,8 @@ def create_connection_ssl(address, timeout=_GLOBAL_DEFAULT_TIMEOUT):
 
     msg = "getaddrinfo returns an empty list"
     host, port = address
-    for res in getaddrinfo(host, port, 0, _socket.SOCK_STREAM):
-        af, socktype, proto, canonname, sa = res
+    for res in getaddrinfo_approx(host, port, 0, SOCK_STREAM):
+        af, socktype, proto, _canonname, sa = res
         sock = None
         try:
             _sock = _socket.socket(af, socktype, proto)
