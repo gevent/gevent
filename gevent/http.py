@@ -29,35 +29,35 @@ class HTTPServer(object):
         fileno = getattr(socket_or_address, 'fileno', None)
         if fileno is not None:
             fd = fileno()
-            s = socket_or_address
+            sock = socket_or_address
         else:
-            s = self.make_listener(socket_or_address, backlog=backlog)
-            fd = s.fileno()
+            sock = self.make_listener(socket_or_address, backlog=backlog)
+            fd = sock.fileno()
         self.http.accept(fd)
-        self.listeners.append(s)
+        self.listeners.append(sock)
         self._stopped_event.clear()
         if self._requests:
             self._no_connections_event.clear()
         else:
             self._no_connections_event.set()
-        return s
+        return sock
 
     def make_listener(self, address, backlog=None):
         if backlog is None:
             backlog = self.backlog
-        s = socket.socket()
+        sock = socket.socket()
         try:
-            s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, s.getsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR) | 1)
+            sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, sock.getsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR) | 1)
         except socket.error:
             pass
-        s.bind(address)
-        s.listen(backlog)
-        return s
+        sock.bind(address)
+        sock.listen(backlog)
+        return sock
 
     def stop(self, timeout=0):
         """Shutdown the server."""
-        for s in self.listeners:
-            s.close()
+        for sock in self.listeners:
+            sock.close()
         self.socket = []
         #2. Set "keep-alive" connections to "close"
         # TODO
@@ -65,15 +65,15 @@ class HTTPServer(object):
         # TODO
         #3. Wait until every connection is closed or timeout expires
         if self._requests:
-            t = Timeout.start_new(timeout)
+            timer = Timeout.start_new(timeout)
             try:
                 try:
                     self._no_connections_event.wait(timeout=timeout)
                 except Timeout, ex:
-                    if t is not ex:
+                    if timer is not ex:
                         raise
             finally:
-                t.cancel()
+                timer.cancel()
         #4. forcefull close all the connections
         # TODO
         #5. free http instance
@@ -88,16 +88,16 @@ class HTTPServer(object):
         # make sure requests belonging to this connection cannot be accessed anymore
         # because they've been freed by libevent
         requests = self._requests.pop(connection._obj, [])
-        for r in requests:
-            r.detach()
+        for request in requests:
+            request.detach()
         if not self._requests:
             self._no_connections_event.set()
 
-    def _cb_request_processed(self, g):
-        request = g._request
-        g._request = None
+    def _cb_request_processed(self, greenlet):
+        request = greenlet._request
+        greenlet._request = None
         if request:
-            if not g.successful():
+            if not greenlet.successful():
                 self.reply_error(request)
             requests = self._requests.get(request.connection._obj)
             if requests is not None:
@@ -111,10 +111,10 @@ class HTTPServer(object):
             if spawn is None:
                 self.handle(request)
             else:
-                g = spawn(wrap_errors(core.HttpRequestDeleted, self.handle), request)
-                rawlink = getattr(g, 'rawlink', None)
+                greenlet = spawn(wrap_errors(core.HttpRequestDeleted, self.handle), request)
+                rawlink = getattr(greenlet, 'rawlink', None)
                 if rawlink is not None:
-                    g._request = request
+                    greenlet._request = request
                     rawlink(self._cb_request_processed)
         except:
             traceback.print_exc()
