@@ -4,15 +4,18 @@ import sys
 
 noisy = True
 
+
 def patch_os():
     from gevent.hub import fork
     import os
     os.fork = fork
 
+
 def patch_time():
     from gevent.hub import sleep
     _time = __import__('time')
     _time.sleep = sleep
+
 
 def patch_thread():
     from gevent import thread as green_thread
@@ -34,6 +37,7 @@ def patch_thread():
         elif noisy:
             sys.stderr.write("gevent.monkey's warning: '_threading_local' is already imported\n\n")
 
+
 def patch_socket(dns=True):
     from gevent.socket import socket, fromfd, wrap_ssl, socketpair
     _socket = __import__('socket')
@@ -43,6 +47,7 @@ def patch_socket(dns=True):
     _socket.socketpair = socketpair
     if dns:
         patch_dns()
+
 
 def patch_dns():
     from gevent.socket import getaddrinfo, getnameinfo, gethostbyname
@@ -79,7 +84,7 @@ def patch_all(socket=True, dns=True, time=True, select=True, thread=True, os=Tru
         patch_ssl()
 
 
-if __name__=='__main__':
+if __name__ == '__main__':
     modules = [x.replace('patch_', '') for x in globals().keys() if x.startswith('patch_') and x!='patch_all']
     script_help = """gevent.monkey - monkey patch the standard modules to use gevent.
 
