@@ -33,7 +33,7 @@ def exit_disabled():
     sys.exit(disabled_marker)
 
 def exit_unless_25():
-    if sys.version_info[:2]<(2, 5):
+    if sys.version_info[:2] < (2, 5):
         exit_disabled()
 
 class TestCase(unittest.TestCase):
@@ -56,12 +56,17 @@ class TestCase(unittest.TestCase):
             self._timer.cancel()
             hub = gevent.hub.get_hub()
             if self._switch_count is not None and hasattr(hub, 'switch_count'):
+                msg = ''
                 if hub.switch_count < self._switch_count:
-                    sys.stderr.write('WARNING: hub.switch_count decreased?\n')
-                if hub.switch_count == self._switch_count and self.switch_expected:
-                    sys.stderr.write('WARNING: %s.%s did not switch\n' % (type(self).__name__, self.testname))
-                if hub.switch_count > self._switch_count and not self.switch_expected:
-                    sys.stderr.write('WARNING: %s.%s switched but expected not to\n' % (type(self).__name__, self.testname))
+                    msg = 'hub.switch_count decreased?\n'
+                elif hub.switch_count == self._switch_count:
+                    if self.switch_expected:
+                        msg = '%s.%s did not switch\n' % (type(self).__name__, self.testname)
+                elif hub.switch_count > self._switch_count:
+                    if not self.switch_expected:
+                        msg = '%s.%s switched but expected not to\n' % (type(self).__name__, self.testname)
+                if msg:
+                    print >> sys.stderr, 'WARNING: ' + msg
 
             if hasattr(gevent.core, '_event_count'):
                 event_count = (gevent.core._event_count(), gevent.core._event_count_active())
@@ -78,10 +83,10 @@ class TestCase(unittest.TestCase):
 
 
 def find_command(command):
-    for dir in os.getenv('PATH', '/usr/bin:/usr/sbin').split(os.pathsep):
-        p = os.path.join(dir, command)
-        if os.access(p, os.X_OK):
-            return p
+    for path in os.getenv('PATH', '/usr/bin:/usr/sbin').split(os.pathsep):
+        path = os.path.join(dir, command)
+        if os.access(path, os.X_OK):
+            return path
     raise IOError(errno.ENOENT, 'Command not found: %r' % command)
 
 main = unittest.main
@@ -100,11 +105,11 @@ gevent.hub.Hub = CountingHub
 
 
 def test_outer_timeout_is_not_lost(self):
-    t = gevent.Timeout.start_new(0.01)
+    timeout = gevent.Timeout.start_new(0.01)
     try:
         self.wait(timeout=0.02)
     except gevent.Timeout, ex:
-        assert ex is t, (ex, t)
+        assert ex is timeout, (ex, timeout)
     else:
         raise AssertionError('must raise Timeout')
     gevent.sleep(0.02)
@@ -125,6 +130,7 @@ class GenericWaitTestCase(TestCase):
         assert 0.01 <= delay < 0.01 + 0.01, delay
         assert result is None, repr(result)
 
+
 class GenericGetTestCase(TestCase):
 
     def wait(self, timeout):
@@ -141,20 +147,20 @@ class GenericGetTestCase(TestCase):
 
     def test_raises_timeout_Timeout(self):
         start = time.time()
-        t = gevent.Timeout(0.01)
+        timeout = gevent.Timeout(0.01)
         try:
-            self.wait(timeout=t)
+            self.wait(timeout=timeout)
         except gevent.Timeout, ex:
-            assert ex is t, (ex, t)
+            assert ex is timeout, (ex, timeout)
         delay = time.time() - start
         assert 0.01 <= delay < 0.01 + 0.01, delay
 
     def test_raises_timeout_Timeout_exc_customized(self):
         start = time.time()
         error = RuntimeError('expected error')
-        t = gevent.Timeout(0.01, exception=error)
+        timeout = gevent.Timeout(0.01, exception=error)
         try:
-            self.wait(timeout=t)
+            self.wait(timeout=timeout)
         except RuntimeError, ex:
             assert ex is error, (ex, error)
         delay = time.time() - start
