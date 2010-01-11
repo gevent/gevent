@@ -25,6 +25,7 @@ import time
 import gevent
 from gevent import core
 from gevent import socket
+from gevent.hub import Waiter
 import signal
 
 DELAY = 0.1
@@ -140,6 +141,37 @@ class TestSignal(greentest.TestCase):
             raise AssertionError('must raise Expected')
         except Expected, ex:
             assert str(ex) == 'TestSignal', ex
+
+
+class TestWaiter(greentest.GenericWaitTestCase):
+
+    def setUp(self):
+        super(TestWaiter, self).setUp()
+        self.waiter = Waiter()
+
+    def wait(self, timeout):
+        evt = core.timer(timeout, self.waiter.switch, None)
+        try:
+            return self.waiter.get()
+        finally:
+            evt.cancel()
+
+    def test(self):
+        waiter = self.waiter
+        self.assertEqual(str(waiter), '<Waiter greenlet=None>')
+        waiter.switch(25)
+        self.assertEqual(str(waiter), '<Waiter greenlet=None value=25>')
+        self.assertEqual(waiter.get(), 25)
+
+        waiter = Waiter()
+        waiter.throw(ZeroDivisionError)
+        self.assertEqual(str(waiter), "<Waiter greenlet=None exc_info=(<type 'exceptions.ZeroDivisionError'>,)>")
+        self.assertRaises(ZeroDivisionError, waiter.get)
+
+        waiter = Waiter()
+        gevent.spawn(waiter.get)
+        gevent.sleep(0)
+        assert str(waiter).startswith('<Waiter greenlet=<Greenlet at 0x'), str(waiter)
 
 
 if __name__=='__main__':
