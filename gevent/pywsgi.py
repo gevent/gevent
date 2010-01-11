@@ -260,7 +260,7 @@ class HttpProtocol(BaseHTTPServer.BaseHTTPRequestHandler):
                     write(''.join(towrite))
                 if not headers_sent or use_chunked[0]:
                     write('')
-            except Exception, e:
+            except Exception:
                 self.close_connection = 1
                 exc = traceback.format_exc()
                 print exc
@@ -360,7 +360,6 @@ class Server(BaseHTTPServer.HTTPServer):
             protocol.minimum_chunk_size = minimum_chunk_size
 
     def get_environ(self):
-        socket = self.socket
         d = {
             'wsgi.errors': sys.stderr,
             'wsgi.version': (1, 0),
