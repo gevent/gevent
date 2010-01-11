@@ -50,10 +50,9 @@ def patch_socket(dns=True):
 
 
 def patch_dns():
-    from gevent.socket import getaddrinfo, getnameinfo, gethostbyname
+    from gevent.socket import gethostbyname, getaddrinfo
     _socket = __import__('socket')
     _socket.getaddrinfo = getaddrinfo
-    _socket.getnameinfo = getnameinfo
     _socket.gethostbyname = gethostbyname
 
 def patch_ssl():
