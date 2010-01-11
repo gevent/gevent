@@ -2,16 +2,12 @@
 
 This module contains synchronous wrappers around some of the libevent DNS API.
 
-    >>> dns_resolve_ipv4('localhost')
-    ['127.0.0.1']
-
     >>> dns_resolve_ipv4('www.python.org')
     ['82.94.164.162']
-
     >>> dns_resolve_reverse('82.94.164.162').endswith('python.org')
     True
 
-The errors are reported through a subclass of :class:`gaierror` - :class:`DNSError`.
+The errors are reported through a subclass of :class:`socket.gaierror`.
 
     >>> dns_resolve_ipv4('aaaaaaaaaaa')
     Traceback (most recent call last):
@@ -38,7 +34,10 @@ core.dns_init()
 
 
 class DNSError(gaierror):
-    """A DNS error reported by libevent-dns"""
+    """A subclass of :class:`socket.gaierror` used by :mod:`evdns` functions to report errors.
+
+    It uses evdns-specific error codes that are different from the standard socket errors.
+    """
 
     def __init__(self, *args):
         if len(args)==1:
