@@ -204,8 +204,16 @@ latex_documents = [
 # prevent some stuff from showing up in docs
 import gevent.queue
 import gevent.http
+import gevent.socket
 del gevent.http.HTTPServer.spawn   # it's a parameter, not a method
 del gevent.Greenlet.throw
+gevent.socket.__all__.remove('error')
+gevent.socket.__all__.remove('gaierror')
+gevent.socket.__all__.remove('timeout')
+try:
+    gevent.socket.__all__.remove('sslerror')
+except:
+    pass
 
 
 # order the methods in the class documentation the same way they are ordered in the source code
