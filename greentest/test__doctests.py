@@ -32,6 +32,8 @@ for m, path in modules:
         suite.addTest(s)
         modules_count += 1
         tests_count += len(s._tests)
-print 'Total: %s tests in %s modules' % (tests_count, modules_count)
-runner = unittest.TextTestRunner(verbosity=2)
-runner.run(suite)
+
+if __name__ == '__main__':
+    print 'Total: %s tests in %s modules' % (tests_count, modules_count)
+    runner = unittest.TextTestRunner(verbosity=2)
+    runner.run(suite)

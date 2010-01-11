@@ -11,19 +11,21 @@ assert modules
 
 errors = []
 
-for path in modules:
-    if path.endswith('server.py') or path.endswith('proxy.py'):
-        print path, 'skipping'
-    else:
-        print path, 'running'
-        sys.stdout.flush()
-        res = os.system('%s %s' % (sys.executable, path))
-        if res:
-            print path, 'failed'
-            errors.append(path)
-    print '-----'
+if __name__ == '__main__':
 
-if errors:
-    print '\n\nFailures: %s' % ', '.join(errors)
-    sys.exit(1)
+    for path in modules:
+        if 'server' in path or path.endswith('proxy.py') or path.endswith('webpy.py'):
+            print path, 'skipping'
+        else:
+            print path, 'running'
+            sys.stdout.flush()
+            res = os.system('%s %s' % (sys.executable, path))
+            if res:
+                print path, 'failed'
+                errors.append(path)
+        print '-----'
+
+    if errors:
+        print '\n\nFailures: %s' % ', '.join(errors)
+        sys.exit(1)
 
