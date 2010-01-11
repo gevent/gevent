@@ -40,6 +40,7 @@ except AttributeError:
 
 
 class SocketConsole(Greenlet):
+
     def __init__(self, desc, hostport, locals):
         Greenlet.__init__(self)
         self.hostport = hostport
