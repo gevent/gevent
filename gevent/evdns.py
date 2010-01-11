@@ -22,9 +22,15 @@ The errors are reported through a subclass of :class:`gaierror` - :class:`DNSErr
 from gevent import core
 from gevent.hub import Waiter
 from _socket import gaierror
+from gevent.core import DNS_QUERY_NO_SEARCH as QUERY_NO_SEARCH
 
 
-__all__ = ['DNSError', 'dns_resolve_ipv4', 'dns_resolve_ipv6', 'dns_resolve_reverse', 'dns_resolve_reverse_ipv6']
+__all__ = ['DNSError',
+           'dns_resolve_ipv4',
+           'dns_resolve_ipv6',
+           'dns_resolve_reverse',
+           'dns_resolve_reverse_ipv6',
+           'QUERY_NO_SEARCH']
 
 
 # move from here into Hub.__init__ (once event_init() is move here as well)
