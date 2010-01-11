@@ -779,7 +779,7 @@ def ssl(sock, keyfile=None, certfile=None):
 
     try:
         sock.getpeername()
-    except:
+    except Exception:
         # no, no connection yet
         pass
     else:
