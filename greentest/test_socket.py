@@ -295,7 +295,7 @@ class GeneralModuleTests(greentest.TestCase):
                 # On some versions, this loses a reference
                 orig = sys.getrefcount(__name__)
                 socket.getnameinfo(__name__,0)
-            except SystemError:
+            except (SystemError, TypeError):
                 if sys.getrefcount(__name__) <> orig:
                     self.fail("socket.getnameinfo loses a reference")
 
