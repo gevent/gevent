@@ -39,11 +39,11 @@ def patch_thread():
 
 
 def patch_socket(dns=True):
-    from gevent.socket import socket, fromfd, wrap_ssl, socketpair
+    from gevent.socket import socket, fromfd, ssl, socketpair
     _socket = __import__('socket')
     _socket.socket = socket
     _socket.fromfd = fromfd
-    _socket.ssl = wrap_ssl
+    _socket.ssl = ssl
     _socket.socketpair = socketpair
     if dns:
         patch_dns()
