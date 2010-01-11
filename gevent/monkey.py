@@ -79,6 +79,7 @@ def patch_select():
     globals()['_select_select'] = _select.select
     _select.select = select
 
+
 def patch_all(socket=True, dns=True, time=True, select=True, thread=True, os=True, ssl=True):
     # order is important
     if os:
