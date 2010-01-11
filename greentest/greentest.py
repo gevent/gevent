@@ -56,13 +56,12 @@ class TestCase(unittest.TestCase):
             self._timer.cancel()
             hub = gevent.hub.get_hub()
             if self._switch_count is not None and hasattr(hub, 'switch_count'):
-                name = getattr(self, '_testMethodName', '') # 2.4 does not have it
                 if hub.switch_count < self._switch_count:
                     sys.stderr.write('WARNING: hub.switch_count decreased?\n')
                 if hub.switch_count == self._switch_count and self.switch_expected:
-                    sys.stderr.write('WARNING: %s.%s did not switch\n' % (type(self).__name__, name))
+                    sys.stderr.write('WARNING: %s.%s did not switch\n' % (type(self).__name__, self.testname))
                 if hub.switch_count > self._switch_count and not self.switch_expected:
-                    sys.stderr.write('WARNING: %s.%s switched but expected not to\n' % (type(self).__name__, name))
+                    sys.stderr.write('WARNING: %s.%s switched but expected not to\n' % (type(self).__name__, self.testname))
 
             if hasattr(gevent.core, '_event_count'):
                 event_count = (gevent.core._event_count(), gevent.core._event_count_active())
@@ -72,6 +71,10 @@ class TestCase(unittest.TestCase):
                     gevent.sleep(0.1)
         else:
             sys.stderr.write('WARNING: %s.setUp does not call base class setUp\n' % (type(self).__name__, ))
+
+    @property
+    def testname(self):
+        return getattr(self, '_testMethodName', '') or getattr(self, '__testMethodName')
 
 
 def find_command(command):
