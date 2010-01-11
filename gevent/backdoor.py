@@ -22,10 +22,10 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
-import socket
 import sys
 from code import InteractiveConsole
 
+from gevent import socket
 from gevent.greenlet import Greenlet
 from gevent import core
 
