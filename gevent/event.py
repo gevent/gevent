@@ -126,7 +126,7 @@ class AsyncResult(object):
         >>> result.get()
         100
 
-    To pass an exception call :meth:`set_exception`. :meth:`get` will raise that exception:
+    To pass an exception call :meth:`set_exception`. This will cause :meth:`get` to raise that exception:
 
         >>> result = AsyncResult()
         >>> result.set_exception(RuntimeError('failure'))
