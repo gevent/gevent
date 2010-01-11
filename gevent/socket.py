@@ -38,7 +38,6 @@ __all__ = ['create_connection',
            'gaierror',
            'getaddrinfo',
            'gethostbyname',
-           'getnameinfo',
            'socket',
            'socketpair',
            'timeout',
@@ -78,11 +77,10 @@ import time
 import random
 import re
 
-from gevent.hub import getcurrent, get_hub, spawn_raw, Waiter
+from gevent.hub import getcurrent, get_hub, spawn_raw
 from gevent import core
 
-BUFFER_SIZE = 4096
-_ip_re = re.compile('^[\d\.]+$')
+_ip4_re = re.compile('^[\d\.]+$')
 
 
 def _wait_helper(ev, evtype):
@@ -615,7 +613,7 @@ def create_connection(address, timeout=_GLOBAL_DEFAULT_TIMEOUT):
 
     msg = "getaddrinfo returns an empty list"
     host, port = address
-    for res in getaddrinfo_approx(host, port, 0, SOCK_STREAM):
+    for res in getaddrinfo(host, port, 0, SOCK_STREAM):
         af, socktype, proto, _canonname, sa = res
         sock = None
         try:
@@ -643,7 +641,7 @@ def create_connection_ssl(address, timeout=_GLOBAL_DEFAULT_TIMEOUT):
 
     msg = "getaddrinfo returns an empty list"
     host, port = address
-    for res in getaddrinfo_approx(host, port, 0, SOCK_STREAM):
+    for res in getaddrinfo(host, port, 0, SOCK_STREAM):
         af, socktype, proto, _canonname, sa = res
         sock = None
         try:
@@ -683,111 +681,88 @@ def wrap_ssl000(sock, keyfile=None, certfile=None):
     return ssl_sock
 
 try:
-    core.dns_init()
+    from gevent.evdns import dns_resolve_ipv4, dns_resolve_ipv6
 except:
-    # fallback to blocking versions
-    gethostbyname = __socket__.gethostbyname
-    getaddrinfo = __socket__.getaddrinfo
-    getnameinfo = __socket__.getnameinfo
+    import traceback
+    traceback.print_exc()
+    __all__.remove('gethostbyname')
+    __all__.remove('getaddrinfo')
 else:
-    # NOTE:
-    # use flags=core.DNS_QUERY_NO_SEARCH to avoid search, see comments in evdns.h
-    # TODO:
-    # might need to map evdns errors to socket errors
-    # for example, DNS_ERR_NOTEXIST(3) is:
-    # socket.gaierror: [Errno -2] Name or service not known
-
-    def _dns_helper(result, type, ttl, addrs, args):
-        (waiter,) = args
-        waiter.switch((result, type, ttl, addrs))
 
     def gethostbyname(hostname):
-        """gethostbyname implemented using EvDNS.
+        """:func:`socket.gethostbyname` implemented using :mod:`evdns`.
 
         Differs in the following ways:
 
-        * raises gaierror with EvDNS error codes instead of standard socket error codes
-        * does not support /etc/hosts (see code for hacks to make localhost work)
+        * raises :class:`DNSError` (a subclass of :class:`socket.gaierror`) with evdns error
+          codes instead of standard socket error codes
+        * does not support ``/etc/hosts`` but calls the original :func:`socket.gethostbyname`
+          if *hostname* has no dots
         * does not iterate through all addresses, instead picks a random one each time
         """
         # TODO: this is supposed to iterate through all the addresses
         # could use a global dict(hostname, iter)
         # - fix these nasty hacks for localhost, ips, etc.
-        if hostname == 'localhost': # QQQ should use /etc/hosts
-            return '127.0.0.1'
-        if _ip_re.match(hostname):
+        if not isinstance(hostname, str) or '.' not in hostname:
+            return _socket.gethostbyname(hostname)
+        if _ip4_re.match(hostname):
             return hostname
         if hostname == _socket.gethostname():
             return _socket.gethostbyname(hostname)
-        waiter = Waiter()
-        core.dns_resolve_ipv4(hostname, 0, _dns_helper, waiter)
-        result, type, ttl, addrs = waiter.wait()
-        if result != core.DNS_ERR_NONE:
-            raise gaierror('dns_resolve_ipv4 returned %s' % result)
+        addrs = dns_resolve_ipv4(hostname)
         return random.choice(addrs)
 
-    def getaddrinfo(host, port, family=__socket__.AF_UNSPEC, socktype=__socket__.SOCK_STREAM, proto=0, flags=0):
-        """getaddrinfo implemented using EvDNS.
+
+    def getaddrinfo(host, port, *args, **kwargs):
+        """*Some* approximation of :func:`socket.getaddrinfo` implemented using :mod:`evdns`.
+
+        If *host* is not a string, does not has any dots or is a numeric IP address, then
+        the standard :func:`socket.getaddrinfo` is called.
+
+        Otherwise, calls either :func:`dns_resolve_ipv4` or :func:`dns_resolve_ipv6` and
+        formats the result the way :func:`socket.getaddrinfo` does it.
 
         Differs in the following ways:
 
-        * raises gaierror with EvDNS error codes instead of standard socket error codes
-        * does not support /etc/hosts
+        * raises :class:`DNSError` (a subclass of :class:`gaierror`) with evdns error
+          codes instead of standard socket error codes
         * IPv6 support is untested.
         * AF_UNSPEC only tries IPv4
         * only supports TCP, UDP, IP protocols
         * port must be numeric, does not support string service names. see socket.getservbyname
-        * only supported value for flags is core.DNS_QUERY_NO_SEARCH, see evdns.h
+        * *flags* argument is ignored
+
+        Additionally, supports *evdns_flags* keyword arguments (default ``0``) that is passed
+        to :mod:`evdns` functions.
         """
-        if _ip_re.match(host):
-            return [(__socket__.AF_INET, socktype, p, '', (host, port)) for p in (6, 17, 0)]
-        waiter = Waiter()
-        if family == __socket__.AF_INET:
-            core.dns_resolve_ipv4(host, flags, _dns_helper, waiter)
-        elif family == __socket__.AF_INET6:
-            core.dns_resolve_ipv6(host, flags, _dns_helper, waiter)
-        elif family == __socket__.AF_UNSPEC:
+        family, socktype, proto, _flags = args + (None, ) * (4 - len(args))
+        if not isinstance(host, str) or '.' not in host or _ip4_re.match(host):
+            return _socket.getaddrinfo(host, port, *args)
+
+        evdns_flags = kwargs.pop('evdns_flags', 0)
+        if kwargs:
+            raise TypeError('Unsupported keyword arguments: %s' % (kwargs.keys(), ))
+
+        if family in (None, AF_INET, AF_UNSPEC):
+            family = AF_INET
             # TODO: AF_UNSPEC means try both AF_INET and AF_INET6
-            family = __socket__.AF_INET
-            core.dns_resolve_ipv4(host, flags, _dns_helper, waiter)
+            addrs = dns_resolve_ipv4(host, evdns_flags)
+        elif family == AF_INET6:
+            addrs = dns_resolve_ipv6(host, evdns_flags)
         else:
-            raise NotImplementedError
-        result, type, ttl, addrs = waiter.wait()
-        if result != core.DNS_ERR_NONE:
-            raise gaierror(result)
+            raise NotImplementedError('family is not among AF_UNSPEC/AF_INET/AF_INET6: %r' % (family, ))
         r = []
+
+        socktype_proto = [(SOCK_STREAM, 6), (SOCK_DGRAM, 17), (SOCK_RAW, 0)]
+        if socktype is not None:
+            socktype_proto = [(x, y) for (x, y) in socktype_proto if socktype == x]
+        if proto is not None:
+            socktype_proto = [(x, y) for (x, y) in socktype_proto if proto == y]
+
         for addr in addrs:
-            for p in (6, 17, 0): # tcp, udp, ip protocols
-                r.append((family, socktype, p, '', (addr, port)))
+            for socktype, proto in socktype_proto:
+                r.append((family, socktype, proto, '', (addr, port)))
         return r
-
-    def getnameinfo(sockaddr, flags):
-        """getnameinfo implemented using EvDNS.
-
-        Differs in the following ways:
-
-        * raises gaierror with EvDNS error codes instead of standard socket error codes
-        * does not support /etc/hosts
-        * IPv6 support is untested.
-        * port must be numeric, does not support string service names. see socket.getservbyname
-        * only supported value for flags is core.DNS_QUERY_NO_SEARCH, see evdns.h
-        """
-
-        # http://svn.python.org/view/python/trunk/Modules/socketmodule.c?view=markup
-        # see socket_getnameinfo
-        try:
-            host, port = sockaddr[:2]
-            port = int(port)
-        except ValueError:
-            # make testRefCountGetNameInfo pass
-            del sockaddr
-            raise SystemError
-        waiter = Waiter()
-        core.dns_resolve_reverse(host, flags, _dns_helper, waiter)
-        result, type, ttl, addrs = waiter.wait()
-        if result != core.DNS_ERR_NONE:
-            raise gaierror(result)
-        return (addrs, port)
 
 
 def ssl(sock, keyfile=None, certfile=None):
