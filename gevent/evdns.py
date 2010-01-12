@@ -2,14 +2,14 @@
 
 This module contains synchronous wrappers around some of the libevent DNS API.
 
-    >>> dns_resolve_ipv4('www.python.org')
+    >>> resolve_ipv4('www.python.org')
     ['82.94.164.162']
-    >>> dns_resolve_reverse('82.94.164.162').endswith('python.org')
+    >>> resolve_reverse('82.94.164.162').endswith('python.org')
     True
 
 The errors are reported through a subclass of :class:`socket.gaierror`.
 
-    >>> dns_resolve_ipv4('aaaaaaaaaaa')
+    >>> resolve_ipv4('aaaaaaaaaaa')
     Traceback (most recent call last):
      ...
     DNSError: [Errno 3] name does not exist
@@ -22,10 +22,10 @@ from gevent.core import DNS_QUERY_NO_SEARCH as QUERY_NO_SEARCH
 
 
 __all__ = ['DNSError',
-           'dns_resolve_ipv4',
-           'dns_resolve_ipv6',
-           'dns_resolve_reverse',
-           'dns_resolve_reverse_ipv6',
+           'resolve_ipv4',
+           'resolve_ipv6',
+           'resolve_reverse',
+           'resolve_reverse_ipv6',
            'QUERY_NO_SEARCH']
 
 
@@ -47,7 +47,7 @@ class DNSError(gaierror):
             gaierror.__init__(self, *args)
 
 
-def dns_resolve_ipv4(name, flags=0):
+def resolve_ipv4(name, flags=0):
     waiter = Waiter()
     core.dns_resolve_ipv4(name, flags, waiter.switch_args)
     result, _type, _ttl, addrs = waiter.get()
@@ -57,7 +57,7 @@ def dns_resolve_ipv4(name, flags=0):
     # QQQ would be nice to have ttl as an attribute
 
 
-def dns_resolve_ipv6(name, flags=0):
+def resolve_ipv6(name, flags=0):
     waiter = Waiter()
     core.dns_resolve_ipv6(name, flags, waiter.switch_args)
     result, _type, _ttl, addrs = waiter.get()
@@ -66,7 +66,7 @@ def dns_resolve_ipv6(name, flags=0):
     return addrs
 
 
-def dns_resolve_reverse(ip, flags=0):
+def resolve_reverse(ip, flags=0):
     waiter = Waiter()
     core.dns_resolve_reverse(ip, flags, waiter.switch_args)
     result, _type, _ttl, addr = waiter.get()
@@ -75,7 +75,7 @@ def dns_resolve_reverse(ip, flags=0):
     return addr
 
 
-def dns_resolve_reverse_ipv6(ip, flags=0):
+def resolve_reverse_ipv6(ip, flags=0):
     waiter = Waiter()
     core.dns_resolve_reverse_ipv6(ip, flags, waiter.switch_args)
     result, _type, _ttl, addrs = waiter.get()

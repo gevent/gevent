@@ -681,7 +681,7 @@ def wrap_ssl000(sock, keyfile=None, certfile=None):
     return ssl_sock
 
 try:
-    from gevent.evdns import dns_resolve_ipv4, dns_resolve_ipv6
+    from gevent.evdns import resolve_ipv4, resolve_ipv6
 except:
     import traceback
     traceback.print_exc()
@@ -709,7 +709,7 @@ else:
             return hostname
         if hostname == _socket.gethostname():
             return _socket.gethostbyname(hostname)
-        addrs = dns_resolve_ipv4(hostname)
+        addrs = resolve_ipv4(hostname)
         return random.choice(addrs)
 
 
@@ -719,7 +719,7 @@ else:
         If *host* is not a string, does not has any dots or is a numeric IP address, then
         the standard :func:`socket.getaddrinfo` is called.
 
-        Otherwise, calls either :func:`dns_resolve_ipv4` or :func:`dns_resolve_ipv6` and
+        Otherwise, calls either :func:`resolve_ipv4` or :func:`resolve_ipv6` and
         formats the result the way :func:`socket.getaddrinfo` does it.
 
         Differs in the following ways:
@@ -746,9 +746,9 @@ else:
         if family in (None, AF_INET, AF_UNSPEC):
             family = AF_INET
             # TODO: AF_UNSPEC means try both AF_INET and AF_INET6
-            addrs = dns_resolve_ipv4(host, evdns_flags)
+            addrs = resolve_ipv4(host, evdns_flags)
         elif family == AF_INET6:
-            addrs = dns_resolve_ipv6(host, evdns_flags)
+            addrs = resolve_ipv6(host, evdns_flags)
         else:
             raise NotImplementedError('family is not among AF_UNSPEC/AF_INET/AF_INET6: %r' % (family, ))
         r = []
