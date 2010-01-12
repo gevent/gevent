@@ -65,7 +65,9 @@ def dns_shutdown(int fail_requests=0):
 
 
 def dns_err_to_string(int err):
-    return evdns_err_to_string(err)
+    cdef char* result = evdns_err_to_string(err)
+    if result:
+        return result
 
 
 cdef void __evdns_callback(int result, char t, int count, int ttl, void *addrs, void *arg) with gil:
