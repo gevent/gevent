@@ -204,7 +204,7 @@ if __name__ == '__main__':
         description='Python network library that uses greenlet and libevent for easy and scalable concurrency',
         author='Denis Bilenko',
         author_email='denis.bilenko@gmail.com',
-        url='http://gevent.org/',
+        url='http://www.gevent.org/',
         packages=['gevent'],
         ext_modules=[gevent_core],
         classifiers=[
