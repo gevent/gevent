@@ -43,6 +43,11 @@ __all__ = ['create_connection',
            'timeout',
            'ssl']
 
+import sys
+import errno
+import time
+import random
+import re
 
 import _socket
 error = _socket.error
@@ -70,12 +75,6 @@ del name, value
 # XXX: import other non-blocking stuff, like ntohl
 # XXX: implement blocking functions that are not yet implemented
 # XXX: add test that checks that socket.__all__ matches gevent.socket.__all__ on all supported platforms
-
-import sys
-import errno
-import time
-import random
-import re
 
 from gevent.hub import getcurrent, get_hub, spawn_raw
 from gevent import core
