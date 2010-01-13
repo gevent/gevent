@@ -91,8 +91,20 @@ def get_version_from_ctypes(cdll, path):
             print 'Weird response from %s get_version(): %r' % (path, version)
 
 def get_version_from_path(path):
-    v1 = re.search('[^\d]1\.', path)
-    v2 = re.search('[^\d]2\.', path)
+    """
+    >>> get_version_from_path('libevent-1.4.13-stable')
+    Using libevent 1: "libevent-1.4.13-stable"
+    1
+    >>> get_version_from_path('libevent-2.0.1-stable')
+    Using libevent 2: "libevent-2.0.1-stable"
+    2
+    >>> get_version_from_path('libevent-2.1.1-alpha')
+    Using libevent 2: "libevent-2.1.1-alpha"
+    2
+    >>> get_version_from_path('xxx-3.1.1-beta')
+    """
+    v1 = re.search(r'[^\d\.]1\.', path)
+    v2 = re.search(r'[^\d\.]2\.', path)
     if v1 is not None:
         if v2 is None:
             print 'Using libevent 1: "%s"' % path
