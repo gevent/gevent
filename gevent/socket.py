@@ -558,6 +558,8 @@ def tcp_listener(address, backlog=50):
     which accepts connections forever and spawns greenlets for
     each incoming connection.
     """
+    import warnings
+    warnings.warn("gevent.socket.tcp_listener is deprecated", DeprecationWarning, stacklevel=2)
     sock = socket()
     socket_bind_and_listen(sock, address, backlog=backlog)
     return sock
@@ -576,6 +578,8 @@ def ssl_listener(address, private_key, certificate):
     which accepts connections forever and spawns greenlets for
     each incoming connection.
     """
+    import warnings
+    warnings.warn("gevent.socket.ssl_listener is deprecated", DeprecationWarning, stacklevel=2)
     r = _socket.socket()
     sock = wrap_ssl000(r, private_key, certificate)
     socket_bind_and_listen(sock, address)
@@ -587,6 +591,8 @@ def connect_tcp(address, localaddr=None):
     Create a TCP connection to address (host, port) and return the socket.
     Optionally, bind to localaddr (host, port) first.
     """
+    import warnings
+    warnings.warn("gevent.socket.connect_tcp is deprecated", DeprecationWarning, stacklevel=2)
     desc = socket()
     if localaddr is not None:
         desc.bind(localaddr)
@@ -608,6 +614,8 @@ def tcp_server(listensocket, server, *args, **kw):
     \*\*kw
         The keyword arguments to pass to *server*.
     """
+    import warnings
+    warnings.warn("gevent.socket.tcp_server is deprecated", DeprecationWarning, stacklevel=2)
     try:
         try:
             while True:
