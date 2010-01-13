@@ -234,7 +234,7 @@ if not sys.argv[1:] or '-h' in sys.argv or '--help' in sys.argv:
 else:
     LIBEVENT_MAJOR = guess_libevent_major()
     if LIBEVENT_MAJOR is None:
-        print 'Cannot guess the version of libevent installed on your system. DEFAULTING TO 1.'
+        print 'Cannot guess the version of libevent installed on your system. DEFAULTING TO 1.x.x'
         LIBEVENT_MAJOR = 1
     extra_compile_args.append( '-DUSE_LIBEVENT_%s' % LIBEVENT_MAJOR )
 
