@@ -1,3 +1,7 @@
+#ifdef WIN32
+#include "winsock2.h" // for timeval
+#endif
+
 #include "sys/queue.h"
 
 #ifdef USE_LIBEVENT_2
