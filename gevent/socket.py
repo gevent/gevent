@@ -294,6 +294,8 @@ class socket(object):
                 wait_write(fd.fileno(), timeout=end-time.time())
 
     def connect_ex(self, address):
+        if isinstance(address, tuple) and len(address)==2:
+            address = gethostbyname(address[0]), address[1]
         if self.timeout == 0.0:
             return self.fd.connect_ex(address)
         fd = self.fd
