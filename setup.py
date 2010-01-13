@@ -51,12 +51,16 @@ def check_dir(path, must_exist):
             sys.exit(msg)
 
 def add_include_dir(path, must_exist=True):
-    check_dir(path, must_exist)
-    include_dirs.append(path)
+    if path not in include_dirs:
+        check_dir(path, must_exist)
+        include_dirs.append(path)
+
 
 def add_library_dir(path, must_exist=True):
-    check_dir(path, must_exist)
-    library_dirs.append(path)
+    if path not in library_dirs:
+        check_dir(path, must_exist)
+        library_dirs.append(path)
+
 
 def get_version_from_include_path(d):
     if VERBOSE:
