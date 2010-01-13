@@ -2,25 +2,6 @@ __all__ += ['dns_init', 'dns_shutdown', 'dns_err_to_string',
             'dns_resolve_ipv4', 'dns_resolve_ipv6',
             'dns_resolve_reverse', 'dns_resolve_reverse_ipv6']
 
-cdef extern from "netinet/in.h":
-    cdef enum:
-        INET6_ADDRSTRLEN
-
-cdef extern from "sys/socket.h":
-    cdef enum:
-        AF_INET
-        AF_INET6
-
-cdef extern from "arpa/inet.h":
-    struct in_addr:
-        pass
-    struct in6_addr:
-        pass
-    ctypedef int socklen_t
-    char *inet_ntoa(in_addr n)
-    int inet_aton(char *cp, in_addr *inp)
-    int inet_pton(int af, char *src, void *dst)
-    char *inet_ntop(int af, void *src, char *dst, socklen_t size)
 
 cdef extern from "libevent.h":
     ctypedef void (*evdns_handler)(int result, char t, int count, int ttl, void *addrs, void *arg)
@@ -29,8 +10,8 @@ cdef extern from "libevent.h":
     char *evdns_err_to_string(int err)
     int evdns_resolve_ipv4(char *name, int flags, evdns_handler callback, void *arg)
     int evdns_resolve_ipv6(char *name, int flags, evdns_handler callback, void *arg)
-    int evdns_resolve_reverse(in_addr *ip, int flags, evdns_handler callback, void *arg)
-    int evdns_resolve_reverse_ipv6(in6_addr *ip, int flags, evdns_handler callback, void *arg)
+    int evdns_resolve_reverse(char *ip, int flags, evdns_handler callback, void *arg)
+    int evdns_resolve_reverse_ipv6(char *ip, int flags, evdns_handler callback, void *arg)
     void evdns_shutdown(int fail_requests)
 
 # Result codes
@@ -70,91 +51,81 @@ def dns_err_to_string(int err):
         return result
 
 
-cdef void __evdns_callback(int result, char t, int count, int ttl, void *addrs, void *arg) with gil:
+cdef void __evdns_callback(int code, char type, int count, int ttl, void *addrs, void *arg) with gil:
     cdef int i
-    cdef char str[INET6_ADDRSTRLEN]
-    ctx = <tuple>(arg)
-    (callback, args) = ctx
-    Py_DECREF(ctx)
+    cdef object callback = <object>arg
+    Py_DECREF(callback)
+    cdef object addr
+    cdef object result
 
-    if t == DNS_IPv4_A:
-        x = []
+    if type == DNS_IPv4_A:
+        result = []
         for i from 0 <= i < count:
-            x.append(PyString_FromString(inet_ntoa((<in_addr *>addrs)[i])))
-    elif t == DNS_IPv6_AAAA:
-        x = []
+            addr = PyString_FromStringAndSize(&(<char *>addrs)[i*4], 4)
+            result.append(addr)
+    elif type == DNS_IPv6_AAAA:
+        result = []
         for i from 0 <= i < count:
-            x.append(PyString_FromString(inet_ntop(AF_INET6, <void *>&(<in6_addr *>addrs)[i], str, sizeof(str))))
-    elif t == DNS_PTR and count == 1: # only 1 PTR possible
-        x = PyString_FromString((<char **>addrs)[0])
+            addr = PyString_FromStringAndSize(&(<char *>addrs)[i*16], 16)
+            result.append(addr)
+    elif type == DNS_PTR and count == 1: # only 1 PTR possible
+        result = PyString_FromString((<char **>addrs)[0])
     else:
-        x = None
+        result = None
     try:
-        callback(result, t, ttl, x, *args)
+        callback(code, type, ttl, result)
     except:
         traceback.print_exc()
 
 
-def dns_resolve_ipv4(char *name, int flags, callback, *args):
+def dns_resolve_ipv4(char *name, int flags, object callback):
     """Lookup an A record for a given name.
 
     - *name*     -- DNS hostname
     - *flags*    -- either 0 or DNS_QUERY_NO_SEARCH
-    - *callback* -- callback with ``(result, type, ttl, addrs, *args)`` prototype
-    - *args*     -- option callback arguments
+    - *callback* -- callback with ``(result, type, ttl, addrs)`` prototype
     """
-    t = (callback, args)
-    cdef int result = evdns_resolve_ipv4(name, flags, __evdns_callback, <void *>t)
+    cdef int result = evdns_resolve_ipv4(name, flags, __evdns_callback, <void *>callback)
     if result:
         raise IOError('evdns_resolve_ipv4(%r, %r) returned %s' % (name, flags, result, ))
-    Py_INCREF(t)
+    Py_INCREF(callback)
 
 
-def dns_resolve_ipv6(char *name, int flags, callback, *args):
+def dns_resolve_ipv6(char *name, int flags, object callback):
     """Lookup an AAAA record for a given name.
 
     - *name*     -- DNS hostname
     - *flags*    -- either 0 or DNS_QUERY_NO_SEARCH
-    - *callback* -- callback with ``(result, type, ttl, addrs, *args)`` prototype
-    - *args*     -- option callback arguments
+    - *callback* -- callback with ``(result, type, ttl, addrs)`` prototype
     """
-    t = (callback, args)
-    cdef int result = evdns_resolve_ipv6(name, flags, __evdns_callback, <void *>t)
+    cdef int result = evdns_resolve_ipv6(name, flags, __evdns_callback, <void *>callback)
     if result:
         raise IOError('evdns_resolve_ip6(%r, %r) returned %s' % (name, flags, result, ))
-    Py_INCREF(t)
+    Py_INCREF(callback)
 
 
-def dns_resolve_reverse(char *ip, int flags, callback, *args):
+def dns_resolve_reverse(char* packed_ip, int flags, object callback):
     """Lookup a PTR record for a given IPv4 address.
 
-    - *name*     -- IPv4 address (as 4-byte binary string)
-    - *flags*    -- either 0 or DNS_QUERY_NO_SEARCH
-    - *callback* -- callback with ``(result, type, ttl, addrs, *args)`` prototype
-    - *args*     -- option callback arguments
+    - *packed_ip* -- IPv4 address (as 4-byte binary string)
+    - *flags*     -- either 0 or DNS_QUERY_NO_SEARCH
+    - *callback*  -- callback with ``(result, type, ttl, addrs)`` prototype
     """
-    t = (callback, args)
-    cdef in_addr addr
-    inet_aton(ip, &addr)
-    cdef int result = evdns_resolve_reverse(&addr, flags, __evdns_callback, <void *>t)
+    cdef int result = evdns_resolve_reverse(packed_ip, flags, __evdns_callback, <void *>callback)
     if result:
-        raise IOError('evdns_resolve_reverse(%r, %r) returned %s' % (ip, flags, result, ))
-    Py_INCREF(t)
+        raise IOError('evdns_resolve_reverse(%r, %r) returned %s' % (packed_ip, flags, result, ))
+    Py_INCREF(callback)
 
 
-def dns_resolve_reverse_ipv6(char *ip, int flags, callback, *args):
+def dns_resolve_reverse_ipv6(char* packed_ip, int flags, object callback):
     """Lookup a PTR record for a given IPv6 address.
 
-    - *name*     -- IPv6 address (as 16-byte binary string)
-    - *flags*    -- either 0 or DNS_QUERY_NO_SEARCH
-    - *callback* -- callback with ``(result, type, ttl, addrs, *args)`` prototype
-    - *args*     -- option callback arguments
+    - *packed_ip* -- IPv6 address (as 16-byte binary string)
+    - *flags*     -- either 0 or DNS_QUERY_NO_SEARCH
+    - *callback*  -- callback with ``(result, type, ttl, addrs)`` prototype
     """
-    t = (callback, args)
-    cdef in6_addr addr
-    inet_pton(AF_INET6, ip, &addr)
-    cdef int result = evdns_resolve_reverse_ipv6(&addr, flags, __evdns_callback, <void *>t)
+    cdef int result = evdns_resolve_reverse_ipv6(packed_ip, flags, __evdns_callback, <void *>callback)
     if result:
-        raise IOError('evdns_resolve_reverse_ipv6(%r, %r) returned %s' % (ip, flags, result, ))
-    Py_INCREF(t)
+        raise IOError('evdns_resolve_reverse_ipv6(%r, %r) returned %s' % (packed_ip, flags, result, ))
+    Py_INCREF(callback)
 
