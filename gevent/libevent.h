@@ -2,8 +2,6 @@
 
 #ifdef USE_LIBEVENT_2
 
-#warning "Using libevent2"
-
 #include "event2/event.h"
 #include "event2/event_struct.h"
 #include "event2/event_compat.h"
@@ -19,8 +17,6 @@
 #define EVHTTP_SET_CB  evhttp_set_cb
 
 #elif USE_LIBEVENT_1
-
-#warning "Using libevent1"
 
 #include "event.h"
 #include "evhttp.h"
