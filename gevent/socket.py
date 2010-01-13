@@ -59,7 +59,7 @@ try:
     __all__.append('sslerror')
 except AttributeError:
     pass
-gaierror = __socket__.gaierror
+gaierror = _socket.gaierror
 
 # Import public constants from the standard socket (called __socket__ here) into this module.
 
