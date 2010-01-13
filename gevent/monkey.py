@@ -6,7 +6,10 @@ noisy = True
 
 
 def patch_os():
-    from gevent.hub import fork
+    try:
+        from gevent.hub import fork
+    except ImportError:
+        return
     import os
     os.fork = fork
 
