@@ -34,24 +34,24 @@ cdef extern from "libevent.h":
     void evdns_shutdown(int fail_requests)
 
 # Result codes
-DNS_ERR_NONE		= 0
-DNS_ERR_FORMAT		= 1
-DNS_ERR_SERVERFAILED	= 2
-DNS_ERR_NOTEXIST	= 3
-DNS_ERR_NOTIMPL		= 4
-DNS_ERR_REFUSED		= 5
-DNS_ERR_TRUNCATED	= 65
-DNS_ERR_UNKNOWN		= 66
-DNS_ERR_TIMEOUT		= 67
-DNS_ERR_SHUTDOWN	= 68
+DNS_ERR_NONE         = 0
+DNS_ERR_FORMAT       = 1
+DNS_ERR_SERVERFAILED = 2
+DNS_ERR_NOTEXIST     = 3
+DNS_ERR_NOTIMPL      = 4
+DNS_ERR_REFUSED      = 5
+DNS_ERR_TRUNCATED    = 65
+DNS_ERR_UNKNOWN      = 66
+DNS_ERR_TIMEOUT      = 67
+DNS_ERR_SHUTDOWN     = 68
 
 # Types
-DNS_IPv4_A      = 1
-DNS_PTR         = 2
-DNS_IPv6_AAAA   = 3
+DNS_IPv4_A    = 1
+DNS_PTR       = 2
+DNS_IPv6_AAAA = 3
 
 # Flags
-DNS_QUERY_NO_SEARCH	= 1
+DNS_QUERY_NO_SEARCH = 1
 
 
 def dns_init():
