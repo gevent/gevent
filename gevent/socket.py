@@ -38,6 +38,10 @@ __all__ = ['create_connection',
            'gaierror',
            'getaddrinfo',
            'gethostbyname',
+           'inet_aton',
+           'inet_ntoa',
+           'inet_pton',
+           'inet_ntop',
            'socket',
            'socketpair',
            'timeout',
@@ -71,6 +75,25 @@ for name in __socket__.__all__:
             __all__.append(name)
 
 del name, value
+
+inet_ntoa = _socket.inet_ntoa
+inet_aton = _socket.inet_aton
+try:
+    inet_ntop = _socket.inet_ntop
+except AttributeError:
+    def inet_ntop(address_family, packed_ip):
+        if address_family == AF_INET:
+            return inet_ntoa(packed_ip)
+        # XXX: ipv6 won't work on windows
+        raise NotImplementedError('inet_ntop() is not available on this platform')
+try:
+    inet_pton = _socket.inet_pton
+except AttributeError:
+    def inet_pton(address_family, ip_string):
+        if address_family == AF_INET:
+            return inet_aton(ip_string)
+        # XXX: ipv6 won't work on windows
+        raise NotImplementedError('inet_ntop() is not available on this platform')
 
 # XXX: import other non-blocking stuff, like ntohl
 # XXX: implement blocking functions that are not yet implemented
