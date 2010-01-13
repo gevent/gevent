@@ -731,8 +731,8 @@ else:
             return hostname
         if hostname == _socket.gethostname():
             return _socket.gethostbyname(hostname)
-        addrs = resolve_ipv4(hostname)
-        return random.choice(addrs)
+        _ttl, addrs = resolve_ipv4(hostname)
+        return inet_ntoa(random.choice(addrs))
 
 
     def getaddrinfo(host, port, *args, **kwargs):
@@ -768,9 +768,9 @@ else:
         if family in (None, AF_INET, AF_UNSPEC):
             family = AF_INET
             # TODO: AF_UNSPEC means try both AF_INET and AF_INET6
-            addrs = resolve_ipv4(host, evdns_flags)
+            _ttl, addrs = resolve_ipv4(host, evdns_flags)
         elif family == AF_INET6:
-            addrs = resolve_ipv6(host, evdns_flags)
+            _ttl, addrs = resolve_ipv6(host, evdns_flags)
         else:
             raise NotImplementedError('family is not among AF_UNSPEC/AF_INET/AF_INET6: %r' % (family, ))
         r = []
@@ -783,7 +783,7 @@ else:
 
         for addr in addrs:
             for socktype, proto in socktype_proto:
-                r.append((family, socktype, proto, '', (addr, port)))
+                r.append((family, socktype, proto, '', (inet_ntop(family, addr), port)))
         return r
 
 
