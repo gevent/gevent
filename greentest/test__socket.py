@@ -1,6 +1,6 @@
 import os
 import gevent
-from gevent import socket, coros
+from gevent import socket
 import greentest
 import time
 
@@ -121,8 +121,8 @@ class TestSSL(TestTCP):
         return socket.create_connection_ssl(('127.0.0.1', self.listener.getsockname()[1]))
 
     def test_recv_timeout(self):
-        incoming = coros.Queue() # preventing the incoming socket from being GCed before the test finished
-        acceptor = gevent.spawn_link_exception(lambda : incoming.send(self.listener.accept()))
+        incoming = []
+        acceptor = gevent.spawn_link_exception(lambda : incoming.append(self.listener.accept()))
         client = self.create_connection()
         client.settimeout(0.1)
         start = time.time()
@@ -135,8 +135,8 @@ class TestSSL(TestTCP):
         acceptor.get()
 
     def test_sendall_timeout(self):
-        incoming = coros.Queue() # preventing the incoming socket from being GCed before the test finished
-        acceptor = gevent.spawn_link_exception(lambda : incoming.send(self.listener.accept()))
+        incoming = []
+        acceptor = gevent.spawn_link_exception(lambda : incoming.append(self.listener.accept()))
         client = self.create_connection()
         client.settimeout(0.1)
         start = time.time()
