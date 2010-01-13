@@ -3,6 +3,7 @@ import re
 import doctest
 import unittest
 import gevent
+from gevent import socket
 
 base = os.path.dirname(gevent.__file__)
 modules = set()
@@ -10,7 +11,7 @@ modules = set()
 def myfunction(*args, **kwargs):
     pass
 
-globs = {'myfunction': myfunction, 'gevent': gevent}
+globs = {'myfunction': myfunction, 'gevent': gevent, 'socket': socket}
 
 for path, dirs, files in os.walk(base):
     package = 'gevent' + path.replace(base, '').replace('/', '.')
