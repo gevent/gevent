@@ -153,7 +153,10 @@ class Hub(greenlet):
     def run(self):
         global _threadlocal
         assert self is getcurrent(), 'Do not call run() directly'
-        self.keyboard_interrupt_signal = signal(2, core.active_event, MAIN.throw, KeyboardInterrupt)
+        try:
+            self.keyboard_interrupt_signal = signal(2, core.active_event, MAIN.throw, KeyboardInterrupt)
+        except IOError:
+            pass # no signal() on windows
         try:
             loop_count = 0
             while True:
