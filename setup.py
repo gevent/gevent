@@ -50,6 +50,7 @@ def check_dir(path, must_exist):
         if must_exist:
             sys.exit(msg)
 
+
 def add_include_dir(path, must_exist=True):
     if path not in include_dirs:
         check_dir(path, must_exist)
@@ -74,6 +75,7 @@ def get_version_from_include_path(d):
         print 'Using libevent 1: %s' % event_h
         return 1
 
+
 def get_version_from_ctypes(cdll, path):
     try:
         get_version = cdll.event_get_version
@@ -89,6 +91,7 @@ def get_version_from_ctypes(cdll, path):
             return 2
         else:
             print 'Weird response from %s get_version(): %r' % (path, version)
+
 
 def get_version_from_path(path):
     """
@@ -113,6 +116,7 @@ def get_version_from_path(path):
         print 'Using libevent 2: "%s"' % path
         return 2
 
+
 def get_version_from_library_path(d):
     if VERBOSE:
         print 'checking %s for %s' % (d, libevent_fn)
@@ -122,6 +126,7 @@ def get_version_from_library_path(d):
             return get_version_from_ctypes( ctypes.CDLL(libevent_fpath), libevent_fpath )
         else:
             return get_version_from_path(d)
+
 
 def unique(lst):
     result = []
