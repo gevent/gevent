@@ -201,18 +201,19 @@ timeout_default = object()
 class socket(object):
     is_secure = False # XXX remove this
 
-    def __init__(self, family_or_realsock=AF_INET, *args, **kwargs):
-        if isinstance(family_or_realsock, (int, long)):
-            self.fd = _socket.socket(family_or_realsock, *args, **kwargs)
+    def __init__(self, family=AF_INET, type=SOCK_STREAM, proto=0, _sock=None):
+        if _sock is None:
+            self.fd = _socket.socket(family, type, proto)
             self.timeout = _socket.getdefaulttimeout()
         else:
-            if hasattr(family_or_realsock, '_sock'):
-                family_or_realsock = family_or_realsock.sock
-            self.fd = family_or_realsock
-            self.timeout = self.fd.gettimeout()
-            assert not args, args
-            assert not kwargs, kwargs
-
+            if hasattr(_sock, '_sock'):
+                self.fd = _sock._sock
+                self.timeout = getattr(_sock, 'timeout', None)
+                if self.timeout is None:
+                    self.timeout = _socket.getdefaulttimeout()
+            else:
+                self.fd = _sock
+                self.timeout = _socket.getdefaulttimeout()
         self.fd.setblocking(0)
 
     def __repr__(self):
@@ -266,7 +267,7 @@ class socket(object):
                     raise
             if res is not None:
                 client, addr = res
-                return type(self)(client), addr
+                return type(self)(_sock=client), addr
             wait_read(fd.fileno(), timeout=self.timeout)
 
     def close(self):
@@ -318,10 +319,10 @@ class socket(object):
                     return ex[0]
 
     def dup(self, *args, **kw):
-        sock = self.fd.dup(*args, **kw)
-        newsock = type(self)(sock)
-        newsock.settimeout(self.timeout)
-        return newsock
+        """dup() -> socket object
+
+        Return a new socket object connected to the same system resource."""
+        return socket(_sock=self._sock)
 
     def makefile(self, mode='r', bufsize=-1):
         return _fileobject(self.dup(), mode, bufsize)
@@ -406,7 +407,7 @@ class GreenSSL(socket):
     is_secure = True
 
     def __init__(self, fd, server_side=False):
-        socket.__init__(self, fd)
+        socket.__init__(self, _sock=fd)
         self._makefile_refs = 0
         if server_side:
             self.fd.set_accept_state()
@@ -532,11 +533,11 @@ class GreenSSL(socket):
 
 def socketpair(*args):
     one, two = _socket.socketpair(*args)
-    return socket(one), socket(two)
+    return socket(_sock=one), socket(_sock=two)
 
 
 def fromfd(*args):
-    return socket(_socket.fromfd(*args))
+    return socket(_sock=_socket.fromfd(*args))
 
 def socket_bind_and_listen(descriptor, addr=('', 0), backlog=50):
     set_reuse_addr(descriptor)
