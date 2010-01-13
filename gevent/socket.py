@@ -176,6 +176,10 @@ if sys.version_info[:2] <= (2, 4):
 
 CONNECT_ERR = (errno.EINPROGRESS, errno.EALREADY, errno.EWOULDBLOCK)
 CONNECT_SUCCESS = (0, errno.EISCONN)
+
+if sys.platform == 'win32':
+    CONNECT_ERR += (errno.WSAEINVAL, )
+
 def socket_connect(descriptor, address):
     err = descriptor.connect_ex(address)
     if err in CONNECT_ERR:
