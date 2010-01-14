@@ -229,7 +229,7 @@ def guess_libevent_major():
                 return result
 
 
-if not sys.argv[1:] or '-h' in sys.argv or '--help' in sys.argv:
+if not sys.argv[1:] or '-h' in sys.argv or '--help' in ' '.join(sys.argv):
     print __doc__
 else:
     LIBEVENT_MAJOR = guess_libevent_major()
