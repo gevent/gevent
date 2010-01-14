@@ -489,11 +489,15 @@ class TestStr(greentest.TestCase):
 
     def test_method(self):
         g = gevent.Greenlet.spawn(A().method)
-        self.assertEqual(hexobj.sub('X', str(g)), '<Greenlet at X: <bound method A.method of <__main__.A object at X>>>')
+        str_g = hexobj.sub('X', str(g))
+        str_g = str_g.replace(__name__, 'module')
+        self.assertEqual(str_g, '<Greenlet at X: <bound method A.method of <module.A object at X>>>')
         assert_not_ready(g)
         g.join()
         assert_ready(g)
-        self.assertEqual(hexobj.sub('X', str(g)), '<Greenlet at X: <bound method A.method of <__main__.A object at X>>>')
+        str_g = hexobj.sub('X', str(g))
+        str_g = str_g.replace(__name__, 'module')
+        self.assertEqual(str_g, '<Greenlet at X: <bound method A.method of <module.A object at X>>>')
 
 
 class TestJoin(greentest.GenericWaitTestCase):
