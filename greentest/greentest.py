@@ -127,7 +127,7 @@ class GenericWaitTestCase(TestCase):
         result = self.wait(timeout=0.01)
         # join and wait simply returns after timeout expires
         delay = time.time() - start
-        assert 0.01 <= delay < 0.01 + 0.01, delay
+        assert 0.01 - 0.001 <= delay < 0.01 + 0.01, delay
         assert result is None, repr(result)
 
 
@@ -143,7 +143,7 @@ class GenericGetTestCase(TestCase):
         self.assertRaises(gevent.Timeout, self.wait, timeout=0.01)
         # get raises Timeout after timeout expired
         delay = time.time() - start
-        assert 0.01 <= delay < 0.01 + 0.01, delay
+        assert 0.01 - 0.001 <= delay < 0.01 + 0.01, delay
 
     def test_raises_timeout_Timeout(self):
         start = time.time()
@@ -153,7 +153,7 @@ class GenericGetTestCase(TestCase):
         except gevent.Timeout, ex:
             assert ex is timeout, (ex, timeout)
         delay = time.time() - start
-        assert 0.01 <= delay < 0.01 + 0.01, delay
+        assert 0.01 - 0.001 <= delay < 0.01 + 0.01, delay
 
     def test_raises_timeout_Timeout_exc_customized(self):
         start = time.time()
@@ -164,5 +164,5 @@ class GenericGetTestCase(TestCase):
         except RuntimeError, ex:
             assert ex is error, (ex, error)
         delay = time.time() - start
-        assert 0.01 <= delay < 0.01 + 0.01, delay
+        assert 0.01 - 0.001 <= delay < 0.01 + 0.01, delay
 
