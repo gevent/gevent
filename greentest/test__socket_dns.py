@@ -120,7 +120,7 @@ class TestLocal(TestCase):
     try:
         etc_hosts = open('/etc/hosts').read()
     except IOError:
-        data = ''
+        etc_hosts = ''
 
     for ip, host in re.findall(r'^\s*(\d+\.\d+\.\d+\.\d+)\s+([^\s]+)', etc_hosts, re.M)[:10]:
         func = get_test(ip, host)
