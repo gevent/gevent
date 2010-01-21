@@ -119,6 +119,9 @@ class TestCase(greentest.TestCase):
             timeout.cancel()
         # XXX currently listening socket is kept open in gevent.wsgi
 
+    def connect(self):
+        return socket.create_connection(('127.0.0.1', self.port))
+
 
 class TestHttpdBasic(TestCase):
 
@@ -133,7 +136,7 @@ class TestHttpdBasic(TestCase):
             return ["not found"]
 
     def test_001_server(self):
-        sock = socket.connect_tcp(('127.0.0.1', self.port))
+        sock = self.connect()
         sock.sendall('GET / HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n')
         result = sock.makefile().read()
         sock.close()
@@ -160,15 +163,15 @@ class TestHttpdBasic(TestCase):
 
     def test_003_passing_non_int_to_read(self):
         # This should go in greenio_test
-        fd = socket.connect_tcp(('127.0.0.1', self.port)).makefile(bufsize=1)
+        fd = self.connect().makefile(bufsize=1)
         fd.write('GET / HTTP/1.1\r\nHost: localhost\r\n\r\n')
         cancel = gevent.Timeout.start_new(1, RuntimeError)
         self.assertRaises(TypeError, fd.read, "This shouldn't work")
         cancel.cancel()
         fd.close()
 
-    def test_004_close_keepalive(self):
-        fd = socket.connect_tcp(('127.0.0.1', self.port)).makefile(bufsize=1)
+    def test_004_connection_close(self):
+        fd = self.connect().makefile(bufsize=1)
         fd.write('GET / HTTP/1.1\r\nHost: localhost\r\n\r\n')
         read_http(fd)
         fd.write('GET / HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n')
@@ -186,7 +189,7 @@ class TestHttpdBasic(TestCase):
         print out.read()
 
     def SKIP_test_006_reject_long_urls(self):
-        fd = socket.connect_tcp(('127.0.0.1', self.port)).makefile(bufsize=1)
+        fd = self.connect().makefile(bufsize=1)
         path_parts = []
         for ii in range(3000):
             path_parts.append('path')
@@ -199,7 +202,7 @@ class TestHttpdBasic(TestCase):
         fd.close()
 
     def test_008_correctresponse(self):
-        fd = socket.connect_tcp(('127.0.0.1', self.port)).makefile(bufsize=1)
+        fd = self.connect().makefile(bufsize=1)
         fd.write('GET / HTTP/1.1\r\nHost: localhost\r\n\r\n')
         response_line_200, _, _ = read_http(fd)
         fd.write('GET /notexist HTTP/1.1\r\nHost: localhost\r\n\r\n')
@@ -252,7 +255,7 @@ class TestGetArg(TestCase):
 
     def test_007_get_arg(self):
         # define a new handler that does a get_arg as well as a read_body
-        fd = socket.connect_tcp(('127.0.0.1', self.port)).makefile(bufsize=1)
+        fd = self.connect().makefile(bufsize=1)
         request = '\r\n'.join((
             'POST / HTTP/1.0',
             'Host: localhost',
@@ -278,12 +281,12 @@ class TestChunkedApp(TestCase):
         yield "chunked"
 
     def test_009_chunked_response(self):
-        fd = socket.connect_tcp(('127.0.0.1', self.port)).makefile(bufsize=1)
+        fd = self.connect().makefile(bufsize=1)
         fd.write('GET / HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n')
         self.assert_('Transfer-Encoding: chunked' in fd.read())
 
     def test_010_no_chunked_http_1_0(self):
-        fd = socket.connect_tcp(('127.0.0.1', self.port)).makefile(bufsize=1)
+        fd = self.connect().makefile(bufsize=1)
         fd.write('GET / HTTP/1.0\r\nHost: localhost\r\nConnection: close\r\n\r\n')
         self.assert_('Transfer-Encoding: chunked' not in fd.read())
 
@@ -299,7 +302,7 @@ class TestBigChunks(TestCase):
 
 
     def test_011_multiple_chunks(self):
-        fd = socket.connect_tcp(('127.0.0.1', self.port)).makefile(bufsize=1)
+        fd = self.connect().makefile(bufsize=1)
         fd.write('GET / HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n')
         _, headers = read_headers(fd)
         assert ('Transfer-Encoding', 'chunked') in headers.items(), headers
@@ -327,21 +330,21 @@ class TestChunkedPost(TestCase):
             return [x for x in iter(lambda: env['wsgi.input'].read(1), '')]
 
     def test_014_chunked_post(self):
-        fd = socket.connect_tcp(('127.0.0.1', self.port)).makefile(bufsize=1)
+        fd = self.connect().makefile(bufsize=1)
         fd.write('POST /a HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n'
                  'Transfer-Encoding: chunked\r\n\r\n'
                  '2\r\noh\r\n4\r\n hai\r\n0\r\n\r\n')
         response_line, headers, body = read_http(fd)
         self.assert_(body == 'oh hai', 'invalid response %r' % body)
 
-        fd = socket.connect_tcp(('127.0.0.1', self.port)).makefile(bufsize=1)
+        fd = self.connect().makefile(bufsize=1)
         fd.write('POST /b HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n'
                  'Transfer-Encoding: chunked\r\n\r\n'
                  '2\r\noh\r\n4\r\n hai\r\n0\r\n\r\n')
         response_line, headers, body = read_http(fd)
         self.assert_(body == 'oh hai', 'invalid response %r' % body)
 
-        fd = socket.connect_tcp(('127.0.0.1', self.port)).makefile(bufsize=1)
+        fd = self.connect().makefile(bufsize=1)
         fd.write('POST /c HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n'
                  'Transfer-Encoding: chunked\r\n\r\n'
                  '2\r\noh\r\n4\r\n hai\r\n0\r\n\r\n')
@@ -363,12 +366,12 @@ class TestUseWrite(TestCase):
         return []
 
     def test_015_write(self):
-        fd = socket.connect_tcp(('127.0.0.1', self.port)).makefile(bufsize=1)
+        fd = self.connect().makefile(bufsize=1)
         fd.write('GET /a HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n')
         response_line, headers, body = read_http(fd)
         self.assert_('Content-Length' in headers)
 
-        fd = socket.connect_tcp(('127.0.0.1', self.port)).makefile(bufsize=1)
+        fd = self.connect().makefile(bufsize=1)
         fd.write('GET /b HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n')
         response_line, headers, body = read_http(fd)
         #self.assert_('Transfer-Encoding' in headers)
@@ -425,7 +428,7 @@ class TestInternational(TestCase):
         return []
 
     def test(self):
-        sock = socket.connect_tcp(('127.0.0.1', self.port))
+        sock = self.connect()
         sock.sendall('GET /%D0%BF%D1%80%D0%B8%D0%B2%D0%B5%D1%82?%D0%B2%D0%BE%D0%BF%D1%80%D0%BE%D1%81=%D0%BE%D1%82%D0%B2%D0%B5%D1%82 HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n')
         result = sock.makefile().read()
         assert '200 PASSED' in result, result
