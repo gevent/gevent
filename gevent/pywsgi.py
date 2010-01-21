@@ -20,6 +20,9 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
+import warnings
+warnings.warn("gevent.pywsgi is deprecated; use gevent.wsgi", DeprecationWarning, stacklevel=2)
+
 import errno
 import os
 import sys
