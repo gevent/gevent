@@ -362,9 +362,12 @@ def main():
 
     options, args = parser.parse_args()
     options.verbosity += options.verbose - options.quiet
-
-    if options.db is None and sqlite3:
-        options.db = get_tempnam() if get_changeset().endswith('+') else 'testresults.sqlite3'
+    
+    if not options.db and sqlite3:
+        if get_changeset().endswith('+'):
+            options.db = get_tempnam()
+        else:
+            options.db = 'testresults.sqlite3'
         print 'Storing the results in %s' % options.db
     elif options.db and not sqlite3:
         sys.exit('Cannot access the database: no sqlite3 module found.')
