@@ -260,7 +260,6 @@ class socket(object):
     def accept(self):
         if self.timeout == 0.0:
             return self.fd.accept()
-        fd = self.fd
         while True:
             try:
                 res = self.fd.accept()
@@ -272,7 +271,7 @@ class socket(object):
             if res is not None:
                 client, addr = res
                 return type(self)(_sock=client), addr
-            wait_read(fd.fileno(), timeout=self.timeout)
+            wait_read(self.fd.fileno(), timeout=self.timeout)
 
     def close(self):
         self.fd = _closedsocket()
