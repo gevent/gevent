@@ -4,7 +4,7 @@
 This test runner runs individual test modules within a subprocess, thus allowing them to
 mangle globals on the module level freely (i.e. do monkey patching).
 
-To report the results as well as for interprocess communication sqlite3 database is used.
+To report the results and generate statistics sqlite3 database is used.
 
 Additionally, the subprocess is killed after a timeout has passed. The test case remains
 in the database logged with the result 'TIMEOUT'.
