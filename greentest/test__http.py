@@ -5,6 +5,7 @@ import greentest
 import os
 from urllib2 import urlopen, URLError, HTTPError
 import socket
+import errno
 
 # add test for "chunked POST input -> chunked output"
 
@@ -56,8 +57,8 @@ class BoundTestCase(greentest.TestCase):
     def check_refused(self):
         try:
             self.connect()
-        except socket.error, e:
-            if 'ECONNREFUSED' not in str(e):
+        except socket.error, ex:
+            if ex[0] != errno.ECONNREFUSED:
                 raise
         except IOError, e:
             print 'WARNING: instead of ECONNREFUSED got IOError: %s' % e
