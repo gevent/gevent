@@ -428,7 +428,7 @@ class TestInternational(TestCase):
     def application(self, environ, start_response):
         assert environ['PATH_INFO'] == '/\xd0\xbf\xd1\x80\xd0\xb8\xd0\xb2\xd0\xb5\xd1\x82', environ['PATH_INFO']
         assert environ['QUERY_STRING'] == '%D0%B2%D0%BE%D0%BF%D1%80%D0%BE%D1%81=%D0%BE%D1%82%D0%B2%D0%B5%D1%82', environ['QUERY_STRING']
-        start_response("200 PASSED", [])
+        start_response("200 PASSED", [('Content-Type', 'text/plain')])
         return []
 
     def test(self):
