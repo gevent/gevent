@@ -32,13 +32,14 @@ import gevent
 from gevent import socket
 
 
-try:
-    from cStringIO import StringIO
-except ImportError:
-    from StringIO import StringIO
-
-
 CONTENT_LENGTH = 'Content-Length'
+CONN_ABORTED_ERRORS = []
+
+try:
+    from errno import WSAECONNABORTED
+    CONN_ABORTED_ERRORS.append(WSAECONNABORTED)
+except ImportError:
+    pass
 
 
 class ConnectionClosed(Exception):
@@ -177,8 +178,12 @@ class TestHttpdBasic(TestCase):
         fd.write('GET / HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n')
         read_http(fd)
         fd.write('GET / HTTP/1.1\r\nHost: localhost\r\n\r\n')
-        self.assertRaises(ConnectionClosed, read_http, fd)
-        fd.close()
+        try:
+            result = fd.readline()
+            assert not result, 'The remote side is expected to close the connection, but it send %r' % (result, )
+        except socket.error, ex:
+            if ex[0] not in CONN_ABORTED_ERRORS:
+                raise
 
     def skip_test_005_run_apachebench(self):
         url = 'http://localhost:%s/' % self.port
