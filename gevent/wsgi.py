@@ -12,6 +12,20 @@ __all__ = ['WSGIServer',
            'WSGIHandler']
 
 
+class buffer_proxy(object):
+
+    def __init__(self, obj):
+        self._obj = obj
+
+    def __getattr__(self, item):
+        assert item != '_obj'
+        return getattr(self._obj, item)
+
+    def __iter__(self):
+        while len(self._obj):
+            yield self._obj.readline()
+
+
 class WSGIHandler(object):
 
     def __init__(self, request):
@@ -89,7 +103,7 @@ class WSGIHandler(object):
                     'SERVER_PROTOCOL': 'HTTP/%d.%d' % req.version,
                     'REMOTE_ADDR': req.remote_host,
                     'REMOTE_PORT': str(req.remote_port),
-                    'wsgi.input': req.input_buffer})
+                    'wsgi.input': buffer_proxy(req.input_buffer)})
         for header, value in req.get_input_headers():
             header = header.replace('-', '_').upper()
             if header not in ('CONTENT_LENGTH', 'CONTENT_TYPE'):
