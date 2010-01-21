@@ -601,11 +601,23 @@ def socketpair(*args):
 def fromfd(*args):
     return socket(_sock=_socket.fromfd(*args))
 
-def socket_bind_and_listen(descriptor, addr=('', 0), backlog=50):
-    set_reuse_addr(descriptor)
+
+def bind_and_listen(descriptor, addr=('', 0), backlog=50, reuse_addr=True):
+    if reuse_addr:
+        try:
+            descriptor.setsockopt(SOL_SOCKET, SO_REUSEADDR, descriptor.getsockopt(SOL_SOCKET, SO_REUSEADDR) | 1)
+        except error:
+            pass
     descriptor.bind(addr)
     descriptor.listen(backlog)
-    return descriptor
+
+
+def socket_bind_and_listen(*args, **kwargs):
+    import warnings
+    warnings.warn("gevent.socket.socket_bind_and_listen is renamed to bind_and_listen", DeprecationWarning, stacklevel=2)
+    bind_and_listen(*args, **kwargs)
+    return args[0]
+
 
 def set_reuse_addr(descriptor):
     try:
