@@ -226,12 +226,12 @@ class TestExplicitContentLength(TestHttpdBasic):
             msg = 'hello world'
             start_response('200 OK',
                            [('Content-Type', 'text/plain'),
-                            ('Content-Length', len(msg))])
+                            ('Content-Length', str(len(msg)))])
         else:
             msg = 'not found'
             start_response('404 Not Found',
                            [('Content-Type', 'text/plain'),
-                            ('Content-Length', len(msg))])
+                            ('Content-Length', str(len(msg)))])
         return [msg]
 
 
