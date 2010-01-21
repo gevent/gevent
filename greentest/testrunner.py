@@ -159,14 +159,11 @@ def get_libevent_method():
 def get_tempnam():
     import warnings
     warnings.filterwarnings('ignore', 'tempnam is a potential security risk to your program')
-    tempnam = os.tempnam()
-    del warnings.filters[0]
-    database_path = os.path.join(os.path.dirname(tempnam), 'testresults.sqlite3')
     try:
-        os.unlink(database_path)
-    except OSError:
-        pass
-    return database_path
+        tempnam = os.tempnam()
+    finally:
+        del warnings.filters[0]
+    return os.path.join(os.path.dirname(tempnam), 'testresults.sqlite3')
 
 
 def run_tests(options, args):
