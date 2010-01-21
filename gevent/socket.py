@@ -629,6 +629,7 @@ def tcp_listener(address, backlog=50):
     socket_bind_and_listen(sock, address, backlog=backlog)
     return sock
 
+
 def ssl_listener(address, private_key, certificate):
     """Listen on the given (ip, port) *address* with a TCP socket that
     can do SSL.
@@ -650,6 +651,7 @@ def ssl_listener(address, private_key, certificate):
     socket_bind_and_listen(sock, address)
     return sock
 
+
 # XXX merge this into create_connection
 def connect_tcp(address, localaddr=None):
     """
@@ -663,6 +665,7 @@ def connect_tcp(address, localaddr=None):
         desc.bind(localaddr)
     desc.connect(address)
     return desc
+
 
 def tcp_server(listensocket, server, *args, **kw):
     """
