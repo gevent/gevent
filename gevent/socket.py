@@ -131,6 +131,15 @@ def wait_write(fileno, timeout=-1, timeout_exc=_socket.timeout):
         evt.cancel()
 
 
+def wait_readwrite(fileno, timeout=-1, timeout_exc=timeout):
+    evt = core.readwrite_event(fileno, _wait_helper, timeout, (getcurrent(), timeout_exc))
+    try:
+        switch_result = get_hub().switch()
+        assert evt is switch_result, 'Invalid switch into wait_readwrite(): %r' % (switch_result, )
+    finally:
+        evt.cancel()
+
+
 try:
     from OpenSSL import SSL
 except ImportError:
