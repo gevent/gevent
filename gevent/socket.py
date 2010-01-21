@@ -52,6 +52,28 @@ import errno
 import time
 import random
 import re
+import platform
+
+is_windows = platform.system() == 'Windows'
+
+if is_windows:
+    # no such thing as WSAEPERM or error code 10001 according to winsock.h or MSDN
+    from errno import WSAEINVAL as EINVAL
+    from errno import WSAEWOULDBLOCK as EWOULDBLOCK
+    from errno import WSAEINPROGRESS as EINPROGRESS
+    from errno import WSAEALREADY as EALREADY
+    from errno import WSAEISCONN as EISCONN
+    from gevent.win32util import formatError as strerror
+    EGAIN = EWOULDBLOCK
+else:
+    from errno import EINVAL
+    from errno import EWOULDBLOCK
+    from errno import EINPROGRESS
+    from errno import EALREADY
+    from errno import EAGAIN
+    from errno import EISCONN
+    from os import strerror
+
 
 import _socket
 error = _socket.error
@@ -183,21 +205,6 @@ if sys.version_info[:2] <= (2, 4):
                 self._sock = None
 
 
-CONNECT_ERR = (errno.EINPROGRESS, errno.EALREADY, errno.EWOULDBLOCK)
-CONNECT_SUCCESS = (0, errno.EISCONN)
-
-if sys.platform == 'win32':
-    CONNECT_ERR += (errno.WSAEINVAL, )
-
-def socket_connect(descriptor, address):
-    err = descriptor.connect_ex(address)
-    if err in CONNECT_ERR:
-        return None
-    if err not in CONNECT_SUCCESS:
-        raise error(err, errno.errorcode[err])
-    return descriptor
-
-
 class _closedsocket(object):
     __slots__ = []
     def _dummy(*args):
@@ -293,42 +300,46 @@ class socket(object):
             address = gethostbyname(address[0]), address[1]
         if self.timeout == 0.0:
             return self.fd.connect(address)
-        fd = self.fd
+        sock = self.fd
         if self.timeout is None:
-            while not socket_connect(fd, address):
-                wait_write(fd.fileno())
+            while True:
+                err = sock.getsockopt(SOL_SOCKET, SO_ERROR)
+                if err:
+                    raise error(err, strerror(err))
+                result = sock.connect_ex(address)
+                if not result or result == EISCONN:
+                    break
+                elif (result in (EWOULDBLOCK, EINPROGRESS, EALREADY)) or (result == EINVAL and is_windows):
+                    wait_readwrite(sock.fileno())
+                else:
+                    raise error(result, strerror(result))
         else:
             end = time.time() + self.timeout
             while True:
-                if socket_connect(fd, address):
-                    return
-                if time.time() >= end:
-                    raise timeout
-                wait_write(fd.fileno(), timeout=end-time.time())
+                err = sock.getsockopt(SOL_SOCKET, SO_ERROR)
+                if err:
+                    raise error(err, strerror(err))
+                result = sock.connect_ex(address)
+                if not result or result == EISCONN:
+                    break
+                elif (result in (EWOULDBLOCK, EINPROGRESS, EALREADY)) or (result == EINVAL and is_windows):
+                    timeleft = end - time.time()
+                    if timeleft <= 0:
+                        raise timeout
+                    wait_readwrite(sock.fileno(), timeout=timeleft)
+                else:
+                    raise error(result, strerror(result))
 
     def connect_ex(self, address):
-        if isinstance(address, tuple) and len(address)==2:
-            address = gethostbyname(address[0]), address[1]
-        if self.timeout == 0.0:
-            return self.fd.connect_ex(address)
-        fd = self.fd
-        if self.timeout is None:
-            while not socket_connect(fd, address):
-                try:
-                    wait_write(fd.fileno())
-                except error, ex:
-                    return ex[0]
-        else:
-            end = time.time() + self.timeout
-            while True:
-                if socket_connect(fd, address):
-                    return 0
-                if time.time() >= end:
-                    raise timeout
-                try:
-                    wait_write(fd.fileno(), timeout=end-time.time())
-                except error, ex:
-                    return ex[0]
+        try:
+            return self.connect(address) or 0
+        except timeout:
+            return EAGAIN
+        except error, ex:
+            if type(ex) is error:
+                return ex[0]
+            else:
+                raise # gaierror is not silented by connect_ex
 
     def dup(self, *args, **kw):
         """dup() -> socket object
