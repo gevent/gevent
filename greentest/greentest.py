@@ -71,7 +71,7 @@ class TestCase(unittest.TestCase):
             if hasattr(gevent.core, '_event_count'):
                 event_count = (gevent.core._event_count(), gevent.core._event_count_active())
                 if event_count > self._event_count:
-                    args = (type(self).__name__, self._testMethodName, self._event_count, event_count)
+                    args = (type(self).__name__, self.testname, self._event_count, event_count)
                     sys.stderr.write('WARNING: %s.%s event count was %s, now %s\n' % args)
                     gevent.sleep(0.1)
         else:
