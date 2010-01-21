@@ -44,6 +44,7 @@ class TestTCP(greentest.TestCase):
         client_reader.get()
 
     def test_recv_timeout(self):
+        acceptor = gevent.spawn_link_exception(self.listener.accept)
         client = self.create_connection()
         client.settimeout(0.1)
         start = time.time()
@@ -53,6 +54,7 @@ class TestTCP(greentest.TestCase):
             assert 0.1 - 0.01 <= time.time() - start <= 0.1 + 0.1, (time.time() - start)
         else:
             raise AssertionError('socket.timeout should have been raised, instead recv returned %r' % (data, ))
+        acceptor.get()
 
     def test_sendall_timeout(self):
         client = self.create_connection()
