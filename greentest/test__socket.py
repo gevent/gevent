@@ -50,7 +50,7 @@ class TestTCP(greentest.TestCase):
         try:
             data = client.recv(1024)
         except socket.timeout:
-            assert time.time() - start >= 0.1 - 0.001, (time.time() - start)
+            assert 0.1 - 0.01 <= time.time() - start <= 0.1 + 0.1, (time.time() - start)
         else:
             raise AssertionError('socket.timeout should have been raised, instead recv returned %r' % (data, ))
 
