@@ -336,6 +336,7 @@ def main():
         if not options.runid:
             import uuid
             options.runid = str(uuid.uuid4())
+            print 'Generated runid: %s' % (options.runid, )
         if options.record:
             run_tests(options, args)
         elif args:
