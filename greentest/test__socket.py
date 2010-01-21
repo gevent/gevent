@@ -57,15 +57,26 @@ class TestTCP(greentest.TestCase):
         acceptor.get()
 
     def test_sendall_timeout(self):
+        acceptor = gevent.spawn_link_exception(self.listener.accept)
         client = self.create_connection()
-        client.settimeout(0.01)
+        client.settimeout(0.1)
         start = time.time()
+        send_succeed = False
+        data_sent = 'h' * 100000
         try:
-            result = client.sendall('h'*100000)
+            result = client.sendall(data_sent)
         except socket.timeout:
             assert 0.1 - 0.01 <= time.time() - start <= 0.1 + 0.1, (time.time() - start)
         else:
-            raise AssertionError('socket.timeout should have been raised, instead sendall returned %r' % (result, ))
+            assert time.time() - start <= 0.1 + 0.01, (time.time() - start)
+            send_succeed = True
+        conn, addr = acceptor.get()
+        if send_succeed:
+            client.close()
+            data_read = conn.makefile().read()
+            self.assertEqual(len(data_sent), len(data_read))
+            self.assertEqual(data_sent, data_read)
+            print 'WARNING: read the data instead of failing with timeout'
 
     def test_makefile(self):
         def accept_once():
