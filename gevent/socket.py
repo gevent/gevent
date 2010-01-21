@@ -391,34 +391,54 @@ class socket(object):
                 sys.exc_clear()
             wait_read(self.fd.fileno(), timeout=self.timeout)
 
-    def send(self, data, timeout=timeout_default):
+    def send(self, data, flags=0, timeout=timeout_default):
         if timeout is timeout_default:
             timeout = self.timeout
-        if timeout != 0.0:
-            wait_write(self.fileno(), timeout=timeout)
-        return self.fd.send(data)
+        try:
+            return self.fd.send(data, flags)
+        except error, ex:
+            if ex[0] != EWOULDBLOCK or timeout == 0.0:
+                raise
+            sys.exc_clear()
+            wait_write(self.fd.fileno(), timeout=timeout)
+            try:
+                return self.fd.send(data, flags)
+            except error, ex2:
+                if ex2[0] == EWOULDBLOCK:
+                    return 0
+                raise
 
-    def sendall(self, data):
+    def sendall(self, data, flags=0):
         # this sendall is also reused by GreenSSL, so it must not call self.fd methods directly
         if self.timeout is None:
             data_sent = 0
             while data_sent < len(data):
-                data_sent += self.send(data[data_sent:])
+                data_sent += self.send(data[data_sent:], flags)
         elif not self.timeout:
             return self.fd.sendall(data)
         else:
             end = time.time() + self.timeout
             data_sent = 0
             while data_sent < len(data):
-                left = end - time.time()
-                if left <= 0:
+                timeleft = end - time.time()
+                if timeleft <= 0:
                     raise timeout
-                data_sent += self.send(data[data_sent:], timeout=left)
+                data_sent += self.send(data[data_sent:], flags, timeout=timeleft)
 
     def sendto(self, *args):
-        if self.timeout != 0.0:
+        try:
+            return self.fd.sendto(*args)
+        except error, ex:
+            if ex[0] != EWOULDBLOCK or timeout == 0.0:
+                raise
+            sys.exc_clear()
             wait_write(self.fileno(), timeout=self.timeout)
-        return self.fd.sendto(*args)
+            try:
+                return self.fd.sendto(*args)
+            except error, ex2:
+                if ex2[0] == EWOULDBLOCK:
+                    return 0
+                raise
 
     def setblocking(self, flag):
         if flag:
@@ -427,16 +447,14 @@ class socket(object):
             self.timeout = 0.0
 
     def settimeout(self, howlong):
-        if howlong is None:
-            self.setblocking(True)
-            return
-        try:
-            f = howlong.__float__
-        except AttributeError:
-            raise TypeError('a float is required')
-        howlong = f()
-        if howlong < 0.0:
-            raise ValueError('Timeout value out of range')
+        if howlong is not None:
+            try:
+                f = howlong.__float__
+            except AttributeError:
+                raise TypeError('a float is required')
+            howlong = f()
+            if howlong < 0.0:
+                raise ValueError('Timeout value out of range')
         self.timeout = howlong
 
     def gettimeout(self):
@@ -502,12 +520,12 @@ class GreenSSL(socket):
         socket.connect(self, *args)
         self.do_handshake()
 
-    def send(self, data, timeout=timeout_default):
+    def send(self, data, flags=0, timeout=timeout_default):
         if timeout is timeout_default:
             timeout = self.timeout
         while True:
             try:
-                return self.fd.send(data)
+                return self.fd.send(data, flags)
             except SSL.WantWriteError, ex:
                 if self.timeout == 0.0:
                     raise timeout(str(ex))
