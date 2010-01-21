@@ -208,9 +208,10 @@ def run_subprocess(arg, options):
 
     popen_args = [sys.executable, sys.argv[0], '--record',
                   '--runid', options.runid,
-                  '--verbosity', options.verbosity,
-                  '--db', options.db,
-                  arg]
+                  '--verbosity', options.verbosity]
+    if options.db:
+        popen_args += ['--db', options.db]
+    popen_args += [arg]
     popen_args = [str(x) for x in popen_args]
     if options.capture:
         popen = Popen(popen_args, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, shell=False)
