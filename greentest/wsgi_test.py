@@ -310,7 +310,7 @@ class TestBigChunks(TestCase):
         chunklen = int(fd.readline(), 16)
         while chunklen:
             chunks += 1
-            chunk = fd.read(chunklen)
+            fd.read(chunklen)
             fd.readline()
             chunklen = int(fd.readline(), 16)
         self.assert_(chunks > 1)
