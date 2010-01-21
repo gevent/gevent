@@ -299,6 +299,14 @@ cdef class write_event(event):
         self.add(timeout)
 
 
+class readwrite_event(event):
+    """Create a new scheduled event with evtype=EV_READ|EV_WRITE"""
+
+    def __init__(self, int handle, callback, timeout=-1, arg=None):
+        event.__init__(self, EV_READ|EV_WRITE, handle, callback, arg)
+        self.add(timeout)
+
+
 cdef void __simple_handler(int fd, short evtype, void *arg) with gil:
     cdef event ev = <event>arg
     try:
