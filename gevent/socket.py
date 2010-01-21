@@ -627,39 +627,20 @@ def set_reuse_addr(descriptor):
     except error:
         pass
 
-def tcp_listener(address, backlog=50):
-    """
-    Listen on the given (ip, port) *address* with a TCP socket.
-    Returns a socket object on which one should call ``accept()`` to
-    accept a connection on the newly bound socket.
 
-    Generally, the returned socket will be passed to ``tcp_server()``,
-    which accepts connections forever and spawns greenlets for
-    each incoming connection.
-    """
-    import warnings
-    warnings.warn("gevent.socket.tcp_listener is deprecated", DeprecationWarning, stacklevel=2)
+def tcp_listener(address, backlog=50, reuse_addr=True):
+    """A shortcut to create a TCP socket, bind it and put it into listening state."""
     sock = socket()
-    socket_bind_and_listen(sock, address, backlog=backlog)
+    bind_and_listen(sock, address, backlog=backlog, reuse_addr=reuse_addr)
     return sock
 
 
 def ssl_listener(address, private_key, certificate):
-    """Listen on the given (ip, port) *address* with a TCP socket that
-    can do SSL.
+    """A shortcut to create an SSL socket, bind it and put it into listening state.
 
     *certificate* and *private_key* should be the filenames of the appropriate
     certificate and private key files to use with the SSL socket.
-
-    Returns a socket object on which one should call ``accept()`` to
-    accept a connection on the newly bound socket.
-
-    Generally, the returned socket will be passed to ``tcp_server()``,
-    which accepts connections forever and spawns greenlets for
-    each incoming connection.
     """
-    import warnings
-    warnings.warn("gevent.socket.ssl_listener is deprecated", DeprecationWarning, stacklevel=2)
     r = _socket.socket()
     sock = wrap_ssl000(r, private_key, certificate)
     socket_bind_and_listen(sock, address)
