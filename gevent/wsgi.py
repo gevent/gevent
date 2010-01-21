@@ -103,7 +103,11 @@ class WSGIHandler(object):
         try:
             try:
                 result = server.application(env, self.start_response)
-                self.data.extend(result)
+                try:
+                    self.data.extend(result)
+                finally:
+                    if hasattr(result, 'close'):
+                        result.close()
             except:
                 traceback.print_exc()
                 try:
