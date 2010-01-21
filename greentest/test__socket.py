@@ -61,7 +61,7 @@ class TestTCP(greentest.TestCase):
         try:
             result = client.sendall('h'*100000)
         except socket.timeout:
-            assert time.time() - start >= 0.01, (time.time() - start)
+            assert 0.1 - 0.01 <= time.time() - start <= 0.1 + 0.1, (time.time() - start)
         else:
             raise AssertionError('socket.timeout should have been raised, instead sendall returned %r' % (result, ))
 
