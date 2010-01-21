@@ -807,7 +807,6 @@ else:
             _ttl, addrs = resolve_ipv6(host, evdns_flags)
         else:
             raise NotImplementedError('family is not among AF_UNSPEC/AF_INET/AF_INET6: %r' % (family, ))
-        r = []
 
         socktype_proto = [(SOCK_STREAM, 6), (SOCK_DGRAM, 17), (SOCK_RAW, 0)]
         if socktype is not None:
@@ -815,10 +814,11 @@ else:
         if proto is not None:
             socktype_proto = [(x, y) for (x, y) in socktype_proto if proto == y]
 
+        result = []
         for addr in addrs:
             for socktype, proto in socktype_proto:
-                r.append((family, socktype, proto, '', (inet_ntop(family, addr), port)))
-        return r
+                result.append((family, socktype, proto, '', (inet_ntop(family, addr), port)))
+        return result
 
 
 def ssl(sock, keyfile=None, certfile=None):
