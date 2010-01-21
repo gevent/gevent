@@ -228,18 +228,19 @@ def run_subprocess(arg, options):
     timeout.start()
     output = ''
     try:
-        if options.capture:
-            while True:
-                data = popen.stdout.read(1)
-                if not data:
-                    break
-                output += data
-                if options.verbosity >= 2:
-                    sys.stdout.write(data)
-        retcode.append(popen.wait())
-    except:
-        popen.kill()
-        raise
+        try:
+            if options.capture:
+                while True:
+                    data = popen.stdout.read(1)
+                    if not data:
+                        break
+                    output += data
+                    if options.verbosity >= 2:
+                        sys.stdout.write(data)
+            retcode.append(popen.wait())
+        except:
+            popen.kill()
+            raise
     finally:
         timeout.cancel()
     return retcode[0], output
