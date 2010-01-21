@@ -297,7 +297,7 @@ def spawn_subprocesses(options, args):
                 fail = True
         except sqlite3.OperationalError, ex:
             print ex
-    print 'To view stats again for this run, use %s --stats --runid %s --db %s' % (sys.argv[0], options.runid, options.db)
+        print 'To view stats again for this run, use %s --stats --runid %s --db %s' % (sys.argv[0], options.runid, options.db)
     if fail:
         sys.exit(1)
 
