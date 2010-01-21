@@ -105,11 +105,13 @@ class TestCase(greentest.TestCase):
         return pywsgi
 
     def setUp(self):
+        greentest.TestCase.setUp(self)
         self.server = self.get_wsgi_module().WSGIServer(('127.0.0.1', 0), self.application)
         self.server.start()
         self.port = self.server.server_port
 
     def tearDown(self):
+        greentest.TestCase.tearDown(self)
         timeout = gevent.Timeout.start_new(0.5)
         try:
             self.server.stop()
