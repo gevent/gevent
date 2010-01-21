@@ -225,6 +225,7 @@ class TestExplicitContentLength(TestHttpdBasic):
                             ('Content-Length', len(msg))])
         return [msg]
 
+
 class TestYield(TestHttpdBasic):
 
     @staticmethod
@@ -236,6 +237,7 @@ class TestYield(TestHttpdBasic):
         else:
             start_response('404 Not Found', [('Content-Type', 'text/plain')])
             yield "not found"
+
 
 class TestGetArg(TestCase):
 
@@ -438,6 +440,7 @@ class HTTPRequest(urllib2.Request):
 
     def get_method(self):
         return self.method
+
 
 if __name__ == '__main__':
     greentest.main()
