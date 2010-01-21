@@ -192,8 +192,20 @@ def run_tests(options, args):
 
 
 def run_subprocess(arg, options):
-    from subprocess import Popen, PIPE, STDOUT
     from threading import Timer
+    import subprocess
+
+    if hasattr(subprocess.Popen, 'kill'):
+        Popen = subprocess.Popen
+    else:
+        class Popen(subprocess.Popen):
+            def kill(self):
+                try:
+                    from os import kill
+                    kill(self.pid, 9)
+                except ImportError:
+                    pass
+
     popen_args = [sys.executable, sys.argv[0], '--record',
                   '--runid', options.runid,
                   '--verbosity', options.verbosity,
@@ -201,31 +213,42 @@ def run_subprocess(arg, options):
                   arg]
     popen_args = [str(x) for x in popen_args]
     if options.capture:
-        popen = Popen(popen_args, stdout=PIPE, stderr=STDOUT)
+        popen = Popen(popen_args, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, shell=False)
     else:
-        popen = Popen(popen_args)
+        popen = Popen(popen_args, shell=False)
+
+    retcode = []
+
     def killer():
-        print >> sys.stderr, 'Killing %s' % popen.pid
-        popen.terminate()
+        retcode.append('TIMEOUT')
+        print >> sys.stderr, 'Killing %s (%s) because of timeout' % (popen.pid, arg)
+        popen.kill()
+
     timeout = Timer(options.timeout, killer)
     timeout.start()
+    output = ''
     try:
         if options.capture:
-            output = popen.stdout.read()
-        else:
-            output = ''
-        retcode = popen.wait()
+            while True:
+                data = popen.stdout.read(1)
+                if not data:
+                    break
+                output += data
+                if options.verbosity >= 2:
+                    sys.stdout.write(data)
+        retcode.append(popen.wait())
     except:
-        popen.terminate()
+        popen.kill()
         raise
     finally:
         timeout.cancel()
-    return retcode, output
+    return retcode[0], output
 
 
 def spawn_subprocesses(options, args):
     if not args:
         args = glob.glob('test_*.py')
+    fail = False
     if options.db:
         db = sqlite3.connect(options.db)
         cursor = db.cursor()
@@ -239,7 +262,7 @@ def spawn_subprocesses(options, args):
             module_name = arg
             if module_name.endswith('.py'):
                 module_name = module_name[:-3]
-                from datetime import datetime
+            from datetime import datetime
             params = {'started_at': datetime.now(),
                       'runid': options.runid,
                       'test': module_name,
@@ -247,36 +270,50 @@ def spawn_subprocesses(options, args):
                       'changeset': get_changeset(),
                       'libevent_version': get_libevent_version(),
                       'libevent_method': get_libevent_method(),
-                      'uname': uname}
+                      'uname': uname,
+                      'retcode': 'TIMEOUT'}
+            row_id = store_record(options.db, 'test', params)
+            params['id'] = row_id
         retcode, output = run_subprocess(arg, options)
         if retcode:
             sys.stdout.write(output)
             print '%s failed with code %s' % (arg, retcode)
+            fail = True
         elif retcode == 0:
             if options.verbosity > 0:
                 sys.stdout.write(output)
             print '%s passed' % arg
         else:
             print '%s timed out' % arg
+            fail = True
         if options.db:
             params['output'] = output
             params['retcode'] = retcode
             store_record(options.db, 'test', params)
     if options.db:
-        print_stats(options)
+        try:
+            if print_stats(options):
+                fail = True
+        except sqlite3.OperationalError, ex:
+            print ex
     print 'To view stats again for this run, use %s --stats --runid %s --db %s' % (sys.argv[0], options.runid, options.db)
+    if fail:
+        sys.exit(1)
+
+
+def get_testcases(cursor, runid, result=None):
+    sql = 'select test, testcase from testcase where runid=?'
+    if result is not None:
+        sql += ' and result="%s"' % result
+    return ['.'.join(x) for x in cursor.execute(sql, (runid, )).fetchall()]
 
 
 def print_stats(options):
     db = sqlite3.connect(options.db)
     cursor = db.cursor()
-    try:
-        total = len(cursor.execute('select test, testcase from testcase where runid=?', (options.runid, )).fetchall())
-    except sqlite3.OperationalError:
-        return
-    sql = 'select test, testcase from testcase where runid=? and result="%s"'
-    failed = ['.'.join(x) for x in cursor.execute(sql % 'FAIL', (options.runid, )).fetchall()]
-    timedout = ['.'.join(x) for x in cursor.execute(sql % 'TIMEOUT', (options.runid, )).fetchall()]
+    total = len(get_testcases(cursor, options.runid))
+    failed = get_testcases(cursor, options.runid, 'FAIL')
+    timedout = get_testcases(cursor, options.runid, 'TIMEOUT')
     if failed:
         print 'FAILURES: '
         print ' - ' + '\n - '.join(failed)
@@ -284,12 +321,16 @@ def print_stats(options):
         print 'TIMEOUTS: '
         print ' - ' + '\n - '.join(timedout)
     warning_reports = []
-    for test, output in cursor.execute('select test, output from test where runid=?', (options.runid, )):
+    for test, output, retcode in cursor.execute('select test, output, retcode from test where runid=?', (options.runid, )):
         output_lower = output.lower()
         warnings = output_lower.count('warning')
         tracebacks = output_lower.count('traceback')
         if warnings or tracebacks:
             warning_reports.append((test, warnings, tracebacks))
+        if retcode == 'TIMEOUT':
+            timedout.append(test)
+        elif retcode != 0:
+            failed.append(test)
     if warning_reports:
         print 'WARNINGS: '
         for test, warnings, tracebacks in warning_reports:
@@ -300,6 +341,9 @@ def print_stats(options):
                 print '%s tracebacks; ' % tracebacks,
             print
     print '%s testcases passed; %s failed; %s timed out' % (total, len(failed), len(timedout))
+    if failed or timedout:
+        return True
+    return False
 
 
 def main():
