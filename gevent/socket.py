@@ -643,7 +643,7 @@ def ssl_listener(address, private_key, certificate):
     """
     r = _socket.socket()
     sock = wrap_ssl000(r, private_key, certificate)
-    socket_bind_and_listen(sock, address)
+    bind_and_listen(sock, address)
     return sock
 
 
