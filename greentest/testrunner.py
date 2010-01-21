@@ -36,6 +36,7 @@ DEFAULT_TIMEOUT = 20
 
 import sys
 import os
+import glob
 from unittest import _TextTestResult, defaultTestLoader, TextTestRunner
 import platform
 
@@ -223,6 +224,8 @@ def run_subprocess(arg, options):
 
 
 def spawn_subprocesses(options, args):
+    if not args:
+        args = glob.glob('test_*.py')
     if options.db:
         db = sqlite3.connect(options.db)
         cursor = db.cursor()
@@ -336,10 +339,8 @@ def main():
             print 'Generated runid: %s' % (options.runid, )
         if options.record:
             run_tests(options, args)
-        elif args:
-            spawn_subprocesses(options, args)
         else:
-            sys.exit('Please provide at least one module to run.')
+            spawn_subprocesses(options, args)
 
 
 if __name__ == '__main__':
