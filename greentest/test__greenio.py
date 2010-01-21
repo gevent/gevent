@@ -55,7 +55,7 @@ class TestGreenIo(TestCase):
                 listener.close()
 
         def did_it_work(server):
-            client = socket.connect_tcp(('127.0.0.1', server.getsockname()[1]))
+            client = socket.create_connection(('127.0.0.1', server.getsockname()[1]))
             fd = client.makefile()
             client.close()
             assert fd.readline() == 'hello\n'
@@ -90,7 +90,7 @@ class TestGreenIo(TestCase):
                 listener.close()
         server = socket.tcp_listener(('0.0.0.0', 0))
         killer = gevent.spawn(accept_once, server)
-        client = socket.connect_tcp(('127.0.0.1', server.getsockname()[1]))
+        client = socket.create_connection(('127.0.0.1', server.getsockname()[1]))
         fd = client.makefile()
         client.close()
         assert fd.read() == 'hello\n'
