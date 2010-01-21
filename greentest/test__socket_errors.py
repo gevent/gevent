@@ -20,18 +20,23 @@
 # THE SOFTWARE.
 
 import greentest
-from gevent import socket
+from gevent.socket import socket, error
+
+try:
+    from errno import WSAECONNREFUSED as ECONNREFUSED
+except ImportError:
+    from errno import ECONNREFUSED
 
 class TestSocketErrors(greentest.TestCase):
 
     def test_connection_refused(self):
-        s = socket.socket()
+        s = socket()
         try:
             s.connect(('127.0.0.1', 81))
-        except socket.error, ex:
-            code, text = ex.args
-            assert code in [111, 61], (code, text)
-            assert 'refused' in text.lower(), (code, text)
+        except error, ex:
+            assert ex[0] == ECONNREFUSED, repr(ex)
+            assert 'refused' in str(ex).lower(), str(ex)
+
 
 if __name__=='__main__':
     greentest.main()
