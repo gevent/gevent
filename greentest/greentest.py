@@ -79,7 +79,7 @@ class TestCase(unittest.TestCase):
 
     @property
     def testname(self):
-        return getattr(self, '_testMethodName', '') or getattr(self, '__testMethodName')
+        return getattr(self, '_testMethodName', '') or getattr(self, '_TestCase__testMethodName')
 
 
 def find_command(command):
