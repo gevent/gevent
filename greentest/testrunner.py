@@ -382,8 +382,12 @@ def main():
         print_stats(options)
     else:
         if not options.runid:
-            import uuid
-            options.runid = str(uuid.uuid4())
+            try:
+                import uuid
+                options.runid = str(uuid.uuid4())
+            except ImportError:
+                import random
+                options.runid = str(random.random())[2:]
             print 'Generated runid: %s' % (options.runid, )
         if options.record:
             run_tests(options, args)
