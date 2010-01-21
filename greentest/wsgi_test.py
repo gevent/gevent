@@ -144,23 +144,21 @@ class TestHttpdBasic(TestCase):
         self.assert_(result.startswith('HTTP/1.1 200 OK\r\n'), result)
         self.assert_(result.endswith('hello world'), result)
 
-    def test_002_keepalive(self):
-        fd = socket.connect_tcp(('127.0.0.1', self.port)).makefile(bufsize=1)
-        fd.write('GET / HTTP/1.1\r\nHost: localhost\r\n\r\n')
-        fd.write('GET /notexist HTTP/1.1\r\nHost: localhost\r\n\r\n')
-        fd.close()
-
-    def test_0021_keepalive(self):
-        fd = socket.connect_tcp(('127.0.0.1', self.port)).makefile(bufsize=1)
-        fd.write('GET / HTTP/1.1\r\nHost: localhost\r\n\r\n')
-        fd.write('GET /notexist HTTP/1.1\r\nHost: localhost\r\n\r\n')
+    def test_002_pipeline(self):
+        fd = self.connect().makefile(bufsize=1)
+        fd.write('GET / HTTP/1.1\r\nHost: localhost\r\n\r\n' + 'GET /notexist HTTP/1.1\r\nHost: localhost\r\n\r\n')
         firstline, headers, body = read_http(fd)
         assert firstline == 'HTTP/1.1 200 OK\r\n', repr(firstline)
         assert body == 'hello world', repr(body)
-        firstline, header, body = read_http(fd)
-        assert firstline == 'HTTP/1.1 404 Not Found\r\n', repr(firstline)
-        assert body == 'not found', repr(body)
-        fd.close()
+        exception = AssertionError('HTTP pipelining not supported; the second request is thrown away')
+        timeout = gevent.Timeout.start_new(0.5, exception=exception)
+        try:
+            firstline, header, body = read_http(fd)
+            assert firstline == 'HTTP/1.1 404 Not Found\r\n', repr(firstline)
+            assert body == 'not found', repr(body)
+            fd.close()
+        finally:
+            timeout.cancel()
 
     def test_003_passing_non_int_to_read(self):
         # This should go in greenio_test
