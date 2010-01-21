@@ -21,7 +21,6 @@
 from gevent import monkey
 monkey.patch_all(thread=False)
 
-import sys
 import cgi
 import os
 import urllib2
