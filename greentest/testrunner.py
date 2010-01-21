@@ -370,7 +370,7 @@ def main():
             options.db = 'testresults.sqlite3'
         print 'Storing the results in %s' % options.db
     elif options.db and not sqlite3:
-        sys.exit('Cannot access the database: no sqlite3 module found.')
+        sys.exit('Cannot access the database %r: no sqlite3 module found.' % (options.db, ))
 
     if options.db:
         db = sqlite3.connect(options.db)
