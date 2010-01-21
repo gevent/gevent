@@ -341,7 +341,7 @@ class socket(object):
             else:
                 raise # gaierror is not silented by connect_ex
 
-    def dup(self, *args, **kw):
+    def dup(self):
         """dup() -> socket object
 
         Return a new socket object connected to the same system resource."""
