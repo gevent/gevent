@@ -351,24 +351,45 @@ class socket(object):
         return _fileobject(self.dup(), mode, bufsize)
 
     def recv(self, *args):
-        if self.timeout != 0.0:
+        while True:
+            try:
+                return self.fd.recv(*args)
+            except error, ex:
+                if ex[0] != EWOULDBLOCK or self.timeout == 0.0:
+                    raise
+                # QQQ without clearing exc_info test__refcount.test_clean_exit fails
+                sys.exc_clear()
             wait_read(self.fileno(), timeout=self.timeout)
-        return self.fd.recv(*args)
 
     def recvfrom(self, *args):
-        if self.timeout != 0.0:
-            wait_read(self.fileno(), timeout=self.timeout)
-        return self.fd.recvfrom(*args)
+        while True:
+            try:
+                return self.fd.recvfrom(*args)
+            except error, ex:
+                sys.exc_clear()
+                if ex[0] != EWOULDBLOCK or self.timeout == 0.0:
+                    raise ex
+            wait_read(self.fd.fileno(), timeout=self.timeout)
 
     def recvfrom_into(self, *args):
-        if self.timeout != 0.0:
-            wait_read(self.fileno(), timeout=self.timeout)
-        return self.fd.recvfrom_into(*args)
+        while True:
+            try:
+                return self.fd.recvfrom_into(*args)
+            except error, ex:
+                if ex[0] != EWOULDBLOCK or self.timeout == 0.0:
+                    raise
+                sys.exc_clear()
+            wait_read(self.fd.fileno(), timeout=self.timeout)
 
     def recv_into(self, *args):
-        if self.timeout != 0.0:
-            wait_read(self.fileno(), timeout=self.timeout)
-        return self.fd.recv_into(*args)
+        while True:
+            try:
+                return self.fd.recv_into(*args)
+            except error, ex:
+                if ex[0] != EWOULDBLOCK or self.timeout == 0.0:
+                    raise
+                sys.exc_clear()
+            wait_read(self.fd.fileno(), timeout=self.timeout)
 
     def send(self, data, timeout=timeout_default):
         if timeout is timeout_default:
