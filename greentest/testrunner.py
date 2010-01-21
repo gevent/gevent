@@ -168,7 +168,7 @@ def get_tempnam():
 
 def run_tests(options, args):
     if len(args) != 1:
-        sys.exit('--record only supports one module at a time')
+        sys.exit('--record requires exactly one test module to run')
     arg = args[0]
     module_name = arg
     if module_name.endswith('.py'):
