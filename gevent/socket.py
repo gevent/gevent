@@ -620,6 +620,8 @@ def socket_bind_and_listen(*args, **kwargs):
 
 
 def set_reuse_addr(descriptor):
+    import warnings
+    warnings.warn("gevent.socket.set_reuse_addr is deprecated", DeprecationWarning, stacklevel=2)
     try:
         descriptor.setsockopt(SOL_SOCKET, SO_REUSEADDR, descriptor.getsockopt(SOL_SOCKET, SO_REUSEADDR) | 1)
     except error:
