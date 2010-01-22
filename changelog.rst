@@ -3,6 +3,74 @@ Changelog
 
 .. currentmodule:: gevent
 
+
+Version 0.12.0
+--------------
+
+- Release highlights:
+
+  - Fixed Windows compatibility.
+  - Improved performance of :meth:`socket.recv`, :meth:`socket.send` and similar methods.
+  - Added a new module - :mod:`dns` - with synchronous wrappers around libevent's DNS API.
+  - Added :class:`core.readwrite_event` and :func:`socket.wait_readwrite` functions.
+  - Fixed a number of incompatibilities of :mod:`wsgi` module with the WSGI spec.
+  - Deprecated :mod:`pywsgi` module.
+
+- :mod:`gevent.wsgi` module
+
+  - Made ``env["REMOTE_PORT"]`` into a string.
+  - Fixed the server to close the iterator returned by the application.
+  - Made ``wsgi.input`` object iterable.
+
+- :mod:`gevent.core` module
+
+  - Made DNS functions no longer accept/return IP addresses in dots-and-numbers format. They work
+    with packed IPs now.
+  - Made DNS functions no longer accept additional arguments to pass to the callback.
+  - Fixed DNS functions to check the return value of the libevent functions and raise
+    :exc:`IOError` if they failed.
+  - Added :func:`core.dns_err_to_string`
+
+- :mod:`gevent.socket` module
+
+  - Fixed :func:`gethostbyname` and :func:`getaddrinfo` to call the stdlib if the passed hostname
+    has no dots.
+  - Fixed :func:`getaddrinfo` to filter the results using *socktype* and *proto* arguments.
+  - Removed :func:`getnameinfo` as it didn't quite match the stdlib interface.
+    Use :func:`dns.resolve_reverse` for reverse resolutions.
+  - Fixed :meth:`socket.connect_ex` to use cooperative :func:`gethostbyname`.
+  - Fixed :meth:`socket.dup` not to call underlying socket's :meth:`dup` (which is not available
+    on Windows) but to use Python's reference counting similar to how the stdlib's socket
+    implements :meth:`dup`
+  - Added *_sock* argument to :class:`socket`'s constructor. Passing the socket instance
+    as first argument is not longer supported.
+  - Fixed :func:`socket.connect` to ignore ``WSAEINVAL`` on Windows.
+  - Fixed :func:`socket.connect` to use :func:`wait_readwrite` instead of :func:`wait_write`.
+  - Fixed :func:`socket.connect` to consult ``SO_ERROR``.
+  - Fixed :func:`socket.send` and :func:`socket.sendall` to support *flags* argument.
+  - Renamed :func:`socket_bind_and_listen` to :func:`socket.bind_and_listen`. The old name
+    is still available as a deprecated alias.
+  - Added _sock property to the socket objects that returns the real socket instance for better
+    compatibility with stdlib's socket.
+  - Import the constants and some utility functions from stdlib's :mod:`socket` for convenience.
+    Thanks to **Matt Goodall** for the original patch.
+  - Renamed :meth:`wrap_ssl` to :meth:`ssl`. (the old name is still available but deprecated)
+  - Deprecated :func:`connect_tcp` and :func:`tcp_server`.
+
+- Miscellaneous
+
+  - Fixed setup.py to proceed with compilation even if libevent cannot be determined.
+    1.x.x is assumed in this case.
+  - Fixed :mod:`monkey` not to break Python 2.6's :func:`ssl.wrap_socket`.
+  - Fixed compatibility of .pyx files with Cython 0.12.0
+  - Renamed arguments for :func:`select.select` to what they are called in the stdlib
+  - Removed internal function :func:`getLinkedCompleted` from :mod:`gevent.greenlet`
+  - Remove ``#warning`` directives from ``libevent.h``. They are not supported by vc90.
+  - Removed some deprecated stuff from :mod:`coros`.
+  - Internal class :class:`Waiter <gevent.hub.Waiter>` now stores the value if no one's waiting for it.
+  - Added ``testrunner.py`` script that replaces a bunch of small scripts that were used before.
+
+
 Version 0.11.2
 --------------
 
