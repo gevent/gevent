@@ -291,6 +291,7 @@ if __name__ == '__main__':
         "Programming Language :: Python",
         "Operating System :: MacOS :: MacOS X",
         "Operating System :: POSIX",
+        "Operating System :: Microsoft :: Windows",
         "Topic :: Internet",
         "Topic :: Software Development :: Libraries :: Python Modules",
         "Intended Audience :: Developers",
