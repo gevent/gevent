@@ -4,8 +4,8 @@ gevent is a coroutine-based Python networking library that uses greenlet
 to provide a high-level synchronous API on top of libevent event loop.
 """
 
-version_info = (0, 11, 2)
-__version__ = '0.11.2'
+version_info = (0, 12, 0)
+__version__ = '0.12.0-preview'
 
 __all__ = ['Greenlet',
            'GreenletExit',
