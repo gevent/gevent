@@ -774,7 +774,7 @@ def wrap_ssl000(sock, keyfile=None, certfile=None):
     return ssl_sock
 
 try:
-    from gevent.evdns import resolve_ipv4, resolve_ipv6
+    from gevent.dns import resolve_ipv4, resolve_ipv6
 except:
     import traceback
     traceback.print_exc()
@@ -783,11 +783,11 @@ except:
 else:
 
     def gethostbyname(hostname):
-        """:func:`socket.gethostbyname` implemented using :mod:`evdns`.
+        """:func:`socket.gethostbyname` implemented using :mod:`dns`.
 
         Differs in the following ways:
 
-        * raises :class:`DNSError` (a subclass of :class:`socket.gaierror`) with evdns error
+        * raises :class:`DNSError` (a subclass of :class:`socket.gaierror`) with dns error
           codes instead of standard socket error codes
         * does not support ``/etc/hosts`` but calls the original :func:`socket.gethostbyname`
           if *hostname* has no dots
@@ -807,7 +807,7 @@ else:
 
 
     def getaddrinfo(host, port, *args, **kwargs):
-        """*Some* approximation of :func:`socket.getaddrinfo` implemented using :mod:`evdns`.
+        """*Some* approximation of :func:`socket.getaddrinfo` implemented using :mod:`dns`.
 
         If *host* is not a string, does not has any dots or is a numeric IP address, then
         the standard :func:`socket.getaddrinfo` is called.
@@ -817,7 +817,7 @@ else:
 
         Differs in the following ways:
 
-        * raises :class:`DNSError` (a subclass of :class:`gaierror`) with evdns error
+        * raises :class:`DNSError` (a subclass of :class:`gaierror`) with libevent-dns error
           codes instead of standard socket error codes
         * IPv6 support is untested.
         * AF_UNSPEC only tries IPv4
@@ -826,7 +826,7 @@ else:
         * *flags* argument is ignored
 
         Additionally, supports *evdns_flags* keyword arguments (default ``0``) that is passed
-        to :mod:`evdns` functions.
+        to :mod:`dns` functions.
         """
         family, socktype, proto, _flags = args + (None, ) * (4 - len(args))
         if not isinstance(host, str) or '.' not in host or _ip4_re.match(host):

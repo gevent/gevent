@@ -1,11 +1,12 @@
 #!/usr/bin/python
 import greentest
-from gevent import evdns
+from gevent import dns
 from gevent import core
 from gevent import socket
+from gevent.dns import DNSError
 
-funcs = [evdns.resolve_ipv4, evdns.resolve_ipv6,
-         evdns.resolve_reverse, evdns.resolve_reverse_ipv6]
+funcs = [dns.resolve_ipv4, dns.resolve_ipv6,
+         dns.resolve_reverse, dns.resolve_reverse_ipv6]
 
 
 class TestNoSwitch(greentest.TestCase):
@@ -30,10 +31,10 @@ class TestSwitch(greentest.TestCase):
     switch_expected = True
 
     def test_empty_string(self):
-        self.assertRaises(evdns.DNSError, evdns.resolve_ipv4, '')
-        self.assertRaises(evdns.DNSError, evdns.resolve_ipv6, '')
-        self.assertRaises(evdns.DNSError, evdns.resolve_reverse, '')
-        self.assertRaises(evdns.DNSError, evdns.resolve_reverse_ipv6, '')
+        self.assertRaises(DNSError, dns.resolve_ipv4, '')
+        self.assertRaises(DNSError, dns.resolve_ipv6, '')
+        self.assertRaises(DNSError, dns.resolve_reverse, '')
+        self.assertRaises(DNSError, dns.resolve_reverse_ipv6, '')
 
 
 if __name__ == '__main__':
