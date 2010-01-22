@@ -12,6 +12,6 @@ API reference
    gevent.wsgi
    gevent.pool
    gevent.util
-   gevent.evdns
+   gevent.dns
    gevent.core
 

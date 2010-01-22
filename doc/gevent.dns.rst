@@ -1,7 +1,7 @@
 Synchronous wrappers around libevent-dns
 ========================================
 
-.. automodule:: gevent.evdns
+.. automodule:: gevent.dns
     :members:
     :undoc-members:
 
