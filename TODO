@@ -9,11 +9,12 @@
  - initialize libevent in Hub.__init__()
    - support multiple event_bases
    - discourage direct use of gevent.core; put the needed methods back on Hub (timer, read_event, write_event)
- - provide gevent.ssl - cooperative replacement for python2.6's ssl module; monkey.patch_socket() should use to patch python2.6's ssl module
- - fix Windows support
+ - provide gevent.ssl - cooperative replacement for python2.6's ssl module; monkey.patch_socket() should use it to patch python2.6's ssl module
  - monkey patch asyncore too? (maybe patch select.poll, so asyncore would work)
  - gevent.sleep(1000000000000000) returns immediatelly instead of raising an error like time.sleep() does
  - streaming version of wsgi.WSGIHandler
+ - monkey should hold references and provide access to all the objects it replaced
+ - port to stackless
 
 1.1
  - use libevent 2.x's bufferevent for socket implementation (or for its _fileobject)
