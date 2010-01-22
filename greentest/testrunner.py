@@ -251,13 +251,6 @@ def spawn_subprocesses(options, args):
     if not args:
         args = glob.glob('test_*.py')
     fail = False
-    if options.db:
-        db = sqlite3.connect(options.db)
-        cursor = db.cursor()
-        results = cursor.execute('select * from test where runid=?', (options.runid, )).fetchall() or \
-                  cursor.execute('select * from testcase where runid=?', (options.runid, )).fetchall()
-        if results:
-            sys.exit('Entries with such runid already exists')
     uname = platform.uname()[0]
     for arg in args:
         if options.db:
