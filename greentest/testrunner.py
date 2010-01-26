@@ -326,7 +326,7 @@ def print_stats(options):
         print ' - ' + '\n - '.join(timedout)
     warning_reports = []
     for test, output, retcode in cursor.execute('select test, output, retcode from test where runid=?', (options.runid, )):
-        output_lower = output.lower()
+        output_lower = (output or '').lower()
         warnings = output_lower.count('warning')
         tracebacks = output_lower.count('traceback')
         if warnings or tracebacks:
