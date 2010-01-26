@@ -318,12 +318,6 @@ def print_stats(options):
     total = len(get_testcases(cursor, options.runid))
     failed = get_testcases(cursor, options.runid, 'FAIL')
     timedout = get_testcases(cursor, options.runid, 'TIMEOUT')
-    if failed:
-        print 'FAILURES: '
-        print ' - ' + '\n - '.join(failed)
-    if timedout:
-        print 'TIMEOUTS: '
-        print ' - ' + '\n - '.join(timedout)
     warning_reports = []
     for test, output, retcode in cursor.execute('select test, output, retcode from test where runid=?', (options.runid, )):
         output_lower = (output or '').lower()
@@ -335,6 +329,12 @@ def print_stats(options):
             timedout.append(test)
         elif retcode != 0:
             failed.append(test)
+    if failed:
+        print 'FAILURES: '
+        print ' - ' + '\n - '.join(failed)
+    if timedout:
+        print 'TIMEOUTS: '
+        print ' - ' + '\n - '.join(timedout)
     if warning_reports:
         print 'WARNINGS: '
         for test, warnings, tracebacks in warning_reports:
