@@ -302,9 +302,11 @@ def spawn_subprocesses(options, args):
 
 def get_testcases(cursor, runid, result=None):
     sql = 'select test, testcase from testcase where runid=?'
+    args = (runid, )
     if result is not None:
-        sql += ' and result="%s"' % result
-    return ['.'.join(x) for x in cursor.execute(sql, (runid, )).fetchall()]
+        sql += ' and result=?'
+        args += (result, )
+    return ['.'.join(x) for x in cursor.execute(sql, args).fetchall()]
 
 
 def print_stats(options):
