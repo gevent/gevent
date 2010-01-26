@@ -312,6 +312,9 @@ def get_testcases(cursor, runid, result=None):
 def print_stats(options):
     db = sqlite3.connect(options.db)
     cursor = db.cursor()
+    if options.runid is None:
+        options.runid = cursor.execute('select runid from test order by started_at desc limit 1').fetchall()[0][0]
+        print 'Using the latest runid: %s' % options.runid
     total = len(get_testcases(cursor, options.runid))
     failed = get_testcases(cursor, options.runid, 'FAIL')
     timedout = get_testcases(cursor, options.runid, 'TIMEOUT')
