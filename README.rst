@@ -31,7 +31,7 @@ Browse ``examples/`` folder at bitbucket_ or `google code`_.
 documentation
 -------------
 
-Read the documentation online at http://gevent.org
+Read the documentation online at http://www.gevent.org
 
 
 get gevent
