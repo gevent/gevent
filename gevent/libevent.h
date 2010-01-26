@@ -1,3 +1,5 @@
+/* Copyright (c) 2009-2010 Denis Bilenko. See LICENSE for details. */
+
 #ifdef WIN32
 #include "winsock2.h" // for timeval
 #endif

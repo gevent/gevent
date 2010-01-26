@@ -1,3 +1,4 @@
+# Copyright (c) 2010 Denis Bilenko. See LICENSE for details.
 """Libevent DNS API made synchronous.
 
 The functions in this module match those in libevent as closely as possible

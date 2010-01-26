@@ -1,3 +1,4 @@
+# Copyright (c) 2009 Denis Bilenko. See LICENSE for details.
 __all__ = ['wrap_errors', 'lazy_property']
 
 class wrap_errors(object):

@@ -1,4 +1,4 @@
-# Copyright (c) 2009 Denis Bilenko. See LICENSE for details.
+# Copyright (c) 2009-2010 Denis Bilenko. See LICENSE for details.
 
 from gevent import core
 from gevent.hub import get_hub, getcurrent

@@ -1,3 +1,4 @@
+# Copyright (c) 2009-2010 Denis Bilenko. See LICENSE for details.
 import sys
 import traceback
 from urllib import unquote

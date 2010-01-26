@@ -5,6 +5,7 @@
 #
 # Copyright (c) 2004 Dug Song <dugsong@monkey.org>
 # Copyright (c) 2003 Martin Murray <murrayma@citi.umich.edu>
+# Copyright (c) 2009-2010 Denis Bilenko <denis.bilenko@gmail.com>
 #
 
 """Wrappers around libevent API.

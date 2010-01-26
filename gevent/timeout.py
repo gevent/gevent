@@ -1,4 +1,4 @@
-# Copyright (c) 2009 Denis Bilenko. See LICENSE for details.
+# Copyright (c) 2009-2010 Denis Bilenko. See LICENSE for details.
 """Timeouts.
 
 Many functions in :mod:`gevent` have a *timeout* argument that allows
