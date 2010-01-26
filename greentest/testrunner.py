@@ -371,7 +371,7 @@ def main():
             options.db = get_tempnam()
         else:
             options.db = 'testresults.sqlite3'
-        print 'Storing the results in %s' % options.db
+        print 'Using the database: %s' % options.db
     elif options.db and not sqlite3:
         sys.exit('Cannot access the database %r: no sqlite3 module found.' % (options.db, ))
 
