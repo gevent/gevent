@@ -365,7 +365,7 @@ def main():
 
     options, args = parser.parse_args()
     options.verbosity += options.verbose - options.quiet
-    
+
     if not options.db and sqlite3:
         if get_changeset().endswith('+'):
             options.db = get_tempnam()
