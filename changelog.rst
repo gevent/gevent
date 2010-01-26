@@ -126,7 +126,7 @@ Version 0.11.0
 * Added a few a few options to ``setup.py`` to select a libevent library to compile against. Check them out with ``setup.py -h``.
 * Added ``__all__`` to many modules that missed it.
 * Converted the docstrings and the changelog to sphinx/rst markup.
-* Added sphinx/rst documentation. It is available online at http://gevent.org.
+* Added sphinx/rst documentation. It is available online at http://www.gevent.org.
 
 
 Version 0.10.0
