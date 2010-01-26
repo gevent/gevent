@@ -32,6 +32,10 @@ Set runid with --runid option. It must not exists in the database. The random
 one will be selected if not provided.
 """
 
+# Known issues:
+# - screws up warnings location, causing them to appear as originated from testrunner.py
+
+
 DEFAULT_TIMEOUT = 20
 
 import sys
