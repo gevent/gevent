@@ -48,24 +48,24 @@ class GreenletSet(object):
         self.greenlets.discard(greenlet)
         self.dying.discard(greenlet)
 
-    def spawn(self, func, *args, **kwargs):
+    def spawn(self, *args, **kwargs):
         add = self.add
-        greenlet = self.greenlet_class.spawn(func, *args, **kwargs)
+        greenlet = self.greenlet_class.spawn(*args, **kwargs)
         add(greenlet)
         return greenlet
 
-    def spawn_link(self, func, *args, **kwargs):
-        greenlet = self.spawn(func, *args, **kwargs)
+    def spawn_link(self, *args, **kwargs):
+        greenlet = self.spawn(*args, **kwargs)
         greenlet.link()
         return greenlet
 
-    def spawn_link_value(self, func, *args, **kwargs):
-        greenlet = self.spawn(func, *args, **kwargs)
+    def spawn_link_value(self, *args, **kwargs):
+        greenlet = self.spawn(*args, **kwargs)
         greenlet.link_value()
         return greenlet
 
-    def spawn_link_exception(self, func, *args, **kwargs):
-        greenlet = self.spawn(func, *args, **kwargs)
+    def spawn_link_exception(self, *args, **kwargs):
+        greenlet = self.spawn(*args, **kwargs)
         greenlet.link_exception()
         return greenlet
 
