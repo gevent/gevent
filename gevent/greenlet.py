@@ -256,20 +256,20 @@ class Greenlet(greenlet):
         return g
 
     @classmethod
-    def spawn_link(cls, function, *args, **kwargs):
-        g = cls.spawn(function, *args, **kwargs)
+    def spawn_link(cls, *args, **kwargs):
+        g = cls.spawn(*args, **kwargs)
         g.link()
         return g
 
     @classmethod
-    def spawn_link_value(cls, function, *args, **kwargs):
-        g = cls.spawn(function, *args, **kwargs)
+    def spawn_link_value(cls, *args, **kwargs):
+        g = cls.spawn(*args, **kwargs)
         g.link_value()
         return g
 
     @classmethod
-    def spawn_link_exception(cls, function, *args, **kwargs):
-        g = cls.spawn(function, *args, **kwargs)
+    def spawn_link_exception(cls, *args, **kwargs):
+        g = cls.spawn(*args, **kwargs)
         g.link_exception()
         return g
 
