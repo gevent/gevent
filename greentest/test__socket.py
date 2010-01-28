@@ -43,6 +43,11 @@ class TestTCP(greentest.TestCase):
             assert result == 'hello world', result
             sender.join(0.2)
             sender.kill(block=True)
+            if client.__class__.__name__ == 'SSLObject':
+                # if sslold.SSLObject is not closed then the other end will receive sslerror: (8, 'Unexpected EOF')
+                # Not sure if it must be fixed but I don't want to waste time on that since
+                # the preferred way to do ssl now is via gevent.ssl which works OK without explicit close
+                client.close()
 
         #print '%s: client' % getcurrent()
 
