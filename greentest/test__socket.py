@@ -99,7 +99,7 @@ class TestTCP(greentest.TestCase):
     # this test was copied from api_test.py
     # using kill() like that is not good, so tcp_server should return an object
     # that provides kill() method or removed altogether
-    def test_server(self):
+    def DEPRECATED_test_server(self):
         connected = []
 
         current = gevent.getcurrent()
