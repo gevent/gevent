@@ -44,6 +44,7 @@ OUTPUT_LIMIT = 100*1024
 import sys
 import os
 import glob
+import re
 from unittest import _TextTestResult, defaultTestLoader, TextTestRunner
 import platform
 
@@ -322,6 +323,71 @@ def get_testcases(cursor, runid, result=None):
     return ['.'.join(x) for x in cursor.execute(sql, args).fetchall()]
 
 
+_warning_re = re.compile('\w*warning', re.I)
+_error_re = re.compile(r'(?P<prefix>\s*)Traceback \(most recent call last\):' +
+                       r'(\n(?P=prefix)\s+.*)+\n(?P=prefix)(?P<error>[\w\.]+)')
+
+
+def get_warnings(output):
+    """
+    >>> get_warnings('hello DeprecationWarning warning: bla DeprecationWarning')
+    ['DeprecationWarning', 'warning', 'DeprecationWarning']
+    """
+    return _warning_re.findall(output)
+
+
+def get_exceptions(output):
+    """
+    >>> get_exceptions('''test$ python -c "1/0"
+    ... Traceback (most recent call last):
+    ...   File "<string>", line 1, in <module>
+    ... ZeroDivisionError: integer division or modulo by zero''')
+    ['ZeroDivisionError']
+    """
+    return [x.group('error') for x in _error_re.finditer(output)]
+
+def get_warning_stats(output):
+    counter = {}
+    for warning in get_warnings(output):
+        counter.setdefault(warning, 0)
+        counter[warning] += 1
+    items = counter.items()
+    items.sort(key=lambda (a, b): -b)
+    result = []
+    for name, count in items:
+        if count == 1:
+            result.append('1 %s' % name)
+        else:
+            result.append('%s %ss' % (count, name))
+    return result
+
+
+def get_traceback_stats(output):
+    counter = {}
+    traceback_count = output.lower().count('traceback')
+    for warning in get_exceptions(output):
+        counter.setdefault(warning, 0)
+        counter[warning] += 1
+        traceback_count -= 1
+    items = counter.items()
+    items.sort(key=lambda (a, b): -b)
+    if traceback_count:
+        items.append(('other traceback', traceback_count))
+    result = []
+    for name, count in items:
+        if count == 1:
+            result.append('1 %s' % name)
+        else:
+            result.append('%s %ss' % (count, name))
+    return result
+
+
+def get_info(output):
+    output = output[:OUTPUT_LIMIT*2]
+    result = get_traceback_stats(output) + get_warning_stats(output)
+    return ', '.join(result)
+
+
 def print_stats(options):
     db = sqlite3.connect(options.db)
     cursor = db.cursor()
@@ -331,32 +397,30 @@ def print_stats(options):
     total = len(get_testcases(cursor, options.runid))
     failed = get_testcases(cursor, options.runid, 'FAIL')
     timedout = get_testcases(cursor, options.runid, 'TIMEOUT')
-    warning_reports = []
     for test, output, retcode in cursor.execute('select test, output, retcode from test where runid=?', (options.runid, )):
-        output_lower = (output or '').lower()
-        warnings = output_lower.count('warning')
-        tracebacks = output_lower.count('traceback')
-        if warnings or tracebacks:
-            warning_reports.append((test, warnings, tracebacks))
+        info = get_info(output or '')
+        if info:
+            print '%s: %s' % (test, info)
         if retcode == 'TIMEOUT':
-            timedout.append(test)
+            for testcase in timedout:
+                if testcase.startswith(test + '.'):
+                    break
+            else:
+                timedout.append(test)
+                total += 1
         elif retcode != 0:
-            failed.append(test)
+            for testcase in failed:
+                if testcase.startswith(test + '.'):
+                    break
+            else:
+                failed.append(test)
+                total += 1
     if failed:
         print 'FAILURES: '
         print ' - ' + '\n - '.join(failed)
     if timedout:
         print 'TIMEOUTS: '
         print ' - ' + '\n - '.join(timedout)
-    if warning_reports:
-        print 'WARNINGS: '
-        for test, warnings, tracebacks in warning_reports:
-            print ' - %s' % test,
-            if warnings:
-                print '%s warnings; ' % warnings,
-            if tracebacks:
-                print '%s tracebacks; ' % tracebacks,
-            print
     print '%s testcases passed; %s failed; %s timed out' % (total, len(failed), len(timedout))
     if failed or timedout:
         return True
