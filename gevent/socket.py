@@ -219,7 +219,6 @@ _delegate_methods = ("recv", "recvfrom", "recv_into", "recvfrom_into", "send", "
 timeout_default = object()
 
 class socket(object):
-    is_secure = False # XXX remove this
 
     def __init__(self, family=AF_INET, type=SOCK_STREAM, proto=0, _sock=None):
         if _sock is None:
