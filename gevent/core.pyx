@@ -248,8 +248,9 @@ cdef class event:
         if event_pending(&self.ev, EV_TIMEOUT|EV_SIGNAL|EV_READ|EV_WRITE, NULL):
             result = event_del(&self.ev)
             if result < 0:
-                raise IOError(errno, strerror(errno))
+                return result
             Py_DECREF(self)
+            return result
 
     def __repr__(self):
         if self.pending:
