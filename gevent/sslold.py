@@ -153,13 +153,14 @@ def ssl(sock, keyfile=None, certfile=None):
     if keyfile is not None:
         context.use_privatekey_file(keyfile)
     context.set_verify(SSL.VERIFY_NONE, lambda *x: True)
+    timeout = sock.gettimeout()
     try:
         sock = sock._sock
     except AttributeError:
         pass
     connection = SSL.Connection(context, sock)
     ssl_sock = SSLObject(connection)
-    ssl_sock.settimeout(sock.gettimeout())
+    ssl_sock.settimeout(timeout)
 
     try:
         sock.getpeername()
