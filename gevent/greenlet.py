@@ -202,8 +202,8 @@ class Greenlet(greenlet):
     def throw(self, *args):
         """Immediatelly switch into the greenlet and raise an exception in it.
 
-        Can only be called from the HUB, otherwise the current greenlet is left unscheduled forever.
-        To raise an exception in a safely manner, use :meth:`kill`.
+        Should only be called from the HUB, otherwise the current greenlet is left unscheduled forever.
+        To raise an exception in a safely manner from any greenlet, use :meth:`kill`.
         """
         if self._start_event is not None:
             self._start_event.cancel()
@@ -406,7 +406,7 @@ class Greenlet(greenlet):
     def link(self, receiver=None, GreenletLink=GreenletLink, SpawnedLink=SpawnedLink):
         """Link greenlet's completion to callable or another greenlet.
 
-        If *receiver* is a callable then it will be called and passed this instance
+        If *receiver* is a callable then it will be called with this instance as an argument
         once this greenlet's dead. A callable is called in its own greenlet.
 
         If *receiver* is a greenlet then an :class:`LinkedExited` exception will be
