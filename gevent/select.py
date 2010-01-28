@@ -18,8 +18,10 @@ def get_fileno(obj):
 
 
 def select(rlist, wlist, xlist, timeout=None):
-    """An implementation of :meth:`select.select` that blocks only the current greenlet."""
-    # QQQ xlist is ignored
+    """An implementation of :meth:`select.select` that blocks only the current greenlet.
+
+    Note: *xlist* is ignored.
+    """
     hub = get_hub()
     current = getcurrent()
     assert hub is not current, 'do not call blocking functions from the mainloop'
