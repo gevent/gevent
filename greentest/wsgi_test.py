@@ -24,7 +24,11 @@ monkey.patch_all(thread=False)
 import cgi
 import os
 import urllib2
-from wsgiref import validate
+try:
+    from wsgiref.validate import validator
+except ImportError:
+    def validator(app):
+        return app
 
 import greentest
 
@@ -107,7 +111,7 @@ class TestCase(greentest.TestCase):
 
     def setUp(self):
         greentest.TestCase.setUp(self)
-        self.server = self.get_wsgi_module().WSGIServer(('127.0.0.1', 0), validate.validator(self.application))
+        self.server = self.get_wsgi_module().WSGIServer(('127.0.0.1', 0), validator(self.application))
         self.server.start()
         self.port = self.server.server_port
 
@@ -399,7 +403,7 @@ class TestHttps(TestCase):
 
         sock = socket.ssl_listener(('', 4201), private_key_file, certificate_file)
 
-        g = gevent.spawn(self.get_wsgi_module().server, sock, validate.validator(self.application))
+        g = gevent.spawn(self.get_wsgi_module().server, sock, validator(self.application))
         try:
             req = HTTPRequest("https://localhost:4201/foo", method="POST", data='abc')
             f = urllib2.urlopen(req)
@@ -412,7 +416,7 @@ class TestHttps(TestCase):
         certificate_file = os.path.join(os.path.dirname(__file__), 'test_server.crt')
         private_key_file = os.path.join(os.path.dirname(__file__), 'test_server.key')
         sock = socket.ssl_listener(('', 4202), private_key_file, certificate_file)
-        g = gevent.spawn(self.get_wsgi_module().server, sock, validate.validator(self.application))
+        g = gevent.spawn(self.get_wsgi_module().server, sock, validator(self.application))
         try:
             req = HTTPRequest("https://localhost:4202/foo")
             f = urllib2.urlopen(req)
