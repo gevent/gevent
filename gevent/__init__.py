@@ -5,7 +5,7 @@ to provide a high-level synchronous API on top of libevent event loop.
 """
 
 version_info = (0, 12, 0)
-__version__ = '0.12.0-preview'
+__version__ = '0.12.0-preview-2'
 
 __all__ = ['Greenlet',
            'GreenletExit',
