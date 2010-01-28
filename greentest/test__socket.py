@@ -1,4 +1,5 @@
 import os
+import traceback
 import gevent
 from gevent import socket
 import greentest
@@ -10,9 +11,22 @@ class TestTCP(greentest.TestCase):
     def setUp(self):
         greentest.TestCase.setUp(self)
         self.listener = socket.tcp_listener(('127.0.0.1', 0))
+        self.tokill = []
 
     def tearDown(self):
         del self.listener
+        try:
+            gevent.killall(self.tokill, block=True)
+        except:
+            traceback.print_exc()
+        # eat LinkedExited notifications
+        while True:
+            try:
+                gevent.sleep(0.001)
+                break
+            except:
+                traceback.print_exc()
+        del self.tokill
         greentest.TestCase.tearDown(self)
 
     def create_connection(self):
@@ -33,8 +47,10 @@ class TestTCP(greentest.TestCase):
         #print '%s: client' % getcurrent()
 
         server_proc = gevent.spawn_link_exception(server)
+        self.tokill.append(server_proc)
         client = self.create_connection()
         client_reader = gevent.spawn_link_exception(client.makefile().read)
+        self.tokill.append(client_reader)
         gevent.sleep(0.001)
         client.send('hello world')
 
@@ -107,12 +123,8 @@ if hasattr(socket, 'ssl'):
         privfile = os.path.join(os.path.dirname(__file__), 'test_server.key')
 
         def setUp(self):
-            greentest.TestCase.setUp(self)
+            TestTCP.setUp(self)
             self.listener = ssl_listener(('127.0.0.1', 0), self.privfile, self.certfile)
-
-        def tearDown(self):
-            del self.listener
-            greentest.TestCase.tearDown(self)
 
         def create_connection(self):
             return socket.ssl(socket.create_connection(('127.0.0.1', self.listener.getsockname()[1])))
