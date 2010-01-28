@@ -119,7 +119,7 @@ if hasattr(socket, 'ssl'):
 
 
     def ssl_listener(address, private_key, certificate):
-        import _socket 
+        import _socket
         r = _socket.socket()
         sock = socket.ssl(r, private_key, certificate)
         socket.bind_and_listen(sock, address)
