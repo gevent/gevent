@@ -135,8 +135,10 @@ class SSLObject(socket):
         if self._makefile_refs < 1:
             self._sock.shutdown()
             # QQQ wait until shutdown completes?
+            socket.close(self)
         else:
             self._makefile_refs -= 1
+
 
 SysCallError_code_mapping = {-1: 8}
 
