@@ -98,26 +98,6 @@ class TestTCP(greentest.TestCase):
         fd.close()
         acceptor.get()
 
-    # this test was copied from api_test.py
-    # using kill() like that is not good, so tcp_server should return an object
-    # that provides kill() method or removed altogether
-    def DEPRECATED_test_server(self):
-        connected = []
-
-        current = gevent.getcurrent()
-
-        def accept_twice((conn, addr)):
-            connected.append(True)
-            conn.close()
-            if len(connected) == 2:
-                #gevent.kill(current, socket.error(32, 'broken pipe'))
-                gevent.core.active_event(current.throw, socket.error(32, 'broken pipe'))
-
-        g1 = gevent.spawn_link_exception(self.create_connection)
-        g2 = gevent.spawn_link_exception(self.create_connection)
-        socket.tcp_server(self.listener, accept_twice)
-        assert len(connected) == 2
-        gevent.joinall([g1, g2])
 
 if hasattr(socket, 'ssl'):
 
