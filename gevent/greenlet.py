@@ -184,7 +184,7 @@ class Greenlet(greenlet):
         else:
             args = []
             if self.args:
-                args = [repr(x) for x in self.args]
+                args = [repr(x)[:50] for x in self.args]
             if self.kwargs:
                 args.extend(['%s=%r' % x for x in self.kwargs.items()])
             if args:
