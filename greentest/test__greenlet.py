@@ -516,6 +516,30 @@ class TestJoinAll(greentest.GenericWaitTestCase):
         gevent.joinall([gevent.spawn(gevent.sleep, 10)], timeout=timeout)
 
 
+class TestKill(greentest.TestCase):
+
+    def test_kill_running(self):
+        g = gevent.spawn(gevent.sleep, 10)
+        gevent.sleep(0.001)
+        error = ExpectedError('hello world')
+        g.kill(error)
+        gevent.sleep(0.01)
+        assert g.dead, g.dead
+        assert g.ready()
+        assert g.exception is error, (g.exception, error)
+
+    #def test_kill_not_started(self): # currently kill() does nothing if Greenlet is not yet started
+
+    def test_kill_started_later(self):
+        g = gevent.spawn_later(0.01, gevent.sleep, 10)
+        error = AssertionError('this must must not be raised')
+        g.kill(error)
+        gevent.sleep(0.1)
+        assert g.dead, g
+        assert g.ready(), g
+        assert g.exception is error, (g.exception, error)
+
+
 def assert_ready(g):
     assert g.dead, g
     assert g.ready(), g
