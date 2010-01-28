@@ -42,11 +42,12 @@ def patch_thread():
 
 
 def patch_socket(dns=True):
-    from gevent.socket import socket, fromfd, socketpair
+    from gevent.socket import socket, fromfd, socketpair, SocketType
     _socket = __import__('socket')
     _socket.socket = socket
     _socket.fromfd = fromfd
     _socket.socketpair = socketpair
+    _socket.SocketType = SocketType
     try:
         from gevent.socket import ssl, sslerror
         _socket.ssl = ssl
