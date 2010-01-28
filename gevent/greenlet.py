@@ -220,7 +220,10 @@ class Greenlet(greenlet):
                 else:
                     self._exception = args[1]
                 try:
-                    return greenlet.throw(self, *args)
+                    try:
+                        return greenlet.throw(self, *args)
+                    except:
+                        pass # traceback for this is useless
                 finally:
                     if self._links and self._notifier is None:
                         self._notifier = core.active_event(self._notify_links)
