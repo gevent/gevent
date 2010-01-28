@@ -188,6 +188,7 @@ def run_tests(options, args):
         test_support.BasicTestRunner = _runner
     if os.path.exists(arg):
         sys.argv = args
+        # QQQ this makes tests reported as if they are from __main__ and screws up warnings location
         execfile(arg, globals())
     else:
         test = defaultTestLoader.loadTestsFromName(arg)
@@ -248,6 +249,11 @@ def run_subprocess(arg, options):
             raise
     finally:
         timeout.cancel()
+    # QQQ compensating for run_tests' screw up
+    module_name = arg
+    if module_name.endswith('.py'):
+        module_name = module_name[:-3]
+    output = output.replace(' (__main__.', ' (' + module_name + '.')
     return retcode[0], output
 
 
