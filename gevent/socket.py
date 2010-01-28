@@ -46,7 +46,8 @@ __all__ = ['create_connection',
            'socketpair',
            'timeout',
            'ssl',
-           'sslerror']
+           'sslerror',
+           'SocketType']
 
 import sys
 import errno
@@ -443,6 +444,8 @@ class socket(object):
     for _m in set(__socket__._socketmethods) - set(locals()):
         exec _s % (_m, _m, _m, _m)
     del _m, _s
+
+SocketType = socket
 
 
 def socketpair(*args):
