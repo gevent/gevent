@@ -64,21 +64,16 @@ def patch_dns():
     _socket.gethostbyname = gethostbyname
 
 
-def __wrap_socket(sock, keyfile=None, certfile=None, **kwargs):
-    if kwargs:
-        ssl = __import__('ssl')
-        # XXX since there is no gevent.ssl yet, cowardly call the blocking function
-        return ssl.wrap_socket(sock, keyfile=keyfile, certfile=certfile, **kwargs)
-    from gevent.socket import ssl
-    return ssl(sock, keyfile=keyfile, certfile=certfile)
-
-
 def patch_ssl():
     try:
-        ssl = __import__('ssl')
-        ssl.wrap_socket = __wrap_socket
+        _ssl = __import__('ssl')
     except ImportError:
-        pass
+        return
+    from gevent.ssl import SSLSocket, wrap_socket, get_server_certificate, sslwrap_simple 
+    _ssl.SSLSocket = SSLSocket
+    _ssl.wrap_socket = wrap_socket
+    _ssl.get_server_certificate = get_server_certificate
+    _ssl.sslwrap_simple = sslwrap_simple
 
 
 def patch_select():
