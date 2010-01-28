@@ -254,6 +254,7 @@ def run_subprocess(arg, options):
 def spawn_subprocesses(options, args):
     if not args:
         args = glob.glob('test_*.py')
+        args.remove('test_support.py')
     fail = False
     uname = platform.uname()[0]
     for arg in args:
