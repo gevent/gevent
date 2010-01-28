@@ -33,13 +33,8 @@ class SSLObject(socket):
         # (it confuses sublcasses)
         return getattr(self._sock, item)
 
-    def __repr__(self):
-        try:
-            fileno = self.fileno()
-        except Exception, ex:
-            fileno = str(ex)
-        args = (type(self).__name__, id(self), fileno, self.timeout, self._sock.state_string())
-        return '<%s at 0x%X fileno=%s timeout=%s state_string=%r>' % args
+    def _formatinfo(self):
+        return socket._formatinfo(self) + ' state_string=%r' % self._sock.state_string()
 
     def accept(self):
         sock, addr = socket.accept(self)
