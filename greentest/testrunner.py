@@ -292,7 +292,7 @@ def spawn_subprocesses(options, args):
             print '%s failed with code %s' % (arg, retcode)
             fail = True
         elif retcode == 0:
-            if options.verbosity > 0:
+            if options.verbosity == 1: # // if verbosity is 2 then output is always printed by run_subprocess
                 sys.stdout.write(output)
             print '%s passed' % arg
         else:
