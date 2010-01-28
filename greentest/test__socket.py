@@ -24,9 +24,11 @@ class TestTCP(greentest.TestCase):
             (client, addr) = self.listener.accept()
             # start reading, then, while reading, start writing. the reader should not hang forever
             N = 100000 # must be a big enough number so that sendall calls trampoline
-            gevent.spawn_link_exception(client.sendall, 't' * N)
+            sender = gevent.spawn_link_exception(client.sendall, 't' * N)
             result = client.recv(1000)
             assert result == 'hello world', result
+            sender.join(0.2)
+            sender.kill(block=True)
 
         #print '%s: client' % getcurrent()
 
