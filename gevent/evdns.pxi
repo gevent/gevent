@@ -2,16 +2,18 @@ __all__ += ['dns_init', 'dns_shutdown', 'dns_err_to_string',
             'dns_resolve_ipv4', 'dns_resolve_ipv6',
             'dns_resolve_reverse', 'dns_resolve_reverse_ipv6']
 
+cdef extern from *:
+    ctypedef char* const_char_ptr "const char*"
 
 cdef extern from "libevent.h":
     ctypedef void (*evdns_handler)(int result, char t, int count, int ttl, void *addrs, void *arg)
 
     int evdns_init()
-    char *evdns_err_to_string(int err)
+    const_char_ptr evdns_err_to_string(int err)
     int evdns_resolve_ipv4(char *name, int flags, evdns_handler callback, void *arg)
     int evdns_resolve_ipv6(char *name, int flags, evdns_handler callback, void *arg)
-    int evdns_resolve_reverse(char *ip, int flags, evdns_handler callback, void *arg)
-    int evdns_resolve_reverse_ipv6(char *ip, int flags, evdns_handler callback, void *arg)
+    int evdns_resolve_reverse(void *ip, int flags, evdns_handler callback, void *arg)
+    int evdns_resolve_reverse_ipv6(void *ip, int flags, evdns_handler callback, void *arg)
     void evdns_shutdown(int fail_requests)
 
 # Result codes
@@ -46,7 +48,7 @@ def dns_shutdown(int fail_requests=0):
 
 
 def dns_err_to_string(int err):
-    cdef char* result = evdns_err_to_string(err)
+    cdef const_char_ptr result = evdns_err_to_string(err)
     if result:
         return result
 
@@ -111,7 +113,7 @@ def dns_resolve_reverse(char* packed_ip, int flags, object callback):
     - *flags*     -- either 0 or DNS_QUERY_NO_SEARCH
     - *callback*  -- callback with ``(result, type, ttl, addrs)`` prototype
     """
-    cdef int result = evdns_resolve_reverse(packed_ip, flags, __evdns_callback, <void *>callback)
+    cdef int result = evdns_resolve_reverse(<void *>packed_ip, flags, __evdns_callback, <void *>callback)
     if result:
         raise IOError('evdns_resolve_reverse(%r, %r) returned %s' % (packed_ip, flags, result, ))
     Py_INCREF(callback)
@@ -124,7 +126,7 @@ def dns_resolve_reverse_ipv6(char* packed_ip, int flags, object callback):
     - *flags*     -- either 0 or DNS_QUERY_NO_SEARCH
     - *callback*  -- callback with ``(result, type, ttl, addrs)`` prototype
     """
-    cdef int result = evdns_resolve_reverse_ipv6(packed_ip, flags, __evdns_callback, <void *>callback)
+    cdef int result = evdns_resolve_reverse_ipv6(<void *>packed_ip, flags, __evdns_callback, <void *>callback)
     if result:
         raise IOError('evdns_resolve_reverse_ipv6(%r, %r) returned %s' % (packed_ip, flags, result, ))
     Py_INCREF(callback)
