@@ -37,7 +37,7 @@ except ImportError:
     ctypes = None
 
 
-__version__ = re.search("__version__\s*=\s*'(.*)'", open('gevent/__init__.py').read(), re.M).group(1).strip()
+__version__ = re.search("__version__\s*=\s*'(.*)'", open('gevent/__init__.py').read(), re.M).group(1)
 assert __version__
 
 
