@@ -1,3 +1,4 @@
+import sys
 import os
 import re
 import doctest
@@ -6,21 +7,22 @@ from os.path import join, dirname
 import gevent
 from gevent import socket
 
-modules = set()
-modules.add(('setup', 'setup.py'))
 
 def myfunction(*args, **kwargs):
     pass
 
 if __name__ == '__main__':
     cwd = os.getcwd()
+    saved_sys_path = sys.path[:]
     try:
+        sys.path.append('.')
         base = dirname(gevent.__file__)
         print base
-        os.chdir(join(base, '..'))
+        os.chdir('..')
 
         globs = {'myfunction': myfunction, 'gevent': gevent, 'socket': socket}
 
+        modules = set()
         for path, dirs, files in os.walk(base):
             package = 'gevent' + path.replace(base, '').replace('/', '.')
             modules.add((package, join(path, '__init__.py')))
@@ -30,6 +32,8 @@ if __name__ == '__main__':
                     module = f[:-3]
                 if module:
                     modules.add((package + '.' + module, join(path, f)))
+
+        modules.add(('setup', 'setup.py'))
 
         suite = unittest.TestSuite()
         tests_count = 0
@@ -46,5 +50,4 @@ if __name__ == '__main__':
         runner.run(suite)
     finally:
         os.chdir(cwd)
-
-
+        sys.path = saved_sys_path
