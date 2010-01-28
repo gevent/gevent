@@ -45,7 +45,8 @@ __all__ = ['create_connection',
            'socket',
            'socketpair',
            'timeout',
-           'ssl']
+           'ssl',
+           'sslerror']
 
 import sys
 import errno
@@ -81,11 +82,6 @@ timeout = _socket.timeout
 _realsocket = _socket.socket
 __socket__ = __import__('socket')
 _fileobject = __socket__._fileobject
-try:
-    sslerror = __socket__.sslerror
-    __all__.append('sslerror')
-except AttributeError:
-    pass
 gaierror = _socket.gaierror
 
 # Import public constants from the standard socket (called __socket__ here) into this module.
@@ -161,26 +157,6 @@ def wait_readwrite(fileno, timeout=-1, timeout_exc=timeout):
         assert evt is switch_result, 'Invalid switch into wait_readwrite(): %r' % (switch_result, )
     finally:
         evt.cancel()
-
-
-try:
-    from OpenSSL import SSL
-except ImportError:
-    class SSL(object):
-        class WantWriteError(object):
-            pass
-
-        class WantReadError(object):
-            pass
-
-        class ZeroReturnError(object):
-            pass
-
-        class SysCallError(object):
-            pass
-
-        class Error(object):
-            pass
 
 
 if sys.version_info[:2] <= (2, 4):
@@ -475,136 +451,6 @@ class socket(object):
 
 GreenSocket = socket # XXX this alias will be removed
 
-SysCallError_code_mapping = {-1: 8}
-
-
-class GreenSSL(socket):
-    is_secure = True
-
-    def __init__(self, fd, server_side=False):
-        socket.__init__(self, _sock=fd)
-        self._makefile_refs = 0
-        if server_side:
-            self.fd.set_accept_state()
-        else:
-            self.fd.set_connect_state()
-
-    def __repr__(self):
-        try:
-            fileno = self.fileno()
-        except Exception, ex:
-            fileno = str(ex)
-        return '<%s at %s fileno=%s timeout=%s state_string=%r>' % (type(self).__name__, hex(id(self)), fileno, self.timeout, self.fd.state_string())
-
-    def accept(self):
-        if self.timeout == 0.0:
-            return self.fd.accept()
-        fd = self.fd
-        while True:
-            try:
-                res = self.fd.accept()
-            except error, e:
-                if e[0] == errno.EWOULDBLOCK:
-                    res = None
-                else:
-                    raise
-            if res is not None:
-                client, addr = res
-                accepted = type(self)(client, server_side=True)
-                accepted.do_handshake()
-                return accepted, addr
-            wait_read(fd.fileno(), timeout=self.timeout)
-
-    def do_handshake(self):
-        while True:
-            try:
-                self.fd.do_handshake()
-                break
-            except SSL.WantReadError:
-                wait_read(self.fileno())
-            except SSL.WantWriteError:
-                wait_write(self.fileno())
-            except SSL.SysCallError, ex:
-                raise sslerror(SysCallError_code_mapping.get(ex.args[0], ex.args[0]), ex.args[1])
-            except SSL.Error, ex:
-                raise sslerror(str(ex))
-
-    def connect(self, *args):
-        socket.connect(self, *args)
-        self.do_handshake()
-
-    def send(self, data, flags=0, timeout=timeout_default):
-        if timeout is timeout_default:
-            timeout = self.timeout
-        while True:
-            try:
-                return self.fd.send(data, flags)
-            except SSL.WantWriteError, ex:
-                if self.timeout == 0.0:
-                    raise timeout(str(ex))
-                else:
-                    wait_write(self.fileno(), timeout=timeout)
-            except SSL.WantReadError, ex:
-                if self.timeout == 0.0:
-                    raise timeout(str(ex))
-                else:
-                    wait_read(self.fileno(), timeout=timeout)
-            except SSL.SysCallError, e:
-                if e[0] == -1 and data == "":
-                    # errors when writing empty strings are expected and can be ignored
-                    return 0
-                raise sslerror(SysCallError_code_mapping.get(ex.args[0], ex.args[0]), ex.args[1])
-            except SSL.Error, ex:
-                raise sslerror(str(ex))
-
-    def recv(self, buflen):
-        pending = self.fd.pending()
-        if pending:
-            return self.fd.recv(min(pending, buflen))
-        while True:
-            try:
-                return self.fd.recv(buflen)
-            except SSL.WantReadError, ex:
-                if self.timeout == 0.0:
-                    raise timeout(str(ex))
-                else:
-                    wait_read(self.fileno(), timeout=self.timeout)
-            except SSL.WantWriteError, ex:
-                if self.timeout == 0.0:
-                    raise timeout(str(ex))
-                else:
-                    wait_read(self.fileno(), timeout=self.timeout)
-            except SSL.ZeroReturnError:
-                return ''
-            except SSL.SysCallError, ex:
-                raise sslerror(SysCallError_code_mapping.get(ex.args[0], ex.args[0]), ex.args[1])
-            except SSL.Error, ex:
-                raise sslerror(str(ex))
-
-    def read(self, buflen=1024):
-        """
-        NOTE: read() in SSLObject does not have the semantics of file.read
-        reading here until we have buflen bytes or hit EOF is an error
-        """
-        return self.recv(buflen)
-
-    def write(self, data):
-        try:
-            return self.sendall(data)
-        except SSL.Error, ex:
-            raise sslerror(str(ex))
-
-    def makefile(self, mode='r', bufsize=-1):
-        self._makefile_refs += 1
-        return _fileobject(self, mode, bufsize, close=True)
-
-    def close (self):
-        if self._makefile_refs < 1:
-            self.fd.shutdown()
-            # QQQ wait until shutdown completes?
-        else:
-            self._makefile_refs -= 1
-
 
 def socketpair(*args):
     one, two = _socket.socketpair(*args)
@@ -648,19 +494,6 @@ def tcp_listener(address, backlog=50, reuse_addr=True):
     return sock
 
 
-def ssl_listener(address, private_key, certificate):
-    """A shortcut to create an SSL socket, bind it and put it into listening state.
-
-    *certificate* and *private_key* should be the filenames of the appropriate
-    certificate and private key files to use with the SSL socket.
-    """
-    r = _socket.socket()
-    sock = wrap_ssl000(r, private_key, certificate)
-    bind_and_listen(sock, address)
-    return sock
-
-
-# XXX merge this into create_connection
 def connect_tcp(address, localaddr=None):
     """
     Create a TCP connection to address (host, port) and return the socket.
@@ -733,58 +566,6 @@ def create_connection(address, timeout=_GLOBAL_DEFAULT_TIMEOUT):
                 sock.close()
     raise error, msg
 
-
-def create_connection_ssl(address, timeout=_GLOBAL_DEFAULT_TIMEOUT):
-    """Connect to *address* and return the socket object.
-
-    Convenience function.  Connect to *address* (a 2-tuple ``(host,
-    port)``) and return the socket object.  Passing the optional
-    *timeout* parameter will set the timeout on the socket instance
-    before attempting to connect.  If no *timeout* is supplied, the
-    global default timeout setting returned by :func:`getdefaulttimeout`
-    is used.
-    """
-
-    msg = "getaddrinfo returns an empty list"
-    host, port = address
-    for res in getaddrinfo(host, port, 0, SOCK_STREAM):
-        af, socktype, proto, _canonname, sa = res
-        sock = None
-        try:
-            _sock = _socket.socket(af, socktype, proto)
-            sock = wrap_ssl000(_sock)
-            if timeout is not _GLOBAL_DEFAULT_TIMEOUT:
-                sock.settimeout(timeout)
-            sock.connect(sa)
-            return sock
-        except error, msg:
-            if sock is not None:
-                sock.close()
-    raise error, msg
-
-
-# get rid of this
-def wrap_ssl000(sock, keyfile=None, certfile=None):
-    from OpenSSL import SSL
-    context = SSL.Context(SSL.SSLv23_METHOD)
-    if certfile is not None:
-        context.use_certificate_file(certfile)
-    if keyfile is not None:
-        context.use_privatekey_file(keyfile)
-    context.set_verify(SSL.VERIFY_NONE, lambda *x: True)
-    connection = SSL.Connection(context, sock)
-    ssl_sock = GreenSSL(connection)
-
-    try:
-        sock.getpeername()
-    except:
-        # no, no connection yet
-        pass
-    else:
-        # yes, do the handshake
-        ssl_sock.do_handshake()
-
-    return ssl_sock
 
 try:
     from gevent.dns import resolve_ipv4, resolve_ipv6
@@ -871,27 +652,19 @@ else:
         return result
 
 
-def ssl(sock, keyfile=None, certfile=None):
-    from OpenSSL import SSL
-    context = SSL.Context(SSL.SSLv23_METHOD)
-    if certfile is not None:
-        context.use_certificate_file(certfile)
-    if keyfile is not None:
-        context.use_privatekey_file(keyfile)
-    context.set_verify(SSL.VERIFY_NONE, lambda *x: True)
-    connection = SSL.Connection(context, sock.fd)
-    ssl_sock = GreenSSL(connection)
-    ssl_sock.settimeout(sock.gettimeout())
+_have_ssl = False
 
+try:
+    from gevent.ssl import sslwrap_simple as ssl, SSLError as sslerror
+    _have_ssl = True
+except ImportError:
     try:
-        sock.getpeername()
-    except Exception:
-        # no, no connection yet
+        from gevent.sslold import ssl, sslerror
+        _have_ssl = True
+    except ImportError:
         pass
-    else:
-        # yes, do the handshake
-        ssl_sock.do_handshake()
 
-    return ssl_sock
+if not _have_ssl:
+    __all__.remove('ssl')
+    __all__.remove('sslerror')
 
-wrap_ssl = ssl # XXX this is deprecated and will be removed
