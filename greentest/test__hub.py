@@ -22,6 +22,7 @@
 import greentest
 import unittest
 import time
+import re
 import gevent
 from gevent import core
 from gevent import socket
@@ -165,13 +166,13 @@ class TestWaiter(greentest.GenericWaitTestCase):
 
         waiter = Waiter()
         waiter.throw(ZeroDivisionError)
-        self.assertEqual(str(waiter), "<Waiter greenlet=None exc_info=(<type 'exceptions.ZeroDivisionError'>,)>")
+        assert re.match('^<Waiter greenlet=None exc_info=.*ZeroDivisionError.*$', str(waiter)), str(waiter)
         self.assertRaises(ZeroDivisionError, waiter.get)
 
         waiter = Waiter()
         gevent.spawn(waiter.get)
         gevent.sleep(0)
-        assert str(waiter).startswith('<Waiter greenlet=<Greenlet at 0x'), str(waiter)
+        assert str(waiter).startswith('<Waiter greenlet=<Greenlet at '), str(waiter)
 
 
 if __name__=='__main__':
