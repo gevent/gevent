@@ -35,8 +35,11 @@ one will be selected if not provided.
 # Known issues:
 # - screws up warnings location, causing them to appear as originated from testrunner.py
 
-
+# the number of seconds each test script is allowed to run
 DEFAULT_TIMEOUT = 20
+
+# the number of bytes of output that is recorded; the rest is thrown away
+OUTPUT_LIMIT = 100*1024
 
 import sys
 import os
@@ -281,6 +284,8 @@ def spawn_subprocesses(options, args):
             row_id = store_record(options.db, 'test', params)
             params['id'] = row_id
         retcode, output = run_subprocess(arg, options)
+        if len(output) > OUTPUT_LIMIT:
+            output = output[:OUTPUT_LIMIT] + '<AbridgedOutputWarning>'
         if retcode:
             sys.stdout.write(output)
             print '%s failed with code %s' % (arg, retcode)
