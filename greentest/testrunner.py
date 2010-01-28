@@ -303,6 +303,7 @@ def spawn_subprocesses(options, args):
             store_record(options.db, 'test', params)
     if options.db:
         try:
+            print '-' * 80
             if print_stats(options):
                 fail = True
         except sqlite3.OperationalError, ex:
