@@ -22,8 +22,15 @@
 """This test checks that socket instances (not gevent.socket.socket but underlying sockets)
 are not leaked by the hub.
 """
-from gevent import monkey
-monkey.patch_all()
+from _socket import socket
+class Socket(socket):
+    "Something we can have a weakref to"
+
+import _socket
+_socket.socket = Socket
+
+from gevent import monkey; monkey.patch_all()
+
 #import sys
 import greentest
 from pprint import pformat
@@ -31,14 +38,6 @@ from thread import start_new_thread
 from time import sleep
 import weakref
 import gc
-
-from _socket import socket
-
-class Socket(socket):
-    "Something we can have a weakref to"
-
-import _socket
-_socket.socket = Socket
 
 import socket
 socket._realsocket = Socket
@@ -90,9 +89,9 @@ def run_interaction(run_client):
         port = s.getsockname()[1]
         start_new_thread(make_request, (port, ))
     sleep(0.1+SOCKET_TIMEOUT)
-    #print sys.getrefcount(s.fd)
+    #print sys.getrefcount(s._sock)
     #s.close()
-    return weakref.ref(s.fd) # XXX OR _sock depending on whether monkey patching is enabled. rename GreenSocket.fd to GreenSocket._sock ?
+    return weakref.ref(s._sock)
 
 def run_and_check(run_client):
     w = run_interaction(run_client=run_client)
