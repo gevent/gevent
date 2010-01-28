@@ -117,22 +117,31 @@ class TestTCP(greentest.TestCase):
         assert len(connected) == 2
         gevent.joinall([g1, g2])
 
+if hasattr(socket, 'ssl'):
 
-class TestSSL(TestTCP):
+    class TestSSL(TestTCP):
 
-    certfile = os.path.join(os.path.dirname(__file__), 'test_server.crt')
-    privfile = os.path.join(os.path.dirname(__file__), 'test_server.key')
+        certfile = os.path.join(os.path.dirname(__file__), 'test_server.crt')
+        privfile = os.path.join(os.path.dirname(__file__), 'test_server.key')
 
-    def setUp(self):
-        greentest.TestCase.setUp(self)
-        self.listener = socket.ssl_listener(('127.0.0.1', 0), self.privfile, self.certfile)
+        def setUp(self):
+            greentest.TestCase.setUp(self)
+            self.listener = ssl_listener(('127.0.0.1', 0), self.privfile, self.certfile)
 
-    def tearDown(self):
-        del self.listener
-        greentest.TestCase.tearDown(self)
+        def tearDown(self):
+            del self.listener
+            greentest.TestCase.tearDown(self)
 
-    def create_connection(self):
-        return socket.create_connection_ssl(('127.0.0.1', self.listener.getsockname()[1]))
+        def create_connection(self):
+            return socket.ssl(socket.create_connection(('127.0.0.1', self.listener.getsockname()[1])))
+
+
+    def ssl_listener(address, private_key, certificate):
+        import _socket 
+        r = _socket.socket()
+        sock = socket.ssl(r, private_key, certificate)
+        socket.bind_and_listen(sock, address)
+        return sock
 
 
 if __name__=='__main__':
