@@ -394,7 +394,7 @@ def server(sock, site, log=None, environ=None, max_size=None, max_http_version=D
     try:
         host, port = sock.getsockname()
         port = ':%s' % (port, )
-        if sock.is_secure:
+        if hasattr(sock, 'do_handshake'):
             scheme = 'https'
             if port == ':443':
                 port = ''
