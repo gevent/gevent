@@ -27,7 +27,6 @@ from code import InteractiveConsole
 
 from gevent import socket
 from gevent.greenlet import Greenlet
-from gevent import core
 
 try:
     sys.ps1
@@ -41,9 +40,8 @@ except AttributeError:
 
 class SocketConsole(Greenlet):
 
-    def __init__(self, desc, hostport, locals):
+    def __init__(self, desc, locals):
         Greenlet.__init__(self)
-        self.hostport = hostport
         self.locals = locals
         # mangle the socket
         self.desc = desc
@@ -60,22 +58,6 @@ class SocketConsole(Greenlet):
                 self.old[key] = getattr(desc, key)
             setattr(desc, key, value)
 
-    def _run(self):
-        try:
-            console = InteractiveConsole(self.locals)
-            console.interact()
-        finally:
-            self.switch_out()
-            self.finalize()
-
-    def switch(self, *args, **kw):
-        self.saved = sys.stdin, sys.stderr, sys.stdout
-        sys.stdin = sys.stdout = sys.stderr = self.desc
-        Greenlet.switch(self, *args, **kw)
-
-    def switch_out(self):
-        sys.stdin, sys.stderr, sys.stdout = self.saved
-
     def finalize(self):
         # restore the state of the socket
         for key in self.fixups:
@@ -88,36 +70,49 @@ class SocketConsole(Greenlet):
         self.fixups.clear()
         self.old.clear()
         self.desc = None
-        print "backdoor closed to %s:%s" % self.hostport
+
+    def switch(self, *args, **kw):
+        self.saved = sys.stdin, sys.stderr, sys.stdout
+        sys.stdin = sys.stdout = sys.stderr = self.desc
+        Greenlet.switch(self, *args, **kw)
+
+    def switch_out(self):
+        sys.stdin, sys.stderr, sys.stdout = self.saved
+
+    def _run(self):
+        try:
+            console = InteractiveConsole(self.locals)
+            console.interact()
+        finally:
+            self.switch_out()
+            self.finalize()
+
+
+class BackdoorServer(Greenlet):
+
+    def __init__(self, address, locals=None):
+        Greenlet.__init__(self)
+        if isinstance(address, socket.socket):
+            self.socket = address
+        else:
+            self.socket = socket.tcp_listener(address)
+        self.locals = locals
+
+    def __str__(self):
+        return '<BackdoorServer on %s>' % (self.socket, )
+
+    def _run(self):
+        while True:
+            (conn, address) = self.socket.accept()
+            print 'accepted connection from %s' % (address, )
+            fileobj = _fileobject(conn)
+            SocketConsole.spawn(fileobj, self.locals)
 
 
 def backdoor_server(server, locals=None):
-    print "backdoor listening on %s:%s" % server.getsockname()
-    try:
-        try:
-            while True:
-                (conn, (host, port)) = server.accept()
-                print "backdoor connected to %s:%s" % (host, port)
-                fl = _fileobject(conn.dup(), "rw", bufsize=1)
-                greenlet = SocketConsole(fl, (host, port), locals)
-                core.active_event(greenlet.switch)
-        except socket.error, e:
-            # Broken pipe means it was shutdown
-            if e[0] != 32:
-                raise
-    finally:
-        server.close()
-
-
-def backdoor((conn, addr), locals=None):
-    """ Use this with tcp_server like so:
-        tcp_server(tcp_listener(('127.0.0.1', 9000)), backdoor.backdoor, {})
-    """
-    host, port = addr
-    print "backdoor to %s:%s" % (host, port)
-    fl = _fileobject(conn.dup(), "rw", bufsize=1)
-    greenlet = SocketConsole(fl, (host, port), locals)
-    core.active_event(greenlet.switch)
+    import warnings
+    warnings.warn("gevent.backdoor_server is deprecated; use BackdoorServer", DeprecationWarning, stacklevel=2)
+    BackdoorServer.spawn(server, locals).join()
 
 
 class _fileobject(socket._fileobject):
@@ -130,6 +125,10 @@ if __name__ == '__main__':
     if not sys.argv[1:]:
         print 'USAGE: %s PORT' % sys.argv[0]
     else:
-        from gevent.socket import tcp_server, tcp_listener
-        tcp_server(tcp_listener(('127.0.0.1', int(sys.argv[1]))), backdoor, {})
+        server = BackdoorServer.spawn(('127.0.0.1', int(sys.argv[1])))
+        print server
+        try:
+            server.join()
+        except KeyboardInterrupt:
+            pass
 
