@@ -449,8 +449,6 @@ class socket(object):
         exec _s % (_m, _m, _m, _m)
     del _m, _s
 
-GreenSocket = socket # XXX this alias will be removed
-
 
 def socketpair(*args):
     one, two = _socket.socketpair(*args)
