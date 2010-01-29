@@ -171,3 +171,12 @@ class GenericGetTestCase(TestCase):
         delay = time.time() - start
         assert 0.01 - 0.001 <= delay < 0.01 + 0.01 + 0.1, delay
 
+
+def patch_all(timeout=None):
+    from gevent import monkey
+    monkey.patch_all(aggressive=True)
+    import unittest
+    unittest.TestCase = TestCase
+    if timeout is not None:
+        TestCase.__timeout__ = timeout
+
