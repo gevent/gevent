@@ -77,14 +77,22 @@ def patch_ssl():
     _ssl.sslwrap_simple = sslwrap_simple
 
 
-def patch_select():
+def patch_select(aggressive=False):
     from gevent.select import select
     _select = __import__('select')
     globals()['_select_select'] = _select.select
     _select.select = select
+    if aggressive:
+        # since these are blocking and don't work with the libevent's event loop
+        # we're removing them here. This makes some other modules (e.g. asyncore)
+        # non-blocking, as they use select that we provide when none of these are available.
+        _select.__dict__.pop('poll', None)
+        _select.__dict__.pop('epoll', None)
+        _select.__dict__.pop('kqueue', None)
+        _select.__dict__.pop('kevent', None)
 
 
-def patch_all(socket=True, dns=True, time=True, select=True, thread=True, os=True, ssl=True):
+def patch_all(socket=True, dns=True, time=True, select=True, thread=True, os=True, ssl=True, aggressive=False):
     # order is important
     if os:
         patch_os()
@@ -95,7 +103,7 @@ def patch_all(socket=True, dns=True, time=True, select=True, thread=True, os=Tru
     if socket:
         patch_socket(dns=dns)
     if select:
-        patch_select()
+        patch_select(aggressive=aggressive)
     if ssl:
         patch_ssl()
 
