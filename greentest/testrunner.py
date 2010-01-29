@@ -18,9 +18,9 @@ The results are stored in the following 2 tables:
 
 testcase:
 
-  runid   | test   | testcase        | result             | time |
-  --------+--------+-----------------+--------------------+------+
-  abc123  | module | class.function  | PASS|FAIL|TIMEOUT  | 0.01 |
+  runid   | test   | testcase        | result                 | time |
+  --------+--------+-----------------+------------------------+------+
+  abc123  | module | class.function  | PASSED|FAILED|TIMEOUT  | 0.01 |
 
 test:
 
