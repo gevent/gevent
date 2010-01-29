@@ -74,14 +74,12 @@ cdef extern from "libevent.h":
     void      evhttp_send_reply_start(evhttp_request *req, int status, char *reason)
     void      evhttp_send_reply_chunk(evhttp_request *req, evbuffer *buf)
     void      evhttp_send_reply_end(evhttp_request *req)
-    void      evhttp_free(evhttp *http)
     void      evhttp_send_error(evhttp_request *req, int error, char *reason)
 
     char*     evhttp_find_header(evkeyvalq*, char*)
     int       evhttp_remove_header(evkeyvalq*, char*)
     int       evhttp_add_header(evkeyvalq*, char*, char*)
     void      evhttp_clear_headers(evkeyvalq*)
-    void      evhttp_request_free(evhttp_request* req)
 
     # connection
     ctypedef void (*conn_closecb)(evhttp_connection *c, void *arg)
