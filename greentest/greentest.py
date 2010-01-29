@@ -36,6 +36,7 @@ def exit_unless_25():
     if sys.version_info[:2] < (2, 5):
         exit_disabled()
 
+
 class TestCase(unittest.TestCase):
 
     __timeout__ = 1
@@ -80,6 +81,10 @@ class TestCase(unittest.TestCase):
     @property
     def testname(self):
         return getattr(self, '_testMethodName', '') or getattr(self, '_TestCase__testMethodName')
+
+    @property
+    def testcasename(self):
+        return self.__class__.__name__ + '.' + self.testname
 
 
 def find_command(command):
