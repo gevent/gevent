@@ -187,7 +187,7 @@ class Hub(greenlet):
         try:
             self.switch()
         except DispatchExit, ex:
-            if ex.code == 1:
+            if ex.code == 1: # no more events registered?
                 return
             raise
 
