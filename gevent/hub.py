@@ -108,7 +108,7 @@ def shutdown():
     """Cancel our CTRL-C handler and wait for core.dispatch() to return."""
     global _threadlocal
     hub = _threadlocal.__dict__.get('hub')
-    if hub is not None and not hub.dead:
+    if hub is not None:
         hub.shutdown()
 
 
@@ -182,6 +182,8 @@ class Hub(greenlet):
             self.keyboard_interrupt_signal.cancel()
             self.keyboard_interrupt_signal = None
         core.dns_shutdown()
+        if not self or self.dead:
+            return
         try:
             self.switch()
         except DispatchExit, ex:
