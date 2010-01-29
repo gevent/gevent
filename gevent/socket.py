@@ -573,7 +573,7 @@ except:
 else:
 
     def gethostbyname(hostname):
-        """:func:`socket.gethostbyname` implemented using :mod:`dns`.
+        """:func:`socket.gethostbyname` implemented using :mod:`gevent.dns`.
 
         Differs in the following ways:
 
@@ -597,7 +597,7 @@ else:
 
 
     def getaddrinfo(host, port, *args, **kwargs):
-        """*Some* approximation of :func:`socket.getaddrinfo` implemented using :mod:`dns`.
+        """*Some* approximation of :func:`socket.getaddrinfo` implemented using :mod:`gevent.dns`.
 
         If *host* is not a string, does not has any dots or is a numeric IP address, then
         the standard :func:`socket.getaddrinfo` is called.
