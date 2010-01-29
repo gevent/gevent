@@ -134,6 +134,7 @@ MONKEY OPTIONS: --verbose %s""" % ', '.join('--[no-]%s' % m for m in modules)
         else:
             sys.exit(script_help + '\n\n' + 'Cannot patch %r' % option)
         del argv[0]
+        # TODO: break on --
     if verbose:
         import pprint, os
         print 'gevent.monkey.patch_all(%s)' % ', '.join('%s=%s' % item for item in args.items())
