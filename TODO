@@ -14,6 +14,8 @@
  - streaming version of wsgi.WSGIHandler
  - monkey should hold references and provide access to all the objects it replaced
  - port to stackless
+ - figure out http server's tests failures on libevent2
+ - split WSGIServer into AsyncWSGIServer (that does not spawn greenlets) and WSGIServer (that does)
 
 1.1
  - use libevent 2.x's bufferevent for socket implementation (or for its _fileobject)
