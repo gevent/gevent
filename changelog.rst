@@ -9,11 +9,12 @@ Version 0.12.0
 
 - Release highlights:
 
-  - Fixed Windows compatibility.
+  - Added :mod:`gevent.ssl` module.
+  - Fixed Windows compatibility (experimental).
   - Improved performance of :meth:`socket.recv`, :meth:`socket.send` and similar methods.
   - Added a new module - :mod:`dns` - with synchronous wrappers around libevent's DNS API.
   - Added :class:`core.readwrite_event` and :func:`socket.wait_readwrite` functions.
-  - Fixed a number of incompatibilities of :mod:`wsgi` module with the WSGI spec.
+  - Fixed several incompatibilities of :mod:`wsgi` module with the WSGI spec.
   - Deprecated :mod:`pywsgi` module.
 
 - :mod:`gevent.wsgi` module
@@ -30,9 +31,13 @@ Version 0.12.0
   - Fixed DNS functions to check the return value of the libevent functions and raise
     :exc:`IOError` if they failed.
   - Added :func:`core.dns_err_to_string`
+  - Made core.event.cancel not to raise if event_del reports an error. instead, the return code is
+    passed to the caller.
 
 - :mod:`gevent.socket` module
 
+  - Fixed bug in socket.accept. It could return unwrapped socket instance if socket's timeout is 0.
+  - Fixed socket.sendall implementation never to call underlying socket's sendall.
   - Fixed :func:`gethostbyname` and :func:`getaddrinfo` to call the stdlib if the passed hostname
     has no dots.
   - Fixed :func:`getaddrinfo` to filter the results using *socktype* and *proto* arguments.
@@ -43,25 +48,29 @@ Version 0.12.0
     on Windows) but to use Python's reference counting similar to how the stdlib's socket
     implements :meth:`dup`
   - Added *_sock* argument to :class:`socket`'s constructor. Passing the socket instance
-    as first argument is not longer supported.
+    as first argument is no longer supported.
   - Fixed :func:`socket.connect` to ignore ``WSAEINVAL`` on Windows.
   - Fixed :func:`socket.connect` to use :func:`wait_readwrite` instead of :func:`wait_write`.
   - Fixed :func:`socket.connect` to consult ``SO_ERROR``.
   - Fixed :func:`socket.send` and :func:`socket.sendall` to support *flags* argument.
   - Renamed :func:`socket_bind_and_listen` to :func:`socket.bind_and_listen`. The old name
     is still available as a deprecated alias.
-  - Added _sock property to the socket objects that returns the real socket instance for better
-    compatibility with stdlib's socket.
-  - Import the constants and some utility functions from stdlib's :mod:`socket` for convenience.
-    Thanks to **Matt Goodall** for the original patch.
+  - The underlying socket object is now stored as ``_sock`` property.
+  - Imported the constants and some utility functions from stdlib's :mod:`socket` into :mod:`gevent.socket`.
+    (Thanks to **Matt Goodall** for the original patch).
   - Renamed :meth:`wrap_ssl` to :meth:`ssl`. (the old name is still available but deprecated)
   - Deprecated :func:`connect_tcp` and :func:`tcp_server`.
+  - Added :exc:`sslerror` to ``socket.__all__``.
+  - Removed :class:`GreenSocket` alias for socket class.
 
 - Miscellaneous
 
-  - Fixed setup.py to proceed with compilation even if libevent cannot be determined.
+  - Fixed Greenlet.spawn_link* and GreenletSet.spawn_link* classmethods not to assume anything
+    about their arguments. (Thanks to **Marcus Cavanaugh** for pointing that out).
+  - Fixed :func:`select <gevent.select.select>` to clean up properly if event creation fails.
+  - Fixed :func:`select <gevent.select.select>` to raise :exc:`select.error` instead of :exc:`IOError`.
+  - Fixed setup.py to proceed with compilation even if libevent version cannot be determined.
     1.x.x is assumed in this case.
-  - Fixed :mod:`monkey` not to break Python 2.6's :func:`ssl.wrap_socket`.
   - Fixed compatibility of .pyx files with Cython 0.12.0
   - Renamed arguments for :func:`select.select` to what they are called in the stdlib
   - Removed internal function :func:`getLinkedCompleted` from :mod:`gevent.greenlet`
@@ -69,6 +78,14 @@ Version 0.12.0
   - Removed some deprecated stuff from :mod:`coros`.
   - Internal class :class:`Waiter <gevent.hub.Waiter>` now stores the value if no one's waiting for it.
   - Added ``testrunner.py`` script that replaces a bunch of small scripts that were used before.
+  - Removed ``is_secure`` attribute from sockets and ssl objects.
+  - Made Greenlet not to print a traceback when a not-yet-started greenlet is killed.
+  - Added BackdoorServer class to backdoor module. Removed backdoor() function and deprecated backdoor_server() function.
+  - Removed ``__getattr__`` from socket class.
+  - Fixed :func:`monkey.patch_socket` not to fail if :func:`socket.ssl` is not present in :mod:`gevent.socket`.
+  - Tests from stdlib no longer included in greentest package. Instead, there are number of stubs
+    that import those tests from ``test`` package directly and run them in monkey patched environment.
+  - Added examples/process.py by **Marcus Cavanaugh**.
 
 
 Version 0.11.2
