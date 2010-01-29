@@ -364,14 +364,14 @@ def get_warning_stats(output):
 
 def get_traceback_stats(output):
     counter = {}
-    traceback_count = output.lower().count('traceback')
+    traceback_count = output.lower().count('Traceback (most recent call last)')
     for warning in get_exceptions(output):
         counter.setdefault(warning, 0)
         counter[warning] += 1
         traceback_count -= 1
     items = counter.items()
     items.sort(key=lambda (a, b): -b)
-    if traceback_count:
+    if traceback_count>0:
         items.append(('other traceback', traceback_count))
     result = []
     for name, count in items:
