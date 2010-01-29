@@ -114,15 +114,22 @@ class DatabaseTestResult(_TextTestResult):
 
     def addSuccess(self, test):
         _TextTestResult.addSuccess(self, test)
-        self._store_result(test, 'PASS')
+        self._store_result(test, 'PASSED')
 
     def addError(self, test, err):
         _TextTestResult.addError(self, test, err)
-        self._store_result(test, 'FAIL')
+        self._store_result(test, format_exc_info(err))
 
     def addFailure(self, test, err):
         _TextTestResult.addFailure(self, test, err)
-        self._store_result(test, 'FAIL')
+        self._store_result(test, format_exc_info(err))
+
+
+def format_exc_info(exc_info):
+    try:
+        return '%s: %s' % (exc_info[0].__name__, exc_info[1])
+    except:
+        return str(exc_info[1]) or str(exc_info[0]) or 'FAILED'
 
 
 class DatabaseTestRunner(TextTestRunner):
@@ -323,6 +330,19 @@ def get_testcases(cursor, runid, result=None):
     return ['.'.join(x) for x in cursor.execute(sql, args).fetchall()]
 
 
+def get_failed_testcases(cursor, runid):
+    sql = 'select test, testcase, result from testcase where runid=?'
+    args = (runid, )
+    sql += ' and result!="PASSED" and result!="TIMEOUT"'
+    names = []
+    errors = {}
+    for test, testcase, result in cursor.execute(sql, args).fetchall():
+        name = '%s.%s' % (test, testcase)
+        names.append(name)
+        errors[name] = result
+    return names, errors
+
+
 _warning_re = re.compile('\w*warning', re.I)
 _error_re = re.compile(r'(?P<prefix>\s*)Traceback \(most recent call last\):' +
                        r'(\n(?P=prefix)\s+.*)+\n(?P=prefix)(?P<error>[\w\.]+)')
@@ -395,7 +415,7 @@ def print_stats(options):
         options.runid = cursor.execute('select runid from test order by started_at desc limit 1').fetchall()[0][0]
         print 'Using the latest runid: %s' % options.runid
     total = len(get_testcases(cursor, options.runid))
-    failed = get_testcases(cursor, options.runid, 'FAIL')
+    failed, errors = get_failed_testcases(cursor, options.runid)
     timedout = get_testcases(cursor, options.runid, 'TIMEOUT')
     for test, output, retcode in cursor.execute('select test, output, retcode from test where runid=?', (options.runid, )):
         info = get_info(output or '')
@@ -416,8 +436,15 @@ def print_stats(options):
                 failed.append(test)
                 total += 1
     if failed:
+        failed.sort()
         print 'FAILURES: '
-        print ' - ' + '\n - '.join(failed)
+        for testcase in failed:
+            error = errors.get(testcase)
+            if error:
+                error = repr(error)[1:-1][:100]
+                print ' - %s: %s' % (testcase, error)
+            else:
+                print ' - %s' % (testcase, )
     if timedout:
         print 'TIMEOUTS: '
         print ' - ' + '\n - '.join(timedout)
