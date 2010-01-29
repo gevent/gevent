@@ -41,7 +41,7 @@ class Test(greentest.TestCase):
         delta = time.time() - start
         assert not s, s
         assert len(s)==0, s
-        assert DELAY*2 < delta < DELAY*2.5, delta
+        assert DELAY*1.9 <= delta <= DELAY*2.5, (delta, DELAY)
 
     def test_kill_block(self):
         s = pool.GreenletSet()
