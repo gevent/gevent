@@ -199,8 +199,13 @@ def run_tests(options, args):
         test_support.BasicTestRunner = _runner
     if os.path.exists(arg):
         sys.argv = args
-        # QQQ this makes tests reported as if they are from __main__ and screws up warnings location
-        execfile(arg, globals())
+        saved_globals = {'__file__': __file__}
+        try:
+            globals()['__file__'] = arg
+            # QQQ this makes tests reported as if they are from __main__ and screws up warnings location
+            execfile(arg, globals())
+        finally:
+            globals().update(saved_globals)
     else:
         test = defaultTestLoader.loadTestsFromName(arg)
         result = _runner().run(test)
