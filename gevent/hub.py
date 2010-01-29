@@ -165,7 +165,7 @@ class Hub(greenlet):
                 except IOError, ex:
                     loop_count += 1
                     if loop_count > 15:
-                        raise
+                        MAIN.throw(*sys.exc_info())
                     sys.stderr.write('Restarting gevent.core.dispatch() after an error [%s]: %s\n' % (loop_count, ex))
                     continue
                 raise DispatchExit(result)
