@@ -108,7 +108,7 @@ class Event(object):
                     try:
                         sys.stderr.write('Failed to notify link %r of %r\n\n' % (link, self))
                     except:
-                        pass
+                        traceback.print_exc()
 
 
 class AsyncResult(object):
@@ -276,7 +276,7 @@ class AsyncResult(object):
                     try:
                         sys.stderr.write('Failed to notify link %r of %r\n\n' % (link, self))
                     except:
-                        pass
+                        traceback.print_exc()
         finally:
             self._notifier = None
 
