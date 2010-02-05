@@ -565,7 +565,7 @@ def create_connection(address, timeout=_GLOBAL_DEFAULT_TIMEOUT):
 
 try:
     from gevent.dns import resolve_ipv4, resolve_ipv6
-except:
+except Exception:
     import traceback
     traceback.print_exc()
     __all__.remove('gethostbyname')
