@@ -1,8 +1,8 @@
 #!/usr/bin/python
 """Unit test runner.
 
-This test runner runs individual test modules within a subprocess, thus allowing them to
-mangle globals on the module level freely (i.e. do monkey patching).
+This test runner runs each test module isolated in a subprocess, thus allowing them to
+mangle globals freely (i.e. do monkey patching).
 
 To report the results and generate statistics sqlite3 database is used.
 
@@ -11,8 +11,8 @@ in the database logged with the result 'TIMEOUT'.
 
 The --db option, when provided, specifies sqlite3 database that holds the test results.
 By default 'testresults.sqlite3' is used in the current directory.
-If the a mercurial repository is detected and it is "dirty", that is, has uncommited changes
-then '/tmp/testresults.sqlite3' is used, which is cleaned up before each run.
+If the a mercurial repository is detected and the current working copy is "dirty", that is,
+has uncommited changes, then '/tmp/testresults.sqlite3' is used.
 
 The results are stored in the following 2 tables:
 
