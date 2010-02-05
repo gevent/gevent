@@ -33,6 +33,7 @@ Version 0.12.0
   - Added :func:`core.dns_err_to_string`
   - Made core.event.cancel not to raise if event_del reports an error. instead, the return code is
     passed to the caller.
+  - Fixed minor issue in string representation of the events.
 
 - :mod:`gevent.socket` module
 
@@ -62,6 +63,8 @@ Version 0.12.0
   - Deprecated :func:`connect_tcp` and :func:`tcp_server`.
   - Added :exc:`sslerror` to ``socket.__all__``.
   - Removed :class:`GreenSocket` alias for socket class.
+  - Moved PyOpenSSL-based implementation of :func:`socket.ssl` into :mod:`gevent.oldssl` module.
+    It's imported into :mod:`gevent.socket` if importing :mod:`gevent.ssl` fails.
 
 - Miscellaneous
 
@@ -83,6 +86,8 @@ Version 0.12.0
   - Added BackdoorServer class to backdoor module. Removed backdoor() function and deprecated backdoor_server() function.
   - Removed ``__getattr__`` from socket class.
   - Fixed :func:`monkey.patch_socket` not to fail if :func:`socket.ssl` is not present in :mod:`gevent.socket`.
+  - Added :func:`monkey.patch_ssl`.
+  - Added *aggressive* to :func:`monkey.patch_all`.
   - Tests from stdlib no longer included in greentest package. Instead, there are number of stubs
     that import those tests from ``test`` package directly and run them in monkey patched environment.
   - Added examples/process.py by **Marcus Cavanaugh**.
