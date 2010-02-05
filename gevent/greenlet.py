@@ -221,9 +221,14 @@ class Greenlet(greenlet):
                     self._exception = args[1]
                 try:
                     try:
+                        # Even though the greenlet is not yet started, we calling throw() here
+                        # so that its 'dead' attribute becomes True
                         return greenlet.throw(self, *args)
                     except:
-                        pass # traceback for this is useless
+                        # since this function is called from the Hub, which is the parent of *greenlet*
+                        # the above statement will re-reraise here whatever we've thrown in it
+                        # this traceback is useless, so we silent it
+                        pass
                 finally:
                     if self._links and self._notifier is None:
                         self._notifier = core.active_event(self._notify_links)
