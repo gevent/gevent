@@ -335,7 +335,7 @@ class Greenlet(greenlet):
             raise Timeout
 
     def join(self, timeout=None):
-        """Wait until the greenlet dies or *timeout* expires.
+        """Wait until the greenlet finishes or *timeout* expires.
         Return ``None`` regardless.
         """
         if self.ready():
@@ -427,7 +427,7 @@ class Greenlet(greenlet):
         if receiver is None or receiver is current:
             receiver = GreenletLink(current)
             if self.ready():
-                # special case : linking to current greenlet when link is ready
+                # special case : linking to current greenlet when the result is ready
                 # raise LinkedExited immediatelly
                 receiver(self)
                 return
