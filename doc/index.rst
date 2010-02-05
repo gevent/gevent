@@ -38,9 +38,9 @@ INSERT-contentstable.html
 get gevent
 ----------
 
-The latest release `0.11.2`_ is available on the `Python Package Index.`_
+The latest release `0.12.0`_ is available on the `Python Package Index.`_
 
-.. _0.11.2: changelog.html
+.. _0.12.0: changelog.html
 .. _Python Package Index.: http://pypi.python.org/pypi/gevent
 
 The current development version is available in a Mercurial repository:

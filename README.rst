@@ -37,7 +37,7 @@ Read the documentation online at http://www.gevent.org
 get gevent
 ----------
 
-The latest release (0.11.2) is available on the `Python Package Index.`_
+The latest release (0.12.0) is available on the `Python Package Index.`_
 
 .. _Python Package Index.: http://pypi.python.org/pypi/gevent
 
