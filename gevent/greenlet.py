@@ -465,7 +465,7 @@ class Greenlet(greenlet):
                     try:
                         sys.stderr.write('Failed to notify link %s of %r\n\n' % (getfuncname(link), self))
                     except:
-                        pass
+                        traceback.print_exc()
         finally:
             self._notifier = None
 
