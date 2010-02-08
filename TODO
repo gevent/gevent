@@ -2,10 +2,9 @@
  - move Semaphore and BoundedSemaphore from coros to another module; deprecate coros
  - fix BoundedSemaphore to behave like standard threading's BoundedSemaphore behaves:
    raise ValueError if upper limit is reached instead of blocking.
- - "raise Timeout" means customizing exception with Timeout(exception=RuntimeError) no longer works
+ - "raise Timeout" used in some places means customizing exception with Timeout(exception=RuntimeError) no longer works
  - grep for XXX and QQQ
  - classes in gevent.core should not crash even if improperly used
- - do not include the standard tests in greentest/; run the standard tests unchanged through monkey patcher
  - initialize libevent in Hub.__init__()
    - support multiple event_bases
    - discourage direct use of gevent.core; put the needed methods back on Hub (timer, read_event, write_event)
@@ -20,4 +19,4 @@
 1.1
  - use libevent 2.x's bufferevent for socket implementation (or for its _fileobject)
  - add threadsafe Queue that can be used to interact with other event loops (e.g. pygtk)
-
+ - wrap libevent's http client code
