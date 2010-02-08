@@ -444,6 +444,8 @@ class Greenlet(greenlet):
         """Remove the receiver set by :meth:`link` or :meth:`rawlink`"""
         if receiver is None:
             receiver = getcurrent()
+        # discarding greenlets when we have GreenletLink instances in _links works, because
+        # a GreenletLink instance pretends to be a greenlet, hash-wise and eq-wise
         self._links.discard(receiver)
 
     def link_value(self, receiver=None, GreenletLink=SuccessGreenletLink, SpawnedLink=SuccessSpawnedLink):
