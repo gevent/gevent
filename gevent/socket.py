@@ -133,7 +133,7 @@ def _wait_helper(ev, evtype):
         current.switch(ev)
 
 
-def wait_read(fileno, timeout=-1, timeout_exc=_socket.timeout):
+def wait_read(fileno, timeout=-1, timeout_exc=_socket.timeout('timed out')):
     evt = core.read_event(fileno, _wait_helper, timeout, (getcurrent(), timeout_exc))
     try:
         switch_result = get_hub().switch()
@@ -142,7 +142,7 @@ def wait_read(fileno, timeout=-1, timeout_exc=_socket.timeout):
         evt.cancel()
 
 
-def wait_write(fileno, timeout=-1, timeout_exc=_socket.timeout):
+def wait_write(fileno, timeout=-1, timeout_exc=_socket.timeout('timed out')):
     evt = core.write_event(fileno, _wait_helper, timeout, (getcurrent(), timeout_exc))
     try:
         switch_result = get_hub().switch()
@@ -151,7 +151,7 @@ def wait_write(fileno, timeout=-1, timeout_exc=_socket.timeout):
         evt.cancel()
 
 
-def wait_readwrite(fileno, timeout=-1, timeout_exc=timeout):
+def wait_readwrite(fileno, timeout=-1, timeout_exc=_socket.timeout('timed out')):
     evt = core.readwrite_event(fileno, _wait_helper, timeout, (getcurrent(), timeout_exc))
     try:
         switch_result = get_hub().switch()
@@ -296,7 +296,7 @@ class socket(object):
                 elif (result in (EWOULDBLOCK, EINPROGRESS, EALREADY)) or (result == EINVAL and is_windows):
                     timeleft = end - time.time()
                     if timeleft <= 0:
-                        raise timeout
+                        raise timeout('timed out')
                     wait_readwrite(sock.fileno(), timeout=timeleft)
                 else:
                     raise error(result, strerror(result))
@@ -396,7 +396,7 @@ class socket(object):
                     break
                 timeleft = end - time.time()
                 if timeleft <= 0:
-                    raise timeout
+                    raise timeout('timed out')
 
     def sendto(self, *args):
         try:
