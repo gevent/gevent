@@ -533,7 +533,11 @@ def tcp_server(listensocket, server, *args, **kw):
     finally:
         listensocket.close()
 
-_GLOBAL_DEFAULT_TIMEOUT = object()
+
+try:
+    _GLOBAL_DEFAULT_TIMEOUT = __socket__._GLOBAL_DEFAULT_TIMEOUT
+except AttributeError:
+    _GLOBAL_DEFAULT_TIMEOUT = object()
 
 def create_connection(address, timeout=_GLOBAL_DEFAULT_TIMEOUT):
     """Connect to *address* and return the socket object.
