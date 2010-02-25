@@ -29,8 +29,9 @@ is a shortcut for
 import sys
 import os
 import re
+import traceback
 from distutils.core import Extension, setup
-from os.path import join, exists, isdir
+from os.path import join, exists, isdir, abspath, basename
 try:
     import ctypes
 except ImportError:
@@ -58,6 +59,39 @@ if sys.platform == 'darwin':
     libevent_shared_name = 'libevent.dylib'
 elif sys.platform == 'win32':
     libevent_shared_name = 'libevent.dll'
+
+
+# hack: create a symlink from build/../core.so to gevent/core.so to prevent "ImportError: cannot import name core" failures
+cmdclass = {}
+try:
+    from distutils.command import build_ext
+    class my_build_ext(build_ext.build_ext):
+        def build_extension(self, ext):
+            result = build_ext.build_ext.build_extension(self, ext)
+            try:
+                fullname = self.get_ext_fullname(ext.name)
+                modpath = fullname.split('.')
+                filename = self.get_ext_filename(ext.name)
+                filename = os.path.split(filename)[-1]
+                if not self.inplace:
+                    filename = os.path.join(*modpath[:-1] + [filename])
+                    path_to_build_core_so = abspath(os.path.join(self.build_lib, filename))
+                    path_to_core_so = abspath(join('gevent', basename(path_to_build_core_so)))
+                    if path_to_build_core_so != path_to_core_so:
+                        print 'Linking %s to %s' % (path_to_build_core_so, path_to_core_so)
+                        if os.path.exists(path_to_core_so):
+                            os.unlink(path_to_core_so)
+                        if hasattr(os, 'symlink'):
+                            os.symlink(path_to_build_core_so, path_to_core_so)
+                        else:
+                            import shutil
+                            shutil.copyfile(path_to_build_core_so, path_to_core_so)
+            except Exception:
+                traceback.print_exc()
+            return result
+    cmdclass = {'build_ext': my_build_ext}
+except Exception:
+    traceback.print_exc()
 
 
 def check_dir(path, must_exist):
@@ -286,6 +320,7 @@ if __name__ == '__main__':
         url='http://www.gevent.org/',
         packages=['gevent'],
         ext_modules=[gevent_core],
+        cmdclass=cmdclass,
         classifiers=[
         "License :: OSI Approved :: MIT License",
         "Programming Language :: Python",
