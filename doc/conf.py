@@ -11,7 +11,20 @@
 # All configuration values have a default; values that are commented out
 # serve to show the default.
 
-import sys, os
+import sys, os, traceback
+
+sys.path.append('.') # for mysphinxext
+
+try:
+    if hasattr(os, 'symlink'):
+        os.symlink('../changelog.rst', 'changelog.rst')
+    else:
+        import shutil
+        shutil.copyfile('../changelog.rst', 'changelog.rst')
+except Exception, ex:
+    if 'File exists' not in str(ex):
+        traceback.print_exc()
+
 
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
