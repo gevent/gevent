@@ -48,7 +48,7 @@ LIBEVENT_MAJOR = None             # 1 or 2, specified by -1 or -2
 VERBOSE = '-v' in sys.argv
 static = sys.platform == 'win32'  # set to True with --static; set to False with --dynamic
 extra_compile_args = []
-sources=['gevent/core.c']
+sources = ['gevent/core.c']
 libraries = []
 extra_objects = []
 
