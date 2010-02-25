@@ -4,6 +4,17 @@ Changelog
 .. currentmodule:: gevent
 
 
+Version 0.12.1
+--------------
+
+* Removed a symlink from the distribution (that causes pip to fail). Thanks to **bkc** for reporting it.
+* setup.py: automatically create symlink from ``build/lib.../gevent/core.so`` to ``gevent/core.so``.
+* :mod:`gevent.socket`: Improved compatibility with stdlib's socket:
+
+  - Fixed :class:`socket <gevent.socket.socket>` to raise ``timeout("timed out")`` rather than simply ``timeout``.
+  - Imported ``_GLOBAL_DEFAULT_TIMEOUT`` from standard :mod:`socket` module instead of creating a new object.
+
+
 Version 0.12.0
 --------------
 
