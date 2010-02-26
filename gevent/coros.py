@@ -67,7 +67,7 @@ class Semaphore(object):
     def release(self, blocking=True):
         # `blocking' parameter is for consistency with BoundedSemaphore and is ignored
         self.counter += 1
-        if self._waiters:
+        if self._waiters and self.counter > 0:
             active_event(self._do_acquire)
         return True
 
