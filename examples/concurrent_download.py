@@ -7,7 +7,9 @@ urls = ['http://www.google.com', 'http://www.yandex.ru', 'http://www.python.org'
 
 import gevent
 from gevent import monkey
-monkey.patch_socket() # patches regular socket to yield to other greenlets
+
+# patches stdlib (including socket and ssl modules) to cooperate with other greenlets
+monkey.patch_all()
 
 import urllib2
 
