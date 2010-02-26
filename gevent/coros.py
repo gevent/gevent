@@ -72,7 +72,7 @@ class Semaphore(object):
         return True
 
     def _do_acquire(self):
-        if self._waiters and self.counter>0:
+        if self._waiters and self.counter > 0:
             waiter = self._waiters.pop()
             waiter.switch()
 
