@@ -62,7 +62,7 @@ that bypass libevent event loop.
 
 .. currentmodule:: gevent.hub
 
-Unlike other network libraries and similar to eventlet_, gevent starts
+Unlike other network libraries and similar to eventlet, gevent starts
 the event loop implicitly in a dedicated greenlet. There's no ``reactor`` that
 you must ``run()`` or ``dispatch()`` function to call. When a function from
 gevent API wants to block, it obtains the :class:`Hub` - a greenlet
@@ -76,6 +76,3 @@ it's not a problem as most of the library takes care not to run user-supplied
 callbacks in the :class:`Hub <hub.Hub>`. The exception is :meth:`Greenlet.rawlink`
 and :meth:`Event.rawlink <event.Event.rawlink>` methods as well as everything
 in the :mod:`gevent.core` module.
-
-.. _eventlet: http://eventlet.net
-

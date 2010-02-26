@@ -329,4 +329,4 @@ Besides having less bugs and less code to care about the goals of the fork are:
 * piggy-back on libevent as much as possible (use its http and dns code)
 * use the interfaces and conventions from the standard Python library where possible
 
-.. _eventlet: http://eventlet.net
+.. _eventlet: http://bitbucket.org/denis/eventlet
