@@ -11,19 +11,17 @@
 # All configuration values have a default; values that are commented out
 # serve to show the default.
 
-import sys, os, traceback
+import sys, os
 
 sys.path.append('.') # for mysphinxext
 
-try:
+if not os.path.exists('changelog.rst') and os.path.exists('../changelog.rst'):
+    print 'Linking ../changelog.rst to changelog.rst'
     if hasattr(os, 'symlink'):
         os.symlink('../changelog.rst', 'changelog.rst')
     else:
         import shutil
         shutil.copyfile('../changelog.rst', 'changelog.rst')
-except Exception, ex:
-    if 'File exists' not in str(ex):
-        traceback.print_exc()
 
 
 # If extensions (or modules to document with autodoc) are in another directory,
@@ -244,49 +242,4 @@ class MyClassDocumenter(ClassDocumenter):
         return members_check_module, members
 
 autodoc.ClassDocumenter = MyClassDocumenter
-
-
-# overload StandaloneHTMLBuilder to take custom_page_templates into account
-custom_page_templates = {'index': 'index.html'}
-
-from sphinx.builders.html import StandaloneHTMLBuilder
-
-class MyStandaloneHTMLBuilder(StandaloneHTMLBuilder):
-
-    def handle_page(self, pagename, addctx, templatename='page.html',
-                    outfilename=None, event_arg=None):
-        templatename = custom_page_templates.get(pagename, templatename)
-        return super(MyStandaloneHTMLBuilder, self).handle_page(pagename=pagename, addctx=addctx,
-                                                                templatename=templatename, outfilename=outfilename,
-                                                                event_arg=event_arg)
-
-from sphinx.builders import html
-html.StandaloneHTMLBuilder = MyStandaloneHTMLBuilder
-
-# link to jquery.js hosted at ajax.googleapis.com
-
-index = html.StandaloneHTMLBuilder.script_files.index('_static/jquery.js')
-html.StandaloneHTMLBuilder.script_files[index] = ('http://ajax.googleapis.com/ajax/libs/jquery/1.3.2/jquery.min.js')
-
-
-# don't add permalinks on index.html
-disable_permalinks = ['index']
-disable_permalinks = [os.path.abspath(x + source_suffix) for x in disable_permalinks]
-
-from sphinx.writers.html import HTMLTranslator
-orig_depart_title = HTMLTranslator.depart_title
-
-def HTMLTranslator_depart_title(self, node):
-    if node.source in disable_permalinks:
-        stored_add_permalinks = self.add_permalinks
-        self.add_permalinks = False
-    else:
-        stored_add_permalinks = None
-    try:
-        return orig_depart_title(self, node)
-    finally:
-        if stored_add_permalinks is not None:
-            self.add_permalinks = stored_add_permalinks
-
-HTMLTranslator.depart_title = HTMLTranslator_depart_title
 
