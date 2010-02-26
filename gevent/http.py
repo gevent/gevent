@@ -53,6 +53,7 @@ class HTTPServer(object):
             pass
         sock.bind(address)
         sock.listen(backlog)
+        sock.setblocking(False)
         return sock
 
     def stop(self, timeout=0):
