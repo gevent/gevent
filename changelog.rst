@@ -7,7 +7,7 @@ Changelog
 Version 0.12.1
 --------------
 
-* Removed a symlink from the distribution (that causes pip to fail). Thanks to **bkc** for reporting it.
+* Removed a symlink from the distribution (that causes pip to fail). Thanks to **Brad Clements** for reporting it.
 * setup.py: automatically create symlink from ``build/lib.../gevent/core.so`` to ``gevent/core.so``.
 * :mod:`gevent.socket`: Improved compatibility with stdlib's socket:
 
