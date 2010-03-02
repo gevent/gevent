@@ -3,6 +3,11 @@ Changelog
 
 .. currentmodule:: gevent
 
+Version 0.12.2
+--------------
+
+* Fixed http server to put the listening socket into a non-blocking mode. Contributed by **Ralf Schmitt**.
+
 
 Version 0.12.1
 --------------
