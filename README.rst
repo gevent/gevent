@@ -61,7 +61,7 @@ gevent runs on Python 2.4 and higher.
 similar projects
 ----------------
 
-* `Eventlet <http://eventlet.net/>`_
+* `Eventlet <http://blog.gevent.org/2010/02/27/why-gevent/>`_
 * `Concurrence <http://opensource.hyves.org/concurrence/>`_
 * `StacklessSocket <http://code.google.com/p/stacklessexamples/wiki/StacklessNetworking>`_
 
