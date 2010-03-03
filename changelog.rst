@@ -103,7 +103,7 @@ Version 0.12.0
   - Removed ``__getattr__`` from socket class.
   - Fixed :func:`monkey.patch_socket` not to fail if :func:`socket.ssl` is not present in :mod:`gevent.socket`.
   - Added :func:`monkey.patch_ssl`.
-  - Added *aggressive* to :func:`monkey.patch_all`.
+  - Added *aggressive* argument to :func:`monkey.patch_all`.
   - Tests from stdlib no longer included in greentest package. Instead, there are number of stubs
     that import those tests from ``test`` package directly and run them in monkey patched environment.
   - Added examples/process.py by **Marcus Cavanaugh**.
@@ -245,10 +245,10 @@ test case for WSGI double content-length header bug.
 Version 0.9.3
 -------------
 
-* Fixed all known bugs in the :mod:`gevent.queue` module made it 2.4-compatible.
+* Fixed all known bugs in the :mod:`gevent.queue` module and made it 2.4-compatible.
   :class:`LifoQueue` and :class:`PriorityQueue` are implemented as well.
   :mod:`gevent.queue` will deprecate both ``coros.Queue`` and ``coros.Channel``.
-* Fixed to :class:`Timeout` to raise itself by default. ``TimeoutError`` is gone.
+* Fixed :class:`Timeout` to raise itself by default. ``TimeoutError`` is gone.
   Silent timeout is now created by passing ``False`` instead of ``None``.
 * Fixed bug in :func:`gevent.select.select` where it could silent the wrong timeout.
 * :func:`spawn` and :func:`spawn_later` now avoid creating a closure and this decreases spawning
@@ -299,7 +299,7 @@ Version 0.9.2
 Version 0.9.1
 -------------
 
-* Fixed compilation with gevent libevent-1.3 (Thanks to **Litao Wei** for reporting the problem.)
+* Fixed compilation with libevent-1.3 (Thanks to **Litao Wei** for reporting the problem.)
 * Fixed :class:`Hub` to recover silently after ``event_dispatch()`` failures (I've seen this
   happen after ``fork`` even though ``event_reinit()`` is called as necessary). The end result is that :func:`fork`
   now works more reliably, as detected by ``test_socketserver.py`` - it used to fail occasionally, now it does not.
@@ -325,9 +325,10 @@ Compared to eventlet, this version has a much simpler API and implementation and
 severe bugs fixed, namely
 
 * full duplex in sockets, i.e. ``read()`` and ``write()`` on the same fd do not cancel one another
-* :meth:`GreenSocket.close <socket.socket.close>` does not hang as it could with eventlet
-  (there's a test in my repo of eventlet that reproduces both of them:
-  http://bitbucket.org/denis/eventlet/src/tip/greentest/test__socket.py)
+* :meth:`GreenSocket.close <socket.socket.close>` does not hang as it could with eventlet.
+
+There's a test in my repo of eventlet that reproduces both of them:
+http://bitbucket.org/denis/eventlet/src/tip/greentest/test__socket.py
 
 Besides having less bugs and less code to care about the goals of the fork are:
 
