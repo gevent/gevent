@@ -13,7 +13,9 @@ class HTTPServer(object):
     spawn = Greenlet.spawn # set to None to avoid spawning at all
     backlog = 256
 
-    def __init__(self, handle=None, spawn='default'):
+    def __init__(self, handle=None, spawn='default', backlog=None):
+        if backlog is not None:
+            self.backlog = backlog
         self.listeners = []
         self._stopped_event = Event()
         self._no_connections_event = Event()
