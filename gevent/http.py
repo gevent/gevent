@@ -11,7 +11,7 @@ import _socket as socket
 class HTTPServer(object):
 
     spawn = Greenlet.spawn # set to None to avoid spawning at all
-    backlog = 5
+    backlog = 256
 
     def __init__(self, handle=None, spawn='default'):
         self.listeners = []
