@@ -191,8 +191,6 @@ cdef class http_request:
     property remote:
 
         def __get__(self):
-            if not self.__obj:
-                raise HttpRequestDeleted
             return (self.remote_host, self.remote_port)
 
     property kind:
@@ -263,8 +261,6 @@ cdef class http_request:
     property response:
 
         def __get__(self):
-            if not self.__obj:
-                raise HttpRequestDeleted
             return (self.response_code, self.response_code_line)
 
     property chunked:
