@@ -141,16 +141,22 @@ cdef class http_request:
         return res
 
     def __str__(self):
-        if self.__obj:
-            return '<%s %s>' % (self.__class__.__name__, self._format())
-        else:
-            return '<%s deleted>' % self.__class__.__name__
+        try:
+            info = self._format()
+        except HttpRequestDeleted:
+            info = 'deleted'
+        except Exception, ex:
+            info = str(ex) or repr(ex) or '<Error>'
+        return '<%s %s>' % (self.__class__.__name__, info)
 
     def __repr__(self):
-        if self.__obj:
-            return '<%s _obj=0x%x %s>' % (self.__class__.__name__, self._obj, self._format())
-        else:
-            return '<%s _obj=0x%x>' % (self.__class__.__name__, self._obj)
+        try:
+            info = ' ' + self._format()
+        except HttpRequestDeleted:
+            info = ''
+        except Exception, ex:
+            info = ' ' + (str(ex) or repr(ex) or '<Error>')
+        return '<%s _obj=0x%x %s>' % (self.__class__.__name__, self._obj, info)
 
     def get_input_headers(self):
         if not self.__obj:
@@ -408,16 +414,18 @@ cdef class http_connection:
             return False
 
     def __str__(self):
-        if self.__obj:
-            return '<%s %s>' % (self.__class__.__name__, self.peer)
-        else:
-            return '<%s deleted>' % (self.__class__.__name__)
+        try:
+            peer = self.peer
+        except HttpConnectionDeleted:
+            peer = 'deleted'
+        return '<%s %s>' % (self.__class__.__name__, peer)
 
     def __repr__(self):
-        if self.__obj:
-            return '<%s _obj=0x%x %s>' % (self.__class__.__name__, self._obj, self.peer)
-        else:
-            return '<%s _obj=0x%x>' % (self.__class__.__name__, self._obj)
+        try:
+            peer = ' %s' % (self.peer, )
+        except HttpConnectionDeleted:
+            peer = ''
+        return '<%s _obj=0x%x%s>' % (self.__class__.__name__, self._obj, peer)
 
     property peer:
 
