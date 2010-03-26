@@ -93,6 +93,12 @@ cdef extern from "libevent.h":
     int EVLOOP_NONBLOCK
     char* _EVENT_VERSION
 
+    int EV_TIMEOUT
+    int EV_READ
+    int EV_WRITE
+    int EV_SIGNAL
+    int EV_PERSIST
+
 cdef extern from "string.h":
     char* strerror(int errnum)
 
@@ -122,12 +128,6 @@ ELSE:
 cdef extern from "libevent.h":
     event_base* current_base
 
-
-EV_TIMEOUT = 0x01
-EV_READ    = 0x02
-EV_WRITE   = 0x04
-EV_SIGNAL  = 0x08
-EV_PERSIST = 0x10
 
 cdef void __event_handler(int fd, short evtype, void *arg) with gil:
     cdef event ev = <event>arg

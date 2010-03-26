@@ -29,6 +29,13 @@ __all__ = ['Greenlet',
            'reinit']
 
 
+from gevent import core
+core.EV_TIMEOUT = 0x01
+core.EV_READ    = 0x02
+core.EV_WRITE   = 0x04
+core.EV_SIGNAL  = 0x08
+core.EV_PERSIST = 0x10
+
 from gevent.core import reinit
 from gevent.greenlet import Greenlet, joinall, killall
 spawn = Greenlet.spawn
