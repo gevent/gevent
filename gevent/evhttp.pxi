@@ -503,12 +503,6 @@ cdef class http:
         if res:
             raise RuntimeError("evhttp_accept_socket(%s) returned %s" % (fd, res))
 
-    def start(cls, char* address='127.0.0.1', int port=80):
-        #cdef evhttp* obj = evhttp_start(address, port)
-        #if obj:
-        #    return cls(<size_t>obj)
-        raise RuntimeError('evhttp_start failed')
-
     def set_cb(self, char* path, object callback):
         cdef res = EVHTTP_SET_CB(self.__obj, path, _http_cb_handler, <void *>callback)
         if res == 0:
