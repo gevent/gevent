@@ -58,17 +58,15 @@ cdef extern from "libevent.h":
     int       evhttp_bind_socket(evhttp *http, char* address, int port)
     int       evhttp_accept_socket(evhttp *http, int fd)
     void      evhttp_free(evhttp* http)
-    int       EVHTTP_SET_CB(evhttp *http, char *uri,
-                           evhttp_handler handler, void *arg)
-    void      evhttp_set_gencb(evhttp *http,
-                           evhttp_handler handler, void *arg)
+    int       EVHTTP_SET_CB(evhttp *http, char *uri, evhttp_handler handler, void *arg)
+    void      evhttp_set_gencb(evhttp *http, evhttp_handler handler, void *arg)
     void      evhttp_del_cb(evhttp *http, char *uri)
 
     # request
     ctypedef void (*evhttp_request_cb)(evhttp_request *r, void *arg)
 
     evhttp_request *evhttp_request_new(evhttp_request_cb reqcb, void *arg)
-    void            evhttp_request_free(evhttp_request *r)
+    void      evhttp_request_free(evhttp_request *r)
 
     void      evhttp_send_reply(evhttp_request *req, int status, char* reason, evbuffer* buf)
     void      evhttp_send_reply_start(evhttp_request *req, int status, char *reason)
@@ -363,13 +361,13 @@ cdef class http_request:
         """Return True if header was found and removed"""
         if not self.__obj:
             raise HttpRequestDeleted
-        return True if 0==evhttp_remove_header(self.__obj.input_headers, key) else False
+        return True if 0 == evhttp_remove_header(self.__obj.input_headers, key) else False
 
     def remove_output_header(self, char* key):
         """Return True if header was found and removed"""
         if not self.__obj:
             raise HttpRequestDeleted
-        return True if 0==evhttp_remove_header(self.__obj.output_headers, key) else False
+        return True if 0 == evhttp_remove_header(self.__obj.output_headers, key) else False
 
     def clear_input_headers(self):
         if not self.__obj:
