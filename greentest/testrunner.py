@@ -45,6 +45,7 @@ import sys
 import os
 import glob
 import re
+import traceback
 from unittest import _TextTestResult, defaultTestLoader, TextTestRunner
 import platform
 
@@ -273,56 +274,67 @@ def run_subprocess(arg, options):
     return retcode[0], output
 
 
+def spawn_subprocess(arg, options):
+    success = False
+    if options.db:
+        module_name = arg
+        if module_name.endswith('.py'):
+            module_name = module_name[:-3]
+        from datetime import datetime
+        params = {'started_at': datetime.now(),
+                  'runid': options.runid,
+                  'test': module_name,
+                  'python': '%s.%s.%s' % sys.version_info[:3],
+                  'changeset': get_changeset(),
+                  'libevent_version': get_libevent_version(),
+                  'libevent_method': get_libevent_method(),
+                  'uname': options.uname,
+                  'retcode': 'TIMEOUT'}
+        row_id = store_record(options.db, 'test', params)
+        params['id'] = row_id
+    retcode, output = run_subprocess(arg, options)
+    if len(output) > OUTPUT_LIMIT:
+        output = output[:OUTPUT_LIMIT] + '<AbridgedOutputWarning>'
+    if retcode:
+        sys.stdout.write(output)
+        print '%s failed with code %s' % (arg, retcode)
+    elif retcode == 0:
+        if options.verbosity == 1: # // if verbosity is 2 then output is always printed by run_subprocess
+            sys.stdout.write(output)
+        print '%s passed' % arg
+        success = True
+    else:
+        print '%s timed out' % arg
+    if options.db:
+        params['output'] = output
+        params['retcode'] = retcode
+        store_record(options.db, 'test', params)
+    return success
+
+
 def spawn_subprocesses(options, args):
+    success = True
     if not args:
         args = glob.glob('test_*.py')
         args.remove('test_support.py')
-    fail = False
-    uname = platform.uname()[0]
+    options.uname = platform.uname()[0]
     for arg in args:
-        if options.db:
-            module_name = arg
-            if module_name.endswith('.py'):
-                module_name = module_name[:-3]
-            from datetime import datetime
-            params = {'started_at': datetime.now(),
-                      'runid': options.runid,
-                      'test': module_name,
-                      'python': '%s.%s.%s' % sys.version_info[:3],
-                      'changeset': get_changeset(),
-                      'libevent_version': get_libevent_version(),
-                      'libevent_method': get_libevent_method(),
-                      'uname': uname,
-                      'retcode': 'TIMEOUT'}
-            row_id = store_record(options.db, 'test', params)
-            params['id'] = row_id
-        retcode, output = run_subprocess(arg, options)
-        if len(output) > OUTPUT_LIMIT:
-            output = output[:OUTPUT_LIMIT] + '<AbridgedOutputWarning>'
-        if retcode:
-            sys.stdout.write(output)
-            print '%s failed with code %s' % (arg, retcode)
-            fail = True
-        elif retcode == 0:
-            if options.verbosity == 1: # // if verbosity is 2 then output is always printed by run_subprocess
-                sys.stdout.write(output)
-            print '%s passed' % arg
-        else:
-            print '%s timed out' % arg
-            fail = True
-        if options.db:
-            params['output'] = output
-            params['retcode'] = retcode
-            store_record(options.db, 'test', params)
+        try:
+            success = spawn_subprocess(arg, options) and success
+        except Exception:
+            try:
+                traceback.print_exc()
+            except Exception:
+                pass
     if options.db:
         try:
             print '-' * 80
             if print_stats(options):
-                fail = True
+                success = False
         except sqlite3.OperationalError, ex:
             print ex
         print 'To view stats again for this run, use %s --stats --runid %s --db %s' % (sys.argv[0], options.runid, options.db)
-    if fail:
+    if not success:
         sys.exit(1)
 
 
