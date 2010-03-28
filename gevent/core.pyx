@@ -132,7 +132,6 @@ cdef extern from "libevent.h":
 cdef void __event_handler(int fd, short evtype, void *arg) with gil:
     cdef event ev = <event>arg
     try:
-        assert ev.fd == fd, (ev.fd, fd)
         ev._callback(ev, evtype)
     except:
         traceback.print_exc()
