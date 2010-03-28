@@ -138,7 +138,7 @@ cdef void __event_handler(int fd, short evtype, void *arg) with gil:
         try:
             sys.stderr.write('Failed to execute callback for %s\n\n' % (ev, ))
         except:
-            pass
+            traceback.print_exc()
     finally:
         if not event_pending(&ev.ev, EV_READ|EV_WRITE|EV_SIGNAL|EV_TIMEOUT, NULL):
             Py_DECREF(ev)
@@ -318,7 +318,7 @@ cdef void __simple_handler(int fd, short evtype, void *arg) with gil:
         try:
             sys.stderr.write('Failed to execute callback for %s\n\n' % (ev, ))
         except:
-            pass
+            traceback.print_exc()
     finally:
         if not event_pending(&ev.ev, EV_READ|EV_WRITE|EV_SIGNAL|EV_TIMEOUT, NULL):
             Py_DECREF(ev)
