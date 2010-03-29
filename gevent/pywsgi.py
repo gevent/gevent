@@ -121,7 +121,7 @@ class Input(object):
             return self._chunked_read(self.rfile, length)
         return self._do_read(self.rfile.read, length)
 
-    def readline(self):
+    def readline(self, size=None):
         return self._do_read(self.rfile.readline)
 
     def readlines(self, hint=None):
