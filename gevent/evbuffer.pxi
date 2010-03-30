@@ -55,11 +55,18 @@ cdef class buffer:
             return ''
         cdef char* data = <char*>evbuffer_pullup(self.__obj, size)
         if not data:
-            raise RuntimeError('evbuffer_pullup(%x, %s) returned NULL' % (self._obj, size))
+            try:
+                sys.stderr.write('evbuffer_pullup(%x, %s) returned NULL\n' % (self._obj, size))
+            except:
+                traceback.print_exc()
+            return ''
         cdef object result = PyString_FromStringAndSize(data, size)
-        cdef res = EVBUFFER_DRAIN(self.__obj, size)
+        cdef int res = EVBUFFER_DRAIN(self.__obj, size)
         if res:
-            raise RuntimeError('evbuffer_drain(%x, %s) returned %s' % (self._obj, size, res))
+            try:
+                sys.stderr.write('evbuffer_drain(%x, %s) returned %s\n' % (self._obj, size, res))
+            except:
+                traceback.print_exc()
         return result
 
     def readline(self):
