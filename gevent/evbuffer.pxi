@@ -1,5 +1,8 @@
 __all__ += ['buffer']
 
+cdef extern from "string.h":
+    void *memchr(void *s, int c, size_t n)
+    
 cdef extern from "libevent.h":
     struct evbuffer:
         char *buf "buffer"
@@ -69,11 +72,29 @@ cdef class buffer:
                 traceback.print_exc()
         return result
 
-    def readline(self):
-        cdef char* res = evbuffer_readline(self.__obj)
+    def readline(self, size=None):
+        cdef char* data = <char*>evbuffer_pullup(self.__obj, -1)
+        if not data:
+            try:
+                sys.stderr.write('evbuffer_pullup(%x, -1) returned NULL\n' % (self._obj, ))
+            except:
+                traceback.print_exc()
+            return ''
+
+        cdef long length = evbuffer_get_length(self.__obj)
+        cdef char *nl = <char*> memchr(<void*>data, 10, length) # search for "\n"
+        
+        if nl:
+            length = nl - data + 1
+        
+        cdef object result = PyString_FromStringAndSize(data, length)
+        cdef int res = EVBUFFER_DRAIN(self.__obj, length)
         if res:
-            return res
-        return ''
+            try:
+                sys.stderr.write('evbuffer_drain(%x, %s) returned %s\n' % (self._obj, length, res))
+            except:
+                traceback.print_exc()
+        return result
 
     def readlines(self, hint=-1):
         return list(self.__iter__())
