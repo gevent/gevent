@@ -109,9 +109,14 @@ class TestCase(greentest.TestCase):
         from gevent import pywsgi
         return pywsgi
 
+    validator = staticmethod(validator)
+
     def setUp(self):
         greentest.TestCase.setUp(self)
-        self.server = self.get_wsgi_module().WSGIServer(('127.0.0.1', 0), validator(self.application))
+        application = self.application
+        if self.validator is not None:
+            application = self.validator(application)
+        self.server = self.get_wsgi_module().WSGIServer(('127.0.0.1', 0), application)
         self.server.start()
         self.port = self.server.server_port
 
