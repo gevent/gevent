@@ -388,42 +388,33 @@ class TestUseWrite(TestCase):
 class TestHttps(TestCase):
 
     def setUp(self):
-        pass
+        certificate_file = os.path.join(os.path.dirname(__file__), 'test_server.crt')
+        private_key_file = os.path.join(os.path.dirname(__file__), 'test_server.key')
+
+        sock = socket.socket()
+        socket.bind_and_listen(sock, ('', 4201))
+        self.sock = socket.ssl(sock, private_key_file, certificate_file)
+
+        self.g = gevent.spawn(self.get_wsgi_module().server, self.sock, validator(self.application))
 
     def tearDown(self):
-        pass
+        self.g.kill(block=True)
+
+    def urlopen(self, *args, **kwargs):
+        req = HTTPRequest("https://localhost:4201/foo", *args, **kwargs)
+        return urllib2.urlopen(req)
 
     def application(self, environ, start_response):
-        start_response('200 OK', {})
+        start_response('200 OK', [('Content-Type', 'text/plain')])
         return [environ['wsgi.input'].read()]
 
     def test_012_ssl_server(self):
-        certificate_file = os.path.join(os.path.dirname(__file__), 'test_server.crt')
-        private_key_file = os.path.join(os.path.dirname(__file__), 'test_server.key')
-
-        sock = socket.ssl_listener(('', 4201), private_key_file, certificate_file)
-
-        g = gevent.spawn(self.get_wsgi_module().server, sock, validator(self.application))
-        try:
-            req = HTTPRequest("https://localhost:4201/foo", method="POST", data='abc')
-            f = urllib2.urlopen(req)
-            result = f.read()
-            self.assertEquals(result, 'abc')
-        finally:
-            g.kill(block=True)
+        result = self.urlopen(method="POST", data='abc').read()
+        self.assertEquals(result, 'abc')
 
     def test_013_empty_return(self):
-        certificate_file = os.path.join(os.path.dirname(__file__), 'test_server.crt')
-        private_key_file = os.path.join(os.path.dirname(__file__), 'test_server.key')
-        sock = socket.ssl_listener(('', 4202), private_key_file, certificate_file)
-        g = gevent.spawn(self.get_wsgi_module().server, sock, validator(self.application))
-        try:
-            req = HTTPRequest("https://localhost:4202/foo")
-            f = urllib2.urlopen(req)
-            result = f.read()
-            self.assertEquals(result, '')
-        finally:
-            g.kill(block=True)
+        result = self.urlopen().read()
+        self.assertEquals(result, '')
 
 
 class TestInternational(TestCase):
