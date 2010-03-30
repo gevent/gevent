@@ -437,6 +437,32 @@ class TestInternational(TestCase):
         assert '200 PASSED' in result, result
 
 
+class TestInputReadline(TestCase):
+
+    validator = None
+
+    def application(self, environ, start_response):
+        input = environ['wsgi.input']
+        lines = []
+        while True:
+            line = input.readline()
+            if not line:
+                break
+            lines.append(repr(line) + ' ')
+        start_response('200 hello', [])
+        return lines
+
+    def test(self):
+        fd = self.connect().makefile()
+        content = 'hello\n\nworld\n123'
+        fd.write('POST / HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n'
+                 'Content-Length: %s\r\n\r\n%s' % (len(content), content))
+        fd.flush()
+        response_line, headers, body = read_http(fd)
+        self.assertEqual(response_line, 'HTTP/1.1 200 hello\r\n')
+        self.assertEqual(body, "'hello\\n' '\\n' 'world\\n' '123' ")
+
+
 class HTTPRequest(urllib2.Request):
     """Hack urllib2.Request to support PUT and DELETE methods."""
 
