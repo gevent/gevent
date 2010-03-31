@@ -119,7 +119,8 @@ except AttributeError:
 # XXX: implement blocking functions that are not yet implemented
 # XXX: add test that checks that socket.__all__ matches gevent.socket.__all__ on all supported platforms
 
-from gevent.hub import getcurrent, get_hub, spawn_raw
+from gevent.hub import getcurrent, get_hub
+from gevent.greenlet import Greenlet
 from gevent import core
 
 _ip4_re = re.compile('^[\d\.]+$')
@@ -525,7 +526,7 @@ def tcp_server(listensocket, server, *args, **kw):
         try:
             while True:
                 client_socket = listensocket.accept()
-                spawn_raw(server, client_socket, *args, **kw)
+                Greenlet.spawn(server, client_socket, *args, **kw)
         except error, e:
             # Broken pipe means it was shutdown
             if e[0] != 32:
