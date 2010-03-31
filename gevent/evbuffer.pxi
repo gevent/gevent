@@ -45,10 +45,14 @@ cdef class buffer:
     def detach(self):
         self.__obj = NULL
 
-    # cython does not implement generators
-    #def __iter__(self):
-    #    while len(self):
-    #        yield self.readline()
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        line = self.readline()
+        if not line:
+            raise StopIteration
+        return line
 
     def read(self, long size=-1):
         """Drain the first *size* bytes from the buffer (or what's left if there are less than *size* bytes).
