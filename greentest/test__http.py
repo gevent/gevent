@@ -156,6 +156,35 @@ class TestSendReplyLater(BoundTestCase):
         gevent.sleep(0.02)
 
 
+class TestDetach(BoundTestCase):
+    spawn = False
+
+    def handle(self, r):
+        input = r.input_buffer
+        output = r.output_buffer
+        assert r.input_buffer is input
+        assert r.output_buffer is output
+        assert input._obj
+        assert output._obj
+        r.detach()
+        assert not input._obj
+        assert not output._obj
+        assert input.read() == ''
+        assert output.read() == ''
+        self.handled = True
+        self.current.throw(Exception('test done'))
+
+    def test(self):
+        self.current = gevent.getcurrent()
+        try:
+            response = urlopen(self.url)
+        except Exception, ex:
+            assert str(ex) == 'test done', ex
+        finally:
+            self.current = None
+        assert self.handled
+
+
 # class TestSendReplyStartChunk(BoundTestCase):
 #     spawn = True
 #
