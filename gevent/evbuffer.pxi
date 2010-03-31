@@ -66,10 +66,6 @@ cdef class buffer:
             return ''
         cdef char* data = <char*>EVBUFFER_PULLUP(self.__obj, size)
         if not data:
-            try:
-                sys.stderr.write('evbuffer_pullup(0x%x, %s) returned NULL\n' % (self._obj, size))
-            except:
-                traceback.print_exc()
             return ''
         cdef object result = PyString_FromStringAndSize(data, size)
         cdef int res = EVBUFFER_DRAIN(self.__obj, size)
@@ -85,10 +81,6 @@ cdef class buffer:
             return ''
         cdef char* data = <char*>EVBUFFER_PULLUP(self.__obj, -1)
         if not data:
-            try:
-                sys.stderr.write('evbuffer_pullup(0x%x, -1) returned NULL\n' % (self._obj, ))
-            except:
-                traceback.print_exc()
             return ''
 
         cdef long length = evbuffer_get_length(self.__obj)
