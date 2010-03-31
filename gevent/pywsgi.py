@@ -272,9 +272,15 @@ class HttpProtocol(BaseHTTPServer.BaseHTTPRequestHandler):
                 self.close_connection = 1
                 exc = traceback.format_exc()
                 print exc
-                if not headers_set:
-                    start_response("500 Internal Server Error", [('Content-type', 'text/plain')])
-                    write(exc)
+                if not length[0]:
+                    self.wfile.writelines(
+                        ["HTTP/1.0 500 Internal Server Error\r\n",
+                         "Connection: close\r\n",
+                         "Content-type: text/plain\r\n",
+                         "Content-length: %s\r\n" % len(exc),
+                         "\r\n",
+                         exc])
+
         finally:
             if hasattr(result, 'close'):
                 result.close()
