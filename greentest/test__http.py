@@ -64,6 +64,25 @@ class BoundTestCase(greentest.TestCase):
             print 'WARNING: instead of ECONNREFUSED got IOError: %s' % e
 
 
+class TestClientCloses(BoundTestCase):
+    spawn = True
+
+    def handle(self, r):
+        self.log.append('reply')
+        gevent.sleep(0.1)
+        r.send_reply(200, 'OK', 'hello world')
+        # QQQ should I get an exception here because the connection is closed?
+        self.log.append('reply_done')
+
+    def test(self):
+        self.log = ['hey']
+        s = self.connect()
+        s.sendall('GET / HTTP/1.1\r\nHost: localhost\r\nContent-Length: 100\r\n\r\n')
+        s.close()
+        gevent.sleep(0.2)
+        self.assertEqual(self.log, ['hey', 'reply', 'reply_done'])
+
+
 class TestStop(BoundTestCase):
 
     # this triggers if connection_closed is not handled properly
