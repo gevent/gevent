@@ -33,11 +33,17 @@ cdef class buffer:
             return <size_t>(self.__obj)
 
     def __len__(self):
-        return evbuffer_get_length(self.__obj)
+        if self.__obj:
+            return evbuffer_get_length(self.__obj)
+        else:
+            return 0
 
     def __nonzero__(self):
         if self.__obj:
             return evbuffer_get_length(self.__obj)
+    
+    def detach(self):
+        self.__obj = NULL
 
     # cython does not implement generators
     #def __iter__(self):
@@ -49,6 +55,8 @@ cdef class buffer:
 
         If *size* is negative, drain the whole buffer.
         """
+        if not self.__obj:
+            return ''
         cdef long length = evbuffer_get_length(self.__obj)
         if size < 0:
             size = length
@@ -73,6 +81,8 @@ cdef class buffer:
         return result
 
     def readline(self, size=None):
+        if not self.__obj:
+            return ''
         cdef char* data = <char*>evbuffer_pullup(self.__obj, -1)
         if not data:
             try:
