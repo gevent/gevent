@@ -128,7 +128,12 @@ class Input(object):
         return self._do_read(self.rfile.readlines, hint)
 
     def __iter__(self):
-        return iter(self.read())
+        while 1:
+            line = self.readline()
+            if not line:
+                break
+            yield line
+            
 
 
 class HttpProtocol(BaseHTTPServer.BaseHTTPRequestHandler):
