@@ -110,6 +110,8 @@ cdef class http_request:
     # prefer gevent.http and gevent.wsgi which should be safe
 
     cdef evhttp_request* __obj
+    cdef object _input_buffer
+    cdef object _output_buffer
 
     def __init__(self, size_t _obj):
         self.__obj = <evhttp_request*>_obj
@@ -127,6 +129,10 @@ cdef class http_request:
 
     def detach(self):
         self.__obj = NULL
+        if self._input_buffer is not None:
+            self._input_buffer.detach()
+        if self._output_buffer is not None:
+            self._output_buffer.detach()
 
     def _format(self):
         args = (self.typestr, self.uri, self.major, self.minor,
@@ -279,16 +285,22 @@ cdef class http_request:
     property input_buffer:
 
         def __get__(self):
+            if self._input_buffer is not None:
+                return self._input_buffer
             if not self.__obj:
                 raise HttpRequestDeleted
-            return buffer(<size_t>self.__obj.input_buffer)
+            self._input_buffer = buffer(<size_t>self.__obj.input_buffer)
+            return self._input_buffer
 
     property output_buffer:
 
         def __get__(self):
+            if self._output_buffer is not None:
+                return self._output_buffer
             if not self.__obj:
                 raise HttpRequestDeleted
-            return buffer(<size_t>self.__obj.output_buffer)
+            self._output_buffer = buffer(<size_t>self.__obj.output_buffer)
+            return self._output_buffer
 
     def send_reply(self, int code, char *reason, object buf):
         if not self.__obj:
