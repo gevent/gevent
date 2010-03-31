@@ -122,7 +122,7 @@ class Input(object):
         return self._do_read(self.rfile.readline)
 
     def readlines(self, hint=None):
-        return self._do_read(self.rfile.readlines, hint)
+        return self.__iter__()
 
     def __iter__(self):
         while 1:
