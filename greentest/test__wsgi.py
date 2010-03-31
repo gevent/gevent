@@ -1,4 +1,3 @@
-import sys
 from gevent import wsgi
 from wsgi_test import *
 
