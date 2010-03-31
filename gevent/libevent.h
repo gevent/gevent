@@ -21,6 +21,7 @@
 
 #define EVBUFFER_DRAIN evbuffer_drain
 #define EVHTTP_SET_CB  evhttp_set_cb
+#define EVBUFFER_PULLUP(BUF, SIZE) evbuffer_pullup(BUF, SIZE)
 
 #elif USE_LIBEVENT_1
 
@@ -31,7 +32,7 @@
 /* compatibility */
 
 #define evbuffer_get_length EVBUFFER_LENGTH
-#define evbuffer_pullup(BUF, SIZE) EVBUFFER_DATA(BUF)
+#define EVBUFFER_PULLUP(BUF, SIZE) EVBUFFER_DATA(BUF)
 
 #define TAILQ_FIRST(head) ((head)->tqh_first)
 #define	TAILQ_NEXT(elm, field) ((elm)->field.tqe_next)

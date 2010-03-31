@@ -13,7 +13,7 @@ cdef extern from "libevent.h":
     char     *evbuffer_readline(evbuffer *buf)
     void      evbuffer_free(evbuffer *buf)
     size_t    evbuffer_get_length(evbuffer *buffer)
-    unsigned char *evbuffer_pullup(evbuffer *buf, size_t size)
+    unsigned char *EVBUFFER_PULLUP(evbuffer *buf, size_t size)
     int       EVBUFFER_DRAIN(evbuffer *buf, size_t len)
 
 
@@ -64,7 +64,7 @@ cdef class buffer:
             size = min(size, length)
         if size <= 0:
             return ''
-        cdef char* data = <char*>evbuffer_pullup(self.__obj, size)
+        cdef char* data = <char*>EVBUFFER_PULLUP(self.__obj, size)
         if not data:
             try:
                 sys.stderr.write('evbuffer_pullup(0x%x, %s) returned NULL\n' % (self._obj, size))
@@ -83,7 +83,7 @@ cdef class buffer:
     def readline(self, size=None):
         if not self.__obj:
             return ''
-        cdef char* data = <char*>evbuffer_pullup(self.__obj, -1)
+        cdef char* data = <char*>EVBUFFER_PULLUP(self.__obj, -1)
         if not data:
             try:
                 sys.stderr.write('evbuffer_pullup(0x%x, -1) returned NULL\n' % (self._obj, ))
