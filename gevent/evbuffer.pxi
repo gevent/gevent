@@ -59,7 +59,7 @@ cdef class buffer:
         cdef char* data = <char*>evbuffer_pullup(self.__obj, size)
         if not data:
             try:
-                sys.stderr.write('evbuffer_pullup(%x, %s) returned NULL\n' % (self._obj, size))
+                sys.stderr.write('evbuffer_pullup(0x%x, %s) returned NULL\n' % (self._obj, size))
             except:
                 traceback.print_exc()
             return ''
@@ -67,7 +67,7 @@ cdef class buffer:
         cdef int res = EVBUFFER_DRAIN(self.__obj, size)
         if res:
             try:
-                sys.stderr.write('evbuffer_drain(%x, %s) returned %s\n' % (self._obj, size, res))
+                sys.stderr.write('evbuffer_drain(0x%x, %s) returned %s\n' % (self._obj, size, res))
             except:
                 traceback.print_exc()
         return result
@@ -76,7 +76,7 @@ cdef class buffer:
         cdef char* data = <char*>evbuffer_pullup(self.__obj, -1)
         if not data:
             try:
-                sys.stderr.write('evbuffer_pullup(%x, -1) returned NULL\n' % (self._obj, ))
+                sys.stderr.write('evbuffer_pullup(0x%x, -1) returned NULL\n' % (self._obj, ))
             except:
                 traceback.print_exc()
             return ''
@@ -91,7 +91,7 @@ cdef class buffer:
         cdef int res = EVBUFFER_DRAIN(self.__obj, length)
         if res:
             try:
-                sys.stderr.write('evbuffer_drain(%x, %s) returned %s\n' % (self._obj, length, res))
+                sys.stderr.write('evbuffer_drain(0x%x, %s) returned %s\n' % (self._obj, length, res))
             except:
                 traceback.print_exc()
         return result
