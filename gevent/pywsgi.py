@@ -258,14 +258,24 @@ class HttpProtocol(BaseHTTPServer.BaseHTTPRequestHandler):
                 if not headers_sent and hasattr(result, '__len__') and \
                         'Content-Length' not in [h for h, v in headers_set[1]]:
                     headers_set[1].append(('Content-Length', str(sum(map(len, result)))))
+                    
                 towrite = []
+                towrite_size = 0
+                
                 for data in result:
+                    dlen = len(data)
+                    if dlen==0:
+                        continue
+                    towrite_size += dlen
                     towrite.append(data)
-                    if sum(map(len, towrite)) >= self.minimum_chunk_size:
+                    if towrite_size >= self.minimum_chunk_size:
                         write(''.join(towrite))
                         towrite = []
-                if towrite:
+                        towrite_size = 0
+                        
+                if towrite_size:
                     write(''.join(towrite))
+                    
                 if not headers_sent or use_chunked[0]:
                     write('')
             except Exception:
