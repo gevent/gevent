@@ -103,5 +103,5 @@ cdef class buffer:
         return result
 
     def readlines(self, hint=-1):
-        return list(self.__iter__())
+        return list(self)
 
