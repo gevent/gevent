@@ -487,6 +487,37 @@ class TestInputReadlines(TestInputReadline):
         return lines
 
 
+class ExpectedException(Exception):
+    pass
+
+
+class TestError(TestCase):
+
+    @staticmethod
+    def application(env, start_response):
+        raise ExpectedException
+
+    @property
+    def url(self):
+        return 'http://127.0.0.1:%s' % self.port
+
+    def test(self):
+        try:
+            r = urllib2.urlopen(self.url)
+            raise AssertionError('Must raise HTTPError, returned %r: %s' % (r, r.code))
+        except urllib2.HTTPError, ex:
+            assert ex.code == 500, ex
+            assert ex.msg == 'Internal Server Error', ex
+
+
+class TestError_after_start_response(TestError):
+
+    @staticmethod
+    def application(env, start_response):
+        start_response('200 OK', [('Content-Type', 'text/plain')])
+        raise ExpectedException
+
+
 class HTTPRequest(urllib2.Request):
     """Hack urllib2.Request to support PUT and DELETE methods."""
 
