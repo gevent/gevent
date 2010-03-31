@@ -133,11 +133,11 @@ cdef class http_request:
                 self.remote_host, self.remote_port)
         res = '"%s %s HTTP/%s.%s" %s:%s' % args
         if self.response_code:
-            res += 'response=%s' % self.response_code
+            res += ' response=%s' % self.response_code
         if self.input_buffer:
-            res += 'input=%s' % len(self.input_buffer)
+            res += ' input=%s' % len(self.input_buffer)
         if self.output_buffer:
-            res += 'output=%s' % len(self.output_buffer)
+            res += ' output=%s' % len(self.output_buffer)
         return res
 
     def __str__(self):
