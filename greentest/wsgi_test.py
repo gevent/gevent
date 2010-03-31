@@ -463,6 +463,30 @@ class TestInputReadline(TestCase):
         self.assertEqual(body, "'hello\\n' '\\n' 'world\\n' '123' ")
 
 
+class TestInputIter(TestInputReadline):
+
+    def application(self, environ, start_response):
+        input = environ['wsgi.input']
+        lines = []
+        assert hasattr(input, 'next'), 'wsgi.input does not have next() method'
+        for line in input:
+            if not line:
+                break
+            lines.append(repr(line) + ' ')
+        start_response('200 hello', [])
+        return lines
+
+
+class TestInputReadlines(TestInputReadline):
+
+    def application(self, environ, start_response):
+        input = environ['wsgi.input']
+        lines = input.readlines()
+        lines = [repr(line) + ' ' for line in lines]
+        start_response('200 hello', [])
+        return lines
+
+
 class HTTPRequest(urllib2.Request):
     """Hack urllib2.Request to support PUT and DELETE methods."""
 
