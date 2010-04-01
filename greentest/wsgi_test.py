@@ -533,7 +533,14 @@ class TestEmptyYield(TestCase):
 
         garbage = fd.read()
         self.assert_(garbage=="", "got garbage: %r" % garbage)
-            
+
+class TestEmptyWrite(TestEmptyYield):
+    @staticmethod
+    def application(env, start_response):
+        write = start_response('200 OK', [('Content-Type', 'text/plain')])
+        write("")
+        write("")
+        return []
 
 class HTTPRequest(urllib2.Request):
     """Hack urllib2.Request to support PUT and DELETE methods."""
