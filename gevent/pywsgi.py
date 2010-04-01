@@ -250,7 +250,10 @@ class HttpProtocol(BaseHTTPServer.BaseHTTPRequestHandler):
                                    for key, value in response_headers]
 
             headers_set[:] = [status, capitalized_headers]
-            return write
+            def safe_write(d):
+                if len(d):
+                    write(d)
+            return safe_write
 
         try:
             try:
