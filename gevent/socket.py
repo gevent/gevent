@@ -54,9 +54,8 @@ import errno
 import time
 import random
 import re
-import platform
 
-is_windows = platform.system() == 'Windows'
+is_windows = sys.platform == 'win32'
 
 if is_windows:
     # no such thing as WSAEPERM or error code 10001 according to winsock.h or MSDN
