@@ -220,7 +220,7 @@ del gevent.http.HTTPServer.spawn   # it's a parameter, not a method
 del gevent.Greenlet.throw
 del gevent.socket.socket.fd
 for item in gevent.socket.__all__[:]:
-    if getattr(gevent.socket, item) is getattr(socket, item):
+    if getattr(gevent.socket, item) is getattr(socket, item, None):
         gevent.socket.__all__.remove(item)
 
 
