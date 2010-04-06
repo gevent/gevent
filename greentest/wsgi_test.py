@@ -468,7 +468,6 @@ class TestInputIter(TestInputReadline):
     def application(self, environ, start_response):
         input = environ['wsgi.input']
         lines = []
-        assert hasattr(input, 'next'), 'wsgi.input does not have next() method'
         for line in input:
             if not line:
                 break
