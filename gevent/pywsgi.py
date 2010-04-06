@@ -125,7 +125,7 @@ class Input(object):
         return self.__iter__()
 
     def __iter__(self):
-        while 1:
+        while True:
             line = self.readline()
             if not line:
                 break
