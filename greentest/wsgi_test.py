@@ -64,7 +64,7 @@ def read_headers(fd):
         except:
             print 'Failed to split: %r' % (line, )
             raise
-        assert key.lower() not in [x.lower() for x in headers.keys()], 'Header %r is sent more than once: %r' % (key, headers)
+        assert key.lower() not in [x.lower() for x in headers.keys()], 'Header %r:%r sent more than once: %r' % (key, value, headers)
         headers[key] = value
     return response_line, headers
 
