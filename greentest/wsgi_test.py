@@ -38,6 +38,7 @@ from gevent import socket
 
 CONTENT_LENGTH = 'Content-Length'
 CONN_ABORTED_ERRORS = []
+server_implements_chunked = True
 
 try:
     from errno import WSAECONNABORTED
@@ -88,21 +89,78 @@ def iread_chunks(fd):
         assert crlf == '\r\n', repr(crlf)
 
 
-def read_http(fd):
-    response_line, headers = read_headers(fd)
+class Response(object):
 
-    if 'chunked' in headers.get('Transfer-Encoding', ''):
-        if CONTENT_LENGTH in headers:
-            print "WARNING: server used chunked transfer-encoding despite having Content-Length header (libevent 1.x's bug)"
-        body = ''.join(iread_chunks(fd))
-    elif CONTENT_LENGTH in headers:
-        num = int(headers[CONTENT_LENGTH])
-        body = fd.read(num)
-    else:
-        body = None
+    def __init__(self, status_line, headers, body=None, chunks=None):
+        self.status_line = status_line
+        self.headers = headers
+        self.body = body
+        self.chunks = chunks
+        try:
+            version, code, self.reason = status_line[:-2].split(' ', 2)
+        except Exception:
+            print 'Error: %r' % status_line
+            raise
+        self.code = int(code)
+        HTTP, self.version = version.split('/')
+        assert HTTP == 'HTTP', repr(HTTP)
+        assert self.version in ('1.0', '1.1'), repr(self.version)
 
-    return response_line, headers, body
+    def __iter__(self):
+        yield self.status_line
+        yield self.headers
+        yield self.body
 
+    def __str__(self):
+        args = (self.__class__.__name__, self.status_line, self.headers, self.body, self.chunks)
+        return '<%s status_line=%r headers=%r body=%r chunks=%r>' % args
+
+    def assertCode(self, code):
+        assert self.code == code, 'Unexpected code: %r (expected %r)' % (self.code, code)
+
+    def assertReason(self, reason):
+        assert self.reason == reason, 'Unexpected reason: %r (expected %r)' % (self.reason, reason)
+
+    def assertVersion(self, version):
+        assert self.version == version, 'Unexpected version: %r (expected %r)' % (self.version, version)
+
+    def assertHeader(self, header, value):
+        real_value = self.headers.get(header)
+        assert real_value == value, \
+               'Unexpected header %r: %r (expected %r)' % (header, real_value, value)
+
+    def assertBody(self, body):
+        assert self.body == body, \
+               'Unexpected body: %r (expected %r)' % (self.body, body)
+
+    @classmethod
+    def read(cls, fd, code=200, reason='OK', version='1.1', body=None):
+        _status_line, headers = read_headers(fd)
+        self = cls(_status_line, headers)
+        if code is not None:
+            self.assertCode(code)
+        if reason is not None:
+            self.assertReason(reason)
+        if version is not None:
+            self.assertVersion(version)
+        try:
+            if 'chunked' in headers.get('Transfer-Encoding', ''):
+                if CONTENT_LENGTH in headers:
+                    print "WARNING: server used chunked transfer-encoding despite having Content-Length header (libevent 1.x's bug)"
+                self.chunks = list(iread_chunks(fd))
+                self.body = ''.join(self.chunks)
+            elif CONTENT_LENGTH in headers:
+                num = int(headers[CONTENT_LENGTH])
+                self.body = fd.read(num)
+            else:
+                self.body = fd.read()
+        except:
+            print 'Response.read failed to read the body:\n%s' % self
+        if body is not None:
+            self.assertBody(body)
+        return self
+
+read_http = Response.read
 
 class TestCase(greentest.TestCase):
 
@@ -157,15 +215,11 @@ class TestHttpdBasic(TestCase):
     def SKIP_test_002_pipeline(self):
         fd = self.connect().makefile(bufsize=1)
         fd.write('GET / HTTP/1.1\r\nHost: localhost\r\n\r\n' + 'GET /notexist HTTP/1.1\r\nHost: localhost\r\n\r\n')
-        firstline, headers, body = read_http(fd)
-        assert firstline == 'HTTP/1.1 200 OK\r\n', repr(firstline)
-        assert body == 'hello world', repr(body)
+        read_http(fd, body='hello world')
         exception = AssertionError('HTTP pipelining not supported; the second request is thrown away')
         timeout = gevent.Timeout.start_new(0.5, exception=exception)
         try:
-            firstline, header, body = read_http(fd)
-            assert firstline == 'HTTP/1.1 404 Not Found\r\n', repr(firstline)
-            assert body == 'not found', repr(body)
+            read_http(fd, code=404, reason='Not Found', body='not found')
             fd.close()
         finally:
             timeout.cancel()
@@ -209,12 +263,11 @@ class TestHttpdBasic(TestCase):
     def test_008_correctresponse(self):
         fd = self.connect().makefile(bufsize=1)
         fd.write('GET / HTTP/1.1\r\nHost: localhost\r\n\r\n')
-        response_line_200, _, _ = read_http(fd)
+        read_http(fd)
         fd.write('GET /notexist HTTP/1.1\r\nHost: localhost\r\n\r\n')
-        response_line_404, _, _ = read_http(fd)
+        read_http(fd, code=404, reason='Not Found')
         fd.write('GET / HTTP/1.1\r\nHost: localhost\r\n\r\n')
-        response_line_test, _, _ = read_http(fd)
-        self.assertEqual(response_line_200, response_line_test)
+        read_http(fd)
         fd.close()
 
 
@@ -271,54 +324,43 @@ class TestGetArg(TestCase):
 
         # send some junk after the actual request
         fd.write('01234567890123456789')
-        reqline, headers, body = read_http(fd)
-        self.assertEqual(body, 'a is a, body is a=a')
+        read_http(fd, version='1.0', body='a is a, body is a=a')
         fd.close()
 
 
 class TestChunkedApp(TestCase):
 
-    @staticmethod
-    def application(env, start_response):
-        start_response('200 OK', [('Content-Type', 'text/plain')])
-        yield "this"
-        yield "is"
-        yield "chunked"
+    chunks = ['this', 'is', 'chunked']
 
-    def test_009_chunked_response(self):
+    def body(self):
+        return ''.join(self.chunks)
+
+    def application(self, env, start_response):
+        start_response('200 OK', [('Content-Type', 'text/plain')])
+        for chunk in self.chunks:
+            yield chunk
+
+    def test_chunked_response(self):
         fd = self.connect().makefile(bufsize=1)
         fd.write('GET / HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n')
-        self.assert_('Transfer-Encoding: chunked' in fd.read())
+        response = read_http(fd, body=self.body())
+        if server_implements_chunked:
+            self.assertEqual(response.headers.get('Transfer-Encoding'), 'chunked')
+            self.assertEqual(response.chunks, self.chunks)
 
-    def test_010_no_chunked_http_1_0(self):
+    def test_no_chunked_http_1_0(self):
         fd = self.connect().makefile(bufsize=1)
         fd.write('GET / HTTP/1.0\r\nHost: localhost\r\nConnection: close\r\n\r\n')
-        self.assert_('Transfer-Encoding: chunked' not in fd.read())
+        response = read_http(fd, version='1.0')
+        self.assertEqual(response.body, self.body())
+        self.assertEqual(response.headers.get('Transfer-Encoding'), None)
+        content_length = int(response.headers.get('Content-Length'))
+        if content_length is not None:
+            self.assertEqual(content_length, len(self.body()))
 
 
-class TestBigChunks(TestCase):
-
-    @staticmethod
-    def application(env, start_response):
-        start_response('200 OK', [('Content-Type', 'text/plain')])
-        line = 'a' * 8192
-        for x in range(10):
-            yield line
-
-
-    def test_011_multiple_chunks(self):
-        fd = self.connect().makefile(bufsize=1)
-        fd.write('GET / HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n')
-        _, headers = read_headers(fd)
-        assert ('Transfer-Encoding', 'chunked') in headers.items(), headers
-        chunks = 0
-        chunklen = int(fd.readline(), 16)
-        while chunklen:
-            chunks += 1
-            fd.read(chunklen)
-            fd.readline()
-            chunklen = int(fd.readline(), 16)
-        self.assert_(chunks > 1)
+class TestBigChunks(TestChunkedApp):
+    data = ['a' * 8192] * 3
 
 
 class TestChunkedPost(TestCase):
@@ -339,48 +381,48 @@ class TestChunkedPost(TestCase):
         fd.write('POST /a HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n'
                  'Transfer-Encoding: chunked\r\n\r\n'
                  '2\r\noh\r\n4\r\n hai\r\n0\r\n\r\n')
-        response_line, headers, body = read_http(fd)
-        self.assert_(body == 'oh hai', 'invalid response %r' % body)
+        read_http(fd, body='oh hai')
 
         fd = self.connect().makefile(bufsize=1)
         fd.write('POST /b HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n'
                  'Transfer-Encoding: chunked\r\n\r\n'
                  '2\r\noh\r\n4\r\n hai\r\n0\r\n\r\n')
-        response_line, headers, body = read_http(fd)
-        self.assert_(body == 'oh hai', 'invalid response %r' % body)
+        read_http(fd, body='oh hai')
 
         fd = self.connect().makefile(bufsize=1)
         fd.write('POST /c HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n'
                  'Transfer-Encoding: chunked\r\n\r\n'
                  '2\r\noh\r\n4\r\n hai\r\n0\r\n\r\n')
-        response_line, headers, body = read_http(fd)
-        self.assert_(body == 'oh hai', 'invalid response %r' % body)
+        read_http(fd, body='oh hai')
 
 
 class TestUseWrite(TestCase):
 
-    @staticmethod
-    def application(env, start_response):
-        if env['PATH_INFO'] == '/a':
+    body = 'abcde'
+
+    def application(self, env, start_response):
+        if env['PATH_INFO'] == '/explicit-content-length':
             write = start_response('200 OK', [('Content-Type', 'text/plain'),
                                               ('Content-Length', '5')])
-            write('abcde')
-        if env['PATH_INFO'] == '/b':
+            write(self.body)
+        elif env['PATH_INFO'] == '/no-content-length':
             write = start_response('200 OK', [('Content-Type', 'text/plain')])
-            write('abcde')
+            write(self.body)
+        else:
+            raise Exception('Invalid url')
         return []
 
     def test_015_write(self):
         fd = self.connect().makefile(bufsize=1)
-        fd.write('GET /a HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n')
-        response_line, headers, body = read_http(fd)
-        self.assert_('Content-Length' in headers)
+        fd.write('GET /explicit-content-length HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n')
+        response = read_http(fd, body=self.body)
+        response.assertHeader('Content-Length', '5')
 
         fd = self.connect().makefile(bufsize=1)
-        fd.write('GET /b HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n')
-        response_line, headers, body = read_http(fd)
-        #self.assert_('Transfer-Encoding' in headers)
-        #self.assert_(headers['Transfer-Encoding'] == 'chunked')
+        fd.write('GET /no-content-length HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n')
+        response = read_http(fd, body=self.body)
+        if server_implements_chunked:
+            response.assertHeader('Transfer-Encoding', 'chunked')
 
 
 class TestHttps(TestCase):
@@ -426,8 +468,7 @@ class TestInternational(TestCase):
     def test(self):
         sock = self.connect()
         sock.sendall('GET /%D0%BF%D1%80%D0%B8%D0%B2%D0%B5%D1%82?%D0%B2%D0%BE%D0%BF%D1%80%D0%BE%D1%81=%D0%BE%D1%82%D0%B2%D0%B5%D1%82 HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n')
-        result = sock.makefile().read()
-        assert '200 PASSED' in result, result
+        read_http(sock.makefile(), reason='PASSED')
 
 
 class TestInputReadline(TestCase):
@@ -451,9 +492,7 @@ class TestInputReadline(TestCase):
         fd.write('POST / HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n'
                  'Content-Length: %s\r\n\r\n%s' % (len(content), content))
         fd.flush()
-        response_line, headers, body = read_http(fd)
-        self.assertEqual(response_line, 'HTTP/1.1 200 hello\r\n')
-        self.assertEqual(body, "'hello\\n' '\\n' 'world\\n' '123' ")
+        read_http(fd, reason='hello', body="'hello\\n' '\\n' 'world\\n' '123' ")
 
 
 class TestInputIter(TestInputReadline):
