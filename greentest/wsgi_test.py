@@ -71,11 +71,12 @@ def read_headers(fd):
 
 def iread_chunks(fd):
     while True:
-        chunk_size = fd.readline().strip()
+        line = fd.readline()
+        chunk_size = line.strip()
         try:
             chunk_size = int(chunk_size, 16)
         except:
-            print 'Failed to parse chunk size: %r' % chunk_size
+            print 'Failed to parse chunk size: %r' % line
             raise
         if chunk_size == 0:
             crlf = fd.read(2)
