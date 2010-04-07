@@ -509,13 +509,13 @@ class TestError_after_start_response(TestError):
         raise ExpectedException
 
 class TestEmptyYield(TestCase):
+
     @staticmethod
     def application(env, start_response):
         start_response('200 OK', [('Content-Type', 'text/plain')])
-        
         yield ""
         yield ""
-        
+
     def test_err(self):
         fd = self.connect().makefile(bufsize=1)
         fd.write('GET / HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n')
@@ -525,6 +525,7 @@ class TestEmptyYield(TestCase):
         garbage = fd.read()
         self.assert_(garbage=="", "got garbage: %r" % garbage)
 
+
 class TestEmptyWrite(TestEmptyYield):
     @staticmethod
     def application(env, start_response):
@@ -532,6 +533,7 @@ class TestEmptyWrite(TestEmptyYield):
         write("")
         write("")
         return []
+
 
 class HTTPRequest(urllib2.Request):
     """Hack urllib2.Request to support PUT and DELETE methods."""
