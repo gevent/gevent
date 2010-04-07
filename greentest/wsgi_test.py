@@ -192,14 +192,6 @@ class TestHttpdBasic(TestCase):
             if ex[0] not in CONN_ABORTED_ERRORS:
                 raise
 
-    def skip_test_005_run_apachebench(self):
-        url = 'http://localhost:%s/' % self.port
-        # ab is apachebench
-        from gevent import processes
-        out = processes.Process(greentest.find_command('ab'),
-                                ['-c','64','-n','1024', '-k', url])
-        print out.read()
-
     def SKIP_test_006_reject_long_urls(self):
         fd = self.connect().makefile(bufsize=1)
         path_parts = []
