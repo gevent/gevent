@@ -153,15 +153,18 @@ class WSGIServer(HTTPServer):
     def server_port(self):
         return self.address[1]
 
+    def pre_start(self):
+        env = self.base_env.copy()
+        env.update( {'SERVER_NAME': socket.getfqdn(self.server_host),
+                     'SERVER_PORT': str(self.server_port) } )
+        self.base_env = env
+
     def start(self):
         if self.listeners:
             raise AssertionError('WSGIServer.start() cannot be called more than once')
         sock = HTTPServer.start(self, self.address, backlog=self.backlog)
         self.address = sock.getsockname()
-        env = self.base_env.copy()
-        env.update( {'SERVER_NAME': socket.getfqdn(self.server_host),
-                     'SERVER_PORT': str(self.server_port) } )
-        self.base_env = env
+        self.pre_start()
         return sock
 
     def handle(self, req):
