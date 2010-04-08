@@ -136,12 +136,13 @@ class WSGIServer(HTTPServer):
                 'wsgi.multiprocess': False,
                 'wsgi.run_once': False}
 
-    def __init__(self, socket_or_address, application, **kwargs):
-        handler_class = kwargs.pop('handler_class', None)
+    def __init__(self, listener, application, backlog=None, handler_class=None, spawn='default'):
+        if hasattr(listener, 'do_handshake'):
+            raise TypeError('%s.start() requires a regular socket, not SSLObject: %r' % (self.__class__.__name__, listener))
         if handler_class is not None:
             self.handler_class = handler_class
-        HTTPServer.__init__(self, **kwargs)
-        self.address = socket_or_address
+        HTTPServer.__init__(self, spawn=spawn, backlog=backlog)
+        self.address = listener
         self.application = application
 
     @property
