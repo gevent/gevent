@@ -8,6 +8,7 @@ from gevent.util import wrap_errors
 from gevent.timeout import Timeout
 import _socket as socket
 
+
 class HTTPServer(object):
 
     spawn = Greenlet.spawn # set to None to avoid spawning at all
