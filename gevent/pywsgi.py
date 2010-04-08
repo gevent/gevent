@@ -390,6 +390,7 @@ def server(sock, site, log=None, environ=None, max_size=None, max_http_version=D
             try:
                 try:
                     client_socket = sock.accept()
+                    pool.spawn(serv.process_request, client_socket)
                 except socket.error, e:
                     if e[0] == errno.EMFILE:
                         # we ran out of file descriptors and will call accept in a busy loop...
@@ -399,7 +400,6 @@ def server(sock, site, log=None, environ=None, max_size=None, max_http_version=D
                         continue
                     if e[0] != errno.EPIPE and e[0] != errno.EBADF:
                         raise
-                pool.spawn(serv.process_request, client_socket)
             except KeyboardInterrupt:
                 print "wsgi exiting"
                 break
