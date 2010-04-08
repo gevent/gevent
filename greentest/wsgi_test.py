@@ -430,30 +430,52 @@ class TestChunkedPost(TestCase):
 class TestUseWrite(TestCase):
 
     body = 'abcde'
+    end = 'end'
+    content_length = str(len(body + end))
 
     def application(self, env, start_response):
         if env['PATH_INFO'] == '/explicit-content-length':
             write = start_response('200 OK', [('Content-Type', 'text/plain'),
-                                              ('Content-Length', '5')])
+                                              ('Content-Length', self.content_length)])
             write(self.body)
         elif env['PATH_INFO'] == '/no-content-length':
             write = start_response('200 OK', [('Content-Type', 'text/plain')])
             write(self.body)
+        elif env['PATH_INFO'] == '/no-content-length-twice':
+            write = start_response('200 OK', [('Content-Type', 'text/plain')])
+            write(self.body)
+            write(self.body)
         else:
             raise Exception('Invalid url')
-        return []
+        return [self.end]
 
-    def test_015_write(self):
+    def test_explicit_content_length(self):
         fd = self.connect().makefile(bufsize=1)
         fd.write('GET /explicit-content-length HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n')
-        response = read_http(fd, body=self.body)
-        response.assertHeader('Content-Length', '5')
+        response = read_http(fd, body=self.body + self.end)
+        response.assertHeader('Content-Length', self.content_length)
+        response.assertHeader('Transfer-Encoding', None)
 
+    def test_no_content_length(self):
         fd = self.connect().makefile(bufsize=1)
         fd.write('GET /no-content-length HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n')
-        response = read_http(fd, body=self.body)
+        response = read_http(fd, body=self.body + self.end)
         if server_implements_chunked:
+            response.assertHeader('Content-Length', None)
             response.assertHeader('Transfer-Encoding', 'chunked')
+        else:
+            response.assertHeader('Content-Length', self.content_length)
+
+    def test_no_content_length_twice(self):
+        fd = self.connect().makefile(bufsize=1)
+        fd.write('GET /no-content-length-twice HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n')
+        response = read_http(fd, body=self.body + self.body + self.end)
+        if server_implements_chunked:
+            response.assertHeader('Content-Length', None)
+            response.assertHeader('Transfer-Encoding', 'chunked')
+            assert response.chunks == [self.body, self.body, self.end], response.chunks
+        else:
+            response.assertHeader('Content-Length', str(5+5+3))
 
 
 class TestHttps(TestCase):
