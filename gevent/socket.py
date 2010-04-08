@@ -523,7 +523,7 @@ def tcp_server(listensocket, server, *args, **kw):
         The keyword arguments to pass to *server*.
     """
     import warnings
-    warnings.warn("gevent.socket.tcp_server is deprecated", DeprecationWarning, stacklevel=2)
+    warnings.warn("gevent.socket.tcp_server is deprecated by gevent.server.StreamServer", DeprecationWarning, stacklevel=2)
     try:
         try:
             while True:
