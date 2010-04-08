@@ -246,6 +246,7 @@ class HttpProtocol(BaseHTTPServer.BaseHTTPRequestHandler):
                 if not self.headers_sent or self.response_use_chunked:
                     self.write('')
             except Exception:
+                self.status = '500 Internal Server Error'
                 self.close_connection = 1
                 exc = traceback.format_exc()
                 print exc
