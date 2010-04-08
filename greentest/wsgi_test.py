@@ -32,7 +32,6 @@ except ImportError:
         return app
 
 import greentest
-
 import gevent
 from gevent import socket
 
