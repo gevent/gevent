@@ -222,27 +222,19 @@ class TestCase(greentest.TestCase):
         return socket.create_connection(('127.0.0.1', self.port))
 
 
-class TestHttpdBasic(TestCase):
+class CommonTests(TestCase):
 
-    @staticmethod
-    def application(env, start_response):
-        path = env['PATH_INFO']
-        if path == '/':
-            start_response('200 OK', [('Content-Type', 'text/plain')])
-            return ["hello world"]
-        else:
-            start_response('404 Not Found', [('Content-Type', 'text/plain')])
-            return ["not found"]
+    def test_basic(self):
+        fd = self.connect().makefile(bufsize=1)
+        fd.write('GET / HTTP/1.1\r\nHost: localhost\r\n\r\n')
+        read_http(fd, body='hello world')
+        fd.write('GET /notexist HTTP/1.1\r\nHost: localhost\r\n\r\n')
+        read_http(fd, code=404, reason='Not Found', body='not found')
+        fd.write('GET / HTTP/1.1\r\nHost: localhost\r\n\r\n')
+        read_http(fd, body='hello world')
+        fd.close()
 
-    def test_001_server(self):
-        sock = self.connect()
-        sock.sendall('GET / HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n')
-        result = sock.makefile().read()
-        sock.close()
-        self.assert_(result.startswith('HTTP/1.1 200 OK\r\n'), result)
-        self.assert_(result.endswith('hello world'), result)
-
-    def SKIP_test_002_pipeline(self):
+    def XXXtest_pipeline(self):
         fd = self.connect().makefile(bufsize=1)
         fd.write('GET / HTTP/1.1\r\nHost: localhost\r\n\r\n' + 'GET /notexist HTTP/1.1\r\nHost: localhost\r\n\r\n')
         read_http(fd, body='hello world')
@@ -254,16 +246,7 @@ class TestHttpdBasic(TestCase):
         finally:
             timeout.cancel()
 
-    def test_003_passing_non_int_to_read(self):
-        # This should go in greenio_test
-        fd = self.connect().makefile(bufsize=1)
-        fd.write('GET / HTTP/1.1\r\nHost: localhost\r\n\r\n')
-        cancel = gevent.Timeout.start_new(1, RuntimeError)
-        self.assertRaises(TypeError, fd.read, "This shouldn't work")
-        cancel.cancel()
-        fd.close()
-
-    def test_004_connection_close(self):
+    def test_connection_close(self):
         fd = self.connect().makefile(bufsize=1)
         fd.write('GET / HTTP/1.1\r\nHost: localhost\r\n\r\n')
         read_http(fd)
@@ -290,39 +273,53 @@ class TestHttpdBasic(TestCase):
         self.assertEqual(status, '414')
         fd.close()
 
-    def test_008_correctresponse(self):
-        fd = self.connect().makefile(bufsize=1)
-        fd.write('GET / HTTP/1.1\r\nHost: localhost\r\n\r\n')
-        read_http(fd)
-        fd.write('GET /notexist HTTP/1.1\r\nHost: localhost\r\n\r\n')
-        read_http(fd, code=404, reason='Not Found')
-        fd.write('GET / HTTP/1.1\r\nHost: localhost\r\n\r\n')
-        read_http(fd)
-        fd.close()
 
-
-class TestExplicitContentLength(TestHttpdBasic):
+class TestNoChunks(CommonTests):
+    # when returning a list of strings a shortcut is employed by the server:
+    # it calculates the content-length and joins all the chunks before sending
+    validator = None
 
     @staticmethod
     def application(env, start_response):
         path = env['PATH_INFO']
         if path == '/':
-            msg = 'hello world'
-            start_response('200 OK',
-                           [('Content-Type', 'text/plain'),
-                            ('Content-Length', str(len(msg)))])
+            start_response('200 OK', [('Content-Type', 'text/plain')])
+            return ['hello ', 'world']
         else:
-            msg = 'not found'
-            start_response('404 Not Found',
-                           [('Content-Type', 'text/plain'),
-                            ('Content-Length', str(len(msg)))])
-        return [msg]
+            start_response('404 Not Found', [('Content-Type', 'text/plain')])
+            return ['not ', 'found']
+
+    def test(self):
+        fd = self.connect().makefile(bufsize=1)
+        fd.write('GET / HTTP/1.1\r\nHost: localhost\r\n\r\n')
+        response = read_http(fd, body='hello world')
+        assert response.chunks is None, response.chunks
+        response.assertHeader('Content-Length', '11')
+
+        fd.write('GET /not-found HTTP/1.1\r\nHost: localhost\r\n\r\n')
+        response = read_http(fd, code=404, reason='Not Found', body='not found')
+        assert response.chunks is None, response.chunks
+        response.assertHeader('Content-Length', '9')
 
 
-class TestYield(TestHttpdBasic):
+class TestExplicitContentLength(TestNoChunks):
+    # when returning a list of strings a shortcut is empoyed by the server - it caculates the content-length
 
     @staticmethod
-    def hello_world_yield(env, start_response):
+    def application(env, start_response):
+        path = env['PATH_INFO']
+        if path == '/':
+            start_response('200 OK', [('Content-Type', 'text/plain'), ('Content-Length', '11')])
+            return ['hello ', 'world']
+        else:
+            start_response('404 Not Found', [('Content-Type', 'text/plain'), ('Content-Length', '9')])
+            return ['not ', 'found']
+
+
+class TestYield(CommonTests):
+
+    @staticmethod
+    def application(env, start_response):
         path = env['PATH_INFO']
         if path == '/':
             start_response('200 OK', [('Content-Type', 'text/plain')])
@@ -617,6 +614,7 @@ class HTTPRequest(urllib2.Request):
     def get_method(self):
         return self.method
 
+del CommonTests
 
 if __name__ == '__main__':
     greentest.main()
