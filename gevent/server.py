@@ -101,7 +101,7 @@ class StreamServer(Greenlet):
     def serve_forever(self):
         if not self: # XXX will this work: server.start(); server.serve_forever()
             self.start()
-        self.server.join()
+        self.join()
 
     def handle(self, socket, address):
         raise NotImplementedError('override in a subclass')
