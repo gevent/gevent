@@ -1,5 +1,6 @@
 # Copyright (c) 2009-2010 Denis Bilenko. See LICENSE for details.
 import sys
+import errno
 from gevent.greenlet import Greenlet
 from gevent.pool import GreenletSet, Pool
 from gevent import socket
@@ -8,11 +9,14 @@ from gevent import sleep
 
 __all__ = ['StreamServer']
 
+FATAL_ERRORS = (errno.EBADF, errno.EINVAL, errno.ENOTSOCK)
+
 
 class StreamServer(Greenlet):
 
     backlog = 256
-    first_delay = 0.1
+    min_delay = 0.01
+    max_delay = 1
     _allowed_ssl_args = ['keyfile', 'certfile', 'cert_reqs', 'ssl_version', 'ca_certs', 'suppress_ragged_eofs']
 
     def __init__(self, listener, backlog=None, pool=None, log=sys.stderr, **ssl_args):
@@ -83,16 +87,20 @@ class StreamServer(Greenlet):
 
     def _run(self):
         try:
-            self.delay = self.first_delay
+            self.delay = self.min_delay
             while True:
                 try:
                     client_socket, address = self.socket.accept()
-                    self.delay = self.first_delay
+                    self.delay = self.min_delay
                     self.pool.spawn(self.handle, client_socket, address)
                 except socket.error, e:
-                    self.log_message('WARNING: %s: accept() failed with %s: %s; will sleep %s seconds' % (self, e[0], e, self.delay))
-                    sleep(self.delay)
-                    self.delay *= 2
+                    if e[0] in FATAL_ERRORS:
+                        self.log_message('ERROR: %s failed with %s' % (self, e))
+                        return e
+                    else:
+                        self.log_message('WARNING: %s: ignoring %s (sleeping %s seconds)' % (self, e, self.delay))
+                        sleep(self.delay)
+                        self.delay = min(self.max_delay, self.delay*2)
         finally:
             try:
                 self.socket.close()
