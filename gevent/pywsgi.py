@@ -170,7 +170,7 @@ class HttpProtocol(BaseHTTPServer.BaseHTTPRequestHandler):
                 self.handle_one_response()
             except socket.error, e:
                 # Broken pipe, connection reset by peer
-                if e[0] in (32, 54):
+                if e[0] in (errno.EPIPE, errno.ECONNRESET):
                     pass
                 else:
                     raise
