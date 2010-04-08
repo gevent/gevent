@@ -361,7 +361,7 @@ class TestChunkedApp(TestCase):
 
 
 class TestBigChunks(TestChunkedApp):
-    data = ['a' * 8192] * 3
+    chunks = ['a' * 8192] * 3
 
 
 class TestChunkedPost(TestCase):
