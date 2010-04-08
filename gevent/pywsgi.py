@@ -44,6 +44,16 @@ _monthname = [None, # Dummy so we can use 1-based month numbers
               "Jan", "Feb", "Mar", "Apr", "May", "Jun",
               "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
 
+
+_INTERNAL_ERROR_STATUS = '500 Internal Server Error'
+INTERNAL_ERROR_RESPONSE = """HTTP/1.0 %s
+Connection: close
+Content-type: text/plain
+Content-length: 21
+
+Internal Server Error""".replace('\n', '\r\n') % _INTERNAL_ERROR_STATUS
+
+
 def format_date_time(timestamp):
     year, month, day, hh, mm, ss, wd, y, z = time.gmtime(timestamp)
     return "%s, %02d %3s %4d %02d:%02d:%02d GMT" % (
@@ -244,19 +254,11 @@ class HttpProtocol(BaseHTTPServer.BaseHTTPRequestHandler):
                 if not self.headers_sent or self.response_use_chunked:
                     self.write('')
             except Exception:
-                self.status = '500 Internal Server Error'
+                self.status = _INTERNAL_ERROR_STATUS
                 self.close_connection = 1
-                exc = traceback.format_exc()
-                print exc
+                traceback.print_exc()
                 if not self.response_length:
-                    self.wfile.writelines(
-                        ["HTTP/1.0 500 Internal Server Error\r\n",
-                         "Connection: close\r\n",
-                         "Content-type: text/plain\r\n",
-                         "Content-length: %s\r\n" % len(exc),
-                         "\r\n",
-                         exc])
-
+                    self.wfile.write(INTERNAL_ERROR_RESPONSE)
         finally:
             if hasattr(result, 'close'):
                 result.close()
