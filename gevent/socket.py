@@ -92,6 +92,9 @@ for name in __socket__.__all__:
         if isinstance(value, (int, basestring)):
             globals()[name] = value
             __all__.append(name)
+    elif name == 'getfqdn':
+        globals()[name] = getattr(__socket__, name)
+        __all__.append(name)
 
 del name, value
 
