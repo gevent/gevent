@@ -200,12 +200,16 @@ class TestCase(greentest.TestCase):
 
     validator = staticmethod(validator)
 
+    def get_listener(self):
+        return ('127.0.0.1', 0)
+
     def setUp(self):
         greentest.TestCase.setUp(self)
         application = self.application
         if self.validator is not None:
             application = self.validator(application)
-        self.server = self.get_wsgi_module().WSGIServer(('127.0.0.1', 0), application)
+        listener = self.get_listener()
+        self.server = self.get_wsgi_module().WSGIServer(listener, application)
         self.server.start()
         self.port = self.server.server_port
 
