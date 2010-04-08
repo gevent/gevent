@@ -385,9 +385,9 @@ class TestChunkedApp(TestCase):
         response = read_http(fd, version='1.0')
         self.assertEqual(response.body, self.body())
         self.assertEqual(response.headers.get('Transfer-Encoding'), None)
-        content_length = int(response.headers.get('Content-Length'))
+        content_length = response.headers.get('Content-Length')
         if content_length is not None:
-            self.assertEqual(content_length, len(self.body()))
+            self.assertEqual(content_length, str(len(self.body())))
 
 
 class TestBigChunks(TestChunkedApp):
