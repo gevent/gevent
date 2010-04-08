@@ -173,17 +173,13 @@ class HttpProtocol(BaseHTTPServer.BaseHTTPRequestHandler):
         self.environ = self.get_environ()
         self.application = self.server.app
         try:
-            self.server.outstanding_requests += 1
-            try:
-                self.handle_one_response()
-            except socket.error, e:
-                # Broken pipe, connection reset by peer
-                if e[0] in (errno.EPIPE, errno.ECONNRESET):
-                    pass
-                else:
-                    raise
-        finally:
-            self.server.outstanding_requests -= 1
+            self.handle_one_response()
+        except socket.error, e:
+            # Broken pipe, connection reset by peer
+            if e[0] in (errno.EPIPE, errno.ECONNRESET):
+                pass
+            else:
+                raise
 
     def write(self, data):
         towrite = []
