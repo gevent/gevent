@@ -251,7 +251,7 @@ class HttpProtocol(BaseHTTPServer.BaseHTTPRequestHandler):
             except Exception:
                 self.status = _INTERNAL_ERROR_STATUS
                 self.close_connection = 1
-                traceback.print_exc()
+                self.server.log_message(traceback.format_exc())
                 if not self.response_length:
                     self.wfile.write(INTERNAL_ERROR_RESPONSE)
         finally:
