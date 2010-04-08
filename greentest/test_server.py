@@ -38,6 +38,12 @@ class TestFatalErrors(greentest.TestCase):
         self._join_server()
         del f
 
+    def test_non_fatal_error(self):
+        error = socket.error('some non-fatal error')
+        self.socket.accept = lambda *args: gevent.getcurrent().throw(error)
+        gevent.sleep(0.1)
+        assert not self.server.ready()
+
 
 if __name__=='__main__':
     greentest.main()
