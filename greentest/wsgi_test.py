@@ -482,28 +482,25 @@ class TestUseWrite(TestCase):
             response.assertHeader('Content-Length', str(5+5+3))
 
 
-class TestHttps(TestCase):
+class HttpsTestCase(TestCase):
 
-    def setUp(self):
+    def get_listener(self):
         certificate_file = os.path.join(os.path.dirname(__file__), 'test_server.crt')
         private_key_file = os.path.join(os.path.dirname(__file__), 'test_server.key')
-
         sock = socket.socket()
-        socket.bind_and_listen(sock, ('', 4201))
-        self.sock = socket.ssl(sock, private_key_file, certificate_file)
-
-        self.g = gevent.spawn(self.get_wsgi_module().server, self.sock, validator(self.application))
-
-    def tearDown(self):
-        self.g.kill(block=True)
+        socket.bind_and_listen(sock, ('', 0))
+        return socket.ssl(sock, private_key_file, certificate_file)
 
     def urlopen(self, *args, **kwargs):
-        req = HTTPRequest("https://localhost:4201/foo", *args, **kwargs)
+        req = HTTPRequest("https://localhost:%s/foo" % self.server.server_port, *args, **kwargs)
         return urllib2.urlopen(req)
 
     def application(self, environ, start_response):
         start_response('200 OK', [('Content-Type', 'text/plain')])
         return [environ['wsgi.input'].read()]
+
+
+class TestHttps(HttpsTestCase):
 
     def test_012_ssl_server(self):
         result = self.urlopen(method="POST", data='abc').read()
