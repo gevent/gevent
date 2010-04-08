@@ -372,7 +372,7 @@ class TestChunkedApp(TestCase):
         fd.write('GET / HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n')
         response = read_http(fd, body=self.body())
         if server_implements_chunked:
-            self.assertEqual(response.headers.get('Transfer-Encoding'), 'chunked')
+            response.assertHeader('Transfer-Encoding', 'chunked')
             self.assertEqual(response.chunks, self.chunks)
 
     def test_no_chunked_http_1_0(self):
