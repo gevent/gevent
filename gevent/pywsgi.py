@@ -36,7 +36,6 @@ from gevent.greenlet import Greenlet
 DEFAULT_MAX_SIMULTANEOUS_REQUESTS = 1024
 DEFAULT_MAX_HTTP_VERSION = 'HTTP/1.1'
 MAX_REQUEST_LINE = 8192
-MINIMUM_CHUNK_SIZE = 4096
 
 
 # Weekday and month names for HTTP date/time formatting; always English!
@@ -130,12 +129,11 @@ class Input(object):
             if not line:
                 break
             yield line
-            
+
 
 
 class HttpProtocol(BaseHTTPServer.BaseHTTPRequestHandler):
     protocol_version = 'HTTP/1.1'
-    minimum_chunk_size = MINIMUM_CHUNK_SIZE
 
     def handle_one_request(self):
         if self.server.max_http_version:
@@ -179,100 +177,79 @@ class HttpProtocol(BaseHTTPServer.BaseHTTPRequestHandler):
         finally:
             self.server.outstanding_requests -= 1
 
+    def write(self, data):
+        towrite = []
+        if not self.status:
+            raise AssertionError("write() before start_response()")
+        elif not self.headers_sent:
+            self.headers_sent = True
+            towrite.append('%s %s\r\n' % (self.protocol_version, self.status))
+            for header in self.response_headers:
+                towrite.append('%s: %s\r\n' % header)
+
+            # send Date header?
+            if 'Date' not in self.response_headers_list:
+                towrite.append('Date: %s\r\n' % (format_date_time(time.time()),))
+            if self.request_version == 'HTTP/1.0':
+                towrite.append('Connection: close\r\n')
+                self.close_connection = 1
+            elif 'Content-Length' not in self.response_headers_list:
+                self.response_use_chunked = True
+                towrite.append('Transfer-Encoding: chunked\r\n')
+            towrite.append('\r\n')
+
+        if self.response_use_chunked:
+            ## Write the chunked encoding
+            towrite.append("%x\r\n%s\r\n" % (len(data), data))
+        else:
+            towrite.append(data)
+
+        self.wfile.writelines(towrite)
+        self.response_length += sum(map(len, towrite))
+
+    def start_response(self, status, headers, exc_info=None):
+        if exc_info:
+            try:
+                if self.headers_sent:
+                    # Re-raise original exception if headers sent
+                    raise exc_info[0], exc_info[1], exc_info[2]
+            finally:
+                # Avoid dangling circular ref
+                exc_info = None
+        self.status = status
+        self.response_headers = [('-'.join([x.capitalize() for x in key.split('-')]), value) for key, value in headers]
+        self.response_headers_list = [x[0] for x in self.response_headers]
+        def safe_write(d):
+            if len(d):
+                self.write(d)
+        return safe_write
+
     def handle_one_response(self):
         start = time.time()
-        headers_set = []
-        headers_sent = []
+        self.status = None
+        self.headers_sent = False
 
-        wfile = self.wfile
         result = None
-        use_chunked = [False]
-        length = [0]
-        status_code = [200]
-
-        def write(data, _writelines=wfile.writelines):
-            towrite = []
-            if not headers_set:
-                raise AssertionError("write() before start_response()")
-            elif not headers_sent:
-                status, response_headers = headers_set
-                headers_sent.append(1)
-                header_list = [header[0].lower() for header in response_headers]
-                towrite.append('%s %s\r\n' % (self.protocol_version, status))
-                for header in response_headers:
-                    towrite.append('%s: %s\r\n' % header)
-
-                # send Date header?
-                if 'date' not in header_list:
-                    towrite.append('Date: %s\r\n' % (format_date_time(time.time()),))
-                if self.request_version == 'HTTP/1.0':
-                    towrite.append('Connection: close\r\n')
-                    self.close_connection = 1
-                elif 'content-length' not in header_list:
-                    use_chunked[0] = True
-                    towrite.append('Transfer-Encoding: chunked\r\n')
-                towrite.append('\r\n')
-
-            if use_chunked[0]:
-                ## Write the chunked encoding
-                towrite.append("%x\r\n%s\r\n" % (len(data), data))
-            else:
-                towrite.append(data)
-
-            _writelines(towrite)
-            length[0] = length[0] + sum(map(len, towrite))
-
-        def start_response(status, response_headers, exc_info=None):
-            status_code[0] = status.split()[0]
-            if exc_info:
-                try:
-                    if headers_sent:
-                        # Re-raise original exception if headers sent
-                        raise exc_info[0], exc_info[1], exc_info[2]
-                finally:
-                    # Avoid dangling circular ref
-                    exc_info = None
-
-            capitalized_headers = [('-'.join([x.capitalize() for x in key.split('-')]), value)
-                                   for key, value in response_headers]
-
-            headers_set[:] = [status, capitalized_headers]
-            def safe_write(d):
-                if len(d):
-                    write(d)
-            return safe_write
+        self.response_use_chunked = False
+        self.response_length = 0
 
         try:
             try:
-                result = self.application(self.environ, start_response)
-                if not headers_sent and hasattr(result, '__len__') and \
-                        'Content-Length' not in [h for h, v in headers_set[1]]:
-                    headers_set[1].append(('Content-Length', str(sum(map(len, result)))))
-                    
-                towrite = []
-                towrite_size = 0
-                
+                result = self.application(self.environ, self.start_response)
+                if not self.headers_sent and hasattr(result, '__len__') and 'Content-Length' not in self.response_headers_list:
+                    self.response_headers.append(('Content-Length', str(sum(map(len, result)))))
+                    self.response_headers_list.append('Content-Length')
+
                 for data in result:
-                    dlen = len(data)
-                    if dlen==0:
-                        continue
-                    towrite_size += dlen
-                    towrite.append(data)
-                    if towrite_size >= self.minimum_chunk_size:
-                        write(''.join(towrite))
-                        towrite = []
-                        towrite_size = 0
-                        
-                if towrite_size:
-                    write(''.join(towrite))
-                    
-                if not headers_sent or use_chunked[0]:
-                    write('')
+                    if data:
+                        self.write(data)
+                if not self.headers_sent or self.response_use_chunked:
+                    self.write('')
             except Exception:
                 self.close_connection = 1
                 exc = traceback.format_exc()
                 print exc
-                if not length[0]:
+                if not self.response_length:
                     self.wfile.writelines(
                         ["HTTP/1.0 500 Internal Server Error\r\n",
                          "Connection: close\r\n",
@@ -284,17 +261,17 @@ class HttpProtocol(BaseHTTPServer.BaseHTTPRequestHandler):
         finally:
             if hasattr(result, 'close'):
                 result.close()
-            if self.environ['gevent.input'].position < self.environ.get('CONTENT_LENGTH', 0):
+            if self.wsgi_input.position < self.environ.get('CONTENT_LENGTH', 0):
                 ## Read and discard body
-                self.environ['gevent.input'].read()
+                self.wsgi_input.read()
             finish = time.time()
 
             self.server.log_message('%s - - [%s] "%s" %s %s %.6f' % (
                 self.client_address[0],
                 self.log_date_time_string(),
                 self.requestline,
-                status_code[0],
-                length[0],
+                self.status.split()[0],
+                self.response_length,
                 finish - start))
 
     def get_environ(self):
@@ -344,10 +321,8 @@ class HttpProtocol(BaseHTTPServer.BaseHTTPRequestHandler):
             wfile = None
             wfile_line = None
         chunked = env.get('HTTP_TRANSFER_ENCODING', '').lower() == 'chunked'
-        env['wsgi.input'] = env['gevent.input'] = Input(
-            self.rfile, length, wfile=wfile, wfile_line=wfile_line,
-            chunked_input=chunked)
-
+        self.wsgi_input = Input(self.rfile, length, wfile=wfile, wfile_line=wfile_line, chunked_input=chunked)
+        env['wsgi.input'] = self.wsgi_input
         return env
 
     def finish(self):
