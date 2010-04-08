@@ -333,7 +333,7 @@ class HttpProtocol(BaseHTTPServer.BaseHTTPRequestHandler):
 
 class Server(BaseHTTPServer.HTTPServer):
 
-    def __init__(self, socket, address, app, log=None, environ=None, max_http_version=None, protocol=HttpProtocol, minimum_chunk_size=None):
+    def __init__(self, socket, address, app, log=None, environ=None, max_http_version=None, protocol=HttpProtocol):
         self.outstanding_requests = 0
         self.socket = socket
         self.address = address
@@ -346,8 +346,6 @@ class Server(BaseHTTPServer.HTTPServer):
         self.max_http_version = max_http_version
         self.protocol = protocol
         self.pid = os.getpid()
-        if minimum_chunk_size is not None:
-            protocol.minimum_chunk_size = minimum_chunk_size
 
     def get_environ(self):
         d = {
@@ -371,10 +369,9 @@ class Server(BaseHTTPServer.HTTPServer):
 
 
 def server(sock, site, log=None, environ=None, max_size=None, max_http_version=DEFAULT_MAX_HTTP_VERSION,
-           protocol=HttpProtocol, minimum_chunk_size=None):
+           protocol=HttpProtocol):
     serv = Server(sock, sock.getsockname(), site, log, environ=None,
-                  max_http_version=max_http_version, protocol=protocol,
-                  minimum_chunk_size=minimum_chunk_size)
+                  max_http_version=max_http_version, protocol=protocol)
     if max_size is None:
         max_size = DEFAULT_MAX_SIMULTANEOUS_REQUESTS
     pool = Pool(size=max_size)
