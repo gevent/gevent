@@ -374,6 +374,10 @@ class TestChunkedApp(TestCase):
         if server_implements_chunked:
             response.assertHeader('Transfer-Encoding', 'chunked')
             self.assertEqual(response.chunks, self.chunks)
+        else:
+            response.assertHeader('Transfer-Encoding', None)
+            response.assertHeader('Content-Length', str(len(self.body())))
+            self.assertEqual(response.chunks, None)
 
     def test_no_chunked_http_1_0(self):
         fd = self.connect().makefile(bufsize=1)
