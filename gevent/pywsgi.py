@@ -403,9 +403,8 @@ def server(sock, site, log=None, environ=None, max_size=None, max_http_version=D
     finally:
         try:
             sock.close()
-        except socket.error, e:
-            if e[0] != errno.EPIPE:
-                traceback.print_exc()
+        except Exception:
+            pass
 
 
 # compatibilty with wsgi module, for tests
