@@ -131,7 +131,6 @@ class Input(object):
             yield line
 
 
-
 class HttpProtocol(BaseHTTPServer.BaseHTTPRequestHandler):
     protocol_version = 'HTTP/1.1'
 
@@ -239,7 +238,6 @@ class HttpProtocol(BaseHTTPServer.BaseHTTPRequestHandler):
                 if not self.headers_sent and hasattr(result, '__len__') and 'Content-Length' not in self.response_headers_list:
                     self.response_headers.append(('Content-Length', str(sum(map(len, result)))))
                     self.response_headers_list.append('Content-Length')
-
                 for data in result:
                     if data:
                         self.write(data)
