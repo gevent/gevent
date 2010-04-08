@@ -388,21 +388,17 @@ def server(sock, site, log=None, environ=None, max_size=None, max_http_version=D
         print "(%s) wsgi starting up on %s://%s%s/" % (os.getpid(), scheme, host, port)
         while True:
             try:
-                try:
-                    client_socket = sock.accept()
-                    pool.spawn(serv.process_request, client_socket)
-                except socket.error, e:
-                    if e[0] == errno.EMFILE:
-                        # we ran out of file descriptors and will call accept in a busy loop...
-                        # ...which we avoid by sleeping a bit
-                        print "WARNING: pywsgi: out of file descriptors. cannot accept outstanding connections."
-                        sleep(1.0)
-                        continue
-                    if e[0] != errno.EPIPE and e[0] != errno.EBADF:
-                        raise
-            except KeyboardInterrupt:
-                print "wsgi exiting"
-                break
+                client_socket = sock.accept()
+                pool.spawn(serv.process_request, client_socket)
+            except socket.error, e:
+                if e[0] == errno.EMFILE:
+                    # we ran out of file descriptors and will call accept in a busy loop...
+                    # ...which we avoid by sleeping a bit
+                    print "WARNING: pywsgi: out of file descriptors. cannot accept outstanding connections."
+                    sleep(1.0)
+                    continue
+                if e[0] != errno.EPIPE and e[0] != errno.EBADF:
+                    raise
     finally:
         try:
             sock.close()
