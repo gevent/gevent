@@ -22,20 +22,17 @@
 # THE SOFTWARE.
 
 import errno
-import os
 import sys
 import time
 import traceback
 
 from urllib import unquote
-from gevent import socket, sleep
+from gevent import socket
 import BaseHTTPServer
-from gevent.pool import Pool
-from gevent.greenlet import Greenlet
+import gevent
+from gevent.server import StreamServer
 
 
-DEFAULT_MAX_SIMULTANEOUS_REQUESTS = 1024
-DEFAULT_MAX_HTTP_VERSION = 'HTTP/1.1'
 MAX_REQUEST_LINE = 8192
 
 
@@ -144,9 +141,6 @@ class HttpProtocol(BaseHTTPServer.BaseHTTPRequestHandler):
     protocol_version = 'HTTP/1.1'
 
     def handle_one_request(self):
-        if self.server.max_http_version:
-            self.protocol_version = self.server.max_http_version
-
         if self.rfile.closed:
             self.close_connection = 1
             return
@@ -171,7 +165,7 @@ class HttpProtocol(BaseHTTPServer.BaseHTTPRequestHandler):
             return
 
         self.environ = self.get_environ()
-        self.application = self.server.app
+        self.application = self.server.application
         try:
             self.handle_one_response()
         except socket.error, e:
@@ -326,105 +320,36 @@ class HttpProtocol(BaseHTTPServer.BaseHTTPRequestHandler):
         self.connection.close()
 
 
-class Server(BaseHTTPServer.HTTPServer):
+class WSGIServer(StreamServer):
 
-    def __init__(self, socket, address, app, log=None, environ=None, max_http_version=None, protocol=HttpProtocol):
-        self.outstanding_requests = 0
-        self.socket = socket
-        self.address = address
-        if log:
-            self.log = log
-        else:
-            self.log = sys.stderr
-        self.app = app
-        self.environ = environ
-        self.max_http_version = max_http_version
-        self.protocol = protocol
-        self.pid = os.getpid()
+    handler_class = HttpProtocol
+    base_env = {'GATEWAY_INTERFACE': 'CGI/1.1',
+                'SERVER_SOFTWARE': 'gevent/%d.%d Python/%d.%d' % (gevent.version_info[:2] + sys.version_info[:2]),
+                'SCRIPT_NAME': '',
+                'wsgi.version': (1, 0),
+                'wsgi.url_scheme': 'http',
+                'wsgi.errors': sys.stderr,
+                'wsgi.multithread': False,
+                'wsgi.multiprocess': False,
+                'wsgi.run_once': False}
 
-    def get_environ(self):
-        d = {
-            'wsgi.errors': sys.stderr,
-            'wsgi.version': (1, 0),
-            'wsgi.multithread': True,
-            'wsgi.multiprocess': False,
-            'wsgi.run_once': False,
-            'wsgi.url_scheme': 'http',
-        }
-        if self.environ is not None:
-            d.update(self.environ)
-        return d
-
-    def process_request(self, (socket, address)):
-        proto = self.protocol(socket, address, self)
-        proto.handle()
-
-    def log_message(self, message):
-        self.log.write(message + '\n')
-
-
-def server(sock, site, log=None, environ=None, max_size=None, max_http_version=DEFAULT_MAX_HTTP_VERSION,
-           protocol=HttpProtocol):
-    serv = Server(sock, sock.getsockname(), site, log, environ=None,
-                  max_http_version=max_http_version, protocol=protocol)
-    if max_size is None:
-        max_size = DEFAULT_MAX_SIMULTANEOUS_REQUESTS
-    pool = Pool(size=max_size)
-    try:
-        host, port = sock.getsockname()
-        port = ':%s' % (port, )
-        if hasattr(sock, 'do_handshake'):
-            scheme = 'https'
-            if port == ':443':
-                port = ''
-        else:
-            scheme = 'http'
-            if port == ':80':
-                port = ''
-
-        print "(%s) wsgi starting up on %s://%s%s/" % (os.getpid(), scheme, host, port)
-        delay = 0.1
-        while True:
-            try:
-                client_socket = sock.accept()
-                delay = 0.1
-                pool.spawn(serv.process_request, client_socket)
-            except socket.error, e:
-                if e[0] == errno.EMFILE:
-                    print "WARNING: pywsgi: out of file descriptors; will not accept for %s seconds" % delay
-                else:
-                    print 'WARNING: pywsgi: accept failed with error %s: %s; will not accept for %s seconds' % (e[0], e, delay)
-                sleep(delay)
-                delay *= 2
-    finally:
-        try:
-            sock.close()
-        except Exception:
-            pass
-
-
-# compatibilty with wsgi module, for tests
-class WSGIServer(object):
-
-    def __init__(self, address, application):
-        self.address = address
+    def __init__(self, listener, application, backlog=None, pool=None, handler_class=None, log=sys.stderr, **ssl_args):
+        StreamServer.__init__(self, listener, backlog=backlog, pool=pool, log=log)
+        if hasattr(listener, 'do_handshake'):
+            self.base_env['wsgi.url_scheme'] = 'https'
         self.application = application
 
-    @property
-    def server_port(self):
-        return self.address[1]
+    def get_environ(self):
+        return self.base_env.copy()
 
-    def start(self):
-        self.socket = socket.tcp_listener(self.address)
-        self.address = self.socket.getsockname()
-        self.server = Greenlet.spawn(server, self.socket, self.application)
+    def pre_start(self):
+        StreamServer.pre_start(self)
+        env = self.base_env.copy()
+        env.update( {'SERVER_NAME': socket.getfqdn(self.server_host),
+                     'SERVER_PORT': str(self.server_port) } )
+        self.base_env = env
 
-    def stop(self):
-        self.server.kill(KeyboardInterrupt)
-        self.socket.close()
-        self.server.join()
-
-    def serve_forever(self):
-        self.start()
-        self.server.join()
+    def handle(self, socket, address):
+        handler = self.handler_class(socket, address, self)
+        handler.handle()
 
