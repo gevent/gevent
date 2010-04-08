@@ -44,7 +44,11 @@ class StreamServer(Greenlet):
         Greenlet.__init__(self)
 
     def __str__(self):
-        return '<%s on %s>' % (self.__class__.__name__, self.socket)
+        try:
+            info = '%s:%s' % self.address
+        except Exception, ex:
+            info = str(ex) or '<error>'
+        return '<%s on %s>' % (self.__class__.__name__, info)
 
     def log_message(self, message):
         self.log.write(message + '\n')
