@@ -525,6 +525,9 @@ class TestInternational(TestCase):
 
 
 class TestInputReadline(TestCase):
+    # this test relies on the fact that readline() returns '' after it reached EOF
+    # this behaviour is not mandated by WSGI spec, it's just happens that gevent.wsgi behaves like that
+    # as such, this may change in the future
 
     validator = None
 
