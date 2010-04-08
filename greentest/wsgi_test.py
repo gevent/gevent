@@ -156,6 +156,7 @@ class Response(object):
                 self.body = fd.read()
         except:
             print 'Response.read failed to read the body:\n%s' % self
+            raise
         if body is not None:
             self.assertBody(body)
         return self
