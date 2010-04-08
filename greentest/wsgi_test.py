@@ -116,22 +116,22 @@ class Response(object):
         return '<%s status_line=%r headers=%r body=%r chunks=%r>' % args
 
     def assertCode(self, code):
-        assert self.code == code, 'Unexpected code: %r (expected %r)' % (self.code, code)
+        assert self.code == code, 'Unexpected code: %r (expected %r)\n%s' % (self.code, code, self)
 
     def assertReason(self, reason):
-        assert self.reason == reason, 'Unexpected reason: %r (expected %r)' % (self.reason, reason)
+        assert self.reason == reason, 'Unexpected reason: %r (expected %r)\n%s' % (self.reason, reason, self)
 
     def assertVersion(self, version):
-        assert self.version == version, 'Unexpected version: %r (expected %r)' % (self.version, version)
+        assert self.version == version, 'Unexpected version: %r (expected %r)\n%s' % (self.version, version, self)
 
     def assertHeader(self, header, value):
         real_value = self.headers.get(header)
         assert real_value == value, \
-               'Unexpected header %r: %r (expected %r)' % (header, real_value, value)
+               'Unexpected header %r: %r (expected %r)\n%s' % (header, real_value, value, self)
 
     def assertBody(self, body):
         assert self.body == body, \
-               'Unexpected body: %r (expected %r)' % (self.body, body)
+               'Unexpected body: %r (expected %r)\n%s' % (self.body, body, self)
 
     @classmethod
     def read(cls, fd, code=200, reason='OK', version='1.1', body=None):
