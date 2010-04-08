@@ -126,7 +126,6 @@ class WSGIHandler(object):
 class WSGIServer(HTTPServer):
 
     handler_class = WSGIHandler
-
     base_env = {'GATEWAY_INTERFACE': 'CGI/1.1',
                 'SERVER_SOFTWARE': 'gevent/%d.%d Python/%d.%d' % (gevent.version_info[:2] + sys.version_info[:2]),
                 'SCRIPT_NAME': '',
