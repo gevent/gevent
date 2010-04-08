@@ -118,5 +118,3 @@ class StreamServer(Greenlet):
     def handle(self, socket, address):
         raise NotImplementedError('override in a subclass')
 
-
-
