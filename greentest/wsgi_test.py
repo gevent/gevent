@@ -24,6 +24,7 @@ monkey.patch_all(thread=False)
 import cgi
 import os
 import urllib2
+import sys
 try:
     from wsgiref.validate import validator
 except ImportError:
@@ -39,6 +40,7 @@ from gevent import socket
 CONTENT_LENGTH = 'Content-Length'
 CONN_ABORTED_ERRORS = []
 server_implements_chunked = True
+DEBUG = '-v' in sys.argv
 
 try:
     from errno import WSAECONNABORTED
@@ -162,6 +164,34 @@ class Response(object):
         return self
 
 read_http = Response.read
+
+
+class DebugFileObject(object):
+
+    def __init__(self, obj):
+        self.obj = obj
+
+    def read(self, *args):
+        result = self.obj.read(*args)
+        if DEBUG:
+            print repr(result)
+        return result
+
+    def readline(self, *args):
+        result = self.obj.readline(*args)
+        if DEBUG:
+            print repr(result)
+        return result
+
+    def __getattr__(self, item):
+        assert item != 'obj'
+        return getattr(self.obj, item)
+
+
+def makefile(self, mode='r', bufsize=-1):
+    return DebugFileObject(socket._fileobject(self.dup(), mode, bufsize))
+
+socket.socket.makefile = makefile
 
 class TestCase(greentest.TestCase):
 
