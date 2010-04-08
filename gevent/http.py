@@ -28,14 +28,14 @@ class HTTPServer(object):
         if spawn != 'default':
             self.spawn = spawn
 
-    def start(self, socket_or_address, backlog=None):
+    def start(self, listener, backlog=None):
         """Start accepting connections"""
-        fileno = getattr(socket_or_address, 'fileno', None)
+        fileno = getattr(listener, 'fileno', None)
         if fileno is not None:
             fd = fileno()
-            sock = socket_or_address
+            sock = listener
         else:
-            sock = self.make_listener(socket_or_address, backlog=backlog)
+            sock = self.make_listener(listener, backlog=backlog)
             fd = sock.fileno()
         self.http.accept(fd)
         self.listeners.append(sock)
