@@ -496,6 +496,7 @@ class HttpsTestCase(TestCase):
         return urllib2.urlopen(req)
 
     def application(self, environ, start_response):
+        assert environ['wsgi.url_scheme'] == 'https', environ['wsgi.url_scheme']
         start_response('200 OK', [('Content-Type', 'text/plain')])
         return [environ['wsgi.input'].read()]
 
