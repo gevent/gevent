@@ -94,12 +94,12 @@ class StreamServer(Greenlet):
                     self.delay = self.min_delay
                     self.pool.spawn(self.handle, client_socket, address)
                     del client_socket, address
-                except socket.error, e:
-                    if e[0] in FATAL_ERRORS:
-                        self.log_message('ERROR: %s failed with %s' % (self, e))
-                        return e
+                except socket.error, ex:
+                    if ex[0] in FATAL_ERRORS:
+                        self.log_message('ERROR: %s failed with %s' % (self, ex))
+                        return ex
                     else:
-                        self.log_message('WARNING: %s: ignoring %s (sleeping %s seconds)' % (self, e, self.delay))
+                        self.log_message('WARNING: %s: ignoring %s (sleeping %s seconds)' % (self, ex, self.delay))
                         sleep(self.delay)
                         self.delay = min(self.max_delay, self.delay*2)
         finally:
