@@ -44,6 +44,16 @@ class TestFatalErrors(greentest.TestCase):
         gevent.sleep(0.1)
         assert not self.server.ready()
 
+    def test_dont_keep_reference_on_client_sock(self):
+        # the client socket should be garbage collected and closed when handle returns
+        self.server.handle = lambda *args: None
+        fd = socket.create_connection(('127.0.0.1', self.server.server_port)).makefile(bufsize=1)
+        t = gevent.Timeout.start_new(0.1)
+        try:
+            fd.read()
+        finally:
+            t.cancel()
+
 
 if __name__=='__main__':
     greentest.main()
