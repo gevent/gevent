@@ -93,6 +93,7 @@ class StreamServer(Greenlet):
                     client_socket, address = self.socket.accept()
                     self.delay = self.min_delay
                     self.pool.spawn(self.handle, client_socket, address)
+                    del client_socket, address
                 except socket.error, e:
                     if e[0] in FATAL_ERRORS:
                         self.log_message('ERROR: %s failed with %s' % (self, e))
