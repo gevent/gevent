@@ -327,7 +327,9 @@ class socket(object):
     def recv(self, *args):
         while True:
             try:
-                return self._sock.recv(*args)
+                res = self._sock.recv(*args)
+                #print 'received: %r' % (res, )
+                return res
             except error, ex:
                 if ex[0] != EWOULDBLOCK or self.timeout == 0.0:
                     raise
@@ -366,6 +368,7 @@ class socket(object):
             wait_read(self._sock.fileno(), timeout=self.timeout)
 
     def send(self, data, flags=0, timeout=timeout_default):
+        #print 'sending: %r' % data
         if timeout is timeout_default:
             timeout = self.timeout
         try:
@@ -388,13 +391,13 @@ class socket(object):
         if self.timeout is None:
             data_sent = 0
             while data_sent < len(data):
-                data_sent += self.send(data[data_sent:], flags)
+                data_sent += self.send(buffer(data, data_sent), flags)
         else:
             timeleft = self.timeout
             end = time.time() + timeleft
             data_sent = 0
             while True:
-                data_sent += self.send(data[data_sent:], flags, timeout=timeleft)
+                data_sent += self.send(buffer(data, data_sent), flags, timeout=timeleft)
                 if data_sent >= len(data):
                     break
                 timeleft = end - time.time()
