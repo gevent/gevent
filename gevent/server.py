@@ -71,15 +71,15 @@ class StreamServer(Greenlet):
             self.address = self.socket.getsockname()
             if self.ssl_enabled:
                 from gevent.ssl import wrap_socket
-                args = {}
+                ssl_args = {}
                 for arg in self._allowed_ssl_args:
                     try:
                         value = getattr(self, arg)
                     except AttributeError:
                         pass
                     else:
-                        args[arg] = value
-                self.socket = wrap_socket(self.socket, **args)
+                        ssl_args[arg] = value
+                self.socket = wrap_socket(self.socket, **ssl_args)
 
     def start(self):
         self.pre_start()
