@@ -28,8 +28,8 @@ class StreamServer(Greenlet):
         else:
             if not isinstance(listener, tuple):
                 raise TypeError('Expected a socket instance or a tuple: %r' % (listener, ))
-            if backlog is None:
-                backlog = self.backlog
+            if backlog is not None:
+                self.backlog = backlog
             self.address = listener
             if ssl_args:
                 self.ssl_enabled = True
