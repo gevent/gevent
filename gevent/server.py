@@ -116,6 +116,6 @@ class StreamServer(Greenlet):
             self.start()
         self.join()
 
-    def handle(self, socket, address):
+    def handle(self, client_socket, address):
         raise NotImplementedError('override in a subclass')
 
