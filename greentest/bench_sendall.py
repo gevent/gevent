@@ -17,7 +17,7 @@ def main():
     server.start()
 
     length = 50*0x100000
-    data = "x" * (50*0x100000)
+    data = "x" * length
     
     spent_total = 0
     N = 10
@@ -31,6 +31,7 @@ def main():
         spent_total += spent
 
     print "== %.2f MB/s" % (length * N / spent_total / 0x100000)
+
 
 if __name__=="__main__":
     main()
