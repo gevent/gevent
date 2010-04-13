@@ -116,7 +116,7 @@ class HTTPServer(object):
             try:
                 sys.stderr.write('Failed to handle request: %s\n\n' % (request, ))
             except:
-                pass
+                traceback.print_exc()
             if request:
                 self.reply_error(request)
 
