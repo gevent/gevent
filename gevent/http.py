@@ -4,7 +4,6 @@ import traceback
 from gevent import core
 from gevent.greenlet import Greenlet
 from gevent.event import Event
-from gevent.timeout import Timeout
 import _socket as socket
 
 
@@ -69,15 +68,7 @@ class HTTPServer(object):
         # TODO
         #3. Wait until every connection is closed or timeout expires
         if self._requests:
-            timer = Timeout.start_new(timeout)
-            try:
-                try:
-                    self._no_connections_event.wait(timeout=timeout)
-                except Timeout, ex:
-                    if timer is not ex:
-                        raise
-            finally:
-                timer.cancel()
+            self._no_connections_event.wait(timeout=timeout)
         #4. forcefull close all the connections
         # TODO
         #5. free http instance
