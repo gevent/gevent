@@ -4,7 +4,6 @@ import traceback
 from gevent import core
 from gevent.greenlet import Greenlet
 from gevent.event import Event
-from gevent.util import wrap_errors
 from gevent.timeout import Timeout
 import _socket as socket
 
@@ -116,7 +115,7 @@ class HTTPServer(object):
             if spawn is None:
                 self.handle(request)
             else:
-                greenlet = spawn(wrap_errors(core.HttpRequestDeleted, self.handle), request)
+                greenlet = spawn(self.handle, request)
                 rawlink = getattr(greenlet, 'rawlink', None)
                 if rawlink is not None:
                     greenlet._request = request
