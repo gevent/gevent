@@ -117,14 +117,12 @@ class HTTPServer(object):
                 sys.stderr.write('Failed to handle request: %s\n\n' % (request, ))
             except:
                 pass
-            self.reply_error(request)
+            if request:
+                self.reply_error(request)
 
     def reply_error(self, request):
-        try:
-            if request.response == (0, None):
-                request.send_reply(500, 'Internal Server Error', '<h1>Internal Server Error</h1>')
-        except core.HttpRequestDeleted:
-            pass
+        if request.response == (0, None):
+            request.send_reply(500, 'Internal Server Error', '<h1>Internal Server Error</h1>')
 
     def serve_forever(self, *args, **kwargs):
         stop_timeout = kwargs.pop('stop_timeout', 0)
