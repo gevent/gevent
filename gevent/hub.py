@@ -229,7 +229,7 @@ class Waiter(object):
     .. warning::
 
         This a limited and dangerous way to communicate between greenlets. It can easily
-        left a greenlet unscheduled forever if used incorrectly. Consider using safer
+        leave a greenlet unscheduled forever if used incorrectly. Consider using safer
         :class:`Event`/:class:`AsyncResult`/:class:`Queue` classes.
     """
 
