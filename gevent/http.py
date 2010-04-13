@@ -64,7 +64,7 @@ class HTTPServer(object):
         self.socket = []
         #2. Set "keep-alive" connections to "close"
         # TODO
-        #3a. set low timeout (min(1s, timeout or 1)) on events belonging to connection (to kill long-polling connections
+        #3a. set low timeout (min(1s, timeout or 1)) on events belonging to connection (to kill long-polling connections)
         # TODO
         #3. Wait until every connection is closed or timeout expires
         if self._requests:
