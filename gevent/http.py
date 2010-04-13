@@ -4,7 +4,7 @@ import traceback
 from gevent import core
 from gevent.greenlet import Greenlet
 from gevent.event import Event
-import _socket as socket
+import _socket
 
 
 class HTTPServer(object):
@@ -47,10 +47,10 @@ class HTTPServer(object):
     def make_listener(self, address, backlog=None):
         if backlog is None:
             backlog = self.backlog
-        sock = socket.socket()
+        sock = _socket.socket()
         try:
-            sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, sock.getsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR) | 1)
-        except socket.error:
+            sock.setsockopt(_socket.SOL_SOCKET, _socket.SO_REUSEADDR, sock.getsockopt(_socket.SOL_SOCKET, _socket.SO_REUSEADDR) | 1)
+        except _socket.error:
             pass
         sock.bind(address)
         sock.listen(backlog)
