@@ -124,9 +124,8 @@ class HTTPServer(object):
         if request.response == (0, None):
             request.send_reply(500, 'Internal Server Error', '<h1>Internal Server Error</h1>')
 
-    def serve_forever(self, *args, **kwargs):
-        stop_timeout = kwargs.pop('stop_timeout', 0)
-        self.start(*args, **kwargs)
+    def serve_forever(self, listener, backlog=None, stop_timeout=0):
+        self.start(listener, backlog=backlog)
         try:
             self._stopped_event.wait()
         finally:
