@@ -254,6 +254,7 @@ class socket(object):
             except error, ex:
                 if ex[0] != errno.EWOULDBLOCK or self.timeout == 0.0:
                     raise
+                sys.exc_clear()
             wait_read(self._sock.fileno(), timeout=self.timeout)
         return socket(_sock=client_socket), address
 
