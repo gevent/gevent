@@ -246,12 +246,6 @@ class socket(object):
             result += ' timeout=' + str(self.timeout)
         return result
 
-    @property
-    def fd(self):
-        import warnings
-        warnings.warn("socket.fd is deprecated; use socket._sock", DeprecationWarning, stacklevel=2)
-        return self._sock
-
     def accept(self):
         while True:
             try:
