@@ -460,13 +460,13 @@ def fromfd(*args):
     return socket(_sock=_socket.fromfd(*args))
 
 
-def bind_and_listen(descriptor, addr=('', 0), backlog=50, reuse_addr=True):
+def bind_and_listen(descriptor, address=('', 0), backlog=50, reuse_addr=True):
     if reuse_addr:
         try:
             descriptor.setsockopt(SOL_SOCKET, SO_REUSEADDR, descriptor.getsockopt(SOL_SOCKET, SO_REUSEADDR) | 1)
         except error:
             pass
-    descriptor.bind(addr)
+    descriptor.bind(address)
     descriptor.listen(backlog)
 
 
