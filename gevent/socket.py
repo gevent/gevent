@@ -339,9 +339,9 @@ class socket(object):
             try:
                 return self._sock.recvfrom(*args)
             except error, ex:
-                sys.exc_clear()
                 if ex[0] != EWOULDBLOCK or self.timeout == 0.0:
-                    raise ex
+                    raise
+                sys.exc_clear()
             wait_read(self._sock.fileno(), timeout=self.timeout)
 
     def recvfrom_into(self, *args):
