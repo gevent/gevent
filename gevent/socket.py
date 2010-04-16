@@ -592,6 +592,7 @@ else:
             for socktype, proto in socktype_proto:
                 result.append((family, socktype, proto, '', (inet_ntop(family, addr), port)))
         return result
+        # TODO libevent2 has getaddrinfo that is probably better than the hack above; should wrap that.
 
 
 _have_ssl = False
