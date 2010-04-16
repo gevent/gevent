@@ -249,13 +249,13 @@ class socket(object):
     def accept(self):
         while True:
             try:
-                client, addr = self._sock.accept()
+                client_socket, address = self._sock.accept()
                 break
             except error, ex:
                 if ex[0] != errno.EWOULDBLOCK or self.timeout == 0.0:
                     raise
             wait_read(self._sock.fileno(), timeout=self.timeout)
-        return socket(_sock=client), addr
+        return socket(_sock=client_socket), address
 
     def close(self):
         self._sock = _closedsocket()
