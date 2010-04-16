@@ -109,12 +109,6 @@ class BackdoorServer(Greenlet):
             SocketConsole.spawn(fileobj, self.locals)
 
 
-def backdoor_server(server, locals=None):
-    import warnings
-    warnings.warn("gevent.backdoor_server is deprecated; use BackdoorServer", DeprecationWarning, stacklevel=2)
-    BackdoorServer.spawn(server, locals).join()
-
-
 class _fileobject(socket._fileobject):
 
     def write(self, data):
