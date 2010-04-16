@@ -122,7 +122,6 @@ except AttributeError:
 # XXX: add test that checks that socket.__all__ matches gevent.socket.__all__ on all supported platforms
 
 from gevent.hub import getcurrent, get_hub
-from gevent.greenlet import Greenlet
 from gevent import core
 
 _ip4_re = re.compile('^[\d\.]+$')
@@ -470,71 +469,11 @@ def bind_and_listen(descriptor, address=('', 0), backlog=50, reuse_addr=True):
     descriptor.listen(backlog)
 
 
-def socket_bind_and_listen(*args, **kwargs):
-    import warnings
-    warnings.warn("gevent.socket.socket_bind_and_listen is renamed to bind_and_listen", DeprecationWarning, stacklevel=2)
-    bind_and_listen(*args, **kwargs)
-    return args[0]
-
-
-def set_reuse_addr(descriptor):
-    import warnings
-    warnings.warn("gevent.socket.set_reuse_addr is deprecated", DeprecationWarning, stacklevel=2)
-    try:
-        descriptor.setsockopt(SOL_SOCKET, SO_REUSEADDR, descriptor.getsockopt(SOL_SOCKET, SO_REUSEADDR) | 1)
-    except error:
-        pass
-
-
 def tcp_listener(address, backlog=50, reuse_addr=True):
     """A shortcut to create a TCP socket, bind it and put it into listening state."""
     sock = socket()
     bind_and_listen(sock, address, backlog=backlog, reuse_addr=reuse_addr)
     return sock
-
-
-def connect_tcp(address, localaddr=None):
-    """
-    Create a TCP connection to address (host, port) and return the socket.
-    Optionally, bind to localaddr (host, port) first.
-    """
-    import warnings
-    warnings.warn("gevent.socket.connect_tcp is deprecated", DeprecationWarning, stacklevel=2)
-    desc = socket()
-    if localaddr is not None:
-        desc.bind(localaddr)
-    desc.connect(address)
-    return desc
-
-
-def tcp_server(listensocket, server, *args, **kw):
-    """
-    Given a socket, accept connections forever, spawning greenlets
-    and executing *server* for each new incoming connection.
-    When *listensocket* is closed, the ``tcp_server()`` greenlet will end.
-
-    listensocket
-        The socket from which to accept connections.
-    server
-        The callable to call when a new connection is made.
-    \*args
-        The positional arguments to pass to *server*.
-    \*\*kw
-        The keyword arguments to pass to *server*.
-    """
-    import warnings
-    warnings.warn("gevent.socket.tcp_server is deprecated by gevent.server.StreamServer", DeprecationWarning, stacklevel=2)
-    try:
-        try:
-            while True:
-                client_socket = listensocket.accept()
-                Greenlet.spawn(server, client_socket, *args, **kw)
-        except error, e:
-            # Broken pipe means it was shutdown
-            if e[0] != 32:
-                raise
-    finally:
-        listensocket.close()
 
 
 try:
