@@ -314,7 +314,9 @@ class socket(object):
         """dup() -> socket object
 
         Return a new socket object connected to the same system resource."""
-        return socket(_sock=self._sock)
+        new_sock = socket(_sock=self._sock)
+        new_sock.timeout = self.timeout
+        return new_sock
 
     def makefile(self, mode='r', bufsize=-1):
         return _fileobject(self.dup(), mode, bufsize)
