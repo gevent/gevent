@@ -212,6 +212,10 @@ class Greenlet(greenlet):
 
         Should only be called from the HUB, otherwise the current greenlet is left unscheduled forever.
         To raise an exception in a safely manner from any greenlet, use :meth:`kill`.
+
+        If a greenlet was started but never switched to yet, then also
+        a) cancel the event that will start it
+        b) fire the notifications as if an exception was raised in a greenlet
         """
         if self._start_event is not None:
             self._start_event.cancel()
