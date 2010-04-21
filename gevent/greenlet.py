@@ -497,10 +497,14 @@ def joinall(greenlets, timeout=None, raise_error=False):
         try:
             for greenlet in greenlets:
                 greenlet.rawlink(put)
-            for _ in xrange(len(greenlets)):
-                greenlet = queue.get()
-                if raise_error and not greenlet.successful():
-                    getcurrent().throw(greenlet.exception)
+            if raise_error:
+                for _ in xrange(len(greenlets)):
+                    greenlet = queue.get()
+                    if not greenlet.successful():
+                        raise greenlet.exception
+            else:
+                for _ in xrange(len(greenlets)):
+                    queue.get()
         except:
             for greenlet in greenlets:
                 greenlet.unlink(put)
