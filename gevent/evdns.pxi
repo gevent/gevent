@@ -78,6 +78,7 @@ cdef void __evdns_callback(int code, char type, int count, int ttl, void *addrs,
         callback(code, type, ttl, result)
     except:
         traceback.print_exc()
+        sys.exc_clear()
 
 
 def dns_resolve_ipv4(char *name, int flags, object callback):
