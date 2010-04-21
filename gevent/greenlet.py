@@ -611,5 +611,5 @@ def getfuncname(func):
     return repr(func)
 
 
-_NONE = Exception("Greenlet didn't even start")
+_NONE = Exception("Neither exception nor result")
 
