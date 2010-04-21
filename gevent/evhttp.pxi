@@ -120,6 +120,7 @@ cdef class http_request:
     def __dealloc__(self):
         if self.__obj:
             report_internal_error(self.__obj)
+            self.__obj = NULL
 
     property _obj:
 
