@@ -465,6 +465,8 @@ cdef void _http_cb_handler(evhttp_request* request, void *arg) with gil:
             sys.stderr.write('Failed to handle request: %s\n\n' % (req, ))
         except:
             traceback.print_exc()
+        # without clearing exc_info a reference to the request is somehow leaked
+        sys.exc_clear()
 
 
 cdef void _http_closecb_handler(evhttp_connection* connection, void *arg) with gil:
