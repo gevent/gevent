@@ -166,8 +166,7 @@ class Greenlet(greenlet):
 
     def successful(self):
         """Return true if and only if the greenlet has finished execution successfully,
-        that is, without raising an error.
-        """
+        that is, without raising an error."""
         return self._exception is None
 
     def __repr__(self):
