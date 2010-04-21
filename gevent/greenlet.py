@@ -156,6 +156,10 @@ class Greenlet(greenlet):
         self._notifier = None
         self._start_event = None
 
+    @property
+    def started(self):
+        return self._start_event is not None or bool(self)
+
     def ready(self):
         """Return true if and only if the greenlet has finished execution."""
         return self.dead or self._exception is not _NONE
