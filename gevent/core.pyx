@@ -43,6 +43,7 @@ __all__ = ['event', 'read_event', 'write_event', 'timer', 'signal', 'active_even
 import sys
 import traceback
 from pprint import pformat
+import weakref
 
 DEF EVENT_INTERNAL_AVAILABLE = False
 
