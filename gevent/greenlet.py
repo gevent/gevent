@@ -481,7 +481,10 @@ class Greenlet(greenlet):
 
 
 def _kill(greenlet, exception, waiter):
-    greenlet.throw(exception)
+    try:
+        greenlet.throw(exception)
+    except:
+        traceback.print_exc()
     waiter.switch()
 
 
