@@ -66,6 +66,8 @@ def sleep(seconds=0):
     expressing a cooperative yield.
     """
     unique_mark = object()
+    if not seconds >= 0:
+        raise IOError(22, 'Invalid argument')
     timer = core.timer(seconds, getcurrent().switch, unique_mark)
     try:
         switch_result = get_hub().switch()
