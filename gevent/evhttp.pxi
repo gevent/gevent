@@ -502,7 +502,7 @@ cdef class http:
     def __init__(self, handle):
         self.handle = handle
         self._gencb = None
-        self._requests = {}
+        self._requests = {} # maps connection id to WeakKeyDictionary which holds requests
         self.__obj = evhttp_new(current_base)
         evhttp_set_gencb(self.__obj, _http_cb_handler, <void *>self)
 
