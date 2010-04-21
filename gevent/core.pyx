@@ -287,24 +287,33 @@ cdef class event:
 cdef class read_event(event):
     """Create a new scheduled event with evtype=EV_READ"""
 
-    def __init__(self, int handle, callback, timeout=-1, arg=None):
-        event.__init__(self, EV_READ, handle, callback, arg)
+    def __init__(self, int handle, callback, timeout=-1, arg=None, persist=False):
+        cdef short evtype = EV_READ
+        if persist:
+            evtype = evtype | EV_PERSIST
+        event.__init__(self, evtype, handle, callback, arg)
         self.add(timeout)
 
 
 cdef class write_event(event):
     """Create a new scheduled event with evtype=EV_WRITE"""
 
-    def __init__(self, int handle, callback, timeout=-1, arg=None):
-        event.__init__(self, EV_WRITE, handle, callback, arg)
+    def __init__(self, int handle, callback, timeout=-1, arg=None, persist=False):
+        cdef short evtype = EV_WRITE
+        if persist:
+            evtype = evtype | EV_PERSIST
+        event.__init__(self, evtype, handle, callback, arg)
         self.add(timeout)
 
 
 class readwrite_event(event):
     """Create a new scheduled event with evtype=EV_READ|EV_WRITE"""
 
-    def __init__(self, int handle, callback, timeout=-1, arg=None):
-        event.__init__(self, EV_READ|EV_WRITE, handle, callback, arg)
+    def __init__(self, int handle, callback, timeout=-1, arg=None, persist=False):
+        cdef short evtype = EV_READ|EV_WRITE
+        if persist:
+            evtype = evtype | EV_PERSIST
+        event.__init__(self, evtype, handle, callback, arg)
         self.add(timeout)
 
 
