@@ -475,10 +475,14 @@ cdef void _http_cb_handler(evhttp_request* request, void *arg) with gil:
 
 
 cdef void report_internal_error(evhttp_request* request):
-    cdef evbuffer*  c_buf = evbuffer_new()
-    evbuffer_add(c_buf, "<h1>Internal Server Error</h1>", 30)
-    evhttp_send_reply(request, 500, "Internal Server Error", c_buf)
-    evbuffer_free(c_buf)
+    cdef evbuffer* c_buf
+    if request != NULL and request.response_code == 0:
+        evhttp_add_header(request.output_headers, "Connection", "close")
+        evhttp_add_header(request.output_headers, "Content-type", "text/plain")
+        c_buf = evbuffer_new()
+        evbuffer_add(c_buf, "Internal Server Error", 21)
+        evhttp_send_reply(request, 500, "Internal Server Error", c_buf)
+        evbuffer_free(c_buf)
 
 
 cdef class http:
