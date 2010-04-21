@@ -486,6 +486,7 @@ cdef void report_internal_error(evhttp_request* request):
     if request != NULL and request.response_code == 0:
         evhttp_add_header(request.output_headers, "Connection", "close")
         evhttp_add_header(request.output_headers, "Content-type", "text/plain")
+        evhttp_add_header(request.output_headers, "Content-length", "21")
         c_buf = evbuffer_new()
         evbuffer_add(c_buf, "Internal Server Error", 21)
         evhttp_send_reply(request, 500, "Internal Server Error", c_buf)
