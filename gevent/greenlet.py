@@ -5,7 +5,6 @@ import traceback
 from gevent import core
 from gevent.hub import greenlet, getcurrent, get_hub, GreenletExit, Waiter, kill
 from gevent.timeout import Timeout
-from gevent.util import lazy_property
 
 
 __all__ = ['Greenlet',
