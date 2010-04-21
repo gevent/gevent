@@ -170,13 +170,16 @@ class Greenlet(greenlet):
     def __repr__(self):
         classname = self.__class__.__name__
         result = '<%s at %s' % (classname, hex(id(self)))
-        formatted = self._formatted_info
-        if formatted is not None:
+        formatted = self._formatinfo()
+        if formatted:
             result += ': ' + formatted
         return result + '>'
 
-    @lazy_property
-    def _formatted_info(self):
+    def _formatinfo(self):
+        try:
+            return self._formatted_info
+        except AttributeError:
+            pass
         try:
             result = getfuncname(self.__dict__['_run'])
         except Exception:
@@ -189,7 +192,10 @@ class Greenlet(greenlet):
                 args.extend(['%s=%r' % x for x in self.kwargs.items()])
             if args:
                 result += '(' + ', '.join(args) + ')'
+            # it is important to save the result here, because once the greenlet exits '_run' attribute will be removed
+            self._formatted_info = result
             return result
+        return ''
 
     @property
     def exception(self):
