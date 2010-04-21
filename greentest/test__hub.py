@@ -125,6 +125,20 @@ class TestSleep(greentest.GenericWaitTestCase):
     def wait(self, timeout):
         gevent.sleep(timeout)
 
+    def test_negative(self):
+        self.switch_expected = False
+        self.assertRaises(IOError, gevent.sleep, -1)
+        from time import sleep as real_sleep
+        try:
+            real_sleep(-1.1)
+        except IOError, real_ex:
+            pass
+        try:
+            gevent.sleep(-1.1)
+        except IOError, gevent_ex:
+            pass
+        self.assertEqual(repr(gevent_ex), repr(real_ex))
+
 
 class Expected(Exception):
     pass
