@@ -243,12 +243,12 @@ class Greenlet(greenlet):
 
     def start(self):
         """Schedule the greenlet to run in this loop iteration"""
-        assert self._start_event is None, 'Greenlet already started'
+        assert not self.started, 'Greenlet already started'
         self._start_event = core.active_event(self.switch)
 
     def start_later(self, seconds):
         """Schedule the greenlet to run in the future loop iteration *seconds* later"""
-        assert self._start_event is None, 'Greenlet already started'
+        assert not self.started, 'Greenlet already started'
         self._start_event = core.timer(seconds, self.switch)
 
     @classmethod
