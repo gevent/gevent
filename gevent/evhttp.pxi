@@ -526,10 +526,10 @@ cdef class http:
     def bind(self, char* address='127.0.0.1', int port=80):
         cdef int res = evhttp_bind_socket(self.__obj, address, port)
         if res:
-            raise RuntimeError('Cannot bind %s:%s' % (address, port))
+            raise RuntimeError('evhttp_bind_socket(%r, %r) returned %r' % (address, port, res))
 
     def accept(self, int fd):
         cdef res = evhttp_accept_socket(self.__obj, fd)
         if res:
-            raise RuntimeError("evhttp_accept_socket(%s) returned %s" % (fd, res))
+            raise RuntimeError("evhttp_accept_socket(%r) returned %r" % (fd, res))
 
