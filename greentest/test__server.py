@@ -1,59 +1,333 @@
-# Copyright (c) 2010 gevent contributors. See LICENSE for details.
-import os
 import greentest
+from gevent import socket
 import gevent
-from gevent import server, socket
+from gevent.server import StreamServer
+import errno
+import os
 
 
-class TestFatalErrors(greentest.TestCase):
+class SimpleStreamServer(StreamServer):
 
-    def setUp(self):
-        greentest.TestCase.setUp(self)
-        self.server = server.StreamServer(("127.0.0.1", 0))
+    def handle(self, client_socket, address):
+        fd = client_socket.makefile()
+        request_line = fd.readline()
+        if not request_line:
+            return
+        try:
+            method, path, rest = request_line.split(' ', 3)
+        except Exception:
+            print 'Failed to parse request line: %r' % (request_line, )
+            raise
+        if path == '/ping':
+            client_socket.sendall('HTTP/1.0 200 OK\r\n\r\nPONG')
+        elif path == '/long':
+            client_socket.sendall('hello')
+            while True:
+                data = client_socket.recv(1)
+                if not data:
+                    break
+        else:
+            client_socket.sendall('HTTP/1.0 404 WTF?\r\n\r\n')
+
+
+class Settings:
+    ServerClass = StreamServer
+    ServerSubClass = SimpleStreamServer
+    restartable = True
+
+    @staticmethod
+    def assert500(self):
+        conn = self.makefile()
+        result = conn.read()
+        assert not result, repr(result)
+
+    @staticmethod
+    def assert503(self):
+        # regular reads timeout
+        self.assert500()
+        # attempt to send anything reset the connection
+        try:
+            self.send_request()
+        except socket.error, ex:
+            if ex[0] != errno.ECONNRESET:
+                raise
+
+
+class TestCase(greentest.TestCase):
+
+    def tearDown(self):
+        greentest.TestCase.tearDown(self)
+        if hasattr(self, 'server'):
+            self.server.stop()
+
+    def get_listener(self):
+        sock = socket.socket()
+        sock.bind(('127.0.0.1', 0))
+        sock.listen(5)
+        return sock
+
+    def makefile(self, timeout=0.1, bufsize=1):
+        sock = socket.create_connection((self.server.server_host, self.server.server_port))
+        fobj = sock.makefile(bufsize=bufsize)
+        fobj._sock.settimeout(timeout)
+        return fobj
+
+    def send_request(self, url='/', timeout=0.1, bufsize=1):
+        conn = self.makefile(timeout=timeout, bufsize=bufsize)
+        conn.write('GET %s HTTP/1.0\r\n\r\n' % url)
+        conn.flush()
+        return conn
+
+    def assertConnectionRefused(self):
+        try:
+            conn = self.makefile()
+            raise AssertionError('Connection was not refused: %r' % (conn._sock, ))
+        except socket.error, ex:
+            self.assertEqual(ex[0], errno.ECONNREFUSED)
+
+    def assert500(self):
+        Settings.assert500(self)
+
+    def assert503(self):
+        Settings.assert503(self)
+
+    def assertNotAccepted(self):
+        conn = self.makefile()
+        conn.write('GET / HTTP/1.0\r\n\r\n')
+        conn.flush()
+        result = ''
+        try:
+            while True:
+                data = conn._sock.recv(1)
+                if not data:
+                    break
+                result += data
+        except socket.timeout:
+            assert not result, repr(result)
+            return
+        assert result.startswith('HTTP/1.0 500 Internal Server Error'), repr(result)
+
+    def assertConnectionSucceed(self):
+        conn = self.makefile()
+        conn.write('GET /ping HTTP/1.0\r\n\r\n')
+        result = conn.read()
+        assert result.endswith('\r\n\r\nPONG'), repr(result)
+
+    def start_server(self):
         self.server.start()
-        self.socket = self.server.socket
+        self.assertConnectionSucceed()
+        self.assertConnectionSucceed()
 
-    def _join_server(self):
-        self.server.join(0.1)
+    def stop_server(self):
+        self.server.stop()
+        self.assertConnectionRefused()
+
+    def report_netstat(self, msg):
+        return
+        print msg
+        os.system('sudo netstat -anp | grep %s' % os.getpid())
+        print '^^^^^'
+
+    def init_server(self):
+        self.server = self.ServerSubClass(('127.0.0.1', 0))
+        self.server.start()
+        gevent.sleep(0.01)
+
+    @property
+    def socket(self):
+        return self.server.socket
+
+    def _test_invalid_callback(self):
+        self.server = self.ServerClass(('127.0.0.1', 0), lambda : None)
+        self.server.start()
+        self.hook_stderr()
+        self.assert500()
+        self.assert_stderr_traceback('TypeError')
+        self.assert_stderr(self.invalid_callback_message)
+
+    def ServerClass(self, *args, **kwargs):
+        kwargs.setdefault('spawn', self.get_spawn())
+        return Settings.ServerClass(*args, **kwargs)
+
+    def ServerSubClass(self, *args, **kwargs):
+        kwargs.setdefault('spawn', self.get_spawn())
+        return Settings.ServerSubClass(*args, **kwargs)
+
+
+class TestDefaultSpawn(TestCase):
+
+    invalid_callback_message = '<Greenlet failed with TypeError'
+
+    def get_spawn(self):
+        return gevent.spawn
+
+    def _test_server_start_stop(self, restartable):
+        self.report_netstat('before start')
+        self.start_server()
+        self.report_netstat('after start')
+        if restartable and Settings.restartable:
+            self.server.stop_accepting()
+            self.report_netstat('after stop_accepting')
+            self.assertNotAccepted()
+            self.server.start_accepting()
+            self.report_netstat('after start_accepting')
+            self.assertConnectionSucceed()
+        else:
+            self.assertRaises(Exception, self.server.start) # XXX which exception exactly?
+        self.stop_server()
+        self.report_netstat('after stop')
+
+    def test_backlog_is_not_accepted_for_socket(self):
+        self.switch_expected = False
+        self.assertRaises(TypeError, self.ServerClass, self.get_listener(), backlog=25)
+
+    def test_backlog_is_accepted_for_address(self):
+        self.server = self.ServerSubClass(('127.0.0.1', 0), backlog=25)
+        self.assertConnectionRefused()
+        self._test_server_start_stop(restartable=False)
+
+    def test_subclass_with_socket(self):
+        self.server = self.ServerSubClass(self.get_listener())
+        self.server.reuse_addr = 1
+        self._test_server_start_stop(restartable=True)
+
+    def test_subclass_with_address(self):
+        self.server = self.ServerSubClass(('127.0.0.1', 0))
+        self.assertConnectionRefused()
+        self._test_server_start_stop(restartable=True)
+
+    def test_invalid_callback(self):
+        self._test_invalid_callback()
+
+    def _test_serve_forever(self):
+        g = gevent.spawn_link_exception(self.server.serve_forever)
         try:
-            self.assert_(self.server.ready(), "server did not die")
+            gevent.sleep(0.01)
+            self.assertConnectionSucceed()
+            self.server.stop()
+            assert not self.server.started
+            self.assertConnectionRefused()
         finally:
-            self.server.kill(block=True)
+            g.kill(block=True)
 
-    def test_socket_shutdown(self):
-        self.socket.shutdown(socket.SHUT_RDWR)
-        self._join_server()
+    def test_serve_forever(self):
+        self.server = self.ServerSubClass(('127.0.0.1', 0))
+        assert not self.server.started
+        self.assertConnectionRefused()
+        self._test_serve_forever()
 
-    def test_socket_close(self):
-        self.socket.close()
-        self._join_server()
+    def test_serve_forever_after_start(self):
+        self.server = self.ServerSubClass(('127.0.0.1', 0))
+        self.assertConnectionRefused()
+        assert not self.server.started
+        self.server.start()
+        assert self.server.started
+        self._test_serve_forever()
 
-    def test_socket_close_fileno(self):
-        os.close(self.socket.fileno())
-        self._join_server()
+    def test_server_closes_client_sockets(self):
+        self.server = self.ServerClass(('127.0.0.1', 0), lambda *args: [])
+        self.server.start()
+        conn = self.send_request()
+        timeout = gevent.Timeout.start_new(1)
+        # use assert500 below?
+        try:
+            try:
+                result = conn.read()
+                assert result.startswith('HTTP/1.0 500 Internal Server Error'), repr(result)
+            except socket.error, ex:
+                if ex[0] != errno.ECONNRESET:
+                    raise
+        finally:
+            timeout.cancel()
+        self.stop_server()
 
-    def test_socket_file(self):
-        os.close(self.socket.fileno())
-        f = open("/dev/zero", "r")
-        self._join_server()
-        del f
+    def init_server(self):
+        self.server = self.ServerSubClass(('127.0.0.1', 0))
+        self.server.start()
+        gevent.sleep(0.01)
 
-    def test_non_fatal_error(self):
-        error = socket.error('some non-fatal error')
-        self.socket.accept = lambda *args: gevent.getcurrent().throw(error)
+    @property
+    def socket(self):
+        return self.server.socket
+
+    def test_error_in_spawn(self):
+        self.init_server()
+        assert self.server.started
+        self.hook_stderr()
+        error = ExpectedError('test_error_in_spawn')
+        self.server.spawn = lambda *args: gevent.getcurrent().throw(error)
+        self.assert500()
+        self.assert_stderr_traceback(error)
+        #self.assert_stderr('^WARNING: <SimpleStreamServer .*?>: ignoring test_error_in_spawn \\(sleeping \d.\d+ seconds\\)\n$')
+        self.assert_stderr('Failed to handle...')
+        return
+        if Settings.restartable:
+            assert not self.server.started
+        else:
+            assert self.server.started
         gevent.sleep(0.1)
-        assert not self.server.ready()
-
-    def test_dont_keep_reference_on_client_sock(self):
-        # the client socket should be garbage collected and closed when handle returns
-        self.server.handle = lambda *args: None
-        fd = socket.create_connection(('127.0.0.1', self.server.server_port)).makefile(bufsize=1)
-        t = gevent.Timeout.start_new(0.1)
-        try:
-            fd.read()
-        finally:
-            t.cancel()
+        assert self.server.started
 
 
-if __name__=='__main__':
+class TestRawSpawn(TestDefaultSpawn):
+
+    invalid_callback_message = 'Failed active_event...'
+
+    def get_spawn(self):
+        return gevent.spawn_raw
+
+
+class TestPoolSpawn(TestDefaultSpawn):
+
+    def get_spawn(self):
+        return 2
+
+    def test_pull_full(self):
+        self.init_server()
+        pool = []
+        for _ in xrange(2):
+            pool.append(self.send_request('/long'))
+        gevent.sleep(0.01)
+        print len(self.server.pool)
+        self.assert503()
+        self.assert503()
+        self.assert503()
+        pool[0]._sock.close()
+        pool[0].close()
+        gevent.sleep(0.1)
+        print len(self.server.pool)
+        self.assertConnectionSucceed()
+
+
+class TestNoneSpawn(TestCase):
+
+    invalid_callback_message = 'Failed to handle'
+
+    def get_spawn(self):
+        return None
+
+    def test_invalid_callback(self):
+        self._test_invalid_callback()
+
+    def test_assertion_in_blocking_func(self):
+        def sleep(*args):
+            gevent.sleep(0)
+        self.server = Settings.ServerClass(('127.0.0.1', 0), sleep, spawn=None)
+        self.server.start()
+        self.hook_stderr()
+        self.assert500()
+        self.assert_mainloop_assertion(self.invalid_callback_message)
+
+
+
+class ExpectedError(Exception):
+    pass
+
+# test non-socket.error exception in accept call: fatal
+# test error in spawn(): non-fatal
+# test error in spawned handler: non-fatal
+
+
+if __name__ == '__main__':
     greentest.main()
+
