@@ -113,13 +113,15 @@ cdef class http_request:
     cdef evhttp_request* __obj
     cdef object _input_buffer
     cdef object _output_buffer
+    cdef public int _default_response_code
 
     def __init__(self, size_t _obj):
         self.__obj = <evhttp_request*>_obj
+        self._default_response_code = 500
 
     def __dealloc__(self):
         if self.__obj:
-            report_internal_error(self.__obj)
+            report_internal_error(self.__obj, self._default_response_code)
             self.__obj = NULL
 
     property _obj:
@@ -478,18 +480,23 @@ cdef void _http_closecb_handler(evhttp_connection* connection, void *arg) with g
 
 
 cdef void _http_cb_reply_error(evhttp_request* request, void *arg):
-    report_internal_error(request)
+    report_internal_error(request, 500)
 
 
-cdef void report_internal_error(evhttp_request* request):
+cdef void report_internal_error(evhttp_request* request, int code):
     cdef evbuffer* c_buf
     if request != NULL and request.response_code == 0:
         evhttp_add_header(request.output_headers, "Connection", "close")
         evhttp_add_header(request.output_headers, "Content-type", "text/plain")
-        evhttp_add_header(request.output_headers, "Content-length", "21")
         c_buf = evbuffer_new()
-        evbuffer_add(c_buf, "Internal Server Error", 21)
-        evhttp_send_reply(request, 500, "Internal Server Error", c_buf)
+        if code == 503:
+            evhttp_add_header(request.output_headers, "Content-length", "31")
+            evbuffer_add(c_buf, "Service Temporarily Unavailable", 31)
+            evhttp_send_reply(request, 503, "Service Unavailable", c_buf)
+        else:
+            evhttp_add_header(request.output_headers, "Content-length", "21")
+            evbuffer_add(c_buf, "Internal Server Error", 21)
+            evhttp_send_reply(request, 500, "Internal Server Error", c_buf)
         evbuffer_free(c_buf)
 
 
