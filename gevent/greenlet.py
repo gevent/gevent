@@ -541,7 +541,7 @@ def _killall(greenlets, exception):
                 traceback.print_exc()
 
 
-def killall(greenlets, exception=GreenletExit, block=False, timeout=None):
+def killall(greenlets, exception=GreenletExit, block=True, timeout=None):
     if block:
         waiter = Waiter()
         core.active_event(_killall3, greenlets, exception, waiter)
