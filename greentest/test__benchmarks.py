@@ -1,6 +1,22 @@
 import sys
-import os
 import glob
+import mysubprocess as subprocess
+import time
+
+def system(command):
+    p = subprocess.Popen(command, shell=True)
+    try:
+        start = time.time()
+        while time.time() < start + 10 and p.poll() is None:
+            time.sleep(0.1)
+        if p.poll() is None:
+            p.kill()
+            return 'KILLED'
+        return p.poll()
+    finally:
+        if p.poll() is None:
+            p.kill()
+
 
 modules = set()
 
@@ -16,7 +32,7 @@ if __name__ == '__main__':
     for path in modules:
         print path
         sys.stdout.flush()
-        res = os.system('%s %s all' % (sys.executable, path))
+        res = system('%s %s all' % (sys.executable, path))
         if res:
             error = 1
             print path, 'failed'
