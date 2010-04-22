@@ -287,11 +287,11 @@ class Greenlet(greenlet):
         g.link_exception()
         return g
 
-    def kill(self, exception=GreenletExit, block=False, timeout=None):
+    def kill(self, exception=GreenletExit, block=True, timeout=None):
         """Raise the exception in the greenlet.
 
-        If block is ``False`` (the default), the current greenlet is not unscheduled.
-        If block is ``True``, wait until the greenlet dies or the optional timeout expires.
+        If block is ``True`` (the default), wait until the greenlet dies or the optional timeout expires.
+        If block is ``False``, the current greenlet is not unscheduled.
 
         Return ``None``.
         """
