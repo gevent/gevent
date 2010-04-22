@@ -175,6 +175,12 @@ def wrap_socket(sock, keyfile=None, certfile=None,
                 ssl_version=None, ca_certs=None,
                 do_handshake_on_connect=None,
                 suppress_ragged_eofs=None):
+    """Create a new :class:`SSLObject` instance.
+    
+    For compatibility with :mod:`gevent.ssl` the function accepts all the arguments that :func:`gevent.ssl.wrap_socket`
+    accepts. However, it only understands what *sock*, *keyfile* and *certfile* mean, so it will raise
+    :exc:`ImportError` if you pass anything else.
+    """
     for arg in ['cert_reqs', 'ssl_version', 'ca_certs', 'do_handshake_on_connect', 'suppress_ragged_eofs']:
         if locals()[arg] is not None:
             raise TypeError('To use argument %r install ssl package: http://pypi.python.org/pypi/ssl' % arg)
