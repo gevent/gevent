@@ -180,6 +180,10 @@ class HttpProtocol(BaseHTTPServer.BaseHTTPRequestHandler):
         if not self.status:
             raise AssertionError("write() before start_response()")
         elif not self.headers_sent:
+            if hasattr(self.result, '__len__') and 'Content-Length' not in self.response_headers_list:
+                self.response_headers.append(('Content-Length', str(sum(len(chunk) for chunk in self.result))))
+                self.response_headers_list.append('Content-Length')
+
             self.headers_sent = True
             towrite.append('%s %s\r\n' % (self.request_version, self.status))
             for header in self.response_headers:
@@ -227,17 +231,15 @@ class HttpProtocol(BaseHTTPServer.BaseHTTPRequestHandler):
         self.status = None
         self.headers_sent = False
 
-        result = None
+        self.result = None
         self.response_use_chunked = False
         self.response_length = 0
 
         try:
             try:
                 result = self.application(self.environ, self.start_response)
-                if not self.headers_sent and hasattr(result, '__len__') and 'Content-Length' not in self.response_headers_list:
-                    self.response_headers.append(('Content-Length', str(sum(map(len, result)))))
-                    self.response_headers_list.append('Content-Length')
-                for data in result:
+                self.result = result
+                for data in self.result:
                     if data:
                         self.write(data)
                 if not self.headers_sent or self.response_use_chunked:
@@ -249,18 +251,23 @@ class HttpProtocol(BaseHTTPServer.BaseHTTPRequestHandler):
                 if not self.response_length:
                     self.wfile.write(_INTERNAL_ERROR_RESPONSE)
         finally:
-            if hasattr(result, 'close'):
-                result.close()
+            if hasattr(self.result, 'close'):
+                self.result.close()
             if self.wsgi_input.position < self.environ.get('CONTENT_LENGTH', 0):
                 ## Read and discard body
                 self.wsgi_input.read()
             finish = time.time()
 
+            if self.status is not None:
+                status = self.status.split()[0]
+            else:
+                status = '-'
+
             self.server.log_message('%s - - [%s] "%s" %s %s %.6f' % (
                 self.client_address[0],
                 self.log_date_time_string(),
                 self.requestline,
-                self.status.split()[0],
+                status,
                 self.response_length,
                 finish - start))
 
