@@ -1,16 +1,20 @@
 from gevent import wsgi
-import wsgi_test
-from wsgi_test import *
+import test__pywsgi
+from test__pywsgi import *
 
 del TestHttps
-wsgi_test.server_implements_chunked = False
+test__pywsgi.server_implements_chunked = False
 TestCase.get_wsgi_module = lambda *args: wsgi
 
 
 class TestHttpsError(HttpsTestCase):
 
     def setUp(self):
-        listener = self.get_listener()
+        from gevent.socket import ssl, socket
+        listener = socket()
+        listener.bind(('0.0.0.0', 0))
+        listener.listen(5)
+        listener = ssl(listener, keyfile=self.keyfile, certfile=self.certfile)
         self.assertRaises(TypeError, self.get_wsgi_module().WSGIServer, listener, self.application)
 
     def tearDown(self):

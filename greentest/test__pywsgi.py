@@ -200,18 +200,17 @@ class TestCase(greentest.TestCase):
 
     validator = staticmethod(validator)
 
-    def get_listener(self):
-        return ('127.0.0.1', 0)
+    def init_server(self, application):
+        self.server = self.get_wsgi_module().WSGIServer(('127.0.0.1', 0), application)
 
     def setUp(self):
-        greentest.TestCase.setUp(self)
         application = self.application
         if self.validator is not None:
             application = self.validator(application)
-        listener = self.get_listener()
-        self.server = self.get_wsgi_module().WSGIServer(listener, application)
+        self.init_server(application)
         self.server.start()
         self.port = self.server.server_port
+        greentest.TestCase.setUp(self)
 
     def tearDown(self):
         greentest.TestCase.tearDown(self)
@@ -484,12 +483,11 @@ class TestUseWrite(TestCase):
 
 class HttpsTestCase(TestCase):
 
-    def get_listener(self):
-        certificate_file = os.path.join(os.path.dirname(__file__), 'test_server.crt')
-        private_key_file = os.path.join(os.path.dirname(__file__), 'test_server.key')
-        sock = socket.socket()
-        socket.bind_and_listen(sock, ('', 0))
-        return socket.ssl(sock, private_key_file, certificate_file)
+    certfile = os.path.join(os.path.dirname(__file__), 'test_server.crt')
+    keyfile = os.path.join(os.path.dirname(__file__), 'test_server.key')
+
+    def init_server(self, application):
+        self.server = self.get_wsgi_module().WSGIServer(('127.0.0.1', 0), application, certfile=self.certfile, keyfile=self.keyfile)
 
     def urlopen(self, *args, **kwargs):
         req = HTTPRequest("https://localhost:%s/foo" % self.server.server_port, *args, **kwargs)
@@ -605,6 +603,7 @@ class TestError_after_start_response(TestError):
     def application(env, start_response):
         start_response('200 OK', [('Content-Type', 'text/plain')])
         raise ExpectedException
+
 
 class TestEmptyYield(TestCase):
 
