@@ -89,7 +89,7 @@ class GreenletSet(object):
         finally:
             timeout.cancel()
 
-    def kill(self, exception=GreenletExit, block=False, timeout=None):
+    def kill(self, exception=GreenletExit, block=True, timeout=None):
         timer = Timeout.start_new(timeout)
         try:
             while self.greenlets:
@@ -103,7 +103,7 @@ class GreenletSet(object):
         finally:
             timer.cancel()
 
-    def killone(self, greenlet, exception=GreenletExit, block=False, timeout=None):
+    def killone(self, greenlet, exception=GreenletExit, block=True, timeout=None):
         if greenlet not in self.dying and greenlet in self.greenlets:
             greenlet.kill(exception)
             self.dying.add(greenlet)
