@@ -79,8 +79,10 @@ try:
                     path_to_core_so = abspath(join('gevent', basename(path_to_build_core_so)))
                     if path_to_build_core_so != path_to_core_so:
                         print 'Linking %s to %s' % (path_to_build_core_so, path_to_core_so)
-                        if os.path.exists(path_to_core_so):
+                        try:
                             os.unlink(path_to_core_so)
+                        except OSError:
+                            pass
                         if hasattr(os, 'symlink'):
                             os.symlink(path_to_build_core_so, path_to_core_so)
                         else:
