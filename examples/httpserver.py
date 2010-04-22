@@ -16,4 +16,4 @@ def callback(request):
         request.send_reply(404, "Not Found", "<h1>Not Found</h1>")
 
 print 'Serving on 8088...'
-http.HTTPServer(callback).serve_forever(('0.0.0.0', 8088))
+http.HTTPServer(('0.0.0.0', 8088), callback).serve_forever()
