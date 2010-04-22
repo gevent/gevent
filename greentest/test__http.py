@@ -3,7 +3,7 @@ import gevent
 from gevent import http
 import greentest
 import os
-from urllib2 import urlopen, URLError, HTTPError
+from urllib2 import urlopen, HTTPError
 import socket
 import errno
 
@@ -14,44 +14,36 @@ class Expected(Exception):
     pass
 
 
-class MainLoopServer(http.HTTPServer):
-    spawn = None
-
 class BoundTestCase(greentest.TestCase):
 
-    address = '127.0.0.1'
-    spawn = False
+    address = ('127.0.0.1', 0)
 
     def setUp(self):
-        if self.spawn:
-            self.http = http.HTTPServer(self.handle)
-        else:
-            self.http = MainLoopServer(self.handle)
-        s = self.http.start((self.address, 0))
-        self.port = s.getsockname()[1]
+        self.server = http.HTTPServer(self.address, self.handle)
+        self.server.start()
 
     def tearDown(self):
         #self.print_netstat('before stop')
         timeout = gevent.Timeout.start_new(0.1)
         try:
-            self.http.stop()
+            self.server.stop()
         finally:
             timeout.cancel()
         #self.print_netstat('after stop')
         self.check_refused()
 
     def print_netstat(self, comment=''):
-        cmd ='sudo netstat -anp | grep %s' % self.port
+        cmd ='sudo netstat -anp | grep %s' % self.server.server_port
         print cmd, ' # %s' % comment
         os.system(cmd)
 
     @property
     def url(self):
-        return 'http://%s:%s' % (self.address, self.port)
+        return 'http://%s:%s' % (self.server.server_host, self.server.server_port)
 
     def connect(self):
         s = socket.socket()
-        s.connect((self.address, self.port))
+        s.connect((self.server.server_host, self.server.server_port))
         return s
 
     def check_refused(self):
@@ -65,7 +57,9 @@ class BoundTestCase(greentest.TestCase):
 
 
 class TestClientCloses(BoundTestCase):
-    spawn = True
+
+    # this test is useless. currently there's no way to know that the client closed the connection,
+    # because libevent calls close_cb callback after you've tried to push something to the client
 
     def handle(self, r):
         self.log.append('reply')
@@ -101,10 +95,10 @@ class TestStop(BoundTestCase):
         s.sendall('GET / HTTP/1.1\r\nHost: localhost\r\n\r\n')
         s.sendall('GET / HTTP/1.1\r\nHost: localhost\r\n\r\n')
         s.close()
-        self.http.stop()
+        self.server.stop()
         gevent.sleep(0.02)
         # stopping what already stopped is OK
-        self.http.stop()
+        self.server.stop()
 
 
 class TestSendReply(BoundTestCase):
@@ -125,10 +119,6 @@ class TestSendReply(BoundTestCase):
         s.sendall('GET / HTTP/1.1\r\nHost: localhost\r\n\r\n')
 
 
-class TestSendReplySpawn(TestSendReply):
-    spawn = True
-
-
 class TestException(BoundTestCase):
 
     def handle(self, r):
@@ -136,18 +126,13 @@ class TestException(BoundTestCase):
 
     def test(self):
         try:
-            response = urlopen(self.url)
+            urlopen(self.url)
         except HTTPError, e:
             assert e.code == 500, e
             assert e.msg == 'Internal Server Error', e
 
 
-class TestExceptionSpawn(TestException):
-    spawn = True
-
-
 class TestSendReplyLater(BoundTestCase):
-    spawn = True
 
     def handle(self, r):
         gevent.sleep(0.01)
@@ -176,7 +161,6 @@ class TestSendReplyLater(BoundTestCase):
 
 
 class TestDetach(BoundTestCase):
-    spawn = False
 
     def handle(self, r):
         input = r.input_buffer
@@ -196,9 +180,10 @@ class TestDetach(BoundTestCase):
     def test(self):
         self.current = gevent.getcurrent()
         try:
-            response = urlopen(self.url)
-        except Exception, ex:
-            assert str(ex) == 'test done', ex
+            try:
+                urlopen(self.url)
+            except Exception, ex:
+                assert str(ex) == 'test done', ex
         finally:
             self.current = None
         assert self.handled
