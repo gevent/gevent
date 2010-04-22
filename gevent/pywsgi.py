@@ -44,12 +44,12 @@ _monthname = [None, # Dummy so we can use 1-based month numbers
 
 
 _INTERNAL_ERROR_STATUS = '500 Internal Server Error'
-INTERNAL_ERROR_RESPONSE = """HTTP/1.0 %s
+_INTERNAL_ERROR_RESPONSE = """HTTP/1.0 500 Internal Server Error
 Connection: close
 Content-type: text/plain
 Content-length: 21
 
-Internal Server Error""".replace('\n', '\r\n') % _INTERNAL_ERROR_STATUS
+Internal Server Error""".replace('\n', '\r\n')
 
 
 def format_date_time(timestamp):
@@ -247,7 +247,7 @@ class HttpProtocol(BaseHTTPServer.BaseHTTPRequestHandler):
                 self.close_connection = 1
                 self.server.log_message(traceback.format_exc())
                 if not self.response_length:
-                    self.wfile.write(INTERNAL_ERROR_RESPONSE)
+                    self.wfile.write(_INTERNAL_ERROR_RESPONSE)
         finally:
             if hasattr(result, 'close'):
                 result.close()
