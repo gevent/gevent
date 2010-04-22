@@ -25,7 +25,7 @@ import gevent
 import re
 from gevent import sleep, with_timeout, getcurrent
 from gevent import greenlet
-from gevent.event import Event, AsyncResult
+from gevent.event import AsyncResult
 from gevent.queue import Queue
 
 DELAY = 0.01
