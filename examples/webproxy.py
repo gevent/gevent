@@ -46,8 +46,8 @@ def proxy(path, start_response):
             response = ex
         print '%s: %s %s' % (path, response.code, response.msg)
         headers = [(k, v) for (k, v) in response.headers.items() if k not in drop_headers]
-        parsed_path = urlparse(path)
-        host = (parsed_path.scheme or 'http') + '://' + parsed_path.netloc
+        scheme, netloc, path, params, query, fragment = urlparse(path)
+        host = (scheme or 'http') + '://' + netloc
     except Exception, ex:
         sys.stderr.write('error while reading %s:\n' % path)
         traceback.print_exc()
