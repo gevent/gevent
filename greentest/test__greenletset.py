@@ -71,26 +71,36 @@ class Test(greentest.TestCase):
         u2 = Undead()
         p1 = gevent.spawn(u1)
         p2 = gevent.spawn(u2)
+        def check(count1, count2):
+            assert p1, p1
+            assert p2, p2
+            assert not p1.dead, p1
+            assert not p2.dead, p2
+            self.assertEqual(u1.shot_count, count1)
+            self.assertEqual(u2.shot_count, count2)
+        gevent.sleep(0.01)
         s = pool.GreenletSet([p1, p2])
-        assert u1.shot_count == 0, u1.shot_count
+        assert len(s) == 2, s
+        check(0, 0)
         s.killone(p1)
-        assert u1.shot_count == 0, u1.shot_count
+        check(0, 0)
         gevent.sleep(0)
-        assert u1.shot_count == 1, u1.shot_count
+        check(1, 0)
         s.killone(p1)
-        assert u1.shot_count == 1, u1.shot_count
+        check(1, 0)
         s.killone(p1)
-        assert u2.shot_count == 0, u2.shot_count
+        check(1, 0)
         s.kill()
         s.kill()
         s.kill()
-        assert u1.shot_count == 1, u1.shot_count
-        assert u2.shot_count == 0, u2.shot_count
+        check(1, 0)
         gevent.sleep(DELAY)
-        assert u1.shot_count == 1, u1.shot_count
-        assert u2.shot_count == 1, u2.shot_count
+        check(1, 1)
         X = object()
-        assert X is gevent.with_timeout(DELAY, s.kill, block=True, timeout_value=X)
+        kill_result = gevent.with_timeout(DELAY, s.kill, block=True, timeout_value=X)
+        assert kill_result is X, repr(kill_result)
+        assert len(s) == 2, s
+        check(1, 1)
 
     def test_killall_subclass(self):
         p1 = GreenletSubclass.spawn(lambda : 1/0)
