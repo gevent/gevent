@@ -78,7 +78,7 @@ class WSGIHandler(object):
         print self.format_request(*args)
 
     def prepare_env(self, req, server):
-        env = server.base_env.copy()
+        env = server.get_environ()
         if '?' in req.uri:
             path, query = req.uri.split('?', 1)
         else:
@@ -115,8 +115,9 @@ class WSGIHandler(object):
                     sys.stderr.write('Failed to handle request:\n  request = %s\n  application = %s\n\n' % (req, server.application))
                 except:
                     traceback.print_exc()
-                server.reply_error(self.request)
-                self = None
+                    sys.exc_clear()
+                # do not call self.end, this will cause core.http to reply with 500
+                self = None 
                 return
         finally:
             if self is not None:
@@ -124,6 +125,7 @@ class WSGIHandler(object):
 
 
 class WSGIServer(HTTPServer):
+    """A fast WSGI server based on :class:`HTTPServer`."""
 
     handler_class = WSGIHandler
     base_env = {'GATEWAY_INTERFACE': 'CGI/1.1',
@@ -136,36 +138,28 @@ class WSGIServer(HTTPServer):
                 'wsgi.multiprocess': False,
                 'wsgi.run_once': False}
 
-    def __init__(self, listener, application, backlog=None, handler_class=None, spawn='default'):
-        if hasattr(listener, 'do_handshake'):
-            raise TypeError('%s.start() requires a regular socket, not SSLObject: %r' % (self.__class__.__name__, listener))
-        if handler_class is not None:
-            self.handler_class = handler_class
-        HTTPServer.__init__(self, spawn=spawn, backlog=backlog)
-        self.address = listener
-        self.application = application
+    def __init__(self, listener, application=None, backlog=None, spawn='default', log=None, handler_class=None):
+        HTTPServer.__init__(self, listener, backlog=backlog, spawn=spawn)
+        if application is not None:
+            self.application = application
+        self.environ = self.base_env.copy()
+        self.log = log
 
-    @property
-    def server_host(self):
-        return self.address[0]
+    def log_message(self, message):
+        self.log.write(message + '\n')
 
-    @property
-    def server_port(self):
-        return self.address[1]
+    def get_environ(self):
+        return self.environ.copy()
 
     def pre_start(self):
-        env = self.base_env.copy()
-        env.update( {'SERVER_NAME': socket.getfqdn(self.server_host),
-                     'SERVER_PORT': str(self.server_port) } )
-        self.base_env = env
+        HTTPServer.pre_start(self)
+        if 'SERVER_NAME' not in self.environ:
+            self.environ['SERVER_NAME'] = socket.getfqdn(self.server_host)
+        self.environ.setdefault('SERVER_PORT', str(self.server_port))
 
-    def start(self):
-        if self.listeners:
-            raise AssertionError('WSGIServer.start() cannot be called more than once')
-        sock = HTTPServer.start(self, self.address, backlog=self.backlog)
-        self.address = sock.getsockname()
-        self.pre_start()
-        return sock
+    def kill(self):
+        super(WSGIServer, self).kill()
+        self.__dict__.pop('application', None)
 
     def handle(self, req):
         handler = self.handler_class(req)
