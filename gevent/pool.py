@@ -1,9 +1,9 @@
 # Copyright (c) 2009-2010 Denis Bilenko. See LICENSE for details.
 
-from collections import deque
 from gevent.hub import GreenletExit, getcurrent
 from gevent.greenlet import joinall, Greenlet
 from gevent.timeout import Timeout
+from gevent.event import Event
 
 __all__ = ['GreenletSet', 'Pool']
 
@@ -47,6 +47,10 @@ class GreenletSet(object):
     def discard(self, greenlet):
         self.greenlets.discard(greenlet)
         self.dying.discard(greenlet)
+
+    def start(self, greenlet):
+        self.add(greenlet)
+        greenlet.start()
 
     def spawn(self, *args, **kwargs):
         add = self.add
@@ -117,6 +121,12 @@ class GreenletSet(object):
         else:
             return self.spawn(func, *args, **kwds).get()
 
+    def apply_cb(self, func, args=None, kwds=None, callback=None):
+        result = self.apply(func, args, kwds)
+        if callback is not None:
+            Greenlet.spawn(callback, result)
+        return result
+
     def apply_async(self, func, args=None, kwds=None, callback=None):
         """A variant of the apply() method which returns a Greenlet object.
 
@@ -126,14 +136,24 @@ class GreenletSet(object):
             args = ()
         if kwds is None:
             kwds = {}
-        greenlet = self.spawn(func, *args, **kwds)
-        if callback is not None:
-            greenlet.link(pass_value(callback))
-        return greenlet
+        if self.full():
+            # cannot call spawn() directly because it blocks
+            return Greenlet.spawn(self.apply_cb, func, args, kwds, callback)
+        else:
+            greenlet = self.spawn(func, *args, **kwds)
+            if callback is not None:
+                greenlet.link(pass_value(callback))
+            return greenlet
 
     def map(self, func, iterable):
         greenlets = [self.spawn(func, item) for item in iterable]
         return [greenlet.get() for greenlet in greenlets]
+
+    def map_cb(self, func, iterable, callback=None):
+        result = self.map(func, iterable)
+        if callback is not None:
+            callback(result)
+        return result
 
     def map_async(self, func, iterable, callback=None):
         """
@@ -142,28 +162,18 @@ class GreenletSet(object):
         If callback is specified then it should be a callable which accepts a
         single argument.
         """
-        greenlets = [self.spawn(func, item) for item in iterable]
-        result = self.spawn(get_values, greenlets)
-        if callback is not None:
-            result.link(pass_value(callback))
-        return result
+        return Greenlet.spawn(self.map_cb, func, iterable, callback)
 
     def imap(self, func, iterable):
         """An equivalent of itertools.imap()"""
-        greenlets = [self.spawn(func, item) for item in iterable]
-        for greenlet in greenlets:
-            yield greenlet.get()
+        # FIXME
+        return iter(self.map(func, iterable))
 
     def imap_unordered(self, func, iterable):
         """The same as imap() except that the ordering of the results from the
         returned iterator should be considered arbitrary."""
-        from gevent.queue import Queue
-        q = Queue()
-        greenlets = [self.spawn(func, item) for item in iterable]
-        for greenlet in greenlets:
-            greenlet.rawlink(q.put)
-        for _ in xrange(len(greenlets)):
-            yield q.get().get()
+        # FIXME
+        return iter(self.map(func, iterable))
 
     def full(self):
         return False
@@ -176,7 +186,8 @@ class Pool(GreenletSet):
             raise ValueError('Invalid size for pool (positive integer or None required): %r' % (size, ))
         GreenletSet.__init__(self)
         self.size = size
-        self.waiting = deque()
+        self._available_event = Event()
+        self._available_event.set()
 
     def full(self):
         return self.free_count() <= 0
@@ -184,32 +195,32 @@ class Pool(GreenletSet):
     def free_count(self):
         if self.size is None:
             return 1
-        return max(0, self.size - len(self) - len(self.waiting))
+        return max(0, self.size - len(self))
+
+    def add(self, greenlet):
+        greenlet.rawlink(self.discard)
+        self.greenlets.add(greenlet)
 
     def start(self, greenlet):
-        if self.size is not None and len(self) >= self.size:
-            self.waiting.append(greenlet)
-        else:
-            greenlet.start()
-            self.add(greenlet)
+        self._available_event.wait()
+        self.add(greenlet)
+        greenlet.start()
+        if self.full():
+            self._available_event.clear()
 
-    def spawn(self, function, *args, **kwargs):
-        greenlet = Greenlet(function, *args, **kwargs)
-        self.start(greenlet)
+    def spawn(self, *args, **kwargs):
+        self._available_event.wait()
+        greenlet = self.greenlet_class.spawn(*args, **kwargs)
+        self.add(greenlet)
+        if self.full():
+            self._available_event.clear()
         return greenlet
 
     def discard(self, greenlet):
         GreenletSet.discard(self, greenlet)
-        while self.waiting and len(self) < self.size:
-            greenlet = self.waiting.popleft()
-            greenlet.start()
-            self.add(greenlet)
+        if not self.full():
+            self._available_event.set()
 
-    def kill(self, exception=GreenletExit, block=False, timeout=None):
-        for greenlet in self.waiting:
-            greenlet.kill(exception)
-        self.waiting.clear()
-        return GreenletSet.kill(self, exception=exception, block=block, timeout=timeout)
 
 
 def get_values(greenlets):
