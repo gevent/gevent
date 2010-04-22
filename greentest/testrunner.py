@@ -215,18 +215,7 @@ def run_tests(options, args):
 
 def run_subprocess(arg, options):
     from threading import Timer
-    import subprocess
-
-    if hasattr(subprocess.Popen, 'kill'):
-        Popen = subprocess.Popen
-    else:
-        class Popen(subprocess.Popen):
-            def kill(self):
-                try:
-                    from os import kill
-                    kill(self.pid, 9)
-                except ImportError:
-                    pass
+    from mysubprocess import Popen, PIPE, STDOUT
 
     popen_args = [sys.executable, sys.argv[0], '--record',
                   '--runid', options.runid,
@@ -236,7 +225,7 @@ def run_subprocess(arg, options):
     popen_args += [arg]
     popen_args = [str(x) for x in popen_args]
     if options.capture:
-        popen = Popen(popen_args, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, shell=False)
+        popen = Popen(popen_args, stdout=PIPE, stderr=STDOUT, shell=False)
     else:
         popen = Popen(popen_args, shell=False)
 
