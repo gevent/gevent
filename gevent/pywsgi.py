@@ -334,27 +334,35 @@ class WSGIServer(StreamServer):
                 'SERVER_SOFTWARE': 'gevent/%d.%d Python/%d.%d' % (gevent.version_info[:2] + sys.version_info[:2]),
                 'SCRIPT_NAME': '',
                 'wsgi.version': (1, 0),
-                'wsgi.url_scheme': 'http',
                 'wsgi.errors': sys.stderr,
                 'wsgi.multithread': False,
                 'wsgi.multiprocess': False,
                 'wsgi.run_once': False}
 
-    def __init__(self, listener, application, backlog=None, pool=None, handler_class=None, log=sys.stderr, **ssl_args):
-        StreamServer.__init__(self, listener, backlog=backlog, pool=pool, log=log)
-        if hasattr(listener, 'do_handshake'):
-            self.base_env['wsgi.url_scheme'] = 'https'
-        self.application = application
+    def __init__(self, listener, application=None, backlog=None, spawn='default', log=sys.stderr, handler_class=None, **ssl_args):
+        StreamServer.__init__(self, listener, backlog=backlog, spawn=spawn, **ssl_args)
+        if handler_class is not None:
+            self.handler_class = handler_class
+        self.environ = self.base_env.copy()
+        if self.ssl_enabled:
+            self.environ['wsgi.url_scheme'] = 'https'
+        else:
+            self.environ['wsgi.url_scheme'] = 'http'
+        if application is not None:
+            self.application = application
+        self.log = log
+
+    def log_message(self, message):
+        self.log.write(message + '\n')
 
     def get_environ(self):
-        return self.base_env.copy()
+        return self.environ.copy()
 
     def pre_start(self):
         StreamServer.pre_start(self)
-        env = self.base_env.copy()
-        env.update( {'SERVER_NAME': socket.getfqdn(self.server_host),
-                     'SERVER_PORT': str(self.server_port) } )
-        self.base_env = env
+        if 'SERVER_NAME' not in self.environ:
+            self.environ['SERVER_NAME'] = socket.getfqdn(self.server_host)
+        self.environ.setdefault('SERVER_PORT', str(self.server_port))
 
     def handle(self, socket, address):
         handler = self.handler_class(socket, address, self)
