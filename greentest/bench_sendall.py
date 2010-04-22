@@ -1,19 +1,16 @@
 #! /usr/bin/env python
 import time
-from gevent import server, socket
+from gevent import socket
+from gevent.server import StreamServer
 
 
-class MyServer(server.StreamServer):
-
-    def handle(self, socket, addr):
-        while True:
-            d = socket.recv(4096)
-            if not d:
-                break
+def recvall(socket, addr):
+    while socket.recv(4096):
+        pass
 
 
 def main():
-    server = MyServer(("127.0.0.1", 0))
+    server = StreamServer(("127.0.0.1", 0), recvall)
     server.start()
 
     length = 50*0x100000
@@ -30,7 +27,8 @@ def main():
         print "%.2f MB/s" % (length / spent / 0x100000)
         spent_total += spent
 
-    print "== %.2f MB/s" % (length * N / spent_total / 0x100000)
+    print "~ %.2f MB/s" % (length * N / spent_total / 0x100000)
+    server.stop()
 
 
 if __name__=="__main__":
