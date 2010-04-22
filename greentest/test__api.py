@@ -50,18 +50,6 @@ class Test(greentest.TestCase):
             return gevent.with_timeout(0.2, gevent.sleep, 2, timeout_value=1)
         self.assertRaises(gevent.Timeout, gevent.with_timeout, 0.1, func)
 
-    def test_killing_not_yet_started(self):
-        def func():
-            pass
-        g = gevent.spawn_later(2000, func)
-        try:
-            assert not g.dead, g
-            g.kill(block=True)
-            assert g.dead, g
-            self.assertRaises(Exception, g.get)
-        finally:
-            g.kill(block=True)
-
     def test_sleep_invalid_switch(self):
         p = gevent.spawn(util.wrap_errors(AssertionError, gevent.sleep), 2)
         gevent.spawn(p.switch, None)
