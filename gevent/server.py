@@ -1,121 +1,135 @@
 # Copyright (c) 2009-2010 Denis Bilenko. See LICENSE for details.
 import sys
 import errno
-from gevent.greenlet import Greenlet
-from gevent.pool import GreenletSet, Pool
+import traceback
 from gevent import socket
-from gevent import sleep
+from gevent import core
+from gevent.baseserver import BaseServer
 
 
 __all__ = ['StreamServer']
 
-FATAL_ERRORS = (errno.EBADF, errno.EINVAL, errno.ENOTSOCK)
 
+class StreamServer(BaseServer):
+    """A generic TCP server. Accepts connections on a listening socket and spawns user's handler for each connection.
 
-class StreamServer(Greenlet):
+    *handle* is called with 2 arguments: a client socket and an address.
 
-    backlog = 256
+    If any of the following keyword arguments are present, then the server assumes SSL mode and uses these arguments
+    to create an SSL wrapper for a client socket before passing it to *handle*:
+     - keyfile
+     - certfile
+     - cert_reqs
+     - ssl_version
+     - ca_certs
+     - suppress_ragged_eofs
+
+    Note that although the errors in a successfully spawned handler will not affect the server or other connections,
+    the errors raised by :func:`accept` and *spawn* cause the server to stop accepting for a short amount of time. The
+    exact period depends on the values of :attr:`min_delay` and :attr:`max_delay` attributes.
+
+    The delay starts with :attr:`min_delay` and doubles with each successive error until it reaches :attr:`max_delay`.
+    A successful :func:`accept` resets the delay to :attr:`min_delay` again.
+    """
+
+    # the number of seconds to sleep in case there was an error in accept() call
+    # for consecutive errors the delay will double until it reaches max_delay
+    # when accept() finally succeeds the delay will be reset to min_delay again
     min_delay = 0.01
     max_delay = 1
-    _allowed_ssl_args = ['keyfile', 'certfile', 'cert_reqs', 'ssl_version', 'ca_certs', 'suppress_ragged_eofs']
 
-    def __init__(self, listener, backlog=None, pool=None, log=sys.stderr, **ssl_args):
-        self.ssl_enabled = False
-        if hasattr(listener, 'accept'):
-            self.socket = listener
-            self.address = listener.getsockname()
-            self.ssl_enabled = hasattr(listener, 'do_handshake')
-        else:
-            if not isinstance(listener, tuple):
-                raise TypeError('Expected a socket instance or a tuple: %r' % (listener, ))
-            if backlog is not None:
-                self.backlog = backlog
-            self.address = listener
-            if ssl_args:
-                self.ssl_enabled = True
-                for key, value in ssl_args:
-                    if key not in self._allowed_ssl_args:
-                        raise TypeError('Unexpected argument: %r' % (key, ))
-                    else:
-                        setattr(self, key, value)
-        if pool is None:
-            self.pool = GreenletSet()
-        elif hasattr(pool, 'spawn'):
-            self.pool = pool
-        elif isinstance(pool, int):
-            self.pool = Pool(pool)
-        self.log = log
-        Greenlet.__init__(self)
+    _allowed_ssl_args = ('keyfile', 'certfile', 'cert_reqs', 'ssl_version', 'ca_certs', 'suppress_ragged_eofs')
 
-    def __str__(self):
-        try:
-            info = '%s:%s' % self.address
-        except Exception, ex:
-            info = str(ex) or '<error>'
-        return '<%s on %s>' % (self.__class__.__name__, info)
-
-    def log_message(self, message):
-        self.log.write(message + '\n')
-
-    @property
-    def server_host(self):
-        return self.address[0]
-
-    @property
-    def server_port(self):
-        return self.address[1]
-
-    def pre_start(self):
-        if not hasattr(self, 'socket'):
-            self.socket = socket.tcp_listener(self.address, backlog=self.backlog)
-            self.address = self.socket.getsockname()
-            if self.ssl_enabled:
-                from gevent.ssl import wrap_socket
-                ssl_args = {}
-                for arg in self._allowed_ssl_args:
-                    try:
-                        value = getattr(self, arg)
-                    except AttributeError:
-                        pass
-                    else:
-                        ssl_args[arg] = value
-                self.socket = wrap_socket(self.socket, **ssl_args)
-
-    def start(self):
-        self.pre_start()
-        Greenlet.start(self)
-
-    def _run(self):
-        try:
-            self.delay = self.min_delay
-            while True:
-                try:
-                    client_socket, address = self.socket.accept()
-                    self.delay = self.min_delay
-                    self.pool.spawn(self.handle, client_socket, address)
-                    del client_socket, address
-                except socket.error, ex:
-                    if ex[0] in FATAL_ERRORS:
-                        self.log_message('ERROR: %s failed with %s' % (self, ex))
-                        return ex
-                    else:
-                        self.log_message('WARNING: %s: ignoring %s (sleeping %s seconds)' % (self, ex, self.delay))
-                        sleep(self.delay)
-                        self.delay = min(self.max_delay, self.delay*2)
-        finally:
+    def __init__(self, listener, handle=None, backlog=None, spawn='default', **ssl_args):
+        if ssl_args:
+            for arg in ssl_args:
+                if arg not in self._allowed_ssl_args:
+                    raise TypeError('StreamServer.__init__() got an unexpected keyword argument %r' % arg)
             try:
-                self.socket.close()
-            except Exception:
-                pass
+                from gevent.ssl import wrap_socket
+            except ImportError:
+                try:
+                    from gevent.sslold import wrap_socket
+                except ImportError:
+                    raise ImportError('ssl package is required: http://pypi.python.org/pypi/ssl')
+            self.wrap_socket = wrap_socket
+            self.ssl_args = ssl_args
+            self.ssl_enabled = True
+        else:
+            self.ssl_enabled = False
+        BaseServer.__init__(self, listener, handle=handle, backlog=backlog, spawn=spawn)
+        self.delay = self.min_delay
+        self._accept_event = None
+        self._start_accepting_timer = None
 
-    def stop(self):
-        self.kill(block=True)
+    def set_listener(self, listener, backlog=None):
+        BaseServer.set_listener(self, listener, backlog=backlog)
+        try:
+            self.socket = self.socket._sock
+        except AttributeError:
+            pass
 
-    def serve_forever(self):
-        if not self: # XXX will this work: server.start(); server.serve_forever()
-            self.start()
-        self.join()
+    def set_handle(self, handle):
+        BaseServer.set_handle(self, handle)
+        # make SSL work:
+        if self.ssl_enabled:
+            self._handle = self.wrap_socket_and_handle
+        else:
+            self._handle = self.handle
 
-    def handle(self, client_socket, address):
-        raise NotImplementedError('override in a subclass')
+    @property
+    def started(self):
+        return self._accept_event is not None or self._start_accepting_timer is not None
 
+    def start_accepting(self):
+        if self._accept_event is None:
+            self._accept_event = core.read_event(self.socket.fileno(), self._do_accept, persist=True)
+
+    def stop_accepting(self):
+        if self._accept_event is not None:
+            self._accept_event.cancel()
+            self._accept_event = None
+        if self._start_accepting_timer is not None:
+            self._start_accepting_timer.cancel()
+            self._start_accepting_timer = None
+
+    def _do_accept(self, event, _evtype):
+        assert event is self._accept_event
+        address = None
+        try:
+            client_socket, address = self.socket.accept()
+            if self.full():
+                return
+            self.delay = self.min_delay
+            client_socket = socket.socket(_sock=client_socket)
+            spawn = self.spawn
+            if spawn is None:
+                self._handle(client_socket, address)
+            else:
+                spawn(self._handle, client_socket, address)
+            return
+        except:
+            traceback.print_exc()
+            ex = sys.exc_info()[1]
+            if self.is_fatal_error(ex):
+                self.kill()
+                sys.stderr.write('ERROR: %s failed with %s\n' % (self, str(ex) or repr(ex)))
+                return
+        try:
+            if address is not None:
+                sys.stderr.write('Failed to handle request from %s\n' % (address, ))
+        except Exception:
+            traceback.print_exc()
+        if self.delay >= 0:
+            self.stop_accepting()
+            self._start_accepting_timer = core.timer(self.delay, self.start_accepting)
+            self.delay = min(self.max_delay, self.delay*2)
+        sys.exc_clear()
+
+    def is_fatal_error(self, ex):
+        return isinstance(ex, socket.error) and ex[0] in (errno.EBADF, errno.EINVAL, errno.ENOTSOCK)
+
+    def wrap_socket_and_handle(self, client_socket, address):
+        # used in case of ssl sockets
+        ssl_socket = self.wrap_socket(client_socket, server_side=True, **self.ssl_args)
+        return self.handle(ssl_socket, address)
