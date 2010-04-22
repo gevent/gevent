@@ -181,7 +181,7 @@ class HttpProtocol(BaseHTTPServer.BaseHTTPRequestHandler):
             raise AssertionError("write() before start_response()")
         elif not self.headers_sent:
             self.headers_sent = True
-            towrite.append('%s %s\r\n' % (self.protocol_version, self.status))
+            towrite.append('%s %s\r\n' % (self.request_version, self.status))
             for header in self.response_headers:
                 towrite.append('%s: %s\r\n' % header)
 
