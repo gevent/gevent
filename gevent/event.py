@@ -241,12 +241,10 @@ class AsyncResult(object):
         floating point number specifying a timeout for the operation in seconds
         (or fractions thereof).
 
-        This method always returns ``None`` regardless of the reason it returns.
-        To find out out what happened, use :meth:`ready` and :meth:`successful` methods
-        or :attr:`value` and :attr:`exception` properties.
+        Return :attr:`value`.
         """
         if self._exception is not _NONE:
-            return
+            return self.value
         else:
             switch = getcurrent().switch
             self.rawlink(switch)
@@ -266,6 +264,7 @@ class AsyncResult(object):
                 raise
             # not calling unlink() in non-exception case, because if switch()
             # finished normally, link was already removed in _notify_links
+        return self.value
 
     def _notify_links(self):
         try:
