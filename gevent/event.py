@@ -57,10 +57,12 @@ class Event(object):
         When the *timeout* argument is present and not ``None``, it should be a
         floating point number specifying a timeout for the operation in seconds
         (or fractions thereof).
+
+        Return the value of the internal flag (``True`` or ``False``).
         """
 
         if self._flag:
-            return
+            return self._flag
         else:
             switch = getcurrent().switch
             self.rawlink(switch)
@@ -77,6 +79,7 @@ class Event(object):
                     timer.cancel()
             finally:
                 self.unlink(switch)
+        return self._flag
 
     def rawlink(self, callback):
         """Register a callback to call when the internal flag is set to true.
