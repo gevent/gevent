@@ -328,6 +328,7 @@ class HttpProtocol(BaseHTTPServer.BaseHTTPRequestHandler):
 
 
 class WSGIServer(StreamServer):
+    """A WSGI server based on :class:`StreamServer` that supports HTTPS."""
 
     handler_class = HttpProtocol
     base_env = {'GATEWAY_INTERFACE': 'CGI/1.1',
