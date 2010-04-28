@@ -181,11 +181,13 @@ class GreenletSet(object):
 
 class Pool(GreenletSet):
 
-    def __init__(self, size=None):
+    def __init__(self, size=None, greenlet_class=None):
         if size is not None and size < 0:
             raise ValueError('Invalid size for pool (positive integer or None required): %r' % (size, ))
         GreenletSet.__init__(self)
         self.size = size
+        if greenlet_class is not None:
+            self.greenlet_class = greenlet_class
         self._available_event = Event()
         self._available_event.set()
 
