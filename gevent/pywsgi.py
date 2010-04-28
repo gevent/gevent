@@ -137,7 +137,7 @@ class Input(object):
             yield line
 
 
-class HttpProtocol(BaseHTTPServer.BaseHTTPRequestHandler):
+class WSGIHandler(BaseHTTPServer.BaseHTTPRequestHandler):
     protocol_version = 'HTTP/1.1'
 
     def handle_one_request(self):
@@ -331,7 +331,7 @@ class HttpProtocol(BaseHTTPServer.BaseHTTPRequestHandler):
 class WSGIServer(StreamServer):
     """A WSGI server based on :class:`StreamServer` that supports HTTPS."""
 
-    handler_class = HttpProtocol
+    handler_class = WSGIHandler
     base_env = {'GATEWAY_INTERFACE': 'CGI/1.1',
                 'SERVER_SOFTWARE': 'gevent/%d.%d Python/%d.%d' % (gevent.version_info[:2] + sys.version_info[:2]),
                 'SCRIPT_NAME': '',
