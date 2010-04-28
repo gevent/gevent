@@ -383,6 +383,8 @@ class socket(object):
                 raise
 
     def sendall(self, data, flags=0):
+        if isinstance(data, unicode):
+            data = data.encode()
         # this sendall is also reused by SSL subclasses (both from ssl and sslold modules),
         # so it should not call self._sock methods directly
         if self.timeout is None:
