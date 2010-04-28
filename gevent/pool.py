@@ -218,6 +218,30 @@ class Pool(GreenletSet):
             self._available_event.clear()
         return greenlet
 
+    def spawn_link(self, *args, **kwargs):
+        self._available_event.wait()
+        greenlet = self.greenlet_class.spawn_link(*args, **kwargs)
+        self.add(greenlet)
+        if self.full():
+            self._available_event.clear()
+        return greenlet
+
+    def spawn_link_value(self, *args, **kwargs):
+        self._available_event.wait()
+        greenlet = self.greenlet_class.spawn_link_value(*args, **kwargs)
+        self.add(greenlet)
+        if self.full():
+            self._available_event.clear()
+        return greenlet
+
+    def spawn_link_exception(self, *args, **kwargs):
+        self._available_event.wait()
+        greenlet = self.greenlet_class.spawn_link_exception(*args, **kwargs)
+        self.add(greenlet)
+        if self.full():
+            self._available_event.clear()
+        return greenlet
+
     def discard(self, greenlet):
         GreenletSet.discard(self, greenlet)
         if not self.full():
