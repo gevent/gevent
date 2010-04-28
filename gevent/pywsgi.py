@@ -226,9 +226,21 @@ class HttpProtocol(BaseHTTPServer.BaseHTTPRequestHandler):
                 self.write(d)
         return safe_write
 
+    def log_request(self, *args):
+        self.server.log_message(self.format_request(*args))
+
+    def format_request(self, length='-'):
+        return '%s - - [%s] "%s" %s %s %.6f' % (
+            self.client_address[0],
+            self.log_date_time_string(),
+            self.requestline,
+            self.status.split()[0],
+            self.response_length,
+            self.time_finish - self.time_start)
+
     def handle_one_response(self):
-        start = time.time()
-        self.status = None
+        self.time_start = time.time()
+        self.status = '-'
         self.headers_sent = False
 
         self.result = None
@@ -256,20 +268,9 @@ class HttpProtocol(BaseHTTPServer.BaseHTTPRequestHandler):
             if self.wsgi_input.position < self.environ.get('CONTENT_LENGTH', 0):
                 ## Read and discard body
                 self.wsgi_input.read()
-            finish = time.time()
 
-            if self.status is not None:
-                status = self.status.split()[0]
-            else:
-                status = '-'
-
-            self.server.log_message('%s - - [%s] "%s" %s %s %.6f' % (
-                self.client_address[0],
-                self.log_date_time_string(),
-                self.requestline,
-                status,
-                self.response_length,
-                finish - start))
+            self.time_finish = time.time()
+            self.log_request()
 
     def get_environ(self):
         env = self.server.get_environ()
