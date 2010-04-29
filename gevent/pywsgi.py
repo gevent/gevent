@@ -33,6 +33,9 @@ import gevent
 from gevent.server import StreamServer
 
 
+__all__ = ['WSGIHandler', 'WSGIServer']
+
+
 MAX_REQUEST_LINE = 8192
 
 
