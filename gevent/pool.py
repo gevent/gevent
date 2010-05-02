@@ -100,6 +100,9 @@ class GreenletSet(object):
                 if not block:
                     break
                 joinall(self.greenlets)
+        except Timeout, ex:
+            if ex is not timer:
+                raise
         finally:
             timer.cancel()
 
