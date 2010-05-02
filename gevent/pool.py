@@ -93,7 +93,7 @@ class GreenletSet(object):
         timer = Timeout.start_new(timeout)
         try:
             while self.greenlets:
-                for greenlet in self.greenlets:
+                for greenlet in list(self.greenlets):
                     if greenlet not in self.dying:
                         greenlet.kill(exception)
                         self.dying.add(greenlet)
