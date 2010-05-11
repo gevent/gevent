@@ -6,7 +6,7 @@ and yields the control to other greenlets until the result is ready.
 This script splits the job between a number of greenlets to get the
 results faster.
 """
-
+import gevent
 from gevent import socket
 from gevent.pool import Pool
 
@@ -28,8 +28,9 @@ def job(url):
     finally:
         finished += 1
 
-for x in xrange(10, N):
-    pool.spawn(job, '%s.com' % x)
+with gevent.Timeout(2, False):
+    for x in xrange(10, 10 + N):
+        pool.spawn(job, '%s.com' % x)
+    pool.join()
 
-pool.join(timeout=2)
 print 'finished within 2 seconds: %s/%s' % (finished, N)
