@@ -181,6 +181,9 @@ class GreenletSet(object):
     def full(self):
         return False
 
+    def wait_available(self):
+        pass
+
 
 class Pool(GreenletSet):
 
@@ -193,6 +196,9 @@ class Pool(GreenletSet):
             self.greenlet_class = greenlet_class
         self._available_event = Event()
         self._available_event.set()
+
+    def wait_available(self):
+        self._available_event.wait()
 
     def full(self):
         return self.free_count() <= 0
