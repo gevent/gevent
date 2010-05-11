@@ -95,7 +95,7 @@ class GreenletSet(object):
             while self.greenlets:
                 for greenlet in list(self.greenlets):
                     if greenlet not in self.dying:
-                        greenlet.kill(exception)
+                        greenlet.kill(exception, block=False)
                         self.dying.add(greenlet)
                 if not block:
                     break
@@ -108,7 +108,7 @@ class GreenletSet(object):
 
     def killone(self, greenlet, exception=GreenletExit, block=True, timeout=None):
         if greenlet not in self.dying and greenlet in self.greenlets:
-            greenlet.kill(exception)
+            greenlet.kill(exception, block=False)
             self.dying.add(greenlet)
             if block:
                 greenlet.join(timeout)
