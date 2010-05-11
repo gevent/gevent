@@ -15,7 +15,7 @@ import sys
 import fcntl, os
 
 
-def popen_communicate(args, data='', poll_interval=0.01):
+def popen_communicate(args, data=''):
     """Communicate with the process non-blockingly."""
     p = subprocess.Popen(args, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
     fcntl.fcntl(p.stdin, fcntl.F_SETFL, os.O_NONBLOCK) # make the file nonblocking
