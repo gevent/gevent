@@ -257,7 +257,6 @@ class Pool(GreenletSet):
             self._available_event.set()
 
 
-
 def get_values(greenlets):
     joinall(greenlets)
     return [x.value for x in greenlets]
