@@ -120,6 +120,10 @@ class TestCase(unittest.TestCase):
         self.stderr = value
         return value
 
+    def assert_no_stderr(self):
+        stderr = self.unhook_stderr()
+        assert not stderr, 'Expected no stderr, got:\n__________\n%s\n^^^^^^^^^^\n\n' % (stderr, )
+
     def assert_stderr_traceback(self, typ, value=None):
         if VERBOSE:
             return
