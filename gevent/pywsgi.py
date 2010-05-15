@@ -219,7 +219,7 @@ class WSGIHandler(BaseHTTPServer.BaseHTTPRequestHandler):
             self.client_address[0],
             self.log_date_time_string(),
             self.requestline,
-            self.status.split()[0],
+            (self.status or '000').split()[0],
             self.response_length,
             self.time_finish - self.time_start)
 
