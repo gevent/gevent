@@ -179,6 +179,9 @@ class WSGIServer(HTTPServer):
     def kill(self):
         super(WSGIServer, self).kill()
         self.__dict__.pop('application', None)
+        self.__dict__.pop('log', None)
+        self.__dict__.pop('environ', None)
+        self.__dict__.pop('handler_class', None)
 
     def handle(self, req):
         handler = self.handler_class(req, self)
