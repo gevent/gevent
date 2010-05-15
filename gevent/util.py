@@ -47,10 +47,13 @@ class wrap_errors(object):
         return getattr(self.func, item)
 
 
+# XXX no longer used anywhere, remove it
 class lazy_property(object):
     '''A decorator similar to :meth:`property` that only calls the *function* once.'''
 
     def __init__(self, function):
+        import warnings
+        warnings.warn("gevent.util.lazy_propery is deprecated", DeprecationWarning, stacklevel=2)
         self._calculate = function
 
     def __get__(self, obj, _=None):
