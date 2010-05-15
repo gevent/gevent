@@ -60,10 +60,7 @@ class WSGIHandler(object):
         if SERVER_SOFTWARE and not self.request.find_output_header('Server'):
             self.request.add_output_header('Server', SERVER_SOFTWARE)
 
-        self.send_reply(self.code, self.reason, data)
-
-    def send_reply(self, code, reason, data):
-        self.request.send_reply(code, reason, data)
+        self.request.send_reply(self.code, self.reason, data)
         self.log_request(len(data))
 
     def format_request(self, length='-'):
