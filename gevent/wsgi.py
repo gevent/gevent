@@ -16,8 +16,9 @@ __all__ = ['WSGIServer',
 
 class WSGIHandler(object):
 
-    def __init__(self, request):
+    def __init__(self, request, server):
         self.request = request
+        self.server = server
         self.code = None
         self.reason = None
         self.headers = None
@@ -76,10 +77,12 @@ class WSGIHandler(object):
         return '%s - - [%s] "%s %s HTTP/%s.%s" %s %s "%s" "%s"' % args
 
     def log_request(self, *args):
-        print self.format_request(*args)
+        log = self.server.log
+        if log is not None:
+            log.write(self.format_request(*args) + '\n')
 
-    def prepare_env(self, req, server):
-        env = server.get_environ()
+    def prepare_env(self, req):
+        env = self.server.get_environ()
         if '?' in req.uri:
             path, query = req.uri.split('?', 1)
         else:
@@ -99,12 +102,12 @@ class WSGIHandler(object):
             env[header] = value
         return env
 
-    def handle(self, server):
+    def handle(self):
         req = self.request
-        env = self.prepare_env(req, server)
+        env = self.prepare_env(req)
         try:
             try:
-                result = server.application(env, self.start_response)
+                result = self.server.application(env, self.start_response)
                 try:
                     self.data.extend(result)
                 finally:
@@ -115,15 +118,16 @@ class WSGIHandler(object):
             except:
                 traceback.print_exc()
                 try:
-                    sys.stderr.write('Failed to handle request:\n  request = %s\n  application = %s\n\n' % (req, server.application))
-                except:
-                    traceback.print_exc()
-                    sys.exc_clear()
-                # do not call self.end, this will cause core.http to reply with 500
+                    sys.stderr.write('%s: Failed to handle request:\n  request = %s\n  application = %s\n\n' %
+                                     (self.server, req, self.server.application))
+                except Exception:
+                    pass
+                # do not call self.end so that core.http replies with 500
                 self = None 
                 return
         finally:
-            if self is not None:
+            sys.exc_clear()
+            if self is not None and self.code is not None:
                 self.end(env)
 
 
@@ -165,8 +169,8 @@ class WSGIServer(HTTPServer):
         self.__dict__.pop('application', None)
 
     def handle(self, req):
-        handler = self.handler_class(req)
-        handler.handle(self)
+        handler = self.handler_class(req, self)
+        handler.handle()
 
 
 def extract_application(filename):
