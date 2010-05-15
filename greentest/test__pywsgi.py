@@ -637,6 +637,28 @@ class TestEmptyWrite(TestEmptyYield):
         return []
 
 
+class BadRequestTests(TestCase):
+    validator = None
+    # pywsgi checks content-length, but wsgi does not
+
+    def application(self, env, start_response):
+        assert env['CONTENT_LENGTH'] == self.content_length, (env['CONTENT_LENGTH'], self.content_length)
+        start_response('200 OK', [('Content-Type', 'text/plain')])
+        return ['hello']
+
+    def test_negative_content_length(self):
+        self.content_length = '-100'
+        fd = self.connect().makefile(bufsize=1)
+        fd.write('GET / HTTP/1.1\r\nHost: localhost\r\nContent-Length: %s\r\n\r\n' % self.content_length)
+        read_http(fd, code=(200, 400), version=None)
+
+    def test_illegal_content_length(self):
+        self.content_length = 'abc'
+        fd = self.connect().makefile(bufsize=1)
+        fd.write('GET / HTTP/1.1\r\nHost: localhost\r\nContent-Length: %s\r\n\r\n' % self.content_length)
+        read_http(fd, code=(200, 400), version=None)
+
+
 class HTTPRequest(urllib2.Request):
     """Hack urllib2.Request to support PUT and DELETE methods."""
 
