@@ -138,11 +138,13 @@ class Response(object):
                'Unexpected body: %r (expected %r)\n%s' % (self.body, body, self)
 
     @classmethod
-    def read(cls, fd, code=200, reason='OK', version='1.1', body=None):
+    def read(cls, fd, code=200, reason='default', version='1.1', body=None):
         _status_line, headers = read_headers(fd)
         self = cls(_status_line, headers)
         if code is not None:
             self.assertCode(code)
+        if reason == 'default':
+            reason = {200: 'OK'}.get(code)
         if reason is not None:
             self.assertReason(reason)
         if version is not None:
