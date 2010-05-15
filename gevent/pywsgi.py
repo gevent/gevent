@@ -163,8 +163,8 @@ class WSGIHandler(BaseHTTPServer.BaseHTTPRequestHandler):
     def write(self, data):
         towrite = []
         if not self.status:
-            raise AssertionError("write() before start_response()")
-        elif not self.headers_sent:
+            raise AssertionError("The application did not call start_response()")
+        if not self.headers_sent:
             if hasattr(self.result, '__len__') and 'Content-Length' not in self.response_headers_list:
                 self.response_headers.append(('Content-Length', str(sum(len(chunk) for chunk in self.result))))
                 self.response_headers_list.append('Content-Length')
