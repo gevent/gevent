@@ -108,7 +108,7 @@ class Input(object):
         return self._do_read(self.rfile.readline)
 
     def readlines(self, hint=None):
-        return self.__iter__()
+        return list(self)
 
     def __iter__(self):
         while True:
