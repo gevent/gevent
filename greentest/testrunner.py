@@ -377,6 +377,7 @@ def get_exceptions(output):
     """
     return [x.group('error') for x in _error_re.finditer(output)]
 
+
 def get_warning_stats(output):
     counter = {}
     for warning in get_warnings(output):
