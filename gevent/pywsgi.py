@@ -11,6 +11,7 @@ from gevent import socket
 import BaseHTTPServer
 import gevent
 from gevent.server import StreamServer
+from gevent.hub import GreenletExit
 
 
 __all__ = ['WSGIHandler', 'WSGIServer']
@@ -27,12 +28,10 @@ _monthname = [None, # Dummy so we can use 1-based month numbers
 
 
 _INTERNAL_ERROR_STATUS = '500 Internal Server Error'
-_INTERNAL_ERROR_RESPONSE = """HTTP/1.0 500 Internal Server Error
-Connection: close
-Content-type: text/plain
-Content-length: 21
-
-Internal Server Error""".replace('\n', '\r\n')
+_INTERNAL_ERROR_BODY = 'Internal Server Error'
+_INTERNAL_ERROR_HEADERS = [('Content-Type', 'text/plain'),
+                           ('Connection', 'close'),
+                           ('Content-Length', str(len(_INTERNAL_ERROR_BODY)))]
 
 
 def format_date_time(timestamp):
@@ -169,27 +168,35 @@ class WSGIHandler(BaseHTTPServer.BaseHTTPRequestHandler):
                 self.response_headers.append(('Content-Length', str(sum(len(chunk) for chunk in self.result))))
                 self.response_headers_list.append('Content-Length')
 
-            self.headers_sent = True
+            if 'Date' not in self.response_headers_list:
+                self.response_headers.append(('Date', format_date_time(time.time())))
+                self.response_headers_list.append('Date')
+
+            if self.request_version == 'HTTP/1.0' and 'Connection' not in self.response_headers_list:
+                self.response_headers.append(('Connection', 'close'))
+                self.response_headers_list.append('Connection')
+                self.close_connection = 1
+            elif ('Connection', 'close') in self.response_headers:
+                self.close_connection = 1
+            
+            if self.request_version != 'HTTP/1.0' and 'Content-Length' not in self.response_headers_list:
+                self.response_use_chunked = True
+                self.response_headers.append(('Transfer-Encoding', 'chunked'))
+                self.response_headers_list.append('Transfer-Encoding')
+
             towrite.append('%s %s\r\n' % (self.request_version, self.status))
             for header in self.response_headers:
                 towrite.append('%s: %s\r\n' % header)
 
-            # send Date header?
-            if 'Date' not in self.response_headers_list:
-                towrite.append('Date: %s\r\n' % (format_date_time(time.time()),))
-            if self.request_version == 'HTTP/1.0':
-                towrite.append('Connection: close\r\n')
-                self.close_connection = 1
-            elif 'Content-Length' not in self.response_headers_list:
-                self.response_use_chunked = True
-                towrite.append('Transfer-Encoding: chunked\r\n')
             towrite.append('\r\n')
+            self.headers_sent = True
 
-        if self.response_use_chunked:
-            ## Write the chunked encoding
-            towrite.append("%x\r\n%s\r\n" % (len(data), data))
-        else:
-            towrite.append(data)
+        if data:
+            if self.response_use_chunked:
+                ## Write the chunked encoding
+                towrite.append("%x\r\n%s\r\n" % (len(data), data))
+            else:
+                towrite.append(data)
 
         self.wfile.writelines(towrite)
         self.response_length += sum(map(len, towrite))
@@ -206,10 +213,7 @@ class WSGIHandler(BaseHTTPServer.BaseHTTPRequestHandler):
         self.status = status
         self.response_headers = [('-'.join([x.capitalize() for x in key.split('-')]), value) for key, value in headers]
         self.response_headers_list = [x[0] for x in self.response_headers]
-        def safe_write(d):
-            if len(d):
-                self.write(d)
-        return safe_write
+        return self.write
 
     def log_request(self, *args):
         log = self.server.log
@@ -227,7 +231,7 @@ class WSGIHandler(BaseHTTPServer.BaseHTTPRequestHandler):
 
     def handle_one_response(self):
         self.time_start = time.time()
-        self.status = '-'
+        self.status = None
         self.headers_sent = False
 
         self.result = None
@@ -236,19 +240,32 @@ class WSGIHandler(BaseHTTPServer.BaseHTTPRequestHandler):
 
         try:
             try:
-                result = self.application(self.environ, self.start_response)
-                self.result = result
+                self.result = self.application(self.environ, self.start_response)
                 for data in self.result:
                     if data:
                         self.write(data)
-                if not self.headers_sent or self.response_use_chunked:
+                if self.status and not self.headers_sent:
                     self.write('')
+                if self.response_use_chunked:
+                    self.wfile.writelines('0\r\n\r\n')
+                    self.response_length += 5
+            except GreenletExit:
+                raise
             except Exception:
-                self.status = _INTERNAL_ERROR_STATUS
-                self.close_connection = 1
-                self.server.log_message(traceback.format_exc())
+                traceback.print_exc()
+                try:
+                    args = (getattr(self, 'server', ''),
+                            getattr(self, 'requestline', ''),
+                            getattr(self, 'client_address', ''),
+                            getattr(self, 'application', ''),
+                           )
+                    msg = '%s: Failed to handle request:\n  request = %s from %s\n  application = %s\n\n' % args
+                    sys.stderr.write(msg)
+                except Exception:
+                    pass
                 if not self.response_length:
-                    self.wfile.write(_INTERNAL_ERROR_RESPONSE)
+                    self.start_response(_INTERNAL_ERROR_STATUS, _INTERNAL_ERROR_HEADERS)
+                    self.write(_INTERNAL_ERROR_BODY)
         finally:
             if hasattr(self.result, 'close'):
                 self.result.close()
