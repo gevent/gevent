@@ -140,20 +140,32 @@ class WSGIServer(HTTPServer):
                 'SCRIPT_NAME': '',
                 'wsgi.version': (1, 0),
                 'wsgi.url_scheme': 'http',
-                'wsgi.errors': sys.stderr,
                 'wsgi.multithread': False,
                 'wsgi.multiprocess': False,
                 'wsgi.run_once': False}
+    # If 'wsgi.errors' is not present in base_env, it will be set to sys.stderr
 
-    def __init__(self, listener, application=None, backlog=None, spawn='default', log=None, handler_class=None):
+    def __init__(self, listener, application=None, backlog=None, spawn='default', log=None, handler_class=None, environ=None):
         HTTPServer.__init__(self, listener, backlog=backlog, spawn=spawn)
         if application is not None:
             self.application = application
-        self.environ = self.base_env.copy()
-        self.log = log
+        if handler_class is not None:
+            self.handler_class = handler_class
+        if log is None:
+            self.log = sys.stderr
+        else:
+            self.log = log
+        self.set_environ(environ)
 
-    def log_message(self, message):
-        self.log.write(message + '\n')
+    def set_environ(self, environ=None):
+        if environ is not None:
+            self.environ = environ
+        environ_update = getattr(self, 'environ', None)
+        self.environ = self.base_env.copy()
+        if environ_update is not None:
+            self.environ.update(environ_update)
+        if self.environ.get('wsgi.errors') is None:
+            self.environ['wsgi.errors'] = sys.stderr
 
     def get_environ(self):
         return self.environ.copy()
