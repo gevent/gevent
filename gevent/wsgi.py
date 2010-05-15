@@ -7,6 +7,7 @@ socket = __import__('socket')
 
 import gevent
 from gevent.http import HTTPServer
+from gevent.hub import GreenletExit
 
 
 __all__ = ['WSGIServer',
@@ -109,6 +110,8 @@ class WSGIHandler(object):
                 finally:
                     if hasattr(result, 'close'):
                         result.close()
+            except GreenletExit:
+                raise
             except:
                 traceback.print_exc()
                 try:
