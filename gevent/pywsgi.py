@@ -45,10 +45,8 @@ class Input(object):
         if content_length is not None:
             content_length = int(content_length)
         self.content_length = content_length
-
         self.wfile = wfile
         self.wfile_line = wfile_line
-
         self.position = 0
         self.chunked_input = chunked_input
         self.chunk_length = -1
@@ -177,7 +175,7 @@ class WSGIHandler(BaseHTTPServer.BaseHTTPRequestHandler):
                 self.close_connection = 1
             elif ('Connection', 'close') in self.response_headers:
                 self.close_connection = 1
-            
+
             if self.request_version != 'HTTP/1.0' and 'Content-Length' not in self.response_headers_list:
                 self.response_use_chunked = True
                 self.response_headers.append(('Transfer-Encoding', 'chunked'))
