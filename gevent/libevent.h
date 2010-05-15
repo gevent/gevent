@@ -23,6 +23,10 @@
 #define EVHTTP_SET_CB  evhttp_set_cb
 #define EVBUFFER_PULLUP(BUF, SIZE) evbuffer_pullup(BUF, SIZE)
 
+#if _EVENT_NUMERIC_VERSION >= 0x02000500
+#define current_base event_global_current_base_
+#endif
+
 #elif USE_LIBEVENT_1
 
 #include "event.h"
