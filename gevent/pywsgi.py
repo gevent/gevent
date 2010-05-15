@@ -131,9 +131,11 @@ class WSGIHandler(BaseHTTPServer.BaseHTTPRequestHandler):
         try:
             self.raw_requestline = self.rfile.readline(MAX_REQUEST_LINE)
             if len(self.raw_requestline) == MAX_REQUEST_LINE:
+                self.status = '414'
                 self.wfile.write(
                     "HTTP/1.0 414 Request URI Too Long\r\nConnection: close\r\nContent-length: 0\r\n\r\n")
                 self.close_connection = 1
+                self.log_request()
                 return
         except socket.error, e:
             if e[0] != errno.EBADF and e[0] != errno.ECONNRESET:
