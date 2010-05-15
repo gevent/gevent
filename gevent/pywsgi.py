@@ -19,7 +19,6 @@ __all__ = ['WSGIHandler', 'WSGIServer']
 
 MAX_REQUEST_LINE = 8192
 
-
 # Weekday and month names for HTTP date/time formatting; always English!
 _weekdayname = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
 _monthname = [None, # Dummy so we can use 1-based month numbers
