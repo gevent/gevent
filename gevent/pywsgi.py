@@ -5,10 +5,11 @@ import errno
 import sys
 import time
 import traceback
-
+import mimetools
+from datetime import datetime
 from urllib import unquote
+
 from gevent import socket
-import BaseHTTPServer
 import gevent
 from gevent.server import StreamServer
 from gevent.hub import GreenletExit
@@ -31,6 +32,8 @@ _INTERNAL_ERROR_BODY = 'Internal Server Error'
 _INTERNAL_ERROR_HEADERS = [('Content-Type', 'text/plain'),
                            ('Connection', 'close'),
                            ('Content-Length', str(len(_INTERNAL_ERROR_BODY)))]
+_REQUEST_TOO_LONG_RESPONSE = "HTTP/1.0 414 Request URI Too Long\r\nConnection: close\r\nContent-length: 0\r\n\r\n"
+_BAD_REQUEST_RESPONSE = "HTTP/1.0 400 Bad Request\r\nConnection: close\r\nContent-length: 0\r\n\r\n"
 
 
 def format_date_time(timestamp):
@@ -42,8 +45,6 @@ class Input(object):
 
     def __init__(self, rfile, content_length, wfile=None, wfile_line=None, chunked_input=False):
         self.rfile = rfile
-        if content_length is not None:
-            content_length = int(content_length)
         self.content_length = content_length
         self.wfile = wfile
         self.wfile_line = wfile_line
@@ -109,41 +110,142 @@ class Input(object):
         return list(self)
 
     def __iter__(self):
-        while True:
-            line = self.readline()
-            if not line:
-                break
-            yield line
+        return self
+
+    def next(self):
+        line = self.readline()
+        if not line:
+            raise StopIteration
+        return line
 
 
-class WSGIHandler(BaseHTTPServer.BaseHTTPRequestHandler):
+class WSGIHandler(object):
     protocol_version = 'HTTP/1.1'
+    MessageClass = mimetools.Message
+
+    def __init__(self, socket, address, server):
+        self.socket = socket
+        self.client_address = address
+        self.server = server
+        self.rfile = socket.makefile('rb', -1)
+        self.wfile = socket.makefile('wb', 0)
+
+    def handle(self):
+        try:
+            while True:
+                self.time_start = time.time()
+                self.time_finish = 0
+                result = self.handle_one_request()
+                if result is None:
+                    break
+                if result is True:
+                    continue
+                self.status, response_body = result
+                self.wfile.write(response_body)
+                if self.time_finish == 0:
+                    self.time_finish = time.time()
+                self.log_request()
+                break
+        finally:
+            self.__dict__.pop('socket', None)
+            self.__dict__.pop('rfile', None)
+            self.__dict__.pop('wfile', None)
+
+    def _check_http_version(self):
+        version = self.request_version
+        if not version.startswith("HTTP/"):
+            return False
+        version = tuple(int(x) for x in version[5:].split(".")) # "HTTP/"
+        if version[1] < 0 or version < (0, 9) or version >= (2, 0):
+            return False
+        return True
+
+    def read_request(self, raw_requestline):
+        self.requestline = raw_requestline.rstrip()
+        words = self.requestline.split()
+        if len(words) == 3:
+            self.command, self.path, self.request_version = words
+            if not self._check_http_version():
+                self.log_error('Invalid http version: %r', raw_requestline)
+                return
+        elif len(words) == 2:
+            self.command, self.path = words
+            if self.command != "GET":
+                self.log_error('Expected GET method: %r', raw_requestline)
+                return
+            self.request_version = "HTTP/0.9"
+        else:
+            self.log_error('Invalid GET method: %r', raw_requestline)
+            return
+
+        self.headers = self.MessageClass(self.rfile, 0)
+        if self.headers.status:
+            self.log_error('Invalid headers status: %r', self.headers.status)
+            return
+
+        content_length = self.headers.get("Content-Length")
+        if content_length is not None:
+            content_length = int(content_length)
+            if content_length < 0:
+                self.log_error('Invalid Content-Length: %r', content_length)
+                return
+            if content_length and self.command in ('GET', 'HEAD'):
+                self.log_error('Unexpected Content-Length')
+                return
+
+        self.content_length = content_length
+
+        if self.request_version == "HTTP/1.1":
+            conntype = self.headers.get("Connection", "").lower()
+            if conntype == "close":
+                self.close_connection = True
+            else:
+                self.close_connection = False
+        else:
+            self.close_connection = True
+
+        return True
+
+    def log_error(self, msg, *args):
+        try:
+            message = msg % args
+        except Exception:
+            traceback.print_exc()
+            message = '%r %r' % (msg, args)
+            sys.exc_clear()
+        try:
+            message = '%s: %s' % (self.socket, message)
+        except Exception:
+            sys.exc_clear()
+        try:
+            sys.stderr.write(message + '\n')
+        except Exception:
+            traceback.print_exc()
+            sys.exc_clear()
 
     def handle_one_request(self):
         if self.rfile.closed:
-            self.close_connection = 1
             return
+
+        raw_requestline = self.rfile.readline(MAX_REQUEST_LINE)
+        if not raw_requestline:
+            return
+
+        self.response_length = 0
+
+        if len(raw_requestline) >= MAX_REQUEST_LINE:
+            return ('414', _REQUEST_TOO_LONG_RESPONSE)
 
         try:
-            self.raw_requestline = self.rfile.readline(MAX_REQUEST_LINE)
-            if len(self.raw_requestline) == MAX_REQUEST_LINE:
-                self.status = '414'
-                self.wfile.write(
-                    "HTTP/1.0 414 Request URI Too Long\r\nConnection: close\r\nContent-length: 0\r\n\r\n")
-                self.close_connection = 1
-                self.log_request()
-                return
-        except socket.error, e:
-            if e[0] != errno.EBADF and e[0] != errno.ECONNRESET:
-                raise
-            self.raw_requestline = ''
-
-        if not self.raw_requestline:
-            self.close_connection = 1
-            return
-
-        if not self.parse_request():
-            return
+            if not self.read_request(raw_requestline):
+                return ('400', _BAD_REQUEST_RESPONSE)
+        except ValueError, ex:
+            self.log_error('Invalid request: %s', str(ex) or ex.__class__.__name__)
+            return ('400', _BAD_REQUEST_RESPONSE)
+        except Exception, ex:
+            traceback.print_exc()
+            self.log_error('Invalid request: %s', str(ex) or ex.__class__.__name__)
+            return ('400', _BAD_REQUEST_RESPONSE)
 
         self.environ = self.get_environ()
         self.application = self.server.application
@@ -155,6 +257,14 @@ class WSGIHandler(BaseHTTPServer.BaseHTTPRequestHandler):
                 sys.exc_clear()
             else:
                 raise
+
+        if self.close_connection:
+            return
+
+        if self.rfile.closed:
+            return
+
+        return True # read more requests
 
     def write(self, data):
         towrite = []
@@ -212,15 +322,16 @@ class WSGIHandler(BaseHTTPServer.BaseHTTPRequestHandler):
         self.response_headers_list = [x[0] for x in self.response_headers]
         return self.write
 
-    def log_request(self, *args):
+    def log_request(self):
         log = self.server.log
         if log is not None:
-            log.write(self.format_request(*args) + '\n')
+            log.write(self.format_request() + '\n')
 
-    def format_request(self, length='-'):
+    def format_request(self):
+        now = datetime.now().replace(microsecond=0)
         return '%s - - [%s] "%s" %s %s %.6f' % (
             self.client_address[0],
-            self.log_date_time_string(),
+            now,
             self.requestline,
             (self.status or '000').split()[0],
             self.response_length,
@@ -295,23 +406,22 @@ class WSGIHandler(BaseHTTPServer.BaseHTTPRequestHandler):
             env['CONTENT_LENGTH'] = length
         env['SERVER_PROTOCOL'] = 'HTTP/1.0'
 
-        host, port = self.request.getsockname()
+        host, port = self.socket.getsockname()
         env['SERVER_NAME'] = host
         env['SERVER_PORT'] = str(port)
         env['REMOTE_ADDR'] = self.client_address[0]
         env['GATEWAY_INTERFACE'] = 'CGI/1.1'
 
-        for h in self.headers.headers:
-            k, v = h.split(':', 1)
-            k = k.replace('-', '_').upper()
-            v = v.strip()
-            if k in env:
-                continue
-            envk = 'HTTP_' + k
-            if envk in env:
-                env[envk] += ',' + v
-            else:
-                env[envk] = v
+        for header in self.headers.headers:
+            key, value = header.split(':', 1)
+            key = key.replace('-', '_').upper()
+            if key not in ('CONTENT_TYPE', 'CONTENT_LENGTH'):
+                value = value.strip()
+                key = 'HTTP_' + key
+                if key in env:
+                    env[key] += ',' + value
+                else:
+                    env[key] = value
 
         if env.get('HTTP_EXPECT') == '100-continue':
             wfile = self.wfile
@@ -320,13 +430,9 @@ class WSGIHandler(BaseHTTPServer.BaseHTTPRequestHandler):
             wfile = None
             wfile_line = None
         chunked = env.get('HTTP_TRANSFER_ENCODING', '').lower() == 'chunked'
-        self.wsgi_input = Input(self.rfile, length, wfile=wfile, wfile_line=wfile_line, chunked_input=chunked)
+        self.wsgi_input = Input(self.rfile, self.content_length, wfile=wfile, wfile_line=wfile_line, chunked_input=chunked)
         env['wsgi.input'] = self.wsgi_input
         return env
-
-    def finish(self):
-        BaseHTTPServer.BaseHTTPRequestHandler.finish(self)
-        self.connection.close()
 
 
 class WSGIServer(StreamServer):
