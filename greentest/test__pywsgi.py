@@ -39,6 +39,7 @@ from gevent import socket
 CONTENT_LENGTH = 'Content-Length'
 CONN_ABORTED_ERRORS = []
 server_implements_chunked = True
+server_supports_pipeline = True
 DEBUG = '-v' in sys.argv
 
 try:
@@ -242,17 +243,25 @@ class CommonTests(TestCase):
         read_http(fd, body='hello world')
         fd.close()
 
-    def XXXtest_pipeline(self):
+    def test_pipeline(self):
         fd = self.connect().makefile(bufsize=1)
         fd.write('GET / HTTP/1.1\r\nHost: localhost\r\n\r\n' + 'GET /notexist HTTP/1.1\r\nHost: localhost\r\n\r\n')
         read_http(fd, body='hello world')
         exception = AssertionError('HTTP pipelining not supported; the second request is thrown away')
-        timeout = gevent.Timeout.start_new(0.5, exception=exception)
         try:
-            read_http(fd, code=404, reason='Not Found', body='not found')
-            fd.close()
-        finally:
-            timeout.cancel()
+            timeout = gevent.Timeout.start_new(0.5, exception=exception)
+            try:
+                read_http(fd, code=404, reason='Not Found', body='not found')
+                fd.close()
+            finally:
+                timeout.cancel()
+        except AssertionError, ex:
+            if ex is not exception:
+                raise
+            if server_supports_pipeline:
+                raise
+            else:
+                print 'PipelineNotImplementedWarning'
 
     def test_connection_close(self):
         fd = self.connect().makefile(bufsize=1)
