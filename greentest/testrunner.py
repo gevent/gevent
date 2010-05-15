@@ -260,7 +260,8 @@ def run_subprocess(arg, options):
     if module_name.endswith('.py'):
         module_name = module_name[:-3]
     output = output.replace(' (__main__.', ' (' + module_name + '.')
-    return retcode[0], output
+    output_printed = options.verbosity >= 2
+    return retcode[0], output, output_printed
 
 
 def spawn_subprocess(arg, options):
@@ -281,14 +282,15 @@ def spawn_subprocess(arg, options):
                   'retcode': 'TIMEOUT'}
         row_id = store_record(options.db, 'test', params)
         params['id'] = row_id
-    retcode, output = run_subprocess(arg, options)
+    retcode, output, output_printed = run_subprocess(arg, options)
     if len(output) > OUTPUT_LIMIT:
         output = output[:OUTPUT_LIMIT] + '<AbridgedOutputWarning>'
     if retcode:
-        sys.stdout.write(output)
+        if not output_printed and options.verbosity >= 0:
+            sys.stdout.write(output)
         print '%s failed with code %s' % (arg, retcode)
     elif retcode == 0:
-        if options.verbosity == 1: # // if verbosity is 2 then output is always printed by run_subprocess
+        if not output_printed and options.verbosity >= 1:
             sys.stdout.write(output)
         print '%s passed' % arg
         success = True
