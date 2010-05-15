@@ -359,7 +359,10 @@ def get_warnings(output):
     >>> get_warnings('hello DeprecationWarning warning: bla DeprecationWarning')
     ['DeprecationWarning', 'warning', 'DeprecationWarning']
     """
-    return _warning_re.findall(output)
+    if len(output) <= OUTPUT_LIMIT:
+        return _warning_re.findall(output)
+    else:
+        return _warning_re.findall(output[:OUTPUT_LIMIT]) + ['AbridgedOutputWarning']
 
 
 def get_exceptions(output):
