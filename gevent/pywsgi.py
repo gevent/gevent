@@ -361,6 +361,7 @@ class WSGIHandler(object):
                 raise
             except Exception:
                 traceback.print_exc()
+                sys.exc_clear()
                 try:
                     args = (getattr(self, 'server', ''),
                             getattr(self, 'requestline', ''),
@@ -369,7 +370,7 @@ class WSGIHandler(object):
                     msg = '%s: Failed to handle request:\n  request = %s from %s\n  application = %s\n\n' % args
                     sys.stderr.write(msg)
                 except Exception:
-                    pass
+                    sys.exc_clear()
                 if not self.response_length:
                     self.start_response(_INTERNAL_ERROR_STATUS, _INTERNAL_ERROR_HEADERS)
                     self.write(_INTERNAL_ERROR_BODY)
