@@ -117,7 +117,10 @@ class Response(object):
         return '<%s status_line=%r headers=%r body=%r chunks=%r>' % args
 
     def assertCode(self, code):
-        assert self.code == code, 'Unexpected code: %r (expected %r)\n%s' % (self.code, code, self)
+        if hasattr(code, '__contains__'):
+            assert self.code in code, 'Unexpected code: %r (expected %r)\n%s' % (self.code, code, self)
+        else:
+            assert self.code == code, 'Unexpected code: %r (expected %r)\n%s' % (self.code, code, self)
 
     def assertReason(self, reason):
         assert self.reason == reason, 'Unexpected reason: %r (expected %r)\n%s' % (self.reason, reason, self)
