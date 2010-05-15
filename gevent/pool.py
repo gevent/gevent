@@ -92,17 +92,18 @@ class GreenletSet(object):
     def kill(self, exception=GreenletExit, block=True, timeout=None):
         timer = Timeout.start_new(timeout)
         try:
-            while self.greenlets:
-                for greenlet in list(self.greenlets):
-                    if greenlet not in self.dying:
-                        greenlet.kill(exception, block=False)
-                        self.dying.add(greenlet)
-                if not block:
-                    break
-                joinall(self.greenlets)
-        except Timeout, ex:
-            if ex is not timer:
-                raise
+            try:
+                while self.greenlets:
+                    for greenlet in list(self.greenlets):
+                        if greenlet not in self.dying:
+                            greenlet.kill(exception, block=False)
+                            self.dying.add(greenlet)
+                    if not block:
+                        break
+                    joinall(self.greenlets)
+            except Timeout, ex:
+                if ex is not timer:
+                    raise
         finally:
             timer.cancel()
 
