@@ -151,10 +151,10 @@ class WSGIHandler(BaseHTTPServer.BaseHTTPRequestHandler):
         self.application = self.server.application
         try:
             self.handle_one_response()
-        except socket.error, e:
+        except socket.error, ex:
             # Broken pipe, connection reset by peer
-            if e[0] in (errno.EPIPE, errno.ECONNRESET):
-                pass
+            if ex[0] in (errno.EPIPE, errno.ECONNRESET):
+                sys.exc_clear()
             else:
                 raise
 
