@@ -6,6 +6,7 @@ and yields the control to other greenlets until the result is ready.
 This script splits the job between a number of greenlets to get the
 results faster.
 """
+from __future__ import with_statement
 import gevent
 from gevent import socket
 from gevent.pool import Pool
