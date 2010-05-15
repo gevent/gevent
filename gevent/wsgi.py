@@ -37,7 +37,7 @@ class WSGIHandler(object):
         self.data.append(data)
 
     def end(self, env):
-        assert self.headers is not None, 'Application did not call start_response'
+        assert self.headers is not None, 'Application did not call start_response()'
         has_content_length = False
         for header, value in self.headers:
             self.request.add_output_header(header, str(value))
