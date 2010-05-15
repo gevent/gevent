@@ -227,7 +227,7 @@ class TestPool(greentest.TestCase):
         self.assertEqual(sorted(it), map(sqr, range(1000)))
 
     def test_terminate(self):
-        result = self.pool.map_async(gevent.sleep, [0.1 for i in range(1000)])
+        result = self.pool.map_async(gevent.sleep, [0.1] * 1000)
         kill = TimingWrapper(self.pool.kill)
         kill(block=True)
         assert kill.elapsed < 0.5, kill.elapsed
