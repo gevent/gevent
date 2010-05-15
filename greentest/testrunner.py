@@ -39,7 +39,7 @@ one will be selected if not provided.
 DEFAULT_TIMEOUT = 60
 
 # the number of bytes of output that is recorded; the rest is thrown away
-OUTPUT_LIMIT = 100*1024
+OUTPUT_LIMIT = 15*1024
 
 import sys
 import os
