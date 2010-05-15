@@ -365,8 +365,7 @@ class WSGIHandler(object):
                     args = (getattr(self, 'server', ''),
                             getattr(self, 'requestline', ''),
                             getattr(self, 'client_address', ''),
-                            getattr(self, 'application', ''),
-                           )
+                            getattr(self, 'application', ''))
                     msg = '%s: Failed to handle request:\n  request = %s from %s\n  application = %s\n\n' % args
                     sys.stderr.write(msg)
                 except Exception:
