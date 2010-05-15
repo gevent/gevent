@@ -78,7 +78,8 @@ class WSGIHandler(object):
         if log is not None:
             log.write(self.format_request(*args) + '\n')
 
-    def prepare_env(self, req):
+    def prepare_env(self):
+        req = self.request
         env = self.server.get_environ()
         if '?' in req.uri:
             path, query = req.uri.split('?', 1)
@@ -100,8 +101,7 @@ class WSGIHandler(object):
         return env
 
     def handle(self):
-        req = self.request
-        env = self.prepare_env(req)
+        env = self.prepare_env()
         try:
             try:
                 result = self.server.application(env, self.start_response)
@@ -116,7 +116,7 @@ class WSGIHandler(object):
                 traceback.print_exc()
                 try:
                     sys.stderr.write('%s: Failed to handle request:\n  request = %s\n  application = %s\n\n' %
-                                     (self.server, req, self.server.application))
+                                     (self.server, self.request, self.server.application))
                 except Exception:
                     pass
                 # do not call self.end so that core.http replies with 500
