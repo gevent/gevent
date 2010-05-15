@@ -198,7 +198,7 @@ class WSGIHandler(BaseHTTPServer.BaseHTTPRequestHandler):
                 towrite.append(data)
 
         self.wfile.writelines(towrite)
-        self.response_length += sum(map(len, towrite))
+        self.response_length += sum(len(x) for x in towrite)
 
     def start_response(self, status, headers, exc_info=None):
         if exc_info:
