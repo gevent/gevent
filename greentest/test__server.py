@@ -20,7 +20,7 @@ class SimpleStreamServer(StreamServer):
             raise
         if path == '/ping':
             client_socket.sendall('HTTP/1.0 200 OK\r\n\r\nPONG')
-        elif path == '/long':
+        elif path in ['/long', '/short']:
             client_socket.sendall('hello')
             while True:
                 data = client_socket.recv(1)
@@ -34,12 +34,15 @@ class Settings:
     ServerClass = StreamServer
     ServerSubClass = SimpleStreamServer
     restartable = True
+    close_socket_detected = True
 
     @staticmethod
-    def assert500(self):
+    def assertAcceptedConnectionError(self):
         conn = self.makefile()
         result = conn.read()
         assert not result, repr(result)
+
+    assert500 = assertAcceptedConnectionError
 
     @staticmethod
     def assert503(self):
@@ -51,6 +54,10 @@ class Settings:
         except socket.error, ex:
             if ex[0] != errno.ECONNRESET:
                 raise
+
+    @staticmethod
+    def assertPoolFull(self):
+        self.assertRaises(socket.timeout, self.assertRequestSucceeded, timeout=0.01)
 
 
 class TestCase(greentest.TestCase):
@@ -91,6 +98,12 @@ class TestCase(greentest.TestCase):
     def assert503(self):
         Settings.assert503(self)
 
+    def assertAcceptedConnectionError(self):
+        Settings.assertAcceptedConnectionError(self)
+
+    def assertPoolFull(self):
+        Settings.assertPoolFull(self)
+
     def assertNotAccepted(self):
         conn = self.makefile()
         conn.write('GET / HTTP/1.0\r\n\r\n')
@@ -107,16 +120,16 @@ class TestCase(greentest.TestCase):
             return
         assert result.startswith('HTTP/1.0 500 Internal Server Error'), repr(result)
 
-    def assertConnectionSucceed(self):
-        conn = self.makefile()
+    def assertRequestSucceeded(self, timeout=0.1):
+        conn = self.makefile(timeout=timeout)
         conn.write('GET /ping HTTP/1.0\r\n\r\n')
         result = conn.read()
         assert result.endswith('\r\n\r\nPONG'), repr(result)
 
     def start_server(self):
         self.server.start()
-        self.assertConnectionSucceed()
-        self.assertConnectionSucceed()
+        self.assertRequestSucceeded()
+        self.assertRequestSucceeded()
 
     def stop_server(self):
         self.server.stop()
@@ -138,9 +151,9 @@ class TestCase(greentest.TestCase):
         return self.server.socket
 
     def _test_invalid_callback(self):
+        self.hook_stderr()
         self.server = self.ServerClass(('127.0.0.1', 0), lambda : None)
         self.server.start()
-        self.hook_stderr()
         self.assert500()
         self.assert_stderr_traceback('TypeError')
         self.assert_stderr(self.invalid_callback_message)
@@ -171,7 +184,7 @@ class TestDefaultSpawn(TestCase):
             self.assertNotAccepted()
             self.server.start_accepting()
             self.report_netstat('after start_accepting')
-            self.assertConnectionSucceed()
+            self.assertRequestSucceeded()
         else:
             self.assertRaises(Exception, self.server.start) # XXX which exception exactly?
         self.stop_server()
@@ -203,7 +216,7 @@ class TestDefaultSpawn(TestCase):
         g = gevent.spawn_link_exception(self.server.serve_forever)
         try:
             gevent.sleep(0.01)
-            self.assertConnectionSucceed()
+            self.assertRequestSucceeded()
             self.server.stop()
             assert not self.server.started
             self.assertConnectionRefused()
@@ -233,7 +246,8 @@ class TestDefaultSpawn(TestCase):
         try:
             try:
                 result = conn.read()
-                assert result.startswith('HTTP/1.0 500 Internal Server Error'), repr(result)
+                if result:
+                    assert result.startswith('HTTP/1.0 500 Internal Server Error'), repr(result)
             except socket.error, ex:
                 if ex[0] != errno.ECONNRESET:
                     raise
@@ -256,10 +270,10 @@ class TestDefaultSpawn(TestCase):
         self.hook_stderr()
         error = ExpectedError('test_error_in_spawn')
         self.server.spawn = lambda *args: gevent.getcurrent().throw(error)
-        self.assert500()
+        self.assertAcceptedConnectionError()
         self.assert_stderr_traceback(error)
         #self.assert_stderr('^WARNING: <SimpleStreamServer .*?>: ignoring test_error_in_spawn \\(sleeping \d.\d+ seconds\\)\n$')
-        self.assert_stderr('Failed to handle...')
+        self.assert_stderr('<.*?>: Failed to handle...')
         return
         if Settings.restartable:
             assert not self.server.started
@@ -282,26 +296,24 @@ class TestPoolSpawn(TestDefaultSpawn):
     def get_spawn(self):
         return 2
 
-    def test_pull_full(self):
+    def test_pool_full(self):
         self.init_server()
-        pool = []
-        for _ in xrange(2):
-            pool.append(self.send_request('/long'))
+        short_request = self.send_request('/short')
+        long_request = self.send_request('/long')
         gevent.sleep(0.01)
-        print len(self.server.pool)
-        self.assert503()
-        self.assert503()
-        self.assert503()
-        pool[0]._sock.close()
-        pool[0].close()
+        self.assertPoolFull()
+        self.assertPoolFull()
+        self.assertPoolFull()
+        short_request._sock.close()
+        # gevent.http and gevent.wsgi cannot detect socket close, so sleep a little
+        # to let /short request finish
         gevent.sleep(0.1)
-        print len(self.server.pool)
-        self.assertConnectionSucceed()
+        self.assertRequestSucceeded()
 
 
 class TestNoneSpawn(TestCase):
 
-    invalid_callback_message = 'Failed to handle'
+    invalid_callback_message = '<.*?>: Failed to handle'
 
     def get_spawn(self):
         return None

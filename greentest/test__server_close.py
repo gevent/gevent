@@ -23,7 +23,7 @@ class Test(unittest.TestCase):
         except socket.error, ex:
             self.assertEqual(ex[0], errno.ECONNREFUSED)
 
-    def assertConnectionSucceed(self):
+    def assertRequestSucceeded(self):
         conn = self.makefile()
         conn.write('GET /ping HTTP/1.0\r\n\r\n')
         result = conn.read()

@@ -12,6 +12,14 @@ def application(self, environ, start_response):
     if environ['PATH_INFO'] == '/ping':
         start_response("200 OK", [])
         return ["PONG"]
+    elif environ['PATH_INFO'] == '/short':
+        gevent.sleep(0.1)
+        start_response("200 after 0.1 seconds", [])
+        return ["hello"]
+    elif environ['PATH_INFO'] == '/long':
+        gevent.sleep(10)
+        start_response("200 after 10 seconds", [])
+        return ["hello"]
     else:
         start_response("404 wsgi WTF?", [])
         return []
@@ -28,10 +36,12 @@ class Settings(http_Settings):
 
 test__server.Settings = Settings
 
-TestNoneSpawn.invalid_callback_message = 'Failed to handle...'
-TestRawSpawn.invalid_callback_message = 'Failed to handle...'
-TestPoolSpawn.invalid_callback_message = 'Failed to handle...'
-TestDefaultSpawn.invalid_callback_message = 'Failed to handle...'
+msg = '<.*?>: Failed to handle...'
+
+TestNoneSpawn.invalid_callback_message = msg
+TestRawSpawn.invalid_callback_message = msg
+TestPoolSpawn.invalid_callback_message = msg
+TestDefaultSpawn.invalid_callback_message = msg
 
 if __name__ == '__main__':
     unittest.main()
