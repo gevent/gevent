@@ -117,8 +117,7 @@ class TestCase(unittest.TestCase):
         except AttributeError:
             return None
         sys.stderr = self.old_stderr
-        if value:
-            self.stderr = value
+        self.stderr = value
         return value
 
     def assert_stderr_traceback(self, typ, value=None):
