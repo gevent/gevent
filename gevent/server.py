@@ -69,6 +69,11 @@ class StreamServer(BaseServer):
         except AttributeError:
             pass
 
+    def set_spawn(self, spawn):
+        BaseServer.set_spawn(self, spawn)
+        if self.pool is not None:
+            self.pool._available_event.rawlink(self._start_accepting)
+
     def set_handle(self, handle):
         BaseServer.set_handle(self, handle)
         # make SSL work:
@@ -85,6 +90,12 @@ class StreamServer(BaseServer):
         if self._accept_event is None:
             self._accept_event = core.read_event(self.socket.fileno(), self._do_accept, persist=True)
 
+    def _start_accepting(self, _event):
+        if self._accept_event is None:
+            if 'socket' not in self.__dict__:
+                return
+            self._accept_event = core.read_event(self.socket.fileno(), self._do_accept, persist=True)
+
     def stop_accepting(self):
         if self._accept_event is not None:
             self._accept_event.cancel()
@@ -97,9 +108,10 @@ class StreamServer(BaseServer):
         assert event is self._accept_event
         address = None
         try:
-            client_socket, address = self.socket.accept()
             if self.full():
+                self.stop_accepting()
                 return
+            client_socket, address = self.socket.accept()
             self.delay = self.min_delay
             client_socket = socket.socket(_sock=client_socket)
             spawn = self.spawn
