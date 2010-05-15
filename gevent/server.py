@@ -128,8 +128,10 @@ class StreamServer(BaseServer):
                 sys.stderr.write('ERROR: %s failed with %s\n' % (self, str(ex) or repr(ex)))
                 return
         try:
-            if address is not None:
-                sys.stderr.write('Failed to handle request from %s\n' % (address, ))
+            if address is None:
+                sys.stderr.write('%s: Failed.\n' % (self, ))
+            else:
+                sys.stderr.write('%s: Failed to handle request from %s\n' % (self, address, ))
         except Exception:
             traceback.print_exc()
         if self.delay >= 0:
