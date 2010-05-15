@@ -212,7 +212,9 @@ class WSGIHandler(BaseHTTPServer.BaseHTTPRequestHandler):
         return safe_write
 
     def log_request(self, *args):
-        self.server.log_message(self.format_request(*args))
+        log = self.server.log
+        if log is not None:
+            log.write(self.format_request(*args) + '\n')
 
     def format_request(self, length='-'):
         return '%s - - [%s] "%s" %s %s %.6f' % (
@@ -321,26 +323,36 @@ class WSGIServer(StreamServer):
                 'SERVER_SOFTWARE': 'gevent/%d.%d Python/%d.%d' % (gevent.version_info[:2] + sys.version_info[:2]),
                 'SCRIPT_NAME': '',
                 'wsgi.version': (1, 0),
-                'wsgi.errors': sys.stderr,
                 'wsgi.multithread': False,
                 'wsgi.multiprocess': False,
                 'wsgi.run_once': False}
 
-    def __init__(self, listener, application=None, backlog=None, spawn='default', log=sys.stderr, handler_class=None, **ssl_args):
+    def __init__(self, listener, application=None, backlog=None, spawn='default', log=None, handler_class=None,
+                 environ=None, **ssl_args):
         StreamServer.__init__(self, listener, backlog=backlog, spawn=spawn, **ssl_args)
+        if application is not None:
+            self.application = application
         if handler_class is not None:
             self.handler_class = handler_class
+        if log is None:
+            self.log = sys.stderr
+        else:
+            self.log = log
+        self.set_environ(environ)
+
+    def set_environ(self, environ=None):
+        if environ is not None:
+            self.environ = environ
+        environ_update = getattr(self, 'environ', None)
         self.environ = self.base_env.copy()
         if self.ssl_enabled:
             self.environ['wsgi.url_scheme'] = 'https'
         else:
             self.environ['wsgi.url_scheme'] = 'http'
-        if application is not None:
-            self.application = application
-        self.log = log
-
-    def log_message(self, message):
-        self.log.write(message + '\n')
+        if environ_update is not None:
+            self.environ.update(environ_update)
+        if self.environ.get('wsgi.errors') is None:
+            self.environ['wsgi.errors'] = sys.stderr
 
     def get_environ(self):
         return self.environ.copy()
