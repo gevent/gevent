@@ -25,6 +25,7 @@ class GreenletSet(object):
         # each item we kill we place in dying, to avoid killing the same greenlet twice
         self.dying = set()
         self._empty_event = Event()
+        self._empty_event.set()
 
     def __repr__(self):
         try:
@@ -215,10 +216,6 @@ class Pool(GreenletSet):
         if self.size is None:
             return 1
         return max(0, self.size - len(self))
-
-    def add(self, greenlet):
-        greenlet.rawlink(self.discard)
-        self.greenlets.add(greenlet)
 
     def start(self, greenlet):
         self._semaphore.acquire()
