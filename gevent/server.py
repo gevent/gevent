@@ -72,7 +72,7 @@ class StreamServer(BaseServer):
     def set_spawn(self, spawn):
         BaseServer.set_spawn(self, spawn)
         if self.pool is not None:
-            self.pool._available_event.rawlink(self._start_accepting)
+            self.pool._semaphore.rawlink(self._start_accepting)
 
     def set_handle(self, handle):
         BaseServer.set_handle(self, handle)
