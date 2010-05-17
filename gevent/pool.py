@@ -203,8 +203,6 @@ class Pool(GreenletSet):
             self._semaphore = DummySemaphore()
         else:
             self._semaphore = Semaphore(size)
-        self._semaphore.rawlink(self._on_available)
-        self._waiting = []
 
     def wait_available(self):
         self._semaphore.wait()
@@ -234,20 +232,6 @@ class Pool(GreenletSet):
         except:
             self._semaphore.release()
             raise
-        return greenlet
-
-    def _on_available(self, _semaphore):
-        if self._waiting:
-            if _semaphore.acquire(blocking=False):
-                greenlet = self._waiting.pop()
-                self.start(greenlet)
-
-    def spawn_async(self, *args, **kwargs):
-        greenlet = self.greenlet_class(*args, **kwargs)
-        if self.full():
-            self._waiting.append(greenlet)
-        else:
-            greenlet.start()
         return greenlet
 
     def spawn_link(self, *args, **kwargs):
