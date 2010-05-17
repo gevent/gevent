@@ -23,6 +23,7 @@ class GreenletSet(object):
                 greenlet.rawlink(self.discard)
         # each item we kill we place in dying, to avoid killing the same greenlet twice
         self.dying = set()
+        self._empty_event = Event()
 
     def __repr__(self):
         try:
@@ -43,10 +44,13 @@ class GreenletSet(object):
     def add(self, greenlet):
         greenlet.rawlink(self.discard)
         self.greenlets.add(greenlet)
+        self._empty_event.clear()
 
     def discard(self, greenlet):
         self.greenlets.discard(greenlet)
         self.dying.discard(greenlet)
+        if not self.greenlets:
+            self._empty_event.set()
 
     def start(self, greenlet):
         self.add(greenlet)
@@ -78,16 +82,14 @@ class GreenletSet(object):
 #         self.add = RaiseException("This %s has been closed" % self.__class__.__name__)
 
     def join(self, timeout=None, raise_error=False):
-        timeout = Timeout.start_new(timeout)
-        try:
-            try:
-                while self.greenlets:
-                    joinall(self.greenlets, raise_error=raise_error)
-            except Timeout, ex:
-                if ex is not timeout:
-                    raise
-        finally:
-            timeout.cancel()
+        if raise_error:
+            greenlets = self.greenlets.copy()
+            self._empty_event.wait(timeout=timeout)
+            for greenlet in greenlets:
+                if not greenlet.successful():
+                    raise greenlet.exception
+        else:
+            self._empty_event.wait(timeout=timeout)
 
     def kill(self, exception=GreenletExit, block=True, timeout=None):
         timer = Timeout.start_new(timeout)
