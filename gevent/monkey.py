@@ -20,7 +20,22 @@ def patch_time():
     _time.sleep = sleep
 
 
-def patch_thread():
+def patch_thread(threading=True, _threading_local=True):
+    """Patch the standard :mod:`thread` module to make it greenlet-based.
+
+    Patch the following names in :mod:`thread` module:
+    - :func:`get_ident`
+    - :func:`start_new_thread`
+    - :class:`LockType`
+    - :func:`allocate_lock`
+    - :func:`exit`
+    - :func:`stack_size`
+    - :class:`_local`
+
+    If *threading* is true (the default), also patch ``threading.local``.
+    If *_threading_local* is true (the default), also patch ``_threading_local.local``.
+    """
+
     from gevent import thread as green_thread
     thread = __import__('thread')
     if thread.exit is not green_thread.exit:
@@ -31,14 +46,16 @@ def patch_thread():
         thread.exit = green_thread.exit
         if hasattr(green_thread, 'stack_size'):
             thread.stack_size = green_thread.stack_size
-        if noisy and 'threading' in sys.modules:
-            sys.stderr.write("gevent.monkey's warning: 'threading' is already imported\n\n")
-        # built-in thread._local object won't work as greenlet-local
-        if '_threading_local' not in sys.modules:
-            import _threading_local
-            thread._local = _threading_local.local
-        elif noisy:
-            sys.stderr.write("gevent.monkey's warning: '_threading_local' is already imported\n\n")
+        from gevent.local import local
+        thread._local = local
+        if threading:
+            if noisy and 'threading' in sys.modules:
+                sys.stderr.write("gevent.monkey's warning: 'threading' is already imported\n\n")
+            threading = __import__('threading')
+            threading.local = local
+        if _threading_local:
+            _threading_local = __import__('_threading_local')
+            _threading_local.local = local
 
 
 def patch_socket(dns=True):
