@@ -6,6 +6,9 @@
 # XXX this module does seem to be useful and may be removed in the future
 """
 
+import warnings
+warnings.warn("gevent.rawgreenlet is deprecated", DeprecationWarning, stacklevel=2)
+
 import traceback
 from gevent import core
 from gevent.hub import GreenletExit, Waiter, sleep
