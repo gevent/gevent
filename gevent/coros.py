@@ -157,3 +157,61 @@ class DummySemaphore(object):
     def __exit__(self, typ, val, tb):
         self.release()
 
+
+class RLock(object):
+
+    def __init__(self):
+        self._block = Semaphore(1)
+        self._owner = None
+        self._count = 0
+
+    def __repr__(self):
+        return "<%s(%s, %d)>" % (
+                self.__class__.__name__,
+                self._owner,
+                self._count)
+
+    def acquire(self, blocking=1):
+        me = getcurrent()
+        if self._owner is me:
+            self._count = self._count + 1
+            return 1
+        rc = self._block.acquire(blocking)
+        if rc:
+            self._owner = me
+            self._count = 1
+        return rc
+
+    def __enter__(self):
+        return self.acquire()
+
+    def release(self):
+        if self._owner is not getcurrent():
+            raise RuntimeError("cannot release un-aquired lock")
+        self._count = count = self._count - 1
+        if not count:
+            self._owner = None
+            self._block.release()
+
+    def __exit__(self, t, v, tb):
+        self.release()
+
+    # Internal methods used by condition variables
+
+    def _acquire_restore(self, count_owner):
+        count, owner = count_owner
+        self._block.acquire()
+        self._count = count
+        self._owner = owner
+
+    def _release_save(self):
+        count = self._count
+        self._count = 0
+        owner = self.__owner
+        self._owner = None
+        self._block.release()
+        return (count, owner)
+
+    def _is_owned(self):
+        return self.owner is getcurrent()
+
