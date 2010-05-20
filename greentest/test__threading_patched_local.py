@@ -3,6 +3,7 @@ import threading
 
 localdata = threading.local()
 localdata.x = "hello"
+assert localdata.x == 'hello'
 
 success = []
 
@@ -19,3 +20,4 @@ t = threading.Thread(None, func)
 t.start()
 t.join()
 assert success == [1], 'test failed'
+assert localdata.x == 'hello'
