@@ -69,33 +69,55 @@ class Input(object):
         self.position += len(read)
         return read
 
-    def _chunked_read(self, rfile, length=None):
+    def _chunked_read(self, rfile, length=None, use_readline=False):
         if self.wfile is not None:
             ## 100 Continue
             self.wfile.write(self.wfile_line)
             self.wfile = None
             self.wfile_line = None
 
-        response = []
-        if length is None:
-            if self.chunk_length > self.position:
-                response.append(rfile.read(self.chunk_length - self.position))
-            while self.chunk_length != 0:
-                self.chunk_length = int(rfile.readline(), 16)
-                response.append(rfile.read(self.chunk_length))
-                rfile.readline()
+        if length == 0:
+            return ""
+
+        if length < 0:
+            length = None
+
+        if use_readline:
+            reader = self.rfile.readline
         else:
-            while length > 0 and self.chunk_length != 0:
-                if self.chunk_length > self.position:
-                    response.append(rfile.read(
-                            min(self.chunk_length - self.position, length)))
-                    length -= len(response[-1])
-                    self.position += len(response[-1])
-                    if self.chunk_length == self.position:
-                        rfile.readline()
-                else:
-                    self.chunk_length = int(rfile.readline(), 16)
-                    self.position = 0
+            reader = self.rfile.read
+
+        response = []
+        while self.chunk_length != 0:
+            maxreadlen = self.chunk_length - self.position
+            if length is not None and length < maxreadlen:
+                maxreadlen = length
+
+            if maxreadlen > 0:
+                data = reader(maxreadlen)
+                if not data:
+                    self.chunk_length = 0
+                    raise IOError("unexpected end of file while parsing chunked data")
+
+                datalen = len(data)
+                response.append(data)
+
+                self.position += datalen
+                if self.chunk_length == self.position:
+                    rfile.readline()
+
+                if length is not None:
+                    length -= datalen
+                    if length == 0:
+                        break
+                if use_readline and data[-1] == "\n":
+                    break
+            else:
+                self.chunk_length = int(rfile.readline().split(";", 1)[0], 16)
+                self.position = 0
+                if self.chunk_length == 0:
+                    rfile.readline()
+
         return ''.join(response)
 
     def read(self, length=None):
@@ -104,7 +126,10 @@ class Input(object):
         return self._do_read(self.rfile.read, length)
 
     def readline(self, size=None):
-        return self._do_read(self.rfile.readline)
+        if self.chunked_input:
+            return self._chunked_read(self.rfile, size, True)
+        else:
+            return self._do_read(self.rfile.readline, size)
 
     def readlines(self, hint=None):
         return list(self)
@@ -182,6 +207,12 @@ class WSGIHandler(object):
         if self.headers.status:
             self.log_error('Invalid headers status: %r', self.headers.status)
             return
+
+        if self.headers.get("transfer-encoding", "").lower() == "chunked":
+            try:
+                del self.headers["content-length"]
+            except KeyError:
+                pass
 
         content_length = self.headers.get("Content-Length")
         if content_length is not None:
@@ -377,8 +408,10 @@ class WSGIHandler(object):
         finally:
             if hasattr(self.result, 'close'):
                 self.result.close()
-            if self.wsgi_input.position < self.environ.get('CONTENT_LENGTH', 0):
-                ## Read and discard body
+
+            if (self.wsgi_input.position < int(self.environ.get('CONTENT_LENGTH', 0))
+                or self.wsgi_input.chunked_input):
+                # ## Read and discard body
                 self.wsgi_input.read()
 
             self.time_finish = time.time()
@@ -486,4 +519,3 @@ class WSGIServer(StreamServer):
     def handle(self, socket, address):
         handler = self.handler_class(socket, address, self)
         handler.handle()
-
