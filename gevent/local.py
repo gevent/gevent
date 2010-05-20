@@ -133,43 +133,30 @@ from gevent.coros import RLock
 
 __all__ = ["local"]
 
-global_dict = WeakKeyDictionary()
-
 class _localbase(object):
-    __slots__ = '_local__key', '_local__args', '_local__lock'
+    __slots__ = '_local__args', '_local__lock', '_local__dicts'
 
     def __new__(cls, *args, **kw):
         self = object.__new__(cls)
-        key = '_local__key', 'greenlet.local.' + str(id(self))
-        object.__setattr__(self, '_local__key', key)
         object.__setattr__(self, '_local__args', (args, kw))
         object.__setattr__(self, '_local__lock', RLock())
+        dicts = WeakKeyDictionary()
+        object.__setattr__(self, '_local__dicts', dicts)
 
         if (args or kw) and (cls.__init__ is object.__init__):
             raise TypeError("Initialization arguments are not supported")
 
         # We need to create the greenlet dict in anticipation of
-        # __init__ being called, to make sure we don't call it
-        # again ourselves.
+        # __init__ being called, to make sure we don't call it again ourselves.
         dict = object.__getattribute__(self, '__dict__')
-        global_dict.setdefault(getcurrent(), {})[key] = dict
+        dicts[getcurrent()] = dict
         return self
-
-
-def _get_locals(self):
-    key = object.__getattribute__(self, '_local__key')
-    current = getcurrent()
-    greenlet_locals = global_dict.get(current)
-    if greenlet_locals is None:
-        greenlet_locals = {}
-        global_dict[current] = greenlet_locals
-    return greenlet_locals.get(key)
 
 
 def _init_locals(self):
     d = {}
-    key = object.__getattribute__(self, '_local__key')
-    global_dict[getcurrent()][key] = d
+    dicts = object.__getattribute__(self, '_local__dicts')
+    dicts[getcurrent()] = d
     object.__setattr__(self, '__dict__', d)
 
     # we have a new instance dict, so call out __init__ if we have one
@@ -182,10 +169,10 @@ def _init_locals(self):
 class local(_localbase):
 
     def __getattribute__(self, name):
-        d = _get_locals(self)
+        d = object.__getattribute__(self, '_local__dicts').get(getcurrent())
         if d is None:
-            # we can obtain the lock here and not earlier, because the above is atomic
-            # however, subclassed __init__ may switch so we do obtain the lock here
+            # we can obtain the lock here and not earlier, because the above has no switches out
+            # however, subclassed __init__ may switch so we do need obtain the lock here
             lock = object.__getattribute__(self, '_local__lock')
             lock.acquire()
             try:
@@ -198,7 +185,7 @@ class local(_localbase):
             return object.__getattribute__(self, name)
 
     def __setattr__(self, name, value):
-        d = _get_locals(self)
+        d = object.__getattribute__(self, '_local__dicts').get(getcurrent())
         if d is None:
             lock = object.__getattribute__(self, '_local__lock')
             lock.acquire()
@@ -212,7 +199,7 @@ class local(_localbase):
             return object.__setattr__(self, name, value)
 
     def __delattr__(self, name):
-        d = _get_locals(self)
+        d = object.__getattribute__(self, '_local__dicts').get(getcurrent())
         if d is None:
             lock = object.__getattribute__(self, '_local__lock')
             lock.acquire()
@@ -224,15 +211,3 @@ class local(_localbase):
         else:
             object.__setattr__(self, '__dict__', d)
             return object.__delattr__(self, name)
-
-    def __del__(self):
-        key = object.__getattribute__(self, '_local__key')
-
-        try:
-            greenlet_locals_list = global_dict.values()
-        except Exception:
-            return
-
-        for greenlet_locals in greenlet_locals_list:
-            greenlet_locals.pop(key, None)
-
