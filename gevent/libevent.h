@@ -6,7 +6,9 @@
 
 #include "sys/queue.h"
 
-#ifdef USE_LIBEVENT_2
+#include "event.h"
+
+#if defined(_EVENT_NUMERIC_VERSION) && _EVENT_NUMERIC_VERSION >= 0x2000000
 
 #include "event2/event.h"
 #include "event2/event_struct.h"
@@ -27,9 +29,8 @@
 #define current_base event_global_current_base_
 #endif
 
-#elif USE_LIBEVENT_1
+#else
 
-#include "event.h"
 #include "evhttp.h"
 #include "evdns.h"
 
@@ -44,10 +45,6 @@
 /* functions that return int in libeven2 but void in libevent1 */
 #define EVBUFFER_DRAIN(A, B) (evbuffer_drain((A), (B)), 0)
 #define EVHTTP_SET_CB(A, B, C, D) (evhttp_set_cb((A), (B), (C), (D)), 0)
-
-#else
-
-#error "Please define either USE_LIBEVENT_1 or USE_LIBEVENT_2"
 
 #endif
 
