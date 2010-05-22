@@ -46,13 +46,6 @@ libraries = []
 extra_objects = []
 
 
-libevent_shared_name = 'libevent.so'
-if sys.platform == 'darwin':
-    libevent_shared_name = 'libevent.dylib'
-elif sys.platform == 'win32':
-    libevent_shared_name = 'libevent.dll'
-
-
 # hack: create a symlink from build/../core.so to gevent/core.so to prevent "ImportError: cannot import name core" failures
 cmdclass = {}
 try:
