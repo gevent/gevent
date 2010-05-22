@@ -1,6 +1,6 @@
 """An example how to use sendfile[1] with gevent.
 
-[1] See http://pypi.python.org/pypi/py-sendfile/
+[1] http://pypi.python.org/pypi/py-sendfile/
 """
 from errno import EAGAIN
 from sendfile import sendfile as original_sendfile
