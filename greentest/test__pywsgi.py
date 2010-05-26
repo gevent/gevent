@@ -680,6 +680,121 @@ class HTTPRequest(urllib2.Request):
     def get_method(self):
         return self.method
 
+
+class ChunkedInputTests(TestCase):
+    dirt = ""
+    validator = None
+    def application(self, env, start_response):
+        input = env['wsgi.input']
+        response = []
+
+        pi = env["PATH_INFO"]
+
+        if pi=="/short-read":
+            d=input.read(10)
+            response = [d]
+        elif pi=="/lines":
+            for x in input:
+                response.append(x)
+        elif pi=="/ping":
+            input.read()
+            response.append("pong")
+        else:
+            raise RuntimeError("bad path")
+
+        start_response('200 OK', [('Content-Type', 'text/plain')])
+        return response
+
+    def chunk_encode(self, chunks, dirt=None):
+        if dirt is None:
+            dirt = self.dirt
+
+        b = ""
+        for c in chunks:
+            b += "%x%s\r\n%s\r\n" % (len(c), dirt, c)
+        return b
+
+    def body(self, dirt=None):
+        return self.chunk_encode(["this", " is ", "chunked", "\nline", " 2", "\n",  "line3", ""], dirt=dirt)
+
+    def ping(self, fd):
+        fd.write("GET /ping HTTP/1.1\r\n\r\n")
+        read_http(fd, body="pong")
+
+    def test_short_read_with_content_length(self):
+        body = self.body()
+        req = "POST /short-read HTTP/1.1\r\ntransfer-encoding: Chunked\r\nContent-Length:1000\r\n\r\n" + body
+
+        fd = self.connect().makefile(bufsize=1)
+        fd.write(req)
+        read_http(fd, body="this is ch")
+
+        self.ping(fd)
+
+    def test_short_read_with_zero_content_length(self):
+        body = self.body()
+        req = "POST /short-read HTTP/1.1\r\ntransfer-encoding: Chunked\r\nContent-Length:0\r\n\r\n" + body
+        print "REQUEST:", repr(req)
+
+        fd = self.connect().makefile(bufsize=1)
+        fd.write(req)
+        read_http(fd, body="this is ch")
+
+        self.ping(fd)
+
+    def test_short_read(self):
+        body = self.body()
+        req = "POST /short-read HTTP/1.1\r\ntransfer-encoding: Chunked\r\n\r\n" + body
+
+        fd = self.connect().makefile(bufsize=1)
+        fd.write(req)
+        read_http(fd, body="this is ch")
+
+        self.ping(fd)
+
+    def test_dirt(self):
+        body = self.body(dirt="; here is dirt\0bla")
+        req = "POST /ping HTTP/1.1\r\ntransfer-encoding: Chunked\r\n\r\n" + body
+
+        fd = self.connect().makefile(bufsize=1)
+        fd.write(req)
+        read_http(fd, body="pong")
+
+        self.ping(fd)
+
+    def test_chunked_readline(self):
+        body = self.body()
+        req = "POST /lines HTTP/1.1\r\nContent-Length: %s\r\ntransfer-encoding: Chunked\r\n\r\n%s" % (len(body), body)
+
+        fd = self.connect().makefile(bufsize=1)
+        fd.write(req)
+        read_http(fd, body='this is chunked\nline 2\nline3')
+
+    def test_close_before_finished(self):
+        import signal
+
+        got_signal = []
+        def handler(*args):
+            got_signal.append(1)
+            raise KeyboardInterrupt()
+
+        signal.signal(signal.SIGALRM, handler)
+        signal.alarm(1)
+
+        try:
+            body = '4\r\nthi'
+            req = "POST /short-read HTTP/1.1\r\ntransfer-encoding: Chunked\r\n\r\n" + body
+
+            fd = self.connect().makefile(bufsize=1)
+            fd.write(req)
+            fd.close()
+            gevent.sleep(0.0)
+        finally:
+            signal.alarm(0)
+            signal.signal(signal.SIGALRM, signal.SIG_DFL)
+
+        assert not got_signal, "caught alarm signal. infinite loop detected."
+
 del CommonTests
 
 if __name__ == '__main__':
