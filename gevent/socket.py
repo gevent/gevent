@@ -47,7 +47,10 @@ __all__ = ['create_connection',
            'timeout',
            'ssl',
            'sslerror',
-           'SocketType']
+           'SocketType',
+           'wait_read',
+           'wait_write',
+           'wait_readwrite']
 
 import sys
 import errno
