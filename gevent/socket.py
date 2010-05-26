@@ -139,6 +139,11 @@ def _wait_helper(ev, evtype):
 
 
 def wait_read(fileno, timeout=-1, timeout_exc=_socket.timeout('timed out')):
+    """Block the current greenlet until *fileno* is ready to read.
+
+    If *timeout* is non-negative, then *timeout_exc* is raised after *timeout* second has passed.
+    By default *timeout_exc* is ``socket.timeout('timed out')``.
+    """
     evt = core.read_event(fileno, _wait_helper, timeout, (getcurrent(), timeout_exc))
     try:
         switch_result = get_hub().switch()
@@ -148,6 +153,11 @@ def wait_read(fileno, timeout=-1, timeout_exc=_socket.timeout('timed out')):
 
 
 def wait_write(fileno, timeout=-1, timeout_exc=_socket.timeout('timed out')):
+    """Block the current greenlet until *fileno* is ready to write.
+
+    If *timeout* is non-negative, then *timeout_exc* is raised after *timeout* second has passed.
+    By default *timeout_exc* is ``socket.timeout('timed out')``.
+    """
     evt = core.write_event(fileno, _wait_helper, timeout, (getcurrent(), timeout_exc))
     try:
         switch_result = get_hub().switch()
@@ -157,6 +167,11 @@ def wait_write(fileno, timeout=-1, timeout_exc=_socket.timeout('timed out')):
 
 
 def wait_readwrite(fileno, timeout=-1, timeout_exc=_socket.timeout('timed out')):
+    """Block the current greenlet until *fileno* is ready to read or write.
+
+    If *timeout* is non-negative, then *timeout_exc* is raised after *timeout* second has passed.
+    By default *timeout_exc* is ``socket.timeout('timed out')``.
+    """
     evt = core.readwrite_event(fileno, _wait_helper, timeout, (getcurrent(), timeout_exc))
     try:
         switch_result = get_hub().switch()
