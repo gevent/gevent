@@ -266,6 +266,8 @@ class socket(object):
                 self._sock = _sock
                 self.timeout = _socket.getdefaulttimeout()
         self._sock.setblocking(0)
+        self._read_event = core.event(core.EV_READ, self.fileno(), _wait_helper)
+        self._write_event = core.event(core.EV_WRITE, self.fileno(), _wait_helper)
 
     def __repr__(self):
         return '<%s at %s %s>' % (type(self).__name__, hex(id(self)), self._formatinfo())
@@ -306,10 +308,14 @@ class socket(object):
                 if ex[0] != errno.EWOULDBLOCK or self.timeout == 0.0:
                     raise
                 sys.exc_clear()
-            wait_read(self._sock.fileno(), timeout=self.timeout)
+            wait_read(self._sock.fileno(), timeout=self.timeout, event=self._read_event)
         return socket(_sock=client_socket), address
 
     def close(self):
+        if self._read_event is not None:
+            cancel_wait(self._read_event)
+        if self._write_event is not None:
+            cancel_wait(self._write_event)
         self._sock = _closedsocket()
         dummy = self._sock._dummy
         for method in _delegate_methods:
@@ -380,11 +386,13 @@ class socket(object):
                 #print 'received: %r' % (res, )
                 return res
             except error, ex:
+                if ex[0] == errno.EBADF:
+                    return ''
                 if ex[0] != EWOULDBLOCK or self.timeout == 0.0:
                     raise
                 # QQQ without clearing exc_info test__refcount.test_clean_exit fails
                 sys.exc_clear()
-            wait_read(self.fileno(), timeout=self.timeout)
+            wait_read(self.fileno(), timeout=self.timeout, event=self._read_event)
 
     def recvfrom(self, *args):
         while True:
@@ -394,7 +402,7 @@ class socket(object):
                 if ex[0] != EWOULDBLOCK or self.timeout == 0.0:
                     raise
                 sys.exc_clear()
-            wait_read(self._sock.fileno(), timeout=self.timeout)
+            wait_read(self._sock.fileno(), timeout=self.timeout, event=self._read_event)
 
     def recvfrom_into(self, *args):
         while True:
@@ -404,17 +412,19 @@ class socket(object):
                 if ex[0] != EWOULDBLOCK or self.timeout == 0.0:
                     raise
                 sys.exc_clear()
-            wait_read(self._sock.fileno(), timeout=self.timeout)
+            wait_read(self._sock.fileno(), timeout=self.timeout, event=self._read_event)
 
     def recv_into(self, *args):
         while True:
             try:
                 return self._sock.recv_into(*args)
             except error, ex:
+                if ex[0] == errno.EBADF:
+                    return 0
                 if ex[0] != EWOULDBLOCK or self.timeout == 0.0:
                     raise
                 sys.exc_clear()
-            wait_read(self._sock.fileno(), timeout=self.timeout)
+            wait_read(self._sock.fileno(), timeout=self.timeout, event=self._read_event)
 
     def send(self, data, flags=0, timeout=timeout_default):
         #print 'sending: %r' % data
@@ -426,7 +436,7 @@ class socket(object):
             if ex[0] != EWOULDBLOCK or timeout == 0.0:
                 raise
             sys.exc_clear()
-            wait_write(self._sock.fileno(), timeout=timeout)
+            wait_write(self._sock.fileno(), timeout=timeout, event=self._write_event)
             try:
                 return self._sock.send(data, flags)
             except error, ex2:
@@ -462,7 +472,7 @@ class socket(object):
             if ex[0] != EWOULDBLOCK or timeout == 0.0:
                 raise
             sys.exc_clear()
-            wait_write(self.fileno(), timeout=self.timeout)
+            wait_write(self.fileno(), timeout=self.timeout, event=self._write_event)
             try:
                 return self._sock.sendto(*args)
             except error, ex2:
