@@ -353,7 +353,7 @@ def get_failed_testcases(cursor, runid):
 
 _warning_re = re.compile('\w*warning', re.I)
 _error_re = re.compile(r'(?P<prefix>\s*)Traceback \(most recent call last\):' +
-                       r'(\n(?P=prefix)\s+.*)+\n(?P=prefix)(?P<error>[\w\.]+)')
+                       r'(\n(?P=prefix)[ \t]+[^\n]*)+\n(?P=prefix)(?P<error>[\w\.]+)')
 
 
 def get_warnings(output):
