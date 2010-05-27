@@ -138,46 +138,80 @@ def _wait_helper(ev, evtype):
         current.switch(ev)
 
 
-def wait_read(fileno, timeout=-1, timeout_exc=_socket.timeout('timed out')):
+def wait_read(fileno, timeout=-1, timeout_exc=_socket.timeout('timed out'), event=None):
     """Block the current greenlet until *fileno* is ready to read.
 
     If *timeout* is non-negative, then *timeout_exc* is raised after *timeout* second has passed.
     By default *timeout_exc* is ``socket.timeout('timed out')``.
     """
-    evt = core.read_event(fileno, _wait_helper, timeout, (getcurrent(), timeout_exc))
+    if event is None:
+        event = core.read_event(fileno, _wait_helper, timeout, (getcurrent(), timeout_exc))
+    else:
+        assert event.callback == _wait_helper, event.callback
+        assert event.arg is None, 'This event is already used by another greenlet: %r' % (event.arg, )
+        event.arg = (getcurrent(), timeout_exc)
+        event.add(timeout)
     try:
         switch_result = get_hub().switch()
-        assert evt is switch_result, 'Invalid switch into wait_read(): %r' % (switch_result, )
+        assert event is switch_result, 'Invalid switch into wait_read(): %r' % (switch_result, )
     finally:
-        evt.cancel()
+        event.cancel()
+        event.arg = None
+    return event
 
 
-def wait_write(fileno, timeout=-1, timeout_exc=_socket.timeout('timed out')):
+def wait_write(fileno, timeout=-1, timeout_exc=_socket.timeout('timed out'), event=None):
     """Block the current greenlet until *fileno* is ready to write.
 
     If *timeout* is non-negative, then *timeout_exc* is raised after *timeout* second has passed.
     By default *timeout_exc* is ``socket.timeout('timed out')``.
     """
-    evt = core.write_event(fileno, _wait_helper, timeout, (getcurrent(), timeout_exc))
+    if event is None:
+        event = core.write_event(fileno, _wait_helper, timeout, (getcurrent(), timeout_exc))
+    else:
+        assert event.callback == _wait_helper, event.callback
+        assert event.arg is None, 'This event is already used by another greenlet: %r' % (event.arg, )
+        event.add(timeout)
     try:
         switch_result = get_hub().switch()
-        assert evt is switch_result, 'Invalid switch into wait_write(): %r' % (switch_result, )
+        assert event is switch_result, 'Invalid switch into wait_write(): %r' % (switch_result, )
     finally:
-        evt.cancel()
+        event.arg = None
+        event.cancel()
+    return event
 
 
-def wait_readwrite(fileno, timeout=-1, timeout_exc=_socket.timeout('timed out')):
+def wait_readwrite(fileno, timeout=-1, timeout_exc=_socket.timeout('timed out'), event=None):
     """Block the current greenlet until *fileno* is ready to read or write.
 
     If *timeout* is non-negative, then *timeout_exc* is raised after *timeout* second has passed.
     By default *timeout_exc* is ``socket.timeout('timed out')``.
     """
-    evt = core.readwrite_event(fileno, _wait_helper, timeout, (getcurrent(), timeout_exc))
+    if event is None:
+        event = core.readwrite_event(fileno, _wait_helper, timeout, (getcurrent(), timeout_exc))
+    else:
+        assert event.callback == _wait_helper, event.callback
+        assert event.arg is None, 'This event is already used by another greenlet: %r' % (event.arg, )
+        event.add(timeout)
     try:
         switch_result = get_hub().switch()
-        assert evt is switch_result, 'Invalid switch into wait_readwrite(): %r' % (switch_result, )
+        assert event is switch_result, 'Invalid switch into wait_readwrite(): %r' % (switch_result, )
     finally:
-        evt.cancel()
+        event.arg = None
+        event.cancel()
+    return event
+
+
+def __cancel_wait(event):
+    if event.pending:
+        arg = event.arg
+        if arg is not None:
+            greenlet, _ = arg
+            greenlet.switch(event)
+
+
+def cancel_wait(event):
+    core.active_event(__cancel_wait, event)
 
 
 if sys.version_info[:2] <= (2, 4):
