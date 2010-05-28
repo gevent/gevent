@@ -150,6 +150,8 @@ class Response(object):
             self.assertReason(reason)
         if version is not None:
             self.assertVersion(version)
+        if self.code == 100:
+            return self
         try:
             if 'chunked' in headers.get('Transfer-Encoding', ''):
                 if CONTENT_LENGTH in headers:
@@ -794,6 +796,28 @@ class ChunkedInputTests(TestCase):
             signal.signal(signal.SIGALRM, signal.SIG_DFL)
 
         assert not got_signal, "caught alarm signal. infinite loop detected."
+
+
+class Expect100ContinueTests(TestCase):
+    validator = None
+    def application(self, environ, start_response):
+        if int(environ['CONTENT_LENGTH']) > 1024:
+            start_response('417 Expectation Failed', [('Content-Length', '7'), ('Content-Type', 'text/plain')])
+            return ['failure']
+        else:
+            text = environ['wsgi.input'].read()
+            start_response('200 OK', [('Content-Length', str(len(text))), ('Content-Type', 'text/plain')])
+            return [text]
+
+    def test_continue(self):
+        fd = self.connect().makefile(bufsize=1)
+
+        fd.write('PUT / HTTP/1.1\r\nHost: localhost\r\nContent-length: 1025\r\nExpect: 100-continue\r\n\r\n')
+        read_http(fd, code=417, body="failure")
+
+        fd.write('PUT / HTTP/1.1\r\nHost: localhost\r\nContent-length: 7\r\nExpect: 100-continue\r\n\r\ntesting')
+        read_http(fd, code=100)
+        read_http(fd, body="testing")
 
 del CommonTests
 
