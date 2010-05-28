@@ -145,7 +145,7 @@ class GreenletSet(object):
         if kwds is None:
             kwds = {}
         if self.full():
-            # cannot call spawn() directly because it blocks
+            # cannot call spawn() directly because it will block
             return Greenlet.spawn(self.apply_cb, func, args, kwds, callback)
         else:
             greenlet = self.spawn(func, *args, **kwds)
