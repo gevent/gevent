@@ -246,12 +246,35 @@ class TestPoolUnlimit(TestPool):
     size = None
 
 
-class TestJoin(greentest.GenericWaitTestCase):
+class TestJoinSleep(greentest.GenericWaitTestCase):
 
     def wait(self, timeout):
         p = pool.Pool()
         p.spawn(gevent.sleep, 10)
         p.join(timeout=timeout)
+
+
+class TestJoinEmpty(greentest.TestCase):
+    switch_expected = False
+
+    def test(self):
+        p = pool.Pool()
+        p.join()
+
+
+class TestSpawn(greentest.TestCase):
+    switch_expected = True
+
+    def test(self):
+        p = pool.Pool(1)
+        self.assertEqual(len(p), 0)
+        p.spawn(gevent.sleep, 0.01)
+        self.assertEqual(len(p), 1)
+        p.spawn(gevent.sleep, 0.01)
+        self.assertEqual(len(p), 1)
+        self.assertEqual(len(p), 1)
+        gevent.sleep(0.019)
+        self.assertEqual(len(p), 0)
 
 
 if __name__=='__main__':
