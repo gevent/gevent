@@ -13,8 +13,8 @@ def myfunction(*args, **kwargs):
 
 if __name__ == '__main__':
     cwd = os.getcwd()
-    saved_sys_path = sys.path[:]
     try:
+        allowed_modules = sys.argv[1:]
         sys.path.append('.')
         base = dirname(gevent.__file__)
         print base
@@ -23,17 +23,26 @@ if __name__ == '__main__':
         globs = {'myfunction': myfunction, 'gevent': gevent, 'socket': socket}
 
         modules = set()
+
+        def add_module(name, path):
+            if allowed_modules and name not in allowed_modules:
+                return
+            modules.add((name, path))
+
         for path, dirs, files in os.walk(base):
             package = 'gevent' + path.replace(base, '').replace('/', '.')
-            modules.add((package, join(path, '__init__.py')))
+            add_module(package, join(path, '__init__.py'))
             for f in files:
                 module = None
                 if f.endswith('.py'):
                     module = f[:-3]
                 if module:
-                    modules.add((package + '.' + module, join(path, f)))
+                    add_module(package + '.' + module, join(path, f))
 
-        modules.add(('setup', 'setup.py'))
+        add_module('setup', 'setup.py')
+
+        if not modules:
+            sys.exit('No modules found matching %s' % ' '.join(allowed_modules))
 
         suite = unittest.TestSuite()
         tests_count = 0
@@ -50,4 +59,3 @@ if __name__ == '__main__':
         runner.run(suite)
     finally:
         os.chdir(cwd)
-        sys.path = saved_sys_path
