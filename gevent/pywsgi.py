@@ -52,6 +52,14 @@ class Input(object):
         self.chunked_input = chunked_input
         self.chunk_length = -1
 
+    def _discard(self):
+        if self.wfile is None and (self.position < (self.content_length or 0) or self.chunked_input):
+            # ## Read and discard body
+            while 1:
+                d = self.read(16384)
+                if not d:
+                    break
+
     def _do_read(self, reader, length=None):
         if self.wfile is not None:
             ## 100 Continue
@@ -408,11 +416,7 @@ class WSGIHandler(object):
         finally:
             if hasattr(self.result, 'close'):
                 self.result.close()
-
-            if (self.wsgi_input.position < int(self.environ.get('CONTENT_LENGTH', 0))
-                or self.wsgi_input.chunked_input):
-                # ## Read and discard body
-                self.wsgi_input.read()
+            self.wsgi_input._discard()
 
             self.time_finish = time.time()
             self.log_request()
