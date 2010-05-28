@@ -35,6 +35,7 @@ _INTERNAL_ERROR_HEADERS = [('Content-Type', 'text/plain'),
 _REQUEST_TOO_LONG_RESPONSE = "HTTP/1.0 414 Request URI Too Long\r\nConnection: close\r\nContent-length: 0\r\n\r\n"
 _BAD_REQUEST_RESPONSE = "HTTP/1.0 400 Bad Request\r\nConnection: close\r\nContent-length: 0\r\n\r\n"
 
+_CONTINUE_RESPONSE = "HTTP/1.1 100 Continue\r\n\r\n"
 
 def format_date_time(timestamp):
     year, month, day, hh, mm, ss, wd, _y, _z = time.gmtime(timestamp)
@@ -43,11 +44,10 @@ def format_date_time(timestamp):
 
 class Input(object):
 
-    def __init__(self, rfile, content_length, wfile=None, wfile_line=None, chunked_input=False):
+    def __init__(self, rfile, content_length, wfile=None, chunked_input=False):
         self.rfile = rfile
         self.content_length = content_length
         self.wfile = wfile
-        self.wfile_line = wfile_line
         self.position = 0
         self.chunked_input = chunked_input
         self.chunk_length = -1
@@ -60,13 +60,13 @@ class Input(object):
                 if not d:
                     break
 
-    def _do_read(self, reader, length=None):
+    def _send_100_continue(self):
         if self.wfile is not None:
-            ## 100 Continue
-            self.wfile.write(self.wfile_line)
+            self.wfile.write(_CONTINUE_RESPONSE)
             self.wfile = None
-            self.wfile_line = None
 
+    def _do_read(self, reader, length=None):
+        self._send_100_continue()
         if length is None and self.content_length is not None:
             length = self.content_length - self.position
         if length and length > self.content_length - self.position:
@@ -78,11 +78,7 @@ class Input(object):
         return read
 
     def _chunked_read(self, rfile, length=None, use_readline=False):
-        if self.wfile is not None:
-            ## 100 Continue
-            self.wfile.write(self.wfile_line)
-            self.wfile = None
-            self.wfile_line = None
+        self._send_100_continue()
 
         if length == 0:
             return ""
@@ -462,12 +458,10 @@ class WSGIHandler(object):
 
         if env.get('HTTP_EXPECT') == '100-continue':
             wfile = self.wfile
-            wfile_line = 'HTTP/1.1 100 Continue\r\n\r\n'
         else:
             wfile = None
-            wfile_line = None
         chunked = env.get('HTTP_TRANSFER_ENCODING', '').lower() == 'chunked'
-        self.wsgi_input = Input(self.rfile, self.content_length, wfile=wfile, wfile_line=wfile_line, chunked_input=chunked)
+        self.wsgi_input = Input(self.rfile, self.content_length, wfile=wfile, chunked_input=chunked)
         env['wsgi.input'] = self.wsgi_input
         return env
 
