@@ -171,6 +171,7 @@ def wait_write(fileno, timeout=-1, timeout_exc=_socket.timeout('timed out'), eve
     else:
         assert event.callback == _wait_helper, event.callback
         assert event.arg is None, 'This event is already used by another greenlet: %r' % (event.arg, )
+        event.arg = (getcurrent(), timeout_exc)
         event.add(timeout)
     try:
         switch_result = get_hub().switch()
@@ -192,6 +193,7 @@ def wait_readwrite(fileno, timeout=-1, timeout_exc=_socket.timeout('timed out'),
     else:
         assert event.callback == _wait_helper, event.callback
         assert event.arg is None, 'This event is already used by another greenlet: %r' % (event.arg, )
+        event.arg = (getcurrent(), timeout_exc)
         event.add(timeout)
     try:
         switch_result = get_hub().switch()
