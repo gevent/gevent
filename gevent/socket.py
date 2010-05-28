@@ -384,9 +384,7 @@ class socket(object):
     def recv(self, *args):
         while True:
             try:
-                res = self._sock.recv(*args)
-                #print 'received: %r' % (res, )
-                return res
+                return self._sock.recv(*args)
             except error, ex:
                 if ex[0] == errno.EBADF:
                     return ''
