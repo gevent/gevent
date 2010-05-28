@@ -61,6 +61,14 @@ cdef extern from "Python.h":
     object PyString_FromString(char *v)
     int    PyObject_AsCharBuffer(object obj, char **buffer, int *buffer_len)
 
+cdef extern from "frameobject.h":
+    ctypedef struct PyThreadState:
+        void* exc_type
+        void* exc_value
+        void* exc_traceback
+
+    PyThreadState* PyThreadState_GET()
+
 ctypedef void (*event_handler)(int fd, short evtype, void *arg)
 
 
@@ -451,3 +459,19 @@ if get_version() != get_header_version() and get_header_version() is not None:
 
 include "evbuffer.pxi"
 include "evhttp.pxi"
+
+def set_exc_info(object typ, object value, object tb):
+    cdef PyThreadState* tstate = PyThreadState_GET()
+    if tstate.exc_type != NULL:
+        Py_DECREF(<object>tstate.exc_type)
+    if tstate.exc_value != NULL:
+        Py_DECREF(<object>tstate.exc_value)
+    if tstate.exc_traceback != NULL:
+        Py_DECREF(<object>tstate.exc_traceback)
+    Py_INCREF(typ)
+    Py_INCREF(value)
+    Py_INCREF(tb)
+    tstate.exc_type = <void*>typ
+    tstate.exc_value = <void *>value
+    tstate.exc_traceback = <void *>tb
+
