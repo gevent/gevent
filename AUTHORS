@@ -1,0 +1,33 @@
+Gevent is written and maintained by
+
+  Denis Bilenko
+
+and the contributors (ordered alphabetically):
+
+  Daniele Varrazzo
+  Jason Toffaletti
+  Ludvig Ericson
+  Marcus Cavanaugh
+  Matt Goodall
+  Mike Barton
+  Nicholas Piël
+  Örjan Persson
+  Ralf Schmitt
+  Ted Suzman
+  Uriel Katz
+
+Gevent is inspired by and uses some code from eventlet which was written by
+
+  Bob Ipollito
+  Donovan Preston
+
+The libevent wrappers are based on pyevent by
+
+  Dug Song
+  Martin Murray
+
+The win32util module is taken from Twisted.
+
+Some modules (local and ssl) are adaptations of the modules from the Python standard library.
+
+If your code is used in gevent and you are not mentioned above, please contact the maintainer.
