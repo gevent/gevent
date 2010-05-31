@@ -241,6 +241,7 @@ cdef class event:
         cdef int result
         if not event_pending(&self.ev, EV_READ|EV_WRITE|EV_SIGNAL|EV_TIMEOUT, NULL):
             Py_INCREF(self)
+        errno = 0  # event_add sometime does not set errno
         if timeout >= 0.0:
             c_timeout = <double>timeout
             tv.tv_sec = <long>c_timeout
@@ -249,7 +250,10 @@ cdef class event:
         else:
             result = event_add(&self.ev, NULL)
         if result < 0:
-            raise IOError(errno, strerror(errno))
+            if errno:
+                raise IOError(errno, strerror(errno))
+            else:
+                raise IOError("event_add failed. bad filedescriptor?")
 
     def cancel(self):
         """Remove event from the event queue."""
