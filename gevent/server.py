@@ -111,7 +111,14 @@ class StreamServer(BaseServer):
             if self.full():
                 self.stop_accepting()
                 return
-            client_socket, address = self.socket.accept()
+            try:
+                client_socket, address = self.socket.accept()
+            except socket.error, err:
+                if err[0]==errno.EAGAIN:
+                    sys.exc_clear()
+                    return
+                raise
+
             self.delay = self.min_delay
             client_socket = socket.socket(_sock=client_socket)
             spawn = self.spawn

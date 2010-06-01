@@ -193,5 +193,6 @@ def _tcp_listener(address, backlog=50, reuse_addr=None):
         sock.setsockopt(_socket.SOL_SOCKET, _socket.SO_REUSEADDR, reuse_addr)
     sock.bind(address)
     sock.listen(backlog)
+    sock.setblocking(0)
     return sock
 
