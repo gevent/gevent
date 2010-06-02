@@ -41,6 +41,7 @@ class TestCase(greentest.TestCase):
     PORTS = [80, 0, 53]
     getaddrinfo_args = [(),
                         (AF_UNSPEC, ),
+                        (AF_UNSPEC, SOCK_STREAM, 0, 0),
                         (AF_INET, SOCK_STREAM, ),
                         (AF_UNSPEC, SOCK_DGRAM, ),
                         (AF_INET, SOCK_RAW, ),
