@@ -647,9 +647,9 @@ else:
             raise NotImplementedError('family is not among AF_UNSPEC/AF_INET/AF_INET6: %r' % (family, ))
 
         socktype_proto = [(SOCK_STREAM, 6), (SOCK_DGRAM, 17), (SOCK_RAW, 0)]
-        if socktype is not None:
+        if socktype:
             socktype_proto = [(x, y) for (x, y) in socktype_proto if socktype == x]
-        if proto is not None:
+        if proto:
             socktype_proto = [(x, y) for (x, y) in socktype_proto if proto == y]
 
         result = []
