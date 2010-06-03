@@ -8,11 +8,11 @@ from gevent.timeout import Timeout
 
 
 class Semaphore(object):
-    """An unbounded semaphore.
-    Optionally initialize with a resource count, then acquire() and release()
-    resources as needed. Attempting to acquire() when count is zero suspends
-    the calling coroutine until count becomes nonzero again.
-    """
+    """A semaphore manages a counter representing the number of release() calls minus the number of acquire() calls,
+    plus an initial value. The acquire() method blocks if necessary until it can return without making the counter
+    negative.
+    
+    If not given, value defaults to 1."""
 
     def __init__(self, count=0):
         self._links = []
