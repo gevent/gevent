@@ -120,13 +120,6 @@ class Semaphore(object):
     def __exit__(self, typ, val, tb):
         self.release()
 
-    @property # REMOVE IT
-    def balance(self):
-        # positive means there are free items
-        # zero means there are no free items but nobody has requested one
-        # negative means there are requests for items, but no items
-        return self.counter - len(self._links)
-
 
 class DummySemaphore(object):
 
