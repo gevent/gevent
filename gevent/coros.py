@@ -122,6 +122,7 @@ class Semaphore(object):
 
 
 class DummySemaphore(object):
+    """A Semaphore initialized with "infinite" initial value. Neither of its methods ever block."""
 
     def __str__(self):
         return '<%s>' % self.__class__.__name__
