@@ -14,9 +14,9 @@ class Semaphore(object):
     
     If not given, value defaults to 1."""
 
-    def __init__(self, count=0):
+    def __init__(self, value=1):
         self._links = []
-        self.counter = count
+        self.counter = value
         self._notifier = None
 
     def __str__(self):
