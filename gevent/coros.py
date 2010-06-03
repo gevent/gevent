@@ -7,6 +7,9 @@ from gevent.hub import get_hub, getcurrent
 from gevent.timeout import Timeout
 
 
+__all__ = ['Semaphore', 'DummySemaphore', 'BoundedSemaphore', 'RLock']
+
+
 class Semaphore(object):
     """A semaphore manages a counter representing the number of release() calls minus the number of acquire() calls,
     plus an initial value. The acquire() method blocks if necessary until it can return without making the counter
