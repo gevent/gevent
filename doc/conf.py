@@ -214,11 +214,8 @@ latex_documents = [
 
 # prevent some stuff from showing up in docs
 import socket
-import gevent.http
 import gevent.socket
-del gevent.http.HTTPServer.spawn   # it's a parameter, not a method
 del gevent.Greenlet.throw
-del gevent.socket.socket.fd
 for item in gevent.socket.__all__[:]:
     if getattr(gevent.socket, item) is getattr(socket, item, None):
         gevent.socket.__all__.remove(item)
