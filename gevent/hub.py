@@ -19,13 +19,19 @@ __all__ = ['getcurrent',
            'Waiter']
 
 
+def __import_py_magic_greenlet():
+    try:
+        from py.magic import greenlet
+        return greenlet
+    except ImportError:
+        pass
+
 try:
     greenlet = __import__('greenlet').greenlet
 except ImportError:
-    try:
-        from py.magic import greenlet
-    except ImportError:
-        raise ImportError('gevent requires greenlet: http://pypi.python.org/pypi/greenlet/')
+    greenlet = __import_py_magic_greenlet()
+    if greenlet is None:
+        raise
 
 getcurrent = greenlet.getcurrent
 GreenletExit = greenlet.GreenletExit
