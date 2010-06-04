@@ -113,7 +113,7 @@ def patch_select(aggressive=False):
         _select.__dict__.pop('kevent', None)
 
 
-def patch_all(socket=True, dns=True, time=True, select=True, thread=True, os=True, ssl=True, aggressive=False):
+def patch_all(socket=True, dns=True, time=True, select=True, thread=True, os=True, ssl=True, aggressive=True):
     # order is important
     if os:
         patch_os()
