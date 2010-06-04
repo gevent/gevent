@@ -58,7 +58,7 @@ def patch_thread(threading=True, _threading_local=True):
             _threading_local.local = local
 
 
-def patch_socket(dns=True):
+def patch_socket(dns=True, aggressive=True):
     from gevent.socket import socket, fromfd, socketpair, SocketType
     _socket = __import__('socket')
     _socket.socket = socket
@@ -70,7 +70,11 @@ def patch_socket(dns=True):
         _socket.ssl = ssl
         _socket.sslerror = sslerror
     except ImportError:
-        pass
+        if aggressive:
+            try:
+                del _socket.ssl
+            except AttributeError:
+                pass
     if dns:
         patch_dns()
 
@@ -118,7 +122,7 @@ def patch_all(socket=True, dns=True, time=True, select=True, thread=True, os=Tru
     if thread:
         patch_thread()
     if socket:
-        patch_socket(dns=dns)
+        patch_socket(dns=dns, aggressive=aggressive)
     if select:
         patch_select(aggressive=aggressive)
     if ssl:
