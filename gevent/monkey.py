@@ -91,7 +91,7 @@ def patch_ssl():
         _ssl = __import__('ssl')
     except ImportError:
         return
-    from gevent.ssl import SSLSocket, wrap_socket, get_server_certificate, sslwrap_simple 
+    from gevent.ssl import SSLSocket, wrap_socket, get_server_certificate, sslwrap_simple
     _ssl.SSLSocket = SSLSocket
     _ssl.wrap_socket = wrap_socket
     _ssl.get_server_certificate = get_server_certificate
