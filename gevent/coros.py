@@ -169,7 +169,7 @@ class BoundedSemaphore(Semaphore):
     def release(self):
         if self.counter >= self._initial_value:
             raise ValueError, "Semaphore released too many times"
-        return _Semaphore.release(self)
+        return Semaphore.release(self)
 
 
 class RLock(object):
