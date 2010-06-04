@@ -221,11 +221,11 @@ class RLock(object):
     def _release_save(self):
         count = self._count
         self._count = 0
-        owner = self.__owner
+        owner = self._owner
         self._owner = None
         self._block.release()
         return (count, owner)
 
     def _is_owned(self):
-        return self.owner is getcurrent()
+        return self._owner is getcurrent()
 
