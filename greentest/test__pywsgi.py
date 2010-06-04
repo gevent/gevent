@@ -686,19 +686,20 @@ class HTTPRequest(urllib2.Request):
 class ChunkedInputTests(TestCase):
     dirt = ""
     validator = None
+
     def application(self, env, start_response):
         input = env['wsgi.input']
         response = []
 
         pi = env["PATH_INFO"]
 
-        if pi=="/short-read":
-            d=input.read(10)
+        if pi == "/short-read":
+            d = input.read(10)
             response = [d]
-        elif pi=="/lines":
+        elif pi == "/lines":
             for x in input:
                 response.append(x)
-        elif pi=="/ping":
+        elif pi == "/ping":
             input.read()
             response.append("pong")
         else:
