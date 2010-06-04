@@ -207,7 +207,7 @@ class RLock(object):
             self._owner = None
             self._block.release()
 
-    def __exit__(self, t, v, tb):
+    def __exit__(self, typ, value, tb):
         self.release()
 
     # Internal methods used by condition variables
