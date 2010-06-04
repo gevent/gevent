@@ -253,7 +253,7 @@ cdef class event:
             if errno:
                 raise IOError(errno, strerror(errno))
             else:
-                raise IOError("event_add failed. bad filedescriptor?")
+                raise IOError("event_add(fileno=%s) returned %s" % (self.fd, result))
 
     def cancel(self):
         """Remove event from the event queue."""
