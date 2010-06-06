@@ -129,7 +129,7 @@ class DatabaseTestResult(_TextTestResult):
 def format_exc_info(exc_info):
     try:
         return '%s: %s' % (exc_info[0].__name__, exc_info[1])
-    except:
+    except Exception:
         return str(exc_info[1]) or str(exc_info[0]) or 'FAILED'
 
 
@@ -250,7 +250,7 @@ def run_subprocess(arg, options):
                     if options.verbosity >= 2:
                         sys.stdout.write(data)
             retcode.append(popen.wait())
-        except:
+        except Exception:
             popen.kill()
             raise
     finally:
