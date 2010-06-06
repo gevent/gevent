@@ -264,22 +264,16 @@ def run_subprocess(arg, options):
     return retcode[0], output, output_printed
 
 
-def spawn_subprocess(arg, options):
+def spawn_subprocess(arg, options, base_params):
     success = False
     if options.db:
         module_name = arg
         if module_name.endswith('.py'):
             module_name = module_name[:-3]
         from datetime import datetime
-        params = {'started_at': datetime.now(),
-                  'runid': options.runid,
-                  'test': module_name,
-                  'python': '%s.%s.%s' % sys.version_info[:3],
-                  'changeset': get_changeset(),
-                  'libevent_version': get_libevent_version(),
-                  'libevent_method': get_libevent_method(),
-                  'uname': options.uname,
-                  'retcode': 'TIMEOUT'}
+        params = base_params.copy()
+        params.update({'started_at': datetime.now(),
+                       'test': module_name})
         row_id = store_record(options.db, 'test', params)
         params['id'] = row_id
     retcode, output, output_printed = run_subprocess(arg, options)
@@ -304,14 +298,20 @@ def spawn_subprocess(arg, options):
 
 
 def spawn_subprocesses(options, args):
+    params = {'runid': options.runid,
+              'python': '%s.%s.%s' % sys.version_info[:3],
+              'changeset': get_changeset(),
+              'libevent_version': get_libevent_version(),
+              'libevent_method': get_libevent_method(),
+              'uname': platform.uname()[0],
+              'retcode': 'TIMEOUT'}
     success = True
     if not args:
         args = glob.glob('test_*.py')
         args.remove('test_support.py')
-    options.uname = platform.uname()[0]
     for arg in args:
         try:
-            success = spawn_subprocess(arg, options) and success
+            success = spawn_subprocess(arg, options, params) and success
         except Exception:
             traceback.print_exc()
     if options.db:
