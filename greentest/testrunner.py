@@ -313,17 +313,14 @@ def spawn_subprocesses(options, args):
         try:
             success = spawn_subprocess(arg, options) and success
         except Exception:
-            try:
-                traceback.print_exc()
-            except Exception:
-                pass
+            traceback.print_exc()
     if options.db:
         try:
             print '-' * 80
             if print_stats(options):
                 success = False
-        except sqlite3.OperationalError, ex:
-            print ex
+        except sqlite3.OperationalError:
+            traceback.print_exc()
         print 'To view stats again for this run, use %s --stats --runid %s --db %s' % (sys.argv[0], options.runid, options.db)
     if not success:
         sys.exit(1)
