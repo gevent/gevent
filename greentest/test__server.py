@@ -90,7 +90,8 @@ class TestCase(greentest.TestCase):
             conn = self.makefile()
             raise AssertionError('Connection was not refused: %r' % (conn._sock, ))
         except socket.error, ex:
-            self.assertEqual(ex[0], errno.ECONNREFUSED)
+            if ex[0] not in (errno.ECONNREFUSED, errno.EADDRNOTAVAIL):
+                raise
 
     def assert500(self):
         Settings.assert500(self)
