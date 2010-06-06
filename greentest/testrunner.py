@@ -147,13 +147,13 @@ class DatabaseTestRunner(TextTestRunner):
 
 def get_changeset():
     try:
-        diffstat = os.popen(r"hg diff 2> /dev/null | diffstat -q").read().strip()
+        diff = os.popen(r"hg diff 2> /dev/null").read().strip()
     except Exception:
-        diffstat = None
+        diff = None
     try:
         changeset = os.popen(r"hg log -r tip 2> /dev/null | grep changeset").readlines()[0]
         changeset = changeset.replace('changeset:', '').strip().replace(':', '_')
-        if diffstat:
+        if diff:
             changeset += '+'
     except Exception:
         changeset = ''
