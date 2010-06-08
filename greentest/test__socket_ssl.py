@@ -1,9 +1,12 @@
 #!/usr/bin/python
 from gevent import monkey; monkey.patch_all()
-
+import sys
 import unittest
 import httplib
 import socket
+
+if not hasattr(socket, 'ssl'):
+    sys.exit(0)
 
 class AmazonHTTPSTests(unittest.TestCase):
 
