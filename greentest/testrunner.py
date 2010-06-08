@@ -286,7 +286,8 @@ def spawn_subprocess(arg, options, base_params):
     elif retcode == 0:
         if not output_printed and options.verbosity >= 1:
             sys.stdout.write(output)
-        print '%s passed' % arg
+        if options.verbosity >= 0:
+            print '%s passed' % arg
         success = True
     else:
         print '%s timed out' % arg
