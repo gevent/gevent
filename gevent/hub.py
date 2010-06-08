@@ -182,6 +182,7 @@ class Hub(greenlet):
                     sys.stderr.write('Restarting gevent.core.dispatch() after an error [%s]: %s\n' % (loop_count, ex))
                     continue
                 raise DispatchExit(result)
+                # this function must never return, as it will cause switch() in MAIN to return an unexpected value
         finally:
             if self.keyboard_interrupt_signal is not None:
                 self.keyboard_interrupt_signal.cancel()
