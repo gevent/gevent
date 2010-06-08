@@ -590,15 +590,11 @@ class TestInputReadlines(TestInputReadline):
         return lines
 
 
-class ExpectedException(Exception):
-    pass
-
-
 class TestError(TestCase):
 
     @staticmethod
     def application(env, start_response):
-        raise ExpectedException
+        raise greentest.ExpectedException('TestError.application')
 
     @property
     def url(self):
@@ -618,7 +614,7 @@ class TestError_after_start_response(TestError):
     @staticmethod
     def application(env, start_response):
         start_response('200 OK', [('Content-Type', 'text/plain')])
-        raise ExpectedException
+        raise greentest.ExpectedException('TestError_after_start_response.application')
 
 
 class TestEmptyYield(TestCase):
