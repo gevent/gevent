@@ -83,6 +83,8 @@ class SocketConsole(Greenlet):
         try:
             console = InteractiveConsole(self.locals)
             console.interact()
+        except SystemExit: # raised by quit()
+            pass
         finally:
             self.switch_out()
             self.finalize()
