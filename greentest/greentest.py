@@ -254,3 +254,6 @@ class GenericGetTestCase(TestCase):
         delay = time.time() - start
         assert 0.01 - 0.001 <= delay < 0.01 + 0.01 + 0.1, delay
 
+
+class ExpectedException(Exception):
+    """An exception whose traceback should be ignored"""
