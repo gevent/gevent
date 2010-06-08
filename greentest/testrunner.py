@@ -392,12 +392,23 @@ def get_warning_stats(output):
     return result
 
 
-def get_traceback_stats(output):
+def get_ignored_tracebacks(test):
+    if os.path.exists(test + '.py'):
+        data = open(test + '.py').read()
+        m = re.search('Ignore tracebacks: (.*)', data)
+        if m is not None:
+            return m.group(1).split()
+    return []
+
+
+def get_traceback_stats(output, test):
+    ignored = get_ignored_tracebacks(test) or ['ExpectedException']
     counter = {}
     traceback_count = output.lower().count('Traceback (most recent call last)')
-    for warning in get_exceptions(output):
-        counter.setdefault(warning, 0)
-        counter[warning] += 1
+    for error in get_exceptions(output):
+        if error not in ignored:
+            counter.setdefault(error, 0)
+            counter[error] += 1
         traceback_count -= 1
     items = counter.items()
     items.sort(key=lambda (a, b): -b)
@@ -412,9 +423,9 @@ def get_traceback_stats(output):
     return result
 
 
-def get_info(output):
+def get_info(output, test):
     output = output[:OUTPUT_LIMIT*2]
-    result = get_traceback_stats(output) + get_warning_stats(output)
+    result = get_traceback_stats(output, test) + get_warning_stats(output)
     return ', '.join(result)
 
 
@@ -428,7 +439,7 @@ def print_stats(options):
     failed, errors = get_failed_testcases(cursor, options.runid)
     timedout = get_testcases(cursor, options.runid, 'TIMEOUT')
     for test, output, retcode in cursor.execute('select test, output, retcode from test where runid=?', (options.runid, )):
-        info = get_info(output or '')
+        info = get_info(output or '', test)
         if info:
             print '%s: %s' % (test, info)
         if retcode == 'TIMEOUT':
