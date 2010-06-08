@@ -21,7 +21,8 @@ class Test(unittest.TestCase):
             conn = self.makefile()
             raise AssertionError('Connection was not refused: %r' % (conn._sock, ))
         except socket.error, ex:
-            self.assertEqual(ex[0], errno.ECONNREFUSED)
+            if ex[0] != errno.ECONNREFUSED:
+                raise
 
     def assertRequestSucceeded(self):
         conn = self.makefile()
@@ -38,7 +39,7 @@ class Test(unittest.TestCase):
         self.init_server()
         self.server.socket.shutdown(socket.SHUT_RDWR)
         self.assertConnectionRefused()
-        assert not self.server.started
+        assert not self.server.started, self.server
 
     def test_socket_close(self):
         self.server = self.ServerSubClass(('127.0.0.1', 0))
