@@ -10,10 +10,6 @@ import errno
 # add test for "chunked POST input -> chunked output"
 
 
-class Expected(Exception):
-    pass
-
-
 class BoundTestCase(greentest.TestCase):
 
     address = ('127.0.0.1', 0)
@@ -122,7 +118,7 @@ class TestSendReply(BoundTestCase):
 class TestException(BoundTestCase):
 
     def handle(self, r):
-        raise Expected
+        raise greentest.ExpectedException('TestException.handle')
 
     def test(self):
         try:
