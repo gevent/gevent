@@ -569,10 +569,10 @@ class TestBasic(greentest.TestCase):
             error = ExpectedError('test_error_exit')
             error.myattr = return_value
             raise error
-        g = gevent.Greenlet(func, 0.01, return_value=5)
+        g = gevent.Greenlet(func, 0.001, return_value=5)
         g.link(lambda x: link_test.append(x))
         g.start()
-        gevent.sleep(0.02)
+        gevent.sleep(0.1)
         assert not g
         assert g.dead
         assert not g.started
