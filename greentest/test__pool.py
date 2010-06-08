@@ -268,12 +268,11 @@ class TestSpawn(greentest.TestCase):
     def test(self):
         p = pool.Pool(1)
         self.assertEqual(len(p), 0)
-        p.spawn(gevent.sleep, 0.01)
+        p.spawn(gevent.sleep, 0.1)
         self.assertEqual(len(p), 1)
-        p.spawn(gevent.sleep, 0.01)
+        p.spawn(gevent.sleep, 0.1) # this spawn blocks until the old one finishes
         self.assertEqual(len(p), 1)
-        self.assertEqual(len(p), 1)
-        gevent.sleep(0.019)
+        gevent.sleep(0.19)
         self.assertEqual(len(p), 0)
 
 
