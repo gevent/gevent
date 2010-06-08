@@ -84,7 +84,9 @@ class TestExceptionInMainloop(greentest.TestCase):
 
 class TestShutdown(unittest.TestCase):
 
-    def _shutdown(self, seconds=0, fuzzy=0.01):
+    def _shutdown(self, seconds=0, fuzzy=None):
+        if fuzzy is None:
+            fuzzy = max(0.05, seconds / 2.)
         start = time.time()
         gevent.hub.shutdown()
         delta = time.time() - start
