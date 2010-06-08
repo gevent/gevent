@@ -8,7 +8,7 @@ import socket
 class AmazonHTTPSTests(unittest.TestCase):
 
     def test_amazon_response(self):
-        conn = httplib.HTTPConnection('sdb.amazonaws.com')
+        conn = httplib.HTTPSConnection('sdb.amazonaws.com')
         conn.debuglevel = 1
         conn.request('GET', '/')
         resp = conn.getresponse()
