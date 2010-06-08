@@ -68,14 +68,16 @@ class TestAsync_ResultAsLinkTarget(greentest.TestCase):
         assert gevent.with_timeout(DELAY, s3.get, timeout_value=X) is X
 
     def test_set_exception(self):
-        g = gevent.spawn(lambda : 1/0)
+        def func():
+            raise greentest.ExpectedException('TestAsync_ResultAsLinkTarget.test_set_exception')
+        g = gevent.spawn(func)
         s1, s2, s3 = AsyncResult(), AsyncResult(), AsyncResult()
         g.link(s1)
         g.link_value(s2)
         g.link_exception(s3)
-        self.assertRaises(ZeroDivisionError, s1.get)
+        self.assertRaises(greentest.ExpectedException, s1.get)
         assert gevent.with_timeout(DELAY, s2.get, timeout_value=X) is X
-        self.assertRaises(ZeroDivisionError, s3.get)
+        self.assertRaises(greentest.ExpectedException, s3.get)
 
 
 class TestEvent_SetThenClear(greentest.TestCase):
