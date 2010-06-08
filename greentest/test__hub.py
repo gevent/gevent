@@ -94,7 +94,7 @@ class TestShutdown(unittest.TestCase):
         assert 'hub' in gevent.hub._threadlocal.__dict__
 
     def assert_no_hub(self):
-        assert 'hub' not in gevent.hub._threadlocal.__dict__
+        assert 'hub' not in gevent.hub._threadlocal.__dict__, gevent.hub._threadlocal.__dict__
 
     def test(self):
         # make sure Hub is started. For the test case when hub is not started, see test_hub_shutdown.py
