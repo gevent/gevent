@@ -27,6 +27,7 @@ from code import InteractiveConsole
 
 from gevent import socket
 from gevent.greenlet import Greenlet
+from gevent.server import StreamServer
 
 try:
     sys.ps1
@@ -40,11 +41,11 @@ except AttributeError:
 
 class SocketConsole(Greenlet):
 
-    def __init__(self, desc, locals):
+    def __init__(self, locals, conn):
         Greenlet.__init__(self)
         self.locals = locals
         # mangle the socket
-        self.desc = desc
+        desc = self.desc = _fileobject(conn)
         readline = desc.readline
         self.old = {}
         self.fixups = {
@@ -90,25 +91,15 @@ class SocketConsole(Greenlet):
             self.finalize()
 
 
-class BackdoorServer(Greenlet):
+class BackdoorServer(StreamServer):
 
-    def __init__(self, address, locals=None):
-        Greenlet.__init__(self)
-        if isinstance(address, socket.socket):
-            self.socket = address
-        else:
-            self.socket = socket.tcp_listener(address)
+    def __init__(self, listener, locals=None, **server_args):
+        StreamServer.__init__(self, listener, spawn=None, **server_args)
         self.locals = locals
+        # QQQ passing pool instance as 'spawn' is not possible; should it be fixed?
 
-    def __str__(self):
-        return '<BackdoorServer on %s>' % (self.socket, )
-
-    def _run(self):
-        while True:
-            (conn, address) = self.socket.accept()
-            print 'accepted connection from %s' % (address, )
-            fileobj = _fileobject(conn)
-            SocketConsole.spawn(fileobj, self.locals)
+    def handle(self, conn, address):
+        SocketConsole.spawn(self.locals, conn)
 
 
 class _fileobject(socket._fileobject):
@@ -121,10 +112,5 @@ if __name__ == '__main__':
     if not sys.argv[1:]:
         print 'USAGE: %s PORT' % sys.argv[0]
     else:
-        server = BackdoorServer.spawn(('127.0.0.1', int(sys.argv[1])))
-        print server
-        try:
-            server.join()
-        except KeyboardInterrupt:
-            pass
+        BackdoorServer(('127.0.0.1', int(sys.argv[1]))).serve_forever()
 
