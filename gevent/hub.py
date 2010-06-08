@@ -197,6 +197,9 @@ class Hub(greenlet):
             self.keyboard_interrupt_signal = None
         core.dns_shutdown()
         if not self or self.dead:
+            if _threadlocal.__dict__.get('hub') is self:
+                _threadlocal.__dict__.pop('hub')
+            self.run = None
             return
         try:
             self.switch()
