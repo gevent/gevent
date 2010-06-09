@@ -40,6 +40,7 @@ CONTENT_LENGTH = 'Content-Length'
 CONN_ABORTED_ERRORS = []
 server_implements_chunked = True
 server_supports_pipeline = True
+server_implements_100continue = True
 DEBUG = '-v' in sys.argv
 
 try:
@@ -759,7 +760,14 @@ class ChunkedInputTests(TestCase):
 
         fd = self.connect().makefile(bufsize=1)
         fd.write(req)
-        read_http(fd, body="pong")
+        try:
+            read_http(fd, body="pong")
+        except AssertionError, ex:
+            if str(ex).startswith('Unexpected code: 400'):
+                if not server_implements_chunked:
+                    print 'ChunkedNotImplementedWarning'
+                    return
+            raise
 
         self.ping(fd)
 
@@ -812,7 +820,15 @@ class Expect100ContinueTests(TestCase):
         fd = self.connect().makefile(bufsize=1)
 
         fd.write('PUT / HTTP/1.1\r\nHost: localhost\r\nContent-length: 1025\r\nExpect: 100-continue\r\n\r\n')
-        read_http(fd, code=417, body="failure")
+        try:
+            read_http(fd, code=417, body="failure")
+        except AssertionError, ex:
+            if str(ex).startswith('Unexpected code: 400'):
+                if not server_implements_100continue:
+                    print '100ContinueNotImplementedWarning'
+                    return
+            raise
+
 
         fd.write('PUT / HTTP/1.1\r\nHost: localhost\r\nContent-length: 7\r\nExpect: 100-continue\r\n\r\ntesting')
         read_http(fd, code=100)
