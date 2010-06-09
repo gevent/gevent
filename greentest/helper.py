@@ -9,7 +9,8 @@ missing_modules = {
     'test_telnetlib': ['2.4', '2.5'],
     'test_httpservers': ['2.4', '2.5'],
     'test_ftplib': ['2.4', '2.5'],
-    'test_wsgiref': ['2.4']
+    'test_wsgiref': ['2.4'],
+    'test_socket_ssl': ['2.6', '2.7']
 }
 
 
