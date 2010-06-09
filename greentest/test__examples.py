@@ -7,6 +7,7 @@ import subprocess
 import urllib2
 import time
 import signal
+import re
 import gevent
 from gevent import socket
 
@@ -97,9 +98,39 @@ class Test_wsgiserver(Test_httpserver):
     path = 'wsgiserver.py'
 
 
-class Test_wsgiserver_ssl(Test_httpserver):
-    path = 'wsgiserver_ssl.py'
-    URL = 'https://localhost:8443'
+if hasattr(socket, 'ssl'):
+
+    class Test_wsgiserver_ssl(Test_httpserver):
+        path = 'wsgiserver_ssl.py'
+        URL = 'https://localhost:8443'
+
+else:
+
+    class Test_wsgiserver_ssl(unittest.TestCase):
+        path = 'wsgiserver_ssl.py'
+
+        def setUp(self):
+            self.process = subprocess.Popen([sys.executable, join(examples_directory, self.path)],
+                                            cwd=examples_directory, stderr=subprocess.PIPE)
+            time.sleep(1)
+
+        def test(self):
+            self.assertEqual(self.process.poll(), 1)
+            stderr = self.process.stderr.read().strip()
+            m = re.match('Traceback \(most recent call last\):.*?ImportError: .*?ssl.*', stderr, re.DOTALL)
+            assert m is not None, repr(stderr)
+
+        def tearDown(self):
+            if self.process.poll() is None:
+                try:
+                    SIGINT = getattr(signal, 'SIGINT', None)
+                    if SIGINT is not None:
+                        os.kill(self.process.pid, SIGINT)
+                        time.sleep(0.1)
+                    self.assertEqual(self.process.poll(), 1)
+                finally:
+                    if self.process.poll() is None:
+                        self.process.kill()
 
 
 class Test_webpy(Test_httpserver):
