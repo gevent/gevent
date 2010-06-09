@@ -41,6 +41,8 @@ DEFAULT_TIMEOUT = 60
 # the number of bytes of output that is recorded; the rest is thrown away
 OUTPUT_LIMIT = 15*1024
 
+ignore_tracebacks = ['ExpectedException', 'test_support.TestSkipped', 'test.test_support.TestSkipped']
+
 import sys
 import os
 import glob
@@ -239,6 +241,7 @@ def run_subprocess(arg, options):
     timeout = Timer(options.timeout, killer)
     timeout.start()
     output = ''
+    output_printed = False
     try:
         try:
             if options.capture:
@@ -249,6 +252,7 @@ def run_subprocess(arg, options):
                     output += data
                     if options.verbosity >= 2:
                         sys.stdout.write(data)
+                        output_printed = True
             retcode.append(popen.wait())
         except Exception:
             popen.kill()
@@ -260,7 +264,6 @@ def run_subprocess(arg, options):
     if module_name.endswith('.py'):
         module_name = module_name[:-3]
     output = output.replace(' (__main__.', ' (' + module_name + '.')
-    output_printed = options.verbosity >= 2
     return retcode[0], output, output_printed
 
 
@@ -280,9 +283,12 @@ def spawn_subprocess(arg, options, base_params):
     if len(output) > OUTPUT_LIMIT:
         output = output[:OUTPUT_LIMIT] + '<AbridgedOutputWarning>'
     if retcode:
-        if not output_printed and options.verbosity >= 0:
-            sys.stdout.write(output)
-        print '%s failed with code %s' % (arg, retcode)
+        if retcode == 1 and 'test_support.TestSkipped' in output:
+            pass
+        else:
+            if not output_printed and options.verbosity >= -1:
+                sys.stdout.write(output)
+            print '%s failed with code %s' % (arg, retcode)
     elif retcode == 0:
         if not output_printed and options.verbosity >= 1:
             sys.stdout.write(output)
@@ -402,11 +408,14 @@ def get_ignored_tracebacks(test):
 
 
 def get_traceback_stats(output, test):
-    ignored = get_ignored_tracebacks(test) or ['ExpectedException']
+    ignored = get_ignored_tracebacks(test) or ignore_tracebacks
     counter = {}
     traceback_count = output.lower().count('Traceback (most recent call last)')
+    ignored_list = []
     for error in get_exceptions(output):
-        if error not in ignored:
+        if error in ignored:
+            ignored_list.append(error)
+        else:
             counter.setdefault(error, 0)
             counter[error] += 1
         traceback_count -= 1
@@ -420,13 +429,16 @@ def get_traceback_stats(output, test):
             result.append('1 %s' % name)
         else:
             result.append('%s %ss' % (count, name))
-    return result
+    return result, ignored_list
 
 
 def get_info(output, test):
     output = output[:OUTPUT_LIMIT*2]
-    result = get_traceback_stats(output, test) + get_warning_stats(output)
-    return ', '.join(result)
+    traceback_stats, ignored_list = get_traceback_stats(output, test)
+    warning_stats = get_warning_stats(output)
+    result = traceback_stats + warning_stats
+    skipped = not warning_stats and not traceback_stats and ignored_list in [['test_support.TestSkipped'], ['test.test_support.TestSkipped']]
+    return ', '.join(result), skipped
 
 
 def print_stats(options):
@@ -439,7 +451,7 @@ def print_stats(options):
     failed, errors = get_failed_testcases(cursor, options.runid)
     timedout = get_testcases(cursor, options.runid, 'TIMEOUT')
     for test, output, retcode in cursor.execute('select test, output, retcode from test where runid=?', (options.runid, )):
-        info = get_info(output or '', test)
+        info, skipped = get_info(output or '', test)
         if info:
             print '%s: %s' % (test, info)
         if retcode == 'TIMEOUT':
@@ -454,8 +466,9 @@ def print_stats(options):
                 if testcase.startswith(test + '.'):
                     break
             else:
-                failed.append(test)
-                total += 1
+                if not skipped:
+                    failed.append(test)
+                    total += 1
     if failed:
         failed.sort()
         print 'FAILURES: '
