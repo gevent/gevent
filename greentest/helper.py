@@ -8,7 +8,8 @@ missing_modules = {
     'test_asyncore': ['2.4', '2.5'],
     'test_telnetlib': ['2.4', '2.5'],
     'test_httpservers': ['2.4', '2.5'],
-    'test_ftplib': ['2.4', '2.5']
+    'test_ftplib': ['2.4', '2.5'],
+    'test_wsgiref': ['2.4']
 }
 
 
