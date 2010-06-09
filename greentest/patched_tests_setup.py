@@ -15,6 +15,9 @@ disabled_tests = [
     # uses some internal C API of threads not available when threads are emulated with greenlets
     'test_threading.ThreadTests.test_PyThreadState_SetAsyncExc',
 
+    # this one is a bogus test that fails even without monkey patching
+    'test_threading.ThreadTests.test_foreign_thread',
+
     # access _sock.gettimeout() which is always in non-blocking mode
     'test_urllib2net.TimeoutTest.test_ftp_no_timeout',
     'test_urllib2net.TimeoutTest.test_ftp_timeout',
