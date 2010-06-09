@@ -392,7 +392,7 @@ def get_warning_stats(output):
     result = []
     for name, count in items:
         if count == 1:
-            result.append('1 %s' % name)
+            result.append(name)
         else:
             result.append('%s %ss' % (count, name))
     return result
