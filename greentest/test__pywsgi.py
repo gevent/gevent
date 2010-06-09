@@ -517,13 +517,15 @@ class HttpsTestCase(TestCase):
 
 class TestHttps(HttpsTestCase):
 
-    def test_012_ssl_server(self):
-        result = self.urlopen(method="POST", data='abc').read()
-        self.assertEquals(result, 'abc')
+    if hasattr(socket, 'ssl'):
 
-    def test_013_empty_return(self):
-        result = self.urlopen().read()
-        self.assertEquals(result, '')
+        def test_012_ssl_server(self):
+            result = self.urlopen(method="POST", data='abc').read()
+            self.assertEquals(result, 'abc')
+
+        def test_013_empty_return(self):
+            result = self.urlopen().read()
+            self.assertEquals(result, '')
 
 
 class TestInternational(TestCase):
