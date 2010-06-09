@@ -40,8 +40,7 @@ def prepare_stdlib_test(filename):
     except:
         if version in missing_modules.get(name, []): 
             sys.exit(0)
-        else:
-            sys.exit('ModuleNotFoundError: test.%s' % name)
+        raise
 
     module = getattr(package, name)
     _filename = module.__file__.replace('.pyc', '.py')
