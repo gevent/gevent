@@ -83,10 +83,11 @@ class SocketConsole(Greenlet):
 
     def _run(self):
         try:
-            console = InteractiveConsole(self.locals)
-            console.interact()
-        except SystemExit: # raised by quit()
-            pass
+            try:
+                console = InteractiveConsole(self.locals)
+                console.interact()
+            except SystemExit: # raised by quit()
+                pass
         finally:
             self.switch_out()
             self.finalize()
