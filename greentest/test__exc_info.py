@@ -39,7 +39,7 @@ class Test(greentest.TestCase):
         self.hook_stderr()
         gevent.sleep(0.1)
         self.assert_stderr_traceback(expected_error)
-        assert sys.exc_info() == (None, None, None)        
+        assert sys.exc_info() == (None, None, None), sys.exc_info()
 
 
 if __name__ == '__main__':
