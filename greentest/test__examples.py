@@ -11,6 +11,8 @@ import re
 import gevent
 from gevent import socket
 
+# Ignore tracebacks: KeyboardInterrupt
+
 base_dir = normpath(join(dirname(abspath(__file__)), '..'))
 glob_expression = join(base_dir, 'examples', '*.py')
 examples = glob.glob(glob_expression)
