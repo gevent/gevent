@@ -1,6 +1,17 @@
 import sys
 import os
 
+version = '%s.%s' % sys.version_info[:2]
+
+missing_modules = {
+    'test_smtplib': ['2.4', '2.5'],
+    'test_asyncore': ['2.4', '2.5'],
+    'test_telnetlib': ['2.4', '2.5'],
+    'test_httpservers': ['2.4', '2.5'],
+    'test_ftplib': ['2.4', '2.5']
+}
+
+
 class ContainsAll(object):
     def __contains__(self, item):
         return True
@@ -27,8 +38,10 @@ def prepare_stdlib_test(filename):
         # XXX importing just to find where it resides; need a function that just returns the path
         package = __import__('test.%s' % name)
     except:
-        print >> sys.stderr, 'ModuleNotFoundWarning: cannot import test.%s' % name
-        sys.exit(0)
+        if version in missing_modules.get(name, []): 
+            sys.exit(0)
+        else:
+            sys.exit('ModuleNotFoundError: test.%s' % name)
 
     module = getattr(package, name)
     _filename = module.__file__.replace('.pyc', '.py')
