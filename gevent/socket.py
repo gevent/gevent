@@ -239,6 +239,13 @@ if sys.version_info[:2] <= (2, 4):
                 self._sock = None
 
 
+if sys.version_info[:2] < (2, 7):
+    _get_memory = buffer
+else:
+    def _get_memory(string, offset):
+        return memoryview(string)[offset:]
+
+
 class _closedsocket(object):
     __slots__ = []
     def _dummy(*args):
@@ -452,13 +459,13 @@ class socket(object):
         if self.timeout is None:
             data_sent = 0
             while data_sent < len(data):
-                data_sent += self.send(buffer(data, data_sent), flags)
+                data_sent += self.send(_get_memory(data, data_sent), flags)
         else:
             timeleft = self.timeout
             end = time.time() + timeleft
             data_sent = 0
             while True:
-                data_sent += self.send(buffer(data, data_sent), flags, timeout=timeleft)
+                data_sent += self.send(_get_memory(data, data_sent), flags, timeout=timeleft)
                 if data_sent >= len(data):
                     break
                 timeleft = end - time.time()
