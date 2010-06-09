@@ -48,10 +48,9 @@ class StreamServer(BaseServer):
             try:
                 from gevent.ssl import wrap_socket
             except ImportError:
-                try:
-                    from gevent.sslold import wrap_socket
-                except ImportError:
-                    raise ImportError('ssl package is required: http://pypi.python.org/pypi/ssl')
+                wrap_socket = _import_sslold_wrap_socket()
+                if wrap_socket is None:
+                    raise
             self.wrap_socket = wrap_socket
             self.ssl_args = ssl_args
             self.ssl_enabled = True
@@ -154,3 +153,12 @@ class StreamServer(BaseServer):
         # used in case of ssl sockets
         ssl_socket = self.wrap_socket(client_socket, server_side=True, **self.ssl_args)
         return self.handle(ssl_socket, address)
+
+
+def _import_sslold_wrap_socket():
+    try:
+        from gevent.sslold import wrap_socket
+        return wrap_socket
+    except ImportError:
+        pass
+
