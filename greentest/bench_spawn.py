@@ -68,7 +68,12 @@ def bench_geventpool(options):
     print 'joining: %.1f microseconds per greenlet' % (delta*1000000.0/N)
 
 def bench_eventlet(options):
-    import eventlet
+    try:
+        import eventlet
+    except ImportError:
+        if options.ignore_import_errors:
+            return
+        raise
     print 'using eventlet from %s' % eventlet.__file__
     from eventlet.api import spawn, sleep, use_hub
     if options.eventlet_hub is not None:
@@ -76,7 +81,12 @@ def bench_eventlet(options):
     test(spawn, sleep, options.kwargs)
 
 def bench_eventlet1(options):
-    import eventlet
+    try:
+        import eventlet
+    except ImportError:
+        if options.ignore_import_errors:
+            return
+        raise
     print 'using eventlet from %s' % eventlet.__file__
     from eventlet.proc import spawn_greenlet as spawn
     from eventlet.api import sleep, use_hub
@@ -93,7 +103,7 @@ def bench_all(options):
     names = all()
     random.shuffle(names)
     for func in names:
-        cmd = '%s %s %s' % (sys.executable, __file__, func)
+        cmd = '%s %s %s --ignore-import-errors' % (sys.executable, __file__, func)
         print cmd
         sys.stdout.flush()
         time.sleep(0.01)
@@ -102,7 +112,7 @@ def bench_all(options):
             print '%s failed' % cmd
         print
     for func in names:
-        cmd = '%s %s --with-kwargs %s' % (sys.executable, __file__, func)
+        cmd = '%s %s --with-kwargs %s --ignore-import-errors' % (sys.executable, __file__, func)
         print cmd
         sys.stdout.flush()
         if os.system(cmd):
@@ -129,6 +139,7 @@ if __name__=='__main__':
     parser = optparse.OptionParser()
     parser.add_option('--with-kwargs', default=False, action='store_true')
     parser.add_option('--eventlet-hub')
+    parser.add_option('--ignore-import-errors', action='store_true')
     options, args = parser.parse_args()
     if options.with_kwargs:
         options.kwargs = {'foo': 1, 'bar': 'hello'}
