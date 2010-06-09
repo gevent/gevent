@@ -7,6 +7,7 @@ from os.path import join, dirname
 import gevent
 from gevent import socket
 
+# Ignore tracebacks: ZeroDivisionError
 
 def myfunction(*args, **kwargs):
     pass
