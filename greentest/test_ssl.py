@@ -1085,6 +1085,10 @@ else:
                 except Exception, x:
                     raise support.TestFailed("Unexpected exception:  " + str(x))
                 else:
+                    try:
+                        bytearray
+                    except NameError:
+                        bytearray = None
                     # helper methods for standardising recv* method signatures
                     def _recv_into():
                         b = bytearray("\0"*100)
@@ -1108,6 +1112,8 @@ else:
                         ('recv_into', _recv_into, True, []),
                         ('recvfrom_into', _recvfrom_into, False, []),
                     ]
+                    if bytearray is None:
+                        recv_methods = recv_methods[:-2]
                     data_prefix = u"PREFIX_"
 
                     for meth_name, send_meth, expect_success, args in send_methods:
