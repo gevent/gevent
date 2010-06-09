@@ -127,5 +127,15 @@ class ThreadingLocalTest(unittest.TestCase):
         self.assertRaises(TypeError, local, 1)
 
 
+try:
+    all
+except NameError:
+    def all(iter):
+        for x in iter:
+            if not x:
+                return False
+        return True
+
+
 if __name__ == '__main__':
     unittest.main()
