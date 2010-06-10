@@ -1081,9 +1081,9 @@ else:
                                         ssl_version=ssl.PROTOCOL_TLSv1)
                     s.connect((HOST, server.port))
                 except ssl.SSLError, x:
-                    raise support.TestFailed("Unexpected SSL error:  " + str(x))
+                    raise test_support.TestFailed("Unexpected SSL error:  " + str(x))
                 except Exception, x:
-                    raise support.TestFailed("Unexpected exception:  " + str(x))
+                    raise test_support.TestFailed("Unexpected exception:  " + str(x))
                 else:
                     try:
                         bytearray
@@ -1123,7 +1123,7 @@ else:
                             outdata = s.read()
                             outdata = outdata.decode('ASCII', 'strict')
                             if outdata != indata.lower():
-                                raise support.TestFailed(
+                                raise test_support.TestFailed(
                                     "While sending with <<%s>> bad data "
                                     "<<%r>> (%d) received; "
                                     "expected <<%r>> (%d)\n" % (
@@ -1133,12 +1133,12 @@ else:
                                 )
                         except ValueError, e:
                             if expect_success:
-                                raise support.TestFailed(
+                                raise test_support.TestFailed(
                                     "Failed to send with method <<%s>>; "
                                     "expected to succeed.\n" % (meth_name,)
                                 )
                             if not str(e).startswith(meth_name):
-                                raise support.TestFailed(
+                                raise test_support.TestFailed(
                                     "Method <<%s>> failed with unexpected "
                                     "exception message: %s\n" % (
                                         meth_name, e
@@ -1152,7 +1152,7 @@ else:
                             outdata = recv_meth(*args)
                             outdata = outdata.decode('ASCII', 'strict')
                             if outdata != indata.lower():
-                                raise support.TestFailed(
+                                raise test_support.TestFailed(
                                     "While receiving with <<%s>> bad data "
                                     "<<%r>> (%d) received; "
                                     "expected <<%r>> (%d)\n" % (
@@ -1162,12 +1162,12 @@ else:
                                 )
                         except ValueError, e:
                             if expect_success:
-                                raise support.TestFailed(
+                                raise test_support.TestFailed(
                                     "Failed to receive with method <<%s>>; "
                                     "expected to succeed.\n" % (meth_name,)
                                 )
                             if not str(e).startswith(meth_name):
-                                raise support.TestFailed(
+                                raise test_support.TestFailed(
                                     "Method <<%s>> failed with unexpected "
                                     "exception message: %s\n" % (
                                         meth_name, e
