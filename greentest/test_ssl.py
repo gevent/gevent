@@ -1214,8 +1214,8 @@ def test_main(verbose=False):
 
     test_support.run_unittest(*tests)
 
-    if _have_threads:
-        test_support.threading_cleanup(*thread_info)
+    #if _have_threads:
+    #    test_support.threading_cleanup(*thread_info)
 
 if __name__ == "__main__":
     test_main()
