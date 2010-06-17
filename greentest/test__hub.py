@@ -146,20 +146,21 @@ class Expected(Exception):
     pass
 
 
-class TestSignal(greentest.TestCase):
+if hasattr(signal, 'SIGALRM'):
+    class TestSignal(greentest.TestCase):
 
-    __timeout__ = 2
+        __timeout__ = 2
 
-    def test_exception_goes_to_MAIN(self):
-        def handler():
-            raise Expected('TestSignal')
-        gevent.signal(signal.SIGALRM, handler)
-        signal.alarm(1)
-        try:
-            gevent.sleep(1.1)
-            raise AssertionError('must raise Expected')
-        except Expected, ex:
-            assert str(ex) == 'TestSignal', ex
+        def test_exception_goes_to_MAIN(self):
+            def handler():
+                raise Expected('TestSignal')
+            gevent.signal(signal.SIGALRM, handler)
+            signal.alarm(1)
+            try:
+                gevent.spawn(gevent.sleep, 2).join()
+                raise AssertionError('must raise Expected')
+            except Expected, ex:
+                assert str(ex) == 'TestSignal', ex
 
 
 class TestWaiter(greentest.GenericWaitTestCase):
