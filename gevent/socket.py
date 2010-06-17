@@ -521,14 +521,18 @@ class socket(object):
 
 SocketType = socket
 
+if hasattr(_socket, 'socketpair'):
+    def socketpair(*args):
+        one, two = _socket.socketpair(*args)
+        return socket(_sock=one), socket(_sock=two)
+else:
+    __all__.remove('socketpair')
 
-def socketpair(*args):
-    one, two = _socket.socketpair(*args)
-    return socket(_sock=one), socket(_sock=two)
-
-
-def fromfd(*args):
-    return socket(_sock=_socket.fromfd(*args))
+if hasattr(_socket, 'fromfd'):
+    def fromfd(*args):
+        return socket(_sock=_socket.fromfd(*args))
+else:
+    __all__.remove('fromfd')
 
 
 def bind_and_listen(descriptor, address=('', 0), backlog=50, reuse_addr=True):
