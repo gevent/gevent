@@ -26,11 +26,19 @@ for example in examples:
 print '\n'.join(examples)
 
 def make_test(path):
+
+    if ' ' in path:
+        path = '"%s"' % path
     
     class TestExample(unittest.TestCase):
     
         def test(self):
-            res = os.system('%s %s' % (sys.executable, path))
+            exe = sys.executable
+            if ' ' in exe:
+                exe = '"%s"' % exe
+            cmd = '%s %s' % (exe, path)
+            print >> sys.stderr, cmd
+            res = os.system(cmd)
             assert not res, '%s failed with %s' % (path, res)
 
     TestExample.__name__ = 'TestExample_' + basename(path).split('.')[0]
