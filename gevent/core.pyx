@@ -108,6 +108,14 @@ cdef extern from "libevent.h":
     int EV_SIGNAL
     int EV_PERSIST
 
+    int EVLIST_TIMEOUT
+    int EVLIST_INSERTED
+    int EVLIST_SIGNAL
+    int EVLIST_ACTIVE
+    int EVLIST_INTERNAL
+    int EVLIST_INIT
+
+
 cdef extern from "string.h":
     char* strerror(int errnum)
 
@@ -233,6 +241,23 @@ cdef class event:
         def __get__(self):
             return self.ev.ev_flags
 
+    property flags_str:
+
+        def __get__(self):
+            result = []
+            cdef int flags = self.ev.ev_flags
+            cdef int c_flag
+            for (flag, txt) in ((EVLIST_TIMEOUT, 'TIMEOUT'), (EVLIST_INSERTED, 'INSERTED'), (EVLIST_SIGNAL, 'SIGNAL'),
+                                (EVLIST_ACTIVE, 'ACTIVE'), (EVLIST_INTERNAL, 'INTERNAL'), (EVLIST_INIT, 'INIT')):
+                c_flag = flag
+                if flags & c_flag:
+                    result.append(txt)
+                    c_flag = c_flag ^ 0xffffffff
+                    flags = flags & c_flag
+            if flags:
+                result.append(hex(flags))
+            return '|'.join(result)
+
     def add(self, timeout=-1):
         """Add event to be executed after an optional *timeout* - number of seconds
         after which the event will be executed."""
@@ -274,8 +299,8 @@ cdef class event:
             events_str = ' %s' % self.events_str
         else:
             events_str = ''
-        return '<%s at %s%s fd=%s%s flags=0x%x cb=%s arg=%s>' % \
-               (type(self).__name__, hex(id(self)), pending, self.fd, events_str, self.flags, self._callback, self._arg)
+        return '<%s at %s%s fd=%s%s flags=%s cb=%s arg=%s>' % \
+               (type(self).__name__, hex(id(self)), pending, self.fd, events_str, self.flags_str, self._callback, self._arg)
 
     def __str__(self):
         if self.pending:
@@ -288,8 +313,8 @@ cdef class event:
             events_str = ''
         cb = str(self._callback).replace('\n', '\n' + ' ' * 8)
         arg = pformat(self._arg, indent=2).replace('\n', '\n' + ' ' * 8)
-        return '%s%s fd=%s%s flags=0x%x\n  cb  = %s\n  arg = %s' % \
-               (type(self).__name__, pending, self.fd, events_str, self.flags, cb, arg)
+        return '%s%s fd=%s%s flags=%s\n  cb  = %s\n  arg = %s' % \
+               (type(self).__name__, pending, self.fd, events_str, self.flags_str, cb, arg)
 
     def __enter__(self):
         return self
