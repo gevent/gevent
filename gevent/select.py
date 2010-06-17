@@ -1,8 +1,8 @@
 # Copyright (c) 2009-2010 Denis Bilenko. See LICENSE for details.
 
 from gevent import core
-from gevent.hub import get_hub, getcurrent
 from gevent.timeout import Timeout
+from gevent.event import Event
 
 __all__ = ['error', 'select']
 
@@ -21,14 +21,21 @@ def get_fileno(obj):
         return fileno_f()
 
 
-def _select_callback(ev, evtype):
-    current, fd = ev.arg
-    if evtype & core.EV_READ:
-        current.switch(([fd], [], []))
-    elif evtype & core.EV_WRITE:
-        current.switch(([], [fd], []))
-    else:
-        current.switch(([], [], []))
+class SelectResult(object):
+
+    def __init__(self):
+        self.read = []
+        self.write = []
+        self.event = Event()
+
+    def update(self, event, evtype):
+        if evtype & core.EV_READ:
+            self.read.append(event.arg)
+            core.timer(0, self.event.set)
+        elif evtype & core.EV_WRITE:
+            self.write.append(event.arg)
+            core.timer(0, self.event.set)
+        # using core.timer(0, ...) to let other active events call update() before Event.wait() returns
 
 
 def select(rlist, wlist, xlist, timeout=None):
@@ -36,27 +43,19 @@ def select(rlist, wlist, xlist, timeout=None):
 
     Note: *xlist* is ignored.
     """
-    hub = get_hub()
-    current = getcurrent()
-    assert hub is not current, 'do not call blocking functions from the mainloop'
     allevents = []
     timeout = Timeout.start_new(timeout)
+    result = SelectResult()
     try:
         try:
             for readfd in rlist:
-                allevents.append(core.read_event(get_fileno(readfd), _select_callback, arg=(current, readfd)))
+                allevents.append(core.read_event(get_fileno(readfd), result.update, arg=readfd))
             for writefd in wlist:
-                allevents.append(core.write_event(get_fileno(writefd), _select_callback, arg=(current, writefd)))
+                allevents.append(core.write_event(get_fileno(writefd), result.update, arg=writefd))
         except IOError, ex:
             raise error(*ex.args)
-        try:
-            result = hub.switch()
-        except Timeout, ex:
-            if ex is not timeout:
-                raise
-            return [], [], []
-        assert hasattr(result, '__len__') and len(result)==3, "Invalid switch into select: %r" % (result, )
-        return result
+        result.event.wait(timeout=timeout)
+        return result.read, result.write, []
     finally:
         for evt in allevents:
             evt.cancel()
