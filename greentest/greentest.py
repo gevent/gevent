@@ -131,6 +131,8 @@ class TestCase(unittest.TestCase):
             if value is None:
                 value = str(typ)
             typ = typ.__class__.__name__
+        else:
+            typ = getattr(typ, '__name__', typ)
         stderr = self.unhook_stderr()
         assert stderr is not None, repr(stderr)
         traceback_re = '^Traceback \\(most recent call last\\):\n( +.*?\n)+^(?P<type>\w+): (?P<value>.*?)$'
