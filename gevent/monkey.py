@@ -61,10 +61,12 @@ def patch_thread(threading=True, _threading_local=True):
 def patch_socket(dns=True, aggressive=True):
     from gevent.socket import socket, fromfd, socketpair, SocketType
     _socket = __import__('socket')
-    _socket.socket = socket
-    _socket.fromfd = fromfd
-    _socket.socketpair = socketpair
-    _socket.SocketType = SocketType
+    _socket.socket = socket.socket
+    _socket.SocketType = socket.SocketType
+    if hasattr(socket, 'socketpair'):
+        _socket.socketpair = socket.socketpair
+    if hasattr(socket, 'fromfd'):
+        _socket.fromfd = socket.fromfd
     try:
         from gevent.socket import ssl, sslerror
         _socket.ssl = ssl
