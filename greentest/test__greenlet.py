@@ -475,7 +475,7 @@ class A(object):
     def method(self):
         pass
 
-hexobj = re.compile('-?0x[0123456789abcdef]+L?')
+hexobj = re.compile('-?0x[0123456789abcdef]+L?', re.I)
 
 class TestStr(greentest.TestCase):
 
