@@ -24,10 +24,14 @@ class TestCase(greentest.TestCase):
 
     def _test_gethostbyname(self, hostname, check_ip=None):
         try:
+            if VERBOSE:
+                print 'real_socket.gethostbyname(%r)' % (hostname, )
             real_ip = real_socket.gethostbyname(hostname)
         except Exception, ex:
             real_ip = ex
         try:
+            if VERBOSE:
+                print 'gevent.socket.gethostbyname(%r)' % (hostname, )
             ip = gethostbyname(hostname)
         except Exception, ex:
             ip = ex
