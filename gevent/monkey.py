@@ -59,7 +59,7 @@ def patch_thread(threading=True, _threading_local=True):
 
 
 def patch_socket(dns=True, aggressive=True):
-    from gevent.socket import socket, fromfd, socketpair, SocketType
+    from gevent import socket
     _socket = __import__('socket')
     _socket.socket = socket.socket
     _socket.SocketType = socket.SocketType
