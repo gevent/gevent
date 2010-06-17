@@ -3,13 +3,13 @@ import os
 import glob
 from os.path import join, abspath, dirname, normpath, basename
 import unittest
-import subprocess
 import urllib2
 import time
 import signal
 import re
 import gevent
 from gevent import socket
+import mysubprocess as subprocess
 
 # Ignore tracebacks: KeyboardInterrupt
 
@@ -61,15 +61,8 @@ class BaseTestServer(unittest.TestCase):
 
     def tearDown(self):
         self.assertEqual(self.process.poll(), None)
-        try:
-            SIGINT = getattr(signal, 'SIGINT', None)
-            if SIGINT is not None:
-                os.kill(self.process.pid, SIGINT)
-                time.sleep(0.1)
-            self.assertEqual(self.process.poll(), 1)
-        finally:
-            if self.process.poll() is None:
-                self.process.kill()
+        self.process.interrupt()
+        time.sleep(0.5)
 
 
 class Test_httpserver(BaseTestServer):
