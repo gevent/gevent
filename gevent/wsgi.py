@@ -142,13 +142,13 @@ class WSGIServer(HTTPServer):
                 'wsgi.run_once': False}
     # If 'wsgi.errors' is not present in base_env, it will be set to sys.stderr
 
-    def __init__(self, listener, application=None, backlog=None, spawn='default', log=None, handler_class=None, environ=None):
+    def __init__(self, listener, application=None, backlog=None, spawn='default', log='default', handler_class=None, environ=None):
         HTTPServer.__init__(self, listener, backlog=backlog, spawn=spawn)
         if application is not None:
             self.application = application
         if handler_class is not None:
             self.handler_class = handler_class
-        if log is None:
+        if log == 'default':
             self.log = sys.stderr
         else:
             self.log = log
