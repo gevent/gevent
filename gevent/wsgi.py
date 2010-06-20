@@ -75,7 +75,7 @@ class WSGIHandler(object):
 
     def log_request(self, *args):
         log = self.server.log
-        if log is not None:
+        if log:
             log.write(self.format_request(*args) + '\n')
 
     def prepare_env(self):
