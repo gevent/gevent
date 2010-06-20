@@ -359,7 +359,7 @@ class WSGIHandler(object):
 
     def log_request(self):
         log = self.server.log
-        if log is not None:
+        if log:
             log.write(self.format_request() + '\n')
 
     def format_request(self):
