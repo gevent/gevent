@@ -478,14 +478,14 @@ class WSGIServer(StreamServer):
                 'wsgi.multiprocess': False,
                 'wsgi.run_once': False}
 
-    def __init__(self, listener, application=None, backlog=None, spawn='default', log=None, handler_class=None,
+    def __init__(self, listener, application=None, backlog=None, spawn='default', log='default', handler_class=None,
                  environ=None, **ssl_args):
         StreamServer.__init__(self, listener, backlog=backlog, spawn=spawn, **ssl_args)
         if application is not None:
             self.application = application
         if handler_class is not None:
             self.handler_class = handler_class
-        if log is None:
+        if log == 'default':
             self.log = sys.stderr
         else:
             self.log = log
