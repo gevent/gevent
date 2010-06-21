@@ -611,5 +611,5 @@ def getfuncname(func):
     return repr(func)
 
 
-_NONE = Exception("Neither exception nor result")
+_NONE = Exception("Neither exception nor value")
 
