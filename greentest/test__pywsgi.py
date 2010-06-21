@@ -780,29 +780,14 @@ class ChunkedInputTests(TestCase):
         read_http(fd, body='this is chunked\nline 2\nline3')
 
     def test_close_before_finished(self):
-        import signal
-
-        got_signal = []
-        def handler(*args):
-            got_signal.append(1)
-            raise KeyboardInterrupt()
-
-        signal.signal(signal.SIGALRM, handler)
-        signal.alarm(1)
-
-        try:
-            body = '4\r\nthi'
-            req = "POST /short-read HTTP/1.1\r\ntransfer-encoding: Chunked\r\n\r\n" + body
-
-            fd = self.connect().makefile(bufsize=1)
-            fd.write(req)
-            fd.close()
-            gevent.sleep(0.0)
-        finally:
-            signal.alarm(0)
-            signal.signal(signal.SIGALRM, signal.SIG_DFL)
-
-        assert not got_signal, "caught alarm signal. infinite loop detected."
+        self.hook_stderr()
+        body = '4\r\nthi'
+        req = "POST /short-read HTTP/1.1\r\ntransfer-encoding: Chunked\r\n\r\n" + body
+        fd = self.connect().makefile(bufsize=1)
+        fd.write(req)
+        fd.close()
+        gevent.sleep(0.01)
+        self.assert_stderr_traceback(IOError, 'unexpected end of file while parsing chunked data')
 
 
 class Expect100ContinueTests(TestCase):
