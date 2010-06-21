@@ -39,7 +39,6 @@ from gevent import socket
 CONTENT_LENGTH = 'Content-Length'
 CONN_ABORTED_ERRORS = []
 server_implements_chunked = True
-server_supports_pipeline = True
 server_implements_100continue = True
 DEBUG = '-v' in sys.argv
 
@@ -261,10 +260,6 @@ class CommonTests(TestCase):
         except AssertionError, ex:
             if ex is not exception:
                 raise
-            if server_supports_pipeline:
-                raise
-            else:
-                print 'PipelineNotImplementedWarning'
 
     def test_connection_close(self):
         fd = self.connect().makefile(bufsize=1)

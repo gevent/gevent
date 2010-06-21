@@ -5,7 +5,6 @@ from test__pywsgi import *
 
 del TestHttps
 test__pywsgi.server_implements_chunked = False
-test__pywsgi.server_supports_pipeline = gevent.core.get_version()[1] == '2'
 test__pywsgi.server_implements_100continue = False
 TestCase.get_wsgi_module = lambda *args: wsgi
 
