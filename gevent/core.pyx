@@ -264,8 +264,7 @@ cdef class event:
         cdef timeval tv
         cdef double c_timeout
         cdef int result
-        if not event_pending(&self.ev, EV_READ|EV_WRITE|EV_SIGNAL|EV_TIMEOUT, NULL):
-            Py_INCREF(self)
+        cdef int need_incref = not event_pending(&self.ev, EV_READ|EV_WRITE|EV_SIGNAL|EV_TIMEOUT, NULL)
         errno = 0  # event_add sometime does not set errno
         if timeout >= 0.0:
             c_timeout = <double>timeout
@@ -279,6 +278,8 @@ cdef class event:
                 raise IOError(errno, strerror(errno))
             else:
                 raise IOError("event_add(fileno=%s) returned %s" % (self.fd, result))
+        if need_incref:
+            Py_INCREF(self)
 
     def cancel(self):
         """Remove event from the event queue."""
