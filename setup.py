@@ -6,30 +6,19 @@ gevent build & installation script
 If you have more than one libevent installed or it is installed in a
 non-standard location, use the options to point to the right dirs:
 
-    -Idir      add include dir
-    -Ldir      add library dir
-    --static   link libevent statically (default on win32)
-    --dynamic  link libevent dynamically (default on any platform other than win32)
-
-Also,
-
-    setup.py build --libevent DIR
-
-is a shortcut for
-
-    setup.py build -IDIR -IDIR/include LDIR/.libs
-
+    -IPATH            add include PATH
+    -LPATH            add library PATH
+   --libevent PATH    use libevent from PATH (implies -IPATH -IPATH/include -LPATH/.libs)
 """
-
-# XXX Options --static and --dynamic aren't tested for values other than theirs
-#     defaults (that is, --static on win32, --dynamic on everything else)
 
 import sys
 import os
 import re
 import traceback
+import glob
+from distutils.command import build_ext
 from distutils.core import Extension, setup
-from os.path import join, isdir, abspath, basename
+from os.path import join, isdir, abspath, basename, exists
 
 __version__ = re.search("__version__\s*=\s*'(.*)'", open('gevent/__init__.py').read(), re.M).group(1)
 assert __version__
@@ -39,7 +28,6 @@ include_dirs = []                 # specified by -I
 library_dirs = []                 # specified by -L
 libevent_source_path = None       # specified by --libevent
 VERBOSE = '-v' in sys.argv
-static = sys.platform == 'win32'  # set to True with --static; set to False with --dynamic
 extra_compile_args = []
 sources = ['gevent/core.c']
 libraries = []
@@ -118,7 +106,7 @@ def add_library_dir(path, must_exist=True):
         library_dirs.append(path)
 
 
-# parse options: -I NAME / -INAME / -L NAME / -LNAME / --libevent DIR / --static / --dynamic
+# parse options: -I NAME / -INAME / -L NAME / -LNAME / --libevent DIR
 # we're cutting out options from sys.path instead of using optparse
 # so that these option can co-exists with distutils' options
 i = 1
@@ -143,44 +131,59 @@ while i < len(sys.argv):
         if sys.platform == 'win32':
             add_include_dir(join(libevent_source_path, 'compat'), must_exist=False)
             add_include_dir(join(libevent_source_path, 'WIN32-Code'), must_exist=False)
-    elif arg == '--static':
-        static = True
-    elif arg == '--dynamic':
-        static = False
     else:
         i += 1
         continue
     del sys.argv[i]
 
 
+# sources used when building on windows; this includes sources of both libevent-1.4
+# and libevent-2 combined, but will filter out the files that do not exist
+libevent_sources = '''buffer.c
+bufferevent_async.c
+bufferevent.c
+bufferevent_filter.c
+bufferevent_pair.c
+bufferevent_ratelim.c
+bufferevent_sock.c
+buffer_iocp.c
+evbuffer.c
+evdns.c
+event.c
+event_iocp.c
+event_tagging.c
+evmap.c
+evrpc.c
+evthread.c
+evthread_win32.c
+evutil.c
+evutil_rand.c
+http.c
+listener.c
+log.c
+signal.c
+strlcpy.c
+WIN32-Code/win32.c
+win32select.c'''.split()
+
+
 if not sys.argv[1:] or '-h' in sys.argv or '--help' in ' '.join(sys.argv):
     print __doc__
 else:
-    if static:
+    if sys.platform == 'win32':
         if not libevent_source_path:
             sys.exit('Please provide path to libevent source with --libevent DIR')
         extra_compile_args += ['-DHAVE_CONFIG_H']
-        libevent_sources = ['event.c',
-                            'buffer.c',
-                            'evbuffer.c',
-                            'event_tagging.c',
-                            'evutil.c',
-                            'log.c',
-                            'signal.c',
-                            'evdns.c',
-                            'http.c',
-                            'strlcpy.c']
-        if sys.platform == 'win32':
-            libraries = ['wsock32', 'advapi32']
-            include_dirs.extend([ join(libevent_source_path, 'WIN32-Code'),
-                                  join(libevent_source_path, 'compat') ])
-            libevent_sources.append('WIN32-Code/win32.c')
-            extra_compile_args += ['-DWIN32']
-        else:
-            libevent_sources += ['select.c']
-            print 'XXX --static is not well supported on non-win32 platforms: only select is enabled'
+        extra_compile_args += ['-DWIN32']
+        libraries = ['wsock32', 'advapi32', 'ws2_32', 'shell32']
+        include_dirs.extend([ join(libevent_source_path, 'WIN32-Code'),
+                              join(libevent_source_path, 'compat') ])
+        libevent_sources = [join(libevent_source_path, filename) for filename in libevent_sources]
+        libevent_sources = [filename for filename in libevent_sources if exists(filename)]
+        if not libevent_sources:
+            sys.exit('No libevent sources found in %s' % libevent_source_path)
         for filename in libevent_sources:
-            sources.append( join(libevent_source_path, filename) )
+            sources.append(filename)
     else:
         libraries = ['event']
 
