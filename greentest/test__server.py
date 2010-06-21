@@ -62,6 +62,8 @@ class Settings:
 
 class TestCase(greentest.TestCase):
 
+    __timeout__ = 10
+
     def tearDown(self):
         greentest.TestCase.tearDown(self)
         if hasattr(self, 'server'):
