@@ -46,39 +46,57 @@ libraries = []
 extra_objects = []
 
 
-# hack: create a symlink from build/../core.so to gevent/core.so to prevent "ImportError: cannot import name core" failures
 cmdclass = {}
-try:
-    from distutils.command import build_ext
-    class my_build_ext(build_ext.build_ext):
-        def build_extension(self, ext):
-            result = build_ext.build_ext.build_extension(self, ext)
-            try:
-                fullname = self.get_ext_fullname(ext.name)
-                modpath = fullname.split('.')
-                filename = self.get_ext_filename(ext.name)
-                filename = os.path.split(filename)[-1]
-                if not self.inplace:
-                    filename = os.path.join(*modpath[:-1] + [filename])
-                    path_to_build_core_so = abspath(os.path.join(self.build_lib, filename))
-                    path_to_core_so = abspath(join('gevent', basename(path_to_build_core_so)))
-                    if path_to_build_core_so != path_to_core_so:
+class my_build_ext(build_ext.build_ext):
+
+    def compile_cython(self):
+        sources = glob.glob('gevent/*.pyx') + sorted(glob.glob('gevent/*.pxi'))
+        if not sources:
+            print >> sys.stderr, 'Could not find gevent.core sources'
+            return
+        core_c_mtime = os.stat('gevent/core.c').st_mtime
+        changed = [filename for filename in sources if os.stat(filename).st_mtime >= core_c_mtime]
+        if changed:
+            print >> sys.stderr, 'Running cython (changed: %s)' % ', '.join(changed)
+            cython_result = os.system('cython gevent/core.pyx')
+            if cython_result:
+                if os.system('cython -V 2> %s' % os.devnull):
+                    # there's no cython in the system
+                    print >> sys.stderr, 'No cython found, cannot rebuild core.c'
+                    return
+                sys.exit(1)
+
+    def build_extension(self, ext):
+        self.compile_cython()
+        result = build_ext.build_ext.build_extension(self, ext)
+        # hack: create a symlink from build/../core.so to gevent/core.so
+        # to prevent "ImportError: cannot import name core" failures
+        try:
+            fullname = self.get_ext_fullname(ext.name)
+            modpath = fullname.split('.')
+            filename = self.get_ext_filename(ext.name)
+            filename = os.path.split(filename)[-1]
+            if not self.inplace:
+                filename = os.path.join(*modpath[:-1] + [filename])
+                path_to_build_core_so = abspath(os.path.join(self.build_lib, filename))
+                path_to_core_so = abspath(join('gevent', basename(path_to_build_core_so)))
+                if path_to_build_core_so != path_to_core_so:
+                    try:
+                        os.unlink(path_to_core_so)
+                    except OSError:
+                        pass
+                    if hasattr(os, 'symlink'):
                         print 'Linking %s to %s' % (path_to_build_core_so, path_to_core_so)
-                        try:
-                            os.unlink(path_to_core_so)
-                        except OSError:
-                            pass
-                        if hasattr(os, 'symlink'):
-                            os.symlink(path_to_build_core_so, path_to_core_so)
-                        else:
-                            import shutil
-                            shutil.copyfile(path_to_build_core_so, path_to_core_so)
-            except Exception:
-                traceback.print_exc()
-            return result
-    cmdclass = {'build_ext': my_build_ext}
-except Exception:
-    traceback.print_exc()
+                        os.symlink(path_to_build_core_so, path_to_core_so)
+                    else:
+                        print 'Copying %s to %s' % (path_to_build_core_so, path_to_core_so)
+                        import shutil
+                        shutil.copyfile(path_to_build_core_so, path_to_core_so)
+        except Exception:
+            traceback.print_exc()
+        return result
+
+cmdclass = {'build_ext': my_build_ext}
 
 
 def check_dir(path, must_exist):
