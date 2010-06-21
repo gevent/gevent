@@ -31,6 +31,12 @@ __all__ = ['Greenlet',
            'reinit']
 
 
+import sys
+if sys.platform == 'win32':
+    __import__('socket') # trigger WSAStartup call
+del sys
+
+
 from gevent import core
 core.EV_TIMEOUT = 0x01
 core.EV_READ    = 0x02
