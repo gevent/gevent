@@ -258,7 +258,7 @@ cdef class event:
                 result.append(hex(flags))
             return '|'.join(result)
 
-    def add(self, timeout=-1):
+    def add(self, timeout=None):
         """Add event to be executed after an optional *timeout* - number of seconds
         after which the event will be executed."""
         cdef timeval tv
@@ -266,13 +266,19 @@ cdef class event:
         cdef int result
         cdef int need_incref = not event_pending(&self.ev, EV_READ|EV_WRITE|EV_SIGNAL|EV_TIMEOUT, NULL)
         errno = 0  # event_add sometime does not set errno
-        if timeout >= 0.0:
-            c_timeout = <double>timeout
-            tv.tv_sec = <long>c_timeout
-            tv.tv_usec = <unsigned int>((c_timeout - <double>tv.tv_sec) * 1000000.0)
-            result = event_add(&self.ev, &tv)
-        else:
+        if timeout is None:
             result = event_add(&self.ev, NULL)
+        else:
+            c_timeout = <double>timeout
+            if c_timeout < 0.0:
+                #raise ValueError('Expected a non-negative number or None: %r' % (timeout, ))
+                import warnings
+                warnings.warn('Negative timeouts are deprecated. Use None to disable timeout.', DeprecationWarning, stacklevel=2)
+                result = event_add(&self.ev, NULL)
+            else:
+                tv.tv_sec = <long>c_timeout
+                tv.tv_usec = <unsigned int>((c_timeout - <double>tv.tv_sec) * 1000000.0)
+                result = event_add(&self.ev, &tv)
         if result < 0:
             if errno:
                 raise IOError(errno, strerror(errno))
@@ -327,7 +333,7 @@ cdef class event:
 cdef class read_event(event):
     """Create a new scheduled event with evtype=EV_READ"""
 
-    def __init__(self, int handle, callback, timeout=-1, arg=None, persist=False):
+    def __init__(self, int handle, callback, timeout=None, arg=None, persist=False):
         cdef short evtype = EV_READ
         if persist:
             evtype = evtype | EV_PERSIST
@@ -338,7 +344,7 @@ cdef class read_event(event):
 cdef class write_event(event):
     """Create a new scheduled event with evtype=EV_WRITE"""
 
-    def __init__(self, int handle, callback, timeout=-1, arg=None, persist=False):
+    def __init__(self, int handle, callback, timeout=None, arg=None, persist=False):
         cdef short evtype = EV_WRITE
         if persist:
             evtype = evtype | EV_PERSIST
@@ -349,7 +355,7 @@ cdef class write_event(event):
 class readwrite_event(event):
     """Create a new scheduled event with evtype=EV_READ|EV_WRITE"""
 
-    def __init__(self, int handle, callback, timeout=-1, arg=None, persist=False):
+    def __init__(self, int handle, callback, timeout=None, arg=None, persist=False):
         cdef short evtype = EV_READ|EV_WRITE
         if persist:
             evtype = evtype | EV_PERSIST
@@ -391,7 +397,7 @@ cdef class signal(event):
         self._callback = callback
         self._arg = (args, kwargs)
         event_set(&self.ev, signalnum, EV_SIGNAL|EV_PERSIST, __simple_handler, <void*>self)
-        self.add(-1)
+        self.add()
 
 
 cdef class active_event(event):
@@ -404,7 +410,7 @@ cdef class active_event(event):
         Py_INCREF(self)
         event_active(&self.ev, EV_TIMEOUT, 1)
 
-    def add(self, timeout=-1):
+    def add(self, timeout=None):
         raise NotImplementedError
 
 
