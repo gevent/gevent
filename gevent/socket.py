@@ -138,7 +138,7 @@ def _wait_helper(ev, evtype):
         current.switch(ev)
 
 
-def wait_read(fileno, timeout=-1, timeout_exc=_socket.timeout('timed out'), event=None):
+def wait_read(fileno, timeout=None, timeout_exc=_socket.timeout('timed out'), event=None):
     """Block the current greenlet until *fileno* is ready to read.
 
     If *timeout* is non-negative, then *timeout_exc* is raised after *timeout* second has passed.
@@ -160,7 +160,7 @@ def wait_read(fileno, timeout=-1, timeout_exc=_socket.timeout('timed out'), even
     return event
 
 
-def wait_write(fileno, timeout=-1, timeout_exc=_socket.timeout('timed out'), event=None):
+def wait_write(fileno, timeout=None, timeout_exc=_socket.timeout('timed out'), event=None):
     """Block the current greenlet until *fileno* is ready to write.
 
     If *timeout* is non-negative, then *timeout_exc* is raised after *timeout* second has passed.
@@ -182,7 +182,7 @@ def wait_write(fileno, timeout=-1, timeout_exc=_socket.timeout('timed out'), eve
     return event
 
 
-def wait_readwrite(fileno, timeout=-1, timeout_exc=_socket.timeout('timed out'), event=None):
+def wait_readwrite(fileno, timeout=None, timeout_exc=_socket.timeout('timed out'), event=None):
     """Block the current greenlet until *fileno* is ready to read or write.
 
     If *timeout* is non-negative, then *timeout_exc* is raised after *timeout* second has passed.
