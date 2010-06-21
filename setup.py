@@ -130,7 +130,7 @@ while i < len(sys.argv):
     elif arg == '--dynamic':
         static = False
     else:
-        i = i+1
+        i += 1
         continue
     del sys.argv[i]
 
@@ -196,6 +196,4 @@ if __name__ == '__main__':
         "Topic :: Internet",
         "Topic :: Software Development :: Libraries :: Python Modules",
         "Intended Audience :: Developers",
-        "Development Status :: 4 - Beta"]
-        )
-
+        "Development Status :: 4 - Beta"])
