@@ -43,7 +43,7 @@ class my_build_ext(build_ext.build_ext):
             print >> sys.stderr, 'Could not find gevent.core sources'
             return
         core_c_mtime = os.stat('gevent/core.c').st_mtime
-        changed = [filename for filename in sources if os.stat(filename).st_mtime >= core_c_mtime]
+        changed = [filename for filename in sources if os.stat(filename).st_mtime > core_c_mtime]
         if changed:
             print >> sys.stderr, 'Running cython (changed: %s)' % ', '.join(changed)
             cython_result = os.system('cython gevent/core.pyx')
