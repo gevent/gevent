@@ -272,7 +272,7 @@ class TestDefaultSpawn(TestCase):
         assert self.server.started
         self.hook_stderr()
         error = ExpectedError('test_error_in_spawn')
-        self.server.spawn = lambda *args: gevent.getcurrent().throw(error)
+        self.server._spawn = lambda *args: gevent.getcurrent().throw(error)
         self.assertAcceptedConnectionError()
         self.assert_stderr_traceback(error)
         #self.assert_stderr('^WARNING: <SimpleStreamServer .*?>: ignoring test_error_in_spawn \\(sleeping \d.\d+ seconds\\)\n$')
