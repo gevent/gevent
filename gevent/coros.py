@@ -1,3 +1,4 @@
+"""Synchronization primitives"""
 # Copyright (c) 2009-2010 Denis Bilenko. See LICENSE for details.
 
 import sys
