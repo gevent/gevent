@@ -1,4 +1,4 @@
-"""implements standard module 'thread' with greenlets"""
+"""Implementation of the standard :mod:`thread` module that spawns greenlets"""
 __thread = __import__('thread')
 from gevent.hub import getcurrent, GreenletExit
 from gevent.greenlet import Greenlet
