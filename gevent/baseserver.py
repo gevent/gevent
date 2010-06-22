@@ -1,3 +1,4 @@
+"""Base class for implementing servers"""
 # Copyright (c) 2009-2010 Denis Bilenko. See LICENSE for details.
 from gevent.greenlet import Greenlet, getfuncname
 from gevent.event import Event
