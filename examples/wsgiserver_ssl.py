@@ -1,8 +1,5 @@
 #!/usr/bin/python
-"""Secure WSGI server example.
-
-It uses pure Python WSGI module - gevent.pywsgi, because gevent.http/gevent.wsgi do not support SSL yet.
-"""
+"""Secure WSGI server example based on gevent.pywsgi"""
 
 from gevent import pywsgi
 
