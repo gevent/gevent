@@ -21,7 +21,7 @@ class HTTPServer(BaseServer):
         return self.http is not None
 
     def _on_request(self, request):
-        spawn = self.spawn
+        spawn = self._spawn
         if spawn is None:
             self.handle(request)
         else:

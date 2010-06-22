@@ -27,7 +27,7 @@ class BaseServer(object):
     * an integer -- a shortcut for ``gevent.pool.Pool(integer)``
     """
 
-    spawn = Greenlet.spawn
+    _spawn = Greenlet.spawn
 
     # the default backlog to use if none was provided in __init__
     backlog = 256
@@ -61,17 +61,17 @@ class BaseServer(object):
     def set_spawn(self, spawn):
         if spawn == 'default':
             self.pool = None
-            self.spawn = self.spawn
+            self._spawn = self._spawn
         elif hasattr(spawn, 'spawn'):
             self.pool = spawn
-            self.spawn = spawn.spawn
+            self._spawn = spawn.spawn
         elif isinstance(spawn, int):
             from gevent.pool import Pool
             self.pool = Pool(spawn)
-            self.spawn = self.pool.spawn
+            self._spawn = self.pool.spawn
         else:
             self.pool = None
-            self.spawn = spawn
+            self._spawn = spawn
         if hasattr(self.pool, 'full'):
             self.full = self.pool.full
 

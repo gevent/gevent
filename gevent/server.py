@@ -120,7 +120,7 @@ class StreamServer(BaseServer):
 
             self.delay = self.min_delay
             client_socket = socket.socket(_sock=client_socket)
-            spawn = self.spawn
+            spawn = self._spawn
             if spawn is None:
                 self._handle(client_socket, address)
             else:
