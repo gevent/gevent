@@ -434,7 +434,6 @@ class socket(object):
             wait_read(self._sock.fileno(), timeout=self.timeout, event=self._read_event)
 
     def send(self, data, flags=0, timeout=timeout_default):
-        #print 'sending: %r' % data
         if timeout is timeout_default:
             timeout = self.timeout
         try:
