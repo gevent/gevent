@@ -98,8 +98,8 @@ Version 0.12.0
   - Internal class :class:`Waiter <gevent.hub.Waiter>` now stores the value if no one's waiting for it.
   - Added ``testrunner.py`` script that replaces a bunch of small scripts that were used before.
   - Removed ``is_secure`` attribute from sockets and ssl objects.
-  - Made Greenlet not to print a traceback when a not-yet-started greenlet is killed.
-  - Added BackdoorServer class to backdoor module. Removed backdoor() function and deprecated backdoor_server() function.
+  - Made :class:`Greenlet` not to print a traceback when a not-yet-started greenlet is killed.
+  - Added :class:`BackdoorServer` class to :mod:`backdoor`. Removed :func:`backdoor` function and deprecated :func:`backdoor_server` function.
   - Removed ``__getattr__`` from socket class.
   - Fixed :func:`monkey.patch_socket` not to fail if :func:`socket.ssl` is not present in :mod:`gevent.socket`.
   - Added :func:`monkey.patch_ssl`.
