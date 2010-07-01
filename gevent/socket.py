@@ -143,6 +143,8 @@ def wait_read(fileno, timeout=None, timeout_exc=_socket.timeout('timed out'), ev
 
     If *timeout* is non-negative, then *timeout_exc* is raised after *timeout* second has passed.
     By default *timeout_exc* is ``socket.timeout('timed out')``.
+
+    Return ``True`` if the event was signalled normally, ``False`` if it was cancelled with :func:`cancel_wait`.
     """
     if event is None:
         event = core.read_event(fileno, _wait_helper, timeout, (getcurrent(), timeout_exc))
@@ -154,10 +156,11 @@ def wait_read(fileno, timeout=None, timeout_exc=_socket.timeout('timed out'), ev
     try:
         switch_result = get_hub().switch()
         assert event is switch_result, 'Invalid switch into wait_read(): %r' % (switch_result, )
+        cancelled = event.pending
     finally:
         event.cancel()
         event.arg = None
-    return event
+    return not cancelled
 
 
 def wait_write(fileno, timeout=None, timeout_exc=_socket.timeout('timed out'), event=None):
@@ -165,6 +168,8 @@ def wait_write(fileno, timeout=None, timeout_exc=_socket.timeout('timed out'), e
 
     If *timeout* is non-negative, then *timeout_exc* is raised after *timeout* second has passed.
     By default *timeout_exc* is ``socket.timeout('timed out')``.
+
+    Return ``True`` if the event was signalled normally, ``False`` if it was cancelled with :func:`cancel_wait`.
     """
     if event is None:
         event = core.write_event(fileno, _wait_helper, timeout, (getcurrent(), timeout_exc))
@@ -176,10 +181,11 @@ def wait_write(fileno, timeout=None, timeout_exc=_socket.timeout('timed out'), e
     try:
         switch_result = get_hub().switch()
         assert event is switch_result, 'Invalid switch into wait_write(): %r' % (switch_result, )
+        cancelled = event.pending
     finally:
         event.arg = None
         event.cancel()
-    return event
+    return not cancelled
 
 
 def wait_readwrite(fileno, timeout=None, timeout_exc=_socket.timeout('timed out'), event=None):
@@ -187,6 +193,8 @@ def wait_readwrite(fileno, timeout=None, timeout_exc=_socket.timeout('timed out'
 
     If *timeout* is non-negative, then *timeout_exc* is raised after *timeout* second has passed.
     By default *timeout_exc* is ``socket.timeout('timed out')``.
+
+    Return ``True`` if the event was signalled normally, ``False`` if it was cancelled with :func:`cancel_wait`.
     """
     if event is None:
         event = core.readwrite_event(fileno, _wait_helper, timeout, (getcurrent(), timeout_exc))
@@ -198,10 +206,11 @@ def wait_readwrite(fileno, timeout=None, timeout_exc=_socket.timeout('timed out'
     try:
         switch_result = get_hub().switch()
         assert event is switch_result, 'Invalid switch into wait_readwrite(): %r' % (switch_result, )
+        cancelled = event.pending
     finally:
         event.arg = None
         event.cancel()
-    return event
+    return not cancelled
 
 
 def __cancel_wait(event):
