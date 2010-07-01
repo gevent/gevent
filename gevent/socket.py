@@ -326,7 +326,8 @@ class socket(object):
                 if ex[0] != errno.EWOULDBLOCK or self.timeout == 0.0:
                     raise
                 sys.exc_clear()
-            wait_read(self._sock.fileno(), timeout=self.timeout, event=self._read_event)
+            if not wait_read(self._sock.fileno(), timeout=self.timeout, event=self._read_event):
+                raise error(errno.EBADF, 'Bad file descriptor')
         return socket(_sock=client_socket), address
 
     def close(self):
