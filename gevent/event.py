@@ -31,6 +31,7 @@ class Event(object):
         return self._flag
 
     isSet = is_set # makes it a better drop-in replacement for threading.Event
+    ready = is_set # makes it compatible with AsyncResult and Greenlet (for example in wait())
 
     def set(self):
         """Set the internal flag to true. All greenlets waiting for it to become true are awakened.
