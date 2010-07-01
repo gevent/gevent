@@ -286,6 +286,7 @@ class socket(object):
         self._sock.setblocking(0)
         self._read_event = core.event(core.EV_READ, self.fileno(), _wait_helper)
         self._write_event = core.event(core.EV_WRITE, self.fileno(), _wait_helper)
+        self._rw_event = core.event(core.EV_READ|core.EV_WRITE, self.fileno(), _wait_helper)
 
     def __repr__(self):
         return '<%s at %s %s>' % (type(self).__name__, hex(id(self)), self._formatinfo())
@@ -331,10 +332,9 @@ class socket(object):
         return socket(_sock=client_socket), address
 
     def close(self):
-        if self._read_event is not None:
-            cancel_wait(self._read_event)
-        if self._write_event is not None:
-            cancel_wait(self._write_event)
+        cancel_wait(self._rw_event)
+        cancel_wait(self._read_event)
+        cancel_wait(self._write_event)
         self._sock = _closedsocket()
         dummy = self._sock._dummy
         for method in _delegate_methods:
@@ -355,7 +355,8 @@ class socket(object):
                 if not result or result == EISCONN:
                     break
                 elif (result in (EWOULDBLOCK, EINPROGRESS, EALREADY)) or (result == EINVAL and is_windows):
-                    wait_readwrite(sock.fileno())
+                    if not wait_readwrite(sock.fileno(), event=self._rw_event):
+                        raise error(errno.EBADF, 'Bad file descriptor')
                 else:
                     raise error(result, strerror(result))
         else:
@@ -371,7 +372,8 @@ class socket(object):
                     timeleft = end - time.time()
                     if timeleft <= 0:
                         raise timeout('timed out')
-                    wait_readwrite(sock.fileno(), timeout=timeleft)
+                    if not wait_readwrite(sock.fileno(), timeout=timeleft, event=self._rw_event):
+                        raise error(errno.EBADF, 'Bad file descriptor')
                 else:
                     raise error(result, strerror(result))
 
