@@ -113,16 +113,17 @@ cdef class http_request:
     cdef evhttp_request* __obj
     cdef object _input_buffer
     cdef object _output_buffer
-    cdef public int _default_response_code
+    cdef public object default_response_headers
 
-    def __init__(self, size_t _obj):
+    def __init__(self, size_t _obj, object default_response_headers):
         self.__obj = <evhttp_request*>_obj
-        self._default_response_code = 500
+        self.default_response_headers = default_response_headers
 
     def __dealloc__(self):
-        if self.__obj:
-            report_internal_error(self.__obj, self._default_response_code)
+        cdef evhttp_request* obj = self.__obj
+        if obj != NULL:
             self.__obj = NULL
+            report_internal_error(obj)
 
     property _obj:
 
@@ -310,13 +311,20 @@ cdef class http_request:
             self._output_buffer = buffer(<size_t>self.__obj.output_buffer)
             return self._output_buffer
 
+    def _add_default_response_headers(self):
+        for key, value in self.default_response_headers:
+            if not self.find_output_header(key):
+                self.add_output_header(key, value)
+
     def send_reply(self, int code, char *reason, object buf):
         if not self.__obj:
             raise HttpRequestDeleted
         cdef evbuffer* c_buf
         if isinstance(buf, buffer):
+            self._add_default_response_headers()
             evhttp_send_reply(self.__obj, code, reason, (<buffer>buf).__obj)
         elif isinstance(buf, str):
+            self._add_default_response_headers()
             c_buf = evbuffer_new()
             evbuffer_add(c_buf, <char *>buf, len(buf))
             evhttp_send_reply(self.__obj, code, reason, c_buf)
@@ -327,6 +335,7 @@ cdef class http_request:
     def send_reply_start(self, int code, char *reason):
         if not self.__obj:
             raise HttpRequestDeleted
+        self._add_default_response_headers()
         evhttp_send_reply_start(self.__obj, code, reason)
 
     def send_reply_chunk(self, object buf):
@@ -351,6 +360,7 @@ cdef class http_request:
     def send_error(self, int code, char* reason):
         if not self.__obj:
             raise HttpRequestDeleted
+        self._add_default_response_headers()
         evhttp_send_error(self.__obj, code, reason)
 
     def find_input_header(self, char* key):
@@ -451,7 +461,7 @@ cdef class http_connection:
 
 cdef void _http_cb_handler(evhttp_request* request, void *arg) with gil:
     cdef http server = <object>arg
-    cdef http_request req = http_request(<size_t>request)
+    cdef http_request req = http_request(<size_t>request, server.default_response_headers)
     cdef evhttp_connection* conn = request.evcon
     cdef object requests
     try:
@@ -480,35 +490,33 @@ cdef void _http_closecb_handler(evhttp_connection* connection, void *arg) with g
 
 
 cdef void _http_cb_reply_error(evhttp_request* request, void *arg):
-    report_internal_error(request, 500)
+    report_internal_error(request)
 
 
-cdef void report_internal_error(evhttp_request* request, int code):
+cdef void report_internal_error(evhttp_request* request):
     cdef evbuffer* c_buf
     if request != NULL and request.response_code == 0:
         evhttp_add_header(request.output_headers, "Connection", "close")
         evhttp_add_header(request.output_headers, "Content-type", "text/plain")
         c_buf = evbuffer_new()
-        if code == 503:
-            evhttp_add_header(request.output_headers, "Content-length", "31")
-            evbuffer_add(c_buf, "Service Temporarily Unavailable", 31)
-            evhttp_send_reply(request, 503, "Service Unavailable", c_buf)
-        else:
-            evhttp_add_header(request.output_headers, "Content-length", "21")
-            evbuffer_add(c_buf, "Internal Server Error", 21)
-            evhttp_send_reply(request, 500, "Internal Server Error", c_buf)
+        evhttp_add_header(request.output_headers, "Content-length", "21")
+        evbuffer_add(c_buf, "Internal Server Error", 21)
+        evhttp_send_reply(request, 500, "Internal Server Error", c_buf)
         evbuffer_free(c_buf)
 
 
 cdef class http:
     cdef evhttp* __obj
-    cdef object _gencb
-    cdef object handle
+    cdef public object handle
+    cdef public object default_response_headers
     cdef dict _requests
 
-    def __init__(self, handle):
+    def __init__(self, object handle, object default_response_headers=None):
         self.handle = handle
-        self._gencb = None
+        if default_response_headers is None:
+            self.default_response_headers = []
+        else:
+            self.default_response_headers = default_response_headers
         self._requests = {} # maps connection id to WeakKeyDictionary which holds requests
         self.__obj = evhttp_new(current_base)
         evhttp_set_gencb(self.__obj, _http_cb_handler, <void *>self)
