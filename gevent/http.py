@@ -12,9 +12,13 @@ class HTTPServer(BaseServer):
     *handle* is called with one argument: an :class:`gevent.core.http_request` instance.
     """
 
-    def __init__(self, listener, handle=None, backlog=None, spawn='default'):
+    default_response_headers = [('Connection', 'close')]
+
+    def __init__(self, listener, handle=None, backlog=None, spawn='default', default_response_headers='default'):
         BaseServer.__init__(self, listener, handle=handle, backlog=backlog, spawn=spawn)
         self.http = None
+        if default_response_headers != 'default':
+            self.default_response_headers = default_response_headers
 
     @property
     def started(self):
@@ -38,7 +42,7 @@ class HTTPServer(BaseServer):
         request.send_reply(503, 'Service Unavailable', msg)
 
     def start_accepting(self):
-        self.http = core.http(self._on_request)
+        self.http = core.http(self._on_request, self.default_response_headers)
         self.http.accept(self.socket.fileno())
 
     def stop_accepting(self):
