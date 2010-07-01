@@ -319,15 +319,16 @@ class socket(object):
         return result
 
     def accept(self):
+        sock = self._sock
         while True:
             try:
-                client_socket, address = self._sock.accept()
+                client_socket, address = sock.accept()
                 break
             except error, ex:
                 if ex[0] != errno.EWOULDBLOCK or self.timeout == 0.0:
                     raise
                 sys.exc_clear()
-            if not wait_read(self._sock.fileno(), timeout=self.timeout, event=self._read_event):
+            if not wait_read(sock.fileno(), timeout=self.timeout, event=self._read_event):
                 raise error(errno.EBADF, 'Bad file descriptor')
         return socket(_sock=client_socket), address
 
@@ -401,9 +402,10 @@ class socket(object):
         return _fileobject(self.dup(), mode, bufsize)
 
     def recv(self, *args):
+        sock = self._sock # keeping the reference so that fd is not closed during waiting
         while True:
             try:
-                return self._sock.recv(*args)
+                return sock.recv(*args)
             except error, ex:
                 if ex[0] == errno.EBADF:
                     return ''
@@ -411,52 +413,61 @@ class socket(object):
                     raise
                 # QQQ without clearing exc_info test__refcount.test_clean_exit fails
                 sys.exc_clear()
-            wait_read(self.fileno(), timeout=self.timeout, event=self._read_event)
+            if not wait_read(sock.fileno(), timeout=self.timeout, event=self._read_event):
+                return ''
 
     def recvfrom(self, *args):
+        sock = self._sock
         while True:
             try:
-                return self._sock.recvfrom(*args)
+                return sock.recvfrom(*args)
             except error, ex:
                 if ex[0] != EWOULDBLOCK or self.timeout == 0.0:
                     raise
                 sys.exc_clear()
-            wait_read(self._sock.fileno(), timeout=self.timeout, event=self._read_event)
+            if not wait_read(sock.fileno(), timeout=self.timeout, event=self._read_event):
+                raise error(errno.EBADF, 'Bad file descriptor')
 
     def recvfrom_into(self, *args):
+        sock = self._sock
         while True:
             try:
-                return self._sock.recvfrom_into(*args)
+                return sock.recvfrom_into(*args)
             except error, ex:
                 if ex[0] != EWOULDBLOCK or self.timeout == 0.0:
                     raise
                 sys.exc_clear()
-            wait_read(self._sock.fileno(), timeout=self.timeout, event=self._read_event)
+            if not wait_read(sock.fileno(), timeout=self.timeout, event=self._read_event):
+                raise error(errno.EBADF, 'Bad file descriptor')
 
     def recv_into(self, *args):
+        sock = self._sock
         while True:
             try:
-                return self._sock.recv_into(*args)
+                return sock.recv_into(*args)
             except error, ex:
                 if ex[0] == errno.EBADF:
                     return 0
                 if ex[0] != EWOULDBLOCK or self.timeout == 0.0:
                     raise
                 sys.exc_clear()
-            wait_read(self._sock.fileno(), timeout=self.timeout, event=self._read_event)
+            if not wait_read(sock.fileno(), timeout=self.timeout, event=self._read_event):
+                return 0
 
     def send(self, data, flags=0, timeout=timeout_default):
+        sock = self._sock
         if timeout is timeout_default:
             timeout = self.timeout
         try:
-            return self._sock.send(data, flags)
+            return sock.send(data, flags)
         except error, ex:
             if ex[0] != EWOULDBLOCK or timeout == 0.0:
                 raise
             sys.exc_clear()
-            wait_write(self._sock.fileno(), timeout=timeout, event=self._write_event)
+            if not wait_write(sock.fileno(), timeout=timeout, event=self._write_event):
+                return 0
             try:
-                return self._sock.send(data, flags)
+                return sock.send(data, flags)
             except error, ex2:
                 if ex2[0] == EWOULDBLOCK:
                     return 0
@@ -484,15 +495,17 @@ class socket(object):
                     raise timeout('timed out')
 
     def sendto(self, *args):
+        sock = self._sock
         try:
-            return self._sock.sendto(*args)
+            return sock.sendto(*args)
         except error, ex:
             if ex[0] != EWOULDBLOCK or timeout == 0.0:
                 raise
             sys.exc_clear()
-            wait_write(self.fileno(), timeout=self.timeout, event=self._write_event)
+            if not wait_write(sock.fileno(), timeout=self.timeout, event=self._write_event):
+                raise error(errno.EBADF, 'Bad file descriptor')
             try:
-                return self._sock.sendto(*args)
+                return sock.sendto(*args)
             except error, ex2:
                 if ex2[0] == EWOULDBLOCK:
                     return 0
