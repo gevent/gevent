@@ -27,17 +27,17 @@ class SelectResult(object):
         self.read = []
         self.write = []
         self.event = Event()
-        self._timer = None
+        self.timer = None
 
     def update(self, event, evtype):
         if evtype & core.EV_READ:
             self.read.append(event.arg)
-            if self._timer is None:
-                self._timer = core.timer(0, self.event.set)
+            if self.timer is None:
+                self.timer = core.timer(0, self.event.set)
         elif evtype & core.EV_WRITE:
             self.write.append(event.arg)
-            if self._timer is None:
-                self._timer = core.timer(0, self.event.set)
+            if self.timer is None:
+                self.timer = core.timer(0, self.event.set)
         # using core.timer(0, ...) to let other active events call update() before Event.wait() returns
 
 
