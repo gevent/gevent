@@ -8,7 +8,7 @@ __all__ = ['HTTPServer']
 
 class HTTPServer(BaseServer):
     """An HTTP server based on libevent-http.
-    
+
     *handle* is called with one argument: an :class:`gevent.core.http_request` instance.
     """
 
