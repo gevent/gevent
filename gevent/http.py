@@ -26,9 +26,16 @@ class HTTPServer(BaseServer):
             self.handle(request)
         else:
             if self.full():
-                request._default_response_code = 503
+                self._on_full(request)
             else:
                 spawn(self.handle, request)
+
+    def _on_full(self, request):
+        msg = 'Service Temporarily Unavailable'
+        request.add_output_header('Connection', 'close')
+        request.add_output_header('Content-type', 'text/plain')
+        request.add_output_header('Content-length', str(len(msg)))
+        request.send_reply(503, 'Service Unavailable', msg)
 
     def start_accepting(self):
         self.http = core.http(self._on_request)
