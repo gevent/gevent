@@ -23,6 +23,8 @@ def get_fileno(obj):
 
 class SelectResult(object):
 
+    __slots__ = ['read', 'write', 'event', 'timer']
+
     def __init__(self):
         self.read = []
         self.write = []
