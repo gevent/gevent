@@ -39,6 +39,7 @@ from gevent import socket
 CONTENT_LENGTH = 'Content-Length'
 CONN_ABORTED_ERRORS = []
 server_implements_chunked = True
+server_implements_pipeline = True
 server_implements_100continue = True
 DEBUG = '-v' in sys.argv
 
@@ -238,7 +239,9 @@ class CommonTests(TestCase):
     def test_basic(self):
         fd = self.connect().makefile(bufsize=1)
         fd.write('GET / HTTP/1.1\r\nHost: localhost\r\n\r\n')
-        read_http(fd, body='hello world')
+        response = read_http(fd, body='hello world')
+        if response.headers.get('Connection') == 'close' and not server_implements_pipeline:
+            return
         fd.write('GET /notexist HTTP/1.1\r\nHost: localhost\r\n\r\n')
         read_http(fd, code=404, reason='Not Found', body='not found')
         fd.write('GET / HTTP/1.1\r\nHost: localhost\r\n\r\n')
@@ -246,6 +249,8 @@ class CommonTests(TestCase):
         fd.close()
 
     def test_pipeline(self):
+        if not server_implements_pipeline:
+            return
         fd = self.connect().makefile(bufsize=1)
         fd.write('GET / HTTP/1.1\r\nHost: localhost\r\n\r\n' + 'GET /notexist HTTP/1.1\r\nHost: localhost\r\n\r\n')
         read_http(fd, body='hello world')
@@ -264,7 +269,9 @@ class CommonTests(TestCase):
     def test_connection_close(self):
         fd = self.connect().makefile(bufsize=1)
         fd.write('GET / HTTP/1.1\r\nHost: localhost\r\n\r\n')
-        read_http(fd)
+        response = read_http(fd)
+        if response.headers.get('Connection') == 'close' and not server_implements_pipeline:
+            return
         fd.write('GET / HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n')
         read_http(fd)
         fd.write('GET / HTTP/1.1\r\nHost: localhost\r\n\r\n')
@@ -310,6 +317,9 @@ class TestNoChunks(CommonTests):
         response = read_http(fd, body='hello world')
         assert response.chunks is None, response.chunks
         response.assertHeader('Content-Length', '11')
+
+        if not server_implements_pipeline:
+            fd = self.connect().makefile(bufsize=1)
 
         fd.write('GET /not-found HTTP/1.1\r\nHost: localhost\r\n\r\n')
         response = read_http(fd, code=404, reason='Not Found', body='not found')
@@ -718,6 +728,15 @@ class ChunkedInputTests(TestCase):
         fd.write("GET /ping HTTP/1.1\r\n\r\n")
         read_http(fd, body="pong")
 
+    def ping_if_possible(self, fd):
+        try:
+            self.ping(fd)
+        except ConnectionClosed:
+            if server_implements_pipeline:
+                raise
+            fd = self.connect().makefile(bufsize=1)
+            self.ping(fd)
+
     def test_short_read_with_content_length(self):
         body = self.body()
         req = "POST /short-read HTTP/1.1\r\ntransfer-encoding: Chunked\r\nContent-Length:1000\r\n\r\n" + body
@@ -726,7 +745,7 @@ class ChunkedInputTests(TestCase):
         fd.write(req)
         read_http(fd, body="this is ch")
 
-        self.ping(fd)
+        self.ping_if_possible(fd)
 
     def test_short_read_with_zero_content_length(self):
         body = self.body()
@@ -737,7 +756,7 @@ class ChunkedInputTests(TestCase):
         fd.write(req)
         read_http(fd, body="this is ch")
 
-        self.ping(fd)
+        self.ping_if_possible(fd)
 
     def test_short_read(self):
         body = self.body()
@@ -747,7 +766,7 @@ class ChunkedInputTests(TestCase):
         fd.write(req)
         read_http(fd, body="this is ch")
 
-        self.ping(fd)
+        self.ping_if_possible(fd)
 
     def test_dirt(self):
         body = self.body(dirt="; here is dirt\0bla")
@@ -764,7 +783,7 @@ class ChunkedInputTests(TestCase):
                     return
             raise
 
-        self.ping(fd)
+        self.ping_if_possible(fd)
 
     def test_chunked_readline(self):
         body = self.body()
