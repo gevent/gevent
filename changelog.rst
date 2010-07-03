@@ -45,8 +45,9 @@ Version 0.13.0
 
 - :mod:`gevent.socket` module
 
+  - Fixed issues #26 and #34: closing the socket while reading/writing/connecting is now safe. Thanks to **Cyril Bay**.
   - Imported :func:`getfqdn` from :mod:`socket` module.
-  - Do not use :mod:`platform` to detect Windows as simpler ``sys.platform`` is more than enough and does not call ``uname``.
+  - The module now uses ``sys.platform`` to detect Windows rather than :mod:`platform` module.
   - Fixed issue #27: :func:`getaddrinfo` used to handle the case when *socktype* or *proto* were equal to ``0``. Thanks to **Randall Leeds**.
 
 - :mod:`gevent.coros` module
@@ -59,6 +60,7 @@ Version 0.13.0
 
   - Made :meth:`Event.wait` return internal flag instead of ``None``.
   - Made :meth:`AsyncResult.wait` return its ``value`` instead of ``None``.
+  - Added :meth:`ready` method as an alias for :meth:`is_set`.
 
 - :mod:`gevent.wsgi` module
 
@@ -74,6 +76,7 @@ Version 0.13.0
 
 - :mod:`gevent.core` module
 
+  - Fixed reference leaks in :class:`event` class.
   - Avoid Python name lookups when accessing EV_* constants from Cython code. Patch by **Daniele Varrazzo**.
   - Added *persist* argument to :class:`read_event`, :class:`write_event` and :class:`readwrite_event`.
   - Made all of the event loop callbacks clear the exception info before exiting.
@@ -93,8 +96,9 @@ Version 0.13.0
 
   - :class:`http` class no longer has :meth:`set_cb` and :meth:`set_gencb`. Instead its contructor accepts *handle* which will be called on each request.
 
-- :mod:`gevent.http` module
+- :mod:`gevent.http` and :mod:`gevent.wsgi` modules
 
+  - Made :class:`HTTPServer` use ``"Connection: close"`` header by default.
   - Class :class:`HTTPServer` now derives from :class:`baseserver.BaseServer`. Thus its :meth:`start` method no longer accepts socket to listen on, it must be passed to the contructor.
   - The *spawn* argument now accepts a :class:`Pool` instance. While the pool is full, the server replies with 503 error.
   - The server no longer links to the greenlets it spawns to detect errors. Instead, it relies on :class:`http_request` which will send 500 reply when deallocated if the user hasn't send any.
