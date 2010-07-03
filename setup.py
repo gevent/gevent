@@ -40,19 +40,23 @@ class my_build_ext(build_ext.build_ext):
     def compile_cython(self):
         sources = glob.glob('gevent/*.pyx') + sorted(glob.glob('gevent/*.pxi'))
         if not sources:
-            print >> sys.stderr, 'Could not find gevent.core sources'
-            return
-        core_c_mtime = os.stat('gevent/core.c').st_mtime
-        changed = [filename for filename in sources if (os.stat(filename).st_mtime - core_c_mtime) > 1]
-        if changed:
+            if not os.path.exists('gevent/core.c'):
+                print >> sys.stderr, 'Could not find gevent/core.c'
+        if os.path.exists('gevent/core.c'):
+            core_c_mtime = os.stat('gevent/core.c').st_mtime
+            changed = [filename for filename in sources if (os.stat(filename).st_mtime - core_c_mtime) > 1]
+            if not changed:
+                return
             print >> sys.stderr, 'Running cython (changed: %s)' % ', '.join(changed)
-            cython_result = os.system('cython gevent/core.pyx')
-            if cython_result:
-                if os.system('cython -V 2> %s' % os.devnull):
-                    # there's no cython in the system
-                    print >> sys.stderr, 'No cython found, cannot rebuild core.c'
-                    return
-                sys.exit(1)
+        else:
+            print >> sys.stderr, 'Running cython'
+        cython_result = os.system('cython gevent/core.pyx')
+        if cython_result:
+            if os.system('cython -V 2> %s' % os.devnull):
+                # there's no cython in the system
+                print >> sys.stderr, 'No cython found, cannot rebuild core.c'
+                return
+            sys.exit(1)
 
     def build_extension(self, ext):
         self.compile_cython()
