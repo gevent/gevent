@@ -38,7 +38,7 @@ cmdclass = {}
 class my_build_ext(build_ext.build_ext):
 
     def compile_cython(self):
-        sources = glob.glob('gevent/*.pyx') + sorted(glob.glob('gevent/*.pxi'))
+        sources = glob.glob('gevent/*.pyx') + glob.glob('gevent/*.pxi')
         if not sources:
             if not os.path.exists('gevent/core.c'):
                 print >> sys.stderr, 'Could not find gevent/core.c'
