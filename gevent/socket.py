@@ -144,7 +144,7 @@ def wait_read(fileno, timeout=None, timeout_exc=timeout('timed out'), event=None
     If *timeout* is non-negative, then *timeout_exc* is raised after *timeout* second has passed.
     By default *timeout_exc* is ``socket.timeout('timed out')``.
 
-    Return ``True`` if the event was signalled normally, ``False`` if it was cancelled with :func:`cancel_wait`.
+    If :func:`cancel_wait` is called, raise ``socket.error(EBADF, 'File descriptor was closed in another greenlet')``.
     """
     if event is None:
         event = core.read_event(fileno, _wait_helper, timeout, (getcurrent(), timeout_exc))
@@ -156,11 +156,9 @@ def wait_read(fileno, timeout=None, timeout_exc=timeout('timed out'), event=None
     try:
         switch_result = get_hub().switch()
         assert event is switch_result, 'Invalid switch into wait_read(): %r' % (switch_result, )
-        cancelled = event.pending
     finally:
         event.cancel()
         event.arg = None
-    return not cancelled
 
 
 def wait_write(fileno, timeout=None, timeout_exc=timeout('timed out'), event=None):
@@ -169,7 +167,7 @@ def wait_write(fileno, timeout=None, timeout_exc=timeout('timed out'), event=Non
     If *timeout* is non-negative, then *timeout_exc* is raised after *timeout* second has passed.
     By default *timeout_exc* is ``socket.timeout('timed out')``.
 
-    Return ``True`` if the event was signalled normally, ``False`` if it was cancelled with :func:`cancel_wait`.
+    If :func:`cancel_wait` is called, raise ``socket.error(EBADF, 'File descriptor was closed in another greenlet')``.
     """
     if event is None:
         event = core.write_event(fileno, _wait_helper, timeout, (getcurrent(), timeout_exc))
@@ -181,11 +179,9 @@ def wait_write(fileno, timeout=None, timeout_exc=timeout('timed out'), event=Non
     try:
         switch_result = get_hub().switch()
         assert event is switch_result, 'Invalid switch into wait_write(): %r' % (switch_result, )
-        cancelled = event.pending
     finally:
         event.arg = None
         event.cancel()
-    return not cancelled
 
 
 def wait_readwrite(fileno, timeout=None, timeout_exc=timeout('timed out'), event=None):
@@ -194,7 +190,7 @@ def wait_readwrite(fileno, timeout=None, timeout_exc=timeout('timed out'), event
     If *timeout* is non-negative, then *timeout_exc* is raised after *timeout* second has passed.
     By default *timeout_exc* is ``socket.timeout('timed out')``.
 
-    Return ``True`` if the event was signalled normally, ``False`` if it was cancelled with :func:`cancel_wait`.
+    If :func:`cancel_wait` is called, raise ``socket.error(EBADF, 'File descriptor was closed in another greenlet')``.
     """
     if event is None:
         event = core.readwrite_event(fileno, _wait_helper, timeout, (getcurrent(), timeout_exc))
@@ -206,19 +202,16 @@ def wait_readwrite(fileno, timeout=None, timeout_exc=timeout('timed out'), event
     try:
         switch_result = get_hub().switch()
         assert event is switch_result, 'Invalid switch into wait_readwrite(): %r' % (switch_result, )
-        cancelled = event.pending
     finally:
         event.arg = None
         event.cancel()
-    return not cancelled
 
 
 def __cancel_wait(event):
     if event.pending:
         arg = event.arg
         if arg is not None:
-            greenlet, _ = arg
-            greenlet.switch(event)
+            arg[0].throw(error(errno.EBADF, 'File descriptor was closed in another greenlet'))
 
 
 def cancel_wait(event):
@@ -328,8 +321,7 @@ class socket(object):
                 if ex[0] != errno.EWOULDBLOCK or self.timeout == 0.0:
                     raise
                 sys.exc_clear()
-            if not wait_read(sock.fileno(), timeout=self.timeout, event=self._read_event):
-                raise error(errno.EBADF, 'Bad file descriptor')
+            wait_read(sock.fileno(), timeout=self.timeout, event=self._read_event)
         return socket(_sock=client_socket), address
 
     def close(self):
@@ -356,8 +348,7 @@ class socket(object):
                 if not result or result == EISCONN:
                     break
                 elif (result in (EWOULDBLOCK, EINPROGRESS, EALREADY)) or (result == EINVAL and is_windows):
-                    if not wait_readwrite(sock.fileno(), event=self._rw_event):
-                        raise error(errno.EBADF, 'Bad file descriptor')
+                    wait_readwrite(sock.fileno(), event=self._rw_event)
                 else:
                     raise error(result, strerror(result))
         else:
@@ -373,8 +364,7 @@ class socket(object):
                     timeleft = end - time.time()
                     if timeleft <= 0:
                         raise timeout('timed out')
-                    if not wait_readwrite(sock.fileno(), timeout=timeleft, event=self._rw_event):
-                        raise error(errno.EBADF, 'Bad file descriptor')
+                    wait_readwrite(sock.fileno(), timeout=timeleft, event=self._rw_event)
                 else:
                     raise error(result, strerror(result))
 
@@ -413,8 +403,12 @@ class socket(object):
                     raise
                 # QQQ without clearing exc_info test__refcount.test_clean_exit fails
                 sys.exc_clear()
-            if not wait_read(sock.fileno(), timeout=self.timeout, event=self._read_event):
-                return ''
+            try:
+                wait_read(sock.fileno(), timeout=self.timeout, event=self._read_event)
+            except error, ex:
+                if ex[0] == errno.EBADF:
+                    return ''
+                raise
 
     def recvfrom(self, *args):
         sock = self._sock
@@ -425,8 +419,7 @@ class socket(object):
                 if ex[0] != EWOULDBLOCK or self.timeout == 0.0:
                     raise
                 sys.exc_clear()
-            if not wait_read(sock.fileno(), timeout=self.timeout, event=self._read_event):
-                raise error(errno.EBADF, 'Bad file descriptor')
+            wait_read(sock.fileno(), timeout=self.timeout, event=self._read_event)
 
     def recvfrom_into(self, *args):
         sock = self._sock
@@ -437,8 +430,7 @@ class socket(object):
                 if ex[0] != EWOULDBLOCK or self.timeout == 0.0:
                     raise
                 sys.exc_clear()
-            if not wait_read(sock.fileno(), timeout=self.timeout, event=self._read_event):
-                raise error(errno.EBADF, 'Bad file descriptor')
+            wait_read(sock.fileno(), timeout=self.timeout, event=self._read_event)
 
     def recv_into(self, *args):
         sock = self._sock
@@ -451,8 +443,12 @@ class socket(object):
                 if ex[0] != EWOULDBLOCK or self.timeout == 0.0:
                     raise
                 sys.exc_clear()
-            if not wait_read(sock.fileno(), timeout=self.timeout, event=self._read_event):
-                return 0
+            try:
+                wait_read(sock.fileno(), timeout=self.timeout, event=self._read_event)
+            except error, ex:
+                if ex[0] == errno.EBADF:
+                    return 0
+                raise
 
     def send(self, data, flags=0, timeout=timeout_default):
         sock = self._sock
@@ -464,8 +460,12 @@ class socket(object):
             if ex[0] != EWOULDBLOCK or timeout == 0.0:
                 raise
             sys.exc_clear()
-            if not wait_write(sock.fileno(), timeout=timeout, event=self._write_event):
-                return 0
+            try:
+                wait_write(sock.fileno(), timeout=timeout, event=self._write_event)
+            except error, ex:
+                if ex[0] == errno.EBADF:
+                    return 0
+                raise
             try:
                 return sock.send(data, flags)
             except error, ex2:
@@ -502,8 +502,7 @@ class socket(object):
             if ex[0] != EWOULDBLOCK or timeout == 0.0:
                 raise
             sys.exc_clear()
-            if not wait_write(sock.fileno(), timeout=self.timeout, event=self._write_event):
-                raise error(errno.EBADF, 'Bad file descriptor')
+            wait_write(sock.fileno(), timeout=self.timeout, event=self._write_event)
             try:
                 return sock.sendto(*args)
             except error, ex2:
