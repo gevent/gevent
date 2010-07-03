@@ -147,19 +147,19 @@ cdef extern from "libevent.h":
 
 
 cdef void __event_handler(int fd, short evtype, void *arg) with gil:
-    cdef event ev = <event>arg
+    cdef event self = <event>arg
     try:
-        ev._callback(ev, evtype)
+        self._callback(self, evtype)
     except:
         traceback.print_exc()
         try:
-            sys.stderr.write('Failed to execute callback for %s\n\n' % (ev, ))
+            sys.stderr.write('Failed to execute callback for %s\n\n' % (self, ))
         except:
             traceback.print_exc()
         sys.exc_clear()
     finally:
-        if not event_pending(&ev.ev, EV_READ|EV_WRITE|EV_SIGNAL|EV_TIMEOUT, NULL):
-            Py_DECREF(ev)
+        if not event_pending(&self.ev, EV_READ|EV_WRITE|EV_SIGNAL|EV_TIMEOUT, NULL):
+            self._delref()
 
 
 cdef class event:
@@ -172,15 +172,27 @@ cdef class event:
     """
     cdef event_t ev
     cdef object _callback, _arg
+    cdef int _incref # 1 if we already INCREFed this object once (because libevent references it)
 
     def __init__(self, short evtype, int handle, callback, arg=None):
         self._callback = callback
         self._arg = arg
+        self._incref = 0
         cdef void* c_self = <void*>self
         if evtype == 0 and not handle:
             evtimer_set(&self.ev, __event_handler, c_self)
         else:
             event_set(&self.ev, handle, evtype, __event_handler, c_self)
+
+    cdef _addref(self):
+        if self._incref <= 0:
+            Py_INCREF(self)
+            self._incref += 1
+
+    cdef _delref(self):
+        if self._incref > 0:
+            Py_DECREF(self)
+            self._incref -= 1
 
     property callback:
         """User callback that will be called once the event is signalled.
@@ -264,7 +276,6 @@ cdef class event:
         cdef timeval tv
         cdef double c_timeout
         cdef int result
-        cdef int need_incref = not event_pending(&self.ev, EV_READ|EV_WRITE|EV_SIGNAL|EV_TIMEOUT, NULL)
         errno = 0  # event_add sometime does not set errno
         if timeout is None:
             result = event_add(&self.ev, NULL)
@@ -284,8 +295,7 @@ cdef class event:
                 raise IOError(errno, strerror(errno))
             else:
                 raise IOError("event_add(fileno=%s) returned %s" % (self.fd, result))
-        if need_incref:
-            Py_INCREF(self)
+        self._addref()
 
     def cancel(self):
         """Remove event from the event queue."""
@@ -294,7 +304,7 @@ cdef class event:
             result = event_del(&self.ev)
             if result < 0:
                 return result
-            Py_DECREF(self)
+            self._delref()
             return result
 
     def __repr__(self):
@@ -364,20 +374,20 @@ class readwrite_event(event):
 
 
 cdef void __simple_handler(int fd, short evtype, void *arg) with gil:
-    cdef event ev = <event>arg
+    cdef event self = <event>arg
     try:
-        args, kwargs = ev._arg
-        ev._callback(*args, **kwargs)
+        args, kwargs = self._arg
+        self._callback(*args, **kwargs)
     except:
         traceback.print_exc()
         try:
-            sys.stderr.write('Failed to execute callback for %s\n\n' % (ev, ))
+            sys.stderr.write('Failed to execute callback for %s\n\n' % (self, ))
         except:
             traceback.print_exc()
         sys.exc_clear()
     finally:
-        if not event_pending(&ev.ev, EV_READ|EV_WRITE|EV_SIGNAL|EV_TIMEOUT, NULL):
-            Py_DECREF(ev)
+        if not event_pending(&self.ev, EV_READ|EV_WRITE|EV_SIGNAL|EV_TIMEOUT, NULL):
+            self._delref()
 
 
 cdef class timer(event):
@@ -407,7 +417,7 @@ cdef class active_event(event):
         self._callback = callback
         self._arg = (args, kwargs)
         evtimer_set(&self.ev, __simple_handler, <void*>self)
-        Py_INCREF(self)
+        self._addref()
         event_active(&self.ev, EV_TIMEOUT, 1)
 
     def add(self, timeout=None):
