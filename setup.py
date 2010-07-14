@@ -21,7 +21,7 @@ if 'bdist_egg' in sys.argv:
     from setuptools import Extension, setup
 else:
     from distutils.core import Extension, setup
-from os.path import join, isdir, abspath, basename, exists
+from os.path import join, isdir, abspath, basename, exists, dirname
 
 __version__ = re.search("__version__\s*=\s*'(.*)'", open('gevent/__init__.py').read(), re.M).group(1)
 assert __version__
@@ -203,12 +203,16 @@ gevent_core = Extension(name='gevent.core',
                         extra_objects=extra_objects,
                         extra_compile_args=extra_compile_args)
 
+def read(name):
+    return open(join(dirname(__file__), name)).read()
+
 
 if __name__ == '__main__':
     setup(
         name='gevent',
         version=__version__,
         description='Python network library that uses greenlet and libevent for easy and scalable concurrency',
+        long_description=read('README.rst'),
         author='Denis Bilenko',
         author_email='denis.bilenko@gmail.com',
         url='http://www.gevent.org/',
