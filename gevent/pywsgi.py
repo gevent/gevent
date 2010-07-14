@@ -413,7 +413,6 @@ class WSGIHandler(object):
             if hasattr(self.result, 'close'):
                 self.result.close()
             self.wsgi_input._discard()
-
             self.time_finish = time.time()
             self.log_request()
 
