@@ -30,16 +30,16 @@ except NameError: # Python < 2.5
 
 
 class Timeout(BaseException):
-    """Raise *exception* in the current greenlet after *timeout* seconds::
+    """Raise *exception* in the current greenlet after given time period::
 
         timeout = Timeout(seconds, exception)
         timeout.start()
         try:
-            ... # execution here is limited by timeout
+            ... # exception will be raised here, after *seconds* passed since start() call
         finally:
             timeout.cancel()
 
-    When *exception* is omitted or ``None``, :class:`Timeout` instance itself is raised:
+    When *exception* is omitted or ``None``, the :class:`Timeout` instance itself is raised:
 
         >>> Timeout(0.1).start()
         >>> gevent.sleep(0.2)
