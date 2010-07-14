@@ -7,7 +7,7 @@ See http://www.gevent.org/ for the documentation.
 """
 
 version_info = (0, 13, 0)
-__version__ = '0.13.0b2'
+__version__ = '0.13.0'
 
 __all__ = ['Greenlet',
            'GreenletExit',
