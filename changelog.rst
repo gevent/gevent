@@ -6,123 +6,123 @@ Changelog
 Version 0.13.0
 --------------
 
-- Release highlights
+Release highlights:
 
-  - Added :mod:`gevent.server` module with :class:`StreamServer` class for easy implementing of TCP and SSL servers.
-  - Added :mod:`gevent.baseserver` module with :class:`BaseServer` class.
-  - Added new implementation of :mod:`gevent.pywsgi` based on :mod:`gevent.server`. Contributed by **Ralf Schmitt**.
-  - Added :mod:`gevent.local` module. Fixed issue #24. Thanks to **Ted Suzman**.
-  - Fixed a number of bugs in :mod:`gevent.wsgi` module.
-  - Fixed issue #26: closing a socket now interrupts all pending read/write operations on it.
-  - Implemented workaround that prevents greenlets from leaking ``exc_info``.
-  - Fixed :meth:`socket.sendall` to use buffer object to prevent string copies.
-  - Made the interfaces of :mod:`gevent.wsgi` and :mod:`gevent.pywsgi` much more similar to each other.
-  - Fixed compilation on Windows with libevent-2. 
-  - Improved Windows compatibility. Fixed issue #30. Thanks to **Luigi Pugnetti**.
-  - Fixed compatibility with Python 2.7.
+- Added :mod:`gevent.server` module with :class:`StreamServer` class for easy implementing of TCP and SSL servers.
+- Added :mod:`gevent.baseserver` module with :class:`BaseServer` class.
+- Added new implementation of :mod:`gevent.pywsgi` based on :mod:`gevent.server`. Contributed by **Ralf Schmitt**.
+- Added :mod:`gevent.local` module. Fixed issue #24. Thanks to **Ted Suzman**.
+- Fixed a number of bugs in :mod:`gevent.wsgi` module.
+- Fixed issue #26: closing a socket now interrupts all pending read/write operations on it.
+- Implemented workaround that prevents greenlets from leaking ``exc_info``.
+- Fixed :meth:`socket.sendall` to use buffer object to prevent string copies.
+- Made the interfaces of :mod:`gevent.wsgi` and :mod:`gevent.pywsgi` much more similar to each other.
+- Fixed compilation on Windows with libevent-2. 
+- Improved Windows compatibility. Fixed issue #30. Thanks to **Luigi Pugnetti**.
+- Fixed compatibility with Python 2.7.
 
-- Backward-incompatible changes
+Backward-incompatible changes:
 
-  - Blocking is now the default behaviour for the :meth:`Greenlet.kill` method and other kill* methods.
-  - Changed the inteface of :class:`http.HTTPServer` to match the interface of other servers.
-  - Changed :class:`Pool`'s :meth:`spawn` method to block until there's a free slot.
-  - Removed deprecated :func:`backdoor.backdoor_server` function.
-  - Removed deprecated functions in :mod:`socket` module:
+- Blocking is now the default behaviour for the :meth:`Greenlet.kill` method and other kill* methods.
+- Changed the inteface of :class:`http.HTTPServer` to match the interface of other servers.
+- Changed :class:`Pool`'s :meth:`spawn` method to block until there's a free slot.
+- Removed deprecated :func:`backdoor.backdoor_server` function.
+- Removed deprecated functions in :mod:`socket` module:
 
-    - :func:`socket_bind_and_listen`
-    - :func:`set_reuse_addr`
-    - :func:`connect_tcp`
-    - :func:`tcp_server`
+  - :func:`socket_bind_and_listen`
+  - :func:`set_reuse_addr`
+  - :func:`connect_tcp`
+  - :func:`tcp_server`
 
-  - Removed deprecated :attr:`socket.fd` property.
-  - Deprecated use of negative numbers to indicate infinite timeout in :func:`core.event.add` and :func:`socket.wait_read` and similar. Use ``None`` from now on, which is compatible with the previous versions.
-  - Derived :class:`backdoor.BackdoorServer` from :class:`StreamServer` rather than from :class:`Greenlet`. This adds lots of new features and removes a few old ones.
-  - Removed non-standard :attr:`balance` property from :class:`Semaphore`.
-  - Removed :func:`start`, :func:`set_cb` and :func:`set_gencb` from :class:`core.http`.
-  - Removed :func:`set_closecb` from :class:`core.http_connection`. It is now used internally to detach the requests of the closed connections.
-  - Deprecated :mod:`rawgreenlet` module.
-  - Deprecated :func:`util.lazy_property`.
+- Removed deprecated :attr:`socket.fd` property.
+- Deprecated use of negative numbers to indicate infinite timeout in :func:`core.event.add` and :func:`socket.wait_read` and similar. Use ``None`` from now on, which is compatible with the previous versions.
+- Derived :class:`backdoor.BackdoorServer` from :class:`StreamServer` rather than from :class:`Greenlet`. This adds lots of new features and removes a few old ones.
+- Removed non-standard :attr:`balance` property from :class:`Semaphore`.
+- Removed :func:`start`, :func:`set_cb` and :func:`set_gencb` from :class:`core.http`.
+- Removed :func:`set_closecb` from :class:`core.http_connection`. It is now used internally to detach the requests of the closed connections.
+- Deprecated :mod:`rawgreenlet` module.
+- Deprecated :func:`util.lazy_property`.
+- Renamed :class:`GreenletSet` to :class:`Group`. The old name is currently available as an alias.
 
-- :mod:`gevent.socket` module
+:mod:`gevent.socket` module:
 
-  - Fixed issues #26 and #34: closing the socket while reading/writing/connecting is now safe. Thanks to **Cyril Bay**.
-  - Imported :func:`getfqdn` from :mod:`socket` module.
-  - The module now uses ``sys.platform`` to detect Windows rather than :mod:`platform` module.
-  - Fixed issue #27: :func:`getaddrinfo` used to handle the case when *socktype* or *proto* were equal to ``0``. Thanks to **Randall Leeds**.
+- Fixed issues #26 and #34: closing the socket while reading/writing/connecting is now safe. Thanks to **Cyril Bay**.
+- Imported :func:`getfqdn` from :mod:`socket` module.
+- The module now uses ``sys.platform`` to detect Windows rather than :mod:`platform` module.
+- Fixed issue #27: :func:`getaddrinfo` used to handle the case when *socktype* or *proto* were equal to ``0``. Thanks to **Randall Leeds**.
 
-- :mod:`gevent.coros` module
+:mod:`gevent.coros` module:
 
-  - Added :class:`RLock` class.
-  - Added :class:`DummySemaphore` class.
-  - Fixed :class:`BoundedSemaphore` class to behave like :class:`threading.BoundedSemaphore` behaves.
+- Added :class:`RLock` class.
+- Added :class:`DummySemaphore` class.
+- Fixed :class:`BoundedSemaphore` class to behave like :class:`threading.BoundedSemaphore` behaves.
 
-- :mod:`gevent.event` module
+:mod:`gevent.event` module:
 
-  - Made :meth:`Event.wait` return internal flag instead of ``None``.
-  - Made :meth:`AsyncResult.wait` return its ``value`` instead of ``None``.
-  - Added :meth:`ready` method as an alias for :meth:`is_set`.
+- Made :meth:`Event.wait` return internal flag instead of ``None``.
+- Made :meth:`AsyncResult.wait` return its ``value`` instead of ``None``.
+- Added :meth:`ready` method as an alias for :meth:`is_set`.
 
-- :mod:`gevent.wsgi` module
+:mod:`gevent.wsgi` module:
 
-  - Remove :class:`wsgi.buffer_proxy`.
+- Removed :class:`wsgi.buffer_proxy`.
 
-- :mod:`gevent.pywsgi` module
+:mod:`gevent.pywsgi` module:
 
-  - Rewritten to use :mod:`server` and not to depend on :mod:`BaseHTTPServer`.
-  - Changed the interface to match :mod:`wsgi` module.
-    Removed :func:`server` function, add :class:`Server` class, added :class:`WSGIServer` class.
-  - Renamed :class:`HttpProtocol` to :class:`WSGIHandler`.
-  - Fixed compatibility with webob by allowing an optional argument to :meth:`readline`.
+- Rewritten to use :mod:`server` and not to depend on :mod:`BaseHTTPServer`.
+- Changed the interface to match :mod:`wsgi` module.
+  Removed :func:`server` function, add :class:`Server` class, added :class:`WSGIServer` class.
+- Renamed :class:`HttpProtocol` to :class:`WSGIHandler`.
+- Fixed compatibility with webob by allowing an optional argument to :meth:`readline`.
 
-- :mod:`gevent.core` module
+:mod:`gevent.core` module:
 
-  - Fixed reference leaks in :class:`event` class.
-  - Avoid Python name lookups when accessing EV_* constants from Cython code. Patch by **Daniele Varrazzo**.
-  - Added *persist* argument to :class:`read_event`, :class:`write_event` and :class:`readwrite_event`.
-  - Made all of the event loop callbacks clear the exception info before exiting.
-  - Added :attr:`flags_str` property to :class:`event`. It is used by ``__str__`` and ``__repr__``.
-  - :class:`buffer <core.buffer>`:
+- Fixed reference leaks in :class:`event` class.
+- Avoid Python name lookups when accessing EV_* constants from Cython code. Patch by **Daniele Varrazzo**.
+- Added *persist* argument to :class:`read_event`, :class:`write_event` and :class:`readwrite_event`.
+- Made all of the event loop callbacks clear the exception info before exiting.
+- Added :attr:`flags_str` property to :class:`event`. It is used by ``__str__`` and ``__repr__``.
+- :class:`buffer <core.buffer>`:
 
-    - Added :meth:`detach` method.
-    - Implemented iterator protocol.
-    - Fixed :meth:`readline` and :meth:`readlines` methods.
+  - Added :meth:`detach` method.
+  - Implemented iterator protocol.
+  - Fixed :meth:`readline` and :meth:`readlines` methods.
 
-  - :class:`http_request`:
+- :class:`http_request`:
 
-    - Fixed :meth:`detach` to detach input and output buffers too.
-    - Changed the response to send 500 error upon deallocation, if no response was sent by the user.
-    - Made :attr:`input_buffer` and :attr:`output_buffer` store and reuse the :class:`buffer` object they create.
-    - Fixed :meth:`__str__` and meth:`__repr__` to include spaces where needed.
-
+  - Fixed :meth:`detach` to detach input and output buffers too.
+  - Changed the response to send 500 error upon deallocation, if no response was sent by the user.
+  - Made :attr:`input_buffer` and :attr:`output_buffer` store and reuse the :class:`buffer` object they create.
+  - Fixed :meth:`__str__` and meth:`__repr__` to include spaces where needed.
   - :class:`http` class no longer has :meth:`set_cb` and :meth:`set_gencb`. Instead its contructor accepts *handle* which will be called on each request.
 
-- :mod:`gevent.http` and :mod:`gevent.wsgi` modules
+:mod:`gevent.http` and :mod:`gevent.wsgi` modules:
 
-  - Made :class:`HTTPServer` use ``"Connection: close"`` header by default.
-  - Class :class:`HTTPServer` now derives from :class:`baseserver.BaseServer`. Thus its :meth:`start` method no longer accepts socket to listen on, it must be passed to the contructor.
-  - The *spawn* argument now accepts a :class:`Pool` instance. While the pool is full, the server replies with 503 error.
-  - The server no longer links to the greenlets it spawns to detect errors. Instead, it relies on :class:`http_request` which will send 500 reply when deallocated if the user hasn't send any.
+- Made :class:`HTTPServer` use ``"Connection: close"`` header by default.
+- Class :class:`HTTPServer` now derives from :class:`baseserver.BaseServer`. Thus its :meth:`start` method no longer accepts socket to listen on, it must be passed to the contructor.
+- The *spawn* argument now accepts a :class:`Pool` instance. While the pool is full, the server replies with 503 error.
+- The server no longer links to the greenlets it spawns to detect errors. Instead, it relies on :class:`http_request` which will send 500 reply when deallocated if the user hasn't send any.
 
-- Miscellaneous
+Miscellaneous:
   
-  - Changed :mod:`gevent.thread` to use :class:`Greenlet` instead of raw greenlets. This means monkey patched thread will become :class:`Greenlet` too.
-  - Added :attr:`started` property to :class:`Greenlet`.
-  - Put common server code in :mod:`gevent.baseserver` module. All servers in gevent package are now derived from :class:`BaseServer`.
-  - Fixed issue #20: :func:`sleep` now raises :exc:`IOError` if passed a negative argument.
-  - Remove the code related to finding out libevent version from setup.py as macro ``USE_LIBEVENT_?`` is no longer needed to build ``gevent.core``.
-  - Increased default backlog in all servers (from 5 to 256). Thanks to **Nicholas Piël**.
-  - Fixed doc/conf.py to work in Python older than 2.6. Thanks to **Örjan Persson**.
-  - Silented SystemError raised in :mod:`backdoor` when a client typed ``quit()``.
-  - If importing :mod:`greenlet` failed with ImportError, keep the original error message,
-    because sometimes the error originates in setuptools.
-  - Changed :func:`select.select` to return all the file descriptors signalled, not just the first one.
-  - Made :mod:`thread` (and thus monkey patched threads) to spawn :class:`Greenlet` instances, rather than raw greenlets.
+- Changed :mod:`gevent.thread` to use :class:`Greenlet` instead of raw greenlets. This means monkey patched thread will become :class:`Greenlet` too.
+- Added :attr:`started` property to :class:`Greenlet`.
+- Put common server code in :mod:`gevent.baseserver` module. All servers in gevent package are now derived from :class:`BaseServer`.
+- Fixed issue #20: :func:`sleep` now raises :exc:`IOError` if passed a negative argument.
+- Remove the code related to finding out libevent version from setup.py as macro ``USE_LIBEVENT_?`` is no longer needed to build ``gevent.core``.
+- Increased default backlog in all servers (from 5 to 256). Thanks to **Nicholas Piël**.
+- Fixed doc/conf.py to work in Python older than 2.6. Thanks to **Örjan Persson**.
+- Silented SystemError raised in :mod:`backdoor` when a client typed ``quit()``.
+- If importing :mod:`greenlet` failed with ImportError, keep the original error message,
+  because sometimes the error originates in setuptools.
+- Changed :func:`select.select` to return all the file descriptors signalled, not just the first one.
+- Made :mod:`thread` (and thus monkey patched threads) to spawn :class:`Greenlet` instances, rather than raw greenlets.
 
-- Examples
+Examples:
 
-  - Updated echoserver.py to use :class:`StreamServer`.
-  - Added geventsendfile.py.
-  - Added wsgiserver_ssl.py.
+- Updated echoserver.py to use :class:`StreamServer`.
+- Added geventsendfile.py.
+- Added wsgiserver_ssl.py.
  
 Thanks to **Ralf Schmitt** for :mod:`pywsgi`, a number of fixes for :mod:`wsgi`, help with
 :mod:`baseserver` and :mod:`server` modules, improving setup.py and various other patches and suggestions.
@@ -150,90 +150,90 @@ Version 0.12.1
 Version 0.12.0
 --------------
 
-- Release highlights:
+Release highlights:
 
-  - Added :mod:`gevent.ssl` module.
-  - Fixed Windows compatibility (experimental).
-  - Improved performance of :meth:`socket.recv`, :meth:`socket.send` and similar methods.
-  - Added a new module - :mod:`dns` - with synchronous wrappers around libevent's DNS API.
-  - Added :class:`core.readwrite_event` and :func:`socket.wait_readwrite` functions.
-  - Fixed several incompatibilities of :mod:`wsgi` module with the WSGI spec.
-  - Deprecated :mod:`pywsgi` module.
+- Added :mod:`gevent.ssl` module.
+- Fixed Windows compatibility (experimental).
+- Improved performance of :meth:`socket.recv`, :meth:`socket.send` and similar methods.
+- Added a new module - :mod:`dns` - with synchronous wrappers around libevent's DNS API.
+- Added :class:`core.readwrite_event` and :func:`socket.wait_readwrite` functions.
+- Fixed several incompatibilities of :mod:`wsgi` module with the WSGI spec.
+- Deprecated :mod:`pywsgi` module.
 
-- :mod:`gevent.wsgi` module
+:mod:`gevent.wsgi` module:
 
-  - Made ``env["REMOTE_PORT"]`` into a string.
-  - Fixed the server to close the iterator returned by the application.
-  - Made ``wsgi.input`` object iterable.
+- Made ``env["REMOTE_PORT"]`` into a string.
+- Fixed the server to close the iterator returned by the application.
+- Made ``wsgi.input`` object iterable.
 
-- :mod:`gevent.core` module
+:mod:`gevent.core` module:
 
-  - Made DNS functions no longer accept/return IP addresses in dots-and-numbers format. They work
-    with packed IPs now.
-  - Made DNS functions no longer accept additional arguments to pass to the callback.
-  - Fixed DNS functions to check the return value of the libevent functions and raise
-    :exc:`IOError` if they failed.
-  - Added :func:`core.dns_err_to_string`
-  - Made core.event.cancel not to raise if event_del reports an error. instead, the return code is
-    passed to the caller.
-  - Fixed minor issue in string representation of the events.
+- Made DNS functions no longer accept/return IP addresses in dots-and-numbers format. They work
+  with packed IPs now.
+- Made DNS functions no longer accept additional arguments to pass to the callback.
+- Fixed DNS functions to check the return value of the libevent functions and raise
+  :exc:`IOError` if they failed.
+- Added :func:`core.dns_err_to_string`
+- Made core.event.cancel not to raise if event_del reports an error. instead, the return code is
+  passed to the caller.
+- Fixed minor issue in string representation of the events.
 
-- :mod:`gevent.socket` module
+:mod:`gevent.socket` module:
 
-  - Fixed bug in socket.accept. It could return unwrapped socket instance if socket's timeout is 0.
-  - Fixed socket.sendall implementation never to call underlying socket's sendall.
-  - Fixed :func:`gethostbyname` and :func:`getaddrinfo` to call the stdlib if the passed hostname
-    has no dots.
-  - Fixed :func:`getaddrinfo` to filter the results using *socktype* and *proto* arguments.
-  - Removed :func:`getnameinfo` as it didn't quite match the stdlib interface.
-    Use :func:`dns.resolve_reverse` for reverse resolutions.
-  - Fixed :meth:`socket.connect_ex` to use cooperative :func:`gethostbyname`.
-  - Fixed :meth:`socket.dup` not to call underlying socket's :meth:`dup` (which is not available
-    on Windows) but to use Python's reference counting similar to how the stdlib's socket
-    implements :meth:`dup`
-  - Added *_sock* argument to :class:`socket`'s constructor. Passing the socket instance
-    as first argument is no longer supported.
-  - Fixed :func:`socket.connect` to ignore ``WSAEINVAL`` on Windows.
-  - Fixed :func:`socket.connect` to use :func:`wait_readwrite` instead of :func:`wait_write`.
-  - Fixed :func:`socket.connect` to consult ``SO_ERROR``.
-  - Fixed :func:`socket.send` and :func:`socket.sendall` to support *flags* argument.
-  - Renamed :func:`socket_bind_and_listen` to :func:`socket.bind_and_listen`. The old name
-    is still available as a deprecated alias.
-  - The underlying socket object is now stored as ``_sock`` property.
-  - Imported the constants and some utility functions from stdlib's :mod:`socket` into :mod:`gevent.socket`.
-    (Thanks to **Matt Goodall** for the original patch).
-  - Renamed :meth:`wrap_ssl` to :meth:`ssl`. (the old name is still available but deprecated)
-  - Deprecated :func:`connect_tcp` and :func:`tcp_server`.
-  - Added :exc:`sslerror` to ``socket.__all__``.
-  - Removed :class:`GreenSocket` alias for socket class.
-  - Moved PyOpenSSL-based implementation of :func:`socket.ssl` into :mod:`gevent.oldssl` module.
-    It's imported into :mod:`gevent.socket` if importing :mod:`gevent.ssl` fails.
+- Fixed bug in socket.accept. It could return unwrapped socket instance if socket's timeout is 0.
+- Fixed socket.sendall implementation never to call underlying socket's sendall.
+- Fixed :func:`gethostbyname` and :func:`getaddrinfo` to call the stdlib if the passed hostname
+  has no dots.
+- Fixed :func:`getaddrinfo` to filter the results using *socktype* and *proto* arguments.
+- Removed :func:`getnameinfo` as it didn't quite match the stdlib interface.
+  Use :func:`dns.resolve_reverse` for reverse resolutions.
+- Fixed :meth:`socket.connect_ex` to use cooperative :func:`gethostbyname`.
+- Fixed :meth:`socket.dup` not to call underlying socket's :meth:`dup` (which is not available
+  on Windows) but to use Python's reference counting similar to how the stdlib's socket
+  implements :meth:`dup`
+- Added *_sock* argument to :class:`socket`'s constructor. Passing the socket instance
+  as first argument is no longer supported.
+- Fixed :func:`socket.connect` to ignore ``WSAEINVAL`` on Windows.
+- Fixed :func:`socket.connect` to use :func:`wait_readwrite` instead of :func:`wait_write`.
+- Fixed :func:`socket.connect` to consult ``SO_ERROR``.
+- Fixed :func:`socket.send` and :func:`socket.sendall` to support *flags* argument.
+- Renamed :func:`socket_bind_and_listen` to :func:`socket.bind_and_listen`. The old name
+  is still available as a deprecated alias.
+- The underlying socket object is now stored as ``_sock`` property.
+- Imported the constants and some utility functions from stdlib's :mod:`socket` into :mod:`gevent.socket`.
+  (Thanks to **Matt Goodall** for the original patch).
+- Renamed :meth:`wrap_ssl` to :meth:`ssl`. (the old name is still available but deprecated)
+- Deprecated :func:`connect_tcp` and :func:`tcp_server`.
+- Added :exc:`sslerror` to ``socket.__all__``.
+- Removed :class:`GreenSocket` alias for socket class.
+- Moved PyOpenSSL-based implementation of :func:`socket.ssl` into :mod:`gevent.oldssl` module.
+  It's imported into :mod:`gevent.socket` if importing :mod:`gevent.ssl` fails.
 
-- Miscellaneous
+Miscellaneous:
 
-  - Fixed Greenlet.spawn_link* and GreenletSet.spawn_link* classmethods not to assume anything
-    about their arguments. (Thanks to **Marcus Cavanaugh** for pointing that out).
-  - Fixed :func:`select <gevent.select.select>` to clean up properly if event creation fails.
-  - Fixed :func:`select <gevent.select.select>` to raise :exc:`select.error` instead of :exc:`IOError`.
-  - Fixed setup.py to proceed with compilation even if libevent version cannot be determined.
-    1.x.x is assumed in this case.
-  - Fixed compatibility of .pyx files with Cython 0.12.0
-  - Renamed arguments for :func:`select.select` to what they are called in the stdlib
-  - Removed internal function :func:`getLinkedCompleted` from :mod:`gevent.greenlet`
-  - Remove ``#warning`` directives from ``libevent.h``. They are not supported by vc90.
-  - Removed some deprecated stuff from :mod:`coros`.
-  - Internal class :class:`Waiter <gevent.hub.Waiter>` now stores the value if no one's waiting for it.
-  - Added ``testrunner.py`` script that replaces a bunch of small scripts that were used before.
-  - Removed ``is_secure`` attribute from sockets and ssl objects.
-  - Made :class:`Greenlet` not to print a traceback when a not-yet-started greenlet is killed.
-  - Added :class:`BackdoorServer` class to :mod:`backdoor`. Removed :func:`backdoor` function and deprecated :func:`backdoor_server` function.
-  - Removed ``__getattr__`` from socket class.
-  - Fixed :func:`monkey.patch_socket` not to fail if :func:`socket.ssl` is not present in :mod:`gevent.socket`.
-  - Added :func:`monkey.patch_ssl`.
-  - Added *aggressive* argument to :func:`monkey.patch_all`.
-  - Tests from stdlib no longer included in greentest package. Instead, there are number of stubs
-    that import those tests from ``test`` package directly and run them in monkey patched environment.
-  - Added examples/process.py by **Marcus Cavanaugh**.
+- Fixed Greenlet.spawn_link* and GreenletSet.spawn_link* classmethods not to assume anything
+  about their arguments. (Thanks to **Marcus Cavanaugh** for pointing that out).
+- Fixed :func:`select <gevent.select.select>` to clean up properly if event creation fails.
+- Fixed :func:`select <gevent.select.select>` to raise :exc:`select.error` instead of :exc:`IOError`.
+- Fixed setup.py to proceed with compilation even if libevent version cannot be determined.
+  1.x.x is assumed in this case.
+- Fixed compatibility of .pyx files with Cython 0.12.0
+- Renamed arguments for :func:`select.select` to what they are called in the stdlib
+- Removed internal function :func:`getLinkedCompleted` from :mod:`gevent.greenlet`
+- Remove ``#warning`` directives from ``libevent.h``. They are not supported by vc90.
+- Removed some deprecated stuff from :mod:`coros`.
+- Internal class :class:`Waiter <gevent.hub.Waiter>` now stores the value if no one's waiting for it.
+- Added ``testrunner.py`` script that replaces a bunch of small scripts that were used before.
+- Removed ``is_secure`` attribute from sockets and ssl objects.
+- Made :class:`Greenlet` not to print a traceback when a not-yet-started greenlet is killed.
+- Added :class:`BackdoorServer` class to :mod:`backdoor`. Removed :func:`backdoor` function and deprecated :func:`backdoor_server` function.
+- Removed ``__getattr__`` from socket class.
+- Fixed :func:`monkey.patch_socket` not to fail if :func:`socket.ssl` is not present in :mod:`gevent.socket`.
+- Added :func:`monkey.patch_ssl`.
+- Added *aggressive* argument to :func:`monkey.patch_all`.
+- Tests from stdlib no longer included in greentest package. Instead, there are number of stubs
+  that import those tests from ``test`` package directly and run them in monkey patched environment.
+- Added examples/process.py by **Marcus Cavanaugh**.
 
 
 Version 0.11.2
