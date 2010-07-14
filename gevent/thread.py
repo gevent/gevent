@@ -1,4 +1,12 @@
-"""Implementation of the standard :mod:`thread` module that spawns greenlets"""
+"""Implementation of the standard :mod:`thread` module that spawns greenlets.
+
+.. note::
+    
+    This module is a helper for :mod:`gevent.monkey` and is not intended to be
+    used directly. For spawning greenlets in your applications, prefer
+    :class:`Greenlet` class.
+"""
+
 __thread = __import__('thread')
 from gevent.hub import getcurrent, GreenletExit
 from gevent.greenlet import Greenlet
