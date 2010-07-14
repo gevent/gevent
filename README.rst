@@ -23,7 +23,7 @@ get gevent
 
 Install Python 2.4 or newer, greenlet and libevent.
 
-Download the latest release from `Python Package Index.`_
+Download the latest release from `Python Package Index`_ or clone `the repository`_.
 
 Read the documentation online at http://www.gevent.org
 
@@ -37,7 +37,8 @@ Post feedback and issues on the `bug tracker`_, `mailing list`_, blog_ and `twit
 .. _use gevent: http://groups.google.com/group/gevent/browse_thread/thread/4de9703e5dca8271
 .. _open source projects based on gevent: http://code.google.com/p/gevent/wiki/ProjectsUsingGevent
 .. _Denis Bilenko: http://denisbilenko.com
-.. _Python Package Index.: http://pypi.python.org/pypi/gevent
+.. _Python Package Index: http://pypi.python.org/pypi/gevent
+.. _the repository: http://bitbucket.org/denis/gevent
 .. _bug tracker: http://code.google.com/p/gevent/issues/list
 .. _mailing list: http://groups.google.com/group/gevent
 .. _blog: http://blog.gevent.org
