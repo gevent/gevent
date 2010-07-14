@@ -1,4 +1,5 @@
 # Copyright (c) 2009-2010 Denis Bilenko. See LICENSE for details.
+"""TCP/SSL server"""
 import sys
 import errno
 import traceback
@@ -11,18 +12,18 @@ __all__ = ['StreamServer']
 
 
 class StreamServer(BaseServer):
-    """A generic TCP server. Accepts connections on a listening socket and spawns user's handler for each connection.
-
-    *handle* is called with 2 arguments: a client socket and an address.
+    """A generic TCP server. Accepts connections on a listening socket and spawns user-provided *handle*
+    for each connection with 2 arguments: the client socket and the client address.
 
     If any of the following keyword arguments are present, then the server assumes SSL mode and uses these arguments
-    to create an SSL wrapper for a client socket before passing it to *handle*:
-     - keyfile
-     - certfile
-     - cert_reqs
-     - ssl_version
-     - ca_certs
-     - suppress_ragged_eofs
+    to create an SSL wrapper for the client socket before passing it to *handle*:
+
+    - keyfile
+    - certfile
+    - cert_reqs
+    - ssl_version
+    - ca_certs
+    - suppress_ragged_eofs
 
     Note that although the errors in a successfully spawned handler will not affect the server or other connections,
     the errors raised by :func:`accept` and *spawn* cause the server to stop accepting for a short amount of time. The
