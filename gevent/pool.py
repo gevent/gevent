@@ -1,5 +1,5 @@
 # Copyright (c) 2009-2010 Denis Bilenko. See LICENSE for details.
-"""Utilities for managing greenlets in a group.
+"""Managing greenlets in a group.
 
 The :class:`Group` class in this module abstracts a group of running greenlets.
 When a greenlet dies, it's automatically removed from the group.
