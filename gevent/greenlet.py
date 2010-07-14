@@ -293,7 +293,9 @@ class Greenlet(greenlet):
         If block is ``True`` (the default), wait until the greenlet dies or the optional timeout expires.
         If block is ``False``, the current greenlet is not unscheduled.
 
-        Return ``None``.
+        The function always returns ``None`` and never raises an errir.
+
+        `Changed in version 0.13.0:` *block* is now ``True`` by default.
         """
         if self._start_event is not None:
             self._start_event.cancel()
