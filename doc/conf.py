@@ -35,7 +35,7 @@ if not os.path.exists('changelog.rst') and os.path.exists('../changelog.rst'):
 # coming with Sphinx (named 'sphinx.ext.*') or your custom ones.
 extensions = ['sphinx.ext.autodoc', 'sphinx.ext.doctest', 'sphinx.ext.coverage', 'sphinx.ext.intersphinx', 'mysphinxext']
 
-intersphinx_mapping = {'http://docs.python.org/dev': None}
+intersphinx_mapping = {'http://docs.python.org/': None}
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
