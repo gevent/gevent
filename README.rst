@@ -1,82 +1,45 @@
-gevent
-======
+gevent_
+=======
 
-gevent is a coroutine_-based Python_ networking library that uses greenlet_ to provide
-a high-level synchronous API on top of libevent_ event loop.
+gevent_ is a Python networking library that uses greenlet_ to provide synchronous API on top of libevent_ event loop.
 
 Features include:
 
-* convenient API around greenlets (gevent.Greenlet)
-* familiar synchronization primitives (gevent.event, gevent.queue)
-* socket module that cooperates (gevent.socket)
-* WSGI server on top of libevent-http (gevent.wsgi)
-* DNS requests done through libevent-dns
-* monkey patching utility to get pure Python modules to cooperate (gevent.monkey)
+* Fast event loop based on libevent_.
+* Lightweight execution units based on greenlet_.
+* Familiar API that re-uses concepts from the Python standard library.
+* Cooperative sockets with ssl support.
+* DNS queries performed through libevent-dns.
+* Ability to use standard library and 3rd party modules written for standard blocking sockets
+* Fast WSGI server based on libevent-http.
 
-.. _coroutine: http://en.wikipedia.org/wiki/Coroutine
-.. _Python: http://www.python.org
-.. _greenlet: http://codespeak.net/py/0.9.2/greenlet.html
-.. _libevent: http://monkey.org/~provos/libevent/
+gevent_ is `inspired by eventlet`_ but features more consistent API, simpler implementation and better performance. Read why others `use gevent`_ and check out the list of the `open source projects based on gevent`_.
 
-
-examples
---------
-
-Browse ``examples/`` folder at bitbucket_ or `google code`_.
-
-.. _bitbucket: http://bitbucket.org/denis/gevent/src/tip/examples/
-.. _google code: http://code.google.com/p/gevent/source/browse/#hg/examples
-
-
-documentation
--------------
-
-Read the documentation online at http://www.gevent.org
+gevent_ is written and maintained by `Denis Bilenko`_ and is licensed under MIT license.
 
 
 get gevent
 ----------
 
-The latest release is available on the `Python Package Index.`_
+Install Python 2.4 or newer, greenlet and libevent.
 
+Download the latest release from `Python Package Index.`_
+
+Read the documentation online at http://www.gevent.org
+
+Post feedback and issues on the `bug tracker`_, `mailing list`_, blog_ and `twitter (@gevent)`_.
+
+
+.. _gevent: http://www.gevent.org
+.. _greenlet: http://codespeak.net/py/0.9.2/greenlet.html
+.. _libevent: http://monkey.org/~provos/libevent/
+.. _inspired by eventlet: http://blog.gevent.org/2010/02/27/why-gevent/
+.. _use gevent: http://groups.google.com/group/gevent/browse_thread/thread/4de9703e5dca8271
+.. _open source projects based on gevent: http://code.google.com/p/gevent/wiki/ProjectsUsingGevent
+.. _Denis Bilenko: http://denisbilenko.com
 .. _Python Package Index.: http://pypi.python.org/pypi/gevent
-
-The current development version is available in a Mercurial repository:
-
-* at bitbucket: http://bitbucket.org/denis/gevent/
-* on google code: http://code.google.com/p/gevent/
-
-
-installation
-------------
-
-Install the dependencies:
-
-* greenlet: http://pypi.python.org/pypi/greenlet (it can be installed with ``easy_install greenlet``)
-* libevent 1.4.x: http://monkey.org/~provos/libevent/
-
-gevent runs on Python 2.4 and higher.
-
-
-similar projects
-----------------
-
-* `Eventlet <http://blog.gevent.org/2010/02/27/why-gevent/>`_
-* `Concurrence <http://opensource.hyves.org/concurrence/>`_
-* `StacklessSocket <http://code.google.com/p/stacklessexamples/wiki/StacklessNetworking>`_
-
-
-feedback
---------
-
-Use `Issue Tracker on Google Code`__ for the bug reports / feature requests.
-
-Comment on the `blog`_.
-
-Send your questions and suggestions to the `mailing list`_.
-
-Contact me directly at denis.bilenko@gmail.com.
-
-__ http://code.google.com/p/gevent/issues/list
-.. _blog: http://blog.gevent.org
+.. _bug tracker: http://code.google.com/p/gevent/issues/list
 .. _mailing list: http://groups.google.com/group/gevent
+.. _blog: http://blog.gevent.org
+.. _twitter (@gevent): http://twitter.com/gevent
+
