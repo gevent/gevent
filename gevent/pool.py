@@ -182,14 +182,18 @@ class Group(object):
         return Greenlet.spawn(self.map_cb, func, iterable, callback)
 
     def imap(self, func, iterable):
-        """An equivalent of itertools.imap()"""
-        # FIXME
+        """An equivalent of itertools.imap()
+        
+        **TODO**: Fix this.
+        """
         return iter(self.map(func, iterable))
 
     def imap_unordered(self, func, iterable):
         """The same as imap() except that the ordering of the results from the
-        returned iterator should be considered arbitrary."""
-        # FIXME
+        returned iterator should be considered arbitrary.
+        
+        **TODO**: Fix this.
+        """
         return iter(self.map(func, iterable))
 
     def full(self):
