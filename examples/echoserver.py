@@ -1,4 +1,4 @@
-#! /usr/bin/env python
+#!/usr/bin/env python
 """Simple server that listens on port 6000 and echos back every input to the client.
 
 Connect to it with:
