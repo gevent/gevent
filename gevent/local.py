@@ -106,7 +106,7 @@ without affecting this greenlet's data:
   AttributeError: 'MyLocal' object has no attribute 'color'
 
 Note that subclasses can define slots, but they are not greenlet
-local. They are shared across greenlets:
+local. They are shared across greenlets::
 
   >>> class MyLocal(local):
   ...     __slots__ = 'number'
