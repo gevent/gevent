@@ -2,8 +2,13 @@
 
 """A few utilities for raw greenlets.
 
-# XXX these functions do not support 'timeout' parameter as gevent.greenlet API
-# XXX this module does seem to be useful and may be removed in the future
+.. warning::
+
+    This module is deprecated. Use :class:`gevent.Greenlet` instead.
+
+.. note::
+
+    These functions do not support *timeout* parameter.
 """
 
 import warnings
