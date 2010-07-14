@@ -224,7 +224,7 @@ class Waiter(object):
     * switching will occur only if the waiting greenlet is executing :meth:`get` method currently;
     * any error raised in the greenlet is handled inside :meth:`switch` and :meth:`throw`
     * if :meth:`switch`/:meth:`throw` is called before the receiver calls :meth:`get`, then :class:`Waiter`
-      will store the value/exception. The following :meth:`get`will return the value/raise the exception.
+      will store the value/exception. The following :meth:`get` will return the value/raise the exception.
 
     The :meth:`switch` and :meth:`throw` methods must only be called from the :class:`Hub` greenlet.
     The :meth:`get` method must be called from a greenlet other than :class:`Hub`.
