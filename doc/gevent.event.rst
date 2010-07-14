@@ -1,5 +1,5 @@
-Synchronization primitives (gevent.event module)
-================================================
+:mod:`gevent.event` -- Notifications of multiple listeners
+==========================================================
 
 .. module:: gevent.event
 

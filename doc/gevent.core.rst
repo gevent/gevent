@@ -1,4 +1,4 @@
-Low-level wrappers around libevent (gevent.core module)
+:mod:`gevent.core` - Low-level wrappers around libevent
 =======================================================
 
 .. automodule:: gevent.core

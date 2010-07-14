@@ -1,5 +1,5 @@
-Synchronized queues (gevent.queue module)
-=========================================
+:mod:`gevent.queue` -- Synchronized queues
+==========================================
 
 .. automodule:: gevent.queue
 	:members:

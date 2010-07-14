@@ -4,14 +4,13 @@ API reference
 .. toctree::
 
    gevent
-   gevent.event
-   gevent.queue
-   gevent.socket
-   gevent.monkey
-   gevent.http
-   gevent.wsgi
+   networking
+   synchronization
    gevent.pool
-   gevent.util
-   gevent.dns
+   servers
+   gevent.local
+   gevent.monkey
    gevent.core
+   gevent.backdoor
+   helpers
 

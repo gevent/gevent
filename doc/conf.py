@@ -13,6 +13,8 @@
 
 import sys, os
 
+os.system('%s generate_rst.py generate' % sys.executable)
+
 sys.path.append('.') # for mysphinxext
 
 if not os.path.exists('changelog.rst') and os.path.exists('../changelog.rst'):
@@ -135,7 +137,7 @@ html_short_title = 'Documentation'
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
-html_static_path = ['_static']
+#html_static_path = ['_static']
 
 # If not '', a 'Last updated on:' timestamp is inserted at every page bottom,
 # using the given strftime format.
@@ -150,7 +152,7 @@ html_sidebars = {}
 
 # Additional templates that should be rendered to pages, maps page names to
 # template names.
-html_additional_pages = {'contentstable': 'contentstable.html'}
+#html_additional_pages = {'contentstable': 'contentstable.html'}
 
 # If false, no module index is generated.
 html_use_modindex = True
@@ -162,7 +164,7 @@ html_use_index = True
 #html_split_index = False
 
 # If true, links to the reST sources are added to the pages.
-#html_show_sourcelink = True
+html_show_sourcelink = False
 
 # If true, an OpenSearch description file will be output, and all pages will
 # contain a <link> tag referring to it.  The value of this option must be the

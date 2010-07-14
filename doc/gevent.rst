@@ -1,5 +1,5 @@
-Basic utilities (The gevent top level package)
-==============================================
+:mod:`gevent` -- basic utilities
+================================
 
 .. module:: gevent
 
@@ -20,18 +20,8 @@ or use classmethod :meth:`spawn` which is a shortcut that does the same:
 
 >>> g = Greenlet.spawn(myfunction, 'arg1', 'arg2', kwarg1=1)
 
-To subclass a :class:`Greenlet`, override its _run() method and call ``Greenlet.__init__(self)`` in __init__:
-
->>> class MyNoopGreenlet(Greenlet):
-...
-...     def __init__(self, seconds):
-...         Greenlet.__init__(self)
-...         self.seconds = seconds
-...
-...     def _run(self):
-...         gevent.sleep(self.seconds)
-
-It also a good idea to override __str__(): if _run() raises an exception, its string representation will be printed after the traceback it generated.
+To subclass a :class:`Greenlet`, override its _run() method and call ``Greenlet.__init__(self)`` in :meth:`__init__`:
+It also a good idea to override :meth:`__str__`: if :meth:`_run` raises an exception, its string representation will be printed after the traceback it generated.
 
 .. class:: Greenlet
 
