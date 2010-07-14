@@ -6,11 +6,11 @@ from gevent.timeout import Timeout
 from gevent.event import Event
 from gevent.coros import Semaphore, DummySemaphore
 
-__all__ = ['GreenletSet', 'Pool']
+__all__ = ['Group', 'Pool']
 
 
-class GreenletSet(object):
-    """Maintain a set of greenlets that are still running.
+class Group(object):
+    """Maintain a group of greenlets that are still running.
 
     Links to each item and removes it upon notification.
     """
@@ -31,7 +31,7 @@ class GreenletSet(object):
         try:
             classname = self.__class__.__name__
         except AttributeError:
-            classname = 'GreenletSet' # XXX check if 2.4 really uses this line
+            classname = 'Group' # XXX check if 2.4 really uses this line
         return '<%s at %s %s>' % (classname, hex(id(self)), self.greenlets)
 
     def __len__(self):
@@ -190,12 +190,15 @@ class GreenletSet(object):
         pass
 
 
-class Pool(GreenletSet):
+GreenletSet = Group # the old name; will be deprecated in the future
+
+
+class Pool(Group):
 
     def __init__(self, size=None, greenlet_class=None):
         if size is not None and size < 0:
             raise ValueError('Invalid size for pool (positive integer or None required): %r' % (size, ))
-        GreenletSet.__init__(self)
+        Group.__init__(self)
         self.size = size
         if greenlet_class is not None:
             self.greenlet_class = greenlet_class
@@ -265,7 +268,7 @@ class Pool(GreenletSet):
         return greenlet
 
     def discard(self, greenlet):
-        GreenletSet.discard(self, greenlet)
+        Group.discard(self, greenlet)
         self._semaphore.release()
 
 
