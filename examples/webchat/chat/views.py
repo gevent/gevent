@@ -21,6 +21,9 @@ class ChatRoom(object):
 
     def message_new(self, request):
         name = request.META.get('REMOTE_ADDR') or 'Anonymous'
+        forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
+        if forwarded_for and name == '127.0.0.1':
+            name = forwarded_for
         msg = create_message(name, request.POST['body'])
         self.cache.append(msg)
         if len(self.cache) > self.cache_size:
