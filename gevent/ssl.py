@@ -20,7 +20,7 @@ except AttributeError:
 
 import sys
 from gevent.socket import socket, _fileobject, timeout, wait_read, wait_write, timeout_default
-from gevent.socket import error as socket_error
+from gevent.socket import error as socket_error, EBADF
 
 __implements__ = ['SSLObject', 'wrap_socket', 'get_server_certificate', 'sslwrap_simple']
 
@@ -109,12 +109,22 @@ class SSLSocket(socket):
                     if self.timeout == 0.0:
                         raise
                     sys.exc_clear()
-                    wait_read(self.fileno(), timeout=self.timeout)
+                    try:
+                        wait_read(self.fileno(), timeout=self.timeout, event=self._read_event)
+                    except socket_error, ex:
+                        if ex[0] == EBADF:
+                            return ''
+                        raise
                 elif ex.args[0] == SSL_ERROR_WANT_WRITE:
                     if self.timeout == 0.0:
                         raise
                     sys.exc_clear()
-                    wait_write(self.fileno(), timeout=self.timeout)
+                    try:
+                        wait_write(self.fileno(), timeout=self.timeout, event=self._write_event)
+                    except socket_error, ex:
+                        if ex[0] == EBADF:
+                            return ''
+                        raise
                 else:
                     raise
 
@@ -129,12 +139,22 @@ class SSLSocket(socket):
                     if self.timeout == 0.0:
                         raise
                     sys.exc_clear()
-                    wait_read(self.fileno(), timeout=self.timeout)
+                    try:
+                        wait_read(self.fileno(), timeout=self.timeout, event=self._read_event)
+                    except socket_error, ex:
+                        if ex[0] == EBADF:
+                            return 0
+                        raise
                 elif ex.args[0] == SSL_ERROR_WANT_WRITE:
                     if self.timeout == 0.0:
                         raise
                     sys.exc_clear()
-                    wait_write(self.fileno(), timeout=self.timeout)
+                    try:
+                        wait_write(self.fileno(), timeout=self.timeout, event=self._write_event)
+                    except socket_error, ex:
+                        if ex[0] == EBADF:
+                            return 0
+                        raise
                 else:
                     raise
 
@@ -167,12 +187,22 @@ class SSLSocket(socket):
                         if self.timeout == 0.0:
                             raise timeout(str(x))
                         sys.exc_clear()
-                        wait_read(self.fileno(), timeout=timeout)
+                        try:
+                            wait_read(self.fileno(), timeout=timeout, event=self._read_event)
+                        except socket_error, ex:
+                            if ex[0] == EBADF:
+                                return 0
+                            raise
                     elif x.args[0] == SSL_ERROR_WANT_WRITE:
                         if self.timeout == 0.0:
                             raise timeout(str(x))
                         sys.exc_clear()
-                        wait_write(self.fileno(), timeout=timeout)
+                        try:
+                            wait_write(self.fileno(), timeout=timeout, event=self._write_event)
+                        except socket_error, ex:
+                            if ex[0] == EBADF:
+                                return 0
+                            raise
                     else:
                         raise
                 else:
@@ -202,7 +232,12 @@ class SSLSocket(socket):
                         sys.exc_clear()
                         if self.timeout == 0.0:
                             raise timeout(str(x))
-                        wait_read(self.fileno(), timeout=self.timeout)
+                        try:
+                            wait_read(self.fileno(), timeout=self.timeout, event=self._read_event)
+                        except socket_error, ex:
+                            if ex[0] == EBADF:
+                                return ''
+                            raise
                         continue
                     else:
                         raise
@@ -230,7 +265,12 @@ class SSLSocket(socket):
                         sys.exc_clear()
                         if self.timeout == 0.0:
                             raise timeout(str(x))
-                        wait_read(self.fileno(), timeout=self.timeout)
+                        try:
+                            wait_read(self.fileno(), timeout=self.timeout, event=self._read_event)
+                        except socket_error, ex:
+                            if ex[0] == EBADF:
+                                return 0
+                            raise
                         continue
                     else:
                         raise
@@ -286,12 +326,12 @@ class SSLSocket(socket):
                     if self.timeout == 0.0:
                         raise
                     sys.exc_clear()
-                    wait_read(self.fileno(), timeout=self.timeout)
+                    wait_read(self.fileno(), timeout=self.timeout, event=self._read_event)
                 elif ex.args[0] == SSL_ERROR_WANT_WRITE:
                     if self.timeout == 0.0:
                         raise
                     sys.exc_clear()
-                    wait_write(self.fileno(), timeout=self.timeout)
+                    wait_write(self.fileno(), timeout=self.timeout, event=self._write_event)
                 else:
                     raise
 
