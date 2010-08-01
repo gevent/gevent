@@ -53,7 +53,6 @@ __all__ = ['create_connection',
            'wait_readwrite']
 
 import sys
-import errno
 import time
 import random
 import re
@@ -78,6 +77,10 @@ else:
     from errno import EISCONN
     from os import strerror
 
+try:
+    from errno import EBADF
+except ImportError:
+    EBADF = 9
 
 import _socket
 error = _socket.error
@@ -211,7 +214,7 @@ def __cancel_wait(event):
     if event.pending:
         arg = event.arg
         if arg is not None:
-            arg[0].throw(error(errno.EBADF, 'File descriptor was closed in another greenlet'))
+            arg[0].throw(error(EBADF, 'File descriptor was closed in another greenlet'))
 
 
 def cancel_wait(event):
@@ -251,7 +254,7 @@ else:
 class _closedsocket(object):
     __slots__ = []
     def _dummy(*args):
-        raise error(errno.EBADF, 'Bad file descriptor')
+        raise error(EBADF, 'Bad file descriptor')
     # All _delegate_methods must also be initialized here.
     send = recv = recv_into = sendto = recvfrom = recvfrom_into = _dummy
     __getattr__ = _dummy
@@ -397,7 +400,7 @@ class socket(object):
             try:
                 return sock.recv(*args)
             except error, ex:
-                if ex[0] == errno.EBADF:
+                if ex[0] == EBADF:
                     return ''
                 if ex[0] != EWOULDBLOCK or self.timeout == 0.0:
                     raise
@@ -406,7 +409,7 @@ class socket(object):
             try:
                 wait_read(sock.fileno(), timeout=self.timeout, event=self._read_event)
             except error, ex:
-                if ex[0] == errno.EBADF:
+                if ex[0] == EBADF:
                     return ''
                 raise
 
@@ -438,7 +441,7 @@ class socket(object):
             try:
                 return sock.recv_into(*args)
             except error, ex:
-                if ex[0] == errno.EBADF:
+                if ex[0] == EBADF:
                     return 0
                 if ex[0] != EWOULDBLOCK or self.timeout == 0.0:
                     raise
@@ -446,7 +449,7 @@ class socket(object):
             try:
                 wait_read(sock.fileno(), timeout=self.timeout, event=self._read_event)
             except error, ex:
-                if ex[0] == errno.EBADF:
+                if ex[0] == EBADF:
                     return 0
                 raise
 
@@ -463,7 +466,7 @@ class socket(object):
             try:
                 wait_write(sock.fileno(), timeout=timeout, event=self._write_event)
             except error, ex:
-                if ex[0] == errno.EBADF:
+                if ex[0] == EBADF:
                     return 0
                 raise
             try:
