@@ -5,7 +5,7 @@
 For the documentation, refer to :mod:`ssl` module manual.
 
 This module implements cooperative SSL socket wrappers.
-On Python 2.6 and older it uses Python's native :mod:`ssl` module. On Python 2.5 and 2.4
+On Python 2.6 and newer it uses Python's native :mod:`ssl` module. On Python 2.5 and 2.4
 it requires `ssl package`_ to be installed.
 
 .. _`ssl package`: http://pypi.python.org/pypi/ssl
