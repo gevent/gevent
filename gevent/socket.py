@@ -318,7 +318,7 @@ class socket(object):
                 client_socket, address = sock.accept()
                 break
             except error, ex:
-                if ex[0] != errno.EWOULDBLOCK or self.timeout == 0.0:
+                if ex[0] != EWOULDBLOCK or self.timeout == 0.0:
                     raise
                 sys.exc_clear()
             wait_read(sock.fileno(), timeout=self.timeout, event=self._read_event)
