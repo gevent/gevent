@@ -14,7 +14,7 @@ def get_fileno(obj):
     try:
         fileno_f = obj.fileno
     except AttributeError:
-        if not isinstance(obj, int):
+        if not isinstance(obj, (int, long)):
             raise TypeError('argument must be an int, or have a fileno() method: %r' % (obj, ))
         return obj
     else:
