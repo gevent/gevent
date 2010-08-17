@@ -110,8 +110,9 @@ class Semaphore(object):
                         result = get_hub().switch()
                         assert result is self, 'Invalid switch into Semaphore.acquire(): %r' % (result, )
                     except Timeout, ex:
-                        if ex is not timer:
-                            raise
+                        if ex is timer:
+                            return False
+                        raise
                 finally:
                     timer.cancel()
             finally:
