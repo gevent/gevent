@@ -28,7 +28,7 @@ class Test(greentest.TestCase):
             g = gevent.spawn(hello)
             g.join()
             self.assert_stderr_traceback(expected_error)
-            self.assert_stderr('<Greenlet at 0x[0-9a-f]+: hello> failed with ExpectedError')
+            self.assert_stderr('<Greenlet at 0x[0-9a-f]+L?: hello> failed with ExpectedError')
             if not isinstance(g.exception, ExpectedError):
                 raise g.exception
             try:
