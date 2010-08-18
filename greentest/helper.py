@@ -29,7 +29,12 @@ def patch_all(timeout=None):
 
 def prepare_stdlib_test(filename):
     patch_all(timeout=20)
-    from test import test_support
+    import test
+    try:
+        from test import test_support
+    except ImportError:
+        sys.stderr.write('test.__file__ = %s\n' % test.__file__)
+        raise
     test_support.use_resources = ContainsAll()
 
     name = filename.replace('_patched', '').replace('.py', '')
