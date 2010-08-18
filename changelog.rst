@@ -8,7 +8,7 @@ Version 0.13.1
 
 - Fixed :class:`ssl.SSLObject` to delete events used by other greenlets when closing the instance (issue #34).
 - Fixed :func:`select <gevent.select.select>` to work recognize ``long`` arguments in addition to ``int``.
-- Fixed :meth:`Semaphore.acquire` to return ``False`` when timeout expires instead of raising :exc:`AssertionError`.
+- Fixed :meth:`Semaphore.acquire` to return ``False`` when timeout expires instead of raising :exc:`AssertionError`. Patch by Teh Ekik.
 - Fixed bogus failure in ``test__exc_info.py``.
 - Updated webchat example to use file on disk rather than in-memory sqlite database to avoid :exc:`OperationalError`.
 
