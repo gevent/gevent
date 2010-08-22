@@ -533,6 +533,17 @@ class socket(object):
     def gettimeout(self):
         return self.timeout
 
+    def shutdown(self, how):
+        cancel_wait(self._rw_event)
+        if how == 0: # SHUT_RD
+            cancel_wait(self._read_event)
+        elif how == 1: # SHUT_RW
+            cancel_wait(self._write_event)
+        else:
+            cancel_wait(self._read_event)
+            cancel_wait(self._write_event)
+        self._sock.shutdown(how)
+
     family = property(lambda self: self._sock.family, doc="the socket family")
     type = property(lambda self: self._sock.type, doc="the socket type")
     proto = property(lambda self: self._sock.proto, doc="the socket protocol")
