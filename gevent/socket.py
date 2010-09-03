@@ -67,7 +67,7 @@ if is_windows:
     from errno import WSAEALREADY as EALREADY
     from errno import WSAEISCONN as EISCONN
     from gevent.win32util import formatError as strerror
-    EGAIN = EWOULDBLOCK
+    EAGAIN = EWOULDBLOCK
 else:
     from errno import EINVAL
     from errno import EWOULDBLOCK
