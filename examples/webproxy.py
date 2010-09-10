@@ -112,8 +112,5 @@ FORM = """<html><head>
 """
 
 if __name__ == '__main__':
-    #import doctest
-    #doctest.testmod()
     print 'Serving on %s...' % PORT
     wsgi.WSGIServer(('', PORT), application).serve_forever()
-
