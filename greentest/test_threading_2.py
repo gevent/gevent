@@ -164,7 +164,7 @@ class ThreadTests(unittest.TestCase):
         self.test_various_ops()
         threading.stack_size(0)
 
-    def BOGUS_test_foreign_thread(self):
+    def test_foreign_thread(self):
         # Check that a "foreign" thread can use the threading module.
         def f(mutex):
             # Calling current_thread() forces an entry for the foreign
