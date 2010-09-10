@@ -159,7 +159,7 @@ class BaseServer(object):
 
         If the server uses a pool to spawn the requests, then :meth:`stop` also waits
         for all the handlers to exit. If there are still handlers executing after *timeout*
-        has expired (default 1 second), then the currenlty running handlers in the pool are killed."""
+        has expired (default 1 second), then the currently running handlers in the pool are killed."""
         self.kill()
         if timeout is None:
             timeout = self.stop_timeout
