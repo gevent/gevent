@@ -477,10 +477,11 @@ class ThreadJoinOnShutdown(unittest.TestCase):
             return
         # Skip platforms with known problems forking from a worker thread.
         # See http://bugs.python.org/issue3863.
-        if sys.platform in ('freebsd4', 'freebsd5', 'freebsd6', 'os2emx'):
-            print >>sys.stderr, ('Skipping test_3_join_in_forked_from_thread'
-                                 ' due to known OS bugs on'), sys.platform
-            return
+        # skip disable because I think the bug shouldn't apply to gevent -- denis
+        #if sys.platform in ('freebsd4', 'freebsd5', 'freebsd6', 'os2emx'):
+        #    print >>sys.stderr, ('Skipping test_3_join_in_forked_from_thread'
+        #                         ' due to known OS bugs on'), sys.platform
+        #    return
         script = """if 1:
             main_thread = threading.current_thread()
             def worker():
