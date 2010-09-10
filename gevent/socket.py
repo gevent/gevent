@@ -95,7 +95,7 @@ gaierror = _socket.gaierror
 for name in __socket__.__all__:
     if name[:1].isupper():
         value = getattr(__socket__, name)
-        if isinstance(value, (int, basestring)):
+        if isinstance(value, (int, long, basestring)):
             globals()[name] = value
             __all__.append(name)
     elif name == 'getfqdn':
