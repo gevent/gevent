@@ -32,7 +32,6 @@ local to a greenlet. If we access the data in a different greenlet:
   ...     log.append(items)
   ...     mydata.number = 11
   ...     log.append(mydata.number)
-
   >>> greenlet = gevent.spawn(f)
   >>> greenlet.join()
   >>> log
