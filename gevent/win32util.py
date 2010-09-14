@@ -66,7 +66,6 @@ class _ErrorFormatter(object):
         return cls(WinError, FormatMessage, errorTab)
     fromEnvironment = classmethod(fromEnvironment)
 
-
     def formatError(self, errorcode):
         """
         Returns the string associated with a Windows error message, such as the

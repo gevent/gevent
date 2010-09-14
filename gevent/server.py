@@ -114,7 +114,7 @@ class StreamServer(BaseServer):
             try:
                 client_socket, address = self.socket.accept()
             except socket.error, err:
-                if err[0]==errno.EAGAIN:
+                if err[0] == errno.EAGAIN:
                     sys.exc_clear()
                     return
                 raise
@@ -144,7 +144,7 @@ class StreamServer(BaseServer):
         if self.delay >= 0:
             self.stop_accepting()
             self._start_accepting_timer = core.timer(self.delay, self.start_accepting)
-            self.delay = min(self.max_delay, self.delay*2)
+            self.delay = min(self.max_delay, self.delay * 2)
         sys.exc_clear()
 
     def is_fatal_error(self, ex):
@@ -162,4 +162,3 @@ def _import_sslold_wrap_socket():
         return wrap_socket
     except ImportError:
         pass
-

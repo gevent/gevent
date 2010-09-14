@@ -19,14 +19,11 @@ __all__ = ['WSGIHandler', 'WSGIServer']
 
 
 MAX_REQUEST_LINE = 8192
-
 # Weekday and month names for HTTP date/time formatting; always English!
 _WEEKDAYNAME = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
-_MONTHNAME = [None, # Dummy so we can use 1-based month numbers
+_MONTHNAME = [None,  # Dummy so we can use 1-based month numbers
               "Jan", "Feb", "Mar", "Apr", "May", "Jun",
               "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
-
-
 _INTERNAL_ERROR_STATUS = '500 Internal Server Error'
 _INTERNAL_ERROR_BODY = 'Internal Server Error'
 _INTERNAL_ERROR_HEADERS = [('Content-Type', 'text/plain'),
@@ -34,8 +31,8 @@ _INTERNAL_ERROR_HEADERS = [('Content-Type', 'text/plain'),
                            ('Content-Length', str(len(_INTERNAL_ERROR_BODY)))]
 _REQUEST_TOO_LONG_RESPONSE = "HTTP/1.0 414 Request URI Too Long\r\nConnection: close\r\nContent-length: 0\r\n\r\n"
 _BAD_REQUEST_RESPONSE = "HTTP/1.0 400 Bad Request\r\nConnection: close\r\nContent-length: 0\r\n\r\n"
-
 _CONTINUE_RESPONSE = "HTTP/1.1 100 Continue\r\n\r\n"
+
 
 def format_date_time(timestamp):
     year, month, day, hh, mm, ss, wd, _y, _z = time.gmtime(timestamp)
@@ -184,7 +181,7 @@ class WSGIHandler(object):
         version = self.request_version
         if not version.startswith("HTTP/"):
             return False
-        version = tuple(int(x) for x in version[5:].split(".")) # "HTTP/"
+        version = tuple(int(x) for x in version[5:].split("."))  # "HTTP/"
         if version[1] < 0 or version < (0, 9) or version >= (2, 0):
             return False
         return True
@@ -299,7 +296,7 @@ class WSGIHandler(object):
         if self.rfile.closed:
             return
 
-        return True # read more requests
+        return True  # read more requests
 
     def write(self, data):
         towrite = []

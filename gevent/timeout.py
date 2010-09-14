@@ -22,7 +22,8 @@ __all__ = ['Timeout',
 
 try:
     BaseException
-except NameError: # Python < 2.5
+except NameError:  # Python < 2.5
+
     class BaseException:
         # not subclassing from object() intentionally, because in
         # that case "raise Timeout" fails with TypeError.
@@ -35,7 +36,7 @@ class Timeout(BaseException):
         timeout = Timeout(seconds, exception)
         timeout.start()
         try:
-            ... # exception will be raised here, after *seconds* passed since start() call
+            ...  # exception will be raised here, after *seconds* passed since start() call
         finally:
             timeout.cancel()
 
@@ -50,7 +51,7 @@ class Timeout(BaseException):
     For Python 2.5 and newer ``with`` statement can be used::
 
         with Timeout(seconds, exception) as timeout:
-            pass # ... code block ...
+            pass  # ... code block ...
 
     This is equivalent to try/finally block above with one additional feature:
     if *exception* is ``False``, the timeout is still raised, but context manager
@@ -62,9 +63,9 @@ class Timeout(BaseException):
         with Timeout(5, False):
             data = mysock.makefile().readline()
         if data is None:
-            ... # 5 seconds passed without reading a line
+            ...  # 5 seconds passed without reading a line
         else:
-            ... # a line was read within 5 seconds
+            ...  # a line was read within 5 seconds
 
     Note that, if ``readline()`` above catches and doesn't re-raise :class:`BaseException`
     (for example, with ``except:``), then your timeout is screwed.
@@ -90,11 +91,11 @@ class Timeout(BaseException):
     def start(self):
         """Schedule the timeout."""
         assert not self.pending, '%r is already started; to restart it, cancel it first' % self
-        if self.seconds is None: # "fake" timeout (never expires)
+        if self.seconds is None:  # "fake" timeout (never expires)
             self.timer = None
-        elif self.exception is None or self.exception is False: # timeout that raises self
+        elif self.exception is None or self.exception is False:  # timeout that raises self
             self.timer = core.timer(self.seconds, getcurrent().throw, self)
-        else: # regular timeout with user-provided exception
+        else:  # regular timeout with user-provided exception
             self.timer = core.timer(self.seconds, getcurrent().throw, self.exception)
 
     @classmethod
@@ -133,7 +134,7 @@ class Timeout(BaseException):
     def __repr__(self):
         try:
             classname = self.__class__.__name__
-        except AttributeError: # Python < 2.5
+        except AttributeError:  # Python < 2.5
             classname = 'Timeout'
         if self.pending:
             pending = ' pending'
@@ -196,4 +197,3 @@ def with_timeout(seconds, function, *args, **kwds):
             raise
     finally:
         timeout.cancel()
-

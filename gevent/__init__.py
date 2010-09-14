@@ -33,7 +33,7 @@ __all__ = ['Greenlet',
 
 import sys
 if sys.platform == 'win32':
-    __import__('socket') # trigger WSAStartup call
+    __import__('socket')  # trigger WSAStartup call
 del sys
 
 

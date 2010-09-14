@@ -100,8 +100,9 @@ def _wrap_signal_handler(handler, args, kwargs):
     except:
         core.active_event(MAIN.throw, *sys.exc_info())
 
+
 def signal(signalnum, handler, *args, **kwargs):
-    return core.signal(signalnum, lambda : spawn_raw(_wrap_signal_handler, handler, args, kwargs))
+    return core.signal(signalnum, lambda: spawn_raw(_wrap_signal_handler, handler, args, kwargs))
 
 
 if _original_fork is not None:
@@ -169,7 +170,7 @@ class Hub(greenlet):
         try:
             self.keyboard_interrupt_signal = signal(2, core.active_event, MAIN.throw, KeyboardInterrupt)
         except IOError:
-            pass # no signal() on windows
+            pass  # no signal() on windows
         try:
             loop_count = 0
             while True:
@@ -204,7 +205,7 @@ class Hub(greenlet):
         try:
             self.switch()
         except DispatchExit, ex:
-            if ex.code == 1: # no more events registered?
+            if ex.code == 1:  # no more events registered?
                 return
             raise
 
@@ -320,7 +321,7 @@ class Waiter(object):
             finally:
                 self.greenlet = None
 
-    wait = get # XXX backward compatibility; will be removed in the next release
+    wait = get  # XXX backward compatibility; will be removed in the next release
 
     # can also have a debugging version, that wraps the value in a tuple (self, value) in switch()
     # and unwraps it in wait() thus checking that switch() was indeed called
@@ -329,8 +330,8 @@ class Waiter(object):
 class _NONE(object):
     "A special thingy you must never pass to any of gevent API"
     __slots__ = []
+
     def __repr__(self):
         return '<_NONE>'
 
 _NONE = _NONE()
-

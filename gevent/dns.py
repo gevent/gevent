@@ -36,7 +36,7 @@ class DNSError(gaierror):
     """
 
     def __init__(self, *args):
-        if len(args)==1:
+        if len(args) == 1:
             code = args[0]
             gaierror.__init__(self, code, core.dns_err_to_string(code))
         else:

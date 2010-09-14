@@ -65,4 +65,3 @@ def select(rlist, wlist, xlist, timeout=None):
         for evt in allevents:
             evt.cancel()
         timeout.cancel()
-

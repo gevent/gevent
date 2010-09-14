@@ -86,7 +86,7 @@ class SocketConsole(Greenlet):
             try:
                 console = InteractiveConsole(self.locals)
                 console.interact()
-            except SystemExit: # raised by quit()
+            except SystemExit:  # raised by quit()
                 pass
         finally:
             self.switch_out()
@@ -115,4 +115,3 @@ if __name__ == '__main__':
         print 'USAGE: %s PORT' % sys.argv[0]
     else:
         BackdoorServer(('127.0.0.1', int(sys.argv[1]))).serve_forever()
-

@@ -120,7 +120,7 @@ class WSGIHandler(object):
                 except Exception:
                     pass
                 # do not call self.end so that core.http replies with 500
-                self = None 
+                self = None
                 return
         finally:
             sys.exc_clear()

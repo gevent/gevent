@@ -196,4 +196,3 @@ def _tcp_listener(address, backlog=50, reuse_addr=None):
     sock.listen(backlog)
     sock.setblocking(0)
     return sock
-

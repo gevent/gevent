@@ -1,6 +1,7 @@
 # Copyright (c) 2009 Denis Bilenko. See LICENSE for details.
 __all__ = ['wrap_errors', 'lazy_property']
 
+
 class wrap_errors(object):
     """Helper to make function return an exception, rather than raise it.
 
@@ -62,4 +63,3 @@ class lazy_property(object):
         value = self._calculate(obj)
         setattr(obj, self._calculate.func_name, value)
         return value
-

@@ -132,6 +132,7 @@ from gevent.coros import RLock
 
 __all__ = ["local"]
 
+
 class _localbase(object):
     __slots__ = '_local__args', '_local__lock', '_local__dicts'
 

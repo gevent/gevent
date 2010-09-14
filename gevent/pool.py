@@ -26,7 +26,7 @@ class Group(object):
     greenlet_class = Greenlet
 
     def __init__(self, *args):
-        assert len(args)<=1, args
+        assert len(args) <= 1, args
         self.greenlets = set(*args)
         if args:
             for greenlet in args[0]:
@@ -40,7 +40,7 @@ class Group(object):
         try:
             classname = self.__class__.__name__
         except AttributeError:
-            classname = 'Group' # XXX check if 2.4 really uses this line
+            classname = 'Group'  # XXX check if 2.4 really uses this line
         return '<%s at %s %s>' % (classname, hex(id(self)), self.greenlets)
 
     def __len__(self):
@@ -183,7 +183,7 @@ class Group(object):
 
     def imap(self, func, iterable):
         """An equivalent of itertools.imap()
-        
+
         **TODO**: Fix this.
         """
         return iter(self.map(func, iterable))
@@ -191,7 +191,7 @@ class Group(object):
     def imap_unordered(self, func, iterable):
         """The same as imap() except that the ordering of the results from the
         returned iterator should be considered arbitrary.
-        
+
         **TODO**: Fix this.
         """
         return iter(self.map(func, iterable))
@@ -203,7 +203,7 @@ class Group(object):
         pass
 
 
-GreenletSet = Group # the old name; will be deprecated in the future
+GreenletSet = Group  # the old name; will be deprecated in the future
 
 
 class Pool(Group):
@@ -315,4 +315,3 @@ class pass_value(object):
     def __getattr__(self, item):
         assert item != 'callback'
         return getattr(self.callback, item)
-

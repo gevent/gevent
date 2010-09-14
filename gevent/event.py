@@ -30,8 +30,8 @@ class Event(object):
         """Return true if and only if the internal flag is true."""
         return self._flag
 
-    isSet = is_set # makes it a better drop-in replacement for threading.Event
-    ready = is_set # makes it compatible with AsyncResult and Greenlet (for example in wait())
+    isSet = is_set  # makes it a better drop-in replacement for threading.Event
+    ready = is_set  # makes it compatible with AsyncResult and Greenlet (for example in wait())
 
     def set(self):
         """Set the internal flag to true. All greenlets waiting for it to become true are awakened.
@@ -92,7 +92,7 @@ class Event(object):
             raise TypeError('Expected callable: %r' % (callback, ))
         self._links.append(callback)
         if self._flag:
-            core.active_event(self._notify_links, list(self._links)) # XXX just pass [callback]
+            core.active_event(self._notify_links, list(self._links))  # XXX just pass [callback]
 
     def unlink(self, callback):
         """Remove the callback set by :meth:`rawlink`"""
@@ -104,7 +104,7 @@ class Event(object):
     def _notify_links(self, links):
         assert getcurrent() is get_hub()
         for link in links:
-            if link in self._links: # check that link was not notified yet and was not removed by the client
+            if link in self._links:  # check that link was not notified yet and was not removed by the client
                 try:
                     link(self)
                 except:
@@ -320,4 +320,3 @@ def waitall(events):
     finally:
         for event in events:
             event.unlink(put)
-

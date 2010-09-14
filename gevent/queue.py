@@ -208,7 +208,7 @@ class Queue(object):
                         getter = self.getters.pop()
                         if getter:
                             item = putter.item
-                            putter.item = _NONE # this makes greenlet calling put() not to call _put() again
+                            putter.item = _NONE  # this makes greenlet calling put() not to call _put() again
                             self._put(item)
                             item = self._get()
                             getter.switch(item)
@@ -221,7 +221,7 @@ class Queue(object):
                 else:
                     break
         finally:
-            self._event_unlock = None # QQQ maybe it's possible to obtain this info from libevent?
+            self._event_unlock = None  # QQQ maybe it's possible to obtain this info from libevent?
             # i.e. whether this event is pending _OR_ currently executing
         # testcase: 2 greenlets: while True: q.put(q.get()) - nothing else has a change to execute
         # to avoid this, schedule unlock with timer(0, ...) once in a while
@@ -315,4 +315,3 @@ class JoinableQueue(Queue):
         unfinished tasks drops to zero, :meth:`join` unblocks.
         '''
         self._cond.wait()
-

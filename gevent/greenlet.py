@@ -228,7 +228,7 @@ class Greenlet(greenlet):
                 # the result was not set and the links weren't notified. let's do it here.
                 # checking that self.dead is true is essential, because the exception raised by
                 # throw() could have been cancelled by the greenlet's function.
-                if len(args)==1:
+                if len(args) == 1:
                     arg = args[0]
                     #if isinstance(arg, type):
                     if type(arg) is type(Exception):
@@ -614,4 +614,3 @@ def getfuncname(func):
 
 
 _NONE = Exception("Neither exception nor value")
-

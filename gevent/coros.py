@@ -15,7 +15,7 @@ class Semaphore(object):
     """A semaphore manages a counter representing the number of release() calls minus the number of acquire() calls,
     plus an initial value. The acquire() method blocks if necessary until it can return without making the counter
     negative.
-    
+
     If not given, value defaults to 1."""
 
     def __init__(self, value=1):
@@ -232,4 +232,3 @@ class RLock(object):
 
     def _is_owned(self):
         return self._owner is getcurrent()
-

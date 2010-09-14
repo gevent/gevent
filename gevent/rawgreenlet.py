@@ -74,7 +74,7 @@ def join(greenlet, polling_period=0.2):
     """Wait for a greenlet to finish by polling its status"""
     delay = 0.002
     while not greenlet.dead:
-        delay = min(polling_period, delay*2)
+        delay = min(polling_period, delay * 2)
         sleep(delay)
 
 
@@ -85,8 +85,7 @@ def joinall(greenlets, polling_period=0.2):
         current += 1
     delay = 0.002
     while current < len(greenlets):
-        delay = min(polling_period, delay*2)
+        delay = min(polling_period, delay * 2)
         sleep(delay)
         while current < len(greenlets) and greenlets[current].dead:
             current += 1
-

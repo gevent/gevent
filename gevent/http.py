@@ -47,4 +47,3 @@ class HTTPServer(BaseServer):
 
     def stop_accepting(self):
         self.http = None
-
