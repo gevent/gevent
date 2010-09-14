@@ -13,6 +13,7 @@ monkey.patch_all()
 
 import urllib2
 
+
 def print_head(url):
     print 'Starting %s' % url
     data = urllib2.urlopen(url).read()
@@ -21,4 +22,3 @@ def print_head(url):
 jobs = [gevent.spawn(print_head, url) for url in urls]
 
 gevent.joinall(jobs)
-

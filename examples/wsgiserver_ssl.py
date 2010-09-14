@@ -3,6 +3,7 @@
 
 from gevent import pywsgi
 
+
 def hello_world(env, start_response):
     if env['PATH_INFO'] == '/':
         start_response('200 OK', [('Content-Type', 'text/html')])
@@ -16,4 +17,3 @@ server = pywsgi.WSGIServer(('0.0.0.0', 8443), hello_world, keyfile='server.key',
 # to start the server asynchronously, call server.start()
 # we use blocking serve_forever() here because we have no other jobs
 server.serve_forever()
-

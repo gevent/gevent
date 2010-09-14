@@ -12,11 +12,10 @@ from gevent import socket
 from gevent.pool import Pool
 
 N = 1000
-
 # limit ourselves to max 10 simultaneous outstanding requests
 pool = Pool(10)
-
 finished = 0
+
 
 def job(url):
     global finished

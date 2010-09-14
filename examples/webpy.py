@@ -1,5 +1,4 @@
 #!/usr/bin/python
-
 """A web.py application powered by gevent"""
 
 from gevent import monkey; monkey.patch_all()
@@ -10,9 +9,11 @@ import web
 urls = ("/", "index",
         '/long', 'long_polling')
 
+
 class index:
     def GET(self):
         return 'Hello, world!<br><a href="/long">/long</a>'
+
 
 class long_polling:
     # Since gevent.wsgi executes each incoming connection in a separate greenlet
@@ -21,11 +22,10 @@ class long_polling:
     # becomes greenlet-local storage thus making requests isolated as they should be.
     def GET(self):
         print 'handling GET context id = %s' % (id(web.ctx._getd()), )
-        gevent.sleep(10) # possible to block the request indefinitely, without harming others
+        gevent.sleep(10)  # possible to block the request indefinitely, without harming others
         return 'Hello, 10 seconds later'
 
 if __name__ == "__main__":
     application = web.application(urls, globals()).wsgifunc()
     print 'Serving on 8088...'
     WSGIServer(('', 8088), application).serve_forever()
-

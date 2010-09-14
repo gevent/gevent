@@ -6,6 +6,7 @@ WSGI interface is a safer choice, see examples/wsgiserver.py.
 """
 from gevent import http
 
+
 def callback(request):
     print request
     if request.uri == '/':

@@ -12,14 +12,15 @@ from gevent import socket
 import subprocess
 import errno
 import sys
-import fcntl, os
+import os
+import fcntl
 
 
 def popen_communicate(args, data=''):
     """Communicate with the process non-blockingly."""
     p = subprocess.Popen(args, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-    fcntl.fcntl(p.stdin, fcntl.F_SETFL, os.O_NONBLOCK) # make the file nonblocking
-    fcntl.fcntl(p.stdout, fcntl.F_SETFL, os.O_NONBLOCK) # make the file nonblocking
+    fcntl.fcntl(p.stdin, fcntl.F_SETFL, os.O_NONBLOCK)  # make the file nonblocking
+    fcntl.fcntl(p.stdout, fcntl.F_SETFL, os.O_NONBLOCK)  # make the file nonblocking
 
     bytes_total = len(data)
     bytes_written = 0
