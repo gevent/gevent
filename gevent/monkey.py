@@ -114,6 +114,7 @@ def patch_socket(dns=True, aggressive=True):
     _socket = __import__('socket')
     _socket.socket = socket.socket
     _socket.SocketType = socket.SocketType
+    _socket.create_connection = socket.create_connection
     if hasattr(socket, 'socketpair'):
         _socket.socketpair = socket.socketpair
     if hasattr(socket, 'fromfd'):
