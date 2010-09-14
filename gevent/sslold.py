@@ -1,6 +1,8 @@
 """OpenSSL-based implementation of SSLObject.
 
-Use when :mod:`ssl` module is not present.
+.. warning::
+
+    This module is deprecated. Use :mod:`ssl <gevent.ssl>` instead.
 """
 from OpenSSL import SSL
 from gevent.socket import socket, _fileobject, __socket__, error, timeout, EWOULDBLOCK
@@ -8,6 +10,9 @@ from gevent.socket import wait_read, wait_write, timeout_default
 import sys
 
 __all__ = ['ssl', 'sslerror']
+
+import warnings
+warnings.warn("gevent.sslold is deprecated; use gevent.ssl instead (install ssl package from PyPI)", DeprecationWarning, stacklevel=2)
 
 try:
     sslerror = __socket__.sslerror
