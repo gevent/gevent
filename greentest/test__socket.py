@@ -143,5 +143,25 @@ if hasattr(socket, 'ssl'):
         return sock
 
 
+class TestCreateConnection(greentest.TestCase):
+
+    def test(self):
+        tempsock1 = socket.socket()
+        tempsock1.bind(('', 0))
+        source_port = tempsock1.getsockname()[1]
+        tempsock2 = socket.socket()
+        tempsock2.bind(('', 0))
+        server_port = tempsock2.getsockname()[1]
+        tempsock1.close()
+        del tempsock1
+        tempsock2.close()
+        del tempsock2
+        try:
+            cli = socket.create_connection(('localhost', 4), timeout=30, source_address=('', source_port))
+        except socket.error, ex:
+            if 'connection refused' not in str(ex).lower():
+                raise
+
+
 if __name__=='__main__':
     greentest.main()
