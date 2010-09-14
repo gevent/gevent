@@ -627,6 +627,7 @@ def create_connection(address, timeout=_GLOBAL_DEFAULT_TIMEOUT, source_address=N
             sock.connect(sa)
             return sock
         except error, msg:
+            sys.exc_clear()
             if sock is not None:
                 sock.close()
     raise msg
