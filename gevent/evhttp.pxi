@@ -111,8 +111,8 @@ cdef class http_request:
 
     cdef object __weakref__
     cdef evhttp_request* __obj
-    cdef object _input_buffer
-    cdef object _output_buffer
+    cdef public object _input_buffer
+    cdef public object _output_buffer
     cdef public object default_response_headers
 
     def __init__(self, size_t _obj, object default_response_headers):
