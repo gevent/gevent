@@ -107,7 +107,7 @@ def patch_thread(threading=True, _threading_local=True):
 
 def patch_socket(dns=True, aggressive=True):
     """Replace the standard socket object with gevent's cooperative sockets.
-    
+
     If *dns* is true, also patch dns functions in :mod:`socket`.
     """
     from gevent import socket
@@ -188,7 +188,7 @@ def patch_all(socket=True, dns=True, time=True, select=True, thread=True, os=Tru
 
 
 if __name__ == '__main__':
-    modules = [x.replace('patch_', '') for x in globals().keys() if x.startswith('patch_') and x!='patch_all']
+    modules = [x.replace('patch_', '') for x in globals().keys() if x.startswith('patch_') and x != 'patch_all']
     script_help = """gevent.monkey - monkey patch the standard modules to use gevent.
 
 USAGE: python -m gevent.monkey [MONKEY OPTIONS] script [SCRIPT OPTIONS]
@@ -215,7 +215,8 @@ MONKEY OPTIONS: --verbose %s""" % ', '.join('--[no-]%s' % m for m in modules)
         del argv[0]
         # TODO: break on --
     if verbose:
-        import pprint, os
+        import pprint
+        import os
         print 'gevent.monkey.patch_all(%s)' % ', '.join('%s=%s' % item for item in args.items())
         print 'sys.version=%s' % (sys.version.strip().replace('\n', ' '), )
         print 'sys.path=%s' % pprint.pformat(sys.path)
@@ -229,4 +230,3 @@ MONKEY OPTIONS: --verbose %s""" % ', '.join('--[no-]%s' % m for m in modules)
         execfile(sys.argv[0])
     else:
         print script_help
-
