@@ -1,7 +1,7 @@
 """Implementation of the standard :mod:`thread` module that spawns greenlets.
 
 .. note::
-    
+
     This module is a helper for :mod:`gevent.monkey` and is not intended to be
     used directly. For spawning greenlets in your applications, prefer
     :class:`Greenlet` class.
@@ -12,18 +12,22 @@ from gevent.hub import getcurrent, GreenletExit
 from gevent.greenlet import Greenlet
 from gevent.coros import Semaphore as LockType
 
+
 def get_ident(gr=None):
     if gr is None:
         return id(getcurrent())
     else:
         return id(gr)
 
+
 def start_new_thread(function, args=(), kwargs={}):
     greenlet = Greenlet.spawn(function, *args, **kwargs)
     return get_ident(greenlet)
 
+
 def allocate_lock():
     return LockType(1)
+
 
 def exit():
     raise GreenletExit
