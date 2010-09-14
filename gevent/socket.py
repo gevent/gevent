@@ -247,12 +247,14 @@ if sys.version_info[:2] <= (2, 4):
 if sys.version_info[:2] < (2, 7):
     _get_memory = buffer
 else:
+
     def _get_memory(string, offset):
         return memoryview(string)[offset:]
 
 
 class _closedsocket(object):
     __slots__ = []
+
     def _dummy(*args):
         raise error(EBADF, 'Bad file descriptor')
     # All _delegate_methods must also be initialized here.
@@ -263,6 +265,7 @@ class _closedsocket(object):
 _delegate_methods = ("recv", "recvfrom", "recv_into", "recvfrom_into", "send", "sendto", 'sendall')
 
 timeout_default = object()
+
 
 class socket(object):
 
@@ -282,7 +285,7 @@ class socket(object):
         self._sock.setblocking(0)
         self._read_event = core.event(core.EV_READ, self.fileno(), _wait_helper)
         self._write_event = core.event(core.EV_WRITE, self.fileno(), _wait_helper)
-        self._rw_event = core.event(core.EV_READ|core.EV_WRITE, self.fileno(), _wait_helper)
+        self._rw_event = core.event(core.EV_READ | core.EV_WRITE, self.fileno(), _wait_helper)
 
     def __repr__(self):
         return '<%s at %s %s>' % (type(self).__name__, hex(id(self)), self._formatinfo())
@@ -337,7 +340,7 @@ class socket(object):
             setattr(self, method, dummy)
 
     def connect(self, address):
-        if isinstance(address, tuple) and len(address)==2:
+        if isinstance(address, tuple) and len(address) == 2:
             address = gethostbyname(address[0]), address[1]
         if self.timeout == 0.0:
             return self._sock.connect(address)
@@ -380,7 +383,7 @@ class socket(object):
             if type(ex) is error:
                 return ex[0]
             else:
-                raise # gaierror is not silented by connect_ex
+                raise  # gaierror is not silented by connect_ex
 
     def dup(self):
         """dup() -> socket object
@@ -395,7 +398,7 @@ class socket(object):
         return _fileobject(self.dup(), mode, bufsize)
 
     def recv(self, *args):
-        sock = self._sock # keeping the reference so that fd is not closed during waiting
+        sock = self._sock  # keeping the reference so that fd is not closed during waiting
         while True:
             try:
                 return sock.recv(*args)
@@ -535,9 +538,9 @@ class socket(object):
 
     def shutdown(self, how):
         cancel_wait(self._rw_event)
-        if how == 0: # SHUT_RD
+        if how == 0:  # SHUT_RD
             cancel_wait(self._read_event)
-        elif how == 1: # SHUT_RW
+        elif how == 1:  # SHUT_RW
             cancel_wait(self._write_event)
         else:
             cancel_wait(self._read_event)
@@ -559,6 +562,7 @@ class socket(object):
 SocketType = socket
 
 if hasattr(_socket, 'socketpair'):
+
     def socketpair(*args):
         one, two = _socket.socketpair(*args)
         return socket(_sock=one), socket(_sock=two)
@@ -566,6 +570,7 @@ else:
     __all__.remove('socketpair')
 
 if hasattr(_socket, 'fromfd'):
+
     def fromfd(*args):
         return socket(_sock=_socket.fromfd(*args))
 else:
@@ -593,6 +598,7 @@ try:
     _GLOBAL_DEFAULT_TIMEOUT = __socket__._GLOBAL_DEFAULT_TIMEOUT
 except AttributeError:
     _GLOBAL_DEFAULT_TIMEOUT = object()
+
 
 def create_connection(address, timeout=_GLOBAL_DEFAULT_TIMEOUT, source_address=None):
     """Connect to *address* and return the socket object.
@@ -623,7 +629,7 @@ def create_connection(address, timeout=_GLOBAL_DEFAULT_TIMEOUT, source_address=N
         except error, msg:
             if sock is not None:
                 sock.close()
-    raise error, msg
+    raise msg
 
 
 try:
@@ -657,7 +663,6 @@ else:
             return _socket.gethostbyname(hostname)
         _ttl, addrs = resolve_ipv4(hostname)
         return inet_ntoa(random.choice(addrs))
-
 
     def getaddrinfo(host, port, *args, **kwargs):
         """*Some* approximation of :func:`socket.getaddrinfo` implemented using :mod:`gevent.dns`.
