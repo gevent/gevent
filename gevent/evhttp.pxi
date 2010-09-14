@@ -509,7 +509,7 @@ cdef class http:
     cdef evhttp* __obj
     cdef public object handle
     cdef public object default_response_headers
-    cdef dict _requests
+    cdef public dict _requests
 
     def __init__(self, object handle, object default_response_headers=None):
         self.handle = handle
