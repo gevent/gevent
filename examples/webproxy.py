@@ -1,4 +1,15 @@
-#!/usr/bin/python
+#!/usr/bin/env python
+"""A web application that retrieves other websites for you.
+
+To start serving the application on port 8088, type
+
+  python webproxy.py
+
+To start the server on some other interface/port, use
+
+  python -m gevent.wsgi -p 8000 -i 0.0.0.0 webproxy.py
+
+"""
 from gevent import monkey; monkey.patch_all()
 from gevent import wsgi
 import sys
@@ -9,12 +20,11 @@ from urlparse import urlparse
 from cgi import escape
 from urllib import unquote
 
-
 PORT = 8088
-PROXY_URL = 'http://127.0.0.1:%s/' % PORT
 
 
 def application(env, start_response):
+    proxy_url = 'http://%s/' % env['HTTP_HOST']
     method = env['REQUEST_METHOD']
     path = env['PATH_INFO']
     if env['QUERY_STRING']:
@@ -24,11 +34,11 @@ def application(env, start_response):
         start_response('200 OK', [('Content-Type', 'text/html')])
         return [FORM]
     elif method == 'GET':
-        return proxy(path, start_response)
+        return proxy(path, start_response, proxy_url)
     elif (method, path) == ('POST', ''):
         key, value = env['wsgi.input'].read().strip().split('=')
         assert key == 'url', repr(key)
-        start_response('302 Found', [('Location', join(PROXY_URL, unquote(value)))])
+        start_response('302 Found', [('Location', join(proxy_url, unquote(value)))])
     elif method == 'POST':
         start_response('404 Not Found', [])
     else:
@@ -36,7 +46,7 @@ def application(env, start_response):
     return []
 
 
-def proxy(path, start_response):
+def proxy(path, start_response, proxy_url):
     if '://' not in path:
         path = 'http://' + path
     try:
@@ -58,7 +68,7 @@ def proxy(path, start_response):
     else:
         start_response('%s %s' % (response.code, response.msg), headers)
         data = response.read()
-        data = fix_links(data, PROXY_URL, host)
+        data = fix_links(data, proxy_url, host)
         return [data]
 
 
@@ -105,7 +115,7 @@ FORM = """<html><head>
 <tr height=30%><td align=center valign=bottom>Type in URL you want to visit and press Enter</td></tr>
 <tr><td align=center valign=top>
 <form action=/ method=post>
-<input size=80 name=url value="http://www.google.com"/>
+<input size=80 name=url value="http://www.gevent.org"/>
 </form>
 </td></tr>
 </table></body></table>
