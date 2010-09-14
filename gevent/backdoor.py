@@ -30,6 +30,8 @@ from gevent import socket
 from gevent.greenlet import Greenlet
 from gevent.server import StreamServer
 
+__all__ = ['BackdoorServer']
+
 try:
     sys.ps1
 except AttributeError:
