@@ -149,7 +149,7 @@ cdef extern from "libevent.h":
 cdef void __event_handler(int fd, short evtype, void *arg) with gil:
     cdef event self = <event>arg
     try:
-        self._callback(self, evtype)
+        self.callback(self, evtype)
     except:
         traceback.print_exc()
         try:
@@ -171,12 +171,13 @@ cdef class event:
     - *arg*      -- optional object, which will be made available as :attr:`arg` property.
     """
     cdef event_t ev
-    cdef object _callback, _arg
+    cdef public object callback
+    cdef public object arg
     cdef int _incref # 1 if we already INCREFed this object once (because libevent references it)
 
     def __init__(self, short evtype, int handle, callback, arg=None):
-        self._callback = callback
-        self._arg = arg
+        self.callback = callback
+        self.arg = arg
         self._incref = 0
         cdef void* c_self = <void*>self
         if evtype == 0 and not handle:
@@ -193,27 +194,6 @@ cdef class event:
         if self._incref > 0:
             Py_DECREF(self)
             self._incref -= 1
-
-    property callback:
-        """User callback that will be called once the event is signalled.
-
-        The prototype: ``callback(event instance, evtype)``.
-        """
-
-        def __get__(self):
-            return self._callback
-
-        def __set__(self, new):
-            self._callback = new
-
-    property arg:
-        """Optional object set and read only by the user."""
-
-        def __get__(self):
-            return self._arg
-
-        def __set__(self, new):
-            self._arg = new
 
     property pending:
         """Return True if the event is still scheduled to run."""
@@ -317,7 +297,7 @@ cdef class event:
         else:
             events_str = ''
         return '<%s at %s%s fd=%s%s flags=%s cb=%s arg=%s>' % \
-               (type(self).__name__, hex(id(self)), pending, self.fd, events_str, self.flags_str, self._callback, self._arg)
+               (type(self).__name__, hex(id(self)), pending, self.fd, events_str, self.flags_str, self.callback, self.arg)
 
     def __str__(self):
         if self.pending:
@@ -328,8 +308,8 @@ cdef class event:
             events_str = ' %s' % self.events_str
         else:
             events_str = ''
-        cb = str(self._callback).replace('\n', '\n' + ' ' * 8)
-        arg = pformat(self._arg, indent=2).replace('\n', '\n' + ' ' * 8)
+        cb = str(self.callback).replace('\n', '\n' + ' ' * 8)
+        arg = pformat(self.arg, indent=2).replace('\n', '\n' + ' ' * 8)
         return '%s%s fd=%s%s flags=%s\n  cb  = %s\n  arg = %s' % \
                (type(self).__name__, pending, self.fd, events_str, self.flags_str, cb, arg)
 
@@ -376,8 +356,8 @@ class readwrite_event(event):
 cdef void __simple_handler(int fd, short evtype, void *arg) with gil:
     cdef event self = <event>arg
     try:
-        args, kwargs = self._arg
-        self._callback(*args, **kwargs)
+        args, kwargs = self.arg
+        self.callback(*args, **kwargs)
     except:
         traceback.print_exc()
         try:
@@ -394,8 +374,8 @@ cdef class timer(event):
     """Create a new scheduled timer"""
 
     def __init__(self, float seconds, callback, *args, **kwargs):
-        self._callback = callback
-        self._arg = (args, kwargs)
+        self.callback = callback
+        self.arg = (args, kwargs)
         evtimer_set(&self.ev, __simple_handler, <void*>self)
         self.add(seconds)
 
@@ -404,8 +384,8 @@ cdef class signal(event):
     """Create a new persistent signal event"""
 
     def __init__(self, int signalnum, callback, *args, **kwargs):
-        self._callback = callback
-        self._arg = (args, kwargs)
+        self.callback = callback
+        self.arg = (args, kwargs)
         event_set(&self.ev, signalnum, EV_SIGNAL|EV_PERSIST, __simple_handler, <void*>self)
         self.add()
 
@@ -414,8 +394,8 @@ cdef class active_event(event):
     """An event that is scheduled to run in the current loop iteration"""
 
     def __init__(self, callback, *args, **kwargs):
-        self._callback = callback
-        self._arg = (args, kwargs)
+        self.callback = callback
+        self.arg = (args, kwargs)
         evtimer_set(&self.ev, __simple_handler, <void*>self)
         self._addref()
         event_active(&self.ev, EV_TIMEOUT, 1)
