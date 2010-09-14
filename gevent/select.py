@@ -4,7 +4,8 @@ from gevent import core
 from gevent.timeout import Timeout
 from gevent.event import Event
 
-__all__ = ['error', 'select']
+__implements__ = ['select']
+__all__ = ['error'] + __implements__
 
 __select__ = __import__('select')
 error = __select__.error
