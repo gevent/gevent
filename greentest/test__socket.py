@@ -100,7 +100,7 @@ class TestTCP(greentest.TestCase):
             data_read = conn.makefile().read()
             self.assertEqual(len(data_sent), len(data_read))
             self.assertEqual(data_sent, data_read)
-            print 'WARNING: read the data instead of failing with timeout'
+            print '%s: WARNING: read the data instead of failing with timeout' % self.__class__.__name__
 
     def test_makefile(self):
         def accept_once():
