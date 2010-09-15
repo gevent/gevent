@@ -43,7 +43,7 @@ Miscellaneous:
 - Fixed ``webproxy.py`` example to be runnable under external WSGI server.
 - Fixed bogus failure in ``test__exc_info.py``.
 - Added new test to check PEP8 conformance: ``xtest_pep8.py``
-
+- Made :class:`BackdoorServer` close the connection on SystemExit and simplified the code
 
 Version 0.13.0
 --------------
