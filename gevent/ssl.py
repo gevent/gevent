@@ -20,7 +20,7 @@ except AttributeError:
 
 import sys
 import errno
-from gevent.socket import socket, _fileobject, timeout, wait_read, wait_write, timeout_default
+from gevent.socket import socket, _fileobject, wait_read, wait_write, timeout_default
 from gevent.socket import error as socket_error, EBADF
 
 __implements__ = ['SSLObject', 'wrap_socket', 'get_server_certificate', 'sslwrap_simple']
