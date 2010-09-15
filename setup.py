@@ -217,7 +217,10 @@ if __name__ == '__main__':
         cmdclass={'build_ext': my_build_ext},
         classifiers=[
         "License :: OSI Approved :: MIT License",
-        "Programming Language :: Python",
+        "Programming Language :: Python :: 2.4",
+        "Programming Language :: Python :: 2.5",
+        "Programming Language :: Python :: 2.6",
+        "Programming Language :: Python :: 2.7",
         "Operating System :: MacOS :: MacOS X",
         "Operating System :: POSIX",
         "Operating System :: Microsoft :: Windows",
