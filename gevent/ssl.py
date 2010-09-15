@@ -221,23 +221,8 @@ class SSLSocket(socket):
                 raise ValueError(
                     "non-zero flags not allowed in calls to recv() on %s" %
                     self.__class__)
-            while True:
-                try:
-                    return self.read(buflen)
-                except SSLError, x:
-                    if x.args[0] == SSL_ERROR_WANT_READ:
-                        sys.exc_clear()
-                        if self.timeout == 0.0:
-                            raise timeout(str(x))
-                        try:
-                            wait_read(self.fileno(), timeout=self.timeout, event=self._read_event)
-                        except socket_error, ex:
-                            if ex[0] == EBADF:
-                                return ''
-                            raise
-                        continue
-                    else:
-                        raise
+            # QQQ Shouldn't we wrap the SSL_WANT_READ errors as socket.timeout errors to match socket.recv's behavior?
+            return self.read(buflen)
         else:
             return socket.recv(self, buflen, flags)
 
