@@ -28,14 +28,6 @@ import re
 
 import gevent
 
-disabled_marker = '-*-*-*-*-*- disabled -*-*-*-*-*-'
-def exit_disabled():
-    sys.exit(disabled_marker)
-
-def exit_unless_25():
-    if sys.version_info[:2] < (2, 5):
-        exit_disabled()
-
 VERBOSE = sys.argv.count('-v') > 1
 
 if '--debug-greentest' in sys.argv:
