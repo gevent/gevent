@@ -23,36 +23,37 @@ import errno
 from gevent.socket import socket, _fileobject, wait_read, wait_write, timeout_default
 from gevent.socket import error as socket_error, EBADF
 
-__implements__ = ['SSLObject', 'wrap_socket', 'get_server_certificate', 'sslwrap_simple']
+__implements__ = ['SSLSocket',
+                  'wrap_socket',
+                  'get_server_certificate',
+                  'sslwrap_simple']
 
-__all__ = ['SSLError',
-           'CERT_NONE', 'CERT_OPTIONAL', 'CERT_REQUIRED',
-           'PROTOCOL_SSLv2', 'PROTOCOL_SSLv3', 'PROTOCOL_SSLv23', 'PROTOCOL_TLSv1', 'PROTOCOL_NOSSLv2',
-           'RAND_status', 'RAND_egd', 'RAND_add',
-           'SSL_ERROR_ZERO_RETURN',
-           'SSL_ERROR_WANT_READ',
-           'SSL_ERROR_WANT_WRITE',
-           'SSL_ERROR_WANT_X509_LOOKUP',
-           'SSL_ERROR_SYSCALL',
-           'SSL_ERROR_SSL',
-           'SSL_ERROR_WANT_CONNECT',
-           'SSL_ERROR_EOF',
-           'SSL_ERROR_INVALID_ERROR_CODE',
-           'cert_time_to_seconds',
-           'DER_cert_to_PEM_cert',
-           'PEM_cert_to_DER_cert',
-           'get_protocol_name']
+__imports__ = ['SSLError',
+               'RAND_status',
+               'RAND_egd',
+               'RAND_add',
+               'cert_time_to_seconds',
+               'get_protocol_name',
+               'DER_cert_to_PEM_cert',
+               'PEM_cert_to_DER_cert']
 
-for name in __all__:
+for name in __imports__[:]:
     try:
         value = getattr(__ssl__, name)
+        globals()[name] = value
     except AttributeError:
-        continue
-    globals()[name] = value
+        __imports__.remove(name)
+
+for name in dir(__ssl__):
+    if not name.startswith('_'):
+        value = getattr(__ssl__, name)
+        if isinstance(value, (int, long, basestring, tuple)):
+            globals()[name] = value
+            __imports__.append(name)
 
 del name, value
 
-__all__ += __implements__
+__all__ = __implements__ + __imports__
 
 
 class SSLSocket(socket):
