@@ -182,7 +182,7 @@ class SSLSocket(socket):
                 except SSLError, x:
                     if x.args[0] == SSL_ERROR_WANT_READ:
                         if self.timeout == 0.0:
-                            raise timeout(str(x))
+                            return 0
                         sys.exc_clear()
                         try:
                             wait_read(self.fileno(), timeout=timeout, event=self._read_event)
@@ -192,7 +192,7 @@ class SSLSocket(socket):
                             raise
                     elif x.args[0] == SSL_ERROR_WANT_WRITE:
                         if self.timeout == 0.0:
-                            raise timeout(str(x))
+                            return 0
                         sys.exc_clear()
                         try:
                             wait_write(self.fileno(), timeout=timeout, event=self._write_event)
