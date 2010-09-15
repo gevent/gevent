@@ -190,9 +190,12 @@ def run_tests(options, args):
     module_name = arg
     if module_name.endswith('.py'):
         module_name = module_name[:-3]
+
     class _runner(object):
+
         def __new__(cls, *args, **kawrgs):
             return DatabaseTestRunner(database_path=options.db, runid=options.runid, module_name=module_name, verbosity=options.verbosity)
+
     if options.db:
         import unittest
         unittest.TextTestRunner = _runner
@@ -419,7 +422,7 @@ def get_traceback_stats(output, test):
         traceback_count -= 1
     items = counter.items()
     items.sort(key=lambda (a, b): -b)
-    if traceback_count>0:
+    if traceback_count > 0:
         items.append(('other traceback', traceback_count))
     result = []
     for name, count in items:
@@ -431,7 +434,7 @@ def get_traceback_stats(output, test):
 
 
 def get_info(output, test):
-    output = output[:OUTPUT_LIMIT*2]
+    output = output[:OUTPUT_LIMIT * 2]
     traceback_stats, ignored_list = get_traceback_stats(output, test)
     warning_stats = get_warning_stats(output)
     result = traceback_stats + warning_stats
