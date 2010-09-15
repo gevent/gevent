@@ -16,12 +16,13 @@ import os
 import re
 import traceback
 import glob
-from distutils.command import build_ext
-if 'bdist_egg' in sys.argv:
-    from setuptools import Extension, setup
-else:
-    from distutils.core import Extension, setup
 from os.path import join, isdir, abspath, basename, exists, dirname
+
+try:
+    from setuptools import Extension, setup
+except ImportError:
+    from distutils.core import Extension, setup
+from distutils.command import build_ext
 
 __version__ = re.search("__version__\s*=\s*'(.*)'", open('gevent/__init__.py').read(), re.M).group(1)
 assert __version__
