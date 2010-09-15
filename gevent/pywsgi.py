@@ -448,7 +448,10 @@ class WSGIHandler(object):
                 value = value.strip()
                 key = 'HTTP_' + key
                 if key in env:
-                    env[key] += ',' + value
+                    if 'COOKIE' in key:
+                        env[key] += '; ' + value
+                    else:
+                        env[key] += ',' + value
                 else:
                     env[key] = value
 
