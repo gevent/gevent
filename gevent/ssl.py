@@ -19,6 +19,7 @@ except AttributeError:
     _ssl = __ssl__._ssl2
 
 import sys
+import errno
 from gevent.socket import socket, _fileobject, timeout, wait_read, wait_write, timeout_default
 from gevent.socket import error as socket_error, EBADF
 
