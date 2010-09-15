@@ -30,14 +30,11 @@ assert __version__
 include_dirs = []                 # specified by -I
 library_dirs = []                 # specified by -L
 libevent_source_path = None       # specified by --libevent
-VERBOSE = '-v' in sys.argv
 extra_compile_args = []
 sources = ['gevent/core.c']
 libraries = []
-extra_objects = []
 
 
-cmdclass = {}
 class my_build_ext(build_ext.build_ext):
 
     def compile_cython(self):
@@ -90,8 +87,6 @@ class my_build_ext(build_ext.build_ext):
         except Exception:
             traceback.print_exc()
         return result
-
-cmdclass = {'build_ext': my_build_ext}
 
 
 def check_dir(path, must_exist):
@@ -200,7 +195,6 @@ gevent_core = Extension(name='gevent.core',
                         include_dirs=include_dirs,
                         library_dirs=library_dirs,
                         libraries=libraries,
-                        extra_objects=extra_objects,
                         extra_compile_args=extra_compile_args)
 
 def read(name):
@@ -218,7 +212,7 @@ if __name__ == '__main__':
         url='http://www.gevent.org/',
         packages=['gevent'],
         ext_modules=[gevent_core],
-        cmdclass=cmdclass,
+        cmdclass={'build_ext': my_build_ext},
         classifiers=[
         "License :: OSI Approved :: MIT License",
         "Programming Language :: Python",
