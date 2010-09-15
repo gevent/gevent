@@ -39,7 +39,7 @@ one will be selected if not provided.
 DEFAULT_TIMEOUT = 60
 
 # the number of bytes of output that is recorded; the rest is thrown away
-OUTPUT_LIMIT = 15*1024
+OUTPUT_LIMIT = 50000
 
 ignore_tracebacks = ['ExpectedException', 'test_support.TestSkipped', 'test.test_support.TestSkipped']
 
