@@ -42,7 +42,7 @@ class Test(unittest.TestCase):
     def test_gevent(self):
         import gevent
         # E221 multiple spaces before operator
-        system(command % join(abspath(dirname(gevent.__file__)), '*.py'), '| grep -v E221')
+        system(command % abspath(dirname(gevent.__file__)), '| grep -v E221')
 
     def test_tests(self):
         # E702 multiple statements on one line (from gevent import monkey; monkey.patch_all())
@@ -61,7 +61,8 @@ class Test(unittest.TestCase):
 
     def test_examples(self):
         # E702 multiple statements on one line (from gevent import monkey; monkey.patch_all())
-        system(command % join(dirname(abspath(dirname(__file__))), 'examples', '*.py'), '| grep -v E702')
+        # E202 whitespace before '('
+        system(command % join(dirname(abspath(dirname(__file__))), 'examples'), '| grep -v E702 | grep -v E202')
 
     def test_setup(self):
         system(command % join(dirname(abspath(dirname(__file__))), 'setup.py'))
