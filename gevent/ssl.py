@@ -208,12 +208,12 @@ class SSLSocket(socket):
             return socket.send(self, data, flags, timeout)
     # is it possible for sendall() to send some data without encryption if another end shut down SSL?
 
-    def sendto(self, data, addr, flags=0):
+    def sendto(self, *args):
         if self._sslobj:
             raise ValueError("sendto not allowed on instances of %s" %
                              self.__class__)
         else:
-            return socket.sendto(self, data, addr, flags)
+            return socket.sendto(self, *args)
 
     def recv(self, buflen=1024, flags=0):
         if self._sslobj:
@@ -274,19 +274,19 @@ class SSLSocket(socket):
         else:
             return socket.recv_into(self, buffer, nbytes, flags)
 
-    def recvfrom(self, addr, buflen=1024, flags=0):
+    def recvfrom(self, *args):
         if self._sslobj:
             raise ValueError("recvfrom not allowed on instances of %s" %
                              self.__class__)
         else:
-            return socket.recvfrom(self, addr, buflen, flags)
+            return socket.recvfrom(self, *args)
 
-    def recvfrom_into(self, buffer, nbytes=None, flags=0):
+    def recvfrom_into(self, *args):
         if self._sslobj:
             raise ValueError("recvfrom_into not allowed on instances of %s" %
                              self.__class__)
         else:
-            return socket.recvfrom_into(self, buffer, nbytes, flags)
+            return socket.recvfrom_into(self, *args)
 
     def pending(self):
         if self._sslobj:
