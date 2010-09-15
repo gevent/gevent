@@ -270,6 +270,14 @@ class TestJoinSleep(greentest.GenericWaitTestCase):
         p.join(timeout=timeout)
 
 
+class TestJoinSleep_raise_error(greentest.GenericWaitTestCase):
+
+    def wait(self, timeout):
+        p = pool.Pool()
+        p.spawn(gevent.sleep, 10)
+        p.join(timeout=timeout, raise_error=True)
+
+
 class TestJoinEmpty(greentest.TestCase):
     switch_expected = False
 
