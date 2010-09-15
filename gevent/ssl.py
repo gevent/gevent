@@ -63,10 +63,6 @@ class SSLSocket(socket):
                  ssl_version=PROTOCOL_SSLv23, ca_certs=None,
                  do_handshake_on_connect=True,
                  suppress_ragged_eofs=True):
-        try:
-            sock = sock._sock
-        except AttributeError:
-            pass
         socket.__init__(self, _sock=sock)
 
         if certfile and not keyfile:
