@@ -183,8 +183,8 @@ else:
         extra_compile_args += ['-DHAVE_CONFIG_H']
         extra_compile_args += ['-DWIN32']
         libraries = ['wsock32', 'advapi32', 'ws2_32', 'shell32']
-        include_dirs.extend([ join(libevent_source_path, 'WIN32-Code'),
-                              join(libevent_source_path, 'compat') ])
+        include_dirs.extend([join(libevent_source_path, 'WIN32-Code'),
+                             join(libevent_source_path, 'compat')])
         libevent_sources = [join(libevent_source_path, filename) for filename in libevent_sources]
         libevent_sources = [filename for filename in libevent_sources if exists(filename)]
         if not libevent_sources:
