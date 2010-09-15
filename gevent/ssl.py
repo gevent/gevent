@@ -376,7 +376,7 @@ def wrap_socket(sock, keyfile=None, certfile=None,
                      suppress_ragged_eofs=suppress_ragged_eofs)
 
 
-def get_server_certificate (addr, ssl_version=PROTOCOL_SSLv3, ca_certs=None):
+def get_server_certificate(addr, ssl_version=PROTOCOL_SSLv3, ca_certs=None):
     """Retrieve the certificate from the server at the specified address,
     and return it as a PEM-encoded string.
     If 'ca_certs' is specified, validate the server cert against it.
@@ -400,4 +400,3 @@ def sslwrap_simple(sock, keyfile=None, certfile=None):
     for compability with Python 2.5 and earlier.  Will disappear in
     Python 3.0."""
     return SSLSocket(sock, keyfile, certfile)
-
