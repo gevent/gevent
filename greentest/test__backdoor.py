@@ -41,6 +41,15 @@ class Test(greentest.TestCase):
         line = conn.makefile().read()
         self.assertEqual(line, '')
 
+    def test_sys_exit(self):
+        server = backdoor.BackdoorServer(('127.0.0.1', 0))
+        server.start()
+        conn = socket.create_connection(('127.0.0.1', server.server_port))
+        read_until(conn, '>>> ')
+        conn.sendall('import sys; sys.exit(0)\r\n')
+        line = conn.makefile().read()
+        self.assertEqual(line, '')
+
 
 if __name__ == '__main__':
     greentest.main()
