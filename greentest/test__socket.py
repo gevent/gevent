@@ -8,6 +8,8 @@ import time
 
 class TestTCP(greentest.TestCase):
 
+    TIMEOUT_ERROR = socket.timeout
+
     def setUp(self):
         greentest.TestCase.setUp(self)
         self.listener = socket.tcp_listener(('127.0.0.1', 0))
@@ -74,10 +76,10 @@ class TestTCP(greentest.TestCase):
         start = time.time()
         try:
             data = client.recv(1024)
-        except socket.timeout:
+        except self.TIMEOUT_ERROR:
             assert 0.1 - 0.01 <= time.time() - start <= 0.1 + 0.1, (time.time() - start)
         else:
-            raise AssertionError('socket.timeout should have been raised, instead recv returned %r' % (data, ))
+            raise AssertionError('%s should have been raised, instead recv returned %r' % (self.TIMEOUT_ERROR, data, ))
         acceptor.get()
 
     def test_sendall_timeout(self):
@@ -89,7 +91,7 @@ class TestTCP(greentest.TestCase):
         data_sent = 'h' * 100000
         try:
             result = client.sendall(data_sent)
-        except socket.timeout:
+        except self.TIMEOUT_ERROR:
             assert 0.1 - 0.01 <= time.time() - start <= 0.1 + 0.1, (time.time() - start)
         else:
             assert time.time() - start <= 0.1 + 0.01, (time.time() - start)
@@ -126,6 +128,7 @@ if hasattr(socket, 'ssl'):
 
         certfile = os.path.join(os.path.dirname(__file__), 'test_server.crt')
         privfile = os.path.join(os.path.dirname(__file__), 'test_server.key')
+        timeout_error = socket.sslerror
 
         def setUp(self):
             TestTCP.setUp(self)
