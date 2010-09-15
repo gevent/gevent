@@ -309,7 +309,7 @@ class socket(object):
             result += ' sock=' + str(sockname)
         if peername is not None:
             result += ' peer=' + str(peername)
-        if self.timeout is not None:
+        if getattr(self, 'timeout', None) is not None:
             result += ' timeout=' + str(self.timeout)
         return result
 
