@@ -97,7 +97,13 @@ class WSGIHandler(object):
             header = header.replace('-', '_').upper()
             if header not in ('CONTENT_LENGTH', 'CONTENT_TYPE'):
                 header = 'HTTP_' + header
-            env[header] = value
+            if header in env:
+                if 'COOKIE' in header:
+                    env[header] += '; ' + value
+                else:
+                    env[header] += ',' + value
+            else:
+               env[header] = value
         return env
 
     def handle(self):
