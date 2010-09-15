@@ -204,26 +204,29 @@ def extract_application(filename):
 
 
 if __name__ == '__main__':
+    USAGE = '''python -m gevent.wsgi [options] /path/to/myapp.wsgi
+Where /path/to/myapp.wsgi is a Python script that defines "application" callable.'''
     import optparse
-    parser = optparse.OptionParser()
-    parser.add_option('-p', '--port', default='8080', type='int')
-    parser.add_option('--interface', default='127.0.0.1')
-    parser.add_option('--no-spawn', dest='spawn', default=True, action='store_false')
+    parser = optparse.OptionParser(USAGE)
+    parser.add_option('-p', '--port', default='8080', type='int', help='Set listening port (default is 8080)')
+    parser.add_option('-i', '--interface', metavar='IP', default='127.0.0.1', help='Set listening interface (default is 127.0.0.1)')
+    parser.add_option('--pool', metavar='SIZE', dest='spawn', type='int', help='Maximum number of concurrent connections')
+    parser.add_option('--no-spawn', action='store_true', help='Do not spawn greenlets (no blocking calls)')
     options, args = parser.parse_args()
+    if options.no_spawn is not None and options.spawn is not None:
+        sys.exit('Please specify either --pool or --no-spawn but not both')
+    if options.no_spawn:
+        options.spawn = None
+    elif options.spawn is None:
+        options.spawn = 'default'
     if len(args) == 1:
         filename = args[0]
         try:
             application = extract_application(filename)
         except AttributeError:
             sys.exit("Could not find application in %s" % filename)
-        if options.spawn:
-            spawn = 'default'
-        else:
-            spawn = None
-        server = WSGIServer((options.interface, options.port), application, spawn=spawn)
+        server = WSGIServer((options.interface, options.port), application, spawn=options.spawn)
         print 'Serving %s on %s:%s' % (filename, options.interface, options.port)
         server.serve_forever()
     else:
-        sys.stderr.write("USAGE: %s /path/to/app.wsgi\napp.wsgi is a python script defining 'application' callable\n" % sys.argv[0])
-
-
+        sys.stderr.write(parser.format_help())
