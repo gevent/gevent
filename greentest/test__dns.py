@@ -39,4 +39,3 @@ class TestSwitch(greentest.TestCase):
 
 if __name__ == '__main__':
     greentest.main()
-

@@ -2,6 +2,7 @@ from gevent.util import lazy_property
 
 calc = []
 
+
 class A(object):
 
     @lazy_property

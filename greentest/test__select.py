@@ -16,5 +16,5 @@ class TestSelectTypes(greentest.TestCase):
         select.select([1L], [], [], 0.001)
 
 
-if __name__=='__main__':
+if __name__ == '__main__':
     greentest.main()

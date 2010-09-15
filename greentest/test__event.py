@@ -4,20 +4,24 @@ from gevent.event import Event, AsyncResult
 
 DELAY = 0.01
 
+
 class TestEventWait(greentest.GenericWaitTestCase):
 
     def wait(self, timeout):
         Event().wait(timeout=timeout)
+
 
 class TestAsyncResultWait(greentest.GenericWaitTestCase):
 
     def wait(self, timeout):
         AsyncResult().wait(timeout=timeout)
 
+
 class TestAsyncResultGet(greentest.GenericGetTestCase):
 
     def wait(self, timeout):
         AsyncResult().get(timeout=timeout)
+
 
 class TestAsyncResult(greentest.TestCase):
 
@@ -41,7 +45,7 @@ class TestAsyncResult(greentest.TestCase):
         event1 = AsyncResult()
         event2 = AsyncResult()
 
-        g = gevent.spawn_later(DELAY/2.0, event1.set, 'hello event1')
+        g = gevent.spawn_later(DELAY / 2.0, event1.set, 'hello event1')
         t = gevent.Timeout.start_new(0, ValueError('interrupted'))
         try:
             try:
@@ -58,7 +62,7 @@ class TestAsyncResult(greentest.TestCase):
 class TestAsync_ResultAsLinkTarget(greentest.TestCase):
 
     def test_set(self):
-        g = gevent.spawn(lambda : 1)
+        g = gevent.spawn(lambda: 1)
         s1, s2, s3 = AsyncResult(), AsyncResult(), AsyncResult()
         g.link(s1)
         g.link_value(s2)
@@ -92,8 +96,10 @@ class TestEvent_SetThenClear(greentest.TestCase):
         for t in waiters:
             t.join()
 
+
 class TestEvent_SetThenClear100(TestEvent_SetThenClear):
     N = 100
+
 
 class TestEvent_SetThenClear1000(TestEvent_SetThenClear):
     N = 1000
@@ -101,5 +107,5 @@ class TestEvent_SetThenClear1000(TestEvent_SetThenClear):
 
 X = object()
 
-if __name__=='__main__':
+if __name__ == '__main__':
     greentest.main()

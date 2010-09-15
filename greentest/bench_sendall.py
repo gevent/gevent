@@ -13,9 +13,9 @@ def main():
     server = StreamServer(("127.0.0.1", 0), recvall)
     server.start()
 
-    length = 50*0x100000
+    length = 50 * 0x100000
     data = "x" * length
-    
+
     spent_total = 0
     N = 10
 
@@ -31,6 +31,5 @@ def main():
     server.stop()
 
 
-if __name__=="__main__":
+if __name__ == "__main__":
     main()
-

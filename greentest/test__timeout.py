@@ -20,17 +20,17 @@ class TestDirectRaise(greentest.TestCase):
             assert timeout is t, (timeout, t)
             assert not t.pending, repr(t)
 
+
 class Test(greentest.TestCase):
 
     def test_with_timeout(self):
-        self.assertRaises(gevent.Timeout, gevent.with_timeout, DELAY, gevent.sleep, DELAY*2)
+        self.assertRaises(gevent.Timeout, gevent.with_timeout, DELAY, gevent.sleep, DELAY * 2)
         X = object()
-        r = gevent.with_timeout(DELAY, gevent.sleep, DELAY*2, timeout_value=X)
+        r = gevent.with_timeout(DELAY, gevent.sleep, DELAY * 2, timeout_value=X)
         assert r is X, (r, X)
-        r = gevent.with_timeout(DELAY*2, gevent.sleep, DELAY, timeout_value=X)
+        r = gevent.with_timeout(DELAY * 2, gevent.sleep, DELAY, timeout_value=X)
         assert r is None, r
 
 
-if __name__=='__main__':
+if __name__ == '__main__':
     greentest.main()
-

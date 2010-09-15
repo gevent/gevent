@@ -4,6 +4,7 @@ import greentest
 
 # XXX also test: send, sendall, recvfrom, recvfrom_into, sendto
 
+
 class Test(greentest.TestCase):
 
     def setUp(self):

@@ -27,6 +27,7 @@ try:
 except ImportError:
     from errno import ECONNREFUSED
 
+
 class TestSocketErrors(greentest.TestCase):
 
     def test_connection_refused(self):
@@ -38,6 +39,5 @@ class TestSocketErrors(greentest.TestCase):
             assert 'refused' in str(ex).lower(), str(ex)
 
 
-if __name__=='__main__':
+if __name__ == '__main__':
     greentest.main()
-

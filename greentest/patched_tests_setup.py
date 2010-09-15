@@ -25,8 +25,7 @@ disabled_tests = [
 
     # this test seems to have a bug which makes it fail with error: (107, 'Transport endpoint is not connected')
     # (they create TCP socket, not UDP)
-    'test_socket.UDPTimeoutTest.testUDPTimeout'
-]
+    'test_socket.UDPTimeoutTest.testUDPTimeout']
 
 if sys.version_info[:2] < (2, 7):
     # On Python 2.6, this test fails even without monkey patching
@@ -43,4 +42,3 @@ def disable_tests_in_the_source(source, name):
         source, n = re.subn(testcase, 'XXX' + testcase, source)
         print >> sys.stderr, 'Removed %s (%d)' % (testcase, n)
     return source
-

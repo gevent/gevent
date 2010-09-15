@@ -23,6 +23,8 @@
 are not leaked by the hub.
 """
 from _socket import socket
+
+
 class Socket(socket):
     "Something we can have a weakref to"
 
@@ -42,8 +44,8 @@ import gc
 import socket
 socket._realsocket = Socket
 
-
 SOCKET_TIMEOUT = 0.1
+
 
 def init_server():
     s = socket.socket()
@@ -52,6 +54,7 @@ def init_server():
     s.bind(('127.0.0.1', 0))
     s.listen(5)
     return s
+
 
 def handle_request(s, raise_on_timeout):
     try:
@@ -63,12 +66,13 @@ def handle_request(s, raise_on_timeout):
             return
     #print 'handle_request - accepted'
     res = conn.recv(100)
-    assert res == 'hello', `res`
+    assert res == 'hello', repr(res)
     #print 'handle_request - recvd %r' % res
     res = conn.send('bye')
     #print 'handle_request - sent %r' % res
     #print 'handle_request - conn refcount: %s' % sys.getrefcount(conn)
     #conn.close()
+
 
 def make_request(port):
     #print 'make_request'
@@ -78,9 +82,10 @@ def make_request(port):
     res = s.send('hello')
     #print 'make_request - sent %s' % res
     res = s.recv(100)
-    assert res == 'bye', `res`
+    assert res == 'bye', repr(res)
     #print 'make_request - recvd %r' % res
     #s.close()
+
 
 def run_interaction(run_client):
     s = init_server()
@@ -88,10 +93,11 @@ def run_interaction(run_client):
     if run_client:
         port = s.getsockname()[1]
         start_new_thread(make_request, (port, ))
-    sleep(0.1+SOCKET_TIMEOUT)
+    sleep(0.1 + SOCKET_TIMEOUT)
     #print sys.getrefcount(s._sock)
     #s.close()
     return weakref.ref(s._sock)
+
 
 def run_and_check(run_client):
     w = run_interaction(run_client=run_client)
@@ -103,6 +109,7 @@ def run_and_check(run_client):
                 print '-', pformat(y)
         raise AssertionError('server should be dead by now')
 
+
 class test(greentest.TestCase):
 
     def test_clean_exit(self):
@@ -113,6 +120,6 @@ class test(greentest.TestCase):
         run_and_check(False)
         run_and_check(False)
 
-if __name__=='__main__':
-    greentest.main()
 
+if __name__ == '__main__':
+    greentest.main()

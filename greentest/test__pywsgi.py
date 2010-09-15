@@ -28,6 +28,7 @@ import sys
 try:
     from wsgiref.validate import validator
 except ImportError:
+
     def validator(app):
         return app
 
@@ -200,6 +201,7 @@ def makefile(self, mode='r', bufsize=-1):
     return DebugFileObject(socket._fileobject(self.dup(), mode, bufsize))
 
 socket.socket.makefile = makefile
+
 
 class TestCase(greentest.TestCase):
 
@@ -500,7 +502,7 @@ class TestUseWrite(TestCase):
             response.assertHeader('Transfer-Encoding', 'chunked')
             assert response.chunks == [self.body, self.body, self.end], response.chunks
         else:
-            response.assertHeader('Content-Length', str(5+5+3))
+            response.assertHeader('Content-Length', str(5 + 5 + 3))
 
 
 class HttpsTestCase(TestCase):
@@ -637,10 +639,10 @@ class TestEmptyYield(TestCase):
         fd = self.connect().makefile(bufsize=1)
         fd.write('GET / HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n')
         st, h, body = read_http(fd)
-        assert body==""
+        assert body == ""
 
         garbage = fd.read()
-        self.assert_(garbage=="", "got garbage: %r" % garbage)
+        self.assert_(garbage == "", "got garbage: %r" % garbage)
 
 
 class TestEmptyWrite(TestEmptyYield):
@@ -679,7 +681,7 @@ class HTTPRequest(urllib2.Request):
 
     def __init__(self, url, method="GET", data=None, headers={},
                  origin_req_host=None, unverifiable=False):
-        urllib2.Request.__init__(self,url,data,headers,origin_req_host,unverifiable)
+        urllib2.Request.__init__(self, url, data, headers, origin_req_host, unverifiable)
         self.url = url
         self.method = method
 
@@ -722,7 +724,7 @@ class ChunkedInputTests(TestCase):
         return b
 
     def body(self, dirt=None):
-        return self.chunk_encode(["this", " is ", "chunked", "\nline", " 2", "\n",  "line3", ""], dirt=dirt)
+        return self.chunk_encode(["this", " is ", "chunked", "\nline", " 2", "\n", "line3", ""], dirt=dirt)
 
     def ping(self, fd):
         fd.write("GET /ping HTTP/1.1\r\n\r\n")
@@ -806,6 +808,7 @@ class ChunkedInputTests(TestCase):
 
 class Expect100ContinueTests(TestCase):
     validator = None
+
     def application(self, environ, start_response):
         if int(environ['CONTENT_LENGTH']) > 1024:
             start_response('417 Expectation Failed', [('Content-Length', '7'), ('Content-Type', 'text/plain')])
@@ -827,7 +830,6 @@ class Expect100ContinueTests(TestCase):
                     print '100ContinueNotImplementedWarning'
                     return
             raise
-
 
         fd.write('PUT / HTTP/1.1\r\nHost: localhost\r\nContent-length: 7\r\nExpect: 100-continue\r\n\r\ntesting')
         read_http(fd, code=100)

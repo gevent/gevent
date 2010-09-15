@@ -32,6 +32,7 @@ import urllib2
 import BaseHTTPServer
 from gevent import spawn
 
+
 def start_http_server():
     server_address = ('', 0)
     BaseHTTPServer.BaseHTTPRequestHandler.protocol_version = "HTTP/1.0"
@@ -39,10 +40,13 @@ def start_http_server():
     #sa = httpd.socket.getsockname()[1]
     #print "Serving HTTP on", sa[0], "port", sa[1], "..."
     httpd.request_count = 0
+
     def serve():
         httpd.handle_request()
         httpd.request_count += 1
+
     return spawn(serve), httpd
+
 
 class TestGreenness(greentest.TestCase):
 
@@ -60,7 +64,7 @@ class TestGreenness(greentest.TestCase):
             urllib2.urlopen('http://127.0.0.1:%s' % port)
             assert False, 'should not get there'
         except urllib2.HTTPError, ex:
-            assert ex.code == 501, `ex`
+            assert ex.code == 501, repr(ex)
         self.assertEqual(self.httpd.request_count, 1)
 
 if __name__ == '__main__':

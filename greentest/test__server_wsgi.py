@@ -45,4 +45,3 @@ TestDefaultSpawn.invalid_callback_message = msg
 
 if __name__ == '__main__':
     unittest.main()
-

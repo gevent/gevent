@@ -4,6 +4,7 @@ import subprocess
 import signal
 from subprocess import *
 
+
 class Popen(subprocess.Popen):
 
     def send_signal(self, sig):
@@ -46,4 +47,3 @@ class Popen(subprocess.Popen):
             os.system('taskkill /f /pid %s' % self.pid)
         else:
             sys.stderr.write('Cannot kill on this platform. Please kill %s\n' % self.pid)
-

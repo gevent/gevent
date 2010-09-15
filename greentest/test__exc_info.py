@@ -4,11 +4,13 @@ import greentest
 
 sys.exc_clear()
 
+
 class ExpectedError(Exception):
     pass
 
 
 expected_error = ExpectedError('expected exception in hello')
+
 
 def hello():
     assert sys.exc_info() == (None, None, None), sys.exc_info()

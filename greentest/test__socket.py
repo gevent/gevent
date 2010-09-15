@@ -39,7 +39,7 @@ class TestTCP(greentest.TestCase):
         def server():
             (client, addr) = self.listener.accept()
             # start reading, then, while reading, start writing. the reader should not hang forever
-            N = 100000 # must be a big enough number so that sendall calls trampoline
+            N = 100000  # must be a big enough number so that sendall calls trampoline
             sender = gevent.spawn_link_exception(client.sendall, 't' * N)
             result = client.recv(1000)
             assert result == 'hello world', result
@@ -137,7 +137,6 @@ if hasattr(socket, 'ssl'):
         def create_connection(self):
             return socket.ssl(socket.create_connection(('127.0.0.1', self.listener.getsockname()[1])))
 
-
     def ssl_listener(address, private_key, certificate):
         import _socket
         r = _socket.socket()
@@ -166,5 +165,5 @@ class TestCreateConnection(greentest.TestCase):
                 raise
 
 
-if __name__=='__main__':
+if __name__ == '__main__':
     greentest.main()

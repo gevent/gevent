@@ -4,8 +4,8 @@ import threading
 localdata = threading.local()
 localdata.x = "hello"
 assert localdata.x == 'hello'
-
 success = []
+
 
 def func():
     try:

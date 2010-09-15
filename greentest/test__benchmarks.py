@@ -3,6 +3,7 @@ import glob
 import mysubprocess as subprocess
 import time
 
+
 def system(command):
     p = subprocess.Popen(command, shell=True)
     try:
@@ -40,4 +41,3 @@ if __name__ == '__main__':
 
     if error:
         sys.exit(1)
-

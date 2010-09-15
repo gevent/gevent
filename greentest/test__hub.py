@@ -38,7 +38,7 @@ class TestScheduleCall(greentest.TestCase):
     def test_global(self):
         lst = [1]
         gevent.spawn(core.timer, DELAY, lst.pop)
-        gevent.sleep(DELAY*2)
+        gevent.sleep(DELAY * 2)
         assert lst == [], lst
 
 
@@ -63,7 +63,7 @@ class TestExceptionInMainloop(greentest.TestCase):
         gevent.sleep(DELAY)
         delay = time.time() - start
 
-        assert delay >= DELAY*0.9, 'sleep returned after %s seconds (was scheduled for %s)' % (delay, DELAY)
+        assert delay >= DELAY * 0.9, 'sleep returned after %s seconds (was scheduled for %s)' % (delay, DELAY)
 
         def fail():
             raise greentest.ExpectedException('TestExceptionInMainloop.test_sleep/fail')
@@ -74,7 +74,7 @@ class TestExceptionInMainloop(greentest.TestCase):
         gevent.sleep(DELAY)
         delay = time.time() - start
 
-        assert delay >= DELAY*0.9, 'sleep returned after %s seconds (was scheduled for %s)' % (delay, DELAY)
+        assert delay >= DELAY * 0.9, 'sleep returned after %s seconds (was scheduled for %s)' % (delay, DELAY)
 
 
 class TestShutdown(unittest.TestCase):
@@ -85,7 +85,7 @@ class TestShutdown(unittest.TestCase):
         start = time.time()
         gevent.hub.shutdown()
         delta = time.time() - start
-        assert seconds - fuzzy < delta < seconds + fuzzy, (seconds-fuzzy, delta, seconds+fuzzy)
+        assert seconds - fuzzy < delta < seconds + fuzzy, (seconds - fuzzy, delta, seconds + fuzzy)
 
     def assert_hub(self):
         assert 'hub' in gevent.hub._threadlocal.__dict__
@@ -109,7 +109,7 @@ class TestShutdown(unittest.TestCase):
         gevent.sleep(0)
         self.assert_hub()
 
-        gevent.core.timer(0.1, lambda : None)
+        gevent.core.timer(0.1, lambda: None)
         self.assert_hub()
         self._shutdown(seconds=0.1)
         self.assert_no_hub()
@@ -146,6 +146,7 @@ class Expected(Exception):
 
 
 if hasattr(signal, 'SIGALRM'):
+
     class TestSignal(greentest.TestCase):
 
         __timeout__ = 2
@@ -193,6 +194,5 @@ class TestWaiter(greentest.GenericWaitTestCase):
         assert str(waiter).startswith('<Waiter greenlet=<Greenlet at '), str(waiter)
 
 
-if __name__=='__main__':
+if __name__ == '__main__':
     greentest.main()
-

@@ -19,12 +19,14 @@ class Test(greentest.TestCase):
     def test(self):
         server = backdoor.BackdoorServer(('127.0.0.1', 0))
         server.start()
+
         def connect():
             conn = socket.create_connection(('127.0.0.1', server.server_port))
             read_until(conn, '>>> ')
             conn.sendall('2+2\r\n')
             line = conn.makefile().readline()
             assert line.strip() == '4', repr(line)
+
         jobs = [gevent.spawn(connect) for _ in xrange(10)]
         gevent.joinall(jobs)
         server.kill()

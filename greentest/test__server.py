@@ -155,7 +155,7 @@ class TestCase(greentest.TestCase):
 
     def _test_invalid_callback(self):
         self.hook_stderr()
-        self.server = self.ServerClass(('127.0.0.1', 0), lambda : None)
+        self.server = self.ServerClass(('127.0.0.1', 0), lambda: None)
         self.server.start()
         self.assert500()
         self.assert_stderr_traceback('TypeError')
@@ -189,7 +189,7 @@ class TestDefaultSpawn(TestCase):
             self.report_netstat('after start_accepting')
             self.assertRequestSucceeded()
         else:
-            self.assertRaises(Exception, self.server.start) # XXX which exception exactly?
+            self.assertRaises(Exception, self.server.start)  # XXX which exception exactly?
         self.stop_server()
         self.report_netstat('after stop')
 
@@ -334,7 +334,6 @@ class TestNoneSpawn(TestCase):
         self.assert_mainloop_assertion(self.invalid_callback_message)
 
 
-
 class ExpectedError(Exception):
     pass
 
@@ -363,4 +362,3 @@ class TestSSLSocketNotAllowed(TestCase):
 
 if __name__ == '__main__':
     greentest.main()
-

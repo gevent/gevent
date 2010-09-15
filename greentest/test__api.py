@@ -25,10 +25,12 @@ from gevent import core, util, socket
 
 DELAY = 0.1
 
+
 class Test(greentest.TestCase):
 
     def test_killing_dormant(self):
         state = []
+
         def test():
             try:
                 state.append('start')
@@ -38,8 +40,9 @@ class Test(greentest.TestCase):
                 # catching GreenletExit
                 pass
             state.append('finished')
+
         g = gevent.spawn(test)
-        gevent.sleep(DELAY/2)
+        gevent.sleep(DELAY / 2)
         assert state == ['start'], state
         g.kill(block=True)
         # will not get there, unless switching is explicitly scheduled by kill
@@ -99,6 +102,5 @@ class TestTimers(greentest.TestCase):
         assert self.lst == [], self.lst
 
 
-if __name__=='__main__':
+if __name__ == '__main__':
     greentest.main()
-

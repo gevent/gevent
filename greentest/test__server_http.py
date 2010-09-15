@@ -14,6 +14,7 @@ Content-length: 31
 
 Service Temporarily Unavailable'''.replace('\n', '\r\n')
 
+
 class SimpleHTTPServer(http.HTTPServer):
 
     def handle(self, request):
@@ -60,4 +61,3 @@ test__server.Settings = Settings
 
 if __name__ == '__main__':
     unittest.main()
-

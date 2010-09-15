@@ -6,6 +6,7 @@ import random
 import traceback
 from time import time
 
+
 def init():
     global N, counter
     N = 10000
@@ -13,26 +14,30 @@ def init():
 
 init()
 
+
 def incr(sleep, **kwargs):
     global counter
     counter += 1
     sleep(0)
 
+
 def noop(p):
     pass
+
 
 def test(spawn, sleep, kwargs):
     start = time()
     for _ in xrange(N):
         spawn(incr, sleep, **kwargs)
     delta = time() - start
-    print 'spawning: %.1f microseconds per greenlet' % (delta*1000000.0/N)
+    print 'spawning: %.1f microseconds per greenlet' % (delta * 1000000.0 / N)
     assert counter == 0, counter
     start = time()
     sleep(0)
     delta = time() - start
     assert counter == N, (counter, N)
-    print 'sleep(0): %.1f microseconds per greenlet' % (delta*1000000.0/N)
+    print 'sleep(0): %.1f microseconds per greenlet' % (delta * 1000000.0 / N)
+
 
 def bench_none(options):
     kwargs = options.kwargs
@@ -41,7 +46,8 @@ def bench_none(options):
         incr(noop, **kwargs)
     delta = time() - start
     assert counter == N, (counter, N)
-    print '%.2f microseconds' % (delta*1000000.0/N)
+    print '%.2f microseconds' % (delta * 1000000.0 / N)
+
 
 def bench_gevent(options):
     import gevent
@@ -49,11 +55,13 @@ def bench_gevent(options):
     from gevent import spawn, sleep
     test(spawn, sleep, options.kwargs)
 
+
 def bench_geventraw(options):
     import gevent
     print 'using gevent from %s' % gevent.__file__
     from gevent import sleep, spawn_raw
     test(spawn_raw, sleep, options.kwargs)
+
 
 def bench_geventpool(options):
     import gevent
@@ -65,7 +73,8 @@ def bench_geventpool(options):
     start = time()
     p.join()
     delta = time() - start
-    print 'joining: %.1f microseconds per greenlet' % (delta*1000000.0/N)
+    print 'joining: %.1f microseconds per greenlet' % (delta * 1000000.0 / N)
+
 
 def bench_eventlet(options):
     try:
@@ -79,6 +88,7 @@ def bench_eventlet(options):
     if options.eventlet_hub is not None:
         use_hub(options.eventlet_hub)
     test(spawn, sleep, options.kwargs)
+
 
 def bench_eventlet1(options):
     try:
@@ -96,6 +106,7 @@ def bench_eventlet1(options):
         print 'eventlet.proc.spawn_greenlet does support kwargs'
         return
     test(spawn, sleep, options.kwargs)
+
 
 def bench_all(options):
     import time
@@ -122,16 +133,19 @@ def bench_all(options):
     if error:
         sys.exit(1)
 
+
 def all():
-    result = [x for x in globals() if x.startswith('bench_') and x!='bench_all']
-    result.sort(key = lambda x: globals()[x].func_code.co_firstlineno)
+    result = [x for x in globals() if x.startswith('bench_') and x != 'bench_all']
+    result.sort(key=lambda x: globals()[x].func_code.co_firstlineno)
     result = [x.replace('bench_', '') for x in result]
     return result
+
 
 def all_functions():
     return [globals()['bench_%s' % x] for x in all()]
 
-if __name__=='__main__':
+
+if __name__ == '__main__':
     USAGE = 'USAGE: python %s [--with-kwargs] [--eventlet-hub HUB] %s' % (sys.argv[0], '|'.join(all()))
     if not sys.argv[1:]:
         sys.exit(USAGE)
@@ -154,4 +168,3 @@ if __name__=='__main__':
             sys.exit(USAGE)
         function = globals()['bench_' + args[0]]
         function(options)
-

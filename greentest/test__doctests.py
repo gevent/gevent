@@ -10,6 +10,7 @@ from greentest import walk_modules
 
 # Ignore tracebacks: ZeroDivisionError
 
+
 def myfunction(*args, **kwargs):
     pass
 

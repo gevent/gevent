@@ -44,7 +44,7 @@ class TestCase(unittest.TestCase):
     _switch_count = None
 
     def setUp(self):
-        gevent.sleep(0) # switch at least once to setup signal handlers
+        gevent.sleep(0)  # switch at least once to setup signal handlers
         if hasattr(gevent.core, '_event_count'):
             self._event_count = (gevent.core._event_count(), gevent.core._event_count_active())
         hub = gevent.hub.get_hub()
@@ -154,7 +154,7 @@ class TestCase(unittest.TestCase):
 
     def extract_re(self, regex, **kwargs):
         assert self.stderr is not None
-        m = re.search(regex, self.stderr, re.DOTALL|re.M)
+        m = re.search(regex, self.stderr, re.DOTALL | re.M)
         if m is None:
             raise AssertionError('%r did not match:\n%r' % (regex, self.stderr))
         for key, expected_value in kwargs.items():
@@ -168,12 +168,12 @@ class TestCase(unittest.TestCase):
         if DEBUG:
             ate = '\n#ATE#: ' + self.stderr[m.start(0):m.end(0)].replace('\n', '\n#ATE#: ') + '\n'
             sys.__stderr__.write(ate)
-        self.stderr = self.stderr[:m.start(0)] + self.stderr[m.end(0)+1:]
+        self.stderr = self.stderr[:m.start(0)] + self.stderr[m.end(0) + 1:]
 
 
 main = unittest.main
-
 _original_Hub = gevent.hub.Hub
+
 
 class CountingHub(_original_Hub):
 
@@ -273,4 +273,3 @@ def walk_modules(basedir=None, modpath=None):
         if not fn.endswith('.py') or fn in ['__init__.py', 'core.py']:
             continue
         yield path, modpath + fn[:-3]
-

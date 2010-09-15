@@ -29,7 +29,7 @@ class BoundTestCase(greentest.TestCase):
         self.check_refused()
 
     def print_netstat(self, comment=''):
-        cmd ='sudo netstat -anp | grep %s' % self.server.server_port
+        cmd = 'sudo netstat -anp | grep %s' % self.server.server_port
         print cmd, ' # %s' % comment
         os.system(cmd)
 
@@ -222,4 +222,3 @@ class TestDetach(BoundTestCase):
 
 if __name__ == '__main__':
     greentest.main()
-

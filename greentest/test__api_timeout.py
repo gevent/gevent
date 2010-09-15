@@ -27,26 +27,28 @@ import time
 from gevent import sleep, Timeout
 DELAY = 0.04
 
+
 class Error(Exception):
     pass
+
 
 class Test(greentest.TestCase):
 
     def test_api(self):
         # Nothing happens if with-block finishes before the timeout expires
-        t = Timeout(DELAY*2)
+        t = Timeout(DELAY * 2)
         assert not t.pending, repr(t)
         with t:
             assert t.pending, repr(t)
             sleep(DELAY)
         # check if timer was actually cancelled
         assert not t.pending, repr(t)
-        sleep(DELAY*2)
+        sleep(DELAY * 2)
 
         # An exception will be raised if it's not
         try:
             with Timeout(DELAY) as t:
-                sleep(DELAY*2)
+                sleep(DELAY * 2)
         except Timeout, ex:
             assert ex is t, (ex, t)
         else:
@@ -55,23 +57,23 @@ class Test(greentest.TestCase):
         # You can customize the exception raised:
         try:
             with Timeout(DELAY, IOError("Operation takes way too long")):
-                sleep(DELAY*2)
+                sleep(DELAY * 2)
         except IOError, ex:
-            assert str(ex)=="Operation takes way too long", repr(ex)
+            assert str(ex) == "Operation takes way too long", repr(ex)
 
         # Providing classes instead of values should be possible too:
         try:
             with Timeout(DELAY, ValueError):
-                sleep(DELAY*2)
+                sleep(DELAY * 2)
         except ValueError:
             pass
 
         try:
-            1/0
+            1 / 0
         except:
             try:
                 with Timeout(DELAY, sys.exc_info()[0]):
-                    sleep(DELAY*2)
+                    sleep(DELAY * 2)
                     raise AssertionError('should not get there')
                 raise AssertionError('should not get there')
             except ZeroDivisionError:
@@ -82,15 +84,15 @@ class Test(greentest.TestCase):
         # It's possible to cancel the timer inside the block:
         with Timeout(DELAY) as timer:
             timer.cancel()
-            sleep(DELAY*2)
+            sleep(DELAY * 2)
 
         # To silent the exception before exiting the block, pass False as second parameter.
-        XDELAY=0.1
+        XDELAY = 0.1
         start = time.time()
         with Timeout(XDELAY, False):
-            sleep(XDELAY*2)
-        delta = (time.time()-start)
-        assert delta<XDELAY*2, delta
+            sleep(XDELAY * 2)
+        delta = (time.time() - start)
+        assert delta < XDELAY * 2, delta
 
         # passing None as seconds disables the timer
         with Timeout(None):
@@ -100,31 +102,31 @@ class Test(greentest.TestCase):
     def test_ref(self):
         err = Error()
         err_ref = weakref.ref(err)
-        with Timeout(DELAY*2, err):
+        with Timeout(DELAY * 2, err):
             sleep(DELAY)
         del err
         assert not err_ref(), repr(err_ref())
 
     def test_nested_timeout(self):
         with Timeout(DELAY, False):
-            with Timeout(DELAY*2, False):
-                sleep(DELAY*3)
+            with Timeout(DELAY * 2, False):
+                sleep(DELAY * 3)
             raise AssertionError('should not get there')
 
         with Timeout(DELAY) as t1:
-            with Timeout(DELAY*2) as t2:
+            with Timeout(DELAY * 2) as t2:
                 try:
-                    sleep(DELAY*3)
+                    sleep(DELAY * 3)
                 except Timeout, ex:
                     assert ex is t1, (ex, t1)
                 assert not t1.pending, t1
                 assert t2.pending, t2
             assert not t2.pending, t2
 
-        with Timeout(DELAY*2) as t1:
+        with Timeout(DELAY * 2) as t1:
             with Timeout(DELAY) as t2:
                 try:
-                    sleep(DELAY*3)
+                    sleep(DELAY * 3)
                 except Timeout, ex:
                     assert ex is t2, (ex, t2)
                 assert t1.pending, t1
@@ -132,6 +134,5 @@ class Test(greentest.TestCase):
         assert not t1.pending, t1
 
 
-if __name__=='__main__':
+if __name__ == '__main__':
     greentest.main()
-

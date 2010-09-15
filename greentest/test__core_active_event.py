@@ -2,6 +2,7 @@ import gevent
 
 called = []
 
+
 def f():
     called.append(1)
 

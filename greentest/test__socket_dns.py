@@ -7,8 +7,7 @@ from gevent.socket import *
 
 
 ACCEPTED_GAIERROR_MISMATCH = {
-    "gaierror(-5, 'No address associated with hostname')": "DNSError(3, 'name does not exist')"
-}
+    "gaierror(-5, 'No address associated with hostname')": "DNSError(3, 'name does not exist')"}
 
 assert gaierror is real_socket.gaierror
 assert error is real_socket.error
@@ -52,7 +51,6 @@ class TestCase(greentest.TestCase):
                         (AF_UNSPEC, SOCK_STREAM, 6),
                         (AF_INET, SOCK_DGRAM, 17)]
 
-
     def _test_getaddrinfo(self, hostname):
         for port in self.PORTS:
             for args in self.getaddrinfo_args:
@@ -80,7 +78,7 @@ class TestCase(greentest.TestCase):
         if isinstance(a, Exception) and isinstance(b, Exception):
             if repr(a) == repr(b):
                 return True
-            if ACCEPTED_GAIERROR_MISMATCH.get(repr(a), repr(b))==repr(b):
+            if ACCEPTED_GAIERROR_MISMATCH.get(repr(a), repr(b)) == repr(b):
                 return True
 
     def checkEqual(self, a, b):
@@ -154,4 +152,3 @@ class TestRemote(TestCase):
 
 if __name__ == '__main__':
     greentest.main()
-

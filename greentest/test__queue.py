@@ -15,6 +15,7 @@ class TestQueue(TestCase):
 
     def test_send_last(self):
         q = queue.Queue()
+
         def waiter(q):
             timer = gevent.Timeout.start_new(0.1)
             try:
@@ -27,7 +28,7 @@ class TestQueue(TestCase):
         gevent.sleep(0.01)
         q.put('hi2')
         gevent.sleep(0.01)
-        assert p.get(timeout=0)=="OK"
+        assert p.get(timeout=0) == "OK"
 
     def test_max_size(self):
         q = queue.Queue(2)
@@ -50,10 +51,11 @@ class TestQueue(TestCase):
         self.assertEquals(results, ['a', 'b', 'c'])
         self.assertEquals(q.get(), 'b')
         self.assertEquals(q.get(), 'c')
-        assert p.get(timeout=0)=="OK"
+        assert p.get(timeout=0) == "OK"
 
     def test_zero_max_size(self):
         q = queue.Queue(0)
+
         def sender(evt, q):
             q.put('hi')
             evt.set('done')
@@ -69,8 +71,8 @@ class TestQueue(TestCase):
         gevent.sleep(0.001)
         self.assert_(not e1.ready())
         p2 = gevent.spawn(receiver, e2, q)
-        self.assertEquals(e2.get(),'hi')
-        self.assertEquals(e1.get(),'done')
+        self.assertEquals(e2.get(), 'hi')
+        self.assertEquals(e1.get(), 'done')
         timeout = gevent.Timeout.start_new(0)
         try:
             gevent.joinall([p1, p2])
@@ -87,11 +89,12 @@ class TestQueue(TestCase):
         sendings = ['1', '2', '3', '4']
         evts = [AsyncResult() for x in sendings]
         for i, x in enumerate(sendings):
-            gevent.spawn(waiter, q, evts[i]) # use waitall for them
+            gevent.spawn(waiter, q, evts[i])  # use waitall for them
 
-        gevent.sleep(0.01) # get 'em all waiting
+        gevent.sleep(0.01)  # get 'em all waiting
 
         results = set()
+
         def collect_pending_results():
             for i, e in enumerate(evts):
                 timer = gevent.Timeout.start_new(0.001)
@@ -138,8 +141,10 @@ class TestQueue(TestCase):
         self.assertEquals(q.get(), 'sent')
 
     def test_two_waiters_one_dies(self):
+
         def waiter(q, evt):
             evt.set(q.get())
+
         def do_receive(q, evt):
             timeout = gevent.Timeout.start_new(0, RuntimeError())
             try:
@@ -243,26 +248,30 @@ class TestNoWait(TestCase):
     def test_put_nowait_simple(self):
         result = []
         q = queue.Queue(1)
+
         def store_result(func, *args):
             result.append(func(*args))
+
         core.active_event(store_result, util.wrap_errors(Exception, q.put_nowait), 2)
         core.active_event(store_result, util.wrap_errors(Exception, q.put_nowait), 3)
         gevent.sleep(0)
-        assert len(result)==2, result
-        assert result[0]==None, result
+        assert len(result) == 2, result
+        assert result[0] == None, result
         assert isinstance(result[1], queue.Full), result
 
     def test_get_nowait_simple(self):
         result = []
         q = queue.Queue(1)
         q.put(4)
+
         def store_result(func, *args):
             result.append(func(*args))
+
         core.active_event(store_result, util.wrap_errors(Exception, q.get_nowait))
         core.active_event(store_result, util.wrap_errors(Exception, q.get_nowait))
         gevent.sleep(0)
-        assert len(result)==2, result
-        assert result[0]==4, result
+        assert len(result) == 2, result
+        assert result[0] == 4, result
         assert isinstance(result[1], queue.Empty), result
 
     # get_nowait must work from the mainloop
@@ -270,8 +279,10 @@ class TestNoWait(TestCase):
         result = []
         q = queue.Queue(0)
         p = gevent.spawn(q.put, 5)
+
         def store_result(func, *args):
             result.append(func(*args))
+
         assert q.empty(), q
         assert q.full(), q
         gevent.sleep(0)
@@ -291,8 +302,10 @@ class TestNoWait(TestCase):
         result = []
         q = queue.Queue(0)
         p = gevent.spawn(q.get)
+
         def store_result(func, *args):
             result.append(func(*args))
+
         assert q.empty(), q
         assert q.full(), q
         gevent.sleep(0)
@@ -307,5 +320,5 @@ class TestNoWait(TestCase):
         assert q.empty(), q
 
 
-if __name__=='__main__':
+if __name__ == '__main__':
     main()

@@ -25,13 +25,14 @@ for example in examples:
 
 print '\n'.join(examples)
 
+
 def make_test(path):
 
     if ' ' in path:
         path = '"%s"' % path
-    
+
     class TestExample(unittest.TestCase):
-    
+
         def test(self):
             exe = sys.executable
             if ' ' in exe:
@@ -82,7 +83,7 @@ class Test_httpserver(BaseTestServer):
         status, data = self.read('/')
         self.assertEqual(status, '200 OK')
         self.assertEqual(data, "<b>hello world</b>")
-    
+
     def _test_not_found(self):
         status, data = self.read('/xxx')
         self.assertEqual(status, '404 Not Found')

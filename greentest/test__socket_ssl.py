@@ -8,6 +8,7 @@ import socket
 if not hasattr(socket, 'ssl'):
     sys.exit(0)
 
+
 class AmazonHTTPSTests(unittest.TestCase):
 
     def test_amazon_response(self):
@@ -26,4 +27,3 @@ class AmazonHTTPSTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
-

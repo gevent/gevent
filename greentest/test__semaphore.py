@@ -1,6 +1,7 @@
 import greentest
 from gevent.coros import Semaphore
 
+
 class TestTimeoutAcquire(greentest.TestCase):
 
     # issue 39
@@ -10,5 +11,5 @@ class TestTimeoutAcquire(greentest.TestCase):
         assert result is False, repr(result)
 
 
-if __name__=='__main__':
+if __name__ == '__main__':
     greentest.main()
