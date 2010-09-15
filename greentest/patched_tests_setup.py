@@ -1,3 +1,5 @@
+import sys
+import re
 
 # By default, test cases are expected to switch and emit warnings if there was none
 # If a test is found in this list, it's expected not to switch.
@@ -15,9 +17,6 @@ disabled_tests = [
     # uses some internal C API of threads not available when threads are emulated with greenlets
     'test_threading.ThreadTests.test_PyThreadState_SetAsyncExc',
 
-    # this one is a bogus test that fails even without monkey patching
-    'test_threading.ThreadTests.test_foreign_thread',
-
     # access _sock.gettimeout() which is always in non-blocking mode
     'test_urllib2net.TimeoutTest.test_ftp_no_timeout',
     'test_urllib2net.TimeoutTest.test_ftp_timeout',
@@ -29,7 +28,10 @@ disabled_tests = [
     'test_socket.UDPTimeoutTest.testUDPTimeout'
 ]
 
-import sys, re
+if sys.version_info[:2] < (2, 7):
+    # On Python 2.6, this test fails even without monkey patching
+    disabled_tests.append('test_threading.ThreadTests.test_foreign_thread')
+
 
 def disable_tests_in_the_source(source, name):
     my_disabled_tests = [x for x in disabled_tests if x.startswith(name + '.')]
