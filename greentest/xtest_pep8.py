@@ -34,7 +34,7 @@ def system(*args):
     result = popen_result.read()
     if result:
         sys.stderr.write(result)
-        raise AssertionError('pep8 failed')
+        raise AssertionError('"%s" failed' % str(command)[:100])
 
 
 class Test(unittest.TestCase):
