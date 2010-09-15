@@ -6,6 +6,7 @@ import unittest
 from os.path import join, dirname
 import gevent
 from gevent import socket
+from greentest import walk_modules
 
 # Ignore tracebacks: ZeroDivisionError
 
@@ -30,16 +31,8 @@ if __name__ == '__main__':
                 return
             modules.add((name, path))
 
-        for path, dirs, files in os.walk(base):
-            package = 'gevent' + path.replace(base, '').replace('/', '.')
-            add_module(package, join(path, '__init__.py'))
-            for f in files:
-                module = None
-                if f.endswith('.py'):
-                    module = f[:-3]
-                if module:
-                    add_module(package + '.' + module, join(path, f))
-
+        for path, module in walk_modules():
+            add_module(module, path)
         add_module('setup', 'setup.py')
 
         if not modules:
