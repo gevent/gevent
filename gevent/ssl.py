@@ -62,7 +62,8 @@ class SSLSocket(socket):
                  server_side=False, cert_reqs=CERT_NONE,
                  ssl_version=PROTOCOL_SSLv23, ca_certs=None,
                  do_handshake_on_connect=True,
-                 suppress_ragged_eofs=True):
+                 suppress_ragged_eofs=True,
+                 ciphers=None):
         socket.__init__(self, _sock=sock)
 
         if certfile and not keyfile:
@@ -77,9 +78,15 @@ class SSLSocket(socket):
             self._sslobj = None
         else:
             # yes, create the SSL object
-            self._sslobj = _ssl.sslwrap(self._sock, server_side,
-                                        keyfile, certfile,
-                                        cert_reqs, ssl_version, ca_certs)
+            if ciphers is None:
+                self._sslobj = _ssl.sslwrap(self._sock, server_side,
+                                            keyfile, certfile,
+                                            cert_reqs, ssl_version, ca_certs)
+            else:
+                self._sslobj = _ssl.sslwrap(self._sock, server_side,
+                                            keyfile, certfile,
+                                            cert_reqs, ssl_version, ca_certs,
+                                            ciphers)
             if do_handshake_on_connect:
                 self.do_handshake()
         self.keyfile = keyfile
@@ -87,6 +94,7 @@ class SSLSocket(socket):
         self.cert_reqs = cert_reqs
         self.ssl_version = ssl_version
         self.ca_certs = ca_certs
+        self.ciphers = ciphers
         self.do_handshake_on_connect = do_handshake_on_connect
         self.suppress_ragged_eofs = suppress_ragged_eofs
         self._makefile_refs = 0
@@ -324,9 +332,14 @@ class SSLSocket(socket):
         if self._sslobj:
             raise ValueError("attempt to connect already-connected SSLSocket!")
         socket.connect(self, addr)
-        self._sslobj = _ssl.sslwrap(self._sock, False, self.keyfile, self.certfile,
-                                    self.cert_reqs, self.ssl_version,
-                                    self.ca_certs)
+        if self.ciphers is None:
+            self._sslobj = _ssl.sslwrap(self._sock, False, self.keyfile, self.certfile,
+                                        self.cert_reqs, self.ssl_version,
+                                        self.ca_certs)
+        else:
+            self._sslobj = _ssl.sslwrap(self._sock, False, self.keyfile, self.certfile,
+                                        self.cert_reqs, self.ssl_version,
+                                        self.ca_certs, self.ciphers)
         if self.do_handshake_on_connect:
             self.do_handshake()
 
@@ -343,7 +356,8 @@ class SSLSocket(socket):
                           ssl_version=self.ssl_version,
                           ca_certs=self.ca_certs,
                           do_handshake_on_connect=self.do_handshake_on_connect,
-                          suppress_ragged_eofs=self.suppress_ragged_eofs),
+                          suppress_ragged_eofs=self.suppress_ragged_eofs,
+                          ciphers=self.ciphers),
                 addr)
 
     def makefile(self, mode='r', bufsize=-1):
@@ -365,13 +379,14 @@ def wrap_socket(sock, keyfile=None, certfile=None,
                 server_side=False, cert_reqs=CERT_NONE,
                 ssl_version=PROTOCOL_SSLv23, ca_certs=None,
                 do_handshake_on_connect=True,
-                suppress_ragged_eofs=True):
+                suppress_ragged_eofs=True, ciphers=None):
     """Create a new :class:`SSLSocket` instance."""
     return SSLSocket(sock, keyfile=keyfile, certfile=certfile,
                      server_side=server_side, cert_reqs=cert_reqs,
                      ssl_version=ssl_version, ca_certs=ca_certs,
                      do_handshake_on_connect=do_handshake_on_connect,
-                     suppress_ragged_eofs=suppress_ragged_eofs)
+                     suppress_ragged_eofs=suppress_ragged_eofs,
+                     ciphers=ciphers)
 
 
 def get_server_certificate(addr, ssl_version=PROTOCOL_SSLv3, ca_certs=None):
