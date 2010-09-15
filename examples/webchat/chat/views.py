@@ -40,7 +40,7 @@ class ChatRoom(object):
         try:
             for index, m in enumerate(self.cache):
                 if m['id'] == cursor:
-                    return json_response({'messages': self.cache[index+1:]})
+                    return json_response({'messages': self.cache[index + 1:]})
             return json_response({'messages': self.cache})
         finally:
             if self.cache:
@@ -63,4 +63,3 @@ def create_message(from_, body):
 def json_response(value, **kwargs):
     kwargs.setdefault('content_type', 'text/javascript; charset=UTF-8')
     return HttpResponse(simplejson.dumps(value), **kwargs)
-

@@ -11,12 +11,13 @@ from django.core.signals import got_request_exception
 sys.path.append('..')
 os.environ['DJANGO_SETTINGS_MODULE'] = 'webchat.settings'
 
+
 def exception_printer(sender, **kwargs):
     traceback.print_exc()
+
 
 got_request_exception.connect(exception_printer)
 
 call_command('syncdb')
 print 'Serving on 8088...'
 WSGIServer(('', 8088), WSGIHandler()).serve_forever()
-
