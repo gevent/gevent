@@ -25,7 +25,7 @@ import unittest
 import time
 import traceback
 import re
-
+import os
 import gevent
 
 VERBOSE = sys.argv.count('-v') > 1
@@ -251,3 +251,26 @@ class GenericGetTestCase(TestCase):
 
 class ExpectedException(Exception):
     """An exception whose traceback should be ignored"""
+
+
+def walk_modules(basedir=None, modpath=None):
+    if basedir is None:
+        basedir = os.path.dirname(gevent.__file__)
+        if modpath is None:
+            modpath = 'gevent.'
+    else:
+        if modpath is None:
+            modpath = ''
+    for fn in sorted(os.listdir(basedir)):
+        path = os.path.join(basedir, fn)
+        if os.path.isdir(path):
+            pkg_init = os.path.join(path, '__init__.py')
+            if os.path.exists(pkg_init):
+                yield pkg_init, modpath + fn
+                for p, m in walk_modules(path, modpath + fn + "."):
+                    yield p, m
+            continue
+        if not fn.endswith('.py') or fn in ['__init__.py', 'core.py']:
+            continue
+        yield path, modpath + fn[:-3]
+
