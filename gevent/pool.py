@@ -97,7 +97,7 @@ class Group(object):
             greenlets = self.greenlets.copy()
             self._empty_event.wait(timeout=timeout)
             for greenlet in greenlets:
-                if not greenlet.successful():
+                if greenlet.exception is not None:
                     raise greenlet.exception
         else:
             self._empty_event.wait(timeout=timeout)
