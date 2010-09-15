@@ -835,6 +835,28 @@ class Expect100ContinueTests(TestCase):
         read_http(fd, code=100)
         read_http(fd, body="testing")
 
+
+class MultipleCookieHeadersTest(TestCase):
+
+    validator = None
+
+    def application(self, environ, start_response):
+        self.assertEquals(environ['HTTP_COOKIE'], 'name1="value1"; name2="value2"')
+        self.assertEquals(environ['HTTP_COOKIE2'], 'nameA="valueA"; nameB="valueB"')
+        start_response('200 OK', [])
+        return []
+
+    def test(self):
+        fd = self.connect().makefile(bufsize=1)
+        fd.write('''GET / HTTP/1.1
+Host: localhost
+Cookie: name1="value1"
+Cookie2: nameA="valueA"
+Cookie2: nameB="valueB"
+Cookie: name2="value2"\n\n'''.replace('\n', '\r\n'))
+        read_http(fd)
+
+
 del CommonTests
 
 if __name__ == '__main__':
