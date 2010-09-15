@@ -128,7 +128,7 @@ if hasattr(socket, 'ssl'):
 
         certfile = os.path.join(os.path.dirname(__file__), 'test_server.crt')
         privfile = os.path.join(os.path.dirname(__file__), 'test_server.key')
-        timeout_error = socket.sslerror
+        TIMEOUT_ERROR = socket.sslerror
 
         def setUp(self):
             TestTCP.setUp(self)
