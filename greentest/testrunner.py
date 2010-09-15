@@ -11,8 +11,6 @@ in the database logged with the result 'TIMEOUT'.
 
 The --db option, when provided, specifies sqlite3 database that holds the test results.
 By default 'testresults.sqlite3' is used in the current directory.
-If the a mercurial repository is detected and the current working copy is "dirty", that is,
-has uncommited changes, then '/tmp/testresults.sqlite3' is used.
 
 The results are stored in the following 2 tables:
 
@@ -505,10 +503,7 @@ def main():
     options.verbosity += options.verbose - options.quiet
 
     if not options.db and sqlite3:
-        if get_changeset().endswith('+'):
-            options.db = get_tempnam()
-        else:
-            options.db = 'testresults.sqlite3'
+        options.db = 'testresults.sqlite3'
         print 'Using the database: %s' % options.db
     elif options.db and not sqlite3:
         sys.exit('Cannot access the database %r: no sqlite3 module found.' % (options.db, ))
