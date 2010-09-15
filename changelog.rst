@@ -6,11 +6,43 @@ Changelog
 Version 0.13.1
 --------------
 
-- Fixed :class:`ssl.SSLObject` to delete events used by other greenlets when closing the instance (issue #34).
+Release highlights:
+
+- Deprecated :mod:`gevent.sslold` module.
+- Fixed :meth:`Pool.join` to handle *raise_error* set to ``True`` properly, it used to raise :exc:`TypeError` (issue #36). Thanks to by **David Hain**.
+- Fixed :mod:`gevent.wsgi` and :mod:`gevent.pywsgi` to join multiple ``Cookie`` headers (issue #40).
 - Fixed :func:`select <gevent.select.select>` to recognize ``long`` arguments in addition to ``int``.
-- Fixed :meth:`Semaphore.acquire` to return ``False`` when timeout expires instead of raising :exc:`AssertionError`. Patch by Teh Ekik.
-- Fixed bogus failure in ``test__exc_info.py``.
+- Fixed :meth:`Semaphore.acquire` to return ``False`` when timeout expires instead of raising :exc:`AssertionError`. Patch by **Teh Ekik**.
+- Updated :mod:`gevent.ssl` module to fully match the functionality of :mod:`ssl` on Python 2.7.
+- Fixed :mod:`monkey` to patch :func:`socket.create_connection <gevent.socket.create_connection>`.
+
+:mod:`gevent.socket` module:
+
+- Overrode :meth:`socket.shutdown` method to interrupt read/write operations on socket.
+- Fixed possible :exc:`NameError` in :meth:`socket.connect_ex` method. Patch by **Alexey Borzenkov**.
+- Fixed socket leak in :func:`create_connection` function.
+- Made :mod:`gevent.socket` import all public items from stdlib :mod:`socket` that do not do I/O.
+
+:mod:`gevent.ssl` module:
+
+- Imported a number of patches from stdlib by **Antoine Pitrou**:
+
+  - Calling makefile() on an SSL object would prevent the underlying socket from being closed until all objects get truely destroyed (Python issue #5238).
+  - SSL handshake would ignore the socket timeout and block indefinitely if the other end didn't respond (Python issue #5103).
+  - When calling getpeername() in SSLSocket.__init__, only silence exceptions caused by the "socket not connected" condition.
+
+- Added support for *ciphers* argument.
+- Updated ``SSLSocket.send`` and ``SSLSocket.recv`` methods to match the behavior of stdlib :mod:`ssl` better.
+- Fixed :class:`ssl.SSLObject` to delete events used by other greenlets when closing the instance (issue #34).
+
+Miscellaneous:
+
+- Made :class:`BaseServer` accept ``long`` values as *pool* argument in addition to ``int``.
+- Made http._requests attribute public.
 - Updated webchat example to use file on disk rather than in-memory sqlite database to avoid :exc:`OperationalError`.
+- Fixed ``webproxy.py`` example to be runnable under external WSGI server.
+- Fixed bogus failure in ``test__exc_info.py``.
+- Added new test to check PEP8 conformance: ``xtest_pep8.py``
 
 
 Version 0.13.0
