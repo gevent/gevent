@@ -35,12 +35,6 @@ DELAY = 0.1
 
 class TestScheduleCall(greentest.TestCase):
 
-#     def test_local(self):
-#         lst = [1]
-#         spawn(get_hub().schedule_call_local, DELAY, lst.pop)
-#         sleep(DELAY*2)
-#         assert lst == [1], lst
-
     def test_global(self):
         lst = [1]
         gevent.spawn(core.timer, DELAY, lst.pop)
