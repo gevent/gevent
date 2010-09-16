@@ -103,7 +103,7 @@ class WSGIHandler(object):
                 else:
                     env[header] += ',' + value
             else:
-               env[header] = value
+                env[header] = value
         return env
 
     def handle(self):
