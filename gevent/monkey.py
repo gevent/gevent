@@ -60,6 +60,14 @@ import sys
 
 noisy = True
 
+__all__ = ['patch_all',
+           'patch_socket',
+           'patch_ssl',
+           'patch_os',
+           'patch_time',
+           'patch_select',
+           'patch_thread']
+
 
 def patch_os():
     """Replace :func:`os.fork` with :func:`gevent.fork`."""
