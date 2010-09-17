@@ -156,7 +156,7 @@ class PoolBasicTests(greentest.TestCase):
     def test_init_zerosize(self):
         self.switch_expected = False
         self.assertRaises(ValueError, self.klass, 0)
-        
+
 #
 # tests from standard library test/test_multiprocessing.py
 
