@@ -634,8 +634,8 @@ try:
 except Exception:
     import traceback
     traceback.print_exc()
-    __all__.remove('gethostbyname')
-    __all__.remove('getaddrinfo')
+    __implements__.remove('gethostbyname')
+    __implements__.remove('getaddrinfo')
 else:
 
     def gethostbyname(hostname):
