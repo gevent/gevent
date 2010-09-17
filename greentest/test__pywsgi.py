@@ -803,7 +803,8 @@ class ChunkedInputTests(TestCase):
         fd.write(req)
         fd.close()
         gevent.sleep(0.01)
-        self.assert_stderr_traceback(IOError, 'unexpected end of file while parsing chunked data')
+        if server_implements_chunked:
+            self.assert_stderr_traceback(IOError, 'unexpected end of file while parsing chunked data')
 
 
 class Expect100ContinueTests(TestCase):
