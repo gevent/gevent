@@ -3,7 +3,7 @@ Changelog
 
 .. currentmodule:: gevent
 
-Version 0.13.1 (in development)
+Release 0.13.1 (in development)
 -------------------------------
 
 Release highlights:
@@ -48,7 +48,7 @@ Miscellaneous:
 - Fixed doc/mysphinxext.py to work with Sphinx 1. Thanks by **Örjan Persson**.
 
 
-Version 0.13.0 (Jul 14, 2010)
+Release 0.13.0 (Jul 14, 2010)
 -----------------------------
 
 Release highlights:
@@ -175,13 +175,13 @@ Thanks to **Ralf Schmitt** for :mod:`pywsgi`, a number of fixes for :mod:`wsgi`,
 Thanks to **Uriel Katz** for :mod:`pywsgi` patches.
 
 
-Version 0.12.2 (Mar 2, 2010)
+Release 0.12.2 (Mar 2, 2010)
 ----------------------------
 
 * Fixed http server to put the listening socket into a non-blocking mode. Contributed by **Ralf Schmitt**.
 
 
-Version 0.12.1 (Feb 26, 2010)
+Release 0.12.1 (Feb 26, 2010)
 -----------------------------
 
 * Removed a symlink from the distribution (that causes pip to fail). Thanks to **Brad Clements** for reporting it.
@@ -192,7 +192,7 @@ Version 0.12.1 (Feb 26, 2010)
   - Imported ``_GLOBAL_DEFAULT_TIMEOUT`` from standard :mod:`socket` module instead of creating a new object.
 
 
-Version 0.12.0 (Feb 5, 2010)
+Release 0.12.0 (Feb 5, 2010)
 ----------------------------
 
 Release highlights:
@@ -281,7 +281,7 @@ Miscellaneous:
 - Added examples/process.py by **Marcus Cavanaugh**.
 
 
-Version 0.11.2 (Dec 10, 2009)
+Release 0.11.2 (Dec 10, 2009)
 -----------------------------
 
 * Fixed :mod:`wsgi` to unquote ``environ['PATH_INFO']`` before passing to application.
@@ -291,7 +291,7 @@ Version 0.11.2 (Dec 10, 2009)
 * Fixed :mod:`gevent.socket` not to fail with :class:`ImportError` if Python was not built with ssl support.
 
 
-Version 0.11.1 (Nov 15, 2009)
+Release 0.11.1 (Nov 15, 2009)
 -----------------------------
 
 * Fixed bug in :func:`select.select` function. Passing non-empty list of write descriptors used to cause this function to fail.
@@ -303,7 +303,7 @@ Contributed by **Ludvig Ericson**:
 * Fixed setup.py to look for libevent.dylib rather than .so on Darwin platforms.
 
 
-Version 0.11.0 (Oct 9, 2009)
+Release 0.11.0 (Oct 9, 2009)
 ----------------------------
 
 * Fixed timeout bug in :func:`joinall`, :meth:`Greenlet.join`, :meth:`pool.Pool.join`: if timeout has expired
@@ -339,7 +339,7 @@ Version 0.11.0 (Oct 9, 2009)
 * Added sphinx/rst documentation. It is available online at http://www.gevent.org.
 
 
-Version 0.10.0 (Aug 26, 2009)
+Release 0.10.0 (Aug 26, 2009)
 -----------------------------
 
 * Changed :class:`Timeout` API in a backward-incompatible way:
@@ -414,7 +414,7 @@ Thanks to **Jason Toffaletti** for reporting the installation issue and providin
 test case for WSGI double content-length header bug.
 
 
-Version 0.9.3 (Aug 3, 2009)
+Release 0.9.3 (Aug 3, 2009)
 ---------------------------
 
 * Fixed all known bugs in the :mod:`gevent.queue` module and made it 2.4-compatible.
@@ -435,7 +435,7 @@ Version 0.9.3 (Aug 3, 2009)
 * Fixed backdoor.py, accidentally broken in the previous release.
 
 
-Version 0.9.2 (Jul 20, 2009)
+Release 0.9.2 (Jul 20, 2009)
 ----------------------------
 
 * Simplified :mod:`gevent.socket`'s implementation and fixed SSL
@@ -448,7 +448,7 @@ Version 0.9.2 (Jul 20, 2009)
   ``core.active_event(func)`` schedules func to be run in this event loop iteration as opposed
   to ``core.timer(0, ...)`` which schedules an event to be run in the next iteration.
   :class:`active_event` is now used throughout the library wherever ``core.timer(0, ....)`` was previously used.
-  This results in :func:`spawn` being at least 20% faster compared to `Version 0.9.1`_ and twice as fast compared to
+  This results in :func:`spawn` being at least 20% faster compared to release 0.9.1 and twice as fast compared to
   eventlet. (The results are obtained with bench_spawn.py script in ``greentest/`` directory)
 * Added boolean parameter *wait* to :func:`kill` and :func:`killall` functions. If set to ``True``, it makes the
   function block until the greenlet(s) is actually dead. By default, :func:`kill` and :func:`killall` are asynchronous,
@@ -468,7 +468,7 @@ Version 0.9.2 (Jul 20, 2009)
 * Removed ``gevent.timeout`` (use :class:`gevent.Timeout`)
 
 
-Version 0.9.1 (Jul 9, 2009)
+Release 0.9.1 (Jul 9, 2009)
 ---------------------------
 
 * Fixed compilation with libevent-1.3 (Thanks to **Litao Wei** for reporting the problem.)
@@ -489,7 +489,7 @@ Version 0.9.1 (Jul 9, 2009)
   than from :mod:`socket`.
 
 
-Version 0.9.0 (Jul 8, 2009)
+Release 0.9.0 (Jul 8, 2009)
 ---------------------------
 
 Started as eventlet_ 0.8.11 fork, with the intention to support only libevent as a backend.
