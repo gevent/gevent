@@ -19,12 +19,8 @@ def missing_reference(app, env, node, contnode):
 
     type = node['reftype']
     target = node['reftarget']
-    if node.has_key('py:module'):
-        modname = node['py:module']
-        classname = node['py:class']
-    else:
-        modname = node['modname']
-        classname = node['classname']
+    modname = node.get('py:module')
+    classname = node.get('py:class')
 
     if modname and classname:
         return
