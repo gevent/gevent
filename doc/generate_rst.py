@@ -29,6 +29,7 @@ modules = set(name for name in modules if not name.startswith('_'))
 import warnings
 warnings.simplefilter('ignore', DeprecationWarning)
 
+
 def generate_rst_for_module(module, do=True):
     rst_filename = 'gevent.%s.rst' % module
     exists = os.path.exists(rst_filename)
@@ -53,7 +54,7 @@ def generate_rst_for_module(module, do=True):
     result = template % params
     if exists:
         if open(rst_filename).read(len(result) + 1) == result:
-            return # already exists one which is the same
+            return  # already exists one which is the same
     if do:
         print 'Generated %s from %s' % (rst_filename, m.__file__)
         open(rst_filename, 'w').write(result)
@@ -93,5 +94,3 @@ if __name__ == '__main__':
         generate_rst(do=False)
     else:
         sys.exit('Invalid command line: %s' % (sys.argv[1:], ))
- 
-

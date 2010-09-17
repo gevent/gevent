@@ -11,11 +11,12 @@
 # All configuration values have a default; values that are commented out
 # serve to show the default.
 
-import sys, os
+import sys
+import os
 
 os.system('%s generate_rst.py generate' % sys.executable)
 
-sys.path.append('.') # for mysphinxext
+sys.path.append('.')  # for mysphinxext
 
 if not os.path.exists('changelog.rst') and os.path.exists('../changelog.rst'):
     print 'Linking ../changelog.rst to changelog.rst'
@@ -228,10 +229,12 @@ for item in gevent.socket.__all__[:]:
 from sphinx.ext import autodoc
 from sphinx.ext.autodoc import ClassDocumenter
 
+
 class MyClassDocumenter(ClassDocumenter):
 
     def get_object_members(self, want_all):
         members_check_module, members = super(MyClassDocumenter, self).get_object_members(want_all)
+
         def key((name, obj)):
             try:
                 return obj.im_func.func_code.co_firstlineno
@@ -241,4 +244,3 @@ class MyClassDocumenter(ClassDocumenter):
         return members_check_module, members
 
 autodoc.ClassDocumenter = MyClassDocumenter
-
