@@ -101,7 +101,7 @@ add_module_names = True
 pygments_style = 'sphinx'
 
 # A list of ignored prefixes for module index sorting.
-#modindex_common_prefix = ['gevent.']
+modindex_common_prefix = ['gevent.']
 
 
 # -- Options for HTML output ---------------------------------------------------
