@@ -8,13 +8,13 @@ Version 0.13.1 (in development)
 
 Release highlights:
 
-- Deprecated :mod:`gevent.sslold` module.
-- Fixed :meth:`Pool.join` to handle *raise_error* set to ``True`` properly, it used to raise :exc:`TypeError` (issue #36). Thanks to by **David Hain**.
+- Fixed :mod:`monkey` to patch :func:`socket.create_connection <gevent.socket.create_connection>`.
+- Updated :mod:`gevent.ssl` module to fully match the functionality of :mod:`ssl` on Python 2.7.
+- Fixed :meth:`Group.join` to handle ``raise_error=True`` properly, it used to raise :exc:`TypeError` (issue #36). Thanks to by **David Hain**.
 - Fixed :mod:`gevent.wsgi` and :mod:`gevent.pywsgi` to join multiple ``Cookie`` headers (issue #40).
 - Fixed :func:`select <gevent.select.select>` to recognize ``long`` arguments in addition to ``int``.
 - Fixed :meth:`Semaphore.acquire` to return ``False`` when timeout expires instead of raising :exc:`AssertionError`. Patch by **Teh Ekik**.
-- Updated :mod:`gevent.ssl` module to fully match the functionality of :mod:`ssl` on Python 2.7.
-- Fixed :mod:`monkey` to patch :func:`socket.create_connection <gevent.socket.create_connection>`.
+- Deprecated :mod:`gevent.sslold` module.
 
 :mod:`gevent.socket` module:
 
@@ -27,9 +27,9 @@ Release highlights:
 
 - Imported a number of patches from stdlib by **Antoine Pitrou**:
 
-  - Calling makefile() on an SSL object would prevent the underlying socket from being closed until all objects get truely destroyed (Python issue #5238).
+  - Calling :meth:`makefile` method on an SSL object would prevent the underlying socket from being closed until all objects get truely destroyed (Python issue #5238).
   - SSL handshake would ignore the socket timeout and block indefinitely if the other end didn't respond (Python issue #5103).
-  - When calling getpeername() in SSLSocket.__init__, only silence exceptions caused by the "socket not connected" condition.
+  - When calling :meth:`getpeername` in ``SSLSocket.__init__``, only silence exceptions caused by the "socket not connected" condition.
 
 - Added support for *ciphers* argument.
 - Updated ``SSLSocket.send`` and ``SSLSocket.recv`` methods to match the behavior of stdlib :mod:`ssl` better.
@@ -38,12 +38,14 @@ Release highlights:
 Miscellaneous:
 
 - Made :class:`BaseServer` accept ``long`` values as *pool* argument in addition to ``int``.
-- Made http._requests attribute public.
+- Made :attr:`http._requests` attribute public.
 - Updated webchat example to use file on disk rather than in-memory sqlite database to avoid :exc:`OperationalError`.
 - Fixed ``webproxy.py`` example to be runnable under external WSGI server.
 - Fixed bogus failure in ``test__exc_info.py``.
 - Added new test to check PEP8 conformance: ``xtest_pep8.py``
-- Made :class:`BackdoorServer` close the connection on SystemExit and simplified the code
+- Fixed :class:`BackdoorServer` close the connection on :exc:`SystemExit` and simplified the code
+- Made :class:`Pool` raise :exc:`ValueError` when initialized with ``size=0``.
+- Fixed doc/mysphinxext.py to work with Sphinx 1. Thanks by **Örjan Persson**.
 
 
 Version 0.13.0 (Jul 14, 2010)
