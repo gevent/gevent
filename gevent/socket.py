@@ -563,14 +563,14 @@ if hasattr(_socket, 'socketpair'):
         one, two = _socket.socketpair(*args)
         return socket(_sock=one), socket(_sock=two)
 else:
-    __all__.remove('socketpair')
+    __implements__.remove('socketpair')
 
 if hasattr(_socket, 'fromfd'):
 
     def fromfd(*args):
         return socket(_sock=_socket.fromfd(*args))
 else:
-    __all__.remove('fromfd')
+    __implements__.remove('fromfd')
 
 
 def bind_and_listen(descriptor, address=('', 0), backlog=50, reuse_addr=True):
