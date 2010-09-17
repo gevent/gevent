@@ -5,8 +5,8 @@ The :class:`Group` class in this module abstracts a group of running greenlets.
 When a greenlet dies, it's automatically removed from the group.
 
 The :class:`Pool` which a subclass of :class:`Group` provides a way to limit
-concurrency: its :meth:`spawn <Pool.spawn>` blocks if the number of greenlets
-in the pool would exceed the limit.
+concurrency: its :meth:`spawn <Pool.spawn>` method blocks if the number of
+greenlets in the pool has already reached the limit, until there is a free slot.
 """
 
 from gevent.hub import GreenletExit, getcurrent
