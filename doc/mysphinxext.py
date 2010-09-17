@@ -5,6 +5,7 @@ from docutils import nodes
 noisy = 0
 message_cache = set()
 
+
 def missing_reference(app, env, node, contnode):
     """Search the index for missing references.
     For example, resolve :class:`Event` to :class:`Event <gevent.event.Event>`"""
