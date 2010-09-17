@@ -121,6 +121,15 @@ for name in __socket__.__all__:
 
 del name, value
 
+if 'inet_ntop' not in globals():
+    # inet_ntop is required by our implementation of getaddrinfo
+
+    def inet_ntop(address_family, packed_ip):
+        if address_family == AF_INET:
+            return inet_ntoa(packed_ip)
+        # XXX: ipv6 won't work on windows
+        raise NotImplementedError('inet_ntop() is not available on this platform')
+
 # XXX: implement blocking functions that are not yet implemented
 
 from gevent.hub import getcurrent, get_hub
