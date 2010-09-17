@@ -3,8 +3,8 @@ Changelog
 
 .. currentmodule:: gevent
 
-Version 0.13.1
---------------
+Version 0.13.1 (in development)
+-------------------------------
 
 Release highlights:
 
@@ -45,8 +45,9 @@ Miscellaneous:
 - Added new test to check PEP8 conformance: ``xtest_pep8.py``
 - Made :class:`BackdoorServer` close the connection on SystemExit and simplified the code
 
-Version 0.13.0
---------------
+
+Version 0.13.0 (Jul 14, 2010)
+-----------------------------
 
 Release highlights:
 
@@ -172,14 +173,14 @@ Thanks to **Ralf Schmitt** for :mod:`pywsgi`, a number of fixes for :mod:`wsgi`,
 Thanks to **Uriel Katz** for :mod:`pywsgi` patches.
 
 
-Version 0.12.2
---------------
+Version 0.12.2 (Mar 2, 2010)
+----------------------------
 
 * Fixed http server to put the listening socket into a non-blocking mode. Contributed by **Ralf Schmitt**.
 
 
-Version 0.12.1
---------------
+Version 0.12.1 (Feb 26, 2010)
+-----------------------------
 
 * Removed a symlink from the distribution (that causes pip to fail). Thanks to **Brad Clements** for reporting it.
 * setup.py: automatically create symlink from ``build/lib.../gevent/core.so`` to ``gevent/core.so``.
@@ -189,8 +190,8 @@ Version 0.12.1
   - Imported ``_GLOBAL_DEFAULT_TIMEOUT`` from standard :mod:`socket` module instead of creating a new object.
 
 
-Version 0.12.0
---------------
+Version 0.12.0 (Feb 5, 2010)
+----------------------------
 
 Release highlights:
 
@@ -278,8 +279,8 @@ Miscellaneous:
 - Added examples/process.py by **Marcus Cavanaugh**.
 
 
-Version 0.11.2
---------------
+Version 0.11.2 (Dec 10, 2009)
+-----------------------------
 
 * Fixed :mod:`wsgi` to unquote ``environ['PATH_INFO']`` before passing to application.
 * Added ``SERVER_SOFTWARE`` variable to :mod:`wsgi` environ.
@@ -288,8 +289,8 @@ Version 0.11.2
 * Fixed :mod:`gevent.socket` not to fail with :class:`ImportError` if Python was not built with ssl support.
 
 
-Version 0.11.1
---------------
+Version 0.11.1 (Nov 15, 2009)
+-----------------------------
 
 * Fixed bug in :func:`select.select` function. Passing non-empty list of write descriptors used to cause this function to fail.
 * Changed setup.py to go ahead with the compilation even if the actual version of libevent cannot be determined (version 1.x.x is assumed in that case).
@@ -300,8 +301,8 @@ Contributed by **Ludvig Ericson**:
 * Fixed setup.py to look for libevent.dylib rather than .so on Darwin platforms.
 
 
-Version 0.11.0
---------------
+Version 0.11.0 (Oct 9, 2009)
+----------------------------
 
 * Fixed timeout bug in :func:`joinall`, :meth:`Greenlet.join`, :meth:`pool.Pool.join`: if timeout has expired
   it used to raise :class:`Timeout`; now it returns silently.
@@ -336,8 +337,8 @@ Version 0.11.0
 * Added sphinx/rst documentation. It is available online at http://www.gevent.org.
 
 
-Version 0.10.0
---------------
+Version 0.10.0 (Aug 26, 2009)
+-----------------------------
 
 * Changed :class:`Timeout` API in a backward-incompatible way:
   :meth:`Timeout.__init__` does not start the timer immediately anymore;
@@ -411,8 +412,8 @@ Thanks to **Jason Toffaletti** for reporting the installation issue and providin
 test case for WSGI double content-length header bug.
 
 
-Version 0.9.3
--------------
+Version 0.9.3 (Aug 3, 2009)
+---------------------------
 
 * Fixed all known bugs in the :mod:`gevent.queue` module and made it 2.4-compatible.
   :class:`LifoQueue` and :class:`PriorityQueue` are implemented as well.
@@ -432,8 +433,8 @@ Version 0.9.3
 * Fixed backdoor.py, accidentally broken in the previous release.
 
 
-Version 0.9.2
--------------
+Version 0.9.2 (Jul 20, 2009)
+----------------------------
 
 * Simplified :mod:`gevent.socket`'s implementation and fixed SSL
   bug reported on eventletdev by **Cesar Alaniz** as well as failures
@@ -465,8 +466,8 @@ Version 0.9.2
 * Removed ``gevent.timeout`` (use :class:`gevent.Timeout`)
 
 
-Version 0.9.1
--------------
+Version 0.9.1 (Jul 9, 2009)
+---------------------------
 
 * Fixed compilation with libevent-1.3 (Thanks to **Litao Wei** for reporting the problem.)
 * Fixed :class:`Hub` to recover silently after ``event_dispatch()`` failures (I've seen this
@@ -486,8 +487,8 @@ Version 0.9.1
   than from :mod:`socket`.
 
 
-Version 0.9.0
--------------
+Version 0.9.0 (Jul 8, 2009)
+---------------------------
 
 Started as eventlet_ 0.8.11 fork, with the intention to support only libevent as a backend.
 Compared to eventlet, this version has a much simpler API and implementation and a few
