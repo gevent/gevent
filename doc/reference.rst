@@ -12,5 +12,3 @@ API reference
    gevent.monkey
    gevent.core
    gevent.backdoor
-   helpers
-
