@@ -64,6 +64,9 @@ class Test(unittest.TestCase):
         # E202 whitespace before '('
         system(command % join(dirname(abspath(dirname(__file__))), 'examples'), '| grep -v E702 | grep -v E202')
 
+    def test_doc(self):
+        system(command % join(dirname(abspath(dirname(__file__))), 'doc'))
+
     def test_setup(self):
         system(command % join(dirname(abspath(dirname(__file__))), 'setup.py'))
 
