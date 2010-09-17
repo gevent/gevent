@@ -68,7 +68,9 @@ __imports__ = ['error',
                # Python 2.5 and older:
                'RAND_add',
                'RAND_egd',
-               'RAND_status']
+               'RAND_status',
+               # Windows:
+               'errorTab']
 
 
 import sys
