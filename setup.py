@@ -8,7 +8,11 @@ non-standard location, use the options to point to the right dirs:
 
     -IPATH            add include PATH
     -LPATH            add library PATH
-   --libevent PATH    use libevent from PATH (implies -IPATH -IPATH/include -LPATH/.libs)
+   --libevent PATH    use libevent from PATH
+       If configure and make have been run in PATH, this implies
+      -IPATH -IPATH/include -LPATH/.libs
+      Otherwise setup.py will run configure and make and link
+      statically with libevent.
 """
 
 import sys
