@@ -270,7 +270,9 @@ else:
             sources.append(filename)
     else:
         libraries = ['event']
-        if libevent_source_path and os.path.exists(os.path.join(libevent_source_path, ".libs")):
+        if (libevent_source_path
+            and (exists(join(libevent_source_path, ".libs"))
+                 or not exists(join(libevent_source_path, "configure")))):
             enable_libevent_source_path()
 
 gevent_core = Extension(name='gevent.core',
