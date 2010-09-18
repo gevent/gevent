@@ -1,5 +1,6 @@
 import sys
 import os
+import imp
 
 version = '%s.%s' % sys.version_info[:2]
 
@@ -28,6 +29,15 @@ def patch_all(timeout=None):
         unittest.TestCase.__timeout__ = timeout
 
 
+def imp_find_dotted_module(name):
+    """imp.find_module with dotted names"""
+    path = None
+    for x in name.split('.'):
+        result = imp.find_module(x, path)
+        path = [result[1]]
+    return result
+
+
 def prepare_stdlib_test(filename):
     patch_all(timeout=20)
     import test
@@ -43,17 +53,13 @@ def prepare_stdlib_test(filename):
     os.environ['__module_name__'] = name
 
     try:
-        # XXX importing just to find where it resides; need a function that just returns the path
-        package = __import__('test.%s' % name)
+        _f, _filename, _ = imp_find_dotted_module('test.%s' % name)
     except:
         if version in missing_modules.get(name, []):
             sys.exit(0)
         raise
 
-    module = getattr(package, name)
-    _filename = module.__file__.replace('.pyc', '.py')
-
-    module_source = open(_filename).read()
+    module_source = _f.read()
     from patched_tests_setup import disable_tests_in_the_source
     module_source = disable_tests_in_the_source(module_source, name)
     module_code = compile(module_source, _filename, 'exec')
