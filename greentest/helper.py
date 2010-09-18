@@ -48,7 +48,7 @@ def prepare_stdlib_test(filename):
         raise
     test_support.use_resources = ContainsAll()
 
-    name = filename.replace('_patched', '').replace('.py', '')
+    name = os.path.splitext(os.path.basename(filename))[0].replace('_patched', '')
 
     os.environ['__module_name__'] = name
 
