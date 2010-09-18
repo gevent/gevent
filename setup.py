@@ -60,6 +60,8 @@ class my_build_ext(build_ext.build_ext):
             sys.exit(1)
 
     def build_extension(self, ext):
+        compile_libevent(self)
+
         self.compile_cython()
         result = build_ext.build_ext.build_extension(self, ext)
         # hack: create a symlink from build/../core.so to gevent/core.so
@@ -89,6 +91,72 @@ class my_build_ext(build_ext.build_ext):
             traceback.print_exc()
         return result
 
+cmdclass = {'build_ext': my_build_ext}
+
+
+def mysystem(cmd):
+    err = os.system(cmd)
+    if err:
+        sys.exit("running %r failed" % cmd)
+
+
+def compile_libevent(build):
+    sdir = libevent_source_path
+    if not sdir:
+        return
+
+    from distutils import sysconfig
+
+    configure = os.path.abspath(os.path.join(sdir, "configure"))
+    addlibs = []
+    bdir = os.path.join(build.build_temp, "libevent")
+    if not os.path.isdir(bdir):
+        os.makedirs(bdir)
+
+    cwd = os.getcwd()
+    os.chdir(bdir)
+    try:
+        if "CC" not in os.environ:
+            cc = sysconfig.get_config_var("CC")
+            if cc:
+                os.environ["CC"] = cc
+
+            archflags = sysconfig.get_config_var("ARCHFLAGS")
+            if archflags:
+                os.environ["AM_CFLAGS"] = archflags
+
+        if not exists("./config.status"):
+            mysystem("%s --with-pic --disable-shared --disable-dependency-tracking" % configure)
+        mysystem("make")
+
+        for line in open("Makefile"):
+            if line.startswith("LIBS = "):
+                addlibs = [x[2:] for x in line[len("LIBS = "):].strip().split() if x.startswith("-l")]
+    finally:
+        os.chdir(cwd)
+
+    if build is None:
+        return
+
+    if build.include_dirs is None:
+        build.include_dirs = []
+    if build.library_dirs is None:
+        build.library_dirs = []
+    # bdir is needed for event-config.h
+    build.include_dirs[:0] = [bdir, sdir, "%s/include" % sdir]
+    build.library_dirs[:0] = ["%s/.libs" % bdir]
+    build.libraries.extend(addlibs)
+
+    cc = build.compiler
+    if sys.platform == "darwin":
+        # stupid apple: http://developer.apple.com/mac/library/qa/qa2006/qa1393.html
+        cc.linker_so += ['-Wl,-search_paths_first']
+        cc.linker_exe += ['-Wl,-search_paths_first']
+
+    cc.set_include_dirs(build.include_dirs)
+    cc.set_library_dirs(build.library_dirs)
+    cc.set_libraries(build.libraries)
+
 
 def check_dir(path, must_exist):
     if not isdir(path):
@@ -107,6 +175,18 @@ def add_library_dir(path, must_exist=True):
     if path not in library_dirs:
         check_dir(path, must_exist)
         library_dirs.append(path)
+
+
+def enable_libevent_source_path():
+    add_include_dir(join(libevent_source_path, 'include'), must_exist=False)
+    add_include_dir(libevent_source_path, must_exist=False)
+    add_library_dir(join(libevent_source_path, '.libs'), must_exist=False)
+    if sys.platform == 'win32':
+        add_include_dir(join(libevent_source_path, 'compat'), must_exist=False)
+        add_include_dir(join(libevent_source_path, 'WIN32-Code'), must_exist=False)
+
+    global compile_libevent
+    compile_libevent = lambda *a: None
 
 
 # parse options: -I NAME / -INAME / -L NAME / -LNAME / --libevent DIR
@@ -128,17 +208,14 @@ while i < len(sys.argv):
     elif arg == '--libevent':
         del sys.argv[i]
         libevent_source_path = sys.argv[i]
-        add_include_dir(join(libevent_source_path, 'include'), must_exist=False)
-        add_include_dir(libevent_source_path, must_exist=False)
-        add_library_dir(join(libevent_source_path, '.libs'), must_exist=False)
-        if sys.platform == 'win32':
-            add_include_dir(join(libevent_source_path, 'compat'), must_exist=False)
-            add_include_dir(join(libevent_source_path, 'WIN32-Code'), must_exist=False)
     else:
         i += 1
         continue
     del sys.argv[i]
 
+if libevent_source_path is None and os.path.isdir("libevent-src"):
+    libevent_source_path = "libevent-src"
+    print "using libevent sources in libevent-src"
 
 # sources used when building on windows; this includes sources of both libevent-1.4
 # and libevent-2 combined, but will filter out the files that do not exist
@@ -176,8 +253,8 @@ else:
     if sys.platform == 'win32':
         if not libevent_source_path:
             sys.exit('Please provide path to libevent source with --libevent DIR')
-        extra_compile_args += ['-DHAVE_CONFIG_H']
-        extra_compile_args += ['-DWIN32']
+        enable_libevent_source_path()
+        extra_compile_args += ['-DHAVE_CONFIG_H', '-DWIN32']
         libraries = ['wsock32', 'advapi32', 'ws2_32', 'shell32']
         include_dirs.extend([join(libevent_source_path, 'WIN32-Code'),
                              join(libevent_source_path, 'compat')])
@@ -189,7 +266,8 @@ else:
             sources.append(filename)
     else:
         libraries = ['event']
-
+        if libevent_source_path and os.path.exists(os.path.join(libevent_source_path, ".libs")):
+            enable_libevent_source_path()
 
 gevent_core = Extension(name='gevent.core',
                         sources=sources,
