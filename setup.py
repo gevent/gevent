@@ -95,8 +95,6 @@ class my_build_ext(build_ext.build_ext):
             traceback.print_exc()
         return result
 
-cmdclass = {'build_ext': my_build_ext}
-
 
 def mysystem(cmd):
     err = os.system(cmd)
