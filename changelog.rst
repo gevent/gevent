@@ -42,8 +42,8 @@ Miscellaneous:
 - Updated webchat example to use file on disk rather than in-memory sqlite database to avoid :exc:`OperationalError`.
 - Fixed ``webproxy.py`` example to be runnable under external WSGI server.
 - Fixed bogus failure in ``test__exc_info.py``.
-- Added new test to check PEP8 conformance: ``xtest_pep8.py``
-- Fixed :class:`BackdoorServer` close the connection on :exc:`SystemExit` and simplified the code
+- Added new test to check PEP8 conformance: ``xtest_pep8.py``.
+- Fixed :class:`BackdoorServer` close the connection on :exc:`SystemExit` and simplified the code.
 - Made :class:`Pool` raise :exc:`ValueError` when initialized with ``size=0``.
 - Fixed doc/mysphinxext.py to work with Sphinx 1. Thanks by **Örjan Persson**.
 
@@ -62,7 +62,7 @@ Release highlights:
 - Implemented workaround that prevents greenlets from leaking ``exc_info``.
 - Fixed :meth:`socket.sendall` to use buffer object to prevent string copies.
 - Made the interfaces of :mod:`gevent.wsgi` and :mod:`gevent.pywsgi` much more similar to each other.
-- Fixed compilation on Windows with libevent-2. 
+- Fixed compilation on Windows with libevent-2.
 - Improved Windows compatibility. Fixed issue #30. Thanks to **Luigi Pugnetti**.
 - Fixed compatibility with Python 2.7.
 
@@ -218,7 +218,7 @@ Release highlights:
 - Made DNS functions no longer accept additional arguments to pass to the callback.
 - Fixed DNS functions to check the return value of the libevent functions and raise
   :exc:`IOError` if they failed.
-- Added :func:`core.dns_err_to_string`
+- Added :func:`core.dns_err_to_string`.
 - Made core.event.cancel not to raise if event_del reports an error. instead, the return code is
   passed to the caller.
 - Fixed minor issue in string representation of the events.
@@ -227,8 +227,7 @@ Release highlights:
 
 - Fixed bug in socket.accept. It could return unwrapped socket instance if socket's timeout is 0.
 - Fixed socket.sendall implementation never to call underlying socket's sendall.
-- Fixed :func:`gethostbyname` and :func:`getaddrinfo` to call the stdlib if the passed hostname
-  has no dots.
+- Fixed :func:`gethostbyname` and :func:`getaddrinfo` to call the stdlib if the passed hostname has no dots.
 - Fixed :func:`getaddrinfo` to filter the results using *socktype* and *proto* arguments.
 - Removed :func:`getnameinfo` as it didn't quite match the stdlib interface.
   Use :func:`dns.resolve_reverse` for reverse resolutions.
@@ -262,9 +261,9 @@ Miscellaneous:
 - Fixed :func:`select <gevent.select.select>` to raise :exc:`select.error` instead of :exc:`IOError`.
 - Fixed setup.py to proceed with compilation even if libevent version cannot be determined.
   1.x.x is assumed in this case.
-- Fixed compatibility of .pyx files with Cython 0.12.0
-- Renamed arguments for :func:`select.select` to what they are called in the stdlib
-- Removed internal function :func:`getLinkedCompleted` from :mod:`gevent.greenlet`
+- Fixed compatibility of .pyx files with Cython 0.12.0.
+- Renamed arguments for :func:`select.select` to what they are called in the stdlib.
+- Removed internal function :func:`getLinkedCompleted` from :mod:`gevent.greenlet`.
 - Remove ``#warning`` directives from ``libevent.h``. They are not supported by vc90.
 - Removed some deprecated stuff from :mod:`coros`.
 - Internal class :class:`Waiter <gevent.hub.Waiter>` now stores the value if no one's waiting for it.
@@ -286,7 +285,6 @@ Release 0.11.2 (Dec 10, 2009)
 
 * Fixed :mod:`wsgi` to unquote ``environ['PATH_INFO']`` before passing to application.
 * Added ``SERVER_SOFTWARE`` variable to :mod:`wsgi` environ.
-
 * Fixed bug in :meth:`JoinableQueue.task_done` that caused :class:`ValueError` to be raised incorrectly here.
 * Fixed :mod:`gevent.socket` not to fail with :class:`ImportError` if Python was not built with ssl support.
 
@@ -402,9 +400,8 @@ Internally, ``gevent.greenlet`` was split into a number of modules:
 
 - :mod:`gevent.hub` provides :class:`Hub` class and basic utilities, like :func:`sleep`;
   :class:`Hub` is now a subclass of greenlet.
-- :mod:`gevent.timeout` provides :class:`Timeout` and :func:`with_timeout`
-- :mod:`gevent.greenlet` provides :class:`Greenlet` class and helpers like :func:`joinall`
-  and :func:`killall`.
+- :mod:`gevent.timeout` provides :class:`Timeout` and :func:`with_timeout`;
+- :mod:`gevent.greenlet` provides :class:`Greenlet` class and helpers like :func:`joinall` and :func:`killall`.
 - :mod:`gevent.rawgreenlet` contains the old "polling" versions of
   :func:`joinall <rawgreenlet.joinall>` and :func:`killall <rawgreenlet.killall>` (they do not need :meth:`link <Greenlet.link>`
   functionality and work with any greenlet by polling their status and sleeping in a loop)
@@ -438,13 +435,12 @@ Release 0.9.3 (Aug 3, 2009)
 Release 0.9.2 (Jul 20, 2009)
 ----------------------------
 
-* Simplified :mod:`gevent.socket`'s implementation and fixed SSL
-  bug reported on eventletdev by **Cesar Alaniz** as well as failures
-  in test_socket_ssl.py.
-* Removed ``GreenSocket.makeGreenFile``; Use :meth:`socket.socket.makefile` that returns _fileobject
+* Simplified :mod:`gevent.socket`'s implementation and fixed SSL bug reported on eventletdev
+  by **Cesar Alaniz** as well as failures in ``test_socket_ssl.py``.
+* Removed ``GreenSocket.makeGreenFile``; Use :meth:`socket.socket.makefile` that returns :class:`_fileobject`
   and is available on both :class:`GreenSocket <gevent.socket.socket>` and :class:`GreenSSL <gevent.socket.GreenSSL>`.
-  socket.py still a work in progress.
-* Added new :class:`core.active_event` class that takes advantage of libevent's event_active function.
+  The :mod:`gevent.socket` is still a work in progress.
+* Added new :class:`core.active_event` class that takes advantage of libevent's ``event_active`` function.
   ``core.active_event(func)`` schedules func to be run in this event loop iteration as opposed
   to ``core.timer(0, ...)`` which schedules an event to be run in the next iteration.
   :class:`active_event` is now used throughout the library wherever ``core.timer(0, ....)`` was previously used.
@@ -454,24 +450,23 @@ Release 0.9.2 (Jul 20, 2009)
   function block until the greenlet(s) is actually dead. By default, :func:`kill` and :func:`killall` are asynchronous,
   i.e. they don't unschedule the current greenlet.
 * Added a few new properties to :class:`gevent.core.event`: :attr:`fd <event.fd>`, :attr:`events <event.events>`,
-  :attr:`events_str <event.events_str>` and :attr:`flags <event.flags>`. It also has
-  :meth:`__enter__ <event.__enter__>` and :meth:`__exit__ <event.__exit__>` now, so it can be used as a context manager. :class:`event`'s :attr:`callback <event.callback>` signature has changed from ``(event, fd, evtype)`` to ``(event, evtype)``.
+  :attr:`events_str <event.events_str>` and :attr:`flags <event.flags>`. It also has :meth:`__enter__ <event.__enter__>`
+  and :meth:`__exit__ <event.__exit__>` now, so it can be used as a context
+  manager. :class:`event`'s :attr:`callback <event.callback>` signature has changed from ``(event, fd, evtype)`` to ``(event, evtype)``.
 * Fixed :class:`Hub`'s mainloop to never return successfully as this will screw up main greenlet's ``switch()`` call.
   Instead of returning it raises :class:`DispatchExit`.
 * Added :func:`reinit` function - wrapper for libevent's ``event_reinit``.
-  This function is a must have at least for daemons, as it fixes ``epoll`` and some others
-  eventloops to work after ``fork``.
-* Trying to use gevent in another thread will now raise an exception immediately,
-  since it's not implemented.
+  This function is a must have at least for daemons, as it fixes ``epoll`` and some others eventloops to work after ``fork``.
+* Trying to use gevent in another thread will now raise an exception immediately, since it's not implemented.
 * Added a few more convenience methods ``spawn_link[exception/value]`` to ``proc.RunningProcSet``.
-* Fixed setup.py not to depend on setuptools.
-* Removed ``gevent.timeout`` (use :class:`gevent.Timeout`)
+* Fixed ``setup.py`` not to depend on ``setuptools``.
+* Removed ``gevent.timeout``. Use :class:`gevent.Timeout`.
 
 
 Release 0.9.1 (Jul 9, 2009)
 ---------------------------
 
-* Fixed compilation with libevent-1.3 (Thanks to **Litao Wei** for reporting the problem.)
+* Fixed compilation with libevent-1.3. Thanks to **Litao Wei** for reporting the problem.
 * Fixed :class:`Hub` to recover silently after ``event_dispatch()`` failures (I've seen this
   happen after ``fork`` even though ``event_reinit()`` is called as necessary). The end result is that :func:`fork`
   now works more reliably, as detected by ``test_socketserver.py`` - it used to fail occasionally, now it does not.
@@ -496,15 +491,15 @@ Started as eventlet_ 0.8.11 fork, with the intention to support only libevent as
 Compared to eventlet, this version has a much simpler API and implementation and a few
 severe bugs fixed, namely
 
-* full duplex in sockets, i.e. ``read()`` and ``write()`` on the same fd do not cancel one another
-* :meth:`GreenSocket.close <socket.socket.close>` does not hang as it could with eventlet.
+* Full duplex in sockets, i.e. ``read()`` and ``write()`` on the same fd do not cancel one another.
+* The :meth:`GreenSocket.close <socket.socket.close>` method does not hang as it could with eventlet.
 
 There's a test in my repo of eventlet that reproduces both of them:
 http://bitbucket.org/denis/eventlet/src/tip/greentest/test__socket.py
 
 Besides having less bugs and less code to care about the goals of the fork are:
 
-* piggy-back on libevent as much as possible (use its http and dns code)
-* use the interfaces and conventions from the standard Python library where possible
+* Piggy-back on libevent as much as possible (use its http and dns code).
+* Use the interfaces and conventions from the standard Python library where possible.
 
 .. _eventlet: http://bitbucket.org/denis/eventlet
