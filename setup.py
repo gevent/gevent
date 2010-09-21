@@ -129,7 +129,10 @@ def compile_libevent(build):
 
         if not exists("./config.status"):
             mysystem("%s --with-pic --disable-shared --disable-dependency-tracking" % configure)
-        mysystem("make")
+	if "bsd" in sys.platform:
+            mysystem("gmake")
+        else:
+            mysystem("make")
 
         for line in open("Makefile"):
             if line.startswith("LIBS = "):
