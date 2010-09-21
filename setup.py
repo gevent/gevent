@@ -129,7 +129,7 @@ def compile_libevent(build):
 
         if not exists("./config.status"):
             mysystem("%s --with-pic --disable-shared --disable-dependency-tracking" % configure)
-	if "bsd" in sys.platform:
+        if "bsd" in sys.platform:
             mysystem("gmake")
         else:
             mysystem("make")
