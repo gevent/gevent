@@ -46,7 +46,7 @@ Miscellaneous:
 - Added new test to check PEP8 conformance: ``xtest_pep8.py``.
 - Fixed :class:`BackdoorServer` close the connection on :exc:`SystemExit` and simplified the code.
 - Made :class:`Pool` raise :exc:`ValueError` when initialized with ``size=0``.
-- Updated ``setup.py --libevent`` to configure and make libevent if it's built already.
+- Updated ``setup.py --libevent`` to configure and make libevent if it's not built already.
 - Updated ``setup.py`` to use ``setuptools`` if present and add dependency on ``greenlet``.
 - Fixed doc/mysphinxext.py to work with Sphinx 1. Thanks by **Örjan Persson**.
 
