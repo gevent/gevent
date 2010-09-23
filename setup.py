@@ -300,6 +300,7 @@ if __name__ == '__main__':
         packages=['gevent'],
         ext_modules=[gevent_core],
         cmdclass={'build_ext': my_build_ext},
+        install_requires=['greenlet'],
         classifiers=[
         "License :: OSI Approved :: MIT License",
         "Programming Language :: Python :: 2.4",
