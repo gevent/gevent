@@ -277,6 +277,7 @@ class JoinableQueue(Queue):
         Queue.__init__(self, maxsize)
         self.unfinished_tasks = 0
         self._cond = Event()
+        self._cond.set()
 
     def _format(self):
         result = Queue._format(self)
