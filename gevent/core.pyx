@@ -253,6 +253,7 @@ cdef class event:
     def add(self, timeout=None):
         """Add event to be executed after an optional *timeout* - number of seconds
         after which the event will be executed."""
+        global errno
         cdef timeval tv
         cdef double c_timeout
         cdef int result
