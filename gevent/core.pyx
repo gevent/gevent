@@ -45,11 +45,6 @@ import traceback
 from pprint import pformat
 import weakref
 
-DEF EVENT_INTERNAL_AVAILABLE = False
-
-cdef extern from "libevent-internal.h":
-    pass
-
 
 cdef extern from "sys/types.h":
     ctypedef unsigned char u_char
@@ -121,25 +116,6 @@ cdef extern from "string.h":
 
 cdef extern from "errno.h":
     int errno
-
-IF EVENT_INTERNAL_AVAILABLE:
-
-    cdef extern from "libevent-internal.h":
-        struct event_base:
-            int event_count         # counts number of total events
-            int event_count_active  # counts number of active events
-
-    def _event_count():
-        cdef event_base* c = current_base
-        return c.event_count
-
-    def _event_count_active():
-        cdef event_base* c = current_base
-        return c.event_count_active
-
-ELSE:
-
-    ctypedef void* event_base
 
 
 cdef extern from "libevent.h":
