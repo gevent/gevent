@@ -263,10 +263,7 @@ cdef class event:
         else:
             c_timeout = <double>timeout
             if c_timeout < 0.0:
-                #raise ValueError('Expected a non-negative number or None: %r' % (timeout, ))
-                import warnings
-                warnings.warn('Negative timeouts are deprecated. Use None to disable timeout.', DeprecationWarning, stacklevel=2)
-                result = event_add(&self.ev, NULL)
+                raise ValueError('Invalid value for timeout, must be a non-negative number or None: %r' % (timeout, ))
             else:
                 tv.tv_sec = <long>c_timeout
                 tv.tv_usec = <unsigned int>((c_timeout - <double>tv.tv_sec) * 1000000.0)
