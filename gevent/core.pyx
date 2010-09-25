@@ -66,6 +66,7 @@ cdef extern from "frameobject.h":
 
 ctypedef void (*event_handler)(int fd, short evtype, void *arg)
 
+ctypedef void* event_base
 
 cdef extern from "libevent.h":
 
