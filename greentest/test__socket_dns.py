@@ -1,4 +1,5 @@
 #!/usr/bin/python
+# -*- coding: utf-8 -*-
 import sys
 import re
 import greentest
@@ -148,6 +149,12 @@ class TestRemote(TestCase):
 
     def test_notexistent_dot_com(self):
         self._test('sdfsdfgu5e66098032453245wfdggd.com')
+
+
+class TestInternational(TestCase):
+
+    def test(self):
+        self._test(u'президент.рф')
 
 
 if __name__ == '__main__':
