@@ -56,15 +56,20 @@ class TestCase(greentest.TestCase):
         for port in self.PORTS:
             for args in self.getaddrinfo_args:
                 if VERBOSE:
+                    print
                     print 'real_socket.getaddrinfo(%r, %r, %r)' % (hostname, port, args)
                 try:
                     real_ip = real_socket.getaddrinfo(hostname, port, *args)
+                    if VERBOSE:
+                        print '    returned %r' % (real_ip, )
                 except Exception, ex:
                     real_ip = ex
                 if VERBOSE:
                     print 'gevent.socket.getaddrinfo(%r, %r, %r)' % (hostname, port, args)
                 try:
                     ip = getaddrinfo(hostname, port, *args)
+                    if VERBOSE:
+                        print '    returned %r' % (ip, )
                 except Exception, ex:
                     ip = ex
                 if not self.equal(real_ip, ip):
