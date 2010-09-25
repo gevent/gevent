@@ -695,6 +695,8 @@ else:
         to :mod:`dns` functions.
         """
         family, socktype, proto, _flags = args + (None, ) * (4 - len(args))
+        if isinstance(host, unicode):
+            host = host.encode('idna')
         if not isinstance(host, str) or '.' not in host or _ip4_re.match(host):
             return _socket.getaddrinfo(host, port, *args)
 
