@@ -42,7 +42,7 @@ class TestCase(greentest.TestCase):
             self.assertEqual(check_ip, ip)
         return ip
 
-    PORTS = [80, 0, 53]
+    PORTS = [80, 0, 53, 'http']
     getaddrinfo_args = [(),
                         (AF_UNSPEC, ),
                         (AF_UNSPEC, SOCK_STREAM, 0, 0),
