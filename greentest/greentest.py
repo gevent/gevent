@@ -45,8 +45,6 @@ class TestCase(unittest.TestCase):
 
     def setUp(self):
         gevent.sleep(0)  # switch at least once to setup signal handlers
-        if hasattr(gevent.core, '_event_count'):
-            self._event_count = (gevent.core._event_count(), gevent.core._event_count_active())
         hub = gevent.hub.get_hub()
         if hasattr(hub, 'switch_count'):
             self._switch_count = hub.switch_count
@@ -75,13 +73,6 @@ class TestCase(unittest.TestCase):
                         msg = '%s.%s switched but expected not to\n' % (type(self).__name__, self.testname)
                 if msg:
                     print >> sys.stderr, 'WARNING: ' + msg
-
-            if hasattr(gevent.core, '_event_count'):
-                event_count = (gevent.core._event_count(), gevent.core._event_count_active())
-                if event_count > self._event_count:
-                    args = (type(self).__name__, self.testname, self._event_count, event_count)
-                    sys.stderr.write('WARNING: %s.%s event count was %s, now %s\n' % args)
-                    gevent.sleep(0.1)
         else:
             sys.stderr.write('WARNING: %s.setUp does not call base class setUp\n' % (type(self).__name__, ))
 
