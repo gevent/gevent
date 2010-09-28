@@ -23,7 +23,7 @@ class Test(greentest.TestCase):
 
     def test_basic(self):
         DELAY = 0.05
-        s = pool.GreenletSet()
+        s = pool.Group()
         s.spawn(gevent.sleep, DELAY)
         assert len(s) == 1, s
         s.spawn(gevent.sleep, DELAY * 2.)
@@ -34,7 +34,7 @@ class Test(greentest.TestCase):
         assert not s, s
 
     def test_waitall(self):
-        s = pool.GreenletSet()
+        s = pool.Group()
         s.spawn(gevent.sleep, DELAY)
         s.spawn(gevent.sleep, DELAY * 2)
         assert len(s) == 2, s
@@ -46,7 +46,7 @@ class Test(greentest.TestCase):
         assert DELAY * 1.9 <= delta <= DELAY * 2.5, (delta, DELAY)
 
     def test_kill_block(self):
-        s = pool.GreenletSet()
+        s = pool.Group()
         s.spawn(gevent.sleep, DELAY)
         s.spawn(gevent.sleep, DELAY * 2)
         assert len(s) == 2, s
@@ -58,7 +58,7 @@ class Test(greentest.TestCase):
         assert delta < DELAY * 0.8, delta
 
     def test_kill_noblock(self):
-        s = pool.GreenletSet()
+        s = pool.Group()
         s.spawn(gevent.sleep, DELAY)
         s.spawn(gevent.sleep, DELAY * 2)
         assert len(s) == 2, s
@@ -83,7 +83,7 @@ class Test(greentest.TestCase):
             self.assertEqual(u2.shot_count, count2)
 
         gevent.sleep(0.01)
-        s = pool.GreenletSet([p1, p2])
+        s = pool.Group([p1, p2])
         assert len(s) == 2, s
         check(0, 0)
         s.killone(p1, block=False)
@@ -109,7 +109,7 @@ class Test(greentest.TestCase):
     def test_killall_subclass(self):
         p1 = GreenletSubclass.spawn(lambda: 1 / 0)
         p2 = GreenletSubclass.spawn(lambda: gevent.sleep(10))
-        s = pool.GreenletSet([p1, p2])
+        s = pool.Group([p1, p2])
         s.kill(block=True)
 
 
