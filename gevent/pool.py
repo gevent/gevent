@@ -203,7 +203,10 @@ class Group(object):
         pass
 
 
-GreenletSet = Group  # the old name; will be deprecated in the future
+def GreenletSet(*args, **kwargs):
+    import warnings
+    warnings.warn("gevent.pool.GreenletSet was renamed to gevent.pool.Group since version 0.13.0", DeprecationWarning, stacklevel=2)
+    return Group(*args, **kwargs)
 
 
 class Pool(Group):
