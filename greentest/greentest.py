@@ -26,6 +26,7 @@ import time
 import traceback
 import re
 import os
+from os.path import basename, splitext
 import gevent
 
 VERBOSE = sys.argv.count('-v') > 1
@@ -83,6 +84,16 @@ class TestCase(unittest.TestCase):
     @property
     def testcasename(self):
         return self.__class__.__name__ + '.' + self.testname
+    
+    @property
+    def modulename(self):
+        test_method = getattr(self, self.testname)
+        return test_method.__func__.func_code.co_filename
+
+    @property
+    def fullname(self):
+        return splitext(basename(self.modulename))[0] + '.' + self.testcasename
+
 
     def hook_stderr(self):
         if VERBOSE:
