@@ -22,12 +22,14 @@
 # package is named greentest, not test, so it won't be confused with test in stdlib
 import sys
 import unittest
+from unittest import TestCase as BaseTestCase
 import time
 import traceback
 import re
 import os
 from os.path import basename, splitext
 import gevent
+from patched_tests_setup import get_switch_expected
 
 VERBOSE = sys.argv.count('-v') > 1
 
@@ -38,11 +40,16 @@ else:
     DEBUG = False
 
 
-class TestCase(unittest.TestCase):
+class TestCase(BaseTestCase):
 
     __timeout__ = 1
-    switch_expected = True
+    switch_expected = 'default'
     _switch_count = None
+
+    def run(self, *args, **kwargs):
+        if self.switch_expected == 'default':
+            self.switch_expected = get_switch_expected(self.fullname)
+        return BaseTestCase.run(self, *args, **kwargs)
 
     def setUp(self):
         gevent.sleep(0)  # switch at least once to setup signal handlers

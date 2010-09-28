@@ -3,12 +3,37 @@ import re
 
 # By default, test cases are expected to switch and emit warnings if there was none
 # If a test is found in this list, it's expected not to switch.
-switch_not_expected = '''test_select.SelectTestCase.test_error_conditions
+tests = '''test_select.SelectTestCase.test_error_conditions
 test_ftplib.TestFTPClass.test_all_errors
 test_ftplib.TestFTPClass.test_getwelcome
 test_ftplib.TestFTPClass.test_sanitize
 test_ftplib.TestFTPClass.test_set_pasv
-test_ftplib.TestIPv6Environment.test_af'''.split()
+test_ftplib.TestIPv6Environment.test_af
+test_socket.TestExceptions.testExceptionTree
+test_socket.Urllib2FileobjectTest.testClose
+test_socket.TestLinuxAbstractNamespace.testLinuxAbstractNamespace
+test_socket.TestLinuxAbstractNamespace.testMaxName
+test_socket.TestLinuxAbstractNamespace.testNameOverflow
+test_socket.GeneralModuleTests.*
+'''
+
+tests = [x.strip().replace('\.', '\\.').replace('*', '.*?') for x in  tests.split('\n') if x.strip()]
+tests = re.compile('^%s$' % '|'.join(tests))
+
+def get_switch_expected(fullname):
+    """
+    >>> get_switch_expected('test_select.SelectTestCase.test_error_conditions')
+    False
+    >>> get_switch_expected('test_socket.GeneralModuleTests.testCrucialConstants')
+    False
+    >>> get_switch_expected('test_socket.SomeOtherTest.testHello')
+    True
+    """
+    if tests.match(fullname) is not None:
+        print fullname
+        return False
+    return True
+
 
 disabled_tests = [
     # uses signal module which does not work with gevent (use gevent.signal())
