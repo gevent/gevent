@@ -8,6 +8,7 @@ and the contributors (ordered alphabetically):
   Daniele Varrazzo
   David Hain
   Dmitry Chechik
+  Erik Näslund
   Jason Toffaletti
   Ludvig Ericson
   Marcus Cavanaugh
@@ -18,7 +19,6 @@ and the contributors (ordered alphabetically):
   Ralf Schmitt
   Randall Leeds
   Ted Suzman
-  Teh Ekik
   Uriel Katz
 
 Gevent is inspired by and uses some code from eventlet which was written by
