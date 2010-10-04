@@ -733,11 +733,8 @@ try:
     from gevent.ssl import sslwrap_simple as ssl, SSLError as sslerror, SSLSocket as SSLType
     _have_ssl = True
 except ImportError:
-    try:
-        from gevent.sslold import ssl, sslerror, SSLObject as SSLType
-        _have_ssl = True
-    except ImportError:
-        pass
+    pass
+
 
 if sys.version_info[:2] <= (2, 5) and _have_ssl:
     __implements__.extend(['ssl', 'sslerror', 'SSLType'])
