@@ -46,12 +46,7 @@ class StreamServer(BaseServer):
             for arg in ssl_args:
                 if arg not in self._allowed_ssl_args:
                     raise TypeError('StreamServer.__init__() got an unexpected keyword argument %r' % arg)
-            try:
-                from gevent.ssl import wrap_socket
-            except ImportError:
-                wrap_socket = _import_sslold_wrap_socket()
-                if wrap_socket is None:
-                    raise
+            from gevent.ssl import wrap_socket
             self.wrap_socket = wrap_socket
             self.ssl_args = ssl_args
             self.ssl_enabled = True
@@ -154,11 +149,3 @@ class StreamServer(BaseServer):
         # used in case of ssl sockets
         ssl_socket = self.wrap_socket(client_socket, server_side=True, **self.ssl_args)
         return self.handle(ssl_socket, address)
-
-
-def _import_sslold_wrap_socket():
-    try:
-        from gevent.sslold import wrap_socket
-        return wrap_socket
-    except ImportError:
-        pass
