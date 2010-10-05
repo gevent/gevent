@@ -5,6 +5,7 @@ syntax: glob
 dist
 gevent.egg-info
 build
+gevent/core.c
 gevent/core.so
 gevent/core_d.so
 doc/_build
