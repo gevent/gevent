@@ -91,7 +91,7 @@ class TestCase(BaseTestCase):
     @property
     def testcasename(self):
         return self.__class__.__name__ + '.' + self.testname
-    
+
     @property
     def modulename(self):
         test_method = getattr(self, self.testname)
@@ -100,7 +100,6 @@ class TestCase(BaseTestCase):
     @property
     def fullname(self):
         return splitext(basename(self.modulename))[0] + '.' + self.testcasename
-
 
     def hook_stderr(self):
         if VERBOSE:
