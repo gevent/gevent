@@ -858,6 +858,32 @@ Cookie: name2="value2"\n\n'''.replace('\n', '\r\n'))
         read_http(fd)
 
 
+class TestLeakInput(TestCase):
+
+    def application(self, environ, start_response):
+        pi = environ["PATH_INFO"]
+        self._leak_wsgi_input = environ["wsgi.input"]
+        self._leak_environ = environ
+        if pi == "/leak-frame":
+            environ["_leak"] = sys._getframe(0)
+
+        text = "foobar"
+        start_response('200 OK', [('Content-Length', str(len(text))), ('Content-Type', 'text/plain')])
+        return [text]
+
+    def test_connection_close_leak_simple(self):
+        fd = self.connect().makefile(bufsize=1)
+        fd.write("GET / HTTP/1.0\r\nConnection: close\r\n\r\n")
+        d = fd.read()
+        assert d.startswith("HTTP/1.0 200 OK"), "bad response"
+
+    def test_connection_close_leak_frame(self):
+        fd = self.connect().makefile(bufsize=1)
+        fd.write("GET /leak-frame HTTP/1.0\r\nConnection: close\r\n\r\n")
+        d = fd.read()
+        assert d.startswith("HTTP/1.0 200 OK"), "bad response"
+
+
 del CommonTests
 
 if __name__ == '__main__':
