@@ -293,7 +293,7 @@ class Greenlet(greenlet):
         If block is ``True`` (the default), wait until the greenlet dies or the optional timeout expires.
         If block is ``False``, the current greenlet is not unscheduled.
 
-        The function always returns ``None`` and never raises an errir.
+        The function always returns ``None`` and never raises an error.
 
         `Changed in version 0.13.0:` *block* is now ``True`` by default.
         """

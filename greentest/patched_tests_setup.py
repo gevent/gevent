@@ -20,6 +20,7 @@ test_socket.GeneralModuleTests.*
 tests = [x.strip().replace('\.', '\\.').replace('*', '.*?') for x in  tests.split('\n') if x.strip()]
 tests = re.compile('^%s$' % '|'.join(tests))
 
+
 def get_switch_expected(fullname):
     """
     >>> get_switch_expected('test_select.SelectTestCase.test_error_conditions')
