@@ -41,6 +41,12 @@ libraries = []
 
 
 class my_build_ext(build_ext.build_ext):
+    user_options = (build_ext.build_ext.user_options
+                    + [("cython=", None, "path to the cython executable")])
+
+    def initialize_options(self):
+        build_ext.build_ext.initialize_options(self)
+        self.cython = "cython"
 
     def compile_cython(self):
         sources = glob.glob('gevent/*.pyx') + glob.glob('gevent/*.pxi')
@@ -52,12 +58,12 @@ class my_build_ext(build_ext.build_ext):
             changed = [filename for filename in sources if (os.stat(filename).st_mtime - core_c_mtime) > 1]
             if not changed:
                 return
-            print >> sys.stderr, 'Running cython (changed: %s)' % ', '.join(changed)
+            print >> sys.stderr, 'Running %s (changed: %s)' % (self.cython, ', '.join(changed))
         else:
-            print >> sys.stderr, 'Running cython'
-        cython_result = os.system('cython gevent/core.pyx')
+            print >> sys.stderr, 'Running %s' % self.cython
+        cython_result = os.system('%s gevent/core.pyx' % self.cython)
         if cython_result:
-            if os.system('cython -V 2> %s' % os.devnull):
+            if os.system('%s -V 2> %s' % (self.cython, os.devnull)):
                 # there's no cython in the system
                 print >> sys.stderr, 'No cython found, cannot rebuild core.c'
                 return
@@ -65,8 +71,8 @@ class my_build_ext(build_ext.build_ext):
 
     def build_extension(self, ext):
         compile_libevent(self)
-
-        self.compile_cython()
+        if self.cython:
+            self.compile_cython()
         result = build_ext.build_ext.build_extension(self, ext)
         # hack: create a symlink from build/../core.so to gevent/core.so
         # to prevent "ImportError: cannot import name core" failures
