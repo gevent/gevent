@@ -95,7 +95,10 @@ class TestCase(BaseTestCase):
     @property
     def modulename(self):
         test_method = getattr(self, self.testname)
-        return test_method.__func__.func_code.co_filename
+        try:
+            return test_method.__func__.func_code.co_filename
+        except AttributeError:
+            return test_method.im_func.func_code.co_filename
 
     @property
     def fullname(self):
