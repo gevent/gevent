@@ -47,7 +47,7 @@ class BaseServer(object):
     def set_listener(self, listener, backlog=None):
         if hasattr(listener, 'accept'):
             if hasattr(listener, 'do_handshake'):
-                raise TypeError('Expected a regular socket, not SSLObject: %r' % (listener, ))
+                raise TypeError('Expected a regular socket, not SSLSocket: %r' % (listener, ))
             if backlog is not None:
                 raise TypeError('backlog must be None when a socket instance is passed')
             self.address = listener.getsockname()
