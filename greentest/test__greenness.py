@@ -55,7 +55,7 @@ class TestGreenness(greentest.TestCase):
 
     def tearDown(self):
         self.httpd.server_close()
-        self.gthread.kill(block=True)
+        self.gthread.kill()
 
     def test_urllib2(self):
         self.assertEqual(self.httpd.request_count, 0)
