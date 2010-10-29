@@ -65,7 +65,7 @@ class TestLink(greentest.TestCase):
             p.link(receiver)
             self.assertRaises(greenlet.LinkedCompleted, receiver.get)
         finally:
-            receiver.kill(block=True)
+            receiver.kill()
 
     def test_link_to_asyncresult(self):
         p = gevent.spawn(lambda: 100)
