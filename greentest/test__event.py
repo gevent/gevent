@@ -56,7 +56,7 @@ class TestAsyncResult(greentest.TestCase):
                 assert result is X, 'Nobody sent anything to event2 yet it received %r' % (result, )
         finally:
             t.cancel()
-            g.kill(block=True)
+            g.kill()
 
 
 class TestAsync_ResultAsLinkTarget(greentest.TestCase):
