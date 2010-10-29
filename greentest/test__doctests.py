@@ -3,7 +3,7 @@ import os
 import re
 import doctest
 import unittest
-from os.path import join, dirname
+import traceback
 import gevent
 from gevent import socket
 from greentest import walk_modules
@@ -19,7 +19,7 @@ if __name__ == '__main__':
     try:
         allowed_modules = sys.argv[1:]
         sys.path.append('.')
-        base = dirname(gevent.__file__)
+        base = os.path.dirname(gevent.__file__)
         print base
         os.chdir('..')
 
@@ -44,11 +44,15 @@ if __name__ == '__main__':
         modules_count = 0
         for m, path in modules:
             if re.search('^\s*>>> ', open(path).read(), re.M):
-                s = doctest.DocTestSuite(m, extraglobs=globs)
-                print '%s (from %s): %s tests' % (m, path, len(s._tests))
-                suite.addTest(s)
-                modules_count += 1
-                tests_count += len(s._tests)
+                try:
+                    s = doctest.DocTestSuite(m, extraglobs=globs)
+                    print '%s (from %s): %s tests' % (m, path, len(s._tests))
+                    suite.addTest(s)
+                    modules_count += 1
+                    tests_count += len(s._tests)
+                except Exception:
+                    traceback.print_exc()
+                    sys.stderr.write('Failed to process %s\n\n' % path)
         print 'Total: %s tests in %s modules' % (tests_count, modules_count)
         runner = unittest.TextTestRunner(verbosity=2)
         runner.run(suite)
