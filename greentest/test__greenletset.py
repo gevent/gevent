@@ -51,7 +51,7 @@ class Test(greentest.TestCase):
         s.spawn(gevent.sleep, DELAY * 2)
         assert len(s) == 2, s
         start = time.time()
-        s.kill(block=True)
+        s.kill()
         assert not s, s
         assert len(s) == 0, s
         delta = time.time() - start
@@ -110,7 +110,7 @@ class Test(greentest.TestCase):
         p1 = GreenletSubclass.spawn(lambda: 1 / 0)
         p2 = GreenletSubclass.spawn(lambda: gevent.sleep(10))
         s = pool.Group([p1, p2])
-        s.kill(block=True)
+        s.kill()
 
 
 class GreenletSubclass(gevent.Greenlet):
