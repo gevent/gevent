@@ -110,7 +110,7 @@ def run_and_check(run_client):
         raise AssertionError('server should be dead by now')
 
 
-class test(greentest.TestCase):
+class Test(greentest.TestCase):
 
     def test_clean_exit(self):
         run_and_check(True)
