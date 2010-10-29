@@ -246,7 +246,7 @@ class TestPool(greentest.TestCase):
     def test_terminate(self):
         result = self.pool.map_async(gevent.sleep, [0.1] * 1000)
         kill = TimingWrapper(self.pool.kill)
-        kill(block=True)
+        kill()
         assert kill.elapsed < 0.5, kill.elapsed
 
 
