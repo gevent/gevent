@@ -68,12 +68,12 @@ class TestGreenIo(TestCase):
         server = socket.tcp_listener(('0.0.0.0', 0))
         server_greenlet = gevent.spawn(accept_close_early, server)
         did_it_work(server)
-        server_greenlet.kill(block=True)
+        server_greenlet.kill()
 
         server = socket.tcp_listener(('0.0.0.0', 0))
         server_greenlet = gevent.spawn(accept_close_late, server)
         did_it_work(server)
-        server_greenlet.kill(block=True)
+        server_greenlet.kill()
 
     def test_del_closes_socket(self):
         timer = gevent.Timeout.start_new(0.5)
