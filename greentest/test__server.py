@@ -224,7 +224,7 @@ class TestDefaultSpawn(TestCase):
             assert not self.server.started
             self.assertConnectionRefused()
         finally:
-            g.kill(block=True)
+            g.kill()
 
     def test_serve_forever(self):
         self.server = self.ServerSubClass(('127.0.0.1', 0))
