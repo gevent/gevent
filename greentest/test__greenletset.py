@@ -6,6 +6,10 @@ from gevent import pool
 DELAY = 0.1
 
 
+class SpecialError(Exception):
+    pass
+
+
 class Undead(object):
 
     def __init__(self):
@@ -15,6 +19,8 @@ class Undead(object):
         while True:
             try:
                 gevent.sleep(1)
+            except SpecialError:
+                break
             except:
                 self.shot_count += 1
 
@@ -105,6 +111,9 @@ class Test(greentest.TestCase):
         assert kill_result is X, repr(kill_result)
         assert len(s) == 2, s
         check(1, 1)
+
+        p1.kill(SpecialError)
+        p2.kill(SpecialError)
 
     def test_killall_subclass(self):
         p1 = GreenletSubclass.spawn(lambda: 1 / 0)
