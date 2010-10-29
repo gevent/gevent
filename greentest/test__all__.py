@@ -5,7 +5,6 @@ import types
 from greentest import walk_modules
 
 
-SKIP = ['sslold']
 MAPPING = {'gevent.local': '_threading_local'}
 
 
@@ -160,8 +159,7 @@ are missing from %r:
 
     for path, modname in walk_modules():
         modname = modname.replace('gevent.', '')
-        if modname not in SKIP:
-            exec '''def test_%s(self): self._test("gevent.%s")''' % (modname, modname)
+        exec '''def test_%s(self): self._test("gevent.%s")''' % (modname, modname)
     del path, modname
 
 
