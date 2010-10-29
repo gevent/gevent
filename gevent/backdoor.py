@@ -97,6 +97,7 @@ class _fileobject(socket._fileobject):
     def readline(self, *a):
         return socket._fileobject.readline(self, *a).replace("\r\n", "\n")
 
+
 if __name__ == '__main__':
     if not sys.argv[1:]:
         print 'USAGE: %s PORT' % sys.argv[0]
