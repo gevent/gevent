@@ -190,17 +190,47 @@ class Group(object):
 
     def imap_unordered(self, func, iterable):
         """The same as imap() except that the ordering of the results from the
-        returned iterator should be considered arbitrary.
-
-        **TODO**: Fix this.
-        """
-        return iter(self.map(func, iterable))
+        returned iterator should be considered in arbitrary order."""
+        return IMapUnordered.spawn(self.spawn, func, iterable)
 
     def full(self):
         return False
 
     def wait_available(self):
         pass
+
+
+class IMapUnordered(Greenlet):
+
+    def __init__(self, spawn, func, iterable):
+        from gevent.queue import Queue
+        Greenlet.__init__(self)
+        self.spawn = spawn
+        self.func = func
+        self.iterable = iterable
+        self.queue = Queue()
+        self.count = 0
+
+    def __iter__(self):
+        return self.queue
+
+    def _run(self):
+        try:
+            func = self.func
+            for item in self.iterable:
+                self.count += 1
+                self.spawn(func, item).rawlink(self._on_result)
+        finally:
+            self.__dict__.pop('spawn', None)
+            self.__dict__.pop('func', None)
+            self.__dict__.pop('iterable', None)
+
+    def _on_result(self, greenlet):
+        self.count -= 1
+        if greenlet.successful():
+            self.queue.put(greenlet.value)
+        if self.ready() and self.count <= 0:
+            self.queue.put(StopIteration)
 
 
 def GreenletSet(*args, **kwargs):
