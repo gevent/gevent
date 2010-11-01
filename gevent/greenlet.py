@@ -304,7 +304,7 @@ class Greenlet(greenlet):
             waiter = Waiter()
             core.active_event(_kill, self, exception, waiter)
             if block:
-                waiter.wait()
+                waiter.get()
                 self.join(timeout)
         # it should be OK to use kill() in finally or kill a greenlet from more than one place;
         # thus it should not raise when the greenlet is already killed (= not started)
@@ -550,7 +550,7 @@ def killall(greenlets, exception=GreenletExit, block=True, timeout=None):
         if block:
             t = Timeout.start_new(timeout)
             try:
-                alive = waiter.wait()
+                alive = waiter.get()
                 if alive:
                     joinall(alive, raise_error=False)
             finally:
