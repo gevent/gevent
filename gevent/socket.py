@@ -489,7 +489,7 @@ class socket(object):
     def sendall(self, data, flags=0):
         if isinstance(data, unicode):
             data = data.encode()
-        # this sendall is also reused by SSL subclasses (both from ssl and sslold modules),
+        # this sendall is also reused by gevent.ssl.SSLSocket subclass,
         # so it should not call self._sock methods directly
         if self.timeout is None:
             data_sent = 0
