@@ -126,7 +126,7 @@ class Queue(object):
             try:
                 if self.getters:
                     self._schedule_unlock()
-                result = waiter.wait()
+                result = waiter.get()
                 assert result is waiter, "Invalid switch into Queue.put: %r" % (result, )
                 if waiter.item is not _NONE:
                     self._put(item)
@@ -175,7 +175,7 @@ class Queue(object):
                 self.getters.add(waiter)
                 if self.putters:
                     self._schedule_unlock()
-                return waiter.wait()
+                return waiter.get()
             finally:
                 self.getters.discard(waiter)
                 timeout.cancel()
