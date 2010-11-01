@@ -43,6 +43,7 @@ class BaseServer(object):
         self.set_listener(listener, backlog=backlog)
         self.set_spawn(spawn)
         self.set_handle(handle)
+        self.started = None
 
     def set_listener(self, listener, backlog=None):
         if hasattr(listener, 'accept'):
@@ -126,7 +127,6 @@ class BaseServer(object):
 
         It is not supposed to be called by the user, it is called by :meth:`start` before starting
         the accept loop."""
-        assert not self.started, '%s already started' % self.__class__.__name__
         if not hasattr(self, 'socket'):
             self.socket = _tcp_listener(self.address, backlog=self.backlog, reuse_addr=self.reuse_addr)
             self.address = self.socket.getsockname()
@@ -137,7 +137,9 @@ class BaseServer(object):
 
         If an address was provided in the constructor, then also create a socket, bind it and put it into the listening mode.
         """
+        assert not self.started, '%s already started' % self.__class__.__name__
         self.pre_start()
+        self.started = True
         try:
             self.start_accepting()
         except:
@@ -146,13 +148,16 @@ class BaseServer(object):
 
     def kill(self):
         """Close the listener socket and stop accepting."""
-        self.stop_accepting()
+        self.started = False
         try:
-            self.socket.close()
-        except Exception:
-            pass
-        self.__dict__.pop('socket', None)
-        self.__dict__.pop('handle', None)
+            self.stop_accepting()
+        finally:
+            try:
+                self.socket.close()
+            except Exception:
+                pass
+            self.__dict__.pop('socket', None)
+            self.__dict__.pop('handle', None)
 
     def stop(self, timeout=None):
         """Stop accepting the connections and close the listening socket.
