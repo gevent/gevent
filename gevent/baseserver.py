@@ -179,7 +179,7 @@ class BaseServer(object):
         try:
             self._stopped_event.wait()
         except:
-            Greenlet.spawn(self.stop, timeout=stop_timeout).join()
+            self.stop(timeout=stop_timeout)
             raise
 
 
