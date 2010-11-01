@@ -116,7 +116,6 @@ class StreamServer(BaseServer):
                     sys.exc_clear()
                     return
                 raise
-
             self.delay = self.min_delay
             client_socket = socket.socket(_sock=client_socket)
             spawn = self._spawn
