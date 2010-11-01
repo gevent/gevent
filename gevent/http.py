@@ -20,10 +20,6 @@ class HTTPServer(BaseServer):
         if default_response_headers != 'default':
             self.default_response_headers = default_response_headers
 
-    @property
-    def started(self):
-        return self.http is not None
-
     def _on_request(self, request):
         spawn = self._spawn
         if spawn is None:

@@ -72,29 +72,32 @@ class StreamServer(BaseServer):
     def set_spawn(self, spawn):
         BaseServer.set_spawn(self, spawn)
         if self.pool is not None:
-            self.pool._semaphore.rawlink(self._start_accepting)
+            self.pool._semaphore.rawlink(self._start_accepting_if_started)
 
-    def set_handle(self, handle):
-        BaseServer.set_handle(self, handle)
+    def kill(self):
+        try:
+            BaseServer.kill(self)
+        finally:
+            self.__dict__.pop('_handle', None)
+            pool = getattr(self, 'pool', None)
+            if pool is not None:
+                pool._semaphore.unlink(self._start_accepting_if_started)
+
+    def pre_start(self):
+        BaseServer.pre_start(self)
         # make SSL work:
         if self.ssl_enabled:
             self._handle = self.wrap_socket_and_handle
         else:
             self._handle = self.handle
 
-    @property
-    def started(self):
-        return self._accept_event is not None or self._start_accepting_timer is not None
-
     def start_accepting(self):
         if self._accept_event is None:
             self._accept_event = core.read_event(self.socket.fileno(), self._do_accept, persist=True)
 
-    def _start_accepting(self, _event):
-        if self._accept_event is None:
-            if 'socket' not in self.__dict__:
-                return
-            self._accept_event = core.read_event(self.socket.fileno(), self._do_accept, persist=True)
+    def _start_accepting_if_started(self, _event=None):
+        if self.started:
+            self.start_accepting()
 
     def stop_accepting(self):
         if self._accept_event is not None:
