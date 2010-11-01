@@ -13,6 +13,18 @@ to :meth:`Queue.get` retrieves the item.
 Another interesting difference is that :meth:`Queue.qsize`, :meth:`Queue.empty`, and
 :meth:`Queue.full` *can* be used as indicators of whether the subsequent :meth:`Queue.get`
 or :meth:`Queue.put` will not block.
+
+Additionally, queues in this module implement iterator protocol. Iterating over queue
+means repeatedly calling :meth:`get <Queue.get>` until :meth:`get <Queue.get>` returns ``StopIteration``.
+
+    >>> queue = gevent.queue.Queue()
+    >>> queue.put(1)
+    >>> queue.put(2)
+    >>> queue.put(StopIteration)
+    >>> for item in queue:
+    ...    print item
+    1
+    2
 """
 
 import sys
@@ -230,6 +242,15 @@ class Queue(object):
         if self._event_unlock is None:
             self._event_unlock = core.active_event(self._unlock)
             # QQQ re-activate event (with event_active libevent call) instead of creating a new one each time
+
+    def __iter__(self):
+        return self
+
+    def next(self):
+        result = self.get()
+        if result is StopIteration:
+            raise result
+        return result
 
 
 class ItemWaiter(Waiter):
