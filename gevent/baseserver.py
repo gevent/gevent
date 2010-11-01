@@ -140,8 +140,8 @@ class BaseServer(object):
         self.pre_start()
         try:
             self.start_accepting()
-        except Exception:
-            Greenlet.spawn(self.kill).join()
+        except:
+            self.kill()
             raise
 
     def kill(self):
