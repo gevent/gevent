@@ -127,6 +127,7 @@ class StreamServer(BaseServer):
         except:
             traceback.print_exc()
             ex = sys.exc_info()[1]
+            sys.exc_clear()
             if self.is_fatal_error(ex):
                 self.kill()
                 sys.stderr.write('ERROR: %s failed with %s\n' % (self, str(ex) or repr(ex)))
