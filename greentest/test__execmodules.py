@@ -1,4 +1,3 @@
-import os
 import sys
 import traceback
 from greentest import walk_modules
