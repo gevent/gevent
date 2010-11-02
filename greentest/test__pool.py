@@ -185,12 +185,14 @@ TIMEOUT1, TIMEOUT2, TIMEOUT3 = 0.082, 0.035, 0.14
 
 
 class TestPool(greentest.TestCase):
+    __timeout__ = 5
     size = 1
 
     def setUp(self):
+        greentest.TestCase.setUp(self)
         self.pool = pool.Pool(self.size)
 
-    def tearDown(self):
+    def cleanup(self):
         self.pool.join()
 
     def test_apply(self):
