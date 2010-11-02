@@ -882,6 +882,7 @@ class TestLeakInput(TestCase):
         fd.write("GET /leak-frame HTTP/1.0\r\nConnection: close\r\n\r\n")
         d = fd.read()
         assert d.startswith("HTTP/1.0 200 OK"), "bad response"
+        self._leak_environ.pop('_leak')
 
 
 del CommonTests
