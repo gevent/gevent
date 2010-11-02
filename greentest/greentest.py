@@ -30,6 +30,7 @@ import os
 from os.path import basename, splitext
 import gevent
 from patched_tests_setup import get_switch_expected
+from functools import wraps
 
 VERBOSE = sys.argv.count('-v') > 1
 
@@ -39,12 +40,58 @@ if '--debug-greentest' in sys.argv:
 else:
     DEBUG = False
 
+gettotalrefcount = getattr(sys, 'gettotalrefcount', None)
 
-class TestCase(BaseTestCase):
+
+def wrap(method):
+    @wraps(method)
+    def wrapped(self, *args, **kwargs):
+        import gc
+        gc.disable()
+        gc.collect()
+        deltas = []
+        d = None
+        try:
+            for _ in xrange(4):
+                d = gettotalrefcount()
+                method(self, *args, **kwargs)
+                if hasattr(self, 'cleanup'):
+                    self.cleanup()
+                if 'urlparse' in sys.modules:
+                    sys.modules['urlparse'].clear_cache()
+                d = gettotalrefcount() - d
+                deltas.append(d)
+                if deltas[-1] == 0:
+                    break
+            else:
+                raise AssertionError('refcount increased by %r' % (deltas, ))
+        finally:
+            gc.collect()
+            gc.enable()
+    return wrapped
+
+
+class CheckRefcountMetaClass(type):
+    def __new__(meta, classname, bases, classDict):
+        if classDict.get('check_totalrefcount', True):
+            for key, value in classDict.items():
+                if (key.startswith('test_') or key == 'test') and callable(value):
+                    classDict.pop(key)
+                    classDict[key] = wrap(value)
+        return type.__new__(meta, classname, bases, classDict)
+
+
+class TestCase0(BaseTestCase):
 
     __timeout__ = 1
     switch_expected = 'default'
     _switch_count = None
+
+    def __init__(self, *args, **kwargs):
+        BaseTestCase.__init__(self, *args, **kwargs)
+        self._timer = None
+        self._hub = gevent.hub.get_hub()
+        self._switch_count = None
 
     def run(self, *args, **kwargs):
         if self.switch_expected == 'default':
@@ -53,9 +100,8 @@ class TestCase(BaseTestCase):
 
     def setUp(self):
         gevent.sleep(0)  # switch at least once to setup signal handlers
-        hub = gevent.hub.get_hub()
-        if hasattr(hub, 'switch_count'):
-            self._switch_count = hub.switch_count
+        if hasattr(self._hub, 'switch_count'):
+            self._switch_count = self._hub.switch_count
         self._timer = gevent.Timeout.start_new(self.__timeout__, RuntimeError('test is taking too long'))
 
     def tearDown(self):
@@ -68,17 +114,17 @@ class TestCase(BaseTestCase):
                 sys.__stderr__.write(self.stderr)
         except:
             traceback.print_exc()
-        if hasattr(self, '_timer'):
+        if getattr(self, '_timer', None) is not None:
             self._timer.cancel()
-            hub = gevent.hub.get_hub()
-            if self._switch_count is not None and hasattr(hub, 'switch_count'):
+            self._timer = None
+            if self._switch_count is not None and hasattr(self._hub, 'switch_count'):
                 msg = ''
-                if hub.switch_count < self._switch_count:
+                if self._hub.switch_count < self._switch_count:
                     msg = 'hub.switch_count decreased?\n'
-                elif hub.switch_count == self._switch_count:
+                elif self._hub.switch_count == self._switch_count:
                     if self.switch_expected:
                         msg = '%s.%s did not switch\n' % (type(self).__name__, self.testname)
-                elif hub.switch_count > self._switch_count:
+                elif self._hub.switch_count > self._switch_count:
                     if not self.switch_expected:
                         msg = '%s.%s switched but expected not to\n' % (type(self).__name__, self.testname)
                 if msg:
@@ -182,6 +228,11 @@ class TestCase(BaseTestCase):
             ate = '\n#ATE#: ' + self.stderr[m.start(0):m.end(0)].replace('\n', '\n#ATE#: ') + '\n'
             sys.__stderr__.write(ate)
         self.stderr = self.stderr[:m.start(0)] + self.stderr[m.end(0) + 1:]
+
+
+class TestCase(TestCase0):
+    if gettotalrefcount is not None:
+        __metaclass__ = CheckRefcountMetaClass
 
 
 main = unittest.main
