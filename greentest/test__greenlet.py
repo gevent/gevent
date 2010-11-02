@@ -382,7 +382,7 @@ class TestStuff(greentest.TestCase):
         self.assertEqual(z.get(), 3)
         self.assertRaises(ExpectedError, gevent.joinall, [y], raise_error=True)
 
-    def test_wait_all_exception_order(self):
+    def test_joinall_exception_order(self):
         # if there're several exceptions raised, the earliest one must be raised by joinall
         def first():
             sleep(0.1)
