@@ -205,6 +205,10 @@ class TestDefaultSpawn(TestCase):
         self.assertConnectionRefused()
         self._test_server_start_stop(restartable=False)
 
+    def test_subclass_just_create(self):
+        self.server = self.ServerSubClass(self.get_listener())
+        self.assertNotAccepted()
+
     def test_subclass_with_socket(self):
         self.server = self.ServerSubClass(self.get_listener())
         self.server.reuse_addr = 1
