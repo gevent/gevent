@@ -36,7 +36,9 @@ include_dirs = []                 # specified by -I
 library_dirs = []                 # specified by -L
 libevent_source_path = None       # specified by --libevent
 extra_compile_args = []
-sources = ['gevent/core.c']
+cython_sources = glob.glob('gevent/*.p*x*')
+cython_output = 'gevent/core.c'
+sources = [cython_output, 'gevent/socketmodule.c']
 libraries = []
 
 
@@ -49,18 +51,14 @@ class my_build_ext(build_ext.build_ext):
         self.cython = "cython"
 
     def compile_cython(self):
-        sources = glob.glob('gevent/*.pyx') + glob.glob('gevent/*.pxi')
-        if not sources:
-            if not os.path.exists('gevent/core.c'):
-                print >> sys.stderr, 'Could not find gevent/core.c'
-        if os.path.exists('gevent/core.c'):
-            core_c_mtime = os.stat('gevent/core.c').st_mtime
-            changed = [filename for filename in sources if (os.stat(filename).st_mtime - core_c_mtime) > 1]
+        if os.path.exists(cython_output):
+            core_c_mtime = os.stat(cython_output).st_mtime
+            changed = [filename for filename in cython_sources if (os.stat(filename).st_mtime - core_c_mtime) > 1]
             if not changed:
                 return
             print >> sys.stderr, 'Running %s (changed: %s)' % (self.cython, ', '.join(changed))
         else:
-            print >> sys.stderr, 'Running %s' % self.cython
+            print >> sys.stderr, 'Running %s' % (self.cython, )
         cython_result = os.system('%s gevent/core.pyx' % self.cython)
         if cython_result:
             if os.system('%s -V 2> %s' % (self.cython, os.devnull)):
