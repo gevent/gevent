@@ -1,4 +1,3 @@
-from time import time
 from gevent import select
 import greentest
 
