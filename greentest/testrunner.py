@@ -179,8 +179,6 @@ def get_tempnam():
 
 
 def run_tests(options, args):
-    if len(args) != 1:
-        sys.exit('--record requires exactly one test module to run')
     arg = args[0]
     module_name = arg
     if module_name.endswith('.py'):
@@ -196,22 +194,19 @@ def run_tests(options, args):
         unittest.TextTestRunner = _runner
         import test_support
         test_support.BasicTestRunner = _runner
+
+    sys.argv = args
+    globals()['__file__'] = arg
+
     if os.path.exists(arg):
-        sys.argv = args
-        saved_globals = {'__file__': __file__}
-        try:
-            globals()['__file__'] = arg
-            # QQQ this makes tests reported as if they are from __main__ and screws up warnings location
-            execfile(arg, globals())
-        finally:
-            globals().update(saved_globals)
+        execfile(arg, globals())
     else:
         test = defaultTestLoader.loadTestsFromName(arg)
         result = _runner().run(test)
         sys.exit(not result.wasSuccessful())
 
 
-def run_subprocess(arg, options):
+def run_subprocess(args, options):
     from threading import Timer
     from mysubprocess import Popen, PIPE, STDOUT
 
@@ -220,7 +215,7 @@ def run_subprocess(arg, options):
                   '--verbosity', options.verbosity]
     if options.db:
         popen_args += ['--db', options.db]
-    popen_args += [arg]
+    popen_args += args
     popen_args = [str(x) for x in popen_args]
     if options.capture:
         popen = Popen(popen_args, stdout=PIPE, stderr=STDOUT, shell=False)
@@ -231,7 +226,7 @@ def run_subprocess(arg, options):
 
     def killer():
         retcode.append('TIMEOUT')
-        print >> sys.stderr, 'Killing %s (%s) because of timeout' % (popen.pid, arg)
+        print >> sys.stderr, 'Killing %s (%s) because of timeout' % (popen.pid, args)
         popen.kill()
 
     timeout = Timer(options.timeout, killer)
@@ -256,17 +251,17 @@ def run_subprocess(arg, options):
     finally:
         timeout.cancel()
     # QQQ compensating for run_tests' screw up
-    module_name = arg
+    module_name = args[0]
     if module_name.endswith('.py'):
         module_name = module_name[:-3]
     output = output.replace(' (__main__.', ' (' + module_name + '.')
     return retcode[0], output, output_printed
 
 
-def spawn_subprocess(arg, options, base_params):
+def spawn_subprocess(args, options, base_params):
     success = False
     if options.db:
-        module_name = arg
+        module_name = args[0]
         if module_name.endswith('.py'):
             module_name = module_name[:-3]
         from datetime import datetime
@@ -275,7 +270,7 @@ def spawn_subprocess(arg, options, base_params):
                        'test': module_name})
         row_id = store_record(options.db, 'test', params)
         params['id'] = row_id
-    retcode, output, output_printed = run_subprocess(arg, options)
+    retcode, output, output_printed = run_subprocess(args, options)
     if len(output) > OUTPUT_LIMIT:
         output = output[:OUTPUT_LIMIT] + '<AbridgedOutputWarning>'
     if retcode:
@@ -284,15 +279,15 @@ def spawn_subprocess(arg, options, base_params):
         else:
             if not output_printed and options.verbosity >= -1:
                 sys.stdout.write(output)
-            print '%s failed with code %s' % (arg, retcode)
+            print '%s failed with code %s' % (' '.join(args), retcode)
     elif retcode == 0:
         if not output_printed and options.verbosity >= 1:
             sys.stdout.write(output)
         if options.verbosity >= 0:
-            print '%s passed' % arg
+            print '%s passed' % ' '.join(args)
         success = True
     else:
-        print '%s timed out' % arg
+        print '%s timed out' % ' '.join(args)
     if options.db:
         params['output'] = output
         params['retcode'] = retcode
@@ -311,7 +306,13 @@ def spawn_subprocesses(options, args):
     if not args:
         args = glob.glob('test_*.py')
         args.remove('test_support.py')
+    real_args = []
     for arg in args:
+        if os.path.exists(arg):
+            real_args.append([arg])
+        else:
+            real_args[-1].append(arg)
+    for arg in real_args:
         try:
             success = spawn_subprocess(arg, options, params) and success
         except Exception:
