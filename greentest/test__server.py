@@ -154,12 +154,15 @@ class TestCase(greentest.TestCase):
         return self.server.socket
 
     def _test_invalid_callback(self):
-        self.hook_stderr()
-        self.server = self.ServerClass(('127.0.0.1', 0), lambda: None)
-        self.server.start()
-        self.assert500()
-        self.assert_stderr_traceback('TypeError')
-        self.assert_stderr(self.invalid_callback_message)
+        try:
+            self.hook_stderr()
+            self.server = self.ServerClass(('127.0.0.1', 0), lambda: None)
+            self.server.start()
+            self.assert500()
+            self.assert_stderr_traceback('TypeError')
+            self.assert_stderr(self.invalid_callback_message)
+        finally:
+            self.server.stop()
 
     def ServerClass(self, *args, **kwargs):
         kwargs.setdefault('spawn', self.get_spawn())
