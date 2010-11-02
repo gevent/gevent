@@ -57,6 +57,7 @@ def prepare_stdlib_test(filename):
     except:
         if version in missing_modules.get(name, []):
             sys.exit(0)
+        sys.stderr.write('Failed to import test.%s\n' % name)
         raise
 
     module_source = _f.read()
