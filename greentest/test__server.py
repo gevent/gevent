@@ -305,7 +305,7 @@ class TestPoolSpawn(TestDefaultSpawn):
     def test_pool_full(self):
         self.init_server()
         short_request = self.send_request('/short')
-        long_request = self.send_request('/long')
+        self.send_request('/long')
         gevent.sleep(0.01)
         self.assertPoolFull()
         self.assertPoolFull()
