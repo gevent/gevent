@@ -341,8 +341,6 @@ class Waiter(object):
             finally:
                 self.greenlet = None
 
-    wait = get  # XXX backward compatibility; will be removed in the next release
-
     # can also have a debugging version, that wraps the value in a tuple (self, value) in switch()
     # and unwraps it in wait() thus checking that switch() was indeed called
 
