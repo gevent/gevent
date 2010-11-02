@@ -229,6 +229,9 @@ class GenericGetTestCase(TestCase):
     def wait(self, timeout):
         raise NotImplementedError('override me in subclass')
 
+    def cleanup(self):
+        pass
+
     test_outer_timeout_is_not_lost = test_outer_timeout_is_not_lost
 
     def test_raises_timeout_number(self):
@@ -237,6 +240,7 @@ class GenericGetTestCase(TestCase):
         # get raises Timeout after timeout expired
         delay = time.time() - start
         assert 0.01 - 0.001 <= delay < 0.01 + 0.01 + 0.1, delay
+        self.cleanup()
 
     def test_raises_timeout_Timeout(self):
         start = time.time()
@@ -247,6 +251,7 @@ class GenericGetTestCase(TestCase):
             assert ex is timeout, (ex, timeout)
         delay = time.time() - start
         assert 0.01 - 0.001 <= delay < 0.01 + 0.01 + 0.1, delay
+        self.cleanup()
 
     def test_raises_timeout_Timeout_exc_customized(self):
         start = time.time()
@@ -258,6 +263,7 @@ class GenericGetTestCase(TestCase):
             assert ex is error, (ex, error)
         delay = time.time() - start
         assert 0.01 - 0.001 <= delay < 0.01 + 0.01 + 0.1, delay
+        self.cleanup()
 
 
 class ExpectedException(Exception):
