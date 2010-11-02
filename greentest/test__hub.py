@@ -189,9 +189,10 @@ class TestWaiter(greentest.GenericWaitTestCase):
         self.assertRaises(ZeroDivisionError, waiter.get)
 
         waiter = Waiter()
-        gevent.spawn(waiter.get)
+        g = gevent.spawn(waiter.get)
         gevent.sleep(0)
         assert str(waiter).startswith('<Waiter greenlet=<Greenlet at '), str(waiter)
+        g.kill()
 
 
 if __name__ == '__main__':
