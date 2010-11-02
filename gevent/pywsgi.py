@@ -246,16 +246,14 @@ class WSGIHandler(object):
         except Exception:
             traceback.print_exc()
             message = '%r %r' % (msg, args)
-            sys.exc_clear()
         try:
             message = '%s: %s' % (self.socket, message)
         except Exception:
-            sys.exc_clear()
+            pass
         try:
             sys.stderr.write(message + '\n')
         except Exception:
             traceback.print_exc()
-            sys.exc_clear()
 
     def handle_one_request(self):
         if self.rfile.closed:
