@@ -225,6 +225,7 @@ class TestPool(greentest.TestCase):
         get = TimingWrapper(res.get)
         self.assertRaises(gevent.Timeout, get, timeout=TIMEOUT2)
         self.assertAlmostEqual(get.elapsed, TIMEOUT2, 1)
+        self.pool.join()
 
     def test_imap(self):
         it = self.pool.imap(sqr, range(10))
@@ -248,10 +249,12 @@ class TestPool(greentest.TestCase):
         self.assertEqual(sorted(it), map(sqr, range(1000)))
 
     def test_terminate(self):
-        result = self.pool.map_async(gevent.sleep, [0.1] * 1000)
+        result = self.pool.map_async(gevent.sleep, [0.1] * ((self.size or 10) * 2))
+        gevent.sleep(0.1)
         kill = TimingWrapper(self.pool.kill)
         kill()
         assert kill.elapsed < 0.5, kill.elapsed
+        result.join()
 
     def sleep(self, x):
         gevent.sleep(float(x) / 10.)
