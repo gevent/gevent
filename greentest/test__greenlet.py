@@ -393,6 +393,7 @@ class TestStuff(greentest.TestCase):
             gevent.joinall([a, b], raise_error=True)
         except ExpectedError, ex:
             assert 'second' in str(ex), repr(str(ex))
+        gevent.joinall([a, b])
 
     def test_multiple_listeners_error(self):
         # if there was an error while calling a callback
