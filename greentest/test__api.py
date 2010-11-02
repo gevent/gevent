@@ -44,7 +44,7 @@ class Test(greentest.TestCase):
         g = gevent.spawn(test)
         gevent.sleep(DELAY / 2)
         assert state == ['start'], state
-        g.kill(block=True)
+        g.kill()
         # will not get there, unless switching is explicitly scheduled by kill
         assert state == ['start', 'except', 'finished'], state
 
