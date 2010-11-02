@@ -1,6 +1,7 @@
 import gevent
 import sys
 import greentest
+from gevent.hub import get_hub
 
 sys.exc_clear()
 
@@ -39,7 +40,7 @@ class Test(greentest.TestCase):
                 assert ex is error, (ex, error)
 
     def test2(self):
-        gevent.core.timer(0, hello)
+        get_hub().reactor.timer(0, hello)
         self.hook_stderr()
         gevent.sleep(0.1)
         self.assert_stderr_traceback(expected_error)

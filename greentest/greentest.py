@@ -207,7 +207,7 @@ class TestCase0(BaseTestCase):
                     raise AssertionError('%r did not match:\n%r' % (message, self.stderr))
 
     def assert_mainloop_assertion(self, message=None):
-        self.assert_stderr_traceback('AssertionError', 'Cannot switch to MAINLOOP from MAINLOOP')
+        self.assert_stderr_traceback('AssertionError', 'Impossible to call blocking function in the event loop callback')
         if message is not None:
             self.assert_stderr(message)
 

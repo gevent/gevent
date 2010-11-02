@@ -20,15 +20,12 @@
 # THE SOFTWARE.
 
 import greentest
-import unittest
 import time
 import re
 import sys
 import gevent
-from gevent import core
 from gevent import socket
-from gevent.hub import Waiter
-import signal
+from gevent.hub import Waiter, get_hub
 
 DELAY = 0.1
 
@@ -37,7 +34,7 @@ class TestScheduleCall(greentest.TestCase):
 
     def test_global(self):
         lst = [1]
-        gevent.spawn(core.timer, DELAY, lst.pop)
+        gevent.spawn(get_hub().reactor.timer, DELAY, lst.pop)
         gevent.sleep(DELAY * 2)
         assert lst == [], lst
 
@@ -47,7 +44,7 @@ class TestCloseSocketWhilePolling(greentest.TestCase):
     def test(self):
         try:
             sock = socket.socket()
-            core.timer(0, sock.close)
+            get_hub().reactor.timer(0, sock.close)
             sock.connect(('python.org', 81))
         except Exception:
             gevent.sleep(0)
@@ -68,53 +65,13 @@ class TestExceptionInMainloop(greentest.TestCase):
         def fail():
             raise greentest.ExpectedException('TestExceptionInMainloop.test_sleep/fail')
 
-        core.timer(0, fail)
+        get_hub().reactor.timer(0, fail)
 
         start = time.time()
         gevent.sleep(DELAY)
         delay = time.time() - start
 
         assert delay >= DELAY * 0.9, 'sleep returned after %s seconds (was scheduled for %s)' % (delay, DELAY)
-
-
-class TestShutdown(unittest.TestCase):
-
-    def _shutdown(self, seconds=0, fuzzy=None):
-        if fuzzy is None:
-            fuzzy = max(0.05, seconds / 2.)
-        start = time.time()
-        gevent.hub.shutdown()
-        delta = time.time() - start
-        assert seconds - fuzzy < delta < seconds + fuzzy, (seconds - fuzzy, delta, seconds + fuzzy)
-
-    def assert_hub(self):
-        assert 'hub' in gevent.hub._threadlocal.__dict__
-
-    def assert_no_hub(self):
-        assert 'hub' not in gevent.hub._threadlocal.__dict__, gevent.hub._threadlocal.__dict__
-
-    def test(self):
-        # make sure Hub is started. For the test case when hub is not started, see test_hub_shutdown.py
-        gevent.sleep(0)
-        assert not gevent.hub.get_hub().dead
-        self._shutdown()
-        self.assert_no_hub()
-
-        # shutting down dead hub is silent
-        self._shutdown()
-        self._shutdown()
-        self.assert_no_hub()
-
-        # ressurect
-        gevent.sleep(0)
-        self.assert_hub()
-
-        gevent.core.timer(0.1, lambda: None)
-        self.assert_hub()
-        self._shutdown(seconds=0.1)
-        self.assert_no_hub()
-        self._shutdown(seconds=0)
-        self.assert_no_hub()
 
 
 class TestSleep(greentest.GenericWaitTestCase):
@@ -141,43 +98,24 @@ class TestSleep(greentest.GenericWaitTestCase):
         self.assertEqual(str(gevent_ex), str(real_ex))
 
 
-class Expected(Exception):
-    pass
-
-
-if hasattr(signal, 'SIGALRM'):
-
-    class TestSignal(greentest.TestCase):
-
-        __timeout__ = 2
-
-        def test_exception_goes_to_MAIN(self):
-            def handler():
-                raise Expected('TestSignal')
-            gevent.signal(signal.SIGALRM, handler)
-            signal.alarm(1)
-            try:
-                gevent.spawn(gevent.sleep, 2).join()
-                raise AssertionError('must raise Expected')
-            except Expected, ex:
-                assert str(ex) == 'TestSignal', ex
-
-
-class TestWaiter(greentest.GenericWaitTestCase):
+class TestWaiterGet(greentest.GenericWaitTestCase):
 
     def setUp(self):
-        super(TestWaiter, self).setUp()
+        super(TestWaiterGet, self).setUp()
         self.waiter = Waiter()
 
     def wait(self, timeout):
-        evt = core.timer(timeout, self.waiter.switch, None)
+        evt = get_hub().reactor.timer(timeout, self.waiter.switch, None)
         try:
             return self.waiter.get()
         finally:
             evt.cancel()
 
+
+class TestWaiter(greentest.TestCase):
+
     def test(self):
-        waiter = self.waiter
+        waiter = Waiter()
         self.assertEqual(str(waiter), '<Waiter greenlet=None>')
         waiter.switch(25)
         self.assertEqual(str(waiter), '<Waiter greenlet=None value=25>')

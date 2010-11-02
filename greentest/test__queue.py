@@ -1,6 +1,7 @@
 from greentest import TestCase, main
 import gevent
-from gevent import util, core
+from gevent.hub import get_hub
+from gevent import util
 from gevent import queue
 from gevent.event import AsyncResult
 
@@ -252,8 +253,10 @@ class TestNoWait(TestCase):
         def store_result(func, *args):
             result.append(func(*args))
 
-        core.active_event(store_result, util.wrap_errors(Exception, q.put_nowait), 2)
-        core.active_event(store_result, util.wrap_errors(Exception, q.put_nowait), 3)
+        active_event = get_hub().reactor.active_event
+
+        active_event(store_result, util.wrap_errors(Exception, q.put_nowait), 2)
+        active_event(store_result, util.wrap_errors(Exception, q.put_nowait), 3)
         gevent.sleep(0)
         assert len(result) == 2, result
         assert result[0] == None, result
@@ -267,8 +270,10 @@ class TestNoWait(TestCase):
         def store_result(func, *args):
             result.append(func(*args))
 
-        core.active_event(store_result, util.wrap_errors(Exception, q.get_nowait))
-        core.active_event(store_result, util.wrap_errors(Exception, q.get_nowait))
+        active_event = get_hub().reactor.active_event
+
+        active_event(store_result, util.wrap_errors(Exception, q.get_nowait))
+        active_event(store_result, util.wrap_errors(Exception, q.get_nowait))
         gevent.sleep(0)
         assert len(result) == 2, result
         assert result[0] == 4, result
@@ -288,7 +293,7 @@ class TestNoWait(TestCase):
         gevent.sleep(0)
         assert q.empty(), q
         assert q.full(), q
-        core.active_event(store_result, util.wrap_errors(Exception, q.get_nowait))
+        get_hub().reactor.active_event(store_result, util.wrap_errors(Exception, q.get_nowait))
         gevent.sleep(0)
         assert q.empty(), q
         assert q.full(), q
@@ -311,7 +316,7 @@ class TestNoWait(TestCase):
         gevent.sleep(0)
         assert q.empty(), q
         assert q.full(), q
-        core.active_event(store_result, util.wrap_errors(Exception, q.put_nowait), 10)
+        get_hub().reactor.active_event(store_result, util.wrap_errors(Exception, q.put_nowait), 10)
         assert not p.ready(), p
         gevent.sleep(0)
         assert result == [None], result

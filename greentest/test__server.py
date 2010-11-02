@@ -297,7 +297,7 @@ class TestDefaultSpawn(TestCase):
 
 class TestRawSpawn(TestDefaultSpawn):
 
-    invalid_callback_message = 'Failed active_event...'
+    invalid_callback_message = 'Failed event...'
 
     def get_spawn(self):
         return gevent.spawn_raw
