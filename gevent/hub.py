@@ -170,7 +170,7 @@ class Hub(greenlet):
         try:
             self.keyboard_interrupt_signal = signal(2, core.active_event, MAIN.throw, KeyboardInterrupt)
         except IOError:
-            pass  # no signal() on windows
+            pass  # no signal() on Windows
         try:
             loop_count = 0
             while True:
