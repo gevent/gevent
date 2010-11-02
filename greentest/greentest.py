@@ -251,14 +251,16 @@ gevent.hub.Hub = CountingHub
 
 
 def test_outer_timeout_is_not_lost(self):
-    timeout = gevent.Timeout.start_new(0.01)
+    timeout = gevent.Timeout.start_new(0.001)
     try:
-        self.wait(timeout=0.02)
-    except gevent.Timeout, ex:
-        assert ex is timeout, (ex, timeout)
-    else:
-        raise AssertionError('must raise Timeout')
-    gevent.sleep(0.02)
+        try:
+            result = self.wait(timeout=1)
+        except gevent.Timeout, ex:
+            assert ex is timeout, (ex, timeout)
+        else:
+            raise AssertionError('must raise Timeout (returned %r)' % (result, ))
+    finally:
+        timeout.cancel()
 
 
 class GenericWaitTestCase(TestCase):
@@ -270,10 +272,10 @@ class GenericWaitTestCase(TestCase):
 
     def test_returns_none_after_timeout(self):
         start = time.time()
-        result = self.wait(timeout=0.01)
+        result = self.wait(timeout=0.001)
         # join and wait simply returns after timeout expires
         delay = time.time() - start
-        assert 0.01 - 0.001 <= delay < 0.01 + 0.01 + 0.1, delay
+        assert 0.001 - 0.0001 <= delay < 0.001 + 0.001 + 0.01, delay
         assert result is None, repr(result)
 
 
