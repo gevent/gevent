@@ -24,7 +24,7 @@ def patch_all(timeout=None):
     monkey.patch_all(aggressive=True)
     import unittest
     import greentest
-    unittest.TestCase = greentest.TestCase
+    unittest.TestCase = greentest.TestCase0
     if timeout is not None:
         unittest.TestCase.__timeout__ = timeout
 
