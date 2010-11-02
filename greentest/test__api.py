@@ -55,24 +55,27 @@ class Test(greentest.TestCase):
 
     def test_sleep_invalid_switch(self):
         p = gevent.spawn(util.wrap_errors(AssertionError, gevent.sleep), 2)
-        gevent.spawn(p.switch, None)
+        switcher = gevent.spawn(p.switch, None)
         result = p.get()
         assert isinstance(result, AssertionError), result
         assert 'Invalid switch' in str(result), repr(str(result))
+        switcher.kill()
 
     def test_wait_read_invalid_switch(self):
         p = gevent.spawn(util.wrap_errors(AssertionError, socket.wait_read), 0)
-        gevent.spawn(p.switch, None)
+        switcher = gevent.spawn(p.switch, None)
         result = p.get()
         assert isinstance(result, AssertionError), result
         assert 'Invalid switch' in str(result), repr(str(result))
+        switcher.kill()
 
     def test_wait_write_invalid_switch(self):
         p = gevent.spawn(util.wrap_errors(AssertionError, socket.wait_write), 0)
-        gevent.spawn(p.switch, None)
+        switcher = gevent.spawn(p.switch, None)
         result = p.get()
         assert isinstance(result, AssertionError), result
         assert 'Invalid switch' in str(result), repr(str(result))
+        switcher.kill()
 
 
 class TestTimers(greentest.TestCase):
