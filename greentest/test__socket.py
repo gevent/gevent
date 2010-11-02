@@ -1,5 +1,4 @@
 import os
-import traceback
 import gevent
 from gevent import socket
 import greentest
@@ -13,22 +12,9 @@ class TestTCP(greentest.TestCase):
     def setUp(self):
         greentest.TestCase.setUp(self)
         self.listener = socket.tcp_listener(('127.0.0.1', 0))
-        self.tokill = []
 
     def tearDown(self):
         del self.listener
-        try:
-            gevent.killall(self.tokill, block=True)
-        except:
-            traceback.print_exc()
-        # eat LinkedExited notifications
-        while True:
-            try:
-                gevent.sleep(0.001)
-                break
-            except:
-                traceback.print_exc()
-        del self.tokill
         greentest.TestCase.tearDown(self)
 
     def create_connection(self):
@@ -54,10 +40,8 @@ class TestTCP(greentest.TestCase):
         #print '%s: client' % getcurrent()
 
         server_proc = gevent.spawn_link_exception(server)
-        self.tokill.append(server_proc)
         client = self.create_connection()
         client_reader = gevent.spawn_link_exception(client.makefile().read)
-        self.tokill.append(client_reader)
         gevent.sleep(0.001)
         client.send('hello world')
 
@@ -71,32 +55,36 @@ class TestTCP(greentest.TestCase):
 
     def test_recv_timeout(self):
         acceptor = gevent.spawn_link_exception(self.listener.accept)
-        client = self.create_connection()
-        client.settimeout(0.1)
-        start = time.time()
         try:
-            data = client.recv(1024)
-        except self.TIMEOUT_ERROR:
-            assert 0.1 - 0.01 <= time.time() - start <= 0.1 + 0.1, (time.time() - start)
-        else:
-            raise AssertionError('%s should have been raised, instead recv returned %r' % (self.TIMEOUT_ERROR, data, ))
-        acceptor.get()
+            client = self.create_connection()
+            client.settimeout(0.1)
+            start = time.time()
+            try:
+                data = client.recv(1024)
+            except self.TIMEOUT_ERROR:
+                assert 0.1 - 0.01 <= time.time() - start <= 0.1 + 0.1, (time.time() - start)
+            else:
+                raise AssertionError('%s should have been raised, instead recv returned %r' % (self.TIMEOUT_ERROR, data, ))
+        finally:
+            acceptor.get()
 
     def test_sendall_timeout(self):
         acceptor = gevent.spawn_link_exception(self.listener.accept)
-        client = self.create_connection()
-        client.settimeout(0.1)
-        start = time.time()
-        send_succeed = False
-        data_sent = 'h' * 100000
         try:
-            result = client.sendall(data_sent)
-        except self.TIMEOUT_ERROR:
-            assert 0.1 - 0.01 <= time.time() - start <= 0.1 + 0.1, (time.time() - start)
-        else:
-            assert time.time() - start <= 0.1 + 0.01, (time.time() - start)
-            send_succeed = True
-        conn, addr = acceptor.get()
+            client = self.create_connection()
+            client.settimeout(0.1)
+            start = time.time()
+            send_succeed = False
+            data_sent = 'h' * 100000
+            try:
+                client.sendall(data_sent)
+            except self.TIMEOUT_ERROR:
+                assert 0.1 - 0.01 <= time.time() - start <= 0.1 + 0.1, (time.time() - start)
+            else:
+                assert time.time() - start <= 0.1 + 0.01, (time.time() - start)
+                send_succeed = True
+        finally:
+            conn, addr = acceptor.get()
         if send_succeed:
             client.close()
             data_read = conn.makefile().read()
@@ -113,13 +101,15 @@ class TestTCP(greentest.TestCase):
             fd.close()
 
         acceptor = gevent.spawn(accept_once)
-        client = self.create_connection()
-        fd = client.makefile()
-        client.close()
-        assert fd.readline() == 'hello\n'
-        assert fd.read() == ''
-        fd.close()
-        acceptor.get()
+        try:
+            client = self.create_connection()
+            fd = client.makefile()
+            client.close()
+            assert fd.readline() == 'hello\n'
+            assert fd.read() == ''
+            fd.close()
+        finally:
+            acceptor.get()
 
 
 if hasattr(socket, 'ssl'):
