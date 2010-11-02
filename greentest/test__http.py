@@ -3,9 +3,9 @@ import gevent
 from gevent import http
 import greentest
 import os
-from urllib2 import urlopen, HTTPError
 import socket
 import errno
+from test__pywsgi import read_http
 
 # add test for "chunked POST input -> chunked output"
 
@@ -15,6 +15,7 @@ class BoundTestCase(greentest.TestCase):
     address = ('127.0.0.1', 0)
 
     def setUp(self):
+        greentest.TestCase.setUp(self)
         self.server = http.HTTPServer(self.address, self.handle)
         self.server.start()
 
@@ -25,22 +26,22 @@ class BoundTestCase(greentest.TestCase):
             self.server.stop()
         finally:
             timeout.cancel()
-        #self.print_netstat('after stop')
         self.check_refused()
+        greentest.TestCase.tearDown(self)
 
     def print_netstat(self, comment=''):
-        cmd = 'sudo netstat -anp | grep %s' % self.server.server_port
-        print cmd, ' # %s' % comment
+        cmd = 'echo "%s" && netstat -anp 2>&1 | grep %s' % (comment, self.server.server_port)
         os.system(cmd)
-
-    @property
-    def url(self):
-        return 'http://%s:%s' % (self.server.server_host, self.server.server_port)
 
     def connect(self):
         s = socket.socket()
         s.connect((self.server.server_host, self.server.server_port))
         return s
+
+    def urlopen(self, *args, **kwargs):
+        fd = self.connect().makefile(bufsize=1)
+        fd.write('GET / HTTP/1.1\r\nHost: localhost\r\n\r\n')
+        return read_http(fd, *args, **kwargs)
 
     def check_refused(self):
         try:
@@ -50,6 +51,15 @@ class BoundTestCase(greentest.TestCase):
                 raise
         except IOError, e:
             print 'WARNING: instead of ECONNREFUSED got IOError: %s' % e
+
+
+class TestNoop(BoundTestCase):
+
+    def handle(self, r):
+        pass
+
+    def test(self):
+        self.urlopen(code=500)
 
 
 class TestClientCloses(BoundTestCase):
@@ -87,14 +97,16 @@ class TestStop(BoundTestCase):
         return gevent.spawn_later(0.01, self.reply, r)
 
     def test(self):
+        server = http.HTTPServer(self.address, self.handle)
+        server.start()
         s = self.connect()
         s.sendall('GET / HTTP/1.1\r\nHost: localhost\r\n\r\n')
         s.sendall('GET / HTTP/1.1\r\nHost: localhost\r\n\r\n')
         s.close()
-        self.server.stop()
+        server.stop()
         gevent.sleep(0.02)
         # stopping what already stopped is OK
-        self.server.stop()
+        server.stop()
 
 
 class TestSendReply(BoundTestCase):
@@ -103,11 +115,7 @@ class TestSendReply(BoundTestCase):
         r.send_reply(200, 'OK', 'hello world')
 
     def test(self):
-        response = urlopen(self.url)
-        assert response.code == 200, response
-        assert response.msg == 'OK', response
-        data = response.read()
-        assert data == 'hello world', data
+        self.urlopen(body='hello world')
 
     def test_keepalive(self):
         s = self.connect()
@@ -121,11 +129,7 @@ class TestException(BoundTestCase):
         raise greentest.ExpectedException('TestException.handle')
 
     def test(self):
-        try:
-            urlopen(self.url)
-        except HTTPError, e:
-            assert e.code == 500, e
-            assert e.msg == 'Internal Server Error', e
+        self.urlopen(code=500)
 
 
 class TestSendReplyLater(BoundTestCase):
@@ -135,13 +139,7 @@ class TestSendReplyLater(BoundTestCase):
         r.send_reply(200, 'OK', 'hello world')
 
     def test(self):
-        response = urlopen(self.url)
-        #print 'connected to %s' % self.url
-        assert response.code == 200, response
-        assert response.msg == 'OK', response
-        data = response.read()
-        #print 'read data from %s' % self.url
-        assert data == 'hello world', data
+        self.urlopen(body='hello world')
 
     def test_client_closes_10(self):
         s = self.connect()
@@ -171,13 +169,13 @@ class TestDetach(BoundTestCase):
         assert input.read() == ''
         assert output.read() == ''
         self.handled = True
-        self.current.throw(Exception('test done'))
+        gevent.kill(self.current, Exception('test done'))
 
     def test(self):
         self.current = gevent.getcurrent()
         try:
             try:
-                urlopen(self.url)
+                self.urlopen()
             except Exception, ex:
                 assert str(ex) == 'test done', ex
         finally:
