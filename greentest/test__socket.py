@@ -44,7 +44,7 @@ class TestTCP(greentest.TestCase):
             result = client.recv(1000)
             assert result == 'hello world', result
             sender.join(0.2)
-            sender.kill(block=True)
+            sender.kill()
 
         #print '%s: client' % getcurrent()
 
