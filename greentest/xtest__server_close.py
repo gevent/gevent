@@ -1,7 +1,6 @@
 import unittest
 from gevent import socket
 import gevent
-from gevent.server import StreamServer
 import errno
 import os
 from test__server import SimpleStreamServer
