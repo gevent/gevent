@@ -2,7 +2,7 @@ __all__ += ['buffer']
 
 cdef extern from "string.h":
     void *memchr(void *s, int c, size_t n)
-    
+
 cdef extern from "libevent.h":
     struct evbuffer:
         char *buf "buffer"
@@ -41,7 +41,7 @@ cdef class buffer:
     def __nonzero__(self):
         if self.__obj:
             return evbuffer_get_length(self.__obj)
-    
+
     def detach(self):
         self.__obj = NULL
 
@@ -88,11 +88,11 @@ cdef class buffer:
             return ''
 
         cdef long length = evbuffer_get_length(self.__obj)
-        cdef char *nl = <char*> memchr(<void*>data, 10, length) # search for "\n"
-        
+        cdef char *nl = <char*> memchr(<void*>data, 10, length)  # search for "\n"
+
         if nl:
             length = nl - data + 1
-        
+
         cdef object result = PyString_FromStringAndSize(data, length)
         cdef int res = EVBUFFER_DRAIN(self.__obj, length)
         if res:
@@ -104,4 +104,3 @@ cdef class buffer:
 
     def readlines(self, hint=-1):
         return list(self)
-

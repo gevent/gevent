@@ -131,4 +131,3 @@ def dns_resolve_reverse_ipv6(char* packed_ip, int flags, object callback):
     if result:
         raise IOError('evdns_resolve_reverse_ipv6(%r, %r) returned %s' % (packed_ip, flags, result, ))
     Py_INCREF(callback)
-

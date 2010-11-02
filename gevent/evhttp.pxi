@@ -9,7 +9,7 @@ EVHTTP_REQ_HEAD     = 2
 EVHTTP_REQ_PUT      = 3
 EVHTTP_REQ_DELETE   = 4
 
-HTTP_method2name = { 0: 'GET', 1: 'POST', 2: 'HEAD', 3: 'PUT', 4: 'DELETE' }
+HTTP_method2name = {0: 'GET', 1: 'POST', 2: 'HEAD', 3: 'PUT', 4: 'DELETE'}
 
 cdef extern from *:
     ctypedef char* const_char_ptr "const char*"
@@ -96,8 +96,10 @@ cdef extern from "libevent.h":
 class ObjectDeleted(AttributeError):
     pass
 
+
 class HttpRequestDeleted(ObjectDeleted):
     """Raised when an attribute is accessed of http_request instance whose _obj is 0"""
+
 
 class HttpConnectionDeleted(ObjectDeleted):
     """Raised when an attribute is accessed of http_connection instance whose _obj is 0"""
@@ -547,4 +549,3 @@ cdef class http:
         cdef res = evhttp_accept_socket(self.__obj, fd)
         if res:
             raise RuntimeError("evhttp_accept_socket(%r) returned %r" % (fd, res))
-
