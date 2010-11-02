@@ -80,29 +80,27 @@ class Test(greentest.TestCase):
 
 class TestTimers(greentest.TestCase):
 
-    def setUp(self):
-        greentest.TestCase.setUp(self)
-        self.lst = [1]
-
     def test_timer_fired(self):
+        lst = [1]
 
         def func():
             gevent.spawn_later(0.01, lst.pop)
             gevent.sleep(0.02)
 
         gevent.spawn(func)
-        assert self.lst == [1], self.lst
+        assert lst == [1], lst
         gevent.sleep(0.03)
-        assert self.lst == [], self.lst
+        assert lst == [], lst
 
     def test_spawn_is_not_cancelled(self):
+        lst = [1]
 
         def func():
-            gevent.spawn(self.lst.pop)
+            gevent.spawn(lst.pop)
             # exiting immediatelly, but self.lst.pop must be called
         gevent.spawn(func)
         gevent.sleep(0.01)
-        assert self.lst == [], self.lst
+        assert lst == [], lst
 
 
 if __name__ == '__main__':
