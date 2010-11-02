@@ -1,5 +1,7 @@
 import greentest
 import gevent
+from gevent.hub import get_hub
+
 DELAY = 0.01
 
 
@@ -22,6 +24,28 @@ class TestDirectRaise(greentest.TestCase):
 
 
 class Test(greentest.TestCase):
+
+    def _test(self, timeout):
+        try:
+            get_hub().switch()
+            raise AssertionError('Must raise Timeout')
+        except gevent.Timeout, ex:
+            if ex is not timeout:
+                raise
+
+    def test(self):
+        timeout = gevent.Timeout(0.01)
+        timeout.start()
+        self._test(timeout)
+        timeout.start()
+        self._test(timeout)
+
+    def test_cancel(self):
+        timeout = gevent.Timeout(0.01)
+        timeout.start()
+        timeout.cancel()
+        gevent.sleep(0.02)
+        assert not timeout.pending, timeout
 
     def test_with_timeout(self):
         self.assertRaises(gevent.Timeout, gevent.with_timeout, DELAY, gevent.sleep, DELAY * 2)
