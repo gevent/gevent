@@ -174,9 +174,9 @@ class LinksTestCase(greentest.TestCase):
     def link(self, p, listener=None):
         getattr(p, self.link_method)(listener)
 
-    def tearDown(self):
-        greentest.TestCase.tearDown(self)
-        self.p.unlink()
+    def receiverf(self, proc_flag):
+        sleep(DELAY)
+        proc_flag.append('finished')
 
     def set_links(self, p, first_time, kill_exc_type):
         event = AsyncResult()
@@ -184,11 +184,7 @@ class LinksTestCase(greentest.TestCase):
 
         proc_flag = []
 
-        def receiver():
-            sleep(DELAY)
-            proc_flag.append('finished')
-
-        receiver = gevent.spawn(receiver)
+        receiver = gevent.spawn(self.receiverf, proc_flag)
         self.link(p, receiver)
 
         queue = Queue(1)
@@ -208,7 +204,13 @@ class LinksTestCase(greentest.TestCase):
         for _ in range(10):
             self.link(p, AsyncResult())
             self.link(p, Queue(1).put)
+
         return event, receiver, proc_flag, queue, callback_flag
+
+    def myprocf(self, proc_finished_flag):
+        sleep(10)
+        proc_finished_flag.append('finished')
+        return 555
 
     def set_links_timeout(self, link):
         # stuff that won't be touched
@@ -216,13 +218,7 @@ class LinksTestCase(greentest.TestCase):
         link(event)
 
         proc_finished_flag = []
-
-        def myproc():
-            sleep(10)
-            proc_finished_flag.append('finished')
-            return 555
-
-        myproc = gevent.spawn(myproc)
+        myproc = gevent.spawn(self.myprocf, proc_finished_flag)
         link(myproc)
 
         queue = Queue(0)
@@ -234,19 +230,31 @@ class LinksTestCase(greentest.TestCase):
         assert with_timeout(DELAY, queue.get, timeout_value=X) is X, queue.get()
         assert with_timeout(DELAY, gevent.joinall, [myproc], timeout_value=X) is X
         assert proc_finished_flag == [], proc_finished_flag
+        myproc.kill()
+
+
+def return25():
+    return 25
+
+
+def sleep0():
+    return sleep(0)
 
 
 class TestReturn_link(LinksTestCase):
     link_method = 'link'
 
+    def cleanup(self):
+        self.p._links.clear()
+
     def test_return(self):
-        def return25():
-            return 25
-        p = self.p = gevent.spawn(return25)
-        self._test_return(p, True, 25, greenlet.LinkedCompleted, lambda: sleep(0))
+        self.p = gevent.spawn(return25)
+        self._test_return(self.p, True, 25, greenlet.LinkedCompleted, sleep0)
         # repeating the same with dead process
         for _ in xrange(3):
-            self._test_return(p, False, 25, greenlet.LinkedCompleted, lambda: sleep(0))
+            self._test_return(self.p, False, 25, greenlet.LinkedCompleted, sleep0)
+        self.p._links.clear()
+        self.p.kill()
 
     def _test_return(self, p, first_time, result, kill_exc_type, action):
         event, receiver, proc_flag, queue, callback_flag = self.set_links(p, first_time, kill_exc_type)
@@ -428,33 +436,39 @@ class TestStuff(greentest.TestCase):
         sleep(DELAY * 10)
         assert results in [[10, 20], [20, 10]], results
 
+    class Results(object):
+
+        def __init__(self):
+            self.results = []
+
+        def listener1(self, p):
+            p.unlink(self.listener2)
+            self.results.append(5)
+            raise ExpectedError('listener1')
+
+        def listener2(self, p):
+            p.unlink(self.listener1)
+            self.results.append(5)
+            raise ExpectedError('listener2')
+
+        def listener3(self, p):
+            raise ExpectedError('listener3')
+
     def _test_multiple_listeners_error_unlink(self, p, link):
         # notification must not happen after unlink even
         # though notification process has been already started
-        results = []
+        results = self.Results()
 
-        def listener1(*args):
-            p.unlink(listener2)
-            results.append(5)
-            raise ExpectedError('listener1')
-
-        def listener2(*args):
-            p.unlink(listener1)
-            results.append(5)
-            raise ExpectedError('listener2')
-
-        def listener3(*args):
-            raise ExpectedError('listener3')
-
-        link(listener1)
-        link(listener2)
-        link(listener3)
+        link(results.listener1)
+        link(results.listener2)
+        link(results.listener3)
         sleep(DELAY * 10)
-        assert results == [5], results
+        assert results.results == [5], results.results
 
     def test_multiple_listeners_error_unlink_Greenlet_link(self):
         p = gevent.spawn(lambda: 5)
         self._test_multiple_listeners_error_unlink(p, p.link)
+        p.kill()
 
     def test_multiple_listeners_error_unlink_Greenlet_rawlink(self):
         p = gevent.spawn(lambda: 5)
@@ -523,19 +537,31 @@ class TestStr(greentest.TestCase):
 class TestJoin(greentest.GenericWaitTestCase):
 
     def wait(self, timeout):
-        gevent.spawn(gevent.sleep, 10).join(timeout=timeout)
+        self.g = gevent.spawn(gevent.sleep, 10)
+        return self.g.join(timeout=timeout)
+
+    def cleanup(self):
+        self.g.kill()
 
 
 class TestGet(greentest.GenericGetTestCase):
 
     def wait(self, timeout):
-        gevent.spawn(gevent.sleep, 10).get(timeout=timeout)
+        self.g = gevent.spawn(gevent.sleep, 10)
+        return self.g.get(timeout=timeout)
+
+    def cleanup(self):
+        self.g.kill()
 
 
 class TestJoinAll(greentest.GenericWaitTestCase):
 
     def wait(self, timeout):
-        gevent.joinall([gevent.spawn(gevent.sleep, 10)], timeout=timeout)
+        self.g = gevent.spawn(gevent.sleep, 10)
+        gevent.joinall([self.g], timeout=timeout)
+
+    def cleanup(self):
+        self.g.kill()
 
 
 class TestBasic(greentest.TestCase):
