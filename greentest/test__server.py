@@ -211,6 +211,8 @@ class TestDefaultSpawn(TestCase):
 
     def test_subclass_with_socket(self):
         self.server = self.ServerSubClass(self.get_listener())
+        # the connection won't be refused, because there exists a listening socket, but it won't be handled also
+        self.assertNotAccepted()
         self.server.reuse_addr = 1
         self._test_server_start_stop(restartable=True)
 
