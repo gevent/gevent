@@ -2,7 +2,6 @@
 import greentest
 from gevent import dns
 from gevent import core
-from gevent import socket
 from gevent.dns import DNSError
 
 funcs = [dns.resolve_ipv4, dns.resolve_ipv6,
