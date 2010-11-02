@@ -15,7 +15,7 @@ class AmazonHTTPSTests(unittest.TestCase):
         conn = httplib.HTTPSConnection('sdb.amazonaws.com')
         conn.debuglevel = 1
         conn.request('GET', '/')
-        resp = conn.getresponse()
+        conn.getresponse()
 
     def test_str_and_repr(self):
         conn = socket.socket()
