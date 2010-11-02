@@ -286,8 +286,10 @@ class TestJoinSleep(greentest.GenericWaitTestCase):
     def wait(self, timeout):
         p = pool.Pool()
         g = p.spawn(gevent.sleep, 10)
-        p.join(timeout=timeout)
-        g.kill()
+        try:
+            p.join(timeout=timeout)
+        finally:
+            g.kill()
 
 
 class TestJoinSleep_raise_error(greentest.GenericWaitTestCase):
@@ -295,8 +297,10 @@ class TestJoinSleep_raise_error(greentest.GenericWaitTestCase):
     def wait(self, timeout):
         p = pool.Pool()
         g = p.spawn(gevent.sleep, 10)
-        p.join(timeout=timeout, raise_error=True)
-        g.kill()
+        try:
+            p.join(timeout=timeout, raise_error=True)
+        finally:
+            g.kill()
 
 
 class TestJoinEmpty(greentest.TestCase):
