@@ -150,7 +150,7 @@ cdef class event:
     cdef event_t ev
     cdef public object callback
     cdef public object arg
-    cdef int _incref # 1 if we already INCREFed this object once (because libevent references it)
+    cdef int _incref  # 1 if we already INCREFed this object once (because libevent references it)
 
     def __init__(self, short evtype, int handle, callback, arg=None):
         self.callback = callback
