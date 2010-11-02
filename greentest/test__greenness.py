@@ -27,45 +27,36 @@ from gevent import monkey
 monkey.patch_all()
 
 import greentest
-import test_support
 import urllib2
 import BaseHTTPServer
-from gevent import spawn
-
-
-def start_http_server():
-    server_address = ('', 0)
-    BaseHTTPServer.BaseHTTPRequestHandler.protocol_version = "HTTP/1.0"
-    httpd = BaseHTTPServer.HTTPServer(server_address, BaseHTTPServer.BaseHTTPRequestHandler)
-    #sa = httpd.socket.getsockname()[1]
-    #print "Serving HTTP on", sa[0], "port", sa[1], "..."
-    httpd.request_count = 0
-
-    def serve():
-        httpd.handle_request()
-        httpd.request_count += 1
-
-    return spawn(serve), httpd
+import gevent
 
 
 class TestGreenness(greentest.TestCase):
+    check_totalrefcount = False
 
-    def setUp(self):
-        self.gthread, self.httpd = start_http_server()
-
-    def tearDown(self):
-        self.httpd.server_close()
-        self.gthread.kill()
+    def serve(self):
+        self.httpd.handle_request()
+        self.httpd.request_count += 1
 
     def test_urllib2(self):
-        self.assertEqual(self.httpd.request_count, 0)
+        server_address = ('', 0)
+        BaseHTTPServer.BaseHTTPRequestHandler.protocol_version = "HTTP/1.0"
+        self.httpd = BaseHTTPServer.HTTPServer(server_address, BaseHTTPServer.BaseHTTPRequestHandler)
+        self.httpd.request_count = 0
+        server = gevent.spawn(self.serve)
+
         port = self.httpd.socket.getsockname()[1]
         try:
             urllib2.urlopen('http://127.0.0.1:%s' % port)
             assert False, 'should not get there'
         except urllib2.HTTPError, ex:
             assert ex.code == 501, repr(ex)
+        server.join(0.01)
         self.assertEqual(self.httpd.request_count, 1)
+        self.httpd.server_close()
+        self.httpd = None
+
 
 if __name__ == '__main__':
-    test_support.run_unittest(TestGreenness)
+    greentest.main()
