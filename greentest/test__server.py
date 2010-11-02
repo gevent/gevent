@@ -64,10 +64,10 @@ class TestCase(greentest.TestCase):
 
     __timeout__ = 10
 
-    def tearDown(self):
-        greentest.TestCase.tearDown(self)
-        if hasattr(self, 'server'):
+    def cleanup(self):
+        if getattr(self, 'server', None) is not None:
             self.server.stop()
+            self.server = None
 
     def get_listener(self):
         sock = socket.socket()
