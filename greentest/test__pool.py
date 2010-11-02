@@ -86,12 +86,6 @@ class TestCoroutinePool(greentest.TestCase):
         import sys
         pool = self.klass(size=1)
 
-        def crash(*args, **kw):
-            raise RuntimeError("Whoa")
-
-        class FakeFile(object):
-            write = crash
-
         # we're going to do this by causing the traceback.print_exc in
         # safe_apply to raise an exception and thus exit _main_loop
         normal_err = sys.stderr
@@ -116,6 +110,14 @@ class TestCoroutinePool(greentest.TestCase):
         finally:
             sys.stderr = normal_err
             pool.join()
+
+
+def crash(*args, **kw):
+    raise RuntimeError("Whoa")
+
+
+class FakeFile(object):
+    write = crash
 
 
 class PoolBasicTests(greentest.TestCase):
