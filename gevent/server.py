@@ -113,7 +113,6 @@ class StreamServer(BaseServer):
                 client_socket, address = self.socket.accept()
             except socket.error, err:
                 if err[0] == errno.EAGAIN:
-                    sys.exc_clear()
                     return
                 raise
             self.delay = self.min_delay
@@ -127,7 +126,6 @@ class StreamServer(BaseServer):
         except:
             traceback.print_exc()
             ex = sys.exc_info()[1]
-            sys.exc_clear()
             if self.is_fatal_error(ex):
                 self.kill()
                 sys.stderr.write('ERROR: %s failed with %s\n' % (self, str(ex) or repr(ex)))
@@ -143,7 +141,6 @@ class StreamServer(BaseServer):
             self.stop_accepting()
             self._start_accepting_timer = core.timer(self.delay, self.start_accepting)
             self.delay = min(self.max_delay, self.delay * 2)
-        sys.exc_clear()
 
     def is_fatal_error(self, ex):
         return isinstance(ex, socket.error) and ex[0] in (errno.EBADF, errno.EINVAL, errno.ENOTSOCK)
