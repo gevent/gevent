@@ -59,6 +59,8 @@ class TestCase(BaseTestCase):
         self._timer = gevent.Timeout.start_new(self.__timeout__, RuntimeError('test is taking too long'))
 
     def tearDown(self):
+        if hasattr(self, 'cleanup'):
+            self.cleanup()
         try:
             if not hasattr(self, 'stderr'):
                 self.unhook_stderr()
