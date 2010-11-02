@@ -21,7 +21,7 @@
 
 import greentest
 import gevent
-from gevent import core, util, socket
+from gevent import util, socket
 
 DELAY = 0.1
 
@@ -87,7 +87,7 @@ class TestTimers(greentest.TestCase):
     def test_timer_fired(self):
 
         def func():
-            core.timer(0.01, self.lst.pop)
+            gevent.spawn_later(0.01, lst.pop)
             gevent.sleep(0.02)
 
         gevent.spawn(func)
