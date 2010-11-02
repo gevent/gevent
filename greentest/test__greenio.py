@@ -93,7 +93,7 @@ class TestGreenIo(TestCase):
                 listener.close()
 
         server = socket.tcp_listener(('0.0.0.0', 0))
-        killer = gevent.spawn(accept_once, server)
+        gevent.spawn(accept_once, server)
         client = socket.create_connection(('127.0.0.1', server.getsockname()[1]))
         fd = client.makefile()
         client.close()
