@@ -3,7 +3,6 @@
 
 import sys
 import traceback
-from gevent.core import active_event
 from gevent.hub import get_hub, getcurrent
 from gevent.timeout import Timeout
 
@@ -35,7 +34,7 @@ class Semaphore(object):
     def release(self):
         self.counter += 1
         if self._links and self.counter > 0 and self._notifier is None:
-            self._notifier = active_event(self._notify_links, list(self._links))
+            self._notifier = get_hub().reactor.active_event(self._notify_links, list(self._links))
 
     def _notify_links(self, links):
         try:
@@ -64,7 +63,7 @@ class Semaphore(object):
             raise TypeError('Expected callable: %r' % (callback, ))
         self._links.append(callback)
         if self.counter > 0 and self._notifier is None:
-            self._notifier = active_event(self._notify_links, list(self._links))
+            self._notifier = get_hub().reactor.active_event(self._notify_links, list(self._links))
 
     def unlink(self, callback):
         """Remove the callback set by :meth:`rawlink`"""

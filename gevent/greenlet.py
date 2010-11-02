@@ -2,7 +2,6 @@
 
 import sys
 import traceback
-from gevent import core
 from gevent.hub import greenlet, getcurrent, get_hub, GreenletExit, Waiter, kill
 from gevent.timeout import Timeout
 
@@ -242,12 +241,12 @@ class Greenlet(greenlet):
     def start(self):
         """Schedule the greenlet to run in this loop iteration"""
         assert not self.started, 'Greenlet already started'
-        self._start_event = core.active_event(self.switch)
+        self._start_event = get_hub().reactor.active_event(self.switch)
 
     def start_later(self, seconds):
         """Schedule the greenlet to run in the future loop iteration *seconds* later"""
         assert not self.started, 'Greenlet already started'
-        self._start_event = core.timer(seconds, self.switch)
+        self._start_event = get_hub().reactor.timer(seconds, self.switch)
 
     @classmethod
     def spawn(cls, *args, **kwargs):
@@ -302,7 +301,7 @@ class Greenlet(greenlet):
             self._start_event = None
         if not self.dead:
             waiter = Waiter()
-            core.active_event(_kill, self, exception, waiter)
+            get_hub().reactor.active_event(_kill, self, exception, waiter)
             if block:
                 waiter.get()
                 self.join(timeout)
@@ -375,7 +374,7 @@ class Greenlet(greenlet):
         self._exception = None
         self.value = result
         if self._links and self._notifier is None:
-            self._notifier = core.active_event(self._notify_links)
+            self._notifier = get_hub().reactor.active_event(self._notify_links)
 
     def _report_error(self, exc_info):
         exception = exc_info[1]
@@ -389,7 +388,7 @@ class Greenlet(greenlet):
         self._exception = exception
 
         if self._links and self._notifier is None:
-            self._notifier = core.active_event(self._notify_links)
+            self._notifier = get_hub().reactor.active_event(self._notify_links)
 
         info = str(self) + ' failed with '
         try:
@@ -421,7 +420,7 @@ class Greenlet(greenlet):
             raise TypeError('Expected callable: %r' % (callback, ))
         self._links.add(callback)
         if self.ready() and self._notifier is None:
-            self._notifier = core.active_event(self._notify_links)
+            self._notifier = get_hub().reactor.active_event(self._notify_links)
 
     def link(self, receiver=None, GreenletLink=GreenletLink, SpawnedLink=SpawnedLink):
         """Link greenlet's completion to callable or another greenlet.
@@ -546,7 +545,7 @@ def _killall(greenlets, exception):
 def killall(greenlets, exception=GreenletExit, block=True, timeout=None):
     if block:
         waiter = Waiter()
-        core.active_event(_killall3, greenlets, exception, waiter)
+        get_hub().reactor.active_event(_killall3, greenlets, exception, waiter)
         if block:
             t = Timeout.start_new(timeout)
             try:
@@ -556,7 +555,7 @@ def killall(greenlets, exception=GreenletExit, block=True, timeout=None):
             finally:
                 t.cancel()
     else:
-        core.active_event(_killall, greenlets, exception)
+        get_hub().reactor.active_event(_killall, greenlets, exception)
 
 
 class LinkedExited(Exception):

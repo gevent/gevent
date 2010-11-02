@@ -34,7 +34,6 @@ from Queue import Full, Empty
 
 from gevent.timeout import Timeout
 from gevent.hub import get_hub, Waiter, getcurrent, _NONE
-from gevent import core
 
 
 __all__ = ['Queue', 'PriorityQueue', 'LifoQueue', 'JoinableQueue']
@@ -240,7 +239,7 @@ class Queue(object):
 
     def _schedule_unlock(self):
         if self._event_unlock is None:
-            self._event_unlock = core.active_event(self._unlock)
+            self._event_unlock = get_hub().reactor.active_event(self._unlock)
             # QQQ re-activate event (with event_active libevent call) instead of creating a new one each time
 
     def __iter__(self):

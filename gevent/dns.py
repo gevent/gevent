@@ -20,10 +20,6 @@ __all__ = ['DNSError',
            'QUERY_NO_SEARCH']
 
 
-# move from here into Hub.__init__ (once event_init() is move here as well)
-core.dns_init()
-
-
 class DNSError(gaierror):
     """A subclass of :class:`socket.gaierror` used by :mod:`evdns` functions to report errors.
 

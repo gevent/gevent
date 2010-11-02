@@ -20,6 +20,7 @@
 #include "event2/buffer_compat.h"
 #include "event2/dns.h"
 #include "event2/dns_compat.h"
+#include "event2/util.h"
 
 #define EVBUFFER_DRAIN evbuffer_drain
 #define EVHTTP_SET_CB  evhttp_set_cb

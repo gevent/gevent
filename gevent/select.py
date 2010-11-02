@@ -1,8 +1,9 @@
 # Copyright (c) 2009-2010 Denis Bilenko. See LICENSE for details.
 
-from gevent import core
 from gevent.timeout import Timeout
 from gevent.event import Event
+from gevent import core
+from gevent.hub import get_hub
 
 __implements__ = ['select']
 __all__ = ['error'] + __implements__
@@ -36,12 +37,12 @@ class SelectResult(object):
         if evtype & core.EV_READ:
             self.read.append(event.arg)
             if self.timer is None:
-                self.timer = core.timer(0, self.event.set)
+                self.timer = get_hub().reactor.timer(0, self.event.set)
         elif evtype & core.EV_WRITE:
             self.write.append(event.arg)
             if self.timer is None:
-                self.timer = core.timer(0, self.event.set)
-        # using core.timer(0, ...) to let other active events call update() before Event.wait() returns
+                self.timer = get_hub().reactor.timer(0, self.event.set)
+        # using timer(0, ...) to let other active events call update() before Event.wait() returns
 
 
 def select(rlist, wlist, xlist, timeout=None):
@@ -54,10 +55,15 @@ def select(rlist, wlist, xlist, timeout=None):
     result = SelectResult()
     try:
         try:
+            reactor = get_hub().reactor
             for readfd in rlist:
-                allevents.append(core.read_event(get_fileno(readfd), result.update, arg=readfd))
+                event = reactor.read_event(get_fileno(readfd))
+                event.add(None, result.update, arg=readfd)
+                allevents.append(event)
             for writefd in wlist:
-                allevents.append(core.write_event(get_fileno(writefd), result.update, arg=writefd))
+                event = reactor.write_event(get_fileno(writefd))
+                event.add(None, result.update, arg=writefd)
+                allevents.append(event)
         except IOError, ex:
             raise error(*ex.args)
         result.event.wait(timeout=timeout)

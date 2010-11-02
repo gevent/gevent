@@ -3,7 +3,6 @@
 
 import sys
 import traceback
-from gevent import core
 from gevent.hub import get_hub, getcurrent, _NONE
 from gevent.timeout import Timeout
 
@@ -40,7 +39,7 @@ class Event(object):
         self._flag = True
         if self._links:
             # schedule a job to notify the links already set
-            core.active_event(self._notify_links, list(self._links))
+            get_hub().reactor.active_event(self._notify_links, list(self._links))
 
     def clear(self):
         """Reset the internal flag to false.
@@ -92,7 +91,7 @@ class Event(object):
             raise TypeError('Expected callable: %r' % (callback, ))
         self._links.append(callback)
         if self._flag:
-            core.active_event(self._notify_links, list(self._links))  # XXX just pass [callback]
+            get_hub().reactor.active_event(self._notify_links, list(self._links))  # XXX just pass [callback]
 
     def unlink(self, callback):
         """Remove the callback set by :meth:`rawlink`"""
@@ -178,7 +177,7 @@ class AsyncResult(object):
         self.value = value
         self._exception = None
         if self._links and self._notifier is None:
-            self._notifier = core.active_event(self._notify_links)
+            self._notifier = get_hub().reactor.active_event(self._notify_links)
 
     def set_exception(self, exception):
         """Store the exception. Wake up the waiters.
@@ -188,7 +187,7 @@ class AsyncResult(object):
         """
         self._exception = exception
         if self._links and self._notifier is None:
-            self._notifier = core.active_event(self._notify_links)
+            self._notifier = get_hub().reactor.active_event(self._notify_links)
 
     def get(self, block=True, timeout=None):
         """Return the stored value or raise the exception.
@@ -293,7 +292,7 @@ class AsyncResult(object):
             raise TypeError('Expected callable: %r' % (callback, ))
         self._links.add(callback)
         if self.ready() and self._notifier is None:
-            self._notifier = core.active_event(self._notify_links)
+            self._notifier = get_hub().reactor.active_event(self._notify_links)
 
     def unlink(self, callback):
         """Remove the callback set by :meth:`rawlink`"""

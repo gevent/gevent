@@ -1,6 +1,7 @@
 # Copyright (c) 2009-2010 Denis Bilenko. See LICENSE for details.
 from gevent import core
 from gevent.baseserver import BaseServer
+from gevent.hub import get_hub
 
 
 __all__ = ['HTTPServer']
@@ -38,7 +39,8 @@ class HTTPServer(BaseServer):
         request.send_reply(503, 'Service Unavailable', msg)
 
     def start_accepting(self):
-        self.http = core.http(self._on_request, self.default_response_headers)
+        reactor = get_hub().reactor
+        self.http = core.http(self._on_request, self.default_response_headers, base=reactor)
         self.http.accept(self.socket.fileno())
 
     def stop_accepting(self):

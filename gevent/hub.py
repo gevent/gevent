@@ -56,11 +56,11 @@ def _switch_helper(function, args, kwargs):
 def spawn_raw(function, *args, **kwargs):
     if kwargs:
         g = greenlet(_switch_helper, get_hub())
-        core.active_event(g.switch, function, args, kwargs)
+        get_hub().reactor.active_event(g.switch, function, args, kwargs)
         return g
     else:
         g = greenlet(function, get_hub())
-        core.active_event(g.switch, *args)
+        get_hub().reactor.active_event(g.switch, *args)
         return g
 
 
@@ -74,7 +74,7 @@ def sleep(seconds=0):
     unique_mark = object()
     if not seconds >= 0:
         raise IOError(22, 'Invalid argument')
-    timer = core.timer(seconds, getcurrent().switch, unique_mark)
+    timer = get_hub().reactor.timer(seconds, getcurrent().switch, unique_mark)
     try:
         switch_result = get_hub().switch()
         assert switch_result is unique_mark, 'Invalid switch into sleep(): %r' % (switch_result, )
@@ -91,25 +91,25 @@ def kill(greenlet, exception=GreenletExit):
     so you have to use this function.
     """
     if not greenlet.dead:
-        core.active_event(greenlet.throw, exception)
+        get_hub().reactor.active_event(greenlet.throw, exception)
 
 
 def _wrap_signal_handler(handler, args, kwargs):
     try:
         handler(*args, **kwargs)
     except:
-        core.active_event(MAIN.throw, *sys.exc_info())
+        get_hub().reactor.active_event(MAIN.throw, *sys.exc_info())
 
 
 def signal(signalnum, handler, *args, **kwargs):
-    return core.signal(signalnum, lambda: spawn_raw(_wrap_signal_handler, handler, args, kwargs))
+    return get_hub().reactor.signal(signalnum, lambda: spawn_raw(_wrap_signal_handler, handler, args, kwargs))
 
 
 if _original_fork is not None:
 
     def fork():
         result = _original_fork()
-        core.reinit()
+        get_hub().reactor.reinit()
         return result
 
 
@@ -121,19 +121,31 @@ def shutdown():
         hub.shutdown()
 
 
+def get_hub_class():
+    """Return the type of hub to use for the current thread.
+
+    If there's no type of hub for the current thread yet, 'gevent.hub.Hub' is used.
+    """
+    global _threadlocal
+    try:
+        hubtype = _threadlocal.Hub
+    except AttributeError:
+        hubtype = None
+    if hubtype is None:
+        hubtype = _threadlocal.Hub = Hub
+    return hubtype
+
+
 def get_hub():
+    """Return the hub for the current thread.
+
+    If hub does not exists in the current thread, the new one is created with call to :meth:`get_hub_class`.
+    """
     global _threadlocal
     try:
         return _threadlocal.hub
     except AttributeError:
-        try:
-            hubtype = _threadlocal.Hub
-        except AttributeError:
-            # do not pretend to support multiple threads because it's not implemented properly by core.pyx
-            # this may change in the future, although currently I don't have a strong need for this
-            raise NotImplementedError('gevent is only usable from a single thread')
-        if hubtype is None:
-            hubtype = Hub
+        hubtype = get_hub_class()
         hub = _threadlocal.hub = hubtype()
         return hub
 
@@ -144,13 +156,19 @@ class Hub(greenlet):
     It is created automatically by :func:`get_hub`.
     """
 
-    def __init__(self):
+    reactor_class = core.event_base
+
+    def __init__(self, reactor=None):
         greenlet.__init__(self)
         self.keyboard_interrupt_signal = None
+        if reactor is None:
+            self.reactor = self.reactor_class()
+        else:
+            self.reactor = reactor
 
     def switch(self):
         cur = getcurrent()
-        assert cur is not self, 'Cannot switch to MAINLOOP from MAINLOOP'
+        assert cur is not self, 'Impossible to call blocking function in the event loop callback'
         exc_info = sys.exc_info()
         try:
             sys.exc_clear()
@@ -166,16 +184,16 @@ class Hub(greenlet):
 
     def run(self):
         global _threadlocal
-        assert self is getcurrent(), 'Do not call run() directly'
+        assert self is getcurrent(), 'Do not call Hub.run() directly'
         try:
-            self.keyboard_interrupt_signal = signal(2, core.active_event, MAIN.throw, KeyboardInterrupt)
+            self.keyboard_interrupt_signal = signal(2, self.reactor.active_event, MAIN.throw, KeyboardInterrupt)
         except IOError:
             pass  # no signal() on windows
         try:
             loop_count = 0
             while True:
                 try:
-                    result = core.dispatch()
+                    result = self.reactor.dispatch()
                 except IOError, ex:
                     loop_count += 1
                     if loop_count > 15:
@@ -196,7 +214,9 @@ class Hub(greenlet):
         if self.keyboard_interrupt_signal is not None:
             self.keyboard_interrupt_signal.cancel()
             self.keyboard_interrupt_signal = None
-        core.dns_shutdown()
+        dns = self.reactor.dns
+        if dns is not None:
+            dns.free()
         if not self or self.dead:
             if _threadlocal.__dict__.get('hub') is self:
                 _threadlocal.__dict__.pop('hub')
@@ -231,7 +251,7 @@ class Waiter(object):
     The :meth:`get` method must be called from a greenlet other than :class:`Hub`.
 
         >>> result = Waiter()
-        >>> _ = core.timer(0.1, result.switch, 'hello from Waiter')
+        >>> _ = get_hub().reactor.timer(0.1, result.switch, 'hello from Waiter')
         >>> result.get() # blocks for 0.1 seconds
         'hello from Waiter'
 
@@ -239,7 +259,7 @@ class Waiter(object):
     :class:`Waiter` stores the value.
 
         >>> result = Waiter()
-        >>> _ = core.timer(0.1, result.switch, 'hi from Waiter')
+        >>> _ = get_hub().reactor.timer(0.1, result.switch, 'hi from Waiter')
         >>> sleep(0.2)
         >>> result.get() # returns immediatelly without blocking
         'hi from Waiter'

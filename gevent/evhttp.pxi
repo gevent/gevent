@@ -54,7 +54,7 @@ cdef extern from "libevent.h":
     # evhttp
     ctypedef void (*evhttp_handler)(evhttp_request *, void *arg)
 
-    evhttp*   evhttp_new(event_base *base)
+    evhttp*   evhttp_new(void *base)
     int       evhttp_bind_socket(evhttp *http, char* address, int port)
     int       evhttp_accept_socket(evhttp *http, int fd)
     void      evhttp_free(evhttp* http)
@@ -511,21 +511,27 @@ cdef class http:
     cdef public object default_response_headers
     cdef public dict _requests
 
-    def __init__(self, object handle, object default_response_headers=None):
+    def __init__(self, object handle, object default_response_headers=None, event_base base=None):
         self.handle = handle
         if default_response_headers is None:
             self.default_response_headers = []
         else:
             self.default_response_headers = default_response_headers
-        self._requests = {} # maps connection id to WeakKeyDictionary which holds requests
-        self.__obj = evhttp_new(current_base)
+        self._requests = {}  # maps connection id to WeakKeyDictionary which holds requests
+        if base is None:
+            if levent.current_base:
+                self.__obj = evhttp_new(levent.current_base)
+            else:
+                raise ValueError('Please provide event_base')
+        else:
+            self.__obj = evhttp_new(base._ptr)
         evhttp_set_gencb(self.__obj, _http_cb_handler, <void *>self)
 
     def __dealloc__(self):
         if self.__obj != NULL:
             evhttp_set_gencb(self.__obj, _http_cb_reply_error, NULL)
             evhttp_free(self.__obj)
-        self.__obj = NULL
+            self.__obj = NULL
 
     property _obj:
 

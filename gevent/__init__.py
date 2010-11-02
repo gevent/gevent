@@ -44,7 +44,6 @@ core.EV_WRITE   = 0x04
 core.EV_SIGNAL  = 0x08
 core.EV_PERSIST = 0x10
 
-from gevent.core import reinit
 from gevent.greenlet import Greenlet, joinall, killall
 spawn = Greenlet.spawn
 spawn_later = Greenlet.spawn_later
@@ -57,3 +56,8 @@ try:
     from gevent.hub import fork
 except ImportError:
     __all__.remove('fork')
+
+
+def reinit():
+    from gevent.hub import get_hub
+    return get_hub().reinit()

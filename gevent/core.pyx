@@ -1,12 +1,4 @@
-#
-# event.pyx
-#
-# libevent Python bindings
-#
-# Copyright (c) 2004 Dug Song <dugsong@monkey.org>
-# Copyright (c) 2003 Martin Murray <murrayma@citi.umich.edu>
-# Copyright (c) 2009-2010 Denis Bilenko <denis.bilenko@gmail.com>
-#
+# Copyright (c) 2009-2010 Denis Bilenko and gevent contributors. See LICENSE for details.
 
 """Wrappers around libevent API.
 
@@ -15,26 +7,19 @@ specific event on a file handle, file descriptor, or signal occurs,
 or after a given time has passed. It also provides wrappers around
 structures and functions from libevent-dns and libevent-http.
 
-This module does not work with the greenlets. A callback passed
+This module does not work with greenlets. A callback passed
 to a method from this module will be executed in the event loop,
 which is running in the :class:`Hub <gevent.hub.Hub>` greenlet.
-Therefore it must not use any synchronous gevent API,
-that is, the functions that switch to the Hub. It's OK to call asynchronous
-stuff like :func:`gevent.spawn`, :meth:`Event.set <gevent.event.Event.set` or
-:meth:`Queue.put_nowait <gevent.queue.Queue.put_nowait>`.
+Therefore it must not use any synchronous gevent API, that is, blocking
+functions that need to switch to the Hub. It's OK to call asynchronous
+stuff like :func:`gevent.spawn`, :meth:`Event.set <gevent.event.Event.set`
+or :meth:`Queue.put_nowait <gevent.queue.Queue.put_nowait>`.
 
-The code is based on pyevent_.
+This module is very similar to pyevent_. In fact, it grew out of pyevent_ source code.
+However it is currently more up to date with regard to libevent API.
 
 .. _pyevent: http://code.google.com/p/pyevent/
 """
-
-__author__ = ( 'Dug Song <dugsong@monkey.org>',
-               'Martin Murray <mmurray@monkey.org>' )
-__copyright__ = ( 'Copyright (c) 2004 Dug Song',
-                  'Copyright (c) 2003 Martin Murray' )
-__license__ = 'BSD'
-__url__ = 'http://monkey.org/~dugsong/pyevent/'
-__version__ = '0.4+'
 
 __all__ = ['event', 'read_event', 'write_event', 'timer', 'signal', 'active_event',
            'init', 'dispatch', 'loop', 'get_version', 'get_method', 'get_header_version']
@@ -44,6 +29,11 @@ import sys
 import traceback
 from pprint import pformat
 import weakref
+
+cimport levent
+
+import _socket
+gaierror = _socket.gaierror
 
 
 cdef extern from "sys/types.h":
@@ -55,62 +45,24 @@ cdef extern from "Python.h":
     object PyString_FromStringAndSize(char *v, int len)
     object PyString_FromString(char *v)
     int    PyObject_AsCharBuffer(object obj, char **buffer, int *buffer_len)
+    void   PyOS_snprintf(void*, size_t, char*, ...)
 
 cdef extern from "frameobject.h":
     ctypedef struct PyThreadState:
         void* exc_type
         void* exc_value
         void* exc_traceback
-
     PyThreadState* PyThreadState_GET()
 
+cdef extern from "stdio.h":
+    void* memset(void*, int, size_t)
+
+cdef extern from "socketmodule.h":
+    char* get_gaierror(int)
+    object makesockaddr(int sockfd, void *, int addrlen, int proto)
+
 ctypedef void (*event_handler)(int fd, short evtype, void *arg)
-
-ctypedef void* event_base
-
-cdef extern from "libevent.h":
-
-    # event.h:
-    struct timeval:
-        unsigned int tv_sec
-        unsigned int tv_usec
-
-    struct event_t "event":
-        int   ev_fd
-        short ev_events
-        int   ev_flags
-        void *ev_arg
-
-    void* event_init()
-    int event_reinit(void *base)
-    char* event_get_version()
-    char* event_get_method()
-    void event_set(event_t *ev, int fd, short event, event_handler handler, void *arg)
-    void evtimer_set(event_t *ev, event_handler handler, void *arg)
-    int  event_add(event_t *ev, timeval *tv)
-    int  event_del(event_t *ev)
-    int  event_dispatch() nogil
-    int  event_loop(int loop) nogil
-    int  event_pending(event_t *ev, short, timeval *tv)
-    void event_active(event_t *ev, int res, short ncalls)
-
-    int EVLOOP_ONCE
-    int EVLOOP_NONBLOCK
-    char* _EVENT_VERSION
-
-    int EV_TIMEOUT
-    int EV_READ
-    int EV_WRITE
-    int EV_SIGNAL
-    int EV_PERSIST
-
-    int EVLIST_TIMEOUT
-    int EVLIST_INSERTED
-    int EVLIST_SIGNAL
-    int EVLIST_ACTIVE
-    int EVLIST_INTERNAL
-    int EVLIST_INIT
-
+ctypedef void (*event_log_cb)(int severity, char *msg)
 
 cdef extern from "string.h":
     char* strerror(int errnum)
@@ -119,8 +71,291 @@ cdef extern from "errno.h":
     int errno
 
 
-cdef extern from "libevent.h":
-    event_base* current_base
+cdef class event_base:
+
+    cdef void* _ptr
+    cdef object _dns
+
+    def __init__(self, size_t ptr=0):
+        if ptr:
+            self._ptr = <void*>ptr
+        else:
+            self._ptr = levent.event_base_new()
+            if not self._ptr:
+                if errno:
+                    raise IOError(errno, strerror(errno))
+                else:
+                    raise IOError("event_base_new returned NULL")
+
+    def __dealloc__(self):
+        self.free()
+
+    property ptr:
+
+        def __get__(self):
+            return <size_t>self._ptr
+
+    property dns:
+
+        def __get__(self):
+            if self._dns is None:
+                self._dns = evdns_base.new(self)
+            return self._dns
+
+    def dispatch(self):
+        return levent.event_base_dispatch(self._ptr)
+
+    def reinit(self):
+        cdef int result = levent.event_reinit(self._ptr)
+        if result != 0:
+            raise IOError('event_reinit failed with %s' % result)
+
+    def get_method(self):
+        return levent.event_base_get_method(self._ptr)
+
+    def get_info(self):
+        return 'libevent-%s/%s' % (get_version(), self.get_method())
+
+    def free(self):
+        if self._ptr:
+            levent.event_base_free(self._ptr)
+            self._ptr = NULL
+        if self._dns is not None:
+            self._dns.free()
+            self._dns = None
+
+    def read_event(self, int handle, persist=False):
+        cdef short evtype = levent.EV_READ
+        if persist:
+            evtype = evtype | levent.EV_PERSIST
+        cdef event ev = event(evtype, handle, self)
+        return ev
+
+    def write_event(self, int handle, persist=False):
+        cdef short evtype = levent.EV_WRITE
+        if persist:
+            evtype = evtype | levent.EV_PERSIST
+        cdef event ev = event(evtype, handle, base=self)
+        return ev
+
+    def readwrite_event(self, int handle, persist=False):
+        cdef short evtype = levent.EV_READ | levent.EV_WRITE
+        if persist:
+            evtype = evtype | levent.EV_PERSIST
+        cdef event ev = event(evtype, handle, base=self)
+        return ev
+
+    def signal(self, int signalnum, callback, *args, **kwargs):
+        cdef event ev = simple_event(levent.EV_SIGNAL|levent.EV_PERSIST, signalnum, base=self)
+        ev.add(None, callback, *args, **kwargs)
+        return ev
+
+    def timer(self, seconds=None, callback=None, *args, **kwargs):
+        cdef event ev = simple_event(0, -1, base=self)
+        if callback is not None:
+            ev.add(seconds, callback, *args, **kwargs)
+        return ev
+
+    def active_event(self, callback, *args, **kwargs):
+        cdef event ev = simple_event(0, -1, base=self)
+        ev.active(callback, *args, **kwargs)
+        return ev
+
+
+cdef class evdns_base:
+
+    cdef void* _ptr
+    cdef public event_base base
+
+    def __init__(self, event_base base, size_t ptr=0):
+        self.base = base
+        self._ptr = <void*>ptr
+
+    @classmethod
+    def new(cls, object base, int init=1):
+        cdef void* ptr = levent.evdns_base_new((<event_base?>base)._ptr, <int>init)
+        if not ptr:
+            if errno:
+                raise IOError(errno, strerror(errno))
+            else:
+                raise IOError("evdns_base_new returned NULL")
+        return cls(base, <size_t>ptr)
+
+    property ptr:
+
+        def __get__(self):
+            return <size_t>self._ptr
+
+    def free(self, int fail_requests=1):
+        if self._ptr:
+            self.base = None
+            levent.evdns_base_free(self._ptr, fail_requests)
+            self._ptr = NULL
+
+    def add_nameserver(self, char* address):
+        """Add a nameserver.
+
+        This function parses a n IPv4 or IPv6 address from a string and adds it as a
+        nameserver.  It supports the following formats:
+        - [IPv6Address]:port
+        - [IPv6Address]
+        - IPv6Address
+        - IPv4Address:port
+        - IPv4Address
+
+        If no port is specified, it defaults to 53."""
+        cdef int result = levent.evdns_base_nameserver_ip_add(self._ptr, address)
+        if result:
+            if errno:
+                raise IOError(errno, strerror(errno))
+            else:
+                raise IOError("evdns_base_nameserver_ip_add returned %r" % result)
+
+    def count_nameservers(self):
+        return levent.evdns_base_count_nameservers(self._ptr)
+
+    def set_option(self, char* option, object val):
+        """Set the value of a configuration option.
+
+        The available configuration options are (as of libevent-2.0.8-rc):
+
+        ndots, timeout, max-timeouts, max-inflight, attempts, randomize-case,
+        bind-to, initial-probe-timeout, getaddrinfo-allow-skew."""
+        # XXX auto add colon fix it: In versions before Libevent 2.0.3-alpha, the option name needed to end with a colon.
+        cdef char* c_val
+        if isinstance(val, str):
+            c_val = val
+        elif isinstance(val, (int, long, float)):
+            val = str(val)
+            c_val = val
+        elif isinstance(val, unicode):
+            val = val.encode('ascii')
+            c_val = val
+        else:
+            raise TypeError('Expected a string or a number: %r' % (val, ))
+        cdef int result = levent.evdns_base_set_option(self._ptr, option, c_val)
+        if result:
+            if errno:
+                raise IOError(errno, strerror(errno))
+            else:
+                raise IOError("evdns_base_set_option returned %r" % result)
+
+    def getaddrinfo(self, callback, host, port, int family=0, int socktype=0, int proto=0, int flags=0, arg=None):
+        # evdns and socket module do not match flags
+        cdef char* nodename = NULL
+        cdef char* servname = NULL
+        cdef char pbuf[30]
+        cdef levent.evutil_addrinfo hints
+        if host is None:
+            pass
+        elif isinstance(host, unicode):
+            host = host.encode('idna')
+            nodename = host
+        elif isinstance(host, str):
+            nodename = host
+        else:
+            raise TypeError("getaddrinfo() first argument must be string or None")
+        if port is None:
+            pass
+        elif isinstance(port, (int, long)):
+            PyOS_snprintf(pbuf, sizeof(pbuf), "%ld", <long>port)
+            servname = pbuf
+        else:
+            servname = <char*?>port  # check that it raises TypeError
+        memset(&hints, 0, sizeof(hints))
+        hints.ai_family = family
+        hints.ai_socktype = socktype
+        hints.ai_protocol = proto
+        hints.ai_flags = flags
+        cdef object param = [callback, arg]
+        Py_INCREF(param)
+        cdef void* c_request = levent.evdns_getaddrinfo(self._ptr, nodename, servname, &hints, __getaddrinfo_handler, <void*>param)
+        if c_request:
+            request = getaddrinfo_request(self.base, <size_t>c_request)
+            param.append(request)
+            return request
+
+
+cdef void __getaddrinfo_handler(int code, levent.evutil_addrinfo* res, void* c_param):
+    cdef object callback
+    cdef object arg
+    cdef object request = None
+    cdef object param = <object>c_param
+    Py_DECREF(param)
+    cdef list result
+    cdef char* canonname
+    try:
+        if len(param) == 2:
+            callback, arg = param
+        else:
+            callback, arg, request = param
+
+        if request is not None:
+            if request.base is None:  # cancelled?
+                request.detach()
+                return
+            request.detach()
+
+        if code:
+            callback(None, gaierror(code, get_gaierror(code)), arg)
+        else:
+            result = []
+            while res:
+                if res.ai_canonname:
+                    canonname = res.ai_canonname
+                else:
+                    canonname = ''
+                result.append((res.ai_family,
+                               res.ai_socktype,
+                               res.ai_protocol,
+                               canonname,
+                               makesockaddr(-1, res.ai_addr, res.ai_addrlen, res.ai_protocol)))
+                res = res.ai_next
+            callback(result, None, arg)
+    except:
+        traceback.print_exc()
+        try:
+            sys.stderr.write('Failed to execute callback %r\n\n' % (callback, ))
+        except:
+            traceback.print_exc()
+        sys.exc_clear()
+
+
+cdef class getaddrinfo_request:
+
+    cdef public event_base base
+    cdef void* _ptr
+
+    def __init__(self, event_base base, size_t ptr=0):
+        self.base = base
+        self._ptr = <void*>ptr
+
+    property ptr:
+
+        def __get__(self):
+            return <size_t>self._ptr
+
+    def __str__(self):
+        return '<%s ptr=%x>' % (self.__class__.__name__, self.ptr)
+
+    def detach(self):
+        self.base = None
+        self._ptr = NULL
+
+    def _cancel(self):
+        if self._ptr and self.base is not None:
+            levent.evdns_getaddrinfo_cancel(self._ptr)
+            # getaddrinfo_handler will be called immediatelly, with EVUTIL_EAI_CANCEL argument
+
+    def cancel(self):
+        if self._ptr and self.base is not None:
+            self.base.active_event(self._cancel)
+            self.base = None
+
+    @property
+    def pending(self):
+        if self._ptr:
+            return self.base is not None
 
 
 cdef void __event_handler(int fd, short evtype, void *arg) with gil:
@@ -135,7 +370,7 @@ cdef void __event_handler(int fd, short evtype, void *arg) with gil:
             traceback.print_exc()
         sys.exc_clear()
     finally:
-        if not event_pending(&self.ev, EV_READ|EV_WRITE|EV_SIGNAL|EV_TIMEOUT, NULL):
+        if not levent.event_pending(&self.ev, levent.EV_READ|levent.EV_WRITE|levent.EV_SIGNAL|levent.EV_TIMEOUT, NULL):
             self._delref()
 
 
@@ -147,20 +382,17 @@ cdef class event:
     - *callback* -- user callback with ``(event, evtype)`` prototype
     - *arg*      -- optional object, which will be made available as :attr:`arg` property.
     """
-    cdef event_t ev
+    cdef levent.event ev
     cdef public object callback
     cdef public object arg
     cdef int _incref  # 1 if we already INCREFed this object once (because libevent references it)
 
-    def __init__(self, short evtype, int handle, callback, arg=None):
-        self.callback = callback
-        self.arg = arg
+    def __init__(self, short evtype, int handle, event_base base=None):
         self._incref = 0
         cdef void* c_self = <void*>self
-        if evtype == 0 and not handle:
-            evtimer_set(&self.ev, __event_handler, c_self)
-        else:
-            event_set(&self.ev, handle, evtype, __event_handler, c_self)
+        levent.event_set(&self.ev, handle, evtype, __event_handler, c_self)
+        if base is not None:
+            levent.event_base_set((<event_base?>base)._ptr, &self.ev)
 
     cdef _addref(self):
         if self._incref <= 0:
@@ -171,12 +403,14 @@ cdef class event:
         if self._incref > 0:
             Py_DECREF(self)
             self._incref -= 1
+        self.callback = None
+        self.arg = None
 
     property pending:
         """Return True if the event is still scheduled to run."""
 
         def __get__(self):
-            return event_pending(&self.ev, EV_TIMEOUT|EV_SIGNAL|EV_READ|EV_WRITE, NULL)
+            return levent.event_pending(&self.ev, levent.EV_TIMEOUT|levent.EV_SIGNAL|levent.EV_READ|levent.EV_WRITE, NULL)
 
     property fd:
 
@@ -194,8 +428,11 @@ cdef class event:
             result = []
             cdef short events = self.ev.ev_events
             cdef short c_event
-            for (event, txt) in ((EV_TIMEOUT, 'TIMEOUT'), (EV_READ, 'READ'), (EV_WRITE, 'WRITE'),
-                                 (EV_SIGNAL, 'SIGNAL'), (EV_PERSIST, 'PERSIST')):
+            for (event, txt) in ((levent.EV_TIMEOUT, 'TIMEOUT'),
+                                 (levent.EV_READ, 'READ'),
+                                 (levent.EV_WRITE, 'WRITE'),
+                                 (levent.EV_SIGNAL, 'SIGNAL'),
+                                 (levent.EV_PERSIST, 'PERSIST')):
                 c_event = event
                 if events & c_event:
                     result.append(txt)
@@ -216,8 +453,12 @@ cdef class event:
             result = []
             cdef int flags = self.ev.ev_flags
             cdef int c_flag
-            for (flag, txt) in ((EVLIST_TIMEOUT, 'TIMEOUT'), (EVLIST_INSERTED, 'INSERTED'), (EVLIST_SIGNAL, 'SIGNAL'),
-                                (EVLIST_ACTIVE, 'ACTIVE'), (EVLIST_INTERNAL, 'INTERNAL'), (EVLIST_INIT, 'INIT')):
+            for (flag, txt) in ((levent.EVLIST_TIMEOUT, 'TIMEOUT'),
+                                (levent.EVLIST_INSERTED, 'INSERTED'),
+                                (levent.EVLIST_SIGNAL, 'SIGNAL'),
+                                (levent.EVLIST_ACTIVE, 'ACTIVE'),
+                                (levent.EVLIST_INTERNAL, 'INTERNAL'),
+                                (levent.EVLIST_INIT, 'INIT')):
                 c_flag = flag
                 if flags & c_flag:
                     result.append(txt)
@@ -227,16 +468,15 @@ cdef class event:
                 result.append(hex(flags))
             return '|'.join(result)
 
-    def add(self, timeout=None):
-        """Add event to be executed after an optional *timeout* - number of seconds
-        after which the event will be executed."""
-        global errno
-        cdef timeval tv
+    def add(self, timeout, callback, arg=None):
+        cdef levent.timeval tv
         cdef double c_timeout
         cdef int result
-        errno = 0  # event_add sometime does not set errno
+        if not self.ev.ev_base:
+            # libevent starting with 2.0.7 actually does check for this condition, so we should not
+            raise AssertionError('ev_base is not set')
         if timeout is None:
-            result = event_add(&self.ev, NULL)
+            result = levent.event_add(&self.ev, NULL)
         else:
             c_timeout = <double>timeout
             if c_timeout < 0.0:
@@ -244,19 +484,30 @@ cdef class event:
             else:
                 tv.tv_sec = <long>c_timeout
                 tv.tv_usec = <unsigned int>((c_timeout - <double>tv.tv_sec) * 1000000.0)
-                result = event_add(&self.ev, &tv)
+                result = levent.event_add(&self.ev, &tv)
         if result < 0:
             if errno:
                 raise IOError(errno, strerror(errno))
             else:
                 raise IOError("event_add(fileno=%s) returned %s" % (self.fd, result))
+        self.callback = callback
+        self.arg = arg
+        self._addref()
+
+    def active(self, callback, arg):
+        levent.event_active(&self.ev, levent.EV_TIMEOUT, 1)
+        self.callback = callback
+        self.arg = arg
         self._addref()
 
     def cancel(self):
         """Remove event from the event queue."""
         cdef int result
-        if event_pending(&self.ev, EV_TIMEOUT|EV_SIGNAL|EV_READ|EV_WRITE, NULL):
-            result = event_del(&self.ev)
+        # setting self.callback and self.arg to None to avoid refcounting cycles
+        self.callback = None
+        self.arg = None
+        if levent.event_pending(&self.ev, levent.EV_TIMEOUT|levent.EV_SIGNAL|levent.EV_READ|levent.EV_WRITE, NULL):
+            result = levent.event_del(&self.ev)
             if result < 0:
                 return result
             self._delref()
@@ -295,39 +546,6 @@ cdef class event:
         self.cancel()
 
 
-cdef class read_event(event):
-    """Create a new scheduled event with evtype=EV_READ"""
-
-    def __init__(self, int handle, callback, timeout=None, arg=None, persist=False):
-        cdef short evtype = EV_READ
-        if persist:
-            evtype = evtype | EV_PERSIST
-        event.__init__(self, evtype, handle, callback, arg)
-        self.add(timeout)
-
-
-cdef class write_event(event):
-    """Create a new scheduled event with evtype=EV_WRITE"""
-
-    def __init__(self, int handle, callback, timeout=None, arg=None, persist=False):
-        cdef short evtype = EV_WRITE
-        if persist:
-            evtype = evtype | EV_PERSIST
-        event.__init__(self, evtype, handle, callback, arg)
-        self.add(timeout)
-
-
-class readwrite_event(event):
-    """Create a new scheduled event with evtype=EV_READ|EV_WRITE"""
-
-    def __init__(self, int handle, callback, timeout=None, arg=None, persist=False):
-        cdef short evtype = EV_READ|EV_WRITE
-        if persist:
-            evtype = evtype | EV_PERSIST
-        event.__init__(self, evtype, handle, callback, arg)
-        self.add(timeout)
-
-
 cdef void __simple_handler(int fd, short evtype, void *arg) with gil:
     cdef event self = <event>arg
     try:
@@ -341,125 +559,35 @@ cdef void __simple_handler(int fd, short evtype, void *arg) with gil:
             traceback.print_exc()
         sys.exc_clear()
     finally:
-        if not event_pending(&self.ev, EV_READ|EV_WRITE|EV_SIGNAL|EV_TIMEOUT, NULL):
+        if not levent.event_pending(&self.ev, levent.EV_READ|levent.EV_WRITE|levent.EV_SIGNAL|levent.EV_TIMEOUT, NULL):
             self._delref()
 
 
-cdef class timer(event):
-    """Create a new scheduled timer"""
+cdef class simple_event(event):
 
-    def __init__(self, float seconds, callback, *args, **kwargs):
-        self.callback = callback
-        self.arg = (args, kwargs)
-        evtimer_set(&self.ev, __simple_handler, <void*>self)
-        self.add(seconds)
+    def __init__(self, short evtype, int handle, base=None):
+        self._incref = 0
+        cdef void* c_self = <void*>self
+        levent.event_set(&self.ev, handle, evtype, __simple_handler, c_self)
+        if base is not None:
+            levent.event_base_set((<event_base?>base)._ptr, &self.ev)
 
+    def add(self, seconds, callback, *args, **kwargs):
+        return event.add(self, seconds, callback, (args, kwargs))
 
-cdef class signal(event):
-    """Create a new persistent signal event"""
-
-    def __init__(self, int signalnum, callback, *args, **kwargs):
-        self.callback = callback
-        self.arg = (args, kwargs)
-        event_set(&self.ev, signalnum, EV_SIGNAL|EV_PERSIST, __simple_handler, <void*>self)
-        self.add()
-
-
-cdef class active_event(event):
-    """An event that is scheduled to run in the current loop iteration"""
-
-    def __init__(self, callback, *args, **kwargs):
-        self.callback = callback
-        self.arg = (args, kwargs)
-        evtimer_set(&self.ev, __simple_handler, <void*>self)
-        self._addref()
-        event_active(&self.ev, EV_TIMEOUT, 1)
-
-    def add(self, timeout=None):
-        raise NotImplementedError
-
-
-def init():
-    """Initialize event queue."""
-    event_init()
-
-
-def dispatch():
-    """Dispatch all events on the event queue.
-    Returns 0 on success, and 1 if no events are registered.
-    May raise IOError.
-    """
-    cdef int ret
-    with nogil:
-        ret = event_dispatch()
-    if ret < 0:
-        raise IOError(errno, strerror(errno))
-    return ret
-
-
-def loop(nonblock=False):
-    """Dispatch all pending events on queue in a single pass.
-    Returns 0 on success, and 1 if no events are registered.
-    May raise IOError.
-    """
-    cdef int flags, ret
-    flags = EVLOOP_ONCE
-    if nonblock:
-        flags = EVLOOP_ONCE|EVLOOP_NONBLOCK
-    with nogil:
-        ret = event_loop(flags)
-    if ret < 0:
-        raise IOError(errno, strerror(errno))
-    return ret
+    def active(self, callback, *args, **kwargs):
+        return event.active(self, callback, (args, kwargs))
 
 
 def get_version():
     """Wrapper for :meth:`event_get_version`"""
-    return event_get_version()
+    return levent.event_get_version()
 
-
-def get_method():
-    """Wrapper for :meth:`event_get_method`"""
-    return event_get_method()
-
-
-cdef extern from *:
-    cdef void emit_ifdef "#if defined(_EVENT_VERSION) //" ()
-    cdef void emit_else  "#else //" ()
-    cdef void emit_endif "#endif //" ()
-
-
-# _EVENT_VERSION is available since libevent 1.4.0-beta
 
 def get_header_version():
     """Return _EVENT_VERSION"""
-    emit_ifdef()
-    return _EVENT_VERSION
-    emit_endif()
+    return levent._EVENT_VERSION
 
-# event_reinit is available since libevent 1.4.1-beta,
-# but I cannot check for existence of a function here, can I?
-# so I'm going to use _EVENT_VERSION as an indicator of event_reinit presence
-# which will work in every version other than 1.4.0-beta
-
-def reinit():
-    """Wrapper for :meth:`event_reinit`."""
-    emit_ifdef()
-    return event_reinit(current_base)
-    emit_endif()
-
-include "evdns.pxi"
-
-# XXX - make sure event queue is always initialized.
-init()
-
-if get_version() != get_header_version() and get_header_version() is not None and get_version() != '1.3.99-trunk':
-    import warnings
-    msg = "libevent version mismatch: system version is %r but this gevent is compiled against %r" % (get_version(), get_header_version())
-    warnings.warn(msg, UserWarning, stacklevel=2)
-
-include "evbuffer.pxi"
-include "evhttp.pxi"
 
 def set_exc_info(object typ, object value, object tb):
     cdef PyThreadState* tstate = PyThreadState_GET()
@@ -476,3 +604,13 @@ def set_exc_info(object typ, object value, object tb):
     tstate.exc_value = <void *>value
     tstate.exc_traceback = <void *>tb
 
+
+#include "evdns.pxi"
+include "evbuffer.pxi"
+include "evhttp.pxi"
+
+
+if get_version() != get_header_version() and get_header_version() is not None and get_version() != '1.3.99-trunk':
+    import warnings
+    msg = "libevent version mismatch: system version is %r but this gevent is compiled against %r" % (get_version(), get_header_version())
+    warnings.warn(msg, UserWarning, stacklevel=2)

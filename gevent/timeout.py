@@ -13,8 +13,7 @@ to arbitrary code.
     which no switches occur, :class:`Timeout` is powerless.
 """
 
-from gevent import core
-from gevent.hub import getcurrent, _NONE
+from gevent.hub import getcurrent, _NONE, get_hub
 
 __all__ = ['Timeout',
            'with_timeout']
@@ -86,17 +85,17 @@ class Timeout(BaseException):
     def __init__(self, seconds=None, exception=None):
         self.seconds = seconds
         self.exception = exception
-        self.timer = None
+        self.timer = get_hub().reactor.timer()
 
     def start(self):
         """Schedule the timeout."""
         assert not self.pending, '%r is already started; to restart it, cancel it first' % self
         if self.seconds is None:  # "fake" timeout (never expires)
-            self.timer = None
+            pass
         elif self.exception is None or self.exception is False:  # timeout that raises self
-            self.timer = core.timer(self.seconds, getcurrent().throw, self)
+            self.timer.add(self.seconds, getcurrent().throw, self)
         else:  # regular timeout with user-provided exception
-            self.timer = core.timer(self.seconds, getcurrent().throw, self.exception)
+            self.timer.add(self.seconds, getcurrent().throw, self.exception)
 
     @classmethod
     def start_new(cls, timeout=None, exception=None):
@@ -167,7 +166,7 @@ class Timeout(BaseException):
             return '%s second%s (%s)' % (self.seconds, suffix, self.exception)
 
     def __enter__(self):
-        if self.timer is None:
+        if not self.timer.pending:
             self.start()
         return self
 

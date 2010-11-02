@@ -4,8 +4,8 @@ import sys
 import errno
 import traceback
 from gevent import socket
-from gevent import core
 from gevent.baseserver import BaseServer
+from gevent.hub import get_hub
 
 
 __all__ = ['StreamServer']
@@ -88,7 +88,8 @@ class StreamServer(BaseServer):
 
     def start_accepting(self):
         if self._accept_event is None:
-            self._accept_event = core.read_event(self.socket.fileno(), self._do_accept, persist=True)
+            self._accept_event = get_hub().reactor.read_event(self.socket.fileno(), persist=True)
+            self._accept_event.add(None, self._do_accept)
 
     def _start_accepting_if_started(self, _event=None):
         if self.started:
@@ -139,7 +140,7 @@ class StreamServer(BaseServer):
             traceback.print_exc()
         if self.delay >= 0:
             self.stop_accepting()
-            self._start_accepting_timer = core.timer(self.delay, self.start_accepting)
+            self._start_accepting_timer = get_hub().reactor.timer(self.delay, self._start_accepting_if_started)
             self.delay = min(self.max_delay, self.delay * 2)
 
     def is_fatal_error(self, ex):

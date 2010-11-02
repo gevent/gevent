@@ -75,7 +75,6 @@ __imports__ = ['error',
 
 import sys
 import time
-import random
 import re
 
 is_windows = sys.platform == 'win32'
@@ -123,18 +122,9 @@ for name in __socket__.__all__:
 
 del name, value
 
-if 'inet_ntop' not in globals():
-    # inet_ntop is required by our implementation of getaddrinfo
-
-    def inet_ntop(address_family, packed_ip):
-        if address_family == AF_INET:
-            return inet_ntoa(packed_ip)
-        # XXX: ipv6 won't work on windows
-        raise NotImplementedError('inet_ntop() is not available on this platform')
-
 # XXX: implement blocking functions that are not yet implemented
 
-from gevent.hub import getcurrent, get_hub
+from gevent.hub import getcurrent, get_hub, Waiter
 from gevent import core
 
 _ip4_re = re.compile('^[\d\.]+$')
@@ -148,6 +138,24 @@ def _wait_helper(ev, evtype):
         current.switch(ev)
 
 
+def wait(event, timeout=None, timeout_exc=timeout('timed out')):
+    """Block the current greenlet until *event* is ready.
+
+    If *timeout* is non-negative, then *timeout_exc* is raised after *timeout* second has passed.
+    By default *timeout_exc* is ``socket.timeout('timed out')``.
+
+    If :func:`cancel_wait` is called, raise ``socket.error(EBADF, 'File descriptor was closed in another greenlet')``.
+    """
+    assert event.arg is None, 'This event is already used by another greenlet: %r' % (event.arg, )
+    event.add(timeout, _wait_helper, (getcurrent(), timeout_exc))
+    try:
+        switch_result = get_hub().switch()
+        assert event is switch_result, 'Invalid switch into wait(%r): %r' % (event, switch_result, )
+    finally:
+        event.cancel()
+        event.arg = None
+
+
 def wait_read(fileno, timeout=None, timeout_exc=timeout('timed out'), event=None):
     """Block the current greenlet until *fileno* is ready to read.
 
@@ -157,18 +165,8 @@ def wait_read(fileno, timeout=None, timeout_exc=timeout('timed out'), event=None
     If :func:`cancel_wait` is called, raise ``socket.error(EBADF, 'File descriptor was closed in another greenlet')``.
     """
     if event is None:
-        event = core.read_event(fileno, _wait_helper, timeout, (getcurrent(), timeout_exc))
-    else:
-        assert event.callback == _wait_helper, event.callback
-        assert event.arg is None, 'This event is already used by another greenlet: %r' % (event.arg, )
-        event.arg = (getcurrent(), timeout_exc)
-        event.add(timeout)
-    try:
-        switch_result = get_hub().switch()
-        assert event is switch_result, 'Invalid switch into wait_read(): %r' % (switch_result, )
-    finally:
-        event.cancel()
-        event.arg = None
+        event = get_hub().reactor.read_event(fileno)
+    return wait(event, timeout, timeout_exc)
 
 
 def wait_write(fileno, timeout=None, timeout_exc=timeout('timed out'), event=None):
@@ -180,18 +178,8 @@ def wait_write(fileno, timeout=None, timeout_exc=timeout('timed out'), event=Non
     If :func:`cancel_wait` is called, raise ``socket.error(EBADF, 'File descriptor was closed in another greenlet')``.
     """
     if event is None:
-        event = core.write_event(fileno, _wait_helper, timeout, (getcurrent(), timeout_exc))
-    else:
-        assert event.callback == _wait_helper, event.callback
-        assert event.arg is None, 'This event is already used by another greenlet: %r' % (event.arg, )
-        event.arg = (getcurrent(), timeout_exc)
-        event.add(timeout)
-    try:
-        switch_result = get_hub().switch()
-        assert event is switch_result, 'Invalid switch into wait_write(): %r' % (switch_result, )
-    finally:
-        event.arg = None
-        event.cancel()
+        event = get_hub().reactor.write_event(fileno)
+    return wait(event, timeout, timeout_exc)
 
 
 def wait_readwrite(fileno, timeout=None, timeout_exc=timeout('timed out'), event=None):
@@ -203,18 +191,8 @@ def wait_readwrite(fileno, timeout=None, timeout_exc=timeout('timed out'), event
     If :func:`cancel_wait` is called, raise ``socket.error(EBADF, 'File descriptor was closed in another greenlet')``.
     """
     if event is None:
-        event = core.readwrite_event(fileno, _wait_helper, timeout, (getcurrent(), timeout_exc))
-    else:
-        assert event.callback == _wait_helper, event.callback
-        assert event.arg is None, 'This event is already used by another greenlet: %r' % (event.arg, )
-        event.arg = (getcurrent(), timeout_exc)
-        event.add(timeout)
-    try:
-        switch_result = get_hub().switch()
-        assert event is switch_result, 'Invalid switch into wait_readwrite(): %r' % (switch_result, )
-    finally:
-        event.arg = None
-        event.cancel()
+        event = get_hub().reactor.readwrite_event(fileno)
+    return wait(event, timeout, timeout_exc)
 
 
 def __cancel_wait(event):
@@ -225,7 +203,7 @@ def __cancel_wait(event):
 
 
 def cancel_wait(event):
-    core.active_event(__cancel_wait, event)
+    get_hub().reactor.active_event(__cancel_wait, event)
 
 
 if sys.version_info[:2] <= (2, 4):
@@ -290,9 +268,10 @@ class socket(object):
                 self._sock = _sock
                 self.timeout = _socket.getdefaulttimeout()
         self._sock.setblocking(0)
-        self._read_event = core.event(core.EV_READ, self.fileno(), _wait_helper)
-        self._write_event = core.event(core.EV_WRITE, self.fileno(), _wait_helper)
-        self._rw_event = core.event(core.EV_READ | core.EV_WRITE, self.fileno(), _wait_helper)
+        reactor = get_hub().reactor
+        self._read_event = reactor.read_event(self.fileno())
+        self._write_event = reactor.write_event(self.fileno())
+        self._rw_event = reactor.readwrite_event(self.fileno())
 
     def __repr__(self):
         return '<%s at %s %s>' % (type(self).__name__, hex(id(self)), self._formatinfo())
@@ -334,7 +313,7 @@ class socket(object):
                 if ex[0] != EWOULDBLOCK or self.timeout == 0.0:
                     raise
                 sys.exc_clear()
-            wait_read(sock.fileno(), timeout=self.timeout, event=self._read_event)
+            wait(self._read_event, timeout=self.timeout)
         return socket(_sock=client_socket), address
 
     def close(self):
@@ -361,7 +340,7 @@ class socket(object):
                 if not result or result == EISCONN:
                     break
                 elif (result in (EWOULDBLOCK, EINPROGRESS, EALREADY)) or (result == EINVAL and is_windows):
-                    wait_readwrite(sock.fileno(), event=self._rw_event)
+                    wait(self._rw_event)
                 else:
                     raise error(result, strerror(result))
         else:
@@ -377,7 +356,7 @@ class socket(object):
                     timeleft = end - time.time()
                     if timeleft <= 0:
                         raise timeout('timed out')
-                    wait_readwrite(sock.fileno(), timeout=timeleft, event=self._rw_event)
+                    wait(self._rw_event, timeout=timeleft)
                 else:
                     raise error(result, strerror(result))
 
@@ -417,7 +396,7 @@ class socket(object):
                 # QQQ without clearing exc_info test__refcount.test_clean_exit fails
                 sys.exc_clear()
             try:
-                wait_read(sock.fileno(), timeout=self.timeout, event=self._read_event)
+                wait(self._read_event, timeout=self.timeout)
             except error, ex:
                 if ex[0] == EBADF:
                     return ''
@@ -432,7 +411,7 @@ class socket(object):
                 if ex[0] != EWOULDBLOCK or self.timeout == 0.0:
                     raise
                 sys.exc_clear()
-            wait_read(sock.fileno(), timeout=self.timeout, event=self._read_event)
+            wait(self._read_event, timeout=self.timeout)
 
     def recvfrom_into(self, *args):
         sock = self._sock
@@ -443,7 +422,7 @@ class socket(object):
                 if ex[0] != EWOULDBLOCK or self.timeout == 0.0:
                     raise
                 sys.exc_clear()
-            wait_read(sock.fileno(), timeout=self.timeout, event=self._read_event)
+            wait(self._read_event, timeout=self.timeout)
 
     def recv_into(self, *args):
         sock = self._sock
@@ -457,7 +436,7 @@ class socket(object):
                     raise
                 sys.exc_clear()
             try:
-                wait_read(sock.fileno(), timeout=self.timeout, event=self._read_event)
+                wait(self._read_event, timeout=self.timeout)
             except error, ex:
                 if ex[0] == EBADF:
                     return 0
@@ -474,7 +453,7 @@ class socket(object):
                 raise
             sys.exc_clear()
             try:
-                wait_write(sock.fileno(), timeout=timeout, event=self._write_event)
+                wait(self._write_event, timeout=timeout)
             except error, ex:
                 if ex[0] == EBADF:
                     return 0
@@ -515,7 +494,7 @@ class socket(object):
             if ex[0] != EWOULDBLOCK or timeout == 0.0:
                 raise
             sys.exc_clear()
-            wait_write(sock.fileno(), timeout=self.timeout, event=self._write_event)
+            wait(self._write_event, timeout=self.timeout)
             try:
                 return sock.sendto(*args)
             except error, ex2:
@@ -640,100 +619,39 @@ def create_connection(address, timeout=_GLOBAL_DEFAULT_TIMEOUT, source_address=N
     raise msg
 
 
-try:
-    from gevent.dns import resolve_ipv4, resolve_ipv6
-except Exception:
-    import traceback
-    traceback.print_exc()
-    __implements__.remove('gethostbyname')
-    __implements__.remove('getaddrinfo')
-else:
-
-    def gethostbyname(hostname):
-        """:func:`socket.gethostbyname` implemented using :mod:`gevent.dns`.
-
-        Differs in the following ways:
-
-        * raises :class:`DNSError` (a subclass of :class:`socket.gaierror`) with dns error
-          codes instead of standard socket error codes
-        * does not support ``/etc/hosts`` but calls the original :func:`socket.gethostbyname`
-          if *hostname* has no dots
-        * does not iterate through all addresses, instead picks a random one each time
-        """
-        # TODO: this is supposed to iterate through all the addresses
-        # could use a global dict(hostname, iter)
-        # - fix these nasty hacks for localhost, ips, etc.
-        if not isinstance(hostname, str) or '.' not in hostname:
-            return _socket.gethostbyname(hostname)
-        if _ip4_re.match(hostname):
-            return hostname
-        if hostname == _socket.gethostname():
-            return _socket.gethostbyname(hostname)
-        _ttl, addrs = resolve_ipv4(hostname)
-        return inet_ntoa(random.choice(addrs))
-
-    def getaddrinfo(host, port, *args, **kwargs):
-        """*Some* approximation of :func:`socket.getaddrinfo` implemented using :mod:`gevent.dns`.
-
-        If *host* is not a string, does not has any dots or is a numeric IP address, then
-        the standard :func:`socket.getaddrinfo` is called.
-
-        Otherwise, calls either :func:`resolve_ipv4` or :func:`resolve_ipv6` and
-        formats the result the way :func:`socket.getaddrinfo` does it.
-
-        Differs in the following ways:
-
-        * raises :class:`DNSError` (a subclass of :class:`gaierror`) with libevent-dns error
-          codes instead of standard socket error codes
-        * IPv6 support is untested.
-        * AF_UNSPEC only tries IPv4
-        * only supports TCP, UDP, IP protocols
-        * port must be numeric, does not support string service names. see socket.getservbyname
-        * *flags* argument is ignored
-
-        Additionally, supports *evdns_flags* keyword arguments (default ``0``) that is passed
-        to :mod:`dns` functions.
-        """
-        family, socktype, proto, _flags = args + (None, ) * (4 - len(args))
-        if isinstance(host, unicode):
-            host = host.encode('idna')
-        if not isinstance(host, str) or '.' not in host or _ip4_re.match(host):
-            return _socket.getaddrinfo(host, port, *args)
-
-        evdns_flags = kwargs.pop('evdns_flags', 0)
-        if kwargs:
-            raise TypeError('Unsupported keyword arguments: %s' % (kwargs.keys(), ))
-
-        if family in (None, AF_INET, AF_UNSPEC):
-            family = AF_INET
-            # TODO: AF_UNSPEC means try both AF_INET and AF_INET6
-            _ttl, addrs = resolve_ipv4(host, evdns_flags)
-        elif family == AF_INET6:
-            _ttl, addrs = resolve_ipv6(host, evdns_flags)
-        else:
-            raise NotImplementedError('family is not among AF_UNSPEC/AF_INET/AF_INET6: %r' % (family, ))
-
-        socktype_proto = [(SOCK_STREAM, 6), (SOCK_DGRAM, 17), (SOCK_RAW, 0)]
-        if socktype:
-            socktype_proto = [(x, y) for (x, y) in socktype_proto if socktype == x]
-        if proto:
-            socktype_proto = [(x, y) for (x, y) in socktype_proto if proto == y]
-
-        result = []
-        for addr in addrs:
-            for socktype, proto in socktype_proto:
-                result.append((family, socktype, proto, '', (inet_ntop(family, addr), port)))
-        return result
-        # TODO libevent2 has getaddrinfo that is probably better than the hack above; should wrap that.
+def gethostbyname(host):
+    # artificial limitations that regular gethostbyname has
+    if host is None:
+        raise TypeError('gethostbyname() argument must be string')
+    host = host.encode('ascii')
+    res = getaddrinfo(host, 0)
+    if res:
+        return res[0][4][0]
 
 
-_have_ssl = False
+def getaddrinfo(host, port, family=0, socktype=0, proto=0, flags=0):
+    dns = get_hub().reactor.dns
+    if dns is None:
+        return _socket.getaddrinfo(host, port, family, socktype, proto, flags)
+    else:
+        waiter = Waiter()
+        request = dns.getaddrinfo(waiter.switch_args, host, port, family, socktype, proto, flags)
+        try:
+            result, request_error, _arg = waiter.get()
+        except:
+            if request is not None:
+                request.cancel()
+            raise
+        if request_error is None:
+            return result
+        raise request_error
+
 
 try:
     from gevent.ssl import sslwrap_simple as ssl, SSLError as sslerror, SSLSocket as SSLType
     _have_ssl = True
 except ImportError:
-    pass
+    _have_ssl = False
 
 
 if sys.version_info[:2] <= (2, 5) and _have_ssl:
