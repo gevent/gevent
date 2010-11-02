@@ -168,11 +168,6 @@ def get_libevent_version():
     return libevent_version
 
 
-def get_libevent_method():
-    from gevent import core
-    return core.get_method()
-
-
 def get_tempnam():
     import warnings
     warnings.filterwarnings('ignore', 'tempnam is a potential security risk to your program')
@@ -310,7 +305,6 @@ def spawn_subprocesses(options, args):
               'python': '%s.%s.%s' % sys.version_info[:3],
               'changeset': get_changeset(),
               'libevent_version': get_libevent_version(),
-              'libevent_method': get_libevent_method(),
               'uname': platform.uname()[0],
               'retcode': 'TIMEOUT'}
     success = True
