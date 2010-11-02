@@ -2,7 +2,7 @@ import sys
 import os
 import subprocess
 import signal
-from subprocess import *
+from subprocess import PIPE, STDOUT
 
 
 class Popen(subprocess.Popen):
@@ -13,9 +13,9 @@ class Popen(subprocess.Popen):
         if hasattr(subprocess.Popen, 'send_signal'):
             try:
                 return subprocess.Popen.send_signal(self, sig)
-            except Exception:
+            except Exception, ex:
                 sys.stderr.write('send_signal(%s, %s) failed: %s\n' % (self.pid, sig, ex))
-                self.external_kill()
+                self.external_kill(str(ex))
         else:
             if hasattr(os, 'kill'):
                 sys.stderr.write('Sending signal %s to %s\n' % (sig, self.pid))
@@ -41,9 +41,9 @@ class Popen(subprocess.Popen):
         sig = getattr(signal, 'SIGINT', 2)
         return self.send_signal(sig)
 
-    def external_kill(self):
+    def external_kill(self, reason=''):
         if sys.platform == 'win32':
-            sys.stderr.write('Killing %s: %s\n' % (self.pid, ex))
+            sys.stderr.write('Killing %s: %s\n' % (self.pid, reason))
             os.system('taskkill /f /pid %s' % self.pid)
         else:
             sys.stderr.write('Cannot kill on this platform. Please kill %s\n' % self.pid)
