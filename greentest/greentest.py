@@ -325,7 +325,7 @@ class ExpectedException(Exception):
     """An exception whose traceback should be ignored"""
 
 
-def walk_modules(basedir=None, modpath=None):
+def walk_modules(basedir=None, modpath=None, include_so=False):
     if basedir is None:
         basedir = os.path.dirname(gevent.__file__)
         if modpath is None:
@@ -342,6 +342,10 @@ def walk_modules(basedir=None, modpath=None):
                 for p, m in walk_modules(path, modpath + fn + "."):
                     yield p, m
             continue
-        if not fn.endswith('.py') or fn in ['__init__.py', 'core.py']:
-            continue
-        yield path, modpath + fn[:-3]
+        if fn.endswith('.py') and fn not in ['__init__.py', 'core.py']:
+            yield path, modpath + fn[:-3]
+        elif include_so and fn.endswith('.so'):
+            if fn.endswith('_d.so'):
+                yield path, modpath + fn[:-5]
+            else:
+                yield path, modpath + fn[:-3]
