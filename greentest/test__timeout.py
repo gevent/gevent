@@ -40,6 +40,13 @@ class Test(greentest.TestCase):
         timeout.start()
         self._test(timeout)
 
+    def test_false(self):
+        timeout = gevent.Timeout(0.01, False)
+        timeout.start()
+        self._test(timeout)
+        timeout.start()
+        self._test(timeout)
+
     def test_cancel(self):
         timeout = gevent.Timeout(0.01)
         timeout.start()
