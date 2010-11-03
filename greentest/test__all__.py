@@ -158,7 +158,7 @@ are missing from %r:
         self.check_extensions_actually_extend()
         self.check_completeness()
 
-    for path, modname in walk_modules():
+    for path, modname in walk_modules(include_so=True):
         modname = modname.replace('gevent.', '')
         if modname not in SKIP:
             exec '''def test_%s(self): self._test("gevent.%s")''' % (modname, modname)
