@@ -270,7 +270,7 @@ cdef class evdns_base:
         Py_INCREF(param)
         cdef void* c_request = levent.evdns_getaddrinfo(self._ptr, nodename, servname, &hints, __getaddrinfo_handler, <void*>param)
         if c_request:
-            request = getaddrinfo_request(self.base, <size_t>c_request)
+            request = getaddrinfo_request(<size_t>c_request)
             param.append(request)
             return request
 
@@ -290,11 +290,13 @@ cdef void __getaddrinfo_handler(int code, levent.evutil_addrinfo* res, void* c_p
         else:
             callback, arg, request = param
 
-        if request is not None:
-            if request.base is None:  # cancelled?
-                request.detach()
-                return
-            request.detach()
+        if code == levent.EVUTIL_EAI_CANCEL:
+            return
+
+        if request is not None and not request._ptr:
+            return
+
+        request.detach()
 
         if code:
             callback(None, gaierror(code, get_gaierror(code)), arg)
@@ -323,11 +325,9 @@ cdef void __getaddrinfo_handler(int code, levent.evutil_addrinfo* res, void* c_p
 
 cdef class getaddrinfo_request:
 
-    cdef public event_base base
     cdef void* _ptr
 
-    def __init__(self, event_base base, size_t ptr=0):
-        self.base = base
+    def __init__(self, size_t ptr=0):
         self._ptr = <void*>ptr
 
     property ptr:
@@ -339,30 +339,13 @@ cdef class getaddrinfo_request:
         return '<%s ptr=%x>' % (self.__class__.__name__, self.ptr)
 
     def detach(self):
-        self.base = None
         self._ptr = NULL
 
-    def _cancel(self):
+    def cancel(self):
         cdef void* ptr = self._ptr
         if ptr:
             self._ptr = NULL
-            # self.base is already None
             levent.evdns_getaddrinfo_cancel(ptr)
-
-    def cancel(self):
-        if self._ptr and self.base is not None:
-            # cannot just all evdns_getaddrinfo_cancel here, because it might calls the user's callback immediateally
-            # and we only want to call the callbacks in the hub
-            self.base.active_event(self._cancel)
-            self.base = None
-            # setting base to None to let __getaddrinfo_handler figure out that the
-            # request was cancelled, even if _cancel was not executed yet;
-            # also to make sure that following up calls to cancel has not effect
-
-    @property
-    def pending(self):
-        if self._ptr:
-            return self.base is not None
 
 
 cdef void __event_handler(int fd, short evtype, void *arg) with gil:
