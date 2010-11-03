@@ -278,7 +278,7 @@ cdef class evdns_base:
 cdef void __getaddrinfo_handler(int code, levent.evutil_addrinfo* res, void* c_param):
     cdef object callback
     cdef object arg
-    cdef object request = None
+    cdef object request
     cdef object param = <object>c_param
     Py_DECREF(param)
     cdef list result
@@ -286,6 +286,7 @@ cdef void __getaddrinfo_handler(int code, levent.evutil_addrinfo* res, void* c_p
     try:
         if len(param) == 2:
             callback, arg = param
+            request = None
         else:
             callback, arg, request = param
 
