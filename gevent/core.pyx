@@ -343,9 +343,11 @@ cdef class getaddrinfo_request:
         self._ptr = NULL
 
     def _cancel(self):
-        if self._ptr and self.base is not None:
-            levent.evdns_getaddrinfo_cancel(self._ptr)
-            # getaddrinfo_handler will be called immediatelly, with EVUTIL_EAI_CANCEL argument
+        cdef void* ptr = self._ptr
+        if ptr:
+            self._ptr = NULL
+            # self.base is already None
+            levent.evdns_getaddrinfo_cancel(ptr)
 
     def cancel(self):
         if self._ptr and self.base is not None:
