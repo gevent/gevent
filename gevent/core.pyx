@@ -293,10 +293,10 @@ cdef void __getaddrinfo_handler(int code, levent.evutil_addrinfo* res, void* c_p
         if code == levent.EVUTIL_EAI_CANCEL:
             return
 
-        if request is not None and not request._ptr:
-            return
-
-        request.detach()
+        if request is not None:
+            if not request.ptr:
+                return
+            request.detach()
 
         if code:
             callback(None, gaierror(code, get_gaierror(code)), arg)
