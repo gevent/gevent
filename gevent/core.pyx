@@ -351,8 +351,13 @@ cdef class getaddrinfo_request:
 
     def cancel(self):
         if self._ptr and self.base is not None:
+            # cannot just all evdns_getaddrinfo_cancel here, because it might calls the user's callback immediateally
+            # and we only want to call the callbacks in the hub
             self.base.active_event(self._cancel)
             self.base = None
+            # setting base to None to let __getaddrinfo_handler figure out that the
+            # request was cancelled, even if _cancel was not executed yet;
+            # also to make sure that following up calls to cancel has not effect
 
     @property
     def pending(self):
