@@ -213,7 +213,11 @@ class TestInterrupted(greentest.GenericWaitTestCase):
 
     def wait(self, timeout):
         with gevent.Timeout(timeout, False):
-            return getaddrinfo('www.gevent.org', 'http')
+            for index in range(1000):
+                try:
+                    getaddrinfo('www.a%s.com' % index, 'http')
+                except gaierror:
+                    pass
 
 
 if __name__ == '__main__':
