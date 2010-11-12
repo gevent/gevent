@@ -4,6 +4,12 @@
 /* This code is lifted from Python 2.7 */
 #include "Python.h"
 
+/* ubuntu 10.10 has HAVE_BLUETOOTH_* defined, but doesn't have the headers installed */
+#ifndef USE_BLUETOOTH
+#undef HAVE_BLUETOOTH_H
+#undef HAVE_BLUETOOTH_BLUETOOTH_H
+#endif
+
 /* XXX This is a terrible mess of platform-dependent preprocessor hacks.
    I hope some day someone can clean this up please... */
 
