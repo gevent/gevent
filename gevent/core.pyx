@@ -30,6 +30,11 @@ from pprint import pformat
 import weakref
 
 cimport levent
+EV_TIMEOUT = levent.EV_TIMEOUT
+EV_READ = levent.EV_READ
+EV_WRITE = levent.EV_WRITE
+EV_SIGNAL = levent.EV_SIGNAL
+EV_PERSIST = levent.EV_PERSIST
 
 import _socket
 gaierror = _socket.gaierror
