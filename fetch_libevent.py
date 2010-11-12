@@ -55,6 +55,12 @@ def download_and_extract(url, digest):
 
 if __name__ == '__main__':
     os.chdir(os.path.dirname(os.path.abspath(__file__)))
-    download_and_extract(
-        "http://monkey.org/~provos/libevent-1.4.14b-stable.tar.gz",
-        "a00e037e4d3f9e4fe9893e8a2d27918c")
+    if "-1" in sys.argv:
+        download_and_extract(
+            "http://monkey.org/~provos/libevent-1.4.14b-stable.tar.gz",
+            "a00e037e4d3f9e4fe9893e8a2d27918c")
+    else:
+        download_and_extract(
+            "http://monkey.org/~provos/libevent-2.0.8-rc.tar.gz",
+            "828846056a9623dd38aae30e37c5d2e7")
+
