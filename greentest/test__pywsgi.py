@@ -22,7 +22,6 @@ monkey.patch_all(thread=False)
 
 import cgi
 import os
-import urllib2
 import sys
 try:
     from wsgiref.validate import validator
@@ -686,19 +685,6 @@ class BadRequestTests(TestCase):
         fd = self.connect().makefile(bufsize=1)
         fd.write('GET / HTTP/1.1\r\nHost: localhost\r\nContent-Length: %s\r\n\r\n' % self.content_length)
         read_http(fd, code=(200, 400), version=None)
-
-
-class HTTPRequest(urllib2.Request):
-    """Hack urllib2.Request to support PUT and DELETE methods."""
-
-    def __init__(self, url, method="GET", data=None, headers={},
-                 origin_req_host=None, unverifiable=False):
-        urllib2.Request.__init__(self, url, data, headers, origin_req_host, unverifiable)
-        self.url = url
-        self.method = method
-
-    def get_method(self):
-        return self.method
 
 
 class ChunkedInputTests(TestCase):
