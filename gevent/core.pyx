@@ -289,7 +289,8 @@ cdef class evdns_base:
             return request
         raise IOError('evdns_base_resolve_ipv4 returned NULL')
 
-cdef void __getaddrinfo_handler(int code, levent.evutil_addrinfo* res, void* c_param):
+
+cdef void __getaddrinfo_handler(int code, levent.evutil_addrinfo* res, void* c_param) with gil:
     cdef object callback
     cdef object request
     cdef object param = <object>c_param
