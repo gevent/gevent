@@ -369,6 +369,17 @@ class WSGIHandler(object):
             self.response_length,
             self.time_finish - self.time_start)
 
+    def run_application(self):
+        self.result = self.application(self.environ, self.start_response)
+        for data in self.result:
+            if data:
+                self.write(data)
+        if self.status and not self.headers_sent:
+            self.write('')
+        if self.response_use_chunked:
+            self.wfile.writelines('0\r\n\r\n')
+            self.response_length += 5
+
     def handle_one_response(self):
         self.time_start = time.time()
         self.status = None
@@ -380,15 +391,7 @@ class WSGIHandler(object):
 
         try:
             try:
-                self.result = self.application(self.environ, self.start_response)
-                for data in self.result:
-                    if data:
-                        self.write(data)
-                if self.status and not self.headers_sent:
-                    self.write('')
-                if self.response_use_chunked:
-                    self.wfile.writelines('0\r\n\r\n')
-                    self.response_length += 5
+                self.run_application()
             except GreenletExit:
                 raise
             except Exception:
