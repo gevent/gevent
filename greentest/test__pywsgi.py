@@ -661,6 +661,39 @@ class TestEmptyYield(TestCase):
         self.assert_(garbage == "", "got garbage: %r" % garbage)
 
 
+class TestFirstEmptyYield(TestCase):
+
+    @staticmethod
+    def application(env, start_response):
+        start_response('200 OK', [('Content-Type', 'text/plain')])
+        yield ""
+        yield "hello"
+
+    def test_err(self):
+        fd = self.connect().makefile(bufsize=1)
+        fd.write('GET / HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n')
+        read_http(fd, body='hello', chunks=['hello'])
+
+        garbage = fd.read()
+        self.assert_(garbage == "", "got garbage: %r" % garbage)
+
+
+class TestEmptyYield304(TestCase):
+
+    @staticmethod
+    def application(env, start_response):
+        start_response('304 Not modified', [])
+        yield ""
+        yield ""
+
+    def test_err(self):
+        fd = self.connect().makefile(bufsize=1)
+        fd.write('GET / HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n')
+        read_http(fd, code=304, body='', chunks=False)
+        garbage = fd.read()
+        self.assert_(garbage == "", "got garbage: %r" % garbage)
+
+
 class TestEmptyWrite(TestEmptyYield):
 
     @staticmethod
