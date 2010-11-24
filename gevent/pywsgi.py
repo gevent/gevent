@@ -303,10 +303,6 @@ class WSGIHandler(object):
         if not self.status:
             raise AssertionError("The application did not call start_response()")
         if not self.headers_sent:
-            if hasattr(self.result, '__len__') and 'Content-Length' not in self.response_headers_list:
-                self.response_headers.append(('Content-Length', str(sum(len(chunk) for chunk in self.result))))
-                self.response_headers_list.append('Content-Length')
-
             if 'Date' not in self.response_headers_list:
                 self.response_headers.append(('Date', format_date_time(time.time())))
                 self.response_headers_list.append('Date')
@@ -318,10 +314,17 @@ class WSGIHandler(object):
             elif ('Connection', 'close') in self.response_headers:
                 self.close_connection = 1
 
-            if self.request_version != 'HTTP/1.0' and 'Content-Length' not in self.response_headers_list:
-                self.response_use_chunked = True
-                self.response_headers.append(('Transfer-Encoding', 'chunked'))
-                self.response_headers_list.append('Transfer-Encoding')
+            if self.code not in [204, 304]:
+                # the reply will include message-body; make sure we have either Content-Length or chunked
+                if 'Content-Length' not in self.response_headers_list:
+                    if hasattr(self.result, '__len__'):
+                        self.response_headers.append(('Content-Length', str(sum(len(chunk) for chunk in self.result))))
+                        self.response_headers_list.append('Content-Length')
+                    else:
+                        if self.request_version != 'HTTP/1.0':
+                            self.response_use_chunked = True
+                            self.response_headers.append(('Transfer-Encoding', 'chunked'))
+                            self.response_headers_list.append('Transfer-Encoding')
 
             towrite.append('%s %s\r\n' % (self.request_version, self.status))
             for header in self.response_headers:
@@ -349,6 +352,7 @@ class WSGIHandler(object):
             finally:
                 # Avoid dangling circular ref
                 exc_info = None
+        self.code = int(status.split(' ', 1)[0])
         self.status = status
         self.response_headers = [('-'.join([x.capitalize() for x in key.split('-')]), value) for key, value in headers]
         self.response_headers_list = [x[0] for x in self.response_headers]
