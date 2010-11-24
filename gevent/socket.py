@@ -629,22 +629,34 @@ def gethostbyname(host):
         return res[0][4][0]
 
 
+def _sync_call(function, *args):
+    waiter = Waiter()
+    request = function(waiter.switch_args, *args)
+    try:
+        result, request_error = waiter.get()
+    except:
+        if request is not None:
+            request.cancel()
+        raise
+    if request_error is None:
+        return result
+    raise request_error
+
+
 def getaddrinfo(host, port, family=0, socktype=0, proto=0, flags=0):
     dns = get_hub().reactor.dns
     if dns is None:
         return _socket.getaddrinfo(host, port, family, socktype, proto, flags)
     else:
-        waiter = Waiter()
-        request = dns.getaddrinfo(waiter.switch_args, host, port, family, socktype, proto, flags)
-        try:
-            result, request_error, _arg = waiter.get()
-        except:
-            if request is not None:
-                request.cancel()
-            raise
-        if request_error is None:
-            return result
-        raise request_error
+        return _sync_call(dns.getaddrinfo, host, port, family, socktype, proto, flags)
+
+
+def resolve_ipv4(name, flags=0):
+    dns = get_hub().reactor.dns
+    if dns is None:
+        raise IOError('dns is not available')
+    else:
+        return _sync_call(dns.resolve_ipv4, name, flags)
 
 
 try:

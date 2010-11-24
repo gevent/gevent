@@ -90,8 +90,16 @@ cdef extern from "libevent.h":
     void *evdns_base_resolve_reverse_ipv6(void *dns_base, void *, int flags, evdns_callback_type callback, void *ptr)
     void  evdns_cancel_request(void *dns_base, void *req)
     int   evdns_base_set_option(void *dns_base, char *option, char *val)
+    void* evdns_base_resolve_ipv4(void* base, char *name, int flags, evdns_callback_type callback, void *arg)
+    void* evdns_base_resolve_ipv6(void* base, char *name, int flags, evdns_callback_type callback, void *arg)
+    void* evdns_base_resolve_reverse(void* base, void *ip, int flags, evdns_callback_type callback, void *arg)
+    void* evdns_base_resolve_reverse_ipv6(void* base, void *ip, int flags, evdns_callback_type callback, void *arg)
 
     void *evdns_getaddrinfo(void *dns_base, char *nodename, char *servname, evutil_addrinfo *hints_in, evdns_getaddrinfo_cb cb, void *arg)
     void evdns_getaddrinfo_cancel(void*)
 
     int EVUTIL_EAI_CANCEL
+    int DNS_ERR_CANCEL
+    int DNS_IPv4_A
+    int DNS_IPv6_AAAA
+    int DNS_PTR

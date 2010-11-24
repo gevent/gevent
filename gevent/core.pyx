@@ -244,7 +244,7 @@ cdef class evdns_base:
             else:
                 raise IOError("evdns_base_set_option returned %r" % result)
 
-    def getaddrinfo(self, callback, host, port, int family=0, int socktype=0, int proto=0, int flags=0, arg=None):
+    def getaddrinfo(self, callback, host, port, int family=0, int socktype=0, int proto=0, int flags=0):
         # evdns and socket module do not match flags
         cdef char* nodename = NULL
         cdef char* servname = NULL
@@ -271,7 +271,7 @@ cdef class evdns_base:
         hints.ai_socktype = socktype
         hints.ai_protocol = proto
         hints.ai_flags = flags
-        cdef object param = [callback, arg]
+        cdef object param = [callback]
         Py_INCREF(param)
         cdef void* c_request = levent.evdns_getaddrinfo(self._ptr, nodename, servname, &hints, __getaddrinfo_handler, <void*>param)
         if c_request:
@@ -279,21 +279,29 @@ cdef class evdns_base:
             param.append(request)
             return request
 
+    def resolve_ipv4(self, callback, char* host, int flags = 0):
+        cdef object param = [callback]
+        cdef void* c_request = levent.evdns_base_resolve_ipv4(self._ptr, host, flags, __evdns_handler, <void*>param)
+        if c_request:
+            request = evdns_request(<size_t>c_request)
+            param.append(request)
+            Py_INCREF(param)
+            return request
+        raise IOError('evdns_base_resolve_ipv4 returned NULL')
 
 cdef void __getaddrinfo_handler(int code, levent.evutil_addrinfo* res, void* c_param):
     cdef object callback
-    cdef object arg
     cdef object request
     cdef object param = <object>c_param
     Py_DECREF(param)
     cdef list result
     cdef char* canonname
     try:
-        if len(param) == 2:
-            callback, arg = param
+        if len(param) == 1:
+            callback = param[0]
             request = None
         else:
-            callback, arg, request = param
+            callback, request = param
 
         if code == levent.EVUTIL_EAI_CANCEL:
             return
@@ -304,7 +312,7 @@ cdef void __getaddrinfo_handler(int code, levent.evutil_addrinfo* res, void* c_p
             request.detach()
 
         if code:
-            callback(None, gaierror(code, get_gaierror(code)), arg)
+            callback(None, gaierror(code, get_gaierror(code)))
         else:
             result = []
             while res:
@@ -318,7 +326,55 @@ cdef void __getaddrinfo_handler(int code, levent.evutil_addrinfo* res, void* c_p
                                canonname,
                                makesockaddr(-1, res.ai_addr, res.ai_addrlen, res.ai_protocol)))
                 res = res.ai_next
-            callback(result, None, arg)
+            callback(result, None)
+    except:
+        traceback.print_exc()
+        try:
+            sys.stderr.write('Failed to execute callback %r\n\n' % (callback, ))
+        except:
+            traceback.print_exc()
+        sys.exc_clear()
+
+
+cdef void __evdns_handler(int code, char typ, int count, int ttl, void *addrs, void *c_param) with gil:
+    cdef object callback
+    cdef object request
+    cdef object param = <object>c_param
+    Py_DECREF(param)
+    cdef list result
+    try:
+        if len(param) == 1:
+            callback = param[0]
+            request = None
+        else:
+            callback, request = param
+
+        if code == levent.DNS_ERR_CANCEL:
+            return
+
+        if request is not None:
+            if not request.ptr:
+                return
+            request.detach()
+
+        if type == levent.DNS_IPv4_A:
+            result = []
+            for i from 0 <= i < count:
+                addr = PyString_FromStringAndSize(&(<char *>addrs)[i*4], 4)
+                result.append(addr)
+        elif type == levent.DNS_IPv6_AAAA:
+            result = []
+            for i from 0 <= i < count:
+                addr = PyString_FromStringAndSize(&(<char *>addrs)[i*16], 16)
+                result.append(addr)
+        elif type == levent.DNS_PTR and count == 1:  # only 1 PTR possible
+            result = PyString_FromString((<char **>addrs)[0])
+        else:
+            result = None
+        if result is None:
+            callback(None, gaierror(-1, 'XXX convert evdns code to gaierror code'))
+        else:
+            callback((result, ttl), None)
     except:
         traceback.print_exc()
         try:
@@ -350,7 +406,34 @@ cdef class getaddrinfo_request:
         cdef void* ptr = self._ptr
         if ptr:
             self._ptr = NULL
-            levent.evdns_getaddrinfo_cancel(ptr)
+            # actually cancelling request might crash (as of libevent-2.0.8-rc)
+            #levent.evdns_getaddrinfo_cancel(ptr)
+
+
+cdef class evdns_request:
+
+    cdef void* _ptr
+
+    def __init__(self, size_t ptr=0):
+        self._ptr = <void*>ptr
+
+    property ptr:
+
+        def __get__(self):
+            return <size_t>self._ptr
+
+    def __repr__(self):
+        return '%s(%x)' % (self.__class__.__name__, self.ptr)
+
+    def detach(self):
+        self._ptr = NULL
+
+    def cancel(self):
+        cdef void* ptr = self._ptr
+        if ptr:
+            self._ptr = NULL
+            # actually cancelling request might crash (as of libevent-2.0.8-rc)
+            #levent.evdns_cancel_request(NULL, ptr)
 
 
 cdef void __event_handler(int fd, short evtype, void *arg) with gil:
