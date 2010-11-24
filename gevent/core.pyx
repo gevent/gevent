@@ -397,8 +397,8 @@ cdef class getaddrinfo_request:
         def __get__(self):
             return <size_t>self._ptr
 
-    def __str__(self):
-        return '<%s ptr=%x>' % (self.__class__.__name__, self.ptr)
+    def __repr__(self):
+        return '%s(%x)' % (self.__class__.__name__, self.ptr)
 
     def detach(self):
         self._ptr = NULL
