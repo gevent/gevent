@@ -96,11 +96,11 @@ def iread_chunks(fd):
 
 class Response(object):
 
-    def __init__(self, status_line, headers, body=None, chunks=None):
+    def __init__(self, status_line, headers):
         self.status_line = status_line
         self.headers = headers
-        self.body = body
-        self.chunks = chunks
+        self.body = None
+        self.chunks = False
         try:
             version, code, self.reason = status_line[:-2].split(' ', 2)
         except Exception:
@@ -133,16 +133,15 @@ class Response(object):
         assert self.version == version, 'Unexpected version: %r (expected %r)\n%s' % (self.version, version, self)
 
     def assertHeader(self, header, value):
-        real_value = self.headers.get(header)
+        real_value = self.headers.get(header, False)
         assert real_value == value, \
                'Unexpected header %r: %r (expected %r)\n%s' % (header, real_value, value, self)
 
     def assertBody(self, body):
-        assert self.body == body, \
-               'Unexpected body: %r (expected %r)\n%s' % (self.body, body, self)
+        assert self.body == body, 'Unexpected body: %r (expected %r)\n%s' % (self.body, body, self)
 
     @classmethod
-    def read(cls, fd, code=200, reason='default', version='1.1', body=None):
+    def read(cls, fd, code=200, reason='default', version='1.1', body=None, chunks=None, content_length=None):
         _status_line, headers = read_headers(fd)
         self = cls(_status_line, headers)
         if code is not None:
@@ -155,6 +154,10 @@ class Response(object):
             self.assertVersion(version)
         if self.code == 100:
             return self
+        if content_length is not None:
+            if isinstance(content_length, int):
+                content_length = str(content_length)
+            self.assertHeader('Content-Length', content_length)
         try:
             if 'chunked' in headers.get('Transfer-Encoding', ''):
                 if CONTENT_LENGTH in headers:
@@ -171,6 +174,8 @@ class Response(object):
             raise
         if body is not None:
             self.assertBody(body)
+        if chunks is not None:
+            assert chunks == self.chunks, (chunks, self.chunks)
         return self
 
 read_http = Response.read
@@ -326,7 +331,7 @@ class TestNoChunks(CommonTests):
         fd = self.makefile()
         fd.write('GET / HTTP/1.1\r\nHost: localhost\r\n\r\n')
         response = read_http(fd, body='hello world')
-        assert response.chunks is None, response.chunks
+        assert response.chunks is False, response.chunks
         response.assertHeader('Content-Length', '11')
 
         if not server_implements_pipeline:
@@ -334,7 +339,7 @@ class TestNoChunks(CommonTests):
 
         fd.write('GET /not-found HTTP/1.1\r\nHost: localhost\r\n\r\n')
         response = read_http(fd, code=404, reason='Not Found', body='not found')
-        assert response.chunks is None, response.chunks
+        assert response.chunks is False, response.chunks
         response.assertHeader('Content-Length', '9')
 
 
@@ -406,12 +411,12 @@ class TestChunkedApp(TestCase):
     def test_chunked_response(self):
         fd = self.makefile()
         fd.write('GET / HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n')
-        response = read_http(fd, body=self.body())
+        response = read_http(fd, body=self.body(), chunks=None)
         if server_implements_chunked:
             response.assertHeader('Transfer-Encoding', 'chunked')
             self.assertEqual(response.chunks, self.chunks)
         else:
-            response.assertHeader('Transfer-Encoding', None)
+            response.assertHeader('Transfer-Encoding', False)
             response.assertHeader('Content-Length', str(len(self.body())))
             self.assertEqual(response.chunks, None)
 
@@ -490,14 +495,14 @@ class TestUseWrite(TestCase):
         fd.write('GET /explicit-content-length HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n')
         response = read_http(fd, body=self.body + self.end)
         response.assertHeader('Content-Length', self.content_length)
-        response.assertHeader('Transfer-Encoding', None)
+        response.assertHeader('Transfer-Encoding', False)
 
     def test_no_content_length(self):
         fd = self.makefile()
         fd.write('GET /no-content-length HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n')
         response = read_http(fd, body=self.body + self.end)
         if server_implements_chunked:
-            response.assertHeader('Content-Length', None)
+            response.assertHeader('Content-Length', False)
             response.assertHeader('Transfer-Encoding', 'chunked')
         else:
             response.assertHeader('Content-Length', self.content_length)
@@ -507,7 +512,7 @@ class TestUseWrite(TestCase):
         fd.write('GET /no-content-length-twice HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n')
         response = read_http(fd, body=self.body + self.body + self.end)
         if server_implements_chunked:
-            response.assertHeader('Content-Length', None)
+            response.assertHeader('Content-Length', False)
             response.assertHeader('Transfer-Encoding', 'chunked')
             assert response.chunks == [self.body, self.body, self.end], response.chunks
         else:
@@ -557,6 +562,7 @@ class TestHttps(HttpsTestCase):
 
 
 class TestInternational(TestCase):
+    validator = None  # wsgiref.validate.IteratorWrapper([]) does not have __len__
 
     def application(self, environ, start_response):
         assert environ['PATH_INFO'] == '/\xd0\xbf\xd1\x80\xd0\xb8\xd0\xb2\xd0\xb5\xd1\x82', environ['PATH_INFO']
@@ -567,7 +573,7 @@ class TestInternational(TestCase):
     def test(self):
         sock = self.connect()
         sock.sendall('GET /%D0%BF%D1%80%D0%B8%D0%B2%D0%B5%D1%82?%D0%B2%D0%BE%D0%BF%D1%80%D0%BE%D1%81=%D0%BE%D1%82%D0%B2%D0%B5%D1%82 HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n')
-        read_http(sock.makefile(), reason='PASSED')
+        read_http(sock.makefile(), reason='PASSED', chunks=False, body='', content_length=0)
 
 
 class TestInputReadline(TestCase):
@@ -649,14 +655,14 @@ class TestEmptyYield(TestCase):
     def test_err(self):
         fd = self.connect().makefile(bufsize=1)
         fd.write('GET / HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n')
-        st, h, body = read_http(fd)
-        assert body == ""
+        read_http(fd, body='', chunks=[])
 
         garbage = fd.read()
         self.assert_(garbage == "", "got garbage: %r" % garbage)
 
 
 class TestEmptyWrite(TestEmptyYield):
+
     @staticmethod
     def application(env, start_response):
         write = start_response('200 OK', [('Content-Type', 'text/plain')])
