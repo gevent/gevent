@@ -368,13 +368,20 @@ class WSGIHandler(object):
 
     def format_request(self):
         now = datetime.now().replace(microsecond=0)
-        return '%s - - [%s] "%s" %s %s %.6f' % (
+        if self.time_finish:
+            delta = '%.6f' % (self.time_finish - self.time_start)
+            length = self.response_length
+        else:
+            delta = '-'
+            if not self.response_length:
+                length = '-'
+        return '%s - - [%s] "%s" %s %s %s' % (
             self.client_address[0],
             now,
             self.requestline,
             (self.status or '000').split()[0],
-            self.response_length,
-            self.time_finish - self.time_start)
+            length,
+            delta)
 
     def run_application(self):
         self.result = self.application(self.environ, self.start_response)
