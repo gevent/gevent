@@ -173,8 +173,11 @@ class WSGIHandler(object):
                 self.log_request()
                 break
         finally:
-            self.socket._sock.close()  # do not rely on garbage collection
-            self.socket.close()
+            try:
+                self.socket._sock.close()  # do not rely on garbage collection
+                self.socket.close()
+            except socket.error:
+                pass
             self.__dict__.pop('socket', None)
             self.__dict__.pop('rfile', None)
             self.__dict__.pop('wfile', None)
