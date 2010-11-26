@@ -313,9 +313,9 @@ class WSGIHandler(object):
             if self.request_version == 'HTTP/1.0' and 'Connection' not in self.response_headers_list:
                 self.response_headers.append(('Connection', 'close'))
                 self.response_headers_list.append('Connection')
-                self.close_connection = 1
+                self.close_connection = True
             elif ('Connection', 'close') in self.response_headers:
-                self.close_connection = 1
+                self.close_connection = True
 
             if self.code not in [204, 304]:
                 # the reply will include message-body; make sure we have either Content-Length or chunked
