@@ -383,8 +383,7 @@ class WSGIHandler(object):
             length,
             delta)
 
-    def run_application(self):
-        self.result = self.application(self.environ, self.start_response)
+    def process_result(self):
         for data in self.result:
             if data:
                 self.write(data)
@@ -393,6 +392,10 @@ class WSGIHandler(object):
         if self.response_use_chunked:
             self.wfile.writelines('0\r\n\r\n')
             self.response_length += 5
+
+    def run_application(self):
+        self.result = self.application(self.environ, self.start_response)
+        self.process_result()
 
     def handle_one_response(self):
         self.time_start = time.time()
