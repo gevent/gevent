@@ -158,7 +158,7 @@ class WSGIHandler(object):
 
     def handle(self):
         try:
-            while True:
+            while self.socket is not None:
                 self.time_start = time.time()
                 self.time_finish = 0
                 result = self.handle_one_request()
@@ -173,11 +173,12 @@ class WSGIHandler(object):
                 self.log_request()
                 break
         finally:
-            try:
-                self.socket._sock.close()  # do not rely on garbage collection
-                self.socket.close()
-            except socket.error:
-                pass
+            if self.socket is not None:
+                try:
+                    self.socket._sock.close()  # do not rely on garbage collection
+                    self.socket.close()
+                except socket.error:
+                    pass
             self.__dict__.pop('socket', None)
             self.__dict__.pop('rfile', None)
             self.__dict__.pop('wfile', None)
