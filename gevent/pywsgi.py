@@ -432,7 +432,8 @@ class WSGIHandler(object):
                 self.result.close()
             self.wsgi_input._discard()
             self.time_finish = time.time()
-            self.log_request()
+            if self.socket is not None:
+                self.log_request()
 
     def get_environ(self):
         env = self.server.get_environ()
