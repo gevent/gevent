@@ -117,6 +117,7 @@ class WSGIHandler(object):
                     if hasattr(result, 'close'):
                         result.close()
             except GreenletExit:
+                self._reply500()
                 raise
             except:
                 traceback.print_exc()
@@ -125,13 +126,16 @@ class WSGIHandler(object):
                                      (self.server, self.request, self.server.application))
                 except Exception:
                     pass
-                # do not call self.end so that core.http replies with 500
-                self = None
-                return
+                self._reply500()
         finally:
             sys.exc_clear()
             if self is not None and self.code is not None:
                 self.end(env)
+
+    def _reply500(self):
+        self.reason = None
+        self.start_response('500 Internal Server Error', [('Content-Type', 'text/plain')])
+        self.write('Internal Server Error')
 
 
 class WSGIServer(HTTPServer):
