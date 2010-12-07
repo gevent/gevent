@@ -922,6 +922,27 @@ class TestLeakInput(TestCase):
         self._leak_environ.pop('_leak')
 
 
+class TestInvalidEnviron(TestCase):
+    validator = None
+    # check that WSGIServer does not insert any default values for CONTENT_LENGTH
+
+    def application(self, environ, start_response):
+        for key, value in environ.items():
+            if key in ('CONTENT_LENGTH', 'CONTENT_TYPE') or key.startswith('HTTP_'):
+                if key != 'HTTP_HOST':
+                    raise AssertionError('Unexpected environment variable: %s=%r' % (key, value))
+        start_response('200 OK', [])
+        return []
+
+    def test(self):
+        fd = self.makefile()
+        fd.write('GET / HTTP/1.0\r\nHost: localhost\r\n\r\n')
+        read_http(fd, version='1.0')
+        fd = self.makefile()
+        fd.write('GET / HTTP/1.1\r\nHost: localhost\r\n\r\n')
+        read_http(fd)
+
+
 del CommonTests
 
 if __name__ == '__main__':
