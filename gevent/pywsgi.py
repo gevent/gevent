@@ -447,9 +447,7 @@ class WSGIHandler(object):
         env['PATH_INFO'] = unquote(path)
         env['QUERY_STRING'] = query
 
-        if self.headers.typeheader is None:
-            env['CONTENT_TYPE'] = self.headers.type
-        else:
+        if self.headers.typeheader is not None:
             env['CONTENT_TYPE'] = self.headers.typeheader
 
         length = self.headers.getheader('content-length')
