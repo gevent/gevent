@@ -207,7 +207,7 @@ class WSGIHandler(object):
                 return
             self.request_version = "HTTP/0.9"
         else:
-            self.log_error('Invalid GET method: %r', raw_requestline)
+            self.log_error('Invalid HTTP method: %r', raw_requestline)
             return
 
         self.headers = self.MessageClass(self.rfile, 0)
