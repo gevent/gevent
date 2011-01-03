@@ -61,6 +61,5 @@ if __name__ == '__main__':
             "a00e037e4d3f9e4fe9893e8a2d27918c")
     else:
         download_and_extract(
-            "http://monkey.org/~provos/libevent-2.0.8-rc.tar.gz",
-            "828846056a9623dd38aae30e37c5d2e7")
-
+            "https://downloads.sourceforge.net/sourceforge/levent/libevent-2.0.10-stable.tar.gz",
+            "a37401d26cbbf28185211d582741a3d4")
