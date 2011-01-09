@@ -10,6 +10,10 @@
 
 #if defined(_EVENT_NUMERIC_VERSION) && _EVENT_NUMERIC_VERSION >= 0x2000000
 
+#if _EVENT_NUMERIC_VERSION >= 0x02000900
+#define LIBEVENT_HTTP_MODERN
+#endif
+
 #include "event2/event.h"
 #include "event2/event_struct.h"
 #include "event2/event_compat.h"
