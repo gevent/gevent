@@ -24,6 +24,8 @@ class StreamServer(BaseServer):
     - ssl_version
     - ca_certs
     - suppress_ragged_eofs
+    - do_handshake_on_connect
+    - ciphers
 
     Note that although the errors in a successfully spawned handler will not affect the server or other connections,
     the errors raised by :func:`accept` and *spawn* cause the server to stop accepting for a short amount of time. The
@@ -39,13 +41,9 @@ class StreamServer(BaseServer):
     min_delay = 0.01
     max_delay = 1
 
-    _allowed_ssl_args = ('keyfile', 'certfile', 'cert_reqs', 'ssl_version', 'ca_certs', 'suppress_ragged_eofs')
-
     def __init__(self, listener, handle=None, backlog=None, spawn='default', **ssl_args):
         if ssl_args:
-            for arg in ssl_args:
-                if arg not in self._allowed_ssl_args:
-                    raise TypeError('StreamServer.__init__() got an unexpected keyword argument %r' % arg)
+            ssl_args.setdefault('server_side', True)
             from gevent.ssl import wrap_socket
             self.wrap_socket = wrap_socket
             self.ssl_args = ssl_args
@@ -148,5 +146,5 @@ class StreamServer(BaseServer):
 
     def wrap_socket_and_handle(self, client_socket, address):
         # used in case of ssl sockets
-        ssl_socket = self.wrap_socket(client_socket, server_side=True, **self.ssl_args)
+        ssl_socket = self.wrap_socket(client_socket, **self.ssl_args)
         return self.handle(ssl_socket, address)
