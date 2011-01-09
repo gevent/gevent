@@ -1,15 +1,52 @@
 __all__ += ['http_request', 'http_connection', 'http']
 
+cdef extern from *:
+    cdef void emit_ifdef "#if defined(LIBEVENT_HTTP_MODERN) //" ()
+    cdef void emit_else  "#else //" ()
+    cdef void emit_endif "#endif //" ()
+
 EVHTTP_REQUEST      = 0
 EVHTTP_RESPONSE     = 1
 
-EVHTTP_REQ_GET      = 0
-EVHTTP_REQ_POST     = 1
-EVHTTP_REQ_HEAD     = 2
-EVHTTP_REQ_PUT      = 3
-EVHTTP_REQ_DELETE   = 4
 
-HTTP_method2name = {0: 'GET', 1: 'POST', 2: 'HEAD', 3: 'PUT', 4: 'DELETE'}
+emit_ifdef()
+
+EVHTTP_REQ_GET     = 1 << 0
+EVHTTP_REQ_POST    = 1 << 1
+EVHTTP_REQ_HEAD    = 1 << 2
+EVHTTP_REQ_PUT     = 1 << 3
+EVHTTP_REQ_DELETE  = 1 << 4
+EVHTTP_REQ_OPTIONS = 1 << 5
+EVHTTP_REQ_TRACE   = 1 << 6
+EVHTTP_REQ_CONNECT = 1 << 7
+EVHTTP_REQ_PATCH   = 1 << 8
+
+HTTP_method2name = {
+    EVHTTP_REQ_GET:     "GET",
+    EVHTTP_REQ_POST:    "POST",
+    EVHTTP_REQ_HEAD:    "HEAD",
+    EVHTTP_REQ_PUT:     "PUT",
+    EVHTTP_REQ_DELETE:  "DELETE",
+    EVHTTP_REQ_OPTIONS: "OPTIONS",
+    EVHTTP_REQ_TRACE:   "TRACE",
+    EVHTTP_REQ_CONNECT: "CONNECT",
+    EVHTTP_REQ_PATCH:   "PATCH"
+}
+
+emit_else()
+
+EVHTTP_REQ_GET     = 0
+EVHTTP_REQ_POST    = 1
+EVHTTP_REQ_HEAD    = 2
+
+HTTP_method2name = {
+    EVHTTP_REQ_GET:     "GET",
+    EVHTTP_REQ_POST:    "POST",
+    EVHTTP_REQ_HEAD:    "HEAD",
+}
+
+emit_endif()
+
 
 cdef extern from *:
     ctypedef char* const_char_ptr "const char*"
