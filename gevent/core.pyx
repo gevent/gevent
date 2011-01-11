@@ -685,6 +685,7 @@ def set_exc_info(object value):
         tstate.exc_value = <void *>value
     tstate.exc_traceback = NULL
 
+
 #include "evdns.pxi"
 include "evbuffer.pxi"
 include "evhttp.pxi"
