@@ -222,7 +222,9 @@ cdef class http_request:
         while p:
             key = p.key
             value = p.value
-            result.append((key if key else None, value if value else None))
+            if key == NULL or value == NULL:
+                break
+            result.append((key.lower(), value))
             p = TAILQ_GET_NEXT(p)
         return result
 
