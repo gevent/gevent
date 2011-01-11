@@ -17,7 +17,8 @@ ANY = ANY()
 NOT_IMPLEMENTED = {
     'socket': ['CAPI', 'gethostbyaddr', 'gethostbyname_ex', 'getnameinfo'],
     'thread': ['allocate', 'exit_thread', 'interrupt_main', 'start_new'],
-    'select': ANY}
+    'select': ANY,
+    'httplib': ANY}
 
 COULD_BE_MISSING = {
     'socket': ['create_connection', 'RAND_add', 'RAND_egd', 'RAND_status']}
