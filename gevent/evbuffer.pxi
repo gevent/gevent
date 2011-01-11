@@ -104,3 +104,9 @@ cdef class buffer:
 
     def readlines(self, hint=-1):
         return list(self)
+
+    def write(self, bytes data):
+        cdef int result = evbuffer_add(self.__obj, data, len(data))
+        if result < 0:
+            raise IOError("evbuffer_add() returned %s" % result)
+        return result
