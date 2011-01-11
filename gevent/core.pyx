@@ -48,7 +48,6 @@ cdef extern from "Python.h":
     void   Py_DECREF(object o)
     object PyString_FromStringAndSize(char *v, int len)
     object PyString_FromString(char *v)
-    int    PyObject_AsCharBuffer(object obj, char **buffer, int *buffer_len)
     void   PyOS_snprintf(void*, size_t, char*, ...)
 
 cdef extern from "frameobject.h":
