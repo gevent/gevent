@@ -78,7 +78,7 @@ cdef extern from "errno.h":
 cdef class event_base:
 
     cdef void* _ptr
-    cdef object _dns
+    cdef public object _dns
 
     def __init__(self, size_t ptr=0):
         if ptr:
