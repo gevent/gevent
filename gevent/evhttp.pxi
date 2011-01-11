@@ -120,6 +120,7 @@ cdef extern from "libevent.h":
     ctypedef void (*conn_closecb)(evhttp_connection *c, void *arg)
 
     evhttp_connection   *evhttp_connection_new(char *addr, short port)
+    evhttp_connection   *evhttp_connection_base_new(void*, void*, char *addr, short port)
     void      evhttp_connection_free(evhttp_connection *c)
     void      evhttp_connection_set_local_address(evhttp_connection *c, char *addr)
     void      evhttp_connection_set_timeout(evhttp_connection *c, int secs)
@@ -142,7 +143,7 @@ class HttpConnectionDeleted(ObjectDeleted):
     """Raised when an attribute is accessed of http_connection instance whose _obj is 0"""
 
 
-cdef class http_request:
+cdef class http_request_base:
     """Wrapper around libevent's :class:`evhttp_request` structure."""
 
     # It is possible to crash the process by using it directly.
@@ -152,17 +153,9 @@ cdef class http_request:
     cdef evhttp_request* __obj
     cdef public object _input_buffer
     cdef public object _output_buffer
-    cdef public object default_response_headers
 
-    def __init__(self, size_t _obj, object default_response_headers):
-        self.__obj = <evhttp_request*>_obj
-        self.default_response_headers = default_response_headers
-
-    def __dealloc__(self):
-        cdef evhttp_request* obj = self.__obj
-        if obj != NULL:
-            self.__obj = NULL
-            report_internal_error(obj)
+    def __init__(self, size_t obj):
+        self.__obj = <evhttp_request *>obj
 
     property _obj:
 
@@ -352,6 +345,73 @@ cdef class http_request:
             self._output_buffer = buffer(<size_t>self.__obj.output_buffer)
             return self._output_buffer
 
+    def find_input_header(self, char* key):
+        if not self.__obj:
+            raise HttpRequestDeleted
+        cdef const_char_ptr val = evhttp_find_header(self.__obj.input_headers, key)
+        if val:
+            return val
+
+    def find_output_header(self, char* key):
+        if not self.__obj:
+            raise HttpRequestDeleted
+        cdef const_char_ptr val = evhttp_find_header(self.__obj.output_headers, key)
+        if val:
+            return val
+
+    def add_input_header(self, char* key, char* value):
+        if not self.__obj:
+            raise HttpRequestDeleted
+        if evhttp_add_header(self.__obj.input_headers, key, value):
+            raise RuntimeError('Internal error in evhttp_add_header')
+
+    def add_output_header(self, char* key, char* value):
+        if not self.__obj:
+            raise HttpRequestDeleted
+        if evhttp_add_header(self.__obj.output_headers, key, value):
+            raise RuntimeError('Internal error in evhttp_add_header')
+
+    def remove_input_header(self, char* key):
+        """Return True if header was found and removed"""
+        if not self.__obj:
+            raise HttpRequestDeleted
+        return True if 0 == evhttp_remove_header(self.__obj.input_headers, key) else False
+
+    def remove_output_header(self, char* key):
+        """Return True if header was found and removed"""
+        if not self.__obj:
+            raise HttpRequestDeleted
+        return True if 0 == evhttp_remove_header(self.__obj.output_headers, key) else False
+
+    def clear_input_headers(self):
+        if not self.__obj:
+            raise HttpRequestDeleted
+        evhttp_clear_headers(self.__obj.input_headers)
+
+    def clear_output_headers(self):
+        if not self.__obj:
+            raise HttpRequestDeleted
+        evhttp_clear_headers(self.__obj.output_headers)
+
+
+cdef class http_request(http_request_base):
+    """Wrapper around libevent's :class:`evhttp_request` structure."""
+
+    # It is possible to crash the process by using it directly.
+    # prefer gevent.http and gevent.wsgi which should be safe
+
+    cdef public object default_response_headers
+
+    def __init__(self, size_t obj, object default_response_headers=[]):
+        http_request_base.__init__(self, obj)
+        self.default_response_headers = default_response_headers
+
+    def __dealloc__(self):
+        cdef evhttp_request* obj = self.__obj
+        if obj != NULL:
+            self.detach()
+            report_internal_error(obj)
+
     def _add_default_response_headers(self):
         for key, value in self.default_response_headers:
             if not self.find_output_header(key):
@@ -404,61 +464,67 @@ cdef class http_request:
         self._add_default_response_headers()
         evhttp_send_error(self.__obj, code, reason)
 
-    def find_input_header(self, char* key):
-        if not self.__obj:
-            raise HttpRequestDeleted
-        cdef const_char_ptr val = evhttp_find_header(self.__obj.input_headers, key)
-        if val:
-            return val
 
-    def find_output_header(self, char* key):
-        if not self.__obj:
-            raise HttpRequestDeleted
-        cdef const_char_ptr val = evhttp_find_header(self.__obj.output_headers, key)
-        if val:
-            return val
+cdef class http_request_client(http_request_base):
+    """Wrapper around libevent's :class:`evhttp_request` structure."""
 
-    def add_input_header(self, char* key, char* value):
-        if not self.__obj:
-            raise HttpRequestDeleted
-        if evhttp_add_header(self.__obj.input_headers, key, value):
-            raise RuntimeError('Internal error in evhttp_add_header')
+    cdef public int _owned
+    cdef public callback
+    cdef int _incref
 
-    def add_output_header(self, char* key, char* value):
-        if not self.__obj:
-            raise HttpRequestDeleted
-        if evhttp_add_header(self.__obj.output_headers, key, value):
-            raise RuntimeError('Internal error in evhttp_add_header')
+    def __init__(self, object callback=None, size_t obj=0):
+        self._incref = 0
+        self.callback = callback
+        if obj:
+            self.__obj = <evhttp_request*>obj
+            self._owned = 0
+        else:
+            self.__obj = evhttp_request_new(_http_request_cb_handler, <void*>self)
+            if not self.__obj:
+                raise IOError('evhttp_request_new() failed')
+            self._owned = 1
+            self._addref()
 
-    def remove_input_header(self, char* key):
-        """Return True if header was found and removed"""
-        if not self.__obj:
-            raise HttpRequestDeleted
-        return True if 0 == evhttp_remove_header(self.__obj.input_headers, key) else False
+    cdef _addref(self):
+        if self._incref <= 0:
+            Py_INCREF(self)
+            self._incref += 1
 
-    def remove_output_header(self, char* key):
-        """Return True if header was found and removed"""
-        if not self.__obj:
-            raise HttpRequestDeleted
-        return True if 0 == evhttp_remove_header(self.__obj.output_headers, key) else False
+    cdef _delref(self):
+        if self._incref > 0:
+            Py_DECREF(self)
+            self._incref -= 1
+        self.callback = None
 
-    def clear_input_headers(self):
-        if not self.__obj:
-            raise HttpRequestDeleted
-        evhttp_clear_headers(self.__obj.input_headers)
-
-    def clear_output_headers(self):
-        if not self.__obj:
-            raise HttpRequestDeleted
-        evhttp_clear_headers(self.__obj.output_headers)
+    def __dealloc__(self):
+        cdef evhttp_request* obj = self.__obj
+        if obj != NULL:
+            self.detach()
+            if self._owned:
+                evhttp_request_free(obj)
 
 
 cdef class http_connection:
 
     cdef evhttp_connection* __obj
+    cdef public int _owned
 
-    def __init__(self, size_t _obj):
-        self.__obj = <evhttp_connection*>_obj
+    def __init__(self, size_t obj, owned=0):
+        self.__obj = <evhttp_connection*>obj
+        self._owned = owned
+
+    @classmethod
+    def new(cls, char* address, unsigned short port, event_base base):
+        cdef void* ptr = evhttp_connection_base_new(base._ptr, NULL, address, port)
+        if ptr != NULL:
+            return cls(<size_t>ptr, 1)
+
+    def __dealloc__(self):
+        cdef evhttp_connection* obj = self.__obj
+        if obj != NULL:
+            self.__obj = NULL
+            if self._owned:
+                evhttp_connection_free(obj)
 
     property _obj:
 
@@ -498,6 +564,51 @@ cdef class http_connection:
             else:
                 addr = None
             return (addr, port)
+
+    def set_local_address(self, char *addr):
+        if not self.__obj:
+            raise HttpConnectionDeleted
+        evhttp_connection_set_local_address(self.__obj, addr)
+
+    def set_timeout(self, int secs):
+        if not self.__obj:
+            raise HttpConnectionDeleted
+        evhttp_connection_set_timeout(self.__obj, secs)
+
+    def set_retries(self, int retry_max):
+        if not self.__obj:
+            raise HttpConnectionDeleted
+        evhttp_connection_set_retries(self.__obj, retry_max)
+
+    def make_request(self, http_request_client req, int type, char* uri):
+        req._owned = 0
+        cdef int result = evhttp_make_request(self.__obj, req.__obj, type, uri)
+        if result != 0:
+            req.detach()
+        return result
+
+
+cdef void _http_request_cb_handler(evhttp_request* c_request, void *arg) with gil:
+    if arg == NULL:
+        return
+    cdef http_request_client obj = <http_request_client>(arg)
+    try:
+        if obj.__obj != NULL:
+            if obj.__obj != c_request:
+                # sometimes this happens, don't know why
+                sys.stderr.write("Internal error in evhttp\n")
+            if obj.callback is not None:
+                # preferring c_request to obj.__obj because the latter sometimes causes crashes
+                obj.callback(http_request_client(obj=<size_t>c_request))
+            obj.detach()
+    except:
+        traceback.print_exc()
+        try:
+            sys.stderr.write('Failed to execute callback for evhttp request.\n')
+        except:
+            pass
+    finally:
+        obj._delref()
 
 
 cdef void _http_cb_handler(evhttp_request* request, void *arg) with gil:
