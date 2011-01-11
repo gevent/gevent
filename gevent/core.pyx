@@ -505,8 +505,8 @@ cdef class event:
 
         def __get__(self):
             result = []
-            cdef short events = self.ev.ev_events
-            cdef short c_event
+            cdef int events = self.ev.ev_events
+            cdef int c_event
             for (event, txt) in ((levent.EV_TIMEOUT, 'TIMEOUT'),
                                  (levent.EV_READ, 'READ'),
                                  (levent.EV_WRITE, 'WRITE'),
@@ -515,8 +515,7 @@ cdef class event:
                 c_event = event
                 if events & c_event:
                     result.append(txt)
-                    c_event = c_event ^ 0xffffff
-                    events = events & c_event
+                    events = events & (~c_event)
             if events:
                 result.append(hex(events))
             return '|'.join(result)
@@ -541,8 +540,7 @@ cdef class event:
                 c_flag = flag
                 if flags & c_flag:
                     result.append(txt)
-                    c_flag = c_flag ^ 0xffffffff
-                    flags = flags & c_flag
+                    flags = flags & (~c_flag)
             if flags:
                 result.append(hex(flags))
             return '|'.join(result)
