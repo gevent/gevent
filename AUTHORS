@@ -34,6 +34,6 @@ The libevent wrappers are based on pyevent by
 
 The win32util module is taken from Twisted.
 
-Some modules (local and ssl) are adaptations of the modules from the Python standard library.
+Some modules (local, ssl, httplib) contain code from the Python standard library.
 
 If your code is used in gevent and you are not mentioned above, please contact the maintainer.
