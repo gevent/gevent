@@ -179,7 +179,13 @@ def patch_select(aggressive=False):
         _select.__dict__.pop('kevent', None)
 
 
-def patch_all(socket=True, dns=True, time=True, select=True, thread=True, os=True, ssl=True, aggressive=True):
+def patch_httplib():
+    from gevent.httplib import HTTPConnection
+    httplib = __import__('httplib')
+    httplib.HTTPConnection = HTTPConnection
+
+
+def patch_all(socket=True, dns=True, time=True, select=True, thread=True, os=True, ssl=True, httplib=False, aggressive=True):
     """Do all of the default monkey patching (calls every other function in this module."""
     # order is important
     if os:
@@ -194,6 +200,8 @@ def patch_all(socket=True, dns=True, time=True, select=True, thread=True, os=Tru
         patch_select(aggressive=aggressive)
     if ssl:
         patch_ssl()
+    if httplib:
+        patch_httplib()
 
 
 if __name__ == '__main__':
