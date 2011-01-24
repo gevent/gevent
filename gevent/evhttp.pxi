@@ -512,8 +512,8 @@ cdef class http_connection:
         self._owned = owned
 
     @classmethod
-    def new(cls, char* address, unsigned short port, event_base base):
-        cdef void* ptr = evhttp_connection_base_new(base._ptr, NULL, address, port)
+    def new(cls, char* address, unsigned short port):
+        cdef void* ptr = evhttp_connection_new(address, port)
         if ptr != NULL:
             return cls(<size_t>ptr, 1)
 
