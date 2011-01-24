@@ -1,15 +1,13 @@
 __all__ += ['http_request', 'http_connection', 'http']
 
 cdef extern from *:
-    cdef void emit_ifdef "#if defined(LIBEVENT_HTTP_MODERN) //" ()
-    cdef void emit_else  "#else //" ()
-    cdef void emit_endif "#endif //" ()
+    cdef void emit_ifdef_modern "#if defined(LIBEVENT_HTTP_MODERN) //" ()
 
 EVHTTP_REQUEST      = 0
 EVHTTP_RESPONSE     = 1
 
 
-emit_ifdef()
+emit_ifdef_modern()
 
 EVHTTP_REQ_GET     = 1 << 0
 EVHTTP_REQ_POST    = 1 << 1
