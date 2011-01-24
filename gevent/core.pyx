@@ -464,7 +464,8 @@ if get_version() != get_header_version() and get_header_version() is not None an
 include "evbuffer.pxi"
 include "evhttp.pxi"
 
-def set_exc_info(object typ, object value, object tb):
+def set_exc_info(object value):
+    cdef object typ
     cdef PyThreadState* tstate = PyThreadState_GET()
     if tstate.exc_type != NULL:
         Py_DECREF(<object>tstate.exc_type)
@@ -472,10 +473,13 @@ def set_exc_info(object typ, object value, object tb):
         Py_DECREF(<object>tstate.exc_value)
     if tstate.exc_traceback != NULL:
         Py_DECREF(<object>tstate.exc_traceback)
-    Py_INCREF(typ)
-    Py_INCREF(value)
-    Py_INCREF(tb)
-    tstate.exc_type = <void*>typ
-    tstate.exc_value = <void *>value
-    tstate.exc_traceback = <void *>tb
-
+    if value is None:
+        tstate.exc_type = NULL
+        tstate.exc_value = NULL
+    else:
+        typ = type(value)
+        Py_INCREF(typ)
+        Py_INCREF(value)
+        tstate.exc_type = <void*>typ
+        tstate.exc_value = <void *>value
+    tstate.exc_traceback = NULL
