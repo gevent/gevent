@@ -292,7 +292,12 @@ class socket(object):
         self._sock.setblocking(0)
         self._read_event = core.event(core.EV_READ, self.fileno(), _wait_helper)
         self._write_event = core.event(core.EV_WRITE, self.fileno(), _wait_helper)
-        self._rw_event = core.event(core.EV_READ | core.EV_WRITE, self.fileno(), _wait_helper)
+        # regarding the following, see issue #31
+        # (http://code.google.com/p/gevent/issues/detail?id=31#c19)
+        if is_windows:
+            self._rw_event = core.event(core.EV_READ | core.EV_WRITE, self.fileno(), _wait_helper)
+        else:
+            self._rw_event = core.event(core.EV_WRITE, self.fileno(), _wait_helper)
 
     def __repr__(self):
         return '<%s at %s %s>' % (type(self).__name__, hex(id(self)), self._formatinfo())
