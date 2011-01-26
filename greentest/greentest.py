@@ -30,7 +30,10 @@ import os
 from os.path import basename, splitext
 import gevent
 from patched_tests_setup import get_switch_expected
-from functools import wraps
+try:
+    from functools import wraps
+except ImportError:
+    wraps = lambda *args: (lambda x: x)
 
 VERBOSE = sys.argv.count('-v') > 1
 
