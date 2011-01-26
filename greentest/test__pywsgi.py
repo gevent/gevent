@@ -418,7 +418,7 @@ class TestChunkedApp(TestCase):
         else:
             response.assertHeader('Transfer-Encoding', False)
             response.assertHeader('Content-Length', str(len(self.body())))
-            self.assertEqual(response.chunks, None)
+            self.assertEqual(response.chunks, False)
 
     def test_no_chunked_http_1_0(self):
         fd = self.makefile()
@@ -655,7 +655,10 @@ class TestEmptyYield(TestCase):
     def test_err(self):
         fd = self.connect().makefile(bufsize=1)
         fd.write('GET / HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n')
-        read_http(fd, body='', chunks=[])
+
+        chunks = [] if server_implements_chunked else False
+
+        read_http(fd, body='', chunks=chunks)
 
         garbage = fd.read()
         self.assert_(garbage == "", "got garbage: %r" % garbage)
@@ -672,7 +675,10 @@ class TestFirstEmptyYield(TestCase):
     def test_err(self):
         fd = self.connect().makefile(bufsize=1)
         fd.write('GET / HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n')
-        read_http(fd, body='hello', chunks=['hello'])
+
+        chunks = ['hello'] if server_implements_chunked else False
+
+        read_http(fd, body='hello', chunks=chunks)
 
         garbage = fd.read()
         self.assert_(garbage == "", "got garbage: %r" % garbage)
