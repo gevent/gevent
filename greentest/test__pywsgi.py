@@ -656,7 +656,10 @@ class TestEmptyYield(TestCase):
         fd = self.connect().makefile(bufsize=1)
         fd.write('GET / HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n')
 
-        chunks = [] if server_implements_chunked else False
+        if server_implements_chunked:
+            chunks = []
+        else:
+            chunks = False
 
         read_http(fd, body='', chunks=chunks)
 
@@ -676,7 +679,10 @@ class TestFirstEmptyYield(TestCase):
         fd = self.connect().makefile(bufsize=1)
         fd.write('GET / HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n')
 
-        chunks = ['hello'] if server_implements_chunked else False
+        if server_implements_chunked:
+            chunks = ['hello']
+        else:
+            chunks = False
 
         read_http(fd, body='hello', chunks=chunks)
 
