@@ -76,7 +76,7 @@ class TestCase(greentest.TestCase):
                     ip = ex
                 if not self.equal(real_ip, ip):
                     args_str = ', '.join(repr(x) for x in (hostname, port) + args)
-                    print 'WARNING: getaddrinfo(%s):\n    %r\n != %r' % (args_str, real_ip, ip)
+                    print 'WARNING: getaddrinfo(%s):\n    %r    (stdlib)\n != %r    (gevent)' % (args_str, real_ip, ip)
         # QQQ switch_expected becomes useless when a bunch of unrelated tests are merged
         #     into a single one like above. Generate individual test cases instead?
 
