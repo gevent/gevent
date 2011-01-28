@@ -260,11 +260,14 @@ class WSGIHandler(object):
         except Exception:
             traceback.print_exc()
 
+    def read_requestline(self):
+        return self.rfile.readline(MAX_REQUEST_LINE)
+
     def handle_one_request(self):
         if self.rfile.closed:
             return
 
-        raw_requestline = self.rfile.readline(MAX_REQUEST_LINE)
+        raw_requestline = self.read_requestline()
         if not raw_requestline:
             return
 
