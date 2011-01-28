@@ -3,6 +3,39 @@ Changelog
 
 .. currentmodule:: gevent
 
+
+Release 0.13.2 (Sep 28, 2010)
+-----------------------------
+
+- Added :mod:`gevent.httplib` -- **experimental** support for libevent-http client. Thanks to **Tommie Gannert**, **Örjan Persson**. Closes issue #9.
+- Fixed crash on Mac OS X (issue #31). Patch by **Alexey Borzenkov**.
+- Fixed compatiblity of the :mod:`gevent.wsgi` with libevent2 (issue #62).
+- Fixed compilation issues with libevent2. Patch by **Ralf Schmitt**.
+- Fixed :mod:`pywsgi` not to use chunked transfer encoding in case of 304 and 204 responses as it creates a non-empty message body which is against RFC and causes some browsers to fail. Patch by **Nicholas Piël**.
+- Fixed :func:`socket.getaddrinfo` to handle ``AF_UNSPEC`` properly and resolve service names (issue #56). Thanks to **Elizabeth Jennifer Myers**.
+- Fixed :func:`socket.getaddrinfo` to handle international domain names.
+- Fixed leaking of traceback object when switching out of greenlet with ``sys.exc_info`` set. Leaking is prevented by not preserving traceback at all and only keeping the value of the exception. Thanks to **Ned Rockson**.
+- Fixed :meth:`ssl.SSLSocket.unwrap` to shutdown :class:`SSLSocket` properly, without raising ``SSLError(read operation timeout)``.
+- Fixed :exc:`TypeError` inside :class:`Hub` on Python 2.4.
+- Made number of internal improvements to :mod:`gevent.pywsgi` to make subclassing easier (driven by the needs of websocket_ package).
+- Changed :class:`WSGIServer <pywsgi.WSGIServer>` now explicitly closes the socket after the last request. Patch by **Ralf Schmitt**.
+- Fixed :class:`pywsgi.WSGIHandler` not to add ``CONTENT_TYPE`` to the *environ* dict when there's no ``Content-Type`` header in the request. Previously a default ``text/plain`` was added in such case.
+- Added proper implementation of :meth:`Pool.imap_unordered` to :class:`Pool` class. Unlike previous "dummy" implementation this one starts yielding the results as soon as they are ready.
+- Implemented iterator protocol in :class:`Queue <gevent.queue.Queue>`. The main use case is the implementation of :meth:`Pool.imap_unordered`.
+- Fixed :attr:`BaseServer.started` property: it is now set to ``True`` after :meth:`start <StreamServer.start>` until :meth:`stop <StreamServer.stop>` or :meth:`kill <StreamServer.kill>`. Previously it could become ``False`` for short period of times, because :class:`StreamServer` could stop accepting for a while in presence of errors and :attr:`StreamServer.started` was defined as "whether the server is currently accepting".
+- Fixed :class:`wsgi.WSGIServer` to reply with 500 error immediatelly if the application raises an error (issue #58). Thanks to **Jon Aslund**.
+- Added :func:`monkey.patch_httplib` function which is disabled by default.
+- Added *httplib* parameter to :func:`monkey.patch_all` (defaults to ``False``).
+- Added :func:`write <core.buffer.write>` function to :class:`core.buffer`.
+- Fixed :exc:`OverflowError` that could happen in :met:`core.event.__str__`.
+- Made :meth:`http_request.get_input_headers` return header names in lower case.
+- Fixed :class:`StreamServer` to accept *ciphers* as an SSL argument.
+- Added ``build_exc --cython=`` option to ``setup.py``. Patch by **Ralf Schmitt**.
+- Updated :class:`local <gevent.local.local>` to raise :exc:`AttributeError` if ``__dict__`` attribute is set or deleted.
+
+.. _websocket: http://bitbucket.org/denis/websocket
+
+
 Release 0.13.1 (Sep 23, 2010)
 -----------------------------
 
