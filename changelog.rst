@@ -4,7 +4,7 @@ Changelog
 .. currentmodule:: gevent
 
 Release 0.13.1 (Sep 23, 2010)
--------------------------------
+-----------------------------
 
 Release highlights:
 
@@ -13,7 +13,7 @@ Release highlights:
 - Fixed :meth:`Group.join` to handle ``raise_error=True`` properly, it used to raise :exc:`TypeError` (issue #36). Thanks to by **David Hain**.
 - Fixed :mod:`gevent.wsgi` and :mod:`gevent.pywsgi` to join multiple ``Cookie`` headers (issue #40).
 - Fixed :func:`select <gevent.select.select>` to recognize ``long`` arguments in addition to ``int``.
-- Fixed :meth:`Semaphore.acquire` to return ``False`` when timeout expires instead of raising :exc:`AssertionError` (issue #39). Patch by **Teh Ekik**.
+- Fixed :meth:`Semaphore.acquire` to return ``False`` when timeout expires instead of raising :exc:`AssertionError` (issue #39). Patch by **Erik Näslund**.
 - Fixed :meth:`JoinableQueue.join` to return immediatelly if queue is already empty (issue #45). Patch by **Dmitry Chechik**.
 - Deprecated :mod:`gevent.sslold` module.
 
