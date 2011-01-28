@@ -206,6 +206,7 @@ class WSGIHandler(object):
                 self.log_error('Expected GET method: %r', raw_requestline)
                 return
             self.request_version = "HTTP/0.9"
+            # QQQ I'm pretty sure we can drop support for HTTP/0.9
         else:
             self.log_error('Invalid HTTP method: %r', raw_requestline)
             return
