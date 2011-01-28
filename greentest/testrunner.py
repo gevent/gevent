@@ -492,7 +492,8 @@ def main():
     parser.add_option('-v', '--verbose', default=0, action='count')
     parser.add_option('-q', '--quiet', default=0, action='count')
     parser.add_option('--verbosity', default=0, type='int', help=optparse.SUPPRESS_HELP)
-    parser.add_option('--db')
+    parser.add_option('--db', default='testresults.sqlite3')
+    parser.add_option('--no-db', dest='db', action='store_false')
     parser.add_option('--runid')
     parser.add_option('--record', default=False, action='store_true')
     parser.add_option('--no-capture', dest='capture', default=True, action='store_false')
@@ -502,11 +503,11 @@ def main():
     options, args = parser.parse_args()
     options.verbosity += options.verbose - options.quiet
 
-    if not options.db and sqlite3:
-        options.db = 'testresults.sqlite3'
-        print 'Using the database: %s' % options.db
-    elif options.db and not sqlite3:
-        sys.exit('Cannot access the database %r: no sqlite3 module found.' % (options.db, ))
+    if options.db:
+        if sqlite3:
+            print 'Using the database: %s' % options.db
+        else:
+            sys.exit('Cannot access the database %r: no sqlite3 module found.' % (options.db, ))
 
     if options.db:
         db = sqlite3.connect(options.db)
