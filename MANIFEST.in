@@ -9,3 +9,4 @@ include TODO
 include changelog.rst
 include MANIFEST.in
 include fetch_libevent.py
+include AUTHORS
