@@ -677,46 +677,53 @@ else:
         _ttl, addrs = resolve_ipv4(hostname)
         return inet_ntoa(random.choice(addrs))
 
-    def getaddrinfo(host, port, *args, **kwargs):
+    def getaddrinfo(host, port, family=0, socktype=0, proto=0, flags=0, evdns_flags=0):
         """*Some* approximation of :func:`socket.getaddrinfo` implemented using :mod:`gevent.dns`.
 
         If *host* is not a string, does not has any dots or is a numeric IP address, then
         the standard :func:`socket.getaddrinfo` is called.
 
-        Otherwise, calls either :func:`resolve_ipv4` or :func:`resolve_ipv6` and
-        formats the result the way :func:`socket.getaddrinfo` does it.
+        Otherwise, calls :func:`resolve_ipv4` (for ``AF_INET``) or :func:`resolve_ipv6` (for ``AF_INET6``) or
+        both (for ``AF_UNSPEC``) and formats the result the way :func:`socket.getaddrinfo` does it.
 
         Differs in the following ways:
 
         * raises :class:`DNSError` (a subclass of :class:`gaierror`) with libevent-dns error
           codes instead of standard socket error codes
-        * IPv6 support is untested.
-        * AF_UNSPEC only tries IPv4
-        * only supports TCP, UDP, IP protocols
-        * port must be numeric, does not support string service names. see socket.getservbyname
         * *flags* argument is ignored
+        * for IPv6, flow info and scope id are always 0
 
         Additionally, supports *evdns_flags* keyword arguments (default ``0``) that is passed
         to :mod:`dns` functions.
         """
-        family, socktype, proto, _flags = args + (None, ) * (4 - len(args))
         if isinstance(host, unicode):
             host = host.encode('idna')
-        if not isinstance(host, str) or '.' not in host or _ip4_re.match(host):
-            return _socket.getaddrinfo(host, port, *args)
+        if not isinstance(host, str) or \
+           '.' not in host or \
+           _ip4_re.match(host) is not None or \
+           family not in (AF_UNSPEC, AF_INET, AF_INET6):
+            return _socket.getaddrinfo(host, port, family, socktype, proto, flags)
 
-        evdns_flags = kwargs.pop('evdns_flags', 0)
-        if kwargs:
-            raise TypeError('Unsupported keyword arguments: %s' % (kwargs.keys(), ))
-
-        if family in (None, AF_INET, AF_UNSPEC):
-            family = AF_INET
-            # TODO: AF_UNSPEC means try both AF_INET and AF_INET6
-            _ttl, addrs = resolve_ipv4(host, evdns_flags)
-        elif family == AF_INET6:
-            _ttl, addrs = resolve_ipv6(host, evdns_flags)
-        else:
-            raise NotImplementedError('family is not among AF_UNSPEC/AF_INET/AF_INET6: %r' % (family, ))
+        if isinstance(port, basestring):
+            try:
+                if socktype == 0:
+                    try:
+                        port = getservbyname(port, 'tcp')
+                        socktype = SOCK_STREAM
+                    except socket.error:
+                        port = getservbyname(port, 'udp')
+                        socktype = SOCK_DGRAM
+                elif socktype == SOCK_STREAM:
+                    port = getservbyname(port, 'tcp')
+                elif socktype == SOCK_DGRAM:
+                    port = getservbyname(port, 'udp')
+                else:
+                    raise gaierror(EAI_SERVICE, 'Servname not supported for ai_socktype')
+            except error, ex:
+                if 'not found' in str(ex):
+                    raise gaierror(EAI_SERVICE, 'Servname not supported for ai_socktype')
+                else:
+                    raise gaierror(str(ex))
 
         socktype_proto = [(SOCK_STREAM, 6), (SOCK_DGRAM, 17), (SOCK_RAW, 0)]
         if socktype:
@@ -725,9 +732,35 @@ else:
             socktype_proto = [(x, y) for (x, y) in socktype_proto if proto == y]
 
         result = []
-        for addr in addrs:
-            for socktype, proto in socktype_proto:
-                result.append((family, socktype, proto, '', (inet_ntop(family, addr), port)))
+
+        if family == AF_INET:
+            for res in resolve_ipv4(host, evdns_flags)[1]:
+                sockaddr = (inet_ntop(family, res), port)
+                for socktype, proto in socktype_proto:
+                    result.append((family, socktype, proto, '', sockaddr))
+        elif family == AF_INET6:
+            for res in resolve_ipv6(host, evdns_flags)[1]:
+                sockaddr = (inet_ntop(family, res), port, 0, 0)
+                for socktype, proto in socktype_proto:
+                    result.append((family, socktype, proto, '', sockaddr))
+        else:
+            failure = None
+            try:
+                for res in resolve_ipv4(host, evdns_flags)[1]:
+                    sockaddr = (inet_ntop(AF_INET, res), port)
+                    for socktype, proto in socktype_proto:
+                        result.append((AF_INET, socktype, proto, '', sockaddr))
+            except gaierror, failure:
+                pass
+            try:
+                for res in resolve_ipv6(host, evdns_flags)[1]:
+                    sockaddr = (inet_ntop(AF_INET6, res), port, 0, 0)
+                    for socktype, proto in socktype_proto:
+                        result.append((AF_INET6, socktype, proto, '', sockaddr))
+            except gaierror:
+                if failure is not None:
+                    raise
+
         return result
         # TODO libevent2 has getaddrinfo that is probably better than the hack above; should wrap that.
 
