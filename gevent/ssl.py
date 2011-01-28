@@ -286,9 +286,39 @@ class SSLSocket(socket):
         else:
             return 0
 
+    def _sslobj_shutdown(self):
+        while True:
+            try:
+                return self._sslobj.shutdown()
+            except SSLError, ex:
+                if ex.args[0] == SSL_ERROR_EOF and self.suppress_ragged_eofs:
+                    return ''
+                elif ex.args[0] == SSL_ERROR_WANT_READ:
+                    if self.timeout == 0.0:
+                        raise
+                    sys.exc_clear()
+                    try:
+                        wait_read(self.fileno(), timeout=self.timeout, timeout_exc=_SSLErrorReadTimeout, event=self._read_event)
+                    except socket_error, ex:
+                        if ex[0] == EBADF:
+                            return ''
+                        raise
+                elif ex.args[0] == SSL_ERROR_WANT_WRITE:
+                    if self.timeout == 0.0:
+                        raise
+                    sys.exc_clear()
+                    try:
+                        wait_write(self.fileno(), timeout=self.timeout, timeout_exc=_SSLErrorWriteTimeout, event=self._write_event)
+                    except socket_error, ex:
+                        if ex[0] == EBADF:
+                            return ''
+                        raise
+                else:
+                    raise
+
     def unwrap(self):
         if self._sslobj:
-            s = self._sslobj.shutdown()
+            s = self._sslobj_shutdown()
             self._sslobj = None
             return socket(_sock=s)
         else:
