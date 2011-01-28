@@ -955,6 +955,51 @@ class TestInvalidEnviron(TestCase):
         read_http(fd)
 
 
+class TestSubclass1(TestCase):
+
+    validator = None
+
+    def application(self, environ, start_response):
+        start_response('200 OK', [])
+        return []
+
+    def init_server(self, application):
+        WSGIHandler = self.get_wsgi_module().WSGIHandler
+
+        class Handler(WSGIHandler):
+
+            def read_requestline(self):
+                data = self.rfile.read(7)
+                if data[0] == '<':
+                    try:
+                        data += self.rfile.read(15)
+                        if data.lower() == '<policy-file-request/>':
+                            self.socket.sendall('HELLO')
+                        else:
+                            self.log_error('Invalid request: %r', data)
+                    finally:
+                        self.socket.shutdown(socket.SHUT_WR)
+                        self.socket.close()
+                        self.socket = None
+                else:
+                    return data + self.rfile.readline()
+
+        self.server = self.get_wsgi_module().WSGIServer(('127.0.0.1', 0), application, handler_class=Handler)
+
+    def test(self):
+        fd = self.makefile()
+        fd.write('<policy-file-request/>\x00')
+        self.assertEqual(fd.read(), 'HELLO')
+
+        fd = self.makefile()
+        fd.write('GET / HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n')
+        read_http(fd)
+
+        fd = self.makefile()
+        fd.write('<policy-file-XXXuest/>\x00')
+        self.assertEqual(fd.read(), '')
+
+
 del CommonTests
 
 if __name__ == '__main__':
