@@ -508,6 +508,7 @@ def main():
             print 'Using the database: %s' % options.db
         else:
             sys.exit('Cannot access the database %r: no sqlite3 module found.' % (options.db, ))
+        options.db = os.path.abspath(options.db)
 
     if options.db:
         db = sqlite3.connect(options.db)
