@@ -220,5 +220,20 @@ class TestInterrupted(greentest.GenericWaitTestCase):
                     pass
 
 
+class TestIPv6(TestCase):
+
+    def test(self):
+        #self.PORTS = ['http']
+        #self.getaddrinfo_args = [(), (AF_UNSPEC, ), (AF_INET, ), (AF_INET6, )]
+        self._test('aaaa.test-ipv6.com')
+
+
+class TestBadPort(TestCase):
+
+    def test(self):
+        self.PORTS = ['xxxxxx']
+        self._test('www.google.com')
+
+
 if __name__ == '__main__':
     greentest.main()
