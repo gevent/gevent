@@ -16,9 +16,21 @@ assert gaierror is real_socket.gaierror
 assert error is real_socket.error
 
 VERBOSE = '-v' in sys.argv
+IGNORE_ERRORS = '--ignore' in sys.argv
+DEBUG = '-d' in sys.argv
+for arg in ['--ignore', '-d']:
+    try:
+        sys.argv.remove(arg)
+    except ValueError:
+        pass
 
 
 class TestCase(greentest.TestCase):
+
+    if IGNORE_ERRORS:
+        def assertEqual(self, a, b):
+            if a != b:
+                print 'ERROR: %r != %r' % (a, b)
 
     def _test(self, hostname, check_ip=None):
         self._test_gethostbyname(hostname, check_ip=check_ip)
@@ -30,12 +42,16 @@ class TestCase(greentest.TestCase):
                 print 'real_socket.gethostbyname(%r)' % (hostname, )
             real_ip = real_socket.gethostbyname(hostname)
         except Exception, ex:
+            if DEBUG:
+                raise
             real_ip = ex
         try:
             if VERBOSE:
                 print 'gevent.socket.gethostbyname(%r)' % (hostname, )
             ip = gethostbyname(hostname)
         except Exception, ex:
+            if DEBUG:
+                raise
             ip = ex
         if self.equal(real_ip, ip):
             return ip
@@ -65,6 +81,8 @@ class TestCase(greentest.TestCase):
                     if VERBOSE:
                         print '    returned %r' % (real_ip, )
                 except Exception, ex:
+                    if DEBUG:
+                        raise
                     real_ip = ex
                 if VERBOSE:
                     print 'gevent.socket.getaddrinfo(%r, %r, %r)' % (hostname, port, args)
@@ -73,6 +91,8 @@ class TestCase(greentest.TestCase):
                     if VERBOSE:
                         print '    returned %r' % (ip, )
                 except Exception, ex:
+                    if DEBUG:
+                        raise
                     ip = ex
                 if not self.equal(real_ip, ip):
                     args_str = ', '.join(repr(x) for x in (hostname, port) + args)
