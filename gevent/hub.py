@@ -151,7 +151,7 @@ class Hub(greenlet):
     def switch(self):
         cur = getcurrent()
         assert cur is not self, 'Cannot switch to MAINLOOP from MAINLOOP'
-        exception = sys.exc_info()[1]
+        exc_type, exc_value = sys.exc_info()[:2]
         try:
             switch_out = getattr(cur, 'switch_out', None)
             if switch_out is not None:
@@ -162,7 +162,7 @@ class Hub(greenlet):
             sys.exc_clear()
             return greenlet.switch(self)
         finally:
-            core.set_exc_info(exception)
+            core.set_exc_info(exc_type, exc_value)
 
     def run(self):
         global _threadlocal
