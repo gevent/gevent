@@ -2,25 +2,26 @@ Gevent is written and maintained by
 
   Denis Bilenko
 
-and the contributors (ordered alphabetically):
+and the contributors (ordered by the date of first contribution):
 
-  Alexey Borzenkov
-  Daniele Varrazzo
-  David Hain
-  Dmitry Chechik
-  Erik Näslund
   Jason Toffaletti
+  Mike Barton
   Ludvig Ericson
   Marcus Cavanaugh
   Matt Goodall
-  Mike Barton
+  Ralf Schmitt
+  Daniele Varrazzo
   Nicholas Piël
   Örjan Persson
-  Ralf Schmitt
-  Randall Leeds
-  Ted Suzman
-  Tommie Gannert
   Uriel Katz
+  Ted Suzman
+  Randall Leeds
+  Erik Näslund
+  Alexey Borzenkov
+  David Hain
+  Dmitry Chechik
+  Ned Rockson
+  Tommie Gannert
 
 Gevent is inspired by and uses some code from eventlet which was written by
 
