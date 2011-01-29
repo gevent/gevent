@@ -665,8 +665,7 @@ def get_header_version():
     return levent._EVENT_VERSION
 
 
-def set_exc_info(object value):
-    cdef object typ
+def set_exc_info(object type, object value):
     cdef PyThreadState* tstate = PyThreadState_GET()
     if tstate.exc_type != NULL:
         Py_DECREF(<object>tstate.exc_type)
@@ -678,10 +677,9 @@ def set_exc_info(object value):
         tstate.exc_type = NULL
         tstate.exc_value = NULL
     else:
-        typ = type(value)
-        Py_INCREF(typ)
+        Py_INCREF(type)
         Py_INCREF(value)
-        tstate.exc_type = <void*>typ
+        tstate.exc_type = <void*>type
         tstate.exc_value = <void *>value
     tstate.exc_traceback = NULL
 
