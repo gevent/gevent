@@ -17,7 +17,7 @@ Release 0.13.2 (Jan 28, 2011)
 - Fixed leaking of traceback object when switching out of greenlet with ``sys.exc_info`` set. Leaking is prevented by not preserving traceback at all and only keeping the value of the exception. Thanks to **Ned Rockson**.
 - Fixed :meth:`ssl.SSLSocket.unwrap` to shutdown :class:`SSLSocket` properly, without raising ``SSLError(read operation timeout)``.
 - Fixed :exc:`TypeError` inside :class:`Hub` on Python 2.4.
-- Made number of internal improvements to :mod:`gevent.pywsgi` to make subclassing easier (driven by the needs of websocket_ package).
+- Made a number of internal improvements to :mod:`gevent.pywsgi` to make subclassing easier (driven by the needs of websocket_ package).
 - Changed :class:`WSGIServer <pywsgi.WSGIServer>` to explicitly close the socket after the last request. Patch by **Ralf Schmitt**.
 - Fixed :class:`pywsgi.WSGIHandler` not to add ``CONTENT_TYPE`` to the *environ* dict when there's no ``Content-Type`` header in the request. Previously a default ``text/plain`` was added in such case.
 - Added proper implementation of :meth:`imap_unordered <gevent.pool.Group.imap_unordered>` to :class:`Pool` class. Unlike previous "dummy" implementation this one starts yielding the results as soon as they are ready.
