@@ -200,7 +200,7 @@ class HTTPConnection(object):
         if self.debuglevel > 0:
             print 'connect: (%s, %u)' % (self.host, self.port)
 
-        self.conn = core.http_connection.new(self.host, self.port, get_hub().reactor)
+        self.conn = core.http_connection.new(self.host, self.port)
 
         if self.timeout is not None:
             self.conn.set_timeout(int(min(1, self.timeout)))
