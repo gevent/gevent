@@ -136,6 +136,8 @@ if 'inet_ntop' not in globals():
 
 from gevent.hub import getcurrent, get_hub
 from gevent import core
+from gevent import spawn
+from gevent.util import wrap_errors
 
 _ip4_re = re.compile('^[\d\.]+$')
 
@@ -745,22 +747,29 @@ else:
                     result.append((family, socktype, proto, '', sockaddr))
         else:
             failure = None
+            job = spawn(wrap_errors(gaierror, resolve_ipv6), host, evdns_flags)
             try:
-                for res in resolve_ipv4(host, evdns_flags)[1]:
-                    sockaddr = (inet_ntop(AF_INET, res), port)
-                    for socktype, proto in socktype_proto:
-                        result.append((AF_INET, socktype, proto, '', sockaddr))
-            except gaierror, failure:
-                pass
-            try:
-                for res in resolve_ipv6(host, evdns_flags)[1]:
-                    sockaddr = (inet_ntop(AF_INET6, res), port, 0, 0)
-                    for socktype, proto in socktype_proto:
-                        result.append((AF_INET6, socktype, proto, '', sockaddr))
-            except gaierror:
-                if failure is not None:
-                    raise
-
+                try:
+                    ipv4_res = resolve_ipv4(host, evdns_flags)[1]
+                except gaierror, failure:
+                    ipv4_res = None
+                ipv6_res = job.get()
+                if isinstance(ipv6_res, gaierror):
+                    ipv6_res = None
+                    if failure is not None:
+                        raise
+                if ipv4_res is not None:
+                    for res in ipv4_res:
+                        sockaddr = (inet_ntop(AF_INET, res), port)
+                        for socktype, proto in socktype_proto:
+                            result.append((AF_INET, socktype, proto, '', sockaddr))
+                if ipv6_res is not None:
+                    for res in ipv6_res[1]:
+                        sockaddr = (inet_ntop(AF_INET6, res), port, 0, 0)
+                        for socktype, proto in socktype_proto:
+                            result.append((AF_INET6, socktype, proto, '', sockaddr))
+            finally:
+                job.kill()
         return result
         # TODO libevent2 has getaddrinfo that is probably better than the hack above; should wrap that.
 
