@@ -28,6 +28,7 @@ class TestNoSwitch(greentest.TestCase):
 class TestSwitch(greentest.TestCase):
 
     switch_expected = True
+    __timeout__ = 10
 
     def test_empty_string(self):
         self.assertRaises(DNSError, dns.resolve_ipv4, '')
