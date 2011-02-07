@@ -26,6 +26,7 @@ for arg in ['--ignore', '-d']:
 
 
 class TestCase(greentest.TestCase):
+    __timeout__ = 30
 
     if IGNORE_ERRORS:
         def assertEqual(self, a, b):
