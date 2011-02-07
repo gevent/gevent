@@ -3,6 +3,12 @@ Changelog
 
 .. currentmodule:: gevent
 
+Release 0.13.2 (Feb 7, 2011)
+----------------------------
+
+- Fixed typo in :mod:`gevent.httplib` that rendered it unusable.
+- Removed unnecessary delay in :func:`getaddrinfo <gevent.socket.getaddrinfo` by calling ``resolve_ipv4`` and ``resolve_ipv6`` concurrently rather than sequentially in ``AF_UNSPEC`` case.
+
 
 Release 0.13.2 (Jan 28, 2011)
 -----------------------------
