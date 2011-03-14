@@ -60,7 +60,6 @@ class Event(object):
 
         Return the value of the internal flag (``True`` or ``False``).
         """
-
         if self._flag:
             return self._flag
         else:
