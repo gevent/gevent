@@ -162,12 +162,9 @@ def get_changeset():
     return changeset
 
 
-def get_libevent_version():
+def get_core_version():
     from gevent import core
-    libevent_version = core.get_version()
-    if core.get_header_version() != core.get_version() and core.get_header_version() is not None:
-        libevent_version += '/headers=%s' % core.get_header_version()
-    return libevent_version
+    return core.get_version()
 
 
 def get_tempnam():
@@ -301,7 +298,7 @@ def spawn_subprocesses(options, args):
     params = {'runid': options.runid,
               'python': '%s.%s.%s' % sys.version_info[:3],
               'changeset': get_changeset(),
-              'libevent_version': get_libevent_version(),
+              'core_version': get_core_version(),
               'uname': platform.uname()[0],
               'retcode': 'TIMEOUT'}
     success = True
