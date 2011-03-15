@@ -316,7 +316,7 @@ class Greenlet(greenlet):
             try:
                 t = Timeout.start_new(timeout)
                 try:
-                    result = get_hub().switch()
+                    result = self.parent.switch()
                     assert result is self, 'Invalid switch into Greenlet.get(): %r' % (result, )
                 finally:
                     t.cancel()
@@ -348,7 +348,7 @@ class Greenlet(greenlet):
             try:
                 t = Timeout.start_new(timeout)
                 try:
-                    result = get_hub().switch()
+                    result = self.parent.switch()
                     assert result is self, 'Invalid switch into Greenlet.join(): %r' % (result, )
                 finally:
                     t.cancel()
