@@ -85,17 +85,7 @@ class GreenletLink(object):
                 error = LinkedCompleted(source)
         else:
             error = LinkedFailed(source)
-        current = getcurrent()
-        greenlet = self.greenlet
-        if current is greenlet:
-            greenlet.throw(error)
-        elif current is get_hub():
-            try:
-                greenlet.throw(error)
-            except:
-                traceback.print_exc()
-        else:
-            kill(self.greenlet, error)
+        self.greenlet.throw(error)
 
     def __hash__(self):
         return hash(self.greenlet)
