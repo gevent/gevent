@@ -246,12 +246,14 @@ cdef class loop:
         if once:
             flags |= libev.EVRUN_ONCE
         if handle_error is None:
-            self.handle_error = self._default_handle_error
+            if self.handle_error is None:
+                self.handle_error = self._default_handle_error
+                handle_error = False
         else:
             self.handle_error = handle_error
         with nogil:
             libev.ev_run(self._ptr, flags)
-        if handle_error is None:
+        if handle_error is False:
             self.handle_error = None
 
     def fork(self):
