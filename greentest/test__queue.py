@@ -253,10 +253,10 @@ class TestNoWait(TestCase):
         def store_result(func, *args):
             result.append(func(*args))
 
-        active_event = get_hub().reactor.active_event
+        run_callback = get_hub().loop.run_callback
 
-        active_event(store_result, util.wrap_errors(Exception, q.put_nowait), 2)
-        active_event(store_result, util.wrap_errors(Exception, q.put_nowait), 3)
+        x = run_callback(store_result, util.wrap_errors(Exception, q.put_nowait), 2)
+        x = run_callback(store_result, util.wrap_errors(Exception, q.put_nowait), 3)
         gevent.sleep(0)
         assert len(result) == 2, result
         assert result[0] == None, result
@@ -270,10 +270,10 @@ class TestNoWait(TestCase):
         def store_result(func, *args):
             result.append(func(*args))
 
-        active_event = get_hub().reactor.active_event
+        run_callback = get_hub().loop.run_callback
 
-        active_event(store_result, util.wrap_errors(Exception, q.get_nowait))
-        active_event(store_result, util.wrap_errors(Exception, q.get_nowait))
+        run_callback(store_result, util.wrap_errors(Exception, q.get_nowait))
+        run_callback(store_result, util.wrap_errors(Exception, q.get_nowait))
         gevent.sleep(0)
         assert len(result) == 2, result
         assert result[0] == 4, result
@@ -293,7 +293,7 @@ class TestNoWait(TestCase):
         gevent.sleep(0)
         assert q.empty(), q
         assert q.full(), q
-        get_hub().reactor.active_event(store_result, util.wrap_errors(Exception, q.get_nowait))
+        get_hub().loop.run_callback(store_result, util.wrap_errors(Exception, q.get_nowait))
         gevent.sleep(0)
         assert q.empty(), q
         assert q.full(), q
@@ -316,7 +316,7 @@ class TestNoWait(TestCase):
         gevent.sleep(0)
         assert q.empty(), q
         assert q.full(), q
-        get_hub().reactor.active_event(store_result, util.wrap_errors(Exception, q.put_nowait), 10)
+        get_hub().loop.run_callback(store_result, util.wrap_errors(Exception, q.put_nowait), 10)
         assert not p.ready(), p
         gevent.sleep(0)
         assert result == [None], result
