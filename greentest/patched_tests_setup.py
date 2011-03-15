@@ -48,7 +48,17 @@ disabled_tests = [
 
     # this test seems to have a bug which makes it fail with error: (107, 'Transport endpoint is not connected')
     # (they create TCP socket, not UDP)
-    'test_socket.UDPTimeoutTest.testUDPTimeout']
+    'test_socket.UDPTimeoutTest.testUDPTimeout',
+
+    # this tests that time.sleep() returns prematurely in case of signal;
+    # gevent.sleep() is better than that and does not get interrupted (unless signal handler raises an error)
+    'test_signal.WakeupSignalTests.test_wakeup_fd_early',
+
+    # this tests that select.select() raises select.error(EINTR, 'interrupted system call')
+    # gevent.select.select() does not get interrupted (unless signal handler raises an error)
+    # maybe it should?
+    'test_signal.WakeupSignalTests.test_wakeup_fd_during',
+]
 
 if sys.version_info[:2] < (2, 7):
     # On Python 2.6, this test fails even without monkey patching
