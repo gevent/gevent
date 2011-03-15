@@ -18,6 +18,13 @@ def hello():
     raise expected_error
 
 
+def hello2():
+    try:
+        hello()
+    except ExpectedError:
+        pass
+
+
 error = Exception('hello')
 
 
@@ -31,7 +38,7 @@ class Test(greentest.TestCase):
             g = gevent.spawn(hello)
             g.join()
             self.assert_stderr_traceback(expected_error)
-            self.assert_stderr('<Greenlet at 0x[0-9a-f]+L?: hello> failed with ExpectedError')
+            self.assert_stderr('Ignoring ExpectedError in <Greenlet')
             if not isinstance(g.exception, ExpectedError):
                 raise g.exception
             try:
@@ -40,10 +47,9 @@ class Test(greentest.TestCase):
                 assert ex is error, (ex, error)
 
     def test2(self):
-        get_hub().reactor.timer(0, hello)
-        self.hook_stderr()
+        timer = get_hub().loop.timer(0)
+        timer.start(hello2)
         gevent.sleep(0.1)
-        self.assert_stderr_traceback(expected_error)
         assert sys.exc_info() == (None, None, None), sys.exc_info()
 
 
