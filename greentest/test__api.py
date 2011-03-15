@@ -55,6 +55,7 @@ class Test(greentest.TestCase):
 
     def test_sleep_invalid_switch(self):
         p = gevent.spawn(util.wrap_errors(AssertionError, gevent.sleep), 2)
+        gevent.sleep(0)  # wait for p to start, because actual order of switching is reversed
         switcher = gevent.spawn(p.switch, None)
         result = p.get()
         assert isinstance(result, AssertionError), result
@@ -63,6 +64,7 @@ class Test(greentest.TestCase):
 
     def test_wait_read_invalid_switch(self):
         p = gevent.spawn(util.wrap_errors(AssertionError, socket.wait_read), 0)
+        gevent.sleep(0)
         switcher = gevent.spawn(p.switch, None)
         result = p.get()
         assert isinstance(result, AssertionError), result
@@ -71,6 +73,7 @@ class Test(greentest.TestCase):
 
     def test_wait_write_invalid_switch(self):
         p = gevent.spawn(util.wrap_errors(AssertionError, socket.wait_write), 0)
+        gevent.sleep(0)
         switcher = gevent.spawn(p.switch, None)
         result = p.get()
         assert isinstance(result, AssertionError), result
