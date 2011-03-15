@@ -1,5 +1,4 @@
 cimport libev
-import sys
 
 
 __all__ = ['get_version',
