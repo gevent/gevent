@@ -195,7 +195,7 @@ class TestCase(BaseTestCase):
             typ = getattr(typ, '__name__', typ)
         stderr = self.unhook_stderr()
         assert stderr is not None, repr(stderr)
-        traceback_re = '^Traceback \\(most recent call last\\):\n( +.*?\n)+^(?P<type>\w+): (?P<value>.*?)$'
+        traceback_re = '^(Traceback \\(most recent call last\\):\n( +.*?\n)+)?^(?P<type>\w+(\.\w+)*): (?P<value>.*?)$'
         self.extract_re(traceback_re, type=typ, value=value)
 
     def assert_stderr(self, message):
@@ -220,28 +220,27 @@ class TestCase(BaseTestCase):
         if message is not None:
             self.assert_stderr(message)
 
-    def extract_re(self, regex, **kwargs):
+    def _extract_re(self, regex, type=None, value=None):
         assert self.stderr is not None
         m = re.search(regex, self.stderr, re.DOTALL | re.M)
         if m is None:
-            raise AssertionError('%r did not match:\n%r' % (regex, self.stderr))
-        for key, expected_value in kwargs.items():
-            real_value = m.group(key)
-            if expected_value is not None:
-                try:
-                    self.assertEqual(real_value, expected_value)
-                except AssertionError:
-                    print 'failed to process: %s' % self.stderr
-                    raise
+            raise AssertionError('Cannot find traceback:\nregex: %s\nstderr:\n%s' % (regex, self.stderr))
+        if type is not None:
+            if m.group('type') != type and m.group('type').split('.')[-1] != type:
+                raise AssertionError('Unexpected exception type: %r (expected %r)' % (m.group(type), type))
+        if value is not None:
+            self.assertEqual(m.group('value'), value)
         if DEBUG:
             ate = '\n#ATE#: ' + self.stderr[m.start(0):m.end(0)].replace('\n', '\n#ATE#: ') + '\n'
             sys.__stderr__.write(ate)
         self.stderr = self.stderr[:m.start(0)] + self.stderr[m.end(0) + 1:]
 
-
-class TestCase(TestCase0):
-    if gettotalrefcount is not None:
-        __metaclass__ = CheckRefcountMetaClass
+    def extract_re(self, regex, type=None, value=None):
+        try:
+            return self._extract_re(regex, type, value)
+        except Exception:
+            print 'failed to process: %r' % (self.stderr, )
+            raise
 
 
 main = unittest.main
