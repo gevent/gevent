@@ -8,6 +8,7 @@ build
 gevent/core.c
 gevent/core.so
 gevent/core_d.so
+gevent/core.pyx
 doc/_build
 doc/changelog.rst
 push
