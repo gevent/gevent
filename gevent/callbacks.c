@@ -1,6 +1,6 @@
 static void handle_error(PyObject* loop, PyObject* arg) {
     PyThreadState *tstate;
-    PyObject *type, *value, *traceback, *handler, *result;
+    PyObject *type, *value, *traceback, *handler, *result, *tuple;
     int reported;
     tstate = PyThreadState_GET();
     type = tstate->curexc_type;
@@ -19,13 +19,7 @@ static void handle_error(PyObject* loop, PyObject* arg) {
     handler = PyObject_GetAttrString(loop, "handle_error");
     if (handler) {
         if (handler != Py_None) {
-            PyObject* tuple;
-            if (arg) {
-                tuple = PyTuple_New(4);
-            }
-            else {
-                tuple = PyTuple_New(3);
-            }
+            tuple = PyTuple_New(4);
             if (tuple) {
                 reported = 1;
                 Py_INCREF(arg);
