@@ -175,7 +175,7 @@ class TestCase(greentest.TestCase):
 
 class TestDefaultSpawn(TestCase):
 
-    invalid_callback_message = '<Greenlet failed with TypeError'
+    invalid_callback_message = 'Ignoring TypeError in <Greenlet'
 
     def get_spawn(self):
         return gevent.spawn
@@ -297,7 +297,7 @@ class TestDefaultSpawn(TestCase):
 
 class TestRawSpawn(TestDefaultSpawn):
 
-    invalid_callback_message = 'Failed event...'
+    invalid_callback_message = 'Ignoring TypeError <callback'
 
     def get_spawn(self):
         return gevent.spawn_raw
