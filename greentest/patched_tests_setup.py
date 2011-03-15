@@ -37,9 +37,6 @@ def get_switch_expected(fullname):
 
 
 disabled_tests = [
-    # uses signal module which does not work with gevent (use gevent.signal())
-    'test_socket.TCPTimeoutTest.testInterruptedTimeout',
-
     # uses some internal C API of threads not available when threads are emulated with greenlets
     'test_threading.ThreadTests.test_PyThreadState_SetAsyncExc',
 
