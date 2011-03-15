@@ -2,8 +2,6 @@ static void handle_error(PyObject* loop, PyObject* arg) {
     PyThreadState *tstate;
     PyObject *type, *value, *traceback, *handler, *result;
     int reported;
-    if (!loop)
-        return;
     tstate = PyThreadState_GET();
     type = tstate->curexc_type;
     if (!type)
@@ -30,18 +28,11 @@ static void handle_error(PyObject* loop, PyObject* arg) {
             }
             if (tuple) {
                 reported = 1;
-                if (arg) {
-                    Py_INCREF(arg);
-                    PyTuple_SET_ITEM(tuple, 0, arg);
-                    PyTuple_SET_ITEM(tuple, 1, type);
-                    PyTuple_SET_ITEM(tuple, 2, value);
-                    PyTuple_SET_ITEM(tuple, 3, traceback);
-                }
-                else {
-                    PyTuple_SET_ITEM(tuple, 0, type);
-                    PyTuple_SET_ITEM(tuple, 1, value);
-                    PyTuple_SET_ITEM(tuple, 2, traceback);
-                }
+                Py_INCREF(arg);
+                PyTuple_SET_ITEM(tuple, 0, arg);
+                PyTuple_SET_ITEM(tuple, 1, type);
+                PyTuple_SET_ITEM(tuple, 2, value);
+                PyTuple_SET_ITEM(tuple, 3, traceback);
                 PyErr_Clear();
                 result = PyObject_Call(handler, tuple, NULL);
                 if (result) {
