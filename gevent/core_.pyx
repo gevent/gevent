@@ -182,7 +182,9 @@ cdef class loop:
     def __init__(self, object flags=None, object default=True, size_t ptr=0):
         cdef unsigned int c_flags
         libev.ev_prepare_init(&self._signal_checker, <void*>signal_check)
-        libev.ev_timer_init(&self._periodic_signal_checker, <void*>periodic_signal_check, 0.5, 0.5)
+        IFDEF_WINDOWS()
+        libev.ev_timer_init(&self._periodic_signal_checker, <void*>periodic_signal_check, 0.3, 0.3)
+        ENDIF()
         if ptr:
             self._ptr = <libev.ev_loop*>ptr
         else:
@@ -206,9 +208,11 @@ cdef class loop:
         if libev.ev_is_active(&self._signal_checker):
             libev.ev_ref(self._ptr)
             libev.ev_prepare_stop(self._ptr, &self._signal_checker)
+        IFDEF_WINDOWS()
         if libev.ev_is_active(&self._periodic_signal_checker):
             libev.ev_ref(self._ptr)
             libev.ev_timer_stop(self._ptr, &self._periodic_signal_checker)
+        ENDIF()
 
     def destroy(self):
         if self._ptr:
