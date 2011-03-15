@@ -19,7 +19,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
-"""This test checks that socket instances (not gevent.socket.socket but underlying sockets)
+"""This test checks that underlying socket instances (gevent.socket.socket._sock)
 are not leaked by the hub.
 """
 from _socket import socket
