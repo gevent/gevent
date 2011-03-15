@@ -112,7 +112,7 @@ _events = [(libev.EV_READ,     'READ'),
            (libev.EV_ERROR,    'ERROR')]
 
 
-def _flags_to_list(unsigned int flags):
+cpdef _flags_to_list(unsigned int flags):
     cdef list result = []
     for code, value in _flags:
         if flags & code:
@@ -125,7 +125,7 @@ def _flags_to_list(unsigned int flags):
     return result
 
 
-def _flags_to_int(object flags):
+cpdef unsigned int _flags_to_int(object flags) except? -1:
     # Note, that order does not matter, libev has its own predefined order
     if flags is None:
         return 0
@@ -142,7 +142,7 @@ def _flags_to_int(object flags):
     return result
 
 
-def _events_to_str(int events):
+cpdef _events_to_str(int events):
     cdef list result = []
     cdef int c_flag
     for (flag, string) in _events:
@@ -455,8 +455,7 @@ cdef class watcher:
         return ''
 
 
-
-def _get_fd(int handle):
+cdef int _get_fd(int handle) except -1:
     cdef int fd = handle
     IFDEF_WINDOWS()
     fd = _open_osfhandle(fd, 0)
