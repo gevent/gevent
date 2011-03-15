@@ -33,6 +33,7 @@ class TestCoroutinePool(greentest.TestCase):
         results = []
 
         def producer():
+            gevent.sleep(0.001)
             results.append('prod')
             evt.set()
 
@@ -148,7 +149,7 @@ class PoolBasicTests(greentest.TestCase):
         p.apply_async(r.append, (4, ))
         self.assertEqual(r, [1])
         gevent.sleep(0.01)
-        self.assertEqual(r, [1, 2, 3, 4])
+        self.assertEqual(sorted(r), [1, 2, 3, 4])
 
     def test_execute(self):
         p = self.klass()
