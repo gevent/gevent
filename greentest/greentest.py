@@ -126,7 +126,9 @@ class TestCase(BaseTestCase):
         return BaseTestCase.run(self, *args, **kwargs)
 
     def setUp(self):
-        gevent.sleep(0)  # switch at least once to setup signal handlers
+        hub = gevent.hub._get_hub()
+        if hub is not None:
+            hub.loop.update_now()
         if hasattr(self._hub, 'switch_count'):
             self._switch_count = self._hub.switch_count
 
