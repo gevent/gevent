@@ -13,7 +13,6 @@ __all__ = ['getcurrent',
            'kill',
            'signal',
            'fork',
-           'shutdown',
            'get_hub',
            'Hub',
            'Waiter']
@@ -35,7 +34,6 @@ except ImportError:
 
 getcurrent = greenlet.getcurrent
 GreenletExit = greenlet.GreenletExit
-MAIN = greenlet.getcurrent()
 
 thread = __import__('thread')
 threadlocal = thread._local
@@ -46,6 +44,8 @@ try:
 except AttributeError:
     _original_fork = None
     __all__.remove('fork')
+get_ident = thread.get_ident
+MAIN_THREAD = get_ident()
 
 
 def _switch_helper(function, args, kwargs):
@@ -54,14 +54,14 @@ def _switch_helper(function, args, kwargs):
 
 
 def spawn_raw(function, *args, **kwargs):
+    hub = get_hub()
     if kwargs:
-        g = greenlet(_switch_helper, get_hub())
-        get_hub().reactor.active_event(g.switch, function, args, kwargs)
-        return g
+        g = greenlet(_switch_helper, hub)
+        hub.loop.run_callback(g.switch, function, args, kwargs)
     else:
-        g = greenlet(function, get_hub())
-        get_hub().reactor.active_event(g.switch, *args)
-        return g
+        g = greenlet(function, hub)
+        hub.loop.run_callback(g.switch, *args)
+    return g
 
 
 def sleep(seconds=0):
@@ -71,16 +71,10 @@ def sleep(seconds=0):
     are desired. Calling sleep with *seconds* of 0 is the canonical way of
     expressing a cooperative yield.
     """
-    unique_mark = object()
     if not seconds >= 0:
         raise IOError(22, 'Invalid argument')
-    timer = get_hub().reactor.timer(seconds, getcurrent().switch, unique_mark)
-    try:
-        switch_result = get_hub().switch()
-        assert switch_result is unique_mark, 'Invalid switch into sleep(): %r' % (switch_result, )
-    except:
-        timer.cancel()
-        raise
+    hub = get_hub()
+    hub.wait(hub.loop.timer(seconds))
 
 
 def kill(greenlet, exception=GreenletExit):
@@ -91,34 +85,50 @@ def kill(greenlet, exception=GreenletExit):
     so you have to use this function.
     """
     if not greenlet.dead:
-        get_hub().reactor.active_event(greenlet.throw, exception)
+        get_hub().loop.run_callback(greenlet.throw, exception)
 
 
-def _wrap_signal_handler(handler, args, kwargs):
-    try:
-        handler(*args, **kwargs)
-    except:
-        get_hub().reactor.active_event(MAIN.throw, *sys.exc_info())
+class Signal(object):
+
+    def __init__(self, signalnum):
+        self.hub = get_hub()
+        self.watcher = self.hub.loop.signal_ref(signalnum)
+        self._unref = 0
+
+    def start(self, handler, *args, **kwargs):
+        self.watcher.start(spawn_raw, self.handle, handler, args, kwargs)
+        if self._unref == 0:
+            self.hub.loop.unref()
+            self._unref = 1
+
+    def cancel(self):
+        self.watcher.stop()
+        if self._unref == 1:
+            self.hub.loop.ref()
+            self._unref = 0
+
+    def handle(self, handler, args, kwargs):
+        try:
+            handler(*args, **kwargs)
+        except:
+            self.hub.loop.run_callback(self.hub.parent.throw, *sys.exc_info())
+        if not self.watcher.active and self._unref == 1:
+            self.hub.loop.ref()
+            self._unref = 0
 
 
 def signal(signalnum, handler, *args, **kwargs):
-    return get_hub().reactor.signal(signalnum, lambda: spawn_raw(_wrap_signal_handler, handler, args, kwargs))
+    obj = Signal(signalnum)
+    obj.start(handler, *args, **kwargs)
+    return obj
 
 
 if _original_fork is not None:
 
     def fork():
         result = _original_fork()
-        get_hub().reactor.reinit()
+        get_hub().loop.fork()
         return result
-
-
-def shutdown():
-    """Cancel our CTRL-C handler and wait for core.dispatch() to return."""
-    global _threadlocal
-    hub = _threadlocal.__dict__.get('hub')
-    if hub is not None:
-        hub.shutdown()
 
 
 def get_hub_class():
@@ -136,7 +146,7 @@ def get_hub_class():
     return hubtype
 
 
-def get_hub():
+def get_hub(*args):
     """Return the hub for the current thread.
 
     If hub does not exists in the current thread, the new one is created with call to :meth:`get_hub_class`.
@@ -146,8 +156,24 @@ def get_hub():
         return _threadlocal.hub
     except AttributeError:
         hubtype = get_hub_class()
-        hub = _threadlocal.hub = hubtype()
+        hub = _threadlocal.hub = hubtype(*args)
         return hub
+
+
+def _get_hub():
+    """Return the hub for the current thread.
+
+    Return ``None`` if no hub has been created yet.
+    """
+    global _threadlocal
+    try:
+        return _threadlocal.hub
+    except AttributeError:
+        pass
+
+
+def set_hub(hub):
+    _threadlocal.hub = hub
 
 
 class Hub(greenlet):
@@ -156,15 +182,26 @@ class Hub(greenlet):
     It is created automatically by :func:`get_hub`.
     """
 
-    reactor_class = core.event_base
+    SYSTEM_ERROR = (KeyboardInterrupt, SystemExit, SystemError)
+    loop_class = core.loop
 
-    def __init__(self, reactor=None):
+    def __init__(self, loop=None):
         greenlet.__init__(self)
-        self.keyboard_interrupt_signal = None
-        if reactor is None:
-            self.reactor = self.reactor_class()
+        if hasattr(loop, 'run'):
+            self.loop = loop
         else:
-            self.reactor = reactor
+            self.loop = self.loop_class(flags=loop, default=(get_ident() == MAIN_THREAD))
+
+    def handle_error(self, where, type, value, tb):
+        traceback.print_exception(type, value, tb)
+        del tb
+        if where is None or issubclass(type, self.SYSTEM_ERROR):
+            if getcurrent() == self:
+                self.parent.throw(type, value)
+            else:
+                self.loop.run_callback(self.parent.throw, type, value)
+        else:
+            sys.stderr.write('Ignoring %s in %s\n\n' % (getattr(type, '__name__', 'exception'), where, ))
 
     def switch(self):
         cur = getcurrent()
@@ -182,41 +219,43 @@ class Hub(greenlet):
         finally:
             core.set_exc_info(exc_type, exc_value)
 
+    def wait(self, watcher):
+        watcher.start(getcurrent().switch, watcher, None)
+        try:
+            result = self.switch()
+            assert isinstance(result, tuple) and result[0] is watcher, 'Invalid switch into %s: %r' % (getcurrent(), result)
+            return result
+        finally:
+            watcher.stop()
+
+    def cancel_wait(self, watcher, error):
+        self.loop.run_callback(self._cancel_wait, watcher, error)
+
+    def _cancel_wait(self, watcher, error):
+        if watcher.active:
+            switch = watcher.callback
+            if switch is not None:
+                greenlet = getattr(switch, '__self__', None)
+                if greenlet is not None:
+                    greenlet.throw(error)
+
     def run(self):
         global _threadlocal
         assert self is getcurrent(), 'Do not call Hub.run() directly'
         try:
-            self.keyboard_interrupt_signal = signal(2, self.reactor.active_event, MAIN.throw, KeyboardInterrupt)
-        except IOError:
-            pass  # no signal() on Windows
-        try:
-            loop_count = 0
-            while True:
-                try:
-                    result = self.reactor.dispatch()
-                except IOError, ex:
-                    loop_count += 1
-                    if loop_count > 15:
-                        MAIN.throw(*sys.exc_info())
-                    sys.stderr.write('Restarting gevent.core.dispatch() after an error [%s]: %s\n' % (loop_count, ex))
-                    continue
-                raise DispatchExit(result)
-                # this function must never return, as it will cause switch() in MAIN to return an unexpected value
+            self.loop.run(handle_error=self.handle_error)
         finally:
-            if self.keyboard_interrupt_signal is not None:
-                self.keyboard_interrupt_signal.cancel()
-                self.keyboard_interrupt_signal = None
             if _threadlocal.__dict__.get('hub') is self:
                 _threadlocal.__dict__.pop('hub')
+        # this function must never return, as it will cause switch() in the parent greenlet
+        # to return an unexpected value
+        raise LoopExit
 
-    def shutdown(self):
-        assert getcurrent() is MAIN, "Shutting down is only possible from MAIN greenlet"
-        if self.keyboard_interrupt_signal is not None:
-            self.keyboard_interrupt_signal.cancel()
-            self.keyboard_interrupt_signal = None
-        dns = self.reactor.dns
-        if dns is not None:
-            dns.free()
+    def join(self):
+        """Wait for the event loop to finish. Exits only when there are
+        no more spawned greenlets, started servers, active timeouts or watchers.
+        """
+        assert getcurrent() is self.parent, "only possible from MAIN greenlet"
         if not self or self.dead:
             if _threadlocal.__dict__.get('hub') is self:
                 _threadlocal.__dict__.pop('hub')
@@ -224,17 +263,12 @@ class Hub(greenlet):
             return
         try:
             self.switch()
-        except DispatchExit, ex:
-            if ex.code == 1:  # no more events registered?
-                return
-            raise
+        except LoopExit:
+            pass
 
 
-class DispatchExit(Exception):
-
-    def __init__(self, code):
-        self.code = code
-        Exception.__init__(self, code)
+class LoopExit(Exception):
+    pass
 
 
 class Waiter(object):
@@ -251,7 +285,7 @@ class Waiter(object):
     The :meth:`get` method must be called from a greenlet other than :class:`Hub`.
 
         >>> result = Waiter()
-        >>> _ = get_hub().reactor.timer(0.1, result.switch, 'hello from Waiter')
+        >>> _ = get_hub().loop.timer(0.1, result.switch, 'hello from Waiter')
         >>> result.get() # blocks for 0.1 seconds
         'hello from Waiter'
 
@@ -259,7 +293,7 @@ class Waiter(object):
     :class:`Waiter` stores the value.
 
         >>> result = Waiter()
-        >>> _ = get_hub().reactor.timer(0.1, result.switch, 'hi from Waiter')
+        >>> _ = get_hub().loop.timer(0.1, result.switch, 'hi from Waiter')
         >>> sleep(0.2)
         >>> result.get() # returns immediatelly without blocking
         'hi from Waiter'

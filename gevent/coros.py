@@ -2,7 +2,6 @@
 # Copyright (c) 2009-2010 Denis Bilenko. See LICENSE for details.
 
 import sys
-import traceback
 from gevent.hub import get_hub, getcurrent
 from gevent.timeout import Timeout
 
@@ -22,7 +21,8 @@ class Semaphore(object):
             raise ValueError("semaphore initial value must be >= 0")
         self._links = []
         self.counter = value
-        self._notifier = None
+        self.hub = get_hub()
+        self._notifier = self.hub.loop.callback()
 
     def __str__(self):
         params = (self.__class__.__name__, self.counter, len(self._links))
@@ -33,25 +33,19 @@ class Semaphore(object):
 
     def release(self):
         self.counter += 1
-        if self._links and self.counter > 0 and self._notifier is None:
-            self._notifier = get_hub().reactor.active_event(self._notify_links, list(self._links))
+        if self._links and self.counter > 0 and not self._notifier.active:
+            self._notifier.start(self._notify_links, list(self._links))
+            # XXX so what if there was another release() with different self._links? it would be ignored then?
 
     def _notify_links(self, links):
-        try:
-            for link in links:
-                if self.counter <= 0:
-                    return
-                if link in self._links:
-                    try:
-                        link(self)
-                    except:
-                        traceback.print_exc()
-                        try:
-                            sys.stderr.write('Failed to notify link %r of %r\n\n' % (link, self))
-                        except:
-                            traceback.print_exc()
-        finally:
-            self._notifier = None
+        for link in links:
+            if self.counter <= 0:
+                return
+            if link in self._links:
+                try:
+                    link(self)
+                except:
+                    self.hub.handle_error((link, self), *sys.exc_info())
 
     def rawlink(self, callback):
         """Register a callback to call when a counter is more than zero.
@@ -62,8 +56,8 @@ class Semaphore(object):
         if not callable(callback):
             raise TypeError('Expected callable: %r' % (callback, ))
         self._links.append(callback)
-        if self.counter > 0 and self._notifier is None:
-            self._notifier = get_hub().reactor.active_event(self._notify_links, list(self._links))
+        if self.counter > 0 and not self._notifier.active:
+            self._notifier.start(self._notify_links, list(self._links))
 
     def unlink(self, callback):
         """Remove the callback set by :meth:`rawlink`"""
@@ -82,7 +76,7 @@ class Semaphore(object):
                 timer = Timeout.start_new(timeout)
                 try:
                     try:
-                        result = get_hub().switch()
+                        result = self.hub.switch()
                         assert result is self, 'Invalid switch into Semaphore.wait(): %r' % (result, )
                     except Timeout, ex:
                         if ex is not timer:
@@ -106,7 +100,7 @@ class Semaphore(object):
                 timer = Timeout.start_new(timeout)
                 try:
                     try:
-                        result = get_hub().switch()
+                        result = self.hub.switch()
                         assert result is self, 'Invalid switch into Semaphore.acquire(): %r' % (result, )
                     except Timeout, ex:
                         if ex is timer:

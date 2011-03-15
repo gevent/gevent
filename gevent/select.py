@@ -2,7 +2,7 @@
 
 from gevent.timeout import Timeout
 from gevent.event import Event
-from gevent import core
+from gevent.core import MAXPRI
 from gevent.hub import get_hub
 
 __implements__ = ['select']
@@ -25,24 +25,20 @@ def get_fileno(obj):
 
 class SelectResult(object):
 
-    __slots__ = ['read', 'write', 'event', 'timer']
+    __slots__ = ['read', 'write', 'event']
 
     def __init__(self):
         self.read = []
         self.write = []
         self.event = Event()
-        self.timer = None
 
-    def update(self, event, evtype):
-        if evtype & core.EV_READ:
-            self.read.append(event.arg)
-            if self.timer is None:
-                self.timer = get_hub().reactor.timer(0, self.event.set)
-        elif evtype & core.EV_WRITE:
-            self.write.append(event.arg)
-            if self.timer is None:
-                self.timer = get_hub().reactor.timer(0, self.event.set)
-        # using timer(0, ...) to let other active events call update() before Event.wait() returns
+    def update(self, watcher, event):
+        if event & 1:
+            self.read.append(watcher.args[0])
+            self.event.set()
+        elif event & 2:
+            self.write.append(watcher.args[0])
+            self.event.set()
 
 
 def select(rlist, wlist, xlist, timeout=None):
@@ -50,25 +46,27 @@ def select(rlist, wlist, xlist, timeout=None):
 
     Note: *xlist* is ignored.
     """
-    allevents = []
+    watchers = []
     timeout = Timeout.start_new(timeout)
+    io = get_hub().loop.io
     result = SelectResult()
     try:
         try:
-            reactor = get_hub().reactor
             for readfd in rlist:
-                event = reactor.read_event(get_fileno(readfd))
-                event.add(None, result.update, arg=readfd)
-                allevents.append(event)
+                watcher = io(get_fileno(readfd), 1)
+                watcher.start(result.update, readfd)
+                watcher.priority = MAXPRI
+                watchers.append(watcher)
             for writefd in wlist:
-                event = reactor.write_event(get_fileno(writefd))
-                event.add(None, result.update, arg=writefd)
-                allevents.append(event)
+                watcher = io(get_fileno(writefd), 2)
+                watcher.start(result.update, writefd)
+                watcher.priority = MAXPRI
+                watchers.append(watcher)
         except IOError, ex:
             raise error(*ex.args)
         result.event.wait(timeout=timeout)
         return result.read, result.write, []
     finally:
-        for evt in allevents:
-            evt.cancel()
+        for watcher in watchers:
+            watcher.stop()
         timeout.cancel()

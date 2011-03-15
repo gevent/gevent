@@ -9,7 +9,8 @@ See http://www.gevent.org/ for the documentation.
 version_info = (0, 14, 0)
 __version__ = '0.14.0dev'
 
-__all__ = ['Greenlet',
+__all__ = ['get_hub',
+           'Greenlet',
            'GreenletExit',
            'spawn',
            'spawn_later',
@@ -26,7 +27,6 @@ __all__ = ['Greenlet',
            'kill',
            'signal',
            'fork',
-           'shutdown',
            'core',
            'reinit']
 
@@ -45,13 +45,13 @@ spawn_link = Greenlet.spawn_link
 spawn_link_value = Greenlet.spawn_link_value
 spawn_link_exception = Greenlet.spawn_link_exception
 from gevent.timeout import Timeout, with_timeout
-from gevent.hub import getcurrent, GreenletExit, spawn_raw, sleep, kill, signal, shutdown
+from gevent.hub import getcurrent, GreenletExit, spawn_raw, sleep, kill, signal
 try:
     from gevent.hub import fork
 except ImportError:
     __all__.remove('fork')
 
+from gevent.hub import get_hub
 
 def reinit():
-    from gevent.hub import get_hub
-    return get_hub().reinit()
+    return get_hub().loop.fork()

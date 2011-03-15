@@ -54,6 +54,7 @@ class StreamServer(BaseServer):
         self.delay = self.min_delay
         self._accept_event = None
         self._start_accepting_timer = None
+        self.loop = get_hub().loop
 
     def set_listener(self, listener, backlog=None):
         BaseServer.set_listener(self, listener, backlog=backlog)
@@ -86,8 +87,8 @@ class StreamServer(BaseServer):
 
     def start_accepting(self):
         if self._accept_event is None:
-            self._accept_event = get_hub().reactor.read_event(self.socket.fileno(), persist=True)
-            self._accept_event.add(None, self._do_accept)
+            self._accept_event = self.loop.io(self.socket.fileno(), 1)
+            self._accept_event.start(self._do_accept)
 
     def _start_accepting_if_started(self, _event=None):
         if self.started:
@@ -95,10 +96,10 @@ class StreamServer(BaseServer):
 
     def stop_accepting(self):
         if self._accept_event is not None:
-            self._accept_event.cancel()
+            self._accept_event.stop()
             self._accept_event = None
         if self._start_accepting_timer is not None:
-            self._start_accepting_timer.cancel()
+            self._start_accepting_timer.stop()
             self._start_accepting_timer = None
 
     def _do_accept(self, event, _evtype):
@@ -138,7 +139,8 @@ class StreamServer(BaseServer):
             traceback.print_exc()
         if self.delay >= 0:
             self.stop_accepting()
-            self._start_accepting_timer = get_hub().reactor.timer(self.delay, self._start_accepting_if_started)
+            self._start_accepting_timer = self.loop.timer(self.delay)
+            self._start_accepting_timer.start(self._start_accepting_if_started)
             self.delay = min(self.max_delay, self.delay * 2)
 
     def is_fatal_error(self, ex):

@@ -125,38 +125,38 @@ del name, value
 # XXX: implement blocking functions that are not yet implemented
 
 from gevent.hub import getcurrent, get_hub, Waiter
-from gevent import core
+from gevent.timeout import Timeout
 
 _ip4_re = re.compile('^[\d\.]+$')
 
+## XXX wait() no longer used by socket class
 
-def _wait_helper(ev, evtype):
-    current, timeout_exc = ev.arg
-    if evtype & core.EV_TIMEOUT:
-        current.throw(timeout_exc)
-    else:
-        current.switch(ev)
-
-
-def wait(event, timeout=None, timeout_exc=timeout('timed out')):
-    """Block the current greenlet until *event* is ready.
+def wait(io, timeout=None, timeout_exc=timeout('timed out')):
+    """Block the current greenlet until *io* is ready.
 
     If *timeout* is non-negative, then *timeout_exc* is raised after *timeout* second has passed.
     By default *timeout_exc* is ``socket.timeout('timed out')``.
 
     If :func:`cancel_wait` is called, raise ``socket.error(EBADF, 'File descriptor was closed in another greenlet')``.
     """
-    assert event.arg is None, 'This event is already used by another greenlet: %r' % (event.arg, )
-    event.add(timeout, _wait_helper, (getcurrent(), timeout_exc))
+    assert io.callback is None, 'This socket is already used by another greenlet: %r' % (io.callback, )
+    if timeout is not None:
+        timeout = Timeout.start_new(timeout, timeout_exc)
     try:
-        switch_result = get_hub().switch()
-        assert event is switch_result, 'Invalid switch into wait(%r): %r' % (event, switch_result, )
+        io.start(getcurrent().switch)
+        try:
+            result, _revents = get_hub().switch()
+            assert io is result, 'Invalid switch into wait(%r): %r' % ((result, _revents), )
+        finally:
+            io.stop()
     finally:
-        event.cancel()
-        event.arg = None
+        if timeout is not None:
+            timeout.cancel()
+    # rename "io" to "watcher" because wait() works with any watcher
+    # make wait() a Hub's method
 
 
-def wait_read(fileno, timeout=None, timeout_exc=timeout('timed out'), event=None):
+def wait_read(fileno, timeout=None, timeout_exc=timeout('timed out')):
     """Block the current greenlet until *fileno* is ready to read.
 
     If *timeout* is non-negative, then *timeout_exc* is raised after *timeout* second has passed.
@@ -164,9 +164,8 @@ def wait_read(fileno, timeout=None, timeout_exc=timeout('timed out'), event=None
 
     If :func:`cancel_wait` is called, raise ``socket.error(EBADF, 'File descriptor was closed in another greenlet')``.
     """
-    if event is None:
-        event = get_hub().reactor.read_event(fileno)
-    return wait(event, timeout, timeout_exc)
+    io = get_hub().loop.io(fileno, 1)
+    return wait(io, timeout, timeout_exc)
 
 
 def wait_write(fileno, timeout=None, timeout_exc=timeout('timed out'), event=None):
@@ -177,9 +176,8 @@ def wait_write(fileno, timeout=None, timeout_exc=timeout('timed out'), event=Non
 
     If :func:`cancel_wait` is called, raise ``socket.error(EBADF, 'File descriptor was closed in another greenlet')``.
     """
-    if event is None:
-        event = get_hub().reactor.write_event(fileno)
-    return wait(event, timeout, timeout_exc)
+    io = get_hub().loop.io(fileno, 2)
+    return wait(io, timeout, timeout_exc)
 
 
 def wait_readwrite(fileno, timeout=None, timeout_exc=timeout('timed out'), event=None):
@@ -190,20 +188,24 @@ def wait_readwrite(fileno, timeout=None, timeout_exc=timeout('timed out'), event
 
     If :func:`cancel_wait` is called, raise ``socket.error(EBADF, 'File descriptor was closed in another greenlet')``.
     """
-    if event is None:
-        event = get_hub().reactor.readwrite_event(fileno)
-    return wait(event, timeout, timeout_exc)
+    io = get_hub().loop.io(fileno, 3)
+    return wait(io, timeout, timeout_exc)
 
 
-def __cancel_wait(event):
-    if event.pending:
-        arg = event.arg
-        if arg is not None:
-            arg[0].throw(error(EBADF, 'File descriptor was closed in another greenlet'))
+cancel_wait_ex = error(EBADF, 'File descriptor was closed in another greenlet')
+
+
+def _cancel_wait(watcher):
+    if watcher.active:
+        switch = watcher.callback
+        if switch is not None:
+            greenlet = getattr(switch, '__self__', None)
+            if greenlet is not None:
+                greenlet.throw(cancel_wait_ex)
 
 
 def cancel_wait(event):
-    get_hub().reactor.active_event(__cancel_wait, event)
+    get_hub().loop.run_callback(_cancel_wait, event)
 
 
 if sys.version_info[:2] <= (2, 4):
@@ -268,15 +270,11 @@ class socket(object):
                 self._sock = _sock
                 self.timeout = _socket.getdefaulttimeout()
         self._sock.setblocking(0)
-        reactor = get_hub().reactor
-        self._read_event = reactor.read_event(self.fileno())
-        self._write_event = reactor.write_event(self.fileno())
-        # regarding the following, see issue #31
-        # (http://code.google.com/p/gevent/issues/detail?id=31#c19)
-        if is_windows:
-            self._rw_event = reactor.readwrite_event(self.fileno())
-        else:
-            self._rw_event = reactor.write_event(self.fileno())
+        fileno = self._sock.fileno()
+        self.hub = get_hub()
+        io = self.hub.loop.io
+        self._read_event = io(fileno, 1)
+        self._write_event = io(fileno, 2)
 
     def __repr__(self):
         return '<%s at %s %s>' % (type(self).__name__, hex(id(self)), self._formatinfo())
@@ -308,6 +306,27 @@ class socket(object):
             result += ' timeout=' + str(self.timeout)
         return result
 
+    def _wait(self, io, timeout_exc=timeout('timed out')):
+        """Block the current greenlet until *io* is ready.
+
+        If *timeout* is non-negative, then *timeout_exc* is raised after *timeout* second has passed.
+        By default *timeout_exc* is ``socket.timeout('timed out')``.
+
+        If :func:`cancel_wait` is called, raise ``socket.error(EBADF, 'File descriptor was closed in another greenlet')``.
+        """
+        assert io.callback is None, 'This socket is already used by another greenlet: %r' % (io.callback, )
+        if self.timeout is not None:
+            timeout = Timeout.start_new(self.timeout, timeout_exc)
+        else:
+            timeout = None
+        try:
+            self.hub.wait(io)
+        finally:
+            if timeout is not None:
+                timeout.cancel()
+
+    # rename "io" to "watcher" because wait() works with any watcher
+    # make wait() a Hub's method
     def accept(self):
         sock = self._sock
         while True:
@@ -318,38 +337,29 @@ class socket(object):
                 if ex[0] != EWOULDBLOCK or self.timeout == 0.0:
                     raise
                 sys.exc_clear()
-            wait(self._read_event, timeout=self.timeout)
+            self._wait(self._read_event)
         return socket(_sock=client_socket), address
 
     def close(self):
-        cancel_wait(self._rw_event)
-        cancel_wait(self._read_event)
-        cancel_wait(self._write_event)
+        # use self._read_event.loop.run_callback
+        self.hub.cancel_wait(self._read_event, cancel_wait_ex)
+        self.hub.cancel_wait(self._write_event, cancel_wait_ex)
         self._sock = _closedsocket()
         dummy = self._sock._dummy
         for method in _delegate_methods:
             setattr(self, method, dummy)
 
     def connect(self, address):
-        if isinstance(address, tuple) and len(address) == 2:
-            address = gethostbyname(address[0]), address[1]
+        #if isinstance(address, tuple) and len(address) == 2:
+        #    address = gethostbyname(address[0]), address[1]
         if self.timeout == 0.0:
             return self._sock.connect(address)
         sock = self._sock
-        if self.timeout is None:
-            while True:
-                err = sock.getsockopt(SOL_SOCKET, SO_ERROR)
-                if err:
-                    raise error(err, strerror(err))
-                result = sock.connect_ex(address)
-                if not result or result == EISCONN:
-                    break
-                elif (result in (EWOULDBLOCK, EINPROGRESS, EALREADY)) or (result == EINVAL and is_windows):
-                    wait(self._rw_event)
-                else:
-                    raise error(result, strerror(result))
+        if self.timeout is not None:
+            timer = Timeout.start_new(self.timeout, timeout('timed out'))
         else:
-            end = time.time() + self.timeout
+            timer = None
+        try:
             while True:
                 err = sock.getsockopt(SOL_SOCKET, SO_ERROR)
                 if err:
@@ -358,12 +368,12 @@ class socket(object):
                 if not result or result == EISCONN:
                     break
                 elif (result in (EWOULDBLOCK, EINPROGRESS, EALREADY)) or (result == EINVAL and is_windows):
-                    timeleft = end - time.time()
-                    if timeleft <= 0:
-                        raise timeout('timed out')
-                    wait(self._rw_event, timeout=timeleft)
+                    self._wait(self._write_event)
                 else:
                     raise error(result, strerror(result))
+        finally:
+            if timer is not None:
+                timer.cancel()
 
     def connect_ex(self, address):
         try:
@@ -401,7 +411,7 @@ class socket(object):
                 # QQQ without clearing exc_info test__refcount.test_clean_exit fails
                 sys.exc_clear()
             try:
-                wait(self._read_event, timeout=self.timeout)
+                self._wait(self._read_event)
             except error, ex:
                 if ex[0] == EBADF:
                     return ''
@@ -416,7 +426,7 @@ class socket(object):
                 if ex[0] != EWOULDBLOCK or self.timeout == 0.0:
                     raise
                 sys.exc_clear()
-            wait(self._read_event, timeout=self.timeout)
+            self._wait(self._read_event)
 
     def recvfrom_into(self, *args):
         sock = self._sock
@@ -427,7 +437,7 @@ class socket(object):
                 if ex[0] != EWOULDBLOCK or self.timeout == 0.0:
                     raise
                 sys.exc_clear()
-            wait(self._read_event, timeout=self.timeout)
+            self._wait(self._read_event)
 
     def recv_into(self, *args):
         sock = self._sock
@@ -441,7 +451,7 @@ class socket(object):
                     raise
                 sys.exc_clear()
             try:
-                wait(self._read_event, timeout=self.timeout)
+                self._wait(self._read_event)
             except error, ex:
                 if ex[0] == EBADF:
                     return 0
@@ -458,7 +468,7 @@ class socket(object):
                 raise
             sys.exc_clear()
             try:
-                wait(self._write_event, timeout=timeout)
+                self._wait(self._write_event)
             except error, ex:
                 if ex[0] == EBADF:
                     return 0
@@ -499,7 +509,7 @@ class socket(object):
             if ex[0] != EWOULDBLOCK or timeout == 0.0:
                 raise
             sys.exc_clear()
-            wait(self._write_event, timeout=self.timeout)
+            self._wait(self._write_event)
             try:
                 return sock.sendto(*args)
             except error, ex2:
@@ -528,14 +538,13 @@ class socket(object):
         return self.timeout
 
     def shutdown(self, how):
-        cancel_wait(self._rw_event)
         if how == 0:  # SHUT_RD
-            cancel_wait(self._read_event)
+            self.hub.cancel_wait(self._read_event, cancel_wait_ex)
         elif how == 1:  # SHUT_RW
-            cancel_wait(self._write_event)
+            self.hub.cancel_wait(self._write_event, cancel_wait_ex)
         else:
-            cancel_wait(self._read_event)
-            cancel_wait(self._write_event)
+            self.hub.cancel_wait(self._read_event, cancel_wait_ex)
+            self.hub.cancel_wait(self._write_event, cancel_wait_ex)
         self._sock.shutdown(how)
 
     family = property(lambda self: self._sock.family, doc="the socket family")
@@ -625,6 +634,7 @@ def create_connection(address, timeout=_GLOBAL_DEFAULT_TIMEOUT, source_address=N
 
 
 def gethostbyname(host):
+    return _socket.gethostbyname(host)
     # artificial limitations that regular gethostbyname has
     if host is None:
         raise TypeError('gethostbyname() argument must be string')
@@ -649,6 +659,7 @@ def _sync_call(function, *args):
 
 
 def getaddrinfo(host, port, family=0, socktype=0, proto=0, flags=0):
+    return _socket.getaddrinfo(host, port, family, socktype, proto, flags)
     dns = get_hub().reactor.dns
     if dns is None:
         return _socket.getaddrinfo(host, port, family, socktype, proto, flags)

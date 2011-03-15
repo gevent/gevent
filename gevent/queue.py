@@ -56,7 +56,8 @@ class Queue(object):
             self.maxsize = maxsize
         self.getters = set()
         self.putters = set()
-        self._event_unlock = None
+        self.hub = get_hub()
+        self._event_unlock = self.hub.loop.callback()
         self._init(maxsize)
 
     # QQQ make maxsize into a property with setter that schedules unlock if necessary
@@ -84,8 +85,6 @@ class Queue(object):
             result += ' getters[%s]' % len(self.getters)
         if self.putters:
             result += ' putters[%s]' % len(self.putters)
-        if self._event_unlock is not None:
-            result += ' unlocking'
         return result
 
     def qsize(self):
@@ -119,7 +118,7 @@ class Queue(object):
             self._put(item)
             if self.getters:
                 self._schedule_unlock()
-        elif not block and get_hub() is getcurrent():
+        elif not block and self.hub is getcurrent():
             # we're in the mainloop, so we cannot wait; we can switch() to other greenlets though
             # find a getter and deliver an item to it
             while self.getters:
@@ -169,7 +168,7 @@ class Queue(object):
             if self.putters:
                 self._schedule_unlock()
             return self._get()
-        elif not block and get_hub() is getcurrent():
+        elif not block and self.hub is getcurrent():
             # special case to make get_nowait() runnable in the mainloop greenlet
             # there are no items in the queue; try to fix the situation by unlocking putters
             while self.putters:
@@ -202,45 +201,39 @@ class Queue(object):
         return self.get(False)
 
     def _unlock(self):
-        try:
-            while True:
-                if self.qsize() and self.getters:
+        while True:
+            if self.qsize() and self.getters:
+                getter = self.getters.pop()
+                if getter:
+                    try:
+                        item = self._get()
+                    except:
+                        getter.throw(*sys.exc_info())
+                    else:
+                        getter.switch(item)
+            elif self.putters and self.getters:
+                putter = self.putters.pop()
+                if putter:
                     getter = self.getters.pop()
                     if getter:
-                        try:
-                            item = self._get()
-                        except:
-                            getter.throw(*sys.exc_info())
-                        else:
-                            getter.switch(item)
-                elif self.putters and self.getters:
-                    putter = self.putters.pop()
-                    if putter:
-                        getter = self.getters.pop()
-                        if getter:
-                            item = putter.item
-                            putter.item = _NONE  # this makes greenlet calling put() not to call _put() again
-                            self._put(item)
-                            item = self._get()
-                            getter.switch(item)
-                            putter.switch(putter)
-                        else:
-                            self.putters.add(putter)
-                elif self.putters and (self.getters or self.qsize() < self.maxsize):
-                    putter = self.putters.pop()
-                    putter.switch(putter)
-                else:
-                    break
-        finally:
-            self._event_unlock = None  # QQQ maybe it's possible to obtain this info from libevent?
-            # i.e. whether this event is pending _OR_ currently executing
+                        item = putter.item
+                        putter.item = _NONE  # this makes greenlet calling put() not to call _put() again
+                        self._put(item)
+                        item = self._get()
+                        getter.switch(item)
+                        putter.switch(putter)
+                    else:
+                        self.putters.add(putter)
+            elif self.putters and (self.getters or self.qsize() < self.maxsize):
+                putter = self.putters.pop()
+                putter.switch(putter)
+            else:
+                break
         # testcase: 2 greenlets: while True: q.put(q.get()) - nothing else has a change to execute
         # to avoid this, schedule unlock with timer(0, ...) once in a while
 
     def _schedule_unlock(self):
-        if self._event_unlock is None:
-            self._event_unlock = get_hub().reactor.active_event(self._unlock)
-            # QQQ re-activate event (with event_active libevent call) instead of creating a new one each time
+        self._event_unlock.start(self._unlock)
 
     def __iter__(self):
         return self

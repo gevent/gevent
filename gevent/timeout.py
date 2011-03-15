@@ -85,17 +85,21 @@ class Timeout(BaseException):
     def __init__(self, seconds=None, exception=None):
         self.seconds = seconds
         self.exception = exception
-        self.timer = get_hub().reactor.timer()
+        if seconds is not None:
+            self.timer = get_hub().loop.timer_ref(seconds)
+        else:
+            self.timer = get_hub().loop.timer_ref(0.0)
 
     def start(self):
         """Schedule the timeout."""
         assert not self.pending, '%r is already started; to restart it, cancel it first' % self
         if self.seconds is None:  # "fake" timeout (never expires)
             pass
-        elif self.exception is None or self.exception is False:  # timeout that raises self
-            self.timer.add(self.seconds, getcurrent().throw, self)
+        elif self.exception is None or self.exception is False or isinstance(self.exception, basestring):
+            # timeout that raises self
+            self.timer.start(getcurrent().throw, self)
         else:  # regular timeout with user-provided exception
-            self.timer.add(self.seconds, getcurrent().throw, self.exception)
+            self.timer.start(getcurrent().throw, self.exception)
 
     @classmethod
     def start_new(cls, timeout=None, exception=None):
@@ -120,15 +124,11 @@ class Timeout(BaseException):
     @property
     def pending(self):
         """Return True if the timeout is scheduled to be raised."""
-        if self.timer is not None:
-            return self.timer.pending
-        else:
-            return False
+        return self.timer.pending or self.timer.active
 
     def cancel(self):
         """If the timeout is pending, cancel it. Otherwise, do nothing."""
-        if self.timer is not None:
-            self.timer.cancel()
+        self.timer.stop()
 
     def __repr__(self):
         try:
@@ -163,10 +163,10 @@ class Timeout(BaseException):
         elif self.exception is False:
             return '%s second%s (silent)' % (self.seconds, suffix)
         else:
-            return '%s second%s (%s)' % (self.seconds, suffix, self.exception)
+            return '%s second%s: %s' % (self.seconds, suffix, self.exception)
 
     def __enter__(self):
-        if not self.timer.pending:
+        if not self.pending:
             self.start()
         return self
 
