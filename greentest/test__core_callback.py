@@ -9,16 +9,19 @@ def f():
 
 
 def main():
-    active_event = get_hub().reactor.active_event
-    x = active_event(f)
-    assert x.pending == 1, x.pending
+    loop = get_hub().loop
+    x = loop.callback()
+    x.start(f)
+
+    assert x.active, x.pending
     gevent.sleep(0)
     assert x.pending == 0, x.pending
     assert called == [1], called
 
-    x = active_event(f)
+    x = loop.callback()
+    x.start(f)
     assert x.pending == 1, x.pending
-    x.cancel()
+    x.stop()
     assert x.pending == 0, x.pending
     gevent.sleep(0)
     assert called == [1], called
