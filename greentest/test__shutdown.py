@@ -10,7 +10,7 @@ class TestShutdown(unittest.TestCase):
         if fuzzy is None:
             fuzzy = max(0.05, seconds / 2.)
         start = time.time()
-        gevent.hub.shutdown()
+        get_hub().join()
         delta = time.time() - start
         assert seconds - fuzzy < delta < seconds + fuzzy, (seconds - fuzzy, delta, seconds + fuzzy)
 
@@ -36,7 +36,8 @@ class TestShutdown(unittest.TestCase):
         gevent.sleep(0)
         self.assert_hub()
 
-        get_hub().reactor.timer(0.1, lambda: None)
+        t = get_hub().loop.timer(0.1)
+        t.start(lambda: None)
         self.assert_hub()
         self._shutdown(seconds=0.1)
         self.assert_no_hub()
