@@ -30,21 +30,12 @@ from gevent.hub import Waiter, get_hub
 DELAY = 0.1
 
 
-class TestScheduleCall(greentest.TestCase):
-
-    def test_global(self):
-        lst = [1]
-        gevent.spawn(get_hub().reactor.timer, DELAY, lst.pop)
-        gevent.sleep(DELAY * 2)
-        assert lst == [], lst
-
-
 class TestCloseSocketWhilePolling(greentest.TestCase):
 
     def test(self):
         try:
             sock = socket.socket()
-            get_hub().reactor.timer(0, sock.close)
+            get_hub().loop.timer(0, sock.close)
             sock.connect(('python.org', 81))
         except Exception:
             gevent.sleep(0)
@@ -65,7 +56,8 @@ class TestExceptionInMainloop(greentest.TestCase):
         def fail():
             raise greentest.ExpectedException('TestExceptionInMainloop.test_sleep/fail')
 
-        get_hub().reactor.timer(0, fail)
+        t = get_hub().loop.timer(0.001)
+        t.start(fail)
 
         start = time.time()
         gevent.sleep(DELAY)
@@ -78,6 +70,9 @@ class TestSleep(greentest.GenericWaitTestCase):
 
     def wait(self, timeout):
         gevent.sleep(timeout)
+
+    def test_simple(self):
+        gevent.sleep(0)
 
     def test_negative(self):
         self.switch_expected = False
@@ -105,11 +100,12 @@ class TestWaiterGet(greentest.GenericWaitTestCase):
         self.waiter = Waiter()
 
     def wait(self, timeout):
-        evt = get_hub().reactor.timer(timeout, self.waiter.switch, None)
+        evt = get_hub().loop.timer(timeout)
+        evt.start(self.waiter.switch)
         try:
             return self.waiter.get()
         finally:
-            evt.cancel()
+            evt.stop()
 
 
 class TestWaiter(greentest.TestCase):
