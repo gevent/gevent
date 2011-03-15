@@ -143,12 +143,7 @@ def wait(io, timeout=None, timeout_exc=timeout('timed out')):
     if timeout is not None:
         timeout = Timeout.start_new(timeout, timeout_exc)
     try:
-        io.start(getcurrent().switch)
-        try:
-            result, _revents = get_hub().switch()
-            assert io is result, 'Invalid switch into wait(%r): %r' % ((result, _revents), )
-        finally:
-            io.stop()
+        return get_hub().wait(io)
     finally:
         if timeout is not None:
             timeout.cancel()
