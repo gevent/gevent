@@ -3,7 +3,7 @@ Changelog
 
 .. currentmodule:: gevent
 
-Release 0.13.2 (Feb 7, 2011)
+Release 0.13.3 (Feb 7, 2011)
 ----------------------------
 
 - Fixed typo in :mod:`gevent.httplib` that rendered it unusable.
