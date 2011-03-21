@@ -627,8 +627,8 @@ def create_connection(address, timeout=_GLOBAL_DEFAULT_TIMEOUT, source_address=N
     An host of '' or port 0 tells the OS to use the default.
     """
 
-    msg = "getaddrinfo returns an empty list"
     host, port = address
+    err = None
     for res in getaddrinfo(host, port, 0, SOCK_STREAM):
         af, socktype, proto, _canonname, sa = res
         sock = None
@@ -640,11 +640,15 @@ def create_connection(address, timeout=_GLOBAL_DEFAULT_TIMEOUT, source_address=N
                 sock.bind(source_address)
             sock.connect(sa)
             return sock
-        except error, msg:
+        except error, ex:
+            err = ex
             sys.exc_clear()
             if sock is not None:
                 sock.close()
-    raise msg
+    if err is not None:
+        raise err
+    else:
+        raise error("getaddrinfo returns an empty list")
 
 
 try:
