@@ -2,6 +2,7 @@ cimport libev
 
 
 __all__ = ['get_version',
+           'get_header_version',
            'supported_backends',
            'recommended_backends',
            'embeddable_backends',
@@ -76,6 +77,10 @@ NOSIGMASK = libev.EVFLAG_NOSIGMASK
 
 def get_version():
     return 'libev-%d.%02d' % (libev.ev_version_major(), libev.ev_version_minor())
+
+
+def get_header_version():
+    return 'libev-%d.%02d' % (libev.EV_VERSION_MAJOR, libev.EV_VERSION_MINOR)
 
 
 # This list backends in the order they are actually tried by libev
