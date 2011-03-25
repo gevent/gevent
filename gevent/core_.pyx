@@ -385,6 +385,8 @@ define(WATCHER_BASE, `cdef public loop loop
             return libev.ev_priority(&self._watcher)
 
         def __set__(self, int priority):
+            if libev.ev_is_active(&self._watcher):
+                raise AttributeError("Cannot set priority of an active watcher")
             libev.ev_set_priority(&self._watcher, priority)
 
     def feed(self, int revents, object callback, *args):
