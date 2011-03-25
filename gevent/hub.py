@@ -111,7 +111,7 @@ class Signal(object):
         try:
             handler(*args, **kwargs)
         except:
-            self.hub.loop.run_callback(self.hub.parent.throw, *sys.exc_info())
+            self.hub.handle_error(None, *sys.exc_info())
         if not self.watcher.active and self._unref == 1:
             self.hub.loop.ref()
             self._unref = 0
