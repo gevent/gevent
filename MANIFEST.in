@@ -2,6 +2,7 @@ recursive-include greentest *
 recursive-include examples *
 recursive-include gevent *
 recursive-include doc *
+recursive-include libev *
 include LICENSE
 include LICENSE.pyevent
 include README.rst
