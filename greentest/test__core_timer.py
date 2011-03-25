@@ -13,11 +13,19 @@ def main():
     x.start(f)
 
     assert x.active, x.pending
+    try:
+        x.priority = 1
+        raise AssertionError('must not be able to change priority of active watcher')
+    except AttributeError:
+        pass
     loop.run()
     assert x.pending == 0, x.pending
     assert called == [1], called
     assert x.callback is None, x.callback
     assert x.args is None, x.args
+    assert x.priority == 0, x
+    x.priority = 1
+    assert x.priority == 1, x
     x.stop()
 
 
