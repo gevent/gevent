@@ -491,10 +491,20 @@ cdef class io(watcher):
         def __get__(self):
             return self._watcher.fd
 
+        def __set__(self, int fd):
+            if libev.ev_is_active(&self._watcher):
+                raise AttributeError("'io' watcher attribute 'fd' is read-only while watcher is active")
+            libev.ev_io_init(&self._watcher, <void *>gevent_io_callback, fd, self._watcher.events)
+
     property events:
 
         def __get__(self):
             return self._watcher.events
+
+        def __set__(self, int events):
+            if libev.ev_is_active(&self._watcher):
+                raise AttributeError("'io' watcher attribute 'events' is read-only while watcher is active")
+            libev.ev_io_init(&self._watcher, <void *>gevent_io_callback, self._watcher.fd, events)
 
     property events_str:
 
