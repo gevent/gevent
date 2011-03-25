@@ -1,4 +1,4 @@
-static void handle_error(PyObject* loop, PyObject* arg) {
+static void gevent_handle_error(PyObject* loop, PyObject* where) {
     PyThreadState *tstate;
     PyObject *type, *value, *traceback, *handler, *result, *tuple;
     int reported;
@@ -22,8 +22,8 @@ static void handle_error(PyObject* loop, PyObject* arg) {
             tuple = PyTuple_New(4);
             if (tuple) {
                 reported = 1;
-                Py_INCREF(arg);
-                PyTuple_SET_ITEM(tuple, 0, arg);
+                Py_INCREF(where);
+                PyTuple_SET_ITEM(tuple, 0, where);
                 PyTuple_SET_ITEM(tuple, 1, type);
                 PyTuple_SET_ITEM(tuple, 2, value);
                 PyTuple_SET_ITEM(tuple, 3, traceback);
@@ -51,20 +51,18 @@ static void handle_error(PyObject* loop, PyObject* arg) {
     PyErr_Clear();
 }
 
-static inline void handle_signal_error(PyObject* loop) {
-    Py_INCREF(Py_None);
-    handle_error(loop, Py_None);
-    Py_DECREF(Py_None);
+static inline void gevent_handle_signal_error(PyObject* loop) {
+    gevent_handle_error(loop, Py_None);
 }
 
 /* Calls callback(watcher, revents) and reports errors.
  * Returns 1 on success, 0 on failure
  * */
-static inline int _callback(PyObject* callback, PyObject* watcher, int revents, PyObject* loop) {
+static inline int gevent_callback(PyObject* callback, PyObject* watcher, int revents, PyObject* loop) {
     int success;
     PyObject *py_revents, *tuple, *result;
     PyErr_CheckSignals();
-    if (PyErr_Occurred()) handle_signal_error(loop);
+    if (PyErr_Occurred()) gevent_handle_signal_error(loop);
 
     success = 0;
 
@@ -81,7 +79,7 @@ static inline int _callback(PyObject* callback, PyObject* watcher, int revents, 
                 Py_DECREF(result);
             }
             else {
-                handle_error(loop, watcher);
+                gevent_handle_error(loop, watcher);
             }
             Py_DECREF(tuple);
         }
@@ -95,10 +93,10 @@ static inline int _callback(PyObject* callback, PyObject* watcher, int revents, 
 
 
 /* Calls callback(*args) and reports errors */
-static void _callback_simple(PyObject* callback, PyObject* watcher, PyObject* args, PyObject* loop) {
+static void gevent_callback_simple(PyObject* callback, PyObject* watcher, PyObject* args, PyObject* loop) {
     PyObject* result;
     PyErr_CheckSignals();
-    if (PyErr_Occurred()) handle_signal_error(loop);
+    if (PyErr_Occurred()) gevent_handle_signal_error(loop);
 
     result = PyObject_Call(callback, args, NULL);
 
@@ -106,7 +104,7 @@ static void _callback_simple(PyObject* callback, PyObject* watcher, PyObject* ar
         Py_DECREF(result);
     }
     else {
-        handle_error(loop, watcher);
+        gevent_handle_error(loop, watcher);
     }
     PyErr_Clear();
 }
@@ -125,7 +123,7 @@ static void _callback_simple(PyObject* callback, PyObject* watcher, PyObject* ar
 #endif
 
 
-static inline void stop(PyObject* self) {
+static inline void gevent_stop(PyObject* self) {
     PyObject *result, *callable;
     callable = PyObject_GetAttrString(self, "stop");
     if (callable) {
@@ -150,7 +148,7 @@ static inline void stop(PyObject* self) {
 #define CHECK_OFFSETOF (timer_offsetof == signal_offsetof) && (timer_offsetof == idle_offsetof) && (timer_offsetof == prepare_offsetof) && (timer_offsetof == callback_offsetof)
 
 
-static void simple_callback(struct ev_loop *_loop, void *watcher, int revents) {
+static void gevent_simple_callback(struct ev_loop *_loop, void *watcher, int revents) {
     char STATIC_ASSERTION__same_offsetof[(CHECK_OFFSETOF)?1:-1];
     struct __pyx_obj_6gevent_4core_timer *self;
     GIL_ENSURE;
@@ -158,40 +156,44 @@ static void simple_callback(struct ev_loop *_loop, void *watcher, int revents) {
      * we can do this, because layout of struct members is the same for all watchers */
     self = ((struct __pyx_obj_6gevent_4core_timer *)(((char *)watcher) - timer_offsetof));
     Py_INCREF(self);
-    _callback_simple(self->callback, (PyObject*)self, self->args, (PyObject*)self->loop);
+    gevent_callback_simple(self->callback, (PyObject*)self, self->args, (PyObject*)self->loop);
     if (!ev_active(watcher)) {
-        stop((PyObject*)self);
+        gevent_stop((PyObject*)self);
     }
     Py_DECREF(self);
     GIL_RELEASE;
 }
 
-static void io_callback(struct ev_loop *loop, struct ev_io *watcher, int revents) {
+static void gevent_io_callback(struct ev_loop *loop, struct ev_io *watcher, int revents) {
     struct __pyx_obj_6gevent_4core_io *self;
     GIL_ENSURE;
     self = GET_OBJECT(watcher, __pyx_obj_6gevent_4core_io, _watcher);
     Py_INCREF(self);
-    if (!_callback(self->callback, (PyObject*)self, revents, (PyObject*)self->loop)) {
-        stop((PyObject*)self);
+    if (!gevent_callback(self->callback, (PyObject*)self, revents, (PyObject*)self->loop)) {
+        gevent_stop((PyObject*)self);
     }
     Py_DECREF(self);
     GIL_RELEASE;
 }
 
-static void signal_check(struct ev_loop *_loop, void *watcher, int revents) {
+static void gevent_signal_check(struct ev_loop *_loop, void *watcher, int revents) {
     struct __pyx_obj_6gevent_4core_loop *loop;
     GIL_ENSURE;
     PyErr_CheckSignals();
     loop = GET_OBJECT(watcher, __pyx_obj_6gevent_4core_loop, _signal_checker);
-    if (PyErr_Occurred()) handle_signal_error((PyObject*)loop);
+    if (PyErr_Occurred()) gevent_handle_signal_error((PyObject*)loop);
     GIL_RELEASE;
 }
 
-static void periodic_signal_check(struct ev_loop *_loop, void *watcher, int revents) {
+#if defined(GEVENT_WINDOWS)
+
+static void gevent_periodic_signal_check(struct ev_loop *_loop, void *watcher, int revents) {
     struct __pyx_obj_6gevent_4core_loop *loop;
     GIL_ENSURE;
     PyErr_CheckSignals();
     loop = GET_OBJECT(watcher, __pyx_obj_6gevent_4core_loop, _periodic_signal_checker);
-    if (PyErr_Occurred()) handle_signal_error((PyObject*)loop);
+    if (PyErr_Occurred()) gevent_handle_signal_error((PyObject*)loop);
     GIL_RELEASE;
 }
+
+#endif

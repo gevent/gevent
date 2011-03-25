@@ -23,10 +23,10 @@ cdef extern from "frameobject.h":
     PyThreadState* PyThreadState_GET()
 
 cdef extern from "callbacks.h":
-    void io_callback(libev.ev_loop, libev.ev_io, int)
-    void simple_callback(libev.ev_loop, void*, int)
-    void signal_check(libev.ev_loop, void*, int)
-    void periodic_signal_check(libev.ev_loop, void*, int)
+    void gevent_io_callback(libev.ev_loop, libev.ev_io, int)
+    void gevent_simple_callback(libev.ev_loop, void*, int)
+    void gevent_signal_check(libev.ev_loop, void*, int)
+    void gevent_periodic_signal_check(libev.ev_loop, void*, int)
 
 
 cdef extern from *:
@@ -180,9 +180,9 @@ cdef class loop:
 
     def __init__(self, object flags=None, object default=True, size_t ptr=0):
         cdef unsigned int c_flags
-        libev.ev_prepare_init(&self._signal_checker, <void*>signal_check)
+        libev.ev_prepare_init(&self._signal_checker, <void*>gevent_signal_check)
         IFDEF_WINDOWS()
-        libev.ev_timer_init(&self._periodic_signal_checker, <void*>periodic_signal_check, 0.3, 0.3)
+        libev.ev_timer_init(&self._periodic_signal_checker, <void*>gevent_periodic_signal_check, 0.3, 0.3)
         ENDIF()
         if ptr:
             self._ptr = <libev.ev_loop*>ptr
@@ -417,7 +417,7 @@ define(WATCHER, `WATCHER_BASE($1)
 
 
 define(INIT, `def __init__(self, loop loop$2, object ref=False):
-        libev.ev_$1_init(&self._watcher, <void *>simple_callback$3)
+        libev.ev_$1_init(&self._watcher, <void *>gevent_simple_callback$3)
         self.loop = loop
         if ref:
             self._incref = 1
@@ -479,7 +479,7 @@ cdef class io(watcher):
         IFDEF_WINDOWS()
         fd = _get_fd(fd)
         ENDIF()
-        libev.ev_io_init(&self._watcher, <void *>io_callback, fd, events)
+        libev.ev_io_init(&self._watcher, <void *>gevent_io_callback, fd, events)
         self.loop = loop
         if ref:
             self._incref = 1
