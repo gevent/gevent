@@ -231,7 +231,7 @@ cdef class loop:
         def __get__(self):
             return <size_t>self._ptr
 
-    def _default_handle_error(self, obj, type, value, tb):
+    def _default_handle_error(self, where, type, value, tb):
         # note: Hub sets its own error handler so this is not used by gevent
         # this is here to make core.loop usable without the rest of gevent
         import traceback
