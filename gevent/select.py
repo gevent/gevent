@@ -54,13 +54,13 @@ def select(rlist, wlist, xlist, timeout=None):
         try:
             for readfd in rlist:
                 watcher = io(get_fileno(readfd), 1)
-                watcher.start(result.update, readfd)
                 watcher.priority = MAXPRI
+                watcher.start(result.update, readfd)
                 watchers.append(watcher)
             for writefd in wlist:
                 watcher = io(get_fileno(writefd), 2)
-                watcher.start(result.update, writefd)
                 watcher.priority = MAXPRI
+                watcher.start(result.update, writefd)
                 watchers.append(watcher)
         except IOError, ex:
             raise error(*ex.args)
