@@ -16,7 +16,7 @@ static void gevent_handle_error(PyObject* loop, PyObject* where) {
 
     reported = 0;
 
-    handler = PyObject_GetAttrString(loop, "handle_error");
+    handler = PyObject_GetAttr(loop, __pyx_n_s__handle_error);
     if (handler) {
         if (handler != Py_None) {
             tuple = PyTuple_New(4);
@@ -125,7 +125,7 @@ static void gevent_callback_simple(PyObject* callback, PyObject* watcher, PyObje
 
 static inline void gevent_stop(PyObject* self) {
     PyObject *result, *callable;
-    callable = PyObject_GetAttrString(self, "stop");
+    callable = PyObject_GetAttr(self, __pyx_n_s__stop);
     if (callable) {
         result = PyObject_Call(callable, __pyx_empty_tuple, NULL);
         if (result) {
