@@ -351,8 +351,6 @@ def get_failed_testcases(cursor, runid):
 
 
 _warning_re = re.compile('\w*warning', re.I)
-_error_re = re.compile(r'(?P<prefix>\s*)Traceback \(most recent call last\):' +
-                       r'(\n(?P=prefix)[ \t]+[^\n]*)+\n(?P=prefix)(?P<error>[\w\.]+)')
 
 
 def get_warnings(output):
@@ -374,7 +372,19 @@ def get_exceptions(output):
     ... ZeroDivisionError: integer division or modulo by zero''')
     ['ZeroDivisionError']
     """
-    return [x.group('error') for x in _error_re.finditer(output)]
+    errors = []
+    readtb = False
+    for line in output.split('\n'):
+        if 'Traceback (most recent call last):' in line:
+            readtb = True
+        else:
+            if readtb:
+                if line[:1] == ' ':
+                    pass
+                else:
+                    errors.append(line.split(':')[0])
+                    readtb = False
+    return errors
 
 
 def get_warning_stats(output):
