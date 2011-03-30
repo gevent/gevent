@@ -267,7 +267,12 @@ class WSGIHandler(object):
         if self.rfile.closed:
             return
 
-        raw_requestline = self.read_requestline()
+        try:
+            raw_requestline = self.read_requestline()
+        except socket.error:
+            # "Connection reset by peer" or other socket errors aren't interesting here
+            return
+
         if not raw_requestline:
             return
 
