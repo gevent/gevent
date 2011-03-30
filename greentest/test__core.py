@@ -11,6 +11,10 @@ class Test(TestCase):
         version = core.get_version()
         assert isinstance(version, str), repr(version)
         assert version, repr(version)
+        header_version = core.get_header_version()
+        assert isinstance(header_version, str), repr(header_version)
+        assert header_version, repr(header_version)
+        self.assertEqual(version, header_version)
 
     def test_flags_conversion(self):
         if sys.platform != 'win32':
