@@ -1,8 +1,7 @@
 # Copyright (c) 2009-2010 Denis Bilenko. See LICENSE for details.
 
 import sys
-import traceback
-from gevent.hub import greenlet, getcurrent, get_hub, GreenletExit, Waiter, kill
+from gevent.hub import greenlet, getcurrent, get_hub, GreenletExit, Waiter
 from gevent.timeout import Timeout
 
 
