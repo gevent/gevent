@@ -319,66 +319,45 @@ cdef class loop:
     def io(self, int fd, int events):
         return io(self, fd, events)
 
-    def io_ref(self, int fd, int events):
-        return io(self, fd, events, True)
-
     def timer(self, double after, double repeat=0.0):
         return timer(self, after, repeat)
-
-    def timer_ref(self, double after, double repeat=0.0):
-        return timer(self, after, repeat, True)
 
     def signal(self, int signum):
         return signal(self, signum)
 
-    def signal_ref(self, int signum):
-        return signal(self, signum, True)
-
     def idle(self):
         return idle(self)
-
-    def idle_ref(self):
-        return idle(self, True)
 
     def prepare(self):
         return prepare(self)
 
-    def prepare_ref(self):
-        return prepare(self, True)
-
     def callback(self):
         return callback(self)
 
-    def callback_ref(self):
-        return callback(self, True)
-
     def run_callback(self, func, *args):
-        cdef object result = callback(self, ref=True)
+        cdef callback result = callback(self)
         result.start(func, *args)
         return result
 
 
-define(INCREF, ``if self._incref == 1:
-            self._incref = 2
+define(INCREF, ``if self._incref == 0:
+            self._incref = 1
             Py_INCREF(<void*>self)'')
 
 
 define(WATCHER_BASE, `cdef public loop loop
     cdef public object callback
     cdef public object args
-    cdef public int _incref   # 0 - disabled, 1 - enabled, 2 - enabled & increfed
+    cdef public int _incref   # 1 - increfed, 0 - not increfed
     cdef libev.ev_$1 _watcher
 
     def stop(self):
         libev.ev_$1_stop(self.loop._ptr, &self._watcher)
         self.callback = None
         self.args = None
-        if self._incref == 2:
+        if self._incref == 1:
             Py_DECREF(<void*>self)
-            self._incref = 1
-
-    def __dealloc__(self):
-        libev.ev_$1_stop(self.loop._ptr, &self._watcher)
+            self._incref = 0
 
     property pending:
 
@@ -422,13 +401,10 @@ define(WATCHER, `WATCHER_BASE($1)
     ACTIVE($1)')
 
 
-define(INIT, `def __init__(self, loop loop$2, object ref=False):
+define(INIT, `def __init__(self, loop loop$2):
         libev.ev_$1_init(&self._watcher, <void *>gevent_simple_callback$3)
         self.loop = loop
-        if ref:
-            self._incref = 1
-        else:
-            self._incref = 0')
+        self._incref = 0')
 
 
 cdef class watcher:
@@ -448,9 +424,7 @@ cdef class watcher:
                 result += " callback=%r" % (self.callback, )
             if self.args is not None:
                 result += " args=%r" % (self.args, )
-            if self._incref == 2:
-                result += " REF"
-            elif self._incref == 1:
+            if self._incref == 1:
                 result += " ref"
             elif self._incref:
                 result += " _incref=%s" % self._incref
@@ -481,16 +455,13 @@ cdef class io(watcher):
 
     WATCHER(io)
 
-    def __init__(self, loop loop, int fd, int events, object ref=False):
+    def __init__(self, loop loop, int fd, int events):
         IFDEF_WINDOWS()
         fd = _get_fd(fd)
         ENDIF()
         libev.ev_io_init(&self._watcher, <void *>gevent_io_callback, fd, events)
         self.loop = loop
-        if ref:
-            self._incref = 1
-        else:
-            self._incref = 0
+        self._incref = 0
 
     property fd:
 

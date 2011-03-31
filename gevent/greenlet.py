@@ -143,8 +143,8 @@ class Greenlet(greenlet):
         self.value = None
         self._exception = _NONE
         loop = self.parent.loop
-        self._notifier = loop.callback_ref()
-        self._start_event = loop.callback_ref()
+        self._notifier = loop.callback()
+        self._start_event = loop.callback()
 
     @property
     def started(self):
@@ -235,7 +235,7 @@ class Greenlet(greenlet):
     def start_later(self, seconds):
         """Schedule the greenlet to run in the future loop iteration *seconds* later"""
         assert not self.started, 'Greenlet already started'
-        self._start_event = self.parent.loop.timer_ref(seconds)
+        self._start_event = self.parent.loop.timer(seconds)
         self._start_event.start(self.switch)
 
     @classmethod

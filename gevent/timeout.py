@@ -86,9 +86,9 @@ class Timeout(BaseException):
         self.seconds = seconds
         self.exception = exception
         if seconds is not None:
-            self.timer = get_hub().loop.timer_ref(seconds)
+            self.timer = get_hub().loop.timer(seconds)
         else:
-            self.timer = get_hub().loop.timer_ref(0.0)
+            self.timer = get_hub().loop.timer(0.0)
 
     def start(self):
         """Schedule the timeout."""

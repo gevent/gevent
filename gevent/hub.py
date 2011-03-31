@@ -92,7 +92,7 @@ class Signal(object):
 
     def __init__(self, signalnum):
         self.hub = get_hub()
-        self.watcher = self.hub.loop.signal_ref(signalnum)
+        self.watcher = self.hub.loop.signal(signalnum)
         self._unref = 0
 
     def start(self, handler, *args, **kwargs):
