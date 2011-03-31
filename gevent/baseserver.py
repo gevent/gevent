@@ -202,7 +202,13 @@ def _tcp_listener(address, backlog=50, reuse_addr=None):
     sock = _socket.socket()
     if reuse_addr is not None:
         sock.setsockopt(_socket.SOL_SOCKET, _socket.SO_REUSEADDR, reuse_addr)
-    sock.bind(address)
+    try:
+        sock.bind(address)
+    except _socket.error, ex:
+        strerror = getattr(ex, 'strerror', None)
+        if strerror is not None:
+            ex.strerror = strerror + ': ' + repr(address)
+        raise
     sock.listen(backlog)
     sock.setblocking(0)
     return sock
