@@ -100,7 +100,10 @@ class BaseServer(object):
         else:
             result = ''
         try:
-            result += 'address=%s:%s' % self.address
+            if isinstance(self.address, tuple) and len(self.address) == 2:
+                result += 'address=%s:%s' % self.address
+            else:
+                result += 'address=%s' % (self.address, )
         except Exception, ex:
             result += str(ex) or '<error>'
         try:
@@ -114,12 +117,14 @@ class BaseServer(object):
     @property
     def server_host(self):
         """IP address that the server is bound to (string)."""
-        return self.address[0]
+        if isinstance(self.address, tuple):
+            return self.address[0]
 
     @property
     def server_port(self):
         """Port that the server is bound to (an integer)."""
-        return self.address[1]
+        if isinstance(self.address, tuple):
+            return self.address[1]
 
     def pre_start(self):
         """If the user initialized the server with an address rather than socket,
