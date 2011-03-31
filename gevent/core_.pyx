@@ -30,7 +30,6 @@ cdef extern from "callbacks.h":
     void gevent_signal_check(libev.ev_loop, void*, int)
     void gevent_periodic_signal_check(libev.ev_loop, void*, int)
 
-
 cdef extern from *:
     int FD_SETSIZE
     int _open_osfhandle(int, int)
