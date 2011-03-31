@@ -41,16 +41,16 @@ def format_date_time(timestamp):
 
 class Input(object):
 
-    def __init__(self, rfile, content_length, wfile=None, chunked_input=False):
+    def __init__(self, rfile, content_length, socket=None, chunked_input=False):
         self.rfile = rfile
         self.content_length = content_length
-        self.wfile = wfile
+        self.socket = socket
         self.position = 0
         self.chunked_input = chunked_input
         self.chunk_length = -1
 
     def _discard(self):
-        if self.wfile is None and (self.position < (self.content_length or 0) or self.chunked_input):
+        if self.socket is None and (self.position < (self.content_length or 0) or self.chunked_input):
             # ## Read and discard body
             while 1:
                 d = self.read(16384)
@@ -58,9 +58,9 @@ class Input(object):
                     break
 
     def _send_100_continue(self):
-        if self.wfile is not None:
-            self.wfile.write(_CONTINUE_RESPONSE)
-            self.wfile = None
+        if self.socket is not None:
+            self.socket.sendall(_CONTINUE_RESPONSE)
+            self.sendall = None
 
     def _do_read(self, reader, length=None):
         self._send_100_continue()
@@ -149,12 +149,22 @@ class WSGIHandler(object):
     protocol_version = 'HTTP/1.1'
     MessageClass = mimetools.Message
 
-    def __init__(self, socket, address, server):
+    def __init__(self, socket, address, server, rfile=None):
         self.socket = socket
         self.client_address = address
         self.server = server
-        self.rfile = socket.makefile('rb', -1)
-        self.wfile = socket.makefile('wb', 0)
+        if rfile is None:
+            self.rfile = socket.makefile('rb', -1)
+        else:
+            self.rfile = rfile
+
+    @property
+    def wfile(self):
+        # DEPRECATED, UNTESTED, TO BE REMOVED
+        wfile = getattr(self, '_wfile', None)
+        if wfile is None:
+            wfile = self._wfile = self.socket.makefile('wb', 0)
+        return wfile
 
     def handle(self):
         try:
@@ -167,7 +177,7 @@ class WSGIHandler(object):
                 if result is True:
                     continue
                 self.status, response_body = result
-                self.wfile.write(response_body)
+                self.socket.sendall(response_body)
                 if self.time_finish == 0:
                     self.time_finish = time.time()
                 self.log_request()
@@ -181,7 +191,7 @@ class WSGIHandler(object):
                     pass
             self.__dict__.pop('socket', None)
             self.__dict__.pop('rfile', None)
-            self.__dict__.pop('wfile', None)
+            self.__dict__.pop('_wfile', None)  # XXX remove once wfile property is gone
 
     def _check_http_version(self):
         version = self.request_version
@@ -353,8 +363,9 @@ class WSGIHandler(object):
             else:
                 towrite.append(data)
 
-        self.wfile.writelines(towrite)
-        self.response_length += sum(len(x) for x in towrite)
+        msg = ''.join(towrite)
+        self.socket.sendall(msg)
+        self.response_length += len(msg)
 
     def start_response(self, status, headers, exc_info=None):
         if exc_info:
@@ -400,7 +411,7 @@ class WSGIHandler(object):
         if self.status and not self.headers_sent:
             self.write('')
         if self.response_use_chunked:
-            self.wfile.writelines('0\r\n\r\n')
+            self.socket.sendall('0\r\n\r\n')
             self.response_length += 5
 
     def run_application(self):
@@ -483,11 +494,11 @@ class WSGIHandler(object):
                     env[key] = value
 
         if env.get('HTTP_EXPECT') == '100-continue':
-            wfile = self.wfile
+            socket = self.socket
         else:
-            wfile = None
+            socket = None
         chunked = env.get('HTTP_TRANSFER_ENCODING', '').lower() == 'chunked'
-        self.wsgi_input = Input(self.rfile, self.content_length, wfile=wfile, chunked_input=chunked)
+        self.wsgi_input = Input(self.rfile, self.content_length, socket=socket, chunked_input=chunked)
         env['wsgi.input'] = self.wsgi_input
         return env
 
