@@ -467,7 +467,6 @@ class WSGIHandler(object):
         env['SERVER_NAME'] = host
         env['SERVER_PORT'] = str(port)
         env['REMOTE_ADDR'] = self.client_address[0]
-        env['GATEWAY_INTERFACE'] = 'CGI/1.1'
 
         for header in self.headers.headers:
             key, value = header.split(':', 1)
