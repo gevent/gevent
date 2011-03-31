@@ -208,7 +208,7 @@ cdef class loop:
                 if not self._ptr:
                     raise SystemError("ev_loop_new(%s) failed" % (c_flags, ))
 
-    def _stop_signal_checker(self):
+    cpdef _stop_signal_checker(self):
         if libev.ev_is_active(&self._signal_checker):
             libev.ev_ref(self._ptr)
             libev.ev_prepare_stop(self._ptr, &self._signal_checker)
