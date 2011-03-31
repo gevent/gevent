@@ -474,9 +474,6 @@ class WSGIHandler(object):
             env['CONTENT_LENGTH'] = length
         env['SERVER_PROTOCOL'] = 'HTTP/1.0'
 
-        host, port = self.socket.getsockname()
-        env['SERVER_NAME'] = host
-        env['SERVER_PORT'] = str(port)
         env['REMOTE_ADDR'] = self.client_address[0]
 
         for header in self.headers.headers:
@@ -547,9 +544,21 @@ class WSGIServer(StreamServer):
 
     def pre_start(self):
         StreamServer.pre_start(self)
-        if 'SERVER_NAME' not in self.environ:
-            self.environ['SERVER_NAME'] = socket.getfqdn(self.server_host)
-        self.environ.setdefault('SERVER_PORT', str(self.server_port))
+        self.update_environ()
+
+    def update_environ(self):
+        address = self.address
+        if isinstance(address, tuple):
+            if 'SERVER_NAME' not in self.environ:
+                try:
+                    name = socket.getfqdn(address[0])
+                except socket.error:
+                    name = str(address[0])
+                self.environ['SERVER_NAME'] = name
+            self.environ.setdefault('SERVER_PORT', str(address[1]))
+        else:
+            self.environ.setdefault('SERVER_NAME', '')
+            self.environ.setdefault('SERVER_PORT', '')
 
     def handle(self, socket, address):
         handler = self.handler_class(socket, address, self)
