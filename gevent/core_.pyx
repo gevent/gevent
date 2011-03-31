@@ -13,6 +13,7 @@ __all__ = ['get_version',
 cdef extern from "Python.h":
     void   Py_INCREF(void* o)
     void   Py_DECREF(void* o)
+    void   Py_XDECREF(void* o)
     int    Py_ReprEnter(void* o)
     void   Py_ReprLeave(void* o)
 
@@ -575,12 +576,9 @@ cdef class callback(watcher):
 
 def set_exc_info(object type, object value):
     cdef PyThreadState* tstate = PyThreadState_GET()
-    if tstate.exc_type != NULL:
-        Py_DECREF(<void*>tstate.exc_type)
-    if tstate.exc_value != NULL:
-        Py_DECREF(<void*>tstate.exc_value)
-    if tstate.exc_traceback != NULL:
-        Py_DECREF(<void*>tstate.exc_traceback)
+    Py_XDECREF(<void*>tstate.exc_type)
+    Py_XDECREF(<void*>tstate.exc_value)
+    Py_XDECREF(<void*>tstate.exc_traceback)
     if value is None:
         tstate.exc_type = NULL
         tstate.exc_value = NULL
