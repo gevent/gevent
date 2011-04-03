@@ -191,6 +191,7 @@ class Hub(greenlet):
             self.loop = loop
         else:
             self.loop = self.loop_class(flags=loop, default=(get_ident() == MAIN_THREAD))
+        self.loop.error_handler = self
 
     def handle_error(self, where, type, value, tb):
         traceback.print_exception(type, value, tb)
@@ -243,10 +244,11 @@ class Hub(greenlet):
         global _threadlocal
         assert self is getcurrent(), 'Do not call Hub.run() directly'
         try:
-            self.loop.run(handle_error=self.handle_error)
+            self.loop.run()
         finally:
             if _threadlocal.__dict__.get('hub') is self:
                 _threadlocal.__dict__.pop('hub')
+            self.loop.error_handler = None  # break the ref cycle
         # this function must never return, as it will cause switch() in the parent greenlet
         # to return an unexpected value
         raise LoopExit

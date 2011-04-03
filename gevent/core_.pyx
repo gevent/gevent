@@ -179,7 +179,7 @@ def time(self):
 
 cdef class loop:
     cdef libev.ev_loop* _ptr
-    cdef public object handle_error
+    cdef public object error_handler
     cdef libev.ev_prepare _signal_checker
     cdef libev.ev_timer _periodic_signal_checker
 
@@ -236,29 +236,31 @@ cdef class loop:
         def __get__(self):
             return <size_t>self._ptr
 
-    def _default_handle_error(self, where, type, value, tb):
+    cpdef handle_error(self, where, type, value, tb):
+        cdef object handle_error
+        cdef object error_handler = self.error_handler
+        if error_handler is not None:
+            # we do want to do getattr every time so that setting Hub.handle_error property just works
+            handle_error = getattr(error_handler, 'handle_error', error_handler)
+            handle_error(where, type, value, tb)
+        else:
+            self._default_handle_error(where, type, value, tb)
+
+    cpdef _default_handle_error(self, where, type, value, tb):
         # note: Hub sets its own error handler so this is not used by gevent
         # this is here to make core.loop usable without the rest of gevent
         import traceback
         traceback.print_exception(type, value, tb)
         libev.ev_break(self._ptr, libev.EVBREAK_ONE)
 
-    def run(self, nowait=False, once=False, object handle_error=None):
+    def run(self, nowait=False, once=False):
         cdef unsigned int flags = 0
         if nowait:
             flags |= libev.EVRUN_NOWAIT
         if once:
             flags |= libev.EVRUN_ONCE
-        if handle_error is None:
-            if self.handle_error is None:
-                self.handle_error = self._default_handle_error
-                handle_error = False
-        else:
-            self.handle_error = handle_error
         with nogil:
             libev.ev_run(self._ptr, flags)
-        if handle_error is False:
-            self.handle_error = None
 
     def fork(self):
         libev.ev_loop_fork(self._ptr)
