@@ -157,7 +157,7 @@ static void gevent_simple_callback(struct ev_loop *_loop, void *watcher, int rev
     self = ((struct __pyx_obj_6gevent_4core_timer *)(((char *)watcher) - timer_offsetof));
     Py_INCREF(self);
     gevent_callback_simple(self->callback, (PyObject*)self, self->args, (PyObject*)self->loop);
-    if (!ev_active(watcher)) {
+    if (!ev_is_active(watcher)) {
         gevent_stop((PyObject*)self);
     }
     Py_DECREF(self);
