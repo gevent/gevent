@@ -1,3 +1,5 @@
+`#' DO NOT EDIT -- this file is auto generated from __file__ on syscmd(date)
+cimport cython
 cimport libev
 
 
@@ -11,11 +13,12 @@ __all__ = ['get_version',
 
 
 cdef extern from "Python.h":
-    void   Py_INCREF(void* o)
-    void   Py_DECREF(void* o)
-    void   Py_XDECREF(void* o)
-    int    Py_ReprEnter(void* o)
-    void   Py_ReprLeave(void* o)
+    void   Py_INCREF(void*)
+    void   Py_DECREF(void*)
+    void   Py_XDECREF(void*)
+    int    Py_ReprEnter(void*)
+    void   Py_ReprLeave(void*)
+    int    PyCallable_Check(void*)
 
 cdef extern from "frameobject.h":
     ctypedef struct PyThreadState:
@@ -25,15 +28,14 @@ cdef extern from "frameobject.h":
     PyThreadState* PyThreadState_GET()
 
 cdef extern from "callbacks.h":
-    void gevent_io_callback(libev.ev_loop, libev.ev_io, int)
-    void gevent_simple_callback(libev.ev_loop, void*, int)
+    void gevent_callback(libev.ev_loop, void*, int)
     void gevent_signal_check(libev.ev_loop, void*, int)
     void gevent_periodic_signal_check(libev.ev_loop, void*, int)
 
 cdef extern from *:
     int FD_SETSIZE
-    int _open_osfhandle(int, int)
-    cdef void IFDEF_WINDOWS "#if defined(GEVENT_WINDOWS) //" ()
+    cdef void IFDEF_WINDOWS "#if defined(_WIN32) //" ()
+    cdef void IFDEF_EV_STANDALONE "#if defined(EV_STANDALONE) //" ()
     cdef void ENDIF "#endif //" ()
     int ioctlsocket(int, int, unsigned long*)
     int FIONREAD
@@ -73,6 +75,26 @@ FORKCHECK = libev.EVFLAG_FORKCHECK
 NOINOTIFY = libev.EVFLAG_NOINOTIFY
 SIGNALFD = libev.EVFLAG_SIGNALFD
 NOSIGMASK = libev.EVFLAG_NOSIGMASK
+
+
+@cython.internal
+cdef class EVENTSType:
+    """A special object to pass to watcher.start which gets replaced by *events* that fired.
+
+    For example, if watcher is started as:
+        >>> io = loop.io(1, READ|WRITE)
+        >>> io.start(callback, EVENTS, 'hello')
+
+    Then the callback will be called with 2 arguments:
+        1) integer representing the event fired (READ, WRITE, READ|WRITE)
+        2) 'hello'
+    """
+    def __repr__(self):
+        return 'gevent.core.EVENTS'
+
+
+cdef public object GEVENT_CORE_EVENTS = EVENTSType()
+EVENTS = GEVENT_CORE_EVENTS
 
 
 def get_version():
@@ -177,7 +199,7 @@ def time(self):
     return libev.ev_time()
 
 
-cdef class loop:
+cdef public class loop [object PyGeventLoopObject, type PyGeventLoop_Type]:
     cdef libev.ev_loop* _ptr
     cdef public object error_handler
     cdef libev.ev_prepare _signal_checker
@@ -312,27 +334,29 @@ cdef class loop:
                     return value
             return backend
 
-    property activecnt:  # XXX only available if we embed libev
+    property activecnt:
 
         def __get__(self):
+            IFDEF_EV_STANDALONE()
             return self._ptr.activecnt
+            ENDIF()
 
-    def io(self, int fd, int events):
+    cpdef io(self, int fd, int events):
         return io(self, fd, events)
 
-    def timer(self, double after, double repeat=0.0):
+    cpdef timer(self, double after, double repeat=0.0):
         return timer(self, after, repeat)
 
-    def signal(self, int signum):
+    cpdef signal(self, int signum):
         return signal(self, signum)
 
-    def idle(self):
+    cpdef idle(self):
         return idle(self)
 
-    def prepare(self):
+    cpdef prepare(self):
         return prepare(self)
 
-    def callback(self):
+    cpdef callback(self):
         return callback(self)
 
     def run_callback(self, func, *args):
@@ -347,14 +371,27 @@ define(INCREF, ``if self._incref == 0:
 
 
 define(WATCHER_BASE, `cdef public loop loop
-    cdef public object callback
-    cdef public object args
-    cdef public int _incref   # 1 - increfed, 0 - not increfed
+    cdef object _callback
+    cdef public tuple args
+    cdef readonly int _incref   # 1 - increfed, 0 - not increfed
     cdef libev.ev_$1 _watcher
 
-    def stop(self):
+    property callback:
+
+        def __get__(self):
+            return self._callback
+
+        def __set__(self, object callback):
+            if not PyCallable_Check(<void*>callback):
+                raise TypeError("Expected callable, not %r" % callback)
+            self._callback = callback
+
+        def __del__(self):
+            self._callback = None
+
+    cpdef stop(self):
         libev.ev_$1_stop(self.loop._ptr, &self._watcher)
-        self.callback = None
+        self._callback = None
         self.args = None
         if self._incref == 1:
             Py_DECREF(<void*>self)
@@ -379,6 +416,12 @@ define(WATCHER_BASE, `cdef public loop loop
         self.callback = callback
         self.args = args
         libev.ev_feed_event(self.loop._ptr, &self._watcher, revents)
+        INCREF
+
+    cdef _feed(self, int revents, object callback, tuple args=()):
+        self.callback = callback
+        self.args = args
+        libev.ev_feed_event(self.loop._ptr, &self._watcher, revents)
         INCREF')
 
 
@@ -389,6 +432,12 @@ define(ACTIVE, `property active:
 
 
 define(START, `def start(self, object callback, *args):
+        self.callback = callback
+        self.args = args
+        libev.ev_$1_start(self.loop._ptr, &self._watcher)
+        INCREF
+
+    cdef _start(self, object callback, tuple args=()):
         self.callback = callback
         self.args = args
         libev.ev_$1_start(self.loop._ptr, &self._watcher)
@@ -403,12 +452,12 @@ define(WATCHER, `WATCHER_BASE($1)
 
 
 define(INIT, `def __init__(self, loop loop$2):
-        libev.ev_$1_init(&self._watcher, <void *>gevent_simple_callback$3)
+        libev.ev_$1_init(&self._watcher, <void *>gevent_callback$3)
         self.loop = loop
         self._incref = 0')
 
 
-cdef class watcher:
+cdef public class watcher [object PyGeventWatcherObject, type PyGeventWatcher_Type]:
     """Abstract base class for all the watchers"""
 
     def __repr__(self):
@@ -452,7 +501,7 @@ cdef int _open_osfhandle(int handle) except -1:
     return fd
 
 
-cdef class io(watcher):
+cdef public class io(watcher) [object PyGeventIOObject, type PyGeventIO_Type]:
 
     WATCHER(io)
 
@@ -460,7 +509,7 @@ cdef class io(watcher):
         IFDEF_WINDOWS()
         fd = _open_osfhandle(fd)
         ENDIF()
-        libev.ev_io_init(&self._watcher, <void *>gevent_io_callback, fd, events)
+        libev.ev_io_init(&self._watcher, <void *>gevent_callback, fd, events)
         self.loop = loop
         self._incref = 0
 
@@ -472,7 +521,7 @@ cdef class io(watcher):
         def __set__(self, int fd):
             if libev.ev_is_active(&self._watcher):
                 raise AttributeError("'io' watcher attribute 'fd' is read-only while watcher is active")
-            libev.ev_io_init(&self._watcher, <void *>gevent_io_callback, fd, self._watcher.events)
+            libev.ev_io_init(&self._watcher, <void *>gevent_callback, fd, self._watcher.events)
 
     property events:
 
@@ -482,7 +531,7 @@ cdef class io(watcher):
         def __set__(self, int events):
             if libev.ev_is_active(&self._watcher):
                 raise AttributeError("'io' watcher attribute 'events' is read-only while watcher is active")
-            libev.ev_io_init(&self._watcher, <void *>gevent_io_callback, self._watcher.fd, events)
+            libev.ev_io_init(&self._watcher, <void *>gevent_callback, self._watcher.fd, events)
 
     property events_str:
 
@@ -493,7 +542,7 @@ cdef class io(watcher):
         return ' fd=%s events=%s' % (self._watcher.fd, self.events_str)
 
 
-cdef class timer(watcher):
+cdef public class timer(watcher) [object PyGeventTimerObject, type PyGeventTimer_Type]:
 
     WATCHER(timer)
 
@@ -505,28 +554,28 @@ cdef class timer(watcher):
             return self._watcher.at
 
 
-cdef class signal(watcher):
+cdef public class signal(watcher) [object PyGeventSignalObject, type PyGeventSignal_Type]:
 
     WATCHER(signal)
 
     INIT(signal, ``, int signalnum'', ``, signalnum'')
 
 
-cdef class idle(watcher):
+cdef public class idle(watcher) [object PyGeventIdleObject, type PyGeventIdle_Type]:
 
     WATCHER(idle)
 
     INIT(idle)
 
 
-cdef class prepare(watcher):
+cdef public class prepare(watcher) [object PyGeventPrepareObject, type PyGeventPrepare_Type]:
 
     WATCHER(prepare)
 
     INIT(prepare)
 
 
-cdef class callback(watcher):
+cdef public class callback(watcher) [object PyGeventCallbackObject, type PyGeventCallback_Type]:
     """Pseudo-watcher used to execute a callback in the loop as soon as possible."""
 
     # does not matter which type we actually use, since we are going to feed() events, not start watchers
@@ -535,6 +584,12 @@ cdef class callback(watcher):
     INIT(prepare)
 
     def start(self, object callback, *args):
+        self.callback = callback
+        self.args = args
+        libev.ev_feed_event(self.loop._ptr, &self._watcher, libev.EV_CUSTOM)
+        INCREF
+
+    cdef _start(self, object callback, tuple args=()):
         self.callback = callback
         self.args = args
         libev.ev_feed_event(self.loop._ptr, &self._watcher, libev.EV_CUSTOM)

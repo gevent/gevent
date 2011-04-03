@@ -102,8 +102,7 @@ class StreamServer(BaseServer):
             self._start_accepting_timer.stop()
             self._start_accepting_timer = None
 
-    def _do_accept(self, event, _evtype):
-        assert event is self._accept_event
+    def _do_accept(self):
         address = None
         try:
             if self.full():

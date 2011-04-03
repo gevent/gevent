@@ -2,7 +2,7 @@
 
 from gevent.timeout import Timeout
 from gevent.event import Event
-from gevent.core import MAXPRI
+from gevent.core import MAXPRI, READ, WRITE, EVENTS
 from gevent.hub import get_hub
 
 __implements__ = ['select']
@@ -32,12 +32,12 @@ class SelectResult(object):
         self.write = []
         self.event = Event()
 
-    def update(self, watcher, event):
-        if event & 1:
-            self.read.append(watcher.args[0])
+    def update(self, events, socket):
+        if events & READ:
+            self.read.append(socket)
             self.event.set()
-        elif event & 2:
-            self.write.append(watcher.args[0])
+        elif events & WRITE:
+            self.write.append(socket)
             self.event.set()
 
 
@@ -55,12 +55,12 @@ def select(rlist, wlist, xlist, timeout=None):
             for readfd in rlist:
                 watcher = io(get_fileno(readfd), 1)
                 watcher.priority = MAXPRI
-                watcher.start(result.update, readfd)
+                watcher.start(result.update, EVENTS, readfd)
                 watchers.append(watcher)
             for writefd in wlist:
                 watcher = io(get_fileno(writefd), 2)
                 watcher.priority = MAXPRI
-                watcher.start(result.update, writefd)
+                watcher.start(result.update, EVENTS, writefd)
                 watchers.append(watcher)
         except IOError, ex:
             raise error(*ex.args)
