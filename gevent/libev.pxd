@@ -1,4 +1,4 @@
-cdef extern from "ev.c":
+cdef extern from "libev.h":
     int EV_MINPRI
     int EV_MAXPRI
 
