@@ -551,12 +551,14 @@ def set_exc_info(object type, object value):
     Py_XDECREF(<void*>tstate.exc_type)
     Py_XDECREF(<void*>tstate.exc_value)
     Py_XDECREF(<void*>tstate.exc_traceback)
-    if value is None:
+    if type is None:
         tstate.exc_type = NULL
-        tstate.exc_value = NULL
     else:
         Py_INCREF(<void*>type)
-        Py_INCREF(<void*>value)
         tstate.exc_type = <void*>type
+    if value is None:
+        tstate.exc_value = NULL
+    else:
+        Py_INCREF(<void*>value)
         tstate.exc_value = <void *>value
     tstate.exc_traceback = NULL
