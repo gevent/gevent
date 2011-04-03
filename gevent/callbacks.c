@@ -74,28 +74,37 @@ static inline void gevent_stop(struct PyGeventTimerObject* watcher) {
 
 static void gevent_callback(struct ev_loop *_loop, void *c_watcher, int revents) {
     struct PyGeventTimerObject *watcher;
-    PyObject *result, *py_events;
+    PyObject *result, *py_events, *args;
+    long length;
     GIL_ENSURE;
     /* we use this callback for all watchers, not just timer
      * we can do this, because layout of struct members is the same for all watchers */
     watcher = ((struct PyGeventTimerObject *)(((char *)c_watcher) - timer_offsetof));
     Py_INCREF(watcher);
     gevent_check_signals(watcher->loop);
-    if (PyTuple_Size(watcher->args) > 0 && PyTuple_GET_ITEM(watcher->args, 0) == GEVENT_CORE_EVENTS) {
+    args = watcher->args;
+    if (args == Py_None) {
+        args = __pyx_empty_tuple;
+    }
+    length = PyTuple_Size(args);
+    if (length < 0) {
+        gevent_handle_error(watcher->loop, (PyObject*)watcher);
+        goto end;
+    }
+    if (length > 0 && PyTuple_GET_ITEM(args, 0) == GEVENT_CORE_EVENTS) {
         py_events = PyInt_FromLong(revents);
-        if (py_events) {
-            Py_DECREF(GEVENT_CORE_EVENTS);
-            PyTuple_SET_ITEM(watcher->args, 0, py_events);
-        }
-        else {
+        if (!py_events) {
             gevent_handle_error(watcher->loop, (PyObject*)watcher);
             goto end;
         }
+        Py_DECREF(GEVENT_CORE_EVENTS);
+        PyTuple_SET_ITEM(args, 0, py_events);
     }
     else {
         py_events = NULL;
     }
-    result = PyObject_Call(watcher->_callback, watcher->args != Py_None ? watcher->args : __pyx_empty_tuple, NULL);
+    // should incref args?
+    result = PyObject_Call(watcher->_callback, args, NULL);
     if (result) {
         Py_DECREF(result);
     }
