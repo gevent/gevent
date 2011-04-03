@@ -57,7 +57,7 @@ static inline void gevent_stop(struct PyGeventTimerObject* watcher) {
         Py_DECREF(result);
     }
     else {
-        gevent_handle_error(watcher->loop, watcher);
+        gevent_handle_error(watcher->loop, (PyObject*)watcher);
     }
 }
 
@@ -103,7 +103,7 @@ static void gevent_callback(struct ev_loop *_loop, void *c_watcher, int revents)
         gevent_handle_error(watcher->loop, (PyObject*)watcher);
         if (revents & (EV_READ|EV_WRITE)) {
             /* this was an 'io' watcher: not stopping it will likely to cause the failing callback to be called repeatedly */
-            gevent_stop((PyObject*)watcher);
+            gevent_stop(watcher);
         }
     }
     if (py_events) {
@@ -112,7 +112,7 @@ static void gevent_callback(struct ev_loop *_loop, void *c_watcher, int revents)
     }
     if (!ev_is_active(c_watcher)) {
         /* watcher will never be run again: calling stop() will clear 'callback' and 'args' */
-        gevent_stop((PyObject*)watcher);
+        gevent_stop(watcher);
     }
 end:
     Py_DECREF(watcher);
