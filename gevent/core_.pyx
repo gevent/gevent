@@ -437,10 +437,10 @@ cdef class watcher:
         return ''
 
 
-cdef int _get_fd(int handle) except -1:
+cdef int _open_osfhandle(int handle) except -1:
     cdef int fd = handle
     IFDEF_WINDOWS()
-    fd = _open_osfhandle(fd, 0)
+    fd = libev._open_osfhandle(fd, 0)
     if fd < 0:
         raise IOError("handle=%s does not have a valid file descriptor" % handle)
     if fd >= FD_SETSIZE:
@@ -458,7 +458,7 @@ cdef class io(watcher):
 
     def __init__(self, loop loop, int fd, int events):
         IFDEF_WINDOWS()
-        fd = _get_fd(fd)
+        fd = _open_osfhandle(fd)
         ENDIF()
         libev.ev_io_init(&self._watcher, <void *>gevent_io_callback, fd, events)
         self.loop = loop
