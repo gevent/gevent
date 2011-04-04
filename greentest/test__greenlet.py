@@ -88,7 +88,7 @@ class TestLink(greentest.TestCase):
         for i in xrange(3):
             event2 = AsyncResult()
             p.link(event2)
-            self.assertRaises(err, event.get)
+            self.assertRaises(err, event2.get)
 
     def test_link_to_queue(self):
         p = gevent.spawn(lambda: 100)
