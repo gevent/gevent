@@ -487,6 +487,7 @@ class TestStuff(greentest.TestCase):
                 raise ExpectedError('test_killing_unlinked')
             except:
                 e.set_exception(sys.exc_info()[1])
+                gevent.sleep(0)
 
         p = gevent.spawn_link(func)
         try:
