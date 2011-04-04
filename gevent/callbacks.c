@@ -116,6 +116,7 @@ static void gevent_callback(struct ev_loop *_loop, void *c_watcher, int revents)
         }
     }
     if (py_events) {
+        Py_DECREF(py_events);
         Py_INCREF(GEVENT_CORE_EVENTS);
         PyTuple_SET_ITEM(watcher->args, 0, GEVENT_CORE_EVENTS);
     }
