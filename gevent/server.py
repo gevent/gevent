@@ -2,7 +2,6 @@
 """TCP/SSL server"""
 import sys
 import errno
-import traceback
 from gevent import socket
 from gevent.baseserver import BaseServer
 from gevent.hub import get_hub
@@ -123,19 +122,12 @@ class StreamServer(BaseServer):
                 spawn(self._handle, client_socket, address)
             return
         except:
-            traceback.print_exc()
+            self.loop.handle_error((address, self), *sys.exc_info())
             ex = sys.exc_info()[1]
             if self.is_fatal_error(ex):
                 self.kill()
                 sys.stderr.write('ERROR: %s failed with %s\n' % (self, str(ex) or repr(ex)))
                 return
-        try:
-            if address is None:
-                sys.stderr.write('%s: Failed.\n' % (self, ))
-            else:
-                sys.stderr.write('%s: Failed to handle request from %s\n' % (self, address, ))
-        except Exception:
-            traceback.print_exc()
         if self.delay >= 0:
             self.stop_accepting()
             self._start_accepting_timer = self.loop.timer(self.delay)
