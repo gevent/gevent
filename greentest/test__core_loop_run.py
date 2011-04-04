@@ -15,3 +15,5 @@ print 'must exit after 0.5 seconds.'
 timer = loop.timer(0.5)
 timer.start(lambda: None)
 loop.run()
+
+del loop
