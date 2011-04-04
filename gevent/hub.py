@@ -214,7 +214,7 @@ class Hub(greenlet):
                 try:
                     switch_out()
                 except:
-                    traceback.print_exc()
+                    self.handle_error(switch_out, *sys.exc_info())
             sys.exc_clear()
             return greenlet.switch(self)
         finally:
@@ -309,9 +309,18 @@ class Waiter(object):
         :class:`Event`/:class:`AsyncResult`/:class:`Queue` classes.
     """
 
-    __slots__ = ['greenlet', 'value', '_exception']
+    __slots__ = ['hub', 'greenlet', 'value', '_exception']
 
-    def __init__(self):
+    def __init__(self, hub=None):
+        if hub is None:
+            self.hub = get_hub()
+        else:
+            self.hub = hub
+        self.greenlet = None
+        self.value = None
+        self._exception = _NONE
+
+    def clear(self):
         self.greenlet = None
         self.value = None
         self._exception = _NONE
@@ -344,11 +353,11 @@ class Waiter(object):
             self.value = value
             self._exception = None
         else:
-            assert getcurrent() is get_hub(), "Can only use Waiter.switch method from the Hub greenlet"
+            assert getcurrent() is self.hub, "Can only use Waiter.switch method from the Hub greenlet"
             try:
                 self.greenlet.switch(value)
             except:
-                traceback.print_exc()
+                self.hub.handle_error(self.greenlet.switch, *sys.exc_info())
 
     def switch_args(self, *args):
         return self.switch(args)
@@ -358,11 +367,11 @@ class Waiter(object):
         if self.greenlet is None:
             self._exception = throw_args
         else:
-            assert getcurrent() is get_hub(), "Can only use Waiter.switch method from the Hub greenlet"
+            assert getcurrent() is self.hub, "Can only use Waiter.switch method from the Hub greenlet"
             try:
                 self.greenlet.throw(*throw_args)
             except:
-                traceback.print_exc()
+                self.hub.handle_error(self.greenlet.throw, *sys.exc_info())
 
     def get(self):
         """If a value/an exception is stored, return/raise it. Otherwise until switch() or throw() is called."""
@@ -375,7 +384,7 @@ class Waiter(object):
             assert self.greenlet is None, 'This Waiter is already used by %r' % (self.greenlet, )
             self.greenlet = getcurrent()
             try:
-                return get_hub().switch()
+                return self.hub.switch()
             finally:
                 self.greenlet = None
 
