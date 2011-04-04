@@ -287,7 +287,8 @@ class Waiter(object):
     The :meth:`get` method must be called from a greenlet other than :class:`Hub`.
 
         >>> result = Waiter()
-        >>> _ = get_hub().loop.timer(0.1, result.switch, 'hello from Waiter')
+        >>> timer = get_hub().loop.timer(0.1)
+        >>> timer.start(result.switch, 'hello from Waiter')
         >>> result.get() # blocks for 0.1 seconds
         'hello from Waiter'
 
@@ -295,7 +296,8 @@ class Waiter(object):
     :class:`Waiter` stores the value.
 
         >>> result = Waiter()
-        >>> _ = get_hub().loop.timer(0.1, result.switch, 'hi from Waiter')
+        >>> timer = get_hub().loop.timer(0.1)
+        >>> timer.start(result.switch, 'hi from Waiter')
         >>> sleep(0.2)
         >>> result.get() # returns immediatelly without blocking
         'hi from Waiter'
