@@ -255,8 +255,8 @@ class TestNoWait(TestCase):
 
         run_callback = get_hub().loop.run_callback
 
-        x = run_callback(store_result, util.wrap_errors(Exception, q.put_nowait), 2)
-        x = run_callback(store_result, util.wrap_errors(Exception, q.put_nowait), 3)
+        run_callback(store_result, util.wrap_errors(Exception, q.put_nowait), 2)
+        run_callback(store_result, util.wrap_errors(Exception, q.put_nowait), 3)
         gevent.sleep(0)
         assert len(result) == 2, result
         assert result[0] == None, result
