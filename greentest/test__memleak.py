@@ -1,4 +1,8 @@
 import sys
+
+if not hasattr(sys, 'gettotalrefcount'):
+    sys.exit(0)
+
 from greentest import TestCase, main
 import gevent
 from gevent.timeout import Timeout
