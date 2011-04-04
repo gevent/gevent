@@ -257,7 +257,8 @@ class CountingHub(_original_Hub):
         self.switch_count += 1
         return _original_Hub.switch(self)
 
-gevent.hub.Hub = CountingHub
+if gettotalrefcount is None:
+    gevent.hub.Hub = CountingHub
 
 
 def test_outer_timeout_is_not_lost(self):
