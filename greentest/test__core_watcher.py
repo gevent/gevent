@@ -1,4 +1,3 @@
-import sys
 import gevent
 import unittest
 
