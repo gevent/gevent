@@ -433,26 +433,23 @@ class WSGIHandler(object):
             except GreenletExit:
                 raise
             except Exception:
-                traceback.print_exc()
-                sys.exc_clear()
-                try:
-                    args = (getattr(self, 'server', ''),
-                            getattr(self, 'requestline', ''),
-                            getattr(self, 'client_address', ''),
-                            getattr(self, 'application', ''))
-                    msg = '%s: Failed to handle request:\n  request = %s from %s\n  application = %s\n\n' % args
-                    sys.stderr.write(msg)
-                except Exception:
-                    sys.exc_clear()
-                if not self.response_length:
-                    self.start_response(_INTERNAL_ERROR_STATUS, _INTERNAL_ERROR_HEADERS)
-                    self.write(_INTERNAL_ERROR_BODY)
+                self.handle_error(*sys.exc_info())
         finally:
             if hasattr(self.result, 'close'):
                 self.result.close()
             self.wsgi_input._discard()
             self.time_finish = time.time()
             self.log_request()
+
+    def handle_error(self, type, value, tb):
+        where = {'server': getattr(self, 'server', None),
+                 'requestline': getattr(self, 'requestline', None),
+                 'client_address': getattr(self, 'client_address', None),
+                 'application': getattr(self, 'application', None)}
+        self.server.loop.handle_error(where, type, value, tb)
+        if not self.response_length:
+            self.start_response(_INTERNAL_ERROR_STATUS, _INTERNAL_ERROR_HEADERS)
+            self.write(_INTERNAL_ERROR_BODY)
 
     def get_environ(self):
         env = self.server.get_environ()
