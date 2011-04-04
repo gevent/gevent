@@ -274,7 +274,8 @@ def spawn_subprocess(args, options, base_params):
         params['id'] = row_id
     retcode, output, output_printed = run_subprocess(args, options)
     if len(output) > OUTPUT_LIMIT:
-        output = output[:OUTPUT_LIMIT] + '<AbridgedOutputWarning>'
+        warn = '<AbridgedOutputWarning>'
+        output = output[:OUTPUT_LIMIT - len(warn)] + warn
     if retcode:
         if retcode == 1 and 'test_support.TestSkipped' in output:
             pass
@@ -441,7 +442,7 @@ def get_traceback_stats(output, test):
 
 
 def get_info(output, test):
-    output = output[:OUTPUT_LIMIT * 2]
+    output = output[:OUTPUT_LIMIT]
     traceback_stats, ignored_list = get_traceback_stats(output, test)
     warning_stats = get_warning_stats(output)
     result = traceback_stats + warning_stats
