@@ -174,8 +174,6 @@ class TestCase(greentest.TestCase):
 
 class TestDefaultSpawn(TestCase):
 
-    invalid_callback_message = 'Ignoring TypeError in <Greenlet'
-
     def get_spawn(self):
         return gevent.spawn
 
@@ -294,8 +292,6 @@ class TestDefaultSpawn(TestCase):
 
 class TestRawSpawn(TestDefaultSpawn):
 
-    invalid_callback_message = 'Ignoring TypeError <callback'
-
     def get_spawn(self):
         return gevent.spawn_raw
 
@@ -324,8 +320,6 @@ class TestPoolSpawn(TestDefaultSpawn):
 
 
 class TestNoneSpawn(TestCase):
-
-    invalid_callback_message = '<.*?>: Failed to handle'
 
     def get_spawn(self):
         return None

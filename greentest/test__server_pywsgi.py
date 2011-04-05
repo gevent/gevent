@@ -78,13 +78,6 @@ class Settings:
 
 test__server.Settings = Settings
 
-msg = '<.*?>: Failed to handle...'
-
-TestNoneSpawn.invalid_callback_message = msg
-TestRawSpawn.invalid_callback_message = msg
-TestPoolSpawn.invalid_callback_message = msg
-TestDefaultSpawn.invalid_callback_message = msg
-
 del TestNoneSpawn
 
 if __name__ == '__main__':
