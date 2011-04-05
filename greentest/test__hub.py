@@ -53,15 +53,21 @@ class TestExceptionInMainloop(greentest.TestCase):
 
         assert delay >= DELAY * 0.9, 'sleep returned after %s seconds (was scheduled for %s)' % (delay, DELAY)
 
+        error = greentest.ExpectedException('TestExceptionInMainloop.test_sleep/fail')
+
         def fail():
-            raise greentest.ExpectedException('TestExceptionInMainloop.test_sleep/fail')
+            raise error
 
         t = get_hub().loop.timer(0.001)
         t.start(fail)
 
+        self.expect_one_error()
+
         start = time.time()
         gevent.sleep(DELAY)
         delay = time.time() - start
+
+        self.assert_error(value=error)
 
         assert delay >= DELAY * 0.9, 'sleep returned after %s seconds (was scheduled for %s)' % (delay, DELAY)
 

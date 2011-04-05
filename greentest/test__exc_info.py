@@ -1,7 +1,6 @@
 import gevent
 import sys
 import greentest
-from gevent.hub import get_hub
 
 sys.exc_clear()
 
@@ -34,11 +33,10 @@ class Test(greentest.TestCase):
         try:
             raise error
         except:
-            self.hook_stderr()
+            self.expect_one_error()
             g = gevent.spawn(hello)
             g.join()
-            self.assert_stderr_traceback(expected_error)
-            self.assert_stderr('Ignoring ExpectedError in <Greenlet')
+            self.assert_error(ExpectedError, expected_error)
             if not isinstance(g.exception, ExpectedError):
                 raise g.exception
             try:
@@ -47,7 +45,7 @@ class Test(greentest.TestCase):
                 assert ex is error, (ex, error)
 
     def test2(self):
-        timer = get_hub().loop.timer(0)
+        timer = self._hub.loop.timer(0)
         timer.start(hello2)
         gevent.sleep(0.1)
         assert sys.exc_info() == (None, None, None), sys.exc_info()

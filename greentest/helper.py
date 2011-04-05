@@ -26,6 +26,7 @@ def patch_all(timeout=None):
     import greentest
     unittest.TestCase = greentest.TestCase
     unittest.TestCase.check_totalrefcount = False
+    unittest.TestCase.error_fatal = False
     if timeout is not None:
         unittest.TestCase.__timeout__ = timeout
 

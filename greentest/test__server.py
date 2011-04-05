@@ -155,12 +155,11 @@ class TestCase(greentest.TestCase):
 
     def _test_invalid_callback(self):
         try:
-            self.hook_stderr()
+            self.expect_one_error()
             self.server = self.ServerClass(('127.0.0.1', 0), lambda: None)
             self.server.start()
             self.assert500()
-            self.assert_stderr_traceback('TypeError')
-            self.assert_stderr(self.invalid_callback_message)
+            self.assert_error(TypeError)
         finally:
             self.server.stop()
 
@@ -279,13 +278,11 @@ class TestDefaultSpawn(TestCase):
     def test_error_in_spawn(self):
         self.init_server()
         assert self.server.started
-        self.hook_stderr()
         error = ExpectedError('test_error_in_spawn')
         self.server._spawn = lambda *args: gevent.getcurrent().throw(error)
+        self.expect_one_error()
         self.assertAcceptedConnectionError()
-        self.assert_stderr_traceback(error)
-        #self.assert_stderr('^WARNING: <SimpleStreamServer .*?>: ignoring test_error_in_spawn \\(sleeping \d.\d+ seconds\\)\n$')
-        self.assert_stderr('<.*?>: Failed to handle...')
+        self.assert_error(ExpectedError, error)
         return
         if Settings.restartable:
             assert not self.server.started
@@ -323,6 +320,8 @@ class TestPoolSpawn(TestDefaultSpawn):
         gevent.sleep(0.1)
         self.assertRequestSucceeded()
 
+    test_pool_full.error_fatal = False
+
 
 class TestNoneSpawn(TestCase):
 
@@ -339,9 +338,9 @@ class TestNoneSpawn(TestCase):
             gevent.sleep(0)
         self.server = Settings.ServerClass(('127.0.0.1', 0), sleep, spawn=None)
         self.server.start()
-        self.hook_stderr()
+        self.expect_one_error()
         self.assert500()
-        self.assert_mainloop_assertion(self.invalid_callback_message)
+        self.assert_error(AssertionError, 'Impossible to call blocking function in the event loop callback')
 
 
 class ExpectedError(Exception):

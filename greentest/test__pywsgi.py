@@ -628,20 +628,25 @@ class TestInputReadlines(TestInputReadline):
 
 class TestError(TestCase):
 
-    @staticmethod
-    def application(env, start_response):
-        raise greentest.ExpectedException('TestError.application')
+    error = greentest.ExpectedException('TestError.application')
+    error_fatal = False
+
+    def application(self, env, start_response):
+        raise self.error
 
     def test(self):
+        self.expect_one_error()
         self.urlopen(code=500)
+        self.assert_error(greentest.ExpectedException, self.error)
 
 
 class TestError_after_start_response(TestError):
 
-    @staticmethod
-    def application(env, start_response):
+    error = greentest.ExpectedException('TestError_after_start_response.application')
+
+    def application(self, env, start_response):
         start_response('200 OK', [('Content-Type', 'text/plain')])
-        raise greentest.ExpectedException('TestError_after_start_response.application')
+        raise self.error
 
 
 class TestEmptyYield(TestCase):
@@ -845,7 +850,8 @@ class ChunkedInputTests(TestCase):
         read_http(fd, body='this is chunked\nline 2\nline3')
 
     def test_close_before_finished(self):
-        self.hook_stderr()
+        if server_implements_chunked:
+            self.expect_one_error()
         body = '4\r\nthi'
         req = "POST /short-read HTTP/1.1\r\ntransfer-encoding: Chunked\r\n\r\n" + body
         fd = self.connect().makefile(bufsize=1)
@@ -853,7 +859,7 @@ class ChunkedInputTests(TestCase):
         fd.close()
         gevent.sleep(0.01)
         if server_implements_chunked:
-            self.assert_stderr_traceback(IOError, 'unexpected end of file while parsing chunked data')
+            self.assert_error(IOError, 'unexpected end of file while parsing chunked data')
 
 
 class Expect100ContinueTests(TestCase):

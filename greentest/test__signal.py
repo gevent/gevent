@@ -15,6 +15,7 @@ if hasattr(signal, 'SIGALRM'):
 
     class TestSignal(greentest.TestCase):
 
+        error_fatal = False
         __timeout__ = 5
 
         def test(self):

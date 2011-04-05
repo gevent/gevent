@@ -24,8 +24,6 @@ import sys
 import unittest
 from unittest import TestCase as BaseTestCase
 import time
-import traceback
-import re
 import os
 from os.path import basename, splitext
 import gevent
@@ -86,6 +84,45 @@ def wrap_refcount(method):
     return wrapped
 
 
+def wrap_error_fatal(method):
+    @wraps(method)
+    def wrapped(self, *args, **kwargs):
+        SYSTEM_ERROR = self._hub.SYSTEM_ERROR
+        self._hub.SYSTEM_ERROR = object
+        try:
+            return method(self, *args, **kwargs)
+        finally:
+            self._hub.SYSTEM_ERROR = SYSTEM_ERROR
+    return wrapped
+
+
+def wrap_restore_handle_error(method):
+    @wraps(method)
+    def wrapped(self, *args, **kwargs):
+        old = self._hub.handle_error
+        try:
+            return method(self, *args, **kwargs)
+        finally:
+            self._hub.handle_error = old
+        if self.peek_error()[0] is not None:
+            gevent.getcurrent().throw(*self.peek_error()[1:])
+    return wrapped
+
+
+def _get_class_attr(classDict, bases, attr, default=AttributeError):
+    NONE = object()
+    value = classDict.get(attr, NONE)
+    if value is not NONE:
+        return value
+    for base in bases:
+        value = getattr(bases[0], attr, NONE)
+        if value is not NONE:
+            return value
+    if default is AttributeError:
+        raise AttributeError('Attribute %r not found\n%s\n%s\n' % (attr, classDict, bases))
+    return default
+
+
 class TestCaseMetaClass(type):
     # wrap each test method with
     # a) timeout check
@@ -94,13 +131,18 @@ class TestCaseMetaClass(type):
         timeout = classDict.get('__timeout__', 'NONE')
         if timeout == 'NONE':
             timeout = getattr(bases[0], '__timeout__', None)
-        check_totalrefcount = classDict.get('check_totalrefcount')
-        if check_totalrefcount is None:
-            check_totalrefcount = getattr(bases[0], 'check_totalrefcount', True)
+        check_totalrefcount = _get_class_attr(classDict, bases, 'check_totalrefcount', True)
+        error_fatal = _get_class_attr(classDict, bases, 'error_fatal', True)
         for key, value in classDict.items():
-            if (key.startswith('test_') or key == 'test') and callable(value):
+            if key.startswith('test') and callable(value):
                 classDict.pop(key)
                 value = wrap_timeout(timeout, value)
+                my_error_fatal = getattr(value, 'error_fatal', None)
+                if my_error_fatal is None:
+                    my_error_fatal = error_fatal
+                if my_error_fatal:
+                    value = wrap_error_fatal(value)
+                value = wrap_restore_handle_error(value)
                 if check_totalrefcount:
                     value = wrap_refcount(value)
                 classDict[key] = value
@@ -112,8 +154,8 @@ class TestCase(BaseTestCase):
     __metaclass__ = TestCaseMetaClass
     __timeout__ = 1
     switch_expected = 'default'
+    error_fatal = True
     _switch_count = None
-    check_totalrefcount = True
 
     def __init__(self, *args, **kwargs):
         BaseTestCase.__init__(self, *args, **kwargs)
@@ -126,22 +168,25 @@ class TestCase(BaseTestCase):
         return BaseTestCase.run(self, *args, **kwargs)
 
     def setUp(self):
-        hub = gevent.hub._get_hub()
-        if hub is not None:
-            hub.loop.update_now()
+        self._hub.loop.update_now()
         if hasattr(self._hub, 'switch_count'):
             self._switch_count = self._hub.switch_count
 
     def tearDown(self):
         if hasattr(self, 'cleanup'):
             self.cleanup()
-        try:
-            if not hasattr(self, 'stderr'):
-                self.unhook_stderr()
-            if hasattr(self, 'stderr'):
-                sys.__stderr__.write(self.stderr)
-        except:
-            traceback.print_exc()
+        if self._switch_count is not None and hasattr(self._hub, 'switch_count'):
+            msg = ''
+            if self._hub.switch_count < self._switch_count:
+                msg = 'hub.switch_count decreased?\n'
+            elif self._hub.switch_count == self._switch_count:
+                if self.switch_expected:
+                    msg = '%s.%s did not switch\n' % (type(self).__name__, self.testname)
+            elif self._hub.switch_count > self._switch_count:
+                if not self.switch_expected:
+                    msg = '%s.%s switched but expected not to\n' % (type(self).__name__, self.testname)
+            if msg:
+                print >> sys.stderr, 'WARNING: ' + msg
 
     @property
     def testname(self):
@@ -163,86 +208,44 @@ class TestCase(BaseTestCase):
     def fullname(self):
         return splitext(basename(self.modulename))[0] + '.' + self.testcasename
 
-    def hook_stderr(self):
-        if VERBOSE:
-            return
-        from cStringIO import StringIO
-        self.new_stderr = StringIO()
-        self.old_stderr = sys.stderr
-        sys.stderr = self.new_stderr
+    _none = (None, None, None)
+    _error = _none
 
-    def unhook_stderr(self):
-        if VERBOSE:
-            return
-        try:
-            value = self.new_stderr.getvalue()
-        except AttributeError:
-            return None
-        sys.stderr = self.old_stderr
-        self.stderr = value
-        return value
+    def expect_one_error(self):
+        assert self._error == self._none, self._error
+        self._old_handle_error = self._hub.handle_error
+        self._hub.handle_error = self._store_error
 
-    def assert_no_stderr(self):
-        stderr = self.unhook_stderr()
-        assert not stderr, 'Expected no stderr, got:\n__________\n%s\n^^^^^^^^^^\n\n' % (stderr, )
-
-    def assert_stderr_traceback(self, typ, value=None):
-        if VERBOSE:
-            return
-        if isinstance(typ, Exception):
-            if value is None:
-                value = str(typ)
-            typ = typ.__class__.__name__
-        else:
-            typ = getattr(typ, '__name__', typ)
-        stderr = self.unhook_stderr()
-        assert stderr is not None, repr(stderr)
-        traceback_re = '^(Traceback \\(most recent call last\\):\n( +.*?\n)+)?^(?P<type>\w+(\.\w+)*): (?P<value>.*?)$'
-        self.extract_re(traceback_re, type=typ, value=value)
-
-    def assert_stderr(self, message):
-        if VERBOSE:
-            return
-        exact_re = '^' + message + '.*?\n$.*'
-        if re.match(exact_re, self.stderr):
-            self.extract_re(exact_re)
-        else:
-            words_re = '^' + '.*?'.join(message.split()) + '.*?\n$'
-            if re.match(words_re, self.stderr):
-                self.extract_re(words_re)
+    def _store_error(self, where, type, value, tb):
+        del tb
+        if self._error != self._none:
+            if self._hub is gevent.getcurrent():
+                self._hub.parent.throw(type, value)
             else:
-                if message.endswith('...'):
-                    another_re = '^' + '.*?'.join(message.split()) + '.*?(\n +.*?$){2,5}\n\n'
-                    self.extract_re(another_re)
-                else:
-                    raise AssertionError('%r did not match:\n%r' % (message, self.stderr))
+                self._hub.loop.run_callback(self._hub.parent.throw, type, value)
+        else:
+            self._error = (where, type, value)
 
-    def assert_mainloop_assertion(self, message=None):
-        self.assert_stderr_traceback('AssertionError', 'Impossible to call blocking function in the event loop callback')
-        if message is not None:
-            self.assert_stderr(message)
+    def peek_error(self):
+        return self._error
 
-    def _extract_re(self, regex, type=None, value=None):
-        assert self.stderr is not None
-        m = re.search(regex, self.stderr, re.DOTALL | re.M)
-        if m is None:
-            raise AssertionError('Cannot find traceback:\nregex: %s\nstderr:\n%s' % (regex, self.stderr))
-        if type is not None:
-            if m.group('type') != type and m.group('type').split('.')[-1] != type:
-                raise AssertionError('Unexpected exception type: %r (expected %r)' % (m.group(type), type))
-        if value is not None:
-            self.assertEqual(m.group('value'), value)
-        if DEBUG:
-            ate = '\n#ATE#: ' + self.stderr[m.start(0):m.end(0)].replace('\n', '\n#ATE#: ') + '\n'
-            sys.__stderr__.write(ate)
-        self.stderr = self.stderr[:m.start(0)] + self.stderr[m.end(0) + 1:]
-
-    def extract_re(self, regex, type=None, value=None):
+    def get_error(self):
         try:
-            return self._extract_re(regex, type, value)
-        except Exception:
-            print 'failed to process: %r' % (self.stderr, )
-            raise
+            return self._error
+        finally:
+            self._error = self._none
+
+    def assert_error(self, type=None, value=None, error=None):
+        if error is None:
+            error = self.get_error()
+        if type is not None:
+           assert error[1] is type, error
+        if value is not None:
+            if isinstance(value, str):
+                assert str(error[2]) == value, error
+            else:
+                assert error[2] is value, error
+        return error
 
 
 main = unittest.main

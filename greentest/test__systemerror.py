@@ -13,6 +13,8 @@ MSG = 'should be re-raised and caught'
 
 class Test(greentest.TestCase):
 
+    error_fatal = False
+
     def test_sys_exit(self):
         self.start(sys.exit, MSG)
 

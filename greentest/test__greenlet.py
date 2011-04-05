@@ -29,6 +29,7 @@ from gevent.event import AsyncResult
 from gevent.queue import Queue
 
 DELAY = 0.01
+greentest.TestCase.error_fatal = False
 
 
 class ExpectedError(Exception):
