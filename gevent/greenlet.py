@@ -128,7 +128,8 @@ class Greenlet(greenlet):
     """A light-weight cooperatively-scheduled execution unit."""
 
     def __init__(self, run=None, *args, **kwargs):
-        greenlet.__init__(self, parent=get_hub())
+        hub = get_hub()
+        greenlet.__init__(self, parent=hub)
         if run is not None:
             self._run = run
         self.args = args
@@ -136,7 +137,7 @@ class Greenlet(greenlet):
         self._links = []
         self.value = None
         self._exception = _NONE
-        loop = self.parent.loop
+        loop = hub.loop
         self._notifier = loop.callback()
         self._start_event = loop.callback()
 
