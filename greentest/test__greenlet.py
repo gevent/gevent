@@ -245,7 +245,8 @@ class TestReturn_link(LinksTestCase):
     link_method = 'link'
 
     def cleanup(self):
-        self.p._links.clear()
+        while self.p._links:
+            self.p._links.pop()
 
     def test_return(self):
         self.p = gevent.spawn(return25)
@@ -253,7 +254,7 @@ class TestReturn_link(LinksTestCase):
         # repeating the same with dead process
         for _ in xrange(3):
             self._test_return(self.p, False, 25, greenlet.LinkedCompleted, sleep0)
-        self.p._links.clear()
+        self.cleanup()
         self.p.kill()
 
     def _test_return(self, p, first_time, result, kill_exc_type, action):
