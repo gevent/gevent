@@ -46,6 +46,17 @@ class Test(unittest.TestCase):
         loop.run()
         self.assertEqual(lst, [()])
 
+        io.start(reset, io, lst)
+        del io
+        loop.run()
+        self.assertEqual(lst, [(), 25])
+
+
+def reset(watcher, lst):
+    watcher.args = None
+    watcher.callback = lambda: None
+    lst.append(25)
+
 
 if __name__ == '__main__':
     unittest.main()
