@@ -103,7 +103,8 @@ static void gevent_callback(struct ev_loop *_loop, void *c_watcher, int revents)
     else {
         py_events = NULL;
     }
-    // should incref args?
+    /* no need to incref 'args'; PyEval_EvalCodeEx which eventually will be called will
+     * increase the reference of every element in args*/
     result = PyObject_Call(watcher->_callback, args, NULL);
     if (result) {
         Py_DECREF(result);
