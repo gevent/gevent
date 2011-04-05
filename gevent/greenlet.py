@@ -129,17 +129,12 @@ class FailureGreenletLink(GreenletLink):
 class Greenlet(greenlet):
     """A light-weight cooperatively-scheduled execution unit."""
 
-    args = ()
-    kwargs = {}
-
     def __init__(self, run=None, *args, **kwargs):
         greenlet.__init__(self, parent=get_hub())
         if run is not None:
             self._run = run
-        if args:
-            self.args = args
-        if kwargs:
-            self.kwargs = kwargs
+        self.args = args
+        self.kwargs = kwargs
         self._links = []
         self.value = None
         self._exception = _NONE
