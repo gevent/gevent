@@ -30,19 +30,19 @@ else:
 def has_changed(destination, *source):
     from glob import glob
     if not os.path.exists(destination):
-        print 'Creating %s' % destination
+        sys.stderr.write('Creating \n' % destination)
         return True
     dest_mtime = os.stat(destination).st_mtime
     source = source + ('setup.py', )
     for pattern in source:
         for filename in glob(pattern):
             if os.stat(filename).st_mtime - dest_mtime > 1:
-                print 'Updating %s (changed: %s)' % (destination, filename)
+                sys.stderr.write('Updating %s (changed: %s)\n' % (destination, filename))
                 return True
 
 
 def system(command):
-    print command
+    sys.stderr.write(command + '\n')
     return os.system(command)
 
 
@@ -89,10 +89,10 @@ class my_build_ext(build_ext.build_ext):
                     except OSError:
                         pass
                     if hasattr(os, 'symlink'):
-                        print 'Linking %s to %s' % (path_to_build_core_so, path_to_core_so)
+                        sys.stderr.write('Linking %s to %s\n' % (path_to_build_core_so, path_to_core_so))
                         os.symlink(path_to_build_core_so, path_to_core_so)
                     else:
-                        print 'Copying %s to %s' % (path_to_build_core_so, path_to_core_so)
+                        sys.stderr.write('Copying %s to %s\n' % (path_to_build_core_so, path_to_core_so))
                         import shutil
                         shutil.copyfile(path_to_build_core_so, path_to_core_so)
         except Exception:
