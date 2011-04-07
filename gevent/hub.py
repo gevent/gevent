@@ -185,12 +185,16 @@ class Hub(greenlet):
     SYSTEM_ERROR = (KeyboardInterrupt, SystemExit, SystemError)
     loop_class = core.loop
 
-    def __init__(self, loop=None):
+    def __init__(self, loop=None, default=None):
         greenlet.__init__(self)
         if hasattr(loop, 'run'):
+            if default is not None:
+                raise TypeError("Unexpected argument: 'default'")
             self.loop = loop
         else:
-            self.loop = self.loop_class(flags=loop, default=(get_ident() == MAIN_THREAD))
+            if default is None:
+                default = get_ident() == MAIN_THREAD
+            self.loop = loop_class(flags=loop, default=default)
         self.loop.error_handler = self
 
     def handle_error(self, where, type, value, tb):
