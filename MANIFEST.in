@@ -3,11 +3,10 @@ recursive-include examples *
 recursive-include gevent *
 recursive-include doc *
 recursive-include libev *
+recursive-include c-ares *
 include LICENSE
-include LICENSE.pyevent
 include README.rst
 include TODO
 include changelog.rst
 include MANIFEST.in
-include fetch_libevent.py
 include AUTHORS
