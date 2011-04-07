@@ -194,6 +194,7 @@ class Hub(greenlet):
 
     SYSTEM_ERROR = (KeyboardInterrupt, SystemExit, SystemError)
     loop_class = 'gevent.core.loop'
+    pformat = 'pprint.pformat'
 
     def __init__(self, loop=None, default=None):
         greenlet.__init__(self)
@@ -207,6 +208,7 @@ class Hub(greenlet):
             loop_class = _import(self.loop_class)
             self.loop = loop_class(flags=loop, default=default)
         self.loop.error_handler = self
+        self.pformat = _import(self.pformat)
 
     def handle_error(self, where, type, value, tb):
         traceback.print_exception(type, value, tb)
@@ -217,6 +219,12 @@ class Hub(greenlet):
             else:
                 self.loop.run_callback(self.parent.throw, type, value)
         else:
+            if not isinstance(where, str):
+                try:
+                    where = self.pformat(where)
+                except:
+                    traceback.print_exc()
+                    where = repr(where)
             sys.stderr.write('Ignoring %s in %s\n\n' % (getattr(type, '__name__', 'exception'), where, ))
 
     def switch(self):
