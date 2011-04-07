@@ -47,8 +47,13 @@ disabled_tests = [
     'test_urllib2net.TimeoutTest.test_http_timeout',
 
     # this test seems to have a bug which makes it fail with error: (107, 'Transport endpoint is not connected')
-    # (they create TCP socket, not UDP)
+    # (it creates a TCP socket, not UDP)
     'test_socket.UDPTimeoutTest.testUDPTimeout',
+
+    # this fails with "socket.getnameinfo loses a reference" while the reference is only "lost"
+    # because it is referenced by the traceback - any Python function would lose a reference like that.
+    # the original getnameinfo does not lose it because it's in C.
+    'test_socket.GeneralModuleTests.testRefCountGetNameInfo',
 
     # this tests that time.sleep() returns prematurely in case of signal;
     # gevent.sleep() is better than that and does not get interrupted (unless signal handler raises an error)
