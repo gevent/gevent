@@ -146,7 +146,7 @@ def get_hub_class():
     return hubtype
 
 
-def get_hub(*args):
+def get_hub(*args, **kwargs):
     """Return the hub for the current thread.
 
     If hub does not exists in the current thread, the new one is created with call to :meth:`get_hub_class`.
@@ -156,7 +156,7 @@ def get_hub(*args):
         return _threadlocal.hub
     except AttributeError:
         hubtype = get_hub_class()
-        hub = _threadlocal.hub = hubtype(*args)
+        hub = _threadlocal.hub = hubtype(*args, **kwargs)
         return hub
 
 
