@@ -54,7 +54,7 @@ if sys.platform == 'win32':
 def has_changed(destination, *source):
     from glob import glob
     if not os.path.exists(destination):
-        sys.stderr.write('Creating \n' % destination)
+        sys.stderr.write('Creating %s\n' % destination)
         return True
     dest_mtime = os.stat(destination).st_mtime
     source = source + ('setup.py', )
