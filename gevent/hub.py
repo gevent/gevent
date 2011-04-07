@@ -176,6 +176,16 @@ def set_hub(hub):
     _threadlocal.hub = hub
 
 
+def _import(path):
+    if not isinstance(path, basestring):
+        return path
+    module, item = path.rsplit('.', 1)
+    x = __import__(module)
+    for attr in path.split('.')[1:]:
+        x = getattr(x, attr)
+    return x
+
+
 class Hub(greenlet):
     """A greenlet that runs the event loop.
 
@@ -183,7 +193,7 @@ class Hub(greenlet):
     """
 
     SYSTEM_ERROR = (KeyboardInterrupt, SystemExit, SystemError)
-    loop_class = core.loop
+    loop_class = 'gevent.core.loop'
 
     def __init__(self, loop=None, default=None):
         greenlet.__init__(self)
@@ -194,6 +204,7 @@ class Hub(greenlet):
         else:
             if default is None:
                 default = get_ident() == MAIN_THREAD
+            loop_class = _import(self.loop_class)
             self.loop = loop_class(flags=loop, default=default)
         self.loop.error_handler = self
 
