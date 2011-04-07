@@ -97,7 +97,7 @@ class my_build_ext(build_ext.build_ext):
         if cares_embed:
             self.configure_cares()
         try:
-            if self.compiler.compiler[0] == 'gcc' and '-Wall' in self.compiler.compiler and not gevent_core.extra_compile_args:
+            if gcc_options and self.compiler.compiler[0] == 'gcc' and '-Wall' in self.compiler.compiler and not gevent_core.extra_compile_args:
                 gevent_core.extra_compile_args = gcc_options
         except (IndexError, AttributeError):
             pass
