@@ -617,3 +617,6 @@ def set_exc_info(object type, object value):
         Py_INCREF(<void*>value)
         tstate.exc_value = <void *>value
     tstate.exc_traceback = NULL
+
+
+include "cares.pxi"

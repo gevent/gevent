@@ -194,6 +194,7 @@ class Hub(greenlet):
 
     SYSTEM_ERROR = (KeyboardInterrupt, SystemExit, SystemError)
     loop_class = 'gevent.core.loop'
+    resolver_class = 'gevent.resolver_ares.Resolver'
     pformat = 'pprint.pformat'
 
     def __init__(self, loop=None, default=None):
@@ -208,6 +209,7 @@ class Hub(greenlet):
             loop_class = _import(self.loop_class)
             self.loop = loop_class(flags=loop, default=default)
         self.loop.error_handler = self
+        self._resolver = None
         self.pformat = _import(self.pformat)
 
     def handle_error(self, where, type, value, tb):
@@ -285,11 +287,27 @@ class Hub(greenlet):
             if _threadlocal.__dict__.get('hub') is self:
                 _threadlocal.__dict__.pop('hub')
             self.run = None
-            return
-        try:
-            self.switch()
-        except LoopExit:
-            pass
+        else:
+            try:
+                self.switch()
+            except LoopExit:
+                pass
+        self.loop.error_handler = None  # break the ref cycle
+
+    def _get_resolver(self):
+        if self._resolver is None:
+            if self.resolver_class is not None:
+                resolver_class = _import(self.resolver_class)
+                self._resolver = resolver_class(hub=self)
+        return self._resolver
+
+    def _set_resolver(self, value):
+        self._resolver = value
+
+    def _del_resolver(self):
+        del self._resolver
+
+    resolver = property(_get_resolver, _set_resolver, _del_resolver)
 
 
 class LoopExit(Exception):

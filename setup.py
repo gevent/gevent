@@ -15,16 +15,40 @@ from distutils.command import build_ext
 __version__ = re.search("__version__\s*=\s*'(.*)'", open('gevent/__init__.py').read(), re.M).group(1)
 assert __version__
 
+libev_embed = os.path.exists('libev')
+cares_embed = os.path.exists('c-ares')
 
-defines = [('EV_STANDALONE', '1'),
-           ('EV_COMMON', '')]
 cython_output = 'gevent/core.c'
-gcc_options = ['-Wno-unused-variable', '-Wno-unused-result']  # disable warnings from ev.c
+defines = []
+include_dirs = []
+libraries = []
+gcc_options = []
+cares_configure_command = './configure CONFIG_COMMANDS= CONFIG_FILES='
+
+if libev_embed:
+    defines += [('EV_STANDALONE', '1'),
+                ('EV_COMMON', ''),  # we don't use void* data
+                # libev watchers that we don't use currently:
+                ('EV_STAT_ENABLE', '0'),
+                ('EV_CHECK_ENABLE', '0'),
+                ('EV_FORK_ENABLE', '0'),
+                ('EV_CLEANUP_ENABLE', '0'),
+                ('EV_EMBED_ENABLE', '0'),
+                ('EV_ASYNC_ENABLE', '0'),
+                ("EV_PERIODIC_ENABLE", '0'),
+                ("EV_CHILD_ENABLE", '0')]
+    include_dirs += ['libev']
+    gcc_options += ['-Wno-unused-variable', '-Wno-unused-result']  # disable warnings from ev.c
+
+
+if cares_embed:
+    include_dirs += ['c-ares']
+    defines += [('HAVE_CONFIG_H', '')]
+
+
 if sys.platform == 'win32':
-    libraries = ['ws2_32']
-    defines += [('FD_SETSIZE', '1024'), ('GEVENT_WINDOWS', '1')]
-else:
-    libraries = []
+    libraries += ['ws2_32']
+    defines += [('FD_SETSIZE', '1024'), ('_WIN32', '1')]
 
 
 def has_changed(destination, *source):
@@ -57,15 +81,21 @@ class my_build_ext(build_ext.build_ext):
     def compile_cython(self):
         if has_changed('gevent/core.pyx', 'gevent/core_.pyx', 'gevent/libev.pxd'):
             system('m4 gevent/core_.pyx > core.pyx && mv core.pyx gevent/')
-        if has_changed(cython_output, 'gevent/*.p*x*', 'gevent/*.h', 'gevent/*.c'):
-            if 0 == system('%s gevent/core.pyx -o core.c && mv core.c gevent/' % (self.cython, )):
+        if has_changed(cython_output, 'gevent/*.p*x*', 'gevent/*.h', 'gevent/*.c', 'libev/*.c', 'c-ares/*.c'):
+            if 0 == system('%s gevent/core.pyx -o core.c && mv core.* gevent/' % (self.cython, )):
                 data = open(cython_output).read()
                 data = data.replace('\n\n#endif /* Py_PYTHON_H */', '\n#include "callbacks.c"\n#endif /* Py_PYTHON_H */')
                 open(cython_output, 'w').write(data)
 
+    def configure_cares(self):
+        if sys.platform != 'win32' and not os.path.exists('c-ares/ares_config.h'):
+            os.system('cd c-ares && %s' % cares_configure_command)
+
     def build_extension(self, ext):
         if self.cython:
             self.compile_cython()
+        if cares_embed:
+            self.configure_cares()
         try:
             if self.compiler.compiler[0] == 'gcc' and '-Wall' in self.compiler.compiler and not gevent_core.extra_compile_args:
                 gevent_core.extra_compile_args = gcc_options
@@ -102,7 +132,7 @@ class my_build_ext(build_ext.build_ext):
 
 gevent_core = Extension(name='gevent.core',
                         sources=[cython_output],
-                        include_dirs=['libev'],
+                        include_dirs=include_dirs,
                         libraries=libraries,
                         define_macros=defines)
 

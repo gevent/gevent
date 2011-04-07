@@ -35,6 +35,9 @@ as well as the constants from :mod:`socket` module are imported into this module
 __implements__ = ['create_connection',
                   'getaddrinfo',
                   'gethostbyname',
+                  'gethostbyname_ex',
+                  'gethostbyaddr',
+                  'getnameinfo',
                   'socket',
                   'SocketType',
                   'fromfd',
@@ -75,7 +78,6 @@ __imports__ = ['error',
 
 import sys
 import time
-import re
 
 is_windows = sys.platform == 'win32'
 
@@ -122,14 +124,9 @@ for name in __socket__.__all__:
 
 del name, value
 
-# XXX: implement blocking functions that are not yet implemented
-
-from gevent.hub import getcurrent, get_hub, Waiter
+from gevent.hub import get_hub
 from gevent.timeout import Timeout
 
-_ip4_re = re.compile('^[\d\.]+$')
-
-## XXX wait() no longer used by socket class
 
 def wait(io, timeout=None, timeout_exc=timeout('timed out')):
     """Block the current greenlet until *io* is ready.
@@ -148,7 +145,6 @@ def wait(io, timeout=None, timeout_exc=timeout('timed out')):
         if timeout is not None:
             timeout.cancel()
     # rename "io" to "watcher" because wait() works with any watcher
-    # make wait() a Hub's method
 
 
 def wait_read(fileno, timeout=None, timeout_exc=timeout('timed out')):
@@ -343,11 +339,12 @@ class socket(object):
             setattr(self, method, dummy)
 
     def connect(self, address):
-        #if isinstance(address, tuple) and len(address) == 2:
-        #    address = gethostbyname(address[0]), address[1]
         if self.timeout == 0.0:
             return self._sock.connect(address)
         sock = self._sock
+        if isinstance(address, tuple):
+            r = getaddrinfo(address[0], address[1], sock.family, sock.type, sock.proto)
+            address = r[0][-1]
         if self.timeout is not None:
             timer = Timeout.start_new(self.timeout, timeout('timed out'))
         else:
@@ -630,46 +627,24 @@ def create_connection(address, timeout=_GLOBAL_DEFAULT_TIMEOUT, source_address=N
         raise error("getaddrinfo returns an empty list")
 
 
-def gethostbyname(host):
-    return _socket.gethostbyname(host)
-    # artificial limitations that regular gethostbyname has
-    if host is None:
-        raise TypeError('gethostbyname() argument must be string')
-    host = host.encode('ascii')
-    res = getaddrinfo(host, 0)
-    if res:
-        return res[0][4][0]
+def gethostbyname(hostname):
+    return get_hub().resolver.gethostbyname(hostname)
 
 
-def _sync_call(function, *args):
-    waiter = Waiter()
-    request = function(waiter.switch_args, *args)
-    try:
-        result, request_error = waiter.get()
-    except:
-        if request is not None:
-            request.cancel()
-        raise
-    if request_error is None:
-        return result
-    raise request_error
+def gethostbyname_ex(hostname):
+    return get_hub().resolver.gethostbyname_ex(hostname)
 
 
 def getaddrinfo(host, port, family=0, socktype=0, proto=0, flags=0):
-    return _socket.getaddrinfo(host, port, family, socktype, proto, flags)
-    dns = get_hub().reactor.dns
-    if dns is None:
-        return _socket.getaddrinfo(host, port, family, socktype, proto, flags)
-    else:
-        return _sync_call(dns.getaddrinfo, host, port, family, socktype, proto, flags)
+    return get_hub().resolver.getaddrinfo(host, port, family, socktype, proto, flags)
 
 
-def resolve_ipv4(name, flags=0):
-    dns = get_hub().reactor.dns
-    if dns is None:
-        raise IOError('dns is not available')
-    else:
-        return _sync_call(dns.resolve_ipv4, name, flags)
+def gethostbyaddr(ip_address):
+    return get_hub().resolver.gethostbyaddr(ip_address)
+
+
+def getnameinfo(sockaddr, flags):
+    return get_hub().resolver.getnameinfo(sockaddr, flags)
 
 
 try:
