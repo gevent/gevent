@@ -323,6 +323,12 @@ class Waiter(object):
 
     wait = get  # XXX backward compatibility; will be removed in the next release
 
+    def __call__(self, source):
+        if source.exception is None:
+            self.switch(source.value)
+        else:
+            self.throw(source.exception)
+
     # can also have a debugging version, that wraps the value in a tuple (self, value) in switch()
     # and unwraps it in wait() thus checking that switch() was indeed called
 
