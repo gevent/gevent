@@ -626,6 +626,23 @@ class TestInputReadlines(TestInputReadline):
         return lines
 
 
+class TestInputN(TestCase):
+    # testing for this:
+    # File "/home/denis/work/gevent/gevent/pywsgi.py", line 70, in _do_read
+    #   if length and length > self.content_length - self.position:
+    # TypeError: unsupported operand type(s) for -: 'NoneType' and 'int'
+
+    validator = None
+
+    def application(self, environ, start_response):
+        environ['wsgi.input'].read(5)
+        start_response('200 OK', [])
+        return []
+
+    def test(self):
+        self.urlopen()
+
+
 class TestError(TestCase):
 
     @staticmethod
