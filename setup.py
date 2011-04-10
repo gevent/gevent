@@ -70,6 +70,16 @@ def system(command):
     return os.system(command)
 
 
+def run_cython(cython_command='cython'):
+    if has_changed('gevent/core.pyx', 'gevent/core_.pyx', 'gevent/libev.pxd'):
+        system('m4 gevent/core_.pyx > core.pyx && mv core.pyx gevent/')
+    if has_changed(cython_output, 'gevent/*.p*x*', 'gevent/*.h', 'gevent/*.c', 'libev/*.c', 'c-ares/*.c'):
+        if 0 == system('%s gevent/core.pyx -o core.c && mv core.* gevent/' % (cython_command, )):
+            data = open(cython_output).read()
+            data = data.replace('\n\n#endif /* Py_PYTHON_H */', '\n#include "callbacks.c"\n#endif /* Py_PYTHON_H */')
+            open(cython_output, 'w').write(data)
+
+
 class my_build_ext(build_ext.build_ext):
     user_options = (build_ext.build_ext.user_options
                     + [("cython=", None, "path to the cython executable")])
@@ -78,22 +88,13 @@ class my_build_ext(build_ext.build_ext):
         build_ext.build_ext.initialize_options(self)
         self.cython = "cython"
 
-    def compile_cython(self):
-        if has_changed('gevent/core.pyx', 'gevent/core_.pyx', 'gevent/libev.pxd'):
-            system('m4 gevent/core_.pyx > core.pyx && mv core.pyx gevent/')
-        if has_changed(cython_output, 'gevent/*.p*x*', 'gevent/*.h', 'gevent/*.c', 'libev/*.c', 'c-ares/*.c'):
-            if 0 == system('%s gevent/core.pyx -o core.c && mv core.* gevent/' % (self.cython, )):
-                data = open(cython_output).read()
-                data = data.replace('\n\n#endif /* Py_PYTHON_H */', '\n#include "callbacks.c"\n#endif /* Py_PYTHON_H */')
-                open(cython_output, 'w').write(data)
-
     def configure_cares(self):
         if sys.platform != 'win32' and not os.path.exists('c-ares/ares_config.h'):
             os.system('cd c-ares && %s' % cares_configure_command)
 
     def build_extension(self, ext):
         if self.cython:
-            self.compile_cython()
+            run_cython(self.cython)
         if cares_embed:
             self.configure_cares()
         try:
@@ -142,28 +143,31 @@ def read(name):
 
 
 if __name__ == '__main__':
-    setup(
-        name='gevent',
-        version=__version__,
-        description='Coroutine-based network library',
-        long_description=read('README.rst'),
-        author='Denis Bilenko',
-        author_email='denis.bilenko@gmail.com',
-        url='http://www.gevent.org/',
-        packages=['gevent'],
-        ext_modules=[gevent_core],
-        cmdclass={'build_ext': my_build_ext},
-        install_requires=['greenlet'],
-        classifiers=[
-        "License :: OSI Approved :: MIT License",
-        "Programming Language :: Python :: 2.4",
-        "Programming Language :: Python :: 2.5",
-        "Programming Language :: Python :: 2.6",
-        "Programming Language :: Python :: 2.7",
-        "Operating System :: MacOS :: MacOS X",
-        "Operating System :: POSIX",
-        "Operating System :: Microsoft :: Windows",
-        "Topic :: Internet",
-        "Topic :: Software Development :: Libraries :: Python Modules",
-        "Intended Audience :: Developers",
-        "Development Status :: 4 - Beta"])
+    if sys.argv[1:] == ['cython']:
+        run_cython()
+    else:
+        setup(
+            name='gevent',
+            version=__version__,
+            description='Coroutine-based network library',
+            long_description=read('README.rst'),
+            author='Denis Bilenko',
+            author_email='denis.bilenko@gmail.com',
+            url='http://www.gevent.org/',
+            packages=['gevent'],
+            ext_modules=[gevent_core],
+            cmdclass={'build_ext': my_build_ext},
+            install_requires=['greenlet'],
+            classifiers=[
+            "License :: OSI Approved :: MIT License",
+            "Programming Language :: Python :: 2.4",
+            "Programming Language :: Python :: 2.5",
+            "Programming Language :: Python :: 2.6",
+            "Programming Language :: Python :: 2.7",
+            "Operating System :: MacOS :: MacOS X",
+            "Operating System :: POSIX",
+            "Operating System :: Microsoft :: Windows",
+            "Topic :: Internet",
+            "Topic :: Software Development :: Libraries :: Python Modules",
+            "Intended Audience :: Developers",
+            "Development Status :: 4 - Beta"])
