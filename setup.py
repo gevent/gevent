@@ -77,6 +77,8 @@ def run_cython(cython_command='cython'):
         if 0 == system('%s gevent/core.pyx -o core.c && mv core.* gevent/' % (cython_command, )):
             data = open(cython_output).read()
             data = data.replace('\n\n#endif /* Py_PYTHON_H */', '\n#include "callbacks.c"\n#endif /* Py_PYTHON_H */')
+            full_path = join(os.getcwd(), 'gevent/')
+            data = data.replace(full_path, 'gevent/')
             open(cython_output, 'w').write(data)
 
 
