@@ -140,7 +140,7 @@ class Greenlet(greenlet):
             self.args = args
         if kwargs:
             self.kwargs = kwargs
-        self._links = set()
+        self._links = []
         self.value = None
         self._exception = _NONE
         self._notifier = None
@@ -409,7 +409,7 @@ class Greenlet(greenlet):
         """
         if not callable(callback):
             raise TypeError('Expected callable: %r' % (callback, ))
-        self._links.add(callback)
+        self._links.append(callback)
         if self.ready() and self._notifier is None:
             self._notifier = core.active_event(self._notify_links)
 
@@ -451,7 +451,10 @@ class Greenlet(greenlet):
             receiver = getcurrent()
         # discarding greenlets when we have GreenletLink instances in _links works, because
         # a GreenletLink instance pretends to be a greenlet, hash-wise and eq-wise
-        self._links.discard(receiver)
+        try:
+            self._links.remove(receiver)
+        except ValueError:
+            pass
 
     def link_value(self, receiver=None, GreenletLink=SuccessGreenletLink, SpawnedLink=SuccessSpawnedLink):
         """Like :meth:`link` but *receiver* is only notified when the greenlet has completed successfully"""
