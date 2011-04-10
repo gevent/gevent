@@ -34,6 +34,10 @@ class StreamServer(BaseServer):
     The delay starts with :attr:`min_delay` and doubles with each successive error until it reaches :attr:`max_delay`.
     A successful :func:`accept` resets the delay to :attr:`min_delay` again.
     """
+    # Sets the maximum number of consecutive accepts that a process may perform on
+    # a single wake up. High values give higher priority to high connection rates,
+    # while lower values give higher priority to already established connections.
+    max_accept = 100
 
     # the number of seconds to sleep in case there was an error in accept() call
     # for consecutive errors the delay will double until it reaches max_delay
@@ -107,43 +111,44 @@ class StreamServer(BaseServer):
 
     def _do_accept(self, event, _evtype):
         assert event is self._accept_event
-        address = None
-        try:
-            if self.full():
-                self.stop_accepting()
-                return
+        for _ in xrange(self.max_accept):
+            address = None
             try:
-                client_socket, address = self.socket.accept()
-            except socket.error, err:
-                if err[0] == errno.EAGAIN:
+                if self.full():
+                    self.stop_accepting()
                     return
-                raise
-            self.delay = self.min_delay
-            client_socket = socket.socket(_sock=client_socket)
-            spawn = self._spawn
-            if spawn is None:
-                self._handle(client_socket, address)
-            else:
-                spawn(self._handle, client_socket, address)
-            return
-        except:
-            traceback.print_exc()
-            ex = sys.exc_info()[1]
-            if self.is_fatal_error(ex):
-                self.kill()
-                sys.stderr.write('ERROR: %s failed with %s\n' % (self, str(ex) or repr(ex)))
+                try:
+                    client_socket, address = self.socket.accept()
+                except socket.error, err:
+                    if err[0] == errno.EAGAIN:
+                        return
+                    raise
+                self.delay = self.min_delay
+                client_socket = socket.socket(_sock=client_socket)
+                spawn = self._spawn
+                if spawn is None:
+                    self._handle(client_socket, address)
+                else:
+                    spawn(self._handle, client_socket, address)
+            except:
+                traceback.print_exc()
+                ex = sys.exc_info()[1]
+                if self.is_fatal_error(ex):
+                    self.kill()
+                    sys.stderr.write('ERROR: %s failed with %s\n' % (self, str(ex) or repr(ex)))
+                    return
+                try:
+                    if address is None:
+                        sys.stderr.write('%s: Failed.\n' % (self, ))
+                    else:
+                        sys.stderr.write('%s: Failed to handle request from %s\n' % (self, address, ))
+                except Exception:
+                    traceback.print_exc()
+                if self.delay >= 0:
+                    self.stop_accepting()
+                    self._start_accepting_timer = core.timer(self.delay, self.start_accepting)
+                    self.delay = min(self.max_delay, self.delay * 2)
                 return
-        try:
-            if address is None:
-                sys.stderr.write('%s: Failed.\n' % (self, ))
-            else:
-                sys.stderr.write('%s: Failed to handle request from %s\n' % (self, address, ))
-        except Exception:
-            traceback.print_exc()
-        if self.delay >= 0:
-            self.stop_accepting()
-            self._start_accepting_timer = core.timer(self.delay, self.start_accepting)
-            self.delay = min(self.max_delay, self.delay * 2)
 
     def is_fatal_error(self, ex):
         return isinstance(ex, socket.error) and ex[0] in (errno.EBADF, errno.EINVAL, errno.ENOTSOCK)
