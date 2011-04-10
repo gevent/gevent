@@ -77,9 +77,13 @@ def run_cython(cython_command='cython'):
         if 0 == system('%s gevent/core.pyx -o core.c && mv core.* gevent/' % (cython_command, )):
             data = open(cython_output).read()
             data = data.replace('\n\n#endif /* Py_PYTHON_H */', '\n#include "callbacks.c"\n#endif /* Py_PYTHON_H */')
-            full_path = join(os.getcwd(), 'gevent/')
-            data = data.replace(full_path, 'gevent/')
+            short_path = 'gevent/'
+            full_path = join(os.getcwd(), short_path)
+            data = data.replace(full_path, short_path)
             open(cython_output, 'w').write(data)
+            cython_header = 'gevent/core.h'
+            data = open(cython_header).read().replace(full_path, short_path)
+            open(cython_header, 'w').write(data)
 
 
 class my_build_ext(build_ext.build_ext):
