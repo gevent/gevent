@@ -63,11 +63,17 @@ class Input(object):
             self.sendall = None
 
     def _do_read(self, reader, length=None):
+        content_length = self.content_length
+        if content_length is None:
+            # Either Content-Length or "Transfer-Encoding: chunked" must be present in a request with a body
+            # if it was chunked, then this function would have not been called
+            return ''
         self._send_100_continue()
-        if length is None and self.content_length is not None:
-            length = self.content_length - self.position
-        if length and length > self.content_length - self.position:
-            length = self.content_length - self.position
+        left = content_length - self.position
+        if length is None:
+            length = left
+        elif length > left:
+            length = left
         if not length:
             return ''
         read = reader(length)
