@@ -1,5 +1,11 @@
 # Copyright (C) 2010-2011 gevent contributors. See LICENSE for details.
-__httplib__ = __import__('httplib')
+
+# Get the standard Python httplib as __httplib__, ensuring we get a version
+# that hasn't already been modified by monkey patching of any of its members.
+# HTTPSConnection must use the standard HTTPConnection because libevent-http
+# does not currently support https.
+import imp
+__httplib__ = imp.load_module('__httplib__', *imp.find_module('httplib'))
 
 from gevent import core
 from gevent.hub import Waiter, get_hub
@@ -10,6 +16,7 @@ __implements__ = [
 ]
 
 __imports__ = [
+    'HTTPSConnection',
     'HTTPException',
     'InvalidURL',
 ]
@@ -19,6 +26,7 @@ __all__ = __implements__ + __imports__
 InvalidURL = __httplib__.InvalidURL
 HTTP_PORT = __httplib__.HTTP_PORT
 HTTPException = __httplib__.HTTPException
+HTTPSConnection = __httplib__.HTTPSConnection
 
 EV_METHOD_TYPES = dict((name, id) for (id, name) in core.HTTP_method2name.items())
 

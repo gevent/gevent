@@ -180,9 +180,10 @@ def patch_select(aggressive=False):
 
 
 def patch_httplib():
-    from gevent.httplib import HTTPConnection
     httplib = __import__('httplib')
+    from gevent.httplib import HTTPConnection, HTTPSConnection
     httplib.HTTPConnection = HTTPConnection
+    httplib.HTTPSConnection = HTTPSConnection
 
 
 def patch_all(socket=True, dns=True, time=True, select=True, thread=True, os=True, ssl=True, httplib=False, aggressive=True):
