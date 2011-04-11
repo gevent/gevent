@@ -92,6 +92,7 @@ class WSGIHandler(object):
                     'SERVER_PROTOCOL': 'HTTP/%d.%d' % req.version,
                     'REMOTE_ADDR': req.remote_host,
                     'REMOTE_PORT': str(req.remote_port),
+                    'REQUEST_URI': req.uri,
                     'wsgi.input': req.input_buffer})
         for header, value in req.get_input_headers():
             header = header.replace('-', '_').upper()
