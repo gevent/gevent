@@ -485,12 +485,12 @@ cdef class http_request_client(http_request_base):
 
     cdef _addref(self):
         if self._incref <= 0:
-            Py_INCREF(self)
+            Py_INCREF(<void*>self)
             self._incref += 1
 
     cdef _delref(self):
         if self._incref > 0:
-            Py_DECREF(self)
+            Py_DECREF(<void*>self)
             self._incref -= 1
         self.callback = None
 

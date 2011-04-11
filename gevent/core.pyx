@@ -50,8 +50,9 @@ cdef extern from "sys/types.h":
     ctypedef unsigned char u_char
 
 cdef extern from "Python.h":
-    void   Py_INCREF(object o)
-    void   Py_DECREF(object o)
+    void   Py_INCREF(void* o)
+    void   Py_DECREF(void* o)
+    void   Py_XDECREF(void* o)
     object PyString_FromStringAndSize(char *v, int len)
     object PyString_FromString(char *v)
 
@@ -163,12 +164,12 @@ cdef class event:
 
     cdef _addref(self):
         if self._incref <= 0:
-            Py_INCREF(self)
+            Py_INCREF(<void*>self)
             self._incref += 1
 
     cdef _delref(self):
         if self._incref > 0:
-            Py_DECREF(self)
+            Py_DECREF(<void*>self)
             self._incref -= 1
 
     property pending:
@@ -461,18 +462,15 @@ include "evhttp.pxi"
 
 def set_exc_info(object type, object value):
     cdef PyThreadState* tstate = PyThreadState_GET()
-    if tstate.exc_type != NULL:
-        Py_DECREF(<object>tstate.exc_type)
-    if tstate.exc_value != NULL:
-        Py_DECREF(<object>tstate.exc_value)
-    if tstate.exc_traceback != NULL:
-        Py_DECREF(<object>tstate.exc_traceback)
+    Py_XDECREF(tstate.exc_type)
+    Py_XDECREF(tstate.exc_value)
+    Py_XDECREF(tstate.exc_traceback)
     if value is None:
         tstate.exc_type = NULL
         tstate.exc_value = NULL
     else:
-        Py_INCREF(type)
-        Py_INCREF(value)
+        Py_INCREF(<void*>type)
+        Py_INCREF(<void*>value)
         tstate.exc_type = <void*>type
         tstate.exc_value = <void *>value
     tstate.exc_traceback = NULL

@@ -56,7 +56,7 @@ def dns_err_to_string(int err):
 cdef void __evdns_callback(int code, char type, int count, int ttl, void *addrs, void *arg) with gil:
     cdef int i
     cdef object callback = <object>arg
-    Py_DECREF(callback)
+    Py_DECREF(<void*>callback)
     cdef object addr
     cdef object result
 
@@ -91,7 +91,7 @@ def dns_resolve_ipv4(char *name, int flags, object callback):
     cdef int result = evdns_resolve_ipv4(name, flags, __evdns_callback, <void *>callback)
     if result:
         raise IOError('evdns_resolve_ipv4(%r, %r) returned %s' % (name, flags, result, ))
-    Py_INCREF(callback)
+    Py_INCREF(<void*>callback)
 
 
 def dns_resolve_ipv6(char *name, int flags, object callback):
@@ -104,7 +104,7 @@ def dns_resolve_ipv6(char *name, int flags, object callback):
     cdef int result = evdns_resolve_ipv6(name, flags, __evdns_callback, <void *>callback)
     if result:
         raise IOError('evdns_resolve_ip6(%r, %r) returned %s' % (name, flags, result, ))
-    Py_INCREF(callback)
+    Py_INCREF(<void*>callback)
 
 
 def dns_resolve_reverse(char* packed_ip, int flags, object callback):
@@ -117,7 +117,7 @@ def dns_resolve_reverse(char* packed_ip, int flags, object callback):
     cdef int result = evdns_resolve_reverse(<void *>packed_ip, flags, __evdns_callback, <void *>callback)
     if result:
         raise IOError('evdns_resolve_reverse(%r, %r) returned %s' % (packed_ip, flags, result, ))
-    Py_INCREF(callback)
+    Py_INCREF(<void*>callback)
 
 
 def dns_resolve_reverse_ipv6(char* packed_ip, int flags, object callback):
@@ -130,4 +130,4 @@ def dns_resolve_reverse_ipv6(char* packed_ip, int flags, object callback):
     cdef int result = evdns_resolve_reverse_ipv6(<void *>packed_ip, flags, __evdns_callback, <void *>callback)
     if result:
         raise IOError('evdns_resolve_reverse_ipv6(%r, %r) returned %s' % (packed_ip, flags, result, ))
-    Py_INCREF(callback)
+    Py_INCREF(<void*>callback)
