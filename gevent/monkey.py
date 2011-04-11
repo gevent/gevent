@@ -104,10 +104,12 @@ def patch_thread(threading=True, _threading_local=True):
         from gevent.local import local
         thread._local = local
         if threading:
-            if noisy and 'threading' in sys.modules:
-                sys.stderr.write("gevent.monkey's warning: 'threading' is already imported\n\n")
             threading = __import__('threading')
             threading.local = local
+            threading._start_new_thread = green_thread.start_new_thread
+            threading._allocate_lock = green_thread.allocate_lock
+            threading.Lock = green_thread.allocate_lock
+            threading._get_ident = green_thread.get_ident
         if _threading_local:
             _threading_local = __import__('_threading_local')
             _threading_local.local = local
