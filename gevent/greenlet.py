@@ -3,7 +3,7 @@
 import sys
 import traceback
 from gevent import core
-from gevent.hub import greenlet, getcurrent, get_hub, GreenletExit, Waiter, kill
+from gevent.hub import greenlet, getcurrent, get_hub, GreenletExit, Waiter
 from gevent.timeout import Timeout
 
 
