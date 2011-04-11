@@ -19,9 +19,11 @@ class ContainsAll(object):
         return True
 
 
-def patch_all(timeout=None):
+def patch_all(**kwargs):
+    timeout = kwargs.pop('timeout', None)
+    kwargs.setdefault('aggressive', True)
     from gevent import monkey
-    monkey.patch_all(aggressive=True)
+    monkey.patch_all(**kwargs)
     import unittest
     import greentest
     unittest.TestCase = greentest.TestCase0
@@ -38,8 +40,9 @@ def imp_find_dotted_module(name):
     return result
 
 
-def prepare_stdlib_test(filename):
-    patch_all(timeout=20)
+def prepare_stdlib_test(filename, **kwargs):
+    kwargs.setdefault('timeout', 20)
+    patch_all(**kwargs)
     import test
     try:
         from test import test_support
