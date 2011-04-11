@@ -56,10 +56,6 @@ Monkey patches:
   - thread-local storage becomes greenlet-local storage
 """
 
-import sys
-
-noisy = True
-
 __all__ = ['patch_all',
            'patch_socket',
            'patch_ssl',
@@ -208,6 +204,7 @@ def patch_all(socket=True, dns=True, time=True, select=True, thread=True, os=Tru
 
 
 if __name__ == '__main__':
+    import sys
     modules = [x.replace('patch_', '') for x in globals().keys() if x.startswith('patch_') and x != 'patch_all']
     script_help = """gevent.monkey - monkey patch the standard modules to use gevent.
 
