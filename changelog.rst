@@ -191,7 +191,7 @@ Backward-incompatible changes:
 - The server no longer links to the greenlets it spawns to detect errors. Instead, it relies on :class:`http_request` which will send 500 reply when deallocated if the user hasn't send any.
 
 Miscellaneous:
-  
+
 - Changed :mod:`gevent.thread` to use :class:`Greenlet` instead of raw greenlets. This means monkey patched thread will become :class:`Greenlet` too.
 - Added :attr:`started` property to :class:`Greenlet`.
 - Put common server code in :mod:`gevent.baseserver` module. All servers in gevent package are now derived from :class:`BaseServer`.
@@ -210,7 +210,7 @@ Examples:
 - Updated echoserver.py to use :class:`StreamServer`.
 - Added geventsendfile.py.
 - Added wsgiserver_ssl.py.
- 
+
 Thanks to **Ralf Schmitt** for :mod:`pywsgi`, a number of fixes for :mod:`wsgi`, help with
 :mod:`baseserver` and :mod:`server` modules, improving setup.py and various other patches and suggestions.
 
