@@ -40,6 +40,28 @@ sources = ['gevent/core.c']
 libraries = []
 
 
+def run_cython(cython_command='cython'):
+    sources = glob.glob('gevent/*.pyx') + glob.glob('gevent/*.pxi')
+    if not sources:
+        if not os.path.exists('gevent/core.c'):
+            print >> sys.stderr, 'Could not find gevent/core.c'
+    if os.path.exists('gevent/core.c'):
+        core_c_mtime = os.stat('gevent/core.c').st_mtime
+        changed = [filename for filename in sources if (os.stat(filename).st_mtime - core_c_mtime) > 1]
+        if not changed:
+            return
+        print >> sys.stderr, 'Running %s (changed: %s)' % (cython_command, ', '.join(changed))
+    else:
+        print >> sys.stderr, 'Running %s' % cython_command
+    cython_result = os.system('%s gevent/core.pyx' % cython_command)
+    if cython_result:
+        if os.system('%s -V 2> %s' % (cython_command, os.devnull)):
+            # there's no cython in the system
+            print >> sys.stderr, 'No cython found, cannot rebuild core.c'
+            return
+        sys.exit(1)
+
+
 class my_build_ext(build_ext.build_ext):
     user_options = (build_ext.build_ext.user_options
                     + [("cython=", None, "path to the cython executable")])
@@ -48,31 +70,10 @@ class my_build_ext(build_ext.build_ext):
         build_ext.build_ext.initialize_options(self)
         self.cython = "cython"
 
-    def compile_cython(self):
-        sources = glob.glob('gevent/*.pyx') + glob.glob('gevent/*.pxi')
-        if not sources:
-            if not os.path.exists('gevent/core.c'):
-                print >> sys.stderr, 'Could not find gevent/core.c'
-        if os.path.exists('gevent/core.c'):
-            core_c_mtime = os.stat('gevent/core.c').st_mtime
-            changed = [filename for filename in sources if (os.stat(filename).st_mtime - core_c_mtime) > 1]
-            if not changed:
-                return
-            print >> sys.stderr, 'Running %s (changed: %s)' % (self.cython, ', '.join(changed))
-        else:
-            print >> sys.stderr, 'Running %s' % self.cython
-        cython_result = os.system('%s gevent/core.pyx' % self.cython)
-        if cython_result:
-            if os.system('%s -V 2> %s' % (self.cython, os.devnull)):
-                # there's no cython in the system
-                print >> sys.stderr, 'No cython found, cannot rebuild core.c'
-                return
-            sys.exit(1)
-
     def build_extension(self, ext):
         compile_libevent(self)
         if self.cython:
-            self.compile_cython()
+            run_cython(self.cython)
         result = build_ext.build_ext.build_extension(self, ext)
         # hack: create a symlink from build/../core.so to gevent/core.so
         # to prevent "ImportError: cannot import name core" failures
@@ -295,28 +296,31 @@ def read(name):
 
 
 if __name__ == '__main__':
-    setup(
-        name='gevent',
-        version=__version__,
-        description='Python network library that uses greenlet and libevent for easy and scalable concurrency',
-        long_description=read('README.rst'),
-        author='Denis Bilenko',
-        author_email='denis.bilenko@gmail.com',
-        url='http://www.gevent.org/',
-        packages=['gevent'],
-        ext_modules=[gevent_core],
-        cmdclass={'build_ext': my_build_ext},
-        install_requires=['greenlet'],
-        classifiers=[
-        "License :: OSI Approved :: MIT License",
-        "Programming Language :: Python :: 2.4",
-        "Programming Language :: Python :: 2.5",
-        "Programming Language :: Python :: 2.6",
-        "Programming Language :: Python :: 2.7",
-        "Operating System :: MacOS :: MacOS X",
-        "Operating System :: POSIX",
-        "Operating System :: Microsoft :: Windows",
-        "Topic :: Internet",
-        "Topic :: Software Development :: Libraries :: Python Modules",
-        "Intended Audience :: Developers",
-        "Development Status :: 4 - Beta"])
+    if sys.argv[1:] == ['cython']:
+        run_cython()
+    else:
+        setup(
+            name='gevent',
+            version=__version__,
+            description='Python network library that uses greenlet and libevent for easy and scalable concurrency',
+            long_description=read('README.rst'),
+            author='Denis Bilenko',
+            author_email='denis.bilenko@gmail.com',
+            url='http://www.gevent.org/',
+            packages=['gevent'],
+            ext_modules=[gevent_core],
+            cmdclass={'build_ext': my_build_ext},
+            install_requires=['greenlet'],
+            classifiers=[
+            "License :: OSI Approved :: MIT License",
+            "Programming Language :: Python :: 2.4",
+            "Programming Language :: Python :: 2.5",
+            "Programming Language :: Python :: 2.6",
+            "Programming Language :: Python :: 2.7",
+            "Operating System :: MacOS :: MacOS X",
+            "Operating System :: POSIX",
+            "Operating System :: Microsoft :: Windows",
+            "Topic :: Internet",
+            "Topic :: Software Development :: Libraries :: Python Modules",
+            "Intended Audience :: Developers",
+            "Development Status :: 4 - Beta"])
