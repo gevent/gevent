@@ -8,7 +8,7 @@ import imp
 __httplib__ = imp.load_module('__httplib__', *imp.find_module('httplib'))
 
 from gevent import core
-from gevent.hub import Waiter, get_hub
+from gevent.hub import Waiter
 
 __implements__ = [
     'HTTPConnection',
