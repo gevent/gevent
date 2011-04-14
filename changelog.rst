@@ -9,7 +9,7 @@ Release 0.13.4 (Apr 11, 2011)
 
 - Fixed :exc:`TypeError` that occurred when ``environ["wsgi.input"].read`` function was called with an integer argument.
 - Fixed issue #63: :func:`monkey.patch_thread` now patches :mod:`threading` too, even if it's already imported. Patch by **Shaun Lindsay**.
-- Fixed issue #64: :func:`joinall` and :func:`killall` functions used hangs if their arguments contained duplicate greenlets passed to them.
+- Fixed issue #64: :func:`joinall` and :func:`killall` functions used to hang if their argument contained duplicate greenlets.
 - Fixed issue #69: :class:`pywsgi.WSGIServer` reported "Connection reset by peer" if the client did not close the connection gracefully after the last request. Such errors are now ignored.
 - Fixed issue #67: Made :class:`wsgi.WSGIServer` add ``REQUEST_URI`` to environ. Patch by **Andreas Blixt**.
 - Fixed issue #71: monkey patching ``httplib`` with :mod:`gevent.httplib` used to break ``HTTPSConnection``. Patch by **Nick Barkas**.
