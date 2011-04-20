@@ -208,7 +208,6 @@ class Hub(greenlet):
                 default = get_ident() == MAIN_THREAD
             loop_class = _import(self.loop_class)
             self.loop = loop_class(flags=loop, default=default)
-        self.loop.error_handler = self
         self._resolver = None
         self.pformat = _import(self.pformat)
 
@@ -269,6 +268,7 @@ class Hub(greenlet):
         global _threadlocal
         assert self is getcurrent(), 'Do not call Hub.run() directly'
         try:
+            self.loop.error_handler = self
             self.loop.run()
         finally:
             if _threadlocal.__dict__.get('hub') is self:
