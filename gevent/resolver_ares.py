@@ -89,23 +89,21 @@ class Resolver(object):
             values.pop()
         result = []
 
-        try:
-            for addrs in values:
-                if addrs.family == AF_INET:
-                    for addr in addrs[-1]:
-                        sockaddr = (addr, port)
-                        for socktype, proto in socktype_proto:
-                            result.append((AF_INET, socktype, proto, '', sockaddr))
-                elif addrs.family == AF_INET6:
-                    for addr in addrs[-1]:
-                        sockaddr = (addr, port, 0, 0)
-                        for socktype, proto in socktype_proto:
-                            result.append((AF_INET6, socktype, proto, '', sockaddr))
-                else:
-                    raise error('Internal error in %s' % self.ares.gethostbyname)
-        except error:
-            if not result:
-                raise
+        for addrs in values:
+            if addrs.family == AF_INET:
+                for addr in addrs[-1]:
+                    sockaddr = (addr, port)
+                    for socktype, proto in socktype_proto:
+                        result.append((AF_INET, socktype, proto, '', sockaddr))
+            elif addrs.family == AF_INET6:
+                for addr in addrs[-1]:
+                    sockaddr = (addr, port, 0, 0)
+                    for socktype, proto in socktype_proto:
+                        result.append((AF_INET6, socktype, proto, '', sockaddr))
+
+        if not result:
+            raise error('Internal error in %s' % self.ares.gethostbyname)
+
         return result
 
     def gethostbyaddr(self, ip_address):
