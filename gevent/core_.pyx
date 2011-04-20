@@ -356,6 +356,9 @@ cdef public class loop [object PyGeventLoopObject, type PyGeventLoop_Type]:
     cpdef prepare(self):
         return prepare(self)
 
+    cpdef fork(self):
+        return fork(self)
+
     cpdef callback(self):
         return callback(self)
 
@@ -573,6 +576,13 @@ cdef public class prepare(watcher) [object PyGeventPrepareObject, type PyGeventP
     WATCHER(prepare)
 
     INIT(prepare)
+
+
+cdef public class fork(watcher) [object PyGeventForkObject, type PyGeventFork_Type]:
+
+    WATCHER(fork)
+
+    INIT(fork)
 
 
 cdef public class callback(watcher) [object PyGeventCallbackObject, type PyGeventCallback_Type]:

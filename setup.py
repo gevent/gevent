@@ -31,7 +31,6 @@ if libev_embed:
                 # libev watchers that we don't use currently:
                 ('EV_STAT_ENABLE', '0'),
                 ('EV_CHECK_ENABLE', '0'),
-                ('EV_FORK_ENABLE', '0'),
                 ('EV_CLEANUP_ENABLE', '0'),
                 ('EV_EMBED_ENABLE', '0'),
                 ('EV_ASYNC_ENABLE', '0'),
