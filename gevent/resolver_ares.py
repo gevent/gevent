@@ -144,7 +144,7 @@ class Resolver(object):
 
 class Values(object):
     # helper to collect multiple values; ignore errors unless nothing has succeeded
-    # QQQ could probable be moved somewhere - hub.py?
+    # QQQ could probably be moved somewhere - hub.py?
 
     __slots__ = ['count', 'values', 'error', 'waiter']
 
