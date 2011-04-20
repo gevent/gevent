@@ -68,6 +68,9 @@ cdef extern from "libev.h":
     struct ev_prepare:
         pass
 
+    struct ev_fork:
+        pass
+
     int ev_version_major()
     int ev_version_minor()
 
@@ -103,6 +106,10 @@ cdef extern from "libev.h":
     void ev_prepare_init(ev_prepare*, void* callback)
     void ev_prepare_start(ev_loop*, ev_prepare*)
     void ev_prepare_stop(ev_loop*, ev_prepare*)
+
+    void ev_fork_init(ev_fork*, void* callback)
+    void ev_fork_start(ev_loop*, ev_fork*)
+    void ev_fork_stop(ev_loop*, ev_fork*)
 
     ev_loop* ev_default_loop(unsigned int flags)
     ev_loop* ev_loop_new(unsigned int flags)
