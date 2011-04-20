@@ -127,7 +127,7 @@ if _original_fork is not None:
 
     def fork():
         result = _original_fork()
-        get_hub().loop.fork()
+        get_hub().loop.reinit()
         return result
 
 
