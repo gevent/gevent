@@ -1,9 +1,37 @@
 cdef extern from "ares.h":
     struct ares_options:
+        int flags
         void* sock_state_cb
         void* sock_state_cb_data
+        int timeout
+        int tries
+        int ndots
+        unsigned short udp_port
+        unsigned short tcp_port
+        char **domains
+        int ndomains
+        char* lookups
 
+    int ARES_OPT_FLAGS
     int ARES_OPT_SOCK_STATE_CB
+    int ARES_OPT_TIMEOUTMS
+    int ARES_OPT_TRIES
+    int ARES_OPT_NDOTS
+    int ARES_OPT_TCP_PORT
+    int ARES_OPT_UDP_PORT
+    int ARES_OPT_SERVERS
+    int ARES_OPT_DOMAINS
+    int ARES_OPT_LOOKUPS
+
+    int ARES_FLAG_USEVC
+    int ARES_FLAG_PRIMARY
+    int ARES_FLAG_IGNTC
+    int ARES_FLAG_NORECURSE
+    int ARES_FLAG_STAYOPEN
+    int ARES_FLAG_NOSEARCH
+    int ARES_FLAG_NOALIASES
+    int ARES_FLAG_NOCHECKRESP
+
     int ARES_LIB_INIT_ALL
     int ARES_SOCKET_BAD
 
@@ -58,6 +86,23 @@ cdef extern from "ares.h":
     char* ares_strerror(int code)
     void ares_cancel(void* channel)
     void ares_getnameinfo(void* channel, void* sa, int salen, int flags, void* callback, void *arg)
+
+    struct in_addr:
+        pass
+
+    struct ares_in6_addr:
+        pass
+
+    struct addr_union:
+        in_addr addr4
+        ares_in6_addr addr6
+
+    struct ares_addr_node:
+        ares_addr_node *next
+        int family
+        addr_union addr
+
+    int ares_set_servers(void* channel, ares_addr_node *servers)
 
 
 cdef extern from "inet_net_pton.h":

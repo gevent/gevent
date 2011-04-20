@@ -24,6 +24,10 @@ cdef extern from "dnshelper.c":
         pass
     int gevent_make_sockaddr(char* hostp, int port, int flowinfo, int scope_id, sockaddr_in6* sa6)
 
+    void* malloc(int)
+    void free(void*)
+    void memset(void*, int, int)
+
 cdef extern from "callbacks.h":
     void gevent_handle_error(void* loop, void* callback)
 
@@ -53,6 +57,15 @@ ARES_ENOTINITIALIZED = cares.ARES_ENOTINITIALIZED
 ARES_ELOADIPHLPAPI = cares.ARES_ELOADIPHLPAPI
 ARES_EADDRGETNETWORKPARAMS = cares.ARES_EADDRGETNETWORKPARAMS
 ARES_ECANCELLED = cares.ARES_ECANCELLED
+
+ARES_FLAG_USEVC = cares.ARES_FLAG_USEVC
+ARES_FLAG_PRIMARY = cares.ARES_FLAG_PRIMARY
+ARES_FLAG_IGNTC = cares.ARES_FLAG_IGNTC
+ARES_FLAG_NORECURSE = cares.ARES_FLAG_NORECURSE
+ARES_FLAG_STAYOPEN = cares.ARES_FLAG_STAYOPEN
+ARES_FLAG_NOSEARCH = cares.ARES_FLAG_NOSEARCH
+ARES_FLAG_NOALIASES = cares.ARES_FLAG_NOALIASES
+ARES_FLAG_NOCHECKRESP = cares.ARES_FLAG_NOCHECKRESP
 
 
 _ares_errors = dict([
@@ -208,23 +221,94 @@ cdef public class ares_channel [object PyGeventAresChannelObject, type PyGeventA
     cdef void* channel
     cdef public dict _watchers
 
-    def __init__(self, loop loop):
-        cdef int result = cares.ares_library_init(cares.ARES_LIB_INIT_ALL)
-        if result:
-            raise get_socket_gaierror()(result, ares_strerror(result))
+    def __init__(self, loop loop, flags=None, timeout=None, tries=None, ndots=None,
+                 udp_port=None, tcp_port=None, servers=None):
+        cdef void* channel = NULL
         cdef cares.ares_options options
+        memset(&options, 0, sizeof(cares.ares_options))
+        cdef int optmask = cares.ARES_OPT_SOCK_STATE_CB
         options.sock_state_cb = <void*>gevent_sock_state_callback
         options.sock_state_cb_data = <void*>self
-        result = cares.ares_init_options(&self.channel, &options, cares.ARES_OPT_SOCK_STATE_CB)
+        if flags is not None:
+            options.flags = flags
+            optmask |= cares.ARES_OPT_FLAGS
+        if timeout is not None:
+            options.timeout = timeout * 1000
+            optmask |= cares.ARES_OPT_TIMEOUTMS
+        if tries is not None:
+            options.tries = tries
+            optmask |= cares.ARES_OPT_TRIES
+        if ndots is not None:
+            options.ndots = ndots
+            optmask |= cares.ARES_OPT_NDOTS
+        if udp_port is not None:
+            options.udp_port = udp_port
+            optmask |= cares.ARES_OPT_UDP_PORT
+        if tcp_port is not None:
+            options.tcp_port = tcp_port
+            optmask |= cares.ARES_OPT_TCP_PORT
+        cdef int result = cares.ares_library_init(cares.ARES_LIB_INIT_ALL)  # ARES_LIB_INIT_WIN32 -DUSE_WINSOCK?
         if result:
             raise get_socket_gaierror()(result, ares_strerror(result))
-        self.loop = loop
-        self._watchers = {}
+        result = cares.ares_init_options(&channel, &options, optmask)
+        if result:
+            raise get_socket_gaierror()(result, ares_strerror(result))
+        try:
+            self.channel = channel
+            if servers is not None:
+                self.set_servers(servers)
+            self.loop = loop
+            self._watchers = {}
+        except:
+            self.destroy()
+            raise
+
+    def destroy(self):
+        if self.channel:
+            # XXX ares_library_cleanup?
+            cares.ares_destroy(self.channel)
+            self.channel = NULL
+            self._watchers.clear()
+            self.loop = None
 
     def __dealloc__(self):
         if self.channel:
             cares.ares_destroy(self.channel)
             self.channel = NULL
+
+    def set_servers(self, object servers=[]):
+        if not self.channel:
+            raise get_socket_gaierror()(cares.ARES_EDESTRUCTION, 'this ares_channel has been destroyed')
+        cdef int length = len(servers)
+        cdef int result, index
+        cdef char* string
+        cdef cares.ares_addr_node* c_servers
+        if length <= 0:
+            result = cares.ares_set_servers(self.channel, NULL)
+        else:
+            c_servers = <cares.ares_addr_node*>malloc(sizeof(cares.ares_addr_node) * length)
+            if not c_servers:
+                raise MemoryError
+            try:
+                index = 0
+                for server in servers:
+                    string = <char*?>server
+                    if cares.ares_inet_pton(AF_INET, string, &c_servers[index].addr) > 0:
+                        c_servers[index].family = AF_INET
+                    elif cares.ares_inet_pton(AF_INET6, string, &c_servers[index].addr) > 0:
+                        c_servers[index].family = AF_INET6
+                    else:
+                        raise ValueError('illegal IP address string: %r' % string)
+                    c_servers[index].next = &c_servers[index] + 1
+                    index += 1
+                    if index >= length:
+                        break
+                c_servers[length - 1].next = NULL
+                index = cares.ares_set_servers(self.channel, c_servers)
+                if index:
+                    raise ValueError(ares_strerror(index))
+            finally:
+                free(c_servers)
 
     # this crashes c-ares
     #def cancel(self):
