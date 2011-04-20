@@ -71,6 +71,7 @@ class Resolver(object):
 
         if family == AF_UNSPEC:
             values = Values(2)
+            # note, that we assume that ares.gethostbyname does not raise exceptions
             self.ares.gethostbyname(values, host, AF_INET)
             self.ares.gethostbyname(values, host, AF_INET6)
         elif family == AF_INET:
