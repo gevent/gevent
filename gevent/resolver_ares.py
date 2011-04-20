@@ -27,16 +27,7 @@ class Resolver(object):
         self.ares.gethostbyname(waiter, hostname, family)
         return waiter.get()
 
-    def getaddrinfo(self, host, port, family=0, socktype=0, proto=0, flags=0):
-        if isinstance(host, unicode):
-            host = host.encode('idna')
-        elif not isinstance(host, str) or (flags & AI_NUMERICHOST):
-            # this handles cases which do not require network access
-            # 1) host is None
-            # 2) host is of an invalid type
-            # 3) AI_NUMERICHOST flag is set
-            return getaddrinfo(host, port, family, socktype, proto, flags)
-            # we also call _socket.getaddrinfo below if family is not one of AF_*
+    def _lookup_port(self, port, socktype):
         if isinstance(port, basestring):
             try:
                 if socktype == 0:
@@ -59,6 +50,20 @@ class Resolver(object):
                     raise gaierror(str(ex))
         elif port is None:
             port = 0
+        return port, socktype
+
+    def getaddrinfo(self, host, port, family=0, socktype=0, proto=0, flags=0):
+        if isinstance(host, unicode):
+            host = host.encode('idna')
+        elif not isinstance(host, str) or (flags & AI_NUMERICHOST):
+            # this handles cases which do not require network access
+            # 1) host is None
+            # 2) host is of an invalid type
+            # 3) AI_NUMERICHOST flag is set
+            return getaddrinfo(host, port, family, socktype, proto, flags)
+            # we also call _socket.getaddrinfo below if family is not one of AF_*
+
+        port, socktype = self._lookup_port(port, socktype)
 
         socktype_proto = [(SOCK_STREAM, 6), (SOCK_DGRAM, 17), (SOCK_RAW, 0)]
         if socktype:
