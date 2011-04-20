@@ -10,14 +10,12 @@ class Resolver(object):
 
     ares_class = 'gevent.core.ares_channel'
 
-    def __init__(self, hub=None, ares=None):
+    def __init__(self, hub=None, **kwargs):
         if hub is None:
             hub = get_hub()
         self.hub = hub
-        if ares is None:
-            ares_class = _import(self.ares_class)
-            ares = ares_class(hub.loop)
-        self.ares = ares
+        self.ares_class = _import(self.ares_class)
+        self.ares = self.ares_class(hub.loop, **kwargs)
 
     def gethostbyname(self, hostname, family=AF_INET):
         return self.gethostbyname_ex(hostname, family)[-1][0]
