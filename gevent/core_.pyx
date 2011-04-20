@@ -284,7 +284,7 @@ cdef public class loop [object PyGeventLoopObject, type PyGeventLoop_Type]:
         with nogil:
             libev.ev_run(self._ptr, flags)
 
-    def fork(self):
+    def reinit(self):
         libev.ev_loop_fork(self._ptr)
 
     def ref(self):
