@@ -1,4 +1,5 @@
 # Copyright (c) 2009-2010 Denis Bilenko. See LICENSE for details.
+raise AssertionError('TODO: gevent.http')
 from gevent import core
 from gevent.baseserver import BaseServer
 from gevent.hub import get_hub

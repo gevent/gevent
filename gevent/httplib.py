@@ -1,4 +1,5 @@
 # Copyright (C) 2010-2011 gevent contributors. See LICENSE for details.
+raise AssertionError('TODO: httplib')
 __httplib__ = __import__('httplib')
 
 from gevent import core
