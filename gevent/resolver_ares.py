@@ -25,7 +25,7 @@ class Resolver(object):
     def _on_fork(self):
         pid = os.getpid()
         if pid != self.pid:
-            self.ares.destroy()
+            self.hub.loop.run_callback(self.ares.destroy)
             self.ares = self.ares_class(self.hub.loop, **self.params)
             self.pid = pid
 
