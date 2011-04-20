@@ -1,3 +1,4 @@
+import os
 from _socket import getservbyname, getaddrinfo, gaierror, error
 from gevent.hub import Waiter, get_hub, _import
 from gevent.socket import AF_UNSPEC, AF_INET, AF_INET6, SOCK_STREAM, SOCK_DGRAM, SOCK_RAW, AI_NUMERICHOST, EAI_SERVICE
@@ -16,6 +17,17 @@ class Resolver(object):
         self.hub = hub
         self.ares_class = _import(self.ares_class)
         self.ares = self.ares_class(hub.loop, **kwargs)
+        self.pid = os.getpid()
+        self.params = kwargs
+        self.fork_watcher = hub.loop.fork()
+        self.fork_watcher.start(self._on_fork)
+
+    def _on_fork(self):
+        pid = os.getpid()
+        if pid != self.pid:
+            self.ares.destroy()
+            self.ares = self.ares_class(self.hub.loop, **self.params)
+            self.pid = pid
 
     def gethostbyname(self, hostname, family=AF_INET):
         return self.gethostbyname_ex(hostname, family)[-1][0]
