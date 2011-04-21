@@ -13,18 +13,21 @@ __all__ = ['get_version',
 
 
 cdef extern from "Python.h":
-    void   Py_INCREF(void*)
-    void   Py_DECREF(void*)
-    void   Py_XDECREF(void*)
-    int    Py_ReprEnter(void*)
-    void   Py_ReprLeave(void*)
-    int    PyCallable_Check(void*)
+    struct PyObject:
+        pass
+    ctypedef PyObject* PyObjectPtr "PyObject*"
+    void   Py_INCREF(PyObjectPtr)
+    void   Py_DECREF(PyObjectPtr)
+    void   Py_XDECREF(PyObjectPtr)
+    int    Py_ReprEnter(PyObjectPtr)
+    void   Py_ReprLeave(PyObjectPtr)
+    int    PyCallable_Check(PyObjectPtr)
 
 cdef extern from "frameobject.h":
     ctypedef struct PyThreadState:
-        void* exc_type
-        void* exc_value
-        void* exc_traceback
+        PyObjectPtr exc_type
+        PyObjectPtr exc_value
+        PyObjectPtr exc_traceback
     PyThreadState* PyThreadState_GET()
 
 cdef extern from "callbacks.h":
@@ -370,7 +373,7 @@ cdef public class loop [object PyGeventLoopObject, type PyGeventLoop_Type]:
 
 define(INCREF, ``if self._incref == 0:
             self._incref = 1
-            Py_INCREF(<void*>self)'')
+            Py_INCREF(<PyObjectPtr>self)'')
 
 
 define(WATCHER_BASE, `cdef public loop loop
@@ -385,7 +388,7 @@ define(WATCHER_BASE, `cdef public loop loop
             return self._callback
 
         def __set__(self, object callback):
-            if not PyCallable_Check(<void*>callback):
+            if not PyCallable_Check(<PyObjectPtr>callback):
                 raise TypeError("Expected callable, not %r" % callback)
             self._callback = callback
 
@@ -397,7 +400,7 @@ define(WATCHER_BASE, `cdef public loop loop
         self._callback = None
         self.args = None
         if self._incref == 1:
-            Py_DECREF(<void*>self)
+            Py_DECREF(<PyObjectPtr>self)
             self._incref = 0
 
     property pending:
@@ -464,7 +467,7 @@ cdef public class watcher [object PyGeventWatcherObject, type PyGeventWatcher_Ty
     """Abstract base class for all the watchers"""
 
     def __repr__(self):
-        if Py_ReprEnter(<void*>self) != 0:
+        if Py_ReprEnter(<PyObjectPtr>self) != 0:
             return "<...>"
         try:
             format = self._format()
@@ -483,7 +486,7 @@ cdef public class watcher [object PyGeventWatcherObject, type PyGeventWatcher_Ty
                 result += " _incref=%s" % self._incref
             return result + ">"
         finally:
-            Py_ReprLeave(<void*>self)
+            Py_ReprLeave(<PyObjectPtr>self)
 
     def _format(self):
         return ''
@@ -613,19 +616,19 @@ cdef public class callback(watcher) [object PyGeventCallbackObject, type PyGeven
 
 def set_exc_info(object type, object value):
     cdef PyThreadState* tstate = PyThreadState_GET()
-    Py_XDECREF(<void*>tstate.exc_type)
-    Py_XDECREF(<void*>tstate.exc_value)
-    Py_XDECREF(<void*>tstate.exc_traceback)
+    Py_XDECREF(tstate.exc_type)
+    Py_XDECREF(tstate.exc_value)
+    Py_XDECREF(tstate.exc_traceback)
     if type is None:
         tstate.exc_type = NULL
     else:
-        Py_INCREF(<void*>type)
-        tstate.exc_type = <void*>type
+        Py_INCREF(<PyObjectPtr>type)
+        tstate.exc_type = <PyObjectPtr>type
     if value is None:
         tstate.exc_value = NULL
     else:
-        Py_INCREF(<void*>value)
-        tstate.exc_value = <void *>value
+        Py_INCREF(<PyObjectPtr>value)
+        tstate.exc_value = <PyObjectPtr>value
     tstate.exc_traceback = NULL
 
 

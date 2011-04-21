@@ -80,7 +80,7 @@ static void gevent_callback(struct ev_loop *_loop, void *c_watcher, int revents)
     /* we use this callback for all watchers, not just timer
      * we can do this, because layout of struct members is the same for all watchers */
     watcher = ((struct PyGeventTimerObject *)(((char *)c_watcher) - timer_offsetof));
-    Py_INCREF(watcher);
+    Py_INCREF((PyObject*)watcher);
     gevent_check_signals(watcher->loop);
     args = watcher->args;
     if (args == Py_None) {
@@ -126,7 +126,7 @@ static void gevent_callback(struct ev_loop *_loop, void *c_watcher, int revents)
         gevent_stop(watcher);
     }
 end:
-    Py_DECREF(watcher);
+    Py_DECREF((PyObject*)watcher);
     GIL_RELEASE;
 }
 

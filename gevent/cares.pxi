@@ -175,7 +175,7 @@ cdef void gevent_ares_host_callback(void *arg, int status, int timeouts, hostent
     cdef ares_channel channel
     cdef object callback
     channel, callback = <tuple>arg
-    Py_DECREF(arg)
+    Py_DECREF(<PyObjectPtr>arg)
     cdef object host_result
     try:
         if status or not host:
@@ -195,7 +195,7 @@ cdef void gevent_ares_nameinfo_callback(void *arg, int status, int timeouts, cha
     cdef ares_channel channel
     cdef object callback
     channel, callback = <tuple>arg
-    Py_DECREF(arg)
+    Py_DECREF(<PyObjectPtr>arg)
     cdef object node
     cdef object service
     try:
@@ -358,7 +358,7 @@ cdef public class ares_channel [object PyGeventAresChannelObject, type PyGeventA
         #                        behaves the same as AS_UNSPEC
         # note that for file lookups still AF_INET can be returned for AF_INET6 request
         cdef object arg = (self, callback)
-        Py_INCREF(<void*>arg)
+        Py_INCREF(<PyObjectPtr>arg)
         cares.ares_gethostbyname(self.channel, name, family, <void*>gevent_ares_host_callback, <void*>arg)
 
     def gethostbyaddr(self, object callback, char* addr):
@@ -378,7 +378,7 @@ cdef public class ares_channel [object PyGeventAresChannelObject, type PyGeventA
             callback(result(exception=ValueError('illegal IP address string: %r' % addr)))
             return
         cdef object arg = (self, callback)
-        Py_INCREF(<void*>arg)
+        Py_INCREF(<PyObjectPtr>arg)
         cares.ares_gethostbyaddr(self.channel, addr_packed, length, family, <void*>gevent_ares_host_callback, <void*>arg)
 
     cpdef _getnameinfo(self, object callback, tuple sockaddr, int flags):
@@ -400,7 +400,7 @@ cdef public class ares_channel [object PyGeventAresChannelObject, type PyGeventA
             callback(result(exception=ValueError('illegal IP address string: %r' % hostp)))
             return
         cdef object arg = (self, callback)
-        Py_INCREF(<void*>arg)
+        Py_INCREF(<PyObjectPtr>arg)
         cares.ares_getnameinfo(self.channel, &sa6, length, flags, <void*>gevent_ares_nameinfo_callback, <void*>arg)
 
     def getnameinfo(self, object callback, tuple sockaddr, int flags):
