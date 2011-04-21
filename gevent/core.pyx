@@ -50,17 +50,20 @@ cdef extern from "sys/types.h":
     ctypedef unsigned char u_char
 
 cdef extern from "Python.h":
-    void   Py_INCREF(void* o)
-    void   Py_DECREF(void* o)
-    void   Py_XDECREF(void* o)
-    object PyString_FromStringAndSize(char *v, int len)
-    object PyString_FromString(char *v)
+     struct PyObject:
+       pass
+     ctypedef PyObject* PyObjectPtr "PyObject*"
+     void   Py_INCREF(PyObjectPtr o)
+     void   Py_DECREF(PyObjectPtr o)
+     void   Py_XDECREF(PyObjectPtr o)
+     object PyString_FromStringAndSize(char *v, int len)
+     object PyString_FromString(char *v)
 
 cdef extern from "frameobject.h":
     ctypedef struct PyThreadState:
-        void* exc_type
-        void* exc_value
-        void* exc_traceback
+        PyObjectPtr exc_type
+        PyObjectPtr exc_value
+        PyObjectPtr exc_traceback
 
     PyThreadState* PyThreadState_GET()
 
@@ -164,12 +167,12 @@ cdef class event:
 
     cdef _addref(self):
         if self._incref <= 0:
-            Py_INCREF(<void*>self)
+            Py_INCREF(<PyObjectPtr>self)
             self._incref += 1
 
     cdef _delref(self):
         if self._incref > 0:
-            Py_DECREF(<void*>self)
+            Py_DECREF(<PyObjectPtr>self)
             self._incref -= 1
 
     property pending:
@@ -469,8 +472,8 @@ def set_exc_info(object type, object value):
         tstate.exc_type = NULL
         tstate.exc_value = NULL
     else:
-        Py_INCREF(<void*>type)
-        Py_INCREF(<void*>value)
-        tstate.exc_type = <void*>type
-        tstate.exc_value = <void *>value
+        Py_INCREF(<PyObjectPtr>type)
+        Py_INCREF(<PyObjectPtr>value)
+        tstate.exc_type = <PyObjectPtr>type
+        tstate.exc_value = <PyObjectPtr>value
     tstate.exc_traceback = NULL
