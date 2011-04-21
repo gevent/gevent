@@ -3,6 +3,11 @@ Changelog
 
 .. currentmodule:: gevent
 
+Release 0.13.5 (Apr 21, 2011)
+-----------------------------
+
+- Fixed build problem on Python 2.5
+
 
 Release 0.13.4 (Apr 11, 2011)
 -----------------------------
