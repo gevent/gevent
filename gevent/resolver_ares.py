@@ -39,9 +39,16 @@ class Resolver(object):
         return self.gethostbyname_ex(hostname, family)[-1][0]
 
     def gethostbyname_ex(self, hostname, family=AF_INET):
-        waiter = Waiter(self.hub)
-        self.ares.gethostbyname(waiter, hostname, family)
-        return waiter.get()
+        while True:
+            ares = self.ares
+            try:
+                waiter = Waiter(self.hub)
+                ares.gethostbyname(waiter, hostname, family)
+                return waiter.get()
+            except gaierror:
+                if ares is self.ares:
+                    raise
+                # "self.ares is not ares" means channel was destroyed (because we were forked)
 
     def _lookup_port(self, port, socktype):
         if isinstance(port, basestring):
@@ -68,7 +75,7 @@ class Resolver(object):
             port = 0
         return port, socktype
 
-    def getaddrinfo(self, host, port, family=0, socktype=0, proto=0, flags=0):
+    def _getaddrinfo(self, host, port, family=0, socktype=0, proto=0, flags=0):
         if isinstance(host, unicode):
             host = host.encode('idna')
         elif not isinstance(host, str) or (flags & AI_NUMERICHOST):
@@ -126,7 +133,16 @@ class Resolver(object):
 
         return result
 
-    def gethostbyaddr(self, ip_address):
+    def getaddrinfo(self, host, port, family=0, socktype=0, proto=0, flags=0):
+        while True:
+            ares = self.ares
+            try:
+                return self._getaddrinfo(host, port, family, socktype, proto, flags)
+            except gaierror:
+                if ares is self.ares:
+                    raise
+
+    def _gethostbyaddr(self, ip_address):
         waiter = Waiter(self.hub)
         self.ares.gethostbyaddr(waiter, ip_address)
         try:
@@ -142,7 +158,16 @@ class Resolver(object):
             self.ares.gethostbyaddr(waiter, _ip_address)
             return waiter.get()
 
-    def getnameinfo(self, sockaddr, flags):
+    def gethostbyaddr(self, ip_address):
+        while True:
+            ares = self.ares
+            try:
+                return self._gethostbyaddr(ip_address)
+            except gaierror:
+                if ares is self.ares:
+                    raise
+
+    def _getnameinfo(self, sockaddr, flags):
         waiter = Waiter(self.hub)
         self.ares.getnameinfo(waiter, sockaddr, flags)
         try:
@@ -160,6 +185,15 @@ class Resolver(object):
         if result[1] is None:
             return (result[0], str(sockaddr[1])) + result[2:]
         return result
+
+    def getnameinfo(self, sockaddr, flags):
+        while True:
+            ares = self.ares
+            try:
+                return self._getnameinfo(sockaddr, flags)
+            except gaierror:
+                if ares is self.ares:
+                    raise
 
 
 class Values(object):
