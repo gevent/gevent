@@ -87,17 +87,19 @@ class Resolver(object):
         if proto:
             socktype_proto = [(x, y) for (x, y) in socktype_proto if proto == y]
 
+        ares = self.ares
+
         if family == AF_UNSPEC:
             values = Values(2)
             # note, that we assume that ares.gethostbyname does not raise exceptions
-            self.ares.gethostbyname(values, host, AF_INET)
-            self.ares.gethostbyname(values, host, AF_INET6)
+            ares.gethostbyname(values, host, AF_INET)
+            ares.gethostbyname(values, host, AF_INET6)
         elif family == AF_INET:
             values = Values(1)
-            self.ares.gethostbyname(values, host, AF_INET)
+            ares.gethostbyname(values, host, AF_INET)
         elif family == AF_INET6:
             values = Values(1)
-            self.ares.gethostbyname(values, host, AF_INET6)
+            ares.gethostbyname(values, host, AF_INET6)
         else:
             # most likely will raise the exception, let the original getaddrinfo do it
             return getaddrinfo(host, port, family, socktype, proto, flags)
@@ -120,7 +122,7 @@ class Resolver(object):
                         result.append((AF_INET6, socktype, proto, '', sockaddr))
 
         if not result:
-            raise error('Internal error in %s' % self.ares.gethostbyname)
+            raise error('Internal error in %s' % ares.gethostbyname)
 
         return result
 
