@@ -29,6 +29,12 @@ class Resolver(object):
             self.ares = self.ares_class(self.hub.loop, **self.params)
             self.pid = pid
 
+    def close(self):
+        if self.ares is not None:
+            self.hub.loop.run_callback(self.ares.destroy)
+            self.ares = None
+        self.fork_watcher.stop()
+
     def gethostbyname(self, hostname, family=AF_INET):
         return self.gethostbyname_ex(hostname, family)[-1][0]
 
