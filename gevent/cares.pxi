@@ -329,9 +329,10 @@ cdef public class ares_channel [object PyGeventAresChannelObject, type PyGeventA
             watcher = self.loop.io(socket, events)
             self._watchers[socket] = watcher
         elif events:
-            if watcher._watcher.events != events:
-                watcher.stop()
-                watcher._watcher.events = events
+            if watcher._watcher.events == events:
+                return
+            watcher.stop()
+            watcher._watcher.events = events
         else:
             watcher.stop()
             self._watchers.pop(socket, None)
