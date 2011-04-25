@@ -76,6 +76,7 @@ static void gevent_callback(struct ev_loop *_loop, void *c_watcher, int revents)
     struct PyGeventTimerObject *watcher;
     PyObject *result, *py_events, *args;
     long length;
+    py_events = 0;
     GIL_ENSURE;
     /* we use this callback for all watchers, not just timer
      * we can do this, because layout of struct members is the same for all watchers */
@@ -86,6 +87,7 @@ static void gevent_callback(struct ev_loop *_loop, void *c_watcher, int revents)
     if (args == Py_None) {
         args = __pyx_empty_tuple;
     }
+    Py_INCREF(args);
     length = PyTuple_Size(args);
     if (length < 0) {
         gevent_handle_error(watcher->loop, (PyObject*)watcher);
@@ -103,8 +105,8 @@ static void gevent_callback(struct ev_loop *_loop, void *c_watcher, int revents)
     else {
         py_events = NULL;
     }
-    /* no need to incref 'args'; PyEval_EvalCodeEx which eventually will be called will
-     * increase the reference of every element in args*/
+    /* The callback can clear watcher->args and thus drop reference of args to zero;
+     * that's why we need to incref args above. */
     result = PyObject_Call(watcher->_callback, args, NULL);
     if (result) {
         Py_DECREF(result);
@@ -114,19 +116,21 @@ static void gevent_callback(struct ev_loop *_loop, void *c_watcher, int revents)
         if (revents & (EV_READ|EV_WRITE)) {
             /* this was an 'io' watcher: not stopping it will likely to cause the failing callback to be called repeatedly */
             gevent_stop(watcher);
+            goto end;
         }
-    }
-    if (py_events) {
-        Py_DECREF(py_events);
-        Py_INCREF(GEVENT_CORE_EVENTS);
-        PyTuple_SET_ITEM(watcher->args, 0, GEVENT_CORE_EVENTS);
     }
     if (!ev_is_active(c_watcher)) {
         /* watcher will never be run again: calling stop() will clear 'callback' and 'args' */
         gevent_stop(watcher);
     }
 end:
+    if (py_events) {
+        Py_DECREF(py_events);
+        Py_INCREF(GEVENT_CORE_EVENTS);
+        PyTuple_SET_ITEM(args, 0, GEVENT_CORE_EVENTS);
+    }
     Py_DECREF((PyObject*)watcher);
+    Py_DECREF(args);
     GIL_RELEASE;
 }
 
