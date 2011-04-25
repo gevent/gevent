@@ -333,6 +333,7 @@ cdef public class ares_channel [object PyGeventAresChannelObject, type PyGeventA
                 watcher.stop()
                 watcher._watcher.events = events
         else:
+            watcher.stop()
             self._watchers.pop(socket, None)
             return
         watcher._start(self._process_fd, (GEVENT_CORE_EVENTS, watcher))
