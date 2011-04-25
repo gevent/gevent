@@ -99,7 +99,6 @@ static void gevent_callback(struct ev_loop *_loop, void *c_watcher, int revents)
             gevent_handle_error(watcher->loop, (PyObject*)watcher);
             goto end;
         }
-        Py_DECREF(GEVENT_CORE_EVENTS);
         PyTuple_SET_ITEM(args, 0, py_events);
     }
     else {
@@ -126,7 +125,6 @@ static void gevent_callback(struct ev_loop *_loop, void *c_watcher, int revents)
 end:
     if (py_events) {
         Py_DECREF(py_events);
-        Py_INCREF(GEVENT_CORE_EVENTS);
         PyTuple_SET_ITEM(args, 0, GEVENT_CORE_EVENTS);
     }
     Py_DECREF((PyObject*)watcher);
