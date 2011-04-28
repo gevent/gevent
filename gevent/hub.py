@@ -109,7 +109,8 @@ if _original_fork is not None:
 
     def fork():
         result = _original_fork()
-        core.reinit()
+        if not result:
+            core.reinit()
         return result
 
 
