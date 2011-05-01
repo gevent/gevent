@@ -480,10 +480,6 @@ cdef public class watcher [object PyGeventWatcherObject, type PyGeventWatcher_Ty
                 result += " callback=%r" % (self.callback, )
             if self.args is not None:
                 result += " args=%r" % (self.args, )
-            if self._incref == 1:
-                result += " ref"
-            elif self._incref:
-                result += " _incref=%s" % self._incref
             return result + ">"
         finally:
             Py_ReprLeave(<PyObjectPtr>self)
