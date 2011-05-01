@@ -60,7 +60,7 @@ if __name__ == '__main__':
     job2 = gevent.spawn(popen_communicate, 'netstat')
 
     # wait for them to complete. stop waiting after 2 seconds
-    gevent.joinall([job1, job2], timeout=2)
+    gevent.joinall([job1, job2], timeout=5)
 
     # print the results (if available)
     if job1.ready():
