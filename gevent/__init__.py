@@ -54,4 +54,4 @@ except ImportError:
 from gevent.hub import get_hub
 
 def reinit():
-    return get_hub().loop.fork()
+    return get_hub().loop.reinit()
