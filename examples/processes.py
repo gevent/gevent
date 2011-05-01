@@ -56,7 +56,7 @@ def popen_communicate(args, data=''):
 
 if __name__ == '__main__':
     # run 2 jobs in parallel
-    job1 = gevent.spawn(popen_communicate, 'finger')
+    job1 = gevent.spawn(popen_communicate, 'uname')
     job2 = gevent.spawn(popen_communicate, 'netstat')
 
     # wait for them to complete. stop waiting after 2 seconds
