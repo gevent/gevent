@@ -100,15 +100,15 @@ class Resolver(object):
         ares = self.ares
 
         if family == AF_UNSPEC:
-            values = Values(2)
+            values = Values(self.hub, 2)
             # note, that we assume that ares.gethostbyname does not raise exceptions
             ares.gethostbyname(values, host, AF_INET)
             ares.gethostbyname(values, host, AF_INET6)
         elif family == AF_INET:
-            values = Values(1)
+            values = Values(self.hub, 1)
             ares.gethostbyname(values, host, AF_INET)
         elif family == AF_INET6:
-            values = Values(1)
+            values = Values(self.hub, 1)
             ares.gethostbyname(values, host, AF_INET6)
         else:
             # most likely will raise the exception, let the original getaddrinfo do it
@@ -205,11 +205,11 @@ class Values(object):
 
     __slots__ = ['count', 'values', 'error', 'waiter']
 
-    def __init__(self, count=1):
+    def __init__(self, hub, count):
         self.count = count
         self.values = []
         self.error = None
-        self.waiter = Waiter()
+        self.waiter = Waiter(hub)
 
     def __call__(self, source):
         self.count -= 1
