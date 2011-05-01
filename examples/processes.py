@@ -64,10 +64,10 @@ if __name__ == '__main__':
 
     # print the results (if available)
     if job1.ready():
-        print 'finger: %s bytes: %s' % (len(job1.value), repr(job1.value)[:50])
+        print 'finger: %s bytes: %s' % (len(job1.value or ''), repr(job1.value)[:50])
     else:
         print 'finger: job is still running'
     if job2.ready():
-        print 'netstat: %s bytes: %s' % (len(job2.value), repr(job2.value)[:50])
+        print 'netstat: %s bytes: %s' % (len(job2.value or ''), repr(job2.value)[:50])
     else:
         print 'netstat: job is still running'
