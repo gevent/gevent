@@ -21,6 +21,7 @@ class Resolver(object):
         self.params = kwargs
         self.fork_watcher = hub.loop.fork()
         self.fork_watcher.start(self._on_fork)
+        self.fork_watcher.loop.unref()
 
     def _on_fork(self):
         pid = os.getpid()
@@ -33,7 +34,9 @@ class Resolver(object):
         if self.ares is not None:
             self.hub.loop.run_callback(self.ares.destroy)
             self.ares = None
-        self.fork_watcher.stop()
+        if self.fork_watcher.active:
+            self.fork_watcher.stop()
+            self.fork_watcher.loop.ref()
 
     def gethostbyname(self, hostname, family=AF_INET):
         return self.gethostbyname_ex(hostname, family)[-1][0]
