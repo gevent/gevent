@@ -118,7 +118,6 @@ parse_h_addr_list(struct hostent *h)
 {
     char **pch;
     PyObject *result = NULL;
-    PyObject *tmp;
 
     result = PyList_New(0);
 
