@@ -627,6 +627,22 @@ def create_connection(address, timeout=_GLOBAL_DEFAULT_TIMEOUT, source_address=N
         raise error("getaddrinfo returns an empty list")
 
 
+class BlockingResolver(object):
+
+    def __init__(self, hub=None):
+        pass
+
+    def close(self):
+        pass
+
+    for method in ['gethostbyname',
+                   'gethostbyname_ex',
+                   'getaddrinfo',
+                   'gethostbyaddr',
+                   'getnameinfo']:
+        locals()[method] = staticmethod(getattr(_socket, method))
+
+
 def gethostbyname(hostname):
     return get_hub().resolver.gethostbyname(hostname)
 
