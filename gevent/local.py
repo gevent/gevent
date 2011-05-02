@@ -127,6 +127,7 @@ affects what we see:
 >>> del mydata
 """
 from weakref import WeakKeyDictionary
+from copy import copy
 from gevent.hub import getcurrent
 from gevent.coros import RLock
 
@@ -215,3 +216,21 @@ class local(_localbase):
         else:
             object.__setattr__(self, '__dict__', d)
             return object.__delattr__(self, name)
+
+    def __copy__(self):
+        currentId = getcurrent()
+        d = object.__getattribute__(self, '_local__dicts').get(currentId)
+        duplicate = copy(d)
+
+        cls = type(self)
+        if cls.__init__ is not object.__init__:
+            args, kw = object.__getattribute__(self, '_local__args')
+            instance = cls(*args, **kw)
+        else:
+            instance = cls()
+
+        object.__setattr__(instance, '_local__dicts', {
+            currentId: duplicate
+        })
+
+        return instance
