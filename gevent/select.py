@@ -2,7 +2,6 @@
 
 from gevent.timeout import Timeout
 from gevent.event import Event
-from gevent.core import MAXPRI, READ, WRITE
 from gevent.hub import get_hub
 
 __implements__ = ['select']
@@ -48,7 +47,9 @@ def select(rlist, wlist, xlist, timeout=None):
     """
     watchers = []
     timeout = Timeout.start_new(timeout)
-    io = get_hub().loop.io
+    loop = get_hub().loop
+    io = loop.io
+    MAXPRI = loop.MAXPRI
     result = SelectResult()
     try:
         try:
