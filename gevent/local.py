@@ -171,8 +171,8 @@ class local(_localbase):
     def __getattribute__(self, name):
         d = object.__getattribute__(self, '_local__dicts').get(getcurrent())
         if d is None:
-            # we can obtain the lock here and not earlier, because the above has no switches out
-            # however, subclassed __init__ may switch so we do need obtain the lock here
+            # it's OK to acquire the lock here and not earlier, because the above code won't switch out
+            # however, subclassed __init__ might switch, so we do need to acquire the lock here
             lock = object.__getattribute__(self, '_local__lock')
             lock.acquire()
             try:
