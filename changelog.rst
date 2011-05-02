@@ -3,6 +3,15 @@ Changelog
 
 .. currentmodule:: gevent
 
+
+Release 0.13.6 (May 2, 2011)
+----------------------------
+
+- Added ``__copy__`` method to :class:`gevent.local.local` class that implements copy semantics compatible with built-in ``threading.local``. Patch by **Galfy Pundee**.
+- Fixed :class:`StreamServer` class to catch ``EWOULDBLOCK`` rather than ``EAGAIN``. This fixes lots of spurious tracebacks on Windows where these two constants are not the same. Patch by **Alexey Borzenkov**.
+- Fixed issue #65: :func:`fork` now calls ``event_reinit`` only in the child process; otherwise the process could hang when using libevent2. Patch by **Alexander Boudkar**.
+
+
 Release 0.13.5 (Apr 21, 2011)
 -----------------------------
 
