@@ -261,6 +261,21 @@ cdef public class loop [object PyGeventLoopObject, type PyGeventLoop_Type]:
         def __get__(self):
             return <size_t>self._ptr
 
+    property WatcherType:
+
+        def __get__(self):
+            return watcher
+
+    property MAXPRI:
+
+       def __get__(self):
+           return libev.EV_MAXPRI
+
+    property MINPRI:
+
+        def __get__(self):
+            return libev.EV_MINPRI
+
     cpdef handle_error(self, where, type, value, tb):
         cdef object handle_error
         cdef object error_handler = self.error_handler
