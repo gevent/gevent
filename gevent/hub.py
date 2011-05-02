@@ -297,8 +297,8 @@ class Hub(greenlet):
     def _get_resolver(self):
         if self._resolver is None:
             if self.resolver_class is not None:
-                resolver_class = _import(self.resolver_class)
-                self._resolver = resolver_class(hub=self)
+                self.resolver_class = _import(self.resolver_class)
+                self._resolver = self.resolver_class(hub=self)
         return self._resolver
 
     def _set_resolver(self, value):
