@@ -5,6 +5,7 @@ import errno
 from gevent import socket
 from gevent.baseserver import BaseServer
 from gevent.hub import get_hub
+from gevent.socket import EWOULDBLOCK
 
 
 __all__ = ['StreamServer']
@@ -115,7 +116,7 @@ class StreamServer(BaseServer):
                 try:
                     client_socket, address = self.socket.accept()
                 except socket.error, err:
-                    if err[0] == errno.EAGAIN:
+                    if err[0] == EWOULDBLOCK:
                         return
                     raise
                 self.delay = self.min_delay
