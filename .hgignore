@@ -5,9 +5,14 @@ syntax: glob
 dist
 gevent.egg-info
 build
-gevent/core.c
+gevent/gevent.core.c
+gevent/gevent.core.h
+gevent/gevent.ares.c
+gevent/gevent.ares.h
 gevent/core.so
 gevent/core_d.so
+gevent/ares.so
+gevent/ares_d.so
 gevent/core.pyx
 doc/_build
 doc/changelog.rst
