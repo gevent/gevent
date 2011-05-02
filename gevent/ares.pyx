@@ -1,5 +1,12 @@
 cimport cares
 import sys
+from python cimport *
+from gevent.core import EVENTS
+from gevent.core import io, loop
+
+
+DEF EV_READ = 1
+DEF EV_WRITE = 1
 
 
 cdef extern from "dnshelper.c":
@@ -27,9 +34,6 @@ cdef extern from "dnshelper.c":
     void* malloc(int)
     void free(void*)
     void memset(void*, int, int)
-
-cdef extern from "callbacks.h":
-    void gevent_handle_error(void* loop, void* callback)
 
 
 ARES_SUCCESS = cares.ARES_SUCCESS
@@ -123,19 +127,15 @@ cpdef _convert_cares_flags(int flags, int default=cares.ARES_NI_LOOKUPHOST|cares
     raise get_socket_gaierror()(-1, "Bad value for ai_flags: 0x%x" % flags)
 
 
-def _ares_strerror(code):
-    return cares.ares_strerror(code)
-
-
-cpdef ares_strerror(code):
+cpdef strerror(code):
     return '%s: %s' % (_ares_errors.get(code) or code, cares.ares_strerror(code))
 
 
 cdef void gevent_sock_state_callback(void *data, int s, int read, int write):
     if not data:
         return
-    cdef ares_channel channel = <ares_channel>data
-    channel._sock_state_callback(s, read, write)
+    cdef channel ch = <channel>data
+    ch._sock_state_callback(s, read, write)
 
 
 cdef class result:
@@ -153,6 +153,7 @@ cdef class result:
             return '%s(exception=%r)' % (self.__class__.__name__, self.exception)
         else:
             return '%s(value=%r, exception=%r)' % (self.__class__.__name__, self.value, self.exception)
+        # add repr_recursive precaution
 
     def successful(self):
         return self.exception is None
@@ -172,14 +173,14 @@ class ares_host_result(tuple):
 
 
 cdef void gevent_ares_host_callback(void *arg, int status, int timeouts, hostent* host):
-    cdef ares_channel channel
+    cdef channel channel
     cdef object callback
     channel, callback = <tuple>arg
     Py_DECREF(<PyObjectPtr>arg)
     cdef object host_result
     try:
         if status or not host:
-            callback(result(None, get_socket_gaierror()(status, ares_strerror(status))))
+            callback(result(None, get_socket_gaierror()(status, strerror(status))))
         else:
             try:
                 host_result = ares_host_result(host.h_addrtype, (host.h_name, parse_h_aliases(host), parse_h_addr_list(host)))
@@ -188,11 +189,11 @@ cdef void gevent_ares_host_callback(void *arg, int status, int timeouts, hostent
             else:
                 callback(result(host_result))
     except:
-        gevent_handle_error(<void*>channel.loop, <void*>callback)
+        channel.loop.handle_error(callback, *sys.exc_info())
 
 
 cdef void gevent_ares_nameinfo_callback(void *arg, int status, int timeouts, char *c_node, char *c_service):
-    cdef ares_channel channel
+    cdef channel channel
     cdef object callback
     channel, callback = <tuple>arg
     Py_DECREF(<PyObjectPtr>arg)
@@ -200,7 +201,7 @@ cdef void gevent_ares_nameinfo_callback(void *arg, int status, int timeouts, cha
     cdef object service
     try:
         if status:
-            callback(result(None, get_socket_gaierror()(status, ares_strerror(status))))
+            callback(result(None, get_socket_gaierror()(status, strerror(status))))
         else:
             if c_node:
                 node = PyString_FromString(c_node)
@@ -212,16 +213,16 @@ cdef void gevent_ares_nameinfo_callback(void *arg, int status, int timeouts, cha
                 service = None
             callback(result((node, service)))
     except:
-        gevent_handle_error(<void*>channel.loop, <void*>callback)
+        channel.loop.handle_error(callback, *sys.exc_info())
 
 
-cdef public class ares_channel [object PyGeventAresChannelObject, type PyGeventAresChannel_Type]:
+cdef public class channel [object PyGeventAresChannelObject, type PyGeventAresChannel_Type]:
 
-    cdef public loop loop
+    cdef public object loop
     cdef void* channel
     cdef public dict _watchers
 
-    def __init__(self, loop loop, flags=None, timeout=None, tries=None, ndots=None,
+    def __init__(self, object loop, flags=None, timeout=None, tries=None, ndots=None,
                  udp_port=None, tcp_port=None, servers=None):
         cdef void* channel = NULL
         cdef cares.ares_options options
@@ -249,10 +250,10 @@ cdef public class ares_channel [object PyGeventAresChannelObject, type PyGeventA
             optmask |= cares.ARES_OPT_TCP_PORT
         cdef int result = cares.ares_library_init(cares.ARES_LIB_INIT_ALL)  # ARES_LIB_INIT_WIN32 -DUSE_WINSOCK?
         if result:
-            raise get_socket_gaierror()(result, ares_strerror(result))
+            raise get_socket_gaierror()(result, strerror(result))
         result = cares.ares_init_options(&channel, &options, optmask)
         if result:
-            raise get_socket_gaierror()(result, ares_strerror(result))
+            raise get_socket_gaierror()(result, strerror(result))
         try:
             self.channel = channel
             if servers is not None:
@@ -273,12 +274,13 @@ cdef public class ares_channel [object PyGeventAresChannelObject, type PyGeventA
 
     def __dealloc__(self):
         if self.channel:
+            # XXX ares_library_cleanup?
             cares.ares_destroy(self.channel)
             self.channel = NULL
 
     def set_servers(self, object servers=[]):
         if not self.channel:
-            raise get_socket_gaierror()(cares.ARES_EDESTRUCTION, 'this ares_channel has been destroyed')
+            raise get_socket_gaierror()(cares.ARES_EDESTRUCTION, 'this ares channel has been destroyed')
         cdef int length = len(servers)
         cdef int result, index
         cdef char* string
@@ -306,7 +308,7 @@ cdef public class ares_channel [object PyGeventAresChannelObject, type PyGeventA
                 c_servers[length - 1].next = NULL
                 index = cares.ares_set_servers(self.channel, c_servers)
                 if index:
-                    raise ValueError(ares_strerror(index))
+                    raise ValueError(strerror(index))
             finally:
                 free(c_servers)
 
@@ -317,43 +319,42 @@ cdef public class ares_channel [object PyGeventAresChannelObject, type PyGeventA
     cdef _sock_state_callback(self, int socket, int read, int write):
         if not self.channel:
             return
-        cdef io watcher = self._watchers.get(socket)
+        cdef object watcher = self._watchers.get(socket)
         cdef int events = 0
         if read:
-            events |= libev.EV_READ
+            events |= EV_READ
         if write:
-            events |= libev.EV_WRITE
+            events |= EV_WRITE
         if watcher is None:
             if not events:
                 return
             watcher = self.loop.io(socket, events)
             self._watchers[socket] = watcher
         elif events:
-            if watcher._watcher.events == events:
+            if watcher.events == events:
                 return
             watcher.stop()
-            watcher._watcher.events = events
+            watcher.events = events
         else:
             watcher.stop()
             self._watchers.pop(socket, None)
             return
-        watcher._start(self._process_fd, (GEVENT_CORE_EVENTS, watcher))
+        watcher.start(self._process_fd, EVENTS, watcher)
 
-    def _process_fd(self, int events, io watcher):
+    def _process_fd(self, int events, object watcher):
         if not self.channel:
             return
-        #print '_process_fd', watcher, events
-        cdef int read_fd = watcher._watcher.fd
+        cdef int read_fd = watcher.fd
         cdef int write_fd = read_fd
-        if not (events & libev.EV_READ):
+        if not (events & EV_READ):
             read_fd = cares.ARES_SOCKET_BAD
-        if not (events & libev.EV_WRITE):
+        if not (events & EV_WRITE):
             write_fd = cares.ARES_SOCKET_BAD
         cares.ares_process_fd(self.channel, read_fd, write_fd)
 
     def gethostbyname(self, object callback, char* name, int family=AF_INET):
         if not self.channel:
-            raise get_socket_gaierror()(cares.ARES_EDESTRUCTION, 'this ares_channel has been destroyed')
+            raise get_socket_gaierror()(cares.ARES_EDESTRUCTION, 'this ares channel has been destroyed')
         # if family == AF_INET, send request for AF_INET
         # if family == AF_UNSPEC, send request for AF_INET6 for AF_INET6 then for AF_INET if the former fails
         # if family == AF_INET6, the bundled c-ares sends requests for AF_INET6 only whereas the stock c-ares
@@ -365,7 +366,7 @@ cdef public class ares_channel [object PyGeventAresChannelObject, type PyGeventA
 
     def gethostbyaddr(self, object callback, char* addr):
         if not self.channel:
-            raise get_socket_gaierror()(cares.ARES_EDESTRUCTION, 'this ares_channel has been destroyed')
+            raise get_socket_gaierror()(cares.ARES_EDESTRUCTION, 'this ares channel has been destroyed')
         # will guess the family
         cdef char addr_packed[16]
         cdef int family
@@ -377,6 +378,7 @@ cdef public class ares_channel [object PyGeventAresChannelObject, type PyGeventA
             family = AF_INET6
             length = 16
         else:
+            # XXX raise immediatelly?
             callback(result(exception=ValueError('illegal IP address string: %r' % addr)))
             return
         cdef object arg = (self, callback)
@@ -385,7 +387,7 @@ cdef public class ares_channel [object PyGeventAresChannelObject, type PyGeventA
 
     cpdef _getnameinfo(self, object callback, tuple sockaddr, int flags):
         if not self.channel:
-            raise get_socket_gaierror()(cares.ARES_EDESTRUCTION, 'this ares_channel has been destroyed')
+            raise get_socket_gaierror()(cares.ARES_EDESTRUCTION, 'this ares channel has been destroyed')
         cdef char* hostp
         cdef int port = 0
         cdef int flowinfo = 0
@@ -399,6 +401,7 @@ cdef public class ares_channel [object PyGeventAresChannelObject, type PyGeventA
             raise get_socket_gaierror()('invalid value for port: %r' % port)
         cdef int length = gevent_make_sockaddr(hostp, port, flowinfo, scope_id, &sa6)
         if length <= 0:
+            # XXX raise immediatelly? like TypeError and gaierror raised above?
             callback(result(exception=ValueError('illegal IP address string: %r' % hostp)))
             return
         cdef object arg = (self, callback)

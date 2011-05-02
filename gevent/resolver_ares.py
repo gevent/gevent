@@ -2,7 +2,7 @@ import os
 from _socket import getservbyname, getaddrinfo, gaierror, error
 from gevent.hub import Waiter, get_hub
 from gevent.socket import AF_UNSPEC, AF_INET, AF_INET6, SOCK_STREAM, SOCK_DGRAM, SOCK_RAW, AI_NUMERICHOST, EAI_SERVICE
-from gevent.core import ares_channel
+from gevent.ares import channel
 
 
 __all__ = ['Resolver']
@@ -10,7 +10,7 @@ __all__ = ['Resolver']
 
 class Resolver(object):
 
-    ares_class = ares_channel
+    ares_class = channel
 
     def __init__(self, hub=None, **kwargs):
         if hub is None:

@@ -1,6 +1,7 @@
 `#' DO NOT EDIT -- this file is auto generated from __file__ on syscmd(date)
 cimport cython
 cimport libev
+from python cimport *
 
 
 __all__ = ['get_version',
@@ -11,24 +12,6 @@ __all__ = ['get_version',
            'time',
            'loop']
 
-
-cdef extern from "Python.h":
-    struct PyObject:
-        pass
-    ctypedef PyObject* PyObjectPtr "PyObject*"
-    void   Py_INCREF(PyObjectPtr)
-    void   Py_DECREF(PyObjectPtr)
-    void   Py_XDECREF(PyObjectPtr)
-    int    Py_ReprEnter(PyObjectPtr)
-    void   Py_ReprLeave(PyObjectPtr)
-    int    PyCallable_Check(PyObjectPtr)
-
-cdef extern from "frameobject.h":
-    ctypedef struct PyThreadState:
-        PyObjectPtr exc_type
-        PyObjectPtr exc_value
-        PyObjectPtr exc_traceback
-    PyThreadState* PyThreadState_GET()
 
 cdef extern from "callbacks.h":
     void gevent_callback_io(libev.ev_loop, void*, int)
@@ -628,6 +611,3 @@ def set_exc_info(object type, object value):
         Py_INCREF(<PyObjectPtr>value)
         tstate.exc_value = <PyObjectPtr>value
     tstate.exc_traceback = NULL
-
-
-include "cares.pxi"

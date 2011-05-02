@@ -5,53 +5,82 @@ import os
 import re
 import traceback
 from os.path import join, abspath, basename, dirname
+from glob import glob
 
 try:
     from setuptools import Extension, setup
 except ImportError:
     from distutils.core import Extension, setup
-from distutils.command import build_ext
+from distutils.command.build_ext import build_ext
+from distutils.errors import CCompilerError, DistutilsExecError, DistutilsPlatformError
+ext_errors = (CCompilerError, DistutilsExecError, DistutilsPlatformError, IOError)
+
 
 __version__ = re.search("__version__\s*=\s*'(.*)'", open('gevent/__init__.py').read(), re.M).group(1)
 assert __version__
 
-libev_embed = os.path.exists('libev')
-cares_embed = os.path.exists('c-ares')
-
-cython_output = 'gevent/core.c'
-defines = []
-include_dirs = []
+ares_embed = os.path.exists('c-ares')
+define_macros = []
 libraries = []
-gcc_options = []
-cares_configure_command = './configure CONFIG_COMMANDS= CONFIG_FILES='
-
-if libev_embed:
-    defines += [('EV_STANDALONE', '1'),
-                ('EV_COMMON', ''),  # we don't use void* data
-                # libev watchers that we don't use currently:
-                ('EV_STAT_ENABLE', '0'),
-                ('EV_CHECK_ENABLE', '0'),
-                ('EV_CLEANUP_ENABLE', '0'),
-                ('EV_EMBED_ENABLE', '0'),
-                ('EV_ASYNC_ENABLE', '0'),
-                ("EV_PERIODIC_ENABLE", '0'),
-                ("EV_CHILD_ENABLE", '0')]
-    include_dirs += ['libev']
-    gcc_options += ['-Wno-unused-variable', '-Wno-unused-result']  # disable warnings from ev.c
-
-
-if cares_embed:
-    include_dirs += ['c-ares']
-    defines += [('HAVE_CONFIG_H', '')]
+ares_configure_command = './configure CONFIG_COMMANDS= CONFIG_FILES='
 
 
 if sys.platform == 'win32':
     libraries += ['ws2_32']
-    defines += [('FD_SETSIZE', '1024'), ('_WIN32', '1')]
+    define_macros += [('FD_SETSIZE', '1024'), ('_WIN32', '1')]
 
 
-def has_changed(destination, *source):
-    from glob import glob
+CORE = Extension(name='gevent.core',
+                 sources=['gevent/gevent.core.c'],
+                 include_dirs=['libev'],
+                 libraries=libraries,
+                 define_macros=define_macros)
+
+ARES = Extension(name='gevent.ares',
+                 sources=['gevent/gevent.ares.c'],
+                 include_dirs=['c-ares'],
+                 libraries=libraries,
+                 define_macros=define_macros)
+ARES.optional = True
+
+
+if os.path.exists('libev'):
+    CORE.define_macros += [('EV_STANDALONE', '1'),
+                           ('EV_COMMON', ''),  # we don't use void* data
+                           # libev watchers that we don't use currently:
+                           ('EV_STAT_ENABLE', '0'),
+                           ('EV_CHECK_ENABLE', '0'),
+                           ('EV_CLEANUP_ENABLE', '0'),
+                           ('EV_EMBED_ENABLE', '0'),
+                           ('EV_ASYNC_ENABLE', '0'),
+                           ("EV_PERIODIC_ENABLE", '0'),
+                           ("EV_CHILD_ENABLE", '0')]
+    #CORE.gcc_options = ['-Wno-unused-variable', '-Wno-unused-result']  # disable warnings from ev.c
+
+
+def need_configure_ares():
+    if 'Generated from ares_build.h.in by configure' not in read('c-ares/ares_build.h'):
+        return True
+    if not os.path.exists('c-ares/ares_config.h'):
+        return True
+
+
+def configure_ares():
+    if need_configure_ares():
+        os.system('cd c-ares && %s' % ares_configure_command)
+
+
+if ares_embed:
+    ARES.sources += sorted(glob('c-ares/*.c'))
+    if sys.platform == 'win32':
+        ARES.libraries += ['advapi32']
+    else:
+        ARES.configure = configure_ares
+        ARES.define_macros += [('HAVE_CONFIG_H', '')]
+        ARES.libraries += ['rt']
+
+
+def need_update(destination, *source):
     if not os.path.exists(destination):
         sys.stderr.write('Creating %s\n' % destination)
         return True
@@ -69,45 +98,65 @@ def system(command):
     return os.system(command)
 
 
-def run_cython(cython_command='cython'):
-    if has_changed('gevent/core.pyx', 'gevent/core_.pyx', 'gevent/libev.pxd'):
+def replace_in_file(filename, old, new, check=True):
+    olddata = open(filename).read()
+    newdata = olddata.replace(old, new)
+    if check:
+        assert olddata != newdata, 'replacement in %s failed' % filename
+    open(filename, 'w').write(newdata)
+
+
+def run_cython_core(cython_command):
+    if need_update('gevent/core.pyx', 'gevent/core_.pyx'):
         system('m4 gevent/core_.pyx > core.pyx && mv core.pyx gevent/')
-    if has_changed(cython_output, 'gevent/*.p*x*', 'gevent/*.h', 'gevent/*.c', 'libev/*.c', 'c-ares/*.c'):
-        if 0 == system('%s gevent/core.pyx -o core.c && mv core.* gevent/' % (cython_command, )):
-            data = open(cython_output).read()
-            data = data.replace('\n\n#endif /* Py_PYTHON_H */', '\n#include "callbacks.c"\n#endif /* Py_PYTHON_H */')
+    if need_update('gevent/gevent.core.c', 'gevent/core.p*x*'):
+        if 0 == system('%s gevent/core.pyx -o gevent.core.c && mv gevent.core.* gevent/' % (cython_command, )):
+            replace_in_file('gevent/gevent.core.c', '\n\n#endif /* Py_PYTHON_H */', '\n#include "callbacks.c"\n#endif /* Py_PYTHON_H */')
             short_path = 'gevent/'
             full_path = join(os.getcwd(), short_path)
-            data = data.replace(full_path, short_path)
-            open(cython_output, 'w').write(data)
-            cython_header = 'gevent/core.h'
-            data = open(cython_header).read().replace(full_path, short_path)
-            open(cython_header, 'w').write(data)
+            replace_in_file('gevent/gevent.core.c', short_path, full_path, check=False)
+            replace_in_file('gevent/gevent.core.h', short_path, full_path, check=False)
+    if need_update('gevent/gevent.core.c', 'gevent/callbacks.*', 'gevent/libev.h', 'libev/*.*'):
+        os.system('touch gevent/gevent.core.c')
 
 
-class my_build_ext(build_ext.build_ext):
-    user_options = (build_ext.build_ext.user_options
+def run_cython_ares(cython_command):
+    if need_update('gevent/gevent.ares.c', 'gevent/ares.pyx'):
+        system('%s gevent/ares.pyx -o gevent.ares.c && mv gevent.ares.* gevent/' % cython_command)
+    if need_update('gevent/gevent.ares.c', 'gevent/dnshelper.c', 'gevent/inet_ntop.c', 'c-ares/*.*'):
+        os.system('touch gevent/gevent.ares.c')
+
+
+CORE.run_cython = run_cython_core
+ARES.run_cython = run_cython_ares
+
+
+class my_build_ext(build_ext):
+    user_options = (build_ext.user_options
                     + [("cython=", None, "path to the cython executable")])
 
     def initialize_options(self):
-        build_ext.build_ext.initialize_options(self)
+        build_ext.initialize_options(self)
         self.cython = "cython"
 
-    def configure_cares(self):
-        if sys.platform != 'win32' and not os.path.exists('c-ares/ares_config.h'):
-            os.system('cd c-ares && %s' % cares_configure_command)
+    def gevent_prepare(self, ext):
+        if self.cython:
+            run_cython = getattr(ext, 'run_cython', None)
+            if run_cython:
+                run_cython(self.cython)
+        configure = getattr(ext, 'configure', None)
+        if configure:
+            configure()
 
     def build_extension(self, ext):
-        if self.cython:
-            run_cython(self.cython)
-        if cares_embed:
-            self.configure_cares()
+        self.gevent_prepare(ext)
         try:
-            if gcc_options and self.compiler.compiler[0] == 'gcc' and '-Wall' in self.compiler.compiler and not gevent_core.extra_compile_args:
-                gevent_core.extra_compile_args = gcc_options
-        except (IndexError, AttributeError):
-            pass
-        result = build_ext.build_ext.build_extension(self, ext)
+            result = build_ext.build_extension(self, ext)
+        except ext_errors:
+            if getattr(ext, 'optional', False):
+                raise BuildFailed
+            else:
+                raise
         # hack: create a symlink from build/../core.so to gevent/core.so
         # to prevent "ImportError: cannot import name core" failures
         try:
@@ -136,43 +185,77 @@ class my_build_ext(build_ext.build_ext):
         return result
 
 
-gevent_core = Extension(name='gevent.core',
-                        sources=[cython_output],
-                        include_dirs=include_dirs,
-                        libraries=libraries,
-                        define_macros=defines)
+class BuildFailed(Exception):
+    pass
 
 
 def read(name):
-    return open(join(dirname(__file__), name)).read()
+    try:
+        return open(join(dirname(__file__), name)).read()
+    except OSError:
+        return ''
+
+
+ext_modules = [CORE, ARES]
+if sys.platform == 'win32':
+    # XXX currently does not work
+    ext_modules.remove(ARES)
+warnings = []
+
+def warn(message):
+    message += '\n'
+    sys.stderr.write(message)
+    warnings.append(message)
+
+
+ARES.disabled_why = None
+for filename in ARES.sources:
+    if not os.path.exists(filename):
+        ARES.disabled_why = '%s does not exist' % filename
+        ext_modules.remove(ARES)
+        break
+
+
+def run_setup(ext_modules):
+    setup(
+        name='gevent',
+        version=__version__,
+        description='Coroutine-based network library',
+        long_description=read('README.rst'),
+        author='Denis Bilenko',
+        author_email='denis.bilenko@gmail.com',
+        url='http://www.gevent.org/',
+        packages=['gevent'],
+        ext_modules=ext_modules,
+        cmdclass={'build_ext': my_build_ext},
+        install_requires=['greenlet'],
+        classifiers=[
+        "License :: OSI Approved :: MIT License",
+        "Programming Language :: Python :: 2.4",
+        "Programming Language :: Python :: 2.5",
+        "Programming Language :: Python :: 2.6",
+        "Programming Language :: Python :: 2.7",
+        "Operating System :: MacOS :: MacOS X",
+        "Operating System :: POSIX",
+        "Operating System :: Microsoft :: Windows",
+        "Topic :: Internet",
+        "Topic :: Software Development :: Libraries :: Python Modules",
+        "Intended Audience :: Developers",
+        "Development Status :: 4 - Beta"])
 
 
 if __name__ == '__main__':
     if sys.argv[1:] == ['cython']:
-        run_cython()
+        CORE.run_cython('cython')
+        ARES.run_cython('cython')
     else:
-        setup(
-            name='gevent',
-            version=__version__,
-            description='Coroutine-based network library',
-            long_description=read('README.rst'),
-            author='Denis Bilenko',
-            author_email='denis.bilenko@gmail.com',
-            url='http://www.gevent.org/',
-            packages=['gevent'],
-            ext_modules=[gevent_core],
-            cmdclass={'build_ext': my_build_ext},
-            install_requires=['greenlet'],
-            classifiers=[
-            "License :: OSI Approved :: MIT License",
-            "Programming Language :: Python :: 2.4",
-            "Programming Language :: Python :: 2.5",
-            "Programming Language :: Python :: 2.6",
-            "Programming Language :: Python :: 2.7",
-            "Operating System :: MacOS :: MacOS X",
-            "Operating System :: POSIX",
-            "Operating System :: Microsoft :: Windows",
-            "Topic :: Internet",
-            "Topic :: Software Development :: Libraries :: Python Modules",
-            "Intended Audience :: Developers",
-            "Development Status :: 4 - Beta"])
+        try:
+            run_setup(ext_modules)
+        except BuildFailed:
+            if ARES not in ext_modules:
+                raise
+            ext_modules.remove(ARES)
+            ARES.disabled_why = 'failed to build'
+            run_setup(ext_modules)
+    if ARES.disabled_why:
+        sys.stderr.write('\nWARNING: The gevent.ares extension has been disabled because %s.\n' % ARES.disabled_why)

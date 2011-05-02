@@ -1,46 +1,20 @@
 #include "Python.h"
+#include "ares_setup.h"
 
-#include "ares__close_sockets.c"
-#include "ares_data.c"
-#include "ares_destroy.c"
-#include "ares_expand_name.c"
-#include "ares_free_hostent.c"
-#include "ares_free_string.c"
-#include "ares_gethostbyaddr.c"
-#include "ares_gethostbyname.c"
-#include "ares__get_hostent.c"
-#include "ares_getnameinfo.c"
-#include "ares_init.c"
-#include "ares_library_init.c"
-#include "ares_llist.c"
-#include "ares_mkquery.c"
-#include "ares_nowarn.c"
-#include "ares_options.c"
-#include "ares_parse_aaaa_reply.c"
-#include "ares_parse_a_reply.c"
-#include "ares_parse_ptr_reply.c"
-#include "ares_process.c"
-#include "ares_query.c"
-#include "ares__read_line.c"
-#include "ares_search.c"
-#include "ares_send.c"
-#include "ares_strerror.c"
-//#include "ares_timeout.c"
-#include "ares__timeval.c"
-//#include "ares_version.c"
-#include "bitncmp.c"
-#include "inet_net_pton.c"
-#include "inet_ntop.c"
-
-#ifdef _WIN32
-#include "windows_port.c"
+#ifdef HAVE_NETDB_H
+#include <netdb.h>
 #endif
+
+#include "ares.h"
+
+#include "inet_ntop.c"
 
 
 static PyObject* _socket_error = 0;
 static PyObject* _socket_gaierror = 0;
 
-static inline PyObject* get_socket_object(PyObject** pobject, const char* name, int incref)
+static PyObject*
+get_socket_object(PyObject** pobject, const char* name, int incref)
 {
     if (!*pobject) {
         PyObject* _socket;
@@ -64,10 +38,18 @@ static inline PyObject* get_socket_object(PyObject** pobject, const char* name, 
     return *pobject;
 }
 
-static inline PyObject* get_socket_error() { return get_socket_object(&_socket_error, "error", 1); }
-static inline PyObject* get_socket_gaierror() { return get_socket_object(&_socket_gaierror, "gaierror", 1); }
+static PyObject*
+get_socket_error() {
+    return get_socket_object(&_socket_error, "error", 1);
+}
 
-static int gevent_append_addr(PyObject* list, int family, void* src, char* tmpbuf, size_t tmpsize) {
+static PyObject*
+get_socket_gaierror() {
+    return get_socket_object(&_socket_gaierror, "gaierror", 1);
+}
+
+static int
+gevent_append_addr(PyObject* list, int family, void* src, char* tmpbuf, size_t tmpsize) {
     int status = -1;
     PyObject* tmp;
     if (ares_inet_ntop(family, src, tmpbuf, tmpsize)) {
@@ -154,7 +136,8 @@ parse_h_addr_list(struct hostent *h)
 }
 
 
-static inline int gevent_make_sockaddr(char* hostp, int port, int flowinfo, int scope_id, struct sockaddr_in6* sa6) {
+static int
+gevent_make_sockaddr(char* hostp, int port, int flowinfo, int scope_id, struct sockaddr_in6* sa6) {
     if ( ares_inet_pton(AF_INET, hostp, &((struct sockaddr_in*)sa6)->sin_addr.s_addr) > 0 ) {
         ((struct sockaddr_in*)sa6)->sin_family = AF_INET;
         ((struct sockaddr_in*)sa6)->sin_port = htons(port);
