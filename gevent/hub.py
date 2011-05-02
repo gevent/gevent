@@ -177,6 +177,14 @@ def set_hub(hub):
 
 
 def _import(path):
+    if isinstance(path, list):
+        error = ImportError('Cannot import from empty list: %r' % (path, ))
+        for item in path:
+            try:
+                return _import(item)
+            except ImportError, ex:
+                error = ex
+        raise error
     if not isinstance(path, basestring):
         return path
     module, item = path.rsplit('.', 1)
