@@ -205,7 +205,8 @@ class Hub(greenlet):
 
     SYSTEM_ERROR = (KeyboardInterrupt, SystemExit, SystemError)
     loop_class = 'gevent.core.loop'
-    resolver_class = 'gevent.resolver_ares.Resolver'
+    resolver_class = ['gevent.resolver_ares.Resolver',
+                      'gevent.socket.BlockingResolver']
     pformat = 'pprint.pformat'
 
     def __init__(self, loop=None, default=None):
