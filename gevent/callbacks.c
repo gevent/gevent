@@ -1,6 +1,6 @@
 static void gevent_handle_error(struct PyGeventLoopObject* loop, PyObject* where) {
     PyThreadState *tstate;
-    PyObject *type, *value, *traceback, *handler, *result, *tuple;
+    PyObject *type, *value, *traceback, *result;
     tstate = PyThreadState_GET();
     type = tstate->curexc_type;
     if (!type)
