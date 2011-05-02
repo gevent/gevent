@@ -37,12 +37,13 @@ static inline void gevent_check_signals(struct PyGeventLoopObject* loop) {
     if (PyErr_Occurred()) gevent_handle_error(loop, Py_None);
 }
 
-#define GET_OBJECT(EV_PTR, PY_TYPE, MEMBER) \
+#define GET_OBJECT(PY_TYPE, EV_PTR, MEMBER) \
     ((struct PY_TYPE *)(((char *)EV_PTR) - offsetof(struct PY_TYPE, MEMBER)))
 
 
 #ifdef WITH_THREAD
-#define GIL_ENSURE  PyGILState_STATE ___save = PyGILState_Ensure();
+#define GIL_DECLARE  PyGILState_STATE ___save
+#define GIL_ENSURE  ___save = PyGILState_Ensure();
 #define GIL_RELEASE  PyGILState_Release(___save);
 #else
 #define GIL_ENSURE
@@ -50,53 +51,44 @@ static inline void gevent_check_signals(struct PyGeventLoopObject* loop) {
 #endif
 
 
-static inline void gevent_stop(struct PyGeventTimerObject* watcher) {
-    PyObject *result, *callable;
-    result = ((struct __pyx_vtabstruct_6gevent_4core_timer *)watcher->__pyx_vtab)->stop(watcher, 0);
-    if (result) {
-        Py_DECREF(result);
+static void gevent_stop(PyObject* watcher, struct PyGeventLoopObject* loop) {
+    PyObject *result, *method;
+    method = PyObject_GetAttrString(watcher, "stop");  // XXX replace with GetAttr
+    if (method) {
+        result = PyObject_Call(method, __pyx_empty_tuple, NULL);
+        if (result) {
+            Py_DECREF(result);
+            return;
+        }
+        Py_DECREF(method);
     }
-    else {
-        gevent_handle_error(watcher->loop, (PyObject*)watcher);
-    }
+    gevent_handle_error(loop, watcher);
 }
 
 
-#define io_offsetof offsetof(struct PyGeventIOObject, _watcher)
-#define timer_offsetof offsetof(struct PyGeventTimerObject, _watcher)
-#define signal_offsetof offsetof(struct PyGeventSignalObject, _watcher)
-#define idle_offsetof offsetof(struct PyGeventIdleObject, _watcher)
-#define prepare_offsetof offsetof(struct PyGeventPrepareObject, _watcher)
-#define callback_offsetof offsetof(struct PyGeventCallbackObject, _watcher)
-
-#define CHECK_OFFSETOF (timer_offsetof == signal_offsetof) && (timer_offsetof == idle_offsetof) && (timer_offsetof == prepare_offsetof) && (timer_offsetof == callback_offsetof) && (timer_offsetof == io_offsetof)
-
-
-static void gevent_callback(struct ev_loop *_loop, void *c_watcher, int revents) {
-    struct PyGeventTimerObject *watcher;
-    PyObject *result, *py_events, *args;
+static void gevent_callback(struct PyGeventLoopObject* loop, PyObject* callback, PyObject* args, PyObject* watcher, void *c_watcher, int revents) {
+    GIL_DECLARE;
+    PyObject *result, *py_events;
     long length;
     py_events = 0;
     GIL_ENSURE;
-    /* we use this callback for all watchers, not just timer
-     * we can do this, because layout of struct members is the same for all watchers */
-    watcher = ((struct PyGeventTimerObject *)(((char *)c_watcher) - timer_offsetof));
-    Py_INCREF((PyObject*)watcher);
-    gevent_check_signals(watcher->loop);
-    args = watcher->args;
+    Py_INCREF(loop);
+    Py_INCREF(callback);
+    Py_INCREF(args);
+    Py_INCREF(watcher);
+    gevent_check_signals(loop);
     if (args == Py_None) {
         args = __pyx_empty_tuple;
     }
-    Py_INCREF(args);
     length = PyTuple_Size(args);
     if (length < 0) {
-        gevent_handle_error(watcher->loop, (PyObject*)watcher);
+        gevent_handle_error(loop, watcher);
         goto end;
     }
     if (length > 0 && PyTuple_GET_ITEM(args, 0) == GEVENT_CORE_EVENTS) {
         py_events = PyInt_FromLong(revents);
         if (!py_events) {
-            gevent_handle_error(watcher->loop, (PyObject*)watcher);
+            gevent_handle_error(loop, watcher);
             goto end;
         }
         PyTuple_SET_ITEM(args, 0, py_events);
@@ -104,47 +96,59 @@ static void gevent_callback(struct ev_loop *_loop, void *c_watcher, int revents)
     else {
         py_events = NULL;
     }
-    /* The callback can clear watcher->args and thus drop reference of args to zero;
-     * that's why we need to incref args above. */
-    result = PyObject_Call(watcher->_callback, args, NULL);
+    result = PyObject_Call(callback, args, NULL);
     if (result) {
         Py_DECREF(result);
     }
     else {
-        gevent_handle_error(watcher->loop, (PyObject*)watcher);
+        gevent_handle_error(loop, watcher);
         if (revents & (EV_READ|EV_WRITE)) {
             /* this was an 'io' watcher: not stopping it will likely to cause the failing callback to be called repeatedly */
-            gevent_stop(watcher);
+            gevent_stop(watcher, loop);
             goto end;
         }
     }
     if (!ev_is_active(c_watcher)) {
         /* watcher will never be run again: calling stop() will clear 'callback' and 'args' */
-        gevent_stop(watcher);
+        gevent_stop(watcher, loop);
     }
 end:
     if (py_events) {
         Py_DECREF(py_events);
         PyTuple_SET_ITEM(args, 0, GEVENT_CORE_EVENTS);
     }
-    Py_DECREF((PyObject*)watcher);
+    Py_DECREF(watcher);
     Py_DECREF(args);
+    Py_DECREF(callback);
+    Py_DECREF(loop);
     GIL_RELEASE;
 }
 
 
+#undef DEFINE_CALLBACK
+#define DEFINE_CALLBACK(WATCHER_LC, WATCHER_TYPE) \
+    static void gevent_callback_##WATCHER_LC(struct ev_loop *_loop, void *c_watcher, int revents) {                  \
+        struct PyGevent##WATCHER_TYPE##Object* watcher = GET_OBJECT(PyGevent##WATCHER_TYPE##Object, c_watcher, _watcher);    \
+        gevent_callback(watcher->loop, watcher->_callback, watcher->args, (PyObject*)watcher, c_watcher, revents); \
+    }
+
+
+DEFINE_CALLBACKS
+
+
 static void gevent_signal_check(struct ev_loop *_loop, void *watcher, int revents) {
-    char STATIC_ASSERTION__same_offsetof[(CHECK_OFFSETOF)?1:-1];
+    GIL_DECLARE;
     GIL_ENSURE;
-    gevent_check_signals(GET_OBJECT(watcher, PyGeventLoopObject, _signal_checker));
+    gevent_check_signals(GET_OBJECT(PyGeventLoopObject, watcher, _signal_checker));
     GIL_RELEASE;
 }
 
 #if defined(_WIN32)
 
 static void gevent_periodic_signal_check(struct ev_loop *_loop, void *watcher, int revents) {
+    GIL_DECLARE;
     GIL_ENSURE;
-    gevent_check_signals(GET_OBJECT(watcher, PyGeventLoopObject, _periodic_signal_checker));
+    gevent_check_signals(GET_OBJECT(PyGeventLoopObject, watcher, _periodic_signal_checker));
     GIL_RELEASE;
 }
 

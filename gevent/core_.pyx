@@ -31,7 +31,12 @@ cdef extern from "frameobject.h":
     PyThreadState* PyThreadState_GET()
 
 cdef extern from "callbacks.h":
-    void gevent_callback(libev.ev_loop, void*, int)
+    void gevent_callback_io(libev.ev_loop, void*, int)
+    void gevent_callback_timer(libev.ev_loop, void*, int)
+    void gevent_callback_signal(libev.ev_loop, void*, int)
+    void gevent_callback_idle(libev.ev_loop, void*, int)
+    void gevent_callback_prepare(libev.ev_loop, void*, int)
+    void gevent_callback_fork(libev.ev_loop, void*, int)
     void gevent_signal_check(libev.ev_loop, void*, int)
     void gevent_periodic_signal_check(libev.ev_loop, void*, int)
 
@@ -410,7 +415,7 @@ define(WATCHER_BASE, `cdef public loop loop
         def __del__(self):
             self._callback = None
 
-    cpdef stop(self):
+    def stop(self):
         libev.ev_$1_stop(self.loop._ptr, &self._watcher)
         self._callback = None
         self.args = None
@@ -437,12 +442,6 @@ define(WATCHER_BASE, `cdef public loop loop
         self.callback = callback
         self.args = args
         libev.ev_feed_event(self.loop._ptr, &self._watcher, revents)
-        INCREF
-
-    cdef _feed(self, int revents, object callback, tuple args=()):
-        self.callback = callback
-        self.args = args
-        libev.ev_feed_event(self.loop._ptr, &self._watcher, revents)
         INCREF')
 
 
@@ -453,12 +452,6 @@ define(ACTIVE, `property active:
 
 
 define(START, `def start(self, object callback, *args):
-        self.callback = callback
-        self.args = args
-        libev.ev_$1_start(self.loop._ptr, &self._watcher)
-        INCREF
-
-    cdef _start(self, object callback, tuple args=()):
         self.callback = callback
         self.args = args
         libev.ev_$1_start(self.loop._ptr, &self._watcher)
@@ -473,7 +466,7 @@ define(WATCHER, `WATCHER_BASE($1)
 
 
 define(INIT, `def __init__(self, loop loop$2):
-        libev.ev_$1_init(&self._watcher, <void *>gevent_callback$3)
+        libev.ev_$1_init(&self._watcher, <void *>gevent_callback_$1$3)
         self.loop = loop
         self._incref = 0')
 
@@ -526,7 +519,7 @@ cdef public class io(watcher) [object PyGeventIOObject, type PyGeventIO_Type]:
         IFDEF_WINDOWS()
         fd = _open_osfhandle(fd)
         ENDIF()
-        libev.ev_io_init(&self._watcher, <void *>gevent_callback, fd, events)
+        libev.ev_io_init(&self._watcher, <void *>gevent_callback_io, fd, events)
         self.loop = loop
         self._incref = 0
 
@@ -538,7 +531,7 @@ cdef public class io(watcher) [object PyGeventIOObject, type PyGeventIO_Type]:
         def __set__(self, int fd):
             if libev.ev_is_active(&self._watcher):
                 raise AttributeError("'io' watcher attribute 'fd' is read-only while watcher is active")
-            libev.ev_io_init(&self._watcher, <void *>gevent_callback, fd, self._watcher.events)
+            libev.ev_io_init(&self._watcher, <void *>gevent_callback_io, fd, self._watcher.events)
 
     property events:
 
@@ -548,7 +541,7 @@ cdef public class io(watcher) [object PyGeventIOObject, type PyGeventIO_Type]:
         def __set__(self, int events):
             if libev.ev_is_active(&self._watcher):
                 raise AttributeError("'io' watcher attribute 'events' is read-only while watcher is active")
-            libev.ev_io_init(&self._watcher, <void *>gevent_callback, self._watcher.fd, events)
+            libev.ev_io_init(&self._watcher, <void *>gevent_callback_io, self._watcher.fd, events)
 
     property events_str:
 
@@ -608,12 +601,6 @@ cdef public class callback(watcher) [object PyGeventCallbackObject, type PyGeven
     INIT(prepare)
 
     def start(self, object callback, *args):
-        self.callback = callback
-        self.args = args
-        libev.ev_feed_event(self.loop._ptr, &self._watcher, libev.EV_CUSTOM)
-        INCREF
-
-    cdef _start(self, object callback, tuple args=()):
         self.callback = callback
         self.args = args
         libev.ev_feed_event(self.loop._ptr, &self._watcher, libev.EV_CUSTOM)
