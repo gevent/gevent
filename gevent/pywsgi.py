@@ -448,11 +448,7 @@ class WSGIHandler(object):
             self.log_request()
 
     def handle_error(self, type, value, tb):
-        where = {'server': getattr(self, 'server', None),
-                 'requestline': getattr(self, 'requestline', None),
-                 'client_address': getattr(self, 'client_address', None),
-                 'application': getattr(self, 'application', None)}
-        self.server.loop.handle_error(where, type, value, tb)
+        self.server.loop.handle_error(self.environ, type, value, tb)
         if not self.response_length:
             self.start_response(_INTERNAL_ERROR_STATUS, _INTERNAL_ERROR_HEADERS)
             self.write(_INTERNAL_ERROR_BODY)
