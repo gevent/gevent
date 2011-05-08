@@ -197,7 +197,7 @@ def read(name):
 
 
 ext_modules = [CORE, ARES]
-if sys.platform == 'win32':
+if sys.platform in ('win32', 'darwin'):
     # XXX currently does not work
     ext_modules.remove(ARES)
 warnings = []
