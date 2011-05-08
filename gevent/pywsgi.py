@@ -238,7 +238,7 @@ class WSGIHandler(object):
             except KeyError:
                 pass
 
-        content_length = self.headers.get("Content-Length")
+        content_length = self.headers.get("content-length")
         if content_length is not None:
             content_length = int(content_length)
             if content_length < 0:
