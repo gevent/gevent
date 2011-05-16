@@ -53,16 +53,20 @@ static inline void gevent_check_signals(struct PyGeventLoopObject* loop) {
 
 static void gevent_stop(PyObject* watcher, struct PyGeventLoopObject* loop) {
     PyObject *result, *method;
+    int error;
+    error = 1;
     method = PyObject_GetAttrString(watcher, "stop");  // XXX replace with GetAttr
     if (method) {
         result = PyObject_Call(method, __pyx_empty_tuple, NULL);
         if (result) {
             Py_DECREF(result);
-            return;
+            error = 0;
         }
         Py_DECREF(method);
     }
-    gevent_handle_error(loop, watcher);
+    if (error) {
+        gevent_handle_error(loop, watcher);
+    }
 }
 
 
