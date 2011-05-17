@@ -1023,6 +1023,23 @@ class TestSubclass1(TestCase):
         self.assertEqual(fd.read(), '')
 
 
+class TestErrorAfterChunk(TestCase):
+    validator = None
+
+    @staticmethod
+    def application(env, start_response):
+        start_response('200 OK', [('Content-Type', 'text/plain')])
+        yield "hello"
+        raise greentest.ExpectedException('TestErrorAfterChunk')
+
+    def test(self):
+        fd = self.connect().makefile(bufsize=1)
+        self.expect_one_error()
+        fd.write('GET / HTTP/1.1\r\nHost: localhost\r\nConnection: keep-alive\r\n\r\n')
+        self.assertRaises(ValueError, read_http, fd)
+        self.assert_error(greentest.ExpectedException)
+
+
 del CommonTests
 
 if __name__ == '__main__':
