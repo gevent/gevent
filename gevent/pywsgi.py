@@ -436,12 +436,14 @@ class WSGIHandler(object):
         try:
             try:
                 self.run_application()
-            except:
-                self.handle_error(*sys.exc_info())
+            finally:
+                close = getattr(self.result, 'close', None)
+                if close is not None:
+                    close()
+                self.wsgi_input._discard()
+        except:
+            self.handle_error(*sys.exc_info())
         finally:
-            if hasattr(self.result, 'close'):
-                self.result.close()
-            self.wsgi_input._discard()
             self.time_finish = time.time()
             self.log_request()
 
