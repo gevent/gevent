@@ -437,8 +437,10 @@ class WSGIHandler(object):
             try:
                 self.run_application()
             except GreenletExit:
+                self.close_connection = True
                 raise
             except Exception:
+                self.close_connection = True
                 self.handle_error(*sys.exc_info())
         finally:
             if hasattr(self.result, 'close'):
