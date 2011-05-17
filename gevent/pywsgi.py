@@ -436,11 +436,7 @@ class WSGIHandler(object):
         try:
             try:
                 self.run_application()
-            except GreenletExit:
-                self.close_connection = True
-                raise
-            except Exception:
-                self.close_connection = True
+            except:
                 self.handle_error(*sys.exc_info())
         finally:
             if hasattr(self.result, 'close'):
@@ -450,8 +446,12 @@ class WSGIHandler(object):
             self.log_request()
 
     def handle_error(self, type, value, tb):
-        self.server.loop.handle_error(self.environ, type, value, tb)
-        if not self.response_length:
+        if not issubclass(type, GreenletExit):
+            self.server.loop.handle_error(self.environ, type, value, tb)
+        del tb
+        if self.response_length:
+            self.close_connection = True
+        else:
             self.start_response(_INTERNAL_ERROR_STATUS, _INTERNAL_ERROR_HEADERS)
             self.write(_INTERNAL_ERROR_BODY)
 
