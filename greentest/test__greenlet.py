@@ -381,15 +381,11 @@ class TestStuff(greentest.TestCase):
             sleep(DELAY)
             return 1
         x = gevent.spawn(x)
-        z = gevent.spawn(lambda: 3)
         y = gevent.spawn(lambda: getcurrent().throw(ExpectedError('test_wait_error')))
-        y.link(x)
         x.link(y)
-        y.link(z)
-        z.link(y)
-        self.assertRaises(ExpectedError, gevent.joinall, [x, y, z], raise_error=True)
+        y.link(x)
+        self.assertRaises(ExpectedError, gevent.joinall, [x, y], raise_error=True)
         self.assertRaises(greenlet.LinkedFailed, gevent.joinall, [x], raise_error=True)
-        self.assertEqual(z.get(), 3)
         self.assertRaises(ExpectedError, gevent.joinall, [y], raise_error=True)
 
     def test_joinall_exception_order(self):
