@@ -59,6 +59,8 @@ if os.path.exists('libev'):
 
 
 def need_configure_ares():
+    if sys.platform == 'win32':
+        return False
     if 'Generated from ares_build.h.in by configure' not in read('c-ares/ares_build.h'):
         return True
     if not os.path.exists('c-ares/ares_config.h'):
@@ -96,12 +98,13 @@ if ares_embed:
     ARES.sources += sorted(glob('c-ares/*.c'))
     if sys.platform == 'win32':
         ARES.libraries += ['advapi32']
+        ARES.define_macros += [('CARES_STATICLIB', '')]
     else:
         ARES.configure = configure_ares
         ARES.define_macros += [('HAVE_CONFIG_H', '')]
-        ARES.define_macros += [('CARES_EMBED', '')]
         if sys.platform != 'darwin':
             ARES.libraries += ['rt']
+    ARES.define_macros += [('CARES_EMBED', '')]
 
 
 def need_update(destination, *source):
@@ -221,9 +224,6 @@ def read(name):
 
 
 ext_modules = [CORE, ARES]
-if sys.platform in ('win32'):
-    # XXX currently does not work
-    ext_modules.remove(ARES)
 warnings = []
 
 def warn(message):

@@ -448,7 +448,7 @@ define(WATCHER, `WATCHER_BASE($1)
     ACTIVE($1)')
 
 
-define(INIT, `def __init__(self, loop loop$2):
+define(INIT, `def __cinit__(self, loop loop$2):
         libev.ev_$1_init(&self._watcher, <void *>gevent_callback_$1$3)
         self.loop = loop
         self._incref = 0')
@@ -498,22 +498,39 @@ cdef public class io(watcher) [object PyGeventIOObject, type PyGeventIO_Type]:
 
     WATCHER(io)
 
-    def __init__(self, loop loop, int fd, int events):
+    cdef int _initialized # for __dealloc__, whether io is initialized
+
+    def __cinit__(self, loop loop, int fd, int events):
         IFDEF_WINDOWS()
         fd = _open_osfhandle(fd)
         ENDIF()
         libev.ev_io_init(&self._watcher, <void *>gevent_callback_io, fd, events)
+        self._initialized = 1
         self.loop = loop
         self._incref = 0
+
+    def __dealloc__(self):
+        IFDEF_WINDOWS()
+        if self._initialized:
+            libev.close(self._watcher.fd)
+        ENDIF()
 
     property fd:
 
         def __get__(self):
-            return self._watcher.fd
+            cdef int fd = self._watcher.fd
+            IFDEF_WINDOWS()
+            fd = libev._get_osfhandle(fd)
+            ENDIF()
+            return fd
 
         def __set__(self, int fd):
             if libev.ev_is_active(&self._watcher):
                 raise AttributeError("'io' watcher attribute 'fd' is read-only while watcher is active")
+            IFDEF_WINDOWS()
+            fd = _open_osfhandle(fd) # careful, might raise
+            libev.close(self._watcher.fd) # close the old one
+            ENDIF()
             libev.ev_io_init(&self._watcher, <void *>gevent_callback_io, fd, self._watcher.events)
 
     property events:

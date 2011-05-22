@@ -131,3 +131,5 @@ cdef extern from "libev.h":
 
     # not from libev, but it's there to avoid collisions with gevent.core._open_osfhandle
     int _open_osfhandle(int, int)
+    int _get_osfhandle(int)
+    void close(int)
