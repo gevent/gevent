@@ -7,7 +7,8 @@
 
 #include "ares.h"
 
-#include "inet_ntop.c"
+#include "cares_ntop.h"
+#include "cares_pton.h"
 
 
 static PyObject* _socket_error = 0;

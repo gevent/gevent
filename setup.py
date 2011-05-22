@@ -65,9 +65,31 @@ def need_configure_ares():
         return True
 
 
+def make_universal_header(filename, *defines):
+    defines = [('#define %s ' % define, define) for define in defines]
+    lines = open(filename, 'r').read().split('\n')
+    ifdef = 0
+    f = open(filename, 'w')
+    for line in lines:
+        if line.startswith('#ifdef'):
+            ifdef += 1
+        elif line.startswith('#endif'):
+            ifdef -= 1
+        elif not ifdef:
+            for prefix,define in defines:
+                if line.startswith(prefix):
+                    line = '#ifdef __LP64__\n#define %s 8\n#else\n#define %s 4\n#endif' % (define, define)
+                    break
+        print >>f, line
+    f.close()
+
+
 def configure_ares():
     if need_configure_ares():
-        os.system('cd c-ares && %s' % ares_configure_command)
+        rc = os.system('cd c-ares && %s' % ares_configure_command)
+        if rc == 0 and sys.platform == 'darwin':
+            make_universal_header('c-ares/ares_build.h', 'CARES_SIZEOF_LONG')
+            make_universal_header('c-ares/ares_config.h', 'SIZEOF_LONG', 'SIZEOF_SIZE_T', 'SIZEOF_TIME_T')
 
 
 if ares_embed:
@@ -77,7 +99,9 @@ if ares_embed:
     else:
         ARES.configure = configure_ares
         ARES.define_macros += [('HAVE_CONFIG_H', '')]
-        ARES.libraries += ['rt']
+        ARES.define_macros += [('CARES_EMBED', '')]
+        if sys.platform != 'darwin':
+            ARES.libraries += ['rt']
 
 
 def need_update(destination, *source):
@@ -197,7 +221,7 @@ def read(name):
 
 
 ext_modules = [CORE, ARES]
-if sys.platform in ('win32', 'darwin'):
+if sys.platform in ('win32'):
     # XXX currently does not work
     ext_modules.remove(ARES)
 warnings = []

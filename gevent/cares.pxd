@@ -105,5 +105,5 @@ cdef extern from "ares.h":
     int ares_set_servers(void* channel, ares_addr_node *servers)
 
 
-cdef extern from "inet_net_pton.h":
+cdef extern from "cares_pton.h":
     int ares_inet_pton(int af, char *src, void *dst)
