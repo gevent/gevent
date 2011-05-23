@@ -12,7 +12,8 @@ __implements__ = ['allocate_lock',
                   'exit',
                   'LockType',
                   'stack_size',
-                  'start_new_thread']
+                  'start_new_thread',
+                  '_local']
 
 __imports__ = ['error']
 
@@ -21,6 +22,7 @@ error = __thread__.error
 from gevent.hub import getcurrent, GreenletExit
 from gevent.greenlet import Greenlet
 from gevent.coros import Semaphore as LockType
+from gevent.local import local as _local
 
 
 def get_ident(gr=None):
@@ -59,5 +61,6 @@ else:
 
 
 __all__ = __implements__ + __imports__
+__all__.remove('_local')
 
-# XXX interrupt_main, _local
+# XXX interrupt_main
