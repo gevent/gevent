@@ -2,7 +2,7 @@
 """A web.py application powered by gevent"""
 
 from gevent import monkey; monkey.patch_all()
-from gevent.wsgi import WSGIServer
+from gevent.pywsgi import WSGIServer
 import gevent
 import web
 
