@@ -5,6 +5,9 @@ from gevent.core import EVENTS
 from gevent.core import io, loop
 
 
+__all__ = ['channel']
+
+
 DEF EV_READ = 1
 DEF EV_WRITE = 1
 
