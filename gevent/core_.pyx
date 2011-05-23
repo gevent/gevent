@@ -4,6 +4,9 @@ cimport libev
 from python cimport *
 
 
+libev.vfd_init()
+
+
 __all__ = ['get_version',
            'get_header_version',
            'supported_backends',
@@ -448,7 +451,7 @@ define(WATCHER, `WATCHER_BASE($1)
     ACTIVE($1)')
 
 
-define(INIT, `def __cinit__(self, loop loop$2):
+define(INIT, `def __init__(self, loop loop$2):
         libev.ev_$1_init(&self._watcher, <void *>gevent_callback_$1$3)
         self.loop = loop
         self._incref = 0')
@@ -479,59 +482,36 @@ cdef public class watcher [object PyGeventWatcherObject, type PyGeventWatcher_Ty
         return ''
 
 
-cdef int _open_osfhandle(int handle) except -1:
-    cdef int fd = handle
-    IFDEF_WINDOWS()
-    fd = libev._open_osfhandle(fd, 0)
-    if fd < 0:
-        raise IOError("handle=%s does not have a valid file descriptor" % handle)
-    if fd >= FD_SETSIZE:
-        raise IOError("fd %s (handle=%s) is bigger than FD_SETSIZE (%s)" % (fd, handle, FD_SETSIZE))
-    cdef unsigned long arg
-    if ioctlsocket(handle, FIONREAD, &arg) != 0:
-        raise IOError("fd=%s (handle=%s) is not a socket descriptor (file descriptors are not supported)" % (fd, handle))
-    ENDIF()
-    return fd
-
-
 cdef public class io(watcher) [object PyGeventIOObject, type PyGeventIO_Type]:
 
     WATCHER(io)
 
     cdef int _initialized # for __dealloc__, whether io is initialized
 
-    def __cinit__(self, loop loop, int fd, int events):
-        IFDEF_WINDOWS()
-        fd = _open_osfhandle(fd)
-        ENDIF()
-        libev.ev_io_init(&self._watcher, <void *>gevent_callback_io, fd, events)
+    def __init__(self, loop loop, long fd, int events):
+        cdef int vfd = libev.vfd_open(fd)
+        if self._initialized:
+            libev.vfd_free(self._watcher.fd)
+        libev.ev_io_init(&self._watcher, <void *>gevent_callback_io, vfd, events)
         self._initialized = 1
         self.loop = loop
         self._incref = 0
 
     def __dealloc__(self):
-        IFDEF_WINDOWS()
         if self._initialized:
-            libev.close(self._watcher.fd)
-        ENDIF()
+            libev.vfd_free(self._watcher.fd)
 
     property fd:
 
         def __get__(self):
-            cdef int fd = self._watcher.fd
-            IFDEF_WINDOWS()
-            fd = libev._get_osfhandle(fd)
-            ENDIF()
-            return fd
+            return libev.vfd_get(self._watcher.fd)
 
-        def __set__(self, int fd):
+        def __set__(self, long fd):
             if libev.ev_is_active(&self._watcher):
                 raise AttributeError("'io' watcher attribute 'fd' is read-only while watcher is active")
-            IFDEF_WINDOWS()
-            fd = _open_osfhandle(fd) # careful, might raise
-            libev.close(self._watcher.fd) # close the old one
-            ENDIF()
-            libev.ev_io_init(&self._watcher, <void *>gevent_callback_io, fd, self._watcher.events)
+            cdef int vfd = libev.vfd_open(fd)
+            libev.vfd_free(self._watcher.fd)
+            libev.ev_io_init(&self._watcher, <void *>gevent_callback_io, vfd, self._watcher.events)
 
     property events:
 
@@ -549,7 +529,7 @@ cdef public class io(watcher) [object PyGeventIOObject, type PyGeventIO_Type]:
             return _events_to_str(self._watcher.events)
 
     def _format(self):
-        return ' fd=%s events=%s' % (self._watcher.fd, self.events_str)
+        return ' fd=%s events=%s' % (self.fd, self.events_str)
 
 
 cdef public class timer(watcher) [object PyGeventTimerObject, type PyGeventTimer_Type]:

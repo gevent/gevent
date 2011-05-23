@@ -1,3 +1,9 @@
+cdef extern from "libev_vfd.h":
+    void vfd_init()
+    long vfd_get(int)
+    int vfd_open(long) except -1
+    void vfd_free(int)
+
 cdef extern from "libev.h":
     int EV_MINPRI
     int EV_MAXPRI
@@ -128,8 +134,3 @@ cdef extern from "libev.h":
     void ev_ref(ev_loop*)
     void ev_unref(ev_loop*)
     void ev_break(ev_loop*, int)
-
-    # not from libev, but it's there to avoid collisions with gevent.core._open_osfhandle
-    int _open_osfhandle(int, int)
-    int _get_osfhandle(int)
-    void close(int)
