@@ -12,16 +12,16 @@ urls = ("/", "index",
 
 class index:
     def GET(self):
-        return 'Hello, world!<br><a href="/long">/long</a>'
+        return '<html>Hello, world!<br><a href="/long">/long</a></html>'
 
 
 class long_polling:
-    # Since gevent.wsgi executes each incoming connection in a separate greenlet
+    # Since gevent's WSGIServer executes each incoming connection in a separate greenlet
     # long running requests such as this one don't block one another;
     # and thanks to "monkey.patch_all()" statement at the top, thread-local storage used by web.ctx
     # becomes greenlet-local storage thus making requests isolated as they should be.
     def GET(self):
-        print 'handling GET context id = %s' % (id(web.ctx._getd()), )
+        print 'GET /long'
         gevent.sleep(10)  # possible to block the request indefinitely, without harming others
         return 'Hello, 10 seconds later'
 
