@@ -1,7 +1,7 @@
 #!/usr/bin/python
 """WSGI server example"""
 
-from gevent import wsgi
+from gevent.pywsgi import WSGIServer
 
 
 def hello_world(env, start_response):
@@ -13,4 +13,4 @@ def hello_world(env, start_response):
         return ['<h1>Not Found</h1>']
 
 print 'Serving on 8088...'
-wsgi.WSGIServer(('', 8088), hello_world).serve_forever()
+WSGIServer(('', 8088), hello_world).serve_forever()
