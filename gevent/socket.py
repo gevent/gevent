@@ -338,7 +338,7 @@ class socket(object):
         self.hub.cancel_wait(self._read_event, cancel_wait_ex)
         self.hub.cancel_wait(self._write_event, cancel_wait_ex)
         if self._connect_event is not self._write_event:
-            self.hub.cancel_wait(self._connect_event)
+            self.hub.cancel_wait(self._connect_event, cancel_wait_ex)
         self._sock = _closedsocket()
         dummy = self._sock._dummy
         for method in _delegate_methods:
