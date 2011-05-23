@@ -55,6 +55,9 @@ disabled_tests = [
     # the original getnameinfo does not lose it because it's in C.
     'test_socket.GeneralModuleTests.testRefCountGetNameInfo',
 
+    # sends some OOB data and expect it to be detected as such; gevent.select.select does not support that
+    'test_asyncore.BaseTestAPI.test_handle_expt',
+
     # this tests that time.sleep() returns prematurely in case of signal;
     # gevent.sleep() is better than that and does not get interrupted (unless signal handler raises an error)
     'test_signal.WakeupSignalTests.test_wakeup_fd_early',
