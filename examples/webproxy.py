@@ -11,7 +11,6 @@ To start the server on some other interface/port, use
 
 """
 from gevent import monkey; monkey.patch_all()
-from gevent import wsgi
 import sys
 import re
 import traceback
@@ -122,5 +121,6 @@ FORM = """<html><head>
 """
 
 if __name__ == '__main__':
+    from gevent.pywsgi import WSGIServer
     print 'Serving on %s...' % PORT
-    wsgi.WSGIServer(('', PORT), application).serve_forever()
+    WSGIServer(('', PORT), application).serve_forever()
