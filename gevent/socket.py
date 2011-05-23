@@ -266,6 +266,10 @@ class socket(object):
         io = self.hub.loop.io
         self._read_event = io(fileno, 1)
         self._write_event = io(fileno, 2)
+        if is_windows:
+            self._connect_event = io(fileno, 3)
+        else:
+            self._connect_event = self._write_event
 
     def __repr__(self):
         return '<%s at %s %s>' % (type(self).__name__, hex(id(self)), self._formatinfo())
@@ -333,6 +337,8 @@ class socket(object):
         # use self._read_event.loop.run_callback
         self.hub.cancel_wait(self._read_event, cancel_wait_ex)
         self.hub.cancel_wait(self._write_event, cancel_wait_ex)
+        if self._connect_event is not self._write_event:
+            self.hub.cancel_wait(self._connect_event)
         self._sock = _closedsocket()
         dummy = self._sock._dummy
         for method in _delegate_methods:
@@ -358,7 +364,7 @@ class socket(object):
                 if not result or result == EISCONN:
                     break
                 elif (result in (EWOULDBLOCK, EINPROGRESS, EALREADY)) or (result == EINVAL and is_windows):
-                    self._wait(self._write_event)
+                    self._wait(self._connect_event)
                 else:
                     raise error(result, strerror(result))
         finally:
