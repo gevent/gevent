@@ -86,19 +86,6 @@ static int vfd_open_(long handle, int pyexc)
 		if (vfd_map == NULL)
 			goto done;
 	}
-	if (vfd_entries == NULL) {
-		vfd_entry* entries = PyMem_Malloc(sizeof(vfd_entry) * VFD_INCREMENT);
-		if (entries == NULL) {
-			if (pyexc)
-				PyErr_NoMemory();
-			goto done;
-		}
-		VFD_LOCK_ENTER;
-		vfd_entries = entries;
-		vfd_max = VFD_INCREMENT;
-		vfd_num = 0;
-		VFD_LOCK_LEAVE;
-	}
 	key = PyLong_FromLong(handle);
 	/* check if it's already in the dict */
 	value = PyDict_GetItem(vfd_map, key);
@@ -136,17 +123,17 @@ static int vfd_open_(long handle, int pyexc)
 			goto done;
 		}
 		vfd_entries = entries;
-		vfd_max += VFD_INCREMENT;
+		vfd_max = newsize;
 	}
 	fd = vfd_num++;
 allocated:
 	/* vfd_lock must be acquired when entering here */
 	vfd_entries[fd].handle = handle;
 	vfd_entries[fd].count = 1;
+	VFD_LOCK_LEAVE;
 	value = PyInt_FromLong(fd);
 	PyDict_SetItem(vfd_map, key, value);
 	Py_DECREF(value);
-	VFD_LOCK_LEAVE;
 done:
 	Py_XDECREF(key);
 	VFD_GIL_RELEASE;
