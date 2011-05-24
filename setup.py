@@ -136,14 +136,14 @@ def replace_in_file(filename, old, new, check=True):
 def run_cython_core(cython_command):
     if need_update('gevent/core.pyx', 'gevent/core_.pyx'):
         system('m4 gevent/core_.pyx > core.pyx && mv core.pyx gevent/')
-    if need_update('gevent/gevent.core.c', 'gevent/core.p*x*'):
+    if need_update('gevent/gevent.core.c', 'gevent/core.p*x*', 'gevent/libev.pxd'):
         if 0 == system('%s gevent/core.pyx -o gevent.core.c && mv gevent.core.* gevent/' % (cython_command, )):
             replace_in_file('gevent/gevent.core.c', '\n\n#endif /* Py_PYTHON_H */', '\n#include "callbacks.c"\n#endif /* Py_PYTHON_H */')
             short_path = 'gevent/'
             full_path = join(os.getcwd(), short_path)
             replace_in_file('gevent/gevent.core.c', short_path, full_path, check=False)
             replace_in_file('gevent/gevent.core.h', short_path, full_path, check=False)
-    if need_update('gevent/gevent.core.c', 'gevent/callbacks.*', 'gevent/libev.h', 'libev/*.*'):
+    if need_update('gevent/gevent.core.c', 'gevent/callbacks.*', 'gevent/libev*.h', 'libev/*.*'):
         os.system('touch gevent/gevent.core.c')
 
 
