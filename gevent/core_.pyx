@@ -486,20 +486,18 @@ cdef public class io(watcher) [object PyGeventIOObject, type PyGeventIO_Type]:
 
     WATCHER(io)
 
-    cdef int _initialized # for __dealloc__, whether io is initialized
+    def __cinit__(self):
+        self._watcher.fd = -1;
 
     def __init__(self, loop loop, long fd, int events):
         cdef int vfd = libev.vfd_open(fd)
-        if self._initialized:
-            libev.vfd_free(self._watcher.fd)
+        libev.vfd_free(self._watcher.fd)
         libev.ev_io_init(&self._watcher, <void *>gevent_callback_io, vfd, events)
-        self._initialized = 1
         self.loop = loop
         self._incref = 0
 
     def __dealloc__(self):
-        if self._initialized:
-            libev.vfd_free(self._watcher.fd)
+        libev.vfd_free(self._watcher.fd)
 
     property fd:
 
