@@ -1,5 +1,4 @@
 cdef extern from "libev_vfd.h":
-    void vfd_init()
     long vfd_get(int)
     int vfd_open(long) except -1
     void vfd_free(int)

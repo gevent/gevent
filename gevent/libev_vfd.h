@@ -26,26 +26,33 @@ static PyObject* vfd_map = NULL; /* map OS handle -> virtual fd */
 static vfd_entry* vfd_entries = NULL; /* list of virtual fd entries */
 
 #ifdef WITH_THREAD
-static CRITICAL_SECTION vfd_lock;
-#define VFD_LOCK_INIT   InitializeCriticalSection(&vfd_lock)
-#define VFD_LOCK_ENTER  EnterCriticalSection(&vfd_lock)
-#define VFD_LOCK_LEAVE  LeaveCriticalSection(&vfd_lock)
+static CRITICAL_SECTION* volatile vfd_lock = NULL;
+static CRITICAL_SECTION* vfd_make_lock()
+{
+	if (vfd_lock == NULL) {
+		/* must use malloc and not PyMem_Malloc here */
+		CRITICAL_SECTION* lock = malloc(sizeof(CRITICAL_SECTION));
+		InitializeCriticalSection(lock);
+		if (InterlockedCompareExchangePointer(&vfd_lock, lock, NULL) != NULL) {
+			/* another thread initialized lock first */
+			DeleteCriticalSection(lock);
+			free(lock);
+		}
+	}
+	return vfd_lock;
+}
+#define VFD_LOCK_ENTER  EnterCriticalSection(vfd_make_lock())
+#define VFD_LOCK_LEAVE  LeaveCriticalSection(vfd_lock)
 #define VFD_GIL_DECLARE PyGILState_STATE ___save
 #define VFD_GIL_ENSURE  ___save = PyGILState_Ensure()
 #define VFD_GIL_RELEASE PyGILState_Release(___save)
 #else
-#define VFD_LOCK_INIT
 #define VFD_LOCK_ENTER
 #define VFD_LOCK_LEAVE
 #define VFD_GIL_DECLARE
 #define VFD_GIL_ENSURE
 #define VFD_GIL_RELEASE
 #endif
-
-static void vfd_init()
-{
-	VFD_LOCK_INIT;
-}
 
 /*
  * Given a virtual fd returns an OS handle or -1
@@ -188,7 +195,6 @@ done:
  * using runtime fds in libev. Note that it will leak
  * fds, because there's no way of closing them safely
  */
-#define vfd_init() do {} while(0)
 #define vfd_get(fd) _get_osfhandle((fd))
 #define vfd_open(fd) _open_osfhandle((fd), 0)
 #define vfd_free(fd)
@@ -197,7 +203,6 @@ done:
 /*
  * On non-win32 platforms vfd_* are noop macros
  */
-#define vfd_init() do {} while(0)
 #define vfd_get(fd) (fd)
 #define vfd_open(fd) ((int)(fd))
 #define vfd_free(fd)

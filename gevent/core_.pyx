@@ -4,9 +4,6 @@ cimport libev
 from python cimport *
 
 
-libev.vfd_init()
-
-
 __all__ = ['get_version',
            'get_header_version',
            'supported_backends',
