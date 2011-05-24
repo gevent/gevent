@@ -75,7 +75,9 @@ static int vfd_open_(long handle, int pyexc)
 	PyObject* key = NULL;
 	PyObject* value;
 
-	VFD_GIL_ENSURE;
+	if (!pyexc) {
+		VFD_GIL_ENSURE;
+	}
 	if (ioctlsocket(handle, FIONREAD, &arg) != 0) {
 		if (pyexc)
 			PyErr_Format(PyExc_IOError, "%ld is not a socket (files are not supported)", handle);
@@ -136,7 +138,9 @@ allocated:
 	Py_DECREF(value);
 done:
 	Py_XDECREF(key);
-	VFD_GIL_RELEASE;
+	if (!pyexc) {
+		VFD_GIL_RELEASE;
+	}
 	return fd;
 }
 
@@ -148,7 +152,9 @@ static void vfd_free_(int fd, int needclose)
 	VFD_GIL_DECLARE;
 	PyObject* key;
 
-	VFD_GIL_ENSURE;
+	if (needclose) {
+		VFD_GIL_ENSURE;
+	}
 	if (fd < 0 || fd >= vfd_num)
 		goto done; /* out of bounds */
 	if (vfd_entries[fd].count <= 0)
@@ -167,7 +173,9 @@ static void vfd_free_(int fd, int needclose)
 		Py_DECREF(key);
 	}
 done:
-	VFD_GIL_RELEASE;
+	if (needclose) {
+		VFD_GIL_RELEASE;
+	}
 }
 
 #define vfd_free(fd) vfd_free_((fd), 0)
