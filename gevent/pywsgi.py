@@ -300,11 +300,9 @@ class WSGIHandler(object):
         try:
             if not self.read_request(raw_requestline):
                 return ('400', _BAD_REQUEST_RESPONSE)
-        except ValueError, ex:
-            self.log_error('Invalid request: %s', str(ex) or ex.__class__.__name__)
-            return ('400', _BAD_REQUEST_RESPONSE)
         except Exception, ex:
-            traceback.print_exc()
+            if not isinstance(ex, ValueError):
+                traceback.print_exc()
             self.log_error('Invalid request: %s', str(ex) or ex.__class__.__name__)
             return ('400', _BAD_REQUEST_RESPONSE)
 
