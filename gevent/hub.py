@@ -227,7 +227,8 @@ class Hub(greenlet):
         traceback.print_exception(type, value, tb)
         del tb
         if where is None or issubclass(type, self.SYSTEM_ERROR):
-            if getcurrent() is self:
+            current = getcurrent()
+            if current is self or current is self.parent:
                 self.parent.throw(type, value)
             else:
                 self.loop.run_callback(self.parent.throw, type, value)
