@@ -204,6 +204,7 @@ class Hub(greenlet):
     """
 
     SYSTEM_ERROR = (KeyboardInterrupt, SystemExit, SystemError)
+    NOT_ERROR = (GreenletExit, )
     loop_class = 'gevent.core.loop'
     resolver_class = ['gevent.resolver_ares.Resolver',
                       'gevent.socket.BlockingResolver']
@@ -224,7 +225,8 @@ class Hub(greenlet):
         self.pformat = _import(self.pformat)
 
     def handle_error(self, where, type, value, tb):
-        traceback.print_exception(type, value, tb)
+        if not issubclass(type, self.NOT_ERROR):
+            traceback.print_exception(type, value, tb)
         del tb
         if where is None or issubclass(type, self.SYSTEM_ERROR):
             current = getcurrent()
