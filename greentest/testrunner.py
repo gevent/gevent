@@ -89,6 +89,23 @@ def store_record(database_path, table, dictionary, _added_colums_per_db={}):
     return cursor.lastrowid
 
 
+def delete_record(database_path, table, dictionary, _added_colums_per_db={}):
+    if sqlite3 is None:
+        return
+    keys = dictionary.keys()
+    conn = sqlite3.connect(database_path)
+    print 'deleting %s from database' % (dictionary, )
+    sql = 'delete from %s where %s' % (table, ' AND '.join('%s=:%s' % (key, key) for key in keys))
+    cursor = conn.cursor()
+    try:
+        cursor.execute(sql, dictionary)
+    except sqlite3.Error:
+        print 'sql=%r\ndictionary=%r' % (sql, dictionary)
+        raise
+    conn.commit()
+    return cursor.lastrowid
+
+
 class DatabaseTestResult(_TextTestResult):
     separator1 = '=' * 70
     separator2 = '-' * 70
@@ -107,6 +124,10 @@ class DatabaseTestResult(_TextTestResult):
         self.params['id'] = row_id
         from time import time
         self.time = time()
+
+    def addSkip(self, test, reason):
+        delete_record(self.database_path, 'testcase', self.params)
+        return super(DatabaseTestResult, self).addSkip(test, reason)
 
     def _store_result(self, test, result):
         self.params['result'] = result
