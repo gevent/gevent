@@ -3,6 +3,7 @@
 from gevent.greenlet import Greenlet, getfuncname
 from gevent.event import Event
 import _socket
+import sys
 
 
 __all__ = ['BaseServer']
@@ -94,7 +95,8 @@ class BaseServer(object):
         if hasattr(self, 'socket'):
             try:
                 fileno = self.socket.fileno()
-            except Exception, ex:
+            except Exception:
+                ex = sys.exc_info()[1]
                 fileno = str(ex)
             result = 'fileno=%s ' % fileno
         else:
@@ -104,7 +106,8 @@ class BaseServer(object):
                 result += 'address=%s:%s' % self.address
             else:
                 result += 'address=%s' % (self.address, )
-        except Exception, ex:
+        except Exception:
+            ex = sys.exc_info()[1]
             result += str(ex) or '<error>'
         try:
             handle = getfuncname(self.__dict__['handle'])
@@ -204,7 +207,8 @@ def _tcp_listener(address, backlog=50, reuse_addr=None):
         sock.setsockopt(_socket.SOL_SOCKET, _socket.SO_REUSEADDR, reuse_addr)
     try:
         sock.bind(address)
-    except _socket.error, ex:
+    except _socket.error:
+        ex = sys.exc_info()[1]
         strerror = getattr(ex, 'strerror', None)
         if strerror is not None:
             ex.strerror = strerror + ': ' + repr(address)

@@ -78,7 +78,8 @@ class Semaphore(object):
                     try:
                         result = self.hub.switch()
                         assert result is self, 'Invalid switch into Semaphore.wait(): %r' % (result, )
-                    except Timeout, ex:
+                    except Timeout:
+                        ex = sys.exc_info()[1]
                         if ex is not timer:
                             raise
                 finally:
@@ -102,7 +103,8 @@ class Semaphore(object):
                     try:
                         result = self.hub.switch()
                         assert result is self, 'Invalid switch into Semaphore.acquire(): %r' % (result, )
-                    except Timeout, ex:
+                    except Timeout:
+                        ex = sys.exc_info()[1]
                         if ex is timer:
                             return False
                         raise

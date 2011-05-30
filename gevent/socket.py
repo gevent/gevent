@@ -78,6 +78,8 @@ __imports__ = ['error',
 
 import sys
 import time
+from gevent.hub import get_hub, basestring
+from gevent.timeout import Timeout
 
 is_windows = sys.platform == 'win32'
 
@@ -123,9 +125,6 @@ for name in __socket__.__all__:
         __imports__.append(name)
 
 del name, value
-
-from gevent.hub import get_hub
-from gevent.timeout import Timeout
 
 
 def wait(io, timeout=None, timeout_exc=timeout('timed out')):
@@ -276,8 +275,8 @@ class socket(object):
     def _formatinfo(self):
         try:
             fileno = self.fileno()
-        except Exception, ex:
-            fileno = str(ex)
+        except Exception:
+            fileno = str(sys.exc_info()[1])
         try:
             sockname = self.getsockname()
             sockname = '%s:%s' % sockname
@@ -322,7 +321,8 @@ class socket(object):
             try:
                 client_socket, address = sock.accept()
                 break
-            except error, ex:
+            except error:
+                ex = sys.exc_info()[1]
                 if ex[0] != EWOULDBLOCK or self.timeout == 0.0:
                     raise
                 sys.exc_clear()
@@ -370,9 +370,10 @@ class socket(object):
             return self.connect(address) or 0
         except timeout:
             return EAGAIN
-        except error, ex:
+        except error:
+            ex = sys.exc_info()[1]
             if type(ex) is error:
-                return ex[0]
+                return ex.args[0]
             else:
                 raise  # gaierror is not silented by connect_ex
 
@@ -393,17 +394,19 @@ class socket(object):
         while True:
             try:
                 return sock.recv(*args)
-            except error, ex:
-                if ex[0] == EBADF:
+            except error:
+                ex = sys.exc_info()[1]
+                if ex.args[0] == EBADF:
                     return ''
-                if ex[0] != EWOULDBLOCK or self.timeout == 0.0:
+                if ex.args[0] != EWOULDBLOCK or self.timeout == 0.0:
                     raise
                 # QQQ without clearing exc_info test__refcount.test_clean_exit fails
                 sys.exc_clear()
             try:
                 self._wait(self._read_event)
-            except error, ex:
-                if ex[0] == EBADF:
+            except error:
+                ex = sys.exc_info()[1]
+                if ex.args[0] == EBADF:
                     return ''
                 raise
 
@@ -412,8 +415,9 @@ class socket(object):
         while True:
             try:
                 return sock.recvfrom(*args)
-            except error, ex:
-                if ex[0] != EWOULDBLOCK or self.timeout == 0.0:
+            except error:
+                ex = sys.exc_info()[1]
+                if ex.args[0] != EWOULDBLOCK or self.timeout == 0.0:
                     raise
                 sys.exc_clear()
             self._wait(self._read_event)
@@ -423,8 +427,9 @@ class socket(object):
         while True:
             try:
                 return sock.recvfrom_into(*args)
-            except error, ex:
-                if ex[0] != EWOULDBLOCK or self.timeout == 0.0:
+            except error:
+                ex = sys.exc_info()[1]
+                if ex.args[0] != EWOULDBLOCK or self.timeout == 0.0:
                     raise
                 sys.exc_clear()
             self._wait(self._read_event)
@@ -434,16 +439,18 @@ class socket(object):
         while True:
             try:
                 return sock.recv_into(*args)
-            except error, ex:
-                if ex[0] == EBADF:
+            except error:
+                ex = sys.exc_info()[1]
+                if ex.args[0] == EBADF:
                     return 0
-                if ex[0] != EWOULDBLOCK or self.timeout == 0.0:
+                if ex.args[0] != EWOULDBLOCK or self.timeout == 0.0:
                     raise
                 sys.exc_clear()
             try:
                 self._wait(self._read_event)
-            except error, ex:
-                if ex[0] == EBADF:
+            except error:
+                ex = sys.exc_info()[1]
+                if ex.args[0] == EBADF:
                     return 0
                 raise
 
@@ -453,20 +460,23 @@ class socket(object):
             timeout = self.timeout
         try:
             return sock.send(data, flags)
-        except error, ex:
-            if ex[0] != EWOULDBLOCK or timeout == 0.0:
+        except error:
+            ex = sys.exc_info()[1]
+            if ex.args[0] != EWOULDBLOCK or timeout == 0.0:
                 raise
             sys.exc_clear()
             try:
                 self._wait(self._write_event)
-            except error, ex:
-                if ex[0] == EBADF:
+            except error:
+                ex = sys.exc_info()[1]
+                if ex.args[0] == EBADF:
                     return 0
                 raise
             try:
                 return sock.send(data, flags)
-            except error, ex2:
-                if ex2[0] == EWOULDBLOCK:
+            except error:
+                ex2 = sys.exc_info()[1]
+                if ex2.args[0] == EWOULDBLOCK:
                     return 0
                 raise
 
@@ -495,15 +505,17 @@ class socket(object):
         sock = self._sock
         try:
             return sock.sendto(*args)
-        except error, ex:
-            if ex[0] != EWOULDBLOCK or timeout == 0.0:
+        except error:
+            ex = sys.exc_info()[1]
+            if ex.args[0] != EWOULDBLOCK or timeout == 0.0:
                 raise
             sys.exc_clear()
             self._wait(self._write_event)
             try:
                 return sock.sendto(*args)
-            except error, ex2:
-                if ex2[0] == EWOULDBLOCK:
+            except error:
+                ex2 = sys.exc_info()[1]
+                if ex2.args[0] == EWOULDBLOCK:
                     return 0
                 raise
 
@@ -546,7 +558,7 @@ class socket(object):
     _s = ("def %s(self, *args): return self._sock.%s(*args)\n\n"
           "%s.__doc__ = _realsocket.%s.__doc__\n")
     for _m in set(__socket__._socketmethods) - set(locals()):
-        exec _s % (_m, _m, _m, _m)
+        exec (_s % (_m, _m, _m, _m))
     del _m, _s
 
 SocketType = socket
@@ -616,8 +628,8 @@ def create_connection(address, timeout=_GLOBAL_DEFAULT_TIMEOUT, source_address=N
                 sock.bind(source_address)
             sock.connect(sa)
             return sock
-        except error, ex:
-            err = ex
+        except error:
+            err = sys.exc_info()[1]
             sys.exc_clear()
             if sock is not None:
                 sock.close()

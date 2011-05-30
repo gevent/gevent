@@ -13,7 +13,8 @@ to arbitrary code.
     which no switches occur, :class:`Timeout` is powerless.
 """
 
-from gevent.hub import getcurrent, _NONE, get_hub
+import sys
+from gevent.hub import getcurrent, _NONE, get_hub, basestring
 
 __all__ = ['Timeout',
            'with_timeout']
@@ -190,8 +191,8 @@ def with_timeout(seconds, function, *args, **kwds):
     try:
         try:
             return function(*args, **kwds)
-        except Timeout, ex:
-            if ex is timeout and timeout_value is not _NONE:
+        except Timeout:
+            if sys.exc_info()[1] is timeout and timeout_value is not _NONE:
                 return timeout_value
             raise
     finally:

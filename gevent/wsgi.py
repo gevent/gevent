@@ -1,7 +1,10 @@
 # Copyright (c) 2009-2010 Denis Bilenko. See LICENSE for details.
 import sys
 import traceback
-from urllib import unquote
+try:
+    from urllib import unquote
+except ImportError:
+    from urllib.parse import unquote
 from datetime import datetime
 socket = __import__('socket')
 

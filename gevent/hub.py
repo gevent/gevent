@@ -35,7 +35,10 @@ except ImportError:
 getcurrent = greenlet.getcurrent
 GreenletExit = greenlet.GreenletExit
 
-thread = __import__('thread')
+if sys.version_info[0] <= 2:
+    thread = __import__('thread')
+else:
+    thread = __import__('_thread')
 threadlocal = thread._local
 _threadlocal = threadlocal()
 _threadlocal.Hub = None
@@ -176,14 +179,24 @@ def set_hub(hub):
     _threadlocal.hub = hub
 
 
+if sys.version_info[0] >= 3:
+    basestring = (str, bytes)
+
+    def exc_clear():
+        pass
+else:
+    basestring = basestring
+    exc_clear = sys.exc_clear
+
+
 def _import(path):
     if isinstance(path, list):
         error = ImportError('Cannot import from empty list: %r' % (path, ))
         for item in path:
             try:
                 return _import(item)
-            except ImportError, ex:
-                error = ex
+            except ImportError:
+                error = sys.exc_info()[1]
         raise error
     if not isinstance(path, basestring):
         return path
@@ -253,7 +266,7 @@ class Hub(greenlet):
                     switch_out()
                 except:
                     self.handle_error(switch_out, *sys.exc_info())
-            sys.exc_clear()
+            exc_clear()
             return greenlet.switch(self)
         finally:
             core.set_exc_info(exc_type, exc_value)

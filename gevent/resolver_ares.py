@@ -1,6 +1,7 @@
 import os
+import sys
 from _socket import getservbyname, getaddrinfo, gaierror, error
-from gevent.hub import Waiter, get_hub
+from gevent.hub import Waiter, get_hub, basestring
 from gevent.socket import AF_UNSPEC, AF_INET, AF_INET6, SOCK_STREAM, SOCK_DGRAM, SOCK_RAW, AI_NUMERICHOST, EAI_SERVICE
 from gevent.ares import channel
 
@@ -69,7 +70,8 @@ class Resolver(object):
                     port = getservbyname(port, 'udp')
                 else:
                     raise gaierror(EAI_SERVICE, 'Servname not supported for ai_socktype')
-            except error, ex:
+            except error:
+                ex = sys.exc_info()[1]
                 if 'not found' in str(ex):
                     raise gaierror(EAI_SERVICE, 'Servname not supported for ai_socktype')
                 else:
@@ -150,7 +152,8 @@ class Resolver(object):
         self.ares.gethostbyaddr(waiter, ip_address)
         try:
             return waiter.get()
-        except ValueError, ex:
+        except ValueError:
+            ex = sys.exc_info()[1]
             if not str(ex).startswith('illegal IP'):
                 raise
             # socket.gethostbyaddr also accepts domain names; let's do that too
@@ -175,7 +178,8 @@ class Resolver(object):
         self.ares.getnameinfo(waiter, sockaddr, flags)
         try:
             result = waiter.get()
-        except ValueError, ex:
+        except ValueError:
+            ex = sys.exc_info()[1]
             if not str(ex).startswith('illegal IP'):
                 raise
             # socket.getnameinfo also accepts domain names; let's do that too

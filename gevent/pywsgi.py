@@ -300,7 +300,8 @@ class WSGIHandler(object):
         try:
             if not self.read_request(raw_requestline):
                 return ('400', _BAD_REQUEST_RESPONSE)
-        except Exception, ex:
+        except Exception:
+            ex = sys.exc_info()[1]
             if not isinstance(ex, ValueError):
                 traceback.print_exc()
             self.log_error('Invalid request: %s', str(ex) or ex.__class__.__name__)
@@ -310,9 +311,10 @@ class WSGIHandler(object):
         self.application = self.server.application
         try:
             self.handle_one_response()
-        except socket.error, ex:
+        except socket.error:
+            ex = sys.exc_info()[1]
             # Broken pipe, connection reset by peer
-            if ex[0] in (errno.EPIPE, errno.ECONNRESET):
+            if ex.args[0] in (errno.EPIPE, errno.ECONNRESET):
                 sys.exc_clear()
             else:
                 raise

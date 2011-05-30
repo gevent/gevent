@@ -30,7 +30,13 @@ means repeatedly calling :meth:`get <Queue.get>` until :meth:`get <Queue.get>` r
 import sys
 import heapq
 import collections
-from Queue import Full, Empty
+
+try:
+    from Queue import Full, Empty
+except ImportError:
+    __queue__ = __import__('queue')
+    Full = __queue__.Full
+    Empty = __queue__.Empty
 
 from gevent.timeout import Timeout
 from gevent.hub import get_hub, Waiter, getcurrent, _NONE

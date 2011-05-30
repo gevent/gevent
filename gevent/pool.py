@@ -9,6 +9,8 @@ concurrency: its :meth:`spawn <Pool.spawn>` method blocks if the number of
 greenlets in the pool has already reached the limit, until there is a free slot.
 """
 
+import sys
+
 from gevent.hub import GreenletExit, getcurrent
 from gevent.greenlet import joinall, Greenlet
 from gevent.timeout import Timeout
@@ -114,7 +116,8 @@ class Group(object):
                     if not block:
                         break
                     joinall(self.greenlets)
-            except Timeout, ex:
+            except Timeout:
+                ex = sys.exc_info()[1]
                 if ex is not timer:
                     raise
         finally:
