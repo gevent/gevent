@@ -117,8 +117,6 @@ def patch_thread(threading=True, _threading_local=True):
     if not patch_module('thread'):
         return
     from gevent.local import local
-    thread = __import__('thread')
-    thread._local = local
     if threading:
         if noisy and 'threading' in sys.modules:
             sys.stderr.write("gevent.monkey's warning: 'threading' is already imported\n\n")
