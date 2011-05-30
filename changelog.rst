@@ -4,6 +4,43 @@ Changelog
 .. currentmodule:: gevent
 
 
+Release 0.13.6 (May 2, 2011)
+----------------------------
+
+- Added ``__copy__`` method to :class:`gevent.local.local` class that implements copy semantics compatible with built-in ``threading.local``. Patch by **Galfy Pundee**.
+- Fixed :class:`StreamServer` class to catch ``EWOULDBLOCK`` rather than ``EAGAIN``. This fixes lots of spurious tracebacks on Windows where these two constants are not the same. Patch by **Alexey Borzenkov**.
+- Fixed issue #65: :func:`fork` now calls ``event_reinit`` only in the child process; otherwise the process could hang when using libevent2. Patch by **Alexander Boudkar**.
+
+
+Release 0.13.5 (Apr 21, 2011)
+-----------------------------
+
+- Fixed build problem on Python 2.5
+
+
+Release 0.13.4 (Apr 11, 2011)
+-----------------------------
+
+- Fixed :exc:`TypeError` that occurred when ``environ["wsgi.input"].read`` function was called with an integer argument.
+- Fixed issue #63: :func:`monkey.patch_thread` now patches :mod:`threading` too, even if it's already imported. Patch by **Shaun Lindsay**.
+- Fixed issue #64: :func:`joinall` and :func:`killall` functions used to hang if their argument contained duplicate greenlets.
+- Fixed issue #69: :class:`pywsgi.WSGIServer` reported "Connection reset by peer" if the client did not close the connection gracefully after the last request. Such errors are now ignored.
+- Fixed issue #67: Made :class:`wsgi.WSGIServer` add ``REQUEST_URI`` to environ. Patch by **Andreas Blixt**.
+- Fixed issue #71: monkey patching ``httplib`` with :mod:`gevent.httplib` used to break ``HTTPSConnection``. Patch by **Nick Barkas**.
+- Fixed issue #74: :func:`create_connection <gevent.socket.create_connection>` now raises proper exception when ``getaddrinfo`` fails.
+- Fixed :meth:`BaseServer.__repr__` method, :attr:`BaseServer.server_host` and :attr:`BaseServer.server_port` attributes to handle the case of ``AF_UNIX`` addresses properly. Previously they assumed address is always a tuple.
+- Fixed :class:`pywsgi.WSGIServer` to handle ``AF_UNIX`` listeners. The server now sets ``environ["SERVER_NAME"]`` and ``environ["SERVER_PORT"]`` to empty string in such case.
+- Make :class:`StreamServer` (and thus :class:`pywsgi.WSGIServer`) accept up to 100 connections per one readiness notification. This behaviour is controlled by :attr:`StreamServer.max_accept` class attribute.
+- If bind fails, the servers now include the address that caused bind to fail in the error message.
+
+
+Release 0.13.3 (Feb 7, 2011)
+----------------------------
+
+- Fixed typo in :mod:`gevent.httplib` that rendered it unusable.
+- Removed unnecessary delay in :func:`getaddrinfo <gevent.socket.getaddrinfo>` by calling ``resolve_ipv4`` and ``resolve_ipv6`` concurrently rather than sequentially in ``AF_UNSPEC`` case.
+
+
 Release 0.13.2 (Jan 28, 2011)
 -----------------------------
 
@@ -17,7 +54,7 @@ Release 0.13.2 (Jan 28, 2011)
 - Fixed leaking of traceback object when switching out of greenlet with ``sys.exc_info`` set. Leaking is prevented by not preserving traceback at all and only keeping the value of the exception. Thanks to **Ned Rockson**.
 - Fixed :meth:`ssl.SSLSocket.unwrap` to shutdown :class:`SSLSocket` properly, without raising ``SSLError(read operation timeout)``.
 - Fixed :exc:`TypeError` inside :class:`Hub` on Python 2.4.
-- Made number of internal improvements to :mod:`gevent.pywsgi` to make subclassing easier (driven by the needs of websocket_ package).
+- Made a number of internal improvements to :mod:`gevent.pywsgi` to make subclassing easier (driven by the needs of websocket_ package).
 - Changed :class:`WSGIServer <pywsgi.WSGIServer>` to explicitly close the socket after the last request. Patch by **Ralf Schmitt**.
 - Fixed :class:`pywsgi.WSGIHandler` not to add ``CONTENT_TYPE`` to the *environ* dict when there's no ``Content-Type`` header in the request. Previously a default ``text/plain`` was added in such case.
 - Added proper implementation of :meth:`imap_unordered <gevent.pool.Group.imap_unordered>` to :class:`Pool` class. Unlike previous "dummy" implementation this one starts yielding the results as soon as they are ready.
@@ -185,7 +222,7 @@ Backward-incompatible changes:
 - The server no longer links to the greenlets it spawns to detect errors. Instead, it relies on :class:`http_request` which will send 500 reply when deallocated if the user hasn't send any.
 
 Miscellaneous:
-  
+
 - Changed :mod:`gevent.thread` to use :class:`Greenlet` instead of raw greenlets. This means monkey patched thread will become :class:`Greenlet` too.
 - Added :attr:`started` property to :class:`Greenlet`.
 - Put common server code in :mod:`gevent.baseserver` module. All servers in gevent package are now derived from :class:`BaseServer`.
@@ -204,7 +241,7 @@ Examples:
 - Updated echoserver.py to use :class:`StreamServer`.
 - Added geventsendfile.py.
 - Added wsgiserver_ssl.py.
- 
+
 Thanks to **Ralf Schmitt** for :mod:`pywsgi`, a number of fixes for :mod:`wsgi`, help with
 :mod:`baseserver` and :mod:`server` modules, improving setup.py and various other patches and suggestions.
 
