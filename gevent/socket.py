@@ -579,23 +579,6 @@ else:
     __implements__.remove('fromfd')
 
 
-def bind_and_listen(descriptor, address=('', 0), backlog=50, reuse_addr=True):
-    if reuse_addr:
-        try:
-            descriptor.setsockopt(SOL_SOCKET, SO_REUSEADDR, descriptor.getsockopt(SOL_SOCKET, SO_REUSEADDR) | 1)
-        except error:
-            pass
-    descriptor.bind(address)
-    descriptor.listen(backlog)
-
-
-def tcp_listener(address, backlog=50, reuse_addr=True):
-    """A shortcut to create a TCP socket, bind it and put it into listening state."""
-    sock = socket()
-    bind_and_listen(sock, address, backlog=backlog, reuse_addr=reuse_addr)
-    return sock
-
-
 try:
     _GLOBAL_DEFAULT_TIMEOUT = __socket__._GLOBAL_DEFAULT_TIMEOUT
 except AttributeError:
