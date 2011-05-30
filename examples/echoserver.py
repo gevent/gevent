@@ -26,7 +26,7 @@ def echo(socket, address):
             break
         fileobj.write(line)
         fileobj.flush()
-        print "echoed", repr(line)
+        print ("echoed %r" % line)
 
 
 if __name__ == '__main__':
