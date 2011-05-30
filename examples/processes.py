@@ -28,8 +28,9 @@ def popen_communicate(args, data=''):
         try:
             # p.stdin.write() doesn't return anything, so use os.write.
             bytes_written += os.write(p.stdin.fileno(), data[bytes_written:])
-        except IOError, ex:
-            if ex[0] != errno.EAGAIN:
+        except IOError:
+            ex = sys.exc_info()[1]
+            if ex.args[0] != errno.EAGAIN:
                 raise
             sys.exc_clear()
         socket.wait_write(p.stdin.fileno())
@@ -44,7 +45,8 @@ def popen_communicate(args, data=''):
             if not chunk:
                 break
             chunks.append(chunk)
-        except IOError, ex:
+        except IOError:
+            ex = sys.exc_info()[1]
             if ex[0] != errno.EAGAIN:
                 raise
             sys.exc_clear()
@@ -64,10 +66,10 @@ if __name__ == '__main__':
 
     # print the results (if available)
     if job1.ready():
-        print 'finger: %s bytes: %s' % (len(job1.value or ''), repr(job1.value)[:50])
+        print ('finger: %s bytes: %s' % (len(job1.value or ''), repr(job1.value)[:50]))
     else:
-        print 'finger: job is still running'
+        print ('finger: job is still running')
     if job2.ready():
-        print 'netstat: %s bytes: %s' % (len(job2.value or ''), repr(job2.value)[:50])
+        print ('netstat: %s bytes: %s' % (len(job2.value or ''), repr(job2.value)[:50]))
     else:
-        print 'netstat: job is still running'
+        print ('netstat: job is still running')

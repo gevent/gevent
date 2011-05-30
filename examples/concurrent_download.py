@@ -15,9 +15,9 @@ import urllib2
 
 
 def print_head(url):
-    print 'Starting %s' % url
+    print ('Starting %s' % url)
     data = urllib2.urlopen(url).read()
-    print '%s: %s bytes: %r' % (url, len(data), data[:50])
+    print ('%s: %s bytes: %r' % (url, len(data), data[:50]))
 
 jobs = [gevent.spawn(print_head, url) for url in urls]
 

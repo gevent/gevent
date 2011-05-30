@@ -51,13 +51,14 @@ def proxy(path, start_response, proxy_url):
     try:
         try:
             response = urllib2.urlopen(path)
-        except urllib2.HTTPError, ex:
-            response = ex
-        print '%s: %s %s' % (path, response.code, response.msg)
+        except urllib2.HTTPError:
+            response = sys.exc_info()[1]
+        print ('%s: %s %s' % (path, response.code, response.msg))
         headers = [(k, v) for (k, v) in response.headers.items() if k not in drop_headers]
         scheme, netloc, path, params, query, fragment = urlparse(path)
         host = (scheme or 'http') + '://' + netloc
-    except Exception, ex:
+    except Exception:
+        ex = sys.exc_info()[1]
         sys.stderr.write('error while reading %s:\n' % path)
         traceback.print_exc()
         tb = traceback.format_exc()

@@ -7,6 +7,7 @@ This script splits the job between a number of greenlets to get the
 results faster.
 """
 from __future__ import with_statement
+import sys
 import gevent
 from gevent import socket
 from gevent.pool import Pool
@@ -22,9 +23,10 @@ def job(url):
     try:
         try:
             ip = socket.gethostbyname(url)
-            print '%s = %s' % (url, ip)
-        except socket.gaierror, ex:
-            print '%s failed with %s' % (url, ex)
+            print ('%s = %s' % (url, ip))
+        except socket.gaierror:
+            ex = sys.exc_info()[1]
+            print ('%s failed with %s' % (url, ex))
     finally:
         finished += 1
 
@@ -33,4 +35,4 @@ with gevent.Timeout(2, False):
         pool.spawn(job, '%s.com' % x)
     pool.join()
 
-print 'finished within 2 seconds: %s/%s' % (finished, N)
+print ('finished within 2 seconds: %s/%s' % (finished, N))
