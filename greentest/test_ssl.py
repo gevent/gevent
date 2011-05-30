@@ -11,12 +11,25 @@ import gc
 import os
 import errno
 import pprint
-import urllib, urlparse
+
+try:
+    from urllib import request as urllib
+except:
+    import urllib
+
+try:
+    import urlparse
+except ImportError:
+    from urllib import parse as urlparse
+
 import traceback
 import weakref
 
-from BaseHTTPServer import HTTPServer
-from SimpleHTTPServer import SimpleHTTPRequestHandler
+try:
+    from BaseHTTPServer import HTTPServer
+    from SimpleHTTPServer import SimpleHTTPRequestHandler
+except ImportError:
+    from http.server import HTTPServer, SimpleHTTPRequestHandler
 
 try:
     bytearray
