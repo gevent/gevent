@@ -135,7 +135,10 @@ def bench_all(options):
 
 def all():
     result = [x for x in globals() if x.startswith('bench_') and x != 'bench_all']
-    result.sort(key=lambda x: globals()[x].func_code.co_firstlineno)
+    try:
+        result.sort(key=lambda x: globals()[x].func_code.co_firstlineno)
+    except AttributeError:
+        result.sort(key=lambda x: globals()[x].__code__.co_firstlineno)
     result = [x.replace('bench_', '') for x in result]
     return result
 
