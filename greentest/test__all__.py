@@ -56,8 +56,13 @@ class Test(unittest.TestCase):
     def check_implements_subset_of_stdlib_all(self):
         "Check that __implements__ + __imports__ is a subset of the corresponding standard module __all__ or dir()"
         for name in self.__implements__ + self.__imports__:
-            if name not in self.stdlib_all and name not in COULD_BE_MISSING.get(self.stdlib_name, []):
-                raise AssertionError('%r is not found in %r.__all__' % (name, self.stdlib_module))
+            if name in self.stdlib_all:
+                continue
+            if name in COULD_BE_MISSING.get(self.stdlib_name, []):
+                continue
+            if name in dir(self.stdlib_module):  # like thread._local which is not in thread.__all__
+                continue
+            raise AssertionError('%r is not found in %r.__all__ nor in dir(%r)' % (name, self.stdlib_module, self.stdlib_module))
 
     def check_implements_actually_implements(self):
         """Check that the module actually implements the entries from __implements__"""
