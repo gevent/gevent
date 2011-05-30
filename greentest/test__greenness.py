@@ -27,8 +27,14 @@ from gevent import monkey
 monkey.patch_all()
 
 import greentest
-import urllib2
-import BaseHTTPServer
+try:
+    import urllib2
+except ImportError:
+    from urllib import request as urllib2
+try:
+    import BaseHTTPServer
+except ImportError:
+    from http import server as BaseHTTPServer
 import gevent
 
 
