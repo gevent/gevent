@@ -11,7 +11,10 @@ missing_modules = {
     'test_httpservers': ['2.4', '2.5'],
     'test_ftplib': ['2.4', '2.5'],
     'test_wsgiref': ['2.4'],
-    'test_socket_ssl': ['2.6', '2.7']}
+    'test_socket_ssl': ['2.6', '2.7', '3.1', '3.2'],
+    'test_patched_urllib2_localnet.py': ['3.1', '3.2'],
+    'test_ssl': ['2.5'],
+}
 
 
 class ContainsAll(object):
