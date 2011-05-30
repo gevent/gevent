@@ -76,6 +76,14 @@ cdef extern from "libev.h":
     struct ev_fork:
         pass
 
+    struct ev_async:
+        pass
+
+    struct ev_child:
+        int pid
+        int rpid
+        int rstatus
+
     int ev_version_major()
     int ev_version_minor()
 
@@ -115,6 +123,14 @@ cdef extern from "libev.h":
     void ev_fork_init(ev_fork*, void* callback)
     void ev_fork_start(ev_loop*, ev_fork*)
     void ev_fork_stop(ev_loop*, ev_fork*)
+
+    void ev_async_init(ev_async*, void* callback)
+    void ev_async_start(ev_loop*, ev_async*)
+    void ev_async_stop(ev_loop*, ev_async*)
+
+    void ev_child_init(ev_child*, void* callback, int, int)
+    void ev_child_start(ev_loop*, ev_child*)
+    void ev_child_stop(ev_loop*, ev_child*)
 
     ev_loop* ev_default_loop(unsigned int flags)
     ev_loop* ev_loop_new(unsigned int flags)

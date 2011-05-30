@@ -21,6 +21,8 @@ cdef extern from "callbacks.h":
     void gevent_callback_idle(libev.ev_loop, void*, int)
     void gevent_callback_prepare(libev.ev_loop, void*, int)
     void gevent_callback_fork(libev.ev_loop, void*, int)
+    void gevent_callback_async(libev.ev_loop, void*, int)
+    void gevent_callback_child(libev.ev_loop, void*, int)
     void gevent_signal_check(libev.ev_loop, void*, int)
     void gevent_periodic_signal_check(libev.ev_loop, void*, int)
 
@@ -354,25 +356,31 @@ cdef public class loop [object PyGeventLoopObject, type PyGeventLoop_Type]:
             return self._ptr.activecnt
             ENDIF()
 
-    cpdef io(self, int fd, int events):
+    def io(self, int fd, int events):
         return io(self, fd, events)
 
-    cpdef timer(self, double after, double repeat=0.0):
+    def timer(self, double after, double repeat=0.0):
         return timer(self, after, repeat)
 
-    cpdef signal(self, int signum):
+    def signal(self, int signum):
         return signal(self, signum)
 
-    cpdef idle(self):
+    def idle(self):
         return idle(self)
 
-    cpdef prepare(self):
+    def prepare(self):
         return prepare(self)
 
-    cpdef fork(self):
+    def fork(self):
         return fork(self)
 
-    cpdef callback(self):
+    def async(self):
+        return async(self)
+
+    def child(self, int pid, bint trace=0):
+        return child(self, pid, trace)
+
+    def callback(self):
         return callback(self)
 
     def run_callback(self, func, *args):
@@ -572,6 +580,21 @@ cdef public class fork(watcher) [object PyGeventForkObject, type PyGeventFork_Ty
     WATCHER(fork)
 
     INIT(fork)
+
+
+cdef public class async(watcher) [object PyGeventAsyncObject, type PyGeventAsync_Type]:
+
+    WATCHER(async)
+
+    INIT(async)
+
+
+cdef public class child(watcher) [object PyGeventChildObject, type PyGeventChild_Type]:
+
+    WATCHER(child)
+
+    INIT(child, ``, int pid, bint trace=0'', ``, pid, trace'')
+
 
 
 cdef public class callback(watcher) [object PyGeventCallbackObject, type PyGeventCallback_Type]:
