@@ -197,7 +197,10 @@ def patch_all(socket=True, dns=True, time=True, select=True, thread=True, os=Tru
     if select:
         patch_select(aggressive=aggressive)
     if ssl:
-        patch_ssl()
+        try:
+            patch_ssl()
+        except ImportError:
+            pass # python <= 2.5 and ssl package is not installed
     if httplib:
         patch_httplib()
 
