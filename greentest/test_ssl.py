@@ -42,11 +42,7 @@ except NameError:
     memoryview = None
 
 # Optionally test SSL support, if we have it in the tested platform
-skip_expected = False
-try:
-    from gevent import ssl
-except ImportError:
-    skip_expected = True
+from gevent import ssl
 
 HOST = 'localhost'
 CERTFILE = os.path.join(os.path.dirname(__file__) or os.curdir, "keycert.pem")
