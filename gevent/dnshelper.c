@@ -10,6 +10,10 @@
 #include "cares_ntop.h"
 #include "cares_pton.h"
 
+#if PY_VERSION_HEX < 0x02060000
+  #define PyBytes_FromString           PyString_FromString
+#endif
+
 
 static PyObject* _socket_error = 0;
 static PyObject* _socket_gaierror = 0;
@@ -54,7 +58,7 @@ gevent_append_addr(PyObject* list, int family, void* src, char* tmpbuf, size_t t
     int status = -1;
     PyObject* tmp;
     if (ares_inet_ntop(family, src, tmpbuf, tmpsize)) {
-        tmp = PyString_FromString(tmpbuf);
+        tmp = PyBytes_FromString(tmpbuf);
         if (tmp) {
             status = PyList_Append(list, tmp);
             Py_DECREF(tmp);
@@ -77,7 +81,7 @@ parse_h_aliases(struct hostent *h)
         for (pch = h->h_aliases; *pch != NULL; pch++) {
             if (*pch != h->h_name && strcmp(*pch, h->h_name)) {
                 int status;
-                tmp = PyString_FromString(*pch);
+                tmp = PyBytes_FromString(*pch);
                 if (tmp == NULL) {
                     break;
                 }
