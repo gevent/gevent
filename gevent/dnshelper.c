@@ -19,7 +19,7 @@ get_socket_object(PyObject** pobject, const char* name, int incref)
 {
     if (!*pobject) {
         PyObject* _socket;
-        _socket = PyImport_ImportModuleNoBlock("_socket");
+        _socket = PyImport_ImportModule("_socket");
         if (_socket) {
             *pobject = PyObject_GetAttrString(_socket, name);
             if (!*pobject) {
