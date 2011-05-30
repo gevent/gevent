@@ -372,3 +372,22 @@ def walk_modules(basedir=None, modpath=None, include_so=False):
                 yield path, modpath + fn[:-5]
             else:
                 yield path, modpath + fn[:-3]
+
+
+def bind_and_listen(sock, address=('', 0), backlog=50, reuse_addr=True):
+    from socket import SOL_SOCKET, SO_REUSEADDR, error
+    if reuse_addr:
+        try:
+            sock.setsockopt(SOL_SOCKET, SO_REUSEADDR, sock.getsockopt(SOL_SOCKET, SO_REUSEADDR) | 1)
+        except error:
+            pass
+    sock.bind(address)
+    sock.listen(backlog)
+
+
+def tcp_listener(address, backlog=50, reuse_addr=True):
+    """A shortcut to create a TCP socket, bind it and put it into listening state."""
+    from gevent import socket
+    sock = socket.socket()
+    bind_and_listen(sock)
+    return sock

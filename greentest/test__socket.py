@@ -12,7 +12,7 @@ class TestTCP(greentest.TestCase):
 
     def setUp(self):
         greentest.TestCase.setUp(self)
-        self.listener = socket.tcp_listener(('127.0.0.1', 0))
+        self.listener = greentest.tcp_listener(('127.0.0.1', 0))
 
     def tearDown(self):
         del self.listener
@@ -127,7 +127,7 @@ if hasattr(socket, 'ssl'):
         import _socket
         r = _socket.socket()
         sock = socket.ssl(r, private_key, certificate)
-        socket.bind_and_listen(sock, address)
+        greentest.bind_and_listen(sock, address)
         return sock
 
 

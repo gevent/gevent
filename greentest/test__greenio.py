@@ -17,7 +17,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
-from greentest import TestCase, main
+from greentest import TestCase, main, tcp_listener
 import gevent
 from gevent import socket
 
@@ -65,12 +65,12 @@ class TestGreenIo(TestCase):
             assert fd.read() == ''
             fd.close()
 
-        server = socket.tcp_listener(('0.0.0.0', 0))
+        server = tcp_listener(('0.0.0.0', 0))
         server_greenlet = gevent.spawn(accept_close_early, server)
         did_it_work(server)
         server_greenlet.kill()
 
-        server = socket.tcp_listener(('0.0.0.0', 0))
+        server = tcp_listener(('0.0.0.0', 0))
         server_greenlet = gevent.spawn(accept_close_late, server)
         did_it_work(server)
         server_greenlet.kill()
@@ -92,7 +92,7 @@ class TestGreenIo(TestCase):
             finally:
                 listener.close()
 
-        server = socket.tcp_listener(('0.0.0.0', 0))
+        server = tcp_listener(('0.0.0.0', 0))
         gevent.spawn(accept_once, server)
         client = socket.create_connection(('127.0.0.1', server.getsockname()[1]))
         fd = client.makefile()
