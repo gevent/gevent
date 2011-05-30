@@ -136,10 +136,8 @@ def patch_socket(dns=True, aggressive=True):
     If *dns* is true, also patch dns functions in :mod:`socket`.
     """
     from gevent import socket
-    if dns:
-        items = None
-    else:
-        items = socket.__implements__[:]
+    items = socket.__implements__[:]
+    if not dns:
         for function in dns_functions:
             items.remove(function)
     # if we patch socket.socket then create_connection is already good
