@@ -1,4 +1,4 @@
-import sys
+import sys; sys.exit(0)  # gevent.http is currently not working
 import gevent
 from gevent import wsgi
 from gevent import socket

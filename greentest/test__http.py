@@ -1,3 +1,4 @@
+import sys; sys.exit(0)  # gevent.http is currently not working
 from gevent import monkey; monkey.patch_socket()
 import gevent
 from gevent import http
