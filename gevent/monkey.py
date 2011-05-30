@@ -74,8 +74,9 @@ class original(object):
 
 
 def patch_module(name, items=None):
-    dest = __import__(name)
     source = getattr(__import__('gevent.' + name), name)
+    target = getattr(source, '__target__', name)
+    dest = __import__(target)
     monkey_original = dest.monkey_original = original()
     count = 0
     if items is None:
