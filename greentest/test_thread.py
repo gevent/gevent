@@ -24,10 +24,10 @@ def task(ident):
     delay = random.random() * numtasks * 0.02
     rmutex.release()
     if verbose:
-        print 'task', ident, 'will run for', round(delay, 2), 'sec'
+        print ('task %s will run for %d sec' % (ident, round(delay, 2)))
     time.sleep(delay)
     if verbose:
-        print 'task', ident, 'done'
+        print ('task %s done' % ident)
     mutex.acquire()
     running = running - 1
     if running == 0:
@@ -40,7 +40,7 @@ def newtask():
     mutex.acquire()
     next_ident = next_ident + 1
     if verbose:
-        print 'creating task', next_ident
+        print ('creating task %s' % next_ident)
     thread.start_new_thread(task, (next_ident,))
     running = running + 1
     mutex.release()
@@ -48,9 +48,9 @@ def newtask():
 for i in range(numtasks):
     newtask()
 
-print 'waiting for all tasks to complete'
+print ('waiting for all tasks to complete')
 done.acquire()
-print 'all tasks done'
+print ('all tasks done')
 
 class barrier:
     def __init__(self, n):
@@ -92,13 +92,13 @@ def task2(ident):
             delay = random.random() * numtasks * 0.02
             rmutex.release()
         if verbose:
-            print 'task', ident, 'will run for', round(delay, 2), 'sec'
+            print ('task %s will run for %d sec' % (ident, round(delay, 2)))
         time.sleep(delay)
         if verbose:
-            print 'task', ident, 'entering barrier', i
+            print ('task %s entering barrier %s' % (ident, i))
         bar.enter()
         if verbose:
-            print 'task', ident, 'leaving barrier', i
+            print ('task %s leaving barrier %s' % (ident, i))
     mutex.acquire()
     running -= 1
     # Must release mutex before releasing done, else the main thread can
@@ -109,25 +109,25 @@ def task2(ident):
     if finished:
         done.release()
 
-print '\n*** Barrier Test ***'
+print ('\n*** Barrier Test ***')
 if done.acquire(0):
-    raise ValueError, "'done' should have remained acquired"
+    raise ValueError("'done' should have remained acquired")
 bar = barrier(numtasks)
 running = numtasks
 for i in range(numtasks):
     thread.start_new_thread(task2, (i,))
 done.acquire()
-print 'all tasks done'
+print ('all tasks done')
 
 if hasattr(thread, 'stack_size'):
     # not all platforms support changing thread stack size
-    print '\n*** Changing thread stack size ***'
+    print ('\n*** Changing thread stack size ***')
     if thread.stack_size() != 0:
-        raise ValueError, "initial stack_size not 0"
+        raise ValueError("initial stack_size not 0")
 
     thread.stack_size(0)
     if thread.stack_size() != 0:
-        raise ValueError, "stack_size not reset to default"
+        raise ValueError("stack_size not reset to default")
 
     from os import name as os_name
     if os_name in ("nt", "os2", "posix"):
@@ -136,10 +136,10 @@ if hasattr(thread, 'stack_size'):
         try:
             thread.stack_size(4096)
         except ValueError:
-            print 'caught expected ValueError setting stack_size(4096)'
+            print ('caught expected ValueError setting stack_size(4096)')
         except thread.error:
             tss_supported = 0
-            print 'platform does not support changing thread stack size'
+            print ('platform does not support changing thread stack size')
 
         if tss_supported:
             failed = lambda s, e: s != e
@@ -147,18 +147,18 @@ if hasattr(thread, 'stack_size'):
             for tss in (262144, 0x100000, 0):
                 thread.stack_size(tss)
                 if failed(thread.stack_size(), tss):
-                    raise ValueError, fail_msg % tss
-                print 'successfully set stack_size(%d)' % tss
+                    raise ValueError(fail_msg % tss)
+                print ('successfully set stack_size(%d)' % tss)
 
             for tss in (262144, 0x100000):
-                print 'trying stack_size = %d' % tss
+                print ('trying stack_size = %d' % tss)
                 next_ident = 0
                 for i in range(numtasks):
                     newtask()
 
-                print 'waiting for all tasks to complete'
+                print ('waiting for all tasks to complete')
                 done.acquire()
-                print 'all tasks done'
+                print ('all tasks done')
 
             # reset stack size to default
             thread.stack_size(0)

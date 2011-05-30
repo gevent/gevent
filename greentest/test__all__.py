@@ -101,7 +101,7 @@ class Test(unittest.TestCase):
             result = []
             for name in missed[:]:
                 if name in not_implemented:
-                    print 'IncompleteImplWarning: gevent.%s.%s' % (self.modname, name)
+                    print ('IncompleteImplWarning: %s.%s' % (self.modname, name))
                 else:
                     result.append(name)
             missed = result
@@ -159,8 +159,9 @@ are missing from %r:
         self.check_completeness()
 
     for path, modname in walk_modules(include_so=True):
-        modname = modname.replace('gevent.', '')
-        exec '''def test_%s(self): self._test("gevent.%s")''' % (modname, modname)
+        modname = modname.replace('gevent.', '').split('.')[0]
+        if modname not in ('http', 'httplib', 'wsgi'):
+            exec ('''def test_%s(self): self._test("gevent.%s")''' % (modname, modname))
     del path, modname
 
 

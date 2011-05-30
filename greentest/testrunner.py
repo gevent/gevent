@@ -51,11 +51,13 @@ import platform
 
 try:
     import sqlite3
-except ImportError, ex:
+except ImportError:
+    ex = sys.exc_info()
     sys.stderr.write('Failed to import sqlite3: %s\n' % ex)
     try:
         import pysqlite2.dbapi2 as sqlite3
-    except ImportError, ex:
+    except ImportError:
+        ex = sys.exc_info()
         sys.stderr.write('Failed to import pysqlite2.dbapi2: %s\n' % ex)
         sqlite3 = None
 
@@ -75,7 +77,8 @@ def store_record(database_path, table, dictionary, _added_colums_per_db={}):
                 conn.execute(sql)
                 conn.commit()
                 _added_columns.add(key)
-            except sqlite3.OperationalError, ex:
+            except sqlite3.OperationalError:
+                ex = sys.exc_info()
                 if 'duplicate column' not in str(ex).lower():
                     raise
     sql = 'insert or replace into %s (%s) values (%s)' % (table, ', '.join(keys), ', '.join(':%s' % key for key in keys))
@@ -83,7 +86,7 @@ def store_record(database_path, table, dictionary, _added_colums_per_db={}):
     try:
         cursor.execute(sql, dictionary)
     except sqlite3.Error:
-        print 'sql=%r\ndictionary=%r' % (sql, dictionary)
+        print ('sql=%r\ndictionary=%r' % (sql, dictionary))
         raise
     conn.commit()
     return cursor.lastrowid
@@ -94,13 +97,13 @@ def delete_record(database_path, table, dictionary, _added_colums_per_db={}):
         return
     keys = dictionary.keys()
     conn = sqlite3.connect(database_path)
-    print 'deleting %s from database' % (dictionary, )
+    print ('deleting %s from database' % (dictionary, ))
     sql = 'delete from %s where %s' % (table, ' AND '.join('%s=:%s' % (key, key) for key in keys))
     cursor = conn.cursor()
     try:
         cursor.execute(sql, dictionary)
     except sqlite3.Error:
-        print 'sql=%r\ndictionary=%r' % (sql, dictionary)
+        print ('sql=%r\ndictionary=%r' % (sql, dictionary))
         raise
     conn.commit()
     return cursor.lastrowid
@@ -246,7 +249,7 @@ def run_subprocess(args, options):
 
     def killer():
         retcode.append('TIMEOUT')
-        print >> sys.stderr, 'Killing %s (%s) because of timeout' % (popen.pid, args)
+        sys.stderr.write('Killing %s (%s) because of timeout\n' % (popen.pid, args))
         popen.kill()
 
     timeout = Timer(options.timeout, killer)
@@ -300,15 +303,15 @@ def spawn_subprocess(args, options, base_params):
         else:
             if not output_printed and options.verbosity >= -1:
                 sys.stdout.write(output)
-            print '%s failed with code %s' % (' '.join(args), retcode)
+            print ('%s failed with code %s' % (' '.join(args), retcode))
     elif retcode == 0:
         if not output_printed and options.verbosity >= 1:
             sys.stdout.write(output)
         if options.verbosity >= 0:
-            print '%s passed' % ' '.join(args)
+            print ('%s passed' % ' '.join(args))
         success = True
     else:
-        print '%s timed out' % ' '.join(args)
+        print ('%s timed out' % ' '.join(args))
     if options.db:
         params['output'] = output
         params['retcode'] = retcode
@@ -340,12 +343,12 @@ def spawn_subprocesses(options, args):
             traceback.print_exc()
     if options.db:
         try:
-            print '-' * 80
+            print ('-' * 80)
             if print_stats(options):
                 success = False
         except sqlite3.OperationalError:
             traceback.print_exc()
-        print 'To view stats again for this run, use %s --stats --runid %s --db %s' % (sys.argv[0], options.runid, options.db)
+        print ('To view stats again for this run, use %s --stats --runid %s --db %s' % (sys.argv[0], options.runid, options.db))
     if not success:
         sys.exit(1)
 
@@ -415,7 +418,9 @@ def get_warning_stats(output):
         counter.setdefault(warning, 0)
         counter[warning] += 1
     items = counter.items()
-    items.sort(key=lambda (a, b): -b)
+    def sortkey(x):
+        return -x[1]
+    items.sort(key=sortkey)
     result = []
     for name, count in items:
         if count == 1:
@@ -447,7 +452,9 @@ def get_traceback_stats(output, test):
             counter[error] += 1
         traceback_count -= 1
     items = counter.items()
-    items.sort(key=lambda (a, b): -b)
+    def sortkey(x):
+        return -x[1]
+    items.sort(key=sortkey)
     if traceback_count > 0:
         items.append(('other traceback', traceback_count))
     result = []
@@ -473,14 +480,14 @@ def print_stats(options):
     cursor = db.cursor()
     if options.runid is None:
         options.runid = cursor.execute('select runid from test order by started_at desc limit 1').fetchall()[0][0]
-        print 'Using the latest runid: %s' % options.runid
+        print ('Using the latest runid: %s' % options.runid)
     total = len(get_testcases(cursor, options.runid))
     failed, errors = get_failed_testcases(cursor, options.runid)
     timedout = get_testcases(cursor, options.runid, 'TIMEOUT')
     for test, output, retcode in cursor.execute('select test, output, retcode from test where runid=?', (options.runid, )):
         info, skipped = get_info(output or '', test)
         if info:
-            print '%s: %s' % (test, info)
+            print ('%s: %s' % (test, info))
         if retcode == 'TIMEOUT':
             for testcase in timedout:
                 if testcase.startswith(test + '.'):
@@ -498,18 +505,18 @@ def print_stats(options):
                     total += 1
     if failed:
         failed.sort()
-        print 'FAILURES: '
+        print ('FAILURES: ')
         for testcase in failed:
             error = errors.get(testcase)
             if error:
                 error = repr(error)[1:-1][:100]
-                print ' - %s: %s' % (testcase, error)
+                print (' - %s: %s' % (testcase, error))
             else:
-                print ' - %s' % (testcase, )
+                print (' - %s' % (testcase, ))
     if timedout:
-        print 'TIMEOUTS: '
-        print ' - ' + '\n - '.join(timedout)
-    print '%s testcases passed; %s failed; %s timed out' % (total, len(failed), len(timedout))
+        print ('TIMEOUTS: ')
+        print (' - ' + '\n - '.join(timedout))
+    print ('%s testcases passed; %s failed; %s timed out' % (total, len(failed), len(timedout)))
     if failed or timedout:
         return True
     return False
@@ -535,7 +542,7 @@ def main():
     if options.db:
         if sqlite3:
             options.db = os.path.abspath(options.db)
-            print 'Using the database: %s' % options.db
+            print ('Using the database: %s' % options.db)
         else:
             sys.stderr.write('Cannot access the database %r: no sqlite3 module found.\n' % (options.db, ))
             options.db = False
@@ -556,7 +563,7 @@ def main():
             except ImportError:
                 import random
                 options.runid = str(random.random())[2:]
-            print 'Generated runid: %s' % (options.runid, )
+            print ('Generated runid: %s' % (options.runid, ))
         if options.record:
             run_tests(options, args)
         else:

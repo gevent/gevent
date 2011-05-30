@@ -2,7 +2,10 @@
 from gevent import monkey; monkey.patch_all()
 import sys
 import unittest
-import httplib
+try:
+    import httplib
+except ImportError:
+    from http import client as httplib
 import socket
 
 if not hasattr(socket, 'ssl'):

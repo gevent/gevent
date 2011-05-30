@@ -2,6 +2,7 @@ import unittest
 from gevent import socket
 import gevent
 import errno
+import sys
 import os
 from test__server import SimpleStreamServer
 
@@ -19,8 +20,9 @@ class Test(unittest.TestCase):
         try:
             conn = self.makefile()
             raise AssertionError('Connection was not refused: %r' % (conn._sock, ))
-        except socket.error, ex:
-            if ex[0] != errno.ECONNREFUSED:
+        except socket.error:
+            ex = sys.exc_info()[1]
+            if ex.args[0] != errno.ECONNREFUSED:
                 raise
 
     def assertRequestSucceeded(self):

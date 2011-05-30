@@ -3,6 +3,7 @@ import gevent
 from gevent import http
 import greentest
 import os
+import sys
 import socket
 import errno
 from test__pywsgi import read_http
@@ -46,10 +47,12 @@ class BoundTestCase(greentest.TestCase):
     def check_refused(self):
         try:
             self.connect()
-        except socket.error, ex:
-            if ex[0] != errno.ECONNREFUSED:
+        except socket.error:
+            ex = sys.exc_info()[1]
+            if ex.args[0] != errno.ECONNREFUSED:
                 raise
-        except IOError, e:
+        except IOError:
+            e = sys.exc_info()[1]
             print 'WARNING: instead of ECONNREFUSED got IOError: %s' % e
 
 
@@ -176,7 +179,8 @@ class TestDetach(BoundTestCase):
         try:
             try:
                 self.urlopen()
-            except Exception, ex:
+            except Exception:
+                ex = sys.exc_info()[1]
                 assert str(ex) == 'test done', ex
         finally:
             self.current = None

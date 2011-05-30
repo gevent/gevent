@@ -61,15 +61,17 @@ class BasicTests(unittest.TestCase):
         # A crude test for the legacy API
         try:
             ssl.sslwrap_simple(socket.socket(socket.AF_INET))
-        except IOError, e:
-            if e[0] == 32: # broken pipe when ssl_sock.do_handshake(), this test doesn't care about that
+        except IOError:
+            e = sys.exc_info()[1]
+            if e.args[0] == 32: # broken pipe when ssl_sock.do_handshake(), this test doesn't care about that
                 pass
             else:
                 raise
         try:
             ssl.sslwrap_simple(socket.socket(socket.AF_INET)._sock)
-        except IOError, e:
-            if e[0] == 32: # broken pipe when ssl_sock.do_handshake(), this test doesn't care about that
+        except IOError:
+            e = sys.exc_info()[1]
+            if e.args[0] == 32: # broken pipe when ssl_sock.do_handshake(), this test doesn't care about that
                 pass
             else:
                 raise
@@ -94,7 +96,7 @@ class BasicTests(unittest.TestCase):
         except TypeError:
             pass
         else:
-            print "didn't raise TypeError"
+            print ("didn't raise TypeError")
         ssl.RAND_add("this is a random string", 75.0)
 
     def test_parse_cert(self):
@@ -161,14 +163,16 @@ class BasicTests(unittest.TestCase):
                             cert_reqs=ssl.CERT_NONE, ciphers="^$:,;?*'dorothyx")
         try:
             s.connect(remote)
-        except ssl.SSLError, ex:
+        except ssl.SSLError:
+            ex = sys.exc_info()[1]
             if "No cipher can be selected" not in str(ex):
                 raise
 
     def test_ciphers(self):
         try:
             self._test_ciphers()
-        except TypeError, ex:
+        except TypeError:
+            ex = sys.exc_info()[1]
             if 'sslwrap() takes at most 7 arguments (8 given)' in str(ex) and sys.version_info[:2] <= (2, 6):
                 pass
             else:
@@ -232,7 +236,8 @@ class NetworkedTests(unittest.TestCase):
         gc.collect()
         try:
             os.read(fd, 0)
-        except OSError, ex:
+        except OSError:
+            ex = sys.exc_info()[1]
             if ex[0] != errno.EBADF:
                 raise
 
@@ -249,7 +254,8 @@ class NetworkedTests(unittest.TestCase):
                 count += 1
                 s.do_handshake()
                 break
-            except ssl.SSLError, err:
+            except ssl.SSLError:
+                err = sys.exc_info()[1]
                 if err.args[0] == ssl.SSL_ERROR_WANT_READ:
                     select.select([s], [], [])
                 elif err.args[0] == ssl.SSL_ERROR_WANT_WRITE:
@@ -516,14 +522,16 @@ else:
                 def _do_ssl_handshake(self):
                     try:
                         self.socket.do_handshake()
-                    except ssl.SSLError, err:
+                    except ssl.SSLError:
+                        err = sys.exc_info()[1]
                         if err.args[0] in (ssl.SSL_ERROR_WANT_READ,
                                            ssl.SSL_ERROR_WANT_WRITE):
                             return
                         elif err.args[0] == ssl.SSL_ERROR_EOF:
                             return self.handle_close()
                         raise
-                    except socket.error, err:
+                    except socket.error:
+                        err = sys.exc_info()[1]
                         if err.args[0] == errno.ECONNABORTED:
                             return self.handle_close()
                     else:
@@ -710,10 +718,12 @@ else:
                                     certfile=certfile,
                                     ssl_version=ssl.PROTOCOL_TLSv1)
                 s.connect((HOST, server.port))
-            except ssl.SSLError, x:
+            except ssl.SSLError:
+                x = sys.exc_info()[1]
                 if test_support.verbose:
                     sys.stdout.write("\nSSLError is %s\n" % x[1])
-            except socket.error, x:
+            except socket.error:
+                x = sys.exc_info()[1]
                 if test_support.verbose:
                     sys.stdout.write("\nsocket.error is %s\n" % x[1])
             else:
@@ -816,8 +826,9 @@ else:
         except ssl.SSLError:
             if expect_success:
                 raise
-        except socket.error, e:
-            if expect_success or e[0] != errno.ECONNRESET:
+        except socket.error:
+            e = sys.exc_info()[1]
+            if expect_success or e.args[0] != errno.ECONNRESET:
                 raise
         else:
             if not expect_success:
@@ -958,7 +969,8 @@ else:
                 sys.stdout.write("\n")
             try:
                 try_protocol_combo(ssl.PROTOCOL_SSLv23, ssl.PROTOCOL_SSLv2, True)
-            except (ssl.SSLError, socket.error), x:
+            except (ssl.SSLError, socket.error):
+                x = sys.exc_info()[1]
                 # this fails on some older versions of OpenSSL (0.9.7l, for instance)
                 if test_support.verbose:
                     sys.stdout.write(
@@ -1186,7 +1198,7 @@ else:
                 ]
                 if bytearray is None:
                     recv_methods = recv_methods[:-2]
-                data_prefix = u"PREFIX_"
+                data_prefix = unicode("PREFIX_")
 
                 for meth_name, send_meth, expect_success, args in send_methods:
                     indata = data_prefix + meth_name
@@ -1203,7 +1215,8 @@ else:
                                     indata[:20], len(indata)
                                 )
                             )
-                    except ValueError, e:
+                    except ValueError:
+                        e = sys.exc_info()[1]
                         if expect_success:
                             raise test_support.TestFailed(
                                 "Failed to send with method <<%s>>; "
@@ -1232,7 +1245,8 @@ else:
                                     indata[:20], len(indata)
                                 )
                             )
-                    except ValueError, e:
+                    except ValueError:
+                        e = sys.exc_info()[1]
                         if expect_success:
                             raise test_support.TestFailed(
                                 "Failed to receive with method <<%s>>; "
@@ -1285,7 +1299,8 @@ else:
                     # Will attempt handshake and time out
                     try:
                         ssl.wrap_socket(c)
-                    except ssl.SSLError, ex:
+                    except ssl.SSLError:
+                        ex = sys.exc_info()[1]
                         if 'timed out' not in str(ex):
                             raise
                 finally:
@@ -1297,7 +1312,8 @@ else:
                     # Will attempt handshake and time out
                     try:
                         c.connect((host, port))
-                    except ssl.SSLError, ex:
+                    except ssl.SSLError:
+                        ex = sys.exc_info()[1]
                         if 'timed out' not in str(ex):
                             raise
                 finally:

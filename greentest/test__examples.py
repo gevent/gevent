@@ -3,7 +3,10 @@ import os
 import glob
 from os.path import join, abspath, dirname, normpath, basename
 import unittest
-import urllib2
+try:
+    import urllib2
+except ImportError:
+    from urllib import request as urllib2
 import time
 import signal
 import re
@@ -23,7 +26,7 @@ for example in examples:
     if 'serve_forever' not in open(example).read():
         simple_examples.append(example)
 
-print '\n'.join(examples)
+print ('\n'.join(examples))
 
 
 def make_test(path):
@@ -50,7 +53,7 @@ def make_test(path):
 for example in simple_examples:
     test = make_test(example)
     globals()[test.__name__] = test
-    print 'Added %s' % test.__name__
+    print ('Added %s' % test.__name__)
     del test
 
 
@@ -75,8 +78,8 @@ class Test_httpserver(BaseTestServer):
         url = self.URL + path
         try:
             response = urllib2.urlopen(url)
-        except urllib2.HTTPError, response:
-            pass
+        except urllib2.HTTPError:
+            response = sys.exc_info()[1]
         return '%s %s' % (response.code, response.msg), response.read()
 
     def _test_hello(self):

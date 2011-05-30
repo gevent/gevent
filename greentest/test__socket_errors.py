@@ -19,6 +19,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
+import sys
 import greentest
 from gevent.socket import socket, error
 
@@ -34,8 +35,9 @@ class TestSocketErrors(greentest.TestCase):
         s = socket()
         try:
             s.connect(('127.0.0.1', 81))
-        except error, ex:
-            assert ex[0] == ECONNREFUSED, repr(ex)
+        except error:
+            ex = sys.exc_info()[1]
+            assert ex.args[0] == ECONNREFUSED, repr(ex)
             assert 'refused' in str(ex).lower(), str(ex)
 
 

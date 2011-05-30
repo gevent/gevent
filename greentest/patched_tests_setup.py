@@ -31,7 +31,7 @@ def get_switch_expected(fullname):
     True
     """
     if tests.match(fullname) is not None:
-        print fullname
+        print (fullname)
         return False
     return True
 

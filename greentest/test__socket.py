@@ -1,4 +1,5 @@
 import os
+import sys
 import gevent
 from gevent import socket
 import greentest
@@ -145,7 +146,8 @@ class TestCreateConnection(greentest.TestCase):
         del tempsock2
         try:
             socket.create_connection(('localhost', 4), timeout=30, source_address=('', source_port))
-        except socket.error, ex:
+        except socket.error:
+            ex = sys.exc_info()[1]
             if 'connection refused' not in str(ex).lower():
                 raise
 

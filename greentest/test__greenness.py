@@ -26,6 +26,7 @@ If either operation blocked the whole script would block and timeout.
 from gevent import monkey
 monkey.patch_all()
 
+import sys
 import greentest
 try:
     import urllib2
@@ -56,7 +57,8 @@ class TestGreenness(greentest.TestCase):
         try:
             urllib2.urlopen('http://127.0.0.1:%s' % port)
             assert False, 'should not get there'
-        except urllib2.HTTPError, ex:
+        except urllib2.HTTPError:
+            ex = sys.exc_info()[1]
             assert ex.code == 501, repr(ex)
         server.join(0.01)
         self.assertEqual(self.httpd.request_count, 1)

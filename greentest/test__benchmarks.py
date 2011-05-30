@@ -31,13 +31,13 @@ error = 0
 if __name__ == '__main__':
 
     for path in modules:
-        print path
+        print (path)
         sys.stdout.flush()
         res = system('%s %s all' % (sys.executable, path))
         if res:
             error = 1
-            print path, 'failed'
-        print '-----'
+            print ('%s %s' % (path, 'failed'))
+        print ('-----')
 
     if error:
         sys.exit(1)

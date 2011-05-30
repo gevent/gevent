@@ -20,7 +20,8 @@ class Test(greentest.TestCase):
 
         try:
             gevent.sleep(0.001)
-        except SystemExit, ex:
+        except SystemExit:
+            ex = sys.exc_info()[1]
             assert str(ex) == MSG, repr(str(ex))
 
     def test_keyboard_interrupt(self):
@@ -36,7 +37,8 @@ class Test(greentest.TestCase):
 
         try:
             gevent.sleep(0.001)
-        except SystemError, ex:
+        except SystemError:
+            ex = sys.exc_info()[1]
             assert str(ex) == MSG, repr(str(ex))
 
     def test_exception(self):

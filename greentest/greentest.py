@@ -275,7 +275,8 @@ def test_outer_timeout_is_not_lost(self):
     try:
         try:
             result = self.wait(timeout=1)
-        except gevent.Timeout, ex:
+        except gevent.Timeout:
+            ex = sys.exc_info()[1]
             assert ex is timeout, (ex, timeout)
         else:
             raise AssertionError('must raise Timeout (returned %r)' % (result, ))
@@ -322,7 +323,8 @@ class GenericGetTestCase(TestCase):
         timeout = gevent.Timeout(0.01)
         try:
             self.wait(timeout=timeout)
-        except gevent.Timeout, ex:
+        except gevent.Timeout:
+            ex = sys.exc_info()[1]
             assert ex is timeout, (ex, timeout)
         delay = time.time() - start
         assert 0.01 - 0.001 <= delay < 0.01 + 0.01 + 0.1, delay
@@ -334,7 +336,8 @@ class GenericGetTestCase(TestCase):
         timeout = gevent.Timeout(0.01, exception=error)
         try:
             self.wait(timeout=timeout)
-        except RuntimeError, ex:
+        except RuntimeError:
+            ex = sys.exc_info()[1]
             assert ex is error, (ex, error)
         delay = time.time() - start
         assert 0.01 - 0.001 <= delay < 0.01 + 0.01 + 0.1, delay

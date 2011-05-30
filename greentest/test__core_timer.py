@@ -34,8 +34,8 @@ if __name__ == '__main__':
     gettotalrefcount = getattr(sys, 'gettotalrefcount', None)
     called[:] = []
     if gettotalrefcount is not None:
-        print gettotalrefcount()
+        print (gettotalrefcount())
     main()
     called[:] = []
     if gettotalrefcount is not None:
-        print gettotalrefcount()
+        print (gettotalrefcount())

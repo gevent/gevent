@@ -3,7 +3,10 @@
 from gevent import monkey; monkey.patch_all()
 import unittest
 from doctest import DocTestSuite
-from test import test_support
+try:
+    from test import test_support
+except ImportError:
+    from test import support as test_support
 import threading
 import weakref
 import gc

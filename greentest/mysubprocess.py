@@ -13,7 +13,8 @@ class Popen(subprocess.Popen):
         if hasattr(subprocess.Popen, 'send_signal'):
             try:
                 return subprocess.Popen.send_signal(self, sig)
-            except Exception, ex:
+            except Exception:
+                ex = sys.exc_info()[1]
                 sys.stderr.write('send_signal(%s, %s) failed: %s\n' % (self.pid, sig, ex))
                 self.external_kill(str(ex))
         else:
@@ -21,7 +22,8 @@ class Popen(subprocess.Popen):
                 sys.stderr.write('Sending signal %s to %s\n' % (sig, self.pid))
                 try:
                     os.kill(self.pid, sig)
-                except Exception, ex:
+                except Exception:
+                    ex = sys.exc_info()[1]
                     sys.stderr.write('Error while killing %s: %s\n' % (self.pid, ex))
                     self.external_kill()
             else:

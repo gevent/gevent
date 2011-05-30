@@ -3,6 +3,7 @@ from gevent import socket
 import gevent
 from gevent.server import StreamServer
 import errno
+import sys
 import os
 
 
@@ -16,7 +17,7 @@ class SimpleStreamServer(StreamServer):
         try:
             method, path, rest = request_line.split(' ', 3)
         except Exception:
-            print 'Failed to parse request line: %r' % (request_line, )
+            print ('Failed to parse request line: %r' % (request_line, ))
             raise
         if path == '/ping':
             client_socket.sendall('HTTP/1.0 200 OK\r\n\r\nPONG')
@@ -51,8 +52,9 @@ class Settings:
         # attempt to send anything reset the connection
         try:
             self.send_request()
-        except socket.error, ex:
-            if ex[0] != errno.ECONNRESET:
+        except socket.error:
+            ex = sys.exc_info()[1]
+            if ex.args[0] != errno.ECONNRESET:
                 raise
 
     @staticmethod
@@ -91,8 +93,9 @@ class TestCase(greentest.TestCase):
         try:
             conn = self.makefile()
             raise AssertionError('Connection was not refused: %r' % (conn._sock, ))
-        except socket.error, ex:
-            if ex[0] not in (errno.ECONNREFUSED, errno.EADDRNOTAVAIL):
+        except socket.error:
+            ex = sys.exc_info()[1]
+            if ex.args[0] not in (errno.ECONNREFUSED, errno.EADDRNOTAVAIL):
                 raise
 
     def assert500(self):
@@ -140,9 +143,9 @@ class TestCase(greentest.TestCase):
 
     def report_netstat(self, msg):
         return
-        print msg
+        print (msg)
         os.system('sudo netstat -anp | grep %s' % os.getpid())
-        print '^^^^^'
+        print ('^^^^^')
 
     def init_server(self):
         self.server = self.ServerSubClass(('127.0.0.1', 0))
@@ -257,8 +260,9 @@ class TestDefaultSpawn(TestCase):
                 result = conn.read()
                 if result:
                     assert result.startswith('HTTP/1.0 500 Internal Server Error'), repr(result)
-            except socket.error, ex:
-                if ex[0] != errno.ECONNRESET:
+            except socket.error:
+                ex = sys.exc_info()[1]
+                if ex.args[0] != errno.ECONNRESET:
                     raise
         finally:
             timeout.cancel()

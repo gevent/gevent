@@ -24,10 +24,10 @@ def main():
         start = time.time()
         conn.sendall(data)
         spent = time.time() - start
-        print "%.2f MB/s" % (length / spent / 0x100000)
+        print ("%.2f MB/s" % (length / spent / 0x100000))
         spent_total += spent
 
-    print "~ %.2f MB/s" % (length * N / spent_total / 0x100000)
+    print ("~ %.2f MB/s" % (length * N / spent_total / 0x100000))
     server.stop()
 
 

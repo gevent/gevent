@@ -26,7 +26,8 @@ class Test(unittest.TestCase):
             try:
                 result = sock.recv(1024)
                 raise AssertionError('Expected timeout to be raised, instead recv() returned %r' % (result, ))
-            except socket.error, ex:
+            except socket.error:
+                ex = sys.exc_info()[1]
                 self.assertEqual(ex.args, ('timed out',))
                 self.assertEqual(str(ex), 'timed out')
                 self.assertEqual(ex[0], 'timed out')

@@ -41,7 +41,8 @@ class Test(greentest.TestCase):
                 raise g.exception
             try:
                 raise
-            except Exception, ex:
+            except Exception:
+                ex = sys.exc_info()[1]
                 assert ex is error, (ex, error)
 
     def test2(self):

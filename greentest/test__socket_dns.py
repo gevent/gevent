@@ -41,10 +41,10 @@ def _run(function, *args):
         result = function(*args)
         assert not isinstance(result, Exception), repr(result)
         return result
-    except MISMATCH_EXCEPTIONS, ex:
-        return ex
-    except (socket.error, UnicodeError), ex:
-        return ex
+    except MISMATCH_EXCEPTIONS:
+        return sys.exc_info()[1]
+    except (socket.error, UnicodeError):
+        return sys.exc_info()[1]
 
 
 def log_fcall(function, args):
@@ -161,7 +161,8 @@ class TestCase(greentest.TestCase):
                 self.assertEqual(repr(real_result), repr(gevent_result))
             else:
                 self.assertEqual(real_result, gevent_result)
-        except AssertionError, ex:
+        except AssertionError:
+            ex = sys.exc_info()[1]
             if good or self.assert_equal is not True:
                 self.warning("WARNING in %s: %s" % (self.testcasename, ex))
             else:

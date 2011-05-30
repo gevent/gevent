@@ -172,12 +172,13 @@ def bind_port(sock, host='', preferred_port=54321):
             if port == 0:
                 port = sock.getsockname()[1]
             return port
-        except socket.error, (err, msg):
+        except socket.error:
+            err = sys.exc_info()[1]
             if err != errno.EADDRINUSE:
                 raise
             print >>sys.__stderr__, \
                 '  WARNING: failed to listen on port %d, trying another' % port
-    raise TestFailed, 'unable to find port to listen on'
+    raise TestFailed('unable to find port to listen on')
 
 FUZZ = 1e-6
 
@@ -248,10 +249,9 @@ else:
             except UnicodeEncodeError:
                 pass
             else:
-                print \
-                'WARNING: The filename %r CAN be encoded by the filesystem.  ' \
-                'Unicode filename tests may not be effective' \
-                % TESTFN_UNICODE_UNENCODEABLE
+                sys.stderr.write('WARNING: The filename %r CAN be encoded by the filesystem.  '
+                'Unicode filename tests may not be effective'
+                % TESTFN_UNICODE_UNENCODEABLE)
 
 # Make sure we can write to TESTFN, try in /tmp if we can't
 fp = None
@@ -307,7 +307,7 @@ def vereq(a, b):
     """
 
     if not (a == b):
-        raise TestFailed, "%r == %r" % (a, b)
+        raise TestFailed("%r == %r" % (a, b))
 
 def sortdict(dict):
     "Like repr(dict), but in sorted order."
@@ -323,7 +323,7 @@ def check_syntax(statement):
     except SyntaxError:
         pass
     else:
-        print 'Missing SyntaxError: "%s"' % statement
+        print ('Missing SyntaxError: "%s"' % statement)
 
 def open_urlresource(url):
     import urllib, urlparse
@@ -390,7 +390,10 @@ _2G = 2 * _1G
 class _Dummy:
     def __getslice__(self, i, j):
         return j
-MAX_Py_ssize_t = _Dummy()[:]
+try:
+    MAX_Py_ssize_t = _Dummy()[:]
+except TypeError:
+    MAX_Py_ssize_t = sys.maxsize
 
 def set_memlimit(limit):
     import re
@@ -542,7 +545,7 @@ def run_doctest(module, verbosity=None):
     finally:
         sys.stdout = save_stdout
     if verbose:
-        print 'doctest (%s) ... %d tests with zero failures' % (module.__name__, t)
+        print ('doctest (%s) ... %d tests with zero failures' % (module.__name__, t))
     return f, t
 
 #=======================================================================
@@ -559,13 +562,13 @@ def threading_cleanup(num_active, num_limbo):
     _MAX_COUNT = 10
     count = 0
     while len(threading._active) != num_active and count < _MAX_COUNT:
-        print threading._active
+        print (threading._active)
         count += 1
         time.sleep(0.1)
 
     count = 0
     while len(threading._limbo) != num_limbo and count < _MAX_COUNT:
-        print threading._limbo
+        print (threading._limbo)
         count += 1
         time.sleep(0.1)
 
