@@ -144,6 +144,8 @@ def patch_socket(dns=True, aggressive=True):
         items = socket.__implements__[:]
         for function in dns_functions:
             items.remove(function)
+    # if we patch socket.socket then create_connection is already good
+    items.remove('create_connection')
     patch_module('socket', items=items)
     if aggressive:
         if 'ssl' not in socket.__implements__:
