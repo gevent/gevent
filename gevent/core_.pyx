@@ -2,6 +2,7 @@
 cimport cython
 cimport libev
 from python cimport *
+import sys
 
 
 __all__ = ['get_version',
@@ -140,6 +141,12 @@ cpdef _flags_to_list(unsigned int flags):
     if flags:
         result.append(flags)
     return result
+
+
+if sys.version_info[0] >= 3:
+    basestring = (bytes, str)
+else:
+    basestring = __builtins__.basestring
 
 
 cpdef unsigned int _flags_to_int(object flags) except? -1:
