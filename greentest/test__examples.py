@@ -70,7 +70,6 @@ class BaseTestServer(unittest.TestCase):
 
 
 class Test_httpserver(BaseTestServer):
-    path = 'httpserver.py'
     URL = 'http://localhost:8088'
     not_found_message = '<h1>Not Found</h1>'
 
@@ -200,6 +199,9 @@ class TestAllTested(unittest.TestCase):
         untested = set(examples) - set(simple_examples)
         untested = set(basename(path) for path in untested) - tests
         assert not untested, 'The following examples have not been tested: %s' % '\n'.join(untested)
+
+
+del Test_httpserver
 
 
 if __name__ == '__main__':
