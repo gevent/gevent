@@ -190,9 +190,8 @@ def _import(path):
     module, item = path.rsplit('.', 1)
     x = __import__(module)
     for attr in path.split('.')[1:]:
-        try:
-            x = getattr(x, attr)
-        except AttributeError:
+        x = getattr(x, attr, _NONE)
+        if x is _NONE:
             raise ImportError('cannot import name %r from %r' % (attr, x))
     return x
 
