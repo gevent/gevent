@@ -1,5 +1,5 @@
 import sys
-from gevent import select
+from gevent import select, socket
 import greentest
 
 
@@ -9,26 +9,28 @@ class TestSelect(greentest.GenericWaitTestCase):
         select.select([], [], [], timeout)
 
 
+if sys.platform != 'win32':
+
+    class TestSelectRead(greentest.GenericWaitTestCase):
+
+        def wait(self, timeout):
+            select.select([sys.stdin.fileno()], [], [], timeout)
+
+
 class TestSelectTypes(greentest.TestCase):
 
-    if sys.platform == 'win32':
+    def test_int(self):
+        sock = socket.socket()
+        select.select([int(sock.fileno())], [], [], 0.001)
 
-        def test_int(self):
-            import msvcrt
-            self.assertRaises(select.error, select.select, [msvcrt.get_osfhandle(1)], [], [], 0.001)
-            self.assertRaises(select.error, select.select, [int(msvcrt.get_osfhandle(1))], [], [], 0.001)
-
-        def test_long(self):
-            import msvcrt
-            self.assertRaises(IOError, select.select, [long(msvcrt.get_osfhandle(1))], [], [], 0.001)
-
+    try:
+        long
+    except NameError:
+        pass
     else:
-
-        def test_int(self):
-            select.select([1], [], [], 0.001)
-
         def test_long(self):
-            select.select([1L], [], [], 0.001)
+            sock = socket.socket()
+            select.select([long(sock.fileno())], [], [], 0.001)
 
     def test_string(self):
         self.switch_expected = False
