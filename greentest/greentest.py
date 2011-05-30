@@ -187,7 +187,7 @@ class TestCase(BaseTestCase):
                 if not self.switch_expected:
                     msg = '%s.%s switched but expected not to\n' % (type(self).__name__, self.testname)
             if msg:
-                print >> sys.stderr, 'WARNING: ' + msg
+                sys.stderr.write('WARNING: %s\n' % msg)
 
     @property
     def testname(self):
@@ -201,9 +201,14 @@ class TestCase(BaseTestCase):
     def modulename(self):
         test_method = getattr(self, self.testname)
         try:
-            return test_method.__func__.func_code.co_filename
+            func = test_method.__func__
         except AttributeError:
-            return test_method.im_func.func_code.co_filename
+            func = test_method.im_func
+
+        try:
+            return func.func_code.co_filename
+        except AttributeError:
+            return func.__code__.co_filename
 
     @property
     def fullname(self):
