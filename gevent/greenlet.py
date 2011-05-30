@@ -518,8 +518,7 @@ def killall(greenlets, exception=GreenletExit, block=True, timeout=None):
     loop = greenlets[0].loop
     if block:
         waiter = Waiter()
-        x = loop.callback()
-        x.start(_killall3, greenlets, exception, waiter)
+        loop.run_callback(_killall3, greenlets, exception, waiter)
         t = Timeout.start_new(timeout)
         try:
             alive = waiter.get()
