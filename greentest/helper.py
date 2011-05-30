@@ -46,8 +46,11 @@ def prepare_stdlib_test(filename):
     try:
         from test import test_support
     except ImportError:
-        sys.stderr.write('test.__file__ = %s\n' % test.__file__)
-        raise
+        try:
+            from test import support as test_support
+        except ImportError:
+            sys.stderr.write('test.__file__ = %s\n' % test.__file__)
+            raise
     test_support.use_resources = ContainsAll()
 
     name = os.path.splitext(os.path.basename(filename))[0].replace('_patched', '')
