@@ -63,7 +63,8 @@ class Test(greentest.TestCase):
         switcher.kill()
 
     def test_wait_read_invalid_switch(self):
-        p = gevent.spawn(util.wrap_errors(AssertionError, socket.wait_read), 0)
+        sock = socket.socket()
+        p = gevent.spawn(util.wrap_errors(AssertionError, socket.wait_read), sock.fileno())
         gevent.sleep(0)
         switcher = gevent.spawn(p.switch, None)
         result = p.get()
@@ -72,7 +73,8 @@ class Test(greentest.TestCase):
         switcher.kill()
 
     def test_wait_write_invalid_switch(self):
-        p = gevent.spawn(util.wrap_errors(AssertionError, socket.wait_write), 0)
+        sock = socket.socket()
+        p = gevent.spawn(util.wrap_errors(AssertionError, socket.wait_write), sock.fileno())
         gevent.sleep(0)
         switcher = gevent.spawn(p.switch, None)
         result = p.get()
