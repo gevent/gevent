@@ -230,7 +230,7 @@ Where /path/to/myapp.wsgi is a Python script that defines "application" callable
         except AttributeError:
             sys.exit("Could not find application in %s" % filename)
         server = WSGIServer((options.interface, options.port), application, spawn=options.spawn)
-        print 'Serving %s on %s:%s' % (filename, options.interface, options.port)
+        print ('Serving %s on %s:%s' % (filename, options.interface, options.port))
         server.serve_forever()
     else:
         sys.stderr.write(parser.format_help())

@@ -105,7 +105,7 @@ class HTTPResponse(object):
 
         if self.debuglevel > 0:
             for (k, v) in self.getheaders():
-                print 'header:', k, v
+                print ('header: %s %s' % (k, v))
 
     def read(self, amt=-1):
         return self._request.input_buffer.read(amt)
@@ -199,7 +199,7 @@ class HTTPConnection(object):
         if self.conn: return
 
         if self.debuglevel > 0:
-            print 'connect: (%s, %u)' % (self.host, self.port)
+            print ('connect: (%s, %u)' % (self.host, self.port))
 
         self.conn = core.http_connection.new(self.host, self.port, get_hub().reactor)
 
@@ -234,6 +234,6 @@ class HTTPConnection(object):
 
     def send(self, data):
         if self.debuglevel > 0:
-            print 'send:', repr(data)
+            print ('send: %r' % data)
 
         self.req.output_buffer.write(data)
