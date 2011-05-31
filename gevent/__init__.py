@@ -6,8 +6,8 @@ to provide a high-level synchronous API on top of libevent event loop.
 See http://www.gevent.org/ for the documentation.
 """
 
-version_info = (0, 14, 0)
-__version__ = '0.14.0dev'
+version_info = (1, 0, 0)
+__version__ = '1.0dev'
 
 __all__ = ['get_hub',
            'Greenlet',
