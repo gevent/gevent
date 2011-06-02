@@ -262,7 +262,11 @@ class TestDefaultSpawn(TestCase):
                     assert result.startswith('HTTP/1.0 500 Internal Server Error'), repr(result)
             except socket.error:
                 ex = sys.exc_info()[1]
-                if ex.args[0] != errno.ECONNRESET:
+                if ex.args[0] == 10053:
+                    pass # "established connection was aborted by the software in your host machine"
+                elif ex.args[0] == errno.ECONNRESET:
+                    pass
+                else:
                     raise
         finally:
             timeout.cancel()
