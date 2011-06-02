@@ -269,7 +269,11 @@ select_poll (EV_P_ ev_tstamp timeout)
 int inline_size
 select_init (EV_P_ int flags)
 {
+#ifdef _WIN32
+  backend_fudge  = 1e-3;
+#else
   backend_fudge  = 0.; /* posix says this is zero */
+#endif
   backend_modify = select_modify;
   backend_poll   = select_poll;
 
