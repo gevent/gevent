@@ -195,7 +195,8 @@ select_poll (EV_P_ ev_tstamp timeout)
        */
       if (errno == EINVAL)
         {
-          ev_sleep (timeout);
+          if (timeout)
+            ev_sleep (timeout >= 1e-3 ? timeout : 1e-3);
           return;
         }
       #endif
@@ -270,7 +271,7 @@ int inline_size
 select_init (EV_P_ int flags)
 {
 #ifdef _WIN32
-  backend_fudge  = 1e-3;
+  backend_fudge  = 1e-6;
 #else
   backend_fudge  = 0.; /* posix says this is zero */
 #endif
