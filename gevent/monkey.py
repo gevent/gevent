@@ -129,9 +129,6 @@ def patch_thread(threading=True, _threading_local=True):
         _threading_local.local = local
 
 
-dns_functions = ['getaddrinfo', 'getnameinfo', 'gethostbyname', 'gethostbyname_ex', 'gethostbyaddr']
-
-
 def patch_socket(dns=True, aggressive=True):
     """Replace the standard socket object with gevent's cooperative sockets.
 
@@ -140,7 +137,7 @@ def patch_socket(dns=True, aggressive=True):
     from gevent import socket
     items = socket.__implements__[:]
     if not dns:
-        for function in dns_functions:
+        for function in socket.__dns__:
             items.remove(function)
     # if we patch socket.socket then create_connection is already good
     items.remove('create_connection')
@@ -151,7 +148,8 @@ def patch_socket(dns=True, aggressive=True):
 
 
 def patch_dns():
-    patch_module('socket', items=dns_functions)
+    from gevent import socket
+    patch_module('socket', items=socket.__dns__)
 
 
 def patch_ssl():

@@ -33,15 +33,19 @@ as well as the constants from :mod:`socket` module are imported into this module
 
 # standard functions and classes that this module re-implements in a gevent-aware way:
 __implements__ = ['create_connection',
-                  'getaddrinfo',
-                  'gethostbyname',
-                  'gethostbyname_ex',
-                  'gethostbyaddr',
-                  'getnameinfo',
                   'socket',
                   'SocketType',
                   'fromfd',
                   'socketpair']
+
+__dns__ = ['getaddrinfo',
+           'gethostbyname',
+           'gethostbyname_ex',
+           'gethostbyaddr',
+           'getnameinfo',
+           'getfqdn']
+
+__implements__ += __dns__
 
 # non-standard functions that this module provides:
 __extensions__ = ['wait_read',
@@ -51,7 +55,6 @@ __extensions__ = ['wait_read',
 # standard functions and classes that this module re-imports
 __imports__ = ['error',
                'gaierror',
-               'getfqdn',
                'herror',
                'htonl',
                'htons',
@@ -656,6 +659,32 @@ def gethostbyaddr(ip_address):
 
 def getnameinfo(sockaddr, flags):
     return get_hub().resolver.getnameinfo(sockaddr, flags)
+
+
+def getfqdn(name=''):
+    """Get fully qualified domain name from name.
+
+    An empty argument is interpreted as meaning the local host.
+
+    First the hostname returned by gethostbyaddr() is checked, then
+    possibly existing aliases. In case no FQDN is available, hostname
+    from gethostname() is returned.
+    """
+    name = name.strip()
+    if not name or name == '0.0.0.0':
+        name = gethostname()
+    try:
+        hostname, aliases, ipaddrs = gethostbyaddr(name)
+    except error:
+        pass
+    else:
+        aliases.insert(0, hostname)
+        for name in aliases:
+            if '.' in name:
+                break
+        else:
+            name = hostname
+    return name
 
 
 try:
