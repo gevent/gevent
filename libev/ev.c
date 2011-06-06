@@ -872,14 +872,6 @@ ev_sleep (ev_tstamp delay)
     }
 }
 
-inline_speed int
-ev_timeout_to_ms (ev_tstamp timeout)
-{
-  int ms = timeout * 1000. + .999999;
-
-  return expect_true (ms) ? ms : timeout < 1e-6 ? 0 : 1;
-}
-
 /*****************************************************************************/
 
 #define MALLOC_ROUND 4096 /* prefer to allocate in chunks of this size, must be 2**n and >> 4 longs */
@@ -2515,14 +2507,14 @@ ev_run (EV_P_ int flags)
 
             if (timercnt)
               {
-                ev_tstamp to = ANHE_at (timers [HEAP0]) - mn_now + backend_fudge;
+                ev_tstamp to = ANHE_at (timers [HEAP0]) - mn_now + backend_mintime;
                 if (waittime > to) waittime = to;
               }
 
 #if EV_PERIODIC_ENABLE
             if (periodiccnt)
               {
-                ev_tstamp to = ANHE_at (periodics [HEAP0]) - ev_rt_now + backend_fudge;
+                ev_tstamp to = ANHE_at (periodics [HEAP0]) - ev_rt_now + backend_mintime;
                 if (waittime > to) waittime = to;
               }
 #endif
@@ -2536,8 +2528,8 @@ ev_run (EV_P_ int flags)
               {
                 sleeptime = io_blocktime - (mn_now - prev_mn_now);
 
-                if (sleeptime > waittime - backend_fudge)
-                  sleeptime = waittime - backend_fudge;
+                if (sleeptime > waittime - backend_mintime)
+                  sleeptime = waittime - backend_mintime;
 
                 if (expect_true (sleeptime > 0.))
                   {

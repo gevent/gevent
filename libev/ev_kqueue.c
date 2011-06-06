@@ -1,7 +1,7 @@
 /*
  * libev kqueue backend
  *
- * Copyright (c) 2007,2008,2009,2010 Marc Alexander Lehmann <libev@schmorp.de>
+ * Copyright (c) 2007,2008,2009,2010,2011 Marc Alexander Lehmann <libev@schmorp.de>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modifica-
@@ -161,9 +161,9 @@ kqueue_init (EV_P_ int flags)
 
   fcntl (backend_fd, F_SETFD, FD_CLOEXEC); /* not sure if necessary, hopefully doesn't hurt */
 
-  backend_fudge  = 0.;
-  backend_modify = kqueue_modify;
-  backend_poll   = kqueue_poll;
+  backend_mintime = 1e-9; /* apparently, they did the right thing in freebsd */
+  backend_modify  = kqueue_modify;
+  backend_poll    = kqueue_poll;
 
   kqueue_eventmax = 64; /* initial number of events receivable per poll */
   kqueue_events = (struct kevent *)ev_malloc (sizeof (struct kevent) * kqueue_eventmax);

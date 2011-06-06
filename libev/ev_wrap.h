@@ -10,7 +10,7 @@
 #define activecnt ((loop)->activecnt)
 #define loop_done ((loop)->loop_done)
 #define backend_fd ((loop)->backend_fd)
-#define backend_fudge ((loop)->backend_fudge)
+#define backend_mintime ((loop)->backend_mintime)
 #define backend_modify ((loop)->backend_modify)
 #define backend_poll ((loop)->backend_poll)
 #define anfds ((loop)->anfds)
@@ -107,7 +107,7 @@
 #undef activecnt
 #undef loop_done
 #undef backend_fd
-#undef backend_fudge
+#undef backend_mintime
 #undef backend_modify
 #undef backend_poll
 #undef anfds

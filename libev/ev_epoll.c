@@ -144,11 +144,13 @@ epoll_poll (EV_P_ ev_tstamp timeout)
   int i;
   int eventcnt;
 
+  if (expect_false (epoll_epermcnt))
+    timeout = 0.;
+
   /* epoll wait times cannot be larger than (LONG_MAX - 999UL) / HZ msecs, which is below */
   /* the default libev max wait time, however. */
   EV_RELEASE_CB;
-  eventcnt = epoll_wait (backend_fd, epoll_events, epoll_eventmax,
-                         epoll_epermcnt ? 0 : ev_timeout_to_ms (timeout));
+  eventcnt = epoll_wait (backend_fd, epoll_events, epoll_eventmax, timeout * 1e3);
   EV_ACQUIRE_CB;
 
   if (expect_false (eventcnt < 0))
@@ -234,9 +236,9 @@ epoll_init (EV_P_ int flags)
 
   fcntl (backend_fd, F_SETFD, FD_CLOEXEC);
 
-  backend_fudge  = 0.; /* kernel sources seem to indicate this to be zero */
-  backend_modify = epoll_modify;
-  backend_poll   = epoll_poll;
+  backend_mintime = 1./1024.; /* epoll does sometimes return early, this is just to avoid the worst */
+  backend_modify  = epoll_modify;
+  backend_poll    = epoll_poll;
 
   epoll_eventmax = 64; /* initial number of events receivable per poll */
   epoll_events = (struct epoll_event *)ev_malloc (sizeof (struct epoll_event) * epoll_eventmax);

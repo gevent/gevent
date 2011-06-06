@@ -1,7 +1,7 @@
 /*
  * libev select fd activity backend
  *
- * Copyright (c) 2007,2008,2009,2010 Marc Alexander Lehmann <libev@schmorp.de>
+ * Copyright (c) 2007,2008,2009,2010,2011 Marc Alexander Lehmann <libev@schmorp.de>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modifica-
@@ -196,7 +196,11 @@ select_poll (EV_P_ ev_tstamp timeout)
       if (errno == EINVAL)
         {
           if (timeout)
-            ev_sleep (timeout >= 1e-3 ? timeout : 1e-3);
+            {
+              unsigned long ms = timeout * 1e3;
+              Sleep (ms ? ms : 1);
+            }
+
           return;
         }
       #endif
@@ -270,13 +274,9 @@ select_poll (EV_P_ ev_tstamp timeout)
 int inline_size
 select_init (EV_P_ int flags)
 {
-#ifdef _WIN32
-  backend_fudge  = 1e-6;
-#else
-  backend_fudge  = 0.; /* posix says this is zero */
-#endif
-  backend_modify = select_modify;
-  backend_poll   = select_poll;
+  backend_mintime = 1e-6;
+  backend_modify  = select_modify;
+  backend_poll    = select_poll;
 
 #if EV_SELECT_USE_FD_SET
   vec_ri  = ev_malloc (sizeof (fd_set)); FD_ZERO ((fd_set *)vec_ri);
@@ -311,5 +311,4 @@ select_destroy (EV_P)
   ev_free (vec_eo);
   #endif
 }
-
 

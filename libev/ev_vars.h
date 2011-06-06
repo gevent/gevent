@@ -51,7 +51,7 @@ VARx(int, activecnt) /* total number of active events ("refcount") */
 VARx(EV_ATOMIC_T, loop_done)  /* signal by ev_break */
 
 VARx(int, backend_fd)
-VARx(ev_tstamp, backend_fudge) /* assumed typical timer resolution */
+VARx(ev_tstamp, backend_mintime) /* assumed typical timer resolution */
 VAR (backend_modify, void (*backend_modify)(EV_P_ int fd, int oev, int nev))
 VAR (backend_poll  , void (*backend_poll)(EV_P_ ev_tstamp timeout))
 
