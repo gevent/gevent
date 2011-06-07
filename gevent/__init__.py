@@ -24,6 +24,7 @@ __all__ = ['get_hub',
            'with_timeout',
            'getcurrent',
            'sleep',
+           'idle',
            'kill',
            'signal',
            'fork',
@@ -45,7 +46,7 @@ spawn_link = Greenlet.spawn_link
 spawn_link_value = Greenlet.spawn_link_value
 spawn_link_exception = Greenlet.spawn_link_exception
 from gevent.timeout import Timeout, with_timeout
-from gevent.hub import getcurrent, GreenletExit, spawn_raw, sleep, kill, signal
+from gevent.hub import getcurrent, GreenletExit, spawn_raw, sleep, idle, kill, signal
 try:
     from gevent.hub import fork
 except ImportError:

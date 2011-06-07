@@ -71,13 +71,28 @@ def sleep(seconds=0):
     """Put the current greenlet to sleep for at least *seconds*.
 
     *seconds* may be specified as an integer, or a float if fractional seconds
-    are desired. Calling sleep with *seconds* of 0 is the canonical way of
-    expressing a cooperative yield.
+    are desired.
+
+    If *seconds* is equal to or less than zero, yield control the other coroutines
+    without actually putting the process to sleep. The :class:`core.idle` watcher
+    with the highest priority is used to achieve that.
     """
-    if not seconds >= 0:
-        raise IOError(22, 'Invalid argument')
     hub = get_hub()
-    hub.wait(hub.loop.timer(seconds))
+    loop = hub.loop
+    if seconds <= 0:
+        watcher = loop.idle()
+        watcher.priority = loop.MAXPRI
+    else:
+        watcher = loop.timer(seconds)
+    hub.wait(watcher)
+
+
+def idle(priority=0):
+    hub = get_hub()
+    watcher = hub.loop.idle()
+    if priority:
+        watcher.priority = priority
+    hub.wait(watcher)
 
 
 def kill(greenlet, exception=GreenletExit):
