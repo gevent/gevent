@@ -3,6 +3,7 @@ import gevent
 from gevent import pool
 from gevent.event import Event
 import greentest
+import random
 
 
 class TestCoroutinePool(greentest.TestCase):
@@ -182,6 +183,12 @@ def sqr(x, wait=0.0):
     gevent.sleep(wait)
     return x * x
 
+
+def sqr_random_sleep(x):
+    gevent.sleep(random.random() * 0.1)
+    return x * x
+
+
 TIMEOUT1, TIMEOUT2, TIMEOUT3 = 0.082, 0.035, 0.14
 
 
@@ -242,12 +249,20 @@ class TestPool(greentest.TestCase):
             self.assertEqual(it.next(), i * i)
         self.assertRaises(StopIteration, it.next)
 
+    def test_imap_random(self):
+        it = self.pool.imap(sqr_random_sleep, range(10))
+        self.assertEqual(list(it), map(sqr, range(10)))
+
     def test_imap_unordered(self):
         it = self.pool.imap_unordered(sqr, range(1000))
         self.assertEqual(sorted(it), map(sqr, range(1000)))
 
         it = self.pool.imap_unordered(sqr, range(1000))
         self.assertEqual(sorted(it), map(sqr, range(1000)))
+
+    def test_imap_unordered_random(self):
+        it = self.pool.imap_unordered(sqr_random_sleep, range(10))
+        self.assertEqual(sorted(it), map(sqr, range(10)))
 
     def test_terminate(self):
         result = self.pool.map_async(gevent.sleep, [0.1] * ((self.size or 10) * 2))
