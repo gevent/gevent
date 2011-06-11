@@ -4,6 +4,7 @@ from gevent import pool
 from gevent.event import Event
 import greentest
 import random
+from greentest import ExpectedException
 
 
 class TestCoroutinePool(greentest.TestCase):
@@ -344,6 +345,21 @@ class TestSpawn(greentest.TestCase):
         self.assertEqual(len(p), 1)
         gevent.sleep(0.19)
         self.assertEqual(len(p), 0)
+
+
+class TestErrorInIterator(greentest.TestCase):
+    error_fatal = False
+
+    def test(self):
+        p = pool.Pool(3)
+        def iter():
+            yield 1
+            yield 2
+            raise ExpectedException
+        self.assertRaises(ExpectedException, p.map, lambda x: None, iter())
+        def unordered(*args):
+            return list(p.imap_unordered(*args))
+        self.assertRaises(ExpectedException, unordered, lambda x: None, iter())
 
 
 if __name__ == '__main__':
