@@ -22,7 +22,8 @@ assert __version__
 ares_embed = os.path.exists('c-ares')
 define_macros = []
 libraries = []
-ares_configure_command = './configure CONFIG_COMMANDS= CONFIG_FILES='
+ares_configure_command = [abspath('c-ares/configure'),
+                          'CONFIG_COMMANDS=', 'CONFIG_FILES=']
 
 
 if sys.platform == 'win32':
@@ -88,7 +89,8 @@ def make_universal_header(filename, *defines):
 
 def configure_ares():
     if need_configure_ares():
-        rc = os.system('cd c-ares && %s' % ares_configure_command)
+        os.chmod(ares_configure_command[0], 0755)  # pip loses permissions
+        rc = os.system('cd c-ares && %s' % ' '.join(ares_configure_command))
         if rc == 0 and sys.platform == 'darwin':
             make_universal_header('c-ares/ares_build.h', 'CARES_SIZEOF_LONG')
             make_universal_header('c-ares/ares_config.h', 'SIZEOF_LONG', 'SIZEOF_SIZE_T', 'SIZEOF_TIME_T')
