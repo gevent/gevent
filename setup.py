@@ -59,9 +59,11 @@ if os.path.exists('libev'):
 def need_configure_ares():
     if sys.platform == 'win32':
         return False
-    if 'Generated from ares_build.h.in by configure' not in read('c-ares/ares_build.h'):
-        return True
     if not os.path.exists('c-ares/ares_config.h'):
+        return True
+    if not os.path.exists('c-ares/ares_build.h'):
+        return True
+    if 'Generated from ares_build.h.in by configure' not in read('c-ares/ares_build.h'):
         return True
 
 
