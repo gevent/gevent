@@ -273,17 +273,17 @@ cdef public class loop [object PyGeventLoopObject, type PyGeventLoop_Type]:
         def __get__(self):
             return libev.EV_MINPRI
 
-    cpdef handle_error(self, where, type, value, tb):
+    cpdef handle_error(self, context, type, value, tb):
         cdef object handle_error
         cdef object error_handler = self.error_handler
         if error_handler is not None:
             # we do want to do getattr every time so that setting Hub.handle_error property just works
             handle_error = getattr(error_handler, 'handle_error', error_handler)
-            handle_error(where, type, value, tb)
+            handle_error(context, type, value, tb)
         else:
-            self._default_handle_error(where, type, value, tb)
+            self._default_handle_error(context, type, value, tb)
 
-    cpdef _default_handle_error(self, where, type, value, tb):
+    cpdef _default_handle_error(self, context, type, value, tb):
         # note: Hub sets its own error handler so this is not used by gevent
         # this is here to make core.loop usable without the rest of gevent
         import traceback

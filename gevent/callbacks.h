@@ -18,7 +18,7 @@ DEFINE_CALLBACKS
 
 static void gevent_signal_check(struct ev_loop *, void *, int);
 struct PyGeventLoopObject;
-static void gevent_handle_error(struct PyGeventLoopObject* loop, PyObject* where);
+static void gevent_handle_error(struct PyGeventLoopObject* loop, PyObject* context);
 
 #if defined(_WIN32)
 static void gevent_periodic_signal_check(struct ev_loop *, void *, int);

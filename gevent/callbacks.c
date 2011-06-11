@@ -1,4 +1,4 @@
-static void gevent_handle_error(struct PyGeventLoopObject* loop, PyObject* where) {
+static void gevent_handle_error(struct PyGeventLoopObject* loop, PyObject* context) {
     PyThreadState *tstate;
     PyObject *type, *value, *traceback, *result;
     tstate = PyThreadState_GET();
@@ -16,7 +16,7 @@ static void gevent_handle_error(struct PyGeventLoopObject* loop, PyObject* where
 
     PyErr_Clear();
 
-    result = ((struct __pyx_vtabstruct_6gevent_4core_loop *)loop->__pyx_vtab)->handle_error(loop, where, type, value, traceback, 0);
+    result = ((struct __pyx_vtabstruct_6gevent_4core_loop *)loop->__pyx_vtab)->handle_error(loop, context, type, value, traceback, 0);
 
     if (result) {
         Py_DECREF(result);
