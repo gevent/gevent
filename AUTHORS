@@ -28,16 +28,12 @@ and the contributors (ordered by the date of first contribution):
   Galfy Pundee
   Alexander Boudkar
   Damien Churchill
+  Tom Lynn
 
 Gevent is inspired by and uses some code from eventlet which was written by
 
   Bob Ipollito
   Donovan Preston
-
-The libevent wrappers are based on pyevent by
-
-  Dug Song
-  Martin Murray
 
 The win32util module is taken from Twisted.
 
