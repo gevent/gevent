@@ -287,11 +287,11 @@ class Hub(greenlet):
             core.set_exc_info(exc_type, exc_value)
 
     def wait(self, watcher):
-        watcher.start(getcurrent().switch, watcher, None)
+        unique = object()
+        watcher.start(getcurrent().switch, unique)
         try:
             result = self.switch()
-            assert isinstance(result, tuple) and result[0] is watcher, 'Invalid switch into %s: %r' % (getcurrent(), result)
-            return result
+            assert result is unique, 'Invalid switch into %s: %r' % (getcurrent(), result)
         finally:
             watcher.stop()
 
