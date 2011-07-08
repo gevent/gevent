@@ -90,7 +90,8 @@ def make_universal_header(filename, *defines):
 
 def configure_ares():
     if need_configure_ares():
-        os.chmod(ares_configure_command[0], 0755)  # pip loses permissions
+        # restore permissions
+        os.chmod(ares_configure_command[0], 493)  # 493 == 0755
         rc = os.system('cd c-ares && %s' % ' '.join(ares_configure_command))
         if rc == 0 and sys.platform == 'darwin':
             make_universal_header('c-ares/ares_build.h', 'CARES_SIZEOF_LONG')
