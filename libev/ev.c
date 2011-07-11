@@ -466,23 +466,77 @@ struct signalfd_siginfo
 #define EV_TV_SET(tv,t) do { tv.tv_sec = (long)t; tv.tv_usec = (long)((t - tv.tv_sec) * 1e6); } while (0)
 #define EV_TS_SET(ts,t) do { ts.tv_sec = (long)t; ts.tv_nsec = (long)((t - ts.tv_sec) * 1e9); } while (0)
 
-#if __GNUC__ >= 4
-# define expect(expr,value)         __builtin_expect ((expr),(value))
-# define noinline                   __attribute__ ((noinline))
-#else
-# define expect(expr,value)         (expr)
-# define noinline
-# if __STDC_VERSION__ < 199901L && __GNUC__ < 2
-#  define inline
-# endif
+/* the following are taken from libecb */
+/* ecb.h start */
+
+/* many compilers define _GNUC_ to some versions but then only implement
+ * what their idiot authors think are the "more important" extensions,
+ * causing enourmous grief in return for some better fake benchmark numbers.
+ * or so.
+ * we try to detect these and simply assume they are not gcc - if they have
+ * an issue with that they should have done it right in the first place.
+ */
+#ifndef ECB_GCC_VERSION
+  #if !defined(__GNUC_MINOR__) || defined(__INTEL_COMPILER) || defined(__SUNPRO_C) || defined(__SUNPRO_CC) || defined(__llvm__) || defined(__clang__)
+    #define ECB_GCC_VERSION(major,minor) 0
+  #else
+    #define ECB_GCC_VERSION(major,minor) (__GNUC__ > (major) || (__GNUC__ == (major) && __GNUC_MINOR__ >= (minor)))
+  #endif
 #endif
 
-#define expect_false(expr) expect ((expr) != 0, 0)
-#define expect_true(expr)  expect ((expr) != 0, 1)
-#define inline_size        static inline
+#if __cplusplus
+  #define ecb_inline static inline
+#elif ECB_GCC_VERSION(2,5)
+  #define ecb_inline static __inline__
+#elif ECB_C99
+  #define ecb_inline static inline
+#else
+  #define ecb_inline static
+#endif
+
+#if ECB_GCC_VERSION(3,1)
+  #define ecb_attribute(attrlist)        __attribute__(attrlist)
+  #define ecb_is_constant(expr)          __builtin_constant_p (expr)
+  #define ecb_expect(expr,value)         __builtin_expect ((expr),(value))
+  #define ecb_prefetch(addr,rw,locality) __builtin_prefetch (addr, rw, locality)
+#else
+  #define ecb_attribute(attrlist)
+  #define ecb_is_constant(expr)          0
+  #define ecb_expect(expr,value)         (expr)
+  #define ecb_prefetch(addr,rw,locality)
+#endif
+
+#define ecb_noinline   ecb_attribute ((__noinline__))
+#define ecb_noreturn   ecb_attribute ((__noreturn__))
+#define ecb_unused     ecb_attribute ((__unused__))
+#define ecb_const      ecb_attribute ((__const__))
+#define ecb_pure       ecb_attribute ((__pure__))
+
+#if ECB_GCC_VERSION(4,3)
+  #define ecb_artificial ecb_attribute ((__artificial__))
+  #define ecb_hot        ecb_attribute ((__hot__))
+  #define ecb_cold       ecb_attribute ((__cold__))
+#else
+  #define ecb_artificial
+  #define ecb_hot
+  #define ecb_cold
+#endif
+
+/* put around conditional expressions if you are very sure that the  */
+/* expression is mostly true or mostly false. note that these return */
+/* booleans, not the expression.                                     */
+#define ecb_expect_false(expr) ecb_expect (!!(expr), 0)
+#define ecb_expect_true(expr)  ecb_expect (!!(expr), 1)
+/* ecb.h end */
+
+#define expect_false(cond) ecb_expect_false (cond)
+#define expect_true(cond)  ecb_expect_true  (cond)
+#define noinline           ecb_noinline
+
+#define inline_size        ecb_inline
 
 #if EV_FEATURE_CODE
-# define inline_speed      static inline
+# define inline_speed      ecb_inline
 #else
 # define inline_speed      static noinline
 #endif
@@ -583,7 +637,7 @@ ev_floor (ev_tstamp v)
 # include <sys/utsname.h>
 #endif
 
-static unsigned int noinline
+static unsigned int noinline ecb_cold
 ev_linux_version (void)
 {
 #ifdef __linux
@@ -622,7 +676,7 @@ ev_linux_version (void)
 /*****************************************************************************/
 
 #if EV_AVOID_STDIO
-static void noinline
+static void noinline ecb_cold
 ev_printerr (const char *msg)
 {
   write (STDERR_FILENO, msg, strlen (msg));
@@ -631,13 +685,13 @@ ev_printerr (const char *msg)
 
 static void (*syserr_cb)(const char *msg);
 
-void
+void ecb_cold
 ev_set_syserr_cb (void (*cb)(const char *msg))
 {
   syserr_cb = cb;
 }
 
-static void noinline
+static void noinline ecb_cold
 ev_syserr (const char *msg)
 {
   if (!msg)
@@ -680,7 +734,7 @@ ev_realloc_emul (void *ptr, long size)
 
 static void *(*alloc)(void *ptr, long size) = ev_realloc_emul;
 
-void
+void ecb_cold
 ev_set_allocator (void *(*cb)(void *ptr, long size))
 {
   alloc = cb;
@@ -899,7 +953,7 @@ array_nextsize (int elem, int cur, int cnt)
   return ncur;
 }
 
-static noinline void *
+static void * noinline ecb_cold
 array_realloc (int elem, void *base, int *cur, int cnt)
 {
   *cur = array_nextsize (elem, *cur, cnt);
@@ -912,7 +966,7 @@ array_realloc (int elem, void *base, int *cur, int cnt)
 #define array_needsize(type,base,cur,cnt,init)			\
   if (expect_false ((cnt) > (cur)))				\
     {								\
-      int ocur_ = (cur);					\
+      int ecb_unused ocur_ = (cur);					\
       (base) = (type *)array_realloc				\
          (sizeof (type), (base), &(cur), (cnt));		\
       init ((base) + (ocur_), (cur) - ocur_);			\
@@ -1092,7 +1146,7 @@ fd_change (EV_P_ int fd, int flags)
 }
 
 /* the given fd is invalid/unusable, so make sure it doesn't hurt us anymore */
-inline_speed void
+inline_speed void ecb_cold
 fd_kill (EV_P_ int fd)
 {
   ev_io *w;
@@ -1105,7 +1159,7 @@ fd_kill (EV_P_ int fd)
 }
 
 /* check whether the given fd is actually valid, for error recovery */
-inline_size int
+inline_size int ecb_cold
 fd_valid (int fd)
 {
 #ifdef _WIN32
@@ -1116,7 +1170,7 @@ fd_valid (int fd)
 }
 
 /* called on EBADF to verify fds */
-static void noinline
+static void noinline ecb_cold
 fd_ebadf (EV_P)
 {
   int fd;
@@ -1128,7 +1182,7 @@ fd_ebadf (EV_P)
 }
 
 /* called on ENOMEM in select/poll to kill some fds and retry */
-static void noinline
+static void noinline ecb_cold
 fd_enomem (EV_P)
 {
   int fd;
@@ -1333,7 +1387,7 @@ static ANSIG signals [EV_NSIG - 1];
 
 #if EV_SIGNAL_ENABLE || EV_ASYNC_ENABLE
 
-static void noinline
+static void noinline ecb_cold
 evpipe_init (EV_P)
 {
   if (!ev_is_active (&pipe_w))
@@ -1365,32 +1419,42 @@ evpipe_init (EV_P)
     }
 }
 
-inline_size void
+inline_speed void
 evpipe_write (EV_P_ EV_ATOMIC_T *flag)
 {
   if (!*flag)
     {
-      int old_errno = errno; /* save errno because write might clobber it */
-      char dummy;
-
       *flag = 1;
 
-#if EV_USE_EVENTFD
-      if (evfd >= 0)
-        {
-          uint64_t counter = 1;
-          write (evfd, &counter, sizeof (uint64_t));
-        }
-      else
-#endif
-        /* win32 people keep sending patches that change this write() to send() */
-        /* and then run away. but send() is wrong, it wants a socket handle on win32 */
-        /* so when you think this write should be a send instead, please find out */
-        /* where your send() is from - it's definitely not the microsoft send, and */
-        /* tell me. thank you. */
-        write (evpipe [1], &dummy, 1);
+      pipe_write_skipped = 1;
 
-      errno = old_errno;
+      if (pipe_write_wanted)
+        {
+          int old_errno;
+
+          pipe_write_skipped = 0;
+
+          old_errno = errno; /* save errno because write will clobber it */
+
+#if EV_USE_EVENTFD
+          if (evfd >= 0)
+            {
+              uint64_t counter = 1;
+              write (evfd, &counter, sizeof (uint64_t));
+            }
+          else
+#endif
+            {
+              /* win32 people keep sending patches that change this write() to send() */
+              /* and then run away. but send() is wrong, it wants a socket handle on win32 */
+              /* so when you think this write should be a send instead, please find out */
+              /* where your send() is from - it's definitely not the microsoft send, and */
+              /* tell me. thank you. */
+              write (evpipe [1], &(evpipe [1]), 1);
+            }
+
+          errno = old_errno;
+        }
     }
 }
 
@@ -1401,19 +1465,24 @@ pipecb (EV_P_ ev_io *iow, int revents)
 {
   int i;
 
+  if (revents & EV_READ)
+    {
 #if EV_USE_EVENTFD
-  if (evfd >= 0)
-    {
-      uint64_t counter;
-      read (evfd, &counter, sizeof (uint64_t));
-    }
-  else
+      if (evfd >= 0)
+        {
+          uint64_t counter;
+          read (evfd, &counter, sizeof (uint64_t));
+        }
+      else
 #endif
-    {
-      char dummy;
-      /* see discussion in evpipe_write when you think this read should be recv in win32 */
-      read (evpipe [0], &dummy, 1);
+        {
+          char dummy;
+          /* see discussion in evpipe_write when you think this read should be recv in win32 */
+          read (evpipe [0], &dummy, 1);
+        }
     }
+
+  pipe_write_skipped = 0;
 
 #if EV_SIGNAL_ENABLE
   if (sig_pending)
@@ -1452,6 +1521,9 @@ ev_feed_signal (int signum)
   if (!EV_A)
     return;
 #endif
+
+  if (!ev_active (&pipe_w))
+    return;
 
   signals [signum - 1].pending = 1;
   evpipe_write (EV_A_ &sig_pending);
@@ -1593,20 +1665,20 @@ childcb (EV_P_ ev_signal *sw, int revents)
 # include "ev_select.c"
 #endif
 
-int
+int ecb_cold
 ev_version_major (void)
 {
   return EV_VERSION_MAJOR;
 }
 
-int
+int ecb_cold
 ev_version_minor (void)
 {
   return EV_VERSION_MINOR;
 }
 
 /* return true if we are running with elevated privileges and should ignore env variables */
-int inline_size
+int inline_size ecb_cold
 enable_secure (void)
 {
 #ifdef _WIN32
@@ -1617,7 +1689,7 @@ enable_secure (void)
 #endif
 }
 
-unsigned int
+unsigned int ecb_cold
 ev_supported_backends (void)
 {
   unsigned int flags = 0;
@@ -1631,7 +1703,7 @@ ev_supported_backends (void)
   return flags;
 }
 
-unsigned int
+unsigned int ecb_cold
 ev_recommended_backends (void)
 {
   unsigned int flags = ev_supported_backends ();
@@ -1653,7 +1725,7 @@ ev_recommended_backends (void)
   return flags;
 }
 
-unsigned int
+unsigned int ecb_cold
 ev_embeddable_backends (void)
 {
   int flags = EVBACKEND_EPOLL | EVBACKEND_KQUEUE | EVBACKEND_PORT;
@@ -1708,12 +1780,14 @@ ev_userdata (EV_P)
   return userdata;
 }
 
-void ev_set_invoke_pending_cb (EV_P_ void (*invoke_pending_cb)(EV_P))
+void
+ev_set_invoke_pending_cb (EV_P_ void (*invoke_pending_cb)(EV_P))
 {
   invoke_cb = invoke_pending_cb;
 }
 
-void ev_set_loop_release_cb (EV_P_ void (*release)(EV_P), void (*acquire)(EV_P))
+void
+ev_set_loop_release_cb (EV_P_ void (*release)(EV_P), void (*acquire)(EV_P))
 {
   release_cb = release;
   acquire_cb = acquire;
@@ -1721,7 +1795,7 @@ void ev_set_loop_release_cb (EV_P_ void (*release)(EV_P), void (*acquire)(EV_P))
 #endif
 
 /* initialise a loop structure, must be zero-initialised */
-static void noinline
+static void noinline ecb_cold
 loop_init (EV_P_ unsigned int flags)
 {
   if (!backend)
@@ -1759,27 +1833,29 @@ loop_init (EV_P_ unsigned int flags)
           && getenv ("LIBEV_FLAGS"))
         flags = atoi (getenv ("LIBEV_FLAGS"));
 
-      ev_rt_now         = ev_time ();
-      mn_now            = get_clock ();
-      now_floor         = mn_now;
-      rtmn_diff         = ev_rt_now - mn_now;
+      ev_rt_now          = ev_time ();
+      mn_now             = get_clock ();
+      now_floor          = mn_now;
+      rtmn_diff          = ev_rt_now - mn_now;
 #if EV_FEATURE_API
-      invoke_cb         = ev_invoke_pending;
+      invoke_cb          = ev_invoke_pending;
 #endif
 
-      io_blocktime      = 0.;
-      timeout_blocktime = 0.;
-      backend           = 0;
-      backend_fd        = -1;
-      sig_pending       = 0;
+      io_blocktime       = 0.;
+      timeout_blocktime  = 0.;
+      backend            = 0;
+      backend_fd         = -1;
+      sig_pending        = 0;
 #if EV_ASYNC_ENABLE
-      async_pending     = 0;
+      async_pending      = 0;
 #endif
+      pipe_write_skipped = 0;
+      pipe_write_wanted  = 0;
 #if EV_USE_INOTIFY
-      fs_fd             = flags & EVFLAG_NOINOTIFY ? -1 : -2;
+      fs_fd              = flags & EVFLAG_NOINOTIFY ? -1 : -2;
 #endif
 #if EV_USE_SIGNALFD
-      sigfd             = flags & EVFLAG_SIGNALFD  ? -2 : -1;
+      sigfd              = flags & EVFLAG_SIGNALFD  ? -2 : -1;
 #endif
 
       if (!(flags & EVBACKEND_MASK))
@@ -1814,7 +1890,7 @@ loop_init (EV_P_ unsigned int flags)
 }
 
 /* free up a loop structure */
-void
+void ecb_cold
 ev_loop_destroy (EV_P)
 {
   int i;
@@ -1954,12 +2030,7 @@ loop_fork (EV_P)
 
   if (ev_is_active (&pipe_w))
     {
-      /* this "locks" the handlers against writing to the pipe */
-      /* while we modify the fd vars */
-      sig_pending   = 1;
-#if EV_ASYNC_ENABLE
-      async_pending = 1;
-#endif
+      /* pipe_write_wanted must be false now, so modifying fd vars should be safe */
 
       ev_ref (EV_A);
       ev_io_stop (EV_A_ &pipe_w);
@@ -1987,7 +2058,7 @@ loop_fork (EV_P)
 
 #if EV_MULTIPLICITY
 
-struct ev_loop *
+struct ev_loop * ecb_cold
 ev_loop_new (unsigned int flags)
 {
   EV_P = (struct ev_loop *)ev_malloc (sizeof (struct ev_loop));
@@ -2005,7 +2076,7 @@ ev_loop_new (unsigned int flags)
 #endif /* multiplicity */
 
 #if EV_VERIFY
-static void noinline
+static void noinline ecb_cold
 verify_watcher (EV_P_ W w)
 {
   assert (("libev: watcher has invalid priority", ABSPRI (w) >= 0 && ABSPRI (w) < NUMPRI));
@@ -2014,7 +2085,7 @@ verify_watcher (EV_P_ W w)
     assert (("libev: pending watcher not on pending queue", pendings [ABSPRI (w)][w->pending - 1].w == w));
 }
 
-static void noinline
+static void noinline ecb_cold
 verify_heap (EV_P_ ANHE *heap, int N)
 {
   int i;
@@ -2029,7 +2100,7 @@ verify_heap (EV_P_ ANHE *heap, int N)
     }
 }
 
-static void noinline
+static void noinline ecb_cold
 array_verify (EV_P_ W *ws, int cnt)
 {
   while (cnt--)
@@ -2041,7 +2112,7 @@ array_verify (EV_P_ W *ws, int cnt)
 #endif
 
 #if EV_FEATURE_API
-void
+void ecb_cold
 ev_verify (EV_P)
 {
 #if EV_VERIFY
@@ -2117,7 +2188,7 @@ ev_verify (EV_P)
 #endif
 
 #if EV_MULTIPLICITY
-struct ev_loop *
+struct ev_loop * ecb_cold
 #else
 int
 #endif
@@ -2326,7 +2397,7 @@ periodics_reify (EV_P)
 
 /* simply recalculate all periodics */
 /* TODO: maybe ensure that at least one event happens when jumping forward? */
-static void noinline
+static void noinline ecb_cold
 periodics_reschedule (EV_P)
 {
   int i;
@@ -2349,7 +2420,7 @@ periodics_reschedule (EV_P)
 #endif
 
 /* adjust all timers by a given offset */
-static void noinline
+static void noinline ecb_cold
 timers_reschedule (EV_P_ ev_tstamp adjust)
 {
   int i;
@@ -2501,20 +2572,23 @@ ev_run (EV_P_ int flags)
         /* update time to cancel out callback processing overhead */
         time_update (EV_A_ 1e100);
 
-        if (expect_true (!(flags & EVRUN_NOWAIT || idleall || !activecnt)))
+        /* from now on, we want a pipe-wake-up */
+        pipe_write_wanted = 1;
+
+        if (expect_true (!(flags & EVRUN_NOWAIT || idleall || !activecnt || pipe_write_skipped)))
           {
             waittime = MAX_BLOCKTIME;
 
             if (timercnt)
               {
-                ev_tstamp to = ANHE_at (timers [HEAP0]) - mn_now + backend_mintime;
+                ev_tstamp to = ANHE_at (timers [HEAP0]) - mn_now;
                 if (waittime > to) waittime = to;
               }
 
 #if EV_PERIODIC_ENABLE
             if (periodiccnt)
               {
-                ev_tstamp to = ANHE_at (periodics [HEAP0]) - ev_rt_now + backend_mintime;
+                ev_tstamp to = ANHE_at (periodics [HEAP0]) - ev_rt_now;
                 if (waittime > to) waittime = to;
               }
 #endif
@@ -2522,6 +2596,11 @@ ev_run (EV_P_ int flags)
             /* don't let timeouts decrease the waittime below timeout_blocktime */
             if (expect_false (waittime < timeout_blocktime))
               waittime = timeout_blocktime;
+
+            /* at this point, we NEED to wait, so we have to ensure */
+            /* to pass a minimum nonzero value to the backend */
+            if (expect_false (waittime < backend_mintime))
+              waittime = backend_mintime;
 
             /* extra check because io_blocktime is commonly 0 */
             if (expect_false (io_blocktime))
@@ -2545,6 +2624,15 @@ ev_run (EV_P_ int flags)
         assert ((loop_done = EVBREAK_RECURSE, 1)); /* assert for side effect */
         backend_poll (EV_A_ waittime);
         assert ((loop_done = EVBREAK_CANCEL, 1)); /* assert for side effect */
+
+        pipe_write_wanted = 0;
+
+        if (pipe_write_skipped)
+          {
+            assert (("libev: pipe_w not active, but pipe not written", ev_is_active (&pipe_w)));
+            ev_feed_event (EV_A_ &pipe_w, EV_CUSTOM);
+          }
+
 
         /* update ev_rt_now, do magic */
         time_update (EV_A_ waittime + sleeptime);
@@ -3208,7 +3296,7 @@ infy_cb (EV_P_ ev_io *w, int revents)
     }
 }
 
-inline_size void
+inline_size void ecb_cold
 ev_check_2625 (EV_P)
 {
   /* kernels < 2.6.25 are borked
@@ -3843,7 +3931,7 @@ ev_once (EV_P_ int fd, int events, ev_tstamp timeout, void (*cb)(int revents, vo
 /*****************************************************************************/
 
 #if EV_WALK_ENABLE
-void
+void ecb_cold
 ev_walk (EV_P_ int types, void (*cb)(EV_P_ int type, void *w))
 {
   int i, j;

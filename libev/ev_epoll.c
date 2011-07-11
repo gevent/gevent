@@ -170,8 +170,12 @@ epoll_poll (EV_P_ ev_tstamp timeout)
       int got  = (ev->events & (EPOLLOUT | EPOLLERR | EPOLLHUP) ? EV_WRITE : 0)
                | (ev->events & (EPOLLIN  | EPOLLERR | EPOLLHUP) ? EV_READ  : 0);
 
-      /* check for spurious notification */
-      /* we assume that fd is always in range, as we never shrink the anfds array */
+      /*
+       * check for spurious notification.
+       * this only finds spurious notifications on egen updates
+       * other spurious notifications will be found by epoll_ctl, below
+       * we assume that fd is always in range, as we never shrink the anfds array
+       */
       if (expect_false ((uint32_t)anfds [fd].egen != (uint32_t)(ev->data.u64 >> 32)))
         {
           /* recreate kernel state */
@@ -183,8 +187,15 @@ epoll_poll (EV_P_ ev_tstamp timeout)
         {
           anfds [fd].emask = want;
 
-          /* we received an event but are not interested in it, try mod or del */
-          /* I don't think we ever need MOD, but let's handle it anyways */
+          /*
+           * we received an event but are not interested in it, try mod or del
+           * this often happens because we optimistically do not unregister fds
+           * when we are no longer interested in them, but also when we get spurious
+           * notifications for fds from another process. this is partially handled
+           * above with the gencounter check (== our fd is not the event fd), and
+           * partially here, when epoll_ctl returns an error (== a child has the fd
+           * but we closed it).
+           */
           ev->events = (want & EV_READ  ? EPOLLIN  : 0)
                      | (want & EV_WRITE ? EPOLLOUT : 0);
 

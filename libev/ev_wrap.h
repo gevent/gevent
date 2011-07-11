@@ -25,6 +25,8 @@
 #define evfd ((loop)->evfd)
 #define evpipe ((loop)->evpipe)
 #define pipe_w ((loop)->pipe_w)
+#define pipe_write_wanted ((loop)->pipe_write_wanted)
+#define pipe_write_skipped ((loop)->pipe_write_skipped)
 #define curpid ((loop)->curpid)
 #define postfork ((loop)->postfork)
 #define vec_ri ((loop)->vec_ri)
@@ -85,7 +87,6 @@
 #define fs_2625 ((loop)->fs_2625)
 #define fs_hash ((loop)->fs_hash)
 #define sig_pending ((loop)->sig_pending)
-#define nosigmask ((loop)->nosigmask)
 #define sigfd ((loop)->sigfd)
 #define sigfd_w ((loop)->sigfd_w)
 #define sigfd_set ((loop)->sigfd_set)
@@ -122,6 +123,8 @@
 #undef evfd
 #undef evpipe
 #undef pipe_w
+#undef pipe_write_wanted
+#undef pipe_write_skipped
 #undef curpid
 #undef postfork
 #undef vec_ri
@@ -182,7 +185,6 @@
 #undef fs_2625
 #undef fs_hash
 #undef sig_pending
-#undef nosigmask
 #undef sigfd
 #undef sigfd_w
 #undef sigfd_set
