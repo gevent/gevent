@@ -320,21 +320,28 @@ class Hub(greenlet):
         # to return an unexpected value
         raise LoopExit
 
-    def join(self):
+    def join(self, timeout=None):
         """Wait for the event loop to finish. Exits only when there are
         no more spawned greenlets, started servers, active timeouts or watchers.
         """
         assert getcurrent() is self.parent, "only possible from MAIN greenlet"
-        if not self or self.dead:
-            if _threadlocal.__dict__.get('hub') is self:
-                _threadlocal.__dict__.pop('hub')
-            self.run = None
-        else:
+        if self.dead:
+            return
+
+        if timeout is not None:
+            timeout = self.loop.timer(timeout)
+            timeout.start(getcurrent().switch)
+            timeout.loop.unref()
+
+        try:
             try:
                 self.switch()
             except LoopExit:
-                pass
-        self.loop.error_handler = None  # break the ref cycle
+                return True
+        finally:
+            if timeout is not None and timeout.active:
+                timeout.loop.ref()
+                timeout.stop()
 
     def _get_resolver(self):
         if self._resolver is None:
