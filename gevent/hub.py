@@ -235,7 +235,7 @@ class Hub(greenlet):
     loop_class = 'gevent.core.loop'
     resolver_class = ['gevent.resolver_ares.Resolver',
                       'gevent.socket.BlockingResolver']
-    pformat = 'pprint.pformat'
+    format_context = 'pprint.pformat'
 
     def __init__(self, loop=None, default=None):
         greenlet.__init__(self)
@@ -249,26 +249,29 @@ class Hub(greenlet):
             loop_class = _import(self.loop_class)
             self.loop = loop_class(flags=loop, default=default)
         self._resolver = None
-        self.pformat = _import(self.pformat)
+        self.format_context = _import(self.format_context)
 
-    def handle_error(self, where, type, value, tb):
-        if not issubclass(type, self.NOT_ERROR):
-            traceback.print_exception(type, value, tb)
-        del tb
-        if where is None or issubclass(type, self.SYSTEM_ERROR):
+    def handle_error(self, context, type, value, tb):
+        self.print_exception(context, type, value, tb)
+        if context is None or issubclass(type, self.SYSTEM_ERROR):
             current = getcurrent()
             if current is self or current is self.parent:
                 self.parent.throw(type, value)
             else:
                 self.loop.run_callback(self.parent.throw, type, value)
-        else:
-            if not isinstance(where, str):
+
+    def print_exception(self, context, type, value, tb):
+        if issubclass(type, self.NOT_ERROR):
+            return
+        traceback.print_exception(type, value, tb)
+        if context is not None:
+            if not isinstance(context, str):
                 try:
-                    where = self.pformat(where)
+                    context = self.format_context(context)
                 except:
                     traceback.print_exc()
-                    where = repr(where)
-            sys.stderr.write('Ignoring %s in %s\n\n' % (getattr(type, '__name__', 'exception'), where, ))
+                    context = repr(context)
+            sys.stderr.write('%s failed with %s\n\n' % (context, getattr(type, '__name__', 'exception'), ))
 
     def switch(self):
         cur = getcurrent()
