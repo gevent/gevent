@@ -352,9 +352,11 @@ cdef public class loop [object PyGeventLoopObject, type PyGeventLoop_Type]:
     property activecnt:
 
         def __get__(self):
+            res = None
             IFDEF_EV_STANDALONE()
-            return self._ptr.activecnt
+            res = self._ptr.activecnt
             ENDIF()
+            return res
 
     def io(self, int fd, int events):
         return io(self, fd, events)
