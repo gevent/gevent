@@ -71,6 +71,9 @@ class Queue(object):
     def _get(self):
         return self.queue.popleft()
 
+    def _peek(self):
+        return self.queue[0]
+
     def _put(self, item):
         self.queue.append(item)
 
@@ -199,6 +202,45 @@ class Queue(object):
         raise the :class:`Empty` exception.
         """
         return self.get(False)
+
+    def peek(self, block=True, timeout=None):
+        """Return an item from the queue without removing it.
+
+        If optional args *block* is true and *timeout* is ``None`` (the default),
+        block if necessary until an item is available. If *timeout* is a positive number,
+        it blocks at most *timeout* seconds and raises the :class:`Empty` exception
+        if no item was available within that time. Otherwise (*block* is false), return
+        an item if one is immediately available, else raise the :class:`Empty` exception
+        (*timeout* is ignored in that case).
+        """
+        if self.qsize():
+            return self._peek()
+        elif self.hub is getcurrent():
+            # special case to make peek(False) runnable in the mainloop greenlet
+            # there are no items in the queue; try to fix the situation by unlocking putters
+            while self.putters:
+                self.putters.pop().put_and_switch()
+                if self.qsize():
+                    return self._peek()
+            raise Empty
+        elif block:
+            waiter = Waiter()
+            timeout = Timeout.start_new(timeout, Empty)
+            try:
+                self.getters.add(waiter)
+                if self.putters:
+                    self._schedule_unlock()
+                result = waiter.get()
+                assert result is waiter, 'Invalid switch into Queue.peek: %r' % (result, )
+                return self._peek()
+            finally:
+                self.getters.discard(waiter)
+                timeout.cancel()
+        else:
+            raise Empty
+
+    def peek_nowait(self):
+        return self.peek(False)
 
     def _unlock(self):
         while True:
