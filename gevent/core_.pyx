@@ -320,6 +320,14 @@ cdef public class loop [object PyGeventLoopObject, type PyGeventLoop_Type]:
     def update_now(self):
         libev.ev_now_update(self._ptr)
 
+    def __repr__(self):
+        args = (self.__class__.__name__, id(self), self.default, self.backend)
+        result = '<%s at 0x%x default=%r backend=%r' % args
+        activecnt = getattr(self, 'activecnt', None)
+        if activecnt is not None:
+            result += ' activecnt=%r' % activecnt
+        return result + '>'
+
     property default:
 
         def __get__(self):
