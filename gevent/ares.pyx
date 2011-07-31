@@ -391,7 +391,7 @@ cdef public class channel [object PyGeventAresChannelObject, type PyGeventAresCh
     cpdef _getnameinfo(self, object callback, tuple sockaddr, int flags):
         if not self.channel:
             raise get_socket_gaierror()(cares.ARES_EDESTRUCTION, 'this ares channel has been destroyed')
-        cdef char* hostp
+        cdef char* hostp = NULL
         cdef int port = 0
         cdef int flowinfo = 0
         cdef int scope_id = 0
