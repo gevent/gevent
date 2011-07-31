@@ -32,7 +32,7 @@ static void gevent_handle_error(struct PyGeventLoopObject* loop, PyObject* conte
 }
 
 
-static inline void gevent_check_signals(struct PyGeventLoopObject* loop) {
+static CYTHON_INLINE void gevent_check_signals(struct PyGeventLoopObject* loop) {
     PyErr_CheckSignals();
     if (PyErr_Occurred()) gevent_handle_error(loop, Py_None);
 }
