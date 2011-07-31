@@ -131,25 +131,25 @@ if hasattr(socket, 'ssl'):
         return sock
 
 
+def get_port():
+    tempsock = socket.socket()
+    tempsock.bind(('', 0))
+    port = tempsock.getsockname()[1]
+    tempsock.close()
+    return port
+
+
 class TestCreateConnection(greentest.TestCase):
 
     def test(self):
-        tempsock1 = socket.socket()
-        tempsock1.bind(('', 0))
-        source_port = tempsock1.getsockname()[1]
-        tempsock2 = socket.socket()
-        tempsock2.bind(('', 0))
-        tempsock2.getsockname()[1]
-        tempsock1.close()
-        del tempsock1
-        tempsock2.close()
-        del tempsock2
         try:
-            socket.create_connection(('localhost', 4), timeout=30, source_address=('', source_port))
+            socket.create_connection(('localhost', get_port()), timeout=30, source_address=('', get_port()))
         except socket.error:
             ex = sys.exc_info()[1]
             if 'refused' not in str(ex).lower():
                 raise
+        else:
+            raise AssertionError('create_connection did not raise socket.error as expected')
 
 
 if __name__ == '__main__':
