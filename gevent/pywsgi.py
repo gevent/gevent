@@ -12,6 +12,7 @@ from urllib import unquote
 from gevent import socket
 import gevent
 from gevent.server import StreamServer
+from gevent import server
 from gevent.hub import GreenletExit
 
 
@@ -527,6 +528,7 @@ class WSGIServer(StreamServer):
         else:
             self.log = log
         self.set_environ(environ)
+        self.set_max_accept()
 
     def set_environ(self, environ=None):
         if environ is not None:
@@ -541,6 +543,13 @@ class WSGIServer(StreamServer):
             self.environ.update(environ_update)
         if self.environ.get('wsgi.errors') is None:
             self.environ['wsgi.errors'] = sys.stderr
+
+    def set_max_accept(self):
+        if self.max_accept is None:
+            if self.environ.get('wsgi.multiprocess'):
+                self.max_accept = 1
+            else:
+                self.max_accept = server.DEFAULT_MAX_ACCEPT
 
     def get_environ(self):
         return self.environ.copy()
