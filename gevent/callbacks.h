@@ -9,8 +9,7 @@
     DEFINE_CALLBACK(idle, Idle);       \
     DEFINE_CALLBACK(prepare, Prepare); \
     DEFINE_CALLBACK(fork, Fork);       \
-    DEFINE_CALLBACK(async, Async);     \
-    DEFINE_CALLBACK(child, Child);
+    DEFINE_CALLBACK(async, Async);
 
 
 DEFINE_CALLBACKS

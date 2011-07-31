@@ -379,8 +379,8 @@ cdef public class loop [object PyGeventLoopObject, type PyGeventLoop_Type]:
     def async(self):
         return async(self)
 
-    def child(self, int pid, bint trace=0):
-        return child(self, pid, trace)
+    #def child(self, int pid, bint trace=0):
+    #    return child(self, pid, trace)
 
     def callback(self):
         return callback(self)
@@ -591,12 +591,11 @@ cdef public class async(watcher) [object PyGeventAsyncObject, type PyGeventAsync
     INIT(async)
 
 
-cdef public class child(watcher) [object PyGeventChildObject, type PyGeventChild_Type]:
-
-    WATCHER(child)
-
-    INIT(child, ``, int pid, bint trace=0'', ``, pid, trace'')
-
+#cdef public class child(watcher) [object PyGeventChildObject, type PyGeventChild_Type]:
+#
+#    WATCHER(child)
+#
+#    INIT(child, ``, int pid, bint trace=0'', ``, pid, trace'')
 
 
 cdef public class callback(watcher) [object PyGeventCallbackObject, type PyGeventCallback_Type]:
