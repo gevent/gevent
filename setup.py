@@ -31,17 +31,27 @@ if sys.platform == 'win32':
     define_macros += [('FD_SETSIZE', '1024'), ('_WIN32', '1')]
 
 
+def expand(*lst):
+    result = []
+    for item in lst:
+        for name in sorted(glob(item)):
+            result.append(name)
+    return result
+
+
 CORE = Extension(name='gevent.core',
                  sources=['gevent/gevent.core.c'],
                  include_dirs=['libev'],
                  libraries=libraries,
-                 define_macros=define_macros)
+                 define_macros=define_macros,
+                 depends=expand('gevent/callbacks.*', 'gevent/libev*.h', 'libev/*.*'))
 
 ARES = Extension(name='gevent.ares',
                  sources=['gevent/gevent.ares.c'],
                  include_dirs=['c-ares'],
                  libraries=libraries,
-                 define_macros=define_macros)
+                 define_macros=define_macros,
+                 depends=expand('gevent/dnshelper.c', 'gevent/cares_*.*'))
 ARES.optional = True
 
 
