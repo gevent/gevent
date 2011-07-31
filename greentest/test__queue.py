@@ -3,6 +3,7 @@ import gevent
 from gevent.hub import get_hub
 from gevent import util
 from gevent import queue
+from gevent.queue import Empty, Full
 from gevent.event import AsyncResult
 
 
@@ -55,7 +56,7 @@ class TestQueue(TestCase):
         assert p.get(timeout=0) == "OK"
 
     def test_zero_max_size(self):
-        q = queue.Queue(0)
+        q = queue.Channel()
 
         def sender(evt, q):
             q.put('hi')
@@ -192,7 +193,7 @@ class TestQueue(TestCase):
 class TestChannel(TestCase):
 
     def test_send(self):
-        channel = queue.Queue(0)
+        channel = queue.Channel()
 
         events = []
 
@@ -212,7 +213,7 @@ class TestChannel(TestCase):
         g.get()
 
     def test_wait(self):
-        channel = queue.Queue(0)
+        channel = queue.Channel()
         events = []
 
         def another_greenlet():
@@ -255,8 +256,8 @@ class TestNoWait(TestCase):
 
         run_callback = get_hub().loop.run_callback
 
-        run_callback(store_result, util.wrap_errors(Exception, q.put_nowait), 2)
-        run_callback(store_result, util.wrap_errors(Exception, q.put_nowait), 3)
+        run_callback(store_result, util.wrap_errors(Full, q.put_nowait), 2)
+        run_callback(store_result, util.wrap_errors(Full, q.put_nowait), 3)
         gevent.sleep(0)
         assert len(result) == 2, result
         assert result[0] == None, result
@@ -272,8 +273,8 @@ class TestNoWait(TestCase):
 
         run_callback = get_hub().loop.run_callback
 
-        run_callback(store_result, util.wrap_errors(Exception, q.get_nowait))
-        run_callback(store_result, util.wrap_errors(Exception, q.get_nowait))
+        run_callback(store_result, util.wrap_errors(Empty, q.get_nowait))
+        run_callback(store_result, util.wrap_errors(Empty, q.get_nowait))
         gevent.sleep(0)
         assert len(result) == 2, result
         assert result[0] == 4, result
@@ -282,7 +283,26 @@ class TestNoWait(TestCase):
     # get_nowait must work from the mainloop
     def test_get_nowait_unlock(self):
         result = []
-        q = queue.Queue(0)
+        q = queue.Queue(1)
+        p = gevent.spawn(q.put, 5)
+
+        def store_result(func, *args):
+            result.append(func(*args))
+
+        assert q.empty(), q
+        gevent.sleep(0)
+        assert q.full(), q
+        get_hub().loop.run_callback(store_result, q.get_nowait)
+        gevent.sleep(0)
+        assert q.empty(), q
+        assert result == [5], result
+        assert p.ready(), p
+        assert p.dead, p
+        assert q.empty(), q
+
+    def test_get_nowait_unlock_channel(self):
+        result = []
+        q = queue.Channel()
         p = gevent.spawn(q.put, 5)
 
         def store_result(func, *args):
@@ -293,7 +313,7 @@ class TestNoWait(TestCase):
         gevent.sleep(0)
         assert q.empty(), q
         assert q.full(), q
-        get_hub().loop.run_callback(store_result, util.wrap_errors(Exception, q.get_nowait))
+        get_hub().loop.run_callback(store_result, q.get_nowait)
         gevent.sleep(0)
         assert q.empty(), q
         assert q.full(), q
@@ -305,23 +325,23 @@ class TestNoWait(TestCase):
     # put_nowait must work from the mainloop
     def test_put_nowait_unlock(self):
         result = []
-        q = queue.Queue(0)
+        q = queue.Queue()
         p = gevent.spawn(q.get)
 
         def store_result(func, *args):
             result.append(func(*args))
 
         assert q.empty(), q
-        assert q.full(), q
+        assert not q.full(), q
         gevent.sleep(0)
         assert q.empty(), q
-        assert q.full(), q
-        get_hub().loop.run_callback(store_result, util.wrap_errors(Exception, q.put_nowait), 10)
+        assert not q.full(), q
+        get_hub().loop.run_callback(store_result, q.put_nowait, 10)
         assert not p.ready(), p
         gevent.sleep(0)
         assert result == [None], result
         assert p.ready(), p
-        assert q.full(), q
+        assert not q.full(), q
         assert q.empty(), q
 
 
