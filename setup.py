@@ -111,7 +111,7 @@ def configure_ares():
 
 
 if ares_embed:
-    ARES.sources += sorted(glob('c-ares/*.c'))
+    ARES.sources += expand('c-ares/*.c')
     if sys.platform == 'win32':
         ARES.libraries += ['advapi32']
         ARES.define_macros += [('CARES_STATICLIB', '')]
@@ -123,15 +123,17 @@ if ares_embed:
     ARES.define_macros += [('CARES_EMBED', '')]
 
 
+def make(done=[]):
+    if not done:
+        if os.system('make'):
+            sys.exit(1)
+        done.append(1)
+
+
 class my_build_ext(build_ext):
 
-    make_run = []
-
     def gevent_prepare(self, ext):
-        if not self.make_run:
-            if os.system('make'):
-                sys.exit(1)
-            self.make_run.append(1)
+        make()
         configure = getattr(ext, 'configure', None)
         if configure:
             configure()
