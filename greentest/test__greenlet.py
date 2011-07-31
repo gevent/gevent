@@ -575,7 +575,7 @@ class TestBasic(greentest.TestCase):
 
         g = gevent.Greenlet(func, 0.01, return_value=5)
         g.link(lambda x: link_test.append(x))
-        assert not g
+        assert not g, bool(g)
         assert not g.dead
         assert not g.started
         assert not g.ready()
@@ -584,7 +584,7 @@ class TestBasic(greentest.TestCase):
         assert g.exception is None
 
         g.start()
-        assert not g
+        assert g  # changed
         assert not g.dead
         assert g.started  # changed
         assert not g.ready()
@@ -593,7 +593,7 @@ class TestBasic(greentest.TestCase):
         assert g.exception is None
 
         gevent.sleep(0.001)
-        assert g  # changed
+        assert g
         assert not g.dead
         assert g.started
         assert not g.ready()
