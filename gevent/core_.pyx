@@ -168,6 +168,24 @@ cpdef unsigned int _flags_to_int(object flags) except? -1:
     return result
 
 
+cdef str _str_hex(object flag):
+    if isinstance(flag, (int, long)):
+        return hex(flag)
+    return str(flag)
+
+
+cpdef _check_flags(unsigned int flags):
+    cdef list as_list
+    flags &= libev.EVBACKEND_MASK
+    if not flags:
+        return
+    if not (flags & libev.EVBACKEND_ALL):
+        raise ValueError('Invalid value for backend: 0x%x' % flags)
+    if not (flags & libev.ev_supported_backends()):
+        as_list = [_str_hex(x) for x in _flags_to_list(flags)]
+        raise ValueError('Unsupported backend: %s' % '|'.join(as_list))
+
+
 cpdef _events_to_str(int events):
     cdef list result = []
     cdef int c_flag
@@ -215,6 +233,7 @@ cdef public class loop [object PyGeventLoopObject, type PyGeventLoop_Type]:
             self._ptr = <libev.ev_loop*>ptr
         else:
             c_flags = _flags_to_int(flags)
+            _check_flags(c_flags)
             if default:
                 self._ptr = libev.ev_default_loop(c_flags)
                 if not self._ptr:
