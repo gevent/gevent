@@ -241,7 +241,7 @@ class Hub(greenlet):
         greenlet.__init__(self)
         if hasattr(loop, 'run'):
             if default is not None:
-                raise TypeError("Unexpected argument: 'default'")
+                raise TypeError("Unexpected argument: default")
             self.loop = loop
         else:
             if default is None:
