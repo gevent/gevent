@@ -11,6 +11,9 @@ from gevent.socket import EWOULDBLOCK
 __all__ = ['StreamServer']
 
 
+DEFAULT_MAX_ACCEPT = 100
+
+
 class StreamServer(BaseServer):
     """A generic TCP server. Accepts connections on a listening socket and spawns user-provided *handle*
     for each connection with 2 arguments: the client socket and the client address.
@@ -37,7 +40,10 @@ class StreamServer(BaseServer):
     # Sets the maximum number of consecutive accepts that a process may perform on
     # a single wake up. High values give higher priority to high connection rates,
     # while lower values give higher priority to already established connections.
-    max_accept = 100
+    # Default is 100. Note, that in case of multiple working processes on the same
+    # listening value, it should be set to a lower value. (pywsgi.WSGIServer sets it
+    # to 1 when environ["wsgi.multiprocess"] is true)
+    max_accept = None
 
     # the number of seconds to sleep in case there was an error in accept() call
     # for consecutive errors the delay will double until it reaches max_delay
@@ -91,6 +97,8 @@ class StreamServer(BaseServer):
 
     def start_accepting(self):
         if self._accept_event is None:
+            if self.max_accept is None:
+                self.max_accept = DEFAULT_MAX_ACCEPT
             self._accept_event = self.loop.io(self.socket.fileno(), 1)
             self._accept_event.start(self._do_accept)
 
