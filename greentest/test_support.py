@@ -173,8 +173,7 @@ def bind_port(sock, host='', preferred_port=54321):
                 port = sock.getsockname()[1]
             return port
         except socket.error:
-            err = sys.exc_info()[1]
-            if err != errno.EADDRINUSE:
+            if sys.exc_info()[1].args[0] != errno.EADDRINUSE:
                 raise
             print >>sys.__stderr__, \
                 '  WARNING: failed to listen on port %d, trying another' % port
