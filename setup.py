@@ -64,7 +64,7 @@ def need_configure_ares():
         return True
     if not os.path.exists('c-ares/ares_build.h'):
         return True
-    if 'Generated from ares_build.h.in by configure' not in read('c-ares/ares_build.h'):
+    if 'Generated from ares_build.h.in by configure' not in read('c-ares/ares_build.h', 100):
         return True
 
 
@@ -219,9 +219,9 @@ class BuildFailed(Exception):
     pass
 
 
-def read(name):
+def read(name, *args):
     try:
-        return open(join(dirname(__file__), name)).read()
+        return open(join(dirname(__file__), name)).read(*args)
     except OSError:
         return ''
 
