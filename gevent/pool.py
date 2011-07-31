@@ -40,11 +40,7 @@ class Group(object):
         self._empty_event.set()
 
     def __repr__(self):
-        try:
-            classname = self.__class__.__name__
-        except AttributeError:
-            classname = 'Group'  # XXX check if 2.4 really uses this line
-        return '<%s at %s %s>' % (classname, hex(id(self)), self.greenlets)
+        return '<%s at 0x%x %s>' % (self.__class__.__name__, id(self), self.greenlets)
 
     def __len__(self):
         return len(self.greenlets)
