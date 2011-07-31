@@ -139,7 +139,7 @@ def replace_in_file(filename, old, new, check=True):
 
 def run_cython_core(cython_command):
     if need_update('gevent/core.pyx', 'gevent/core_.pyx'):
-        system('m4 gevent/core_.pyx > core.pyx && mv core.pyx gevent/')
+        system('m4 -P gevent/core_.pyx > core.pyx && mv core.pyx gevent/')
     if need_update('gevent/gevent.core.c', 'gevent/core.p*x*', 'gevent/libev.pxd'):
         if 0 == system('%s gevent/core.pyx -o gevent.core.c && mv gevent.core.* gevent/' % (cython_command, )):
             replace_in_file('gevent/gevent.core.c', '\n\n#endif /* Py_PYTHON_H */', '\n#include "callbacks.c"\n#endif /* Py_PYTHON_H */')

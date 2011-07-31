@@ -391,12 +391,12 @@ cdef public class loop [object PyGeventLoopObject, type PyGeventLoop_Type]:
         return result
 
 
-define(INCREF, ``if self._incref == 0:
+m4_define(INCREF, ``if self._incref == 0:
             self._incref = 1
             Py_INCREF(<PyObjectPtr>self)'')
 
 
-define(WATCHER_BASE, `cdef public loop loop
+m4_define(WATCHER_BASE, `cdef public loop loop
     cdef object _callback
     cdef public tuple args
     cdef readonly int _incref   # 1 - increfed, 0 - not increfed
@@ -445,27 +445,27 @@ define(WATCHER_BASE, `cdef public loop loop
         INCREF')
 
 
-define(ACTIVE, `property active:
+m4_define(ACTIVE, `property active:
 
         def __get__(self):
             return True if libev.ev_is_active(&self._watcher) else False')
 
 
-define(START, `def start(self, object callback, *args):
+m4_define(START, `def start(self, object callback, *args):
         self.callback = callback
         self.args = args
         libev.ev_$1_start(self.loop._ptr, &self._watcher)
         INCREF')
 
 
-define(WATCHER, `WATCHER_BASE($1)
+m4_define(WATCHER, `WATCHER_BASE($1)
 
     START($1)
 
     ACTIVE($1)')
 
 
-define(INIT, `def __init__(self, loop loop$2):
+m4_define(INIT, `def __init__(self, loop loop$2):
         libev.ev_$1_init(&self._watcher, <void *>gevent_callback_$1$3)
         self.loop = loop
         self._incref = 0')
