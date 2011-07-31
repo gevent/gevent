@@ -55,7 +55,6 @@ if os.path.exists('libev'):
                            ('EV_EMBED_ENABLE', '0'),
                            ('EV_CHILD_ENABLE', '0'),
                            ("EV_PERIODIC_ENABLE", '0')]
-    #CORE.gcc_options = ['-Wno-unused-variable', '-Wno-unused-result']  # disable warnings from ev.c
 
 
 def need_configure_ares():
