@@ -12,7 +12,7 @@ greenlets in the pool has already reached the limit, until there is a free slot.
 import sys
 from bisect import insort_right
 
-from gevent.hub import GreenletExit, getcurrent
+from gevent.hub import GreenletExit, getcurrent, kill as _kill
 from gevent.greenlet import joinall, Greenlet
 from gevent.timeout import Timeout
 from gevent.event import Event
@@ -113,7 +113,12 @@ class Group(object):
                 while self.greenlets:
                     for greenlet in list(self.greenlets):
                         if greenlet not in self.dying:
-                            greenlet.kill(exception, block=False)
+                            try:
+                                kill = greenlet.kill
+                            except AttributeError:
+                                _kill(greenlet, exception)
+                            else:
+                                kill(exception, block=False)
                             self.dying.add(greenlet)
                     if not block:
                         break
