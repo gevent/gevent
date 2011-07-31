@@ -251,6 +251,14 @@ class Hub(greenlet):
         self._resolver = None
         self.format_context = _import(self.format_context)
 
+    def __repr__(self):
+        args = (self.__class__.__name__, id(self), self.loop)
+        if self._resolver is not None:
+            args = args + (self._resolver, )
+            return '<%s at 0x%x loop=%r resolver=%r>' % args
+        else:
+            return '<%s at 0x%x loop=%r>' % args
+
     def handle_error(self, context, type, value, tb):
         self.print_exception(context, type, value, tb)
         if context is None or issubclass(type, self.SYSTEM_ERROR):
