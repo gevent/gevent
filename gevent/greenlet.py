@@ -141,9 +141,12 @@ class Greenlet(greenlet):
         self._notifier = loop.callback()
         self._start_event = loop.callback()
 
+    def __nonzero__(self):
+        return self._start_event.pending or greenlet.__nonzero__(self)
+
     @property
     def started(self):
-        return self._start_event.pending or bool(self)
+        return self._start_event.pending or greenlet.__nonzero__(self)
 
     def ready(self):
         """Return true if and only if the greenlet has finished execution."""
