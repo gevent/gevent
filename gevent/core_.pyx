@@ -28,9 +28,6 @@ cdef extern from "callbacks.h":
 
 cdef extern from *:
     int FD_SETSIZE
-    cdef void IFDEF_WINDOWS "#if defined(_WIN32) //" ()
-    cdef void IFDEF_EV_STANDALONE "#if defined(EV_STANDALONE) //" ()
-    cdef void ENDIF "#endif //" ()
     int ioctlsocket(int, int, unsigned long*)
     int FIONREAD
 
@@ -221,14 +218,16 @@ cdef public class loop [object PyGeventLoopObject, type PyGeventLoop_Type]:
     cdef libev.ev_loop* _ptr
     cdef public object error_handler
     cdef libev.ev_prepare _signal_checker
+#ifdef _WIN32
     cdef libev.ev_timer _periodic_signal_checker
+#endif
 
     def __init__(self, object flags=None, object default=True, size_t ptr=0):
         cdef unsigned int c_flags
         libev.ev_prepare_init(&self._signal_checker, <void*>gevent_signal_check)
-        IFDEF_WINDOWS()
+#ifdef _WIN32
         libev.ev_timer_init(&self._periodic_signal_checker, <void*>gevent_periodic_signal_check, 0.3, 0.3)
-        ENDIF()
+#endif
         if ptr:
             self._ptr = <libev.ev_loop*>ptr
         else:
@@ -240,10 +239,10 @@ cdef public class loop [object PyGeventLoopObject, type PyGeventLoop_Type]:
                     raise SystemError("ev_default_loop(%s) failed" % (c_flags, ))
                 libev.ev_prepare_start(self._ptr, &self._signal_checker)
                 libev.ev_unref(self._ptr)
-                IFDEF_WINDOWS()
+#ifdef _WIN32
                 libev.ev_timer_start(self._ptr, &self._periodic_signal_checker)
                 libev.ev_unref(self._ptr)
-                ENDIF()
+#endif
             else:
                 self._ptr = libev.ev_loop_new(c_flags)
                 if not self._ptr:
@@ -253,11 +252,11 @@ cdef public class loop [object PyGeventLoopObject, type PyGeventLoop_Type]:
         if libev.ev_is_active(&self._signal_checker):
             libev.ev_ref(self._ptr)
             libev.ev_prepare_stop(self._ptr, &self._signal_checker)
-        IFDEF_WINDOWS()
+#ifdef _WIN32
         if libev.ev_is_active(&self._periodic_signal_checker):
             libev.ev_ref(self._ptr)
             libev.ev_timer_stop(self._ptr, &self._periodic_signal_checker)
-        ENDIF()
+#endif
 
     def destroy(self):
         if self._ptr:
@@ -376,14 +375,12 @@ cdef public class loop [object PyGeventLoopObject, type PyGeventLoop_Type]:
                     return value
             return backend
 
+#ifdef EV_STANDALONE
     property activecnt:
 
         def __get__(self):
-            res = None
-            IFDEF_EV_STANDALONE()
-            res = self._ptr.activecnt
-            ENDIF()
-            return res
+            return self._ptr.activecnt
+#endif
 
     def io(self, int fd, int events):
         return io(self, fd, events)

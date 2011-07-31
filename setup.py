@@ -45,6 +45,9 @@ ARES = Extension(name='gevent.ares',
 ARES.optional = True
 
 
+ext_modules = [CORE, ARES]
+
+
 if os.path.exists('libev'):
     CORE.define_macros += [('EV_STANDALONE', '1'),
                            ('EV_COMMON', ''),  # we don't use void* data
@@ -110,70 +113,15 @@ if ares_embed:
     ARES.define_macros += [('CARES_EMBED', '')]
 
 
-def need_update(destination, *source):
-    if not os.path.exists(destination):
-        sys.stderr.write('Creating %s\n' % destination)
-        return True
-    dest_mtime = os.stat(destination).st_mtime
-    source = source + ('setup.py', )
-    for pattern in source:
-        for filename in glob(pattern):
-            if os.stat(filename).st_mtime - dest_mtime > 1:
-                sys.stderr.write('Updating %s (changed: %s)\n' % (destination, filename))
-                return True
-
-
-def system(command):
-    sys.stderr.write(command + '\n')
-    return os.system(command)
-
-
-def replace_in_file(filename, old, new, check=True):
-    olddata = open(filename).read()
-    newdata = olddata.replace(old, new)
-    if check:
-        assert olddata != newdata, 'replacement in %s failed' % filename
-    open(filename, 'w').write(newdata)
-
-
-def run_cython_core(cython_command):
-    if need_update('gevent/core.pyx', 'gevent/core_.pyx'):
-        system('m4 -P gevent/core_.pyx > core.pyx && mv core.pyx gevent/')
-    if need_update('gevent/gevent.core.c', 'gevent/core.p*x*', 'gevent/libev.pxd'):
-        if 0 == system('%s gevent/core.pyx -o gevent.core.c && mv gevent.core.* gevent/' % (cython_command, )):
-            replace_in_file('gevent/gevent.core.c', '\n\n#endif /* Py_PYTHON_H */', '\n#include "callbacks.c"\n#endif /* Py_PYTHON_H */')
-            short_path = 'gevent/'
-            full_path = join(os.getcwd(), short_path)
-            replace_in_file('gevent/gevent.core.c', short_path, full_path, check=False)
-            replace_in_file('gevent/gevent.core.h', short_path, full_path, check=False)
-    if need_update('gevent/gevent.core.c', 'gevent/callbacks.*', 'gevent/libev*.h', 'libev/*.*'):
-        os.system('touch gevent/gevent.core.c')
-
-
-def run_cython_ares(cython_command):
-    if need_update('gevent/gevent.ares.c', 'gevent/ares.pyx'):
-        system('%s gevent/ares.pyx -o gevent.ares.c && mv gevent.ares.* gevent/' % cython_command)
-    if need_update('gevent/gevent.ares.c', 'gevent/dnshelper.c', 'gevent/inet_ntop.c', 'c-ares/*.*'):
-        os.system('touch gevent/gevent.ares.c')
-
-
-CORE.run_cython = run_cython_core
-ARES.run_cython = run_cython_ares
-
-
 class my_build_ext(build_ext):
-    user_options = (build_ext.user_options
-                    + [("cython=", None, "path to the cython executable")])
 
-    def initialize_options(self):
-        build_ext.initialize_options(self)
-        self.cython = "cython"
+    make_run = []
 
     def gevent_prepare(self, ext):
-        if self.cython:
-            run_cython = getattr(ext, 'run_cython', None)
-            if run_cython:
-                run_cython(self.cython)
+        if not self.make_run:
+            if os.system('make'):
+                sys.exit(1)
+            self.make_run.append(1)
         configure = getattr(ext, 'configure', None)
         if configure:
             configure()
@@ -226,23 +174,6 @@ def read(name, *args):
         return ''
 
 
-ext_modules = [CORE, ARES]
-warnings = []
-
-def warn(message):
-    message += '\n'
-    sys.stderr.write(message)
-    warnings.append(message)
-
-
-ARES.disabled_why = None
-for filename in ARES.sources:
-    if not os.path.exists(filename):
-        ARES.disabled_why = '%s does not exist' % filename
-        ext_modules.remove(ARES)
-        break
-
-
 def run_setup(ext_modules):
     setup(
         name='gevent',
@@ -272,17 +203,12 @@ def run_setup(ext_modules):
 
 
 if __name__ == '__main__':
-    if sys.argv[1:] == ['cython']:
-        CORE.run_cython('cython')
-        ARES.run_cython('cython')
-    else:
-        try:
-            run_setup(ext_modules)
-        except BuildFailed:
-            if ARES not in ext_modules:
-                raise
-            ext_modules.remove(ARES)
-            ARES.disabled_why = 'failed to build'
-            run_setup(ext_modules)
-    if ARES.disabled_why:
-        sys.stderr.write('\nWARNING: The gevent.ares extension has been disabled because %s.\n' % ARES.disabled_why)
+    try:
+        run_setup(ext_modules)
+    except BuildFailed:
+        if ARES not in ext_modules:
+            raise
+        ext_modules.remove(ARES)
+        run_setup(ext_modules)
+    if ARES not in ext_modules:
+        sys.stderr.write('\nWARNING: The gevent.ares extension has been disabled.\n')
