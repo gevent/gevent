@@ -56,7 +56,12 @@ class Group(object):
         return iter(self.greenlets)
 
     def add(self, greenlet):
-        greenlet.rawlink(self.discard)
+        try:
+            rawlink = greenlet.rawlink
+        except AttributeError:
+            pass  # non-Greenlet greenlet, like MAIN
+        else:
+            rawlink(self.discard)
         self.greenlets.add(greenlet)
         self._empty_event.clear()
 
