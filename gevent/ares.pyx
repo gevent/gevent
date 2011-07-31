@@ -358,9 +358,9 @@ cdef public class channel [object PyGeventAresChannelObject, type PyGeventAresCh
     def gethostbyname(self, object callback, char* name, int family=AF_INET):
         if not self.channel:
             raise get_socket_gaierror()(cares.ARES_EDESTRUCTION, 'this ares channel has been destroyed')
-        # if family == AF_INET, send request for AF_INET
-        # if family == AF_UNSPEC, send request for AF_INET6 for AF_INET6 then for AF_INET if the former fails
-        # if family == AF_INET6, the bundled c-ares sends requests for AF_INET6 only whereas the stock c-ares
+        # when family == AF_INET, send request for AF_INET
+        # when family == AF_UNSPEC, send request for AF_INET6 for AF_INET6 then for AF_INET if the former fails
+        # when family == AF_INET6, the bundled c-ares sends requests for AF_INET6 only whereas the stock c-ares
         #                        behaves the same as AS_UNSPEC
         # note that for file lookups still AF_INET can be returned for AF_INET6 request
         cdef object arg = (self, callback)
