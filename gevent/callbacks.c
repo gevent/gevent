@@ -1,3 +1,5 @@
+#ifdef Py_PYTHON_H
+
 static void gevent_handle_error(struct PyGeventLoopObject* loop, PyObject* context) {
     PyThreadState *tstate;
     PyObject *type, *value, *traceback, *result;
@@ -156,4 +158,6 @@ static void gevent_periodic_signal_check(struct ev_loop *_loop, void *watcher, i
     GIL_RELEASE;
 }
 
-#endif
+#endif  /* _WIN32 */
+
+#endif  /* Py_PYTHON_H */
