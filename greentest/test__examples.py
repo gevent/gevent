@@ -31,6 +31,10 @@ print ('\n'.join(examples))
 
 def make_test(path):
 
+    if sys.platform == 'win32' and os.path.basename(path) in ('geventsendfile.py', 'processes.py'):
+        print 'Ignoring', path
+        return
+
     if ' ' in path:
         path = '"%s"' % path
 
@@ -53,7 +57,8 @@ def make_test(path):
 for example in simple_examples:
     test = make_test(example)
     globals()[test.__name__] = test
-    print ('Added %s' % test.__name__)
+    if test is not None:
+        print ('Added %s' % test.__name__)
     del test
 
 
