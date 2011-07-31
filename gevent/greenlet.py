@@ -71,8 +71,11 @@ class GreenletLink(object):
     Can be called only from main loop.
     """
     __slots__ = ['greenlet']
+    _stacklevel = 3
 
     def __init__(self, greenlet):
+        import warnings
+        warnings.warn('linking to greenlet is deprecated', DeprecationWarning, stacklevel=self._stacklevel)
         self.greenlet = greenlet
 
     def __call__(self, source):
@@ -105,6 +108,7 @@ class SuccessGreenletLink(GreenletLink):
     Can be called only from main loop.
     """
     __slots__ = []
+    _stacklevel = 4
 
     def __call__(self, source):
         if source.successful():
@@ -118,6 +122,7 @@ class FailureGreenletLink(GreenletLink):
     Can be called only from main loop.
     """
     __slots__ = []
+    _stacklevel = 4
 
     def __call__(self, source):
         if not source.successful():
