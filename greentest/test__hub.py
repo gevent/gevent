@@ -80,24 +80,6 @@ class TestSleep(greentest.GenericWaitTestCase):
     def test_simple(self):
         gevent.sleep(0)
 
-    def test_negative(self):
-        self.switch_expected = False
-        self.assertRaises(IOError, gevent.sleep, -1)
-        if sys.platform != 'win32':
-            from time import sleep as real_sleep
-            try:
-                real_sleep(-0.1)
-            except IOError:
-                real_ex = sys.exc_info()[1]
-        else:
-            # XXX real_sleep(-0.1) hangs on win32
-            real_ex = "[Errno 22] Invalid argument"
-        try:
-            gevent.sleep(-0.1)
-        except IOError:
-            gevent_ex = sys.exc_info()[1]
-        self.assertEqual(str(gevent_ex), str(real_ex))
-
 
 class TestWaiterGet(greentest.GenericWaitTestCase):
 
