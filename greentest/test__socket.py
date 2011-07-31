@@ -148,7 +148,7 @@ class TestCreateConnection(greentest.TestCase):
             socket.create_connection(('localhost', 4), timeout=30, source_address=('', source_port))
         except socket.error:
             ex = sys.exc_info()[1]
-            if 'connection refused' not in str(ex).lower():
+            if 'refused' not in str(ex).lower():
                 raise
 
 
