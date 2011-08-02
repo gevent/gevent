@@ -8,6 +8,8 @@ from gevent.core import io, loop
 __all__ = ['channel']
 
 
+TIMEOUT = 1
+
 DEF EV_READ = 1
 DEF EV_WRITE = 2
 
@@ -224,6 +226,7 @@ cdef public class channel [object PyGeventAresChannelObject, type PyGeventAresCh
     cdef public object loop
     cdef void* channel
     cdef public dict _watchers
+    cdef public object _timer
 
     def __init__(self, object loop, flags=None, timeout=None, tries=None, ndots=None,
                  udp_port=None, tcp_port=None, servers=None):
@@ -257,6 +260,7 @@ cdef public class channel [object PyGeventAresChannelObject, type PyGeventAresCh
         result = cares.ares_init_options(&channel, &options, optmask)
         if result:
             raise get_socket_gaierror()(result, strerror(result))
+        self._timer = loop.timer(TIMEOUT, TIMEOUT)
         self._watchers = {}
         self.channel = channel
         try:
@@ -267,12 +271,17 @@ cdef public class channel [object PyGeventAresChannelObject, type PyGeventAresCh
             self.destroy()
             raise
 
+    def __repr__(self):
+        args = (self.__class__.__name__, id(self), self._timer, len(self._watchers))
+        return '<%s at 0x%x _timer=%r _watchers[%s]>' % args
+
     def destroy(self):
         if self.channel:
             # XXX ares_library_cleanup?
             cares.ares_destroy(self.channel)
             self.channel = NULL
             self._watchers.clear()
+            self._timer.stop()
             self.loop = None
 
     def __dealloc__(self):
@@ -341,8 +350,14 @@ cdef public class channel [object PyGeventAresChannelObject, type PyGeventAresCh
         else:
             watcher.stop()
             self._watchers.pop(socket, None)
+            if not self._watchers:
+                self._timer.stop()
             return
         watcher.start(self._process_fd, EVENTS, watcher)
+        self._timer.again(self._on_timer)
+
+    def _on_timer(self):
+        cares.ares_process_fd(self.channel, cares.ARES_SOCKET_BAD, cares.ARES_SOCKET_BAD)
 
     def _process_fd(self, int events, object watcher):
         if not self.channel:
