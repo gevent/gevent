@@ -9,7 +9,7 @@ __all__ = ['channel']
 
 
 DEF EV_READ = 1
-DEF EV_WRITE = 1
+DEF EV_WRITE = 2
 
 
 cdef extern from "dnshelper.c":
