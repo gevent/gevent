@@ -4,6 +4,84 @@ Changelog
 .. currentmodule:: gevent
 
 
+Release 1.0dev1
+---------------
+
+TODO:
+- gevent.http?
+- gevent.httplib?
+- gevent.wsgi? (Currently gevent/wsgi.py imports classes from gevent/pywsgi.py)
+
+
+Backward-incompatible changes:
+
+- Dropped support for Python 2.4.
+- `Queue(0)` is now equivalent to an unbound queue and raises :exc:`DeprecationError`. Use :class:`gevent.queue.Channel` if you need a channel.
+- Deprecated ability to passing a greenlet instance to :meth:`Greenlet.link`, :meth:`Greenlet.link_value` and :meth:`Greenlet.link_exception`.
+- All of :mod:`gevent.core` has been rewritten and interface is incompatible.
+- Removed deprecated :class:`util.lazy_property` property.
+- Removed :mod:`gevent.dns` module.
+- Removed deprecated gevent.sslold module
+- Removed deprecated gevent.rawgreenlet module
+- Removed deprecated name `GreenletSet` which used to be alias for :class:`Group`.
+
+Release highlights:
+
+- The :mod:`gevent.core` module now wraps libev's API and is not compatible with gevent 0.x.
+- Added a concept of pluggable event loops. By default gevent.core.loop is used, which is a wrapper around libev.
+- Added a concept of pluggable name resolvers. By default a resolver based on c-ares library is used.
+- Added support for multiple OS threads, each new thread will get its own Hub instance with its own event loop.
+- The release now includes and embeds the dependencies: libev and c-ares.
+- The standard :mod:`signal` works now as expected.
+- The unhandled errors are now handled uniformely by `Hub.handle_error` function.
+- Added :class:`Channel` class to :mod:`gevent.queue` module. It is equivalent to `Queue(0)` in gevent 0.x, which is deprecated now. 
+- Added method :meth:`peek` to :class:`Queue` class.
+- Added :func:`idle` function which blocks until the event loop is idle.
+- Added a way to gracefully shutdown the application by waiting for all outstanding greenlets/servers/watchers: :meth:`Hub.join`.
+- Added new :mod:`gevent.ares` C extension which wraps `c-ares` and provides asynchronous DNS resolver.
+- Added new :mod:`gevent.resolver_ares` module provides synchronous API on top of :mod:`gevent.ares`.
+
+The :mod:`gevent.socket` module:
+
+- DNS functions now use c-ares library rather than libevent-dns. This fixes a number of problems with name resolving:
+  - Issue #2: DNS resolver no longer breaks after `fork()`. You still need to call :func:`gevent.fork` (`os.fork` is monkey
+    patched with it if `monkey.patch_all()` was called).
+  - DNS resolver no longer ignores `/etc/resolv.conf` and `/etc/hosts`.
+- The following functions were added to socket module
+  - gethostbyname_ex
+  - getnameinfo
+  - geyhostbyadd
+  - getfqdn
+- Removed undocumented bind_and_listen and tcp_listener
+
+The :class:`Hub` object:
+
+- Added :meth:`join` method which waits until the event loop exits or optional timeout expires.
+- Added :meth:`wait` method which waits until a watcher has got an event.
+- Added :meth:`handle_error` method which is called by all of gevent in case of unhandled exception.
+- Added :meth:`print_exception` method which is called by `handle_error` to print the exception traceback.
+
+The :class:`Greenlet` objects:
+
+- Added `__nonzero__` implementation that returns `True` after greenlet was started until it's dead.
+  Previously greenlet was `False` after `start()` until it was first switched to.
+
+The mod:`gevent.pool` module:
+
+- It is now possible to add raw greenlets to the pool.
+- The :meth:`map` and :meth:`imap` methods now start yielding the results as soon as possible.
+- The :meth:`imap_unordered` no longer swallows an exception raised while iterating its argument.
+
+Miscellaneous:
+
+- `gevent.sleep(<negative value>)` no longer raises an exception, instead if does `sleep(0)`.
+- Added method `clear` to internal `Waiter` class.
+- Removed `wait` method from internal `Waiter` class.
+- The :class:`WSGIServer` now sets `max_accept` to 1 if `wsgi.multiprocessing` is set to `True`.
+- Added :func:`monkey.patch_module` function that monkey patches module using `__implements__` list provided by gevent module.
+  All of gevent modules that replace stdlib module now have `__implements__` attribute.
+
+
 Release 0.13.6 (May 2, 2011)
 ----------------------------
 
