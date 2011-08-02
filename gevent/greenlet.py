@@ -146,6 +146,10 @@ class Greenlet(greenlet):
         self._notifier = loop.callback()
         self._start_event = loop.callback()
 
+    @property
+    def loop(self):
+        return self.parent.loop
+
     def __nonzero__(self):
         return self._start_event.pending or greenlet.__nonzero__(self)
 
