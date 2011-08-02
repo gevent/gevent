@@ -17,8 +17,7 @@ ANY = ANY()
 NOT_IMPLEMENTED = {
     'socket': ['CAPI', 'gethostbyaddr', 'gethostbyname_ex', 'getnameinfo'],
     'thread': ['allocate', 'exit_thread', 'interrupt_main', 'start_new'],
-    'select': ANY,
-    'httplib': ANY}
+    'select': ANY}
 
 COULD_BE_MISSING = {
     'socket': ['create_connection', 'RAND_add', 'RAND_egd', 'RAND_status']}
@@ -165,8 +164,7 @@ are missing from %r:
 
     for path, modname in walk_modules(include_so=True):
         modname = modname.replace('gevent.', '').split('.')[0]
-        if modname not in ('http', 'httplib', 'wsgi'):
-            exec ('''def test_%s(self): self._test("gevent.%s")''' % (modname, modname))
+        exec ('''def test_%s(self): self._test("gevent.%s")''' % (modname, modname))
     del path, modname
 
 
