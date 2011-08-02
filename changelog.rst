@@ -50,7 +50,7 @@ The :mod:`gevent.socket` module:
 - The following functions were added to socket module
   - gethostbyname_ex
   - getnameinfo
-  - geyhostbyadd
+  - gethostbyaddr
   - getfqdn
 - Removed undocumented bind_and_listen and tcp_listener
 
@@ -74,7 +74,7 @@ The mod:`gevent.pool` module:
 
 Miscellaneous:
 
-- `gevent.sleep(<negative value>)` no longer raises an exception, instead if does `sleep(0)`.
+- `gevent.sleep(<negative value>)` no longer raises an exception, instead it does `sleep(0)`.
 - Added method `clear` to internal `Waiter` class.
 - Removed `wait` method from internal `Waiter` class.
 - The :class:`WSGIServer` now sets `max_accept` to 1 if `wsgi.multiprocessing` is set to `True`.
