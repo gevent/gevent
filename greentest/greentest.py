@@ -169,7 +169,7 @@ class TestCase(BaseTestCase):
         return BaseTestCase.run(self, *args, **kwargs)
 
     def setUp(self):
-        self._hub.loop.update_now()
+        self._hub.loop.update()
         if hasattr(self._hub, 'switch_count'):
             self._switch_count = self._hub.switch_count
 
