@@ -56,8 +56,8 @@ def make_test(path):
 
 for example in simple_examples:
     test = make_test(example)
-    globals()[test.__name__] = test
     if test is not None:
+        globals()[test.__name__] = test
         print ('Added %s' % test.__name__)
     del test
 
