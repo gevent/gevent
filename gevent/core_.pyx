@@ -579,6 +579,12 @@ cdef public class timer(watcher) [object PyGeventTimerObject, type PyGeventTimer
         def __get__(self):
             return self._watcher.at
 
+    def again(self, object callback, *args):
+        self.callback = callback
+        self.args = args
+        libev.ev_timer_again(self.loop._ptr, &self._watcher)
+        INCREF
+
 
 cdef public class signal(watcher) [object PyGeventSignalObject, type PyGeventSignal_Type]:
 
