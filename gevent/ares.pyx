@@ -257,12 +257,12 @@ cdef public class channel [object PyGeventAresChannelObject, type PyGeventAresCh
         result = cares.ares_init_options(&channel, &options, optmask)
         if result:
             raise get_socket_gaierror()(result, strerror(result))
+        self._watchers = {}
+        self.channel = channel
         try:
-            self.channel = channel
             if servers is not None:
                 self.set_servers(servers)
             self.loop = loop
-            self._watchers = {}
         except:
             self.destroy()
             raise
