@@ -335,7 +335,7 @@ cdef public class loop [object PyGeventLoopObject, type PyGeventLoop_Type]:
     def now(self):
         return libev.ev_now(self._ptr)
 
-    def update_now(self):
+    def update(self):
         libev.ev_now_update(self._ptr)
 
     def __repr__(self):
