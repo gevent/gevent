@@ -1,3 +1,4 @@
+/* Copyright (c) 2011 Denis Bilenko. See LICENSE for details. */
 #ifdef Py_PYTHON_H
 
 static void gevent_handle_error(struct PyGeventLoopObject* loop, PyObject* context) {

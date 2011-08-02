@@ -1,3 +1,4 @@
+# Copyright (c) 2011 Denis Bilenko. See LICENSE for details.
 import os
 import sys
 from _socket import getservbyname, getaddrinfo, gaierror, error

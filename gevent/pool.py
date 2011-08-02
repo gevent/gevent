@@ -1,4 +1,4 @@
-# Copyright (c) 2009-2010 Denis Bilenko. See LICENSE for details.
+# Copyright (c) 2009-2011 Denis Bilenko. See LICENSE for details.
 """Managing greenlets in a group.
 
 The :class:`Group` class in this module abstracts a group of running greenlets.

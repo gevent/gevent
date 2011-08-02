@@ -1,3 +1,4 @@
+/* Copyright (c) 2011 Denis Bilenko. See LICENSE for details. */
 #include "Python.h"
 #include "ares_setup.h"
 

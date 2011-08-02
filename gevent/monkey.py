@@ -1,4 +1,4 @@
-# Copyright (c) 2009-2010 Denis Bilenko. See LICENSE for details.
+# Copyright (c) 2009-2011 Denis Bilenko. See LICENSE for details.
 """Make the standard library cooperative.
 
 The functions in this module patch parts of the standard library with compatible cooperative counterparts

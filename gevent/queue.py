@@ -1,4 +1,4 @@
-# Copyright (c) 2009-2010 Denis Bilenko. See LICENSE for details.
+# Copyright (c) 2009-2011 Denis Bilenko. See LICENSE for details.
 """Synchronized queues.
 
 The :mod:`gevent.queue` module implements multi-producer, multi-consumer queues

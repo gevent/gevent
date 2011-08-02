@@ -1,3 +1,4 @@
+# Copyright (c) 2011 Denis Bilenko. See LICENSE for details.
 cimport cares
 import sys
 from python cimport *

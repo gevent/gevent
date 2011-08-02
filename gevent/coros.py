@@ -1,5 +1,5 @@
+# Copyright (c) 2009-2011 Denis Bilenko. See LICENSE for details.
 """Locking primitives"""
-# Copyright (c) 2009-2010 Denis Bilenko. See LICENSE for details.
 
 import sys
 from gevent.hub import get_hub, getcurrent

@@ -1,5 +1,5 @@
 # Copyright (c) 2005-2009, eventlet contributors
-# Copyright (c) 2009-2010, gevent contributors
+# Copyright (c) 2009-2011, gevent contributors
 
 import errno
 import sys

@@ -1,3 +1,4 @@
+# Copyright (c) 2009-2011 Denis Bilenko. See LICENSE for details.
 `#' DO NOT EDIT -- this file is auto generated from __file__ on syscmd(date)
 cimport cython
 cimport libev
