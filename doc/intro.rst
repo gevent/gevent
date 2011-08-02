@@ -1,20 +1,16 @@
 Introduction
 ============
 
-gevent is a Python networking library that uses greenlet_ to provide a synchronous API on top of libevent_ event loop.
+gevent is a coroutine-based Python networking library.
 
 Features include:
 
-* Fast event loop based on libevent (epoll on Linux, kqueue on FreeBSD).
+* Fast event loop based on libev (epoll on Linux, kqueue on FreeBSD).
 * Lightweight execution units based on greenlet.
 * API that re-uses concepts from the Python standard library (e.g. :class:`Event`, :class:`Queue`).
 * Cooperative :mod:`socket` and :mod:`ssl` modules.
 * Ability to use standard library and 3rd party modules written for standard blocking sockets (:mod:`gevent.monkey`).
-* DNS queries performed through libevent-dns.
-* Fast WSGI server based on libevent-http.
-
-.. _greenlet: http://codespeak.net/py/0.9.2/greenlet.html
-.. _libevent: http://monkey.org/~provos/libevent/
+* DNS queries performed through c-ares.
 
 
 Installation

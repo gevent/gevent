@@ -1,17 +1,16 @@
 gevent_
 =======
 
-gevent_ is a Python networking library that uses greenlet_ to provide synchronous API on top of libevent_ event loop.
+gevent_ is a coroutine-based Python networking library.
 
 Features include:
 
-* Fast event loop based on libevent_.
+* Fast event loop based on libev_.
 * Lightweight execution units based on greenlet_.
 * Familiar API that re-uses concepts from the Python standard library.
 * Cooperative sockets with ssl support.
-* DNS queries performed through libevent-dns.
+* DNS queries performed through c-ares_.
 * Ability to use standard library and 3rd party modules written for standard blocking sockets
-* Fast WSGI server based on libevent-http.
 
 gevent_ is `inspired by eventlet`_ but features more consistent API, simpler implementation and better performance. Read why others `use gevent`_ and check out the list of the `open source projects based on gevent`_.
 
@@ -21,7 +20,7 @@ gevent_ is written and maintained by `Denis Bilenko`_ and is licensed under MIT 
 get gevent
 ----------
 
-Install Python 2.4 or newer, greenlet and libevent.
+Install Python 2.5 or newer and greenlet_ extension.
 
 Download the latest release from `Python Package Index`_ or clone `the repository`_.
 
@@ -32,7 +31,8 @@ Post feedback and issues on the `bug tracker`_, `mailing list`_, blog_ and `twit
 
 .. _gevent: http://www.gevent.org
 .. _greenlet: http://codespeak.net/py/0.9.2/greenlet.html
-.. _libevent: http://monkey.org/~provos/libevent/
+.. _libev: http://libev.schmorp.de/
+.. _c-ares: http://c-ares.haxx.se/
 .. _inspired by eventlet: http://blog.gevent.org/2010/02/27/why-gevent/
 .. _use gevent: http://groups.google.com/group/gevent/browse_thread/thread/4de9703e5dca8271
 .. _open source projects based on gevent: http://code.google.com/p/gevent/wiki/ProjectsUsingGevent
