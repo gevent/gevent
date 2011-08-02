@@ -4,8 +4,8 @@ Changelog
 .. currentmodule:: gevent
 
 
-Release 1.0dev1
----------------
+Release 1.0a1
+-------------
 
 TODO:
 - gevent.http?
