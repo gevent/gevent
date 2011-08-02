@@ -125,8 +125,9 @@ if ares_embed:
 
 def make(done=[]):
     if not done:
-        if os.system('make'):
-            sys.exit(1)
+        if os.path.exists('Makefile'):
+            if os.system('make'):
+                sys.exit(1)
         done.append(1)
 
 
