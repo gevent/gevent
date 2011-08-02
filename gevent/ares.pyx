@@ -428,5 +428,3 @@ cdef public class channel [object PyGeventAresChannelObject, type PyGeventAresCh
 
     def getnameinfo(self, object callback, tuple sockaddr, int flags):
         return self._getnameinfo(callback, sockaddr, _convert_cares_flags(flags))
-
-# XXX add timeouts
