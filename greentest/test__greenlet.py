@@ -26,7 +26,7 @@ import re
 from gevent import sleep, with_timeout, getcurrent
 from gevent import greenlet
 from gevent.event import AsyncResult
-from gevent.queue import Queue
+from gevent.queue import Queue, Channel
 
 DELAY = 0.01
 greentest.TestCase.error_fatal = False
@@ -105,7 +105,7 @@ class TestLink(greentest.TestCase):
         p1 = gevent.spawn(lambda: 101)
         p2 = gevent.spawn(lambda: 102)
         p3 = gevent.spawn(lambda: 103)
-        q = Queue(0)
+        q = Channel()
         p1.link(q.put)
         p2.link(q.put)
         p3.link(q.put)
@@ -222,7 +222,7 @@ class LinksTestCase(greentest.TestCase):
         myproc = gevent.spawn(self.myprocf, proc_finished_flag)
         link(myproc)
 
-        queue = Queue(0)
+        queue = Channel()
         link(queue.put)
         return event, myproc, proc_finished_flag, queue
 
