@@ -418,7 +418,8 @@ class Channel(object):
             timeout = 0
 
         waiter = Waiter()
-        self.putters.append((item, waiter))
+        item = (item, waiter)
+        self.putters.append(item)
         timeout = Timeout.start_new(timeout, Full)
         try:
             if self.getters:
@@ -426,10 +427,16 @@ class Channel(object):
             result = waiter.get()
             assert result is waiter, "Invalid switch into Channel.put: %r" % (result, )
         except:
-            self.putters.remove(waiter)
+            self._discard(item)
             raise
         finally:
             timeout.cancel()
+
+    def _discard(self, item):
+        try:
+            self.putters.remove(item)
+        except ValueError:
+            pass
 
     def put_nowait(self, item):
         self.put(item, False)
