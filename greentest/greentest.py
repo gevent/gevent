@@ -302,6 +302,8 @@ class GenericWaitTestCase(TestCase):
 
 class GenericGetTestCase(TestCase):
 
+    Timeout = gevent.Timeout
+
     def wait(self, timeout):
         raise NotImplementedError('override me in subclass')
 
@@ -312,7 +314,7 @@ class GenericGetTestCase(TestCase):
 
     def test_raises_timeout_number(self):
         start = time.time()
-        self.assertRaises(gevent.Timeout, self.wait, timeout=0.01)
+        self.assertRaises(self.Timeout, self.wait, timeout=0.01)
         # get raises Timeout after timeout expired
         delay = time.time() - start
         assert 0.01 - 0.001 <= delay < 0.01 + 0.01 + 0.1, delay
