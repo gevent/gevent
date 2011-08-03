@@ -1,4 +1,4 @@
-from greentest import TestCase, main
+from greentest import TestCase, main, GenericGetTestCase
 import gevent
 from gevent.hub import get_hub
 from gevent import util
@@ -352,6 +352,49 @@ class TestJoinEmpty(TestCase):
         self.switch_expected = False
         q = queue.JoinableQueue()
         q.join()
+
+
+def test_get_interrupt(queue_type):
+
+    class TestGetInterrupt(GenericGetTestCase):
+
+        Timeout = Empty
+
+        def wait(self, timeout):
+            return queue_type().get(timeout=timeout)
+
+    TestGetInterrupt.__name__ += '_' + queue_type.__name__
+    return TestGetInterrupt
+
+
+for queue_type in [queue.Queue, queue.JoinableQueue, queue.LifoQueue, queue.PriorityQueue, queue.Channel]:
+    klass = test_get_interrupt(queue_type)
+    globals()[klass.__name__] = klass
+del klass, queue_type
+
+
+def test_put_interrupt(queue):
+
+    class TestPutInterrupt(GenericGetTestCase):
+
+        Timeout = Full
+
+        def wait(self, timeout):
+            while not queue.full():
+                queue.put(1)
+            return queue.put(2, timeout=timeout)
+
+    TestPutInterrupt.__name__ += '_' + queue.__class__.__name__
+    return TestPutInterrupt
+
+
+for obj in [queue.Queue(1), queue.JoinableQueue(1), queue.LifoQueue(1), queue.PriorityQueue(1), queue.Channel()]:
+    klass = test_put_interrupt(obj)
+    globals()[klass.__name__] = klass
+del klass, obj
+
+
+del GenericGetTestCase
 
 
 if __name__ == '__main__':
