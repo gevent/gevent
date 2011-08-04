@@ -7,7 +7,7 @@ gevent/core.pyx: gevent/core_.pyx
 	m4 -P gevent/core_.pyx > core.pyx && mv core.pyx gevent/
 
 gevent/gevent.core.c: gevent/core.pyx gevent/libev.pxd
-	util/cython_ifdef.py -o gevent.core.c gevent/core.pyx
+	python util/cython_ifdef.py -o gevent.core.c gevent/core.pyx
 	echo                          >> gevent.core.c
 	echo '#include "callbacks.c"' >> gevent.core.c
 	mv gevent.core.* gevent/
