@@ -488,7 +488,7 @@ class TestStuff(greentest.TestCase):
                 e.set_exception(sys.exc_info()[1])
                 gevent.sleep(0)
 
-        p = gevent.spawn_link(func)
+        p = gevent.Greenlet.spawn_link(func)
         try:
             try:
                 e.wait()

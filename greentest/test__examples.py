@@ -187,9 +187,10 @@ class Test_echoserver(BaseTestServer):
             self.assertEqual(received, message)
             conn._sock.settimeout(0.1)
             self.assertRaises(socket.timeout, conn.read, 1)
-        client1 = gevent.spawn_link_exception(test_client, 'hello\r\n')
-        client2 = gevent.spawn_link_exception(test_client, 'world\r\n')
-        gevent.joinall([client1, client2])
+        client1 = gevent.spawn(test_client, 'hello\r\n')
+        client2 = gevent.spawn(test_client, 'world\r\n')
+        gevent.joinall([client1, client2], raise_error=True)
+
 
 
 class TestAllTested(unittest.TestCase):

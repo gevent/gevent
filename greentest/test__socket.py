@@ -27,17 +27,18 @@ class TestTCP(greentest.TestCase):
             (client, addr) = self.listener.accept()
             # start reading, then, while reading, start writing. the reader should not hang forever
             N = 100000  # must be a big enough number so that sendall calls trampoline
-            sender = gevent.spawn_link_exception(client.sendall, 't' * N)
+            sender = gevent.spawn(client.sendall, 't' * N)
             result = client.recv(1000)
             assert result == 'hello world', result
-            sender.join(0.2)
+            sender.join(timeout=0.2)
             sender.kill()
+            sender.get()
 
         #print '%s: client' % getcurrent()
 
-        server_proc = gevent.spawn_link_exception(server)
+        server_proc = gevent.spawn(server)
         client = self.create_connection()
-        client_reader = gevent.spawn_link_exception(client.makefile().read)
+        client_reader = gevent.spawn(client.makefile().read)
         gevent.sleep(0.001)
         client.send('hello world')
 
@@ -50,7 +51,7 @@ class TestTCP(greentest.TestCase):
         client_reader.get()
 
     def test_recv_timeout(self):
-        acceptor = gevent.spawn_link_exception(self.listener.accept)
+        acceptor = gevent.spawn(self.listener.accept)
         try:
             client = self.create_connection()
             client.settimeout(0.1)
@@ -65,7 +66,7 @@ class TestTCP(greentest.TestCase):
             acceptor.get()
 
     def test_sendall_timeout(self):
-        acceptor = gevent.spawn_link_exception(self.listener.accept)
+        acceptor = gevent.spawn(self.listener.accept)
         try:
             client = self.create_connection()
             client.settimeout(0.1)

@@ -225,7 +225,7 @@ class TestDefaultSpawn(TestCase):
         self._test_invalid_callback()
 
     def _test_serve_forever(self):
-        g = gevent.spawn_link_exception(self.server.serve_forever)
+        g = gevent.spawn(self.server.serve_forever)
         try:
             gevent.sleep(0.01)
             self.assertRequestSucceeded()
@@ -234,6 +234,7 @@ class TestDefaultSpawn(TestCase):
             self.assertConnectionRefused()
         finally:
             g.kill()
+            g.get()
 
     def test_serve_forever(self):
         self.server = self.ServerSubClass(('127.0.0.1', 0))
