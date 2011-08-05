@@ -92,7 +92,7 @@ def make_universal_header(filename, *defines):
         elif line.startswith('#endif'):
             ifdef -= 1
         elif not ifdef:
-            for prefix,define in defines:
+            for prefix, define in defines:
                 if line.startswith(prefix):
                     line = '#ifdef __LP64__\n#define %s 8\n#else\n#define %s 4\n#endif' % (define, define)
                     break
