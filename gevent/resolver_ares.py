@@ -21,9 +21,8 @@ class Resolver(object):
         self.ares = self.ares_class(hub.loop, **kwargs)
         self.pid = os.getpid()
         self.params = kwargs
-        self.fork_watcher = hub.loop.fork()
+        self.fork_watcher = hub.loop.fork(ref=False)
         self.fork_watcher.start(self._on_fork)
-        self.fork_watcher.loop.unref()
 
     def __repr__(self):
         return '<%s at 0x%x ares=%r>' % (self.__class__.__name__, id(self), self.ares)
@@ -39,9 +38,7 @@ class Resolver(object):
         if self.ares is not None:
             self.hub.loop.run_callback(self.ares.destroy)
             self.ares = None
-        if self.fork_watcher.active:
-            self.fork_watcher.stop()
-            self.fork_watcher.loop.ref()
+        self.fork_watcher.stop()
 
     def gethostbyname(self, hostname, family=AF_INET):
         return self.gethostbyname_ex(hostname, family)[-1][0]
