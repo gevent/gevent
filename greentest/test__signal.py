@@ -21,6 +21,10 @@ if hasattr(signal, 'SIGALRM'):
 
         def test(self):
             sig = gevent.signal(signal.SIGALRM, raise_Expected)
+            assert sig.ref is False, repr(sig.ref)
+            sig.ref = True
+            assert sig.ref is True
+            sig.ref = False
             try:
                 signal.alarm(1)
                 try:
