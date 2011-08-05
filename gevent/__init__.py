@@ -14,9 +14,6 @@ __all__ = ['get_hub',
            'GreenletExit',
            'spawn',
            'spawn_later',
-           'spawn_link',
-           'spawn_link_value',
-           'spawn_link_exception',
            'spawn_raw',
            'joinall',
            'killall',
@@ -40,9 +37,6 @@ del sys
 from gevent.greenlet import Greenlet, joinall, killall
 spawn = Greenlet.spawn
 spawn_later = Greenlet.spawn_later
-spawn_link = Greenlet.spawn_link
-spawn_link_value = Greenlet.spawn_link_value
-spawn_link_exception = Greenlet.spawn_link_exception
 from gevent.timeout import Timeout, with_timeout
 from gevent.hub import getcurrent, GreenletExit, spawn_raw, sleep, idle, kill, signal
 try:
