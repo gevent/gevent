@@ -1,5 +1,5 @@
+m4_dnl This is what core.pyx generated from. Run "make" to produce gevent.core.c extension.
 # Copyright (c) 2009-2011 Denis Bilenko. See LICENSE for details.
-`#' DO NOT EDIT -- this file is auto generated from __file__ on syscmd(date)
 cimport cython
 cimport libev
 from python cimport *
