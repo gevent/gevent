@@ -106,39 +106,30 @@ def kill(greenlet, exception=GreenletExit):
         get_hub().loop.run_callback(greenlet.throw, exception)
 
 
-class Signal(object):
+class signal(object):
 
-    def __init__(self, signalnum):
+    def __init__(self, signalnum, handler, *args, **kwargs):
         self.hub = get_hub()
-        self.watcher = self.hub.loop.signal(signalnum)
-        self._unref = 0
-
-    def start(self, handler, *args, **kwargs):
+        self.watcher = self.hub.loop.signal(signalnum, ref=False)
         self.watcher.start(spawn_raw, self.handle, handler, args, kwargs)
-        if self._unref == 0:
-            self.hub.loop.unref()
-            self._unref = 1
+
+    def _get_ref(self):
+        return self.watcher.ref
+
+    def _set_ref(self, value):
+        self.watcher.ref = value
+
+    ref = property(_get_ref, _set_ref)
+    del _get_ref, _set_ref
 
     def cancel(self):
         self.watcher.stop()
-        if self._unref == 1:
-            self.hub.loop.ref()
-            self._unref = 0
 
     def handle(self, handler, args, kwargs):
         try:
             handler(*args, **kwargs)
         except:
             self.hub.handle_error(None, *sys.exc_info())
-        if not self.watcher.active and self._unref == 1:
-            self.hub.loop.ref()
-            self._unref = 0
-
-
-def signal(signalnum, handler, *args, **kwargs):
-    obj = Signal(signalnum)
-    obj.start(handler, *args, **kwargs)
-    return obj
 
 
 if _original_fork is not None:
