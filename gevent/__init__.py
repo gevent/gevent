@@ -28,7 +28,6 @@ __all__ = ['get_hub',
            'kill',
            'signal',
            'fork',
-           'core',
            'reinit']
 
 
@@ -38,7 +37,6 @@ if sys.platform == 'win32':
 del sys
 
 
-from gevent import core
 from gevent.greenlet import Greenlet, joinall, killall
 spawn = Greenlet.spawn
 spawn_later = Greenlet.spawn_later
