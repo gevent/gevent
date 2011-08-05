@@ -340,9 +340,8 @@ class Hub(greenlet):
             return
 
         if timeout is not None:
-            timeout = self.loop.timer(timeout)
+            timeout = self.loop.timer(timeout, ref=False)
             timeout.start(getcurrent().switch)
-            timeout.loop.unref()
 
         try:
             try:
@@ -350,8 +349,7 @@ class Hub(greenlet):
             except LoopExit:
                 return True
         finally:
-            if timeout is not None and timeout.active:
-                timeout.loop.ref()
+            if timeout is not None:
                 timeout.stop()
 
     def _get_resolver(self):
