@@ -342,9 +342,9 @@ cdef public class loop [object PyGeventLoopObject, type PyGeventLoop_Type]:
     def __repr__(self):
         args = (self.__class__.__name__, id(self), self.default, self.backend)
         result = '<%s at 0x%x default=%r backend=%r' % args
-        activecnt = getattr(self, 'activecnt', None)
-        if activecnt is not None:
-            result += ' activecnt=%r' % activecnt
+#ifdef EV_STANDALONE
+        result += ' activecnt=%r' % self.activecnt
+#endif
         return result + '>'
 
     property default:
