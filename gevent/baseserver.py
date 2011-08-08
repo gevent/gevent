@@ -154,7 +154,7 @@ class BaseServer(object):
             self.kill()
             raise
 
-    def kill(self):
+    def close(self):
         """Close the listener socket and stop accepting."""
         self.started = False
         try:
@@ -166,6 +166,8 @@ class BaseServer(object):
                 pass
             self.__dict__.pop('socket', None)
             self.__dict__.pop('handle', None)
+
+    kill = close   # this is deprecated
 
     def stop(self, timeout=None):
         """Stop accepting the connections and close the listening socket.

@@ -78,14 +78,16 @@ class StreamServer(BaseServer):
         if self.pool is not None:
             self.pool._semaphore.rawlink(self._start_accepting_if_started)
 
-    def kill(self):
+    def close(self):
         try:
-            BaseServer.kill(self)
+            BaseServer.close(self)
         finally:
             self.__dict__.pop('_handle', None)
             pool = getattr(self, 'pool', None)
             if pool is not None:
                 pool._semaphore.unlink(self._start_accepting_if_started)
+
+    kill = close  # this is deprecated
 
     def pre_start(self):
         BaseServer.pre_start(self)
@@ -138,7 +140,7 @@ class StreamServer(BaseServer):
                 self.loop.handle_error((address, self), *sys.exc_info())
                 ex = sys.exc_info()[1]
                 if self.is_fatal_error(ex):
-                    self.kill()
+                    self.close()
                     sys.stderr.write('ERROR: %s failed with %s\n' % (self, str(ex) or repr(ex)))
                     return
                 if self.delay >= 0:
