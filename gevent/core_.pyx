@@ -215,6 +215,12 @@ def time(self):
     return libev.ev_time()
 
 
+m4_define(LOOP_PROPERTY, ``property $1:
+
+        def __get__(self):
+            return self._ptr.$1'')
+
+
 cdef public class loop [object PyGeventLoopObject, type PyGeventLoop_Type]:
     cdef libev.ev_loop* _ptr
     cdef public object error_handler
@@ -340,11 +346,8 @@ cdef public class loop [object PyGeventLoopObject, type PyGeventLoop_Type]:
         libev.ev_now_update(self._ptr)
 
     def __repr__(self):
-        args = (self.__class__.__name__, id(self), self.default, self.backend)
-        result = '<%s at 0x%x default=%r backend=%r' % args
-#ifdef EV_STANDALONE
-        result += ' activecnt=%r' % self.activecnt
-#endif
+        result = '<%s at 0x%x' % (self.__class__.__name__, id(self))
+        result += self._format()
         return result + '>'
 
     property default:
@@ -375,13 +378,6 @@ cdef public class loop [object PyGeventLoopObject, type PyGeventLoop_Type]:
                 if key == backend:
                     return value
             return backend
-
-#ifdef EV_STANDALONE
-    property activecnt:
-
-        def __get__(self):
-            return self._ptr.activecnt
-#endif
 
     def io(self, int fd, int events, ref=True):
         return io(self, fd, events, ref)
@@ -414,6 +410,24 @@ cdef public class loop [object PyGeventLoopObject, type PyGeventLoop_Type]:
         cdef callback result = callback(self)
         result.start(func, *args)
         return result
+
+#ifdef EV_STANDALONE
+    def _format(self):
+        args = (self.default, self.backend, self.activecnt, self.backend_fd, self.fdchangecnt, self.timercnt)
+        return  ' default=%r backend=%r activecnt=%r backend_fd=%r fdchangecnt=%r timercnt=%r' % args
+#else
+    def _format(self):
+        args = (self.default, self.backend)
+        return  ' default=%r backend=%r' % args
+#endif
+
+#ifdef EV_STANDALONE
+    LOOP_PROPERTY(activecnt)
+    LOOP_PROPERTY(backend_fd)
+    LOOP_PROPERTY(fdchangecnt)
+    LOOP_PROPERTY(timercnt)
+#endif
+
 
 m4_define(PYTHON_INCREF, ``if not self._flags & 1:
             Py_INCREF(<PyObjectPtr>self)
