@@ -1,5 +1,3 @@
-#ifndef ARES_DATA_H
-#define ARES_DATA_H
 
 /* Copyright (C) 2009-2010 by Daniel Stenberg
  *
@@ -65,5 +63,3 @@ struct ares_data {
 void *ares_malloc_data(ares_datatype type);
 
 ares_datatype ares_get_datatype(void * dataptr);
-
-#endif

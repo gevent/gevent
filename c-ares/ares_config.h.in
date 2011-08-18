@@ -102,6 +102,9 @@
 /* Define to 1 if the getaddrinfo function is threadsafe. */
 #undef HAVE_GETADDRINFO_THREADSAFE
 
+/* Define to 1 if you have the getenv function. */
+#undef HAVE_GETENV
+
 /* Define to 1 if you have the gethostbyaddr function. */
 #undef HAVE_GETHOSTBYADDR
 
@@ -123,11 +126,8 @@
 /* Define to 1 if you have the `if_indextoname' function. */
 #undef HAVE_IF_INDEXTONAME
 
-/* Define to 1 if you have the `inet_net_pton' function. */
+/* Define to 1 if you have a IPv6 capable working inet_net_pton function. */
 #undef HAVE_INET_NET_PTON
-
-/* Define to 1 if inet_net_pton supports IPv6. */
-#undef HAVE_INET_NET_PTON_IPV6
 
 /* Define to 1 if you have a IPv6 capable working inet_ntop function. */
 #undef HAVE_INET_NTOP
@@ -376,6 +376,9 @@
 
 /* a suitable file/device to read random data from */
 #undef RANDOM_FILE
+
+/* Define to the type qualifier pointed by arg 5 for recvfrom. */
+#undef RECVFROM_QUAL_ARG5
 
 /* Define to the type of arg 1 for recvfrom. */
 #undef RECVFROM_TYPE_ARG1

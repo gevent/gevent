@@ -42,6 +42,7 @@
 
 #include "ares.h"
 #include "inet_net_pton.h"
+#include "ares_platform.h"
 #include "ares_private.h"
 
 #ifdef WATT32
@@ -59,12 +60,12 @@ struct addr_query {
   int timeouts;
 };
 
-static void gethostbyaddr_next_lookup(struct addr_query *aquery);
+static void next_lookup(struct addr_query *aquery);
 static void addr_callback(void *arg, int status, int timeouts,
                           unsigned char *abuf, int alen);
 static void end_aquery(struct addr_query *aquery, int status,
                        struct hostent *host);
-static int gethostbyaddr_file_lookup(struct ares_addr *addr, struct hostent **host);
+static int file_lookup(struct ares_addr *addr, struct hostent **host);
 static void ptr_rr_name(char *name, const struct ares_addr *addr);
 
 void ares_gethostbyaddr(ares_channel channel, const void *addr, int addrlen,
@@ -102,10 +103,10 @@ void ares_gethostbyaddr(ares_channel channel, const void *addr, int addrlen,
   aquery->remaining_lookups = channel->lookups;
   aquery->timeouts = 0;
 
-  gethostbyaddr_next_lookup(aquery);
+  next_lookup(aquery);
 }
 
-static void gethostbyaddr_next_lookup(struct addr_query *aquery)
+static void next_lookup(struct addr_query *aquery)
 {
   const char *p;
   char name[128];
@@ -123,7 +124,7 @@ static void gethostbyaddr_next_lookup(struct addr_query *aquery)
                      aquery);
           return;
         case 'f':
-          status = gethostbyaddr_file_lookup(&aquery->addr, &host);
+          status = file_lookup(&aquery->addr, &host);
 
           /* this status check below previously checked for !ARES_ENOTFOUND,
              but we should not assume that this single error code is the one
@@ -166,7 +167,7 @@ static void addr_callback(void *arg, int status, int timeouts,
   else if (status == ARES_EDESTRUCTION)
     end_aquery(aquery, status, NULL);
   else
-    gethostbyaddr_next_lookup(aquery);
+    next_lookup(aquery);
 }
 
 static void end_aquery(struct addr_query *aquery, int status,
@@ -178,7 +179,7 @@ static void end_aquery(struct addr_query *aquery, int status,
   free(aquery);
 }
 
-static int gethostbyaddr_file_lookup(struct ares_addr *addr, struct hostent **host)
+static int file_lookup(struct ares_addr *addr, struct hostent **host)
 {
   FILE *fp;
   int status;
@@ -186,7 +187,13 @@ static int gethostbyaddr_file_lookup(struct ares_addr *addr, struct hostent **ho
 
 #ifdef WIN32
   char PATH_HOSTS[MAX_PATH];
-  if (IS_NT()) {
+  win_platform platform;
+
+  PATH_HOSTS[0] = '\0';
+
+  platform = ares__getplatform();
+
+  if (platform == WIN_NT) {
     char tmp[MAX_PATH];
     HKEY hkeyHosts;
 
@@ -200,8 +207,10 @@ static int gethostbyaddr_file_lookup(struct ares_addr *addr, struct hostent **ho
       RegCloseKey(hkeyHosts);
     }
   }
-  else
+  else if (platform == WIN_9X)
     GetWindowsDirectory(PATH_HOSTS, MAX_PATH);
+  else
+    return ARES_ENOTFOUND;
 
   strcat(PATH_HOSTS, WIN_PATH_HOSTS);
 
