@@ -4,6 +4,7 @@ import sys
 from python cimport *
 from gevent.core import EVENTS
 from gevent.core import io, loop
+from _socket import gaierror
 
 
 __all__ = ['channel']
@@ -28,8 +29,6 @@ cdef extern from "dnshelper.c":
     void* create_object_from_hostent(void*)
 
     # this imports _socket lazily
-    object get_socket_error()
-    object get_socket_gaierror()
     object PyBytes_FromString(char*)
     int PyTuple_Check(object)
     int PyArg_ParseTuple(object, char*, ...) except 0
@@ -130,7 +129,7 @@ cpdef _convert_cares_flags(int flags, int default=cares.ARES_NI_LOOKUPHOST|cares
             flags &= ~socket_flag
         if not flags:
             return default
-    raise get_socket_gaierror()(-1, "Bad value for ai_flags: 0x%x" % flags)
+    raise gaierror(-1, "Bad value for ai_flags: 0x%x" % flags)
 
 
 cpdef strerror(code):
@@ -186,7 +185,7 @@ cdef void gevent_ares_host_callback(void *arg, int status, int timeouts, hostent
     cdef object host_result
     try:
         if status or not host:
-            callback(result(None, get_socket_gaierror()(status, strerror(status))))
+            callback(result(None, gaierror(status, strerror(status))))
         else:
             try:
                 host_result = ares_host_result(host.h_addrtype, (host.h_name, parse_h_aliases(host), parse_h_addr_list(host)))
@@ -207,7 +206,7 @@ cdef void gevent_ares_nameinfo_callback(void *arg, int status, int timeouts, cha
     cdef object service
     try:
         if status:
-            callback(result(None, get_socket_gaierror()(status, strerror(status))))
+            callback(result(None, gaierror(status, strerror(status))))
         else:
             if c_node:
                 node = PyBytes_FromString(c_node)
@@ -257,10 +256,10 @@ cdef public class channel [object PyGeventAresChannelObject, type PyGeventAresCh
             optmask |= cares.ARES_OPT_TCP_PORT
         cdef int result = cares.ares_library_init(cares.ARES_LIB_INIT_ALL)  # ARES_LIB_INIT_WIN32 -DUSE_WINSOCK?
         if result:
-            raise get_socket_gaierror()(result, strerror(result))
+            raise gaierror(result, strerror(result))
         result = cares.ares_init_options(&channel, &options, optmask)
         if result:
-            raise get_socket_gaierror()(result, strerror(result))
+            raise gaierror(result, strerror(result))
         self._timer = loop.timer(TIMEOUT, TIMEOUT)
         self._watchers = {}
         self.channel = channel
@@ -293,7 +292,7 @@ cdef public class channel [object PyGeventAresChannelObject, type PyGeventAresCh
 
     def set_servers(self, object servers=[]):
         if not self.channel:
-            raise get_socket_gaierror()(cares.ARES_EDESTRUCTION, 'this ares channel has been destroyed')
+            raise gaierror(cares.ARES_EDESTRUCTION, 'this ares channel has been destroyed')
         cdef int length = len(servers)
         cdef int result, index
         cdef char* string
@@ -373,11 +372,7 @@ cdef public class channel [object PyGeventAresChannelObject, type PyGeventAresCh
 
     def gethostbyname(self, object callback, char* name, int family=AF_INET):
         if not self.channel:
-            raise get_socket_gaierror()(cares.ARES_EDESTRUCTION, 'this ares channel has been destroyed')
-        # when family == AF_INET, send request for AF_INET
-        # when family == AF_UNSPEC, send request for AF_INET6 for AF_INET6 then for AF_INET if the former fails
-        # when family == AF_INET6, the bundled c-ares sends requests for AF_INET6 only whereas the stock c-ares
-        #                        behaves the same as AS_UNSPEC
+            raise gaierror(cares.ARES_EDESTRUCTION, 'this ares channel has been destroyed')
         # note that for file lookups still AF_INET can be returned for AF_INET6 request
         cdef object arg = (self, callback)
         Py_INCREF(<PyObjectPtr>arg)
@@ -385,7 +380,7 @@ cdef public class channel [object PyGeventAresChannelObject, type PyGeventAresCh
 
     def gethostbyaddr(self, object callback, char* addr):
         if not self.channel:
-            raise get_socket_gaierror()(cares.ARES_EDESTRUCTION, 'this ares channel has been destroyed')
+            raise gaierror(cares.ARES_EDESTRUCTION, 'this ares channel has been destroyed')
         # will guess the family
         cdef char addr_packed[16]
         cdef int family
@@ -406,7 +401,7 @@ cdef public class channel [object PyGeventAresChannelObject, type PyGeventAresCh
 
     cpdef _getnameinfo(self, object callback, tuple sockaddr, int flags):
         if not self.channel:
-            raise get_socket_gaierror()(cares.ARES_EDESTRUCTION, 'this ares channel has been destroyed')
+            raise gaierror(cares.ARES_EDESTRUCTION, 'this ares channel has been destroyed')
         cdef char* hostp = NULL
         cdef int port = 0
         cdef int flowinfo = 0
@@ -417,7 +412,7 @@ cdef public class channel [object PyGeventAresChannelObject, type PyGeventAresCh
             raise TypeError('expected a tuple, got %r' % (sockaddr, ))
         PyArg_ParseTuple(sockaddr, "si|ii", &hostp, &port, &flowinfo, &scope_id)
         if port < 0 or port > 65535:
-            raise get_socket_gaierror()('invalid value for port: %r' % port)
+            raise gaierror(-8, 'Invalid value for port: %r' % port)
         cdef int length = gevent_make_sockaddr(hostp, port, flowinfo, scope_id, &sa6)
         if length <= 0:
             # XXX raise immediatelly? like TypeError and gaierror raised above?
