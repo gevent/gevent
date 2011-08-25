@@ -31,6 +31,8 @@ except ImportError:
 
 class TestSocketErrors(greentest.TestCase):
 
+    __timeout__ = 5
+
     def test_connection_refused(self):
         s = socket()
         try:

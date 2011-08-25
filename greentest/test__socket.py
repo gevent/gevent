@@ -142,6 +142,8 @@ def get_port():
 
 class TestCreateConnection(greentest.TestCase):
 
+    __timeout__ = 5
+
     def test(self):
         try:
             socket.create_connection(('localhost', get_port()), timeout=30, source_address=('', get_port()))
