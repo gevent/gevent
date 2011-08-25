@@ -120,19 +120,28 @@ class Resolver(object):
         values = values.get()
         if len(values) == 2 and values[0] == values[1]:
             values.pop()
-        result = []
+
+        result  = []
+        result4 = []
+        result6 = []
 
         for addrs in values:
             if addrs.family == AF_INET:
                 for addr in addrs[-1]:
                     sockaddr = (addr, port)
                     for socktype, proto in socktype_proto:
-                        result.append((AF_INET, socktype, proto, '', sockaddr))
+                        result4.append((AF_INET, socktype, proto, '', sockaddr))
             elif addrs.family == AF_INET6:
                 for addr in addrs[-1]:
+                    if addr == '::1':
+                        dest = result
+                    else:
+                        dest = result6
                     sockaddr = (addr, port, 0, 0)
                     for socktype, proto in socktype_proto:
-                        result.append((AF_INET6, socktype, proto, '', sockaddr))
+                        dest.append((AF_INET6, socktype, proto, '', sockaddr))
+
+        result += result4 + result6
 
         if not result:
             raise error('Internal error in %s' % ares.gethostbyname)
