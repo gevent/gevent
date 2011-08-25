@@ -1,0 +1,2 @@
+#!/bin/sh
+uwsgi --loop gevent --http-socket :8000 --module application --async 1000
