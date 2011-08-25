@@ -17,7 +17,6 @@
 
 
 static PyObject* _socket_error = 0;
-static PyObject* _socket_gaierror = 0;
 
 static PyObject*
 get_socket_object(PyObject** pobject, const char* name, int incref)
@@ -44,15 +43,6 @@ get_socket_object(PyObject** pobject, const char* name, int incref)
     return *pobject;
 }
 
-static PyObject*
-get_socket_error() {
-    return get_socket_object(&_socket_error, "error", 1);
-}
-
-static PyObject*
-get_socket_gaierror() {
-    return get_socket_object(&_socket_gaierror, "gaierror", 1);
-}
 
 static int
 gevent_append_addr(PyObject* list, int family, void* src, char* tmpbuf, size_t tmpsize) {
