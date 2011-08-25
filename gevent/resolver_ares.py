@@ -3,8 +3,8 @@ import os
 import sys
 from _socket import getservbyname, getaddrinfo, gaierror, error
 from gevent.hub import Waiter, get_hub, basestring
-from gevent.socket import AF_UNSPEC, AF_INET, AF_INET6, SOCK_STREAM, SOCK_DGRAM, SOCK_RAW, AI_NUMERICHOST, EAI_SERVICE
-from gevent.ares import channel
+from gevent.socket import AF_UNSPEC, AF_INET, AF_INET6, SOCK_STREAM, SOCK_DGRAM, SOCK_RAW, AI_NUMERICHOST, EAI_SERVICE, AI_PASSIVE
+from gevent.ares import channel, InvalidIP
 
 
 __all__ = ['Resolver']
@@ -41,6 +41,7 @@ class Resolver(object):
         self.fork_watcher.stop()
 
     def gethostbyname(self, hostname, family=AF_INET):
+        hostname = _resolve_special(hostname, family)
         return self.gethostbyname_ex(hostname, family)[-1][0]
 
     def gethostbyname_ex(self, hostname, family=AF_INET):
@@ -58,27 +59,37 @@ class Resolver(object):
     def _lookup_port(self, port, socktype):
         if isinstance(port, basestring):
             try:
-                if socktype == 0:
-                    try:
+                port = int(port)
+            except ValueError:
+                try:
+                    if socktype == 0:
+                        try:
+                            port = getservbyname(port, 'tcp')
+                            socktype = SOCK_STREAM
+                        except error:
+                            port = getservbyname(port, 'udp')
+                            socktype = SOCK_DGRAM
+                    elif socktype == SOCK_STREAM:
                         port = getservbyname(port, 'tcp')
-                        socktype = SOCK_STREAM
-                    except error:
+                    elif socktype == SOCK_DGRAM:
                         port = getservbyname(port, 'udp')
-                        socktype = SOCK_DGRAM
-                elif socktype == SOCK_STREAM:
-                    port = getservbyname(port, 'tcp')
-                elif socktype == SOCK_DGRAM:
-                    port = getservbyname(port, 'udp')
-                else:
-                    raise gaierror(EAI_SERVICE, 'Servname not supported for ai_socktype')
-            except error:
-                ex = sys.exc_info()[1]
-                if 'not found' in str(ex):
-                    raise gaierror(EAI_SERVICE, 'Servname not supported for ai_socktype')
-                else:
-                    raise gaierror(str(ex))
+                    else:
+                        raise gaierror(EAI_SERVICE, 'Servname not supported for ai_socktype')
+                except error:
+                    ex = sys.exc_info()[1]
+                    if 'not found' in str(ex):
+                        raise gaierror(EAI_SERVICE, 'Servname not supported for ai_socktype')
+                    else:
+                        raise gaierror(str(ex))
+                except UnicodeEncodeError:
+                    raise error('Int or String expected')
         elif port is None:
             port = 0
+        elif isinstance(port, int):
+            pass
+        else:
+            raise error('Int or String expected')
+        port = int(port % 65536)
         return port, socktype
 
     def _getaddrinfo(self, host, port, family=0, socktype=0, proto=0, flags=0):
@@ -104,7 +115,6 @@ class Resolver(object):
 
         if family == AF_UNSPEC:
             values = Values(self.hub, 2)
-            # note, that we assume that ares.gethostbyname does not raise exceptions
             ares.gethostbyname(values, host, AF_INET)
             ares.gethostbyname(values, host, AF_INET6)
         elif family == AF_INET:
@@ -159,15 +169,14 @@ class Resolver(object):
 
     def _gethostbyaddr(self, ip_address):
         waiter = Waiter(self.hub)
-        self.ares.gethostbyaddr(waiter, ip_address)
         try:
+            self.ares.gethostbyaddr(waiter, ip_address)
             return waiter.get()
-        except ValueError:
-            ex = sys.exc_info()[1]
-            if not str(ex).startswith('illegal IP'):
+        except InvalidIP:
+            result = self._getaddrinfo(ip_address, None, family=AF_UNSPEC, socktype=SOCK_DGRAM)
+            if not result:
                 raise
-            # socket.gethostbyaddr also accepts domain names; let's do that too
-            _ip_address = self.gethostbyname(ip_address, 0)
+            _ip_address = result[0][-1][0]
             if _ip_address == ip_address:
                 raise
             waiter.clear()
@@ -175,6 +184,7 @@ class Resolver(object):
             return waiter.get()
 
     def gethostbyaddr(self, ip_address):
+        ip_address = _resolve_special(ip_address, AF_UNSPEC)
         while True:
             ares = self.ares
             try:
@@ -184,24 +194,27 @@ class Resolver(object):
                     raise
 
     def _getnameinfo(self, sockaddr, flags):
+        if not isinstance(flags, int):
+            raise TypeError('an integer is required')
+        if not isinstance(sockaddr, tuple):
+            raise TypeError('getnameinfo() argument 1 must be a tuple')
+
         waiter = Waiter(self.hub)
-        self.ares.getnameinfo(waiter, sockaddr, flags)
-        try:
-            result = waiter.get()
-        except ValueError:
-            ex = sys.exc_info()[1]
-            if not str(ex).startswith('illegal IP'):
-                raise
-            # socket.getnameinfo also accepts domain names; let's do that too
-            _ip_address = self.gethostbyname(sockaddr[0], 0)
-            if _ip_address == sockaddr[0]:
-                raise
-            waiter.clear()
-            self.ares.getnameinfo(waiter, (_ip_address, ) + sockaddr[1:], flags)
-            result = waiter.get()
-        if result[1] is None:
-            return (result[0], str(sockaddr[1])) + result[2:]
-        return result
+        result = self._getaddrinfo(sockaddr[0], str(sockaddr[1]), family=AF_UNSPEC, socktype=SOCK_DGRAM)
+        if not result:
+            raise
+        elif len(result) != 1:
+            raise error('sockaddr resolved to multiple addresses')
+        family, socktype, proto, name, address = result[0]
+
+        if family == AF_INET:
+            if len(sockaddr) != 2:
+                raise error("IPv4 sockaddr must be 2 tuple")
+        elif family == AF_INET6:
+            address = address[:2] + sockaddr[2:]
+
+        self.ares.getnameinfo(waiter, address, flags)
+        return waiter.get()
 
     def getnameinfo(self, sockaddr, flags):
         while True:
@@ -240,3 +253,12 @@ class Values(object):
             return self.values
         else:
             raise self.error
+
+
+def _resolve_special(hostname, family):
+    if hostname == '':
+        result = getaddrinfo(None, 0, family, SOCK_DGRAM, 0, AI_PASSIVE)
+        if len(result) != 1:
+            raise error('wildcard resolved to multiple address')
+        return result[0][4][0]
+    return hostname

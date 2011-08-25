@@ -142,6 +142,10 @@ cpdef strerror(code):
     return '%s: %s' % (_ares_errors.get(code) or code, cares.ares_strerror(code))
 
 
+class InvalidIP(ValueError):
+    pass
+
+
 cdef void gevent_sock_state_callback(void *data, int s, int read, int write):
     if not data:
         return
@@ -318,7 +322,7 @@ cdef public class channel [object PyGeventAresChannelObject, type PyGeventAresCh
                     elif cares.ares_inet_pton(AF_INET6, string, &c_servers[index].addr) > 0:
                         c_servers[index].family = AF_INET6
                     else:
-                        raise ValueError('illegal IP address string: %r' % string)
+                        raise InvalidIP(repr(string))
                     c_servers[index].next = &c_servers[index] + 1
                     index += 1
                     if index >= length:
@@ -398,9 +402,7 @@ cdef public class channel [object PyGeventAresChannelObject, type PyGeventAresCh
             family = AF_INET6
             length = 16
         else:
-            # XXX raise immediatelly?
-            callback(result(exception=ValueError('illegal IP address string: %r' % addr)))
-            return
+            raise InvalidIP(repr(addr))
         cdef object arg = (self, callback)
         Py_INCREF(<PyObjectPtr>arg)
         cares.ares_gethostbyaddr(self.channel, addr_packed, length, family, <void*>gevent_ares_host_callback, <void*>arg)
@@ -421,9 +423,7 @@ cdef public class channel [object PyGeventAresChannelObject, type PyGeventAresCh
             raise gaierror(-8, 'Invalid value for port: %r' % port)
         cdef int length = gevent_make_sockaddr(hostp, port, flowinfo, scope_id, &sa6)
         if length <= 0:
-            # XXX raise immediatelly? like TypeError and gaierror raised above?
-            callback(result(exception=ValueError('illegal IP address string: %r' % hostp)))
-            return
+            raise InvalidIP(repr(hostp))
         cdef object arg = (self, callback)
         Py_INCREF(<PyObjectPtr>arg)
         cdef sockaddr_t* x = <sockaddr_t*>&sa6
