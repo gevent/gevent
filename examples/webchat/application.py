@@ -1,4 +1,5 @@
 #!/usr/bin/python
+from gevent import monkey; monkey.patch_all()
 import os
 import traceback
 from django.core.handlers.wsgi import WSGIHandler
