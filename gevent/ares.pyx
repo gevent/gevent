@@ -24,6 +24,12 @@ cdef extern from "dnshelper.c":
         char* h_name
         int h_addrtype
 
+    struct sockaddr_t "sockaddr":
+        pass
+
+    struct ares_channeldata:
+        pass
+
     object parse_h_aliases(hostent*)
     object parse_h_addr_list(hostent*)
     void* create_object_from_hostent(void*)
@@ -224,13 +230,13 @@ cdef void gevent_ares_nameinfo_callback(void *arg, int status, int timeouts, cha
 cdef public class channel [object PyGeventAresChannelObject, type PyGeventAresChannel_Type]:
 
     cdef public object loop
-    cdef void* channel
+    cdef ares_channeldata* channel
     cdef public dict _watchers
     cdef public object _timer
 
     def __init__(self, object loop, flags=None, timeout=None, tries=None, ndots=None,
                  udp_port=None, tcp_port=None, servers=None):
-        cdef void* channel = NULL
+        cdef ares_channeldata* channel = NULL
         cdef cares.ares_options options
         memset(&options, 0, sizeof(cares.ares_options))
         cdef int optmask = cares.ARES_OPT_SOCK_STATE_CB
@@ -420,7 +426,8 @@ cdef public class channel [object PyGeventAresChannelObject, type PyGeventAresCh
             return
         cdef object arg = (self, callback)
         Py_INCREF(<PyObjectPtr>arg)
-        cares.ares_getnameinfo(self.channel, &sa6, length, flags, <void*>gevent_ares_nameinfo_callback, <void*>arg)
+        cdef sockaddr_t* x = <sockaddr_t*>&sa6
+        cares.ares_getnameinfo(self.channel, x, length, flags, <void*>gevent_ares_nameinfo_callback, <void*>arg)
 
     def getnameinfo(self, object callback, tuple sockaddr, int flags):
         return self._getnameinfo(callback, sockaddr, _convert_cares_flags(flags))
