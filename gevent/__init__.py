@@ -28,7 +28,8 @@ __all__ = ['get_hub',
            'kill',
            'signal',
            'fork',
-           'reinit']
+           'reinit',
+           'run']
 
 
 import sys
