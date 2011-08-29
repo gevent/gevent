@@ -18,7 +18,8 @@ Backward-incompatible changes:
 - Dropped support for Python 2.4.
 - `Queue(0)` is now equivalent to an unbound queue and raises :exc:`DeprecationError`. Use :class:`gevent.queue.Channel` if you need a channel.
 - Deprecated ability to passing a greenlet instance to :meth:`Greenlet.link`, :meth:`Greenlet.link_value` and :meth:`Greenlet.link_exception`.
-- All of :mod:`gevent.core` has been rewritten and interface is incompatible.
+- All of :mod:`gevent.core` has been rewritten and the interface is not compatible.
+- :exc:`SystemExit` and :exc:`SystemError` now kill the whole process instead of printing a traceback.
 - Removed deprecated :class:`util.lazy_property` property.
 - Removed :mod:`gevent.dns` module.
 - Removed deprecated gevent.sslold module
