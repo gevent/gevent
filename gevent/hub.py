@@ -108,10 +108,18 @@ def kill(greenlet, exception=GreenletExit):
 
 class signal(object):
 
+    greenlet_class = None
+
     def __init__(self, signalnum, handler, *args, **kwargs):
         self.hub = get_hub()
         self.watcher = self.hub.loop.signal(signalnum, ref=False)
-        self.watcher.start(spawn_raw, self.handle, handler, args, kwargs)
+        self.watcher.start(self._start)
+        self.handler = handler
+        self.args = args
+        self.kwargs = kwargs
+        if self.greenlet_class is None:
+            from gevent import Greenlet
+            self.greenlet_class = Greenlet
 
     def _get_ref(self):
         return self.watcher.ref
@@ -125,11 +133,22 @@ class signal(object):
     def cancel(self):
         self.watcher.stop()
 
-    def handle(self, handler, args, kwargs):
+    def _start(self):
+        greenlet = self.greenlet_class(self.handle)
+        greenlet._start_event = _Dummy()
+        greenlet.switch()
+
+    def handle(self):
         try:
-            handler(*args, **kwargs)
+            self.handler(*self.args, **self.kwargs)
         except:
             self.hub.handle_error(None, *sys.exc_info())
+
+
+class _Dummy(object):
+
+    def stop(self):
+        pass
 
 
 if _original_fork is not None:
