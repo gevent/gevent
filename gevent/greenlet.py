@@ -144,7 +144,7 @@ class Greenlet(greenlet):
         self._exception = _NONE
         loop = hub.loop
         self._notifier = loop.callback()
-        self._start_event = loop.callback()
+        self._start_event = None
 
     @property
     def loop(self):
@@ -152,11 +152,12 @@ class Greenlet(greenlet):
         return self.parent.loop
 
     def __nonzero__(self):
-        return self._start_event.pending or greenlet.__nonzero__(self)
+        return self._start_event is not None and self._exception is _NONE
 
     @property
     def started(self):
-        return self._start_event.pending or greenlet.__nonzero__(self)
+        # DEPRECATED
+        return self.__nonzero__()
 
     def ready(self):
         """Return true if and only if the greenlet has finished execution."""
@@ -215,7 +216,8 @@ class Greenlet(greenlet):
         a) cancel the event that will start it
         b) fire the notifications as if an exception was raised in a greenlet
         """
-        self._start_event.stop()
+        if self._start_event is not None:
+            self._start_event.stop()
         try:
             greenlet.throw(self, *args)
         finally:
@@ -237,14 +239,15 @@ class Greenlet(greenlet):
 
     def start(self):
         """Schedule the greenlet to run in this loop iteration"""
-        assert not self.started, 'Greenlet already started'
-        self._start_event.start(self.switch)
+        if self._start_event is None:
+            self._start_event = self.parent.loop.callback()
+            self._start_event.start(self.switch)
 
     def start_later(self, seconds):
         """Schedule the greenlet to run in the future loop iteration *seconds* later"""
-        assert not self.started, 'Greenlet already started'
-        self._start_event = self.parent.loop.timer(seconds)
-        self._start_event.start(self.switch)
+        if self._start_event is None:
+            self._start_event = self.parent.loop.timer(seconds)
+            self._start_event.start(self.switch)
 
     @classmethod
     def spawn(cls, *args, **kwargs):
@@ -294,7 +297,8 @@ class Greenlet(greenlet):
 
         `Changed in version 0.13.0:` *block* is now ``True`` by default.
         """
-        self._start_event.stop()
+        if self._start_event is not None:
+            self._start_event.stop()
         if not self.dead:
             waiter = Waiter()
             self.parent.loop.run_callback(_kill, self, exception, waiter)
