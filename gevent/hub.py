@@ -277,20 +277,18 @@ class Hub(greenlet):
             sys.stderr.write('%s failed with %s\n\n' % (context, getattr(type, '__name__', 'exception'), ))
 
     def switch(self):
-        cur = getcurrent()
-        assert cur is not self, 'Impossible to call blocking function in the event loop callback'
         exc_type, exc_value = sys.exc_info()[:2]
         try:
-            switch_out = getattr(cur, 'switch_out', None)
+            switch_out = getattr(getcurrent(), 'switch_out', None)
             if switch_out is not None:
-                try:
-                    switch_out()
-                except:
-                    self.handle_error(switch_out, *sys.exc_info())
+                switch_out()
             exc_clear()
             return greenlet.switch(self)
         finally:
             core.set_exc_info(exc_type, exc_value)
+
+    def switch_out(self):
+        raise AssertionError('Impossible to call blocking function in the event loop callback')
 
     def wait(self, watcher):
         unique = object()
