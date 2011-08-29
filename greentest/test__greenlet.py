@@ -718,6 +718,23 @@ class TestBasic(greentest.TestCase):
         self._test_kill_running(block=False)
 
 
+class TestStart(greentest.TestCase):
+
+    def test(self):
+        g = gevent.spawn(gevent.sleep, 0.01)
+        assert g.started
+        assert not g.dead
+        g.start()
+        assert g.started
+        assert not g.dead
+        g.join()
+        assert not g.started
+        assert g.dead
+        g.start()
+        assert not g.started
+        assert g.dead
+
+
 def assert_ready(g):
     assert g.dead, g
     assert g.ready(), g
