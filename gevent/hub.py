@@ -253,11 +253,14 @@ class Hub(greenlet):
     def handle_error(self, context, type, value, tb):
         self.print_exception(context, type, value, tb)
         if context is None or issubclass(type, self.SYSTEM_ERROR):
-            current = getcurrent()
-            if current is self or current is self.parent:
-                self.parent.throw(type, value)
-            else:
-                self.loop.run_callback(self.parent.throw, type, value)
+            self.handle_system_error(type, value)
+
+    def handle_system_error(self, type, value):
+        current = getcurrent()
+        if current is self or current is self.parent:
+            self.parent.throw(type, value)
+        else:
+            self.loop.run_callback(self.parent.throw, type, value)
 
     def print_exception(self, context, type, value, tb):
         if issubclass(type, self.NOT_ERROR):
