@@ -317,6 +317,7 @@ class WSGIHandler(object):
             # Broken pipe, connection reset by peer
             if ex.args[0] in (errno.EPIPE, errno.ECONNRESET):
                 sys.exc_clear()
+                return
             else:
                 raise
 
