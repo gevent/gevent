@@ -36,36 +36,36 @@ def get_switch_expected(fullname):
     return True
 
 
-disabled_tests = [
+disabled_tests = \
+    [ 'test_threading.ThreadTests.test_PyThreadState_SetAsyncExc'
     # uses some internal C API of threads not available when threads are emulated with greenlets
-    'test_threading.ThreadTests.test_PyThreadState_SetAsyncExc',
 
+    , 'test_urllib2net.TimeoutTest.test_ftp_no_timeout'
+    , 'test_urllib2net.TimeoutTest.test_ftp_timeout'
+    , 'test_urllib2net.TimeoutTest.test_http_no_timeout'
+    , 'test_urllib2net.TimeoutTest.test_http_timeout'
     # access _sock.gettimeout() which is always in non-blocking mode
-    'test_urllib2net.TimeoutTest.test_ftp_no_timeout',
-    'test_urllib2net.TimeoutTest.test_ftp_timeout',
-    'test_urllib2net.TimeoutTest.test_http_no_timeout',
-    'test_urllib2net.TimeoutTest.test_http_timeout',
 
-    # this test seems to have a bug which makes it fail with error: (107, 'Transport endpoint is not connected')
+    , 'test_socket.UDPTimeoutTest.testUDPTimeout'
+    # has a bug which makes it fail with error: (107, 'Transport endpoint is not connected')
     # (it creates a TCP socket, not UDP)
-    'test_socket.UDPTimeoutTest.testUDPTimeout',
 
-    # this fails with "socket.getnameinfo loses a reference" while the reference is only "lost"
+    , 'test_socket.GeneralModuleTests.testRefCountGetNameInfo'
+    # fails with "socket.getnameinfo loses a reference" while the reference is only "lost"
     # because it is referenced by the traceback - any Python function would lose a reference like that.
     # the original getnameinfo does not lose it because it's in C.
-    'test_socket.GeneralModuleTests.testRefCountGetNameInfo',
 
+    , 'test_asyncore.BaseTestAPI.test_handle_expt'
     # sends some OOB data and expect it to be detected as such; gevent.select.select does not support that
-    'test_asyncore.BaseTestAPI.test_handle_expt',
 
-    # this tests that time.sleep() returns prematurely in case of signal;
+    , 'test_signal.WakeupSignalTests.test_wakeup_fd_early'
+    # expects time.sleep() to return prematurely in case of a signal;
     # gevent.sleep() is better than that and does not get interrupted (unless signal handler raises an error)
-    'test_signal.WakeupSignalTests.test_wakeup_fd_early',
 
-    # this tests that select.select() raises select.error(EINTR, 'interrupted system call')
+    , 'test_signal.WakeupSignalTests.test_wakeup_fd_during'
+    # expects select.select() to raise select.error(EINTR, 'interrupted system call')
     # gevent.select.select() does not get interrupted (unless signal handler raises an error)
     # maybe it should?
-    'test_signal.WakeupSignalTests.test_wakeup_fd_during',
 ]
 
 if sys.version_info[:2] < (2, 7):
