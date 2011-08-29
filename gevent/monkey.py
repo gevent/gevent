@@ -86,7 +86,7 @@ def patch_module(name, items=None):
         newitem = getattr(source, attr)
         if olditem is not newitem:
             setattr(monkey_original, attr, olditem)
-            setattr(dest, attr, getattr(source, attr))
+            setattr(dest, attr, newitem)
             count += 1
     return count
 
