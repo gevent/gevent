@@ -326,26 +326,43 @@ class Hub(greenlet):
         # It is still possible to kill this greenlet with throw. However, in that case
         # switching to it is no longer safe, as switch will return immediatelly
 
-    def join(self, timeout=None):
+    def join(self, timeout=None, event=None):
         """Wait for the event loop to finish. Exits only when there are
         no more spawned greenlets, started servers, active timeouts or watchers.
+
+        If *timeout* is provided, wait no longer for the specified number of seconds.
+        If *event* was provided, exit when it was signalled with :meth:`Event.set` method.
+
+        Returns True if exited because the loop finished execution.
+        Returns None if exited because of timeout expired or event was signalled.
         """
-        assert getcurrent() is self.parent, "only possible from MAIN greenlet"
+        assert getcurrent() is self.parent, "only possible from the MAIN greenlet"
         if self.dead:
             return True
 
-        if timeout is not None:
-            timeout = self.loop.timer(timeout, ref=False)
-            timeout.start(getcurrent().switch)
+        waiter = Waiter()
+
+        if event is not None:
+            switch = waiter.switch
+            event.rawlink(switch)
 
         try:
-            try:
-                self.switch()
-            except LoopExit:
-                return True
-        finally:
             if timeout is not None:
-                timeout.stop()
+                self.loop.update()
+                timeout = self.loop.timer(timeout, ref=False)
+                timeout.start(waiter.switch)
+
+            try:
+                try:
+                    waiter.get()
+                except LoopExit:
+                    return True
+            finally:
+                if timeout is not None:
+                    timeout.stop()
+        finally:
+            if event is not None:
+                event.unlink(switch)
 
     def _get_resolver(self):
         if self._resolver is None:
