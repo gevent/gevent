@@ -298,7 +298,8 @@ class Hub(greenlet):
             watcher.stop()
 
     def cancel_wait(self, watcher, error):
-        self.loop.run_callback(self._cancel_wait, watcher, error)
+        if watcher.callback is not None:
+            self.loop.run_callback(self._cancel_wait, watcher, error)
 
     def _cancel_wait(self, watcher, error):
         if watcher.active:
