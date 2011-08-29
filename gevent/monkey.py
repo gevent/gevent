@@ -135,12 +135,15 @@ def patch_socket(dns=True, aggressive=True):
     If *dns* is true, also patch dns functions in :mod:`socket`.
     """
     from gevent import socket
-    items = socket.__implements__[:]
-    if not dns:
-        for function in socket.__dns__:
-            items.remove(function)
-    # if we patch socket.socket then create_connection is already good
-    items.remove('create_connection')
+    # Note: although it seems like it's not strictly necessary to monkey patch 'create_connection',
+    # it's better to do it. If 'create_connection' was not monkey patched, but the rest of socket module
+    # was, create_connection would still use "green" getaddrinfo and "green" socket.
+    # However, because gevent.socket.socket.connect is a Python function, the exception raised by it causes
+    # _socket object to be referenced by the frame, thus causing the next invocation of bind(source_address) to fail.
+    if dns:
+        items = socket.__implements__
+    else:
+        items = set(socket.__implements__) - set(socket.__dns__)
     patch_module('socket', items=items)
     if aggressive:
         if 'ssl' not in socket.__implements__:
