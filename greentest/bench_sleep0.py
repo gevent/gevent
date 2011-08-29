@@ -13,7 +13,7 @@ while True:
         sleep(0)
     user_time_x, system_time_x = os.times()[:2]
     delta = time() - start
-    if delta > 1:
+    if delta > 0.2:
         break
     N *= 10
 user_time_x -= user_time
