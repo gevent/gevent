@@ -266,6 +266,7 @@ class Hub(greenlet):
         if issubclass(type, self.NOT_ERROR):
             return
         traceback.print_exception(type, value, tb)
+        del tb
         if context is not None:
             if not isinstance(context, str):
                 try:
