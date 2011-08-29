@@ -262,9 +262,9 @@ class CountingHub(_original_Hub):
 
     switch_count = 0
 
-    def switch(self):
+    def switch(self, *args):
         self.switch_count += 1
-        return _original_Hub.switch(self)
+        return _original_Hub.switch(self, *args)
 
 if gettotalrefcount is None:
     gevent.hub.Hub = CountingHub
