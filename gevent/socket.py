@@ -332,8 +332,8 @@ class socket(object):
             self._wait(self._read_event)
         return socket(_sock=client_socket), address
 
-    def close(self):
-        # use self._read_event.loop.run_callback
+    def close(self,_closedsocket=_closedsocket, _delegate_methods=_delegate_methods, setattr=setattr):
+        # This function should not reference any globals. See Python issue #808164.
         self.hub.cancel_wait(self._read_event, cancel_wait_ex)
         self.hub.cancel_wait(self._write_event, cancel_wait_ex)
         self._sock = _closedsocket()
