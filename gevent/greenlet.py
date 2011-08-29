@@ -219,10 +219,10 @@ class Greenlet(greenlet):
             greenlet.throw(self, *args)
         finally:
             if self._exception is _NONE and self.dead:
-                # the greenlet was not started yet, so _report_error was not called, so
+                # the greenlet was never switched to before and it will never be, _report_error was not called
                 # the result was not set and the links weren't notified. let's do it here.
-                # checking that self.dead is true is essential, because the exception raised by
-                # throw() could have been cancelled by the greenlet's function.
+                # checking that self.dead is true is essential, because throw() does not necessarily kill the greenlet
+                # (if the exception raised by throw() is caught somewhere inside the greenlet).
                 if len(args) == 1:
                     arg = args[0]
                     #if isinstance(arg, type):
