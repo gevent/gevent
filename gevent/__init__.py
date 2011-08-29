@@ -37,6 +37,7 @@ if sys.platform == 'win32':
 del sys
 
 
+from gevent.hub import get_hub
 from gevent.greenlet import Greenlet, joinall, killall
 spawn = Greenlet.spawn
 spawn_later = Greenlet.spawn_later
@@ -47,7 +48,11 @@ try:
 except ImportError:
     __all__.remove('fork')
 
-from gevent.hub import get_hub
+
 
 def reinit():
     return get_hub().loop.reinit()
+
+
+def run(timeout=None, event=None):
+    return get_hub().join(timeout=timeout, event=event)
