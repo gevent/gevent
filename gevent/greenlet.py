@@ -148,6 +148,7 @@ class Greenlet(greenlet):
 
     @property
     def loop(self):
+        # needed by killall
         return self.parent.loop
 
     def __nonzero__(self):
