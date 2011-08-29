@@ -332,7 +332,7 @@ class Hub(greenlet):
         """
         assert getcurrent() is self.parent, "only possible from MAIN greenlet"
         if self.dead:
-            return
+            return True
 
         if timeout is not None:
             timeout = self.loop.timer(timeout, ref=False)
