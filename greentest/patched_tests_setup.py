@@ -55,6 +55,13 @@ disabled_tests = \
     # because it is referenced by the traceback - any Python function would lose a reference like that.
     # the original getnameinfo does not lose it because it's in C.
 
+    , 'test_socket.NetworkConnectionNoServer.test_create_connection_timeout'
+    # replaces socket.socket with MockSocket and then calls create_connection.
+    # this unfortunately does not work with monkey patching, because gevent.socket.create_connection
+    # is bound to gevent.socket.socket and updating socket.socket does not affect it.
+    # this issues also manifests itself when not monkey patching DNS: http://code.google.com/p/gevent/issues/detail?id=54
+    # create_connection still uses gevent.socket.getaddrinfo while it should be using socket.getaddrinfo
+
     , 'test_asyncore.BaseTestAPI.test_handle_expt'
     # sends some OOB data and expect it to be detected as such; gevent.select.select does not support that
 
