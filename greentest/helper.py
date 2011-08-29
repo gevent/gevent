@@ -69,8 +69,8 @@ def prepare_stdlib_test(filename):
         raise
 
     module_source = _f.read()
-    from patched_tests_setup import disable_tests_in_the_source
-    module_source = disable_tests_in_the_source(module_source, name)
+    from patched_tests_setup import disable_tests_in_source
+    module_source = disable_tests_in_source(module_source, name)
     module_code = compile(module_source, _filename, 'exec')
 
     print >> sys.stderr, 'Testing %s with monkey patching' % _filename

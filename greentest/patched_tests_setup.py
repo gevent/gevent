@@ -80,7 +80,7 @@ if sys.version_info[:2] < (2, 7):
     disabled_tests.append('test_threading.ThreadTests.test_foreign_thread')
 
 
-def disable_tests_in_the_source(source, name):
+def disable_tests_in_source(source, name):
     my_disabled_tests = [x for x in disabled_tests if x.startswith(name + '.')]
     if not my_disabled_tests:
         return source
