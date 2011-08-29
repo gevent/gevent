@@ -372,7 +372,13 @@ class WSGIHandler(object):
                 towrite.append(data)
 
         msg = ''.join(towrite)
-        self.socket.sendall(msg)
+        try:
+            self.socket.sendall(msg)
+        except socket.error, ex:
+            self.status = 'socket error: %s' % ex
+            if self.code > 0:
+                self.code = -self.code
+            raise
         self.response_length += len(msg)
 
     def start_response(self, status, headers, exc_info=None):
