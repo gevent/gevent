@@ -312,18 +312,19 @@ class Hub(greenlet):
                     greenlet.throw(error)
 
     def run(self):
-        global _threadlocal
         assert self is getcurrent(), 'Do not call Hub.run() directly'
-        try:
-            self.loop.error_handler = self
-            self.loop.run()
-        finally:
-            if _threadlocal.__dict__.get('hub') is self:
-                _threadlocal.__dict__.pop('hub')
-            self.loop.error_handler = None  # break the ref cycle
+        while True:
+            loop = self.loop
+            loop.error_handler = self
+            try:
+                loop.run()
+            finally:
+                loop.error_handler = None  # break the refcount cycle
+            self.parent.throw(LoopExit('This operation would block forever'))
         # this function must never return, as it will cause switch() in the parent greenlet
         # to return an unexpected value
-        raise LoopExit
+        # It is still possible to kill this greenlet with throw. However, in that case
+        # switching to it is no longer safe, as switch will return immediatelly
 
     def join(self, timeout=None):
         """Wait for the event loop to finish. Exits only when there are
