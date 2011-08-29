@@ -616,6 +616,10 @@ def create_connection(address, timeout=_GLOBAL_DEFAULT_TIMEOUT, source_address=N
             return sock
         except error:
             err = sys.exc_info()[1]
+            # without exc_clear(), if connect() fails once, the socket is referenced by the frame in exc_info
+            # and the next bind() fails (see test__socket.TestCreateConnection)
+            # that does not happen with regular sockets though, because _socket.socket.connect() is a built-in.
+            # this is similar to "getnameinfo loses a reference" failure in test_socket.py
             sys.exc_clear()
             if sock is not None:
                 sock.close()
