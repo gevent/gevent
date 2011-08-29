@@ -329,40 +329,40 @@ class WSGIHandler(object):
 
         return True  # read more requests
 
+    def finalize_headers(self):
+        response_headers_list = [x[0] for x in self.response_headers]
+        if 'Date' not in response_headers_list:
+            self.response_headers.append(('Date', format_date_time(time.time())))
+
+        if self.request_version == 'HTTP/1.0' and 'Connection' not in response_headers_list:
+            self.response_headers.append(('Connection', 'close'))
+            self.close_connection = True
+        elif ('Connection', 'close') in self.response_headers:
+            self.close_connection = True
+
+        if self.code not in [204, 304]:
+            # the reply will include message-body; make sure we have either Content-Length or chunked
+            if 'Content-Length' not in response_headers_list:
+                if hasattr(self.result, '__len__'):
+                    self.response_headers.append(('Content-Length', str(sum(len(chunk) for chunk in self.result))))
+                else:
+                    if self.request_version != 'HTTP/1.0':
+                        self.response_use_chunked = True
+                        self.response_headers.append(('Transfer-Encoding', 'chunked'))
+
     def write(self, data):
         towrite = []
         if not self.status:
             raise AssertionError("The application did not call start_response()")
         if not self.headers_sent:
-            if 'Date' not in self.response_headers_list:
-                self.response_headers.append(('Date', format_date_time(time.time())))
-                self.response_headers_list.append('Date')
-
-            if self.request_version == 'HTTP/1.0' and 'Connection' not in self.response_headers_list:
-                self.response_headers.append(('Connection', 'close'))
-                self.response_headers_list.append('Connection')
-                self.close_connection = True
-            elif ('Connection', 'close') in self.response_headers:
-                self.close_connection = True
-
-            if self.code not in [204, 304]:
-                # the reply will include message-body; make sure we have either Content-Length or chunked
-                if 'Content-Length' not in self.response_headers_list:
-                    if hasattr(self.result, '__len__'):
-                        self.response_headers.append(('Content-Length', str(sum(len(chunk) for chunk in self.result))))
-                        self.response_headers_list.append('Content-Length')
-                    else:
-                        if self.request_version != 'HTTP/1.0':
-                            self.response_use_chunked = True
-                            self.response_headers.append(('Transfer-Encoding', 'chunked'))
-                            self.response_headers_list.append('Transfer-Encoding')
+            self.headers_sent = True
+            self.finalize_headers()
 
             towrite.append('%s %s\r\n' % (self.request_version, self.status))
             for header in self.response_headers:
                 towrite.append('%s: %s\r\n' % header)
 
             towrite.append('\r\n')
-            self.headers_sent = True
 
         if data:
             if self.response_use_chunked:
@@ -387,7 +387,6 @@ class WSGIHandler(object):
         self.code = int(status.split(' ', 1)[0])
         self.status = status
         self.response_headers = [('-'.join([x.capitalize() for x in key.split('-')]), value) for key, value in headers]
-        self.response_headers_list = [x[0] for x in self.response_headers]
         return self.write
 
     def log_request(self):
