@@ -216,7 +216,9 @@ class Greenlet(greenlet):
         a) cancel the event that will start it
         b) fire the notifications as if an exception was raised in a greenlet
         """
-        if self._start_event is not None:
+        if self._start_event is None:
+            self._start_event = _dummy_event
+        else:
             self._start_event.stop()
         try:
             greenlet.throw(self, *args)
@@ -297,7 +299,9 @@ class Greenlet(greenlet):
 
         `Changed in version 0.13.0:` *block* is now ``True`` by default.
         """
-        if self._start_event is not None:
+        if self._start_event is None:
+            self._start_event = _dummy_event
+        else:
             self._start_event.stop()
         if not self.dead:
             waiter = Waiter()
@@ -390,7 +394,10 @@ class Greenlet(greenlet):
 
     def run(self):
         try:
-            self._start_event.stop()
+            if self._start_event is None:
+                self._start_event = _dummy_event
+            else:
+                self._start_event.stop()
             try:
                 result = self._run(*self.args, **self.kwargs)
             except:
@@ -471,6 +478,15 @@ class Greenlet(greenlet):
                 link(self)
             except:
                 self.parent.handle_error((link, self), *sys.exc_info())
+
+
+class _dummy_event(object):
+
+    def stop(self):
+        pass
+
+
+_dummy_event = _dummy_event()
 
 
 def _kill(greenlet, exception, waiter):
