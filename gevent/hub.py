@@ -134,21 +134,17 @@ class signal(object):
         self.watcher.stop()
 
     def _start(self):
-        greenlet = self.greenlet_class(self.handle)
-        greenlet._start_event = _Dummy()
-        greenlet.switch()
+        try:
+            greenlet = self.greenlet_class(self.handle)
+            greenlet.switch()
+        except:
+            self.hub.handle_error(None, *sys._exc_info())
 
     def handle(self):
         try:
             self.handler(*self.args, **self.kwargs)
         except:
             self.hub.handle_error(None, *sys.exc_info())
-
-
-class _Dummy(object):
-
-    def stop(self):
-        pass
 
 
 if _original_fork is not None:
