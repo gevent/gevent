@@ -115,9 +115,8 @@ Lightweight pseudothreads
 
 The greenlets are spawned by creating a :class:`Greenlet` instance and calling its :meth:`start <Greenlet.start>`
 method. (The :func:`spawn` function is a shortcut that does exactly that). The :meth:`start <Greenlet.start>`
-method schedules an :class:`event <gevent.core.active_event>` that will switch to the greenlet created, as soon
-as the current greenlet gives up control. If there is more than one active event, they will be executed
-one by one, in an undefined order.
+method schedules a switch to the greenlet that will happen as soon as the current greenlet gives up control.
+If there is more than one active event, they will be executed one by one, in an undefined order.
 
 If there was an error during execution it won't escape greenlet's boundaries. An unhandled error results
 in a stacktrace being printed complemented by failed function signature and arguments:
