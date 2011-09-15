@@ -4,6 +4,63 @@ Changelog
 .. currentmodule:: gevent
 
 
+Release 1.0a3
+-------------
+
+Added 'ref' property to all watchers. Settings it to False make watcher call ev_unref/ev_ref appropriatelly so that this watcher does not prevent loop.run()/hub.join()/run() from exiting.
+Made resolver_ares.Resolver use 'ref' property for internal watcher.
+
+In all servers, method "kill" was renamed to "close". The old name is available as deprecated alias.
+
+Added a few properties to the loop: backend_fd, fdchangecnt, timercnt.
+
+Upgraded c-ares to 1.7.5+patch.
+
+Fixed getaddrinfo to return results in the order (::1, IPv4, IPv6).
+
+Fixed getaddrinfo() to handle integer of string type. Thanks to kconor.
+
+Fixed gethostbyname() to handle '' (empty string).
+
+Fixed getaddrinfo() to convert UnicodeEncodeError into error('Int or String expected').
+
+Fixed getaddrinfo() to uses the lowest 16 bits of passed port integer similar to built-in _socket.
+
+Fixed getnameinfo() to call getaddrinfo() to process arguments similar to built-in _socket.
+
+Fixed gethostbyaddr() to use getaddrinfo() to process arguments.
+
+version_info is now a 5-tuple.
+
+Added handle_system_error() method to Hub (used internally).
+
+Fixed Hub's run() method to never exit. This prevent inappropriate switches into parent greenlet.
+
+Fixed Hub.join() to return False if Hub was already dead.
+
+Added 'event' argument to Hub.join().
+
+Added `run()` function to gevent top level package.
+
+Fixed Greenlet.start() to exit silently if greenlet was already started rather than raising :exc:`AssertionError`.
+
+Fixed Greenlet.start() not to schedule another switch if greenlet is already dead.
+
+Fixed gevent.signal() to spawn Greenlet instead of raw greenlet. Also it'll switch into the new greenlet immediatelly instead of scheduling additional callback.
+
+Do monkey patch create_connection() as gevent's version works better with gevent.socket.socket than the standard create_connection.
+
+pywsgi: make sure we don't try to read more requests if socket operation failed with EPIPE
+
+pywsgi: if we failed to send the reply, change 'status' to socket error so that the logs mention the error.
+
+
+Release 1.0a2
+-------------
+
+Fixed a bug in gevent.queue.Channel class. (Thanks to Alexey Borzenkov)
+
+
 Release 1.0a1
 -------------
 
@@ -35,7 +92,7 @@ Release highlights:
 - The release now includes and embeds the dependencies: libev and c-ares.
 - The standard :mod:`signal` works now as expected.
 - The unhandled errors are now handled uniformely by `Hub.handle_error` function.
-- Added :class:`Channel` class to :mod:`gevent.queue` module. It is equivalent to `Queue(0)` in gevent 0.x, which is deprecated now. 
+- Added :class:`Channel` class to :mod:`gevent.queue` module. It is equivalent to `Queue(0)` in gevent 0.x, which is deprecated now.
 - Added method :meth:`peek` to :class:`Queue` class.
 - Added :func:`idle` function which blocks until the event loop is idle.
 - Added a way to gracefully shutdown the application by waiting for all outstanding greenlets/servers/watchers: :meth:`Hub.join`.
