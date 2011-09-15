@@ -7,7 +7,7 @@ Changelog
 Release 1.0a3
 -------------
 
-Added 'ref' property to all watchers. Settings it to False make watcher call ev_unref/ev_ref appropriatelly so that this watcher does not prevent loop.run()/hub.join()/run() from exiting.
+Added 'ref' property to all watchers. Settings it to False make watcher call ev_unref/ev_ref appropriately so that this watcher does not prevent loop.run()/hub.join()/run() from exiting.
 Made resolver_ares.Resolver use 'ref' property for internal watcher.
 
 In all servers, method "kill" was renamed to "close". The old name is available as deprecated alias.
@@ -46,7 +46,7 @@ Fixed Greenlet.start() to exit silently if greenlet was already started rather t
 
 Fixed Greenlet.start() not to schedule another switch if greenlet is already dead.
 
-Fixed gevent.signal() to spawn Greenlet instead of raw greenlet. Also it'll switch into the new greenlet immediatelly instead of scheduling additional callback.
+Fixed gevent.signal() to spawn Greenlet instead of raw greenlet. Also it'll switch into the new greenlet immediately instead of scheduling additional callback.
 
 Do monkey patch create_connection() as gevent's version works better with gevent.socket.socket than the standard create_connection.
 
