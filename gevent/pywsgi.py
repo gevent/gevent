@@ -61,7 +61,7 @@ class Input(object):
     def _send_100_continue(self):
         if self.socket is not None:
             self.socket.sendall(_CONTINUE_RESPONSE)
-            self.sendall = None
+            self.socket = None
 
     def _do_read(self, reader, length=None):
         content_length = self.content_length
