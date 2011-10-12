@@ -886,11 +886,15 @@ class Expect100ContinueTests(TestCase):
     validator = None
 
     def application(self, environ, start_response):
-        if int(environ['CONTENT_LENGTH']) > 1024:
+        content_length = int(environ['CONTENT_LENGTH'])
+        if content_length > 1024:
             start_response('417 Expectation Failed', [('Content-Length', '7'), ('Content-Type', 'text/plain')])
             return ['failure']
         else:
-            text = environ['wsgi.input'].read()
+            # pywsgi did sent a "100 continue" for each read
+            # see http://code.google.com/p/gevent/issues/detail?id=93
+            text = environ['wsgi.input'].read(1)
+            text += environ['wsgi.input'].read(content_length - 1)
             start_response('200 OK', [('Content-Length', str(len(text))), ('Content-Type', 'text/plain')])
             return [text]
 
