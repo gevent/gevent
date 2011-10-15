@@ -211,7 +211,7 @@ def embeddable_backends():
     return _flags_to_list(libev.ev_embeddable_backends())
 
 
-def time(self):
+def time():
     return libev.ev_time()
 
 
