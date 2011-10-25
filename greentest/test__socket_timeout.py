@@ -1,3 +1,4 @@
+import sys
 import gevent
 from gevent import socket
 import unittest
