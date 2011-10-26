@@ -83,6 +83,10 @@ class Input(object):
             return ''
         read = reader(length)
         self.position += len(read)
+        if len(read) < length:
+            if (use_readline and not read.endswith("\n")) or not use_readline:
+                raise IOError("unexpected end of file while reading request at position %s" % (self.position,))
+
         return read
 
     def _chunked_read(self, length=None, use_readline=False):
@@ -126,7 +130,11 @@ class Input(object):
                 if use_readline and data[-1] == "\n":
                     break
             else:
-                self.chunk_length = int(rfile.readline().split(";", 1)[0], 16)
+                line = rfile.readline()
+                if not line.endswith("\n"):
+                    self.chunk_length = 0
+                    raise IOError("unexpected end of file while reading chunked data header")
+                self.chunk_length = int(line.split(";", 1)[0], 16)
                 self.position = 0
                 if self.chunk_length == 0:
                     rfile.readline()
