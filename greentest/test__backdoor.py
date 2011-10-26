@@ -57,5 +57,17 @@ class Test(greentest.TestCase):
             server.stop()
 
 
+    def test_banner(self):
+        banner = "Welcome stranger!"
+        server = backdoor.BackdoorServer(('127.0.0.1', 0), banner=banner)
+        server.start()
+        try:
+            conn = socket.create_connection(('127.0.0.1', server.server_port))
+            response = read_until(conn, '>>> ')
+            self.assertEqual(response[:len(banner)], banner)
+        finally:
+            server.stop()
+
+
 if __name__ == '__main__':
     greentest.main()

@@ -44,10 +44,11 @@ except AttributeError:
 
 class SocketConsole(Greenlet):
 
-    def __init__(self, locals, conn):
+    def __init__(self, locals, conn, banner=None):
         Greenlet.__init__(self)
         self.locals = locals
         self.desc = _fileobject(conn)
+        self.banner = banner
 
     def finalize(self):
         self.desc = None
@@ -64,7 +65,7 @@ class SocketConsole(Greenlet):
         try:
             try:
                 console = InteractiveConsole(self.locals)
-                console.interact()
+                console.interact(banner=self.banner)
             except SystemExit:  # raised by quit()
                 sys.exc_clear()
         finally:
@@ -74,13 +75,14 @@ class SocketConsole(Greenlet):
 
 class BackdoorServer(StreamServer):
 
-    def __init__(self, listener, locals=None, **server_args):
+    def __init__(self, listener, locals=None, banner=None, **server_args):
         StreamServer.__init__(self, listener, spawn=None, **server_args)
         self.locals = locals
+        self.banner = banner
         # QQQ passing pool instance as 'spawn' is not possible; should it be fixed?
 
     def handle(self, conn, address):
-        SocketConsole.spawn(self.locals, conn)
+        SocketConsole.spawn(self.locals, conn, banner=self.banner)
 
 
 class _fileobject(socket._fileobject):
