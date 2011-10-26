@@ -23,6 +23,7 @@ monkey.patch_all(thread=False)
 import cgi
 import os
 import sys
+import StringIO
 try:
     from wsgiref.validate import validator
 except ImportError:
@@ -33,6 +34,7 @@ except ImportError:
 import greentest
 import gevent
 from gevent import socket
+from gevent.pywsgi import Input
 
 
 CONTENT_LENGTH = 'Content-Length'
@@ -791,10 +793,7 @@ class ChunkedInputTests(TestCase):
         if dirt is None:
             dirt = self.dirt
 
-        b = ""
-        for c in chunks:
-            b += "%x%s\r\n%s\r\n" % (len(c), dirt, c)
-        return b
+        return chunk_encode(chunks, dirt=dirt)
 
     def body(self, dirt=None):
         return self.chunk_encode(["this", " is ", "chunked", "\nline", " 2", "\n", "line3", ""], dirt=dirt)
@@ -1047,6 +1046,80 @@ class TestErrorAfterChunk(TestCase):
         self.assertRaises(ValueError, read_http, fd)
         self.assert_error(greentest.ExpectedException)
 
+
+def chunk_encode(chunks, dirt=None):
+    if dirt is None:
+        dirt = ""
+
+    b = ""
+    for c in chunks:
+        b += "%x%s\r\n%s\r\n" % (len(c), dirt, c)
+    return b
+
+
+class TestInputRaw(greentest.BaseTestCase):
+    def make_input(self, data, content_length=None, chunked_input=False):
+        if isinstance(data, list):
+            data = chunk_encode(data)
+            chunked_input = True
+
+        return Input(StringIO.StringIO(data), content_length=content_length, chunked_input=chunked_input)
+
+    def test_short_post(self):
+        i = self.make_input("1", content_length=2)
+        self.assertRaises(IOError, i.read)
+
+    def test_short_post_read_with_length(self):
+        i = self.make_input("1", content_length=2)
+        self.assertRaises(IOError, i.read, 2)
+
+    def test_short_post_readline(self):
+        i = self.make_input("1", content_length=2)
+        self.assertRaises(IOError, i.readline)
+
+    def test_post(self):
+        i = self.make_input("12", content_length=2)
+        data = i.read()
+        self.assertEqual(data, "12")
+
+    def test_post_read_with_length(self):
+        i = self.make_input("12", content_length=2)
+        data = i.read(10)
+        self.assertEqual(data, "12")
+
+    def test_chunked(self):
+        i = self.make_input(["1", "2", ""])
+        data = i.read()
+        self.assertEqual(data, "12")
+
+    def test_chunked_read_with_length(self):
+        i = self.make_input(["1", "2", ""])
+        data = i.read(10)
+        self.assertEqual(data, "12")
+
+    def test_chunked_missing_chunk(self):
+        i = self.make_input(["1", "2"])
+        self.assertRaises(IOError, i.read)
+
+    def test_chunked_missing_chunk_read_with_length(self):
+        i = self.make_input(["1", "2"])
+        self.assertRaises(IOError, i.read, 10)
+
+    def test_chunked_missing_chunk_readline(self):
+        i = self.make_input(["1", "2"])
+        self.assertRaises(IOError, i.readline)
+
+    def test_chunked_short_chunk(self):
+        i = self.make_input("2\r\n1", chunked_input=True)
+        self.assertRaises(IOError, i.read)
+
+    def test_chunked_short_chunk_read_with_length(self):
+        i = self.make_input("2\r\n1", chunked_input=True)
+        self.assertRaises(IOError, i.read, 2)
+
+    def test_chunked_short_chunk_readline(self):
+        i = self.make_input("2\r\n1", chunked_input=True)
+        self.assertRaises(IOError, i.readline)
 
 del CommonTests
 
