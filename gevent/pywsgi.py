@@ -63,7 +63,11 @@ class Input(object):
             self.socket.sendall(_CONTINUE_RESPONSE)
             self.socket = None
 
-    def _do_read(self, reader, length=None):
+    def _do_read(self, length=None, use_readline=False):
+        if use_readline:
+            reader = self.rfile.readline
+        else:
+            reader = self.rfile.read
         content_length = self.content_length
         if content_length is None:
             # Either Content-Length or "Transfer-Encoding: chunked" must be present in a request with a body
@@ -81,7 +85,8 @@ class Input(object):
         self.position += len(read)
         return read
 
-    def _chunked_read(self, rfile, length=None, use_readline=False):
+    def _chunked_read(self, length=None, use_readline=False):
+        rfile = self.rfile
         self._send_100_continue()
 
         if length == 0:
@@ -130,14 +135,14 @@ class Input(object):
 
     def read(self, length=None):
         if self.chunked_input:
-            return self._chunked_read(self.rfile, length)
-        return self._do_read(self.rfile.read, length)
+            return self._chunked_read(length)
+        return self._do_read(length)
 
     def readline(self, size=None):
         if self.chunked_input:
-            return self._chunked_read(self.rfile, size, True)
+            return self._chunked_read(size, True)
         else:
-            return self._do_read(self.rfile.readline, size)
+            return self._do_read(size, use_readline=True)
 
     def readlines(self, hint=None):
         return list(self)
