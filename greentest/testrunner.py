@@ -201,6 +201,20 @@ def get_tempnam():
     return os.path.join(os.path.dirname(tempnam), 'testresults.sqlite3')
 
 
+def execfile_as_main(path):
+    import __builtin__
+    oldmain = sys.modules["__main__"]
+    main = sys.__class__("__main__")
+    main.__file__ = path
+    main.__builtins__ = __builtin__
+    main.__package__ = None
+    try:
+        sys.modules["__main__"] = main
+        return execfile(path, main.__dict__)
+    finally:
+        sys.modules["__main__"] = oldmain
+
+
 def run_tests(options, args):
     arg = args[0]
     module_name = arg
@@ -219,10 +233,9 @@ def run_tests(options, args):
         test_support.BasicTestRunner = _runner
 
     sys.argv = args
-    globals()['__file__'] = arg
 
     if os.path.exists(arg):
-        execfile(arg, globals())
+        execfile_as_main(arg)
     else:
         test = defaultTestLoader.loadTestsFromName(arg)
         result = _runner().run(test)
