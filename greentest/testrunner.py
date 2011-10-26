@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 """Unit test runner.
 
 This test runner runs each test module isolated in a subprocess, thus allowing them to
