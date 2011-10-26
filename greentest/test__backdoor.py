@@ -68,6 +68,18 @@ class Test(greentest.TestCase):
         finally:
             server.stop()
 
+    def test_builtins(self):
+        server = backdoor.BackdoorServer(('127.0.0.1', 0))
+        server.start()
+        try:
+            conn = socket.create_connection(('127.0.0.1', server.server_port))
+            read_until(conn, '>>> ')
+            conn.sendall('locals()["__builtins__"]\r\n')
+            response = read_until(conn, '>>> ')
+            self.assertTrue(len(response) < 300, msg="locals() unusable: %s..." % response[:100])
+        finally:
+            server.stop()
+
 
 if __name__ == '__main__':
     greentest.main()
