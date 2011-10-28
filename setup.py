@@ -126,6 +126,8 @@ if ares_embed:
 def make(done=[]):
     if not done:
         if os.path.exists('Makefile'):
+            if "PYTHON" not in os.environ:
+                os.environ["PYTHON"] = sys.executable
             if os.system('make'):
                 sys.exit(1)
         done.append(1)
