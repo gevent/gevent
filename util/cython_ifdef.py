@@ -262,8 +262,7 @@ def pairs(iterable):
 
 
 def _bin(number, length):
-    result = bin(number)[2:]
-    return '0' * (length - len(result)) + result
+    return "".join([str((number >> shift) & 1) for shift in xrange(length - 1, -1, -1)])
 
 
 def iter_configurations(symbols):
