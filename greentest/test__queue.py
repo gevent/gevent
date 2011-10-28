@@ -354,7 +354,7 @@ class TestJoinEmpty(TestCase):
         q.join()
 
 
-def test_get_interrupt(queue_type):
+def make_get_interrupt(queue_type):
 
     class TestGetInterrupt(GenericGetTestCase):
 
@@ -368,12 +368,12 @@ def test_get_interrupt(queue_type):
 
 
 for queue_type in [queue.Queue, queue.JoinableQueue, queue.LifoQueue, queue.PriorityQueue, queue.Channel]:
-    klass = test_get_interrupt(queue_type)
+    klass = make_get_interrupt(queue_type)
     globals()[klass.__name__] = klass
 del klass, queue_type
 
 
-def test_put_interrupt(queue):
+def make_put_interrupt(queue):
 
     class TestPutInterrupt(GenericGetTestCase):
 
@@ -389,7 +389,7 @@ def test_put_interrupt(queue):
 
 
 for obj in [queue.Queue(1), queue.JoinableQueue(1), queue.LifoQueue(1), queue.PriorityQueue(1), queue.Channel()]:
-    klass = test_put_interrupt(obj)
+    klass = make_put_interrupt(obj)
     globals()[klass.__name__] = klass
 del klass, obj
 
