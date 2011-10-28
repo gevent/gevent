@@ -12,6 +12,7 @@ try:
 except ImportError:
     from distutils.core import Extension, setup
 from distutils.command.build_ext import build_ext
+from distutils.command.sdist import sdist as _sdist
 from distutils.errors import CCompilerError, DistutilsExecError, DistutilsPlatformError
 ext_errors = (CCompilerError, DistutilsExecError, DistutilsPlatformError, IOError)
 
@@ -132,6 +133,10 @@ def make(done=[]):
                 sys.exit(1)
         done.append(1)
 
+class sdist(_sdist):
+    def run(self):
+        make()
+        _sdist.run(self)
 
 class my_build_ext(build_ext):
 
@@ -200,7 +205,7 @@ def run_setup(ext_modules):
         url='http://www.gevent.org/',
         packages=['gevent'],
         ext_modules=ext_modules,
-        cmdclass={'build_ext': my_build_ext},
+        cmdclass=dict(build_ext=my_build_ext, sdist=sdist),
         install_requires=['greenlet'],
         classifiers=[
         "License :: OSI Approved :: MIT License",
