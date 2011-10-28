@@ -1,4 +1,5 @@
 import sys
+import os
 from gevent import select, socket
 import greentest
 
@@ -14,7 +15,12 @@ if sys.platform != 'win32':
     class TestSelectRead(greentest.GenericWaitTestCase):
 
         def wait(self, timeout):
-            select.select([sys.stdin.fileno()], [], [], timeout)
+            r, w = os.pipe()
+            try:
+                select.select([r], [], [], timeout)
+            finally:
+                os.close(r)
+                os.close(w)
 
 
 class TestSelectTypes(greentest.TestCase):
