@@ -1,5 +1,6 @@
 import os
 import sys
+import array
 import gevent
 from gevent import socket
 import greentest
@@ -9,6 +10,7 @@ import time
 class TestTCP(greentest.TestCase):
 
     TIMEOUT_ERROR = socket.timeout
+    long_data = ", ".join([str(x) for x in range(20000)])
 
     def setUp(self):
         greentest.TestCase.setUp(self)
@@ -20,6 +22,35 @@ class TestTCP(greentest.TestCase):
 
     def create_connection(self):
         return socket.create_connection(('127.0.0.1', self.listener.getsockname()[1]))
+
+    def sendall(self, data):
+        def accept_and_read():
+            conn, addr = self.listener.accept()
+            fd = conn.makefile()
+            conn.close()
+            read = fd.read()
+            fd.close()
+            return read
+
+        server = gevent.spawn(accept_and_read)
+        try:
+            client = self.create_connection()
+            client.sendall(data)
+            client.close()
+            read = server.get()
+            assert read == self.long_data
+        finally:
+            server.kill()
+
+    def test_sendall_str(self):
+        self.sendall(self.long_data)
+
+    def test_sendall_unicode(self):
+        self.sendall(unicode(self.long_data))
+
+    def test_sendall_array(self):
+        data = array.array("B", self.long_data)
+        self.sendall(data)
 
     def test_fullduplex(self):
 
