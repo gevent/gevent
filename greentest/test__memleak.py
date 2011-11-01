@@ -1,7 +1,5 @@
 import sys
 
-if not hasattr(sys, 'gettotalrefcount'):
-    sys.exit(0)
 
 from greentest import TestCase, main
 import gevent
@@ -48,6 +46,9 @@ class TestQueue(TestCase):
         a, b, c = result.split()
         assert b == c, 'total refcount mismatch: %s' % result
 
+
+if not hasattr(sys, 'gettotalrefcount'):
+    del TestQueue
 
 if __name__ == '__main__':
     main()
