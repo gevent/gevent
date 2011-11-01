@@ -226,8 +226,13 @@ if sys.version_info[:2] <= (2, 4):
 
 if sys.version_info[:2] < (2, 7):
     _get_memory = buffer
+elif sys.version_info[:2] < (3, 0):
+    def _get_memory(string, offset):
+        try:
+            return memoryview(string)[offset:]
+        except TypeError:
+            return buffer(string, offset)
 else:
-
     def _get_memory(string, offset):
         return memoryview(string)[offset:]
 
