@@ -4,6 +4,7 @@
 import sys
 import os
 import datetime
+import tempfile
 from cStringIO import StringIO
 import difflib
 import uuid
@@ -73,6 +74,17 @@ def system_unifdef(command):
     result = os.WEXITSTATUS(result)
     if result not in (0, 1):
         sys.exit('%r failed with code %s' % (command, result))
+
+
+def unifdef_b():
+    fd, path = tempfile.mkstemp()
+    try:
+        os.close(fd)
+        if os.system("unifdef %s" % path) != 0:
+            sys.exit("unifdef not installed?")
+        return os.system("unifdef -b %s" % path) == 0
+    finally:
+        os.unlink(path)
 
 
 def unlink(filename):
@@ -389,12 +401,14 @@ def main():
     today = str(datetime.date.today())
     sources = []
 
+    _b = ("", "-b")[unifdef_b()]
+
     tmpname = options.sourcefile + '.saved.%s' % os.getpid()
     os.rename(options.sourcefile, tmpname)
 
     try:
         for key in iter_configurations(symbols):
-            system_unifdef('unifdef -t -b %s %s > %s' % (key, tmpname, options.sourcefile))
+            system_unifdef('unifdef -t %s %s %s > %s' % (_b, key, tmpname, options.sourcefile))
             system('cython %s -o %s %s' % (options.cython_args, options.output, options.sourcefile))
             convert_comments(options.output, today)
             sources.append(Source(open(options.output).read(), key))
