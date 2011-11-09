@@ -717,7 +717,7 @@ void ev_resume  (EV_P);
 /* stopping (disabling, deleting) a watcher does nothing unless its already running */
 #if EV_PROTOTYPES
 
-/* feeds an event into a watcher as if the event actually occured */
+/* feeds an event into a watcher as if the event actually occurred */
 /* accepts any ev_watcher type */
 void ev_feed_event     (EV_P_ void *w, int revents);
 void ev_feed_fd_event  (EV_P_ int fd, int revents);
