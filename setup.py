@@ -3,6 +3,7 @@
 import sys
 import os
 import re
+import shutil
 import traceback
 from os.path import join, abspath, basename, dirname
 from glob import glob
@@ -23,7 +24,7 @@ assert __version__
 ares_embed = os.path.exists('c-ares')
 define_macros = []
 libraries = []
-ares_configure_command = [abspath('c-ares/configure'),
+ares_configure_command = ["/bin/sh", abspath('c-ares/configure'),
                           'CONFIG_COMMANDS=', 'CONFIG_FILES=']
 
 
@@ -71,17 +72,6 @@ if os.path.exists('libev'):
                            ("EV_PERIODIC_ENABLE", '0')]
 
 
-def need_configure_ares():
-    if sys.platform == 'win32':
-        return False
-    if not os.path.exists('c-ares/ares_config.h'):
-        return True
-    if not os.path.exists('c-ares/ares_build.h'):
-        return True
-    if 'Generated from ares_build.h.in by configure' not in read('c-ares/ares_build.h', 100):
-        return True
-
-
 def make_universal_header(filename, *defines):
     defines = [('#define %s ' % define, define) for define in defines]
     lines = open(filename, 'r').read().split('\n')
@@ -101,23 +91,38 @@ def make_universal_header(filename, *defines):
     f.close()
 
 
-def configure_ares():
-    if need_configure_ares():
-        # restore permissions
-        os.chmod(ares_configure_command[0], 493)  # 493 == 0755
-        rc = os.system('cd c-ares && %s' % ' '.join(ares_configure_command))
+def configure_ares(bext, ext):
+    bdir = os.path.join(bext.build_temp, 'c-ares')
+    ext.include_dirs.insert(0, bdir)
+
+    if not os.path.isdir(bdir):
+        os.makedirs(bdir)
+
+    if sys.platform == "win32":
+        shutil.copy("c-ares\\ares_build.h.dist", os.path.join(bdir, "ares_build.h"))
+        return
+
+    cwd = os.getcwd()
+    try:
+        os.chdir(bdir)
+        if os.path.exists('ares_config.h') and os.path.exists('ares_build.h'):
+            return
+
+        rc = os.system(' '.join(ares_configure_command))
         if rc == 0 and sys.platform == 'darwin':
-            make_universal_header('c-ares/ares_build.h', 'CARES_SIZEOF_LONG')
-            make_universal_header('c-ares/ares_config.h', 'SIZEOF_LONG', 'SIZEOF_SIZE_T', 'SIZEOF_TIME_T')
+            make_universal_header('ares_build.h', 'CARES_SIZEOF_LONG')
+            make_universal_header('ares_config.h', 'SIZEOF_LONG', 'SIZEOF_SIZE_T', 'SIZEOF_TIME_T')
+    finally:
+        os.chdir(cwd)
 
 
 if ares_embed:
     ARES.sources += expand('c-ares/*.c')
+    ARES.configure = configure_ares
     if sys.platform == 'win32':
         ARES.libraries += ['advapi32']
         ARES.define_macros += [('CARES_STATICLIB', '')]
     else:
-        ARES.configure = configure_ares
         ARES.define_macros += [('HAVE_CONFIG_H', '')]
         if sys.platform != 'darwin':
             ARES.libraries += ['rt']
@@ -133,10 +138,12 @@ def make(done=[]):
                 sys.exit(1)
         done.append(1)
 
+
 class sdist(_sdist):
     def run(self):
         make()
         _sdist.run(self)
+
 
 class my_build_ext(build_ext):
 
@@ -144,7 +151,7 @@ class my_build_ext(build_ext):
         make()
         configure = getattr(ext, 'configure', None)
         if configure:
-            configure()
+            configure(self, ext)
 
     def build_extension(self, ext):
         self.gevent_prepare(ext)
@@ -176,7 +183,6 @@ class my_build_ext(build_ext):
                         os.symlink(path_to_build_core_so, path_to_core_so)
                     else:
                         sys.stderr.write('Copying %s to %s\n' % (path_to_build_core_so, path_to_core_so))
-                        import shutil
                         shutil.copyfile(path_to_build_core_so, path_to_core_so)
         except Exception:
             traceback.print_exc()
