@@ -201,29 +201,6 @@ def cancel_wait(event):
     get_hub().loop.run_callback(_cancel_wait, event)
 
 
-if sys.version_info[:2] <= (2, 4):
-    # implement close argument to _fileobject that we require
-
-    realfileobject = _fileobject
-
-    class _fileobject(realfileobject):
-
-        __slots__ = realfileobject.__slots__ + ['_close']
-
-        def __init__(self, *args, **kwargs):
-            self._close = kwargs.pop('close', False)
-            realfileobject.__init__(self, *args, **kwargs)
-
-        def close(self):
-            try:
-                if self._sock:
-                    self.flush()
-            finally:
-                if self._close:
-                    self._sock.close()
-                self._sock = None
-
-
 if sys.version_info[:2] < (2, 7):
     _get_memory = buffer
 elif sys.version_info[:2] < (3, 0):
