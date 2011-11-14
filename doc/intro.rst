@@ -16,10 +16,9 @@ Features include:
 Installation
 ------------
 
-gevent runs on Python 2.4 and newer and requires
+gevent runs on Python 2.5 and newer and requires
 
 * greenlet__ which can be installed with ``easy_install greenlet``.
-* libevent_ 1.4.x
 
 For ssl to work on Python older than 2.6, ssl_ package is required.
 
@@ -80,24 +79,28 @@ gevent API wants to block, it obtains the :class:`Hub` instance - a greenlet
 that runs the event loop - and switches to it. If there's no :class:`Hub`
 instance yet, one is created on the fly.
 
-The event loop provided by libevent uses the fastest polling mechanism available
-on the system by default. It is possible to command libevent not to use a particular
-polling mechanism by setting ``EVENT_NOXXX``` environment variable where ``XXX`` is the event loop
-you want to disable. For example, on Linux setting ``EVENT_NOEPOLL=1`` would avoid the default
-``epoll`` mechanism and use ``poll``.
+The event loop provided by libev uses the fastest polling mechanism
+available on the system by default. It is possible to command libev to
+use a particular polling mechanism by setting the ``LIBEV_FLAGS```
+environment variable. Possible values include ``LIBEV_FLAGS=1`` for
+the select backend, ``LIBEV_FLAGS=2`` for the poll backend,
+``LIBEV_FLAGS=4`` for the epoll backend and ``LIBEV_FLAGS=8`` for the
+kqueue backend. Please read the `libev documentation`_ for more
+information.
 
-Libevent API is available under :mod:`gevent.core` module. Note, that the callbacks
-supplied to libevent API are run in the :class:`Hub` greenlet and thus cannot use synchronous
-gevent API. It is possible to use asynchronous API there, like :func:`spawn` and :meth:`Event.set`.
+The Libev API is available under :mod:`gevent.core` module. Note, that
+the callbacks supplied to libev API are run in the :class:`Hub`
+greenlet and thus cannot use synchronous gevent API. It is possible to
+use asynchronous API there, like :func:`spawn` and :meth:`Event.set`.
 
 
 Cooperative multitasking
 ------------------------
 
-The greenlets all run in the same OS thread and scheduled cooperatively. This means that until
+The greenlets all run in the same OS thread and are scheduled cooperatively. This means that until
 a particular greenlet gives up control, by calling a blocking function that will switch to the :class:`Hub`, other greenlets
 won't get a chance to run. It is typically not an issue for an I/O bound app, but one should be aware
-of this when doing something CPU intensive or calling blocking I/O functions that bypass libevent event loop.
+of this when doing something CPU intensive or calling blocking I/O functions that bypass libev event loop.
 
 Synchronizing access to the objects shared across the greenlets is unnecessary in most cases, thus
 :class:`Lock` and :class:`Semaphore` classes although present aren't used as often. Other abstractions
@@ -203,6 +206,8 @@ To limit concurrency, use :class:`Pool` class (see `example: dns_mass_resolve.py
 Gevent comes with TCP/SSL/HTTP/WSGI servers. See :doc:`servers`.
 
 .. _`example: dns_mass_resolve.py`: http://bitbucket.org/denis/gevent/src/tip/examples/dns_mass_resolve.py#cl-17
+
+.. _`libev documentation`: http://pod.tst.eu/http://cvs.schmorp.de/libev/ev.pod#FUNCTIONS_CONTROLLING_EVENT_LOOPS
 
 .. rubric:: Footnotes
 
