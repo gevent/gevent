@@ -19,7 +19,3 @@ gevent/core.pyx
 doc/_build
 doc/changelog.rst
 push
-config.log
-config.status
-stamp-h?
-ares_config.h
