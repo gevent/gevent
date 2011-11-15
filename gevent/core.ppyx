@@ -1,4 +1,3 @@
-m4_dnl This is what core.pyx generated from. Run "make" to produce gevent.core.c extension.
 # Copyright (c) 2009-2011 Denis Bilenko. See LICENSE for details.
 cimport cython
 cimport libev
@@ -215,10 +214,10 @@ def time():
     return libev.ev_time()
 
 
-m4_define(LOOP_PROPERTY, ``property $1:
-
-        def __get__(self):
-            return self._ptr.$1'')
+#define LOOP_PROPERTY(NAME) property NAME:  \
+                                            \
+        def __get__(self):                  \
+            return self._ptr.NAME
 
 
 cdef public class loop [object PyGeventLoopObject, type PyGeventLoop_Type]:
@@ -411,134 +410,142 @@ cdef public class loop [object PyGeventLoopObject, type PyGeventLoop_Type]:
         result.start(func, *args)
         return result
 
-#ifdef EV_STANDALONE
     def _format(self):
+#ifdef EV_STANDALONE
         args = (self.default, self.backend, self.activecnt, self.backend_fd, self.fdchangecnt, self.timercnt)
         return  ' default=%r backend=%r activecnt=%r backend_fd=%r fdchangecnt=%r timercnt=%r' % args
 #else
-    def _format(self):
         args = (self.default, self.backend)
         return  ' default=%r backend=%r' % args
 #endif
 
 #ifdef EV_STANDALONE
     LOOP_PROPERTY(activecnt)
+
     LOOP_PROPERTY(backend_fd)
+
     LOOP_PROPERTY(fdchangecnt)
+
     LOOP_PROPERTY(timercnt)
 #endif
 
 
-m4_define(PYTHON_INCREF, ``if not self._flags & 1:
-            Py_INCREF(<PyObjectPtr>self)
-            self._flags |= 1'')m4_dnl
+#define PYTHON_INCREF if not self._flags & 1:  \
+            Py_INCREF(<PyObjectPtr>self)       \
+            self._flags |= 1
 
-m4_define(LIBEV_UNREF, ``if self._flags & 6 == 4:
-            libev.ev_unref(self.loop._ptr)
-            self._flags |= 2'')m4_dnl
+#define LIBEV_UNREF if self._flags & 6 == 4:   \
+            libev.ev_unref(self.loop._ptr)     \
+            self._flags |= 2
 
-m4_define(WATCHER_BASE, `cdef public loop loop
-    cdef object _callback
-    cdef public tuple args
+# about readonly _flags attribute:
+# bit #1 set if object owns Python reference to itself (Py_INCREF was called and we must call Py_DECREF later)
+# bit #2 set if ev_unref() was called and we must call ev_ref() later
+# bit #3 set if user wants to call ev_unref() before start()
 
-    # bit #1 set if object owns Python reference to itself (Py_INCREF was called and we must call Py_DECREF later)
-    # bit #2 set if ev_unref() was called and we must call ev_ref() later
-    # bit #3 set if user wants to call ev_unref() before start()
-    cdef readonly int _flags
+#define WATCHER_BASE(TYPE)                                                              \
+    cdef public loop loop                                                               \
+    cdef object _callback                                                               \
+    cdef public tuple args                                                              \
+    cdef readonly int _flags                                                            \
+    cdef libev.ev_##TYPE _watcher                                                       \
+                                                                                        \
+    property ref:                                                                       \
+                                                                                        \
+        def __get__(self):                                                              \
+            return False if self._flags & 4 else True                                   \
+                                                                                        \
+        def __set__(self, object value):                                                \
+            if value:                                                                   \
+                if not self._flags & 4:                                                 \
+                    return  # ref is already True                                       \
+                if self._flags & 2:  # ev_unref was called, undo                        \
+                    libev.ev_ref(self.loop._ptr)                                        \
+                self._flags &= ~6  # do not want unref, no outstanding unref            \
+            else:                                                                       \
+                if self._flags & 4:                                                     \
+                    return  # ref is already False                                      \
+                self._flags |= 4                                                        \
+                if not self._flags & 2 and libev.ev_is_active(&self._watcher):          \
+                    libev.ev_unref(self.loop._ptr)                                      \
+                    self._flags |= 2                                                    \
+                                                                                        \
+    property callback:                                                                  \
+                                                                                        \
+        def __get__(self):                                                              \
+            return self._callback                                                       \
+                                                                                        \
+        def __set__(self, object callback):                                             \
+            if not PyCallable_Check(<PyObjectPtr>callback):                             \
+                raise TypeError("Expected callable, not %r" % callback)                 \
+            self._callback = callback                                                   \
+                                                                                        \
+        def __del__(self):                                                              \
+            self._callback = None                                                       \
+                                                                                        \
+    def stop(self):                                                                     \
+        if self._flags & 2:                                                             \
+            libev.ev_ref(self.loop._ptr)                                                \
+            self._flags &= ~2                                                           \
+        libev.ev_##TYPE##_stop(self.loop._ptr, &self._watcher)                          \
+        self._callback = None                                                           \
+        self.args = None                                                                \
+        if self._flags & 1:                                                             \
+            Py_DECREF(<PyObjectPtr>self)                                                \
+            self._flags &= ~1                                                           \
+                                                                                        \
+    property pending:                                                                   \
+                                                                                        \
+        def __get__(self):                                                              \
+            return True if libev.ev_is_pending(&self._watcher) else False               \
+                                                                                        \
+    property priority:                                                                  \
+                                                                                        \
+        def __get__(self):                                                              \
+            return libev.ev_priority(&self._watcher)                                    \
+                                                                                        \
+        def __set__(self, int priority):                                                \
+            if libev.ev_is_active(&self._watcher):                                      \
+                raise AttributeError("Cannot set priority of an active watcher")        \
+            libev.ev_set_priority(&self._watcher, priority)                             \
+                                                                                        \
+    def feed(self, int revents, object callback, *args):                                \
+        self.callback = callback                                                        \
+        self.args = args                                                                \
+        LIBEV_UNREF                                                                     \
+        libev.ev_feed_event(self.loop._ptr, &self._watcher, revents)                    \
+        PYTHON_INCREF
 
-    cdef libev.ev_$1 _watcher
+#define ACTIVE property active:                                             \
+                                                                            \
+        def __get__(self):                                                  \
+            return True if libev.ev_is_active(&self._watcher) else False
 
-    property ref:
+#define START(TYPE) def start(self, object callback, *args):     \
+        self.callback = callback                                 \
+        self.args = args                                         \
+        LIBEV_UNREF                                              \
+        libev.ev_##TYPE##_start(self.loop._ptr, &self._watcher)  \
+        PYTHON_INCREF
 
-        def __get__(self):
-            return False if self._flags & 4 else True
+#define WATCHER(TYPE) WATCHER_BASE(TYPE) \
+                                         \
+    START(TYPE)                          \
+                                         \
+    ACTIVE
 
-        def __set__(self, object value):
-            if value:
-                if not self._flags & 4:
-                    return  # ref is already True
-                if self._flags & 2:  # ev_unref was called, undo
-                    libev.ev_ref(self.loop._ptr)
-                self._flags &= ~6  # do not want unref, no outstanding unref
-            else:
-                if self._flags & 4:
-                    return  # ref is already False
-                self._flags |= 4
-                if not self._flags & 2 and libev.ev_is_active(&self._watcher):
-                    libev.ev_unref(self.loop._ptr)
-                    self._flags |= 2
 
-    property callback:
+#define COMMA ,
 
-        def __get__(self):
-            return self._callback
 
-        def __set__(self, object callback):
-            if not PyCallable_Check(<PyObjectPtr>callback):
-                raise TypeError("Expected callable, not %r" % callback)
-            self._callback = callback
-
-        def __del__(self):
-            self._callback = None
-
-    def stop(self):
-        if self._flags & 2:
-            libev.ev_ref(self.loop._ptr)
-            self._flags &= ~2
-        libev.ev_$1_stop(self.loop._ptr, &self._watcher)
-        self._callback = None
-        self.args = None
-        if self._flags & 1:
-            Py_DECREF(<PyObjectPtr>self)
-            self._flags &= ~1
-
-    property pending:
-
-        def __get__(self):
-            return True if libev.ev_is_pending(&self._watcher) else False
-
-    property priority:
-
-        def __get__(self):
-            return libev.ev_priority(&self._watcher)
-
-        def __set__(self, int priority):
-            if libev.ev_is_active(&self._watcher):
-                raise AttributeError("Cannot set priority of an active watcher")
-            libev.ev_set_priority(&self._watcher, priority)
-
-    def feed(self, int revents, object callback, *args):
-        self.callback = callback
-        self.args = args
-        LIBEV_UNREF
-        libev.ev_feed_event(self.loop._ptr, &self._watcher, revents)
-        PYTHON_INCREF')m4_dnl
-
-m4_define(ACTIVE, `property active:
-
-        def __get__(self):
-            return True if libev.ev_is_active(&self._watcher) else False')m4_dnl
-
-m4_define(START, `def start(self, object callback, *args):
-        self.callback = callback
-        self.args = args
-        LIBEV_UNREF
-        libev.ev_$1_start(self.loop._ptr, &self._watcher)
-        PYTHON_INCREF')m4_dnl
-
-m4_define(WATCHER, `WATCHER_BASE($1)
-
-    START($1)
-
-    ACTIVE($1)')m4_dnl
-
-m4_define(INIT, `def __init__(self, loop loop$2, ref=True):
-        libev.ev_$1_init(&self._watcher, <void *>gevent_callback_$1$3)
-        self.loop = loop
-        if ref:
-            self._flags = 0
-        else:
-            self._flags = 4')m4_dnl
+#define INIT(TYPE, ARGS_INITIALIZERS, ARGS)                                                \
+    def __init__(self, loop loop ARGS_INITIALIZERS, ref=True):                             \
+        libev.ev_##TYPE##_init(&self._watcher, <void *>gevent_callback_##TYPE ARGS)        \
+        self.loop = loop                                                                   \
+        if ref:                                                                            \
+            self._flags = 0                                                                \
+        else:                                                                              \
+            self._flags = 4
 
 cdef public class watcher [object PyGeventWatcherObject, type PyGeventWatcher_Type]:
     """Abstract base class for all the watchers"""
@@ -638,7 +645,7 @@ cdef public class timer(watcher) [object PyGeventTimerObject, type PyGeventTimer
 
     WATCHER(timer)
 
-    INIT(timer, ``, double after=0.0, double repeat=0.0'', ``, after, repeat'')
+    INIT(timer, COMMA double after=0.0 COMMA double repeat=0.0, COMMA after COMMA repeat)
 
     property at:
 
@@ -657,35 +664,35 @@ cdef public class signal(watcher) [object PyGeventSignalObject, type PyGeventSig
 
     WATCHER(signal)
 
-    INIT(signal, ``, int signalnum'', ``, signalnum'')
+    INIT(signal, COMMA int signalnum, COMMA signalnum)
 
 
 cdef public class idle(watcher) [object PyGeventIdleObject, type PyGeventIdle_Type]:
 
     WATCHER(idle)
 
-    INIT(idle)
+    INIT(idle,,)
 
 
 cdef public class prepare(watcher) [object PyGeventPrepareObject, type PyGeventPrepare_Type]:
 
     WATCHER(prepare)
 
-    INIT(prepare)
+    INIT(prepare,,)
 
 
 cdef public class fork(watcher) [object PyGeventForkObject, type PyGeventFork_Type]:
 
     WATCHER(fork)
 
-    INIT(fork)
+    INIT(fork,,)
 
 
 cdef public class async(watcher) [object PyGeventAsyncObject, type PyGeventAsync_Type]:
 
     WATCHER(async)
 
-    INIT(async)
+    INIT(async,,)
 
 
 #cdef public class child(watcher) [object PyGeventChildObject, type PyGeventChild_Type]:
@@ -701,7 +708,7 @@ cdef public class callback(watcher) [object PyGeventCallbackObject, type PyGeven
     # does not matter which type we actually use, since we are going to feed() events, not start watchers
     WATCHER_BASE(prepare)
 
-    INIT(prepare)
+    INIT(prepare,,)
 
     def start(self, object callback, *args):
         self.callback = callback
