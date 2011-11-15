@@ -20,7 +20,7 @@ WRITE_OUTPUT = False
 # Parameter name in macros must match this regex:
 param_name_re = re.compile('^[a-zA-Z_]\w*$')
 
-# First line of a definition of a new macros:
+# First line of a definition of a new macro:
 define_re = re.compile(r'^#define\s+([a-zA-Z_]\w*)(\((?:[^,)]+,)*[^,)]+\))?\s+(.*)$')
 
 # Conditional directive:
@@ -370,7 +370,7 @@ def expand_definitions(code, definitions):
     keys.sort(key=lambda x: (-len(x), x))
     keys = '|'.join(keys)
 
-    # This regex defines macros
+    # This regex defines a macro invocation
     re_macro = re.compile(r'(^|##|[^\w])(%s)(\([^)]+\)|$|##|[^w])' % keys)
 
     def repl(m):
