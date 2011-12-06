@@ -10,6 +10,12 @@ import pipes
 import difflib
 from hashlib import md5
 
+if sys.version_info >= (3, 0):
+    exec("def do_exec(co, loc): exec(co, loc)\n")
+else:
+    exec("def do_exec(co, loc): exec co in loc\n")
+
+_ex = lambda: sys.exc_info()[1]
 
 # TODO: avoid using itertools.product which is not available on Python2.5
 
@@ -66,7 +72,7 @@ def process_filename(filename, output_filename=None):
     for configuration, lines in preprocessed.items():
         counter += 1
         value = ''.join(lines)
-        sourcehash = md5(value).hexdigest()
+        sourcehash = md5(value.encode("utf-8")).hexdigest()
         comment = convert_key_to_ifdef(configuration, short=True)
         atomic_write(pyx_filename, py_banner + value)
         if WRITE_OUTPUT:
@@ -165,7 +171,8 @@ def preprocess_filename(filename, config):
                                 lines = [x + '\n' for x in lines]
                                 lines = [Str_sourceline(x, linecount - 1) for x in lines]
                                 result.extend(lines)
-        except BaseException, ex:
+        except BaseException:
+            ex = _ex()
             log('%s:%s: %s', filename, linecount, ex)
             if type(ex) is SyntaxError:
                 sys.exit(1)
@@ -214,12 +221,13 @@ def expand_to_match(items):
     for configuration, lines in items:
         cfg2newlines[configuration] = []
 
+    maxguard = 2**30
     while True:
-        minimalsourceline = sys.maxint
+        minimalsourceline = maxguard
         for configuration, lines in items:
             if lines:
                 minimalsourceline = min(minimalsourceline, lines[0].sourceline)
-        if minimalsourceline == sys.maxint:
+        if minimalsourceline == maxguard:
             break
 
         for configuration, lines in items:
@@ -324,8 +332,8 @@ class Str(str):
                'join', 'replace', 'upper', 'lower']
 
     for method in methods:
-        exec '''def %s(self, *args):
-    return self.__class__(str.%s(self, *args), self.tag)''' % (method, method)
+        do_exec('''def %s(self, *args):
+    return self.__class__(str.%s(self, *args), self.tag)''' % (method, method), locals())
 
 
 def simplify_tag(tag):
@@ -336,7 +344,7 @@ def simplify_tag(tag):
     conditions = {}
     for condition, flag in tag:
         conditions.setdefault(condition, set()).add(flag)
-    for condition, flags in conditions.items():
+    for condition, flags in list(conditions.items()):
         if flags == set([True, False]):
             conditions.pop(condition)
     return set(((condition, flags.pop()) for (condition, flags) in conditions.items()))
@@ -366,7 +374,7 @@ def parse_parameter_values(x):
 def expand_definitions(code, definitions):
     if not definitions:
         return code
-    keys = definitions.keys()
+    keys = list(definitions.keys())
     keys.sort(key=lambda x: (-len(x), x))
     keys = '|'.join(keys)
 
@@ -405,7 +413,7 @@ def expand_definitions(code, definitions):
         dbg('Replace %r with %r', m.group(0), result)
         return result
 
-    for _ in xrange(20000):
+    for _ in range(20000):
         newcode, count = re_macro.subn(repl, code, count=1)
         if code == newcode:
             if count > 0:
@@ -545,7 +553,8 @@ def get_conditions(filename):
                     raise AssertionError('Internal error')
             else:
                 conditions.add(tuple(condition_stack))
-        except BaseException, ex:
+        except BaseException:
+            ex = _ex()
             log('%s:%s: %s', filename, linecount, ex)
             if type(ex) is SyntaxError:
                 sys.exit(1)
@@ -657,12 +666,12 @@ if __name__ == '__main__':
     if options.list_cond:
         run = False
         for x in get_conditions(filename):
-            print '* %s' % (x, )
+            sys.stdout.write('* %s\n' % (x, ))
 
     if options.list:
         run = False
         for x in get_configurations(filename):
-            print '* %s' % (x, )
+            sys.stdout.write('* %s\n' % (x, ))
 
     if options.ignore_cond:
         run = False
