@@ -1,5 +1,6 @@
 import sys
 from greentest import walk_modules, BaseTestCase, main
+from gevent import six
 
 
 class TestExec(BaseTestCase):
@@ -10,7 +11,10 @@ def make_exec_test(path, module):
 
     def test(self):
         sys.stderr.write('%s %s\n' % (module, path))
-        execfile(path, {})
+        f = open(path)
+        src = f.read()
+        f.close()
+        six.exec_(src, {})
 
     name = "test_" + module.replace(".", "_")
     test.__name__ = name
