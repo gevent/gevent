@@ -74,7 +74,7 @@ class TestLink(greentest.TestCase):
         p.link(event)
         self.assertEqual(event.get(), 100)
 
-        for i in xrange(3):
+        for i in range(3):
             event2 = AsyncResult()
             p.link(event2)
             self.assertEqual(event2.get(), 100)
@@ -86,7 +86,7 @@ class TestLink(greentest.TestCase):
         p.link(event)
         self.assertRaises(err, event.get)
 
-        for i in xrange(3):
+        for i in range(3):
             event2 = AsyncResult()
             p.link(event2)
             self.assertRaises(err, event2.get)
@@ -97,7 +97,7 @@ class TestLink(greentest.TestCase):
         p.link(q.put)
         self.assertEqual(q.get().get(), 100)
 
-        for i in xrange(3):
+        for i in range(3):
             p.link(q.put)
             self.assertEqual(q.get().get(), 100)
 
@@ -253,7 +253,7 @@ class TestReturn_link(LinksTestCase):
         self.p = gevent.spawn(return25)
         self._test_return(self.p, True, 25, greenlet.LinkedCompleted, sleep0)
         # repeating the same with dead process
-        for _ in xrange(3):
+        for _ in range(3):
             self._test_return(self.p, False, 25, greenlet.LinkedCompleted, sleep0)
         self.cleanup()
         self.p.kill()
@@ -313,7 +313,7 @@ class TestReturn_link(LinksTestCase):
         p = self.p = gevent.spawn(sleep, DELAY)
         self._test_kill(p, True, greenlet.LinkedKilled)
         # repeating the same with dead process
-        for _ in xrange(3):
+        for _ in range(3):
             self._test_kill(p, False, greenlet.LinkedKilled)
 
 
@@ -351,7 +351,7 @@ class TestRaise_link(LinksTestCase):
         p = self.p = gevent.spawn(lambda: getcurrent().throw(ExpectedError('test_raise')))
         self._test_raise(p, True, greenlet.LinkedFailed)
         # repeating the same with dead process
-        for _ in xrange(3):
+        for _ in range(3):
             self._test_raise(p, False, greenlet.LinkedFailed)
 
 
