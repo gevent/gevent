@@ -49,7 +49,7 @@ class Queue(object):
     """
 
     def __init__(self, maxsize=None):
-        if maxsize <= 0:
+        if maxsize is not None and maxsize <= 0:
             self.maxsize = None
             if maxsize == 0:
                 import warnings
