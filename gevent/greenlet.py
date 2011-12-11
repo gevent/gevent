@@ -3,7 +3,7 @@
 import sys
 from gevent.hub import greenlet, getcurrent, get_hub, GreenletExit, Waiter
 from gevent.timeout import Timeout
-
+from gevent import six
 
 __all__ = ['Greenlet',
            'joinall',
@@ -151,13 +151,17 @@ class Greenlet(greenlet):
         # needed by killall
         return self.parent.loop
 
-    def __nonzero__(self):
-        return self._start_event is not None and self._exception is _NONE
+    if six.PY3:
+        def __bool__(self):
+            return self._start_event is not None and self._exception is _NONE
+    else:
+        def __nonzero__(self):
+            return self._start_event is not None and self._exception is _NONE
 
     @property
     def started(self):
         # DEPRECATED
-        return self.__nonzero__()
+        return bool(self)
 
     def ready(self):
         """Return true if and only if the greenlet has finished execution."""
@@ -498,6 +502,8 @@ def _kill(greenlet, exception, waiter):
 
 
 def joinall(greenlets, timeout=None, raise_error=False):
+    xrange = six.moves.xrange
+
     from gevent.queue import Queue
     queue = Queue()
     put = queue.put
@@ -606,7 +612,13 @@ class LinkedFailed(LinkedExited):
 
 
 def getfuncname(func):
-    if not hasattr(func, 'im_self'):
+    try:
+        six.get_method_self(func)
+        is_bound_method = True
+    except AttributeError:
+        is_bound_method = False
+
+    if not is_bound_method:
         try:
             funcname = func.__name__
         except AttributeError:
