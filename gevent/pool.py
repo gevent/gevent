@@ -17,6 +17,7 @@ from gevent.greenlet import joinall, Greenlet
 from gevent.timeout import Timeout
 from gevent.event import Event
 from gevent.coros import Semaphore, DummySemaphore
+from gevent import six
 
 __all__ = ['Group', 'Pool']
 
@@ -228,6 +229,10 @@ class IMapUnordered(Greenlet):
             raise value.exc
         return value
 
+    if six.PY3:
+        __next__ = next
+        del next
+
     def _run(self):
         try:
             func = self.func
@@ -284,6 +289,10 @@ class IMap(Greenlet):
                 raise value.exc
             if value is not _SKIP:
                 return value
+    if six.PY3:
+        __next__ = next
+        del next
+
 
     def _run(self):
         try:

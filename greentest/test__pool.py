@@ -1,6 +1,6 @@
 from time import time
 import gevent
-from gevent import pool
+from gevent import pool, six
 from gevent.event import Event
 import greentest
 import random
@@ -48,7 +48,7 @@ class TestCoroutinePool(greentest.TestCase):
         done = pool.spawn(consumer)
         pool.apply_async(producer)
         done.get()
-        self.assertEquals(['cons1', 'prod', 'cons2'], results)
+        self.assertEqual(['cons1', 'prod', 'cons2'], results)
 
     def dont_test_timer_cancel(self):
         timer_fired = []
@@ -62,7 +62,7 @@ class TestCoroutinePool(greentest.TestCase):
         pool = self.klass(2)
         pool.apply(some_work)
         gevent.sleep(0)
-        self.assertEquals(timer_fired, [])
+        self.assertEqual(timer_fired, [])
 
     def test_reentrant(self):
         pool = self.klass(1)
@@ -211,8 +211,8 @@ class TestPool(greentest.TestCase):
 
     def test_map(self):
         pmap = self.pool.map
-        self.assertEqual(pmap(sqr, range(10)), map(sqr, range(10)))
-        self.assertEqual(pmap(sqr, range(100)), map(sqr, range(100)))
+        self.assertEqual(pmap(sqr, range(10)), list(map(sqr, range(10))))
+        self.assertEqual(pmap(sqr, range(100)), list(map(sqr, range(100))))
 
     def test_async(self):
         res = self.pool.apply_async(sqr, (7, TIMEOUT1,))
@@ -238,32 +238,32 @@ class TestPool(greentest.TestCase):
 
     def test_imap(self):
         it = self.pool.imap(sqr, range(10))
-        self.assertEqual(list(it), map(sqr, range(10)))
+        self.assertEqual(list(it), list(map(sqr, range(10))))
 
         it = self.pool.imap(sqr, range(10))
         for i in range(10):
-            self.assertEqual(it.next(), i * i)
-        self.assertRaises(StopIteration, it.next)
+            self.assertEqual(six.advance_iterator(it), i * i)
+        self.assertRaises(StopIteration, lambda: six.advance_iterator(it))
 
         it = self.pool.imap(sqr, range(1000))
         for i in range(1000):
-            self.assertEqual(it.next(), i * i)
-        self.assertRaises(StopIteration, it.next)
+            self.assertEqual(six.advance_iterator(it), i * i)
+        self.assertRaises(StopIteration, lambda: six.advance_iterator(it))
 
     def test_imap_random(self):
         it = self.pool.imap(sqr_random_sleep, range(10))
-        self.assertEqual(list(it), map(sqr, range(10)))
+        self.assertEqual(list(it), list(map(sqr, range(10))))
 
     def test_imap_unordered(self):
         it = self.pool.imap_unordered(sqr, range(1000))
-        self.assertEqual(sorted(it), map(sqr, range(1000)))
+        self.assertEqual(sorted(it), list(map(sqr, range(1000))))
 
         it = self.pool.imap_unordered(sqr, range(1000))
-        self.assertEqual(sorted(it), map(sqr, range(1000)))
+        self.assertEqual(sorted(it), list(map(sqr, range(1000))))
 
     def test_imap_unordered_random(self):
         it = self.pool.imap_unordered(sqr_random_sleep, range(10))
-        self.assertEqual(sorted(it), map(sqr, range(10)))
+        self.assertEqual(sorted(it), list(map(sqr, range(10))))
 
     def test_terminate(self):
         result = self.pool.map_async(gevent.sleep, [0.1] * ((self.size or 10) * 2))
