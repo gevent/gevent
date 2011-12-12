@@ -92,7 +92,7 @@ class TestEvent_SetThenClear(greentest.TestCase):
 
     def test(self):
         e = Event()
-        waiters = [gevent.spawn(e.wait) for i in xrange(self.N)]
+        waiters = [gevent.spawn(e.wait) for i in range(self.N)]
         gevent.sleep(0.001)
         e.set()
         e.clear()
