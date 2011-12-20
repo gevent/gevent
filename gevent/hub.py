@@ -363,7 +363,6 @@ class Hub(greenlet):
 
         try:
             if timeout is not None:
-                self.loop.update()
                 timeout = self.loop.timer(timeout, ref=False)
                 timeout.start(waiter.switch)
 
