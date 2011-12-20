@@ -2,6 +2,7 @@
 # Copyright (c) 2009-2010 Denis Bilenko. See LICENSE for details.
 from gevent.greenlet import Greenlet, getfuncname
 from gevent.event import Event
+from gevent.six import string_types, integer_types
 import _socket
 import sys
 
@@ -52,14 +53,13 @@ class BaseServer(object):
                 raise TypeError('Expected a regular socket, not SSLSocket: %r' % (listener, ))
             if backlog is not None:
                 raise TypeError('backlog must be None when a socket instance is passed')
+            self.family = listener.family
             self.address = listener.getsockname()
             self.socket = listener
         else:
-            if not isinstance(listener, tuple):
-                raise TypeError('Expected a socket instance or an address (tuple of 2 elements): %r' % (listener, ))
             if backlog is not None:
                 self.backlog = backlog
-            self.address = listener
+            self.family, self.address = parse_address(listener)
 
     def set_spawn(self, spawn):
         if spawn == 'default':
@@ -136,7 +136,7 @@ class BaseServer(object):
         It is not supposed to be called by the user, it is called by :meth:`start` before starting
         the accept loop."""
         if not hasattr(self, 'socket'):
-            self.socket = _tcp_listener(self.address, backlog=self.backlog, reuse_addr=self.reuse_addr)
+            self.socket = _tcp_listener(self.address, backlog=self.backlog, reuse_addr=self.reuse_addr, family=self.family)
             self.address = self.socket.getsockname()
         self._stopped_event.clear()
 
@@ -198,13 +198,13 @@ class BaseServer(object):
             raise
 
 
-def _tcp_listener(address, backlog=50, reuse_addr=None):
+def _tcp_listener(address, backlog=50, reuse_addr=None, family=_socket.AF_INET):
     """A shortcut to create a TCP socket, bind it and put it into listening state.
 
     The difference from :meth:`gevent.socket.tcp_listener` is that this function returns
     an unwrapped :class:`_socket.socket` instance.
     """
-    sock = _socket.socket()
+    sock = _socket.socket(family=family)
     if reuse_addr is not None:
         sock.setsockopt(_socket.SOL_SOCKET, _socket.SO_REUSEADDR, reuse_addr)
     try:
@@ -218,3 +218,37 @@ def _tcp_listener(address, backlog=50, reuse_addr=None):
     sock.listen(backlog)
     sock.setblocking(0)
     return sock
+
+
+def _extract_family(host):
+    if host.startswith('[') and host.endswith(']'):
+        host = host[1:-1]
+        return _socket.AF_INET6, host
+    return _socket.AF_INET, host
+
+
+def _parse_address(address):
+    if isinstance(address, tuple):
+        if ':' in address[0]:
+            return _socket.AF_INET6, address
+        return _socket.AF_INET, address
+    elif isinstance(address, string_types):
+        if ':' in address:
+            host, port = address.rsplit(':', 1)
+            family, host = _extract_family(host)
+            if host == '*':
+                host = ''
+            return family, (host, int(port))
+        else:
+            return _socket.AF_INET, ('', int(port))
+    elif isinstance(address, integer_types):
+        return _socket.AF_INET, ('', int(address))
+    else:
+        raise TypeError('Expected tuple or string, got %s' % type(address))
+
+
+def parse_address(address):
+    try:
+        return _parse_address(address)
+    except ValueError:
+        raise ValueError('Failed to parse address %r: %s' % (address, sys.exc_info()[1]))
