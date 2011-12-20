@@ -502,30 +502,32 @@ def _kill(greenlet, exception, waiter):
     waiter.switch()
 
 
-def joinall(greenlets, timeout=None, raise_error=False):
+def joinall(greenlets, timeout=None, raise_error=False, count=None):
     xrange = six.moves.xrange
-
     from gevent.queue import Queue
     queue = Queue()
     put = queue.put
+    if count is None:
+        count = len(greenlets)
     timeout = Timeout.start_new(timeout)
     try:
         try:
             for greenlet in greenlets:
                 greenlet.rawlink(put)
             if raise_error:
-                for _ in xrange(len(greenlets)):
+                for _ in xrange(count):
                     greenlet = queue.get()
                     if not greenlet.successful():
                         raise greenlet.exception
             else:
-                for _ in xrange(len(greenlets)):
+                for _ in xrange(count):
                     queue.get()
         except:
-            for greenlet in greenlets:
-                greenlet.unlink(put)
             if sys.exc_info()[1] is not timeout:
                 raise
+        finally:
+            for greenlet in greenlets:
+                greenlet.unlink(put)
     finally:
         timeout.cancel()
 
