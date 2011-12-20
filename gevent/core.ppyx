@@ -643,7 +643,18 @@ cdef public class io(watcher) [object PyGeventIOObject, type PyGeventIO_Type]:
 
 cdef public class timer(watcher) [object PyGeventTimerObject, type PyGeventTimer_Type]:
 
-    WATCHER(timer)
+    WATCHER_BASE(timer)
+
+    def start(self, object callback, *args, update=True):
+        self.callback = callback
+        self.args = args
+        LIBEV_UNREF
+        if update:
+            libev.ev_now_update(self.loop._ptr)
+        libev.ev_timer_start(self.loop._ptr, &self._watcher)
+        PYTHON_INCREF
+
+    ACTIVE
 
     INIT(timer, COMMA double after=0.0 COMMA double repeat=0.0, COMMA after COMMA repeat)
 
@@ -652,10 +663,12 @@ cdef public class timer(watcher) [object PyGeventTimerObject, type PyGeventTimer
         def __get__(self):
             return self._watcher.at
 
-    def again(self, object callback, *args):
+    def again(self, object callback, *args, update=True):
         self.callback = callback
         self.args = args
         LIBEV_UNREF
+        if update:
+            libev.ev_now_update(self.loop._ptr)
         libev.ev_timer_again(self.loop._ptr, &self._watcher)
         PYTHON_INCREF
 
