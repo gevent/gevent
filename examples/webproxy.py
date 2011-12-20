@@ -19,7 +19,7 @@ from urlparse import urlparse
 from cgi import escape
 from urllib import unquote
 
-PORT = 8088
+LISTEN = ":8088"
 
 
 def application(env, start_response):
@@ -123,5 +123,5 @@ FORM = """<html><head>
 
 if __name__ == '__main__':
     from gevent.pywsgi import WSGIServer
-    print 'Serving on %s...' % PORT
-    WSGIServer(('', PORT), application).serve_forever()
+    print 'Serving on %s...' % LISTEN
+    WSGIServer(LISTEN, application).serve_forever()
