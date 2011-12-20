@@ -527,7 +527,7 @@ class socket(object):
     def shutdown(self, how):
         if how == 0:  # SHUT_RD
             self.hub.cancel_wait(self._read_event, cancel_wait_ex)
-        elif how == 1:  # SHUT_RW
+        elif how == 1:  # SHUT_WR
             self.hub.cancel_wait(self._write_event, cancel_wait_ex)
         else:
             self.hub.cancel_wait(self._read_event, cancel_wait_ex)
