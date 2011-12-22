@@ -118,7 +118,7 @@ TODO: memory fences for clang
           that this is a race condition regardless of EV_SIGNALFD.
 	- backport inotify code to C89.
         - inotify file descriptors could leak into child processes.
-        - ev_stat watchers could keep an errornous extra ref on the loop,
+        - ev_stat watchers could keep an erroneous extra ref on the loop,
           preventing exit when unregistering all watchers (testcases
           provided by ry@tinyclouds.org).
         - implement EV_WIN32_HANDLE_TO_FD and EV_WIN32_CLOSE_FD configuration
@@ -186,7 +186,7 @@ TODO: memory fences for clang
           Malek Hadj-Ali).
         - implement ev_suspend and ev_resume.
         - new EV_CUSTOM revents flag for use by applications.
-        - add documentation section about priorites.
+        - add documentation section about priorities.
         - add a glossary to the dcoumentation.
         - extend the ev_fork description slightly.
         - optimize a jump out of call_pending.
