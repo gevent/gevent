@@ -21,11 +21,12 @@ ext_errors = (CCompilerError, DistutilsExecError, DistutilsPlatformError, IOErro
 __version__ = re.search("__version__\s*=\s*'(.*)'", open('gevent/__init__.py').read(), re.M).group(1)
 assert __version__
 
+libev_embed = os.path.exists('libev')
 ares_embed = os.path.exists('c-ares')
 define_macros = []
 libraries = []
-ares_configure_command = ["/bin/sh", abspath('c-ares/configure'),
-                          'CONFIG_COMMANDS=', 'CONFIG_FILES=']
+libev_configure_command = ["/bin/sh", abspath('libev/configure'), '> configure-output.txt']
+ares_configure_command = ["/bin/sh", abspath('c-ares/configure'), 'CONFIG_COMMANDS= CONFIG_FILES= > configure-output.txt']
 
 
 if sys.platform == 'win32':
@@ -60,18 +61,6 @@ ARES.optional = True
 ext_modules = [CORE, ARES]
 
 
-if os.path.exists('libev'):
-    CORE.define_macros += [('EV_STANDALONE', '1'),
-                           ('EV_COMMON', ''),  # we don't use void* data
-                           # libev watchers that we don't use currently:
-                           ('EV_STAT_ENABLE', '0'),
-                           ('EV_CHECK_ENABLE', '0'),
-                           ('EV_CLEANUP_ENABLE', '0'),
-                           ('EV_EMBED_ENABLE', '0'),
-                           ('EV_CHILD_ENABLE', '0'),
-                           ("EV_PERIODIC_ENABLE", '0')]
-
-
 def make_universal_header(filename, *defines):
     defines = [('#define %s ' % define, define) for define in defines]
     lines = open(filename, 'r').read().split('\n')
@@ -91,6 +80,36 @@ def make_universal_header(filename, *defines):
     f.close()
 
 
+def _system(cmd):
+   cmd = ' '.join(cmd)
+   sys.stderr.write('Running %r in %s\n' % (cmd, os.getcwd()))
+   return os.system(cmd)
+
+
+def configure_libev(bext, ext):
+    if sys.platform == "win32":
+        CORE.define_macros.append(('EV_STANDALONE', '1'))
+        return
+
+    bdir = os.path.join(bext.build_temp, 'libev')
+    ext.include_dirs.insert(0, bdir)
+
+    if not os.path.isdir(bdir):
+        os.makedirs(bdir)
+
+    cwd = os.getcwd()
+    try:
+        os.chdir(bdir)
+        if os.path.exists('config.h'):
+            return
+
+        rc = _system(libev_configure_command)
+        if rc == 0 and sys.platform == 'darwin':
+            make_universal_header('config.h', 'SIZEOF_LONG', 'SIZEOF_SIZE_T', 'SIZEOF_TIME_T')
+    finally:
+        os.chdir(cwd)
+
+
 def configure_ares(bext, ext):
     bdir = os.path.join(bext.build_temp, 'c-ares')
     ext.include_dirs.insert(0, bdir)
@@ -108,12 +127,25 @@ def configure_ares(bext, ext):
         if os.path.exists('ares_config.h') and os.path.exists('ares_build.h'):
             return
 
-        rc = os.system(' '.join(ares_configure_command))
+        rc = _system(ares_configure_command)
         if rc == 0 and sys.platform == 'darwin':
             make_universal_header('ares_build.h', 'CARES_SIZEOF_LONG')
             make_universal_header('ares_config.h', 'SIZEOF_LONG', 'SIZEOF_SIZE_T', 'SIZEOF_TIME_T')
     finally:
         os.chdir(cwd)
+
+
+if libev_embed:
+    CORE.define_macros += [('LIBEV_EMBED', '1'),
+                           ('EV_COMMON', ''),  # we don't use void* data
+                           # libev watchers that we don't use currently:
+                           ('EV_STAT_ENABLE', '0'),
+                           ('EV_CHECK_ENABLE', '0'),
+                           ('EV_CLEANUP_ENABLE', '0'),
+                           ('EV_EMBED_ENABLE', '0'),
+                           ('EV_CHILD_ENABLE', '0'),
+                           ("EV_PERIODIC_ENABLE", '0')]
+    CORE.configure = configure_libev
 
 
 if ares_embed:

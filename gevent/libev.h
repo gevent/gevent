@@ -1,4 +1,4 @@
-#if defined(EV_STANDALONE)
+#if defined(LIBEV_EMBED)
 #include "ev.c"
 #else
 #include "ev.h"
