@@ -32,6 +32,12 @@ define_re = re.compile(r'^#define\s+([a-zA-Z_]\w*)(\((?:[^,)]+,)*[^,)]+\))?\s+(.
 # Conditional directive:
 condition_re = re.compile(r'^#(ifdef\s+.+|if\s+.+|else\s*|endif\s*)$')
 
+def match_condition(line):
+    line = line.strip()
+    if line.endswith(':'):
+        return None
+    return condition_re.match(line)
+
 newline_token = ' <cythonpp.py: REPLACE WITH NEWLINE!> '
 
 
@@ -140,7 +146,7 @@ def preprocess_filename(filename, config):
                         definitions[name]['params'] = parse_parameter_names(params)
                         dbg('Adding definition for %r: %s', name, definitions[name]['params'])
                 else:
-                    m = condition_re.match(stripped)
+                    m = match_condition(stripped)
                     if m is not None and config is not None:
                         if stripped == '#else':
                             if not including_section:
@@ -524,7 +530,7 @@ def get_conditions(filename):
     for line in open(filename):
         linecount += 1
         try:
-            m = condition_re.match(line.strip())
+            m = match_condition(line)
             if m is not None:
                 split = m.group(1).strip().split(' ', 1)
                 directive = split[0].strip()
