@@ -29,6 +29,10 @@ class Test(TestCase):
     def test_events_conversion(self):
         self.assertEqual(core._events_to_str(core.READ|core.WRITE), 'READ|WRITE')
 
+    def test_EVENTS(self):
+        self.assertEqual(str(core.EVENTS), 'gevent.core.EVENTS')
+        self.assertEqual(repr(core.EVENTS), 'gevent.core.EVENTS')
+
 
 if __name__ == '__main__':
     main()
