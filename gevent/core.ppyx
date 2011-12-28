@@ -71,22 +71,13 @@ NOSIGMASK = libev.EVFLAG_NOSIGMASK
 
 
 @cython.internal
-cdef class EVENTSType:
-    """A special object to pass to watcher.start which gets replaced by *events* that fired.
+cdef class _EVENTSType:
 
-    For example, if watcher is started as:
-        >>> io = loop.io(1, READ|WRITE)
-        >>> io.start(callback, EVENTS, 'hello')
-
-    Then the callback will be called with 2 arguments:
-        1) integer representing the event fired (READ, WRITE, READ|WRITE)
-        2) 'hello'
-    """
     def __repr__(self):
         return 'gevent.core.EVENTS'
 
 
-cdef public object GEVENT_CORE_EVENTS = EVENTSType()
+cdef public object GEVENT_CORE_EVENTS = _EVENTSType()
 EVENTS = GEVENT_CORE_EVENTS
 
 
@@ -581,7 +572,19 @@ cdef public class watcher [object PyGeventWatcherObject, type PyGeventWatcher_Ty
 
 cdef public class io(watcher) [object PyGeventIOObject, type PyGeventIO_Type]:
 
-    WATCHER(io)
+    WATCHER_BASE(io)
+
+    def start(self, object callback, *args, pass_events=False):
+        self.callback = callback
+        if pass_events:
+            self.args = (GEVENT_CORE_EVENTS, ) + args
+        else:
+            self.args = args
+        LIBEV_UNREF
+        libev.ev_io_start(self.loop._ptr, &self._watcher)
+        PYTHON_INCREF
+
+    ACTIVE
 
 #ifdef _WIN32
 
