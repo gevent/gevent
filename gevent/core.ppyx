@@ -30,6 +30,7 @@ cdef extern from *:
     int FD_SETSIZE
     int ioctlsocket(int, int, unsigned long*)
     int FIONREAD
+    int errno
 
 
 UNDEF = libev.EV_UNDEF
@@ -733,6 +734,29 @@ cdef public class callback(watcher) [object PyGeventCallbackObject, type PyGeven
 
         def __get__(self):
             return self.callback is not None
+
+
+__SYSERR_CALLBACK = None
+
+
+cdef void _syserr_cb(char* msg) with gil:
+    try:
+        __SYSERR_CALLBACK(msg, errno)
+    except:
+        set_syserr_cb(None)
+        raise
+
+
+def set_syserr_cb(callback):
+    global __SYSERR_CALLBACK
+    if callback is None:
+        libev.ev_set_syserr_cb(NULL)
+        __SYSERR_CALLBACK = None
+    elif hasattr(callback, '__call__'):
+        libev.ev_set_syserr_cb(<void *>_syserr_cb)
+        __SYSERR_CALLBACK = callback
+    else:
+        raise TypeError('Expected callable or None, got %r' % (callback, ))
 
 
 def set_exc_info(object type, object value):
