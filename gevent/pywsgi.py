@@ -178,14 +178,6 @@ class WSGIHandler(object):
         else:
             self.rfile = rfile
 
-    @property
-    def wfile(self):
-        # DEPRECATED, UNTESTED, TO BE REMOVED
-        wfile = getattr(self, '_wfile', None)
-        if wfile is None:
-            wfile = self._wfile = self.socket.makefile('wb', 0)
-        return wfile
-
     def handle(self):
         try:
             while self.socket is not None:
