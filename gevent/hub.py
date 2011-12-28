@@ -378,6 +378,15 @@ class Hub(greenlet):
             if event is not None:
                 event.unlink(switch)
 
+    def destroy(self):
+        global _threadlocal
+        result = self.join()
+        assert result is True, result
+        self.loop.destroy()
+        del self.loop
+        if getattr(_threadlocal, 'hub', None) is self:
+            del _threadlocal.hub
+
     def _get_resolver(self):
         if self._resolver is None:
             if self.resolver_class is not None:
