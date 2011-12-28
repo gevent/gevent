@@ -1,5 +1,5 @@
 #ifdef _WIN32
-#ifdef EV_STANDALONE
+#ifdef LIBEV_EMBED
 /*
  * If libev on win32 is embedded, then we can use an
  * arbitrary mapping between integer fds and OS

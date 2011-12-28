@@ -411,7 +411,7 @@ cdef public class loop [object PyGeventLoopObject, type PyGeventLoop_Type]:
         return result
 
     def _format(self):
-#ifdef EV_STANDALONE
+#ifdef LIBEV_EMBED
         args = (self.default, self.backend, self.activecnt, self.backend_fd, self.fdchangecnt, self.timercnt)
         return  ' default=%r backend=%r activecnt=%r backend_fd=%r fdchangecnt=%r timercnt=%r' % args
 #else
@@ -419,7 +419,7 @@ cdef public class loop [object PyGeventLoopObject, type PyGeventLoop_Type]:
         return  ' default=%r backend=%r' % args
 #endif
 
-#ifdef EV_STANDALONE
+#ifdef LIBEV_EMBED
     LOOP_PROPERTY(activecnt)
 
     LOOP_PROPERTY(backend_fd)
