@@ -3,6 +3,7 @@ cimport cython
 cimport libev
 from python cimport *
 import sys
+import os
 
 
 __all__ = ['get_version',
@@ -254,6 +255,8 @@ cdef public class loop [object PyGeventLoopObject, type PyGeventLoop_Type]:
                 self._ptr = libev.ev_loop_new(c_flags)
                 if not self._ptr:
                     raise SystemError("ev_loop_new(%s) failed" % (c_flags, ))
+            if default or __SYSERR_CALLBACK is None:
+                set_syserr_cb(self._handle_syserr)
 
     cpdef _stop_signal_checker(self):
         if libev.ev_is_active(&self._signal_checker):
@@ -297,6 +300,9 @@ cdef public class loop [object PyGeventLoopObject, type PyGeventLoop_Type]:
 
         def __get__(self):
             return libev.EV_MINPRI
+
+    def _handle_syserr(self, message, errno):
+        self.handle_error(None, SystemError, SystemError(message + ': ' + os.strerror(errno)), None)
 
     cpdef handle_error(self, context, type, value, tb):
         cdef object handle_error
