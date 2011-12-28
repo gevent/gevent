@@ -2,7 +2,6 @@
 cimport cares
 import sys
 from python cimport *
-from gevent.core import EVENTS
 from gevent.core import io, loop
 from _socket import gaierror
 
@@ -363,7 +362,7 @@ cdef public class channel [object PyGeventAresChannelObject, type PyGeventAresCh
             if not self._watchers:
                 self._timer.stop()
             return
-        watcher.start(self._process_fd, EVENTS, watcher)
+        watcher.start(self._process_fd, watcher, pass_events=True)
         self._timer.again(self._on_timer)
 
     def _on_timer(self):
