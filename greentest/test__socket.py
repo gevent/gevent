@@ -186,5 +186,19 @@ class TestCreateConnection(greentest.TestCase):
             raise AssertionError('create_connection did not raise socket.error as expected')
 
 
+class TestClosedSocket(greentest.TestCase):
+
+    switch_expected = False
+
+    def test(self):
+        sock = socket.socket()
+        sock.close()
+        try:
+            sock.send('a', timeout=1)
+        except socket.error, ex:
+            if ex.errno != 9:
+                raise
+
+
 if __name__ == '__main__':
     greentest.main()
