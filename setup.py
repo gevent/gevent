@@ -146,7 +146,8 @@ if libev_embed:
                            ('EV_CHILD_ENABLE', '0'),
                            ("EV_PERIODIC_ENABLE", '0')]
     CORE.configure = configure_libev
-
+    if sys.platform == "darwin":
+        os.environ["CFLAGS"] = ("%s %s" % (os.environ.get("CFLAGS", ""), "-U__llvm__")).lstrip()
 
 if ares_embed:
     ARES.sources += expand('c-ares/*.c')
