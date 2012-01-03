@@ -180,8 +180,8 @@ cdef class result:
 
 class ares_host_result(tuple):
 
-    def __new__(cls, family, *args):
-        cdef object self = tuple.__new__(cls, *args)
+    def __new__(cls, family, iterable):
+        cdef object self = tuple.__new__(cls, iterable)
         self.family = family
         return self
 
