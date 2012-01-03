@@ -148,6 +148,9 @@ if libev_embed:
     CORE.configure = configure_libev
     if sys.platform == "darwin":
         os.environ["CFLAGS"] = ("%s %s" % (os.environ.get("CFLAGS", ""), "-U__llvm__")).lstrip()
+else:
+    CORE.libraries.append('ev')
+
 
 if ares_embed:
     ARES.sources += expand('c-ares/*.c')
@@ -160,6 +163,9 @@ if ares_embed:
         if sys.platform != 'darwin':
             ARES.libraries += ['rt']
     ARES.define_macros += [('CARES_EMBED', '')]
+else:
+    ARES.libraries.append('cares')
+    ARES.define_macros += [('HAVE_NETDB_H', '')]
 
 
 def make(done=[]):
