@@ -22,6 +22,12 @@ class TestPickle(unittest.TestCase):
     def test2(self):
         return self._test(2)
 
+    if pickle.HIGHEST_PROTOCOL == 3:
+        def test3(self):
+            return self._test(3)
+    else:
+        assert pickle.HIGHEST_PROTOCOL == 2, pickle.HIGHEST_PROTOCOL
+
 
 if __name__ == '__main__':
     unittest.main()
