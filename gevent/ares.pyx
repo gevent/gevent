@@ -185,6 +185,9 @@ class ares_host_result(tuple):
         self.family = family
         return self
 
+    def __getnewargs__(self):
+        return (self.family, tuple(self))
+
 
 cdef void gevent_ares_host_callback(void *arg, int status, int timeouts, hostent* host):
     cdef channel channel
