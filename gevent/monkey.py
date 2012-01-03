@@ -124,6 +124,8 @@ def patch_thread(threading=True, _threading_local=True):
         threading._allocate_lock = green_thread.allocate_lock
         threading.Lock = green_thread.allocate_lock
         threading._get_ident = green_thread.get_ident
+        from gevent.hub import sleep
+        threading._sleep = sleep
     if _threading_local:
         _threading_local = __import__('_threading_local')
         _threading_local.local = local
