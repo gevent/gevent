@@ -1,6 +1,8 @@
 /* Copyright (c) 2011 Denis Bilenko. See LICENSE for details. */
 #include "Python.h"
+#ifdef CARES_EMBED
 #include "ares_setup.h"
+#endif
 
 #ifdef HAVE_NETDB_H
 #include <netdb.h>
