@@ -81,9 +81,9 @@ def make_universal_header(filename, *defines):
 
 
 def _system(cmd):
-   cmd = ' '.join(cmd)
-   sys.stderr.write('Running %r in %s\n' % (cmd, os.getcwd()))
-   return os.system(cmd)
+    cmd = ' '.join(cmd)
+    sys.stderr.write('Running %r in %s\n' % (cmd, os.getcwd()))
+    return os.system(cmd)
 
 
 def configure_libev(bext, ext):
