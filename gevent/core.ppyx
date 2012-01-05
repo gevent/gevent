@@ -249,7 +249,7 @@ cdef public class loop [object PyGeventLoopObject, type PyGeventLoop_Type]:
             if default or __SYSERR_CALLBACK is None:
                 set_syserr_cb(self._handle_syserr)
 
-    cpdef _stop_signal_checker(self):
+    def _stop_signal_checker(self):
         if libev.ev_is_active(&self._signal_checker):
             libev.ev_ref(self._ptr)
             libev.ev_prepare_stop(self._ptr, &self._signal_checker)
