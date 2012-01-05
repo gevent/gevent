@@ -77,6 +77,12 @@ class BaseServer(object):
             self._spawn = spawn
         if hasattr(self.pool, 'full'):
             self.full = self.pool.full
+        if self.pool is not None:
+            self.pool._semaphore.rawlink(self._start_accepting_if_started)
+
+    def _start_accepting_if_started(self, _event=None):
+        if self.started:
+            self.start_accepting()
 
     def set_handle(self, handle):
         if handle is not None:
@@ -166,8 +172,8 @@ class BaseServer(object):
                 pass
             self.__dict__.pop('socket', None)
             self.__dict__.pop('handle', None)
-
-    kill = close   # this is deprecated
+            if self.pool is not None:
+                self.pool._semaphore.unlink(self._start_accepting_if_started)
 
     def stop(self, timeout=None):
         """Stop accepting the connections and close the listening socket.
@@ -175,7 +181,7 @@ class BaseServer(object):
         If the server uses a pool to spawn the requests, then :meth:`stop` also waits
         for all the handlers to exit. If there are still handlers executing after *timeout*
         has expired (default 1 second), then the currently running handlers in the pool are killed."""
-        self.kill()
+        self.close()
         if timeout is None:
             timeout = self.stop_timeout
         if self.pool:

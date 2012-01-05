@@ -73,22 +73,6 @@ class StreamServer(BaseServer):
         except AttributeError:
             pass
 
-    def set_spawn(self, spawn):
-        BaseServer.set_spawn(self, spawn)
-        if self.pool is not None:
-            self.pool._semaphore.rawlink(self._start_accepting_if_started)
-
-    def close(self):
-        try:
-            BaseServer.close(self)
-        finally:
-            self.__dict__.pop('_handle', None)
-            pool = getattr(self, 'pool', None)
-            if pool is not None:
-                pool._semaphore.unlink(self._start_accepting_if_started)
-
-    kill = close  # this is deprecated
-
     def pre_start(self):
         BaseServer.pre_start(self)
         # make SSL work:
@@ -103,10 +87,6 @@ class StreamServer(BaseServer):
                 self.max_accept = DEFAULT_MAX_ACCEPT
             self._accept_event = self.loop.io(self.socket.fileno(), 1)
             self._accept_event.start(self._do_accept)
-
-    def _start_accepting_if_started(self, _event=None):
-        if self.started:
-            self.start_accepting()
 
     def stop_accepting(self):
         if self._accept_event is not None:
