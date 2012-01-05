@@ -690,6 +690,8 @@ cdef public class timer(watcher) [object PyGeventTimerObject, type PyGeventTimer
         def __get__(self):
             return self._watcher.at
 
+    # QQQ: add 'after' and 'repeat' properties?
+
     def again(self, object callback, *args, update=True):
         self.callback = callback
         self.args = args
