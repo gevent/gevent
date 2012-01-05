@@ -4,6 +4,7 @@ cimport libev
 from python cimport *
 import sys
 import os
+from signal import NSIG
 
 
 __all__ = ['get_version',
@@ -589,6 +590,10 @@ cdef public class io(watcher) [object PyGeventIOObject, type PyGeventIO_Type]:
 #ifdef _WIN32
 
     def __init__(self, loop loop, long fd, int events, ref=True):
+        if fd < 0:
+            raise ValueError('fd must be non-negative: %r' % fd)
+        if events & ~(libev.EV__IOFDSET | libev.EV_READ | libev.EV_WRITE):
+            raise ValueError('illegal event mask: %r' % events)
         cdef int vfd = libev.vfd_open(fd)
         libev.vfd_free(self._watcher.fd)
         libev.ev_io_init(&self._watcher, <void *>gevent_callback_io, vfd, events)
@@ -601,6 +606,10 @@ cdef public class io(watcher) [object PyGeventIOObject, type PyGeventIO_Type]:
 #else
 
     def __init__(self, loop loop, int fd, int events, ref=True):
+        if fd < 0:
+            raise ValueError('fd must be non-negative: %r' % fd)
+        if events & ~(libev.EV__IOFDSET | libev.EV_READ | libev.EV_WRITE):
+            raise ValueError('illegal event mask: %r' % events)
         libev.ev_io_init(&self._watcher, <void *>gevent_callback_io, fd, events)
         self.loop = loop
         if ref:
@@ -666,7 +675,15 @@ cdef public class timer(watcher) [object PyGeventTimerObject, type PyGeventTimer
 
     ACTIVE
 
-    INIT(timer, COMMA double after=0.0 COMMA double repeat=0.0, COMMA after COMMA repeat)
+    def __init__(self, loop loop, double after=0.0, double repeat=0.0, ref=True):
+        if repeat < 0.0:
+            raise ValueError("repeat must be positive or zero: %r" % repeat)
+        libev.ev_timer_init(&self._watcher, <void *>gevent_callback_timer, after, repeat)
+        self.loop = loop
+        if ref:
+            self._flags = 0
+        else:
+            self._flags = 4
 
     property at:
 
@@ -688,6 +705,21 @@ cdef public class signal(watcher) [object PyGeventSignalObject, type PyGeventSig
     WATCHER(signal)
 
     INIT(signal, COMMA int signalnum, COMMA signalnum)
+
+    def __init__(self, loop loop, int signalnum, ref=True):
+        if signalnum < 1 or signalnum >= NSIG:
+            raise ValueError('illegal signal number: %r' % signalnum)
+        # still possible to crash on one of libev's asserts:
+        # 1) "libev: ev_signal_start called with illegal signal number"
+        #    EV_NSIG might be different from signal.NSIG on some platforms
+        # 2) "libev: a signal must not be attached to two different loops"
+        #    we probably could check that in LIBEV_EMBED mode, but not in general
+        libev.ev_signal_init(&self._watcher, <void *>gevent_callback_signal, signalnum)
+        self.loop = loop
+        if ref:
+            self._flags = 0
+        else:
+            self._flags = 4
 
 
 cdef public class idle(watcher) [object PyGeventIdleObject, type PyGeventIdle_Type]:
