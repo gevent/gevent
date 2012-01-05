@@ -33,6 +33,16 @@ class Test(TestCase):
         self.assertEqual(str(core.EVENTS), 'gevent.core.EVENTS')
         self.assertEqual(repr(core.EVENTS), 'gevent.core.EVENTS')
 
+    def test_io(self):
+        self.assertRaises(ValueError, core.loop().io, -1, 1)
+        self.assertRaises(ValueError, core.loop().io, 1, core.TIMER)
+
+    def test_timer(self):
+        self.assertRaises(ValueError, core.loop().timer, 1, -1)
+
+    def test_signal(self):
+        self.assertRaises(ValueError, core.loop().signal, 1000)
+
 
 if __name__ == '__main__':
     main()
