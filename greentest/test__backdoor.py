@@ -29,7 +29,7 @@ class Test(greentest.TestCase):
 
         jobs = [gevent.spawn(connect) for _ in xrange(10)]
         gevent.joinall(jobs)
-        server.kill()
+        server.close()
         #self.assertEqual(conn.recv(1), '')
 
     def test_quit(self):
