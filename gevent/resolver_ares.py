@@ -50,7 +50,10 @@ class Resolver(object):
             try:
                 waiter = Waiter(self.hub)
                 ares.gethostbyname(waiter, hostname, family)
-                return waiter.get()
+                result = waiter.get()
+                if not result[-1]:
+                    raise gaierror(-5, 'No address associated with hostname')
+                return result
             except gaierror:
                 if ares is self.ares:
                     raise
@@ -154,7 +157,7 @@ class Resolver(object):
         result += result4 + result6
 
         if not result:
-            raise error('Internal error in %s' % ares.gethostbyname)
+            raise gaierror(-5, 'No address associated with hostname')
 
         return result
 
