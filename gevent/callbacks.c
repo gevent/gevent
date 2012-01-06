@@ -111,14 +111,15 @@ static void gevent_callback(struct PyGeventLoopObject* loop, PyObject* callback,
         gevent_handle_error(loop, watcher);
         if (revents & (EV_READ|EV_WRITE)) {
             /* this was an 'io' watcher: not stopping it will likely to cause the failing callback to be called repeatedly */
+            /* QQQ what about idle watcher? It will also cause the repeated failure. */
             gevent_stop(watcher, loop);
             goto end;
         }
     }
     if (!ev_is_active(c_watcher)) {
-        /* Watcher will never be run again (because it was stopped by libev).
-         * Let's call stop() to clean up 'callback' and 'args' properties.
-         * In this case, py_events might had EV_ERROR bit set. */
+        /* Watcher was stopped, maybe by libev. Let's call stop() to clean up
+         * 'callback' and 'args' properties, do Py_DECREF() and ev_ref() if necessary.
+         * BTW, we don't need to check for EV_ERROR, because libev stops the watcher in that case. */
         gevent_stop(watcher, loop);
     }
 end:
