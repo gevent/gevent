@@ -49,7 +49,13 @@ accept_results = [
 
                   # in some cases the error is different, but that's OK
                   ("error('sockaddr resolved to multiple addresses',)",
-                   "TypeError('must be string, not None',)")
+                   "TypeError('must be string, not None',)"),
+
+                  # in some cases gevent succeeds but stdlib fails
+                  # don't care enough about it to fix it
+                  ("('kremlin.ru', 'www')",
+                   "UnicodeEncodeError('ascii', u'\u043f\u0440\u0435\u0437\u0438\u0434\u0435\u043d\u0442.\u0440\u0444', 0, 9, 'ordinal not in range(128)')",
+                   'getnameinfo')
 ]
 
 
@@ -117,6 +123,49 @@ def log_call(result, function, *args):
     log_fresult(result)
 
 
+def add(klass, hostname, name=None, call=False):
+
+    if name is None:
+        if call:
+            name = hostname.__name__
+        else:
+            name = re.sub('[^\w]+', '_', repr(hostname))
+        assert name, repr(hostname)
+
+    def test1(self):
+        x = hostname() if call else hostname
+        self._test('getaddrinfo', x, 'http')
+    test1.__name__ = 'test_%s_getaddrinfo' % name
+    setattr(klass, test1.__name__, test1)
+
+    def test2(self):
+        x = hostname() if call else hostname
+        ipaddr = self._test('gethostbyname', x)
+        if not isinstance(ipaddr, Exception):
+            self._test('gethostbyaddr', ipaddr)
+    test2.__name__ = 'test_%s_gethostbyname' % name
+    setattr(klass, test2.__name__, test2)
+
+    def test3(self):
+        x = hostname() if call else hostname
+        self._test('gethostbyname_ex', x)
+    test3.__name__ = 'test_%s_gethostbyname_ex' % name
+    setattr(klass, test3.__name__, test3)
+
+    def test4(self):
+        x = hostname() if call else hostname
+        self._test('gethostbyaddr', x)
+    test4.__name__ = 'test_%s_gethostbyaddr' % name
+    setattr(klass, test4.__name__, test4)
+
+    def test5(self):
+        x = hostname() if call else hostname
+        self._test('getnameinfo', (x, 80), 0)
+    test5.__name__ = 'test_%s_getnameinfo' % name
+    setattr(klass, test5.__name__, test5)
+
+
+
 class TestCase(greentest.TestCase):
 
     __timeout__ = 15
@@ -133,19 +182,10 @@ class TestCase(greentest.TestCase):
             log('')
         elif VERBOSE >= 2:
             log('')
-        self.assertEqualResults(real_result, result)
+        self.assertEqualResults(real_result, result, func)
         return result
 
-    def _test_all(self, hostname):
-        self._test('getaddrinfo', hostname, 'http')
-        ipaddr = self._test('gethostbyname', hostname)
-        self._test('gethostbyname_ex', hostname)
-        if not isinstance(ipaddr, Exception):
-            self._test('gethostbyaddr', ipaddr)
-        self._test('gethostbyaddr', hostname)
-        self._test('getnameinfo', (hostname, 80), 0)
-
-    def assertEqualResults(self, real_result, gevent_result):
+    def assertEqualResults(self, real_result, gevent_result, func):
         if type(real_result) is TypeError and type(gevent_result) is TypeError:
             return
         real_result = repr(real_result)
@@ -154,75 +194,74 @@ class TestCase(greentest.TestCase):
             return
         if (gevent_result, real_result) in accept_results:
             return
+        if (gevent_result, real_result, func) in accept_results:
+            return
         raise AssertionError('%s != %s' % (gevent_result, real_result))
 
 
-def get_test(ip, host):
-
-    def test(self):
-        self._test_all(host)
-    test.__name__ = 'test_' + re.sub('[^\w]', '_', host)
-
-    return test
-
-
-class TestLocal(TestCase):
-
+class TestTypeError(TestCase):
     switch_expected = False
 
-    def test_hostname(self):
-        assert socket.gethostname is gevent_socket.gethostname
-        hostname = socket.gethostname()
-        self._test_all(hostname)
-
-    def test_localhost_getaddrinfo(self):
-        # certain tests in test_patched_socket.py only work if getaddrinfo('localhost') does not switch
-        # (e.g. NetworkConnectionAttributesTest.testSourceAddress)
-        self.switch_expected = False
-        gevent_socket.getaddrinfo('localhost', 80)
-
-    def test_localhost(self):
-        self._test_all('localhost')
-
-    def test_127_0_0_1(self):
-        self._test_all('127.0.0.1')
-
-    def test_1_2_3_4(self):
-        self._test_all('1.2.3.4')
-
-    def test_notexistent(self):
-        self._test_all('notexistent')
-
-    # <broadcast>, 127.0.0.1 special-cased in socketmodule.c?
-
-    def test_None(self):
-        self.switch_expected = False
-        self._test_all(None)
-
-    def test_25(self):
-        self.switch_expected = False
-        self._test_all(25)
-
-    try:
-        etc_hosts = open('/etc/hosts').read()
-    except IOError:
-        etc_hosts = ''
-
-    for ip, host in re.findall(r'^\s*(\d+\.\d+\.\d+\.\d+)\s+([^\s]+)', etc_hosts, re.M)[:10]:
-        func = get_test(ip, host)
-        print 'Adding %s' % func.__name__
-        locals()[func.__name__] = func
-        del func
+add(TestTypeError, None)
+add(TestTypeError, 25)
 
 
-class TestSimple(TestCase):
+class TestHostname(TestCase):
+    switch_expected = False
 
-    def test_gethostbyname(self):
-        gevent_socket.gethostbyname('gevent.org')
-        #self._test('gethostbyname', 'gevent.org')
+add(TestHostname, socket.gethostname, call=True)
 
-    def test_gethostbyname_ex(self):
-        self._test('gethostbyname_ex', 'gevent.org')
+
+class TestLocalhost(TestCase):
+    # certain tests in test_patched_socket.py only work if getaddrinfo('localhost') does not switch
+    # (e.g. NetworkConnectionAttributesTest.testSourceAddress)
+    switch_expected = False
+
+add(TestLocalhost, 'localhost')
+
+
+class TestNonexistent(TestCase):
+    switch_expected = True
+
+add(TestNonexistent, 'nonexistentxxxyyy')
+
+
+class Test1234(TestCase):
+    switch_expected = None
+
+add(Test1234, '1.2.3.4')
+
+
+class Test127001(TestCase):
+    switch_expected = False
+
+add(Test127001, '127.0.0.1')
+
+
+# class TestBroadcast(TestCase):
+#     switch_expected = False
+#
+# add(TestBroadcast, '<broadcast>')
+
+
+class TestEtcHosts(TestCase):
+    switch_expected = None
+
+try:
+    etc_hosts = open('/etc/hosts').read()
+except IOError:
+    etc_hosts = ''
+
+for ip, host in re.findall(r'^\s*(\d+\.\d+\.\d+\.\d+)\s+([^\s]+)', etc_hosts, re.M)[:10]:
+    add(TestEtcHosts, host)
+    add(TestEtcHosts, ip)
+    del host, ip
+
+
+class TestGeventOrg(TestCase):
+    switch_expected = True
+
+add(TestGeventOrg, 'gevent.org')
 
 
 class TestFamily(TestCase):
@@ -305,16 +344,11 @@ class Test_getaddrinfo(TestCase):
 
 
 class TestInternational(TestCase):
-    domain = u'президент.рф'
+    switch_expected = None
 
-    def test(self):
-        self._test_all(self.domain)
+add(TestInternational, u'президент.рф', 'russian')
+add(TestInternational, u'президент.рф'.encode('idna'), 'idna')
 
-    def test_idna(self):
-        self._test('gethostbyname', self.domain.encode('idna'))
-
-    def test_getaddrinfo(self):
-        self._test('getaddrinfo', self.domain, 'http')
 
 
 class TestInterrupted_gethostbyname(greentest.GenericWaitTestCase):
@@ -339,15 +373,13 @@ class TestInterrupted_gethostbyname(greentest.GenericWaitTestCase):
 #                     pass
 
 
-class TestIPv6(TestCase):
+class Test6(TestCase):
+    switch_expected = True
 
     # host that only has AAAA record
     host = 'aaaa.test-ipv6.com'
 
-    def test(self):
-        self._test_all(self.host)
-
-    def test_(self):
+    def test_empty(self):
         self._test('getaddrinfo', self.host, 'http')
 
     def test_inet(self):
@@ -360,24 +392,37 @@ class TestIPv6(TestCase):
         self._test('getaddrinfo', self.host, None, socket.AF_UNSPEC)
 
 
-class TestIPv6_ds(TestIPv6):
+class Test6_google(Test6):
+    host = 'ipv6.google.com'
 
+
+class Test6_ds(Test6):
     # host that has both A and AAAA records
     host = 'ds.test-ipv6.com'
 
 
+add(Test6, Test6.host)
+add(Test6_google, Test6_google.host)
+add(Test6_ds, Test6_ds.host)
+
+
+class TestBadName(TestCase):
+    switch_expected = True
+
+add(TestBadName, 'xxxxxxxxxxxx')
+
+
 class TestBadIP(TestCase):
+    switch_expected = True
 
-    def test_name(self):
-        self._test_all('xxxxxxxxx')
-
-    def test_ip(self):
-        self._test_all('1.2.3.400')
+add(TestBadIP, '1.2.3.400')
 
 
-class Test_getnameinfo(TestCase):
+class Test_getnameinfo_127001(TestCase):
+    switch_expected = False
 
     def test(self):
+        self.switch_expected = False
         assert gevent_socket.getnameinfo is not socket.getnameinfo
         self._test('getnameinfo', ('127.0.0.1', 80), 0)
 
@@ -389,6 +434,13 @@ class Test_getnameinfo(TestCase):
         # I get ('localhost', 'www') with _socket but ('localhost.localdomain', 'www') with gevent.socket
         self._test('getnameinfo', ('127.0.0.1', 80), socket.NI_NOFQDN)
 
+    def test_NAMEREQD(self):
+        self._test('getnameinfo', ('127.0.0.1', 80), socket.NI_NAMEREQD)
+
+
+class Test_getnameinfo_geventorg(TestCase):
+    switch_expected = True
+
     def test_NUMERICHOST(self):
         self._test('getnameinfo', ('gevent.org', 80), 0)
         self._test('getnameinfo', ('gevent.org', 80), socket.NI_NUMERICHOST)
@@ -396,17 +448,11 @@ class Test_getnameinfo(TestCase):
     def test_NUMERICSERV(self):
         self._test('getnameinfo', ('gevent.org', 80), socket.NI_NUMERICSERV)
 
-    def test_NAMEREQD(self):
-        self._test('getnameinfo', ('127.0.0.1', 80), socket.NI_NAMEREQD)
-
     def test_domain1(self):
         self._test('getnameinfo', ('gevent.org', 80), 0)
 
     def test_domain2(self):
         self._test('getnameinfo', ('www.gevent.org', 80), 0)
-
-    def test_port_string(self):
-        self._test('getnameinfo', ('www.gevent.org', 'http'), 0)
 
     def test_port_zero(self):
         self._test('getnameinfo', ('www.gevent.org', 0), 0)
@@ -415,13 +461,25 @@ class Test_getnameinfo(TestCase):
 class Test_getnameinfo_fail(TestCase):
     switch_expected = False
 
+    def test_port_string(self):
+        self._test('getnameinfo', ('www.gevent.org', 'http'), 0)
+
     def test_bad_flags(self):
         self._test('getnameinfo', ('127.0.0.1', 80), 55555555)
 
-    def test_invalid_port(self):
+
+class TestInvalidPort(TestCase):
+
+    def test1(self):
         self._test('getnameinfo', ('www.gevent.org', -1), 0)
+
+    def test2(self):
         self._test('getnameinfo', ('www.gevent.org', None), 0)
+
+    def test3(self):
         self._test('getnameinfo', ('www.gevent.org', 'x'), 0)
+
+    def test4(self):
         self._test('getnameinfo', ('www.gevent.org', 65536), 0)
 
 
