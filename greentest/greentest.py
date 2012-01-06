@@ -179,18 +179,25 @@ class TestCase(BaseTestCase):
     def tearDown(self):
         if hasattr(self, 'cleanup'):
             self.cleanup()
+        if self.switch_count is not None:
+            msg = None
+            if self.switch_count < 0:
+                raise AssertionError('hub.switch_count decreased???')
+            if self.switch_expected is None:
+                pass
+            elif self.switch_expected is True:
+                if self.switch_count <= 0:
+                    raise AssertionError('%s did not switch' % self.testcasename)
+            elif self.switch_expected is False:
+                if self.switch_count:
+                    raise AssertionError('%s switched but not expected to' % self.testcasename)
+            else:
+                raise AssertionError('Invalid value for switch_expected: %r' % (self.switch_expected, ))
+
+    @property
+    def switch_count(self):
         if self._switch_count is not None and hasattr(self._hub, 'switch_count'):
-            msg = ''
-            if self._hub.switch_count < self._switch_count:
-                msg = 'hub.switch_count decreased?\n'
-            elif self._hub.switch_count == self._switch_count:
-                if self.switch_expected:
-                    msg = '%s.%s did not switch\n' % (type(self).__name__, self.testname)
-            elif self._hub.switch_count > self._switch_count:
-                if not self.switch_expected:
-                    msg = '%s.%s switched but expected not to\n' % (type(self).__name__, self.testname)
-            if msg:
-                sys.stderr.write('WARNING: %s\n' % msg)
+            return self._hub.switch_count - self._switch_count
 
     @property
     def testname(self):
