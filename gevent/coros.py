@@ -34,18 +34,22 @@ class Semaphore(object):
     def release(self):
         self.counter += 1
         if self._links and self.counter > 0 and not self._notifier.active:
-            self._notifier.start(self._notify_links, list(self._links))
-            # XXX so what if there was another release() with different self._links? it would be ignored then?
+            self._notifier.start(self._notify_links)
 
-    def _notify_links(self, links):
-        for link in links:
-            if self.counter <= 0:
-                return
-            if link in self._links:
+    def _notify_links(self):
+        while True:
+            self._dirty = False
+            for link in self._links:
+                if self.counter <= 0:
+                    return
                 try:
                     link(self)
                 except:
                     self.hub.handle_error((link, self), *sys.exc_info())
+                if self._dirty:
+                    break
+            if not self._dirty:
+                return
 
     def rawlink(self, callback):
         """Register a callback to call when a counter is more than zero.
@@ -56,13 +60,13 @@ class Semaphore(object):
         if not callable(callback):
             raise TypeError('Expected callable: %r' % (callback, ))
         self._links.append(callback)
-        if self.counter > 0 and not self._notifier.active:
-            self._notifier.start(self._notify_links, list(self._links))
+        self._dirty = True
 
     def unlink(self, callback):
         """Remove the callback set by :meth:`rawlink`"""
         try:
             self._links.remove(callback)
+            self._dirty = True
         except ValueError:
             pass
 
