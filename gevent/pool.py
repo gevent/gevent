@@ -289,10 +289,10 @@ class IMap(Greenlet):
                 raise value.exc
             if value is not _SKIP:
                 return value
+
     if six.PY3:
         __next__ = next
         del next
-
 
     def _run(self):
         try:
