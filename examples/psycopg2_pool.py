@@ -50,6 +50,14 @@ class DatabaseConnectionPool(object):
     def put(self, item):
         self.pool.put(item)
 
+    def closeall(self):
+        while not self.pool.empty():
+            conn = self.pool.get_nowait()
+            try:
+                conn.close()
+            except Exception:
+                pass
+
     @contextlib.contextmanager
     def connection(self):
         conn = self.get()
@@ -97,14 +105,6 @@ class DatabaseConnectionPool(object):
             gevent.get_hub().handle_error(conn, *sys.exc_info())
             return
         return conn
-
-    def closeall(self):
-        while not self.pool.empty():
-            conn = self.pool.get_nowait()
-            try:
-                conn.close()
-            except Exception:
-                pass
 
     def execute(self, *args, **kwargs):
         with self.cursor() as cursor:
