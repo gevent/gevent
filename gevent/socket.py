@@ -188,17 +188,8 @@ def wait_readwrite(fileno, timeout=None, timeout_exc=timeout('timed out'), event
 cancel_wait_ex = error(EBADF, 'File descriptor was closed in another greenlet')
 
 
-def _cancel_wait(watcher):
-    if watcher.active:
-        switch = watcher.callback
-        if switch is not None:
-            greenlet = getattr(switch, '__self__', None)
-            if greenlet is not None:
-                greenlet.throw(cancel_wait_ex)
-
-
-def cancel_wait(event):
-    get_hub().loop.run_callback(_cancel_wait, event)
+def cancel_wait(watcher):
+    get_hub().cancel_wait(watcher, cancel_wait_ex)
 
 
 if sys.version_info[:2] < (2, 7):
