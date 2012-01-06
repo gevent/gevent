@@ -66,20 +66,10 @@ class TestCoroutinePool(greentest.TestCase):
 
     def test_reentrant(self):
         pool = self.klass(1)
-
-        def reenter():
-            result = pool.apply(lambda a: a, ('reenter', ))
-            self.assertEqual('reenter', result)
-
-        pool.apply(reenter)
-
+        result = pool.apply(pool.apply, (lambda a: a+1, (5, )))
+        self.assertEqual(result, 6)
         evt = Event()
-
-        def reenter_async():
-            pool.apply_async(lambda a: a, ('reenter', ))
-            evt.set()
-
-        pool.apply_async(reenter_async)
+        pool.apply_async(evt.set)
         evt.wait()
 
     def test_stderr_raising(self):
@@ -347,19 +337,26 @@ class TestSpawn(greentest.TestCase):
         self.assertEqual(len(p), 0)
 
 
+def error_iter():
+    yield 1
+    yield 2
+    raise ExpectedException
+
+
 class TestErrorInIterator(greentest.TestCase):
     error_fatal = False
 
     def test(self):
         p = pool.Pool(3)
-        def iter():
-            yield 1
-            yield 2
-            raise ExpectedException
-        self.assertRaises(ExpectedException, p.map, lambda x: None, iter())
-        def unordered(*args):
-            return list(p.imap_unordered(*args))
-        self.assertRaises(ExpectedException, unordered, lambda x: None, iter())
+        self.assertRaises(ExpectedException, p.map, lambda x: None, error_iter())
+        gevent.sleep(0.001)
+
+    def test_unordered(self):
+        p = pool.Pool(3)
+        def unordered():
+            return list(p.imap_unordered(lambda x: None, error_iter()))
+        self.assertRaises(ExpectedException, unordered)
+        gevent.sleep(0.001)
 
 
 if __name__ == '__main__':
