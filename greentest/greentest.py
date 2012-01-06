@@ -75,7 +75,10 @@ def wrap_refcount(method):
                     sys.modules['urlparse'].clear_cache()
                 d = gettotalrefcount() - d
                 deltas.append(d)
-                if deltas[-1] == 0:
+                if len(deltas) >= 2 and deltas[-1] <= 0 and deltas[-2] <= 0:
+                    break
+                elif len(deltas) >= 3 and deltas[-3:] == [-1, 1, -1]:
+                    # as seen on test__server.py: test_assertion_in_blocking_func (__main__.TestNoneSpawn)
                     break
             else:
                 raise AssertionError('refcount increased by %r' % (deltas, ))
