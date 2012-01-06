@@ -131,7 +131,7 @@ class Resolver(object):
         if len(values) == 2 and values[0] == values[1]:
             values.pop()
 
-        result  = []
+        result = []
         result4 = []
         result6 = []
 
