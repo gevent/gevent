@@ -350,14 +350,14 @@ class ExpectedError(Exception):
     pass
 
 
-class TestSSLSocketNotAllowed(TestCase):
+if hasattr(socket, 'ssl'):
 
-    switch_expected = False
+    class TestSSLSocketNotAllowed(TestCase):
 
-    def get_spawn(self):
-        return gevent.spawn
+        switch_expected = False
 
-    if hasattr(socket, 'ssl'):
+        def get_spawn(self):
+            return gevent.spawn
 
         def test(self):
             from gevent.socket import ssl, socket
@@ -366,6 +366,7 @@ class TestSSLSocketNotAllowed(TestCase):
             listener.listen(5)
             listener = ssl(listener)
             self.assertRaises(TypeError, self.ServerSubClass, listener)
+
 
 # test non-socket.error exception in accept call: fatal
 # test error in spawn(): non-fatal
