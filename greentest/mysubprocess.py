@@ -49,3 +49,10 @@ class Popen(subprocess.Popen):
             os.system('taskkill /f /pid %s' % self.pid)
         else:
             sys.stderr.write('Cannot kill on this platform. Please kill %s\n' % self.pid)
+
+    def gevent_wait(self):
+        from gevent import sleep
+        while True:
+            if self.poll() is not None:
+                return self.poll()
+            sleep(0.1)
