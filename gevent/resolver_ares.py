@@ -217,7 +217,10 @@ class Resolver(object):
             address = address[:2] + sockaddr[2:]
 
         self.ares.getnameinfo(waiter, address, flags)
-        return waiter.get()
+        node, service = waiter.get()
+        if service is None:
+            service = '0'
+        return node, service
 
     def getnameinfo(self, sockaddr, flags):
         while True:
