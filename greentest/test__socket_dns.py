@@ -32,6 +32,13 @@ accept_results = [
                   ("gaierror(1, 'ARES_ENODATA: DNS server returned answer with no data')",
                    "gaierror(-5, 'No address associated with hostname')"),
 
+                  # windows has its own error codes:
+                  ("gaierror(4, 'ARES_ENOTFOUND: Domain name not found')",
+                   "gaierror(11001, 'getaddrinfo failed')"),
+
+                  ("gaierror(4, 'ARES_ENOTFOUND: Domain name not found')",
+                   "herror(11004, 'host not found')"),
+
                   # _socket.gethostbyname_ex('\x00') checks for zeroes and raises TypeError
                   # but it's not worth the trouble
                   ("gaierror(1, 'ARES_ENODATA: DNS server returned answer with no data')",
