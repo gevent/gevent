@@ -50,7 +50,6 @@ except ImportError:
     __all__.remove('fork')
 
 
-
 def reinit():
     return get_hub().loop.reinit()
 
