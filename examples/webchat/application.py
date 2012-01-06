@@ -8,8 +8,10 @@ from django.core.management import call_command
 
 os.environ['DJANGO_SETTINGS_MODULE'] = 'webchat.settings'
 
+
 def exception_printer(sender, **kwargs):
     traceback.print_exc()
+
 
 got_request_exception.connect(exception_printer)
 
