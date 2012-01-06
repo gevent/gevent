@@ -235,10 +235,7 @@ class TestCase(BaseTestCase):
     def _store_error(self, where, type, value, tb):
         del tb
         if self._error != self._none:
-            if self._hub is gevent.getcurrent():
-                self._hub.parent.throw(type, value)
-            else:
-                self._hub.loop.run_callback(self._hub.parent.throw, type, value)
+            self._hub.parent.throw(type, value)
         else:
             self._error = (where, type, value)
 
