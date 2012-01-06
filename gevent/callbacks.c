@@ -116,8 +116,9 @@ static void gevent_callback(struct PyGeventLoopObject* loop, PyObject* callback,
         }
     }
     if (!ev_is_active(c_watcher)) {
-        /* watcher will never be run again: calling stop() will clear 'callback' and 'args'
-         * also it will release the reference held by watcher to itself and does ref() if unref() was done before */
+        /* Watcher will never be run again (because it was stopped by libev).
+         * Let's call stop() to clean up 'callback' and 'args' properties.
+         * In this case, py_events might had EV_ERROR bit set. */
         gevent_stop(watcher, loop);
     }
 end:
