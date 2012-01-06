@@ -191,14 +191,12 @@ class TestDefaultSpawn(TestCase):
             self.server.start_accepting()
             self.report_netstat('after start_accepting')
             self.assertRequestSucceeded()
-        else:
-            self.assertRaises(Exception, self.server.start)  # XXX which exception exactly?
         self.stop_server()
         self.report_netstat('after stop')
 
     def test_backlog_is_not_accepted_for_socket(self):
         self.switch_expected = False
-        self.assertRaises(TypeError, self.ServerClass, self.get_listener(), backlog=25)
+        self.assertRaises(TypeError, self.ServerClass, self.get_listener(), backlog=25, handle=False)
 
     def test_backlog_is_accepted_for_address(self):
         self.server = self.ServerSubClass(('127.0.0.1', 0), backlog=25)

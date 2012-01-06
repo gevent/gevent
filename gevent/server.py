@@ -1,17 +1,12 @@
 # Copyright (c) 2009-2011 Denis Bilenko. See LICENSE for details.
 """TCP/SSL server"""
 import sys
-import errno
-from gevent import socket
+import _socket
 from gevent.baseserver import BaseServer
-from gevent.hub import get_hub
-from gevent.socket import EWOULDBLOCK
+from gevent.socket import EWOULDBLOCK, socket
 
 
-__all__ = ['StreamServer']
-
-
-DEFAULT_MAX_ACCEPT = 100
+__all__ = ['StreamServer', 'DatagramServer']
 
 
 class StreamServer(BaseServer):
@@ -37,103 +32,127 @@ class StreamServer(BaseServer):
     The delay starts with :attr:`min_delay` and doubles with each successive error until it reaches :attr:`max_delay`.
     A successful :func:`accept` resets the delay to :attr:`min_delay` again.
     """
-    # Sets the maximum number of consecutive accepts that a process may perform on
-    # a single wake up. High values give higher priority to high connection rates,
-    # while lower values give higher priority to already established connections.
-    # Default is 100. Note, that in case of multiple working processes on the same
-    # listening value, it should be set to a lower value. (pywsgi.WSGIServer sets it
-    # to 1 when environ["wsgi.multiprocess"] is true)
-    max_accept = None
-
-    # the number of seconds to sleep in case there was an error in accept() call
-    # for consecutive errors the delay will double until it reaches max_delay
-    # when accept() finally succeeds the delay will be reset to min_delay again
-    min_delay = 0.01
-    max_delay = 1
+    # the default backlog to use if none was provided in __init__
+    backlog = 256
 
     def __init__(self, listener, handle=None, backlog=None, spawn='default', **ssl_args):
-        if ssl_args:
-            ssl_args.setdefault('server_side', True)
-            from gevent.ssl import wrap_socket
-            self.wrap_socket = wrap_socket
-            self.ssl_args = ssl_args
-            self.ssl_enabled = True
-        else:
-            self.ssl_enabled = False
-        BaseServer.__init__(self, listener, handle=handle, backlog=backlog, spawn=spawn)
-        self.delay = self.min_delay
-        self._accept_event = None
-        self._start_accepting_timer = None
-        self.loop = get_hub().loop
+        BaseServer.__init__(self, listener, handle=handle, spawn=spawn)
+        try:
+            if ssl_args:
+                ssl_args.setdefault('server_side', True)
+                from gevent.ssl import wrap_socket
+                self.wrap_socket = wrap_socket
+                self.ssl_args = ssl_args
+            else:
+                self.ssl_args = None
+            if backlog is not None:
+                if hasattr(self, 'socket'):
+                    raise TypeError('backlog must be None when a socket instance is passed')
+                self.backlog = backlog
+        except:
+            self.close()
+            raise
 
-    def set_listener(self, listener, backlog=None):
-        BaseServer.set_listener(self, listener, backlog=backlog)
+    @property
+    def ssl_enabled(self):
+        return self.ssl_args is not None
+
+    def set_listener(self, listener):
+        BaseServer.set_listener(self, listener)
         try:
             self.socket = self.socket._sock
         except AttributeError:
             pass
 
-    def pre_start(self):
-        BaseServer.pre_start(self)
-        # make SSL work:
-        if self.ssl_enabled:
+    def init_socket(self):
+        if not hasattr(self, 'socket'):
+            self.socket = _tcp_listener(self.address, backlog=self.backlog,
+                                        reuse_addr=self.reuse_addr, family=self.family)
+            self.address = self.socket.getsockname()
+        if self.ssl_args:
             self._handle = self.wrap_socket_and_handle
         else:
             self._handle = self.handle
 
-    def start_accepting(self):
-        if self._accept_event is None:
-            if self.max_accept is None:
-                self.max_accept = DEFAULT_MAX_ACCEPT
-            self._accept_event = self.loop.io(self.socket.fileno(), 1)
-            self._accept_event.start(self._do_accept)
-
-    def stop_accepting(self):
-        if self._accept_event is not None:
-            self._accept_event.stop()
-            self._accept_event = None
-        if self._start_accepting_timer is not None:
-            self._start_accepting_timer.stop()
-            self._start_accepting_timer = None
-
-    def _do_accept(self):
-        for _ in xrange(self.max_accept):
-            address = None
-            try:
-                if self.full():
-                    self.stop_accepting()
-                    return
-                try:
-                    client_socket, address = self.socket.accept()
-                except socket.error, err:
-                    if err[0] == EWOULDBLOCK:
-                        return
-                    raise
-                self.delay = self.min_delay
-                client_socket = socket.socket(_sock=client_socket)
-                spawn = self._spawn
-                if spawn is None:
-                    self._handle(client_socket, address)
-                else:
-                    spawn(self._handle, client_socket, address)
-            except:
-                self.loop.handle_error((address, self), *sys.exc_info())
-                ex = sys.exc_info()[1]
-                if self.is_fatal_error(ex):
-                    self.close()
-                    sys.stderr.write('ERROR: %s failed with %s\n' % (self, str(ex) or repr(ex)))
-                    return
-                if self.delay >= 0:
-                    self.stop_accepting()
-                    self._start_accepting_timer = self.loop.timer(self.delay)
-                    self._start_accepting_timer.start(self._start_accepting_if_started)
-                    self.delay = min(self.max_delay, self.delay * 2)
-                break
-
-    def is_fatal_error(self, ex):
-        return isinstance(ex, socket.error) and ex[0] in (errno.EBADF, errno.EINVAL, errno.ENOTSOCK)
+    def do_read(self):
+        try:
+            client_socket, address = self.socket.accept()
+        except _socket.error, err:
+            if err[0] == EWOULDBLOCK:
+                return
+            raise
+        return socket(_sock=client_socket), address
 
     def wrap_socket_and_handle(self, client_socket, address):
         # used in case of ssl sockets
         ssl_socket = self.wrap_socket(client_socket, **self.ssl_args)
         return self.handle(ssl_socket, address)
+
+
+class DatagramServer(BaseServer):
+    """A UDP server"""
+
+    def __init__(self, *args, **kwargs):
+        BaseServer.__init__(self, *args, **kwargs)
+        from gevent.coros import Semaphore
+        self._writelock = Semaphore()
+
+    def init_socket(self):
+        if not hasattr(self, 'socket'):
+            self.socket = _udp_socket(self.address, reuse_addr=self.reuse_addr, family=self.family)
+            self.address = self.socket.getsockname()
+        self._socket = self.socket
+        try:
+            self._socket = self._socket._sock
+        except AttributeError:
+            pass
+
+    def do_read(self):
+        try:
+            data, address = self._socket.recvfrom(8192)
+        except _socket.error, err:
+            if err[0] == EWOULDBLOCK:
+                return
+            raise
+        return data, address
+
+    def sendto(self, *args):
+        self._writelock.acquire()
+        try:
+            self.socket.sendto(*args)
+        finally:
+            self._writelock.release()
+
+
+def _tcp_listener(address, backlog=50, reuse_addr=None, family=_socket.AF_INET):
+    """A shortcut to create a TCP socket, bind it and put it into listening state."""
+    sock = socket(family=family)
+    if reuse_addr is not None:
+        sock.setsockopt(_socket.SOL_SOCKET, _socket.SO_REUSEADDR, reuse_addr)
+    try:
+        sock.bind(address)
+    except _socket.error:
+        ex = sys.exc_info()[1]
+        strerror = getattr(ex, 'strerror', None)
+        if strerror is not None:
+            ex.strerror = strerror + ': ' + repr(address)
+        raise
+    sock.listen(backlog)
+    sock.setblocking(0)
+    return sock
+
+
+def _udp_socket(address, backlog=50, reuse_addr=None, family=_socket.AF_INET):
+    # we want gevent.socket.socket here
+    sock = socket(family=family, type=_socket.SOCK_DGRAM)
+    if reuse_addr is not None:
+        sock.setsockopt(_socket.SOL_SOCKET, _socket.SO_REUSEADDR, reuse_addr)
+    try:
+        sock.bind(address)
+    except _socket.error:
+        ex = sys.exc_info()[1]
+        strerror = getattr(ex, 'strerror', None)
+        if strerror is not None:
+            ex.strerror = strerror + ': ' + repr(address)
+        raise
+    return sock

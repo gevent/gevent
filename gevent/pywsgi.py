@@ -565,8 +565,8 @@ class WSGIServer(StreamServer):
     def get_environ(self):
         return self.environ.copy()
 
-    def pre_start(self):
-        StreamServer.pre_start(self)
+    def init_socket(self):
+        StreamServer.init_socket(self)
         self.update_environ()
 
     def update_environ(self):
