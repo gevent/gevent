@@ -216,7 +216,9 @@ def patch_all(socket=True, dns=True, time=True, select=True, thread=True, os=Tru
         try:
             patch_ssl()
         except ImportError:
-            pass  # python <= 2.5 and ssl package is not installed
+            if sys.version_info[:2] > (2, 5):
+                raise
+            # in Python 2.5, 'ssl' is a standalone package not included in stdlib
     if httplib:
         patch_httplib()
 
