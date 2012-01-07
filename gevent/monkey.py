@@ -184,9 +184,9 @@ def patch_select(aggressive=False):
     patch_module('select')
     if aggressive:
         select = __import__('select')
-        # since these are blocking and don't work with the libevent's event loop
-        # we're removing them here. This makes some other modules (e.g. asyncore)
-        # non-blocking, as they use select that we provide when none of these are available.
+        # since these are blocking we're removing them here. This makes some other
+        # modules (e.g. asyncore)  non-blocking, as they use select that we provide
+        # when none of these are available.
         select.__dict__.pop('poll', None)
         select.__dict__.pop('epoll', None)
         select.__dict__.pop('kqueue', None)
