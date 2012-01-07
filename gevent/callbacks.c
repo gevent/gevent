@@ -58,7 +58,7 @@ static void gevent_stop(PyObject* watcher, struct PyGeventLoopObject* loop) {
     PyObject *result, *method;
     int error;
     error = 1;
-    method = PyObject_GetAttrString(watcher, "stop");  // XXX replace with GetAttr
+    method = PyObject_GetAttrString(watcher, "stop");
     if (method) {
         result = PyObject_Call(method, __pyx_empty_tuple, NULL);
         if (result) {
