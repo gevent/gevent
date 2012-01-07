@@ -193,12 +193,6 @@ def patch_select(aggressive=False):
         select.__dict__.pop('kevent', None)
 
 
-def patch_httplib():
-    from gevent.httplib import HTTPConnection
-    httplib = __import__('httplib')
-    httplib.HTTPConnection = HTTPConnection
-
-
 def patch_all(socket=True, dns=True, time=True, select=True, thread=True, os=True, ssl=True, httplib=False, aggressive=True):
     """Do all of the default monkey patching (calls every other function in this module."""
     # order is important
@@ -220,7 +214,7 @@ def patch_all(socket=True, dns=True, time=True, select=True, thread=True, os=Tru
                 raise
             # in Python 2.5, 'ssl' is a standalone package not included in stdlib
     if httplib:
-        patch_httplib()
+        raise ValueError('gevent.httplib is no longer provided, httplib must be False')
 
 
 if __name__ == '__main__':
