@@ -203,7 +203,6 @@ class WSGIHandler(object):
                     pass
             self.__dict__.pop('socket', None)
             self.__dict__.pop('rfile', None)
-            self.__dict__.pop('_wfile', None)  # XXX remove once wfile property is gone
 
     def _check_http_version(self):
         version = self.request_version
