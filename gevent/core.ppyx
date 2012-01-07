@@ -704,8 +704,6 @@ cdef public class signal(watcher) [object PyGeventSignalObject, type PyGeventSig
 
     WATCHER(signal)
 
-    INIT(signal, COMMA int signalnum, COMMA signalnum)
-
     def __init__(self, loop loop, int signalnum, ref=True):
         if signalnum < 1 or signalnum >= NSIG:
             raise ValueError('illegal signal number: %r' % signalnum)
