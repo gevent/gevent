@@ -747,6 +747,13 @@ cdef public class async(watcher) [object PyGeventAsyncObject, type PyGeventAsync
 
     INIT(async,,)
 
+    def send(self):
+        libev.ev_async_send(self.loop._ptr, &self._watcher)
+
+    @property
+    def sent(self):
+        return libev.ev_async_pending(&self._watcher)
+
 
 #cdef public class child(watcher) [object PyGeventChildObject, type PyGeventChild_Type]:
 #

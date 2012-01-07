@@ -131,6 +131,8 @@ cdef extern from "libev.h":
     void ev_async_init(ev_async*, void* callback)
     void ev_async_start(ev_loop*, ev_async*)
     void ev_async_stop(ev_loop*, ev_async*)
+    void ev_async_send(ev_loop*, ev_async*)
+    int ev_async_pending(ev_async*)
 
     void ev_child_init(ev_child*, void* callback, int, int)
     void ev_child_start(ev_loop*, ev_child*)
