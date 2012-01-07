@@ -590,8 +590,6 @@ cdef public class io(watcher) [object PyGeventIOObject, type PyGeventIO_Type]:
 #ifdef _WIN32
 
     def __init__(self, loop loop, long fd, int events, ref=True):
-        if fd < 0:
-            raise ValueError('fd must be non-negative: %r' % fd)
         if events & ~(libev.EV__IOFDSET | libev.EV_READ | libev.EV_WRITE):
             raise ValueError('illegal event mask: %r' % events)
         cdef int vfd = libev.vfd_open(fd)
