@@ -1,4 +1,4 @@
-# Copyright (c) 2011 Denis Bilenko. See LICENSE for details.
+# Copyright (c) 2011-2012 Denis Bilenko. See LICENSE for details.
 cimport cares
 import sys
 from python cimport *
