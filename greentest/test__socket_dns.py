@@ -6,10 +6,12 @@ import re
 import traceback
 import greentest
 import socket
+from time import time
 import gevent
 import gevent.socket as gevent_socket
 
 
+RAISE_TOO_SLOW = False
 # also test: '<broadcast>'
 
 
@@ -109,25 +111,27 @@ def log_fcall(function, args):
         newline=False)
 
 
-def log_fresult(result):
+def log_fresult(result, seconds):
     if isinstance(result, Exception):
-        log(' -> raised %r', result)
+        log(' -> raised %r (%.3f)', result, seconds * 1000.0)
     else:
-        log(' -> returned %r', result)
+        log(' -> returned %r (%.3f)', result, seconds * 1000.0)
 
 
 def run(function, *args):
     if VERBOSE >= 2:
         log_fcall(function, args)
+    delta = time()
     result = _run(function, *args)
+    delta = time() - delta
     if VERBOSE >= 2:
-        log_fresult(result)
-    return result
+        log_fresult(result, delta)
+    return result, delta
 
 
-def log_call(result, function, *args):
+def log_call(result, time, function, *args):
     log_fcall(function, args)
-    log_fresult(result)
+    log_fresult(result, time)
 
 
 def add(klass, hostname, name=None, call=False):
@@ -172,6 +176,9 @@ def add(klass, hostname, name=None, call=False):
     setattr(klass, test5.__name__, test5)
 
 
+class TooSlow(AssertionError):
+    pass
+
 
 class TestCase(greentest.TestCase):
 
@@ -180,16 +187,33 @@ class TestCase(greentest.TestCase):
     def _test(self, func, *args):
         gevent_func = getattr(gevent_socket, func)
         real_func = getattr(socket, func)
-        result = run(gevent_func, *args)
-        real_result = run(real_func, *args)
+        real_result, time_real = run(real_func, *args)
+        result, time_gevent = run(gevent_func, *args)
         if VERBOSE == 1 and repr(result) != repr(real_result):
             # slightly less verbose mode: only print the results that are different
-            log_call(result, gevent_func, *args)
-            log_call(real_result, real_func, *args)
+            log_call(result, time_gevent, gevent_func, *args)
+            log_call(real_result, time_real, real_func, *args)
             log('')
         elif VERBOSE >= 2:
             log('')
         self.assertEqualResults(real_result, result, func)
+        if isinstance(real_result, Exception):
+            if isinstance(result, Exception):
+                # built-in socket module is faster at raising exceptions
+                allowed = 2.
+            else:
+                # built-in socket module raised an error, gevent made a real query
+                allowed = 100000.
+        else:
+            allowed = 1.2
+        if time_gevent / allowed > time_real:
+            times = time_gevent / time_real
+            params = (func, args, times, time_gevent * 1000.0, time_real * 1000.0)
+            msg = 'gevent_socket.%s%s is %.1f times slower (%.3fms versus %.3fms)' % params
+            if RAISE_TOO_SLOW:
+                raise TooSlow(msg)
+            else:
+                sys.stderr.write('WARNING: %s\n' % msg)
         return result
 
     def assertEqualResults(self, real_result, gevent_result, func):
