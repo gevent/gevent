@@ -67,6 +67,21 @@ __all__ = ['patch_all',
            'patch_thread']
 
 
+def get_unpatched(name, items):
+    # QQQ would prefer to avoid importing gevent.xxx module just to get __target__
+    source = getattr(__import__('gevent.' + name), name)
+    target = getattr(source, '__target__', name)
+    dest = __import__(target)
+    original = getattr(dest, 'monkey_original', dest)
+    if isinstance(items, basestring):
+        return getattr(original, items)
+    else:
+        results = []
+        for item in items:
+            results.append(getattr(original, item))
+        return results
+
+
 class original(object):
     pass
 
