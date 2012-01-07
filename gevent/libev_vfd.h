@@ -6,6 +6,7 @@
  * handles. Then by defining special macros libev
  * will use our functions.
  */
+#define GEVENT_VFD_MODE
 
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>

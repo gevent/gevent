@@ -1812,12 +1812,27 @@ evpipe_write (EV_P_ EV_ATOMIC_T *flag)
       else
 #endif
         {
+#ifdef GEVENT_VFD_MODE
+          /* in gevent VFD mode, a file descriptor is a meaningless number, 
+           * so we'll convert it to proper Windows handle */
+          if (send(EV_FD_TO_WIN32_HANDLE(evpipe[1]), &(evpipe[1]), 1, 0) < 0) {
+#if EV_AVOID_STDIO
+            ev_printerr ("(libev) send error");
+            ev_printerr (": ");
+            ev_printerr (strerror (errno));
+            ev_printerr ("\n");
+#else
+            perror ("(libev) send error");
+#endif
+          }
+#else
           /* win32 people keep sending patches that change this write() to send() */
           /* and then run away. but send() is wrong, it wants a socket handle on win32 */
           /* so when you think this write should be a send instead, please find out */
           /* where your send() is from - it's definitely not the microsoft send, and */
           /* tell me. thank you. */
           write (evpipe [1], &(evpipe [1]), 1);
+#endif
         }
 
       errno = old_errno;
@@ -1843,8 +1858,12 @@ pipecb (EV_P_ ev_io *iow, int revents)
 #endif
         {
           char dummy;
+#ifdef GEVENT_VFD_MODE
+          recv(EV_FD_TO_WIN32_HANDLE(evpipe[0]), &dummy, 1, 0);
+#else
           /* see discussion in evpipe_write when you think this read should be recv in win32 */
           read (evpipe [0], &dummy, 1);
+#endif
         }
     }
 
