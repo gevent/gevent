@@ -1,7 +1,7 @@
 #!/usr/bin/python
 """Resolve hostnames concurrently, exit after 2 seconds.
 
-Note, that gevent.socket.gethostname uses libevent-dns under the hood
+Note, that gevent.socket.gethostname uses c-ares under the hood
 and yields the control to other greenlets until the result is ready.
 This script splits the job between a number of greenlets to get the
 results faster.
