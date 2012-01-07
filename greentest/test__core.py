@@ -34,7 +34,11 @@ class Test(TestCase):
         self.assertEqual(repr(core.EVENTS), 'gevent.core.EVENTS')
 
     def test_io(self):
-        self.assertRaises(ValueError, core.loop().io, -1, 1)
+        if sys.platform == 'win32':
+            Error = IOError
+        else:
+            Error = ValueError
+        self.assertRaises(Error, core.loop().io, -1, 1)
         self.assertRaises(ValueError, core.loop().io, 1, core.TIMER)
 
     def test_timer(self):
