@@ -1,5 +1,5 @@
 #!/usr/bin/python
-# Copyright (C) 2011 Denis Bilenko (http://denisbilenko.com)
+# Copyright (C) 2011-2012 Denis Bilenko (http://denisbilenko.com)
 import sys
 import os
 import re
