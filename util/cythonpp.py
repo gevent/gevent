@@ -256,7 +256,7 @@ def produce_preprocessor(iterable):
 
     def wrap(line, log=True):
         current_line[0] += 1
-        dbg('%5d: %s', current_line[0], line)
+        dbg('%5d: %s', current_line[0], repr(str(line))[1:-1])
         return line
 
     state = None
