@@ -17,8 +17,6 @@ else:
 
 _ex = lambda: sys.exc_info()[1]
 
-# TODO: avoid using itertools.product which is not available on Python2.5
-
 
 DEBUG = False
 WRITE_OUTPUT = False
