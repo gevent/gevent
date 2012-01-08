@@ -79,7 +79,7 @@ def process_filename(filename, output_filename=None):
         counter += 1
         value = ''.join(lines)
         sourcehash = md5(value.encode("utf-8")).hexdigest()
-        comment = convert_key_to_ifdef(configuration, short=True)
+        comment = format_tag(set(configuration))
         atomic_write(pyx_filename, py_banner + value)
         if WRITE_OUTPUT:
             atomic_write(pyx_filename + '.%s' % counter, '# %s (%s)\n%s' % (banner, comment, value))
@@ -192,19 +192,19 @@ def merge(sources):
     is a subclass of string that maintains the information for each configuration
     it should appear in the result.
 
-    >>> src1 = attach_tags('hello\nworld\n', (('defined(hello)', True), ('defined(world)', True)))
-    >>> src2 = attach_tags('goodbye\nworld\n', (('defined(hello)', False), ('defined(world)', True)))
-    >>> src3 = attach_tags('hello\neveryone\n', (('defined(hello)', True), ('defined(world)', False)))
-    >>> src4 = attach_tags('goodbye\neveryone\n', (('defined(hello)', False), ('defined(world)', False)))
+    >>> src1 = attach_tags('hello\nworld\n', set([('defined(hello)', True), ('defined(world)', True)]))
+    >>> src2 = attach_tags('goodbye\nworld\n', set([('defined(hello)', False), ('defined(world)', True)]))
+    >>> src3 = attach_tags('hello\neveryone\n', set([('defined(hello)', True), ('defined(world)', False)]))
+    >>> src4 = attach_tags('goodbye\neveryone\n', set([('defined(hello)', False), ('defined(world)', False)]))
     >>> from pprint import pprint
     >>> pprint(merge([src1, src2, src3, src4]))
-    [Str('hello\n', set([('defined(hello)', True)])),
-     Str('goodbye\n', set([('defined(hello)', False)])),
-     Str('world\n', set([('defined(world)', True)])),
-     Str('everyone\n', set([('defined(world)', False)]))]
+    [Str('hello\n', [set([('defined(hello)', True)])]),
+     Str('goodbye\n', [set([('defined(hello)', False)])]),
+     Str('world\n', [set([('defined(world)', True)])]),
+     Str('everyone\n', [set([('defined(world)', False)])])]
     """
     if len(sources) <= 1:
-        return [Str(str(x), simplify_tag(x.tag)) for x in sources[0]]
+        return [Str(str(x), simplify_tags(x.tags)) for x in sources[0]]
     return merge([list(_merge(sources[0], sources[1]))] + sources[2:])
 
 
@@ -212,8 +212,8 @@ def _merge(a, b):
     for tag, i1, i2, j1, j2 in difflib.SequenceMatcher(None, a, b).get_opcodes():
         if tag == 'equal':
             for line_a, line_b in zip(a[i1:i2], b[j1:j2]):
-                tag = getattr(line_a, 'tag', set()) | getattr(line_b, 'tag', set())
-                yield Str(line_a, tag)
+                tags = getattr(line_a, 'tags', []) + getattr(line_b, 'tags', [])
+                yield Str(line_a, tags)
         else:
             for line in a[i1:i2]:
                 yield line
@@ -261,45 +261,66 @@ def produce_preprocessor(iterable):
 
     state = None
     for line in iterable:
-        key = line.tag or None
+        key = line.tags or None
+
         if key == state:
             yield wrap(line, key)
         else:
             if exact_reverse(key, state):
-                yield wrap('#else /* %s */\n' % convert_key_to_ifdef(state, short=True))
+                yield wrap('#else /* %s */\n' % format_tags(state))
             else:
                 if state:
-                    yield wrap('#endif /* %s */\n' % convert_key_to_ifdef(state, short=True))
+                    yield wrap('#endif /* %s */\n' % format_tags(state))
                 if key:
-                    yield wrap(convert_key_to_ifdef(key) + '\n')
+                    yield wrap('#if %s\n' % format_tags(key))
             yield wrap(line, key)
             state = key
     if state:
-        yield wrap('#endif /* %s */\n' % convert_key_to_ifdef(state, short=True))
+        yield wrap('#endif /* %s */\n' % format_tags(state))
 
 
-def exact_reverse(tag1, tag2):
-    if tag1 is None or tag2 is None:
+def exact_reverse(tags1, tags2):
+    if not tags1:
         return
-    if len(tag1) == 1 and len(tag2) == 1:
-        tag1 = list(tag1)[0]
-        tag2 = list(tag2)[0]
-        if tag1[0] == tag2[0]:
-            return sorted([tag1[1], tag2[1]]) == [False, True]
+    if not tags2:
+        return
+    if not isinstance(tags1, list):
+        raise TypeError(repr(tags1))
+    if not isinstance(tags2, list):
+        raise TypeError(repr(tags2))
+    if len(tags1) == 1 and len(tags2) == 1:
+        tag1 = tags1[0]
+        tag2 = tags2[0]
+        assert isinstance(tag1, set), tag1
+        assert isinstance(tag2, set), tag2
+        if len(tag1) == 1 and len(tag2) == 1:
+            tag1 = list(tag1)[0]
+            tag2 = list(tag2)[0]
+            if tag1[0] == tag2[0]:
+                return sorted([tag1[1], tag2[1]]) == [False, True]
 
 
-def convert_cond_to_text(cond):
+def format_cond(cond):
+    if isinstance(cond, tuple) and len(cond) == 2 and isinstance(cond[-1], bool):
+        pass
+    else:
+        raise TypeError(repr(cond))
     if cond[1]:
         return cond[0]
     else:
         return '!' + cond[0]
 
 
-def convert_key_to_ifdef(tag, short=False):
-    result = ' && '.join([convert_cond_to_text(x) for x in tag])
-    if short:
-        return result
-    return '#if ' + result
+def format_tag(tag):
+    if not isinstance(tag, set):
+        raise TypeError(repr(tag))
+    return ' && '.join([format_cond(x) for x in tag])
+
+
+def format_tags(tags):
+    if not isinstance(tags, list):
+        raise TypeError(repr(tags))
+    return ' || '.join('(%s)' % format_tag(x) for x in tags)
 
 
 def attach_tags(text, tags):
@@ -309,51 +330,101 @@ def attach_tags(text, tags):
     return [Str(x + '\n', set(tags)) for x in result]
 
 
+def is_tags_type(tags):
+    if not isinstance(tags, list):
+        return False
+    for tag in tags:
+        if not isinstance(tag, set):
+            return False
+        for item in tag:
+            if isinstance(item, tuple) and len(item) == 2 and isinstance(item[1], bool) and isinstance(item[0], str):
+                pass
+            else:
+                raise TypeError('Invalid item: %r\n%s' % (item, tags))
+    return True
+
+
 class Str(str):
     """This is a string subclass that has a set of tags attached to it.
 
     Used for merging the outputs.
     """
 
-    def __new__(cls, string, tag=None):
+    def __new__(cls, string, tags):
+        if not isinstance(string, str):
+            raise TypeError('string must be str: %s' % (type(string), ))
+        if isinstance(tags, set):
+            tags = [tags]
+        if not is_tags_type(tags):
+            raise TypeError('tags must be a list of sets of 2-tuples: %r' % (tags, ))
         self = str.__new__(cls, string)
-        self.tag = getattr(string, 'tag', set())
-        if tag is not None:
-            self.tag |= tag
-        self.tag = self.tag
+        self.tags = tags
         return self
 
     def __repr__(self):
-        return '%s(%s, %r)' % (self.__class__.__name__, str.__repr__(self), self.tag)
+        return '%s(%s, %r)' % (self.__class__.__name__, str.__repr__(self), self.tags)
 
     def __add__(self, other):
-        newtag = self.tag | getattr(other, 'tag', set())
-        return self.__class__(str.__add__(self, other), newtag)
+        if not isinstance(other, str):
+            raise TypeError
+        return self.__class__(str.__add__(self, other), self.tags)
 
     def __radd__(self, other):
-        newtag = self.tag | getattr(other, 'tag', set())
-        return self.__class__(str.__add__(other, self), newtag)
+        if not isinstance(other, str):
+            raise TypeError
+        return self.__class__(str.__add__(other, self), self.tags)
 
     methods = ['__getslice__', '__getitem__', '__mul__', '__rmod__', '__rmul__',
                'join', 'replace', 'upper', 'lower']
 
     for method in methods:
         do_exec('''def %s(self, *args):
-    return self.__class__(str.%s(self, *args), self.tag)''' % (method, method), locals())
+    return self.__class__(str.%s(self, *args), self.tags)''' % (method, method), locals())
 
 
-def simplify_tag(tag):
+def simplify_tags(tags):
     """
-    >>> simplify_tag([('x', True), ('x', False)])
-    set([])
+    >>> simplify_tags([set([('defined(world)', True), ('defined(hello)', True)]),
+    ...                set([('defined(world)', False), ('defined(hello)', True)])])
+    [set([('defined(hello)', True)])]
+    >>> simplify_tags([set([('defined(LIBEV_EMBED)', True), ('defined(_WIN32)', True)]), set([('defined(LIBEV_EMBED)', True), ('defined(_WIN32)', False)]), set([('defined(_WIN32)', False), ('defined(LIBEV_EMBED)', False)]), set([('defined(LIBEV_EMBED)', False), ('defined(_WIN32)', True)])])
+    []
     """
-    conditions = {}
-    for condition, flag in tag:
-        conditions.setdefault(condition, set()).add(flag)
-    for condition, flags in list(conditions.items()):
-        if flags == set([True, False]):
-            conditions.pop(condition)
-    return set(((condition, flags.pop()) for (condition, flags) in conditions.items()))
+    if not isinstance(tags, list):
+        raise TypeError
+    for x in tags:
+        if not x:
+            tags.remove(x)
+            return simplify_tags(tags)
+    for tag1, tag2 in itertools.combinations(tags, 2):
+        if tag1 == tag2:
+            tags.remove(tag1)
+            return simplify_tags(tags)
+        for item in tag1:
+            reverted_item = reverted(item)
+            if reverted_item in tag2:
+                tag1_copy = tag1.copy()
+                tag1_copy.remove(item)
+                tag2_copy = tag2.copy()
+                tag2_copy.remove(reverted_item)
+                if tag1_copy == tag2_copy:
+                    tags.remove(tag1)
+                    tags.remove(tag2)
+                    tags.append(tag1_copy)
+                    return simplify_tags(tags)
+    return tags
+
+
+def reverted(item):
+    if not isinstance(item, tuple):
+        raise TypeError(repr(item))
+    if len(item) != 2:
+        raise TypeError(repr(item))
+    if item[-1] is True:
+        return (item[0], False)
+    elif item[-1] is False:
+        return (item[0], True)
+    raise ValueError(repr(item))
 
 
 def parse_parameter_names(x):
