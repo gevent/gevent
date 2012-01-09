@@ -361,7 +361,7 @@ class Hub(greenlet):
         If *event* was provided, exit when it was signalled with :meth:`Event.set` method.
 
         Returns True if exited because the loop finished execution.
-        Returns None if exited because of timeout expired or event was signalled.
+        Returns False if exited because of timeout expired or event was signalled.
         """
         assert getcurrent() is self.parent, "only possible from the MAIN greenlet"
         if self.dead:
@@ -389,6 +389,7 @@ class Hub(greenlet):
         finally:
             if event is not None:
                 event.unlink(switch)
+        return False
 
     def destroy(self):
         global _threadlocal
