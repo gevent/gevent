@@ -344,9 +344,7 @@ cdef public class loop [object PyGeventLoopObject, type PyGeventLoop_Type]:
         libev.ev_now_update(self._ptr)
 
     def __repr__(self):
-        result = '<%s at 0x%x' % (self.__class__.__name__, id(self))
-        result += self._format()
-        return result + '>'
+        return '<%s at 0x%x %s>' % (self.__class__.__name__, id(self), self._format())
 
     property default:
 
@@ -410,18 +408,25 @@ cdef public class loop [object PyGeventLoopObject, type PyGeventLoop_Type]:
         return result
 
     def _format(self):
+        cdef object msg = self.backend
+        if self.default:
+            msg += ' default'
 #ifdef LIBEV_EMBED
-        args = (self.default, self.backend, self.activecnt, self.backend_fd, self.fdchangecnt, self.timercnt)
-        return  ' default=%r backend=%r activecnt=%r backend_fd=%r fdchangecnt=%r timercnt=%r' % args
-#else
-        args = (self.default, self.backend)
-        return  ' default=%r backend=%r' % args
+        if self.fileno() is not None:
+            msg += ' fileno=%s' % self.fileno()
+        args = (self.activecnt, self.fdchangecnt, self.timercnt, self.asynccnt)
+        msg += ' ref/io/timer/async=%r/%r/%r/%r' % args
 #endif
+        return msg
 
 #ifdef LIBEV_EMBED
-    LOOP_PROPERTY(activecnt)
 
-    LOOP_PROPERTY(backend_fd)
+    def fileno(self):
+        cdef int fd = self._ptr.backend_fd
+        if fd >= 0:
+            return fd
+
+    LOOP_PROPERTY(activecnt)
 
     LOOP_PROPERTY(fdchangecnt)
 
