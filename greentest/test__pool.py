@@ -143,7 +143,7 @@ class PoolBasicTests(greentest.TestCase):
         gevent.sleep(0.01)
         self.assertEqual(sorted(r), [1, 2, 3, 4])
 
-    def test_execute(self):
+    def test_apply(self):
         p = self.klass()
         result = p.apply(lambda a: ('foo', a), (1, ))
         self.assertEqual(result, ('foo', 1))
