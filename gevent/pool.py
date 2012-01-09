@@ -78,21 +78,6 @@ class Group(object):
         add(greenlet)
         return greenlet
 
-    def spawn_link(self, *args, **kwargs):
-        greenlet = self.spawn(*args, **kwargs)
-        greenlet.link()
-        return greenlet
-
-    def spawn_link_value(self, *args, **kwargs):
-        greenlet = self.spawn(*args, **kwargs)
-        greenlet.link_value()
-        return greenlet
-
-    def spawn_link_exception(self, *args, **kwargs):
-        greenlet = self.spawn(*args, **kwargs)
-        greenlet.link_exception()
-        return greenlet
-
 #     def close(self):
 #         """Prevents any more tasks from being submitted to the pool"""
 #         self.add = RaiseException("This %s has been closed" % self.__class__.__name__)
@@ -369,36 +354,6 @@ class Pool(Group):
         self._semaphore.acquire()
         try:
             greenlet = self.greenlet_class.spawn(*args, **kwargs)
-            self.add(greenlet)
-        except:
-            self._semaphore.release()
-            raise
-        return greenlet
-
-    def spawn_link(self, *args, **kwargs):
-        self._semaphore.acquire()
-        try:
-            greenlet = self.greenlet_class.spawn_link(*args, **kwargs)
-            self.add(greenlet)
-        except:
-            self._semaphore.release()
-            raise
-        return greenlet
-
-    def spawn_link_value(self, *args, **kwargs):
-        self._semaphore.acquire()
-        try:
-            greenlet = self.greenlet_class.spawn_link_value(*args, **kwargs)
-            self.add(greenlet)
-        except:
-            self._semaphore.release()
-            raise
-        return greenlet
-
-    def spawn_link_exception(self, *args, **kwargs):
-        self._semaphore.acquire()
-        try:
-            greenlet = self.greenlet_class.spawn_link_exception(*args, **kwargs)
             self.add(greenlet)
         except:
             self._semaphore.release()
