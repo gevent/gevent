@@ -66,70 +66,6 @@ class FailureSpawnedLink(SpawnedLink):
             return SpawnedLink.__call__(self, source)
 
 
-class GreenletLink(object):
-    """A wrapper around greenlet that raises a LinkedExited exception when called.
-
-    Can be called only from main loop.
-    """
-    __slots__ = ['greenlet']
-    _stacklevel = 3
-
-    def __init__(self, greenlet):
-        import warnings
-        warnings.warn('linking to greenlet is deprecated', DeprecationWarning, stacklevel=self._stacklevel)
-        self.greenlet = greenlet
-
-    def __call__(self, source):
-        if source.successful():
-            if isinstance(source.value, GreenletExit):
-                error = LinkedKilled(source)
-            else:
-                error = LinkedCompleted(source)
-        else:
-            error = LinkedFailed(source)
-        self.greenlet.throw(error)
-
-    def __hash__(self):
-        return hash(self.greenlet)
-
-    def __eq__(self, other):
-        return self.greenlet == getattr(other, 'greenlet', other)
-
-    def __str__(self):
-        return str(self.greenlet)
-
-    def __repr__(self):
-        return repr(self.greenlet)
-
-
-class SuccessGreenletLink(GreenletLink):
-    """A wrapper around greenlet that raises a LinkedExited exception when called
-    if source has succeed.
-
-    Can be called only from main loop.
-    """
-    __slots__ = []
-    _stacklevel = 4
-
-    def __call__(self, source):
-        if source.successful():
-            return GreenletLink.__call__(self, source)
-
-
-class FailureGreenletLink(GreenletLink):
-    """A wrapper around greenlet that raises a LinkedExited exception when called
-    if source has failed.
-
-    Can be called only from main loop.
-    """
-    __slots__ = []
-    _stacklevel = 4
-
-    def __call__(self, source):
-        if not source.successful():
-            return GreenletLink.__call__(self, source)
-
-
 class Greenlet(greenlet):
     """A light-weight cooperatively-scheduled execution unit."""
 
@@ -276,24 +212,6 @@ class Greenlet(greenlet):
         g.start_later(seconds)
         return g
 
-    @classmethod
-    def spawn_link(cls, *args, **kwargs):
-        g = cls.spawn(*args, **kwargs)
-        g.link()
-        return g
-
-    @classmethod
-    def spawn_link_value(cls, *args, **kwargs):
-        g = cls.spawn(*args, **kwargs)
-        g.link_value()
-        return g
-
-    @classmethod
-    def spawn_link_exception(cls, *args, **kwargs):
-        g = cls.spawn(*args, **kwargs)
-        g.link_exception()
-        return g
-
     def kill(self, exception=GreenletExit, block=True, timeout=None):
         """Raise the exception in the greenlet.
 
@@ -425,56 +343,28 @@ class Greenlet(greenlet):
         if self.ready() and not self._notifier.active:
             self._notifier.start(self._notify_links)
 
-    def link(self, receiver=None, GreenletLink=GreenletLink, SpawnedLink=SpawnedLink):
-        """Link greenlet's completion to callable or another greenlet.
+    def link(self, receiver, SpawnedLink=SpawnedLink):
+        """Link greenlet's completion to a callable.
 
-        If *receiver* is a callable then it will be called with this instance as an argument
+        The *receiver* will be called with this instance as an argument
         once this greenlet's dead. A callable is called in its own greenlet.
-
-        If *receiver* is a greenlet then an :class:`LinkedExited` exception will be
-        raised in it once this greenlet's dead.
-
-        If *receiver* is ``None``, link to the current greenlet.
-
-        Always asynchronous, unless receiver is a current greenlet and the result is ready.
-        If this greenlet is already dead, then notification will performed in this loop
-        iteration as soon as this greenlet switches to the hub.
         """
-        current = getcurrent()
-        if receiver is None or receiver is current:
-            receiver = GreenletLink(current)
-            if self.ready():
-                # special case : linking to current greenlet when the result is ready
-                # raise LinkedExited immediatelly
-                receiver(self)
-                return
-        elif not callable(receiver):
-            if isinstance(receiver, greenlet):
-                receiver = GreenletLink(receiver)
-            else:
-                raise TypeError('Expected callable or greenlet: %r' % (receiver, ))
-        else:
-            receiver = SpawnedLink(receiver)
-        self.rawlink(receiver)
+        self.rawlink(SpawnedLink(receiver))
 
-    def unlink(self, receiver=None):
+    def unlink(self, receiver):
         """Remove the receiver set by :meth:`link` or :meth:`rawlink`"""
-        if receiver is None:
-            receiver = getcurrent()
-        # discarding greenlets when we have GreenletLink instances in _links works, because
-        # a GreenletLink instance pretends to be a greenlet, hash-wise and eq-wise
         try:
             self._links.remove(receiver)
         except ValueError:
             pass
 
-    def link_value(self, receiver=None, GreenletLink=SuccessGreenletLink, SpawnedLink=SuccessSpawnedLink):
+    def link_value(self, receiver, SpawnedLink=SuccessSpawnedLink):
         """Like :meth:`link` but *receiver* is only notified when the greenlet has completed successfully"""
-        self.link(receiver=receiver, GreenletLink=GreenletLink, SpawnedLink=SpawnedLink)
+        self.link(receiver=receiver, SpawnedLink=SpawnedLink)
 
-    def link_exception(self, receiver=None, GreenletLink=FailureGreenletLink, SpawnedLink=FailureSpawnedLink):
+    def link_exception(self, receiver=None, SpawnedLink=FailureSpawnedLink):
         """Like :meth:`link` but *receiver* is only notified when the greenlet dies because of unhandled exception"""
-        self.link(receiver=receiver, GreenletLink=GreenletLink, SpawnedLink=SpawnedLink)
+        self.link(receiver=receiver, SpawnedLink=SpawnedLink)
 
     def _notify_links(self):
         while self._links:
@@ -570,48 +460,6 @@ def killall(greenlets, exception=GreenletExit, block=True, timeout=None):
             t.cancel()
     else:
         loop.run_callback(_killall, greenlets, exception)
-
-
-class LinkedExited(Exception):
-    pass
-
-
-class LinkedCompleted(LinkedExited):
-    """Raised when a linked greenlet finishes the execution cleanly"""
-
-    msg = "%r completed successfully"
-
-    def __init__(self, source):
-        assert source.ready(), source
-        assert source.successful(), source
-        LinkedExited.__init__(self, self.msg % source)
-
-
-class LinkedKilled(LinkedCompleted):
-    """Raised when a linked greenlet returns GreenletExit instance"""
-
-    msg = "%r returned %s"
-
-    def __init__(self, source):
-        try:
-            result = source.value.__class__.__name__
-        except:
-            result = str(source) or repr(source)
-        LinkedExited.__init__(self, self.msg % (source, result))
-
-
-class LinkedFailed(LinkedExited):
-    """Raised when a linked greenlet dies because of unhandled exception"""
-
-    msg = "%r failed with %s"
-
-    def __init__(self, source):
-        exception = source.exception
-        try:
-            excname = exception.__class__.__name__
-        except:
-            excname = str(exception) or repr(exception)
-        LinkedExited.__init__(self, self.msg % (source, excname))
 
 
 def getfuncname(func):
