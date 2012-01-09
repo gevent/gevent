@@ -242,6 +242,23 @@ def _import(path):
     return x
 
 
+def config(default, envvar):
+    result = os.environ.get(envvar) or default
+    if isinstance(result, basestring):
+        return result.split(',')
+    return result
+
+
+def resolver_config(default, envvar):
+    result = config(default, envvar)
+    return [_resolvers.get(x, x) for x in result]
+
+
+_resolvers = {'ares': 'gevent.resolver_ares.Resolver',
+              'thread': 'gevent.resolver_thread.Resolver',
+              'block': 'gevent.socket.BlockingResolver'}
+
+
 class Hub(greenlet):
     """A greenlet that runs the event loop.
 
@@ -250,10 +267,15 @@ class Hub(greenlet):
 
     SYSTEM_ERROR = (KeyboardInterrupt, SystemExit, SystemError)
     NOT_ERROR = (GreenletExit, SystemExit)
-    loop_class = 'gevent.core.loop'
+    loop_class = config('gevent.core.loop', 'GEVENT_LOOP')
     resolver_class = ['gevent.resolver_ares.Resolver',
+                      'gevent.resolver_thread.Resolver',
                       'gevent.socket.BlockingResolver']
+    resolver_class = resolver_config(resolver_class, 'GEVENT_RESOLVER')
+    threadpool_class = config('gevent.threadpool.ThreadPool', 'GEVENT_THREADPOOL')
+    DEFAULT_BACKEND = config(None, 'GEVENT_BACKEND')
     format_context = 'pprint.pformat'
+    threadpool_size = 10
 
     def __init__(self, loop=None, default=None):
         greenlet.__init__(self)
@@ -265,8 +287,11 @@ class Hub(greenlet):
             if default is None:
                 default = get_ident() == MAIN_THREAD
             loop_class = _import(self.loop_class)
+            if loop is None:
+                loop = self.DEFAULT_BACKEND
             self.loop = loop_class(flags=loop, default=default)
         self._resolver = None
+        self._threadpool = None
         self.format_context = _import(self.format_context)
 
     def __repr__(self):
@@ -414,6 +439,21 @@ class Hub(greenlet):
         del self._resolver
 
     resolver = property(_get_resolver, _set_resolver, _del_resolver)
+
+    def _get_threadpool(self):
+        if self._threadpool is None:
+            if self.threadpool_class is not None:
+                self.threadpool_class = _import(self.threadpool_class)
+                self._threadpool = self.threadpool_class(self.threadpool_size, hub=self)
+        return self._threadpool
+
+    def _set_threadpool(self, value):
+        self._threadpool = value
+
+    def _del_threadpool(self):
+        del self._threadpool
+
+    threadpool = property(_get_threadpool, _set_threadpool, _del_threadpool)
 
 
 class LoopExit(Exception):
