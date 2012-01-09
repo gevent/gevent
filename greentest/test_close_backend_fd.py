@@ -5,21 +5,22 @@ import gevent
 
 for _ in xrange(2):
     for backend in gevent.core.supported_backends():
-        print 'Testing backend: %r' % backend
         hub = gevent.get_hub(backend)
-        print hub
         assert hub.loop.backend == backend, (hub.loop.backend, backend)
         gevent.sleep(0.001)
-        fd = getattr(hub.loop, 'backend_fd', None)
-        if fd is not None and fd >= 0:
-            os.close(hub.loop.backend_fd)
+        fileno = hub.loop.fileno()
+        if fileno is not None:
+            print 'Testing %r: %r' % (backend, hub)
+            os.close(fileno)
             try:
                 gevent.sleep(0.001)
             except SystemError, ex:
-                if '(libev)' not in str(ex):
+                if '(libev)' in str(ex):
+                    print 'The error is expected: %s' % ex
+                else:
                     raise
-                traceback.print_exc()
+            else:
+                raise AssertionError('gevent.sleep() is expected to fail after loop fd was closed')
         else:
             print 'Skipping %r' % backend
         hub.destroy()
-        print
