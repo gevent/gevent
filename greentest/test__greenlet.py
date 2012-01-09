@@ -50,24 +50,6 @@ class TestLink(greentest.TestCase):
             raise
         raise AssertionError('%s not raised, returned %r' % (err, result))
 
-    def test_link_to_greenlet(self):
-        p = gevent.spawn(lambda: 100)
-        receiver = gevent.spawn(sleep, 1)
-        p.link(receiver)
-        self.assertRaises(greenlet.LinkedCompleted, receiver.get)
-        receiver2 = gevent.spawn(sleep, 1)
-        p.link(receiver2)
-        self.assertRaises(greenlet.LinkedCompleted, receiver2.get)
-
-    def test_link_to_inactive_greenlet(self):
-        p = gevent.spawn(lambda: 100)
-        receiver = gevent.spawn_later(10000, sleep, 1)
-        try:
-            p.link(receiver)
-            self.assertRaises(greenlet.LinkedCompleted, receiver.get)
-        finally:
-            receiver.kill()
-
     def test_link_to_asyncresult(self):
         p = gevent.spawn(lambda: 100)
         event = AsyncResult()
@@ -111,12 +93,6 @@ class TestLink(greentest.TestCase):
         p3.link(q.put)
         results = [q.get().get(), q.get().get(), q.get().get()]
         assert sorted(results) == [101, 102, 103], results
-
-    def test_link_to_current(self):
-        p = gevent.spawn(lambda: 100)
-        p.link()
-        self.assertRaises(greenlet.LinkedCompleted, sleep, 0.1)
-        self.assertRaises(greenlet.LinkedCompleted, p.link)
 
 
 class TestUnlink(greentest.TestCase):
@@ -175,29 +151,12 @@ class LinksTestCase(greentest.TestCase):
     def link(self, p, listener=None):
         getattr(p, self.link_method)(listener)
 
-    def receiverf(self, proc_flag):
-        sleep(DELAY)
-        proc_flag.append('finished')
-
-    def set_links(self, p, first_time, kill_exc_type):
+    def set_links(self, p):
         event = AsyncResult()
         self.link(p, event)
 
-        proc_flag = []
-
-        receiver = gevent.spawn(self.receiverf, proc_flag)
-        self.link(p, receiver)
-
         queue = Queue(1)
         self.link(p, queue.put)
-
-        try:
-            self.link(p)
-        except kill_exc_type:
-            if first_time:
-                raise
-        else:
-            assert first_time, 'not raising here only first time'
 
         callback_flag = ['initial']
         self.link(p, lambda *args: callback_flag.remove('initial'))
@@ -206,32 +165,20 @@ class LinksTestCase(greentest.TestCase):
             self.link(p, AsyncResult())
             self.link(p, Queue(1).put)
 
-        return event, receiver, proc_flag, queue, callback_flag
-
-    def myprocf(self, proc_finished_flag):
-        sleep(10)
-        proc_finished_flag.append('finished')
-        return 555
+        return event, queue, callback_flag
 
     def set_links_timeout(self, link):
         # stuff that won't be touched
         event = AsyncResult()
         link(event)
 
-        proc_finished_flag = []
-        myproc = gevent.spawn(self.myprocf, proc_finished_flag)
-        link(myproc)
-
         queue = Channel()
         link(queue.put)
-        return event, myproc, proc_finished_flag, queue
+        return event, queue
 
-    def check_timed_out(self, event, myproc, proc_finished_flag, queue):
+    def check_timed_out(self, event, queue):
         assert with_timeout(DELAY, event.get, timeout_value=X) is X, repr(event.get())
         assert with_timeout(DELAY, queue.get, timeout_value=X) is X, queue.get()
-        assert with_timeout(DELAY, gevent.joinall, [myproc], timeout_value=X) is X
-        assert proc_finished_flag == [], proc_finished_flag
-        myproc.kill()
 
 
 def return25():
@@ -251,70 +198,48 @@ class TestReturn_link(LinksTestCase):
 
     def test_return(self):
         self.p = gevent.spawn(return25)
-        self._test_return(self.p, True, 25, greenlet.LinkedCompleted, sleep0)
-        # repeating the same with dead process
         for _ in range(3):
-            self._test_return(self.p, False, 25, greenlet.LinkedCompleted, sleep0)
+            self._test_return(self.p, 25, sleep0)
         self.cleanup()
         self.p.kill()
 
-    def _test_return(self, p, first_time, result, kill_exc_type, action):
-        event, receiver, proc_flag, queue, callback_flag = self.set_links(p, first_time, kill_exc_type)
+    def _test_return(self, p, result, action):
+        event, queue, callback_flag = self.set_links(p)
 
         # stuff that will time out because there's no unhandled exception:
         xxxxx = self.set_links_timeout(p.link_exception)
 
-        try:
-            sleep(DELAY * 2)
-        except kill_exc_type:
-            assert first_time, 'raising here only first time'
-        else:
-            assert not first_time, 'Should not raise LinkedKilled here after first time'
-
+        sleep(DELAY * 2)
         assert not p, p
 
         self.assertEqual(event.get(), result)
         self.assertEqual(queue.get().get(), result)
-        self.assertRaises(kill_exc_type, receiver.get)
-        self.assertRaises(kill_exc_type, gevent.joinall, [receiver], raise_error=True)
 
         sleep(DELAY)
-        assert not proc_flag, proc_flag
         assert not callback_flag, callback_flag
 
         self.check_timed_out(*xxxxx)
 
-    def _test_kill(self, p, first_time, kill_exc_type):
-        event, receiver, proc_flag, queue, callback_flag = self.set_links(p, first_time, kill_exc_type)
+    def _test_kill(self, p):
+        event, queue, callback_flag = self.set_links(p)
         xxxxx = self.set_links_timeout(p.link_exception)
 
         p.kill()
-        try:
-            sleep(DELAY)
-        except kill_exc_type:
-            assert first_time, 'raising here only first time'
-        else:
-            assert not first_time, 'Should not raise LinkedKilled here after first time'
-
+        sleep(DELAY)
         assert not p, p
 
         assert isinstance(event.get(), greenlet.GreenletExit), event.get()
         assert isinstance(queue.get().get(), greenlet.GreenletExit), queue.get().get()
-        self.assertRaises(kill_exc_type, gevent.joinall, [receiver], raise_error=True)
-        self.assertRaises(kill_exc_type, receiver.get)
 
         sleep(DELAY)
-        assert not proc_flag, proc_flag
         assert not callback_flag, callback_flag
 
         self.check_timed_out(*xxxxx)
 
     def test_kill(self):
         p = self.p = gevent.spawn(sleep, DELAY)
-        self._test_kill(p, True, greenlet.LinkedKilled)
-        # repeating the same with dead process
         for _ in range(3):
-            self._test_kill(p, False, greenlet.LinkedKilled)
+            self._test_kill(p)
 
 
 class TestReturn_link_value(TestReturn_link):
@@ -324,35 +249,24 @@ class TestReturn_link_value(TestReturn_link):
 class TestRaise_link(LinksTestCase):
     link_method = 'link'
 
-    def _test_raise(self, p, first_time, kill_exc_type):
-        event, receiver, proc_flag, queue, callback_flag = self.set_links(p, first_time, kill_exc_type)
+    def _test_raise(self, p):
+        event, queue, callback_flag = self.set_links(p)
         xxxxx = self.set_links_timeout(p.link_value)
 
-        try:
-            sleep(DELAY)
-        except kill_exc_type:
-            assert first_time, 'raising here only first time'
-        else:
-            assert not first_time, 'Should not raise LinkedKilled here after first time'
-
+        sleep(DELAY)
         assert not p, p
 
         self.assertRaises(ExpectedError, event.get)
         self.assertEqual(queue.get(), p)
-        self.assertRaises(kill_exc_type, receiver.get)
-        self.assertRaises(kill_exc_type, gevent.joinall, [receiver], raise_error=True)
         sleep(DELAY)
-        assert not proc_flag, proc_flag
         assert not callback_flag, callback_flag
 
         self.check_timed_out(*xxxxx)
 
     def test_raise(self):
         p = self.p = gevent.spawn(lambda: getcurrent().throw(ExpectedError('test_raise')))
-        self._test_raise(p, True, greenlet.LinkedFailed)
-        # repeating the same with dead process
         for _ in range(3):
-            self._test_raise(p, False, greenlet.LinkedFailed)
+            self._test_raise(p)
 
 
 class TestRaise_link_exception(TestRaise_link):
@@ -385,7 +299,6 @@ class TestStuff(greentest.TestCase):
         x.link(y)
         y.link(x)
         self.assertRaises(ExpectedError, gevent.joinall, [x, y], raise_error=True)
-        self.assertRaises(greenlet.LinkedFailed, gevent.joinall, [x], raise_error=True)
         self.assertRaises(ExpectedError, gevent.joinall, [y], raise_error=True)
 
     def test_joinall_exception_order(self):
@@ -488,14 +401,6 @@ class TestStuff(greentest.TestCase):
                 e.set_exception(sys.exc_info()[1])
                 gevent.sleep(0)
 
-        p = gevent.Greenlet.spawn_link(func)
-        try:
-            try:
-                e.wait()
-            except ExpectedError:
-                pass
-        finally:
-            p.unlink()  # this disables LinkedCompleted that otherwise would be raised by the next line
         sleep(DELAY)
 
 
