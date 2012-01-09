@@ -426,6 +426,8 @@ cdef public class loop [object PyGeventLoopObject, type PyGeventLoop_Type]:
     LOOP_PROPERTY(fdchangecnt)
 
     LOOP_PROPERTY(timercnt)
+
+    LOOP_PROPERTY(asynccnt)
 #endif
 
 
