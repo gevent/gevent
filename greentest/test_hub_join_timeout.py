@@ -50,7 +50,7 @@ for _a in xrange(2):
         x = gevent.spawn_later(10, lambda: 5)
         with expected_time(SMALL):
             result = gevent.get_hub().join(timeout=SMALL)
-        assert result is None, repr(result)
+        assert result is False, repr(result)
         assert not x.dead, x
         x.kill()
         with no_time():
@@ -64,7 +64,7 @@ for _a in xrange(2):
         event_set = gevent.spawn_later(SMALL, event.set)
         with expected_time(SMALL):
             result = gevent.get_hub().join(event=event)
-        assert result is None, repr(result)
+        assert result is False, repr(result)
         assert not x.dead, x
         assert event_set.dead
         assert event.is_set()
