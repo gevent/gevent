@@ -1,4 +1,4 @@
-# Copyright (c) 2009-2011 Denis Bilenko. See LICENSE for details.
+# Copyright (c) 2009-2012 Denis Bilenko. See LICENSE for details.
 
 import sys
 from gevent.hub import greenlet, getcurrent, get_hub, GreenletExit, Waiter
