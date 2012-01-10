@@ -418,8 +418,12 @@ class Hub(greenlet):
 
     def destroy(self):
         global _threadlocal
-        result = self.join()
-        assert result is True, result
+        if self._resolver is not None:
+            self._resolver.close()
+            del self._resolver
+        if self._threadpool is not None:
+            self._threadpool.close()
+            del self._threadpool
         self.loop.destroy()
         del self.loop
         if getattr(_threadlocal, 'hub', None) is self:
