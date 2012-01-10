@@ -325,6 +325,7 @@ def spawn_subprocess(args, options, base_params):
         success = True
     else:
         print ('%s timed out' % ' '.join(args))
+    sys.stdout.flush()
     if options.db:
         params['output'] = output
         params['retcode'] = retcode
