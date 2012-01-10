@@ -206,8 +206,16 @@ class TestCase(greentest.TestCase):
                 allowed = 100000.
         else:
             allowed = 1.2
-        if time_gevent / allowed > time_real:
-            times = time_gevent / time_real
+        if time_gevent / allowed > time_real and (time_gevent + time_real) > 0.0005:
+            # QQQ use clock() on windows
+            times = None
+            if not time_real:
+                if time_gevent:
+                    times = time_gevent / 0.001
+                else:
+                    times = 1
+            if times is None:
+                times = time_gevent / time_real
             params = (func, args, times, time_gevent * 1000.0, time_real * 1000.0)
             msg = 'gevent_socket.%s%s is %.1f times slower (%.3fms versus %.3fms)' % params
             if RAISE_TOO_SLOW:
