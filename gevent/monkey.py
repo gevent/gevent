@@ -69,6 +69,7 @@ __all__ = ['patch_all',
 
 def get_unpatched(name, items):
     # QQQ would prefer to avoid importing gevent.xxx module just to get __target__
+    # XXX does not work for 'time', 'sleep'
     source = getattr(__import__('gevent.' + name), name)
     target = getattr(source, '__target__', name)
     dest = __import__(target)
