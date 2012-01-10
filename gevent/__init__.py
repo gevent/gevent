@@ -8,8 +8,6 @@ See http://www.gevent.org/ for the documentation.
 
 version_info = (1, 0, 0, 'dev', None)
 __version__ = '1.0dev'
-# 'dev' in version_info should be replaced with alpha|beta|candidate|final
-# 'dev' in __version__ should be replaced with a|b|rc|<empty string>
 
 
 __all__ = ['get_hub',
