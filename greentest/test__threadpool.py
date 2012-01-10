@@ -42,6 +42,7 @@ class PoolBasicTests(TestCase):
     def test_init_valuerror(self):
         self.switch_expected = False
         self.assertRaises(ValueError, ThreadPool, -1)
+        self.pool = None
 
 #
 # tests from standard library test/test_multiprocessing.py
@@ -197,8 +198,8 @@ class TestJoinEmpty(TestCase):
     switch_expected = False
 
     def test(self):
-        pool = ThreadPool(1)
-        pool.join()
+        self.pool = ThreadPool(1)
+        self.pool.join()
 
 
 class TestSpawn(TestCase):
@@ -243,20 +244,15 @@ class TestErrorInIterator(TestCase):
 
 class TestMaxsize(TestCase):
 
-    __timeout__ = 50
-
     def test_inc(self):
         self.pool = ThreadPool(0)
         done = []
         gevent.spawn(self.pool.spawn, done.append, 1)
         gevent.spawn(self.pool.spawn, done.append, 2)
-        print 'sleeping'
-        gevent.sleep(5)
+        gevent.sleep(0.001)
         self.assertEqual(done, [])
-        print 'updating maxsize'
         self.pool.maxsize = 1
-        print 'sleeping'
-        gevent.sleep(5)
+        gevent.sleep(0.001)
         self.assertEqual(done, [2, 1])
 
 
