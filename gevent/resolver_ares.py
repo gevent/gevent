@@ -25,7 +25,7 @@ class Resolver(object):
         self.fork_watcher.start(self._on_fork)
 
     def __repr__(self):
-        return '<%s at 0x%x ares=%r>' % (self.__class__.__name__, id(self), self.ares)
+        return '<gevent.resolver_ares.Resolver at 0x%x ares=%r>' % (id(self), self.ares)
 
     def _on_fork(self):
         pid = os.getpid()
