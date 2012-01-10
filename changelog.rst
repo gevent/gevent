@@ -35,7 +35,7 @@ misc:
 - Hub got a new property: threadpool.
 
 ares.pyx:
-- Fixed issue #104: made ares_host_result pickable issue. Thanks to Shaun Cutts.
+- Fixed issue #104: made ares_host_result pickable. Thanks to Shaun Cutts.
 
 pywsgi:
 - Removed unused deprecated 'wfile' property from WSGIHandler
