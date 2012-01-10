@@ -14,8 +14,9 @@ import gevent.socket as gevent_socket
 RAISE_TOO_SLOW = False
 # also test: '<broadcast>'
 
-
-accept_results = [
+resolver = gevent.get_hub().resolver
+if hasattr(resolver, 'ares'):
+    accept_results = [
                   # Python's socketmodule.c randomly chooses between gaierror and herror when raising an exception
                   # There are also a number of error code that are mapped to ARES_ENOTFOUND
 
@@ -64,8 +65,11 @@ accept_results = [
                   # don't care enough about it to fix it
                   ("('kremlin.ru', 'www')",
                    "UnicodeEncodeError('ascii', u'\u043f\u0440\u0435\u0437\u0438\u0434\u0435\u043d\u0442.\u0440\u0444', 0, 9, 'ordinal not in range(128)')",
-                   'getnameinfo')
-]
+                   'getnameinfo')]
+else:
+    accept_results = [("gaierror(-5, 'No address associated with hostname')",
+                       "gaierror(-2, 'Name or service not known')")]
+
 
 
 assert gevent_socket.gaierror is socket.gaierror
