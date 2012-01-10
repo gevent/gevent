@@ -417,6 +417,7 @@ class Hub(greenlet):
         return False
 
     def destroy(self):
+        # this function would be useful after fork / before exec
         global _threadlocal
         if self._resolver is not None:
             self._resolver.close()
