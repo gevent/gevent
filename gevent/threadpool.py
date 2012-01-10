@@ -36,6 +36,8 @@ class ThreadPool(object):
         self._maxsize = maxsize
         self._remove_threads()
         self._add_threads()
+        # make sure all currently blocking spawn() start unlocking if maxsize increased
+        self._semaphore._start_notify()
 
     def _get_maxsize(self):
         return self._maxsize
