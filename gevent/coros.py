@@ -33,6 +33,9 @@ class Semaphore(object):
 
     def release(self):
         self.counter += 1
+        self._start_notify()
+
+    def _start_notify(self):
         if self._links and self.counter > 0 and not self._notifier.active:
             self._notifier.start(self._notify_links)
 
