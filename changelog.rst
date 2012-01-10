@@ -4,6 +4,102 @@ Changelog
 .. currentmodule:: gevent
 
 
+Release 1.0b1
+-------------
+
+Backward-incompatible changes:
+
+- Removed "link to greenlet" feature of Greenlet.
+- If greenlet module older than 0.3.2 is used, then greenlet.GreenletExit.__bases__ is monkey patched to derive from BaseException and not Exception. That way gevent.GreenletExit is always derived from BaseException, regardless of installed greenlet version.
+- Some code supporting Python 2.4 has been removed.
+
+Release highlights:
+
+- Added thread pool: gevent.threadpool.ThreadPool.
+- Added thread pool-based resolver. Enable with GEVENT_RESOLVER=thread.
+- Added UDP server: gevent.server.DatagramServer
+- A "configure" is now run on libev. This fixes a problem of 'kqueue' not being available on Mac OS X.
+- Gevent recognizes some environment variables now:
+  - GEVENT_BACKEND allows passing argument to loop, e.g. "GEVENT_BACKEND=select" for force select backend
+  - GEVENT_RESOLVER allows choosing resolver class.
+  - GEVENT_THREADPOOL allows choosing thread pool class.
+- Added new examples: portforwarder, psycopg2_pool.py, threadpool.py, udp_server.py
+- Fixed non-embedding build. To build against system libev, remove or rename 'libev' directory. To build against system c-ares, remove or rename 'c-ares'. Thanks to Örjan Persson.
+- Added gevent.six module (http://pypi.python.org/pypi/six)
+
+misc:
+- gevent.joinall() method now accepts optional 'count' keyword.
+- gevent.fork() only calls reinit() in the child process now.
+- gevent.run() now returns False when exiting because of timeout or event (previous None).
+- Hub got a new method: destroy().
+- Hub got a new property: threadpool.
+
+ares.pyx:
+- Fixed issue #104: made ares_host_result pickable issue. Thanks to Shaun Cutts.
+
+pywsgi:
+- Removed unused deprecated 'wfile' property from WSGIHandler
+- Fixed issue #92: raise IOError on truncated POST requests.
+- Fixed issue #93: do not sent multiple "100 continue" responses
+
+core:
+- Fixed issue #97: the timer watcher now calls ev_now_update() in start() and again() unless 'update' keyword is passed and set to False.
+- add set_syserr_cb() function; it's used by gevent internally.
+- gevent now installs syserr callback using libev's set_syserr_cb. This callback is called when libev encounters an error it cannot recover from. The default action is to print a message and abort. With the callback installed, a SystemError() is now raised in the main greenlet.
+- renamed 'backend_fd' property to 'fileno()' method. (not available if you build gevent against system libev)
+- added 'asynccnt' property (not available if you build gevent against system libev)
+- made loop.__repr__ output a bit more compact
+- the watchers check the arguments for validness now (previously invalid argument would crash libev).
+- The 'async' watcher now has send() method;
+- fixed time() function
+- libev has been upgraded to latest CVS version.
+- libev has been patched to use send()/recv() for evpipe on windows when libev_vfd.h is in effect
+
+resolver_ares:
+- Slightly improved compatibility with stdlib's socket in some error cases.
+
+socket:
+- Fixed close() method not to reference any globals
+- Fixed issue #115: _dummy gets unexpected Timeout arg
+- Removed _fileobject used for python 2.4 compatibility in socket.py
+- Fixed issue #94: fallback to buffer if memoryview fails in _get_memory on python 2.7
+
+monkey:
+- Removed patch_httplib()
+- Fixed issue #112: threading._sleep is not patched. Thanks to David LaBissoniere.
+- Added get_unpatched() function. However, it is slightly broken at the moment.
+
+servers:
+- baseserver.BaseServer has been
+
+backdoor:
+- make 'locals()' not spew out __builtin__.__dict__ in backdoor
+- add optional banner argument to BackdoorServer
+
+servers:
+- add server.DatagramServer;
+- StreamServer: 'ssl_enabled' is now a read-only property
+- servers no longer have 'kill' method; it has been renamed to 'close'.
+- listeners can now be configured as strings, e.g. ':80' or 80
+- modify baseserver.BaseServer in such a way that makes it a good base class for both StreamServer and DatagramServer
+- BaseServer no longer accepts 'backlog' parameter. It is now done by StreamServer.
+- BaseServer implements start_accepting() and stop_accepting() methods
+- BaseServer now implements "temporarily stop accepting" strategy
+- BaseServer now has _do_read method which does everything except for actually calling accept()/recvfrom()
+- pre_start() method is renamed to init_socket()
+- renamed _stopped_event to _stop_event
+- 'started' is now a read-only property (which actually reports state of _stop_event)
+- post_stop() method is removed
+- close() now sets _stop_event(), thus setting 'started' to False, thus causing serve_forever() to exit
+- _tcp_listener() function is moved from baseserver.py to server.py
+- added 'fatal_errors' class attribute which is a tuple of all errnos that should kill the server
+
+coros:
+- Semaphore: add _start_notify() method
+- Semaphore: avoid copying list of links; rawlink() no longer schedules notification
+
+
+
 Release 1.0a3
 -------------
 
