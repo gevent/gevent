@@ -13,6 +13,9 @@ class Resolver(object):
             hub = get_hub()
         self.pool = hub.threadpool
 
+    def close(self):
+        pass
+
     # from briefly reading socketmodule.c, it seems that all of the functions
     # below are thread-safe in Python, even if they are not thread-safe in C.
 
