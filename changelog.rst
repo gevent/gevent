@@ -69,9 +69,6 @@ monkey:
 - Fixed issue #112: threading._sleep is not patched. Thanks to David LaBissoniere.
 - Added get_unpatched() function. However, it is slightly broken at the moment.
 
-servers:
-- baseserver.BaseServer has been
-
 backdoor:
 - make 'locals()' not spew out __builtin__.__dict__ in backdoor
 - add optional banner argument to BackdoorServer
