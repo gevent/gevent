@@ -8,8 +8,8 @@ Features include:
 * Fast event loop based on libev_.
 * Lightweight execution units based on greenlet_.
 * Familiar API that re-uses concepts from the Python standard library.
-* Cooperative sockets with ssl support.
-* DNS queries performed through c-ares_.
+* Cooperative sockets with SSL support.
+* DNS queries performed through c-ares_ or a threadpool.
 * Ability to use standard library and 3rd party modules written for standard blocking sockets
 
 gevent_ is `inspired by eventlet`_ but features more consistent API, simpler implementation and better performance. Read why others `use gevent`_ and check out the list of the `open source projects based on gevent`_.
