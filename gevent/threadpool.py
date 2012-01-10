@@ -1,4 +1,5 @@
 # Copyright (c) 2012 Denis Bilenko. See LICENSE for details.
+from __future__ import with_statement
 import sys
 import os
 from gevent.hub import get_hub, sleep
