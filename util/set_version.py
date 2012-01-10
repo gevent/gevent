@@ -88,7 +88,6 @@ def modify_version(filename, new_version):
         if count != 1:
             raise AssertionError('version_info found more than once in %s' % filename)
 
-
     def repl_version(m):
         result = m.group(0).replace(m.group(1), new_version or m.group(1))
         result += "\n__changeset__ = '%s'" % get_changeset()

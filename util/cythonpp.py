@@ -29,6 +29,7 @@ define_re = re.compile(r'^#define\s+([a-zA-Z_]\w*)(\((?:[^,)]+,)*[^,)]+\))?\s+(.
 # Conditional directive:
 condition_re = re.compile(r'^#(ifdef\s+.+|if\s+.+|else\s*|endif\s*)$')
 
+
 def match_condition(line):
     line = line.strip()
     if line.endswith(':'):
@@ -224,7 +225,7 @@ def expand_to_match(items):
     for configuration, lines in items:
         cfg2newlines[configuration] = []
 
-    maxguard = 2**30
+    maxguard = 2 ** 30
     while True:
         minimalsourceline = maxguard
         for configuration, lines in items:
@@ -714,7 +715,7 @@ def dbg(*args):
     return log(*args)
 
 
-# itertools is only available in python 2.6
+# itertools is not available on python 2.5
 # itertools.combinations has a problem on 2.6.1
 
 def combinations(iterable, r):
