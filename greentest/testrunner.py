@@ -52,12 +52,12 @@ import platform
 try:
     import sqlite3
 except ImportError:
-    ex = sys.exc_info()
+    ex = sys.exc_info()[1]
     sys.stderr.write('Failed to import sqlite3: %s\n' % ex)
     try:
         import pysqlite2.dbapi2 as sqlite3
     except ImportError:
-        ex = sys.exc_info()
+        ex = sys.exc_info()[1]
         sys.stderr.write('Failed to import pysqlite2.dbapi2: %s\n' % ex)
         sqlite3 = None
 
@@ -78,7 +78,7 @@ def store_record(database_path, table, dictionary, _added_colums_per_db={}):
                 conn.commit()
                 _added_columns.add(key)
             except sqlite3.OperationalError:
-                ex = sys.exc_info()
+                ex = sys.exc_info()[1]
                 if 'duplicate column' not in str(ex).lower():
                     raise
     sql = 'insert or replace into %s (%s) values (%s)' % (table, ', '.join(keys), ', '.join(':%s' % key for key in keys))
