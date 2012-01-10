@@ -374,7 +374,7 @@ def walk_modules(basedir=None, modpath=None, include_so=False):
                 for p, m in walk_modules(path, modpath + fn + "."):
                     yield p, m
             continue
-        if fn.endswith('.py') and fn not in ['__init__.py', 'core.py']:
+        if fn.endswith('.py') and fn not in ['__init__.py', 'core.py', 'ares.py']:
             yield path, modpath + fn[:-3]
         elif include_so and fn.endswith('.so'):
             if fn.endswith('_d.so'):
