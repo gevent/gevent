@@ -30,7 +30,7 @@ class ThreadPool(object):
         if not isinstance(maxsize, integer_types):
             raise TypeError('maxsize must be integer: %r' % (maxsize, ))
         if maxsize < 0:
-            raise ValueError('maxsize cannot be negative: %r' % (maxsize, ))
+            raise ValueError('maxsize must not be negative: %r' % (maxsize, ))
         difference = maxsize - self._maxsize
         self._semaphore.counter += difference
         self._maxsize = maxsize
