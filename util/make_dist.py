@@ -31,21 +31,21 @@ def main():
     os.chdir(TMPDIR)
 
     if options.rsync:
-        options.copy_command = 'rsync -r %s .' % basedir
+        copy_command = 'rsync -r %s .' % basedir
     else:
-        options.copy_command = 'hg clone %s' % basedir
+        copy_command = 'hg clone %s' % basedir
 
     if options.version:
-        options.set_version_command = 'util/set_version.py --version %s gevent/__init__.py' % options.version
+        set_version_command = 'util/set_version.py --version %s gevent/__init__.py' % options.version
     else:
-        options.set_version_command = 'util/set_version.py gevent/__init__.py'
+        set_version_command = 'util/set_version.py gevent/__init__.py'
 
-    system(options.copy_command)
+    system(copy_command)
     directory = os.listdir('.')
     assert len(directory) == 1, directory
     os.chdir(directory[0])
 
-    system(options.set_version_command)
+    system(set_version_command)
     system('hg diff')
     system('python setup.py sdist')
 
