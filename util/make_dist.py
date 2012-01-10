@@ -1,6 +1,7 @@
 #!/usr/bin/python
 import sys
 import os
+import glob
 import optparse
 
 
@@ -51,9 +52,14 @@ def main():
         system('rm -fr dist')
     system('python setup.py sdist')
 
+    dist_filename = glob.glob('dist/gevent-*.tar.gz')
+    assert len(dist_filename) == 1, dist_filename
+    dist_filename = os.path.abspath(dist_filename[0])
+
     website_dir = os.path.join(os.path.dirname(basedir), 'gevent-website')
     if os.path.exists(website_dir):
-        system('cp dist/gevent-*.tar.gz %s/dist' % website_dir)
+        system('cp %s %s/dist' % (dist_filename, website_dir))
+    system('ln -fs %s /tmp' % dist_filename)
 
 
 if __name__ == '__main__':
