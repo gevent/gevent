@@ -39,6 +39,13 @@ def match_condition(line):
 newline_token = ' <cythonpp.py: REPLACE WITH NEWLINE!> '
 
 
+def combinations(p, r):
+    # python 2.6.1 on snow leopard fails with a ValueError on this case
+    if len(p) < r:
+        return []
+    return itertools.combinations(p, r)
+
+
 def process_filename(filename, output_filename=None):
     """Process the .ppyx file with preprocessor and compile it with cython.
 
@@ -394,7 +401,7 @@ def simplify_tags(tags):
         if not x:
             tags.remove(x)
             return simplify_tags(tags)
-    for tag1, tag2 in itertools.combinations(tags, 2):
+    for tag1, tag2 in combinations(tags, 2):
         if tag1 == tag2:
             tags.remove(tag1)
             return simplify_tags(tags)
