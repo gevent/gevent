@@ -148,9 +148,9 @@ class PoolBasicTests(greentest.TestCase):
         result = p.apply(lambda a: ('foo', a), (1, ))
         self.assertEqual(result, ('foo', 1))
 
-    def test_init_zerosize(self):
+    def test_init_error(self):
         self.switch_expected = False
-        self.assertRaises(ValueError, self.klass, 0)
+        self.assertRaises(ValueError, self.klass, -1)
 
 #
 # tests from standard library test/test_multiprocessing.py
