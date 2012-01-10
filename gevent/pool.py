@@ -319,8 +319,8 @@ class Failure(object):
 class Pool(Group):
 
     def __init__(self, size=None, greenlet_class=None):
-        if size is not None and size < 1:
-            raise ValueError('Invalid size for pool (positive integer or None required): %r' % (size, ))
+        if size is not None and size < 0:
+            raise ValueError('size must not be negative: %r' % (size, ))
         Group.__init__(self)
         self.size = size
         if greenlet_class is not None:
