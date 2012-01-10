@@ -73,7 +73,6 @@ class ThreadPool(object):
                 # go down to 0.
                 sys.stderr.write("WARNING: Mixing fork() and threads detected; memory leaked.\n")
             self._init(self._maxsize)
-            self._add_threads()
 
     def join(self):
         delay = 0.0005
