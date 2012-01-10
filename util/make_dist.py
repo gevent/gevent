@@ -16,30 +16,32 @@ def system(cmd):
 
 
 def main():
-    basedir = os.path.abspath(os.getcwd())
     assert os.path.exists('gevent/__init__.py'), 'Where am I?'
+    basedir = os.path.abspath(os.getcwd())
 
     parser = optparse.OptionParser()
     parser.add_option('--rsync', action='store_true')
-    parser.add_option('--version')
     options, args = parser.parse_args()
-    if args:
-        sys.exit('Unexpected arguments: %r' % (args, ))
 
-    os.chdir('/tmp')
-    system('rm -fr ' + TMPDIR)
-    os.mkdir(TMPDIR)
-    os.chdir(TMPDIR)
+    if len(args) != 1:
+        sys.exit('Expected one argument: version (could be "dev")')
+
+    version = args[0]
+
+    if version.lower() == 'dev':
+        set_version_command = 'util/set_version.py gevent/__init__.py'
+    else:
+        set_version_command = 'util/set_version.py --version %s gevent/__init__.py' % version
 
     if options.rsync:
         copy_command = 'rsync -r %s .' % basedir
     else:
         copy_command = 'hg clone %s' % basedir
 
-    if options.version:
-        set_version_command = 'util/set_version.py --version %s gevent/__init__.py' % options.version
-    else:
-        set_version_command = 'util/set_version.py gevent/__init__.py'
+    os.chdir('/tmp')
+    system('rm -fr ' + TMPDIR)
+    os.mkdir(TMPDIR)
+    os.chdir(TMPDIR)
 
     system(copy_command)
     directory = os.listdir('.')
