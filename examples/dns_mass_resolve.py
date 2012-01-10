@@ -1,10 +1,13 @@
 #!/usr/bin/python
 """Resolve hostnames concurrently, exit after 2 seconds.
 
-Note, that gevent.socket.gethostname uses c-ares under the hood
-and yields the control to other greenlets until the result is ready.
-This script splits the job between a number of greenlets to get the
-results faster.
+Under the hood, this might use an asynchronous resolver based on
+c-ares (the default) or thread-pool-based resolver.
+
+You can choose between resolvers using GEVENT_RESOLVER environment
+variable. To enable threading resolver:
+
+    GEVENT_RESOLVER=thread python dns_mass_resolve.py
 """
 from __future__ import with_statement
 import sys
