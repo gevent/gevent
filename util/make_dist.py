@@ -47,6 +47,8 @@ def main():
 
     system(set_version_command)
     system('hg diff')
+    if options.rsync:
+        system('rm -fr dist')
     system('python setup.py sdist')
 
     website_dir = os.path.join(os.path.dirname(basedir), 'gevent-website')
