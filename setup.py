@@ -179,9 +179,18 @@ def make(done=[]):
 
 
 class sdist(_sdist):
+
     def run(self):
-        make()
-        _sdist.run(self)
+        renamed = False
+        if os.path.exists('Makefile'):
+            make()
+            os.rename('Makefile', 'Makefile.ext')
+            renamed = True
+        try:
+            return _sdist.run(self)
+        finally:
+            if renamed:
+                os.rename('Makefile.ext', 'Makefile')
 
 
 class my_build_ext(build_ext):
