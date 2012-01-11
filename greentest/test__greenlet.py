@@ -123,28 +123,6 @@ class TestUnlink(greentest.TestCase):
     def test_func_link_exception(self):
         self._test_func(self.p.link_exception)
 
-    def _test_greenlet(self, link):
-        p = self.p
-        link(getcurrent())
-        assert len(p._links) == 1, p._links
-        p.unlink(getcurrent())
-        assert not p._links, p._links
-
-        g = gevent.Greenlet()
-        link(g)
-        assert len(p._links) == 1, p._links
-        p.unlink(g)
-        assert not p._links, p._links
-
-    def test_greenlet_link(self):
-        self._test_greenlet(self.p.link)
-
-    def test_greenlet_link_value(self):
-        self._test_greenlet(self.p.link_value)
-
-    def test_greenlet_link_exception(self):
-        self._test_greenlet(self.p.link_exception)
-
 
 class LinksTestCase(greentest.TestCase):
 
@@ -296,8 +274,6 @@ class TestStuff(greentest.TestCase):
             return 1
         x = gevent.spawn(x)
         y = gevent.spawn(lambda: getcurrent().throw(ExpectedError('test_wait_error')))
-        x.link(y)
-        y.link(x)
         self.assertRaises(ExpectedError, gevent.joinall, [x, y], raise_error=True)
         self.assertRaises(ExpectedError, gevent.joinall, [y], raise_error=True)
 
