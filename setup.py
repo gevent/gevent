@@ -98,11 +98,10 @@ def configure_libev(bext, ext):
         os.makedirs(bdir)
 
     cwd = os.getcwd()
+    os.chdir(bdir)
     try:
-        os.chdir(bdir)
         if os.path.exists('config.h'):
             return
-
         rc = _system(libev_configure_command)
         if rc == 0 and sys.platform == 'darwin':
             make_universal_header('config.h', 'SIZEOF_LONG', 'SIZEOF_SIZE_T', 'SIZEOF_TIME_T')
@@ -122,11 +121,10 @@ def configure_ares(bext, ext):
         return
 
     cwd = os.getcwd()
+    os.chdir(bdir)
     try:
-        os.chdir(bdir)
         if os.path.exists('ares_config.h') and os.path.exists('ares_build.h'):
             return
-
         rc = _system(ares_configure_command)
         if rc == 0 and sys.platform == 'darwin':
             make_universal_header('ares_build.h', 'CARES_SIZEOF_LONG')
