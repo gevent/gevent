@@ -5,7 +5,12 @@ import types
 from greentest import walk_modules
 
 
-MAPPING = {'gevent.local': '_threading_local'}
+MAPPING = {'gevent.local': '_threading_local',
+           'gevent.socket': 'socket',
+           'gevent.select': 'select',
+           'gevent.ssl': 'ssl',
+           'gevent.thread': 'thread'}
+
 
 
 class ANY(object):
@@ -138,22 +143,19 @@ are missing from %r:
         self.__extensions__ = getattr(self.module, '__extensions__', [])
 
         self.stdlib_name = MAPPING.get(modname)
-        if self.stdlib_name is None:
-            self.stdlib_name = modname.replace('gevent.', '')
-        try:
-            self.stdlib_module = __import__(self.stdlib_name)
-        except ImportError:
-            self.stdlib_module = None
+        self.stdlib_module = None
+
+        if self.stdlib_name is not None:
+            try:
+                self.stdlib_module = __import__(self.stdlib_name)
+            except ImportError:
+                pass
 
         self.check_implements_presence_justified()
 
         # use __all__ as __implements__
         if self.__implements__ is None:
             self.__implements__ = sorted(self.module.__all__)
-
-        if modname == 'gevent.greenlet':
-            # 'greenlet' is not a corresponding standard module for gevent.greenlet
-            return
 
         if self.stdlib_module is None:
             return
