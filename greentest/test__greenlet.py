@@ -100,13 +100,13 @@ class TestUnlink(greentest.TestCase):
 
     def setUp(self):
         greentest.TestCase.setUp(self)
-        self.p = gevent.spawn(test_func)
+        self.p = gevent.spawn(dummy_test_func)
 
     def _test_func(self, link):
         p = self.p
-        link(test_func)
+        link(dummy_test_func)
         assert len(p._links) == 1, p._links
-        p.unlink(test_func)
+        p.unlink(dummy_test_func)
         assert not p._links, p._links
 
         link(self.setUp)
@@ -404,7 +404,7 @@ class TestStuff(greentest.TestCase):
         sleep(DELAY)
 
 
-def test_func(*args):
+def dummy_test_func(*args):
     pass
 
 
@@ -419,12 +419,12 @@ hexobj = re.compile('-?0x[0123456789abcdef]+L?', re.I)
 class TestStr(greentest.TestCase):
 
     def test_function(self):
-        g = gevent.Greenlet.spawn(test_func)
-        self.assertEqual(hexobj.sub('X', str(g)), '<Greenlet at X: test_func>')
+        g = gevent.Greenlet.spawn(dummy_test_func)
+        self.assertEqual(hexobj.sub('X', str(g)), '<Greenlet at X: dummy_test_func>')
         assert_not_ready(g)
         g.join()
         assert_ready(g)
-        self.assertEqual(hexobj.sub('X', str(g)), '<Greenlet at X: test_func>')
+        self.assertEqual(hexobj.sub('X', str(g)), '<Greenlet at X: dummy_test_func>')
 
     def test_method(self):
         g = gevent.Greenlet.spawn(A().method)
