@@ -19,6 +19,8 @@ class SpawnedLink(object):
     __slots__ = ['callback']
 
     def __init__(self, callback):
+        if not six.callable(callback):
+            raise TypeError("SpawnedLink argument '%s' object is not callable" % callback.__class__.__name__)
         self.callback = callback
 
     def __call__(self, source):
