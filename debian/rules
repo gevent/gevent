@@ -1,0 +1,21 @@
+#!/usr/bin/make -f
+%:
+	dh $@ --parallel
+
+override_dh_auto_clean:
+	dh_auto_clean
+	rm -f gevent/*.so
+
+override_dh_compress:
+	dh_compress -X.js -X_static/* -X _sources/* -X_sources/*/* -X.inv
+
+override_dh_strip:
+ifeq (,$(filter nostrip,$(DEB_BUILD_OPTIONS)))
+	dh_strip --dbg-package=python-gevent-dbg
+	cd debian/python-gevent-dbg/usr/lib/debug/usr/lib && mv pyshared pymodules
+endif
+
+override_dh_installdocs:
+	dh_installdocs --link-doc=python-gevent
+
+.PHONY: override_dh_auto_build override_dh_auto_clean override_dh_compress override_dh_strip override_dh_installdocs
