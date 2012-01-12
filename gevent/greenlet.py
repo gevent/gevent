@@ -3,7 +3,7 @@
 import sys
 from gevent.hub import greenlet, getcurrent, get_hub, GreenletExit, Waiter
 from gevent.timeout import Timeout
-from gevent import six
+from gevent.six import callable, _meth_self, moves, PY3
 
 
 __all__ = ['Greenlet',
@@ -19,8 +19,8 @@ class SpawnedLink(object):
     __slots__ = ['callback']
 
     def __init__(self, callback):
-        if not six.callable(callback):
-            raise TypeError("SpawnedLink argument '%s' object is not callable" % callback.__class__.__name__)
+        if not callable(callback):
+            raise TypeError("Expected callable: %r" % (callback, ))
         self.callback = callback
 
     def __call__(self, source):
@@ -90,7 +90,7 @@ class Greenlet(greenlet):
         # needed by killall
         return self.parent.loop
 
-    if six.PY3:
+    if PY3:
         def __bool__(self):
             return self._start_event is not None and self._exception is _NONE
     else:
@@ -395,7 +395,7 @@ def _kill(greenlet, exception, waiter):
 
 
 def joinall(greenlets, timeout=None, raise_error=False, count=None):
-    xrange = six.moves.xrange
+    xrange = moves.xrange
     from gevent.queue import Queue
     queue = Queue()
     put = queue.put
@@ -465,13 +465,7 @@ def killall(greenlets, exception=GreenletExit, block=True, timeout=None):
 
 
 def getfuncname(func):
-    try:
-        six.get_method_self(func)
-        is_bound_method = True
-    except AttributeError:
-        is_bound_method = False
-
-    if not is_bound_method:
+    if not hasattr(func, _meth_self):
         try:
             funcname = func.__name__
         except AttributeError:
