@@ -25,7 +25,6 @@ Release highlights:
   - GEVENT_THREADPOOL allows choosing thread pool class.
 - Added new examples: portforwarder, psycopg2_pool.py, threadpool.py, udp_server.py
 - Fixed non-embedding build. To build against system libev, remove or rename 'libev' directory. To build against system c-ares, remove or rename 'c-ares'. Thanks to Örjan Persson.
-- Added gevent.six module (http://pypi.python.org/pypi/six)
 
 misc:
 - gevent.joinall() method now accepts optional 'count' keyword.
