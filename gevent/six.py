@@ -1,4 +1,5 @@
 """Utilities for writing code that runs on Python 2 and 3"""
+# XXX We only use a fraction of it in gevent, so this module will probably be removed
 
 import operator
 import sys
