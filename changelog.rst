@@ -128,7 +128,7 @@ Added handle_system_error() method to Hub (used internally).
 
 Fixed Hub's run() method to never exit. This prevent inappropriate switches into parent greenlet.
 
-Fixed Hub.join() to return False if Hub was already dead.
+Fixed Hub.join() to return True if Hub was already dead.
 
 Added 'event' argument to Hub.join().
 
@@ -166,7 +166,7 @@ Backward-incompatible changes:
 
 - Dropped support for Python 2.4.
 - `Queue(0)` is now equivalent to an unbound queue and raises :exc:`DeprecationError`. Use :class:`gevent.queue.Channel` if you need a channel.
-- Deprecated ability to passing a greenlet instance to :meth:`Greenlet.link`, :meth:`Greenlet.link_value` and :meth:`Greenlet.link_exception`.
+- Deprecated ability to pass a greenlet instance to :meth:`Greenlet.link`, :meth:`Greenlet.link_value` and :meth:`Greenlet.link_exception`.
 - All of :mod:`gevent.core` has been rewritten and the interface is not compatible.
 - :exc:`SystemExit` and :exc:`SystemError` now kill the whole process instead of printing a traceback.
 - Removed deprecated :class:`util.lazy_property` property.
