@@ -1,4 +1,4 @@
-# Copyright (c) 2009-2011 Denis Bilenko. See LICENSE for details.
+# Copyright (c) 2009-2012 Denis Bilenko. See LICENSE for details.
 
 import sys
 import os
