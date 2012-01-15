@@ -4,6 +4,7 @@ cimport libev
 from python cimport *
 import sys
 import os
+import traceback
 from signal import NSIG
 
 
@@ -824,7 +825,9 @@ cdef void _syserr_cb(char* msg) with gil:
         __SYSERR_CALLBACK(msg, errno)
     except:
         set_syserr_cb(None)
-        raise
+        print_exc = getattr(traceback, 'print_exc', None)
+        if print_exc is not None:
+            print_exc()
 
 
 def set_syserr_cb(callback):
