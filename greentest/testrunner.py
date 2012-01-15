@@ -227,6 +227,12 @@ def run_tests(options, args):
             return DatabaseTestRunner(database_path=options.db, runid=options.runid, module_name=module_name, verbosity=options.verbosity)
 
     if options.db:
+        try:
+            from unittest import runner
+        except ImportError:
+            pass
+        else:
+            runner.TextTestRunner = _runner
         import unittest
         unittest.TextTestRunner = _runner
         import test_support
