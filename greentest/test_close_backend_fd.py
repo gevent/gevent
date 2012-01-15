@@ -5,7 +5,7 @@ import gevent
 
 for _ in xrange(2):
     for backend in gevent.core.supported_backends():
-        hub = gevent.get_hub(backend)
+        hub = gevent.get_hub(backend, default=False)
         assert hub.loop.backend == backend, (hub.loop.backend, backend)
         gevent.sleep(0.001)
         fileno = hub.loop.fileno()
