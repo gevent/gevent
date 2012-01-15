@@ -24,3 +24,4 @@ for count in xrange(2):
         else:
             print '%s. %r lacks fileno()' % (count, backend)
         hub.destroy()
+        assert 'destroyed' in repr(hub), repr(hub)
