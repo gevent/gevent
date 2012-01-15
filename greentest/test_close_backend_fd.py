@@ -3,14 +3,14 @@ import traceback
 import gevent
 
 
-for _ in xrange(2):
+for count in xrange(2):
     for backend in gevent.core.supported_backends():
         hub = gevent.get_hub(backend, default=False)
         assert hub.loop.backend == backend, (hub.loop.backend, backend)
         gevent.sleep(0.001)
         fileno = hub.loop.fileno()
         if fileno is not None:
-            print 'Testing %r: %r' % (backend, hub)
+            print '%s. Testing %r: %r' % (count, backend, hub)
             os.close(fileno)
             try:
                 gevent.sleep(0.001)
@@ -22,5 +22,5 @@ for _ in xrange(2):
             else:
                 raise AssertionError('gevent.sleep() is expected to fail after loop fd was closed')
         else:
-            print '%r lacks fileno()' % backend
+            print '%s. %r lacks fileno()' % (count, backend)
         hub.destroy()
