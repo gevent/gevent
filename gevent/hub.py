@@ -416,8 +416,7 @@ class Hub(greenlet):
                 event.unlink(switch)
         return False
 
-    def destroy(self):
-        # this function would be useful after fork / before exec
+    def destroy(self, destroy_loop=None):
         global _threadlocal
         if self._resolver is not None:
             self._resolver.close()
@@ -425,8 +424,11 @@ class Hub(greenlet):
         if self._threadpool is not None:
             self._threadpool.close()
             del self._threadpool
-        self.loop.destroy()
-        del self.loop
+        if destroy_loop is None:
+            destroy_loop = not self.loop.default
+        if destroy_loop:
+            self.loop.destroy()
+        self.loop = None
         if getattr(_threadlocal, 'hub', None) is self:
             del _threadlocal.hub
 
