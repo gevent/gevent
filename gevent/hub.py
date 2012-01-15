@@ -309,7 +309,7 @@ class Hub(greenlet):
 
     def handle_system_error(self, type, value):
         current = getcurrent()
-        if current is self or current is self.parent:
+        if current is self or current is self.parent or self.loop is None:
             self.parent.throw(type, value)
         else:
             self.loop.run_callback(self.parent.throw, type, value)
