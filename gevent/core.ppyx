@@ -830,7 +830,7 @@ cdef void _syserr_cb(char* msg) with gil:
             print_exc()
 
 
-def set_syserr_cb(callback):
+cpdef set_syserr_cb(callback):
     global __SYSERR_CALLBACK
     if callback is None:
         libev.ev_set_syserr_cb(NULL)
