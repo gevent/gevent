@@ -295,7 +295,14 @@ class Hub(greenlet):
         self.format_context = _import(self.format_context)
 
     def __repr__(self):
-        result = '<%s at 0x%x %s' % (self.__class__.__name__, id(self), self.loop._format())
+        if self.loop is None:
+            info = 'destroyed'
+        else:
+            try:
+                info = self.loop._format()
+            except Exception, ex:
+                info = str(ex) or repr(ex) or 'error'
+        result = '<%s at 0x%x %s' % (self.__class__.__name__, id(self), info)
         if self._resolver is not None:
             result += ' resolver=%r' % self._resolver
         if self._threadpool is not None:
