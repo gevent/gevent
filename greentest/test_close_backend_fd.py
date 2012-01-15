@@ -22,5 +22,5 @@ for _ in xrange(2):
             else:
                 raise AssertionError('gevent.sleep() is expected to fail after loop fd was closed')
         else:
-            print 'Skipping %r' % backend
+            print '%r lacks fileno()' % backend
         hub.destroy()
