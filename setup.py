@@ -59,6 +59,8 @@ ARES.optional = True
 
 
 ext_modules = [CORE, ARES]
+ext_modules.append(Extension(name="gevent._semaphore",
+                             sources=["gevent/gevent._semaphore.c"]))
 
 
 def make_universal_header(filename, *defines):

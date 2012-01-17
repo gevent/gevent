@@ -3,7 +3,7 @@
 
 PYTHON ?= python
 
-all: gevent/gevent.core.c gevent/gevent.ares.c
+all: gevent/gevent.core.c gevent/gevent.ares.c gevent/gevent._semaphore.c
 
 gevent/gevent.core.c: gevent/core.ppyx gevent/libev.pxd util/cythonpp.py
 	$(PYTHON) util/cythonpp.py -o gevent.core.c gevent/core.ppyx
@@ -11,9 +11,13 @@ gevent/gevent.core.c: gevent/core.ppyx gevent/libev.pxd util/cythonpp.py
 	echo '#include "callbacks.c"' >> gevent.core.c
 	mv gevent.core.* gevent/
 
-gevent/gevent.ares.c: gevent/*.pyx gevent/*.pxd
+gevent/gevent.ares.c: gevent/ares.pyx gevent/core.pyx gevent/*.pxd
 	cython -o gevent.ares.c gevent/ares.pyx
 	mv gevent.ares.* gevent/
+
+gevent/gevent._semaphore.c: gevent/_semaphore.pyx
+	cython -o gevent._semaphore.c gevent/_semaphore.pyx
+	mv gevent._semaphore.c gevent/
 
 clean:
 	rm -f gevent.core.c gevent.core.h core.pyx gevent/gevent.core.c gevent/gevent.core.h gevent/core.pyx
