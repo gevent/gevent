@@ -317,35 +317,6 @@ class ThreadTests(unittest.TestCase):
                 """ % setup_4])
             self.assertEqual(rc, 42)
 
-    def test_finalize_with_trace(self):
-        # Issue1733757
-        # Avoid a deadlock when sys.settrace steps into threading._shutdown
-        import subprocess
-        rc = subprocess.call([sys.executable, "-c", """if 1:
-%s
-            import sys, threading
-
-            # A deadlock-killer, to prevent the
-            # testsuite to hang forever
-            def killer():
-                import os, time
-                time.sleep(2)
-                print 'program blocked; aborting'
-                os._exit(2)
-            t = threading.Thread(target=killer)
-            t.daemon = True
-            t.start()
-
-            # This is the trace function
-            def func(frame, event, arg):
-                threading.current_thread()
-                return func
-
-            sys.settrace(func)
-            """ % setup_3])
-        self.failIf(rc == 2, "interpreted was blocked")
-        self.failUnless(rc == 0, "Unexpected error")
-
     if sys.version_info[:2] > (2, 5):
         def test_join_nondaemon_on_shutdown(self):
             # Issue 1722344
