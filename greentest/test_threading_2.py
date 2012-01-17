@@ -1,7 +1,7 @@
 # testing gevent's Event, Lock, RLock, Semaphore, BoundedSemaphore with standard test_threading
 from __future__ import with_statement
 
-setup = '''from gevent import monkey; monkey.patch_all()
+setup_ = '''from gevent import monkey; monkey.patch_all()
 from gevent.event import Event
 from gevent.coros import RLock, Semaphore, BoundedSemaphore
 from gevent.thread import allocate_lock as Lock
@@ -23,11 +23,11 @@ if not hasattr(threading._Condition, 'notify_all'):
     threading._Condition.notify_all = threading._Condition.notifyAll
 '''
 
-exec setup
+exec setup_
 
-setup_3 = '\n'.join('            %s' % line for line in setup.split('\n'))
-setup_4 = '\n'.join('                %s' % line for line in setup.split('\n'))
-setup_5 = '\n'.join('                    %s' % line for line in setup.split('\n'))
+setup_3 = '\n'.join('            %s' % line for line in setup_.split('\n'))
+setup_4 = '\n'.join('                %s' % line for line in setup_.split('\n'))
+setup_5 = '\n'.join('                    %s' % line for line in setup_.split('\n'))
 
 
 import test.test_support
@@ -560,7 +560,7 @@ class BoundedSemaphoreTests(lock_tests.BoundedSemaphoreTests):
     semtype = staticmethod(threading.BoundedSemaphore)
 
 
-def test_main():
+def main():
     test.test_support.run_unittest(LockTests, RLockTests, EventTests,
                                    ConditionAsRLockTests, ConditionTests,
                                    SemaphoreTests, BoundedSemaphoreTests,
@@ -570,4 +570,4 @@ def test_main():
                                    )
 
 if __name__ == "__main__":
-    test_main()
+    main()
