@@ -65,7 +65,6 @@ BACKEND_KQUEUE = libev.EVBACKEND_KQUEUE
 BACKEND_EPOLL = libev.EVBACKEND_EPOLL
 BACKEND_POLL = libev.EVBACKEND_POLL
 BACKEND_SELECT = libev.EVBACKEND_SELECT
-NOENV = libev.EVFLAG_NOENV
 FORKCHECK = libev.EVFLAG_FORKCHECK
 NOINOTIFY = libev.EVFLAG_NOINOTIFY
 SIGNALFD = libev.EVFLAG_SIGNALFD
@@ -97,7 +96,6 @@ _flags = [(libev.EVBACKEND_PORT, 'port'),
           (libev.EVBACKEND_EPOLL, 'epoll'),
           (libev.EVBACKEND_POLL, 'poll'),
           (libev.EVBACKEND_SELECT, 'select'),
-          (libev.EVFLAG_NOENV, 'noenv'),
           (libev.EVFLAG_FORKCHECK, 'forkcheck'),
           (libev.EVFLAG_SIGNALFD, 'signalfd'),
           (libev.EVFLAG_NOSIGMASK, 'nosigmask')]
@@ -237,6 +235,7 @@ cdef public class loop [object PyGeventLoopObject, type PyGeventLoop_Type]:
         else:
             c_flags = _flags_to_int(flags)
             _check_flags(c_flags)
+            c_flags |= libev.EVFLAG_NOENV
             if _default_loop_destroyed:
                 default = False
             if default:
