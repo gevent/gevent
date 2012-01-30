@@ -145,16 +145,16 @@ else:
 
 cpdef unsigned int _flags_to_int(object flags) except? -1:
     # Note, that order does not matter, libev has its own predefined order
-    if flags is None:
+    if not flags:
         return 0
     if isinstance(flags, (int, long)):
         return flags
     cdef unsigned int result = 0
     try:
         if isinstance(flags, basestring):
-            return _flags_str2int[flags.lower()]
+            flags = flags.split(',')
         for value in flags:
-            result |= _flags_str2int[value.lower()]
+            result |= _flags_str2int[value.strip().lower()]
     except KeyError, ex:
         raise ValueError('Invalid backend or flag: %s\nPossible values: %s' % (ex, ', '.join(sorted(_flags_str2int.keys()))))
     return result
