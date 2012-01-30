@@ -215,7 +215,7 @@ def time():
             return self._ptr.NAME
 
 
-cdef bint _default_loop_is_good = True
+cdef bint _default_loop_destroyed = False
 
 
 cdef public class loop [object PyGeventLoopObject, type PyGeventLoop_Type]:
@@ -237,7 +237,7 @@ cdef public class loop [object PyGeventLoopObject, type PyGeventLoop_Type]:
         else:
             c_flags = _flags_to_int(flags)
             _check_flags(c_flags)
-            if not _default_loop_is_good:
+            if _default_loop_destroyed:
                 default = False
             if default:
                 self._ptr = libev.ev_default_loop(c_flags)
@@ -267,13 +267,13 @@ cdef public class loop [object PyGeventLoopObject, type PyGeventLoop_Type]:
 #endif
 
     def destroy(self):
-        global _default_loop_is_good
+        global _default_loop_destroyed
         if self._ptr:
             self._stop_signal_checker()
             if __SYSERR_CALLBACK == self._handle_syserr:
                 set_syserr_cb(None)
             if libev.ev_is_default_loop(self._ptr):
-                _default_loop_is_good = False
+                _default_loop_destroyed = True
             libev.ev_loop_destroy(self._ptr)
             self._ptr = NULL
 
