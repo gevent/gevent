@@ -423,14 +423,32 @@ cdef public class loop [object PyGeventLoopObject, type PyGeventLoop_Type]:
         if self.default:
             msg += ' default'
 #ifdef LIBEV_EMBED
-        if self.fileno() is not None:
-            msg += ' fileno=%s' % self.fileno()
-        args = (self.activecnt, self.fdchangecnt, self.timercnt, self.asynccnt)
-        msg += ' ref/io/timer/async=%r/%r/%r/%r' % args
+        msg += self._format_details()
 #endif
         return msg
 
 #ifdef LIBEV_EMBED
+
+    def _format_details(self):
+        cdef str msg = ''
+        cdef object fileno = self.fileno()
+        cdef object sigfd = None
+        cdef object activecnt = None
+        try:
+            sigfd = self.sigfd
+        except AttributeError:
+            sigfd = None
+        try:
+            activecnt = self.activecnt
+        except AttributeError:
+            pass
+        if fileno is not None:
+            msg += ' fileno=' + repr(fileno)
+        if activecnt is not None:
+            msg += ' ref=' + repr(activecnt)
+        if sigfd is not None and sigfd != -1:
+            msg += ' sigfd=' + repr(sigfd)
+        return msg
 
     def fileno(self):
         cdef int fd = self._ptr.backend_fd
@@ -439,11 +457,10 @@ cdef public class loop [object PyGeventLoopObject, type PyGeventLoop_Type]:
 
     LOOP_PROPERTY(activecnt)
 
-    LOOP_PROPERTY(fdchangecnt)
+#if EV_USE_SIGNALFD
+    LOOP_PROPERTY(sigfd)
+#endif
 
-    LOOP_PROPERTY(timercnt)
-
-    LOOP_PROPERTY(asynccnt)
 #endif
 
 

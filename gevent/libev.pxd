@@ -57,9 +57,7 @@ cdef extern from "libev.h":
     struct ev_loop:
         int activecnt
         int backend_fd
-        int fdchangecnt
-        int timercnt
-        int asynccnt
+        int sigfd
 
     struct ev_io:
         int fd
