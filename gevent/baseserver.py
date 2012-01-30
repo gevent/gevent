@@ -313,7 +313,7 @@ def _parse_address(address):
                 host = ''
             return family, (host, int(port))
         else:
-            return _socket.AF_INET, ('', int(port))
+            return _socket.AF_INET, ('', int(address))
     elif isinstance(address, integer_types):
         return _socket.AF_INET, ('', int(address))
     else:
