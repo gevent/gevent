@@ -58,6 +58,7 @@ cdef extern from "libev.h":
         int activecnt
         int backend_fd
         int sigfd
+        unsigned int origflags
 
     struct ev_io:
         int fd
