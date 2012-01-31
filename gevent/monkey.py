@@ -135,6 +135,9 @@ def patch_thread(threading=True, _threading_local=True):
     if threading:
         from gevent import thread as green_thread
         threading = __import__('threading')
+        # QQQ Note, that importing threading results in get_hub() call.
+        # QQQ Would prefer not to import threading at all if it's not used;
+        # QQQ that should be possible with import hooks
         threading.local = local
         threading._start_new_thread = green_thread.start_new_thread
         threading._allocate_lock = green_thread.allocate_lock
