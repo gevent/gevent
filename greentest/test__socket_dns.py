@@ -512,6 +512,7 @@ class Test_getnameinfo_fail(TestCase):
 
 
 class TestInvalidPort(TestCase):
+    switch_expected = None
 
     def test1(self):
         self._test('getnameinfo', ('www.gevent.org', -1), 0)
