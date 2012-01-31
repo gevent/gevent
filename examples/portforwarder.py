@@ -1,4 +1,5 @@
 import sys
+import signal
 import gevent
 from gevent.server import StreamServer
 from gevent.socket import create_connection, gethostbyname
@@ -16,6 +17,10 @@ class PortForwarder(StreamServer):
         forwarder1 = gevent.spawn(forward, source, dest)
         forwarder2 = gevent.spawn(forward, dest, source)
         gevent.joinall([forwarder1, forwarder2], count=1)
+
+    def close(self):
+        print 'Closing listener socket'
+        StreamServer.close(self)
 
 
 def forward(source, dest):
@@ -50,7 +55,11 @@ def main():
     dest = parse_address(args[1])
     server = PortForwarder(source, dest)
     log('Starting port forwarder %s:%s -> %s:%s', *(server.address[:2] + dest))
-    server.serve_forever()
+    gevent.signal(signal.SIGTERM, server.close)
+    gevent.signal(signal.SIGQUIT, server.close)
+    gevent.signal(signal.SIGINT, server.close)
+    server.start()
+    gevent.run()
 
 
 def log(message, *args):
