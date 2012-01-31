@@ -764,7 +764,7 @@ else:
                                 ssl_version=client_protocol)
             s.connect((HOST, server.port))
             args = [indata]
-            if sys.version_info[:2] >= (2, 7): 
+            if sys.version_info[:2] >= (2, 7):
                 # bytearray fails on Python2.6
                 args.append(bytearray(indata))
             if memoryview is not None:
