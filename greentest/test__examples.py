@@ -14,6 +14,10 @@ import gevent
 from gevent import socket
 import mysubprocess as subprocess
 from gevent.server import DatagramServer, StreamServer
+import gevent.hub
+
+
+gevent.hub.Hub.backend = (getattr(gevent.hub.Hub, 'backend') or '') + ',nochild'
 
 # Ignore tracebacks: KeyboardInterrupt
 

@@ -143,7 +143,6 @@ if libev_embed:
                            ('EV_CHECK_ENABLE', '0'),
                            ('EV_CLEANUP_ENABLE', '0'),
                            ('EV_EMBED_ENABLE', '0'),
-                           ('EV_CHILD_ENABLE', '0'),
                            ("EV_PERIODIC_ENABLE", '0')]
     CORE.configure = configure_libev
     if sys.platform == "darwin":
