@@ -23,11 +23,10 @@
 To do that spawn a green server and then access it using a green socket.
 If either operation blocked the whole script would block and timeout.
 """
+import greentest
 from gevent import monkey
 monkey.patch_all()
-
 import sys
-import greentest
 try:
     import urllib2
 except ImportError:
