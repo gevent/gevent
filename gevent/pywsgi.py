@@ -417,7 +417,7 @@ class WSGIHandler(object):
             self.client_address[0],
             now,
             self.requestline,
-            (self.status or '000').split()[0],
+            (getattr(self, 'status', None) or '000').split()[0],
             length,
             delta)
 
