@@ -1,6 +1,5 @@
 #!/usr/bin/python
 """WSGI server example"""
-
 from gevent.pywsgi import WSGIServer
 
 
