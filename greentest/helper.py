@@ -23,10 +23,10 @@ class ContainsAll(object):
 
 
 def patch_all(timeout=None):
+    import greentest
     from gevent import monkey
     monkey.patch_all(aggressive=True)
     import unittest
-    import greentest
     unittest.TestCase = greentest.TestCase
     unittest.TestCase.check_totalrefcount = False
     unittest.TestCase.error_fatal = False
