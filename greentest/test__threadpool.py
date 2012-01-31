@@ -1,4 +1,4 @@
-from time import time
+from time import time, sleep
 import random
 import greentest
 from gevent.threadpool import ThreadPool
@@ -63,12 +63,12 @@ class TimingWrapper(object):
 
 
 def sqr(x, wait=0.0):
-    gevent.sleep(wait)
+    sleep(wait)
     return x * x
 
 
 def sqr_random_sleep(x):
-    gevent.sleep(random.random() * 0.1)
+    sleep(random.random() * 0.1)
     return x * x
 
 
@@ -145,7 +145,7 @@ class TestPool(TestCase):
         self.assertEqual(sorted(it), list(map(sqr, range(10))))
 
     def test_terminate(self):
-        result = self.pool.map_async(gevent.sleep, [0.1] * ((self.size or 10) * 2))
+        result = self.pool.map_async(sleep, [0.1] * ((self.size or 10) * 2))
         gevent.sleep(0.1)
         kill = TimingWrapper(self.pool.kill)
         kill()
@@ -153,7 +153,7 @@ class TestPool(TestCase):
         result.join()
 
     def sleep(self, x):
-        gevent.sleep(float(x) / 10.)
+        sleep(float(x) / 10.)
         return str(x)
 
     def test_imap_unordered_sleep(self):
@@ -248,8 +248,8 @@ class TestMaxsize(TestCase):
         self.pool = ThreadPool(0)
         done = []
         gevent.spawn(self.pool.spawn, done.append, 1)
-        gevent.spawn(self.pool.spawn, done.append, 2)
-        gevent.sleep(0.001)
+        gevent.spawn_later(0.0001, self.pool.spawn, done.append, 2)
+        gevent.sleep(0.01)
         self.assertEqual(done, [])
         self.pool.maxsize = 1
         gevent.sleep(0.001)
