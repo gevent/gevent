@@ -59,7 +59,7 @@ class TestGreenness(greentest.TestCase):
         except urllib2.HTTPError:
             ex = sys.exc_info()[1]
             assert ex.code == 501, repr(ex)
-        server.join(0.01)
+        server.get(0.01)
         self.assertEqual(self.httpd.request_count, 1)
         self.httpd.server_close()
         self.httpd = None
