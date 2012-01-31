@@ -34,7 +34,7 @@ class Group(object):
         self.greenlets = set(*args)
         if args:
             for greenlet in args[0]:
-                greenlet.rawlink(self.discard)
+                greenlet.rawlink(self._discard)
         # each item we kill we place in dying, to avoid killing the same greenlet twice
         self.dying = set()
         self._empty_event = Event()
@@ -58,24 +58,32 @@ class Group(object):
         except AttributeError:
             pass  # non-Greenlet greenlet, like MAIN
         else:
-            rawlink(self.discard)
+            rawlink(self._discard)
         self.greenlets.add(greenlet)
         self._empty_event.clear()
 
-    def discard(self, greenlet):
+    def _discard(self, greenlet):
         self.greenlets.discard(greenlet)
         self.dying.discard(greenlet)
         if not self.greenlets:
             self._empty_event.set()
+
+    def discard(self, greenlet):
+        self._discard(greenlet)
+        try:
+            unlink = greenlet.unlink
+        except AttributeError:
+            pass  # non-Greenlet greenlet, like MAIN
+        else:
+            unlink(self._discard)
 
     def start(self, greenlet):
         self.add(greenlet)
         greenlet.start()
 
     def spawn(self, *args, **kwargs):
-        add = self.add
-        greenlet = self.greenlet_class.spawn(*args, **kwargs)
-        add(greenlet)
+        greenlet = self.greenlet_class(*args, **kwargs)
+        self.start(greenlet)
         return greenlet
 
 #     def close(self):
@@ -341,27 +349,16 @@ class Pool(Group):
             return 1
         return max(0, self.size - len(self))
 
-    def start(self, greenlet):
+    def add(self, greenlet):
         self._semaphore.acquire()
         try:
-            self.add(greenlet)
+            Group.add(self, greenlet)
         except:
             self._semaphore.release()
             raise
-        greenlet.start()
 
-    def spawn(self, *args, **kwargs):
-        self._semaphore.acquire()
-        try:
-            greenlet = self.greenlet_class.spawn(*args, **kwargs)
-            self.add(greenlet)
-        except:
-            self._semaphore.release()
-            raise
-        return greenlet
-
-    def discard(self, greenlet):
-        Group.discard(self, greenlet)
+    def _discard(self, greenlet):
+        Group._discard(self, greenlet)
         self._semaphore.release()
 
 
