@@ -487,7 +487,10 @@ class WSGIHandler(object):
             env['CONTENT_LENGTH'] = length
         env['SERVER_PROTOCOL'] = 'HTTP/1.0'
 
-        env['REMOTE_ADDR'] = self.client_address[0]
+        client_address = self.client_address
+        if isinstance(client_address, tuple):
+            env['REMOTE_ADDR'] = str(client_address[0])
+            env['REMOTE_PORT'] = str(client_address[1])
 
         for header in self.headers.headers:
             key, value = header.split(':', 1)
