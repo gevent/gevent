@@ -138,7 +138,6 @@ class Input(object):
                 self.position = 0
                 if self.chunk_length == 0:
                     rfile.readline()
-
         return ''.join(response)
 
     def read(self, length=None):
