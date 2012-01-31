@@ -176,18 +176,19 @@ class TestPool3(TestPool):
 
 class TestPool10(TestPool):
     size = 10
+    __timeout__ = 5
 
 
 # class TestJoinSleep(greentest.GenericGetTestCase):
-# 
+#
 #     def wait(self, timeout):
 #         pool = ThreadPool(1)
 #         pool.spawn(gevent.sleep, 10)
 #         pool.join(timeout=timeout)
-# 
-# 
+#
+#
 # class TestJoinSleep_raise_error(greentest.GenericWaitTestCase):
-# 
+#
 #     def wait(self, timeout):
 #         pool = ThreadPool(1)
 #         g = pool.spawn(gevent.sleep, 10)
@@ -252,8 +253,19 @@ class TestMaxsize(TestCase):
         gevent.sleep(0.01)
         self.assertEqual(done, [])
         self.pool.maxsize = 1
+        gevent.sleep(0.01)
+        self.assertEqual(done, [1, 2])
+
+    def test_setzero(self):
+        pool = self.pool = ThreadPool(3)
+        pool.spawn(sleep, 0.001)
+        pool.spawn(sleep, 0.002)
+        pool.spawn(sleep, 0.003)
         gevent.sleep(0.001)
-        self.assertEqual(done, [2, 1])
+        self.assertEqual(pool.size, 3)
+        pool.maxsize = 0
+        gevent.sleep(0.01)
+        self.assertEqual(pool.size, 0)
 
 
 if __name__ == '__main__':
