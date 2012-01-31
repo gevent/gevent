@@ -35,6 +35,8 @@ class StreamServer(BaseServer):
     # the default backlog to use if none was provided in __init__
     backlog = 256
 
+    reuse_addr = 1
+
     def __init__(self, listener, handle=None, backlog=None, spawn='default', **ssl_args):
         BaseServer.__init__(self, listener, handle=handle, spawn=spawn)
         try:
@@ -66,13 +68,18 @@ class StreamServer(BaseServer):
 
     def init_socket(self):
         if not hasattr(self, 'socket'):
-            self.socket = _tcp_listener(self.address, backlog=self.backlog,
-                                        reuse_addr=self.reuse_addr, family=self.family)
+            self.socket = self.get_listener(self.address, self.backlog, self.family)
             self.address = self.socket.getsockname()
         if self.ssl_args:
             self._handle = self.wrap_socket_and_handle
         else:
             self._handle = self.handle
+
+    @classmethod
+    def get_listener(self, address, backlog=None, family=None):
+        if backlog is None:
+            backlog = self.backlog
+        return _tcp_listener(address, backlog=backlog, reuse_addr=self.reuse_addr, family=family)
 
     def do_read(self):
         try:
@@ -92,6 +99,8 @@ class StreamServer(BaseServer):
 class DatagramServer(BaseServer):
     """A UDP server"""
 
+    reuse_addr = 1
+
     def __init__(self, *args, **kwargs):
         BaseServer.__init__(self, *args, **kwargs)
         from gevent.coros import Semaphore
@@ -99,13 +108,17 @@ class DatagramServer(BaseServer):
 
     def init_socket(self):
         if not hasattr(self, 'socket'):
-            self.socket = _udp_socket(self.address, reuse_addr=self.reuse_addr, family=self.family)
+            self.socket = self.get_listener(self.address, self.family)
             self.address = self.socket.getsockname()
         self._socket = self.socket
         try:
             self._socket = self._socket._sock
         except AttributeError:
             pass
+
+    @classmethod
+    def get_listener(self, address, family=None):
+        return _udp_socket(address, reuse_addr=self.reuse_addr, family=family)
 
     def do_read(self):
         try:

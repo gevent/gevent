@@ -12,9 +12,6 @@ import errno
 __all__ = ['BaseServer']
 
 
-DEFAULT_MAX_ACCEPT = 100
-
-
 class BaseServer(object):
     """An abstract base class that implements some common functionality for the servers in gevent.
 
@@ -46,11 +43,9 @@ class BaseServer(object):
     # Default is 100. Note, that in case of multiple working processes on the same
     # listening value, it should be set to a lower value. (pywsgi.WSGIServer sets it
     # to 1 when environ["wsgi.multiprocess"] is true)
-    max_accept = None
+    max_accept = 100
 
     _spawn = Greenlet.spawn
-
-    reuse_addr = 1
 
     # the default timeout that we wait for the client connections to close in stop()
     stop_timeout = 1
@@ -69,8 +64,6 @@ class BaseServer(object):
             self.set_handle(handle)
             self.delay = self.min_delay
             self.loop = gevent.get_hub().loop
-            if self.max_accept is None:
-                self.max_accept = DEFAULT_MAX_ACCEPT
             if self.max_accept < 1:
                 raise ValueError('max_accept must be positive int: %r' % (self.max_accept, ))
         except:
