@@ -46,7 +46,7 @@ class Test(greentest.TestCase):
                 assert ex is error, (ex, error)
 
     def test2(self):
-        timer = self._hub.loop.timer(0)
+        timer = gevent.get_hub().loop.timer(0)
         timer.start(hello2)
         gevent.sleep(0.1)
         assert sys.exc_info() == (None, None, None), sys.exc_info()
