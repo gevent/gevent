@@ -186,6 +186,16 @@ class ThreadPool(object):
             if need_decrease:
                 self._decrease_size()
 
+    def apply_e(self, expected_errors, function, args=None, kwargs=None):
+        if args is None:
+            args = ()
+        if kwargs is None:
+            kwargs = {}
+        success, result = self.spawn(wrap_errors, expected_errors, function, args, kwargs).get()
+        if success:
+            return result
+        raise result
+
     def apply(self, func, args=None, kwds=None):
         """Equivalent of the apply() builtin function. It blocks till the result is ready."""
         if args is None:
@@ -281,3 +291,10 @@ class ThreadResult(object):
     # link protocol:
     def successful(self):
         return True
+
+
+def wrap_errors(errors, function, args, kwargs):
+    try:
+        return True, function(*args, **kwargs)
+    except errors:
+        return False, sys.exc_info()[1]
