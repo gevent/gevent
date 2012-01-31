@@ -29,6 +29,7 @@ import os
 from os.path import basename, splitext
 import gevent
 from patched_tests_setup import get_switch_expected
+from gevent.hub import _get_hub
 from functools import wraps
 
 VERBOSE = sys.argv.count('-v') > 1
@@ -63,7 +64,7 @@ def wrap_refcount(method):
         deltas = []
         d = None
         try:
-            for _ in xrange(4):
+            while True:
                 d = gettotalrefcount()
                 method(self, *args, **kwargs)
                 if hasattr(self, 'cleanup'):
@@ -72,13 +73,12 @@ def wrap_refcount(method):
                     sys.modules['urlparse'].clear_cache()
                 d = gettotalrefcount() - d
                 deltas.append(d)
-                if len(deltas) >= 2 and deltas[-1] <= 0 and deltas[-2] <= 0:
+                if 2 <= len(deltas) <= 3 and deltas[-2:] == [0, 0]:
                     break
-                elif len(deltas) >= 3 and deltas[-3:] == [-1, 1, -1]:
-                    # as seen on test__server.py: test_assertion_in_blocking_func (__main__.TestNoneSpawn)
+                if 3 <= len(deltas) and deltas[-3:] == [0, 0, 0]:
                     break
-            else:
-                raise AssertionError('refcount increased by %r' % (deltas, ))
+                if len(deltas) >= 6:
+                    raise AssertionError('refcount increased by %r' % (deltas, ))
         finally:
             gc.collect()
             gc.enable()
@@ -88,23 +88,23 @@ def wrap_refcount(method):
 def wrap_error_fatal(method):
     @wraps(method)
     def wrapped(self, *args, **kwargs):
-        SYSTEM_ERROR = self._hub.SYSTEM_ERROR
-        self._hub.SYSTEM_ERROR = object
+        SYSTEM_ERROR = gevent.get_hub().SYSTEM_ERROR
+        gevent.get_hub().SYSTEM_ERROR = object
         try:
             return method(self, *args, **kwargs)
         finally:
-            self._hub.SYSTEM_ERROR = SYSTEM_ERROR
+            gevent.get_hub().SYSTEM_ERROR = SYSTEM_ERROR
     return wrapped
 
 
 def wrap_restore_handle_error(method):
     @wraps(method)
     def wrapped(self, *args, **kwargs):
-        old = self._hub.handle_error
+        old = gevent.get_hub().handle_error
         try:
             return method(self, *args, **kwargs)
         finally:
-            self._hub.handle_error = old
+            gevent.get_hub().handle_error = old
         if self.peek_error()[0] is not None:
             gevent.getcurrent().throw(*self.peek_error()[1:])
     return wrapped
@@ -132,6 +132,8 @@ class TestCaseMetaClass(type):
         timeout = classDict.get('__timeout__', 'NONE')
         if timeout == 'NONE':
             timeout = getattr(bases[0], '__timeout__', None)
+            if gettotalrefcount is not None and timeout is not None:
+                timeout *= 6
         check_totalrefcount = _get_class_attr(classDict, bases, 'check_totalrefcount', True)
         error_fatal = _get_class_attr(classDict, bases, 'error_fatal', True)
         for key, value in classDict.items():
@@ -156,12 +158,6 @@ class TestCase(BaseTestCase):
     __timeout__ = 1
     switch_expected = 'default'
     error_fatal = True
-    _switch_count = None
-
-    def __init__(self, *args, **kwargs):
-        BaseTestCase.__init__(self, *args, **kwargs)
-        self._hub = gevent.hub.get_hub()
-        self._switch_count = None
 
     def run(self, *args, **kwargs):
         if self.switch_expected == 'default':
@@ -169,14 +165,12 @@ class TestCase(BaseTestCase):
         return BaseTestCase.run(self, *args, **kwargs)
 
     def setUp(self):
-        if hasattr(self._hub, 'switch_count'):
-            self._switch_count = self._hub.switch_count
+        self.initial_switch_count = getattr(_get_hub(), 'switch_count', 0)
 
     def tearDown(self):
         if hasattr(self, 'cleanup'):
             self.cleanup()
         if self.switch_count is not None:
-            msg = None
             if self.switch_count < 0:
                 raise AssertionError('hub.switch_count decreased???')
             if self.switch_expected is None:
@@ -192,8 +186,13 @@ class TestCase(BaseTestCase):
 
     @property
     def switch_count(self):
-        if self._switch_count is not None and hasattr(self._hub, 'switch_count'):
-            return self._hub.switch_count - self._switch_count
+        if self.switch_expected is None:
+            return
+        initial = getattr(self, 'initial_switch_count', None)
+        if initial is None:
+            raise AssertionError('Cannot check switch_count (setUp() was not called)')
+        current = getattr(_get_hub(), 'switch_count', 0)
+        return current - initial
 
     @property
     def testname(self):
@@ -205,16 +204,7 @@ class TestCase(BaseTestCase):
 
     @property
     def modulename(self):
-        test_method = getattr(self, self.testname)
-        try:
-            func = test_method.__func__
-        except AttributeError:
-            func = test_method.im_func
-
-        try:
-            return func.func_code.co_filename
-        except AttributeError:
-            return func.__code__.co_filename
+        return os.path.basename(sys.modules[self.__class__.__module__].__file__).rsplit('.', 1)[0]
 
     @property
     def fullname(self):
@@ -225,13 +215,13 @@ class TestCase(BaseTestCase):
 
     def expect_one_error(self):
         assert self._error == self._none, self._error
-        self._old_handle_error = self._hub.handle_error
-        self._hub.handle_error = self._store_error
+        self._old_handle_error = gevent.get_hub().handle_error
+        gevent.get_hub().handle_error = self._store_error
 
     def _store_error(self, where, type, value, tb):
         del tb
         if self._error != self._none:
-            self._hub.parent.throw(type, value)
+            gevent.get_hub().parent.throw(type, value)
         else:
             self._error = (where, type, value)
 

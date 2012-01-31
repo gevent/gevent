@@ -3,35 +3,66 @@ import re
 
 # By default, test cases are expected to switch and emit warnings if there was none
 # If a test is found in this list, it's expected not to switch.
-tests = '''test_select.SelectTestCase.test_error_conditions
-test_ftplib.TestFTPClass.test_all_errors
-test_ftplib.TestFTPClass.test_getwelcome
-test_ftplib.TestFTPClass.test_sanitize
-test_ftplib.TestFTPClass.test_set_pasv
-test_ftplib.TestIPv6Environment.test_af
-test_socket.TestExceptions.testExceptionTree
-test_socket.Urllib2FileobjectTest.testClose
-test_socket.TestLinuxAbstractNamespace.testLinuxAbstractNamespace
-test_socket.TestLinuxAbstractNamespace.testMaxName
-test_socket.TestLinuxAbstractNamespace.testNameOverflow
-test_socket.GeneralModuleTests.*
+no_switch_tests = '''test_patched_select.SelectTestCase.test_error_conditions
+test_patched_ftplib.TestFTPClass.test_all_errors
+test_patched_ftplib.TestFTPClass.test_getwelcome
+test_patched_ftplib.TestFTPClass.test_sanitize
+test_patched_ftplib.TestFTPClass.test_set_pasv
+test_patched_ftplib.TestIPv6Environment.test_af
+test_patched_socket.TestExceptions.testExceptionTree
+test_patched_socket.Urllib2FileobjectTest.testClose
+test_patched_socket.TestLinuxAbstractNamespace.testLinuxAbstractNamespace
+test_patched_socket.TestLinuxAbstractNamespace.testMaxName
+test_patched_socket.TestLinuxAbstractNamespace.testNameOverflow
+test_patched_socket.FileObjectInterruptedTestCase.*
+test_patched_urllib.*
+test_patched_asyncore.HelperFunctionTests.*
+test_patched_httplib.BasicTest.*
+test_patched_httplib.HTTPSTimeoutTest.test_attributes
+test_patched_httplib.HeaderTests.*
+test_patched_httplib.OfflineTest.*
+test_patched_select.SelectTestCase.test_error_conditions
+test_patched_smtplib.NonConnectingTests.*
+test_patched_urllib2net.OtherNetworkTests.*
+test_patched_wsgiref.*
 '''
 
-tests = [x.strip().replace('\.', '\\.').replace('*', '.*?') for x in  tests.split('\n') if x.strip()]
-tests = re.compile('^%s$' % '|'.join(tests))
+ignore_switch_tests = '''
+test_patched_socket.GeneralModuleTests.*
+test_patched_httpservers.BaseHTTPRequestHandlerTestCase.*
+test_patched_queue.*
+test_patched_signal.SiginterruptTest.*
+test_patched_urllib2.*
+test_patched_ssl.*
+test_patched_signal.BasicSignalTests.*
+test_patched_threading_local.*
+'''
+
+
+def make_re(tests):
+    tests = [x.strip().replace('\.', '\\.').replace('*', '.*?') for x in  tests.split('\n') if x.strip()]
+    tests = re.compile('^%s$' % '|'.join(tests))
+    return tests
+
+
+no_switch_tests = make_re(no_switch_tests)
+ignore_switch_tests = make_re(ignore_switch_tests)
 
 
 def get_switch_expected(fullname):
     """
-    >>> get_switch_expected('test_select.SelectTestCase.test_error_conditions')
+    >>> get_switch_expected('test_patched_select.SelectTestCase.test_error_conditions')
     False
-    >>> get_switch_expected('test_socket.GeneralModuleTests.testCrucialConstants')
+    >>> get_switch_expected('test_patched_socket.GeneralModuleTests.testCrucialConstants')
     False
-    >>> get_switch_expected('test_socket.SomeOtherTest.testHello')
+    >>> get_switch_expected('test_patched_socket.SomeOtherTest.testHello')
     True
+    >>> get_switch_expected("test_patched_httplib.BasicTest.test_bad_status_repr")
+    False
     """
-    if tests.match(fullname) is not None:
-        print (fullname)
+    if ignore_switch_tests.match(fullname) is not None:
+        return None
+    if no_switch_tests.match(fullname) is not None:
         return False
     return True
 
@@ -44,7 +75,7 @@ disabled_tests = \
     , 'test_urllib2net.TimeoutTest.test_ftp_timeout'
     , 'test_urllib2net.TimeoutTest.test_http_no_timeout'
     , 'test_urllib2net.TimeoutTest.test_http_timeout'
-    # access _sock.gettimeout() which is always in non-blocking mode
+    # accesses _sock.gettimeout() which is always in non-blocking mode
 
     , 'test_socket.UDPTimeoutTest.testUDPTimeout'
     # has a bug which makes it fail with error: (107, 'Transport endpoint is not connected')
@@ -53,7 +84,7 @@ disabled_tests = \
     , 'test_socket.GeneralModuleTests.testRefCountGetNameInfo'
     # fails with "socket.getnameinfo loses a reference" while the reference is only "lost"
     # because it is referenced by the traceback - any Python function would lose a reference like that.
-    # the original getnameinfo does not lose it because it's in C.
+    # the original getnameinfo does not "lose" it because it's in C.
 
     , 'test_socket.NetworkConnectionNoServer.test_create_connection_timeout'
     # replaces socket.socket with MockSocket and then calls create_connection.
