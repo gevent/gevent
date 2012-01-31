@@ -236,13 +236,12 @@ class Test_portforwarder(BaseTestServer):
         try:
             conn = socket.create_connection(('127.0.0.5', 9999))
             conn.sendall('msg1')
-            gevent.sleep(0.01)
+            gevent.sleep(0.1)
             self.assertEqual(log, ['msg1'])
             conn.sendall('msg2')
             conn.close()
         finally:
             server.close()
-        gevent.sleep(0.01)
 
 
 tests = set()
