@@ -96,6 +96,7 @@ _flags = [(libev.EVBACKEND_PORT, 'port'),
           (libev.EVBACKEND_EPOLL, 'epoll'),
           (libev.EVBACKEND_POLL, 'poll'),
           (libev.EVBACKEND_SELECT, 'select'),
+          (libev.EVFLAG_NOENV, 'noenv'),
           (libev.EVFLAG_FORKCHECK, 'forkcheck'),
           (libev.EVFLAG_SIGNALFD, 'signalfd'),
           (libev.EVFLAG_NOSIGMASK, 'nosigmask')]
