@@ -233,13 +233,25 @@ def _import(path):
         return path
     if '.' not in path:
         raise ImportError("Cannot import %r (required format: module.class)" % path)
-    module, item = path.rsplit('.', 1)
-    x = __import__(module)
-    for attr in path.split('.')[1:]:
-        x = getattr(x, attr, _NONE)
-        if x is _NONE:
-            raise ImportError('Cannot import name %r from %r' % (attr, x))
-    return x
+    if '/' in path:
+        package_path, path = path.rsplit('/', 1)
+        sys.path = [package_path] + sys.path
+    else:
+        package_path = None
+    try:
+        module, item = path.rsplit('.', 1)
+        x = __import__(module)
+        for attr in path.split('.')[1:]:
+            oldx = x
+            x = getattr(x, attr, _NONE)
+            if x is _NONE:
+                raise ImportError('Cannot import %r from %r' % (attr, oldx))
+        return x
+    finally:
+        try:
+            sys.path.remove(package_path)
+        except ValueError:
+            pass
 
 
 def config(default, envvar):
