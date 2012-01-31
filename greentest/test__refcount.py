@@ -31,10 +31,9 @@ class Socket(socket):
 import _socket
 _socket.socket = Socket
 
+import greentest
 from gevent import monkey; monkey.patch_all()
 
-#import sys
-import greentest
 from pprint import pformat
 from thread import start_new_thread
 from time import sleep
