@@ -39,7 +39,7 @@ class PoolBasicTests(TestCase):
         result = pool.apply(lambda a: ('foo', a), (1, ))
         self.assertEqual(result, ('foo', 1))
 
-    def test_init_valuerror(self):
+    def test_init_valueerror(self):
         self.switch_expected = False
         self.assertRaises(ValueError, ThreadPool, -1)
         self.pool = None
