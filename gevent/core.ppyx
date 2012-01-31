@@ -152,7 +152,9 @@ cpdef unsigned int _flags_to_int(object flags) except? -1:
         if isinstance(flags, basestring):
             flags = flags.split(',')
         for value in flags:
-            result |= _flags_str2int[value.strip().lower()]
+            value = value.strip().lower()
+            if value:
+                result |= _flags_str2int[value]
     except KeyError, ex:
         raise ValueError('Invalid backend or flag: %s\nPossible values: %s' % (ex, ', '.join(sorted(_flags_str2int.keys()))))
     return result
