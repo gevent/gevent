@@ -273,7 +273,7 @@ class Hub(greenlet):
                       'gevent.socket.BlockingResolver']
     resolver_class = resolver_config(resolver_class, 'GEVENT_RESOLVER')
     threadpool_class = config('gevent.threadpool.ThreadPool', 'GEVENT_THREADPOOL')
-    DEFAULT_BACKEND = config(None, 'GEVENT_BACKEND')
+    backend = config(None, 'GEVENT_BACKEND')
     format_context = 'pprint.pformat'
     threadpool_size = 10
 
@@ -288,7 +288,7 @@ class Hub(greenlet):
                 default = get_ident() == MAIN_THREAD
             loop_class = _import(self.loop_class)
             if loop is None:
-                loop = self.DEFAULT_BACKEND
+                loop = self.backend
             self.loop = loop_class(flags=loop, default=default)
         self._resolver = None
         self._threadpool = None
