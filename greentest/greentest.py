@@ -165,7 +165,7 @@ class TestCase(BaseTestCase):
         return BaseTestCase.run(self, *args, **kwargs)
 
     def setUp(self):
-        self.initial_switch_count = getattr(_get_hub(), 'switch_count', 0)
+        self.initial_switch_count = getattr(_get_hub(), 'switch_count', None)
 
     def tearDown(self):
         if hasattr(self, 'cleanup'):
@@ -188,11 +188,12 @@ class TestCase(BaseTestCase):
     def switch_count(self):
         if self.switch_expected is None:
             return
-        initial = getattr(self, 'initial_switch_count', None)
-        if initial is None:
+        if not hasattr(self, 'initial_switch_count'):
             raise AssertionError('Cannot check switch_count (setUp() was not called)')
+        if self.initial_switch_count is None:
+            return
         current = getattr(_get_hub(), 'switch_count', 0)
-        return current - initial
+        return current - self.initial_switch_count
 
     @property
     def testname(self):
