@@ -23,7 +23,7 @@ It is possible to limit the maximum number of concurrent connections, by passing
   server = StreamServer(('127.0.0.1', 1234), handle, spawn=pool)
   server.serve_forever()
 
-The :meth:`server_forever` method calls :meth:`start` and then waits until interrupted or until the server is stopped.
+The :meth:`serve_forever` method calls :meth:`start` and then waits until interrupted or until the server is stopped.
 
 The difference between :class:`wsgi.WSGIServer <gevent.wsgi.WSGIServer>` and :class:`pywsgi.WSGIServer <gevent.pywsgi.WSGIServer>`
 is that the first one is very fast as it uses libevent's http server implementation but it shares the issues that
