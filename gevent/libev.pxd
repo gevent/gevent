@@ -10,6 +10,23 @@ cdef extern from "libev.h":
     int EV_VERSION_MAJOR
     int EV_VERSION_MINOR
 
+    int EV_USE_FLOOR
+    int EV_USE_CLOCK_SYSCALL
+    int EV_USE_REALTIME
+    int EV_USE_MONOTONIC
+    int EV_USE_NANOSLEEP
+    int EV_USE_SELECT
+    int EV_USE_POLL
+    int EV_USE_EPOLL
+    int EV_USE_KQUEUE
+    int EV_USE_PORT
+    int EV_USE_INOTIFY
+    int EV_USE_SIGNALFD
+    int EV_USE_EVENTFD
+    int EV_USE_4HEAP
+    int EV_USE_IOCP
+    int EV_SELECT_IS_WINSOCKET
+
     int EV_UNDEF
     int EV_NONE
     int EV_READ

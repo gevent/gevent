@@ -985,3 +985,16 @@ def set_exc_info(object type, object value):
         Py_INCREF(<PyObjectPtr>value)
         tstate.exc_value = <PyObjectPtr>value
     tstate.exc_traceback = NULL
+
+
+#ifdef LIBEV_EMBED
+EV_USE_FLOOR = libev.EV_USE_FLOOR
+EV_USE_CLOCK_SYSCALL = libev.EV_USE_CLOCK_SYSCALL
+EV_USE_REALTIME = libev.EV_USE_REALTIME
+EV_USE_MONOTONIC = libev.EV_USE_MONOTONIC
+EV_USE_NANOSLEEP = libev.EV_USE_NANOSLEEP
+EV_USE_INOTIFY = libev.EV_USE_INOTIFY
+EV_USE_SIGNALFD = libev.EV_USE_SIGNALFD
+EV_USE_EVENTFD = libev.EV_USE_EVENTFD
+EV_USE_4HEAP = libev.EV_USE_4HEAP
+#endif
