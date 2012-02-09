@@ -21,7 +21,7 @@
 static PyObject* _socket_error = 0;
 
 static PyObject*
-get_socket_object(PyObject** pobject, const char* name, int incref)
+get_socket_object(PyObject** pobject, const char* name)
 {
     if (!*pobject) {
         PyObject* _socket;
@@ -40,8 +40,6 @@ get_socket_object(PyObject** pobject, const char* name, int incref)
             *pobject = PyExc_IOError;
         }
     }
-    if (incref)
-        Py_INCREF(*pobject);
     return *pobject;
 }
 
@@ -124,7 +122,7 @@ parse_h_addr_list(struct hostent *h)
                 break;
             }
             default:
-                PyErr_SetString(get_socket_object(&_socket_error, "error", 0), "unsupported address family");
+                PyErr_SetString(get_socket_object(&_socket_error, "error"), "unsupported address family");
                 Py_DECREF(result);
                 result = NULL;
         }
