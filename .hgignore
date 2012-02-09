@@ -10,6 +10,7 @@ gevent/gevent.core.c
 gevent/gevent.core.h
 gevent/gevent.ares.c
 gevent/gevent.ares.h
+gevent/gevent._semaphore.c
 gevent/core.so
 gevent/core.cpython*.so
 gevent/core_d.so
