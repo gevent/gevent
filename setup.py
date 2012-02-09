@@ -47,7 +47,7 @@ CORE = Extension(name='gevent.core',
                  include_dirs=['libev'],
                  libraries=libraries,
                  define_macros=define_macros,
-                 depends=expand('gevent/callbacks.*', 'gevent/libev*.h', 'libev/*.*'))
+                 depends=expand('gevent/callbacks.*', 'gevent/stathelper.c', 'gevent/libev*.h', 'libev/*.*'))
 
 ARES = Extension(name='gevent.ares',
                  sources=['gevent/gevent.ares.c'],
@@ -139,7 +139,6 @@ if libev_embed:
     CORE.define_macros += [('LIBEV_EMBED', '1'),
                            ('EV_COMMON', ''),  # we don't use void* data
                            # libev watchers that we don't use currently:
-                           ('EV_STAT_ENABLE', '0'),
                            ('EV_CHECK_ENABLE', '0'),
                            ('EV_CLEANUP_ENABLE', '0'),
                            ('EV_EMBED_ENABLE', '0'),
