@@ -2,7 +2,7 @@
     static void gevent_callback_##WATCHER_LC(struct ev_loop *, void *, int);
 
 
-#define DEFINE_CALLBACKS               \
+#define DEFINE_CALLBACKS0              \
     DEFINE_CALLBACK(io, IO);           \
     DEFINE_CALLBACK(timer, Timer);     \
     DEFINE_CALLBACK(signal, Signal);   \
@@ -10,7 +10,20 @@
     DEFINE_CALLBACK(prepare, Prepare); \
     DEFINE_CALLBACK(fork, Fork);       \
     DEFINE_CALLBACK(async, Async);     \
-    DEFINE_CALLBACK(child, Child);
+    DEFINE_CALLBACK(stat, Stat);
+
+
+#if EV_CHILD_ENABLE
+
+#define DEFINE_CALLBACKS               \
+    DEFINE_CALLBACKS0                  \
+    DEFINE_CALLBACK(child, Child)
+
+#else
+
+#define DEFINE_CALLBACKS DEFINE_CALLBACKS0
+
+#endif
 
 
 DEFINE_CALLBACKS

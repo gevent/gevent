@@ -87,6 +87,14 @@ cdef extern from "libev.h":
         int rpid
         int rstatus
 
+    struct stat:
+        int st_nlink
+
+    struct ev_stat:
+        stat attr
+        stat prev
+        double interval
+
     int ev_version_major()
     int ev_version_minor()
 
@@ -137,6 +145,10 @@ cdef extern from "libev.h":
     void ev_child_init(ev_child*, void* callback, int, int)
     void ev_child_start(ev_loop*, ev_child*)
     void ev_child_stop(ev_loop*, ev_child*)
+
+    void ev_stat_init(ev_stat*, void* callback, char*, double)
+    void ev_stat_start(ev_loop*, ev_stat*)
+    void ev_stat_stop(ev_loop*, ev_stat*)
 
     ev_loop* ev_default_loop(unsigned int flags)
     ev_loop* ev_loop_new(unsigned int flags)

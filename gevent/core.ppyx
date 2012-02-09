@@ -27,6 +27,7 @@ cdef extern from "callbacks.h":
     void gevent_callback_fork(libev.ev_loop, void*, int)
     void gevent_callback_async(libev.ev_loop, void*, int)
     void gevent_callback_child(libev.ev_loop, void*, int)
+    void gevent_callback_stat(libev.ev_loop, void*, int)
     void gevent_signal_check(libev.ev_loop, void*, int)
     void gevent_periodic_signal_check(libev.ev_loop, void*, int)
 
@@ -35,6 +36,9 @@ cdef extern from *:
     int ioctlsocket(int, int, unsigned long*)
     int FIONREAD
     int errno
+
+cdef extern from "stathelper.c":
+    object _pystat_fromstructstat(void*)
 
 
 UNDEF = libev.EV_UNDEF
@@ -433,6 +437,9 @@ cdef public class loop [object PyGeventLoopObject, type PyGeventLoop_Type]:
         return child(self, pid, trace, ref)
 
 #endif
+
+    def stat(self, bytes path, float interval=0.0, ref=True):
+        return stat(self, path, interval, ref)
 
     def callback(self):
         return callback(self)
@@ -879,6 +886,40 @@ cdef public class child(watcher) [object PyGeventChildObject, type PyGeventChild
             self._watcher.rstatus = value
 
 #endif
+
+
+cdef public class stat(watcher) [object PyGeventStatObject, type PyGeventStat_Type]:
+
+    WATCHER(stat)
+    cdef readonly bytes path
+
+    def __init__(self, loop loop, bytes path, float interval=0.0, ref=True):
+        self.path = path
+        libev.ev_stat_init(&self._watcher, <void *>gevent_callback_stat, <char*>self.path, interval)
+        self.loop = loop
+        if ref:
+            self._flags = 0
+        else:
+            self._flags = 4
+
+    property attr:
+
+        def __get__(self):
+            if not self._watcher.attr.st_nlink:
+                return
+            return _pystat_fromstructstat(&self._watcher.attr)
+
+    property prev:
+
+       def __get__(self):
+            if not self._watcher.prev.st_nlink:
+                return
+            return _pystat_fromstructstat(&self._watcher.prev)
+
+    property interval:
+
+        def __get__(self):
+            return self._watcher.interval
 
 
 cdef public class callback(watcher) [object PyGeventCallbackObject, type PyGeventCallback_Type]:
