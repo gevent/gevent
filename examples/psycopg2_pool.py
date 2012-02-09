@@ -109,6 +109,7 @@ class DatabaseConnectionPool(object):
     def execute(self, *args, **kwargs):
         with self.cursor() as cursor:
             cursor.execute(*args, **kwargs)
+            return cursor.rowcount
 
     def fetchone(self, *args, **kwargs):
         with self.cursor() as cursor:
