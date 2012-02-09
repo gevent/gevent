@@ -854,6 +854,9 @@ cdef public class child(watcher) [object PyGeventChildObject, type PyGeventChild
         else:
             self._flags = 4
 
+    def _format(self):
+        return ' pid=%r rstatus=%r' % (self.pid, self.rstatus)
+
     property pid:
 
         def __get__(self):
