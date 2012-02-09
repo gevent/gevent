@@ -48,6 +48,7 @@ CORE = Extension(name='gevent.core',
                  libraries=libraries,
                  define_macros=define_macros,
                  depends=expand('gevent/callbacks.*', 'gevent/stathelper.c', 'gevent/libev*.h', 'libev/*.*'))
+# QQQ libev can also use -lm, however it seems to be added implicitly
 
 ARES = Extension(name='gevent.ares',
                  sources=['gevent/gevent.ares.c'],
