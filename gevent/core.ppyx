@@ -398,16 +398,6 @@ cdef public class loop [object PyGeventLoopObject, type PyGeventLoop_Type]:
                     return value
             return backend
 
-    property origflags:
-
-        def __get__(self):
-            return _flags_to_list(self._ptr.origflags)
-
-    property origflags_int:
-
-        def __get__(self):
-            return self._ptr.origflags
-
     def io(self, int fd, int events, ref=True):
         return io(self, fd, events, ref)
 
@@ -484,6 +474,16 @@ cdef public class loop [object PyGeventLoopObject, type PyGeventLoop_Type]:
 #if EV_USE_SIGNALFD
     LOOP_PROPERTY(sigfd)
 #endif
+
+    property origflags:
+
+        def __get__(self):
+            return _flags_to_list(self._ptr.origflags)
+
+    property origflags_int:
+
+        def __get__(self):
+            return self._ptr.origflags
 
 #endif
 
