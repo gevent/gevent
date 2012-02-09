@@ -76,7 +76,7 @@ def spawn_raw(function, *args, **kwargs):
     return g
 
 
-def sleep(seconds=0):
+def sleep(seconds=0, ref=True):
     """Put the current greenlet to sleep for at least *seconds*.
 
     *seconds* may be specified as an integer, or a float if fractional seconds
@@ -89,10 +89,10 @@ def sleep(seconds=0):
     hub = get_hub()
     loop = hub.loop
     if seconds <= 0:
-        watcher = loop.idle()
+        watcher = loop.idle(ref=ref)
         watcher.priority = loop.MAXPRI
     else:
-        watcher = loop.timer(seconds)
+        watcher = loop.timer(seconds, ref=ref)
     hub.wait(watcher)
 
 
