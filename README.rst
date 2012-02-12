@@ -30,7 +30,7 @@ Post feedback and issues on the `bug tracker`_, `mailing list`_, blog_ and `twit
 
 
 .. _gevent: http://www.gevent.org
-.. _greenlet: http://codespeak.net/py/0.9.2/greenlet.html
+.. _greenlet: http://pypi.python.org/pypi/greenlet
 .. _libev: http://libev.schmorp.de/
 .. _c-ares: http://c-ares.haxx.se/
 .. _inspired by eventlet: http://blog.gevent.org/2010/02/27/why-gevent/
