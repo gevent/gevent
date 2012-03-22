@@ -202,6 +202,11 @@ class TestJoinEmpty(TestCase):
         self.pool = ThreadPool(1)
         self.pool.join()
 
+    def cleanup(self):
+        # needed here because currently Greenlet.kill() switches out even if greenlet not started yet
+        # XXX fix Greenlet.kill
+        pass
+
 
 class TestSpawn(TestCase):
     switch_expected = True
