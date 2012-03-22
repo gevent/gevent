@@ -116,6 +116,21 @@ class DatabaseConnectionPool(object):
             cursor.execute(*args, **kwargs)
             return cursor.fetchone()
 
+    def fetchall(self, *args, **kwargs):
+        with self.cursor() as cursor:
+            cursor.execute(*args, **kwargs)
+            return cursor.fetchall()
+
+    def fetchiter(self, *args, **kwargs):
+        with self.cursor() as cursor:
+            cursor.execute(*args, **kwargs)
+            while True:
+                items = cursor.fetchmany()
+                if not items:
+                    break
+                for item in items:
+                    yield item
+
 
 class PostgresConnectionPool(DatabaseConnectionPool):
 
