@@ -21,8 +21,9 @@ ext_errors = (CCompilerError, DistutilsExecError, DistutilsPlatformError, IOErro
 __version__ = re.search("__version__\s*=\s*'(.*)'", open('gevent/__init__.py').read(), re.M).group(1)
 assert __version__
 
-libev_embed = os.path.exists('libev')
-ares_embed = os.path.exists('c-ares')
+embed = os.environ.get("gevent_embed", "yes").lower().strip() not in ("0", "no", "off")
+libev_embed = embed and os.path.exists('libev')
+ares_embed = embed and os.path.exists('c-ares')
 define_macros = []
 libraries = []
 libev_configure_command = ["/bin/sh", abspath('libev/configure'), '> configure-output.txt']
