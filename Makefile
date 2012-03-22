@@ -22,5 +22,6 @@ gevent/gevent._semaphore.c: gevent/_semaphore.pyx
 clean:
 	rm -f gevent.core.c gevent.core.h core.pyx gevent/gevent.core.c gevent/gevent.core.h gevent/core.pyx
 	rm -f gevent.ares.c gevent.ares.h gevent/gevent.ares.c gevent/gevent.ares.h
+	rm -f gevent._semaphore.c gevent._semaphore.h gevent/gevent._semaphore.c gevent/gevent._semaphore.h
 
 .PHONY: clean all
