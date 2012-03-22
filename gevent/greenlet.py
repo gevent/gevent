@@ -224,6 +224,8 @@ class Greenlet(greenlet):
 
         `Changed in version 0.13.0:` *block* is now ``True`` by default.
         """
+        # XXX this function should not switch out if greenlet is not started but it does
+        # XXX fix it (will have to override 'dead' property of greenlet.greenlet)
         if self._start_event is None:
             self._start_event = _dummy_event
         else:
