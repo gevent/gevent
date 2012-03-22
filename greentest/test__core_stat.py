@@ -1,3 +1,4 @@
+from __future__ import with_statement
 import gevent
 import gevent.core
 import os
