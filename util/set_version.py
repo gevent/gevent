@@ -102,12 +102,28 @@ def modify_version(filename, new_version):
     return original_data, data
 
 
+def unlink(path):
+    try:
+        os.unlink(path)
+    except OSError, ex:
+        if ex.errno == 2:  # No such file or directory
+            return
+        raise
+
+
 def write(filename, data):
-    f = open(filename, 'w')
-    f.write(data)
-    f.flush()
-    os.fsync(f.fileno())
-    f.close()
+    # intentionally breaking links here so that util/make_dist.py can use "cp --link"
+    tmpname = filename + '.tmp.%s' % os.getpid()
+    f = open(tmpname, 'w')
+    try:
+        f.write(data)
+        f.flush()
+        os.fsync(f.fileno())
+        f.close()
+        os.rename(tmpname, filename)
+    except:
+        unlink(tmpname)
+        raise
 
 
 def main():
