@@ -173,7 +173,7 @@ class ThreadPool(object):
                         exc_info = getattr(sys, 'exc_info', None)
                         if exc_info is None:
                             return
-                        result.handle_error(func, exc_info())
+                        result.handle_error((self, func), exc_info())
                     else:
                         if sys is None:
                             return
