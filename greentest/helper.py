@@ -47,13 +47,13 @@ def prepare_stdlib_test(filename):
     patch_all(timeout=20)
     import test
     try:
-        from test import test_support
-    except ImportError:
-        try:
+        if sys.version_info[0] >= 3:
             from test import support as test_support
-        except ImportError:
-            sys.stderr.write('test.__file__ = %s\n' % test.__file__)
-            raise
+        else:
+            from test import test_support
+    except ImportError:
+        sys.stderr.write('test.__file__ = %s\n' % test.__file__)
+        raise
     test_support.use_resources = ContainsAll()
 
     name = os.path.splitext(os.path.basename(filename))[0].replace('_patched', '')
