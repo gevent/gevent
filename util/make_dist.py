@@ -16,6 +16,7 @@ import sys
 import os
 import glob
 import optparse
+from os.path import exists, join, dirname, abspath, basename
 
 
 TMPDIR = '/tmp/gevent-make-dist'
@@ -45,8 +46,8 @@ def iter_status(command):
 
 
 def main():
-    assert os.path.exists('gevent/__init__.py'), 'Where am I?'
-    basedir = os.path.abspath(os.getcwd())
+    assert exists('gevent/__init__.py'), 'Where am I?'
+    basedir = abspath(os.getcwd())
 
     parser = optparse.OptionParser()
     parser.add_option('--fast', action='store_true', help='Rather than cloning the repo, hard link the files in it')
@@ -104,12 +105,41 @@ def main():
 
     dist_filename = glob.glob('dist/gevent-*.tar.gz')
     assert len(dist_filename) == 1, dist_filename
-    dist_filename = os.path.abspath(dist_filename[0])
+    dist_filename = abspath(dist_filename[0])
 
-    website_dist_dir = os.path.join(os.path.dirname(basedir), 'gevent-website', 'dist')
-    if os.path.exists(website_dist_dir):
+    website_dist_dir = join(dirname(basedir), 'gevent-website', 'dist')
+    if exists(website_dist_dir):
         system('cp %s %s' % (dist_filename, website_dist_dir))
-    system('ln -f %s %s/' % (dist_filename, TMPDIR))
+    link(dist_filename, join(TMPDIR, basename(dist_filename)))
+    dist_directory = join(basedir, 'dist')
+    mkdir(dist_directory)
+    link(dist_filename, join(dist_directory, basename(dist_filename)))
+
+
+def link(source, dest):
+    assert source != dest, source
+    unlink(dest)
+    os.link(source, dest)
+
+
+def unlink(path):
+    try:
+        os.unlink(path)
+    except OSError, ex:
+        if ex.errno == 2:  # No such file or directory
+            return False
+        raise
+    return True
+
+
+def mkdir(path):
+    try:
+        os.mkdir(path)
+    except OSError, ex:
+        if ex.errno == 17:  # File exists
+            return False
+        raise
+    return True
 
 
 if __name__ == '__main__':
