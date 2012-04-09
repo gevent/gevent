@@ -1,3 +1,4 @@
+import sys
 from gevent.hub import PY3
 
 if PY3:
