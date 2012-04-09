@@ -103,7 +103,7 @@ class DatagramServer(BaseServer):
 
     def __init__(self, *args, **kwargs):
         BaseServer.__init__(self, *args, **kwargs)
-        from gevent.coros import Semaphore
+        from gevent.lock import Semaphore
         self._writelock = Semaphore()
 
     def init_socket(self):

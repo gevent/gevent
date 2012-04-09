@@ -1,6 +1,6 @@
 import greentest
 import gevent
-from gevent.coros import Semaphore
+from gevent.lock import Semaphore
 
 
 class TestTimeoutAcquire(greentest.TestCase):

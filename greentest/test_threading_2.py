@@ -3,7 +3,7 @@ from __future__ import with_statement
 
 setup_ = '''from gevent import monkey; monkey.patch_all()
 from gevent.event import Event
-from gevent.coros import RLock, Semaphore, BoundedSemaphore
+from gevent.lock import RLock, Semaphore, BoundedSemaphore
 from gevent.thread import allocate_lock as Lock
 import threading
 threading.Event = Event

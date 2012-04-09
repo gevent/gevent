@@ -16,7 +16,7 @@ from gevent.hub import GreenletExit, getcurrent, kill as _kill
 from gevent.greenlet import joinall, Greenlet
 from gevent.timeout import Timeout
 from gevent.event import Event
-from gevent.coros import Semaphore, DummySemaphore
+from gevent.lock import Semaphore, DummySemaphore
 from gevent import six
 
 __all__ = ['Group', 'Pool']

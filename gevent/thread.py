@@ -25,7 +25,7 @@ __thread__ = __import__(__target__)
 error = __thread__.error
 from gevent.hub import getcurrent, GreenletExit
 from gevent.greenlet import Greenlet
-from gevent.coros import Semaphore as LockType
+from gevent.lock import Semaphore as LockType
 from gevent.local import local as _local
 
 

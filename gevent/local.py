@@ -129,7 +129,7 @@ affects what we see:
 from weakref import WeakKeyDictionary
 from copy import copy
 from gevent.hub import getcurrent
-from gevent.coros import RLock
+from gevent.lock import RLock
 
 __all__ = ["local"]
 
