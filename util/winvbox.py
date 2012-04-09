@@ -92,9 +92,6 @@ def main():
         this_script = this_script[:-1]
     this_script_remote = '%s/%s' % (directory, os.path.basename(this_script))
 
-    unlink(WINVBOX_LOG)
-
-    failed = False
     machine = VirtualBox(options.machine, options.username, options.password, this_script_remote, python)
     try:
         machine.mkdir(directory)
@@ -103,21 +100,9 @@ def main():
         machine.copyto(this_script, this_script_remote)
 
         function = globals().get('command_%s' % command, command_default)
-        try:
-            function(command, command_args, machine, options)
-        except SystemExit, ex:
-            sys.stderr.write(str(ex) + '\n')
-            failed = True
-        finally:
-            machine.copyfrom(directory + '/' + WINVBOX_LOG, WINVBOX_LOG)
-
+        function(command, command_args, machine, options)
     finally:
         machine.cleanup()
-
-    show(WINVBOX_LOG)
-
-    if failed:
-        sys.exit(1)
 
 
 def command_default(command, command_args, machine, options):
@@ -127,7 +112,6 @@ def command_default(command, command_args, machine, options):
 def remote_wrapper(function):
     @wraps(function)
     def wrapper(*args, **kwargs):
-        redirect_output()
         print '%s: STARTED.' % datetime.datetime.now()
         result = function(*args, **kwargs)
         print '%s: DONE.' % datetime.datetime.now()
@@ -187,13 +171,6 @@ def extract_and_build():
     print 'cd into %s' % directory
     os.chdir(directory)
     system('%s setup.py build' % sys.executable)
-
-
-def redirect_output():
-    output = open(WINVBOX_LOG, 'a', 0)
-    sys.stdout = os.fdopen(sys.stdout.fileno(), 'w', 0)
-    os.dup2(output.fileno(), sys.stdout.fileno())
-    os.dup2(output.fileno(), sys.stderr.fileno())
 
 
 def get_make_dist_option(options, command):
@@ -467,17 +444,6 @@ def vbox_execute(name, image, arguments, username=None, password=None):
         system('VBoxManage guestcontrol %s execute %s%s -- %s' % (name, image, options, arguments))
     except SystemExit, ex:
         sys.stderr.write(str(ex) + '\n')
-
-
-def show(filename):
-    if not os.path.exists(WINVBOX_LOG):
-        return
-    if os.stat(WINVBOX_LOG).st_size < 1500:
-        data = open(WINVBOX_LOG).read()
-        if data.count('\n') < 20:
-            print data.rstrip()
-            return
-    os.system('less %s' % filename)
 
 
 if __name__ == '__main__':
