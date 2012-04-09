@@ -58,8 +58,11 @@ def main():
     parser.add_option('--username')
     parser.add_option('--password', default='')
     parser.add_option('--version', default='dev')
+    parser.add_option('-v', '--verbose', action='store_true')
 
     options, args = parser.parse_args()
+
+    system.noisy = options.verbose
 
     if not args or args[0] not in ['build', 'test', 'dist', 'noop']:
         sys.exit('Expected a command: build|test|dist')
@@ -485,5 +488,4 @@ if __name__ == '__main__':
         os.chdir(os.path.dirname(__file__))
         function(args)
     else:
-        system.noisy = False
         main()
