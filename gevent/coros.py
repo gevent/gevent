@@ -9,7 +9,7 @@ from gevent.timeout import Timeout
 __all__ = ['Semaphore', 'DummySemaphore', 'BoundedSemaphore', 'RLock']
 
 
-class _Semaphore(object):
+class PySemaphore(object):
     """A semaphore manages a counter representing the number of release() calls minus the number of acquire() calls,
     plus an initial value. The acquire() method blocks if necessary until it can return without making the counter
     negative.
@@ -132,7 +132,7 @@ class _Semaphore(object):
 try:
     from gevent._semaphore import Semaphore
 except ImportError:
-    Semaphore = _Semaphore
+    Semaphore = PySemaphore
 
 
 class DummySemaphore(object):
