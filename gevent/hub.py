@@ -3,7 +3,12 @@
 import sys
 import os
 import traceback
-from gevent import core
+try:
+    from gevent._util import set_exc_info
+except ImportError, ex:
+    sys.stderr.write('Failed to import set_exc_info: %s\n' % ex)
+    def set_exc_info(*args):
+        pass
 
 
 __all__ = ['getcurrent',
@@ -359,7 +364,7 @@ class Hub(greenlet):
             exc_clear()
             return greenlet.switch(self)
         finally:
-            core.set_exc_info(exc_type, exc_value)
+            set_exc_info(exc_type, exc_value)
 
     def switch_out(self):
         raise AssertionError('Impossible to call blocking function in the event loop callback')

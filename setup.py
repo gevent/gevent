@@ -60,9 +60,12 @@ ARES = Extension(name='gevent.ares',
 ARES.optional = True
 
 
-ext_modules = [CORE, ARES]
-ext_modules.append(Extension(name="gevent._semaphore",
-                             sources=["gevent/gevent._semaphore.c"]))
+ext_modules = [CORE,
+               ARES,
+               Extension(name="gevent._semaphore",
+                         sources=["gevent/gevent._semaphore.c"]),
+               Extension(name="gevent._util",
+                         sources=["gevent/gevent._util.c"])]
 
 
 def make_universal_header(filename, *defines):
