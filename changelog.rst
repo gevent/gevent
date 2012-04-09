@@ -4,6 +4,56 @@ Changelog
 .. currentmodule:: gevent
 
 
+Release 1.0b2
+-------------
+
+Major and backward-incompatible changes:
+
+- Added support for child watchers (not available on Windows).
+  - Libev loop now reaps all children by default.
+  - If NOCHILD flag is passed to the loop, child watchers and child reaping are disabled.
+- Renamed gevent.coros to gevent.lock. The gevent.coros is still available but deprecated.
+- Added 'stat' watchers to loop.
+- The setup.py now recognizes gevent_embed env var. When set to "no", bundled c-ares and libev are ignored.
+- Added optional 'ref' argument to sleep(). When ref=false, the watchers created by sleep() do not hold gevent.run() from exiting.
+- ThreadPool now calls Hub.handle_error for exceptions in worker threads.
+- ThreadPool got new method: apply_e.
+- Added new extension module gevent._util and moved gevent.core.set_exc_info function there.
+- Added new extension module gevent._semaphore. It contains Semaphore class which is imported by gevent.lock as gevent.lock.Semaphore. Providing Semaphore in extension module ensures that trace function set with settrace will not be called during __exit__. Thanks to Ralf Schmitt.
+
+core:
+
+- Make sure the default loop cannot be destroyed more than once, thus crashing the process.
+- Make Hub.destroy() method not to destroy the default loop, unless *destroy_loop* is *True*. Non-default loops are still destroyed by default.
+- loop: Removed properties from loop: fdchangecnt, timercnt, asynccnt.
+- loop: Added propertoes: sigfd, origflags, origflags_int
+- loop: The EVFLAG_NOENV is now always passed to libev. Thus LIBEV_FLAGS env variable is no longer checked. Use GEVENT_BACKEND.
+
+Misc:
+
+- Check that the argument of link() is callable. Raise TypeError when it's not.
+- Fixed TypeError in baseserver when parsing an address.
+- Pool: made add() and discard() usable by external users. Thanks to Danil Eremeev.
+- When specifying a class to import, it is not possible to use format path/package.module.name
+- pywsgi: Made sure format_request() does not fail if 'status' attribute is not set yet
+- pywsgi: Added REMOTE_PORT variable to the environment.
+
+Examples:
+
+- portforwarder.py now shows how to use gevent.run() to implement graceful shutdown of a server.
+- psycopg2_pool.py: Changed execute() to return rowcount.
+- psycopg2_pool.py: Added fetchall() and fetchiter() methods.
+
+Developer utilities:
+
+- When building, CYTHON env variable can be used to specify Cython executable to use.
+- util/make_dist.py now recongizes --fast and --revert options. Previous --rsync option is removed.
+- Added util/winvbox.py which automates building/testing/making binaries on Windows VM.
+- Fixed typos in exception handling code in testrunner.py
+- Fixed patching unittest.runner on Python2.7. This caused the details of test cases run lost.
+
+
+
 Release 1.0b1
 -------------
 
