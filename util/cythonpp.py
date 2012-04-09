@@ -17,6 +17,7 @@ else:
 _ex = lambda: sys.exc_info()[1]
 
 
+CYTHON = os.environ.get('CYTHON') or 'cython'
 DEBUG = False
 WRITE_OUTPUT = False
 
@@ -521,7 +522,7 @@ def run_cython(filename, sourcehash, output_filename, banner, comment, cache={})
     result = cache.get(sourcehash)
     if result is not None:
         return result
-    system('cython -o %s %s' % (pipes.quote(output_filename), pipes.quote(filename)), comment)
+    system('%s -o %s %s' % (CYTHON, pipes.quote(output_filename), pipes.quote(filename)), comment)
     result = postprocess_cython_output(output_filename, banner)
     cache[sourcehash] = result
     return result
