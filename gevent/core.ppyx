@@ -32,9 +32,6 @@ cdef extern from "callbacks.h":
     void gevent_periodic_signal_check(libev.ev_loop, void*, int)
 
 cdef extern from *:
-    int FD_SETSIZE
-    int ioctlsocket(int, int, unsigned long*)
-    int FIONREAD
     int errno
 
 cdef extern from "stathelper.c":
