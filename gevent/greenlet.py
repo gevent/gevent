@@ -1,9 +1,8 @@
 # Copyright (c) 2009-2012 Denis Bilenko. See LICENSE for details.
 
 import sys
-from gevent.hub import greenlet, getcurrent, get_hub, GreenletExit, Waiter
+from gevent.hub import greenlet, getcurrent, get_hub, GreenletExit, Waiter, PY3
 from gevent.timeout import Timeout
-from gevent.six import callable, _meth_self, moves, PY3
 
 
 __all__ = ['Greenlet',
@@ -396,8 +395,13 @@ def _kill(greenlet, exception, waiter):
     waiter.switch()
 
 
+try:
+    xrange
+except NameError:
+    xrange = range
+
+
 def joinall(greenlets, timeout=None, raise_error=False, count=None):
-    xrange = moves.xrange
     from gevent.queue import Queue
     queue = Queue()
     put = queue.put
@@ -464,6 +468,12 @@ def killall(greenlets, exception=GreenletExit, block=True, timeout=None):
             t.cancel()
     else:
         loop.run_callback(_killall, greenlets, exception)
+
+
+if PY3:
+    _meth_self = "__self__"
+else:
+    _meth_self = "im_self"
 
 
 def getfuncname(func):

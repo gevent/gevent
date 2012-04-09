@@ -1,10 +1,11 @@
 from time import time
 import gevent
-from gevent import pool, six
+from gevent import pool
 from gevent.event import Event
 import greentest
 import random
 from greentest import ExpectedException
+import six
 
 
 class TestCoroutinePool(greentest.TestCase):

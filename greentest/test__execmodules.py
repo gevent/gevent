@@ -1,6 +1,6 @@
 import sys
 from greentest import walk_modules, BaseTestCase, main
-from gevent import six
+import six
 
 
 class TestExec(BaseTestCase):

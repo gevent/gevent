@@ -2,8 +2,8 @@ from time import time, sleep
 import random
 import greentest
 from gevent.threadpool import ThreadPool
-from gevent import six
 import gevent
+import six
 
 
 class TestCase(greentest.TestCase):

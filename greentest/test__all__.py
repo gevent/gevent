@@ -133,9 +133,6 @@ are missing from %r:
         exec "import %s" % modname in {}
         self.module = sys.modules[modname]
 
-        if modname == 'gevent.six':
-            return
-
         self.check_all()
 
         self.__implements__ = getattr(self.module, '__implements__', None)

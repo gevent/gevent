@@ -12,12 +12,11 @@ greenlets in the pool has already reached the limit, until there is a free slot.
 import sys
 from bisect import insort_right
 
-from gevent.hub import GreenletExit, getcurrent, kill as _kill
+from gevent.hub import GreenletExit, getcurrent, kill as _kill, PY3
 from gevent.greenlet import joinall, Greenlet
 from gevent.timeout import Timeout
 from gevent.event import Event
 from gevent.lock import Semaphore, DummySemaphore
-from gevent import six
 
 __all__ = ['Group', 'Pool']
 
@@ -222,7 +221,7 @@ class IMapUnordered(Greenlet):
             raise value.exc
         return value
 
-    if six.PY3:
+    if PY3:
         __next__ = next
         del next
 
@@ -283,7 +282,7 @@ class IMap(Greenlet):
             if value is not _SKIP:
                 return value
 
-    if six.PY3:
+    if PY3:
         __next__ = next
         del next
 

@@ -1,12 +1,11 @@
 """Base class for implementing servers"""
 # Copyright (c) 2009-2012 Denis Bilenko. See LICENSE for details.
+import sys
+import _socket
+import errno
 from gevent.greenlet import Greenlet, getfuncname
 from gevent.event import Event
-from gevent.six import string_types, integer_types
-import gevent
-import _socket
-import sys
-import errno
+from gevent.hub import string_types, integer_types, get_hub
 
 
 __all__ = ['BaseServer']
@@ -63,7 +62,7 @@ class BaseServer(object):
             self.set_spawn(spawn)
             self.set_handle(handle)
             self.delay = self.min_delay
-            self.loop = gevent.get_hub().loop
+            self.loop = get_hub().loop
             if self.max_accept < 1:
                 raise ValueError('max_accept must be positive int: %r' % (self.max_accept, ))
         except:
@@ -280,7 +279,7 @@ class BaseServer(object):
         try:
             self._stop_event.wait()
         finally:
-            gevent.spawn(self.stop, timeout=stop_timeout).join()
+            Greenlet.spawn(self.stop, timeout=stop_timeout).join()
 
     def is_fatal_error(self, ex):
         return isinstance(ex, _socket.error) and ex[0] in self.fatal_errors

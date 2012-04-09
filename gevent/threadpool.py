@@ -2,13 +2,12 @@
 from __future__ import with_statement
 import sys
 import os
-from gevent.hub import get_hub, sleep
+from gevent.hub import get_hub, sleep, integer_types
 from gevent.event import AsyncResult
 from gevent.greenlet import Greenlet
 from gevent.pool import IMap, IMapUnordered
 from gevent.lock import Semaphore
 from gevent._threading import Lock, Queue, start_new_thread
-from gevent.six import integer_types
 
 
 __all__ = ['ThreadPool',
