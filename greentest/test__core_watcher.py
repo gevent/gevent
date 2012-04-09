@@ -1,11 +1,11 @@
-import gevent
 import unittest
+from gevent import core
 
 
 class Test(unittest.TestCase):
 
     def test_types(self):
-        loop = gevent.core.loop()
+        loop = core.loop()
         lst = []
 
         io = loop.timer(0.01)
