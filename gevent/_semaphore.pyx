@@ -126,5 +126,5 @@ class Semaphore(object):
     def __enter__(self):
         self.acquire()
 
-    def __exit__(self, typ, val, tb):
+    def __exit__(self, *args):
         self.release()
