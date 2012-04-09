@@ -2,14 +2,19 @@ import sys
 from gevent.hub import get_hub, getcurrent
 from gevent.timeout import Timeout
 
+
 __all__ = ['Semaphore']
+
 
 class Semaphore(object):
     """A semaphore manages a counter representing the number of release() calls minus the number of acquire() calls,
     plus an initial value. The acquire() method blocks if necessary until it can return without making the counter
     negative.
 
-    If not given, value defaults to 1."""
+    If not given, value defaults to 1.
+
+    This Semaphore's __exit__ method does not call the trace function.
+    """
 
     def __init__(self, value=1):
         if value < 0:
