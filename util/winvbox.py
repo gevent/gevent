@@ -60,6 +60,7 @@ def main():
     parser.add_option('--password', default='')
     parser.add_option('--version', default='dev')
     parser.add_option('-v', '--verbose', action='store_true')
+    parser.add_option('--type')
 
     options, args = parser.parse_args()
 
@@ -96,7 +97,7 @@ def main():
         this_script = this_script[:-1]
     this_script_remote = '%s/%s' % (directory, os.path.basename(this_script))
 
-    machine = VirtualBox(options.machine, options.username, options.password, this_script_remote, python)
+    machine = VirtualBox(options.machine, options.username, options.password, this_script_remote, python, type=options.type)
     try:
         machine.mkdir(directory)
         machine.directory = directory
@@ -309,12 +310,13 @@ RESTORE, POWEROFF, PAUSE = range(3)
 
 class VirtualBox(object):
 
-    def __init__(self, name, username, password, script_path, python_path):
+    def __init__(self, name, username, password, script_path, python_path, type=None):
         self.name = name
         self.username = username
         self.password = password
         self.script_path = script_path
         self.python_path = python_path
+        self.type = type
         self.final_action = None
         self.mkdir_timeout = 15
         self._start()
@@ -324,7 +326,7 @@ class VirtualBox(object):
         if state in ('powered off', 'saved', 'aborted'):
             if state != 'saved':
                 self.mkdir_timeout = 90
-            vbox_startvm(self.name)
+            vbox_startvm(self.name, type=self.type)
             if state != 'saved':
                 time.sleep(5)
             if state == 'saved':
@@ -365,8 +367,12 @@ class VirtualBox(object):
         self.execute(self.python_path, args)
 
 
-def vbox_startvm(name):
-    system('VBoxManage startvm %s' % name)
+def vbox_startvm(name, type=None):
+    if type:
+        options = ' --type ' + type
+    else:
+        options = ''
+    system('VBoxManage startvm %s%s' % (name, options))
 
 
 def vbox_resume(name):
