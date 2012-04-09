@@ -36,6 +36,7 @@ test_patched_urllib2.*
 test_patched_ssl.*
 test_patched_signal.BasicSignalTests.*
 test_patched_threading_local.*
+test_patched_threading.*
 '''
 
 
@@ -71,6 +72,9 @@ disabled_tests = \
     [ 'test_threading.ThreadTests.test_PyThreadState_SetAsyncExc'
     # uses some internal C API of threads not available when threads are emulated with greenlets
 
+    , 'test_threading.ThreadTests.test_join_nondaemon_on_shutdown'
+    # asserts that repr(sleep) is '<built-in function sleep>'
+
     , 'test_urllib2net.TimeoutTest.test_ftp_no_timeout'
     , 'test_urllib2net.TimeoutTest.test_ftp_timeout'
     , 'test_urllib2net.TimeoutTest.test_http_no_timeout'
@@ -105,10 +109,6 @@ disabled_tests = \
     # gevent.select.select() does not get interrupted (unless signal handler raises an error)
     # maybe it should?
 ]
-
-if sys.version_info[:2] < (2, 7):
-    # On Python 2.6, this test fails even without monkey patching
-    disabled_tests.append('test_threading.ThreadTests.test_foreign_thread')
 
 
 def disable_tests_in_source(source, name):
