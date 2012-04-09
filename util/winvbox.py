@@ -50,6 +50,7 @@ def main():
     import optparse
     import uuid
     parser = optparse.OptionParser()
+    parser.add_option('--source')
     parser.add_option('--fast', action='store_true')
     parser.add_option('--revert', action='store_true')
     parser.add_option('--clean', action='store_true')
@@ -74,7 +75,10 @@ def main():
         import getpass
         options.username = getpass.getuser()
 
-    archive_filename = make_dist(options, command)
+    if options.source:
+        assert not options.fast and not options.revert and not options.clean
+    else:
+        options.source = make_dist(options, command)
     options.unique = uuid.uuid4().hex
     directory = 'c:/tmpdir.%s' % options.unique
 
@@ -96,7 +100,7 @@ def main():
     try:
         machine.mkdir(directory)
         machine.directory = directory
-        machine.copyto(archive_filename, directory + '/' + os.path.basename(archive_filename))
+        machine.copyto(options.source, directory + '/' + os.path.basename(options.source))
         machine.copyto(this_script, this_script_remote)
 
         function = globals().get('command_%s' % command, command_default)
