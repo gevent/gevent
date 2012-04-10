@@ -8,7 +8,7 @@ __all__ = ['Resolver']
 
 class Resolver(object):
 
-    expected_errors = (_socket.error, TypeError)
+    expected_errors = Exception
 
     def __init__(self, hub=None):
         if hub is None:
