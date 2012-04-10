@@ -15,6 +15,9 @@ class Resolver(object):
             hub = get_hub()
         self.pool = hub.threadpool
 
+    def __repr__(self):
+        return '<gevent.resolver_thread.Resolver at 0x%x pool=%r>' % (id(self), self.pool)
+
     def close(self):
         pass
 
