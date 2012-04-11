@@ -14,7 +14,7 @@ to arbitrary code.
 """
 
 import sys
-from gevent.hub import getcurrent, _NONE, get_hub, basestring
+from gevent.hub import getcurrent, _NONE, get_hub, string_types
 
 __all__ = ['Timeout',
            'with_timeout']
@@ -96,7 +96,7 @@ class Timeout(BaseException):
         assert not self.pending, '%r is already started; to restart it, cancel it first' % self
         if self.seconds is None:  # "fake" timeout (never expires)
             pass
-        elif self.exception is None or self.exception is False or isinstance(self.exception, basestring):
+        elif self.exception is None or self.exception is False or isinstance(self.exception, string_types):
             # timeout that raises self
             self.timer.start(getcurrent().throw, self)
         else:  # regular timeout with user-provided exception
