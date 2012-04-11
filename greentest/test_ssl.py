@@ -12,24 +12,18 @@ import os
 import errno
 import pprint
 
-try:
+if sys.version_info[0] == 3:
     from urllib import request as urllib
-except:
-    import urllib
-
-try:
-    import urlparse
-except ImportError:
     from urllib import parse as urlparse
+    from http.server import HTTPServer, SimpleHTTPRequestHandler
+else:
+    import urllib
+    import urlparse
+    from BaseHTTPServer import HTTPServer
+    from SimpleHTTPServer import SimpleHTTPRequestHandler
 
 import traceback
 import weakref
-
-try:
-    from BaseHTTPServer import HTTPServer
-    from SimpleHTTPServer import SimpleHTTPRequestHandler
-except ImportError:
-    from http.server import HTTPServer, SimpleHTTPRequestHandler
 
 try:
     bytearray
