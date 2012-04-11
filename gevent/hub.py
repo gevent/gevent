@@ -248,7 +248,7 @@ def _import(path):
             except ImportError:
                 error = sys.exc_info()[1]
         raise error
-    if not isinstance(path, basestring):
+    if not isinstance(path, string_types):
         return path
     if '.' not in path:
         raise ImportError("Cannot import %r (required format: module.class)" % path)
@@ -275,7 +275,7 @@ def _import(path):
 
 def config(default, envvar):
     result = os.environ.get(envvar) or default
-    if isinstance(result, basestring):
+    if isinstance(result, string_types):
         return result.split(',')
     return result
 
