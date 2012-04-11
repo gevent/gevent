@@ -9,6 +9,7 @@ Release 1.0b2
 
 Major and backward-incompatible changes:
 
+- Made the threadpool-based resolver the default. To enable the ares-based resolver, set GEVENT_RESOLVER=ares env var.
 - Added support for child watchers (not available on Windows).
   - Libev loop now reaps all children by default.
   - If NOCHILD flag is passed to the loop, child watchers and child reaping are disabled.
@@ -20,6 +21,7 @@ Major and backward-incompatible changes:
 - ThreadPool got new method: apply_e.
 - Added new extension module gevent._util and moved gevent.core.set_exc_info function there.
 - Added new extension module gevent._semaphore. It contains Semaphore class which is imported by gevent.lock as gevent.lock.Semaphore. Providing Semaphore in extension module ensures that trace function set with settrace will not be called during __exit__. Thanks to Ralf Schmitt.
+- It is now possible to kill or pre-spawn threads in ThreadPool by setting its 'size' property.
 
 core:
 
@@ -51,7 +53,7 @@ Developer utilities:
 - Added util/winvbox.py which automates building/testing/making binaries on Windows VM.
 - Fixed typos in exception handling code in testrunner.py
 - Fixed patching unittest.runner on Python2.7. This caused the details of test cases run lost.
-
+- Made testrunner.py kill the whole process group after test is done.
 
 
 Release 1.0b1
