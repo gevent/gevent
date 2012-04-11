@@ -28,7 +28,7 @@ core:
 - Make sure the default loop cannot be destroyed more than once, thus crashing the process.
 - Make Hub.destroy() method not to destroy the default loop, unless *destroy_loop* is *True*. Non-default loops are still destroyed by default.
 - loop: Removed properties from loop: fdchangecnt, timercnt, asynccnt.
-- loop: Added propertoes: sigfd, origflags, origflags_int
+- loop: Added properties: sigfd, origflags, origflags_int
 - loop: The EVFLAG_NOENV is now always passed to libev. Thus LIBEV_FLAGS env variable is no longer checked. Use GEVENT_BACKEND.
 
 Misc:
