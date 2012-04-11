@@ -81,7 +81,7 @@ __imports__ = ['error',
 
 import sys
 import time
-from gevent.hub import get_hub, basestring
+from gevent.hub import get_hub, string_types, integer_types
 from gevent.timeout import Timeout
 
 is_windows = sys.platform == 'win32'
@@ -123,7 +123,7 @@ for name in __imports__[:]:
 
 for name in __socket__.__all__:
     value = getattr(__socket__, name)
-    if isinstance(value, (int, long, basestring)):
+    if isinstance(value, integer_types) or isinstance(value, string_types):
         globals()[name] = value
         __imports__.append(name)
 

@@ -22,7 +22,8 @@ import sys
 import errno
 from gevent.socket import socket, _fileobject, timeout_default
 from gevent.socket import error as socket_error, EBADF
-from gevent.hub import basestring
+from gevent.hub import string_types
+
 
 __implements__ = ['SSLSocket',
                   'wrap_socket',
@@ -48,7 +49,7 @@ for name in __imports__[:]:
 for name in dir(__ssl__):
     if not name.startswith('_'):
         value = getattr(__ssl__, name)
-        if isinstance(value, (int, long, basestring, tuple)):
+        if isinstance(value, (int, long, tuple)) or isinstance(value, string_types):
             globals()[name] = value
             __imports__.append(name)
 
