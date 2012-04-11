@@ -50,6 +50,11 @@ from unittest import _TextTestResult, defaultTestLoader, TextTestRunner
 import platform
 
 try:
+    killpg = os.killpg
+except AttributeError:
+    killpg = None
+
+try:
     import sqlite3
 except ImportError:
     ex = sys.exc_info()[1]
@@ -266,31 +271,41 @@ def run_subprocess(args, options):
 
     retcode = []
 
+    def kill():
+        if popen.poll() is None:
+            try:
+                popen.kill()
+            except Exception, ex:
+                log('%s: %s', popen.pid, ex)
+        if killpg:
+            try:
+                killpg(popen.pid, 9)
+            except OSError, ex:
+                if ex.errno != 3:
+                    raise
+
     def killer():
         retcode.append('TIMEOUT')
         sys.stderr.write('Killing %s (%s) because of timeout\n' % (popen.pid, args))
-        popen.kill()
+        kill()
 
     timeout = Timer(options.timeout, killer)
     timeout.start()
     output = ''
     output_printed = False
     try:
-        try:
-            if options.capture:
-                while True:
-                    data = popen.stdout.read(1)
-                    if not data:
-                        break
-                    output += data
-                    if options.verbosity >= 2:
-                        sys.stdout.write(data)
-                        output_printed = True
-            retcode.append(popen.wait())
-        except Exception:
-            popen.kill()
-            raise
+        if options.capture:
+            while True:
+                data = popen.stdout.read(1)
+                if not data:
+                    break
+                output += data
+                if options.verbosity >= 2:
+                    sys.stdout.write(data)
+                    output_printed = True
+        retcode.append(popen.wait())
     finally:
+        kill()
         timeout.cancel()
     # QQQ compensating for run_tests' screw up
     module_name = args[0]
@@ -587,6 +602,11 @@ def main():
                 options.runid = str(random.random())[2:]
             log('Generated runid: %s', options.runid)
         if options.record:
+            if killpg:
+                try:
+                    os.setpgrp()
+                except AttributeError:
+                    pass
             run_tests(options, args)
         else:
             spawn_subprocesses(options, args)
