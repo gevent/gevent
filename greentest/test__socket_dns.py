@@ -69,6 +69,7 @@ if hasattr(resolver, 'ares'):
 else:
     accept_results = [("gaierror(-5, 'No address associated with hostname')",
                        "gaierror(-2, 'Name or service not known')")]
+    resolver.pool.size = 1
 
 
 
