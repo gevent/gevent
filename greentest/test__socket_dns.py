@@ -335,10 +335,6 @@ class TestFamily(TestCase):
     def test_inet(self):
         self.assertEqual(gevent_socket.getaddrinfo('gevent.org', None, socket.AF_INET), self.getresult())
 
-    def test_inet6(self):
-        expected = socket.gaierror(1, 'ARES_ENODATA: DNS server returned answer with no data')
-        self.assert_error(expected, gevent_socket.getaddrinfo, 'gevent.org', None, socket.AF_INET6)
-
     def test_unspec(self):
         self.assertEqual(gevent_socket.getaddrinfo('gevent.org', None, socket.AF_UNSPEC), self.getresult())
 
