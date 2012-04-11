@@ -49,9 +49,26 @@ class ThreadPool(object):
     def __len__(self):
         return self.task_queue.unfinished_tasks
 
-    @property
-    def size(self):
+    def _get_size(self):
         return self._size
+
+    def _set_size(self, size):
+        if size < 0:
+            raise ValueError('Size of the pool cannot be negative: %r' % (size, ))
+        if size > self._maxsize:
+            raise ValueError('Size of the pool cannot be bigger than maxsize: %r > %r' % (size, self._maxsize))
+        if self.manager:
+            self.manager.kill()
+        while self._size < size:
+            self._add_thread()
+        delay = 0.0001
+        while self._size > size:
+            while self._size - size > self.task_queue.unfinished_tasks:
+                self.task_queue.put(None)
+            sleep(delay)
+            delay = min(delay * 2, .05)
+
+    size = property(_get_size, _set_size)
 
     def _init(self, maxsize):
         self._size = 0
@@ -82,37 +99,35 @@ class ThreadPool(object):
     def kill(self):
         if self.manager:
             self.manager.kill()
-        self._manage(0)
+        self.size = 0
 
-    def _adjust(self, maxsize):
-        if maxsize is None:
-            maxsize = self._maxsize
-        while self.task_queue.unfinished_tasks > self._size and self._size < maxsize:
+    def _adjust_step(self):
+        # if there is a possibility & necessity for adding a thread, do it
+        while self._size < self._maxsize and self.task_queue.unfinished_tasks > self._size:
             self._add_thread()
-        while self._size - maxsize > self.task_queue.unfinished_tasks:
+        # while the number of threads is more than maxsize, kill one
+        # we do not check what's already in task_queue - it could be all Nones
+        while self._size - self._maxsize > self.task_queue.unfinished_tasks:
             self.task_queue.put(None)
         if self._size:
             self.fork_watcher.start(self._on_fork)
         else:
             self.fork_watcher.stop()
 
-    def _manage(self, maxsize=None):
-        if maxsize is None:
-            maxsize = self._maxsize
+    def _adjust_wait(self):
         delay = 0.0001
         while True:
-            self._adjust(maxsize)
-            if self._size <= maxsize:
+            self._adjust_step()
+            if self._size <= self._maxsize:
                 return
             sleep(delay)
             delay = min(delay * 2, .05)
 
     def adjust(self):
-        if self.manager:
-            return
-        if self._adjust(self.maxsize):
-            return
-        self.manager = Greenlet.spawn(self._manage)
+        self._adjust_step()
+        if not self.manager and self._size > self._maxsize:
+            # might need to feed more Nones into the pool
+            self.manager = Greenlet.spawn(self._adjust_wait)
 
     def _add_thread(self):
         with self._lock:
