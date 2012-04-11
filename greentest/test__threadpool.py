@@ -273,5 +273,28 @@ class TestMaxsize(TestCase):
         self.assertEqual(pool.size, 0)
 
 
+class TestSize(TestCase):
+
+    def test(self):
+        pool = self.pool = ThreadPool(2)
+        self.assertEqual(pool.size, 0)
+        pool.size = 1
+        self.assertEqual(pool.size, 1)
+        pool.size = 2
+        self.assertEqual(pool.size, 2)
+        pool.size = 1
+        self.assertEqual(pool.size, 1)
+        def set_neg():
+            pool.size = -1
+        self.assertRaises(ValueError, set_neg)
+        def set_too_big():
+            pool.size = 3
+        self.assertRaises(ValueError, set_too_big)
+        pool.size = 0
+        self.assertEqual(pool.size, 0)
+        pool.size = 2
+        self.assertEqual(pool.size, 2)
+
+
 if __name__ == '__main__':
     greentest.main()
