@@ -102,7 +102,7 @@ class Queue(object):
 
         ``Queue(None)`` is never full.
         """
-        return self.qsize() >= self.maxsize
+        return self.maxsize is not None and self.qsize() >= self.maxsize
 
     def put(self, item, block=True, timeout=None):
         """Put an item into the queue.
