@@ -22,7 +22,7 @@ Monkey patches:
   - :func:`socket.getaddrinfo`
   - :func:`socket.gethostbyname`
   - It is possible to disable dns patching by passing ``dns=False`` to :func:`patch_socket` of :func:`patch_all`
-  - If ssl is not available (Python < 2.6 without ``ssl`` and ``PyOpenSSL`` packages installed) then :func:`ssl` is removed from the target :mod:`socket` module.
+  - If ssl is not available (Python < 2.6 without ``ssl`` package installed) then :func:`ssl` is removed from the target :mod:`socket` module.
 
 * :mod:`ssl` module -- :func:`patch_ssl`
 
