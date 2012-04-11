@@ -2,7 +2,7 @@
 import os
 import sys
 from _socket import getservbyname, getaddrinfo, gaierror, error
-from gevent.hub import Waiter, get_hub, basestring
+from gevent.hub import Waiter, get_hub, string_types
 from gevent.socket import AF_UNSPEC, AF_INET, AF_INET6, SOCK_STREAM, SOCK_DGRAM, SOCK_RAW, AI_NUMERICHOST, EAI_SERVICE, AI_PASSIVE
 from gevent.ares import channel, InvalidIP
 
@@ -60,7 +60,7 @@ class Resolver(object):
                 # "self.ares is not ares" means channel was destroyed (because we were forked)
 
     def _lookup_port(self, port, socktype):
-        if isinstance(port, basestring):
+        if isinstance(port, string_types):
             try:
                 port = int(port)
             except ValueError:
