@@ -296,8 +296,8 @@ class Hub(greenlet):
     SYSTEM_ERROR = (KeyboardInterrupt, SystemExit, SystemError)
     NOT_ERROR = (GreenletExit, SystemExit)
     loop_class = config('gevent.core.loop', 'GEVENT_LOOP')
-    resolver_class = ['gevent.resolver_ares.Resolver',
-                      'gevent.resolver_thread.Resolver',
+    resolver_class = ['gevent.resolver_thread.Resolver',
+                      'gevent.resolver_ares.Resolver',
                       'gevent.socket.BlockingResolver']
     resolver_class = resolver_config(resolver_class, 'GEVENT_RESOLVER')
     threadpool_class = config('gevent.threadpool.ThreadPool', 'GEVENT_THREADPOOL')
