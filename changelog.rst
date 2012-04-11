@@ -4,6 +4,15 @@ Changelog
 .. currentmodule:: gevent
 
 
+Release 0.13.7 (April 12, 2012)
+-------------------------------
+
+- Fixed #94: fallback to buffer if memoryview fails in _get_memory on python 2.7.
+- Fixed #103: ``Queue(None).full()`` returns ``False`` now (previously it returned ``True``).
+- Fixed #112: threading._sleep is not patched. Thanks to David LaBissoniere.
+- Fixed #115: _dummy gets unexpected Timeout arg.
+
+
 Release 0.13.6 (May 2, 2011)
 ----------------------------
 
