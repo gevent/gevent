@@ -230,12 +230,9 @@ def set_hub(hub):
 
 
 if sys.version_info[0] >= 3:
-    basestring = (str, bytes)
-
     def exc_clear():
         pass
 else:
-    basestring = basestring
     exc_clear = sys.exc_clear
 
 
