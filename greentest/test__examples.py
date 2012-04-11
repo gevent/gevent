@@ -3,10 +3,10 @@ import os
 import glob
 from os.path import join, abspath, dirname, normpath, basename
 import unittest
-try:
-    import urllib2
-except ImportError:
+if sys.version_info[0] == 3:
     from urllib import request as urllib2
+else:
+    import urllib2
 import time
 import signal
 import re
