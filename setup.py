@@ -45,7 +45,7 @@ def expand(*lst):
 
 CORE = Extension(name='gevent.core',
                  sources=['gevent/gevent.core.c'],
-                 include_dirs=['libev'],
+                 include_dirs=['libev'] if libev_embed else [],
                  libraries=libraries,
                  define_macros=define_macros,
                  depends=expand('gevent/callbacks.*', 'gevent/stathelper.c', 'gevent/libev*.h', 'libev/*.*'))
@@ -53,7 +53,7 @@ CORE = Extension(name='gevent.core',
 
 ARES = Extension(name='gevent.ares',
                  sources=['gevent/gevent.ares.c'],
-                 include_dirs=['c-ares'],
+                 include_dirs=['c-ares'] if ares_embed else [],
                  libraries=libraries,
                  define_macros=define_macros,
                  depends=expand('gevent/dnshelper.c', 'gevent/cares_*.*'))
