@@ -31,6 +31,7 @@ and the contributors (ordered by the date of first contribution):
   Tom Lynn
   Shaun Cutts
   David LaBissoniere
+  Alexandre Kandalintsev
 
 Gevent is inspired by and uses some code from eventlet which was written by
 
@@ -39,6 +40,6 @@ Gevent is inspired by and uses some code from eventlet which was written by
 
 The win32util module is taken from Twisted.
 
-Some modules (local, ssl, httplib) contain code from the Python standard library.
+Some modules (local, ssl) contain code from the Python standard library.
 
 If your code is used in gevent and you are not mentioned above, please contact the maintainer.
