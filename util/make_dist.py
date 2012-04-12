@@ -26,7 +26,8 @@ useful_files = ['gevent/core.pyx',
                 'gevent/gevent.ares.h',
                 'gevent/gevent.ares.c',
                 'gevent/gevent._semaphore.c',
-                'gevent/gevent._semaphore.h']
+                'gevent/gevent._semaphore.h',
+                'gevent/gevent._util.c']
 
 
 def system(cmd, noisy=True):
