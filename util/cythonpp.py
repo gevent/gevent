@@ -726,7 +726,7 @@ def combinations(iterable, r):
     n = len(pool)
     if r > n:
         return
-    indices = range(r)
+    indices = list(range(r))
     yield tuple(pool[i] for i in indices)
     while True:
         for i in reversed(range(r)):
@@ -743,7 +743,7 @@ def combinations(iterable, r):
 def product(*args, **kwds):
     # product('ABCD', 'xy') --> Ax Ay Bx By Cx Cy Dx Dy
     # product(range(2), repeat=3) --> 000 001 010 011 100 101 110 111
-    pools = map(tuple, args) * kwds.get('repeat', 1)
+    pools = tuple(map(tuple, args)) * kwds.get('repeat', 1)
     result = [[]]
     for pool in pools:
         result = [x+[y] for x in result for y in pool]
