@@ -732,6 +732,69 @@ class TestEmptyYield304(TestCase):
         self.assert_(garbage == "", "got garbage: %r" % garbage)
 
 
+class TestContentLength304(TestCase):
+    validator = None
+
+    def application(self, env, start_response):
+        try:
+            start_response('304 Not modified', [('Content-Length', '100')])
+        except AssertionError, ex:
+            start_response('200 Raised', [])
+            return [str(ex)]
+        else:
+            raise AssertionError('start_response did not fail but it should')
+
+    def test_err(self):
+        fd = self.connect().makefile(bufsize=1)
+        fd.write('GET / HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n')
+        body = "Invalid Content-Length for 304 response: '100' (must be absent or zero)"
+        read_http(fd, code=200, reason='Raised', body=body, chunks=False)
+        garbage = fd.read()
+        self.assert_(garbage == "", "got garbage: %r" % garbage)
+
+
+class TestBody304(TestCase):
+    validator = None
+
+    def application(self, env, start_response):
+        start_response('304 Not modified', [])
+        return ['body']
+
+    def test_err(self):
+        fd = self.connect().makefile(bufsize=1)
+        fd.write('GET / HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n')
+        try:
+            read_http(fd)
+        except AssertionError, ex:
+            self.assertEqual(str(ex), 'The 304 response must have no body')
+        else:
+            raise AssertionError('AssertionError must be raised')
+
+
+class TestWrite304(TestCase):
+    validator = None
+
+    def application(self, env, start_response):
+        write = start_response('304 Not modified', [])
+        self.error_raised = False
+        try:
+            write('body')
+        except AssertionError:
+            self.error_raised = True
+            raise
+
+    def test_err(self):
+        fd = self.connect().makefile(bufsize=1)
+        fd.write('GET / HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n')
+        try:
+            read_http(fd)
+        except AssertionError, ex:
+            self.assertEqual(str(ex), 'The 304 response must have no body')
+        else:
+            raise AssertionError('write() must raise')
+        assert self.error_raised, 'write() must raise'
+
+
 class TestEmptyWrite(TestEmptyYield):
 
     @staticmethod
