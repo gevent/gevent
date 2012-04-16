@@ -332,19 +332,12 @@ class WSGIHandler(object):
         return True  # read more requests
 
     def finalize_headers(self):
-        response_headers_list = [x[0] for x in self.response_headers]
-        if 'Date' not in response_headers_list:
+        if self.provided_date is None:
             self.response_headers.append(('Date', format_date_time(time.time())))
 
-        if self.request_version == 'HTTP/1.0' and 'Connection' not in response_headers_list:
-            self.response_headers.append(('Connection', 'close'))
-            self.close_connection = True
-        elif ('Connection', 'close') in self.response_headers:
-            self.close_connection = True
-
-        if self.code not in [204, 304]:
+        if self.code not in (304, 204):
             # the reply will include message-body; make sure we have either Content-Length or chunked
-            if 'Content-Length' not in response_headers_list:
+            if self.provided_content_length is None:
                 if hasattr(self.result, '__len__'):
                     self.response_headers.append(('Content-Length', str(sum(len(chunk) for chunk in self.result))))
                 else:
@@ -367,6 +360,9 @@ class WSGIHandler(object):
             towrite.append('\r\n')
 
         if data:
+            if self.code in (304, 204):
+                raise AssertionError('The %s response must have no body' % self.code)
+
             if self.response_use_chunked:
                 ## Write the chunked encoding
                 towrite.append("%x\r\n%s\r\n" % (len(data), data))
@@ -394,7 +390,32 @@ class WSGIHandler(object):
                 exc_info = None
         self.code = int(status.split(' ', 1)[0])
         self.status = status
-        self.response_headers = [('-'.join([x.capitalize() for x in key.split('-')]), value) for key, value in headers]
+        self.response_headers = headers
+
+        provided_connection = None
+        self.provided_date = None
+        self.provided_content_length = None
+
+        for header, value in headers:
+            header = header.lower()
+            if header == 'connection':
+                provided_connection = value
+            elif header == 'date':
+                self.provided_date = value
+            elif header == 'content-length':
+                self.provided_content_length = value
+
+        if self.request_version == 'HTTP/1.0' and provided_connection is None:
+            headers.append(('Connection', 'close'))
+            self.close_connection = True
+        elif provided_connection == 'close':
+            self.close_connection = True
+
+        if self.code in (304, 204):
+            if self.provided_content_length is not None and self.provided_content_length != '0':
+                msg = 'Invalid Content-Length for %s response: %r (must be absent or zero)' % (self.code, self.provided_content_length)
+                raise AssertionError(msg)
+
         return self.write
 
     def log_request(self):
