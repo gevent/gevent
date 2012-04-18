@@ -362,9 +362,12 @@ class socket(object):
         return socket(_sock=self._sock)
 
     def makefile(self, mode='r', bufsize=-1):
-        # note that this does not inherit timeout either (intentionally, because that's
-        # how the standard socket behaves)
-        return _fileobject(self.dup(), mode, bufsize)
+        # Two things to look out for:
+        # 1) Closing the original socket object should not close the
+        #    socket (hence creating a new instance)
+        # 2) The resulting fileobject must keep the timeout in order
+        #    to be compatible with the stdlib's socket.makefile.
+        return _fileobject(type(self)(_sock=self), mode, bufsize)
 
     def recv(self, *args):
         sock = self._sock  # keeping the reference so that fd is not closed during waiting
