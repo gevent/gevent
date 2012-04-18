@@ -59,9 +59,14 @@ class DatabaseConnectionPool(object):
                 pass
 
     @contextlib.contextmanager
-    def connection(self):
+    def connection(self, isolation_level=None):
         conn = self.get()
         try:
+            if isolation_level is not None:
+                if conn.isolation_level == isolation_level:
+                    isolation_level = None
+                else:
+                    conn.set_isolation_level(isolation_level)
             yield conn
         except:
             if conn.closed:
@@ -76,12 +81,20 @@ class DatabaseConnectionPool(object):
             conn.commit()
         finally:
             if conn is not None and not conn.closed:
+                if isolation_level is not None:
+                    conn.set_isolation_level(isolation_level)
                 self.put(conn)
 
     @contextlib.contextmanager
     def cursor(self, *args, **kwargs):
+        isolation_level = kwargs.pop('isolation_level', None)
         conn = self.get()
         try:
+            if isolation_level is not None:
+                if conn.isolation_level == isolation_level:
+                    isolation_level = None
+                else:
+                    conn.set_isolation_level(isolation_level)
             yield conn.cursor(*args, **kwargs)
         except:
             if conn.closed:
@@ -96,6 +109,8 @@ class DatabaseConnectionPool(object):
             conn.commit()
         finally:
             if conn is not None and not conn.closed:
+                if isolation_level is not None:
+                    conn.set_isolation_level(isolation_level)
                 self.put(conn)
 
     def _rollback(self, conn):
