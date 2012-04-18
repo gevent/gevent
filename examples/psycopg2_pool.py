@@ -107,23 +107,23 @@ class DatabaseConnectionPool(object):
         return conn
 
     def execute(self, *args, **kwargs):
-        with self.cursor() as cursor:
-            cursor.execute(*args, **kwargs)
+        with self.cursor(**kwargs) as cursor:
+            cursor.execute(*args)
             return cursor.rowcount
 
     def fetchone(self, *args, **kwargs):
-        with self.cursor() as cursor:
-            cursor.execute(*args, **kwargs)
+        with self.cursor(**kwargs) as cursor:
+            cursor.execute(*args)
             return cursor.fetchone()
 
     def fetchall(self, *args, **kwargs):
-        with self.cursor() as cursor:
-            cursor.execute(*args, **kwargs)
+        with self.cursor(**kwargs) as cursor:
+            cursor.execute(*args)
             return cursor.fetchall()
 
     def fetchiter(self, *args, **kwargs):
-        with self.cursor() as cursor:
-            cursor.execute(*args, **kwargs)
+        with self.cursor(**kwargs) as cursor:
+            cursor.execute(*args)
             while True:
                 items = cursor.fetchmany()
                 if not items:
