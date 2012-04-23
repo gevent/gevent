@@ -83,10 +83,10 @@ class Timeout(BaseException):
                 raise # not my timeout
     """
 
-    def __init__(self, seconds=None, exception=None):
+    def __init__(self, seconds=None, exception=None, ref=True):
         self.seconds = seconds
         self.exception = exception
-        self.timer = get_hub().loop.timer(seconds or 0.0, ref=False)
+        self.timer = get_hub().loop.timer(seconds or 0.0, ref=ref)
         # we pass ref=False so that gevent.run() ignores oustanding timeouts
         # we can do that because timeouts are always used with some other watchers
 
@@ -102,7 +102,7 @@ class Timeout(BaseException):
             self.timer.start(getcurrent().throw, self.exception)
 
     @classmethod
-    def start_new(cls, timeout=None, exception=None):
+    def start_new(cls, timeout=None, exception=None, ref=True):
         """Create a started :class:`Timeout`.
 
         This is a shortcut, the exact action depends on *timeout*'s type:
@@ -117,7 +117,7 @@ class Timeout(BaseException):
             if not timeout.pending:
                 timeout.start()
             return timeout
-        timeout = cls(timeout, exception)
+        timeout = cls(timeout, exception, ref=ref)
         timeout.start()
         return timeout
 
