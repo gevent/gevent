@@ -192,6 +192,9 @@ class ThreadPool(object):
                         if sys is None:
                             return
                         result.set(value)
+                        del value
+                    finally:
+                        del func, args, kwargs, result, task
                 finally:
                     if sys is None:
                         return
