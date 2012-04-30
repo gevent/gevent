@@ -1,5 +1,7 @@
+import sys
 from time import time, sleep
 import random
+import weakref
 import greentest
 from gevent.threadpool import ThreadPool
 import gevent
@@ -294,6 +296,44 @@ class TestSize(TestCase):
         self.assertEqual(pool.size, 0)
         pool.size = 2
         self.assertEqual(pool.size, 2)
+
+
+class TestRef(TestCase):
+
+    def test(self):
+        pool = self.pool=ThreadPool(2)
+
+        refs = []
+        obj = SomeClass()
+        obj.refs = refs
+        func = obj.func
+        del obj
+
+        with greentest.disabled_gc():
+            # we do this:
+            #     result = func(Object(), kwarg1=Object())
+            # but in a thread pool and see that arguments', result's and func's references are not leaked
+            result = pool.apply(func, (Object(), ), {'kwarg1': Object()})
+            assert isinstance(result, Object), repr(result)
+            gevent.sleep(0)  # XXX should not be needed
+
+            refs.append(weakref.ref(func))
+            del func, result
+            for index, r in enumerate(refs):
+                assert r() is None, (index, r(), sys.getrefcount(r()), refs)
+            assert len(refs) == 4, refs
+
+
+class Object(object):
+    pass
+
+
+class SomeClass(object):
+
+    def func(self, arg1, kwarg1=None):
+        result = Object()
+        self.refs.extend([weakref.ref(x) for x in [arg1, kwarg1, result]])
+        return result
 
 
 if __name__ == '__main__':
