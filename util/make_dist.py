@@ -101,7 +101,10 @@ def main():
                 os.rmdir(root)
 
     system(set_version_command)
-    system('hg diff', noisy=False)
+    if options.revert or not options.fast:
+        system('hg diff', noisy=False)
+    else:
+        system('hg status', noisy=False)
     system('python setup.py -q sdist')
 
     dist_filename = glob.glob('dist/gevent-*.tar.gz')
