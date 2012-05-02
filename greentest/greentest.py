@@ -31,6 +31,8 @@ import gevent
 from patched_tests_setup import get_switch_expected
 from gevent.hub import _get_hub
 from functools import wraps
+import contextlib
+import gc
 
 VERBOSE = sys.argv.count('-v') > 1
 
@@ -387,3 +389,14 @@ def tcp_listener(address, backlog=50, reuse_addr=True):
     sock = socket.socket()
     bind_and_listen(sock)
     return sock
+
+
+@contextlib.contextmanager
+def disabled_gc():
+    was_enabled = gc.isenabled()
+    gc.disable()
+    try:
+        yield
+    finally:
+        if was_enabled:
+            gc.enable()
