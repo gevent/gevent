@@ -25,6 +25,7 @@ test_patched_select.SelectTestCase.test_error_conditions
 test_patched_smtplib.NonConnectingTests.*
 test_patched_urllib2net.OtherNetworkTests.*
 test_patched_wsgiref.*
+test_patched_subprocess.HelperFunctionTests.*
 '''
 
 ignore_switch_tests = '''
