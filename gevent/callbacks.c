@@ -110,8 +110,7 @@ static void gevent_callback(struct PyGeventLoopObject* loop, PyObject* callback,
     else {
         gevent_handle_error(loop, watcher);
         if (revents & (EV_READ|EV_WRITE)) {
-            /* this was an 'io' watcher: not stopping it will likely to cause the failing callback to be called repeatedly */
-            /* QQQ what about idle watcher? It will also cause the repeated failure. */
+            /* io watcher: not stopping it may cause the failing callback to be called repeatedly */
             gevent_stop(watcher, loop);
             goto end;
         }
