@@ -20,7 +20,7 @@ class ANY(object):
 ANY = ANY()
 
 NOT_IMPLEMENTED = {
-    'socket': ['CAPI', 'gethostbyaddr', 'gethostbyname_ex', 'getnameinfo'],
+    'socket': ['CAPI'],
     'thread': ['allocate', 'exit_thread', 'interrupt_main', 'start_new'],
     'select': ANY}
 
