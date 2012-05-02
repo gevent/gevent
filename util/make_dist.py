@@ -84,9 +84,9 @@ def main():
     if options.fast:
         system('rm -fr build doc/_build dist')
 
-        status_command = 'hg status --unknown --ignored'
+        status_command = 'hg status --ignored'
         if options.revert:
-            status_command += ' --modified --added'
+            status_command += ' --modified --added --unknown'
 
         for status, name in iter_status(status_command):
             if name not in useful_files:
