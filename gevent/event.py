@@ -27,7 +27,7 @@ class Event(object):
         self._notifier = self.hub.loop.callback()
 
     def __str__(self):
-        return '<%s %s>' % (self.__class__.__name__, (self._flag and 'set') or 'clear')
+        return '<%s %s _links[%s]>' % (self.__class__.__name__, (self._flag and 'set') or 'clear', len(self._links))
 
     def is_set(self):
         """Return true if and only if the internal flag is true."""
