@@ -84,7 +84,7 @@ class Test(unittest.TestCase):
         for name in self.__imports__:
             item = getattr(self.module, name)
             stdlib_item = getattr(self.stdlib_module, name)
-            assert item is stdlib_item, (item, stdlib_item)
+            assert item is stdlib_item, (name, item, stdlib_item)
 
     def check_extensions_actually_extend(self):
         """Check that the module actually defines new entries in __extensions__"""
