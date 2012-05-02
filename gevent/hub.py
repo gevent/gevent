@@ -338,7 +338,8 @@ class Hub(greenlet):
         return result + '>'
 
     def handle_error(self, context, type, value, tb):
-        self.print_exception(context, type, value, tb)
+        if not issubclass(type, self.NOT_ERROR):
+            self.print_exception(context, type, value, tb)
         if context is None or issubclass(type, self.SYSTEM_ERROR):
             self.handle_system_error(type, value)
 
@@ -350,8 +351,6 @@ class Hub(greenlet):
             self.loop.run_callback(self.parent.throw, type, value)
 
     def print_exception(self, context, type, value, tb):
-        if issubclass(type, self.NOT_ERROR):
-            return
         traceback.print_exception(type, value, tb)
         del tb
         if context is not None:
