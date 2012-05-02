@@ -553,7 +553,7 @@ def print_stats(options):
     if timedout:
         log('TIMEOUTS: ')
         log(' - ' + '\n - '.join(timedout))
-    log('%s testcases passed; %s failed; %s timed out', total, len(failed), len(timedout))
+    log('%s testcases total; %s failed; %s timed out', total, len(failed), len(timedout))
     if failed or timedout:
         return True
     return False
