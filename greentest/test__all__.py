@@ -9,8 +9,8 @@ MAPPING = {'gevent.local': '_threading_local',
            'gevent.socket': 'socket',
            'gevent.select': 'select',
            'gevent.ssl': 'ssl',
-           'gevent.thread': 'thread'}
-
+           'gevent.thread': 'thread',
+           'gevent.subprocess': 'subprocess'}
 
 
 class ANY(object):
