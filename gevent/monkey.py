@@ -204,7 +204,12 @@ def patch_select(aggressive=True):
         remove_item(select, 'kevent')
 
 
-def patch_all(socket=True, dns=True, time=True, select=True, thread=True, os=True, ssl=True, httplib=False, aggressive=True):
+def patch_subprocess():
+    patch_module('subprocess')
+
+
+def patch_all(socket=True, dns=True, time=True, select=True, thread=True, os=True, ssl=True, httplib=False,
+              subprocess=True, aggressive=True):
     """Do all of the default monkey patching (calls every other function in this module."""
     # order is important
     if os:
@@ -226,6 +231,8 @@ def patch_all(socket=True, dns=True, time=True, select=True, thread=True, os=Tru
             # in Python 2.5, 'ssl' is a standalone package not included in stdlib
     if httplib:
         raise ValueError('gevent.httplib is no longer provided, httplib must be False')
+    if subprocess:
+        patch_subprocess()
 
 
 if __name__ == '__main__':
