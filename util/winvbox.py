@@ -60,7 +60,7 @@ def main():
     parser.add_option('--password', default='')
     parser.add_option('--version', default='dev')
     parser.add_option('-v', '--verbose', action='store_true')
-    parser.add_option('--type')
+    parser.add_option('--type', default='headless')
 
     options, args = parser.parse_args()
 
