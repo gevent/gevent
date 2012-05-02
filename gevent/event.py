@@ -156,6 +156,16 @@ class AsyncResult(object):
         self.hub = get_hub()
         self._notifier = self.hub.loop.callback()
 
+    def __str__(self):
+        result = '<%s ' % (self.__class__.__name__, )
+        if self.value is not None or self._exception is not _NONE:
+            result += 'value=%r ' % self.value
+        if self._exception is not None and self._exception is not _NONE:
+            result += 'exception=%r ' % self._exception
+        if self._exception is _NONE:
+            result += 'unset '
+        return result + ' _links[%s]>' % len(self._links)
+
     def ready(self):
         """Return true if and only if it holds a value or an exception"""
         return self._exception is not _NONE
