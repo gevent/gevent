@@ -238,17 +238,18 @@ else:
 
 def _import(path):
     if isinstance(path, list):
-        error = ImportError('Cannot import from empty list: %r' % (path, ))
-        for item in path:
+        if not path:
+            raise ImportError('Cannot import from empty list: %r' % (path, ))
+        for item in path[:-1]:
             try:
                 return _import(item)
             except ImportError:
-                error = sys.exc_info()[1]
-        raise error
+                pass
+        return _import(path[-1])
     if not isinstance(path, string_types):
         return path
     if '.' not in path:
-        raise ImportError("Cannot import %r (required format: module.class)" % path)
+        raise ImportError("Cannot import %r (required format: [path/][package.]module.class)" % path)
     if '/' in path:
         package_path, path = path.rsplit('/', 1)
         sys.path = [package_path] + sys.path
