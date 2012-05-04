@@ -336,5 +336,18 @@ class SomeClass(object):
         return result
 
 
+def func():
+    pass
+
+
+class TestRefCount(TestCase):
+
+    def test(self):
+        pool = ThreadPool(1)
+        pool.spawn(func)
+        gevent.sleep(0)
+        pool.kill()
+
+
 if __name__ == '__main__':
     greentest.main()
