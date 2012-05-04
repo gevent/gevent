@@ -74,7 +74,7 @@ def process_filename(filename, output_filename=None):
     sources = []
 
     counter = 0
-    for configuration, lines in preprocessed.items():
+    for configuration, lines in sorted(preprocessed.items()):
         counter += 1
         value = ''.join(lines)
         sourcehash = md5(value.encode("utf-8")).hexdigest()
@@ -313,7 +313,7 @@ def format_cond(cond):
 def format_tag(tag):
     if not isinstance(tag, set):
         raise TypeError(repr(tag))
-    return ' && '.join([format_cond(x) for x in tag])
+    return ' && '.join([format_cond(x) for x in sorted(tag)])
 
 
 def format_tags(tags):
