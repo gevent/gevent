@@ -33,6 +33,8 @@ one will be selected if not provided.
 # Known issues:
 # - screws up warnings location, causing them to appear as originated from testrunner.py
 
+DEFAULT_FILENAME = '/tmp/gevent-testrunner.sqlite3'
+
 # the number of seconds each test script is allowed to run
 DEFAULT_TIMEOUT = 60
 
@@ -194,16 +196,6 @@ def get_changeset():
 def get_core_version():
     from gevent import core
     return core.get_version()
-
-
-def get_tempnam():
-    import warnings
-    warnings.filterwarnings('ignore', 'tempnam is a potential security risk to your program')
-    try:
-        tempnam = os.tempnam()
-    finally:
-        del warnings.filters[0]
-    return os.path.join(os.path.dirname(tempnam), 'testresults.sqlite3')
 
 
 def execfile_as_main(path):
@@ -559,13 +551,22 @@ def print_stats(options):
     return False
 
 
+def unlink(path):
+    try:
+        os.unlink(path)
+    except OSError, ex:
+        if ex.errno == 2:  # No such file or directory
+            return
+        raise
+
+
 def main():
     import optparse
     parser = optparse.OptionParser()
     parser.add_option('-v', '--verbose', default=0, action='count')
     parser.add_option('-q', '--quiet', default=0, action='count')
     parser.add_option('--verbosity', default=0, type='int', help=optparse.SUPPRESS_HELP)
-    parser.add_option('--db', default='testresults.sqlite3')
+    parser.add_option('--db')
     parser.add_option('--no-db', dest='db', action='store_false')
     parser.add_option('--runid')
     parser.add_option('--record', default=False, action='store_true')
@@ -575,6 +576,10 @@ def main():
 
     options, args = parser.parse_args()
     options.verbosity += options.verbose - options.quiet
+
+    if options.db is None:
+        unlink(DEFAULT_FILENAME)
+        options.db = DEFAULT_FILENAME
 
     if options.db:
         if sqlite3:
