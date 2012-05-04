@@ -36,7 +36,7 @@ one will be selected if not provided.
 DEFAULT_FILENAME = '/tmp/gevent-testrunner.sqlite3'
 
 # the number of seconds each test script is allowed to run
-DEFAULT_TIMEOUT = 60
+DEFAULT_TIMEOUT = 600
 
 # the number of bytes of output that is recorded; the rest is thrown away
 OUTPUT_LIMIT = 50000
