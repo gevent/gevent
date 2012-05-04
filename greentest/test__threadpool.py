@@ -11,8 +11,10 @@ import six
 class TestCase(greentest.TestCase):
 
     def cleanup(self):
-        if self.pool is not None:
-            self.pool.kill()
+        pool = getattr(self, 'pool', None)
+        if pool is not None:
+            pool.kill()
+            del self.pool
 
 
 class PoolBasicTests(TestCase):
@@ -203,11 +205,6 @@ class TestJoinEmpty(TestCase):
     def test(self):
         self.pool = ThreadPool(1)
         self.pool.join()
-
-    def cleanup(self):
-        # needed here because currently Greenlet.kill() switches out even if greenlet not started yet
-        # XXX fix Greenlet.kill
-        pass
 
 
 class TestSpawn(TestCase):
