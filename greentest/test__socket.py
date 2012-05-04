@@ -201,6 +201,8 @@ class TestClosedSocket(greentest.TestCase):
 
 class TestRef(greentest.TestCase):
 
+    switch_expected = False
+
     def test(self):
         sock = socket.socket()
         assert sock.ref is True, sock.ref
