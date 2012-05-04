@@ -40,7 +40,10 @@ class Test(greentest.TestCase):
                          stderr=subprocess.PIPE)
         (stdout, stderr) = p.communicate("banana")
         self.assertEqual(stdout, "banana")
-        self.assertEqual(stderr, "pineapple")
+        if sys.executable.endswith('-dbg'):
+            assert stderr.startswith('pineapple')
+        else:
+            self.assertEqual(stderr, "pineapple")
 
 
 if __name__ == '__main__':
