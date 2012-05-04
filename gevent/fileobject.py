@@ -86,31 +86,6 @@ else:
                     sys.exc_clear()
                 self.hub.wait(self._write_event)
 
-        def send(self, data):
-            try:
-                return os.write(self.fileno(), data)
-            except (IOError, OSError):
-                ex = sys.exc_info()[1]
-                if ex.args[0] == EBADF:
-                    return 0
-                if ex.args[0] != EAGAIN:
-                    raise
-                sys.exc_clear()
-                try:
-                    self.hub.wait(self._write_event)
-                except IOError:
-                    ex = sys.exc_info()[1]
-                    if ex.args[0] == EBADF:
-                        return 0
-                    raise
-                try:
-                    return os.write(self.fileno(), data)
-                except (IOError, OSError):
-                    ex2 = sys.exc_info()[1]
-                    if ex2.args[0] in (EBADF, EAGAIN):
-                        return 0
-                    raise
-
         def recv(self, size):
             while True:
                 try:
