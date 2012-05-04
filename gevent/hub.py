@@ -378,11 +378,12 @@ class Hub(greenlet):
         raise AssertionError('Impossible to call blocking function in the event loop callback')
 
     def wait(self, watcher):
+        waiter = Waiter()
         unique = object()
-        watcher.start(getcurrent().switch, unique)
+        watcher.start(waiter.switch, unique)
         try:
-            result = self.switch()
-            assert result is unique, 'Invalid switch into %s: %r' % (getcurrent(), result)
+            result = waiter.get()
+            assert result is unique, 'Invalid switch into %s: %r (expected %r)' % (getcurrent(), result, unique)
         finally:
             watcher.stop()
 
