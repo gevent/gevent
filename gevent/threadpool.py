@@ -2,7 +2,7 @@
 from __future__ import with_statement
 import sys
 import os
-from gevent.hub import get_hub, sleep, integer_types
+from gevent.hub import get_hub, getcurrent, sleep, integer_types
 from gevent.event import AsyncResult
 from gevent.greenlet import Greenlet
 from gevent.pool import IMap, IMapUnordered
@@ -65,8 +65,14 @@ class ThreadPool(object):
         while self._size > size:
             while self._size - size > self.task_queue.unfinished_tasks:
                 self.task_queue.put(None)
+            if getcurrent() is self.hub:
+                break
             sleep(delay)
             delay = min(delay * 2, .05)
+        if self._size:
+            self.fork_watcher.start(self._on_fork)
+        else:
+            self.fork_watcher.stop()
 
     size = property(_get_size, _set_size)
 
