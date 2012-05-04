@@ -75,9 +75,13 @@ else:
             bytes_written = 0
             while bytes_written < bytes_total:
                 try:
-                    bytes_written += os.write(fileno, data[bytes_written:])
-                except (IOError, OSError), ex:
-                    if ex[0] != EAGAIN:
+                    bytes_written += os.write(fileno, _get_memory(data, bytes_written))
+                except (IOError, OSError):
+                    code = sys.exc_info()[1].args[0]
+                    if code == EINTR:
+                        sys.exc_clear()
+                        continue
+                    elif code != EAGAIN:
                         raise
                     sys.exc_clear()
                 self.hub.wait(self._write_event)
