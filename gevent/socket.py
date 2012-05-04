@@ -282,7 +282,7 @@ class socket(object):
         """
         assert watcher.callback is None, 'This socket is already used by another greenlet: %r' % (watcher.callback, )
         if self.timeout is not None:
-            timeout = Timeout.start_new(self.timeout, timeout_exc)
+            timeout = Timeout.start_new(self.timeout, timeout_exc, ref=False)
         else:
             timeout = None
         try:
