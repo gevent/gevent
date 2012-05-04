@@ -305,15 +305,11 @@ class socket(object):
             self._wait(self._read_event)
         return socket(_sock=client_socket), address
 
-    def close(self, _closedsocket=_closedsocket, _delegate_methods=_delegate_methods,
-              setattr=setattr, cancel_wait_ex=cancel_wait_ex):
+    def close(self, _closedsocket=_closedsocket, cancel_wait_ex=cancel_wait_ex):
         # This function should not reference any globals. See Python issue #808164.
         self.hub.cancel_wait(self._read_event, cancel_wait_ex)
         self.hub.cancel_wait(self._write_event, cancel_wait_ex)
         self._sock = _closedsocket()
-        dummy = self._sock._dummy
-        for method in _delegate_methods:
-            setattr(self, method, dummy)
 
     def connect(self, address):
         if self.timeout == 0.0:
