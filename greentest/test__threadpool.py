@@ -216,9 +216,9 @@ class TestSpawn(TestCase):
     def test(self):
         self.pool = pool = ThreadPool(1)
         self.assertEqual(len(pool), 0)
-        pool.spawn(gevent.sleep, 0.1)
+        pool.spawn(sleep, 0.1)
         self.assertEqual(len(pool), 1)
-        pool.spawn(gevent.sleep, 0.1)
+        pool.spawn(sleep, 0.1)
         # even though the pool is of size 1, it can contain 2 items
         # since we allow +1 for better throughput
         self.assertEqual(len(pool), 2)
