@@ -272,6 +272,15 @@ class socket(object):
             result += ' timeout=' + str(self.timeout)
         return result
 
+    def _get_ref(self):
+        return self._read_event.ref or self._write_event.ref
+
+    def _set_ref(self, value):
+        self._read_event.ref = value
+        self._write_event.ref = value
+
+    ref = property(_get_ref, _set_ref)
+
     def _wait(self, watcher, timeout_exc=timeout('timed out')):
         """Block the current greenlet until *watcher* has pending events.
 
