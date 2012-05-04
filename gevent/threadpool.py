@@ -103,8 +103,6 @@ class ThreadPool(object):
             delay = min(delay * 2, .05)
 
     def kill(self):
-        if self.manager:
-            self.manager.kill()
         self.size = 0
 
     def _adjust_step(self):
