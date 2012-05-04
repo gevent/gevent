@@ -16,9 +16,8 @@ class TestTCP(greentest.TestCase):
         greentest.TestCase.setUp(self)
         self.listener = greentest.tcp_listener(('127.0.0.1', 0))
 
-    def tearDown(self):
+    def cleanup(self):
         del self.listener
-        greentest.TestCase.tearDown(self)
 
     def create_connection(self):
         return socket.create_connection(('127.0.0.1', self.listener.getsockname()[1]))
