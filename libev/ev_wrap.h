@@ -82,6 +82,7 @@
 #define asyncs ((loop)->asyncs)
 #define asyncmax ((loop)->asyncmax)
 #define asynccnt ((loop)->asynccnt)
+#define childall ((loop)->childall)
 #define fs_fd ((loop)->fs_fd)
 #define fs_w ((loop)->fs_w)
 #define fs_2625 ((loop)->fs_2625)
@@ -180,6 +181,7 @@
 #undef asyncs
 #undef asyncmax
 #undef asynccnt
+#undef childall
 #undef fs_fd
 #undef fs_w
 #undef fs_2625

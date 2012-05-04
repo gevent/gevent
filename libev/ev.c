@@ -1976,6 +1976,7 @@ sigfdcb (EV_P_ ev_io *iow, int revents)
 static WL childs [EV_PID_HASHSIZE];
 
 static ev_signal childev;
+static ev_timer childpollev;
 
 #ifndef WIFCONTINUED
 # define WIFCONTINUED(status) 0
@@ -2301,6 +2302,11 @@ ev_loop_destroy (EV_P)
       ev_ref (EV_A); /* child watcher */
       ev_signal_stop (EV_A_ &childev);
     }
+  if (ev_is_active (&childpollev))
+    {
+      ev_ref (EV_A); /* child watcher */
+      ev_timer_stop (EV_A_ &childpollev);
+    }
 #endif
 
   if (ev_is_active (&pipe_w))
@@ -2596,6 +2602,7 @@ ev_default_loop (unsigned int flags)
           ev_set_priority (&childev, EV_MAXPRI);
           ev_signal_start (EV_A_ &childev);
           ev_unref (EV_A); /* child watcher should not keep loop alive */
+          ev_timer_init (&childpollev, childcb, 1.0, 1.0);
 #endif
         }
       else
@@ -3514,8 +3521,16 @@ ev_child_start (EV_P_ ev_child *w)
 
   EV_FREQUENT_CHECK;
 
+  ++childall;
+
   ev_start (EV_A_ (W)w, 1);
   wlist_add (&childs [w->pid & ((EV_PID_HASHSIZE) - 1)], (WL)w);
+
+  if (!ev_is_active (&childpollev))
+    {
+      ev_timer_start (EV_A_ &childpollev);
+      ev_unref (EV_A);
+    }
 
   EV_FREQUENT_CHECK;
 }
@@ -3531,6 +3546,12 @@ ev_child_stop (EV_P_ ev_child *w)
 
   wlist_del (&childs [w->pid & ((EV_PID_HASHSIZE) - 1)], (WL)w);
   ev_stop (EV_A_ (W)w);
+
+  if (--childall <= 0 && ev_is_active (&childpollev))
+    {
+      ev_timer_stop (EV_A_ &childpollev);
+      ev_ref (EV_A);
+    }
 
   EV_FREQUENT_CHECK;
 }
