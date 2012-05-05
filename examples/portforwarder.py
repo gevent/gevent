@@ -1,3 +1,16 @@
+"""Port forwarder with graceful exit.
+
+Run the example as
+
+  python portforwarder.py :8080 gevent.org:80
+
+Then direct your browser to http://localhost:8080 or do "telnet localhost 8080".
+
+When the portforwarder receives TERM or INT signal (type Ctrl-C),
+it closes the listening socket and waits for all existing
+connections to finish. The existing connections will remain unaffected.
+The program will exit once the last connection has been closed.
+"""
 import sys
 import signal
 import gevent
@@ -13,14 +26,20 @@ class PortForwarder(StreamServer):
 
     def handle(self, source, address):
         log('%s:%s accepted', *address[:2])
-        dest = create_connection(self.dest)
-        forwarder1 = gevent.spawn(forward, source, dest)
-        forwarder2 = gevent.spawn(forward, dest, source)
-        gevent.joinall([forwarder1, forwarder2], count=1)
+        try:
+            dest = create_connection(self.dest)
+        except IOError, ex:
+            log('%s:%s failed to connect to %s:%s: %s', address[0], address[1], self.dest[0], self.dest[1], ex)
+            return
+        gevent.spawn(forward, source, dest)
+        gevent.spawn(forward, dest, source)
 
     def close(self):
-        print 'Closing listener socket'
-        StreamServer.close(self)
+        if self.closed:
+            sys.exit('Multiple exit signals received - aborting.')
+        else:
+            log('Closing listener socket')
+            StreamServer.close(self)
 
 
 def forward(source, dest):
@@ -56,7 +75,6 @@ def main():
     server = PortForwarder(source, dest)
     log('Starting port forwarder %s:%s -> %s:%s', *(server.address[:2] + dest))
     gevent.signal(signal.SIGTERM, server.close)
-    gevent.signal(signal.SIGQUIT, server.close)
     gevent.signal(signal.SIGINT, server.close)
     server.start()
     gevent.run()
