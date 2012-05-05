@@ -287,7 +287,7 @@ if gettotalrefcount is None:
 
 
 def test_outer_timeout_is_not_lost(self):
-    timeout = gevent.Timeout.start_new(0.001)
+    timeout = gevent.Timeout.start_new(0.001, ref=False)
     try:
         try:
             result = self.wait(timeout=1)
