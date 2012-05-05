@@ -204,10 +204,8 @@ class Popen(object):
         return (None if stdout is None else stdout.value or '',
                 None if stderr is None else stderr.value or '')
 
-
     def poll(self):
         return self._internal_poll()
-
 
     if mswindows:
         #
@@ -269,13 +267,11 @@ class Popen(object):
                     c2pread, c2pwrite,
                     errread, errwrite)
 
-
         def _make_inheritable(self, handle):
             """Return a duplicate of handle, which is inheritable"""
             return _subprocess.DuplicateHandle(_subprocess.GetCurrentProcess(),
                                 handle, _subprocess.GetCurrentProcess(), 0, 1,
                                 _subprocess.DUPLICATE_SAME_ACCESS)
-
 
         def _find_w9xpopen(self):
             """Find and return absolut path to w9xpopen.exe"""
@@ -292,7 +288,6 @@ class Popen(object):
                                        "needed for Popen to work with your "
                                        "shell or platform.")
             return w9xpopen
-
 
         def _execute_child(self, args, executable, preexec_fn, close_fds,
                            cwd, env, universal_newlines,
@@ -318,7 +313,7 @@ class Popen(object):
                 startupinfo.dwFlags |= _subprocess.STARTF_USESHOWWINDOW
                 startupinfo.wShowWindow = _subprocess.SW_HIDE
                 comspec = os.environ.get("COMSPEC", "cmd.exe")
-                args = '{} /c "{}"'.format (comspec, args)
+                args = '{} /c "{}"'.format(comspec, args)
                 if (_subprocess.GetVersion() >= 0x80000000 or
                         os.path.basename(comspec).lower() == "command.com"):
                     # Win9x, or using command.com on NT. We need to
@@ -378,7 +373,6 @@ class Popen(object):
                 if _subprocess.WaitForSingleObject(self._handle, 0) == _subprocess._WAIT_OBJECT_0:
                     self.returncode = _subprocess.GetExitCodeProcess(self._handle)
             return self.returncode
-
 
         def wait(self):
             """Wait for child process to terminate.  Returns returncode
@@ -455,7 +449,6 @@ class Popen(object):
                     c2pread, c2pwrite,
                     errread, errwrite)
 
-
         def _set_cloexec_flag(self, fd, cloexec=True):
             try:
                 cloexec_flag = fcntl.FD_CLOEXEC
@@ -467,7 +460,6 @@ class Popen(object):
                 fcntl.fcntl(fd, fcntl.F_SETFD, old | cloexec_flag)
             else:
                 fcntl.fcntl(fd, fcntl.F_SETFD, old & ~cloexec_flag)
-
 
         def _close_fds(self, but):
             if hasattr(os, 'closerange'):
@@ -481,7 +473,6 @@ class Popen(object):
                         os.close(i)
                     except:
                         pass
-
 
         def _execute_child(self, args, executable, preexec_fn, close_fds,
                            cwd, env, universal_newlines,
@@ -618,7 +609,6 @@ class Popen(object):
                         os.close(fd)
                 raise child_exception
 
-
         def _handle_exitstatus(self, sts):
             if os.WIFSIGNALED(sts):
                 self.returncode = -os.WTERMSIG(sts)
@@ -628,13 +618,11 @@ class Popen(object):
                 # Should never happen
                 raise RuntimeError("Unknown child exit status!")
 
-
         def _internal_poll(self):
             """Check if child process has terminated.  Returns returncode
             attribute.
             """
             return self.returncode
-
 
         def wait(self):
             """Wait for child process to terminate.  Returns returncode
@@ -642,7 +630,6 @@ class Popen(object):
             if self.returncode is None:
                 self._event.wait()
             return self.returncode
-
 
         def send_signal(self, sig):
             """Send a signal to the process

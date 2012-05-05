@@ -7,6 +7,7 @@ try:
     from gevent._util import set_exc_info
 except ImportError, ex:
     sys.stderr.write('Failed to import set_exc_info: %s\n' % ex)
+
     def set_exc_info(*args):
         pass
 

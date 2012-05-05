@@ -33,14 +33,12 @@ else:
 
     from types import UnboundMethodType
 
-
     class NA(object):
 
         def __repr__(self):
             return 'N/A'
 
     NA = NA()
-
 
     class SocketAdapter(object):
         """Socket-like API on top of a file descriptor.
@@ -158,7 +156,6 @@ else:
 
     if SocketAdapter__del__:
         SocketAdapter.__del__ = UnboundMethodType(SocketAdapter__del__, None, SocketAdapter)
-
 
     class FileObjectPosix(_fileobject):
 

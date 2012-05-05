@@ -153,7 +153,7 @@ class Condition(object):
                 # little at first, longer as time goes on, but never longer
                 # than 20 times per second (or the timeout time remaining).
                 endtime = _time() + timeout
-                delay = 0.0005 # 500 us -> initial delay of 1 ms
+                delay = 0.0005  # 500 us -> initial delay of 1 ms
                 while True:
                     gotit = waiter.acquire(0)
                     if gotit:
