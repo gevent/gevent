@@ -405,6 +405,11 @@ cdef public class loop [object PyGeventLoopObject, type PyGeventLoop_Type]:
                     return value
             return backend
 
+    property pendingcnt:
+
+        def __get__(self):
+            return libev.ev_pending_count(self._ptr)
+
     def io(self, int fd, int events, ref=True, priority=None):
         return io(self, fd, events, ref, priority)
 
@@ -450,6 +455,7 @@ cdef public class loop [object PyGeventLoopObject, type PyGeventLoop_Type]:
         cdef object msg = self.backend
         if self.default:
             msg += ' default'
+        msg += ' pending=%s' % self.pendingcnt
 #ifdef LIBEV_EMBED
         msg += self._format_details()
 #endif
@@ -470,10 +476,10 @@ cdef public class loop [object PyGeventLoopObject, type PyGeventLoop_Type]:
             activecnt = self.activecnt
         except AttributeError:
             pass
-        if fileno is not None:
-            msg += ' fileno=' + repr(fileno)
         if activecnt is not None:
             msg += ' ref=' + repr(activecnt)
+        if fileno is not None:
+            msg += ' fileno=' + repr(fileno)
         if sigfd is not None and sigfd != -1:
             msg += ' sigfd=' + repr(sigfd)
         return msg

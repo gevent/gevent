@@ -184,3 +184,4 @@ cdef extern from "libev.h":
     void ev_ref(ev_loop*)
     void ev_unref(ev_loop*)
     void ev_break(ev_loop*, int)
+    unsigned int ev_pending_count(ev_loop*)
