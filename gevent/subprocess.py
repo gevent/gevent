@@ -161,6 +161,9 @@ class Popen(object):
             else:
                 self.stderr = FileObject(errread, 'rb')
 
+    def __repr__(self):
+        return '<%s at 0x%x pid=%r returncode=%r>' % (self.__class__.__name__, id(self), self.pid, self.returncode)
+
     def _on_child(self, watcher):
         watcher.stop()
         self._handle_exitstatus(watcher.rstatus)
