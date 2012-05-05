@@ -74,7 +74,6 @@ else:
     resolver.pool.size = 1
 
 
-
 assert gevent_socket.gaierror is socket.gaierror
 assert gevent_socket.error is socket.error
 
@@ -388,7 +387,6 @@ class TestInternational(TestCase):
 
 add(TestInternational, u'президент.рф', 'russian')
 add(TestInternational, u'президент.рф'.encode('idna'), 'idna')
-
 
 
 class TestInterrupted_gethostbyname(greentest.GenericWaitTestCase):
