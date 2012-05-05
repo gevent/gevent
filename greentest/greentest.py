@@ -101,6 +101,7 @@ def wrap_refcount(method):
         finally:
             gc.collect()
             gc.enable()
+        self.skipTearDown = True
     return wrapped
 
 
@@ -187,6 +188,8 @@ class TestCase(BaseTestCase):
         self.initial_switch_count = getattr(_get_hub(), 'switch_count', None)
 
     def tearDown(self):
+        if getattr(self, 'skipTearDown', False):
+            return
         if hasattr(self, 'cleanup'):
             self.cleanup()
         if self.switch_count is not None:
