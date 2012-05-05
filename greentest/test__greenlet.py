@@ -178,7 +178,6 @@ class TestReturn_link(LinksTestCase):
         self.p = gevent.spawn(return25)
         for _ in range(3):
             self._test_return(self.p, 25, sleep0)
-        self.cleanup()
         self.p.kill()
 
     def _test_return(self, p, result, action):
@@ -266,7 +265,6 @@ class TestStuff(greentest.TestCase):
         e = AsyncResult()
         x.link(e)
         self.assertEqual(e.get(), 1)
-        #self.assertEqual([proc.waitall([X]) for X in [x, y, z]], [[1], [2], [3]])
 
     def test_wait_error(self):
         def x():
@@ -276,6 +274,7 @@ class TestStuff(greentest.TestCase):
         y = gevent.spawn(lambda: getcurrent().throw(ExpectedError('test_wait_error')))
         self.assertRaises(ExpectedError, gevent.joinall, [x, y], raise_error=True)
         self.assertRaises(ExpectedError, gevent.joinall, [y], raise_error=True)
+        x.join()
 
     def test_joinall_exception_order(self):
         # if there're several exceptions raised, the earliest one must be raised by joinall
@@ -418,31 +417,31 @@ class TestStr(greentest.TestCase):
 class TestJoin(greentest.GenericWaitTestCase):
 
     def wait(self, timeout):
-        self.g = gevent.spawn(gevent.sleep, 10)
-        return self.g.join(timeout=timeout)
-
-    def cleanup(self):
-        self.g.kill()
+        g = gevent.spawn(gevent.sleep, 10)
+        try:
+            return g.join(timeout=timeout)
+        finally:
+            g.kill()
 
 
 class TestGet(greentest.GenericGetTestCase):
 
     def wait(self, timeout):
-        self.g = gevent.spawn(gevent.sleep, 10)
-        return self.g.get(timeout=timeout)
-
-    def cleanup(self):
-        self.g.kill()
+        g = gevent.spawn(gevent.sleep, 10)
+        try:
+            return g.get(timeout=timeout)
+        finally:
+            g.kill()
 
 
 class TestJoinAll(greentest.GenericWaitTestCase):
 
     def wait(self, timeout):
-        self.g = gevent.spawn(gevent.sleep, 10)
-        gevent.joinall([self.g], timeout=timeout)
-
-    def cleanup(self):
-        self.g.kill()
+        g = gevent.spawn(gevent.sleep, 10)
+        try:
+            gevent.joinall([g], timeout=timeout)
+        finally:
+            g.kill()
 
 
 class TestBasic(greentest.TestCase):
@@ -588,8 +587,8 @@ class TestBasic(greentest.TestCase):
         link_test = []
         g = gevent.spawn(gevent.sleep, 10)
         g.link(lambda x: link_test.append(x))
-        gevent.sleep(0.01)
         self._test_kill(g, block=block)
+        gevent.sleep(0.01)
         assert link_test == [g]
 
     def test_kill_running_block(self):
