@@ -367,20 +367,13 @@ class Popen(object):
             self.pid = pid
             ht.Close()
 
-        def _internal_poll(self, _deadstate=None,
-                _WaitForSingleObject=_subprocess.WaitForSingleObject,
-                _WAIT_OBJECT_0=_subprocess.WAIT_OBJECT_0,
-                _GetExitCodeProcess=_subprocess.GetExitCodeProcess):
+        def _internal_poll(self):
             """Check if child process has terminated.  Returns returncode
             attribute.
-
-            This method is called by __del__, so it can only refer to objects
-            in its local scope.
-
             """
             if self.returncode is None:
-                if _WaitForSingleObject(self._handle, 0) == _WAIT_OBJECT_0:
-                    self.returncode = _GetExitCodeProcess(self._handle)
+                if _subprocess.WaitForSingleObject(self._handle, 0) == _subprocess._WAIT_OBJECT_0:
+                    self.returncode = _subprocess.GetExitCodeProcess(self._handle)
             return self.returncode
 
 
@@ -623,15 +616,11 @@ class Popen(object):
                 raise child_exception
 
 
-        def _handle_exitstatus(self, sts, _WIFSIGNALED=os.WIFSIGNALED,
-                _WTERMSIG=os.WTERMSIG, _WIFEXITED=os.WIFEXITED,
-                _WEXITSTATUS=os.WEXITSTATUS):
-            # This method is called (indirectly) by __del__, so it cannot
-            # refer to anything outside of its local scope."""
-            if _WIFSIGNALED(sts):
-                self.returncode = -_WTERMSIG(sts)
-            elif _WIFEXITED(sts):
-                self.returncode = _WEXITSTATUS(sts)
+        def _handle_exitstatus(self, sts):
+            if os.WIFSIGNALED(sts):
+                self.returncode = -os.WTERMSIG(sts)
+            elif os.WIFEXITED(sts):
+                self.returncode = os.WEXITSTATUS(sts)
             else:
                 # Should never happen
                 raise RuntimeError("Unknown child exit status!")
