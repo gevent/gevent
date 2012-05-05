@@ -590,6 +590,9 @@ def main():
             options.db = False
 
     if options.db:
+        directory = os.path.dirname(options.db)
+        if not os.path.exists(directory):
+            os.makedirs(directory)
         db = sqlite3.connect(options.db)
         db.execute('create table if not exists test (id integer primary key autoincrement, runid text)')
         db.execute('create table if not exists testcase (id integer primary key autoincrement, runid text)')
