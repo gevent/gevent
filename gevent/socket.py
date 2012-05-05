@@ -215,8 +215,6 @@ class _closedsocket(object):
     __getattr__ = _dummy
 
 
-_delegate_methods = ("recv", "recvfrom", "recv_into", "recvfrom_into", "send", "sendto", 'sendall')
-
 timeout_default = object()
 
 
