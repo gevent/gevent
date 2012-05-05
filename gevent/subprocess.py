@@ -179,7 +179,7 @@ class Popen(object):
         communicate() returns a tuple (stdout, stderr)."""
         greenlets = []
         if self.stdin:
-           greenlets.append(spawn(write_and_close, self.stdin, input))
+            greenlets.append(spawn(write_and_close, self.stdin, input))
 
         if self.stdout:
             stdout = spawn(self.stdout.read)
