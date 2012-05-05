@@ -626,6 +626,24 @@ def assert_not_ready(g):
     assert not g.ready(), g
 
 
+class TestRef(greentest.TestCase):
+
+    def test_init(self):
+        self.switch_expected = False
+        # in python-dbg mode this will check that Greenlet() does not create any circular refs
+        gevent.Greenlet()
+
+    def test_kill_scheduled(self):
+        gevent.spawn(gevent.sleep, 10).kill()
+
+    def test_kill_started(self):
+        g = gevent.spawn(gevent.sleep, 10)
+        try:
+            gevent.sleep(0.001)
+        finally:
+            g.kill()
+
+
 X = object()
 
 if __name__ == '__main__':
