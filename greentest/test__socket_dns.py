@@ -15,6 +15,8 @@ RAISE_TOO_SLOW = False
 # also test: '<broadcast>'
 
 resolver = gevent.get_hub().resolver
+sys.stderr.write('Resolver: %s\n' % resolver)
+
 if hasattr(resolver, 'ares'):
     accept_results = [
                   # Python's socketmodule.c randomly chooses between gaierror and herror when raising an exception
