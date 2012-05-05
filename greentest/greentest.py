@@ -68,9 +68,9 @@ def wrap_refcount(method):
         try:
             while True:
                 d = gettotalrefcount()
+                self.setUp()
                 method(self, *args, **kwargs)
-                if hasattr(self, 'cleanup'):
-                    self.cleanup()
+                self.tearDown()
                 if 'urlparse' in sys.modules:
                     sys.modules['urlparse'].clear_cache()
                 d = gettotalrefcount() - d
