@@ -2896,6 +2896,19 @@ time_update (EV_P_ ev_tstamp max_block)
     }
 }
 
+inline_speed int
+has_pending (EV_P)
+{
+  int pri;
+
+  for (pri = NUMPRI; pri--; )
+    if (pendingcnt [pri])
+        return 1;
+
+  return 0;
+}
+
+
 void
 ev_run (EV_P_ int flags)
 {
@@ -3052,7 +3065,7 @@ ev_run (EV_P_ int flags)
       EV_INVOKE_PENDING;
     }
   while (expect_true (
-    activecnt
+    (activecnt || has_pending(EV_A))
     && !loop_done
     && !(flags & (EVRUN_ONCE | EVRUN_NOWAIT))
   ));
