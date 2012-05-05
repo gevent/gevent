@@ -126,8 +126,8 @@ else:
                     if not self._translate or not data:
                         return data
                     if self._eat_newline:
+                        self._eat_newline = False
                         if data.startswith('\n'):
-                            self._eat_newline = False
                             data = data[1:]
                             if not data:
                                 return self.recv(size)
