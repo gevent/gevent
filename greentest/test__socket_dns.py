@@ -188,10 +188,10 @@ class TooSlow(AssertionError):
 
 class TestCase(greentest.TestCase):
 
-    __timeout__ = 15
+    __timeout__ = 60
     switch_expected = None
 
-    def _test(self, func, *args):
+    def _test_once(self, func, *args):
         gevent_func = getattr(gevent_socket, func)
         real_func = getattr(socket, func)
         real_result, time_real = run(real_func, *args)
@@ -224,12 +224,21 @@ class TestCase(greentest.TestCase):
             if times is None:
                 times = time_gevent / time_real
             params = (func, args, times, time_gevent * 1000.0, time_real * 1000.0)
-            msg = 'gevent_socket.%s%s is %.1f times slower (%.3fms versus %.3fms)' % params
-            if RAISE_TOO_SLOW:
-                raise TooSlow(msg)
-            else:
-                sys.stderr.write('WARNING: %s\n' % msg)
+            raise TooSlow('gevent_socket.%s%s is %.1f times slower (%.3fms versus %.3fms)' % params)
         return result
+
+    def _test(self, func, *args):
+        try:
+            return self._test_once(func, *args)
+        except AssertionError, ex:
+            sys.stderr.write('\n%s (retrying)\n' % ex)
+        try:
+            return self._test_once(func, *args)
+        except TooSlow, ex:
+            if RAISE_TOO_SLOW:
+                raise
+            else:
+                sys.stderr.write('WARNING: %s\n' % ex)
 
     def assertEqualResults(self, real_result, gevent_result, func):
         if type(real_result) is TypeError and type(gevent_result) is TypeError:
