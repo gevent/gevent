@@ -212,14 +212,19 @@ else:
 
 class FileObjectThreadPool(object):
 
-    def __init__(self, fobj, mode='rb', bufsize=-1, close=True, threadpool=None):
+    def __init__(self, fobj, *args, **kwargs):
+        self._close = kwargs.pop('close', True)
+        self.threadpool = kwargs.pop('threadpool', None)
+        if kwargs:
+            raise TypeError('Unexpected arguments: %r' % kwargs.keys())
         if isinstance(fobj, (int, long)):
-            fobj = os.fdopen(fobj, mode, bufsize)
+            if not self._close:
+                # we cannot do this, since fdopen object will close the descriptor
+                raise TypeError('FileObjectThreadPool does not support close=False')
+            fobj = os.fdopen(fobj, *args)
         self._fobj = fobj
-        self._close = close
-        if threadpool is None:
-            threadpool = get_hub().threadpool
-        self.threadpool = threadpool
+        if self.threadpool is None:
+            self.threadpool = get_hub().threadpool
 
     def close(self):
         fobj = self._fobj
@@ -227,14 +232,14 @@ class FileObjectThreadPool(object):
             return
         self._fobj = None
         try:
-            self.flush(__fobj=fobj)
+            self.flush(_fobj=fobj)
         finally:
             if self._close:
                 fobj.close()
 
-    def flush(self, __fobj=None):
-        if __fobj is not None:
-            fobj = __fobj
+    def flush(self, _fobj=None):
+        if _fobj is not None:
+            fobj = _fobj
         else:
             fobj = self._fobj
         if fobj is None:

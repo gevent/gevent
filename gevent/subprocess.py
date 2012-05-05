@@ -593,11 +593,12 @@ class Popen(object):
 
                 # Wait for exec to fail or succeed; possibly raising exception
                 # Exception limited to 1M
-                data = FileObject(errpipe_read, 'rb', close=False).read(1048576)
+                data = FileObject(errpipe_read, 'rb').read(1048576)
+                errpipe_read = None
             finally:
-                # be sure the FD is closed no matter what
                 try:
-                    os.close(errpipe_read)
+                    if errpipe_read is not None:
+                        os.close(errpipe_read)
                 except EnvironmentError:
                     pass
 
