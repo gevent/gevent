@@ -420,3 +420,9 @@ def disabled_gc():
     finally:
         if was_enabled:
             gc.enable()
+
+
+def get_number_open_files():
+    if os.path.exists('/proc/'):
+        fd_directory = '/proc/%d/fd' % os.getpid()
+        return len(os.listdir(fd_directory))
