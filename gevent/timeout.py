@@ -83,12 +83,10 @@ class Timeout(BaseException):
                 raise # not my timeout
     """
 
-    def __init__(self, seconds=None, exception=None, ref=True):
+    def __init__(self, seconds=None, exception=None, ref=True, priority=-1):
         self.seconds = seconds
         self.exception = exception
-        self.timer = get_hub().loop.timer(seconds or 0.0, ref=ref)
-        # we pass ref=False so that gevent.run() ignores oustanding timeouts
-        # we can do that because timeouts are always used with some other watchers
+        self.timer = get_hub().loop.timer(seconds or 0.0, ref=ref, priority=priority)
 
     def start(self):
         """Schedule the timeout."""
