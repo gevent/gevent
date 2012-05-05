@@ -258,6 +258,10 @@ class BaseServer(object):
                 if self.pool is not None:
                     self.pool._semaphore.unlink(self._start_accepting_if_started)
 
+    @property
+    def closed(self):
+        return not hasattr(self, 'socket')
+
     def stop(self, timeout=None):
         """Stop accepting the connections and close the listening socket.
 
