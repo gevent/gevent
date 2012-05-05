@@ -5,17 +5,22 @@ from gevent import monkey; monkey.patch_all()
 
 
 from threading import local
+
+
 class A(local):
-    __slots__ = ['initialized','obj']
+    __slots__ = ['initialized', 'obj']
 
     path = ''
+
     def __init__(self, obj):
         if not  hasattr(self, 'initialized'):
             self.obj = obj
         self.path = ''
 
+
 class Obj(object):
     pass
+
 
 class GeventLocalTestCase(unittest.TestCase):
 
@@ -45,7 +50,7 @@ class GeventLocalTestCase(unittest.TestCase):
         """
         a = A({})
         a.path = '123'
-        b = A({'one':2})
+        b = A({'one': 2})
         b.path = '123'
         self.assertEqual(a.path, b.path, 'The values in the two objects must be equal')
 
