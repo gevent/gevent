@@ -320,6 +320,10 @@ class socket(object):
         self.hub.cancel_wait(self._write_event, cancel_wait_ex)
         self._sock = _closedsocket()
 
+    @property
+    def closed(self):
+        return isinstance(self._sock, _closedsocket)
+
     def connect(self, address):
         if self.timeout == 0.0:
             return self._sock.connect(address)
