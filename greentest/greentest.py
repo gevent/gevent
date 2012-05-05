@@ -75,11 +75,28 @@ def wrap_refcount(method):
                     sys.modules['urlparse'].clear_cache()
                 d = gettotalrefcount() - d
                 deltas.append(d)
-                if 2 <= len(deltas) <= 3 and deltas[-2:] == [0, 0]:
+                # the following configurations are classified as "no leak"
+                # [0, 0]
+                # [x, 0, 0]
+                # [... a, b, c, d]  where a+b+c+d = 0
+                #
+                # the following configurations are classified as "leak"
+                # [... z, z, z]  where z > 0
+                if deltas[-2:] == [0, 0] and len(deltas) in (2, 3):
                     break
-                if 3 <= len(deltas) and deltas[-3:] == [0, 0, 0]:
+                elif deltas[-3:] == [0, 0, 0]:
                     break
-                if len(deltas) >= 6:
+                elif len(deltas) >= 4 and sum(deltas[-4:]) == 0:
+                    break
+                elif len(deltas) >= 3 and deltas[-1] > 0 and deltas[-1] == deltas[-2] and deltas[-2] == deltas[-3]:
+                    raise AssertionError('refcount increased by %r' % (deltas, ))
+                # OK, we don't know for sure yet. Let's search for more
+                if sum(deltas[-3:]) <= 0 or sum(deltas[-4:]) <= 0 or deltas[-4:].count(0) >= 2:
+                    # this is suspicious, so give a few more runs
+                    limit = 10
+                else:
+                    limit = 6
+                if len(deltas) >= limit:
                     raise AssertionError('refcount increased by %r' % (deltas, ))
         finally:
             gc.collect()
