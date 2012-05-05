@@ -41,19 +41,51 @@ __extra__ = ['MAXFD',
              'STARTUPINFO',
              'pywintypes',
              '_PIPE_BUF',
+             'list2cmdline',
              '_subprocess',
-             'list2cmdline']
+             # Python 2.5 does not have _subprocess, so we don't use it
+             'WAIT_OBJECT_0',
+             'WaitForSingleObject',
+             'GetExitCodeProcess',
+             'GetStdHandle',
+             'CreatePipe',
+             'DuplicateHandle',
+             'GetCurrentProcess',
+             'DUPLICATE_SAME_ACCESS',
+             'GetModuleFileName',
+             'GetVersion',
+             'CreateProcess',
+             'INFINITE',
+             'TerminateProcess']
 
 
-for name in (__imports__ + __extra__):
+for name in __imports__[:]:
     try:
         value = getattr(__subprocess__, name)
         globals()[name] = value
     except AttributeError:
-        if name in __imports__:
-            __imports__.remove(name)
-        else:
-            __extra__.remove(name)
+        __imports__.remove(name)
+        __extra__.append(name)
+
+_subprocess = getattr(__subprocess__, '_subprocess', None)
+_NONE = object()
+
+for name in __extra__[:]:
+    if name in globals():
+        continue
+    value = _NONE
+    try:
+        value = getattr(__subprocess__, name)
+    except AttributeError:
+        if _subprocess is not None:
+            try:
+                value = getattr(_subprocess, name)
+            except AttributeError:
+                pass
+    if value is _NONE:
+        __extra__.remove(name)
+    else:
+        globals()[name] = value
 
 
 __all__ = __implements__ + __imports__
@@ -223,11 +255,11 @@ class Popen(object):
             errread, errwrite = None, None
 
             if stdin is None:
-                p2cread = _subprocess.GetStdHandle(_subprocess.STD_INPUT_HANDLE)
+                p2cread = GetStdHandle(STD_INPUT_HANDLE)
                 if p2cread is None:
-                    p2cread, _ = _subprocess.CreatePipe(None, 0)
+                    p2cread, _ = CreatePipe(None, 0)
             elif stdin == PIPE:
-                p2cread, p2cwrite = _subprocess.CreatePipe(None, 0)
+                p2cread, p2cwrite = CreatePipe(None, 0)
             elif isinstance(stdin, int):
                 p2cread = msvcrt.get_osfhandle(stdin)
             else:
@@ -236,11 +268,11 @@ class Popen(object):
             p2cread = self._make_inheritable(p2cread)
 
             if stdout is None:
-                c2pwrite = _subprocess.GetStdHandle(_subprocess.STD_OUTPUT_HANDLE)
+                c2pwrite = GetStdHandle(STD_OUTPUT_HANDLE)
                 if c2pwrite is None:
-                    _, c2pwrite = _subprocess.CreatePipe(None, 0)
+                    _, c2pwrite = CreatePipe(None, 0)
             elif stdout == PIPE:
-                c2pread, c2pwrite = _subprocess.CreatePipe(None, 0)
+                c2pread, c2pwrite = CreatePipe(None, 0)
             elif isinstance(stdout, int):
                 c2pwrite = msvcrt.get_osfhandle(stdout)
             else:
@@ -249,11 +281,11 @@ class Popen(object):
             c2pwrite = self._make_inheritable(c2pwrite)
 
             if stderr is None:
-                errwrite = _subprocess.GetStdHandle(_subprocess.STD_ERROR_HANDLE)
+                errwrite = GetStdHandle(STD_ERROR_HANDLE)
                 if errwrite is None:
-                    _, errwrite = _subprocess.CreatePipe(None, 0)
+                    _, errwrite = CreatePipe(None, 0)
             elif stderr == PIPE:
-                errread, errwrite = _subprocess.CreatePipe(None, 0)
+                errread, errwrite = CreatePipe(None, 0)
             elif stderr == STDOUT:
                 errwrite = c2pwrite
             elif isinstance(stderr, int):
@@ -269,14 +301,14 @@ class Popen(object):
 
         def _make_inheritable(self, handle):
             """Return a duplicate of handle, which is inheritable"""
-            return _subprocess.DuplicateHandle(_subprocess.GetCurrentProcess(),
-                                handle, _subprocess.GetCurrentProcess(), 0, 1,
-                                _subprocess.DUPLICATE_SAME_ACCESS)
+            return DuplicateHandle(GetCurrentProcess(),
+                                handle, GetCurrentProcess(), 0, 1,
+                                DUPLICATE_SAME_ACCESS)
 
         def _find_w9xpopen(self):
             """Find and return absolut path to w9xpopen.exe"""
             w9xpopen = os.path.join(
-                            os.path.dirname(_subprocess.GetModuleFileName(0)),
+                            os.path.dirname(GetModuleFileName(0)),
                                     "w9xpopen.exe")
             if not os.path.exists(w9xpopen):
                 # Eeek - file-not-found - possibly an embedding
@@ -304,18 +336,18 @@ class Popen(object):
             if startupinfo is None:
                 startupinfo = STARTUPINFO()
             if None not in (p2cread, c2pwrite, errwrite):
-                startupinfo.dwFlags |= _subprocess.STARTF_USESTDHANDLES
+                startupinfo.dwFlags |= STARTF_USESTDHANDLES
                 startupinfo.hStdInput = p2cread
                 startupinfo.hStdOutput = c2pwrite
                 startupinfo.hStdError = errwrite
 
             if shell:
-                startupinfo.dwFlags |= _subprocess.STARTF_USESHOWWINDOW
-                startupinfo.wShowWindow = _subprocess.SW_HIDE
+                startupinfo.dwFlags |= STARTF_USESHOWWINDOW
+                startupinfo.wShowWindow = SW_HIDE
                 comspec = os.environ.get("COMSPEC", "cmd.exe")
                 args = '{} /c "{}"'.format(comspec, args)
-                if (_subprocess.GetVersion() >= 0x80000000 or
-                        os.path.basename(comspec).lower() == "command.com"):
+                if (GetVersion() >= 0x80000000 or
+                    os.path.basename(comspec).lower() == "command.com"):
                     # Win9x, or using command.com on NT. We need to
                     # use the w9xpopen intermediate program. For more
                     # information, see KB Q150956
@@ -328,11 +360,11 @@ class Popen(object):
                     # use at xxx" and a hopeful warning about the
                     # stability of your system.  Cost is Ctrl+C wont
                     # kill children.
-                    creationflags |= _subprocess.CREATE_NEW_CONSOLE
+                    creationflags |= CREATE_NEW_CONSOLE
 
             # Start the process
             try:
-                hp, ht, pid, tid = _subprocess.CreateProcess(executable, args,
+                hp, ht, pid, tid = CreateProcess(executable, args,
                                          # no special security
                                          None, None,
                                          int(not close_fds),
@@ -370,16 +402,16 @@ class Popen(object):
             attribute.
             """
             if self.returncode is None:
-                if _subprocess.WaitForSingleObject(self._handle, 0) == _subprocess._WAIT_OBJECT_0:
-                    self.returncode = _subprocess.GetExitCodeProcess(self._handle)
+                if WaitForSingleObject(self._handle, 0) == WAIT_OBJECT_0:
+                    self.returncode = GetExitCodeProcess(self._handle)
             return self.returncode
 
         def wait(self):
             """Wait for child process to terminate.  Returns returncode
             attribute."""
             if self.returncode is None:
-                self.threadpool.apply_e(BaseException, _subprocess.WaitForSingleObject, (self._handle, _subprocess.INFINITE))
-                self.returncode = _subprocess.GetExitCodeProcess(self._handle)
+                self.threadpool.apply_e(BaseException, WaitForSingleObject, (self._handle, INFINITE))
+                self.returncode = GetExitCodeProcess(self._handle)
             return self.returncode
 
         def send_signal(self, sig):
@@ -397,7 +429,7 @@ class Popen(object):
         def terminate(self):
             """Terminates the process
             """
-            _subprocess.TerminateProcess(self._handle, 1)
+            TerminateProcess(self._handle, 1)
 
         kill = terminate
 
@@ -540,7 +572,7 @@ class Popen(object):
 
                             # Close pipe fds.  Make sure we don't close the
                             # same fd more than once, or standard fds.
-                            closed = { None }
+                            closed = set([None])
                             for fd in [p2cread, c2pwrite, errwrite]:
                                 if fd not in closed and fd > 2:
                                     os.close(fd)
