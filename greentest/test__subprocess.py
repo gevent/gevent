@@ -1,3 +1,4 @@
+# mostly tests from test_subprocess.py that used to have problems
 import sys
 import os
 import greentest
