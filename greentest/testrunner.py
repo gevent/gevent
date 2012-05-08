@@ -386,7 +386,14 @@ def get_testcases(cursor, runid, result=None):
     if result is not None:
         sql += ' and result=?'
         args += (result, )
-    return ['.'.join(x) for x in cursor.execute(sql, args).fetchall()]
+
+    try:
+        result = cursor.execute(sql, args)
+    except Exception:
+        log('Failed to execute %r %r', sql, args)
+        raise
+
+    return ['.'.join(x) for x in result.fetchall()]
 
 
 def get_failed_testcases(cursor, runid):
@@ -532,6 +539,9 @@ def print_stats(options):
                 if not skipped:
                     failed.append(test)
                     total += 1
+            # XXX if a test without any test cases fails it is added to total
+            # XXX but if it passes it is not
+
     if failed:
         failed.sort()
         log('FAILURES: ')
@@ -595,7 +605,12 @@ def main():
             os.makedirs(directory)
         db = sqlite3.connect(options.db)
         db.execute('create table if not exists test (id integer primary key autoincrement, runid text)')
-        db.execute('create table if not exists testcase (id integer primary key autoincrement, runid text)')
+        db.execute('''create table if not exists testcase (
+                      id integer primary key autoincrement,
+                      runid text,
+                      test text,
+                      testcase test,
+                      result text)''')
         db.commit()
 
     if options.stats:
