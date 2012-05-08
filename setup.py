@@ -21,9 +21,30 @@ ext_errors = (CCompilerError, DistutilsExecError, DistutilsPlatformError, IOErro
 __version__ = re.search("__version__\s*=\s*'(.*)'", open('gevent/__init__.py').read(), re.M).group(1)
 assert __version__
 
-embed = os.environ.get("gevent_embed", "yes").lower().strip() not in ("0", "no", "off")
-libev_embed = embed and os.path.exists('libev')
-ares_embed = embed and os.path.exists('c-ares')
+
+def parse_environ(key):
+    value = os.environ.get(key)
+    if not value:
+        return
+    value = value.lower().strip()
+    if value in ('1', 'true', 'on', 'yes'):
+        return True
+    elif value in ('0', 'false', 'off', 'no'):
+        return False
+    raise ValueError('Environment variable %r has invalid value %r. Please set it to 1, 0 or an empty string' % (key, value))
+
+
+def get_config_value(key, defkey, path):
+    value = parse_environ(key)
+    if value is None:
+        value = parse_environ(defkey)
+    if value is None:
+        return os.path.exists(path)
+
+
+LIBEV_EMBED = get_config_value('LIBEV_EMBED', 'EMBED', 'libev')
+CARES_EMBED = get_config_value('CARES_EMBED', 'EMBED', 'c-ares')
+
 define_macros = []
 libraries = []
 libev_configure_command = ["/bin/sh", abspath('libev/configure'), '> configure-output.txt']
@@ -45,7 +66,7 @@ def expand(*lst):
 
 CORE = Extension(name='gevent.core',
                  sources=['gevent/gevent.core.c'],
-                 include_dirs=['libev'] if libev_embed else [],
+                 include_dirs=['libev'] if LIBEV_EMBED else [],
                  libraries=libraries,
                  define_macros=define_macros,
                  depends=expand('gevent/callbacks.*', 'gevent/stathelper.c', 'gevent/libev*.h', 'libev/*.*'))
@@ -53,7 +74,7 @@ CORE = Extension(name='gevent.core',
 
 ARES = Extension(name='gevent.ares',
                  sources=['gevent/gevent.ares.c'],
-                 include_dirs=['c-ares'] if ares_embed else [],
+                 include_dirs=['c-ares'] if CARES_EMBED else [],
                  libraries=libraries,
                  define_macros=define_macros,
                  depends=expand('gevent/dnshelper.c', 'gevent/cares_*.*'))
@@ -140,7 +161,7 @@ def configure_ares(bext, ext):
         os.chdir(cwd)
 
 
-if libev_embed:
+if LIBEV_EMBED:
     CORE.define_macros += [('LIBEV_EMBED', '1'),
                            ('EV_COMMON', ''),  # we don't use void* data
                            # libev watchers that we don't use currently:
@@ -155,7 +176,7 @@ else:
     CORE.libraries.append('ev')
 
 
-if ares_embed:
+if CARES_EMBED:
     ARES.sources += expand('c-ares/*.c')
     ARES.configure = configure_ares
     if sys.platform == 'win32':
@@ -165,7 +186,7 @@ if ares_embed:
         ARES.define_macros += [('HAVE_CONFIG_H', '')]
         if sys.platform != 'darwin':
             ARES.libraries += ['rt']
-    ARES.define_macros += [('CARES_EMBED', '')]
+    ARES.define_macros += [('CARES_EMBED', '1')]
 else:
     ARES.libraries.append('cares')
     ARES.define_macros += [('HAVE_NETDB_H', '')]
