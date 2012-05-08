@@ -43,7 +43,7 @@ def imp_find_dotted_module(name):
     return result
 
 
-def prepare_stdlib_test(filename):
+def _prepare_stdlib_test(filename):
     patch_all(timeout=20)
     import test
     try:
@@ -74,4 +74,13 @@ def prepare_stdlib_test(filename):
     module_code = compile(module_source, _filename, 'exec')
 
     print >> sys.stderr, 'Testing %s with monkey patching' % _filename
-    return module_code
+    return module_code, _filename
+
+
+def prepare_stdlib_test(filename):
+    return _prepare_stdlib_test(filename)[0]
+
+
+def run(filename, globals):
+    module_code, filename = _prepare_stdlib_test(filename)
+    exec module_code in globals
