@@ -1,12 +1,41 @@
 Revision history for libev, a high-performance and full-featured event loop.
 
 TODO: ev_loop_wakeup
-
-TODO: EV_NO_THREADS/NO_SMP and/or EV_USE_PTHREADS or so. also document.
-TODO: #define EV_API_DECL static? ev_default_loop_ptr?
 TODO: EV_STANDALONE == NO_HASSEL (do not use clock_gettime in ev_standalone)
-TODO: memory fences for clang
-4.10
+TODO: faq, process a thing in each iteration
+TODO: dbeugging tips, ev_verify, ev_init twice
+
+	- queueing pending watchers of higher priority from a watcher now invokes
+          them in a timely fashion (reported by Denis Bilenko).
+	- add throw() to all libev functions that cannot throw exceptions, for
+          further code size decrease when compiling for C++.
+        - add throw () to callbacks that must not throw exceptions (allocator,
+          syserr, loop acquire/release, periodic reschedule cbs).
+	- fix event_base_loop return code, add event_get_callback, event_base_new,
+          event_base_get_method calls to improve libevent 1.x emulation and add
+          some libevent 2.x funcitonality (based on a patch by Jeff Davey).
+        - add more memory fences to fix a bug reported by Jeff Davey. Better
+          be overfenced than underprotected.
+	- ev_run now returns a boolean status (true meaning watchers are
+          still active).
+	- ev_once: undef EV_ERROR in ev_kqueue.c, to avoid clashing with
+          libev's EV_ERROR (reported by 191919).
+	- (ecb) add memory fence support for xlC (Darin McBride).
+	- (ecb) add memory fence support for gcc-mips (Anton Kirilov).
+	- (ecb) add memory fence support for gcc-alpha (Christian Weisgerber).
+        - work around some kernels losing file descriptors by leaking
+          the kqueue descriptor in the child.
+        - include sys/syscall.h instead of plain syscall.h.
+        - check for io watcher loops in ev_verify, check for the most
+          common reported usage bug in ev_io_start.
+        - chose socket vs. WSASocket at compiletime using EV_USE_WSASOCKET.
+        - always use WSASend/WSARecv directly on windows, hoping that this
+          works in all cases (unlike read/write/send/recv...).
+
+4.11 Sat Feb  4 19:52:39 CET 2012
+	- INCOMPATIBLE CHANGE: ev_timer_again now clears the pending status, as
+          was documented already, but not implemented in the repeating case.
+        - new compiletime symbols: EV_NO_SMP and EV_NO_THREADS.
 	- fix a race where the workaround against the epoll fork bugs
           caused signals to not be handled anymore.
 	- correct backend_fudge for most backends, and implement a windows
@@ -23,6 +52,14 @@ TODO: memory fences for clang
         - strategically import macros from libecb and mark rarely-used functions
           as cache-cold (saving almost 2k code size on typical amd64 setups).
         - add Symbols.ev and Symbols.event files, that were missing.
+        - fix backend_mintime value for epoll (was 1/1024, is 1/1000 now).
+        - fix #3 "be smart about timeouts" to not "deadlock" when
+          timeout == now, also improve the section overall.
+        - avoid "AVOIDING FINISHING BEFORE RETURNING" idiom.
+        - support new EV_API_STATIC mode to make all libev symbols
+          static.
+        - supply default CFLAGS of -g -O3 with gcc when original CFLAGS
+          were empty.
 
 4.04 Wed Feb 16 09:01:51 CET 2011
 	- fix two problems in the native win32 backend, where reuse of fd's

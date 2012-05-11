@@ -65,7 +65,7 @@
 #       compiler:		$LTCC
 #       compiler flags:		$LTCFLAGS
 #       linker:		$LD (gnu? $with_gnu_ld)
-#       $progname:		(GNU libtool) 2.2.6b Debian-2.2.6b-2ubuntu3
+#       $progname:		(GNU libtool) 2.2.6b Debian-2.2.6b-2
 #       automake:		$automake_version
 #       autoconf:		$autoconf_version
 #
@@ -73,7 +73,7 @@
 
 PROGRAM=ltmain.sh
 PACKAGE=libtool
-VERSION="2.2.6b Debian-2.2.6b-2ubuntu3"
+VERSION="2.2.6b Debian-2.2.6b-2"
 TIMESTAMP=""
 package_revision=1.3017
 
