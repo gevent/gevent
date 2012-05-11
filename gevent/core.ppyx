@@ -6,7 +6,6 @@ import sys
 import os
 import traceback
 import signal as signalmodule
-SIGCHLD = getattr(signalmodule, 'SIGCHLD', None)
 
 
 __all__ = ['get_version',
@@ -72,10 +71,6 @@ NOINOTIFY = libev.EVFLAG_NOINOTIFY
 SIGNALFD = libev.EVFLAG_SIGNALFD
 NOSIGMASK = libev.EVFLAG_NOSIGMASK
 
-# gevent-added flag:
-cdef int c_NOCHILD = 0x0100000U
-NOCHILD = c_NOCHILD
-
 
 @cython.internal
 cdef class _EVENTSType:
@@ -105,8 +100,7 @@ _flags = [(libev.EVBACKEND_PORT, 'port'),
           (libev.EVFLAG_NOENV, 'noenv'),
           (libev.EVFLAG_FORKCHECK, 'forkcheck'),
           (libev.EVFLAG_SIGNALFD, 'signalfd'),
-          (libev.EVFLAG_NOSIGMASK, 'nosigmask'),
-          (NOCHILD, 'nochild')]
+          (libev.EVFLAG_NOSIGMASK, 'nosigmask')]
 
 
 _flags_str2int = dict((string, flag) for (flag, string) in _flags)
@@ -230,7 +224,6 @@ cdef public class loop [object PyGeventLoopObject, type PyGeventLoop_Type]:
     cdef libev.ev_loop* _ptr
     cdef public object error_handler
     cdef libev.ev_prepare _signal_checker
-    cdef public int nochild
 #ifdef _WIN32
     cdef libev.ev_timer _periodic_signal_checker
 #endif
@@ -238,7 +231,6 @@ cdef public class loop [object PyGeventLoopObject, type PyGeventLoop_Type]:
     def __init__(self, object flags=None, object default=True, size_t ptr=0):
         cdef unsigned int c_flags
         cdef object old_handler = None
-        self.nochild = 0
         libev.ev_prepare_init(&self._signal_checker, <void*>gevent_signal_check)
 #ifdef _WIN32
         libev.ev_timer_init(&self._periodic_signal_checker, <void*>gevent_periodic_signal_check, 0.3, 0.3)
@@ -252,16 +244,9 @@ cdef public class loop [object PyGeventLoopObject, type PyGeventLoop_Type]:
             if _default_loop_destroyed:
                 default = False
             if default:
-                if c_flags & c_NOCHILD:
-                    self.nochild = 1
-                    if SIGCHLD is not None:
-                        old_handler = signalmodule.getsignal(SIGCHLD)
                 self._ptr = libev.ev_default_loop(c_flags)
                 if not self._ptr:
                     raise SystemError("ev_default_loop(%s) failed" % (c_flags, ))
-                if self.nochild:
-                    if SIGCHLD is not None:
-                        signalmodule.signal(SIGCHLD, old_handler)
                 libev.ev_prepare_start(self._ptr, &self._signal_checker)
                 libev.ev_unref(self._ptr)
 #ifdef _WIN32
@@ -434,8 +419,6 @@ cdef public class loop [object PyGeventLoopObject, type PyGeventLoop_Type]:
 #if EV_CHILD_ENABLE
 
     def child(self, int pid, bint trace=0, ref=True):
-        if self.nochild:
-            raise TypeError('child watchers are not available because "nochild" is in effect')
         return child(self, pid, trace, ref)
 
 #endif
