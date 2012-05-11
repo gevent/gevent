@@ -59,14 +59,8 @@ except AttributeError:
 try:
     import sqlite3
 except ImportError:
-    ex = sys.exc_info()[1]
-    sys.stderr.write('Failed to import sqlite3: %s\n' % ex)
-    try:
-        import pysqlite2.dbapi2 as sqlite3
-    except ImportError:
-        ex = sys.exc_info()[1]
-        sys.stderr.write('Failed to import pysqlite2.dbapi2: %s\n' % ex)
-        sqlite3 = None
+    sys.stderr.write('Failed to import sqlite3: %s\n' % sys.exc_info()[1])
+    sqlite3 = None
 
 _column_types = {'time': 'real'}
 
