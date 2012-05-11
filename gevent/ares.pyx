@@ -2,7 +2,6 @@
 cimport cares
 import sys
 from python cimport *
-from gevent.core import io, loop
 from _socket import gaierror
 
 
