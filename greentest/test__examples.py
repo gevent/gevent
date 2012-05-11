@@ -54,16 +54,16 @@ def run_script(path, *args):
         raise AssertionError('%r failed with code %s' % (cmd, popen.wait()))
 
 
-def kill(popen, signum=9):
-    while True:
-        try:
-            popen.send_signal(signum)
-        except OSError, ex:
-            if ex.errno == 3:  # No such process
-                return
-            raise
-        else:
-            gevent.sleep(0.01)
+def kill(popen):
+    try:
+        popen.kill()
+    except OSError, ex:
+        if ex.errno == 3:  # No such process
+            return
+        if ex.errno == 13:  # Permission denied (translated from windows error 5: "Access is denied")
+            return
+        raise
+    popen.wait()
 
 
 class BaseTestServer(unittest.TestCase):
