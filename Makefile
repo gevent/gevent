@@ -6,7 +6,7 @@ CYTHON ?= cython
 
 all: gevent/gevent.core.c gevent/gevent.ares.c gevent/gevent._semaphore.c gevent/gevent._util.c
 
-gevent/gevent.core.c: gevent/core.ppyx gevent/libev.pxd util/cythonpp.py
+gevent/gevent.core.c: gevent/core.ppyx gevent/libev.pxd
 	$(PYTHON) util/cythonpp.py -o gevent.core.c gevent/core.ppyx
 	echo                          >> gevent.core.c
 	echo '#include "callbacks.c"' >> gevent.core.c
