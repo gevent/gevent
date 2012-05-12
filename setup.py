@@ -110,7 +110,7 @@ def make_universal_header(filename, *defines):
 
 def _system(cmd):
     cmd = ' '.join(cmd)
-    sys.stderr.write('Running %r in %s\n' % (cmd, os.getcwd()))
+    sys.stdout.write('Running %r in %s\n' % (cmd, os.getcwd()))
     return os.system(cmd)
 
 
@@ -251,10 +251,10 @@ class my_build_ext(build_ext):
                     except OSError:
                         pass
                     if hasattr(os, 'symlink'):
-                        sys.stderr.write('Linking %s to %s\n' % (path_to_build_core_so, path_to_core_so))
+                        sys.stdout.write('Linking %s to %s\n' % (path_to_build_core_so, path_to_core_so))
                         os.symlink(path_to_build_core_so, path_to_core_so)
                     else:
-                        sys.stderr.write('Copying %s to %s\n' % (path_to_build_core_so, path_to_core_so))
+                        sys.stdout.write('Copying %s to %s\n' % (path_to_build_core_so, path_to_core_so))
                         shutil.copyfile(path_to_build_core_so, path_to_core_so)
         except Exception:
             traceback.print_exc()
