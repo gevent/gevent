@@ -1,3 +1,4 @@
+# testrunner timeout: 300
 import sys
 import glob
 import subprocess

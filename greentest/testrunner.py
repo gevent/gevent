@@ -36,7 +36,7 @@ one will be selected if not provided.
 DEFAULT_FILENAME = '/tmp/gevent-testrunner.sqlite3'
 
 # the number of seconds each test script is allowed to run
-DEFAULT_TIMEOUT = 600
+DEFAULT_TIMEOUT = 60
 
 # the number of bytes of output that is recorded; the rest is thrown away
 OUTPUT_LIMIT = 50000
@@ -239,9 +239,9 @@ def run_tests(options, args):
         sys.exit(not result.wasSuccessful())
 
 
-def run_subprocess(args, options):
+def run_subprocess(args, options, timeout):
     from threading import Timer
-    from mysubprocess import Popen, PIPE, STDOUT
+    from subprocess import Popen, PIPE, STDOUT
 
     popen_args = [sys.executable, sys.argv[0], '--record',
                   '--runid', options.runid,
@@ -257,25 +257,17 @@ def run_subprocess(args, options):
 
     retcode = []
 
-    def kill():
-        if popen.poll() is None:
-            try:
-                popen.kill()
-            except Exception, ex:
-                log('%s: %s', popen.pid, ex)
-        if killpg:
-            try:
-                killpg(popen.pid, 9)
-            except OSError, ex:
-                if ex.errno != 3:
-                    raise
-
     def killer():
         retcode.append('TIMEOUT')
         sys.stderr.write('Killing %s (%s) because of timeout\n' % (popen.pid, args))
-        kill()
+        try:
+            popen.stdout.close()
+        except EnvironmentError:
+            pass
+        finally:
+            killgroup(popen)
 
-    timeout = Timer(options.timeout, killer)
+    timeout = Timer(timeout, killer)
     timeout.start()
     output = ''
     output_printed = False
@@ -291,14 +283,36 @@ def run_subprocess(args, options):
                     output_printed = True
         retcode.append(popen.wait())
     finally:
-        kill()
         timeout.cancel()
+        killgroup(popen)
     # QQQ compensating for run_tests' screw up
     module_name = args[0]
     if module_name.endswith('.py'):
         module_name = module_name[:-3]
     output = output.replace(' (__main__.', ' (' + module_name + '.')
     return retcode[0], output, output_printed
+
+
+def killgroup(popen):
+    if killpg is not None:
+        try:
+            killpg(popen.pid, 9)
+        except OSError, ex:
+            if ex.errno != 3:
+                raise
+    elif sys.platform.startswith('win'):
+        os.system('taskkill /F /PID %s /T' % popen.pid)
+    else:
+        popen.kill()
+
+
+def read_timeout(source):
+    data = open(source, 'rb').read(1000)
+    matches = re.findall('^# testrunner timeout: (\d+)', data)
+    if not matches:
+        return
+    assert len(matches) == 1, (source, matches)
+    return int(matches[0])
 
 
 def spawn_subprocess(args, options, base_params):
@@ -313,7 +327,18 @@ def spawn_subprocess(args, options, base_params):
                        'test': module_name})
         row_id = store_record(options.db, 'test', params)
         params['id'] = row_id
-    retcode, output, output_printed = run_subprocess(args, options)
+
+    timeout = options.timeout
+
+    if timeout is None:
+        timeout = read_timeout(args[0]) or DEFAULT_TIMEOUT
+        if '-dbg' in sys.executable:
+            timeout *= 5
+        if 'test_patched_' in args[0]:
+            timeout *= 2
+
+    retcode, output, output_printed = run_subprocess(args, options, timeout)
+
     if len(output) > OUTPUT_LIMIT:
         warn = '<AbridgedOutputWarning>'
         output = output[:OUTPUT_LIMIT - len(warn)] + warn
@@ -576,7 +601,7 @@ def main():
     parser.add_option('--record', default=False, action='store_true')
     parser.add_option('--no-capture', dest='capture', default=True, action='store_false')
     parser.add_option('--stats', default=False, action='store_true')
-    parser.add_option('--timeout', default=DEFAULT_TIMEOUT, type=float, metavar='SECONDS')
+    parser.add_option('--timeout', type=float, metavar='SECONDS')
 
     options, args = parser.parse_args()
     options.verbosity += options.verbose - options.quiet

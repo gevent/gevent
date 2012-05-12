@@ -1,5 +1,6 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
+# testrunner timeout: 300
 from __future__ import with_statement
 import sys
 import re
