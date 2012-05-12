@@ -34,6 +34,7 @@ except ImportError:
 import greentest
 import gevent
 from gevent import socket
+from gevent import pywsgi
 from gevent.pywsgi import Input
 
 
@@ -213,14 +214,10 @@ socket.socket.makefile = makefile
 
 class TestCase(greentest.TestCase):
 
-    def get_wsgi_module(self):
-        from gevent import pywsgi
-        return pywsgi
-
     validator = staticmethod(validator)
 
     def init_server(self, application):
-        self.server = self.get_wsgi_module().WSGIServer(('127.0.0.1', 0), application)
+        self.server = pywsgi.WSGIServer(('127.0.0.1', 0), application)
 
     def setUp(self):
         application = self.application
@@ -529,7 +526,7 @@ class HttpsTestCase(TestCase):
     keyfile = os.path.join(os.path.dirname(__file__), 'test_server.key')
 
     def init_server(self, application):
-        self.server = self.get_wsgi_module().WSGIServer(('127.0.0.1', 0), application, certfile=self.certfile, keyfile=self.keyfile)
+        self.server = pywsgi.WSGIServer(('127.0.0.1', 0), application, certfile=self.certfile, keyfile=self.keyfile)
 
     def urlopen(self, method='GET', post_body=None, **kwargs):
         import ssl
@@ -1048,6 +1045,25 @@ class TestInvalidEnviron(TestCase):
         read_http(fd)
 
 
+class Handler(pywsgi.WSGIHandler):
+
+    def read_requestline(self):
+        data = self.rfile.read(7)
+        if data[0] == '<':
+            try:
+                data += self.rfile.read(15)
+                if data.lower() == '<policy-file-request/>':
+                    self.socket.sendall('HELLO')
+                else:
+                    self.log_error('Invalid request: %r', data)
+            finally:
+                self.socket.shutdown(socket.SHUT_WR)
+                self.socket.close()
+                self.socket = None
+        else:
+            return data + self.rfile.readline()
+
+
 class TestSubclass1(TestCase):
 
     validator = None
@@ -1057,27 +1073,7 @@ class TestSubclass1(TestCase):
         return []
 
     def init_server(self, application):
-        WSGIHandler = self.get_wsgi_module().WSGIHandler
-
-        class Handler(WSGIHandler):
-
-            def read_requestline(self):
-                data = self.rfile.read(7)
-                if data[0] == '<':
-                    try:
-                        data += self.rfile.read(15)
-                        if data.lower() == '<policy-file-request/>':
-                            self.socket.sendall('HELLO')
-                        else:
-                            self.log_error('Invalid request: %r', data)
-                    finally:
-                        self.socket.shutdown(socket.SHUT_WR)
-                        self.socket.close()
-                        self.socket = None
-                else:
-                    return data + self.rfile.readline()
-
-        self.server = self.get_wsgi_module().WSGIServer(('127.0.0.1', 0), application, handler_class=Handler)
+        self.server = pywsgi.WSGIServer(('127.0.0.1', 0), application, handler_class=Handler)
 
     def test(self):
         fd = self.makefile()
