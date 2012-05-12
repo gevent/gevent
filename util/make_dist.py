@@ -46,21 +46,12 @@ def iter_status(command):
             yield line[:1], line[1:].strip()
 
 
-def main():
+def make_dist(version='dev', fast=False, revert=False):
     assert exists('gevent/__init__.py'), 'Where am I?'
     basedir = abspath(os.getcwd())
 
-    parser = optparse.OptionParser()
-    parser.add_option('--fast', action='store_true', help='Rather than cloning the repo, hard link the files in it')
-    parser.add_option('--revert', action='store_true', help='Same as --fast, but also do "hg revert -a" before start')
-    options, args = parser.parse_args()
-
-    if options.revert:
-        options.fast = True
-
-    if len(args) != 1:
-        sys.exit('Expected one argument: version (could be "dev").')
-    version = args[0]
+    if revert:
+        fast = True
 
     if version.lower() == 'dev':
         set_version_command = 'util/set_version.py gevent/__init__.py'
@@ -72,7 +63,7 @@ def main():
     os.mkdir(TMPDIR)
     os.chdir(TMPDIR)
 
-    if options.fast:
+    if fast:
         system('cp -al %s .' % basedir)
     else:
         system('hg clone %s gevent' % basedir)
@@ -81,18 +72,18 @@ def main():
     assert len(directory) == 1, directory
     os.chdir(directory[0])
 
-    if options.fast:
+    if fast:
         system('rm -fr build doc/_build dist')
 
         status_command = 'hg status --ignored'
-        if options.revert:
+        if revert:
             status_command += ' --modified --added --unknown'
 
         for status, name in iter_status(status_command):
             if name not in useful_files:
                 os.unlink(name)
 
-        if options.revert:
+        if revert:
             system('hg revert -a')
 
         for root, dirs, files in os.walk('.', topdown=False):
@@ -101,7 +92,7 @@ def main():
                 os.rmdir(root)
 
     system(set_version_command)
-    if options.revert or not options.fast:
+    if revert or not fast:
         system('hg diff', noisy=False)
     else:
         system('hg status', noisy=False)
@@ -114,10 +105,25 @@ def main():
     website_dist_dir = join(dirname(basedir), 'gevent-website', 'dist')
     if exists(website_dist_dir):
         system('cp %s %s' % (dist_filename, website_dist_dir))
-    link(dist_filename, join(TMPDIR, basename(dist_filename)))
-    dist_directory = join(basedir, 'dist')
-    mkdir(dist_directory)
-    link(dist_filename, join(dist_directory, basename(dist_filename)))
+
+    result = join(TMPDIR, basename(dist_filename))
+    link(dist_filename, result)
+    return result
+
+
+def main():
+    parser = optparse.OptionParser()
+    parser.add_option('--fast', action='store_true', help='Rather than cloning the repo, hard link the files in it')
+    parser.add_option('--revert', action='store_true', help='Same as --fast, but also do "hg revert -a" before start')
+    options, args = parser.parse_args()
+
+    if options.revert:
+        options.fast = True
+
+    if len(args) != 1:
+        sys.exit('Expected one argument: version (could be "dev").')
+
+    return make_dist(args[0], fast=options.fast, revert=options.revert)
 
 
 def link(source, dest):
