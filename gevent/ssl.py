@@ -263,9 +263,9 @@ class SSLSocket(socket):
                 except SSLError:
                     x = sys.exc_info()[1]
                     if x.args[0] == SSL_ERROR_WANT_READ:
-                        sys.exc_clear()
                         if self.timeout == 0.0:
                             raise
+                        sys.exc_clear()
                         try:
                             self._wait(self._read_event)
                         except socket_error:
