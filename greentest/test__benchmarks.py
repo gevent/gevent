@@ -1,25 +1,42 @@
 import sys
 import glob
-import mysubprocess as subprocess
+import subprocess
 import time
 
 
-TIMEOUT = 10
+TIMEOUT = 30
+
+
+def kill(popen):
+    if popen.poll() is not None:
+        return
+    try:
+        popen.kill()
+    except OSError, ex:
+        if ex.errno == 3:  # No such process
+            return
+        if ex.errno == 13:  # Permission denied (translated from windows error 5: "Access is denied")
+            return
+        raise
+
+
+def wait(popen):
+    end = time.time() + TIMEOUT
+    while popen.poll() is None:
+        if time.time() > end:
+            kill(popen)
+            popen.wait()
+            return 'TIMEOUT'
+        time.sleep(0.1)
+    return popen.poll()
 
 
 def system(command):
-    p = subprocess.Popen(command, shell=True)
+    popen = subprocess.Popen(command, shell=False)
     try:
-        start = time.time()
-        while time.time() < start + TIMEOUT and p.poll() is None:
-            time.sleep(0.1)
-        if p.poll() is None:
-            p.kill()
-            return 'KILLED'
-        return p.poll()
+        return wait(popen)
     finally:
-        if p.poll() is None:
-            p.kill()
+        kill(popen)
 
 
 modules = set()
@@ -35,10 +52,10 @@ if __name__ == '__main__':
     for path in modules:
         sys.stderr.write(path + '\n')
         sys.stdout.flush()
-        command = '%s %s all' % (sys.executable, path)
+        command = [sys.executable, '-u', path, 'all']
         res = system(command)
         if res:
-            error = '%r failed with code %s' % (command, res)
+            error = '%r failed with %s' % (' '.join(command), res)
             sys.stderr.write(error + '\n')
             errors.append(error)
         sys.stderr.write('-----\n\n')
