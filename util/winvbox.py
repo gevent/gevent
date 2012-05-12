@@ -184,25 +184,21 @@ def get_make_dist_option(options, command):
         sys.exit('Only one expected of --fast|--revert|--clean')
 
     if options.fast:
-        return '--fast'
+        return {'fast': True}
     elif options.revert:
-        return '--revert'
+        return {'revert': True}
     elif options.clean:
-        return ''
+        return {}
     else:
         if command == 'dist':
-            return ''
+            return {}
         else:
-            return '--fast'
+            return {'fast': True}
 
 
 def make_dist(options, command):
-    make_dist_opt = get_make_dist_option(options, command)
-    make_dist_command = '%s util/make_dist.py %s %s' % (sys.executable, make_dist_opt, options.version)
-    system(make_dist_command)
-    filename = glob.glob('/tmp/gevent-make-dist/*.tar.gz')
-    assert len(filename) == 1, filename
-    return filename[0]
+    import make_dist
+    return make_dist.make_dist(options.version, **get_make_dist_option(options, command))
 
 
 def get_output(command):
