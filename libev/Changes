@@ -5,6 +5,8 @@ TODO: EV_STANDALONE == NO_HASSEL (do not use clock_gettime in ev_standalone)
 TODO: faq, process a thing in each iteration
 TODO: dbeugging tips, ev_verify, ev_init twice
 
+        - destroying a non-default loop would stop the global waitpid
+          watcher (Denis Bilenko).
 	- queueing pending watchers of higher priority from a watcher now invokes
           them in a timely fashion (reported by Denis Bilenko).
 	- add throw() to all libev functions that cannot throw exceptions, for

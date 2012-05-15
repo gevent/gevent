@@ -1922,10 +1922,9 @@ pipecb (EV_P_ ev_io *iow, int revents)
 #ifdef _WIN32
           WSABUF buf;
           DWORD recvd;
-          DWORD flags;
+          DWORD flags = 0;
           buf.buf = dummy;
           buf.len = sizeof (dummy);
-          flags = 0;
           if (WSARecv(EV_FD_TO_WIN32_HANDLE(evpipe[0]), &buf, 1, &recvd, &flags, 0, 0))
             {
               int error;
@@ -2380,7 +2379,7 @@ ev_loop_destroy (EV_P)
 #endif
 
 #if EV_CHILD_ENABLE
-  if (ev_default_loop_ptr == EV_A)
+  if (ev_is_default_loop(EV_A))
     {
       if (ev_is_active (&childev))
         {
