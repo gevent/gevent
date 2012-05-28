@@ -698,14 +698,13 @@ class Popen(object):
 
                 # Wait for exec to fail or succeed; possibly raising exception
                 # Exception limited to 1M
-                data = FileObject(errpipe_read, 'rb').read(1048576)
-                errpipe_read = None
+                errpipe_read = FileObject(errpipe_read, 'rb')
+                data = errpipe_read.read(1048576)
             finally:
-                try:
-                    if errpipe_read is not None:
-                        os.close(errpipe_read)
-                except EnvironmentError:
-                    pass
+                if hasattr(errpipe_read, 'close'):
+                    errpipe_read.close()
+                else:
+                    os.close(errpipe_read)
 
             if data != "":
                 self.wait()
