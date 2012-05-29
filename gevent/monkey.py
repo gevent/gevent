@@ -72,7 +72,7 @@ __all__ = ['patch_all',
 saved = {}
 
 
-def get_original(name, items):
+def _get_original(name, items):
     d = saved.get(name, {})
     values = []
     module = None
@@ -84,6 +84,13 @@ def get_original(name, items):
                 module = __import__(name)
             values.append(getattr(module, item))
     return values
+
+
+def get_original(name, item):
+    if isinstance(item, basestring):
+        return _get_original(name, [item])[0]
+    else:
+        return _get_original(name, item)
 
 
 def patch_item(module, attr, newitem):
