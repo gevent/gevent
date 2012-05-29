@@ -8,15 +8,13 @@ Comment out the lines in ev.c that start the timer if you want to see for yourse
 
 Reproduced on my machine (Linux 3.0.0-16-generic) with backend epoll and select.
 
-With signalfd enabled (GEVENT_BACKEND=signalfd) it seems to work OK or at least takes
-much longer to reproduce.
+With signalfd enabled (GEVENT_BACKEND=signalfd) it seems to work.
 """
 import gevent
 from contextlib import closing
 import gc
 import pickle
 from gevent import select
-import signal
 from gevent import subprocess
 import traceback
 import sys
@@ -24,20 +22,13 @@ import os
 
 gc.disable()
 
-MAIN_PID = os.getpid()
-
-
-def handlerA(signum, frame):
-    pass
-
-
 MAX_DURATION = 10
 
 
 def run_test():
-    signal.signal(signal.SIGHUP, handlerA)
-    pid = os.getpid()
-    child = subprocess.Popen(['kill', '-HUP', str(pid)])
+    # XXX the main point seems to be that a process is short-lived
+    # maybe somehow the child is reaped by previously scheduled sigcb?
+    child = subprocess.Popen(['/bin/true'])
     child.wait()  # << this is where it blocks
 
 
@@ -78,7 +69,7 @@ def test_main():
             tb = pickle.load(done_r)
             assert not tb, tb
         else:
-            os.kill(child, signal.SIGKILL)
+            os.kill(child, 9)
             assert False, 'Test deadlocked after %d seconds.' % MAX_DURATION
 
 
