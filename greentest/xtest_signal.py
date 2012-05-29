@@ -26,8 +26,6 @@ MAX_DURATION = 10
 
 
 def run_test():
-    # XXX the main point seems to be that a process is short-lived
-    # maybe somehow the child is reaped by previously scheduled sigcb?
     child = subprocess.Popen(['/bin/true'])
     child.wait()  # << this is where it blocks
 
