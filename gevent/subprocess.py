@@ -97,6 +97,10 @@ else:
     import pickle
 
 
+from gevent import monkey
+fork = monkey.get_original('os', 'fork')
+
+
 def call(*popenargs, **kwargs):
     """Run command with arguments.  Wait for command to complete, then
     return the returncode attribute.
@@ -605,7 +609,7 @@ class Popen(object):
                     # write to stderr -> hang.  http://bugs.python.org/issue1336
                     gc.disable()
                     try:
-                        self.pid = os.fork()
+                        self.pid = fork()
                     except:
                         if gc_was_enabled:
                             gc.enable()
