@@ -7,44 +7,53 @@ import time
 
 filename = 'test__core_stat.%s' % os.getpid()
 
-def unlink():
-    try:
-        os.unlink(filename)
-    except OSError:
-        pass
-
 hub = gevent.get_hub()
-watcher = hub.loop.stat(filename)
 
-if getattr(gevent.core, 'EV_USE_INOTIFY', None):
-    timeout = 0.3
-else:
-    timeout = 5.3
+DELAY = 0.5
+
+EV_USE_INOTIFY = getattr(gevent.core, 'EV_USE_INOTIFY', None)
 
 try:
-    fobj = open(filename, 'wb', buffering=0)
+    open(filename, 'wb', buffering=0).close()
+    assert os.path.exists(filename), filename
 
     def write():
-        fobj.write('x')
-        fobj.close()
+        f= open(filename, 'wb', buffering=0)
+        f.write('x')
+        f.close()
 
-    gevent.spawn_later(0.2, write)
-
-    start = time.time()
-
-    with gevent.Timeout(timeout):
-        hub.wait(watcher)
-
-    print 'Watcher %r reacted after %.6f seconds' % (watcher, time.time() - start - 0.2)
-
-    gevent.spawn_later(0.2, unlink)
+    greenlet = gevent.spawn_later(DELAY, write)
+    watcher = hub.loop.stat(filename)
 
     start = time.time()
 
-    with gevent.Timeout(timeout):
+    with gevent.Timeout(5 + DELAY + 0.5):
         hub.wait(watcher)
 
-    print 'Watcher %r reacted after %.2f seconds' % (watcher, time.time() - start - 0.2)
+    reaction = time.time() - start - DELAY
+    print 'Watcher %s reacted after %.4f seconds (write)' % (watcher, reaction)
+    if reaction >= DELAY and EV_USE_INOTIFY:
+        print 'WARNING: inotify failed (write)'
+    assert reaction >= 0.0, 'Watcher %s reacted too early (write): %.3fs' % (watcher, reaction)
+    assert watcher.attr is not None, watcher.attr
+    assert watcher.prev is not None, watcher.prev
+
+    greenlet.join()
+    gevent.spawn_later(DELAY, os.unlink, filename)
+
+    start = time.time()
+
+    with gevent.Timeout(5 + DELAY + 0.5):
+        hub.wait(watcher)
+
+    reaction = time.time() - start - DELAY
+    print 'Watcher %s reacted after %.4f seconds (unlink)' % (watcher, reaction)
+    if reaction >= DELAY and EV_USE_INOTIFY:
+        print 'WARNING: inotify failed (unlink)'
+    assert reaction >= 0.0, 'Watcher %s reacted too early (unlink): %.3fs' % (watcher, reaction)
+    assert watcher.attr is None, watcher.attr
+    assert watcher.prev is not None, watcher.prev
 
 finally:
-    unlink()
+    if os.path.exists(filename):
+        os.unlink(filename)
