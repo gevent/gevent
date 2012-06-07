@@ -17,7 +17,6 @@
 #define checkcnt ((loop)->checkcnt)
 #define checkmax ((loop)->checkmax)
 #define checks ((loop)->checks)
-#define childall ((loop)->childall)
 #define cleanupcnt ((loop)->cleanupcnt)
 #define cleanupmax ((loop)->cleanupmax)
 #define cleanups ((loop)->cleanups)
@@ -118,7 +117,6 @@
 #undef checkcnt
 #undef checkmax
 #undef checks
-#undef childall
 #undef cleanupcnt
 #undef cleanupmax
 #undef cleanups

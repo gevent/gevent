@@ -176,10 +176,6 @@ VARx(int, asyncmax)
 VARx(int, asynccnt)
 #endif
 
-#if EV_CHILD_ENABLE || EV_GENWRAP
-VARx(int, childall) /* total number */
-#endif
-
 #if EV_USE_INOTIFY || EV_GENWRAP
 VARx(int, fs_fd)
 VARx(ev_io, fs_w)

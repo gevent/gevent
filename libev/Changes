@@ -5,6 +5,8 @@ TODO: EV_STANDALONE == NO_HASSEL (do not use clock_gettime in ev_standalone)
 TODO: faq, process a thing in each iteration
 TODO: dbeugging tips, ev_verify, ev_init twice
 
+TODO: document the special problem of signals around fork.
+TODO: ev_feed_child_event
         - destroying a non-default loop would stop the global waitpid
           watcher (Denis Bilenko).
 	- queueing pending watchers of higher priority from a watcher now invokes
@@ -15,7 +17,7 @@ TODO: dbeugging tips, ev_verify, ev_init twice
           syserr, loop acquire/release, periodic reschedule cbs).
 	- fix event_base_loop return code, add event_get_callback, event_base_new,
           event_base_get_method calls to improve libevent 1.x emulation and add
-          some libevent 2.x funcitonality (based on a patch by Jeff Davey).
+          some libevent 2.x functionality (based on a patch by Jeff Davey).
         - add more memory fences to fix a bug reported by Jeff Davey. Better
           be overfenced than underprotected.
 	- ev_run now returns a boolean status (true meaning watchers are
@@ -33,6 +35,8 @@ TODO: dbeugging tips, ev_verify, ev_init twice
         - chose socket vs. WSASocket at compiletime using EV_USE_WSASOCKET.
         - always use WSASend/WSARecv directly on windows, hoping that this
           works in all cases (unlike read/write/send/recv...).
+        - try to detect signals around a fork faster (test program by
+          Denis Bilenko).
 
 4.11 Sat Feb  4 19:52:39 CET 2012
 	- INCOMPATIBLE CHANGE: ev_timer_again now clears the pending status, as

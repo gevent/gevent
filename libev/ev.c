@@ -506,6 +506,9 @@ struct signalfd_siginfo
 #ifndef ECB_H
 #define ECB_H
 
+/* 16 bits major, 16 bits minor */
+#define ECB_VERSION 0x00010001
+
 #ifdef _WIN32
   typedef   signed char   int8_t;
   typedef unsigned char  uint8_t;
@@ -520,8 +523,23 @@ struct signalfd_siginfo
     typedef   signed __int64   int64_t;
     typedef unsigned __int64   uint64_t;
   #endif
+  #ifdef _WIN64
+    #define ECB_PTRSIZE 8
+    typedef uint64_t uintptr_t;
+    typedef  int64_t  intptr_t;
+  #else
+    #define ECB_PTRSIZE 4
+    typedef uint32_t uintptr_t;
+    typedef  int32_t  intptr_t;
+  #endif
+ typedef intptr_t ptrdiff_t;
 #else
   #include <inttypes.h>
+  #if UINTMAX_MAX > 0xffffffffU
+    #define ECB_PTRSIZE 8
+  #else
+    #define ECB_PTRSIZE 4
+  #endif
 #endif
 
 /* many compilers define _GNUC_ to some versions but then only implement
@@ -539,16 +557,22 @@ struct signalfd_siginfo
   #endif
 #endif
 
+#define ECB_C     (__STDC__+0) /* this assumes that __STDC__ is either empty or a number */
+#define ECB_C99   (__STDC_VERSION__ >= 199901L)
+#define ECB_C11   (__STDC_VERSION__ >= 201112L)
+#define ECB_CPP   (__cplusplus+0)
+#define ECB_CPP11 (__cplusplus >= 201103L)
+
 /*****************************************************************************/
 
 /* ECB_NO_THREADS - ecb is not used by multiple threads, ever */
 /* ECB_NO_SMP     - ecb might be used in multiple threads, but only on a single cpu */
 
 #if ECB_NO_THREADS
-# define ECB_NO_SMP 1
+  #define ECB_NO_SMP 1
 #endif
 
-#if ECB_NO_THREADS || ECB_NO_SMP
+#if ECB_NO_SMP
   #define ECB_MEMORY_FENCE do { } while (0)
 #endif
 
@@ -556,39 +580,48 @@ struct signalfd_siginfo
   #if ECB_GCC_VERSION(2,5) || defined __INTEL_COMPILER || (__llvm__ && __GNUC__) || __SUNPRO_C >= 0x5110 || __SUNPRO_CC >= 0x5110
     #if __i386 || __i386__
       #define ECB_MEMORY_FENCE         __asm__ __volatile__ ("lock; orb $0, -1(%%esp)" : : : "memory")
-      #define ECB_MEMORY_FENCE_ACQUIRE ECB_MEMORY_FENCE /* non-lock xchg might be enough */
-      #define ECB_MEMORY_FENCE_RELEASE do { } while (0) /* unlikely to change in future cpus */
+      #define ECB_MEMORY_FENCE_ACQUIRE __asm__ __volatile__ (""                        : : : "memory")
+      #define ECB_MEMORY_FENCE_RELEASE __asm__ __volatile__ ("")
     #elif __amd64 || __amd64__ || __x86_64 || __x86_64__
-      #define ECB_MEMORY_FENCE         __asm__ __volatile__ ("mfence" : : : "memory")
-      #define ECB_MEMORY_FENCE_ACQUIRE __asm__ __volatile__ ("lfence" : : : "memory")
-      #define ECB_MEMORY_FENCE_RELEASE __asm__ __volatile__ ("sfence") /* play safe - not needed in any current cpu */
+      #define ECB_MEMORY_FENCE         __asm__ __volatile__ ("mfence"   : : : "memory")
+      #define ECB_MEMORY_FENCE_ACQUIRE __asm__ __volatile__ (""         : : : "memory")
+      #define ECB_MEMORY_FENCE_RELEASE __asm__ __volatile__ ("")
     #elif __powerpc__ || __ppc__ || __powerpc64__ || __ppc64__
-      #define ECB_MEMORY_FENCE         __asm__ __volatile__ ("sync" : : : "memory")
+      #define ECB_MEMORY_FENCE         __asm__ __volatile__ ("sync"     : : : "memory")
     #elif defined __ARM_ARCH_6__  || defined __ARM_ARCH_6J__  \
        || defined __ARM_ARCH_6K__ || defined __ARM_ARCH_6ZK__
       #define ECB_MEMORY_FENCE         __asm__ __volatile__ ("mcr p15,0,%0,c7,c10,5" : : "r" (0) : "memory")
     #elif defined __ARM_ARCH_7__  || defined __ARM_ARCH_7A__  \
-       || defined __ARM_ARCH_7M__ || defined __ARM_ARCH_7R__ 
-      #define ECB_MEMORY_FENCE         __asm__ __volatile__ ("dmb" : : : "memory")
+       || defined __ARM_ARCH_7M__ || defined __ARM_ARCH_7R__
+      #define ECB_MEMORY_FENCE         __asm__ __volatile__ ("dmb"      : : : "memory")
     #elif __sparc || __sparc__
-      #define ECB_MEMORY_FENCE         __asm__ __volatile__ ("membar #LoadStore | #LoadLoad | #StoreStore | #StoreLoad | " : : : "memory")
-      #define ECB_MEMORY_FENCE_ACQUIRE __asm__ __volatile__ ("membar #LoadStore | #LoadLoad"                               : : : "memory")
-      #define ECB_MEMORY_FENCE_RELEASE __asm__ __volatile__ ("membar #LoadStore |             #StoreStore")
+      #define ECB_MEMORY_FENCE         __asm__ __volatile__ ("membar #LoadStore | #LoadLoad | #StoreStore | #StoreLoad" : : : "memory")
+      #define ECB_MEMORY_FENCE_ACQUIRE __asm__ __volatile__ ("membar #LoadStore | #LoadLoad"                            : : : "memory")
+      #define ECB_MEMORY_FENCE_RELEASE __asm__ __volatile__ ("membar #LoadStore             | #StoreStore")
     #elif defined __s390__ || defined __s390x__
       #define ECB_MEMORY_FENCE         __asm__ __volatile__ ("bcr 15,0" : : : "memory")
     #elif defined __mips__
-      #define ECB_MEMORY_FENCE         __asm__ __volatile__ ("sync" : : : "memory")
+      #define ECB_MEMORY_FENCE         __asm__ __volatile__ ("sync"     : : : "memory")
     #elif defined __alpha__
-      #define ECB_MEMORY_FENCE         __asm__ __volatile__ ("mb" : : : "memory")
+      #define ECB_MEMORY_FENCE         __asm__ __volatile__ ("mb"       : : : "memory")
+    #elif defined __hppa__
+      #define ECB_MEMORY_FENCE         __asm__ __volatile__ (""         : : : "memory")
+      #define ECB_MEMORY_FENCE_RELEASE __asm__ __volatile__ ("")
+    #elif defined __ia64__
+      #define ECB_MEMORY_FENCE         __asm__ __volatile__ ("mf"       : : : "memory")
     #endif
   #endif
 #endif
 
 #ifndef ECB_MEMORY_FENCE
-  #if ECB_GCC_VERSION(4,4) || defined __INTEL_COMPILER || defined __clang__
+  #if ECB_GCC_VERSION(4,7)
+    /* see comment below (stdatomic.h) about the C11 memory model. */
+    #define ECB_MEMORY_FENCE         __atomic_thread_fence (__ATOMIC_SEQ_CST)
+  #elif defined __clang && __has_feature (cxx_atomic)
+    /* see comment below (stdatomic.h) about the C11 memory model. */
+    #define ECB_MEMORY_FENCE         __c11_atomic_thread_fence (__ATOMIC_SEQ_CST)
+  #elif ECB_GCC_VERSION(4,4) || defined __INTEL_COMPILER || defined __clang__
     #define ECB_MEMORY_FENCE         __sync_synchronize ()
-    /*#define ECB_MEMORY_FENCE_ACQUIRE ({ char dummy = 0; __sync_lock_test_and_set (&dummy, 1); }) */
-    /*#define ECB_MEMORY_FENCE_RELEASE ({ char dummy = 1; __sync_lock_release      (&dummy   ); }) */
   #elif _MSC_VER >= 1400 /* VC++ 2005 */
     #pragma intrinsic(_ReadBarrier,_WriteBarrier,_ReadWriteBarrier)
     #define ECB_MEMORY_FENCE         _ReadWriteBarrier ()
@@ -604,6 +637,21 @@ struct signalfd_siginfo
     #define ECB_MEMORY_FENCE_RELEASE __machine_w_barrier  ()
   #elif __xlC__
     #define ECB_MEMORY_FENCE         __sync ()
+  #endif
+#endif
+
+#ifndef ECB_MEMORY_FENCE
+  #if ECB_C11 && !defined __STDC_NO_ATOMICS__
+    /* we assume that these memory fences work on all variables/all memory accesses, */
+    /* not just C11 atomics and atomic accesses */
+    #include <stdatomic.h>
+    /* Unfortunately, neither gcc 4.7 nor clang 3.1 generate any instructions for */
+    /* any fence other than seq_cst, which isn't very efficient for us. */
+    /* Why that is, we don't know - either the C11 memory model is quite useless */
+    /* for most usages, or gcc and clang have a bug */
+    /* I *currently* lean towards the latter, and inefficiently implement */
+    /* all three of ecb's fences as a seq_cst fence */
+    #define ECB_MEMORY_FENCE         atomic_thread_fence (memory_order_seq_cst)
   #endif
 #endif
 
@@ -634,8 +682,6 @@ struct signalfd_siginfo
 #endif
 
 /*****************************************************************************/
-
-#define ECB_C99 (__STDC_VERSION__ >= 199901L)
 
 #if __cplusplus
   #define ecb_inline static inline
@@ -684,10 +730,15 @@ typedef int ecb_bool;
 #endif
 
 #define ecb_noinline   ecb_attribute ((__noinline__))
-#define ecb_noreturn   ecb_attribute ((__noreturn__))
 #define ecb_unused     ecb_attribute ((__unused__))
 #define ecb_const      ecb_attribute ((__const__))
 #define ecb_pure       ecb_attribute ((__pure__))
+
+#if ECB_C11
+  #define ecb_noreturn   _Noreturn
+#else
+  #define ecb_noreturn   ecb_attribute ((__noreturn__))
+#endif
 
 #if ECB_GCC_VERSION(4,3)
   #define ecb_artificial ecb_attribute ((__artificial__))
@@ -787,6 +838,11 @@ typedef int ecb_bool;
     return r + ecb_ld32 (x);
   }
 #endif
+
+ecb_function_ ecb_bool ecb_is_pot32 (uint32_t x) ecb_const;
+ecb_function_ ecb_bool ecb_is_pot32 (uint32_t x) { return !(x & (x - 1)); }
+ecb_function_ ecb_bool ecb_is_pot64 (uint64_t x) ecb_const;
+ecb_function_ ecb_bool ecb_is_pot64 (uint64_t x) { return !(x & (x - 1)); }
 
 ecb_function_ uint8_t  ecb_bitrev8  (uint8_t  x) ecb_const;
 ecb_function_ uint8_t  ecb_bitrev8  (uint8_t  x)
@@ -1107,7 +1163,7 @@ ev_printerr (const char *msg)
 static void (*syserr_cb)(const char *msg) EV_THROW;
 
 void ecb_cold
-ev_set_syserr_cb (void (*cb)(const char *msg)) EV_THROW
+ev_set_syserr_cb (void (*cb)(const char *msg) EV_THROW) EV_THROW
 {
   syserr_cb = cb;
 }
@@ -1135,7 +1191,7 @@ ev_syserr (const char *msg)
 }
 
 static void *
-ev_realloc_emul (void *ptr, long size)
+ev_realloc_emul (void *ptr, long size) EV_THROW
 {
 #if __GLIBC__
   return realloc (ptr, size);
@@ -1156,7 +1212,7 @@ ev_realloc_emul (void *ptr, long size)
 static void *(*alloc)(void *ptr, long size) EV_THROW = ev_realloc_emul;
 
 void ecb_cold
-ev_set_allocator (void *(*cb)(void *ptr, long size)) EV_THROW
+ev_set_allocator (void *(*cb)(void *ptr, long size) EV_THROW) EV_THROW
 {
   alloc = cb;
 }
@@ -1851,7 +1907,6 @@ evpipe_write (EV_P_ EV_ATOMIC_T *flag)
     return;
 
   *flag = 1;
-
   ECB_MEMORY_FENCE_RELEASE; /* make sure flag is visible before the wakeup */
 
   pipe_write_skipped = 1;
@@ -1862,7 +1917,8 @@ evpipe_write (EV_P_ EV_ATOMIC_T *flag)
     {
       int old_errno;
 
-      pipe_write_skipped = 0; /* just an optimisation, no fence needed */
+      pipe_write_skipped = 0;
+      ECB_MEMORY_FENCE_RELEASE;
 
       old_errno = errno; /* save errno because write will clobber it */
 
@@ -1880,17 +1936,7 @@ evpipe_write (EV_P_ EV_ATOMIC_T *flag)
           DWORD sent;
           buf.buf = &buf;
           buf.len = 1;
-          if (WSASend(EV_FD_TO_WIN32_HANDLE (evpipe [1]), &buf, 1, &sent, 0, 0, 0))
-            {
-              int error;
-              error = GetLastError();
-              if (error != WSAEWOULDBLOCK)
-#if EV_AVOID_STDIO
-                ev_printerr ("(libev) WSASend failed.\n");
-#else
-                fprintf(stderr, "(libev) WSASend failed with error %d\n", error);
-#endif
-            }
+          WSASend (EV_FD_TO_WIN32_HANDLE (evpipe [1]), &buf, 1, &sent, 0, 0, 0);
 #else
           write (evpipe [1], &(evpipe [1]), 1);
 #endif
@@ -1925,18 +1971,7 @@ pipecb (EV_P_ ev_io *iow, int revents)
           DWORD flags = 0;
           buf.buf = dummy;
           buf.len = sizeof (dummy);
-          if (WSARecv(EV_FD_TO_WIN32_HANDLE(evpipe[0]), &buf, 1, &recvd, &flags, 0, 0))
-            {
-              int error;
-              error = GetLastError();
-              if (error != WSAEWOULDBLOCK)
-#if EV_AVOID_STDIO
-                ev_printerr ("(libev) WSARecv failed.\n");
-#else
-                fprintf(stderr, "(libev) WSARecv failed with error %d\n", error);
-#endif
-            }
-
+          WSARecv (EV_FD_TO_WIN32_HANDLE (evpipe [0]), &buf, 1, &recvd, &flags, 0, 0);
 #else
           read (evpipe [0], &dummy, sizeof (dummy));
 #endif
@@ -1952,7 +1987,7 @@ pipecb (EV_P_ ev_io *iow, int revents)
     {
       sig_pending = 0;
 
-      ECB_MEMORY_FENCE_RELEASE;
+      ECB_MEMORY_FENCE;
 
       for (i = EV_NSIG - 1; i--; )
         if (expect_false (signals [i].pending))
@@ -1965,12 +2000,13 @@ pipecb (EV_P_ ev_io *iow, int revents)
     {
       async_pending = 0;
 
-      ECB_MEMORY_FENCE_RELEASE;
+      ECB_MEMORY_FENCE;
 
       for (i = asynccnt; i--; )
         if (asyncs [i]->sent)
           {
             asyncs [i]->sent = 0;
+            ECB_MEMORY_FENCE_RELEASE;
             ev_feed_event (EV_A_ asyncs [i], EV_ASYNC);
           }
     }
@@ -2025,6 +2061,7 @@ ev_feed_signal_event (EV_P_ int signum) EV_THROW
 #endif
 
   signals [signum].pending = 0;
+  ECB_MEMORY_FENCE_RELEASE;
 
   for (w = signals [signum].head; w; w = w->next)
     ev_feed_event (EV_A_ (W)w, EV_SIGNAL);
@@ -2058,7 +2095,6 @@ sigfdcb (EV_P_ ev_io *iow, int revents)
 static WL childs [EV_PID_HASHSIZE];
 
 static ev_signal childev;
-static ev_timer childpollev;
 
 #ifndef WIFCONTINUED
 # define WIFCONTINUED(status) 0
@@ -2379,18 +2415,10 @@ ev_loop_destroy (EV_P)
 #endif
 
 #if EV_CHILD_ENABLE
-  if (ev_is_default_loop(EV_A))
+  if (ev_is_default_loop (EV_A) && ev_is_active (&childev))
     {
-      if (ev_is_active (&childev))
-        {
-          ev_ref (EV_A); /* child watcher */
-          ev_signal_stop (EV_A_ &childev);
-        }
-      if (ev_is_active (&childpollev))
-        {
-          ev_ref (EV_A); /* child watcher */
-          ev_timer_stop (EV_A_ &childpollev);
-        }
+      ev_ref (EV_A); /* child watcher */
+      ev_signal_stop (EV_A_ &childev);
     }
 #endif
 
@@ -2524,8 +2552,8 @@ loop_fork (EV_P)
 
 #if EV_SIGNAL_ENABLE || EV_ASYNC_ENABLE
       evpipe_init (EV_A);
-      /* now iterate over everything, in case we missed something */
-      pipecb (EV_A_ &pipe_w, EV_READ);
+      /* iterate over everything, in case we missed something before */
+      ev_feed_event (EV_A_ &pipe_w, EV_CUSTOM);
 #endif
     }
 
@@ -2696,8 +2724,8 @@ ev_default_loop (unsigned int flags) EV_THROW
 #if EV_CHILD_ENABLE
           ev_signal_init (&childev, childcb, SIGCHLD);
           ev_set_priority (&childev, EV_MAXPRI);
-          ev_timer_init (&childpollev, childcb, 1.0, 1.0);
-          ev_set_priority (&childpollev, EV_MAXPRI);
+          ev_signal_start (EV_A_ &childev);
+          ev_unref (EV_A); /* child watcher should not keep loop alive */
 #endif
         }
       else
@@ -2710,7 +2738,7 @@ ev_default_loop (unsigned int flags) EV_THROW
 void
 ev_loop_fork (EV_P) EV_THROW
 {
-  postfork = 1; /* must be in line with ev_default_fork */
+  postfork = 1;
 }
 
 /*****************************************************************************/
@@ -2736,15 +2764,21 @@ ev_pending_count (EV_P) EV_THROW
 void noinline
 ev_invoke_pending (EV_P)
 {
-  for (pendingpri = NUMPRI; pendingpri--; ) /* pendingpri is modified during the loop */
-    while (pendingcnt [pendingpri])
-      {
-        ANPENDING *p = pendings [pendingpri] + --pendingcnt [pendingpri];
+  pendingpri = NUMPRI;
 
-        p->w->pending = 0;
-        EV_CB_INVOKE (p->w, p->events);
-        EV_FREQUENT_CHECK;
-      }
+  while (pendingpri) /* pendingpri possibly gets modified in the inner loop */
+    {
+      --pendingpri;
+
+      while (pendingcnt [pendingpri])
+        {
+          ANPENDING *p = pendings [pendingpri] + --pendingcnt [pendingpri];
+
+          p->w->pending = 0;
+          EV_CB_INVOKE (p->w, p->events);
+          EV_FREQUENT_CHECK;
+        }
+    }
 }
 
 #if EV_IDLE_ENABLE
@@ -2844,8 +2878,6 @@ periodics_reify (EV_P)
 
   while (periodiccnt && ANHE_at (periodics [HEAP0]) < ev_rt_now)
     {
-      int feed_count = 0;
-
       do
         {
           ev_periodic *w = (ev_periodic *)ANHE_w (periodics [HEAP0]);
@@ -3114,6 +3146,7 @@ ev_run (EV_P_ int flags)
 
         pipe_write_wanted = 0; /* just an optimisation, no fence needed */
 
+        ECB_MEMORY_FENCE_ACQUIRE;
         if (pipe_write_skipped)
           {
             assert (("libev: pipe_w not active, but pipe not written", ev_is_active (&pipe_w)));
@@ -3621,23 +3654,8 @@ ev_child_start (EV_P_ ev_child *w) EV_THROW
 
   EV_FREQUENT_CHECK;
 
-  ++childall;
-
   ev_start (EV_A_ (W)w, 1);
   wlist_add (&childs [w->pid & ((EV_PID_HASHSIZE) - 1)], (WL)w);
-
-  if (!ev_is_active(&childev))
-    {
-      ev_signal_start (EV_A_ &childev);
-      ev_unref (EV_A); /* child watcher should not keep loop alive */
-      ev_feed_event (EV_A_ (W)&childev, EV_SIGNAL);
-    }
-
-  if (!ev_is_active (&childpollev))
-    {
-      ev_timer_start (EV_A_ &childpollev);
-      ev_unref (EV_A);
-    }
 
   EV_FREQUENT_CHECK;
 }
@@ -3653,12 +3671,6 @@ ev_child_stop (EV_P_ ev_child *w) EV_THROW
 
   wlist_del (&childs [w->pid & ((EV_PID_HASHSIZE) - 1)], (WL)w);
   ev_stop (EV_A_ (W)w);
-
-  if (--childall <= 0 && ev_is_active (&childpollev))
-    {
-      ev_timer_stop (EV_A_ &childpollev);
-      ev_ref (EV_A);
-    }
 
   EV_FREQUENT_CHECK;
 }
