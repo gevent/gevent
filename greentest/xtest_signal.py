@@ -40,7 +40,7 @@ def test_main():
     with closing(os.fdopen(os_done_r)) as done_r, \
          closing(os.fdopen(os_done_w, 'w')) as done_w:
         child = gevent.fork()
-        if child == 0:
+        if not child:
             # In the child process; run the test and report results
             # through the pipe.
             try:
