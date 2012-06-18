@@ -244,7 +244,7 @@ cdef public class loop [object PyGeventLoopObject, type PyGeventLoop_Type]:
             if _default_loop_destroyed:
                 default = False
             if default:
-                self._ptr = libev.ev_default_loop(c_flags)
+                self._ptr = libev.gevent_ev_default_loop(c_flags)
                 if not self._ptr:
                     raise SystemError("ev_default_loop(%s) failed" % (c_flags, ))
                 libev.ev_prepare_start(self._ptr, &self._signal_checker)
@@ -420,6 +420,9 @@ cdef public class loop [object PyGeventLoopObject, type PyGeventLoop_Type]:
 
     def child(self, int pid, bint trace=0, ref=True):
         return child(self, pid, trace, ref)
+
+    def install_sigchld(self):
+        libev.gevent_install_sigchld_handler()
 
 #endif
 
@@ -851,6 +854,7 @@ cdef public class child(watcher) [object PyGeventChildObject, type PyGeventChild
     def __init__(self, loop loop, int pid, bint trace=0, ref=True):
         if not loop.default:
             raise TypeError('child watchers are only available on the default loop')
+        libev.gevent_install_sigchld_handler()
         libev.ev_child_init(&self._watcher, <void *>gevent_callback_child, pid, trace)
         self.loop = loop
         if ref:

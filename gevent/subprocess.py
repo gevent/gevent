@@ -598,6 +598,8 @@ class Popen(object):
             if executable is None:
                 executable = args[0]
 
+            self._loop.install_sigchld()
+
             # For transferring possible exec failure from child to parent
             # The first char specifies the exception type: 0 means
             # OSError, 1 means some other error.

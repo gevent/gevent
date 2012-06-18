@@ -185,3 +185,6 @@ cdef extern from "libev.h":
     void ev_unref(ev_loop*)
     void ev_break(ev_loop*, int)
     unsigned int ev_pending_count(ev_loop*)
+
+    ev_loop* gevent_ev_default_loop(unsigned int flags)
+    void gevent_install_sigchld_handler()
