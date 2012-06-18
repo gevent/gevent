@@ -35,6 +35,7 @@ winvbox.py assumes Python is located at "C:/Python<VER>/python.exe".
 Instead of using --machine option, you can also add word "gevent" to the machine description in
 order to be selected by this script.
 """
+
 import sys
 import os
 import re
@@ -42,8 +43,6 @@ import time
 import datetime
 import glob
 from functools import wraps
-
-WINVBOX_LOG = 'winvbox.log'
 
 
 def main():
