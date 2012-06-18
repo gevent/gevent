@@ -18,6 +18,7 @@ __all__ = ['getcurrent',
            'sleep',
            'kill',
            'signal',
+           'reinit',
            'fork',
            'get_hub',
            'Hub',
@@ -176,12 +177,18 @@ class signal(object):
             self.hub.handle_error(None, *sys.exc_info())
 
 
+def reinit():
+    hub = _get_hub()
+    if hub is not None:
+        hub.loop.reinit()
+
+
 if _original_fork is not None:
 
     def fork():
         result = _original_fork()
         if not result:
-            get_hub().loop.reinit()
+            reinit()
         return result
 
 
