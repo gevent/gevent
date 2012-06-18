@@ -282,10 +282,34 @@ except NameError:
     FileObject = FileObjectThreadPool
 
 
+class FileObjectBlock(object):
+
+    def __init__(self, fobj, *args, **kwargs):
+        self._close = kwargs.pop('close', True)
+        if kwargs:
+            raise TypeError('Unexpected arguments: %r' % kwargs.keys())
+        if isinstance(fobj, (int, long)):
+            if not self._close:
+                # we cannot do this, since fdopen object will close the descriptor
+                raise TypeError('FileObjectBlock does not support close=False')
+            fobj = os.fdopen(fobj, *args)
+        self._fobj = fobj
+
+    def __repr__(self):
+        return '<%s %r>' % (self._fobj, )
+
+    def __getattr__(self, item):
+        assert item != '_fobj'
+        if self._fobj is None:
+            raise FileObjectClosed
+        return getattr(self._fobj, item)
+
+
 config = os.environ.get('GEVENT_FILE')
 if config:
     klass = {'thread': 'gevent.fileobject.FileObjectThreadPool',
-             'posix': 'gevent.fileobject.FileObjectPosix'}.get(config, config)
+             'posix': 'gevent.fileobject.FileObjectPosix',
+             'block': 'gevent.fileobject.FileObjectBlock'}.get(config, config)
     if klass.startswith('gevent.fileobject.'):
         FileObject = globals()[klass.split('.', 2)[-1]]
     else:
