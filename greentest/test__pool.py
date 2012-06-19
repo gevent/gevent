@@ -291,6 +291,15 @@ class TestPool(greentest.TestCase):
         it = self.pool.imap_unordered(sqr_random_sleep, range(10))
         self.assertEqual(sorted(it), list(map(sqr, range(10))))
 
+    def test_empty(self):
+        it = self.pool.imap_unordered(sqr, [])
+        self.assertEqual(list(it), [])
+
+        it = self.pool.imap(sqr, [])
+        self.assertEqual(list(it), [])
+
+        self.assertEqual(self.pool.map(sqr, []), [])
+
     def test_terminate(self):
         result = self.pool.map_async(gevent.sleep, [0.1] * ((self.size or 10) * 2))
         gevent.sleep(0.1)
