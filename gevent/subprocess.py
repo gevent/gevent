@@ -735,11 +735,11 @@ class Popen(object):
             """
             return self.returncode
 
-        def wait(self):
+        def wait(self, timeout=None):
             """Wait for child process to terminate.  Returns returncode
             attribute."""
             if self.returncode is None:
-                self._event.wait()
+                self._event.wait(timeout=timeout)
             return self.returncode
 
         def send_signal(self, sig):
