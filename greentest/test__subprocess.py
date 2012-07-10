@@ -106,6 +106,15 @@ class Test(greentest.TestCase):
         finally:
             p.stdout.close()
 
+    def test_nonblock_removed(self):
+        # see issue #134
+        p = subprocess.Popen(['grep', 'text'], stdin=subprocess.FileObject(os.dup(1)))
+        try:
+            self.assertEqual(p.wait(timeout=0.1), None)
+        finally:
+            if p.poll() is None:
+                p.send_signal(9)
+
 
 if __name__ == '__main__':
     greentest.main()
