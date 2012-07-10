@@ -553,6 +553,10 @@ class Popen(object):
             else:
                 fcntl.fcntl(fd, fcntl.F_SETFD, old & ~cloexec_flag)
 
+        def _remove_nonblock_flag(self, fd):
+            flags = fcntl.fcntl(fd, fcntl.F_GETFL) & (~os.O_NONBLOCK)
+            fcntl.fcntl(fd, fcntl.F_SETFL, flags)
+
         def pipe_cloexec(self):
             """Create a pipe with FDs set CLOEXEC."""
             # Pipes' FDs are set CLOEXEC by default because we don't want them
@@ -645,6 +649,7 @@ class Popen(object):
                                     self._set_cloexec_flag(a, False)
                                 elif a is not None:
                                     os.dup2(a, b)
+                                self._remove_nonblock_flag(b)
                             _dup2(p2cread, 0)
                             _dup2(c2pwrite, 1)
                             _dup2(errwrite, 2)
