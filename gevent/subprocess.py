@@ -95,10 +95,8 @@ if mswindows:
 else:
     import fcntl
     import pickle
-
-
-from gevent import monkey
-fork = monkey.get_original('os', 'fork')
+    from gevent import monkey
+    fork = monkey.get_original('os', 'fork')
 
 
 def call(*popenargs, **kwargs):
