@@ -38,8 +38,9 @@ def get_config_value(key, defkey, path):
     value = parse_environ(key)
     if value is None:
         value = parse_environ(defkey)
-    if value is None:
-        return os.path.exists(path)
+    if value is not None:
+        return value
+    return os.path.exists(path)
 
 
 LIBEV_EMBED = get_config_value('LIBEV_EMBED', 'EMBED', 'libev')
