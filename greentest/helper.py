@@ -1,6 +1,9 @@
 import sys
 import os
 import imp
+import tempfile
+import glob
+from pipes import quote
 
 version = '%s.%s' % sys.version_info[:2]
 
@@ -81,6 +84,20 @@ def prepare_stdlib_test(filename):
     return _prepare_stdlib_test(filename)[0]
 
 
-def run(filename, globals):
+def run(filename, d, assets=None):
     module_code, filename = _prepare_stdlib_test(filename)
-    exec module_code in globals
+    chdir = os.path.join(tempfile.gettempdir(), 'gevent-test')
+    try:
+        os.makedirs(chdir)
+    except EnvironmentError:
+        pass
+    if assets:
+        directory = os.path.dirname(filename)
+        os.chdir(directory)
+        if isinstance(assets, basestring):
+            assets = glob.glob(assets)
+        for asset in assets:
+            os.system('cp -r %s %s' % (quote(asset), quote(os.path.join(chdir, asset))))
+
+    os.chdir(chdir)
+    exec module_code in d
