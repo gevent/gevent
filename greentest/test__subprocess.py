@@ -108,7 +108,9 @@ class Test(greentest.TestCase):
 
     def test_nonblock_removed(self):
         # see issue #134
-        p = subprocess.Popen(['grep', 'text'], stdin=subprocess.FileObject(os.dup(1)))
+        r, w = os.pipe()
+        p = subprocess.Popen(['grep', 'text'], stdin=subprocess.FileObject(r))
+        os.close(w)
         try:
             self.assertEqual(p.wait(timeout=0.1), None)
         finally:
