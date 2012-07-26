@@ -5,6 +5,12 @@ import tempfile
 import glob
 from pipes import quote
 
+chdir = os.path.join(tempfile.gettempdir(), 'gevent-test')
+try:
+    os.makedirs(chdir)
+except EnvironmentError:
+    pass
+
 version = '%s.%s' % sys.version_info[:2]
 
 missing_modules = {
@@ -46,7 +52,7 @@ def imp_find_dotted_module(name):
     return result
 
 
-def _prepare_stdlib_test(filename):
+def prepare_stdlib_test(filename, assets=None):
     patch_all(timeout=20)
     import test
     try:
@@ -77,27 +83,25 @@ def _prepare_stdlib_test(filename):
     module_code = compile(module_source, _filename, 'exec')
 
     print >> sys.stderr, 'Testing %s with monkey patching' % _filename
-    return module_code, _filename
+
+    copy_assets(os.path.dirname(_filename), assets)
+    os.chdir(chdir)
+    return module_code
 
 
-def prepare_stdlib_test(filename):
-    return _prepare_stdlib_test(filename)[0]
+def copy_assets(source, assets):
+    if assets:
+        directory = os.path.dirname(filename)
+        cwd = os.getcwd()
+        os.chdir(directory)
+        try:
+            if isinstance(assets, basestring):
+                assets = glob.glob(assets)
+            for asset in assets:
+                os.system('cp -r %s %s' % (quote(asset), quote(os.path.join(chdir, asset))))
+        finally:
+            os.chdir(cwd)
 
 
 def run(filename, d, assets=None):
-    module_code, filename = _prepare_stdlib_test(filename)
-    chdir = os.path.join(tempfile.gettempdir(), 'gevent-test')
-    try:
-        os.makedirs(chdir)
-    except EnvironmentError:
-        pass
-    if assets:
-        directory = os.path.dirname(filename)
-        os.chdir(directory)
-        if isinstance(assets, basestring):
-            assets = glob.glob(assets)
-        for asset in assets:
-            os.system('cp -r %s %s' % (quote(asset), quote(os.path.join(chdir, asset))))
-
-    os.chdir(chdir)
-    exec module_code in d
+    exec prepare_stdlib_test(filename) in d
