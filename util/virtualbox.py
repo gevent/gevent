@@ -1,4 +1,3 @@
-# XXX share this with gevent/util/winvbox.py
 import sys
 import os
 import re
