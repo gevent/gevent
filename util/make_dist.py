@@ -104,8 +104,6 @@ def _make_dist(version='dev', fast=False, revert=False):
     system(set_version_command)
     if revert or not fast:
         system('hg diff', noisy=False)
-    else:
-        system('hg status', noisy=False)
     system('python setup.py -q sdist')
 
     dist_filename = glob.glob('dist/gevent-*.tar.gz')
