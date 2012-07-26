@@ -1,4 +1,4 @@
-# Copyright (c) 2009-2011 Denis Bilenko. See LICENSE for details.
+# Copyright (c) 2009-2012 Denis Bilenko. See LICENSE for details.
 """Synchronized queues.
 
 The :mod:`gevent.queue` module implements multi-producer, multi-consumer queues
@@ -48,7 +48,7 @@ class Queue(object):
     infinite size).
     """
 
-    def __init__(self, maxsize=None):
+    def __init__(self, maxsize=None, items=None):
         if maxsize is not None and maxsize <= 0:
             self.maxsize = None
             if maxsize == 0:
@@ -61,12 +61,21 @@ class Queue(object):
         self.putters = set()
         self.hub = get_hub()
         self._event_unlock = self.hub.loop.callback()
-        self._init(maxsize)
+        if items:
+            self._init(maxsize, items)
+        else:
+            self._init(maxsize)
 
     # QQQ make maxsize into a property with setter that schedules unlock if necessary
 
-    def _init(self, maxsize):
-        self.queue = collections.deque()
+    def copy(self):
+        return type(self)(self.maxsize, self.queue)
+
+    def _init(self, maxsize, items=None):
+        if items:
+            self.queue = collections.deque(items)
+        else:
+            self.queue = collections.deque()
 
     def _get(self):
         return self.queue.popleft()
@@ -78,20 +87,25 @@ class Queue(object):
         self.queue.append(item)
 
     def __repr__(self):
-        return '<%s at %s %s>' % (type(self).__name__, hex(id(self)), self._format())
+        return '<%s at %s%s>' % (type(self).__name__, hex(id(self)), self._format())
 
     def __str__(self):
-        return '<%s %s>' % (type(self).__name__, self._format())
+        return '<%s%s>' % (type(self).__name__, self._format())
 
     def _format(self):
-        result = 'maxsize=%r' % (self.maxsize, )
+        result = []
+        if self.maxsize is not None:
+            result.append('maxsize=%r' % (self.maxsize, ))
         if getattr(self, 'queue', None):
-            result += ' queue=%r' % self.queue
+            result.append('queue=%r' % (self.queue, ))
         if self.getters:
-            result += ' getters[%s]' % len(self.getters)
+            result.append('getters[%s]' % len(self.getters))
         if self.putters:
-            result += ' putters[%s]' % len(self.putters)
-        return result
+            result.append('putters[%s]' % len(self.putters))
+        if result:
+            return ' ' + ' '.join(result)
+        else:
+            return ''
 
     def qsize(self):
         """Return the size of the queue."""
@@ -299,8 +313,11 @@ class PriorityQueue(Queue):
     Entries are typically tuples of the form: ``(priority number, data)``.
     '''
 
-    def _init(self, maxsize):
-        self.queue = []
+    def _init(self, maxsize, items=None):
+        if items:
+            self.queue = list(items)
+        else:
+            self.queue = []
 
     def _put(self, item, heappush=heapq.heappush):
         heappush(self.queue, item)
@@ -312,8 +329,12 @@ class PriorityQueue(Queue):
 class LifoQueue(Queue):
     '''A subclass of :class:`Queue` that retrieves most recently added entries first.'''
 
-    def _init(self, maxsize):
-        self.queue = []
+    def _init(self, maxsize, items=None):
+        if items:
+            self.queue = list(items)
+        else:
+            self.queue = []
+
 
     def _put(self, item):
         self.queue.append(item)
@@ -325,12 +346,15 @@ class LifoQueue(Queue):
 class JoinableQueue(Queue):
     '''A subclass of :class:`Queue` that additionally has :meth:`task_done` and :meth:`join` methods.'''
 
-    def __init__(self, maxsize=None):
+    def __init__(self, maxsize=None, items=None, unfinished_tasks=None):
         from gevent.event import Event
-        Queue.__init__(self, maxsize)
-        self.unfinished_tasks = 0
+        Queue.__init__(self, maxsize, items)
+        self.unfinished_tasks = unfinished_tasks or 0
         self._cond = Event()
         self._cond.set()
+
+    def copy(self):
+        return type(self)(self.maxsize, self.queue, self.unfinished_tasks)
 
     def _format(self):
         result = Queue._format(self)
