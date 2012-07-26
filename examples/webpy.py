@@ -3,7 +3,7 @@
 
 from gevent import monkey; monkey.patch_all()
 from gevent.pywsgi import WSGIServer
-import gevent
+import time
 import web
 
 urls = ("/", "index",
@@ -22,7 +22,7 @@ class long_polling:
     # becomes greenlet-local storage thus making requests isolated as they should be.
     def GET(self):
         print 'GET /long'
-        gevent.sleep(10)  # possible to block the request indefinitely, without harming others
+        time.sleep(10)  # possible to block the request indefinitely, without harming others
         return 'Hello, 10 seconds later'
 
 if __name__ == "__main__":
