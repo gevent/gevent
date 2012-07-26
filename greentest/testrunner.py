@@ -521,7 +521,7 @@ def main():
         testrunner(options, args)
     finally:
         if show_results:
-            os.system('%s %s %s' % (sys.executable, os.path.join(base_directory, 'util', 'runteststat.py'), show_results))
+            os.system('%s %s %s' % (sys.executable, os.path.join(base_directory, 'util', 'stat.py'), show_results))
 
 
 def log(message, *args):
