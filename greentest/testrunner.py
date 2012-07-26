@@ -10,30 +10,13 @@ Additionally, the subprocess is killed after a timeout has passed. The test case
 in the database logged with the result 'TIMEOUT'.
 
 The --db option, when provided, specifies sqlite3 database that holds the test results.
-By default 'testresults.sqlite3' is used in the current directory.
-
-The results are stored in the following 2 tables:
-
-testcase:
-
-  runid   | test   | testcase        | result                 | time |
-  --------+--------+-----------------+------------------------+------+
-  abc123  | module | class.function  | PASSED|FAILED|TIMEOUT  | 0.01 |
-
-test:
-
-  runid   | test    | python | output | retcode | changeset   | uname | started_at |
-  --------+---------+--------+--------+---------+-------------+-------+------------+
-  abc123  | module  | 2.6.4  | ...    |       1 | 123_fe43ca+ | Linux |            |
-
-Set runid with --runid option. It must not exists in the database. The random
-one will be selected if not provided.
+By default '/tmp/testresults.sqlite3' is used and is unlinked before used.
 """
 
 # Known issues:
 # - screws up warnings location, causing them to appear as originated from testrunner.py
 
-DEFAULT_FILENAME = '/tmp/gevent-testrunner.sqlite3'
+DEFAULT_FILENAME = 'tmp-testrunner.sqlite3'
 
 # the number of seconds each test script is allowed to run
 DEFAULT_TIMEOUT = 60
@@ -41,15 +24,15 @@ DEFAULT_TIMEOUT = 60
 # the number of bytes of output that is recorded; the rest is thrown away
 OUTPUT_LIMIT = 50000
 
-ignore_tracebacks = ['ExpectedException', 'test_support.TestSkipped', 'test.test_support.TestSkipped']
-
 import sys
 import os
 import glob
 import re
 import traceback
+import subprocess
 from unittest import _TextTestResult, defaultTestLoader, TextTestRunner
 import platform
+from datetime import datetime
 
 try:
     killpg = os.killpg
@@ -62,83 +45,84 @@ except ImportError:
     sys.stderr.write('Failed to import sqlite3: %s\n' % sys.exc_info()[1])
     sqlite3 = None
 
-_column_types = {'time': 'real'}
+
+base_directory = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+DB = None
+# maps table name to key to value
+DEFAULT_PARAMS = {}
 
 
-def store_record(database_path, table, dictionary, _added_colums_per_db={}):
-    if sqlite3 is None:
-        return
-    conn = sqlite3.connect(database_path)
-    _added_columns = _added_colums_per_db.setdefault(database_path, set())
-    keys = dictionary.keys()
-    for key in keys:
-        if key not in _added_columns:
-            try:
-                sql = '''alter table %s add column %s %s''' % (table, key, _column_types.get(key))
-                conn.execute(sql)
-                conn.commit()
-                _added_columns.add(key)
-            except sqlite3.OperationalError:
-                ex = sys.exc_info()[1]
-                if 'duplicate column' not in str(ex).lower():
-                    raise
-    sql = 'insert or replace into %s (%s) values (%s)' % (table, ', '.join(keys), ', '.join(':%s' % key for key in keys))
-    cursor = conn.cursor()
+def execute(sql, args=None):
+    if DB is None:
+        return ()
     try:
-        cursor.execute(sql, dictionary)
-    except sqlite3.Error:
-        log('sql=%r\ndictionary=%r', sql, dictionary)
+        if args is None:
+            result = DB.execute(sql)
+        else:
+            result = DB.execute(sql, args)
+    except Exception, ex:
+        if 'has no column named' not in str(ex):
+            log('FAILED query %r %s: %s: %s', sql, args or '', type(ex).__name__, ex)
         raise
-    conn.commit()
-    return cursor.lastrowid
+    else:
+        DB.commit()
+        return result
 
 
-def delete_record(database_path, table, dictionary, _added_colums_per_db={}):
-    if sqlite3 is None:
-        return
-    keys = dictionary.keys()
-    conn = sqlite3.connect(database_path)
-    #print ('deleting %s from database' % (dictionary, ))
+def store_record(table, params):
+    d = DEFAULT_PARAMS.get(table, {}).copy()
+    d.update(params)
+    params = d
+    assert params
+    keys = sorted(params.keys())
+    columns = set()
+    for _ in xrange(1000):
+        try:
+            sql = 'insert or replace into %s (%s) values (%s)' % (table, ', '.join(keys), ', '.join(':%s' % key for key in keys))
+            return execute(sql, params).lastrowid
+        except sqlite3.OperationalError, ex:
+            prefix = 'table ' + table + ' has no column named '
+            ex = str(ex)
+            if ex.startswith(prefix):
+                column = ex[len(prefix):]
+                if column and ' ' not in column and column not in columns:
+                    execute('alter table %s add column %s' % (table, column))
+                    continue
+            raise
+    raise AssertionError
+
+
+def delete_record(table, params):
+    keys = params.keys()
     sql = 'delete from %s where %s' % (table, ' AND '.join('%s=:%s' % (key, key) for key in keys))
-    cursor = conn.cursor()
-    try:
-        cursor.execute(sql, dictionary)
-    except sqlite3.Error:
-        log('sql=%r\ndictionary=%r', sql, dictionary)
-        raise
-    conn.commit()
-    return cursor.lastrowid
+    return execute(sql, params)
 
 
 class DatabaseTestResult(_TextTestResult):
     separator1 = '=' * 70
     separator2 = '-' * 70
 
-    def __init__(self, database_path, runid, module_name, stream, descriptions, verbosity):
-        _TextTestResult.__init__(self, stream, descriptions, verbosity)
-        self.database_path = database_path
-        self.params = {'runid': runid,
-                       'test': module_name}
-
     def startTest(self, test):
-        _TextTestResult.startTest(self, test)
-        self.params['testcase'] = test.id().replace('__main__.', '')
-        self.params['result'] = 'TIMEOUT'
-        row_id = store_record(self.database_path, 'testcase', self.params)
-        self.params['id'] = row_id
         from time import time
+        _TextTestResult.startTest(self, test)
+        self.params = {'testcase': test.id().replace('__main__.', ''),
+                       'result': 'TIMEOUT'}
+        testcase_id = store_record('testcase', self.params)
+        self.params['id'] = testcase_id
         self.time = time()
 
     def addSkip(self, test, reason):
-        delete_record(self.database_path, 'testcase', self.params)
+        delete_record('testcase', self.params)
         return super(DatabaseTestResult, self).addSkip(test, reason)
 
     def _store_result(self, test, result):
-        self.params['result'] = result
         from time import time
         self.params['time'] = time() - self.time
-        store_record(self.database_path, 'testcase', self.params)
-        self.params.pop('id', None)
+        self.params['result'] = result
+        store_record('testcase', self.params)
+        del self.params
+        #self.params.pop('id', None)
 
     def addSuccess(self, test):
         _TextTestResult.addSuccess(self, test)
@@ -162,14 +146,8 @@ def format_exc_info(exc_info):
 
 class DatabaseTestRunner(TextTestRunner):
 
-    def __init__(self, database_path, runid, module_name, stream=sys.stderr, descriptions=1, verbosity=1):
-        self.database_path = database_path
-        self.runid = runid
-        self.module_name = module_name
-        TextTestRunner.__init__(self, stream=stream, descriptions=descriptions, verbosity=verbosity)
-
     def _makeResult(self):
-        return DatabaseTestResult(self.database_path, self.runid, self.module_name, self.stream, self.descriptions, self.verbosity)
+        return DatabaseTestResult(self.stream, self.descriptions, self.verbosity)
 
 
 def get_changeset():
@@ -187,11 +165,6 @@ def get_changeset():
     return changeset
 
 
-def get_core_version():
-    from gevent import core
-    return core.get_version()
-
-
 def execfile_as_main(path):
     import __builtin__
     oldmain = sys.modules["__main__"]
@@ -206,18 +179,32 @@ def execfile_as_main(path):
         sys.modules["__main__"] = oldmain
 
 
-def run_tests(options, args):
-    arg = args[0]
-    module_name = arg
-    if module_name.endswith('.py'):
-        module_name = module_name[:-3]
+def worker_main():
+    global DB
+
+    if killpg:
+        try:
+            os.setpgrp()
+        except AttributeError:
+            pass
+
+    path = sys.argv[1]
+    verbosity = int(os.environ['testrunner_verbosity'])
+    test_id = int(os.environ['testrunner_test_id'])
+    run_id = os.environ['testrunner_run_id']
+    db_name = os.environ.get('testrunner_db')
+    if db_name:
+        DB = sqlite3.connect(db_name)
+
+    DEFAULT_PARAMS['testcase'] = {'run_id': run_id,
+                                  'test_id': test_id}
 
     class _runner(object):
 
         def __new__(cls, *args, **kawrgs):
-            return DatabaseTestRunner(database_path=options.db, runid=options.runid, module_name=module_name, verbosity=options.verbosity)
+            return DatabaseTestRunner(verbosity=verbosity)
 
-    if options.db:
+    if DB:
         try:
             from unittest import runner
         except ImportError:
@@ -229,81 +216,83 @@ def run_tests(options, args):
         import test_support
         test_support.BasicTestRunner = _runner
 
-    sys.argv = args
+    sys.argv = sys.argv[1:]
 
-    if os.path.exists(arg):
-        execfile_as_main(arg)
+    if os.path.exists(path):
+        execfile_as_main(path)
     else:
-        test = defaultTestLoader.loadTestsFromName(arg)
+        test = defaultTestLoader.loadTestsFromName(path)
         result = _runner().run(test)
         sys.exit(not result.wasSuccessful())
 
 
-def run_subprocess(args, options, timeout):
+def run_subprocess(args, module_name, test_id, verbosity, timeout, capture=True):
     from threading import Timer
-    from subprocess import Popen, PIPE, STDOUT
 
-    popen_args = [sys.executable, sys.argv[0], '--record',
-                  '--runid', options.runid,
-                  '--verbosity', options.verbosity]
-    if options.db:
-        popen_args += ['--db', options.db]
-    popen_args += args
+    env = os.environ.copy()
+    env['testrunner_test_id'] = str(test_id)
+
+    popen_args = [sys.executable, sys.argv[0], 'WORKER'] + args
     popen_args = [str(x) for x in popen_args]
-    if options.capture:
-        popen = Popen(popen_args, stdout=PIPE, stderr=STDOUT, shell=False)
+    if capture:
+        popen = subprocess.Popen(popen_args, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, env=env)
     else:
-        popen = Popen(popen_args, shell=False)
+        popen = subprocess.Popen(popen_args, env=env)
 
     retcode = []
 
     def killer():
         retcode.append('TIMEOUT')
         sys.stderr.write('Killing %s (%s) because of timeout\n' % (popen.pid, args))
+        kill(popen)
         try:
             popen.stdout.close()
         except EnvironmentError:
             pass
-        finally:
-            killgroup(popen)
 
     timeout = Timer(timeout, killer)
     timeout.start()
     output = ''
     output_printed = False
     try:
-        if options.capture:
+        if capture:
             while True:
                 data = popen.stdout.read(1)
                 if not data:
                     break
                 output += data
-                if options.verbosity >= 2:
+                if verbosity >= 2:
                     sys.stdout.write(data)
                     output_printed = True
         retcode.append(popen.wait())
     finally:
         timeout.cancel()
-        killgroup(popen)
-    # QQQ compensating for run_tests' screw up
-    module_name = args[0]
-    if module_name.endswith('.py'):
-        module_name = module_name[:-3]
+        kill(popen)
+
+    # QQQ compensating for worker_main' screw up
     output = output.replace(' (__main__.', ' (' + module_name + '.')
     return retcode[0], output, output_printed
 
 
-def killgroup(popen):
+def kill(popen):
     if killpg is not None:
         try:
             killpg(popen.pid, 9)
         except OSError, ex:
             if ex.errno != 3:
-                raise
-    elif sys.platform.startswith('win'):
-        os.system('taskkill /F /PID %s /T' % popen.pid)
-    else:
-        popen.kill()
+                log('killpg(%r, 9) failed: %s: %s', popen.pid, type(ex).__name__, ex)
+    if sys.platform.startswith('win'):
+        ignore_msg = 'ERROR: The process "%s" not found.' % popen.pid
+        err = subprocess.Popen('taskkill /F /PID %s /T' % popen.pid, stderr=subprocess.PIPE).communicate()[1]
+        if err and err.strip() not in [ignore_msg, '']:
+            sys.stderr.write(repr(err))
+    try:
+        if hasattr(popen, 'kill'):
+            popen.kill()
+        elif hasattr(os, 'kill'):
+            os.kill(popen.pid, 9)
+    except EnvironmentError:
+        pass
 
 
 def read_timeout(source):
@@ -315,18 +304,16 @@ def read_timeout(source):
     return int(matches[0])
 
 
-def spawn_subprocess(args, options, base_params):
+def spawn_subprocess(args, options, run_id):
     success = False
-    if options.db:
-        module_name = args[0]
-        if module_name.endswith('.py'):
-            module_name = module_name[:-3]
-        from datetime import datetime
-        params = base_params.copy()
-        params.update({'started_at': datetime.now(),
-                       'test': module_name})
-        row_id = store_record(options.db, 'test', params)
-        params['id'] = row_id
+    module_name = args[0]
+    if module_name.endswith('.py'):
+        module_name = module_name[:-3]
+    params = {'started_at': datetime.now(),
+              'module': module_name,
+              'run_id': run_id}
+    test_id = store_record('test', params)
+    params['test_id'] = test_id
 
     timeout = options.timeout
 
@@ -337,7 +324,7 @@ def spawn_subprocess(args, options, base_params):
         if 'test_patched_' in args[0]:
             timeout *= 2
 
-    retcode, output, output_printed = run_subprocess(args, options, timeout)
+    retcode, output, output_printed = run_subprocess(args, module_name, test_id, verbosity=options.verbosity, timeout=timeout, capture=options.capture)
 
     if len(output) > OUTPUT_LIMIT:
         warn = '<AbridgedOutputWarning>'
@@ -358,20 +345,121 @@ def spawn_subprocess(args, options, base_params):
     else:
         log('%s timed out', ' '.join(args))
     sys.stdout.flush()
-    if options.db:
-        params['output'] = output
-        params['retcode'] = retcode
-        store_record(options.db, 'test', params)
+    params['output'] = output
+    params['retcode'] = retcode
+    store_record('test', params)
+    if not list(execute('select id from testcase where test_id=?', (test_id, ))):
+        store_record('testcase', {'module': module_name,
+                                  'run_id': run_id,
+                                  'test_id': test_id,
+                                  'testcase': '',
+                                  'result': 'PASSED' if not retcode else 'FAILED'})
     return success
 
 
-def spawn_subprocesses(options, args):
-    params = {'runid': options.runid,
-              'python': '%s.%s.%s' % sys.version_info[:3],
-              'changeset': get_changeset(),
-              'core_version': get_core_version(),
-              'uname': platform.uname()[0],
-              'retcode': 'TIMEOUT'}
+def get_platform_details():
+    functions = ['architecture',
+                 'machine',
+                 'linux_distribution',
+                 'dist',
+                 'node',
+                 'processor',
+                 'python_build',
+                 'python_compiler',
+                 'python_implementation',
+                 'python_version',
+                 'release',
+                 'system',
+                 'version',
+                 'win32_ver',
+                 'mac_ver',
+                 'libc_ver']
+
+    result = {}
+    for name in functions:
+        function = getattr(platform, name, None)
+        if function is not None:
+            try:
+                value = function()
+            except Exception:
+                traceback.print_exc()
+            else:
+                if not empty(value):
+                    result[name] = str(value)
+
+    dist = result.pop('dist', None)
+    result['linux_distribution'] = result.get('linux_distribution', None) or dist
+
+    return result
+
+
+def empty(container):
+    if not container:
+        return True
+    if not isinstance(container, (list, tuple)):
+        return False
+    for item in container:
+        if not empty(item):
+            return False
+    return True
+
+
+def get_backend():
+    p = subprocess.Popen([sys.executable, '-c', 'import gevent.core; print gevent.core.loop().backend'],
+                         stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    out, err = p.communicate()
+    if err:
+        raise SystemExit(err)
+    if p.poll():
+        raise SystemExit
+    return out.strip()
+
+
+def get_gevent_details():
+    import gevent.core
+    backend = get_backend()
+    recommended_backends = ','.join(gevent.core.recommended_backends())
+    supported_backends = ','.join(gevent.core.supported_backends())
+    assert backend and backend in supported_backends, repr(backend)
+    return {'backend': backend,
+            'recommended_backends': recommended_backends,
+            'supported_backends': supported_backends}
+
+
+def get_environ_details():
+    result = {}
+    for key, value in os.environ.items():
+        if key.startswith('GEVENT'):
+            result[key] = value
+    return result
+
+
+def testrunner(options, args):
+    import uuid
+    run_id = str(uuid.uuid4())
+    details = {'run_id': run_id,
+               'changeset': get_changeset(),  # replace with version + changeset
+               'python_exe': sys.executable,
+               'started_at': datetime.now()}
+
+    keys = ['changeset', 'python_exe']
+
+    def update(data):
+        keys.extend(sorted(data.keys()))
+        details.update(data)
+
+    update(get_platform_details())
+    update(get_gevent_details())
+    update(get_environ_details())
+
+    execute('CREATE TABLE IF NOT EXISTS run (run_id PRIMARY_KEY, %s);' % ', '.join(keys))
+    execute('CREATE TABLE IF NOT EXISTS test (test_id INTEGER PRIMARY KEY AUTOINCREMENT, run_id);')
+    execute('CREATE TABLE IF NOT EXISTS testcase (id INTEGER PRIMARY KEY AUTOINCREMENT, run_id, test_id INTEGER);')
+
+    assert details
+    store_record('run', details)
+    os.environ['testrunner_run_id'] = str(run_id)
+
     success = True
     if not args:
         args = glob.glob('test_*.py')
@@ -384,212 +472,15 @@ def spawn_subprocesses(options, args):
             real_args[-1].append(arg)
     for arg in real_args:
         try:
-            success = spawn_subprocess(arg, options, params) and success
+            success = spawn_subprocess(arg, options, run_id) and success
         except Exception:
             traceback.print_exc()
-    if options.db:
-        try:
-            log('-' * 80)
-            if print_stats(options):
-                success = False
-        except sqlite3.OperationalError:
-            traceback.print_exc()
-        log('To view stats again for this run, use %s --stats --runid %s --db %s', sys.argv[0], options.runid, options.db)
     if not success:
         sys.exit(1)
 
 
-def get_testcases(cursor, runid, result=None):
-    sql = 'select test, testcase from testcase where runid=?'
-    args = (runid, )
-    if result is not None:
-        sql += ' and result=?'
-        args += (result, )
-
-    try:
-        result = cursor.execute(sql, args)
-    except Exception:
-        log('Failed to execute %r %r', sql, args)
-        raise
-
-    return ['.'.join(x) for x in result.fetchall()]
-
-
-def get_failed_testcases(cursor, runid):
-    sql = 'select test, testcase, result from testcase where runid=?'
-    args = (runid, )
-    sql += ' and result!="PASSED" and result!="TIMEOUT"'
-    names = []
-    errors = {}
-    for test, testcase, result in cursor.execute(sql, args).fetchall():
-        name = '%s.%s' % (test, testcase)
-        names.append(name)
-        errors[name] = result
-    return names, errors
-
-
-_warning_re = re.compile('\w*warning', re.I)
-
-
-def get_warnings(output):
-    """
-    >>> get_warnings('hello DeprecationWarning warning: bla DeprecationWarning')
-    ['DeprecationWarning', 'warning', 'DeprecationWarning']
-    """
-    if len(output) <= OUTPUT_LIMIT:
-        return _warning_re.findall(output)
-    else:
-        return _warning_re.findall(output[:OUTPUT_LIMIT]) + ['AbridgedOutputWarning']
-
-
-newline_re = re.compile('[\r\n]+')
-
-def get_exceptions(output):
-    """
-    >>> get_exceptions('''test$ python -c "1/0"
-    ... Traceback (most recent call last):
-    ...   File "<string>", line 1, in <module>
-    ... ZeroDivisionError: integer division or modulo by zero''')
-    ['ZeroDivisionError']
-    """
-    errors = []
-    readtb = False
-    for line in newline_re.split(output):
-        if 'Traceback (most recent call last):' in line:
-            readtb = True
-        else:
-            if readtb:
-                if line[:1] == ' ':
-                    pass
-                else:
-                    errors.append(line.split(':')[0])
-                    readtb = False
-    return errors
-
-
-def get_warning_stats(output):
-    counter = {}
-    for warning in get_warnings(output):
-        counter.setdefault(warning, 0)
-        counter[warning] += 1
-    items = counter.items()
-    def sortkey(x):
-        return -x[1]
-    items.sort(key=sortkey)
-    result = []
-    for name, count in items:
-        if count == 1:
-            result.append(name)
-        else:
-            result.append('%s %ss' % (count, name))
-    return result
-
-
-def get_ignored_tracebacks(test):
-    if os.path.exists(test + '.py'):
-        data = open(test + '.py').read()
-        m = re.search('Ignore tracebacks: (.*)', data)
-        if m is not None:
-            return m.group(1).split()
-    return []
-
-
-def get_traceback_stats(output, test):
-    ignored = get_ignored_tracebacks(test) or ignore_tracebacks
-    counter = {}
-    traceback_count = output.lower().count('Traceback (most recent call last)')
-    ignored_list = []
-    for error in get_exceptions(output):
-        if error in ignored:
-            ignored_list.append(error)
-        else:
-            counter.setdefault(error, 0)
-            counter[error] += 1
-        traceback_count -= 1
-    items = counter.items()
-    def sortkey(x):
-        return -x[1]
-    items.sort(key=sortkey)
-    if traceback_count > 0:
-        items.append(('other traceback', traceback_count))
-    result = []
-    for name, count in items:
-        if count == 1:
-            result.append('1 %s' % name)
-        else:
-            result.append('%s %ss' % (count, name))
-    return result, ignored_list
-
-
-def get_info(output, test):
-    output = output[:OUTPUT_LIMIT]
-    traceback_stats, ignored_list = get_traceback_stats(output, test)
-    warning_stats = get_warning_stats(output)
-    result = traceback_stats + warning_stats
-    skipped = not warning_stats and not traceback_stats and ignored_list in [['test_support.TestSkipped'], ['test.test_support.TestSkipped']]
-    return ', '.join(result), skipped
-
-
-def print_stats(options):
-    db = sqlite3.connect(options.db)
-    cursor = db.cursor()
-    if options.runid is None:
-        options.runid = cursor.execute('select runid from test order by started_at desc limit 1').fetchall()[0][0]
-        log('Using the latest runid: %s', options.runid)
-    total = len(get_testcases(cursor, options.runid))
-    failed, errors = get_failed_testcases(cursor, options.runid)
-    timedout = get_testcases(cursor, options.runid, 'TIMEOUT')
-    for test, output, retcode in cursor.execute('select test, output, retcode from test where runid=?', (options.runid, )):
-        info, skipped = get_info(output or '', test)
-        if info:
-            log('%s: %s', test, info)
-        if retcode == 'TIMEOUT':
-            for testcase in timedout:
-                if testcase.startswith(test + '.'):
-                    break
-            else:
-                timedout.append(test)
-                total += 1
-        elif retcode != 0:
-            for testcase in failed:
-                if testcase.startswith(test + '.'):
-                    break
-            else:
-                if not skipped:
-                    failed.append(test)
-                    total += 1
-            # XXX if a test without any test cases fails it is added to total
-            # XXX but if it passes it is not
-
-    if failed:
-        failed.sort()
-        log('FAILURES: ')
-        for testcase in failed:
-            error = errors.get(testcase)
-            if error:
-                error = repr(error)[1:-1][:100]
-                log(' - %s: %s', testcase, error)
-            else:
-                log(' - %s', testcase)
-    if timedout:
-        log('TIMEOUTS: ')
-        log(' - ' + '\n - '.join(timedout))
-    log('%s testcases total; %s failed; %s timed out', total, len(failed), len(timedout))
-    if failed or timedout:
-        return True
-    return False
-
-
-def unlink(path):
-    try:
-        os.unlink(path)
-    except OSError, ex:
-        if ex.errno == 2:  # No such file or directory
-            return
-        raise
-
-
 def main():
+    global DB
     import optparse
     parser = optparse.OptionParser()
     parser.add_option('-v', '--verbose', default=0, action='count')
@@ -597,61 +488,40 @@ def main():
     parser.add_option('--verbosity', default=0, type='int', help=optparse.SUPPRESS_HELP)
     parser.add_option('--db')
     parser.add_option('--no-db', dest='db', action='store_false')
-    parser.add_option('--runid')
-    parser.add_option('--record', default=False, action='store_true')
     parser.add_option('--no-capture', dest='capture', default=True, action='store_false')
-    parser.add_option('--stats', default=False, action='store_true')
     parser.add_option('--timeout', type=float, metavar='SECONDS')
 
     options, args = parser.parse_args()
     options.verbosity += options.verbose - options.quiet
 
-    if options.db is None:
-        unlink(DEFAULT_FILENAME)
-        options.db = DEFAULT_FILENAME
+    show_results = False
 
-    if options.db:
-        if sqlite3:
-            options.db = os.path.abspath(options.db)
-            log('Using the database: %s', options.db)
-        else:
-            log('Cannot access the database %r: no sqlite3 module found.', options.db)
-            options.db = False
-
-    if options.db:
-        directory = os.path.dirname(options.db)
-        if not os.path.exists(directory):
-            os.makedirs(directory)
-        db = sqlite3.connect(options.db)
-        db.execute('create table if not exists test (id integer primary key autoincrement, runid text)')
-        db.execute('''create table if not exists testcase (
-                      id integer primary key autoincrement,
-                      runid text,
-                      test text,
-                      testcase test,
-                      result text)''')
-        db.commit()
-
-    if options.stats:
-        print_stats(options)
+    if sqlite3 is None:
+        assert options.db is None, 'Cannot use --db option because sqlite3 is not available'
     else:
-        if not options.runid:
-            try:
-                import uuid
-                options.runid = str(uuid.uuid4())
-            except ImportError:
-                import random
-                options.runid = str(random.random())[2:]
-            log('Generated runid: %s', options.runid)
-        if options.record:
-            if killpg:
-                try:
-                    os.setpgrp()
-                except AttributeError:
-                    pass
-            run_tests(options, args)
+        if options.db is None:
+            if os.path.exists(DEFAULT_FILENAME):
+                os.unlink(DEFAULT_FILENAME)
+            db = DEFAULT_FILENAME
+            show_results = db
         else:
-            spawn_subprocesses(options, args)
+            db = options.db
+
+        if db:
+            db = os.path.abspath(db)
+            directory = os.path.dirname(db)
+            if not os.path.exists(directory):
+                os.makedirs(directory)
+            DB = sqlite3.connect(db)
+            os.environ['testrunner_db'] = db
+
+    os.environ['testrunner_verbosity'] = str(options.verbosity)
+
+    try:
+        testrunner(options, args)
+    finally:
+        if show_results:
+            os.system('%s %s %s' % (sys.executable, os.path.join(base_directory, 'util', 'runteststat.py'), show_results))
 
 
 def log(message, *args):
@@ -672,4 +542,8 @@ def log(message, *args):
 
 
 if __name__ == '__main__':
-    main()
+    if sys.argv[1:2] == ['WORKER']:
+        del sys.argv[1]
+        worker_main()
+    else:
+        main()
