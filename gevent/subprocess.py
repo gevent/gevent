@@ -467,6 +467,9 @@ class Popen(object):
         def wait(self):
             """Wait for child process to terminate.  Returns returncode
             attribute."""
+            # XXX support timeout argument
+            # XXX do not launch more than one WaitForSingleObject
+            # XXX add 'event' attribute
             if self.returncode is None:
                 self.threadpool.apply_e(BaseException, WaitForSingleObject, (self._handle, INFINITE))
                 self.returncode = GetExitCodeProcess(self._handle)
