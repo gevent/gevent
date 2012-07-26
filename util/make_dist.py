@@ -17,6 +17,7 @@ import os
 import glob
 import optparse
 from os.path import exists, join, dirname, abspath, basename
+from pipes import quote
 
 
 TMPDIR = '/tmp/gevent-make-dist'
@@ -108,15 +109,19 @@ def _make_dist(version='dev', fast=False, revert=False):
 
     dist_filename = glob.glob('dist/gevent-*.tar.gz')
     assert len(dist_filename) == 1, dist_filename
-    dist_filename = abspath(dist_filename[0])
+    dist_path = abspath(dist_filename[0])
+    dist_filename = basename(dist_path)
+
 
     website_dist_dir = join(dirname(basedir), 'gevent-website', 'dist')
     if exists(website_dist_dir):
-        system('cp %s %s' % (dist_filename, website_dist_dir))
+        copy(dist_path, join(website_dist_dir, dist_filename))
 
-    result = join(TMPDIR, basename(dist_filename))
-    link(dist_filename, result)
-    return result
+    if not exists(join(basedir, 'dist')):
+        os.makedir(join(basedir, 'dist'))
+
+    copy(dist_path, join(basedir, 'dist', dist_filename))
+    return dist_path
 
 
 def main():
@@ -134,10 +139,8 @@ def main():
     return make_dist(args[0], fast=options.fast, revert=options.revert)
 
 
-def link(source, dest):
-    assert source != dest, source
-    unlink(dest)
-    os.link(source, dest)
+def copy(source, dest):
+    system('cp -a %s %s' % (quote(source), quote(dest)))
 
 
 def unlink(path):
