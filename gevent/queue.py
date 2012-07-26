@@ -25,11 +25,11 @@ import heapq
 import collections
 
 if sys.version_info[0] == 2:
-    from Queue import Full, Empty
+    __queue__ = __import__('Queue')
 else:
     __queue__ = __import__('queue')
-    Full = __queue__.Full
-    Empty = __queue__.Empty
+Full = __queue__.Full
+Empty = __queue__.Empty
 
 from gevent.timeout import Timeout
 from gevent.hub import get_hub, Waiter, getcurrent
