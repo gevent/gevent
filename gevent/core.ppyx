@@ -965,7 +965,7 @@ cpdef set_syserr_cb(callback):
     if callback is None:
         libev.ev_set_syserr_cb(NULL)
         __SYSERR_CALLBACK = None
-    elif hasattr(callback, '__call__'):
+    elif callable(callback):
         libev.ev_set_syserr_cb(<void *>_syserr_cb)
         __SYSERR_CALLBACK = callback
     else:
