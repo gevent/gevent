@@ -157,6 +157,8 @@ class ThreadPool(object):
             self.adjust()
             # rawlink() must be the last call
             result.rawlink(lambda *args: self._semaphore.release())
+            # XXX this _semaphore.release() is competing for order with get()
+            # XXX this is not good, just make ThreadResult release the semaphore before doing anything else
         except:
             semaphore.release()
             raise
@@ -207,6 +209,9 @@ class ThreadPool(object):
             if need_decrease:
                 self._decrease_size()
 
+    # XXX apply() should re-raise error by default
+    # XXX because that's what builtin apply does
+    # XXX check gevent.pool.Pool.apply and multiprocessing.Pool.apply
     def apply_e(self, expected_errors, function, args=None, kwargs=None):
         if args is None:
             args = ()
@@ -295,6 +300,7 @@ class ThreadResult(object):
             self.async = None
             self.hub = None
             if self.receiver is not None:
+                # XXX exception!!!?
                 self.receiver(self)
         finally:
             self.receiver = None
