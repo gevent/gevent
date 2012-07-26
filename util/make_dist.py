@@ -72,12 +72,14 @@ def _make_dist(version='dev', fast=False, revert=False):
     os.chdir(TMPDIR)
 
     if fast:
-        system('cp -al %s .' % basedir)
+        # -l option is nice but does not work on mac
+        system('cp -a %s .' % basedir)
     else:
         system('hg clone %s gevent' % basedir)
 
     directory = os.listdir('.')
     assert len(directory) == 1, directory
+
     os.chdir(directory[0])
 
     if fast:
