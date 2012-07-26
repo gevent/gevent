@@ -46,7 +46,15 @@ def iter_status(command):
             yield line[:1], line[1:].strip()
 
 
-def make_dist(version='dev', fast=False, revert=False):
+def make_dist(*args, **kwargs):
+    cwd = os.getcwd()
+    try:
+        return _make_dist(*args, **kwargs)
+    finally:
+        os.chdir(cwd)
+
+
+def _make_dist(version='dev', fast=False, revert=False):
     assert exists('gevent/__init__.py'), 'Where am I?'
     basedir = abspath(os.getcwd())
 
