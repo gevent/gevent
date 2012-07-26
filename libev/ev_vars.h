@@ -69,9 +69,6 @@ VAR (backend_poll  , void (*backend_poll)(EV_P_ ev_tstamp timeout))
 VARx(ANFD *, anfds)
 VARx(int, anfdmax)
 
-#if EV_USE_EVENTFD || EV_GENWRAP
-VARx(int, evfd)
-#endif
 VAR (evpipe, int evpipe [2])
 VARx(ev_io, pipe_w)
 VARx(EV_ATOMIC_T, pipe_write_wanted)

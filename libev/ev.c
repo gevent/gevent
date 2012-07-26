@@ -1193,12 +1193,11 @@ ev_syserr (const char *msg)
 static void *
 ev_realloc_emul (void *ptr, long size) EV_THROW
 {
-#if __GLIBC__
-  return realloc (ptr, size);
-#else
   /* some systems, notably openbsd and darwin, fail to properly
    * implement realloc (x, 0) (as required by both ansi c-89 and
    * the single unix specification, so work around them here.
+   * recently, also (at least) fedora and debian started breaking it,
+   * despite documenting it otherwise.
    */
 
   if (size)
@@ -1206,7 +1205,6 @@ ev_realloc_emul (void *ptr, long size) EV_THROW
 
   free (ptr);
   return 0;
-#endif
 }
 
 static void *(*alloc)(void *ptr, long size) EV_THROW = ev_realloc_emul;
@@ -1871,28 +1869,41 @@ evpipe_init (EV_P)
 {
   if (!ev_is_active (&pipe_w))
     {
-# if EV_USE_EVENTFD
-      evfd = eventfd (0, EFD_NONBLOCK | EFD_CLOEXEC);
-      if (evfd < 0 && errno == EINVAL)
-        evfd = eventfd (0, 0);
+      int fds [2];
 
-      if (evfd >= 0)
-        {
-          evpipe [0] = -1;
-          fd_intern (evfd); /* doing it twice doesn't hurt */
-          ev_io_set (&pipe_w, evfd, EV_READ);
-        }
-      else
+# if EV_USE_EVENTFD
+      fds [0] = -1;
+      fds [1] = eventfd (0, EFD_NONBLOCK | EFD_CLOEXEC);
+      if (fds [1] < 0 && errno == EINVAL)
+        fds [1] = eventfd (0, 0);
+
+      if (fds [1] < 0)
 # endif
         {
-          while (pipe (evpipe))
+          while (pipe (fds))
             ev_syserr ("(libev) error creating signal/async pipe");
 
-          fd_intern (evpipe [0]);
-          fd_intern (evpipe [1]);
-          ev_io_set (&pipe_w, evpipe [0], EV_READ);
+          fd_intern (fds [0]);
         }
 
+      fd_intern (fds [1]);
+
+      evpipe [0] = fds [0];
+
+      if (evpipe [1] < 0)
+        evpipe [1] = fds [1]; /* first call, set write fd */
+      else
+        {
+          /* on subsequent calls, do not change evpipe [1] */
+          /* so that evpipe_write can always rely on its value. */
+          /* this branch does not do anything sensible on windows, */
+          /* so must not be executed on windows */
+
+          dup2 (fds [1], evpipe [1]);
+          close (fds [1]);
+        }
+
+      ev_io_set (&pipe_w, evpipe [0] < 0 ? evpipe [1] : evpipe [0], EV_READ);
       ev_io_start (EV_A_ &pipe_w);
       ev_unref (EV_A); /* watcher should not keep loop alive */
     }
@@ -1923,10 +1934,10 @@ evpipe_write (EV_P_ EV_ATOMIC_T *flag)
       old_errno = errno; /* save errno because write will clobber it */
 
 #if EV_USE_EVENTFD
-      if (evfd >= 0)
+      if (evpipe [0] < 0)
         {
           uint64_t counter = 1;
-          write (evfd, &counter, sizeof (uint64_t));
+          write (evpipe [1], &counter, sizeof (uint64_t));
         }
       else
 #endif
@@ -1956,10 +1967,10 @@ pipecb (EV_P_ ev_io *iow, int revents)
   if (revents & EV_READ)
     {
 #if EV_USE_EVENTFD
-      if (evfd >= 0)
+      if (evpipe [0] < 0)
         {
           uint64_t counter;
-          read (evfd, &counter, sizeof (uint64_t));
+          read (evpipe [1], &counter, sizeof (uint64_t));
         }
       else
 #endif
@@ -2025,9 +2036,6 @@ ev_feed_signal (int signum) EV_THROW
     return;
 #endif
 
-  if (!ev_active (&pipe_w))
-    return;
-
   signals [signum - 1].pending = 1;
   evpipe_write (EV_A_ &sig_pending);
 }
@@ -2047,7 +2055,7 @@ ev_feed_signal_event (EV_P_ int signum) EV_THROW
 {
   WL w;
 
-  if (expect_false (signum <= 0 || signum > EV_NSIG))
+  if (expect_false (signum <= 0 || signum >= EV_NSIG))
     return;
 
   --signum;
@@ -2355,6 +2363,8 @@ loop_init (EV_P_ unsigned int flags) EV_THROW
 #endif
       pipe_write_skipped = 0;
       pipe_write_wanted  = 0;
+      evpipe [0]         = -1;
+      evpipe [1]         = -1;
 #if EV_USE_INOTIFY
       fs_fd              = flags & EVFLAG_NOINOTIFY ? -1 : -2;
 #endif
@@ -2427,16 +2437,8 @@ ev_loop_destroy (EV_P)
       /*ev_ref (EV_A);*/
       /*ev_io_stop (EV_A_ &pipe_w);*/
 
-#if EV_USE_EVENTFD
-      if (evfd >= 0)
-        close (evfd);
-#endif
-
-      if (evpipe [0] >= 0)
-        {
-          EV_WIN32_CLOSE_FD (evpipe [0]);
-          EV_WIN32_CLOSE_FD (evpipe [1]);
-        }
+      if (evpipe [0] >= 0) EV_WIN32_CLOSE_FD (evpipe [0]);
+      if (evpipe [1] >= 0) EV_WIN32_CLOSE_FD (evpipe [1]);
     }
 
 #if EV_USE_SIGNALFD
@@ -2532,6 +2534,7 @@ loop_fork (EV_P)
   infy_fork (EV_A);
 #endif
 
+#if EV_SIGNAL_ENABLE || EV_ASYNC_ENABLE
   if (ev_is_active (&pipe_w))
     {
       /* pipe_write_wanted must be false now, so modifying fd vars should be safe */
@@ -2539,23 +2542,14 @@ loop_fork (EV_P)
       ev_ref (EV_A);
       ev_io_stop (EV_A_ &pipe_w);
 
-#if EV_USE_EVENTFD
-      if (evfd >= 0)
-        close (evfd);
-#endif
-
       if (evpipe [0] >= 0)
-        {
-          EV_WIN32_CLOSE_FD (evpipe [0]);
-          EV_WIN32_CLOSE_FD (evpipe [1]);
-        }
+        EV_WIN32_CLOSE_FD (evpipe [0]);
 
-#if EV_SIGNAL_ENABLE || EV_ASYNC_ENABLE
       evpipe_init (EV_A);
       /* iterate over everything, in case we missed something before */
       ev_feed_event (EV_A_ &pipe_w, EV_CUSTOM);
-#endif
     }
+#endif
 
   postfork = 0;
 }

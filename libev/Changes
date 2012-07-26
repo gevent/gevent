@@ -4,9 +4,12 @@ TODO: ev_loop_wakeup
 TODO: EV_STANDALONE == NO_HASSEL (do not use clock_gettime in ev_standalone)
 TODO: faq, process a thing in each iteration
 TODO: dbeugging tips, ev_verify, ev_init twice
+TODO: ev_break for immediate exit (EVBREAK_NOW?)
+TODO: ev_feed_child_event
 
 TODO: document the special problem of signals around fork.
-TODO: ev_feed_child_event
+TODO: store pid for each signal
+TODO: document file descriptor usage per loop
         - destroying a non-default loop would stop the global waitpid
           watcher (Denis Bilenko).
 	- queueing pending watchers of higher priority from a watcher now invokes
@@ -37,6 +40,12 @@ TODO: ev_feed_child_event
           works in all cases (unlike read/write/send/recv...).
         - try to detect signals around a fork faster (test program by
           Denis Bilenko).
+        - work around recent glibc versions that leak memory in realloc.
+        - rename ev::embed::set to ev::embed::set_embed to avoid clashing
+          the watcher base set (loop) method.
+        - rewrite the async/signal pipe logic to always keep a valid fd, which
+          simplifies (and hopefuly correctifies :) the race checking
+          on fork, at the cost of one extra fd.
 
 4.11 Sat Feb  4 19:52:39 CET 2012
 	- INCOMPATIBLE CHANGE: ev_timer_again now clears the pending status, as
