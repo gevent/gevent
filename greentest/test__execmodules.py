@@ -10,7 +10,7 @@ class TestExec(BaseTestCase):
 def make_exec_test(path, module):
 
     def test(self):
-        sys.stderr.write('%s %s\n' % (module, path))
+        #sys.stderr.write('%s %s\n' % (module, path))
         f = open(path)
         src = f.read()
         f.close()
