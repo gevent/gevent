@@ -15,15 +15,9 @@ Make binary installers:
 
     winvbox.py dist VERSION
 
-Before doing anything, winvbox.py runs util/make_dist.py to generate the archive that will
-be built/tested. In case of "build" and "test" commands, the default is to pass "--fast" to
-make_dist.py. In case of "dist", the default is to run make_dist.py without arguments (which
-implies --clean).
-
-It is possible to override the default by passing "--revert", "--clean" or "--fast" explicitly.
-
 Other useful options:
 
+    --source FILENAME     # release tarball of gevent to use
     --python PYTHONVER    # Python version to use. Defaults to "27".
                             Could also be a path to Python executable.
     --machine MACHINE     # VirtualBox machine to use.
@@ -38,8 +32,6 @@ order to be selected by this script.
 
 import sys
 import os
-import re
-import time
 import datetime
 import glob
 from functools import wraps
@@ -48,6 +40,7 @@ from functools import wraps
 def main():
     import optparse
     import uuid
+    import virtualbox
     parser = optparse.OptionParser()
     parser.add_option('--source')
     parser.add_option('--fast', action='store_true')
@@ -75,10 +68,11 @@ def main():
         import getpass
         options.username = getpass.getuser()
 
-    if options.source:
-        assert not options.fast and not options.revert and not options.clean
-    else:
-        options.source = make_dist(options, command)
+    if not options.source:
+        import make_dist
+        options.source = make_dist.make_dist('dev', fast=True)
+    options.source = os.path.abspath(options.source)
+
     options.unique = uuid.uuid4().hex
     directory = 'c:/tmpdir.%s' % options.unique
 
@@ -96,21 +90,30 @@ def main():
         this_script = this_script[:-1]
     this_script_remote = '%s/%s' % (directory, os.path.basename(this_script))
 
-    machine = VirtualBox(options.machine, options.username, options.password, this_script_remote, python, type=options.type)
+    machine = virtualbox.VirtualBox(options.machine, options.username, options.password, type=options.type)
+    machine.start()
     try:
         machine.mkdir(directory)
-        machine.directory = directory
         machine.copyto(options.source, directory + '/' + os.path.basename(options.source))
         machine.copyto(this_script, this_script_remote)
+
+        machine.script_path = this_script_remote
+        machine.python_path = python
+        machine.directory = directory
 
         function = globals().get('command_%s' % command, command_default)
         function(command, command_args, machine, options)
     finally:
-        machine.cleanup()
+        machine.stop()
+
+
+def run_command(machine, command, command_args):
+    args = ['-u', machine.script_path, 'REMOTE', command] + (command_args or [])
+    machine.execute(machine.python_path, args)
 
 
 def command_default(command, command_args, machine, options):
-    machine.command(command, command_args)
+    run_command(machine, command, command_args)
 
 
 def remote_wrapper(function):
@@ -133,16 +136,24 @@ def remote_build(args):
     extract_and_build()
 
 
+def command_test(command, command_args, machine, options):
+    run_command(machine, command, command_args)
+    local_filename = 'remote-tmp-testrunner-%s.sqlite3' % machine.name
+    machine.copyfrom(machine.directory + '/tmp-testrunner.sqlite3', local_filename)
+    system('%s util/runteststat.py %s' % (sys.executable, local_filename))
+
+
 @remote_wrapper
 def remote_test(args):
     extract_and_build()
     os.chdir('greentest')
     os.environ['PYTHONPATH'] = '.;..'
-    system('%s testrunner.py %s' % (sys.executable, ' '.join(args)))
+    system('%s testrunner.py %s' % (sys.executable, ' '.join(args)), fail=False)
+    system('mv tmp-testrunner.sqlite3 ../../')
 
 
 def command_dist(command, command_args, machine, options):
-    machine.command(command, command_args)
+    run_command(machine, command, command_args)
     local_name = 'dist_%s.tar' % options.unique
     machine.copyfrom(machine.directory + '/dist.tar', local_name)
     if os.path.exists(local_name):
@@ -177,82 +188,13 @@ def extract_and_build():
     system('%s setup.py build' % sys.executable)
 
 
-def get_make_dist_option(options, command):
-    count = sum(1 if x else 0 for x in [options.fast, options.revert, options.clean])
-    if count > 1:
-        sys.exit('Only one expected of --fast|--revert|--clean')
-
-    if options.fast:
-        return {'fast': True}
-    elif options.revert:
-        return {'revert': True}
-    elif options.clean:
-        return {}
-    else:
-        if command == 'dist':
-            return {}
-        else:
-            return {'fast': True}
-
-
-def make_dist(options, command):
-    import make_dist
-    return make_dist.make_dist(options.version, **get_make_dist_option(options, command))
-
-
-def get_output(command):
-    result = os.popen(command)
-    output = result.read()
-    exitcode = result.close()
-    if exitcode:
-        sys.stdout.write(output)
-        raise SystemExit('Command %r failed with code %r' % (command, exitcode))
-    return output
-
-
-info_re = ('(^|\n)Name:\s*(?P<name>[^\n]+)'
-           '(\nGuest OS:\s*(?P<os>[^\n]+))?'
-           '\nUUID:\\s*(?P<id>[^\n]+).*?')
-
-
-info_re = re.compile(info_re, re.DOTALL)
-description_re = re.compile('^Description:(?P<desc>.*?\n.*?\n)', re.M)
-state_re = re.compile('^State:\s*(.*?)$', re.M)
-
-
-def get_machines():
-    output = get_output('VBoxManage list -l vms 2> /dev/null')
-    results = []
-    for m in info_re.finditer(output):
-        info = m.groupdict()
-        info['start'] = m.end(0)
-        if results:
-            results[-1]['end'] = m.start(0)
-        results.append(info)
-
-    for result in results:
-        text = output[result.pop('start', 0):result.pop('end', None)]
-        d = description_re.findall(text)
-        if d:
-            assert len(d) == 1, (result, d)
-            result['desc'] = d[0].strip()
-
-    return results
-
-
-def get_state(name):
-    output = get_output('VBoxManage showvminfo %s' % name)
-    state = state_re.findall(output)
-    assert len(state) == 1, state
-    return state[0].strip().split('(')[0].strip()
-
-
 def get_default_machine():
     return _get_default_machine()['name']
 
 
 def _get_default_machine():
-    machines = [m for m in get_machines() if m.get('name') and m.get('name') != '<inaccessible!>']
+    import virtualbox
+    machines = virtualbox.get_machines()
     if len(machines) == 1:
         return machines[0]
 
@@ -290,165 +232,6 @@ def system(command, fail=True):
     return result
 
 system.noisy = True
-
-
-def unlink(path):
-    try:
-        os.unlink(path)
-    except OSError, ex:
-        if ex.errno == 2:  # No such file or directory
-            return
-        raise
-
-RESTORE, POWEROFF, PAUSE = range(3)
-
-
-class VirtualBox(object):
-
-    def __init__(self, name, username, password, script_path, python_path, type=None):
-        self.name = name
-        self.username = username
-        self.password = password
-        self.script_path = script_path
-        self.python_path = python_path
-        self.type = type
-        self.final_action = None
-        self.mkdir_timeout = 15
-        self._start()
-
-    def _start(self):
-        state = get_state(self.name)
-        if state in ('powered off', 'saved', 'aborted'):
-            if state != 'saved':
-                self.mkdir_timeout = 90
-            vbox_startvm(self.name, type=self.type)
-            if state != 'saved':
-                time.sleep(5)
-            if state == 'saved':
-                self.final_action = RESTORE
-            else:
-                self.final_action = POWEROFF
-        elif state == 'paused':
-            vbox_resume(self.name)
-            self.final_action = PAUSE
-        elif state == 'running':
-            pass
-        else:
-            sys.exit('Machine %r has invalid state: %r' % (self.name, state))
-
-    def cleanup(self):
-        if self.final_action is PAUSE:
-            vbox_pause(self.name)
-        elif self.final_action == POWEROFF:
-            vbox_poweroff(self.name)
-        elif self.final_action == RESTORE:
-            vbox_restore(self.name)
-        self.final_action = None
-
-    def mkdir(self, path):
-        vbox_mkdir(self.name, path, username=self.username, password=self.password, timeout=self.mkdir_timeout)
-
-    def copyto(self, source, dest):
-        vbox_copyto(self.name, source, dest, username=self.username, password=self.password)
-
-    def copyfrom(self, source, dest):
-        vbox_copyfrom(self.name, source, dest, username=self.username, password=self.password)
-
-    def execute(self, exe, arguments):
-        vbox_execute(self.name, exe, arguments, username=self.username, password=self.password)
-
-    def command(self, command, command_args=None):
-        args = ['-u', self.script_path, 'REMOTE', command] + (command_args or [])
-        self.execute(self.python_path, args)
-
-
-def vbox_startvm(name, type=None):
-    if type:
-        options = ' --type ' + type
-    else:
-        options = ''
-    system('VBoxManage startvm %s%s' % (name, options))
-
-
-def vbox_resume(name):
-    system('VBoxManage controlvm %s resume' % name)
-
-
-def vbox_pause(name):
-    system('VBoxManage controlvm %s pause' % name)
-
-
-def vbox_poweroff(name):
-    system('VBoxManage controlvm %s poweroff' % name)
-
-
-def vbox_restorecurrent(name):
-    system('VBoxManage snapshot %s restorecurrent' % name)
-
-
-def vbox_restore(name):
-    vbox_poweroff(name)
-    count = 0
-    while True:
-        count += 1
-        time.sleep(0.5)
-        try:
-            vbox_restorecurrent(name)
-            break
-        except SystemExit:
-            if count > 3:
-                raise
-
-
-def _get_options(username=None, password=None, image=None):
-    from pipes import quote
-    options = ''
-    if username is not None:
-        options += ' --username %s' % quote(username)
-    if password is not None:
-        options += ' --password %s' % quote(password)
-    if image is not None:
-        options += ' --image %s' % quote(image)
-    return options
-
-
-def _vbox_mkdir(name, path, username=None, password=None):
-    from pipes import quote
-    system('VBoxManage guestcontrol %s mkdir %s%s' % (name, quote(path), _get_options(username, password)))
-
-
-def vbox_mkdir(name, path, username=None, password=None, timeout=90):
-    end = time.time() + timeout
-    while True:
-        try:
-            return _vbox_mkdir(name, path, username=username, password=password)
-        except SystemExit:
-            if time.time() > end:
-                raise
-        time.sleep(5)
-
-
-def vbox_copyto(name, source, dest, username=None, password=None):
-    from pipes import quote
-    args = (name, quote(os.path.abspath(source)), quote(dest), _get_options(username, password))
-    system('VBoxManage guestcontrol %s copyto %s %s%s' % args)
-
-
-def vbox_copyfrom(name, source, dest, username=None, password=None):
-    from pipes import quote
-    args = (name, quote(source), quote(os.path.abspath(dest)), _get_options(username, password))
-    system('VBoxManage guestcontrol %s copyfrom %s %s%s' % args)
-
-
-def vbox_execute(name, image, arguments, username=None, password=None):
-    from pipes import quote
-    options = _get_options(username, password, image)
-    options += ' --wait-stdout --wait-stderr'
-    arguments = ' '.join(quote(x) for x in arguments)
-    try:
-        system('VBoxManage guestcontrol %s execute %s%s -- %s' % (name, image, options, arguments))
-    except SystemExit, ex:
-        sys.stderr.write(str(ex) + '\n')
 
 
 if __name__ == '__main__':
