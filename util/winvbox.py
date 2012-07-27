@@ -165,10 +165,21 @@ def command_dist(command, command_args, machine, options):
 @remote_wrapper
 def remote_dist(args):
     extract_and_build()
-    system('%s setup.py bdist_egg bdist_wininst' % sys.executable)
+
+    success = 0
+
+    if not system('%s setup.py bdist_egg' % sys.executable, fail=False):
+        success += 1
+
+    if not system('%s setup.py bdist_wininst' % sys.executable, fail=False):
+        success += 1
 
     # bdist_msi fails if version is not strict
-    system('%s setup.py bdist_msi' % sys.executable, fail=False)
+    if not system('%s setup.py bdist_msi' % sys.executable, fail=False):
+        success += 1
+
+    if not success:
+        sys.exit('bdist_egg bdist_wininst and bdist_msi all failed')
 
     # must use forward slash here. back slashe causes dist.tar to be placed on c:\
     system('tar -cf ../dist.tar dist')
