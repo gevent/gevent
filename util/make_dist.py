@@ -118,7 +118,7 @@ def _make_dist(version='dev', fast=False, revert=False):
         copy(dist_path, join(website_dist_dir, dist_filename))
 
     if not exists(join(basedir, 'dist')):
-        os.makedir(join(basedir, 'dist'))
+        os.mkdir(join(basedir, 'dist'))
 
     copy(dist_path, join(basedir, 'dist', dist_filename))
     return dist_path
