@@ -4,6 +4,33 @@ Changelog
 .. currentmodule:: gevent
 
 
+Release 1.0b3
+-------------
+
+- New gevent.subprocess module
+- New gevent.fileobject module
+- Fixed ThreadPool to discard references of the objects passed to it (function, arguments) asap. Previously they could be stored for unlimited time until the thread gets a new job.
+- Fixed #138: gevent.pool.Pool().imap_unordered hangs with an empty iterator. Thanks to exproxus.
+- Fixed #127: ssl.py could raise TypeError in certain cases. Thanks to Johan Mjones.
+- Fixed socket.makefile() to keep the timeout setting of the socket instance. Thanks to Colin Marc.
+- Added 'copy()' method to queues.
+- The 'nochild' event loop config option is removed. The install_sigchld offer more flexible way of enabling child watchers.
+- core: all watchers except for 'child' now accept new 'priority' keyword argument
+- gevent.Timeout accepts new arguments: 'ref' and 'priority'. The default priority for Timeout is -1.
+- Hub.wait() uses Waiter now instead of raw switching
+- Updated libev to the latest CVS version
+- Made pywsgi to raise an AssertionError if non-zero content-length is passed to start_response(204/304) or if non-empty body is attempted to be written for 304/204 response
+- Removed pywsgi feature to capitalize the passed headers.
+- Fixed util/cythonpp.py to work on python3.2 (#123). Patch by Alexandre Kandalintsev.
+- Added 'closed' readonly property to socket.
+- Added 'ref' read/write property to socket.
+- setup.py now parses CARES_EMBED and LIBEV_EMBED parameters, in addition to EMBED.
+- gevent.reinit() and gevent.fork() only reinit hub if it was created and do not create it themselves
+- Fixed setup.py not to add libev and c-ares to include dirs in non-embed mode. Patch by Ralf Schmitt.
+- Renamed util/make_dist.py to util/makedist.py
+- testrunner.py now saves more information about the system; the stat printing functionality is moved to a separate util/stat.py script.
+
+
 Release 1.0b2
 -------------
 
@@ -856,3 +883,4 @@ Besides having less bugs and less code to care about the goals of the fork are:
 * Use the interfaces and conventions from the standard Python library where possible.
 
 .. _eventlet: http://bitbucket.org/denis/eventlet
+
