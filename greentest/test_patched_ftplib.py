@@ -1,2 +1,2 @@
 import helper
-helper.run(__file__, globals())
+helper.run(__file__, globals(), '*.pem')
