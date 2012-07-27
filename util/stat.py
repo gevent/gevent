@@ -1,5 +1,6 @@
 #!/usr/bin/python
 import sys
+import os
 import traceback
 import sqlite3
 import pprint
@@ -92,6 +93,8 @@ def remove_dependent_columns(main_columns, dependent_columns):
 
 
 def format_runs(runs, allruns):
+    if len(runs) <= 3:
+        return ', '.join(format_run(x) for x in runs)
     passed = set(allruns) - set(runs)
     if not passed:
         return 'all'
@@ -250,10 +253,13 @@ def main():
 
     for runs, cases in testcases:
         print 'Fail in %s:' % format_runs(runs, allruns)
-        for case in cases:
+        for case in sorted(cases):
             print '  ', case
         print
 
 
 if __name__ == '__main__':
-    main()
+    try:
+        main()
+    except sqlite3.OperationalError, ex:
+        sys.exit('%s: Exiting because of %s: %s' % (os.path.basename(sys.argv[0]), type(ex).__name__, ex))
