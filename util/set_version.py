@@ -112,7 +112,7 @@ def unlink(path):
 
 
 def write(filename, data):
-    # intentionally breaking links here so that util/make_dist.py can use "cp --link"
+    # intentionally breaking links here so that util/makedist.py can use "cp --link"
     tmpname = filename + '.tmp.%s' % os.getpid()
     f = open(tmpname, 'w')
     try:

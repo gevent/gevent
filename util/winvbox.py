@@ -69,8 +69,8 @@ def main():
         options.username = getpass.getuser()
 
     if not options.source:
-        import make_dist
-        options.source = make_dist.make_dist('dev', fast=True)
+        import makedist
+        options.source = makedist.makedist('dev', fast=True)
     options.source = os.path.abspath(options.source)
 
     options.unique = uuid.uuid4().hex

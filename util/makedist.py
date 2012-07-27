@@ -47,15 +47,15 @@ def iter_status(command):
             yield line[:1], line[1:].strip()
 
 
-def make_dist(*args, **kwargs):
+def makedist(*args, **kwargs):
     cwd = os.getcwd()
     try:
-        return _make_dist(*args, **kwargs)
+        return _makedist(*args, **kwargs)
     finally:
         os.chdir(cwd)
 
 
-def _make_dist(version='dev', fast=False, revert=False):
+def _makedist(version='dev', fast=False, revert=False):
     assert exists('gevent/__init__.py'), 'Where am I?'
     basedir = abspath(os.getcwd())
 
@@ -136,7 +136,7 @@ def main():
     if len(args) != 1:
         sys.exit('Expected one argument: version (could be "dev").')
 
-    return make_dist(args[0], fast=options.fast, revert=options.revert)
+    return makedist(args[0], fast=options.fast, revert=options.revert)
 
 
 def copy(source, dest):
