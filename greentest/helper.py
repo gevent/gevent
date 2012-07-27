@@ -89,9 +89,8 @@ def prepare_stdlib_test(filename, assets=None):
     return module_code
 
 
-def copy_assets(source, assets):
+def copy_assets(directory, assets):
     if assets:
-        directory = os.path.dirname(filename)
         cwd = os.getcwd()
         os.chdir(directory)
         try:
@@ -104,4 +103,4 @@ def copy_assets(source, assets):
 
 
 def run(filename, d, assets=None):
-    exec prepare_stdlib_test(filename) in d
+    exec prepare_stdlib_test(filename, assets) in d
