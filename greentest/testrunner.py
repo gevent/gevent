@@ -33,6 +33,10 @@ import subprocess
 from unittest import _TextTestResult, defaultTestLoader, TextTestRunner
 import platform
 from datetime import datetime
+try:
+    from ast import literal_eval
+except ImportError:
+    literal_eval = eval
 
 try:
     killpg = os.killpg
@@ -148,21 +152,6 @@ class DatabaseTestRunner(TextTestRunner):
 
     def _makeResult(self):
         return DatabaseTestResult(self.stream, self.descriptions, self.verbosity)
-
-
-def get_changeset():
-    try:
-        diff = os.popen(r"hg diff 2> /dev/null").read().strip()
-    except Exception:
-        diff = None
-    try:
-        changeset = os.popen(r"hg log -r tip 2> /dev/null | grep changeset").readlines()[0]
-        changeset = changeset.replace('changeset:', '').strip().replace(':', '_')
-        if diff:
-            changeset += '+'
-    except Exception:
-        changeset = ''
-    return changeset
 
 
 def execfile_as_main(path):
@@ -404,18 +393,28 @@ def empty(container):
     return True
 
 
-def get_backend():
-    p = subprocess.Popen([sys.executable, '-c', 'import gevent.core; print gevent.core.loop().backend'],
-                         stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+def read_output(command, **kwargs):
+    p = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, **kwargs)
     out, err = p.communicate()
     if err:
         raise SystemExit(err)
     if p.poll():
-        raise SystemExit
-    return out.strip()
+        raise SystemExit('%r failed with code %r' % (command, p.poll()))
+    output = out.strip()
+    if not output:
+        raise SystemExit('%r failed' % (command, ))
+    return output
 
 
-def get_gevent_details():
+def get_backend():
+    return read_output([sys.executable, '-c', 'import gevent.core; print gevent.core.loop().backend'])
+
+
+def get_greenlet_version():
+    return read_output([sys.executable, '-c', 'import greenlet; print greenlet.__version__'])
+
+
+def get_gevent_core_details():
     import gevent.core
     backend = get_backend()
     recommended_backends = ','.join(gevent.core.recommended_backends())
@@ -434,23 +433,46 @@ def get_environ_details():
     return result
 
 
+def get_variables(names, limit=10000):
+    data = open(os.path.join(base_directory, 'gevent', '__init__.py')).read(limit)
+    results = []
+    for name in names:
+        result = re.search('^' + name + r'\s*=\s*(.+)\s*$', data, re.M)
+        if result:
+            result = literal_eval(result.group(1))
+            results.append(result)
+        else:
+            results.append(None)
+    return results
+
+
+def get_gevent_version():
+    version, changeset = get_variables(['__version__', '__changeset__'])
+    assert version
+    if changeset:
+        version = '%s(%s)' % (version, changeset)
+    return version
+
+
 def testrunner(options, args):
     import uuid
     run_id = str(uuid.uuid4())
     details = {'run_id': run_id,
-               'changeset': get_changeset(),  # replace with version + changeset
+               'gevent': get_gevent_version(),
+               'greenlet': get_greenlet_version(),
                'python_exe': sys.executable,
                'started_at': datetime.now()}
 
-    keys = ['changeset', 'python_exe']
+    keys = sorted(details.keys())
+    keys.remove('run_id')
 
     def update(data):
         keys.extend(sorted(data.keys()))
         details.update(data)
 
-    update(get_platform_details())
-    update(get_gevent_details())
+    update(get_gevent_core_details())
     update(get_environ_details())
+    update(get_platform_details())
 
     execute('CREATE TABLE IF NOT EXISTS run (run_id PRIMARY_KEY, %s);' % ', '.join(keys))
     execute('CREATE TABLE IF NOT EXISTS test (test_id INTEGER PRIMARY KEY AUTOINCREMENT, run_id);')
@@ -520,7 +542,7 @@ def main():
     try:
         testrunner(options, args)
     finally:
-        if show_results:
+        if show_results and os.path.exists(show_results):
             os.system('%s %s %s' % (sys.executable, os.path.join(base_directory, 'util', 'stat.py'), show_results))
 
 
