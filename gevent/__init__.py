@@ -45,7 +45,7 @@ spawn_later = Greenlet.spawn_later
 from gevent.timeout import Timeout, with_timeout
 from gevent.hub import getcurrent, GreenletExit, spawn_raw, sleep, idle, kill, signal, reinit
 try:
-    from gevent.hub import fork
+    from gevent.os import fork
 except ImportError:
     __all__.remove('fork')
 

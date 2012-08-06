@@ -125,12 +125,7 @@ def patch_module(name, items=None):
 
 def patch_os():
     """Replace :func:`os.fork` with :func:`gevent.fork`. Does nothing if fork is not available."""
-    try:
-        from gevent.hub import fork
-    except ImportError:
-        return
-    import os
-    patch_item(os, 'fork', fork)
+    patch_module('os')
 
 
 def patch_time():
