@@ -1,3 +1,4 @@
+from __future__ import absolute_import
 import sys
 import os
 from gevent.hub import get_hub

@@ -1,5 +1,6 @@
 # Copyright (c) 2009-2012 Denis Bilenko. See LICENSE for details.
 
+from __future__ import absolute_import
 import sys
 import os
 import traceback
@@ -44,7 +45,7 @@ def __import_py_magic_greenlet():
         pass
 
 try:
-    greenlet = __import__('greenlet').greenlet
+    from greenlet import greenlet
 except ImportError:
     greenlet = __import_py_magic_greenlet()
     if greenlet is None:
@@ -63,9 +64,9 @@ if GreenletExit.__bases__[0] is Exception:
     GreenletExit.__bases__ = (BaseException, )
 
 if sys.version_info[0] <= 2:
-    thread = __import__('thread')
+    import thread
 else:
-    thread = __import__('_thread')
+    import _thread as thread
 threadlocal = thread._local
 _threadlocal = threadlocal()
 _threadlocal.Hub = None

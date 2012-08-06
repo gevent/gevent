@@ -31,6 +31,8 @@ For convenience, exceptions (like :class:`error <socket.error>` and :class:`time
 as well as the constants from :mod:`socket` module are imported into this module.
 """
 
+from __future__ import absolute_import
+
 # standard functions and classes that this module re-implements in a gevent-aware way:
 __implements__ = ['create_connection',
                   'socket',
@@ -111,7 +113,7 @@ except ImportError:
 
 import _socket
 _realsocket = _socket.socket
-__socket__ = __import__('socket')
+import socket as __socket__
 _fileobject = __socket__._fileobject
 
 for name in __imports__[:]:

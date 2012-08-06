@@ -56,6 +56,7 @@ Monkey patches:
   - thread-local storage becomes greenlet-local storage
 """
 
+from __future__ import absolute_import
 import sys
 
 __all__ = ['patch_all',

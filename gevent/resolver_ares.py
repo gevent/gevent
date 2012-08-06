@@ -1,4 +1,5 @@
 # Copyright (c) 2011 Denis Bilenko. See LICENSE for details.
+from __future__ import absolute_import
 import os
 import sys
 from _socket import getservbyname, getaddrinfo, gaierror, error

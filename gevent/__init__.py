@@ -6,6 +6,8 @@ to provide a high-level synchronous API on top of libev event loop.
 See http://www.gevent.org/ for the documentation.
 """
 
+from __future__ import absolute_import
+
 version_info = (1, 0, 0, 'dev', None)
 __version__ = '1.0dev'
 
@@ -32,7 +34,7 @@ __all__ = ['get_hub',
 
 import sys
 if sys.platform == 'win32':
-    __import__('socket')  # trigger WSAStartup call
+    import socket  # trigger WSAStartup call
 del sys
 
 

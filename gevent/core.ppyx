@@ -3,7 +3,8 @@ cimport cython
 cimport libev
 from python cimport *
 import sys
-import os
+# Work around lack of absolute_import in Cython
+os = __import__('os', level=0)
 import traceback
 import signal as signalmodule
 

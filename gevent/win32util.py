@@ -23,6 +23,7 @@
 The code is taken from twisted.python.win32 module.
 """
 
+from __future__ import absolute_import
 import os
 
 
