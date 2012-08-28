@@ -37,7 +37,7 @@ Monkey patches:
 
 * :mod:`time` module -- :func:`patch_time`
 
-  - :func:`time`
+  - :func:`sleep`
 
 * :mod:`select` module -- :func:`patch_select`
 
