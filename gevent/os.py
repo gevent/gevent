@@ -1,5 +1,3 @@
-# Wrapper module for stdlib os. Written by Geert Jansen.
-
 """
 This module provides cooperative versions of os.read() and os.write().
 On Posix platforms this uses non-blocking IO, on Windows a threadpool

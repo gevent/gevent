@@ -32,6 +32,7 @@ and the contributors (ordered by the date of first contribution):
   Shaun Cutts
   David LaBissoniere
   Alexandre Kandalintsev
+  Geert Jansen
 
 Gevent is inspired by and uses some code from eventlet which was written by
 
