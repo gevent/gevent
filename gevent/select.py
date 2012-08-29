@@ -1,4 +1,5 @@
 # Copyright (c) 2009-2011 Denis Bilenko. See LICENSE for details.
+from __future__ import absolute_import
 import sys
 from gevent.timeout import Timeout
 from gevent.event import Event
@@ -7,7 +8,7 @@ from gevent.hub import get_hub
 __implements__ = ['select']
 __all__ = ['error'] + __implements__
 
-__select__ = __import__('select')
+import select as __select__
 error = __select__.error
 
 

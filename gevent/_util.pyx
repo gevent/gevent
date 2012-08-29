@@ -1,5 +1,6 @@
 from python cimport *
-import os
+# Work around lack of absolute_import in Cython.
+os = __import__('os', level=0)
 
 
 __all__ = ['set_exc_info']

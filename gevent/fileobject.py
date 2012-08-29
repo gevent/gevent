@@ -1,7 +1,9 @@
+from __future__ import absolute_import
 import sys
 import os
 from gevent.hub import get_hub
 from gevent.socket import EBADF
+from gevent.os import os_read, os_write
 
 
 try:
@@ -104,7 +106,7 @@ else:
             bytes_written = 0
             while bytes_written < bytes_total:
                 try:
-                    bytes_written += os.write(fileno, _get_memory(data, bytes_written))
+                    bytes_written += os_write(fileno, _get_memory(data, bytes_written))
                 except (IOError, OSError):
                     code = sys.exc_info()[1].args[0]
                     if code not in ignore_errors:
@@ -115,7 +117,7 @@ else:
         def recv(self, size):
             while True:
                 try:
-                    data = os.read(self.fileno(), size)
+                    data = os_read(self.fileno(), size)
                 except (IOError, OSError):
                     code = sys.exc_info()[1].args[0]
                     if code in ignore_errors:

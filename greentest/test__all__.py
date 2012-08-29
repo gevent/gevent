@@ -10,7 +10,8 @@ MAPPING = {'gevent.local': '_threading_local',
            'gevent.select': 'select',
            'gevent.ssl': 'ssl',
            'gevent.thread': 'thread',
-           'gevent.subprocess': 'subprocess'}
+           'gevent.subprocess': 'subprocess',
+           'gevent.os': 'os'}
 
 
 class ANY(object):
@@ -22,7 +23,8 @@ ANY = ANY()
 NOT_IMPLEMENTED = {
     'socket': ['CAPI'],
     'thread': ['allocate', 'exit_thread', 'interrupt_main', 'start_new'],
-    'select': ANY}
+    'select': ANY,
+    'os': ANY}
 
 COULD_BE_MISSING = {
     'socket': ['create_connection', 'RAND_add', 'RAND_egd', 'RAND_status']}

@@ -1,5 +1,6 @@
 # Copyright (c) 2009-2012 Denis Bilenko. See LICENSE for details.
 
+from __future__ import absolute_import
 import sys
 import os
 import traceback
@@ -19,7 +20,6 @@ __all__ = ['getcurrent',
            'kill',
            'signal',
            'reinit',
-           'fork',
            'get_hub',
            'Hub',
            'Waiter']
@@ -44,7 +44,7 @@ def __import_py_magic_greenlet():
         pass
 
 try:
-    greenlet = __import__('greenlet').greenlet
+    from greenlet import greenlet
 except ImportError:
     greenlet = __import_py_magic_greenlet()
     if greenlet is None:
@@ -63,17 +63,12 @@ if GreenletExit.__bases__[0] is Exception:
     GreenletExit.__bases__ = (BaseException, )
 
 if sys.version_info[0] <= 2:
-    thread = __import__('thread')
+    import thread
 else:
-    thread = __import__('_thread')
+    import _thread as thread
 threadlocal = thread._local
 _threadlocal = threadlocal()
 _threadlocal.Hub = None
-try:
-    _original_fork = os.fork
-except AttributeError:
-    _original_fork = None
-    __all__.remove('fork')
 get_ident = thread.get_ident
 MAIN_THREAD = get_ident()
 
@@ -181,15 +176,6 @@ def reinit():
     hub = _get_hub()
     if hub is not None:
         hub.loop.reinit()
-
-
-if _original_fork is not None:
-
-    def fork():
-        result = _original_fork()
-        if not result:
-            reinit()
-        return result
 
 
 def get_hub_class():

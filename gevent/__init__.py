@@ -6,6 +6,8 @@ to provide a high-level synchronous API on top of libev event loop.
 See http://www.gevent.org/ for the documentation.
 """
 
+from __future__ import absolute_import
+
 version_info = (1, 0, 0, 'dev', None)
 __version__ = '1.0dev'
 
@@ -32,7 +34,7 @@ __all__ = ['get_hub',
 
 import sys
 if sys.platform == 'win32':
-    __import__('socket')  # trigger WSAStartup call
+    import socket  # trigger WSAStartup call
 del sys
 
 
@@ -43,7 +45,7 @@ spawn_later = Greenlet.spawn_later
 from gevent.timeout import Timeout, with_timeout
 from gevent.hub import getcurrent, GreenletExit, spawn_raw, sleep, idle, kill, signal, reinit
 try:
-    from gevent.hub import fork
+    from gevent.os import fork
 except ImportError:
     __all__.remove('fork')
 
