@@ -14,4 +14,8 @@ import socket
 from gevent import socket as gevent_socket
 assert socket.create_connection is gevent_socket.create_connection
 
+import os
+assert 'built-in' not in repr(os.read), repr(os.read)
+assert 'built-in' not in repr(os.write), repr(os.write)
+
 assert monkey.saved
