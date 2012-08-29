@@ -124,7 +124,7 @@ def pickaddr(proto):
     if proto == socket.AF_INET:
         return (host, pickport())
     else:
-        fn = TESTFN + str(pickport())
+        fn = '/tmp/' + TESTFN + str(pickport())
         if os.name == 'os2':
             # AF_UNIX socket names on OS/2 require a specific prefix
             # which can't include a drive letter and must also use
