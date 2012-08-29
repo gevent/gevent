@@ -20,11 +20,24 @@ from gevent.server import DatagramServer, StreamServer
 examples_directory = normpath(join(dirname(abspath(__file__)), '..', 'examples'))
 examples = [basename(x) for x in glob.glob(examples_directory + '/*.py')]
 simple_examples = []
+default_time_range = (0.0, 10.0)
 
 
 for example in examples:
     if 'serve_forever' not in open(join(examples_directory, example)).read():
         simple_examples.append(example)
+
+
+class TestCase(unittest.TestCase):
+
+    def run_script(self, *args, **kwargs):
+        cmd = [sys.executable, join(examples_directory, self.path)] + list(args)
+        start = time()
+        subprocess.check_call(cmd, **kwargs)
+        took = time() - start
+        min_time, max_time = getattr(self, 'time_range', default_time_range)
+        assert took >= min_time, '%s exited too quickly %s %s' % (self.path, took, min_time)
+        assert took <= max_time, '%s takes way too long %s %s' % (self.path, took, max_time)
 
 
 def make_test(path):
@@ -36,23 +49,15 @@ def make_test(path):
     if ' ' in path:
         path = '"%s"' % path
 
-    class Test(unittest.TestCase):
+    class Test(TestCase):
 
         def test(self):
-            run_script(self.path)
+            self.run_script()
 
     Test.__name__ = 'Test_' + basename(path).split('.')[0]
     assert Test.__name__ not in globals(), Test.__name__
     Test.path = path
-
     return Test
-
-
-def run_script(path, *args):
-    cmd = [sys.executable, join(examples_directory, path)] + list(args)
-    popen = subprocess.Popen(cmd)
-    if popen.wait() != 0:
-        raise AssertionError('%r failed with code %s' % (cmd, popen.wait()))
 
 
 def kill(popen):
@@ -221,7 +226,7 @@ class Test_echoserver(BaseTestServer):
         gevent.joinall([client1, client2], raise_error=True)
 
 
-class Test_udp_client(unittest.TestCase):
+class Test_udp_client(TestCase):
 
     path = 'udp_client.py'
 
@@ -233,7 +238,7 @@ class Test_udp_client(unittest.TestCase):
         server = DatagramServer('127.0.0.1:9000', handle)
         server.start()
         try:
-            run_script(self.path, 'Test_udp_client')
+            self.run_script('Test_udp_client')
         finally:
             server.close()
         self.assertEqual(log, ['Test_udp_client'])
@@ -304,6 +309,10 @@ for example in simple_examples:
         globals()[test.__name__] = test
         print ('Added %s' % test.__name__)
     del test
+
+
+Test_psycopg2_pool.time_range = (2.0, 2.5)
+Test_threadpool.time_range = (2.0, 3.0)
 
 
 class TestAllTested(unittest.TestCase):
