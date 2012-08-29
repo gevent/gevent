@@ -22,9 +22,9 @@ except ImportError:
 __implements__ = ['read', 'write', 'fork']
 __all__ = __implements__
 
-os_read = os.read
-os_write = os.write
-os_fork = os.fork
+_read = os.read
+_write = os.write
+_fork = os.fork
 
 
 ignored_errors = [EAGAIN, errno.EINTR]
@@ -58,7 +58,7 @@ def posix_read(fd, n):
         if not flags & os.O_NONBLOCK:
             _map_errors(fcntl.fcntl, fd, fcntl.F_SETFL, flags|os.O_NONBLOCK)
         try:
-            return os_read(fd, n)
+            return _read(fd, n)
         except OSError, e:
             if e.errno not in ignored_errors:
                 raise
@@ -86,7 +86,7 @@ def posix_write(fd, buf):
         if not flags & os.O_NONBLOCK:
             _map_errors(fcntl.fcntl, fd, fcntl.F_SETFL, flags|os.O_NONBLOCK)
         try:
-            return os_write(fd, buf)
+            return _write(fd, buf)
         except OSError, e:
             if e.errno not in ignored_errors:
                 raise
@@ -105,13 +105,13 @@ def threadpool_read(fd, n):
     """Read up to `n` bytes from file descriptor `fd`. Return a string
     containing the bytes read. If end-of-file is reached, an empty string
     is returned."""
-    return get_hub().threadpool.apply(os_read, (fd, n))
+    return get_hub().threadpool.apply(_read, (fd, n))
 
 
 def threadpool_write(fd, buf):
     """Write bytes from buffer `buf` to file descriptor `fd`. Return the
     number of bytes written."""
-    return get_hub().threadpool.apply(os_write, (fd, buf))
+    return get_hub().threadpool.apply(_write, (fd, buf))
 
 
 if fcntl is None:
@@ -125,7 +125,7 @@ else:
 if hasattr(os, 'fork'):
 
     def fork():
-        result = os_fork()
+        result = _fork()
         if not result:
             reinit()
         return result

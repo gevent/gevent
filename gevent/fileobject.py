@@ -3,7 +3,7 @@ import sys
 import os
 from gevent.hub import get_hub
 from gevent.socket import EBADF
-from gevent.os import os_read, os_write, ignored_errors
+from gevent.os import _read, _write, ignored_errors
 
 
 try:
@@ -98,7 +98,7 @@ else:
             bytes_written = 0
             while bytes_written < bytes_total:
                 try:
-                    bytes_written += os_write(fileno, _get_memory(data, bytes_written))
+                    bytes_written += _write(fileno, _get_memory(data, bytes_written))
                 except (IOError, OSError):
                     code = sys.exc_info()[1].args[0]
                     if code not in ignored_errors:
@@ -109,7 +109,7 @@ else:
         def recv(self, size):
             while True:
                 try:
-                    data = os_read(self.fileno(), size)
+                    data = _read(self.fileno(), size)
                 except (IOError, OSError):
                     code = sys.exc_info()[1].args[0]
                     if code in ignored_errors:
