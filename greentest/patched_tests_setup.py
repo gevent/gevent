@@ -110,6 +110,10 @@ disabled_tests = \
     # gevent.select.select() does not get interrupted (unless signal handler raises an error)
     # maybe it should?
 
+    , 'test_signal.SiginterruptTest.test_without_siginterrupt'
+    , 'test_signal.SiginterruptTest.test_siginterrupt_on'
+    # these rely on os.read raising EINTR which never happens with gevent.os.read
+
     , 'test_subprocess.test_leak_fast_process_del_killed'
     , 'test_subprocess.test_zombie_fast_process_del'
     # relies on subprocess._active which we don't use
