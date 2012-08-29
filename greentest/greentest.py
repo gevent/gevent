@@ -45,6 +45,31 @@ else:
 gettotalrefcount = getattr(sys, 'gettotalrefcount', None)
 
 
+def wrap_switch_count_check(method):
+    @wraps(method)
+    def wrapped(self, *args, **kwargs):
+        initial_switch_count = getattr(_get_hub(), 'switch_count', None)
+        self.switch_expected = getattr(self, 'switch_expected', True)
+        if initial_switch_count is not None:
+            fullname = getattr(self, 'fullname', None)
+            if self.switch_expected == 'default' and fullname:
+                self.switch_expected = get_switch_expected(fullname)
+        result = method(self, *args, **kwargs)
+        if initial_switch_count is not None and self.switch_expected is not None:
+            switch_count = _get_hub().switch_count - initial_switch_count
+            if self.switch_expected is True:
+                assert switch_count >= 0
+                if not switch_count:
+                    raise AssertionError('%s did not switch' % fullname)
+            elif self.switch_expected is False:
+                if switch_count:
+                    raise AssertionError('%s switched but not expected to' % fullname)
+            else:
+                raise AssertionError('Invalid value for switch_expected: %r' % (self.switch_expected, ))
+        return result
+    return wrapped
+
+
 def wrap_timeout(timeout, method):
     if timeout is None:
         return method
@@ -159,6 +184,7 @@ class TestCaseMetaClass(type):
         for key, value in classDict.items():
             if key.startswith('test') and callable(value):
                 classDict.pop(key)
+                #value = wrap_switch_count_check(value)
                 value = wrap_timeout(timeout, value)
                 my_error_fatal = getattr(value, 'error_fatal', None)
                 if my_error_fatal is None:
@@ -184,38 +210,11 @@ class TestCase(BaseTestCase):
             self.switch_expected = get_switch_expected(self.fullname)
         return BaseTestCase.run(self, *args, **kwargs)
 
-    def setUp(self):
-        self.initial_switch_count = getattr(_get_hub(), 'switch_count', None)
-
     def tearDown(self):
         if getattr(self, 'skipTearDown', False):
             return
         if hasattr(self, 'cleanup'):
             self.cleanup()
-        if self.switch_count is not None:
-            if self.switch_count < 0:
-                raise AssertionError('hub.switch_count decreased???')
-            if self.switch_expected is None:
-                pass
-            elif self.switch_expected is True:
-                if self.switch_count <= 0:
-                    raise AssertionError('%s did not switch' % self.testcasename)
-            elif self.switch_expected is False:
-                if self.switch_count:
-                    raise AssertionError('%s switched but not expected to' % self.testcasename)
-            else:
-                raise AssertionError('Invalid value for switch_expected: %r' % (self.switch_expected, ))
-
-    @property
-    def switch_count(self):
-        if self.switch_expected is None:
-            return
-        if not hasattr(self, 'initial_switch_count'):
-            raise AssertionError('Cannot check switch_count (setUp() was not called)')
-        if self.initial_switch_count is None:
-            return
-        current = getattr(_get_hub(), 'switch_count', 0)
-        return current - self.initial_switch_count
 
     @property
     def testname(self):
