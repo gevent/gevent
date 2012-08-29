@@ -5,9 +5,9 @@ import tempfile
 import glob
 from pipes import quote
 
-chdir = os.path.join(tempfile.gettempdir(), 'gevent-test')
+CHDIR = os.path.join(tempfile.gettempdir(), 'gevent-test')
 try:
-    os.makedirs(chdir)
+    os.makedirs(CHDIR)
 except EnvironmentError:
     pass
 
@@ -84,8 +84,9 @@ def prepare_stdlib_test(filename, assets=None):
 
     print >> sys.stderr, 'Testing %s with monkey patching' % _filename
 
+    os.system('cp %s %s' % (quote(filename), quote(os.path.join(CHDIR, os.path.basename(filename)))))
+    os.chdir(CHDIR)
     copy_assets(os.path.dirname(_filename), assets)
-    os.chdir(chdir)
     return module_code
 
 
@@ -97,7 +98,7 @@ def copy_assets(directory, assets):
             if isinstance(assets, basestring):
                 assets = glob.glob(assets)
             for asset in assets:
-                os.system('cp -r %s %s' % (quote(asset), quote(os.path.join(chdir, asset))))
+                os.system('cp -r %s %s' % (quote(asset), quote(os.path.join(CHDIR, asset))))
         finally:
             os.chdir(cwd)
 
