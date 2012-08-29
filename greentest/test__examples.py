@@ -258,7 +258,7 @@ class Test_udp_server(BaseTestServer):
 
 class Test_portforwarder(BaseTestServer):
     path = 'portforwarder.py'
-    args = ['127.0.0.5:9999', '127.0.0.6:9999']
+    args = ['127.0.0.1:10011', '127.0.0.1:10012']
     URL = 'tcp://' + args[0]
 
     def test(self):
