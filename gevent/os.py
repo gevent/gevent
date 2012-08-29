@@ -11,7 +11,8 @@ from __future__ import absolute_import
 import os
 import sys
 from gevent.hub import get_hub, reinit
-from gevent.socket import EBADF, EAGAIN
+from gevent.socket import EAGAIN
+import errno
 
 try:
     import fcntl
@@ -24,6 +25,13 @@ __all__ = __implements__
 os_read = os.read
 os_write = os.write
 os_fork = os.fork
+
+
+ignored_errors = [EAGAIN, errno.EINTR]
+if sys.platform == 'darwin':
+    # EINVAL sometimes happens on macosx without reason
+    # http://code.google.com/p/gevent/issues/detail?id=148
+    ignored_errors.append(errno.EINVAL)
 
 
 def _map_errors(func, *args):
@@ -44,6 +52,7 @@ def posix_read(fd, n):
     """Read up to `n` bytes from file descriptor `fd`. Return a string
     containing the bytes read. If end-of-file is reached, an empty string
     is returned."""
+    hub, event = None, None
     while True:
         flags = _map_errors(fcntl.fcntl, fd, fcntl.F_GETFL, 0)
         if not flags & os.O_NONBLOCK:
@@ -51,7 +60,7 @@ def posix_read(fd, n):
         try:
             return os_read(fd, n)
         except OSError, e:
-            if e.errno != EAGAIN:
+            if e.errno not in ignored_errors:
                 raise
             sys.exc_clear()
         finally:
@@ -62,13 +71,16 @@ def posix_read(fd, n):
             # before any other code can possibly run.
             if not flags & os.O_NONBLOCK:
                 _map_errors(fcntl.fcntl, fd, fcntl.F_SETFL, flags)
-        hub = get_hub()
-        event = hub.loop.io(fd, 1)
-        _map_errors(hub.wait, event)
+        if hub is None:
+            hub = get_hub()
+            event = hub.loop.io(fd, 1)
+        hub.wait(event)
+
 
 def posix_write(fd, buf):
     """Write bytes from buffer `buf` to file descriptor `fd`. Return the
     number of bytes written."""
+    hub, event = None, None
     while True:
         flags = _map_errors(fcntl.fcntl, fd, fcntl.F_GETFL, 0)
         if not flags & os.O_NONBLOCK:
@@ -76,30 +88,30 @@ def posix_write(fd, buf):
         try:
             return os_write(fd, buf)
         except OSError, e:
-            if e.errno != EAGAIN:
+            if e.errno not in ignored_errors:
                 raise
             sys.exc_clear()
         finally:
             # See note in posix_read().
             if not flags & os.O_NONBLOCK:
                 _map_errors(fcntl.fcntl, fd, fcntl.F_SETFL, flags)
-        hub = get_hub()
-        event = hub.loop.io(fd, 2)
-        _map_errors(hub.wait, event)
+        if hub is None:
+            hub = get_hub()
+            event = hub.loop.io(fd, 2)
+        hub.wait(event)
 
 
 def threadpool_read(fd, n):
     """Read up to `n` bytes from file descriptor `fd`. Return a string
     containing the bytes read. If end-of-file is reached, an empty string
     is returned."""
-    threadpool = get_hub().threadpool
-    return _map_errors(threadpool.apply, os_read, (fd, n))
+    return get_hub().threadpool.apply(os_read, (fd, n))
+
 
 def threadpool_write(fd, buf):
     """Write bytes from buffer `buf` to file descriptor `fd`. Return the
     number of bytes written."""
-    threadpool = get_hub().threadpool
-    return _map_errors(threadpool.apply, os_write, (fd, buf))
+    return get_hub().threadpool.apply(os_write, (fd, buf))
 
 
 if fcntl is None:
@@ -115,7 +127,7 @@ if hasattr(os, 'fork'):
     def fork():
         result = os_fork()
         if not result:
-            _map_errors(reinit)
+            reinit()
         return result
 
 else:

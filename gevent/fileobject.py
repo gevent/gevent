@@ -3,7 +3,7 @@ import sys
 import os
 from gevent.hub import get_hub
 from gevent.socket import EBADF
-from gevent.os import os_read, os_write
+from gevent.os import os_read, os_write, ignored_errors
 
 
 try:
@@ -23,15 +23,7 @@ if fcntl is None:
 
 else:
 
-    from gevent.socket import _fileobject, EAGAIN, _get_memory
-    import errno
-
-    ignore_errors = [EAGAIN, errno.EINTR]
-    if sys.platform == 'darwin':
-        # EINVAL sometimes happens on macosx without reason
-        # http://code.google.com/p/gevent/issues/detail?id=148
-        ignore_errors.append(errno.EINVAL)
-
+    from gevent.socket import _fileobject, _get_memory
     cancel_wait_ex = IOError(EBADF, 'File descriptor was closed in another greenlet')
 
     try:
@@ -109,7 +101,7 @@ else:
                     bytes_written += os_write(fileno, _get_memory(data, bytes_written))
                 except (IOError, OSError):
                     code = sys.exc_info()[1].args[0]
-                    if code not in ignore_errors:
+                    if code not in ignored_errors:
                         raise
                     sys.exc_clear()
                 self.hub.wait(self._write_event)
@@ -120,7 +112,7 @@ else:
                     data = os_read(self.fileno(), size)
                 except (IOError, OSError):
                     code = sys.exc_info()[1].args[0]
-                    if code in ignore_errors:
+                    if code in ignored_errors:
                         pass
                     elif code == EBADF:
                         return ''
