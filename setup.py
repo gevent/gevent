@@ -244,22 +244,29 @@ class my_build_ext(build_ext):
             filename = os.path.split(filename)[-1]
             if not self.inplace:
                 filename = os.path.join(*modpath[:-1] + [filename])
-                path_to_build_core_so = abspath(os.path.join(self.build_lib, filename))
-                path_to_core_so = abspath(join('gevent', basename(path_to_build_core_so)))
-                if path_to_build_core_so != path_to_core_so:
-                    try:
-                        os.unlink(path_to_core_so)
-                    except OSError:
-                        pass
-                    if hasattr(os, 'symlink'):
-                        sys.stdout.write('Linking %s to %s\n' % (path_to_build_core_so, path_to_core_so))
-                        os.symlink(path_to_build_core_so, path_to_core_so)
-                    else:
-                        sys.stdout.write('Copying %s to %s\n' % (path_to_build_core_so, path_to_core_so))
-                        shutil.copyfile(path_to_build_core_so, path_to_core_so)
+                path_to_build_core_so = os.path.join(self.build_lib, filename)
+                path_to_core_so = join('gevent', basename(path_to_build_core_so))
+                link(path_to_build_core_so, path_to_core_so)
         except Exception:
             traceback.print_exc()
         return result
+
+
+def link(source, dest):
+    source = abspath(source)
+    dest = abspath(dest)
+    if source == dest:
+        return
+    try:
+        os.unlink(dest)
+    except OSError:
+        pass
+    try:
+        os.symlink(source, dest)
+        sys.stdout.write('Linking %s to %s\n' % (source, dest))
+    except (OSError, AttributeError):
+        sys.stdout.write('Copying %s to %s\n' % (source, dest))
+        shutil.copyfile(source, dest)
 
 
 class BuildFailed(Exception):
