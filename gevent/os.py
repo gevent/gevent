@@ -22,7 +22,6 @@ __all__ = __implements__
 
 _read = os.read
 _write = os.write
-_fork = os.fork
 
 
 ignored_errors = [EAGAIN, errno.EINTR]
@@ -121,6 +120,7 @@ else:
 
 
 if hasattr(os, 'fork'):
+    _fork = os.fork
 
     def fork():
         result = _fork()
