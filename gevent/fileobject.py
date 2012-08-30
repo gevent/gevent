@@ -96,7 +96,7 @@ else:
             fileno = self.fileno()
             bytes_total = len(data)
             bytes_written = 0
-            while bytes_written < bytes_total:
+            while True:
                 try:
                     bytes_written += _write(fileno, _get_memory(data, bytes_written))
                 except (IOError, OSError):
@@ -104,6 +104,8 @@ else:
                     if code not in ignored_errors:
                         raise
                     sys.exc_clear()
+                if bytes_written >= bytes_total:
+                    return
                 self.hub.wait(self._write_event)
 
         def recv(self, size):
