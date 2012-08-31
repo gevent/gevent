@@ -181,7 +181,7 @@ def start(name, type=None):
         vbox_startvm(name, type)
     else:
         print 'Weird state: %r' % state
-        vbox_poweroff(name)
+        vbox_poweroff(name, fail=False)
         vbox_startvm(name, type)
     return state
 
@@ -202,8 +202,8 @@ def vbox_pause(name):
     system('VBoxManage controlvm %s pause' % name)
 
 
-def vbox_poweroff(name):
-    system('VBoxManage controlvm %s poweroff' % name)
+def vbox_poweroff(name, **kwargs):
+    system('VBoxManage controlvm %s poweroff' % name, **kwargs)
 
 
 def vbox_restorecurrent(name):
