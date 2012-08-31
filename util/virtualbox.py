@@ -146,6 +146,8 @@ class VirtualBox(object):
     def stop(self):
         if self.initial_state == 'paused':
             self.pause()
+        elif self.initial_state == 'saved':
+            self.restore()
         elif self.initial_state != 'running':
             self.poweroff()
 
