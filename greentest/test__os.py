@@ -28,25 +28,11 @@ class TestOS(TestCase):
         def produce():
             while byteswritten[0] != nbytes:
                 bytesleft = nbytes - byteswritten[0]
-                try:
-                    byteswritten[0] += os.write(w, buf[:min(bytesleft, 4096)])
-                except OSError:
-                    code = sys.exc_info()[1].args[0]
-                    assert code != EAGAIN
-                    if code == EINTR:
-                        continue
-                    raise
+                byteswritten[0] += os.write(w, buf[:min(bytesleft, 4096)])
         def consume():
             while bytesread[0] != nbytes:
                 bytesleft = nbytes - bytesread[0]
-                try:
-                    bytesread[0] += len(os.read(r, min(bytesleft, 4096)))
-                except OSError:
-                    code = sys.exc_info()[1].args[0]
-                    assert code != EAGAIN
-                    if code == EINTR:
-                        continue
-                    raise
+                bytesread[0] += len(os.read(r, min(bytesleft, 4096)))
         producer = Greenlet(produce)
         producer.start()
         consumer = Greenlet(consume)
