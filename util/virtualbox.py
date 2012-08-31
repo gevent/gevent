@@ -138,7 +138,6 @@ class VirtualBox(object):
         self.username = username
         self.password = password
         self.type = type
-        self.mkdir_timeout = 15
 
     def start(self):
         self.initial_state = start(self.name, self.type)
@@ -159,10 +158,8 @@ class VirtualBox(object):
     def restore(self):
         return vbox_restore(self.name)
 
-    def mkdir(self, path, timeout=None):
-        if timeout is None:
-            timeout = self.mkdir_timeout
-        return vbox_mkdir(self.name, path, username=self.username, password=self.password, timeout=timeout)
+    def mkdir(self, path, **kwargs):
+        return vbox_mkdir(self.name, path, username=self.username, password=self.password, **kwargs)
 
     def copyto(self, source, dest):
         return vbox_copyto(self.name, source, dest, username=self.username, password=self.password)
