@@ -1,11 +1,8 @@
 from gevent import monkey; monkey.patch_all()
 
 import os
-from select import PIPE_BUF
 from greentest import TestCase, main
 from gevent import Greenlet, joinall
-from gevent.socket import EAGAIN
-from errno import EINTR
 try:
     import fcntl
 except ImportError:
