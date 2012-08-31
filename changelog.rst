@@ -3,6 +3,14 @@ Changelog
 
 .. currentmodule:: gevent
 
+Release 1.0b4
+-------------
+
+- Added gevent.os module with 'read' and 'write' functions. Patch by Geert Jansen.
+- Moved gevent.hub.fork to gevent.os module (it is still available as gevent.fork).
+- Fixed issue #148: Made fileobject handle EINVAL, which is randomly raised by os.read/os.write on Mac OS X. Thanks to Mark Hingston.
+- Fixed issue #150: gevent.fileobject.SocketAdapter.sendall() could needlessly wait for write event on the descriptor. Original patch by Mark Hingston.
+
 
 Release 1.0b3
 -------------
