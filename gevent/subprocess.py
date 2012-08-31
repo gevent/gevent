@@ -465,10 +465,10 @@ class Popen(object):
                     self.returncode = GetExitCodeProcess(self._handle)
             return self.returncode
 
-        def wait(self):
+        def wait(self, timeout=None):
             """Wait for child process to terminate.  Returns returncode
             attribute."""
-            # XXX support timeout argument
+            # XXX timeout is ignored now
             # XXX do not launch more than one WaitForSingleObject
             # XXX add 'event' attribute
             if self.returncode is None:
