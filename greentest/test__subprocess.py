@@ -4,6 +4,7 @@ import os
 import errno
 import greentest
 from gevent import subprocess
+import time
 
 
 if subprocess.mswindows:
@@ -111,12 +112,13 @@ class Test(greentest.TestCase):
         # see issue #134
         r, w = os.pipe()
         p = subprocess.Popen(['grep', 'text'], stdin=subprocess.FileObject(r))
-        os.close(w)
         try:
-            self.assertEqual(p.wait(timeout=0.1), None)
+            os.close(w)
+            time.sleep(0.1)
+            self.assertEqual(p.poll(), None)
         finally:
             if p.poll() is None:
-                p.send_signal(9)
+                p.kill()
 
     def test_issue148(self):
         for i in range(7):
