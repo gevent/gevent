@@ -10,7 +10,7 @@ Release 1.0b4
 - Moved gevent.hub.fork to gevent.os module (it is still available as gevent.fork).
 - Fixed issue #148: Made fileobject handle EINVAL, which is randomly raised by os.read/os.write on Mac OS X. Thanks to Mark Hingston.
 - Fixed issue #150: gevent.fileobject.SocketAdapter.sendall() could needlessly wait for write event on the descriptor. Original patch by Mark Hingston.
-
+- Fixed AttributeError in baseserver. In case of error, start() would call kill() which was renamed to close(). Thanks to Vitaly Kruglikov.
 
 Release 1.0b3
 -------------
