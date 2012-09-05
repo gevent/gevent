@@ -236,7 +236,7 @@ class BaseServer(object):
         try:
             self.start_accepting()
         except:
-            self.kill()
+            self.close()
             raise
 
     def close(self):
