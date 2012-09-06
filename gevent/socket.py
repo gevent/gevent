@@ -679,6 +679,8 @@ else:
         # TODO: this is supposed to iterate through all the addresses
         # could use a global dict(hostname, iter)
         # - fix these nasty hacks for localhost, ips, etc.
+        if isinstance(hostname, unicode):
+            hostname = str(hostname)
         if not isinstance(hostname, str) or '.' not in hostname:
             return _socket.gethostbyname(hostname)
         if _ip4_re.match(hostname):
