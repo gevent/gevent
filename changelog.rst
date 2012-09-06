@@ -12,6 +12,7 @@ Release 1.0b4
 - Fixed issue #150: gevent.fileobject.SocketAdapter.sendall() could needlessly wait for write event on the descriptor. Original patch by Mark Hingston.
 - Fixed AttributeError in baseserver. In case of error, start() would call kill() which was renamed to close(). Thanks to Vitaly Kruglikov.
 
+
 Release 1.0b3
 -------------
 
