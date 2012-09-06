@@ -3,6 +3,9 @@
 """download and extract the libevent source archive
 """
 
+url = 'http://github.com/downloads/libevent/libevent/libevent-1.4.14b-stable.tar.gz'
+hash = 'a00e037e4d3f9e4fe9893e8a2d27918c'
+
 import sys
 import os
 import urllib
@@ -40,8 +43,9 @@ def download_and_extract(url, digest):
         dirname = os.path.join(tmpdir, url.split("/")[-1][:-len(".tar.gz")])
         print "downloading libevent source from %s" % url
         tgz = urllib.urlopen(url).read()
-        if md5(tgz).hexdigest() != digest:
-            sys.exit("Error: wrong md5 sum")
+        tgz_digest = md5(tgz).hexdigest()
+        if tgz_digest != digest:
+            sys.exit("Error: wrong md5 sum: %r != %r" % (tgz_digest, digest))
 
         print "extracting to %s" % dst
         tf = tarfile.open("libevent-src.tar.gz",
@@ -53,8 +57,11 @@ def download_and_extract(url, digest):
     finally:
         shutil.rmtree(tmpdir)
 
-if __name__ == '__main__':
+
+def main():
     os.chdir(os.path.dirname(os.path.abspath(__file__)))
-    download_and_extract(
-        "http://monkey.org/~provos/libevent-1.4.14b-stable.tar.gz",
-        "a00e037e4d3f9e4fe9893e8a2d27918c")
+    download_and_extract(url, hash)
+
+
+if __name__ == '__main__':
+    main()
