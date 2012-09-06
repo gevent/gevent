@@ -4,7 +4,7 @@ Changelog
 .. currentmodule:: gevent
 
 
-Release 0.13.7 (September 6, 2012)
+Release 0.13.8 (September 6, 2012)
 ----------------------------------
 
 - Fixed issue #80: gevent.httplib failed with RequestFailed errors because timeout was reset to 1s. Patch by Tomasz Prus.
