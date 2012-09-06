@@ -50,6 +50,30 @@
 #define EVBUFFER_DRAIN(A, B) (evbuffer_drain((A), (B)), 0)
 #define EVHTTP_SET_CB(A, B, C, D) (evhttp_set_cb((A), (B), (C), (D)), 0)
 
+#ifndef EVHTTP_REQ_PUT
+#define EVHTTP_REQ_PUT -1
+#endif
+
+#ifndef EVHTTP_REQ_DELETE
+#define EVHTTP_REQ_DELETE -1
+#endif
+
+#ifndef EVHTTP_REQ_OPTIONS
+#define EVHTTP_REQ_OPTIONS -1
+#endif
+
+#ifndef EVHTTP_REQ_TRACE
+#define EVHTTP_REQ_TRACE -1
+#endif
+
+#ifndef EVHTTP_REQ_CONNECT
+#define EVHTTP_REQ_CONNECT -1
+#endif
+
+#ifndef EVHTTP_REQ_PATCH
+#define EVHTTP_REQ_PATCH -1
+#endif
+
 #endif
 
 #define TAILQ_GET_NEXT(X) TAILQ_NEXT((X), next)

@@ -1,0 +1,13 @@
+cdef extern from "libevent.h":
+    int EVHTTP_REQUEST
+    int EVHTTP_RESPONSE
+
+    int EVHTTP_REQ_GET
+    int EVHTTP_REQ_POST
+    int EVHTTP_REQ_HEAD
+    int EVHTTP_REQ_PUT
+    int EVHTTP_REQ_DELETE
+    int EVHTTP_REQ_OPTIONS
+    int EVHTTP_REQ_TRACE
+    int EVHTTP_REQ_CONNECT
+    int EVHTTP_REQ_PATCH

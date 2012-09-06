@@ -425,19 +425,11 @@ def get_method():
     return event_get_method()
 
 
-cdef extern from *:
-    cdef void emit_ifdef "#if defined(_EVENT_VERSION) //" ()
-    cdef void emit_else  "#else //" ()
-    cdef void emit_endif "#endif //" ()
-
-
 # _EVENT_VERSION is available since libevent 1.4.0-beta
 
 def get_header_version():
     """Return _EVENT_VERSION"""
-    emit_ifdef()
     return _EVENT_VERSION
-    emit_endif()
 
 # event_reinit is available since libevent 1.4.1-beta,
 # but I cannot check for existence of a function here, can I?
@@ -446,9 +438,7 @@ def get_header_version():
 
 def reinit():
     """Wrapper for :meth:`event_reinit`."""
-    emit_ifdef()
     return event_reinit(current_base)
-    emit_endif()
 
 include "evdns.pxi"
 
