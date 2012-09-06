@@ -211,7 +211,7 @@ class HTTPConnection(object):
         self.conn = core.http_connection.new(self.host, self.port)
 
         if self.timeout is not None:
-            self.conn.set_timeout(int(min(1, self.timeout)))
+            self.conn.set_timeout(int(max(1, self.timeout)))
 
     def close(self):
         self.resp = None
