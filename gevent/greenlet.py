@@ -3,6 +3,7 @@
 import sys
 from gevent.hub import greenlet, getcurrent, get_hub, GreenletExit, Waiter, PY3
 from gevent.timeout import Timeout
+from collections import deque
 
 
 __all__ = ['Greenlet',
@@ -77,7 +78,7 @@ class Greenlet(greenlet):
             self._run = run
         self.args = args
         self.kwargs = kwargs
-        self._links = []
+        self._links = deque()
         self.value = None
         self._exception = _NONE
         loop = hub.loop
@@ -371,7 +372,7 @@ class Greenlet(greenlet):
 
     def _notify_links(self):
         while self._links:
-            link = self._links.pop()
+            link = self._links.popleft()
             try:
                 link(self)
             except:
