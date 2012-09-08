@@ -203,6 +203,7 @@ else:
         if not noop:
 
             def __del__(self):
+                # disable _fileobject's __del__
                 pass
 
     if noop:
