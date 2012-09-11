@@ -541,12 +541,9 @@ cdef public class loop [object PyGeventLoopObject, type PyGeventLoop_Type]:
             return self._callback                                                       \
                                                                                         \
         def __set__(self, object callback):                                             \
-            if not PyCallable_Check(<PyObjectPtr>callback):                             \
+            if not PyCallable_Check(<PyObjectPtr>callback) and callback is not None:    \
                 raise TypeError("Expected callable, not %r" % (callback, ))             \
             self._callback = callback                                                   \
-                                                                                        \
-        def __del__(self):                                                              \
-            self._callback = None                                                       \
                                                                                         \
     def stop(self):                                                                     \
         if self._flags & 2:                                                             \
