@@ -394,6 +394,7 @@ class socket(object):
             try:
                 self._wait(self._read_event)
             except error:
+                # if another greenlet called this socket, _wait would fail with EBADF
                 ex = sys.exc_info()[1]
                 if ex.args[0] == EBADF:
                     return ''
