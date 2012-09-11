@@ -25,10 +25,6 @@ _write = os.write
 
 
 ignored_errors = [EAGAIN, errno.EINTR]
-if sys.platform == 'darwin':
-    # EINVAL sometimes happens on macosx without reason
-    # http://code.google.com/p/gevent/issues/detail?id=148
-    ignored_errors.append(errno.EINVAL)
 
 
 def _map_errors(func, *args):
