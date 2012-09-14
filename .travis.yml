@@ -5,7 +5,7 @@ python:
   - "2.7"
 #  - "3.2"
 install:
- - pip install cython -q --user-mirrors
+ - pip install cython -q --use-mirrors
  - cython --version
  - pip install greenlet --use-mirrors
  - python setup.py install
