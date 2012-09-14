@@ -17,8 +17,8 @@ class Test(unittest.TestCase):
         io.start(lambda *args: lst.append(args))
         self.assertEqual(io.args, ())
         try:
-            io.callback = None
-            raise AssertionError('"io.callback = None" must raise TypeError')
+            io.callback = False
+            raise AssertionError('"io.callback = False" must raise TypeError')
         except TypeError:
             pass
         try:

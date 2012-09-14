@@ -579,11 +579,13 @@ cdef public class loop [object PyGeventLoopObject, type PyGeventLoop_Type]:
         def __get__(self):                                                  \
             return True if libev.ev_is_active(&self._watcher) else False
 
-#define START(TYPE) def start(self, object callback, *args):     \
-        self.callback = callback                                 \
-        self.args = args                                         \
-        LIBEV_UNREF                                              \
-        libev.ev_##TYPE##_start(self.loop._ptr, &self._watcher)  \
+#define START(TYPE) def start(self, object callback, *args):       \
+        if callback is None:                                       \
+            raise TypeError('callback must be callable, not None') \
+        self.callback = callback                                   \
+        self.args = args                                           \
+        LIBEV_UNREF                                                \
+        libev.ev_##TYPE##_start(self.loop._ptr, &self._watcher)    \
         PYTHON_INCREF
 
 
@@ -649,6 +651,8 @@ cdef public class io(watcher) [object PyGeventIOObject, type PyGeventIO_Type]:
     WATCHER_BASE(io)
 
     def start(self, object callback, *args, pass_events=False):
+        if callback is None:
+            raise TypeError('callback must be callable, not None')
         self.callback = callback
         if pass_events:
             self.args = (GEVENT_CORE_EVENTS, ) + args
@@ -742,6 +746,8 @@ cdef public class timer(watcher) [object PyGeventTimerObject, type PyGeventTimer
     WATCHER_BASE(timer)
 
     def start(self, object callback, *args, update=True):
+        if callback is None:
+            raise TypeError('callback must be callable, not None')
         self.callback = callback
         self.args = args
         LIBEV_UNREF
@@ -934,6 +940,8 @@ cdef public class callback(watcher) [object PyGeventCallbackObject, type PyGeven
     INIT(prepare,,)
 
     def start(self, object callback, *args):
+        if callback is None:
+            raise TypeError('callback must be callable, not None')
         self.callback = callback
         self.args = args
         libev.ev_feed_event(self.loop._ptr, &self._watcher, libev.EV_CUSTOM)
