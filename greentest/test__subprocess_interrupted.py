@@ -1,5 +1,4 @@
 import sys
-import os
 
 
 if 'runtestcase' in sys.argv[1:]:

@@ -3,7 +3,7 @@ import greentest
 
 
 class Test(greentest.TestCase):
-    
+
     count = 2
 
     def setUp(self):
@@ -23,7 +23,7 @@ class Test(greentest.TestCase):
                 self.lst.append(myself.item)
 
         for i in xrange(1, self.count):
-            g.link(appender(i)) 
+            g.link(appender(i))
         g.join()
 
 

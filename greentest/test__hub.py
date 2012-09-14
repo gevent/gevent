@@ -22,7 +22,6 @@
 import greentest
 import time
 import re
-import sys
 import gevent
 from gevent import socket
 from gevent.hub import Waiter, get_hub

@@ -25,6 +25,7 @@ class long_polling:
         time.sleep(10)  # possible to block the request indefinitely, without harming others
         return 'Hello, 10 seconds later'
 
+
 if __name__ == "__main__":
     application = web.application(urls, globals()).wsgifunc()
     print 'Serving on 8088...'

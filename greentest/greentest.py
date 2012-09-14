@@ -308,10 +308,10 @@ class GenericWaitTestCase(TestCase):
 
     def test_returns_none_after_timeout(self):
         start = time.time()
-        result = self.wait(timeout=0.02)
-        # join and wait simply returns after timeout expires
+        result = self.wait(timeout=0.2)
+        # join and wait simply return after timeout expires
         delay = time.time() - start
-        assert 0.02 - 0.002 <= delay < 0.02 + 0.02, delay
+        assert 0.2 - 0.1 <= delay < 0.2 + 0.1, delay
         assert result is None, repr(result)
 
 

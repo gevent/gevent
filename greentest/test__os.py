@@ -40,7 +40,7 @@ class TestOS(TestCase):
         joinall([producer, consumer])
         assert bytesread[0] == nbytes
         assert bytesread[0] == byteswritten[0]
- 
+
     def test_fd_flags_restored(self):
         if fcntl is None:
             return

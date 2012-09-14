@@ -1,12 +1,6 @@
-# this is http://svn.python.org/view/python/trunk/Lib/test/test_threading_local.py?view=markup&pathrev=78336
-# although we do have test_patched_local.py, it does not have all the tests that this file has
-from gevent import monkey; monkey.patch_all()
 import unittest
 from doctest import DocTestSuite
-try:
-    from test import test_support
-except ImportError:
-    from test import support as test_support
+from test import test_support
 import threading
 import weakref
 import gc
@@ -46,8 +40,7 @@ class ThreadingLocalTest(unittest.TestCase):
         local.someothervar = None
         gc.collect()
         deadlist = [weak for weak in weaklist if weak() is None]
-        #self.assertIn(len(deadlist), (n-1, n), (n, len(deadlist)))
-        assert len(deadlist) in (n-1, n), (n, len(deadlist))
+        self.assert_(len(deadlist) in (n-1, n), (n, len(deadlist)))
 
     def test_derived(self):
         # Issue 3088: if there is a threads switch inside the __init__
@@ -112,33 +105,28 @@ class ThreadingLocalTest(unittest.TestCase):
 
         self.assertTrue(passed[0])
 
-    def test_arguments(self):
-        # Issue 1522237
-        from thread import _local as local
-        from _threading_local import local as py_local
 
-        assert local is py_local
-        assert local is threading.local
+def test_main():
+    suite = unittest.TestSuite()
+    suite.addTest(DocTestSuite('_threading_local'))
+    suite.addTest(unittest.makeSuite(ThreadingLocalTest))
 
-        class MyLocal(local):
-            def __init__(self, *args, **kwargs):
-                pass
+    try:
+        from thread import _local
+    except ImportError:
+        pass
+    else:
+        import _threading_local
+        local_orig = _threading_local.local
+        def setUp(test):
+            _threading_local.local = _local
+        def tearDown(test):
+            _threading_local.local = local_orig
+        suite.addTest(DocTestSuite('_threading_local',
+                                   setUp=setUp, tearDown=tearDown)
+                      )
 
-        MyLocal(a=1)
-        MyLocal(1)
-        self.assertRaises(TypeError, local, a=1)
-        self.assertRaises(TypeError, local, 1)
-
-
-try:
-    all
-except NameError:
-    def all(iter):
-        for x in iter:
-            if not x:
-                return False
-        return True
-
+    test_support.run_unittest(suite)
 
 if __name__ == '__main__':
-    unittest.main()
+    test_main()

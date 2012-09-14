@@ -119,6 +119,18 @@ disabled_tests = \
     , 'test_subprocess.test_leak_fast_process_del_killed'
     , 'test_subprocess.test_zombie_fast_process_del'
     # relies on subprocess._active which we don't use
+
+    , 'test_ssl.ThreadedTests.test_default_ciphers'
+    , 'test_ssl.ThreadedTests.test_empty_cert'
+    , 'test_ssl.ThreadedTests.test_malformed_cert'
+    , 'test_ssl.ThreadedTests.test_malformed_key'
+    , 'test_ssl.NetworkedTests.test_non_blocking_connect_ex'
+    # XXX needs investigating
+
+    , 'test_urllib2.HandlerTests.test_cookie_redirect'
+    # this uses cookielib which we don't care about
+
+    , 'test_thread.ThreadRunningTests.test__count'
 ]
 
 

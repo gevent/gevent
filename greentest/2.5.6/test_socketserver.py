@@ -1,30 +1,20 @@
 # Test suite for SocketServer.py
-# converted to unittest (Denis)
-from gevent import monkey
-monkey.patch_all()
 
-import sys
-import test_support
-from test_support import (verbose, verify, TESTFN, TestSkipped,
-                          reap_children)
+from test import test_support
+from test.test_support import (verbose, verify, TESTFN, TestSkipped,
+                               reap_children)
 test_support.requires('network')
 
-try:
-    from SocketServer import *
-except ImportError:
-    from socketserver import *
-
+from SocketServer import *
 import socket
 import errno
 import select
 import time
 import threading
-import sys
 import os
-import unittest
 
 NREQ = 3
-DELAY = 0.05
+DELAY = 0.5
 
 class MyMixinHandler:
     def handle(self):
@@ -48,29 +38,20 @@ class MyMixinServer:
         self.server_close()
         raise
 
+teststring = "hello world\n"
 
-if str is unicode:
-    def b(s):
-        return s.encode('ascii')
-else:
-    def b(s):
-        return s
-
-teststring = b("hello world\n")
-NL = b('\n')
-
-def receive(sock, n, timeout=5):
+def receive(sock, n, timeout=20):
     r, w, x = select.select([sock], [], [], timeout)
     if sock in r:
         return sock.recv(n)
     else:
-        raise RuntimeError("timed out on %r" % (sock,))
+        raise RuntimeError, "timed out on %r" % (sock,)
 
 def testdgram(proto, addr):
     s = socket.socket(proto, socket.SOCK_DGRAM)
     s.sendto(teststring, addr)
     buf = data = receive(s, 100)
-    while data and NL not in buf:
+    while data and '\n' not in buf:
         data = receive(s, 100)
         buf += data
     verify(buf == teststring)
@@ -81,8 +62,7 @@ def teststream(proto, addr):
     s.connect(addr)
     s.sendall(teststring)
     buf = data = receive(s, 100)
-
-    while data and NL not in buf:
+    while data and '\n' not in buf:
         data = receive(s, 100)
         buf += data
     verify(buf == teststring)
@@ -97,20 +77,19 @@ class ServerThread(threading.Thread):
     def run(self):
         class svrcls(MyMixinServer, self.__svrcls):
             pass
-        if verbose: print ("thread: creating server")
+        if verbose: print "thread: creating server"
         svr = svrcls(self.__addr, self.__hdlrcls)
         # pull the address out of the server in case it changed
         # this can happen if another process is using the port
         addr = svr.server_address
         if addr:
             self.__addr = addr
-            if sys.version_info[:2] >= (2, 5):
-                if self.__addr != svr.socket.getsockname():
-                    raise RuntimeError('server_address was %s, expected %s' %
-                                           (self.__addr, svr.socket.getsockname()))
-        if verbose: print ("thread: serving three times")
+            if self.__addr != svr.socket.getsockname():
+                raise RuntimeError('server_address was %s, expected %s' %
+                                       (self.__addr, svr.socket.getsockname()))
+        if verbose: print "thread: serving three times"
         svr.serve_a_few()
-        if verbose: print ("thread: done")
+        if verbose: print "thread: done"
 
 seed = 0
 def pickport():
@@ -124,7 +103,7 @@ def pickaddr(proto):
     if proto == socket.AF_INET:
         return (host, pickport())
     else:
-        fn = '/tmp/' + TESTFN + str(pickport())
+        fn = TESTFN + str(pickport())
         if os.name == 'os2':
             # AF_UNIX socket names on OS/2 require a specific prefix
             # which can't include a drive letter and must also use
@@ -153,19 +132,19 @@ def testloop(proto, servers, hdlrcls, testfunc):
     for svrcls in servers:
         addr = pickaddr(proto)
         if verbose:
-            print ("ADDR = %s" % (addr,))
-            print ("CLASS = %s" % svrcls)
+            print "ADDR =", addr
+            print "CLASS =", svrcls
         t = ServerThread(addr, svrcls, hdlrcls)
-        if verbose: print ("server created")
+        if verbose: print "server created"
         t.start()
-        if verbose: print ("server running")
+        if verbose: print "server running"
         for i in range(NREQ):
             time.sleep(DELAY)
-            if verbose: print ("test client %d" % i)
+            if verbose: print "test client", i
             testfunc(proto, addr)
-        if verbose: print ("waiting for server")
+        if verbose: print "waiting for server"
         t.join()
-        if verbose: print ("done")
+        if verbose: print "done"
 
 class ForgivingTCPServer(TCPServer):
     # prevent errors if another process is using the port we want
@@ -179,8 +158,7 @@ class ForgivingTCPServer(TCPServer):
                 self.server_address = host, port
                 TCPServer.server_bind(self)
                 break
-            except socket.error:
-                err, msg = sys.exc_info()[1].args
+            except socket.error, (err, msg):
                 if err != errno.EADDRINUSE:
                     raise
                 print >>sys.__stderr__, \
@@ -190,7 +168,6 @@ tcpservers = [ForgivingTCPServer, ThreadingTCPServer]
 if hasattr(os, 'fork') and os.name not in ('os2',):
     tcpservers.append(ForkingTCPServer)
 udpservers = [UDPServer, ThreadingUDPServer]
-
 if hasattr(os, 'fork') and os.name not in ('os2',):
     udpservers.append(ForkingUDPServer)
 
@@ -224,28 +201,6 @@ def testall():
         # Alas, on Linux (at least) recvfrom() doesn't return a meaningful
         # client address so this cannot work:
         ##testloop(socket.AF_UNIX, dgramservers, MyDatagramHandler, testdgram)
-
-class Test(unittest.TestCase):
-
-    def tearDown(self):
-        sloppy_cleanup()
-
-    for tcpserver in tcpservers:
-        n = tcpserver.__name__
-        exec ("""def test_%s(self): testloop(socket.AF_INET, [%s], MyStreamHandler, teststream)""" % (n,n))
-
-    for udpserver in udpservers:
-        n = udpserver.__name__
-        exec ("""def test_%s(self): testloop(socket.AF_INET, [%s], MyDatagramHandler, testdgram)""" % (n,n))
-
-    if hasattr(socket, 'AF_UNIX'):
-        for streamserver in streamservers:
-            n = streamserver.__name__
-            exec ("""def test_%s(self): testloop(socket.AF_UNIX, [%s], MyStreamHandler, teststream)""" % (n,n))
-
-
-def testall():
-    test_support.run_unittest(Test)
 
 def test_main():
     import imp

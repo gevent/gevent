@@ -1,4 +1,3 @@
-import sys
 from greentest import walk_modules, BaseTestCase, main
 import six
 

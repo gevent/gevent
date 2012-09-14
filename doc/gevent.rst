@@ -9,7 +9,7 @@ The most common functions and classes are available in the :mod:`gevent` top lev
 Greenlet objects
 ----------------
 
-:class:`Greenlet` is a light-weight cooperatively-scheduled execution unit. 
+:class:`Greenlet` is a light-weight cooperatively-scheduled execution unit.
 
 To start a new greenlet, pass the target function and its arguments to :class:`Greenlet` constructor and call :meth:`start`:
 
@@ -53,7 +53,7 @@ __ http://codespeak.net/py/0.9.2/greenlet.html
 .. exception:: GreenletExit
 
     A special exception that kills the greenlet silently.
-    
+
     When a greenlet raises :exc:`GreenletExit` or a subclass, the traceback is not
     printed and the greenlet is considered :meth:`successful <Greenlet.successful>`.
     The exception instance is available under :attr:`value <Greenlet.value>`
