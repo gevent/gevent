@@ -5,7 +5,7 @@ import subprocess
 import time
 
 
-def wait(popen, timeout=60):
+def wait(popen, timeout=120):
     endtime = time.time() + timeout
     try:
         while True:
