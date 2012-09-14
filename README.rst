@@ -38,8 +38,8 @@ Post feedback and issues on the `bug tracker`_, `mailing list`_, blog_ and `twit
 .. _open source projects based on gevent: http://code.google.com/p/gevent/wiki/ProjectsUsingGevent
 .. _Denis Bilenko: http://denisbilenko.com
 .. _Python Package Index: http://pypi.python.org/pypi/gevent
-.. _the repository: http://bitbucket.org/denis/gevent
-.. _bug tracker: http://code.google.com/p/gevent/issues/list
+.. _the repository: https://github.com/sitesupport/gevent
+.. _bug tracker: https://github.com/SiteSupport/gevent/wiki/Projects
 .. _mailing list: http://groups.google.com/group/gevent
 .. _blog: http://blog.gevent.org
 .. _twitter (@gevent): http://twitter.com/gevent
