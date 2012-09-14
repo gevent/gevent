@@ -66,8 +66,7 @@ in multi-greenlet environment.
 
 See `examples/concurrent_download.py`__
 
-__ http://bitbucket.org/denis/gevent/src/tip/examples/concurrent_download.py#cl-4
-
+__ https://github.com/SiteSupport/gevent/blob/master/examples/concurrent_download.py#L1
 
 Event loop
 ----------
