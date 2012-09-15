@@ -411,7 +411,9 @@ def get_backend():
 
 
 def get_greenlet_version():
-    return read_output([sys.executable, '-c', 'import greenlet; print greenlet.__version__'])
+    return read_output(
+        [sys.executable, '-c',
+        'import greenlet;\ntry: print greenlet.__version__\nexcept AttributeError: print "0"'])
 
 
 def get_gevent_core_details():
