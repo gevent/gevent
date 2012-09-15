@@ -61,6 +61,29 @@ class Test(greentest.TestCase):
                     raise
             else:
                 raise AssertionError('FileObject.read with closed fd must fail with EBADF')
+            
+            os.close(w)
+            del rfile
+            
+            # Test when fd is closed during hub switch in read
+            r, w = os.pipe()
+            rfile = FileObject(r, 'r', close=False)
+            wfile = FileObject(w, 'w')
+            # set nbytes such that for sure it is > maximum pipe buffer
+            def close_fd(fd):
+                os.close(fd)
+            
+            g = gevent.spawn(close_fd, fd=r)
+            try:
+                data = rfile.read()
+            except OSError, e:
+                if e.errno != errno.EBADF:
+                    raise
+            else:
+                raise AssertionError('FileObject.read with closed fd must fail with EBADF')
+            g.get()
+            del g
+            
                 
         def test_fcntl_flags_preserved(self):
             if fcntl is None:
