@@ -41,8 +41,7 @@ def start_new_thread(function, args=(), kwargs={}):
     return get_ident(greenlet)
 
 
-def allocate_lock():
-    return LockType(1)
+allocate_lock = LockType
 
 
 def exit():
@@ -68,3 +67,4 @@ __all__ = __implements__ + __imports__
 __all__.remove('_local')
 
 # XXX interrupt_main
+# XXX _count()
