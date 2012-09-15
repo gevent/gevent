@@ -68,7 +68,6 @@ class Test(greentest.TestCase):
             # Test when fd is closed during hub switch in read
             r, w = os.pipe()
             rfile = FileObject(r, 'r', close=False)
-            wfile = FileObject(w, 'w')
             # set nbytes such that for sure it is > maximum pipe buffer
             def close_fd(fd):
                 os.close(fd)
@@ -82,7 +81,6 @@ class Test(greentest.TestCase):
             else:
                 raise AssertionError('FileObject.read with closed fd must fail with EBADF')
             g.get()
-            del g
             
                 
         def test_fcntl_flags_preserved(self):
