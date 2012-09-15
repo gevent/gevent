@@ -8,6 +8,11 @@ try:
 except ImportError:
     fcntl = None
 
+try:
+    import errno
+except ImportError:
+    errno = None
+
 
 class TestOS(TestCase):
 
@@ -56,6 +61,64 @@ class TestOS(TestCase):
         assert not flags & os.O_NONBLOCK
         flags = fcntl.fcntl(w, fcntl.F_GETFL, 0)
         assert not flags & os.O_NONBLOCK
+
+    def test_o_nonblock_read(self):
+        if fcntl is None or errno is None:
+            return
+        r, w = os.pipe()
+        
+        rflags = fcntl.fcntl(r, fcntl.F_GETFL, 0)
+        fcntl.fcntl(r, fcntl.F_SETFL, rflags|os.O_NONBLOCK)
+        
+        gotEAGAIN = False
+        try:
+            os.read(r, 3)
+        except OSError, e:
+            if e.errno != errno.EAGAIN:
+                raise
+            
+            gotEAGAIN = True
+        
+        assert gotEAGAIN
+        
+        os.write(w, "foo")
+        data = os.read(r, 3)
+        assert data == "foo"
+        
+        gotEAGAIN = False
+        try:
+            os.read(r, 3)
+        except OSError, e:
+            if e.errno != errno.EAGAIN:
+                raise
+            
+            gotEAGAIN = True
+        
+        assert gotEAGAIN
+ 
+    def test_o_nonblock_write(self):
+        if fcntl is None or errno is None:
+            return
+        r, w = os.pipe()
+        
+        wflags = fcntl.fcntl(r, fcntl.F_GETFL, 0)
+        fcntl.fcntl(w, fcntl.F_SETFL, wflags|os.O_NONBLOCK)
+        
+        data = "d" * 1000000
+        
+        # fill output buffer to force EAGAIN in next os.write() call
+        os.write(w, data)
+        
+        gotEAGAIN = False
+        try:
+            os.write(w, data)
+        except OSError, e:
+            if e.errno != errno.EAGAIN:
+                raise
+            
+            gotEAGAIN = True
+        
+        assert gotEAGAIN
 
 
 if __name__ == '__main__':
