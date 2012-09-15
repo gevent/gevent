@@ -135,7 +135,7 @@ def patch_time():
     patch_item(time, 'sleep', sleep)
 
 
-def patch_thread(threading=True, _threading_local=True):
+def patch_thread(threading=True, _threading_local=True, Event=False):
     """Replace the standard :mod:`thread` module to make it greenlet-based.
     If *threading* is true (the default), also patch ``threading``.
     If *_threading_local* is true (the default), also patch ``_threading_local.local``.
@@ -155,6 +155,9 @@ def patch_thread(threading=True, _threading_local=True):
         threading._get_ident = green_thread.get_ident
         from gevent.hub import sleep
         threading._sleep = sleep
+        if Event:
+            from gevent.event import Event
+            threading.Event = Event
     if _threading_local:
         _threading_local = __import__('_threading_local')
         _threading_local.local = local
@@ -212,7 +215,7 @@ def patch_subprocess():
 
 
 def patch_all(socket=True, dns=True, time=True, select=True, thread=True, os=True, ssl=True, httplib=False,
-              subprocess=True, aggressive=True):
+              subprocess=True, aggressive=True, Event=False):
     """Do all of the default monkey patching (calls every other function in this module."""
     # order is important
     if os:
@@ -220,7 +223,7 @@ def patch_all(socket=True, dns=True, time=True, select=True, thread=True, os=Tru
     if time:
         patch_time()
     if thread:
-        patch_thread()
+        patch_thread(Event=Event)
     if socket:
         patch_socket(dns=dns, aggressive=aggressive)
     if select:
