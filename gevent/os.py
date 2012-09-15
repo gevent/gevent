@@ -32,7 +32,7 @@ def _map_errors(func, *args):
     try:
         return func(*args)
     except IOError, e:
-        # IOError is structered like OSError in that it has two args: an error
+        # IOError is structured like OSError in that it has two args: an error
         # number and a error string. So we can just re-raise OSError passing it
         # the IOError args. If at some point we want to catch other errors and
         # map those to OSError as well, we need to make sure that it follows
@@ -48,12 +48,15 @@ def posix_read(fd, n):
     hub, event = None, None
     while True:
         flags = _map_errors(fcntl.fcntl, fd, fcntl.F_GETFL, 0)
-        if not flags & os.O_NONBLOCK:
+        blocking_fd = not bool(flags & os.O_NONBLOCK)
+        if blocking_fd:
             _map_errors(fcntl.fcntl, fd, fcntl.F_SETFL, flags|os.O_NONBLOCK)
         try:
             return _read(fd, n)
         except OSError, e:
             if e.errno not in ignored_errors:
+                raise
+            if e.errno == EAGAIN and not blocking_fd:
                 raise
             sys.exc_clear()
         finally:
@@ -62,7 +65,7 @@ def posix_read(fd, n):
             # (e.g. when using ttys/ptys). Those other file descriptors are
             # impacted by our change of flags, so we should restore them
             # before any other code can possibly run.
-            if not flags & os.O_NONBLOCK:
+            if blocking_fd:
                 _map_errors(fcntl.fcntl, fd, fcntl.F_SETFL, flags)
         if hub is None:
             hub = get_hub()
@@ -76,17 +79,20 @@ def posix_write(fd, buf):
     hub, event = None, None
     while True:
         flags = _map_errors(fcntl.fcntl, fd, fcntl.F_GETFL, 0)
-        if not flags & os.O_NONBLOCK:
+        blocking_fd = not bool(flags & os.O_NONBLOCK)
+        if blocking_fd:
             _map_errors(fcntl.fcntl, fd, fcntl.F_SETFL, flags|os.O_NONBLOCK)
         try:
             return _write(fd, buf)
         except OSError, e:
             if e.errno not in ignored_errors:
                 raise
+            if e.errno == EAGAIN and not blocking_fd:
+                raise
             sys.exc_clear()
         finally:
             # See note in posix_read().
-            if not flags & os.O_NONBLOCK:
+            if blocking_fd:
                 _map_errors(fcntl.fcntl, fd, fcntl.F_SETFL, flags)
         if hub is None:
             hub = get_hub()
