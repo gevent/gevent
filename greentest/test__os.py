@@ -103,10 +103,14 @@ class TestOS(TestCase):
         
         wflags = fcntl.fcntl(r, fcntl.F_GETFL, 0)
         fcntl.fcntl(w, fcntl.F_SETFL, wflags|os.O_NONBLOCK)
+        
         data = "d" * 1000000
+        
+        # fill output buffer to force EAGAIN in next os.write() call
+        os.write(w, data)
+        
         gotEAGAIN = False
         try:
-            os.write(w, data)
             os.write(w, data)
         except OSError, e:
             if e.errno != errno.EAGAIN:
