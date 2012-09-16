@@ -66,6 +66,10 @@ for name in __imports__[:]:
         __imports__.remove(name)
         __extra__.append(name)
 
+if sys.version_info[:2] <= (2, 6):
+    __implements__.remove('check_output')
+    __extra__.append('check_output')
+
 _subprocess = getattr(__subprocess__, '_subprocess', None)
 _NONE = object()
 
