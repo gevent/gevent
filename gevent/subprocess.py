@@ -714,7 +714,7 @@ class Popen(object):
                 # Wait for exec to fail or succeed; possibly raising exception
                 # Exception limited to 1M
                 errpipe_read = FileObject(errpipe_read, 'rb')
-                data = errpipe_read.read(1048576)
+                data = errpipe_read.read()
             finally:
                 if hasattr(errpipe_read, 'close'):
                     errpipe_read.close()
