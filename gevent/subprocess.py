@@ -687,6 +687,8 @@ class Popen(object):
                                                                    tb)
                             exc_value.child_traceback = ''.join(exc_lines)
                             os.write(errpipe_write, pickle.dumps(exc_value))
+                        finally:
+                            os._exit(255)
 
                         # This exitcode won't be reported to applications, so it
                         # really doesn't matter what we return.
