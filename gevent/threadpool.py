@@ -9,6 +9,9 @@ from gevent.pool import IMap, IMapUnordered
 from gevent.lock import Semaphore
 from gevent._threading import Lock, Queue, start_new_thread
 
+# XXX apply_e is ugly and must not be needed
+# XXX apply() should re-raise everything
+
 
 __all__ = ['ThreadPool',
            'ThreadResult']
@@ -47,6 +50,7 @@ class ThreadPool(object):
         return '<%s at 0x%x %s/%s/%s>' % (self.__class__.__name__, id(self), len(self), self.size, self.maxsize)
 
     def __len__(self):
+        # XXX just do unfinished_tasks property
         return self.task_queue.unfinished_tasks
 
     def _get_size(self):
