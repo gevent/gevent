@@ -61,18 +61,26 @@ class Resolver(object):
                 # "self.ares is not ares" means channel was destroyed (because we were forked)
 
     def _lookup_port(self, port, socktype):
+        socktypes = []
         if isinstance(port, string_types):
             try:
                 port = int(port)
             except ValueError:
                 try:
                     if socktype == 0:
+                        origport = port
                         try:
                             port = getservbyname(port, 'tcp')
-                            socktype = SOCK_STREAM
+                            socktypes.append(SOCK_STREAM)
                         except error:
                             port = getservbyname(port, 'udp')
-                            socktype = SOCK_DGRAM
+                            socktypes.append(SOCK_DGRAM)
+                        else:
+                            try:
+                                if port == getservbyname(origport, 'udp'):
+                                    socktypes.append(SOCK_DGRAM)
+                            except error:
+                                pass
                     elif socktype == SOCK_STREAM:
                         port = getservbyname(port, 'tcp')
                     elif socktype == SOCK_DGRAM:
@@ -94,7 +102,9 @@ class Resolver(object):
         else:
             raise error('Int or String expected')
         port = int(port % 65536)
-        return port, socktype
+        if not socktypes and socktype:
+            socktypes.append(socktype)
+        return port, socktypes
 
     def _getaddrinfo(self, host, port, family=0, socktype=0, proto=0, flags=0):
         if isinstance(host, unicode):
@@ -107,11 +117,12 @@ class Resolver(object):
             return getaddrinfo(host, port, family, socktype, proto, flags)
             # we also call _socket.getaddrinfo below if family is not one of AF_*
 
-        port, socktype = self._lookup_port(port, socktype)
+        origport = port
+        port, socktypes = self._lookup_port(port, socktype)
 
         socktype_proto = [(SOCK_STREAM, 6), (SOCK_DGRAM, 17), (SOCK_RAW, 0)]
-        if socktype:
-            socktype_proto = [(x, y) for (x, y) in socktype_proto if socktype == x]
+        if socktypes:
+            socktype_proto = [(x, y) for (x, y) in socktype_proto if x in socktypes]
         if proto:
             socktype_proto = [(x, y) for (x, y) in socktype_proto if proto == y]
 
@@ -129,7 +140,7 @@ class Resolver(object):
             ares.gethostbyname(values, host, AF_INET6)
         else:
             # most likely will raise the exception, let the original getaddrinfo do it
-            return getaddrinfo(host, port, family, socktype, proto, flags)
+            return getaddrinfo(host, origport, family, socktype, proto, flags)
 
         values = values.get()
         if len(values) == 2 and values[0] == values[1]:
