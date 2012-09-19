@@ -2,7 +2,7 @@
 from __future__ import absolute_import
 import os
 import sys
-from _socket import getservbyname, getaddrinfo, gaierror, error
+from _socket import getservbyname, getaddrinfo, gethostbyname_ex, gaierror, error
 from gevent.hub import Waiter, get_hub, string_types
 from gevent.socket import AF_UNSPEC, AF_INET, AF_INET6, SOCK_STREAM, SOCK_DGRAM, SOCK_RAW, AI_NUMERICHOST, EAI_SERVICE, AI_PASSIVE
 from gevent.ares import channel, InvalidIP
@@ -15,10 +15,17 @@ class Resolver(object):
 
     ares_class = channel
 
-    def __init__(self, hub=None, **kwargs):
+    def __init__(self, hub=None, use_threadpool=True, **kwargs):
         if hub is None:
             hub = get_hub()
         self.hub = hub
+        if use_threadpool:
+            if use_threadpool is not True:
+                self.pool = use_threadpool
+            else:
+                self.pool = self.hub.threadpool
+        else:
+            self.pool = None
         self.ares = self.ares_class(hub.loop, **kwargs)
         self.pid = os.getpid()
         self.params = kwargs
@@ -46,6 +53,14 @@ class Resolver(object):
         return self.gethostbyname_ex(hostname, family)[-1][0]
 
     def gethostbyname_ex(self, hostname, family=AF_INET):
+        if isinstance(hostname, unicode):
+            hostname = hostname.encode('ascii')
+        elif not isinstance(hostname, str):
+            raise TypeError('Expected string, not %s' % type(hostname).__name__)
+
+        if family==AF_INET and self.pool is not None and '.' not in hostname:
+            return self.pool.apply_e(BaseException, gethostbyname_ex, (hostname, ))
+
         while True:
             ares = self.ares
             try:
@@ -114,8 +129,15 @@ class Resolver(object):
             # 1) host is None
             # 2) host is of an invalid type
             # 3) AI_NUMERICHOST flag is set
-            return getaddrinfo(host, port, family, socktype, proto, flags)
+            if self.pool is not None:
+                return self.pool.apply_e(BaseException, getaddrinfo, (host, port, family, socktype, proto, flags))
+            else:
+                return getaddrinfo(host, port, family, socktype, proto, flags)
             # we also call _socket.getaddrinfo below if family is not one of AF_*
+
+        if self.pool is not None and '.' not in host:
+            # localhost, <broadcast>
+            return self.pool.apply_e(BaseException, getaddrinfo, (host, port, family, socktype, proto, flags))
 
         origport = port
         port, socktypes = self._lookup_port(port, socktype)
@@ -139,8 +161,10 @@ class Resolver(object):
             values = Values(self.hub, 1)
             ares.gethostbyname(values, host, AF_INET6)
         else:
-            # most likely will raise the exception, let the original getaddrinfo do it
-            return getaddrinfo(host, origport, family, socktype, proto, flags)
+            if self.pool is not None:
+                return self.pool.apply_e(BaseException, getaddrinfo, (host, origport, family, socktype, proto, flags))
+            else:
+                return getaddrinfo(host, origport, family, socktype, proto, flags)
 
         values = values.get()
         if len(values) == 2 and values[0] == values[1]:
@@ -183,6 +207,11 @@ class Resolver(object):
                     raise
 
     def _gethostbyaddr(self, ip_address):
+        if isinstance(ip_address, unicode):
+            ip_address = ip_address.encode('ascii')
+        elif not isinstance(ip_address, str):
+            raise TypeError('Expected string, not %s' % type(ip_address).__name__)
+
         waiter = Waiter(self.hub)
         try:
             self.ares.gethostbyaddr(waiter, ip_address)
@@ -214,8 +243,19 @@ class Resolver(object):
         if not isinstance(sockaddr, tuple):
             raise TypeError('getnameinfo() argument 1 must be a tuple')
 
+        address = sockaddr[0]
+        if isinstance(address, unicode):
+            address = address.encode('ascii')
+
+        if not isinstance(address, str):
+            raise TypeError('sockaddr[0] must be a string, not %s' % type(address).__name__)
+
+        port = sockaddr[1]
+        if not isinstance(port, int):
+            raise TypeError
+
         waiter = Waiter(self.hub)
-        result = self._getaddrinfo(sockaddr[0], str(sockaddr[1]), family=AF_UNSPEC, socktype=SOCK_DGRAM)
+        result = self._getaddrinfo(address, str(sockaddr[1]), family=AF_UNSPEC, socktype=SOCK_DGRAM)
         if not result:
             raise
         elif len(result) != 1:
