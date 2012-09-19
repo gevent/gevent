@@ -301,9 +301,13 @@ cdef public class channel [object PyGeventAresChannelObject, type PyGeventAresCh
             cares.ares_destroy(self.channel)
             self.channel = NULL
 
-    def set_servers(self, object servers=[]):
+    def set_servers(self, servers=None):
         if not self.channel:
             raise gaierror(cares.ARES_EDESTRUCTION, 'this ares channel has been destroyed')
+        if not servers:
+            servers = []
+        if isinstance(servers, basestring):
+            servers = servers.split(',')
         cdef int length = len(servers)
         cdef int result, index
         cdef char* string
