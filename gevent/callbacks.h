@@ -13,7 +13,7 @@
     DEFINE_CALLBACK(stat, Stat);
 
 
-#if EV_CHILD_ENABLE
+#ifndef _WIN32
 
 #define DEFINE_CALLBACKS               \
     DEFINE_CALLBACKS0                  \

@@ -417,7 +417,8 @@ cdef public class loop [object PyGeventLoopObject, type PyGeventLoop_Type]:
     def async(self, ref=True, priority=None):
         return async(self, ref, priority)
 
-#if EV_CHILD_ENABLE
+#ifdef _WIN32
+#else
 
     def child(self, int pid, bint trace=0, ref=True):
         return child(self, pid, trace, ref)
@@ -843,7 +844,8 @@ cdef public class async(watcher) [object PyGeventAsyncObject, type PyGeventAsync
     def send(self):
         libev.ev_async_send(self.loop._ptr, &self._watcher)
 
-#if EV_CHILD_ENABLE
+#ifdef _WIN32
+#else
 
 cdef public class child(watcher) [object PyGeventChildObject, type PyGeventChild_Type]:
 

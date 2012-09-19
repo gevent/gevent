@@ -3,13 +3,13 @@
 #else
 #include "ev.h"
 
-#if EV_CHILD_ENABLE
+#ifndef _WIN32
 #include <signal.h>
 #endif
 
 #endif
 
-#if EV_CHILD_ENABLE
+#ifndef _WIN32
 
 static struct sigaction libev_sigchld;
 static int sigchld_state = 0;
