@@ -8,11 +8,6 @@ import gevent
 TIMEOUT = 120
 
 
-class ContainsAll(object):
-    def __contains__(self, item):
-        return True
-
-
 def TESTRUNNER(tests=None):
     version = '%s.%s.%s' % sys.version_info[:3]
     assert os.path.isdir(version), 'Directory %s not found in %s' % (version, os.getcwd())
