@@ -3,4 +3,3 @@ build/
 *.so
 gevent.*.[ch]
 gevent/core.pyx
-tmp-testrunner.sqlite3
