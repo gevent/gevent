@@ -14,20 +14,20 @@ from distutils.version import LooseVersion
 
 version_re = re.compile("__version__\s*=\s*'([^']+)'", re.M)
 version_info_re = re.compile(r"version_info\s*=\s*([^\n]+)")
-changeset_re = re.compile("__changeset__\s*=\s*'([^']+)'", re.M)
-hg_changeset_re = re.compile('changeset:\s+([^\s$]+)', re.M)
 strict_version_re = re.compile(r'^(\d+) \. (\d+) (\. (\d+))? ([ab](\d+))?$', re.VERBOSE)
 
 
-def get_changeset():
-    hg_head_command = os.popen('hg head')
-    data = hg_head_command.read()
-    retcode = hg_head_command.close()
+def read(command):
+    popen = os.popen(command)
+    data = popen.read()
+    retcode = popen.close()
     if retcode:
-        sys.exit('Failed (%s) to run "hg head"' % retcode)
-    m = hg_changeset_re.search(data)
-    if m is not None:
-        return m.group(1)
+        sys.exit('Failed (%s) to run %r' % (retcode, command))
+    return data.strip()
+
+
+def get_changeset():
+    return read('git describe --tags --always --dirty --long')
 
 
 def get_version_info(version):
