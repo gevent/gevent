@@ -3,7 +3,7 @@ import sys
 import os
 from gevent.hub import get_hub
 from gevent.socket import EBADF
-from gevent.os import _read, _write, ignored_errors
+from gevent.os import posix_read, posix_write
 
 
 try:
@@ -55,7 +55,6 @@ else:
             self._mode = mode or 'rb'
             self._close = close
             self._translate = 'U' in self._mode
-            fcntl(fileno, F_SETFL, os.O_NONBLOCK)
             self._eat_newline = False
             self.hub = get_hub()
             io = self.hub.loop.io
@@ -97,49 +96,26 @@ else:
             bytes_total = len(data)
             bytes_written = 0
             while True:
-                try:
-                    bytes_written += _write(fileno, _get_memory(data, bytes_written))
-                except (IOError, OSError):
-                    code = sys.exc_info()[1].args[0]
-                    if code not in ignored_errors:
-                        raise
-                    sys.exc_clear()
+                bytes_written += posix_write(fileno, _get_memory(data, bytes_written))
+                # NOTE: doing this test *after* posix_write (instead of as while
+                #  predicate) facilitates arg checking (e.g., EBADF)
                 if bytes_written >= bytes_total:
                     return
-                self.hub.wait(self._write_event)
 
         def recv(self, size):
             while True:
-                try:
-                    data = _read(self.fileno(), size)
-                except (IOError, OSError):
-                    code = sys.exc_info()[1].args[0]
-                    if code in ignored_errors:
-                        pass
-                    elif code == EBADF:
-                        return ''
-                    else:
-                        raise
-                    sys.exc_clear()
-                else:
-                    if not self._translate or not data:
-                        return data
-                    if self._eat_newline:
-                        self._eat_newline = False
-                        if data.startswith('\n'):
-                            data = data[1:]
-                            if not data:
-                                return self.recv(size)
-                    if data.endswith('\r'):
-                        self._eat_newline = True
-                    return self._translate_newlines(data)
-                try:
-                    self.hub.wait(self._read_event)
-                except IOError:
-                    ex = sys.exc_info()[1]
-                    if ex.args[0] == EBADF:
-                        return ''
-                    raise
+                data = posix_read(self.fileno(), size)
+                if not self._translate or not data:
+                    return data
+                if self._eat_newline:
+                    self._eat_newline = False
+                    if data.startswith('\n'):
+                        data = data[1:]
+                        if not data:
+                            return self.recv(size)
+                if data.endswith('\r'):
+                    self._eat_newline = True
+                return self._translate_newlines(data)
 
         def _translate_newlines(self, data):
             data = data.replace("\r\n", "\n")
