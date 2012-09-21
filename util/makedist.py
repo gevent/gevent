@@ -15,6 +15,7 @@ If --revert is provided, then copying is done and then changes are reverted.
 import sys
 import os
 import glob
+import optparse
 from os.path import exists, join, abspath, basename
 from pipes import quote
 
@@ -54,7 +55,7 @@ def makedist(*args, **kwargs):
         os.chdir(cwd)
 
 
-def _makedist(version='dev'):
+def _makedist(version='dev', dest=None):
     assert exists('gevent/__init__.py'), 'Where am I?'
     basedir = abspath(os.getcwd())
 
@@ -83,20 +84,27 @@ def _makedist(version='dev'):
     dist_path = abspath(dist_filename[0])
     dist_filename = basename(dist_path)
 
-    if not exists(join(basedir, 'dist')):
-        os.mkdir(join(basedir, 'dist'))
+    if dest:
+        if os.path.isdir(dest):
+            dest = join(dest, dist_filename)
+    else:
+        if not exists(join(basedir, 'dist')):
+            os.mkdir(join(basedir, 'dist'))
+        dest = join(basedir, 'dist', dist_filename)
 
-    copy(dist_path, join(basedir, 'dist', dist_filename))
+    copy(dist_path, dest)
     return dist_path
 
 
 def main():
-    args = sys.argv[1:]
+    parser = optparse.OptionParser()
+    parser.add_option('--dest')
+    options, args = parser.parse_args()
 
     if len(args) != 1:
         sys.exit('Expected one argument: version (could be "dev").')
 
-    return makedist(args[0])
+    return makedist(args[0], dest=options.dest)
 
 
 def copy(source, dest):
