@@ -9,15 +9,6 @@
 /* when building as static part of libcurl */
 #undef BUILDING_LIBCURL
 
-/* when building c-ares library */
-#undef CARES_BUILDING_LIBRARY
-
-/* when not building a shared library */
-#undef CARES_STATICLIB
-
-/* Define to 1 to enable hiding of library internal symbols. */
-#undef CARES_SYMBOL_HIDING
-
 /* Definition to make a library symbol externally visible. */
 #undef CARES_SYMBOL_SCOPE_EXTERN
 
@@ -332,9 +323,6 @@
    */
 #undef LT_OBJDIR
 
-/* Define to 1 if you are building a native Windows target. */
-#undef NATIVE_WINDOWS
-
 /* Define to 1 if you need the malloc.h header file even with stdlib.h */
 #undef NEED_MALLOC_H
 
@@ -451,6 +439,9 @@
 
 /* The size of `long', as computed by sizeof. */
 #undef SIZEOF_LONG
+
+/* The size of `short', as computed by sizeof. */
+#undef SIZEOF_SHORT
 
 /* The size of `size_t', as computed by sizeof. */
 #undef SIZEOF_SIZE_T

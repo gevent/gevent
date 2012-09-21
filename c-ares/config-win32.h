@@ -365,5 +365,21 @@
 #define HAVE_SOCKADDR_IN6_SIN6_SCOPE_ID 1
 #endif
 
+/* ---------------------------------------------------------------- */
+/*                              Win CE                              */
+/* ---------------------------------------------------------------- */
+
+/* FIXME: A proper config-win32ce.h should be created to hold these */
+
+/*
+ *  System error codes for Windows CE
+ */
+
+#if defined(_WIN32_WCE) && !defined(HAVE_ERRNO_H)
+#  define ENOENT    ERROR_FILE_NOT_FOUND
+#  define ESRCH     ERROR_PATH_NOT_FOUND
+#  define ENOMEM    ERROR_NOT_ENOUGH_MEMORY
+#  define ENOSPC    ERROR_INVALID_PARAMETER
+#endif
 
 #endif /* HEADER_CARES_CONFIG_WIN32_H */

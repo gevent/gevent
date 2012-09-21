@@ -1,4 +1,5 @@
 
+
 /* Copyright 1998 by the Massachusetts Institute of Technology.
  *
  * Permission to use, copy, modify, and distribute this
@@ -15,10 +16,15 @@
  */
 
 #include "ares_setup.h"
-#include "ares.h"
+#include "ares_getenv.h"
 
-int ares_mkquery(const char *name, int dnsclass, int type, unsigned short id,
-                 int rd, unsigned char **buf, int *buflen)
+#ifndef HAVE_GETENV
+
+char *ares_getenv(const char *name)
 {
-  return ares_create_query(name, dnsclass, type, id, rd, buf, buflen, 0);
+#ifdef _WIN32_WCE
+  return NULL;
+#endif
 }
+
+#endif
