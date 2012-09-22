@@ -2,7 +2,7 @@
 from __future__ import absolute_import
 import os
 import sys
-from _socket import getservbyname, getaddrinfo, gethostbyname_ex, gaierror, error
+from _socket import getservbyname, getaddrinfo, gethostbyname, gethostbyname_ex, gaierror, error
 from gevent.hub import Waiter, get_hub, string_types
 from gevent.socket import AF_UNSPEC, AF_INET, AF_INET6, SOCK_STREAM, SOCK_DGRAM, SOCK_RAW, AI_NUMERICHOST, EAI_SERVICE, AI_PASSIVE
 from gevent.ares import channel, InvalidIP
@@ -56,7 +56,8 @@ class Resolver(object):
         self.fork_watcher.stop()
 
     def gethostbyname(self, hostname, family=AF_INET):
-        hostname = _resolve_special(hostname, family)
+        if family==AF_INET and self.pool is not None and '.' not in hostname:
+            return self.pool.apply_e(BaseException, gethostbyname, (hostname, ))
         return self.gethostbyname_ex(hostname, family)[-1][0]
 
     def gethostbyname_ex(self, hostname, family=AF_INET):
