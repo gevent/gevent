@@ -44,7 +44,7 @@ test_patched_threading.*
 
 
 def make_re(tests):
-    tests = [x.strip().replace('\.', '\\.').replace('*', '.*?') for x in  tests.split('\n') if x.strip()]
+    tests = [x.strip().replace('\.', '\\.').replace('*', '.*?') for x in tests.split('\n') if x.strip()]
     tests = re.compile('^%s$' % '|'.join(tests))
     return tests
 

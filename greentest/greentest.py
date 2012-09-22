@@ -73,16 +73,19 @@ def wrap_switch_count_check(method):
 def wrap_timeout(timeout, method):
     if timeout is None:
         return method
+
     @wraps(method)
     def wrapped(self, *args, **kwargs):
         with gevent.Timeout(timeout, 'test timed out'):
             return method(self, *args, **kwargs)
+
     return wrapped
 
 
 def wrap_refcount(method):
     if gettotalrefcount is None:
         return method
+
     @wraps(method)
     def wrapped(self, *args, **kwargs):
         import gc
@@ -127,6 +130,7 @@ def wrap_refcount(method):
             gc.collect()
             gc.enable()
         self.skipTearDown = True
+
     return wrapped
 
 
@@ -260,7 +264,7 @@ class TestCase(BaseTestCase):
         if error is None:
             error = self.get_error()
         if type is not None:
-           assert error[1] is type, error
+            assert error[1] is type, error
         if value is not None:
             if isinstance(value, str):
                 assert str(error[2]) == value, error

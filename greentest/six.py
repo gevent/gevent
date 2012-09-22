@@ -11,12 +11,10 @@ if PY3:
     import builtins
     exec_ = getattr(builtins, "exec")
 
-
     def reraise(tp, value, tb=None):
         if value.__traceback__ is not tb:
             raise value.with_traceback(tb)
         raise value
-
 
     print_ = getattr(builtins, "print")
     del builtins
@@ -33,6 +31,3 @@ else:
         elif locs is None:
             locs = globs
         exec("""exec code in globs, locs""")
-
-
-

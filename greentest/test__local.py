@@ -13,7 +13,7 @@ class A(local):
     path = ''
 
     def __init__(self, obj):
-        if not  hasattr(self, 'initialized'):
+        if not hasattr(self, 'initialized'):
             self.obj = obj
         self.path = ''
 

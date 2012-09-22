@@ -37,8 +37,7 @@ def test_main():
     # re-raises information about any exceptions the child
     # throws. The real work happens in self.run_test().
     os_done_r, os_done_w = os.pipe()
-    with closing(os.fdopen(os_done_r)) as done_r, \
-         closing(os.fdopen(os_done_w, 'w')) as done_w:
+    with closing(os.fdopen(os_done_r)) as done_r, closing(os.fdopen(os_done_w, 'w')) as done_w:
         child = gevent.fork()
         if not child:
             # In the child process; run the test and report results

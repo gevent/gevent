@@ -237,6 +237,7 @@ def error_iter():
 
 
 class TestErrorInIterator(TestCase):
+
     error_fatal = False
 
     def test(self):
@@ -246,8 +247,10 @@ class TestErrorInIterator(TestCase):
 
     def test_unordered(self):
         self.pool = ThreadPool(3)
+
         def unordered():
             return list(self.pool.imap_unordered(lambda x: None, error_iter()))
+
         self.assertRaises(greentest.ExpectedException, unordered)
         gevent.sleep(0.001)
 
@@ -288,11 +291,15 @@ class TestSize(TestCase):
         self.assertEqual(pool.size, 2)
         pool.size = 1
         self.assertEqual(pool.size, 1)
+
         def set_neg():
             pool.size = -1
+
         self.assertRaises(ValueError, set_neg)
+
         def set_too_big():
             pool.size = 3
+
         self.assertRaises(ValueError, set_too_big)
         pool.size = 0
         self.assertEqual(pool.size, 0)
@@ -303,7 +310,7 @@ class TestSize(TestCase):
 class TestRef(TestCase):
 
     def test(self):
-        pool = self.pool=ThreadPool(2)
+        pool = self.pool = ThreadPool(2)
 
         refs = []
         obj = SomeClass()

@@ -363,13 +363,12 @@ class Popen(object):
         def _make_inheritable(self, handle):
             """Return a duplicate of handle, which is inheritable"""
             return DuplicateHandle(GetCurrentProcess(),
-                                handle, GetCurrentProcess(), 0, 1,
-                                DUPLICATE_SAME_ACCESS)
+                                   handle, GetCurrentProcess(), 0, 1,
+                                   DUPLICATE_SAME_ACCESS)
 
         def _find_w9xpopen(self):
             """Find and return absolut path to w9xpopen.exe"""
-            w9xpopen = os.path.join(
-                            os.path.dirname(GetModuleFileName(0)),
+            w9xpopen = os.path.join(os.path.dirname(GetModuleFileName(0)),
                                     "w9xpopen.exe")
             if not os.path.exists(w9xpopen):
                 # Eeek - file-not-found - possibly an embedding
@@ -407,8 +406,7 @@ class Popen(object):
                 startupinfo.wShowWindow = SW_HIDE
                 comspec = os.environ.get("COMSPEC", "cmd.exe")
                 args = '{} /c "{}"'.format(comspec, args)
-                if (GetVersion() >= 0x80000000 or
-                    os.path.basename(comspec).lower() == "command.com"):
+                if GetVersion() >= 0x80000000 or os.path.basename(comspec).lower() == "command.com":
                     # Win9x, or using command.com on NT. We need to
                     # use the w9xpopen intermediate program. For more
                     # information, see KB Q150956
@@ -426,13 +424,13 @@ class Popen(object):
             # Start the process
             try:
                 hp, ht, pid, tid = CreateProcess(executable, args,
-                                         # no special security
-                                         None, None,
-                                         int(not close_fds),
-                                         creationflags,
-                                         env,
-                                         cwd,
-                                         startupinfo)
+                                                 # no special security
+                                                 None, None,
+                                                 int(not close_fds),
+                                                 creationflags,
+                                                 env,
+                                                 cwd,
+                                                 startupinfo)
             except pywintypes.error, e:
                 # Translate pywintypes.error to WindowsError, which is
                 # a subclass of OSError.  FIXME: We should really

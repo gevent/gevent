@@ -294,17 +294,17 @@ def run_setup(ext_modules):
         cmdclass=dict(build_ext=my_build_ext, sdist=sdist),
         install_requires=['greenlet'],
         classifiers=[
-        "License :: OSI Approved :: MIT License",
-        "Programming Language :: Python :: 2.5",
-        "Programming Language :: Python :: 2.6",
-        "Programming Language :: Python :: 2.7",
-        "Operating System :: MacOS :: MacOS X",
-        "Operating System :: POSIX",
-        "Operating System :: Microsoft :: Windows",
-        "Topic :: Internet",
-        "Topic :: Software Development :: Libraries :: Python Modules",
-        "Intended Audience :: Developers",
-        "Development Status :: 4 - Beta"])
+            "License :: OSI Approved :: MIT License",
+            "Programming Language :: Python :: 2.5",
+            "Programming Language :: Python :: 2.6",
+            "Programming Language :: Python :: 2.7",
+            "Operating System :: MacOS :: MacOS X",
+            "Operating System :: POSIX",
+            "Operating System :: Microsoft :: Windows",
+            "Topic :: Internet",
+            "Topic :: Software Development :: Libraries :: Python Modules",
+            "Intended Audience :: Developers",
+            "Development Status :: 4 - Beta"])
 
 
 if __name__ == '__main__':

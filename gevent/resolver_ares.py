@@ -56,7 +56,7 @@ class Resolver(object):
         self.fork_watcher.stop()
 
     def gethostbyname(self, hostname, family=AF_INET):
-        if family==AF_INET and self.pool is not None and '.' not in hostname:
+        if family == AF_INET and self.pool is not None and '.' not in hostname:
             return self.pool.apply_e(BaseException, gethostbyname, (hostname, ))
         return self.gethostbyname_ex(hostname, family)[-1][0]
 
@@ -66,7 +66,7 @@ class Resolver(object):
         elif not isinstance(hostname, str):
             raise TypeError('Expected string, not %s' % type(hostname).__name__)
 
-        if family==AF_INET and self.pool is not None and '.' not in hostname:
+        if family == AF_INET and self.pool is not None and '.' not in hostname:
             return self.pool.apply_e(BaseException, gethostbyname_ex, (hostname, ))
 
         while True:

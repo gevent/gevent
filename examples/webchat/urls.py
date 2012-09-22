@@ -8,6 +8,6 @@ urlpatterns = patterns('webchat.chat.views',
 
 urlpatterns += patterns('django.views.static',
     (r'^%s(?P<path>.*)$' % settings.MEDIA_URL.lstrip('/'),
-      'serve', {
-      'document_root': settings.MEDIA_ROOT,
-      'show_indexes': True}))
+     'serve', {
+     'document_root': settings.MEDIA_ROOT,
+     'show_indexes': True}))

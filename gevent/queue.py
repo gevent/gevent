@@ -336,7 +336,6 @@ class LifoQueue(Queue):
         else:
             self.queue = []
 
-
     def _put(self, item):
         self.queue.append(item)
 

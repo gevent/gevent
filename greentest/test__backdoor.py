@@ -56,7 +56,6 @@ class Test(greentest.TestCase):
         finally:
             server.stop()
 
-
     def test_banner(self):
         banner = "Welcome stranger!"
         server = backdoor.BackdoorServer(('127.0.0.1', 0), banner=banner)

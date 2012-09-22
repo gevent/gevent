@@ -13,8 +13,6 @@ import util
 
 TIMEOUT = 120
 NWORKERS = int(os.environ.get('NWORKERS') or 8)
-pool = Pool(NWORKERS)
-util.BUFFER_OUTPUT = NWORKERS != 1
 
 
 def info():
@@ -43,6 +41,10 @@ def main():
     if not tests:
         tests = set(glob.glob('test_*.py')) - set(['test_support.py'])
         tests = sorted(tests)
+
+    NWORKERS = max(len(tests), NWORKERS)
+    util.BUFFER_OUTPUT = NWORKERS > 1
+    pool = Pool(NWORKERS)
 
     def run_one(name, cmd, **kwargs):
         result = util.run(cmd, **kwargs)

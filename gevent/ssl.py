@@ -253,8 +253,8 @@ class SSLSocket(socket):
         if self._sslobj:
             if flags != 0:
                 raise ValueError(
-                  "non-zero flags not allowed in calls to recv_into() on %s" %
-                  self.__class__)
+                    "non-zero flags not allowed in calls to recv_into() on %s" %
+                    self.__class__)
             while True:
                 try:
                     tmp_buffer = self.read(nbytes)

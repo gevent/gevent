@@ -36,16 +36,18 @@ def main():
     from testrunner import pool
     import time
     failed = []
+
     def run(name, cmd, **kwargs):
         if util.run(cmd, **kwargs):
             failed.append(name)
+
     start = time.time()
     total = 0
     for name, cmd, options in TESTRUNNER(sys.argv[1:]):
         total += 1
         pool.spawn(run, name, cmd, **options)
     gevent.run()
-    util.report(total, failed, took=time.time()-start)
+    util.report(total, failed, took=time.time() - start)
 
 
 if __name__ == '__main__':

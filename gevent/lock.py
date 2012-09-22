@@ -192,11 +192,11 @@ class RLock(object):
 
     def __repr__(self):
         return "<%s at 0x%x _block=%s _count=%r _owner=%r)>" % (
-                self.__class__.__name__,
-                id(self),
-                self._block,
-                self._count,
-                self._owner)
+            self.__class__.__name__,
+            id(self),
+            self._block,
+            self._count,
+            self._owner)
 
     def acquire(self, blocking=1):
         me = getcurrent()

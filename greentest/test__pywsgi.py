@@ -138,7 +138,7 @@ class Response(object):
     def assertHeader(self, header, value):
         real_value = self.headers.get(header, False)
         assert real_value == value, \
-               'Unexpected header %r: %r (expected %r)\n%s' % (header, real_value, value, self)
+            'Unexpected header %r: %r (expected %r)\n%s' % (header, real_value, value, self)
 
     def assertBody(self, body):
         assert self.body == body, 'Unexpected body: %r (expected %r)\n%s' % (self.body, body, self)

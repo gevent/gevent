@@ -260,7 +260,7 @@ class TestNoWait(TestCase):
         run_callback(store_result, util.wrap_errors(Full, q.put_nowait), 3)
         gevent.sleep(0)
         assert len(result) == 2, result
-        assert result[0] == None, result
+        assert result[0] is None, result
         assert isinstance(result[1], queue.Full), result
 
     def test_get_nowait_simple(self):

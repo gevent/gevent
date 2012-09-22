@@ -17,8 +17,10 @@ class Test(greentest.TestCase):
         g = gevent.spawn(self.lst.append, 0)
 
         class appender(object):
+
             def __init__(myself, item):
                 myself.item = item
+
             def __call__(myself, *args):
                 self.lst.append(myself.item)
 

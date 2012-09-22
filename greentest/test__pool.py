@@ -67,7 +67,7 @@ class TestCoroutinePool(greentest.TestCase):
 
     def test_reentrant(self):
         pool = self.klass(1)
-        result = pool.apply(pool.apply, (lambda a: a+1, (5, )))
+        result = pool.apply(pool.apply, (lambda a: a + 1, (5, )))
         self.assertEqual(result, 6)
         evt = Event()
         pool.apply_async(evt.set)
@@ -398,8 +398,10 @@ class TestErrorInIterator(greentest.TestCase):
 
     def test_unordered(self):
         p = pool.Pool(3)
+
         def unordered():
             return list(p.imap_unordered(lambda x: None, error_iter()))
+
         self.assertRaises(ExpectedException, unordered)
         gevent.sleep(0.001)
 

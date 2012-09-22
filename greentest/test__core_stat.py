@@ -5,7 +5,7 @@ import os
 import time
 
 
-filename = 'test__core_stat.%s' % os.getpid()
+filename = 'tmp.test__core_stat.%s' % os.getpid()
 
 hub = gevent.get_hub()
 
@@ -18,7 +18,7 @@ try:
     assert os.path.exists(filename), filename
 
     def write():
-        f= open(filename, 'wb', buffering=0)
+        f = open(filename, 'wb', buffering=0)
         f.write('x')
         f.close()
 

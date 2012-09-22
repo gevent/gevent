@@ -262,7 +262,7 @@ class TestDefaultSpawn(TestCase):
             except socket.error:
                 ex = sys.exc_info()[1]
                 if ex.args[0] == 10053:
-                    pass # "established connection was aborted by the software in your host machine"
+                    pass  # "established connection was aborted by the software in your host machine"
                 elif ex.args[0] == errno.ECONNRESET:
                     pass
                 else:

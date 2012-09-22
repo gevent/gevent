@@ -27,14 +27,17 @@ class TestOS(TestCase):
         # Lack of "nonlocal" keyword in Python 2.x:
         bytesread = [0]
         byteswritten = [0]
+
         def produce():
             while byteswritten[0] != nbytes:
                 bytesleft = nbytes - byteswritten[0]
                 byteswritten[0] += os.write(w, buf[:min(bytesleft, 4096)])
+
         def consume():
             while bytesread[0] != nbytes:
                 bytesleft = nbytes - bytesread[0]
                 bytesread[0] += len(os.read(r, min(bytesleft, 4096)))
+
         producer = Greenlet(produce)
         producer.start()
         consumer = Greenlet(consume)
@@ -68,7 +71,7 @@ class TestOS(TestCase):
         r, w = os.pipe()
 
         rflags = fcntl.fcntl(r, fcntl.F_GETFL, 0)
-        fcntl.fcntl(r, fcntl.F_SETFL, rflags|os.O_NONBLOCK)
+        fcntl.fcntl(r, fcntl.F_SETFL, rflags | os.O_NONBLOCK)
 
         gotEAGAIN = False
         try:
@@ -100,7 +103,7 @@ class TestOS(TestCase):
         r, w = os.pipe()
 
         wflags = fcntl.fcntl(r, fcntl.F_GETFL, 0)
-        fcntl.fcntl(w, fcntl.F_SETFL, wflags|os.O_NONBLOCK)
+        fcntl.fcntl(w, fcntl.F_SETFL, wflags | os.O_NONBLOCK)
 
         data = "d" * 1000000
 

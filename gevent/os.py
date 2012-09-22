@@ -50,7 +50,7 @@ def posix_read(fd, n):
         flags = _map_errors(fcntl.fcntl, fd, fcntl.F_GETFL, 0)
         blocking_fd = not bool(flags & os.O_NONBLOCK)
         if blocking_fd:
-            _map_errors(fcntl.fcntl, fd, fcntl.F_SETFL, flags|os.O_NONBLOCK)
+            _map_errors(fcntl.fcntl, fd, fcntl.F_SETFL, flags | os.O_NONBLOCK)
         try:
             return _read(fd, n)
         except OSError, e:
@@ -81,7 +81,7 @@ def posix_write(fd, buf):
         flags = _map_errors(fcntl.fcntl, fd, fcntl.F_GETFL, 0)
         blocking_fd = not bool(flags & os.O_NONBLOCK)
         if blocking_fd:
-            _map_errors(fcntl.fcntl, fd, fcntl.F_SETFL, flags|os.O_NONBLOCK)
+            _map_errors(fcntl.fcntl, fd, fcntl.F_SETFL, flags | os.O_NONBLOCK)
         try:
             return _write(fd, buf)
         except OSError, e:

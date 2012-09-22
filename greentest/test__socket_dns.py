@@ -179,7 +179,7 @@ class TestCase(greentest.TestCase):
         self.assertEqualResults(real_result, gevent_result, func, args)
 
         if time_gevent > time_real + 0.01 and time_gevent > 0.02:
-            msg = 'gevent:%s%s took %dms versus %dms stdlib' %  (func, args, time_gevent * 1000.0, time_real * 1000.0)
+            msg = 'gevent:%s%s took %dms versus %dms stdlib' % (func, args, time_gevent * 1000.0, time_real * 1000.0)
 
             if time_gevent > time_real + 1:
                 word = 'VERY'

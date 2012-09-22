@@ -34,8 +34,8 @@ class Test_wsgiserver(util.TestServer):
 
 
 class Test_wsgiserver_ssl(Test_wsgiserver):
-     server = 'wsgiserver_ssl.py'
-     URL = 'https://localhost:8443'
+    server = 'wsgiserver_ssl.py'
+    URL = 'https://localhost:8443'
 
 
 class Test_webproxy(Test_wsgiserver):
@@ -51,21 +51,21 @@ class Test_webproxy(Test_wsgiserver):
 
 
 class Test_webpy(Test_wsgiserver):
-     server = 'webpy.py'
-     not_found_message = 'not found'
+    server = 'webpy.py'
+    not_found_message = 'not found'
 
-     def _test_hello(self):
-         status, data = self.read('/')
-         self.assertEqual(status, '200 OK')
-         assert "Hello, world" in data, repr(data)
+    def _test_hello(self):
+        status, data = self.read('/')
+        self.assertEqual(status, '200 OK')
+        assert "Hello, world" in data, repr(data)
 
-     def _test_long(self):
-         start = time.time()
-         status, data = self.read('/long')
-         delay = time.time() - start
-         assert 10 - 0.5 < delay < 10 + 0.5, delay
-         self.assertEqual(status, '200 OK')
-         self.assertEqual(data, 'Hello, 10 seconds later')
+    def _test_long(self):
+        start = time.time()
+        status, data = self.read('/long')
+        delay = time.time() - start
+        assert 10 - 0.5 < delay < 10 + 0.5, delay
+        self.assertEqual(status, '200 OK')
+        self.assertEqual(data, 'Hello, 10 seconds later')
 
 
 if __name__ == '__main__':

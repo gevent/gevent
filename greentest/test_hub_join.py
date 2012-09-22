@@ -11,4 +11,3 @@ gevent.sleep(0.01)
 
 res = gevent.get_hub().join()
 assert res is True, res
-

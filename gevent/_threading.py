@@ -40,7 +40,7 @@ class RLock(object):
     def __repr__(self):
         owner = self.__owner
         return "<%s owner=%r count=%d>" % (
-                self.__class__.__name__, owner, self.__count)
+            self.__class__.__name__, owner, self.__count)
 
     def acquire(self, blocking=1):
         me = get_ident()

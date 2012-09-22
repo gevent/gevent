@@ -9,9 +9,11 @@ class Test_udp_client(TestCase):
 
     def test(self):
         log = []
+
         def handle(message, address):
             log.append(message)
             server.sendto('reply-from-server', address)
+
         server = DatagramServer('127.0.0.1:9000', handle)
         server.start()
         try:

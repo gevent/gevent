@@ -9,7 +9,7 @@ SMALL = 0.1
 FUZZY = SMALL / 2
 
 # setting up signal does not affect join()
-gevent.signal(1, lambda : None) # wouldn't work on windows
+gevent.signal(1, lambda: None)  # wouldn't work on windows
 
 
 @contextmanager
@@ -75,7 +75,7 @@ for _a in xrange(2):
 
     # checking "ref=False" argument
     for _ in xrange(2):
-        gevent.get_hub().loop.timer(10, ref=False).start(lambda : None)
+        gevent.get_hub().loop.timer(10, ref=False).start(lambda: None)
         with no_time():
             result = gevent.get_hub().join()
         assert result is True
@@ -83,7 +83,7 @@ for _a in xrange(2):
     # checking "ref=False" attribute
     for _d in xrange(2):
         w = gevent.get_hub().loop.timer(10)
-        w.start(lambda : None)
+        w.start(lambda: None)
         w.ref = False
         with no_time():
             result = gevent.get_hub().join()
