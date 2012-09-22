@@ -15,7 +15,7 @@ class Resolver(object):
 
     ares_class = channel
 
-    def __init__(self, hub=None, use_threadpool=True, **kwargs):
+    def __init__(self, hub=None, use_threadpool=True, use_environ=True, **kwargs):
         if hub is None:
             hub = get_hub()
         self.hub = hub
@@ -26,6 +26,13 @@ class Resolver(object):
                 self.pool = self.hub.threadpool
         else:
             self.pool = None
+        if use_environ:
+            for key in os.environ.iterkeys():
+                if key.startswith('GEVENTARES_'):
+                    name = key[11:].lower()
+                    if name:
+                        value = os.environ[key]
+                        kwargs.setdefault(name, value)
         self.ares = self.ares_class(hub.loop, **kwargs)
         self.pid = os.getpid()
         self.params = kwargs
