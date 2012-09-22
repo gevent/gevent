@@ -1,10 +1,8 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
-# testrunner timeout: 300
 from __future__ import with_statement
 import sys
 import re
-import traceback
 import greentest
 import socket
 from time import time
@@ -12,12 +10,9 @@ import gevent
 import gevent.socket as gevent_socket
 from util import log
 
-RAISE_TOO_SLOW = False
-# also test: '<broadcast>'
 
 resolver = gevent.get_hub().resolver
 log('Resolver: %s', resolver)
-
 
 if getattr(resolver, 'pool', None) is not None:
     resolver.pool.size = 1
@@ -27,23 +22,6 @@ assert gevent_socket.gaierror is socket.gaierror
 assert gevent_socket.error is socket.error
 
 VERBOSE = sys.argv.count('-v') + 2 * sys.argv.count('-vv')
-PASS = True
-LOGFILE = sys.stderr
-
-
-def log(s, *args, **kwargs):
-    newline = kwargs.pop('newline', True)
-    assert not kwargs, kwargs
-    if not VERBOSE:
-        return
-    try:
-        s = s % args
-    except Exception:
-        traceback.print_exc()
-        s = '%s %r' % (s, args)
-    if newline:
-        s += '\n'
-    LOGFILE.write(s)
 
 
 def _run(function, *args):
@@ -55,27 +33,28 @@ def _run(function, *args):
         return sys.exc_info()[1]
 
 
-def log_fcall(function, args):
+def format_call(function, args):
     args = repr(args)
     if args.endswith(',)'):
         args = args[:-2] + ')'
-    log('\n%7s.%s%s',
-        function.__module__.replace('gevent.socket', 'gevent'),
-        function.__name__,
-        args,
-        newline=False)
+    try:
+        module = function.__module__.replace('gevent.socket', 'gevent').replace('_socket', 'stdlib')
+        name = function.__name__
+        return '%s:%s%s' % (module, name, args)
+    except AttributeError:
+        return function + args
 
 
 def log_fresult(result, seconds):
     if isinstance(result, Exception):
-        log(' -> raised %r (%.3f)', result, seconds * 1000.0)
+        log('  -=>  raised %r          %.2fms', result, seconds * 1000.0)
     else:
-        log(' -> returned %r (%.3f)', result, seconds * 1000.0)
+        log('  -=>  returned %r         %.2fms', result, seconds * 1000.0)
 
 
 def run(function, *args):
     if VERBOSE >= 2:
-        log_fcall(function, args)
+        log(format_call(function, args))
     delta = time()
     result = _run(function, *args)
     delta = time() - delta
@@ -85,7 +64,7 @@ def run(function, *args):
 
 
 def log_call(result, time, function, *args):
-    log_fcall(function, args)
+    log(format_call(function, args))
     log_fresult(result, time)
 
 
@@ -106,6 +85,13 @@ def compare_ipv6(a, b):
     return a == b
 
 
+def contains_5tuples(lst):
+    for item in lst:
+        if not (isinstance(item, tuple) and len(item) == 5):
+            return False
+    return True
+
+
 def relaxed_is_equal(a, b):
     """
     >>> relaxed_is_equal([(10, 1, 6, '', ('2a00:1450:400f:801::1010', 80, 0, 0))], [(10, 1, 6, '', ('2a00:1450:400f:800::1011', 80, 0, 0))])
@@ -122,6 +108,10 @@ def relaxed_is_equal(a, b):
     if hasattr(a, '__iter__'):
         if len(a) != len(b):
             return False
+        if contains_5tuples(a) and contains_5tuples(b):
+            # getaddrinfo results
+            a = sorted(a)
+            b = sorted(b)
         return all(relaxed_is_equal(x, y) for (x, y) in zip(a, b))
     return a == b
 
@@ -170,63 +160,37 @@ def add(klass, hostname, name=None):
     setattr(klass, test5.__name__, test5)
 
 
-class TooSlow(AssertionError):
-    pass
-
-
 class TestCase(greentest.TestCase):
 
-    __timeout__ = 60
+    __timeout__ = 30
     switch_expected = None
 
-    def _test_once(self, func, *args):
+    def _test(self, func, *args):
+        if VERBOSE:
+            log('')
         gevent_func = getattr(gevent_socket, func)
         real_func = getattr(socket, func)
         real_result, time_real = run(real_func, *args)
-        result, time_gevent = run(gevent_func, *args)
-        if VERBOSE == 1 and repr(result) != repr(real_result):
+        gevent_result, time_gevent = run(gevent_func, *args)
+        if VERBOSE == 1 and repr(gevent_result) != repr(real_result):
             # slightly less verbose mode: only print the results that are different
-            log_call(result, time_gevent, gevent_func, *args)
             log_call(real_result, time_real, real_func, *args)
-            log('')
-        elif VERBOSE >= 2:
-            log('')
-        self.assertEqualResults(real_result, result, func)
-        if isinstance(real_result, Exception):
-            if isinstance(result, Exception):
-                # built-in socket module is faster at raising exceptions
-                allowed = 2.
-            else:
-                # built-in socket module raised an error, gevent made a real query
-                allowed = 100000.
-        else:
-            allowed = 1.2
-        if time_gevent / allowed > time_real and (time_gevent + time_real) > 0.0005:
-            # QQQ use clock() on windows
-            times = None
-            if not time_real:
-                if time_gevent:
-                    times = time_gevent / 0.001
-                else:
-                    times = 1
-            if times is None:
-                times = time_gevent / time_real
-            params = (func, args, times, time_gevent * 1000.0, time_real * 1000.0)
-            raise TooSlow('gevent_socket.%s%s is %.1f times slower (%.3fms versus %.3fms)' % params)
-        return result
+            log_call(gevent_result, time_gevent, gevent_func, *args)
+        self.assertEqualResults(real_result, gevent_result, func, args)
 
-    def _test(self, func, *args):
-        try:
-            return self._test_once(func, *args)
-        except TooSlow, ex:
-            if RAISE_TOO_SLOW:
-                raise
-            else:
-                if not VERBOSE:
-                    log('')
-                log('WARNING: %s', ex)
+        if time_gevent > time_real + 0.01 and time_gevent > 0.02:
+            msg = 'gevent:%s%s took %dms versus %dms stdlib' %  (func, args, time_gevent * 1000.0, time_real * 1000.0)
 
-    def assertEqualResults(self, real_result, gevent_result, func):
+            if time_gevent > time_real + 1:
+                word = 'VERY'
+            else:
+                word = 'quite'
+
+            log('\nWARNING: %s slow: %s', word, msg)
+
+        return gevent_result
+
+    def assertEqualResults(self, real_result, gevent_result, func, args):
         errors = [socket.gaierror, socket.herror, TypeError]
         if type(real_result) in errors and type(gevent_result) in errors:
             if type(real_result) is not type(gevent_result):
@@ -238,7 +202,7 @@ class TestCase(greentest.TestCase):
             return
         if relaxed_is_equal(gevent_result, real_result):
             return
-        raise AssertionError('%r != %r' % (gevent_result, real_result))
+        raise AssertionError('%r != %r\n    %s' % (gevent_result, real_result, format_call(func, args)))
 
 
 class TestTypeError(TestCase):
@@ -282,10 +246,11 @@ class Test127001(TestCase):
 add(Test127001, '127.0.0.1')
 
 
-# class TestBroadcast(TestCase):
-#     switch_expected = False
-#
-# add(TestBroadcast, '<broadcast>')
+class TestBroadcast(TestCase):
+    switch_expected = False
+
+
+add(TestBroadcast, '<broadcast>')
 
 
 class TestEtcHosts(TestCase):
@@ -407,39 +372,6 @@ class TestInterrupted_gethostbyname(greentest.GenericWaitTestCase):
 #                     gevent_socket.getaddrinfo('www.a%s.com' % index, 'http')
 #                 except socket.gaierror:
 #                     pass
-
-
-class Test6(TestCase):
-    pass
-
-    # host that only has AAAA record
-    host = 'aaaa.test-ipv6.com'
-
-    def test_empty(self):
-        self._test('getaddrinfo', self.host, 'http')
-
-    def test_inet(self):
-        self._test('getaddrinfo', self.host, None, socket.AF_INET)
-
-    def test_inet6(self):
-        self._test('getaddrinfo', self.host, None, socket.AF_INET6)
-
-    def test_unspec(self):
-        self._test('getaddrinfo', self.host, None, socket.AF_UNSPEC)
-
-
-class Test6_google(Test6):
-    host = 'ipv6.google.com'
-
-
-class Test6_ds(Test6):
-    # host that has both A and AAAA records
-    host = 'ds.test-ipv6.com'
-
-
-add(Test6, Test6.host)
-add(Test6_google, Test6_google.host)
-add(Test6_ds, Test6_ds.host)
 
 
 class TestBadName(TestCase):
