@@ -13,6 +13,7 @@ env:
   - GEVENT_BACKEND=nosigmask
   - GEVENT_RESOLVER=ares GEVENT_BACKEND=signalfd
   - GEVENT_RESOLVER=ares GEVENT_FILE=thread
+  - NWORKERS=1 TESTS="*dns*.py" GEVENT_RESOLVER=ares GEVENTARES_SERVERS=8.8.8.8
 install:
  - deactivate
  - export VER=$TRAVIS_PYTHON_VERSION
@@ -35,7 +36,7 @@ install:
  - sudo $PYTHON setup.py install
 script:
  - "echo `date`: Started testing"
- - cd greentest && $PYTHON testrunner.py
+ - cd greentest && $PYTHON testrunner.py $TESTS
  - "echo `date`: Finished testing"
 notifications:
   email:
