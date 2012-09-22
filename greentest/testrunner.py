@@ -13,6 +13,7 @@ import util
 
 TIMEOUT = 120
 NWORKERS = int(os.environ.get('NWORKERS') or 8)
+pool = None
 
 
 def info():
@@ -33,6 +34,7 @@ def spawn(*args, **kwargs):
 
 
 def main():
+    global NWORKERS, pool
     start = time.time()
     total = 0
     failed = {}
@@ -42,9 +44,9 @@ def main():
         tests = set(glob.glob('test_*.py')) - set(['test_support.py'])
         tests = sorted(tests)
 
-    NWORKERS = max(len(tests), NWORKERS)
-    util.BUFFER_OUTPUT = NWORKERS > 1
+    NWORKERS = min(len(tests), NWORKERS)
     pool = Pool(NWORKERS)
+    util.BUFFER_OUTPUT = NWORKERS > 1
 
     def run_one(name, cmd, **kwargs):
         result = util.run(cmd, **kwargs)
