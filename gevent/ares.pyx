@@ -248,22 +248,22 @@ cdef public class channel [object PyGeventAresChannelObject, type PyGeventAresCh
         options.sock_state_cb = <void*>gevent_sock_state_callback
         options.sock_state_cb_data = <void*>self
         if flags is not None:
-            options.flags = flags
+            options.flags = int(flags)
             optmask |= cares.ARES_OPT_FLAGS
         if timeout is not None:
-            options.timeout = timeout * 1000
+            options.timeout = int(float(timeout) * 1000)
             optmask |= cares.ARES_OPT_TIMEOUTMS
         if tries is not None:
-            options.tries = tries
+            options.tries = int(tries)
             optmask |= cares.ARES_OPT_TRIES
         if ndots is not None:
-            options.ndots = ndots
+            options.ndots = int(ndots)
             optmask |= cares.ARES_OPT_NDOTS
         if udp_port is not None:
-            options.udp_port = udp_port
+            options.udp_port = int(udp_port)
             optmask |= cares.ARES_OPT_UDP_PORT
         if tcp_port is not None:
-            options.tcp_port = tcp_port
+            options.tcp_port = int(tcp_port)
             optmask |= cares.ARES_OPT_TCP_PORT
         cdef int result = cares.ares_library_init(cares.ARES_LIB_INIT_ALL)  # ARES_LIB_INIT_WIN32 -DUSE_WINSOCK?
         if result:
