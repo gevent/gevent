@@ -18,10 +18,14 @@ util.BUFFER_OUTPUT = NWORKERS != 1
 
 
 def info():
+    lastmsg = None
     while True:
         gevent.sleep(10, ref=False)
         if pool:
-            util.log('# Currently running: %s: %s', len(pool), ', '.join(x.name for x in pool))
+            msg = '# Currently running: %s: %s' % (len(pool), ', '.join(x.name for x in pool))
+            if msg != lastmsg:
+                lastmsg = msg
+                util.log(msg)
 
 
 def spawn(*args, **kwargs):
@@ -48,7 +52,7 @@ def main():
             # we therefore will retry them sequentially
             failed[name] = [cmd, kwargs, 'AssertionError' in (result.output or '')]
 
-    if NWORKERS:
+    if NWORKERS > 1:
         gevent.spawn(info)
 
     try:
