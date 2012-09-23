@@ -1,8 +1,8 @@
-import unittest
+import greentest
 from gevent import core
 
 
-class Test(unittest.TestCase):
+class Test(greentest.TestCase):
 
     def test_types(self):
         loop = core.loop()
@@ -43,8 +43,11 @@ class Test(unittest.TestCase):
         self.assertEqual(io.args, (1, 2, 3))
         # None also works, means empty tuple
         io.args = None
+        start = core.time()
         loop.run()
+        took = core.time() - start
         self.assertEqual(lst, [()])
+        assert took < 1, took
 
         io.start(reset, io, lst)
         del io
@@ -59,4 +62,4 @@ def reset(watcher, lst):
 
 
 if __name__ == '__main__':
-    unittest.main()
+    greentest.main()

@@ -1,4 +1,4 @@
-import unittest
+import greentest
 import gevent
 from gevent import pywsgi
 import test__server
@@ -81,4 +81,4 @@ test__server.Settings = Settings
 del TestNoneSpawn
 
 if __name__ == '__main__':
-    unittest.main()
+    greentest.main()

@@ -1,4 +1,4 @@
-import unittest
+import greentest
 from copy import copy
 # Comment the line below to see that the standard thread.local is working correct
 from gevent import monkey; monkey.patch_all()
@@ -22,7 +22,7 @@ class Obj(object):
     pass
 
 
-class GeventLocalTestCase(unittest.TestCase):
+class GeventLocalTestCase(greentest.TestCase):
 
     def test_copy(self):
         a = A(Obj())
@@ -59,4 +59,4 @@ class GeventLocalTestCase(unittest.TestCase):
         self.assertNotEqual(a.path, b.path, 'The values in the two objects must be different')
 
 if __name__ == '__main__':
-    unittest.main()
+    greentest.main()
