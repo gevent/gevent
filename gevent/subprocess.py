@@ -688,9 +688,10 @@ class Popen(object):
                             exc_value.child_traceback = ''.join(exc_lines)
                             os.write(errpipe_write, pickle.dumps(exc_value))
 
-                        # This exitcode won't be reported to applications, so it
-                        # really doesn't matter what we return.
-                        os._exit(255)
+                        finally:
+                            # This exitcode won't be reported to applications, so it
+                            # really doesn't matter what we return.
+                            os._exit(255)
 
                     # Parent
                     self._watcher = self._loop.child(self.pid)
@@ -710,9 +711,8 @@ class Popen(object):
                     os.close(errwrite)
 
                 # Wait for exec to fail or succeed; possibly raising exception
-                # Exception limited to 1M
                 errpipe_read = FileObject(errpipe_read, 'rb')
-                data = errpipe_read.read(1048576)
+                data = errpipe_read.read()
             finally:
                 if hasattr(errpipe_read, 'close'):
                     errpipe_read.close()
