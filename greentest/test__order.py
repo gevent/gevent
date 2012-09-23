@@ -2,31 +2,30 @@ import gevent
 import greentest
 
 
+class appender(object):
+
+    def __init__(self, lst, item):
+        self.lst = lst
+        self.item = item
+
+    def __call__(self, *args):
+        self.lst.append(self.item)
+
+
 class Test(greentest.TestCase):
 
     count = 2
 
-    def setUp(self):
-        self.lst = []
-
-    def tearDown(self):
-        self.assertEqual(self.lst, range(self.count))
-
     def test_greenlet_link(self):
+        lst = []
+
         # test that links are executed in the same order as they were added
-        g = gevent.spawn(self.lst.append, 0)
-
-        class appender(object):
-
-            def __init__(myself, item):
-                myself.item = item
-
-            def __call__(myself, *args):
-                self.lst.append(myself.item)
+        g = gevent.spawn(lst.append, 0)
 
         for i in xrange(1, self.count):
-            g.link(appender(i))
+            g.link(appender(lst, i))
         g.join()
+        self.assertEqual(lst, range(self.count))
 
 
 class Test3(Test):

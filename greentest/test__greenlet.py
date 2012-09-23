@@ -98,12 +98,7 @@ class TestLink(greentest.TestCase):
 class TestUnlink(greentest.TestCase):
     switch_expected = False
 
-    def setUp(self):
-        greentest.TestCase.setUp(self)
-        self.p = gevent.spawn(dummy_test_func)
-
-    def _test_func(self, link):
-        p = self.p
+    def _test_func(self, p, link):
         link(dummy_test_func)
         assert len(p._links) == 1, p._links
         p.unlink(dummy_test_func)
@@ -113,15 +108,19 @@ class TestUnlink(greentest.TestCase):
         assert len(p._links) == 1, p._links
         p.unlink(self.setUp)
         assert not p._links, p._links
+        p.kill()
 
     def test_func_link(self):
-        self._test_func(self.p.link)
+        p = gevent.spawn(dummy_test_func)
+        self._test_func(p, p.link)
 
     def test_func_link_value(self):
-        self._test_func(self.p.link_value)
+        p = gevent.spawn(dummy_test_func)
+        self._test_func(p, p.link_value)
 
     def test_func_link_exception(self):
-        self._test_func(self.p.link_exception)
+        p = gevent.spawn(dummy_test_func)
+        self._test_func(p, p.link_exception)
 
 
 class LinksTestCase(greentest.TestCase):
