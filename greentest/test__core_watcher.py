@@ -4,7 +4,7 @@ from gevent import core
 
 class Test(greentest.TestCase):
 
-    __timeout__ = 5
+    __timeout__ = None
 
     def test_types(self):
         loop = core.loop()
