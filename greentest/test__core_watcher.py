@@ -4,6 +4,8 @@ from gevent import core
 
 class Test(greentest.TestCase):
 
+    __timeout__ = 5
+
     def test_types(self):
         loop = core.loop()
         lst = []
