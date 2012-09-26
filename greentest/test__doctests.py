@@ -14,6 +14,7 @@ from greentest import walk_modules
 def myfunction(*args, **kwargs):
     pass
 
+
 if __name__ == '__main__':
     cwd = os.getcwd()
     try:
