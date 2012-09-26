@@ -33,17 +33,13 @@ def spawn(*args, **kwargs):
     return g
 
 
-def main():
+def run_many(tests):
     global NWORKERS, pool
     start = time.time()
     total = 0
     failed = {}
 
-    tests = sys.argv[1:]
-    if not tests:
-        tests = set(glob.glob('test_*.py')) - set(['test_support.py'])
-        tests = sorted(tests)
-
+    tests = list(tests)
     NWORKERS = min(len(tests), NWORKERS)
     pool = Pool(NWORKERS)
     util.BUFFER_OUTPUT = NWORKERS > 1
@@ -61,17 +57,9 @@ def main():
 
     try:
         try:
-            for filename in tests:
+            for name, cmd, options in tests:
                 total += 1
-                if 'TESTRUNNER' in open(filename).read():
-                    module = __import__(filename.rsplit('.', 1)[0])
-                    for name, cmd, options in module.TESTRUNNER():
-                        total += 1
-                        name = filename + ' ' + name
-                        spawn(run_one, name, cmd, **options).name = ' '.join(cmd)
-                else:
-                    cmd = [sys.executable, '-u', filename]
-                    spawn(run_one, filename, cmd, timeout=TIMEOUT).name = ' '.join(cmd)
+                spawn(run_one, name, cmd, **options).name = ' '.join(cmd)
             gevent.run()
         except KeyboardInterrupt:
             try:
@@ -102,6 +90,31 @@ def main():
         util.log('\n%s tests failed during concurrent run but succeeded when ran sequentially:', len(failed_then_succeeded))
         util.log('- ' + '\n- '.join(failed_then_succeeded))
     assert not pool, pool
+
+    os.system('rm -f */@test*_tmp')
+
+
+def discover(tests):
+    if not tests:
+        tests = set(glob.glob('test_*.py')) - set(['test_support.py'])
+        tests = sorted(tests)
+
+    to_process = []
+    default_options = {'timeout': TIMEOUT}
+
+    for filename in tests:
+        if 'TESTRUNNER' in open(filename).read():
+            module = __import__(filename.rsplit('.', 1)[0])
+            for name, cmd, options in module.TESTRUNNER():
+                to_process.append((filename + ' ' + name, cmd, options))
+        else:
+            to_process.append((filename, [sys.executable, '-u', filename], default_options))
+
+    return to_process
+
+
+def main():
+    run_many(discover(sys.argv[1:]))
 
 
 if __name__ == '__main__':
