@@ -1,9 +1,9 @@
 import pickle
-import unittest
+import greentest
 from gevent.ares import ares_host_result
 
 
-class TestPickle(unittest.TestCase):
+class TestPickle(greentest.TestCase):
     # Issue 104: ares.ares_host_result unpickleable
 
     def _test(self, protocol):
@@ -30,4 +30,4 @@ class TestPickle(unittest.TestCase):
 
 
 if __name__ == '__main__':
-    unittest.main()
+    greentest.main()
