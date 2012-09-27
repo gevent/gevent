@@ -1,0 +1,78 @@
+test__all__.py
+#uses socket test__api.py
+test__api_timeout.py
+test__ares_host_result.py
+test_ares_timeout.py  # explicitly uses ares resolver
+# uses socket test__backdoor.py
+test_close_backend_fd.py
+test__core_async.py
+test__core_callback.py
+test__core_loop_run.py
+test__core.py
+test__core_stat.py
+test__core_timer.py
+test__core_watcher.py
+test__destroy.py
+# uses socket test__doctests.py
+test__environ.py
+test__event.py
+# uses socket test__example_echoserver.py
+# uses socket test__example_portforwarder.py
+# uses socket test___example_servers.py
+# uses bunch of things test__examples.py
+# uses socket test__example_udp_client.py
+# uses socket test__example_udp_server.py
+test__exc_info.py
+#test__execmodules.py
+test__fileobject.py
+# uses socket test__greenio.py
+test__GreenletExit.py
+test__greenlet.py
+test__greenletset.py
+# uses socket test__greenness.py
+test_hub_join.py
+test_hub_join_timeout.py
+# uses socket test__hub.py
+test_issue112.py
+test__joinall.py
+test__local.py
+test__loop_callback.py
+test__memleak.py
+# uses lots of things test___monkey_patching.py
+test__monkey.py
+test__order.py
+test__os.py
+test__pool.py
+# uses socket test__pywsgi.py
+test__queue.py
+test_queue.py
+# uses socket test__refcount.py
+test__select.py
+test__semaphore.py
+# uses socket test__server.py
+# test__server_pywsgi.py
+test__signal.py
+# uses socket test__socket_close.py
+# test__socket_dns6.py
+# test__socket_dns.py
+# test__socket_errors.py
+# test__socket.py
+# test__socket_ssl.py
+# test__socket_timeout.py
+test__subprocess_interrupted.py
+test__subprocess.py
+test__systemerror.py
+test_threading_2.py
+test__threading_patched_local.py
+test__threading_vs_settrace.py
+test__threadpool.py
+test__timeout.py
+
+# monkey patched standard tests:
+test_queue.py
+test_select.py
+test_signal.py
+test_subprocess.py
+test_threading_local.py
+test_threading.py
+test_thread.py

@@ -2,9 +2,10 @@ import sys
 import os
 import glob
 import util
+import atexit
 
 
-TIMEOUT = 120
+TIMEOUT = 45
 directory = '%s.%s' % sys.version_info[:2]
 version = '%s.%s.%s' % sys.version_info[:3]
 
@@ -14,23 +15,27 @@ def TESTRUNNER(tests=None):
     if preferred_version != version:
         util.log('WARNING: The tests in %s/ are from version %s and your Python is %s', directory, preferred_version, version)
 
-    env = os.environ.copy()
-    env['PYTHONPATH'] = os.getcwd() + ':' + os.environ.get('PYTHONPATH', '')
-
     if not tests:
         tests = sorted(glob.glob('%s/test_*.py' % directory))
 
+    PYTHONPATH = (os.getcwd() + ':' + os.environ.get('PYTHONPATH', '')).rstrip(':')
+
     tests = [os.path.basename(x) for x in tests]
-    options = {'cwd': directory, 'env': env}
+    options = {'cwd': directory,
+               'timeout': TIMEOUT,
+               'setenv': {'PYTHONPATH': PYTHONPATH}}
+
+    if tests:
+        atexit.register(os.system, 'rm -f */@test*_tmp')
 
     for filename in tests:
-        yield directory + '/' + filename, [sys.executable, '-u', '-m', 'monkey_test', filename], options
-        yield directory + '/' + filename + '/Event', [sys.executable, '-u', '-m', 'monkey_test', '--Event', filename], options
+        yield directory + '/' + filename, [sys.executable, '-u', '-m', 'monkey_test', filename], options.copy()
+        yield directory + '/' + filename + '/Event', [sys.executable, '-u', '-m', 'monkey_test', '--Event', filename], options.copy()
 
 
 def main():
     import testrunner
-    return testrunner.run_many(TESTRUNNER())
+    return testrunner.run_many(TESTRUNNER(sys.argv[1:]))
 
 
 if __name__ == '__main__':

@@ -18,6 +18,9 @@ from distutils.errors import CCompilerError, DistutilsExecError, DistutilsPlatfo
 ext_errors = (CCompilerError, DistutilsExecError, DistutilsPlatformError, IOError)
 
 
+# XXX make all env variables that setup.py parses start with GEVENTSETUP_
+
+
 __version__ = re.search("__version__\s*=\s*'(.*)'", open('gevent/__init__.py').read(), re.M).group(1)
 assert __version__
 
@@ -173,6 +176,8 @@ if LIBEV_EMBED:
     CORE.configure = configure_libev
     if sys.platform == "darwin":
         os.environ["CFLAGS"] = ("%s %s" % (os.environ.get("CFLAGS", ""), "-U__llvm__")).lstrip()
+    if os.environ.get('GEVENTSETUP_EV_VERIFY') is not None:
+        CORE.define_macros.append(('EV_VERIFY', os.environ['GEVENTSETUP_EV_VERIFY']))
 else:
     CORE.libraries.append('ev')
 

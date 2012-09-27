@@ -1,4 +1,5 @@
 import sys
+import os
 import re
 
 # By default, test cases are expected to switch and emit warnings if there was none
@@ -132,6 +133,14 @@ disabled_tests = \
 
     , 'test_thread.ThreadRunningTests.test__count'
 ]
+
+# if 'signalfd' in os.environ.get('GEVENT_BACKEND', ''):
+#     # tests that don't interact well with signalfd
+#     disabled_tests.extend([
+#         'test_signal.SiginterruptTest.test_siginterrupt_off',
+#         'test_socketserver.SocketServerTest.test_ForkingTCPServer',
+#         'test_socketserver.SocketServerTest.test_ForkingUDPServer',
+#         'test_socketserver.SocketServerTest.test_ForkingUnixStreamServer'])
 
 
 def disable_tests_in_source(source, name):

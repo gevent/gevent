@@ -3,6 +3,7 @@ import sys
 import os
 import traceback
 import unittest
+from datetime import timedelta
 from time import time
 from gevent import subprocess, sleep, spawn_later
 
@@ -24,7 +25,10 @@ class Popen(subprocess.Popen):
 
 def log(message, *args):
     try:
-        string = message % args
+        if args:
+            string = message % args
+        else:
+            string = message
     except Exception:
         traceback.print_exc()
         try:
@@ -98,16 +102,24 @@ def getname(command):
 
 
 def start(command, **kwargs):
+    # XXX should not really need 'name' there: can still figure it out
+    # from command + environment vars starting with GEVENT_ and GEVENTARES_
+    name = kwargs.pop('name', None) or getname(command)
     timeout = kwargs.pop('timeout', None)
     preexec_fn = None
     if not os.environ.get('DO_NOT_SETPGRP'):
         preexec_fn = getattr(os, 'setpgrp', None)
     env = kwargs.pop('env', None)
+    setenv = kwargs.pop('setenv', None) or {}
     if preexec_fn is not None:
-        if env is None:
+        setenv['DO_NOT_SETPGRP'] = '1'
+    if setenv:
+        if env:
+            env = env.copy()
+        else:
             env = os.environ.copy()
-        env['DO_NOT_SETPGRP'] = '1'
-    log('+ %s', getname(command))
+        env.update(setenv)
+    log('+ %s', name)
     popen = Popen(command, preexec_fn=preexec_fn, env=env, **kwargs)
     popen.setpgrp_enabled = preexec_fn is not None
     if timeout is not None:
@@ -132,7 +144,7 @@ class RunResult(object):
 
 
 def run(command, **kwargs):
-    name = getname(command)
+    name = kwargs.get('name') or getname(command)
     buffer_output = kwargs.pop('buffer_output', BUFFER_OUTPUT)
     if buffer_output:
         assert 'stdout' not in kwargs and 'stderr' not in kwargs, kwargs
@@ -156,6 +168,8 @@ def run(command, **kwargs):
         out = out.strip()
         if out:
             out = '  ' + out.replace('\n', '\n  ')
+            out = out.rstrip()
+            out += '\n'
             log('| %s\n%s', name, out)
     if result:
         log('! %s [code %s] [took %.1fs]', name, result, took)
@@ -166,25 +180,52 @@ def run(command, **kwargs):
     return RunResult(result, out)
 
 
-def report(total, failed, exit=True, took=None):
-    if took:
-        took = ' in %.1fs' % took
-    else:
-        took = ''
-    if failed:
-        log('\n%s/%s tests failed%s\n- %s', len(failed), total, took, '\n- '.join(failed))
-    else:
-        log('\n%s tests passed%s', total, took)
+def expected_match(name, expected):
+    name_parts = set(name.split())
+    assert name_parts
+    for item in expected:
+        item = set(item.split())
+        if item.issubset(name_parts):
+            return True
+
+
+def format_seconds(seconds):
+    if seconds < 20:
+        return '%.1fs' % seconds
+    seconds = str(timedelta(seconds=round(seconds)))
+    if seconds.startswith('0:'):
+        seconds = seconds[2:]
+    return seconds
+
+
+def report(total, failed, exit=True, took=None, expected=None):
     if runtimelog:
         log('\nLongest-running tests:')
         runtimelog.sort()
         length = len('%.1f' % -runtimelog[0][0])
         frmt = '%' + str(length) + '.1f seconds: %s'
-        for took, name in runtimelog[:5]:
-            log(frmt, -took, name)
+        for delta, name in runtimelog[:5]:
+            log(frmt, -delta, name)
+    if took:
+        took = ' in %s' % format_seconds(took)
+    else:
+        took = ''
+
+    error_count = 0
+    if failed:
+        log('\n%s/%s tests failed%s', len(failed), total, took)
+        expected = set(expected or [])
+        for name in failed:
+            if expected_match(name, expected):
+                log('- %s (expected)', name)
+            else:
+                log('- %s', name)
+                error_count += 1
+    else:
+        log('\n%s tests passed%s', total, took)
     if exit:
-        if failed:
-            sys.exit(1)
+        if error_count:
+            sys.exit(min(100, error_count))
         if total <= 0:
             sys.exit('No tests found.')
 
