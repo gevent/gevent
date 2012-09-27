@@ -2,7 +2,7 @@
 from __future__ import absolute_import
 import os
 import sys
-from _socket import getservbyname, getaddrinfo, gethostbyname, gethostbyname_ex, gaierror, error
+from _socket import getservbyname, getaddrinfo, gaierror, error
 from gevent.hub import Waiter, get_hub, string_types
 from gevent.socket import AF_UNSPEC, AF_INET, AF_INET6, SOCK_STREAM, SOCK_DGRAM, SOCK_RAW, AI_NUMERICHOST, EAI_SERVICE, AI_PASSIVE
 from gevent.ares import channel, InvalidIP
@@ -15,17 +15,10 @@ class Resolver(object):
 
     ares_class = channel
 
-    def __init__(self, hub=None, use_threadpool=True, use_environ=True, **kwargs):
+    def __init__(self, hub=None, use_environ=True, **kwargs):
         if hub is None:
             hub = get_hub()
         self.hub = hub
-        if use_threadpool:
-            if use_threadpool is not True:
-                self.pool = use_threadpool
-            else:
-                self.pool = self.hub.threadpool
-        else:
-            self.pool = None
         if use_environ:
             for key in os.environ.iterkeys():
                 if key.startswith('GEVENTARES_'):
@@ -56,8 +49,7 @@ class Resolver(object):
         self.fork_watcher.stop()
 
     def gethostbyname(self, hostname, family=AF_INET):
-        if family == AF_INET and self.pool is not None and '.' not in hostname:
-            return self.pool.apply_e(BaseException, gethostbyname, (hostname, ))
+        hostname = _resolve_special(hostname, family)
         return self.gethostbyname_ex(hostname, family)[-1][0]
 
     def gethostbyname_ex(self, hostname, family=AF_INET):
@@ -65,9 +57,6 @@ class Resolver(object):
             hostname = hostname.encode('ascii')
         elif not isinstance(hostname, str):
             raise TypeError('Expected string, not %s' % type(hostname).__name__)
-
-        if family == AF_INET and self.pool is not None and '.' not in hostname:
-            return self.pool.apply_e(BaseException, gethostbyname_ex, (hostname, ))
 
         while True:
             ares = self.ares
@@ -137,17 +126,9 @@ class Resolver(object):
             # 1) host is None
             # 2) host is of an invalid type
             # 3) AI_NUMERICHOST flag is set
-            if self.pool is not None:
-                return self.pool.apply_e(BaseException, getaddrinfo, (host, port, family, socktype, proto, flags))
-            else:
-                return getaddrinfo(host, port, family, socktype, proto, flags)
+            return getaddrinfo(host, port, family, socktype, proto, flags)
             # we also call _socket.getaddrinfo below if family is not one of AF_*
 
-        if self.pool is not None and '.' not in host:
-            # localhost, <broadcast>
-            return self.pool.apply_e(BaseException, getaddrinfo, (host, port, family, socktype, proto, flags))
-
-        origport = port
         port, socktypes = self._lookup_port(port, socktype)
 
         socktype_proto = [(SOCK_STREAM, 6), (SOCK_DGRAM, 17), (SOCK_RAW, 0)]
@@ -169,10 +150,7 @@ class Resolver(object):
             values = Values(self.hub, 1)
             ares.gethostbyname(values, host, AF_INET6)
         else:
-            if self.pool is not None:
-                return self.pool.apply_e(BaseException, getaddrinfo, (host, origport, family, socktype, proto, flags))
-            else:
-                return getaddrinfo(host, origport, family, socktype, proto, flags)
+            raise gaierror(5, 'ai_family not supported: %r' % (family, ))
 
         values = values.get()
         if len(values) == 2 and values[0] == values[1]:
@@ -260,7 +238,7 @@ class Resolver(object):
 
         port = sockaddr[1]
         if not isinstance(port, int):
-            raise TypeError
+            raise TypeError('port must be an integer, not %s' % type(port))
 
         waiter = Waiter(self.hub)
         result = self._getaddrinfo(address, str(sockaddr[1]), family=AF_UNSPEC, socktype=SOCK_DGRAM)
