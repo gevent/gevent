@@ -46,9 +46,9 @@ def test():
         if verbose:
             print "Can't test select easily on", sys.platform
         return
-    cmd = 'for i in 0 1 2 3 4 5 6 7 8 9; do echo testing...; sleep 1; done'
+    cmd = 'for i in 0 1 2 3 4 5 6 7 8 9; do echo testing...; sleep 0.1; done'
     p = os.popen(cmd, 'r')
-    for tout in (0, 1, 2, 4, 8, 16) + (None,)*10:
+    for tout in (0, 0.1, 0.2, 0.4, 0.8, 1.6) + (None,)*10:
         if verbose:
             print 'timeout =', tout
         rfd, wfd, xfd = select.select([p], [], [], tout)

@@ -23,7 +23,7 @@ class LoopbackHttpServer(BaseHTTPServer.HTTPServer):
 
         # Set the timeout of our listening socket really low so
         # that we can stop the server easily.
-        self.socket.settimeout(1.0)
+        self.socket.settimeout(0.1)
 
     def get_request(self):
         """BaseHTTPServer method, overridden."""
@@ -33,7 +33,7 @@ class LoopbackHttpServer(BaseHTTPServer.HTTPServer):
         # It's a loopback connection, so setting the timeout
         # really low shouldn't affect anything, but should make
         # deadlocks less likely to occur.
-        request.settimeout(10.0)
+        request.settimeout(1.0)
 
         return (request, client_address)
 
