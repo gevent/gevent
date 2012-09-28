@@ -160,10 +160,10 @@ class DummySemaphore(object):
         pass
 
     def __enter__(self):
-        self.acquire()
+        pass
 
     def __exit__(self, typ, val, tb):
-        self.release()
+        pass
 
 
 class BoundedSemaphore(Semaphore):
