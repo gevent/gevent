@@ -14,7 +14,7 @@ env:
   - GEVENT_BACKEND=noinotify
 matrix:
  allow_failures:
-   GEVENT_BACKEND=signalfd
+  - env: GEVENT_BACKEND=signalfd
 install:
  - deactivate
  - export VER=$TRAVIS_PYTHON_VERSION
