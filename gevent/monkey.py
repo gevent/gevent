@@ -1,63 +1,8 @@
 # Copyright (c) 2009-2012 Denis Bilenko. See LICENSE for details.
-"""Make the standard library cooperative.
-
-The functions in this module patch parts of the standard library with compatible cooperative counterparts
-from :mod:`gevent` package.
-
-To patch an individual module call the corresponding ``patch_*`` function. For example, to patch
-socket module only, call :func:`patch_socket`. To patch all default modules, call ``gevent.monkey.patch_all()``.
-
-Monkey can also patch thread and threading to become greenlet-based. So :func:`thread.start_new_thread`
-starts a new greenlet instead and :class:`threading.local` becomes a greenlet-local storage.
-
-Monkey patches:
-
-* :mod:`socket` module -- :func:`patch_socket`
-
-  - :class:`socket`
-  - :class:`SocketType`
-  - :func:`socketpair`
-  - :func:`fromfd`
-  - :func:`ssl` and :class:`sslerror`
-  - :func:`socket.getaddrinfo`
-  - :func:`socket.gethostbyname`
-  - It is possible to disable dns patching by passing ``dns=False`` to :func:`patch_socket` of :func:`patch_all`
-  - If ssl is not available (Python < 2.6 without ``ssl`` package installed) then :func:`ssl` is removed from the target :mod:`socket` module.
-
-* :mod:`ssl` module -- :func:`patch_ssl`
-
-  - :class:`SSLSocket`
-  - :func:`wrap_socket`
-  - :func:`get_server_certificate`
-  - :func:`sslwrap_simple`
-
-* :mod:`os` module -- :func:`patch_os`
-
-  - :func:`fork`
-
-* :mod:`time` module -- :func:`patch_time`
-
-  - :func:`sleep`
-
-* :mod:`select` module -- :func:`patch_select`
-
-  - :func:`select`
-  - Removes polling mechanisms that :mod:`gevent.select` does not simulate: poll, epoll, kqueue, kevent
-
-* :mod:`thread` and :mod:`threading` modules -- :func:`patch_thread`
-
-  - Become greenlet-based.
-  - :func:`get_ident`
-  - :func:`start_new_thread`
-  - :class:`LockType`
-  - :func:`allocate_lock`
-  - :func:`exit`
-  - :func:`stack_size`
-  - thread-local storage becomes greenlet-local storage
-"""
-
+"""Make the standard library cooperative."""
 from __future__ import absolute_import
 import sys
+from sys import version_info
 
 __all__ = ['patch_all',
            'patch_socket',
@@ -65,7 +10,9 @@ __all__ = ['patch_all',
            'patch_os',
            'patch_time',
            'patch_select',
-           'patch_thread']
+           'patch_thread',
+           'patch_subprocess',
+           'patch_sys']
 
 
 # maps module name -> attribute name -> original item
@@ -121,6 +68,19 @@ def patch_module(name, items=None):
             raise AttributeError('%r does not have __implements__' % gevent_module)
     for attr in items:
         patch_item(module, attr, getattr(gevent_module, attr))
+
+
+def _patch_sys_std(name):
+    from gevent.fileobject import FileObjectThread
+    orig = getattr(sys, name)
+    if not isinstance(orig, FileObjectThread):
+        patch_item(sys, name, FileObjectThread(orig))
+
+
+def patch_sys(stdin=True, stdout=True, stderr=True):
+    _patch_sys_std('stdin')
+    _patch_sys_std('stdout')
+    _patch_sys_std('stderr')
 
 
 def patch_os():
@@ -215,9 +175,11 @@ def patch_subprocess():
 
 
 def patch_all(socket=True, dns=True, time=True, select=True, thread=True, os=True, ssl=True, httplib=False,
-              subprocess=True, aggressive=True, Event=False):
+              subprocess=True, sys=False, aggressive=True, Event=False):
     """Do all of the default monkey patching (calls every other function in this module."""
     # order is important
+    if sys:
+        patch_sys()
     if os:
         patch_os()
     if time:
@@ -229,12 +191,13 @@ def patch_all(socket=True, dns=True, time=True, select=True, thread=True, os=Tru
     if select:
         patch_select(aggressive=aggressive)
     if ssl:
-        try:
+        if version_info[:2] > (2, 5):
             patch_ssl()
-        except ImportError:
-            if sys.version_info[:2] > (2, 5):
-                raise
-            # in Python 2.5, 'ssl' is a standalone package not included in stdlib
+        else:
+            try:
+                patch_ssl()
+            except ImportError:
+                pass  # in Python 2.5, 'ssl' is a standalone package not included in stdlib
     if httplib:
         raise ValueError('gevent.httplib is no longer provided, httplib must be False')
     if subprocess:
