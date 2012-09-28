@@ -140,7 +140,7 @@ class Queue(object):
             if self.getters:
                 self._schedule_unlock()
         elif self.hub is getcurrent():
-            # We're in the mainloop, so we cannot wait; we can switch() to other greenlets though.
+            # We're in the mainloop, so we cannot wait; we can switch to other greenlets though.
             # Check if possible to get a free slot in the queue.
             while self.getters and self.qsize() and self.qsize() >= self.maxsize:
                 getter = self.getters.pop()
