@@ -43,7 +43,7 @@ def process_tests(tests):
     return [process_test(name, cmd, options) for (name, cmd, options) in tests]
 
 
-def run_many(tests, expected=None):
+def run_many(tests, expected=None, failfast=False):
     global NWORKERS, pool
     start = time()
     total = 0
@@ -57,6 +57,8 @@ def run_many(tests, expected=None):
     def run_one(name, cmd, **kwargs):
         result = util.run(cmd, name=name, **kwargs)
         if result:
+            if failfast:
+                sys.exit(1)
             # the tests containing AssertionError might have failed because
             # we spawned more workers than CPUs
             # we therefore will retry them sequentially
@@ -167,6 +169,7 @@ def main():
     parser.add_option('--discover', action='store_true')
     parser.add_option('--full', action='store_true')
     parser.add_option('--expected')
+    parser.add_option('--failfast', action='store_true')
     options, args = parser.parse_args()
     options.expected = load_list_from_file(options.expected)
     if options.full:
@@ -179,7 +182,7 @@ def main():
             print '%s: %s' % (name, ' '.join(cmd))
         print '%s tests found.' % len(tests)
     else:
-        run_many(tests, expected=options.expected)
+        run_many(tests, expected=options.expected, failfast=options.failfast)
 
 
 if __name__ == '__main__':
