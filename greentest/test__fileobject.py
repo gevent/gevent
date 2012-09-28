@@ -1,7 +1,7 @@
 import os
 import greentest
 import gevent
-from gevent.fileobject import FileObject, FileObjectThreadPool
+from gevent.fileobject import FileObject, FileObjectThread
 
 
 class Test(greentest.TestCase):
@@ -26,7 +26,7 @@ class Test(greentest.TestCase):
     def test_del_close(self):
         self._test_del(close=True)
 
-    if FileObject is not FileObjectThreadPool:
+    if FileObject is not FileObjectThread:
 
         def test_del_noclose(self):
             r, w = os.pipe()

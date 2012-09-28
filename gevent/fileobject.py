@@ -13,7 +13,7 @@ except ImportError:
 
 
 __all__ = ['FileObjectPosix',
-           'FileObjectThreadPool',
+           'FileObjectThread',
            'FileObject']
 
 
@@ -210,7 +210,7 @@ else:
         FileObjectPosix.__del__ = UnboundMethodType(FileObjectPosix, None, noop)
 
 
-class FileObjectThreadPool(object):
+class FileObjectThread(object):
 
     def __init__(self, fobj, *args, **kwargs):
         self._close = kwargs.pop('close', True)
@@ -220,7 +220,7 @@ class FileObjectThreadPool(object):
         if isinstance(fobj, (int, long)):
             if not self._close:
                 # we cannot do this, since fdopen object will close the descriptor
-                raise TypeError('FileObjectThreadPool does not support close=False')
+                raise TypeError('FileObjectThread does not support close=False')
             fobj = os.fdopen(fobj, *args)
         self._fobj = fobj
         if self.threadpool is None:
@@ -279,7 +279,7 @@ FileObjectClosed = IOError(EBADF, 'Bad file descriptor (FileObject was closed)')
 try:
     FileObject = FileObjectPosix
 except NameError:
-    FileObject = FileObjectThreadPool
+    FileObject = FileObjectThread
 
 
 class FileObjectBlock(object):
@@ -307,7 +307,7 @@ class FileObjectBlock(object):
 
 config = os.environ.get('GEVENT_FILE')
 if config:
-    klass = {'thread': 'gevent.fileobject.FileObjectThreadPool',
+    klass = {'thread': 'gevent.fileobject.FileObjectThread',
              'posix': 'gevent.fileobject.FileObjectPosix',
              'block': 'gevent.fileobject.FileObjectBlock'}.get(config, config)
     if klass.startswith('gevent.fileobject.'):
