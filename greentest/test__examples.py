@@ -43,6 +43,9 @@ def main(tests=None):
         util.log('! Failed examples:\n! - %s', '\n! - '.join(failed))
         sys.exit(1)
 
+    if not tests:
+        sys.exit('No tests.')
+
 
 if __name__ == '__main__':
     main()
