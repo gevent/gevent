@@ -1,9 +1,10 @@
-from __future__ import absolute_import
+from __future__ import absolute_import, with_statement
 import sys
 import os
 from gevent.hub import get_hub
 from gevent.socket import EBADF
 from gevent.os import _read, _write, ignored_errors
+from gevent.lock import Semaphore, DummySemaphore
 
 
 try:
@@ -215,8 +216,15 @@ class FileObjectThread(object):
     def __init__(self, fobj, *args, **kwargs):
         self._close = kwargs.pop('close', True)
         self.threadpool = kwargs.pop('threadpool', None)
+        self.lock = kwargs.pop('lock', True)
         if kwargs:
             raise TypeError('Unexpected arguments: %r' % kwargs.keys())
+        if self.lock is True:
+            self.lock = Semaphore()
+        elif not self.lock:
+            self.lock = DummySemaphore()
+        if not hasattr(self.lock, '__enter__'):
+            raise TypeError('Expected a Semaphore or boolean, got %r' % type(self.lock))
         if isinstance(fobj, (int, long)):
             if not self._close:
                 # we cannot do this, since fdopen object will close the descriptor
@@ -225,6 +233,10 @@ class FileObjectThread(object):
         self._fobj = fobj
         if self.threadpool is None:
             self.threadpool = get_hub().threadpool
+
+    def _apply(self, func, args=None, kwargs=None):
+        with self.lock:
+            return self.threadpool.apply_e(BaseException, func, args, kwargs)
 
     def close(self):
         fobj = self._fobj
@@ -244,7 +256,7 @@ class FileObjectThread(object):
             fobj = self._fobj
         if fobj is None:
             raise FileObjectClosed
-        return self.threadpool.apply_e(BaseException, fobj.flush)
+        return self._apply(fobj.flush)
 
     def __repr__(self):
         return '<%s _fobj=%r threadpool=%r>' % (self.__class__.__name__, self._fobj, self.threadpool)
@@ -261,7 +273,7 @@ class FileObjectThread(object):
     fobj = self._fobj
     if fobj is None:
         raise FileObjectClosed
-    return self.threadpool.apply_e(BaseException, fobj.%s, args, kwargs)''' % (method, method)
+    return self._apply(fobj.%s, args, kwargs)''' % (method, method)
 
     def __iter__(self):
         return self
