@@ -2,6 +2,7 @@ import sys
 import os
 
 
+sys.stderr.write('pep8 --version: ')
 if os.system('pep8 --version'):
     sys.exit('ERROR: pep8 script not found')
 
