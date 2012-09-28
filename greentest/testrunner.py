@@ -67,7 +67,7 @@ def run_many(tests, expected=None):
             for name, cmd, options in tests:
                 total += 1
                 spawn(run_one, name, cmd, **options)
-            gevent.run()
+            gevent.wait()
         except KeyboardInterrupt:
             try:
                 if pool:

@@ -78,7 +78,7 @@ def main():
     gevent.signal(signal.SIGTERM, server.close)
     gevent.signal(signal.SIGINT, server.close)
     server.start()
-    gevent.run()
+    gevent.wait()
 
 
 def log(message, *args):

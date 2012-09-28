@@ -29,7 +29,7 @@ __all__ = ['get_hub',
            'signal',
            'fork',
            'reinit',
-           'run']
+           'wait']
 
 
 import sys
@@ -50,5 +50,8 @@ except ImportError:
     __all__.remove('fork')
 
 
-def run(timeout=None, event=None):
+def wait(timeout=None, event=None):
     return get_hub().join(timeout=timeout, event=event)
+
+
+run = wait  # XXX to be deleted (soon)
