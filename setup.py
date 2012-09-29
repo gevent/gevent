@@ -297,7 +297,7 @@ def run_setup(ext_modules):
         packages=['gevent'],
         ext_modules=ext_modules,
         cmdclass=dict(build_ext=my_build_ext, sdist=sdist),
-        install_requires=['greenlet'],
+        install_requires=['greenlet', 'cython'],
         classifiers=[
             "License :: OSI Approved :: MIT License",
             "Programming Language :: Python :: 2.5",
