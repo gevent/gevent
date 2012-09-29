@@ -388,8 +388,12 @@ def walk_modules(basedir=None, modpath=None, include_so=False):
                 for p, m in walk_modules(path, modpath + fn + "."):
                     yield p, m
             continue
-        if fn.endswith('.py') and fn not in ['__init__.py', 'core.py', 'ares.py', '_util.py', '_semaphore.py']:
-            yield path, modpath + fn[:-3]
+        if fn.endswith('.py'):
+            x = fn[:-3]
+            if x.endswith('_d'):
+                x = x[:-2]
+            if x not in ['__init__', 'core', 'ares', '_util', '_semaphore']:
+                yield path, modpath + x
         elif include_so and fn.endswith('.so'):
             if fn.endswith('_d.so'):
                 yield path, modpath + fn[:-5]

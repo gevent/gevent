@@ -18,8 +18,10 @@ win32 * C:\Python27\python.exe -u -m monkey_test test_subprocess.py
 win32 * C:\Python27\python.exe -u -m monkey_test --Event test_subprocess.py
 
 # these need investigating:
-* * /usr/bin/python2.5 -u -m monkey_test --Event test_urllib2net.py
-* * /usr/bin/python2.5 -u -m monkey_test test_urllib2net.py
-* * /usr/bin/python2.5 -u test__threading_vs_settrace.py
-* * /usr/bin/python2.5 -u test__example_portforwarder.py
-* * /usr/bin/python2.5 -u test__socket_close.py
+* * /usr/bin/python2.5(-dbg)? -u -m monkey_test --Event test_urllib2net.py
+* * /usr/bin/python2.5(-dbg)? -u -m monkey_test test_urllib2net.py
+* * /usr/bin/python2.5(-dbg)? -u test__threading_vs_settrace.py
+* * /usr/bin/python2.5(-dbg)? -u test__example_portforwarder.py
+* * /usr/bin/python2.5(-dbg)? -u test__socket_close.py
+
+* * /usr/bin/python2.[567]-dbg -u test__backdoor.py

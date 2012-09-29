@@ -5,19 +5,33 @@ python:
   - "2.7"
 env:
   - EXTRA=1
-  - GEVENTSETUP_EV_VERIFY=3
   - GEVENT_FILE=thread
-  - GEVENT_BACKEND=select GEVENTSETUP_EV_VERIFY=3
-  - GEVENT_BACKEND=poll GEVENTSETUP_EV_VERIFY=3
   - GEVENT_BACKEND=signalfd
-#  - GEVENT_BACKEND=nosigmask
-#  - GEVENT_BACKEND=noinotify
 matrix:
  allow_failures:
-  - env: GEVENT_BACKEND=signalfd
+   - env: GEVENT_BACKEND=signalfd
+   - python: 2.5
+     env: DEBUGPY=-dbg GEVENTSETUP_EV_VERIFY=3
+ include:
+   - python: 2.7
+     env: DEBUGPY=-dbg GEVENTSETUP_EV_VERIFY=3
+   - python: 2.7
+     env: DEBUGPY=-dbg GEVENTSETUP_EV_VERIFY=3 GEVENT_FILE=thread
+   - python: 2.7
+     env: GEVENT_BACKEND=select GEVENTSETUP_EV_VERIFY=3
+   - python: 2.7
+     env: GEVENT_BACKEND=poll GEVENTSETUP_EV_VERIFY=3
+   - python: 2.7
+     env: GEVENT_BACKEND=nosigmask,noinotify GEVENTSETUP_EV_VERIFY=3
+   - python: 2.6
+     env: DEBUGPY=-dbg GEVENTSETUP_EV_VERIFY=3
+   - python: 2.5
+     env: DEBUGPY=-dbg GEVENTSETUP_EV_VERIFY=3
 install:
  - deactivate
- - export VER=$TRAVIS_PYTHON_VERSION
+ - export VER=$TRAVIS_PYTHON_VERSION$DEBUGPY
+ - sudo apt-get update -qq
+ - sudo apt-get install -q python$VER
  - export PYTHON=/usr/bin/python$VER
  - echo $PYTHON && $PYTHON --version
  - sudo -E ./travis_install_deps.sh
