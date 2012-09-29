@@ -23,5 +23,6 @@ def make_exec_test(path, module):
 for path, module in walk_modules():
     make_exec_test(path, module)
 
+
 if __name__ == '__main__':
     main()
