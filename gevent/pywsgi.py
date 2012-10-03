@@ -8,6 +8,7 @@ import traceback
 import mimetools
 from datetime import datetime
 from urllib import unquote
+import logging
 
 from gevent import socket
 import gevent
@@ -275,7 +276,10 @@ class WSGIHandler(object):
         except Exception:
             pass
         try:
-            sys.stderr.write(message + '\n')
+            try:
+                self.server.log.write(message + '\n')
+            except AttributeError:
+                self.server.log.error(message)
         except Exception:
             traceback.print_exc()
 
@@ -421,10 +425,21 @@ class WSGIHandler(object):
     def log_request(self):
         log = self.server.log
         if log:
-            log.write(self.format_request() + '\n')
+            message=self.format_request()
+            try:
+                try:
+                    self.server.log.write(message + '\n')
+                except AttributeError:
+                    self.server.log.info(message)
+            except Exception:
+                traceback.print_exc()
 
     def format_request(self):
-        now = datetime.now().replace(microsecond=0)
+        now = ""
+        log = self.server.log
+        if isinstance(log, file):
+            now = datetime.now().replace(microsecond=0)
+            now = " [%s] " % now
         if self.time_finish:
             delta = '%.6f' % (self.time_finish - self.time_start)
             length = self.response_length
@@ -432,7 +447,7 @@ class WSGIHandler(object):
             delta = '-'
             if not self.response_length:
                 length = '-'
-        return '%s - - [%s] "%s" %s %s %s' % (
+        return '%s - -%s"%s" %s %s %s' % (
             self.client_address[0],
             now,
             self.requestline,
@@ -548,16 +563,18 @@ class WSGIServer(StreamServer):
                 'wsgi.multiprocess': False,
                 'wsgi.run_once': False}
 
-    def __init__(self, listener, application=None, backlog=None, spawn='default', log='default', handler_class=None,
+    def __init__(self, listener, application=None, backlog=None, spawn='default', log=None, handler_class=None,
                  environ=None, **ssl_args):
         StreamServer.__init__(self, listener, backlog=backlog, spawn=spawn, **ssl_args)
         if application is not None:
             self.application = application
         if handler_class is not None:
             self.handler_class = handler_class
-        if log == 'default':
-            self.log = sys.stderr
-        else:
+        if log is None:
+            self.log = logging.getLogger()
+        elif isinstance(log, str):
+            self.log = logging.getLogger(log)
+        elif isinstance(log, file):
             self.log = log
         self.set_environ(environ)
         self.set_max_accept()
