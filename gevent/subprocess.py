@@ -6,7 +6,7 @@ import types
 import gc
 import signal
 import traceback
-from gevent.event import Event
+from gevent.event import AsyncResult
 from gevent.hub import get_hub
 from gevent.fileobject import FileObject
 from gevent.greenlet import Greenlet, joinall
@@ -188,6 +188,7 @@ class Popen(object):
             if threadpool is None:
                 threadpool = hub.threadpool
             self.threadpool = threadpool
+            self._waiting = False
         else:
             # POSIX
             if startupinfo is not None:
@@ -198,7 +199,6 @@ class Popen(object):
                                  "platforms")
             assert threadpool is None
             self._loop = hub.loop
-            self._event = Event()
 
         self.stdin = None
         self.stdout = None
@@ -206,6 +206,7 @@ class Popen(object):
         self.pid = None
         self.returncode = None
         self.universal_newlines = universal_newlines
+        self.result = AsyncResult()
 
         # Input and output objects. The general principle is like
         # this:
@@ -259,8 +260,12 @@ class Popen(object):
 
     def _on_child(self, watcher):
         watcher.stop()
-        self._handle_exitstatus(watcher.rstatus)
-        self._event.set()
+        status = watcher.rstatus
+        if os.WIFSIGNALED(status):
+            self.returncode = -os.WTERMSIG(status)
+        else:
+            self.returncode = os.WEXITSTATUS(status)
+        self.result.set(self.returncode)
 
     def communicate(self, input=None):
         """Interact with process: Send data to stdin.  Read data from
@@ -465,16 +470,17 @@ class Popen(object):
                     self.returncode = GetExitCodeProcess(self._handle)
             return self.returncode
 
+        def _wait(self):
+            self.threadpool.apply_e(BaseException, WaitForSingleObject, (self._handle, INFINITE))
+            return GetExitCodeProcess(self._handle)
+
         def wait(self, timeout=None):
             """Wait for child process to terminate.  Returns returncode
             attribute."""
-            # XXX timeout is ignored now
-            # XXX do not launch more than one WaitForSingleObject
-            # XXX add 'event' attribute
-            if self.returncode is None:
-                self.threadpool.apply_e(BaseException, WaitForSingleObject, (self._handle, INFINITE))
-                self.returncode = GetExitCodeProcess(self._handle)
-            return self.returncode
+            if not self._waiting:
+                self._waiting = True
+                self.threadpool.spawn(self._wait).rawlink(self.result)
+            return self.result.wait(timeout=timeout)
 
         def send_signal(self, sig):
             """Send a signal to the process
@@ -745,9 +751,7 @@ class Popen(object):
         def wait(self, timeout=None):
             """Wait for child process to terminate.  Returns returncode
             attribute."""
-            if self.returncode is None:
-                self._event.wait(timeout=timeout)
-            return self.returncode
+            return self.result.wait(timeout=timeout)
 
         def send_signal(self, sig):
             """Send a signal to the process
