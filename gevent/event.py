@@ -310,18 +310,3 @@ class AsyncResult(object):
             self.set(source.value)
         else:
             self.set_exception(source.exception)
-
-
-def waitall(events):
-    # QQQ add timeout?
-    from gevent.queue import Queue
-    queue = Queue()
-    put = queue.put
-    try:
-        for event in events:
-            event.rawlink(put)
-        for _ in xrange(len(events)):
-            queue.get()
-    finally:
-        for event in events:
-            event.unlink(put)

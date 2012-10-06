@@ -408,15 +408,14 @@ class Hub(greenlet):
         # It is still possible to kill this greenlet with throw. However, in that case
         # switching to it is no longer safe, as switch will return immediatelly
 
-    def join(self, timeout=None, event=None):
+    def join(self, timeout=None):
         """Wait for the event loop to finish. Exits only when there are
         no more spawned greenlets, started servers, active timeouts or watchers.
 
         If *timeout* is provided, wait no longer for the specified number of seconds.
-        If *event* was provided, exit when it was signalled with :meth:`Event.set` method.
 
         Returns True if exited because the loop finished execution.
-        Returns False if exited because of timeout expired or event was signalled.
+        Returns False if exited because of timeout expired.
         """
         assert getcurrent() is self.parent, "only possible from the MAIN greenlet"
         if self.dead:
@@ -424,26 +423,18 @@ class Hub(greenlet):
 
         waiter = Waiter()
 
-        if event is not None:
-            switch = waiter.switch
-            event.rawlink(switch)
+        if timeout is not None:
+            timeout = self.loop.timer(timeout, ref=False)
+            timeout.start(waiter.switch)
 
         try:
-            if timeout is not None:
-                timeout = self.loop.timer(timeout, ref=False)
-                timeout.start(waiter.switch)
-
             try:
-                try:
-                    waiter.get()
-                except LoopExit:
-                    return True
-            finally:
-                if timeout is not None:
-                    timeout.stop()
+                waiter.get()
+            except LoopExit:
+                return True
         finally:
-            if event is not None:
-                event.unlink(switch)
+            if timeout is not None:
+                timeout.stop()
         return False
 
     def destroy(self, destroy_loop=None):
@@ -620,6 +611,41 @@ class Waiter(object):
 
     # can also have a debugging version, that wraps the value in a tuple (self, value) in switch()
     # and unwraps it in wait() thus checking that switch() was indeed called
+
+
+def iwait(objects, timeout=None):
+    # QQQ would be nice to support iterable here that can be generated slowly (why?)
+    waiter = Waiter()
+    switch = waiter.switch
+    if timeout is not None:
+        get_hub().loop.timer(timeout, priority=-1, ref=False).start(waiter.switch, _NONE)
+    try:
+        count = len(objects)
+        for obj in objects:
+            obj.rawlink(switch)
+        for _ in xrange(count):
+            item = waiter.get()
+            waiter.clear()
+            if item is _NONE:
+                return
+            yield item
+    finally:
+        for obj in objects:
+            obj.unlink(switch)
+
+
+def wait(objects=None, timeout=None, count=None):
+    if objects is None:
+        return get_hub().join(timeout=timeout)
+    result = []
+    if count is None:
+        return list(iwait(objects, timeout))
+    for obj in iwait(objects=objects, timeout=timeout):
+        result.append(obj)
+        count -= 1
+        if count <= 0:
+            break
+    return result
 
 
 class _NONE(object):

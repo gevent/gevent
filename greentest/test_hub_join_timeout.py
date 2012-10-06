@@ -32,7 +32,7 @@ for _a in xrange(2):
     for _ in xrange(2):
         x = gevent.spawn(lambda: 5)
         with no_time(SMALL):
-            result = gevent.get_hub().join(timeout=10)
+            result = gevent.wait(timeout=10)
         assert result is True, repr(result)
         assert x.dead, x
         assert x.value == 5, x
@@ -41,7 +41,7 @@ for _a in xrange(2):
     for _ in xrange(2):
         x = gevent.spawn_later(SMALL, lambda: 5)
         with expected_time(SMALL):
-            result = gevent.get_hub().join(timeout=10)
+            result = gevent.wait(timeout=10)
         assert result is True, repr(result)
         assert x.dead, x
 
@@ -49,12 +49,12 @@ for _a in xrange(2):
     for _ in xrange(2):
         x = gevent.spawn_later(10, lambda: 5)
         with expected_time(SMALL):
-            result = gevent.get_hub().join(timeout=SMALL)
+            result = gevent.wait(timeout=SMALL)
         assert result is False, repr(result)
         assert not x.dead, x
         x.kill()
         with no_time():
-            result = gevent.get_hub().join()
+            result = gevent.wait()
         assert result is True
 
     # exiting because of event (the spawned greenlet still runs)
@@ -63,21 +63,21 @@ for _a in xrange(2):
         event = Event()
         event_set = gevent.spawn_later(SMALL, event.set)
         with expected_time(SMALL):
-            result = gevent.get_hub().join(event=event)
-        assert result is False, repr(result)
+            result = gevent.wait([event])
+        assert result == [event], repr(result)
         assert not x.dead, x
         assert event_set.dead
         assert event.is_set()
         x.kill()
         with no_time():
-            result = gevent.get_hub().join()
+            result = gevent.wait()
         assert result is True
 
     # checking "ref=False" argument
     for _ in xrange(2):
         gevent.get_hub().loop.timer(10, ref=False).start(lambda: None)
         with no_time():
-            result = gevent.get_hub().join()
+            result = gevent.wait()
         assert result is True
 
     # checking "ref=False" attribute
@@ -86,5 +86,5 @@ for _a in xrange(2):
         w.start(lambda: None)
         w.ref = False
         with no_time():
-            result = gevent.get_hub().join()
+            result = gevent.wait()
         assert result is True

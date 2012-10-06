@@ -18,7 +18,8 @@ __all__ = ['get_hub',
            'spawn',
            'spawn_later',
            'spawn_raw',
-           'joinall',
+           'iwait',
+           'wait',
            'killall',
            'Timeout',
            'with_timeout',
@@ -28,8 +29,7 @@ __all__ = ['get_hub',
            'kill',
            'signal',
            'fork',
-           'reinit',
-           'wait']
+           'reinit']
 
 
 import sys
@@ -39,7 +39,7 @@ if sys.platform == 'win32':
 del sys
 
 
-from gevent.hub import get_hub
+from gevent.hub import get_hub, iwait, wait
 from gevent.greenlet import Greenlet, joinall, killall
 spawn = Greenlet.spawn
 spawn_later = Greenlet.spawn_later
@@ -49,10 +49,5 @@ try:
     from gevent.os import fork
 except ImportError:
     __all__.remove('fork')
-
-
-def wait(timeout=None, event=None):
-    return get_hub().join(timeout=timeout, event=event)
-
 
 run = wait  # XXX to be deleted (soon)
