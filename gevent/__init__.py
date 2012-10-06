@@ -35,6 +35,7 @@ __all__ = ['get_hub',
 import sys
 if sys.platform == 'win32':
     import socket  # trigger WSAStartup call
+    del socket
 del sys
 
 
