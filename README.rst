@@ -17,7 +17,7 @@ gevent_ is `inspired by eventlet`_ but features more consistent API, simpler imp
 gevent_ is written and maintained by `Denis Bilenko`_ and is licensed under MIT license.
 
 
-get gevent
+Get gevent
 ----------
 
 Install Python 2.5 or newer and greenlet_ extension.
@@ -28,6 +28,15 @@ Read the documentation online at http://www.gevent.org
 
 Post feedback and issues on the `bug tracker`_, `mailing list`_, blog_ and `twitter (@gevent)`_.
 
+
+Running tests
+-------------
+
+You will need greenlet_ and cython_ installed. From the checkout of this repository run::
+
+    python setup.py build
+    cd greentest
+    PYTHONPATH=.. python testrunner.py
 
 .. _gevent: http://www.gevent.org
 .. _greenlet: http://pypi.python.org/pypi/greenlet
@@ -43,4 +52,5 @@ Post feedback and issues on the `bug tracker`_, `mailing list`_, blog_ and `twit
 .. _mailing list: http://groups.google.com/group/gevent
 .. _blog: http://blog.gevent.org
 .. _twitter (@gevent): http://twitter.com/gevent
+.. _cython: http://pypi.python/org/pypi/cython
 

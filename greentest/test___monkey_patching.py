@@ -4,6 +4,7 @@ import glob
 import util
 import atexit
 
+BASEDIR = os.path.abspath(os.path.dirname(__file__))
 
 TIMEOUT = 45
 directory = '%s.%s' % sys.version_info[:2]
@@ -18,7 +19,12 @@ def TESTRUNNER(tests=None):
     if not tests:
         tests = sorted(glob.glob('%s/test_*.py' % directory))
 
-    PYTHONPATH = (os.getcwd() + ':' + os.environ.get('PYTHONPATH', '')).rstrip(':')
+    paths = [ BASEDIR ]
+
+    # resolve relative paths now, because we're going to call the subproccess
+    # with a different working directory
+    paths.extend( os.path.abspath(p) for p in os.environ.get('PYTHONPATH', '').split(os.pathsep) )
+    PYTHONPATH = os.pathsep.join(paths)
 
     tests = [os.path.basename(x) for x in tests]
     options = {'cwd': directory,
