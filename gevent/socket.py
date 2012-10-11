@@ -590,7 +590,7 @@ def create_connection(address, timeout=_GLOBAL_DEFAULT_TIMEOUT, source_address=N
 
     host, port = address
     err = None
-    for res in getaddrinfo(host, port, 0, SOCK_STREAM):
+    for res in getaddrinfo(host, port, 0 if has_ipv6 else AF_INET, SOCK_STREAM):
         af, socktype, proto, _canonname, sa = res
         sock = None
         try:
