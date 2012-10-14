@@ -11,7 +11,7 @@ import util
 
 class Test_wsgiserver(util.TestServer):
     server = 'wsgiserver.py'
-    URL = 'http://localhost:8088'
+    URL = 'http://127.0.0.1:8088'
     not_found_message = '<h1>Not Found</h1>'
 
     def read(self, path='/'):
@@ -35,7 +35,7 @@ class Test_wsgiserver(util.TestServer):
 
 class Test_wsgiserver_ssl(Test_wsgiserver):
     server = 'wsgiserver_ssl.py'
-    URL = 'https://localhost:8443'
+    URL = 'https://127.0.0.1:8443'
 
 
 class Test_webproxy(Test_wsgiserver):

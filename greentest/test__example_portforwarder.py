@@ -1,5 +1,6 @@
 from __future__ import with_statement
 from gevent import monkey; monkey.patch_all()
+import sys
 import socket
 from time import sleep
 
@@ -9,12 +10,15 @@ from gevent.server import StreamServer
 import util
 
 
-class Test_portforwarder(util.TestServer):
+class Test(util.TestServer):
     server = 'portforwarder.py'
     args = ['127.0.0.1:10011', '127.0.0.1:10012']
 
     def after(self):
-        self.assertEqual(self.popen.poll(), 0)
+        if sys.platform == 'win32':
+            assert self.popen.poll() is not None
+        else:
+            self.assertEqual(self.popen.poll(), 0)
 
     def _run_all_tests(self):
         log = []
@@ -35,14 +39,25 @@ class Test_portforwarder(util.TestServer):
             sleep(0.1)
             self.popen.send_signal(15)
             sleep(0.1)
-            conn.sendall('msg2')
-            conn.close()
+            try:
+                conn.sendall('msg2')
+                conn.close()
+            except socket.error:
+                if sys.platform != 'win32':
+                    raise
+                # On Windows, signal/15 kills the process rather than actually sends a signal
+                # so, sendall('msg2') fails with
+                # error: [Errno 10054] An existing connection was forcibly closed by the remote host
+                # XXX maybe it could be made working with CTRL_C_EVENT somehow?
             with gevent.Timeout(0.1):
                 self.popen.wait()
         finally:
             server.close()
 
-        self.assertEqual(['msg1', 'msg2'], log)
+        if sys.platform == 'win32':
+            self.assertEqual(['msg1'], log)
+        else:
+            self.assertEqual(['msg1', 'msg2'], log)
 
 
 if __name__ == '__main__':

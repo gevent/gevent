@@ -12,7 +12,7 @@ from gevent.pool import Pool
 import util
 
 
-TIMEOUT = 120
+TIMEOUT = 180
 NWORKERS = int(os.environ.get('NWORKERS') or 8)
 pool = None
 
