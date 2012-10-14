@@ -471,7 +471,7 @@ class Popen(object):
             return self.returncode
 
         def _wait(self):
-            self.threadpool.apply_e(BaseException, WaitForSingleObject, (self._handle, INFINITE))
+            WaitForSingleObject(self._handle, INFINITE)
             return GetExitCodeProcess(self._handle)
 
         def wait(self, timeout=None):
