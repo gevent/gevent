@@ -76,7 +76,7 @@ def wrap_timeout(timeout, method):
 
     @wraps(method)
     def wrapped(self, *args, **kwargs):
-        with gevent.Timeout(timeout, 'test timed out'):
+        with gevent.Timeout(timeout, 'test timed out', ref=False):
             return method(self, *args, **kwargs)
 
     return wrapped
