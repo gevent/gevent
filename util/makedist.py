@@ -55,15 +55,11 @@ def makedist(*args, **kwargs):
         os.chdir(cwd)
 
 
-def _makedist(version='dev', dest=None):
+def _makedist(version=None, dest=None):
     assert exists('gevent/__init__.py'), 'Where am I?'
     basedir = abspath(os.getcwd())
-
-    if version.lower() == 'dev':
-        set_version_command = 'util/set_version.py gevent/__init__.py'
-    else:
-        set_version_command = 'util/set_version.py --version %s gevent/__init__.py' % version
-
+    version = version or 'dev'
+    set_version_command = 'util/set_version.py --version %s ./gevent/__init__.py' % version
     os.chdir('/tmp')
     system('rm -fr ' + TMPDIR)
     os.mkdir(TMPDIR)
@@ -75,6 +71,7 @@ def _makedist(version='dev', dest=None):
     assert len(directory) == 1, directory
 
     os.chdir(directory[0])
+    system('git branch')
     system(set_version_command)
     system('git diff', noisy=False)
     system('python setup.py -q sdist')
@@ -99,12 +96,10 @@ def _makedist(version='dev', dest=None):
 def main():
     parser = optparse.OptionParser()
     parser.add_option('--dest')
+    parser.add_option('--version')
     options, args = parser.parse_args()
-
-    if len(args) != 1:
-        sys.exit('Expected one argument: version (could be "dev").')
-
-    return makedist(args[0], dest=options.dest)
+    assert not args, 'Expected no arguments'
+    return makedist(options.version, dest=options.dest)
 
 
 def copy(source, dest):

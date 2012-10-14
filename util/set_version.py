@@ -12,8 +12,8 @@ from optparse import OptionParser
 from distutils.version import LooseVersion
 
 
-version_re = re.compile("__version__\s*=\s*'([^']+)'", re.M)
-version_info_re = re.compile(r"version_info\s*=\s*([^\n]+)")
+version_re = re.compile("^__version__\s*=\s*'([^']+)'", re.M)
+version_info_re = re.compile(r"^version_info\s*=\s*([^\n]+)", re.M)
 strict_version_re = re.compile(r'^(\d+) \. (\d+) (\. (\d+))? ([ab](\d+))?$', re.VERBOSE)
 
 
@@ -129,16 +129,25 @@ def write(filename, data):
 def main():
     global options
     parser = OptionParser()
-    parser.add_option('--version')
+    parser.add_option('--version', default='dev')
+    parser.add_option('--dry-run', action='store_true')
     options, args = parser.parse_args()
-    if options.version:
-        if strict_version_re.match(options.version) is None:
-            sys.exit('Not a strict version: %r (bdist_msi will fail)' % options.version)
-    assert len(args) == 1, args
+    assert len(args) == 1, 'One argument is expected, got %s' % len(args)
+    version = options.version
+    if version.lower() == 'dev':
+        version = ''
+    if version and strict_version_re.match(version) is None:
+        sys.stderr.write('WARNING: Not a strict version: %r (bdist_msi will fail)' % version)
     filename = args[0]
-    original_content, new_content = modify_version(filename, options.version)
-    write(filename, new_content)
-    print 'Updated %s' % filename
+    original_content, new_content = modify_version(filename, version)
+    if options.dry_run:
+        tmpname = '/tmp/' + os.path.basename(filename) + '.set_version'
+        write(tmpname, new_content)
+        if not os.system('diff -u %s %s' % (filename, tmpname)):
+            sys.exit('No differences applied')
+    else:
+        write(filename, new_content)
+        print 'Updated %s' % filename
 
 
 if __name__ == '__main__':
