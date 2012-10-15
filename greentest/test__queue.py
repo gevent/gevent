@@ -1,3 +1,4 @@
+from __future__ import with_statement
 from greentest import TestCase, main, GenericGetTestCase
 import gevent
 from gevent.hub import get_hub
@@ -19,11 +20,8 @@ class TestQueue(TestCase):
         q = queue.Queue()
 
         def waiter(q):
-            timer = gevent.Timeout.start_new(0.1)
-            try:
+            with gevent.Timeout(0.1):
                 self.assertEquals(q.get(), 'hi2')
-            finally:
-                timer.cancel()
             return "OK"
 
         p = gevent.spawn(waiter, q)
@@ -75,11 +73,8 @@ class TestQueue(TestCase):
         p2 = gevent.spawn(receiver, e2, q)
         self.assertEquals(e2.get(), 'hi')
         self.assertEquals(e1.get(), 'done')
-        timeout = gevent.Timeout.start_new(0)
-        try:
+        with gevent.Timeout(0):
             gevent.joinall([p1, p2])
-        finally:
-            timeout.cancel()
 
     def test_multiple_waiters(self):
         # tests that multiple waiters get their results back
@@ -91,22 +86,19 @@ class TestQueue(TestCase):
         sendings = ['1', '2', '3', '4']
         evts = [AsyncResult() for x in sendings]
         for i, x in enumerate(sendings):
-            gevent.spawn(waiter, q, evts[i])  # use waitall for them
+            gevent.spawn(waiter, q, evts[i])  # XXX use waitall for them
 
         gevent.sleep(0.01)  # get 'em all waiting
 
         results = set()
 
         def collect_pending_results():
-            for i, e in enumerate(evts):
-                timer = gevent.Timeout.start_new(0.001)
-                try:
+            for e in evts:
+                with gevent.Timeout(0.001, False):
                     x = e.get()
                     results.add(x)
-                    timer.cancel()
-                except gevent.Timeout:
-                    pass  # no pending result at that event
             return len(results)
+
         q.put(sendings[0])
         self.assertEquals(collect_pending_results(), 1)
         q.put(sendings[1])
@@ -119,12 +111,12 @@ class TestQueue(TestCase):
         q = queue.Queue()
 
         def do_receive(q, evt):
-            gevent.Timeout.start_new(0, RuntimeError())
-            try:
-                result = q.get()
-                evt.set(result)
-            except RuntimeError:
-                evt.set('timed out')
+            with gevent.Timeout(0, RuntimeError()):
+                try:
+                    result = q.get()
+                    evt.set(result)
+                except RuntimeError:
+                    evt.set('timed out')
 
         evt = AsyncResult()
         gevent.spawn(do_receive, q, evt)
@@ -148,15 +140,12 @@ class TestQueue(TestCase):
             evt.set(q.get())
 
         def do_receive(q, evt):
-            timeout = gevent.Timeout.start_new(0, RuntimeError())
-            try:
+            with gevent.Timeout(0, RuntimeError()):
                 try:
                     result = q.get()
                     evt.set(result)
                 except RuntimeError:
                     evt.set('timed out')
-            finally:
-                timeout.cancel()
 
         q = queue.Queue()
         dying_evt = AsyncResult()
@@ -170,13 +159,12 @@ class TestQueue(TestCase):
 
     def test_two_bogus_waiters(self):
         def do_receive(q, evt):
-            gevent.Timeout.start_new(0, RuntimeError())
-            try:
-                result = q.get()
-                evt.set(result)
-            except RuntimeError:
-                evt.set('timed out')
-            # XXX finally = timeout
+            with gevent.Timeout(0, RuntimeError()):
+                try:
+                    result = q.get()
+                    evt.set(result)
+                except RuntimeError:
+                    evt.set('timed out')
 
         q = queue.Queue()
         e1 = AsyncResult()
