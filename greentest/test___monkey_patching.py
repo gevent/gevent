@@ -29,8 +29,8 @@ def TESTRUNNER(tests=None):
         atexit.register(os.system, 'rm -f */@test*_tmp')
 
     for filename in tests:
-        yield directory + '/' + filename, [sys.executable, '-u', '-m', 'monkey_test', filename], options.copy()
-        yield directory + '/' + filename + '/Event', [sys.executable, '-u', '-m', 'monkey_test', '--Event', filename], options.copy()
+        yield [sys.executable, '-u', '-m', 'monkey_test', filename], options.copy()
+        yield [sys.executable, '-u', '-m', 'monkey_test', '--Event', filename], options.copy()
 
 
 def main():

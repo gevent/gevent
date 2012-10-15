@@ -97,20 +97,33 @@ def kill(popen):
         traceback.print_exc()
 
 
-def getname(command):
-    return ' '.join(command)
+def getname(command, env=None, setenv=None):
+    result = []
+
+    for key, value in sorted((env or {}).items()):
+        if key.startswith('GEVENT_') or key.startswith('GEVENTARES_'):
+            result.append('%s=%s' % (key, value))
+
+    for key, value in sorted((setenv or {}).items()):
+        if key.startswith('GEVENT_') or key.startswith('GEVENTARES_'):
+            result.append('%s=%s' % (key, value))
+
+    if isinstance(command, basestring):
+        result.append(command)
+    else:
+        result.extend(command)
+
+    return ' '.join(result)
 
 
 def start(command, **kwargs):
-    # XXX should not really need 'name' there: can still figure it out
-    # from command + environment vars starting with GEVENT_ and GEVENTARES_
-    name = kwargs.pop('name', None) or getname(command)
     timeout = kwargs.pop('timeout', None)
     preexec_fn = None
     if not os.environ.get('DO_NOT_SETPGRP'):
         preexec_fn = getattr(os, 'setpgrp', None)
     env = kwargs.pop('env', None)
     setenv = kwargs.pop('setenv', None) or {}
+    name = getname(command, env=env, setenv=setenv)
     if preexec_fn is not None:
         setenv['DO_NOT_SETPGRP'] = '1'
     if setenv:
@@ -119,8 +132,10 @@ def start(command, **kwargs):
         else:
             env = os.environ.copy()
         env.update(setenv)
+
     log('+ %s', name)
     popen = Popen(command, preexec_fn=preexec_fn, env=env, **kwargs)
+    popen.name = name
     popen.setpgrp_enabled = preexec_fn is not None
     if timeout is not None:
         popen._killer = spawn_later(timeout, kill, popen)
@@ -132,9 +147,10 @@ def start(command, **kwargs):
 
 class RunResult(object):
 
-    def __init__(self, code, output=None):
+    def __init__(self, code, output=None, name=None):
         self.code = code
         self.output = output
+        self.name = name
 
     def __nonzero__(self):
         return bool(self.code)
@@ -144,13 +160,13 @@ class RunResult(object):
 
 
 def run(command, **kwargs):
-    name = kwargs.get('name') or getname(command)
     buffer_output = kwargs.pop('buffer_output', BUFFER_OUTPUT)
     if buffer_output:
         assert 'stdout' not in kwargs and 'stderr' not in kwargs, kwargs
         kwargs['stderr'] = subprocess.STDOUT
         kwargs['stdout'] = subprocess.PIPE
     popen = start(command, **kwargs)
+    name = popen.name
     try:
         time_start = time()
         out, err = popen.communicate()
@@ -177,7 +193,7 @@ def run(command, **kwargs):
         log('- %s [took %.1fs]', name, took)
     if took >= MIN_RUNTIME:
         runtimelog.append((-took, name))
-    return RunResult(result, out)
+    return RunResult(result, out, name)
 
 
 def expected_match(name, expected):
