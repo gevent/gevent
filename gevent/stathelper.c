@@ -89,10 +89,14 @@ static PyObject*
 _pystat_fromstructstat(STRUCT_STAT *st)
 {
     unsigned long ansec, mnsec, cnsec;
+    PyObject *v;
 
     PyTypeObject* StatResultType = (PyTypeObject*)import_StatResultType();
+    if (StatResultType == NULL) {
+        return NULL;
+    }
 
-    PyObject *v = PyStructSequence_New(StatResultType);
+    v = PyStructSequence_New(StatResultType);
     if (v == NULL)
         return NULL;
 
