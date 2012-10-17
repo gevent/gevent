@@ -100,11 +100,10 @@ def kill(popen):
 def getname(command, env=None, setenv=None):
     result = []
 
-    for key, value in sorted((env or {}).items()):
-        if key.startswith('GEVENT_') or key.startswith('GEVENTARES_'):
-            result.append('%s=%s' % (key, value))
+    env = (env or {}).copy()
+    env.update(setenv or {})
 
-    for key, value in sorted((setenv or {}).items()):
+    for key, value in sorted(env.items()):
         if key.startswith('GEVENT_') or key.startswith('GEVENTARES_'):
             result.append('%s=%s' % (key, value))
 
