@@ -137,6 +137,8 @@ def wrap_refcount(method):
 def wrap_error_fatal(method):
     @wraps(method)
     def wrapped(self, *args, **kwargs):
+        # XXX should also be able to do gevent.SYSTEM_ERROR = object
+        # which is a global default to all hubs
         SYSTEM_ERROR = gevent.get_hub().SYSTEM_ERROR
         gevent.get_hub().SYSTEM_ERROR = object
         try:
