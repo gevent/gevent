@@ -8,7 +8,7 @@ from gevent.lock import Semaphore, DummySemaphore
 
 
 try:
-    from fcntl import fcntl, F_SETFL
+    from fcntl import fcntl, F_SETFL, F_GETFL
 except ImportError:
     fcntl = None
 
@@ -49,14 +49,16 @@ else:
         from file descriptors on POSIX platforms.
         """
 
-        def __init__(self, fileno, mode=None, close=True):
+        def __init__(self, fileno, mode=None, close=True, restore_flags=False):
             if not isinstance(fileno, (int, long)):
                 raise TypeError('fileno must be int: %r' % fileno)
             self._fileno = fileno
             self._mode = mode or 'rb'
             self._close = close
             self._translate = 'U' in self._mode
-            fcntl(fileno, F_SETFL, os.O_NONBLOCK)
+            self._restore_flags=restore_flags
+            if not restore_flags:
+                fcntl(fileno, F_SETFL, os.O_NONBLOCK)
             self._eat_newline = False
             self.hub = get_hub()
             io = self.hub.loop.io
@@ -98,28 +100,42 @@ else:
             bytes_total = len(data)
             bytes_written = 0
             while True:
+                if self._restore_flags:
+                    flags = fcntl(fileno, F_GETFL, 0)
+                    blocking_fd = not bool(flags & os.O_NONBLOCK)
+                    if blocking_fd:
+                        fcntl(fileno, F_SETFL, flags | os.O_NONBLOCK)
                 try:
                     bytes_written += _write(fileno, _get_memory(data, bytes_written))
-                except (IOError, OSError):
-                    code = sys.exc_info()[1].args[0]
-                    if code not in ignored_errors:
+                except OSError, e:
+                    if e.errno not in ignored_errors:
                         raise
                     sys.exc_clear()
-                if bytes_written >= bytes_total:
-                    return
+                else:
+                    if bytes_written >= bytes_total:
+                        return
+                finally:
+                    if self._restore_flags and blocking_fd:
+                        # Be sure to restore the fcntl flags before we switch into the hub.
+                        # Sometimes multiple file descriptors share the same fcntl flags
+                        # (e.g. when using ttys/ptys). Those other file descriptors are
+                        # impacted by our change of flags, so we should restore them
+                        # before any other code can possibly run.
+                        fcntl(fileno, F_SETFL, flags)
                 self.hub.wait(self._write_event)
 
         def recv(self, size):
             while True:
+                fileno = self.fileno()
+                if self._restore_flags:
+                    flags = fcntl(fileno, F_GETFL, 0)
+                    blocking_fd = not bool(flags & os.O_NONBLOCK)
+                    if blocking_fd:
+                        fcntl(fileno, F_SETFL, flags | os.O_NONBLOCK)
                 try:
-                    data = _read(self.fileno(), size)
-                except (IOError, OSError):
-                    code = sys.exc_info()[1].args[0]
-                    if code in ignored_errors:
-                        pass
-                    elif code == EBADF:
-                        return ''
-                    else:
+                    data = _read(fileno, size)
+                except OSError, e:
+                    if e.errno not in ignored_errors:
                         raise
                     sys.exc_clear()
                 else:
@@ -134,13 +150,15 @@ else:
                     if data.endswith('\r'):
                         self._eat_newline = True
                     return self._translate_newlines(data)
-                try:
-                    self.hub.wait(self._read_event)
-                except IOError:
-                    ex = sys.exc_info()[1]
-                    if ex.args[0] == EBADF:
-                        return ''
-                    raise
+                finally:
+                    if self._restore_flags and blocking_fd:
+                        # Be sure to restore the fcntl flags before we switch into the hub.
+                        # Sometimes multiple file descriptors share the same fcntl flags
+                        # (e.g. when using ttys/ptys). Those other file descriptors are
+                        # impacted by our change of flags, so we should restore them
+                        # before any other code can possibly run.
+                        fcntl(fileno, F_SETFL, flags)
+                self.hub.wait(self._read_event)
 
         def _translate_newlines(self, data):
             data = data.replace("\r\n", "\n")
@@ -159,13 +177,18 @@ else:
 
     class FileObjectPosix(_fileobject):
 
-        def __init__(self, fobj, mode='rb', bufsize=-1, close=True):
+        def __init__(self, fobj, mode='rb', bufsize=-1, close=True, restore_flags=False):
+            """ If the optional arg restore_flags is True, restore the
+            file descriptor's fcntl before we switch into the hub and before we
+            return from I/O operations. This protects integrity of file
+            descriptors that share the same fcntl flags (e.g., stdin and stdout)
+            """
             if isinstance(fobj, (int, long)):
                 fileno = fobj
                 fobj = None
             else:
                 fileno = fobj.fileno()
-            sock = SocketAdapter(fileno, mode, close=close)
+            sock = SocketAdapter(fileno, mode, close=close, restore_flags=restore_flags)
             self._fobj = fobj
             self._closed = False
             _fileobject.__init__(self, sock, mode=mode, bufsize=bufsize, close=close)
