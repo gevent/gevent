@@ -1,165 +1,168 @@
-import os
+from gevent import monkey; monkey.patch_all()
 import sys
+import os
 import array
-import gevent
-from gevent import socket
-import greentest
+import socket
+import traceback
 import time
+import greentest
+from functools import wraps
+
+# we use threading on purpose so that we can test both regular and gevent sockets with the same code
+from threading import Thread as _Thread
+
+
+def wrap_error(func):
+
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        try:
+            return func(*args, **kwargs)
+        except:
+            traceback.print_exc()
+            os._exit(2)
+
+    return wrapper
+
+
+class Thread(_Thread):
+
+    def __init__(self, **kwargs):
+        target = kwargs.pop('target')
+        target = wrap_error(target)
+        _Thread.__init__(self, target=target, **kwargs)
+        self.start()
 
 
 class TestTCP(greentest.TestCase):
 
+    __timeout__ = None
     TIMEOUT_ERROR = socket.timeout
     long_data = ", ".join([str(x) for x in range(20000)])
 
     def setUp(self):
         greentest.TestCase.setUp(self)
-        self.listener = greentest.tcp_listener(('127.0.0.1', 0))
+        listener = socket.socket()
+        greentest.bind_and_listen(listener, ('127.0.0.1', 0))
+        self.listener = listener
+        self.port = listener.getsockname()[1]
 
     def cleanup(self):
         del self.listener
 
     def create_connection(self):
-        return socket.create_connection(('127.0.0.1', self.listener.getsockname()[1]))
+        return socket.create_connection(('127.0.0.1', self.port))
 
-    def sendall(self, data):
+    def _test_sendall(self, data):
+
+        read_data = []
+
         def accept_and_read():
-            conn, addr = self.listener.accept()
-            fd = conn.makefile()
-            conn.close()
-            read = fd.read()
-            fd.close()
-            return read
+            try:
+                read_data.append(self.listener.accept()[0].makefile().read())
+            except:
+                traceback.print_exc()
+                os._exit(1)
 
-        server = gevent.spawn(accept_and_read)
-        try:
-            client = self.create_connection()
-            client.sendall(data)
-            client.close()
-            read = server.get()
-            assert read == self.long_data
-        finally:
-            server.kill()
+        server = Thread(target=accept_and_read)
+        client = self.create_connection()
+        client.sendall(data)
+        client.close()
+        server.join()
+        assert read_data[0] == self.long_data, read_data
 
     def test_sendall_str(self):
-        self.sendall(self.long_data)
+        self._test_sendall(self.long_data)
 
     def test_sendall_unicode(self):
-        self.sendall(unicode(self.long_data))
+        self._test_sendall(unicode(self.long_data))
 
     def test_sendall_array(self):
         data = array.array("B", self.long_data)
-        self.sendall(data)
+        self._test_sendall(data)
 
     def test_fullduplex(self):
 
         def server():
             (client, addr) = self.listener.accept()
             # start reading, then, while reading, start writing. the reader should not hang forever
-            N = 100000  # must be a big enough number so that sendall calls trampoline
-            sender = gevent.spawn(client.sendall, 't' * N)
-            result = client.recv(1000)
-            assert result == 'hello world', result
-            sender.join(timeout=0.2)
-            sender.kill()
-            sender.get()
+            alive = [1]
 
-        #print '%s: client' % getcurrent()
+            def sendloop():
+                try:
+                    while alive:
+                        client.sendall('t' * 100000)
+                except socket.error:
+                    return
+                raise AssertionError('expected socket error')
 
-        server_proc = gevent.spawn(server)
+            sender = Thread(target=sendloop)
+            try:
+                result = client.recv(1000)
+                self.assertEqual(result, 'hello world')
+            finally:
+                del alive[0]
+            sender.join()
+
+        server_thread = Thread(target=server)
         client = self.create_connection()
-        client_reader = gevent.spawn(client.makefile().read)
-        gevent.sleep(0.001)
+        client_reader = Thread(target=client.makefile().read, args=(5000, ))
+        time.sleep(0.1)
         client.send('hello world')
+        time.sleep(0.1)
 
         # close() used to hang
         client.close()
 
         # this tests "full duplex" bug;
-        server_proc.get()
+        server_thread.join()
 
-        client_reader.get()
+        client_reader.join()
 
     def test_recv_timeout(self):
-        acceptor = gevent.spawn(self.listener.accept)
-        try:
-            client = self.create_connection()
-            client.settimeout(0.1)
-            start = time.time()
-            try:
-                data = client.recv(1024)
-            except self.TIMEOUT_ERROR:
-                assert 0.1 - 0.01 <= time.time() - start <= 0.1 + 0.1, (time.time() - start)
-            else:
-                raise AssertionError('%s should have been raised, instead recv returned %r' % (self.TIMEOUT_ERROR, data, ))
-        finally:
-            acceptor.get()
+        client_sock = []
+        acceptor = Thread(target=lambda: client_sock.append(self.listener.accept()))
+        client = self.create_connection()
+        client.settimeout(1)
+        start = time.time()
+        self.assertRaises(self.TIMEOUT_ERROR, client.recv, 1024)
+        took = time.time() - start
+        assert 1 - 0.1 <= took <= 1 + 0.1, (time.time() - start)
+        acceptor.join()
 
-    def test_sendall_timeout(self):
-        acceptor = gevent.spawn(self.listener.accept)
-        try:
+    # On Windows send() accepts whatever is thrown at it
+    if sys.platform != 'win32':
+
+        def test_sendall_timeout(self):
+            client_sock = []
+            acceptor = Thread(target=lambda: client_sock.append(self.listener.accept()))
             client = self.create_connection()
+            time.sleep(0.1)
+            assert client_sock
             client.settimeout(0.1)
+            data_sent = 'h' * 1000000
             start = time.time()
-            send_succeed = False
-            data_sent = 'h' * 100000
-            try:
-                client.sendall(data_sent)
-            except self.TIMEOUT_ERROR:
-                assert 0.1 - 0.01 <= time.time() - start <= 0.1 + 0.1, (time.time() - start)
-            else:
-                assert time.time() - start <= 0.1 + 0.01, (time.time() - start)
-                send_succeed = True
-        finally:
-            conn, addr = acceptor.get()
-        if send_succeed:
-            client.close()
-            data_read = conn.makefile().read()
-            self.assertEqual(len(data_sent), len(data_read))
-            self.assertEqual(data_sent, data_read)
-            print '%s: WARNING: read the data instead of failing with timeout' % self.__class__.__name__
+            self.assertRaises(self.TIMEOUT_ERROR, client.sendall, data_sent)
+            took = time.time() - start
+            assert 0.1 - 0.01 <= took <= 0.1 + 0.1, took
+            acceptor.join()
 
     def test_makefile(self):
+
         def accept_once():
             conn, addr = self.listener.accept()
             fd = conn.makefile()
-            conn.close()
             fd.write('hello\n')
             fd.close()
 
-        acceptor = gevent.spawn(accept_once)
-        try:
-            client = self.create_connection()
-            fd = client.makefile()
-            client.close()
-            assert fd.readline() == 'hello\n'
-            assert fd.read() == ''
-            fd.close()
-        finally:
-            acceptor.get()
-
-
-if hasattr(socket, 'ssl'):
-
-    class TestSSL(TestTCP):
-
-        certfile = os.path.join(os.path.dirname(__file__), 'test_server.crt')
-        privfile = os.path.join(os.path.dirname(__file__), 'test_server.key')
-        TIMEOUT_ERROR = socket.sslerror
-
-        def setUp(self):
-            TestTCP.setUp(self)
-            self.listener = ssl_listener(('127.0.0.1', 0), self.privfile, self.certfile)
-
-        def create_connection(self):
-            return socket.ssl(socket.create_connection(('127.0.0.1', self.listener.getsockname()[1])))
-
-    def ssl_listener(address, private_key, certificate):
-        import _socket
-        r = _socket.socket()
-        sock = socket.ssl(r, private_key, certificate)
-        greentest.bind_and_listen(sock, address)
-        return sock
+        acceptor = Thread(target=accept_once)
+        client = self.create_connection()
+        fd = client.makefile()
+        client.close()
+        assert fd.readline() == 'hello\n'
+        assert fd.read() == ''
+        fd.close()
+        acceptor.join()
 
 
 def get_port():
@@ -183,33 +186,6 @@ class TestCreateConnection(greentest.TestCase):
                 raise
         else:
             raise AssertionError('create_connection did not raise socket.error as expected')
-
-
-class TestClosedSocket(greentest.TestCase):
-
-    switch_expected = False
-
-    def test(self):
-        sock = socket.socket()
-        sock.close()
-        try:
-            sock.send('a', timeout=1)
-        except socket.error, ex:
-            if ex[0] != 9:
-                raise
-
-
-class TestRef(greentest.TestCase):
-
-    switch_expected = False
-
-    def test(self):
-        sock = socket.socket()
-        assert sock.ref is True, sock.ref
-        sock.ref = False
-        assert sock.ref is False, sock.ref
-        assert sock._read_event.ref is False, sock.ref
-        assert sock._write_event.ref is False, sock.ref
 
 
 if __name__ == '__main__':
