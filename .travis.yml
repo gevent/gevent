@@ -4,7 +4,7 @@ python:
   - "2.6"
   - "2.7"
 env:
-  -
+  - CHECK_PEP8=1
   - GEVENTSETUP_EV_VERIFY=3
   - GEVENT_FILE=thread
   - GEVENT_BACKEND=select GEVENTSETUP_EV_VERIFY=3
