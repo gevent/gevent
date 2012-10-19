@@ -1,2 +1,0 @@
-GEVENT_RESOLVER=ares test__socket_dns.py
-GEVENT_RESOLVER=ares test__socket_dns6.py

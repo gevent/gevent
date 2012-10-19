@@ -1,0 +1,14 @@
+# format:
+# platform environ executable arguments
+# instead of platform star ("*") means any platform
+# instead of environ star ("*") means any environ, "-" means no gevent-specific environ
+# instead of executable star ("*") means any executable
+* GEVENTARES_SERVERS=8.8.8.8 GEVENT_RESOLVER=ares * -u test__socket_dns.py
+* GEVENTARES_SERVERS=8.8.8.8 GEVENT_RESOLVER=ares * -u test__socket_dns6.py
+win32 * C:\Python27\python.exe -u test__core_stat.py
+win32 * C:\Python27\python.exe -u -m monkey_test test_threading.py
+win32 * C:\Python27\python.exe -u -m monkey_test --Event test_threading.py
+win32 * C:\Python27\python.exe -u -m monkey_test test_telnetlib.py
+win32 * C:\Python27\python.exe -u -m monkey_test --Event test_telnetlib.py
+win32 * C:\Python27\python.exe -u -m monkey_test test_subprocess.py
+win32 * C:\Python27\python.exe -u -m monkey_test --Event test_subprocess.py

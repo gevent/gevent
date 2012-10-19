@@ -38,7 +38,7 @@ install:
  - sudo $PYTHON setup.py install
 script:
  - "echo `date`: Started testing"
- - cd greentest && $PYTHON testrunner.py --full --expected expected_failures.txt
+ - cd greentest && $PYTHON testrunner.py --full --expected ../known_failures.txt
  - "echo `date`: Finished testing"
 notifications:
   email:

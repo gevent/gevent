@@ -28,7 +28,7 @@ if args[0:1] == ['test']:
     system('%s setup.py build' % sys.executable)
     os.chdir('greentest')
     os.environ['PYTHONPATH'] = '.;..;../..'
-    system('%s testrunner.py' % sys.executable)
+    system('%s testrunner.py --expected ../known_failures.txt' % sys.executable)
 elif not args:
     assert options.host
     if not options.source:

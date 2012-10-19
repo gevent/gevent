@@ -12,3 +12,4 @@ include changelog.rst
 include MANIFEST.in
 include AUTHORS
 include Makefile.ext
+include known_failures.txt
