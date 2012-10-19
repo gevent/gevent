@@ -195,12 +195,68 @@ def run(command, **kwargs):
     return RunResult(result, out, name)
 
 
-def expected_match(name, expected):
-    name_parts = set(name.split())
-    assert name_parts
-    for item in expected:
-        item = set(item.split())
-        if item.issubset(name_parts):
+def parse_command(parts):
+    if isinstance(parts, basestring):
+        parts = parts.split()
+    environ = []
+    if parts[0] == '-':
+        del parts[0]
+    elif parts[0] == '*':
+        del parts[0]
+        environ = None
+    elif '=' in parts[0]:
+        while parts[0].count('='):
+            environ.append(parts[0])
+            del parts[0]
+    exe = parts[0]
+    del parts[0]
+    if exe == '*':
+        exe = None
+    else:
+        assert exe
+        assert not exe.startswith('-'), repr(exe)
+    return environ, exe, parts
+
+
+def parse_line(line):
+    """
+    >>> parse_line("* - /usr/bin/python -u test.py")
+    (None, [], '/usr/bin/python', ['-u', 'test.py'])
+
+    >>> parse_line("win32 * C:\\Python27\\python.exe -u -m monkey_test --Event test_subprocess.py")
+    ('win32', None, 'C:\\\\Python27\\\\python.exe', ['-u', '-m', 'monkey_test', '--Event', 'test_subprocess.py'])
+
+    >>> parse_line("* GEVENTARES_SERVERS=8.8.8.8 GEVENT_RESOLVER=ares * -u test__socket_dns.py")
+    (None, ['GEVENTARES_SERVERS=8.8.8.8', 'GEVENT_RESOLVER=ares'], None, ['-u', 'test__socket_dns.py'])
+    """
+    parts = line.split()
+    if len(parts) < 4:
+        raise ValueError('Expected "platform environ executable arguments", got %r' % line)
+    platform = parts[0]
+    if platform == '*':
+        platform = None
+    return (platform, ) + parse_command(parts[1:])
+
+
+def match_line(line, command):
+    expected_platform, expected_environ, expected_exe, expected_arguments = parse_line(line)
+    if expected_platform is not None and expected_platform != sys.platform:
+        return
+    environ, exe, arguments = parse_command(command)
+    if expected_environ is not None and expected_environ != environ:
+        return
+    if expected_exe is not None and expected_exe != exe:
+        return
+    return expected_arguments == arguments
+
+
+def matches(expected, command):
+    """
+    >>> matches(["* * C:\Python27\python.exe -u -m monkey_test --Event test_threading.py"], "C:\Python27\python.exe -u -m monkey_test --Event test_threading.py")
+    True
+    """
+    for line in expected:
+        if match_line(line, command):
             return True
 
 
@@ -226,21 +282,31 @@ def report(total, failed, exit=True, took=None, expected=None):
     else:
         took = ''
 
-    error_count = 0
     if failed:
         log('\n%s/%s tests failed%s', len(failed), total, took)
         expected = set(expected or [])
+        failed_expected = []
+        failed_unexpected = []
         for name in failed:
-            if expected_match(name, expected):
-                log('- %s (expected)', name)
+            if matches(expected, name):
+                failed_expected.append(name)
             else:
-                log('- %s', name)
-                error_count += 1
+                failed_unexpected.append(name)
+
+        if failed_expected:
+            log('\n%s/%s expected failures', len(failed_expected), total)
+            for name in failed_expected:
+                log(' - %s', name)
+
+        if failed_unexpected:
+            log('\n%s/%s unexpected failures', len(failed_unexpected), total)
+            for name in failed_unexpected:
+                log(' - %s', name)
     else:
         log('\n%s tests passed%s', total, took)
     if exit:
-        if error_count:
-            sys.exit(min(100, error_count))
+        if failed_unexpected:
+            sys.exit(min(100, len(failed_unexpected)))
         if total <= 0:
             sys.exit('No tests found.')
 
