@@ -8,9 +8,6 @@ Does the following:
     - Clones the repo into a temporary location.
     - Run set_version.py that will update gevent/__init__.py.
     - Run 'python setup.py sdist'.
-
-If --fast is provided, then fast copying with hard-links is used instead of cloning.
-If --revert is provided, then copying is done and then changes are reverted.
 """
 import sys
 import os
@@ -21,14 +18,6 @@ from pipes import quote
 
 
 TMPDIR = '/tmp/gevent-make-dist'
-useful_files = ['gevent/core.pyx',
-                'gevent/gevent.core.h',
-                'gevent/gevent.core.c',
-                'gevent/gevent.ares.h',
-                'gevent/gevent.ares.c',
-                'gevent/gevent._semaphore.c',
-                'gevent/gevent._semaphore.h',
-                'gevent/gevent._util.c']
 
 
 def system(cmd, noisy=True):
@@ -37,14 +26,6 @@ def system(cmd, noisy=True):
     res = os.system(cmd)
     if res:
         sys.exit('%r failed with %s' % (cmd, res))
-
-
-def iter_status(command):
-    for line in os.popen(command).readlines():
-        line = line.strip()
-        if line:
-            assert line[1] == ' ' and line[0] != ' ' and line[2] != ' ', repr(line)
-            yield line[:1], line[1:].strip()
 
 
 def makedist(*args, **kwargs):
@@ -104,16 +85,6 @@ def main():
 
 def copy(source, dest):
     system('cp -a %s %s' % (quote(source), quote(dest)))
-
-
-def mkdir(path):
-    try:
-        os.mkdir(path)
-    except OSError, ex:
-        if ex.errno == 17:  # File exists
-            return False
-        raise
-    return True
 
 
 if __name__ == '__main__':
