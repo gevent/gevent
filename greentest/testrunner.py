@@ -136,7 +136,7 @@ def full(args=None):
             options['setenv'] = my_setenv
             tests.append((cmd, options))
 
-    if sys.version_info[:2] == (2, 7) and os.environ.get('CHECK_PEP8'):
+    if sys.version_info[:2] == (2, 7) and os.environ.get('EXTRA'):
         tests.append(([sys.executable, '-u', 'xtest_pep8.py'], None))
 
     return tests
