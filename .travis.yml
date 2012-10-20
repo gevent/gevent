@@ -1,6 +1,6 @@
 language: python
 python:
-#  - "2.5"
+  - "2.5"
   - "2.6"
   - "2.7"
 env:
@@ -10,8 +10,8 @@ env:
   - GEVENT_BACKEND=select GEVENTSETUP_EV_VERIFY=3
   - GEVENT_BACKEND=poll GEVENTSETUP_EV_VERIFY=3
   - GEVENT_BACKEND=signalfd
-  - GEVENT_BACKEND=nosigmask
-  - GEVENT_BACKEND=noinotify
+#  - GEVENT_BACKEND=nosigmask
+#  - GEVENT_BACKEND=noinotify
 matrix:
  allow_failures:
   - env: GEVENT_BACKEND=signalfd
@@ -20,30 +20,13 @@ install:
  - export VER=$TRAVIS_PYTHON_VERSION
  - export PYTHON=/usr/bin/python$VER
  - echo $PYTHON && $PYTHON --version
-#broken - if [[ $VER == '2.5' ]]; then sudo apt-get install libssl-dev libkrb5-dev libbluetooth-dev; pip install --use-mirrors sslfix; fi
- - curl -sSLO --retry 5 --fail https://github.com/downloads/SiteSupport/gevent/python2.7-cython_0.17_i386.deb
- - curl -sSLO --retry 5 --fail https://github.com/downloads/SiteSupport/gevent/python$VER-greenlet_0.4.0_i386.deb
- - curl -sSLO --retry 5 --fail https://github.com/downloads/SiteSupport/gevent/python$VER-psycopg2_2.4.5_i386.deb
- - curl -sSLO --retry 5 --fail https://github.com/downloads/SiteSupport/gevent/python$VER-pysendfile_2.0.0_i386.deb
- - curl -sSLO --retry 5 --fail http://pypi.python.org/packages/source/w/web.py/web.py-0.37.tar.gz #md5=93375e3f03e74d6bf5c5096a4962a8db
- - sudo dpkg -i python2.7-cython_0.17_i386.deb
- - sudo dpkg -i python$VER-greenlet_0.4.0_i386.deb
- - sudo dpkg -i python$VER-psycopg2_2.4.5_i386.deb
- - sudo dpkg -i python$VER-pysendfile_2.0.0_i386.deb
- - tar -xf web.py-0.37.tar.gz && cd web.py-0.37 && sudo $PYTHON setup.py -q install && cd -
- - if [[ $VER == '2.7' ]]; then sudo pip install --use-mirrors -q pep8; fi
- - cython --version
- - $PYTHON -c 'import greenlet; print greenlet, greenlet.__version__; import psycopg2; print psycopg2, psycopg2.__version__; import web; print web, web.__version__'
- - "echo `date`: Started installing gevent"
+ - sudo -E ./travis_install_deps.sh
  - sudo $PYTHON setup.py install
 script:
- - "echo `date`: Started testing"
  - cd greentest && $PYTHON testrunner.py --full --expected ../known_failures.txt
- - "echo `date`: Finished testing"
 notifications:
   email:
     recipients:
       - denis.bilenko@gmail.com
     on_success: change
     on_failure: change
-

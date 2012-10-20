@@ -1,14 +1,25 @@
-# format:
-# platform environ executable arguments
-# instead of platform star ("*") means any platform
-# instead of environ star ("*") means any environ, "-" means no gevent-specific environ
-# instead of executable star ("*") means any executable
+# This is a list of known failures (=bugs).
+
+# format: platform environ executable arguments
+# A star ("*") can be used instead of platform, environ or executable (means "any").
+
 * GEVENTARES_SERVERS=8.8.8.8 GEVENT_RESOLVER=ares * -u test__socket_dns.py
 * GEVENTARES_SERVERS=8.8.8.8 GEVENT_RESOLVER=ares * -u test__socket_dns6.py
+
+# currently gevent.core.stat watcher does not implement 'prev' and 'attr' attributes on Windows
 win32 * C:\Python27\python.exe -u test__core_stat.py
+
+# other Windows-related issues (need investigating)
 win32 * C:\Python27\python.exe -u -m monkey_test test_threading.py
 win32 * C:\Python27\python.exe -u -m monkey_test --Event test_threading.py
 win32 * C:\Python27\python.exe -u -m monkey_test test_telnetlib.py
 win32 * C:\Python27\python.exe -u -m monkey_test --Event test_telnetlib.py
 win32 * C:\Python27\python.exe -u -m monkey_test test_subprocess.py
 win32 * C:\Python27\python.exe -u -m monkey_test --Event test_subprocess.py
+
+# these need investigating:
+* * /usr/bin/python2.5 -u -m monkey_test --Event test_urllib2net.py
+* * /usr/bin/python2.5 -u -m monkey_test test_urllib2net.py
+* * /usr/bin/python2.5 -u test__threading_vs_settrace.py
+* * /usr/bin/python2.5 -u test__example_portforwarder.py
+* * /usr/bin/python2.5 -u test__socket_close.py
