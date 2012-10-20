@@ -282,11 +282,12 @@ def report(total, failed, exit=True, took=None, expected=None):
     else:
         took = ''
 
+    failed_expected = []
+    failed_unexpected = []
+
     if failed:
         log('\n%s/%s tests failed%s', len(failed), total, took)
         expected = set(expected or [])
-        failed_expected = []
-        failed_unexpected = []
         for name in failed:
             if matches(expected, name):
                 failed_expected.append(name)
