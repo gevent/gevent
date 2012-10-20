@@ -85,10 +85,11 @@ class TestTCP(greentest.TestCase):
 
     def test_fullduplex(self):
 
+        N = 100000
+
         def server():
             (client, addr) = self.listener.accept()
             # start reading, then, while reading, start writing. the reader should not hang forever
-            N = 100000
 
             def sendall():
                 client.sendall('t' * N)
@@ -100,7 +101,7 @@ class TestTCP(greentest.TestCase):
 
         server_thread = Thread(target=server)
         client = self.create_connection()
-        client_reader = Thread(target=client.makefile().read, args=(5000, ))
+        client_reader = Thread(target=client.makefile().read, args=(N, ))
         time.sleep(0.1)
         client.send('hello world')
         time.sleep(0.1)
