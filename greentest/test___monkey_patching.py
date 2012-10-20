@@ -35,7 +35,7 @@ def TESTRUNNER(tests=None):
 
 def main():
     import testrunner
-    return testrunner.run_many(TESTRUNNER(sys.argv[1:]))
+    return testrunner.run_many(list(TESTRUNNER(sys.argv[1:])))
 
 
 if __name__ == '__main__':
