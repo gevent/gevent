@@ -7,7 +7,7 @@ import time
 import sys
 import weakref
 
-from test import lock_tests
+import lock_tests
 
 NUMTASKS = 10
 NUMTRIPS = 3

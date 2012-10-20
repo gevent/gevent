@@ -882,7 +882,7 @@ class HandlerTests(unittest.TestCase):
         # cookies shouldn't leak into redirected requests
         from cookielib import CookieJar
 
-        from test.test_cookielib import interact_netscape
+        from test_cookielib import interact_netscape
 
         cj = CookieJar()
         interact_netscape(cj, "http://www.example.com/", "spam=eggs")
@@ -1074,7 +1074,7 @@ class MiscTests(unittest.TestCase):
 
 
 def test_main(verbose=None):
-    from test import test_urllib2
+    import test_urllib2
     test_support.run_doctest(test_urllib2, verbose)
     test_support.run_doctest(urllib2, verbose)
     tests = (TrivialTests,

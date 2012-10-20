@@ -2,7 +2,7 @@
 
 import unittest
 from test import test_support
-from test.test_urllib2 import sanepathname2url
+from test_urllib2 import sanepathname2url
 
 import socket
 import urllib2

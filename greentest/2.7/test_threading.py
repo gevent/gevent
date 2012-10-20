@@ -13,7 +13,7 @@ import weakref
 import os
 import subprocess
 
-from test import lock_tests
+import lock_tests
 
 # A trivial mutable counter.
 class Counter(object):

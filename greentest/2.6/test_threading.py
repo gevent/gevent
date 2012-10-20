@@ -11,7 +11,7 @@ import time
 import unittest
 import weakref
 
-from test import lock_tests
+import lock_tests
 
 # A trivial mutable counter.
 class Counter(object):
