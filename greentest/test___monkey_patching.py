@@ -26,7 +26,7 @@ def TESTRUNNER(tests=None):
                'setenv': {'PYTHONPATH': PYTHONPATH}}
 
     if tests:
-        atexit.register(os.system, 'rm -f */@test*_tmp')
+        atexit.register(os.system, 'rm -f */@test*')
 
     for filename in tests:
         yield [sys.executable, '-u', '-m', 'monkey_test', filename], options.copy()
