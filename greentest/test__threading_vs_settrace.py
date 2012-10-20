@@ -25,7 +25,7 @@ t.start()
 
 def trace(frame, event, arg):
     if threading is not None:
-        threading.current_thread()
+        threading.currentThread()
     return trace
 
 
@@ -49,7 +49,10 @@ sys.stdout.write("..finishing..")
 
 class ThreadTrace(unittest.TestCase):
     def test_untraceable_lock(self):
-        old = sys.gettrace()
+        if hasattr(sys, 'gettrace'):
+            old = sys.gettrace()
+        else:
+            old = None
         lst = []
         try:
             def trace(frame, ev, arg):

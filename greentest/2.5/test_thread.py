@@ -18,7 +18,7 @@ numtasks = 10
 def task(ident):
     global running
     rmutex.acquire()
-    delay = random.random() * numtasks
+    delay = random.random() * numtasks / 10.
     rmutex.release()
     if verbose:
         print 'task', ident, 'will run for', round(delay, 1), 'sec'
@@ -86,7 +86,7 @@ def task2(ident):
             delay = 0.001
         else:
             rmutex.acquire()
-            delay = random.random() * numtasks
+            delay = random.random() * numtasks / 10.
             rmutex.release()
         if verbose:
             print 'task', ident, 'will run for', round(delay, 1), 'sec'

@@ -51,7 +51,9 @@ class TestTCP(greentest.TestCase):
         del self.listener
 
     def create_connection(self):
-        return socket.create_connection(('127.0.0.1', self.port))
+        sock = socket.socket()
+        sock.connect(('127.0.0.1', self.port))
+        return sock
 
     def _test_sendall(self, data):
 
@@ -86,22 +88,14 @@ class TestTCP(greentest.TestCase):
         def server():
             (client, addr) = self.listener.accept()
             # start reading, then, while reading, start writing. the reader should not hang forever
-            alive = [1]
+            N = 100000
 
-            def sendloop():
-                try:
-                    while alive:
-                        client.sendall('t' * 100000)
-                except socket.error:
-                    return
-                raise AssertionError('expected socket error')
+            def sendall():
+                client.sendall('t' * N)
 
-            sender = Thread(target=sendloop)
-            try:
-                result = client.recv(1000)
-                self.assertEqual(result, 'hello world')
-            finally:
-                del alive[0]
+            sender = Thread(target=sendall)
+            result = client.recv(1000)
+            self.assertEqual(result, 'hello world')
             sender.join()
 
         server_thread = Thread(target=server)

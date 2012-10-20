@@ -20,7 +20,8 @@ class TestSSL(TestTCP):
     def create_connection(self):
         return ssl.wrap_socket(super(TestSSL, self).create_connection())
 
-    test_sendall_timeout = None
+    def test_sendall_timeout(self):
+        pass
 
 del TestTCP
 
