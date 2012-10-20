@@ -346,18 +346,18 @@ class WSGIHandler(object):
                         self.response_headers.append(('Transfer-Encoding', 'chunked'))
 
     def write(self, data):
-        towrite = []
+        towrite = bytearray()
         if not self.status:
             raise AssertionError("The application did not call start_response()")
         if not self.headers_sent:
             self.headers_sent = True
             self.finalize_headers()
 
-            towrite.append('%s %s\r\n' % (self.request_version, self.status))
+            towrite.extend('%s %s\r\n' % (self.request_version, self.status))
             for header in self.response_headers:
-                towrite.append('%s: %s\r\n' % header)
+                towrite.extend('%s: %s\r\n' % header)
 
-            towrite.append('\r\n')
+            towrite.extend('\r\n')
 
         if data:
             if self.code in (304, 204):
@@ -365,19 +365,18 @@ class WSGIHandler(object):
 
             if self.response_use_chunked:
                 ## Write the chunked encoding
-                towrite.append("%x\r\n%s\r\n" % (len(data), data))
+                towrite.extend("%x\r\n%s\r\n" % (len(data), data))
             else:
-                towrite.append(data)
+                towrite.extend(data)
 
-        msg = ''.join(towrite)
         try:
-            self.socket.sendall(msg)
+            self.socket.sendall(towrite)
         except socket.error, ex:
             self.status = 'socket error: %s' % ex
             if self.code > 0:
                 self.code = -self.code
             raise
-        self.response_length += len(msg)
+        self.response_length += len(towrite)
 
     def start_response(self, status, headers, exc_info=None):
         if exc_info:
