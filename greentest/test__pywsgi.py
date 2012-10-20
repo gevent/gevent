@@ -371,6 +371,23 @@ class TestYield(CommonTests):
             yield "not found"
 
 
+if 'bytearray' in __builtins__.__dict__:
+
+    class TestBytearray(CommonTests):
+
+        validator = None
+
+        @staticmethod
+        def application(env, start_response):
+            path = env['PATH_INFO']
+            if path == '/':
+                start_response('200 OK', [('Content-Type', 'text/plain')])
+                return [bytearray("hello "), bytearray("world")]
+            else:
+                start_response('404 Not Found', [('Content-Type', 'text/plain')])
+                return [bytearray("not found")]
+
+
 class TestGetArg(TestCase):
 
     @staticmethod
