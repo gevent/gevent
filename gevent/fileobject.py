@@ -273,7 +273,8 @@ class FileObjectThread(object):
     fobj = self._fobj
     if fobj is None:
         raise FileObjectClosed
-    return self._apply(fobj.%s, args, kwargs)''' % (method, method)
+    return self._apply(fobj.%s, args, kwargs)
+''' % (method, method)
 
     def __iter__(self):
         return self
