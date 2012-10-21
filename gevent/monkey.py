@@ -103,7 +103,7 @@ def patch_thread(threading=True, _threading_local=True, Event=False):
     patch_module('thread')
     from gevent.local import local
     if threading:
-        from gevent import thread as green_thread
+        from gevent import thread as green_thread, getcurrent, Greenlet
         threading = __import__('threading')
         # QQQ Note, that importing threading results in get_hub() call.
         # QQQ Would prefer not to import threading at all if it's not used;
@@ -115,6 +115,28 @@ def patch_thread(threading=True, _threading_local=True, Event=False):
         threading._get_ident = green_thread.get_ident
         from gevent.hub import sleep
         threading._sleep = sleep
+
+        def cleanup_greenlet(g):
+            with threading._active_limbo_lock:
+                del threading._active[id(g)]
+
+        class _GreenDummyThread(threading._DummyThread):
+            # instances of this will cleanup its own entry
+            # in ``threading._active``
+            def __init__(self):
+                threading._DummyThread.__init__(self)
+                g = getcurrent()
+                if isinstance(g, Greenlet):
+                    g.link(cleanup_greenlet)
+
+        def currentThread():
+            try:
+                return threading._active[threading._get_ident()]
+            except KeyError:
+                return _GreenDummyThread()
+        threading.currentThread = currentThread
+        threading.current_thread = currentThread
+
         if Event:
             from gevent.event import Event
             threading.Event = Event
