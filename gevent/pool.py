@@ -370,11 +370,6 @@ class Pool(Group):
         self._semaphore.release()
 
 
-def get_values(greenlets):
-    joinall(greenlets)
-    return [x.value for x in greenlets]
-
-
 class pass_value(object):
     __slots__ = ['callback']
 
