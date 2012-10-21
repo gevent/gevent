@@ -100,7 +100,7 @@ def kill(popen):
 def getname(command, env=None, setenv=None):
     result = []
 
-    env = (env or {}).copy()
+    env = (env or os.environ).copy()
     env.update(setenv or {})
 
     for key, value in sorted(env.items()):
