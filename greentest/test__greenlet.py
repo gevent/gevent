@@ -433,6 +433,14 @@ class TestGet(greentest.GenericGetTestCase):
             g.kill()
 
 
+class TestJoinAll0(greentest.GenericWaitTestCase):
+
+    g = gevent.Greenlet()
+
+    def wait(self, timeout):
+        gevent.joinall([self.g], timeout=timeout)
+
+
 class TestJoinAll(greentest.GenericWaitTestCase):
 
     def wait(self, timeout):
