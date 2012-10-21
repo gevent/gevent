@@ -101,25 +101,15 @@ def patch_thread(threading=True, _threading_local=True, Event=False):
     If *_threading_local* is true (the default), also patch ``_threading_local.local``.
     """
     patch_module('thread')
-    from gevent.local import local
     if threading:
-        from gevent import thread as green_thread
+        patch_module('threading')
         threading = __import__('threading')
-        # QQQ Note, that importing threading results in get_hub() call.
-        # QQQ Would prefer not to import threading at all if it's not used;
-        # QQQ that should be possible with import hooks
-        threading.local = local
-        threading._start_new_thread = green_thread.start_new_thread
-        threading._allocate_lock = green_thread.allocate_lock
-        threading.Lock = green_thread.allocate_lock
-        threading._get_ident = green_thread.get_ident
-        from gevent.hub import sleep
-        threading._sleep = sleep
         if Event:
             from gevent.event import Event
             threading.Event = Event
     if _threading_local:
         _threading_local = __import__('_threading_local')
+        from gevent.local import local
         _threading_local.local = local
 
 

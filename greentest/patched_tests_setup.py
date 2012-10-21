@@ -1,5 +1,4 @@
 import sys
-import os
 import re
 
 # By default, test cases are expected to switch and emit warnings if there was none
@@ -132,6 +131,12 @@ disabled_tests = \
     # this uses cookielib which we don't care about
 
     , 'test_thread.ThreadRunningTests.test__count'
+    # XXX
+
+    , 'test_threading.ThreadedTests.test_ident_of_no_threading_threads'
+    , 'test_threading.ThreadedTests.test_foreign_thread'
+    # this assert that dummy thread id is in threading._active
+    # however, we clean that up
 ]
 
 # if 'signalfd' in os.environ.get('GEVENT_BACKEND', ''):

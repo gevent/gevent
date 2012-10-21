@@ -11,7 +11,8 @@ MAPPING = {'gevent.local': '_threading_local',
            'gevent.ssl': 'ssl',
            'gevent.thread': 'thread',
            'gevent.subprocess': 'subprocess',
-           'gevent.os': 'os'}
+           'gevent.os': 'os',
+           'gevent.threading': 'threading'}
 
 
 class ANY(object):
@@ -24,16 +25,22 @@ NOT_IMPLEMENTED = {
     'socket': ['CAPI'],
     'thread': ['allocate', 'exit_thread', 'interrupt_main', 'start_new'],
     'select': ANY,
-    'os': ANY}
+    'os': ANY,
+    'threading': ANY}
 
 COULD_BE_MISSING = {
     'socket': ['create_connection', 'RAND_add', 'RAND_egd', 'RAND_status']}
+
+NO_ALL = ['gevent.threading']
 
 
 class Test(unittest.TestCase):
 
     def check_all(self):
         "Check that __all__ is present and does not contain invalid entries"
+        if not hasattr(self.module, '__all__'):
+            assert self.modname in NO_ALL
+            return
         names = {}
         exec ("from %s import *" % self.modname) in names
         names.pop('__builtins__', None)
@@ -97,7 +104,7 @@ class Test(unittest.TestCase):
         """Check that __all__ (or dir()) of the corresponsing stdlib is a subset of __all__ of this module"""
         missed = []
         for name in self.stdlib_all:
-            if name not in self.module.__all__:
+            if name not in getattr(self.module, '__all__', []):
                 missed.append(name)
 
         # handle stuff like ssl.socket and ssl.socket_error which have no reason to be in gevent.ssl.__all__

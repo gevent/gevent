@@ -144,7 +144,9 @@ class ThreadTests(unittest.TestCase):
             done.wait()
             self.assertFalse(ident[0] is None)
             # Kill the "immortal" _DummyThread
-            del threading._active[ident[0]]
+            # in gevent, we already cleaned that up
+            #del threading._active[ident[0]]
+            assert ident[0] not in threading._active
 
     # run with a small(ish) thread stack size (256kB)
     def test_various_ops_small_stack(self):
@@ -185,10 +187,12 @@ class ThreadTests(unittest.TestCase):
         tid = thread.start_new_thread(f, (mutex,))
         # Wait for the thread to finish.
         mutex.acquire()
-        self.assert_(tid in threading._active)
-        self.assert_(isinstance(threading._active[tid],
-                                threading._DummyThread))
-        del threading._active[tid]
+        # in gevent, we clean up the entry, so the following fails:
+        #self.assert_(tid in threading._active)
+        #self.assert_(isinstance(threading._active[tid],
+        #                        threading._DummyThread))
+        #del threading._active[tid]
+        self.assert_(tid not in threading._active)
 
     # PyThreadState_SetAsyncExc() is a CPython-only gimmick, not (currently)
     # exposed at the Python level.  This test relies on ctypes to get at it.
