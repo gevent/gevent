@@ -12,10 +12,22 @@ class TestEventWait(greentest.GenericWaitTestCase):
         Event().wait(timeout=timeout)
 
 
+class TestWaitEvent(greentest.GenericWaitTestCase):
+
+    def wait(self, timeout):
+        gevent.wait([Event()], timeout=timeout)
+
+
 class TestAsyncResultWait(greentest.GenericWaitTestCase):
 
     def wait(self, timeout):
         AsyncResult().wait(timeout=timeout)
+
+
+class TestWaitAsyncResult(greentest.GenericWaitTestCase):
+
+    def wait(self, timeout):
+        gevent.wait([AsyncResult()], timeout=timeout)
 
 
 class TestAsyncResultGet(greentest.GenericGetTestCase):
@@ -106,6 +118,52 @@ class TestEvent_SetThenClear100(TestEvent_SetThenClear):
 
 class TestEvent_SetThenClear1000(TestEvent_SetThenClear):
     N = 1000
+
+
+class TestWait(greentest.TestCase):
+    N = 5
+    count = None
+    timeout = 1
+    period = 0.01
+
+    def _sender(self, events, asyncs):
+        while events or asyncs:
+            gevent.sleep(self.period)
+            if events:
+                events.pop().set()
+            gevent.sleep(self.period)
+            if asyncs:
+                asyncs.pop().set()
+
+    def test(self):
+        events = [Event() for _ in xrange(self.N)]
+        asyncs = [AsyncResult() for _ in xrange(self.N)]
+        max_len = len(events) + len(asyncs)
+        sender = gevent.spawn(self._sender, events, asyncs)
+        results = gevent.wait(events + asyncs, count=self.count, timeout=self.timeout)
+        if self.timeout is None:
+            expected_len = max_len
+        else:
+            expected_len = min(max_len, self.timeout / self.period)
+        if self.count is None:
+            assert sender.ready()
+        else:
+            expected_len = min(self.count, expected_len)
+            assert not sender.ready()
+            sender.kill()
+        assert expected_len == len(results), (expected_len, results)
+
+
+class TestWait_notimeout(TestWait):
+    timeout = None
+
+
+class TestWait_count1(TestWait):
+    count = 1
+
+
+class TestWait_count2(TestWait):
+    count = 2
 
 
 X = object()
