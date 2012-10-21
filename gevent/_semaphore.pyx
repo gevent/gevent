@@ -21,8 +21,9 @@ class Semaphore(object):
             raise ValueError("semaphore initial value must be >= 0")
         self._links = []
         self.counter = value
-        self.hub = get_hub()
-        self._notifier = self.hub.loop.callback()
+        self._notifier = None
+        # we don't want to do get_hub() here to allow module-level locks
+        # without initializing the hub
 
     def __str__(self):
         params = (self.__class__.__name__, self.counter, len(self._links))
@@ -36,8 +37,8 @@ class Semaphore(object):
         self._start_notify()
 
     def _start_notify(self):
-        if self._links and self.counter > 0 and not self._notifier.active:
-            self._notifier.start(self._notify_links)
+        if self._links and self.counter > 0 and (self._notifier is None or not self._notifier.active):
+            self._notifier = get_hub().loop.run_callback(self._notify_links)
 
     def _notify_links(self):
         while True:
@@ -48,7 +49,7 @@ class Semaphore(object):
                 try:
                     link(self)
                 except:
-                    self.hub.handle_error((link, self), *sys.exc_info())
+                    getcurrent().handle_error((link, self), *sys.exc_info())
                 if self._dirty:
                     break
             if not self._dirty:
@@ -83,7 +84,7 @@ class Semaphore(object):
                 timer = Timeout.start_new(timeout)
                 try:
                     try:
-                        result = self.hub.switch()
+                        result = get_hub().switch()
                         assert result is self, 'Invalid switch into Semaphore.wait(): %r' % (result, )
                     except Timeout:
                         ex = sys.exc_info()[1]
@@ -108,7 +109,7 @@ class Semaphore(object):
                 timer = Timeout.start_new(timeout)
                 try:
                     try:
-                        result = self.hub.switch()
+                        result = get_hub().switch()
                         assert result is self, 'Invalid switch into Semaphore.acquire(): %r' % (result, )
                     except Timeout:
                         ex = sys.exc_info()[1]
