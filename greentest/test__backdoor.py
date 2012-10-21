@@ -14,6 +14,12 @@ def read_until(conn, postfix):
     return read
 
 
+def create_connection(address):
+    conn = socket.socket()
+    conn.connect(address)
+    return conn
+
+
 class Test(greentest.TestCase):
 
     def test(self):
@@ -21,7 +27,7 @@ class Test(greentest.TestCase):
         server.start()
 
         def connect():
-            conn = socket.create_connection(('127.0.0.1', server.server_port))
+            conn = create_connection(('127.0.0.1', server.server_port))
             read_until(conn, '>>> ')
             conn.sendall('2+2\r\n')
             line = conn.makefile().readline()
@@ -36,7 +42,7 @@ class Test(greentest.TestCase):
         server = backdoor.BackdoorServer(('127.0.0.1', 0))
         server.start()
         try:
-            conn = socket.create_connection(('127.0.0.1', server.server_port))
+            conn = create_connection(('127.0.0.1', server.server_port))
             read_until(conn, '>>> ')
             conn.sendall('quit()\r\n')
             line = conn.makefile().read()
@@ -48,7 +54,7 @@ class Test(greentest.TestCase):
         server = backdoor.BackdoorServer(('127.0.0.1', 0))
         server.start()
         try:
-            conn = socket.create_connection(('127.0.0.1', server.server_port))
+            conn = create_connection(('127.0.0.1', server.server_port))
             read_until(conn, '>>> ')
             conn.sendall('import sys; sys.exit(0)\r\n')
             line = conn.makefile().read()
@@ -61,7 +67,7 @@ class Test(greentest.TestCase):
         server = backdoor.BackdoorServer(('127.0.0.1', 0), banner=banner)
         server.start()
         try:
-            conn = socket.create_connection(('127.0.0.1', server.server_port))
+            conn = create_connection(('127.0.0.1', server.server_port))
             response = read_until(conn, '>>> ')
             self.assertEqual(response[:len(banner)], banner)
         finally:
@@ -71,7 +77,7 @@ class Test(greentest.TestCase):
         server = backdoor.BackdoorServer(('127.0.0.1', 0))
         server.start()
         try:
-            conn = socket.create_connection(('127.0.0.1', server.server_port))
+            conn = create_connection(('127.0.0.1', server.server_port))
             read_until(conn, '>>> ')
             conn.sendall('locals()["__builtins__"]\r\n')
             response = read_until(conn, '>>> ')

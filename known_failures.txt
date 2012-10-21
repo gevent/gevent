@@ -12,8 +12,6 @@ win32 * C:\Python27\python.exe -u test__core_stat.py
 # other Windows-related issues (need investigating)
 win32 * C:\Python27\python.exe -u -m monkey_test test_threading.py
 win32 * C:\Python27\python.exe -u -m monkey_test --Event test_threading.py
-win32 * C:\Python27\python.exe -u -m monkey_test test_telnetlib.py
-win32 * C:\Python27\python.exe -u -m monkey_test --Event test_telnetlib.py
 win32 * C:\Python27\python.exe -u -m monkey_test test_subprocess.py
 win32 * C:\Python27\python.exe -u -m monkey_test --Event test_subprocess.py
 

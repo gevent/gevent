@@ -375,6 +375,9 @@ class TestInterrupted_gethostbyname(greentest.GenericWaitTestCase):
                     pass
             raise AssertionError('Timeout was not raised')
 
+    def cleanup(self):
+        gevent.get_hub().threadpool.join()
+
 
 # class TestInterrupted_getaddrinfo(greentest.GenericWaitTestCase):
 #
