@@ -19,7 +19,7 @@ pool = None
 
 def spawn(*args, **kwargs):
     g = pool.spawn(*args, **kwargs)
-    g.link_exception(lambda *args: sys.exit('Internal error in testrunner.py'))
+    g.link_exception(lambda *args: sys.exit('Internal error in testrunner.py: %s %s' % (g, g.exception)))
     return g
 
 
