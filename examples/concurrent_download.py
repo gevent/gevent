@@ -21,4 +21,4 @@ def print_head(url):
 
 jobs = [gevent.spawn(print_head, url) for url in urls]
 
-gevent.joinall(jobs)
+gevent.wait(jobs)
