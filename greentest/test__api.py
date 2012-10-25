@@ -62,25 +62,36 @@ class Test(greentest.TestCase):
         assert 'Invalid switch' in str(result), repr(str(result))
         switcher.kill()
 
-    def test_wait_read_invalid_switch(self):
-        sock = socket.socket()
-        p = gevent.spawn(util.wrap_errors(AssertionError, socket.wait_read), sock.fileno())
-        gevent.sleep(0)
-        switcher = gevent.spawn(p.switch, None)
-        result = p.get()
-        assert isinstance(result, AssertionError), result
-        assert 'Invalid switch' in str(result), repr(str(result))
-        switcher.kill()
+    def _test_wait_read_invalid_switch(self, sleep):
+        sock1, sock2 = socket.socketpair()
+        try:
+            lst = []
+            gevent.get_hub().loop.run_callback(switch_None, lst)
+            p = gevent.spawn(util.wrap_errors(AssertionError, socket.wait_read), sock1.fileno())
+            lst.append(p)
+            if sleep is not None:
+                gevent.sleep(sleep)
+            result = p.get()
+            assert isinstance(result, AssertionError), result
+            assert 'Invalid switch' in str(result), repr(str(result))
+        finally:
+            sock1.close()
+            sock2.close()
 
-    def test_wait_write_invalid_switch(self):
-        sock = socket.socket()
-        p = gevent.spawn(util.wrap_errors(AssertionError, socket.wait_write), sock.fileno())
-        gevent.sleep(0)
-        switcher = gevent.spawn(p.switch, None)
-        result = p.get()
-        assert isinstance(result, AssertionError), result
-        assert 'Invalid switch' in str(result), repr(str(result))
-        switcher.kill()
+    def test_invalid_switch_None(self):
+        self._test_wait_read_invalid_switch(None)
+
+    def test_invalid_switch_0(self):
+        self._test_wait_read_invalid_switch(0)
+
+    def test_invalid_switch_1(self):
+        self._test_wait_read_invalid_switch(0.001)
+
+    # we don't test wait_write the same way, because socket is always ready to write
+
+
+def switch_None(g):
+    g[0].switch(None)
 
 
 class TestTimers(greentest.TestCase):
