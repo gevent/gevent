@@ -6,7 +6,6 @@ python:
 env:
   - EXTRA=1
   - GEVENT_FILE=thread
-  - GEVENT_BACKEND=signalfd
 matrix:
  allow_failures:
    - env: GEVENT_BACKEND=signalfd
@@ -25,6 +24,8 @@ matrix:
      env: GEVENT_BACKEND=nosigmask,noinotify GEVENTSETUP_EV_VERIFY=3
    - python: 2.6
      env: DEBUGPY=-dbg GEVENTSETUP_EV_VERIFY=3
+   - python: 2.7
+     env: GEVENT_BACKEND=signalfd
    - python: 2.5
      env: DEBUGPY=-dbg GEVENTSETUP_EV_VERIFY=3
 install:
