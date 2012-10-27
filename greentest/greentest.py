@@ -121,9 +121,9 @@ def wrap_refcount(method):
                 # OK, we don't know for sure yet. Let's search for more
                 if sum(deltas[-3:]) <= 0 or sum(deltas[-4:]) <= 0 or deltas[-4:].count(0) >= 2:
                     # this is suspicious, so give a few more runs
-                    limit = 10
+                    limit = 11
                 else:
-                    limit = 6
+                    limit = 7
                 if len(deltas) >= limit:
                     raise AssertionError('refcount increased by %r' % (deltas, ))
         finally:

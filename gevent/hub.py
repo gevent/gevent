@@ -4,13 +4,15 @@ from __future__ import absolute_import
 import sys
 import os
 import traceback
-try:
-    from gevent._util import set_exc_info
-except ImportError, ex:
-    sys.stderr.write('Failed to import set_exc_info: %s\n' % ex)
 
-    def set_exc_info(*args):
-        pass
+import greenlet  # http://pypi.python.org/pypi/greenlet/
+greenlet_version = getattr(greenlet, '__version__', None)
+if greenlet_version:
+    greenlet_version_info = [int(x) for x in greenlet_version.split('.')]
+if not greenlet_version or greenlet_version_info[:3] < [0, 3, 2]:
+    raise ImportError('''Your version of greenlet (%s) is too old (required >= 0.3.2)
+             You can get a newer version of greenlet from http://pypi.python.org/pypi/greenlet/''' % (greenlet_version, ))
+from greenlet import greenlet, getcurrent, GreenletExit
 
 
 __all__ = ['getcurrent',
@@ -34,24 +36,6 @@ if PY3:
 else:
     string_types = basestring,
     integer_types = (int, long)
-
-
-def __import_py_magic_greenlet():
-    try:
-        from py.magic import greenlet
-        return greenlet
-    except ImportError:
-        pass
-
-try:
-    from greenlet import greenlet
-except ImportError:
-    greenlet = __import_py_magic_greenlet()
-    if greenlet is None:
-        raise
-
-getcurrent = greenlet.getcurrent
-GreenletExit = greenlet.GreenletExit
 
 
 # In greenlet >= 0.3.2, GreenletExit is a subclass of BaseException
@@ -358,15 +342,10 @@ class Hub(greenlet):
             sys.stderr.write('%s failed with %s\n\n' % (context, getattr(type, '__name__', 'exception'), ))
 
     def switch(self):
-        exc_type, exc_value = sys.exc_info()[:2]
-        try:
-            switch_out = getattr(getcurrent(), 'switch_out', None)
-            if switch_out is not None:
-                switch_out()
-            exc_clear()
-            return greenlet.switch(self)
-        finally:
-            set_exc_info(exc_type, exc_value)
+        switch_out = getattr(getcurrent(), 'switch_out', None)
+        if switch_out is not None:
+            switch_out()
+        return greenlet.switch(self)
 
     def switch_out(self):
         raise AssertionError('Impossible to call blocking function in the event loop callback')

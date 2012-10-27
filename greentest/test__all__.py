@@ -31,7 +31,7 @@ NOT_IMPLEMENTED = {
 COULD_BE_MISSING = {
     'socket': ['create_connection', 'RAND_add', 'RAND_egd', 'RAND_status']}
 
-NO_ALL = ['gevent.threading']
+NO_ALL = ['gevent.threading', 'gevent._util']
 
 
 class Test(unittest.TestCase):
@@ -159,12 +159,12 @@ are missing from %r:
 
         self.check_implements_presence_justified()
 
+        if self.stdlib_module is None:
+            return
+
         # use __all__ as __implements__
         if self.__implements__ is None:
             self.__implements__ = sorted(self.module.__all__)
-
-        if self.stdlib_module is None:
-            return
 
         self.set_stdlib_all()
         self.check_implements_subset_of_stdlib_all()
