@@ -134,6 +134,45 @@ end:
 }
 
 
+static void gevent_call(struct PyGeventLoopObject* loop, struct PyGeventCallbackObject* cb) {
+    GIL_DECLARE;
+    PyObject *result, *callback, *args;
+    GIL_ENSURE;
+    if (!loop || !cb)
+        return;
+    callback = cb->callback;
+    args = cb->args;
+    if (!callback || !args)
+        return;
+    if (callback == Py_None || args == Py_None)
+        return;
+    Py_INCREF(loop);
+    Py_INCREF(callback);
+    Py_INCREF(args);
+
+    Py_INCREF(Py_None);
+    Py_DECREF(cb->callback);
+    cb->callback = Py_None;
+
+    result = PyObject_Call(callback, args, NULL);
+    if (result) {
+        Py_DECREF(result);
+    }
+    else {
+        gevent_handle_error(loop, cb);
+    }
+
+    Py_INCREF(Py_None);
+    Py_DECREF(cb->args);
+    cb->args = Py_None;
+
+    Py_DECREF(callback);
+    Py_DECREF(args);
+    Py_DECREF(loop);
+    GIL_RELEASE;
+}
+
+
 #undef DEFINE_CALLBACK
 #define DEFINE_CALLBACK(WATCHER_LC, WATCHER_TYPE) \
     static void gevent_callback_##WATCHER_LC(struct ev_loop *_loop, void *c_watcher, int revents) {                  \
@@ -145,10 +184,23 @@ end:
 DEFINE_CALLBACKS
 
 
-static void gevent_signal_check(struct ev_loop *_loop, void *watcher, int revents) {
+static void gevent_run_callbacks(struct ev_loop *_loop, void *watcher, int revents) {
+    struct PyGeventLoopObject* loop;
+    PyObject *result;
     GIL_DECLARE;
     GIL_ENSURE;
-    gevent_check_signals(GET_OBJECT(PyGeventLoopObject, watcher, _signal_checker));
+    loop = GET_OBJECT(PyGeventLoopObject, watcher, _signal_checker);
+    Py_INCREF(loop);
+    gevent_check_signals(loop);
+    result = ((struct __pyx_vtabstruct_6gevent_4core_loop *)loop->__pyx_vtab)->_run_callbacks(loop);
+    if (result) {
+        Py_DECREF(result);
+    }
+    else {
+        PyErr_Print();
+        PyErr_Clear();
+    }
+    Py_DECREF(loop);
     GIL_RELEASE;
 }
 

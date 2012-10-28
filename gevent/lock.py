@@ -9,6 +9,7 @@ __all__ = ['Semaphore', 'DummySemaphore', 'BoundedSemaphore', 'RLock']
 
 
 class DummySemaphore(object):
+    # XXX what is this used for?
     """A Semaphore initialized with "infinite" initial value. Neither of its methods ever block."""
 
     def __str__(self):
@@ -21,6 +22,7 @@ class DummySemaphore(object):
         pass
 
     def rawlink(self, callback):
+        # XXX should still work and notify?
         pass
 
     def unlink(self, callback):

@@ -56,8 +56,5 @@ def sleep0(lst, param):
     lst.append(param + 'B')
 
 
-del TestSleep0  # XXX
-
-
 if __name__ == '__main__':
     greentest.main()

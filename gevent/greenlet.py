@@ -82,7 +82,7 @@ class Greenlet(greenlet):
         self.value = None
         self._exception = _NONE
         loop = hub.loop
-        self._notifier = loop.callback()
+        self._notifier = None
         self._start_event = None
 
     @property
@@ -185,8 +185,7 @@ class Greenlet(greenlet):
     def start(self):
         """Schedule the greenlet to run in this loop iteration"""
         if self._start_event is None:
-            self._start_event = self.parent.loop.callback()
-            self._start_event.start(self.switch)
+            self._start_event = self.parent.loop.run_callback(self.switch)
 
     def start_later(self, seconds):
         """Schedule the greenlet to run in the future loop iteration *seconds* later"""
@@ -304,8 +303,8 @@ class Greenlet(greenlet):
     def _report_result(self, result):
         self._exception = None
         self.value = result
-        if self._links and not self._notifier.active:
-            self._notifier.start(self._notify_links)
+        if self._links and not self._notifier:
+            self._notifier = self.parent.loop.run_callback(self._notify_links)
 
     def _report_error(self, exc_info):
         exception = exc_info[1]
@@ -314,8 +313,8 @@ class Greenlet(greenlet):
             return
         self._exception = exception
 
-        if self._links and not self._notifier.active:
-            self._notifier.start(self._notify_links)
+        if self._links and not self._notifier:
+            self._notifier = self.parent.loop.run_callback(self._notify_links)
 
         self.parent.handle_error(self, *exc_info)
 
@@ -344,8 +343,8 @@ class Greenlet(greenlet):
         if not callable(callback):
             raise TypeError('Expected callable: %r' % (callback, ))
         self._links.append(callback)
-        if self.ready() and not self._notifier.active:
-            self._notifier.start(self._notify_links)
+        if self.ready() and self._links and not self._notifier:
+            self._notifier = self.parent.loop.run_callback(self._notify_links)
 
     def link(self, receiver, SpawnedLink=SpawnedLink):
         """Link greenlet's completion to a callable.
@@ -392,6 +391,7 @@ def _kill(greenlet, exception, waiter):
     try:
         greenlet.throw(exception)
     except:
+        # XXX do we need this here?
         greenlet.parent.handle_error(greenlet, *sys.exc_info())
     waiter.switch()
 

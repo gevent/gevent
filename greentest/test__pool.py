@@ -1,3 +1,4 @@
+from __future__ import with_statement
 from time import time
 import gevent
 from gevent import pool
@@ -7,8 +8,10 @@ import random
 from greentest import ExpectedException
 import six
 
+import unittest
 
-class TestCoroutinePool(greentest.TestCase):
+
+class TestCoroutinePool(unittest.TestCase):
     klass = pool.Pool
 
     def test_apply_async(self):
@@ -86,7 +89,8 @@ class TestCoroutinePool(greentest.TestCase):
         try:
             sys.stderr = FakeFile()
             waiter = pool.spawn(crash)
-            self.assertRaises(RuntimeError, waiter.get)
+            with gevent.Timeout(2):
+                self.assertRaises(RuntimeError, waiter.get)
             # the pool should have something free at this point since the
             # waiter returned
             # pool.Pool change: if an exception is raised during execution of a link,
@@ -111,7 +115,9 @@ def crash(*args, **kw):
 
 
 class FakeFile(object):
-    write = crash
+
+    def write(*args):
+        raise RuntimeError('Whaaa')
 
 
 class PoolBasicTests(greentest.TestCase):
@@ -211,6 +217,10 @@ def sqr(x, wait=0.0):
     return x * x
 
 
+def squared(x):
+    return x * x
+
+
 def sqr_random_sleep(x):
     gevent.sleep(random.random() * 0.1)
     return x * x
@@ -232,13 +242,13 @@ class TestPool(greentest.TestCase):
 
     def test_apply(self):
         papply = self.pool.apply
-        self.assertEqual(papply(sqr, (5,)), sqr(5))
-        self.assertEqual(papply(sqr, (), {'x': 3}), sqr(x=3))
+        self.assertEqual(papply(sqr, (5,)), 25)
+        self.assertEqual(papply(sqr, (), {'x': 3}), 9)
 
     def test_map(self):
         pmap = self.pool.map
-        self.assertEqual(pmap(sqr, range(10)), list(map(sqr, range(10))))
-        self.assertEqual(pmap(sqr, range(100)), list(map(sqr, range(100))))
+        self.assertEqual(pmap(sqr, range(10)), list(map(squared, range(10))))
+        self.assertEqual(pmap(sqr, range(100)), list(map(squared, range(100))))
 
     def test_async(self):
         res = self.pool.apply_async(sqr, (7, TIMEOUT1,))
@@ -264,7 +274,7 @@ class TestPool(greentest.TestCase):
 
     def test_imap(self):
         it = self.pool.imap(sqr, range(10))
-        self.assertEqual(list(it), list(map(sqr, range(10))))
+        self.assertEqual(list(it), list(map(squared, range(10))))
 
         it = self.pool.imap(sqr, range(10))
         for i in range(10):
@@ -278,18 +288,18 @@ class TestPool(greentest.TestCase):
 
     def test_imap_random(self):
         it = self.pool.imap(sqr_random_sleep, range(10))
-        self.assertEqual(list(it), list(map(sqr, range(10))))
+        self.assertEqual(list(it), list(map(squared, range(10))))
 
     def test_imap_unordered(self):
         it = self.pool.imap_unordered(sqr, range(1000))
-        self.assertEqual(sorted(it), list(map(sqr, range(1000))))
+        self.assertEqual(sorted(it), list(map(squared, range(1000))))
 
         it = self.pool.imap_unordered(sqr, range(1000))
-        self.assertEqual(sorted(it), list(map(sqr, range(1000))))
+        self.assertEqual(sorted(it), list(map(squared, range(1000))))
 
     def test_imap_unordered_random(self):
         it = self.pool.imap_unordered(sqr_random_sleep, range(10))
-        self.assertEqual(sorted(it), list(map(sqr, range(10))))
+        self.assertEqual(sorted(it), list(map(squared, range(10))))
 
     def test_empty(self):
         it = self.pool.imap_unordered(sqr, [])

@@ -37,7 +37,7 @@ class Semaphore(object):
         self._start_notify()
 
     def _start_notify(self):
-        if self._links and self.counter > 0 and (self._notifier is None or not self._notifier.active):
+        if self._links and self.counter > 0 and not self._notifier:
             self._notifier = get_hub().loop.run_callback(self._notify_links)
 
     def _notify_links(self):

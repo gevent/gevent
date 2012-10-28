@@ -48,15 +48,11 @@ class Test(greentest.TestCase):
 
 class TestCallback(Test):
 
-    def setUp(self):
-        super(TestCallback, self).setUp()
-        self.x = get_hub().loop.callback()
-
     def tearDown(self):
         assert not self.x.pending, self.x
 
     def start(self, *args):
-        self.x.start(*args)
+        self.x = get_hub().loop.run_callback(*args)
 
 
 class TestSpawn(Test):

@@ -61,7 +61,7 @@ class Queue(object):
         self.getters = set()
         self.putters = set()
         self.hub = get_hub()
-        self._event_unlock = self.hub.loop.callback()
+        self._event_unlock = None
         if items:
             self._init(maxsize, items)
         else:
@@ -275,13 +275,10 @@ class Queue(object):
                 getter.switch(getter)
             if not repeat:
                 return
-        # testcase: 2 greenlets: while True: q.put(q.get()) - nothing else has a change to execute
-        # to avoid this, schedule unlock with timer(0, ...) once in a while
-        # replace 'while True' with 'for _ in xrange(100): ...; self._timer.start(self._unlock)
-        # but then I need _timer and self._event_unlock to play with each other
 
     def _schedule_unlock(self):
-        self._event_unlock.start(self._unlock)
+        if not self._event_unlock:
+            self._event_unlock = self.hub.loop.run_callback(self._unlock)
 
     def __iter__(self):
         return self
@@ -401,7 +398,7 @@ class Channel(object):
         self.getters = collections.deque()
         self.putters = collections.deque()
         self.hub = get_hub()
-        self._event_unlock = self.hub.loop.callback()
+        self._event_unlock = None
 
     def __repr__(self):
         return '<%s at %s %s>' % (type(self).__name__, hex(id(self)), self._format())
@@ -499,7 +496,8 @@ class Channel(object):
             putter.switch(putter)
 
     def _schedule_unlock(self):
-        self._event_unlock.start(self._unlock)
+        if not self._event_unlock:
+            self._event_unlock = self.hub.loop.run_callback(self._unlock)
 
     def __iter__(self):
         return self

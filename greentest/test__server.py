@@ -64,7 +64,7 @@ class Settings:
 
 class TestCase(greentest.TestCase):
 
-    __timeout__ = 10
+    __timeout__ = 5
 
     def cleanup(self):
         if getattr(self, 'server', None) is not None:
@@ -78,7 +78,8 @@ class TestCase(greentest.TestCase):
         return sock
 
     def makefile(self, timeout=0.1, bufsize=1):
-        sock = socket.create_connection((self.server.server_host, self.server.server_port))
+        sock = socket.socket()
+        sock.connect((self.server.server_host, self.server.server_port))
         fobj = sock.makefile(bufsize=bufsize)
         fobj._sock.settimeout(timeout)
         return fobj

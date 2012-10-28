@@ -4,6 +4,7 @@
 import sys
 from gevent.hub import get_hub, getcurrent, _NONE, PY3
 from gevent.timeout import Timeout
+from collections import deque
 if PY3:
     xrange = range
 
@@ -24,7 +25,7 @@ class Event(object):
         self._todo = set()
         self._flag = False
         self.hub = get_hub()
-        self._notifier = self.hub.loop.callback()
+        self._notifier = None
 
     def __str__(self):
         return '<%s %s _links[%s]>' % (self.__class__.__name__, (self._flag and 'set') or 'clear', len(self._links))
@@ -42,9 +43,8 @@ class Event(object):
         """
         self._flag = True
         self._todo.update(self._links)
-        if self._todo and not self._notifier.active:
-            # schedule a job to notify the links already set
-            self._notifier.start(self._notify_links)
+        if self._todo and not self._notifier:
+            self._notifier = self.hub.loop.run_callback(self._notify_links)
 
     def clear(self):
         """Reset the internal flag to false.
@@ -95,9 +95,9 @@ class Event(object):
         if not callable(callback):
             raise TypeError('Expected callable: %r' % (callback, ))
         self._links.add(callback)
-        if self._flag and not self._notifier.active:
+        if self._flag and not self._notifier:
             self._todo.add(callback)
-            self._notifier.start(self._notify_links)
+            self._notifier = self.hub.loop.run_callback(self._notify_links)
 
     def unlink(self, callback):
         """Remove the callback set by :meth:`rawlink`"""
@@ -150,11 +150,11 @@ class AsyncResult(object):
         ZeroDivisionError: integer division or modulo by zero
     """
     def __init__(self):
-        self._links = set()
+        self._links = deque()
         self.value = None
         self._exception = _NONE
         self.hub = get_hub()
-        self._notifier = self.hub.loop.callback()
+        self._notifier = None
 
     def __str__(self):
         result = '<%s ' % (self.__class__.__name__, )
@@ -189,8 +189,8 @@ class AsyncResult(object):
         """
         self.value = value
         self._exception = None
-        if self._links and not self._notifier.active:
-            self._notifier.start(self._notify_links)
+        if self._links and not self._notifier:
+            self._notifier = self.hub.loop.run_callback(self._notify_links)
 
     def set_exception(self, exception):
         """Store the exception. Wake up the waiters.
@@ -199,8 +199,8 @@ class AsyncResult(object):
         Sequential calls to :meth:`wait` and :meth:`get` will not block at all.
         """
         self._exception = exception
-        if self._links and not self._notifier.active:
-            self._notifier.start(self._notify_links)
+        if self._links and not self._notifier:
+            self._notifier = self.hub.loop.run_callback(self._notify_links)
 
     def get(self, block=True, timeout=None):
         """Return the stored value or raise the exception.
@@ -282,7 +282,7 @@ class AsyncResult(object):
 
     def _notify_links(self):
         while self._links:
-            link = self._links.pop()
+            link = self._links.popleft()
             try:
                 link(self)
             except:
@@ -296,13 +296,16 @@ class AsyncResult(object):
         """
         if not callable(callback):
             raise TypeError('Expected callable: %r' % (callback, ))
-        self._links.add(callback)
-        if self.ready() and not self._notifier.active:
-            self._notifier.start(self._notify_links)
+        self._links.append(callback)
+        if self.ready() and not self._notifier:
+            self._notifier = self.hub.loop.run_callback(self._notify_links)
 
     def unlink(self, callback):
         """Remove the callback set by :meth:`rawlink`"""
-        self._links.discard(callback)
+        try:
+            self._links.remove(callback)
+        except ValueError:
+            pass
 
     # link protocol
     def __call__(self, source):

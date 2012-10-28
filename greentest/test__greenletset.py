@@ -70,9 +70,9 @@ class Test(greentest.TestCase):
         assert len(s) == 2, s
         s.kill(block=False)
         assert len(s) == 2, s
-        gevent.sleep(0)
-        assert not s, s
+        gevent.sleep(0.0001)
         assert len(s) == 0, s
+        assert not s, s
 
     def test_kill_fires_once(self):
         u1 = Undead()

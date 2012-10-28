@@ -65,10 +65,8 @@ class Test(greentest.TestCase):
     def _test_wait_read_invalid_switch(self, sleep):
         sock1, sock2 = socket.socketpair()
         try:
-            lst = []
-            gevent.get_hub().loop.run_callback(switch_None, lst)
             p = gevent.spawn(util.wrap_errors(AssertionError, socket.wait_read), sock1.fileno())
-            lst.append(p)
+            gevent.get_hub().loop.run_callback(switch_None, p)
             if sleep is not None:
                 gevent.sleep(sleep)
             result = p.get()
@@ -91,7 +89,7 @@ class Test(greentest.TestCase):
 
 
 def switch_None(g):
-    g[0].switch(None)
+    g.switch(None)
 
 
 class TestTimers(greentest.TestCase):

@@ -298,11 +298,11 @@ class TestNoWait(TestCase):
 
         assert q.empty(), q
         assert q.full(), q
-        gevent.sleep(0)
+        gevent.sleep(0.001)
         assert q.empty(), q
         assert q.full(), q
         get_hub().loop.run_callback(store_result, q.get_nowait)
-        gevent.sleep(0)
+        gevent.sleep(0.001)
         assert q.empty(), q
         assert q.full(), q
         assert result == [5], result
@@ -321,12 +321,12 @@ class TestNoWait(TestCase):
 
         assert q.empty(), q
         assert not q.full(), q
-        gevent.sleep(0)
+        gevent.sleep(0.001)
         assert q.empty(), q
         assert not q.full(), q
         get_hub().loop.run_callback(store_result, q.put_nowait, 10)
         assert not p.ready(), p
-        gevent.sleep(0)
+        gevent.sleep(0.001)
         assert result == [None], result
         assert p.ready(), p
         assert not q.full(), q

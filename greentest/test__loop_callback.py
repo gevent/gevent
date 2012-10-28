@@ -8,6 +8,6 @@ def incr():
     count += 1
 
 loop = loop()
-loop.callback().start(incr)
+loop.run_callback(incr)
 loop.run()
 assert count == 1, count

@@ -89,11 +89,11 @@ def sleep(seconds=0, ref=True):
     hub = get_hub()
     loop = hub.loop
     if seconds <= 0:
-        watcher = loop.idle(ref=ref)
-        watcher.priority = loop.MAXPRI
+        waiter = Waiter()
+        loop.run_callback(waiter.switch)
+        waiter.get()
     else:
-        watcher = loop.timer(seconds, ref=ref)
-    hub.wait(watcher)
+        hub.wait(loop.timer(seconds, ref=ref))
 
 
 def idle(priority=0):
