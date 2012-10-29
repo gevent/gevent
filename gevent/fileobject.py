@@ -115,11 +115,7 @@ else:
                     data = _read(self.fileno(), size)
                 except (IOError, OSError):
                     code = sys.exc_info()[1].args[0]
-                    if code in ignored_errors:
-                        pass
-                    elif code == EBADF:
-                        return ''
-                    else:
+                    if code not in ignored_errors:
                         raise
                     sys.exc_clear()
                 else:
@@ -134,13 +130,7 @@ else:
                     if data.endswith('\r'):
                         self._eat_newline = True
                     return self._translate_newlines(data)
-                try:
-                    self.hub.wait(self._read_event)
-                except IOError:
-                    ex = sys.exc_info()[1]
-                    if ex.args[0] == EBADF:
-                        return ''
-                    raise
+                self.hub.wait(self._read_event)
 
         def _translate_newlines(self, data):
             data = data.replace("\r\n", "\n")

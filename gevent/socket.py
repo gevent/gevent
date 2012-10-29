@@ -385,20 +385,11 @@ class socket(object):
                 return sock.recv(*args)
             except error:
                 ex = sys.exc_info()[1]
-                if ex.args[0] == EBADF:
-                    return ''
                 if ex.args[0] != EWOULDBLOCK or self.timeout == 0.0:
                     raise
                 # QQQ without clearing exc_info test__refcount.test_clean_exit fails
                 sys.exc_clear()
-            try:
-                self._wait(self._read_event)
-            except error:
-                # if another greenlet called this socket, _wait would fail with EBADF
-                ex = sys.exc_info()[1]
-                if ex.args[0] == EBADF:
-                    return ''
-                raise
+            self._wait(self._read_event)
 
     def recvfrom(self, *args):
         sock = self._sock
@@ -431,18 +422,10 @@ class socket(object):
                 return sock.recv_into(*args)
             except error:
                 ex = sys.exc_info()[1]
-                if ex.args[0] == EBADF:
-                    return 0
                 if ex.args[0] != EWOULDBLOCK or self.timeout == 0.0:
                     raise
                 sys.exc_clear()
-            try:
-                self._wait(self._read_event)
-            except error:
-                ex = sys.exc_info()[1]
-                if ex.args[0] == EBADF:
-                    return 0
-                raise
+            self._wait(self._read_event)
 
     def send(self, data, flags=0, timeout=timeout_default):
         sock = self._sock
@@ -455,13 +438,7 @@ class socket(object):
             if ex.args[0] != EWOULDBLOCK or timeout == 0.0:
                 raise
             sys.exc_clear()
-            try:
-                self._wait(self._write_event)
-            except error:
-                ex = sys.exc_info()[1]
-                if ex.args[0] == EBADF:
-                    return 0
-                raise
+            self._wait(self._write_event)
             try:
                 return sock.send(data, flags)
             except error:
