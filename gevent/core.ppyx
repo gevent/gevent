@@ -538,7 +538,7 @@ cdef public class callback [object PyGeventCallbackObject, type PyGeventCallback
             return "<...>"
         try:
             format = self._format()
-            result = "<yy %s at 0x%x%s" % (self.__class__.__name__, id(self), format)
+            result = "<%s at 0x%x%s" % (self.__class__.__name__, id(self), format)
             if self.pending:
                 result += " pending"
             if self.callback is not None:
