@@ -613,7 +613,12 @@ def iwait(objects, timeout=None):
         if timeout is not None:
             timer.stop()
         for obj in objects:
-            obj.unlink(switch)
+            unlink = getattr(obj, 'unlink', None)
+            if unlink:
+                try:
+                    unlink(switch)
+                except:
+                    traceback.print_exc()
 
 
 def wait(objects=None, timeout=None, count=None):
