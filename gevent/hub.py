@@ -57,19 +57,10 @@ get_ident = thread.get_ident
 MAIN_THREAD = get_ident()
 
 
-def _switch_helper(function, args, kwargs):
-    # work around the fact that greenlet.switch does not support keyword args
-    return function(*args, **kwargs)
-
-
 def spawn_raw(function, *args, **kwargs):
     hub = get_hub()
-    if kwargs:
-        g = greenlet(_switch_helper, hub)
-        hub.loop.run_callback(g.switch, function, args, kwargs)
-    else:
-        g = greenlet(function, hub)
-        hub.loop.run_callback(g.switch, *args)
+    g = greenlet(function, hub)
+    hub.loop.run_callback(g.switch, *args, **kwargs)
     return g
 
 
