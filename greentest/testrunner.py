@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 import gevent
-gevent.get_hub('select')
+gevent.get_hub('select')  # this is just to make sure we don't pass any fds to children
 from gevent import monkey; monkey.patch_all()
 import sys
 import os
