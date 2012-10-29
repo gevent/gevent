@@ -318,7 +318,13 @@ class Hub(greenlet):
         if current is self or current is self.parent or self.loop is None:
             self.parent.throw(type, value)
         else:
-            self.loop.run_callback(self.parent.throw, type, value)
+            # in case system error was handled and life goes on
+            # switch back to this greenlet as well
+            cb = self.loop.run_callback(current.switch)
+            try:
+                self.parent.throw(type, value)
+            finally:
+                cb.stop()
 
     def print_exception(self, context, type, value, tb):
         traceback.print_exception(type, value, tb)

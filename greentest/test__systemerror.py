@@ -23,6 +23,8 @@ class Test(greentest.TestCase):
         except SystemExit:
             ex = sys.exc_info()[1]
             assert str(ex) == MSG, repr(str(ex))
+        else:
+            raise AssertionError('must raise SystemExit')
 
     def test_keyboard_interrupt(self):
         self.start(raise_, KeyboardInterrupt)
@@ -31,6 +33,8 @@ class Test(greentest.TestCase):
             gevent.sleep(0.001)
         except KeyboardInterrupt:
             pass
+        else:
+            raise AssertionError('must raise KeyboardInterrupt')
 
     def test_system_error(self):
         self.start(raise_, SystemError(MSG))
@@ -40,6 +44,8 @@ class Test(greentest.TestCase):
         except SystemError:
             ex = sys.exc_info()[1]
             assert str(ex) == MSG, repr(str(ex))
+        else:
+            raise AssertionError('must raise SystemError')
 
     def test_exception(self):
         self.start(raise_, Exception('regular exception must not kill the program'))
@@ -58,6 +64,7 @@ class TestCallback(Test):
 class TestSpawn(Test):
 
     def tearDown(self):
+        gevent.sleep(0.0001)
         assert self.x.dead, self.x
 
     def start(self, *args):
