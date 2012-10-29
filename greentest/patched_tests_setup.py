@@ -131,14 +131,8 @@ disabled_tests = \
     # this uses cookielib which we don't care about
 
     , 'test_thread.ThreadRunningTests.test__count'
-    # XXX
-
-
-    # XXX remove these:
-    #, 'test_threading.ThreadedTests.test_ident_of_no_threading_threads'
-    #, 'test_threading.ThreadedTests.test_foreign_thread'
-    # this assert that dummy thread id is in threading._active
-    # however, we clean that up
+    , 'test_thread.TestForkInThread.test_forkinthread'
+    # XXX needs investigating
 
     , 'test_urllib2net.OtherNetworkTests.test_urlwithfrag'
     # fails dues to some changes on python.org

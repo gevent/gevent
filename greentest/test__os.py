@@ -1,6 +1,5 @@
-from gevent import monkey; monkey.patch_all()
-
-import os
+from os import pipe
+from gevent import os
 from greentest import TestCase, main
 from gevent import Greenlet, joinall
 try:
@@ -14,12 +13,21 @@ except ImportError:
     errno = None
 
 
-class TestOS(TestCase):
+class TestOS_tp(TestCase):
 
     __timeout__ = 5
 
+    def pipe(self):
+        return pipe()
+
+    def read(self, *args):
+        return os.tp_read(*args)
+
+    def write(self, *args):
+        return os.tp_write(*args)
+
     def test_if_pipe_blocks(self):
-        r, w = os.pipe()
+        r, w = self.pipe()
         # set nbytes such that for sure it is > maximum pipe buffer
         nbytes = 1000000
         block = 'x' * 4096
@@ -31,12 +39,12 @@ class TestOS(TestCase):
         def produce():
             while byteswritten[0] != nbytes:
                 bytesleft = nbytes - byteswritten[0]
-                byteswritten[0] += os.write(w, buf[:min(bytesleft, 4096)])
+                byteswritten[0] += self.write(w, buf[:min(bytesleft, 4096)])
 
         def consume():
             while bytesread[0] != nbytes:
                 bytesleft = nbytes - bytesread[0]
-                bytesread[0] += len(os.read(r, min(bytesleft, 4096)))
+                bytesread[0] += len(self.read(r, min(bytesleft, 4096)))
 
         producer = Greenlet(produce)
         producer.start()
@@ -49,74 +57,22 @@ class TestOS(TestCase):
         assert bytesread[0] == nbytes
         assert bytesread[0] == byteswritten[0]
 
-    def test_fd_flags_restored(self):
-        if fcntl is None:
-            return
-        r, w = os.pipe()
-        flags = fcntl.fcntl(r, fcntl.F_GETFL, 0)
-        assert not flags & os.O_NONBLOCK
-        flags = fcntl.fcntl(w, fcntl.F_GETFL, 0)
-        assert not flags & os.O_NONBLOCK
-        os.write(w, 'foo')
-        buf = os.read(r, 3)
-        assert buf == 'foo'
-        flags = fcntl.fcntl(r, fcntl.F_GETFL, 0)
-        assert not flags & os.O_NONBLOCK
-        flags = fcntl.fcntl(w, fcntl.F_GETFL, 0)
-        assert not flags & os.O_NONBLOCK
 
-    def test_o_nonblock_read(self):
-        if fcntl is None or errno is None:
-            return
-        r, w = os.pipe()
+if hasattr(os, 'make_nonblocking'):
 
-        rflags = fcntl.fcntl(r, fcntl.F_GETFL, 0)
-        fcntl.fcntl(r, fcntl.F_SETFL, rflags | os.O_NONBLOCK)
+    class TestOS_nb(TestOS_tp):
 
-        gotEAGAIN = False
-        try:
-            os.read(r, 3)
-        except OSError, e:
-            if e.errno != errno.EAGAIN:
-                raise
-            gotEAGAIN = True
+        def pipe(self):
+            r, w = pipe()
+            os.make_nonblocking(r)
+            os.make_nonblocking(w)
+            return r, w
 
-        assert gotEAGAIN
+        def read(self, *args):
+            return os.nb_read(*args)
 
-        os.write(w, "foo")
-        data = os.read(r, 3)
-        assert data == "foo"
-
-        gotEAGAIN = False
-        try:
-            os.read(r, 3)
-        except OSError, e:
-            if e.errno != errno.EAGAIN:
-                raise
-            gotEAGAIN = True
-
-        assert gotEAGAIN
-
-    def test_o_nonblock_write(self):
-        if fcntl is None or errno is None:
-            return
-        r, w = os.pipe()
-
-        wflags = fcntl.fcntl(r, fcntl.F_GETFL, 0)
-        fcntl.fcntl(w, fcntl.F_SETFL, wflags | os.O_NONBLOCK)
-
-        data = "d" * 1000000
-
-        # fill output buffer to force EAGAIN in next os.write() call
-        os.write(w, data)
-        gotEAGAIN = False
-        try:
-            os.write(w, data)
-        except OSError, e:
-            if e.errno != errno.EAGAIN:
-                raise
-            gotEAGAIN = True
-        assert gotEAGAIN
+        def write(self, *args):
+            return os.nb_write(*args)
 
 
 if __name__ == '__main__':
