@@ -371,7 +371,7 @@ class TestYield(CommonTests):
             yield "not found"
 
 
-if 'bytearray' in __builtins__.__dict__:
+if sys.version_info[:2] >= (2, 6):
 
     class TestBytearray(CommonTests):
 
@@ -386,6 +386,27 @@ if 'bytearray' in __builtins__.__dict__:
             else:
                 start_response('404 Not Found', [('Content-Type', 'text/plain')])
                 return [bytearray("not found")]
+
+
+class MultiLineHeader(TestCase):
+    @staticmethod
+    def application(env, start_response):
+        assert "test.submit" in env["CONTENT_TYPE"]
+        start_response('200 OK', [('Content-Type', 'text/plain')])
+        return ["ok"]
+
+    def test_multiline_116(self):
+        """https://github.com/SiteSupport/gevent/issues/116"""
+        request = '\r\n'.join((
+            'POST / HTTP/1.0',
+            'Host: localhost',
+            'Content-Type: multipart/related; boundary="====XXXX====";',
+            ' type="text/xml";start="test.submit"',
+            'Content-Length: 0',
+            '', ''))
+        fd = self.makefile()
+        fd.write(request)
+        read_http(fd, version='1.0')
 
 
 class TestGetArg(TestCase):

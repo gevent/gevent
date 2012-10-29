@@ -523,6 +523,23 @@ class WSGIHandler(object):
             self.start_response(_INTERNAL_ERROR_STATUS, _INTERNAL_ERROR_HEADERS)
             self.write(_INTERNAL_ERROR_BODY)
 
+    def _headers(self):
+        key = None
+        value = None
+        for header in self.headers.headers:
+            if key is not None and header[:1] in " \t":
+                value += header
+                continue
+
+            if key not in (None, 'CONTENT_TYPE', 'CONTENT_LENGTH'):
+                yield 'HTTP_' + key, value.strip()
+
+            key, value = header.split(':', 1)
+            key = key.replace('-', '_').upper()
+
+        if key not in (None, 'CONTENT_TYPE', 'CONTENT_LENGTH'):
+            yield 'HTTP_' + key, value.strip()
+
     def get_environ(self):
         env = self.server.get_environ()
         env['REQUEST_METHOD'] = self.command
@@ -548,19 +565,14 @@ class WSGIHandler(object):
             env['REMOTE_ADDR'] = str(client_address[0])
             env['REMOTE_PORT'] = str(client_address[1])
 
-        for header in self.headers.headers:
-            key, value = header.split(':', 1)
-            key = key.replace('-', '_').upper()
-            if key not in ('CONTENT_TYPE', 'CONTENT_LENGTH'):
-                value = value.strip()
-                key = 'HTTP_' + key
-                if key in env:
-                    if 'COOKIE' in key:
-                        env[key] += '; ' + value
-                    else:
-                        env[key] += ',' + value
+        for key, value in self._headers():
+            if key in env:
+                if 'COOKIE' in key:
+                    env[key] += '; ' + value
                 else:
-                    env[key] = value
+                    env[key] += ',' + value
+            else:
+                env[key] = value
 
         if env.get('HTTP_EXPECT') == '100-continue':
             socket = self.socket
