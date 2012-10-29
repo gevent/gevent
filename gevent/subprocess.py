@@ -7,7 +7,7 @@ import gc
 import signal
 import traceback
 from gevent.event import AsyncResult
-from gevent.hub import get_hub
+from gevent.hub import get_hub, linkproxy
 from gevent.fileobject import FileObject
 from gevent.greenlet import Greenlet, joinall
 spawn = Greenlet.spawn
@@ -257,6 +257,10 @@ class Popen(object):
 
     def __repr__(self):
         return '<%s at 0x%x pid=%r returncode=%r>' % (self.__class__.__name__, id(self), self.pid, self.returncode)
+
+    def rawlink(self, callback):
+        self.result.rawlink(linkproxy(callback, self))
+    # XXX unlink
 
     def _on_child(self, watcher):
         watcher.stop()

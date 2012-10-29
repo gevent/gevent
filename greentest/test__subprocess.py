@@ -3,6 +3,7 @@ import sys
 import os
 import errno
 import greentest
+import gevent
 from gevent import subprocess
 import time
 
@@ -18,6 +19,11 @@ class Test(greentest.TestCase):
     def test_exit(self):
         popen = subprocess.Popen([sys.executable, '-c', 'import sys; sys.exit(10)'])
         self.assertEqual(popen.wait(), 10)
+
+    def test_wait(self):
+        popen = subprocess.Popen([sys.executable, '-c', 'import sys; sys.exit(11)'])
+        gevent.wait([popen])
+        self.assertEqual(popen.poll(), 11)
 
     def test_child_exception(self):
         try:

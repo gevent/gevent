@@ -635,6 +635,21 @@ def wait(objects=None, timeout=None, count=None):
     return result
 
 
+class linkproxy(object):
+    __slots__ = ['callback', 'obj']
+
+    def __init__(self, callback, obj):
+        self.callback = callback
+        self.obj = obj
+
+    def __call__(self, *args):
+        callback = self.callback
+        obj = self.obj
+        self.callback = None
+        self.obj = None
+        callback(obj)
+
+
 class _NONE(object):
     "A special thingy you must never pass to any of gevent API"
     __slots__ = []
