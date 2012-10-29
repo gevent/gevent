@@ -78,9 +78,12 @@ def _patch_sys_std(name):
 
 
 def patch_sys(stdin=True, stdout=True, stderr=True):
-    _patch_sys_std('stdin')
-    _patch_sys_std('stdout')
-    _patch_sys_std('stderr')
+    if stdin:
+        _patch_sys_std('stdin')
+    if stdout:
+        _patch_sys_std('stdout')
+    if stderr:
+        _patch_sys_std('stderr')
 
 
 def patch_os():
