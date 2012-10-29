@@ -15,6 +15,7 @@ from gevent import socket as gevent_socket
 assert socket.create_connection is gevent_socket.create_connection
 
 import os
-assert 'built-in' not in repr(os.fork), repr(os.fork)
+if hasattr(os, 'fork'):
+    assert 'built-in' not in repr(os.fork), repr(os.fork)
 
 assert monkey.saved
