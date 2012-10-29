@@ -258,10 +258,6 @@ class Popen(object):
     def __repr__(self):
         return '<%s at 0x%x pid=%r returncode=%r>' % (self.__class__.__name__, id(self), self.pid, self.returncode)
 
-    def rawlink(self, callback):
-        self.result.rawlink(linkproxy(callback, self))
-    # XXX unlink
-
     def _on_child(self, watcher):
         watcher.stop()
         status = watcher.rstatus
@@ -308,6 +304,10 @@ class Popen(object):
 
     def poll(self):
         return self._internal_poll()
+
+    def rawlink(self, callback):
+        self.result.rawlink(linkproxy(callback, self))
+    # XXX unlink
 
     if mswindows:
         #
@@ -472,18 +472,31 @@ class Popen(object):
             if self.returncode is None:
                 if WaitForSingleObject(self._handle, 0) == WAIT_OBJECT_0:
                     self.returncode = GetExitCodeProcess(self._handle)
+                    self.result.set(self.returncode)
+            return self.returncode
+
+        def rawlink(self, callback):
+            if not self.result.ready() and not self._waiting:
+                self._waiting = True
+                Greenlet.spawn(self._wait)
+            self.result.rawlink(linkproxy(callback, self))
+            # XXX unlink
+
+        def _blocking_wait(self):
+            WaitForSingleObject(self._handle, INFINITE)
+            self.returncode = GetExitCodeProcess(self._handle)
             return self.returncode
 
         def _wait(self):
-            WaitForSingleObject(self._handle, INFINITE)
-            return GetExitCodeProcess(self._handle)
+            self.threadpool.spawn(self._blocking_wait).rawlink(self.result)
 
         def wait(self, timeout=None):
             """Wait for child process to terminate.  Returns returncode
             attribute."""
-            if not self._waiting:
-                self._waiting = True
-                self.threadpool.spawn(self._wait).rawlink(self.result)
+            if self.returncode is None:
+                if not self._waiting:
+                    self._waiting = True
+                    self._wait()
             return self.result.wait(timeout=timeout)
 
         def send_signal(self, sig):
