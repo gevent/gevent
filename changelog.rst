@@ -3,6 +3,78 @@ Changelog
 
 .. currentmodule:: gevent
 
+
+Release 1.0rc1
+--------------
+
+- Fixed hub.switch() not to touch stacktrace when switching. greenlet restores the exception information correctly since version 0.3.2. gevent now requires greenlet >= 0.3.2
+- Added gevent.wait() and gevent.iwait(). This is like gevent.joinall() but supports more objects, including Greenlet, Event, Semaphore, Popen. Without arguments it waits for the event loop to finish (previously gevent.run() did that). gevent.run will be removed before final release and gevent.joinall() might be deprecated.
+- Reimplemented loop.run_callback with a list and a single prepare watcher; this fixes the order of spawns and improves performance a little.
+- Fixes Semaphore/Lock not to init hub in `__init__`, so that it's possible to have module-global locks without initializing the hub. This fixes monkey.patch_all() not to init the hub.
+- New implementation of callbacks that executes them in the order they were added. core.loop.callback is removed.
+- Fixed 2.5 compatibility.
+- Fixed crash on Windows when request 'prev' and 'attr' attributes of 'stat' watcher. The attribute access still fails, but now with an exception.
+- Added known_failures.txt that lists all the tests that fail. It can be used by testrunner.py via expected option. It's used when running the test suite in travis.
+- Fixed socket, ssl and fileobject to not mask EBADF error - it is now propogated to the caller. Previously EBADF was converted to empty read/write. Thanks to Vitaly Kruglikov
+- Removed gevent.event.waitall()
+- Renamed FileObjectThreadPool -> FileObjectThread
+- Greenlet: Fixed #143: greenlet links are now executed in the order they were added
+- Synchronize access to FileObjectThread with Semaphore
+- EINVAL is not longer handled in fileobject.
+
+monkey:
+
+- Fixed #178: disable monkey patch os.read/os.write
+- Fixed monkey.patch_thread() to patch threading._DummyThread to avoid leak in threading._active. Original patch by Wil Tan.
+- added Event=False argument to patch_all() and patch_thread
+- added patch_sys() which patches stdin, stdout, stderr with FileObjectThread wrappers. Experimental / buggy.
+- monkey patching everything no longer initializes the hub/event loop.
+
+socket:
+
+- create_connection: do not lookup IPv6 address if IPv6 is unsupported. Patch by Ralf Schmitt.
+
+pywsgi:
+
+- Fixed #86: bytearray is now supported. Original patch by Aaron Westendorf.
+- Fixed #116: Multiline HTTP headers are now handled properly. Patch by Ralf Schmitt.
+
+subprocess:
+
+- Fixed Windows compatibility. The wait() method now also supports 'timeout' argument on Windows.
+- Popen: Added rawlink() method, which makes Popen objects supported by gevent.wait(). Updated examples/processes.py
+- Fixed #148: read from errpipe_read in small chunks, to avoid trigger EINVAL issue on Mac OS X. Patch by Vitaly Kruglikov
+- Do os._exit() in "finally" section to avoid executing unrelated code. Patch by Vitaly Kruglikov.
+
+resolver_ares:
+
+- improve getaddrinfo: For string ports (e.g. "http") resolver_ares/getaddrinfo previously only checked either getservbyname(port, "tcp") or getservbyname(port, "udp"), but never both. It now checks both of them.
+- gevent.ares.channel now accepts strings as arguments
+- upgraded c-ares to cares-1_9_1-12-g805c736
+- it is not possible to configure resolver_ares directly with environ, like GEVENTARES_SERVERS
+
+hub:
+
+- The system error is now raised immediatelly in main greenlet in all cases.
+- Dropped support for old greenlet versions (need >= 0.3.2 now)
+
+core:
+
+- allow 'callback' property of watcher to be set to None. "del w.callback" no longer works.
+- added missing 'noinotify' flag
+
+Misc:
+
+- gevent.thread: allocate_lock is now an alias for LockType/Semaphore. That way it does not fail when being used as class member.
+- Updated greentest.py to start timeouts with `ref=False`.
+- pool: remove unused get_values() function
+- setup.py now recognizes GEVENTSETUP_EV_VERIFY env var which sets EV_VERIFY macro when compiling
+- Added a few micro benchmarks
+- stdlib tests that we care about are now included in greentest/2.x directories, so we don't depend on them being installed system-wide
+- updated util/makedist.py
+- the testrunner was completely rewritten.
+
+
 Release 1.0b4
 -------------
 
