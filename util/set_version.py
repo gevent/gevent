@@ -42,10 +42,13 @@ def get_version_info(version):
     (1, 0, 0, 'dev', 1)
     >>> get_version_info('1.0a3')
     (1, 0, 0, 'alpha', 3)
+    >>> get_version_info('1.0rc1')
+    (1, 0, 0, 'candidate', 1)
     """
 
     repl = {'a': 'alpha',
             'b': 'beta',
+            'rc': 'candidate',
             'dev': 'dev'}
 
     components = LooseVersion(version).version
