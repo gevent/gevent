@@ -26,6 +26,7 @@ else:
 
     from gevent.socket import _fileobject, _get_memory
     cancel_wait_ex = IOError(EBADF, 'File descriptor was closed in another greenlet')
+    from gevent.os import make_nonblocking
 
     try:
         from gevent._util import SocketAdapter__del__, noop
@@ -56,7 +57,7 @@ else:
             self._mode = mode or 'rb'
             self._close = close
             self._translate = 'U' in self._mode
-            fcntl(fileno, F_SETFL, os.O_NONBLOCK)
+            make_nonblocking(fileno)
             self._eat_newline = False
             self.hub = get_hub()
             io = self.hub.loop.io
