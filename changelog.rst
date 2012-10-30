@@ -54,6 +54,7 @@ resolver_ares:
 - it is not possible to configure resolver_ares directly with environ, like GEVENTARES_SERVERS
 
 os:
+
 - Renamed threadpool_read/write to tp_read/write.
 - Removed posix_read, posix_write.
 - Added nb_read, nb_write, make_nonblocking.
