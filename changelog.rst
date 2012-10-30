@@ -53,6 +53,11 @@ resolver_ares:
 - upgraded c-ares to cares-1_9_1-12-g805c736
 - it is not possible to configure resolver_ares directly with environ, like GEVENTARES_SERVERS
 
+os:
+- Renamed threadpool_read/write to tp_read/write.
+- Removed posix_read, posix_write.
+- Added nb_read, nb_write, make_nonblocking.
+
 hub:
 
 - The system error is now raised immediatelly in main greenlet in all cases.
