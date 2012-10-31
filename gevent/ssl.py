@@ -22,7 +22,7 @@ except AttributeError:
 import sys
 import errno
 from gevent.socket import socket, _fileobject, timeout_default
-from gevent.socket import error as socket_error, EBADF
+from gevent.socket import error as socket_error
 from gevent.hub import string_types
 
 
