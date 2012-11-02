@@ -93,11 +93,9 @@ class ThreadPool(object):
         pid = os.getpid()
         if pid != self.pid:
             self.pid = pid
-            if self._size > 0:
-                # Do not mix fork() and threads; since fork() only copies one thread
-                # all objects referenced by other threads has refcount that will never
-                # go down to 0.
-                sys.stderr.write("WARNING: Mixing fork() and threads detected; memory leaked.\n")
+            # Do not mix fork() and threads; since fork() only copies one thread
+            # all objects referenced by other threads has refcount that will never
+            # go down to 0.
             self._init(self._maxsize)
 
     def join(self):
