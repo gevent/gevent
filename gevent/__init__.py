@@ -44,3 +44,14 @@ except ImportError:
     __all__.remove('fork')
 
 run = wait  # XXX to be deleted (soon)
+
+
+# the following makes hidden imports visible to freezing tools like
+# py2exe. see https://github.com/SiteSupport/gevent/issues/181
+def __dependencies_for_freezing():
+    from gevent import core, resolver_thread, resolver_ares, socket,\
+        threadpool, thread, threading, select, subprocess
+
+    import pprint, traceback, signal
+
+del __dependencies_for_freezing
