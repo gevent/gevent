@@ -51,7 +51,8 @@ run = wait  # XXX to be deleted (soon)
 def __dependencies_for_freezing():
     from gevent import core, resolver_thread, resolver_ares, socket,\
         threadpool, thread, threading, select, subprocess
-
-    import pprint, traceback, signal
+    import pprint
+    import traceback
+    import signal
 
 del __dependencies_for_freezing
