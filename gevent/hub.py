@@ -38,14 +38,6 @@ else:
     integer_types = (int, long)
 
 
-# In greenlet >= 0.3.2, GreenletExit is a subclass of BaseException
-# In greenlet <= 0.3.1, GreenletExit is a subclass of Exception
-# Since, GreenletExit is a part of gevent's public interface, we want
-# it to be consistent, so if we got older greenlet, we monkey patch
-# GreenletExit's __bases__
-if GreenletExit.__bases__[0] is Exception:
-    GreenletExit.__bases__ = (BaseException, )
-
 if sys.version_info[0] <= 2:
     import thread
 else:
