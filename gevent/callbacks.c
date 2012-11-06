@@ -139,13 +139,13 @@ static void gevent_call(struct PyGeventLoopObject* loop, struct PyGeventCallback
     PyObject *result, *callback, *args;
     GIL_ENSURE;
     if (!loop || !cb)
-        return;
+        goto end;
     callback = cb->callback;
     args = cb->args;
     if (!callback || !args)
-        return;
+        goto end;
     if (callback == Py_None || args == Py_None)
-        return;
+        goto end;
     Py_INCREF(loop);
     Py_INCREF(callback);
     Py_INCREF(args);
@@ -169,6 +169,7 @@ static void gevent_call(struct PyGeventLoopObject* loop, struct PyGeventCallback
     Py_DECREF(callback);
     Py_DECREF(args);
     Py_DECREF(loop);
+end:
     GIL_RELEASE;
 }
 
