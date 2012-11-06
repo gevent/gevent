@@ -537,29 +537,33 @@ class Waiter(object):
 
     def switch(self, value=None):
         """Switch to the greenlet if one's available. Otherwise store the value."""
-        if self.greenlet is None:
+        greenlet = self.greenlet
+        if greenlet is None:
             self.value = value
             self._exception = None
         else:
             assert getcurrent() is self.hub, "Can only use Waiter.switch method from the Hub greenlet"
+            switch = greenlet.switch
             try:
-                self.greenlet.switch(value)
+                switch(value)
             except:
-                self.hub.handle_error(self.greenlet.switch, *sys.exc_info())
+                self.hub.handle_error(switch, *sys.exc_info())
 
     def switch_args(self, *args):
         return self.switch(args)
 
     def throw(self, *throw_args):
         """Switch to the greenlet with the exception. If there's no greenlet, store the exception."""
-        if self.greenlet is None:
+        greenlet = self.greenlet
+        if greenlet is None:
             self._exception = throw_args
         else:
             assert getcurrent() is self.hub, "Can only use Waiter.switch method from the Hub greenlet"
+            throw = greenlet.throw
             try:
-                self.greenlet.throw(*throw_args)
+                throw(*throw_args)
             except:
-                self.hub.handle_error(self.greenlet.throw, *sys.exc_info())
+                self.hub.handle_error(throw, *sys.exc_info())
 
     def get(self):
         """If a value/an exception is stored, return/raise it. Otherwise until switch() or throw() is called."""
