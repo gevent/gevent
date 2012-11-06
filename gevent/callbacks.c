@@ -49,6 +49,7 @@ static CYTHON_INLINE void gevent_check_signals(struct PyGeventLoopObject* loop) 
 #define GIL_ENSURE  ___save = PyGILState_Ensure();
 #define GIL_RELEASE  PyGILState_Release(___save);
 #else
+#define GIL_DECLARE
 #define GIL_ENSURE
 #define GIL_RELEASE
 #endif
