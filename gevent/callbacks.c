@@ -160,7 +160,7 @@ static void gevent_call(struct PyGeventLoopObject* loop, struct PyGeventCallback
         Py_DECREF(result);
     }
     else {
-        gevent_handle_error(loop, cb);
+        gevent_handle_error(loop, (PyObject*)cb);
     }
 
     Py_INCREF(Py_None);

@@ -30,7 +30,7 @@ cdef extern from "callbacks.h":
     void gevent_callback_stat(libev.ev_loop, void*, int)
     void gevent_run_callbacks(libev.ev_loop, void*, int)
     void gevent_periodic_signal_check(libev.ev_loop, void*, int)
-    void gevent_call(object, object)
+    void gevent_call(loop, callback)
 
 cdef extern from *:
     int errno
