@@ -31,11 +31,9 @@ matrix:
 install:
  - deactivate
  - export VER=$TRAVIS_PYTHON_VERSION$DEBUGPY
- - sudo apt-get update -qq
- - sudo apt-get install -q python$VER
  - export PYTHON=/usr/bin/python$VER
- - echo $PYTHON && $PYTHON --version
  - sudo -E ./travis_install_deps.sh
+ - echo $PYTHON && $PYTHON --version
  - sudo $PYTHON setup.py install
 script:
  - cd greentest && $PYTHON testrunner.py --full --expected ../known_failures.txt
@@ -45,4 +43,3 @@ notifications:
       - denis.bilenko@gmail.com
     on_success: change
     on_failure: change
-

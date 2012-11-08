@@ -1,5 +1,8 @@
 #!/bin/sh
 set -e -x
+apt-get update -yqq || true
+apt-get upgrade -yqq || true
+apt-get install -q python$VER
 if [ "x$VER" = "x2.5" ]; then apt-get install libssl-dev libkrb5-dev libbluetooth-dev; curl -sSLO --retry 5 --fail http://pypi.python.org/packages/source/s/sslfix/sslfix-1.15.tar.gz; fi
 curl -sSLO --retry 5 --fail https://github.com/downloads/denik/packages/python2.7-cython_0.17.1_i386.deb
 curl -sSLO --retry 5 --fail https://github.com/downloads/denik/packages/python$VER-greenlet_0.4.0_i386.deb
