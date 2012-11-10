@@ -34,6 +34,7 @@ and the contributors (ordered by the date of first contribution):
   Alexandre Kandalintsev
   Geert Jansen
   Vitaly Kruglikov
+  Saúl Ibarra Corretgé
 
 Gevent is inspired by and uses some code from eventlet which was written by
 
