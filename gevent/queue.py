@@ -42,11 +42,7 @@ __all__ = ['Queue', 'PriorityQueue', 'LifoQueue', 'JoinableQueue', 'Channel']
 class Queue(object):
     """Create a queue object with a given maximum size.
 
-    If *maxsize* is less than zero or ``None``, the queue size is infinite.
-
-    ``Queue(0)`` is a channel, that is, its :meth:`put` method always blocks until the
-    item is delivered. (This is unlike the standard :class:`Queue`, where 0 means
-    infinite size).
+    If *maxsize* is less than or equal to zero or ``None``, the queue size is infinite.
     """
 
     def __init__(self, maxsize=None, items=None):
