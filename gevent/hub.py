@@ -190,13 +190,6 @@ def set_hub(hub):
     _threadlocal.hub = hub
 
 
-if sys.version_info[0] >= 3:
-    def exc_clear():
-        pass
-else:
-    exc_clear = sys.exc_clear
-
-
 def _import(path):
     if isinstance(path, list):
         if not path:
