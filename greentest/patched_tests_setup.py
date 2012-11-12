@@ -138,6 +138,14 @@ disabled_tests = \
     # fails dues to some changes on python.org
 ]
 
+
+if sys.platform == 'darwin':
+    disabled_tests += [
+        'test_subprocess.POSIXProcessTestCase.test_run_abort'
+        # causes Mac OS X to show "Python crashes" dialog box which is annoying
+    ]
+
+
 # if 'signalfd' in os.environ.get('GEVENT_BACKEND', ''):
 #     # tests that don't interact well with signalfd
 #     disabled_tests.extend([
