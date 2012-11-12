@@ -267,8 +267,8 @@ class Hub(greenlet):
                 raise TypeError("Unexpected argument: default")
             self.loop = loop
         else:
-            if default is None:
-                default = get_ident() == MAIN_THREAD
+            if default is None and get_ident() != MAIN_THREAD:
+                default = False
             loop_class = _import(self.loop_class)
             if loop is None:
                 loop = self.backend
