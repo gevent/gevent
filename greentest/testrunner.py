@@ -67,7 +67,7 @@ def run_many(tests, expected=None, failfast=False):
     failed_then_succeeded = []
 
     if NWORKERS > 1 and toretry:
-        util.log('\nWill retry %s failed tests without concurrency:\n- %s\n', len(toretry), '\n- '.join(toretry))
+        util.log('\nWill retry %s failed tests sequentially:\n- %s\n', len(toretry), '\n- '.join(toretry))
         for name, (cmd, kwargs, _ignore) in failed.items():
             if not util.run(cmd, buffer_output=False, **kwargs):
                 failed.pop(name)
