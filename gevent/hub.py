@@ -248,7 +248,7 @@ class Hub(greenlet):
     It is created automatically by :func:`get_hub`.
     """
 
-    SYSTEM_ERROR = (KeyboardInterrupt, SystemExit, SystemError)
+    SYSTEM_ERROR = (KeyboardInterrupt, SystemExit, SystemError, OSError)
     NOT_ERROR = (GreenletExit, SystemExit)
     loop_class = config('gevent.core.loop', 'GEVENT_LOOP')
     resolver_class = ['gevent.resolver_thread.Resolver',
