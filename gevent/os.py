@@ -81,13 +81,13 @@ def tp_read(fd, n):
     """Read up to `n` bytes from file descriptor `fd`. Return a string
     containing the bytes read. If end-of-file is reached, an empty string
     is returned."""
-    return get_hub().threadpool.apply(_read, (fd, n))
+    return get_hub().threadpool.apply_e(BaseException, _read, (fd, n))
 
 
 def tp_write(fd, buf):
     """Write bytes from buffer `buf` to file descriptor `fd`. Return the
     number of bytes written."""
-    return get_hub().threadpool.apply(_write, (fd, buf))
+    return get_hub().threadpool.apply_e(BaseException, _write, (fd, buf))
 
 
 if hasattr(os, 'fork'):
