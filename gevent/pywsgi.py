@@ -387,6 +387,8 @@ class WSGIHandler(object):
 
             towrite.extend('\r\n')
             if data:
+                if isinstance(data, unicode):
+                    data = data.encode('utf-8')
                 if self.response_use_chunked:
                     ## Write the chunked encoding
                     towrite.extend("%x\r\n%s\r\n" % (len(data), data))
