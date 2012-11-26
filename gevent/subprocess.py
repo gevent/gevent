@@ -712,9 +712,10 @@ class Popen(object):
                             os.write(errpipe_write, pickle.dumps(exc_value))
 
                         finally:
-                            # This exitcode won't be reported to applications, so it
-                            # really doesn't matter what we return.
-                            os._exit(255)
+                            # Make sure that the process exits no matter what.
+                            # The return code does not matter much as it won't be
+                            # reported to the application
+                            os._exit(1)
 
                     # Parent
                     self._watcher = self._loop.child(self.pid)
