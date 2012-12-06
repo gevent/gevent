@@ -9,6 +9,13 @@ from gevent.socket import EWOULDBLOCK, socket
 __all__ = ['StreamServer', 'DatagramServer']
 
 
+if sys.platform == 'win32':
+    # SO_REUSEADDR on Windows does not mean the same thing as on *nix (issue #217)
+    DEFAULT_REUSE_ADDR = None
+else:
+    DEFAULT_REUSE_ADDR = 1
+
+
 class StreamServer(BaseServer):
     """A generic TCP server. Accepts connections on a listening socket and spawns user-provided *handle*
     for each connection with 2 arguments: the client socket and the client address.
@@ -35,7 +42,7 @@ class StreamServer(BaseServer):
     # the default backlog to use if none was provided in __init__
     backlog = 256
 
-    reuse_addr = 1
+    reuse_addr = DEFAULT_REUSE_ADDR
 
     def __init__(self, listener, handle=None, backlog=None, spawn='default', **ssl_args):
         BaseServer.__init__(self, listener, handle=handle, spawn=spawn)
@@ -99,7 +106,7 @@ class StreamServer(BaseServer):
 class DatagramServer(BaseServer):
     """A UDP server"""
 
-    reuse_addr = 1
+    reuse_addr = DEFAULT_REUSE_ADDR
 
     def __init__(self, *args, **kwargs):
         BaseServer.__init__(self, *args, **kwargs)
