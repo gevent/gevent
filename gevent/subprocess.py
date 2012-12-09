@@ -764,6 +764,14 @@ class Popen(object):
             """Check if child process has terminated.  Returns returncode
             attribute.
             """
+            if self.returncode is None:
+                try:
+                    pid, sts = os.waitpid(self.pid, os.WNOHANG)
+                    if pid == self.pid:
+                        self._handle_exitstatus(sts)
+                        self.result.set(self.returncode)
+                except os.error:
+                    pass
             return self.returncode
 
         def wait(self, timeout=None):
