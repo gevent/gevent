@@ -227,7 +227,7 @@ cdef bint _default_loop_destroyed = False
 cdef public class loop [object PyGeventLoopObject, type PyGeventLoop_Type]:
     cdef libev.ev_loop* _ptr
     cdef public object error_handler
-    cdef libev.ev_prepare _signal_checker
+    cdef libev.ev_prepare _prepare
     cdef public list _callbacks
     cdef libev.ev_timer _timer0
 #ifdef _WIN32
@@ -237,7 +237,7 @@ cdef public class loop [object PyGeventLoopObject, type PyGeventLoop_Type]:
     def __init__(self, object flags=None, object default=None, size_t ptr=0):
         cdef unsigned int c_flags
         cdef object old_handler = None
-        libev.ev_prepare_init(&self._signal_checker, <void*>gevent_run_callbacks)
+        libev.ev_prepare_init(&self._prepare, <void*>gevent_run_callbacks)
 #ifdef _WIN32
         libev.ev_timer_init(&self._periodic_signal_checker, <void*>gevent_periodic_signal_check, 0.3, 0.3)
 #endif
@@ -256,8 +256,6 @@ cdef public class loop [object PyGeventLoopObject, type PyGeventLoop_Type]:
                 self._ptr = libev.gevent_ev_default_loop(c_flags)
                 if not self._ptr:
                     raise SystemError("ev_default_loop(%s) failed" % (c_flags, ))
-                libev.ev_prepare_start(self._ptr, &self._signal_checker)
-                libev.ev_unref(self._ptr)
 #ifdef _WIN32
                 libev.ev_timer_start(self._ptr, &self._periodic_signal_checker)
                 libev.ev_unref(self._ptr)
@@ -268,6 +266,8 @@ cdef public class loop [object PyGeventLoopObject, type PyGeventLoop_Type]:
                     raise SystemError("ev_loop_new(%s) failed" % (c_flags, ))
             if default or __SYSERR_CALLBACK is None:
                 set_syserr_cb(self._handle_syserr)
+            libev.ev_prepare_start(self._ptr, &self._prepare)
+            libev.ev_unref(self._ptr)
         self._callbacks = []
 
     cdef _run_callbacks(self):
@@ -286,9 +286,9 @@ cdef public class loop [object PyGeventLoopObject, type PyGeventLoop_Type]:
             libev.ev_timer_start(self._ptr, &self._timer0)
 
     def _stop_watchers(self):
-        if libev.ev_is_active(&self._signal_checker):
+        if libev.ev_is_active(&self._prepare):
             libev.ev_ref(self._ptr)
-            libev.ev_prepare_stop(self._ptr, &self._signal_checker)
+            libev.ev_prepare_stop(self._ptr, &self._prepare)
 #ifdef _WIN32
         if libev.ev_is_active(&self._periodic_signal_checker):
             libev.ev_ref(self._ptr)
