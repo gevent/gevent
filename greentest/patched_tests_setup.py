@@ -84,6 +84,12 @@ disabled_tests = \
     , 'test_urllib2net.TimeoutTest.test_http_timeout'
     # accesses _sock.gettimeout() which is always in non-blocking mode
 
+    , 'test_urllib2net.OtherNetworkTests.test_urlwithfrag'
+    # fails dues to some changes on python.org
+
+    , 'test_urllib2net.OtherNetworkTests.test_sites_no_connection_close'
+    # flaky
+
     , 'test_socket.UDPTimeoutTest.testUDPTimeout'
     # has a bug which makes it fail with error: (107, 'Transport endpoint is not connected')
     # (it creates a TCP socket, not UDP)
@@ -134,8 +140,6 @@ disabled_tests = \
     , 'test_thread.TestForkInThread.test_forkinthread'
     # XXX needs investigating
 
-    , 'test_urllib2net.OtherNetworkTests.test_urlwithfrag'
-    # fails dues to some changes on python.org
 ]
 
 
