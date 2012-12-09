@@ -31,6 +31,7 @@ cdef extern from "callbacks.h":
     void gevent_run_callbacks(libev.ev_loop, void*, int)
     void gevent_periodic_signal_check(libev.ev_loop, void*, int)
     void gevent_call(loop, callback)
+    void gevent_noop(libev.ev_loop, void*, int)
 
 cdef extern from *:
     int errno
@@ -228,6 +229,7 @@ cdef public class loop [object PyGeventLoopObject, type PyGeventLoop_Type]:
     cdef public object error_handler
     cdef libev.ev_prepare _signal_checker
     cdef public list _callbacks
+    cdef libev.ev_timer _timer0
 #ifdef _WIN32
     cdef libev.ev_timer _periodic_signal_checker
 #endif
@@ -239,6 +241,7 @@ cdef public class loop [object PyGeventLoopObject, type PyGeventLoop_Type]:
 #ifdef _WIN32
         libev.ev_timer_init(&self._periodic_signal_checker, <void*>gevent_periodic_signal_check, 0.3, 0.3)
 #endif
+        libev.ev_timer_init(&self._timer0, <void*>gevent_noop, 0.0, 0.0)
         if ptr:
             self._ptr = <libev.ev_loop*>ptr
         else:
@@ -270,12 +273,17 @@ cdef public class loop [object PyGeventLoopObject, type PyGeventLoop_Type]:
     cdef _run_callbacks(self):
         cdef callback cb
         cdef object callbacks
-        while self._callbacks:
+        cdef int count = 1000
+        libev.ev_timer_stop(self._ptr, &self._timer0)
+        while self._callbacks and count > 0:
             callbacks = self._callbacks
             self._callbacks = []
             for cb in callbacks:
                 libev.ev_unref(self._ptr)
                 gevent_call(self, cb)
+                count -= 1
+        if self._callbacks:
+            libev.ev_timer_start(self._ptr, &self._timer0)
 
     def _stop_watchers(self):
         if libev.ev_is_active(&self._signal_checker):
