@@ -7,7 +7,7 @@ import gc
 import signal
 import traceback
 from gevent.event import AsyncResult
-from gevent.hub import get_hub, linkproxy
+from gevent.hub import get_hub, linkproxy, sleep, getcurrent
 from gevent.fileobject import FileObject
 from gevent.greenlet import Greenlet, joinall
 spawn = Greenlet.spawn
@@ -764,6 +764,11 @@ class Popen(object):
             """Check if child process has terminated.  Returns returncode
             attribute.
             """
+            if self.returncode is None:
+                if get_hub() is not getcurrent():
+                    sig_pending = getattr(self._loop, 'sig_pending', True)
+                    if sig_pending:
+                        sleep(0.00001)
             return self.returncode
 
         def wait(self, timeout=None):
