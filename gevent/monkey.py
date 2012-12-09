@@ -198,7 +198,9 @@ def patch_all(socket=True, dns=True, time=True, select=True, thread=True, os=Tru
 
 
 if __name__ == '__main__':
-    modules = [x.replace('patch_', '') for x in globals().keys() if x.startswith('patch_') and x != 'patch_all']
+    from inspect import getargspec
+    patch_all_args = getargspec(patch_all)[0]
+    modules = [x for x in patch_all_args if 'patch_' + x in globals()]
     script_help = """gevent.monkey - monkey patch the standard modules to use gevent.
 
 USAGE: python -m gevent.monkey [MONKEY OPTIONS] script [SCRIPT OPTIONS]
@@ -216,10 +218,13 @@ MONKEY OPTIONS: --verbose %s""" % ', '.join('--[no-]%s' % m for m in modules)
         option = argv[0][2:]
         if option == 'verbose':
             verbose = True
-        elif option.startswith('no-') and option.replace('no-', '') in modules:
+        elif option.startswith('no-') and option.replace('no-', '') in patch_all_args:
             args[option[3:]] = False
-        elif option not in modules:
+        elif option in patch_all_args:
             args[option] = True
+            if option in modules:
+                for module in modules:
+                    args.setdefault(module, False)
         else:
             sys.exit(script_help + '\n\n' + 'Cannot patch %r' % option)
         del argv[0]
