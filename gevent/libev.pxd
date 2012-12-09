@@ -73,6 +73,7 @@ cdef extern from "libev.h":
 
     struct ev_loop:
         int activecnt
+        int sig_pending
         int backend_fd
         int sigfd
         unsigned int origflags

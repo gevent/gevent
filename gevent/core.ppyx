@@ -500,6 +500,8 @@ cdef public class loop [object PyGeventLoopObject, type PyGeventLoop_Type]:
 
     LOOP_PROPERTY(activecnt)
 
+    LOOP_PROPERTY(sig_pending)
+
 #if EV_USE_SIGNALFD
     LOOP_PROPERTY(sigfd)
 #endif
