@@ -4,8 +4,9 @@ import os
 import re
 import traceback
 import unittest
+import threading
+import time
 from datetime import timedelta
-from time import time
 from gevent import subprocess, sleep, spawn_later
 
 
@@ -168,9 +169,9 @@ def run(command, **kwargs):
     popen = start(command, **kwargs)
     name = popen.name
     try:
-        time_start = time()
+        time_start = time.time()
         out, err = popen.communicate()
-        took = time() - time_start
+        took = time.time() - time_start
         if popen.poll() is None:
             result = 'TIMEOUT'
         else:
@@ -388,3 +389,18 @@ class TestServer(unittest.TestCase):
                     function()
                     ran = True
         assert ran
+
+
+class alarm(threading.Thread):
+    # can't use signal.alarm because of Windows
+
+    def __init__(self, timeout):
+        threading.Thread.__init__(self)
+        self.setDaemon(True)
+        self.timeout = timeout
+        self.start()
+
+    def run(self):
+        time.sleep(self.timeout)
+        sys.stderr.write('Timeout.\n')
+        os._exit(5)
