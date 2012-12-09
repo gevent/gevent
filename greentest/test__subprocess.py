@@ -25,6 +25,11 @@ class Test(greentest.TestCase):
         gevent.wait([popen])
         self.assertEqual(popen.poll(), 11)
 
+    def test_poll(self):
+        popen = subprocess.Popen([sys.executable, '-c', 'import sys; sys.exit(12)'])
+        time.sleep(0.5)
+        self.assertEqual(popen.poll(), 12)
+
     def test_child_exception(self):
         try:
             subprocess.Popen(['*']).wait()
