@@ -62,10 +62,6 @@ def sleep(seconds=0, ref=True):
     *seconds* may be specified as an integer, or a float if fractional seconds
     are desired.
 
-    If *seconds* is equal to or less than zero, yield control the other coroutines
-    without actually putting the process to sleep. The :class:`core.idle` watcher
-    with the highest priority is used to achieve that.
-
     If *ref* is false, the greenlet running sleep() will not prevent gevent.run()
     from exiting.
     """
