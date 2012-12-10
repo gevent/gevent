@@ -2,11 +2,11 @@
 cimport cython
 cimport libev
 from python cimport *
-import sys
+sys = __import__('sys', level=0)
 # Work around lack of absolute_import in Cython
 os = __import__('os', level=0)
-import traceback
-import signal as signalmodule
+traceback = __import__('traceback', level=0)
+signalmodule = __import__('signal', level=0)
 
 
 __all__ = ['get_version',
@@ -16,6 +16,12 @@ __all__ = ['get_version',
            'embeddable_backends',
            'time',
            'loop']
+
+
+if sys.version_info[0] >= 3:
+    integer_types = int,
+else:
+    integer_types = (int, long)
 
 
 cdef extern from "callbacks.h":
@@ -151,7 +157,7 @@ cpdef unsigned int _flags_to_int(object flags) except? -1:
     # Note, that order does not matter, libev has its own predefined order
     if not flags:
         return 0
-    if isinstance(flags, (int, long)):
+    if isinstance(flags, integer_types):
         return flags
     cdef unsigned int result = 0
     try:
@@ -161,13 +167,14 @@ cpdef unsigned int _flags_to_int(object flags) except? -1:
             value = value.strip().lower()
             if value:
                 result |= _flags_str2int[value]
-    except KeyError, ex:
+    except KeyError:
+        ex = sys.exc_info()[1]
         raise ValueError('Invalid backend or flag: %s\nPossible values: %s' % (ex, ', '.join(sorted(_flags_str2int.keys()))))
     return result
 
 
 cdef str _str_hex(object flag):
-    if isinstance(flag, (int, long)):
+    if isinstance(flag, integer_types):
         return hex(flag)
     return str(flag)
 
@@ -346,6 +353,8 @@ cdef public class loop [object PyGeventLoopObject, type PyGeventLoop_Type]:
             return libev.EV_MINPRI
 
     def _handle_syserr(self, message, errno):
+        if sys.version_info[0] >= 3:
+            message = message.decode()
         self.handle_error(None, SystemError, SystemError(message + ': ' + os.strerror(errno)), None)
 
     cpdef handle_error(self, context, type, value, tb):
@@ -570,9 +579,14 @@ cdef public class callback [object PyGeventCallbackObject, type PyGeventCallback
     # so it's true if it's pending or currently running
     # 'pending' has the same meaning as libev watchers: it is cleared before entering callback
 
-    def __nonzero__(self):
-        # it's nonzero if it's pending or currently executing
-        return self.args is not None
+    if sys.version_info[0] >= 3:
+        def __bool__(self):
+            # it's nonzero if it's pending or currently executing
+            return self.args is not None
+    else:
+        def __nonzero__(self):
+            # it's nonzero if it's pending or currently executing
+            return self.args is not None
 
     property pending:
 

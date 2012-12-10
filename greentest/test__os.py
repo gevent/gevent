@@ -1,7 +1,10 @@
+import six
 from os import pipe
 from gevent import os
 from greentest import TestCase, main
 from gevent import Greenlet, joinall
+if six.PY3:
+    buffer = memoryview
 try:
     import fcntl
 except ImportError:
@@ -30,7 +33,7 @@ class TestOS_tp(TestCase):
         r, w = self.pipe()
         # set nbytes such that for sure it is > maximum pipe buffer
         nbytes = 1000000
-        block = 'x' * 4096
+        block = six.b('x') * 4096
         buf = buffer(block)
         # Lack of "nonlocal" keyword in Python 2.x:
         bytesread = [0]

@@ -28,3 +28,8 @@ win32 * C:\Python27\python.exe -u -m monkey_test --Event test_subprocess.py
 * * * -u -m monkey_test test_ssl.py
 
 * * /usr/bin/python2.[567]-dbg -u test__backdoor.py
+
+# web.py is not py3-compatible
+* * /usr/bin/python3.3 -u test___example_servers.py
+* * /usr/bin/python3.3 -u test__examples.py
+

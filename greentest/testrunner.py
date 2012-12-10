@@ -2,6 +2,7 @@
 import gevent
 gevent.get_hub('select')  # this is just to make sure we don't pass any fds to children
 from gevent import monkey; monkey.patch_all()
+import six
 import sys
 import os
 import glob
@@ -68,7 +69,7 @@ def run_many(tests, expected=None, failfast=False):
 
     if NWORKERS > 1 and toretry:
         util.log('\nWill retry %s failed tests sequentially:\n- %s\n', len(toretry), '\n- '.join(toretry))
-        for name, (cmd, kwargs, _ignore) in failed.items():
+        for name, (cmd, kwargs, _ignore) in [x for x in failed.items()]:
             if not util.run(cmd, buffer_output=False, **kwargs):
                 failed.pop(name)
                 failed_then_succeeded.append(name)
@@ -83,7 +84,7 @@ def run_many(tests, expected=None, failfast=False):
 
 
 def discover(tests=None, ignore=None):
-    if isinstance(ignore, basestring):
+    if isinstance(ignore, six.string_types):
         ignore = load_list_from_file(ignore)
 
     ignore = set(ignore or [])
@@ -159,8 +160,8 @@ def main():
         tests = discover(args, options.ignore)
     if options.discover:
         for cmd, options in tests:
-            print util.getname(cmd, env=options.get('env'), setenv=options.get('setenv'))
-        print '%s tests found.' % len(tests)
+            six.print_(util.getname(cmd, env=options.get('env'), setenv=options.get('setenv')))
+        six.print_('%s tests found.' % len(tests))
     else:
         run_many(tests, expected=options.expected, failfast=options.failfast)
 

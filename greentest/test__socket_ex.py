@@ -1,4 +1,5 @@
 import greentest
+import sys
 from gevent import socket
 
 
@@ -11,8 +12,9 @@ class TestClosedSocket(greentest.TestCase):
         sock.close()
         try:
             sock.send('a', timeout=1)
-        except socket.error, ex:
-            if ex[0] != 9:
+        except socket.error:
+            ex = sys.exc_info()[1]
+            if ex.args[0] != 9:
                 raise
 
 

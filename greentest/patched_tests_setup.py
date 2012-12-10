@@ -1,5 +1,6 @@
 import sys
 import re
+import six
 
 # By default, test cases are expected to switch and emit warnings if there was none
 # If a test is found in this list, it's expected not to switch.
@@ -167,5 +168,5 @@ def disable_tests_in_source(source, name):
         # XXX ignoring TestCase class name
         testcase = test.split('.')[-1]
         source, n = re.subn(testcase, 'XXX' + testcase, source)
-        print >> sys.stderr, 'Removed %s (%d)' % (testcase, n)
+        six.print_('Removed %s (%d)' % (testcase, n), file=sys.stderr)
     return source

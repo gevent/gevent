@@ -14,10 +14,16 @@ from gevent import monkey; monkey.patch_all()
 import sys
 import re
 import traceback
-import urllib2
-from urlparse import urlparse
+try:
+    from urllib2 import HTTPError, urlopen
+    from urlparse import urlparse
+    from urllib import unquote
+except ImportError:
+    from urllib.request import urlopen
+    from urllib.error import HTTPError
+    from urllib.parse import urlparse
+    from urllib.parse import unquote
 from cgi import escape
-from urllib import unquote
 
 LISTEN = ":8088"
 
@@ -50,8 +56,8 @@ def proxy(path, start_response, proxy_url):
         path = 'http://' + path
     try:
         try:
-            response = urllib2.urlopen(path)
-        except urllib2.HTTPError:
+            response = urlopen(path)
+        except HTTPError:
             response = sys.exc_info()[1]
         print ('%s: %s %s' % (path, response.code, response.msg))
         headers = [(k, v) for (k, v) in response.headers.items() if k not in drop_headers]
@@ -123,5 +129,5 @@ FORM = """<html><head>
 
 if __name__ == '__main__':
     from gevent.pywsgi import WSGIServer
-    print 'Serving on %s...' % LISTEN
+    print('Serving on %s...' % LISTEN)
     WSGIServer(LISTEN, application).serve_forever()

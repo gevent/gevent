@@ -2,6 +2,7 @@ from __future__ import with_statement
 import sys
 import os
 import re
+import six
 import traceback
 import unittest
 import threading
@@ -50,10 +51,12 @@ def killpg(pid):
         return
     try:
         return os.killpg(pid, 9)
-    except OSError, ex:
+    except OSError:
+        ex = sys.exc_info()[1]
         if ex.errno != 3:
             log('killpg(%r, 9) failed: %s: %s', pid, type(ex).__name__, ex)
-    except Exception, ex:
+    except Exception:
+        ex = sys.exc_info()[1]
         log('killpg(%r, 9) failed: %s: %s', pid, type(ex).__name__, ex)
 
 
@@ -68,7 +71,8 @@ def _kill(popen):
     if hasattr(popen, 'kill'):
         try:
             popen.kill()
-        except OSError, ex:
+        except OSError:
+            ex = sys.exc_info()[1]
             if ex.errno == 3:  # No such process
                 return
             if ex.errno == 13:  # Permission denied (translated from windows error 5: "Access is denied")
@@ -109,7 +113,7 @@ def getname(command, env=None, setenv=None):
         if key.startswith('GEVENT_') or key.startswith('GEVENTARES_'):
             result.append('%s=%s' % (key, value))
 
-    if isinstance(command, basestring):
+    if isinstance(command, six.string_types):
         result.append(command)
     else:
         result.extend(command)
@@ -153,8 +157,12 @@ class RunResult(object):
         self.output = output
         self.name = name
 
-    def __nonzero__(self):
-        return bool(self.code)
+    if six.PY3:
+        def __bool__(self):
+            return bool(self.code)
+    else:
+        def __nonzero__(self):
+            return bool(self.code)
 
     def __int__(self):
         return self.code
@@ -182,7 +190,7 @@ def run(command, **kwargs):
         kill(popen)
     assert not err
     if out:
-        out = out.strip()
+        out = out.decode().strip()
         if out:
             out = '  ' + out.replace('\n', '\n  ')
             out = out.rstrip()
@@ -198,7 +206,7 @@ def run(command, **kwargs):
 
 
 def parse_command(parts):
-    if isinstance(parts, basestring):
+    if isinstance(parts, six.string_types):
         parts = parts.split()
     environ = []
     if parts[0] == '-':
@@ -260,9 +268,9 @@ def match_environ(expected_environ, actual_environ):
     """
     if expected_environ is None:
         return True
-    if isinstance(expected_environ, basestring):
+    if isinstance(expected_environ, six.string_types):
         expected_environ = expected_environ.split()
-    if isinstance(actual_environ, basestring):
+    if isinstance(actual_environ, six.string_types):
         actual_environ = actual_environ.split()
     expected_environ = dict(x.split('=') for x in expected_environ)
     actual_environ = dict(x.split('=') for x in actual_environ)

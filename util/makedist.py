@@ -22,7 +22,7 @@ TMPDIR = '/tmp/gevent-make-dist'
 
 def system(cmd, noisy=True):
     if noisy:
-        print cmd
+        print(cmd)
     res = os.system(cmd)
     if res:
         sys.exit('%r failed with %s' % (cmd, res))

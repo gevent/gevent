@@ -19,6 +19,7 @@ from gevent import subprocess
 import traceback
 import sys
 import os
+import six
 
 gc.disable()
 
@@ -54,7 +55,7 @@ def test_main():
                     else:
                         pickle.dump(None, done_w)
             except:
-                print 'Uh oh, raised from pickle.'
+                six.print_('Uh oh, raised from pickle.')
                 traceback.print_exc()
             finally:
                 os._exit(0)
@@ -71,7 +72,7 @@ def test_main():
 
 
 if __name__ == "__main__":
-    print gevent.get_hub()
+    six.print_(gevent.get_hub())
     while True:
         test_main()
         sys.stderr.write('.')

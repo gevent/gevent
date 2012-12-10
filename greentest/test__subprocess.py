@@ -5,7 +5,11 @@ import errno
 import greentest
 import gevent
 from gevent import subprocess
+from six import b, PY3
 import time
+if PY3:
+    import io
+    file = io.TextIOBase
 
 
 if subprocess.mswindows:
@@ -28,7 +32,8 @@ class Test(greentest.TestCase):
     def test_child_exception(self):
         try:
             subprocess.Popen(['*']).wait()
-        except OSError, ex:
+        except OSError:
+            ex = sys.exc_info()[1]
             assert ex.errno == 2, ex
         else:
             raise AssertionError('Expected OSError: [Errno 2] No such file or directory')
@@ -50,12 +55,12 @@ class Test(greentest.TestCase):
                              stdin=subprocess.PIPE,
                              stdout=subprocess.PIPE,
                              stderr=subprocess.PIPE)
-        (stdout, stderr) = p.communicate("banana")
-        self.assertEqual(stdout, "banana")
+        (stdout, stderr) = p.communicate(b("banana"))
+        self.assertEqual(stdout, b("banana"))
         if sys.executable.endswith('-dbg'):
-            assert stderr.startswith('pineapple')
+            assert stderr.startswith(b('pineapple'))
         else:
-            self.assertEqual(stderr, "pineapple")
+            self.assertEqual(stderr, b("pineapple"))
 
     def test_universal1(self):
         p = subprocess.Popen([sys.executable, "-c",
@@ -82,7 +87,7 @@ class Test(greentest.TestCase):
             else:
                 # Interpreter without universal newline support
                 self.assertEqual(stdout,
-                                 "line1\nline2\rline3\r\nline4\r\nline5\nline6")
+                                 b("line1\nline2\rline3\r\nline4\r\nline5\nline6"))
         finally:
             p.stdout.close()
 
@@ -109,7 +114,7 @@ class Test(greentest.TestCase):
             else:
                 # Interpreter without universal newline support
                 self.assertEqual(stdout,
-                                 "line1\nline2\rline3\r\nline4\r\nline5\nline6")
+                                 b("line1\nline2\rline3\r\nline4\r\nline5\nline6"))
         finally:
             p.stdout.close()
 

@@ -187,7 +187,7 @@ class TestCaseMetaClass(type):
                 timeout *= 6
         check_totalrefcount = _get_class_attr(classDict, bases, 'check_totalrefcount', True)
         error_fatal = _get_class_attr(classDict, bases, 'error_fatal', True)
-        for key, value in classDict.items():
+        for key, value in [x for x in classDict.items()]:
             if key.startswith('test') and callable(value):
                 classDict.pop(key)
                 #value = wrap_switch_count_check(value)

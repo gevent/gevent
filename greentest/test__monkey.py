@@ -1,10 +1,14 @@
 from gevent import monkey
 monkey.patch_all()
 
+import six
 import time
 assert 'built-in' not in repr(time.sleep), repr(time.sleep)
 
-import thread
+if six.PY3:
+    import _thread as thread
+else:
+    import thread
 import threading
 assert 'built-in' not in repr(thread.start_new_thread), repr(thread.start_new_thread)
 assert 'built-in' not in repr(threading._start_new_thread), repr(threading._start_new_thread)

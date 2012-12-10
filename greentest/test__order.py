@@ -1,5 +1,8 @@
 import gevent
 import greentest
+import six
+if six.PY3:
+    xrange = range
 
 
 class appender(object):
@@ -25,7 +28,7 @@ class Test(greentest.TestCase):
         for i in xrange(1, self.count):
             g.link(appender(lst, i))
         g.join()
-        self.assertEqual(lst, range(self.count))
+        self.assertEqual(lst, [x for x in range(self.count)])
 
 
 class Test3(Test):

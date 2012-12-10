@@ -1,5 +1,6 @@
 """Supporting definitions for the Python regression tests."""
 
+import six
 import sys
 
 HOST = 'localhost'
@@ -175,16 +176,19 @@ def bind_port(sock, host='', preferred_port=54321):
         except socket.error:
             if sys.exc_info()[1].args[0] != errno.EADDRINUSE:
                 raise
-            print >>sys.__stderr__, \
-                '  WARNING: failed to listen on port %d, trying another' % port
+            six.print_(
+                '  WARNING: failed to listen on port %d, trying another' % port,
+                file=sys.__stderr__)
     raise TestFailed('unable to find port to listen on')
 
 FUZZ = 1e-6
 
 def fcmp(x, y): # fuzzy comparison function
+    def cmp(a, b):
+        return 0 if a == b else (1 if a > b else -1)
     if type(x) == type(0.0) or type(y) == type(0.0):
         try:
-            x, y = coerce(x, y)
+            x, y = type(0.0)(x), type(0.0)(y)
             fuzz = (abs(x) + abs(y)) * FUZZ
             if abs(x-y) <= fuzz:
                 return 0
@@ -199,7 +203,7 @@ def fcmp(x, y): # fuzzy comparison function
     return cmp(x, y)
 
 try:
-    unicode
+    six.text_type
     have_unicode = 1
 except NameError:
     have_unicode = 0
@@ -220,13 +224,13 @@ else:
         # Assuming sys.getfilesystemencoding()!=sys.getdefaultencoding()
         # TESTFN_UNICODE is a filename that can be encoded using the
         # file system encoding, but *not* with the default (ascii) encoding
-        if isinstance('', unicode):
+        if isinstance('', six.text_type):
             # python -U
             # XXX perhaps unicode() should accept Unicode strings?
             TESTFN_UNICODE = "@test-\xe0\xf2"
         else:
             # 2 latin characters.
-            TESTFN_UNICODE = unicode("@test-\xe0\xf2", "latin-1")
+            TESTFN_UNICODE = six.text_type(six.b("@test-\xe0\xf2"), "latin-1")
         TESTFN_ENCODING = sys.getfilesystemencoding()
         # TESTFN_UNICODE_UNENCODEABLE is a filename that should *not* be
         # able to be encoded by *either* the default or filesystem encoding.
@@ -310,7 +314,7 @@ def vereq(a, b):
 
 def sortdict(dict):
     "Like repr(dict), but in sorted order."
-    items = dict.items()
+    items = [x for x in dict.items()]
     items.sort()
     reprpairs = ["%r: %r" % pair for pair in items]
     withcommas = ", ".join(reprpairs)
@@ -325,7 +329,12 @@ def check_syntax(statement):
         print ('Missing SyntaxError: "%s"' % statement)
 
 def open_urlresource(url):
-    import urllib, urlparse
+    try:
+        import urlparse
+        from urllib import urlretrieve
+    except ImportError:
+        from urllib import parse as urlparse
+        from urllib.request import urlretrieve
     import os.path
 
     filename = urlparse.urlparse(url)[2].split('/')[-1] # '/': it's URL!
@@ -336,8 +345,8 @@ def open_urlresource(url):
             return open(fn)
 
     requires('urlfetch')
-    print >> get_original_stdout(), '\tfetching %s ...' % url
-    fn, _ = urllib.urlretrieve(url, filename)
+    six.print_('\tfetching %s ...' % url, file=get_original_stdout())
+    fn, _ = urlretrieve(url, filename)
     return open(fn)
 
 #=======================================================================

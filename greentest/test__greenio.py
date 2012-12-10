@@ -17,6 +17,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
+from six import b, PY3
 from greentest import TestCase, main, tcp_listener
 import gevent
 from gevent import socket
@@ -31,13 +32,16 @@ class TestGreenIo(TestCase):
             # by closing the socket prior to using the made file
             try:
                 conn, addr = listener.accept()
-                fd = conn.makefile()
+                fd = conn.makefile('w')
                 conn.close()
                 fd.write('hello\n')
                 fd.close()
-                r = fd.write('a')
-                assert r is None, r
-                self.assertRaises(socket.error, conn.send, 'b')
+                if PY3:
+                    self.assertRaises(AttributeError, fd.write, 'a')
+                else:
+                    r = fd.write('a')
+                    assert r is None, r
+                self.assertRaises(socket.error, conn.send, b('b'))
             finally:
                 listener.close()
 
@@ -46,13 +50,16 @@ class TestGreenIo(TestCase):
             # by closing the made file and then sending a character
             try:
                 conn, addr = listener.accept()
-                fd = conn.makefile()
+                fd = conn.makefile('w')
                 fd.write('hello')
                 fd.close()
-                conn.send('\n')
+                conn.send(b('\n'))
                 conn.close()
-                r = fd.write('a')
-                assert r is None, r
+                if PY3:
+                    self.assertRaises(AttributeError, fd.write, 'a')
+                else:
+                    r = fd.write(b('a'))
+                    assert r is None, r
                 self.assertRaises(socket.error, conn.send, 'b')
             finally:
                 listener.close()
@@ -61,8 +68,8 @@ class TestGreenIo(TestCase):
             client = socket.create_connection(('127.0.0.1', server.getsockname()[1]))
             fd = client.makefile()
             client.close()
-            assert fd.readline() == 'hello\n'
-            assert fd.read() == ''
+            assert fd.readline() == b('hello\n')
+            assert fd.read() == b('')
             fd.close()
 
         server = tcp_listener(('0.0.0.0', 0))
@@ -83,12 +90,16 @@ class TestGreenIo(TestCase):
             # object, only keeping the file object around
             # closing the file object should close everything
             try:
-                conn, addr = listener.accept()
-                conn = conn.makefile()
-                conn.write('hello\n')
+                conn_, addr = listener.accept()
+                conn = conn_.makefile()
+                conn.write(b('hello\n'))
                 conn.close()
-                r = conn.write('a')
-                assert r is None, r
+                conn_.close()
+                if PY3:
+                    self.assertRaises(AttributeError, conn.write, b('a'))
+                else:
+                    r = conn.write(b('a'))
+                    assert r is None, r
             finally:
                 listener.close()
 
@@ -97,8 +108,8 @@ class TestGreenIo(TestCase):
         client = socket.create_connection(('127.0.0.1', server.getsockname()[1]))
         fd = client.makefile()
         client.close()
-        assert fd.read() == 'hello\n'
-        assert fd.read() == ''
+        assert fd.read() == b('hello\n')
+        assert fd.read() == b('')
 
         timer.cancel()
 

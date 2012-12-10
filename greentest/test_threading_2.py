@@ -1,5 +1,8 @@
 # testing gevent's Event, Lock, RLock, Semaphore, BoundedSemaphore with standard test_threading
 from __future__ import with_statement
+import six
+if six.PY3:
+    xrange = range
 
 setup_ = '''from gevent import monkey; monkey.patch_all()
 from gevent.event import Event
@@ -19,24 +22,31 @@ if not hasattr(threading.Thread, 'is_alive'):
     threading.Thread.is_alive = threading.Thread.isAlive
 if not hasattr(threading.Thread, 'daemon'):
     threading.Thread.daemon = property(threading.Thread.isDaemon, threading.Thread.setDaemon)
-if not hasattr(threading._Condition, 'notify_all'):
-    threading._Condition.notify_all = threading._Condition.notifyAll
+try:
+    if not hasattr(threading.Condition, 'notify_all'):
+        threading.Condition.notify_all = threading.Condition.notifyAll
+except AttributeError:
+    if not hasattr(threading._Condition, 'notify_all'):
+        threading._Condition.notify_all = threading._Condition.notifyAll
 '''
 
-exec setup_
+six.exec_(setup_)
 
 setup_3 = '\n'.join('            %s' % line for line in setup_.split('\n'))
 setup_4 = '\n'.join('                %s' % line for line in setup_.split('\n'))
 setup_5 = '\n'.join('                    %s' % line for line in setup_.split('\n'))
 
 
-import test.test_support
-from test.test_support import verbose
+import test_support
+from test_support import verbose
 import random
 import re
 import sys
 import threading
-import thread
+if six.PY3:
+    import _thread as thread
+else:
+    import thread
 import time
 import unittest
 import weakref
@@ -71,26 +81,26 @@ class TestThread(threading.Thread):
     def run(self):
         delay = random.random() / 10000.0
         if verbose:
-            print 'task %s will run for %.1f usec' % (
-                self.name, delay * 1e6)
+            six.print_('task %s will run for %.1f usec' % (
+                self.name, delay * 1e6))
 
         with self.sema:
             with self.mutex:
                 self.nrunning.inc()
                 if verbose:
-                    print self.nrunning.get(), 'tasks are running'
+                    six.print_(self.nrunning.get(), 'tasks are running')
                 self.testcase.assert_(self.nrunning.get() <= 3)
 
             time.sleep(delay)
             if verbose:
-                print 'task', self.name, 'done'
+                six.print_('task', self.name, 'done')
 
             with self.mutex:
                 self.nrunning.dec()
                 self.testcase.assert_(self.nrunning.get() >= 0)
                 if verbose:
-                    print '%s is finished. %d tasks are running' % (
-                        self.name, self.nrunning.get())
+                    six.print_('%s is finished. %d tasks are running' % (
+                        self.name, self.nrunning.get()))
 
 
 class ThreadTests(unittest.TestCase):
@@ -118,7 +128,7 @@ class ThreadTests(unittest.TestCase):
             t.start()
 
         if verbose:
-            print 'waiting for all tasks to complete'
+            six.print_('waiting for all tasks to complete')
         for t in threads:
             t.join(NUMTASKS)
             self.assert_(not t.is_alive())
@@ -127,7 +137,7 @@ class ThreadTests(unittest.TestCase):
                 self.assertFalse(t.ident is None)
                 self.assert_(re.match('<TestThread\(.*, \w+ -?\d+\)>', repr(t)))
         if verbose:
-            print 'all tasks done'
+            six.print_('all tasks done')
         self.assertEqual(numrunning.get(), 0)
 
     if sys.version_info[:2] > (2, 5):
@@ -149,12 +159,12 @@ class ThreadTests(unittest.TestCase):
     # run with a small(ish) thread stack size (256kB)
     def test_various_ops_small_stack(self):
         if verbose:
-            print 'with 256kB thread stack size...'
+            six.print_('with 256kB thread stack size...')
         try:
             threading.stack_size(262144)
         except thread.error:
             if verbose:
-                print 'platform does not support changing thread stack size'
+                six.print_('platform does not support changing thread stack size')
             return
         self.test_various_ops()
         threading.stack_size(0)
@@ -162,12 +172,12 @@ class ThreadTests(unittest.TestCase):
     # run with a large thread stack size (1MB)
     def test_various_ops_large_stack(self):
         if verbose:
-            print 'with 1MB thread stack size...'
+            six.print_('with 1MB thread stack size...')
         try:
             threading.stack_size(0x100000)
         except thread.error:
             if verbose:
-                print 'platform does not support changing thread stack size'
+                six.print_('platform does not support changing thread stack size')
             return
         self.test_various_ops()
         threading.stack_size(0)
@@ -198,7 +208,7 @@ class ThreadTests(unittest.TestCase):
             import ctypes
         except ImportError:
             if verbose:
-                print "test_PyThreadState_SetAsyncExc can't import ctypes"
+                six.print_("test_PyThreadState_SetAsyncExc can't import ctypes")
             return  # can't do anything
 
         set_async_exc = ctypes.pythonapi.PyThreadState_SetAsyncExc
@@ -232,31 +242,31 @@ class ThreadTests(unittest.TestCase):
         t.daemon = True  # so if this fails, we don't hang Python at shutdown
         t.start()
         if verbose:
-            print "    started worker thread"
+            six.print_("    started worker thread")
 
         # Try a thread id that doesn't make sense.
         if verbose:
-            print "    trying nonsensical thread id"
+            six.print_("    trying nonsensical thread id")
         result = set_async_exc(ctypes.c_long(-1), exception)
         self.assertEqual(result, 0)  # no thread states modified
 
         # Now raise an exception in the worker thread.
         if verbose:
-            print "    waiting for worker thread to get started"
+            six.print_("    waiting for worker thread to get started")
         worker_started.wait()
         if verbose:
-            print "    verifying worker hasn't exited"
+            six.print_("    verifying worker hasn't exited")
         self.assert_(not t.finished)
         if verbose:
-            print "    attempting to raise asynch exception in worker"
+            six.print_("    attempting to raise asynch exception in worker")
         result = set_async_exc(ctypes.c_long(t.id), exception)
         self.assertEqual(result, 1)  # one thread state modified
         if verbose:
-            print "    waiting for worker to say it caught the exception"
+            six.print_("    waiting for worker to say it caught the exception")
         worker_saw_exception.wait(timeout=10)
         self.assert_(t.finished)
         if verbose:
-            print "    all OK -- joining worker"
+            six.print_("    all OK -- joining worker")
         if t.finished:
             t.join()
         # else the thread is still running, and we have no way to kill it
@@ -292,7 +302,11 @@ class ThreadTests(unittest.TestCase):
             import subprocess
             rc = subprocess.call([sys.executable, "-c", """if 1:
 %s
-                import ctypes, sys, time, thread
+                import ctypes, sys, time
+                try:
+                    import thread
+                except ImportError:
+                    import _thread as thread
 
                 # This lock is used as a simple event variable.
                 ready = thread.allocate_lock()
@@ -332,7 +346,7 @@ class ThreadTests(unittest.TestCase):
                         sleep(1)
                         # As a non-daemon thread we SHOULD wake up and nothing
                         # should be torn down yet
-                        print "Woke up, sleep function is:", sleep
+                        print("Woke up, sleep function is: %%r" %% sleep)
 
                     threading.Thread(target=child).start()
                     raise SystemExit
@@ -341,6 +355,9 @@ class ThreadTests(unittest.TestCase):
                 stderr=subprocess.PIPE)
             stdout, stderr = p.communicate()
             stdout = stdout.strip()
+            if six.PY3:
+                stdout = stdout.decode()
+                stderr = stderr.decode()
             assert re.match('^Woke up, sleep function is: <.*?sleep.*?>$', stdout), repr(stdout)
             stderr = re.sub(r"^\[\d+ refs\]", "", stderr, re.MULTILINE).strip()
             self.assertEqual(stderr, "")
@@ -407,14 +424,14 @@ class ThreadJoinOnShutdown(unittest.TestCase):
             # a thread, which waits for the main program to terminate
             def joiningfunc(mainthread):
                 mainthread.join()
-                print 'end of thread'
+                print('end of thread')
         \n""" % setup_3 + script
 
         import subprocess
         p = subprocess.Popen([sys.executable, "-c", script], stdout=subprocess.PIPE)
         rc = p.wait()
-        data = p.stdout.read().replace('\r', '')
-        self.assertEqual(data, "end of main\nend of thread\n")
+        data = p.stdout.read().replace(six.b('\r'), six.b(''))
+        self.assertEqual(data, six.b("end of main\nend of thread\n"))
         self.failIf(rc == 2, "interpreter was blocked")
         self.failUnless(rc == 0, "Unexpected error")
 
@@ -426,7 +443,7 @@ class ThreadJoinOnShutdown(unittest.TestCase):
                                  args=(threading.current_thread(),))
             t.start()
             time.sleep(0.1)
-            print 'end of main'
+            print('end of main')
             """
         self._run_and_join(script)
 
@@ -444,7 +461,7 @@ class ThreadJoinOnShutdown(unittest.TestCase):
             t = threading.Thread(target=joiningfunc,
                                  args=(threading.current_thread(),))
             t.start()
-            print 'end of main'
+            print('end of main')
             """
         self._run_and_join(script)
 
@@ -471,7 +488,7 @@ class ThreadJoinOnShutdown(unittest.TestCase):
 
                 t = threading.Thread(target=joiningfunc,
                                      args=(main_thread,))
-                print 'end of main'
+                print('end of main')
                 t.start()
                 t.join() # Should not block: main_thread is already stopped
 
@@ -533,7 +550,7 @@ class BoundedSemaphoreTests(lock_tests.BoundedSemaphoreTests):
 
 
 def main():
-    test.test_support.run_unittest(LockTests, RLockTests, EventTests,
+    test_support.run_unittest(LockTests, RLockTests, EventTests,
                                    ConditionAsRLockTests, ConditionTests,
                                    SemaphoreTests, BoundedSemaphoreTests,
                                    ThreadTests,

@@ -33,9 +33,35 @@ PY3 = sys.version_info[0] >= 3
 if PY3:
     string_types = str,
     integer_types = int,
+    text_type = str
+    binary_type = bytes
+    xrange = range
+
+    def b(s):
+        return s.encode("latin-1")
+
+    def u(s):
+        return s
+
+    def reraise(tp, value, tb=None):
+        if value.__traceback__ is not tb:
+            raise value.with_traceback(tb)
+        raise value
 else:
     string_types = basestring,
     integer_types = (int, long)
+    text_type = unicode
+    binary_type = str
+
+    def b(s):
+        return s
+
+    def u(s):
+        return unicode(s, "unicode_escape")
+
+    exec("""def reraise(tp, value, tb=None):
+    raise tp, value, tb
+""")
 
 
 if sys.version_info[0] <= 2:
@@ -165,9 +191,10 @@ def get_hub(*args, **kwargs):
     try:
         return _threadlocal.hub
     except AttributeError:
-        hubtype = get_hub_class()
-        hub = _threadlocal.hub = hubtype(*args, **kwargs)
-        return hub
+        pass
+    hubtype = get_hub_class()
+    hub = _threadlocal.hub = hubtype(*args, **kwargs)
+    return hub
 
 
 def _get_hub():
@@ -279,7 +306,8 @@ class Hub(greenlet):
         else:
             try:
                 info = self.loop._format()
-            except Exception, ex:
+            except Exception:
+                ex = sys.exc_info()[1]
                 info = str(ex) or repr(ex) or 'error'
         result = '<%s at 0x%x %s' % (self.__class__.__name__, id(self), info)
         if self._resolver is not None:
@@ -313,7 +341,11 @@ class Hub(greenlet):
                     cb.stop()
 
     def print_exception(self, context, type, value, tb):
-        traceback.print_exception(type, value, tb)
+        if PY3 and value is None:
+            # print_exception() will fail in Python 3 if value is None
+            traceback.print_exception(type, type(), tb)
+        else:
+            traceback.print_exception(type, value, tb)
         del tb
         if context is not None:
             if not isinstance(context, str):

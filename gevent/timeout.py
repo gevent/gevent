@@ -42,11 +42,13 @@ class Timeout(BaseException):
 
     When *exception* is omitted or ``None``, the :class:`Timeout` instance itself is raised:
 
-        >>> Timeout(0.1).start()
-        >>> gevent.sleep(0.2)
-        Traceback (most recent call last):
-         ...
-        Timeout: 0.1 seconds
+        >>> timeout = Timeout(0.1)
+        >>> timeout.start()
+        >>> try:
+        ...     gevent.sleep(0.2)
+        ... except Timeout:
+        ...     ex = sys.exc_info()[1]
+        ...     assert ex is timeout
 
     For Python 2.5 and newer ``with`` statement can be used::
 
@@ -144,12 +146,6 @@ class Timeout(BaseException):
         return '<%s at %s seconds=%s%s%s>' % (classname, hex(id(self)), self.seconds, exception, pending)
 
     def __str__(self):
-        """
-        >>> raise Timeout
-        Traceback (most recent call last):
-            ...
-        Timeout
-        """
         if self.seconds is None:
             return ''
         if self.seconds == 1:

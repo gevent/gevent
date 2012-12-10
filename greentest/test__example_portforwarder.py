@@ -1,5 +1,6 @@
 from __future__ import with_statement
 from gevent import monkey; monkey.patch_all()
+import six
 import sys
 import socket
 from time import sleep
@@ -26,7 +27,7 @@ class Test(util.TestServer):
         def handle(socket, address):
             while True:
                 data = socket.recv(1024)
-                print 'got %r' % data
+                print('got %r' % data)
                 if not data:
                     break
                 log.append(data)
@@ -55,9 +56,9 @@ class Test(util.TestServer):
             server.close()
 
         if sys.platform == 'win32':
-            self.assertEqual(['msg1'], log)
+            self.assertEqual([six.b('msg1')], log)
         else:
-            self.assertEqual(['msg1', 'msg2'], log)
+            self.assertEqual([six.b('msg1'), six.b('msg2')], log)
 
 
 if __name__ == '__main__':

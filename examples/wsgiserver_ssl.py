@@ -12,7 +12,7 @@ def hello_world(env, start_response):
         start_response('404 Not Found', [('Content-Type', 'text/html')])
         return ['<h1>Not Found</h1>']
 
-print 'Serving on https://127.0.0.1:8443'
+print('Serving on https://127.0.0.1:8443')
 server = pywsgi.WSGIServer(('0.0.0.0', 8443), hello_world, keyfile='server.key', certfile='server.crt')
 # to start the server asynchronously, call server.start()
 # we use blocking serve_forever() here because we have no other jobs

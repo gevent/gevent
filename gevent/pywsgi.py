@@ -5,14 +5,17 @@ import errno
 import sys
 import time
 import traceback
-import mimetools
 from datetime import datetime
-from urllib import unquote
+
+try:
+    from urllib import unquote
+except ImportError:
+    from urllib.parse import unquote
 
 from gevent import socket
 import gevent
 from gevent.server import StreamServer
-from gevent.hub import GreenletExit
+from gevent.hub import GreenletExit, reraise, PY3, b, string_types
 
 
 __all__ = ['WSGIHandler', 'WSGIServer']
@@ -25,13 +28,14 @@ _MONTHNAME = [None,  # Dummy so we can use 1-based month numbers
               "Jan", "Feb", "Mar", "Apr", "May", "Jun",
               "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
 _INTERNAL_ERROR_STATUS = '500 Internal Server Error'
-_INTERNAL_ERROR_BODY = 'Internal Server Error'
+_INTERNAL_ERROR_BODY = b('Internal Server Error')
 _INTERNAL_ERROR_HEADERS = [('Content-Type', 'text/plain'),
                            ('Connection', 'close'),
                            ('Content-Length', str(len(_INTERNAL_ERROR_BODY)))]
-_REQUEST_TOO_LONG_RESPONSE = "HTTP/1.1 414 Request URI Too Long\r\nConnection: close\r\nContent-length: 0\r\n\r\n"
-_BAD_REQUEST_RESPONSE = "HTTP/1.1 400 Bad Request\r\nConnection: close\r\nContent-length: 0\r\n\r\n"
-_CONTINUE_RESPONSE = "HTTP/1.1 100 Continue\r\n\r\n"
+
+_REQUEST_TOO_LONG_RESPONSE = b("HTTP/1.1 414 Request URI Too Long\r\nConnection: close\r\nContent-length: 0\r\n\r\n")
+_BAD_REQUEST_RESPONSE = b("HTTP/1.1 400 Bad Request\r\nConnection: close\r\nContent-length: 0\r\n\r\n")
+_CONTINUE_RESPONSE = b("HTTP/1.1 100 Continue\r\n\r\n")
 
 
 def format_date_time(timestamp):
@@ -79,11 +83,11 @@ class Input(object):
         elif length > left:
             length = left
         if not length:
-            return ''
+            return b('')
         read = reader(length)
         self.position += len(read)
         if len(read) < length:
-            if (use_readline and not read.endswith("\n")) or not use_readline:
+            if (use_readline and not read.endswith(b("\n"))) or not use_readline:
                 raise IOError("unexpected end of file while reading request at position %s" % (self.position,))
 
         return read
@@ -93,9 +97,9 @@ class Input(object):
         self._send_100_continue()
 
         if length == 0:
-            return ""
+            return b("")
 
-        if length < 0:
+        if length is not None and length < 0:
             length = None
 
         if use_readline:
@@ -126,18 +130,18 @@ class Input(object):
                     length -= datalen
                     if length == 0:
                         break
-                if use_readline and data[-1] == "\n":
+                if use_readline and data[-1:] == b("\n"):
                     break
             else:
                 line = rfile.readline()
-                if not line.endswith("\n"):
+                if not line.endswith(b("\n")):
                     self.chunk_length = 0
                     raise IOError("unexpected end of file while reading chunked data header")
-                self.chunk_length = int(line.split(";", 1)[0], 16)
+                self.chunk_length = int(line.split(b(";"), 1)[0], 16)
                 self.position = 0
                 if self.chunk_length == 0:
                     rfile.readline()
-        return ''.join(response)
+        return b('').join(response)
 
     def read(self, length=None):
         if self.chunked_input:
@@ -162,10 +166,79 @@ class Input(object):
             raise StopIteration
         return line
 
+    if PY3:
+        __next__ = next
+        del next
+
+
+try:
+    from http.client import HTTPMessage, parse_headers, LineTooLong
+except ImportError:
+    import email.message
+    import email.parser
+
+    _MAXLINE = 65536
+
+    class LineTooLong(Exception):
+        def __init__(self, line_type):
+            Exception.__init__(self, "got more than %d bytes when reading %s"
+                                     % (_MAXLINE, line_type))
+
+    class HTTPMessage(email.message.Message):
+        # XXX The only usage of this method is in
+        # http.server.CGIHTTPRequestHandler.  Maybe move the code there so
+        # that it doesn't need to be part of the public API.  The API has
+        # never been defined so this could cause backwards compatibility
+        # issues.
+
+        def getallmatchingheaders(self, name):
+            """Find all header lines matching a given header name.
+
+            Look through the list of headers and find all lines matching a given
+            header name (and their continuation lines).  A list of the lines is
+            returned, without interpretation.  If the header does not occur, an
+            empty list is returned.  If the header occurs multiple times, all
+            occurrences are returned.  Case is not important in the header name.
+
+            """
+            name = name.lower() + ':'
+            n = len(name)
+            lst = []
+            hit = 0
+            for line in self.keys():
+                if line[:n].lower() == name:
+                    hit = 1
+                elif not line[:1].isspace():
+                    hit = 0
+                if hit:
+                    lst.append(line)
+            return lst
+
+    def parse_headers(fp, _class=HTTPMessage):
+        """Parses only RFC2822 headers from a file pointer.
+
+        email Parser wants to see strings rather than bytes.
+        But a TextIOWrapper around self.rfile would buffer too many bytes
+        from the stream, bytes which we later need to read as bytes.
+        So we read the correct bytes here, as bytes, for email Parser
+        to parse.
+
+        """
+        headers = []
+        while True:
+            line = fp.readline(_MAXLINE + 1)
+            if len(line) > _MAXLINE:
+                raise LineTooLong("header line")
+            headers.append(line)
+            if line in ('\r\n', '\n', ''):
+                break
+        hstring = ''.join(headers)
+        return email.parser.Parser(_class=_class).parsestr(hstring)
+
 
 class WSGIHandler(object):
     protocol_version = 'HTTP/1.1'
-    MessageClass = mimetools.Message
+    MessageClass = HTTPMessage
 
     def __init__(self, socket, address, server, rfile=None):
         self.socket = socket
@@ -216,6 +289,8 @@ class WSGIHandler(object):
         return True
 
     def read_request(self, raw_requestline):
+        if not isinstance(raw_requestline, string_types):
+            raw_requestline = raw_requestline.decode('latin-1')
         self.requestline = raw_requestline.rstrip()
         words = self.requestline.split()
         if len(words) == 3:
@@ -234,9 +309,16 @@ class WSGIHandler(object):
             self.log_error('Invalid HTTP method: %r', raw_requestline)
             return
 
-        self.headers = self.MessageClass(self.rfile, 0)
-        if self.headers.status:
-            self.log_error('Invalid headers status: %r', self.headers.status)
+        try:
+            self.headers = parse_headers(self.rfile, _class=self.MessageClass)
+        except LineTooLong:
+            ex = sys.exc_info()[1]
+            self.log_error('Line in headers too long: %r', ex.args[0])
+            return
+
+        if self.headers.defects:
+            self.log_error('Headers defect:' + ' %r' * len(self.headers.defects),
+                           *self.headers.defects)
             return
 
         if self.headers.get("transfer-encoding", "").lower() == "chunked":
@@ -323,7 +405,8 @@ class WSGIHandler(object):
             ex = sys.exc_info()[1]
             # Broken pipe, connection reset by peer
             if ex.args[0] in (errno.EPIPE, errno.ECONNRESET):
-                sys.exc_clear()
+                if not PY3:
+                    sys.exc_clear()
                 return
             else:
                 raise
@@ -353,7 +436,8 @@ class WSGIHandler(object):
     def _sendall(self, data):
         try:
             self.socket.sendall(data)
-        except socket.error, ex:
+        except socket.error:
+            ex = sys.exc_info()[1]
             self.status = 'socket error: %s' % ex
             if self.code > 0:
                 self.code = -self.code
@@ -365,7 +449,7 @@ class WSGIHandler(object):
             return
         if self.response_use_chunked:
             ## Write the chunked encoding
-            data = "%x\r\n%s\r\n" % (len(data), data)
+            data = b('\r\n').join((b('%x' % len(data)), data, b('')))
         self._sendall(data)
 
     def write(self, data):
@@ -386,15 +470,17 @@ class WSGIHandler(object):
             self.headers_sent = True
             self.finalize_headers()
 
-            towrite.extend('HTTP/1.1 %s\r\n' % self.status)
+            towrite.extend(b('HTTP/1.1 %s\r\n' % self.status))
             for header in self.response_headers:
-                towrite.extend('%s: %s\r\n' % header)
+                towrite.extend(b('%s: %s\r\n' % header))
 
-            towrite.extend('\r\n')
+            towrite.extend(b('\r\n'))
             if data:
                 if self.response_use_chunked:
                     ## Write the chunked encoding
-                    towrite.extend("%x\r\n%s\r\n" % (len(data), data))
+                    towrite.extend(b("%x\r\n" % (len(data),)))
+                    towrite.extend(data)
+                    towrite.extend(b("\r\n"))
                 else:
                     towrite.extend(data)
             self._sendall(towrite)
@@ -425,7 +511,7 @@ class WSGIHandler(object):
             try:
                 if self.headers_sent:
                     # Re-raise original exception if headers sent
-                    raise exc_info[0], exc_info[1], exc_info[2]
+                    reraise(*exc_info)
             finally:
                 # Avoid dangling circular ref
                 exc_info = None
@@ -528,21 +614,10 @@ class WSGIHandler(object):
             self.write(_INTERNAL_ERROR_BODY)
 
     def _headers(self):
-        key = None
-        value = None
-        for header in self.headers.headers:
-            if key is not None and header[:1] in " \t":
-                value += header
-                continue
-
+        for key, value in self.headers._headers:
+            key = key.replace('-', '_').upper()
             if key not in (None, 'CONTENT_TYPE', 'CONTENT_LENGTH'):
                 yield 'HTTP_' + key, value.strip()
-
-            key, value = header.split(':', 1)
-            key = key.replace('-', '_').upper()
-
-        if key not in (None, 'CONTENT_TYPE', 'CONTENT_LENGTH'):
-            yield 'HTTP_' + key, value.strip()
 
     def get_environ(self):
         env = self.server.get_environ()
@@ -556,10 +631,11 @@ class WSGIHandler(object):
         env['PATH_INFO'] = unquote(path)
         env['QUERY_STRING'] = query
 
-        if self.headers.typeheader is not None:
-            env['CONTENT_TYPE'] = self.headers.typeheader
+        typeheader = self.headers.get("content-type")
+        if typeheader is not None:
+            env['CONTENT_TYPE'] = typeheader
 
-        length = self.headers.getheader('content-length')
+        length = self.headers.get('content-length')
         if length:
             env['CONTENT_LENGTH'] = length
         env['SERVER_PROTOCOL'] = self.request_version

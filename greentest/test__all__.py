@@ -1,4 +1,5 @@
 """Check __all__, __implements__, __extensions__, __imports__ of the modules"""
+import six
 import sys
 import unittest
 import types
@@ -33,6 +34,22 @@ COULD_BE_MISSING = {
 
 NO_ALL = ['gevent.threading', 'gevent._util']
 
+if six.PY3:
+    MAPPING['gevent.thread'] = '_thread'
+    NOT_IMPLEMENTED['socket'].extend([
+        'CMSG_LEN', 'CMSG_SPACE', 'dup', 'if_indextoname', 'if_nameindex',
+        'if_nametoindex', 'sethostname'])
+    NOT_IMPLEMENTED['subprocess'] = ['getstatusoutput', 'getoutput', 'DEVNULL']
+    NOT_IMPLEMENTED['ssl'] = [
+        'CHANNEL_BINDING_TYPES', 'CertificateError', 'RAND_bytes',
+        'RAND_pseudo_bytes', 'SSLContext', 'SSLEOFError', 'SSLSyscallError',
+        'SSLWantReadError', 'SSLWantWriteError', 'SSLZeroReturnError',
+        'create_connection', 'match_hostname']
+    NOT_IMPLEMENTED['_thread'] = NOT_IMPLEMENTED['thread']
+    NOT_IMPLEMENTED['_thread'].extend(['RLock', 'TIMEOUT_MAX'])
+    COULD_BE_MISSING['ssl'] = ['sslwrap_simple']
+    COULD_BE_MISSING['threading'] = ['_get_ident']
+
 
 class Test(unittest.TestCase):
 
@@ -42,7 +59,7 @@ class Test(unittest.TestCase):
             assert self.modname in NO_ALL
             return
         names = {}
-        exec ("from %s import *" % self.modname) in names
+        six.exec_("from %s import *" % self.modname, names)
         names.pop('__builtins__', None)
         self.assertEqual(sorted(names), sorted(self.module.__all__))
 
@@ -139,7 +156,7 @@ are missing from %r:
 
     def _test(self, modname):
         self.modname = modname
-        exec "import %s" % modname in {}
+        six.exec_("import %s" % modname, {})
         self.module = sys.modules[modname]
 
         self.check_all()

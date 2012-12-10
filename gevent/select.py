@@ -3,7 +3,7 @@ from __future__ import absolute_import
 import sys
 from gevent.timeout import Timeout
 from gevent.event import Event
-from gevent.hub import get_hub
+from gevent.hub import get_hub, integer_types
 
 __implements__ = ['select']
 __all__ = ['error'] + __implements__
@@ -16,7 +16,7 @@ def get_fileno(obj):
     try:
         fileno_f = obj.fileno
     except AttributeError:
-        if not isinstance(obj, (int, long)):
+        if not isinstance(obj, integer_types):
             raise TypeError('argument must be an int, or have a fileno() method: %r' % (obj, ))
         return obj
     else:

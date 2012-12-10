@@ -28,7 +28,8 @@ class PortForwarder(StreamServer):
         log('%s:%s accepted', *address[:2])
         try:
             dest = create_connection(self.dest)
-        except IOError, ex:
+        except IOError:
+            ex = sys.exc_info()[1]
             log('%s:%s failed to connect to %s:%s: %s', address[0], address[1], self.dest[0], self.dest[1], ex)
             return
         gevent.spawn(forward, source, dest)

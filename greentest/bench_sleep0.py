@@ -1,6 +1,10 @@
 """Benchmarking sleep(0) performance."""
 import sys
 from time import time
+try:
+    xrange
+except NameError:
+    xrange = range
 
 
 def noop(p):
@@ -31,7 +35,8 @@ def bench_gevent(arg=0):
 def bench_eventlet(arg):
     try:
         import eventlet
-    except ImportError, ex:
+    except ImportError:
+        ex = sys.exc_info()[1]
         sys.stderr.write('Failed to import eventlet: %s\n' % ex)
         return
     from eventlet.api import sleep

@@ -1,5 +1,6 @@
 from __future__ import with_statement
 
+import six
 import sys
 import subprocess
 import unittest
@@ -57,7 +58,7 @@ class ThreadTrace(unittest.TestCase):
         try:
             def trace(frame, ev, arg):
                 lst.append((frame.f_code.co_filename, frame.f_lineno, ev))
-                print "TRACE: %s:%s %s" % lst[-1]
+                six.print_("TRACE: %s:%s %s" % lst[-1])
                 return trace
 
             with gevent.thread.allocate_lock():
@@ -80,5 +81,5 @@ class ThreadTrace(unittest.TestCase):
 
 
 if __name__ == "__main__":
-    import test.test_support
-    test.test_support.run_unittest(ThreadTrace)
+    import test_support
+    test_support.run_unittest(ThreadTrace)

@@ -3,7 +3,8 @@
 import sys
 import _socket
 from gevent.baseserver import BaseServer
-from gevent.socket import EWOULDBLOCK, socket
+from gevent.hub import PY3
+from gevent.socket import EWOULDBLOCK, socket, _realsocket
 
 
 __all__ = ['StreamServer', 'DatagramServer']
@@ -75,7 +76,7 @@ class StreamServer(BaseServer):
 
     def init_socket(self):
         if not hasattr(self, 'socket'):
-            self.socket = self.get_listener(self.address, self.backlog, self.family)
+            self.set_listener(self.get_listener(self.address, self.backlog, self.family))
             self.address = self.socket.getsockname()
         if self.ssl_args:
             self._handle = self.wrap_socket_and_handle
@@ -90,9 +91,16 @@ class StreamServer(BaseServer):
 
     def do_read(self):
         try:
-            client_socket, address = self.socket.accept()
-        except _socket.error, err:
-            if err[0] == EWOULDBLOCK:
+            if PY3:
+                fd, address = self.socket._accept()
+                client_socket = _realsocket(self.socket.family,
+                                            self.socket.type,
+                                            self.socket.proto, fileno=fd)
+            else:
+                client_socket, address = self.socket.accept()
+        except _socket.error:
+            err = sys.exc_info()[1]
+            if err.args[0] == EWOULDBLOCK:
                 return
             raise
         return socket(_sock=client_socket), address
@@ -130,8 +138,9 @@ class DatagramServer(BaseServer):
     def do_read(self):
         try:
             data, address = self._socket.recvfrom(8192)
-        except _socket.error, err:
-            if err[0] == EWOULDBLOCK:
+        except _socket.error:
+            err = sys.exc_info()[1]
+            if err.args[0] == EWOULDBLOCK:
                 return
             raise
         return data, address

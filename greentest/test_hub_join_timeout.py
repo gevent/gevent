@@ -1,8 +1,11 @@
 from __future__ import with_statement
 from contextlib import contextmanager
 import gevent
+import six
 from gevent.event import Event
 from time import time
+if six.PY3:
+    xrange = range
 
 
 SMALL = 0.1

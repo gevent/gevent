@@ -1,7 +1,7 @@
 from __future__ import absolute_import, with_statement
 import sys
 import os
-from gevent.hub import get_hub
+from gevent.hub import get_hub, integer_types, PY3, b
 from gevent.socket import EBADF
 from gevent.os import _read, _write, ignored_errors
 from gevent.lock import Semaphore, DummySemaphore
@@ -34,7 +34,10 @@ else:
         SocketAdapter__del__ = None
         noop = None
 
-    from types import UnboundMethodType
+    try:
+        from types import UnboundMethodType
+    except ImportError:
+        UnboundMethodType = lambda func, *x: lambda *y: func(*y)
 
     class NA(object):
 
@@ -51,18 +54,20 @@ else:
         """
 
         def __init__(self, fileno, mode=None, close=True):
-            if not isinstance(fileno, (int, long)):
+            if not isinstance(fileno, integer_types):
                 raise TypeError('fileno must be int: %r' % fileno)
             self._fileno = fileno
             self._mode = mode or 'rb'
             self._close = close
-            self._translate = 'U' in self._mode
+            self._translate = not PY3 and 'U' in self._mode
             make_nonblocking(fileno)
             self._eat_newline = False
             self.hub = get_hub()
             io = self.hub.loop.io
             self._read_event = io(fileno, 1)
             self._write_event = io(fileno, 2)
+            self._io_refs = 0   # for Python 3
+            self._closed = False
 
         def __repr__(self):
             if self._fileno is None:
@@ -70,6 +75,12 @@ else:
             else:
                 args = (self.__class__.__name__, id(self), getattr(self, '_fileno', NA), getattr(self, '_mode', NA))
                 return '<%s at 0x%x (%r, %r)>' % args
+
+        def _decref_socketios(self):
+            if self._io_refs > 0:
+                self._io_refs -= 1
+            if self._closed:
+                self.close()
 
         def makefile(self, *args, **kwargs):
             return _fileobject(self, *args, **kwargs)
@@ -86,6 +97,11 @@ else:
             return x
 
         def close(self):
+            self._closed = True
+            if self._io_refs <= 0:
+                self._real_close()
+
+        def _real_close(self):
             self.hub.cancel_wait(self._read_event, cancel_wait_ex)
             self.hub.cancel_wait(self._write_event, cancel_wait_ex)
             fileno = self._fileno
@@ -94,7 +110,7 @@ else:
                 if self._close:
                     os.close(fileno)
 
-        def sendall(self, data):
+        def send(self, data):
             fileno = self.fileno()
             bytes_total = len(data)
             bytes_written = 0
@@ -105,10 +121,14 @@ else:
                     code = sys.exc_info()[1].args[0]
                     if code not in ignored_errors:
                         raise
-                    sys.exc_clear()
+                    if not PY3:
+                        sys.exc_clear()
                 if bytes_written >= bytes_total:
-                    return
+                    return bytes_written
                 self.hub.wait(self._write_event)
+
+        def sendall(self, data):
+            self.send(data)
 
         def recv(self, size):
             while True:
@@ -118,20 +138,28 @@ else:
                     code = sys.exc_info()[1].args[0]
                     if code not in ignored_errors:
                         raise
-                    sys.exc_clear()
+                    if not PY3:
+                        sys.exc_clear()
                 else:
                     if not self._translate or not data:
                         return data
                     if self._eat_newline:
                         self._eat_newline = False
-                        if data.startswith('\n'):
+                        if data.startswith(b('\n')):
                             data = data[1:]
                             if not data:
                                 return self.recv(size)
-                    if data.endswith('\r'):
+                    if data.endswith(b('\r')):
                         self._eat_newline = True
                     return self._translate_newlines(data)
                 self.hub.wait(self._read_event)
+
+        def recv_into(self, buffer):
+            data = self.recv(len(buffer))
+            ret = len(data)
+            if ret:
+                buffer[:ret] = data
+            return ret
 
         def _translate_newlines(self, data):
             data = data.replace("\r\n", "\n")
@@ -151,7 +179,7 @@ else:
     class FileObjectPosix(_fileobject):
 
         def __init__(self, fobj, mode='rb', bufsize=-1, close=True):
-            if isinstance(fobj, (int, long)):
+            if isinstance(fobj, integer_types):
                 fileno = fobj
                 fobj = None
             else:
@@ -181,6 +209,8 @@ else:
             try:
                 self.flush()
             finally:
+                if PY3:
+                    _fileobject.close(self)
                 if self._fobj is not None or not self._close:
                     sock.detach()
                 self._sock = None
@@ -199,7 +229,7 @@ else:
                 pass
 
     if noop:
-        FileObjectPosix.__del__ = UnboundMethodType(FileObjectPosix, None, noop)
+        FileObjectPosix.__del__ = UnboundMethodType(noop, None, FileObjectPosix)
 
 
 class FileObjectThread(object):
@@ -216,7 +246,7 @@ class FileObjectThread(object):
             self.lock = DummySemaphore()
         if not hasattr(self.lock, '__enter__'):
             raise TypeError('Expected a Semaphore or boolean, got %r' % type(self.lock))
-        if isinstance(fobj, (int, long)):
+        if isinstance(fobj, integer_types):
             if not self._close:
                 # we cannot do this, since fdopen object will close the descriptor
                 raise TypeError('FileObjectThread does not support close=False')
@@ -260,12 +290,12 @@ class FileObjectThread(object):
 
     for method in ['read', 'readinto', 'readline', 'readlines', 'write', 'writelines', 'xreadlines']:
 
-        exec '''def %s(self, *args, **kwargs):
+        exec('''def %s(self, *args, **kwargs):
     fobj = self._fobj
     if fobj is None:
         raise FileObjectClosed
     return self._apply(fobj.%s, args, kwargs)
-''' % (method, method)
+''' % (method, method))
 
     def __iter__(self):
         return self
@@ -292,7 +322,7 @@ class FileObjectBlock(object):
         self._close = kwargs.pop('close', True)
         if kwargs:
             raise TypeError('Unexpected arguments: %r' % kwargs.keys())
-        if isinstance(fobj, (int, long)):
+        if isinstance(fobj, integer_types):
             if not self._close:
                 # we cannot do this, since fdopen object will close the descriptor
                 raise TypeError('FileObjectBlock does not support close=False')

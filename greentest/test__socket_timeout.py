@@ -33,7 +33,7 @@ class Test(greentest.TestCase):
                     ex = sys.exc_info()[1]
                     self.assertEqual(ex.args, ('timed out',))
                     self.assertEqual(str(ex), 'timed out')
-                    self.assertEqual(ex[0], 'timed out')
+                    self.assertEqual(ex.args[0], 'timed out')
             finally:
                 sock.close()
         finally:

@@ -22,6 +22,7 @@
 """This test checks that underlying socket instances (gevent.socket.socket._sock)
 are not leaked by the hub.
 """
+import six
 from _socket import socket
 
 
@@ -35,13 +36,17 @@ import greentest
 from gevent import monkey; monkey.patch_all()
 
 from pprint import pformat
-from thread import start_new_thread
+try:
+    from thread import start_new_thread
+except ImportError:
+    from _thread import start_new_thread
 from time import sleep
 import weakref
 import gc
 
 import socket
-socket._realsocket = Socket
+from gevent import socket as gevent_socket
+gevent_socket._realsocket = Socket
 
 SOCKET_TIMEOUT = 0.1
 
@@ -63,26 +68,26 @@ def handle_request(s, raise_on_timeout):
             raise
         else:
             return
-    #print 'handle_request - accepted'
+    #six.print_('handle_request - accepted')
     res = conn.recv(100)
-    assert res == 'hello', repr(res)
-    #print 'handle_request - recvd %r' % res
-    res = conn.send('bye')
-    #print 'handle_request - sent %r' % res
-    #print 'handle_request - conn refcount: %s' % sys.getrefcount(conn)
+    assert res == six.b('hello'), repr(res)
+    #six.print_('handle_request - recvd %r' % res)
+    res = conn.send(six.b('bye'))
+    #six.print_('handle_request - sent %r' % res)
+    #six.print_('handle_request - conn refcount: %s' % sys.getrefcount(conn))
     #conn.close()
 
 
 def make_request(port):
-    #print 'make_request'
+    #six.print_('make_request')
     s = socket.socket()
     s.connect(('127.0.0.1', port))
-    #print 'make_request - connected'
-    res = s.send('hello')
-    #print 'make_request - sent %s' % res
+    #six.print_('make_request - connected')
+    res = s.send(six.b('hello'))
+    #six.print_('make_request - sent %s' % res)
     res = s.recv(100)
-    assert res == 'bye', repr(res)
-    #print 'make_request - recvd %r' % res
+    assert res == six.b('bye'), repr(res)
+    #six.print_('make_request - recvd %r' % res)
     #s.close()
 
 
@@ -93,7 +98,7 @@ def run_interaction(run_client):
         port = s.getsockname()[1]
         start_new_thread(make_request, (port, ))
     sleep(0.1 + SOCKET_TIMEOUT)
-    #print sys.getrefcount(s._sock)
+    #six.print_(sys.getrefcount(s._sock))
     #s.close()
     return weakref.ref(s._sock)
 
@@ -101,11 +106,11 @@ def run_interaction(run_client):
 def run_and_check(run_client):
     w = run_interaction(run_client=run_client)
     if w():
-        print pformat(gc.get_referrers(w()))
+        six.print_(pformat(gc.get_referrers(w())))
         for x in gc.get_referrers(w()):
-            print pformat(x)
+            six.print_(pformat(x))
             for y in gc.get_referrers(x):
-                print '-', pformat(y)
+                six.print_('-', pformat(y))
         raise AssertionError('server should be dead by now')
 
 

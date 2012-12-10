@@ -29,6 +29,7 @@ from code import InteractiveConsole
 
 from gevent import socket
 from gevent.greenlet import Greenlet
+from gevent.hub import PY3
 from gevent.server import StreamServer
 
 __all__ = ['BackdoorServer']
@@ -48,11 +49,15 @@ class SocketConsole(Greenlet):
     def __init__(self, locals, conn, banner=None):
         Greenlet.__init__(self)
         self.locals = locals
-        self.desc = _fileobject(conn)
+        self.desc = _fileobject(conn, mode='rw', close=True)
         self.banner = banner
 
     def finalize(self):
-        self.desc = None
+        try:
+            if PY3:
+                self.desc.close()
+        finally:
+            self.desc = None
 
     def switch(self, *args, **kw):
         self.saved = sys.stdin, sys.stderr, sys.stdout
@@ -70,11 +75,15 @@ class SocketConsole(Greenlet):
                 # __builtin__.__dict__ in the latter case typing
                 # locals() at the backdoor prompt spews out lots of
                 # useless stuff
-                import __builtin__
+                try:
+                    import __builtin__
+                except ImportError:
+                    import builtins as __builtin__
                 console.locals["__builtins__"] = __builtin__
                 console.interact(banner=self.banner)
             except SystemExit:  # raised by quit()
-                sys.exc_clear()
+                if not PY3:
+                    sys.exc_clear()
         finally:
             self.switch_out()
             self.finalize()

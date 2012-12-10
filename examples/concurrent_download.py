@@ -11,12 +11,15 @@ from gevent import monkey
 # patches stdlib (including socket and ssl modules) to cooperate with other greenlets
 monkey.patch_all()
 
-import urllib2
+try:
+    from urllib2 import urlopen
+except ImportError:
+    from urllib.request import urlopen
 
 
 def print_head(url):
     print ('Starting %s' % url)
-    data = urllib2.urlopen(url).read()
+    data = urlopen(url).read()
     print ('%s: %s bytes: %r' % (url, len(data), data[:50]))
 
 jobs = [gevent.spawn(print_head, url) for url in urls]

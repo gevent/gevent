@@ -1,4 +1,4 @@
-import sys
+sys = __import__('sys', level=0)
 from gevent.hub import get_hub, getcurrent
 from gevent.timeout import Timeout
 

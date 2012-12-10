@@ -15,6 +15,12 @@ __all__ = ['patch_all',
            'patch_sys']
 
 
+if version_info[0] >= 3:
+    string_types = str,
+else:
+    string_types = basestring,
+
+
 # maps module name -> attribute name -> original item
 # e.g. "time" -> "sleep" -> built-in function sleep
 saved = {}
@@ -35,7 +41,7 @@ def _get_original(name, items):
 
 
 def get_original(name, item):
-    if isinstance(item, basestring):
+    if isinstance(item, string_types):
         return _get_original(name, [item])[0]
     else:
         return _get_original(name, item)
@@ -245,6 +251,11 @@ MONKEY OPTIONS: --verbose %s""" % ', '.join('--[no-]%s' % m for m in modules)
         sys.argv = argv
         __package__ = None
         globals()['__file__'] = sys.argv[0]  # issue #302
-        execfile(sys.argv[0])
+        f = open(sys.argv[0])
+        try:
+            code = f.read()
+        finally:
+            f.close()
+        exec(compile(code, sys.argv[0], 'exec'))
     else:
         print (script_help)

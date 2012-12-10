@@ -12,7 +12,7 @@ else:
 test_filename = sys.argv[1]
 del sys.argv[1]
 
-print 'Running with patch_all(%s): %s' % (','.join('%s=%r' % x for x in kwargs.items()), test_filename)
+print('Running with patch_all(%s): %s' % (','.join('%s=%r' % x for x in kwargs.items()), test_filename))
 
 from gevent import monkey; monkey.patch_all(**kwargs)
 
@@ -30,4 +30,4 @@ test_name = os.path.splitext(test_filename)[0]
 module_source = open(test_filename).read()
 module_source = disable_tests_in_source(module_source, test_name)
 module_code = compile(module_source, test_filename, 'exec')
-exec module_code in globals()
+exec(module_code, globals())

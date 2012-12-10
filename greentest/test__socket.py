@@ -2,11 +2,13 @@ from gevent import monkey; monkey.patch_all()
 import sys
 import os
 import array
+import six
 import socket
 import traceback
 import time
 import greentest
 from functools import wraps
+from six import b
 
 # we use threading on purpose so that we can test both regular and gevent sockets with the same code
 from threading import Thread as _Thread
@@ -38,7 +40,7 @@ class TestTCP(greentest.TestCase):
 
     __timeout__ = None
     TIMEOUT_ERROR = socket.timeout
-    long_data = ", ".join([str(x) for x in range(20000)])
+    long_data = b(", ".join([str(x) for x in range(20000)]))
 
     def setUp(self):
         greentest.TestCase.setUp(self)
@@ -77,7 +79,7 @@ class TestTCP(greentest.TestCase):
         self._test_sendall(self.long_data)
 
     def test_sendall_unicode(self):
-        self._test_sendall(unicode(self.long_data))
+        self._test_sendall(self.long_data.decode())
 
     def test_sendall_array(self):
         data = array.array("B", self.long_data)
@@ -96,14 +98,14 @@ class TestTCP(greentest.TestCase):
 
             sender = Thread(target=sendall)
             result = client.recv(1000)
-            self.assertEqual(result, 'hello world')
+            self.assertEqual(result, b('hello world'))
             sender.join()
 
         server_thread = Thread(target=server)
         client = self.create_connection()
         client_reader = Thread(target=client.makefile().read, args=(N, ))
         time.sleep(0.1)
-        client.send('hello world')
+        client.send(b('hello world'))
         time.sleep(0.1)
 
         # close() used to hang
@@ -147,15 +149,15 @@ class TestTCP(greentest.TestCase):
         def accept_once():
             conn, addr = self.listener.accept()
             fd = conn.makefile()
-            fd.write('hello\n')
+            fd.write(b('hello\n'))
             fd.close()
 
         acceptor = Thread(target=accept_once)
         client = self.create_connection()
         fd = client.makefile()
         client.close()
-        assert fd.readline() == 'hello\n'
-        assert fd.read() == ''
+        assert fd.readline() == b('hello\n')
+        assert fd.read() == b('')
         fd.close()
         acceptor.join()
 

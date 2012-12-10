@@ -83,7 +83,7 @@ __imports__ = ['error',
 
 import sys
 import time
-from gevent.hub import get_hub, string_types, integer_types
+from gevent.hub import get_hub, string_types, integer_types, text_type, PY3
 from gevent.timeout import Timeout
 
 is_windows = sys.platform == 'win32'
@@ -112,9 +112,52 @@ except ImportError:
     EBADF = 9
 
 import _socket
-_realsocket = _socket.socket
 import socket as __socket__
-_fileobject = __socket__._fileobject
+if PY3:
+    from socket import socket as __socket__socket__
+
+    # for ssl.py to create weakref
+    class _realsocket(_socket.socket):
+        pass
+
+    class _fileobject:
+        def __init__(self, sock, mode='rwb', bufsize=-1, close=False):
+            super().__init__()
+            self._sock = sock
+            self._close = close
+            self._obj = __socket__socket__.makefile(sock, mode, bufsize)
+
+        @property
+        def closed(self):
+            return self._obj.closed
+
+        def __del__(self):
+            try:
+                self.close()
+            except:
+                pass
+
+        def close(self):
+            try:
+                if self._obj is not None:
+                    self._obj.close()
+                if self._sock is not None and self._close:
+                    self._sock.close()
+            finally:
+                self._sock = self._obj = None
+
+        for _name in ['fileno', 'flush', 'isatty', 'readable', 'readline',
+                      'readlines', 'seek', 'seekable', 'tell', 'truncate',
+                      'writable', 'writelines', 'read', 'write', 'readinto',
+                      'readall']:
+            exec('''def %s(self, *args, **kwargs):
+    return getattr(self._obj, '%s')(*args, **kwargs)
+''' % (_name, _name))
+        del _name
+else:
+    _fileobject = __socket__._fileobject
+    _realsocket = _socket.socket
+
 
 for name in __imports__[:]:
     try:
@@ -122,6 +165,10 @@ for name in __imports__[:]:
         globals()[name] = value
     except AttributeError:
         __imports__.remove(name)
+
+_has_sock_nonblock = False
+if hasattr(__socket__, 'SOCK_NONBLOCK'):
+    _has_sock_nonblock = True
 
 for name in __socket__.__all__:
     value = getattr(__socket__, name)
@@ -132,7 +179,11 @@ for name in __socket__.__all__:
 del name, value
 
 
-def wait(io, timeout=None, timeout_exc=timeout('timed out')):
+timeout_exc_default = object()
+timeout_class = timeout
+
+
+def wait(io, timeout=None, timeout_exc=timeout_exc_default):
     """Block the current greenlet until *io* is ready.
 
     If *timeout* is non-negative, then *timeout_exc* is raised after *timeout* second has passed.
@@ -142,16 +193,21 @@ def wait(io, timeout=None, timeout_exc=timeout('timed out')):
     """
     assert io.callback is None, 'This socket is already used by another greenlet: %r' % (io.callback, )
     if timeout is not None:
-        timeout = Timeout.start_new(timeout, timeout_exc)
+        if timeout_exc is timeout_exc_default:
+            timeout_exc = timeout_class('timed out')
+        _timeout = Timeout.start_new(timeout, timeout_exc)
+    else:
+        _timeout = None
     try:
         return get_hub().wait(io)
     finally:
-        if timeout is not None:
-            timeout.cancel()
+        if _timeout is not None:
+            _timeout.cancel()
+        _timeout = timeout_exc = None
     # rename "io" to "watcher" because wait() works with any watcher
 
 
-def wait_read(fileno, timeout=None, timeout_exc=timeout('timed out')):
+def wait_read(fileno, timeout=None, timeout_exc=timeout_exc_default):
     """Block the current greenlet until *fileno* is ready to read.
 
     If *timeout* is non-negative, then *timeout_exc* is raised after *timeout* second has passed.
@@ -163,7 +219,7 @@ def wait_read(fileno, timeout=None, timeout_exc=timeout('timed out')):
     return wait(io, timeout, timeout_exc)
 
 
-def wait_write(fileno, timeout=None, timeout_exc=timeout('timed out'), event=None):
+def wait_write(fileno, timeout=None, timeout_exc=timeout_exc_default, event=None):
     """Block the current greenlet until *fileno* is ready to write.
 
     If *timeout* is non-negative, then *timeout_exc* is raised after *timeout* second has passed.
@@ -175,7 +231,7 @@ def wait_write(fileno, timeout=None, timeout_exc=timeout('timed out'), event=Non
     return wait(io, timeout, timeout_exc)
 
 
-def wait_readwrite(fileno, timeout=None, timeout_exc=timeout('timed out'), event=None):
+def wait_readwrite(fileno, timeout=None, timeout_exc=timeout_exc_default, event=None):
     """Block the current greenlet until *fileno* is ready to read or write.
 
     If *timeout* is non-negative, then *timeout_exc* is raised after *timeout* second has passed.
@@ -235,12 +291,20 @@ class socket(object):
             else:
                 self._sock = _sock
                 self.timeout = _socket.getdefaulttimeout()
+        self._io_refs = 0   # for Python 3
         self._sock.setblocking(0)
         fileno = self._sock.fileno()
         self.hub = get_hub()
         io = self.hub.loop.io
         self._read_event = io(fileno, 1)
         self._write_event = io(fileno, 2)
+        self._closed = False
+
+    def _decref_socketios(self):
+        if self._io_refs > 0:
+            self._io_refs -= 1
+        if self._closed:
+            self.close()
 
     def __repr__(self):
         return '<%s at %s %s>' % (type(self).__name__, hex(id(self)), self._formatinfo())
@@ -281,7 +345,7 @@ class socket(object):
 
     ref = property(_get_ref, _set_ref)
 
-    def _wait(self, watcher, timeout_exc=timeout('timed out')):
+    def _wait(self, watcher, timeout_exc=timeout_exc_default):
         """Block the current greenlet until *watcher* has pending events.
 
         If *timeout* is non-negative, then *timeout_exc* is raised after *timeout* second has passed.
@@ -291,6 +355,8 @@ class socket(object):
         """
         assert watcher.callback is None, 'This socket is already used by another greenlet: %r' % (watcher.callback, )
         if self.timeout is not None:
+            if timeout_exc is timeout_exc_default:
+                timeout_exc = timeout_class('timed out')
             timeout = Timeout.start_new(self.timeout, timeout_exc, ref=False)
         else:
             timeout = None
@@ -299,26 +365,46 @@ class socket(object):
         finally:
             if timeout is not None:
                 timeout.cancel()
+            timeout = timeout_exc = None
 
     def accept(self):
         sock = self._sock
         while True:
             try:
-                client_socket, address = sock.accept()
+                if PY3:
+                    fd, address = sock._accept()
+                else:
+                    client_socket, address = sock.accept()
                 break
             except error:
                 ex = sys.exc_info()[1]
-                if ex[0] != EWOULDBLOCK or self.timeout == 0.0:
+                if ex.args[0] != EWOULDBLOCK or self.timeout == 0.0:
                     raise
-                sys.exc_clear()
+                if PY3:
+                    ex = None
+                    del ex
+                else:
+                    sys.exc_clear()
             self._wait(self._read_event)
+        if PY3:
+            client_socket = _realsocket(self.family, self.type, self.proto,
+                                        fileno=fd)
         return socket(_sock=client_socket), address
 
     def close(self, _closedsocket=_closedsocket, cancel_wait_ex=cancel_wait_ex):
+        self._closed = True
+        if self._io_refs <= 0:
+            self._real_close()
+
+    def _real_close(self):
         # This function should not reference any globals. See Python issue #808164.
         self.hub.cancel_wait(self._read_event, cancel_wait_ex)
         self.hub.cancel_wait(self._write_event, cancel_wait_ex)
-        self._sock = _closedsocket()
+        try:
+            if PY3:
+                self._sock.close()
+        finally:
+            self._sock = _closedsocket()
 
     @property
     def closed(self):
@@ -329,7 +415,10 @@ class socket(object):
             return self._sock.connect(address)
         sock = self._sock
         if isinstance(address, tuple):
-            r = getaddrinfo(address[0], address[1], sock.family, sock.type, sock.proto)
+            sock_type = sock.type
+            if _has_sock_nonblock:
+                sock_type ^= __socket__.SOCK_NONBLOCK
+            r = getaddrinfo(address[0], address[1], sock.family, sock_type, sock.proto)
             address = r[0][-1]
         if self.timeout is not None:
             timer = Timeout.start_new(self.timeout, timeout('timed out'))
@@ -370,13 +459,17 @@ class socket(object):
         Note, that the new socket does not inherit the timeout."""
         return socket(_sock=self._sock)
 
-    def makefile(self, mode='r', bufsize=-1):
+    def makefile(self, mode='rwb', bufsize=-1):
         # Two things to look out for:
         # 1) Closing the original socket object should not close the
         #    socket (hence creating a new instance)
         # 2) The resulting fileobject must keep the timeout in order
         #    to be compatible with the stdlib's socket.makefile.
-        return _fileobject(type(self)(_sock=self), mode, bufsize)
+        if PY3:
+            sock = self
+        else:
+            sock = type(self)(_sock=self)
+        return _fileobject(sock, mode, bufsize)
 
     def recv(self, *args):
         sock = self._sock  # keeping the reference so that fd is not closed during waiting
@@ -388,7 +481,11 @@ class socket(object):
                 if ex.args[0] != EWOULDBLOCK or self.timeout == 0.0:
                     raise
                 # QQQ without clearing exc_info test__refcount.test_clean_exit fails
-                sys.exc_clear()
+                if PY3:
+                    ex = None
+                    del ex
+                else:
+                    sys.exc_clear()
             self._wait(self._read_event)
 
     def recvfrom(self, *args):
@@ -400,7 +497,11 @@ class socket(object):
                 ex = sys.exc_info()[1]
                 if ex.args[0] != EWOULDBLOCK or self.timeout == 0.0:
                     raise
-                sys.exc_clear()
+                if PY3:
+                    ex = None
+                    del ex
+                else:
+                    sys.exc_clear()
             self._wait(self._read_event)
 
     def recvfrom_into(self, *args):
@@ -412,7 +513,11 @@ class socket(object):
                 ex = sys.exc_info()[1]
                 if ex.args[0] != EWOULDBLOCK or self.timeout == 0.0:
                     raise
-                sys.exc_clear()
+                if PY3:
+                    ex = None
+                    del ex
+                else:
+                    sys.exc_clear()
             self._wait(self._read_event)
 
     def recv_into(self, *args):
@@ -424,7 +529,11 @@ class socket(object):
                 ex = sys.exc_info()[1]
                 if ex.args[0] != EWOULDBLOCK or self.timeout == 0.0:
                     raise
-                sys.exc_clear()
+                if PY3:
+                    ex = None
+                    del ex
+                else:
+                    sys.exc_clear()
             self._wait(self._read_event)
 
     def send(self, data, flags=0, timeout=timeout_default):
@@ -437,7 +546,11 @@ class socket(object):
             ex = sys.exc_info()[1]
             if ex.args[0] != EWOULDBLOCK or timeout == 0.0:
                 raise
-            sys.exc_clear()
+            if PY3:
+                ex = None
+                del ex
+            else:
+                sys.exc_clear()
             self._wait(self._write_event)
             try:
                 return sock.send(data, flags)
@@ -448,7 +561,7 @@ class socket(object):
                 raise
 
     def sendall(self, data, flags=0):
-        if isinstance(data, unicode):
+        if isinstance(data, text_type):
             data = data.encode()
         # this sendall is also reused by gevent.ssl.SSLSocket subclass,
         # so it should not call self._sock methods directly
@@ -476,7 +589,11 @@ class socket(object):
             ex = sys.exc_info()[1]
             if ex.args[0] != EWOULDBLOCK or timeout == 0.0:
                 raise
-            sys.exc_clear()
+            if PY3:
+                ex = None
+                del ex
+            else:
+                sys.exc_clear()
             self._wait(self._write_event)
             try:
                 return sock.sendto(*args)
@@ -517,15 +634,32 @@ class socket(object):
         self._sock.shutdown(how)
 
     family = property(lambda self: self._sock.family, doc="the socket family")
-    type = property(lambda self: self._sock.type, doc="the socket type")
+    if _has_sock_nonblock:
+        type = property(lambda self: self._sock.type ^ __socket__.SOCK_NONBLOCK,
+                        doc="the socket type")
+    else:
+        type = property(lambda self: self._sock.type, doc="the socket type")
     proto = property(lambda self: self._sock.proto, doc="the socket protocol")
 
     # delegate the functions that we haven't implemented to the real socket object
 
     _s = ("def %s(self, *args): return self._sock.%s(*args)\n\n"
           "%s.__doc__ = _realsocket.%s.__doc__\n")
-    for _m in set(__socket__._socketmethods) - set(locals()):
-        exec (_s % (_m, _m, _m, _m))
+    for _m in set(('bind',
+                   'connect',
+                   'connect_ex',
+                   'fileno',
+                   'listen',
+                   'getpeername',
+                   'getsockname',
+                   'getsockopt',
+                   'setsockopt',
+                   'sendall',
+                   'setblocking',
+                   'settimeout',
+                   'gettimeout',
+                   'shutdown')) - set(locals()):
+            exec (_s % (_m, _m, _m, _m))
     del _m, _s
 
 SocketType = socket
@@ -584,7 +718,8 @@ def create_connection(address, timeout=_GLOBAL_DEFAULT_TIMEOUT, source_address=N
             # and the next bind() fails (see test__socket.TestCreateConnection)
             # that does not happen with regular sockets though, because _socket.socket.connect() is a built-in.
             # this is similar to "getnameinfo loses a reference" failure in test_socket.py
-            sys.exc_clear()
+            if not PY3:
+                sys.exc_clear()
             if sock is not None:
                 sock.close()
     if err is not None:

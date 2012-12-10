@@ -3,6 +3,7 @@ from gevent.socket import create_connection, timeout
 from unittest import main
 import gevent
 
+import six
 import util
 
 
@@ -13,14 +14,14 @@ class Test(util.TestServer):
         def test_client(message):
             conn = create_connection(('127.0.0.1', 6000)).makefile(bufsize=1)
             welcome = conn.readline()
-            assert 'Welcome' in welcome, repr(welcome)
+            assert six.b('Welcome') in welcome, repr(welcome)
             conn.write(message)
             received = conn.read(len(message))
             self.assertEqual(received, message)
             conn._sock.settimeout(0.1)
             self.assertRaises(timeout, conn.read, 1)
-        client1 = gevent.spawn(test_client, 'hello\r\n')
-        client2 = gevent.spawn(test_client, 'world\r\n')
+        client1 = gevent.spawn(test_client, six.b('hello\r\n'))
+        client2 = gevent.spawn(test_client, six.b('world\r\n'))
         gevent.joinall([client1, client2], raise_error=True)
 
 
