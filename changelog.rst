@@ -4,6 +4,22 @@ Changelog
 .. currentmodule:: gevent
 
 
+Release 1.0rc2
+--------------
+
+- Fixed #210: callbacks were not run for non-default loop (bug introduced in 1.0rc1).
+- patch_all() no longer patches subprocess unless `subprocess=True` is passed.
+- Fixed AttributeError in hub.Waiter.
+- Fixed #181: make hidden imports visible to freezing tools like py2exe. Patch by Ralf Schmitt.
+- Fixed #202: periodically yield when running callbacks (sleep(0) cannot block the event loop now).
+- Fixed #204: os.tp_read/tp_write did not propogate errors to the caller.
+- Fixed #217: do not set SO_REUSEADDR on Windows.
+- Fixed bug in --module argument for gevent.monkey. Patch by Örjan Persson.
+- Remove warning from threadpool.py about mixing fork() and threads.
+- Cleaned up hub.py from code that was needed to support older greenlets. Patch by Saúl Ibarra Corretgé.
+- Allow for explicit default loop creation via `get_hub(default=True)`. Patch by Jan-Philip Gehrcke.
+
+
 Release 1.0rc1
 --------------
 
