@@ -72,6 +72,31 @@ class SSLSocket(socket):
 
         if certfile and not keyfile:
             keyfile = certfile
+
+        if PY3:
+            if _context:
+                self.context = _context
+            else:
+                if server_side and not certfile:
+                    raise ValueError("certfile must be specified for "
+                                     "server-side operations")
+                if keyfile and not certfile:
+                    raise ValueError("certfile must be specified")
+                if certfile and not keyfile:
+                    keyfile = certfile
+                self.context = __ssl__._SSLContext(ssl_version)
+                self.context.verify_mode = cert_reqs
+                if ca_certs:
+                    self.context.load_verify_locations(ca_certs)
+                if certfile:
+                    self.context.load_cert_chain(certfile, keyfile)
+                if ciphers:
+                    self.context.set_ciphers(ciphers)
+            if server_side and server_hostname:
+                raise ValueError("server_hostname can only be specified "
+                                 "in client mode")
+            self.server_hostname = server_hostname
+
         # see if it's connected
         try:
             socket.getpeername(self)
@@ -85,28 +110,6 @@ class SSLSocket(socket):
             # yes, create the SSL object
             if PY3:
                 self._sslobj = None
-                if _context:
-                    self.context = _context
-                else:
-                    if server_side and not certfile:
-                        raise ValueError("certfile must be specified for "
-                                         "server-side operations")
-                    if keyfile and not certfile:
-                        raise ValueError("certfile must be specified")
-                    if certfile and not keyfile:
-                        keyfile = certfile
-                    self.context = __ssl__._SSLContext(ssl_version)
-                    self.context.verify_mode = cert_reqs
-                    if ca_certs:
-                        self.context.load_verify_locations(ca_certs)
-                    if certfile:
-                        self.context.load_cert_chain(certfile, keyfile)
-                    if ciphers:
-                        self.context.set_ciphers(ciphers)
-                if server_side and server_hostname:
-                    raise ValueError("server_hostname can only be specified "
-                                     "in client mode")
-                self.server_hostname = server_hostname
                 try:
                     self._sslobj = self.context._wrap_socket(
                         self._sock, server_side, server_hostname)
@@ -126,6 +129,7 @@ class SSLSocket(socket):
                                                 ciphers)
             if do_handshake_on_connect:
                 self.do_handshake()
+
         self.keyfile = keyfile
         self.certfile = certfile
         self.cert_reqs = cert_reqs
