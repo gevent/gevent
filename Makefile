@@ -12,7 +12,7 @@ gevent/gevent.core.c: gevent/core.ppyx gevent/libev.pxd
 	echo '#include "callbacks.c"' >> gevent.core.c
 	mv gevent.core.* gevent/
 
-gevent/gevent.ares.c: gevent/ares.pyx gevent/core.pyx gevent/*.pxd
+gevent/gevent.ares.c: gevent/ares.pyx gevent/*.pxd
 	$(CYTHON) -o gevent.ares.c gevent/ares.pyx
 	mv gevent.ares.* gevent/
 
