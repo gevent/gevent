@@ -405,7 +405,7 @@ class Hub(greenlet):
             self._resolver.close()
             del self._resolver
         if self._threadpool is not None:
-            self._threadpool.close()
+            self._threadpool.kill()
             del self._threadpool
         if destroy_loop is None:
             destroy_loop = not self.loop.default
