@@ -262,6 +262,10 @@ class Hub(greenlet):
             if default is not None:
                 raise TypeError("Unexpected argument: default")
             self.loop = loop
+        elif getattr(_threadlocal, 'loop', None) is not None:
+            # Re-use loop instance if not destroyed during hub destruction.
+            self.loop = _threadlocal.loop
+            _threadlocal.loop = None
         else:
             if default is None and get_ident() != MAIN_THREAD:
                 default = False
@@ -411,6 +415,9 @@ class Hub(greenlet):
             destroy_loop = not self.loop.default
         if destroy_loop:
             self.loop.destroy()
+        else:
+            # Store loop instance for next hub instantiation.
+            _threadlocal.loop = self.loop
         self.loop = None
         if getattr(_threadlocal, 'hub', None) is self:
             del _threadlocal.hub
