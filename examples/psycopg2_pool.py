@@ -89,30 +89,8 @@ class DatabaseConnectionPool(object):
     @contextlib.contextmanager
     def cursor(self, *args, **kwargs):
         isolation_level = kwargs.pop('isolation_level', None)
-        conn = self.get()
-        try:
-            if isolation_level is not None:
-                if conn.isolation_level == isolation_level:
-                    isolation_level = None
-                else:
-                    conn.set_isolation_level(isolation_level)
+        with self.connection(isolation_level) as conn:
             yield conn.cursor(*args, **kwargs)
-        except:
-            if conn.closed:
-                conn = None
-                self.closeall()
-            else:
-                conn = self._rollback(conn)
-            raise
-        else:
-            if conn.closed:
-                raise OperationalError("Cannot commit because connection was closed: %r" % (conn, ))
-            conn.commit()
-        finally:
-            if conn is not None and not conn.closed:
-                if isolation_level is not None:
-                    conn.set_isolation_level(isolation_level)
-                self.put(conn)
 
     def _rollback(self, conn):
         try:
