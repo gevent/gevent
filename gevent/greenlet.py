@@ -81,6 +81,7 @@ class Greenlet(greenlet):
         self._links = deque()
         self.value = None
         self._exception = _NONE
+        self._traceback = None
         loop = hub.loop
         self._notifier = None
         self._start_event = None
@@ -148,6 +149,14 @@ class Greenlet(greenlet):
         """
         if self._exception is not _NONE:
             return self._exception
+
+    @property
+    def traceback(self):
+        """Holds the traceback of the exception instance raised by the function if the greenlet has
+        finished with an error.  Otherwise ``None``.
+        """
+        if self._exception is not _NONE:
+            return self._traceback
 
     def throw(self, *args):
         """Immediatelly switch into the greenlet and raise an exception in it.
@@ -249,7 +258,7 @@ class Greenlet(greenlet):
             if self.successful():
                 return self.value
             else:
-                raise self._exception
+                raise self._exception, None, self._traceback
         if block:
             switch = getcurrent().switch
             self.rawlink(switch)
@@ -272,7 +281,7 @@ class Greenlet(greenlet):
                 if self.successful():
                     return self.value
                 else:
-                    raise self._exception
+                    raise self._exception, None, self._traceback
         else:
             raise Timeout
 
@@ -312,6 +321,7 @@ class Greenlet(greenlet):
             self._report_result(exception)
             return
         self._exception = exception
+        self._traceback = exc_info[2]
 
         if self._links and not self._notifier:
             self._notifier = self.parent.loop.run_callback(self._notify_links)
