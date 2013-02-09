@@ -512,9 +512,22 @@ class WSGIHandler(object):
         finally:
             self.time_finish = time.time()
             self.log_request()
-
+            
+    def _is_silent_error(self, type, value):
+        '''Indicate what errors should silently handled.'''
+        if issubclass(type, GreenletExit):
+            # Raised during a normal exit from a Greenlet.
+            return True
+        elif issubclass(type, socket.error) \
+        and (value.errno in [errno.ECONNRESET, errno.EPIPE, errno.ETIMEDOUT]):
+            # Raised if a client closes the browser connection during 
+            # a long poll or websocket-type connection.
+            return True
+        else:
+            return False            
+        
     def handle_error(self, type, value, tb):
-        if not issubclass(type, GreenletExit):
+        if not self._is_silent_error(type, value):
             self.server.loop.handle_error(self.environ, type, value, tb)
         del tb
         if self.response_length:
