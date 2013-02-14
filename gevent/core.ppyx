@@ -461,6 +461,8 @@ cdef public class loop [object PyGeventLoopObject, type PyGeventLoop_Type]:
         return cb
 
     def _format(self):
+        if self._ptr == NULL:
+            return 'destroyed'    
         cdef object msg = self.backend
         if self.default:
             msg += ' default'
