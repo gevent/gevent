@@ -22,4 +22,9 @@ win32 * C:\Python27\python.exe -u -m monkey_test --Event test_subprocess.py
 * * /usr/bin/python2.5(-dbg)? -u test__example_portforwarder.py
 * * /usr/bin/python2.5(-dbg)? -u test__socket_close.py
 
+# bunch of SSLError: [Errno 1] _ssl.c:504: error:14090086:SSL routines:SSL3_GET_SERVER_CERTIFICATE:certificate verify failed
+# seems to be Python/OpenSSL problem, not gevent's
+* * * -u -m monkey_test --Event test_ssl.py
+* * * -u -m monkey_test test_ssl.py
+
 * * /usr/bin/python2.[567]-dbg -u test__backdoor.py
