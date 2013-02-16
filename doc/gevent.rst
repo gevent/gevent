@@ -38,9 +38,9 @@ It also a good idea to override :meth:`__str__`: if :meth:`_run` raises an excep
 .. automethod:: Greenlet.join
 .. automethod:: Greenlet.get
 .. automethod:: Greenlet.kill(exception=GreenletExit, block=False, timeout=None)
-.. automethod:: Greenlet.link(receiver=None)
-.. automethod:: Greenlet.link_value(receiver=None)
-.. automethod:: Greenlet.link_exception(receiver=None)
+.. automethod:: Greenlet.link(callback)
+.. automethod:: Greenlet.link_value(callback)
+.. automethod:: Greenlet.link_exception(callback)
 .. automethod:: Greenlet.unlink
 
 
@@ -78,21 +78,6 @@ Spawn helpers
     Create a new :class:`greenlet` object and schedule it to run ``function(*args, **kwargs)``.
     As this returns a raw greenlet, it does not have all the useful methods that
     :class:`gevent.Greenlet` has and should only be used as an optimization.
-
-.. function:: spawn_link(function, *args, **kwargs)
-              spawn_link_value(function, *args, **kwargs)
-              spawn_link_exception(function, *args, **kwargs)
-
-    This are the shortcuts for::
-
-        g = spawn(function, *args, **kwargs)
-        g.link() # or g.link_value() or g.link_exception()
-
-    As :meth:`Greenlet.link` without argument links to the current greenlet, a :class:`gevent.greenlet.LinkedExited`
-    exception will be raised if the newly spawned greenlet exits. It is not meant as a way of inter-greenlet communication
-    but more of a way to assert that a background greenlet is running at least as long as the current greenlet.
-
-    See :meth:`Greenlet.link`, :meth:`Greenlet.link_value` and :meth:`Greenlet.link_exception` for details.
 
 
 Useful general functions

@@ -346,28 +346,28 @@ class Greenlet(greenlet):
         if self.ready() and self._links and not self._notifier:
             self._notifier = self.parent.loop.run_callback(self._notify_links)
 
-    def link(self, receiver, SpawnedLink=SpawnedLink):
+    def link(self, callback, SpawnedLink=SpawnedLink):
         """Link greenlet's completion to a callable.
 
-        The *receiver* will be called with this instance as an argument
+        The *callback* will be called with this instance as an argument
         once this greenlet's dead. A callable is called in its own greenlet.
         """
-        self.rawlink(SpawnedLink(receiver))
+        self.rawlink(SpawnedLink(callback))
 
-    def unlink(self, receiver):
-        """Remove the receiver set by :meth:`link` or :meth:`rawlink`"""
+    def unlink(self, callback):
+        """Remove the callback set by :meth:`link` or :meth:`rawlink`"""
         try:
-            self._links.remove(receiver)
+            self._links.remove(callback)
         except ValueError:
             pass
 
-    def link_value(self, receiver, SpawnedLink=SuccessSpawnedLink):
-        """Like :meth:`link` but *receiver* is only notified when the greenlet has completed successfully"""
-        self.link(receiver=receiver, SpawnedLink=SpawnedLink)
+    def link_value(self, callback, SpawnedLink=SuccessSpawnedLink):
+        """Like :meth:`link` but *callback* is only notified when the greenlet has completed successfully"""
+        self.link(callback, SpawnedLink=SpawnedLink)
 
-    def link_exception(self, receiver=None, SpawnedLink=FailureSpawnedLink):
-        """Like :meth:`link` but *receiver* is only notified when the greenlet dies because of unhandled exception"""
-        self.link(receiver=receiver, SpawnedLink=SpawnedLink)
+    def link_exception(self, callback, SpawnedLink=FailureSpawnedLink):
+        """Like :meth:`link` but *callback* is only notified when the greenlet dies because of unhandled exception"""
+        self.link(callback, SpawnedLink=SpawnedLink)
 
     def _notify_links(self):
         while self._links:
