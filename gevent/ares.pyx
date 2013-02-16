@@ -420,7 +420,6 @@ cdef public class channel [object PyGeventAresChannelObject, type PyGeventAresCh
         cdef int flowinfo = 0
         cdef int scope_id = 0
         cdef sockaddr_in6 sa6
-        cdef object exc_type
         if not PyTuple_Check(sockaddr):
             raise TypeError('expected a tuple, got %r' % (sockaddr, ))
         PyArg_ParseTuple(sockaddr, "si|ii", &hostp, &port, &flowinfo, &scope_id)
