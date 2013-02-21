@@ -47,7 +47,6 @@ def select(rlist, wlist, xlist, timeout=None):
     Note: *xlist* is ignored.
     """
     watchers = []
-    timeout = Timeout.start_new(timeout)
     loop = get_hub().loop
     io = loop.io
     MAXPRI = loop.MAXPRI
@@ -72,4 +71,3 @@ def select(rlist, wlist, xlist, timeout=None):
     finally:
         for watcher in watchers:
             watcher.stop()
-        timeout.cancel()
