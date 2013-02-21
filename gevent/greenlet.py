@@ -81,7 +81,6 @@ class Greenlet(greenlet):
         self._links = deque()
         self.value = None
         self._exception = _NONE
-        loop = hub.loop
         self._notifier = None
         self._start_event = None
 
