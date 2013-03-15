@@ -247,7 +247,7 @@ class WSGIHandler(object):
             if content_length < 0:
                 self.log_error('Invalid Content-Length: %r', content_length)
                 return
-            if content_length and self.command in ('GET', 'HEAD'):
+            if content_length and self.command in ('HEAD'):
                 self.log_error('Unexpected Content-Length')
                 return
 
