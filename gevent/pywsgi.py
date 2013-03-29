@@ -461,13 +461,11 @@ class WSGIHandler(object):
 
     def format_request(self):
         now = datetime.now().replace(microsecond=0)
+        length = self.response_length or '-'
         if self.time_finish:
             delta = '%.6f' % (self.time_finish - self.time_start)
-            length = self.response_length
         else:
             delta = '-'
-            if not self.response_length:
-                length = '-'
         return '%s - - [%s] "%s" %s %s %s' % (
             self.client_address[0],
             now,
