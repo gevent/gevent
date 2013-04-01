@@ -4,6 +4,19 @@ Changelog
 .. currentmodule:: gevent
 
 
+Release 1.0rc3
+--------------
+
+- Fix #251: crash in gevent.core when accessing destroyed loop.
+- Fix #235: Replace self._threadpool.close() with self._threadpool.kill() in hub.py.
+- Remove unused timeout from select.py.
+- Rename Greenlet.link()'s argument to 'callback' (closes #244).
+- Fix parallel build (#193).
+- Fix #263: potential UnboundLocalError: 'length' in gevent.pywsgi.
+- Simplify psycopg2_pool.py.
+- pywsgi: allow Content-Length in GET requests.
+
+
 Release 1.0rc2 (Dec 10, 2012)
 -----------------------------
 
