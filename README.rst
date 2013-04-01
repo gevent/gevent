@@ -41,6 +41,16 @@ To install latest development version:
   pip install cython -e git://github.com/surfly/gevent.git#egg=gevent
 
 
+running tests
+-------------
+
+  python setup.py build
+
+  cd greentest
+
+  PYTHONPATH=.. python testrunner.py --expected ../known_failures.txt
+
+
 .. _gevent: http://www.gevent.org
 .. _greenlet: http://pypi.python.org/pypi/greenlet
 .. _libev: http://libev.schmorp.de/
