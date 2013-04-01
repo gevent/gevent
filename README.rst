@@ -35,11 +35,11 @@ Post feedback and issues on the `bug tracker`_, `mailing list`_, blog_ and `twit
 .. _c-ares: http://c-ares.haxx.se/
 .. _inspired by eventlet: http://blog.gevent.org/2010/02/27/why-gevent/
 .. _use gevent: http://groups.google.com/group/gevent/browse_thread/thread/4de9703e5dca8271
-.. _open source projects based on gevent: https://github.com/SiteSupport/gevent/wiki/Projects
+.. _open source projects based on gevent: https://github.com/surfly/gevent/wiki/Projects
 .. _Denis Bilenko: http://denisbilenko.com
 .. _Python Package Index: http://pypi.python.org/pypi/gevent
-.. _the repository: https://github.com/sitesupport/gevent
-.. _bug tracker: https://github.com/SiteSupport/gevent/wiki/Projects
+.. _the repository: https://github.com/surfly/gevent
+.. _bug tracker: https://github.com/surfly/gevent/wiki/Projects
 .. _mailing list: http://groups.google.com/group/gevent
 .. _blog: http://blog.gevent.org
 .. _twitter (@gevent): http://twitter.com/gevent

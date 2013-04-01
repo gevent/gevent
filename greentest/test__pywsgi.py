@@ -396,7 +396,7 @@ class MultiLineHeader(TestCase):
         return ["ok"]
 
     def test_multiline_116(self):
-        """https://github.com/SiteSupport/gevent/issues/116"""
+        """issue #116"""
         request = '\r\n'.join((
             'POST / HTTP/1.0',
             'Host: localhost',
