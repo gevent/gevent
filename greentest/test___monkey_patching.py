@@ -10,6 +10,11 @@ directory = '%s.%s' % sys.version_info[:2]
 version = '%s.%s.%s' % sys.version_info[:3]
 
 
+def get_absolute_pythonpath():
+    paths = [os.path.abspath(p) for p in os.environ.get('PYTHONPATH', '').split(os.pathsep)]
+    return os.pathsep.join(paths)
+
+
 def TESTRUNNER(tests=None):
     preferred_version = open(os.path.join(directory, 'version')).read().strip()
     if preferred_version != version:
@@ -18,7 +23,7 @@ def TESTRUNNER(tests=None):
     if not tests:
         tests = sorted(glob.glob('%s/test_*.py' % directory))
 
-    PYTHONPATH = (os.getcwd() + ':' + os.environ.get('PYTHONPATH', '')).rstrip(':')
+    PYTHONPATH = (os.getcwd() + os.pathsep + get_absolute_pythonpath()).rstrip(':')
 
     tests = [os.path.basename(x) for x in tests]
     options = {'cwd': directory,
