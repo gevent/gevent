@@ -29,6 +29,18 @@ Read the documentation online at http://www.gevent.org
 Post feedback and issues on the `bug tracker`_, `mailing list`_, blog_ and `twitter (@gevent)`_.
 
 
+installing from github
+----------------------
+
+To install latest release candidate:
+
+  pip install cython -e git://github.com/surfly/gevent.git@1.0rc2#egg=gevent
+
+To install latest development version:
+
+  pip install cython -e git://github.com/surfly/gevent.git#egg=gevent
+
+
 .. _gevent: http://www.gevent.org
 .. _greenlet: http://pypi.python.org/pypi/greenlet
 .. _libev: http://libev.schmorp.de/
