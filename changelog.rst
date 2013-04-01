@@ -414,6 +414,23 @@ Miscellaneous:
   All of gevent modules that replace stdlib module now have `__implements__` attribute.
 
 
+Release 0.13.8 (September 6, 2012)
+----------------------------------
+
+- Fixed issue #80: gevent.httplib failed with RequestFailed errors because timeout was reset to 1s. Patch by Tomasz Prus.
+- core: fix compilation with the latest Cython: remove emit_ifdef/emit_else/emit_endif.
+- Fixed issue #132: gevent.socket.gethostbyname(<unicode>) now does ascii encoding and uses gevent's resolver rather than calling built-in resolver. Patch by Alexey Borzenkov.
+
+
+Release 0.13.7 (April 12, 2012)
+-------------------------------
+
+- Fixed #94: fallback to buffer if memoryview fails in _get_memory on python 2.7.
+- Fixed #103: ``Queue(None).full()`` returns ``False`` now (previously it returned ``True``).
+- Fixed #112: threading._sleep is not patched. Thanks to David LaBissoniere.
+- Fixed #115: _dummy gets unexpected Timeout arg.
+
+
 Release 0.13.6 (May 2, 2011)
 ----------------------------
 
