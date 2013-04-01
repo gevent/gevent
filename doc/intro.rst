@@ -13,7 +13,7 @@ Features include:
 * DNS queries performed through libevent-dns.
 * Fast WSGI server based on libevent-http.
 
-.. _greenlet: http://codespeak.net/py/0.9.2/greenlet.html
+.. _greenlet: https://pypi.python.org/pypi/greenlet
 .. _libevent: http://monkey.org/~provos/libevent/
 
 
