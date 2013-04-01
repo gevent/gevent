@@ -5,11 +5,11 @@ gevent_
 
   New_ version of gevent uses libev_ and c-ares rather than libevent and includes all the dependencies in the release tarball.
 
-  You can download the 1.0 release candidate from `github`_. Please give it a try.
+  You can get the 1.0 release candidate from `github`_. Please give it a try.
 
-.. _github: https://github.com/SiteSupport/gevent/downloads
+.. _github: https://github.com/surfly/gevent
 .. _libev: http://blog.gevent.org/2011/04/28/libev-and-libevent/
-.. _New: https://bitbucket.org/denis/gevent/src/tip/changelog.rst#cl-7
+.. _New: https://github.com/surfly/gevent/blob/master/changelog.rst
 
 gevent_ is a Python networking library that uses greenlet_ to provide synchronous API on top of libevent_ event loop.
 
@@ -45,11 +45,11 @@ Post feedback and issues on the `bug tracker`_, `mailing list`_, blog_ and `twit
 .. _libevent: http://monkey.org/~provos/libevent/
 .. _inspired by eventlet: http://blog.gevent.org/2010/02/27/why-gevent/
 .. _use gevent: http://groups.google.com/group/gevent/browse_thread/thread/4de9703e5dca8271
-.. _open source projects based on gevent: http://code.google.com/p/gevent/wiki/ProjectsUsingGevent
+.. _open source projects based on gevent: https://github.com/surfly/gevent/wiki/Projects
 .. _Denis Bilenko: http://denisbilenko.com
 .. _Python Package Index: http://pypi.python.org/pypi/gevent
-.. _the repository: http://bitbucket.org/denis/gevent
-.. _bug tracker: http://code.google.com/p/gevent/issues/list
+.. _the repository: http://github.com/surfly/gevent
+.. _bug tracker: https://github.com/surfly/gevent/issues
 .. _mailing list: http://groups.google.com/group/gevent
 .. _blog: http://blog.gevent.org
 .. _twitter (@gevent): http://twitter.com/gevent

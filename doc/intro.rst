@@ -71,7 +71,7 @@ in multi-greenlet environment.
 
 See `examples/concurrent_download.py`__
 
-__ http://bitbucket.org/denis/gevent/src/tip/examples/concurrent_download.py#cl-4
+__ https://github.com/surfly/gevent/blob/gevent013/examples/concurrent_download.py
 
 
 Event loop
@@ -207,7 +207,7 @@ To limit concurrency, use :class:`Pool` class (see `example: dns_mass_resolve.py
 
 Gevent comes with TCP/SSL/HTTP/WSGI servers. See :doc:`servers`.
 
-.. _`example: dns_mass_resolve.py`: http://bitbucket.org/denis/gevent/src/tip/examples/dns_mass_resolve.py#cl-17
+.. _`example: dns_mass_resolve.py`: https://github.com/surfly/gevent/blob/gevent013/examples/dns_mass_resolve.py
 
 .. rubric:: Footnotes
 
