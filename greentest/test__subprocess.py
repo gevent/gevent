@@ -138,6 +138,14 @@ class Test(greentest.TestCase):
             else:
                 raise AssertionError('must fail with ENOENT')
 
+    def test_check_output_keyword_error(self):
+        try:
+            subprocess.check_output([sys.executable, '-c', 'import sys; sys.exit(44)'])
+        except subprocess.CalledProcessError, e:
+            self.assertEqual(e.returncode, 44)
+        else:
+            raise AssertionError('must fail with CalledProcessError')
+
 
 if __name__ == '__main__':
     greentest.main()
