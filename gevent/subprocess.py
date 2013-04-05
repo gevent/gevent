@@ -70,6 +70,13 @@ if sys.version_info[:2] <= (2, 6):
     __implements__.remove('check_output')
     __extra__.append('check_output')
 
+    class CalledProcessError(__subprocess__.CalledProcessError):
+        """ Py2.6 and 2.5 don't accept the output keyword argument """
+        def __init__(self, returncode, cmd, output=None):
+            __subprocess__.CalledProcessError.__init__(self, returncode, cmd)
+            self.output = output
+
+
 _subprocess = getattr(__subprocess__, '_subprocess', None)
 _NONE = object()
 
