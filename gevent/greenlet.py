@@ -71,6 +71,11 @@ class FailureSpawnedLink(SpawnedLink):
 class Greenlet(greenlet):
     """A light-weight cooperatively-scheduled execution unit."""
 
+    # set this to a tuple of exception classes to prevent a traceback
+    # from being printed when the greenlet exits with by raising one
+    # of these exceptions
+    expected_exceptions = (GreenletExit, SystemExit)
+
     def __init__(self, run=None, *args, **kwargs):
         hub = get_hub()
         greenlet.__init__(self, parent=hub)

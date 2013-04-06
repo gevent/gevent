@@ -289,7 +289,8 @@ class Hub(greenlet):
         return result + '>'
 
     def handle_error(self, context, type, value, tb):
-        if not issubclass(type, self.NOT_ERROR):
+        expected_exceptions = getattr(context, "expected_exceptions", self.NOT_ERROR)
+        if not issubclass(type, expected_exceptions):
             self.print_exception(context, type, value, tb)
         if context is None or issubclass(type, self.SYSTEM_ERROR):
             self.handle_system_error(type, value)
