@@ -8,7 +8,7 @@ See http://www.gevent.org/ for the documentation.
 
 from __future__ import absolute_import
 
-version_info = (1, 0, 0, 'rc2', None)
+version_info = (1, 0, 0, 'candidate', 2)
 __version__ = '1.0rc2'
 
 
