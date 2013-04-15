@@ -44,6 +44,8 @@ def get_version_info(version):
     (1, 0, 0, 'alpha', 3)
     >>> get_version_info('1.0rc1')
     (1, 0, 0, 'candidate', 1)
+     >>> get_version_info('1.0rc2')
+    (1, 0, 0, 'candidate', 2)
     """
 
     repl = {'a': 'alpha',
