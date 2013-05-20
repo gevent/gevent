@@ -86,7 +86,7 @@ class _ErrorFormatter(object):
         @rtype: C{str}
         """
         if self.winError is not None:
-            return self.winError(errorcode)[1]
+            return self.winError(errorcode).args[1]
         if self.formatMessage is not None:
             return self.formatMessage(errorcode)
         if self.errorTab is not None:
