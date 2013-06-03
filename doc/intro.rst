@@ -43,7 +43,7 @@ After the jobs have been spawned, :func:`gevent.joinall` waits for them to compl
 no longer than 2 seconds though. The results are then collected by checking
 :attr:`gevent.Greenlet.value` property. The :func:`gevent.socket.gethostbyname` function
 has the same interface as the standard :func:`socket.gethostbyname` but it does not block
-the whole interpreter and thus lets the other greenlets to proceed with their requests as well.
+the whole interpreter and thus lets the other greenlets proceed with their requests unhindered.
 
 .. _monkey-patching:
 
@@ -52,14 +52,14 @@ Monkey patching
 ---------------
 
 The example above used :mod:`gevent.socket` for socket operations. If the standard :mod:`socket`
-module was used it would took it 3 times longer to complete because the DNS requests would
+module was used the example would have taken 3 times longer to complete because the DNS requests would
 be sequential. Using the standard socket module inside greenlets makes gevent rather
 pointless, so what about module and packages that are built on top of :mod:`socket`?
 
-That's what monkey patching for. The functions in :mod:`gevent.monkey` carefully
+That's what monkey patching is for. The functions in :mod:`gevent.monkey` carefully
 replace functions and classes in the standard :mod:`socket` module with their cooperative
 counterparts. That way even the modules that are unaware of gevent can benefit from running
-in multi-greenlet environment.
+in a multi-greenlet environment.
 
     >>> from gevent import monkey; monkey.patch_socket()
     >>> import urllib2 # it's usable from multiple greenlets now
@@ -71,10 +71,10 @@ __ https://github.com/surfly/gevent/blob/master/examples/concurrent_download.py#
 Event loop
 ----------
 
-Unlike other network libraries and similar to eventlet, gevent starts
+Unlike other network libraries, in similar fashion to eventlet, gevent starts
 the event loop implicitly in a dedicated greenlet. There's no ``reactor`` that
-you must ``run()`` or ``dispatch()`` function to call. When a function from
-gevent API wants to block, it obtains the :class:`Hub` instance - a greenlet
+you must call a ``run()`` or ``dispatch()`` function on. When a function from
+gevent's API wants to block, it obtains the :class:`Hub` instance - a greenlet
 that runs the event loop - and switches to it. If there's no :class:`Hub`
 instance yet, one is created on the fly.
 
@@ -88,24 +88,24 @@ kqueue backend. Please read the `libev documentation`_ for more
 information.
 
 The Libev API is available under :mod:`gevent.core` module. Note, that
-the callbacks supplied to libev API are run in the :class:`Hub`
-greenlet and thus cannot use synchronous gevent API. It is possible to
-use asynchronous API there, like :func:`spawn` and :meth:`Event.set`.
+the callbacks supplied to the libev API are run in the :class:`Hub`
+greenlet and thus cannot use the synchronous gevent API. It is possible to
+use the asynchronous API there, like :func:`spawn` and :meth:`Event.set`.
 
 
 Cooperative multitasking
 ------------------------
 
 The greenlets all run in the same OS thread and are scheduled cooperatively. This means that until
-a particular greenlet gives up control, by calling a blocking function that will switch to the :class:`Hub`, other greenlets
+a particular greenlet gives up control, (by calling a blocking function that will switch to the :class:`Hub`), other greenlets
 won't get a chance to run. It is typically not an issue for an I/O bound app, but one should be aware
-of this when doing something CPU intensive or calling blocking I/O functions that bypass libev event loop.
+of this when doing something CPU intensive, or when calling blocking I/O functions that bypass the libev event loop.
 
-Synchronizing access to the objects shared across the greenlets is unnecessary in most cases, thus
-:class:`Lock` and :class:`Semaphore` classes although present aren't used as often. Other abstractions
+Synchronizing access to objects shared across the greenlets is unnecessary in most cases, thus
+:class:`Lock` and :class:`Semaphore` classes, although present, aren't used very often. Other abstractions
 from threading and multiprocessing remain useful in the cooperative world:
 
-- :class:`Event` allows to wake up a number of greenlets that are calling :meth:`Event.wait` method.
+- :class:`Event` allows one to wake up a number of greenlets that are calling :meth:`Event.wait` method.
 - :class:`AsyncResult` is similar to :class:`Event` but allows passing a value or an exception to the waiters.
 - :class:`Queue` and :class:`JoinableQueue`.
 
@@ -120,8 +120,8 @@ method. (The :func:`spawn` function is a shortcut that does exactly that). The :
 method schedules a switch to the greenlet that will happen as soon as the current greenlet gives up control.
 If there is more than one active event, they will be executed one by one, in an undefined order.
 
-If there was an error during execution it won't escape greenlet's boundaries. An unhandled error results
-in a stacktrace being printed complemented by failed function signature and arguments:
+If there is an error during execution it won't escape greenlet's boundaries. An unhandled error results
+in a stacktrace being printed, complemented by the failed function's signature and arguments:
 
     >>> gevent.spawn(lambda : 1/0)
     >>> gevent.sleep(1)
@@ -132,13 +132,13 @@ in a stacktrace being printed complemented by failed function signature and argu
 
 The traceback is asynchronously printed to ``sys.stderr`` when the greenlet dies.
 
-:class:`Greenlet` instances has a number of useful methods:
+:class:`Greenlet` instances have a number of useful methods:
 
 - :meth:`join <Greenlet.join>` -- waits until the greenlet exits;
 - :meth:`kill <Greenlet.kill>` -- interrupts greenlet's execution;
 - :meth:`get <Greenlet.get>`  -- returns the value returned by greenlet or re-raised the exception that killed it.
 
-It is possible to customize the string printed after the traceback by subclassing :class:`Greenlet` class
+It is possible to customize the string printed after the traceback by subclassing the :class:`Greenlet` class
 and redefining its ``__str__`` method.
 
 To subclass a :class:`Greenlet`, override its :meth:`_run` method and call ``Greenlet.__init__(self)`` in ``__init__``::
@@ -164,11 +164,11 @@ of continuing execution, a :exc:`GreenletExit` will be raised.
     >>> g.dead
     True
 
-The :exc:`GreenletExit` exception and its subclasses are handled differently then other exceptions.
+The :exc:`GreenletExit` exception and its subclasses are handled differently than other exceptions.
 Raising :exc:`GreenletExit` is not considered an exceptional situation, so the traceback is not printed.
-The :exc:`GreenletExit` is returned by :meth:`get <Greenlet.get>` as if it was returned by the greenlet, not raised.
+The :exc:`GreenletExit` is returned by :meth:`get <Greenlet.get>` as if it were returned by the greenlet, not raised.
 
-The :meth:`kill <Greenlet.kill>` method can accept an exception to raise:
+The :meth:`kill <Greenlet.kill>` method can accept a custom exception to be raised:
 
     >>> g = MyNoopGreenlet.spawn(5) # spawn() creates a Greenlet and starts it
     >>> g.kill(Exception("A time to kill"))
@@ -178,7 +178,7 @@ The :meth:`kill <Greenlet.kill>` method can accept an exception to raise:
     MyNoopGreenlet(5) failed with Exception
 
 The :meth:`kill <Greenlet.kill>` can also accept a *timeout* argument specifying the number of seconds to wait for the greenlet to exit.
-Note, that :meth:`kill <Greenlet.kill>` cannot guarantee that the target greenlet will not ignore the exception and thus it's a good idea always to pass a timeout to :meth:`kill <Greenlet.kill>`.
+Note, that :meth:`kill <Greenlet.kill>` cannot guarantee that the target greenlet will not ignore the exception, thus it's a good idea always to pass a timeout to :meth:`kill <Greenlet.kill>`.
 
 
 Timeouts
@@ -186,13 +186,13 @@ Timeouts
 
 Many functions in the gevent API are synchronous, blocking the current greenlet until the operation is done. For example,
 :meth:`kill <Greenlet.kill>` waits until the target greenlet is :attr:`dead` before returning [#f1]_. Many of those
-functions can be made asynchronous by passing ``block=False`` argument.
+functions can be made asynchronous by passing the argument ``block=False``.
 
-Furthermore, many of the synchronous functions accept *timeout* argument, which specifies a limit on how long the function
-could block (examples: :meth:`Event.wait`, :meth:`Greenlet.join`, :meth:`Greenlet.kill`, :meth:`AsyncResult.get` and many more).
+Furthermore, many of the synchronous functions accept a *timeout* argument, which specifies a limit on how long the function
+can block (examples: :meth:`Event.wait`, :meth:`Greenlet.join`, :meth:`Greenlet.kill`, :meth:`AsyncResult.get`, and many more).
 
 The :class:`socket <gevent.socket.socket>` and :class:`SSLObject <gevent.ssl.SSLObject>` instances can also have a timeout,
-set by :meth:`settimeout <gevent.socket.socket.settimeout>` method.
+set by the :meth:`settimeout <gevent.socket.socket.settimeout>` method.
 
 When these are not enough, the :class:`Timeout` class can be used to add timeouts to arbitrary sections of (yielding) code.
 
@@ -200,7 +200,7 @@ When these are not enough, the :class:`Timeout` class can be used to add timeout
 Futher reading
 --------------
 
-To limit concurrency, use :class:`Pool` class (see `example: dns_mass_resolve.py`_).
+To limit concurrency, use the :class:`Pool` class (see `example: dns_mass_resolve.py`_).
 
 Gevent comes with TCP/SSL/HTTP/WSGI servers. See :doc:`servers`.
 
