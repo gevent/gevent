@@ -34,11 +34,11 @@ installing from github
 
 To install latest release candidate:
 
-  pip install cython -e git://github.com/surfly/gevent.git@1.0rc2#egg=gevent
+  pip install cython git+git://github.com/surfly/gevent.git@1.0rc2#egg=gevent
 
 To install latest development version:
 
-  pip install cython -e git://github.com/surfly/gevent.git#egg=gevent
+  pip install cython git+git://github.com/surfly/gevent.git#egg=gevent
 
 
 running tests
