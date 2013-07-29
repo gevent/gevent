@@ -81,6 +81,31 @@ class SocketConsole(Greenlet):
 
 
 class BackdoorServer(StreamServer):
+    """Provide a backdoor to a program for debugging purposes.
+
+    You may bind to any interface, but for security purposes it is recommended
+    that you bind to 127.0.0.1.
+
+    Basic usage:
+
+    >> from gevent.backdoor import BackdoorServer
+    >> server = BackdoorServer(('127.0.0.1', 5001),
+    ...                         locals={'foo': "From defined scope!"})
+    >> server.serve_forever()
+
+    In a another terminal, connect with...
+
+    $ telnet 127.0.0.1 5001
+    Trying 127.0.0.1...
+    Connected to 127.0.0.1.
+    Escape character is '^]'.
+    Python 2.7.5 (default, May 12 2013, 12:00:47)
+    [GCC 4.8.0 20130502 (prerelease)] on linux2
+    Type "help", "copyright", "credits" or "license" for more information.
+    (InteractiveConsole)
+    >> print foo
+    From defined scope!
+    """
 
     def __init__(self, listener, locals=None, banner=None, **server_args):
         StreamServer.__init__(self, listener, spawn=None, **server_args)
