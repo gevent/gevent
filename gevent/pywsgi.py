@@ -467,7 +467,7 @@ class WSGIHandler(object):
         else:
             delta = '-'
         return '%s - - [%s] "%s" %s %s %s' % (
-            self.client_address[0],
+			"UNIX_SOCKET" if self.client_address is None or len(self.client_address) == 0 else self.client_address[0],
             now,
             self.requestline,
             (getattr(self, 'status', None) or '000').split()[0],
