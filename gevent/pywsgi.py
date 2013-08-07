@@ -381,7 +381,7 @@ class WSGIHandler(object):
             self.headers_sent = True
             self.finalize_headers()
 
-            towrite.extend('%s %s\r\n' % (self.request_version, self.status))
+            towrite.extend('HTTP/1.1 %s\r\n' % self.status)
             for header in self.response_headers:
                 towrite.extend('%s: %s\r\n' % header)
 
