@@ -29,8 +29,8 @@ _INTERNAL_ERROR_BODY = 'Internal Server Error'
 _INTERNAL_ERROR_HEADERS = [('Content-Type', 'text/plain'),
                            ('Connection', 'close'),
                            ('Content-Length', str(len(_INTERNAL_ERROR_BODY)))]
-_REQUEST_TOO_LONG_RESPONSE = "HTTP/1.0 414 Request URI Too Long\r\nConnection: close\r\nContent-length: 0\r\n\r\n"
-_BAD_REQUEST_RESPONSE = "HTTP/1.0 400 Bad Request\r\nConnection: close\r\nContent-length: 0\r\n\r\n"
+_REQUEST_TOO_LONG_RESPONSE = "HTTP/1.1 414 Request URI Too Long\r\nConnection: close\r\nContent-length: 0\r\n\r\n"
+_BAD_REQUEST_RESPONSE = "HTTP/1.1 400 Bad Request\r\nConnection: close\r\nContent-length: 0\r\n\r\n"
 _CONTINUE_RESPONSE = "HTTP/1.1 100 Continue\r\n\r\n"
 
 
@@ -402,7 +402,7 @@ class WSGIHandler(object):
             self.headers_sent = True
             self.finalize_headers()
 
-            towrite.append('%s %s\r\n' % (self.request_version, self.status))
+            towrite.append('HTTP/1.1 %s\r\n' % self.status)
             for header in self.response_headers:
                 towrite.append('%s: %s\r\n' % header)
 
@@ -556,7 +556,7 @@ class WSGIHandler(object):
         length = self.headers.getheader('content-length')
         if length:
             env['CONTENT_LENGTH'] = length
-        env['SERVER_PROTOCOL'] = 'HTTP/1.0'
+        env['SERVER_PROTOCOL'] = self.request_version
 
         client_address = self.client_address
         if isinstance(client_address, tuple):
