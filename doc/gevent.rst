@@ -37,7 +37,7 @@ It also a good idea to override :meth:`__str__`: if :meth:`_run` raises an excep
 .. automethod:: Greenlet.start_later
 .. automethod:: Greenlet.join
 .. automethod:: Greenlet.get
-.. automethod:: Greenlet.kill(exception=GreenletExit, block=False, timeout=None)
+.. automethod:: Greenlet.kill(exception=GreenletExit, block=True, timeout=None)
 .. automethod:: Greenlet.link(callback)
 .. automethod:: Greenlet.link_value(callback)
 .. automethod:: Greenlet.link_exception(callback)
@@ -89,7 +89,7 @@ Useful general functions
 
 .. autofunction:: kill(greenlet, exception=GreenletExit)
 
-.. autofunction:: killall(greenlets, exception=GreenletExit, block=False, timeout=None)
+.. autofunction:: killall(greenlets, exception=GreenletExit, block=True, timeout=None)
 
 .. autofunction:: joinall
 
