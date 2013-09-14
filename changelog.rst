@@ -4,17 +4,27 @@ Changelog
 .. currentmodule:: gevent
 
 
-Release 1.0rc3
---------------
+Release 1.0rc3 (Sep 14, 2013)
+-----------------------------
 
 - Fix #251: crash in gevent.core when accessing destroyed loop.
-- Fix #235: Replace self._threadpool.close() with self._threadpool.kill() in hub.py.
-- Remove unused timeout from select.py.
+- Fix #235: Replace self._threadpool.close() with self._threadpool.kill() in hub.py. Patch by Jan-Philip Gehrcke.
+- Remove unused timeout from select.py (#254). Patch by Saúl Ibarra Corretgé.
 - Rename Greenlet.link()'s argument to 'callback' (closes #244).
-- Fix parallel build (#193).
+- Fix parallel build (#193). Patch by Yichao Yu.
 - Fix #263: potential UnboundLocalError: 'length' in gevent.pywsgi.
-- Simplify psycopg2_pool.py.
-- pywsgi: allow Content-Length in GET requests.
+- Simplify psycopg2_pool.py (#239). Patch by Alex Gaynor.
+- pywsgi: allow Content-Length in GET requests (#264). Patch by 陈小玉.
+- documentation fixes (#281) [philipaconrad].
+- Fix old documentation about default blocking behavior of kill, killall (#306). Patch by Daniel Farina.
+- Fix #6: patch sys after thread. Patch by Anton Patrushev.
+- subprocess: fix check_output on Py2.6 and older (#265). Thanks to Marc Sibson for test.
+- Fix #302: "python -m gevent.monkey" now sets __file__ properly.
+- pywsgi: fix logging when bound on unix socket (#295). Thanks to Chris Meyers, Eugene Pankov.
+- pywsgi: readout request data to prevent ECONNRESET
+- Fix #303: 'requestline' AttributeError in pywsgi. Thanks to Neil Chintomby.
+- Fix #79: Properly handle HTTP versions. Patch by Luca Wehrstedt.
+- Fix #216: propagate errors raised by Pool.map/imap
 
 
 Release 1.0rc2 (Dec 10, 2012)
