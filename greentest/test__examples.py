@@ -6,7 +6,7 @@ import util
 
 
 cwd = '../examples/'
-ignore = ['wsgiserver.py', 'wsgiserver_ssl.py', 'webproxy.py', 'webpy.py']
+ignore = ['wsgiserver.py', 'wsgiserver_ssl.py', 'webproxy.py', 'webpy.py', 'unixsocket_server.py', 'unixsocket_client.py']
 if sys.platform == 'win32':
     ignore += ['geventsendfile.py', 'psycopg2_pool.py']
 ignore += [x[14:] for x in glob.glob('test__example_*.py')]
