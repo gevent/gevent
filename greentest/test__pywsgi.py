@@ -406,7 +406,7 @@ class MultiLineHeader(TestCase):
             '', ''))
         fd = self.makefile()
         fd.write(request)
-        read_http(fd, version='1.0')
+        read_http(fd)
 
 
 class TestGetArg(TestCase):
@@ -431,7 +431,7 @@ class TestGetArg(TestCase):
 
         # send some junk after the actual request
         fd.write('01234567890123456789')
-        read_http(fd, version='1.0', body='a is a, body is a=a')
+        read_http(fd, body='a is a, body is a=a')
         fd.close()
 
 
@@ -462,7 +462,7 @@ class TestChunkedApp(TestCase):
     def test_no_chunked_http_1_0(self):
         fd = self.makefile()
         fd.write('GET / HTTP/1.0\r\nHost: localhost\r\nConnection: close\r\n\r\n')
-        response = read_http(fd, version='1.0')
+        response = read_http(fd)
         self.assertEqual(response.body, self.body())
         self.assertEqual(response.headers.get('Transfer-Encoding'), None)
         content_length = response.headers.get('Content-Length')
@@ -853,13 +853,13 @@ class BadRequestTests(TestCase):
         self.content_length = '-100'
         fd = self.connect().makefile(bufsize=1)
         fd.write('GET / HTTP/1.1\r\nHost: localhost\r\nContent-Length: %s\r\n\r\n' % self.content_length)
-        read_http(fd, code=(200, 400), version=None)
+        read_http(fd, code=(200, 400))
 
     def test_illegal_content_length(self):
         self.content_length = 'abc'
         fd = self.connect().makefile(bufsize=1)
         fd.write('GET / HTTP/1.1\r\nHost: localhost\r\nContent-Length: %s\r\n\r\n' % self.content_length)
-        read_http(fd, code=(200, 400), version=None)
+        read_http(fd, code=(200, 400))
 
 
 class ChunkedInputTests(TestCase):
@@ -1052,13 +1052,13 @@ class TestLeakInput(TestCase):
         fd = self.connect().makefile(bufsize=1)
         fd.write("GET / HTTP/1.0\r\nConnection: close\r\n\r\n")
         d = fd.read()
-        assert d.startswith("HTTP/1.0 200 OK"), "bad response"
+        assert d.startswith("HTTP/1.1 200 OK"), "bad response: %r" % d
 
     def test_connection_close_leak_frame(self):
         fd = self.connect().makefile(bufsize=1)
         fd.write("GET /leak-frame HTTP/1.0\r\nConnection: close\r\n\r\n")
         d = fd.read()
-        assert d.startswith("HTTP/1.0 200 OK"), "bad response"
+        assert d.startswith("HTTP/1.1 200 OK"), "bad response: %r" % d
         self._leak_environ.pop('_leak')
 
 
@@ -1077,7 +1077,7 @@ class TestInvalidEnviron(TestCase):
     def test(self):
         fd = self.makefile()
         fd.write('GET / HTTP/1.0\r\nHost: localhost\r\n\r\n')
-        read_http(fd, version='1.0')
+        read_http(fd)
         fd = self.makefile()
         fd.write('GET / HTTP/1.1\r\nHost: localhost\r\n\r\n')
         read_http(fd)
@@ -1229,7 +1229,7 @@ class Test414(TestCase):
         fd = self.makefile()
         longline = 'x' * 20000
         fd.write('''GET /%s HTTP/1.0\r\nHello: world\r\n\r\n''' % longline)
-        read_http(fd, code=414, version='1.0')
+        read_http(fd, code=414)
 
 
 del CommonTests
