@@ -195,7 +195,8 @@ class WSGIHandler(object):
         finally:
             if self.socket is not None:
                 try:
-                    self.socket._sock.close()  # do not rely on garbage collection
+#                    self.socket._sock.close()  # do not rely on garbage collection
+#     for SSL connections, with _sock wrapped by OpenSSL, must not close FD till ready
                     self.socket.close()
                 except socket.error:
                     pass
