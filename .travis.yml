@@ -1,33 +1,18 @@
 language: python
 python:
-  - "2.5"
-  - "2.6"
-  - "2.7"
+ - "2.7"
 env:
-  - EXTRA=1
-  - GEVENT_FILE=thread
+ - EXTRA=1
 matrix:
- allow_failures:
-   - env: GEVENT_BACKEND=signalfd
-   - python: 2.5
-     env: DEBUGPY=-dbg GEVENTSETUP_EV_VERIFY=3
  include:
+   - python: 2.6
+   - python: 2.5
    - python: 2.7
      env: DEBUGPY=-dbg GEVENTSETUP_EV_VERIFY=3
-   - python: 2.7
-     env: DEBUGPY=-dbg GEVENTSETUP_EV_VERIFY=3 GEVENT_FILE=thread
-   - python: 2.7
-     env: GEVENT_BACKEND=select GEVENTSETUP_EV_VERIFY=3
-   - python: 2.7
-     env: GEVENT_BACKEND=poll GEVENTSETUP_EV_VERIFY=3
-   - python: 2.7
-     env: GEVENT_BACKEND=nosigmask,noinotify GEVENTSETUP_EV_VERIFY=3
    - python: 2.6
      env: DEBUGPY=-dbg GEVENTSETUP_EV_VERIFY=3
    - python: 2.7
-     env: GEVENT_BACKEND=signalfd
-   - python: 2.5
-     env: DEBUGPY=-dbg GEVENTSETUP_EV_VERIFY=3
+     env: DEBUGPY=-dbg GEVENTSETUP_EV_VERIFY=3 GEVENT_FILE=thread
 install:
  - pip install --use-mirrors cython
  - cython --version
