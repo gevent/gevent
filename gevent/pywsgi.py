@@ -212,22 +212,22 @@ class WSGIHandler(object):
         return True
 
     def read_request(self, raw_requestline):
-        self.requestline = raw_requestline.rstrip()
+        self.requestline = self.raw_requestline.rstrip()
         words = self.requestline.split()
         if len(words) == 3:
             self.command, self.path, self.request_version = words
             if not self._check_http_version():
-                self.log_error('Invalid http version: %r', raw_requestline)
+                self.log_error('Invalid http version: %r', self.raw_requestline)
                 return
         elif len(words) == 2:
             self.command, self.path = words
             if self.command != "GET":
-                self.log_error('Expected GET method: %r', raw_requestline)
+                self.log_error('Expected GET method: %r', self.raw_requestline)
                 return
             self.request_version = "HTTP/0.9"
             # QQQ I'm pretty sure we can drop support for HTTP/0.9
         else:
-            self.log_error('Invalid HTTP method: %r', raw_requestline)
+            self.log_error('Invalid HTTP method: %r', self.raw_requestline)
             return
 
         self.headers = self.MessageClass(self.rfile, 0)
@@ -283,25 +283,26 @@ class WSGIHandler(object):
         return self.rfile.readline(MAX_REQUEST_LINE)
 
     def handle_one_request(self):
+        self.raw_requestline = None
         if self.rfile.closed:
             return
 
         try:
-            raw_requestline = self.read_requestline()
+            self.raw_requestline = self.read_requestline()
         except socket.error:
             # "Connection reset by peer" or other socket errors aren't interesting here
             return
 
-        if not raw_requestline:
+        if not self.raw_requestline:
             return
 
         self.response_length = 0
 
-        if len(raw_requestline) >= MAX_REQUEST_LINE:
+        if len(self.raw_requestline) >= MAX_REQUEST_LINE:
             return ('414', _REQUEST_TOO_LONG_RESPONSE)
 
         try:
-            if not self.read_request(raw_requestline):
+            if not self.read_request(self.raw_requestline):
                 return ('400', _BAD_REQUEST_RESPONSE)
         except Exception:
             ex = sys.exc_info()[1]
@@ -470,7 +471,7 @@ class WSGIHandler(object):
         return '%s - - [%s] "%s" %s %s %s' % (
             client_address or '-',
             now,
-            self.requestline,
+            getattr(self, 'requestline', self.raw_requestline),
             (getattr(self, 'status', None) or '000').split()[0],
             length,
             delta)
