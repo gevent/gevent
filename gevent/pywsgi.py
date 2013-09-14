@@ -291,21 +291,22 @@ class WSGIHandler(object):
             return
 
         try:
-            raw_requestline = self.read_requestline()
+            self.requestline = self.read_requestline()
         except socket.error:
             # "Connection reset by peer" or other socket errors aren't interesting here
             return
 
-        if not raw_requestline:
+        if not self.requestline:
             return
 
         self.response_length = 0
 
-        if len(raw_requestline) >= MAX_REQUEST_LINE:
+        if len(self.requestline) >= MAX_REQUEST_LINE:
             return ('414', _REQUEST_TOO_LONG_RESPONSE)
 
         try:
-            if not self.read_request(raw_requestline):
+            # for compatibility with older versions of pywsgi, we pass self.requestline as an argument there
+            if not self.read_request(self.requestline):
                 return ('400', _BAD_REQUEST_RESPONSE)
         except Exception:
             ex = sys.exc_info()[1]
@@ -473,7 +474,7 @@ class WSGIHandler(object):
         return '%s - - [%s] "%s" %s %s %s' % (
             self.client_address[0],
             now,
-            self.requestline,
+            getattr(self, 'requestline', ''),
             (getattr(self, 'status', None) or '000').split()[0],
             length,
             delta)
