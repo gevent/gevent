@@ -416,5 +416,33 @@ class TestErrorInIterator(greentest.TestCase):
         gevent.sleep(0.001)
 
 
+def divide_by(x):
+    return 1.0 / x
+
+
+class TestErrorInHandler(greentest.TestCase):
+    error_fatal = False
+
+    def test_map(self):
+        p = pool.Pool(3)
+        self.assertRaises(ZeroDivisionError, p.map, divide_by, [1, 0, 2])
+
+    def test_imap(self):
+        p = pool.Pool(1)
+        it = p.imap(divide_by, [1, 0, 2])
+        self.assertEqual(it.next(), 1.0)
+        self.assertRaises(ZeroDivisionError, it.next)
+        self.assertEqual(it.next(), 0.5)
+        self.assertRaises(StopIteration, it.next)
+
+    def test_imap_unordered(self):
+        p = pool.Pool(1)
+        it = p.imap_unordered(divide_by, [1, 0, 2])
+        self.assertEqual(it.next(), 1.0)
+        self.assertRaises(ZeroDivisionError, it.next)
+        self.assertEqual(it.next(), 0.5)
+        self.assertRaises(StopIteration, it.next)
+
+
 if __name__ == '__main__':
     greentest.main()

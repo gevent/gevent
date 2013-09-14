@@ -244,6 +244,8 @@ class IMapUnordered(Greenlet):
         self.count -= 1
         if greenlet.successful():
             self.queue.put(greenlet.value)
+        else:
+            self.queue.put(Failure(greenlet.exception))
         if self.ready() and self.count <= 0:
             self.queue.put(Failure(StopIteration))
 
@@ -283,8 +285,7 @@ class IMap(Greenlet):
             self.index += 1
             if isinstance(value, Failure):
                 raise value.exc
-            if value is not _SKIP:
-                return value
+            return value
 
     if PY3:
         __next__ = next
@@ -314,7 +315,7 @@ class IMap(Greenlet):
         if greenlet.successful():
             self.queue.put((greenlet.index, greenlet.value))
         else:
-            self.queue.put((greenlet.index, _SKIP))
+            self.queue.put((greenlet.index, Failure(greenlet.exception)))
         if self.ready() and self.count <= 0:
             self.maxindex += 1
             self.queue.put((self.maxindex, Failure(StopIteration)))
@@ -395,6 +396,3 @@ class pass_value(object):
     def __getattr__(self, item):
         assert item != 'callback'
         return getattr(self.callback, item)
-
-
-_SKIP = object()
