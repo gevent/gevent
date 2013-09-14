@@ -1,4 +1,7 @@
 #!/usr/bin/python -u
+"""
+Unix utilities must be installed on target machine for this to work: http://unxutils.sourceforge.net/
+"""
 import sys
 import os
 import optparse
@@ -29,7 +32,7 @@ def prepare():
     system('rm -fr %s %s' % (tar_name, dir_name))
     system('gzip -d %s && tar -xf %s' % (source_name, tar_name))
     os.chdir(dir_name)
-    os.environ.setdefault('VS90COMNTOOLS', 'C:\\Program Files (x86)\\Microsoft Visual Studio 10.0\\Common7\Tools\\')
+    os.environ.setdefault('VS90COMNTOOLS', 'C:\\Program Files\\Microsoft Visual Studio 10.0\\Common7\Tools\\')
 
 if args[0:1] == ['test']:
     prepare()
