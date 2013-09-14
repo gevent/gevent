@@ -1218,6 +1218,20 @@ class TestInputRaw(greentest.BaseTestCase):
         i = self.make_input("2\r\n1", chunked_input=True)
         self.assertRaises(IOError, i.readline)
 
+
+class Test414(TestCase):
+
+    @staticmethod
+    def application(env, start_response):
+        raise AssertionError('should not get there')
+
+    def test(self):
+        fd = self.makefile()
+        longline = 'x' * 20000
+        fd.write('''GET /%s HTTP/1.0\r\nHello: world\r\n\r\n''' % longline)
+        read_http(fd, code=414, version='1.0')
+
+
 del CommonTests
 
 if __name__ == '__main__':
