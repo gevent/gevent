@@ -195,8 +195,12 @@ class WSGIHandler(object):
         finally:
             if self.socket is not None:
                 try:
-                    self.socket._sock.close()  # do not rely on garbage collection
-                    self.socket.close()
+                    # read out request data to prevent error: [Errno 104] Connection reset by peer
+                    try:
+                        self.socket._sock.recv(16384)
+                    finally:
+                        self.socket._sock.close()  # do not rely on garbage collection
+                        self.socket.close()
                 except socket.error:
                     pass
             self.__dict__.pop('socket', None)
