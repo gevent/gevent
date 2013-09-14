@@ -467,7 +467,7 @@ class WSGIHandler(object):
         else:
             delta = '-'
         return '%s - - [%s] "%s" %s %s %s' % (
-            self.client_address[0],
+            self.client_address[0] if isinstance(self.client_address, tuple) else self.client_address,
             now,
             self.requestline,
             (getattr(self, 'status', None) or '000').split()[0],
