@@ -516,6 +516,8 @@ def atomic_write(filename, data):
     f.flush()
     os.fsync(f.fileno())
     f.close()
+    if os.path.exists(filename):
+        os.unlink(filename)
     os.rename(tmpname, filename)
     dbg('Wrote %s bytes to %s', len(data), filename)
 
