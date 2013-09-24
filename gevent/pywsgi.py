@@ -204,12 +204,20 @@ class WSGIHandler(object):
 
     def __init__(self, socket, address, server, rfile=None):
         self.socket = socket
-        self.client_address = address
+        self._client_address = address
         self.server = server
         if rfile is None:
             self.rfile = socket.makefile('rb', -1)
         else:
             self.rfile = rfile
+
+    @property
+    def client_address(self):
+        client_port = self._client_address[0] if isinstance(self._client_address, tuple) else None
+        if self.server.reverse_proxied and hasattr(self, 'headers') and self.headers.get('x-forwarded-for'):
+            return (self.headers['x-forwarded-for'], client_port) if client_port else self.headers['x-forwarded-for']
+        else:
+            return self._client_address
 
     def handle(self):
         try:
@@ -612,8 +620,9 @@ class WSGIServer(StreamServer):
                 'wsgi.run_once': False}
 
     def __init__(self, listener, application=None, backlog=None, spawn='default', log='default', handler_class=None,
-                 environ=None, **ssl_args):
+                 environ=None, reverse_proxied=True, **ssl_args):
         StreamServer.__init__(self, listener, backlog=backlog, spawn=spawn, **ssl_args)
+        self.reverse_proxied = reverse_proxied
         if application is not None:
             self.application = application
         if handler_class is not None:
