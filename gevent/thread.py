@@ -8,6 +8,7 @@
 """
 from __future__ import absolute_import
 import sys
+import weakref
 
 __implements__ = ['allocate_lock',
                   'get_ident',
@@ -28,6 +29,8 @@ from gevent.greenlet import Greenlet
 from gevent.lock import Semaphore as LockType
 from gevent.local import local as _local
 
+all_threads = weakref.WeakKeyDictionary()
+
 
 def get_ident(gr=None):
     if gr is None:
@@ -37,7 +40,13 @@ def get_ident(gr=None):
 
 
 def start_new_thread(function, args=(), kwargs={}):
-    greenlet = Greenlet.spawn(function, *args, **kwargs)
+    def _(*a, **kw):
+        try:
+            return function(*a, **kw)
+        except GreenletExit:
+            pass
+    greenlet = Greenlet.spawn(_, *args, **kwargs)
+    all_threads[greenlet] = True
     return get_ident(greenlet)
 
 

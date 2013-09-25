@@ -8,8 +8,9 @@ from __future__ import absolute_import
 
 import os
 import sys
-from gevent.hub import get_hub, reinit
+from gevent.hub import get_hub, reinit, getcurrent
 from gevent.socket import EAGAIN
+from gevent.thread import all_threads as _all_threads
 import errno
 
 try:
@@ -97,6 +98,11 @@ if hasattr(os, 'fork'):
         result = _fork()
         if not result:
             reinit()
+            current = getcurrent()
+            for thread in _all_threads:
+                if thread is not current:
+                    thread.kill(block=False)
+
         return result
 
 else:

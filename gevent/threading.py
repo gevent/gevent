@@ -7,6 +7,7 @@ __implements__ = ['local',
                   'Lock',
                   '_get_ident',
                   '_sleep',
+                  'Thread',
                   '_DummyThread']
 
 
@@ -14,7 +15,7 @@ import threading as __threading__
 _DummyThread_ = __threading__._DummyThread
 from gevent.local import local
 from gevent.thread import start_new_thread as _start_new_thread, allocate_lock as _allocate_lock, get_ident as _get_ident
-from gevent.hub import sleep as _sleep, getcurrent
+from gevent.hub import sleep as _sleep, getcurrent, GreenletExit
 Lock = _allocate_lock
 
 
@@ -22,7 +23,15 @@ def _cleanup(g):
     __threading__._active.pop(id(g))
 
 
-class _DummyThread(_DummyThread_):
+class Thread(__threading__.Thread):
+    def run(self):
+        try:
+            super(Thread, self).run()
+        except GreenletExit:
+            pass
+
+
+class _DummyThread(_DummyThread_, Thread):
     # instances of this will cleanup its own entry
     # in ``threading._active``
 
