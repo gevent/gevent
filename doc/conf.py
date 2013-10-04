@@ -19,7 +19,7 @@ os.system('%s generate_rst.py generate' % sys.executable)
 sys.path.append('.')  # for mysphinxext
 
 if not os.path.exists('changelog.rst') and os.path.exists('../changelog.rst'):
-    print 'Linking ../changelog.rst to changelog.rst'
+    print ('Linking ../changelog.rst to changelog.rst')
     if hasattr(os, 'symlink'):
         os.symlink('../changelog.rst', 'changelog.rst')
     else:

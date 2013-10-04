@@ -150,7 +150,7 @@ def main():
             sys.exit('No differences applied')
     else:
         write(filename, new_content)
-        print 'Updated %s' % filename
+        print ('Updated %s' % filename)
 
 
 if __name__ == '__main__':

@@ -2,7 +2,7 @@ import sys
 import gevent
 from gevent.resolver_ares import Resolver
 from gevent import socket
-print gevent.__file__
+print (gevent.__file__)
 
 address = ('127.0.0.10', 53)
 listener = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -17,7 +17,7 @@ except socket.error, ex:
 
 def reader():
     while True:
-        print listener.recvfrom(10000)
+        print (listener.recvfrom(10000))
 
 gevent.spawn(reader)
 

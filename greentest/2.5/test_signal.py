@@ -15,7 +15,7 @@ else:
 
 pid = os.getpid()
 if verbose:
-    print "test runner's pid is", pid
+    print ("test runner's pid is", pid)
 
 # Shell script that will send us asynchronous signals
 script = """
@@ -36,7 +36,7 @@ def handlerA(*args):
     global a_called
     a_called = True
     if verbose:
-        print "handlerA invoked", args
+        print ("handlerA invoked", args)
 
 class HandlerBCalled(Exception):
     pass
@@ -45,7 +45,7 @@ def handlerB(*args):
     global b_called
     b_called = True
     if verbose:
-        print "handlerB invoked", args
+        print ("handlerB invoked", args)
     raise HandlerBCalled, args
 
 # Set up a child to send signals to us (the parent) after waiting long
@@ -126,27 +126,27 @@ try:
     # KeyboardInterrupt, finally getting us out of the loop.
     os.system(script)
     try:
-        print "starting pause() loop..."
+        print ("starting pause() loop...")
         while 1:
             try:
                 if verbose:
-                    print "call pause()..."
+                    print ("call pause()...")
                 signal.pause()
                 if verbose:
-                    print "pause() returned"
+                    print ("pause() returned")
             except HandlerBCalled:
                 if verbose:
-                    print "HandlerBCalled exception caught"
+                    print ("HandlerBCalled exception caught")
 
     except KeyboardInterrupt:
         if verbose:
-            print "KeyboardInterrupt (the alarm() went off)"
+            print ("KeyboardInterrupt (the alarm() went off)")
 
     if not a_called:
-        print 'HandlerA not called'
+        print ('HandlerA not called')
 
     if not b_called:
-        print 'HandlerB not called'
+        print ('HandlerB not called')
 
 finally:
     # Forcibly kill the child we created to ping us if there was a test error.
