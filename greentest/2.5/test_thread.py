@@ -143,7 +143,7 @@ if os_name in ("nt", "os2", "posix"):
         for tss in (262144, 0x100000, 0):
             thread.stack_size(tss)
             if failed(thread.stack_size(), tss):
-                raise ValueError, fail_msg % tss
+                raise ValueError(fail_msg % tss)
             print ('successfully set stack_size(%d)' % tss)
 
         for tss in (262144, 0x100000):

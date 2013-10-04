@@ -4,7 +4,7 @@ import signal
 import os, sys, time
 
 if sys.platform[:3] in ('win', 'os2') or sys.platform=='riscos':
-    raise TestSkipped, "Can't test signal on %s" % sys.platform
+    raise TestSkipped("Can't test signal on %s" % sys.platform)
 
 MAX_DURATION = 20   # Entire test should last at most 20 sec.
 
