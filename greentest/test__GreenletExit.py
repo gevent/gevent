@@ -1,4 +1,4 @@
 from gevent import GreenletExit
 
-assert issubclass(GreenletExit, BaseException)
+assert issubclass(GreenletExit, Exception)
 assert not issubclass(GreenletExit, Exception)

@@ -27,7 +27,7 @@ DEBUG = False
 def _run(function, *args):
     try:
         result = function(*args)
-        assert not isinstance(result, BaseException), repr(result)
+        assert not isinstance(result, Exception), repr(result)
         return result
     except Exception:
         return sys.exc_info()[1]
@@ -176,7 +176,7 @@ class TestCase(greentest.TestCase):
     switch_expected = None
 
     def should_log_results(self, result1, result2):
-        if isinstance(result1, BaseException) and isinstance(result2, BaseException):
+        if isinstance(result1, Exception) and isinstance(result2, Exception):
             return type(result1) is not type(result2)
         return repr(result1) != repr(result2)
 
