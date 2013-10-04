@@ -279,7 +279,7 @@ class Queue(object):
     def __iter__(self):
         return self
 
-    def next(self):
+    def __next__(self):
         result = self.get()
         if result is StopIteration:
             raise result
@@ -498,7 +498,7 @@ class Channel(object):
     def __iter__(self):
         return self
 
-    def next(self):
+    def __next__(self):
         result = self.get()
         if result is StopIteration:
             raise result

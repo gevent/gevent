@@ -215,15 +215,11 @@ class IMapUnordered(Greenlet):
     def __iter__(self):
         return self
 
-    def next(self):
+    def __next__(self):
         value = self.queue.get()
         if isinstance(value, Failure):
             raise value.exc
         return value
-
-    if PY3:
-        __next__ = next
-        del next
 
     def _run(self):
         try:
@@ -273,7 +269,7 @@ class IMap(Greenlet):
     def __iter__(self):
         return self
 
-    def next(self):
+    def __next__(self):
         while True:
             if self.waiting and self.waiting[0][0] <= self.index:
                 index, value = self.waiting.pop(0)
@@ -286,10 +282,6 @@ class IMap(Greenlet):
             if isinstance(value, Failure):
                 raise value.exc
             return value
-
-    if PY3:
-        __next__ = next
-        del next
 
     def _run(self):
         try:
