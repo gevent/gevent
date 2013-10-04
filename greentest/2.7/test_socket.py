@@ -1061,7 +1061,7 @@ class FileObjectInterruptedTestCase(unittest.TestCase):
             self._recv_step = iter(recv_funcs)
 
         def recv(self, size):
-            return self._recv_step.next()()
+            return next(self._recv_step)()
 
     @staticmethod
     def _raise_eintr():
