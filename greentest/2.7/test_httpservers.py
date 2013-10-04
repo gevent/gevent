@@ -447,7 +447,7 @@ class CGIHTTPServerTestCase(BaseTestCase):
             '/a/b/c/../d/e/../../../../../f': IndexError,
             '/a/b/c/../d/e/../../../../f/..': ('/', ''),
         }
-        for path, expected in test_vectors.iteritems():
+        for path, expected in test_vectors.items():
             if isinstance(expected, type) and issubclass(expected, Exception):
                 self.assertRaises(expected,
                                   CGIHTTPServer._url_collapse_path_split, path)

@@ -245,6 +245,6 @@ MONKEY OPTIONS: --verbose %s""" % ', '.join('--[no-]%s' % m for m in modules)
         sys.argv = argv
         __package__ = None
         globals()['__file__'] = sys.argv[0]  # issue #302
-        execfile(sys.argv[0])
+        exec(open(sys.argv[0]).read())
     else:
         print (script_help)
