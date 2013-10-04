@@ -424,7 +424,7 @@ class HandlerTests(TestCase):
         env = handler.environ
         from os import environ
         for k,v in environ.items():
-            if not empty.has_key(k):
+            if not k in empty:
                 self.assertEqual(env[k],v)
         for k,v in empty.items():
             self.failUnless(env.has_key(k))
