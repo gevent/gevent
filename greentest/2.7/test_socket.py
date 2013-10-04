@@ -1464,7 +1464,7 @@ class BufferIOTest(SocketConnectedTest):
 
     def _testRecvIntoArray(self):
         with test_support.check_py3k_warnings():
-            buf = buffer(MSG)
+            buf = memoryview(MSG)
         self.serv_conn.send(buf)
 
     def testRecvIntoBytearray(self):
@@ -1494,7 +1494,7 @@ class BufferIOTest(SocketConnectedTest):
 
     def _testRecvFromIntoArray(self):
         with test_support.check_py3k_warnings():
-            buf = buffer(MSG)
+            buf = memoryview(MSG)
         self.serv_conn.send(buf)
 
     def testRecvFromIntoBytearray(self):

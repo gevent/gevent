@@ -1228,7 +1228,7 @@ class BufferIOTest(SocketConnectedTest):
 
     def _testRecvInto(self):
         with test_support._check_py3k_warnings():
-            buf = buffer(MSG)
+            buf = memoryview(MSG)
         self.serv_conn.send(buf)
 
     def testRecvFromInto(self):
@@ -1240,7 +1240,7 @@ class BufferIOTest(SocketConnectedTest):
 
     def _testRecvFromInto(self):
         with test_support._check_py3k_warnings():
-            buf = buffer(MSG)
+            buf = memoryview(MSG)
         self.serv_conn.send(buf)
 
 
