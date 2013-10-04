@@ -4,7 +4,7 @@ Unix utilities must be installed on target machine for this to work: http://unxu
 """
 import sys
 import os
-import optparse
+import argparse
 
 
 def system(cmd, exit=True):
@@ -16,17 +16,16 @@ def system(cmd, exit=True):
     return retcode
 
 
-parser = optparse.OptionParser()
-parser.add_option('--host')
-parser.add_option('--username', default='Administrator')
-parser.add_option('--source')
-parser.add_option('--dist', action='store_true')
-parser.add_option('--python', default='27')
-options, args = parser.parse_args()
+parser = argparse.ArgumentParser(prog='PROG')
+parser.add_argument('--host', dest='host')
+parser.add_argument('--username', default='Administrator')
+parser.add_argument('--source', dest='source_name', dest='source')
+parser.add_argument('--dist', action='store_true', dest='dist')
+parser.add_argument('--python', default='27')
+args = parser.parse_args()
 
 
 def prepare():
-    source_name = args[1]
     tar_name = source_name.rsplit('.', 1)[0]
     dir_name = tar_name.rsplit('.', 1)[0]
     system('rm -fr %s %s' % (tar_name, dir_name))
@@ -34,13 +33,13 @@ def prepare():
     os.chdir(dir_name)
     os.environ.setdefault('VS90COMNTOOLS', 'C:\\Program Files\\Microsoft Visual Studio 10.0\\Common7\Tools\\')
 
-if args[0:1] == ['test']:
+if dist == 'test':
     prepare()
     system('%s setup.py build' % sys.executable)
     os.chdir('greentest')
     os.environ['PYTHONPATH'] = '.;..;../..'
     system('%s testrunner.py --expected ../known_failures.txt' % sys.executable)
-elif args[0:1] == ['dist']:
+elif dist == 'dist':
     prepare()
     success = 0
     for command in ['bdist_egg', 'bdist_wininst', 'bdist_msi']:
@@ -50,8 +49,8 @@ elif args[0:1] == ['dist']:
     if not success:
         sys.exit('bdist_egg bdist_wininst and bdist_msi all failed')
 elif not args:
-    assert options.host
-    if not options.source:
+    assert host
+    if not source_name:
         import makedist
         options.source = makedist.makedist()
 
@@ -67,7 +66,7 @@ elif not args:
     options.dir_name = dir_name
 
     system('scp %(source)s %(script_path)s %(username)s@%(host)s:' % options.__dict__)
-    if options.dist:
+    if dist:
         system('ssh %(username)s@%(host)s %(python)s -u %(script_name)s dist %(source_name)s'  % options.__dict__)
         try:
             os.mkdir('dist')
