@@ -176,7 +176,7 @@ class Popen(object):
                  cwd=None, env=None, universal_newlines=False,
                  startupinfo=None, creationflags=0, threadpool=None):
         """Create new Popen instance."""
-        if not isinstance(bufsize, (int, long)):
+        if not isinstance(bufsize, (int)):
             raise TypeError("bufsize must be an integer")
         hub = get_hub()
 

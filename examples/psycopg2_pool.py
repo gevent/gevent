@@ -29,7 +29,7 @@ extensions.set_wait_callback(gevent_wait_callback)
 class DatabaseConnectionPool(object):
 
     def __init__(self, maxsize=100):
-        if not isinstance(maxsize, (int, long)):
+        if not isinstance(maxsize, (int)):
             raise TypeError('Expected integer, got %r' % (maxsize, ))
         self.maxsize = maxsize
         self.pool = Queue()

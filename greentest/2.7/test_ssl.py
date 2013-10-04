@@ -144,7 +144,7 @@ class BasicSocketTests(unittest.TestCase):
         n = ssl.OPENSSL_VERSION_NUMBER
         t = ssl.OPENSSL_VERSION_INFO
         s = ssl.OPENSSL_VERSION
-        self.assertIsInstance(n, (int, long))
+        self.assertIsInstance(n, (int))
         self.assertIsInstance(t, tuple)
         self.assertIsInstance(s, str)
         # Some sanity checks follow

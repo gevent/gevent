@@ -387,7 +387,7 @@ _2G = 2 * _1G
 
 # Hack to get at the maximum value an internal index can take.
 class _Dummy:
-    def __getslice__(self, i, j):
+    def __getitem__(self, i, j):
         return j
 try:
     MAX_Py_ssize_t = _Dummy()[:]
