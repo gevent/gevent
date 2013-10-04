@@ -762,7 +762,7 @@ class BasicTCPTest(SocketConnectedTest):
     def testSendAll(self):
         # Testing sendall() with a 2048 byte string over TCP
         msg = ''
-        while 1:
+        while True:
             read = self.cli_conn.recv(1024)
             if not read:
                 break
@@ -997,7 +997,7 @@ class FileObjectClassTestCase(SocketConnectedTest):
     def testUnbufferedRead(self):
         # Performing unbuffered file read test
         buf = ''
-        while 1:
+        while True:
             char = self.serv_file.read(1)
             if not char:
                 break

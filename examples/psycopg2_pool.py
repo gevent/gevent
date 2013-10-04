@@ -10,7 +10,7 @@ from psycopg2 import extensions, OperationalError, connect
 
 def gevent_wait_callback(conn, timeout=None):
     """A wait callback useful to allow gevent to work with Psycopg."""
-    while 1:
+    while True:
         state = conn.poll()
         if state == extensions.POLL_OK:
             break

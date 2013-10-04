@@ -746,7 +746,7 @@ class FileObjectClassTestCase(SocketConnectedTest):
     def testUnbufferedRead(self):
         # Performing unbuffered file read test
         buf = ''
-        while 1:
+        while True:
             char = self.serv_file.read(1)
             if not char:
                 break

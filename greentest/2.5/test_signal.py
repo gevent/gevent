@@ -127,7 +127,7 @@ try:
     os.system(script)
     try:
         print ("starting pause() loop...")
-        while 1:
+        while True:
             try:
                 if verbose:
                     print ("call pause()...")

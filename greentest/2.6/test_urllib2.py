@@ -923,7 +923,7 @@ class HandlerTests(unittest.TestCase):
         count = 0
         req.timeout = socket._GLOBAL_DEFAULT_TIMEOUT
         try:
-            while 1:
+            while True:
                 redirect(h, req, "http://example.com/")
                 count = count + 1
         except urllib2.HTTPError:
@@ -935,7 +935,7 @@ class HandlerTests(unittest.TestCase):
         count = 0
         req.timeout = socket._GLOBAL_DEFAULT_TIMEOUT
         try:
-            while 1:
+            while True:
                 redirect(h, req, "http://example.com/%d" % count)
                 count = count + 1
         except urllib2.HTTPError:
