@@ -264,21 +264,21 @@ class SimpleHTTPServerTestCase(BaseTestCase):
 cgi_file1 = """\
 #!%s
 
-print "Content-type: text/html"
-print
-print "Hello World"
+print ("Content-type: text/html")
+print ()
+print ("Hello World")
 """
 
 cgi_file2 = """\
 #!%s
 import cgi
 
-print "Content-type: text/html"
-print
+print ("Content-type: text/html")
+print ()
 
 form = cgi.FieldStorage()
-print "%%s, %%s, %%s" %% (form.getfirst("spam"), form.getfirst("eggs"),\
-              form.getfirst("bacon"))
+print ("%%s, %%s, %%s" %% (form.getfirst("spam"), form.getfirst("eggs"),\
+              form.getfirst("bacon")))
 """
 
 class CGIHTTPServerTestCase(BaseTestCase):

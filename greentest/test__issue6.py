@@ -17,7 +17,7 @@ elif sys.argv[1:] == ['subprocess']:
 
     def printline():
         line = input()
-        print '%s chars.' % len(line)
+        print ('%s chars.' % len(line))
 
     gevent.spawn(printline).join()
 
