@@ -5,13 +5,9 @@ env:
  - EXTRA=1
 matrix:
  include:
-   - python: 2.6
-   - python: 2.5
-   - python: 2.7
+   - python: 3.3
      env: DEBUGPY=-dbg GEVENTSETUP_EV_VERIFY=3
-   - python: 2.6
-     env: DEBUGPY=-dbg GEVENTSETUP_EV_VERIFY=3
-   - python: 2.7
+   - python: 3.3
      env: DEBUGPY=-dbg GEVENTSETUP_EV_VERIFY=3 GEVENT_FILE=thread
 install:
  - pip install --use-mirrors cython
