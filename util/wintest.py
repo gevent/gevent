@@ -21,7 +21,7 @@ parser.add_argument('--host', dest='host')
 parser.add_argument('--username', default='Administrator')
 parser.add_argument('--source', dest='source_name', dest='source')
 parser.add_argument('--dist', action='store_true', dest='dist')
-parser.add_argument('--python', default='27')
+parser.add_argument('--python', default='27', dest='python_version')
 args = parser.parse_args()
 
 
@@ -50,22 +50,22 @@ elif dist == 'dist':
         sys.exit('bdist_egg bdist_wininst and bdist_msi all failed')
 elif not args:
     assert host
-    if not source_name:
+    if not source:
         import makedist
-        options.source = makedist.makedist()
+        source = makedist.makedist()
 
-    options.source_name = os.path.basename(options.source)
-    options.script_path = os.path.abspath(__file__)
-    options.script_name = os.path.basename(__file__)
+    source_name = os.path.basename(options.source)
+    script_path = os.path.abspath(__file__)
+    script_name = os.path.basename(__file__)
 
-    if options.python.isdigit():
-        options.python = 'C:/Python' + options.python + '/python.exe'
+    if python_version.isdigit():
+        options.python = 'C:/Python' + python_version + '/python.exe'
 
     tar_name = options.source_name.rsplit('.', 1)[0]
     dir_name = tar_name.rsplit('.', 1)[0]
     options.dir_name = dir_name
 
-    system('scp %(source)s %(script_path)s %(username)s@%(host)s:' % options.__dict__)
+    system('scp %(source)s %(script_path)s %(username)s@%(host)s:' % source_name, source_path)
     if dist:
         system('ssh %(username)s@%(host)s %(python)s -u %(script_name)s dist %(source_name)s'  % options.__dict__)
         try:
