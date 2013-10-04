@@ -258,7 +258,7 @@ class FileObjectThread(object):
             raise FileObjectClosed
         return getattr(self._fobj, item)
 
-    for method in ['read', 'readinto', 'readline', 'readlines', 'write', 'writelines', 'xreadlines']:
+    for method in ['read', 'readinto', 'readline', 'readlines', 'write', 'writelines']:
 
         exec ('''def %s(self, *args, **kwargs):
     fobj = self._fobj
