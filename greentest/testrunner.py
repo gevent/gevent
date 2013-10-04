@@ -86,10 +86,10 @@ def discover(tests=None, ignore=None):
     if isinstance(ignore, str):
         ignore = load_list_from_file(ignore)
 
-    ignore = set(ignore or [])
+    ignore = {ignore or []}
 
     if not tests:
-        tests = set(glob.glob('test_*.py')) - set(['test_support.py'])
+        tests = {glob.glob('test_*.py')) - set(['test_support.py']}
         if ignore:
             tests -= ignore
         tests = sorted(tests)

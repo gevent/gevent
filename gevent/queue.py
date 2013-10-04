@@ -54,8 +54,8 @@ class Queue(object):
                               DeprecationWarning, stacklevel=2)
         else:
             self.maxsize = maxsize
-        self.getters = set()
-        self.putters = set()
+        self.getters = {}
+        self.putters = {}
         self.hub = get_hub()
         self._event_unlock = None
         if items:

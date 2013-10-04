@@ -30,12 +30,12 @@ class Group(object):
 
     def __init__(self, *args):
         assert len(args) <= 1, args
-        self.greenlets = set(*args)
+        self.greenlets = {*args}
         if args:
             for greenlet in args[0]:
                 greenlet.rawlink(self._discard)
         # each item we kill we place in dying, to avoid killing the same greenlet twice
-        self.dying = set()
+        self.dying = {}
         self._empty_event = Event()
         self._empty_event.set()
 

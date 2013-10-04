@@ -26,7 +26,7 @@ if __name__ == '__main__':
 
         globs = {'myfunction': myfunction, 'gevent': gevent, 'socket': socket}
 
-        modules = set()
+        modules = {}
 
         def add_module(name, path):
             if allowed_modules and name not in allowed_modules:

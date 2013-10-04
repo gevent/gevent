@@ -130,7 +130,7 @@ def patch_socket(dns=True, aggressive=True):
     if dns:
         items = socket.__implements__
     else:
-        items = set(socket.__implements__) - set(socket.__dns__)
+        items = {socket.__implements__} - {socket.__dns__}
     patch_module('socket', items=items)
     if aggressive:
         if 'ssl' not in socket.__implements__:

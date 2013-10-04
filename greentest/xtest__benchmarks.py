@@ -40,7 +40,7 @@ def system(command):
         kill(popen)
 
 
-modules = set()
+modules = {}
 
 for path in glob.glob('bench_*.py'):
     modules.add(path)

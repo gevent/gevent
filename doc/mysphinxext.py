@@ -3,7 +3,7 @@ from sphinx.ext import intersphinx
 from docutils import nodes
 
 noisy = 0
-message_cache = set()
+message_cache = {}
 
 
 def missing_reference(app, env, node, contnode):
