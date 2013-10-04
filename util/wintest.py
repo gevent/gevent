@@ -16,9 +16,9 @@ def system(cmd, exit=True):
     return retcode
 
 
-parser = argparse.ArgumentParser(prog='PROG')
+parser = argparse.ArgumentParser(prog='gevent')
 parser.add_argument('--host', dest='host')
-parser.add_argument('--username', default='Administrator')
+parser.add_argument('--username', default='Administrator', dest='username')
 parser.add_argument('--source', dest='source_name', dest='source')
 parser.add_argument('--dist', action='store_true', dest='dist')
 parser.add_argument('--python', default='27', dest='python_version')
@@ -63,17 +63,16 @@ elif not args:
 
     tar_name = options.source_name.rsplit('.', 1)[0]
     dir_name = tar_name.rsplit('.', 1)[0]
-    options.dir_name = dir_name
 
-    system('scp %(source)s %(script_path)s %(username)s@%(host)s:' % source_name, source_path)
+    system('scp %(source)s %(script_path)s %(username)s@%(host)s:' % source_name, source_path, username, host)
     if dist:
-        system('ssh %(username)s@%(host)s %(python)s -u %(script_name)s dist %(source_name)s'  % options.__dict__)
+        system('ssh %(username)s@%(host)s %(python)s -u %(script_name)s dist %(source_name)s'  % username, host, python_version, source_name)
         try:
             os.mkdir('dist')
         except OSError:
             pass
-        system('scp -r %(username)s@%(host)s:%(dir_name)s/dist/ dist' % options.__dict__)
+        system('scp -r %(username)s@%(host)s:%(dir_name)s/dist/ dist' % username, host, dir_name)
     else:
-        system('ssh %(username)s@%(host)s C:/Python27/python.exe -u %(script_name)s test %(source_name)s'  % options.__dict__)
+        system('ssh %(username)s@%(host)s C:/Python27/python.exe -u %(script_name)s test %(source_name)s'  % username, host, script_name, source_name)
 else:
     sys.exit('Invalid args: %r' % (args, ))
