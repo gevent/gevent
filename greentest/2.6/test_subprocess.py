@@ -68,7 +68,7 @@ class ProcessTestCase(unittest.TestCase):
         try:
             subprocess.check_call([sys.executable, "-c",
                                    "import sys; sys.exit(47)"])
-        except subprocess.CalledProcessError, e:
+        except subprocess.CalledProcessError as e:
             self.assertEqual(e.returncode, 47)
         else:
             self.fail("Expected CalledProcessError")
@@ -497,7 +497,7 @@ class ProcessTestCase(unittest.TestCase):
                                  stdout=subprocess.PIPE,
                                  stderr=subprocess.PIPE)
             # Windows raises IOError
-            except (IOError, OSError), err:
+            except (IOError, OSError) as err:
                 if err.errno != 2:  # ignore "no such file"
                     raise
 
@@ -510,7 +510,7 @@ class ProcessTestCase(unittest.TestCase):
             try:
                 p = subprocess.Popen([sys.executable, "-c", ""],
                                  cwd="/this/path/does/not/exist")
-            except OSError, e:
+            except OSError as e:
                 # The attribute child_traceback should contain "os.chdir"
                 # somewhere.
                 self.assertNotEqual(e.child_traceback.find("os.chdir"), -1)

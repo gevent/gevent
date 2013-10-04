@@ -384,7 +384,7 @@ class TestUrlopen(BaseTestCase):
         try:
             try:
                 urllib2.urlopen('http://localhost:%s/weeble' % handler.port)
-            except urllib2.URLError, f:
+            except urllib2.URLError as f:
                 pass
             else:
                 self.fail('404 should raise URLError')

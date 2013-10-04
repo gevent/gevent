@@ -29,7 +29,7 @@ def test_basic():
 
     try:
         f = urllib.urlopen('https://sf.net')
-    except IOError, exc:
+    except IOError as exc:
         if exc.errno == errno.ETIMEDOUT:
             raise test_support.ResourceDenied('HTTPS connection is timing out')
         else:

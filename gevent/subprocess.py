@@ -443,7 +443,7 @@ class Popen(object):
                                                  env,
                                                  cwd,
                                                  startupinfo)
-            except pywintypes.error, e:
+            except pywintypes.error as e:
                 # Translate pywintypes.error to WindowsError, which is
                 # a subclass of OSError.  FIXME: We should really
                 # translate errno using _sys_errlist (or similar), but
@@ -799,7 +799,7 @@ def write_and_close(fobj, data):
     try:
         if data:
             fobj.write(data)
-    except (OSError, IOError), ex:
+    except (OSError, IOError) as ex:
         if ex.errno != errno.EPIPE and ex.errno != errno.EINVAL:
             raise
     finally:

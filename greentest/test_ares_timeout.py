@@ -8,7 +8,7 @@ address = ('127.0.0.10', 53)
 listener = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 try:
     listener.bind(address)
-except socket.error, ex:
+except socket.error as ex:
     if 'permission denied' in str(ex).lower():
         sys.stderr.write('This test binds on port 53 and thus must be run as root.\n')
         sys.exit(0)
@@ -24,7 +24,7 @@ gevent.spawn(reader)
 r = gevent.get_hub().resolver = Resolver(servers=['127.0.0.10'], timeout=0.001, tries=1)
 try:
     result = r.gethostbyname('www.google.com')
-except socket.gaierror, ex:
+except socket.gaierror as ex:
     if 'ARES_ETIMEOUT' not in str(ex):
         raise
 else:

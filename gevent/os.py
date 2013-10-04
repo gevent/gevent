@@ -48,7 +48,7 @@ if fcntl:
         while True:
             try:
                 return _read(fd, n)
-            except OSError, e:
+            except OSError as e:
                 if e.errno not in ignored_errors:
                     raise
                 sys.exc_clear()
@@ -67,7 +67,7 @@ if fcntl:
         while True:
             try:
                 return _write(fd, buf)
-            except OSError, e:
+            except OSError as e:
                 if e.errno not in ignored_errors:
                     raise
                 sys.exc_clear()
