@@ -26,7 +26,7 @@ def noop(p):
 
 def test(spawn, sleep, kwargs):
     start = time()
-    for _ in xrange(N):
+    for _ in range(N):
         spawn(incr, sleep, **kwargs)
     delta = time() - start
     print ('spawning: %.1f microseconds per greenlet' % (delta * 1000000.0 / N))
@@ -41,7 +41,7 @@ def test(spawn, sleep, kwargs):
 def bench_none(options):
     kwargs = options.kwargs
     start = time()
-    for _ in xrange(N):
+    for _ in range(N):
         incr(noop, **kwargs)
     delta = time() - start
     assert counter == N, (counter, N)

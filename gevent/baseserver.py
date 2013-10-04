@@ -132,7 +132,7 @@ class BaseServer(object):
             spawn(self._handle, *args)
 
     def _do_read(self):
-        for _ in xrange(self.max_accept):
+        for _ in range(self.max_accept):
             if self.full():
                 self.stop_accepting()
                 return

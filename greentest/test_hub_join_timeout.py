@@ -26,10 +26,10 @@ def no_time(fuzzy=0.001):
     return expected_time(0, fuzzy=fuzzy)
 
 
-for _a in xrange(2):
+for _a in range(2):
 
     # exiting because the spawned greenlet finished execution (spawn (=callback) variant)
-    for _ in xrange(2):
+    for _ in range(2):
         x = gevent.spawn(lambda: 5)
         with no_time(SMALL):
             result = gevent.wait(timeout=10)
@@ -38,7 +38,7 @@ for _a in xrange(2):
         assert x.value == 5, x
 
     # exiting because the spawned greenlet finished execution (spawn_later (=timer) variant)
-    for _ in xrange(2):
+    for _ in range(2):
         x = gevent.spawn_later(SMALL, lambda: 5)
         with expected_time(SMALL):
             result = gevent.wait(timeout=10)
@@ -46,7 +46,7 @@ for _a in xrange(2):
         assert x.dead, x
 
     # exiting because of timeout (the spawned greenlet still runs)
-    for _ in xrange(2):
+    for _ in range(2):
         x = gevent.spawn_later(10, lambda: 5)
         with expected_time(SMALL):
             result = gevent.wait(timeout=SMALL)
@@ -58,7 +58,7 @@ for _a in xrange(2):
         assert result is True
 
     # exiting because of event (the spawned greenlet still runs)
-    for _ in xrange(2):
+    for _ in range(2):
         x = gevent.spawn_later(10, lambda: 5)
         event = Event()
         event_set = gevent.spawn_later(SMALL, event.set)
@@ -74,14 +74,14 @@ for _a in xrange(2):
         assert result is True
 
     # checking "ref=False" argument
-    for _ in xrange(2):
+    for _ in range(2):
         gevent.get_hub().loop.timer(10, ref=False).start(lambda: None)
         with no_time():
             result = gevent.wait()
         assert result is True
 
     # checking "ref=False" attribute
-    for _d in xrange(2):
+    for _d in range(2):
         w = gevent.get_hub().loop.timer(10)
         w.start(lambda: None)
         w.ref = False

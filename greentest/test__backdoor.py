@@ -33,7 +33,7 @@ class Test(greentest.TestCase):
             line = conn.makefile().readline()
             assert line.strip() == '4', repr(line)
 
-        jobs = [gevent.spawn(connect) for _ in xrange(10)]
+        jobs = [gevent.spawn(connect) for _ in range(10)]
         gevent.joinall(jobs)
         server.close()
         #self.assertEqual(conn.recv(1), '')

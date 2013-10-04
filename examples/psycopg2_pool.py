@@ -143,7 +143,7 @@ if __name__ == '__main__':
     import time
     pool = PostgresConnectionPool("dbname=postgres", maxsize=3)
     start = time.time()
-    for _ in xrange(4):
+    for _ in range(4):
         gevent.spawn(pool.execute, 'select pg_sleep(1);')
     gevent.wait()
     delay = time.time() - start

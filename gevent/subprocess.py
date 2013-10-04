@@ -601,7 +601,7 @@ class Popen(object):
                 os.closerange(3, but)
                 os.closerange(but + 1, MAXFD)
             else:
-                for i in xrange(3, MAXFD):
+                for i in range(3, MAXFD):
                     if i == but:
                         continue
                     try:

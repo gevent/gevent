@@ -590,7 +590,7 @@ def iwait(objects, timeout=None):
         count = len(objects)
         for obj in objects:
             obj.rawlink(switch)
-        for _ in xrange(count):
+        for _ in range(count):
             item = waiter.get()
             waiter.clear()
             if item is _NONE:

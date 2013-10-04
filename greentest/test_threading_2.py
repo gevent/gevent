@@ -351,7 +351,7 @@ class ThreadTests(unittest.TestCase):
         enum = threading.enumerate
         old_interval = sys.getcheckinterval()
         try:
-            for i in xrange(1, 100):
+            for i in range(1, 100):
                 # Try a couple times at each thread-switching interval
                 # to get more interleavings.
                 sys.setcheckinterval(i // 5)

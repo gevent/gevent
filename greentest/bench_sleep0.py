@@ -12,7 +12,7 @@ ARG = 0
 
 def test(sleep, arg):
     start = time()
-    for _ in xrange(N):
+    for _ in range(N):
         sleep(arg)
     return time() - start
 

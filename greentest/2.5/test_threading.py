@@ -209,7 +209,7 @@ class ThreadTests(unittest.TestCase):
         old_interval = sys.getcheckinterval()
         sys.setcheckinterval(1)
         try:
-            for i in xrange(1, 1000):
+            for i in range(1, 1000):
                 t = threading.Thread(target=lambda: None)
                 t.start()
                 t.join()
