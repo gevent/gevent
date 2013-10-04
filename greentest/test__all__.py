@@ -139,7 +139,7 @@ are missing from %r:
 
     def _test(self, modname):
         self.modname = modname
-        exec "import %s" % modname in {}
+        exec ("import %s" % modname in {})
         self.module = sys.modules[modname]
 
         self.check_all()
