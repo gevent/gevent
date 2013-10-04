@@ -83,7 +83,7 @@ def run_many(tests, expected=None, failfast=False):
 
 
 def discover(tests=None, ignore=None):
-    if isinstance(ignore, basestring):
+    if isinstance(ignore, str):
         ignore = load_list_from_file(ignore)
 
     ignore = set(ignore or [])

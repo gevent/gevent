@@ -237,7 +237,7 @@ class MyClassDocumenter(ClassDocumenter):
 
         def key((name, obj)):
             try:
-                return obj.im_func.func_code.co_firstlineno
+                return obj.__func__.func_code.co_firstlineno
             except AttributeError:
                 return 0
         members.sort(key=key)

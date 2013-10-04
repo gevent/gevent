@@ -109,7 +109,7 @@ def getname(command, env=None, setenv=None):
         if key.startswith('GEVENT_') or key.startswith('GEVENTARES_'):
             result.append('%s=%s' % (key, value))
 
-    if isinstance(command, basestring):
+    if isinstance(command, str):
         result.append(command)
     else:
         result.extend(command)
@@ -198,7 +198,7 @@ def run(command, **kwargs):
 
 
 def parse_command(parts):
-    if isinstance(parts, basestring):
+    if isinstance(parts, str):
         parts = parts.split()
     environ = []
     if parts[0] == '-':
@@ -260,9 +260,9 @@ def match_environ(expected_environ, actual_environ):
     """
     if expected_environ is None:
         return True
-    if isinstance(expected_environ, basestring):
+    if isinstance(expected_environ, str):
         expected_environ = expected_environ.split()
-    if isinstance(actual_environ, basestring):
+    if isinstance(actual_environ, str):
         actual_environ = actual_environ.split()
     expected_environ = dict(x.split('=') for x in expected_environ)
     actual_environ = dict(x.split('=') for x in actual_environ)
@@ -385,7 +385,7 @@ class TestServer(unittest.TestCase):
         for method in sorted(dir(self)):
             if method.startswith('_test'):
                 function = getattr(self, method)
-                if callable(function):
+                if hasattr(function, '__call__'):
                     function()
                     ran = True
         assert ran

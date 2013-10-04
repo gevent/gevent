@@ -880,7 +880,7 @@ class HandlerTests(unittest.TestCase):
 
     def test_cookie_redirect(self):
         # cookies shouldn't leak into redirected requests
-        from cookielib import CookieJar
+        from http.cookies import CookieJar
 
         from test_cookielib import interact_netscape
 

@@ -147,11 +147,11 @@ class ThreadableTest:
         self.server_ready.wait()
         self.clientSetUp()
         self.client_ready.set()
-        if not callable(test_func):
+        if not hasattr(test_func, '__call__'):
             raise TypeError("test_func must be a callable function.")
         try:
             test_func()
-        except Exception, strerror:
+        except Exception as strerror:
             self.queue.put(strerror)
         self.clientTearDown()
 

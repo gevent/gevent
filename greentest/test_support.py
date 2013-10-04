@@ -325,7 +325,10 @@ def check_syntax(statement):
         print ('Missing SyntaxError: "%s"' % statement)
 
 def open_urlresource(url):
-    import urllib, urlparse
+    import urllib.request
+	import urllib.parse
+	import urllib.error
+	from urllib.parse import urlparse
     import os.path
 
     filename = urlparse.urlparse(url)[2].split('/')[-1] # '/': it's URL!

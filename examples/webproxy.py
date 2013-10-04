@@ -14,8 +14,9 @@ from gevent import monkey; monkey.patch_all()
 import sys
 import re
 import traceback
-import urllib2
-from urlparse import urlparse
+import urllib.request
+import urllib.error
+from urllib.parse import urlparse
 from cgi import escape
 from urllib import unquote
 

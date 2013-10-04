@@ -35,7 +35,7 @@ def _get_original(name, items):
 
 
 def get_original(name, item):
-    if isinstance(item, basestring):
+    if isinstance(item, str):
         return _get_original(name, [item])[0]
     else:
         return _get_original(name, item)
