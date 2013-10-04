@@ -42,7 +42,7 @@ class Test(unittest.TestCase):
             assert self.modname in NO_ALL
             return
         names = {}
-        exec ("from %s import *" % self.modname) in names
+        exec ("from %s import *" % self.modname in names)
         names.pop('__builtins__', None)
         self.assertEqual(sorted(names), sorted(self.module.__all__))
 
