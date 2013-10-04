@@ -85,7 +85,7 @@ class ProcessTestCase(unittest.TestCase):
 
     def test_stdin_none(self):
         # .stdin is None when not redirected
-        p = subprocess.Popen([sys.executable, "-c", 'print "banana"'],
+        p = subprocess.Popen([sys.executable, "-c", 'print ("banana")'],
                          stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         p.wait()
         self.assertEqual(p.stdin, None)
@@ -532,7 +532,7 @@ class ProcessTestCase(unittest.TestCase):
                     'com.apple.CrashReporter', 'DialogType'],
                     stdout=subprocess.PIPE).communicate()[0]
                 if value.strip() == b'developer':
-                    print "this tests triggers the Crash Reporter, that is intentional"
+                    print ("this tests triggers the Crash Reporter, that is intentional")
                     sys.stdout.flush()
 
             try:

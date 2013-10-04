@@ -83,7 +83,7 @@ class TestThread(threading.Thread):
 
             time.sleep(delay)
             if verbose:
-                print 'task', self.name, 'done'
+                print ('task', self.name, 'done')
 
             with self.mutex:
                 self.nrunning.dec()
@@ -198,7 +198,7 @@ class ThreadTests(unittest.TestCase):
             import ctypes
         except ImportError:
             if verbose:
-                print "test_PyThreadState_SetAsyncExc can't import ctypes"
+                print ("test_PyThreadState_SetAsyncExc can't import ctypes")
             return  # can't do anything
 
         set_async_exc = ctypes.pythonapi.PyThreadState_SetAsyncExc

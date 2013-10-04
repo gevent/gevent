@@ -128,7 +128,7 @@ class ThreadableTest:
                 raise TypeError("test_func must be a callable function.")
         try:
             test_func()
-        except Exception, strerror:
+        except Exception as strerror:
             self.queue.put(strerror)
         self.clientTearDown()
 
@@ -1263,7 +1263,7 @@ def isTipcAvailable():
             if line.startswith("tipc "):
                 return True
     if test_support.verbose:
-        print "TIPC module is not loaded, please 'sudo modprobe tipc'"
+        print ("TIPC module is not loaded, please 'sudo modprobe tipc'")
     return False
 
 class TIPCTest (unittest.TestCase):

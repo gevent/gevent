@@ -16,7 +16,7 @@ def test_basic():
     import urllib
 
     if test_support.verbose:
-        print "test_basic ..."
+        print ("test_basic ...")
 
     socket.RAND_status()
     try:
@@ -24,7 +24,7 @@ def test_basic():
     except TypeError:
         pass
     else:
-        print "didn't raise TypeError"
+        print ("didn't raise TypeError")
     socket.RAND_add("this is a random string", 75.0)
 
     try:
@@ -48,7 +48,7 @@ def test_timeout():
     use a more reliable address.""" % (ADDR, extra_msg)
 
     if test_support.verbose:
-        print "test_timeout ..."
+        print ("test_timeout ...")
 
     # A service which issues a welcome banner (without need to write
     # anything).
@@ -76,7 +76,7 @@ def test_timeout():
 
 def test_rude_shutdown():
     if test_support.verbose:
-        print "test_rude_shutdown ..."
+        print ("test_rude_shutdown ...")
 
     try:
         import threading

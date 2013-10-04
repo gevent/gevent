@@ -60,7 +60,7 @@ def test():
                 print (repr(line))
             if not line:
                 if verbose:
-                    print 'EOF'
+                    print ('EOF')
                 break
             continue
         print ('Unexpected return values from select():', rfd, wfd, xfd)

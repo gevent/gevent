@@ -38,14 +38,14 @@ class BasicTests(unittest.TestCase):
         # A crude test for the legacy API
         try:
             ssl.sslwrap_simple(socket.socket(socket.AF_INET))
-        except IOError, e:
+        except IOError as e:
             if e.errno == 32: # broken pipe when ssl_sock.do_handshake(), this test doesn't care about that
                 pass
             else:
                 raise
         try:
             ssl.sslwrap_simple(socket.socket(socket.AF_INET)._sock)
-        except IOError, e:
+        except IOError as e:
             if e.errno == 32: # broken pipe when ssl_sock.do_handshake(), this test doesn't care about that
                 pass
             else:
@@ -100,7 +100,7 @@ class BasicSocketTests(unittest.TestCase):
         except TypeError:
             pass
         else:
-            print "didn't raise TypeError"
+            print ("didn't raise TypeError")
         ssl.RAND_add("this is a random string", 75.0)
 
     def test_parse_cert(self):
