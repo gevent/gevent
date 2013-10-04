@@ -108,7 +108,7 @@ def make_universal_header(filename, *defines):
                 if line.startswith(prefix):
                     line = '#ifdef __LP64__\n#define %s 8\n#else\n#define %s 4\n#endif' % (define, define)
                     break
-        print >>f, line
+        print (line, file=f)
     f.close()
 
 

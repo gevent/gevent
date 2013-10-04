@@ -181,7 +181,7 @@ class OtherNetworkTests(unittest.TestCase):
                     self.assert_(isinstance(err, expected_err), msg)
             except urllib2.URLError as err:
                 if isinstance(err[0], socket.timeout):
-                    print >>sys.stderr, "<timeout: %s>" % url
+                    print ("<timeout: %s>" % url, file=sys.stderr)
                     continue
                 else:
                     raise
@@ -191,7 +191,7 @@ class OtherNetworkTests(unittest.TestCase):
                         buf = f.read()
                         debug("read %d bytes" % len(buf))
                 except socket.timeout:
-                    print >>sys.stderr, "<timeout: %s>" % url
+                    print ("<timeout: %s>" % url, file=sys.stderr)
                 f.close()
             debug("******** next url coming up...")
             time.sleep(0.1)

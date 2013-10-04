@@ -47,7 +47,7 @@ def missing_reference(app, env, node, contnode):
             print (docname)
         for (i_type, i_string, i_target, i_aliasname) in items:
             if noisy >= 3:
-                print '---', [i_type, i_string, i_target, i_aliasname]
+                print ('---', [i_type, i_string, i_target, i_aliasname])
             if i_aliasname.endswith(target):
                 stripped_aliasname = i_aliasname[len(docname):]
                 if stripped_aliasname:

@@ -332,7 +332,7 @@ class ThreadTests(unittest.TestCase):
                         sleep(1)
                         # As a non-daemon thread we SHOULD wake up and nothing
                         # should be torn down yet
-                        print "Woke up, sleep function is:", sleep
+                        print ("Woke up, sleep function is:", sleep)
 
                     threading.Thread(target=child).start()
                     raise SystemExit
@@ -407,7 +407,7 @@ class ThreadJoinOnShutdown(unittest.TestCase):
             # a thread, which waits for the main program to terminate
             def joiningfunc(mainthread):
                 mainthread.join()
-                print 'end of thread'
+                print ('end of thread')
         \n""" % setup_3 + script
 
         import subprocess
@@ -426,7 +426,7 @@ class ThreadJoinOnShutdown(unittest.TestCase):
                                  args=(threading.current_thread(),))
             t.start()
             time.sleep(0.1)
-            print 'end of main'
+            print ('end of main')
             """
         self._run_and_join(script)
 
@@ -435,7 +435,7 @@ class ThreadJoinOnShutdown(unittest.TestCase):
         import os
         if not hasattr(os, 'fork'):
             return
-        script = """if 1:
+        script = """if True:
             childpid = os.fork()
             if childpid != 0:
                 os.waitpid(childpid, 0)
@@ -444,7 +444,7 @@ class ThreadJoinOnShutdown(unittest.TestCase):
             t = threading.Thread(target=joiningfunc,
                                  args=(threading.current_thread(),))
             t.start()
-            print 'end of main'
+            print ('end of main')
             """
         self._run_and_join(script)
 
@@ -461,7 +461,7 @@ class ThreadJoinOnShutdown(unittest.TestCase):
         #    print >>sys.stderr, ('Skipping test_3_join_in_forked_from_thread'
         #                         ' due to known OS bugs on'), sys.platform
         #    return
-        script = """if 1:
+        script = """if True:
             main_thread = threading.current_thread()
             def worker():
                 childpid = os.fork()
@@ -471,7 +471,7 @@ class ThreadJoinOnShutdown(unittest.TestCase):
 
                 t = threading.Thread(target=joiningfunc,
                                      args=(main_thread,))
-                print 'end of main'
+                print ('end of main')
                 t.start()
                 t.join() # Should not block: main_thread is already stopped
 

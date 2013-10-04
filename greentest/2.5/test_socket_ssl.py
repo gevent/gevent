@@ -41,11 +41,11 @@ def test_timeout():
     test_support.requires('network')
 
     def error_msg(extra_msg):
-        print >> sys.stderr, """\
+        print ("""\
     WARNING:  an attempt to connect to %r %s, in
     test_timeout.  That may be legitimate, but is not the outcome we hoped
     for.  If this message is seen often, test_timeout should be changed to
-    use a more reliable address.""" % (ADDR, extra_msg)
+    use a more reliable address.""" % (ADDR, extra_msg), file=sys.stderr)
 
     if test_support.verbose:
         print ("test_timeout ...")
@@ -61,7 +61,7 @@ def test_timeout():
     except socket.timeout:
         error_msg('timed out')
         return
-    except socket.error, exc:  # In case connection is refused.
+    except socket.error as exc:  # In case connection is refused.
         if exc.args[0] == errno.ECONNREFUSED:
             error_msg('was refused')
             return

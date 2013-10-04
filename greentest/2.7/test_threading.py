@@ -425,13 +425,13 @@ class ThreadJoinOnShutdown(BaseTestCase):
                          'os2emx')
 
     def _run_and_join(self, script):
-        script = """if 1:
+        script = """if True:
             import sys, os, time, threading
 
             # a thread, which waits for the main program to terminate
             def joiningfunc(mainthread):
                 mainthread.join()
-                print 'end of thread'
+                print ('end of thread')
         \n""" + script
 
         p = subprocess.Popen([sys.executable, "-c", script], stdout=subprocess.PIPE)
@@ -444,13 +444,13 @@ class ThreadJoinOnShutdown(BaseTestCase):
 
     def test_1_join_on_shutdown(self):
         # The usual case: on exit, wait for a non-daemon thread
-        script = """if 1:
+        script = """if True:
             import os
             t = threading.Thread(target=joiningfunc,
                                  args=(threading.current_thread(),))
             t.start()
             time.sleep(0.1)
-            print 'end of main'
+            print ('end of main')
             """
         self._run_and_join(script)
 
@@ -459,7 +459,7 @@ class ThreadJoinOnShutdown(BaseTestCase):
     @unittest.skipIf(sys.platform in platforms_to_skip, "due to known OS bug")
     def test_2_join_in_forked_process(self):
         # Like the test above, but from a forked interpreter
-        script = """if 1:
+        script = """if True:
             childpid = os.fork()
             if childpid != 0:
                 os.waitpid(childpid, 0)
@@ -468,7 +468,7 @@ class ThreadJoinOnShutdown(BaseTestCase):
             t = threading.Thread(target=joiningfunc,
                                  args=(threading.current_thread(),))
             t.start()
-            print 'end of main'
+            print ('end of main')
             """
         self._run_and_join(script)
 
@@ -477,7 +477,7 @@ class ThreadJoinOnShutdown(BaseTestCase):
     def test_3_join_in_forked_from_thread(self):
         # Like the test above, but fork() was called from a worker thread
         # In the forked process, the main Thread object must be marked as stopped.
-        script = """if 1:
+        script = """if True:
             main_thread = threading.current_thread()
             def worker():
                 childpid = os.fork()
@@ -487,7 +487,7 @@ class ThreadJoinOnShutdown(BaseTestCase):
 
                 t = threading.Thread(target=joiningfunc,
                                      args=(main_thread,))
-                print 'end of main'
+                print ('end of main')
                 t.start()
                 t.join() # Should not block: main_thread is already stopped
 
@@ -527,7 +527,7 @@ class ThreadJoinOnShutdown(BaseTestCase):
         #   lock in the Thread._block Condition object and hang, because the
         #   lock was held across the fork.
 
-        script = """if 1:
+        script = """if True:
             import os, time, threading
 
             finish_join = False

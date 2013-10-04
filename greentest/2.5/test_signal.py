@@ -69,10 +69,10 @@ def force_test_exit():
         # time for the normal sequence of events to occur.  This is
         # just a stop-gap to try to prevent the test from hanging.
         time.sleep(MAX_DURATION + 5)
-        print >> sys.__stdout__, '  child should not have to kill parent'
+        print ('  child should not have to kill parent', file=sys.__stdout__)
         for signame in "SIGHUP", "SIGUSR1", "SIGUSR2", "SIGALRM":
             os.kill(pid, getattr(signal, signame))
-            print >> sys.__stdout__, "    child sent", signame, "to", pid
+            print ("    child sent", signame, "to", pid, file=sys.__stdout__)
             time.sleep(1)
     finally:
         os._exit(0)

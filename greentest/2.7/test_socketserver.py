@@ -37,7 +37,7 @@ def receive(sock, n, timeout=20):
     if sock in r:
         return sock.recv(n)
     else:
-        raise RuntimeError, "timed out on %r" % (sock,)
+        raise RuntimeError("timed out on %r" % (sock,))
 
 if HAVE_UNIX_SOCKETS:
     class ForkingUnixStreamServer(SocketServer.ForkingMixIn,
@@ -118,7 +118,7 @@ class SocketServerTest(unittest.TestCase):
                 line = self.rfile.readline()
                 self.wfile.write(line)
 
-        if verbose: print "creating server"
+        if verbose: print ("creating server")
         server = MyServer(addr, MyHandler)
         self.assertEqual(server.server_address, server.socket.getsockname())
         return server
@@ -147,7 +147,7 @@ class SocketServerTest(unittest.TestCase):
         for i in range(3):
             if verbose: print ("test client", i)
             testfunc(svrcls.address_family, addr)
-        if verbose: print "waiting for server"
+        if verbose: print ("waiting for server")
         server.shutdown()
         t.join()
         if verbose: print ("done")

@@ -356,7 +356,7 @@ cgi_file1 = """\
 #!%s
 
 print ("Content-type: text/html")
-print
+print ()
 print ("Hello World")
 """
 
@@ -368,8 +368,8 @@ print ("Content-type: text/html")
 print ()
 
 form = cgi.FieldStorage()
-print "%%s, %%s, %%s" %% (form.getfirst("spam"), form.getfirst("eggs"),
-                          form.getfirst("bacon"))
+print ("%%s, %%s, %%s" %% (form.getfirst("spam"), form.getfirst("eggs"),
+                          form.getfirst("bacon")))
 """
 
 

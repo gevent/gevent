@@ -45,9 +45,9 @@ def newtask():
 for i in range(numtasks):
     newtask()
 
-print 'waiting for all tasks to complete'
+print ('waiting for all tasks to complete')
 done.acquire()
-print 'all tasks done'
+print ('all tasks done')
 
 class barrier:
     def __init__(self, n):
@@ -108,7 +108,7 @@ def task2(ident):
 
 print ('\n*** Barrier Test ***')
 if done.acquire(0):
-    raise ValueError, "'done' should have remained acquired"
+    raise ValueError("'done' should have remained acquired")
 bar = barrier(numtasks)
 running = numtasks
 for i in range(numtasks):
@@ -119,11 +119,11 @@ print ('all tasks done')
 # not all platforms support changing thread stack size
 print '\n*** Changing thread stack size ***'
 if thread.stack_size() != 0:
-    raise ValueError, "initial stack_size not 0"
+    raise ValueError("initial stack_size not 0")
 
 thread.stack_size(0)
 if thread.stack_size() != 0:
-    raise ValueError, "stack_size not reset to default"
+    raise ValueError("stack_size not reset to default")
 
 from os import name as os_name
 if os_name in ("nt", "os2", "posix"):

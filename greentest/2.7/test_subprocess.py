@@ -103,7 +103,7 @@ class ProcessTestCase(BaseTestCase):
         # check_output() function stderr redirected to stdout
         with self.assertRaises(ValueError) as c:
             output = subprocess.check_output(
-                    [sys.executable, "-c", "print 'will not be run'"],
+                    [sys.executable, "-c", "print ('will not be run')"],
                     stdout=sys.stdout)
             self.fail("Expected ValueError when stdout arg supplied.")
         self.assertIn('stdout', c.exception.args[0])
@@ -140,9 +140,9 @@ class ProcessTestCase(BaseTestCase):
     def test_stdout_none(self):
         # .stdout is None when not redirected
         p = subprocess.Popen([sys.executable, "-c",
-                             'print "    this bit of output is from a '
+                             'print ("    this bit of output is from a '
                              'test of stdout in a different '
-                             'process ..."'],
+                             'process ...")'],
                              stdin=subprocess.PIPE, stderr=subprocess.PIPE)
         self.addCleanup(p.stdin.close)
         self.addCleanup(p.stderr.close)

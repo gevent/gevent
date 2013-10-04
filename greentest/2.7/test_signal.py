@@ -54,14 +54,14 @@ class InterProcessSignalTests(unittest.TestCase):
     def handlerA(self, signum, frame):
         self.a_called = True
         if test_support.verbose:
-            print "handlerA invoked from signal %s at:\n%s" % (
-                signum, self.format_frame(frame, limit=1))
+            print ("handlerA invoked from signal %s at:\n%s" % (
+                signum, self.format_frame(frame, limit=1)))
 
     def handlerB(self, signum, frame):
         self.b_called = True
         if test_support.verbose:
-            print "handlerB invoked from signal %s at:\n%s" % (
-                signum, self.format_frame(frame, limit=1))
+            print ("handlerB invoked from signal %s at:\n%s" % (
+                signum, self.format_frame(frame, limit=1)))
         raise HandlerBCalled(signum, self.format_frame(frame))
 
     def wait(self, child):

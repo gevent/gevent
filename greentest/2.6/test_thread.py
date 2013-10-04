@@ -18,7 +18,7 @@ def verbose_print(arg):
     """Helper function for printing out debugging output."""
     if test_support.verbose:
         with _print_mutex:
-            print arg
+            print (arg)
 
 
 class BasicThreadTest(unittest.TestCase):

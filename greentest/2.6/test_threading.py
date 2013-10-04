@@ -380,13 +380,13 @@ class ThreadTests(unittest.TestCase):
 class ThreadJoinOnShutdown(unittest.TestCase):
 
     def _run_and_join(self, script):
-        script = """if 1:
+        script = """if True:
             import sys, os, time, threading
 
             # a thread, which waits for the main program to terminate
             def joiningfunc(mainthread):
                 mainthread.join()
-                print 'end of thread'
+                print ('end of thread')
         \n""" + script
 
         import subprocess
@@ -399,13 +399,13 @@ class ThreadJoinOnShutdown(unittest.TestCase):
 
     def test_1_join_on_shutdown(self):
         # The usual case: on exit, wait for a non-daemon thread
-        script = """if 1:
+        script = """if True:
             import os
             t = threading.Thread(target=joiningfunc,
                                  args=(threading.current_thread(),))
             t.start()
             time.sleep(0.1)
-            print 'end of main'
+            print ('end of main')
             """
         self._run_and_join(script)
 
@@ -415,7 +415,7 @@ class ThreadJoinOnShutdown(unittest.TestCase):
         import os
         if not hasattr(os, 'fork'):
             return
-        script = """if 1:
+        script = """if True:
             childpid = os.fork()
             if childpid != 0:
                 os.waitpid(childpid, 0)
@@ -424,7 +424,7 @@ class ThreadJoinOnShutdown(unittest.TestCase):
             t = threading.Thread(target=joiningfunc,
                                  args=(threading.current_thread(),))
             t.start()
-            print 'end of main'
+            print ('end of main')
             """
         self._run_and_join(script)
 
@@ -437,10 +437,11 @@ class ThreadJoinOnShutdown(unittest.TestCase):
         # Skip platforms with known problems forking from a worker thread.
         # See http://bugs.python.org/issue3863.
         if sys.platform in ('freebsd4', 'freebsd5', 'freebsd6', 'os2emx'):
-            print >>sys.stderr, ('Skipping test_3_join_in_forked_from_thread'
-                                 ' due to known OS bugs on'), sys.platform
+            print (('Skipping test_3_join_in_forked_from_thread'
+                                 ' due to known OS bugs on'), sys.platform,
+                                 file=sys.stderr)
             return
-        script = """if 1:
+        script = """if True:
             main_thread = threading.current_thread()
             def worker():
                 childpid = os.fork()
