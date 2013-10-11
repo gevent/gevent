@@ -12,12 +12,24 @@ __all__ = ['patch_all',
            'patch_select',
            'patch_thread',
            'patch_subprocess',
-           'patch_sys']
+           'patch_sys',
+           'is_module_patched',
+           'is_object_patched']
 
 
 # maps module name -> attribute name -> original item
 # e.g. "time" -> "sleep" -> built-in function sleep
 saved = {}
+
+
+def is_module_patched(modname):
+    """Check if a module has been replaced with a cooperative version."""
+    return modname in saved
+
+
+def is_object_patched(modname, objname):
+    """Check if an object in a module has been replaced with a cooperative version."""
+    return is_module_patched(modname) and objname in saved[modname]
 
 
 def _get_original(name, items):
