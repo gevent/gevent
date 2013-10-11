@@ -121,11 +121,11 @@ def patch_thread(threading=True, _threading_local=True, Event=False):
         threading = __import__('threading')
         if Event:
             from gevent.event import Event
-            threading.Event = Event
+            patch_item(threading, 'Event', Event)
     if _threading_local:
         _threading_local = __import__('_threading_local')
         from gevent.local import local
-        _threading_local.local = local
+        patch_item(_threading_local, 'local', local)
 
 
 def patch_socket(dns=True, aggressive=True):
