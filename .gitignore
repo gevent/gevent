@@ -5,3 +5,10 @@ gevent.*.[ch]
 gevent/core.pyx
 *.egg-info
 
+doc/changelog.rst
+doc/_build
+doc/gevent.*.rst
+!doc/gevent.core.rst
+!doc/gevent.event.rst
+!doc/gevent.hub.rst
+!doc/gevent.queue.rst
