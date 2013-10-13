@@ -431,7 +431,7 @@ class WSGIHandler(object):
                 exc_info = None
         self.code = int(status.split(' ', 1)[0])
         self.status = status
-        self.response_headers = headers
+        self.response_headers = list(headers)
 
         provided_connection = None
         self.provided_date = None
