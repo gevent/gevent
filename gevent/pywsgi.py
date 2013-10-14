@@ -524,7 +524,7 @@ class WSGIHandler(object):
         if self.response_length:
             self.close_connection = True
         else:
-            self.start_response(_INTERNAL_ERROR_STATUS, _INTERNAL_ERROR_HEADERS)
+            self.start_response(_INTERNAL_ERROR_STATUS, _INTERNAL_ERROR_HEADERS[:])
             self.write(_INTERNAL_ERROR_BODY)
 
     def _headers(self):
