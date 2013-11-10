@@ -113,7 +113,7 @@ def relaxed_is_equal(a, b):
     """
     if type(a) is not type(b):
         return False
-    if isinstance(a, basestring):
+    if isinstance(a, str):
         return compare_ipv6(a, b)
     if hasattr(a, '__iter__'):
         if len(a) != len(b):
@@ -299,7 +299,7 @@ class TestFamily(TestCase):
             result = function(*args)
             raise AssertionError('%s: Expected to raise %s, instead returned %r' % (function, error, result))
         except Exception, ex:
-            if isinstance(error, basestring):
+            if isinstance(error, str):
                 repr_error = error
             else:
                 repr_error = repr(error)
@@ -368,7 +368,7 @@ class TestInterrupted_gethostbyname(greentest.GenericWaitTestCase):
 
     def wait(self, timeout):
         with gevent.Timeout(timeout, False):
-            for index in xrange(1000000):
+            for index in range(1000000):
                 try:
                     gevent_socket.gethostbyname('www.x%s.com' % index)
                 except socket.error:

@@ -52,7 +52,7 @@ class Input(object):
     def _discard(self):
         if self.socket is None and (self.position < (self.content_length or 0) or self.chunked_input):
             # ## Read and discard body
-            while 1:
+            while True:
                 d = self.read(16384)
                 if not d:
                     break
@@ -353,7 +353,7 @@ class WSGIHandler(object):
     def _sendall(self, data):
         try:
             self.socket.sendall(data)
-        except socket.error, ex:
+        except socket.error as ex:
             self.status = 'socket error: %s' % ex
             if self.code > 0:
                 self.code = -self.code

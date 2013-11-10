@@ -839,7 +839,7 @@ class HandlerTests(unittest.TestCase):
         req = Request(from_url, origin_req_host="example.com")
         count = 0
         try:
-            while 1:
+            while True:
                 redirect(h, req, "http://example.com/")
                 count = count + 1
         except urllib2.HTTPError:
@@ -850,7 +850,7 @@ class HandlerTests(unittest.TestCase):
         req = Request(from_url, origin_req_host="example.com")
         count = 0
         try:
-            while 1:
+            while True:
                 redirect(h, req, "http://example.com/%d" % count)
                 count = count + 1
         except urllib2.HTTPError:
@@ -880,7 +880,7 @@ class HandlerTests(unittest.TestCase):
 
     def test_cookie_redirect(self):
         # cookies shouldn't leak into redirected requests
-        from cookielib import CookieJar
+        from http.cookies import CookieJar
 
         from test_cookielib import interact_netscape
 

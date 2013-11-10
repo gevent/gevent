@@ -17,7 +17,7 @@ def _retry_thrice(func, exc, *args, **kwargs):
     for i in range(3):
         try:
             return func(*args, **kwargs)
-        except exc, last_exc:
+        except exc as last_exc:
             continue
         except:
             raise
@@ -173,7 +173,7 @@ class OtherNetworkTests(unittest.TestCase):
             debug(url)
             try:
                 f = urlopen(url, req, TIMEOUT)
-            except EnvironmentError, err:
+            except EnvironmentError as err:
                 debug(err)
                 if expected_err:
                     msg = ("Didn't get expected error(s) %s for %s %s, got %s: %s" %

@@ -12,7 +12,7 @@ ARG = 0
 
 def test(sleep, arg):
     start = time()
-    for _ in xrange(N):
+    for _ in range(N):
         sleep(arg)
     return time() - start
 
@@ -31,7 +31,7 @@ def bench_gevent(arg=0):
 def bench_eventlet(arg):
     try:
         import eventlet
-    except ImportError, ex:
+    except ImportError as ex:
         sys.stderr.write('Failed to import eventlet: %s\n' % ex)
         return
     from eventlet.api import sleep

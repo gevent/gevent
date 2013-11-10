@@ -86,7 +86,7 @@ class BaseServer(object):
         elif hasattr(spawn, 'spawn'):
             self.pool = spawn
             self._spawn = spawn.spawn
-        elif isinstance(spawn, (int, long)):
+        elif isinstance(spawn, (int)):
             from gevent.pool import Pool
             self.pool = Pool(spawn)
             self._spawn = self.pool.spawn
@@ -132,7 +132,7 @@ class BaseServer(object):
             spawn(self._handle, *args)
 
     def _do_read(self):
-        for _ in xrange(self.max_accept):
+        for _ in range(self.max_accept):
             if self.full():
                 self.stop_accepting()
                 return

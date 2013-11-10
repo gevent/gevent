@@ -176,7 +176,7 @@ class Popen(object):
                  cwd=None, env=None, universal_newlines=False,
                  startupinfo=None, creationflags=0, threadpool=None):
         """Create new Popen instance."""
-        if not isinstance(bufsize, (int, long)):
+        if not isinstance(bufsize, (int)):
             raise TypeError("bufsize must be an integer")
         hub = get_hub()
 
@@ -443,7 +443,7 @@ class Popen(object):
                                                  env,
                                                  cwd,
                                                  startupinfo)
-            except pywintypes.error, e:
+            except pywintypes.error as e:
                 # Translate pywintypes.error to WindowsError, which is
                 # a subclass of OSError.  FIXME: We should really
                 # translate errno using _sys_errlist (or similar), but
@@ -601,7 +601,7 @@ class Popen(object):
                 os.closerange(3, but)
                 os.closerange(but + 1, MAXFD)
             else:
-                for i in xrange(3, MAXFD):
+                for i in range(3, MAXFD):
                     if i == but:
                         continue
                     try:
@@ -799,7 +799,7 @@ def write_and_close(fobj, data):
     try:
         if data:
             fobj.write(data)
-    except (OSError, IOError), ex:
+    except (OSError, IOError) as ex:
         if ex.errno != errno.EPIPE and ex.errno != errno.EINVAL:
             raise
     finally:

@@ -198,7 +198,7 @@ class BasicTest(TestCase):
             resp.begin()
             try:
                 resp.read()
-            except httplib.IncompleteRead, i:
+            except httplib.IncompleteRead as i:
                 self.assertEquals(i.partial, 'hello world')
                 self.assertEqual(repr(i),'IncompleteRead(11 bytes read)')
                 self.assertEqual(str(i),'IncompleteRead(11 bytes read)')

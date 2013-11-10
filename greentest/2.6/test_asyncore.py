@@ -308,7 +308,7 @@ class DispatcherTests(unittest.TestCase):
         # object but the dispatcher instance instead
         try:
             d.foo
-        except AttributeError, err:
+        except AttributeError as err:
             self.assertTrue('dispatcher instance' in str(err))
         else:
             self.fail("exception not raised")

@@ -9,7 +9,7 @@ if 'runtestcase' in sys.argv[1:]:
     gevent.sleep(1)
 else:
     import subprocess
-    for _ in xrange(5):
+    for _ in range(5):
         out, err = subprocess.Popen([sys.executable, __file__, 'runtestcase'], stderr=subprocess.PIPE).communicate()
         if 'refs' in err:
             assert err.startswith('bye'), repr(err)

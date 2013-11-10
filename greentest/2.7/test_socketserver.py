@@ -131,9 +131,9 @@ class SocketServerTest(unittest.TestCase):
         # the server.
         addr = server.server_address
         if verbose:
-            print "server created"
-            print "ADDR =", addr
-            print "CLASS =", svrcls
+            print ("server created")
+            print ("ADDR =", addr)
+            print ("CLASS =", svrcls)
         t = threading.Thread(
             name='%s serving' % svrcls,
             target=server.serve_forever,
@@ -143,14 +143,14 @@ class SocketServerTest(unittest.TestCase):
             kwargs={'poll_interval':0.01})
         t.daemon = True  # In case this function raises.
         t.start()
-        if verbose: print "server running"
+        if verbose: print ("server running")
         for i in range(3):
-            if verbose: print "test client", i
+            if verbose: print ("test client", i)
             testfunc(svrcls.address_family, addr)
         if verbose: print "waiting for server"
         server.shutdown()
         t.join()
-        if verbose: print "done"
+        if verbose: print ("done")
 
     def stream_examine(self, proto, addr):
         s = socket.socket(proto, socket.SOCK_STREAM)

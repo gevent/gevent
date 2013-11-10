@@ -15,7 +15,7 @@ means repeatedly calling :meth:`get <Queue.get>` until :meth:`get <Queue.get>` r
     >>> queue.put(2)
     >>> queue.put(StopIteration)
     >>> for item in queue:
-    ...    print item
+    ...    print (item)
     1
     2
 """
@@ -54,8 +54,8 @@ class Queue(object):
                               DeprecationWarning, stacklevel=2)
         else:
             self.maxsize = maxsize
-        self.getters = set()
-        self.putters = set()
+        self.getters = {}
+        self.putters = {}
         self.hub = get_hub()
         self._event_unlock = None
         if items:

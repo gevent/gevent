@@ -12,7 +12,7 @@ saved_loop = hub.loop
 # Destroy hub including default loop.
 hub.destroy(destroy_loop=True)
 assert saved_loop.fileno() is None, saved_loop
-print hub, saved_loop
+print (hub, saved_loop)
 
 # Create new hub and explicitly request creation of a new default loop.
 hub = gevent.get_hub(default=True)

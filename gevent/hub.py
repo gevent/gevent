@@ -279,7 +279,7 @@ class Hub(greenlet):
         else:
             try:
                 info = self.loop._format()
-            except Exception, ex:
+            except Exception as ex:
                 info = str(ex) or repr(ex) or 'error'
         result = '<%s at 0x%x %s' % (self.__class__.__name__, id(self), info)
         if self._resolver is not None:
@@ -590,7 +590,7 @@ def iwait(objects, timeout=None):
         count = len(objects)
         for obj in objects:
             obj.rawlink(switch)
-        for _ in xrange(count):
+        for _ in range(count):
             item = waiter.get()
             waiter.clear()
             if item is _NONE:

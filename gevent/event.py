@@ -92,7 +92,7 @@ class Event(object):
         *callback* will be called in the :class:`Hub <gevent.hub.Hub>`, so it must not use blocking gevent API.
         *callback* will be passed one argument: this instance.
         """
-        if not callable(callback):
+        if not hasattr(callback, '__call__'):
             raise TypeError('Expected callable: %r' % (callback, ))
         self._links.add(callback)
         if self._flag and not self._notifier:
@@ -294,7 +294,7 @@ class AsyncResult(object):
         *callback* will be called in the :class:`Hub <gevent.hub.Hub>`, so it must not use blocking gevent API.
         *callback* will be passed one argument: this instance.
         """
-        if not callable(callback):
+        if not hasattr(callback, '__call__'):
             raise TypeError('Expected callable: %r' % (callback, ))
         self._links.append(callback)
         if self.ready() and not self._notifier:

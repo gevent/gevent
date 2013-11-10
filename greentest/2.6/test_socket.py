@@ -124,11 +124,11 @@ class ThreadableTest:
         self.client_ready.set()
         self.clientSetUp()
         with test_support._check_py3k_warnings():
-            if not callable(test_func):
+            if not hasattr(test_func, '__call__'):
                 raise TypeError("test_func must be a callable function.")
         try:
             test_func()
-        except Exception, strerror:
+        except Exception as strerror:
             self.queue.put(strerror)
         self.clientTearDown()
 
@@ -850,7 +850,7 @@ class FileObjectInterruptedTestCase(unittest.TestCase):
             self._recv_step = iter(recv_funcs)
 
         def recv(self, size):
-            return self._recv_step.next()()
+            return next(self._recv_step)()
 
     @staticmethod
     def _raise_eintr():
@@ -1228,7 +1228,7 @@ class BufferIOTest(SocketConnectedTest):
 
     def _testRecvInto(self):
         with test_support._check_py3k_warnings():
-            buf = buffer(MSG)
+            buf = memoryview(MSG)
         self.serv_conn.send(buf)
 
     def testRecvFromInto(self):
@@ -1240,7 +1240,7 @@ class BufferIOTest(SocketConnectedTest):
 
     def _testRecvFromInto(self):
         with test_support._check_py3k_warnings():
-            buf = buffer(MSG)
+            buf = memoryview(MSG)
         self.serv_conn.send(buf)
 
 
@@ -1263,7 +1263,7 @@ def isTipcAvailable():
             if line.startswith("tipc "):
                 return True
     if test_support.verbose:
-        print "TIPC module is not loaded, please 'sudo modprobe tipc'"
+        print ("TIPC module is not loaded, please 'sudo modprobe tipc'")
     return False
 
 class TIPCTest (unittest.TestCase):

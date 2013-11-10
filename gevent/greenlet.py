@@ -19,7 +19,7 @@ class SpawnedLink(object):
     __slots__ = ['callback']
 
     def __init__(self, callback):
-        if not callable(callback):
+        if not hasattr(callback, '__call__'):
             raise TypeError("Expected callable: %r" % (callback, ))
         self.callback = callback
 
@@ -339,7 +339,7 @@ class Greenlet(greenlet):
 
         WARNING: the callable will be called in the HUB greenlet.
         """
-        if not callable(callback):
+        if not hasattr(callback, '__call__'):
             raise TypeError('Expected callable: %r' % (callback, ))
         self._links.append(callback)
         if self.ready() and self._links and not self._notifier:
