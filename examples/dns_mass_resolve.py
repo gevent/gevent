@@ -34,7 +34,7 @@ def job(url):
         finished += 1
 
 with gevent.Timeout(2, False):
-    for x in xrange(10, 10 + N):
+    for x in range(10, 10 + N):
         pool.spawn(job, '%s.com' % x)
     pool.join()
 
