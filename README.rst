@@ -3,13 +3,11 @@ gevent_
 
 .. attention::
 
-  New_ version of gevent uses libev_ and c-ares rather than libevent and includes all the dependencies in the release tarball.
-
-  You can get the 1.0 release candidate from `github`_. Please give it a try.
+  This version is deprecated. Please use the `new 1.0 version`_.
 
 .. _github: https://github.com/surfly/gevent
 .. _libev: http://blog.gevent.org/2011/04/28/libev-and-libevent/
-.. _New: https://github.com/surfly/gevent/blob/master/changelog.rst
+.. _new 1.0 version: https://github.com/surfly/gevent/blob/master/changelog.rst
 
 gevent_ is a Python networking library that uses greenlet_ to provide synchronous API on top of libevent_ event loop.
 
