@@ -30,4 +30,8 @@ clean:
 	rm -f gevent._semaphore.c gevent._semaphore.h gevent/gevent._semaphore.c gevent/gevent._semaphore.h
 	rm -f gevent._util.c gevent._util.h gevent/gevent._util.c gevent/gevent._util.h
 
-.PHONY: clean all
+doc:
+	cd doc && PYTHONPATH=.. make html
+
+
+.PHONY: clean all doc
