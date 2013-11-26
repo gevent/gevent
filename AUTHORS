@@ -35,6 +35,15 @@ and the contributors (ordered by the date of first contribution):
   Geert Jansen
   Vitaly Kruglikov
   Saúl Ibarra Corretgé
+  Oliver Beattie
+  Bobby Powers
+  Anton Patrushev
+  Jan-Philip Gehrcke
+  Alex Gaynor
+  陈小玉
+  Philip Conrad
+
+  See https://github.com/surfly/gevent/graphs/contributors for more info.
 
 Gevent is inspired by and uses some code from eventlet which was written by
 
