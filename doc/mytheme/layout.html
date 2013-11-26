@@ -1,0 +1,263 @@
+{%- block doctype -%}
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+{%- endblock %}
+{%- set reldelim1 = reldelim1 is not defined and ' &raquo;' or reldelim1 %}
+{%- set reldelim2 = reldelim2 is not defined and ' |' or reldelim2 %}
+{%- set url_root = pathto('', 1) %}
+{%- if url_root == '#' %}{% set url_root = '' %}{% endif %}
+
+{%- macro relbar() %}
+    <div class="related">
+      <h3>{{ _('Navigation') }}</h3>
+      <ul>
+        {%- for rellink in rellinks %}
+        <li class="right" {% if loop.first %}style="margin-right: 10px"{% endif %}>
+          <a href="{{ pathto(rellink[0]) }}" title="{{ rellink[1]|striptags }}"
+             {{ accesskey(rellink[2]) }}>{{ rellink[3] }}</a>
+          {%- if not loop.first %}{{ reldelim2 }}{% endif %}</li>
+        {%- endfor %}
+        {%- block rootrellink %}
+        <li><a href="{{ pathto(master_doc) }}">{{ shorttitle|e }}</a>{{ reldelim1 }}</li>
+        {%- endblock %}
+        {%- for parent in parents %}
+          <li><a href="{{ parent.link|e }}" {% if loop.last %}{{ accesskey("U") }}{% endif %}>{{ parent.title }}</a>{{ reldelim1 }}</li>
+        {%- endfor %}
+        {%- block relbaritems %} {% endblock %}
+      </ul>
+    </div>
+{%- endmacro %}
+
+{%- macro sidebar() %}
+      {%- if not embedded %}{% if not theme_nosidebar|tobool %}
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+          {%- block sidebarlogo %}
+          {%- if logo %}
+            <p class="logo"><a href="{{ pathto(master_doc) }}">
+              <img class="logo" src="{{ pathto('_static/' + logo, 1) }}" alt="Logo"/>
+            </a></p>
+          {%- endif %}
+          {%- endblock %}
+          {%- block sidebartoc %}
+          {%- if display_toc %}
+            <h4 class="label label-blue"><a href="{{ pathto(master_doc) }}">{{ _('Table Of Contents') }}</a></h4>
+            {{ toc }}
+            <ul>
+          {%- if next %}
+          <li>Next: <a href="{{ next.link|e }}" title="{{ _('next chapter') }}">{{ next.title }}</a></li>
+          {%- endif %}
+          {%- if prev %}
+          <li>Previous: <a href="{{ prev.link|e }}" title="{{ _('previous chapter') }}">{{ prev.title }}</a></li>
+          {%- endif %}
+          {%- if parents and parents[-1]!=next and parents[-1]!=prev %}
+          <li>Up: <a href="{{ parents[-1].link|e }}">{{ parents[-1].title }}</a></li>
+          {%- endif %}
+          </ul>
+          {%- else %}
+          <h4 class="label label-blue"><a href="{{ pathto(master_doc) }}">{{ _('Navigation') }}</a></h4>
+          <ul>
+          {%- if next %}
+          <li>Next: <a href="{{ next.link|e }}" title="{{ _('next chapter') }}">{{ next.title }}</a></li>
+          {%- endif %}
+          {%- if prev %}
+          <li>Previous: <a href="{{ prev.link|e }}" title="{{ _('previous chapter') }}">{{ prev.title }}</a></li>
+          {%- endif %}
+          {%- if parents and parents[-1]!=next and parents[-1]!=prev %}
+          <li>Up: <a href="{{ parents[-1].link|e }}">{{ parents[-1].title }}</a></li>
+          {%- endif %}
+          </ul>
+
+          {%- endif %}
+          {%- endblock %}
+          {%- block sidebarrel %}
+          <h4 class="label label-orange">Related pages</h4>
+          <ul>
+          <li><a href="https://github.com/surfly/gevent/tree/master/examples"
+              title="Browse gevent/examples in the development repository">Code examples</a></li>
+          </ul>
+          {%- endblock %}
+          {%- block sidebarsourcelink %}
+          {%- if show_source and has_source and sourcename %}
+            <h3>{{ _('This Page') }}</h3>
+            <ul class="this-page-menu">
+              <li><a href="{{ pathto('_sources/' + sourcename, true)|e }}"
+                     rel="nofollow">{{ _('Show Source') }}</a></li>
+            </ul>
+          {%- endif %}
+          {%- endblock %}
+          {%- if customsidebar %}
+          {% include customsidebar %}
+          {%- endif %}
+{#
+          {%- block sidebarsearch %}
+          {%- if pagename != "search" %}
+          <div id="searchbox" style="display: none">
+            <h3>{{ _('Quick search') }}</h3>
+              <form class="search" action="{{ pathto('search') }}" method="get">
+                <input type="text" name="q" size="18" />
+                <input type="submit" value="{{ _('Go') }}" />
+                <input type="hidden" name="check_keywords" value="yes" />
+                <input type="hidden" name="area" value="default" />
+              </form>
+              <p class="searchtip" style="font-size: 90%">
+              {{ _('Enter search terms or a module, class or function name.') }}
+              </p>
+          </div>
+          <script type="text/javascript">$('#searchbox').show(0);</script>
+          {%- endif %}
+          {%- endblock %} #}
+        </div>
+      </div>
+      {%- endif %}{% endif %}
+{%- endmacro %}
+
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr">
+
+<head>
+	<meta http-equiv="content-type" content="text/html; charset=UTF-8"/>
+    {{ metatags }}
+    {%- if not embedded and docstitle %}
+      {%- set titlesuffix = " &mdash; "|safe + docstitle|e %}
+    {%- else %}
+      {%- set titlesuffix = "" %}
+    {%- endif %}
+    <title>{{ title|striptags }}{{ titlesuffix }}</title>
+    <link rel="stylesheet" href="{{ pathto('_static/' + style, 1) }}" type="text/css" />
+    <link rel="stylesheet" href="{{ pathto('_static/pygments.css', 1) }}" type="text/css" />
+    {%- if not embedded %}
+{#    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '{{ url_root }}',
+        VERSION:     '{{ release|e }}',
+        COLLAPSE_MODINDEX: false,
+        FILE_SUFFIX: '{{ file_suffix }}',
+        HAS_SOURCE:  {{ has_source|lower }}
+      };
+  </script>
+    {%- for scriptfile in script_files %}
+    <script type="text/javascript" src="{{ pathto(scriptfile, 1) }}"></script>
+    {%- endfor %}
+    {%- if use_opensearch %}
+    <link rel="search" type="application/opensearchdescription+xml"
+          title="{% trans docstitle=docstitle|e %}Search within {{ docstitle }}{% endtrans %}"
+          href="{{ pathto('_static/opensearch.xml', 1) }}"/>
+    {%- endif %}     #}
+    {%- if favicon %}
+    <link rel="shortcut icon" href="{{ pathto('_static/' + favicon, 1) }}"/>
+    {%- endif %}
+    {%- endif %}
+{%- block linktags %}
+    {%- if hasdoc('about') %}
+    <link rel="author" title="{{ _('About these documents') }}" href="{{ pathto('about') }}" />
+    {%- endif %}
+    {%- if hasdoc('genindex') %}
+    <link rel="index" title="{{ _('Index') }}" href="{{ pathto('genindex') }}" />
+    {%- endif %}
+    {%- if hasdoc('search') %}
+    <link rel="search" title="{{ _('Search') }}" href="{{ pathto('search') }}" />
+    {%- endif %}
+    {%- if hasdoc('copyright') %}
+    <link rel="copyright" title="{{ _('Copyright') }}" href="{{ pathto('copyright') }}" />
+    {%- endif %}
+    <link rel="top" title="{{ docstitle|e }}" href="{{ pathto('index') }}" />
+    {%- if parents %}
+    <link rel="up" title="{{ parents[-1].title|striptags }}" href="{{ parents[-1].link|e }}" />
+    {%- endif %}
+    {%- if next %}
+    <link rel="next" title="{{ next.title|striptags }}" href="{{ next.link|e }}" />
+    {%- endif %}
+    {%- if prev %}
+    <link rel="prev" title="{{ prev.title|striptags }}" href="{{ prev.link|e }}" />
+    {%- endif %}
+{%- endblock %}
+{%- block extrahead %} {% endblock %}
+  </head>
+
+<body>
+
+<div id="site-wrapper">
+	<div id="header">
+		<div id="top">
+			<div class="left" id="logo">
+                <h1><a id="title" href="/">gevent</a></h1>
+			</div>
+			<div class="left navigation" id="main-nav">
+				<ul class="tabbed">
+                    <li><a href="http://blog.gevent.org">Blog</a></li>
+                    <li><a href="https://github.com/surfly/gevent">Code</a></li>
+                    <li{%- if pagename!='community' and pagename!='sfc' %} class="current-tab"{%- endif %}><a href="/contents.html">Docs</a></li>
+                    <li><a href="http://pypi.python.org/pypi/gevent#downloads">Download</a></li>
+					<li{%- if pagename=='community' %} class="current-tab"{%- endif %}><a href="/community.html">Mailing list</a></li>
+                    <li><a href="https://github.com/surfly/gevent/issues">Issues</a></li>
+					<li><a href="http://webchat.freenode.net/?channels=gevent" rel="nofollow">IRC</a></li>
+                    <li{%- if pagename=='sfc' %} class="current-tab"{%- endif %}><a href="/sfc.html">Donate</a></li>
+                </ul>
+				<div class="clearer">&nbsp;</div>
+			</div>
+			<div class="clearer">&nbsp;</div>
+        </div>
+    </div>
+
+	<div id="splash">
+
+        <div class="col3big left">
+
+            <div class="document">
+{%- block document %}
+                <div class="documentwrapper">
+{%- if not embedded %}{% if not theme_nosidebar|tobool %}
+                    <div class="bodywrapper">
+{%- endif %}{% endif %}
+                        <div class="body">
+
+
+                            {% block body %} {% endblock %}
+
+          {%- if next %}
+          <p><strong>Next page: <a href="{{ next.link|e }}" title="{{ _('next chapter') }}">{{ next.title }}</a></strong></p>
+          {%- endif %}
+
+                        </div>
+{%- if not embedded %}{% if not theme_nosidebar|tobool %}
+                    </div>
+{%- endif %}{% endif %}
+                </div>
+{%- endblock %}
+            </div>
+        </div>
+
+        <div class="col3 right">
+            <div class="body">
+                {%- block sidebar2 %}{{ sidebar() }}{% endblock %}
+            </div>
+        </div>
+ 		<div class="clearer">&nbsp;</div>
+    </div>
+
+	<div id="footer">
+
+		<div class="left" id="footer-left">
+
+            <p><a href="http://denisbilenko.com" class="quiet-link">&copy; 2009-2013 Denis Bilenko</a></p>
+
+			<div class="clearer">&nbsp;</div>
+
+		</div>
+
+		<div class="right" id="footer-right">
+
+			<p class="large"><a href="http://blog.gevent.org">Blog</a> <span class="text-separator">|</span> <a href="https://github.com/surfly/gevent">Code</a> <span class="text-separator">|</span> <a href="/contents.html">Docs</a> <span class="text-separator">|</span> <a href="http://pypi.python.org/pypi/gevent">Download</a> <span class="text-separator">|</span> <a href="/community.html">Mailing list</a> <span class="text-separator">|</span> <a href="https://github.com/surfly/gevent/issues">Issue tracker</a> <span class="text-separator">|</span> <a href="http://webchat.freenode.net/?channels=gevent" rel="nofollow">IRC</a> <span class="text-separator">|</span> <a href="#top" class="quiet">Page Top &uarr;</a></p>
+
+		</div>
+
+		<div class="clearer">&nbsp;</div>
+
+	</div>
+
+</div>
+
+</body>
+</html>
+
+
