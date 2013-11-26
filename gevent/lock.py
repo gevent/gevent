@@ -10,7 +10,7 @@ __all__ = ['Semaphore', 'DummySemaphore', 'BoundedSemaphore', 'RLock']
 
 class DummySemaphore(object):
     # XXX what is this used for?
-    """A Semaphore initialized with "infinite" initial value. Neither of its methods ever block."""
+    """A Semaphore initialized with "infinite" initial value. None of its methods ever block."""
 
     def __str__(self):
         return '<%s>' % self.__class__.__name__

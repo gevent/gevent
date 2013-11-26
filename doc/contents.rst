@@ -5,6 +5,7 @@ Table Of Contents
 
    intro
    reference
+   whatsnew_1_0
    changelog
 
 * :ref:`genindex`

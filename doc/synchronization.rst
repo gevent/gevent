@@ -5,5 +5,5 @@ Synchronization primitives
 
    gevent.event
    gevent.queue
-   gevent.coros
+   gevent.lock
 

@@ -10,7 +10,10 @@ Features include:
 * API that re-uses concepts from the Python standard library (e.g. :class:`Event`, :class:`Queue`).
 * Cooperative :mod:`socket` and :mod:`ssl` modules.
 * Ability to use standard library and 3rd party modules written for standard blocking sockets (:mod:`gevent.monkey`).
-* DNS queries performed through c-ares.
+* DNS queries performed through threadpool (default) or through c-ares (enabled via GEVENT_RESOLVER=ares env var).
+* TCP/UDP/HTTP servers
+* Subprocess support (through :mod:`gevent.subprocess`)
+* Thread pools
 
 
 Installation
@@ -18,7 +21,7 @@ Installation
 
 gevent runs on Python 2.5 and newer and requires
 
-* greenlet__ which can be installed with ``easy_install greenlet``.
+* greenlet__ which can be installed with ``pip install greenlet``.
 
 For ssl to work on Python older than 2.6, ssl_ package is required.
 
@@ -86,6 +89,8 @@ the select backend, ``LIBEV_FLAGS=2`` for the poll backend,
 ``LIBEV_FLAGS=4`` for the epoll backend and ``LIBEV_FLAGS=8`` for the
 kqueue backend. Please read the `libev documentation`_ for more
 information.
+
+.. _`libev documentation`: http://pod.tst.eu/http://cvs.schmorp.de/libev/ev.pod#FUNCTIONS_CONTROLLING_EVENT_LOOPS
 
 The Libev API is available under :mod:`gevent.core` module. Note, that
 the callbacks supplied to the libev API are run in the :class:`Hub`
@@ -206,7 +211,13 @@ Gevent comes with TCP/SSL/HTTP/WSGI servers. See :doc:`servers`.
 
 .. _`example: dns_mass_resolve.py`: http://bitbucket.org/denis/gevent/src/tip/examples/dns_mass_resolve.py#cl-17
 
-.. _`libev documentation`: http://pod.tst.eu/http://cvs.schmorp.de/libev/ev.pod#FUNCTIONS_CONTROLLING_EVENT_LOOPS
+
+External resources
+------------------
+
+`Gevent for working Python developer`__ is a comprehensive tutorial.
+
+__ http://sdiehl.github.io/gevent-tutorial/
 
 .. rubric:: Footnotes
 

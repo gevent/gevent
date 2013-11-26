@@ -7,8 +7,6 @@
     :members:
     :undoc-members:
 
-.. autoexception:: DispatchExit
-
 .. autofunction:: get_hub
 
 .. autoclass:: Waiter

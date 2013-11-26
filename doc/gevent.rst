@@ -97,8 +97,6 @@ Useful general functions
 
 .. autofunction:: fork
 
-.. autofunction:: shutdown
-
 .. autofunction:: reinit
 
 
@@ -111,3 +109,10 @@ Timeouts
 
 .. autofunction:: with_timeout
 
+
+Waiting
+-------
+
+.. autofunction:: wait
+
+.. autofunction:: iwait

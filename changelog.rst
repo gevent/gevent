@@ -99,7 +99,7 @@ resolver_ares:
 - improve getaddrinfo: For string ports (e.g. "http") resolver_ares/getaddrinfo previously only checked either getservbyname(port, "tcp") or getservbyname(port, "udp"), but never both. It now checks both of them.
 - gevent.ares.channel now accepts strings as arguments
 - upgraded c-ares to cares-1_9_1-12-g805c736
-- it is not possible to configure resolver_ares directly with environ, like GEVENTARES_SERVERS
+- it is now possible to configure resolver_ares directly with environ, like GEVENTARES_SERVERS
 
 os:
 
@@ -198,7 +198,7 @@ Misc:
 - Check that the argument of link() is callable. Raise TypeError when it's not.
 - Fixed TypeError in baseserver when parsing an address.
 - Pool: made add() and discard() usable by external users. Thanks to Danil Eremeev.
-- When specifying a class to import, it is not possible to use format path/package.module.name
+- When specifying a class to import, it is now possible to use format path/package.module.name
 - pywsgi: Made sure format_request() does not fail if 'status' attribute is not set yet
 - pywsgi: Added REMOTE_PORT variable to the environment.
 
@@ -369,12 +369,6 @@ Fixed a bug in gevent.queue.Channel class. (Thanks to Alexey Borzenkov)
 
 Release 1.0a1 (Aug 2, 2011)
 ---------------------------
-
-TODO:
-- gevent.http?
-- gevent.httplib?
-- gevent.wsgi? (Currently gevent/wsgi.py imports classes from gevent/pywsgi.py)
-
 
 Backward-incompatible changes:
 
@@ -984,7 +978,7 @@ Release 0.9.2 (Jul 20, 2009)
   and :meth:`__exit__ <event.__exit__>` now, so it can be used as a context
   manager. :class:`event`'s :attr:`callback <event.callback>` signature has changed from ``(event, fd, evtype)`` to ``(event, evtype)``.
 * Fixed :class:`Hub`'s mainloop to never return successfully as this will screw up main greenlet's ``switch()`` call.
-  Instead of returning it raises :class:`DispatchExit`.
+  Instead of returning it raises ``DispatchExit``.
 * Added :func:`reinit` function - wrapper for libevent's ``event_reinit``.
   This function is a must have at least for daemons, as it fixes ``epoll`` and some others eventloops to work after ``fork``.
 * Trying to use gevent in another thread will now raise an exception immediately, since it's not implemented.
