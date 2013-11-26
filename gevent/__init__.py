@@ -43,8 +43,6 @@ try:
 except ImportError:
     __all__.remove('fork')
 
-run = wait  # XXX to be deleted (soon)
-
 
 # the following makes hidden imports visible to freezing tools like
 # py2exe. see https://github.com/surfly/gevent/issues/181

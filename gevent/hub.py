@@ -62,7 +62,7 @@ def sleep(seconds=0, ref=True):
     *seconds* may be specified as an integer, or a float if fractional seconds
     are desired.
 
-    If *ref* is false, the greenlet running sleep() will not prevent gevent.run()
+    If *ref* is false, the greenlet running sleep() will not prevent gevent.wait()
     from exiting.
     """
     hub = get_hub()
