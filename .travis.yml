@@ -16,10 +16,10 @@ matrix:
 install:
  - pip install --use-mirrors cython
  - cython --version
- - pip install --use-mirrors greenlet psycopg2 pysendfile web.py
+ - pip install --use-mirrors greenlet psycopg2 pysendfile bottle
  - if [ "x$TRAVIS_PYTHON_VERSION" == "x2.5" ]; then sudo apt-get install libssl-dev libkrb5-dev libbluetooth-dev; pip install --use-mirrors sslfix; fi
  - if [ "x$TRAVIS_PYTHON_VERSION" == "x2.7" ]; then pip install --use-mirrors -q pep8; fi
- - python -c 'import greenlet; print greenlet, greenlet.__version__; import psycopg2; print psycopg2, psycopg2.__version__; import web; print web, web.__version__'
+ - python -c 'import greenlet; print(greenlet, greenlet.__version__); import psycopg2; print(psycopg2, psycopg2.__version__); import bottle; print(bottle, bottle.__version__)'
  - export CYTHON=`which cython`
  - python setup.py install
 script:

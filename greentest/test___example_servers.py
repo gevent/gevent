@@ -50,8 +50,8 @@ class Test_webproxy(Test_wsgiserver):
         assert 'google' in data.lower(), repr(data)
 
 
-class Test_webpy(Test_wsgiserver):
-    server = 'webpy.py'
+class Test_bottleapp(Test_wsgiserver):
+    server = 'bottleapp.py'
     not_found_message = 'not found'
 
     def _test_hello(self):
