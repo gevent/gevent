@@ -34,7 +34,7 @@ installing from github
 
 To install latest release candidate:
 
-  pip install cython git+git://github.com/surfly/gevent.git@1.0rc3#egg=gevent
+  pip install cython git+git://github.com/surfly/gevent.git@1.0#egg=gevent
 
 To install latest development version:
 
