@@ -480,6 +480,32 @@ class ThreadJoinOnShutdown(unittest.TestCase):
             """
         self._run_and_join(script)
 
+    def test_threads_should_be_destroyed_after_fork(self):
+        import os
+        if not hasattr(os, 'fork'):
+            return
+        script = """if 1:
+            import threading
+            def f(ret):
+                time.sleep(0.5)
+                ret[0] = 1
+            ret = [0]
+            t = threading.Thread(target=f, args=(ret,))
+            t.start()
+            pid = os.fork()
+            if pid == 0:
+                # in child process, the thread should be set as stopped status and
+                # join finishes immediately.
+                t.join()
+                sys.exit(ret[0])
+
+            status = os.waitpid(pid, 0)[1]
+            print "end of main"
+            joiningfunc(t)
+            sys.exit(status >> 8)
+            """
+        self._run_and_join(script)
+
 
 class ThreadingExceptionTests(unittest.TestCase):
     # A RuntimeError should be raised if Thread.start() is called
