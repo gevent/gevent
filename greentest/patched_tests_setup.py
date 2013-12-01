@@ -1,4 +1,5 @@
 import sys
+import os
 import re
 
 # By default, test cases are expected to switch and emit warnings if there was none
@@ -139,8 +140,21 @@ disabled_tests = \
     , 'test_thread.ThreadRunningTests.test__count'
     , 'test_thread.TestForkInThread.test_forkinthread'
     # XXX needs investigating
-
 ]
+
+
+def disabled_tests_extend(lines):
+    disabled_tests.extend(lines.strip().split('\n'))
+
+
+if sys.version_info[:2] == (2, 6) and os.environ.get('TRAVIS') == 'true':
+    # somehow these fail with "Permission denied" on travis
+    disabled_tests_extend('''
+test_httpservers.CGIHTTPServerTestCase.test_post
+test_httpservers.CGIHTTPServerTestCase.test_headers_and_content
+test_httpservers.CGIHTTPServerTestCase.test_authorization
+test_httpservers.SimpleHTTPServerTestCase.test_get
+''')
 
 
 if sys.platform == 'darwin':
