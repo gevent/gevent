@@ -52,7 +52,7 @@ class Test_webproxy(Test_wsgiserver):
 
 class Test_bottleapp(Test_wsgiserver):
     server = 'bottleapp.py'
-    not_found_message = 'not found'
+    not_found_message = 'Not Found'
 
     def _test_hello(self):
         status, data = self.read('/')

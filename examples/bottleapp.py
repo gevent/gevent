@@ -22,4 +22,4 @@ def long_polling():
 
 if __name__ == "__main__":
     print('Serving on 8088...')
-    run(host='0.0.0.0', port=8080, server='gevent')
+    run(host='0.0.0.0', port=8088, server='gevent')
