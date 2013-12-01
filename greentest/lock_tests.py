@@ -439,7 +439,7 @@ class BaseSemaphoreTests(BaseTestCase):
     def test_acquire_contended(self):
         sem = self.semtype(7)
         sem.acquire()
-        N = 10
+        #N = 10
         results1 = []
         results2 = []
         phase_num = 0
