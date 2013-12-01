@@ -287,13 +287,17 @@ def match_line(line, command):
 
 def matches(expected, command):
     """
-    >>> matches(["* * C:\Python27\python.exe -u -m monkey_test --Event test_threading.py"], "C:\Python27\python.exe -u -m monkey_test --Event test_threading.py")
+    >>> matches(["* * C:\Python27\python.exe -u -m monkey_test --Event test_threading.py"],
+    ...         "C:\Python27\python.exe -u -m monkey_test --Event test_threading.py")
     True
-    >>> matches(['* * /usr/bin/python2.5(-dbg)? -u -m monkey_test --Event test_urllib2net.py'], "/usr/bin/python2.5-dbg -u -m monkey_test --Event test_urllib2net.py")
+    >>> matches(['* * /usr/bin/python2.5(-dbg)? -u -m monkey_test --Event test_urllib2net.py'],
+    ...         "/usr/bin/python2.5-dbg -u -m monkey_test --Event test_urllib2net.py")
     True
-    >>> matches(['* * /usr/bin/python2.5(-dbg)? -u -m monkey_test --Event test_urllib2net.py'], "/usr/bin/python2.5 -u -m monkey_test --Event test_urllib2net.py")
+    >>> matches(['* * /usr/bin/python2.5(-dbg)? -u -m monkey_test --Event test_urllib2net.py'],
+    ...         "/usr/bin/python2.5 -u -m monkey_test --Event test_urllib2net.py")
     True
-    >>> matches(['* * /usr/bin/python2.5(-dbg)? -u -m monkey_test --Event test_urllib2net.py'], "/usr/bin/python2.6 -u -m monkey_test --Event test_urllib2net.py")
+    >>> matches(['* * /usr/bin/python2.5(-dbg)? -u -m monkey_test --Event test_urllib2net.py'],
+    ...         "/usr/bin/python2.6 -u -m monkey_test --Event test_urllib2net.py")
     False
     >>> matches(['* GEVENT_RESOLVER=ares GEVENTARES_SERVERS=8.8.8.8 python -u test__subprocess.py'],
     ...          "GEVENT_RESOLVER=ares GEVENTARES_SERVERS=8.8.8.8 GEVENT_FILE=thread python -u test__subprocess.py")
