@@ -8,7 +8,7 @@ from gevent.lock import Semaphore, DummySemaphore
 
 
 try:
-    from fcntl import fcntl, F_SETFL
+    from fcntl import fcntl
 except ImportError:
     fcntl = None
 
