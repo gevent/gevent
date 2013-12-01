@@ -1,7 +1,7 @@
 # This file is renamed to "Makefile.ext" in release tarballs so that setup.py won't try to
 # run it.  If you want setup.py to run "make" automatically, rename it back to "Makefile".
 
-PYTHON ?= python
+PYTHON ?= python${TRAVIS_PYTHON_VERSION}
 CYTHON ?= cython
 
 all: gevent/gevent.core.c gevent/gevent.ares.c gevent/gevent._semaphore.c gevent/gevent._util.c
@@ -33,5 +33,83 @@ clean:
 doc:
 	cd doc && PYTHONPATH=.. make html
 
+whitespace:
+	! find . -not -path "./.git/*" -not -path "./build/*" -not -path "./libev/*" -not -path "./c-ares/*" -not -path "./doc/_build/*" -type f | xargs egrep -l " $$"
 
-.PHONY: clean all doc
+pep8:
+	${PYTHON} `which pep8` .
+
+pyflakes:
+	${PYTHON} util/pyflakes.py
+
+lint: whitespace pep8 pyflakes
+
+travistest:
+	which ${PYTHON} || true
+	${PYTHON} --version
+
+	cd greenlet-* && ${PYTHON} setup.py install -q
+	${PYTHON} -c 'import greenlet; print (greenlet, greenlet.__version__)'
+
+	${PYTHON} setup.py install
+	make bench
+
+	cd greentest && GEVENT_RESOLVER=thread ${PYTHON} testrunner.py --config ../known_failures.py
+	cd greentest && GEVENT_RESOLVER=ares GEVENTARES_SERVERS=8.8.8.8 ${PYTHON} testrunner.py --config ../known_failures.py --ignore tests_that_dont_use_resolver.txt
+	cd greentest && GEVENT_FILE=thread ${PYTHON} testrunner.py --config ../known_failures.py `grep -l subprocess test_*.py`
+
+bench:
+	${PYTHON} greentest/bench_sendall.py
+
+travis_cpython:
+	make whitespace
+
+	pip install -q pep8
+	PYTHON=python make pep8
+
+	pip install -q pyflakes
+	PYTHON=python make pyflakes
+
+	sudo add-apt-repository -y ppa:chris-lea/cython
+	sudo add-apt-repository -y ppa:fkrull/deadsnakes
+
+	sudo apt-get -qq -y update
+
+	sudo -E apt-get -qq -y install ${PYTHON} ${PYTHON}-dev
+	sudo apt-get -qq -y install cython
+	cython --version
+
+	pip install -q --download . greenlet
+	unzip -q greenlet-*.zip
+
+
+	sudo -E make travistest
+	sudo -E apt-get -qq -y install ${PYTHON}-dbg
+	sudo -E PYTHON=${PYTHON}-dbg GEVENTSETUP_EV_VERIFY=3 make travistest
+
+travis_cpython_25:
+	sudo add-apt-repository -y ppa:fkrull/deadsnakes
+	sudo add-apt-repository -y ppa:chris-lea/cython
+
+	sudo apt-get -qq -y update
+
+	sudo -E apt-get -qq -y install ${PYTHON} ${PYTHON}-dev
+	sudo apt-get -qq -y install cython
+	cython --version
+
+	pip install -q --download . greenlet
+	unzip -q greenlet-*.zip
+
+	pip install -q --download . multiprocessing
+	tar -xf multiprocessing*tar.gz
+	cd multiprocessing* && sudo ${PYTHON} setup.py install
+
+	sudo apt-get install libssl-dev libkrb5-dev libbluetooth-dev
+	pip install -q --download . ssl || true
+	tar -xf ssl*tar.gz
+	cd ssl* && sudo ${PYTHON} setup.py install
+
+	sudo -E make travistest
+
+
+.PHONY: clean all doc pep8 whitespace pyflakes lint travistest travis

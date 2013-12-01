@@ -39,7 +39,7 @@ if args[0:1] == ['test']:
     system('%s setup.py build' % sys.executable)
     os.chdir('greentest')
     os.environ['PYTHONPATH'] = '.;..;../..'
-    system('%s testrunner.py --expected ../known_failures.txt' % sys.executable)
+    system('%s testrunner.py --config ../known_failures.py' % sys.executable)
 elif args[0:1] == ['dist']:
     prepare()
     success = 0

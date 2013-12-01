@@ -1,4 +1,4 @@
-from gevent import monkey; monkey.patch_all()
+from gevent import monkey; monkey.patch_all(subprocess=True)
 import sys
 from gevent.server import DatagramServer
 from unittest import TestCase, main

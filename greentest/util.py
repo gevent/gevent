@@ -1,13 +1,11 @@
 from __future__ import with_statement
 import sys
 import os
-import re
 import traceback
 import unittest
 import threading
+import subprocess
 import time
-from datetime import timedelta
-from gevent import subprocess, sleep, spawn_later
 
 
 runtimelog = []
@@ -81,6 +79,11 @@ def _kill(popen):
 
 
 def kill(popen):
+    if popen.timer is not None:
+        popen.timer.cancel()
+    if popen.poll() is not None:
+        return
+    popen.was_killed = True
     try:
         if getattr(popen, 'setpgrp_enabled', None):
             killpg(popen.pid)
@@ -137,11 +140,13 @@ def start(command, **kwargs):
     popen = Popen(command, preexec_fn=preexec_fn, env=env, **kwargs)
     popen.name = name
     popen.setpgrp_enabled = preexec_fn is not None
+    popen.was_killed = False
+    popen.timer = None
     if timeout is not None:
-        popen._killer = spawn_later(timeout, kill, popen)
-        popen._killer._start_event.ref = False   # XXX add 'ref' property to greenlet
-    else:
-        popen._killer = None
+        t = threading.Timer(timeout, kill, args=(popen, ))
+        t.setDaemon(True)
+        t.start()
+        popen.timer = t
     return popen
 
 
@@ -159,6 +164,9 @@ class RunResult(object):
         return self.code
 
 
+lock = threading.Lock()
+
+
 def run(command, **kwargs):
     buffer_output = kwargs.pop('buffer_output', BUFFER_OUTPUT)
     if buffer_output:
@@ -171,193 +179,28 @@ def run(command, **kwargs):
         time_start = time.time()
         out, err = popen.communicate()
         took = time.time() - time_start
-        if popen.poll() is None:
+        if popen.was_killed or popen.poll() is None:
             result = 'TIMEOUT'
         else:
             result = popen.poll()
     finally:
-        if popen._killer is not None:
-            popen._killer.kill(block=False)
         kill(popen)
     assert not err
-    if out:
-        out = out.strip()
+    with lock:
         if out:
-            out = '  ' + out.replace('\n', '\n  ')
-            out = out.rstrip()
-            out += '\n'
-            log('| %s\n%s', name, out)
-    if result:
-        log('! %s [code %s] [took %.1fs]', name, result, took)
-    else:
-        log('- %s [took %.1fs]', name, took)
+            out = out.strip().decode('utf-8', 'ignore')
+            if out:
+                out = '  ' + out.replace('\n', '\n  ')
+                out = out.rstrip()
+                out += '\n'
+                log('| %s\n%s', name, out)
+        if result:
+            log('! %s [code %s] [took %.1fs]', name, result, took)
+        else:
+            log('- %s [took %.1fs]', name, took)
     if took >= MIN_RUNTIME:
         runtimelog.append((-took, name))
     return RunResult(result, out, name)
-
-
-def parse_command(parts):
-    if isinstance(parts, basestring):
-        parts = parts.split()
-    environ = []
-    if parts[0] == '-':
-        del parts[0]
-    elif parts[0] == '*':
-        del parts[0]
-        environ = None
-    elif '=' in parts[0]:
-        while parts[0].count('='):
-            environ.append(parts[0])
-            del parts[0]
-    exe = parts[0]
-    del parts[0]
-    if exe == '*':
-        exe = None
-    else:
-        assert exe
-        assert not exe.startswith('-'), repr(exe)
-    return environ, exe, parts
-
-
-def parse_line(line):
-    """
-    >>> parse_line("* - /usr/bin/python -u test.py")
-    (None, [], '/usr/bin/python', ['-u', 'test.py'])
-
-    >>> parse_line("win32 * C:\\Python27\\python.exe -u -m monkey_test --Event test_subprocess.py")
-    ('win32', None, 'C:\\\\Python27\\\\python.exe', ['-u', '-m', 'monkey_test', '--Event', 'test_subprocess.py'])
-
-    >>> parse_line("* GEVENTARES_SERVERS=8.8.8.8 GEVENT_RESOLVER=ares * -u test__socket_dns.py")
-    (None, ['GEVENTARES_SERVERS=8.8.8.8', 'GEVENT_RESOLVER=ares'], None, ['-u', 'test__socket_dns.py'])
-    """
-    parts = line.split()
-    if len(parts) < 4:
-        raise ValueError('Expected "platform environ executable arguments", got %r' % line)
-    platform = parts[0]
-    if platform == '*':
-        platform = None
-    return (platform, ) + parse_command(parts[1:])
-
-
-def match_word(pattern, word):
-    if isinstance(pattern, str) and isinstance(word, str) and '(' in pattern or '*' in pattern or '?' in pattern or '[' in pattern:
-        return re.match(pattern, word)
-    return pattern == word
-
-
-def match_environ(expected_environ, actual_environ):
-    """
-    >>> match_environ('GEVENT_RESOLVER=ares GEVENTARES_SERVERS=8.8.8.8',
-    ...               'GEVENT_RESOLVER=ares GEVENTARES_SERVERS=8.8.8.8 GEVENT_FILE=thread')
-    True
-    >>> match_environ('GEVENT_RESOLVER=ares GEVENTARES_SERVERS=8.8.8.7',
-    ...               'GEVENT_RESOLVER=ares GEVENTARES_SERVERS=8.8.8.8 GEVENT_FILE=thread')
-    False
-    >>> match_environ('GEVENT_RESOLVER=ares GEVENTARES_SERVERS=8.8.8.8 GEVENT_FILE=',
-    ...               'GEVENT_RESOLVER=ares GEVENTARES_SERVERS=8.8.8.8 GEVENT_FILE=thread')
-    False
-    """
-    if expected_environ is None:
-        return True
-    if isinstance(expected_environ, basestring):
-        expected_environ = expected_environ.split()
-    if isinstance(actual_environ, basestring):
-        actual_environ = actual_environ.split()
-    expected_environ = dict(x.split('=') for x in expected_environ)
-    actual_environ = dict(x.split('=') for x in actual_environ)
-    for key, expected_value in expected_environ.items():
-        value = actual_environ.pop(key, None)
-        if value is not None and value != expected_value:
-            return False
-    return True
-
-
-def match_line(line, command):
-    expected_platform, expected_environ, expected_exe, expected_arguments = parse_line(line)
-    if expected_platform is not None and expected_platform != sys.platform:
-        return
-    environ, exe, arguments = parse_command(command)
-    if not match_environ(expected_environ, environ):
-        return
-    if expected_exe is not None and not match_word(expected_exe, exe):
-        return
-    return expected_arguments == arguments
-
-
-def matches(expected, command):
-    """
-    >>> matches(["* * C:\Python27\python.exe -u -m monkey_test --Event test_threading.py"],
-    ...         "C:\Python27\python.exe -u -m monkey_test --Event test_threading.py")
-    True
-    >>> matches(['* * /usr/bin/python2.5(-dbg)? -u -m monkey_test --Event test_urllib2net.py'],
-    ...         "/usr/bin/python2.5-dbg -u -m monkey_test --Event test_urllib2net.py")
-    True
-    >>> matches(['* * /usr/bin/python2.5(-dbg)? -u -m monkey_test --Event test_urllib2net.py'],
-    ...         "/usr/bin/python2.5 -u -m monkey_test --Event test_urllib2net.py")
-    True
-    >>> matches(['* * /usr/bin/python2.5(-dbg)? -u -m monkey_test --Event test_urllib2net.py'],
-    ...         "/usr/bin/python2.6 -u -m monkey_test --Event test_urllib2net.py")
-    False
-    >>> matches(['* GEVENT_RESOLVER=ares GEVENTARES_SERVERS=8.8.8.8 python -u test__subprocess.py'],
-    ...          "GEVENT_RESOLVER=ares GEVENTARES_SERVERS=8.8.8.8 GEVENT_FILE=thread python -u test__subprocess.py")
-    True
-    """
-    for line in expected:
-        if match_line(line, command):
-            return True
-    return False
-
-
-def format_seconds(seconds):
-    if seconds < 20:
-        return '%.1fs' % seconds
-    seconds = str(timedelta(seconds=round(seconds)))
-    if seconds.startswith('0:'):
-        seconds = seconds[2:]
-    return seconds
-
-
-def report(total, failed, exit=True, took=None, expected=None):
-    if runtimelog:
-        log('\nLongest-running tests:')
-        runtimelog.sort()
-        length = len('%.1f' % -runtimelog[0][0])
-        frmt = '%' + str(length) + '.1f seconds: %s'
-        for delta, name in runtimelog[:5]:
-            log(frmt, -delta, name)
-    if took:
-        took = ' in %s' % format_seconds(took)
-    else:
-        took = ''
-
-    failed_expected = []
-    failed_unexpected = []
-
-    if failed:
-        log('\n%s/%s tests failed%s', len(failed), total, took)
-        expected = set(expected or [])
-        for name in failed:
-            if matches(expected, name):
-                failed_expected.append(name)
-            else:
-                failed_unexpected.append(name)
-
-        if failed_expected:
-            log('\n%s/%s expected failures', len(failed_expected), total)
-            for name in failed_expected:
-                log(' - %s', name)
-
-        if failed_unexpected:
-            log('\n%s/%s unexpected failures', len(failed_unexpected), total)
-            for name in failed_unexpected:
-                log(' - %s', name)
-    else:
-        log('\n%s tests passed%s', total, took)
-    if exit:
-        if failed_unexpected:
-            sys.exit(min(100, len(failed_unexpected)))
-        if total <= 0:
-            sys.exit('No tests found.')
 
 
 class TestServer(unittest.TestCase):
@@ -375,12 +218,12 @@ class TestServer(unittest.TestCase):
 
     def before(self):
         if self.before_delay is not None:
-            sleep(self.before_delay)
+            time.sleep(self.before_delay)
         assert self.popen.poll() is None, '%s died with code %s' % (self.server, self.popen.poll(), )
 
     def after(self):
         if self.after_delay is not None:
-            sleep(self.after_delay)
+            time.sleep(self.after_delay)
             assert self.popen.poll() is None, '%s died with code %s' % (self.server, self.popen.poll(), )
 
     def _run_all_tests(self):

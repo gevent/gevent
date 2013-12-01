@@ -3,6 +3,7 @@ import os
 import glob
 import util
 import atexit
+# subprocess: include in subprocess tests
 
 
 TIMEOUT = 120

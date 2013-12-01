@@ -1,5 +1,5 @@
 from __future__ import with_statement
-from gevent import monkey; monkey.patch_all()
+from gevent import monkey; monkey.patch_all(subprocess=True)
 import sys
 import socket
 from time import sleep
