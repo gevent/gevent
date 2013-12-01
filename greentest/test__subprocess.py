@@ -130,7 +130,7 @@ class Test(greentest.TestCase):
     def test_issue148(self):
         for i in range(7):
             try:
-                p1 = subprocess.Popen('this_name_must_not_exist')
+                subprocess.Popen('this_name_must_not_exist')
             except OSError:
                 ex = sys.exc_info()[1]
                 if ex.errno != errno.ENOENT:

@@ -50,13 +50,13 @@ def log_fresult(result, seconds):
         msg = '  -=>  raised %r' % (result, )
     else:
         msg = '  -=>  returned %r' % (result, )
-    time = ' %.2fms' % (seconds * 1000.0, )
-    space = 80 - len(msg) - len(time)
+    time_ms = ' %.2fms' % (seconds * 1000.0, )
+    space = 80 - len(msg) - len(time_ms)
     if space > 0:
         space = ' ' * space
     else:
         space = ''
-    log(msg + space + time)
+    log(msg + space + time_ms)
 
 
 def run(function, *args):

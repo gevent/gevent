@@ -142,6 +142,7 @@ class AsyncResult(object):
 
     :class:`AsyncResult` implements :meth:`__call__` and thus can be used as :meth:`link` target:
 
+        >>> import gevent
         >>> result = AsyncResult()
         >>> gevent.spawn(lambda : 1/0).link(result)
         >>> result.get()

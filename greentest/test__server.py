@@ -322,6 +322,7 @@ class TestPoolSpawn(TestDefaultSpawn):
         # to let /short request finish
         gevent.sleep(0.1)
         self.assertRequestSucceeded()
+        del long_request
 
     test_pool_full.error_fatal = False
 

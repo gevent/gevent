@@ -261,7 +261,6 @@ except IOError:
     try:
         fp = open(TMP_TESTFN, 'w+')
         TESTFN = TMP_TESTFN
-        del TMP_TESTFN
     except IOError:
         print ('WARNING: tests will fail, unable to write to: %s or %s' %
                 (TESTFN, TMP_TESTFN))

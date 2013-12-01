@@ -9,6 +9,7 @@ import pipes
 import difflib
 from hashlib import md5
 
+do_exec = None
 if sys.version_info >= (3, 0):
     exec("def do_exec(co, loc): exec(co, loc)\n")
 else:

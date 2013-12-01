@@ -289,6 +289,8 @@ class ThreadTests(unittest.TestCase):
                     print("test_finalize_with_runnning_thread can't import ctypes")
                 return  # can't do anything
 
+            del ctypes  # pyflakes fix
+
             import subprocess
             rc = subprocess.call([sys.executable, "-c", """if 1:
 %s

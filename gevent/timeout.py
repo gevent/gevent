@@ -42,7 +42,8 @@ class Timeout(BaseException):
 
     When *exception* is omitted or ``None``, the :class:`Timeout` instance itself is raised:
 
-        >>> Timeout(0.1).start()
+        >>> import gevent
+        >>> gevent.Timeout(0.1).start()
         >>> gevent.sleep(0.2)
         Traceback (most recent call last):
          ...
@@ -50,7 +51,7 @@ class Timeout(BaseException):
 
     For Python 2.5 and newer ``with`` statement can be used::
 
-        with Timeout(seconds, exception) as timeout:
+        with gevent.Timeout(seconds, exception) as timeout:
             pass  # ... code block ...
 
     This is equivalent to try/finally block above with one additional feature:
@@ -60,7 +61,7 @@ class Timeout(BaseException):
     This is handy for adding a timeout to the functions that don't support *timeout* parameter themselves::
 
         data = None
-        with Timeout(5, False):
+        with gevent.Timeout(5, False):
             data = mysock.makefile().readline()
         if data is None:
             ...  # 5 seconds passed without reading a line
