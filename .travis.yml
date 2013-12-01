@@ -1,29 +1,12 @@
 language: python
-python:
- - "2.7"
 env:
- - EXTRA=1
+ - PYTHONVER=2.6
+ - PYTHONVER=2.7
+ - PYTHONVER=3.3
 matrix:
- include:
-   - python: 2.6
-   - python: 2.5
-   - python: 2.7
-     env: DEBUGPY=-dbg GEVENTSETUP_EV_VERIFY=3
-   - python: 2.6
-     env: DEBUGPY=-dbg GEVENTSETUP_EV_VERIFY=3
-   - python: 2.7
-     env: DEBUGPY=-dbg GEVENTSETUP_EV_VERIFY=3 GEVENT_FILE=thread
-install:
- - pip install --use-mirrors cython
- - cython --version
- - pip install --use-mirrors greenlet psycopg2 pysendfile web.py
- - if [ "x$TRAVIS_PYTHON_VERSION" == "x2.5" ]; then sudo apt-get install libssl-dev libkrb5-dev libbluetooth-dev; pip install --use-mirrors sslfix; fi
- - if [ "x$TRAVIS_PYTHON_VERSION" == "x2.7" ]; then pip install --use-mirrors -q pep8; fi
- - python -c 'import greenlet; print greenlet, greenlet.__version__; import psycopg2; print psycopg2, psycopg2.__version__; import web; print web, web.__version__'
- - export CYTHON=`which cython`
- - python setup.py install
-script:
- - cd greentest && python testrunner.py --full --expected ../known_failures.txt
+  allow_failures:
+    - env: PYTHONVER=3.3
+script: sudo -E make travis
 notifications:
   email:
     recipients:

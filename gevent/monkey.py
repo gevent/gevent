@@ -2,7 +2,6 @@
 """Make the standard library cooperative."""
 from __future__ import absolute_import
 import sys
-from sys import version_info
 
 __all__ = ['patch_all',
            'patch_socket',
@@ -186,13 +185,7 @@ def patch_all(socket=True, dns=True, time=True, select=True, thread=True, os=Tru
     if select:
         patch_select(aggressive=aggressive)
     if ssl:
-        if version_info[:2] > (2, 5):
-            patch_ssl()
-        else:
-            try:
-                patch_ssl()
-            except ImportError:
-                pass  # in Python 2.5, 'ssl' is a standalone package not included in stdlib
+        patch_ssl()
     if httplib:
         raise ValueError('gevent.httplib is no longer provided, httplib must be False')
     if subprocess:

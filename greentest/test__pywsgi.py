@@ -277,8 +277,7 @@ class CommonTests(TestCase):
                 fd.close()
             finally:
                 timeout.cancel()
-        except AssertionError:
-            ex = sys.exc_info()[1]
+        except AssertionError as ex:
             if ex is not exception:
                 raise
 
@@ -294,8 +293,7 @@ class CommonTests(TestCase):
         try:
             result = fd.readline()
             assert not result, 'The remote side is expected to close the connection, but it send %r' % (result, )
-        except socket.error:
-            ex = sys.exc_info()[1]
+        except socket.error as ex:
             if ex.args[0] not in CONN_ABORTED_ERRORS:
                 raise
 
@@ -611,7 +609,11 @@ class TestInternational(TestCase):
 
     def test(self):
         sock = self.connect()
-        sock.sendall('GET /%D0%BF%D1%80%D0%B8%D0%B2%D0%B5%D1%82?%D0%B2%D0%BE%D0%BF%D1%80%D0%BE%D1%81=%D0%BE%D1%82%D0%B2%D0%B5%D1%82 HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n')
+        sock.sendall('''GET /%D0%BF%D1%80%D0%B8%D0%B2%D0%B5%D1%82?%D0%B2%D0%BE%D0%BF%D1%80%D0%BE%D1%81=%D0%BE%D1%82%D0%B2%D0%B5%D1%82 HTTP/1.1
+Host: localhost
+Connection: close
+
+'''.replace('\n', '\r\n'))
         read_http(sock.makefile(), reason='PASSED', chunks=False, body='', content_length=0)
 
 
@@ -773,7 +775,7 @@ class TestContentLength304(TestCase):
     def application(self, env, start_response):
         try:
             start_response('304 Not modified', [('Content-Length', '100')])
-        except AssertionError, ex:
+        except AssertionError as ex:
             start_response('200 Raised', [])
             return [str(ex)]
         else:
@@ -800,7 +802,7 @@ class TestBody304(TestCase):
         fd.write('GET / HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n')
         try:
             read_http(fd)
-        except AssertionError, ex:
+        except AssertionError as ex:
             self.assertEqual(str(ex), 'The 304 response must have no body')
         else:
             raise AssertionError('AssertionError must be raised')
@@ -823,7 +825,7 @@ class TestWrite304(TestCase):
         fd.write('GET / HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n')
         try:
             read_http(fd)
-        except AssertionError, ex:
+        except AssertionError as ex:
             self.assertEqual(str(ex), 'The 304 response must have no body')
         else:
             raise AssertionError('write() must raise')
@@ -948,8 +950,7 @@ class ChunkedInputTests(TestCase):
         fd.write(req)
         try:
             read_http(fd, body="pong")
-        except AssertionError:
-            ex = sys.exc_info()[1]
+        except AssertionError as ex:
             if str(ex).startswith('Unexpected code: 400'):
                 if not server_implements_chunked:
                     print 'ChunkedNotImplementedWarning'
@@ -1001,8 +1002,7 @@ class Expect100ContinueTests(TestCase):
         fd.write('PUT / HTTP/1.1\r\nHost: localhost\r\nContent-length: 1025\r\nExpect: 100-continue\r\n\r\n')
         try:
             read_http(fd, code=417, body="failure")
-        except AssertionError:
-            ex = sys.exc_info()[1]
+        except AssertionError as ex:
             if str(ex).startswith('Unexpected code: 400'):
                 if not server_implements_100continue:
                     print '100ContinueNotImplementedWarning'

@@ -10,7 +10,6 @@ variable. To enable threading resolver:
     GEVENT_RESOLVER=thread python dns_mass_resolve.py
 """
 from __future__ import with_statement
-import sys
 import gevent
 from gevent import socket
 from gevent.pool import Pool
@@ -27,8 +26,7 @@ def job(url):
         try:
             ip = socket.gethostbyname(url)
             print ('%s = %s' % (url, ip))
-        except socket.gaierror:
-            ex = sys.exc_info()[1]
+        except socket.gaierror as ex:
             print ('%s failed with %s' % (url, ex))
     finally:
         finished += 1

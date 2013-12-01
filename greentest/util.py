@@ -50,10 +50,10 @@ def killpg(pid):
         return
     try:
         return os.killpg(pid, 9)
-    except OSError, ex:
+    except OSError as ex:
         if ex.errno != 3:
             log('killpg(%r, 9) failed: %s: %s', pid, type(ex).__name__, ex)
-    except Exception, ex:
+    except Exception as ex:
         log('killpg(%r, 9) failed: %s: %s', pid, type(ex).__name__, ex)
 
 
@@ -68,7 +68,7 @@ def _kill(popen):
     if hasattr(popen, 'kill'):
         try:
             popen.kill()
-        except OSError, ex:
+        except OSError as ex:
             if ex.errno == 3:  # No such process
                 return
             if ex.errno == 13:  # Permission denied (translated from windows error 5: "Access is denied")
@@ -287,13 +287,17 @@ def match_line(line, command):
 
 def matches(expected, command):
     """
-    >>> matches(["* * C:\Python27\python.exe -u -m monkey_test --Event test_threading.py"], "C:\Python27\python.exe -u -m monkey_test --Event test_threading.py")
+    >>> matches(["* * C:\Python27\python.exe -u -m monkey_test --Event test_threading.py"],
+    ...         "C:\Python27\python.exe -u -m monkey_test --Event test_threading.py")
     True
-    >>> matches(['* * /usr/bin/python2.5(-dbg)? -u -m monkey_test --Event test_urllib2net.py'], "/usr/bin/python2.5-dbg -u -m monkey_test --Event test_urllib2net.py")
+    >>> matches(['* * /usr/bin/python2.5(-dbg)? -u -m monkey_test --Event test_urllib2net.py'],
+    ...         "/usr/bin/python2.5-dbg -u -m monkey_test --Event test_urllib2net.py")
     True
-    >>> matches(['* * /usr/bin/python2.5(-dbg)? -u -m monkey_test --Event test_urllib2net.py'], "/usr/bin/python2.5 -u -m monkey_test --Event test_urllib2net.py")
+    >>> matches(['* * /usr/bin/python2.5(-dbg)? -u -m monkey_test --Event test_urllib2net.py'],
+    ...         "/usr/bin/python2.5 -u -m monkey_test --Event test_urllib2net.py")
     True
-    >>> matches(['* * /usr/bin/python2.5(-dbg)? -u -m monkey_test --Event test_urllib2net.py'], "/usr/bin/python2.6 -u -m monkey_test --Event test_urllib2net.py")
+    >>> matches(['* * /usr/bin/python2.5(-dbg)? -u -m monkey_test --Event test_urllib2net.py'],
+    ...         "/usr/bin/python2.6 -u -m monkey_test --Event test_urllib2net.py")
     False
     >>> matches(['* GEVENT_RESOLVER=ares GEVENTARES_SERVERS=8.8.8.8 python -u test__subprocess.py'],
     ...          "GEVENT_RESOLVER=ares GEVENTARES_SERVERS=8.8.8.8 GEVENT_FILE=thread python -u test__subprocess.py")

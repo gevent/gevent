@@ -6,15 +6,19 @@ import util
 
 
 cwd = '../examples/'
-ignore = ['wsgiserver.py', 'wsgiserver_ssl.py', 'webproxy.py', 'webpy.py', 'unixsocket_server.py', 'unixsocket_client.py']
-if sys.platform == 'win32':
-    ignore += ['geventsendfile.py', 'psycopg2_pool.py']
+ignore = ['wsgiserver.py',
+          'wsgiserver_ssl.py',
+          'webproxy.py',
+          'webpy.py',
+          'unixsocket_server.py',
+          'unixsocket_client.py',
+          'psycopg2_pool.py',
+          'geventsendfile.py']
 ignore += [x[14:] for x in glob.glob('test__example_*.py')]
 
 default_time_range = (2, 4)
 time_ranges = {
     'concurrent_download.py': (0, 30),
-    'geventsendfile.py': (0, 4),
     'processes.py': (0, 4)}
 
 

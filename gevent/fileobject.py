@@ -8,7 +8,7 @@ from gevent.lock import Semaphore, DummySemaphore
 
 
 try:
-    from fcntl import fcntl, F_SETFL
+    from fcntl import fcntl
 except ImportError:
     fcntl = None
 
@@ -101,8 +101,8 @@ else:
             while True:
                 try:
                     bytes_written += _write(fileno, _get_memory(data, bytes_written))
-                except (IOError, OSError):
-                    code = sys.exc_info()[1].args[0]
+                except (IOError, OSError) as ex:
+                    code = ex.args[0]
                     if code not in ignored_errors:
                         raise
                     sys.exc_clear()
@@ -114,8 +114,8 @@ else:
             while True:
                 try:
                     data = _read(self.fileno(), size)
-                except (IOError, OSError):
-                    code = sys.exc_info()[1].args[0]
+                except (IOError, OSError) as ex:
+                    code = ex.args[0]
                     if code not in ignored_errors:
                         raise
                     sys.exc_clear()

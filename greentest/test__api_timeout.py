@@ -49,8 +49,7 @@ class Test(greentest.TestCase):
         try:
             with Timeout(DELAY) as t:
                 sleep(DELAY * 2)
-        except Timeout:
-            ex = sys.exc_info()[1]
+        except Timeout as ex:
             assert ex is t, (ex, t)
         else:
             raise AssertionError('must raise Timeout')
@@ -59,8 +58,7 @@ class Test(greentest.TestCase):
         try:
             with Timeout(DELAY, IOError("Operation takes way too long")):
                 sleep(DELAY * 2)
-        except IOError:
-            ex = sys.exc_info()[1]
+        except IOError as ex:
             assert str(ex) == "Operation takes way too long", repr(ex)
 
         # Providing classes instead of values should be possible too:
@@ -119,8 +117,7 @@ class Test(greentest.TestCase):
             with Timeout(DELAY * 2) as t2:
                 try:
                     sleep(DELAY * 3)
-                except Timeout:
-                    ex = sys.exc_info()[1]
+                except Timeout as ex:
                     assert ex is t1, (ex, t1)
                 assert not t1.pending, t1
                 assert t2.pending, t2
@@ -130,8 +127,7 @@ class Test(greentest.TestCase):
             with Timeout(DELAY) as t2:
                 try:
                     sleep(DELAY * 3)
-                except Timeout:
-                    ex = sys.exc_info()[1]
+                except Timeout as ex:
                     assert ex is t2, (ex, t2)
                 assert t1.pending, t1
                 assert not t2.pending, t2

@@ -13,7 +13,7 @@ def kill(popen):
         return
     try:
         popen.kill()
-    except OSError, ex:
+    except OSError as ex:
         if ex.errno == 3:  # No such process
             return
         if ex.errno == 13:  # Permission denied (translated from windows error 5: "Access is denied")

@@ -179,8 +179,7 @@ class BaseServer(object):
         if hasattr(self, 'socket'):
             try:
                 fileno = self.socket.fileno()
-            except Exception:
-                ex = sys.exc_info()[1]
+            except Exception as ex:
                 fileno = str(ex)
             result = 'fileno=%s ' % fileno
         else:
@@ -190,8 +189,7 @@ class BaseServer(object):
                 result += 'address=%s:%s' % self.address
             else:
                 result += 'address=%s' % (self.address, )
-        except Exception:
-            ex = sys.exc_info()[1]
+        except Exception as ex:
             result += str(ex) or '<error>'
         try:
             handle = getfuncname(self.__dict__['handle'])
@@ -319,5 +317,5 @@ def _parse_address(address):
 def parse_address(address):
     try:
         return _parse_address(address)
-    except ValueError:
-        raise ValueError('Failed to parse address %r: %s' % (address, sys.exc_info()[1]))
+    except ValueError as ex:
+        raise ValueError('Failed to parse address %r: %s' % (address, ex))

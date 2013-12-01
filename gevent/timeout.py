@@ -13,21 +13,10 @@ to arbitrary code.
     which no switches occur, :class:`Timeout` is powerless.
 """
 
-import sys
 from gevent.hub import getcurrent, _NONE, get_hub, string_types
 
 __all__ = ['Timeout',
            'with_timeout']
-
-
-try:
-    BaseException
-except NameError:  # Python < 2.5
-
-    class BaseException:
-        # not subclassing from object() intentionally, because in
-        # that case "raise Timeout" fails with TypeError.
-        pass
 
 
 class Timeout(BaseException):
@@ -42,7 +31,8 @@ class Timeout(BaseException):
 
     When *exception* is omitted or ``None``, the :class:`Timeout` instance itself is raised:
 
-        >>> Timeout(0.1).start()
+        >>> import gevent
+        >>> gevent.Timeout(0.1).start()
         >>> gevent.sleep(0.2)
         Traceback (most recent call last):
          ...
@@ -50,7 +40,7 @@ class Timeout(BaseException):
 
     For Python 2.5 and newer ``with`` statement can be used::
 
-        with Timeout(seconds, exception) as timeout:
+        with gevent.Timeout(seconds, exception) as timeout:
             pass  # ... code block ...
 
     This is equivalent to try/finally block above with one additional feature:
@@ -60,7 +50,7 @@ class Timeout(BaseException):
     This is handy for adding a timeout to the functions that don't support *timeout* parameter themselves::
 
         data = None
-        with Timeout(5, False):
+        with gevent.Timeout(5, False):
             data = mysock.makefile().readline()
         if data is None:
             ...  # 5 seconds passed without reading a line
@@ -78,7 +68,7 @@ class Timeout(BaseException):
         timeout.start()
         try:
             ...
-        except Timeout, t:
+        except Timeout as t:
             if t is not timeout:
                 raise # not my timeout
     """
@@ -129,10 +119,7 @@ class Timeout(BaseException):
         self.timer.stop()
 
     def __repr__(self):
-        try:
-            classname = self.__class__.__name__
-        except AttributeError:  # Python < 2.5
-            classname = 'Timeout'
+        classname = type(self).__name__
         if self.pending:
             pending = ' pending'
         else:
@@ -188,8 +175,8 @@ def with_timeout(seconds, function, *args, **kwds):
     try:
         try:
             return function(*args, **kwds)
-        except Timeout:
-            if sys.exc_info()[1] is timeout and timeout_value is not _NONE:
+        except Timeout as ex:
+            if ex is timeout and timeout_value is not _NONE:
                 return timeout_value
             raise
     finally:

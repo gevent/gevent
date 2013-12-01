@@ -6,12 +6,8 @@ import random
 from time import time
 
 
-def init():
-    global N, counter
-    N = 10000
-    counter = 0
-
-init()
+N = 10000
+counter = 0
 
 
 def incr(sleep, **kwargs):

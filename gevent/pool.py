@@ -9,7 +9,6 @@ concurrency: its :meth:`spawn <Pool.spawn>` method blocks if the number of
 greenlets in the pool has already reached the limit, until there is a free slot.
 """
 
-import sys
 from bisect import insort_right
 
 from gevent.hub import GreenletExit, getcurrent, kill as _kill, PY3
@@ -116,8 +115,7 @@ class Group(object):
                     if not block:
                         break
                     joinall(self.greenlets)
-            except Timeout:
-                ex = sys.exc_info()[1]
+            except Timeout as ex:
                 if ex is not timer:
                     raise
         finally:

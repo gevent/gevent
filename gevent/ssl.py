@@ -5,10 +5,6 @@
 For the documentation, refer to :mod:`ssl` module manual.
 
 This module implements cooperative SSL socket wrappers.
-On Python 2.6 and newer it uses Python's native :mod:`ssl` module. On Python 2.5 and 2.4
-it requires `ssl package`_ to be installed.
-
-.. _`ssl package`: http://pypi.python.org/pypi/ssl
 """
 
 from __future__ import absolute_import
@@ -74,7 +70,7 @@ class SSLSocket(socket):
         # see if it's connected
         try:
             socket.getpeername(self)
-        except socket_error, e:
+        except socket_error as e:
             if e[0] != errno.ENOTCONN:
                 raise
             # no, no connection yet
@@ -108,8 +104,7 @@ class SSLSocket(socket):
         while True:
             try:
                 return self._sslobj.read(len)
-            except SSLError:
-                ex = sys.exc_info()[1]
+            except SSLError as ex:
                 if ex.args[0] == SSL_ERROR_EOF and self.suppress_ragged_eofs:
                     return ''
                 elif ex.args[0] == SSL_ERROR_WANT_READ:
@@ -132,8 +127,7 @@ class SSLSocket(socket):
         while True:
             try:
                 return self._sslobj.write(data)
-            except SSLError:
-                ex = sys.exc_info()[1]
+            except SSLError as ex:
                 if ex.args[0] == SSL_ERROR_WANT_READ:
                     if self.timeout == 0.0:
                         raise
@@ -171,8 +165,7 @@ class SSLSocket(socket):
             while True:
                 try:
                     v = self._sslobj.write(data)
-                except SSLError:
-                    x = sys.exc_info()[1]
+                except SSLError as x:
                     if x.args[0] == SSL_ERROR_WANT_READ:
                         if self.timeout == 0.0:
                             return 0
@@ -225,8 +218,7 @@ class SSLSocket(socket):
                     v = len(tmp_buffer)
                     buffer[:v] = tmp_buffer
                     return v
-                except SSLError:
-                    x = sys.exc_info()[1]
+                except SSLError as x:
                     if x.args[0] == SSL_ERROR_WANT_READ:
                         if self.timeout == 0.0:
                             raise
@@ -262,8 +254,7 @@ class SSLSocket(socket):
         while True:
             try:
                 return self._sslobj.shutdown()
-            except SSLError:
-                ex = sys.exc_info()[1]
+            except SSLError as ex:
                 if ex.args[0] == SSL_ERROR_EOF and self.suppress_ragged_eofs:
                     return ''
                 elif ex.args[0] == SSL_ERROR_WANT_READ:
@@ -303,8 +294,7 @@ class SSLSocket(socket):
         while True:
             try:
                 return self._sslobj.do_handshake()
-            except SSLError:
-                ex = sys.exc_info()[1]
+            except SSLError as ex:
                 if ex.args[0] == SSL_ERROR_WANT_READ:
                     if self.timeout == 0.0:
                         raise

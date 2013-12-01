@@ -308,8 +308,7 @@ class WSGIHandler(object):
             # for compatibility with older versions of pywsgi, we pass self.requestline as an argument there
             if not self.read_request(self.requestline):
                 return ('400', _BAD_REQUEST_RESPONSE)
-        except Exception:
-            ex = sys.exc_info()[1]
+        except Exception as ex:
             if not isinstance(ex, ValueError):
                 traceback.print_exc()
             self.log_error('Invalid request: %s', str(ex) or ex.__class__.__name__)
@@ -319,8 +318,7 @@ class WSGIHandler(object):
         self.application = self.server.application
         try:
             self.handle_one_response()
-        except socket.error:
-            ex = sys.exc_info()[1]
+        except socket.error as ex:
             # Broken pipe, connection reset by peer
             if ex.args[0] in (errno.EPIPE, errno.ECONNRESET):
                 sys.exc_clear()
@@ -353,7 +351,7 @@ class WSGIHandler(object):
     def _sendall(self, data):
         try:
             self.socket.sendall(data)
-        except socket.error, ex:
+        except socket.error as ex:
             self.status = 'socket error: %s' % ex
             if self.code > 0:
                 self.code = -self.code
@@ -379,46 +377,23 @@ class WSGIHandler(object):
                 raise AssertionError("The application did not call start_response()")
             self._write_with_headers(data)
 
-    if sys.version_info[:2] >= (2, 6):
+    def _write_with_headers(self, data):
+        towrite = bytearray()
+        self.headers_sent = True
+        self.finalize_headers()
 
-        def _write_with_headers(self, data):
-            towrite = bytearray()
-            self.headers_sent = True
-            self.finalize_headers()
+        towrite.extend('HTTP/1.1 %s\r\n' % self.status)
+        for header in self.response_headers:
+            towrite.extend('%s: %s\r\n' % header)
 
-            towrite.extend('HTTP/1.1 %s\r\n' % self.status)
-            for header in self.response_headers:
-                towrite.extend('%s: %s\r\n' % header)
-
-            towrite.extend('\r\n')
-            if data:
-                if self.response_use_chunked:
-                    ## Write the chunked encoding
-                    towrite.extend("%x\r\n%s\r\n" % (len(data), data))
-                else:
-                    towrite.extend(data)
-            self._sendall(towrite)
-
-    else:
-        # Python 2.5 does not have bytearray
-
-        def _write_with_headers(self, data):
-            towrite = []
-            self.headers_sent = True
-            self.finalize_headers()
-
-            towrite.append('HTTP/1.1 %s\r\n' % self.status)
-            for header in self.response_headers:
-                towrite.append('%s: %s\r\n' % header)
-
-            towrite.append('\r\n')
-            if data:
-                if self.response_use_chunked:
-                    ## Write the chunked encoding
-                    towrite.append("%x\r\n%s\r\n" % (len(data), data))
-                else:
-                    towrite.append(data)
-            self._sendall(''.join(towrite))
+        towrite.extend('\r\n')
+        if data:
+            if self.response_use_chunked:
+                ## Write the chunked encoding
+                towrite.extend("%x\r\n%s\r\n" % (len(data), data))
+            else:
+                towrite.extend(data)
+        self._sendall(towrite)
 
     def start_response(self, status, headers, exc_info=None):
         if exc_info:
