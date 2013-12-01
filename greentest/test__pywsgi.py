@@ -611,7 +611,11 @@ class TestInternational(TestCase):
 
     def test(self):
         sock = self.connect()
-        sock.sendall('GET /%D0%BF%D1%80%D0%B8%D0%B2%D0%B5%D1%82?%D0%B2%D0%BE%D0%BF%D1%80%D0%BE%D1%81=%D0%BE%D1%82%D0%B2%D0%B5%D1%82 HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n')
+        sock.sendall('''GET /%D0%BF%D1%80%D0%B8%D0%B2%D0%B5%D1%82?%D0%B2%D0%BE%D0%BF%D1%80%D0%BE%D1%81=%D0%BE%D1%82%D0%B2%D0%B5%D1%82 HTTP/1.1
+Host: localhost
+Connection: close
+
+'''.replace('\n', '\r\n'))
         read_http(sock.makefile(), reason='PASSED', chunks=False, body='', content_length=0)
 
 

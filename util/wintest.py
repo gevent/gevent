@@ -68,13 +68,13 @@ elif not args:
 
     system('scp %(source)s %(script_path)s %(username)s@%(host)s:' % options.__dict__)
     if options.dist:
-        system('ssh %(username)s@%(host)s %(python)s -u %(script_name)s dist %(source_name)s'  % options.__dict__)
+        system('ssh %(username)s@%(host)s %(python)s -u %(script_name)s dist %(source_name)s' % options.__dict__)
         try:
             os.mkdir('dist')
         except OSError:
             pass
         system('scp -r %(username)s@%(host)s:%(dir_name)s/dist/ dist' % options.__dict__)
     else:
-        system('ssh %(username)s@%(host)s C:/Python27/python.exe -u %(script_name)s test %(source_name)s'  % options.__dict__)
+        system('ssh %(username)s@%(host)s C:/Python27/python.exe -u %(script_name)s test %(source_name)s' % options.__dict__)
 else:
     sys.exit('Invalid args: %r' % (args, ))
