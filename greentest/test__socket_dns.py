@@ -298,7 +298,7 @@ class TestFamily(TestCase):
         try:
             result = function(*args)
             raise AssertionError('%s: Expected to raise %s, instead returned %r' % (function, error, result))
-        except Exception, ex:
+        except Exception as ex:
             if isinstance(error, basestring):
                 repr_error = error
             else:

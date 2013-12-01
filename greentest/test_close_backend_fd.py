@@ -14,7 +14,7 @@ for count in xrange(2):
             os.close(fileno)
             try:
                 gevent.sleep(0.001)
-            except SystemError, ex:
+            except SystemError as ex:
                 if '(libev)' in str(ex):
                     print 'The error is expected: %s' % ex
                 else:

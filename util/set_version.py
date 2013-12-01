@@ -108,7 +108,7 @@ def modify_version(filename, new_version):
 def unlink(path):
     try:
         os.unlink(path)
-    except OSError, ex:
+    except OSError as ex:
         if ex.errno == 2:  # No such file or directory
             return
         raise

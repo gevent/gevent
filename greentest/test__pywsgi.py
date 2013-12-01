@@ -777,7 +777,7 @@ class TestContentLength304(TestCase):
     def application(self, env, start_response):
         try:
             start_response('304 Not modified', [('Content-Length', '100')])
-        except AssertionError, ex:
+        except AssertionError as ex:
             start_response('200 Raised', [])
             return [str(ex)]
         else:
@@ -804,7 +804,7 @@ class TestBody304(TestCase):
         fd.write('GET / HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n')
         try:
             read_http(fd)
-        except AssertionError, ex:
+        except AssertionError as ex:
             self.assertEqual(str(ex), 'The 304 response must have no body')
         else:
             raise AssertionError('AssertionError must be raised')
@@ -827,7 +827,7 @@ class TestWrite304(TestCase):
         fd.write('GET / HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n')
         try:
             read_http(fd)
-        except AssertionError, ex:
+        except AssertionError as ex:
             self.assertEqual(str(ex), 'The 304 response must have no body')
         else:
             raise AssertionError('write() must raise')

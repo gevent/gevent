@@ -353,7 +353,7 @@ class WSGIHandler(object):
     def _sendall(self, data):
         try:
             self.socket.sendall(data)
-        except socket.error, ex:
+        except socket.error as ex:
             self.status = 'socket error: %s' % ex
             if self.code > 0:
                 self.code = -self.code

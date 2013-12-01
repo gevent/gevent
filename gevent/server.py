@@ -91,7 +91,7 @@ class StreamServer(BaseServer):
     def do_read(self):
         try:
             client_socket, address = self.socket.accept()
-        except _socket.error, err:
+        except _socket.error as err:
             if err[0] == EWOULDBLOCK:
                 return
             raise
@@ -130,7 +130,7 @@ class DatagramServer(BaseServer):
     def do_read(self):
         try:
             data, address = self._socket.recvfrom(8192)
-        except _socket.error, err:
+        except _socket.error as err:
             if err[0] == EWOULDBLOCK:
                 return
             raise
