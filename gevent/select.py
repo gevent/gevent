@@ -1,6 +1,5 @@
 # Copyright (c) 2009-2011 Denis Bilenko. See LICENSE for details.
 from __future__ import absolute_import
-import sys
 from gevent.timeout import Timeout
 from gevent.event import Event
 from gevent.hub import get_hub
@@ -63,8 +62,7 @@ def select(rlist, wlist, xlist, timeout=None):
                 watcher.priority = MAXPRI
                 watcher.start(result.add_write, writefd)
                 watchers.append(watcher)
-        except IOError:
-            ex = sys.exc_info()[1]
+        except IOError as ex:
             raise error(*ex.args)
         result.event.wait(timeout=timeout)
         return result.read, result.write, []

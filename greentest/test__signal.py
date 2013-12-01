@@ -1,7 +1,6 @@
 import signal
 import greentest
 import gevent
-import sys
 
 
 class Expected(Exception):
@@ -30,16 +29,14 @@ if hasattr(signal, 'SIGALRM'):
                 try:
                     gevent.sleep(2)
                     raise AssertionError('must raise Expected')
-                except Expected:
-                    ex = sys.exc_info()[1]
+                except Expected as ex:
                     assert str(ex) == 'TestSignal', ex
                 # also let's check that alarm is persistent
                 signal.alarm(1)
                 try:
                     gevent.sleep(2)
                     raise AssertionError('must raise Expected')
-                except Expected:
-                    ex = sys.exc_info()[1]
+                except Expected as ex:
                     assert str(ex) == 'TestSignal', ex
             finally:
                 sig.cancel()

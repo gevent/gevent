@@ -277,8 +277,7 @@ class CommonTests(TestCase):
                 fd.close()
             finally:
                 timeout.cancel()
-        except AssertionError:
-            ex = sys.exc_info()[1]
+        except AssertionError as ex:
             if ex is not exception:
                 raise
 
@@ -294,8 +293,7 @@ class CommonTests(TestCase):
         try:
             result = fd.readline()
             assert not result, 'The remote side is expected to close the connection, but it send %r' % (result, )
-        except socket.error:
-            ex = sys.exc_info()[1]
+        except socket.error as ex:
             if ex.args[0] not in CONN_ABORTED_ERRORS:
                 raise
 
@@ -952,8 +950,7 @@ class ChunkedInputTests(TestCase):
         fd.write(req)
         try:
             read_http(fd, body="pong")
-        except AssertionError:
-            ex = sys.exc_info()[1]
+        except AssertionError as ex:
             if str(ex).startswith('Unexpected code: 400'):
                 if not server_implements_chunked:
                     print 'ChunkedNotImplementedWarning'
@@ -1005,8 +1002,7 @@ class Expect100ContinueTests(TestCase):
         fd.write('PUT / HTTP/1.1\r\nHost: localhost\r\nContent-length: 1025\r\nExpect: 100-continue\r\n\r\n')
         try:
             read_http(fd, code=417, body="failure")
-        except AssertionError:
-            ex = sys.exc_info()[1]
+        except AssertionError as ex:
             if str(ex).startswith('Unexpected code: 400'):
                 if not server_implements_100continue:
                     print '100ContinueNotImplementedWarning'

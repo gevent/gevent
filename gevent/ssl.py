@@ -104,8 +104,7 @@ class SSLSocket(socket):
         while True:
             try:
                 return self._sslobj.read(len)
-            except SSLError:
-                ex = sys.exc_info()[1]
+            except SSLError as ex:
                 if ex.args[0] == SSL_ERROR_EOF and self.suppress_ragged_eofs:
                     return ''
                 elif ex.args[0] == SSL_ERROR_WANT_READ:
@@ -128,8 +127,7 @@ class SSLSocket(socket):
         while True:
             try:
                 return self._sslobj.write(data)
-            except SSLError:
-                ex = sys.exc_info()[1]
+            except SSLError as ex:
                 if ex.args[0] == SSL_ERROR_WANT_READ:
                     if self.timeout == 0.0:
                         raise
@@ -167,8 +165,7 @@ class SSLSocket(socket):
             while True:
                 try:
                     v = self._sslobj.write(data)
-                except SSLError:
-                    x = sys.exc_info()[1]
+                except SSLError as x:
                     if x.args[0] == SSL_ERROR_WANT_READ:
                         if self.timeout == 0.0:
                             return 0
@@ -221,8 +218,7 @@ class SSLSocket(socket):
                     v = len(tmp_buffer)
                     buffer[:v] = tmp_buffer
                     return v
-                except SSLError:
-                    x = sys.exc_info()[1]
+                except SSLError as x:
                     if x.args[0] == SSL_ERROR_WANT_READ:
                         if self.timeout == 0.0:
                             raise
@@ -258,8 +254,7 @@ class SSLSocket(socket):
         while True:
             try:
                 return self._sslobj.shutdown()
-            except SSLError:
-                ex = sys.exc_info()[1]
+            except SSLError as ex:
                 if ex.args[0] == SSL_ERROR_EOF and self.suppress_ragged_eofs:
                     return ''
                 elif ex.args[0] == SSL_ERROR_WANT_READ:
@@ -299,8 +294,7 @@ class SSLSocket(socket):
         while True:
             try:
                 return self._sslobj.do_handshake()
-            except SSLError:
-                ex = sys.exc_info()[1]
+            except SSLError as ex:
                 if ex.args[0] == SSL_ERROR_WANT_READ:
                     if self.timeout == 0.0:
                         raise

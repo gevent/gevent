@@ -1,7 +1,6 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 from __future__ import with_statement
-import sys
 import re
 import greentest
 import socket
@@ -29,8 +28,8 @@ def _run(function, *args):
         result = function(*args)
         assert not isinstance(result, BaseException), repr(result)
         return result
-    except Exception:
-        return sys.exc_info()[1]
+    except Exception as ex:
+        return ex
 
 
 def format_call(function, args):

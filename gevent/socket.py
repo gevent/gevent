@@ -247,8 +247,8 @@ class socket(object):
     def _formatinfo(self):
         try:
             fileno = self.fileno()
-        except Exception:
-            fileno = str(sys.exc_info()[1])
+        except Exception as ex:
+            fileno = str(ex)
         try:
             sockname = self.getsockname()
             sockname = '%s:%s' % sockname
@@ -302,8 +302,7 @@ class socket(object):
             try:
                 client_socket, address = sock.accept()
                 break
-            except error:
-                ex = sys.exc_info()[1]
+            except error as ex:
                 if ex[0] != EWOULDBLOCK or self.timeout == 0.0:
                     raise
                 sys.exc_clear()
@@ -352,8 +351,7 @@ class socket(object):
             return self.connect(address) or 0
         except timeout:
             return EAGAIN
-        except error:
-            ex = sys.exc_info()[1]
+        except error as ex:
             if type(ex) is error:
                 return ex.args[0]
             else:
@@ -379,8 +377,7 @@ class socket(object):
         while True:
             try:
                 return sock.recv(*args)
-            except error:
-                ex = sys.exc_info()[1]
+            except error as ex:
                 if ex.args[0] != EWOULDBLOCK or self.timeout == 0.0:
                     raise
                 # QQQ without clearing exc_info test__refcount.test_clean_exit fails
@@ -392,8 +389,7 @@ class socket(object):
         while True:
             try:
                 return sock.recvfrom(*args)
-            except error:
-                ex = sys.exc_info()[1]
+            except error as ex:
                 if ex.args[0] != EWOULDBLOCK or self.timeout == 0.0:
                     raise
                 sys.exc_clear()
@@ -404,8 +400,7 @@ class socket(object):
         while True:
             try:
                 return sock.recvfrom_into(*args)
-            except error:
-                ex = sys.exc_info()[1]
+            except error as ex:
                 if ex.args[0] != EWOULDBLOCK or self.timeout == 0.0:
                     raise
                 sys.exc_clear()
@@ -416,8 +411,7 @@ class socket(object):
         while True:
             try:
                 return sock.recv_into(*args)
-            except error:
-                ex = sys.exc_info()[1]
+            except error as ex:
                 if ex.args[0] != EWOULDBLOCK or self.timeout == 0.0:
                     raise
                 sys.exc_clear()
@@ -429,16 +423,14 @@ class socket(object):
             timeout = self.timeout
         try:
             return sock.send(data, flags)
-        except error:
-            ex = sys.exc_info()[1]
+        except error as ex:
             if ex.args[0] != EWOULDBLOCK or timeout == 0.0:
                 raise
             sys.exc_clear()
             self._wait(self._write_event)
             try:
                 return sock.send(data, flags)
-            except error:
-                ex2 = sys.exc_info()[1]
+            except error as ex2:
                 if ex2.args[0] == EWOULDBLOCK:
                     return 0
                 raise
@@ -468,16 +460,14 @@ class socket(object):
         sock = self._sock
         try:
             return sock.sendto(*args)
-        except error:
-            ex = sys.exc_info()[1]
+        except error as ex:
             if ex.args[0] != EWOULDBLOCK or timeout == 0.0:
                 raise
             sys.exc_clear()
             self._wait(self._write_event)
             try:
                 return sock.sendto(*args)
-            except error:
-                ex2 = sys.exc_info()[1]
+            except error as ex2:
                 if ex2.args[0] == EWOULDBLOCK:
                     return 0
                 raise
@@ -574,8 +564,7 @@ def create_connection(address, timeout=_GLOBAL_DEFAULT_TIMEOUT, source_address=N
                 sock.bind(source_address)
             sock.connect(sa)
             return sock
-        except error:
-            err = sys.exc_info()[1]
+        except error as err:
             # without exc_clear(), if connect() fails once, the socket is referenced by the frame in exc_info
             # and the next bind() fails (see test__socket.TestCreateConnection)
             # that does not happen with regular sockets though, because _socket.socket.connect() is a built-in.

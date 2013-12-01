@@ -1,7 +1,6 @@
 # Copyright (c) 2011 Denis Bilenko. See LICENSE for details.
 from __future__ import absolute_import
 import os
-import sys
 from _socket import getservbyname, getaddrinfo, gaierror, error
 from gevent.hub import Waiter, get_hub, string_types
 from gevent.socket import AF_UNSPEC, AF_INET, AF_INET6, SOCK_STREAM, SOCK_DGRAM, SOCK_RAW, AI_NUMERICHOST, EAI_SERVICE, AI_PASSIVE
@@ -99,8 +98,7 @@ class Resolver(object):
                         port = getservbyname(port, 'udp')
                     else:
                         raise gaierror(EAI_SERVICE, 'Servname not supported for ai_socktype')
-                except error:
-                    ex = sys.exc_info()[1]
+                except error as ex:
                     if 'not found' in str(ex):
                         raise gaierror(EAI_SERVICE, 'Servname not supported for ai_socktype')
                     else:

@@ -284,8 +284,7 @@ class TestStuff(greentest.TestCase):
         b = gevent.spawn(lambda: getcurrent().throw(ExpectedError('second')))
         try:
             gevent.joinall([a, b], raise_error=True)
-        except ExpectedError:
-            ex = sys.exc_info()[1]
+        except ExpectedError as ex:
             assert 'second' in str(ex), repr(str(ex))
         gevent.joinall([a, b])
 

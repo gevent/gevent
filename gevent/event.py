@@ -76,8 +76,7 @@ class Event(object):
                     try:
                         result = self.hub.switch()
                         assert result is self, 'Invalid switch into Event.wait(): %r' % (result, )
-                    except Timeout:
-                        ex = sys.exc_info()[1]
+                    except Timeout as ex:
                         if ex is not timer:
                             raise
                 finally:
@@ -268,8 +267,7 @@ class AsyncResult(object):
                     assert result is self, 'Invalid switch into AsyncResult.wait(): %r' % (result, )
                 finally:
                     timer.cancel()
-            except Timeout:
-                exc = sys.exc_info()[1]
+            except Timeout as exc:
                 self.unlink(switch)
                 if exc is not timer:
                     raise

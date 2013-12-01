@@ -325,5 +325,5 @@ class ThreadResult(object):
 def wrap_errors(errors, function, args, kwargs):
     try:
         return True, function(*args, **kwargs)
-    except errors:
-        return False, sys.exc_info()[1]
+    except errors as ex:
+        return False, ex

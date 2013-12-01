@@ -308,8 +308,7 @@ class WSGIHandler(object):
             # for compatibility with older versions of pywsgi, we pass self.requestline as an argument there
             if not self.read_request(self.requestline):
                 return ('400', _BAD_REQUEST_RESPONSE)
-        except Exception:
-            ex = sys.exc_info()[1]
+        except Exception as ex:
             if not isinstance(ex, ValueError):
                 traceback.print_exc()
             self.log_error('Invalid request: %s', str(ex) or ex.__class__.__name__)
@@ -319,8 +318,7 @@ class WSGIHandler(object):
         self.application = self.server.application
         try:
             self.handle_one_response()
-        except socket.error:
-            ex = sys.exc_info()[1]
+        except socket.error as ex:
             # Broken pipe, connection reset by peer
             if ex.args[0] in (errno.EPIPE, errno.ECONNRESET):
                 sys.exc_clear()
