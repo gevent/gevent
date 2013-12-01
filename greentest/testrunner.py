@@ -124,24 +124,6 @@ def load_list_from_file(filename):
     return result
 
 
-def full(args=None):
-    tests = []
-
-    for setenv, ignore in [('GEVENT_RESOLVER=thread', None),
-                           ('GEVENT_RESOLVER=ares GEVENTARES_SERVERS=8.8.8.8', 'tests_that_dont_use_resolver.txt')]:
-        setenv = dict(x.split('=') for x in setenv.split())
-        for cmd, options in discover(args, ignore=ignore):
-            my_setenv = options.get('setenv', {})
-            my_setenv.update(setenv)
-            options['setenv'] = my_setenv
-            tests.append((cmd, options))
-
-    if sys.version_info[:2] == (2, 7) and os.environ.get('EXTRA'):
-        tests.append(([sys.executable, '-u', 'xtest_pep8.py'], None))
-
-    return tests
-
-
 def main():
     import optparse
     parser = optparse.OptionParser()
@@ -152,11 +134,7 @@ def main():
     parser.add_option('--failfast', action='store_true')
     options, args = parser.parse_args()
     options.expected = load_list_from_file(options.expected)
-    if options.full:
-        assert options.ignore is None, '--ignore and --full are not compatible'
-        tests = full(args)
-    else:
-        tests = discover(args, options.ignore)
+    tests = discover(args, options.ignore)
     if options.discover:
         for cmd, options in tests:
             print (util.getname(cmd, env=options.get('env'), setenv=options.get('setenv')))

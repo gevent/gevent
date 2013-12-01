@@ -1,5 +1,5 @@
 import sys
-import time
+#import time
 from unittest import main
 if sys.version_info[0] == 3:
     from urllib import request as urllib2
@@ -50,22 +50,22 @@ class Test_webproxy(Test_wsgiserver):
         assert 'google' in data.lower(), repr(data)
 
 
-class Test_webpy(Test_wsgiserver):
-    server = 'webpy.py'
-    not_found_message = 'not found'
-
-    def _test_hello(self):
-        status, data = self.read('/')
-        self.assertEqual(status, '200 OK')
-        assert "Hello, world" in data, repr(data)
-
-    def _test_long(self):
-        start = time.time()
-        status, data = self.read('/long')
-        delay = time.time() - start
-        assert 10 - 0.5 < delay < 10 + 0.5, delay
-        self.assertEqual(status, '200 OK')
-        self.assertEqual(data, 'Hello, 10 seconds later')
+# class Test_webpy(Test_wsgiserver):
+#     server = 'webpy.py'
+#     not_found_message = 'not found'
+#
+#     def _test_hello(self):
+#         status, data = self.read('/')
+#         self.assertEqual(status, '200 OK')
+#         assert "Hello, world" in data, repr(data)
+#
+#     def _test_long(self):
+#         start = time.time()
+#         status, data = self.read('/long')
+#         delay = time.time() - start
+#         assert 10 - 0.5 < delay < 10 + 0.5, delay
+#         self.assertEqual(status, '200 OK')
+#         self.assertEqual(data, 'Hello, 10 seconds later')
 
 
 if __name__ == '__main__':
