@@ -75,24 +75,27 @@ def log_call(result, time, function, *args):
     log_fresult(result, time)
 
 
-google_host_re = re.compile('^arn[a-z0-9-]+.1e100.net$')
-
-
-def compare_ipv6(a, b):
+def compare_relaxed(a, b):
     """
-    >>> compare_ipv6('2a00:1450:400f:801::1010', '2a00:1450:400f:800::1011')
+    >>> compare_relaxed('2a00:1450:400f:801::1010', '2a00:1450:400f:800::1011')
     True
-    >>> compare_ipv6('2a00:1450:400f:801::1010', '2aXX:1450:400f:900::1011')
+
+    >>> compare_relaxed('2a00:1450:400f:801::1010', '2aXX:1450:400f:900::1011')
     False
-    >>> compare_ipv6('2a00:1450:4016:800::1013', '2a00:1450:4008:c01::93')
+
+    >>> compare_relaxed('2a00:1450:4016:800::1013', '2a00:1450:4008:c01::93')
     True
+
+    >>> compare_relaxed('a.surfly.com', 'b.surfly.com')
+    True
+
+    >>> compare_relaxed('a.surfly.com', 'a.gevent.org')
+    False
     """
     if a.count(':') == 5 and b.count(':') == 5:
         # QQQ not actually sure if this is right thing to do
         return a.rsplit(':')[:2] == b.rsplit(':')[:2]
-    if google_host_re.match(a) and google_host_re.match(b):
-        return True
-    return a == b
+    return a.split('.', 1)[-1] == b.split('.', 1)[-1]
 
 
 def contains_5tuples(lst):
@@ -106,24 +109,29 @@ def relaxed_is_equal(a, b):
     """
     >>> relaxed_is_equal([(10, 1, 6, '', ('2a00:1450:400f:801::1010', 80, 0, 0))], [(10, 1, 6, '', ('2a00:1450:400f:800::1011', 80, 0, 0))])
     True
+
     >>> relaxed_is_equal([1, '2'], (1, '2'))
     False
+
     >>> relaxed_is_equal([1, '2'], [1, '2'])
+    True
+
+    >>> relaxed_is_equal(('wi-in-x93.1e100.net', 'http'), ('we-in-x68.1e100.net', 'http'))
     True
     """
     if type(a) is not type(b):
         return False
+    if a == b:
+        return True
     if isinstance(a, basestring):
-        return compare_ipv6(a, b)
-    if hasattr(a, '__iter__'):
-        if len(a) != len(b):
-            return False
-        if contains_5tuples(a) and contains_5tuples(b):
-            # getaddrinfo results
-            a = sorted(a)
-            b = sorted(b)
-        return all(relaxed_is_equal(x, y) for (x, y) in zip(a, b))
-    return a == b
+        return compare_relaxed(a, b)
+    if len(a) != len(b):
+        return False
+    if contains_5tuples(a) and contains_5tuples(b):
+        # getaddrinfo results
+        a = sorted(a)
+        b = sorted(b)
+    return all(relaxed_is_equal(x, y) for (x, y) in zip(a, b))
 
 
 def add(klass, hostname, name=None):
