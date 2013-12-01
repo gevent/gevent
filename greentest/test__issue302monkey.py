@@ -2,7 +2,7 @@ import sys
 
 
 if 'gevent' not in sys.modules:
-    from subprocess import Popen, PIPE
+    from subprocess import Popen
     args = [sys.executable, '-m', 'gevent.monkey', __file__]
     p = Popen(args)
     code = p.wait()
