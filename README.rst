@@ -20,7 +20,7 @@ gevent_ is written and maintained by `Denis Bilenko`_ and is licensed under MIT 
 get gevent
 ----------
 
-Install Python 2.5 or newer and greenlet_ extension.
+Install Python 2.6 or newer and greenlet_ extension.
 
 Download the latest release from `Python Package Index`_ or clone `the repository`_.
 

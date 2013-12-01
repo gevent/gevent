@@ -300,7 +300,6 @@ def run_setup(ext_modules):
         install_requires=['greenlet'],
         classifiers=[
             "License :: OSI Approved :: MIT License",
-            "Programming Language :: Python :: 2.5",
             "Programming Language :: Python :: 2.6",
             "Programming Language :: Python :: 2.7",
             "Operating System :: MacOS :: MacOS X",

@@ -19,7 +19,7 @@ Features include:
 Installation
 ------------
 
-gevent runs on Python 2.5 and newer and requires
+gevent runs on Python 2.6 and newer and requires
 
 * greenlet__ which can be installed with ``pip install greenlet``.
 

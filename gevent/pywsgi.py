@@ -379,46 +379,23 @@ class WSGIHandler(object):
                 raise AssertionError("The application did not call start_response()")
             self._write_with_headers(data)
 
-    if sys.version_info[:2] >= (2, 6):
+    def _write_with_headers(self, data):
+        towrite = bytearray()
+        self.headers_sent = True
+        self.finalize_headers()
 
-        def _write_with_headers(self, data):
-            towrite = bytearray()
-            self.headers_sent = True
-            self.finalize_headers()
+        towrite.extend('HTTP/1.1 %s\r\n' % self.status)
+        for header in self.response_headers:
+            towrite.extend('%s: %s\r\n' % header)
 
-            towrite.extend('HTTP/1.1 %s\r\n' % self.status)
-            for header in self.response_headers:
-                towrite.extend('%s: %s\r\n' % header)
-
-            towrite.extend('\r\n')
-            if data:
-                if self.response_use_chunked:
-                    ## Write the chunked encoding
-                    towrite.extend("%x\r\n%s\r\n" % (len(data), data))
-                else:
-                    towrite.extend(data)
-            self._sendall(towrite)
-
-    else:
-        # Python 2.5 does not have bytearray
-
-        def _write_with_headers(self, data):
-            towrite = []
-            self.headers_sent = True
-            self.finalize_headers()
-
-            towrite.append('HTTP/1.1 %s\r\n' % self.status)
-            for header in self.response_headers:
-                towrite.append('%s: %s\r\n' % header)
-
-            towrite.append('\r\n')
-            if data:
-                if self.response_use_chunked:
-                    ## Write the chunked encoding
-                    towrite.append("%x\r\n%s\r\n" % (len(data), data))
-                else:
-                    towrite.append(data)
-            self._sendall(''.join(towrite))
+        towrite.extend('\r\n')
+        if data:
+            if self.response_use_chunked:
+                ## Write the chunked encoding
+                towrite.extend("%x\r\n%s\r\n" % (len(data), data))
+            else:
+                towrite.extend(data)
+        self._sendall(towrite)
 
     def start_response(self, status, headers, exc_info=None):
         if exc_info:

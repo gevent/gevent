@@ -20,16 +20,6 @@ __all__ = ['Timeout',
            'with_timeout']
 
 
-try:
-    BaseException
-except NameError:  # Python < 2.5
-
-    class BaseException:
-        # not subclassing from object() intentionally, because in
-        # that case "raise Timeout" fails with TypeError.
-        pass
-
-
 class Timeout(BaseException):
     """Raise *exception* in the current greenlet after given time period::
 
@@ -129,10 +119,7 @@ class Timeout(BaseException):
         self.timer.stop()
 
     def __repr__(self):
-        try:
-            classname = self.__class__.__name__
-        except AttributeError:  # Python < 2.5
-            classname = 'Timeout'
+        classname = type(self).__name__
         if self.pending:
             pending = ' pending'
         else:

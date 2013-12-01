@@ -16,11 +16,6 @@ win32 * C:\Python27\python.exe -u -m monkey_test test_subprocess.py
 win32 * C:\Python27\python.exe -u -m monkey_test --Event test_subprocess.py
 
 # these need investigating:
-* * .*/python2.5(-dbg)? -u -m monkey_test --Event test_urllib2net.py
-* * .*/python2.5(-dbg)? -u -m monkey_test test_urllib2net.py
-* * .*/python2.5(-dbg)? -u test__threading_vs_settrace.py
-* * .*/python2.5(-dbg)? -u test__example_portforwarder.py
-* * .*/python2.5(-dbg)? -u test__socket_close.py
 * * * -u test__issue6.py
 
 # bunch of SSLError: [Errno 1] _ssl.c:504: error:14090086:SSL routines:SSL3_GET_SERVER_CERTIFICATE:certificate verify failed
@@ -28,4 +23,4 @@ win32 * C:\Python27\python.exe -u -m monkey_test --Event test_subprocess.py
 * * * -u -m monkey_test --Event test_ssl.py
 * * * -u -m monkey_test test_ssl.py
 
-* * /usr/bin/python2.[567]-dbg -u test__backdoor.py
+* * /usr/bin/python2.[67]-dbg -u test__backdoor.py
