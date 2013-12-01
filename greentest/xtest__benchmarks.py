@@ -13,7 +13,7 @@ def kill(popen):
         return
     try:
         popen.kill()
-    except OSError, ex:
+    except OSError as ex:
         if ex.errno == 3:  # No such process
             return
         if ex.errno == 13:  # Permission denied (translated from windows error 5: "Access is denied")
@@ -40,7 +40,7 @@ def system(command):
         kill(popen)
 
 
-modules = set()
+modules = {}
 
 for path in glob.glob('bench_*.py'):
     modules.add(path)

@@ -51,7 +51,7 @@ else:
         """
 
         def __init__(self, fileno, mode=None, close=True):
-            if not isinstance(fileno, (int, long)):
+            if not isinstance(fileno, (int)):
                 raise TypeError('fileno must be int: %r' % fileno)
             self._fileno = fileno
             self._mode = mode or 'rb'
@@ -151,7 +151,7 @@ else:
     class FileObjectPosix(_fileobject):
 
         def __init__(self, fobj, mode='rb', bufsize=-1, close=True):
-            if isinstance(fobj, (int, long)):
+            if isinstance(fobj, (int)):
                 fileno = fobj
                 fobj = None
             else:
@@ -216,7 +216,7 @@ class FileObjectThread(object):
             self.lock = DummySemaphore()
         if not hasattr(self.lock, '__enter__'):
             raise TypeError('Expected a Semaphore or boolean, got %r' % type(self.lock))
-        if isinstance(fobj, (int, long)):
+        if isinstance(fobj, (int)):
             if not self._close:
                 # we cannot do this, since fdopen object will close the descriptor
                 raise TypeError('FileObjectThread does not support close=False')
@@ -227,7 +227,7 @@ class FileObjectThread(object):
 
     def _apply(self, func, args=None, kwargs=None):
         with self.lock:
-            return self.threadpool.apply_e(BaseException, func, args, kwargs)
+            return self.threadpool.apply_e(Exception, func, args, kwargs)
 
     def close(self):
         fobj = self._fobj
@@ -258,19 +258,19 @@ class FileObjectThread(object):
             raise FileObjectClosed
         return getattr(self._fobj, item)
 
-    for method in ['read', 'readinto', 'readline', 'readlines', 'write', 'writelines', 'xreadlines']:
+    for method in ['read', 'readinto', 'readline', 'readlines', 'write', 'writelines']:
 
-        exec '''def %s(self, *args, **kwargs):
+        exec ('''def %s(self, *args, **kwargs):
     fobj = self._fobj
     if fobj is None:
         raise FileObjectClosed
     return self._apply(fobj.%s, args, kwargs)
-''' % (method, method)
+''' % (method, method))
 
     def __iter__(self):
         return self
 
-    def next(self):
+    def __next__(self):
         line = self.readline()
         if line:
             return line
@@ -292,7 +292,7 @@ class FileObjectBlock(object):
         self._close = kwargs.pop('close', True)
         if kwargs:
             raise TypeError('Unexpected arguments: %r' % kwargs.keys())
-        if isinstance(fobj, (int, long)):
+        if isinstance(fobj, (int)):
             if not self._close:
                 # we cannot do this, since fdopen object will close the descriptor
                 raise TypeError('FileObjectBlock does not support close=False')

@@ -105,7 +105,7 @@ def test_request_headers_methods():
 
     >>> r.has_header("Not-there")
     False
-    >>> print r.get_header("Not-there")
+    >>> print (r.get_header("Not-there"))
     None
     >>> r.get_header("Not-there", "default")
     'default'
@@ -923,7 +923,7 @@ class HandlerTests(unittest.TestCase):
         count = 0
         req.timeout = socket._GLOBAL_DEFAULT_TIMEOUT
         try:
-            while 1:
+            while True:
                 redirect(h, req, "http://example.com/")
                 count = count + 1
         except urllib2.HTTPError:
@@ -935,7 +935,7 @@ class HandlerTests(unittest.TestCase):
         count = 0
         req.timeout = socket._GLOBAL_DEFAULT_TIMEOUT
         try:
-            while 1:
+            while True:
                 redirect(h, req, "http://example.com/%d" % count)
                 count = count + 1
         except urllib2.HTTPError:

@@ -44,14 +44,14 @@ class BasicTests(unittest.TestCase):
         # A crude test for the legacy API
         try:
             ssl.sslwrap_simple(socket.socket(socket.AF_INET))
-        except IOError, e:
+        except IOError as e:
             if e.errno == 32: # broken pipe when ssl_sock.do_handshake(), this test doesn't care about that
                 pass
             else:
                 raise
         try:
             ssl.sslwrap_simple(socket.socket(socket.AF_INET)._sock)
-        except IOError, e:
+        except IOError as e:
             if e.errno == 32: # broken pipe when ssl_sock.do_handshake(), this test doesn't care about that
                 pass
             else:
@@ -77,7 +77,7 @@ class BasicTests(unittest.TestCase):
         except TypeError:
             pass
         else:
-            print "didn't raise TypeError"
+            print ("didn't raise TypeError")
         ssl.RAND_add("this is a random string", 75.0)
 
     def test_parse_cert(self):
@@ -146,7 +146,7 @@ class NetworkedTests(unittest.TestCase):
         # file descriptor, hence skipping the test under Windows).
         if os.name == "nt":
             if test_support.verbose:
-                print "Skipped: can't use a socket as a file under Windows"
+                print ("Skipped: can't use a socket as a file under Windows")
             return
         ss = ssl.wrap_socket(socket.socket(socket.AF_INET))
         ss.connect(("svn.python.org", 443))
@@ -160,7 +160,7 @@ class NetworkedTests(unittest.TestCase):
         gc.collect()
         try:
             os.read(fd, 0)
-        except OSError, e:
+        except OSError as e:
             self.assertEqual(e.errno, errno.EBADF)
         else:
             self.fail("OSError wasn't raised")
@@ -178,7 +178,7 @@ class NetworkedTests(unittest.TestCase):
                 count += 1
                 s.do_handshake()
                 break
-            except ssl.SSLError, err:
+            except ssl.SSLError as err:
                 if err.args[0] == ssl.SSL_ERROR_WANT_READ:
                     select.select([s], [], [])
                 elif err.args[0] == ssl.SSL_ERROR_WANT_WRITE:
@@ -440,14 +440,14 @@ else:
                 def _do_ssl_handshake(self):
                     try:
                         self.socket.do_handshake()
-                    except ssl.SSLError, err:
+                    except ssl.SSLError as err:
                         if err.args[0] in (ssl.SSL_ERROR_WANT_READ,
                                            ssl.SSL_ERROR_WANT_WRITE):
                             return
                         elif err.args[0] == ssl.SSL_ERROR_EOF:
                             return self.handle_close()
                         raise
-                    except socket.error, err:
+                    except socket.error as err:
                         if err.args[0] == errno.ECONNABORTED:
                             return self.handle_close()
                     else:
@@ -621,10 +621,10 @@ else:
                                     certfile=certfile,
                                     ssl_version=ssl.PROTOCOL_TLSv1)
                 s.connect((HOST, server.port))
-            except ssl.SSLError, x:
+            except ssl.SSLError as x:
                 if test_support.verbose:
                     sys.stdout.write("\nSSLError is %s\n" % x[1])
-            except socket.error, x:
+            except socket.error as x:
                 if test_support.verbose:
                     sys.stdout.write("\nsocket.error is %s\n" % x[1])
             else:
@@ -850,7 +850,7 @@ else:
             return
             try:
                 try_protocol_combo(ssl.PROTOCOL_SSLv23, ssl.PROTOCOL_SSLv2, True)
-            except (ssl.SSLError, socket.error), x:
+            except (ssl.SSLError, socket.error) as x:
                 # this fails on some older versions of OpenSSL (0.9.7l, for instance)
                 if test_support.verbose:
                     sys.stdout.write(
@@ -1181,7 +1181,7 @@ else:
                     # Will attempt handshake and time out
                     try:
                         ssl.wrap_socket(c)
-                    except ssl.SSLError, e:
+                    except ssl.SSLError as e:
                         self.assertTrue("timed out" in str(e), str(e))
                     else:
                         self.fail("SSLError wasn't raised")
@@ -1194,7 +1194,7 @@ else:
                     # Will attempt handshake and time out
                     try:
                         c.connect((host, port))
-                    except ssl.SSLError, e:
+                    except ssl.SSLError as e:
                         self.assertTrue("timed out" in str(e), str(e))
                     else:
                         self.fail("SSLError wasn't raised")

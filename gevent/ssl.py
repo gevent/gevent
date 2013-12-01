@@ -50,7 +50,7 @@ for name in __imports__[:]:
 for name in dir(__ssl__):
     if not name.startswith('_'):
         value = getattr(__ssl__, name)
-        if isinstance(value, (int, long, tuple)) or isinstance(value, string_types):
+        if isinstance(value, (int)) or isinstance(value, string_types):
             globals()[name] = value
             __imports__.append(name)
 
@@ -74,7 +74,7 @@ class SSLSocket(socket):
         # see if it's connected
         try:
             socket.getpeername(self)
-        except socket_error, e:
+        except socket_error as e:
             if e[0] != errno.ENOTCONN:
                 raise
             # no, no connection yet

@@ -45,7 +45,7 @@ def receive(sock, n, timeout=20):
     if sock in r:
         return sock.recv(n)
     else:
-        raise RuntimeError, "timed out on %r" % (sock,)
+        raise RuntimeError("timed out on %r" % (sock,))
 
 def testdgram(proto, addr):
     s = socket.socket(proto, socket.SOCK_DGRAM)
@@ -77,7 +77,7 @@ class ServerThread(threading.Thread):
     def run(self):
         class svrcls(MyMixinServer, self.__svrcls):
             pass
-        if verbose: print "thread: creating server"
+        if verbose: print ("thread: creating server")
         svr = svrcls(self.__addr, self.__hdlrcls)
         # pull the address out of the server in case it changed
         # this can happen if another process is using the port
@@ -87,9 +87,9 @@ class ServerThread(threading.Thread):
             if self.__addr != svr.socket.getsockname():
                 raise RuntimeError('server_address was %s, expected %s' %
                                        (self.__addr, svr.socket.getsockname()))
-        if verbose: print "thread: serving three times"
+        if verbose: print ("thread: serving three times")
         svr.serve_a_few()
-        if verbose: print "thread: done"
+        if verbose: print ("thread: done")
 
 seed = 0
 def pickport():
@@ -132,19 +132,19 @@ def testloop(proto, servers, hdlrcls, testfunc):
     for svrcls in servers:
         addr = pickaddr(proto)
         if verbose:
-            print "ADDR =", addr
-            print "CLASS =", svrcls
+            print ("ADDR =", addr)
+            print ("CLASS =", svrcls)
         t = ServerThread(addr, svrcls, hdlrcls)
-        if verbose: print "server created"
+        if verbose: print ("server created")
         t.start()
-        if verbose: print "server running"
+        if verbose: print ("server running")
         for i in range(NREQ):
             time.sleep(DELAY)
-            if verbose: print "test client", i
+            if verbose: print ("test client", i)
             testfunc(proto, addr)
-        if verbose: print "waiting for server"
+        if verbose: print ("waiting for server")
         t.join()
-        if verbose: print "done"
+        if verbose: print ("done")
 
 class ForgivingTCPServer(TCPServer):
     # prevent errors if another process is using the port we want

@@ -10,7 +10,7 @@ from psycopg2 import extensions, OperationalError, connect
 
 def gevent_wait_callback(conn, timeout=None):
     """A wait callback useful to allow gevent to work with Psycopg."""
-    while 1:
+    while True:
         state = conn.poll()
         if state == extensions.POLL_OK:
             break
@@ -29,7 +29,7 @@ extensions.set_wait_callback(gevent_wait_callback)
 class DatabaseConnectionPool(object):
 
     def __init__(self, maxsize=100):
-        if not isinstance(maxsize, (int, long)):
+        if not isinstance(maxsize, (int)):
             raise TypeError('Expected integer, got %r' % (maxsize, ))
         self.maxsize = maxsize
         self.pool = Queue()
@@ -147,4 +147,4 @@ if __name__ == '__main__':
         gevent.spawn(pool.execute, 'select pg_sleep(1);')
     gevent.wait()
     delay = time.time() - start
-    print 'Running "select pg_sleep(1);" 4 times with 3 connections. Should take about 2 seconds: %.2fs' % delay
+    print ('Running "select pg_sleep(1);" 4 times with 3 connections. Should take about 2 seconds: %.2fs' % delay)

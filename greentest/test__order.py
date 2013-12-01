@@ -22,7 +22,7 @@ class Test(greentest.TestCase):
         # test that links are executed in the same order as they were added
         g = gevent.spawn(lst.append, 0)
 
-        for i in xrange(1, self.count):
+        for i in range(1, self.count):
             g.link(appender(lst, i))
         g.join()
         self.assertEqual(lst, range(self.count))

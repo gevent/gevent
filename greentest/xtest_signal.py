@@ -54,7 +54,7 @@ def test_main():
                     else:
                         pickle.dump(None, done_w)
             except:
-                print 'Uh oh, raised from pickle.'
+                print ('Uh oh, raised from pickle.')
                 traceback.print_exc()
             finally:
                 os._exit(0)
@@ -71,7 +71,7 @@ def test_main():
 
 
 if __name__ == "__main__":
-    print gevent.get_hub()
+    print (gevent.get_hub())
     while True:
         test_main()
         sys.stderr.write('.')

@@ -17,7 +17,7 @@ def _retry_thrice(func, exc, *args, **kwargs):
     for i in range(3):
         try:
             return func(*args, **kwargs)
-        except exc, last_exc:
+        except exc as last_exc:
             continue
         except:
             raise
@@ -173,7 +173,7 @@ class OtherNetworkTests(unittest.TestCase):
             debug(url)
             try:
                 f = urlopen(url, req, TIMEOUT)
-            except EnvironmentError, err:
+            except EnvironmentError as err:
                 debug(err)
                 if expected_err:
                     msg = ("Didn't get expected error(s) %s for %s %s, got %s: %s" %
@@ -181,7 +181,7 @@ class OtherNetworkTests(unittest.TestCase):
                     self.assert_(isinstance(err, expected_err), msg)
             except urllib2.URLError as err:
                 if isinstance(err[0], socket.timeout):
-                    print >>sys.stderr, "<timeout: %s>" % url
+                    print ("<timeout: %s>" % url, file=sys.stderr)
                     continue
                 else:
                     raise
@@ -191,7 +191,7 @@ class OtherNetworkTests(unittest.TestCase):
                         buf = f.read()
                         debug("read %d bytes" % len(buf))
                 except socket.timeout:
-                    print >>sys.stderr, "<timeout: %s>" % url
+                    print ("<timeout: %s>" % url, file=sys.stderr)
                 f.close()
             debug("******** next url coming up...")
             time.sleep(0.1)

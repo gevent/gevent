@@ -430,17 +430,17 @@ class TestErrorInHandler(greentest.TestCase):
     def test_imap(self):
         p = pool.Pool(1)
         it = p.imap(divide_by, [1, 0, 2])
-        self.assertEqual(it.next(), 1.0)
+        self.assertEqual(next(it), 1.0)
         self.assertRaises(ZeroDivisionError, it.next)
-        self.assertEqual(it.next(), 0.5)
+        self.assertEqual(next(it), 0.5)
         self.assertRaises(StopIteration, it.next)
 
     def test_imap_unordered(self):
         p = pool.Pool(1)
         it = p.imap_unordered(divide_by, [1, 0, 2])
-        self.assertEqual(it.next(), 1.0)
+        self.assertEqual(next(it), 1.0)
         self.assertRaises(ZeroDivisionError, it.next)
-        self.assertEqual(it.next(), 0.5)
+        self.assertEqual(next(it), 0.5)
         self.assertRaises(StopIteration, it.next)
 
 

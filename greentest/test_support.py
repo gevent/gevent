@@ -175,8 +175,8 @@ def bind_port(sock, host='', preferred_port=54321):
         except socket.error:
             if sys.exc_info()[1].args[0] != errno.EADDRINUSE:
                 raise
-            print >>sys.__stderr__, \
-                '  WARNING: failed to listen on port %d, trying another' % port
+            print ('  WARNING: failed to listen on port %d, trying another' % port,\
+                    file = sys.__stderr__)
     raise TestFailed('unable to find port to listen on')
 
 FUZZ = 1e-6
@@ -325,7 +325,10 @@ def check_syntax(statement):
         print ('Missing SyntaxError: "%s"' % statement)
 
 def open_urlresource(url):
-    import urllib, urlparse
+    import urllib.request
+	import urllib.parse
+	import urllib.error
+	from urllib.parse import urlparse
     import os.path
 
     filename = urlparse.urlparse(url)[2].split('/')[-1] # '/': it's URL!
@@ -336,7 +339,7 @@ def open_urlresource(url):
             return open(fn)
 
     requires('urlfetch')
-    print >> get_original_stdout(), '\tfetching %s ...' % url
+    print ('\tfetching %s ...' % url, file=get_original_stdout())
     fn, _ = urllib.urlretrieve(url, filename)
     return open(fn)
 
@@ -387,7 +390,7 @@ _2G = 2 * _1G
 
 # Hack to get at the maximum value an internal index can take.
 class _Dummy:
-    def __getslice__(self, i, j):
+    def __getitem__(self, i, j):
         return j
 try:
     MAX_Py_ssize_t = _Dummy()[:]

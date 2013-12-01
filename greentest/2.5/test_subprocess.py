@@ -67,7 +67,7 @@ class ProcessTestCase(unittest.TestCase):
         try:
             subprocess.check_call([sys.executable, "-c",
                                    "import sys; sys.exit(47)"])
-        except subprocess.CalledProcessError, e:
+        except subprocess.CalledProcessError as e:
             self.assertEqual(e.returncode, 47)
         else:
             self.fail("Expected CalledProcessError")
@@ -84,7 +84,7 @@ class ProcessTestCase(unittest.TestCase):
 
     def test_stdin_none(self):
         # .stdin is None when not redirected
-        p = subprocess.Popen([sys.executable, "-c", 'print "banana"'],
+        p = subprocess.Popen([sys.executable, "-c", 'print ("banana")'],
                          stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         p.wait()
         self.assertEqual(p.stdin, None)
@@ -92,16 +92,16 @@ class ProcessTestCase(unittest.TestCase):
     def test_stdout_none(self):
         # .stdout is None when not redirected
         p = subprocess.Popen([sys.executable, "-c",
-                             'print "    this bit of output is from a '
+                             'print ("    this bit of output is from a '
                              'test of stdout in a different '
-                             'process ..."'],
+                             'process ..."')],
                              stdin=subprocess.PIPE, stderr=subprocess.PIPE)
         p.wait()
         self.assertEqual(p.stdout, None)
 
     def test_stderr_none(self):
         # .stderr is None when not redirected
-        p = subprocess.Popen([sys.executable, "-c", 'print "banana"'],
+        p = subprocess.Popen([sys.executable, "-c", 'print ("banana")'],
                          stdin=subprocess.PIPE, stdout=subprocess.PIPE)
         p.wait()
         self.assertEqual(p.stderr, None)
@@ -493,7 +493,7 @@ class ProcessTestCase(unittest.TestCase):
             try:
                 p = subprocess.Popen([sys.executable, "-c", ""],
                                  cwd="/this/path/does/not/exist")
-            except OSError, e:
+            except OSError as e:
                 # The attribute child_traceback should contain "os.chdir"
                 # somewhere.
                 self.assertNotEqual(e.child_traceback.find("os.chdir"), -1)

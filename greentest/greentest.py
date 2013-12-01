@@ -188,7 +188,7 @@ class TestCaseMetaClass(type):
         check_totalrefcount = _get_class_attr(classDict, bases, 'check_totalrefcount', True)
         error_fatal = _get_class_attr(classDict, bases, 'error_fatal', True)
         for key, value in classDict.items():
-            if key.startswith('test') and callable(value):
+            if key.startswith('test') and hasattr(value, '__call__'):
                 classDict.pop(key)
                 #value = wrap_switch_count_check(value)
                 value = wrap_timeout(timeout, value)
@@ -204,9 +204,8 @@ class TestCaseMetaClass(type):
         return type.__new__(meta, classname, bases, classDict)
 
 
-class TestCase(BaseTestCase):
-
-    __metaclass__ = TestCaseMetaClass
+class TestCase(BaseTestCase, metaclass = TestCaseMetaClass):
+    
     __timeout__ = 1
     switch_expected = 'default'
     error_fatal = True

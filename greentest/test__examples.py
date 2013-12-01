@@ -20,7 +20,7 @@ time_ranges = {
 
 def main(tests=None):
     if not tests:
-        tests = set(os.path.basename(x) for x in glob.glob('../examples/*.py'))
+        tests = {os.path.basename(x) for x in glob.glob('../examples/*.py')}
         tests = sorted(tests)
 
     failed = []

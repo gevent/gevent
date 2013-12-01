@@ -14,8 +14,9 @@ from gevent import monkey; monkey.patch_all()
 import sys
 import re
 import traceback
-import urllib2
-from urlparse import urlparse
+import urllib.request
+import urllib.error
+from urllib.parse import urlparse
 from cgi import escape
 from urllib import unquote
 
@@ -123,5 +124,5 @@ FORM = """<html><head>
 
 if __name__ == '__main__':
     from gevent.pywsgi import WSGIServer
-    print 'Serving on %s...' % LISTEN
+    print ('Serving on %s...' % LISTEN)
     WSGIServer(LISTEN, application).serve_forever()

@@ -14,7 +14,7 @@ class wrap_errors(object):
         def wrapped_func(*args, **kwargs):
             try:
                 return func(*args, **kwargs)
-            except (A, B, C), ex:
+            except (A, B, C) as ex:
                 return ex
 
     :class:`wrap_errors` provides a shortcut to write that in one line::

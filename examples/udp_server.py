@@ -11,10 +11,10 @@ from gevent.server import DatagramServer
 class EchoServer(DatagramServer):
 
     def handle(self, data, address):
-        print '%s: got %r' % (address[0], data)
+        print ('%s: got %r' % (address[0], data))
         self.socket.sendto('Received %s bytes' % len(data), address)
 
 
 if __name__ == '__main__':
-    print 'Receiving datagrams on :9000'
+    print ('Receiving datagrams on :9000')
     EchoServer(':9000').serve_forever()

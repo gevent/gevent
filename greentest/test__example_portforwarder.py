@@ -26,7 +26,7 @@ class Test(util.TestServer):
         def handle(socket, address):
             while True:
                 data = socket.recv(1024)
-                print 'got %r' % data
+                print ('got %r' % data)
                 if not data:
                     break
                 log.append(data)

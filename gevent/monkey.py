@@ -35,7 +35,7 @@ def _get_original(name, items):
 
 
 def get_original(name, item):
-    if isinstance(item, basestring):
+    if isinstance(item, str):
         return _get_original(name, [item])[0]
     else:
         return _get_original(name, item)
@@ -130,7 +130,7 @@ def patch_socket(dns=True, aggressive=True):
     if dns:
         items = socket.__implements__
     else:
-        items = set(socket.__implements__) - set(socket.__dns__)
+        items = {socket.__implements__} - {socket.__dns__}
     patch_module('socket', items=items)
     if aggressive:
         if 'ssl' not in socket.__implements__:
@@ -245,6 +245,6 @@ MONKEY OPTIONS: --verbose %s""" % ', '.join('--[no-]%s' % m for m in modules)
         sys.argv = argv
         __package__ = None
         globals()['__file__'] = sys.argv[0]  # issue #302
-        execfile(sys.argv[0])
+        exec(compile(open(sys.argv[0]).read()), sys.argv[0], 'exec')
     else:
         print (script_help)

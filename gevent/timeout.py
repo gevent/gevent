@@ -20,17 +20,7 @@ __all__ = ['Timeout',
            'with_timeout']
 
 
-try:
-    BaseException
-except NameError:  # Python < 2.5
-
-    class BaseException:
-        # not subclassing from object() intentionally, because in
-        # that case "raise Timeout" fails with TypeError.
-        pass
-
-
-class Timeout(BaseException):
+class Timeout(Exception):
     """Raise *exception* in the current greenlet after given time period::
 
         timeout = Timeout(seconds, exception)

@@ -87,7 +87,7 @@ class BaseQueueTest(unittest.TestCase, BlockingTestMixin):
 
     def simple_queue_test(self, q):
         if not q.empty():
-            raise RuntimeError, "Call this function with an empty queue"
+            raise RuntimeError("Call this function with an empty queue")
         # I guess we better check things actually queue correctly a little :)
         q.put(111)
         q.put(333)
@@ -152,7 +152,7 @@ class BaseQueueTest(unittest.TestCase, BlockingTestMixin):
         self.cum = 0
         for i in (0,1):
             threading.Thread(target=self.worker, args=(q,)).start()
-        for i in xrange(100):
+        for i in range(100):
             q.put(i)
         q.join()
         self.assertEquals(self.cum, sum(range(100)),
@@ -215,19 +215,19 @@ class FailingQueue(Queue.Queue):
     def _put(self, item):
         if self.fail_next_put:
             self.fail_next_put = False
-            raise FailingQueueException, "You Lose"
+            raise FailingQueueException("You Lose")
         return Queue.Queue._put(self, item)
     def _get(self):
         if self.fail_next_get:
             self.fail_next_get = False
-            raise FailingQueueException, "You Lose"
+            raise FailingQueueException("You Lose")
         return Queue.Queue._get(self)
 
 class FailingQueueTest(unittest.TestCase, BlockingTestMixin):
 
     def failing_queue_test(self, q):
         if not q.empty():
-            raise RuntimeError, "Call this function with an empty queue"
+            raise RuntimeError("Call this function with an empty queue")
         for i in range(QUEUE_SIZE-1):
             q.put(i)
         # Test a failing non-blocking put.

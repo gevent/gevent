@@ -86,7 +86,7 @@ def test():
     # print individual lines with endings stripped
     s = buf.getvalue()
     for line in s.split("\n"):
-        print line.strip()
+        print (line.strip())
 
 def _test():
     # Test HTTP status lines
@@ -95,7 +95,7 @@ def _test():
     sock = FakeSocket(body)
     resp = httplib.HTTPResponse(sock, 1)
     resp.begin()
-    print resp.read()
+    print (resp.read())
     resp.close()
 
     body = "HTTP/1.1 400.100 Not Ok\r\n\r\nText"
@@ -104,9 +104,9 @@ def _test():
     try:
         resp.begin()
     except httplib.BadStatusLine:
-        print "BadStatusLine raised as expected"
+        print ("BadStatusLine raised as expected")
     else:
-        print "Expect BadStatusLine"
+        print ("Expect BadStatusLine")
 
     # Check invalid host_port
 
@@ -114,9 +114,9 @@ def _test():
         try:
             h = httplib.HTTP(hp)
         except httplib.InvalidURL:
-            print "InvalidURL raised as expected"
+            print ("InvalidURL raised as expected")
         else:
-            print "Expect InvalidURL"
+            print ("Expect InvalidURL")
 
     for hp,h,p in (("[fe80::207:e9ff:fe9b]:8000", "fe80::207:e9ff:fe9b", 8000),
                    ("www.python.org:80", "www.python.org", 80),
@@ -125,7 +125,7 @@ def _test():
         try:
             http = httplib.HTTP(hp)
         except httplib.InvalidURL:
-            print "InvalidURL raised erroneously"
+            print ("InvalidURL raised erroneously")
         c = http._conn
         if h != c.host: raise AssertionError, ("Host incorrectly parsed", h, c.host)
         if p != c.port: raise AssertionError, ("Port incorrectly parsed", p, c.host)

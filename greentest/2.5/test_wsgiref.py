@@ -108,9 +108,9 @@ def compare_generic_iter(make_it,match):
         it = make_it()
         if not iter(it) is it: raise AssertionError
         for item in match:
-            if not it.next()==item: raise AssertionError
+            if not next(it)==item: raise AssertionError
         try:
-            it.next()
+            next(it)
         except StopIteration:
             pass
         else:
@@ -424,7 +424,7 @@ class HandlerTests(TestCase):
         env = handler.environ
         from os import environ
         for k,v in environ.items():
-            if not empty.has_key(k):
+            if not k in empty:
                 self.assertEqual(env[k],v)
         for k,v in empty.items():
             self.failUnless(env.has_key(k))
@@ -515,7 +515,7 @@ class HandlerTests(TestCase):
             "Content-Length: %d\r\n"
             "\r\n%s" % (h.error_status,len(h.error_body),h.error_body))
 
-        self.failUnless(h.stderr.getvalue().find("AssertionError")<>-1)
+        self.failUnless(h.stderr.getvalue().find("AssertionError")!=-1)
 
     def testErrorAfterOutput(self):
         MSG = "Some output has been sent"
@@ -528,7 +528,7 @@ class HandlerTests(TestCase):
         self.assertEqual(h.stdout.getvalue(),
             "Status: 200 OK\r\n"
             "\r\n"+MSG)
-        self.failUnless(h.stderr.getvalue().find("AssertionError")<>-1)
+        self.failUnless(h.stderr.getvalue().find("AssertionError")!=-1)
 
 
     def testHeaderFormats(self):

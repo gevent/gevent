@@ -42,7 +42,7 @@ class Test(unittest.TestCase):
             assert self.modname in NO_ALL
             return
         names = {}
-        exec ("from %s import *" % self.modname) in names
+        exec ("from %s import *" % self.modname in names)
         names.pop('__builtins__', None)
         self.assertEqual(sorted(names), sorted(self.module.__all__))
 
@@ -139,7 +139,7 @@ are missing from %r:
 
     def _test(self, modname):
         self.modname = modname
-        exec "import %s" % modname in {}
+        exec ("import %s" % modname in {})
         self.module = sys.modules[modname]
 
         self.check_all()

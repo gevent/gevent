@@ -27,7 +27,7 @@ DEBUG = False
 def _run(function, *args):
     try:
         result = function(*args)
-        assert not isinstance(result, BaseException), repr(result)
+        assert not isinstance(result, Exception), repr(result)
         return result
     except Exception:
         return sys.exc_info()[1]
@@ -113,7 +113,7 @@ def relaxed_is_equal(a, b):
     """
     if type(a) is not type(b):
         return False
-    if isinstance(a, basestring):
+    if isinstance(a, str):
         return compare_ipv6(a, b)
     if hasattr(a, '__iter__'):
         if len(a) != len(b):
@@ -176,7 +176,7 @@ class TestCase(greentest.TestCase):
     switch_expected = None
 
     def should_log_results(self, result1, result2):
-        if isinstance(result1, BaseException) and isinstance(result2, BaseException):
+        if isinstance(result1, Exception) and isinstance(result2, Exception):
             return type(result1) is not type(result2)
         return repr(result1) != repr(result2)
 
@@ -299,7 +299,7 @@ class TestFamily(TestCase):
             result = function(*args)
             raise AssertionError('%s: Expected to raise %s, instead returned %r' % (function, error, result))
         except Exception, ex:
-            if isinstance(error, basestring):
+            if isinstance(error, str):
                 repr_error = error
             else:
                 repr_error = repr(error)
@@ -368,7 +368,7 @@ class TestInterrupted_gethostbyname(greentest.GenericWaitTestCase):
 
     def wait(self, timeout):
         with gevent.Timeout(timeout, False):
-            for index in xrange(1000000):
+            for index in range(1000000):
                 try:
                     gevent_socket.gethostbyname('www.x%s.com' % index)
                 except socket.error:

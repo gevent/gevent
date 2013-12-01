@@ -125,8 +125,8 @@ class ThreadableTest:
         self.server_ready.wait()
         self.client_ready.set()
         self.clientSetUp()
-        if not callable(test_func):
-            raise TypeError, "test_func must be a callable function"
+        if not hasattr(test_func, '__call__'):
+            raise TypeError("test_func must be a callable function")
         try:
             test_func()
         except Exception, strerror:
@@ -285,7 +285,7 @@ class GeneralModuleTests(unittest.TestCase):
                 orig = sys.getrefcount(__name__)
                 socket.getnameinfo(__name__,0)
             except SystemError:
-                if sys.getrefcount(__name__) <> orig:
+                if sys.getrefcount(__name__) != orig:
                     self.fail("socket.getnameinfo loses a reference")
 
     def testInterpreterCrash(self):
@@ -746,7 +746,7 @@ class FileObjectClassTestCase(SocketConnectedTest):
     def testUnbufferedRead(self):
         # Performing unbuffered file read test
         buf = ''
-        while 1:
+        while True:
             char = self.serv_file.read(1)
             if not char:
                 break

@@ -147,11 +147,11 @@ class ThreadableTest:
         self.server_ready.wait()
         self.clientSetUp()
         self.client_ready.set()
-        if not callable(test_func):
+        if not hasattr(test_func, '__call__'):
             raise TypeError("test_func must be a callable function.")
         try:
             test_func()
-        except Exception, strerror:
+        except Exception as strerror:
             self.queue.put(strerror)
         self.clientTearDown()
 
@@ -762,7 +762,7 @@ class BasicTCPTest(SocketConnectedTest):
     def testSendAll(self):
         # Testing sendall() with a 2048 byte string over TCP
         msg = ''
-        while 1:
+        while True:
             read = self.cli_conn.recv(1024)
             if not read:
                 break
@@ -997,7 +997,7 @@ class FileObjectClassTestCase(SocketConnectedTest):
     def testUnbufferedRead(self):
         # Performing unbuffered file read test
         buf = ''
-        while 1:
+        while True:
             char = self.serv_file.read(1)
             if not char:
                 break
@@ -1061,7 +1061,7 @@ class FileObjectInterruptedTestCase(unittest.TestCase):
             self._recv_step = iter(recv_funcs)
 
         def recv(self, size):
-            return self._recv_step.next()()
+            return next(self._recv_step)()
 
     @staticmethod
     def _raise_eintr():
@@ -1464,7 +1464,7 @@ class BufferIOTest(SocketConnectedTest):
 
     def _testRecvIntoArray(self):
         with test_support.check_py3k_warnings():
-            buf = buffer(MSG)
+            buf = memoryview(MSG)
         self.serv_conn.send(buf)
 
     def testRecvIntoBytearray(self):
@@ -1494,7 +1494,7 @@ class BufferIOTest(SocketConnectedTest):
 
     def _testRecvFromIntoArray(self):
         with test_support.check_py3k_warnings():
-            buf = buffer(MSG)
+            buf = memoryview(MSG)
         self.serv_conn.send(buf)
 
     def testRecvFromIntoBytearray(self):
@@ -1535,7 +1535,7 @@ def isTipcAvailable():
             if line.startswith("tipc "):
                 return True
     if test_support.verbose:
-        print "TIPC module is not loaded, please 'sudo modprobe tipc'"
+        print ("TIPC module is not loaded, please 'sudo modprobe tipc'")
     return False
 
 class TIPCTest (unittest.TestCase):

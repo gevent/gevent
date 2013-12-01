@@ -355,21 +355,21 @@ class SimpleHTTPServerTestCase(BaseTestCase):
 cgi_file1 = """\
 #!%s
 
-print "Content-type: text/html"
-print
-print "Hello World"
+print ("Content-type: text/html")
+print ()
+print ("Hello World")
 """
 
 cgi_file2 = """\
 #!%s
 import cgi
 
-print "Content-type: text/html"
-print
+print ("Content-type: text/html")
+print ()
 
 form = cgi.FieldStorage()
-print "%%s, %%s, %%s" %% (form.getfirst("spam"), form.getfirst("eggs"),
-                          form.getfirst("bacon"))
+print ("%%s, %%s, %%s" %% (form.getfirst("spam"), form.getfirst("eggs"),
+                          form.getfirst("bacon")))
 """
 
 
@@ -447,7 +447,7 @@ class CGIHTTPServerTestCase(BaseTestCase):
             '/a/b/c/../d/e/../../../../../f': IndexError,
             '/a/b/c/../d/e/../../../../f/..': ('/', ''),
         }
-        for path, expected in test_vectors.iteritems():
+        for path, expected in test_vectors.items():
             if isinstance(expected, type) and issubclass(expected, Exception):
                 self.assertRaises(expected,
                                   CGIHTTPServer._url_collapse_path_split, path)

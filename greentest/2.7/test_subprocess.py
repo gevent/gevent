@@ -82,7 +82,7 @@ class ProcessTestCase(BaseTestCase):
     def test_check_output(self):
         # check_output() function with zero return code
         output = subprocess.check_output(
-                [sys.executable, "-c", "print 'BDFL'"])
+                [sys.executable, "-c", "print ('BDFL')"])
         self.assertIn('BDFL', output)
 
     def test_check_output_nonzero(self):
@@ -103,7 +103,7 @@ class ProcessTestCase(BaseTestCase):
         # check_output() function stderr redirected to stdout
         with self.assertRaises(ValueError) as c:
             output = subprocess.check_output(
-                    [sys.executable, "-c", "print 'will not be run'"],
+                    [sys.executable, "-c", "print ('will not be run')"],
                     stdout=sys.stdout)
             self.fail("Expected ValueError when stdout arg supplied.")
         self.assertIn('stdout', c.exception.args[0])
@@ -130,7 +130,7 @@ class ProcessTestCase(BaseTestCase):
 
     def test_stdin_none(self):
         # .stdin is None when not redirected
-        p = subprocess.Popen([sys.executable, "-c", 'print "banana"'],
+        p = subprocess.Popen([sys.executable, "-c", 'print ("banana")'],
                          stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         self.addCleanup(p.stdout.close)
         self.addCleanup(p.stderr.close)
@@ -140,9 +140,9 @@ class ProcessTestCase(BaseTestCase):
     def test_stdout_none(self):
         # .stdout is None when not redirected
         p = subprocess.Popen([sys.executable, "-c",
-                             'print "    this bit of output is from a '
+                             'print ("    this bit of output is from a '
                              'test of stdout in a different '
-                             'process ..."'],
+                             'process ...")'],
                              stdin=subprocess.PIPE, stderr=subprocess.PIPE)
         self.addCleanup(p.stdin.close)
         self.addCleanup(p.stderr.close)
@@ -151,7 +151,7 @@ class ProcessTestCase(BaseTestCase):
 
     def test_stderr_none(self):
         # .stderr is None when not redirected
-        p = subprocess.Popen([sys.executable, "-c", 'print "banana"'],
+        p = subprocess.Popen([sys.executable, "-c", 'print ("banana")'],
                          stdin=subprocess.PIPE, stdout=subprocess.PIPE)
         self.addCleanup(p.stdout.close)
         self.addCleanup(p.stdin.close)
@@ -656,7 +656,7 @@ class _SuppressCoreFiles(object):
                     'com.apple.CrashReporter', 'DialogType'],
                     stdout=subprocess.PIPE).communicate()[0]
             if value.strip() == b'developer':
-                print "this tests triggers the Crash Reporter, that is intentional"
+                print ("this tests triggers the Crash Reporter, that is intentional")
                 sys.stdout.flush()
 
     def __exit__(self, *args):
