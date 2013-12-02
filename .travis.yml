@@ -8,8 +8,4 @@ matrix:
     - env: PYTHONVER=3.3
 script: sudo -E make travis
 notifications:
-  email:
-    recipients:
-      - denis.bilenko@gmail.com
-    on_success: change
-    on_failure: change
+  email: false
