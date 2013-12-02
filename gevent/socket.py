@@ -511,7 +511,7 @@ class socket(object):
     _s = ("def %s(self, *args): return self._sock.%s(*args)\n\n"
           "%s.__doc__ = _realsocket.%s.__doc__\n")
     for _m in set(__socket__._socketmethods) - set(locals()):
-        exec (_s % (_m, _m, _m, _m))
+        exec(_s % (_m, _m, _m, _m))
     del _m, _s
 
 SocketType = socket

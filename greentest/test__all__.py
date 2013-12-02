@@ -177,7 +177,7 @@ are missing from %r:
 
     for path, modname in walk_modules(include_so=True):
         modname = modname.replace('gevent.', '').split('.')[0]
-        exec ('''def test_%s(self): self._test("gevent.%s")''' % (modname, modname))
+        exec('''def test_%s(self): self._test("gevent.%s")''' % (modname, modname))
     del path, modname
 
 
