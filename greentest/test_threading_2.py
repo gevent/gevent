@@ -23,7 +23,7 @@ if not hasattr(threading._Condition, 'notify_all'):
     threading._Condition.notify_all = threading._Condition.notifyAll
 '''
 
-exec setup_
+exec(setup_)
 
 setup_3 = '\n'.join('            %s' % line for line in setup_.split('\n'))
 setup_4 = '\n'.join('                %s' % line for line in setup_.split('\n'))
