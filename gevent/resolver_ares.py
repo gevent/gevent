@@ -2,7 +2,7 @@
 from __future__ import absolute_import
 import os
 from _socket import getservbyname, getaddrinfo, gaierror, error
-from gevent.hub import Waiter, get_hub, string_types
+from gevent.hub import Waiter, get_hub, string_types, text_type
 from gevent.socket import AF_UNSPEC, AF_INET, AF_INET6, SOCK_STREAM, SOCK_DGRAM, SOCK_RAW, AI_NUMERICHOST, EAI_SERVICE, AI_PASSIVE
 from gevent.ares import channel, InvalidIP
 
@@ -52,7 +52,7 @@ class Resolver(object):
         return self.gethostbyname_ex(hostname, family)[-1][0]
 
     def gethostbyname_ex(self, hostname, family=AF_INET):
-        if isinstance(hostname, unicode):
+        if isinstance(hostname, text_type):
             hostname = hostname.encode('ascii')
         elif not isinstance(hostname, str):
             raise TypeError('Expected string, not %s' % type(hostname).__name__)
@@ -117,7 +117,7 @@ class Resolver(object):
         return port, socktypes
 
     def _getaddrinfo(self, host, port, family=0, socktype=0, proto=0, flags=0):
-        if isinstance(host, unicode):
+        if isinstance(host, text_type):
             host = host.encode('idna')
         elif not isinstance(host, str) or (flags & AI_NUMERICHOST):
             # this handles cases which do not require network access
@@ -191,7 +191,7 @@ class Resolver(object):
                     raise
 
     def _gethostbyaddr(self, ip_address):
-        if isinstance(ip_address, unicode):
+        if isinstance(ip_address, text_type):
             ip_address = ip_address.encode('ascii')
         elif not isinstance(ip_address, str):
             raise TypeError('Expected string, not %s' % type(ip_address).__name__)
@@ -228,7 +228,7 @@ class Resolver(object):
             raise TypeError('getnameinfo() argument 1 must be a tuple')
 
         address = sockaddr[0]
-        if isinstance(address, unicode):
+        if isinstance(address, text_type):
             address = address.encode('ascii')
 
         if not isinstance(address, str):
