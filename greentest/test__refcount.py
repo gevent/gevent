@@ -22,6 +22,7 @@
 """This test checks that underlying socket instances (gevent.socket.socket._sock)
 are not leaked by the hub.
 """
+from __future__ import print_function
 from _socket import socket
 
 
@@ -63,26 +64,26 @@ def handle_request(s, raise_on_timeout):
             raise
         else:
             return
-    #print 'handle_request - accepted'
+    #print('handle_request - accepted')
     res = conn.recv(100)
     assert res == 'hello', repr(res)
-    #print 'handle_request - recvd %r' % res
+    #print('handle_request - recvd %r' % res)
     res = conn.send('bye')
-    #print 'handle_request - sent %r' % res
-    #print 'handle_request - conn refcount: %s' % sys.getrefcount(conn)
+    #print('handle_request - sent %r' % res)
+    #print('handle_request - conn refcount: %s' % sys.getrefcount(conn))
     #conn.close()
 
 
 def make_request(port):
-    #print 'make_request'
+    #print('make_request')
     s = socket.socket()
     s.connect(('127.0.0.1', port))
-    #print 'make_request - connected'
+    #print('make_request - connected')
     res = s.send('hello')
-    #print 'make_request - sent %s' % res
+    #print('make_request - sent %s' % res)
     res = s.recv(100)
     assert res == 'bye', repr(res)
-    #print 'make_request - recvd %r' % res
+    #print('make_request - recvd %r' % res)
     #s.close()
 
 
@@ -93,7 +94,7 @@ def run_interaction(run_client):
         port = s.getsockname()[1]
         start_new_thread(make_request, (port, ))
     sleep(0.1 + SOCKET_TIMEOUT)
-    #print sys.getrefcount(s._sock)
+    #print(sys.getrefcount(s._sock))
     #s.close()
     return weakref.ref(s._sock)
 
@@ -101,11 +102,11 @@ def run_interaction(run_client):
 def run_and_check(run_client):
     w = run_interaction(run_client=run_client)
     if w():
-        print pformat(gc.get_referrers(w()))
+        print(pformat(gc.get_referrers(w())))
         for x in gc.get_referrers(w()):
-            print pformat(x)
+            print(pformat(x))
             for y in gc.get_referrers(x):
-                print '-', pformat(y)
+                print('-', pformat(y))
         raise AssertionError('server should be dead by now')
 
 

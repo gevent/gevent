@@ -1,3 +1,4 @@
+from __future__ import print_function
 import sys
 
 
@@ -17,7 +18,7 @@ elif sys.argv[1:] == ['subprocess']:
 
     def printline():
         line = raw_input()
-        print '%s chars.' % len(line)
+        print('%s chars.' % len(line))
 
     gevent.spawn(printline).join()
 

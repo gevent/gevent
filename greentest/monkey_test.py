@@ -12,7 +12,7 @@ else:
 test_filename = sys.argv[1]
 del sys.argv[1]
 
-print 'Running with patch_all(%s): %s' % (','.join('%s=%r' % x for x in kwargs.items()), test_filename)
+print('Running with patch_all(%s): %s' % (','.join('%s=%r' % x for x in kwargs.items()), test_filename))
 
 from gevent import monkey; monkey.patch_all(**kwargs)
 

@@ -1,6 +1,6 @@
 #!/bin/sh
 set -e -x
-python -c 'import gevent.core; print gevent.__version__, gevent.core.get_version(), getattr(gevent.core, "get_method", lambda: "n/a")(), getattr(gevent, "get_hub", lambda: "n/a")()'
+python -c 'import gevent.core; from __future__ import print_function; print(gevent.__version__, gevent.core.get_version(), getattr(gevent.core, "get_method", lambda: "n/a")(), getattr(gevent, "get_hub", lambda: "n/a")())'
 python -mtimeit -r 6 -s'obj = Exception(); obj.x=5' 'obj.x'
 python -mtimeit -r 6 -s'from gevent import get_hub; get_hub()' 'get_hub()'
 python -mtimeit -r 6 -s'from gevent import getcurrent' 'getcurrent()'

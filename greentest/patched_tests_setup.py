@@ -1,3 +1,4 @@
+from __future__ import print_function
 import sys
 import os
 import re
@@ -181,5 +182,5 @@ def disable_tests_in_source(source, name):
         # XXX ignoring TestCase class name
         testcase = test.split('.')[-1]
         source, n = re.subn(testcase, 'XXX' + testcase, source)
-        print >> sys.stderr, 'Removed %s (%d)' % (testcase, n)
+        print('Removed %s (%d)' % (testcase, n), file=sys.stderr)
     return source
