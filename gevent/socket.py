@@ -79,7 +79,7 @@ __imports__ = ['error',
 
 import sys
 import time
-from gevent.hub import get_hub, string_types, integer_types
+from gevent.hub import get_hub, string_types, integer_types, text_type
 from gevent.timeout import Timeout
 
 is_windows = sys.platform == 'win32'
@@ -436,7 +436,7 @@ class socket(object):
                 raise
 
     def sendall(self, data, flags=0):
-        if isinstance(data, unicode):
+        if isinstance(data, text_type):
             data = data.encode()
         # this sendall is also reused by gevent.ssl.SSLSocket subclass,
         # so it should not call self._sock methods directly

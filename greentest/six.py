@@ -1,5 +1,7 @@
 import sys
-from gevent.hub import PY3
+from gevent.hub import PY3, text_type
+
+__all__ = ['PY3', 'text_type', 'advance_iterator', 'exec_']
 
 if PY3:
     advance_iterator = next
