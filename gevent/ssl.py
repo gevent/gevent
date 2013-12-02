@@ -19,6 +19,7 @@ import sys
 import errno
 from gevent.socket import socket, _fileobject, timeout_default
 from gevent.socket import error as socket_error
+from gevent.hub import integer_types
 from gevent.hub import string_types
 
 
@@ -46,7 +47,8 @@ for name in __imports__[:]:
 for name in dir(__ssl__):
     if not name.startswith('_'):
         value = getattr(__ssl__, name)
-        if isinstance(value, (int, long, tuple)) or isinstance(value, string_types):
+        if (isinstance(value, integer_types) or isinstance(value, tuple) or
+                isinstance(value, string_types)):
             globals()[name] = value
             __imports__.append(name)
 
