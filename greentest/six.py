@@ -16,7 +16,6 @@ if PY3:
             raise value.with_traceback(tb)
         raise value
 
-    print_ = getattr(builtins, "print")
     del builtins
 
 else:

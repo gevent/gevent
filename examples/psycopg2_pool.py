@@ -1,3 +1,4 @@
+from __future__ import print_function
 from __future__ import with_statement
 import sys
 import contextlib
@@ -147,4 +148,4 @@ if __name__ == '__main__':
         gevent.spawn(pool.execute, 'select pg_sleep(1);')
     gevent.wait()
     delay = time.time() - start
-    print 'Running "select pg_sleep(1);" 4 times with 3 connections. Should take about 2 seconds: %.2fs' % delay
+    print('Running "select pg_sleep(1);" 4 times with 3 connections. Should take about 2 seconds: %.2fs' % delay)

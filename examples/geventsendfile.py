@@ -12,7 +12,7 @@ def gevent_sendfile(out_fd, in_fd, offset, count):
     while total_sent < count:
         try:
             _offset, sent = original_sendfile(out_fd, in_fd, offset + total_sent, count - total_sent)
-            #print '%s: sent %s [%d%%]' % (out_fd, sent, 100*total_sent/count)
+            #print('%s: sent %s [%d%%]' % (out_fd, sent, 100*total_sent/count))
             total_sent += sent
         except OSError as ex:
             if ex[0] == EAGAIN:

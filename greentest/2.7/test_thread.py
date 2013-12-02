@@ -1,3 +1,4 @@
+from __future__ import print_function
 import os
 import unittest
 import random
@@ -19,7 +20,7 @@ def verbose_print(arg):
     """Helper function for printing out debugging output."""
     if test_support.verbose:
         with _print_mutex:
-            print arg
+            print(arg)
 
 
 class BasicThreadTest(unittest.TestCase):

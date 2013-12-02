@@ -1,4 +1,5 @@
 """Check __all__, __implements__, __extensions__, __imports__ of the modules"""
+from __future__ import print_function
 import six
 import sys
 import unittest
@@ -120,7 +121,7 @@ class Test(unittest.TestCase):
             result = []
             for name in missed[:]:
                 if name in not_implemented:
-                    print ('IncompleteImplWarning: %s.%s' % (self.modname, name))
+                    print('IncompleteImplWarning: %s.%s' % (self.modname, name))
                 else:
                     result.append(name)
             missed = result

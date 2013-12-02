@@ -1,6 +1,7 @@
 # Copyright (c) 2009-2012 Denis Bilenko. See LICENSE for details.
 """Make the standard library cooperative."""
 from __future__ import absolute_import
+from __future__ import print_function
 import sys
 
 __all__ = ['patch_all',
@@ -227,11 +228,11 @@ MONKEY OPTIONS: --verbose %s""" % ', '.join('--[no-]%s' % m for m in modules)
     if verbose:
         import pprint
         import os
-        print ('gevent.monkey.patch_all(%s)' % ', '.join('%s=%s' % item for item in args.items()))
-        print ('sys.version=%s' % (sys.version.strip().replace('\n', ' '), ))
-        print ('sys.path=%s' % pprint.pformat(sys.path))
-        print ('sys.modules=%s' % pprint.pformat(sorted(sys.modules.keys())))
-        print ('cwd=%s' % os.getcwd())
+        print('gevent.monkey.patch_all(%s)' % ', '.join('%s=%s' % item for item in args.items()))
+        print('sys.version=%s' % (sys.version.strip().replace('\n', ' '), ))
+        print('sys.path=%s' % pprint.pformat(sys.path))
+        print('sys.modules=%s' % pprint.pformat(sorted(sys.modules.keys())))
+        print('cwd=%s' % os.getcwd())
 
     patch_all(**args)
     if argv:
@@ -240,4 +241,4 @@ MONKEY OPTIONS: --verbose %s""" % ', '.join('--[no-]%s' % m for m in modules)
         globals()['__file__'] = sys.argv[0]  # issue #302
         execfile(sys.argv[0])
     else:
-        print (script_help)
+        print(script_help)
