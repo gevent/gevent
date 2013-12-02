@@ -24,6 +24,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
+from __future__ import print_function
 import sys
 from code import InteractiveConsole
 
@@ -109,6 +110,6 @@ class _fileobject(socket._fileobject):
 
 if __name__ == '__main__':
     if not sys.argv[1:]:
-        print ('USAGE: %s PORT' % sys.argv[0])
+        print('USAGE: %s PORT' % sys.argv[0])
     else:
         BackdoorServer(('127.0.0.1', int(sys.argv[1]))).serve_forever()

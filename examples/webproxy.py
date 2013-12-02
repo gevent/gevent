@@ -10,6 +10,7 @@ To start the server on some other interface/port, use
   python -m gevent.wsgi -p 8000 -i 0.0.0.0 webproxy.py
 
 """
+from __future__ import print_function
 from gevent import monkey; monkey.patch_all()
 import sys
 import re
@@ -53,7 +54,7 @@ def proxy(path, start_response, proxy_url):
             response = urllib2.urlopen(path)
         except urllib2.HTTPError as ex:
             response = ex
-        print ('%s: %s %s' % (path, response.code, response.msg))
+        print('%s: %s %s' % (path, response.code, response.msg))
         headers = [(k, v) for (k, v) in response.headers.items() if k not in drop_headers]
         scheme, netloc, path, params, query, fragment = urlparse(path)
         host = (scheme or 'http') + '://' + netloc
@@ -97,7 +98,7 @@ def fix_links(data, proxy_url, host_url):
             result = m.group('before') + '"' + join(proxy_url, url) + '"'
         else:
             result = m.group('before') + '"' + join(proxy_url, host_url, url) + '"'
-        #print 'replaced %r -> %r' % (m.group(0), result)
+        #print('replaced %r -> %r' % (m.group(0), result))
         return result
     data = _link_re_1.sub(fix_link_cb, data)
     data = _link_re_2.sub(fix_link_cb, data)
@@ -122,5 +123,5 @@ FORM = """<html><head>
 
 if __name__ == '__main__':
     from gevent.pywsgi import WSGIServer
-    print 'Serving on %s...' % LISTEN
+    print('Serving on %s...' % LISTEN)
     WSGIServer(LISTEN, application).serve_forever()

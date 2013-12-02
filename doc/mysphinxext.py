@@ -1,3 +1,4 @@
+from __future__ import print_function
 from sphinx.ext.autodoc import cut_lines
 from sphinx.ext import intersphinx
 from docutils import nodes
@@ -34,20 +35,20 @@ def missing_reference(app, env, node, contnode):
         newnode.append(contnode)
         msg = 'Resolved missing-reference: :%5s:`%s` -> %s' % (type, target, refuri)
         if noisy >= 1 or msg not in message_cache:
-            print msg
+            print(msg)
             message_cache.add(msg)
         return newnode
 
     if noisy >= 1:
-        print 'Looking for %s' % [type, target, modname, classname]
-        print node
+        print('Looking for %s' % [type, target, modname, classname])
+        print(node)
 
     for docname, items in env.indexentries.iteritems():
         if noisy >= 2:
-            print docname
+            print(docname)
         for (i_type, i_string, i_target, i_aliasname) in items:
             if noisy >= 3:
-                print '---', [i_type, i_string, i_target, i_aliasname]
+                print('---', [i_type, i_string, i_target, i_aliasname])
             if i_aliasname.endswith(target):
                 stripped_aliasname = i_aliasname[len(docname):]
                 if stripped_aliasname:
@@ -55,7 +56,7 @@ def missing_reference(app, env, node, contnode):
                     stripped_aliasname = stripped_aliasname[1:]
                     if stripped_aliasname == target:
                         if noisy >= 1:
-                            print '--- found %s %s in %s' % (type, target, i_aliasname)
+                            print('--- found %s %s in %s' % (type, target, i_aliasname))
                         return new_reference(docname + '.html#' + i_aliasname, i_aliasname)
 
     if type == 'mod':

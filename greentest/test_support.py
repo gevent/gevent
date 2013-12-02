@@ -1,5 +1,6 @@
 """Supporting definitions for the Python regression tests."""
 
+from __future__ import print_function
 import sys
 
 HOST = 'localhost'
@@ -175,8 +176,9 @@ def bind_port(sock, host='', preferred_port=54321):
         except socket.error:
             if sys.exc_info()[1].args[0] != errno.EADDRINUSE:
                 raise
-            print >>sys.__stderr__, \
-                '  WARNING: failed to listen on port %d, trying another' % port
+            print(
+                '  WARNING: failed to listen on port %d, trying another' %
+                port, file=sys.__stderr__)
     raise TestFailed('unable to find port to listen on')
 
 FUZZ = 1e-6
@@ -262,8 +264,8 @@ except IOError:
         fp = open(TMP_TESTFN, 'w+')
         TESTFN = TMP_TESTFN
     except IOError:
-        print ('WARNING: tests will fail, unable to write to: %s or %s' %
-                (TESTFN, TMP_TESTFN))
+        print('WARNING: tests will fail, unable to write to: %s or %s' %
+              (TESTFN, TMP_TESTFN))
 if fp is not None:
     fp.close()
     unlink(TESTFN)
@@ -321,7 +323,7 @@ def check_syntax(statement):
     except SyntaxError:
         pass
     else:
-        print ('Missing SyntaxError: "%s"' % statement)
+        print('Missing SyntaxError: "%s"' % statement)
 
 def open_urlresource(url):
     import urllib, urlparse
@@ -335,7 +337,7 @@ def open_urlresource(url):
             return open(fn)
 
     requires('urlfetch')
-    print >> get_original_stdout(), '\tfetching %s ...' % url
+    print('\tfetching %s ...' % url, file=get_original_stdout())
     fn, _ = urllib.urlretrieve(url, filename)
     return open(fn)
 
@@ -543,7 +545,7 @@ def run_doctest(module, verbosity=None):
     finally:
         sys.stdout = save_stdout
     if verbose:
-        print ('doctest (%s) ... %d tests with zero failures' % (module.__name__, t))
+        print('doctest (%s) ... %d tests with zero failures' % (module.__name__, t))
     return f, t
 
 #=======================================================================
@@ -560,13 +562,13 @@ def threading_cleanup(num_active, num_limbo):
     _MAX_COUNT = 10
     count = 0
     while len(threading._active) != num_active and count < _MAX_COUNT:
-        print (threading._active)
+        print(threading._active)
         count += 1
         time.sleep(0.1)
 
     count = 0
     while len(threading._limbo) != num_limbo and count < _MAX_COUNT:
-        print (threading._limbo)
+        print(threading._limbo)
         count += 1
         time.sleep(0.1)
 

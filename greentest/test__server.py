@@ -1,3 +1,4 @@
+from __future__ import print_function
 import greentest
 from gevent import socket
 import gevent
@@ -16,7 +17,7 @@ class SimpleStreamServer(StreamServer):
         try:
             method, path, rest = request_line.split(' ', 3)
         except Exception:
-            print ('Failed to parse request line: %r' % (request_line, ))
+            print('Failed to parse request line: %r' % (request_line, ))
             raise
         if path == '/ping':
             client_socket.sendall('HTTP/1.0 200 OK\r\n\r\nPONG')
@@ -141,9 +142,9 @@ class TestCase(greentest.TestCase):
 
     def report_netstat(self, msg):
         return
-        print (msg)
+        print(msg)
         os.system('sudo netstat -anp | grep %s' % os.getpid())
-        print ('^^^^^')
+        print('^^^^^')
 
     def init_server(self):
         self.server = self.ServerSubClass(('127.0.0.1', 0))

@@ -2,6 +2,7 @@
 # Copyright (c) 2009 Denis Bilenko. See LICENSE for details.
 
 """Spawn multiple workers and wait for them to complete"""
+from __future__ import print_function
 
 urls = ['http://www.google.com', 'http://www.yandex.ru', 'http://www.python.org']
 
@@ -15,9 +16,9 @@ import urllib2
 
 
 def print_head(url):
-    print ('Starting %s' % url)
+    print('Starting %s' % url)
     data = urllib2.urlopen(url).read()
-    print ('%s: %s bytes: %r' % (url, len(data), data[:50]))
+    print('%s: %s bytes: %r' % (url, len(data), data[:50]))
 
 jobs = [gevent.spawn(print_head, url) for url in urls]
 
