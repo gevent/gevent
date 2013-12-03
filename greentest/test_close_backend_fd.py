@@ -1,7 +1,10 @@
 from __future__ import print_function
 import os
 import gevent
+import six
 from gevent import core
+if six.PY3:
+    xrange = range
 
 
 for count in xrange(2):

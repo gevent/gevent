@@ -5,7 +5,7 @@ import _socket
 import errno
 from gevent.greenlet import Greenlet, getfuncname
 from gevent.event import Event
-from gevent.hub import string_types, integer_types, get_hub
+from gevent.hub import string_types, integer_types, get_hub, xrange
 
 
 __all__ = ['BaseServer']

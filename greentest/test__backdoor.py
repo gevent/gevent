@@ -1,7 +1,10 @@
 import greentest
 import gevent
+import six
 from gevent import socket
 from gevent import backdoor
+if six.PY3:
+    xrange = range
 
 
 def read_until(conn, postfix):

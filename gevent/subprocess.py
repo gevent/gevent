@@ -6,7 +6,7 @@ import gc
 import signal
 import traceback
 from gevent.event import AsyncResult
-from gevent.hub import get_hub, linkproxy, sleep, getcurrent, string_types, integer_types
+from gevent.hub import get_hub, linkproxy, sleep, getcurrent, string_types, integer_types, xrange
 from gevent.fileobject import FileObject
 from gevent.greenlet import Greenlet, joinall
 spawn = Greenlet.spawn

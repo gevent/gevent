@@ -5,6 +5,10 @@ import sys
 import os
 import random
 from time import time
+try:
+    xrange
+except NameError:
+    xrange = range
 
 
 N = 10000

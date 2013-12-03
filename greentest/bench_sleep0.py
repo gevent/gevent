@@ -2,6 +2,10 @@
 from __future__ import print_function
 import sys
 from time import time
+try:
+    xrange
+except NameError:
+    xrange = range
 
 
 def noop(p):

@@ -1,11 +1,21 @@
 import sys
-from gevent.hub import PY3, text_type, string_types
 
-__all__ = ['PY3', 'text_type', 'string_types', 'advance_iterator', 'exec_']
+__all__ = ['PY3', 'text_type', 'string_types', 'advance_iterator',
+           'exec_']
+
+PY3 = sys.version_info[0] >= 3
+
 
 if PY3:
+    string_types = str,
+    integer_types = int,
+    text_type = str
     advance_iterator = next
 else:
+    string_types = basestring,
+    integer_types = (int, long)
+    text_type = unicode
+
     def advance_iterator(it):
         return it.next()
 
