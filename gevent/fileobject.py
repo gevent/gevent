@@ -3,6 +3,7 @@ import sys
 import os
 from gevent.hub import get_hub
 from gevent.hub import integer_types
+from gevent.hub import PY3
 from gevent.socket import EBADF
 from gevent.os import _read, _write, ignored_errors
 from gevent.lock import Semaphore, DummySemaphore
@@ -106,7 +107,8 @@ else:
                     code = ex.args[0]
                     if code not in ignored_errors:
                         raise
-                    sys.exc_clear()
+                    if not PY3:
+                        sys.exc_clear()
                 if bytes_written >= bytes_total:
                     return
                 self.hub.wait(self._write_event)
@@ -119,7 +121,8 @@ else:
                     code = ex.args[0]
                     if code not in ignored_errors:
                         raise
-                    sys.exc_clear()
+                    if not PY3:
+                        sys.exc_clear()
                 else:
                     if not self._translate or not data:
                         return data

@@ -20,6 +20,7 @@ import errno
 from gevent.socket import socket, _fileobject, timeout_default
 from gevent.socket import error as socket_error
 from gevent.hub import integer_types
+from gevent.hub import PY3
 from gevent.hub import string_types
 
 
@@ -112,12 +113,14 @@ class SSLSocket(socket):
                 elif ex.args[0] == SSL_ERROR_WANT_READ:
                     if self.timeout == 0.0:
                         raise
-                    sys.exc_clear()
+                    if not PY3:
+                        sys.exc_clear()
                     self._wait(self._read_event, timeout_exc=_SSLErrorReadTimeout)
                 elif ex.args[0] == SSL_ERROR_WANT_WRITE:
                     if self.timeout == 0.0:
                         raise
-                    sys.exc_clear()
+                    if not PY3:
+                        sys.exc_clear()
                     # note: using _SSLErrorReadTimeout rather than _SSLErrorWriteTimeout below is intentional
                     self._wait(self._write_event, timeout_exc=_SSLErrorReadTimeout)
                 else:
@@ -133,12 +136,14 @@ class SSLSocket(socket):
                 if ex.args[0] == SSL_ERROR_WANT_READ:
                     if self.timeout == 0.0:
                         raise
-                    sys.exc_clear()
+                    if not PY3:
+                        sys.exc_clear()
                     self._wait(self._read_event, timeout_exc=_SSLErrorWriteTimeout)
                 elif ex.args[0] == SSL_ERROR_WANT_WRITE:
                     if self.timeout == 0.0:
                         raise
-                    sys.exc_clear()
+                    if not PY3:
+                        sys.exc_clear()
                     self._wait(self._write_event, timeout_exc=_SSLErrorWriteTimeout)
                 else:
                     raise
@@ -171,12 +176,14 @@ class SSLSocket(socket):
                     if x.args[0] == SSL_ERROR_WANT_READ:
                         if self.timeout == 0.0:
                             return 0
-                        sys.exc_clear()
+                        if not PY3:
+                            sys.exc_clear()
                         self._wait(self._read_event)
                     elif x.args[0] == SSL_ERROR_WANT_WRITE:
                         if self.timeout == 0.0:
                             return 0
-                        sys.exc_clear()
+                        if not PY3:
+                            sys.exc_clear()
                         self._wait(self._write_event)
                     else:
                         raise
@@ -224,7 +231,8 @@ class SSLSocket(socket):
                     if x.args[0] == SSL_ERROR_WANT_READ:
                         if self.timeout == 0.0:
                             raise
-                        sys.exc_clear()
+                        if not PY3:
+                            sys.exc_clear()
                         self._wait(self._read_event)
                         continue
                     else:
@@ -262,12 +270,14 @@ class SSLSocket(socket):
                 elif ex.args[0] == SSL_ERROR_WANT_READ:
                     if self.timeout == 0.0:
                         raise
-                    sys.exc_clear()
+                    if not PY3:
+                        sys.exc_clear()
                     self._wait(self._read_event, timeout_exc=_SSLErrorReadTimeout)
                 elif ex.args[0] == SSL_ERROR_WANT_WRITE:
                     if self.timeout == 0.0:
                         raise
-                    sys.exc_clear()
+                    if not PY3:
+                        sys.exc_clear()
                     self._wait(self._write_event, timeout_exc=_SSLErrorWriteTimeout)
                 else:
                     raise
@@ -300,12 +310,14 @@ class SSLSocket(socket):
                 if ex.args[0] == SSL_ERROR_WANT_READ:
                     if self.timeout == 0.0:
                         raise
-                    sys.exc_clear()
+                    if not PY3:
+                        sys.exc_clear()
                     self._wait(self._read_event, timeout_exc=_SSLErrorHandshakeTimeout)
                 elif ex.args[0] == SSL_ERROR_WANT_WRITE:
                     if self.timeout == 0.0:
                         raise
-                    sys.exc_clear()
+                    if not PY3:
+                        sys.exc_clear()
                     self._wait(self._write_event, timeout_exc=_SSLErrorHandshakeTimeout)
                 else:
                     raise
