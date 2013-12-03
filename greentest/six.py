@@ -19,6 +19,7 @@ if PY3:
 
     del builtins
     xrange = range
+    string_types = str,
 
 else:
     def exec_(code, globs=None, locs=None):
@@ -34,3 +35,4 @@ else:
         exec("""exec code in globs, locs""")
 
     xrange = xrange
+    string_types = basestring,
