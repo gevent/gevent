@@ -3,6 +3,7 @@ from __future__ import print_function
 import gevent
 gevent.get_hub('select')  # this is just to make sure we don't pass any fds to children
 from gevent import monkey; monkey.patch_all()
+import six
 import sys
 import os
 import glob
@@ -84,7 +85,7 @@ def run_many(tests, expected=None, failfast=False):
 
 
 def discover(tests=None, ignore=None):
-    if isinstance(ignore, basestring):
+    if isinstance(ignore, six.string_types):
         ignore = load_list_from_file(ignore)
 
     ignore = set(ignore or [])
