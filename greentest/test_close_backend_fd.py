@@ -1,6 +1,10 @@
+from __future__ import print_function
 import os
 import gevent
+import six
 from gevent import core
+if six.PY3:
+    xrange = range
 
 
 for count in xrange(2):
@@ -10,18 +14,18 @@ for count in xrange(2):
         gevent.sleep(0.001)
         fileno = hub.loop.fileno()
         if fileno is not None:
-            print '%s. Testing %r: %r' % (count, backend, hub)
+            print('%s. Testing %r: %r' % (count, backend, hub))
             os.close(fileno)
             try:
                 gevent.sleep(0.001)
             except SystemError as ex:
                 if '(libev)' in str(ex):
-                    print 'The error is expected: %s' % ex
+                    print('The error is expected: %s' % ex)
                 else:
                     raise
             else:
                 raise AssertionError('gevent.sleep() is expected to fail after loop fd was closed')
         else:
-            print '%s. %r lacks fileno()' % (count, backend)
+            print('%s. %r lacks fileno()' % (count, backend))
         hub.destroy()
         assert 'destroyed' in repr(hub), repr(hub)

@@ -1,3 +1,4 @@
+from __future__ import print_function
 from __future__ import with_statement
 import gevent
 import gevent.core
@@ -31,9 +32,9 @@ try:
         hub.wait(watcher)
 
     reaction = time.time() - start - DELAY
-    print 'Watcher %s reacted after %.4f seconds (write)' % (watcher, reaction)
+    print('Watcher %s reacted after %.4f seconds (write)' % (watcher, reaction))
     if reaction >= DELAY and EV_USE_INOTIFY:
-        print 'WARNING: inotify failed (write)'
+        print('WARNING: inotify failed (write)')
     assert reaction >= 0.0, 'Watcher %s reacted too early (write): %.3fs' % (watcher, reaction)
     assert watcher.attr is not None, watcher.attr
     assert watcher.prev is not None, watcher.prev
@@ -47,9 +48,9 @@ try:
         hub.wait(watcher)
 
     reaction = time.time() - start - DELAY
-    print 'Watcher %s reacted after %.4f seconds (unlink)' % (watcher, reaction)
+    print('Watcher %s reacted after %.4f seconds (unlink)' % (watcher, reaction))
     if reaction >= DELAY and EV_USE_INOTIFY:
-        print 'WARNING: inotify failed (unlink)'
+        print('WARNING: inotify failed (unlink)')
     assert reaction >= 0.0, 'Watcher %s reacted too early (unlink): %.3fs' % (watcher, reaction)
     assert watcher.attr is None, watcher.attr
     assert watcher.prev is not None, watcher.prev

@@ -3,10 +3,13 @@
 #from __future__ import with_statement
 from gevent import monkey; monkey.patch_all()
 from gevent import queue as Queue
+import six
 import threading
 import time
 import unittest
 import test_support
+if six.PY3:
+    xrange = range
 
 QUEUE_SIZE = 5
 

@@ -1,3 +1,4 @@
+from __future__ import print_function
 import unittest
 from test import test_support
 from contextlib import closing
@@ -54,14 +55,14 @@ class InterProcessSignalTests(unittest.TestCase):
     def handlerA(self, signum, frame):
         self.a_called = True
         if test_support.verbose:
-            print "handlerA invoked from signal %s at:\n%s" % (
-                signum, self.format_frame(frame, limit=1))
+            print("handlerA invoked from signal %s at:\n%s" % (
+                signum, self.format_frame(frame, limit=1)))
 
     def handlerB(self, signum, frame):
         self.b_called = True
         if test_support.verbose:
-            print "handlerB invoked from signal %s at:\n%s" % (
-                signum, self.format_frame(frame, limit=1))
+            print("handlerB invoked from signal %s at:\n%s" % (
+                signum, self.format_frame(frame, limit=1)))
         raise HandlerBCalled(signum, self.format_frame(frame))
 
     def wait(self, child):
@@ -89,7 +90,7 @@ class InterProcessSignalTests(unittest.TestCase):
         # Let the sub-processes know who to send signals to.
         pid = os.getpid()
         if test_support.verbose:
-            print "test runner's pid is", pid
+            print("test runner's pid is", pid)
 
         child = ignoring_eintr(subprocess.Popen, ['kill', '-HUP', str(pid)])
         if child:
@@ -114,7 +115,7 @@ class InterProcessSignalTests(unittest.TestCase):
             self.assertTrue(self.b_called)
             self.assertFalse(self.a_called)
             if test_support.verbose:
-                print "HandlerBCalled exception caught"
+                print("HandlerBCalled exception caught")
 
         child = ignoring_eintr(subprocess.Popen, ['kill', '-USR2', str(pid)])
         if child:
@@ -131,7 +132,7 @@ class InterProcessSignalTests(unittest.TestCase):
             time.sleep(1)
         except KeyboardInterrupt:
             if test_support.verbose:
-                print "KeyboardInterrupt (the alarm() went off)"
+                print("KeyboardInterrupt (the alarm() went off)")
         except:
             self.fail("Some other exception woke us from pause: %s" %
                       traceback.format_exc())
@@ -168,7 +169,7 @@ class InterProcessSignalTests(unittest.TestCase):
                         else:
                             pickle.dump(None, done_w)
                 except:
-                    print 'Uh oh, raised from pickle.'
+                    print('Uh oh, raised from pickle.')
                     traceback.print_exc()
                 finally:
                     exit_subprocess()

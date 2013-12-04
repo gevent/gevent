@@ -1,5 +1,8 @@
 import gevent
 import greentest
+import six
+if six.PY3:
+    xrange = range
 
 
 class appender(object):

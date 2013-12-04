@@ -5,6 +5,7 @@
 'dev' in __version__ should be replaced with a|b|rc|<empty string>
 """
 
+from __future__ import print_function
 import sys
 import os
 import re
@@ -150,7 +151,7 @@ def main():
             sys.exit('No differences applied')
     else:
         write(filename, new_content)
-        print 'Updated %s' % filename
+        print('Updated %s' % filename)
 
 
 if __name__ == '__main__':

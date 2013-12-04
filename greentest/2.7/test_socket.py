@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+from __future__ import print_function
 
 import unittest
 from test import test_support
@@ -1535,7 +1536,7 @@ def isTipcAvailable():
             if line.startswith("tipc "):
                 return True
     if test_support.verbose:
-        print "TIPC module is not loaded, please 'sudo modprobe tipc'"
+        print("TIPC module is not loaded, please 'sudo modprobe tipc'")
     return False
 
 class TIPCTest (unittest.TestCase):

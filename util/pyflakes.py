@@ -1,4 +1,5 @@
 #!/usr/bin/python
+from __future__ import print_function
 import sys
 import re
 import subprocess
@@ -45,10 +46,10 @@ failed = False
 for line in output:
     line = line.strip()
     if not is_ignored(line):
-        print 'E %s' % line
+        print('E %s' % line)
         failed = True
     #else:
-    #    print 'I %s' % line
+    #    print('I %s' % line)
 
 if failed:
     sys.exit(1)

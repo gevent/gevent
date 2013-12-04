@@ -1,6 +1,9 @@
 import greentest
 import gevent
+import six
 from gevent.event import Event, AsyncResult
+if six.PY3:
+    xrange = range
 
 DELAY = 0.01
 

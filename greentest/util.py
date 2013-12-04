@@ -2,6 +2,7 @@ from __future__ import with_statement
 import sys
 import os
 import re
+import six
 import traceback
 import unittest
 import threading
@@ -109,7 +110,7 @@ def getname(command, env=None, setenv=None):
         if key.startswith('GEVENT_') or key.startswith('GEVENTARES_'):
             result.append('%s=%s' % (key, value))
 
-    if isinstance(command, basestring):
+    if isinstance(command, six.string_types):
         result.append(command)
     else:
         result.extend(command)
@@ -153,8 +154,12 @@ class RunResult(object):
         self.output = output
         self.name = name
 
-    def __nonzero__(self):
-        return bool(self.code)
+    if six.PY3:
+        def __bool__(self):
+            return bool(self.code)
+    else:
+        def __nonzero__(self):
+            return bool(self.code)
 
     def __int__(self):
         return self.code
@@ -198,7 +203,7 @@ def run(command, **kwargs):
 
 
 def parse_command(parts):
-    if isinstance(parts, basestring):
+    if isinstance(parts, six.string_types):
         parts = parts.split()
     environ = []
     if parts[0] == '-':
@@ -260,9 +265,9 @@ def match_environ(expected_environ, actual_environ):
     """
     if expected_environ is None:
         return True
-    if isinstance(expected_environ, basestring):
+    if isinstance(expected_environ, six.string_types):
         expected_environ = expected_environ.split()
-    if isinstance(actual_environ, basestring):
+    if isinstance(actual_environ, six.string_types):
         actual_environ = actual_environ.split()
     expected_environ = dict(x.split('=') for x in expected_environ)
     actual_environ = dict(x.split('=') for x in actual_environ)

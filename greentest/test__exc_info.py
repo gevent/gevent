@@ -1,8 +1,10 @@
 import gevent
 import sys
 import greentest
+import six
 
-sys.exc_clear()
+if not six.PY3:
+    sys.exc_clear()
 
 
 class ExpectedError(Exception):

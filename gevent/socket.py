@@ -79,7 +79,7 @@ __imports__ = ['error',
 
 import sys
 import time
-from gevent.hub import get_hub, string_types, integer_types
+from gevent.hub import get_hub, string_types, integer_types, text_type, PY3
 from gevent.timeout import Timeout
 
 is_windows = sys.platform == 'win32'
@@ -305,7 +305,8 @@ class socket(object):
             except error as ex:
                 if ex[0] != EWOULDBLOCK or self.timeout == 0.0:
                     raise
-                sys.exc_clear()
+                if not PY3:
+                    sys.exc_clear()
             self._wait(self._read_event)
         return socket(_sock=client_socket), address
 
@@ -381,7 +382,8 @@ class socket(object):
                 if ex.args[0] != EWOULDBLOCK or self.timeout == 0.0:
                     raise
                 # QQQ without clearing exc_info test__refcount.test_clean_exit fails
-                sys.exc_clear()
+                if not PY3:
+                    sys.exc_clear()
             self._wait(self._read_event)
 
     def recvfrom(self, *args):
@@ -392,7 +394,8 @@ class socket(object):
             except error as ex:
                 if ex.args[0] != EWOULDBLOCK or self.timeout == 0.0:
                     raise
-                sys.exc_clear()
+                if not PY3:
+                    sys.exc_clear()
             self._wait(self._read_event)
 
     def recvfrom_into(self, *args):
@@ -403,7 +406,8 @@ class socket(object):
             except error as ex:
                 if ex.args[0] != EWOULDBLOCK or self.timeout == 0.0:
                     raise
-                sys.exc_clear()
+                if not PY3:
+                    sys.exc_clear()
             self._wait(self._read_event)
 
     def recv_into(self, *args):
@@ -414,7 +418,8 @@ class socket(object):
             except error as ex:
                 if ex.args[0] != EWOULDBLOCK or self.timeout == 0.0:
                     raise
-                sys.exc_clear()
+                if not PY3:
+                    sys.exc_clear()
             self._wait(self._read_event)
 
     def send(self, data, flags=0, timeout=timeout_default):
@@ -426,7 +431,8 @@ class socket(object):
         except error as ex:
             if ex.args[0] != EWOULDBLOCK or timeout == 0.0:
                 raise
-            sys.exc_clear()
+            if not PY3:
+                sys.exc_clear()
             self._wait(self._write_event)
             try:
                 return sock.send(data, flags)
@@ -436,7 +442,7 @@ class socket(object):
                 raise
 
     def sendall(self, data, flags=0):
-        if isinstance(data, unicode):
+        if isinstance(data, text_type):
             data = data.encode()
         # this sendall is also reused by gevent.ssl.SSLSocket subclass,
         # so it should not call self._sock methods directly
@@ -463,7 +469,8 @@ class socket(object):
         except error as ex:
             if ex.args[0] != EWOULDBLOCK or timeout == 0.0:
                 raise
-            sys.exc_clear()
+            if not PY3:
+                sys.exc_clear()
             self._wait(self._write_event)
             try:
                 return sock.sendto(*args)
@@ -511,7 +518,7 @@ class socket(object):
     _s = ("def %s(self, *args): return self._sock.%s(*args)\n\n"
           "%s.__doc__ = _realsocket.%s.__doc__\n")
     for _m in set(__socket__._socketmethods) - set(locals()):
-        exec (_s % (_m, _m, _m, _m))
+        exec(_s % (_m, _m, _m, _m))
     del _m, _s
 
 SocketType = socket
@@ -569,7 +576,8 @@ def create_connection(address, timeout=_GLOBAL_DEFAULT_TIMEOUT, source_address=N
             # and the next bind() fails (see test__socket.TestCreateConnection)
             # that does not happen with regular sockets though, because _socket.socket.connect() is a built-in.
             # this is similar to "getnameinfo loses a reference" failure in test_socket.py
-            sys.exc_clear()
+            if not PY3:
+                sys.exc_clear()
             if sock is not None:
                 sock.close()
     if err is not None:

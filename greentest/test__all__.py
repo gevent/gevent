@@ -1,4 +1,6 @@
 """Check __all__, __implements__, __extensions__, __imports__ of the modules"""
+from __future__ import print_function
+import six
 import sys
 import unittest
 import types
@@ -42,7 +44,7 @@ class Test(unittest.TestCase):
             assert self.modname in NO_ALL
             return
         names = {}
-        exec ("from %s import *" % self.modname) in names
+        six.exec_("from %s import *" % self.modname, names)
         names.pop('__builtins__', None)
         self.assertEqual(sorted(names), sorted(self.module.__all__))
 
@@ -119,7 +121,7 @@ class Test(unittest.TestCase):
             result = []
             for name in missed[:]:
                 if name in not_implemented:
-                    print ('IncompleteImplWarning: %s.%s' % (self.modname, name))
+                    print('IncompleteImplWarning: %s.%s' % (self.modname, name))
                 else:
                     result.append(name)
             missed = result
@@ -139,7 +141,7 @@ are missing from %r:
 
     def _test(self, modname):
         self.modname = modname
-        exec "import %s" % modname in {}
+        six.exec_("import %s" % modname, {})
         self.module = sys.modules[modname]
 
         self.check_all()
@@ -175,7 +177,7 @@ are missing from %r:
 
     for path, modname in walk_modules(include_so=True):
         modname = modname.replace('gevent.', '').split('.')[0]
-        exec ('''def test_%s(self): self._test("gevent.%s")''' % (modname, modname))
+        exec('''def test_%s(self): self._test("gevent.%s")''' % (modname, modname))
     del path, modname
 
 

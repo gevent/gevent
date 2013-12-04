@@ -1,3 +1,4 @@
+from __future__ import print_function
 import unittest
 from test import test_support
 import subprocess
@@ -532,7 +533,7 @@ class ProcessTestCase(unittest.TestCase):
                     'com.apple.CrashReporter', 'DialogType'],
                     stdout=subprocess.PIPE).communicate()[0]
                 if value.strip() == b'developer':
-                    print "this tests triggers the Crash Reporter, that is intentional"
+                    print("this tests triggers the Crash Reporter, that is intentional")
                     sys.stdout.flush()
 
             try:

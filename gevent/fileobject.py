@@ -2,6 +2,8 @@ from __future__ import absolute_import, with_statement
 import sys
 import os
 from gevent.hub import get_hub
+from gevent.hub import integer_types
+from gevent.hub import PY3
 from gevent.socket import EBADF
 from gevent.os import _read, _write, ignored_errors
 from gevent.lock import Semaphore, DummySemaphore
@@ -51,7 +53,7 @@ else:
         """
 
         def __init__(self, fileno, mode=None, close=True):
-            if not isinstance(fileno, (int, long)):
+            if not isinstance(fileno, integer_types):
                 raise TypeError('fileno must be int: %r' % fileno)
             self._fileno = fileno
             self._mode = mode or 'rb'
@@ -105,7 +107,8 @@ else:
                     code = ex.args[0]
                     if code not in ignored_errors:
                         raise
-                    sys.exc_clear()
+                    if not PY3:
+                        sys.exc_clear()
                 if bytes_written >= bytes_total:
                     return
                 self.hub.wait(self._write_event)
@@ -118,7 +121,8 @@ else:
                     code = ex.args[0]
                     if code not in ignored_errors:
                         raise
-                    sys.exc_clear()
+                    if not PY3:
+                        sys.exc_clear()
                 else:
                     if not self._translate or not data:
                         return data
@@ -151,7 +155,7 @@ else:
     class FileObjectPosix(_fileobject):
 
         def __init__(self, fobj, mode='rb', bufsize=-1, close=True):
-            if isinstance(fobj, (int, long)):
+            if isinstance(fobj, integer_types):
                 fileno = fobj
                 fobj = None
             else:
@@ -216,7 +220,7 @@ class FileObjectThread(object):
             self.lock = DummySemaphore()
         if not hasattr(self.lock, '__enter__'):
             raise TypeError('Expected a Semaphore or boolean, got %r' % type(self.lock))
-        if isinstance(fobj, (int, long)):
+        if isinstance(fobj, integer_types):
             if not self._close:
                 # we cannot do this, since fdopen object will close the descriptor
                 raise TypeError('FileObjectThread does not support close=False')
@@ -260,12 +264,12 @@ class FileObjectThread(object):
 
     for method in ['read', 'readinto', 'readline', 'readlines', 'write', 'writelines', 'xreadlines']:
 
-        exec '''def %s(self, *args, **kwargs):
+        exec('''def %s(self, *args, **kwargs):
     fobj = self._fobj
     if fobj is None:
         raise FileObjectClosed
     return self._apply(fobj.%s, args, kwargs)
-''' % (method, method)
+''' % (method, method))
 
     def __iter__(self):
         return self
@@ -292,7 +296,7 @@ class FileObjectBlock(object):
         self._close = kwargs.pop('close', True)
         if kwargs:
             raise TypeError('Unexpected arguments: %r' % kwargs.keys())
-        if isinstance(fobj, (int, long)):
+        if isinstance(fobj, integer_types):
             if not self._close:
                 # we cannot do this, since fdopen object will close the descriptor
                 raise TypeError('FileObjectBlock does not support close=False')
