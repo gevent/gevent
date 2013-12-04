@@ -576,9 +576,14 @@ cdef public class callback [object PyGeventCallbackObject, type PyGeventCallback
     # so it's true if it's pending or currently running
     # 'pending' has the same meaning as libev watchers: it is cleared before entering callback
 
-    def __nonzero__(self):
-        # it's nonzero if it's pending or currently executing
-        return self.args is not None
+    if sys.version_info[0] >= 3:
+        def __bool__(self):
+            # it's true if it's pending or currently executing
+            return self.args is not None
+    else:
+        def __nonzero__(self):
+            # it's nonzero if it's pending or currently executing
+            return self.args is not None
 
     property pending:
 
