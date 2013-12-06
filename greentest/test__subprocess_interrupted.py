@@ -12,7 +12,7 @@ else:
     import subprocess
     for _ in xrange(5):
         out, err = subprocess.Popen([sys.executable, __file__, 'runtestcase'], stderr=subprocess.PIPE).communicate()
-        if 'refs' in err:
-            assert err.startswith('bye'), repr(err)
+        if b'refs' in err:
+            assert err.startswith(b'bye'), repr(err)
         else:
-            assert err.strip() == 'bye', repr(err)
+            assert err.strip() == b'bye', repr(err)
