@@ -77,7 +77,7 @@ class TestTCP(greentest.TestCase):
         self._test_sendall(self.long_data)
 
     def test_sendall_unicode(self):
-        self._test_sendall(unicode(self.long_data))
+        self._test_sendall(self.long_data.decode())
 
     def test_sendall_array(self):
         data = array.array("B", self.long_data)

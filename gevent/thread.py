@@ -22,6 +22,7 @@ if sys.version_info[0] <= 2:
     import thread as __thread__
 else:
     import _thread as __thread__
+    __target__ = '_thread'
 error = __thread__.error
 from gevent.hub import getcurrent, GreenletExit
 from gevent.greenlet import Greenlet

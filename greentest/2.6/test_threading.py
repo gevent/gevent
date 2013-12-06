@@ -1,4 +1,5 @@
 # Very rudimentary test of threading module
+from __future__ import print_function
 
 import test.test_support
 from test.test_support import verbose
@@ -35,26 +36,26 @@ class TestThread(threading.Thread):
     def run(self):
         delay = random.random() / 10000.0
         if verbose:
-            print 'task %s will run for %.1f usec' % (
-                self.name, delay * 1e6)
+            print('task %s will run for %.1f usec' % (
+                self.name, delay * 1e6))
 
         with self.sema:
             with self.mutex:
                 self.nrunning.inc()
                 if verbose:
-                    print self.nrunning.get(), 'tasks are running'
+                    print(self.nrunning.get(), 'tasks are running')
                 self.testcase.assert_(self.nrunning.get() <= 3)
 
             time.sleep(delay)
             if verbose:
-                print 'task', self.name, 'done'
+                print('task', self.name, 'done')
 
             with self.mutex:
                 self.nrunning.dec()
                 self.testcase.assert_(self.nrunning.get() >= 0)
                 if verbose:
-                    print '%s is finished. %d tasks are running' % (
-                        self.name, self.nrunning.get())
+                    print('%s is finished. %d tasks are running' % (
+                        self.name, self.nrunning.get()))
 
 class ThreadTests(unittest.TestCase):
 
@@ -80,7 +81,7 @@ class ThreadTests(unittest.TestCase):
             t.start()
 
         if verbose:
-            print 'waiting for all tasks to complete'
+            print('waiting for all tasks to complete')
         for t in threads:
             t.join(NUMTASKS)
             self.assert_(not t.is_alive())
@@ -88,7 +89,7 @@ class ThreadTests(unittest.TestCase):
             self.assertFalse(t.ident is None)
             self.assert_(re.match('<TestThread\(.*, \w+ -?\d+\)>', repr(t)))
         if verbose:
-            print 'all tasks done'
+            print('all tasks done')
         self.assertEqual(numrunning.get(), 0)
 
     def test_ident_of_no_threading_threads(self):
@@ -108,12 +109,12 @@ class ThreadTests(unittest.TestCase):
     # run with a small(ish) thread stack size (256kB)
     def test_various_ops_small_stack(self):
         if verbose:
-            print 'with 256kB thread stack size...'
+            print('with 256kB thread stack size...')
         try:
             threading.stack_size(262144)
         except thread.error:
             if verbose:
-                print 'platform does not support changing thread stack size'
+                print('platform does not support changing thread stack size')
             return
         self.test_various_ops()
         threading.stack_size(0)
@@ -121,12 +122,12 @@ class ThreadTests(unittest.TestCase):
     # run with a large thread stack size (1MB)
     def test_various_ops_large_stack(self):
         if verbose:
-            print 'with 1MB thread stack size...'
+            print('with 1MB thread stack size...')
         try:
             threading.stack_size(0x100000)
         except thread.error:
             if verbose:
-                print 'platform does not support changing thread stack size'
+                print('platform does not support changing thread stack size')
             return
         self.test_various_ops()
         threading.stack_size(0)
@@ -156,7 +157,7 @@ class ThreadTests(unittest.TestCase):
             import ctypes
         except ImportError:
             if verbose:
-                print "test_PyThreadState_SetAsyncExc can't import ctypes"
+                print("test_PyThreadState_SetAsyncExc can't import ctypes")
             return  # can't do anything
 
         set_async_exc = ctypes.pythonapi.PyThreadState_SetAsyncExc
@@ -190,31 +191,31 @@ class ThreadTests(unittest.TestCase):
         t.daemon = True # so if this fails, we don't hang Python at shutdown
         t.start()
         if verbose:
-            print "    started worker thread"
+            print("    started worker thread")
 
         # Try a thread id that doesn't make sense.
         if verbose:
-            print "    trying nonsensical thread id"
+            print("    trying nonsensical thread id")
         result = set_async_exc(ctypes.c_long(-1), exception)
         self.assertEqual(result, 0)  # no thread states modified
 
         # Now raise an exception in the worker thread.
         if verbose:
-            print "    waiting for worker thread to get started"
+            print("    waiting for worker thread to get started")
         worker_started.wait()
         if verbose:
-            print "    verifying worker hasn't exited"
+            print("    verifying worker hasn't exited")
         self.assert_(not t.finished)
         if verbose:
-            print "    attempting to raise asynch exception in worker"
+            print("    attempting to raise asynch exception in worker")
         result = set_async_exc(ctypes.c_long(t.id), exception)
         self.assertEqual(result, 1) # one thread state modified
         if verbose:
-            print "    waiting for worker to say it caught the exception"
+            print("    waiting for worker to say it caught the exception")
         worker_saw_exception.wait(timeout=10)
         self.assert_(t.finished)
         if verbose:
-            print "    all OK -- joining worker"
+            print("    all OK -- joining worker")
         if t.finished:
             t.join()
         # else the thread is still running, and we have no way to kill it
@@ -313,7 +314,7 @@ class ThreadTests(unittest.TestCase):
                     sleep(1)
                     # As a non-daemon thread we SHOULD wake up and nothing
                     # should be torn down yet
-                    print "Woke up, sleep function is:", sleep
+                    print("Woke up, sleep function is: %r" % sleep)
 
                 threading.Thread(target=child).start()
                 raise SystemExit
@@ -437,8 +438,8 @@ class ThreadJoinOnShutdown(unittest.TestCase):
         # Skip platforms with known problems forking from a worker thread.
         # See http://bugs.python.org/issue3863.
         if sys.platform in ('freebsd4', 'freebsd5', 'freebsd6', 'os2emx'):
-            print >>sys.stderr, ('Skipping test_3_join_in_forked_from_thread'
-                                 ' due to known OS bugs on'), sys.platform
+            print(('Skipping test_3_join_in_forked_from_thread'
+                  ' due to known OS bugs on'), sys.platform, file=sys.stderr)
             return
         script = """if 1:
             main_thread = threading.current_thread()

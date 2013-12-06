@@ -7,7 +7,7 @@ Implementing servers
 There are a few classes to simplify server implementation with gevent. They all share the similar interface::
 
   def handle(socket, address):
-       print 'new connection!'
+       print('new connection!')
 
   server = StreamServer(('127.0.0.1', 1234), handle) # creates a new server
   server.start() # start accepting new connections

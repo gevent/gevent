@@ -1,8 +1,12 @@
+from __future__ import print_function
 from __future__ import with_statement
 import gevent
 import gevent.core
 import time
-import thread
+try:
+    import thread
+except ImportError:
+    import _thread as thread
 
 
 hub = gevent.get_hub()
@@ -15,4 +19,4 @@ start = time.time()
 with gevent.Timeout(0.3):
     hub.wait(watcher)
 
-print 'Watcher %r reacted after %.6f seconds' % (watcher, time.time() - start - 0.1)
+print('Watcher %r reacted after %.6f seconds' % (watcher, time.time() - start - 0.1))
