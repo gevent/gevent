@@ -3,7 +3,10 @@ from __future__ import with_statement
 import gevent
 import gevent.core
 import time
-import thread
+try:
+    import thread
+except ImportError:
+    import _thread as thread
 
 
 hub = gevent.get_hub()

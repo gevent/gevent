@@ -40,7 +40,10 @@ import random
 import re
 import sys
 import threading
-import thread
+try:
+    import thread
+except ImportError:
+    import _thread as thread
 import time
 import unittest
 import weakref
