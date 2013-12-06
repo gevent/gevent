@@ -741,7 +741,7 @@ class Popen(object):
                 else:
                     os.close(errpipe_read)
 
-            if data != "":
+            if data != b"":
                 self.wait()
                 child_exception = pickle.loads(data)
                 for fd in (p2cwrite, c2pread, errread):
