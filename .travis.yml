@@ -5,7 +5,7 @@ python:
  - "3.3"
 matrix:
   allow_failures:
-    - python: "3.3"
+    - python: "3.4"
 script: make travis
 notifications:
   email: false
