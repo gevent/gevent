@@ -11,7 +11,7 @@ python -mtimeit -r 6 -s'from gevent.coros import Semaphore; from gevent import s
 
 python -mtimeit -r 6 -s'from gevent import spawn; f = lambda : 5' 'spawn(f)'
 python -mtimeit -r 6 -s'from gevent import spawn; f = lambda : 5' 'spawn(f).join()'
-python -mtimeit -r 6 -s'from gevent import spawn, run; f = lambda : 5' 'for _ in xrange(10000): spawn(f)' 'run()'
+python -mtimeit -r 6 -s'from gevent import spawn, run; from gevent.hub import xrange; f = lambda : 5' 'for _ in xrange(10000): spawn(f)' 'run()'
 python -mtimeit -r 6 -s'from gevent import spawn_raw; f = lambda : 5' 'spawn_raw(f)'
 
 python -mtimeit -r 6 -s'from gevent import sleep; f = lambda : 5' 'sleep(0)'

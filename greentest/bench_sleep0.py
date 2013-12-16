@@ -1,6 +1,10 @@
 """Benchmarking sleep(0) performance."""
 import sys
 from time import time
+try:
+    xrange
+except NameError:
+    xrange = range
 
 
 def noop(p):
