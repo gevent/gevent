@@ -308,10 +308,6 @@ class Popen(object):
     def poll(self):
         return self._internal_poll()
 
-    def rawlink(self, callback):
-        self.result.rawlink(linkproxy(callback, self))
-    # XXX unlink
-
     if mswindows:
         #
         # Windows methods
@@ -525,6 +521,11 @@ class Popen(object):
         #
         # POSIX methods
         #
+
+        def rawlink(self, callback):
+            self.result.rawlink(linkproxy(callback, self))
+        # XXX unlink
+
         def _get_handles(self, stdin, stdout, stderr):
             """Construct and return tuple with IO objects:
             p2cread, p2cwrite, c2pread, c2pwrite, errread, errwrite
