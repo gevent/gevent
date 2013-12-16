@@ -9,8 +9,9 @@ from __future__ import absolute_import
 import os
 import sys
 from gevent.hub import get_hub, reinit
-from gevent.socket import EAGAIN
 import errno
+
+EAGAIN = getattr(errno, 'EAGAIN', 11)
 
 try:
     import fcntl
