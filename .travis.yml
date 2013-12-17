@@ -1,11 +1,11 @@
 language: python
-env:
- - PYTHONVER=2.6
- - PYTHONVER=2.7
- - PYTHONVER=3.3
+python:
+ - "2.6"
+ - "2.7"
+ - "3.3"
 matrix:
   allow_failures:
-    - env: PYTHONVER=3.3
-script: sudo -E make travis
+    - python: "3.3"
+script: make travis
 notifications:
   email: false

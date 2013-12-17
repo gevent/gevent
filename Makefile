@@ -1,7 +1,7 @@
 # This file is renamed to "Makefile.ext" in release tarballs so that setup.py won't try to
 # run it.  If you want setup.py to run "make" automatically, rename it back to "Makefile".
 
-PYTHON ?= python${PYTHONVER}
+PYTHON ?= python${TRAVIS_PYTHON_VERSION}
 CYTHON ?= cython
 
 all: gevent/gevent.core.c gevent/gevent.ares.c gevent/gevent._semaphore.c gevent/gevent._util.c
@@ -37,10 +37,10 @@ whitespace:
 	! find . -not -path "./.git/*" -not -path "./build/*" -not -path "./libev/*" -not -path "./c-ares/*" -not -path "./doc/_build/*" -type f | xargs egrep -l " $$"
 
 pep8:
-	pep8 .
+	${PYTHON} `which pep8` .
 
 pyflakes:
-	util/pyflakes.py
+	${PYTHON} util/pyflakes.py
 
 lint: whitespace pep8 pyflakes
 
@@ -62,10 +62,10 @@ travis:
 	make whitespace
 
 	pip install -q pep8
-	make pep8
+	PYTHON=python make pep8
 
 	pip install -q pyflakes
-	make pyflakes
+	PYTHON=python make pyflakes
 
 	sudo add-apt-repository -y ppa:chris-lea/cython
 	sudo apt-get -qq -y update
@@ -77,11 +77,11 @@ travis:
 
 	ack -w subprocess greentest/ -l -v | python -c 'import sys; print "\n".join(line.split("/")[-1].strip() for line in sys.stdin)' > greentest/tests_that_dont_use_subprocess.txt
 
-	make travistest
+	sudo -E make travistest
 
-	apt-get install ${PYTHON}-dbg
+	sudo -E apt-get install ${PYTHON}-dbg
 
-	PYTHON=${PYTHON}-dbg GEVENTSETUP_EV_VERIFY=3 make travistest
+	sudo -E PYTHON=${PYTHON}-dbg GEVENTSETUP_EV_VERIFY=3 make travistest
 
 
 .PHONY: clean all doc pep8 whitespace pyflakes lint travistest travis
