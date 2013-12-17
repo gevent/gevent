@@ -30,11 +30,21 @@ def is_ignored(line):
             return True
 
 
-popen = subprocess.Popen('pyflakes gevent/ examples/ greentest/*.py util/ *.py', shell=True, stdout=subprocess.PIPE)
-output, _err = popen.communicate()
+popen = subprocess.Popen('%s `which pyflakes` gevent/ examples/ greentest/*.py util/ *.py' % sys.executable,
+                         shell=True,
+                         stdout=subprocess.PIPE,
+                         stderr=subprocess.PIPE)
+output, errors = popen.communicate()
+
+if errors:
+    sys.stderr.write(errors.decode())
+
 if popen.poll() != 1:
     sys.stderr.write(output + '\n')
     sys.exit('pyflakes returned %r' % popen.poll())
+
+if errors:
+    sys.exit(1)
 
 assert output
 
