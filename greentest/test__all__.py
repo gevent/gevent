@@ -43,7 +43,7 @@ class Test(unittest.TestCase):
             assert self.modname in NO_ALL
             return
         names = {}
-        exec ("from %s import *" % self.modname) in names
+        exec("from %s import *" % self.modname) in names
         names.pop('__builtins__', None)
         self.assertEqual(sorted(names), sorted(self.module.__all__))
 
@@ -176,7 +176,7 @@ are missing from %r:
 
     for path, modname in walk_modules(include_so=True):
         modname = modname.replace('gevent.', '').split('.')[0]
-        exec ('''def test_%s(self): self._test("gevent.%s")''' % (modname, modname))
+        exec('''def test_%s(self): self._test("gevent.%s")''' % (modname, modname))
     del path, modname
 
 
