@@ -13,6 +13,7 @@ from gevent import socket
 import gevent
 from gevent.server import StreamServer
 from gevent.hub import GreenletExit
+from gevent.hub import PY3
 
 
 __all__ = ['WSGIHandler', 'WSGIServer']
@@ -321,7 +322,8 @@ class WSGIHandler(object):
         except socket.error as ex:
             # Broken pipe, connection reset by peer
             if ex.args[0] in (errno.EPIPE, errno.ECONNRESET):
-                sys.exc_clear()
+                if not PY3:
+                    sys.exc_clear()
                 return
             else:
                 raise
