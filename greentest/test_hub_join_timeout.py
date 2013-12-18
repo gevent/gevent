@@ -3,6 +3,7 @@ from contextlib import contextmanager
 import gevent
 from gevent.event import Event
 from time import time
+from six import xrange
 
 
 SMALL = 0.1

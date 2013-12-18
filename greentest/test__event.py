@@ -1,6 +1,7 @@
 import greentest
 import gevent
 from gevent.event import Event, AsyncResult
+from six import xrange
 
 DELAY = 0.01
 

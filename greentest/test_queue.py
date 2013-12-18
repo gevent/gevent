@@ -7,6 +7,7 @@ import threading
 import time
 import unittest
 import test_support
+from six import xrange
 
 QUEUE_SIZE = 5
 

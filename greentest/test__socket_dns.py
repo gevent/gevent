@@ -8,6 +8,7 @@ from time import time
 import gevent
 import gevent.socket as gevent_socket
 from util import log
+from six import xrange
 
 
 resolver = gevent.get_hub().resolver

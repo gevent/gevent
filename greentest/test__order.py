@@ -1,5 +1,6 @@
 import gevent
 import greentest
+from six import xrange
 
 
 class appender(object):
