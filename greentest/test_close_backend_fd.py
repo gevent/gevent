@@ -1,6 +1,7 @@
 import os
 import gevent
 from gevent import core
+from six import xrange
 
 
 for count in xrange(2):

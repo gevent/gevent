@@ -1,5 +1,6 @@
 import sys
-from gevent.hub import PY3
+
+PY3 = sys.version_info[0] >= 3
 
 if PY3:
     advance_iterator = next
@@ -18,6 +19,7 @@ if PY3:
 
     print_ = getattr(builtins, "print")
     del builtins
+    xrange = range
 
 else:
     def exec_(code, globs=None, locs=None):
@@ -31,3 +33,5 @@ else:
         elif locs is None:
             locs = globs
         exec("""exec code in globs, locs""")
+
+    xrange = xrange
