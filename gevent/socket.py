@@ -750,12 +750,8 @@ def gethostbyname_ex(hostname):
     return get_hub().resolver.gethostbyname_ex(hostname)
 
 
-if PY3:
-    def getaddrinfo(host, port, family=0, type=0, proto=0, flags=0):
-        return get_hub().resolver.getaddrinfo(host, port, family, type, proto, flags)
-else:
-    def getaddrinfo(host, port, family=0, socktype=0, proto=0, flags=0):
-        return get_hub().resolver.getaddrinfo(host, port, family, socktype, proto, flags)
+def getaddrinfo(host, port, family=0, type=0, proto=0, flags=0):
+    return get_hub().resolver.getaddrinfo(host, port, family, type, proto, flags)
 
 
 def gethostbyaddr(ip_address):
