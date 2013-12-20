@@ -15,7 +15,7 @@ means repeatedly calling :meth:`get <Queue.get>` until :meth:`get <Queue.get>` r
     >>> queue.put(2)
     >>> queue.put(StopIteration)
     >>> for item in queue:
-    ...    print item
+    ...    print(item)
     1
     2
 """

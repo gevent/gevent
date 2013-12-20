@@ -17,6 +17,7 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
+from __future__ import print_function
 from gevent import monkey
 monkey.patch_all(thread=False)
 
@@ -71,7 +72,7 @@ def read_headers(fd):
         try:
             key, value = line.split(': ', 1)
         except:
-            print 'Failed to split: %r' % (line, )
+            print('Failed to split: %r' % (line, ))
             raise
         assert key.lower() not in [x.lower() for x in headers.keys()], 'Header %r:%r sent more than once: %r' % (key, value, headers)
         headers[key] = value
@@ -85,7 +86,7 @@ def iread_chunks(fd):
         try:
             chunk_size = int(chunk_size, 16)
         except:
-            print 'Failed to parse chunk size: %r' % line
+            print('Failed to parse chunk size: %r' % line)
             raise
         if chunk_size == 0:
             crlf = fd.read(2)
@@ -107,7 +108,7 @@ class Response(object):
         try:
             version, code, self.reason = status_line[:-2].split(' ', 2)
         except Exception:
-            print 'Error: %r' % status_line
+            print('Error: %r' % status_line)
             raise
         self.code = int(code)
         HTTP, self.version = version.split('/')
@@ -164,7 +165,7 @@ class Response(object):
         try:
             if 'chunked' in headers.get('Transfer-Encoding', ''):
                 if CONTENT_LENGTH in headers:
-                    print "WARNING: server used chunked transfer-encoding despite having Content-Length header (libevent 1.x's bug)"
+                    print("WARNING: server used chunked transfer-encoding despite having Content-Length header (libevent 1.x's bug)")
                 self.chunks = list(iread_chunks(fd))
                 self.body = ''.join(self.chunks)
             elif CONTENT_LENGTH in headers:
@@ -173,7 +174,7 @@ class Response(object):
             else:
                 self.body = fd.read()
         except:
-            print 'Response.read failed to read the body:\n%s' % self
+            print('Response.read failed to read the body:\n%s' % self)
             raise
         if body is not None:
             self.assertBody(body)
@@ -192,13 +193,13 @@ class DebugFileObject(object):
     def read(self, *args):
         result = self.obj.read(*args)
         if DEBUG:
-            print repr(result)
+            print(repr(result))
         return result
 
     def readline(self, *args):
         result = self.obj.readline(*args)
         if DEBUG:
-            print repr(result)
+            print(repr(result))
         return result
 
     def __getattr__(self, item):
@@ -924,7 +925,7 @@ class ChunkedInputTests(TestCase):
     def test_short_read_with_zero_content_length(self):
         body = self.body()
         req = "POST /short-read HTTP/1.1\r\ntransfer-encoding: Chunked\r\nContent-Length:0\r\n\r\n" + body
-        print "REQUEST:", repr(req)
+        print("REQUEST:", repr(req))
 
         fd = self.connect().makefile(bufsize=1)
         fd.write(req)
@@ -953,7 +954,7 @@ class ChunkedInputTests(TestCase):
         except AssertionError as ex:
             if str(ex).startswith('Unexpected code: 400'):
                 if not server_implements_chunked:
-                    print 'ChunkedNotImplementedWarning'
+                    print('ChunkedNotImplementedWarning')
                     return
             raise
 
@@ -1005,7 +1006,7 @@ class Expect100ContinueTests(TestCase):
         except AssertionError as ex:
             if str(ex).startswith('Unexpected code: 400'):
                 if not server_implements_100continue:
-                    print '100ContinueNotImplementedWarning'
+                    print('100ContinueNotImplementedWarning')
                     return
             raise
 

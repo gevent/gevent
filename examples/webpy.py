@@ -1,6 +1,7 @@
 #!/usr/bin/python
 """A web.py application powered by gevent"""
 
+from __future__ import print_function
 from gevent import monkey; monkey.patch_all()
 from gevent.pywsgi import WSGIServer
 import time
@@ -21,12 +22,12 @@ class long_polling:
     # and thanks to "monkey.patch_all()" statement at the top, thread-local storage used by web.ctx
     # becomes greenlet-local storage thus making requests isolated as they should be.
     def GET(self):
-        print 'GET /long'
+        print('GET /long')
         time.sleep(10)  # possible to block the request indefinitely, without harming others
         return 'Hello, 10 seconds later'
 
 
 if __name__ == "__main__":
     application = web.application(urls, globals()).wsgifunc()
-    print 'Serving on 8088...'
+    print('Serving on 8088...')
     WSGIServer(('', 8088), application).serve_forever()
