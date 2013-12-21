@@ -1,4 +1,3 @@
-from __future__ import with_statement
 import sys
 from time import time, sleep
 import random

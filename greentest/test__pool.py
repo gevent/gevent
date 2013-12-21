@@ -1,4 +1,3 @@
-from __future__ import with_statement
 from time import time
 import gevent
 from gevent import pool

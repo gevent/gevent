@@ -1,8 +1,6 @@
 """
 Various tests for synchronization primitives.
 """
-from __future__ import with_statement
-
 import sys
 import time
 from thread import start_new_thread, get_ident

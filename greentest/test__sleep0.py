@@ -1,4 +1,3 @@
-from __future__ import with_statement
 import gevent
 from util import alarm
 

@@ -1,6 +1,5 @@
 # Some simple queue module tests, plus some failure conditions
 # to ensure the Queue locks remain stable.
-#from __future__ import with_statement
 from gevent import monkey; monkey.patch_all()
 from gevent import queue as Queue
 import threading

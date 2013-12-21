@@ -1,5 +1,4 @@
 from __future__ import print_function
-from __future__ import with_statement
 import gevent
 import gevent.core
 import time

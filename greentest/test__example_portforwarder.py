@@ -1,5 +1,4 @@
 from __future__ import print_function
-from __future__ import with_statement
 from gevent import monkey; monkey.patch_all()
 import sys
 import socket

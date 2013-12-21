@@ -20,7 +20,6 @@
 # THE SOFTWARE.
 
 # package is named greentest, not test, so it won't be confused with test in stdlib
-from __future__ import with_statement
 import sys
 import unittest
 from unittest import TestCase as BaseTestCase
