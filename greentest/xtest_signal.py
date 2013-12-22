@@ -37,37 +37,38 @@ def test_main():
     # re-raises information about any exceptions the child
     # throws. The real work happens in self.run_test().
     os_done_r, os_done_w = os.pipe()
-    with closing(os.fdopen(os_done_r)) as done_r, closing(os.fdopen(os_done_w, 'w')) as done_w:
-        child = gevent.fork()
-        if not child:
-            # In the child process; run the test and report results
-            # through the pipe.
-            try:
-                done_r.close()
-                # Have to close done_w again here because
-                # exit_subprocess() will skip the enclosing with block.
-                with closing(done_w):
-                    try:
-                        run_test()
-                    except:
-                        pickle.dump(traceback.format_exc(), done_w)
-                    else:
-                        pickle.dump(None, done_w)
-            except:
-                print 'Uh oh, raised from pickle.'
-                traceback.print_exc()
-            finally:
-                os._exit(0)
+    with closing(os.fdopen(os_done_r)) as done_r:
+        with closing(os.fdopen(os_done_w, 'w')) as done_w:
+            child = gevent.fork()
+            if not child:
+                # In the child process; run the test and report results
+                # through the pipe.
+                try:
+                    done_r.close()
+                    # Have to close done_w again here because
+                    # exit_subprocess() will skip the enclosing with block.
+                    with closing(done_w):
+                        try:
+                            run_test()
+                        except:
+                            pickle.dump(traceback.format_exc(), done_w)
+                        else:
+                            pickle.dump(None, done_w)
+                except:
+                    print('Uh oh, raised from pickle.')
+                    traceback.print_exc()
+                finally:
+                    os._exit(0)
 
-        done_w.close()
-        # Block for up to MAX_DURATION seconds for the test to finish.
-        r, w, x = select.select([done_r], [], [], MAX_DURATION)
-        if done_r in r:
-            tb = pickle.load(done_r)
-            assert not tb, tb
-        else:
-            os.kill(child, 9)
-            assert False, 'Test deadlocked after %d seconds.' % MAX_DURATION
+            done_w.close()
+            # Block for up to MAX_DURATION seconds for the test to finish.
+            r, w, x = select.select([done_r], [], [], MAX_DURATION)
+            if done_r in r:
+                tb = pickle.load(done_r)
+                assert not tb, tb
+            else:
+                os.kill(child, 9)
+                assert False, 'Test deadlocked after %d seconds.' % MAX_DURATION
 
 
 if __name__ == "__main__":
