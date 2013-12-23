@@ -6,10 +6,14 @@ TODO: faq, process a thing in each iteration
 TODO: dbeugging tips, ev_verify, ev_init twice
 TODO: ev_break for immediate exit (EVBREAK_NOW?)
 TODO: ev_feed_child_event
-
 TODO: document the special problem of signals around fork.
 TODO: store pid for each signal
 TODO: document file descriptor usage per loop
+TODO: store loop pid_t and compare isndie signal handler,store 1 for same, 2 for differign pid, clean up in loop_fork
+TODO: embed watchers need updating when fd changes
+TODO: document portbaility requirements for atomic pointer access
+
+4.15 Fri Mar  1 12:04:50 CET 2013
         - destroying a non-default loop would stop the global waitpid
           watcher (Denis Bilenko).
 	- queueing pending watchers of higher priority from a watcher now invokes
@@ -32,6 +36,8 @@ TODO: document file descriptor usage per loop
 	- (ecb) add memory fence support for gcc-alpha (Christian Weisgerber).
         - work around some kernels losing file descriptors by leaking
           the kqueue descriptor in the child.
+        - work around linux inotify not reporting IN_ATTRIB changes for directories
+          in many cases.
         - include sys/syscall.h instead of plain syscall.h.
         - check for io watcher loops in ev_verify, check for the most
           common reported usage bug in ev_io_start.
@@ -46,6 +52,13 @@ TODO: document file descriptor usage per loop
         - rewrite the async/signal pipe logic to always keep a valid fd, which
           simplifies (and hopefuly correctifies :) the race checking
           on fork, at the cost of one extra fd.
+        - add fat, msdos, jffs2, ramfs, ntfs and btrfs to the list of
+          inotify-supporting filesystems.
+        - move orig_CFLAGS assignment to after AC_INIT, as newer autoconf
+          versions ignore it before
+          (https://bugzilla.redhat.com/show_bug.cgi?id=908096).
+        - add some untested android support.
+        - enum expressions must be of type int (reported by Juan Pablo L).
 
 4.11 Sat Feb  4 19:52:39 CET 2012
 	- INCOMPATIBLE CHANGE: ev_timer_again now clears the pending status, as
