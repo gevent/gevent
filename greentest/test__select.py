@@ -1,3 +1,4 @@
+import six
 import sys
 import os
 from gevent import select, socket
@@ -30,13 +31,14 @@ class TestSelectTypes(greentest.TestCase):
         select.select([int(sock.fileno())], [], [], 0.001)
 
     try:
-        long
-    except NameError:
+        six.builtins.long
+    except AttributeError:
         pass
     else:
         def test_long(self):
             sock = socket.socket()
-            select.select([long(sock.fileno())], [], [], 0.001)
+            select.select(
+                [six.builtins.long(sock.fileno())], [], [], 0.001)
 
     def test_string(self):
         self.switch_expected = False

@@ -1,7 +1,11 @@
+import six
+import sys
 from os import pipe
 from gevent import os
 from greentest import TestCase, main
 from gevent import Greenlet, joinall
+if sys.version_info[:2] < (2, 7):
+    memoryview = six.builtins.buffer
 try:
     import fcntl
 except ImportError:
@@ -31,7 +35,7 @@ class TestOS_tp(TestCase):
         # set nbytes such that for sure it is > maximum pipe buffer
         nbytes = 1000000
         block = 'x' * 4096
-        buf = buffer(block)
+        buf = memoryview(block)
         # Lack of "nonlocal" keyword in Python 2.x:
         bytesread = [0]
         byteswritten = [0]
