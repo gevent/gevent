@@ -30,4 +30,4 @@ test_name = os.path.splitext(test_filename)[0]
 module_source = open(test_filename).read()
 module_source = disable_tests_in_source(module_source, test_name)
 module_code = compile(module_source, test_filename, 'exec')
-exec module_code in globals()
+exec(module_code, globals())
