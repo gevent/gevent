@@ -71,7 +71,7 @@ class SSLSocket(socket):
         try:
             socket.getpeername(self)
         except socket_error as e:
-            if e[0] != errno.ENOTCONN:
+            if e.args[0] != errno.ENOTCONN:
                 raise
             # no, no connection yet
             self._sslobj = None

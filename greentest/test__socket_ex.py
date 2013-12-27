@@ -12,7 +12,7 @@ class TestClosedSocket(greentest.TestCase):
         try:
             sock.send('a', timeout=1)
         except socket.error as ex:
-            if ex[0] != 9:
+            if ex.args[0] != 9:
                 raise
 
 
