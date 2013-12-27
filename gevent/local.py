@@ -27,7 +27,7 @@ local to a greenlet. If we access the data in a different greenlet:
 
   >>> log = []
   >>> def f():
-  ...     items = mydata.__dict__.items()
+  ...     items = list(mydata.__dict__.items())
   ...     items.sort()
   ...     log.append(items)
   ...     mydata.number = 11
