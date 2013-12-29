@@ -26,7 +26,7 @@ class Test(greentest.TestCase):
         for i in xrange(1, self.count):
             g.link(appender(lst, i))
         g.join()
-        self.assertEqual(lst, range(self.count))
+        self.assertEqual(lst, list(range(self.count)))
 
 
 class Test3(Test):

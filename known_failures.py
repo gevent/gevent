@@ -108,7 +108,6 @@ test__pywsgi.py
 test__socket_ex.py
 test__example_echoserver.py
 test__subprocess_poll.py
-test__order.py
 test__ssl.py
 test__makefile_ref.py
 test__socketpair.py
