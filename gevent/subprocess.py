@@ -5,6 +5,7 @@ import errno
 import gc
 import signal
 import traceback
+from gevent import Timeout
 from gevent.event import AsyncResult
 from gevent.hub import get_hub, linkproxy, sleep, getcurrent, integer_types, string_types, xrange
 from gevent.fileobject import FileObject
@@ -229,12 +230,21 @@ class Popen(object):
          c2pread, c2pwrite,
          errread, errwrite) = self._get_handles(stdin, stdout, stderr)
 
-        self._execute_child(args, executable, preexec_fn, close_fds,
-                            cwd, env, universal_newlines,
-                            startupinfo, creationflags, shell,
-                            p2cread, p2cwrite,
-                            c2pread, c2pwrite,
-                            errread, errwrite)
+        try:
+            self._execute_child(args, executable, preexec_fn, close_fds,
+                                cwd, env, universal_newlines,
+                                startupinfo, creationflags, shell,
+                                p2cread, p2cwrite,
+                                c2pread, c2pwrite,
+                                errread, errwrite)
+        except Timeout as e:
+            for fd in (p2cread, p2cwrite, c2pread, c2pwrite, errread, errwrite):
+                if fd is not None:
+                    try:
+                        os.close(fd)
+                    except OSError:
+                        pass # ignore the fd has already closed.
+            raise e
 
         if mswindows:
             if p2cwrite is not None:
