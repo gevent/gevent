@@ -351,16 +351,7 @@ class WSGIHandler(object):
 
         self.environ = self.get_environ()
         self.application = self.server.application
-        try:
-            self.handle_one_response()
-        except socket.error as ex:
-            # Broken pipe, connection reset by peer
-            if ex.args[0] in (errno.EPIPE, errno.ECONNRESET):
-                if not PY3:
-                    sys.exc_clear()
-                return
-            else:
-                raise
+        self.handle_one_response()
 
         if self.close_connection:
             return
@@ -522,6 +513,14 @@ class WSGIHandler(object):
                 if close is not None:
                     close()
                 self.wsgi_input._discard()
+        except socket.error as ex:
+            # Broken pipe, connection reset by peer
+            if ex.args[0] in (errno.EPIPE, errno.ECONNRESET):
+                if not PY3:
+                    sys.exc_clear()
+                self.close_connection = True
+            else:
+                self.handle_error(*sys.exc_info())
         except:
             self.handle_error(*sys.exc_info())
         finally:
