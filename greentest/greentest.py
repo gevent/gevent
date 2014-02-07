@@ -100,6 +100,8 @@ def wrap_refcount(method):
                 self.tearDown()
                 if 'urlparse' in sys.modules:
                     sys.modules['urlparse'].clear_cache()
+                if 'urllib.parse' in sys.modules:
+                    sys.modules['urllib.parse'].clear_cache()
                 d = gettotalrefcount() - d
                 deltas.append(d)
                 # the following configurations are classified as "no leak"

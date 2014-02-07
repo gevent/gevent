@@ -6,7 +6,10 @@ import sys
 import time
 import traceback
 from datetime import datetime
-from urllib import unquote
+try:
+    from urllib import unquote
+except ImportError:
+    from urllib.parse import unquote
 
 from gevent import socket
 import gevent
