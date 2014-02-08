@@ -31,8 +31,12 @@ setup_4 = '\n'.join('                %s' % line for line in setup_.split('\n'))
 setup_5 = '\n'.join('                    %s' % line for line in setup_.split('\n'))
 
 
-import test.test_support
-from test.test_support import verbose
+try:
+    from test import support
+    from test.support import verbose
+except ImportError:
+    from test import test_support as support
+    from test.test_support import verbose
 import random
 import re
 import sys
@@ -539,13 +543,13 @@ class BoundedSemaphoreTests(lock_tests.BoundedSemaphoreTests):
 
 
 def main():
-    test.test_support.run_unittest(LockTests, RLockTests, EventTests,
-                                   ConditionAsRLockTests, ConditionTests,
-                                   SemaphoreTests, BoundedSemaphoreTests,
-                                   ThreadTests,
-                                   ThreadJoinOnShutdown,
-                                   ThreadingExceptionTests,
-                                   )
+    support.run_unittest(LockTests, RLockTests, EventTests,
+                         ConditionAsRLockTests, ConditionTests,
+                         SemaphoreTests, BoundedSemaphoreTests,
+                         ThreadTests,
+                         ThreadJoinOnShutdown,
+                         ThreadingExceptionTests,
+                         )
 
 if __name__ == "__main__":
     main()

@@ -3,11 +3,17 @@ Various tests for synchronization primitives.
 """
 import sys
 import time
-from thread import start_new_thread, get_ident
+try:
+    from thread import start_new_thread, get_ident
+except ImportError:
+    from _thread import start_new_thread, get_ident
 import threading
 import unittest
 
-from test import test_support as support
+try:
+    from test import support
+except ImportError:
+    from test import test_support as support
 
 
 def _wait():

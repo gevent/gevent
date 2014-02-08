@@ -17,12 +17,15 @@ print('Running with patch_all(%s): %s' % (','.join('%s=%r' % x for x in kwargs.i
 from gevent import monkey; monkey.patch_all(**kwargs)
 
 from patched_tests_setup import disable_tests_in_source
-import test.test_support
-test.test_support.is_resource_enabled = lambda *args: True
-del test.test_support.use_resources
+try:
+    from test import support
+except ImportError:
+    from test import test_support as support
+support.is_resource_enabled = lambda *args: True
+del support.use_resources
 
 if sys.version_info[:2] <= (2, 6):
-    test.test_support.TESTFN += '_%s' % os.getpid()
+    support.TESTFN += '_%s' % os.getpid()
 
 __file__ = os.path.join(os.getcwd(), test_filename)
 
