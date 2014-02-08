@@ -24,7 +24,10 @@ monkey.patch_all(thread=False)
 import cgi
 import os
 import sys
-import StringIO
+try:
+    from StringIO import StringIO
+except ImportError:
+    from io import StringIO
 try:
     from wsgiref.validate import validator
 except ImportError:
@@ -1161,7 +1164,7 @@ class TestInputRaw(greentest.BaseTestCase):
             data = chunk_encode(data)
             chunked_input = True
 
-        return Input(StringIO.StringIO(data), content_length=content_length, chunked_input=chunked_input)
+        return Input(StringIO(data), content_length=content_length, chunked_input=chunked_input)
 
     def test_short_post(self):
         i = self.make_input("1", content_length=2)

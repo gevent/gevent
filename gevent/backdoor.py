@@ -71,8 +71,12 @@ class SocketConsole(Greenlet):
                 # __builtin__.__dict__ in the latter case typing
                 # locals() at the backdoor prompt spews out lots of
                 # useless stuff
-                import __builtin__
-                console.locals["__builtins__"] = __builtin__
+                try:
+                    import __builtin__
+                    console.locals["__builtins__"] = __builtin__
+                except ImportError:
+                    import builtins
+                    console.locals["builtins"] = builtins
                 console.interact(banner=self.banner)
             except SystemExit:  # raised by quit()
                 sys.exc_clear()
