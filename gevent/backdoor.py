@@ -30,6 +30,7 @@ from code import InteractiveConsole
 
 from gevent import socket
 from gevent.greenlet import Greenlet
+from gevent.hub import PY3
 from gevent.server import StreamServer
 
 __all__ = ['BackdoorServer']
@@ -79,7 +80,8 @@ class SocketConsole(Greenlet):
                     console.locals["builtins"] = builtins
                 console.interact(banner=self.banner)
             except SystemExit:  # raised by quit()
-                sys.exc_clear()
+                if not PY3:
+                    sys.exc_clear()
         finally:
             self.switch_out()
             self.finalize()
