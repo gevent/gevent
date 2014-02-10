@@ -5,7 +5,6 @@ import errno
 import sys
 import time
 import traceback
-import mimetools
 from datetime import datetime
 from urllib import unquote
 
@@ -164,9 +163,42 @@ class Input(object):
         return line
 
 
+try:
+    import mimetools
+    headers_factory = mimetools.Message
+except ImportError:
+    # adapt Python 3 HTTP headers to old API
+    from http import client
+
+    class OldMessage(client.HTTPMessage):
+        def __init__(self, **kwargs):
+            super().__init__(**kwargs)
+            self.status = ''
+
+        def getheader(self, name, default=None):
+            return self.get(name, default)
+
+        @property
+        def headers(self):
+            for key, value in self._headers:
+                yield '%s: %s\r\n' % (key, value)
+
+        @property
+        def typeheader(self):
+            return self.get('content-type')
+
+    def headers_factory(fp, *args):
+        try:
+            ret = client.parse_headers(fp, _class=OldMessage)
+        except client.LineTooLong:
+            ret = OldMessage()
+            ret.status = 'Line too long'
+        return ret
+
+
 class WSGIHandler(object):
     protocol_version = 'HTTP/1.1'
-    MessageClass = mimetools.Message
+    MessageClass = headers_factory
 
     def __init__(self, socket, address, server, rfile=None):
         self.socket = socket
