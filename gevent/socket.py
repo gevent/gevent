@@ -303,7 +303,7 @@ class socket(object):
                 client_socket, address = sock.accept()
                 break
             except error as ex:
-                if ex[0] != EWOULDBLOCK or self.timeout == 0.0:
+                if ex.args[0] != EWOULDBLOCK or self.timeout == 0.0:
                     raise
                 sys.exc_clear()
             self._wait(self._read_event)

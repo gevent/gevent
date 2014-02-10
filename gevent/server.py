@@ -92,7 +92,7 @@ class StreamServer(BaseServer):
         try:
             client_socket, address = self.socket.accept()
         except _socket.error as err:
-            if err[0] == EWOULDBLOCK:
+            if err.args[0] == EWOULDBLOCK:
                 return
             raise
         return socket(_sock=client_socket), address
@@ -131,7 +131,7 @@ class DatagramServer(BaseServer):
         try:
             data, address = self._socket.recvfrom(8192)
         except _socket.error as err:
-            if err[0] == EWOULDBLOCK:
+            if err.args[0] == EWOULDBLOCK:
                 return
             raise
         return data, address

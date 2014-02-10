@@ -284,7 +284,7 @@ class BaseServer(object):
             Greenlet.spawn(self.stop, timeout=stop_timeout).join()
 
     def is_fatal_error(self, ex):
-        return isinstance(ex, _socket.error) and ex[0] in self.fatal_errors
+        return isinstance(ex, _socket.error) and ex.args[0] in self.fatal_errors
 
 
 def _extract_family(host):
