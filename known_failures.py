@@ -94,7 +94,6 @@ if PY3:
     # No idea / TODO
     FAILING_TESTS += '''
 test__example_udp_server.py
-test_close_backend_fd.py
 test__examples.py
 test__pool.py
 FLAKY test___example_servers.py
