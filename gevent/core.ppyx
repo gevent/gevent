@@ -354,6 +354,8 @@ cdef public class loop [object PyGeventLoopObject, type PyGeventLoop_Type]:
             return libev.EV_MINPRI
 
     def _handle_syserr(self, message, errno):
+        if sys.version_info[0] >= 3:
+            message = message.decode()
         self.handle_error(None, SystemError, SystemError(message + ': ' + os.strerror(errno)), None)
 
     cpdef handle_error(self, context, type, value, tb):
