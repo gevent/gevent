@@ -53,6 +53,12 @@ if CPYTHON_DBG:
 
 if PYPY:
     FAILING_TESTS += [
+        # Different in PyPy:
+
+        # PyPy has no refcount
+        # http://pypy.readthedocs.org/en/latest/cpython_differences.html#differences-related-to-garbage-collection-strategies
+        'test__refcount_core.py',
+
         # Not implemented:
 
         # stat watchers are not implemented on pypy
