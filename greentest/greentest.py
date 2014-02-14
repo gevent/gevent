@@ -208,9 +208,7 @@ class TestCaseMetaClass(type):
         return type.__new__(meta, classname, bases, classDict)
 
 
-class TestCase(BaseTestCase):
-
-    __metaclass__ = TestCaseMetaClass
+class TestCase(TestCaseMetaClass("NewBase", (BaseTestCase,), {})):
     __timeout__ = 1
     switch_expected = 'default'
     error_fatal = True
