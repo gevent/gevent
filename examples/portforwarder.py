@@ -31,8 +31,10 @@ class PortForwarder(StreamServer):
         except IOError as ex:
             log('%s:%s failed to connect to %s:%s: %s', address[0], address[1], self.dest[0], self.dest[1], ex)
             return
-        gevent.spawn(forward, source, dest)
-        gevent.spawn(forward, dest, source)
+        gevent.joinall([
+            gevent.spawn(forward, source, dest),
+            gevent.spawn(forward, dest, source),
+        ])
         # XXX only one spawn() is needed
 
     def close(self):
