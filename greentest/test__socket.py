@@ -39,7 +39,7 @@ class TestTCP(greentest.TestCase):
 
     __timeout__ = None
     TIMEOUT_ERROR = socket.timeout
-    long_data = ", ".join([str(x) for x in range(20000)])
+    long_data = b", ".join([str(x).encode() for x in range(20000)])
 
     def setUp(self):
         greentest.TestCase.setUp(self)
@@ -62,7 +62,7 @@ class TestTCP(greentest.TestCase):
 
         def accept_and_read():
             try:
-                read_data.append(self.listener.accept()[0].makefile().read())
+                read_data.append(self.listener.accept()[0].makefile('rb').read())
             except:
                 traceback.print_exc()
                 os._exit(1)
@@ -77,8 +77,9 @@ class TestTCP(greentest.TestCase):
     def test_sendall_str(self):
         self._test_sendall(self.long_data)
 
-    def test_sendall_unicode(self):
-        self._test_sendall(six.text_type(self.long_data))
+    if not six.PY3:
+        def test_sendall_unicode(self):
+            self._test_sendall(six.text_type(self.long_data))
 
     def test_sendall_array(self):
         data = array.array("B", self.long_data)
@@ -93,18 +94,18 @@ class TestTCP(greentest.TestCase):
             # start reading, then, while reading, start writing. the reader should not hang forever
 
             def sendall():
-                client.sendall('t' * N)
+                client.sendall(b't' * N)
 
             sender = Thread(target=sendall)
             result = client.recv(1000)
-            self.assertEqual(result, 'hello world')
+            self.assertEqual(result, b'hello world')
             sender.join()
 
         server_thread = Thread(target=server)
         client = self.create_connection()
         client_reader = Thread(target=client.makefile().read, args=(N, ))
         time.sleep(0.1)
-        client.send('hello world')
+        client.send(b'hello world')
         time.sleep(0.1)
 
         # close() used to hang
@@ -136,7 +137,7 @@ class TestTCP(greentest.TestCase):
             time.sleep(0.1)
             assert client_sock
             client.settimeout(0.1)
-            data_sent = 'h' * 1000000
+            data_sent = b'h' * 1000000
             start = time.time()
             self.assertRaises(self.TIMEOUT_ERROR, client.sendall, data_sent)
             took = time.time() - start
@@ -147,7 +148,7 @@ class TestTCP(greentest.TestCase):
 
         def accept_once():
             conn, addr = self.listener.accept()
-            fd = conn.makefile(mode='w')
+            fd = conn.makefile(mode='rw')
             fd.write('hello\n')
             fd.close()
             conn.close()  # for pypy
