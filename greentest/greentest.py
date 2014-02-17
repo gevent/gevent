@@ -254,6 +254,11 @@ class TestCase(TestCaseMetaClass("NewBase", (BaseTestCase,), {})):
             gevent.get_hub().parent.throw(type, value)
         else:
             self._error = (where, type, value)
+            if sys.version_info[0] >= 3:
+                try:
+                    value.__traceback__ = None
+                except AttributeError:
+                    pass
 
     def peek_error(self):
         return self._error
