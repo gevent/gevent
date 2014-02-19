@@ -6,7 +6,7 @@ from six import xrange
 
 
 def read_until(conn, postfix):
-    read = ''
+    read = b''
     while not read.endswith(postfix):
         result = conn.recv(1)
         if not result:
@@ -29,10 +29,11 @@ class Test(greentest.TestCase):
 
         def connect():
             conn = create_connection(('127.0.0.1', server.server_port))
-            read_until(conn, '>>> ')
-            conn.sendall('2+2\r\n')
-            line = conn.makefile().readline()
-            assert line.strip() == '4', repr(line)
+            read_until(conn, b'>>> ')
+            conn.sendall(b'2+2\r\n')
+            line = conn.makefile('rb', 0).readline()
+            assert line.strip() == b'4', repr(line)
+            read_until(conn, b'>>> ')
 
         jobs = [gevent.spawn(connect) for _ in xrange(10)]
         gevent.joinall(jobs)
@@ -44,8 +45,8 @@ class Test(greentest.TestCase):
         server.start()
         try:
             conn = create_connection(('127.0.0.1', server.server_port))
-            read_until(conn, '>>> ')
-            conn.sendall('quit()\r\n')
+            read_until(conn, b'>>> ')
+            conn.sendall(b'quit()\r\n')
             line = conn.makefile().read()
             self.assertEqual(line, '')
         finally:
@@ -56,8 +57,8 @@ class Test(greentest.TestCase):
         server.start()
         try:
             conn = create_connection(('127.0.0.1', server.server_port))
-            read_until(conn, '>>> ')
-            conn.sendall('import sys; sys.exit(0)\r\n')
+            read_until(conn, b'>>> ')
+            conn.sendall(b'import sys; sys.exit(0)\r\n')
             line = conn.makefile().read()
             self.assertEqual(line, '')
         finally:
@@ -69,8 +70,8 @@ class Test(greentest.TestCase):
         server.start()
         try:
             conn = create_connection(('127.0.0.1', server.server_port))
-            response = read_until(conn, '>>> ')
-            self.assertEqual(response[:len(banner)], banner)
+            response = read_until(conn, b'>>> ')
+            self.assertEqual(response[:len(banner)], banner.encode())
         finally:
             server.stop()
 
@@ -79,9 +80,9 @@ class Test(greentest.TestCase):
         server.start()
         try:
             conn = create_connection(('127.0.0.1', server.server_port))
-            read_until(conn, '>>> ')
-            conn.sendall('locals()["__builtins__"]\r\n')
-            response = read_until(conn, '>>> ')
+            read_until(conn, b'>>> ')
+            conn.sendall(b'locals()["__builtins__"]\r\n')
+            response = read_until(conn, b'>>> ')
             self.assertTrue(len(response) < 300, msg="locals() unusable: %s..." % response[:100])
         finally:
             server.stop()
