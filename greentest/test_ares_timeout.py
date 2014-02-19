@@ -26,7 +26,7 @@ def reader():
 
 gevent.spawn(reader)
 
-r = gevent.get_hub().resolver = Resolver(servers=['127.0.0.10'], timeout=0.001, tries=1)
+r = gevent.get_hub().resolver = Resolver(servers=[b'127.0.0.10'], timeout=0.001, tries=1)
 try:
     result = r.gethostbyname('www.google.com')
 except socket.gaierror as ex:
