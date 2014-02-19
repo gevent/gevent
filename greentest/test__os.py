@@ -32,7 +32,7 @@ class TestOS_tp(TestCase):
         r, w = self.pipe()
         # set nbytes such that for sure it is > maximum pipe buffer
         nbytes = 1000000
-        block = 'x' * 4096
+        block = b'x' * 4096
         buf = buffer_class(block)
         # Lack of "nonlocal" keyword in Python 2.x:
         bytesread = [0]
