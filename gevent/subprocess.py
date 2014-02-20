@@ -24,6 +24,8 @@ __implements__ = ['Popen',
 __imports__ = ['PIPE',
                'STDOUT',
                'CalledProcessError',
+               # Python 3:
+               'DEVNULL',
                # Windows:
                'CREATE_NEW_CONSOLE',
                'CREATE_NEW_PROCESS_GROUP',
