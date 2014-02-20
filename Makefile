@@ -77,6 +77,12 @@ travis:
 
 	ack -w subprocess greentest/ -l -v | python -c 'import sys; print("\n".join(line.split("/")[-1].strip() for line in sys.stdin))' > greentest/tests_that_dont_use_subprocess.txt
 
+# patch deadsnakes Python 3.3.3 missing file
+ifeq ($(shell ${PYTHON} -c 'import sys;print(".".join(map(str, sys.version_info[:3])))'), 3.3.3)
+	sudo mkdir /usr/lib/python3.3/test/support
+	sudo cp python-3.3.3_test_support_init.py.fix /usr/lib/python3.3/test/support/__init__.py
+endif
+
 	sudo -E make travistest
 
 	sudo -E apt-get install ${PYTHON}-dbg
