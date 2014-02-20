@@ -41,6 +41,14 @@ __imports__ = ['error',
                'getservbyport',
                'getdefaulttimeout',
                'setdefaulttimeout',
+               # Python 3:
+               'CMSG_LEN',
+               'CMSG_SPACE',
+               'dup',
+               'if_indextoname',
+               'if_nameindex',
+               'if_nametoindex',
+               'sethostname',
                # Windows:
                'errorTab']
 
