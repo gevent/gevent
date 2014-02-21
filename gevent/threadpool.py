@@ -222,7 +222,8 @@ class ThreadPool(object):
         success, result = self.spawn(wrap_errors, expected_errors, function, args, kwargs).get()
         if success:
             return result
-        raise result
+        result = [result]
+        raise result.pop()
 
     def apply(self, func, args=None, kwds=None):
         """Equivalent of the apply() builtin function. It blocks till the result is ready."""

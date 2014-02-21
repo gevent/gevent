@@ -30,6 +30,8 @@ def _run(function, *args):
         assert not isinstance(result, BaseException), repr(result)
         return result
     except Exception as ex:
+        if six.PY3:
+            ex.__traceback__ = None
         return ex
 
 
