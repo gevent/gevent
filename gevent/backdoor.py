@@ -70,8 +70,10 @@ class BackdoorServer(StreamServer):
                 import builtins as __builtin__
             console.locals["__builtins__"] = __builtin__
             console.interact(banner=self.banner)
-        except SystemExit:  # raised by quit()
-            if not PY3:
+        except SystemExit as ex:  # raised by quit()
+            if PY3:
+                ex.__traceback__ = None
+            else:
                 sys.exc_clear()
         finally:
             conn.close()
