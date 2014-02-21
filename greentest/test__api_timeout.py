@@ -51,6 +51,8 @@ class Test(greentest.TestCase):
                 sleep(DELAY * 2)
         except Timeout as ex:
             assert ex is t, (ex, t)
+            if sys.version_info[0] > 2:
+                ex.__traceback__ = None
         else:
             raise AssertionError('must raise Timeout')
 

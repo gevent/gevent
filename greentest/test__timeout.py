@@ -1,6 +1,6 @@
 import greentest
 import gevent
-from gevent.hub import get_hub
+from gevent.hub import get_hub, PY3
 
 DELAY = 0.01
 
@@ -21,6 +21,8 @@ class TestDirectRaise(greentest.TestCase):
         except gevent.Timeout as t:
             assert timeout is t, (timeout, t)
             assert not t.pending, repr(t)
+            if PY3:
+                t.__traceback__ = None
 
 
 class Test(greentest.TestCase):
@@ -39,6 +41,8 @@ class Test(greentest.TestCase):
         self._test(timeout)
         timeout.start()
         self._test(timeout)
+        if PY3:
+            timeout.__traceback__ = None
 
     def test_false(self):
         timeout = gevent.Timeout(0.01, False)
@@ -46,6 +50,8 @@ class Test(greentest.TestCase):
         self._test(timeout)
         timeout.start()
         self._test(timeout)
+        if PY3:
+            timeout.__traceback__ = None
 
     def test_cancel(self):
         timeout = gevent.Timeout(0.01)
