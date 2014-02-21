@@ -47,7 +47,7 @@ def create_connection(address, timeout=_GLOBAL_DEFAULT_TIMEOUT, source_address=N
     """
 
     host, port = address
-    err = None
+    err = [None]
     for res in getaddrinfo(host, port, 0 if has_ipv6 else AF_INET, SOCK_STREAM):
         af, socktype, proto, _canonname, sa = res
         sock = None
@@ -68,8 +68,8 @@ def create_connection(address, timeout=_GLOBAL_DEFAULT_TIMEOUT, source_address=N
                 sys.exc_clear()
             if sock is not None:
                 sock.close()
-            err = ex
-    if err is not None:
-        raise err
+            err[0] = ex
+    if err[0] is not None:
+        raise err.pop()
     else:
         raise error("getaddrinfo returns an empty list")
