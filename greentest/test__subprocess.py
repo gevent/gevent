@@ -1,5 +1,6 @@
 # mostly tests from test_subprocess.py that used to have problems
 import sys
+import six
 import os
 import errno
 import greentest
@@ -41,6 +42,8 @@ class Test(greentest.TestCase):
             subprocess.Popen(['*']).wait()
         except OSError as ex:
             assert ex.errno == 2, ex
+            if six.PY3:
+                ex.__traceback__ = None
         else:
             raise AssertionError('Expected OSError: [Errno 2] No such file or directory')
 
@@ -148,6 +151,8 @@ class Test(greentest.TestCase):
             except OSError as ex:
                 if ex.errno != errno.ENOENT:
                     raise
+                if six.PY3:
+                    ex.__traceback__ = None
             else:
                 raise AssertionError('must fail with ENOENT')
 
@@ -156,6 +161,8 @@ class Test(greentest.TestCase):
             subprocess.check_output([sys.executable, '-c', 'import sys; sys.exit(44)'])
         except subprocess.CalledProcessError as e:
             self.assertEqual(e.returncode, 44)
+            if six.PY3:
+                e.__traceback__ = None
         else:
             raise AssertionError('must fail with CalledProcessError')
 
