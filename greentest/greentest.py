@@ -354,6 +354,8 @@ class GenericGetTestCase(TestCase):
             self.wait(timeout=timeout)
         except gevent.Timeout as ex:
             assert ex is timeout, (ex, timeout)
+            if sys.version_info[0] > 2:
+                ex.__traceback__ = None
         delay = time.time() - start
         assert 0.01 - 0.001 <= delay < 0.01 + 0.01 + 0.1, delay
         self.cleanup()
@@ -366,6 +368,8 @@ class GenericGetTestCase(TestCase):
             self.wait(timeout=timeout)
         except RuntimeError as ex:
             assert ex is error, (ex, error)
+            if sys.version_info[0] > 2:
+                ex.__traceback__ = None
         delay = time.time() - start
         assert 0.01 - 0.001 <= delay < 0.01 + 0.01 + 0.1, delay
         self.cleanup()
