@@ -175,6 +175,7 @@ try:
 except ImportError:
     # adapt Python 3 HTTP headers to old API
     from http import client
+    from email.feedparser import FeedParser
 
     class OldMessage(client.HTTPMessage):
         def __init__(self, **kwargs):
@@ -194,12 +195,24 @@ except ImportError:
             return self.get('content-type')
 
     def headers_factory(_, fp, *args):
+        headers = 0
+        feedparser = FeedParser(OldMessage)
         try:
-            ret = client.parse_headers(fp, _class=OldMessage)
-        except client.LineTooLong:
-            ret = OldMessage()
-            ret.status = 'Line too long'
-        return ret
+            while True:
+                line = fp.readline(client._MAXLINE + 1)
+                if len(line) > client._MAXLINE:
+                    ret = OldMessage()
+                    ret.status = 'Line too long'
+                    return ret
+                headers += 1
+                if headers > client._MAXHEADERS:
+                    raise client.HTTPException("got more than %d headers" % client._MAXHEADERS)
+                feedparser.feed(line.decode('iso-8859-1'))
+                if line in (b'\r\n', b'\n', b''):
+                    return feedparser.close()
+        finally:
+            # break the recursive reference chain
+            feedparser.__dict__.clear()
 
 
 class WSGIHandler(object):
