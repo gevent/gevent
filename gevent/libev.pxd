@@ -1,4 +1,13 @@
 cdef extern from "libev_vfd.h":
+#ifdef _WIN32
+#ifdef _WIN64
+    ctypedef long long vfd_socket_t
+#else
+    ctypedef long vfd_socket_t
+#endif
+#else
+    ctypedef int vfd_socket_t
+#endif
     long vfd_get(int)
     int vfd_open(long) except -1
     void vfd_free(int)
