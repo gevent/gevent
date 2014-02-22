@@ -446,8 +446,13 @@ cdef public class loop [object PyGeventLoopObject, type PyGeventLoop_Type]:
             CHECK_LOOP3(self)
             return libev.ev_pending_count(self._ptr)
 
+#ifdef _WIN32
+    def io(self, libev.vfd_socket_t fd, int events, ref=True, priority=None):
+        return io(self, fd, events, ref, priority)
+#else
     def io(self, int fd, int events, ref=True, priority=None):
         return io(self, fd, events, ref, priority)
+#endif
 
     def timer(self, double after, double repeat=0.0, ref=True, priority=None):
         return timer(self, after, repeat, ref, priority)
@@ -778,7 +783,7 @@ cdef public class io(watcher) [object PyGeventIOObject, type PyGeventIO_Type]:
 
 #ifdef _WIN32
 
-    def __init__(self, loop loop, long fd, int events, ref=True, priority=None):
+    def __init__(self, loop loop, libev.vfd_socket_t fd, int events, ref=True, priority=None):
         if events & ~(libev.EV__IOFDSET | libev.EV_READ | libev.EV_WRITE):
             raise ValueError('illegal event mask: %r' % events)
         cdef int vfd = libev.vfd_open(fd)
