@@ -24,6 +24,7 @@ if not os.path.exists(CYTHON) and 'VIRTUAL_ENV' in os.environ:
     CYTHON = os.path.join(os.environ['VIRTUAL_ENV'], 'bin', 'cython')
 if not os.path.exists(CYTHON):
     CYTHON = 'cython'
+os.environ['CYTHON'] = CYTHON
 DEBUG = False
 WRITE_OUTPUT = False
 
