@@ -204,6 +204,12 @@ def make(done=[]):
         if os.path.exists('Makefile'):
             if "PYTHON" not in os.environ:
                 os.environ["PYTHON"] = sys.executable
+            if "CYTHON" not in os.environ:
+                cython = os.path.join(os.path.dirname(sys.executable), 'cython')
+                if not os.path.exists(cython) and 'VIRTUAL_ENV' in os.environ:
+                    cython = os.path.join(os.environ['VIRTUAL_ENV'], 'bin', 'cython')
+                if os.path.exists(cython):
+                    os.environ["CYTHON"] = cython
             if os.system('make'):
                 sys.exit(1)
         done.append(1)
