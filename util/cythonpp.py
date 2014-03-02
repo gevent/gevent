@@ -19,7 +19,9 @@ else:
 _ex = lambda: sys.exc_info()[1]
 
 
-CYTHON = os.environ.get('CYTHON') or 'cython'
+CYTHON = os.environ.get('CYTHON') or os.path.join(os.path.dirname(sys.executable), 'cython')
+if not os.path.exists(CYTHON):
+    CYTHON = 'cython'
 DEBUG = False
 WRITE_OUTPUT = False
 
