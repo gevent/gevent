@@ -34,10 +34,18 @@ if PY3:
     string_types = str,
     integer_types = int,
     xrange = range
+
+    def reraise(tp, value, tb=None):
+        if value.__traceback__ is not tb:
+            raise value.with_traceback(tb)
+        raise value
+
 else:
     string_types = basestring,
     integer_types = (int, long)
     xrange = xrange
+
+    from gevent._util_py2 import reraise
 
 
 if sys.version_info[0] <= 2:

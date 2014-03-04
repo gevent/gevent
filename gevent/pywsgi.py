@@ -11,8 +11,7 @@ from urllib import unquote
 from gevent import socket
 import gevent
 from gevent.server import StreamServer
-from gevent.hub import GreenletExit
-from gevent.hub import PY3
+from gevent.hub import GreenletExit, PY3, reraise
 
 
 __all__ = ['WSGIHandler', 'WSGIServer']
@@ -434,7 +433,7 @@ class WSGIHandler(object):
             try:
                 if self.headers_sent:
                     # Re-raise original exception if headers sent
-                    raise exc_info[0], exc_info[1], exc_info[2]
+                    reraise(*exc_info)
             finally:
                 # Avoid dangling circular ref
                 exc_info = None
