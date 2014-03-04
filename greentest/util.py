@@ -5,9 +5,9 @@ import six
 import traceback
 import unittest
 import threading
+import subprocess
 import time
 from datetime import timedelta
-from gevent import subprocess, sleep, spawn_later
 
 
 SLEEP = 0.1
@@ -82,6 +82,8 @@ def _kill(popen):
 
 
 def kill(popen):
+    if popen.poll() is not None:
+        return
     try:
         if getattr(popen, 'setpgrp_enabled', None):
             killpg(popen.pid)
@@ -139,10 +141,9 @@ def start(command, **kwargs):
     popen.name = name
     popen.setpgrp_enabled = preexec_fn is not None
     if timeout is not None:
-        popen._killer = spawn_later(timeout, kill, popen)
-        popen._killer._start_event.ref = False   # XXX add 'ref' property to greenlet
-    else:
-        popen._killer = None
+        t = threading.Timer(timeout, kill, args=(popen, ))
+        t.setDaemon(True)
+        t.start()
     return popen
 
 
@@ -164,6 +165,9 @@ class RunResult(object):
         return self.code
 
 
+lock = threading.Lock()
+
+
 def run(command, **kwargs):
     buffer_output = kwargs.pop('buffer_output', BUFFER_OUTPUT)
     if buffer_output:
@@ -181,21 +185,20 @@ def run(command, **kwargs):
         else:
             result = popen.poll()
     finally:
-        if popen._killer is not None:
-            popen._killer.kill(block=False)
         kill(popen)
     assert not err
-    if out:
-        out = out.strip()
+    with lock:
         if out:
-            out = '  ' + out.replace('\n', '\n  ')
-            out = out.rstrip()
-            out += '\n'
-            log('| %s\n%s', name, out)
-    if result:
-        log('! %s [code %s] [took %.1fs]', name, result, took)
-    else:
-        log('- %s [took %.1fs]', name, took)
+            out = out.strip().decode()
+            if out:
+                out = '  ' + out.replace('\n', '\n  ')
+                out = out.rstrip()
+                out += '\n'
+                log('| %s\n%s', name, out)
+        if result:
+            log('! %s [code %s] [took %.1fs]', name, result, took)
+        else:
+            log('- %s [took %.1fs]', name, took)
     if took >= MIN_RUNTIME:
         runtimelog.append((-took, name))
     return RunResult(result, out, name)
@@ -380,12 +383,12 @@ class TestServer(unittest.TestCase):
 
     def before(self):
         if self.before_delay is not None:
-            sleep(self.before_delay)
+            time.sleep(self.before_delay)
         assert self.popen.poll() is None, '%s died with code %s' % (self.server, self.popen.poll(), )
 
     def after(self):
         if self.after_delay is not None:
-            sleep(self.after_delay)
+            time.sleep(self.after_delay)
             assert self.popen.poll() is None, '%s died with code %s' % (self.server, self.popen.poll(), )
 
     def _run_all_tests(self):
