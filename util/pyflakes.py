@@ -8,8 +8,11 @@ import glob
 
 IGNORED = r'''
 gevent/socket.py:\d+: undefined name
+gevent/_socket[23].py:\d+: undefined name
+gevent/_socketcommon.py:\d+: undefined name
+gevent/_socketcommon.py:\d+: .*imported but unused
 gevent/subprocess.py:\d+: undefined name
-gevent/ssl.py:\d+: undefined name
+gevent/_?ssl[23]?.py:\d+: undefined name
 gevent/__init__.py:\d+:.*imported but unused
 gevent/__init__.py:\d+: redefinition of unused 'signal' from line
 gevent/coros.py:\d+: 'from gevent.lock import *' used; unable to detect undefined names
@@ -68,5 +71,11 @@ def pyflakes(args):
 
 
 pyflakes('examples/ greentest/*.py util/ *.py')
-py = set(glob.glob('gevent/*.py')) - set(['gevent/_util_py2.py'])
+
+if sys.version_info[0] == 3:
+    ignored_files = ['gevent/_util_py2.py', 'gevent/_socket2.py']
+else:
+    ignored_files = ['gevent/_socket3.py']
+
+py = set(glob.glob('gevent/*.py')) - set(ignored_files)
 pyflakes(' '.join(py))

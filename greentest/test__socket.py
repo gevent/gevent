@@ -147,7 +147,7 @@ class TestTCP(greentest.TestCase):
 
         def accept_once():
             conn, addr = self.listener.accept()
-            fd = conn.makefile()
+            fd = conn.makefile(mode='w')
             fd.write('hello\n')
             fd.close()
 
