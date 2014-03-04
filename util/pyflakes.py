@@ -3,6 +3,7 @@ from __future__ import print_function
 import sys
 import re
 import subprocess
+import glob
 
 
 IGNORED = r'''
@@ -31,35 +32,41 @@ def is_ignored(line):
             return True
 
 
-popen = subprocess.Popen('%s `which pyflakes` gevent/ examples/ greentest/*.py util/ *.py' % sys.executable,
-                         shell=True,
-                         stdout=subprocess.PIPE,
-                         stderr=subprocess.PIPE)
-output, errors = popen.communicate()
+def pyflakes(args):
+    popen = subprocess.Popen('%s `which pyflakes` %s' % (sys.executable, args),
+                             shell=True,
+                             stdout=subprocess.PIPE,
+                             stderr=subprocess.PIPE)
+    output, errors = popen.communicate()
 
-if errors:
-    sys.stderr.write(errors.decode())
+    if errors:
+        sys.stderr.write(errors.decode())
 
-if popen.poll() != 1:
-    sys.stderr.write(output + '\n')
-    sys.exit('pyflakes returned %r' % popen.poll())
+    if popen.poll() != 1:
+        sys.stderr.write(output + '\n')
+        sys.exit('pyflakes returned %r' % popen.poll())
 
-if errors:
-    sys.exit(1)
+    if errors:
+        sys.exit(1)
 
-assert output
+    assert output
 
-output = output.strip().split('\n')
-failed = False
+    output = output.decode('utf-8')
+    output = output.strip().split('\n')
+    failed = False
+
+    for line in output:
+        line = line.strip()
+        if not is_ignored(line):
+            print('E %s' % line)
+            failed = True
+        #else:
+        #    print('I %s' % line)
+
+    if failed:
+        sys.exit(1)
 
 
-for line in output:
-    line = line.strip()
-    if not is_ignored(line):
-        print('E %s' % line)
-        failed = True
-    #else:
-    #    print('I %s' % line)
-
-if failed:
-    sys.exit(1)
+pyflakes('examples/ greentest/*.py util/ *.py')
+py = set(glob.glob('gevent/*.py')) - set(['gevent/_util_py2.py'])
+pyflakes(' '.join(py))
