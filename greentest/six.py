@@ -34,5 +34,6 @@ else:
             locs = globs
         exec("""exec code in globs, locs""")
 
-    xrange = xrange
-    string_types = basestring,
+    import __builtin__ as builtins
+    xrange = builtins.xrange
+    string_types = builtins.basestring,

@@ -18,7 +18,8 @@ __all__ = ['patch_all',
 if sys.version_info[0] >= 3:
     string_types = str,
 else:
-    string_types = basestring,
+    import __builtin__
+    string_types = __builtin__.basestring
 
 
 # maps module name -> attribute name -> original item
