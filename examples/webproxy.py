@@ -15,10 +15,15 @@ from gevent import monkey; monkey.patch_all()
 import sys
 import re
 import traceback
-import urllib2
-from urlparse import urlparse
 from cgi import escape
-from urllib import unquote
+try:
+    import urllib2
+    from urlparse import urlparse
+    from urllib import unquote
+except ImportError:
+    from urllib import request as urllib2
+    from urllib.parse import urlparse
+    from urllib.parse import unquote
 
 LISTEN = ":8088"
 
