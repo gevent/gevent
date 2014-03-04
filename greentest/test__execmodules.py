@@ -1,3 +1,4 @@
+import sys
 from greentest import walk_modules, BaseTestCase, main
 import six
 
@@ -21,6 +22,10 @@ def make_exec_test(path, module):
 
 
 for path, module in walk_modules():
+    if sys.version_info[0] == 3 and path.endswith('2.py'):
+        continue
+    if sys.version_info[0] == 2 and path.endswith('3.py'):
+        continue
     make_exec_test(path, module)
 
 
