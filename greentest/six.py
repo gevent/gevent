@@ -17,7 +17,6 @@ if PY3:
             raise value.with_traceback(tb)
         raise value
 
-    del builtins
     xrange = range
     string_types = str,
 
@@ -34,5 +33,6 @@ else:
             locs = globs
         exec("""exec code in globs, locs""")
 
-    xrange = xrange
-    string_types = basestring,
+    import __builtin__ as builtins
+    xrange = builtins.xrange
+    string_types = builtins.basestring,

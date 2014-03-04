@@ -35,6 +35,7 @@ popen = subprocess.Popen('%s `which pyflakes` gevent/ examples/ greentest/*.py u
                          stdout=subprocess.PIPE,
                          stderr=subprocess.PIPE)
 output, errors = popen.communicate()
+output = output.decode()
 
 if errors:
     sys.stderr.write(errors.decode())

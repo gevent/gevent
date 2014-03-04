@@ -35,9 +35,10 @@ if PY3:
     integer_types = int,
     xrange = range
 else:
-    string_types = basestring,
-    integer_types = (int, long)
-    xrange = xrange
+    import __builtin__
+    string_types = __builtin__.basestring,
+    integer_types = (int, __builtin__.long)
+    xrange = __builtin__.xrange
 
 
 if sys.version_info[0] <= 2:

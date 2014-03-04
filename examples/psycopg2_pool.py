@@ -11,7 +11,8 @@ from psycopg2 import extensions, OperationalError, connect
 if sys.version_info[0] >= 3:
     integer_types = int,
 else:
-    integer_types = int, long
+    import __builtin__
+    integer_types = int, __builtin__.long
 
 
 def gevent_wait_callback(conn, timeout=None):
