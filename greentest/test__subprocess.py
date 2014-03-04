@@ -14,6 +14,9 @@ else:
     SETBINARY = ''
 
 
+python_universal_newlines = hasattr(sys.stdout, 'newlines')
+
+
 class Test(greentest.TestCase):
 
     def test_exit(self):
@@ -75,7 +78,7 @@ class Test(greentest.TestCase):
                              universal_newlines=1)
         try:
             stdout = p.stdout.read()
-            if hasattr(file, 'newlines'):
+            if python_universal_newlines:
                 # Interpreter with universal newline support
                 self.assertEqual(stdout,
                                  "line1\nline2\nline3\nline4\nline5\nline6")
@@ -102,7 +105,7 @@ class Test(greentest.TestCase):
                              universal_newlines=1)
         try:
             stdout = p.stdout.read()
-            if hasattr(file, 'newlines'):
+            if python_universal_newlines:
                 # Interpreter with universal newline support
                 self.assertEqual(stdout,
                                  "line1\nline2\nline3\nline4\nline5\nline6")
