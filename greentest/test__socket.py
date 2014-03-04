@@ -7,6 +7,7 @@ import traceback
 import time
 import greentest
 from functools import wraps
+import six
 
 # we use threading on purpose so that we can test both regular and gevent sockets with the same code
 from threading import Thread as _Thread
@@ -77,7 +78,7 @@ class TestTCP(greentest.TestCase):
         self._test_sendall(self.long_data)
 
     def test_sendall_unicode(self):
-        self._test_sendall(unicode(self.long_data))
+        self._test_sendall(six.text_type(self.long_data))
 
     def test_sendall_array(self):
         data = array.array("B", self.long_data)

@@ -20,6 +20,7 @@ if PY3:
     del builtins
     xrange = range
     string_types = str,
+    text_type = str
 
 else:
     def exec_(code, globs=None, locs=None):
@@ -37,3 +38,4 @@ else:
     import __builtin__ as builtins
     xrange = builtins.xrange
     string_types = builtins.basestring,
+    text_type = builtins.unicode
