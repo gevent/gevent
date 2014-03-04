@@ -153,8 +153,12 @@ class RunResult(object):
         self.output = output
         self.name = name
 
-    def __nonzero__(self):
-        return bool(self.code)
+    if six.PY3:
+        def __bool__(self):
+            return bool(self.code)
+    else:
+        def __nonzero__(self):
+            return bool(self.code)
 
     def __int__(self):
         return self.code
