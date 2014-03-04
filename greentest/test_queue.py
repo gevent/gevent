@@ -5,7 +5,10 @@ from gevent import queue as Queue
 import threading
 import time
 import unittest
-import test_support
+try:
+    from test import support as test_support
+except ImportError:
+    from test import test_support
 from six import xrange
 
 QUEUE_SIZE = 5
