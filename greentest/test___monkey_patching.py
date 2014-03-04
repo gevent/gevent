@@ -16,6 +16,8 @@ def get_absolute_pythonpath():
 
 
 def TESTRUNNER(tests=None):
+    if not os.path.exists(directory):
+        return
     preferred_version = open(os.path.join(directory, 'version')).read().strip()
     if preferred_version != version:
         util.log('WARNING: The tests in %s/ are from version %s and your Python is %s', directory, preferred_version, version)
