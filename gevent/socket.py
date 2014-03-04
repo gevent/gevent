@@ -564,7 +564,8 @@ def create_connection(address, timeout=_GLOBAL_DEFAULT_TIMEOUT, source_address=N
                 sock.bind(source_address)
             sock.connect(sa)
             return sock
-        except error as err:
+        except error as ex:
+            err = ex
             # without exc_clear(), if connect() fails once, the socket is referenced by the frame in exc_info
             # and the next bind() fails (see test__socket.TestCreateConnection)
             # that does not happen with regular sockets though, because _socket.socket.connect() is a built-in.
