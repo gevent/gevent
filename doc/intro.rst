@@ -65,7 +65,7 @@ counterparts. That way even the modules that are unaware of gevent can benefit f
 in a multi-greenlet environment.
 
     >>> from gevent import monkey; monkey.patch_socket()
-    >>> import urllib2 # it's usable from multiple greenlets now
+    >>> import urllib # it's usable from multiple greenlets now
 
 See `examples/concurrent_download.py`__
 

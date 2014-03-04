@@ -12,7 +12,10 @@ from gevent import monkey
 # patches stdlib (including socket and ssl modules) to cooperate with other greenlets
 monkey.patch_all()
 
-import urllib2
+try:
+    import urllib2
+except ImportError:
+    from urllib import request as urllib2
 
 
 def print_head(url):
