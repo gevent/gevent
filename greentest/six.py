@@ -20,6 +20,7 @@ if PY3:
     del builtins
     xrange = range
     string_types = str,
+    text_type = str
 
 else:
     def exec_(code, globs=None, locs=None):
@@ -36,3 +37,4 @@ else:
 
     xrange = xrange
     string_types = basestring,
+    text_type = unicode
