@@ -69,7 +69,8 @@ class StreamServer(BaseServer):
     def set_listener(self, listener):
         BaseServer.set_listener(self, listener)
         try:
-            self.socket = self.socket._sock
+            if sys.version_info[0] == 2:
+                self.socket = self.socket._sock
         except AttributeError:
             pass
 
@@ -89,6 +90,21 @@ class StreamServer(BaseServer):
         return _tcp_listener(address, backlog=backlog, reuse_addr=self.reuse_addr, family=family)
 
     def do_read(self):
+        if sys.version_info[0] == 3:
+            return self._do_read_3()
+        else:
+            return self._do_read_2()
+
+    def _do_read_3(self):
+        try:
+            fd, address = self.socket._accept()
+        except _socket.error as err:
+            if err.args[0] == EWOULDBLOCK:
+                return
+            raise
+        return socket(fileno=fd), address
+
+    def _do_read_2(self):
         try:
             client_socket, address = self.socket.accept()
         except _socket.error as err:
@@ -101,6 +117,9 @@ class StreamServer(BaseServer):
         # used in case of ssl sockets
         ssl_socket = self.wrap_socket(client_socket, **self.ssl_args)
         return self.handle(ssl_socket, address)
+
+    def close_resource(self, client_socket, address):
+        client_socket.close()
 
 
 class DatagramServer(BaseServer):
@@ -119,7 +138,10 @@ class DatagramServer(BaseServer):
             self.address = self.socket.getsockname()
         self._socket = self.socket
         try:
-            self._socket = self._socket._sock
+            if sys.version_info[0] == 2:
+                self._socket = self._socket._sock
+            else:
+                self._socket = super(socket, self._socket)
         except AttributeError:
             pass
 

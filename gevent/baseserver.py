@@ -127,9 +127,9 @@ class BaseServer(object):
     def do_handle(self, *args):
         spawn = self._spawn
         if spawn is None:
-            self._handle(*args)
+            self._handle_and_close(*args)
         else:
-            spawn(self._handle, *args)
+            spawn(self._handle_and_close, *args)
 
     def _do_read(self):
         for _ in xrange(self.max_accept):
@@ -164,7 +164,17 @@ class BaseServer(object):
                         self._timer = self.loop.timer(self.delay)
                         self._timer.start(self._start_accepting_if_started)
                         self.delay = min(self.max_delay, self.delay * 2)
+                    self.close_resource(*args)
                     break
+
+    def close_resource(self, *args):
+        pass
+
+    def _handle_and_close(self, *args):
+        try:
+            self._handle(*args)
+        finally:
+            self.close_resource(*args)
 
     def full(self):
         return False

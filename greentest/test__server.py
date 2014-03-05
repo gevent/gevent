@@ -20,15 +20,15 @@ class SimpleStreamServer(StreamServer):
             print('Failed to parse request line: %r' % (request_line, ))
             raise
         if path == '/ping':
-            client_socket.sendall('HTTP/1.0 200 OK\r\n\r\nPONG')
+            client_socket.sendall(b'HTTP/1.0 200 OK\r\n\r\nPONG')
         elif path in ['/long', '/short']:
-            client_socket.sendall('hello')
+            client_socket.sendall(b'hello')
             while True:
                 data = client_socket.recv(1)
                 if not data:
                     break
         else:
-            client_socket.sendall('HTTP/1.0 404 WTF?\r\n\r\n')
+            client_socket.sendall(b'HTTP/1.0 404 WTF?\r\n\r\n')
 
 
 class Settings:
@@ -76,23 +76,29 @@ class TestCase(greentest.TestCase):
         sock.listen(5)
         return sock
 
-    def makefile(self, timeout=0.1, bufsize=1):
+    def makefile(self, timeout=0.1, bufsize=1, need_sock=False):
         sock = socket.socket()
         sock.connect((self.server.server_host, self.server.server_port))
-        fobj = sock.makefile(bufsize=bufsize)
-        fobj._sock.settimeout(timeout)
-        return fobj
+        fobj = sock.makefile('rwb', bufsize)
+        if hasattr(fobj, '_sock'):
+            fobj._sock.settimeout(timeout)
+        else:
+            sock.settimeout(timeout)
+        if need_sock:
+            return fobj, sock
+        else:
+            return fobj
 
     def send_request(self, url='/', timeout=0.1, bufsize=1):
         conn = self.makefile(timeout=timeout, bufsize=bufsize)
-        conn.write('GET %s HTTP/1.0\r\n\r\n' % url)
+        conn.write(('GET %s HTTP/1.0\r\n\r\n' % url).encode())
         conn.flush()
         return conn
 
     def assertConnectionRefused(self):
         try:
             conn = self.makefile()
-            raise AssertionError('Connection was not refused: %r' % (conn._sock, ))
+            raise AssertionError('Connection was not refused: %r' % (getattr(conn, '_sock', conn), ))
         except socket.error as ex:
             if ex.args[0] not in (errno.ECONNREFUSED, errno.EADDRNOTAVAIL):
                 raise
@@ -110,26 +116,29 @@ class TestCase(greentest.TestCase):
         Settings.assertPoolFull(self)
 
     def assertNotAccepted(self):
-        conn = self.makefile()
-        conn.write('GET / HTTP/1.0\r\n\r\n')
+        conn, sock = self.makefile(need_sock=True)
+        conn.write(b'GET / HTTP/1.0\r\n\r\n')
         conn.flush()
-        result = ''
+        result = b''
         try:
             while True:
-                data = conn._sock.recv(1)
+                if hasattr(conn, '_sock'):
+                    data = conn._sock.recv(1)
+                else:
+                    data = sock.recv(1)
                 if not data:
                     break
                 result += data
         except socket.timeout:
             assert not result, repr(result)
             return
-        assert result.startswith('HTTP/1.0 500 Internal Server Error'), repr(result)
+        assert result.startswith(b'HTTP/1.0 500 Internal Server Error'), repr(result)
 
     def assertRequestSucceeded(self, timeout=0.1):
         conn = self.makefile(timeout=timeout)
-        conn.write('GET /ping HTTP/1.0\r\n\r\n')
+        conn.write(b'GET /ping HTTP/1.0\r\n\r\n')
         result = conn.read()
-        assert result.endswith('\r\n\r\nPONG'), repr(result)
+        assert result.endswith(b'\r\n\r\nPONG'), repr(result)
 
     def start_server(self):
         self.server.start()
@@ -314,7 +323,10 @@ class TestPoolSpawn(TestDefaultSpawn):
         self.assertPoolFull()
         self.assertPoolFull()
         self.assertPoolFull()
-        short_request._sock.close()
+        if hasattr(short_request, '_sock'):
+            short_request._sock.close()
+        else:
+            short_request.close()
         # gevent.http and gevent.wsgi cannot detect socket close, so sleep a little
         # to let /short request finish
         gevent.sleep(0.1)
