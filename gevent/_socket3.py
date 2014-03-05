@@ -355,7 +355,7 @@ class socket(_socket.socket):
         else:
             self.hub.cancel_wait(self._read_event, cancel_wait_ex)
             self.hub.cancel_wait(self._write_event, cancel_wait_ex)
-        self._sock.shutdown(how)
+        super().shutdown(how)
 
 
 SocketType = socket
