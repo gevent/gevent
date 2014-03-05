@@ -65,7 +65,10 @@ class socket(object):
         # Only defined under Linux
         @property
         def type(self):
-            return self._sock.type & ~_socket.SOCK_NONBLOCK
+            if self.timeout != 0.0:
+                return self._sock.type & ~_socket.SOCK_NONBLOCK
+            else:
+                return self._sock.type
 
     def __enter__(self):
         return self
