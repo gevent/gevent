@@ -17,7 +17,6 @@ if PY3:
             raise value.with_traceback(tb)
         raise value
 
-    del builtins
     xrange = range
     string_types = str,
     text_type = str
