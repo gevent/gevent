@@ -12,6 +12,7 @@ class Test(util.TestServer):
         sock.send(b'Test udp_server')
         data, address = sock.recvfrom(8192)
         self.assertEqual(data, b'Received 15 bytes')
+        sock.close()
 
 
 if __name__ == '__main__':
