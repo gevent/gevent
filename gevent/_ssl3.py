@@ -15,7 +15,7 @@ _ssl = __ssl__._ssl
 import errno
 from gevent.socket import socket, timeout_default
 from gevent.socket import error as socket_error
-
+import gevent.socket
 
 __implements__ = ['SSLContext',
                   'SSLSocket',
@@ -90,7 +90,7 @@ class SSLSocket(socket):
             self.ciphers = ciphers
         # Can't use sock.type as other flags (such as SOCK_NONBLOCK) get
         # mixed in.
-        if sock.getsockopt(SOL_SOCKET, SO_TYPE) != SOCK_STREAM:
+        if sock.getsockopt(gevent.socket.SOL_SOCKET, gevent.socket.SO_TYPE) != gevent.socket.SOCK_STREAM:
             raise NotImplementedError("only stream sockets are supported")
         if server_side and server_hostname:
             raise ValueError("server_hostname can only be specified "
