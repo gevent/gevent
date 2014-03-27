@@ -13,7 +13,7 @@ class Test(greentest.TestCase):
     def _test_del(self, **kwargs):
         r, w = os.pipe()
         s = FileObject(w, 'wb')
-        s.write('x')
+        s.write(b'x')
         s.flush()
         if PYPY:
             s.close()
@@ -25,7 +25,7 @@ class Test(greentest.TestCase):
             pass  # expected, because SocketAdapter already closed it
         else:
             raise AssertionError('os.close(%r) must not succeed' % w)
-        self.assertEqual(FileObject(r).read(), 'x')
+        self.assertEqual(FileObject(r, 'rb').read(), b'x')
 
     def test_del(self):
         self._test_del()
@@ -38,18 +38,18 @@ class Test(greentest.TestCase):
         def test_del_noclose(self):
             r, w = os.pipe()
             s = FileObject(w, 'wb', close=False)
-            s.write('x')
+            s.write(b'x')
             s.flush()
             if PYPY:
                 s.close()
             else:
                 del s
             os.close(w)
-            self.assertEqual(FileObject(r).read(), 'x')
+            self.assertEqual(FileObject(r, 'rb').read(), b'x')
 
     def test_newlines(self):
         r, w = os.pipe()
-        lines = ['line1\n', 'line2\r', 'line3\r\n', 'line4\r\nline5', '\nline6']
+        lines = [b'line1\n', b'line2\r', b'line3\r\n', b'line4\r\nline5', b'\nline6']
         g = gevent.spawn(writer, FileObject(w, 'wb'), lines)
         try:
             result = FileObject(r, 'rU').read()

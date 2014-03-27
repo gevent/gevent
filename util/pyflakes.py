@@ -75,7 +75,7 @@ def pyflakes(args):
 pyflakes('examples/ greentest/*.py util/ *.py')
 
 if sys.version_info[0] == 3:
-    ignored_files = ['gevent/_util_py2.py', 'gevent/_socket2.py']
+    ignored_files = ['gevent/_util_py2.py', 'gevent/_socket2.py', 'gevent/_fileobject2.py']
 else:
     ignored_files = ['gevent/_socket3.py']
 
