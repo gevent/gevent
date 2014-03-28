@@ -49,6 +49,7 @@ class TestTCP(greentest.TestCase):
         self.port = listener.getsockname()[1]
 
     def cleanup(self):
+        self.listener.close()
         del self.listener
 
     def create_connection(self):
@@ -62,7 +63,11 @@ class TestTCP(greentest.TestCase):
 
         def accept_and_read():
             try:
-                read_data.append(self.listener.accept()[0].makefile('rb').read())
+                sock = self.listener.accept()[0]
+                f = sock.makefile('rb')
+                read_data.append(f.read())
+                f.close()
+                sock.close()
             except:
                 traceback.print_exc()
                 os._exit(1)
@@ -100,6 +105,7 @@ class TestTCP(greentest.TestCase):
             result = client.recv(1000)
             self.assertEqual(result, b'hello world')
             sender.join()
+            client.close()
 
         server_thread = Thread(target=server)
         client = self.create_connection()
@@ -126,6 +132,9 @@ class TestTCP(greentest.TestCase):
         took = time.time() - start
         assert 1 - 0.1 <= took <= 1 + 0.1, (time.time() - start)
         acceptor.join()
+        client.close()
+        for s, a in client_sock:
+            s.close()
 
     # On Windows send() accepts whatever is thrown at it
     if sys.platform != 'win32':
@@ -143,6 +152,9 @@ class TestTCP(greentest.TestCase):
             took = time.time() - start
             assert 0.1 - 0.01 <= took <= 0.1 + 0.1, took
             acceptor.join()
+            client.close()
+            for s, a in client_sock:
+                s.close()
 
     def test_makefile(self):
 
@@ -151,7 +163,7 @@ class TestTCP(greentest.TestCase):
             fd = conn.makefile(mode='rw')
             fd.write('hello\n')
             fd.close()
-            conn.close()  # for pypy
+            conn.close()  # for pypy and PY3
 
         acceptor = Thread(target=accept_once)
         client = self.create_connection()
