@@ -81,17 +81,20 @@ class TestCase(greentest.TestCase):
 
     def makefile(self, timeout=0.1, bufsize=1, need_sock=False):
         sock = socket.socket()
-        sock.connect((self.server.server_host, self.server.server_port))
-        fobj = sock.makefile('rwb', bufsize)
-        if hasattr(fobj, '_sock'):
-            fobj._sock.settimeout(timeout)
-        else:
-            sock.settimeout(timeout)
-        if need_sock:
-            return fobj, sock
-        else:
-            sock.close()
-            return fobj
+        try:
+            sock.connect((self.server.server_host, self.server.server_port))
+            fobj = sock.makefile('rwb', bufsize)
+            if hasattr(fobj, '_sock'):
+                fobj._sock.settimeout(timeout)
+            else:
+                sock.settimeout(timeout)
+            if need_sock:
+                return fobj, sock
+            else:
+                return fobj
+        finally:
+            if not need_sock:
+                sock.close()
 
     def send_request(self, url='/', timeout=0.1, bufsize=1):
         conn = self.makefile(timeout=timeout, bufsize=bufsize)
