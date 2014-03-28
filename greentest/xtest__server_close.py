@@ -18,7 +18,7 @@ class Test(unittest.TestCase):
     def assertConnectionRefused(self):
         try:
             conn = self.makefile()
-            raise AssertionError('Connection was not refused: %r' % (conn._sock, ))
+            raise AssertionError('Connection was not refused: %r' % (getattr(conn, '_sock', conn), ))
         except socket.error as ex:
             if ex.args[0] != errno.ECONNREFUSED:
                 raise
