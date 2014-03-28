@@ -23,6 +23,8 @@ class Test(util.TestServer):
                 sock.settimeout(0.1)
 
             self.assertRaises(timeout, conn.read, 1)
+            conn.close()
+            sock.close()
         client1 = gevent.spawn(test_client, b'hello\r\n')
         client2 = gevent.spawn(test_client, b'world\r\n')
         gevent.joinall([client1, client2], raise_error=True)
