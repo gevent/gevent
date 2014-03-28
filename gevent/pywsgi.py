@@ -14,7 +14,7 @@ except ImportError:
 from gevent import socket
 import gevent
 from gevent.server import StreamServer
-from gevent.hub import GreenletExit, PY3, reraise
+from gevent.hub import GreenletExit, PY3, reraise, string_types
 
 
 __all__ = ['WSGIHandler', 'WSGIServer']
@@ -27,13 +27,13 @@ _MONTHNAME = [None,  # Dummy so we can use 1-based month numbers
               "Jan", "Feb", "Mar", "Apr", "May", "Jun",
               "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
 _INTERNAL_ERROR_STATUS = '500 Internal Server Error'
-_INTERNAL_ERROR_BODY = 'Internal Server Error'
+_INTERNAL_ERROR_BODY = b'Internal Server Error'
 _INTERNAL_ERROR_HEADERS = [('Content-Type', 'text/plain'),
                            ('Connection', 'close'),
                            ('Content-Length', str(len(_INTERNAL_ERROR_BODY)))]
-_REQUEST_TOO_LONG_RESPONSE = "HTTP/1.1 414 Request URI Too Long\r\nConnection: close\r\nContent-length: 0\r\n\r\n"
-_BAD_REQUEST_RESPONSE = "HTTP/1.1 400 Bad Request\r\nConnection: close\r\nContent-length: 0\r\n\r\n"
-_CONTINUE_RESPONSE = "HTTP/1.1 100 Continue\r\n\r\n"
+_REQUEST_TOO_LONG_RESPONSE = b"HTTP/1.1 414 Request URI Too Long\r\nConnection: close\r\nContent-length: 0\r\n\r\n"
+_BAD_REQUEST_RESPONSE = b"HTTP/1.1 400 Bad Request\r\nConnection: close\r\nContent-length: 0\r\n\r\n"
+_CONTINUE_RESPONSE = b"HTTP/1.1 100 Continue\r\n\r\n"
 
 
 def format_date_time(timestamp):
@@ -81,11 +81,11 @@ class Input(object):
         elif length > left:
             length = left
         if not length:
-            return ''
+            return b''
         read = reader(length)
         self.position += len(read)
         if len(read) < length:
-            if (use_readline and not read.endswith("\n")) or not use_readline:
+            if (use_readline and not read.endswith(b"\n")) or not use_readline:
                 raise IOError("unexpected end of file while reading request at position %s" % (self.position,))
 
         return read
@@ -95,9 +95,9 @@ class Input(object):
         self._send_100_continue()
 
         if length == 0:
-            return ""
+            return b""
 
-        if length < 0:
+        if length is not None and length < 0:
             length = None
 
         if use_readline:
@@ -128,18 +128,18 @@ class Input(object):
                     length -= datalen
                     if length == 0:
                         break
-                if use_readline and data[-1] == "\n":
+                if use_readline and data[-1] == b"\n":
                     break
             else:
                 line = rfile.readline()
-                if not line.endswith("\n"):
+                if not line.endswith(b"\n"):
                     self.chunk_length = 0
                     raise IOError("unexpected end of file while reading chunked data header")
-                self.chunk_length = int(line.split(";", 1)[0], 16)
+                self.chunk_length = int(line.split(b";", 1)[0], 16)
                 self.position = 0
                 if self.chunk_length == 0:
                     rfile.readline()
-        return ''.join(response)
+        return b''.join(response)
 
     def read(self, length=None):
         if self.chunked_input:
@@ -163,6 +163,10 @@ class Input(object):
         if not line:
             raise StopIteration
         return line
+
+    if PY3:
+        __next__ = next
+        del next
 
 
 try:
@@ -189,7 +193,7 @@ except ImportError:
         def typeheader(self):
             return self.get('content-type')
 
-    def headers_factory(fp, *args):
+    def headers_factory(_, fp, *args):
         try:
             ret = client.parse_headers(fp, _class=OldMessage)
         except client.LineTooLong:
@@ -232,9 +236,16 @@ class WSGIHandler(object):
                 try:
                     # read out request data to prevent error: [Errno 104] Connection reset by peer
                     try:
-                        self.socket._sock.recv(16384)
+                        if PY3:
+                            super(socket.socket, self.socket).recv(16384)
+                        else:
+                            self.socket._sock.recv(16384)
                     finally:
-                        self.socket._sock.close()  # do not rely on garbage collection
+                        # sleep 0.001 to prevent error: [Errno 54] Connection reset by peer
+                        gevent.sleep(0.001)
+                        self.rfile.close()
+                        if not PY3:
+                            self.socket._sock.close()  # do not rely on garbage collection
                         self.socket.close()
                 except socket.error:
                     pass
@@ -251,6 +262,8 @@ class WSGIHandler(object):
         return True
 
     def read_request(self, raw_requestline):
+        if not isinstance(raw_requestline, string_types):
+            raw_requestline = raw_requestline.decode('iso-8859-1')
         self.requestline = raw_requestline.rstrip()
         words = self.requestline.split()
         if len(words) == 3:
@@ -399,7 +412,7 @@ class WSGIHandler(object):
             return
         if self.response_use_chunked:
             ## Write the chunked encoding
-            data = "%x\r\n%s\r\n" % (len(data), data)
+            data = b'\r\n'.join((("%x" % len(data)).encode(), data, b''))
         self._sendall(data)
 
     def write(self, data):
@@ -418,15 +431,18 @@ class WSGIHandler(object):
         self.headers_sent = True
         self.finalize_headers()
 
-        towrite.extend('HTTP/1.1 %s\r\n' % self.status)
+        towrite.extend(
+            b''.join((b'HTTP/1.1 ', str(self.status).encode(), b'\r\n')))
         for header in self.response_headers:
-            towrite.extend('%s: %s\r\n' % header)
+            towrite.extend(('%s: %s\r\n' % header).encode())
 
-        towrite.extend('\r\n')
+        towrite.extend(b'\r\n')
         if data:
             if self.response_use_chunked:
                 ## Write the chunked encoding
-                towrite.extend("%x\r\n%s\r\n" % (len(data), data))
+                towrite.extend(("%x\r\n" % (len(data),)).encode())
+                towrite.extend(data)
+                towrite.extend(b"\r\n")
             else:
                 towrite.extend(data)
         self._sendall(towrite)
@@ -496,9 +512,9 @@ class WSGIHandler(object):
             if data:
                 self.write(data)
         if self.status and not self.headers_sent:
-            self.write('')
+            self.write(b'')
         if self.response_use_chunked:
-            self.socket.sendall('0\r\n\r\n')
+            self.socket.sendall(b'0\r\n\r\n')
             self.response_length += 5
 
     def run_application(self):
