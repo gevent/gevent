@@ -308,6 +308,8 @@ class Greenlet(greenlet):
                 self.unlink(switch)
                 if ex is not t:
                     raise
+                if PY3:
+                    ex.__traceback__ = None
             except:
                 self.unlink(switch)
                 raise
@@ -320,6 +322,8 @@ class Greenlet(greenlet):
 
     def _report_error(self, exc_info):
         exception = exc_info[1]
+        if PY3:
+            exception.__traceback__ = None
         if isinstance(exception, GreenletExit):
             self._report_result(exception)
             return
