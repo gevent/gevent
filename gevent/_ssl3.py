@@ -39,8 +39,6 @@ orig_SSLContext = __ssl__.SSLContext
 
 
 class SSLContext(orig_SSLContext):
-    __slots__ = ('protocol', '__weakref__')
-
     def wrap_socket(self, sock, server_side=False,
                     do_handshake_on_connect=True,
                     suppress_ragged_eofs=True,
