@@ -2,6 +2,7 @@ from time import time
 import gevent
 from gevent import pool
 from gevent.event import Event
+from gevent.queue import Queue
 import greentest
 import random
 from greentest import ExpectedException
@@ -225,6 +226,12 @@ def sqr_random_sleep(x):
     return x * x
 
 
+def final_sleep():
+    for i in range(3):
+        yield i
+    gevent.sleep(0.2)
+
+
 TIMEOUT1, TIMEOUT2, TIMEOUT3 = 0.082, 0.035, 0.14
 
 
@@ -329,6 +336,30 @@ class TestPool(greentest.TestCase):
         else:
             expected = ['1', '2', '10']
         self.assertEqual(result, expected)
+
+    # https://github.com/surfly/gevent/issues/423
+    def test_imap_no_stop(self):
+        q = Queue()
+        q.put(123)
+        gevent.spawn_later(0.1, q.put, StopIteration)
+        result = list(self.pool.imap(lambda _: _, q))
+        self.assertEqual(result, [123])
+
+    def test_imap_unordered_no_stop(self):
+        q = Queue()
+        q.put(1234)
+        gevent.spawn_later(0.1, q.put, StopIteration)
+        result = list(self.pool.imap_unordered(lambda _: _, q))
+        self.assertEqual(result, [1234])
+
+    # same issue, but different test: https://github.com/surfly/gevent/issues/311
+    def test_imap_final_sleep(self):
+        result = list(self.pool.imap(sqr, final_sleep()))
+        self.assertEqual(result, [0, 1, 4])
+
+    def test_imap_unordered_final_sleep(self):
+        result = list(self.pool.imap_unordered(sqr, final_sleep()))
+        self.assertEqual(result, [0, 1, 4])
 
 
 class TestPool2(TestPool):

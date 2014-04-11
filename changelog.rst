@@ -4,6 +4,12 @@ Changelog
 .. currentmodule:: gevent
 
 
+Release 1.0.1
+-------------
+
+- Fix #423: Pool's imap/imap_unordered could hang forever. Based on patch and test by Jianfei Wang.
+
+
 Release 1.0 (Nov 26, 2013)
 --------------------------
 
