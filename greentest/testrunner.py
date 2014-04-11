@@ -21,7 +21,7 @@ def run_many(tests, expected=None, failfast=False):
     total = 0
     failed = {}
 
-    NWORKERS = min(len(tests), NWORKERS)
+    NWORKERS = min(len(tests), NWORKERS) or 1
     pool = ThreadPool(NWORKERS)
     util.BUFFER_OUTPUT = NWORKERS > 1
 
