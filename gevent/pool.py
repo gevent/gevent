@@ -226,12 +226,10 @@ class IMapUnordered(Greenlet):
     def _run(self):
         try:
             func = self.func
-            empty = True
             for item in self.iterable:
                 self.count += 1
                 self.spawn(func, item).rawlink(self._on_result)
-                empty = False
-            if empty:
+            if self.count <= 0:
                 self.queue.put(Failure(StopIteration))
         finally:
             self.__dict__.pop('spawn', None)
@@ -291,7 +289,6 @@ class IMap(Greenlet):
 
     def _run(self):
         try:
-            empty = True
             func = self.func
             for item in self.iterable:
                 self.count += 1
@@ -299,8 +296,7 @@ class IMap(Greenlet):
                 g.rawlink(self._on_result)
                 self.maxindex += 1
                 g.index = self.maxindex
-                empty = False
-            if empty:
+            if self.count <= 0:
                 self.maxindex += 1
                 self.queue.put((self.maxindex, Failure(StopIteration)))
         finally:
