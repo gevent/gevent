@@ -50,10 +50,15 @@ class SocketConsole(Greenlet):
     def __init__(self, locals, conn, banner=None):
         Greenlet.__init__(self)
         self.locals = locals
-        self.desc = _fileobject(conn)
+        if PY3:
+            self.desc = TTYRWPair(conn.makefile('rwb'), line_buffering=True)
+            conn.close()
+        else:
+            self.desc = _fileobject(conn)
         self.banner = banner
 
     def finalize(self):
+        self.desc.close()
         self.desc = None
 
     def switch(self, *args, **kw):
@@ -74,10 +79,9 @@ class SocketConsole(Greenlet):
                 # useless stuff
                 try:
                     import __builtin__
-                    console.locals["__builtins__"] = __builtin__
                 except ImportError:
-                    import builtins
-                    console.locals["builtins"] = builtins
+                    import builtins as __builtin__
+                console.locals["__builtins__"] = __builtin__
                 console.interact(banner=self.banner)
             except SystemExit:  # raised by quit()
                 if not PY3:
@@ -98,20 +102,30 @@ class BackdoorServer(StreamServer):
     def handle(self, conn, address):
         SocketConsole.spawn(self.locals, conn, banner=self.banner)
 
-
-class _fileobject(socket._fileobject):
-
-    def write(self, data):
-        self._sock.sendall(data)
-
-    def isatty(self):
-        return True
-
-    def flush(self):
+    def close_resource(self, client_socket, address):
         pass
 
-    def readline(self, *a):
-        return socket._fileobject.readline(self, *a).replace("\r\n", "\n")
+
+if PY3:
+    import io
+
+    class TTYRWPair(io.TextIOWrapper):
+        def isatty(self, *args, **kwargs):
+            return True
+else:
+    class _fileobject(socket._fileobject):
+
+        def write(self, data):
+            self._sock.sendall(data)
+
+        def isatty(self):
+            return True
+
+        def flush(self):
+            pass
+
+        def readline(self, *a):
+            return socket._fileobject.readline(self, *a).replace("\r\n", "\n")
 
 
 if __name__ == '__main__':
