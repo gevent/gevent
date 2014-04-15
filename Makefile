@@ -55,8 +55,7 @@ travistest:
 
 	cd greentest && GEVENT_RESOLVER=thread ${PYTHON} testrunner.py --expected ../known_failures.txt
 	cd greentest && GEVENT_RESOLVER=ares GEVENTARES_SERVERS=8.8.8.8 ${PYTHON} testrunner.py --expected ../known_failures.txt --ignore tests_that_dont_use_resolver.txt
-	# --ignore option does not work as expected XXX
-	cd greentest && GEVENT_FILE=thread ${PYTHON} testrunner.py --expected ../known_failures.txt --ignore tests_that_dont_use_subprocess.txt
+	cd greentest && GEVENT_FILE=thread ${PYTHON} testrunner.py --expected ../known_failures.txt `grep -l subprocess test_*.py`
 
 travis:
 	make whitespace
@@ -74,8 +73,6 @@ travis:
 
 	pip install -q --download . greenlet
 	unzip -q greenlet-*.zip
-
-	ack -w subprocess greentest/ -l -v | python -c 'import sys; print("\n".join(line.split("/")[-1].strip() for line in sys.stdin))' > greentest/tests_that_dont_use_subprocess.txt
 
 	sudo -E make travistest
 
