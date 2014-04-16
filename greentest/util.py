@@ -10,7 +10,6 @@ from datetime import timedelta
 from gevent import subprocess, sleep, spawn_later
 
 
-SLEEP = 0.1
 runtimelog = []
 MIN_RUNTIME = 1.0
 BUFFER_OUTPUT = False
