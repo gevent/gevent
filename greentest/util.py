@@ -10,7 +10,6 @@ import time
 from datetime import timedelta
 
 
-SLEEP = 0.1
 runtimelog = []
 MIN_RUNTIME = 1.0
 BUFFER_OUTPUT = False
