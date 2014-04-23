@@ -1,8 +1,7 @@
-# this produces syntax error on Python3
-
-
+eval("""
 __all__ = ['reraise']
 
 
 def reraise(type, value, tb):
     raise type, value, tb
+""")
