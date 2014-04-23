@@ -1,4 +1,4 @@
-eval("""
+exec("""
 __all__ = ['reraise']
 
 
