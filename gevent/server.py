@@ -4,6 +4,7 @@ import sys
 import _socket
 from gevent.baseserver import BaseServer
 from gevent.socket import EWOULDBLOCK, socket
+from gevent.hub import PYPY
 
 
 __all__ = ['StreamServer', 'DatagramServer']
@@ -95,7 +96,13 @@ class StreamServer(BaseServer):
             if err.args[0] == EWOULDBLOCK:
                 return
             raise
-        return socket(_sock=client_socket), address
+        sockobj = socket(_sock=client_socket)
+        if PYPY:
+            client_socket._drop()
+        return sockobj, address
+
+    def do_close(self, socket, *args):
+        socket.close()
 
     def wrap_socket_and_handle(self, client_socket, address):
         # used in case of ssl sockets

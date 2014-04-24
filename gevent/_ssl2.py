@@ -18,8 +18,8 @@ except AttributeError:
 import sys
 import errno
 from gevent.socket import socket, _fileobject, timeout_default
-from gevent.socket import error as socket_error
-from gevent.hub import string_types
+from gevent.socket import error as socket_error, EWOULDBLOCK
+from gevent.hub import string_types, PYPY
 
 
 __implements__ = ['SSLSocket',
@@ -64,6 +64,9 @@ class SSLSocket(socket):
                  suppress_ragged_eofs=True,
                  ciphers=None):
         socket.__init__(self, _sock=sock)
+
+        if PYPY:
+            sock._drop()
 
         if certfile and not keyfile:
             keyfile = certfile
@@ -289,6 +292,17 @@ class SSLSocket(socket):
         else:
             self._makefile_refs -= 1
 
+    if PYPY:
+
+        def _reuse(self):
+            self._makefile_refs += 1
+
+        def _drop(self):
+            if self._makefile_refs < 1:
+                self.close()
+            else:
+                self._makefile_refs -= 1
+
     def do_handshake(self):
         """Perform a TLS/SSL handshake."""
         while True:
@@ -331,24 +345,36 @@ class SSLSocket(socket):
         """Accepts a new connection from a remote client, and returns
         a tuple containing that new connection wrapped with a server-side
         SSL channel, and the address of the remote client."""
-        newsock, addr = socket.accept(self)
-        return (SSLSocket(newsock._sock,
-                          keyfile=self.keyfile,
-                          certfile=self.certfile,
-                          server_side=True,
-                          cert_reqs=self.cert_reqs,
-                          ssl_version=self.ssl_version,
-                          ca_certs=self.ca_certs,
-                          do_handshake_on_connect=self.do_handshake_on_connect,
-                          suppress_ragged_eofs=self.suppress_ragged_eofs,
-                          ciphers=self.ciphers),
-                addr)
+        sock = self._sock
+        while True:
+            try:
+                client_socket, address = sock.accept()
+                break
+            except socket_error as ex:
+                if ex.args[0] != EWOULDBLOCK or self.timeout == 0.0:
+                    raise
+                sys.exc_clear()
+            self._wait(self._read_event)
+
+        sslobj = SSLSocket(client_socket,
+                           keyfile=self.keyfile,
+                           certfile=self.certfile,
+                           server_side=True,
+                           cert_reqs=self.cert_reqs,
+                           ssl_version=self.ssl_version,
+                           ca_certs=self.ca_certs,
+                           do_handshake_on_connect=self.do_handshake_on_connect,
+                           suppress_ragged_eofs=self.suppress_ragged_eofs,
+                           ciphers=self.ciphers)
+
+        return sslobj, address
 
     def makefile(self, mode='r', bufsize=-1):
         """Make and return a file-like object that
         works with the SSL connection.  Just use the code
         from the socket module."""
-        self._makefile_refs += 1
+        if not PYPY:
+            self._makefile_refs += 1
         # close=True so as to decrement the reference count when done with
         # the file-like object.
         return _fileobject(self, mode, bufsize, close=True)

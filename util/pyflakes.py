@@ -24,6 +24,8 @@ gevent/wsgi.py:1: 'from gevent.pywsgi import *' used; unable to detect undefined
 examples/webchat/urls.py:1: 'from django.conf.urls.defaults import *' used; unable to detect undefined names
 greentest/test__queue.py:\d+: undefined name 'GenericGetTestCase'
 greentest/test__server_pywsgi.py:
+gevent/core.py:\d+: 'from gevent.corecffi import *' used; unable to detect undefined names
+gevent/core.py:\d+: 'from gevent.corecext import *' used; unable to detect undefined names
 '''
 
 IGNORED = IGNORED.strip().replace(' *', ' \\*').split('\n')

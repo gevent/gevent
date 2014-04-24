@@ -28,6 +28,7 @@ __all__ = ['getcurrent',
 
 
 PY3 = sys.version_info[0] >= 3
+PYPY = hasattr(sys, 'pypy_version_info')
 
 
 if PY3:

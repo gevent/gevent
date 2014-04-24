@@ -9,17 +9,19 @@ import traceback
 from os.path import join, abspath, basename, dirname
 from glob import glob
 
+PYPY = hasattr(sys, 'pypy_version_info')
+
 try:
     from setuptools import Extension, setup
 except ImportError:
+    if PYPY:
+        # need setuptools for include_package_data to work
+        raise
     from distutils.core import Extension, setup
 from distutils.command.build_ext import build_ext
 from distutils.command.sdist import sdist as _sdist
 from distutils.errors import CCompilerError, DistutilsExecError, DistutilsPlatformError
 ext_errors = (CCompilerError, DistutilsExecError, DistutilsPlatformError, IOError)
-
-
-# XXX make all env variables that setup.py parses start with GEVENTSETUP_
 
 
 __version__ = re.search("__version__\s*=\s*'(.*)'", open('gevent/__init__.py').read(), re.M).group(1)
@@ -52,8 +54,8 @@ CARES_EMBED = get_config_value('CARES_EMBED', 'EMBED', 'c-ares')
 
 define_macros = []
 libraries = []
-libev_configure_command = ["/bin/sh", abspath('libev/configure'), '> configure-output.txt']
-ares_configure_command = ["/bin/sh", abspath('c-ares/configure'), 'CONFIG_COMMANDS= CONFIG_FILES= > configure-output.txt']
+libev_configure_command = ' '.join(["/bin/sh", abspath('libev/configure'), '> configure-output.txt'])
+ares_configure_command = ' '.join(["/bin/sh", abspath('c-ares/configure'), 'CONFIG_COMMANDS= CONFIG_FILES= > configure-output.txt'])
 
 
 if sys.platform == 'win32':
@@ -70,7 +72,7 @@ def expand(*lst):
 
 
 CORE = Extension(name='gevent.core',
-                 sources=['gevent/gevent.core.c'],
+                 sources=['gevent/gevent.corecext.c'],
                  include_dirs=['libev'] if LIBEV_EMBED else [],
                  libraries=libraries,
                  define_macros=define_macros,
@@ -84,14 +86,6 @@ ARES = Extension(name='gevent.ares',
                  define_macros=define_macros,
                  depends=expand('gevent/dnshelper.c', 'gevent/cares_*.*'))
 ARES.optional = True
-
-
-ext_modules = [CORE,
-               ARES,
-               Extension(name="gevent._semaphore",
-                         sources=["gevent/gevent._semaphore.c"]),
-               Extension(name="gevent._util",
-                         sources=["gevent/gevent._util.c"])]
 
 
 def make_universal_header(filename, *defines):
@@ -114,9 +108,13 @@ def make_universal_header(filename, *defines):
 
 
 def _system(cmd):
-    cmd = ' '.join(cmd)
     sys.stdout.write('Running %r in %s\n' % (cmd, os.getcwd()))
     return os.system(cmd)
+
+
+def system(cmd):
+    if _system(cmd):
+        sys.exit(1)
 
 
 def configure_libev(bext, ext):
@@ -170,7 +168,6 @@ if LIBEV_EMBED:
     CORE.define_macros += [('LIBEV_EMBED', '1'),
                            ('EV_COMMON', ''),  # we don't use void* data
                            # libev watchers that we don't use currently:
-                           ('EV_CHECK_ENABLE', '0'),
                            ('EV_CLEANUP_ENABLE', '0'),
                            ('EV_EMBED_ENABLE', '0'),
                            ("EV_PERIODIC_ENABLE", '0')]
@@ -204,8 +201,7 @@ def make(done=[]):
         if os.path.exists('Makefile'):
             if "PYTHON" not in os.environ:
                 os.environ["PYTHON"] = sys.executable
-            if os.system('make'):
-                sys.exit(1)
+            system('make')
         done.append(1)
 
 
@@ -227,7 +223,6 @@ class sdist(_sdist):
 class my_build_ext(build_ext):
 
     def gevent_prepare(self, ext):
-        make()
         configure = getattr(ext, 'configure', None)
         if configure:
             configure(self, ext)
@@ -241,6 +236,11 @@ class my_build_ext(build_ext):
                 raise BuildFailed
             else:
                 raise
+        if not PYPY:
+            self.gevent_symlink(ext)
+        return result
+
+    def gevent_symlink(self, ext):
         # hack: create a symlink from build/../core.so to gevent/core.so
         # to prevent "ImportError: cannot import name core" failures
         try:
@@ -255,7 +255,6 @@ class my_build_ext(build_ext):
                 link(path_to_build_core_so, path_to_core_so)
         except Exception:
             traceback.print_exc()
-        return result
 
 
 def link(source, dest):
@@ -286,7 +285,32 @@ def read(name, *args):
         return ''
 
 
-def run_setup(ext_modules):
+if PYPY:
+    sys.path.insert(0, '.')
+    # XXX ugly - need to find a better way
+    system('cp -r libev gevent/libev')
+    system('touch gevent/libev/__init__.py')
+    system('cd gevent/libev && ./configure > configure_output.txt')
+    from gevent import corecffi
+    ext_modules = [corecffi.ffi.verifier.get_extension()]
+    install_requires = []
+    include_package_data = True
+    run_make = False
+else:
+    ext_modules = [CORE,
+                   ARES,
+                   Extension(name="gevent._semaphore",
+                             sources=["gevent/gevent._semaphore.c"]),
+                   Extension(name="gevent._util",
+                             sources=["gevent/gevent._util.c"])]
+    install_requires = ['greenlet']
+    include_package_data = False
+    run_make = True
+
+
+def run_setup(ext_modules, run_make):
+    if run_make:
+        make()
     setup(
         name='gevent',
         version=__version__,
@@ -296,9 +320,11 @@ def run_setup(ext_modules):
         author_email='denis.bilenko@gmail.com',
         url='http://www.gevent.org/',
         packages=['gevent'],
+        include_package_data=include_package_data,
         ext_modules=ext_modules,
         cmdclass=dict(build_ext=my_build_ext, sdist=sdist),
-        install_requires=['greenlet'],
+        install_requires=install_requires,
+        zip_safe=False,
         classifiers=[
             "License :: OSI Approved :: MIT License",
             "Programming Language :: Python :: 2.6",
@@ -314,11 +340,11 @@ def run_setup(ext_modules):
 
 if __name__ == '__main__':
     try:
-        run_setup(ext_modules)
+        run_setup(ext_modules, run_make=run_make)
     except BuildFailed:
         if ARES not in ext_modules:
             raise
         ext_modules.remove(ARES)
-        run_setup(ext_modules)
+        run_setup(ext_modules, run_make=run_make)
     if ARES not in ext_modules:
         sys.stderr.write('\nWARNING: The gevent.ares extension has been disabled.\n')
