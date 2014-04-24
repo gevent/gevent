@@ -1,4 +1,4 @@
 [pep8]
 ignore=E702,E265
 max_line_length=160
-exclude=.git,build,2.6,2.7,3.3,test_support.py,test_queue.py,patched_tests_setup.py,test_threading_2.py,lock_tests.py
+exclude=.git,build,2.6,2.7,2.7pypy,3.3,test_support.py,test_queue.py,patched_tests_setup.py,test_threading_2.py,lock_tests.py
