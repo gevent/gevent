@@ -4,11 +4,12 @@ Passes with CPython + greenlet 0.4.0
 
 Fails with PyPy 2.2.1
 """
+from __future__ import print_function
 import sys
 import greenlet
 
 
-print ('Your greenlet version: %s' % (getattr(greenlet, '__version__', None), ))
+print('Your greenlet version: %s' % (getattr(greenlet, '__version__', None), ))
 
 
 result = []
