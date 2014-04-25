@@ -1,6 +1,5 @@
 import sys
 import os
-import re
 import six
 import traceback
 import unittest
@@ -203,114 +202,9 @@ def run(command, **kwargs):
     return RunResult(result, out, name)
 
 
-def parse_command(parts):
-    if isinstance(parts, six.string_types):
-        parts = parts.split()
-    environ = []
-    if parts[0] == '-':
-        del parts[0]
-    elif parts[0] == '*':
-        del parts[0]
-        environ = None
-    elif '=' in parts[0]:
-        while parts[0].count('='):
-            environ.append(parts[0])
-            del parts[0]
-    exe = parts[0]
-    del parts[0]
-    if exe == '*':
-        exe = None
-    else:
-        assert exe
-        assert not exe.startswith('-'), repr(exe)
-    return environ, exe, parts
-
-
-def parse_line(line):
-    """
-    >>> parse_line("* - /usr/bin/python -u test.py")
-    (None, [], '/usr/bin/python', ['-u', 'test.py'])
-
-    >>> parse_line("win32 * C:\\Python27\\python.exe -u -m monkey_test --Event test_subprocess.py")
-    ('win32', None, 'C:\\\\Python27\\\\python.exe', ['-u', '-m', 'monkey_test', '--Event', 'test_subprocess.py'])
-
-    >>> parse_line("* GEVENTARES_SERVERS=8.8.8.8 GEVENT_RESOLVER=ares * -u test__socket_dns.py")
-    (None, ['GEVENTARES_SERVERS=8.8.8.8', 'GEVENT_RESOLVER=ares'], None, ['-u', 'test__socket_dns.py'])
-    """
-    parts = line.split()
-    if len(parts) < 4:
-        raise ValueError('Expected "platform environ executable arguments", got %r' % line)
-    platform = parts[0]
-    if platform == '*':
-        platform = None
-    return (platform, ) + parse_command(parts[1:])
-
-
-def match_word(pattern, word):
-    if isinstance(pattern, str) and isinstance(word, str) and '(' in pattern or '*' in pattern or '?' in pattern or '[' in pattern:
-        return re.match(pattern, word)
-    return pattern == word
-
-
-def match_environ(expected_environ, actual_environ):
-    """
-    >>> match_environ('GEVENT_RESOLVER=ares GEVENTARES_SERVERS=8.8.8.8',
-    ...               'GEVENT_RESOLVER=ares GEVENTARES_SERVERS=8.8.8.8 GEVENT_FILE=thread')
-    True
-    >>> match_environ('GEVENT_RESOLVER=ares GEVENTARES_SERVERS=8.8.8.7',
-    ...               'GEVENT_RESOLVER=ares GEVENTARES_SERVERS=8.8.8.8 GEVENT_FILE=thread')
-    False
-    >>> match_environ('GEVENT_RESOLVER=ares GEVENTARES_SERVERS=8.8.8.8 GEVENT_FILE=',
-    ...               'GEVENT_RESOLVER=ares GEVENTARES_SERVERS=8.8.8.8 GEVENT_FILE=thread')
-    False
-    """
-    if expected_environ is None:
-        return True
-    if isinstance(expected_environ, six.string_types):
-        expected_environ = expected_environ.split()
-    if isinstance(actual_environ, six.string_types):
-        actual_environ = actual_environ.split()
-    expected_environ = dict(x.split('=') for x in expected_environ)
-    actual_environ = dict(x.split('=') for x in actual_environ)
-    for key, expected_value in expected_environ.items():
-        value = actual_environ.pop(key, None)
-        if value is not None and value != expected_value:
-            return False
-    return True
-
-
-def match_line(line, command):
-    expected_platform, expected_environ, expected_exe, expected_arguments = parse_line(line)
-    if expected_platform is not None and expected_platform != sys.platform:
-        return
-    environ, exe, arguments = parse_command(command)
-    if not match_environ(expected_environ, environ):
-        return
-    if expected_exe is not None and not match_word(expected_exe, exe):
-        return
-    return expected_arguments == arguments
-
-
 def matches(expected, command):
-    """
-    >>> matches(["* * C:\Python27\python.exe -u -m monkey_test --Event test_threading.py"],
-    ...         "C:\Python27\python.exe -u -m monkey_test --Event test_threading.py")
-    True
-    >>> matches(['* * /usr/bin/python2.5(-dbg)? -u -m monkey_test --Event test_urllib2net.py'],
-    ...         "/usr/bin/python2.5-dbg -u -m monkey_test --Event test_urllib2net.py")
-    True
-    >>> matches(['* * /usr/bin/python2.5(-dbg)? -u -m monkey_test --Event test_urllib2net.py'],
-    ...         "/usr/bin/python2.5 -u -m monkey_test --Event test_urllib2net.py")
-    True
-    >>> matches(['* * /usr/bin/python2.5(-dbg)? -u -m monkey_test --Event test_urllib2net.py'],
-    ...         "/usr/bin/python2.6 -u -m monkey_test --Event test_urllib2net.py")
-    False
-    >>> matches(['* GEVENT_RESOLVER=ares GEVENTARES_SERVERS=8.8.8.8 python -u test__subprocess.py'],
-    ...          "GEVENT_RESOLVER=ares GEVENTARES_SERVERS=8.8.8.8 GEVENT_FILE=thread python -u test__subprocess.py")
-    True
-    """
     for line in expected:
-        if match_line(line, command):
+        if command.endswith(' ' + line):
             return True
     return False
 
