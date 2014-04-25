@@ -10,7 +10,6 @@ import time
 from datetime import timedelta
 
 
-SLEEP = 0.1
 runtimelog = []
 MIN_RUNTIME = 1.0
 BUFFER_OUTPUT = False
@@ -189,7 +188,7 @@ def run(command, **kwargs):
     assert not err
     with lock:
         if out:
-            out = out.strip().decode()
+            out = out.strip().decode('utf-8', 'ignore')
             if out:
                 out = '  ' + out.replace('\n', '\n  ')
                 out = out.rstrip()
