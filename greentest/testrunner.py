@@ -149,17 +149,21 @@ def main():
     parser.add_option('--ignore')
     parser.add_option('--discover', action='store_true')
     parser.add_option('--full', action='store_true')
-    parser.add_option('--expected')
+    parser.add_option('--config')
     parser.add_option('--failfast', action='store_true')
     options, args = parser.parse_args()
-    options.expected = load_list_from_file(options.expected)
+    FAILING_TESTS = []
+    if options.config:
+        config = {}
+        six.exec_(open(options.config).read(), config)
+        FAILING_TESTS = config['FAILING_TESTS']
     tests = discover(args, options.ignore)
     if options.discover:
         for cmd, options in tests:
             print(util.getname(cmd, env=options.get('env'), setenv=options.get('setenv')))
         print('%s tests found.' % len(tests))
     else:
-        run_many(tests, expected=options.expected, failfast=options.failfast)
+        run_many(tests, expected=FAILING_TESTS, failfast=options.failfast)
 
 
 if __name__ == '__main__':
