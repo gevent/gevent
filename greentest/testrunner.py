@@ -14,7 +14,7 @@ from util import log
 
 
 TIMEOUT = 180
-NWORKERS = int(os.environ.get('NWORKERS') or 8)
+NWORKERS = int(os.environ.get('NWORKERS') or 4)
 
 
 def run_many(tests, expected=None, failfast=False):

@@ -63,7 +63,7 @@ travis_pypy:
 	which ${PYTHON}
 	${PYTHON} --version
 	${PYTHON} setup.py install
-	NWORKERS=1 cd greentest && ${PYTHON} testrunner.py --config ../known_failures.py
+	cd greentest && ${PYTHON} testrunner.py --config ../known_failures.py
 
 travis_cpython:
 	make whitespace
