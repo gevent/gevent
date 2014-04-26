@@ -32,10 +32,7 @@ def run_many(tests, expected=None, failfast=False):
         if result:
             if failfast:
                 sys.exit(1)
-            # the tests containing AssertionError might have failed because
-            # we spawned more workers than CPUs
-            # we therefore will retry them sequentially
-            failed[result.name] = [cmd, kwargs, 'AssertionError' in (result.output or '')]
+            failed[result.name] = [cmd, kwargs]
 
     results = []
 
@@ -85,21 +82,6 @@ def run_many(tests, expected=None, failfast=False):
         raise
 
     reap_all()
-
-    toretry = [key for (key, (cmd, kwargs, can_retry)) in failed.items() if can_retry]
-    failed_then_succeeded = []
-
-    if NWORKERS > 1 and toretry:
-        log('\nWill retry %s failed tests sequentially:\n- %s\n', len(toretry), '\n- '.join(toretry))
-        for name, (cmd, kwargs, _ignore) in list(failed.items()):
-            if not util.run(cmd, buffer_output=False, **kwargs):
-                failed.pop(name)
-                failed_then_succeeded.append(name)
-
-    if failed_then_succeeded:
-        log('\n%s tests failed during concurrent run but succeeded when ran sequentially:', len(failed_then_succeeded))
-        log('- ' + '\n- '.join(failed_then_succeeded))
-
     util.report(total, failed, took=time.time() - start, expected=expected)
 
 
