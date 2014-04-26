@@ -1,4 +1,6 @@
 # This is a list of known failures (=bugs).
+# The tests listed there must fail (or testrunner.py will report error) unless they are prefixed with FLAKY
+# in which cases the result of them is simply ignored
 import os
 import sys
 
@@ -9,7 +11,7 @@ PYPY = hasattr(sys, 'pypy_version_info')
 
 FAILING_TESTS = [
     # needs investigating
-    'test__issue6.py',
+    'FLAKY test__issue6.py',
 
     # bunch of SSLError: [Errno 1] _ssl.c:504: error:14090086:SSL routines:SSL3_GET_SERVER_CERTIFICATE:certificate verify failed
     # seems to be Python/OpenSSL problem, not gevent's
@@ -21,8 +23,8 @@ FAILING_TESTS = [
 if os.environ.get('GEVENT_RESOLVER') == 'ares':
     # XXX fix this
     FAILING_TESTS += [
-        'test__socket_dns.py',
-        'test__socket_dns6.py',
+        'FLAKY test__socket_dns.py',
+        'FLAKY test__socket_dns6.py',
     ]
 
 

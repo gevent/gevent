@@ -22,6 +22,7 @@ def run_many(tests, expected=None, failfast=False):
     start = time.time()
     total = 0
     failed = {}
+    passed = {}
 
     NWORKERS = min(len(tests), NWORKERS) or 1
     pool = ThreadPool(NWORKERS)
@@ -33,6 +34,8 @@ def run_many(tests, expected=None, failfast=False):
             if failfast:
                 sys.exit(1)
             failed[result.name] = [cmd, kwargs]
+        else:
+            passed[result.name] = True
 
     results = []
 
@@ -73,7 +76,7 @@ def run_many(tests, expected=None, failfast=False):
                 reap_all()
             except KeyboardInterrupt:
                 pool.terminate()
-                report(total, failed, exit=False, took=time.time() - start, expected=expected)
+                report(total, failed, passed, exit=False, took=time.time() - start, expected=expected)
                 log('(partial results)\n')
                 raise
     except:
@@ -82,7 +85,7 @@ def run_many(tests, expected=None, failfast=False):
         raise
 
     reap_all()
-    util.report(total, failed, took=time.time() - start, expected=expected)
+    report(total, failed, passed, took=time.time() - start, expected=expected)
 
 
 def discover(tests=None, ignore=None):
@@ -127,9 +130,18 @@ def load_list_from_file(filename):
     return result
 
 
-def matches(expected, command):
+def might_fail(expected, command):
     for line in expected:
-        if command.endswith(' ' + line):
+        if command.endswith(' ' + line.replace('FLAKY ', '')):
+            return True
+    return False
+
+
+def must_fail(expected, command):
+    for line in expected:
+        if 'FLAKY' in line:
+            continue
+        if command.endswith(' ' + line.replace('FLAKY ', '')):
             return True
     return False
 
@@ -143,7 +155,7 @@ def format_seconds(seconds):
     return seconds
 
 
-def report(total, failed, exit=True, took=None, expected=None):
+def report(total, failed, passed, exit=True, took=None, expected=None):
     runtimelog = util.runtimelog
     if runtimelog:
         log('\nLongest-running tests:')
@@ -159,32 +171,47 @@ def report(total, failed, exit=True, took=None, expected=None):
 
     failed_expected = []
     failed_unexpected = []
+    passed_unexpected = []
+
+    for name in passed:
+        if must_fail(expected, name):
+            passed_unexpected.append(name)
+
+    if passed_unexpected:
+        log('\n%s/%s unexpected passes', len(passed_unexpected), total)
+        print_list(passed_unexpected)
 
     if failed:
         log('\n%s/%s tests failed%s', len(failed), total, took)
         expected = set(expected or [])
         for name in failed:
-            if matches(expected, name):
+            if might_fail(expected, name):
                 failed_expected.append(name)
             else:
                 failed_unexpected.append(name)
 
         if failed_expected:
             log('\n%s/%s expected failures', len(failed_expected), total)
-            for name in failed_expected:
-                log(' - %s', name)
+            print_list(failed_expected)
 
         if failed_unexpected:
             log('\n%s/%s unexpected failures', len(failed_unexpected), total)
-            for name in failed_unexpected:
-                log(' - %s', name)
+            print_list(failed_unexpected)
     else:
         log('\n%s tests passed%s', total, took)
+
     if exit:
         if failed_unexpected:
             sys.exit(min(100, len(failed_unexpected)))
+        if passed_unexpected:
+            sys.exit(101)
         if total <= 0:
             sys.exit('No tests found.')
+
+
+def print_list(lst):
+    for name in lst:
+        log(' - %s', name)
 
 
 def main():
