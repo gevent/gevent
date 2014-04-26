@@ -133,13 +133,24 @@ class Test(greentest.TestCase):
     if sys.platform != 'win32':
 
         def test_nonblock_removed(self):
+            import subprocess as orig_subprocess
+            r, w = os.pipe()
+            p = orig_subprocess.Popen(['grep', 'text'], stdin=r)
+            try:
+                os.close(w)
+                time.sleep(0.1)
+                expected = p.poll()
+            finally:
+                if p.poll() is None:
+                    p.kill()
+
             # see issue #134
             r, w = os.pipe()
             p = subprocess.Popen(['grep', 'text'], stdin=subprocess.FileObject(r))
             try:
                 os.close(w)
                 time.sleep(0.1)
-                self.assertEqual(p.poll(), None)
+                self.assertEqual(p.poll(), expected)
             finally:
                 if p.poll() is None:
                     p.kill()

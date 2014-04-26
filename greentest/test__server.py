@@ -154,6 +154,7 @@ class TestCase(greentest.TestCase):
         self.server.start()
         self.assertRequestSucceeded()
         self.assertRequestSucceeded()
+        gevent.sleep(0.01)
 
     def stop_server(self):
         self.server.stop()
