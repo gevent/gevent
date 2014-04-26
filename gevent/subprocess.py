@@ -264,11 +264,14 @@ class Popen(object):
 
     def _on_child(self, watcher):
         watcher.stop()
-        status = watcher.rstatus
-        if os.WIFSIGNALED(status):
-            self.returncode = -os.WTERMSIG(status)
+        if hasattr(watcher, 'rstatus'):
+            status = watcher.rstatus
+            if os.WIFSIGNALED(status):
+                self.returncode = -os.WTERMSIG(status)
+            else:
+                self.returncode = os.WEXITSTATUS(status)
         else:
-            self.returncode = os.WEXITSTATUS(status)
+            self.returncode = watcher.rcode
         self.result.set(self.returncode)
 
     def communicate(self, input=None):
