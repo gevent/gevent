@@ -25,6 +25,7 @@ def run_many(tests, expected=None, failfast=False):
     passed = {}
 
     NWORKERS = min(len(tests), NWORKERS) or 1
+    print('thread pool size: %s' % NWORKERS)
     pool = ThreadPool(NWORKERS)
     util.BUFFER_OUTPUT = NWORKERS > 1
 
