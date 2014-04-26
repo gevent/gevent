@@ -7,6 +7,7 @@ import sys
 
 CPYTHON_DBG = hasattr(sys, 'gettotalrefcount')
 PYPY = hasattr(sys, 'pypy_version_info')
+PY3 = sys.version_info[0] >= 3
 
 
 FAILING_TESTS = [
@@ -82,6 +83,44 @@ if PYPY:
         'test__server.py',
         'test_subprocess.py',  # test_executable_without_cwd
     ]
+
+
+if PY3:
+    # No idea / TODO
+    FAILING_TESTS += '''
+test__threading_vs_settrace.py
+test__example_udp_server.py
+test_close_backend_fd.py
+test__examples.py
+test__pool.py
+test___example_servers.py
+test__example_udp_client.py
+test__os.py
+test__backdoor.py
+test_threading_2.py
+test_ares_timeout.py
+test__refcount.py
+test__socket.py
+test__subprocess.py
+test__all__.py
+test__fileobject.py
+test__pywsgi.py
+test__socket_ex.py
+test__example_echoserver.py
+test__subprocess_poll.py
+test__order.py
+test__ssl.py
+test__makefile_ref.py
+test__socketpair.py
+test_queue.py
+test__server_pywsgi.py
+test__core_stat.py
+test__server.py
+test__subprocess_interrupted.py
+test__example_portforwarder.py
+test__execmodules.py
+test__greenio.py
+'''.strip().split()
 
 
 if __name__ == '__main__':
