@@ -264,7 +264,7 @@ def report(total, failed, exit=True, took=None, expected=None):
 class TestServer(unittest.TestCase):
     cwd = '../examples/'
     args = []
-    before_delay = 1
+    before_delay = 3
     after_delay = 0.5
 
     def test(self):

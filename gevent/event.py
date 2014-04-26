@@ -150,10 +150,11 @@ class AsyncResult(object):
         >>> import gevent
         >>> result = AsyncResult()
         >>> gevent.spawn(lambda : 1/0).link(result)
-        >>> result.get()
-        Traceback (most recent call last):
-         ...
-        ZeroDivisionError: integer division or modulo by zero
+        >>> try:
+        ...     result.get()
+        ... except ZeroDivisionError:
+        ...     print 'ZeroDivisionError'
+        ZeroDivisionError
     """
     def __init__(self):
         self._links = deque()

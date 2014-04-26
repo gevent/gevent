@@ -3,9 +3,12 @@ python:
  - "2.6"
  - "2.7"
  - "3.3"
+ - "pypy"
 matrix:
   allow_failures:
     - python: "3.3"
-script: make travis
+script:
+ - if [[ $TRAVIS_PYTHON_VERSION == 'pypy' ]]; then PYTHON=pypy make travis_pypy; fi
+ - if [[ $TRAVIS_PYTHON_VERSION != 'pypy' ]]; then PYTHON=python$TRAVIS_PYTHON_VERSION make travis_cpython; fi
 notifications:
   email: false

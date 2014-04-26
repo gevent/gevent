@@ -2,6 +2,7 @@
 
 import time
 from gevent import _socketcommon
+from gevent.hub import PYPY
 
 for key in _socketcommon.__dict__:
     if key.startswith('__'):
@@ -36,6 +37,15 @@ class _closedsocket(object):
         raise error(EBADF, 'Bad file descriptor')
     # All _delegate_methods must also be initialized here.
     send = recv = recv_into = sendto = recvfrom = recvfrom_into = _dummy
+
+    if PYPY:
+
+        def _drop(self):
+            pass
+
+        def _reuse(self):
+            pass
+
     __getattr__ = _dummy
 
 
@@ -57,6 +67,8 @@ class socket(object):
             else:
                 self._sock = _sock
                 self.timeout = _socket.getdefaulttimeout()
+            if PYPY:
+                self._sock._reuse()
         self._sock.setblocking(0)
         fileno = self._sock.fileno()
         self.hub = get_hub()
@@ -133,13 +145,19 @@ class socket(object):
                     raise
                 sys.exc_clear()
             self._wait(self._read_event)
-        return socket(_sock=client_socket), address
+        sockobj = socket(_sock=client_socket)
+        if PYPY:
+            client_socket._drop()
+        return sockobj, address
 
     def close(self, _closedsocket=_closedsocket, cancel_wait_ex=cancel_wait_ex):
         # This function should not reference any globals. See Python issue #808164.
         self.hub.cancel_wait(self._read_event, cancel_wait_ex)
         self.hub.cancel_wait(self._write_event, cancel_wait_ex)
+        s = self._sock
         self._sock = _closedsocket()
+        if PYPY:
+            s._drop()
 
     @property
     def closed(self):
@@ -196,7 +214,10 @@ class socket(object):
         #    socket (hence creating a new instance)
         # 2) The resulting fileobject must keep the timeout in order
         #    to be compatible with the stdlib's socket.makefile.
-        return _fileobject(type(self)(_sock=self), mode, bufsize)
+        fobj = _fileobject(type(self)(_sock=self._sock), mode, bufsize)
+        if PYPY:
+            self._sock._drop()
+        return fobj
 
     def recv(self, *args):
         sock = self._sock  # keeping the reference so that fd is not closed during waiting
@@ -340,20 +361,38 @@ class socket(object):
         exec(_s % (_m, _m, _m, _m))
     del _m, _s
 
+    if PYPY:
+
+        def _reuse(self):
+            self._sock._reuse()
+
+        def _drop(self):
+            self._sock._drop()
+
+
 SocketType = socket
 
 if hasattr(_socket, 'socketpair'):
 
     def socketpair(*args):
         one, two = _socket.socketpair(*args)
-        return socket(_sock=one), socket(_sock=two)
+        result = socket(_sock=one), socket(_sock=two)
+        if PYPY:
+            one._drop()
+            two._drop()
+        return result
 else:
     __implements__.remove('socketpair')
 
 if hasattr(_socket, 'fromfd'):
 
     def fromfd(*args):
-        return socket(_sock=_socket.fromfd(*args))
+        s = _socket.fromfd(*args)
+        result = socket(_sock=s)
+        if PYPY:
+            s._drop()
+        return result
+
 else:
     __implements__.remove('fromfd')
 

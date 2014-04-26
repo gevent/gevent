@@ -32,7 +32,9 @@ from gevent.hub import _get_hub
 from functools import wraps
 import contextlib
 import gc
+import six
 
+PYPY = hasattr(sys, 'pypy_version_info')
 VERBOSE = sys.argv.count('-v') > 1
 
 if '--debug-greentest' in sys.argv:
@@ -42,6 +44,7 @@ else:
     DEBUG = False
 
 gettotalrefcount = getattr(sys, 'gettotalrefcount', None)
+OPTIONAL_MODULES = ['resolver_ares']
 
 
 def wrap_switch_count_check(method):
@@ -369,7 +372,9 @@ class ExpectedException(Exception):
     """An exception whose traceback should be ignored"""
 
 
-def walk_modules(basedir=None, modpath=None, include_so=False):
+def walk_modules(basedir=None, modpath=None, include_so=False, recursive=False):
+    if PYPY:
+        include_so = False
     if basedir is None:
         basedir = os.path.dirname(gevent.__file__)
         if modpath is None:
@@ -380,6 +385,8 @@ def walk_modules(basedir=None, modpath=None, include_so=False):
     for fn in sorted(os.listdir(basedir)):
         path = os.path.join(basedir, fn)
         if os.path.isdir(path):
+            if not recursive:
+                continue
             pkg_init = os.path.join(path, '__init__.py')
             if os.path.exists(pkg_init):
                 yield pkg_init, modpath + fn
@@ -390,8 +397,14 @@ def walk_modules(basedir=None, modpath=None, include_so=False):
             x = fn[:-3]
             if x.endswith('_d'):
                 x = x[:-2]
-            if x not in ['__init__', 'core', 'ares', '_util', '_semaphore']:
-                yield path, modpath + x
+            if x in ['__init__', 'core', 'ares', '_util', '_semaphore', 'corecffi']:
+                continue
+            if x in OPTIONAL_MODULES:
+                try:
+                    six.exec_("import %s" % x, {})
+                except ImportError:
+                    continue
+            yield path, modpath + x
         elif include_so and fn.endswith('.so'):
             if fn.endswith('_d.so'):
                 yield path, modpath + fn[:-5]
@@ -433,3 +446,14 @@ def get_number_open_files():
     if os.path.exists('/proc/'):
         fd_directory = '/proc/%d/fd' % os.getpid()
         return len(os.listdir(fd_directory))
+
+
+if PYPY:
+
+    def getrefcount(*args):
+        pass
+
+else:
+
+    def getrefcount(*args):
+        return sys.getrefcount(*args)

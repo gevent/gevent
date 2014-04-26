@@ -77,6 +77,9 @@ class TestCoroutinePool(unittest.TestCase):
         evt.wait()
 
     def test_stderr_raising(self):
+        if greentest.PYPY:
+            # Does not work on PyPy
+            return
         # testing that really egregious errors in the error handling code
         # (that prints tracebacks to stderr) don't cause the pool to lose
         # any members

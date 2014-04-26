@@ -30,21 +30,28 @@ class Test(greentest.TestCase):
             pass
         # test that args can be changed later
         io.args = (1, 2, 3)
-        # test that only tuple and None are accepted by 'args' attribute
-        try:
-            io.args = 5
-            raise AssertionError('"io.args = 5" must raise TypeError')
-        except TypeError:
-            pass
+        if greentest.PYPY:
+            pass  # on PYPY .args is just a normal property
+        else:
+            # test that only tuple and None are accepted by 'args' attribute
+            try:
+                io.args = 5
+                raise AssertionError('"io.args = 5" must raise TypeError')
+            except TypeError:
+                pass
+            self.assertEqual(io.args, (1, 2, 3))
+            try:
+                io.args = [4, 5]
+                raise AssertionError('"io.args = [4, 5]" must raise TypeError')
+            except TypeError:
+                pass
         self.assertEqual(io.args, (1, 2, 3))
-        try:
-            io.args = [4, 5]
-            raise AssertionError('"io.args = [4, 5]" must raise TypeError')
-        except TypeError:
-            pass
-        self.assertEqual(io.args, (1, 2, 3))
-        # None also works, means empty tuple
-        io.args = None
+        if greentest.PYPY:
+            io.args = ()
+        else:
+            # None also works, means empty tuple
+            # XXX why?
+            io.args = None
         start = core.time()
         loop.run()
         took = core.time() - start

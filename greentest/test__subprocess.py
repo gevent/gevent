@@ -6,6 +6,10 @@ import greentest
 import gevent
 from gevent import subprocess
 import time
+import gc
+
+
+PYPY = hasattr(sys, 'pypy_version_info')
 
 
 if subprocess.mswindows:
@@ -18,6 +22,10 @@ python_universal_newlines = hasattr(sys.stdout, 'newlines')
 
 
 class Test(greentest.TestCase):
+
+    def setUp(self):
+        gc.collect()
+        gc.collect()
 
     def test_exit(self):
         popen = subprocess.Popen([sys.executable, '-c', 'import sys; sys.exit(10)'])
@@ -42,6 +50,9 @@ class Test(greentest.TestCase):
                              stdout=subprocess.PIPE)
         p.wait()
         del p
+        if PYPY:
+            gc.collect()
+            gc.collect()
         num_after = greentest.get_number_open_files()
         self.assertEqual(num_before, num_after)
 

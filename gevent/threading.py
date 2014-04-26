@@ -32,3 +32,6 @@ class _DummyThread(_DummyThread_):
         rawlink = getattr(g, 'rawlink', None)
         if rawlink is not None:
             rawlink(_cleanup)
+
+    def _Thread__stop(self):
+        pass

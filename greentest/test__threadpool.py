@@ -6,6 +6,10 @@ import greentest
 from gevent.threadpool import ThreadPool
 import gevent
 import six
+import gc
+
+
+PYPY = hasattr(sys, 'pypy_version_info')
 
 
 class TestCase(greentest.TestCase):
@@ -132,6 +136,22 @@ class TestPool(TestCase):
         for i in range(1000):
             self.assertEqual(six.advance_iterator(it), i * i)
         self.assertRaises(StopIteration, lambda: six.advance_iterator(it))
+
+    def test_imap_gc(self):
+        it = self.pool.imap(sqr, range(10))
+        for i in range(10):
+            self.assertEqual(six.advance_iterator(it), i * i)
+            gc.collect()
+        self.assertRaises(StopIteration, lambda: six.advance_iterator(it))
+
+    def test_imap_unordered_gc(self):
+        it = self.pool.imap_unordered(sqr, range(10))
+        result = []
+        for i in range(10):
+            result.append(six.advance_iterator(it))
+            gc.collect()
+        self.assertRaises(StopIteration, lambda: six.advance_iterator(it))
+        self.assertEqual(sorted(result), [x * x for x in range(10)])
 
     def test_imap_random(self):
         it = self.pool.imap(sqr_random_sleep, range(10))
@@ -327,8 +347,11 @@ class TestRef(TestCase):
 
             refs.append(weakref.ref(func))
             del func, result
+            if PYPY:
+                gc.collect()
+                gc.collect()
             for index, r in enumerate(refs):
-                assert r() is None, (index, r(), sys.getrefcount(r()), refs)
+                assert r() is None, (index, r(), greentest.getrefcount(r()), refs)
             assert len(refs) == 4, refs
 
 

@@ -8,6 +8,9 @@ from gevent.os import _read, _write, ignored_errors
 from gevent.lock import Semaphore, DummySemaphore
 
 
+PYPY = hasattr(sys, 'pypy_version_info')
+
+
 try:
     from fcntl import fcntl
 except ImportError:
@@ -64,6 +67,7 @@ else:
             io = self.hub.loop.io
             self._read_event = io(fileno, 1)
             self._write_event = io(fileno, 2)
+            self._refcount = 1
 
         def __repr__(self):
             if self._fileno is None:
@@ -86,7 +90,18 @@ else:
             self._fileno = None
             return x
 
+        def _reuse(self):
+            self._refcount += 1
+
+        def _drop(self):
+            self._refcount -= 1
+            if self._refcount <= 0:
+                self._realclose()
+
         def close(self):
+            self._drop()
+
+        def _realclose(self):
             self.hub.cancel_wait(self._read_event, cancel_wait_ex)
             self.hub.cancel_wait(self._write_event, cancel_wait_ex)
             fileno = self._fileno
@@ -161,6 +176,8 @@ else:
             self._fobj = fobj
             self._closed = False
             _fileobject.__init__(self, sock, mode=mode, bufsize=bufsize, close=close)
+            if PYPY:
+                sock._drop()
 
         def __repr__(self):
             if self._sock is None:
@@ -184,6 +201,8 @@ else:
             finally:
                 if self._fobj is not None or not self._close:
                     sock.detach()
+                else:
+                    sock._drop()
                 self._sock = None
                 self._fobj = None
 

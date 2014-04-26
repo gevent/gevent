@@ -8,6 +8,8 @@ import atexit
 
 TIMEOUT = 60
 directory = '%s.%s' % sys.version_info[:2]
+if hasattr(sys, 'pypy_version_info'):
+    directory += 'pypy'
 version = '%s.%s.%s' % sys.version_info[:3]
 
 

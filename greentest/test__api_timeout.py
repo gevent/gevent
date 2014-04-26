@@ -23,6 +23,7 @@ import sys
 import greentest
 import weakref
 import time
+import gc
 from gevent import sleep, Timeout
 DELAY = 0.04
 
@@ -104,6 +105,7 @@ class Test(greentest.TestCase):
         with Timeout(DELAY * 2, err):
             sleep(DELAY)
         del err
+        gc.collect()
         assert not err_ref(), repr(err_ref())
 
     def test_nested_timeout(self):

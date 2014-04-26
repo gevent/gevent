@@ -32,7 +32,7 @@ __all__ = ['get_hub',
            'reinit']
 
 
-from gevent.hub import get_hub, iwait, wait
+from gevent.hub import get_hub, iwait, wait, PYPY
 from gevent.greenlet import Greenlet, joinall, killall
 spawn = Greenlet.spawn
 spawn_later = Greenlet.spawn_later
