@@ -5,7 +5,6 @@ __implements__ = ['local',
                   '_start_new_thread',
                   '_allocate_lock',
                   'Lock',
-                  '_get_ident',
                   '_sleep',
                   '_DummyThread']
 
@@ -13,8 +12,14 @@ __implements__ = ['local',
 import threading as __threading__
 _DummyThread_ = __threading__._DummyThread
 from gevent.local import local
-from gevent.thread import start_new_thread as _start_new_thread, allocate_lock as _allocate_lock, get_ident as _get_ident
-from gevent.hub import sleep as _sleep, getcurrent
+from gevent.thread import start_new_thread as _start_new_thread, allocate_lock as _allocate_lock
+from gevent.hub import sleep as _sleep, getcurrent, PY3
+if PY3:
+    from gevent.thread import get_ident
+    __implements__.append('get_ident')
+else:
+    from gevent.thread import get_ident as _get_ident
+    __implements__.append('_get_ident')
 Lock = _allocate_lock
 
 

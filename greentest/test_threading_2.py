@@ -20,8 +20,6 @@ if not hasattr(threading.Thread, 'is_alive'):
     threading.Thread.is_alive = threading.Thread.isAlive
 if not hasattr(threading.Thread, 'daemon'):
     threading.Thread.daemon = property(threading.Thread.isDaemon, threading.Thread.setDaemon)
-if not hasattr(threading._Condition, 'notify_all'):
-    threading._Condition.notify_all = threading._Condition.notifyAll
 '''
 
 exec(setup_)
@@ -302,7 +300,11 @@ class ThreadTests(unittest.TestCase):
             import subprocess
             rc = subprocess.call([sys.executable, "-c", """if 1:
 %s
-                import ctypes, sys, time, thread
+                import ctypes, sys, time
+                try:
+                    import thread
+                except ImportError:
+                    import _thread as thread
 
                 # This lock is used as a simple event variable.
                 ready = thread.allocate_lock()
@@ -351,9 +353,9 @@ class ThreadTests(unittest.TestCase):
                 stderr=subprocess.PIPE)
             stdout, stderr = p.communicate()
             stdout = stdout.strip()
-            assert re.match('^Woke up, sleep function is: <.*?sleep.*?>$', stdout), repr(stdout)
-            stderr = re.sub(r"^\[\d+ refs\]", "", stderr, re.MULTILINE).strip()
-            self.assertEqual(stderr, "")
+            assert re.match(b'^Woke up, sleep function is: <.*?sleep.*?>$', stdout), repr(stdout)
+            stderr = re.sub(br"^\[\d+ refs\]", b"", stderr, re.MULTILINE).strip()
+            self.assertEqual(stderr, b"")
 
     def test_enumerate_after_join(self):
         # Try hard to trigger #1703448: a thread is still returned in
@@ -423,8 +425,8 @@ class ThreadJoinOnShutdown(unittest.TestCase):
         import subprocess
         p = subprocess.Popen([sys.executable, "-c", script], stdout=subprocess.PIPE)
         rc = p.wait()
-        data = p.stdout.read().replace('\r', '')
-        self.assertEqual(data, "end of main\nend of thread\n")
+        data = p.stdout.read().replace(b'\r', b'')
+        self.assertEqual(data, b"end of main\nend of thread\n")
         self.failIf(rc == 2, "interpreter was blocked")
         self.failUnless(rc == 0, "Unexpected error")
 

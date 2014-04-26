@@ -2,6 +2,10 @@ from gevent import monkey; monkey.patch_all()
 import os
 import socket
 import greentest
+try:
+    from socket import sslerror
+except ImportError:
+    from ssl import SSLError as sslerror
 from test__socket import TestTCP
 import ssl
 
@@ -10,12 +14,12 @@ class TestSSL(TestTCP):
 
     certfile = os.path.join(os.path.dirname(__file__), 'test_server.crt')
     privfile = os.path.join(os.path.dirname(__file__), 'test_server.key')
-    TIMEOUT_ERROR = socket.sslerror
+    TIMEOUT_ERROR = sslerror
 
     def setUp(self):
         greentest.TestCase.setUp(self)
         self.listener, r = ssl_listener(('127.0.0.1', 0), self.privfile, self.certfile)
-        self.port = r.getsockname()[1]
+        self.port = self.listener.getsockname()[1]
 
     def create_connection(self):
         return ssl.wrap_socket(super(TestSSL, self).create_connection())

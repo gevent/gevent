@@ -377,6 +377,8 @@ if hasattr(_socket.socket, "share"):
         """
         return socket(0, 0, 0, info)
 
+    __implements__.append('fromshare')
+
 if hasattr(_socket, "socketpair"):
 
     def socketpair(family=None, type=SOCK_STREAM, proto=0):

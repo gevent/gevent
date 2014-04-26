@@ -35,6 +35,14 @@ COULD_BE_MISSING = {
 
 NO_ALL = ['gevent.threading', 'gevent._util', 'gevent._socketcommon']
 
+if six.PY3:
+    NO_ALL.append('gevent.ssl')
+    MAPPING['gevent.thread'] = '_thread'
+    NOT_IMPLEMENTED['ssl'] = ['create_connection']
+    NOT_IMPLEMENTED['subprocess'] = ['getstatusoutput', 'getoutput']
+    NOT_IMPLEMENTED['_thread'] = NOT_IMPLEMENTED['thread']
+    NOT_IMPLEMENTED['_thread'].extend(['RLock', 'TIMEOUT_MAX'])
+
 
 class Test(unittest.TestCase):
 
