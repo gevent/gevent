@@ -6,7 +6,6 @@ import unittest
 import threading
 import subprocess
 import time
-from datetime import timedelta
 
 
 runtimelog = []
@@ -200,65 +199,6 @@ def run(command, **kwargs):
     if took >= MIN_RUNTIME:
         runtimelog.append((-took, name))
     return RunResult(result, out, name)
-
-
-def matches(expected, command):
-    for line in expected:
-        if command.endswith(' ' + line):
-            return True
-    return False
-
-
-def format_seconds(seconds):
-    if seconds < 20:
-        return '%.1fs' % seconds
-    seconds = str(timedelta(seconds=round(seconds)))
-    if seconds.startswith('0:'):
-        seconds = seconds[2:]
-    return seconds
-
-
-def report(total, failed, exit=True, took=None, expected=None):
-    if runtimelog:
-        log('\nLongest-running tests:')
-        runtimelog.sort()
-        length = len('%.1f' % -runtimelog[0][0])
-        frmt = '%' + str(length) + '.1f seconds: %s'
-        for delta, name in runtimelog[:5]:
-            log(frmt, -delta, name)
-    if took:
-        took = ' in %s' % format_seconds(took)
-    else:
-        took = ''
-
-    failed_expected = []
-    failed_unexpected = []
-
-    if failed:
-        log('\n%s/%s tests failed%s', len(failed), total, took)
-        expected = set(expected or [])
-        for name in failed:
-            if matches(expected, name):
-                failed_expected.append(name)
-            else:
-                failed_unexpected.append(name)
-
-        if failed_expected:
-            log('\n%s/%s expected failures', len(failed_expected), total)
-            for name in failed_expected:
-                log(' - %s', name)
-
-        if failed_unexpected:
-            log('\n%s/%s unexpected failures', len(failed_unexpected), total)
-            for name in failed_unexpected:
-                log(' - %s', name)
-    else:
-        log('\n%s tests passed%s', total, took)
-    if exit:
-        if failed_unexpected:
-            sys.exit(min(100, len(failed_unexpected)))
-        if total <= 0:
-            sys.exit('No tests found.')
 
 
 class TestServer(unittest.TestCase):
