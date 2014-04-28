@@ -17,6 +17,13 @@ TIMEOUT = 180
 NWORKERS = int(os.environ.get('NWORKERS') or 4)
 
 
+# tests that don't do well when run on busy box
+RUN_ALONE = [
+    'test__threadpool.py',
+    'test__examples.py'
+]
+
+
 def run_many(tests, expected=None, failfast=False):
     global NWORKERS
     start = time.time()
@@ -64,13 +71,23 @@ def run_many(tests, expected=None, failfast=False):
             else:
                 time.sleep(0.1)
 
+    run_alone = []
+
     try:
         try:
             for cmd, options in tests:
                 total += 1
-                spawn((cmd, ), options or {})
+                options = options or {}
+                if matches(RUN_ALONE, cmd):
+                    run_alone.append((cmd, options))
+                else:
+                    spawn((cmd, ), options)
             pool.close()
             pool.join()
+
+            for cmd, options in run_alone:
+                run_one(cmd, **options)
+
         except KeyboardInterrupt:
             try:
                 log('Waiting for currently running to finish...')
@@ -131,16 +148,11 @@ def load_list_from_file(filename):
     return result
 
 
-def might_fail(expected, command):
+def matches(expected, command, include_flaky=True):
+    if isinstance(command, list):
+        command = ' '.join(command)
     for line in expected:
-        if command.endswith(' ' + line.replace('FLAKY ', '')):
-            return True
-    return False
-
-
-def must_fail(expected, command):
-    for line in expected:
-        if 'FLAKY' in line:
+        if not include_flaky and line.startswith('FLAKY '):
             continue
         if command.endswith(' ' + line.replace('FLAKY ', '')):
             return True
@@ -175,7 +187,7 @@ def report(total, failed, passed, exit=True, took=None, expected=None):
     passed_unexpected = []
 
     for name in passed:
-        if must_fail(expected, name):
+        if matches(expected, name, include_flaky=False):
             passed_unexpected.append(name)
 
     if passed_unexpected:
@@ -186,7 +198,7 @@ def report(total, failed, passed, exit=True, took=None, expected=None):
         log('\n%s/%s tests failed%s', len(failed), total, took)
         expected = set(expected or [])
         for name in failed:
-            if might_fail(expected, name):
+            if matches(expected, name, include_flaky=True):
                 failed_expected.append(name)
             else:
                 failed_unexpected.append(name)
