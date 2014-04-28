@@ -15,7 +15,7 @@ def main():
     server.start()
 
     length = 50 * 0x100000
-    data = "x" * length
+    data = b"x" * length
 
     spent_total = 0
     N = 10
