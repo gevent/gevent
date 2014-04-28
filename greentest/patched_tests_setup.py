@@ -86,6 +86,9 @@ disabled_tests = \
     , 'test_urllib2net.TimeoutTest.test_http_timeout'
     # accesses _sock.gettimeout() which is always in non-blocking mode
 
+    , 'test_urllib2net.OtherNetworkTests.test_ftp'
+    # too slow
+
     , 'test_urllib2net.OtherNetworkTests.test_urlwithfrag'
     # fails dues to some changes on python.org
 
