@@ -19,7 +19,7 @@ class Resolver(object):
             hub = get_hub()
         self.hub = hub
         if use_environ:
-            for key in os.environ.iterkeys():
+            for key in os.environ.keys():
                 if key.startswith('GEVENTARES_'):
                     name = key[11:].lower()
                     if name:
