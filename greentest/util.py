@@ -79,8 +79,11 @@ def _kill(popen):
 
 
 def kill(popen):
+    if popen.timer is not None:
+        popen.timer.cancel()
     if popen.poll() is not None:
         return
+    popen.was_killed = True
     try:
         if getattr(popen, 'setpgrp_enabled', None):
             killpg(popen.pid)
@@ -137,10 +140,13 @@ def start(command, **kwargs):
     popen = Popen(command, preexec_fn=preexec_fn, env=env, **kwargs)
     popen.name = name
     popen.setpgrp_enabled = preexec_fn is not None
+    popen.was_killed = False
+    popen.timer = None
     if timeout is not None:
         t = threading.Timer(timeout, kill, args=(popen, ))
         t.setDaemon(True)
         t.start()
+        popen.timer = t
     return popen
 
 
@@ -177,7 +183,7 @@ def run(command, **kwargs):
         time_start = time.time()
         out, err = popen.communicate()
         took = time.time() - time_start
-        if popen.poll() is None:
+        if popen.was_killed or popen.poll() is None:
             result = 'TIMEOUT'
         else:
             result = popen.poll()
