@@ -88,11 +88,12 @@ def wrap_refcount(method):
 
     @wraps(method)
     def wrapped(self, *args, **kwargs):
-        import gc
-        gc.disable()
+        gc.collect()
+        gc.collect()
         gc.collect()
         deltas = []
         d = None
+        gc.disable()
         try:
             while True:
                 d = gettotalrefcount()
@@ -127,7 +128,6 @@ def wrap_refcount(method):
                 if len(deltas) >= limit:
                     raise AssertionError('refcount increased by %r' % (deltas, ))
         finally:
-            gc.collect()
             gc.enable()
         self.skipTearDown = True
 
