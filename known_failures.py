@@ -127,6 +127,22 @@ FLAKY test__greenio.py
 
     if CPYTHON_DBG:
         FAILING_TESTS += ['FLAKY test__threadpool.py']
+        # refcount problems:
+        FAILING_TESTS += '''
+            test__timeout.py
+            test__greenletset.py
+            test__core.py
+            test__systemerror.py
+            test__exc_info.py
+            test__api_timeout.py
+            test__event.py
+            test__api.py
+            test__hub.py
+            test__queue.py
+            test__socket_close.py
+            test__select.py
+            test__greenlet.py
+'''.strip().split()
     else:
         FAILING_TESTS += ['test_queue.py', 'test__threading_vs_settrace.py']
 
