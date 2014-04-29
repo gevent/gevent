@@ -169,11 +169,12 @@ class TestPool(TestCase):
         self.assertEqual(sorted(it), list(map(sqr, range(10))))
 
     def test_terminate(self):
-        result = self.pool.map_async(sleep, [0.1] * ((self.size or 10) * 2))
+        size = self.size or 10
+        result = self.pool.map_async(sleep, [0.1] * (size * 2))
         gevent.sleep(0.1)
         kill = TimingWrapper(self.pool.kill)
         kill()
-        assert kill.elapsed < 0.5, kill.elapsed
+        assert kill.elapsed < 0.1 * self.size + 0.5, kill.elapsed
         result.join()
 
     def sleep(self, x):
