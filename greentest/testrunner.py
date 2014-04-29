@@ -89,7 +89,7 @@ def discover(tests=None, ignore=None):
     ignore = set(ignore or [])
 
     if not tests:
-        tests = set(glob.glob('test_*.py')) - set(['test_support.py'])
+        tests = set(glob.glob('test_*.py'))
         if ignore:
             tests -= ignore
         tests = sorted(tests)

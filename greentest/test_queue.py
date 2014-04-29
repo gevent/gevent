@@ -6,7 +6,7 @@ from gevent import queue as Queue
 import threading
 import time
 import unittest
-import test_support
+from test import test_support
 
 QUEUE_SIZE = 5
 
