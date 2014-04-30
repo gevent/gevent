@@ -7,7 +7,15 @@ Changelog
 Release 1.0.1
 -------------
 
+- Upgrade libev to 4.15. This fixes #361: installation on armv5.
+- Better support for win64. Patch by Alexey Borzenkov.
 - Fix #423: Pool's imap/imap_unordered could hang forever. Based on patch and test by Jianfei Wang.
+- Enable libev's check watchers.
+
+misc:
+
+- Add dummy Event._reset_internal_locks() method. Only relevant if patch_all(Event=True) is enabled (non-default).
+- Backport new testrunner.py from master branch.
 
 
 Release 1.0 (Nov 26, 2013)
