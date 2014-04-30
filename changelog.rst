@@ -4,8 +4,8 @@ Changelog
 .. currentmodule:: gevent
 
 
-Release 1.0.1
--------------
+Release 1.0.1 (Apr 30, 2014)
+----------------------------
 
 - Upgrade libev to 4.15. This fixes #361: installation on armv5.
 - Better support for win64. Patch by Alexey Borzenkov.
