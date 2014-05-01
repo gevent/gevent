@@ -303,7 +303,7 @@ else:
                              sources=["gevent/gevent._semaphore.c"]),
                    Extension(name="gevent._util",
                              sources=["gevent/gevent._util.c"])]
-    install_requires = ['greenlet']
+    install_requires = ['greenlet>=0.3.2']
     include_package_data = False
     run_make = True
 
