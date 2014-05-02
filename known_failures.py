@@ -48,6 +48,7 @@ if sys.platform == 'win32':
 
 if CPYTHON_DBG:
     FAILING_TESTS += ['FLAKY test__backdoor.py']
+    FAILING_TESTS += ['FLAKY test__os.py']
 
 
 if PYPY:
@@ -119,7 +120,7 @@ test__server.py
 test__example_portforwarder.py
 test__execmodules.py
 FLAKY test__greenio.py
-'''.strip().split()
+'''.strip().split('\n')
 
     if os.environ.get('GEVENT_RESOLVER') == 'ares':
         FAILING_TESTS += [
@@ -143,8 +144,6 @@ FLAKY test__greenio.py
             test__select.py
             test__greenlet.py
 '''.strip().split()
-    else:
-        FAILING_TESTS += ['test_queue.py', 'test__threading_vs_settrace.py']
 
 
 if __name__ == '__main__':
