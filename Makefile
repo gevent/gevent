@@ -80,7 +80,12 @@ travis_cpython:
 	PYTHON=python make pyflakes
 
 	sudo add-apt-repository -y ppa:chris-lea/cython
+
+	# somehow travis changed something and python2.6 and python3.3 no longer accessible anymore
+	sudo add-apt-repository -y ppa:fkrull/deadsnakes
 	sudo apt-get -qq -y update
+	sudo -E apt-get -qq -y install ${PYTHON} ${PYTHON}-dev
+
 	sudo apt-get -qq -y install cython
 	cython --version
 
