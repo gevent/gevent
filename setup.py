@@ -199,8 +199,8 @@ else:
 def make(done=[]):
     if not done:
         if os.path.exists('Makefile'):
-            if "PYTHON" not in os.environ:
-                os.environ["PYTHON"] = sys.executable
+            if 'PYTHON' not in os.environ:
+                os.environ['PYTHON'] = sys.executable
             system('make')
         done.append(1)
 
