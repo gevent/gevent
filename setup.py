@@ -23,7 +23,9 @@ from distutils.command.sdist import sdist as _sdist
 from distutils.errors import CCompilerError, DistutilsExecError, DistutilsPlatformError
 ext_errors = (CCompilerError, DistutilsExecError, DistutilsPlatformError, IOError)
 
-from util import cythonpp
+# setup.py doesn't appear to always have "." in the path:
+sys.path.append(os.path.join(os.path.dirname(__file__), 'util'))
+import cythonpp
 
 
 __version__ = re.search("__version__\s*=\s*'(.*)'", open('gevent/__init__.py').read(), re.M).group(1)
