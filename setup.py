@@ -23,6 +23,8 @@ from distutils.command.sdist import sdist as _sdist
 from distutils.errors import CCompilerError, DistutilsExecError, DistutilsPlatformError
 ext_errors = (CCompilerError, DistutilsExecError, DistutilsPlatformError, IOError)
 
+from util import cythonpp
+
 
 __version__ = re.search("__version__\s*=\s*'(.*)'", open('gevent/__init__.py').read(), re.M).group(1)
 assert __version__
@@ -201,6 +203,8 @@ def make(done=[]):
         if os.path.exists('Makefile'):
             if 'PYTHON' not in os.environ:
                 os.environ['PYTHON'] = sys.executable
+            if 'CYTHON' not in os.environ:
+                os.environ['CYTHON'] = cythonpp.CYTHON
             system('make')
         done.append(1)
 
