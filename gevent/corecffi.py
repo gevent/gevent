@@ -3,6 +3,7 @@ import sys
 import os
 import traceback
 import signal as signalmodule
+import struct
 
 
 __all__ = ['get_version',
@@ -14,9 +15,15 @@ __all__ = ['get_version',
            'loop']
 
 
+def system_bits():
+    return struct.calcsize('P') * 8
+
+
 def st_nlink_type():
     if sys.platform == "darwin":
         return "short"
+    elif system_bits() == 32:
+        return "unsigned long"
     return "long long"
 
 
