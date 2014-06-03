@@ -1,5 +1,6 @@
 *.py[co]
 build/
+dist/
 *.so
 gevent.*.[ch]
 gevent/core.pyx
