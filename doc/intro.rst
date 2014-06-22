@@ -209,7 +209,7 @@ To limit concurrency, use the :class:`Pool` class (see `example: dns_mass_resolv
 
 Gevent comes with TCP/SSL/HTTP/WSGI servers. See :doc:`servers`.
 
-.. _`example: dns_mass_resolve.py`: http://bitbucket.org/denis/gevent/src/tip/examples/dns_mass_resolve.py#cl-17
+.. _`example: dns_mass_resolve.py`: https://github.com/surfly/gevent/blob/master/examples/dns_mass_resolve.py#L17
 
 
 External resources
