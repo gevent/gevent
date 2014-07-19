@@ -353,6 +353,7 @@ class WSGIHandler(object):
 
         try:
             self.requestline = self.read_requestline()
+            self.requestline = self.requestline if not PY3 else self.requestline.decode()
         except socket.error:
             # "Connection reset by peer" or other socket errors aren't interesting here
             return
@@ -439,25 +440,28 @@ class WSGIHandler(object):
                 raise AssertionError("The application did not call start_response()")
             self._write_with_headers(data)
 
+    def __add_to(self, towrite, text):
+        if PY3:
+            towrite.extend(bytes(text, 'utf-8'))
+        else:
+            towrite.extend(unicode(text))
+    
     def _write_with_headers(self, data):
         towrite = bytearray()
         self.headers_sent = True
         self.finalize_headers()
 
-        towrite.extend(
-            b''.join((b'HTTP/1.1 ', str(self.status).encode(), b'\r\n')))
+        self.__add_to(towrite, 'HTTP/1.1 %s\r\n' % self.status)
         for header in self.response_headers:
-            towrite.extend(('%s: %s\r\n' % header).encode())
+            self.__add_to(towrite, '%s: %s\r\n' % header)
 
-        towrite.extend(b'\r\n')
+        self.__add_to(towrite, '\r\n')
         if data:
             if self.response_use_chunked:
                 ## Write the chunked encoding
-                towrite.extend(("%x\r\n" % (len(data),)).encode())
-                towrite.extend(data)
-                towrite.extend(b"\r\n")
+                self.__add_to(towrite, "%x\r\n%s\r\n" % (len(data), data))
             else:
-                towrite.extend(data)
+                self.__add_to(towrite, data)
         self._sendall(towrite)
 
     def start_response(self, status, headers, exc_info=None):
