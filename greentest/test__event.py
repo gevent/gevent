@@ -2,6 +2,7 @@ import greentest
 import gevent
 from gevent.event import Event, AsyncResult
 from six import xrange
+from six import PY3
 
 DELAY = 0.01
 
@@ -48,6 +49,8 @@ class TestAsyncResult(greentest.TestCase):
                 log.append(('received', result))
             except Exception as ex:
                 log.append(('catched', ex))
+                if PY3:
+                    ex.__traceback__ = None
         gevent.spawn(waiter)
         obj = Exception()
         e.set_exception(obj)
@@ -63,10 +66,12 @@ class TestAsyncResult(greentest.TestCase):
         try:
             try:
                 result = event1.get()
-            except ValueError:
+            except ValueError as ex:
                 X = object()
                 result = gevent.with_timeout(DELAY, event2.get, timeout_value=X)
                 assert result is X, 'Nobody sent anything to event2 yet it received %r' % (result, )
+                if PY3:
+                    ex.__traceback__ = None
         finally:
             t.cancel()
             g.kill()

@@ -19,11 +19,11 @@ try:
 
     def write():
         f = open(filename, 'wb', buffering=0)
-        f.write('x')
+        f.write(b'x')
         f.close()
 
     greenlet = gevent.spawn_later(DELAY, write)
-    watcher = hub.loop.stat(filename)
+    watcher = hub.loop.stat(filename.encode())
 
     start = time.time()
 

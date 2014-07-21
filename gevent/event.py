@@ -279,6 +279,8 @@ class AsyncResult(object):
                 self.unlink(switch)
                 if exc is not timer:
                     raise
+                if PY3:
+                    exc.__traceback__ = None
             except:
                 self.unlink(switch)
                 raise

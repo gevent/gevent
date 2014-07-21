@@ -46,7 +46,10 @@ class socket(_socket.socket):
 
     @property
     def type(self):
-        return _socket.socket.type.__get__(self) & ~_socket.SOCK_NONBLOCK
+        if self.timeout != 0.0 and hasattr(_socket, 'SOCK_NONBLOCK'):
+            return _socket.socket.type.__get__(self) & ~_socket.SOCK_NONBLOCK
+        else:
+            return _socket.socket.type.__get__(self)
 
     def __enter__(self):
         return self
@@ -377,6 +380,8 @@ if hasattr(_socket.socket, "share"):
         socket.share(pid).
         """
         return socket(0, 0, 0, info)
+
+    __implements__.append('fromshare')
 
 if hasattr(_socket, "socketpair"):
 

@@ -72,6 +72,8 @@ class TestLink(greentest.TestCase):
             event2 = AsyncResult()
             p.link(event2)
             self.assertRaises(err, event2.get)
+        if sys.version_info[0] > 2:
+            err.__traceback__ = None
 
     def test_link_to_queue(self):
         p = gevent.spawn(lambda: 100)
@@ -286,6 +288,8 @@ class TestStuff(greentest.TestCase):
             gevent.joinall([a, b], raise_error=True)
         except ExpectedError as ex:
             assert 'second' in str(ex), repr(str(ex))
+            if sys.version_info[0] > 2:
+                ex.__traceback__ = None
         gevent.joinall([a, b])
 
     def test_multiple_listeners_error(self):

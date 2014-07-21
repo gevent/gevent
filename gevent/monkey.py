@@ -159,8 +159,12 @@ def patch_select(aggressive=True):
     If aggressive is true (the default), also remove other blocking functions the :mod:`select`.
     """
     patch_module('select')
+    select = __import__('select')
+    try:
+        selectors = __import__('selectors')
+    except ImportError:
+        selectors = None
     if aggressive:
-        select = __import__('select')
         # since these are blocking we're removing them here. This makes some other
         # modules (e.g. asyncore)  non-blocking, as they use select that we provide
         # when none of these are available.
@@ -168,6 +172,13 @@ def patch_select(aggressive=True):
         remove_item(select, 'epoll')
         remove_item(select, 'kqueue')
         remove_item(select, 'kevent')
+        if selectors:
+            remove_item(selectors, 'PollSelector')
+            remove_item(selectors, 'EpollSelector')
+            remove_item(selectors, 'KqueueSelector')
+            selectors.DefaultSelector = selectors.SelectSelector
+    if selectors and sys.platform != 'win32':
+        selectors.SelectSelector._select = lambda *x: select.select(*x[1:])
 
 
 def patch_subprocess():

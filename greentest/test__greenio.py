@@ -20,6 +20,7 @@
 from greentest import TestCase, main, tcp_listener
 import gevent
 from gevent import socket
+from gevent.hub import PY3
 import sys
 
 
@@ -35,13 +36,18 @@ class TestGreenIo(TestCase):
             # by closing the socket prior to using the made file
             try:
                 conn, addr = listener.accept()
-                fd = conn.makefile()
+                fd = conn.makefile('rw')
                 conn.close()
                 fd.write('hello\n')
                 fd.close()
-                r = fd.write('a')
-                assert r is None, r
-                self.assertRaises(socket.error, conn.send, 'b')
+                if PY3:
+                    self.assertRaises(ValueError, fd.write, 'a')
+                    self.assertRaises(ValueError, fd.flush)
+                else:
+                    r = fd.write('a')
+                    assert r is None, r
+                    self.assertRaises(AttributeError, fd.flush)
+                self.assertRaises(socket.error, conn.send, b'b')
             finally:
                 listener.close()
 
@@ -50,14 +56,19 @@ class TestGreenIo(TestCase):
             # by closing the made file and then sending a character
             try:
                 conn, addr = listener.accept()
-                fd = conn.makefile()
+                fd = conn.makefile('rw')
                 fd.write('hello')
                 fd.close()
-                conn.send('\n')
+                conn.send(b'\n')
                 conn.close()
-                r = fd.write('a')
-                assert r is None, r
-                self.assertRaises(socket.error, conn.send, 'b')
+                if PY3:
+                    self.assertRaises(ValueError, fd.write, 'a')
+                    self.assertRaises(ValueError, fd.flush)
+                else:
+                    r = fd.write('a')
+                    assert r is None, r
+                    self.assertRaises(AttributeError, fd.flush)
+                self.assertRaises(socket.error, conn.send, b'b')
             finally:
                 listener.close()
 
@@ -88,13 +99,20 @@ class TestGreenIo(TestCase):
             # delete/overwrite the original conn
             # object, only keeping the file object around
             # closing the file object should close everything
+            # update: this is not true for PY3
             try:
-                conn, addr = listener.accept()
-                conn = conn.makefile()
+                sock, addr = listener.accept()
+                conn = sock.makefile('rw')
                 conn.write('hello\n')
+                sock.close()
                 conn.close()
-                r = conn.write('a')
-                assert r is None, r
+                if PY3:
+                    self.assertRaises(ValueError, conn.write, 'a')
+                    self.assertRaises(ValueError, conn.flush)
+                else:
+                    r = conn.write('a')
+                    assert r is None, r
+                    self.assertRaises(AttributeError, conn.flush)
             finally:
                 listener.close()
 

@@ -1,5 +1,6 @@
 # mostly tests from test_subprocess.py that used to have problems
 import sys
+import six
 import os
 import errno
 import greentest
@@ -41,6 +42,8 @@ class Test(greentest.TestCase):
             subprocess.Popen(['*']).wait()
         except OSError as ex:
             assert ex.errno == 2, ex
+            if six.PY3:
+                ex.__traceback__ = None
         else:
             raise AssertionError('Expected OSError: [Errno 2] No such file or directory')
 
@@ -130,13 +133,24 @@ class Test(greentest.TestCase):
     if sys.platform != 'win32':
 
         def test_nonblock_removed(self):
+            import subprocess as orig_subprocess
+            r, w = os.pipe()
+            p = orig_subprocess.Popen(['grep', 'text'], stdin=r)
+            try:
+                os.close(w)
+                time.sleep(0.1)
+                expected = p.poll()
+            finally:
+                if p.poll() is None:
+                    p.kill()
+
             # see issue #134
             r, w = os.pipe()
             p = subprocess.Popen(['grep', 'text'], stdin=subprocess.FileObject(r))
             try:
                 os.close(w)
                 time.sleep(0.1)
-                self.assertEqual(p.poll(), None)
+                self.assertEqual(p.poll(), expected)
             finally:
                 if p.poll() is None:
                     p.kill()
@@ -148,6 +162,8 @@ class Test(greentest.TestCase):
             except OSError as ex:
                 if ex.errno != errno.ENOENT:
                     raise
+                if six.PY3:
+                    ex.__traceback__ = None
             else:
                 raise AssertionError('must fail with ENOENT')
 
@@ -156,6 +172,8 @@ class Test(greentest.TestCase):
             subprocess.check_output([sys.executable, '-c', 'import sys; sys.exit(44)'])
         except subprocess.CalledProcessError as e:
             self.assertEqual(e.returncode, 44)
+            if six.PY3:
+                e.__traceback__ = None
         else:
             raise AssertionError('must fail with CalledProcessError')
 

@@ -23,8 +23,20 @@ class Test(TestCase):
         self.assertEqual(core._flags_to_int(None), 0)
         self.assertEqual(core._flags_to_int(['kqueue', 'SELECT']), core.BACKEND_KQUEUE | core.BACKEND_SELECT)
         self.assertEqual(core._flags_to_list(core.BACKEND_PORT | core.BACKEND_POLL), ['port', 'poll'])
-        self.assertRaises(ValueError, core.loop, ['port', 'blabla'])
-        self.assertRaises(TypeError, core.loop, object())
+        try:
+            core.loop(['port', 'blabla'])
+        except ValueError as ex:
+            if sys.version_info[0] > 2:
+                ex.__traceback__ = None
+        else:
+            raise AssertionError("ValueError is not raised")
+        try:
+            core.loop(object())
+        except TypeError as ex:
+            if sys.version_info[0] > 2:
+                ex.__traceback__ = None
+        else:
+            raise AssertionError("TypeError is not raised")
 
     def test_events_conversion(self):
         self.assertEqual(core._events_to_str(core.READ | core.WRITE), 'READ|WRITE')

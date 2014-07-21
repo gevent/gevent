@@ -15,6 +15,7 @@ __implements__ = ['allocate_lock',
                   'LockType',
                   'stack_size',
                   'start_new_thread',
+                  '_set_sentinel',
                   '_local']
 
 __imports__ = ['error']
@@ -62,6 +63,25 @@ if hasattr(__thread__, 'stack_size'):
             # not going to decrease stack_size, because otherwise other greenlets in this thread will suffer
 else:
     __implements__.remove('stack_size')
+
+
+if hasattr(__thread__, '_set_sentinel'):
+    class Sentinel(LockType):
+        def acquire(self, blocking=True, timeout=None):
+            if timeout == -1:
+                timeout = None
+            return super().acquire(blocking, timeout)
+
+    _original_set_sentinel = __thread__._set_sentinel
+
+    def _set_sentinel():
+        g = getcurrent()
+        ret = Sentinel()
+        if hasattr(g, 'rawlink'):
+            g.rawlink(lambda *x: ret.release())
+        return ret
+else:
+    __implements__.remove('_set_sentinel')
 
 
 __all__ = __implements__ + __imports__

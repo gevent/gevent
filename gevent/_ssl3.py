@@ -232,7 +232,8 @@ class SSLSocket(socket):
                     self.__class__)
             while True:
                 try:
-                    return self._sslobj.write(data)
+                    data = data.encode('utf-8') if isinstance(data, str) else data
+                    return self._sslobj.write(data)             
                 except SSLWantReadError:
                     if self.timeout == 0.0:
                         return 0

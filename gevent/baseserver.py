@@ -126,14 +126,14 @@ class BaseServer(object):
 
     def do_handle(self, *args):
         spawn = self._spawn
-        try:
-            if spawn is None:
-                self._handle(*args)
-            else:
-                spawn(self._handle, *args)
-        except:
-            self.do_close(*args)
-            raise
+        if spawn is None:
+            self._handle_and_close(*args)
+        else:
+            try:
+                spawn(self._handle_and_close, *args)
+            except:
+                self.do_close(*args)
+                raise
 
     def do_close(self, *args):
         pass
@@ -171,7 +171,14 @@ class BaseServer(object):
                         self._timer = self.loop.timer(self.delay)
                         self._timer.start(self._start_accepting_if_started)
                         self.delay = min(self.max_delay, self.delay * 2)
+                    self.do_close(*args)
                     break
+
+    def _handle_and_close(self, *args):
+        try:
+            self._handle(*args)
+        finally:
+            self.do_close(*args)
 
     def full(self):
         return False

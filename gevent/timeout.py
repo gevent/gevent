@@ -13,7 +13,7 @@ to arbitrary code.
     which no switches occur, :class:`Timeout` is powerless.
 """
 
-from gevent.hub import getcurrent, _NONE, get_hub, string_types
+from gevent.hub import getcurrent, _NONE, get_hub, string_types, PY3
 
 __all__ = ['Timeout',
            'with_timeout']
@@ -117,6 +117,8 @@ class Timeout(BaseException):
     def cancel(self):
         """If the timeout is pending, cancel it. Otherwise, do nothing."""
         self.timer.stop()
+        if PY3:
+            self.__traceback__ = None
 
     def __repr__(self):
         classname = type(self).__name__

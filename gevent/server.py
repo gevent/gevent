@@ -72,7 +72,8 @@ class StreamServer(BaseServer):
     def set_listener(self, listener):
         BaseServer.set_listener(self, listener)
         try:
-            self.socket = self.socket._sock
+            if sys.version_info[0] == 2:
+                self.socket = self.socket._sock
         except AttributeError:
             pass
 
@@ -144,7 +145,10 @@ class DatagramServer(BaseServer):
             self.address = self.socket.getsockname()
         self._socket = self.socket
         try:
-            self._socket = self._socket._sock
+            if sys.version_info[0] == 2:
+                self._socket = self._socket._sock
+            else:
+                self._socket = super(socket, self._socket)
         except AttributeError:
             pass
 
