@@ -9,6 +9,7 @@ This module implements cooperative SSL socket wrappers.
 
 from __future__ import absolute_import
 import ssl as __ssl__
+from gevent.hub import to_wire
 
 _ssl = __ssl__._ssl
 
@@ -232,7 +233,7 @@ class SSLSocket(socket):
                     self.__class__)
             while True:
                 try:
-                    return self._sslobj.write(data)
+                    return self._sslobj.write(to_wire(data))             
                 except SSLWantReadError:
                     if self.timeout == 0.0:
                         return 0

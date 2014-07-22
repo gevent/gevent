@@ -5,6 +5,8 @@ import time
 from gevent import _socketcommon
 import _socket
 from io import BlockingIOError
+from os import dup
+from gevent.hub import string_types, to_wire
 
 for key in _socketcommon.__dict__:
     if key.startswith('__'):
@@ -22,7 +24,7 @@ SocketIO = __socket__.SocketIO
 
 
 def _get_memory(string, offset):
-    return memoryview(string)[offset:]
+    return memoryview(to_wire(string))[offset:]
 
 
 timeout_default = object()
