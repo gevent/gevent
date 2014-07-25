@@ -259,7 +259,7 @@ class Hub(greenlet):
     """
 
     SYSTEM_ERROR = (KeyboardInterrupt, SystemExit, SystemError)
-    NOT_ERROR = (GreenletExit, SystemExit)
+    NOT_ERROR = (GreenletExit, SystemExit, KeyboardInterrupt)
     loop_class = config('gevent.core.loop', 'GEVENT_LOOP')
     resolver_class = ['gevent.resolver_thread.Resolver',
                       'gevent.resolver_ares.Resolver',
