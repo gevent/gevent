@@ -4,8 +4,14 @@ Changelog
 .. currentmodule:: gevent
 
 
+Release 1.0.2
+-------------
+
+- Fix LifoQueue.peek() to return correct element. PR #456. Patch by Christine Spang.
+
+
 Release 1.0.1 (Apr 30, 2014)
-----------------------------
+-------------
 
 - Upgrade libev to 4.15. This fixes #361: installation on armv5.
 - Better support for win64. Patch by Alexey Borzenkov.
