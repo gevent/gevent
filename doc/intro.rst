@@ -83,7 +83,7 @@ instance yet, one is created on the fly.
 
 The event loop provided by libev uses the fastest polling mechanism
 available on the system by default. It is possible to command libev to
-use a particular polling mechanism by setting the ``LIBEV_FLAGS```
+use a particular polling mechanism by setting the ``LIBEV_FLAGS``
 environment variable. Possible values include ``LIBEV_FLAGS=1`` for
 the select backend, ``LIBEV_FLAGS=2`` for the poll backend,
 ``LIBEV_FLAGS=4`` for the epoll backend and ``LIBEV_FLAGS=8`` for the
