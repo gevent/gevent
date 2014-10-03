@@ -19,7 +19,13 @@ else:
 _ex = lambda: sys.exc_info()[1]
 
 
-CYTHON = os.environ.get('CYTHON') or 'cython'
+# Find cython:
+if 'CYTHON' in os.environ:
+    CYTHON = os.environ['CYTHON']
+elif os.path.exists(os.path.join(sys.exec_prefix, 'bin', 'cython')):
+    CYTHON = os.path.join(sys.exec_prefix, 'bin', 'cython')
+else:
+    CYTHON = 'cython'
 DEBUG = False
 WRITE_OUTPUT = False
 
