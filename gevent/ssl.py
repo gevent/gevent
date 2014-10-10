@@ -21,8 +21,9 @@ except AttributeError:
 
 import sys
 import errno
-from gevent.socket import socket, _fileobject, timeout_default
-from gevent.socket import error as socket_error
+from gevent._socket import _socket, timeout_default
+from gevent._socket import error as socket_error
+from gevent._socket import socket1
 from gevent.hub import string_types
 
 
@@ -50,7 +51,8 @@ for name in __imports__[:]:
 for name in dir(__ssl__):
     if not name.startswith('_'):
         value = getattr(__ssl__, name)
-        if isinstance(value, (int, long, tuple)) or isinstance(value, string_types):
+#        if isinstance(value, (int, long, tuple)) or isinstance(value, string_types):
+        if isinstance(value, string_types):
             globals()[name] = value
             __imports__.append(name)
 
@@ -59,15 +61,21 @@ del name, value
 __all__ = __implements__ + __imports__
 
 
-class SSLSocket(socket):
+class SSLSocket(socket1):
 
-    def __init__(self, sock, keyfile=None, certfile=None,
-                 server_side=False, cert_reqs=CERT_NONE,
-                 ssl_version=PROTOCOL_SSLv23, ca_certs=None,
-                 do_handshake_on_connect=True,
-                 suppress_ragged_eofs=True,
-                 ciphers=None):
-        socket.__init__(self, _sock=sock)
+    def __init__(
+        self, 
+        sock=socket1, 
+        keyfile=None, 
+        certfile=None,
+        server_side=False, 
+        cert_reqs=_ssl.CERT_NONE,
+        ssl_version=_ssl.PROTOCOL_SSLv23, 
+        ca_certs=None,
+        do_handshake_on_connect=True,
+        suppress_ragged_eofs=True,
+        ciphers=None):
+#        _socket.__init__(self=self, sock=_sock)
 
         if certfile and not keyfile:
             keyfile = certfile
@@ -370,8 +378,8 @@ _SSLErrorHandshakeTimeout = SSLError('The handshake operation timed out')
 
 
 def wrap_socket(sock, keyfile=None, certfile=None,
-                server_side=False, cert_reqs=CERT_NONE,
-                ssl_version=PROTOCOL_SSLv23, ca_certs=None,
+                server_side=False, cert_reqs=__ssl__.CERT_NONE,
+                ssl_version=__ssl__.PROTOCOL_SSLv23, ca_certs=None,
                 do_handshake_on_connect=True,
                 suppress_ragged_eofs=True, ciphers=None):
     """Create a new :class:`SSLSocket` instance."""
@@ -383,7 +391,7 @@ def wrap_socket(sock, keyfile=None, certfile=None,
                      ciphers=ciphers)
 
 
-def get_server_certificate(addr, ssl_version=PROTOCOL_SSLv3, ca_certs=None):
+def get_server_certificate(addr, ssl_version=__ssl__.PROTOCOL_SSLv3, ca_certs=None):
     """Retrieve the certificate from the server at the specified address,
     and return it as a PEM-encoded string.
     If 'ca_certs' is specified, validate the server cert against it.

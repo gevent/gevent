@@ -5,9 +5,9 @@ import errno
 import sys
 import time
 import traceback
-import mimetools
+import email
 from datetime import datetime
-from urllib import unquote
+from urllib.parse import quote
 
 from gevent import socket
 import gevent
@@ -165,7 +165,8 @@ class Input(object):
 
 class WSGIHandler(object):
     protocol_version = 'HTTP/1.1'
-    MessageClass = mimetools.Message
+    MessageClass = email
+    #.message_from_string(Message)
 
     def __init__(self, socket, address, server, rfile=None):
         self.socket = socket

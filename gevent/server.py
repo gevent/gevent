@@ -3,7 +3,7 @@
 import sys
 import _socket
 from gevent.baseserver import BaseServer
-from gevent.socket import EWOULDBLOCK, socket
+from gevent.socket import EWOULDBLOCK, socket1
 
 
 __all__ = ['StreamServer', 'DatagramServer']

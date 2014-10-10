@@ -121,7 +121,7 @@ _realsocket = _socket.socket
 import socket as __socket__
 
 #_fileobject = __socket__._fileobject
-#_fileobject = __socket__.socket.makefile(_socket)
+#_fileobject = _socket.makefile()
 
 for name in __imports__[:]:
     try:
