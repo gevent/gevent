@@ -3,10 +3,14 @@
 import sys
 import _socket
 from gevent.baseserver import BaseServer
+<<<<<<< HEAD
+from gevent.socket import EWOULDBLOCK, socket1
+=======
 from gevent.socket import EWOULDBLOCK, socket
 from gevent.hub import PYPY, PY3
 if PY3:
     from io import BlockingIOError
+>>>>>>> master
 
 
 __all__ = ['StreamServer', 'DatagramServer']
@@ -91,6 +95,16 @@ class StreamServer(BaseServer):
             backlog = self.backlog
         return _tcp_listener(address, backlog=backlog, reuse_addr=self.reuse_addr, family=family)
 
+<<<<<<< HEAD
+    def do_read(self):
+        try:
+            client_socket, address = self.socket.accept()
+        except _socket.error as err:
+            if err[0] == EWOULDBLOCK:
+                return
+            raise
+        return socket(_sock=client_socket), address
+=======
     if PY3:
 
         def do_read(self):
@@ -121,6 +135,7 @@ class StreamServer(BaseServer):
 
     def do_close(self, socket, *args):
         socket.close()
+>>>>>>> master
 
     def wrap_socket_and_handle(self, client_socket, address):
         # used in case of ssl sockets
@@ -156,7 +171,11 @@ class DatagramServer(BaseServer):
         try:
             data, address = self._socket.recvfrom(8192)
         except _socket.error as err:
+<<<<<<< HEAD
+            if err[0] == EWOULDBLOCK:
+=======
             if err.args[0] == EWOULDBLOCK:
+>>>>>>> master
                 return
             raise
         return data, address

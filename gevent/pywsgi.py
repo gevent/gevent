@@ -5,11 +5,17 @@ import errno
 import sys
 import time
 import traceback
+<<<<<<< HEAD
+import email
+from datetime import datetime
+from urllib.parse import quote
+=======
 from datetime import datetime
 try:
     from urllib import unquote
 except ImportError:
     from urllib.parse import unquote
+>>>>>>> master
 
 from gevent import socket
 import gevent
@@ -200,7 +206,12 @@ except ImportError:
 
 class WSGIHandler(object):
     protocol_version = 'HTTP/1.1'
+<<<<<<< HEAD
+    MessageClass = email
+    #.message_from_string(Message)
+=======
     MessageClass = headers_factory
+>>>>>>> master
 
     def __init__(self, socket, address, server, rfile=None):
         self.socket = socket
@@ -436,7 +447,11 @@ class WSGIHandler(object):
             try:
                 if self.headers_sent:
                     # Re-raise original exception if headers sent
+<<<<<<< HEAD
+                    raise (exc_info[0], exc_info[1], exc_info[2])
+=======
                     reraise(*exc_info)
+>>>>>>> master
             finally:
                 # Avoid dangling circular ref
                 exc_info = None

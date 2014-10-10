@@ -280,12 +280,20 @@ class FileObjectThread(object):
 
     for method in ['read', 'readinto', 'readline', 'readlines', 'write', 'writelines', 'xreadlines']:
 
+<<<<<<< HEAD
+        exec ('''def %s(self, *args, **kwargs):
+=======
         exec('''def %s(self, *args, **kwargs):
+>>>>>>> master
     fobj = self._fobj
     if fobj is None:
         raise FileObjectClosed
     return self._apply(fobj.%s, args, kwargs)
+<<<<<<< HEAD
+''',(method, method))
+=======
 ''' % (method, method))
+>>>>>>> master
 
     def __iter__(self):
         return self

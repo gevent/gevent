@@ -110,7 +110,7 @@ def patch_thread(threading=True, _threading_local=True, Event=False):
     If *threading* is true (the default), also patch ``threading``.
     If *_threading_local* is true (the default), also patch ``_threading_local.local``.
     """
-    patch_module('thread')
+    patch_module('_thread')
     if threading:
         patch_module('threading')
         threading = __import__('threading')
@@ -128,25 +128,25 @@ def patch_socket(dns=True, aggressive=True):
 
     If *dns* is true, also patch dns functions in :mod:`socket`.
     """
-    from gevent import socket
+    from gevent import _socket
     # Note: although it seems like it's not strictly necessary to monkey patch 'create_connection',
     # it's better to do it. If 'create_connection' was not monkey patched, but the rest of socket module
     # was, create_connection would still use "green" getaddrinfo and "green" socket.
     # However, because gevent.socket.socket.connect is a Python function, the exception raised by it causes
     # _socket object to be referenced by the frame, thus causing the next invocation of bind(source_address) to fail.
     if dns:
-        items = socket.__implements__
+        items = _socket.__implements__
     else:
-        items = set(socket.__implements__) - set(socket.__dns__)
-    patch_module('socket', items=items)
+        items = set(_socket.__implements__) - set(_socket.__dns__)
+    patch_module('_socket', items=items)
     if aggressive:
-        if 'ssl' not in socket.__implements__:
-            remove_item(socket, 'ssl')
+        if 'ssl' not in _socket.__implements__:
+            remove_item(_socket, 'ssl')
 
 
 def patch_dns():
-    from gevent import socket
-    patch_module('socket', items=socket.__dns__)
+    from gevent import _socket
+    patch_module('_socket', items=_socket.__dns__)
 
 
 def patch_ssl():
@@ -174,7 +174,7 @@ def patch_subprocess():
     patch_module('subprocess')
 
 
-def patch_all(socket=True, dns=True, time=True, select=True, thread=True, os=True, ssl=True, httplib=False,
+def patch_all(socket=False, dns=True, time=True, select=True, thread=True, os=True, ssl=True, httplib=False,
               subprocess=False, sys=False, aggressive=True, Event=False):
     """Do all of the default monkey patching (calls every other function in this module."""
     # order is important
