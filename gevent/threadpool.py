@@ -1,5 +1,5 @@
 # Copyright (c) 2012 Denis Bilenko. See LICENSE for details.
-from __future__ import with_statement, absolute_import
+from __future__ import absolute_import
 import sys
 import os
 from gevent.hub import get_hub, getcurrent, sleep, integer_types
@@ -188,21 +188,21 @@ class ThreadPool(object):
                         # otherwise, _adjust might think there's one more idle thread that
                         # needs to be killed
                         return
-                    func, args, kwargs, result = task
+                    func, args, kwargs, thread_result = task
                     try:
                         value = func(*args, **kwargs)
                     except:
                         exc_info = getattr(sys, 'exc_info', None)
                         if exc_info is None:
                             return
-                        result.handle_error((self, func), exc_info())
+                        thread_result.handle_error((self, func), exc_info())
                     else:
                         if sys is None:
                             return
-                        result.set(value)
+                        thread_result.set(value)
                         del value
                     finally:
-                        del func, args, kwargs, result, task
+                        del func, args, kwargs, thread_result, task
                 finally:
                     if sys is None:
                         return
@@ -325,5 +325,5 @@ class ThreadResult(object):
 def wrap_errors(errors, function, args, kwargs):
     try:
         return True, function(*args, **kwargs)
-    except errors:
-        return False, sys.exc_info()[1]
+    except errors as ex:
+        return False, ex

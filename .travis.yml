@@ -1,6 +1,8 @@
 language: python
 python:
+ - "2.6"
  - "2.7"
+<<<<<<< HEAD
 env:
  - EXTRA=1
 matrix:
@@ -22,11 +24,12 @@ install:
  - python -c 'import greenlet; print(greenlet, greenlet.__version__); import psycopg2; print(psycopg2, psycopg2.__version__); import bottle; print(bottle, bottle.__version__)'
  - export CYTHON=`which cython`
  - python setup.py install
+=======
+ - "3.3"
+ - "pypy"
+>>>>>>> master
 script:
- - cd greentest && python testrunner.py --full --expected ../known_failures.txt
+ - if [[ $TRAVIS_PYTHON_VERSION == 'pypy' ]]; then NWORKERS=4 PYTHON=pypy make travis_pypy; fi
+ - if [[ $TRAVIS_PYTHON_VERSION != 'pypy' ]]; then NWORKERS=4 PYTHON=python$TRAVIS_PYTHON_VERSION make travis_cpython; fi
 notifications:
-  email:
-    recipients:
-      - denis.bilenko@gmail.com
-    on_success: change
-    on_failure: change
+  email: false

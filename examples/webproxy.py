@@ -10,14 +10,20 @@ To start the server on some other interface/port, use
   python -m gevent.wsgi -p 8000 -i 0.0.0.0 webproxy.py
 
 """
+from __future__ import print_function
 from gevent import monkey; monkey.patch_all()
 import sys
 import re
 import traceback
-import urllib2
-from urlparse import urlparse
 from cgi import escape
-from urllib import unquote
+try:
+    import urllib2
+    from urlparse import urlparse
+    from urllib import unquote
+except ImportError:
+    from urllib import request as urllib2
+    from urllib.parse import urlparse
+    from urllib.parse import unquote
 
 LISTEN = ":8088"
 
@@ -51,14 +57,13 @@ def proxy(path, start_response, proxy_url):
     try:
         try:
             response = urllib2.urlopen(path)
-        except urllib2.HTTPError:
-            response = sys.exc_info()[1]
-        print ('%s: %s %s' % (path, response.code, response.msg))
+        except urllib2.HTTPError as ex:
+            response = ex
+        print('%s: %s %s' % (path, response.code, response.msg))
         headers = [(k, v) for (k, v) in response.headers.items() if k not in drop_headers]
         scheme, netloc, path, params, query, fragment = urlparse(path)
         host = (scheme or 'http') + '://' + netloc
-    except Exception:
-        ex = sys.exc_info()[1]
+    except Exception as ex:
         sys.stderr.write('error while reading %s:\n' % path)
         traceback.print_exc()
         tb = traceback.format_exc()
@@ -98,7 +103,7 @@ def fix_links(data, proxy_url, host_url):
             result = m.group('before') + '"' + join(proxy_url, url) + '"'
         else:
             result = m.group('before') + '"' + join(proxy_url, host_url, url) + '"'
-        #print 'replaced %r -> %r' % (m.group(0), result)
+        #print('replaced %r -> %r' % (m.group(0), result))
         return result
     data = _link_re_1.sub(fix_link_cb, data)
     data = _link_re_2.sub(fix_link_cb, data)
@@ -123,5 +128,5 @@ FORM = """<html><head>
 
 if __name__ == '__main__':
     from gevent.pywsgi import WSGIServer
-    print 'Serving on %s...' % LISTEN
+    print('Serving on %s...' % LISTEN)
     WSGIServer(LISTEN, application).serve_forever()

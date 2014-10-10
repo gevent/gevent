@@ -5,7 +5,7 @@ import _socket
 import errno
 from gevent.greenlet import Greenlet, getfuncname
 from gevent.event import Event
-from gevent.hub import string_types, integer_types, get_hub
+from gevent.hub import string_types, integer_types, get_hub, xrange
 
 
 __all__ = ['BaseServer']
@@ -86,7 +86,7 @@ class BaseServer(object):
         elif hasattr(spawn, 'spawn'):
             self.pool = spawn
             self._spawn = spawn.spawn
-        elif isinstance(spawn, (int, long)):
+        elif isinstance(spawn, integer_types):
             from gevent.pool import Pool
             self.pool = Pool(spawn)
             self._spawn = self.pool.spawn
@@ -126,10 +126,17 @@ class BaseServer(object):
 
     def do_handle(self, *args):
         spawn = self._spawn
-        if spawn is None:
-            self._handle(*args)
-        else:
-            spawn(self._handle, *args)
+        try:
+            if spawn is None:
+                self._handle(*args)
+            else:
+                spawn(self._handle, *args)
+        except:
+            self.do_close(*args)
+            raise
+
+    def do_close(self, *args):
+        pass
 
     def _do_read(self):
         for _ in xrange(self.max_accept):
@@ -179,8 +186,7 @@ class BaseServer(object):
         if hasattr(self, 'socket'):
             try:
                 fileno = self.socket.fileno()
-            except Exception:
-                ex = sys.exc_info()[1]
+            except Exception as ex:
                 fileno = str(ex)
             result = 'fileno=%s ' % fileno
         else:
@@ -190,8 +196,7 @@ class BaseServer(object):
                 result += 'address=%s:%s' % self.address
             else:
                 result += 'address=%s' % (self.address, )
-        except Exception:
-            ex = sys.exc_info()[1]
+        except Exception as ex:
             result += str(ex) or '<error>'
         try:
             handle = getfuncname(self.__dict__['handle'])
@@ -286,7 +291,7 @@ class BaseServer(object):
             Greenlet.spawn(self.stop, timeout=stop_timeout).join()
 
     def is_fatal_error(self, ex):
-        return isinstance(ex, _socket.error) and ex[0] in self.fatal_errors
+        return isinstance(ex, _socket.error) and ex.args[0] in self.fatal_errors
 
 
 def _extract_family(host):
@@ -319,5 +324,5 @@ def _parse_address(address):
 def parse_address(address):
     try:
         return _parse_address(address)
-    except ValueError:
-        raise ValueError('Failed to parse address %r: %s' % (address, sys.exc_info()[1]))
+    except ValueError as ex:
+        raise ValueError('Failed to parse address %r: %s' % (address, ex))

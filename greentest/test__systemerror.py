@@ -20,8 +20,7 @@ class Test(greentest.TestCase):
 
         try:
             gevent.sleep(0.001)
-        except SystemExit:
-            ex = sys.exc_info()[1]
+        except SystemExit as ex:
             assert str(ex) == MSG, repr(str(ex))
         else:
             raise AssertionError('must raise SystemExit')
@@ -41,8 +40,7 @@ class Test(greentest.TestCase):
 
         try:
             gevent.sleep(0.001)
-        except SystemError:
-            ex = sys.exc_info()[1]
+        except SystemError as ex:
             assert str(ex) == MSG, repr(str(ex))
         else:
             raise AssertionError('must raise SystemError')

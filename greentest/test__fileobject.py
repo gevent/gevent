@@ -1,7 +1,11 @@
 import os
+import sys
 import greentest
 import gevent
 from gevent.fileobject import FileObject, FileObjectThread
+
+
+PYPY = hasattr(sys, 'pypy_version_info')
 
 
 class Test(greentest.TestCase):
@@ -11,7 +15,10 @@ class Test(greentest.TestCase):
         s = FileObject(w, 'wb')
         s.write('x')
         s.flush()
-        del s
+        if PYPY:
+            s.close()
+        else:
+            del s
         try:
             os.close(w)
         except OSError:
@@ -33,7 +40,10 @@ class Test(greentest.TestCase):
             s = FileObject(w, 'wb', close=False)
             s.write('x')
             s.flush()
-            del s
+            if PYPY:
+                s.close()
+            else:
+                del s
             os.close(w)
             self.assertEqual(FileObject(r).read(), 'x')
 
@@ -67,7 +77,10 @@ else:
             r, w = os.pipe()
             s = SocketAdapter(w)
             s.sendall('x')
-            del s
+            if PYPY:
+                s.close()
+            else:
+                del s
             try:
                 os.close(w)
             except OSError:

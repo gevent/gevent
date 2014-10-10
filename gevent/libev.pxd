@@ -1,4 +1,13 @@
 cdef extern from "libev_vfd.h":
+#ifdef _WIN32
+#ifdef _WIN64
+    ctypedef long long vfd_socket_t
+#else
+    ctypedef long vfd_socket_t
+#endif
+#else
+    ctypedef int vfd_socket_t
+#endif
     long vfd_get(int)
     int vfd_open(long) except -1
     void vfd_free(int)
@@ -94,6 +103,9 @@ cdef extern from "libev.h":
     struct ev_prepare:
         pass
 
+    struct ev_check:
+        pass
+
     struct ev_fork:
         pass
 
@@ -149,6 +161,10 @@ cdef extern from "libev.h":
     void ev_prepare_init(ev_prepare*, void* callback)
     void ev_prepare_start(ev_loop*, ev_prepare*)
     void ev_prepare_stop(ev_loop*, ev_prepare*)
+
+    void ev_check_init(ev_check*, void* callback)
+    void ev_check_start(ev_loop*, ev_check*)
+    void ev_check_stop(ev_loop*, ev_check*)
 
     void ev_fork_init(ev_fork*, void* callback)
     void ev_fork_start(ev_loop*, ev_fork*)

@@ -1,24 +1,4 @@
-# Copyright (c) 2005-2006, Bob Ippolito
-# Copyright (c) 2007, Linden Research, Inc.
-# Copyright (c) 2009-2012 Denis Bilenko
-#
-# Permission is hereby granted, free of charge, to any person obtaining a copy
-# of this software and associated documentation files (the "Software"), to deal
-# in the Software without restriction, including without limitation the rights
-# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-# copies of the Software, and to permit persons to whom the Software is
-# furnished to do so, subject to the following conditions:
-#
-# The above copyright notice and this permission notice shall be included in
-# all copies or substantial portions of the Software.
-#
-# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-# THE SOFTWARE.
+# Copyright (c) 2009-2014 Denis Bilenko and gevent contributors. See LICENSE for details.
 
 """Cooperative socket module.
 
@@ -31,6 +11,7 @@ For convenience, exceptions (like :class:`error <socket.error>` and :class:`time
 as well as the constants from :mod:`socket` module are imported into this module.
 """
 
+<<<<<<< HEAD
 from __future__ import absolute_import
 
 # standard functions and classes that this module re-implements in a gevent-aware way:
@@ -181,35 +162,16 @@ def wait_write(fileno, timeout=None, timeout_exc=timeout('timed out'), event=Non
     io = get_hub().loop.io(fileno, 2)
     return wait(io, timeout, timeout_exc)
 
-
-def wait_readwrite(fileno, timeout=None, timeout_exc=timeout('timed out'), event=None):
-    """Block the current greenlet until *fileno* is ready to read or write.
-
-    If *timeout* is non-negative, then *timeout_exc* is raised after *timeout* second has passed.
-    By default *timeout_exc* is ``socket.timeout('timed out')``.
-
-    If :func:`cancel_wait` is called, raise ``socket.error(EBADF, 'File descriptor was closed in another greenlet')``.
-    """
-    io = get_hub().loop.io(fileno, 3)
-    return wait(io, timeout, timeout_exc)
+=======
+import sys
+from gevent.hub import PY3
+>>>>>>> master
 
 
-cancel_wait_ex = error(EBADF, 'File descriptor was closed in another greenlet')
-
-
-def cancel_wait(watcher):
-    get_hub().cancel_wait(watcher, cancel_wait_ex)
-
-
-if sys.version_info[:2] < (2, 7):
-    _get_memory = buffer
-elif sys.version_info[:2] < (3, 0):
-    def _get_memory(string, offset):
-        try:
-            return memoryview(string)[offset:]
-        except TypeError:
-            return buffer(string, offset)
+if PY3:
+    from gevent import _socket3 as _source
 else:
+<<<<<<< HEAD
     def _get_memory(string, offset):
         return memoryview(string)[offset:]
 
@@ -561,6 +523,15 @@ if hasattr(_socket, 'fromfd'):
         return socket1(_sock=_socket.fromfd(*args))
 else:
     __implements__.remove('fromfd')
+=======
+    from gevent import _socket2 as _source
+
+
+for key in _source.__dict__:
+    if key.startswith('__') and key not in '__implements__ __dns__ __all__ __extensions__ __imports__ __socket__'.split():
+        continue
+    globals()[key] = getattr(_source, key)
+>>>>>>> master
 
 
 try:
@@ -595,92 +566,17 @@ def create_connection(address, timeout=_GLOBAL_DEFAULT_TIMEOUT, source_address=N
                 sock.bind(source_address)
             sock.connect(sa)
             return sock
-        except error:
-            err = sys.exc_info()[1]
+        except error as ex:
             # without exc_clear(), if connect() fails once, the socket is referenced by the frame in exc_info
             # and the next bind() fails (see test__socket.TestCreateConnection)
             # that does not happen with regular sockets though, because _socket.socket.connect() is a built-in.
             # this is similar to "getnameinfo loses a reference" failure in test_socket.py
-            sys.exc_clear()
+            if not PY3:
+                sys.exc_clear()
             if sock is not None:
                 sock.close()
+            err = ex
     if err is not None:
         raise err
     else:
         raise error("getaddrinfo returns an empty list")
-
-
-class BlockingResolver(object):
-
-    def __init__(self, hub=None):
-        pass
-
-    def close(self):
-        pass
-
-    for method in ['gethostbyname',
-                   'gethostbyname_ex',
-                   'getaddrinfo',
-                   'gethostbyaddr',
-                   'getnameinfo']:
-        locals()[method] = staticmethod(getattr(_socket, method))
-
-
-def gethostbyname(hostname):
-    return get_hub().resolver.gethostbyname(hostname)
-
-
-def gethostbyname_ex(hostname):
-    return get_hub().resolver.gethostbyname_ex(hostname)
-
-
-def getaddrinfo(host, port, family=0, socktype=0, proto=0, flags=0):
-    return get_hub().resolver.getaddrinfo(host, port, family, socktype, proto, flags)
-
-
-def gethostbyaddr(ip_address):
-    return get_hub().resolver.gethostbyaddr(ip_address)
-
-
-def getnameinfo(sockaddr, flags):
-    return get_hub().resolver.getnameinfo(sockaddr, flags)
-
-
-def getfqdn(name=''):
-    """Get fully qualified domain name from name.
-
-    An empty argument is interpreted as meaning the local host.
-
-    First the hostname returned by gethostbyaddr() is checked, then
-    possibly existing aliases. In case no FQDN is available, hostname
-    from gethostname() is returned.
-    """
-    name = name.strip()
-    if not name or name == '0.0.0.0':
-        name = gethostname()
-    try:
-        hostname, aliases, ipaddrs = gethostbyaddr(name)
-    except error:
-        pass
-    else:
-        aliases.insert(0, hostname)
-        for name in aliases:
-            if '.' in name:
-                break
-        else:
-            name = hostname
-    return name
-
-
-try:
-    from gevent.ssl import sslwrap_simple as ssl, SSLError as sslerror, SSLSocket as SSLType
-    _have_ssl = True
-except ImportError:
-    _have_ssl = False
-
-
-if sys.version_info[:2] <= (2, 5) and _have_ssl:
-    __implements__.extend(['ssl', 'sslerror', 'SSLType'])
-
-
-__all__ = __implements__ + __extensions__ + __imports__

@@ -1,4 +1,3 @@
-import sys
 import gevent
 from gevent import socket
 import greentest
@@ -29,11 +28,9 @@ class Test(greentest.TestCase):
                 try:
                     result = sock.recv(1024)
                     raise AssertionError('Expected timeout to be raised, instead recv() returned %r' % (result, ))
-                except socket.error:
-                    ex = sys.exc_info()[1]
+                except socket.error as ex:
                     self.assertEqual(ex.args, ('timed out',))
                     self.assertEqual(str(ex), 'timed out')
-                    self.assertEqual(ex[0], 'timed out')
             finally:
                 sock.close()
         finally:

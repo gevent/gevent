@@ -1,4 +1,6 @@
+from __future__ import print_function
 import sys
+import os
 import re
 
 # By default, test cases are expected to switch and emit warnings if there was none
@@ -84,6 +86,9 @@ disabled_tests = \
     , 'test_urllib2net.TimeoutTest.test_http_timeout'
     # accesses _sock.gettimeout() which is always in non-blocking mode
 
+    , 'test_urllib2net.OtherNetworkTests.test_ftp'
+    # too slow
+
     , 'test_urllib2net.OtherNetworkTests.test_urlwithfrag'
     # fails dues to some changes on python.org
 
@@ -139,8 +144,21 @@ disabled_tests = \
     , 'test_thread.ThreadRunningTests.test__count'
     , 'test_thread.TestForkInThread.test_forkinthread'
     # XXX needs investigating
-
 ]
+
+
+def disabled_tests_extend(lines):
+    disabled_tests.extend(lines.strip().split('\n'))
+
+
+if sys.version_info[:2] == (2, 6) and os.environ.get('TRAVIS') == 'true':
+    # somehow these fail with "Permission denied" on travis
+    disabled_tests_extend('''
+test_httpservers.CGIHTTPServerTestCase.test_post
+test_httpservers.CGIHTTPServerTestCase.test_headers_and_content
+test_httpservers.CGIHTTPServerTestCase.test_authorization
+test_httpservers.SimpleHTTPServerTestCase.test_get
+''')
 
 
 if sys.platform == 'darwin':
@@ -167,5 +185,5 @@ def disable_tests_in_source(source, name):
         # XXX ignoring TestCase class name
         testcase = test.split('.')[-1]
         source, n = re.subn(testcase, 'XXX' + testcase, source)
-        print >> sys.stderr, 'Removed %s (%d)' % (testcase, n)
+        print('Removed %s (%d)' % (testcase, n), file=sys.stderr)
     return source

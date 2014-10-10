@@ -9,7 +9,6 @@ concurrency: its :meth:`spawn <Pool.spawn>` method blocks if the number of
 greenlets in the pool has already reached the limit, until there is a free slot.
 """
 
-import sys
 from bisect import insort_right
 
 from gevent.hub import GreenletExit, getcurrent, kill as _kill, PY3
@@ -116,8 +115,7 @@ class Group(object):
                     if not block:
                         break
                     joinall(self.greenlets)
-            except Timeout:
-                ex = sys.exc_info()[1]
+            except Timeout as ex:
                 if ex is not timer:
                     raise
         finally:
@@ -210,6 +208,7 @@ class IMapUnordered(Greenlet):
         self.iterable = iterable
         self.queue = Queue()
         self.count = 0
+        self.finished = False
         self.rawlink(self._on_finish)
 
     def __iter__(self):
@@ -228,13 +227,9 @@ class IMapUnordered(Greenlet):
     def _run(self):
         try:
             func = self.func
-            empty = True
             for item in self.iterable:
                 self.count += 1
                 self.spawn(func, item).rawlink(self._on_result)
-                empty = False
-            if empty:
-                self.queue.put(Failure(StopIteration))
         finally:
             self.__dict__.pop('spawn', None)
             self.__dict__.pop('func', None)
@@ -246,12 +241,20 @@ class IMapUnordered(Greenlet):
             self.queue.put(greenlet.value)
         else:
             self.queue.put(Failure(greenlet.exception))
-        if self.ready() and self.count <= 0:
+        if self.ready() and self.count <= 0 and not self.finished:
             self.queue.put(Failure(StopIteration))
+            self.finished = True
 
     def _on_finish(self, _self):
+        if self.finished:
+            return
         if not self.successful():
             self.queue.put(Failure(self.exception))
+            self.finished = True
+            return
+        if self.count <= 0:
+            self.queue.put(Failure(StopIteration))
+            self.finished = True
 
 
 class IMap(Greenlet):
@@ -268,6 +271,7 @@ class IMap(Greenlet):
         self.waiting = []  # QQQ maybe deque will work faster there?
         self.index = 0
         self.maxindex = -1
+        self.finished = False
         self.rawlink(self._on_finish)
 
     def __iter__(self):
@@ -293,7 +297,6 @@ class IMap(Greenlet):
 
     def _run(self):
         try:
-            empty = True
             func = self.func
             for item in self.iterable:
                 self.count += 1
@@ -301,10 +304,6 @@ class IMap(Greenlet):
                 g.rawlink(self._on_result)
                 self.maxindex += 1
                 g.index = self.maxindex
-                empty = False
-            if empty:
-                self.maxindex += 1
-                self.queue.put((self.maxindex, Failure(StopIteration)))
         finally:
             self.__dict__.pop('spawn', None)
             self.__dict__.pop('func', None)
@@ -316,14 +315,23 @@ class IMap(Greenlet):
             self.queue.put((greenlet.index, greenlet.value))
         else:
             self.queue.put((greenlet.index, Failure(greenlet.exception)))
-        if self.ready() and self.count <= 0:
+        if self.ready() and self.count <= 0 and not self.finished:
             self.maxindex += 1
             self.queue.put((self.maxindex, Failure(StopIteration)))
+            self.finished = True
 
     def _on_finish(self, _self):
+        if self.finished:
+            return
         if not self.successful():
             self.maxindex += 1
             self.queue.put((self.maxindex, Failure(self.exception)))
+            self.finished = True
+            return
+        if self.count <= 0:
+            self.maxindex += 1
+            self.queue.put((self.maxindex, Failure(StopIteration)))
+            self.finished = True
 
 
 class Failure(object):

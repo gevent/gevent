@@ -20,7 +20,6 @@
 # THE SOFTWARE.
 
 # package is named greentest, not test, so it won't be confused with test in stdlib
-from __future__ import with_statement
 import sys
 import unittest
 from unittest import TestCase as BaseTestCase
@@ -33,7 +32,9 @@ from gevent.hub import _get_hub
 from functools import wraps
 import contextlib
 import gc
+import six
 
+PYPY = hasattr(sys, 'pypy_version_info')
 VERBOSE = sys.argv.count('-v') > 1
 
 if '--debug-greentest' in sys.argv:
@@ -43,6 +44,7 @@ else:
     DEBUG = False
 
 gettotalrefcount = getattr(sys, 'gettotalrefcount', None)
+OPTIONAL_MODULES = ['resolver_ares']
 
 
 def wrap_switch_count_check(method):
@@ -88,11 +90,12 @@ def wrap_refcount(method):
 
     @wraps(method)
     def wrapped(self, *args, **kwargs):
-        import gc
-        gc.disable()
+        gc.collect()
+        gc.collect()
         gc.collect()
         deltas = []
         d = None
+        gc.disable()
         try:
             while True:
                 d = gettotalrefcount()
@@ -101,6 +104,8 @@ def wrap_refcount(method):
                 self.tearDown()
                 if 'urlparse' in sys.modules:
                     sys.modules['urlparse'].clear_cache()
+                if 'urllib.parse' in sys.modules:
+                    sys.modules['urllib.parse'].clear_cache()
                 d = gettotalrefcount() - d
                 deltas.append(d)
                 # the following configurations are classified as "no leak"
@@ -127,7 +132,6 @@ def wrap_refcount(method):
                 if len(deltas) >= limit:
                     raise AssertionError('refcount increased by %r' % (deltas, ))
         finally:
-            gc.collect()
             gc.enable()
         self.skipTearDown = True
 
@@ -204,9 +208,7 @@ class TestCaseMetaClass(type):
         return type.__new__(meta, classname, bases, classDict)
 
 
-class TestCase(BaseTestCase):
-
-    __metaclass__ = TestCaseMetaClass
+class TestCase(TestCaseMetaClass("NewBase", (BaseTestCase,), {})):
     __timeout__ = 1
     switch_expected = 'default'
     error_fatal = True
@@ -296,8 +298,7 @@ def test_outer_timeout_is_not_lost(self):
     try:
         try:
             result = self.wait(timeout=1)
-        except gevent.Timeout:
-            ex = sys.exc_info()[1]
+        except gevent.Timeout as ex:
             assert ex is timeout, (ex, timeout)
         else:
             raise AssertionError('must raise Timeout (returned %r)' % (result, ))
@@ -346,8 +347,7 @@ class GenericGetTestCase(TestCase):
         timeout = gevent.Timeout(0.01)
         try:
             self.wait(timeout=timeout)
-        except gevent.Timeout:
-            ex = sys.exc_info()[1]
+        except gevent.Timeout as ex:
             assert ex is timeout, (ex, timeout)
         delay = time.time() - start
         assert 0.01 - 0.001 <= delay < 0.01 + 0.01 + 0.1, delay
@@ -359,8 +359,7 @@ class GenericGetTestCase(TestCase):
         timeout = gevent.Timeout(0.01, exception=error)
         try:
             self.wait(timeout=timeout)
-        except RuntimeError:
-            ex = sys.exc_info()[1]
+        except RuntimeError as ex:
             assert ex is error, (ex, error)
         delay = time.time() - start
         assert 0.01 - 0.001 <= delay < 0.01 + 0.01 + 0.1, delay
@@ -371,7 +370,9 @@ class ExpectedException(Exception):
     """An exception whose traceback should be ignored"""
 
 
-def walk_modules(basedir=None, modpath=None, include_so=False):
+def walk_modules(basedir=None, modpath=None, include_so=False, recursive=False):
+    if PYPY:
+        include_so = False
     if basedir is None:
         basedir = os.path.dirname(gevent.__file__)
         if modpath is None:
@@ -382,6 +383,8 @@ def walk_modules(basedir=None, modpath=None, include_so=False):
     for fn in sorted(os.listdir(basedir)):
         path = os.path.join(basedir, fn)
         if os.path.isdir(path):
+            if not recursive:
+                continue
             pkg_init = os.path.join(path, '__init__.py')
             if os.path.exists(pkg_init):
                 yield pkg_init, modpath + fn
@@ -392,8 +395,14 @@ def walk_modules(basedir=None, modpath=None, include_so=False):
             x = fn[:-3]
             if x.endswith('_d'):
                 x = x[:-2]
-            if x not in ['__init__', 'core', 'ares', '_util', '_semaphore']:
-                yield path, modpath + x
+            if x in ['__init__', 'core', 'ares', '_util', '_semaphore', 'corecffi']:
+                continue
+            if x in OPTIONAL_MODULES:
+                try:
+                    six.exec_("import %s" % x, {})
+                except ImportError:
+                    continue
+            yield path, modpath + x
         elif include_so and fn.endswith('.so'):
             if fn.endswith('_d.so'):
                 yield path, modpath + fn[:-5]
@@ -435,3 +444,14 @@ def get_number_open_files():
     if os.path.exists('/proc/'):
         fd_directory = '/proc/%d/fd' % os.getpid()
         return len(os.listdir(fd_directory))
+
+
+if PYPY:
+
+    def getrefcount(*args):
+        pass
+
+else:
+
+    def getrefcount(*args):
+        return sys.getrefcount(*args)

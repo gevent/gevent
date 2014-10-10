@@ -1,7 +1,6 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
-from __future__ import with_statement
-import sys
+import six
 import re
 import greentest
 import socket
@@ -9,6 +8,7 @@ from time import time
 import gevent
 import gevent.socket as gevent_socket
 from util import log
+from six import xrange
 
 
 resolver = gevent.get_hub().resolver
@@ -29,8 +29,8 @@ def _run(function, *args):
         result = function(*args)
         assert not isinstance(result, BaseException), repr(result)
         return result
-    except Exception:
-        return sys.exc_info()[1]
+    except Exception as ex:
+        return ex
 
 
 def format_call(function, args):
@@ -50,13 +50,13 @@ def log_fresult(result, seconds):
         msg = '  -=>  raised %r' % (result, )
     else:
         msg = '  -=>  returned %r' % (result, )
-    time = ' %.2fms' % (seconds * 1000.0, )
-    space = 80 - len(msg) - len(time)
+    time_ms = ' %.2fms' % (seconds * 1000.0, )
+    space = 80 - len(msg) - len(time_ms)
     if space > 0:
         space = ' ' * space
     else:
         space = ''
-    log(msg + space + time)
+    log(msg + space + time_ms)
 
 
 def run(function, *args):
@@ -75,24 +75,27 @@ def log_call(result, time, function, *args):
     log_fresult(result, time)
 
 
-google_host_re = re.compile('^arn[a-z0-9-]+.1e100.net$')
-
-
-def compare_ipv6(a, b):
+def compare_relaxed(a, b):
     """
-    >>> compare_ipv6('2a00:1450:400f:801::1010', '2a00:1450:400f:800::1011')
+    >>> compare_relaxed('2a00:1450:400f:801::1010', '2a00:1450:400f:800::1011')
     True
-    >>> compare_ipv6('2a00:1450:400f:801::1010', '2aXX:1450:400f:900::1011')
+
+    >>> compare_relaxed('2a00:1450:400f:801::1010', '2aXX:1450:400f:900::1011')
     False
-    >>> compare_ipv6('2a00:1450:4016:800::1013', '2a00:1450:4008:c01::93')
+
+    >>> compare_relaxed('2a00:1450:4016:800::1013', '2a00:1450:4008:c01::93')
     True
+
+    >>> compare_relaxed('a.surfly.com', 'b.surfly.com')
+    True
+
+    >>> compare_relaxed('a.surfly.com', 'a.gevent.org')
+    False
     """
     if a.count(':') == 5 and b.count(':') == 5:
-        # QQQ not actually sure if this is right thing to do
-        return a.rsplit(':')[:2] == b.rsplit(':')[:2]
-    if google_host_re.match(a) and google_host_re.match(b):
+        # IPv6 address from different requests might be different
         return True
-    return a == b
+    return a.split('.', 1)[-1] == b.split('.', 1)[-1]
 
 
 def contains_5tuples(lst):
@@ -106,24 +109,29 @@ def relaxed_is_equal(a, b):
     """
     >>> relaxed_is_equal([(10, 1, 6, '', ('2a00:1450:400f:801::1010', 80, 0, 0))], [(10, 1, 6, '', ('2a00:1450:400f:800::1011', 80, 0, 0))])
     True
+
     >>> relaxed_is_equal([1, '2'], (1, '2'))
     False
+
     >>> relaxed_is_equal([1, '2'], [1, '2'])
+    True
+
+    >>> relaxed_is_equal(('wi-in-x93.1e100.net', 'http'), ('we-in-x68.1e100.net', 'http'))
     True
     """
     if type(a) is not type(b):
         return False
-    if isinstance(a, basestring):
-        return compare_ipv6(a, b)
-    if hasattr(a, '__iter__'):
-        if len(a) != len(b):
-            return False
-        if contains_5tuples(a) and contains_5tuples(b):
-            # getaddrinfo results
-            a = sorted(a)
-            b = sorted(b)
-        return all(relaxed_is_equal(x, y) for (x, y) in zip(a, b))
-    return a == b
+    if a == b:
+        return True
+    if isinstance(a, six.string_types):
+        return compare_relaxed(a, b)
+    if len(a) != len(b):
+        return False
+    if contains_5tuples(a) and contains_5tuples(b):
+        # getaddrinfo results
+        a = sorted(a)
+        b = sorted(b)
+    return all(relaxed_is_equal(x, y) for (x, y) in zip(a, b))
 
 
 def add(klass, hostname, name=None):
@@ -298,8 +306,8 @@ class TestFamily(TestCase):
         try:
             result = function(*args)
             raise AssertionError('%s: Expected to raise %s, instead returned %r' % (function, error, result))
-        except Exception, ex:
-            if isinstance(error, basestring):
+        except Exception as ex:
+            if isinstance(error, six.string_types):
                 repr_error = error
             else:
                 repr_error = repr(error)

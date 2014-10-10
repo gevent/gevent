@@ -1,16 +1,13 @@
-# Wrapper module for _ssl. Written by Bill Janssen.
-# Ported to gevent by Denis Bilenko.
-"""SSL wrapper for socket objects.
+from gevent.hub import PY3
 
-For the documentation, refer to :mod:`ssl` module manual.
 
-This module implements cooperative SSL socket wrappers.
-On Python 2.6 and newer it uses Python's native :mod:`ssl` module. On Python 2.5 and 2.4
-it requires `ssl package`_ to be installed.
+if PY3:
+    from gevent import _ssl3 as _source
+else:
+    from gevent import _ssl2 as _source
 
-.. _`ssl package`: http://pypi.python.org/pypi/ssl
-"""
 
+<<<<<<< HEAD
 from __future__ import absolute_import
 import ssl as __ssl__
 
@@ -415,3 +412,9 @@ def sslwrap_simple(sock, keyfile=None, certfile=None):
     for compability with Python 2.5 and earlier.  Will disappear in
     Python 3.0."""
     return SSLSocket(sock, keyfile, certfile)
+=======
+for key in _source.__dict__:
+    if key.startswith('__') and key not in '__implements__ __all__ __imports__'.split():
+        continue
+    globals()[key] = getattr(_source, key)
+>>>>>>> master

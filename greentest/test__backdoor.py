@@ -2,6 +2,7 @@ import greentest
 import gevent
 from gevent import socket
 from gevent import backdoor
+from six import xrange
 
 
 def read_until(conn, postfix):

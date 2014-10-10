@@ -21,6 +21,10 @@ static struct ev_loop* gevent_ev_default_loop(unsigned int flags)
 
     if (sigchld_state)
         return ev_default_loop(flags);
+<<<<<<< HEAD
+=======
+
+>>>>>>> master
     sigaction(SIGCHLD, NULL, &tmp);
     result = ev_default_loop(flags);
     // XXX what if SIGCHLD received there?

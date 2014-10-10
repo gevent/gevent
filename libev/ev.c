@@ -359,6 +359,22 @@
 # define EV_HEAP_CACHE_AT EV_FEATURE_DATA
 #endif
 
+#ifdef ANDROID
+/* supposedly, android doesn't typedef fd_mask */
+# undef EV_USE_SELECT
+# define EV_USE_SELECT 0
+/* supposedly, we need to include syscall.h, not sys/syscall.h, so just disable */
+# undef EV_USE_CLOCK_SYSCALL
+# define EV_USE_CLOCK_SYSCALL 0
+#endif
+
+/* aix's poll.h seems to cause lots of trouble */
+#ifdef _AIX
+/* AIX has a completely broken poll.h header */
+# undef EV_USE_POLL
+# define EV_USE_POLL 0
+#endif
+
 /* on linux, we can use a (slow) syscall to avoid a dependency on pthread, */
 /* which makes programs even slower. might work on other unices, too. */
 #if EV_USE_CLOCK_SYSCALL
@@ -374,12 +390,6 @@
 #endif
 
 /* this block fixes any misconfiguration where we know we run into trouble otherwise */
-
-#ifdef _AIX
-/* AIX has a completely broken poll.h header */
-# undef EV_USE_POLL
-# define EV_USE_POLL 0
-#endif
 
 #ifndef CLOCK_MONOTONIC
 # undef EV_USE_MONOTONIC
@@ -507,7 +517,7 @@ struct signalfd_siginfo
 #define ECB_H
 
 /* 16 bits major, 16 bits minor */
-#define ECB_VERSION 0x00010001
+#define ECB_VERSION 0x00010003
 
 #ifdef _WIN32
   typedef   signed char   int8_t;
@@ -532,13 +542,21 @@ struct signalfd_siginfo
     typedef uint32_t uintptr_t;
     typedef  int32_t  intptr_t;
   #endif
- typedef intptr_t ptrdiff_t;
 #else
   #include <inttypes.h>
   #if UINTMAX_MAX > 0xffffffffU
     #define ECB_PTRSIZE 8
   #else
     #define ECB_PTRSIZE 4
+  #endif
+#endif
+
+/* work around x32 idiocy by defining proper macros */
+#if __x86_64 || _M_AMD64
+  #if __ILP32
+    #define ECB_AMD64_X32 1
+  #else
+    #define ECB_AMD64 1
   #endif
 #endif
 
@@ -562,6 +580,16 @@ struct signalfd_siginfo
 #define ECB_C11   (__STDC_VERSION__ >= 201112L)
 #define ECB_CPP   (__cplusplus+0)
 #define ECB_CPP11 (__cplusplus >= 201103L)
+
+#if ECB_CPP
+  #define ECB_EXTERN_C extern "C"
+  #define ECB_EXTERN_C_BEG ECB_EXTERN_C {
+  #define ECB_EXTERN_C_END }
+#else
+  #define ECB_EXTERN_C extern
+  #define ECB_EXTERN_C_BEG
+  #define ECB_EXTERN_C_END
+#endif
 
 /*****************************************************************************/
 
@@ -617,9 +645,16 @@ struct signalfd_siginfo
   #if ECB_GCC_VERSION(4,7)
     /* see comment below (stdatomic.h) about the C11 memory model. */
     #define ECB_MEMORY_FENCE         __atomic_thread_fence (__ATOMIC_SEQ_CST)
-  #elif defined __clang && __has_feature (cxx_atomic)
-    /* see comment below (stdatomic.h) about the C11 memory model. */
-    #define ECB_MEMORY_FENCE         __c11_atomic_thread_fence (__ATOMIC_SEQ_CST)
+
+  /* The __has_feature syntax from clang is so misdesigned that we cannot use it
+   * without risking compile time errors with other compilers. We *could*
+   * define our own ecb_clang_has_feature, but I just can't be bothered to work
+   * around this shit time and again.
+   * #elif defined __clang && __has_feature (cxx_atomic)
+   *   // see comment below (stdatomic.h) about the C11 memory model.
+   *   #define ECB_MEMORY_FENCE         __c11_atomic_thread_fence (__ATOMIC_SEQ_CST)
+   */
+
   #elif ECB_GCC_VERSION(4,4) || defined __INTEL_COMPILER || defined __clang__
     #define ECB_MEMORY_FENCE         __sync_synchronize ()
   #elif _MSC_VER >= 1400 /* VC++ 2005 */
@@ -937,14 +972,32 @@ ecb_inline uint64_t ecb_rotr64 (uint64_t x, unsigned int count) { return (x << (
 #endif
 
 /* try to tell the compiler that some condition is definitely true */
-#define ecb_assume(cond) do { if (!(cond)) ecb_unreachable (); } while (0)
+#define ecb_assume(cond) if (!(cond)) ecb_unreachable (); else 0
 
 ecb_inline unsigned char ecb_byteorder_helper (void) ecb_const;
 ecb_inline unsigned char
 ecb_byteorder_helper (void)
 {
-  const uint32_t u = 0x11223344;
-  return *(unsigned char *)&u;
+  /* the union code still generates code under pressure in gcc, */
+  /* but less than using pointers, and always seems to */
+  /* successfully return a constant. */
+  /* the reason why we have this horrible preprocessor mess */
+  /* is to avoid it in all cases, at least on common architectures */
+  /* or when using a recent enough gcc version (>= 4.6) */
+#if __i386 || __i386__ || _M_X86 || __amd64 || __amd64__ || _M_X64
+  return 0x44;
+#elif __BYTE_ORDER__ && __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
+  return 0x44;
+#elif __BYTE_ORDER__ && __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__
+  return 0x11;
+#else
+  union
+  {
+    uint32_t i;
+    uint8_t c;
+  } u = { 0x11223344 };
+  return u.c;
+#endif
 }
 
 ecb_inline ecb_bool ecb_big_endian    (void) ecb_const;
@@ -983,6 +1036,173 @@ ecb_inline ecb_bool ecb_little_endian (void) { return ecb_byteorder_helper () ==
   }
 #else
   #define ecb_array_length(name) (sizeof (name) / sizeof (name [0]))
+#endif
+
+/*******************************************************************************/
+/* floating point stuff, can be disabled by defining ECB_NO_LIBM */
+
+/* basically, everything uses "ieee pure-endian" floating point numbers */
+/* the only noteworthy exception is ancient armle, which uses order 43218765 */
+#if 0 \
+    || __i386 || __i386__ \
+    || __amd64 || __amd64__ || __x86_64 || __x86_64__ \
+    || __powerpc__ || __ppc__ || __powerpc64__ || __ppc64__ \
+    || defined __arm__ && defined __ARM_EABI__ \
+    || defined __s390__ || defined __s390x__ \
+    || defined __mips__ \
+    || defined __alpha__ \
+    || defined __hppa__ \
+    || defined __ia64__ \
+    || defined _M_IX86 || defined _M_AMD64 || defined _M_IA64
+  #define ECB_STDFP 1
+  #include <string.h> /* for memcpy */
+#else
+  #define ECB_STDFP 0
+  #include <math.h> /* for frexp*, ldexp* */
+#endif
+
+#ifndef ECB_NO_LIBM
+
+  /* convert a float to ieee single/binary32 */
+  ecb_function_ uint32_t ecb_float_to_binary32 (float x) ecb_const;
+  ecb_function_ uint32_t
+  ecb_float_to_binary32 (float x)
+  {
+    uint32_t r;
+
+    #if ECB_STDFP
+      memcpy (&r, &x, 4);
+    #else
+      /* slow emulation, works for anything but -0 */
+      uint32_t m;
+      int e;
+
+      if (x == 0e0f                    ) return 0x00000000U;
+      if (x > +3.40282346638528860e+38f) return 0x7f800000U;
+      if (x < -3.40282346638528860e+38f) return 0xff800000U;
+      if (x != x                       ) return 0x7fbfffffU;
+
+      m = frexpf (x, &e) * 0x1000000U;
+
+      r = m & 0x80000000U;
+
+      if (r)
+        m = -m;
+
+      if (e <= -126)
+        {
+          m &= 0xffffffU;
+          m >>= (-125 - e);
+          e = -126;
+        }
+
+      r |= (e + 126) << 23;
+      r |= m & 0x7fffffU;
+    #endif
+
+    return r;
+  }
+
+  /* converts an ieee single/binary32 to a float */
+  ecb_function_ float ecb_binary32_to_float (uint32_t x) ecb_const;
+  ecb_function_ float
+  ecb_binary32_to_float (uint32_t x)
+  {
+    float r;
+
+    #if ECB_STDFP
+      memcpy (&r, &x, 4);
+    #else
+      /* emulation, only works for normals and subnormals and +0 */
+      int neg = x >> 31;
+      int e = (x >> 23) & 0xffU;
+
+      x &= 0x7fffffU;
+
+      if (e)
+        x |= 0x800000U;
+      else
+        e = 1;
+
+      /* we distrust ldexpf a bit and do the 2**-24 scaling by an extra multiply */
+      r = ldexpf (x * (0.5f / 0x800000U), e - 126);
+
+      r = neg ? -r : r;
+    #endif
+
+    return r;
+  }
+
+  /* convert a double to ieee double/binary64 */
+  ecb_function_ uint64_t ecb_double_to_binary64 (double x) ecb_const;
+  ecb_function_ uint64_t
+  ecb_double_to_binary64 (double x)
+  {
+    uint64_t r;
+
+    #if ECB_STDFP
+      memcpy (&r, &x, 8);
+    #else
+      /* slow emulation, works for anything but -0 */
+      uint64_t m;
+      int e;
+
+      if (x == 0e0                     ) return 0x0000000000000000U;
+      if (x > +1.79769313486231470e+308) return 0x7ff0000000000000U;
+      if (x < -1.79769313486231470e+308) return 0xfff0000000000000U;
+      if (x != x                       ) return 0X7ff7ffffffffffffU;
+
+      m = frexp (x, &e) * 0x20000000000000U;
+
+      r = m & 0x8000000000000000;;
+
+      if (r)
+        m = -m;
+
+      if (e <= -1022)
+        {
+          m &= 0x1fffffffffffffU;
+          m >>= (-1021 - e);
+          e = -1022;
+        }
+
+      r |= ((uint64_t)(e + 1022)) << 52;
+      r |= m & 0xfffffffffffffU;
+    #endif
+
+    return r;
+  }
+
+  /* converts an ieee double/binary64 to a double */
+  ecb_function_ double ecb_binary64_to_double (uint64_t x) ecb_const;
+  ecb_function_ double
+  ecb_binary64_to_double (uint64_t x)
+  {
+    double r;
+
+    #if ECB_STDFP
+      memcpy (&r, &x, 8);
+    #else
+      /* emulation, only works for normals and subnormals and +0 */
+      int neg = x >> 63;
+      int e = (x >> 52) & 0x7ffU;
+
+      x &= 0xfffffffffffffU;
+
+      if (e)
+        x |= 0x10000000000000U;
+      else
+        e = 1;
+
+      /* we distrust ldexp a bit and do the 2**-53 scaling by an extra multiply */
+      r = ldexp (x * (0.5 / 0x10000000000000U), e - 1022);
+
+      r = neg ? -r : r;
+    #endif
+
+    return r;
+  }
+
 #endif
 
 #endif
@@ -2030,7 +2250,9 @@ void
 ev_feed_signal (int signum) EV_THROW
 {
 #if EV_MULTIPLICITY
-  EV_P = signals [signum - 1].loop;
+  EV_P;
+  ECB_MEMORY_FENCE_ACQUIRE;
+  EV_A = signals [signum - 1].loop;
 
   if (!EV_A)
     return;
@@ -3528,6 +3750,7 @@ ev_signal_start (EV_P_ ev_signal *w) EV_THROW
            !signals [w->signum - 1].loop || signals [w->signum - 1].loop == loop));
 
   signals [w->signum - 1].loop = EV_A;
+  ECB_MEMORY_FENCE_RELEASE;
 #endif
 
   EV_FREQUENT_CHECK;
@@ -3692,7 +3915,10 @@ static void noinline stat_timer_cb (EV_P_ ev_timer *w_, int revents);
 static void noinline
 infy_add (EV_P_ ev_stat *w)
 {
-  w->wd = inotify_add_watch (fs_fd, w->path, IN_ATTRIB | IN_DELETE_SELF | IN_MOVE_SELF | IN_MODIFY | IN_DONT_FOLLOW | IN_MASK_ADD);
+  w->wd = inotify_add_watch (fs_fd, w->path,
+                             IN_ATTRIB | IN_DELETE_SELF | IN_MOVE_SELF | IN_MODIFY
+                             | IN_CREATE | IN_DELETE | IN_MOVED_FROM | IN_MOVED_TO
+                             | IN_DONT_FOLLOW | IN_MASK_ADD);
 
   if (w->wd >= 0)
     {
@@ -3706,10 +3932,16 @@ infy_add (EV_P_ ev_stat *w)
         w->timer.repeat = w->interval ? w->interval : DEF_STAT_INTERVAL;
       else if (!statfs (w->path, &sfs)
                && (sfs.f_type == 0x1373 /* devfs */
+                   || sfs.f_type == 0x4006 /* fat */
+                   || sfs.f_type == 0x4d44 /* msdos */
                    || sfs.f_type == 0xEF53 /* ext2/3 */
+                   || sfs.f_type == 0x72b6 /* jffs2 */
+                   || sfs.f_type == 0x858458f6 /* ramfs */
+                   || sfs.f_type == 0x5346544e /* ntfs */
                    || sfs.f_type == 0x3153464a /* jfs */
+                   || sfs.f_type == 0x9123683e /* btrfs */
                    || sfs.f_type == 0x52654973 /* reiser3 */
-                   || sfs.f_type == 0x01021994 /* tempfs */
+                   || sfs.f_type == 0x01021994 /* tmpfs */
                    || sfs.f_type == 0x58465342 /* xfs */))
         w->timer.repeat = 0.; /* filesystem is local, kernel new enough */
       else

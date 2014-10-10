@@ -1,9 +1,8 @@
 # Copyright (c) 2009-2011 Denis Bilenko. See LICENSE for details.
 from __future__ import absolute_import
-import sys
-from gevent.timeout import Timeout
 from gevent.event import Event
 from gevent.hub import get_hub
+from gevent.hub import integer_types
 
 __implements__ = ['select']
 __all__ = ['error'] + __implements__
@@ -16,7 +15,7 @@ def get_fileno(obj):
     try:
         fileno_f = obj.fileno
     except AttributeError:
-        if not isinstance(obj, (int, long)):
+        if not isinstance(obj, integer_types):
             raise TypeError('argument must be an int, or have a fileno() method: %r' % (obj, ))
         return obj
     else:
@@ -63,8 +62,7 @@ def select(rlist, wlist, xlist, timeout=None):
                 watcher.priority = MAXPRI
                 watcher.start(result.add_write, writefd)
                 watchers.append(watcher)
-        except IOError:
-            ex = sys.exc_info()[1]
+        except IOError as ex:
             raise error(*ex.args)
         result.event.wait(timeout=timeout)
         return result.read, result.write, []

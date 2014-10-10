@@ -1,5 +1,6 @@
 import sys
-from gevent.hub import PY3
+
+PY3 = sys.version_info[0] >= 3
 
 if PY3:
     advance_iterator = next
@@ -16,8 +17,9 @@ if PY3:
             raise value.with_traceback(tb)
         raise value
 
-    print_ = getattr(builtins, "print")
-    del builtins
+    xrange = range
+    string_types = str,
+    text_type = str
 
 else:
     def exec_(code, globs=None, locs=None):
@@ -31,3 +33,8 @@ else:
         elif locs is None:
             locs = globs
         exec("""exec code in globs, locs""")
+
+    import __builtin__ as builtins
+    xrange = builtins.xrange
+    string_types = builtins.basestring,
+    text_type = builtins.unicode

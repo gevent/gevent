@@ -1,4 +1,11 @@
 #ifdef _WIN32
+#ifdef _WIN64
+typedef PY_LONG_LONG vfd_socket_t;
+#define vfd_socket_object PyLong_FromLongLong
+#else
+typedef long vfd_socket_t;
+#define vfd_socket_object PyInt_FromLong
+#endif
 #ifdef LIBEV_EMBED
 /*
  * If libev on win32 is embedded, then we can use an
@@ -13,7 +20,7 @@
 
 typedef struct vfd_entry_t
 {
-	long handle; /* OS handle, i.e. SOCKET */
+	vfd_socket_t handle; /* OS handle, i.e. SOCKET */
 	int count; /* Reference count, 0 if free */
 	int next; /* Next free fd, -1 if last */
 } vfd_entry;
@@ -58,7 +65,7 @@ static CRITICAL_SECTION* vfd_make_lock()
  * Given a virtual fd returns an OS handle or -1
  * This function is speed critical, so it cannot use GIL
  */
-static long vfd_get(int fd)
+static vfd_socket_t vfd_get(int fd)
 {
 	int handle = -1;
 	VFD_LOCK_ENTER;
@@ -74,7 +81,7 @@ static long vfd_get(int fd)
  * Given an OS handle finds or allocates a virtual fd
  * Returns -1 on failure and sets Python exception if pyexc is non-zero
  */
-static int vfd_open_(long handle, int pyexc)
+static int vfd_open_(vfd_socket_t handle, int pyexc)
 {
 	VFD_GIL_DECLARE;
 	int fd = -1;
@@ -87,7 +94,13 @@ static int vfd_open_(long handle, int pyexc)
 	}
 	if (ioctlsocket(handle, FIONREAD, &arg) != 0) {
 		if (pyexc)
-			PyErr_Format(PyExc_IOError, "%ld is not a socket (files are not supported)", handle);
+			PyErr_Format(PyExc_IOError,
+#ifdef _WIN64
+				"%lld is not a socket (files are not supported)",
+#else
+				"%ld is not a socket (files are not supported)",
+#endif
+				handle);
 		goto done;
 	}
 	if (vfd_map == NULL) {
@@ -95,7 +108,7 @@ static int vfd_open_(long handle, int pyexc)
 		if (vfd_map == NULL)
 			goto done;
 	}
-	key = PyLong_FromLong(handle);
+	key = vfd_socket_object(handle);
 	/* check if it's already in the dict */
 	value = PyDict_GetItem(vfd_map, key);
 	if (value != NULL) {
@@ -168,14 +181,14 @@ static void vfd_free_(int fd, int needclose)
 		goto done; /* free entry, ignore */
 	if (!--vfd_entries[fd].count) {
 		/* fd has just been freed */
-		long handle = vfd_entries[fd].handle;
+		vfd_socket_t handle = vfd_entries[fd].handle;
 		vfd_entries[fd].handle = -1;
 		vfd_entries[fd].next = vfd_next;
 		vfd_next = fd;
 		if (needclose)
 			closesocket(handle);
 		/* vfd_map is assumed to be != NULL */
-		key = PyLong_FromLong(handle);
+		key = vfd_socket_object(handle);
 		PyDict_DelItem(vfd_map, key);
 		Py_DECREF(key);
 	}
@@ -203,6 +216,7 @@ done:
 /*
  * On non-win32 platforms vfd_* are noop macros
  */
+typedef int vfd_socket_t;
 #define vfd_get(fd) (fd)
 #define vfd_open(fd) ((int)(fd))
 #define vfd_free(fd)

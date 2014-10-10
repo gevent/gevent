@@ -1,4 +1,3 @@
-
 .. implementing-servers:
 
 Implementing servers
@@ -7,7 +6,7 @@ Implementing servers
 There are a few classes to simplify server implementation with gevent. They all share the similar interface::
 
   def handle(socket, address):
-       print 'new connection!'
+       print('new connection!')
 
   server = StreamServer(('127.0.0.1', 1234), handle) # creates a new server
   server.start() # start accepting new connections
@@ -42,14 +41,13 @@ More examples are available in the `code repository`_:
 - `wsgiserver.py`_ - demonstrates :class:`wsgi.WSGIServer <gevent.wsgi.WSGIServer>`
 - `wsgiserver_ssl.py`_ - demonstrates :class:`pywsgi.WSGIServer <gevent.pywsgi.WSGIServer>`
 
-.. _`code repository`: http://bitbucket.org/denis/gevent/src/tip/examples/#source-path
+.. _`code repository`: https://github.com/surfly/gevent/tree/master/examples
 .. _`does not support streaming`: http://code.google.com/p/gevent/issues/detail?id=4
 .. _`pipelining does not work`: http://code.google.com/p/gevent/issues/detail?id=32
 .. _gunicorn: http://gunicorn.org
-.. _`echoserver.py`: http://bitbucket.org/denis/gevent/src/tip/examples/echoserver.py#cl-9
-.. _`wsgiserver.py`: http://bitbucket.org/denis/gevent/src/tip/examples/wsgiserver.py#cl-4
-.. _`wsgiserver_ssl.py`: http://bitbucket.org/denis/gevent/src/tip/examples/wsgiserver_ssl.py#cl-4
-.. _`httpserver.py`: http://bitbucket.org/denis/gevent/src/tip/examples/httpserver.py#cl-4
+.. _`echoserver.py`: https://github.com/surfly/gevent/blob/master/examples/echoserver.py#L34
+.. _`wsgiserver.py`: https://github.com/surfly/gevent/blob/master/examples/wsgiserver.py#L18
+.. _`wsgiserver_ssl.py`: https://github.com/surfly/gevent/blob/master/examples/wsgiserver_ssl.py#L17
 
 .. toctree::
 

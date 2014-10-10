@@ -17,6 +17,13 @@ __all__ = ['get_version',
            'time',
            'loop']
 
+cdef tuple integer_types
+
+if sys.version_info[0] >= 3:
+    integer_types = int,
+else:
+    integer_types = (int, long)
+
 
 cdef extern from "callbacks.h":
     void gevent_callback_io(libev.ev_loop, void*, int)
@@ -24,6 +31,7 @@ cdef extern from "callbacks.h":
     void gevent_callback_signal(libev.ev_loop, void*, int)
     void gevent_callback_idle(libev.ev_loop, void*, int)
     void gevent_callback_prepare(libev.ev_loop, void*, int)
+    void gevent_callback_check(libev.ev_loop, void*, int)
     void gevent_callback_fork(libev.ev_loop, void*, int)
     void gevent_callback_async(libev.ev_loop, void*, int)
     void gevent_callback_child(libev.ev_loop, void*, int)
@@ -151,7 +159,7 @@ cpdef unsigned int _flags_to_int(object flags) except? -1:
     # Note, that order does not matter, libev has its own predefined order
     if not flags:
         return 0
-    if isinstance(flags, (int, long)):
+    if isinstance(flags, integer_types):
         return flags
     cdef unsigned int result = 0
     try:
@@ -161,13 +169,13 @@ cpdef unsigned int _flags_to_int(object flags) except? -1:
             value = value.strip().lower()
             if value:
                 result |= _flags_str2int[value]
-    except KeyError, ex:
+    except KeyError as ex:
         raise ValueError('Invalid backend or flag: %s\nPossible values: %s' % (ex, ', '.join(sorted(_flags_str2int.keys()))))
     return result
 
 
 cdef str _str_hex(object flag):
-    if isinstance(flag, (int, long)):
+    if isinstance(flag, integer_types):
         return hex(flag)
     return str(flag)
 
@@ -346,6 +354,8 @@ cdef public class loop [object PyGeventLoopObject, type PyGeventLoop_Type]:
             return libev.EV_MINPRI
 
     def _handle_syserr(self, message, errno):
+        if sys.version_info[0] >= 3:
+            message = message.decode()
         self.handle_error(None, SystemError, SystemError(message + ': ' + os.strerror(errno)), None)
 
     cpdef handle_error(self, context, type, value, tb):
@@ -446,8 +456,13 @@ cdef public class loop [object PyGeventLoopObject, type PyGeventLoop_Type]:
             CHECK_LOOP3(self)
             return libev.ev_pending_count(self._ptr)
 
+#ifdef _WIN32
+    def io(self, libev.vfd_socket_t fd, int events, ref=True, priority=None):
+        return io(self, fd, events, ref, priority)
+#else
     def io(self, int fd, int events, ref=True, priority=None):
         return io(self, fd, events, ref, priority)
+#endif
 
     def timer(self, double after, double repeat=0.0, ref=True, priority=None):
         return timer(self, after, repeat, ref, priority)
@@ -460,6 +475,9 @@ cdef public class loop [object PyGeventLoopObject, type PyGeventLoop_Type]:
 
     def prepare(self, ref=True, priority=None):
         return prepare(self, ref, priority)
+
+    def check(self, ref=True, priority=None):
+        return check(self, ref, priority)
 
     def fork(self, ref=True, priority=None):
         return fork(self, ref, priority)
@@ -778,7 +796,7 @@ cdef public class io(watcher) [object PyGeventIOObject, type PyGeventIO_Type]:
 
 #ifdef _WIN32
 
-    def __init__(self, loop loop, long fd, int events, ref=True, priority=None):
+    def __init__(self, loop loop, libev.vfd_socket_t fd, int events, ref=True, priority=None):
         if events & ~(libev.EV__IOFDSET | libev.EV_READ | libev.EV_WRITE):
             raise ValueError('illegal event mask: %r' % events)
         cdef int vfd = libev.vfd_open(fd)
@@ -935,6 +953,13 @@ cdef public class prepare(watcher) [object PyGeventPrepareObject, type PyGeventP
     WATCHER(prepare)
 
     INIT(prepare,,)
+
+
+cdef public class check(watcher) [object PyGeventCheckObject, type PyGeventCheck_Type]:
+
+    WATCHER(check)
+
+    INIT(check,,)
 
 
 cdef public class fork(watcher) [object PyGeventForkObject, type PyGeventFork_Type]:

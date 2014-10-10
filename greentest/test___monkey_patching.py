@@ -3,10 +3,13 @@ import os
 import glob
 import util
 import atexit
+# subprocess: include in subprocess tests
 
 
-TIMEOUT = 60
+TIMEOUT = 120
 directory = '%s.%s' % sys.version_info[:2]
+if hasattr(sys, 'pypy_version_info'):
+    directory += 'pypy'
 version = '%s.%s.%s' % sys.version_info[:3]
 
 
@@ -16,6 +19,8 @@ def get_absolute_pythonpath():
 
 
 def TESTRUNNER(tests=None):
+    if not os.path.exists(directory):
+        return
     preferred_version = open(os.path.join(directory, 'version')).read().strip()
     if preferred_version != version:
         util.log('WARNING: The tests in %s/ are from version %s and your Python is %s', directory, preferred_version, version)

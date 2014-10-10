@@ -1,6 +1,5 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
-from __future__ import with_statement
 import greentest
 import socket
 from test__socket_dns import TestCase, add

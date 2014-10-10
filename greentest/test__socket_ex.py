@@ -11,8 +11,8 @@ class TestClosedSocket(greentest.TestCase):
         sock.close()
         try:
             sock.send('a', timeout=1)
-        except socket.error, ex:
-            if ex[0] != 9:
+        except socket.error as ex:
+            if ex.args[0] != 9:
                 raise
 
 

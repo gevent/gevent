@@ -1,3 +1,4 @@
+from __future__ import print_function
 import sys
 
 
@@ -16,8 +17,11 @@ elif sys.argv[1:] == ['subprocess']:
     gevent.monkey.patch_all(sys=True)
 
     def printline():
-        line = raw_input()
-        print '%s chars.' % len(line)
+        try:
+            line = raw_input()
+        except NameError:
+            line = input()
+        print('%s chars.' % len(line))
 
     gevent.spawn(printline).join()
 

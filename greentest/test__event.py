@@ -1,7 +1,7 @@
 import greentest
 import gevent
-import sys
 from gevent.event import Event, AsyncResult
+from six import xrange
 
 DELAY = 0.01
 
@@ -46,8 +46,7 @@ class TestAsyncResult(greentest.TestCase):
             try:
                 result = e.get()
                 log.append(('received', result))
-            except Exception:
-                ex = sys.exc_info()[1]
+            except Exception as ex:
                 log.append(('catched', ex))
         gevent.spawn(waiter)
         obj = Exception()

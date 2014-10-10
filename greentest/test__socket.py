@@ -7,6 +7,7 @@ import traceback
 import time
 import greentest
 from functools import wraps
+import six
 
 # we use threading on purpose so that we can test both regular and gevent sockets with the same code
 from threading import Thread as _Thread
@@ -77,7 +78,7 @@ class TestTCP(greentest.TestCase):
         self._test_sendall(self.long_data)
 
     def test_sendall_unicode(self):
-        self._test_sendall(unicode(self.long_data))
+        self._test_sendall(six.text_type(self.long_data))
 
     def test_sendall_array(self):
         data = array.array("B", self.long_data)
@@ -146,9 +147,10 @@ class TestTCP(greentest.TestCase):
 
         def accept_once():
             conn, addr = self.listener.accept()
-            fd = conn.makefile()
+            fd = conn.makefile(mode='w')
             fd.write('hello\n')
             fd.close()
+            conn.close()  # for pypy
 
         acceptor = Thread(target=accept_once)
         client = self.create_connection()
@@ -175,8 +177,7 @@ class TestCreateConnection(greentest.TestCase):
     def test(self):
         try:
             socket.create_connection(('localhost', get_port()), timeout=30, source_address=('', get_port()))
-        except socket.error:
-            ex = sys.exc_info()[1]
+        except socket.error as ex:
             if 'refused' not in str(ex).lower():
                 raise
         else:

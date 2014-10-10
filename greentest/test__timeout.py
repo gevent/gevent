@@ -1,6 +1,5 @@
 import greentest
 import gevent
-import sys
 from gevent.hub import get_hub
 
 DELAY = 0.01
@@ -12,16 +11,14 @@ class TestDirectRaise(greentest.TestCase):
     def test_direct_raise_class(self):
         try:
             raise gevent.Timeout
-        except gevent.Timeout:
-            t = sys.exc_info()[1]
+        except gevent.Timeout as t:
             assert not t.pending, repr(t)
 
     def test_direct_raise_instance(self):
         timeout = gevent.Timeout()
         try:
             raise timeout
-        except gevent.Timeout:
-            t = sys.exc_info()[1]
+        except gevent.Timeout as t:
             assert timeout is t, (timeout, t)
             assert not t.pending, repr(t)
 
@@ -32,8 +29,7 @@ class Test(greentest.TestCase):
         try:
             get_hub().switch()
             raise AssertionError('Must raise Timeout')
-        except gevent.Timeout:
-            ex = sys.exc_info()[1]
+        except gevent.Timeout as ex:
             if ex is not timeout:
                 raise
 

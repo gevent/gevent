@@ -1,4 +1,5 @@
 #! /usr/bin/env python
+from __future__ import print_function
 import time
 from gevent import socket
 from gevent.server import StreamServer
@@ -14,7 +15,7 @@ def main():
     server.start()
 
     length = 50 * 0x100000
-    data = "x" * length
+    data = b"x" * length
 
     spent_total = 0
     N = 10
@@ -24,10 +25,10 @@ def main():
         start = time.time()
         conn.sendall(data)
         spent = time.time() - start
-        print ("%.2f MB/s" % (length / spent / 0x100000))
+        print("%.2f MB/s" % (length / spent / 0x100000))
         spent_total += spent
 
-    print ("~ %.2f MB/s" % (length * N / spent_total / 0x100000))
+    print("~ %.2f MB/s" % (length * N / spent_total / 0x100000))
     server.stop()
 
 

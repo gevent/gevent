@@ -76,8 +76,7 @@ class Event(object):
                     try:
                         result = self.hub.switch()
                         assert result is self, 'Invalid switch into Event.wait(): %r' % (result, )
-                    except Timeout:
-                        ex = sys.exc_info()[1]
+                    except Timeout as ex:
                         if ex is not timer:
                             raise
                 finally:
@@ -115,6 +114,12 @@ class Event(object):
                 except:
                     self.hub.handle_error((link, self), *sys.exc_info())
 
+    def _reset_internal_locks(self):
+        # for compatibility with threading.Event (only in case of patch_all(Event=True), by default Event is not pathed)
+        #  Exception AttributeError: AttributeError("'Event' object has no attribute '_reset_internal_locks'",)
+        # in <module 'threading' from '/usr/lib/python2.7/threading.pyc'> ignored
+        pass
+
 
 class AsyncResult(object):
     """A one-time event that stores a value or an exception.
@@ -142,12 +147,14 @@ class AsyncResult(object):
 
     :class:`AsyncResult` implements :meth:`__call__` and thus can be used as :meth:`link` target:
 
+        >>> import gevent
         >>> result = AsyncResult()
         >>> gevent.spawn(lambda : 1/0).link(result)
-        >>> result.get()
-        Traceback (most recent call last):
-         ...
-        ZeroDivisionError: integer division or modulo by zero
+        >>> try:
+        ...     result.get()
+        ... except ZeroDivisionError:
+        ...     print 'ZeroDivisionError'
+        ZeroDivisionError
     """
     def __init__(self):
         self._links = deque()
@@ -268,8 +275,7 @@ class AsyncResult(object):
                     assert result is self, 'Invalid switch into AsyncResult.wait(): %r' % (result, )
                 finally:
                     timer.cancel()
-            except Timeout:
-                exc = sys.exc_info()[1]
+            except Timeout as exc:
                 self.unlink(switch)
                 if exc is not timer:
                     raise

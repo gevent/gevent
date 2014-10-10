@@ -3,7 +3,14 @@
 import sys
 import _socket
 from gevent.baseserver import BaseServer
+<<<<<<< HEAD
 from gevent.socket import EWOULDBLOCK, socket1
+=======
+from gevent.socket import EWOULDBLOCK, socket
+from gevent.hub import PYPY, PY3
+if PY3:
+    from io import BlockingIOError
+>>>>>>> master
 
 
 __all__ = ['StreamServer', 'DatagramServer']
@@ -88,6 +95,7 @@ class StreamServer(BaseServer):
             backlog = self.backlog
         return _tcp_listener(address, backlog=backlog, reuse_addr=self.reuse_addr, family=family)
 
+<<<<<<< HEAD
     def do_read(self):
         try:
             client_socket, address = self.socket.accept()
@@ -96,6 +104,38 @@ class StreamServer(BaseServer):
                 return
             raise
         return socket(_sock=client_socket), address
+=======
+    if PY3:
+
+        def do_read(self):
+            sock = self.socket
+            try:
+                fd, address = sock._accept()
+            except BlockingIOError:
+                if sock.timeout == 0.0:
+                    return
+                raise
+            sock = socket(sock.family, sock.type, sock.proto, fileno=fd)
+            # XXX Python issue #7995?
+            return sock, address
+
+    else:
+
+        def do_read(self):
+            try:
+                client_socket, address = self.socket.accept()
+            except _socket.error as err:
+                if err.args[0] == EWOULDBLOCK:
+                    return
+                raise
+            sockobj = socket(_sock=client_socket)
+            if PYPY:
+                client_socket._drop()
+            return sockobj, address
+
+    def do_close(self, socket, *args):
+        socket.close()
+>>>>>>> master
 
     def wrap_socket_and_handle(self, client_socket, address):
         # used in case of ssl sockets
@@ -131,7 +171,11 @@ class DatagramServer(BaseServer):
         try:
             data, address = self._socket.recvfrom(8192)
         except _socket.error as err:
+<<<<<<< HEAD
             if err[0] == EWOULDBLOCK:
+=======
+            if err.args[0] == EWOULDBLOCK:
+>>>>>>> master
                 return
             raise
         return data, address
@@ -151,8 +195,7 @@ def _tcp_listener(address, backlog=50, reuse_addr=None, family=_socket.AF_INET):
         sock.setsockopt(_socket.SOL_SOCKET, _socket.SO_REUSEADDR, reuse_addr)
     try:
         sock.bind(address)
-    except _socket.error:
-        ex = sys.exc_info()[1]
+    except _socket.error as ex:
         strerror = getattr(ex, 'strerror', None)
         if strerror is not None:
             ex.strerror = strerror + ': ' + repr(address)
@@ -169,8 +212,7 @@ def _udp_socket(address, backlog=50, reuse_addr=None, family=_socket.AF_INET):
         sock.setsockopt(_socket.SOL_SOCKET, _socket.SO_REUSEADDR, reuse_addr)
     try:
         sock.bind(address)
-    except _socket.error:
-        ex = sys.exc_info()[1]
+    except _socket.error as ex:
         strerror = getattr(ex, 'strerror', None)
         if strerror is not None:
             ex.strerror = strerror + ': ' + repr(address)

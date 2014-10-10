@@ -5,14 +5,22 @@ import errno
 import sys
 import time
 import traceback
+<<<<<<< HEAD
 import email
 from datetime import datetime
 from urllib.parse import quote
+=======
+from datetime import datetime
+try:
+    from urllib import unquote
+except ImportError:
+    from urllib.parse import unquote
+>>>>>>> master
 
 from gevent import socket
 import gevent
 from gevent.server import StreamServer
-from gevent.hub import GreenletExit
+from gevent.hub import GreenletExit, PY3, reraise
 
 
 __all__ = ['WSGIHandler', 'WSGIServer']
@@ -163,10 +171,47 @@ class Input(object):
         return line
 
 
+try:
+    import mimetools
+    headers_factory = mimetools.Message
+except ImportError:
+    # adapt Python 3 HTTP headers to old API
+    from http import client
+
+    class OldMessage(client.HTTPMessage):
+        def __init__(self, **kwargs):
+            super().__init__(**kwargs)
+            self.status = ''
+
+        def getheader(self, name, default=None):
+            return self.get(name, default)
+
+        @property
+        def headers(self):
+            for key, value in self._headers:
+                yield '%s: %s\r\n' % (key, value)
+
+        @property
+        def typeheader(self):
+            return self.get('content-type')
+
+    def headers_factory(fp, *args):
+        try:
+            ret = client.parse_headers(fp, _class=OldMessage)
+        except client.LineTooLong:
+            ret = OldMessage()
+            ret.status = 'Line too long'
+        return ret
+
+
 class WSGIHandler(object):
     protocol_version = 'HTTP/1.1'
+<<<<<<< HEAD
     MessageClass = email
     #.message_from_string(Message)
+=======
+    MessageClass = headers_factory
+>>>>>>> master
 
     def __init__(self, socket, address, server, rfile=None):
         self.socket = socket
@@ -309,8 +354,7 @@ class WSGIHandler(object):
             # for compatibility with older versions of pywsgi, we pass self.requestline as an argument there
             if not self.read_request(self.requestline):
                 return ('400', _BAD_REQUEST_RESPONSE)
-        except Exception:
-            ex = sys.exc_info()[1]
+        except Exception as ex:
             if not isinstance(ex, ValueError):
                 traceback.print_exc()
             self.log_error('Invalid request: %s', str(ex) or ex.__class__.__name__)
@@ -320,11 +364,11 @@ class WSGIHandler(object):
         self.application = self.server.application
         try:
             self.handle_one_response()
-        except socket.error:
-            ex = sys.exc_info()[1]
+        except socket.error as ex:
             # Broken pipe, connection reset by peer
             if ex.args[0] in (errno.EPIPE, errno.ECONNRESET):
-                sys.exc_clear()
+                if not PY3:
+                    sys.exc_clear()
                 return
             else:
                 raise
@@ -380,53 +424,34 @@ class WSGIHandler(object):
                 raise AssertionError("The application did not call start_response()")
             self._write_with_headers(data)
 
-    if sys.version_info[:2] >= (2, 6):
+    def _write_with_headers(self, data):
+        towrite = bytearray()
+        self.headers_sent = True
+        self.finalize_headers()
 
-        def _write_with_headers(self, data):
-            towrite = bytearray()
-            self.headers_sent = True
-            self.finalize_headers()
+        towrite.extend('HTTP/1.1 %s\r\n' % self.status)
+        for header in self.response_headers:
+            towrite.extend('%s: %s\r\n' % header)
 
-            towrite.extend('HTTP/1.1 %s\r\n' % self.status)
-            for header in self.response_headers:
-                towrite.extend('%s: %s\r\n' % header)
-
-            towrite.extend('\r\n')
-            if data:
-                if self.response_use_chunked:
-                    ## Write the chunked encoding
-                    towrite.extend("%x\r\n%s\r\n" % (len(data), data))
-                else:
-                    towrite.extend(data)
-            self._sendall(towrite)
-
-    else:
-        # Python 2.5 does not have bytearray
-
-        def _write_with_headers(self, data):
-            towrite = []
-            self.headers_sent = True
-            self.finalize_headers()
-
-            towrite.append('HTTP/1.1 %s\r\n' % self.status)
-            for header in self.response_headers:
-                towrite.append('%s: %s\r\n' % header)
-
-            towrite.append('\r\n')
-            if data:
-                if self.response_use_chunked:
-                    ## Write the chunked encoding
-                    towrite.append("%x\r\n%s\r\n" % (len(data), data))
-                else:
-                    towrite.append(data)
-            self._sendall(''.join(towrite))
+        towrite.extend('\r\n')
+        if data:
+            if self.response_use_chunked:
+                ## Write the chunked encoding
+                towrite.extend("%x\r\n%s\r\n" % (len(data), data))
+            else:
+                towrite.extend(data)
+        self._sendall(towrite)
 
     def start_response(self, status, headers, exc_info=None):
         if exc_info:
             try:
                 if self.headers_sent:
                     # Re-raise original exception if headers sent
+<<<<<<< HEAD
                     raise (exc_info[0], exc_info[1], exc_info[2])
+=======
+                    reraise(*exc_info)
+>>>>>>> master
             finally:
                 # Avoid dangling circular ref
                 exc_info = None
