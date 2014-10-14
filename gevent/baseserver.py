@@ -303,7 +303,7 @@ def _extract_family(host):
 
 def _parse_address(address):
     if isinstance(address, tuple):
-        if ':' in address[0]:
+        if not address[0] or ':' in address[0]:
             return _socket.AF_INET6, address
         return _socket.AF_INET, address
     elif isinstance(address, string_types):
@@ -314,9 +314,9 @@ def _parse_address(address):
                 host = ''
             return family, (host, int(port))
         else:
-            return _socket.AF_INET, ('', int(address))
+            return _socket.AF_INET6, ('', int(address))
     elif isinstance(address, integer_types):
-        return _socket.AF_INET, ('', int(address))
+        return _socket.AF_INET6, ('', int(address))
     else:
         raise TypeError('Expected tuple or string, got %s' % type(address))
 
