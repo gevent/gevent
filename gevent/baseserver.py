@@ -3,7 +3,7 @@
 import sys
 import _socket
 import errno
-from gevent.greenlet import Greenlet, getfuncname
+from gevent.greenlet import Greenlet
 from gevent.event import Event
 from gevent.hub import string_types, integer_types, get_hub, xrange
 
@@ -198,12 +198,25 @@ class BaseServer(object):
                 result += 'address=%s' % (self.address, )
         except Exception as ex:
             result += str(ex) or '<error>'
+
+        handle = self.__dict__.get('handle')
         try:
-            handle = getfuncname(self.__dict__['handle'])
-        except Exception:
-            handle = None
-        if handle is not None:
-            result += ' handle=' + handle
+            if handle is not None:
+                fself = getattr(handle, '__self__')
+                if fself is self:
+                    # Checks the __self__ of the handle in case it is a bound
+                    # method of self to prevent recursivly defined reprs.
+                    handle_repr = '<bound method %s.%s of self>' % (
+                        self.__class__.__name__,
+                        handle.__name__,
+                    )
+                else:
+                    handle_repr = repr(handle)
+
+                result += ' handle=' + handle_repr
+        except AttributeError:
+            pass
+
         return result
 
     @property
