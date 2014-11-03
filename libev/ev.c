@@ -1,7 +1,7 @@
 /*
  * libev event processing core, watcher management
  *
- * Copyright (c) 2007,2008,2009,2010,2011,2012 Marc Alexander Lehmann <libev@schmorp.de>
+ * Copyright (c) 2007,2008,2009,2010,2011,2012,2013 Marc Alexander Lehmann <libev@schmorp.de>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modifica-
@@ -45,11 +45,11 @@
 #  include "config.h"
 # endif
 
-#if HAVE_FLOOR
-# ifndef EV_USE_FLOOR
-#  define EV_USE_FLOOR 1
+# if HAVE_FLOOR
+#  ifndef EV_USE_FLOOR
+#   define EV_USE_FLOOR 1
+#  endif
 # endif
-#endif
 
 # if HAVE_CLOCK_SYSCALL
 #  ifndef EV_USE_CLOCK_SYSCALL
@@ -243,10 +243,7 @@
 #elif defined _sys_nsig
 # define EV_NSIG (_sys_nsig) /* Solaris 2.5 */
 #else
-# error "unable to find value for NSIG, please report"
-/* to make it compile regardless, just remove the above line, */
-/* but consider reporting it, too! :) */
-# define EV_NSIG 65
+# define EV_NSIG (8 * sizeof (sigset_t) + 1)
 #endif
 
 #ifndef EV_USE_FLOOR
@@ -254,10 +251,19 @@
 #endif
 
 #ifndef EV_USE_CLOCK_SYSCALL
-# if __linux && __GLIBC__ >= 2
+# if __linux && __GLIBC__ == 2 && __GLIBC_MINOR__ < 17
 #  define EV_USE_CLOCK_SYSCALL EV_FEATURE_OS
 # else
 #  define EV_USE_CLOCK_SYSCALL 0
+# endif
+#endif
+
+#if !(_POSIX_TIMERS > 0)
+# ifndef EV_USE_MONOTONIC
+#  define EV_USE_MONOTONIC 0
+# endif
+# ifndef EV_USE_REALTIME
+#  define EV_USE_REALTIME 0
 # endif
 #endif
 
@@ -487,7 +493,7 @@ struct signalfd_siginfo
 /*
  * libecb - http://software.schmorp.de/pkg/libecb
  *
- * Copyright (©) 2009-2012 Marc Alexander Lehmann <libecb@schmorp.de>
+ * Copyright (©) 2009-2014 Marc Alexander Lehmann <libecb@schmorp.de>
  * Copyright (©) 2011 Emanuele Giaquinta
  * All rights reserved.
  *
@@ -511,6 +517,17 @@ struct signalfd_siginfo
  * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTH-
  * ERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
  * OF THE POSSIBILITY OF SUCH DAMAGE.
+ *
+ * Alternatively, the contents of this file may be used under the terms of
+ * the GNU General Public License ("GPL") version 2 or any later version,
+ * in which case the provisions of the GPL are applicable instead of
+ * the above. If you wish to allow the use of your version of this file
+ * only under the terms of the GPL and not to allow others to use your
+ * version of this file under the BSD license, indicate your decision
+ * by deleting the provisions above and replace them with the notice
+ * and other provisions required by the GPL. If you do not delete the
+ * provisions above, a recipient may use your version of this file under
+ * either the BSD or the GPL.
  */
 
 #ifndef ECB_H
@@ -552,8 +569,8 @@ struct signalfd_siginfo
 #endif
 
 /* work around x32 idiocy by defining proper macros */
-#if __x86_64 || _M_AMD64
-  #if __ILP32
+#if __amd64 || __x86_64 || _M_AMD64 || _M_X64
+  #if _ILP32
     #define ECB_AMD64_X32 1
   #else
     #define ECB_AMD64 1
@@ -575,11 +592,19 @@ struct signalfd_siginfo
   #endif
 #endif
 
-#define ECB_C     (__STDC__+0) /* this assumes that __STDC__ is either empty or a number */
-#define ECB_C99   (__STDC_VERSION__ >= 199901L)
-#define ECB_C11   (__STDC_VERSION__ >= 201112L)
 #define ECB_CPP   (__cplusplus+0)
 #define ECB_CPP11 (__cplusplus >= 201103L)
+
+#if ECB_CPP
+  #define ECB_C            0
+  #define ECB_STDC_VERSION 0
+#else
+  #define ECB_C            1
+  #define ECB_STDC_VERSION __STDC_VERSION__
+#endif
+
+#define ECB_C99   (ECB_STDC_VERSION >= 199901L)
+#define ECB_C11   (ECB_STDC_VERSION >= 201112L)
 
 #if ECB_CPP
   #define ECB_EXTERN_C extern "C"
@@ -622,14 +647,18 @@ struct signalfd_siginfo
     #elif defined __ARM_ARCH_7__  || defined __ARM_ARCH_7A__  \
        || defined __ARM_ARCH_7M__ || defined __ARM_ARCH_7R__
       #define ECB_MEMORY_FENCE         __asm__ __volatile__ ("dmb"      : : : "memory")
-    #elif __sparc || __sparc__
+    #elif __aarch64__
+      #define ECB_MEMORY_FENCE         __asm__ __volatile__ ("dmb ish"  : : : "memory")
+    #elif (__sparc || __sparc__) && !__sparcv8
       #define ECB_MEMORY_FENCE         __asm__ __volatile__ ("membar #LoadStore | #LoadLoad | #StoreStore | #StoreLoad" : : : "memory")
       #define ECB_MEMORY_FENCE_ACQUIRE __asm__ __volatile__ ("membar #LoadStore | #LoadLoad"                            : : : "memory")
       #define ECB_MEMORY_FENCE_RELEASE __asm__ __volatile__ ("membar #LoadStore             | #StoreStore")
     #elif defined __s390__ || defined __s390x__
       #define ECB_MEMORY_FENCE         __asm__ __volatile__ ("bcr 15,0" : : : "memory")
     #elif defined __mips__
-      #define ECB_MEMORY_FENCE         __asm__ __volatile__ ("sync"     : : : "memory")
+      /* GNU/Linux emulates sync on mips1 architectures, so we force its use */
+      /* anybody else who still uses mips1 is supposed to send in their version, with detection code. */
+      #define ECB_MEMORY_FENCE         __asm__ __volatile__ (".set mips2; sync; .set mips0" : : : "memory")
     #elif defined __alpha__
       #define ECB_MEMORY_FENCE         __asm__ __volatile__ ("mb"       : : : "memory")
     #elif defined __hppa__
@@ -637,6 +666,12 @@ struct signalfd_siginfo
       #define ECB_MEMORY_FENCE_RELEASE __asm__ __volatile__ ("")
     #elif defined __ia64__
       #define ECB_MEMORY_FENCE         __asm__ __volatile__ ("mf"       : : : "memory")
+    #elif defined __m68k__
+      #define ECB_MEMORY_FENCE         __asm__ __volatile__ (""         : : : "memory")
+    #elif defined __m88k__
+      #define ECB_MEMORY_FENCE         __asm__ __volatile__ ("tb1 0,%%r0,128" : : : "memory")
+    #elif defined __sh__
+      #define ECB_MEMORY_FENCE         __asm__ __volatile__ (""         : : : "memory")
     #endif
   #endif
 #endif
@@ -645,6 +680,8 @@ struct signalfd_siginfo
   #if ECB_GCC_VERSION(4,7)
     /* see comment below (stdatomic.h) about the C11 memory model. */
     #define ECB_MEMORY_FENCE         __atomic_thread_fence (__ATOMIC_SEQ_CST)
+    #define ECB_MEMORY_FENCE_ACQUIRE __atomic_thread_fence (__ATOMIC_ACQUIRE)
+    #define ECB_MEMORY_FENCE_RELEASE __atomic_thread_fence (__ATOMIC_RELEASE)
 
   /* The __has_feature syntax from clang is so misdesigned that we cannot use it
    * without risking compile time errors with other compilers. We *could*
@@ -653,10 +690,18 @@ struct signalfd_siginfo
    * #elif defined __clang && __has_feature (cxx_atomic)
    *   // see comment below (stdatomic.h) about the C11 memory model.
    *   #define ECB_MEMORY_FENCE         __c11_atomic_thread_fence (__ATOMIC_SEQ_CST)
+   *   #define ECB_MEMORY_FENCE_ACQUIRE __c11_atomic_thread_fence (__ATOMIC_ACQUIRE)
+   *   #define ECB_MEMORY_FENCE_RELEASE __c11_atomic_thread_fence (__ATOMIC_RELEASE)
    */
 
   #elif ECB_GCC_VERSION(4,4) || defined __INTEL_COMPILER || defined __clang__
     #define ECB_MEMORY_FENCE         __sync_synchronize ()
+  #elif _MSC_VER >= 1500 /* VC++ 2008 */
+    /* apparently, microsoft broke all the memory barrier stuff in Visual Studio 2008... */
+    #pragma intrinsic(_ReadBarrier,_WriteBarrier,_ReadWriteBarrier)
+    #define ECB_MEMORY_FENCE         _ReadWriteBarrier (); MemoryBarrier()
+    #define ECB_MEMORY_FENCE_ACQUIRE _ReadWriteBarrier (); MemoryBarrier() /* according to msdn, _ReadBarrier is not a load fence */
+    #define ECB_MEMORY_FENCE_RELEASE _WriteBarrier (); MemoryBarrier()
   #elif _MSC_VER >= 1400 /* VC++ 2005 */
     #pragma intrinsic(_ReadBarrier,_WriteBarrier,_ReadWriteBarrier)
     #define ECB_MEMORY_FENCE         _ReadWriteBarrier ()
@@ -686,6 +731,8 @@ struct signalfd_siginfo
     /* for most usages, or gcc and clang have a bug */
     /* I *currently* lean towards the latter, and inefficiently implement */
     /* all three of ecb's fences as a seq_cst fence */
+    /* Update, gcc-4.8 generates mfence for all c++ fences, but nothing */
+    /* for all __atomic_thread_fence's except seq_cst */
     #define ECB_MEMORY_FENCE         atomic_thread_fence (memory_order_seq_cst)
   #endif
 #endif
@@ -752,6 +799,11 @@ typedef int ecb_bool;
   #define ecb_prefetch(addr,rw,locality) __builtin_prefetch (addr, rw, locality)
 #else
   #define ecb_attribute(attrlist)
+
+  /* possible C11 impl for integral types
+  typedef struct ecb_is_constant_struct ecb_is_constant_struct;
+  #define ecb_is_constant(expr)          _Generic ((1 ? (struct ecb_is_constant_struct *)0 : (void *)((expr) - (expr)), ecb_is_constant_struct *: 0, default: 1)) */
+
   #define ecb_is_constant(expr)          0
   #define ecb_expect(expr,value)         (expr)
   #define ecb_prefetch(addr,rw,locality)
@@ -764,11 +816,18 @@ typedef int ecb_bool;
   #define ecb_decltype(x) __typeof(x)
 #endif
 
+#if _MSC_VER >= 1300
+  #define ecb_deprecated __declspec(deprecated)
+#else
+  #define ecb_deprecated ecb_attribute ((__deprecated__))
+#endif
+
 #define ecb_noinline   ecb_attribute ((__noinline__))
 #define ecb_unused     ecb_attribute ((__unused__))
 #define ecb_const      ecb_attribute ((__const__))
 #define ecb_pure       ecb_attribute ((__pure__))
 
+/* http://msdn.microsoft.com/en-us/library/k6ktzx3s.aspx __declspec(noreturn) */
 #if ECB_C11
   #define ecb_noreturn   _Noreturn
 #else
@@ -1047,21 +1106,56 @@ ecb_inline ecb_bool ecb_little_endian (void) { return ecb_byteorder_helper () ==
     || __i386 || __i386__ \
     || __amd64 || __amd64__ || __x86_64 || __x86_64__ \
     || __powerpc__ || __ppc__ || __powerpc64__ || __ppc64__ \
-    || defined __arm__ && defined __ARM_EABI__ \
     || defined __s390__ || defined __s390x__ \
     || defined __mips__ \
     || defined __alpha__ \
     || defined __hppa__ \
     || defined __ia64__ \
-    || defined _M_IX86 || defined _M_AMD64 || defined _M_IA64
+    || defined __m68k__ \
+    || defined __m88k__ \
+    || defined __sh__ \
+    || defined _M_IX86 || defined _M_AMD64 || defined _M_IA64 \
+    || (defined __arm__ && (defined __ARM_EABI__ || defined __EABI__ || defined __VFP_FP__ || defined _WIN32_WCE || defined __ANDROID__)) \
+    || defined __aarch64__
   #define ECB_STDFP 1
   #include <string.h> /* for memcpy */
 #else
   #define ECB_STDFP 0
-  #include <math.h> /* for frexp*, ldexp* */
 #endif
 
 #ifndef ECB_NO_LIBM
+
+  #include <math.h> /* for frexp*, ldexp*, INFINITY, NAN */
+
+  /* only the oldest of old doesn't have this one. solaris. */
+  #ifdef INFINITY
+    #define ECB_INFINITY INFINITY
+  #else
+    #define ECB_INFINITY HUGE_VAL
+  #endif
+
+  #ifdef NAN
+    #define ECB_NAN NAN
+  #else
+    #define ECB_NAN ECB_INFINITY
+  #endif
+
+  /* converts an ieee half/binary16 to a float */
+  ecb_function_ float ecb_binary16_to_float (uint16_t x) ecb_const;
+  ecb_function_ float
+  ecb_binary16_to_float (uint16_t x)
+  {
+    int e = (x >> 10) & 0x1f;
+    int m = x & 0x3ff;
+    float r;
+
+    if      (!e     ) r = ldexpf (m        ,    -24);
+    else if (e != 31) r = ldexpf (m + 0x400, e - 25);
+    else if (m      ) r = ECB_NAN;
+    else              r = ECB_INFINITY;
+
+    return x & 0x8000 ? -r : r;
+  }
 
   /* convert a float to ieee single/binary32 */
   ecb_function_ uint32_t ecb_float_to_binary32 (float x) ecb_const;
@@ -2106,8 +2200,6 @@ evpipe_init (EV_P)
           fd_intern (fds [0]);
         }
 
-      fd_intern (fds [1]);
-
       evpipe [0] = fds [0];
 
       if (evpipe [1] < 0)
@@ -2122,6 +2214,8 @@ evpipe_init (EV_P)
           dup2 (fds [1], evpipe [1]);
           close (fds [1]);
         }
+
+      fd_intern (evpipe [1]);
 
       ev_io_set (&pipe_w, evpipe [0] < 0 ? evpipe [1] : evpipe [0], EV_READ);
       ev_io_start (EV_A_ &pipe_w);
@@ -2515,7 +2609,7 @@ ev_userdata (EV_P) EV_THROW
 }
 
 void
-ev_set_invoke_pending_cb (EV_P_ void (*invoke_pending_cb)(EV_P)) EV_THROW
+ev_set_invoke_pending_cb (EV_P_ ev_loop_callback invoke_pending_cb) EV_THROW
 {
   invoke_cb = invoke_pending_cb;
 }
