@@ -32,6 +32,13 @@ __all__ = ['get_hub',
            'reinit']
 
 
+import sys
+if sys.platform == 'win32':
+    import socket  # trigger WSAStartup call
+    del socket
+del sys
+
+
 from gevent.hub import get_hub, iwait, wait, PYPY
 from gevent.greenlet import Greenlet, joinall, killall
 spawn = Greenlet.spawn
