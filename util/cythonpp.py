@@ -738,7 +738,7 @@ if __name__ == '__main__':
 
     options, args = parser.parse_args()
     if len(args) != 1:
-        sys.exit('Expected one argument, got %s' % len(args))
+        sys.exit('Expected one argument (filename), got %r' % args)
     filename = args[0]
 
     if options.debug:
