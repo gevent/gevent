@@ -65,10 +65,6 @@ if PYPY:
 
         # BUGS:
 
-        # https://bugs.pypy.org/issue1743
-        'test__real_greenlet.py',
-        'test__exc_info.py',
-
         # in CPython we compile _semaphore.py with Cython to make its operation atomic
         # how to do atomic operations on PyPy?
         'test__threading_vs_settrace.py',
@@ -86,7 +82,9 @@ if PYPY:
         'test__refcount.py',
         'test__server.py',
         'test_subprocess.py',  # test_executable_without_cwd
-        'FLAKY test___example_servers.py'
+        'FLAKY test___example_servers.py',
+        'test_httpservers.py',
+        'FLAKY test_queue.py',
     ]
 
 
