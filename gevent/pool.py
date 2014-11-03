@@ -190,6 +190,9 @@ class Group(object):
         returned iterator should be considered in arbitrary order."""
         return IMapUnordered.spawn(func, iterable, spawn=self.spawn)
 
+    def empty(self):
+        return self.__len__() == 0
+
     def full(self):
         return False
 
