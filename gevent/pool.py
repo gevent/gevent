@@ -97,6 +97,7 @@ class Group(object):
                     raise greenlet.exception
         else:
             self._empty_event.wait(timeout=timeout)
+        return self._empty_event.is_set()
 
     def kill(self, exception=GreenletExit, block=True, timeout=None):
         timer = Timeout.start_new(timeout)
