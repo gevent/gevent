@@ -7,9 +7,10 @@ import sys
 import time
 import warnings
 import errno
+import struct
 
 from test import test_support
-from test.test_support import TESTFN, run_unittest, unlink
+from test.test_support import TESTFN, run_unittest, unlink, HOST
 from StringIO import StringIO
 
 try:
@@ -17,7 +18,6 @@ try:
 except ImportError:
     threading = None
 
-HOST = test_support.HOST
 
 class dummysocket:
     def __init__(self):
@@ -483,8 +483,9 @@ class TCPServer(asyncore.dispatcher):
         return self.socket.getsockname()[:2]
 
     def handle_accept(self):
-        sock, addr = self.accept()
-        self.handler(sock)
+        pair = self.accept()
+        if pair is not None:
+            self.handler(pair[0])
 
     def handle_error(self):
         raise
@@ -702,6 +703,27 @@ class BaseTestAPI(unittest.TestCase):
                                                  socket.SO_REUSEADDR))
         finally:
             sock.close()
+
+    @unittest.skipUnless(threading, 'Threading required for this test.')
+    @test_support.reap_threads
+    def test_quick_connect(self):
+        # see: http://bugs.python.org/issue10340
+        server = TCPServer()
+        t = threading.Thread(target=lambda: asyncore.loop(timeout=0.1, count=500))
+        t.start()
+        self.addCleanup(t.join)
+
+        for x in xrange(20):
+            s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            s.settimeout(.2)
+            s.setsockopt(socket.SOL_SOCKET, socket.SO_LINGER,
+                         struct.pack('ii', 1, 0))
+            try:
+                s.connect(server.address)
+            except socket.error:
+                pass
+            finally:
+                s.close()
 
 
 class TestAPI_UseSelect(BaseTestAPI):
