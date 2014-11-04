@@ -228,7 +228,10 @@ epoll_poll (EV_P_ ev_tstamp timeout)
       if (anfds [fd].emask & EV_EMASK_EPERM && events)
         fd_event (EV_A_ fd, events);
       else
-        epoll_eperms [i] = epoll_eperms [--epoll_epermcnt];
+        {
+          epoll_eperms [i] = epoll_eperms [--epoll_epermcnt];
+          anfds [fd].emask = 0;
+        }
     }
 }
 
