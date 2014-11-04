@@ -83,7 +83,6 @@ if PYPY:
         'test__server.py',
         'test_subprocess.py',  # test_executable_without_cwd
         'FLAKY test___example_servers.py',
-        'test_httpservers.py',
         'FLAKY test_queue.py',
     ]
 
