@@ -593,7 +593,7 @@ cdef public class callback [object PyGeventCallbackObject, type PyGeventCallback
         # it's nonzero if it's pending or currently executing
         return self.args is not None
         
-    def _bool__(self):
+    def __bool__(self):
         return self.__nonzero__()
 
     property pending:
