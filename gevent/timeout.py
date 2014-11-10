@@ -19,7 +19,7 @@ __all__ = ['Timeout',
            'with_timeout']
 
 
-class Timeout(BaseException):
+class Timeout(Exception):
     """Raise *exception* in the current greenlet after given time period::
 
         timeout = Timeout(seconds, exception)
