@@ -410,7 +410,7 @@ def _kill(greenlet, exception, waiter):
 
 def joinall(greenlets, timeout=None, raise_error=False, count=None):
     if not raise_error:
-        wait(greenlets, timeout=timeout)
+        wait(greenlets, timeout=timeout, count=count)
     else:
         for obj in iwait(greenlets, timeout=timeout):
             if getattr(obj, 'exception', None) is not None:
