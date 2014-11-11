@@ -4,11 +4,6 @@ Written by Cody A.W. Somerville <cody-somerville@ubuntu.com>,
 Josip Dzolonga, and Michael Otteneder for the 2007/08 GHOP contest.
 """
 
-from BaseHTTPServer import BaseHTTPRequestHandler, HTTPServer
-from SimpleHTTPServer import SimpleHTTPRequestHandler
-from CGIHTTPServer import CGIHTTPRequestHandler
-import CGIHTTPServer
-
 import os
 import sys
 import re
@@ -17,12 +12,17 @@ import shutil
 import urllib
 import httplib
 import tempfile
-
 import unittest
+import CGIHTTPServer
 
+
+from BaseHTTPServer import BaseHTTPRequestHandler, HTTPServer
+from SimpleHTTPServer import SimpleHTTPRequestHandler
+from CGIHTTPServer import CGIHTTPRequestHandler
 from StringIO import StringIO
-
 from test import test_support
+
+
 threading = test_support.import_module('threading')
 
 
@@ -43,7 +43,7 @@ class SocketlessRequestHandler(SimpleHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(b'<html><body>Data</body></html>\r\n')
 
-    def log_message(self, format, *args):
+    def log_message(self, fmt, *args):
         pass
 
 
@@ -97,9 +97,9 @@ class BaseHTTPRequestHandlerTestCase(unittest.TestCase):
         self.handler = SocketlessRequestHandler()
 
     def send_typical_request(self, message):
-        input = StringIO(message)
+        input_msg = StringIO(message)
         output = StringIO()
-        self.handler.rfile = input
+        self.handler.rfile = input_msg
         self.handler.wfile = output
         self.handler.handle_one_request()
         output.seek(0)
@@ -114,7 +114,7 @@ class BaseHTTPRequestHandlerTestCase(unittest.TestCase):
 
     def verify_http_server_response(self, response):
         match = self.HTTPResponseMatch.search(response)
-        self.assertTrue(match is not None)
+        self.assertIsNotNone(match)
 
     def test_http_1_1(self):
         result = self.send_typical_request('GET / HTTP/1.1\r\n\r\n')
@@ -189,7 +189,7 @@ class BaseHTTPServerTestCase(BaseTestCase):
 
     def test_request_line_trimming(self):
         self.con._http_vsn_str = 'HTTP/1.1\n'
-        self.con.putrequest('GET', '/')
+        self.con.putrequest('XYZBOGUS', '/')
         self.con.endheaders()
         res = self.con.getresponse()
         self.assertEqual(res.status, 501)
@@ -216,8 +216,9 @@ class BaseHTTPServerTestCase(BaseTestCase):
         self.assertEqual(res.status, 501)
 
     def test_version_none(self):
+        # Test that a valid method is rejected when not HTTP/1.x
         self.con._http_vsn_str = ''
-        self.con.putrequest('PUT', '/')
+        self.con.putrequest('CUSTOM', '/')
         self.con.endheaders()
         res = self.con.getresponse()
         self.assertEqual(res.status, 400)
@@ -296,7 +297,7 @@ class SimpleHTTPServerTestCase(BaseTestCase):
             os.chdir(self.cwd)
             try:
                 shutil.rmtree(self.tempdir)
-            except:
+            except OSError:
                 pass
         finally:
             BaseTestCase.tearDown(self)
@@ -313,6 +314,9 @@ class SimpleHTTPServerTestCase(BaseTestCase):
         #constructs the path relative to the root directory of the HTTPServer
         response = self.request(self.tempdir_name + '/test')
         self.check_status_and_reason(response, 200, data=self.data)
+        # check for trailing "/" which should return 404. See Issue17324
+        response = self.request(self.tempdir_name + '/test/')
+        self.check_status_and_reason(response, 404)
         response = self.request(self.tempdir_name + '/')
         self.check_status_and_reason(response, 200)
         response = self.request(self.tempdir_name)
@@ -321,17 +325,16 @@ class SimpleHTTPServerTestCase(BaseTestCase):
         self.check_status_and_reason(response, 404)
         response = self.request('/' + 'ThisDoesNotExist' + '/')
         self.check_status_and_reason(response, 404)
-        f = open(os.path.join(self.tempdir_name, 'index.html'), 'w')
-        response = self.request('/' + self.tempdir_name + '/')
-        self.check_status_and_reason(response, 200)
-
-        # chmod() doesn't work as expected on Windows, and filesystem
-        # permissions are ignored by root on Unix.
-        if os.name == 'posix' and os.geteuid() != 0:
-            os.chmod(self.tempdir, 0)
-            response = self.request(self.tempdir_name + '/')
-            self.check_status_and_reason(response, 404)
-            os.chmod(self.tempdir, 0755)
+        with open(os.path.join(self.tempdir_name, 'index.html'), 'w') as fp:
+            response = self.request('/' + self.tempdir_name + '/')
+            self.check_status_and_reason(response, 200)
+            # chmod() doesn't work as expected on Windows, and filesystem
+            # permissions are ignored by root on Unix.
+            if os.name == 'posix' and os.geteuid() != 0:
+                os.chmod(self.tempdir, 0)
+                response = self.request(self.tempdir_name + '/')
+                self.check_status_and_reason(response, 404)
+                os.chmod(self.tempdir, 0755)
 
     def test_head(self):
         response = self.request(
@@ -393,6 +396,11 @@ class CGIHTTPServerTestCase(BaseTestCase):
         else:
             self.pythonexe = sys.executable
 
+        self.nocgi_path = os.path.join(self.parent_dir, 'nocgi.py')
+        with open(self.nocgi_path, 'w') as fp:
+            fp.write(cgi_file1 % self.pythonexe)
+        os.chmod(self.nocgi_path, 0777)
+
         self.file1_path = os.path.join(self.cgi_dir, 'file1.py')
         with open(self.file1_path, 'w') as file1:
             file1.write(cgi_file1 % self.pythonexe)
@@ -411,6 +419,7 @@ class CGIHTTPServerTestCase(BaseTestCase):
             os.chdir(self.cwd)
             if self.pythonexe != sys.executable:
                 os.remove(self.pythonexe)
+            os.remove(self.nocgi_path)
             os.remove(self.file1_path)
             os.remove(self.file2_path)
             os.rmdir(self.cgi_dir)
@@ -418,41 +427,44 @@ class CGIHTTPServerTestCase(BaseTestCase):
         finally:
             BaseTestCase.tearDown(self)
 
-    def test_url_collapse_path_split(self):
+    def test_url_collapse_path(self):
+        # verify tail is the last portion and head is the rest on proper urls
         test_vectors = {
-            '': ('/', ''),
+            '': '//',
             '..': IndexError,
             '/.//..': IndexError,
-            '/': ('/', ''),
-            '//': ('/', ''),
-            '/\\': ('/', '\\'),
-            '/.//': ('/', ''),
-            'cgi-bin/file1.py': ('/cgi-bin', 'file1.py'),
-            '/cgi-bin/file1.py': ('/cgi-bin', 'file1.py'),
-            'a': ('/', 'a'),
-            '/a': ('/', 'a'),
-            '//a': ('/', 'a'),
-            './a': ('/', 'a'),
-            './C:/': ('/C:', ''),
-            '/a/b': ('/a', 'b'),
-            '/a/b/': ('/a/b', ''),
-            '/a/b/c/..': ('/a/b', ''),
-            '/a/b/c/../d': ('/a/b', 'd'),
-            '/a/b/c/../d/e/../f': ('/a/b/d', 'f'),
-            '/a/b/c/../d/e/../../f': ('/a/b', 'f'),
-            '/a/b/c/../d/e/.././././..//f': ('/a/b', 'f'),
+            '/': '//',
+            '//': '//',
+            '/\\': '//\\',
+            '/.//': '//',
+            'cgi-bin/file1.py': '/cgi-bin/file1.py',
+            '/cgi-bin/file1.py': '/cgi-bin/file1.py',
+            'a': '//a',
+            '/a': '//a',
+            '//a': '//a',
+            './a': '//a',
+            './C:/': '/C:/',
+            '/a/b': '/a/b',
+            '/a/b/': '/a/b/',
+            '/a/b/.': '/a/b/',
+            '/a/b/c/..': '/a/b/',
+            '/a/b/c/../d': '/a/b/d',
+            '/a/b/c/../d/e/../f': '/a/b/d/f',
+            '/a/b/c/../d/e/../../f': '/a/b/f',
+            '/a/b/c/../d/e/.././././..//f': '/a/b/f',
             '../a/b/c/../d/e/.././././..//f': IndexError,
-            '/a/b/c/../d/e/../../../f': ('/a', 'f'),
-            '/a/b/c/../d/e/../../../../f': ('/', 'f'),
+            '/a/b/c/../d/e/../../../f': '/a/f',
+            '/a/b/c/../d/e/../../../../f': '//f',
             '/a/b/c/../d/e/../../../../../f': IndexError,
-            '/a/b/c/../d/e/../../../../f/..': ('/', ''),
+            '/a/b/c/../d/e/../../../../f/..': '//',
+            '/a/b/c/../d/e/../../../../f/../.': '//',
         }
         for path, expected in test_vectors.iteritems():
             if isinstance(expected, type) and issubclass(expected, Exception):
                 self.assertRaises(expected,
-                                  CGIHTTPServer._url_collapse_path_split, path)
+                                  CGIHTTPServer._url_collapse_path, path)
             else:
-                actual = CGIHTTPServer._url_collapse_path_split(path)
+                actual = CGIHTTPServer._url_collapse_path(path)
                 self.assertEqual(expected, actual,
                                  msg='path = %r\nGot:    %r\nWanted: %r' %
                                  (path, actual, expected))
@@ -461,6 +473,10 @@ class CGIHTTPServerTestCase(BaseTestCase):
         res = self.request('/cgi-bin/file1.py')
         self.assertEqual(('Hello World\n', 'text/html', 200),
             (res.read(), res.getheader('Content-type'), res.status))
+
+    def test_issue19435(self):
+        res = self.request('///////////nocgi.py/../cgi-bin/nothere.sh')
+        self.assertEqual(res.status, 404)
 
     def test_post(self):
         params = urllib.urlencode({'spam' : 1, 'eggs' : 'python', 'bacon' : 123456})
@@ -494,6 +510,11 @@ class CGIHTTPServerTestCase(BaseTestCase):
         self.assertEqual((b'Hello World\n', 'text/html', 200),
                 (res.read(), res.getheader('Content-type'), res.status))
         self.assertEqual(os.environ['SERVER_SOFTWARE'], signature)
+
+    def test_urlquote_decoding_in_cgi_check(self):
+        res = self.request('/cgi-bin%2ffile1.py')
+        self.assertEqual((b'Hello World\n', 'text/html', 200),
+                (res.read(), res.getheader('Content-type'), res.status))
 
 
 class SimpleHTTPRequestHandlerTestCase(unittest.TestCase):
