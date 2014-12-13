@@ -285,7 +285,14 @@ def read(name, *args):
         return ''
 
 
-if PYPY:
+# If we are running info / help commands, we don't need to build anything
+if len(sys.argv) >= 2 and ('--help' in sys.argv[1:] or
+   sys.argv[1] in ('--help-commands', 'egg_info', '--version', 'clean')):
+    ext_modules = []
+    install_requires = [] if PYPY else ['greenlet']
+    include_package_data = PYPY
+    run_make = False
+elif PYPY:
     sys.path.insert(0, '.')
     # XXX ugly - need to find a better way
     system('cp -r libev gevent/libev')
@@ -335,7 +342,8 @@ def run_setup(ext_modules, run_make):
             "Topic :: Internet",
             "Topic :: Software Development :: Libraries :: Python Modules",
             "Intended Audience :: Developers",
-            "Development Status :: 4 - Beta"])
+            "Development Status :: 4 - Beta"]
+    )
 
 
 if __name__ == '__main__':
