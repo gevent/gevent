@@ -1,7 +1,7 @@
 # Copyright (c) 2009-2012 Denis Bilenko. See LICENSE for details.
 
 import sys
-from gevent.hub import greenlet, getcurrent, get_hub, GreenletExit, Waiter, PY3, iwait, wait
+from gevent.hub import greenlet, getcurrent, get_hub, GreenletExit, Waiter, PY3, iwait, wait, PYPY
 from gevent.timeout import Timeout
 from collections import deque
 
@@ -9,6 +9,11 @@ from collections import deque
 __all__ = ['Greenlet',
            'joinall',
            'killall']
+
+
+if PYPY:
+    import _continuation
+    _continulet = _continuation.continulet
 
 
 class SpawnedLink(object):
@@ -95,6 +100,14 @@ class Greenlet(greenlet):
     else:
         def __nonzero__(self):
             return self._start_event is not None and self._exception is _NONE
+
+    if PYPY:
+
+        # oops - pypy's .dead relies on __nonzero__ which we overriden above
+
+        @property
+        def dead(self):
+            return self._greenlet__started and not (self._greenlet__main or _continulet.is_pending(self))
 
     @property
     def started(self):

@@ -114,6 +114,12 @@ class Event(object):
                 except:
                     self.hub.handle_error((link, self), *sys.exc_info())
 
+    def _reset_internal_locks(self):
+        # for compatibility with threading.Event (only in case of patch_all(Event=True), by default Event is not pathed)
+        #  Exception AttributeError: AttributeError("'Event' object has no attribute '_reset_internal_locks'",)
+        # in <module 'threading' from '/usr/lib/python2.7/threading.pyc'> ignored
+        pass
+
 
 class AsyncResult(object):
     """A one-time event that stores a value or an exception.
@@ -144,10 +150,11 @@ class AsyncResult(object):
         >>> import gevent
         >>> result = AsyncResult()
         >>> gevent.spawn(lambda : 1/0).link(result)
-        >>> result.get()
-        Traceback (most recent call last):
-         ...
-        ZeroDivisionError: integer division or modulo by zero
+        >>> try:
+        ...     result.get()
+        ... except ZeroDivisionError:
+        ...     print 'ZeroDivisionError'
+        ZeroDivisionError
     """
     def __init__(self):
         self._links = deque()

@@ -3,10 +3,13 @@ import os
 import glob
 import util
 import atexit
+# subprocess: include in subprocess tests
 
 
-TIMEOUT = 60
+TIMEOUT = 120
 directory = '%s.%s' % sys.version_info[:2]
+if hasattr(sys, 'pypy_version_info'):
+    directory += 'pypy'
 version = '%s.%s.%s' % sys.version_info[:3]
 
 

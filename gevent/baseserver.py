@@ -126,10 +126,17 @@ class BaseServer(object):
 
     def do_handle(self, *args):
         spawn = self._spawn
-        if spawn is None:
-            self._handle(*args)
-        else:
-            spawn(self._handle, *args)
+        try:
+            if spawn is None:
+                self._handle(*args)
+            else:
+                spawn(self._handle, *args)
+        except:
+            self.do_close(*args)
+            raise
+
+    def do_close(self, *args):
+        pass
 
     def _do_read(self):
         for _ in xrange(self.max_accept):

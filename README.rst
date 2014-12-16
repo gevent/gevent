@@ -44,7 +44,7 @@ running tests
 
   cd greentest
 
-  PYTHONPATH=.. python testrunner.py --expected ../known_failures.txt
+  PYTHONPATH=.. python testrunner.py --config ../known_failures.py
 
 
 .. _gevent: http://www.gevent.org

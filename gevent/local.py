@@ -27,7 +27,7 @@ local to a greenlet. If we access the data in a different greenlet:
 
   >>> log = []
   >>> def f():
-  ...     items = mydata.__dict__.items()
+  ...     items = list(mydata.__dict__.items())
   ...     items.sort()
   ...     log.append(items)
   ...     mydata.number = 11
@@ -128,7 +128,7 @@ affects what we see:
 """
 from weakref import WeakKeyDictionary
 from copy import copy
-from gevent.hub import getcurrent
+from gevent.hub import getcurrent, PYPY
 from gevent.lock import RLock
 
 __all__ = ["local"]
@@ -144,8 +144,9 @@ class _localbase(object):
         dicts = WeakKeyDictionary()
         object.__setattr__(self, '_local__dicts', dicts)
 
-        if (args or kw) and (cls.__init__ is object.__init__):
-            raise TypeError("Initialization arguments are not supported")
+        if args or kw:
+            if (PYPY and cls.__init__ == object.__init__) or (not PYPY and cls.__init__ is object.__init__):
+                raise TypeError("Initialization arguments are not supported")
 
         # We need to create the greenlet dict in anticipation of
         # __init__ being called, to make sure we don't call it again ourselves.

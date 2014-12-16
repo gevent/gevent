@@ -98,9 +98,19 @@ class BaseQueueTest(unittest.TestCase, BlockingTestMixin):
         q.put(111)
         q.put(333)
         q.put(222)
-        target_order = dict(Queue = [111, 333, 222],
+        q.put(444)
+        target_first_items = dict(
+            Queue = 111,
+            LifoQueue = 444,
+            PriorityQueue = 111)
+        actual_first_item = (q.peek(), q.get())
+        self.assertEquals(actual_first_item,
+                          (target_first_items[q.__class__.__name__],
+                           target_first_items[q.__class__.__name__]),
+                          "q.peek() and q.get() are not equal!")
+        target_order = dict(Queue = [333, 222, 444],
                             LifoQueue = [222, 333, 111],
-                            PriorityQueue = [111, 222, 333])
+                            PriorityQueue = [222, 333, 444])
         actual_order = [q.get(), q.get(), q.get()]
         self.assertEquals(actual_order, target_order[q.__class__.__name__],
                           "Didn't seem to queue the correct data!")
@@ -108,22 +118,22 @@ class BaseQueueTest(unittest.TestCase, BlockingTestMixin):
             q.put(i)
             self.assert_(not q.empty(), "Queue should not be empty")
         self.assert_(not q.full(), "Queue should not be full")
-        q.put("last")
+        q.put(999)
         self.assert_(q.full(), "Queue should be full")
         try:
-            q.put("full", block=0)
+            q.put(888, block=0)
             self.fail("Didn't appear to block with a full queue")
         except Queue.Full:
             pass
         try:
-            q.put("full", timeout=0.01)
+            q.put(888, timeout=0.01)
             self.fail("Didn't appear to time-out with a full queue")
         except Queue.Full:
             pass
         self.assertEquals(q.qsize(), QUEUE_SIZE)
         # Test a blocking put
-        self.do_blocking_test(q.put, ("full",), q.get, ())
-        self.do_blocking_test(q.put, ("full", True, 10), q.get, ())
+        self.do_blocking_test(q.put, (888,), q.get, ())
+        self.do_blocking_test(q.put, (888, True, 10), q.get, ())
         # Empty it
         for i in range(QUEUE_SIZE):
             q.get()
@@ -249,36 +259,36 @@ class FailingQueueTest(unittest.TestCase, BlockingTestMixin):
             self.fail("The queue didn't fail when it should have")
         except FailingQueueException:
             pass
-        q.put("last")
+        q.put(999)
         self.assert_(q.full(), "Queue should be full")
         # Test a failing blocking put
         q.fail_next_put = True
         try:
-            self.do_blocking_test(q.put, ("full",), q.get, ())
+            self.do_blocking_test(q.put, (888,), q.get, ())
             self.fail("The queue didn't fail when it should have")
         except FailingQueueException:
             pass
         # Check the Queue isn't damaged.
         # put failed, but get succeeded - re-add
-        q.put("last")
+        q.put(999)
         # Test a failing timeout put
         q.fail_next_put = True
         try:
-            self.do_exceptional_blocking_test(q.put, ("full", True, 10), q.get, (),
+            self.do_exceptional_blocking_test(q.put, (888, True, 10), q.get, (),
                                               FailingQueueException)
             self.fail("The queue didn't fail when it should have")
         except FailingQueueException:
             pass
         # Check the Queue isn't damaged.
         # put failed, but get succeeded - re-add
-        q.put("last")
+        q.put(999)
         self.assert_(q.full(), "Queue should be full")
         q.get()
         self.assert_(not q.full(), "Queue should not be full")
-        q.put("last")
+        q.put(999)
         self.assert_(q.full(), "Queue should be full")
         # Test a blocking put
-        self.do_blocking_test(q.put, ("full",), q.get, ())
+        self.do_blocking_test(q.put, (888,), q.get, ())
         # Empty it
         for i in range(QUEUE_SIZE):
             q.get()

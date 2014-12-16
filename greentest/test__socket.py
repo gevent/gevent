@@ -150,6 +150,7 @@ class TestTCP(greentest.TestCase):
             fd = conn.makefile(mode='w')
             fd.write('hello\n')
             fd.close()
+            conn.close()  # for pypy
 
         acceptor = Thread(target=accept_once)
         client = self.create_connection()

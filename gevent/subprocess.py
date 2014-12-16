@@ -143,13 +143,13 @@ def check_output(*popenargs, **kwargs):
     The arguments are the same as for the Popen constructor.  Example:
 
     >>> check_output(["ls", "-1", "/dev/null"])
-    '/dev/null\n'
+    b'/dev/null\n'
 
     The stdout argument is not allowed as it is used internally.
     To capture standard error in the result, use stderr=STDOUT.
 
     >>> check_output(["/bin/sh", "-c", "echo hello world"], stderr=STDOUT)
-    'hello world\n'
+    b'hello world\n'
     """
     if 'stdout' in kwargs:
         raise ValueError('stdout argument not allowed, it will be overridden.')
@@ -746,7 +746,7 @@ class Popen(object):
                 else:
                     os.close(errpipe_read)
 
-            if data != "":
+            if data != b"":
                 self.wait()
                 child_exception = pickle.loads(data)
                 for fd in (p2cwrite, c2pread, errread):

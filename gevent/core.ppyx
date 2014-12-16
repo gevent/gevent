@@ -31,6 +31,7 @@ cdef extern from "callbacks.h":
     void gevent_callback_signal(libev.ev_loop, void*, int)
     void gevent_callback_idle(libev.ev_loop, void*, int)
     void gevent_callback_prepare(libev.ev_loop, void*, int)
+    void gevent_callback_check(libev.ev_loop, void*, int)
     void gevent_callback_fork(libev.ev_loop, void*, int)
     void gevent_callback_async(libev.ev_loop, void*, int)
     void gevent_callback_child(libev.ev_loop, void*, int)
@@ -353,6 +354,8 @@ cdef public class loop [object PyGeventLoopObject, type PyGeventLoop_Type]:
             return libev.EV_MINPRI
 
     def _handle_syserr(self, message, errno):
+        if sys.version_info[0] >= 3:
+            message = message.decode()
         self.handle_error(None, SystemError, SystemError(message + ': ' + os.strerror(errno)), None)
 
     cpdef handle_error(self, context, type, value, tb):
@@ -472,6 +475,9 @@ cdef public class loop [object PyGeventLoopObject, type PyGeventLoop_Type]:
 
     def prepare(self, ref=True, priority=None):
         return prepare(self, ref, priority)
+
+    def check(self, ref=True, priority=None):
+        return check(self, ref, priority)
 
     def fork(self, ref=True, priority=None):
         return fork(self, ref, priority)
@@ -947,6 +953,13 @@ cdef public class prepare(watcher) [object PyGeventPrepareObject, type PyGeventP
     WATCHER(prepare)
 
     INIT(prepare,,)
+
+
+cdef public class check(watcher) [object PyGeventCheckObject, type PyGeventCheck_Type]:
+
+    WATCHER(check)
+
+    INIT(check,,)
 
 
 cdef public class fork(watcher) [object PyGeventForkObject, type PyGeventFork_Type]:

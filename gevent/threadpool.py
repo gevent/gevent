@@ -188,21 +188,21 @@ class ThreadPool(object):
                         # otherwise, _adjust might think there's one more idle thread that
                         # needs to be killed
                         return
-                    func, args, kwargs, result = task
+                    func, args, kwargs, thread_result = task
                     try:
                         value = func(*args, **kwargs)
                     except:
                         exc_info = getattr(sys, 'exc_info', None)
                         if exc_info is None:
                             return
-                        result.handle_error((self, func), exc_info())
+                        thread_result.handle_error((self, func), exc_info())
                     else:
                         if sys is None:
                             return
-                        result.set(value)
+                        thread_result.set(value)
                         del value
                     finally:
-                        del func, args, kwargs, result, task
+                        del func, args, kwargs, thread_result, task
                 finally:
                     if sys is None:
                         return

@@ -374,7 +374,7 @@ class ThreadTests(unittest.TestCase):
         finally:
             sys.setcheckinterval(old_interval)
 
-    if sys.version_info[:2] > (2, 5):
+    if sys.version_info[:2] > (2, 5) and not hasattr(sys, 'pypy_version_info'):
         def test_no_refcycle_through_target(self):
             class RunSelfFunction(object):
                 def __init__(self, should_raise):

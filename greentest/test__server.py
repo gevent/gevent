@@ -11,24 +11,27 @@ class SimpleStreamServer(StreamServer):
 
     def handle(self, client_socket, address):
         fd = client_socket.makefile()
-        request_line = fd.readline()
-        if not request_line:
-            return
         try:
-            method, path, rest = request_line.split(' ', 3)
-        except Exception:
-            print('Failed to parse request line: %r' % (request_line, ))
-            raise
-        if path == '/ping':
-            client_socket.sendall('HTTP/1.0 200 OK\r\n\r\nPONG')
-        elif path in ['/long', '/short']:
-            client_socket.sendall('hello')
-            while True:
-                data = client_socket.recv(1)
-                if not data:
-                    break
-        else:
-            client_socket.sendall('HTTP/1.0 404 WTF?\r\n\r\n')
+            request_line = fd.readline()
+            if not request_line:
+                return
+            try:
+                method, path, rest = request_line.split(' ', 3)
+            except Exception:
+                print('Failed to parse request line: %r' % (request_line, ))
+                raise
+            if path == '/ping':
+                client_socket.sendall('HTTP/1.0 200 OK\r\n\r\nPONG')
+            elif path in ['/long', '/short']:
+                client_socket.sendall('hello')
+                while True:
+                    data = client_socket.recv(1)
+                    if not data:
+                        break
+            else:
+                client_socket.sendall('HTTP/1.0 404 WTF?\r\n\r\n')
+        finally:
+            fd.close()
 
 
 class Settings:
@@ -81,6 +84,7 @@ class TestCase(greentest.TestCase):
         sock.connect((self.server.server_host, self.server.server_port))
         fobj = sock.makefile(bufsize=bufsize)
         fobj._sock.settimeout(timeout)
+        sock.close()
         return fobj
 
     def send_request(self, url='/', timeout=0.1, bufsize=1):

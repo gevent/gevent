@@ -4,20 +4,20 @@
 PYTHON ?= python${TRAVIS_PYTHON_VERSION}
 CYTHON ?= cython
 
-all: gevent/gevent.core.c gevent/gevent.ares.c gevent/gevent._semaphore.c gevent/gevent._util.c
+all: gevent/gevent.corecext.c gevent/gevent.ares.c gevent/gevent._semaphore.c gevent/gevent._util.c
 
-gevent/gevent.core.c: gevent/core.ppyx gevent/libev.pxd
-	$(PYTHON) util/cythonpp.py -o gevent.core.c gevent/core.ppyx
-	echo                          >> gevent.core.c
-	echo '#include "callbacks.c"' >> gevent.core.c
-	mv gevent.core.* gevent/
+gevent/gevent.corecext.c: gevent/core.ppyx gevent/libev.pxd
+	$(PYTHON) util/cythonpp.py -o gevent.corecext.c gevent/core.ppyx
+	echo                          >> gevent.corecext.c
+	echo '#include "callbacks.c"' >> gevent.corecext.c
+	mv gevent.corecext.* gevent/
 
 gevent/gevent.ares.c: gevent/ares.pyx gevent/*.pxd
 	$(CYTHON) -o gevent.ares.c gevent/ares.pyx
 	mv gevent.ares.* gevent/
 
-gevent/gevent._semaphore.c: gevent/_semaphore.pyx
-	$(CYTHON) -o gevent._semaphore.c gevent/_semaphore.pyx
+gevent/gevent._semaphore.c: gevent/_semaphore.py
+	$(CYTHON) -o gevent._semaphore.c gevent/_semaphore.py
 	mv gevent._semaphore.* gevent/
 
 gevent/gevent._util.c: gevent/_util.pyx
@@ -26,6 +26,7 @@ gevent/gevent._util.c: gevent/_util.pyx
 
 clean:
 	rm -f gevent.core.c gevent.core.h core.pyx gevent/gevent.core.c gevent/gevent.core.h gevent/core.pyx
+	rm -f gevent.corecext.c gevent.corecext.h gevent/gevent.corecext.c gevent/gevent.corecext.h
 	rm -f gevent.ares.c gevent.ares.h gevent/gevent.ares.c gevent/gevent.ares.h
 	rm -f gevent._semaphore.c gevent._semaphore.h gevent/gevent._semaphore.c gevent/gevent._semaphore.h
 	rm -f gevent._util.c gevent._util.h gevent/gevent._util.c gevent/gevent._util.h
@@ -52,13 +53,24 @@ travistest:
 	${PYTHON} -c 'import greenlet; print(greenlet, greenlet.__version__)'
 
 	${PYTHON} setup.py install
+	make bench
 
-	cd greentest && GEVENT_RESOLVER=thread ${PYTHON} testrunner.py --expected ../known_failures.txt
-	cd greentest && GEVENT_RESOLVER=ares GEVENTARES_SERVERS=8.8.8.8 ${PYTHON} testrunner.py --expected ../known_failures.txt --ignore tests_that_dont_use_resolver.txt
-	# --ignore option does not work as expected XXX
-	cd greentest && GEVENT_FILE=thread ${PYTHON} testrunner.py --expected ../known_failures.txt --ignore tests_that_dont_use_subprocess.txt
+	cd greentest && GEVENT_RESOLVER=thread ${PYTHON} testrunner.py --config ../known_failures.py
+	cd greentest && GEVENT_RESOLVER=ares GEVENTARES_SERVERS=8.8.8.8 ${PYTHON} testrunner.py --config ../known_failures.py --ignore tests_that_dont_use_resolver.txt
+	cd greentest && GEVENT_FILE=thread ${PYTHON} testrunner.py --config ../known_failures.py `grep -l subprocess test_*.py`
 
-travis:
+bench:
+	${PYTHON} greentest/bench_sendall.py
+
+travis_pypy:
+	# no need to repeat linters here
+	which ${PYTHON}
+	${PYTHON} --version
+	${PYTHON} setup.py install
+	make bench
+	cd greentest && ${PYTHON} testrunner.py --config ../known_failures.py
+
+travis_cpython:
 	make whitespace
 
 	pip install -q pep8
@@ -68,14 +80,17 @@ travis:
 	PYTHON=python make pyflakes
 
 	sudo add-apt-repository -y ppa:chris-lea/cython
+
+	# somehow travis changed something and python2.6 and python3.3 no longer accessible anymore
+	sudo add-apt-repository -y ppa:fkrull/deadsnakes
 	sudo apt-get -qq -y update
+	sudo -E apt-get -qq -y install ${PYTHON} ${PYTHON}-dev
+
 	sudo apt-get -qq -y install cython
 	cython --version
 
 	pip install -q --download . greenlet
 	unzip -q greenlet-*.zip
-
-	ack -w subprocess greentest/ -l -v | python -c 'import sys; print("\n".join(line.split("/")[-1].strip() for line in sys.stdin))' > greentest/tests_that_dont_use_subprocess.txt
 
 	sudo -E make travistest
 

@@ -8,6 +8,7 @@
     DEFINE_CALLBACK(signal, Signal);   \
     DEFINE_CALLBACK(idle, Idle);       \
     DEFINE_CALLBACK(prepare, Prepare); \
+    DEFINE_CALLBACK(check, Check);     \
     DEFINE_CALLBACK(fork, Fork);       \
     DEFINE_CALLBACK(async, Async);     \
     DEFINE_CALLBACK(stat, Stat);

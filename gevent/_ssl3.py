@@ -39,8 +39,6 @@ orig_SSLContext = __ssl__.SSLContext
 
 
 class SSLContext(orig_SSLContext):
-    __slots__ = ('protocol', '__weakref__')
-
     def wrap_socket(self, sock, server_side=False,
                     do_handshake_on_connect=True,
                     suppress_ragged_eofs=True,
@@ -444,7 +442,7 @@ def wrap_socket(sock, keyfile=None, certfile=None,
                      ciphers=ciphers)
 
 
-def get_server_certificate(addr, ssl_version=PROTOCOL_SSLv3, ca_certs=None):
+def get_server_certificate(addr, ssl_version=PROTOCOL_SSLv23, ca_certs=None):
     """Retrieve the certificate from the server at the specified address,
     and return it as a PEM-encoded string.
     If 'ca_certs' is specified, validate the server cert against it.

@@ -1,7 +1,11 @@
 from __future__ import print_function
 import sys
 import gevent
-from gevent.resolver_ares import Resolver
+try:
+    from gevent.resolver_ares import Resolver
+except ImportError as ex:
+    print(ex)
+    sys.exit(0)
 from gevent import socket
 print(gevent.__file__)
 

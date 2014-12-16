@@ -33,7 +33,7 @@ Full = __queue__.Full
 Empty = __queue__.Empty
 
 from gevent.timeout import Timeout
-from gevent.hub import get_hub, Waiter, getcurrent
+from gevent.hub import get_hub, Waiter, getcurrent, PY3
 
 
 __all__ = ['Queue', 'PriorityQueue', 'LifoQueue', 'JoinableQueue', 'Channel']
@@ -285,6 +285,10 @@ class Queue(object):
             raise result
         return result
 
+    if PY3:
+        __next__ = next
+        del next
+
 
 class ItemWaiter(Waiter):
     __slots__ = ['item', 'queue']
@@ -334,6 +338,9 @@ class LifoQueue(Queue):
 
     def _get(self):
         return self.queue.pop()
+
+    def _peek(self):
+        return self.queue[-1]
 
 
 class JoinableQueue(Queue):

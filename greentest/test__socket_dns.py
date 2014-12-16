@@ -93,8 +93,8 @@ def compare_relaxed(a, b):
     False
     """
     if a.count(':') == 5 and b.count(':') == 5:
-        # QQQ not actually sure if this is right thing to do
-        return a.rsplit(':')[:2] == b.rsplit(':')[:2]
+        # IPv6 address from different requests might be different
+        return True
     return a.split('.', 1)[-1] == b.split('.', 1)[-1]
 
 
