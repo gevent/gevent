@@ -62,6 +62,8 @@ class SSLSocket(socket):
                  ssl_version=PROTOCOL_SSLv23, ca_certs=None,
                  do_handshake_on_connect=True,
                  suppress_ragged_eofs=True,
+                 server_hostname=None,
+                 _context=None,
                  ciphers=None):
         socket.__init__(self, _sock=sock)
 
@@ -91,15 +93,18 @@ class SSLSocket(socket):
                                                 cert_reqs, ssl_version, ca_certs,
                                                 ciphers)
             else:
-                self.context = __ssl__.SSLContext(ssl_version)
-                self.context.verify_mode = cert_reqs
-                if ca_certs:
-                    self.context.load_verify_locations(ca_certs)
-                if certfile:
-                    self.context.load_cert_chain(certfile, keyfile)
-                if ciphers:
-                    self.context.set_ciphers(ciphers)
-                self._sslobj = self.context._wrap_socket(self._sock, server_side=server_side, ssl_sock=self)
+                if _context:
+                    self.context = _context
+                else:
+                    self.context = __ssl__.SSLContext(ssl_version)
+                    self.context.verify_mode = cert_reqs
+                    if ca_certs:
+                        self.context.load_verify_locations(ca_certs)
+                    if certfile:
+                        self.context.load_cert_chain(certfile, keyfile)
+                    if ciphers:
+                        self.context.set_ciphers(ciphers)
+                self._sslobj = self.context._wrap_socket(self._sock, server_side=server_side, ssl_sock=self, server_hostname=server_hostname)
 
             if do_handshake_on_connect:
                 self.do_handshake()
