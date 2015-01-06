@@ -98,9 +98,19 @@ class BaseQueueTest(unittest.TestCase, BlockingTestMixin):
         q.put(111)
         q.put(333)
         q.put(222)
-        target_order = dict(Queue = [111, 333, 222],
+        q.put(444)
+        target_first_items = dict(
+            Queue = 111,
+            LifoQueue = 444,
+            PriorityQueue = 111)
+        actual_first_item = (q.peek(), q.get())
+        self.assertEquals(actual_first_item,
+                          (target_first_items[q.__class__.__name__],
+                           target_first_items[q.__class__.__name__]),
+                          "q.peek() and q.get() are not equal!")
+        target_order = dict(Queue = [333, 222, 444],
                             LifoQueue = [222, 333, 111],
-                            PriorityQueue = [111, 222, 333])
+                            PriorityQueue = [222, 333, 444])
         actual_order = [q.get(), q.get(), q.get()]
         self.assertEquals(actual_order, target_order[q.__class__.__name__],
                           "Didn't seem to queue the correct data!")

@@ -1,7 +1,9 @@
 # Very rudimentary test of threading module
 
 import test.test_support
-from test.test_support import verbose
+from test.test_support import verbose, cpython_only
+from test.script_helper import assert_python_ok
+
 import random
 import re
 import sys
@@ -12,8 +14,12 @@ import unittest
 import weakref
 import os
 import subprocess
+try:
+    import _testcapi
+except ImportError:
+    _testcapi = None
 
-import lock_tests
+from test import lock_tests
 
 # A trivial mutable counter.
 class Counter(object):
@@ -123,9 +129,7 @@ class ThreadTests(BaseTestCase):
         try:
             threading.stack_size(262144)
         except thread.error:
-            if verbose:
-                print 'platform does not support changing thread stack size'
-            return
+            self.skipTest('platform does not support changing thread stack size')
         self.test_various_ops()
         threading.stack_size(0)
 
@@ -136,9 +140,7 @@ class ThreadTests(BaseTestCase):
         try:
             threading.stack_size(0x100000)
         except thread.error:
-            if verbose:
-                print 'platform does not support changing thread stack size'
-            return
+            self.skipTest('platform does not support changing thread stack size')
         self.test_various_ops()
         threading.stack_size(0)
 
@@ -166,9 +168,7 @@ class ThreadTests(BaseTestCase):
         try:
             import ctypes
         except ImportError:
-            if verbose:
-                print "test_PyThreadState_SetAsyncExc can't import ctypes"
-            return  # can't do anything
+            self.skipTest('requires ctypes')
 
         set_async_exc = ctypes.pythonapi.PyThreadState_SetAsyncExc
 
@@ -275,9 +275,7 @@ class ThreadTests(BaseTestCase):
         try:
             import ctypes
         except ImportError:
-            if verbose:
-                print("test_finalize_with_runnning_thread can't import ctypes")
-            return  # can't do anything
+            self.skipTest('requires ctypes')
 
         rc = subprocess.call([sys.executable, "-c", """if 1:
             import ctypes, sys, time, thread
@@ -417,6 +415,73 @@ class ThreadTests(BaseTestCase):
                          msg=('%d references still around' %
                               sys.getrefcount(weak_raising_cyclic_object())))
 
+    @unittest.skipUnless(hasattr(os, 'fork'), 'test needs fork()')
+    def test_dummy_thread_after_fork(self):
+        # Issue #14308: a dummy thread in the active list doesn't mess up
+        # the after-fork mechanism.
+        code = """if 1:
+            import thread, threading, os, time
+
+            def background_thread(evt):
+                # Creates and registers the _DummyThread instance
+                threading.current_thread()
+                evt.set()
+                time.sleep(10)
+
+            evt = threading.Event()
+            thread.start_new_thread(background_thread, (evt,))
+            evt.wait()
+            assert threading.active_count() == 2, threading.active_count()
+            if os.fork() == 0:
+                assert threading.active_count() == 1, threading.active_count()
+                os._exit(0)
+            else:
+                os.wait()
+        """
+        _, out, err = assert_python_ok("-c", code)
+        self.assertEqual(out, '')
+        self.assertEqual(err, '')
+
+    @unittest.skipUnless(hasattr(os, 'fork'), "needs os.fork()")
+    def test_is_alive_after_fork(self):
+        # Try hard to trigger #18418: is_alive() could sometimes be True on
+        # threads that vanished after a fork.
+        old_interval = sys.getcheckinterval()
+
+        # Make the bug more likely to manifest.
+        sys.setcheckinterval(10)
+
+        try:
+            for i in range(20):
+                t = threading.Thread(target=lambda: None)
+                t.start()
+                pid = os.fork()
+                if pid == 0:
+                    os._exit(1 if t.is_alive() else 0)
+                else:
+                    t.join()
+                    pid, status = os.waitpid(pid, 0)
+                    self.assertEqual(0, status)
+        finally:
+            sys.setcheckinterval(old_interval)
+
+    def test_BoundedSemaphore_limit(self):
+        # BoundedSemaphore should raise ValueError if released too often.
+        for limit in range(1, 10):
+            bs = threading.BoundedSemaphore(limit)
+            threads = [threading.Thread(target=bs.acquire)
+                       for _ in range(limit)]
+            for t in threads:
+                t.start()
+            for t in threads:
+                t.join()
+            threads = [threading.Thread(target=bs.release)
+                       for _ in range(limit)]
+            for t in threads:
+                t.start()
+            for t in threads:
+                t.join()
+            self.assertRaises(ValueError, bs.release)
 
 class ThreadJoinOnShutdown(BaseTestCase):
 
@@ -641,6 +706,49 @@ class ThreadJoinOnShutdown(BaseTestCase):
         output = "end of worker thread\nend of main thread\n"
         self.assertScriptHasOutput(script, output)
 
+    @unittest.skipIf(sys.platform in platforms_to_skip, "due to known OS bug")
+    def test_6_daemon_threads(self):
+        # Check that a daemon thread cannot crash the interpreter on shutdown
+        # by manipulating internal structures that are being disposed of in
+        # the main thread.
+        script = """if True:
+            import os
+            import random
+            import sys
+            import time
+            import threading
+
+            thread_has_run = set()
+
+            def random_io():
+                '''Loop for a while sleeping random tiny amounts and doing some I/O.'''
+                while True:
+                    in_f = open(os.__file__, 'rb')
+                    stuff = in_f.read(200)
+                    null_f = open(os.devnull, 'wb')
+                    null_f.write(stuff)
+                    time.sleep(random.random() / 1995)
+                    null_f.close()
+                    in_f.close()
+                    thread_has_run.add(threading.current_thread())
+
+            def main():
+                count = 0
+                for _ in range(40):
+                    new_thread = threading.Thread(target=random_io)
+                    new_thread.daemon = True
+                    new_thread.start()
+                    count += 1
+                while len(thread_has_run) < count:
+                    time.sleep(0.001)
+                # Trigger process shutdown
+                sys.exit(0)
+
+            main()
+            """
+        rc, out, err = assert_python_ok('-c', script)
+        self.assertFalse(err)
+
     @unittest.skipUnless(hasattr(os, 'fork'), "needs os.fork()")
     @unittest.skipIf(sys.platform in platforms_to_skip, "due to known OS bug")
     def test_reinit_tls_after_fork(self):
@@ -664,6 +772,46 @@ class ThreadJoinOnShutdown(BaseTestCase):
 
         for t in threads:
             t.join()
+
+    @cpython_only
+    @unittest.skipIf(_testcapi is None, "need _testcapi module")
+    def test_frame_tstate_tracing(self):
+        # Issue #14432: Crash when a generator is created in a C thread that is
+        # destroyed while the generator is still used. The issue was that a
+        # generator contains a frame, and the frame kept a reference to the
+        # Python state of the destroyed C thread. The crash occurs when a trace
+        # function is setup.
+
+        def noop_trace(frame, event, arg):
+            # no operation
+            return noop_trace
+
+        def generator():
+            while 1:
+                yield "genereator"
+
+        def callback():
+            if callback.gen is None:
+                callback.gen = generator()
+            return next(callback.gen)
+        callback.gen = None
+
+        old_trace = sys.gettrace()
+        sys.settrace(noop_trace)
+        try:
+            # Install a trace function
+            threading.settrace(noop_trace)
+
+            # Create a generator in a C thread which exits after the call
+            _testcapi.call_in_temporary_c_thread(callback)
+
+            # Call the generator in a different Python thread, check that the
+            # generator didn't keep a reference to the destroyed thread state
+            for test in range(3):
+                # The trace function is still called here
+                callback()
+        finally:
+            sys.settrace(old_trace)
 
 
 class ThreadingExceptionTests(BaseTestCase):

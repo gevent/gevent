@@ -1,11 +1,11 @@
-#!/usr/bin/env python
-
 import urlparse
 import urllib2
 import BaseHTTPServer
 import unittest
 import hashlib
+
 from test import test_support
+
 mimetools = test_support.import_module('mimetools', deprecated=True)
 threading = test_support.import_module('threading')
 
@@ -23,7 +23,7 @@ class LoopbackHttpServer(BaseHTTPServer.HTTPServer):
 
         # Set the timeout of our listening socket really low so
         # that we can stop the server easily.
-        self.socket.settimeout(0.1)
+        self.socket.settimeout(1.0)
 
     def get_request(self):
         """BaseHTTPServer method, overridden."""
@@ -33,7 +33,7 @@ class LoopbackHttpServer(BaseHTTPServer.HTTPServer):
         # It's a loopback connection, so setting the timeout
         # really low shouldn't affect anything, but should make
         # deadlocks less likely to occur.
-        request.settimeout(1.0)
+        request.settimeout(10.0)
 
         return (request, client_address)
 
@@ -346,6 +346,12 @@ class TestUrlopen(BaseTestCase):
     for transparent redirection have been written.
     """
 
+    def setUp(self):
+        proxy_handler = urllib2.ProxyHandler({})
+        opener = urllib2.build_opener(proxy_handler)
+        urllib2.install_opener(opener)
+        super(TestUrlopen, self).setUp()
+
     def start_server(self, responses):
         handler = GetRequestHandler(responses)
 
@@ -481,6 +487,11 @@ class TestUrlopen(BaseTestCase):
     def test_bad_address(self):
         # Make sure proper exception is raised when connecting to a bogus
         # address.
+
+        # as indicated by the comment below, this might fail with some ISP,
+        # so we run the test only when -unetwork/-uall is specified to
+        # mitigate the problem a bit (see #17564)
+        test_support.requires('network')
         self.assertRaises(IOError,
                           # Given that both VeriSign and various ISPs have in
                           # the past or are presently hijacking various invalid

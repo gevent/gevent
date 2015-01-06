@@ -339,6 +339,9 @@ class LifoQueue(Queue):
     def _get(self):
         return self.queue.pop()
 
+    def _peek(self):
+        return self.queue[-1]
+
 
 class JoinableQueue(Queue):
     '''A subclass of :class:`Queue` that additionally has :meth:`task_done` and :meth:`join` methods.'''

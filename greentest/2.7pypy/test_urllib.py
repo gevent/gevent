@@ -222,6 +222,27 @@ Content-Type: text/html; charset=iso-8859-1
         finally:
             self.unfakehttp()
 
+    def test_missing_localfile(self):
+        self.assertRaises(IOError, urllib.urlopen,
+                'file://localhost/a/missing/file.py')
+        fd, tmp_file = tempfile.mkstemp()
+        tmp_fileurl = 'file://localhost/' + tmp_file.replace(os.path.sep, '/')
+        self.assertTrue(os.path.exists(tmp_file))
+        try:
+            fp = urllib.urlopen(tmp_fileurl)
+            fp.close()
+        finally:
+            os.close(fd)
+            os.unlink(tmp_file)
+
+        self.assertFalse(os.path.exists(tmp_file))
+        self.assertRaises(IOError, urllib.urlopen, tmp_fileurl)
+
+    def test_ftp_nonexisting(self):
+        self.assertRaises(IOError, urllib.urlopen,
+                'ftp://localhost/not/existing/file.py')
+
+
     def test_userpass_inurl(self):
         self.fakehttp('Hello!')
         try:
@@ -768,6 +789,26 @@ class Utility_Tests(unittest.TestCase):
         self.assertEqual(('user 2', 'ab'),urllib.splitpasswd('user 2:ab'))
         self.assertEqual(('user+1', 'a+b'),urllib.splitpasswd('user+1:a+b'))
 
+    def test_splitport(self):
+        splitport = urllib.splitport
+        self.assertEqual(splitport('parrot:88'), ('parrot', '88'))
+        self.assertEqual(splitport('parrot'), ('parrot', None))
+        self.assertEqual(splitport('parrot:'), ('parrot', None))
+        self.assertEqual(splitport('127.0.0.1'), ('127.0.0.1', None))
+        self.assertEqual(splitport('parrot:cheese'), ('parrot:cheese', None))
+
+    def test_splitnport(self):
+        splitnport = urllib.splitnport
+        self.assertEqual(splitnport('parrot:88'), ('parrot', 88))
+        self.assertEqual(splitnport('parrot'), ('parrot', -1))
+        self.assertEqual(splitnport('parrot', 55), ('parrot', 55))
+        self.assertEqual(splitnport('parrot:'), ('parrot', -1))
+        self.assertEqual(splitnport('parrot:', 55), ('parrot', 55))
+        self.assertEqual(splitnport('127.0.0.1'), ('127.0.0.1', -1))
+        self.assertEqual(splitnport('127.0.0.1', 55), ('127.0.0.1', 55))
+        self.assertEqual(splitnport('parrot:cheese'), ('parrot', None))
+        self.assertEqual(splitnport('parrot:cheese', 55), ('parrot', None))
+
 
 class URLopener_Tests(unittest.TestCase):
     """Testcase to test the open method of URLopener class."""
@@ -791,7 +832,7 @@ class URLopener_Tests(unittest.TestCase):
 # Everywhere else they work ok, but on those machines, sometimes
 # fail in one of the tests, sometimes in other. I have a linux, and
 # the tests go ok.
-# If anybody has one of the problematic enviroments, please help!
+# If anybody has one of the problematic environments, please help!
 # .   Facundo
 #
 # def server(evt):
@@ -837,7 +878,7 @@ class URLopener_Tests(unittest.TestCase):
 #     def testTimeoutNone(self):
 #         # global default timeout is ignored
 #         import socket
-#         self.assertTrue(socket.getdefaulttimeout() is None)
+#         self.assertIsNone(socket.getdefaulttimeout())
 #         socket.setdefaulttimeout(30)
 #         try:
 #             ftp = urllib.ftpwrapper("myuser", "mypass", "localhost", 9093, [])
@@ -849,7 +890,7 @@ class URLopener_Tests(unittest.TestCase):
 #     def testTimeoutDefault(self):
 #         # global default timeout is used
 #         import socket
-#         self.assertTrue(socket.getdefaulttimeout() is None)
+#         self.assertIsNone(socket.getdefaulttimeout())
 #         socket.setdefaulttimeout(30)
 #         try:
 #             ftp = urllib.ftpwrapper("myuser", "mypass", "localhost", 9093, [])

@@ -143,7 +143,7 @@ fail:
 
 #undef pipe
 #define pipe(filedes) ev_pipe (filedes)
-  
+
 #define EV_HAVE_EV_TIME 1
 ev_tstamp
 ev_time (void)
