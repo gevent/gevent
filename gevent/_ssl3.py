@@ -13,7 +13,7 @@ import ssl as __ssl__
 _ssl = __ssl__._ssl
 
 import errno
-from gevent.socket import socket, timeout_default
+from gevent.socket import socket, timeout_default, SOL_SOCKET, SO_TYPE, SOCK_STREAM
 from gevent.socket import error as socket_error
 
 
