@@ -8,6 +8,10 @@ Release 1.0.2
 -------------
 
 - Fix LifoQueue.peek() to return correct element. PR #456. Patch by Christine Spang.
+- Upgrade to libev 4.19
+- Remove SSL3 entirely as default TLS protocol
+- Import socket on Windows (closes #459)
+- Fix C90 syntax error (PR #449)
 
 
 Release 1.0.1 (Apr 30, 2014)
