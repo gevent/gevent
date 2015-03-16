@@ -78,7 +78,6 @@ if PYPY:
         'test__pywsgi.py',
 
         # No idea!
-        'test__backdoor.py',
         'test__server.py',
         'test_subprocess.py',  # test_executable_without_cwd
         'FLAKY test___example_servers.py',

@@ -7,8 +7,10 @@ from code import InteractiveConsole
 
 from gevent import socket
 from gevent.greenlet import Greenlet
-from gevent.hub import PY3, getcurrent
+from gevent.hub import PY3, PYPY, getcurrent
 from gevent.server import StreamServer
+if PYPY:
+    import gc
 
 __all__ = ['BackdoorServer']
 
@@ -77,6 +79,12 @@ class BackdoorServer(StreamServer):
         finally:
             conn.close()
             f.close()
+            if PYPY:
+                # The underlying socket somewhere has a reference
+                # that's not getting closed until finalizers run.
+                # Without running them, test__backdoor.Test.test_sys_exit
+                # hangs forever
+                gc.collect()
 
 
 class _fileobject(socket._fileobject):
@@ -92,7 +100,6 @@ class _fileobject(socket._fileobject):
 
     def readline(self, *a):
         return socket._fileobject.readline(self, *a).replace("\r\n", "\n")
-
 
 if __name__ == '__main__':
     if not sys.argv[1:]:
