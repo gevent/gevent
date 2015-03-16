@@ -75,8 +75,6 @@ if PYPY:
         'test_socket.py',
 
         # No idea!
-        'test_threading_2.py',
-        'test_threading.py',
         'test__pywsgi.py',
         'test__backdoor.py',
         'test__refcount.py',
