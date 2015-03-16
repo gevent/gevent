@@ -32,7 +32,9 @@ class SimpleStreamServer(StreamServer):
                 client_socket.sendall('HTTP/1.0 404 WTF?\r\n\r\n')
         finally:
             fd.close()
-
+            # The non-reference count behaviour of PyPy requires
+            # us to explicitly close this socket or the client never returns
+            client_socket.close()
 
 class Settings:
     ServerClass = StreamServer
