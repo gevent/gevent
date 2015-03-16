@@ -1,5 +1,5 @@
 import sys
-from gevent.hub import get_hub, getcurrent
+from gevent.hub import get_hub, getcurrent, PYPY
 from gevent.timeout import Timeout
 
 
@@ -129,3 +129,7 @@ class Semaphore(object):
 
     def __exit__(self, *args):
         self.release()
+
+
+if PYPY:
+    Semaphore._py3k_acquire = Semaphore.acquire
