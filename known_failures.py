@@ -74,8 +74,10 @@ if PYPY:
         # https://bitbucket.org/cffi/cffi/issue/152/handling-errors-from-signal-handlers-in
         'test_socket.py',
 
-        # No idea!
+        # https://bitbucket.org/cffi/cffi/issue/152/handling-errors-from-signal-handlers-in
         'test__pywsgi.py',
+
+        # No idea!
         'test__backdoor.py',
         'test__refcount.py',
         'test__server.py',

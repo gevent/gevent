@@ -984,6 +984,7 @@ class ChunkedInputTests(TestCase):
             self.assert_error(IOError, 'unexpected end of file while parsing chunked data')
 
 
+
 class Expect100ContinueTests(TestCase):
     validator = None
 
