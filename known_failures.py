@@ -31,7 +31,15 @@ if os.environ.get('GEVENT_RESOLVER') == 'ares' or CPYTHON_DBG:
         'FLAKY test__socket_dns.py',
         'FLAKY test__socket_dns6.py',
     ]
-
+else:
+    FAILING_TESTS += [
+        # A number of the host names hardcoded have multiple, load
+        # balanced DNS entries. Therefore, multiple sequential calls
+        # of the resolution function, whether gevent or stdlib, can
+        # return non-equal results, possibly dependent on the host
+        # dns configuration
+        'FLAKY test__socket_dns6.py',
+    ]
 
 if sys.platform == 'win32':
     # currently gevent.core.stat watcher does not implement 'prev' and 'attr' attributes on Windows
@@ -74,12 +82,8 @@ if PYPY:
         # https://bitbucket.org/cffi/cffi/issue/152/handling-errors-from-signal-handlers-in
         'test_socket.py',
 
-        # https://bitbucket.org/cffi/cffi/issue/152/handling-errors-from-signal-handlers-in
-        'test__pywsgi.py',
-
         # No idea!
         'test_subprocess.py',  # test_executable_without_cwd
-        'FLAKY test___example_servers.py',
     ]
 
 
