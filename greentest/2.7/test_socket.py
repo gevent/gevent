@@ -1177,11 +1177,15 @@ class NetworkConnectionNoServer(unittest.TestCase):
     def mocked_socket_module(self):
         """Return a socket which times out on connect"""
         old_socket = socket.socket
+        import gevent.socket
+        old_g_socket = gevent.socket.socket
         socket.socket = self.MockSocket
+        gevent.socket.socket = self.MockSocket
         try:
             yield
         finally:
             socket.socket = old_socket
+            gevent.socket.socket = old_g_socket
 
     def test_connect(self):
         port = test_support.find_unused_port()
