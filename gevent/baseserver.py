@@ -126,11 +126,18 @@ class BaseServer(object):
 
     def do_handle(self, *args):
         spawn = self._spawn
+        handle = self._handle
+        def _close_when_done(*args):
+            try:
+                return handle(*args)
+            finally:
+                self.do_close(*args)
+
         try:
             if spawn is None:
-                self._handle(*args)
+                _close_when_done(*args)
             else:
-                spawn(self._handle, *args)
+                spawn(_close_when_done, *args)
         except:
             self.do_close(*args)
             raise
