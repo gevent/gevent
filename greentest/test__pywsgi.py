@@ -983,7 +983,7 @@ class ChunkedInputTests(TestCase):
         fd = self.connect().makefile(bufsize=1)
         fd.write(req)
         fd.close()
-#        gevent.sleep(0.01)
+        gevent.sleep(0.01) # timing needed for cpython
 
         if server_implements_chunked:
             if greentest.PYPY:
