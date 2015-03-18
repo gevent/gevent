@@ -159,6 +159,16 @@ class Test(greentest.TestCase):
         else:
             raise AssertionError('must fail with CalledProcessError')
 
+    def test_popen_bufsize(self):
+        # Test that subprocess has unbuffered output by default
+        # (as the vanilla subprocess module)
+        p = subprocess.Popen([sys.executable, '-u', '-c',
+                              'import sys; sys.stdout.write(sys.stdin.readline())'],
+                             stdin=subprocess.PIPE, stdout=subprocess.PIPE)
+        p.stdin.write('foobar\n')
+        r = p.stdout.readline()
+        self.assertEqual(r, 'foobar\n')
+
 
 if __name__ == '__main__':
     greentest.main()
