@@ -203,6 +203,8 @@ class SSLSocket(socket):
         if server_side and server_hostname:
             raise ValueError("server_hostname can only be specified "
                              "in client mode")
+        if self._context.check_hostname and not server_hostname:
+            raise ValueError("check_hostname requires server_hostname")
         self.server_side = server_side
         self.server_hostname = server_hostname
         self.do_handshake_on_connect = do_handshake_on_connect
