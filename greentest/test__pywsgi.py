@@ -581,6 +581,7 @@ class HttpsTestCase(TestCase):
                 kwargs['body'] = post_body
         else:
             fd.write('\r\n')
+        fd.flush()
         return read_http(fd, **kwargs)
 
     def application(self, environ, start_response):
@@ -1120,14 +1121,17 @@ class TestSubclass1(TestCase):
     def test(self):
         fd = self.makefile()
         fd.write('<policy-file-request/>\x00')
+        fd.flush()
         self.assertEqual(fd.read(), 'HELLO')
 
         fd = self.makefile()
         fd.write('GET / HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n')
+        fd.flush()
         read_http(fd)
 
         fd = self.makefile()
         fd.write('<policy-file-XXXuest/>\x00')
+        fd.flush()
         self.assertEqual(fd.read(), '')
 
 
