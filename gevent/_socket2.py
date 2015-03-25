@@ -397,10 +397,15 @@ else:
     __implements__.remove('fromfd')
 
 if hasattr(__socket__, 'ssl'):
+    from gevent.hub import PYGTE279
     def ssl(sock, keyfile=None, certfile=None):
         # deprecated in 2.7.9 but still present
-        from . import _ssl2
-        return _ssl2.sslwrap_simple(sock, keyfile, certfile)
+        if PYGTE279:
+            from . import _sslgte279
+            return _sslgte279.wrap_socket(sock, keyfile, certfile)
+        else:
+            from . import _ssl2
+            return _ssl2.sslwrap_simple(sock, keyfile, certfile)
     __implements__.append('ssl')
 
 __all__ = __implements__ + __extensions__ + __imports__
