@@ -8,19 +8,28 @@ else:
 
 import util
 
+import ssl
 
 class Test_wsgiserver(util.TestServer):
     server = 'wsgiserver.py'
     URL = 'http://127.0.0.1:8088'
     not_found_message = '<h1>Not Found</h1>'
+    ssl_ctx = None
 
     def read(self, path='/'):
         url = self.URL + path
         try:
-            response = urllib2.urlopen(url)
+            if self.ssl_ctx is not None:
+                response = urllib2.urlopen(url, context=self.ssl_ctx)
+            else:
+                response = urllib2.urlopen(url)
         except urllib2.HTTPError:
             response = sys.exc_info()[1]
-        return '%s %s' % (response.code, response.msg), response.read()
+        result = '%s %s' % (response.code, response.msg), response.read()
+		# XXX: It looks like under PyPy this isn't directly closing the socket
+		# when SSL is in use. It takes a GC cycle to make that true.
+        response.close()
+        return result
 
     def _test_hello(self):
         status, data = self.read('/')
@@ -36,6 +45,11 @@ class Test_wsgiserver(util.TestServer):
 class Test_wsgiserver_ssl(Test_wsgiserver):
     server = 'wsgiserver_ssl.py'
     URL = 'https://127.0.0.1:8443'
+
+    if hasattr(ssl, '_create_unverified_context'):
+        # Disable verification for our self-signed cert
+		# on Python >= 2.7.9 and 3.4
+        ssl_ctx = ssl._create_unverified_context()
 
 
 class Test_webproxy(Test_wsgiserver):
