@@ -20,8 +20,13 @@ from gevent.hub import PYPY
 __implements__ = ['SSLContext',
                   'SSLSocket',
                   'wrap_socket',
-                  'get_server_certificate']
+                  'get_server_certificate',
+                  'create_default_context',
+                  '_create_unverified_context',
+                  '_create_default_https_context',
+                  '_create_stdlib_context']
 
+__imports__ = []
 
 # Import all symbols from Python's ssl.py, except those that we are implementing
 # and "private" symbols.
@@ -32,10 +37,11 @@ for name in dir(__ssl__):
         continue
     value = getattr(__ssl__, name)
     globals()[name] = value
-
+    __imports__.append(name)
 
 del name, value
 
+__all__ = __implements__ + __imports__
 
 orig_SSLContext = __ssl__.SSLContext
 
