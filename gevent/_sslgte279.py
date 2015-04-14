@@ -15,13 +15,18 @@ _ssl = __ssl__._ssl
 import errno
 from gevent.socket import socket, timeout_default
 from gevent.socket import error as socket_error
-
+from gevent.hub import PYPY
 
 __implements__ = ['SSLContext',
                   'SSLSocket',
                   'wrap_socket',
-                  'get_server_certificate']
+                  'get_server_certificate',
+                  'create_default_context',
+                  '_create_unverified_context',
+                  '_create_default_https_context',
+                  '_create_stdlib_context']
 
+__imports__ = []
 
 # Import all symbols from Python's ssl.py, except those that we are implementing
 # and "private" symbols.
@@ -32,10 +37,11 @@ for name in dir(__ssl__):
         continue
     value = getattr(__ssl__, name)
     globals()[name] = value
-
+    __imports__.append(name)
 
 del name, value
 
+__all__ = __implements__ + __imports__
 
 orig_SSLContext = __ssl__.SSLContext
 
@@ -465,11 +471,31 @@ class SSLSocket(socket):
         else:
             self._makefile_refs -= 1
 
+    def _sslobj_shutdown(self):
+        while True:
+            try:
+                return self._sslobj.shutdown()
+            except SSLError as ex:
+                if ex.args[0] == SSL_ERROR_EOF and self.suppress_ragged_eofs:
+                    return ''
+                elif ex.args[0] == SSL_ERROR_WANT_READ:
+                    if self.timeout == 0.0:
+                        raise
+                    sys.exc_clear()
+                    self._wait(self._read_event, timeout_exc=_SSLErrorReadTimeout)
+                elif ex.args[0] == SSL_ERROR_WANT_WRITE:
+                    if self.timeout == 0.0:
+                        raise
+                    sys.exc_clear()
+                    self._wait(self._write_event, timeout_exc=_SSLErrorWriteTimeout)
+                else:
+                    raise
+
     def unwrap(self):
         if self._sslobj:
-            s = self._sslobj.shutdown()
+            s = self._sslobj_shutdown()
             self._sslobj = None
-            return s
+            return socket(_sock=s) # match _ssl2; critical to drop/reuse here on PyPy
         else:
             raise ValueError("No SSL wrapper around " + str(self))
 
@@ -576,6 +602,18 @@ class SSLSocket(socket):
         if self._sslobj is None:
             return None
         return self._sslobj.version()
+
+if PYPY or not hasattr(SSLSocket, 'timeout'):
+    # PyPy (and certain versions of CPython) doesn't have a direct
+    # 'timeout' property on raw sockets, because that's not part of
+    # the documented specification. We may wind up wrapping a raw
+    # socket (when ssl is used with PyWSGI) or a gevent socket, which
+    # does have a read/write timeout property as an alias for
+    # get/settimeout, so make sure that's always the case because
+    # pywsgi can depend on that.
+    SSLSocket.timeout = property(lambda self: self.gettimeout(),
+                                 lambda self, value: self.settimeout(value))
+
 
 
 _SSLErrorReadTimeout = SSLError('The read operation timed out')

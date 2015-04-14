@@ -334,10 +334,10 @@ class socket(object):
             howlong = f()
             if howlong < 0.0:
                 raise ValueError('Timeout value out of range')
-        self.timeout = howlong
+        self.__dict__['timeout'] = howlong # avoid recursion with any property on self.timeout
 
     def gettimeout(self):
-        return self.timeout
+        return self.__dict__['timeout'] # avoid recursion with any property on self.timeout
 
     def shutdown(self, how):
         if how == 0:  # SHUT_RD
@@ -396,5 +396,16 @@ if hasattr(_socket, 'fromfd'):
 else:
     __implements__.remove('fromfd')
 
+if hasattr(__socket__, 'ssl'):
+    from gevent.hub import PYGTE279
+    def ssl(sock, keyfile=None, certfile=None):
+        # deprecated in 2.7.9 but still present
+        if PYGTE279:
+            from . import _sslgte279
+            return _sslgte279.wrap_socket(sock, keyfile, certfile)
+        else:
+            from . import _ssl2
+            return _ssl2.sslwrap_simple(sock, keyfile, certfile)
+    __implements__.append('ssl')
 
 __all__ = __implements__ + __extensions__ + __imports__
