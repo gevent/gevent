@@ -30,6 +30,7 @@ __imports__ = []
 
 # Import all symbols from Python's ssl.py, except those that we are implementing
 # and "private" symbols.
+value = None
 for name in dir(__ssl__):
     if name in __implements__:
         continue
@@ -40,6 +41,11 @@ for name in dir(__ssl__):
     __imports__.append(name)
 
 del name, value
+
+try:
+    _delegate_methods
+except NameError: # PyPy doesn't expose this detail
+    _delegate_methods = ('recv', 'recvfrom', 'recv_into', 'recvfrom_into', 'send', 'sendto')
 
 __all__ = __implements__ + __imports__
 
@@ -166,7 +172,6 @@ class SSLSocket(socket):
                  server_hostname=None,
                  _context=None):
 
-        self._makefile_refs = 0
         if _context:
             self._context = _context
         else:
@@ -197,7 +202,10 @@ class SSLSocket(socket):
         # mixed in.
         if sock.getsockopt(SOL_SOCKET, SO_TYPE) != SOCK_STREAM:
             raise NotImplementedError("only stream sockets are supported")
-        socket.__init__(self, _sock=sock._sock)
+        socket.__init__(self, _sock=sock)
+        if PYPY:
+            sock._drop()
+
         # The initializer for socket overrides the methods send(), recv(), etc.
         # in the instancce, which we don't need -- but we want to provide the
         # methods defined in SSLSocket.
@@ -243,6 +251,8 @@ class SSLSocket(socket):
             except socket_error as x:
                 self.close()
                 raise x
+        self._makefile_refs = 0
+
 
     @property
     def context(self):
@@ -469,6 +479,17 @@ class SSLSocket(socket):
         else:
             self._makefile_refs -= 1
 
+    if PYPY:
+
+        def _reuse(self):
+            self._makefile_refs += 1
+
+        def _drop(self):
+            if self._makefile_refs < 1:
+                self.close()
+            else:
+                self._makefile_refs -= 1
+
     def _sslobj_shutdown(self):
         while True:
             try:
@@ -571,8 +592,8 @@ class SSLSocket(socket):
         """Make and return a file-like object that
         works with the SSL connection.  Just use the code
         from the socket module."""
-
-        self._makefile_refs += 1
+        if not PYPY:
+            self._makefile_refs += 1
         # close=True so as to decrement the reference count when done with
         # the file-like object.
         return _fileobject(self, mode, bufsize, close=True)
