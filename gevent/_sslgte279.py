@@ -233,6 +233,7 @@ class SSLSocket(socket):
         else:
             connected = True
 
+        self._makefile_refs = 0
         self._closed = False
         self._sslobj = None
         self._connected = connected
@@ -251,7 +252,6 @@ class SSLSocket(socket):
             except socket_error as x:
                 self.close()
                 raise x
-        self._makefile_refs = 0
 
 
     @property
