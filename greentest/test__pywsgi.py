@@ -585,6 +585,7 @@ class HttpsTestCase(TestCase):
                 kwargs['body'] = post_body
         else:
             fd.write('\r\n')
+        fd.flush()
         return read_http(fd, **kwargs)
 
     def application(self, environ, start_response):

@@ -25,7 +25,11 @@ class Test_wsgiserver(util.TestServer):
                 response = urllib2.urlopen(url)
         except urllib2.HTTPError:
             response = sys.exc_info()[1]
-        return '%s %s' % (response.code, response.msg), response.read()
+        result = '%s %s' % (response.code, response.msg), response.read()
+		# XXX: It looks like under PyPy this isn't directly closing the socket
+		# when SSL is in use. It takes a GC cycle to make that true.
+        response.close()
+        return result
 
     def _test_hello(self):
         status, data = self.read('/')

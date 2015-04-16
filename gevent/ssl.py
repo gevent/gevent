@@ -1,7 +1,10 @@
 from gevent.hub import PY3
+from gevent.hub import PYGTE279
 
 
-if PY3:
+if PYGTE279:
+    from gevent import _sslgte279 as _source
+elif PY3:
     from gevent import _ssl3 as _source
 else:
     from gevent import _ssl2 as _source

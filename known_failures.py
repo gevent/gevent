@@ -14,11 +14,6 @@ FAILING_TESTS = [
     # needs investigating
     'FLAKY test__issue6.py',
 
-    # bunch of SSLError: [Errno 1] _ssl.c:504: error:14090086:SSL routines:SSL3_GET_SERVER_CERTIFICATE:certificate verify failed
-    # seems to be Python/OpenSSL problem, not gevent's
-    'monkey_test --Event test_ssl.py',
-    'monkey_test test_ssl.py',
-
     # Sometimes fails with AssertionError: ...\nIOError: close() called during concurrent operation on the same file object.\n'
     # Sometimes it contains "\nUnhandled exception in thread started by \nsys.excepthook is missing\nlost sys.stderr\n"
     "FLAKY test__subprocess_interrupted.py",

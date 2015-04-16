@@ -396,6 +396,17 @@ class SSLSocket(socket):
         # the file-like object.
         return _fileobject(self, mode, bufsize, close=True)
 
+if PYPY or not hasattr(SSLSocket, 'timeout'):
+    # PyPy (and certain versions of CPython) doesn't have a direct
+    # 'timeout' property on raw sockets, because that's not part of
+    # the documented specification. We may wind up wrapping a raw
+    # socket (when ssl is used with PyWSGI) or a gevent socket, which
+    # does have a read/write timeout property as an alias for
+    # get/settimeout, so make sure that's always the case because
+    # pywsgi can depend on that.
+    SSLSocket.timeout = property(lambda self: self.gettimeout(),
+                                 lambda self, value: self.settimeout(value))
+
 
 _SSLErrorReadTimeout = SSLError('The read operation timed out')
 _SSLErrorWriteTimeout = SSLError('The write operation timed out')

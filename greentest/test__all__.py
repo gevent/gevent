@@ -140,7 +140,7 @@ are missing from %r:
             raise AssertionError(msg)
 
     def _test(self, modname):
-        if modname.endswith('2'):
+        if modname.endswith('2') or modname.endswith("279"):
             return
         if modname.endswith('3'):
             return
