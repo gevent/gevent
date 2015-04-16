@@ -124,12 +124,10 @@ class Semaphore(object):
             assert self.counter >= 0
             return True
 
+    _py3k_acquire = acquire # PyPy needs this; it must be static for Cython
+
     def __enter__(self):
         self.acquire()
 
     def __exit__(self, *args):
         self.release()
-
-
-if PYPY:
-    Semaphore._py3k_acquire = Semaphore.acquire

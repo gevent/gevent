@@ -69,7 +69,14 @@ if PYPY:
         # BUGS:
 
         # in CPython we compile _semaphore.py with Cython to make its operation atomic
-        # how to do atomic operations on PyPy?
+        # how to do atomic operations on PyPy?.
+        # Note that PyPy will compile and load the Cython version of gevent._semaphore,
+        # thus fixing this test case (making it load it is a manual process now because
+        # _semaphore.py still exists and PyPy prefers that to the .so---some things would have
+        # to be renamed to make it work automatically). However, on at least one machine, the Cython
+        # version causes the test suite to run slower: ~2:52 vs ~2:37. Is that worth the
+        # non-traceability? (Is it even repeatable? Possibly not; a lot of the test time is spent in,
+        # e.g., test__socket_dns.py doing network stuff.)
         'test__threading_vs_settrace.py',
 
 
