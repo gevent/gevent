@@ -76,9 +76,6 @@ if PYPY:
         # check_sendall_interrupted and testInterruptedTimeout fail due to
         # https://bitbucket.org/cffi/cffi/issue/152/handling-errors-from-signal-handlers-in
         'test_socket.py',
-
-        # No idea!
-        'test_subprocess.py',  # test_executable_without_cwd
     ]
 
 

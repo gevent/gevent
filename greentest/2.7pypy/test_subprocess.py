@@ -20,6 +20,7 @@ except ImportError:
     threading = None
 
 mswindows = (sys.platform == "win32")
+PYPY = hasattr(sys, 'pypy_version_info')
 
 #
 # Depends on the following external programs: Python
@@ -193,8 +194,8 @@ class ProcessTestCase(BaseTestCase):
         p.wait()
         self.assertEqual(p.returncode, 47)
 
-    @unittest.skipIf(sysconfig.is_python_build(),
-                     "need an installed Python. See #7774")
+    @unittest.skipIf(sysconfig.is_python_build() or PYPY,
+                     "need an installed Python. See #7774. Also fails to get sys.prefix on PyPy")
     def test_executable_without_cwd(self):
         # For a normal installation, it should work without 'cwd'
         # argument.  For test runs in the build directory, see #7774.
