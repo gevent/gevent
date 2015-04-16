@@ -10,6 +10,7 @@ import util
 
 import ssl
 
+
 class Test_wsgiserver(util.TestServer):
     server = 'wsgiserver.py'
     URL = 'http://127.0.0.1:8088'
@@ -48,7 +49,7 @@ class Test_wsgiserver_ssl(Test_wsgiserver):
 
     if hasattr(ssl, '_create_unverified_context'):
         # Disable verification for our self-signed cert
-		# on Python >= 2.7.9 and 3.4
+        # on Python >= 2.7.9 and 3.4
         ssl_ctx = ssl._create_unverified_context()
 
 
