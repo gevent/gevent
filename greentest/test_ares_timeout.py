@@ -1,5 +1,6 @@
 from __future__ import print_function
 import sys
+import errno
 import gevent
 try:
     from gevent.resolver_ares import Resolver
@@ -9,13 +10,14 @@ except ImportError as ex:
 from gevent import socket
 print(gevent.__file__)
 
-address = ('127.0.0.10', 53)
+address = ('', 7153)
 listener = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+
 try:
     listener.bind(address)
 except socket.error as ex:
-    if 'permission denied' in str(ex).lower():
-        sys.stderr.write('This test binds on port 53 and thus must be run as root.\n')
+    if ex.errno in (errno.EPERM, errno.EADDRNOTAVAIL) or 'permission denied' in str(ex).lower():
+        sys.stderr.write('This test binds on port a port that was already in use or not allowed.\n')
         sys.exit(0)
     raise
 
@@ -26,7 +28,7 @@ def reader():
 
 gevent.spawn(reader)
 
-r = gevent.get_hub().resolver = Resolver(servers=['127.0.0.10'], timeout=0.001, tries=1)
+r = gevent.get_hub().resolver = Resolver(servers=['127.0.0.1'], timeout=0.001, tries=1, udp_port=address[-1])
 try:
     result = r.gethostbyname('www.google.com')
 except socket.gaierror as ex:
