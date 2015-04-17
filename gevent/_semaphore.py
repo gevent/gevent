@@ -1,5 +1,5 @@
 import sys
-from gevent.hub import get_hub, getcurrent, PYPY
+from gevent.hub import get_hub, getcurrent
 from gevent.timeout import Timeout
 
 

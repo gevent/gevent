@@ -26,8 +26,8 @@ class Test_wsgiserver(util.TestServer):
         except urllib2.HTTPError:
             response = sys.exc_info()[1]
         result = '%s %s' % (response.code, response.msg), response.read()
-		# XXX: It looks like under PyPy this isn't directly closing the socket
-		# when SSL is in use. It takes a GC cycle to make that true.
+        # XXX: It looks like under PyPy this isn't directly closing the socket
+        # when SSL is in use. It takes a GC cycle to make that true.
         response.close()
         return result
 
@@ -48,7 +48,7 @@ class Test_wsgiserver_ssl(Test_wsgiserver):
 
     if hasattr(ssl, '_create_unverified_context'):
         # Disable verification for our self-signed cert
-		# on Python >= 2.7.9 and 3.4
+        # on Python >= 2.7.9 and 3.4
         ssl_ctx = ssl._create_unverified_context()
 
 
