@@ -58,9 +58,6 @@ if PYPY:
     FAILING_TESTS += [
         # Not implemented:
 
-        # ares not supported on PyPy yet
-        'test__ares_host_result.py',
-
         # ---
 
         # BUGS:
