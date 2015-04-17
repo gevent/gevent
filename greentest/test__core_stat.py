@@ -23,7 +23,14 @@ try:
         f.close()
 
     greenlet = gevent.spawn_later(DELAY, write)
-    watcher = hub.loop.stat(filename)
+    # If we don't specify an interval, we default to zero.
+    # libev interprets that as meaning to use its default interval,
+    # which is about 5 seconds. If we go below it's minimum check
+    # threshold, it bumps it up to the minimum.
+    watcher = hub.loop.stat(filename, interval=-1)
+    if hasattr(watcher, 'path'):
+        assert watcher.path == filename
+    assert watcher.interval == -1
 
     start = time.time()
 
@@ -37,6 +44,8 @@ try:
     assert reaction >= 0.0, 'Watcher %s reacted too early (write): %.3fs' % (watcher, reaction)
     assert watcher.attr is not None, watcher.attr
     assert watcher.prev is not None, watcher.prev
+    # The watcher interval changed after it started; -1 is illegal
+    assert watcher.interval != -1
 
     greenlet.join()
     gevent.spawn_later(DELAY, os.unlink, filename)

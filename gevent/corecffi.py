@@ -1067,18 +1067,28 @@ class stat(watcher):
     _watcher_ffi_cb = "void(*)(struct ev_loop *, struct %s *, int)" % _watcher_type
 
     def __init__(self, _loop, path, interval=0.0, ref=True, priority=None):
-        self.path = path
-        watcher.__init__(self, _loop, ref=ref, priority=priority, args=(path, interval))
-        # XXX: self._watcher.path is not getting properly set at the C level
-        # (Possibly because ev_stat_init is actually a macro? I don't know)
-        # Something overwrites it or fails to set it. We reset it in start() method
+        if not isinstance(path, bytes):
+            # XXX: Filesystem encoding? Python itself has issues here, were they fixed?
+            path = path.encode('utf-8')
+
+        watcher.__init__(self, _loop, ref=ref, priority=priority,
+                         # cffi doesn't automatically marshal byte strings to
+                         # char* in the function call; instead it passes an
+                         # empty string or garbage pointer. If the watcher's
+                         # path is incorrect, watching silently fails
+                         # (the underlying call to lstat() keeps erroring out)
+                         args=(ffi.new('char[]', path),
+                               interval))
 
     def start(self, callback, *args):
-        self._watcher.path = ffi.new("char[]", self.path)
         watcher.start(self, callback, *args)
 
     def stop(self):
         watcher.stop(self)
+
+    @property
+    def path(self):
+        return ffi.string(self._watcher.path)
 
     @property
     def attr(self):
