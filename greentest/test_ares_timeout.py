@@ -1,5 +1,6 @@
 from __future__ import print_function
 import sys
+import errno
 import gevent
 try:
     from gevent.resolver_ares import Resolver
@@ -14,7 +15,7 @@ listener = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 try:
     listener.bind(address)
 except socket.error as ex:
-    if 'permission denied' in str(ex).lower():
+    if ex.errno in (errno.EPERM, errno.EADDRNOTAVAIL) or 'permission denied' in str(ex).lower():
         sys.stderr.write('This test binds on port 53 and thus must be run as root.\n')
         sys.exit(0)
     raise

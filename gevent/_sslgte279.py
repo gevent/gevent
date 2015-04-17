@@ -202,9 +202,15 @@ class SSLSocket(socket):
         # mixed in.
         if sock.getsockopt(SOL_SOCKET, SO_TYPE) != SOCK_STREAM:
             raise NotImplementedError("only stream sockets are supported")
-        socket.__init__(self, _sock=sock)
+
         if PYPY:
+            socket.__init__(self, _sock=sock)
             sock._drop()
+        else:
+            # CPython: XXX: Must pass the underlying socket, not our
+            # potential wrapper; test___example_servers fails the SSL test
+            # with a client-side EOF error. (Why?)
+            socket.__init__(self, _sock=sock._sock)
 
         # The initializer for socket overrides the methods send(), recv(), etc.
         # in the instancce, which we don't need -- but we want to provide the
