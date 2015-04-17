@@ -86,15 +86,32 @@ def compare_relaxed(a, b):
     >>> compare_relaxed('2a00:1450:4016:800::1013', '2a00:1450:4008:c01::93')
     True
 
+    >>> compare_relaxed('2001:470::e852:4a38:9d7f:0', '2001:470:6d00:1c:1::d00')
+    True
+
+    >>> compare_relaxed('2001:470:4147:4943:6161:6161:2e74:6573', '2001:470::')
+    True
+
+    >>> compare_relaxed('2607:f8b0:6708:24af:1fd:700:60d4:4af', '2607:f8b0:2d00::f000:0')
+    True
+
     >>> compare_relaxed('a.surfly.com', 'b.surfly.com')
     True
 
     >>> compare_relaxed('a.surfly.com', 'a.gevent.org')
     False
     """
-    if a.count(':') == 5 and b.count(':') == 5:
-        # IPv6 address from different requests might be different
-        return True
+    # IPv6 address from different requests might be different
+    a_segments = a.count(':')
+    b_segments = b.count(':')
+    if a_segments and b_segments:
+        if a_segments == b_segments and a_segments in (4,5,6,7):
+            return True
+        if a.rstrip(':').startswith(b.rstrip(':')) or b.rstrip(':').startswith(a.rstrip(':')):
+            return True
+        if a_segments >= 2 and b_segments >= 2 and a.split(':')[:2] == b.split(':')[:2]:
+            return True
+
     return a.split('.', 1)[-1] == b.split('.', 1)[-1]
 
 
@@ -223,7 +240,13 @@ class TestCase(greentest.TestCase):
             return
         if relaxed_is_equal(gevent_result, real_result):
             return
-        raise AssertionError('%r != %r\n    %s' % (gevent_result, real_result, format_call(func, args)))
+
+        # From 2.7 on, assertEqual does a better job highlighting the results than we would
+        # because it calls assertSequenceEqual, which highlights the exact
+        # difference in the tuple
+        msg = format_call(func, args)
+        self.assertEqual((msg,gevent_result), (msg,real_result))
+
 
 
 class TestTypeError(TestCase):
