@@ -58,9 +58,6 @@ if PYPY:
     FAILING_TESTS += [
         # Not implemented:
 
-        # stat watchers are not implemented on pypy
-        'test__core_stat.py',
-
         # ares not supported on PyPy yet
         'test__ares_host_result.py',
 

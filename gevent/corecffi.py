@@ -114,6 +114,7 @@ struct stat {
 
 struct ev_stat {
     struct stat attr;
+    const char* path;
     struct stat prev;
     double interval;
     ...;
@@ -648,6 +649,9 @@ class loop(object):
         def install_sigchld(self):
             libev.gevent_install_sigchld_handler()
 
+    def stat(self, path, interval=0.0, ref=True, priority=None):
+        return stat(self, path, interval, ref, priority)
+
     def callback(self, priority=None):
         return callback(self, priority)
 
@@ -1054,6 +1058,43 @@ class child(watcher):
     def rstatus(self, value):
         self._watcher.rstatus = value
 
+class stat(watcher):
+    _watcher_start = libev.ev_stat_start
+    _watcher_stop = libev.ev_stat_stop
+    _watcher_init = libev.ev_stat_init
+    _watcher_type = 'ev_stat'
+    _watcher_ffi_type = "struct %s *" % _watcher_type
+    _watcher_ffi_cb = "void(*)(struct ev_loop *, struct %s *, int)" % _watcher_type
+
+    def __init__(self, _loop, path, interval=0.0, ref=True, priority=None):
+        self.path = path
+        watcher.__init__(self, _loop, ref=ref, priority=priority, args=(path, interval))
+        # XXX: self._watcher.path is not getting properly set at the C level
+        # (Possibly because ev_stat_init is actually a macro? I don't know)
+        # Something overwrites it or fails to set it. We reset it in start() method
+
+    def start(self, callback, *args):
+        self._watcher.path = ffi.new("char[]", self.path)
+        watcher.start(self, callback, *args)
+
+    def stop(self):
+        watcher.stop(self)
+
+    @property
+    def attr(self):
+        if not self._watcher.attr.st_nlink:
+            return
+        return self._watcher.attr
+
+    @property
+    def prev(self):
+        if not self._watcher.prev.st_nlink:
+            return
+        return self._watcher.prev
+
+    @property
+    def interval(self):
+        return self._watcher.interval
 
 def _syserr_cb(msg):
     try:
