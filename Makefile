@@ -59,6 +59,14 @@ travistest:
 	cd greentest && GEVENT_RESOLVER=ares GEVENTARES_SERVERS=8.8.8.8 ${PYTHON} testrunner.py --config ../known_failures.py --ignore tests_that_dont_use_resolver.txt
 	cd greentest && GEVENT_FILE=thread ${PYTHON} testrunner.py --config ../known_failures.py `grep -l subprocess test_*.py`
 
+toxtest:
+	cd greentest && GEVENT_RESOLVER=thread python testrunner.py --config ../known_failures.py
+
+fulltoxtest:
+	cd greentest && GEVENT_RESOLVER=thread python testrunner.py --config ../known_failures.py
+	cd greentest && GEVENT_RESOLVER=ares GEVENTARES_SERVERS=8.8.8.8 python testrunner.py --config ../known_failures.py --ignore tests_that_dont_use_resolver.txt
+	cd greentest && GEVENT_FILE=thread python testrunner.py --config ../known_failures.py `grep -l subprocess test_*.py`
+
 bench:
 	${PYTHON} greentest/bench_sendall.py
 
