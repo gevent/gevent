@@ -221,7 +221,7 @@ class SSLSocket(socket):
         # See if we are connected
         try:
             self.getpeername()
-        except socket_error as e:
+        except socket_error, e:
             if e.errno != errno.ENOTCONN:
                 raise
             connected = False
