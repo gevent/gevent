@@ -107,7 +107,7 @@ class SSLSocket(socket):
         while True:
             try:
                 return self._sslobj.read(len)
-            except SSLError as ex:
+            except SSLError, ex:
                 if ex.args[0] == SSL_ERROR_EOF and self.suppress_ragged_eofs:
                     return ''
                 elif ex.args[0] == SSL_ERROR_WANT_READ:
@@ -130,7 +130,7 @@ class SSLSocket(socket):
         while True:
             try:
                 return self._sslobj.write(data)
-            except SSLError as ex:
+            except SSLError, ex:
                 if ex.args[0] == SSL_ERROR_WANT_READ:
                     if self.timeout == 0.0:
                         raise
@@ -168,7 +168,7 @@ class SSLSocket(socket):
             while True:
                 try:
                     v = self._sslobj.write(data)
-                except SSLError as x:
+                except SSLError, x:
                     if x.args[0] == SSL_ERROR_WANT_READ:
                         if self.timeout == 0.0:
                             return 0
@@ -221,7 +221,7 @@ class SSLSocket(socket):
                     v = len(tmp_buffer)
                     buffer[:v] = tmp_buffer
                     return v
-                except SSLError as x:
+                except SSLError, x:
                     if x.args[0] == SSL_ERROR_WANT_READ:
                         if self.timeout == 0.0:
                             raise
@@ -257,7 +257,7 @@ class SSLSocket(socket):
         while True:
             try:
                 return self._sslobj.shutdown()
-            except SSLError as ex:
+            except SSLError, ex:
                 if ex.args[0] == SSL_ERROR_EOF and self.suppress_ragged_eofs:
                     return ''
                 elif ex.args[0] == SSL_ERROR_WANT_READ:
@@ -308,7 +308,7 @@ class SSLSocket(socket):
         while True:
             try:
                 return self._sslobj.do_handshake()
-            except SSLError as ex:
+            except SSLError, ex:
                 if ex.args[0] == SSL_ERROR_WANT_READ:
                     if self.timeout == 0.0:
                         raise
@@ -350,7 +350,7 @@ class SSLSocket(socket):
             try:
                 client_socket, address = sock.accept()
                 break
-            except socket_error as ex:
+            except socket_error, ex:
                 if ex.args[0] != EWOULDBLOCK or self.timeout == 0.0:
                     raise
                 sys.exc_clear()
