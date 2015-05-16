@@ -77,6 +77,8 @@ __imports__ = ['error',
                'RAND_add',
                'RAND_egd',
                'RAND_status',
+               'SSLType',
+               'sslerror',
                # Windows:
                'errorTab']
 
