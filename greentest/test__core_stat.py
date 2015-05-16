@@ -22,6 +22,7 @@ try:
         f.write('x')
         f.close()
 
+    start = time.time()
     greenlet = gevent.spawn_later(DELAY, write)
     # If we don't specify an interval, we default to zero.
     # libev interprets that as meaning to use its default interval,
@@ -31,8 +32,6 @@ try:
     if hasattr(watcher, 'path'):
         assert watcher.path == filename
     assert watcher.interval == -1
-
-    start = time.time()
 
     with gevent.Timeout(5 + DELAY + 0.5):
         hub.wait(watcher)
