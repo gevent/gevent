@@ -144,7 +144,17 @@ def patch_dns():
 
 def patch_ssl():
     patch_module('ssl')
-
+    # On Python 2.5 we use an external 'ssl' module. On all
+    # newer versions, the ssl module is builtin, and 'ssl.SSLError' *is*
+    # 'socket.sslerror', but that's not the case with the external
+    # module. Because our patched functions will raise ssl.SSLError, but
+    # callers on 2.5 could only be expecting to catch 'socket.sslerror'
+    # we make them the same.
+    if version_info[:2] <= (2, 5):
+        from gevent import ssl
+        import socket
+        saved['socket']['sslerror'] = socket.sslerror
+        socket.sslerror = ssl.SSLError
 
 def patch_select(aggressive=True):
     """Replace :func:`select.select` with :func:`gevent.select.select`.
