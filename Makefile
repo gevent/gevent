@@ -71,14 +71,6 @@ travis_pypy:
 	cd greentest && ${PYTHON} testrunner.py --config ../known_failures.py
 
 travis_cpython:
-	make whitespace
-
-	pip install -q pep8
-	PYTHON=python make pep8
-
-	pip install -q pyflakes
-	PYTHON=python make pyflakes
-
 	sudo add-apt-repository -y ppa:chris-lea/cython
 
 	# somehow travis changed something and python2.6 and python3.3 no longer accessible anymore
