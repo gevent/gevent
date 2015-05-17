@@ -12,6 +12,7 @@ Release 1.0.2
 - Remove SSL3 entirely as default TLS protocol
 - Import socket on Windows (closes #459)
 - Fix C90 syntax error (PR #449)
+- Add compatibility with Python 2.7.9's SSL changes. Issue #477.
 
 
 Release 1.0.1 (Apr 30, 2014)
@@ -1051,4 +1052,3 @@ Besides having less bugs and less code to care about the goals of the fork are:
 * Use the interfaces and conventions from the standard Python library where possible.
 
 .. _eventlet: http://bitbucket.org/denis/eventlet
-
