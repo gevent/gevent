@@ -26,6 +26,13 @@ __all__ = ['getcurrent',
            'Hub',
            'Waiter']
 
+# Sniff Python > 2.7.9 for new SSL interfaces
+# If True, Python is greater than or equal to 2.7.9 (but not Python 3).
+PYGTE279 = (
+    sys.version_info[0] == 2
+    and sys.version_info[1] >= 7
+    and sys.version_info[2] >= 9
+)
 
 PY3 = sys.version_info[0] >= 3
 PYPY = hasattr(sys, 'pypy_version_info')

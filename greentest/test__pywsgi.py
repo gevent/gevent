@@ -55,6 +55,10 @@ try:
 except ImportError:
     pass
 
+if greentest.PYPY:
+    from errno import ECONNRESET
+    CONN_ABORTED_ERRORS.append(ECONNRESET)
+
 REASONS = {200: 'OK',
            500: 'Internal Server Error'}
 
@@ -581,6 +585,7 @@ class HttpsTestCase(TestCase):
                 kwargs['body'] = post_body
         else:
             fd.write('\r\n')
+        fd.flush()
         return read_http(fd, **kwargs)
 
     def application(self, environ, start_response):
@@ -979,9 +984,21 @@ class ChunkedInputTests(TestCase):
         fd = self.connect().makefile(bufsize=1)
         fd.write(req)
         fd.close()
-        gevent.sleep(0.01)
+        gevent.sleep(0.01) # timing needed for cpython
+
         if server_implements_chunked:
+            if greentest.PYPY:
+                # XXX: Something is keeping the socket alive,
+                # by which I mean, the close event is not propagating to the server
+                # and waking up its recv() loop...we are stuck with the three bytes of
+                # 'thi' in the buffer and trying to read the forth. No amount of tinkering
+                # with the timing changes this...the only thing that does is running a
+                # GC and letting some object get collected. Might this be a problem in real life?
+                import gc
+                gc.collect()
+                gevent.sleep(0.01)
             self.assert_error(IOError, 'unexpected end of file while parsing chunked data')
+
 
 
 class Expect100ContinueTests(TestCase):
@@ -1120,14 +1137,17 @@ class TestSubclass1(TestCase):
     def test(self):
         fd = self.makefile()
         fd.write('<policy-file-request/>\x00')
+        fd.flush() # flush() is needed on PyPy, apparently it buffers slightly differently
         self.assertEqual(fd.read(), 'HELLO')
 
         fd = self.makefile()
         fd.write('GET / HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n')
+        fd.flush()
         read_http(fd)
 
         fd = self.makefile()
         fd.write('<policy-file-XXXuest/>\x00')
+        fd.flush()
         self.assertEqual(fd.read(), '')
 
 

@@ -14,7 +14,7 @@ import threading as __threading__
 _DummyThread_ = __threading__._DummyThread
 from gevent.local import local
 from gevent.thread import start_new_thread as _start_new_thread, allocate_lock as _allocate_lock, get_ident as _get_ident
-from gevent.hub import sleep as _sleep, getcurrent
+from gevent.hub import sleep as _sleep, getcurrent, PYPY
 Lock = _allocate_lock
 
 
@@ -35,3 +35,12 @@ class _DummyThread(_DummyThread_):
 
     def _Thread__stop(self):
         pass
+
+if PYPY:
+    # Make sure the MainThread can be found by our current greenlet ID,
+    # otherwise we get a new DummyThread, which cannot be joined.
+    # Fixes tests in test_threading_2
+    if _get_ident() not in __threading__._active and len(__threading__._active) == 1:
+        k,v = __threading__._active.items()[0]
+        del __threading__._active[k]
+        __threading__._active[_get_ident()] = v

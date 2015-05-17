@@ -120,9 +120,11 @@ class ThreadTests(unittest.TestCase):
         for i in range(NUMTASKS):
             t = TestThread("<thread %d>" % i, self, sema, mutex, numrunning)
             threads.append(t)
+            t.daemon = False # Under PYPY we get daemon by default?
             if hasattr(t, 'ident'):
                 self.failUnlessEqual(t.ident, None)
-                self.assert_(re.match('<TestThread\(.*, initial\)>', repr(t)))
+                self.assertFalse(t.daemon)
+                self.assert_(re.match(r'<TestThread\(.*, initial\)>', repr(t)))
             t.start()
 
         if verbose:
@@ -133,7 +135,7 @@ class ThreadTests(unittest.TestCase):
             if hasattr(t, 'ident'):
                 self.failIfEqual(t.ident, 0)
                 self.assertFalse(t.ident is None)
-                self.assert_(re.match('<TestThread\(.*, \w+ -?\d+\)>', repr(t)))
+                self.assert_(re.match(r'<TestThread\(.*, \w+ -?\d+\)>', repr(t)))
         if verbose:
             print('all tasks done')
         self.assertEqual(numrunning.get(), 0)
@@ -292,7 +294,8 @@ class ThreadTests(unittest.TestCase):
             # example.
             try:
                 import ctypes
-            except ImportError:
+                getattr(ctypes, 'pythonapi') # not available on PyPy
+            except (ImportError,AttributeError):
                 if verbose:
                     print("test_finalize_with_runnning_thread can't import ctypes")
                 return  # can't do anything
@@ -413,7 +416,6 @@ class ThreadJoinOnShutdown(unittest.TestCase):
         script = """if 1:
 %s
             import sys, os, time, threading
-
             # a thread, which waits for the main program to terminate
             def joiningfunc(mainthread):
                 mainthread.join()

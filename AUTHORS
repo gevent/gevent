@@ -1,6 +1,9 @@
 Gevent is written and maintained by
 
   Denis Bilenko
+  Matt Iversen
+  Steffen Prince
+  Jason Madden
 
 and the contributors (ordered by the date of first contribution):
 
@@ -43,7 +46,7 @@ and the contributors (ordered by the date of first contribution):
   陈小玉
   Philip Conrad
 
-  See https://github.com/surfly/gevent/graphs/contributors for more info.
+  See https://github.com/gevent/gevent/graphs/contributors for more info.
 
 Gevent is inspired by and uses some code from eventlet which was written by
 

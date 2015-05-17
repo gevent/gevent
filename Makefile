@@ -59,6 +59,14 @@ travistest:
 	cd greentest && GEVENT_RESOLVER=ares GEVENTARES_SERVERS=8.8.8.8 ${PYTHON} testrunner.py --config ../known_failures.py --ignore tests_that_dont_use_resolver.txt
 	cd greentest && GEVENT_FILE=thread ${PYTHON} testrunner.py --config ../known_failures.py `grep -l subprocess test_*.py`
 
+toxtest:
+	cd greentest && GEVENT_RESOLVER=thread python testrunner.py --config ../known_failures.py
+
+fulltoxtest:
+	cd greentest && GEVENT_RESOLVER=thread python testrunner.py --config ../known_failures.py
+	cd greentest && GEVENT_RESOLVER=ares GEVENTARES_SERVERS=8.8.8.8 python testrunner.py --config ../known_failures.py --ignore tests_that_dont_use_resolver.txt
+	cd greentest && GEVENT_FILE=thread python testrunner.py --config ../known_failures.py `grep -l subprocess test_*.py`
+
 bench:
 	${PYTHON} greentest/bench_sendall.py
 
@@ -71,14 +79,6 @@ travis_pypy:
 	cd greentest && ${PYTHON} testrunner.py --config ../known_failures.py
 
 travis_cpython:
-	make whitespace
-
-	pip install -q pep8
-	PYTHON=python make pep8
-
-	pip install -q pyflakes
-	PYTHON=python make pyflakes
-
 	sudo add-apt-repository -y ppa:chris-lea/cython
 
 	# somehow travis changed something and python2.6 and python3.3 no longer accessible anymore

@@ -1,6 +1,14 @@
+from __future__ import print_function
+
 import pickle
+import sys
 import greentest
-from gevent.ares import ares_host_result
+try:
+    from gevent.ares import ares_host_result
+except ImportError as ex:
+    print(ex)
+    sys.exit(0)
+
 
 
 class TestPickle(greentest.TestCase):

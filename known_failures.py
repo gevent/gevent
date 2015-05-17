@@ -14,11 +14,6 @@ FAILING_TESTS = [
     # needs investigating
     'FLAKY test__issue6.py',
 
-    # bunch of SSLError: [Errno 1] _ssl.c:504: error:14090086:SSL routines:SSL3_GET_SERVER_CERTIFICATE:certificate verify failed
-    # seems to be Python/OpenSSL problem, not gevent's
-    'monkey_test --Event test_ssl.py',
-    'monkey_test test_ssl.py',
-
     # Sometimes fails with AssertionError: ...\nIOError: close() called during concurrent operation on the same file object.\n'
     # Sometimes it contains "\nUnhandled exception in thread started by \nsys.excepthook is missing\nlost sys.stderr\n"
     "FLAKY test__subprocess_interrupted.py",
@@ -31,7 +26,15 @@ if os.environ.get('GEVENT_RESOLVER') == 'ares' or CPYTHON_DBG:
         'FLAKY test__socket_dns.py',
         'FLAKY test__socket_dns6.py',
     ]
-
+else:
+    FAILING_TESTS += [
+        # A number of the host names hardcoded have multiple, load
+        # balanced DNS entries. Therefore, multiple sequential calls
+        # of the resolution function, whether gevent or stdlib, can
+        # return non-equal results, possibly dependent on the host
+        # dns configuration
+        'FLAKY test__socket_dns6.py',
+    ]
 
 if sys.platform == 'win32':
     # currently gevent.core.stat watcher does not implement 'prev' and 'attr' attributes on Windows
@@ -55,35 +58,25 @@ if PYPY:
     FAILING_TESTS += [
         # Not implemented:
 
-        # stat watchers are not implemented on pypy
-        'test__core_stat.py',
-
-        # ares not supported on PyPy yet
-        'test__ares_host_result.py',
-
         # ---
 
         # BUGS:
 
         # in CPython we compile _semaphore.py with Cython to make its operation atomic
-        # how to do atomic operations on PyPy?
+        # how to do atomic operations on PyPy?.
+        # Note that PyPy will compile and load the Cython version of gevent._semaphore,
+        # thus fixing this test case (making it load it is a manual process now because
+        # _semaphore.py still exists and PyPy prefers that to the .so---some things would have
+        # to be renamed to make it work automatically). However, on at least one machine, the Cython
+        # version causes the test suite to run slower: ~2:52 vs ~2:37. Is that worth the
+        # non-traceability? (Is it even repeatable? Possibly not; a lot of the test time is spent in,
+        # e.g., test__socket_dns.py doing network stuff.)
         'test__threading_vs_settrace.py',
 
 
         # check_sendall_interrupted and testInterruptedTimeout fail due to
         # https://bitbucket.org/cffi/cffi/issue/152/handling-errors-from-signal-handlers-in
         'test_socket.py',
-
-        # No idea!
-        'test_threading_2.py',
-        'test_threading.py',
-        'test__pywsgi.py',
-        'test__backdoor.py',
-        'test__refcount.py',
-        'test__server.py',
-        'test_subprocess.py',  # test_executable_without_cwd
-        'FLAKY test___example_servers.py',
-        'FLAKY test_queue.py',
     ]
 
 

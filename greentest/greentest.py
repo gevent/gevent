@@ -182,7 +182,9 @@ def _get_class_attr(classDict, bases, attr, default=AttributeError):
 class TestCaseMetaClass(type):
     # wrap each test method with
     # a) timeout check
-    # b) totalrefcount check
+    # b) fatal error check
+    # c) restore the hub's error handler (see expect_one_error)
+    # d) totalrefcount check
     def __new__(meta, classname, bases, classDict):
         timeout = classDict.get('__timeout__', 'NONE')
         if timeout == 'NONE':
@@ -223,6 +225,7 @@ class TestCase(TestCaseMetaClass("NewBase", (BaseTestCase,), {})):
             return
         if hasattr(self, 'cleanup'):
             self.cleanup()
+        self._error = self._none
 
     @property
     def testname(self):

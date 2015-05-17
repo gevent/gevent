@@ -25,7 +25,6 @@ are not leaked by the hub.
 from __future__ import print_function
 from _socket import socket
 
-
 class Socket(socket):
     "Something we can have a weakref to"
 
@@ -104,6 +103,10 @@ def run_interaction(run_client):
 
 def run_and_check(run_client):
     w = run_interaction(run_client=run_client)
+    if greentest.PYPY:
+        # PyPy doesn't use a strict ref counting and must
+        # run a gc, but the object should be gone
+        gc.collect()
     if w():
         print(pformat(gc.get_referrers(w())))
         for x in gc.get_referrers(w()):

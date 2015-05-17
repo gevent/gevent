@@ -33,7 +33,6 @@ class SimpleStreamServer(StreamServer):
         finally:
             fd.close()
 
-
 class Settings:
     ServerClass = StreamServer
     ServerSubClass = SimpleStreamServer
