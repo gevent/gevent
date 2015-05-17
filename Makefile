@@ -62,14 +62,6 @@ bench:
 	${PYTHON} greentest/bench_sendall.py
 
 travis_cpython:
-	make whitespace
-
-	pip install -q pep8
-	PYTHON=python make pep8
-
-	pip install -q pyflakes
-	PYTHON=python make pyflakes
-
 	sudo add-apt-repository -y ppa:chris-lea/cython
 	sudo add-apt-repository -y ppa:fkrull/deadsnakes
 
