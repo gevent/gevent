@@ -161,6 +161,12 @@ class Greenlet(greenlet):
         if self._exception is not _NONE:
             return self._exception
 
+    def raise_exception(self):
+        if hasattr(self, '_exc_info'):
+            exc_info = self._exc_info
+            del self._exc_info
+            raise exc_info[0], exc_info[1], exc_info[2]
+
     def throw(self, *args):
         """Immediatelly switch into the greenlet and raise an exception in it.
 
@@ -324,6 +330,7 @@ class Greenlet(greenlet):
             self._report_result(exception)
             return
         self._exception = exception
+        self._exc_info = exc_info
 
         if self._links and not self._notifier:
             self._notifier = self.parent.loop.run_callback(self._notify_links)
@@ -411,10 +418,13 @@ def _kill(greenlet, exception, waiter):
 def joinall(greenlets, timeout=None, raise_error=False, count=None):
     if not raise_error:
         wait(greenlets, timeout=timeout)
+        for green in greenlets:
+            if hasattr(green, "_exc_info"):
+                del green._exc_info
     else:
         for obj in iwait(greenlets, timeout=timeout):
             if getattr(obj, 'exception', None) is not None:
-                raise obj.exception
+                obj.raise_exception()
             if count is not None:
                 count -= 1
                 if count <= 0:
