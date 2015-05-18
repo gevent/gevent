@@ -35,7 +35,7 @@ doc:
 	cd doc && PYTHONPATH=.. make html
 
 whitespace:
-	! find . -not -path "./.git/*" -not -path "./build/*" -not -path "./libev/*" -not -path "./c-ares/*" -not -path "./doc/_build/*" -type f | xargs egrep -l " $$"
+	! find . -not -path "./.git/*" -not -path "./build/*" -not -path "./libev/*" -not -path "./c-ares/*" -not -path "./doc/_build/*" -not -path "./doc/mytheme/static/*" -type f | xargs egrep -l " $$"
 
 pep8:
 	${PYTHON} `which pep8` .
