@@ -107,6 +107,7 @@ test__server.py
 test__example_portforwarder.py
 test__execmodules.py
 FLAKY test__greenio.py
+FLAKY test__socket_dns.py
 '''.strip().split('\n')
 
     if os.environ.get('GEVENT_RESOLVER') == 'ares':
