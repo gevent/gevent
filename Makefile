@@ -49,7 +49,6 @@ travistest:
 	which ${PYTHON}
 	${PYTHON} --version
 
-	cd greenlet-* && ${PYTHON} setup.py install -q
 	${PYTHON} -c 'import greenlet; print(greenlet, greenlet.__version__)'
 
 	${PYTHON} setup.py install
