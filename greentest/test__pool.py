@@ -340,7 +340,7 @@ class TestPool(greentest.TestCase):
             expected = ['1', '2', '10']
         self.assertEqual(result, expected)
 
-    # https://github.com/surfly/gevent/issues/423
+    # https://github.com/gevent/gevent/issues/423
     def test_imap_no_stop(self):
         q = Queue()
         q.put(123)
@@ -355,7 +355,7 @@ class TestPool(greentest.TestCase):
         result = list(self.pool.imap_unordered(lambda _: _, q))
         self.assertEqual(result, [1234])
 
-    # same issue, but different test: https://github.com/surfly/gevent/issues/311
+    # same issue, but different test: https://github.com/gevent/gevent/issues/311
     def test_imap_final_sleep(self):
         result = list(self.pool.imap(sqr, final_sleep()))
         self.assertEqual(result, [0, 1, 4])

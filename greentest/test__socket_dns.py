@@ -95,10 +95,10 @@ def compare_relaxed(a, b):
     >>> compare_relaxed('2607:f8b0:6708:24af:1fd:700:60d4:4af', '2607:f8b0:2d00::f000:0')
     True
 
-    >>> compare_relaxed('a.surfly.com', 'b.surfly.com')
+    >>> compare_relaxed('a.google.com', 'b.google.com')
     True
 
-    >>> compare_relaxed('a.surfly.com', 'a.gevent.org')
+    >>> compare_relaxed('a.google.com', 'a.gevent.org')
     False
     """
     # IPv6 address from different requests might be different
