@@ -80,15 +80,28 @@ class SSLSocket(socket):
             self._sslobj = None
         else:
             # yes, create the SSL object
-            if ciphers is None:
-                self._sslobj = _ssl.sslwrap(self._sock, server_side,
-                                            keyfile, certfile,
-                                            cert_reqs, ssl_version, ca_certs)
+            if hasattr(_ssl, 'sslwrap'):
+                if ciphers is None:
+                    self._sslobj = _ssl.sslwrap(self._sock, server_side,
+                                                keyfile, certfile,
+                                                cert_reqs, ssl_version, ca_certs)
+                else:
+                    self._sslobj = _ssl.sslwrap(self._sock, server_side,
+                                                keyfile, certfile,
+                                                cert_reqs, ssl_version, ca_certs,
+                                                ciphers)
             else:
-                self._sslobj = _ssl.sslwrap(self._sock, server_side,
-                                            keyfile, certfile,
-                                            cert_reqs, ssl_version, ca_certs,
-                                            ciphers)
+                # Python 2.7.9
+                ctx = __ssl__.SSLContext(ssl_version)
+                ctx.verify_mode = cert_reqs
+                if keyfile or certfile:
+                    ctx.load_cert_chain(certfile, keyfile)
+                if ca_certs:
+                    ctx.load_verify_locations(ca_certs)
+                if ciphers:
+                    ctx.set_ciphers(ciphers)
+                self._sslobj = ctx._wrap_socket(self._sock, server_side=server_side)
+
             if do_handshake_on_connect:
                 self.do_handshake()
         self.keyfile = keyfile
@@ -330,14 +343,27 @@ class SSLSocket(socket):
         if self._sslobj:
             raise ValueError("attempt to connect already-connected SSLSocket!")
         socket.connect(self, addr)
-        if self.ciphers is None:
-            self._sslobj = _ssl.sslwrap(self._sock, False, self.keyfile, self.certfile,
-                                        self.cert_reqs, self.ssl_version,
-                                        self.ca_certs)
+        if hasattr(_ssl, 'sslwrap'):
+            if self.ciphers is None:
+                self._sslobj = _ssl.sslwrap(self._sock, False, self.keyfile, self.certfile,
+                                            self.cert_reqs, self.ssl_version,
+                                            self.ca_certs)
+            else:
+                self._sslobj = _ssl.sslwrap(self._sock, False, self.keyfile, self.certfile,
+                                            self.cert_reqs, self.ssl_version,
+                                            self.ca_certs, self.ciphers)
         else:
-            self._sslobj = _ssl.sslwrap(self._sock, False, self.keyfile, self.certfile,
-                                        self.cert_reqs, self.ssl_version,
-                                        self.ca_certs, self.ciphers)
+            # Python 2.7.9
+            ctx = __ssl__.SSLContext(self.ssl_version)
+            ctx.verify_mode = self.cert_reqs
+            if self.keyfile or self.certfile:
+                ctx.load_cert_chain(self.certfile, self.keyfile)
+            if self.ca_certs:
+                ctx.load_verify_locations(self.ca_certs)
+            if self.ciphers:
+                ctx.set_ciphers(self.ciphers)
+            self._sslobj = ctx._wrap_socket(self._sock, server_side=False)
+
         if self.do_handshake_on_connect:
             self.do_handshake()
 
