@@ -41,13 +41,13 @@ More examples are available in the `code repository`_:
 - `wsgiserver.py`_ - demonstrates :class:`wsgi.WSGIServer <gevent.wsgi.WSGIServer>`
 - `wsgiserver_ssl.py`_ - demonstrates :class:`pywsgi.WSGIServer <gevent.pywsgi.WSGIServer>`
 
-.. _`code repository`: https://github.com/surfly/gevent/tree/master/examples
+.. _`code repository`: https://github.com/gevent/gevent/tree/master/examples
 .. _`does not support streaming`: http://code.google.com/p/gevent/issues/detail?id=4
 .. _`pipelining does not work`: http://code.google.com/p/gevent/issues/detail?id=32
 .. _gunicorn: http://gunicorn.org
-.. _`echoserver.py`: https://github.com/surfly/gevent/blob/master/examples/echoserver.py#L34
-.. _`wsgiserver.py`: https://github.com/surfly/gevent/blob/master/examples/wsgiserver.py#L18
-.. _`wsgiserver_ssl.py`: https://github.com/surfly/gevent/blob/master/examples/wsgiserver_ssl.py#L17
+.. _`echoserver.py`: https://github.com/gevent/gevent/blob/master/examples/echoserver.py#L34
+.. _`wsgiserver.py`: https://github.com/gevent/gevent/blob/master/examples/wsgiserver.py#L18
+.. _`wsgiserver_ssl.py`: https://github.com/gevent/gevent/blob/master/examples/wsgiserver_ssl.py#L17
 
 .. toctree::
 

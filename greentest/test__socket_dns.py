@@ -86,10 +86,10 @@ def compare_relaxed(a, b):
     >>> compare_relaxed('2a00:1450:4016:800::1013', '2a00:1450:4008:c01::93')
     True
 
-    >>> compare_relaxed('a.surfly.com', 'b.surfly.com')
+    >>> compare_relaxed('a.google.com', 'b.google.com')
     True
 
-    >>> compare_relaxed('a.surfly.com', 'a.gevent.org')
+    >>> compare_relaxed('a.google.com', 'a.gevent.org')
     False
     """
     if a.count(':') == 5 and b.count(':') == 5:
