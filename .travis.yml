@@ -3,6 +3,7 @@ python:
  - "2.6"
  - "2.7"
  - "3.3"
+ - "3.4"
  - "pypy"
 script:
  - if [[ $TRAVIS_PYTHON_VERSION == 'pypy' ]]; then NWORKERS=4 PYTHON=pypy make travis_pypy; fi
