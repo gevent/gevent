@@ -65,6 +65,13 @@ if sys.version_info[:2] >= (3, 4):
         def _set_tstate_lock(self):
             self._greenlet = getcurrent()
 
+        def run(self):
+            try:
+                super(Thread, self).run()
+            finally:
+                del self._greenlet # avoid ref cycles
+                self._stop() # mark as finished
+
         def join(self, timeout=None):
             if self._greenlet is None:
                 return

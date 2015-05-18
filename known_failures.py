@@ -131,6 +131,7 @@ FLAKY test__socket_dns.py
             test__socket_close.py
             test__select.py
             test__greenlet.py
+            FLAKY test__socket.py
 '''.strip().split()
 
 

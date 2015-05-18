@@ -32,7 +32,6 @@ class Thread(_Thread):
         target = kwargs.pop('target')
         target = wrap_error(target)
         _Thread.__init__(self, target=target, **kwargs)
-        self.daemon = True
         self.start()
 
 
