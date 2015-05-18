@@ -1,9 +1,13 @@
 # Copyright (c) 2012 Denis Bilenko. See LICENSE for details.
 import _socket
-from gevent.hub import get_hub
+from gevent.hub import get_hub, text_type
 
 
 __all__ = ['Resolver']
+
+
+# trigger import of encodings.idna to avoid https://github.com/gevent/gevent/issues/349
+text_type('foo').encode('idna')
 
 
 class Resolver(object):
