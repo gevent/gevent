@@ -79,24 +79,10 @@ travis_pypy:
 	cd greentest && ${PYTHON} testrunner.py --config ../known_failures.py
 
 travis_cpython:
-	sudo add-apt-repository -y ppa:chris-lea/cython
+	pip install cython greenlet
 
-	# somehow travis changed something and python2.6 and python3.3 no longer accessible anymore
-	sudo add-apt-repository -y ppa:fkrull/deadsnakes
-	sudo apt-get -qq -y update
-	sudo -E apt-get -qq -y install ${PYTHON} ${PYTHON}-dev
+	make travistest
 
-	sudo apt-get -qq -y install cython
-	cython --version
-
-	pip install -q --download . greenlet
-	unzip -q greenlet-*.zip
-
-	sudo -E make travistest
-
-	sudo -E apt-get install ${PYTHON}-dbg
-
-	sudo -E PYTHON=${PYTHON}-dbg GEVENTSETUP_EV_VERIFY=3 make travistest
 
 
 .PHONY: clean all doc pep8 whitespace pyflakes lint travistest travis
