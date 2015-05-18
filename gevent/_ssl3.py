@@ -60,6 +60,7 @@ class SSLSocket(socket):
                  suppress_ragged_eofs=True, npn_protocols=None, ciphers=None,
                  server_hostname=None,
                  _context=None):
+
         if _context:
             self.context = _context
         else:

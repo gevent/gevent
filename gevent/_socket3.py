@@ -44,9 +44,11 @@ class socket(_socket.socket):
         self._write_event = io_class(fileno, 2)
         self.timeout = _socket.getdefaulttimeout()
 
-    @property
-    def type(self):
-        return _socket.socket.type.__get__(self) & ~_socket.SOCK_NONBLOCK
+    if hasattr(_socket, 'SOCK_NONBLOCK'):
+        # Only defined under Linux
+        @property
+        def type(self):
+            return _socket.socket.type.__get__(self) & ~_socket.SOCK_NONBLOCK
 
     def __enter__(self):
         return self
