@@ -33,7 +33,7 @@ class Timeout(BaseException):
 
         >>> import gevent
         >>> gevent.Timeout(0.1).start()
-        >>> gevent.sleep(0.2)
+        >>> gevent.sleep(0.2)  #doctest: +IGNORE_EXCEPTION_DETAIL
         Traceback (most recent call last):
          ...
         Timeout: 0.1 seconds
@@ -132,7 +132,7 @@ class Timeout(BaseException):
 
     def __str__(self):
         """
-        >>> raise Timeout
+        >>> raise Timeout #doctest: +IGNORE_EXCEPTION_DETAIL
         Traceback (most recent call last):
             ...
         Timeout

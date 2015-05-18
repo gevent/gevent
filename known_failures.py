@@ -92,7 +92,6 @@ test__os.py
 test__backdoor.py
 test_threading_2.py
 test__refcount.py
-test__socket.py
 test__subprocess.py
 test__all__.py
 test__fileobject.py
@@ -100,7 +99,6 @@ test__pywsgi.py
 test__socket_ex.py
 test__example_echoserver.py
 test__subprocess_poll.py
-test__ssl.py
 test__makefile_ref.py
 test__socketpair.py
 test__server_pywsgi.py
@@ -109,6 +107,7 @@ test__server.py
 test__example_portforwarder.py
 test__execmodules.py
 FLAKY test__greenio.py
+FLAKY test__socket_dns.py
 '''.strip().split('\n')
 
     if os.environ.get('GEVENT_RESOLVER') == 'ares':
@@ -132,6 +131,7 @@ FLAKY test__greenio.py
             test__socket_close.py
             test__select.py
             test__greenlet.py
+            FLAKY test__socket.py
 '''.strip().split()
 
 

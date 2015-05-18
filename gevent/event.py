@@ -153,7 +153,7 @@ class AsyncResult(object):
         >>> try:
         ...     result.get()
         ... except ZeroDivisionError:
-        ...     print 'ZeroDivisionError'
+        ...     print('ZeroDivisionError')
         ZeroDivisionError
     """
     def __init__(self):

@@ -122,7 +122,13 @@ def discover(tests=None, ignore=None):
     default_options = {'timeout': TIMEOUT}
 
     for filename in tests:
-        if 'TESTRUNNER' in open(filename).read():
+        with open(filename, 'rb') as f:
+            # Some of the test files (e.g., test__socket_dns) are
+            # UTF8 encoded. Depending on the environment, Python 3 may
+            # try to decode those as ASCII, which fails with UnicodeDecodeError.
+            # Thus, be sure to open and compare in binary mode.
+            contents = f.read()
+        if b'TESTRUNNER' in contents:
             module = __import__(filename.rsplit('.', 1)[0])
             for cmd, options in module.TESTRUNNER():
                 if remove_options(cmd)[-1] in ignore:

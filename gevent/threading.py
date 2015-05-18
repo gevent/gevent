@@ -44,3 +44,40 @@ if PYPY:
         k,v = __threading__._active.items()[0]
         del __threading__._active[k]
         __threading__._active[_get_ident()] = v
+
+import sys
+if sys.version_info[:2] >= (3, 4):
+    # XXX: Issue 18808 breaks us on Python 3.4.
+    # Thread objects now expect a callback from the interpreter itself
+    # (threadmodule.c:release_sentinel). Because this never happens
+    # when a greenlet exits, join() and friends will block forever.
+    # The solution below involves capturing the greenlet when it is
+    # started and deferring the known broken methods to it.
+
+    class Thread(__threading__.Thread):
+        _greenlet = None
+
+        def is_alive(self):
+            return bool(self._greenlet)
+
+        isAlive = is_alive
+
+        def _set_tstate_lock(self):
+            self._greenlet = getcurrent()
+
+        def run(self):
+            try:
+                super(Thread, self).run()
+            finally:
+                del self._greenlet # avoid ref cycles
+                self._stop() # mark as finished
+
+        def join(self, timeout=None):
+            if self._greenlet is None:
+                return
+            self._greenlet.join(timeout=timeout)
+
+        def _wait_for_tstate_lock(self, *args, **kwargs):
+            raise NotImplementedError()
+
+    __implements__.append('Thread')

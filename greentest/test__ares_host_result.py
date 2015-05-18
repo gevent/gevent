@@ -21,20 +21,10 @@ class TestPickle(greentest.TestCase):
         assert r == loaded, (r, loaded)
         assert r.family == loaded.family, (r, loaded)
 
-    def test0(self):
-        return self._test(0)
-
-    def test1(self):
-        return self._test(1)
-
-    def test2(self):
-        return self._test(2)
-
-    if pickle.HIGHEST_PROTOCOL == 3:
-        def test3(self):
-            return self._test(3)
-    else:
-        assert pickle.HIGHEST_PROTOCOL == 2, pickle.HIGHEST_PROTOCOL
+for i in range(0, pickle.HIGHEST_PROTOCOL):
+    def make_test(j):
+        return lambda self: self._test(j)
+    setattr(TestPickle, 'test' + str(i), make_test(i) )
 
 
 if __name__ == '__main__':
