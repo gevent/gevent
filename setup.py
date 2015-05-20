@@ -302,6 +302,7 @@ def run_setup(ext_modules):
             "Programming Language :: Python :: 2.5",
             "Programming Language :: Python :: 2.6",
             "Programming Language :: Python :: 2.7",
+            "Programming Language :: Python :: Implementation :: CPython",
             "Operating System :: MacOS :: MacOS X",
             "Operating System :: POSIX",
             "Operating System :: Microsoft :: Windows",
