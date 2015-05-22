@@ -8,7 +8,18 @@ Unreleased
 ----------
 
 - Fix LifoQueue.peek() to return correct element. PR #456. Patch by Christine Spang.
+- Fix gevent.greenlet.joinall to not ignore ``count`` when
+  ``raise_error`` is False. PR #512 by Ivan Diao.
 
+Release 1.0.2
+-------------
+
+- Fix LifoQueue.peek() to return correct element. PR #456. Patch by Christine Spang.
+- Upgrade to libev 4.19
+- Remove SSL3 entirely as default TLS protocol
+- Import socket on Windows (closes #459)
+- Fix C90 syntax error (PR #449)
+- Add compatibility with Python 2.7.9's SSL changes. Issue #477.
 
 Release 1.0.1
 -------------
@@ -80,7 +91,7 @@ Release 1.0rc1 (Oct 30, 2012)
 - Renamed FileObjectThreadPool -> FileObjectThread
 - Greenlet: Fixed #143: greenlet links are now executed in the order they were added
 - Synchronize access to FileObjectThread with Semaphore
-- EINVAL is not longer handled in fileobject.
+- EINVAL is no longer handled in fileobject.
 
 monkey:
 
@@ -1039,4 +1050,3 @@ Besides having less bugs and less code to care about the goals of the fork are:
 * Use the interfaces and conventions from the standard Python library where possible.
 
 .. _eventlet: http://bitbucket.org/denis/eventlet
-
