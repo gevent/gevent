@@ -288,6 +288,26 @@ class TestStuff(greentest.TestCase):
             assert 'second' in str(ex), repr(str(ex))
         gevent.joinall([a, b])
 
+    def test_joinall_count_raise_error(self):
+        # When joinall is asked not to raise an error, the 'count' param still
+        # works.
+        def raises_but_ignored():
+            raise ExpectedError("count")
+        def sleep_forever():
+            while True:
+                sleep(0.1)
+
+        sleeper = gevent.spawn(sleep_forever)
+        raiser = gevent.spawn(raises_but_ignored)
+
+        gevent.joinall([sleeper, raiser], raise_error=False, count=1)
+        assert_ready(raiser)
+        assert_not_ready(sleeper)
+
+        # Clean up our mess
+        sleeper.kill()
+        assert_ready(sleeper)
+
     def test_multiple_listeners_error(self):
         # if there was an error while calling a callback
         # it should not prevent the other listeners from being called
