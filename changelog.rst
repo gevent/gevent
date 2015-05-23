@@ -4,7 +4,7 @@ Changelog
 .. currentmodule:: gevent
 
 
-Release 1.0.2
+Release 1.0.2 (May 23, 2015)
 -------------
 
 - Fix LifoQueue.peek() to return correct element. PR #456. Patch by Christine Spang.
