@@ -115,7 +115,7 @@ class Event(object):
                     self.hub.handle_error((link, self), *sys.exc_info())
 
     def _reset_internal_locks(self):
-        # for compatibility with threading.Event (only in case of patch_all(Event=True), by default Event is not pathed)
+        # for compatibility with threading.Event (only in case of patch_all(Event=True), by default Event is not patched)
         #  Exception AttributeError: AttributeError("'Event' object has no attribute '_reset_internal_locks'",)
         # in <module 'threading' from '/usr/lib/python2.7/threading.pyc'> ignored
         pass
