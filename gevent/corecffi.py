@@ -1058,6 +1058,7 @@ class child(watcher):
     def rstatus(self, value):
         self._watcher.rstatus = value
 
+
 class stat(watcher):
     _watcher_start = libev.ev_stat_start
     _watcher_stop = libev.ev_stat_stop
@@ -1105,6 +1106,7 @@ class stat(watcher):
     @property
     def interval(self):
         return self._watcher.interval
+
 
 def _syserr_cb(msg):
     try:

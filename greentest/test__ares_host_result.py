@@ -10,7 +10,6 @@ except ImportError as ex:
     sys.exit(0)
 
 
-
 class TestPickle(greentest.TestCase):
     # Issue 104: ares.ares_host_result unpickleable
 
@@ -24,7 +23,7 @@ class TestPickle(greentest.TestCase):
 for i in range(0, pickle.HIGHEST_PROTOCOL):
     def make_test(j):
         return lambda self: self._test(j)
-    setattr(TestPickle, 'test' + str(i), make_test(i) )
+    setattr(TestPickle, 'test' + str(i), make_test(i))
 
 
 if __name__ == '__main__':

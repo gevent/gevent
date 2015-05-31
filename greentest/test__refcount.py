@@ -25,6 +25,7 @@ are not leaked by the hub.
 from __future__ import print_function
 from _socket import socket
 
+
 class Socket(socket):
     "Something we can have a weakref to"
 

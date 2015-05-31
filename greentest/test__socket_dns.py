@@ -105,7 +105,7 @@ def compare_relaxed(a, b):
     a_segments = a.count(':')
     b_segments = b.count(':')
     if a_segments and b_segments:
-        if a_segments == b_segments and a_segments in (4,5,6,7):
+        if a_segments == b_segments and a_segments in (4, 5, 6, 7):
             return True
         if a.rstrip(':').startswith(b.rstrip(':')) or b.rstrip(':').startswith(a.rstrip(':')):
             return True
@@ -245,8 +245,7 @@ class TestCase(greentest.TestCase):
         # because it calls assertSequenceEqual, which highlights the exact
         # difference in the tuple
         msg = format_call(func, args)
-        self.assertEqual((msg,gevent_result), (msg,real_result))
-
+        self.assertEqual((msg, gevent_result), (msg, real_result))
 
 
 class TestTypeError(TestCase):

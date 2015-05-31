@@ -266,6 +266,7 @@ class TestStuff(greentest.TestCase):
         self.assertEqual(e.get(), 1)
 
     def test_wait_error(self):
+
         def x():
             sleep(DELAY)
             return 1
@@ -293,6 +294,7 @@ class TestStuff(greentest.TestCase):
         # works.
         def raises_but_ignored():
             raise ExpectedError("count")
+
         def sleep_forever():
             while True:
                 sleep(0.1)

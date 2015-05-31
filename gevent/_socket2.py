@@ -398,6 +398,7 @@ else:
 
 if hasattr(__socket__, 'ssl'):
     from gevent.hub import PYGTE279
+
     def ssl(sock, keyfile=None, certfile=None):
         # deprecated in 2.7.9 but still present
         if PYGTE279:
