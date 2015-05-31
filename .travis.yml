@@ -1,12 +1,12 @@
 language: python
 sudo: false
 env:
+    - TOXENV=travis-lint
     - TOXENV=py26
     - TOXENV=py27
+    - TOXENV=pypy
     - TOXENV=py33
     - TOXENV=py34
-    - TOXENV=pypy
-    - TOXENV=travis-lint
 install:
     - travis_retry pip install tox
     - travis_retry pip install cython
