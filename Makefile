@@ -35,7 +35,7 @@ doc:
 	cd doc && PYTHONPATH=.. make html
 
 whitespace:
-	! find . -not -path "./.git/*" -not -path "./build/*" -not -path "./libev/*" -not -path "./c-ares/*" -not -path "./doc/_build/*" -not -path "./doc/mytheme/static/*" -type f | xargs egrep -l " $$"
+	! find . -not -path "./.tox/*" -not -path "*/__pycache__/*" -not -path "*.pyc" -not -path "./.git/*" -not -path "./build/*" -not -path "./libev/*" -not -path "./gevent/libev/*" -not -path "./gevent.egg-info/*" -not -path "./dist/*" -not -path "./.DS_Store" -not -path "./c-ares/*" -not -path "./gevent/gevent.*.[ch]" -not -path "./gevent/core.pyx" -not -path "./doc/_build/*" -not -path "./doc/mytheme/static/*" -type f | xargs egrep -l " $$"
 
 pep8:
 	${PYTHON} `which pep8` .
@@ -43,7 +43,7 @@ pep8:
 pyflakes:
 	${PYTHON} util/pyflakes.py
 
-lint: whitespace pep8 pyflakes
+lint: whitespace pyflakes pep8
 
 travistest:
 	which ${PYTHON}
@@ -66,11 +66,13 @@ fulltoxtest:
 	cd greentest && GEVENT_RESOLVER=ares GEVENTARES_SERVERS=8.8.8.8 python testrunner.py --config ../known_failures.py --ignore tests_that_dont_use_resolver.txt
 	cd greentest && GEVENT_FILE=thread python testrunner.py --config ../known_failures.py `grep -l subprocess test_*.py`
 
+leaktest:
+	GEVENTSETUP_EV_VERIFY=3 GEVENTTEST_LEAKCHECK=1 make travistest
+
 bench:
 	${PYTHON} greentest/bench_sendall.py
 
 travis_pypy:
-	# no need to repeat linters here
 	which ${PYTHON}
 	${PYTHON} --version
 	${PYTHON} setup.py install
@@ -82,6 +84,9 @@ travis_cpython:
 
 	make travistest
 
+travis_test_linters:
+	make lint
+	make leaktest
 
 
 .PHONY: clean all doc pep8 whitespace pyflakes lint travistest travis

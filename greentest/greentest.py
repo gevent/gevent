@@ -85,7 +85,7 @@ def wrap_timeout(timeout, method):
 
 
 def wrap_refcount(method):
-    if gettotalrefcount is None:
+    if not os.getenv('GEVENTTEST_LEAKCHECK'):
         return method
 
     @wraps(method)
@@ -98,7 +98,7 @@ def wrap_refcount(method):
         gc.disable()
         try:
             while True:
-                d = gettotalrefcount()
+                d = len(gc.get_objects())
                 self.setUp()
                 method(self, *args, **kwargs)
                 self.tearDown()
@@ -106,7 +106,7 @@ def wrap_refcount(method):
                     sys.modules['urlparse'].clear_cache()
                 if 'urllib.parse' in sys.modules:
                     sys.modules['urllib.parse'].clear_cache()
-                d = gettotalrefcount() - d
+                d = len(gc.get_objects()) - d
                 deltas.append(d)
                 # the following configurations are classified as "no leak"
                 # [0, 0]

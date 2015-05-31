@@ -1,13 +1,15 @@
 language: python
 sudo: false
 python:
- - "2.6"
- - "2.7"
- - "3.3"
- - "3.4"
- - "pypy"
+    - TOXENV=py26
+    - TOXENV=py27
+    - TOXENV=py33
+    - TOXENV=py34
+    - TOXENV=pypy
+    - TOXENV=travis-lint
+install:
+    - travis_retry pip install tox
 script:
- - if [[ $TRAVIS_PYTHON_VERSION == 'pypy' ]]; then NWORKERS=4 PYTHON=pypy make travis_pypy; fi
- - if [[ $TRAVIS_PYTHON_VERSION != 'pypy' ]]; then NWORKERS=4 PYTHON=python$TRAVIS_PYTHON_VERSION make travis_cpython; fi
+    - tox
 notifications:
   email: false
