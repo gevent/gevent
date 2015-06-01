@@ -9,7 +9,7 @@ env:
     - TOXENV=py34
 install:
     - travis_retry pip install -U pip
-    - travis_retry pip install -U tox,cython
+    - travis_retry pip install -U tox cython
 script:
     - tox
 notifications:
