@@ -15,6 +15,7 @@ gevent/subprocess.py:\d+: undefined name
 gevent/_?ssl[23]?.py:\d+: undefined name
 gevent/__init__.py:\d+:.*imported but unused
 gevent/__init__.py:\d+: redefinition of unused 'signal' from line
+gevent/__init__.py:\d+: redefinition of unused 'socket' from line
 gevent/coros.py:\d+: 'from gevent.lock import *' used; unable to detect undefined names
 gevent/coros.py:\d+: '__all__' imported but unused
 gevent/hub.py:\d+: 'reraise' imported but unused
