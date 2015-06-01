@@ -51,11 +51,12 @@ class TestTCP(greentest.TestCase):
         self.port = listener.getsockname()[1]
 
     def cleanup(self):
-        try:
-            self.listener.close()
-        except:
-            pass
-        del self.listener
+        if hasattr(self, 'listener'):
+            try:
+                self.listener.close()
+            except:
+                pass
+            del self.listener
 
     def create_connection(self):
         sock = socket.socket()
