@@ -291,6 +291,7 @@ class socket(object):
             data_sent = 0
             while data_sent < len(data):
                 data_sent += self.send(_get_memory(data, data_sent), flags)
+            return data_sent, 'no timeout'
         else:
             timeleft = self.timeout
             end = time.time() + timeleft
@@ -298,7 +299,7 @@ class socket(object):
             while True:
                 data_sent += self.send(_get_memory(data, data_sent), flags, timeout=timeleft)
                 if data_sent >= len(data):
-                    break
+                    return data_sent, 'timeout', self.timeout
                 timeleft = end - time.time()
                 if timeleft <= 0:
                     raise timeout('timed out')
