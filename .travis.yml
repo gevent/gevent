@@ -13,6 +13,7 @@ install:
     # makes the overall build much faster.
     - travis_retry pip install --install-option='--no-cython-compile' cython
 script:
-    - tox
+    # Try to use the site packages of cython we just installed
+    - tox --sitepackages
 notifications:
   email: false
