@@ -147,16 +147,9 @@ class TestTCP(greentest.TestCase):
     if sys.platform != 'win32':
 
         def test_sendall_timeout(self):
-            data_sent = b'h' * 2000000
+            data_sent = b'hello' * 1000000
             client_sock = []
-            def target():
-                print("Running thread")
-                sock = self.listener.accept()
-                print("Accepted")
-                client_sock.append(sock)
-                print("Done")
-            acceptor = Thread(target=target)
-#            acceptor = Thread(target=lambda: client_sock.append(self.listener.accept()))
+            acceptor = Thread(target=lambda: client_sock.append(self.listener.accept()))
             client = self.create_connection()
             time.sleep(0.1)
             assert client_sock
