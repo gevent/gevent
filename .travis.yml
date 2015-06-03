@@ -14,6 +14,6 @@ install:
     - travis_retry pip install --install-option='--no-cython-compile' cython
 script:
     # Try to use the site packages of cython we just installed
-    - tox --sitepackages
+    - tox --sitepackages --develop
 notifications:
   email: false
