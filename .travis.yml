@@ -8,8 +8,10 @@ env:
     - TOXENV=py33
     - TOXENV=py34
 install:
-    - travis_retry pip install -U pip
-    - travis_retry pip install -U tox cython
+    - travis_retry pip install -U pip tox
+    # We only have a few files to compile, so not compiling cython itself
+    # makes the overall build much faster.
+    - travis_retry pip install --install-option='--no-cython-compile' cython
 script:
     - tox
 notifications:
