@@ -164,7 +164,7 @@ class TestTCP(greentest.TestCase):
             start = time.time()
             try:
                 count = client.sendall(data_sent)
-                print("Sent data in %s" % (time.time() - start))
+                print("Sent %s data in %s" % (count, time.time() - start))
                 #self.assertRaises(self.TIMEOUT_ERROR, client.sendall, data_sent)
                 self.fail("Should raise timeout error")
             except self.TIMEOUT_ERROR:
