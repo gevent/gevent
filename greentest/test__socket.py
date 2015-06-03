@@ -147,6 +147,9 @@ class TestTCP(greentest.TestCase):
     if sys.platform != 'win32':
 
         def test_sendall_timeout(self):
+            # Travis-CI container infrastructure is configured with
+            # large socket buffers, at least 2MB, as-of Jun 3, 2015,
+            # so we must be sure to send more data than that.
             data_sent = b'hello' * 1000000
             client_sock = []
             acceptor = Thread(target=lambda: client_sock.append(self.listener.accept()))
@@ -156,11 +159,7 @@ class TestTCP(greentest.TestCase):
             client.settimeout(0.1)
             start = time.time()
             try:
-                count = client.sendall(data_sent)
-                print("Sent %s data in %s" % (count, time.time() - start))
-                #self.assertRaises(self.TIMEOUT_ERROR, client.sendall, data_sent)
-                self.fail("Should raise timeout error")
-            except self.TIMEOUT_ERROR:
+                self.assertRaises(self.TIMEOUT_ERROR, client.sendall, data_sent)
                 took = time.time() - start
                 assert 0.1 - 0.01 <= took <= 0.1 + 0.1, took
             finally:
