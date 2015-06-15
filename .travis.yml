@@ -17,3 +17,6 @@ script:
     - tox --sitepackages --develop
 notifications:
   email: false
+cache:
+  directories:
+    - $HOME/.cache/pip
