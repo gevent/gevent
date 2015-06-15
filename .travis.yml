@@ -8,15 +8,22 @@ env:
     - TOXENV=py33
     - TOXENV=py34
 install:
-    - travis_retry pip install -U pip tox
-    # We only have a few files to compile, so not compiling cython itself
-    # makes the overall build much faster.
-    - travis_retry pip install --install-option='--no-cython-compile' cython
+    # First install a newer pip so that it can use the wheel cache
+    # (only needed until travis upgrades pip to 7.x)
+    - travis_retry pip install -U pip
+    # Then start installing our deps. Note that use of --build-options / --global-options / --install-options
+    # disables the cache.
+    # XXX: This may be useless; our environment based test matrix means these commands all
+    # run with the same python version.
+    - travis_retry pip install -U tox cython greenlet
 script:
-    # Try to use the site packages of cython we just installed
+    # Try to use the site packages of cython we just installed. Also use development mode
+    # so that our actual source is not included in the cache (because it changes all the time
+    # the cache would be useless).
     - tox --sitepackages --develop
 notifications:
   email: false
 cache:
   directories:
     - $HOME/.cache/pip
+    - $HOME/build/gevent/gevent/.tox
