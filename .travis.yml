@@ -20,4 +20,7 @@ script:
     - if [[ $TRAVIS_PYTHON_VERSION == '2.7' && $LINT == true ]]; then python setup.py develop && make travis_test_linters; elif [[ $LINT == false ]]; then python setup.py develop && make toxtest; fi
 notifications:
   email: false
-cache: pip
+# cache: pip seems not to work
+cache:
+  directories:
+    - $HOME/.cache/pip
