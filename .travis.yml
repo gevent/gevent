@@ -1,29 +1,24 @@
 language: python
 sudo: false
+python:
+    - 2.6
+    - 2.7
+    - pypy
+    - 3.3
+    - 3.4
 env:
-    - TOXENV=travis-lint
-    - TOXENV=py26
-    - TOXENV=py27
-    - TOXENV=pypy
-    - TOXENV=py33
-    - TOXENV=py34
+    - LINT=true
+    - LINT=false
 install:
     # First install a newer pip so that it can use the wheel cache
     # (only needed until travis upgrades pip to 7.x)
     - travis_retry pip install -U pip
     # Then start installing our deps. Note that use of --build-options / --global-options / --install-options
     # disables the cache.
-    # XXX: This may be useless; our environment based test matrix means these commands all
-    # run with the same python version.
-    - travis_retry pip install -U tox cython greenlet
+    - travis_retry pip install -U tox cython greenlet pep8 pyflakes
+    - travis_retry python setup.py develop
 script:
-    # Try to use the site packages of cython we just installed. Also use development mode
-    # so that our actual source is not included in the cache (because it changes all the time
-    # the cache would be useless).
-    - tox --sitepackages --develop
+    - if [[ $TRAVIS_PYTHON_VERSION == '2.7' && LINT == true ]]; then make travis_test_linters; else make toxtest; fi
 notifications:
   email: false
-cache:
-  directories:
-    - $HOME/.cache/pip
-    - $HOME/build/gevent/gevent/.tox
+cache: pip
