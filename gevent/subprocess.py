@@ -247,17 +247,17 @@ class Popen(object):
                 errread = msvcrt.open_osfhandle(errread.Detach(), 0)
 
         if p2cwrite is not None:
-            self.stdin = FileObject(p2cwrite, 'wb')
+            self.stdin = FileObject(p2cwrite, 'wb', bufsize)
         if c2pread is not None:
             if universal_newlines:
-                self.stdout = FileObject(c2pread, 'rU')
+                self.stdout = FileObject(c2pread, 'rU', bufsize)
             else:
-                self.stdout = FileObject(c2pread, 'rb')
+                self.stdout = FileObject(c2pread, 'rb', bufsize)
         if errread is not None:
             if universal_newlines:
-                self.stderr = FileObject(errread, 'rU')
+                self.stderr = FileObject(errread, 'rU', bufsize)
             else:
-                self.stderr = FileObject(errread, 'rb')
+                self.stderr = FileObject(errread, 'rb', bufsize)
 
     def __repr__(self):
         return '<%s at 0x%x pid=%r returncode=%r>' % (self.__class__.__name__, id(self), self.pid, self.returncode)
