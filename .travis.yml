@@ -16,9 +16,8 @@ install:
     # Then start installing our deps. Note that use of --build-options / --global-options / --install-options
     # disables the cache.
     - travis_retry pip install -U tox cython greenlet pep8 pyflakes
-    - travis_retry python setup.py develop
 script:
-    - if [[ $TRAVIS_PYTHON_VERSION == '2.7' && $LINT == true ]]; then make travis_test_linters; elif [[ $LINT == false ]]; then make toxtest; fi
+    - if [[ $TRAVIS_PYTHON_VERSION == '2.7' && $LINT == true ]]; then python setup.py develop && make travis_test_linters; elif [[ $LINT == false ]]; then python setup.py develop && make toxtest; fi
 notifications:
   email: false
 cache: pip
