@@ -51,11 +51,12 @@ class TestTCP(greentest.TestCase):
         self.port = listener.getsockname()[1]
 
     def cleanup(self):
-        try:
-            self.listener.close()
-        except:
-            pass
-        del self.listener
+        if hasattr(self, 'listener'):
+            try:
+                self.listener.close()
+            except:
+                pass
+            del self.listener
 
     def create_connection(self):
         sock = socket.socket()
@@ -146,20 +147,25 @@ class TestTCP(greentest.TestCase):
     if sys.platform != 'win32':
 
         def test_sendall_timeout(self):
+            # Travis-CI container infrastructure is configured with
+            # large socket buffers, at least 2MB, as-of Jun 3, 2015,
+            # so we must be sure to send more data than that.
+            data_sent = b'hello' * 1000000
             client_sock = []
             acceptor = Thread(target=lambda: client_sock.append(self.listener.accept()))
             client = self.create_connection()
             time.sleep(0.1)
             assert client_sock
             client.settimeout(0.1)
-            data_sent = b'h' * 1000000
             start = time.time()
-            self.assertRaises(self.TIMEOUT_ERROR, client.sendall, data_sent)
-            took = time.time() - start
-            assert 0.1 - 0.01 <= took <= 0.1 + 0.1, took
-            acceptor.join()
-            client.close()
-            client_sock[0][0].close()
+            try:
+                self.assertRaises(self.TIMEOUT_ERROR, client.sendall, data_sent)
+                took = time.time() - start
+                assert 0.1 - 0.01 <= took <= 0.1 + 0.1, took
+            finally:
+                acceptor.join()
+                client.close()
+                client_sock[0][0].close()
 
     def test_makefile(self):
 

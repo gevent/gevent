@@ -127,6 +127,7 @@ class BaseServer(object):
     def do_handle(self, *args):
         spawn = self._spawn
         handle = self._handle
+
         def _close_when_done(*args):
             try:
                 return handle(*args)

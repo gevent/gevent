@@ -85,8 +85,32 @@ def wrap_timeout(timeout, method):
 
 
 def wrap_refcount(method):
-    if gettotalrefcount is None:
+    if not os.getenv('GEVENTTEST_LEAKCHECK'):
         return method
+
+    # Some builtin things that we ignore
+    IGNORED_TYPES = (tuple, dict)
+
+    def type_hist():
+        import collections
+        d = collections.defaultdict(int)
+        for x in gc.get_objects():
+            k = type(x)
+            if k in IGNORED_TYPES:
+                continue
+            d[k] += 1
+        return d
+
+    def report_diff(a, b):
+        diff_lines = []
+        for k, v in sorted(a.items()):
+            if b[k] != v:
+                diff_lines.append("%s: %s != %s" % (k, v, b[k]))
+
+        if not diff_lines:
+            return None
+        diff = '\n'.join(diff_lines)
+        return diff
 
     @wraps(method)
     def wrapped(self, *args, **kwargs):
@@ -98,16 +122,29 @@ def wrap_refcount(method):
         gc.disable()
         try:
             while True:
-                d = gettotalrefcount()
+
+                # Grab current snapshot
+                hist_before = type_hist()
+                d = sum(hist_before.values())
+
                 self.setUp()
                 method(self, *args, **kwargs)
                 self.tearDown()
+
+                # Grab post snapshot
                 if 'urlparse' in sys.modules:
                     sys.modules['urlparse'].clear_cache()
                 if 'urllib.parse' in sys.modules:
                     sys.modules['urllib.parse'].clear_cache()
-                d = gettotalrefcount() - d
+                hist_after = type_hist()
+                d = sum(hist_after.values()) - d
                 deltas.append(d)
+
+                # Reset and check for cycles
+                gc.collect()
+                if gc.garbage:
+                    raise AssertionError("Generated uncollectable garbage")
+
                 # the following configurations are classified as "no leak"
                 # [0, 0]
                 # [x, 0, 0]
@@ -122,7 +159,8 @@ def wrap_refcount(method):
                 elif len(deltas) >= 4 and sum(deltas[-4:]) == 0:
                     break
                 elif len(deltas) >= 3 and deltas[-1] > 0 and deltas[-1] == deltas[-2] and deltas[-2] == deltas[-3]:
-                    raise AssertionError('refcount increased by %r' % (deltas, ))
+                    diff = report_diff(hist_before, hist_after)
+                    raise AssertionError('refcount increased by %r\n%s' % (deltas, diff))
                 # OK, we don't know for sure yet. Let's search for more
                 if sum(deltas[-3:]) <= 0 or sum(deltas[-4:]) <= 0 or deltas[-4:].count(0) >= 2:
                     # this is suspicious, so give a few more runs
@@ -130,7 +168,7 @@ def wrap_refcount(method):
                 else:
                     limit = 7
                 if len(deltas) >= limit:
-                    raise AssertionError('refcount increased by %r' % (deltas, ))
+                    raise AssertionError('refcount increased by %r\n%s' % (deltas, report_diff(hist_before, hist_after)))
         finally:
             gc.enable()
         self.skipTearDown = True

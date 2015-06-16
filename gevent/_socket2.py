@@ -298,7 +298,7 @@ class socket(object):
             while True:
                 data_sent += self.send(_get_memory(data, data_sent), flags, timeout=timeleft)
                 if data_sent >= len(data):
-                    break
+                    return
                 timeleft = end - time.time()
                 if timeleft <= 0:
                     raise timeout('timed out')
@@ -398,6 +398,7 @@ else:
 
 if hasattr(__socket__, 'ssl'):
     from gevent.hub import PYGTE279
+
     def ssl(sock, keyfile=None, certfile=None):
         # deprecated in 2.7.9 but still present
         if PYGTE279:

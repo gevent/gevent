@@ -41,7 +41,7 @@ if PYPY:
     # otherwise we get a new DummyThread, which cannot be joined.
     # Fixes tests in test_threading_2
     if _get_ident() not in __threading__._active and len(__threading__._active) == 1:
-        k,v = __threading__._active.items()[0]
+        k, v = __threading__._active.items()[0]
         del __threading__._active[k]
         __threading__._active[_get_ident()] = v
 

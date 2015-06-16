@@ -1,12 +1,28 @@
 language: python
+sudo: false
 python:
- - "2.6"
- - "2.7"
- - "3.3"
- - "3.4"
- - "pypy"
+    - 2.6
+    - 2.7
+    - pypy
+    - 3.3
+    - 3.4
+env:
+    - LINT=true
+    - LINT=false
+install:
+    # First install a newer pip so that it can use the wheel cache
+    # (only needed until travis upgrades pip to 7.x)
+    - travis_retry pip install -U pip
+    # Then start installing our deps. Note that use of --build-options / --global-options / --install-options
+    # disables the cache.
+    - travis_retry pip install -U tox cython greenlet pep8 pyflakes
 script:
- - if [[ $TRAVIS_PYTHON_VERSION == 'pypy' ]]; then NWORKERS=4 PYTHON=pypy make travis_pypy; fi
- - if [[ $TRAVIS_PYTHON_VERSION != 'pypy' ]]; then NWORKERS=4 PYTHON=python$TRAVIS_PYTHON_VERSION make travis_cpython; fi
+    - if [[ $TRAVIS_PYTHON_VERSION == '2.7' && $LINT == true ]]; then python setup.py develop && make travis_test_linters; elif [[ $LINT == false && $TRAVIS_PYTHON_VERSION == 'pypy' ]]; then python setup.py develop && make toxtest; elif [[ $LINT == false ]]; then python setup.py develop && make fulltoxtest; fi
 notifications:
   email: false
+# cache: pip seems not to work
+cache:
+  directories:
+    - $HOME/.cache/pip
+before_cache:
+    - rm -f $HOME/.cache/pip/log/debug.log
