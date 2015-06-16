@@ -10,6 +10,9 @@ Unreleased
 - Fix LifoQueue.peek() to return correct element. PR #456. Patch by Christine Spang.
 - Fix gevent.greenlet.joinall to not ignore ``count`` when
   ``raise_error`` is False. PR #512 by Ivan Diao.
+- Fix subprocess.Popen to not ignore the ``bufsize`` argument. Note
+  that this changes the (platform dependent) default, typically from
+  buffered to unbuffered. PR #542 by Romuald Brunet.
 
 Release 1.0.2
 -------------
