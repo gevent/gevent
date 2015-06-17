@@ -334,8 +334,11 @@ class Hub(greenlet):
                     cb.stop()
 
     def print_exception(self, context, type, value, tb):
-        traceback.print_exception(type, value, tb)
-        del tb
+        if tb is not None:
+            traceback.print_exception(type, value, tb)
+            del tb
+        elif value is not None:
+            print(str(value), file=sys.stderr)
         if context is not None:
             if not isinstance(context, str):
                 try:
