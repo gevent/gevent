@@ -13,6 +13,7 @@ Unreleased
 - Fix subprocess.Popen to not ignore the ``bufsize`` argument. Note
   that this changes the (platform dependent) default, typically from
   buffered to unbuffered. PR #542 by Romuald Brunet.
+- Upgraded c-ares to 1.10.0. PR #579 by Omer Katz.
 
 Release 1.0.2
 -------------

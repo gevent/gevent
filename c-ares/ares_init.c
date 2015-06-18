@@ -1,6 +1,6 @@
 
 /* Copyright 1998 by the Massachusetts Institute of Technology.
- * Copyright (C) 2007-2012 by Daniel Stenberg
+ * Copyright (C) 2007-2013 by Daniel Stenberg
  *
  * Permission to use, copy, modify, and distribute this
  * software and its documentation for any purpose and without
@@ -19,14 +19,6 @@
 
 #ifdef HAVE_SYS_PARAM_H
 #include <sys/param.h>
-#endif
-
-#ifdef HAVE_SYS_TIME_H
-#include <sys/time.h>
-#endif
-
-#ifdef HAVE_SYS_SOCKET_H
-#include <sys/socket.h>
 #endif
 
 #ifdef HAVE_NETINET_IN_H
@@ -50,16 +42,6 @@
 #  include <arpa/nameser_compat.h>
 #endif
 
-#ifdef HAVE_UNISTD_H
-#include <unistd.h>
-#endif
-
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <ctype.h>
-#include <time.h>
-
 #if defined(ANDROID) || defined(__ANDROID__)
 #include <sys/system_properties.h>
 /* From the Bionic sources */
@@ -68,8 +50,7 @@
 #endif
 
 #include "ares.h"
-#include "inet_ntop.h"
-#include "inet_net_pton.h"
+#include "ares_inet_net_pton.h"
 #include "ares_library_init.h"
 #include "ares_nowarn.h"
 #include "ares_platform.h"
@@ -1960,13 +1941,6 @@ static int init_id_key(rc4_key* key,int key_data_len)
   }
   free(key_data_ptr);
   return ARES_SUCCESS;
-}
-
-unsigned short ares__generate_new_id(rc4_key* key)
-{
-  unsigned short r=0;
-  ares__rc4(key, (unsigned char *)&r, sizeof(r));
-  return r;
 }
 
 void ares_set_local_ip4(ares_channel channel, unsigned int local_ip)

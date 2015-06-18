@@ -26,9 +26,6 @@
 #define WIN32
 #endif
 
-#include <stdio.h>
-#include <sys/types.h>
-
 #ifdef HAVE_NETINET_IN_H
 #include <netinet/in.h>
 #endif
@@ -38,10 +35,6 @@
 #include <sys/ioctl.h>
 #define writev(s,v,c)     writev_s(s,v,c)
 #define HAVE_WRITEV 1
-#endif
-
-#ifdef NETWARE
-#include <time.h>
 #endif
 
 #define DEFAULT_TIMEOUT         5000 /* milliseconds */
@@ -325,7 +318,6 @@ long ares__timeoffset(struct timeval *now,
                       struct timeval *check);
 /* returns ARES_SUCCESS if library has been initialized */
 int ares_library_initialized(void);
-void ares__rc4(rc4_key* key,unsigned char *buffer_ptr, int buffer_len);
 void ares__send_query(ares_channel channel, struct query *query,
                       struct timeval *now);
 void ares__close_sockets(ares_channel channel, struct server_state *server);
@@ -357,6 +349,7 @@ long ares__tvdiff(struct timeval t1, struct timeval t2);
    libcurl lowlevel code from within library is ugly and only works when
    c-ares is built and linked with a similarly curldebug-enabled libcurl,
    but we do this anyway for convenience. */
+#define HEADER_CURL_SETUP_ONCE_H
 #include "../lib/memdebug.h"
 #endif
 

@@ -1,6 +1,6 @@
 
-/* Copyright 1998, 2009 by the Massachusetts Institute of Technology.
- * Copyright (C) 2007-2011 by Daniel Stenberg
+/* Copyright 1998 by the Massachusetts Institute of Technology.
+ * Copyright (C) 2007-2013 by Daniel Stenberg
  *
  * Permission to use, copy, modify, and distribute this
  * software and its documentation for any purpose and without
@@ -75,22 +75,18 @@ extern "C" {
 ** c-ares external API function linkage decorations.
 */
 
-#if !defined(CARES_STATICLIB) && \
-   (defined(WIN32) || defined(_WIN32) || defined(__SYMBIAN32__))
-   /* __declspec function decoration for Win32 and Symbian DLL's */
+#ifdef CARES_STATICLIB
+#  define CARES_EXTERN
+#elif defined(WIN32) || defined(_WIN32) || defined(__SYMBIAN32__)
 #  if defined(CARES_BUILDING_LIBRARY)
 #    define CARES_EXTERN  __declspec(dllexport)
 #  else
 #    define CARES_EXTERN  __declspec(dllimport)
 #  endif
+#elif defined(CARES_BUILDING_LIBRARY) && defined(CARES_SYMBOL_HIDING)
+#  define CARES_EXTERN CARES_SYMBOL_SCOPE_EXTERN
 #else
-   /* visibility function decoration for other cases */
-#  if !defined(CARES_SYMBOL_HIDING) || \
-     defined(WIN32) || defined(_WIN32) || defined(__SYMBIAN32__)
-#    define CARES_EXTERN
-#  else
-#    define CARES_EXTERN CARES_SYMBOL_SCOPE_EXTERN
-#  endif
+#  define CARES_EXTERN
 #endif
 
 
@@ -553,8 +549,6 @@ CARES_EXTERN void ares_free_string(void *str);
 
 CARES_EXTERN void ares_free_hostent(struct hostent *host);
 
-CARES_EXTERN void ares_free_soa(struct ares_soa_reply *soa);
-
 CARES_EXTERN void ares_free_data(void *dataptr);
 
 CARES_EXTERN const char *ares_strerror(int code);
@@ -578,6 +572,12 @@ CARES_EXTERN int ares_set_servers_csv(ares_channel channel,
 
 CARES_EXTERN int ares_get_servers(ares_channel channel,
                                   struct ares_addr_node **servers);
+
+CARES_EXTERN const char *ares_inet_ntop(int af, const void *src, char *dst,
+                                        ares_socklen_t size);
+
+CARES_EXTERN int ares_inet_pton(int af, const char *src, void *dst);
+
 
 #ifdef  __cplusplus
 }
