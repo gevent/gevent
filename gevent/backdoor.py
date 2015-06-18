@@ -72,6 +72,7 @@ class BackdoorServer(StreamServer):
             except ImportError:
                 import builtins
                 console.locals["builtins"] = builtins
+                console.locals['__builtins__'] = builtins
             console.interact(banner=self.banner)
         except SystemExit:  # raised by quit()
             if not PY3:
@@ -89,8 +90,14 @@ class BackdoorServer(StreamServer):
 
 class _fileobject(socket._fileobject):
 
-    def write(self, data):
-        self._sock.sendall(data)
+    if not PY3:
+        def write(self, data):
+            self._sock.sendall(data)
+    else:
+        def write(self, data):
+            if isinstance(data, str):
+                data = data.encode('utf-8')
+            self._sock.sendall(data)
 
     def isatty(self):
         return True
@@ -98,8 +105,15 @@ class _fileobject(socket._fileobject):
     def flush(self):
         pass
 
-    def readline(self, *a):
-        return socket._fileobject.readline(self, *a).replace("\r\n", "\n")
+    def _readline(self, *a):
+        return socket._fileobject.readline(self, *a).replace(b"\r\n", b"\n")
+    if not PY3:
+        readline = _readline
+    else:
+        def readline(self, *a):
+            line = self._readline(*a)
+            return line.decode('utf-8')
+
 
 if __name__ == '__main__':
     if not sys.argv[1:]:

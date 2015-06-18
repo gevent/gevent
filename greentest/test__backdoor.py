@@ -6,12 +6,16 @@ from six import xrange
 
 
 def read_until(conn, postfix):
-    read = ''
+    read = b''
+    if isinstance(postfix, str) and str != bytes:
+        postfix = postfix.encode('utf-8')
     while not read.endswith(postfix):
         result = conn.recv(1)
         if not result:
             raise AssertionError('Connection ended before %r. Data read:\n%r' % (postfix, read))
         read += result
+    if str != bytes:
+        read = read.decode('utf-8')
     return read
 
 
@@ -28,10 +32,14 @@ class Test(greentest.TestCase):
 
         def connect():
             conn = create_connection(('127.0.0.1', server.server_port))
-            read_until(conn, '>>> ')
-            conn.sendall('2+2\r\n')
-            line = conn.makefile().readline()
-            assert line.strip() == '4', repr(line)
+            try:
+                read_until(conn, '>>> ')
+                conn.sendall(b'2+2\r\n')
+                with conn.makefile() as f:
+                    line = f.readline()
+                self.assertEqual(line.strip(), '4', repr(line))
+            finally:
+                conn.close()
 
         server.start()
         try:
@@ -47,10 +55,12 @@ class Test(greentest.TestCase):
         try:
             conn = create_connection(('127.0.0.1', server.server_port))
             read_until(conn, '>>> ')
-            conn.sendall('quit()\r\n')
-            line = conn.makefile().read()
+            conn.sendall(b'quit()\r\n')
+            with conn.makefile() as f:
+                line = f.read()
             self.assertEqual(line, '')
         finally:
+            conn.close()
             server.stop()
 
     def test_sys_exit(self):
@@ -58,21 +68,24 @@ class Test(greentest.TestCase):
         server.start()
         try:
             conn = create_connection(('127.0.0.1', server.server_port))
-            read_until(conn, '>>> ')
-            conn.sendall('import sys; sys.exit(0)\r\n')
-            line = conn.makefile().read()
+            read_until(conn, b'>>> ')
+            conn.sendall(b'import sys; sys.exit(0)\r\n')
+            with conn.makefile() as f:
+                line = f.read()
             self.assertEqual(line, '')
         finally:
+            conn.close()
             server.stop()
 
     def test_banner(self):
-        banner = "Welcome stranger!"
+        banner = "Welcome stranger!" # native string
         server = backdoor.BackdoorServer(('127.0.0.1', 0), banner=banner)
         server.start()
         try:
             conn = create_connection(('127.0.0.1', server.server_port))
-            response = read_until(conn, '>>> ')
-            self.assertEqual(response[:len(banner)], banner)
+            response = read_until(conn, b'>>> ')
+            self.assertEqual(response[:len(banner)], banner, response)
+            conn.close()
         finally:
             server.stop()
 
@@ -81,11 +94,12 @@ class Test(greentest.TestCase):
         server.start()
         try:
             conn = create_connection(('127.0.0.1', server.server_port))
-            read_until(conn, '>>> ')
-            conn.sendall('locals()["__builtins__"]\r\n')
+            read_until(conn, b'>>> ')
+            conn.sendall(b'locals()["__builtins__"]\r\n')
             response = read_until(conn, '>>> ')
-            self.assertTrue(len(response) < 300, msg="locals() unusable: %s..." % response[:100])
+            self.assertTrue(len(response) < 300, msg="locals() unusable: %s..." % response)
         finally:
+            conn.close()
             server.stop()
 
 

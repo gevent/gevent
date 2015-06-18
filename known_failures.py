@@ -89,7 +89,6 @@ test__pool.py
 FLAKY test___example_servers.py
 test__example_udp_client.py
 test__os.py
-test__backdoor.py
 test_threading_2.py
 test__refcount.py
 test__subprocess.py
