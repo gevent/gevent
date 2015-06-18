@@ -30,13 +30,19 @@ else:
     else:
         kwargs = {}
     p = Popen([sys.executable, __file__, 'subprocess'], stdout=PIPE, **kwargs)
-    p.stdout.readline()
+    line = p.stdout.readline()
+    if not isinstance(line, str):
+        line = line.decode('ascii')
+    assert line == 'ready\n'
     p.send_signal(signal.SIGINT)
+    # Wait up to 3 seconds for child process to die
     for i in range(30):
         if p.poll() is not None:
             break
         time.sleep(0.1)
     else:
+        # Kill unresponsive child and exit with error 1
         p.terminate()
+        p.wait()
         sys.exit(1)
     sys.exit(p.returncode)
