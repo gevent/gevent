@@ -16,9 +16,6 @@
 
 #include "ares_setup.h"
 
-#ifdef HAVE_SYS_SOCKET_H
-#  include <sys/socket.h>
-#endif
 #ifdef HAVE_NETINET_IN_H
 #  include <netinet/in.h>
 #endif
@@ -31,11 +28,13 @@
 #  include <arpa/nameser_compat.h>
 #endif
 
-#include <stdlib.h>
-#include <string.h>
 #include "ares.h"
 #include "ares_dns.h"
 #include "ares_private.h"
+
+#ifndef T_OPT
+#  define T_OPT  41 /* EDNS0 option (meta-RR) */
+#endif
 
 /* Header format, from RFC 1035:
  *                                  1  1  1  1  1  1
@@ -201,7 +200,7 @@ int ares_create_query(const char *name, int dnsclass, int type,
       q += QFIXEDSZ;
       memset(q, 0, EDNSFIXEDSZ);
       q++;
-      DNS_RR_SET_TYPE(q, ns_t_opt);
+      DNS_RR_SET_TYPE(q, T_OPT);
       DNS_RR_SET_CLASS(q, max_udp_size);
   }
 

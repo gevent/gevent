@@ -1,8 +1,7 @@
-#ifndef __ARES_LLIST_H
-#define __ARES_LLIST_H
+#ifndef HEADER_CARES_INET_NET_PTON_H
+#define HEADER_CARES_INET_NET_PTON_H
 
-
-/* Copyright 1998 by the Massachusetts Institute of Technology.
+/* Copyright (C) 2005-2013 by Daniel Stenberg et al
  *
  * Permission to use, copy, modify, and distribute this
  * software and its documentation for any purpose and without
@@ -17,23 +16,10 @@
  * without express or implied warranty.
  */
 
+#ifdef HAVE_INET_NET_PTON
+#define ares_inet_net_pton(w,x,y,z) inet_net_pton(w,x,y,z)
+#else
+int ares_inet_net_pton(int af, const char *src, void *dst, size_t size);
+#endif
 
-/* Node definition for circular, doubly-linked list */
-struct list_node {
-  struct list_node *prev;
-  struct list_node *next;
-  void* data;
-};
-
-void ares__init_list_head(struct list_node* head);
-
-void ares__init_list_node(struct list_node* node, void* d);
-
-int ares__is_list_empty(struct list_node* head);
-
-void ares__insert_in_list(struct list_node* new_node,
-                          struct list_node* old_node);
-
-void ares__remove_from_list(struct list_node* node);
-
-#endif /* __ARES_LLIST_H */
+#endif /* HEADER_CARES_INET_NET_PTON_H */
