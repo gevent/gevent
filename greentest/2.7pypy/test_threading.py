@@ -707,6 +707,9 @@ class ThreadJoinOnShutdown(BaseTestCase):
         self.assertScriptHasOutput(script, output)
 
     @unittest.skipIf(sys.platform in platforms_to_skip, "due to known OS bug")
+    @unittest.skipIf(sys.pypy_version_info[:2] >= (2,6),
+                     "This test was removed in CPython 2.7.9, and fails under PyPy 2.6 "
+                     "with 'RuntimeError: stream lock is not held' in random_io")
     def test_6_daemon_threads(self):
         # Check that a daemon thread cannot crash the interpreter on shutdown
         # by manipulating internal structures that are being disposed of in
