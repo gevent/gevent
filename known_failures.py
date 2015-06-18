@@ -91,7 +91,6 @@ test__refcount.py
 test__subprocess.py
 test__all__.py
 test__pywsgi.py
-test__socket_ex.py
 test__example_echoserver.py
 test__makefile_ref.py
 test__server_pywsgi.py
