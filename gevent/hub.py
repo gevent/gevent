@@ -334,7 +334,12 @@ class Hub(greenlet):
                     cb.stop()
 
     def print_exception(self, context, type, value, tb):
-        traceback.print_exception(type, value, tb)
+        # Python 3 does not gracefully handle None value or tb in
+        # traceback.print_exception() as previous versions did.
+        if value is None:
+            sys.stderr.write('%s\n' % type.__name__)
+        else:
+            traceback.print_exception(type, value, tb)
         del tb
         if context is not None:
             if not isinstance(context, str):
