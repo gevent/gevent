@@ -98,7 +98,7 @@ class StreamServer(BaseServer):
             try:
                 fd, address = sock._accept()
             except BlockingIOError:
-                if sock.timeout == 0.0:
+                if not sock.timeout:
                     return
                 raise
             sock = socket(sock.family, sock.type, sock.proto, fileno=fd)

@@ -3,6 +3,7 @@ import sys
 import os
 from gevent.hub import get_hub
 from gevent.hub import integer_types
+from gevent.hub import PY3
 from gevent.socket import EBADF
 from gevent.os import _read, _write, ignored_errors
 from gevent.lock import Semaphore, DummySemaphore
@@ -10,6 +11,12 @@ from gevent.lock import Semaphore, DummySemaphore
 
 PYPY = hasattr(sys, 'pypy_version_info')
 
+if hasattr(sys, 'exc_clear'):
+    def _exc_clear():
+        sys.exc_clear()
+else:
+    def _exc_clear():
+        return
 
 try:
     from fcntl import fcntl
@@ -38,7 +45,10 @@ else:
         SocketAdapter__del__ = None
         noop = None
 
-    from types import UnboundMethodType
+    if PY3:
+        UnboundMethodType = None
+    else:
+        from types import UnboundMethodType
 
     class NA(object):
 
@@ -121,7 +131,7 @@ else:
                     code = ex.args[0]
                     if code not in ignored_errors:
                         raise
-                    sys.exc_clear()
+                    _exc_clear()
                 if bytes_written >= bytes_total:
                     return
                 self.hub.wait(self._write_event)
@@ -134,24 +144,24 @@ else:
                     code = ex.args[0]
                     if code not in ignored_errors:
                         raise
-                    sys.exc_clear()
+                    _exc_clear()
                 else:
                     if not self._translate or not data:
                         return data
                     if self._eat_newline:
                         self._eat_newline = False
-                        if data.startswith('\n'):
+                        if data.startswith(b'\n'):
                             data = data[1:]
                             if not data:
                                 return self.recv(size)
-                    if data.endswith('\r'):
+                    if data.endswith(b'\r'):
                         self._eat_newline = True
                     return self._translate_newlines(data)
                 self.hub.wait(self._read_event)
 
         def _translate_newlines(self, data):
-            data = data.replace("\r\n", "\n")
-            data = data.replace("\r", "\n")
+            data = data.replace(b"\r\n", b"\n")
+            data = data.replace(b"\r", b"\n")
             return data
 
         if not SocketAdapter__del__:
@@ -160,13 +170,15 @@ else:
                 fileno = self._fileno
                 if fileno is not None:
                     close(fileno)
-
-    if SocketAdapter__del__:
+        elif PY3:
+            def __del__(self, close=os.close):
+                SocketAdapter__del__(self, close=close)
+    if SocketAdapter__del__ and not PY3:
         SocketAdapter.__del__ = UnboundMethodType(SocketAdapter__del__, None, SocketAdapter)
 
     class FileObjectPosix(_fileobject):
 
-        def __init__(self, fobj, mode='rb', bufsize=-1, close=True):
+        def __init__(self, fobj=None, mode='rb', bufsize=-1, close=True):
             if isinstance(fobj, integer_types):
                 fileno = fobj
                 fobj = None
@@ -212,13 +224,13 @@ else:
                 raise FileObjectClosed
             return getattr(self._fobj, item)
 
-        if not noop:
+        if not noop or PY3:
 
             def __del__(self):
                 # disable _fileobject's __del__
                 pass
 
-    if noop:
+    if noop and not PY3:
         FileObjectPosix.__del__ = UnboundMethodType(FileObjectPosix, None, noop)
 
 

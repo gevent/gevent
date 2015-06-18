@@ -24,24 +24,28 @@ def create_connection(address):
     conn.connect(address)
     return conn
 
+def readline(conn):
+    f = conn.makefile()
+    line = f.readline()
+    f.close()
+    return line
 
 class Test(greentest.TestCase):
 
     def test(self):
         server = backdoor.BackdoorServer(('127.0.0.1', 0))
+        server.start()
 
         def connect():
             conn = create_connection(('127.0.0.1', server.server_port))
             try:
                 read_until(conn, '>>> ')
                 conn.sendall(b'2+2\r\n')
-                with conn.makefile() as f:
-                    line = f.readline()
+                line = readline(conn)
                 self.assertEqual(line.strip(), '4', repr(line))
             finally:
                 conn.close()
 
-        server.start()
         try:
             jobs = [gevent.spawn(connect) for _ in xrange(10)]
             gevent.joinall(jobs, raise_error=True)
@@ -56,8 +60,7 @@ class Test(greentest.TestCase):
             conn = create_connection(('127.0.0.1', server.server_port))
             read_until(conn, '>>> ')
             conn.sendall(b'quit()\r\n')
-            with conn.makefile() as f:
-                line = f.read()
+            line = readline(conn)
             self.assertEqual(line, '')
         finally:
             conn.close()
@@ -70,8 +73,7 @@ class Test(greentest.TestCase):
             conn = create_connection(('127.0.0.1', server.server_port))
             read_until(conn, b'>>> ')
             conn.sendall(b'import sys; sys.exit(0)\r\n')
-            with conn.makefile() as f:
-                line = f.read()
+            line = readline(conn)
             self.assertEqual(line, '')
         finally:
             conn.close()

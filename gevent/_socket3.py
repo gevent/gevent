@@ -475,7 +475,7 @@ class _fileobject(object):
 
     def flush(self):
         if self._wbuf:
-            data = "".join(self._wbuf)
+            data = b"".join(self._wbuf)
             self._wbuf = []
             self._wbuf_len = 0
             buffer_size = max(self._rbufsize, self.default_bufsize)
@@ -497,13 +497,14 @@ class _fileobject(object):
         return self._sock.fileno()
 
     def write(self, data):
-        data = str(data) # XXX Should really reject non-string non-buffers
+        if not isinstance(data, bytes):
+            raise TypeError("Non-bytes data")
         if not data:
             return
         self._wbuf.append(data)
         self._wbuf_len += len(data)
         if (self._wbufsize == 0 or
-            (self._wbufsize == 1 and '\n' in data) or
+            (self._wbufsize == 1 and b'\n' in data) or
             (self._wbufsize > 1 and self._wbuf_len >= self._wbufsize)):
             self.flush()
 

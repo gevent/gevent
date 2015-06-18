@@ -84,27 +84,20 @@ if PY3:
     # No idea / TODO
     FAILING_TESTS += '''
 test__example_udp_server.py
-test__examples.py
 test__pool.py
 FLAKY test___example_servers.py
-test__example_udp_client.py
-test__os.py
 test_threading_2.py
 test__refcount.py
 test__subprocess.py
 test__all__.py
-test__fileobject.py
 test__pywsgi.py
 test__socket_ex.py
 test__example_echoserver.py
-test__subprocess_poll.py
 test__makefile_ref.py
 test__socketpair.py
 test__server_pywsgi.py
 test__core_stat.py
-test__server.py
 test__example_portforwarder.py
-test__execmodules.py
 FLAKY test__greenio.py
 FLAKY test__socket_dns.py
 '''.strip().split('\n')
