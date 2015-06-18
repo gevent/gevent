@@ -6,15 +6,15 @@ import unittest
 class Test(unittest.TestCase):
 
     def test(self):
-        msg = 'hello world'
+        msg = b'hello world'
         x, y = socket.socketpair()
         x.sendall(msg)
         x.close()
-        read = y.makefile().read()
+        read = y.makefile('rb').read()
         self.assertEqual(msg, read)
 
     def test_fromfd(self):
-        msg = 'hello world'
+        msg = b'hello world'
         x, y = socket.socketpair()
         xx = socket.fromfd(x.fileno(), x.family, socket.SOCK_STREAM)
         x.close()
@@ -23,7 +23,7 @@ class Test(unittest.TestCase):
 
         xx.sendall(msg)
         xx.close()
-        read = yy.makefile().read()
+        read = yy.makefile('rb').read()
         self.assertEqual(msg, read)
 
 

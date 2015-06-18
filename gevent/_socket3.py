@@ -5,6 +5,7 @@ import time
 from gevent import _socketcommon
 import _socket
 from io import BlockingIOError
+from os import dup
 
 for key in _socketcommon.__dict__:
     if key.startswith('__'):

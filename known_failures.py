@@ -94,7 +94,6 @@ test__pywsgi.py
 test__socket_ex.py
 test__example_echoserver.py
 test__makefile_ref.py
-test__socketpair.py
 test__server_pywsgi.py
 test__core_stat.py
 test__example_portforwarder.py
