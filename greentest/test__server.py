@@ -85,37 +85,22 @@ class TestCase(greentest.TestCase):
         sock.connect((self.server.server_host, self.server.server_port))
 
         if PY3:
-            kwargs = {'buffering': bufsize, 'mode': 'rb'}
+            # Under Python3, you can't read and write to the same
+            # makefile() opened in r, and r+ is not allowed
+            kwargs = {'buffering': bufsize, 'mode': 'rwb'}
         else:
             kwargs = {'bufsize': bufsize}
 
         rconn = sock.makefile(**kwargs)
         if PY3:
-            # Under Python3, you can't read and write to the same
-            # makefile() opened in r, and r+ is not allowed
-            kwargs['mode'] = 'wb'
-            wconn = sock.makefile(**kwargs)
             rconn._sock = sock
-            _rconn_close = rconn.close
-            def write(data):
-                if isinstance(data, str):
-                    data = data.encode('ascii')
-                return wconn.write(data)
-            def flush():
-                return wconn.flush()
-            def close():
-                _rconn_close()
-                wconn.close()
-            rconn.write = write
-            rconn.flush = flush
-            rconn.close = close
         rconn._sock.settimeout(timeout)
         sock.close()
         return rconn
 
     def send_request(self, url='/', timeout=0.1, bufsize=1):
         conn = self.makefile(timeout=timeout, bufsize=bufsize)
-        conn.write('GET %s HTTP/1.0\r\n\r\n' % url)
+        conn.write(('GET %s HTTP/1.0\r\n\r\n' % url).encode('latin-1'))
         conn.flush()
         return conn
 
@@ -141,7 +126,7 @@ class TestCase(greentest.TestCase):
 
     def assertNotAccepted(self):
         conn = self.makefile()
-        conn.write('GET / HTTP/1.0\r\n\r\n')
+        conn.write(b'GET / HTTP/1.0\r\n\r\n')
         conn.flush()
         result = ''
         try:

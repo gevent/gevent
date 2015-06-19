@@ -128,7 +128,7 @@ class Input(object):
                     length -= datalen
                     if length == 0:
                         break
-                if use_readline and data[-1] == b"\n":
+                if use_readline and data[-1] == b"\n"[0]:
                     break
             else:
                 line = rfile.readline()
@@ -339,9 +339,11 @@ class WSGIHandler(object):
     def handle_one_request(self):
         if self.rfile.closed:
             return
-
         try:
             self.requestline = self.read_requestline()
+            # Account for old subclasses that haven't done this
+            if PY3 and isinstance(self.requestline, bytes):
+                self.requestline = self.requestline.decode('latin-1')
         except socket.error:
             # "Connection reset by peer" or other socket errors aren't interesting here
             return

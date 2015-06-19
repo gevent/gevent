@@ -154,7 +154,6 @@ def patch_thread(threading=True, _threading_local=True, Event=False):
             def join(timeout=None):
                 if threading.current_thread() is main_thread:
                     raise RuntimeError("Cannot join current thread")
-                self = _greenlet
                 if _greenlet.dead or not main_thread.is_alive():
                     return
                 elif timeout:

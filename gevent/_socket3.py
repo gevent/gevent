@@ -27,6 +27,7 @@ def _get_memory(string, offset):
 
 timeout_default = object()
 
+
 class _wrefsocket(_socket.socket):
     # Plain stdlib socket.socket objects subclass _socket.socket
     # and add weakref ability. The ssl module, for one, counts on this.
@@ -34,10 +35,11 @@ class _wrefsocket(_socket.socket):
     # monkey patched to be the object from this module), but we still
     # need to make sure what we do create can be weakrefd.
 
-    __slots__ = ["__weakref__",]
+    __slots__ = ["__weakref__", ]
 
 _closedsocket = _wrefsocket()
 _closedsocket.close()
+
 
 class socket(object):
 
@@ -416,6 +418,7 @@ if hasattr(_socket, "socketpair"):
         b = socket(family, type, proto, b.detach())
         return a, b
 
+
 # PyPy needs drop and reuse
 def _do_reuse_or_drop(socket, methname):
     try:
@@ -426,6 +429,7 @@ def _do_reuse_or_drop(socket, methname):
         method()
 
 from io import BytesIO
+
 
 class _fileobject(object):
     """Faux file object attached to a socket object."""
@@ -500,7 +504,7 @@ class _fileobject(object):
             view = memoryview(data)
             try:
                 while write_offset < data_size:
-                    self._sock.sendall(view[write_offset:write_offset+buffer_size])
+                    self._sock.sendall(view[write_offset:write_offset + buffer_size])
                     write_offset += buffer_size
             finally:
                 if write_offset < data_size:
@@ -519,8 +523,7 @@ class _fileobject(object):
             return
         self._wbuf.append(data)
         self._wbuf_len += len(data)
-        if (self._wbufsize == 0 or
-            (self._wbufsize == 1 and b'\n' in data) or
+        if (self._wbufsize == 0 or (self._wbufsize == 1 and b'\n' in data) or
             (self._wbufsize > 1 and self._wbuf_len >= self._wbufsize)):
             self.flush()
 
@@ -530,8 +533,7 @@ class _fileobject(object):
         lines = filter(None, map(str, list))
         self._wbuf_len += sum(map(len, lines))
         self._wbuf.extend(lines)
-        if (self._wbufsize <= 1 or
-            self._wbuf_len >= self._wbufsize):
+        if (self._wbufsize <= 1 or self._wbuf_len >= self._wbufsize):
             self.flush()
 
     def read(self, size=-1):

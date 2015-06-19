@@ -28,6 +28,7 @@ try:
     from StringIO import StringIO
 except ImportError:
     from io import BytesIO as StringIO
+import weakref
 try:
     from wsgiref.validate import validator
 except ImportError:
@@ -56,7 +57,7 @@ try:
 except ImportError:
     pass
 
-if greentest.PYPY:
+if greentest.PYPY or PY3:
     from errno import ECONNRESET
     CONN_ABORTED_ERRORS.append(ECONNRESET)
 
@@ -197,33 +198,36 @@ class Response(object):
 
 read_http = Response.read
 
+if not PY3:
+    # Under Python 3, socket.makefile does not use
+    # socket._fileobject; instead it uses the io package.
+    # We don't want to artificially interfere with that because
+    # then we won't be testing the actual code that's in use.
+    class DebugFileObject(object):
 
-class DebugFileObject(object):
+        def __init__(self, obj):
+            self.obj = obj
 
-    def __init__(self, obj):
-        self.obj = obj
+        def read(self, *args):
+            result = self.obj.read(*args)
+            if DEBUG:
+                print(repr(result))
+            return result
 
-    def read(self, *args):
-        result = self.obj.read(*args)
-        if DEBUG:
-            print(repr(result))
-        return result
+        def readline(self, *args):
+            result = self.obj.readline(*args)
+            if DEBUG:
+                print(repr(result))
+            return result
 
-    def readline(self, *args):
-        result = self.obj.readline(*args)
-        if DEBUG:
-            print(repr(result))
-        return result
+        def __getattr__(self, item):
+            assert item != 'obj'
+            return getattr(self.obj, item)
 
-    def __getattr__(self, item):
-        assert item != 'obj'
-        return getattr(self.obj, item)
+    def makefile(self, mode='r', bufsize=-1):
+        return DebugFileObject(socket._fileobject(self.dup(), mode, bufsize))
 
-
-def makefile(self, mode='r', bufsize=-1):
-    return DebugFileObject(socket._fileobject(self.dup(), mode, bufsize))
-
-socket.socket.makefile = makefile
+    socket.socket.makefile = makefile
 
 
 class TestCase(greentest.TestCase):
@@ -241,9 +245,20 @@ class TestCase(greentest.TestCase):
         self.init_server(application)
         self.server.start()
         self.port = self.server.server_port
+        # We keep a list of sockets/files we need to close so we
+        # don't get ResourceWarnings under Py3
+        self.connected = list()
         greentest.TestCase.setUp(self)
 
+    def close_opened(self):
+        for x in self.connected:
+            x = x()
+            if x is not None:
+                x.close()
+        self.connected = list()
+
     def tearDown(self):
+        self.close_opened()
         greentest.TestCase.tearDown(self)
         timeout = gevent.Timeout.start_new(0.5)
         try:
@@ -254,33 +269,32 @@ class TestCase(greentest.TestCase):
 
     def connect(self):
         conn = socket.create_connection(('127.0.0.1', self.port))
+        self.connected.append(weakref.ref(conn))
         result = conn
         if PY3:
             conn_makefile = conn.makefile
+
             def makefile(*args, **kwargs):
+                if 'bufsize' in kwargs:
+                    kwargs['buffering'] = kwargs.pop('bufsize')
+
                 if 'mode' in kwargs:
                     return conn_makefile(*args, **kwargs)
+
                 # Under Python3, you can't read and write to the same
-                # makefile() opened in r, and r+ is not allowed
-                kwargs['mode'] = 'rb'
+                # makefile() opened in (default) r, and r+ is not allowed
+                kwargs['mode'] = 'rwb'
                 rconn = conn_makefile(*args, **kwargs)
-                kwargs['mode'] = 'wb'
-                wconn = conn_makefile(**kwargs)
-                rconn._sock = conn
-                _rconn_close = rconn.close
+                _rconn_write = rconn.write
+
                 def write(data):
                     if isinstance(data, str):
                         data = data.encode('ascii')
-                    return wconn.write(data)
-                def flush():
-                    return wconn.flush()
-                def close():
-                    _rconn_close()
-                    wconn.close()
+                    return _rconn_write(data)
                 rconn.write = write
-                rconn.flush = flush
-                rconn.close = close
+                self.connected.append(weakref.ref(rconn))
                 return rconn
+
             class proxy(object):
                 def __getattribute__(self, name):
                     if name == 'makefile':
@@ -532,27 +546,27 @@ class TestChunkedPost(TestCase):
             data = env['wsgi.input'].read(6)
             return [data]
         elif env['PATH_INFO'] == '/b':
-            return [x for x in iter(lambda: env['wsgi.input'].read(6), '')]
+            lines = [x for x in iter(lambda: env['wsgi.input'].read(6), b'')]
+            return lines
         elif env['PATH_INFO'] == '/c':
-            return [x for x in iter(lambda: env['wsgi.input'].read(1), '')]
+            return [x for x in iter(lambda: env['wsgi.input'].read(1), b'')]
 
     def test_014_chunked_post(self):
         fd = self.makefile()
-        data = ('POST /a HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n'
-                'Transfer-Encoding: chunked\r\n\r\n'
-                '2\r\noh\r\n4\r\n hai\r\n0\r\n\r\n')
+        data = (b'POST /a HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n'
+                b'Transfer-Encoding: chunked\r\n\r\n'
+                b'2\r\noh\r\n4\r\n hai\r\n0\r\n\r\n')
         fd.write(data)
         read_http(fd, body='oh hai')
+        self.close_opened()
 
-        if not PY3:
-            # XXX: Problem with the chunked input or validater?
-            fd = self.makefile()
-            fd.write(data.replace('/a', '/b'))
-            read_http(fd, body='oh hai')
+        fd = self.makefile()
+        fd.write(data.replace(b'/a', b'/b'))
+        read_http(fd, body='oh hai')
 
-            fd = self.makefile()
-            fd.write(data.replace('/a', '/c'))
-            read_http(fd, body='oh hai')
+        fd = self.makefile()
+        fd.write(data.replace(b'/a', b'/c'))
+        read_http(fd, body='oh hai')
 
 
 class TestUseWrite(TestCase):
@@ -970,12 +984,14 @@ class ChunkedInputTests(TestCase):
     def test_short_read_with_content_length(self):
         body = self.body()
         req = b"POST /short-read HTTP/1.1\r\ntransfer-encoding: Chunked\r\nContent-Length:1000\r\n\r\n" + body
-
-        fd = self.connect().makefile(bufsize=1)
+        conn = self.connect()
+        fd = conn.makefile(bufsize=1)
         fd.write(req)
         read_http(fd, body="this is ch")
 
         self.ping_if_possible(fd)
+        fd.close()
+        conn.close()
 
     def test_short_read_with_zero_content_length(self):
         body = self.body()
@@ -1017,7 +1033,9 @@ class ChunkedInputTests(TestCase):
 
     def test_chunked_readline(self):
         body = self.body()
-        req = "POST /lines HTTP/1.1\r\nContent-Length: %s\r\ntransfer-encoding: Chunked\r\n\r\n%s" % (len(body), body)
+        req = "POST /lines HTTP/1.1\r\nContent-Length: %s\r\ntransfer-encoding: Chunked\r\n\r\n" % (len(body))
+        req = req.encode('latin-1')
+        req += body
 
         fd = self.connect().makefile(bufsize=1)
         fd.write(req)
@@ -1028,9 +1046,21 @@ class ChunkedInputTests(TestCase):
             self.expect_one_error()
         body = b'4\r\nthi'
         req = b"POST /short-read HTTP/1.1\r\ntransfer-encoding: Chunked\r\n\r\n" + body
-        fd = self.connect().makefile(bufsize=1)
+        sock = self.connect()
+        fd = sock.makefile(bufsize=1, mode='wb')
         fd.write(req)
         fd.close()
+        if PY3:
+            # Python 3 keeps the socket open even though the only
+            # makefile is gone; python 2 closed them both (because there were
+            # no outstanding references to the socket). Closing is essential for the server
+            # to get the message that the read will fail. It's better to be explicit
+            # to avoid a ResourceWarning
+            sock.close()
+        else:
+            # Under Py2 it still needs to go away, which was implicit before
+            del sock
+
         gevent.sleep(0.01) # timing needed for cpython
 
         if server_implements_chunked:
@@ -1117,15 +1147,15 @@ class TestLeakInput(TestCase):
 
     def test_connection_close_leak_simple(self):
         fd = self.connect().makefile(bufsize=1)
-        fd.write("GET / HTTP/1.0\r\nConnection: close\r\n\r\n")
+        fd.write(b"GET / HTTP/1.0\r\nConnection: close\r\n\r\n")
         d = fd.read()
-        assert d.startswith("HTTP/1.1 200 OK"), "bad response: %r" % d
+        assert d.startswith(b"HTTP/1.1 200 OK"), "bad response: %r" % d
 
     def test_connection_close_leak_frame(self):
         fd = self.connect().makefile(bufsize=1)
-        fd.write("GET /leak-frame HTTP/1.0\r\nConnection: close\r\n\r\n")
+        fd.write(b"GET /leak-frame HTTP/1.0\r\nConnection: close\r\n\r\n")
         d = fd.read()
-        assert d.startswith("HTTP/1.1 200 OK"), "bad response: %r" % d
+        assert d.startswith(b"HTTP/1.1 200 OK"), "bad response: %r" % d
         self._leak_environ.pop('_leak')
 
 
@@ -1154,11 +1184,11 @@ class Handler(pywsgi.WSGIHandler):
 
     def read_requestline(self):
         data = self.rfile.read(7)
-        if data[0] == '<':
+        if data[0] == b'<'[0]:
             try:
                 data += self.rfile.read(15)
-                if data.lower() == '<policy-file-request/>':
-                    self.socket.sendall('HELLO')
+                if data.lower() == b'<policy-file-request/>':
+                    self.socket.sendall(b'HELLO')
                 else:
                     self.log_error('Invalid request: %r', data)
             finally:
@@ -1182,9 +1212,9 @@ class TestSubclass1(TestCase):
 
     def test(self):
         fd = self.makefile()
-        fd.write('<policy-file-request/>\x00')
+        fd.write(b'<policy-file-request/>\x00')
         fd.flush() # flush() is needed on PyPy, apparently it buffers slightly differently
-        self.assertEqual(fd.read(), 'HELLO')
+        self.assertEqual(fd.read(), b'HELLO')
 
         fd = self.makefile()
         fd.write('GET / HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n')
@@ -1194,7 +1224,7 @@ class TestSubclass1(TestCase):
         fd = self.makefile()
         fd.write('<policy-file-XXXuest/>\x00')
         fd.flush()
-        self.assertEqual(fd.read(), '')
+        self.assertEqual(fd.read(), b'')
 
 
 class TestErrorAfterChunk(TestCase):
@@ -1238,7 +1268,7 @@ class TestInputRaw(greentest.BaseTestCase):
         def assertEqual(self, data, expected, *args):
             if isinstance(expected, str):
                 expected = expected.encode('ascii')
-            super(TestInputRaw,self).assertEqual(data, expected, *args)
+            super(TestInputRaw, self).assertEqual(data, expected, *args)
 
     def test_short_post(self):
         i = self.make_input("1", content_length=2)

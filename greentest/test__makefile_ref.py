@@ -16,6 +16,7 @@ lsof_command = 'lsof -p %s > %s' % (pid, tmpname)
 import sys
 PY3 = sys.version_info[0] >= 3
 
+
 def get_open_files():
     if os.system(lsof_command):
         raise OSError('lsof failed')

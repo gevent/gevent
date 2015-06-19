@@ -26,6 +26,7 @@ import sys
 PYPY = hasattr(sys, 'pypy_version_info')
 PY3 = sys.version_info[0] >= 3
 
+
 def _write_to_closed(f, s):
     try:
         r = f.write(s)

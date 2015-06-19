@@ -1,7 +1,6 @@
 from __future__ import print_function
 import sys
 
-
 if not sys.argv[1:]:
     from subprocess import Popen, PIPE
     p = Popen([sys.executable, __file__, 'subprocess'], stdin=PIPE, stdout=PIPE, stderr=PIPE)

@@ -51,7 +51,7 @@ class Settings:
     @staticmethod
     def assert500(self):
         conn = self.makefile()
-        conn.write('GET / HTTP/1.0\r\n\r\n')
+        conn.write(b'GET / HTTP/1.0\r\n\r\n')
         result = conn.read()
         assert result.startswith(internal_error_start), (result, internal_error_start)
         assert result.endswith(internal_error_end), (result, internal_error_end)
@@ -61,7 +61,7 @@ class Settings:
     @staticmethod
     def assert503(self):
         conn = self.makefile()
-        conn.write('GET / HTTP/1.0\r\n\r\n')
+        conn.write(b'GET / HTTP/1.0\r\n\r\n')
         result = conn.read()
         assert result == internal_error503, (result, internal_error503)
 

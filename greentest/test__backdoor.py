@@ -24,11 +24,13 @@ def create_connection(address):
     conn.connect(address)
     return conn
 
+
 def readline(conn):
     f = conn.makefile()
     line = f.readline()
     f.close()
     return line
+
 
 class Test(greentest.TestCase):
 
