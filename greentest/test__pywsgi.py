@@ -19,9 +19,12 @@
 # THE SOFTWARE.
 from __future__ import print_function
 from gevent import monkey
+from gevent.hub import PY3, string_types, to_wire, to_local
+from urllib.parse import unquote, unquote_to_bytes
 monkey.patch_all(thread=False)
 
 import cgi
+import io
 import os
 import sys
 try:
@@ -62,6 +65,15 @@ if greentest.PYPY:
 REASONS = {200: 'OK',
            500: 'Internal Server Error'}
 
+def asHex(text):
+    import binascii
+    newString=''
+    for character in text:
+        x=to_wire(character)
+        x=binascii.hexlify(x)
+        y=str(x,'ascii')
+        newString += y
+    return newString
 
 class ConnectionClosed(Exception):
     pass
@@ -85,10 +97,18 @@ def read_headers(fd):
         headers[key] = value
     return response_line, headers
 
+def detect_end(fd):
+    for _ in range(2):
+        crlf = to_local(fd.read(1))
+        if crlf == '\n':
+            return
+        assert crlf == '\r', '\\r != '+ repr(crlf)
+    assert crlf == '\n', '\\n != '+ repr(crlf)
+        
 
 def iread_chunks(fd):
     while True:
-        line = fd.readline()
+        line = to_local(fd.readline())
         chunk_size = line.strip()
         try:
             chunk_size = int(chunk_size, 16)
@@ -96,13 +116,11 @@ def iread_chunks(fd):
             print('Failed to parse chunk size: %r' % line)
             raise
         if chunk_size == 0:
-            crlf = fd.read(2)
-            assert crlf == '\r\n', repr(crlf)
+            detect_end(fd)
             break
-        data = fd.read(chunk_size)
+        data = to_local(fd.read(chunk_size))
         yield data
-        crlf = fd.read(2)
-        assert crlf == '\r\n', repr(crlf)
+        detect_end(fd)
 
 
 class Response(object):
@@ -113,7 +131,8 @@ class Response(object):
         self.body = None
         self.chunks = False
         try:
-            version, code, self.reason = status_line[:-2].split(' ', 2)
+            last_char_location = -2 if self.status_line[-2] == '\r' else -1
+            version, code, self.reason = status_line[:last_char_location].split(' ', 2)
         except Exception:
             print('Error: %r' % status_line)
             raise
@@ -208,14 +227,64 @@ class DebugFileObject(object):
         if DEBUG:
             print(repr(result))
         return result
+    
+    def write(self, *args):
+        return self.obj.write(*args)
 
     def __getattr__(self, item):
         assert item != 'obj'
         return getattr(self.obj, item)
 
+if not PY3:
+    def makefile(self, mode='r', bufsize=-1):
+        return DebugFileObject(socket._fileobject(self.dup(), mode, bufsize))
+else:
+    import socket as __socket__
+    SocketIO = __socket__.SocketIO
+    def special_makefile(sock, mode="r", buffering=None, *,
+                 encoding=None, errors=None, newline=None):
+        """makefile(...) -> an I/O stream connected to the socket
 
-def makefile(self, mode='r', bufsize=-1):
-    return DebugFileObject(socket._fileobject(self.dup(), mode, bufsize))
+        The arguments are as for io.open() after the filename,
+        except the only mode characters supported are 'r', 'w' and 'b'.
+        The semantics are similar too.  (XXX refactor to share code?)
+        """
+        for c in mode:
+            if c not in {"r", "w", "b"}:
+                raise ValueError("invalid mode %r (only r, w, b allowed)")
+        writing = "w" in mode
+        reading = "r" in mode or not writing
+        assert reading or writing
+        binary = "b" in mode
+        rawmode = ""
+        if reading:
+            rawmode += "r"
+        if writing:
+            rawmode += "w"
+        raw = SocketIO(sock, rawmode)
+        if buffering is None:
+            buffering = -1
+        if buffering < 0:
+            buffering = io.DEFAULT_BUFFER_SIZE
+        if buffering == 0:
+            if not binary:
+                raise ValueError("unbuffered streams must be binary")
+            return raw
+        if reading and writing:
+            buffer = io.BufferedRWPair(raw, raw, buffering)
+        elif reading:
+            buffer = io.BufferedReader(raw, buffering)
+        else:
+            assert writing
+            buffer = io.BufferedWriter(raw, buffering)
+        if binary:
+            return buffer
+        text = io.TextIOWrapper(buffer, encoding, errors, newline)
+        text.mode = mode
+        return text
+    
+    def makefile(self, mode='wr', bufsize=-1):
+        return DebugFileObject(special_makefile(self.dup(), mode=mode, buffering=bufsize))
 
 socket.socket.makefile = makefile
 
@@ -235,6 +304,7 @@ class TestCase(greentest.TestCase):
         self.server.start()
         self.port = self.server.server_port
         greentest.TestCase.setUp(self)
+        self.fds = []
 
     def tearDown(self):
         greentest.TestCase.tearDown(self)
@@ -243,13 +313,16 @@ class TestCase(greentest.TestCase):
             self.server.stop()
         finally:
             timeout.cancel()
+        for fd in self.fds:
+            fd.close()
         # XXX currently listening socket is kept open in gevent.wsgi
 
     def connect(self):
         return socket.create_connection(('127.0.0.1', self.port))
 
     def makefile(self):
-        return self.connect().makefile(bufsize=1)
+        self.fds.append(self.connect().makefile(bufsize=1))
+        return self.fds[-1]
 
     def urlopen(self, *args, **kwargs):
         fd = self.connect().makefile(bufsize=1)
@@ -371,10 +444,10 @@ class TestYield(CommonTests):
         path = env['PATH_INFO']
         if path == '/':
             start_response('200 OK', [('Content-Type', 'text/plain')])
-            yield "hello world"
+            yield to_wire("hello world")
         else:
             start_response('404 Not Found', [('Content-Type', 'text/plain')])
-            yield "not found"
+            yield to_wire("not found")
 
 
 if sys.version_info[:2] >= (2, 6):
@@ -388,10 +461,10 @@ if sys.version_info[:2] >= (2, 6):
             path = env['PATH_INFO']
             if path == '/':
                 start_response('200 OK', [('Content-Type', 'text/plain')])
-                return [bytearray("hello "), bytearray("world")]
+                return [bytearray(to_wire("hello ")), bytearray(to_wire("world"))]
             else:
                 start_response('404 Not Found', [('Content-Type', 'text/plain')])
-                return [bytearray("not found")]
+                return [bytearray(to_wire("not found"))]
 
 
 class MultiLineHeader(TestCase):
@@ -399,7 +472,7 @@ class MultiLineHeader(TestCase):
     def application(env, start_response):
         assert "test.submit" in env["CONTENT_TYPE"]
         start_response('200 OK', [('Content-Type', 'text/plain')])
-        return ["ok"]
+        return [to_wire("ok")]
 
     def test_multiline_116(self):
         """issue #116"""
@@ -419,10 +492,10 @@ class TestGetArg(TestCase):
 
     @staticmethod
     def application(env, start_response):
-        body = env['wsgi.input'].read()
-        a = cgi.parse_qs(body).get('a', [1])[0]
+        body = to_local(env['wsgi.input'].read(-1))
+        a=cgi.parse_qs(body).get('a', [1])[0]
         start_response('200 OK', [('Content-Type', 'text/plain')])
-        return ['a is %s, body is %s' % (a, body)]
+        return [to_wire('a is %s, body is %s' % (a, body))]
 
     def test_007_get_arg(self):
         # define a new handler that does a get_arg as well as a read_body
@@ -451,7 +524,7 @@ class TestChunkedApp(TestCase):
     def application(self, env, start_response):
         start_response('200 OK', [('Content-Type', 'text/plain')])
         for chunk in self.chunks:
-            yield chunk
+            yield to_wire(chunk)
 
     def test_chunked_response(self):
         fd = self.makefile()
@@ -486,12 +559,14 @@ class TestChunkedPost(TestCase):
     def application(env, start_response):
         start_response('200 OK', [('Content-Type', 'text/plain')])
         if env['PATH_INFO'] == '/a':
-            data = env['wsgi.input'].read()
-            return [data]
+            data = env['wsgi.input'].read(-1)
+            return [to_wire(data)]
         elif env['PATH_INFO'] == '/b':
-            return [x for x in iter(lambda: env['wsgi.input'].read(4096), '')]
+            response = [to_wire(x) for x in iter(lambda: env['wsgi.input'].read(4096), to_wire(''))]
+            return response
         elif env['PATH_INFO'] == '/c':
-            return [x for x in iter(lambda: env['wsgi.input'].read(1), '')]
+            response = [to_wire(x) for x in iter(lambda: env['wsgi.input'].read(1), to_wire(''))]
+            return response
 
     def test_014_chunked_post(self):
         fd = self.makefile()
@@ -523,17 +598,17 @@ class TestUseWrite(TestCase):
         if env['PATH_INFO'] == '/explicit-content-length':
             write = start_response('200 OK', [('Content-Type', 'text/plain'),
                                               ('Content-Length', self.content_length)])
-            write(self.body)
+            write(to_wire(self.body))
         elif env['PATH_INFO'] == '/no-content-length':
             write = start_response('200 OK', [('Content-Type', 'text/plain')])
-            write(self.body)
+            write(to_wire(self.body))
         elif env['PATH_INFO'] == '/no-content-length-twice':
             write = start_response('200 OK', [('Content-Type', 'text/plain')])
-            write(self.body)
-            write(self.body)
+            write(to_wire(self.body))
+            write(to_wire(self.body))
         else:
             raise Exception('Invalid url')
-        return [self.end]
+        return [to_wire(self.end)]
 
     def test_explicit_content_length(self):
         fd = self.makefile()
@@ -608,23 +683,23 @@ class TestHttps(HttpsTestCase):
 
 
 class TestInternational(TestCase):
-    validator = None  # wsgiref.validate.IteratorWrapper([]) does not have __len__
+    validator = None  # wsgiref.validate.IteratorWrapper([]) does not have __len__ 
 
     def application(self, environ, start_response):
-        assert environ['PATH_INFO'] == '/\xd0\xbf\xd1\x80\xd0\xb8\xd0\xb2\xd0\xb5\xd1\x82', environ['PATH_INFO']
-        assert environ['QUERY_STRING'] == '%D0%B2%D0%BE%D0%BF%D1%80%D0%BE%D1%81=%D0%BE%D1%82%D0%B2%D0%B5%D1%82', environ['QUERY_STRING']
+        assert environ['PATH_INFO'] == '/\xd0\xbf\xd1\x80\xd0\xb8\xd0\xb2\xd0\xb5\xd1\x82', asHex(environ['PATH_INFO'])
+        assert environ['QUERY_STRING'] == '%D0%B2%D0%BE%D0%BF%D1%80%D0%BE%D1%81=%D0%BE%D1%82%D0%B2%D0%B5%D1%82', asHex(environ['QUERY_STRING'])
         start_response("200 PASSED", [('Content-Type', 'text/plain')])
         return []
 
     def test(self):
-        sock = self.connect()
-        sock.sendall('''GET /%D0%BF%D1%80%D0%B8%D0%B2%D0%B5%D1%82?%D0%B2%D0%BE%D0%BF%D1%80%D0%BE%D1%81=%D0%BE%D1%82%D0%B2%D0%B5%D1%82 HTTP/1.1
+        fd = self.makefile()
+        fd.write('''GET /%D0%BF%D1%80%D0%B8%D0%B2%D0%B5%D1%82?%D0%B2%D0%BE%D0%BF%D1%80%D0%BE%D1%81=%D0%BE%D1%82%D0%B2%D0%B5%D1%82 HTTP/1.1
 Host: localhost
 Connection: close
 
 '''.replace('\n', '\r\n'))
-        read_http(sock.makefile(), reason='PASSED', chunks=False, body='', content_length=0)
-
+        read_http(fd, reason='PASSED', chunks=False, body='', content_length=0)
+ 
 
 class TestInputReadline(TestCase):
     # this test relies on the fact that readline() returns '' after it reached EOF
@@ -640,7 +715,7 @@ class TestInputReadline(TestCase):
             line = input.readline()
             if not line:
                 break
-            lines.append(repr(line) + ' ')
+            lines.append(repr(to_local(line)) + ' ')
         start_response('200 hello', [])
         return lines
 
@@ -661,7 +736,7 @@ class TestInputIter(TestInputReadline):
         for line in input:
             if not line:
                 break
-            lines.append(repr(line) + ' ')
+            lines.append(repr(to_local(line)) + ' ')
         start_response('200 hello', [])
         return lines
 
@@ -671,7 +746,7 @@ class TestInputReadlines(TestInputReadline):
     def application(self, environ, start_response):
         input = environ['wsgi.input']
         lines = input.readlines()
-        lines = [repr(line) + ' ' for line in lines]
+        lines = [repr(to_local(line)) + ' ' for line in lines]
         start_response('200 hello', [])
         return lines
 
@@ -721,8 +796,8 @@ class TestEmptyYield(TestCase):
     @staticmethod
     def application(env, start_response):
         start_response('200 OK', [('Content-Type', 'text/plain')])
-        yield ""
-        yield ""
+        yield to_wire("")
+        yield to_wire("")
 
     def test_err(self):
         fd = self.connect().makefile(bufsize=1)
@@ -744,8 +819,8 @@ class TestFirstEmptyYield(TestCase):
     @staticmethod
     def application(env, start_response):
         start_response('200 OK', [('Content-Type', 'text/plain')])
-        yield ""
-        yield "hello"
+        yield to_wire("")
+        yield to_wire("hello")
 
     def test_err(self):
         fd = self.connect().makefile(bufsize=1)
@@ -767,8 +842,8 @@ class TestEmptyYield304(TestCase):
     @staticmethod
     def application(env, start_response):
         start_response('304 Not modified', [])
-        yield ""
-        yield ""
+        yield to_wire("")
+        yield to_wire("")
 
     def test_err(self):
         fd = self.connect().makefile(bufsize=1)
@@ -786,7 +861,7 @@ class TestContentLength304(TestCase):
             start_response('304 Not modified', [('Content-Length', '100')])
         except AssertionError as ex:
             start_response('200 Raised', [])
-            return [str(ex)]
+            return [to_wire(str(ex))]
         else:
             raise AssertionError('start_response did not fail but it should')
 
@@ -804,7 +879,7 @@ class TestBody304(TestCase):
 
     def application(self, env, start_response):
         start_response('304 Not modified', [])
-        return ['body']
+        return [to_wire('body')]
 
     def test_err(self):
         fd = self.connect().makefile(bufsize=1)
@@ -846,8 +921,8 @@ class TestEmptyWrite(TestEmptyYield):
     @staticmethod
     def application(env, start_response):
         write = start_response('200 OK', [('Content-Type', 'text/plain')])
-        write("")
-        write("")
+        write(to_wire(""))
+        write(to_wire(""))
         return []
 
 
@@ -858,7 +933,7 @@ class BadRequestTests(TestCase):
     def application(self, env, start_response):
         assert env['CONTENT_LENGTH'] == self.content_length, (env['CONTENT_LENGTH'], self.content_length)
         start_response('200 OK', [('Content-Type', 'text/plain')])
-        return ['hello']
+        return [to_wire('hello')]
 
     def test_negative_content_length(self):
         self.content_length = '-100'
@@ -868,8 +943,9 @@ class BadRequestTests(TestCase):
 
     def test_illegal_content_length(self):
         self.content_length = 'abc'
+        req = 'GET / HTTP/1.1\r\nHost: localhost\r\nContent-Length: %s\r\n\r\n' % self.content_length
         fd = self.connect().makefile(bufsize=1)
-        fd.write('GET / HTTP/1.1\r\nHost: localhost\r\nContent-Length: %s\r\n\r\n' % self.content_length)
+        fd.write(req)
         read_http(fd, code=(200, 400))
 
 
@@ -932,9 +1008,7 @@ class ChunkedInputTests(TestCase):
 
     def test_short_read_with_zero_content_length(self):
         body = self.body()
-        req = "POST /short-read HTTP/1.1\r\ntransfer-encoding: Chunked\r\nContent-Length:0\r\n\r\n" + body
-        print("REQUEST:", repr(req))
-
+        req = "POST /short-read HTTP/1.1\r\ntransfer-encoding: Chunked\r\nContent-Length:0\r\n\r\n" + body 
         fd = self.connect().makefile(bufsize=1)
         fd.write(req)
         read_http(fd, body="this is ch")
@@ -1007,14 +1081,14 @@ class Expect100ContinueTests(TestCase):
         content_length = int(environ['CONTENT_LENGTH'])
         if content_length > 1024:
             start_response('417 Expectation Failed', [('Content-Length', '7'), ('Content-Type', 'text/plain')])
-            return ['failure']
+            return [to_wire('failure')]
         else:
             # pywsgi did sent a "100 continue" for each read
             # see http://code.google.com/p/gevent/issues/detail?id=93
             text = environ['wsgi.input'].read(1)
             text += environ['wsgi.input'].read(content_length - 1)
             start_response('200 OK', [('Content-Length', str(len(text))), ('Content-Type', 'text/plain')])
-            return [text]
+            return [to_wire(text)]
 
     def test_continue(self):
         fd = self.connect().makefile(bufsize=1)
@@ -1066,7 +1140,7 @@ class TestLeakInput(TestCase):
 
         text = "foobar"
         start_response('200 OK', [('Content-Length', str(len(text))), ('Content-Type', 'text/plain')])
-        return [text]
+        return [to_wire(text)]
 
     def test_connection_close_leak_simple(self):
         fd = self.connect().makefile(bufsize=1)
@@ -1106,10 +1180,10 @@ class TestInvalidEnviron(TestCase):
 class Handler(pywsgi.WSGIHandler):
 
     def read_requestline(self):
-        data = self.rfile.read(7)
+        data = to_local(self.rfile.read(7))
         if data[0] == '<':
             try:
-                data += self.rfile.read(15)
+                data += to_local(self.rfile.read(15))
                 if data.lower() == '<policy-file-request/>':
                     self.socket.sendall('HELLO')
                 else:
@@ -1119,7 +1193,7 @@ class Handler(pywsgi.WSGIHandler):
                 self.socket.close()
                 self.socket = None
         else:
-            return data + self.rfile.readline()
+            return data + to_local(self.rfile.readline())
 
 
 class TestSubclass1(TestCase):
@@ -1200,22 +1274,22 @@ class TestInputRaw(greentest.BaseTestCase):
     def test_post(self):
         i = self.make_input("12", content_length=2)
         data = i.read()
-        self.assertEqual(data, "12")
+        self.assertEqual(data, to_wire("12"))
 
     def test_post_read_with_length(self):
         i = self.make_input("12", content_length=2)
         data = i.read(10)
-        self.assertEqual(data, "12")
+        self.assertEqual(data, to_wire("12"))
 
     def test_chunked(self):
         i = self.make_input(["1", "2", ""])
         data = i.read()
-        self.assertEqual(data, "12")
+        self.assertEqual(data, to_wire("12"))
 
     def test_chunked_read_with_length(self):
         i = self.make_input(["1", "2", ""])
         data = i.read(10)
-        self.assertEqual(data, "12")
+        self.assertEqual(data, to_wire("12"))
 
     def test_chunked_missing_chunk(self):
         i = self.make_input(["1", "2"])

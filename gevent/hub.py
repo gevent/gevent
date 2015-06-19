@@ -43,21 +43,24 @@ if PY3:
     integer_types = int,
     text_type = str
     xrange = range
-
-    def reraise(tp, value, tb=None):
-        if value.__traceback__ is not tb:
-            raise value.with_traceback(tb)
-        raise value
-
+    from gevent._util_py3 import reraise
 else:
     import __builtin__
     string_types = __builtin__.basestring,
     text_type = __builtin__.unicode
     integer_types = (int, __builtin__.long)
     xrange = __builtin__.xrange
-
     from gevent._util_py2 import reraise
 
+def to_wire(text):
+    if not text == None and isinstance(text, string_types):
+        text = text if not PY3 else bytes(text, 'iso-8859-1')
+    return text
+
+def to_local(text):
+    if not text == None and not isinstance(text, string_types): 
+        text = text.decode('iso-8859-1')
+    return text
 
 if sys.version_info[0] <= 2:
     import thread

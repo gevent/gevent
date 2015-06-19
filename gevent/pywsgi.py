@@ -1,4 +1,3 @@
-# Copyright (c) 2005-2009, eventlet contributors
 # Copyright (c) 2009-2011, gevent contributors
 
 import errno
@@ -6,6 +5,7 @@ import sys
 import time
 import traceback
 from datetime import datetime
+from urllib.parse import unquote_to_bytes
 try:
     from urllib import unquote
 except ImportError:
@@ -14,11 +14,13 @@ except ImportError:
 from gevent import socket
 import gevent
 from gevent.server import StreamServer
-from gevent.hub import GreenletExit, PY3, reraise
-
+from gevent.hub import GreenletExit, PY3, string_types, to_wire, to_local
+if PY3:
+    from gevent._util_py3 import reraise
+else:
+    from gevent._util_py2 import reraise
 
 __all__ = ['WSGIHandler', 'WSGIServer']
-
 
 MAX_REQUEST_LINE = 8192
 # Weekday and month names for HTTP date/time formatting; always English!
@@ -73,31 +75,31 @@ class Input(object):
         if content_length is None:
             # Either Content-Length or "Transfer-Encoding: chunked" must be present in a request with a body
             # if it was chunked, then this function would have not been called
-            return ''
+            return to_wire('')
         self._send_100_continue()
         left = content_length - self.position
         if length is None:
             length = left
-        elif length > left:
+        elif length > left or length < 0:
             length = left
         if not length:
-            return ''
-        read = reader(length)
+            return to_wire('')
+        read = to_local(reader(length))
         self.position += len(read)
         if len(read) < length:
             if (use_readline and not read.endswith("\n")) or not use_readline:
                 raise IOError("unexpected end of file while reading request at position %s" % (self.position,))
 
-        return read
+        return to_wire(read)
 
     def _chunked_read(self, length=None, use_readline=False):
         rfile = self.rfile
         self._send_100_continue()
 
-        if length == 0:
-            return ""
+        if not length == None and length == 0:
+            return to_wire("")
 
-        if length < 0:
+        if not length == None and length < 0:
             length = None
 
         if use_readline:
@@ -112,7 +114,7 @@ class Input(object):
                 maxreadlen = length
 
             if maxreadlen > 0:
-                data = reader(maxreadlen)
+                data = to_local(reader(maxreadlen))
                 if not data:
                     self.chunk_length = 0
                     raise IOError("unexpected end of file while parsing chunked data")
@@ -131,7 +133,7 @@ class Input(object):
                 if use_readline and data[-1] == "\n":
                     break
             else:
-                line = rfile.readline()
+                line = to_local(rfile.readline())
                 if not line.endswith("\n"):
                     self.chunk_length = 0
                     raise IOError("unexpected end of file while reading chunked data header")
@@ -139,7 +141,7 @@ class Input(object):
                 self.position = 0
                 if self.chunk_length == 0:
                     rfile.readline()
-        return ''.join(response)
+        return to_wire(''.join(response))
 
     def read(self, length=None):
         if self.chunked_input:
@@ -163,7 +165,10 @@ class Input(object):
         if not line:
             raise StopIteration
         return line
-
+    
+    if PY3:
+        __next__ = next
+        del next
 
 try:
     import mimetools
@@ -171,6 +176,7 @@ try:
 except ImportError:
     # adapt Python 3 HTTP headers to old API
     from http import client
+    from email.feedparser import FeedParser
 
     class OldMessage(client.HTTPMessage):
         def __init__(self, **kwargs):
@@ -189,13 +195,25 @@ except ImportError:
         def typeheader(self):
             return self.get('content-type')
 
-    def headers_factory(fp, *args):
+    def headers_factory(_, fp, *args):
+        headers = 0
+        feedparser = FeedParser(OldMessage)
         try:
-            ret = client.parse_headers(fp, _class=OldMessage)
-        except client.LineTooLong:
-            ret = OldMessage()
-            ret.status = 'Line too long'
-        return ret
+            while True:
+                line = to_local(fp.readline(client._MAXLINE + 1))
+                if len(line) > client._MAXLINE:
+                    ret = OldMessage()
+                    ret.status = 'Line too long'
+                    return ret
+                headers += 1
+                if headers > client._MAXHEADERS:
+                    raise client.HTTPException("got more than %d headers" % client._MAXHEADERS)
+                feedparser.feed(line)
+                if line in ('\r\n', '\n', ''):
+                    return feedparser.close()
+        finally:
+            # break the recursive reference chain
+            feedparser.__dict__.clear()
 
 
 class WSGIHandler(object):
@@ -232,9 +250,16 @@ class WSGIHandler(object):
                 try:
                     # read out request data to prevent error: [Errno 104] Connection reset by peer
                     try:
-                        self.socket._sock.recv(16384)
+                        if PY3:
+                            super(socket.socket, self.socket).recv(16384)
+                        else:
+                            self.socket._sock.recv(16384)
                     finally:
-                        self.socket._sock.close()  # do not rely on garbage collection
+                        # sleep 0.001 to prevent error: [Errno 54] Connection reset by peer
+                        gevent.sleep(0.001)
+                        self.rfile.close()
+                        if not PY3:
+                            self.socket._sock.close()  # do not rely on garbage collection
                         self.socket.close()
                 except socket.error:
                     pass
@@ -251,6 +276,7 @@ class WSGIHandler(object):
         return True
 
     def read_request(self, raw_requestline):
+        raw_requestline = to_local(raw_requestline)
         self.requestline = raw_requestline.rstrip()
         words = self.requestline.split()
         if len(words) == 3:
@@ -326,7 +352,7 @@ class WSGIHandler(object):
             return
 
         try:
-            self.requestline = self.read_requestline()
+            self.requestline = to_local(self.read_requestline())
         except socket.error:
             # "Connection reset by peer" or other socket errors aren't interesting here
             return
@@ -399,6 +425,7 @@ class WSGIHandler(object):
             return
         if self.response_use_chunked:
             ## Write the chunked encoding
+            data = to_local(data)
             data = "%x\r\n%s\r\n" % (len(data), data)
         self._sendall(data)
 
@@ -418,17 +445,17 @@ class WSGIHandler(object):
         self.headers_sent = True
         self.finalize_headers()
 
-        towrite.extend('HTTP/1.1 %s\r\n' % self.status)
+        towrite.extend(to_wire('HTTP/1.1 %s\r\n' % self.status))
         for header in self.response_headers:
-            towrite.extend('%s: %s\r\n' % header)
+            towrite.extend(to_wire('%s: %s\r\n' % header))
 
-        towrite.extend('\r\n')
+        towrite.extend(to_wire('\r\n'))
         if data:
+            data = to_local(data)
             if self.response_use_chunked:
-                ## Write the chunked encoding
-                towrite.extend("%x\r\n%s\r\n" % (len(data), data))
+                towrite.extend(to_wire("%x\r\n%s\r\n" % (len(data), data)))
             else:
-                towrite.extend(data)
+                towrite.extend(to_wire(data))
         self._sendall(towrite)
 
     def start_response(self, status, headers, exc_info=None):
@@ -564,7 +591,7 @@ class WSGIHandler(object):
             path, query = self.path.split('?', 1)
         else:
             path, query = self.path, ''
-        env['PATH_INFO'] = unquote(path)
+        env['PATH_INFO'] = unquote(path) if not PY3 else to_local(unquote_to_bytes(path))
         env['QUERY_STRING'] = query
 
         if self.headers.typeheader is not None:
