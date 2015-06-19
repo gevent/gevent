@@ -3,6 +3,7 @@
 import io
 import time
 from gevent import _socketcommon
+from gevent.hub import text_type
 import _socket
 from io import BlockingIOError
 
@@ -22,6 +23,8 @@ SocketIO = __socket__.SocketIO
 
 
 def _get_memory(string, offset):
+    if isinstance(string,text_type):
+        string = string.encode('utf-8')
     return memoryview(string)[offset:]
 
 
