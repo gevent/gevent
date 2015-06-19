@@ -25,7 +25,6 @@ SocketIO = __socket__.SocketIO
 def _get_memory(string, offset):
     return memoryview(string)[offset:]
 
-
 timeout_default = object()
 
 
@@ -535,10 +534,8 @@ class _fileobject(object):
             while True:
                 try:
                     data = self._sock.recv(rbufsize)
-                except error as e:
-                    if e.args[0] == EINTR:
-                        continue
-                    raise
+                except InterruptedError:
+                    continue
                 if not data:
                     break
                 buf.write(data)
@@ -564,10 +561,9 @@ class _fileobject(object):
                 # fragmentation issues on many platforms.
                 try:
                     data = self._sock.recv(left)
-                except error as e:
-                    if e.args[0] == EINTR:
-                        continue
-                    raise
+                except InterruptedError:
+                    continue
+
                 if not data:
                     break
                 n = len(data)
@@ -596,7 +592,7 @@ class _fileobject(object):
             # check if we already have it in our buffer
             buf.seek(0)
             bline = buf.readline(size)
-            if bline.endswith('\n') or len(bline) == size:
+            if bline.endswith(b'\n') or len(bline) == size:
                 self._rbuf = BytesIO()
                 self._rbuf.write(buf.read())
                 return bline
@@ -612,17 +608,16 @@ class _fileobject(object):
                 recv = self._sock.recv
                 while True:
                     try:
-                        while data != "\n":
+                        while data != b"\n":
                             data = recv(1)
                             if not data:
                                 break
                             buffers.append(data)
-                    except error as e:
+                    except InterruptedError:
                         # The try..except to catch EINTR was moved outside the
                         # recv loop to avoid the per byte overhead.
-                        if e.args[0] == EINTR:
-                            continue
-                        raise
+                        continue
+
                     break
                 return "".join(buffers)
 
@@ -631,10 +626,9 @@ class _fileobject(object):
             while True:
                 try:
                     data = self._sock.recv(self._rbufsize)
-                except error as e:
-                    if e.args[0] == EINTR:
-                        continue
-                    raise
+                except InterruptedError:
+                    continue
+
                 if not data:
                     break
                 nl = data.find(b'\n')
@@ -660,10 +654,9 @@ class _fileobject(object):
             while True:
                 try:
                     data = self._sock.recv(self._rbufsize)
-                except error as e:
-                    if e.args[0] == EINTR:
-                        continue
-                    raise
+                except InterruptedError:
+                    continue
+
                 if not data:
                     break
                 left = size - buf_len

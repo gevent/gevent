@@ -9,10 +9,10 @@ from test__server import Settings as server_Settings
 def application(self, environ, start_response):
     if environ['PATH_INFO'] == '/':
         start_response("200 OK", [])
-        return ["PONG"]
+        return [b"PONG"]
     if environ['PATH_INFO'] == '/ping':
         start_response("200 OK", [])
-        return ["PONG"]
+        return [b"PONG"]
     elif environ['PATH_INFO'] == '/short':
         gevent.sleep(0.5)
         start_response("200 OK", [])

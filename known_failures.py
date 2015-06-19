@@ -85,7 +85,6 @@ if PY3:
     FAILING_TESTS += '''
 test__example_udp_server.py
 test__pool.py
-FLAKY test___example_servers.py
 test_threading_2.py
 test__refcount.py
 test__subprocess.py

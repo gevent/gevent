@@ -14,7 +14,7 @@ import ssl
 class Test_wsgiserver(util.TestServer):
     server = 'wsgiserver.py'
     URL = 'http://127.0.0.1:8088'
-    not_found_message = '<h1>Not Found</h1>'
+    not_found_message = b'<h1>Not Found</h1>'
     ssl_ctx = None
 
     def read(self, path='/'):
@@ -35,7 +35,7 @@ class Test_wsgiserver(util.TestServer):
     def _test_hello(self):
         status, data = self.read('/')
         self.assertEqual(status, '200 OK')
-        self.assertEqual(data, "<b>hello world</b>")
+        self.assertEqual(data, b"<b>hello world</b>")
 
     def _test_not_found(self):
         status, data = self.read('/xxx')
@@ -59,10 +59,10 @@ class Test_webproxy(Test_wsgiserver):
     def _run_all_tests(self):
         status, data = self.read('/')
         self.assertEqual(status, '200 OK')
-        assert "gevent example" in data, repr(data)
+        assert b"gevent example" in data, repr(data)
         status, data = self.read('/http://www.google.com')
         self.assertEqual(status, '200 OK')
-        assert 'google' in data.lower(), repr(data)
+        assert b'google' in data.lower(), repr(data)
 
 
 # class Test_webpy(Test_wsgiserver):
