@@ -8,8 +8,8 @@ if not sys.argv[1:]:
     out, err = p.communicate(b'hello world\n')
     code = p.poll()
     assert p.poll() == 0, (out, err, code)
-    assert out.strip() == '11 chars.', (out, err, code)
-    assert err == '', (out, err, code)
+    assert out.strip() == b'11 chars.', (out, err, code)
+    assert err == b'', (out, err, code)
 
 elif sys.argv[1:] == ['subprocess']:
     import gevent

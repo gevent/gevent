@@ -17,9 +17,11 @@ __all__ = ['patch_all',
 
 if sys.version_info[0] >= 3:
     string_types = str,
+    PY3 = True
 else:
     import __builtin__
     string_types = __builtin__.basestring
+    PY3 = False
 
 
 # maps module name -> attribute name -> original item
@@ -85,6 +87,20 @@ def _patch_sys_std(name):
 
 
 def patch_sys(stdin=True, stdout=True, stderr=True):
+    """Patch sys.std[in,out,err] to use a cooperative IO via a threadpool.
+
+    This is relatively dangerous and can have unintended consequences such as hanging
+    the process or misinterpreting control keys.
+
+    This method does nothing on Python 3. The Python 3 interpreter wants to flush
+    the TextIOWrapper objects that make up stderr/stdout at shutdown time, but
+    using a threadpool at that time leads to a hang.
+    """
+    # test__issue6.py demonstrates the hang if these lines are removed;
+    # strangely enough that test passes even without monkey-patching sys
+    if PY3:
+        return
+
     if stdin:
         _patch_sys_std('stdin')
     if stdout:

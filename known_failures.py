@@ -11,8 +11,6 @@ PY3 = sys.version_info[0] >= 3
 
 
 FAILING_TESTS = [
-    # needs investigating
-    'FLAKY test__issue6.py',
 
     # Sometimes fails with AssertionError: ...\nIOError: close() called during concurrent operation on the same file object.\n'
     # Sometimes it contains "\nUnhandled exception in thread started by \nsys.excepthook is missing\nlost sys.stderr\n"

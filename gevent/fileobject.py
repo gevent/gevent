@@ -307,6 +307,7 @@ class FileObjectThread(object):
         if line:
             return line
         raise StopIteration
+    __next__ = next
 
 
 FileObjectClosed = IOError(EBADF, 'Bad file descriptor (FileObject was closed)')
