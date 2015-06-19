@@ -69,10 +69,14 @@ if sys.version_info[:2] >= (3, 4):
             try:
                 super(Thread, self).run()
             finally:
-                del self._greenlet # avoid ref cycles
+                # avoid ref cycles, but keep in __dict__ so we can
+                # distinguish the started/never-started case
+                self._greenlet = None
                 self._stop() # mark as finished
 
         def join(self, timeout=None):
+            if '_greenlet' not in self.__dict__:
+                raise RuntimeError("Cannot join an inactive thread")
             if self._greenlet is None:
                 return
             self._greenlet.join(timeout=timeout)

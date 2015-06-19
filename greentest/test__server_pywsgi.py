@@ -30,15 +30,15 @@ class SimpleWSGIServer(pywsgi.WSGIServer):
     application = application
 
 
-internal_error_start = 'HTTP/1.1 500 Internal Server Error\n'.replace('\n', '\r\n')
-internal_error_end = '\n\nInternal Server Error'.replace('\n', '\r\n')
+internal_error_start = b'HTTP/1.1 500 Internal Server Error\n'.replace(b'\n', b'\r\n')
+internal_error_end = b'\n\nInternal Server Error'.replace(b'\n', b'\r\n')
 
-internal_error503 = '''HTTP/1.1 503 Service Unavailable
+internal_error503 = b'''HTTP/1.1 503 Service Unavailable
 Connection: close
 Content-type: text/plain
 Content-length: 31
 
-Service Temporarily Unavailable'''.replace('\n', '\r\n')
+Service Temporarily Unavailable'''.replace(b'\n', b'\r\n')
 
 
 class Settings:

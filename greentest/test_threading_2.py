@@ -20,7 +20,7 @@ if not hasattr(threading.Thread, 'is_alive'):
     threading.Thread.is_alive = threading.Thread.isAlive
 if not hasattr(threading.Thread, 'daemon'):
     threading.Thread.daemon = property(threading.Thread.isDaemon, threading.Thread.setDaemon)
-if not hasattr(threading._Condition, 'notify_all'):
+if hasattr(threading, '_Condition') and not hasattr(threading._Condition, 'notify_all'):
     threading._Condition.notify_all = threading._Condition.notifyAll
 '''
 
@@ -305,7 +305,11 @@ class ThreadTests(unittest.TestCase):
             import subprocess
             rc = subprocess.call([sys.executable, "-c", """if 1:
 %s
-                import ctypes, sys, time, thread
+                import ctypes, sys, time
+                try:
+                    import thread
+                except ImportError:
+                    import _thread as thread # Py3
 
                 # This lock is used as a simple event variable.
                 ready = thread.allocate_lock()
@@ -354,6 +358,8 @@ class ThreadTests(unittest.TestCase):
                 stderr=subprocess.PIPE)
             stdout, stderr = p.communicate()
             stdout = stdout.strip()
+            stdout = stdout.decode('utf-8')
+            stderr = stderr.decode('utf-8')
             assert re.match('^Woke up, sleep function is: <.*?sleep.*?>$', stdout), repr(stdout)
             stderr = re.sub(r"^\[\d+ refs\]", "", stderr, re.MULTILINE).strip()
             self.assertEqual(stderr, "")
@@ -425,10 +431,10 @@ class ThreadJoinOnShutdown(unittest.TestCase):
         import subprocess
         p = subprocess.Popen([sys.executable, "-c", script], stdout=subprocess.PIPE)
         rc = p.wait()
-        data = p.stdout.read().replace('\r', '')
-        self.assertEqual(data, "end of main\nend of thread\n")
-        self.failIf(rc == 2, "interpreter was blocked")
-        self.failUnless(rc == 0, "Unexpected error")
+        data = p.stdout.read().replace(b'\r', b'')
+        self.assertEqual(data, b"end of main\nend of thread\n")
+        self.failIf(rc == 2, b"interpreter was blocked")
+        self.failUnless(rc == 0, b"Unexpected error")
 
     def test_1_join_on_shutdown(self):
         # The usual case: on exit, wait for a non-daemon thread

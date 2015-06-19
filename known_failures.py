@@ -83,12 +83,10 @@ if PYPY:
 if PY3:
     # No idea / TODO
     FAILING_TESTS += '''
-test_threading_2.py
 test__refcount.py
 test__all__.py
 test__pywsgi.py
 test__makefile_ref.py
-test__server_pywsgi.py
 test__core_stat.py
 FLAKY test__greenio.py
 FLAKY test__socket_dns.py
