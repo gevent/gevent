@@ -81,7 +81,6 @@ if PYPY:
 if PY3:
     # No idea / TODO
     FAILING_TESTS += '''
-test__refcount.py
 test__all__.py
 test__pywsgi.py
 test__makefile_ref.py

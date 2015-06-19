@@ -198,6 +198,7 @@ class socket(object):
         self.hub.cancel_wait(self._read_event, cancel_wait_ex)
         self.hub.cancel_wait(self._write_event, cancel_wait_ex)
         _ss.close(self._sock)
+        self._sock = None
 
     def close(self):
         # This function should not reference any globals. See Python issue #808164.
