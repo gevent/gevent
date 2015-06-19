@@ -619,7 +619,7 @@ class _fileobject(object):
                         continue
 
                     break
-                return "".join(buffers)
+                return b"".join(buffers)
 
             buf.seek(0, 2)  # seek end
             self._rbuf = BytesIO()  # reset _rbuf.  we consume it via buf.

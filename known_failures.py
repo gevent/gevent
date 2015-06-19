@@ -86,7 +86,6 @@ if PY3:
 test__example_udp_server.py
 test_threading_2.py
 test__refcount.py
-test__subprocess.py
 test__all__.py
 test__pywsgi.py
 test__example_echoserver.py
