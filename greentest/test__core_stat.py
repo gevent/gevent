@@ -19,7 +19,7 @@ try:
 
     def write():
         f = open(filename, 'wb', buffering=0)
-        f.write('x')
+        f.write(b'x')
         f.close()
 
     start = time.time()
