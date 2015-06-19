@@ -13,7 +13,7 @@ class EchoServer(DatagramServer):
 
     def handle(self, data, address):
         print('%s: got %r' % (address[0], data))
-        self.socket.sendto('Received %s bytes' % len(data), address)
+        self.socket.sendto(('Received %s bytes' % len(data)).encode('utf-8'), address)
 
 
 if __name__ == '__main__':

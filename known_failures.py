@@ -83,7 +83,6 @@ if PYPY:
 if PY3:
     # No idea / TODO
     FAILING_TESTS += '''
-test__example_udp_server.py
 test_threading_2.py
 test__refcount.py
 test__all__.py

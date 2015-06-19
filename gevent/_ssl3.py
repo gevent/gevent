@@ -126,7 +126,7 @@ class SSLSocket(socket):
         if connected:
             # create the SSL object
             try:
-                self._sslobj = self.context._wrap_socket(self, server_side,
+                self._sslobj = self.context._wrap_socket(getattr(self, '_sock', self), server_side,
                                                          server_hostname)
                 if do_handshake_on_connect:
                     timeout = self.gettimeout()
