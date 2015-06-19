@@ -82,7 +82,6 @@ if PY3:
     # No idea / TODO
     FAILING_TESTS += '''
 test__pywsgi.py
-test__makefile_ref.py
 FLAKY test__socket_dns.py
 '''.strip().split('\n')
 

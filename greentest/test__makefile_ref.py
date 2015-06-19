@@ -13,6 +13,8 @@ pid = os.getpid()
 tmpname = '/tmp/test__makefile_ref.lsof.%s' % pid
 lsof_command = 'lsof -p %s > %s' % (pid, tmpname)
 
+import sys
+PY3 = sys.version_info[0] >= 3
 
 def get_open_files():
     if os.system(lsof_command):
@@ -78,7 +80,12 @@ class Test(unittest.TestCase):
         if isinstance(sock, int):
             self.assert_fd_closed(sock)
         else:
-            self.assert_raises_EBADF(sock.fileno)
+            # Under Python3, the socket module returns -1 for a fileno
+            # of a closed socket; under Py2 it raises
+            if PY3:
+                self.assertEqual(sock.fileno(), -1)
+            else:
+                self.assert_raises_EBADF(sock.fileno)
             self.assert_raises_EBADF(sock.getsockname)
             self.assert_raises_EBADF(sock.accept)
         if rest:
@@ -103,9 +110,13 @@ class TestSocket(Test):
         f = s.makefile()
         self.assert_open(s, fileno)
         s.close()
-        # this closes socket wrapper object but not the file descriptor
-        self.assert_closed(s)
-        self.assert_open(fileno)
+        # Under python 2, this closes socket wrapper object but not the file descriptor;
+        # under python 3, both stay open
+        if PY3:
+            self.assert_open(s, fileno)
+        else:
+            self.assert_closed(s)
+            self.assert_open(fileno)
         f.close()
         self.assert_closed(s)
         self.assert_closed(fileno)
@@ -169,8 +180,13 @@ class TestSocket(Test):
             f = client_socket.makefile()
             self.assert_open(client_socket, fileno)
             client_socket.close()
-            self.assert_closed(client_socket)
-            self.assert_open(fileno)
+            # Under python 2, this closes socket wrapper object but not the file descriptor;
+            # under python 3, both stay open
+            if PY3:
+                self.assert_open(client_socket, fileno)
+            else:
+                self.assert_closed(client_socket)
+                self.assert_open(fileno)
             f.close()
             self.assert_closed(client_socket, fileno)
         finally:
@@ -306,6 +322,7 @@ class TestSSL(Test):
             self.assert_closed(client_socket, fileno)
         finally:
             t.join()
+            connector.close()
 
     def test_server_makefile2(self):
         listener = socket.socket()
@@ -337,6 +354,7 @@ class TestSSL(Test):
         finally:
             t.join()
             listener.close()
+            connector.close()
 
     def test_serverssl_makefile1(self):
         listener = socket.socket()
@@ -368,6 +386,7 @@ class TestSSL(Test):
         finally:
             t.join()
             listener.close()
+            connector.close()
 
     def test_serverssl_makefile2(self):
         listener = socket.socket()
@@ -381,7 +400,7 @@ class TestSSL(Test):
         def connect():
             connector.connect(('127.0.0.1', port))
             s = ssl.wrap_socket(connector)
-            s.sendall('test_serverssl_makefile2')
+            s.sendall(b'test_serverssl_makefile2')
             s.close()
             connector.close()
 
