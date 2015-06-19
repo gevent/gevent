@@ -36,6 +36,9 @@ class _wrefsocket(_socket.socket):
 
     __slots__ = ["__weakref__",]
 
+_closedsocket = _wrefsocket()
+_closedsocket.close()
+
 class socket(object):
 
     def __init__(self, family=AF_INET, type=SOCK_STREAM, proto=0, fileno=None):
@@ -198,7 +201,7 @@ class socket(object):
         self.hub.cancel_wait(self._read_event, cancel_wait_ex)
         self.hub.cancel_wait(self._write_event, cancel_wait_ex)
         _ss.close(self._sock)
-        self._sock = None
+        self._sock = _closedsocket
 
     def close(self):
         # This function should not reference any globals. See Python issue #808164.

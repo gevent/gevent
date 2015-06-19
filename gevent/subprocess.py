@@ -56,6 +56,10 @@ __extra__ = ['MAXFD',
              'INFINITE',
              'TerminateProcess']
 
+if sys.version_info[:2] >= (3, 3):
+    __imports__ += ['DEVNULL',
+                    'getstatusoutput',
+                    'getoutput']
 
 for name in __imports__[:]:
     try:

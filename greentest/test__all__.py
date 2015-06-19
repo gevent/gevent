@@ -11,7 +11,7 @@ MAPPING = {'gevent.local': '_threading_local',
            'gevent.socket': 'socket',
            'gevent.select': 'select',
            'gevent.ssl': 'ssl',
-           'gevent.thread': 'thread',
+           'gevent.thread': '_thread' if six.PY3 else 'thread',
            'gevent.subprocess': 'subprocess',
            'gevent.os': 'os',
            'gevent.threading': 'threading'}

@@ -85,3 +85,9 @@ if sys.version_info[:2] >= (3, 4):
             raise NotImplementedError()
 
     __implements__.append('Thread')
+
+if sys.version_info[:2] >= (3, 3):
+    __implements__.remove('_get_ident')
+    __implements__.append('get_ident')
+    get_ident = _get_ident
+    __implements__.remove('_sleep')

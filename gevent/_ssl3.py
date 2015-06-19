@@ -22,6 +22,7 @@ __implements__ = ['SSLContext',
                   'wrap_socket',
                   'get_server_certificate']
 
+__imports__ = []
 
 for name in dir(__ssl__):
     if name in __implements__:
@@ -30,10 +31,11 @@ for name in dir(__ssl__):
         continue
     value = getattr(__ssl__, name)
     globals()[name] = value
-
+    __imports__.append(name)
 
 del name, value
 
+__all__ = __implements__ + __imports__
 
 orig_SSLContext = __ssl__.SSLContext
 

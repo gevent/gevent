@@ -42,7 +42,17 @@ __imports__ = ['error',
                'getdefaulttimeout',
                'setdefaulttimeout',
                # Windows:
-               'errorTab']
+               'errorTab',
+               # Python 3
+               'AddressFamily',
+               'SocketKind',
+               'CMSG_LEN',
+               'CMSG_SPACE',
+               'dup',
+               'if_indextoname',
+               'if_nameindex',
+               'if_nametoindex',
+               'sethostname']
 
 
 import sys
