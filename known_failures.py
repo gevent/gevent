@@ -91,7 +91,6 @@ test__pywsgi.py
 test__makefile_ref.py
 test__server_pywsgi.py
 test__core_stat.py
-test__example_portforwarder.py
 FLAKY test__greenio.py
 FLAKY test__socket_dns.py
 '''.strip().split('\n')
