@@ -85,7 +85,6 @@ test__refcount.py
 test__all__.py
 test__pywsgi.py
 test__makefile_ref.py
-FLAKY test__greenio.py
 FLAKY test__socket_dns.py
 '''.strip().split('\n')
 
