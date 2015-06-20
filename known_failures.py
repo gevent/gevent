@@ -84,10 +84,6 @@ if PY3:
 FLAKY test__socket_dns.py
 '''.strip().split('\n')
 
-    if os.environ.get('GEVENT_RESOLVER') == 'ares':
-        FAILING_TESTS += [
-            'test__greenness.py']
-
     if CPYTHON_DBG:
         FAILING_TESTS += ['FLAKY test__threadpool.py']
         # refcount problems:
