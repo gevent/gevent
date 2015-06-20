@@ -86,7 +86,8 @@ class Test(greentest.TestCase):
                               'sys.stdout.flush();'
                               'sys.stdout.write("\\nline6");'],
                              stdout=subprocess.PIPE,
-                             universal_newlines=1)
+                             universal_newlines=1,
+                             bufsize=1)
         try:
             stdout = p.stdout.read()
             if python_universal_newlines:
@@ -113,7 +114,8 @@ class Test(greentest.TestCase):
                               'sys.stdout.flush();'
                               'sys.stdout.write("\\nline6");'],
                              stdout=subprocess.PIPE,
-                             universal_newlines=1)
+                             universal_newlines=1,
+                             bufsize=1)
         try:
             stdout = p.stdout.read()
             if python_universal_newlines:
