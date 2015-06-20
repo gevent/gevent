@@ -682,6 +682,8 @@ class WSGIServer(StreamServer):
                     name = socket.getfqdn(address[0])
                 except socket.error:
                     name = str(address[0])
+                if PY3 and not isinstance(name, str):
+                    name = name.decode('ascii')
                 self.environ['SERVER_NAME'] = name
             self.environ.setdefault('SERVER_PORT', str(address[1]))
         else:
