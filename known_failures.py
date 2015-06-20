@@ -5,7 +5,7 @@ import os
 import sys
 
 
-CPYTHON_DBG = hasattr(sys, 'gettotalrefcount')
+LEAKTEST = os.getenv('GEVENTTEST_LEAKCHECK')
 PYPY = hasattr(sys, 'pypy_version_info')
 PY3 = sys.version_info[0] >= 3
 
@@ -18,7 +18,7 @@ FAILING_TESTS = [
 ]
 
 
-if os.environ.get('GEVENT_RESOLVER') == 'ares' or CPYTHON_DBG:
+if os.environ.get('GEVENT_RESOLVER') == 'ares' or LEAKTEST:
     # XXX fix this
     FAILING_TESTS += [
         'FLAKY test__socket_dns.py',
@@ -47,7 +47,7 @@ if sys.platform == 'win32':
     ]
 
 
-if CPYTHON_DBG:
+if LEAKTEST:
     FAILING_TESTS += ['FLAKY test__backdoor.py']
     FAILING_TESTS += ['FLAKY test__os.py']
 
@@ -84,7 +84,7 @@ if PY3:
 FLAKY test__socket_dns.py
 '''.strip().split('\n')
 
-    if CPYTHON_DBG:
+    if LEAKTEST:
         FAILING_TESTS += ['FLAKY test__threadpool.py']
         # refcount problems:
         FAILING_TESTS += '''
