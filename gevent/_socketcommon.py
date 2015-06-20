@@ -222,7 +222,10 @@ def getfqdn(name=''):
     else:
         aliases.insert(0, hostname)
         for name in aliases:
-            if b'.' in name:
+            if isinstance(name, bytes):
+                if b'.' in name:
+                    break
+            elif '.' in name:
                 break
         else:
             name = hostname
