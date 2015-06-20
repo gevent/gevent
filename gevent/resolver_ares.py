@@ -208,6 +208,8 @@ class Resolver(object):
             if _ip_address == ip_address:
                 raise
             waiter.clear()
+            if isinstance(_ip_address, text_type):
+                _ip_address = _ip_address.encode('ascii')
             self.ares.gethostbyaddr(waiter, _ip_address)
             return waiter.get()
 

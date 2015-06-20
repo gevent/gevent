@@ -9,10 +9,10 @@ from test__server import Settings as server_Settings
 def application(self, environ, start_response):
     if environ['PATH_INFO'] == '/':
         start_response("200 OK", [])
-        return ["PONG"]
+        return [b"PONG"]
     if environ['PATH_INFO'] == '/ping':
         start_response("200 OK", [])
-        return ["PONG"]
+        return [b"PONG"]
     elif environ['PATH_INFO'] == '/short':
         gevent.sleep(0.5)
         start_response("200 OK", [])
@@ -30,15 +30,15 @@ class SimpleWSGIServer(pywsgi.WSGIServer):
     application = application
 
 
-internal_error_start = 'HTTP/1.1 500 Internal Server Error\n'.replace('\n', '\r\n')
-internal_error_end = '\n\nInternal Server Error'.replace('\n', '\r\n')
+internal_error_start = b'HTTP/1.1 500 Internal Server Error\n'.replace(b'\n', b'\r\n')
+internal_error_end = b'\n\nInternal Server Error'.replace(b'\n', b'\r\n')
 
-internal_error503 = '''HTTP/1.1 503 Service Unavailable
+internal_error503 = b'''HTTP/1.1 503 Service Unavailable
 Connection: close
 Content-type: text/plain
 Content-length: 31
 
-Service Temporarily Unavailable'''.replace('\n', '\r\n')
+Service Temporarily Unavailable'''.replace(b'\n', b'\r\n')
 
 
 class Settings:
@@ -51,7 +51,7 @@ class Settings:
     @staticmethod
     def assert500(self):
         conn = self.makefile()
-        conn.write('GET / HTTP/1.0\r\n\r\n')
+        conn.write(b'GET / HTTP/1.0\r\n\r\n')
         result = conn.read()
         assert result.startswith(internal_error_start), (result, internal_error_start)
         assert result.endswith(internal_error_end), (result, internal_error_end)
@@ -61,7 +61,7 @@ class Settings:
     @staticmethod
     def assert503(self):
         conn = self.makefile()
-        conn.write('GET / HTTP/1.0\r\n\r\n')
+        conn.write(b'GET / HTTP/1.0\r\n\r\n')
         result = conn.read()
         assert result == internal_error503, (result, internal_error503)
 

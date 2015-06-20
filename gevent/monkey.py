@@ -17,9 +17,11 @@ __all__ = ['patch_all',
 
 if sys.version_info[0] >= 3:
     string_types = str,
+    PY3 = True
 else:
     import __builtin__
     string_types = __builtin__.basestring
+    PY3 = False
 
 
 # maps module name -> attribute name -> original item
@@ -85,6 +87,20 @@ def _patch_sys_std(name):
 
 
 def patch_sys(stdin=True, stdout=True, stderr=True):
+    """Patch sys.std[in,out,err] to use a cooperative IO via a threadpool.
+
+    This is relatively dangerous and can have unintended consequences such as hanging
+    the process or misinterpreting control keys.
+
+    This method does nothing on Python 3. The Python 3 interpreter wants to flush
+    the TextIOWrapper objects that make up stderr/stdout at shutdown time, but
+    using a threadpool at that time leads to a hang.
+    """
+    # test__issue6.py demonstrates the hang if these lines are removed;
+    # strangely enough that test passes even without monkey-patching sys
+    if PY3:
+        return
+
     if stdin:
         _patch_sys_std('stdin')
     if stdout:
@@ -121,6 +137,38 @@ def patch_thread(threading=True, _threading_local=True, Event=False):
         _threading_local = __import__('_threading_local')
         from gevent.local import local
         _threading_local.local = local
+
+    if sys.version_info[:2] >= (3, 4):
+        # Issue 18808 changes the nature of Thread.join() to use
+        # locks. This means that a greenlet spawned in the main thread
+        # (which is already running) cannot wait for the main thread---it
+        # hangs forever. We patch around this if possible. See also
+        # gevent.threading.
+        threading = __import__('threading')
+        greenlet = __import__('greenlet')
+        if threading.current_thread() == threading.main_thread():
+            main_thread = threading.main_thread()
+            _greenlet = main_thread._greenlet = greenlet.getcurrent()
+            from .hub import sleep
+
+            def join(timeout=None):
+                if threading.current_thread() is main_thread:
+                    raise RuntimeError("Cannot join current thread")
+                if _greenlet.dead or not main_thread.is_alive():
+                    return
+                elif timeout:
+                    raise ValueError("Cannot use a timeout to join the main thread")
+                    # XXX: Make that work
+                else:
+                    while main_thread.is_alive():
+                        sleep(0.01)
+
+            main_thread.join = join
+        else:
+            # TODO: Can we use warnings here or does that mess up monkey patching?
+            print("Monkey-patching not on the main thread; "
+                  "threading.main_thread().join() will hang from a greenlet",
+                  file=sys.stderr)
 
 
 def patch_socket(dns=True, aggressive=True):
@@ -168,6 +216,18 @@ def patch_select(aggressive=True):
         remove_item(select, 'epoll')
         remove_item(select, 'kqueue')
         remove_item(select, 'kevent')
+
+    if sys.version_info[:2] >= (3, 4):
+        # Python 3 wants to use `select.select` as a member function,
+        # leading to this error in selectors.py
+        #    r, w, _ = self._select(self._readers, self._writers, [], timeout)
+        #    TypeError: select() takes from 3 to 4 positional arguments but 5 were given
+        select = __import__('select')
+        selectors = __import__('selectors')
+        if selectors.SelectSelector._select is select.select:
+            def _select(self, *args, **kwargs):
+                return select.select(*args, **kwargs)
+            selectors.SelectSelector._select = _select
 
 
 def patch_subprocess():

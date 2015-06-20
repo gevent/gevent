@@ -5,14 +5,12 @@ import os
 import sys
 
 
-CPYTHON_DBG = hasattr(sys, 'gettotalrefcount')
+LEAKTEST = os.getenv('GEVENTTEST_LEAKCHECK')
 PYPY = hasattr(sys, 'pypy_version_info')
 PY3 = sys.version_info[0] >= 3
 
 
 FAILING_TESTS = [
-    # needs investigating
-    'FLAKY test__issue6.py',
 
     # Sometimes fails with AssertionError: ...\nIOError: close() called during concurrent operation on the same file object.\n'
     # Sometimes it contains "\nUnhandled exception in thread started by \nsys.excepthook is missing\nlost sys.stderr\n"
@@ -20,7 +18,7 @@ FAILING_TESTS = [
 ]
 
 
-if os.environ.get('GEVENT_RESOLVER') == 'ares' or CPYTHON_DBG:
+if os.environ.get('GEVENT_RESOLVER') == 'ares' or LEAKTEST:
     # XXX fix this
     FAILING_TESTS += [
         'FLAKY test__socket_dns.py',
@@ -49,7 +47,7 @@ if sys.platform == 'win32':
     ]
 
 
-if CPYTHON_DBG:
+if LEAKTEST:
     FAILING_TESTS += ['FLAKY test__backdoor.py']
     FAILING_TESTS += ['FLAKY test__os.py']
 
@@ -83,38 +81,10 @@ if PYPY:
 if PY3:
     # No idea / TODO
     FAILING_TESTS += '''
-test__example_udp_server.py
-test__examples.py
-test__pool.py
-FLAKY test___example_servers.py
-test__example_udp_client.py
-test__os.py
-test__backdoor.py
-test_threading_2.py
-test__refcount.py
-test__subprocess.py
-test__all__.py
-test__fileobject.py
-test__pywsgi.py
-test__socket_ex.py
-test__example_echoserver.py
-test__subprocess_poll.py
-test__makefile_ref.py
-test__socketpair.py
-test__server_pywsgi.py
-test__core_stat.py
-test__server.py
-test__example_portforwarder.py
-test__execmodules.py
-FLAKY test__greenio.py
 FLAKY test__socket_dns.py
 '''.strip().split('\n')
 
-    if os.environ.get('GEVENT_RESOLVER') == 'ares':
-        FAILING_TESTS += [
-            'test__greenness.py']
-
-    if CPYTHON_DBG:
+    if LEAKTEST:
         FAILING_TESTS += ['FLAKY test__threadpool.py']
         # refcount problems:
         FAILING_TESTS += '''

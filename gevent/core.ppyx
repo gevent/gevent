@@ -496,7 +496,7 @@ cdef public class loop [object PyGeventLoopObject, type PyGeventLoop_Type]:
 
 #endif
 
-    def stat(self, bytes path, float interval=0.0, ref=True, priority=None):
+    def stat(self, str path, float interval=0.0, ref=True, priority=None):
         return stat(self, path, interval, ref, priority)
 
     def run_callback(self, func, *args):
@@ -1036,11 +1036,21 @@ cdef public class child(watcher) [object PyGeventChildObject, type PyGeventChild
 cdef public class stat(watcher) [object PyGeventStatObject, type PyGeventStat_Type]:
 
     WATCHER(stat)
-    cdef readonly bytes path
+    cdef readonly str path
+    cdef readonly bytes _paths
 
-    def __init__(self, loop loop, bytes path, float interval=0.0, ref=True, priority=None):
+    def __init__(self, loop loop, str path, float interval=0.0, ref=True, priority=None):
         self.path = path
-        libev.ev_stat_init(&self._watcher, <void *>gevent_callback_stat, <char*>self.path, interval)
+        cdef bytes paths
+        if isinstance(path, unicode):
+            # the famous Python3 filesystem encoding debacle hits us here. Can we do better?
+            # We must keep a reference to the encoded string so that its bytes don't get freed
+            # and overwritten, leading to strange errors from libev ("no such file or directory")
+            paths = (<unicode>path).encode(sys.getfilesystemencoding())
+            self._paths = paths
+        else:
+            paths = <bytes>path
+        libev.ev_stat_init(&self._watcher, <void *>gevent_callback_stat, <char*>paths, interval)
         self.loop = loop
         if ref:
             self._flags = 0

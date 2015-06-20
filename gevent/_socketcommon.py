@@ -42,7 +42,17 @@ __imports__ = ['error',
                'getdefaulttimeout',
                'setdefaulttimeout',
                # Windows:
-               'errorTab']
+               'errorTab',
+               # Python 3
+               'AddressFamily',
+               'SocketKind',
+               'CMSG_LEN',
+               'CMSG_SPACE',
+               'dup',
+               'if_indextoname',
+               'if_nameindex',
+               'if_nametoindex',
+               'sethostname']
 
 
 import sys
@@ -212,7 +222,10 @@ def getfqdn(name=''):
     else:
         aliases.insert(0, hostname)
         for name in aliases:
-            if '.' in name:
+            if isinstance(name, bytes):
+                if b'.' in name:
+                    break
+            elif '.' in name:
                 break
         else:
             name = hostname

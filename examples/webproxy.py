@@ -105,8 +105,10 @@ def fix_links(data, proxy_url, host_url):
             result = m.group('before') + '"' + join(proxy_url, host_url, url) + '"'
         #print('replaced %r -> %r' % (m.group(0), result))
         return result
+    data = data.decode('latin-1') # XXX Assuming charset. Can regexes work with bytes data?
     data = _link_re_1.sub(fix_link_cb, data)
     data = _link_re_2.sub(fix_link_cb, data)
+    data = data.encode('latin-1')
     return data
 
 _link_re_1 = re.compile('''(?P<before>(href|src|action)\s*=\s*)(?P<quote>['"])(?P<url>[^#].*?)(?P=quote)''')
@@ -114,7 +116,7 @@ _link_re_2 = re.compile('''(?P<before>(href|src|action)\s*=\s*)(?P<url>[^'"#>][^
 
 drop_headers = ['transfer-encoding', 'set-cookie']
 
-FORM = """<html><head>
+FORM = b"""<html><head>
 <title>Web Proxy - gevent example</title></head><body>
 <table width=60% height=100% align=center>
 <tr height=30%><td align=center valign=bottom>Type in URL you want to visit and press Enter</td></tr>

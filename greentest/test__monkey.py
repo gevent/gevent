@@ -1,5 +1,6 @@
 from gevent import monkey
 monkey.patch_all()
+import sys
 
 import time
 assert 'built-in' not in repr(time.sleep), repr(time.sleep)
@@ -11,7 +12,8 @@ except ImportError:
 import threading
 assert 'built-in' not in repr(thread.start_new_thread), repr(thread.start_new_thread)
 assert 'built-in' not in repr(threading._start_new_thread), repr(threading._start_new_thread)
-assert 'built-in' not in repr(threading._sleep), repr(threading._sleep)
+if sys.version_info[0] == 2:
+    assert 'built-in' not in repr(threading._sleep), repr(threading._sleep)
 
 import socket
 from gevent import socket as gevent_socket

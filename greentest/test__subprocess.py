@@ -10,6 +10,7 @@ import gc
 
 
 PYPY = hasattr(sys, 'pypy_version_info')
+PY3 = sys.version_info[0] >= 3
 
 
 if subprocess.mswindows:
@@ -86,9 +87,15 @@ class Test(greentest.TestCase):
                               'sys.stdout.flush();'
                               'sys.stdout.write("\\nline6");'],
                              stdout=subprocess.PIPE,
-                             universal_newlines=1)
+                             universal_newlines=1,
+                             bufsize=1)
         try:
             stdout = p.stdout.read()
+            if PY3 and isinstance(stdout, bytes):
+                # OS X gives us binary back from stdout.read, but linux (travis ci)
+                # gives us text...text is correct because we're in universal newline
+                # mode
+                stdout = stdout.decode('ascii')
             if python_universal_newlines:
                 # Interpreter with universal newline support
                 self.assertEqual(stdout,
@@ -96,7 +103,7 @@ class Test(greentest.TestCase):
             else:
                 # Interpreter without universal newline support
                 self.assertEqual(stdout,
-                                 b"line1\nline2\rline3\r\nline4\r\nline5\nline6")
+                                 "line1\nline2\rline3\r\nline4\r\nline5\nline6")
         finally:
             p.stdout.close()
 
@@ -113,9 +120,15 @@ class Test(greentest.TestCase):
                               'sys.stdout.flush();'
                               'sys.stdout.write("\\nline6");'],
                              stdout=subprocess.PIPE,
-                             universal_newlines=1)
+                             universal_newlines=1,
+                             bufsize=1)
         try:
             stdout = p.stdout.read()
+            if PY3 and isinstance(stdout, bytes):
+                # OS X gives us binary back from stdout.read, but linux (travis ci)
+                # gives us text...text is correct because we're in universal newline
+                # mode
+                stdout = stdout.decode('ascii')
             if python_universal_newlines:
                 # Interpreter with universal newline support
                 self.assertEqual(stdout,
@@ -123,7 +136,7 @@ class Test(greentest.TestCase):
             else:
                 # Interpreter without universal newline support
                 self.assertEqual(stdout,
-                                 b"line1\nline2\rline3\r\nline4\r\nline5\nline6")
+                                 "line1\nline2\rline3\r\nline4\r\nline5\nline6")
         finally:
             p.stdout.close()
 
@@ -134,7 +147,12 @@ class Test(greentest.TestCase):
             r, w = os.pipe()
             p = subprocess.Popen(['grep', 'text'], stdin=subprocess.FileObject(r))
             try:
-                os.close(w)
+                # Closing one half of the pipe causes Python 3 on OS X to terminate the
+                # child process; it exits with code 1 and the assert that p.poll is None
+                # fails. Removing the close lets it pass under both Python 3 and 2.7.
+                # If subprocess.Popen._remove_nonblock_flag is changed to a noop, then
+                # the test fails (as expected) even with the close removed
+                #os.close(w)
                 time.sleep(0.1)
                 self.assertEqual(p.poll(), None)
             finally:
@@ -165,9 +183,9 @@ class Test(greentest.TestCase):
         p = subprocess.Popen([sys.executable, '-u', '-c',
                               'import sys; sys.stdout.write(sys.stdin.readline())'],
                              stdin=subprocess.PIPE, stdout=subprocess.PIPE)
-        p.stdin.write('foobar\n')
+        p.stdin.write(b'foobar\n')
         r = p.stdout.readline()
-        self.assertEqual(r, 'foobar\n')
+        self.assertEqual(r, b'foobar\n')
 
 
 if __name__ == '__main__':

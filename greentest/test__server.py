@@ -1,5 +1,6 @@
 from __future__ import print_function
 import greentest
+from gevent.hub import PY3
 from gevent import socket
 import gevent
 from gevent.server import StreamServer
@@ -21,15 +22,15 @@ class SimpleStreamServer(StreamServer):
                 print('Failed to parse request line: %r' % (request_line, ))
                 raise
             if path == '/ping':
-                client_socket.sendall('HTTP/1.0 200 OK\r\n\r\nPONG')
+                client_socket.sendall(b'HTTP/1.0 200 OK\r\n\r\nPONG')
             elif path in ['/long', '/short']:
-                client_socket.sendall('hello')
+                client_socket.sendall(b'hello')
                 while True:
                     data = client_socket.recv(1)
                     if not data:
                         break
             else:
-                client_socket.sendall('HTTP/1.0 404 WTF?\r\n\r\n')
+                client_socket.sendall(b'HTTP/1.0 404 WTF?\r\n\r\n')
         finally:
             fd.close()
 
@@ -82,14 +83,24 @@ class TestCase(greentest.TestCase):
     def makefile(self, timeout=0.1, bufsize=1):
         sock = socket.socket()
         sock.connect((self.server.server_host, self.server.server_port))
-        fobj = sock.makefile(bufsize=bufsize)
-        fobj._sock.settimeout(timeout)
+
+        if PY3:
+            # Under Python3, you can't read and write to the same
+            # makefile() opened in r, and r+ is not allowed
+            kwargs = {'buffering': bufsize, 'mode': 'rwb'}
+        else:
+            kwargs = {'bufsize': bufsize}
+
+        rconn = sock.makefile(**kwargs)
+        if PY3:
+            rconn._sock = sock
+        rconn._sock.settimeout(timeout)
         sock.close()
-        return fobj
+        return rconn
 
     def send_request(self, url='/', timeout=0.1, bufsize=1):
         conn = self.makefile(timeout=timeout, bufsize=bufsize)
-        conn.write('GET %s HTTP/1.0\r\n\r\n' % url)
+        conn.write(('GET %s HTTP/1.0\r\n\r\n' % url).encode('latin-1'))
         conn.flush()
         return conn
 
@@ -115,7 +126,7 @@ class TestCase(greentest.TestCase):
 
     def assertNotAccepted(self):
         conn = self.makefile()
-        conn.write('GET / HTTP/1.0\r\n\r\n')
+        conn.write(b'GET / HTTP/1.0\r\n\r\n')
         conn.flush()
         result = ''
         try:
@@ -128,12 +139,14 @@ class TestCase(greentest.TestCase):
             assert not result, repr(result)
             return
         assert result.startswith('HTTP/1.0 500 Internal Server Error'), repr(result)
+        conn.close()
 
     def assertRequestSucceeded(self, timeout=0.1):
         conn = self.makefile(timeout=timeout)
-        conn.write('GET /ping HTTP/1.0\r\n\r\n')
+        conn.write(b'GET /ping HTTP/1.0\r\n\r\n')
         result = conn.read()
-        assert result.endswith('\r\n\r\nPONG'), repr(result)
+        conn.close()
+        assert result.endswith(b'\r\n\r\nPONG'), repr(result)
 
     def start_server(self):
         self.server.start()
@@ -270,6 +283,7 @@ class TestDefaultSpawn(TestCase):
                     raise
         finally:
             timeout.cancel()
+            conn.close()
         self.stop_server()
 
     def init_server(self):
@@ -319,6 +333,10 @@ class TestPoolSpawn(TestDefaultSpawn):
         self.assertPoolFull()
         self.assertPoolFull()
         short_request._sock.close()
+        if PY3:
+            # We use two makefiles to simulate reading/writing
+            # under py3
+            short_request.close()
         # gevent.http and gevent.wsgi cannot detect socket close, so sleep a little
         # to let /short request finish
         gevent.sleep(0.1)

@@ -56,6 +56,10 @@ __extra__ = ['MAXFD',
              'INFINITE',
              'TerminateProcess']
 
+if sys.version_info[:2] >= (3, 3):
+    __imports__ += ['DEVNULL',
+                    'getstatusoutput',
+                    'getoutput']
 
 for name in __imports__[:]:
     try:
@@ -142,14 +146,14 @@ def check_output(*popenargs, **kwargs):
 
     The arguments are the same as for the Popen constructor.  Example:
 
-    >>> print(check_output(["ls", "-1", "/dev/null"]))
+    >>> print(check_output(["ls", "-1", "/dev/null"]).decode('ascii'))
     /dev/null
     <BLANKLINE>
 
     The stdout argument is not allowed as it is used internally.
     To capture standard error in the result, use stderr=STDOUT.
 
-    >>> print(check_output(["/bin/sh", "-c", "echo hello world"], stderr=STDOUT))
+    >>> print(check_output(["/bin/sh", "-c", "echo hello world"], stderr=STDOUT).decode('ascii'))
     hello world
     <BLANKLINE>
     """

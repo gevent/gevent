@@ -23,6 +23,12 @@ if sys.version_info[0] <= 2:
 else:
     import _thread as __thread__
     __target__ = '_thread'
+    __imports__ += ['RLock',
+                    'TIMEOUT_MAX',
+                    'allocate',
+                    'exit_thread',
+                    'interrupt_main',
+                    'start_new']
 error = __thread__.error
 from gevent.hub import getcurrent, GreenletExit
 from gevent.greenlet import Greenlet
@@ -63,6 +69,12 @@ if hasattr(__thread__, 'stack_size'):
 else:
     __implements__.remove('stack_size')
 
+for name in __imports__[:]:
+    try:
+        value = getattr(__thread__, name)
+        globals()[name] = value
+    except AttributeError:
+        __imports__.remove(name)
 
 __all__ = __implements__ + __imports__
 __all__.remove('_local')

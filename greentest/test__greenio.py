@@ -24,6 +24,16 @@ import sys
 
 
 PYPY = hasattr(sys, 'pypy_version_info')
+PY3 = sys.version_info[0] >= 3
+
+
+def _write_to_closed(f, s):
+    try:
+        r = f.write(s)
+    except ValueError:
+        assert PY3
+    else:
+        assert r is None, r
 
 
 class TestGreenIo(TestCase):
@@ -35,13 +45,12 @@ class TestGreenIo(TestCase):
             # by closing the socket prior to using the made file
             try:
                 conn, addr = listener.accept()
-                fd = conn.makefile()
+                fd = conn.makefile(mode='wb')
                 conn.close()
-                fd.write('hello\n')
+                fd.write(b'hello\n')
                 fd.close()
-                r = fd.write('a')
-                assert r is None, r
-                self.assertRaises(socket.error, conn.send, 'b')
+                _write_to_closed(fd, b'a')
+                self.assertRaises(socket.error, conn.send, b'b')
             finally:
                 listener.close()
 
@@ -50,23 +59,22 @@ class TestGreenIo(TestCase):
             # by closing the made file and then sending a character
             try:
                 conn, addr = listener.accept()
-                fd = conn.makefile()
-                fd.write('hello')
+                fd = conn.makefile(mode='wb')
+                fd.write(b'hello')
                 fd.close()
-                conn.send('\n')
+                conn.send(b'\n')
                 conn.close()
-                r = fd.write('a')
-                assert r is None, r
-                self.assertRaises(socket.error, conn.send, 'b')
+                _write_to_closed(fd, b'a')
+                self.assertRaises(socket.error, conn.send, b'b')
             finally:
                 listener.close()
 
         def did_it_work(server):
             client = socket.create_connection(('127.0.0.1', server.getsockname()[1]))
-            fd = client.makefile()
+            fd = client.makefile(mode='rb')
             client.close()
-            assert fd.readline() == 'hello\n'
-            assert fd.read() == ''
+            assert fd.readline() == b'hello\n'
+            assert fd.read() == b''
             fd.close()
 
         server = tcp_listener(('0.0.0.0', 0))
@@ -90,11 +98,10 @@ class TestGreenIo(TestCase):
             # closing the file object should close everything
             try:
                 conn, addr = listener.accept()
-                conn = conn.makefile()
-                conn.write('hello\n')
+                conn = conn.makefile(mode='wb')
+                conn.write(b'hello\n')
                 conn.close()
-                r = conn.write('a')
-                assert r is None, r
+                _write_to_closed(conn, b'a')
             finally:
                 listener.close()
 

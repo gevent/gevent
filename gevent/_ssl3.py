@@ -22,6 +22,7 @@ __implements__ = ['SSLContext',
                   'wrap_socket',
                   'get_server_certificate']
 
+__imports__ = []
 
 for name in dir(__ssl__):
     if name in __implements__:
@@ -30,10 +31,11 @@ for name in dir(__ssl__):
         continue
     value = getattr(__ssl__, name)
     globals()[name] = value
-
+    __imports__.append(name)
 
 del name, value
 
+__all__ = __implements__ + __imports__
 
 orig_SSLContext = __ssl__.SSLContext
 
@@ -126,7 +128,7 @@ class SSLSocket(socket):
         if connected:
             # create the SSL object
             try:
-                self._sslobj = self.context._wrap_socket(self, server_side,
+                self._sslobj = self.context._wrap_socket(getattr(self, '_sock', self), server_side,
                                                          server_hostname)
                 if do_handshake_on_connect:
                     timeout = self.gettimeout()

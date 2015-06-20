@@ -1,15 +1,14 @@
 from __future__ import print_function
 import sys
 
-
 if not sys.argv[1:]:
     from subprocess import Popen, PIPE
     p = Popen([sys.executable, __file__, 'subprocess'], stdin=PIPE, stdout=PIPE, stderr=PIPE)
-    out, err = p.communicate('hello world\n')
+    out, err = p.communicate(b'hello world\n')
     code = p.poll()
     assert p.poll() == 0, (out, err, code)
-    assert out.strip() == '11 chars.', (out, err, code)
-    assert err == '', (out, err, code)
+    assert out.strip() == b'11 chars.', (out, err, code)
+    assert err == b'', (out, err, code)
 
 elif sys.argv[1:] == ['subprocess']:
     import gevent

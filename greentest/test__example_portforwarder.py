@@ -35,12 +35,12 @@ class Test(util.TestServer):
         server.start()
         try:
             conn = socket.create_connection(('127.0.0.1', 10011))
-            conn.sendall('msg1')
+            conn.sendall(b'msg1')
             sleep(0.1)
             self.popen.send_signal(15)
             sleep(0.1)
             try:
-                conn.sendall('msg2')
+                conn.sendall(b'msg2')
                 conn.close()
             except socket.error:
                 if sys.platform != 'win32':
@@ -55,9 +55,9 @@ class Test(util.TestServer):
             server.close()
 
         if sys.platform == 'win32':
-            self.assertEqual(['msg1'], log)
+            self.assertEqual([b'msg1'], log)
         else:
-            self.assertEqual(['msg1', 'msg2'], log)
+            self.assertEqual([b'msg1', b'msg2'], log)
 
 
 if __name__ == '__main__':
