@@ -431,7 +431,7 @@ def _do_reuse_or_drop(socket, methname):
 from io import BytesIO
 
 
-class _fileobject(object):
+class _basefileobject(object):
     """Faux file object attached to a socket object."""
 
     default_bufsize = 8192
@@ -728,6 +728,41 @@ class _fileobject(object):
         if not line:
             raise StopIteration
         return line
+    __next__ = next
+
+try:
+    from gevent.fileobject import FileObjectPosix
+except ImportError:
+    # Manual implementation
+    _fileobject = _basefileobject
+else:
+    class _fileobject(FileObjectPosix):
+        # Add the proper drop/reuse support for pypy, and match
+        # the close=False default in the constructor
+        def __init__(self, sock, mode='rb', bufsize=-1, close=False):
+            _do_reuse_or_drop(sock, '_reuse')
+            self._sock = sock
+            FileObjectPosix.__init__(self, sock, mode, bufsize, close)
+
+        def close(self):
+            try:
+                if self._sock:
+                    self.flush()
+            finally:
+                s = self._sock
+                self._sock = None
+                if s is not None:
+                    if self._close:
+                        FileObjectPosix.close(self)
+                    else:
+                        _do_reuse_or_drop(s, '_drop')
+
+        def __del__(self):
+            try:
+                self.close()
+            except:
+                # close() may fail if __init__ didn't complete
+                pass
 
 
 __all__ = __implements__ + __extensions__ + __imports__

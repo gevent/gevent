@@ -53,7 +53,7 @@ class Test(greentest.TestCase):
         g = gevent.spawn(writer, FileObject(w, 'wb'), lines)
         try:
             result = FileObject(r, 'rU').read()
-            self.assertEqual(b'line1\nline2\nline3\nline4\nline5\nline6', result)
+            self.assertEqual('line1\nline2\nline3\nline4\nline5\nline6', result)
         finally:
             g.kill()
 
