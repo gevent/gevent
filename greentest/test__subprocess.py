@@ -10,6 +10,7 @@ import gc
 
 
 PYPY = hasattr(sys, 'pypy_version_info')
+PY3 = sys.version_info[0] >= 3
 
 
 if subprocess.mswindows:
@@ -90,14 +91,19 @@ class Test(greentest.TestCase):
                              bufsize=1)
         try:
             stdout = p.stdout.read()
+            if PY3 and isinstance(stdout, bytes):
+                # OS X gives us binary back from stdout.read, but linux (travis ci)
+                # gives us text...text is correct because we're in universal newline
+                # mode
+                stdout = stdout.decode('ascii')
             if python_universal_newlines:
                 # Interpreter with universal newline support
                 self.assertEqual(stdout,
-                                 b"line1\nline2\nline3\nline4\nline5\nline6")
+                                 "line1\nline2\nline3\nline4\nline5\nline6")
             else:
                 # Interpreter without universal newline support
                 self.assertEqual(stdout,
-                                 b"line1\nline2\rline3\r\nline4\r\nline5\nline6")
+                                 "line1\nline2\rline3\r\nline4\r\nline5\nline6")
         finally:
             p.stdout.close()
 
@@ -118,14 +124,19 @@ class Test(greentest.TestCase):
                              bufsize=1)
         try:
             stdout = p.stdout.read()
+            if PY3 and isinstance(stdout, bytes):
+                # OS X gives us binary back from stdout.read, but linux (travis ci)
+                # gives us text...text is correct because we're in universal newline
+                # mode
+                stdout = stdout.decode('ascii')
             if python_universal_newlines:
                 # Interpreter with universal newline support
                 self.assertEqual(stdout,
-                                 b"line1\nline2\nline3\nline4\nline5\nline6")
+                                 "line1\nline2\nline3\nline4\nline5\nline6")
             else:
                 # Interpreter without universal newline support
                 self.assertEqual(stdout,
-                                 b"line1\nline2\rline3\r\nline4\r\nline5\nline6")
+                                 "line1\nline2\rline3\r\nline4\r\nline5\nline6")
         finally:
             p.stdout.close()
 
