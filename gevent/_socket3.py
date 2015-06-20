@@ -132,7 +132,7 @@ class socket(_socket.socket):
             sock.setblocking(True)
         return sock, addr
 
-    def makefile(self, mode="r", buffering=None, *,
+    def makefile(self, mode="r", buffering=None, 
                  encoding=None, errors=None, newline=None):
         """makefile(...) -> an I/O stream connected to the socket
 
