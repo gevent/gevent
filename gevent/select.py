@@ -39,7 +39,7 @@ class SelectResult(object):
         self.write.append(socket)
         self.event.set()
 
-
+@staticmethod
 def select(rlist, wlist, xlist, timeout=None):
     """An implementation of :meth:`select.select` that blocks only the current greenlet.
 
