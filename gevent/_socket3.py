@@ -65,7 +65,7 @@ class socket(object):
         # Only defined under Linux
         @property
         def type(self):
-            return _socket.socket.type.__get__(self._sock) & ~_socket.SOCK_NONBLOCK
+            return self._sock.type & ~_socket.SOCK_NONBLOCK
 
     def __enter__(self):
         return self
