@@ -29,7 +29,7 @@ def st_nlink_type():
 
 from cffi import FFI
 ffi = FFI()
-ffi.cdef("""
+_cdef = """
 #define EV_MINPRI ...
 #define EV_MAXPRI ...
 
@@ -204,12 +204,20 @@ void gevent_install_sigchld_handler();
 
 void (*gevent_noop)(struct ev_loop *_loop, struct ev_timer *w, int revents);
 void ev_sleep (ev_tstamp delay); /* sleep for a while */
-""")
+"""
 
 
-thisdir = os.path.dirname(os.path.realpath(__file__))
-include_dirs = [thisdir, os.path.join(thisdir, 'libev')]
-libev = C = ffi.verify("""   // passed to the real C compiler
+_watcher_types = ['ev_io',
+                  'ev_timer',
+                  'ev_signal',
+                  'ev_prepare',
+                  'ev_check',
+                  'ev_fork',
+                  'ev_async',
+                  'ev_child',
+                  'ev_stat',]
+
+_source = """   // passed to the real C compiler
 #define LIBEV_EMBED 1
 #include "libev.h"
 
@@ -217,11 +225,93 @@ static void
 _gevent_noop(struct ev_loop *_loop, struct ev_timer *w, int revents) { }
 
 void (*gevent_noop)(struct ev_loop *, struct ev_timer *, int) = &_gevent_noop;
-""", include_dirs=include_dirs)
-del thisdir, include_dirs
+"""
+
+# Setup the watcher callbacks
+_cbs = """
+static int (*python_callback)(void* handle, int revents);
+static void (*python_handle_error)(void* handle, int revents);
+static void (*python_stop)(void* handle);
+"""
+_cdef += _cbs
+_source += _cbs
+
+for _watcher_type in _watcher_types:
+    _cdef += """
+   struct gevent_%s {
+        struct %s watcher;
+        void* handle;
+        ...;
+    };
+    static void _gevent_%s_callback(struct ev_loop* loop, struct %s* watcher, int revents);
+    """ %(_watcher_type, _watcher_type, _watcher_type, _watcher_type)
+
+    _source += """
+    struct gevent_%s {
+        struct %s watcher;
+        void* handle;
+    };
+    """ %(_watcher_type, _watcher_type)
+
+
+    _source += """
+    static void _gevent_%s_callback(struct ev_loop* loop, struct %s* watcher, int revents)
+    {
+        // invoke self.callback()
+        void* handle = ((struct gevent_%s *)watcher)->handle;
+        if( python_callback(handle, revents) < 0) {
+            /* in case of exception, call self.loop.handle_error */
+            python_handle_error(handle, revents);
+        }
+        // Code to stop the event
+        if (!ev_is_active(watcher)) {
+            python_stop(handle);
+        }
+    }
+    """ % (_watcher_type, _watcher_type, _watcher_type)
+
+thisdir = os.path.dirname(os.path.realpath(__file__))
+include_dirs = [thisdir, os.path.join(thisdir, 'libev')]
+ffi.cdef(_cdef)
+libev = C = ffi.verify(_source, include_dirs=include_dirs)
+del thisdir, include_dirs, _watcher_type, _watcher_types
 
 libev.vfd_open = libev.vfd_get = lambda fd: fd
 libev.vfd_free = lambda fd: None
+
+@ffi.callback("int(void* handle, int revents)")
+def _python_callback(handle, revents):
+    watcher = ffi.from_handle(handle)
+    try:
+        watcher.callback(*watcher.args)
+    except:
+        watcher._exc_info = sys.exc_info()
+        return -1
+    else:
+        return 0
+libev.python_callback = _python_callback
+
+@ffi.callback("void(void* handle, int revents)")
+def _python_handle_error(handle, revents):
+    watcher = ffi.from_handle(handle)
+    exc_info = watcher._exc_info
+    del watcher._exc_info
+    try:
+        watcher.loop.handle_error(watcher, *exc_info)
+    finally:
+        if revents & (libev.EV_READ | libev.EV_WRITE):
+             try:
+                 watcher.stop()
+             except:
+                 watcher.loop.handle_error(watcher, *sys.exc_info())
+                 return
+libev.python_handle_error = _python_handle_error
+
+@ffi.callback("void(void* handle)")
+def _python_stop(handle):
+    watcher = ffi.from_handle(handle)
+    watcher.stop()
+libev.python_stop = _python_stop
 
 
 UNDEF = libev.EV_UNDEF
@@ -717,6 +807,7 @@ class callback(object):
     def __nonzero__(self):
         # it's nonzero if it's pending or currently executing
         return self.args is not None
+    __bool__ = __nonzero__
 
     @property
     def pending(self):
@@ -736,11 +827,15 @@ class watcher(object):
             self._flags = 4
         self.args = None
         self._callback = None
-        self._watcher = ffi.new(self._watcher_ffi_type)
-        self._cb = ffi.callback(self._watcher_ffi_cb, _loop._wrap_cb(self._run_callback))
+        self._handle = ffi.new_handle(self)
+        self._gwatcher = ffi.new('struct gevent_' + self._watcher_type + '*')
+        self._watcher = ffi.addressof(self._gwatcher.watcher)
+        self._gwatcher.handle = self._handle
         if priority is not None:
             libev.ev_set_priority(self._watcher, priority)
-        self._watcher_init(self._watcher, self._cb, *args)
+        self._watcher_init(self._watcher,
+                           getattr(libev, '_gevent_' + self._watcher_type + '_callback'),
+                           *args)
 
     # this is not needed, since we keep alive the watcher while it's started
     #def __del__(self):
@@ -761,26 +856,6 @@ class watcher(object):
 
     def _format(self):
         return ''
-
-    def _run_callback(self, loop, c_watcher, revents):
-        try:
-            self.callback(*self.args)
-        except:
-            try:
-                self.loop.handle_error(self, *sys.exc_info())
-            finally:
-                if revents & (libev.EV_READ | libev.EV_WRITE):
-                    # /* io watcher: not stopping it may cause the failing callback to be called repeatedly */
-                    try:
-                        self.stop()
-                    except:
-                        self.loop.handle_error(self, *sys.exc_info())
-                    return
-
-        # callbacks' self.active differs from ev_is_active(...) at
-        # this point. don't use it!
-        if not libev.ev_is_active(c_watcher):
-            self.stop()
 
     def _libev_unref(self):
         if self._flags & 6 == 4:
@@ -869,8 +944,6 @@ class io(watcher):
     _watcher_stop = libev.ev_io_stop
     _watcher_init = libev.ev_io_init
     _watcher_type = 'ev_io'
-    _watcher_ffi_type = "struct %s *" % _watcher_type
-    _watcher_ffi_cb = "void(*)(struct ev_loop *, struct %s *, int)" % _watcher_type
 
     def __init__(self, loop, fd, events, ref=True, priority=None):
         if fd < 0:
@@ -914,8 +987,6 @@ class timer(watcher):
     _watcher_stop = libev.ev_timer_stop
     _watcher_init = libev.ev_timer_init
     _watcher_type = 'ev_timer'
-    _watcher_ffi_type = "struct %s *" % _watcher_type
-    _watcher_ffi_cb = "void(*)(struct ev_loop *, struct %s *, int)" % _watcher_type
 
     def __init__(self, loop, after=0.0, repeat=0.0, ref=True, priority=None):
         if repeat < 0.0:
@@ -955,8 +1026,6 @@ class signal(watcher):
     _watcher_stop = libev.ev_signal_stop
     _watcher_init = libev.ev_signal_init
     _watcher_type = 'ev_signal'
-    _watcher_ffi_type = "struct %s *" % _watcher_type
-    _watcher_ffi_cb = "void(*)(struct ev_loop *, struct %s *, int)" % _watcher_type
 
     def __init__(self, loop, signalnum, ref=True, priority=None):
         if signalnum < 1 or signalnum >= signalmodule.NSIG:
@@ -974,8 +1043,6 @@ class idle(watcher):
     _watcher_stop = libev.ev_idle_stop
     _watcher_init = libev.ev_idle_init
     _watcher_type = 'ev_idle'
-    _watcher_ffi_type = "struct %s *" % _watcher_type
-    _watcher_ffi_cb = "void(*)(struct ev_loop *, struct %s *, int)" % _watcher_type
 
 
 class prepare(watcher):
@@ -983,8 +1050,6 @@ class prepare(watcher):
     _watcher_stop = libev.ev_prepare_stop
     _watcher_init = libev.ev_prepare_init
     _watcher_type = 'ev_prepare'
-    _watcher_ffi_type = "struct %s *" % _watcher_type
-    _watcher_ffi_cb = "void(*)(struct ev_loop *, struct %s *, int)" % _watcher_type
 
 
 class check(watcher):
@@ -992,8 +1057,6 @@ class check(watcher):
     _watcher_stop = libev.ev_check_stop
     _watcher_init = libev.ev_check_init
     _watcher_type = 'ev_check'
-    _watcher_ffi_type = "struct %s *" % _watcher_type
-    _watcher_ffi_cb = "void(*)(struct ev_loop *, struct %s *, int)" % _watcher_type
 
 
 class fork(watcher):
@@ -1001,8 +1064,6 @@ class fork(watcher):
     _watcher_stop = libev.ev_fork_stop
     _watcher_init = libev.ev_fork_init
     _watcher_type = 'ev_fork'
-    _watcher_ffi_type = "struct %s *" % _watcher_type
-    _watcher_ffi_cb = "void(*)(struct ev_loop *, struct %s *, int)" % _watcher_type
 
 
 class async(watcher):
@@ -1010,8 +1071,6 @@ class async(watcher):
     _watcher_stop = libev.ev_async_stop
     _watcher_init = libev.ev_async_init
     _watcher_type = 'ev_async'
-    _watcher_ffi_type = "struct %s *" % _watcher_type
-    _watcher_ffi_cb = "void(*)(struct ev_loop *, struct %s *, int)" % _watcher_type
 
     def send(self):
         libev.ev_async_send(self.loop._ptr, self._watcher)
@@ -1026,8 +1085,6 @@ class child(watcher):
     _watcher_stop = libev.ev_child_stop
     _watcher_init = libev.ev_child_init
     _watcher_type = 'ev_child'
-    _watcher_ffi_type = "struct %s *" % _watcher_type
-    _watcher_ffi_cb = "void(*)(struct ev_loop *, struct %s *, int)" % _watcher_type
 
     def __init__(self, loop, pid, trace=0, ref=True):
         if not loop.default:
@@ -1064,8 +1121,6 @@ class stat(watcher):
     _watcher_stop = libev.ev_stat_stop
     _watcher_init = libev.ev_stat_init
     _watcher_type = 'ev_stat'
-    _watcher_ffi_type = "struct %s *" % _watcher_type
-    _watcher_ffi_cb = "void(*)(struct ev_loop *, struct %s *, int)" % _watcher_type
 
     def __init__(self, _loop, path, interval=0.0, ref=True, priority=None):
         if not isinstance(path, bytes):
