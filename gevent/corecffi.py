@@ -291,25 +291,39 @@ def _python_callback(handle, revents):
         return 0
 libev.python_callback = _python_callback
 
+# After _python_callback is called, the handle may no longer be
+# valid. The callback itself might have called watcher.stop(),
+# which would remove the object from loop.keepaliveset, and if
+# that was the last reference to it, the handle would be GC'd.
+# Therefore the other functions need to correctly deal with an
+# invalid handle
+
 @ffi.callback("void(void* handle, int revents)")
 def _python_handle_error(handle, revents):
-    watcher = ffi.from_handle(handle)
+    try:
+        watcher = ffi.from_handle(handle)
+    except RuntimeError:
+        return
+
     exc_info = watcher._exc_info
     del watcher._exc_info
     try:
         watcher.loop.handle_error(watcher, *exc_info)
     finally:
         if revents & (libev.EV_READ | libev.EV_WRITE):
-             try:
-                 watcher.stop()
-             except:
-                 watcher.loop.handle_error(watcher, *sys.exc_info())
-                 return
+            try:
+                watcher.stop()
+            except:
+                watcher.loop.handle_error(watcher, *sys.exc_info())
+            return
 libev.python_handle_error = _python_handle_error
 
 @ffi.callback("void(void* handle)")
 def _python_stop(handle):
-    watcher = ffi.from_handle(handle)
+    try:
+        watcher = ffi.from_handle(handle)
+    except RuntimeError:
+        return
     watcher.stop()
 libev.python_stop = _python_stop
 
@@ -491,10 +505,14 @@ class loop(object):
         self._in_callback = False
         self._callbacks = []
 
+        # self._check is a watcher that runs in each iteration of the
+        # mainloop, just after the blocking call
         self._check = ffi.new("struct ev_check *")
         self._check_callback_ffi = ffi.callback("void(*)(struct ev_loop *, void*, int)", self._check_callback)
         libev.ev_check_init(self._check, self._check_callback_ffi)
 
+        # self._prepare is a watcher that runs in each iteration of the mainloop,
+        # just before the blocking call
         self._prepare = ffi.new("struct ev_prepare *")
         self._prepare_callback_ffi = ffi.callback("void(*)(struct ev_loop *, void*, int)", self._run_callbacks)
         libev.ev_prepare_init(self._prepare, self._prepare_callback_ffi)
@@ -541,17 +559,6 @@ class loop(object):
         if self.keyboard_interrupt_allowed:
             raise KeyboardInterrupt
         self.ate_keyboard_interrupt = True
-
-    def _wrap_cb(self, cb):
-        def wrapper(*args):
-            try:
-                self.keyboard_interrupt_allowed = True
-                return cb(*args)
-            except:
-                self.handle_error((cb, args), *sys.exc_info())
-            finally:
-                self.keyboard_interrupt_allowed = False
-        return wrapper
 
     def _run_callbacks(self, evloop, _, revents):
         count = 1000
@@ -1135,12 +1142,6 @@ class stat(watcher):
                          # (the underlying call to lstat() keeps erroring out)
                          args=(ffi.new('char[]', path),
                                interval))
-
-    def start(self, callback, *args):
-        watcher.start(self, callback, *args)
-
-    def stop(self):
-        watcher.stop(self)
 
     @property
     def path(self):
