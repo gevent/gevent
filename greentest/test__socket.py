@@ -187,15 +187,12 @@ class TestTCP(greentest.TestCase):
 
     def test_attributes(self):
         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, 0)
-        print("Socket type", s.type)
         self.assertEqual(socket.AF_INET, s.type)
         self.assertEqual(socket.SOCK_DGRAM, s.family)
         self.assertEqual(0, s.proto)
 
         if hasattr(socket, 'SOCK_NONBLOCK'):
-            print("Has non-block")
             s.settimeout(1)
-            print("Socket type with timeout", s.type)
             self.assertEqual(socket.AF_INET, s.type)
 
 
