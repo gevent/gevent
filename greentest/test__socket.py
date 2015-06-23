@@ -196,7 +196,6 @@ class TestTCP(greentest.TestCase):
             self.assertEqual(socket.AF_INET, s.type)
 
 
-
 def get_port():
     tempsock = socket.socket()
     tempsock.bind(('', 0))
