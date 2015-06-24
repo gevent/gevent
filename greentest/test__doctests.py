@@ -44,14 +44,17 @@ if __name__ == '__main__':
         suite = unittest.TestSuite()
         tests_count = 0
         modules_count = 0
-        for m, path in modules:
-            if re.search('^\s*>>> ', open(path).read(), re.M):
+        for m, path in sorted(modules):
+            with open(path, 'r') as f:
+                contents = f.read()
+            if re.search(r'^\s*>>> ', contents, re.M):
                 try:
                     s = doctest.DocTestSuite(m, extraglobs=globs)
-                    print('%s (from %s): %s tests' % (m, path, len(s._tests)))
+                    test_count = len(s._tests) # pylint: disable=W0212
+                    print('%s (from %s): %s tests' % (m, path, test_count))
                     suite.addTest(s)
                     modules_count += 1
-                    tests_count += len(s._tests)
+                    tests_count += test_count
                 except Exception:
                     traceback.print_exc()
                     sys.stderr.write('Failed to process %s\n\n' % path)
