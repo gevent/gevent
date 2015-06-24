@@ -215,7 +215,7 @@ _watcher_types = ['ev_io',
                   'ev_fork',
                   'ev_async',
                   'ev_child',
-                  'ev_stat',]
+                  'ev_stat', ]
 
 _source = """   // passed to the real C compiler
 #define LIBEV_EMBED 1
@@ -244,15 +244,14 @@ for _watcher_type in _watcher_types:
         ...;
     };
     static void _gevent_%s_callback(struct ev_loop* loop, struct %s* watcher, int revents);
-    """ %(_watcher_type, _watcher_type, _watcher_type, _watcher_type)
+    """ % (_watcher_type, _watcher_type, _watcher_type, _watcher_type)
 
     _source += """
     struct gevent_%s {
         struct %s watcher;
         void* handle;
     };
-    """ %(_watcher_type, _watcher_type)
-
+    """ % (_watcher_type, _watcher_type)
 
     _source += """
     static void _gevent_%s_callback(struct ev_loop* loop, struct %s* watcher, int revents)
@@ -279,6 +278,7 @@ del thisdir, include_dirs, _watcher_type, _watcher_types
 libev.vfd_open = libev.vfd_get = lambda fd: fd
 libev.vfd_free = lambda fd: None
 
+
 @ffi.callback("int(void* handle, int revents)")
 def _python_callback(handle, revents):
     watcher = ffi.from_handle(handle)
@@ -297,6 +297,7 @@ libev.python_callback = _python_callback
 # that was the last reference to it, the handle would be GC'd.
 # Therefore the other functions need to correctly deal with an
 # invalid handle
+
 
 @ffi.callback("void(void* handle, int revents)")
 def _python_handle_error(handle, revents):
@@ -317,6 +318,7 @@ def _python_handle_error(handle, revents):
                 watcher.loop.handle_error(watcher, *sys.exc_info())
             return
 libev.python_handle_error = _python_handle_error
+
 
 @ffi.callback("void(void* handle)")
 def _python_stop(handle):
