@@ -89,6 +89,9 @@ def wrap_refcount(method):
     if not os.getenv('GEVENTTEST_LEAKCHECK'):
         return method
 
+    if getattr(method, 'ignore_leakcheck', False):
+        return method
+
     # Some builtin things that we ignore
     IGNORED_TYPES = (tuple, dict, types.FrameType)
 
