@@ -200,6 +200,26 @@ class BaseQueueTest(unittest.TestCase, BlockingTestMixin):
         else:
             self.fail("Did not detect task count going negative")
 
+    def test_queue_task_done_with_items(self):
+        # Passing items to the constructor allows for as
+        # many task_done calls. Joining before all the task done
+        # are called returns false
+        # XXX the same test in subclass
+        l = [1, 2, 3]
+        q = Queue.JoinableQueue(items=l)
+        for i in l:
+            self.assertFalse(q.join(timeout=0.001))
+            self.assertEqual(i, q.get())
+            q.task_done()
+
+        try:
+            q.task_done()
+        except ValueError:
+            pass
+        else:
+            self.fail("Did not detect task count going negative")
+        self.assertTrue(q.join(timeout=0.001))
+
     def test_simple_queue(self):
         # Do it a couple of times on the same queue.
         # Done twice to make sure works with same instance reused.

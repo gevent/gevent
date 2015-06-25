@@ -349,14 +349,18 @@ class JoinableQueue(Queue):
     def __init__(self, maxsize=None, items=None, unfinished_tasks=None):
         from gevent.event import Event
         Queue.__init__(self, maxsize, items)
+        self._cond = Event()
+        self._cond.set()
+
         if unfinished_tasks:
             self.unfinished_tasks = unfinished_tasks
         elif items:
             self.unfinished_tasks = len(items)
         else:
             self.unfinished_tasks = 0
-        self._cond = Event()
-        self._cond.set()
+
+        if self.unfinished_tasks:
+            self._cond.clear()
 
     def copy(self):
         return type(self)(self.maxsize, self.queue, self.unfinished_tasks)
@@ -389,15 +393,20 @@ class JoinableQueue(Queue):
         if self.unfinished_tasks == 0:
             self._cond.set()
 
-    def join(self):
+    def join(self, timeout=None):
         '''Block until all items in the queue have been gotten and processed.
 
         The count of unfinished tasks goes up whenever an item is added to the queue.
         The count goes down whenever a consumer thread calls :meth:`task_done` to indicate
         that the item was retrieved and all work on it is complete. When the count of
         unfinished tasks drops to zero, :meth:`join` unblocks.
+
+        :param float timeout: If not ``None``, then wait no more than this time in seconds
+            for all tasks to finish.
+        :return: ``True`` if all tasks have finished; if ``timeout`` was given and expired before
+            all tasks finished, ``False``.
         '''
-        self._cond.wait()
+        return self._cond.wait(timeout=timeout)
 
 
 class Channel(object):

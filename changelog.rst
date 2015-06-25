@@ -19,6 +19,11 @@ Unreleased
 - Upgraded c-ares to 1.10.0. PR #579 by Omer Katz.
 - Add a ``count`` argument to ``gevent.greenlet.wait``. PR #482 by
   wiggin15.
+- Add a ``timeout`` argument to ``gevent.queue.JoinableQueue.wait``
+  which now returns whether all items were waited for or not.
+- ``gevent.queue.JoinableQueue`` treats ``items`` passed to
+  ``__init__`` as unfinished tasks, the same as if they were ``put``.
+  Initial PR #554 by DuLLSoN.
 
 Release 1.0.2
 -------------
