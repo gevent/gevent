@@ -43,7 +43,7 @@ def missing_reference(app, env, node, contnode):
         print('Looking for %s' % [type, target, modname, classname])
         print(node)
 
-    for docname, items in env.indexentries.iteritems():
+    for docname, items in env.indexentries.items():
         if noisy >= 2:
             print(docname)
         for (i_type, i_string, i_target, i_aliasname) in items:
