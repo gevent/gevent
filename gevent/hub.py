@@ -605,19 +605,25 @@ class Waiter(object):
     # and unwraps it in wait() thus checking that switch() was indeed called
 
 
-def iwait(objects, timeout=None):
+def iwait(objects, timeout=None, count=None):
     """Yield objects as they are ready, until all are ready or timeout expired.
 
     *objects* must be iterable yielding instance implementing wait protocol (rawlink() and unlink()).
     """
     # QQQ would be nice to support iterable here that can be generated slowly (why?)
+    if objects is None:
+        yield get_hub().join(timeout=timeout)
+        return
     waiter = Waiter()
     switch = waiter.switch
     if timeout is not None:
         timer = get_hub().loop.timer(timeout, priority=-1)
         timer.start(waiter.switch, _NONE)
     try:
-        count = len(objects)
+        if count is None:
+            count = len(objects)
+        else:
+            count = min(count, len(objects))
         for obj in objects:
             obj.rawlink(switch)
         for _ in xrange(count):
@@ -666,15 +672,7 @@ def wait(objects=None, timeout=None, count=None):
     """
     if objects is None:
         return get_hub().join(timeout=timeout)
-    result = []
-    if count is None:
-        return list(iwait(objects, timeout))
-    for obj in iwait(objects=objects, timeout=timeout):
-        result.append(obj)
-        count -= 1
-        if count <= 0:
-            break
-    return result
+    return list(iwait(objects, timeout, count))
 
 
 class linkproxy(object):

@@ -412,13 +412,9 @@ def joinall(greenlets, timeout=None, raise_error=False, count=None):
     if not raise_error:
         wait(greenlets, timeout=timeout, count=count)
     else:
-        for obj in iwait(greenlets, timeout=timeout):
+        for obj in iwait(greenlets, timeout=timeout, count=count):
             if getattr(obj, 'exception', None) is not None:
                 raise obj.exception
-            if count is not None:
-                count -= 1
-                if count <= 0:
-                    break
 
 
 def _killall3(greenlets, exception, waiter):
