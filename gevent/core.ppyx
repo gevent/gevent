@@ -2,11 +2,12 @@
 cimport cython
 cimport libev
 from python cimport *
-import sys
 # Work around lack of absolute_import in Cython
+# Note for PY3: not doing so will leave reference to locals() on import
+sys = __import__('sys', level=0)
 os = __import__('os', level=0)
-import traceback
-import signal as signalmodule
+traceback = __import__('traceback', level=0)
+signalmodule = __import__('signal', level=0)
 
 
 __all__ = ['get_version',
