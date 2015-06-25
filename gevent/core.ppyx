@@ -4,6 +4,7 @@ cimport libev
 from python cimport *
 # Work around lack of absolute_import in Cython
 # Note for PY3: not doing so will leave reference to locals() on import
+# (reproducible under Python 3.3, not under Python 3.4; see test__refcount_core.py)
 sys = __import__('sys', level=0)
 os = __import__('os', level=0)
 traceback = __import__('traceback', level=0)
