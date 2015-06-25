@@ -606,26 +606,32 @@ class Waiter(object):
 
 
 def iwait(objects, timeout=None, count=None):
-    """Yield objects as they are ready, until all are ready or timeout expired.
+    """
+    Yield objects as they are ready, until all (or `count`) are ready or `timeout` expired.
 
-    *objects* must be iterable yielding instance implementing wait protocol (rawlink() and unlink()).
+    :param objects: A list (supporting `len`) containing objects
+        implementing the wait protocol (rawlink() and unlink()).
+    :param count: If not `None`, then a number specifying the maximum number
+        of objects to wait for.
     """
     # QQQ would be nice to support iterable here that can be generated slowly (why?)
     if objects is None:
         yield get_hub().join(timeout=timeout)
         return
+
     waiter = Waiter()
     switch = waiter.switch
+
     if timeout is not None:
         timer = get_hub().loop.timer(timeout, priority=-1)
         timer.start(waiter.switch, _NONE)
+
+    count = len(objects) if count is None else min(count, len(objects))
+
     try:
-        if count is None:
-            count = len(objects)
-        else:
-            count = min(count, len(objects))
         for obj in objects:
             obj.rawlink(switch)
+
         for _ in xrange(count):
             item = waiter.get()
             waiter.clear()
@@ -645,30 +651,36 @@ def iwait(objects, timeout=None, count=None):
 
 
 def wait(objects=None, timeout=None, count=None):
-    """Wait for *objects* to become ready or for event loop to finish.
+    """
+    Wait for ``objects`` to become ready or for event loop to finish.
 
-    If *objects* is provided, it should be an iterable containg objects implementing wait protocol (rawlink() and
-    unlink() methods):
+    If ``objects`` is provided, it must be an list containing objects
+    implementing the wait protocol (rawlink() and unlink() methods):
 
     - :class:`gevent.Greenlet` instance
     - :class:`gevent.event.Event` instance
     - :class:`gevent.lock.Semaphore` instance
     - :class:`gevent.subprocess.Popen` instance
 
-    If *objects* is ``None`` (the default), ``wait()`` blocks until all event loops has nothing to do:
+    If ``objects`` is ``None`` (the default), ``wait()`` blocks until
+    all event loops have nothing to do (or until ``timeout`` passes):
 
     - all greenlets have finished
     - all servers were stopped
     - all event loop watchers were stopped.
 
-    If *count* is ``None`` (the default), wait for all of *object* to become ready.
+    If ``count`` is ``None`` (the default), wait for all ``object``s
+    to become ready.
 
-    If *count* is a number, wait for *count* object to become ready. (For example, if count is ``1`` then the
-    function exits when any object in the list is ready).
+    If ``count`` is a number, wait for (up to) ``count`` objects to become
+    ready. (For example, if count is ``1`` then the function exits
+    when any object in the list is ready).
 
-    If *timeout* is provided, it specifies the maximum number of seconds ``wait()`` will block.
+    If ``timeout`` is provided, it specifies the maximum number of
+    seconds ``wait()`` will block.
 
-    Returns the list of ready objects, in the order in which they were ready.
+    Returns the list of ready objects, in the order in which they were
+    ready.
     """
     if objects is None:
         return get_hub().join(timeout=timeout)

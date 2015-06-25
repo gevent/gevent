@@ -7,13 +7,16 @@ Changelog
 Unreleased
 ----------
 
-- Fix LifoQueue.peek() to return correct element. PR #456. Patch by Christine Spang.
+- Add support for Python 3.3 and 3.4.
+- Add support for PyPy.
 - Fix gevent.greenlet.joinall to not ignore ``count`` when
   ``raise_error`` is False. PR #512 by Ivan Diao.
 - Fix subprocess.Popen to not ignore the ``bufsize`` argument. Note
   that this changes the (platform dependent) default, typically from
   buffered to unbuffered. PR #542 by Romuald Brunet.
 - Upgraded c-ares to 1.10.0. PR #579 by Omer Katz.
+- Add a ``count`` argument to ``gevent.greenlet.wait``. PR #482 by
+  wiggin15.
 
 Release 1.0.2
 -------------
