@@ -24,7 +24,8 @@ from distutils.errors import CCompilerError, DistutilsExecError, DistutilsPlatfo
 ext_errors = (CCompilerError, DistutilsExecError, DistutilsPlatformError, IOError)
 
 
-__version__ = re.search("__version__\s*=\s*'(.*)'", open('gevent/__init__.py').read(), re.M).group(1)
+with open('gevent/__init__.py') as _:
+    __version__ = re.search(r"__version__\s*=\s*'(.*)'", _.read(), re.M).group(1)
 assert __version__
 
 
@@ -90,21 +91,21 @@ ARES.optional = True
 
 def make_universal_header(filename, *defines):
     defines = [('#define %s ' % define, define) for define in defines]
-    lines = open(filename, 'r').read().split('\n')
+    with open(filename, 'r') as f:
+        lines = f.read().split('\n')
     ifdef = 0
-    f = open(filename, 'w')
-    for line in lines:
-        if line.startswith('#ifdef'):
-            ifdef += 1
-        elif line.startswith('#endif'):
-            ifdef -= 1
-        elif not ifdef:
-            for prefix, define in defines:
-                if line.startswith(prefix):
-                    line = '#ifdef __LP64__\n#define %s 8\n#else\n#define %s 4\n#endif' % (define, define)
-                    break
-        print(line, file=f)
-    f.close()
+    with open(filename, 'w') as f:
+        for line in lines:
+            if line.startswith('#ifdef'):
+                ifdef += 1
+            elif line.startswith('#endif'):
+                ifdef -= 1
+            elif not ifdef:
+                for prefix, define in defines:
+                    if line.startswith(prefix):
+                        line = '#ifdef __LP64__\n#define %s 8\n#else\n#define %s 4\n#endif' % (define, define)
+                        break
+            print(line, file=f)
 
 
 def _system(cmd):
@@ -280,7 +281,8 @@ class BuildFailed(Exception):
 
 def read(name, *args):
     try:
-        return open(join(dirname(__file__), name)).read(*args)
+        with open(join(dirname(__file__), name)) as f:
+            return f.read(*args)
     except OSError:
         return ''
 
@@ -336,6 +338,10 @@ def run_setup(ext_modules, run_make):
             "License :: OSI Approved :: MIT License",
             "Programming Language :: Python :: 2.6",
             "Programming Language :: Python :: 2.7",
+            "Programming Language :: Python :: 3.3",
+            "Programming Language :: Python :: 3.4",
+            "Programming Language :: Python :: Implementation :: CPython",
+            "Programming Language :: Python :: Implementation :: PyPy",
             "Operating System :: MacOS :: MacOS X",
             "Operating System :: POSIX",
             "Operating System :: Microsoft :: Windows",

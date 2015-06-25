@@ -9,6 +9,8 @@ Unreleased
 
 - Add support for Python 3.3 and 3.4.
 - Add support for PyPy.
+- Drop support for Python 2.5. Python 2.5 users can continue to use
+  gevent 1.0.x.
 - Fix gevent.greenlet.joinall to not ignore ``count`` when
   ``raise_error`` is False. PR #512 by Ivan Diao.
 - Fix subprocess.Popen to not ignore the ``bufsize`` argument. Note
