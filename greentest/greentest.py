@@ -21,6 +21,7 @@
 
 # package is named greentest, not test, so it won't be confused with test in stdlib
 import sys
+import types
 import unittest
 from unittest import TestCase as BaseTestCase
 import time
@@ -88,8 +89,11 @@ def wrap_refcount(method):
     if not os.getenv('GEVENTTEST_LEAKCHECK'):
         return method
 
+    if getattr(method, 'ignore_leakcheck', False):
+        return method
+
     # Some builtin things that we ignore
-    IGNORED_TYPES = (tuple, dict)
+    IGNORED_TYPES = (tuple, dict, types.FrameType)
 
     def type_hist():
         import collections
@@ -103,7 +107,7 @@ def wrap_refcount(method):
 
     def report_diff(a, b):
         diff_lines = []
-        for k, v in sorted(a.items()):
+        for k, v in sorted(a.items(), key=lambda i: i[0].__name__):
             if b[k] != v:
                 diff_lines.append("%s: %s != %s" % (k, v, b[k]))
 

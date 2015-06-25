@@ -27,6 +27,10 @@ Unreleased
 - ``gevent.pywsgi`` no longer prints debugging information for the
   normal conditions of a premature client disconnect. Issue #136,
   fixed in PR #377 by Paul Collier.
+- (Experimental.) Waiting on or getting results from greenlets that
+  raised exceptions now usually raises the original traceback. This
+  should assist things like Sentry to track the original problem. PRs
+  #450 and #528 by Rodolfo and Eddi Linder.
 
 Release 1.0.2
 -------------
