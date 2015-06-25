@@ -24,6 +24,10 @@ Unreleased
 - ``gevent.queue.JoinableQueue`` treats ``items`` passed to
   ``__init__`` as unfinished tasks, the same as if they were ``put``.
   Initial PR #554 by DuLLSoN.
+- (Experimental.) Waiting on or getting results from greenlets that
+  raised exceptions now usually raises the original traceback. This
+  should assist things like Sentry to track the original problem. PRs
+  #450 and #528 by Rodolfo and Eddi Linder.
 
 Release 1.0.2
 -------------

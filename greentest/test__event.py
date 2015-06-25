@@ -96,6 +96,7 @@ class TestAsyncResultAsLinkTarget(greentest.TestCase):
         self.assertRaises(greentest.ExpectedException, s1.get)
         assert gevent.with_timeout(DELAY, s2.get, timeout_value=X) is X
         self.assertRaises(greentest.ExpectedException, s3.get)
+        g._exc_clear()
 
 
 class TestEvent_SetThenClear(greentest.TestCase):

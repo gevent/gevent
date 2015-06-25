@@ -181,6 +181,9 @@ class TestCase(greentest.TestCase):
             self.assert_error(TypeError)
         finally:
             self.server.stop()
+            # XXX: There's an unreachable greenlet that has a traceback.
+            # We need to clear it to make the leak checks work
+            import gc; gc.collect()
 
     def ServerClass(self, *args, **kwargs):
         kwargs.setdefault('spawn', self.get_spawn())

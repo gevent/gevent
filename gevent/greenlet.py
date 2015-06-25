@@ -122,6 +122,14 @@ class Greenlet(greenlet):
     def _raise_exception(self):
         reraise(*self._exc_info)
 
+    def _exc_clear(self):
+        """Throw away the traceback associated with the exception on this object.
+
+        Call this to resolve any reference cycles.
+        """
+        if self._exc_info:
+            self._exc_info = (self._exc_info[0], self._exc_info[1], None)
+
     @property
     def loop(self):
         # needed by killall
@@ -437,11 +445,19 @@ def _kill(greenlet, exception, waiter):
 def joinall(greenlets, timeout=None, raise_error=False, count=None):
     if not raise_error:
         wait(greenlets, timeout=timeout, count=count)
+        for g in greenlets:
+            if hasattr(g, '_exc_clear'):
+                g._exc_clear()
     else:
         for obj in iwait(greenlets, timeout=timeout, count=count):
             if getattr(obj, 'exception', None) is not None:
                 if hasattr(obj, '_raise_exception'):
-                    obj._raise_exception()
+                    try:
+                        obj._raise_exception()
+                    finally:
+                        for g in greenlets:
+                            if hasattr(g, '_exc_clear'):
+                                g._exc_clear()
                 else:
                     raise obj.exception
 

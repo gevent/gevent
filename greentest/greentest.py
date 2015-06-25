@@ -21,6 +21,7 @@
 
 # package is named greentest, not test, so it won't be confused with test in stdlib
 import sys
+import types
 import unittest
 from unittest import TestCase as BaseTestCase
 import time
@@ -89,7 +90,7 @@ def wrap_refcount(method):
         return method
 
     # Some builtin things that we ignore
-    IGNORED_TYPES = (tuple, dict)
+    IGNORED_TYPES = (tuple, dict, types.FrameType)
 
     def type_hist():
         import collections
