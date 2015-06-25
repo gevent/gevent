@@ -538,8 +538,12 @@ class WSGIHandler(object):
                     close()
                 self.wsgi_input._discard()
         except socket.error as ex:
-            # Broken pipe, connection reset by peer
             if ex.args[0] in (errno.EPIPE, errno.ECONNRESET):
+                # Broken pipe, connection reset by peer.
+                # Swallow these silently to avoid spewing
+                # useless info on normal operating conditions,
+                # bloating logfiles. See https://github.com/gevent/gevent/pull/377
+                # and https://github.com/gevent/gevent/issues/136.
                 if not PY3:
                     sys.exc_clear()
                 self.close_connection = True

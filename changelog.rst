@@ -24,6 +24,9 @@ Unreleased
 - ``gevent.queue.JoinableQueue`` treats ``items`` passed to
   ``__init__`` as unfinished tasks, the same as if they were ``put``.
   Initial PR #554 by DuLLSoN.
+- ``gevent.pywsgi`` no longer prints debugging information for the
+  normal conditions of a premature client disconnect. Issue #136,
+  fixed in PR #377 by Paul Collier.
 
 Release 1.0.2
 -------------
