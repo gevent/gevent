@@ -349,7 +349,12 @@ class JoinableQueue(Queue):
     def __init__(self, maxsize=None, items=None, unfinished_tasks=None):
         from gevent.event import Event
         Queue.__init__(self, maxsize, items)
-        self.unfinished_tasks = unfinished_tasks or 0
+        if unfinished_tasks:
+            self.unfinished_tasks = unfinished_tasks
+        elif items:
+            self.unfinished_tasks = len(items)
+        else:
+            self.unfinished_tasks = 0
         self._cond = Event()
         self._cond.set()
 
