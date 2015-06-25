@@ -81,6 +81,7 @@ class FailureSpawnedLink(SpawnedLink):
         if not source.successful():
             return SpawnedLink.__call__(self, source)
 
+
 class _lazy(object):
 
     def __init__(self, func):
@@ -92,7 +93,7 @@ class _lazy(object):
 
         func, name = self.data
         value = func(inst)
-        inst.__dict__[name]= value
+        inst.__dict__[name] = value
         return value
 
 
