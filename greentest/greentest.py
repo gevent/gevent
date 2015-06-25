@@ -103,7 +103,7 @@ def wrap_refcount(method):
 
     def report_diff(a, b):
         diff_lines = []
-        for k, v in sorted(a.items()):
+        for k, v in sorted(a.items(), key=lambda i: i[0].__name__):
             if b[k] != v:
                 diff_lines.append("%s: %s != %s" % (k, v, b[k]))
 

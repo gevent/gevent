@@ -1,7 +1,16 @@
 # Copyright (c) 2009-2012 Denis Bilenko. See LICENSE for details.
 
 import sys
-from gevent.hub import greenlet, getcurrent, get_hub, GreenletExit, Waiter, PY3, iwait, wait, PYPY
+from gevent.hub import GreenletExit
+from gevent.hub import PY3
+from gevent.hub import PYPY
+from gevent.hub import Waiter
+from gevent.hub import get_hub
+from gevent.hub import getcurrent
+from gevent.hub import greenlet
+from gevent.hub import iwait
+from gevent.hub import reraise
+from gevent.hub import wait
 from gevent.timeout import Timeout
 from collections import deque
 
@@ -72,39 +81,57 @@ class FailureSpawnedLink(SpawnedLink):
         if not source.successful():
             return SpawnedLink.__call__(self, source)
 
+class _lazy(object):
+
+    def __init__(self, func):
+        self.data = (func, func.__name__)
+
+    def __get__(self, inst, class_):
+        if inst is None:
+            return self
+
+        func, name = self.data
+        value = func(inst)
+        inst.__dict__[name]= value
+        return value
+
 
 class Greenlet(greenlet):
     """A light-weight cooperatively-scheduled execution unit."""
+
+    value = None
+    _exc_info = ()
+    _notifier = None
+    _start_event = None
+    args = ()
 
     def __init__(self, run=None, *args, **kwargs):
         hub = get_hub()
         greenlet.__init__(self, parent=hub)
         if run is not None:
             self._run = run
-        self.args = args
+        if args:
+            self.args = args
         self.kwargs = kwargs
-        self._links = deque()
-        self.value = None
-        self._exception = _NONE
-        self._notifier = None
-        self._start_event = None
+
+    @_lazy
+    def _links(self):
+        return deque()
+
+    def _raise_exception(self):
+        reraise(*self._exc_info)
 
     @property
     def loop(self):
         # needed by killall
         return self.parent.loop
 
-    if PY3:
-        def __bool__(self):
-            return self._start_event is not None and self._exception is _NONE
-    else:
-        def __nonzero__(self):
-            return self._start_event is not None and self._exception is _NONE
+    def __bool__(self):
+        return self._start_event is not None and self._exc_info is Greenlet._exc_info
+    __nonzero__ = __bool__
 
     if PYPY:
-
         # oops - pypy's .dead relies on __nonzero__ which we overriden above
-
         @property
         def dead(self):
             return self._greenlet__started and not (self._greenlet__main or _continulet.is_pending(self))
@@ -116,12 +143,12 @@ class Greenlet(greenlet):
 
     def ready(self):
         """Return true if and only if the greenlet has finished execution."""
-        return self.dead or self._exception is not _NONE
+        return self.dead or self._exc_info
 
     def successful(self):
         """Return true if and only if the greenlet has finished execution successfully,
         that is, without raising an error."""
-        return self._exception is None
+        return self._exc_info and self._exc_info[1] is None
 
     def __repr__(self):
         classname = self.__class__.__name__
@@ -158,8 +185,7 @@ class Greenlet(greenlet):
         """Holds the exception instance raised by the function if the greenlet has finished with an error.
         Otherwise ``None``.
         """
-        if self._exception is not _NONE:
-            return self._exception
+        return self._exc_info[1] if self._exc_info else None
 
     def throw(self, *args):
         """Immediatelly switch into the greenlet and raise an exception in it.
@@ -178,7 +204,7 @@ class Greenlet(greenlet):
         try:
             greenlet.throw(self, *args)
         finally:
-            if self._exception is _NONE and self.dead:
+            if self._exc_info is Greenlet._exc_info and self.dead:
                 # the greenlet was never switched to before and it will never be, _report_error was not called
                 # the result was not set and the links weren't notified. let's do it here.
                 # checking that self.dead is true is essential, because throw() does not necessarily kill the greenlet
@@ -260,33 +286,32 @@ class Greenlet(greenlet):
         if self.ready():
             if self.successful():
                 return self.value
-            else:
-                raise self._exception
-        if block:
-            switch = getcurrent().switch
-            self.rawlink(switch)
+            self._raise_exception()
+        if not block:
+            raise Timeout()
+
+        switch = getcurrent().switch
+        self.rawlink(switch)
+        try:
+            t = Timeout.start_new(timeout)
             try:
-                t = Timeout.start_new(timeout)
-                try:
-                    result = self.parent.switch()
-                    assert result is self, 'Invalid switch into Greenlet.get(): %r' % (result, )
-                finally:
-                    t.cancel()
-            except:
-                # unlinking in 'except' instead of finally is an optimization:
-                # if switch occurred normally then link was already removed in _notify_links
-                # and there's no need to touch the links set.
-                # Note, however, that if "Invalid switch" assert was removed and invalid switch
-                # did happen, the link would remain, causing another invalid switch later in this greenlet.
-                self.unlink(switch)
-                raise
-            if self.ready():
-                if self.successful():
-                    return self.value
-                else:
-                    raise self._exception
-        else:
-            raise Timeout
+                result = self.parent.switch()
+                assert result is self, 'Invalid switch into Greenlet.get(): %r' % (result, )
+            finally:
+                t.cancel()
+        except:
+            # unlinking in 'except' instead of finally is an optimization:
+            # if switch occurred normally then link was already removed in _notify_links
+            # and there's no need to touch the links set.
+            # Note, however, that if "Invalid switch" assert was removed and invalid switch
+            # did happen, the link would remain, causing another invalid switch later in this greenlet.
+            self.unlink(switch)
+            raise
+
+        if self.ready():
+            if self.successful():
+                return self.value
+            self._raise_exception()
 
     def join(self, timeout=None):
         """Wait until the greenlet finishes or *timeout* expires.
@@ -294,36 +319,36 @@ class Greenlet(greenlet):
         """
         if self.ready():
             return
-        else:
-            switch = getcurrent().switch
-            self.rawlink(switch)
+
+        switch = getcurrent().switch
+        self.rawlink(switch)
+        try:
+            t = Timeout.start_new(timeout)
             try:
-                t = Timeout.start_new(timeout)
-                try:
-                    result = self.parent.switch()
-                    assert result is self, 'Invalid switch into Greenlet.join(): %r' % (result, )
-                finally:
-                    t.cancel()
-            except Timeout as ex:
-                self.unlink(switch)
-                if ex is not t:
-                    raise
-            except:
-                self.unlink(switch)
+                result = self.parent.switch()
+                assert result is self, 'Invalid switch into Greenlet.join(): %r' % (result, )
+            finally:
+                t.cancel()
+        except Timeout as ex:
+            self.unlink(switch)
+            if ex is not t:
                 raise
+        except:
+            self.unlink(switch)
+            raise
 
     def _report_result(self, result):
-        self._exception = None
+        self._exc_info = (None, None, None)
         self.value = result
         if self._links and not self._notifier:
             self._notifier = self.parent.loop.run_callback(self._notify_links)
 
     def _report_error(self, exc_info):
-        exception = exc_info[1]
-        if isinstance(exception, GreenletExit):
-            self._report_result(exception)
+        if isinstance(exc_info[1], GreenletExit):
+            self._report_result(exc_info[1])
             return
-        self._exception = exception
+
+        self._exc_info = exc_info
 
         if self._links and not self._notifier:
             self._notifier = self.parent.loop.run_callback(self._notify_links)
@@ -414,7 +439,10 @@ def joinall(greenlets, timeout=None, raise_error=False, count=None):
     else:
         for obj in iwait(greenlets, timeout=timeout, count=count):
             if getattr(obj, 'exception', None) is not None:
-                raise obj.exception
+                if hasattr(obj, '_raise_exception'):
+                    obj._raise_exception()
+                else:
+                    raise obj.exception
 
 
 def _killall3(greenlets, exception, waiter):
@@ -473,6 +501,3 @@ def getfuncname(func):
             if funcname != '<lambda>':
                 return funcname
     return repr(func)
-
-
-_NONE = Exception("Neither exception nor value")
