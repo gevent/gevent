@@ -28,6 +28,18 @@ except ImportError:
 LISTEN = ":8088"
 
 
+def _as_bytes(s):
+    if not isinstance(s, bytes): # Py3
+        s = s.encode('utf-8')
+    return s
+
+
+def _as_str(s):
+    if not isinstance(s, str): # Py3
+        s = s.decode('latin-1')
+    return s
+
+
 def application(env, start_response):
     proxy_url = 'http://%s/' % env['HTTP_HOST']
     method = env['REQUEST_METHOD']
@@ -41,9 +53,10 @@ def application(env, start_response):
     elif method == 'GET':
         return proxy(path, start_response, proxy_url)
     elif (method, path) == ('POST', ''):
-        key, value = env['wsgi.input'].read().strip().split('=')
-        assert key == 'url', repr(key)
-        start_response('302 Found', [('Location', join(proxy_url, unquote(value)))])
+        key, value = env['wsgi.input'].read().strip().split(b'=')
+        assert key == b'url', repr(key)
+        value = _as_str(value)
+        start_response('302 Found', [('Location', _as_str(join(proxy_url, unquote(value))))])
     elif method == 'POST':
         start_response('404 Not Found', [])
     else:
@@ -69,7 +82,8 @@ def proxy(path, start_response, proxy_url):
         tb = traceback.format_exc()
         start_response('502 Bad Gateway', [('Content-Type', 'text/html')])
         error_str = escape(str(ex) or ex.__class__.__name__ or 'Error')
-        return ['<h1>%s</h1><h2>%s</h2><pre>%s</pre>' % (error_str, escape(path), escape(tb))]
+        error_str = '<h1>%s</h1><h2>%s</h2><pre>%s</pre>' % (error_str, escape(path), escape(tb))
+        return [_as_bytes(error_str)]
     else:
         start_response('%s %s' % (response.code, response.msg), headers)
         data = response.read()
@@ -81,15 +95,17 @@ def join(url1, *rest):
     if not rest:
         return url1
     url2, rest = rest[0], rest[1:]
-    if url1.endswith('/'):
-        if url2.startswith('/'):
+    url1 = _as_bytes(url1)
+    url2 = _as_bytes(url2)
+    if url1.endswith(b'/'):
+        if url2.startswith(b'/'):
             return join(url1 + url2[1:], *rest)
         else:
             return join(url1 + url2, *rest)
-    elif url2.startswith('/'):
+    elif url2.startswith(b'/'):
         return join(url1 + url2, *rest)
     else:
-        return join(url1 + '/' + url2, *rest)
+        return join(url1 + b'/' + url2, *rest)
 
 
 def fix_links(data, proxy_url, host_url):
@@ -99,20 +115,18 @@ def fix_links(data, proxy_url, host_url):
     """
     def fix_link_cb(m):
         url = m.group('url')
-        if '://' in url:
-            result = m.group('before') + '"' + join(proxy_url, url) + '"'
+        if b'://' in url:
+            result = m.group('before') + b'"' + join(proxy_url, url) + b'"'
         else:
-            result = m.group('before') + '"' + join(proxy_url, host_url, url) + '"'
+            result = m.group('before') + b'"' + join(proxy_url, host_url, url) + b'"'
         #print('replaced %r -> %r' % (m.group(0), result))
         return result
-    data = data.decode('latin-1') # XXX Assuming charset. Can regexes work with bytes data?
     data = _link_re_1.sub(fix_link_cb, data)
     data = _link_re_2.sub(fix_link_cb, data)
-    data = data.encode('latin-1')
     return data
 
-_link_re_1 = re.compile('''(?P<before>(href|src|action)\s*=\s*)(?P<quote>['"])(?P<url>[^#].*?)(?P=quote)''')
-_link_re_2 = re.compile('''(?P<before>(href|src|action)\s*=\s*)(?P<url>[^'"#>][^ >]*)''')
+_link_re_1 = re.compile(br'''(?P<before>(href|src|action)\s*=\s*)(?P<quote>['"])(?P<url>[^#].*?)(?P=quote)''')
+_link_re_2 = re.compile(br'''(?P<before>(href|src|action)\s*=\s*)(?P<url>[^'"#>][^ >]*)''')
 
 drop_headers = ['transfer-encoding', 'set-cookie']
 
