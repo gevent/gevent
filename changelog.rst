@@ -7,7 +7,9 @@ Changelog
 Unreleased
 ----------
 
-- Add support for Python 3.3 and 3.4.
+- Add support for Python 3.3 and 3.4. Many people have contributed to
+  this effort, including but not limited to Fantix King, hashstat,
+  Elizabeth Myers, jander, Luke Woydziak, and others.
 - Add support for PyPy.
 - Drop support for Python 2.5. Python 2.5 users can continue to use
   gevent 1.0.x.
