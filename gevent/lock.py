@@ -32,7 +32,7 @@ class DummySemaphore(object):
         pass
 
     def acquire(self, blocking=True, timeout=None):
-        pass
+        return True
 
     def __enter__(self):
         pass
