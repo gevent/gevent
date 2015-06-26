@@ -323,10 +323,10 @@ class TestDefaultSpawn(TestCase):
         # PR 501
         self.init_server()
         self.start_server()
-        self.assertTrue('<SimpleStreamServer' in repr(self.server))
+        self.assertTrue('Server' in repr(self.server))
 
         self.server.set_handle(self.server.handle)
-        self.assertTrue('handle=<bound method SimpleStreamServer.handle of self>' in repr(self.server),
+        self.assertTrue('handle=<bound method' in repr(self.server) and 'of self>' in repr(self.server),
                         repr(self.server))
 
         self.server.set_handle(self.test_server_repr_when_handle_is_instancemethod)
