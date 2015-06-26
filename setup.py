@@ -286,12 +286,15 @@ def read(name, *args):
     except OSError:
         return ''
 
+if PYPY:
+    install_requires = []
+else:
+    install_requires = ['greenlet >= 0.4.7']
 
 # If we are running info / help commands, we don't need to build anything
 if len(sys.argv) >= 2 and ('--help' in sys.argv[1:] or
    sys.argv[1] in ('--help-commands', 'egg_info', '--version', 'clean')):
     ext_modules = []
-    install_requires = [] if PYPY else ['greenlet']
     include_package_data = PYPY
     run_make = False
 elif PYPY:
@@ -302,7 +305,6 @@ elif PYPY:
     system('cd gevent/libev && ./configure > configure_output.txt')
     from gevent import corecffi
     ext_modules = [corecffi.ffi.verifier.get_extension()]
-    install_requires = []
     include_package_data = True
     run_make = False
 else:
@@ -312,7 +314,6 @@ else:
                              sources=["gevent/gevent._semaphore.c"]),
                    Extension(name="gevent._util",
                              sources=["gevent/gevent._util.c"])]
-    install_requires = ['greenlet']
     include_package_data = False
     run_make = True
 
