@@ -64,7 +64,6 @@ class TestSpawn(Test):
     def tearDown(self):
         gevent.sleep(0.0001)
         assert self.x.dead, self.x
-        self.x._exc_clear()
 
     def start(self, *args):
         self.x = gevent.spawn(*args)

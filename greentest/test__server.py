@@ -348,11 +348,6 @@ class TestPoolSpawn(TestDefaultSpawn):
 
     test_pool_full.error_fatal = False
 
-    # XXX: Travis CI is reporting a leak test failure with this method
-    # but so far I can't reproduce it locally. Attempting a smash-and-grab
-    # fix
-    test_pool_full.ignore_leakcheck = True
-
 
 class TestNoneSpawn(TestCase):
 

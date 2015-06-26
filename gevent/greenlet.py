@@ -12,6 +12,8 @@ from gevent.hub import iwait
 from gevent.hub import reraise
 from gevent.hub import wait
 from gevent.timeout import Timeout
+from gevent._tblib import dump_traceback
+from gevent._tblib import load_traceback
 from collections import deque
 
 
@@ -120,15 +122,8 @@ class Greenlet(greenlet):
         return deque()
 
     def _raise_exception(self):
-        reraise(*self._exc_info)
-
-    def _exc_clear(self):
-        """Throw away the traceback associated with the exception on this object.
-
-        Call this to resolve any reference cycles.
-        """
-        if self._exc_info:
-            self._exc_info = (self._exc_info[0], self._exc_info[1], None)
+        t, v, tbs = self._exc_info
+        reraise(t, v, load_traceback(tbs))
 
     @property
     def loop(self):
@@ -357,7 +352,7 @@ class Greenlet(greenlet):
             self._report_result(exc_info[1])
             return
 
-        self._exc_info = exc_info
+        self._exc_info = exc_info[0], exc_info[1], dump_traceback(exc_info[2])
 
         if self._links and not self._notifier:
             self._notifier = self.parent.loop.run_callback(self._notify_links)
@@ -445,19 +440,11 @@ def _kill(greenlet, exception, waiter):
 def joinall(greenlets, timeout=None, raise_error=False, count=None):
     if not raise_error:
         wait(greenlets, timeout=timeout, count=count)
-        for g in greenlets:
-            if hasattr(g, '_exc_clear'):
-                g._exc_clear()
     else:
         for obj in iwait(greenlets, timeout=timeout, count=count):
             if getattr(obj, 'exception', None) is not None:
                 if hasattr(obj, '_raise_exception'):
-                    try:
-                        obj._raise_exception()
-                    finally:
-                        for g in greenlets:
-                            if hasattr(g, '_exc_clear'):
-                                g._exc_clear()
+                    obj._raise_exception()
                 else:
                     raise obj.exception
 

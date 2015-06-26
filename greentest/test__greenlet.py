@@ -67,7 +67,6 @@ class TestLink(greentest.TestCase):
         event = AsyncResult()
         p.link(event)
         self.assertRaises(err, event.get)
-        p._exc_clear()
 
         for i in range(3):
             event2 = AsyncResult()
@@ -239,7 +238,6 @@ class TestRaise_link(LinksTestCase):
         assert not callback_flag, callback_flag
 
         self.check_timed_out(*xxxxx)
-        p._exc_clear()
 
     def test_raise(self):
         p = self.p = gevent.spawn(lambda: getcurrent().throw(ExpectedError('test_raise')))
@@ -277,8 +275,6 @@ class TestStuff(greentest.TestCase):
         self.assertRaises(ExpectedError, gevent.joinall, [x, y], raise_error=True)
         self.assertRaises(ExpectedError, gevent.joinall, [y], raise_error=True)
         x.join()
-        x._exc_clear()
-        y._exc_clear()
 
     def test_joinall_exception_order(self):
         # if there're several exceptions raised, the earliest one must be raised by joinall
@@ -346,7 +342,6 @@ class TestStuff(greentest.TestCase):
         p.link(listener3)
         sleep(DELAY * 10)
         assert results in [[10, 20], [20, 10]], results
-        p._exc_clear()
 
     class Results(object):
 
@@ -546,7 +541,6 @@ class TestBasic(greentest.TestCase):
         assert g.value is None  # not changed
         assert g.exception.myattr == 5
         assert link_test == [g], link_test
-        g._exc_clear()
 
     def _assertKilled(self, g):
         assert not g
@@ -556,7 +550,6 @@ class TestBasic(greentest.TestCase):
         assert g.successful(), (repr(g), g.value, g.exception)
         assert isinstance(g.value, gevent.GreenletExit), (repr(g), g.value, g.exception)
         assert g.exception is None
-        g._exc_clear()
 
     def assertKilled(self, g):
         self._assertKilled(g)
