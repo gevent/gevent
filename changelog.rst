@@ -35,7 +35,12 @@ Unreleased
   #450 and #528 by Rodolfo and Eddi Linder.
 - Upgrade to libev 4.20. PR #590 by Peter Renström.
 - Fix ``gevent.baseserver.BaseServer`` to be printable when its
-  ``handle`` function is an instancemethod of itself. PR #501 by Joe Jevnik.
+  ``handle`` function is an instancemethod of itself. PR #501 by Joe
+  Jevnik.
+- Make the ``acquire`` method of ``gevent.lock.DummySemaphore`` always
+  return True, supporting its use-case as an "infinite" or unbounded
+  semaphore providing no exclusing, and allowing the idiom ``if
+  sem.acquire(): ...``. PR #544 by Mouad Benchchaoui.
 
 Release 1.0.2
 -------------

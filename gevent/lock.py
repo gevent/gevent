@@ -9,13 +9,36 @@ __all__ = ['Semaphore', 'DummySemaphore', 'BoundedSemaphore', 'RLock']
 
 
 class DummySemaphore(object):
-    # XXX what is this used for?
-    """A Semaphore initialized with "infinite" initial value. None of its methods ever block."""
+    """
+    A Semaphore initialized with "infinite" initial value. None of its
+methods ever block.
+
+    This can be used to parameterize on whether or not to actually
+    guard access to a potentially limited resource. If the resource is
+    actually limited, such as a fixed-size thread pool, use a real
+    :class:`Semaphore`, but if the resource is unbounded, use an
+    instance of this class. In that way none of the supporting code
+    needs to change.
+
+    Similarly, it can be used to parameterize on whether or not to
+    enforce mutual exclusion to some underlying object. If the
+    underlying object is known to be thread-safe itself mutual
+    exclusion is not needed and a ``DummySemaphore`` can be used, but
+    if that's not true, use a real ``Semaphore``.
+    """
+
+    # Internally this is used for exactly the purpose described in the
+    # documentation. gevent.pool.Pool uses it instead of a Semaphore
+    # when the pool size is unlimited, and
+    # gevent.fileobject.FileObjectThread takes a parameter that
+    # determines whether it should lock around IO to the underlying
+    # file object.
 
     def __str__(self):
         return '<%s>' % self.__class__.__name__
 
     def locked(self):
+        """A DummySemaphore is never locked so this always returns False."""
         return False
 
     def release(self):
@@ -32,6 +55,9 @@ class DummySemaphore(object):
         pass
 
     def acquire(self, blocking=True, timeout=None):
+        """A DummySemaphore can always be acquired immediately so this always
+        returns True and ignores its arguments.
+        """
         return True
 
     def __enter__(self):
