@@ -12,6 +12,28 @@ else:
 test_filename = sys.argv[1]
 del sys.argv[1]
 
+if hasattr(sys, 'pypy_version_info') and sys.pypy_version_info[:3] < (2, 6, 0):
+    # PyPy 2.5.0 has issues running these tests if subprocess is
+    # patched due to different parameter lists; later versions,
+    # specifically 2.6.0 on OS X, have not been shown to have these issues.
+    # Travis CI uses 2.5.0 at this writing.
+
+    # Example issue:
+    #   ======================================================================
+    #   ERROR: test_preexec_errpipe_does_not_double_close_pipes (__main__.POSIXProcessTestCase)
+    #   Issue16140: Don't double close pipes on preexec error.
+    #   ----------------------------------------------------------------------
+    #   Traceback (most recent call last):
+    #     File "test_subprocess.py", line 860, in test_preexec_errpipe_does_not_double_close_pipes
+    #       stderr=subprocess.PIPE, preexec_fn=raise_it)
+    #     File "test_subprocess.py", line 819, in __init__
+    #       subprocess.Popen.__init__(self, *args, **kwargs)
+    #     File "/home/travis/build/gevent/gevent/gevent/subprocess.py", line 243, in __init__
+    #       errread, errwrite)
+    #   TypeError: _execute_child() takes exactly 18 arguments (17 given)
+    if test_filename in ('test_signal.py', 'test_subprocess.py'):
+        kwargs['subprocess'] = False
+
 print('Running with patch_all(%s): %s' % (','.join('%s=%r' % x for x in kwargs.items()), test_filename))
 
 from gevent import monkey; monkey.patch_all(**kwargs)
