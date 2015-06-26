@@ -12,8 +12,13 @@ TODO: document file descriptor usage per loop
 TODO: store loop pid_t and compare isndie signal handler,store 1 for same, 2 for differign pid, clean up in loop_fork
 TODO: embed watchers need updating when fd changes
 TODO: document portability requirements for atomic pointer access
-TODO: possible cb aliasing?
 TODO: document requirements for function pointers and calling conventions.
+
+4.20 Sat Jun 20 13:01:43 CEST 2015
+	- prefer noexcept over throw () with C++ 11.
+        - update ecb.h due to incompatibilities with c11.
+        - fix a potential aliasing issue when reading and writing
+          watcher callbacks.
 
 4.19 Thu Sep 25 08:18:25 CEST 2014
 	- ev.h wasn't valid C++ anymore, which tripped compilers other than
