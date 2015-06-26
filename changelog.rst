@@ -33,7 +33,7 @@ Unreleased
   raised exceptions now usually raises the original traceback. This
   should assist things like Sentry to track the original problem. PRs
   #450 and #528 by Rodolfo and Eddi Linder.
-- Upgrade to libev 4.20.
+- Upgrade to libev 4.20. PR #590 by Peter Renström.
 
 Release 1.0.2
 -------------
