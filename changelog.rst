@@ -41,6 +41,7 @@ Unreleased
   return True, supporting its use-case as an "infinite" or unbounded
   semaphore providing no exclusing, and allowing the idiom ``if
   sem.acquire(): ...``. PR #544 by Mouad Benchchaoui.
+- Patch ``subprocess`` by default in ``gevent.monkey.patch_all``. See #446.
 
 Release 1.0.2
 -------------
