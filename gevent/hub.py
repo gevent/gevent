@@ -5,7 +5,6 @@ import sys
 import os
 import traceback
 
-import greenlet  # http://pypi.python.org/pypi/greenlet/
 from greenlet import greenlet, getcurrent, GreenletExit
 
 
