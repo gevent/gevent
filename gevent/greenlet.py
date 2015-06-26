@@ -122,8 +122,7 @@ class Greenlet(greenlet):
         return deque()
 
     def _raise_exception(self):
-        t, v, tbs = self._exc_info
-        reraise(t, v, load_traceback(tbs))
+        reraise(self._exc_info[0], self._exc_info[1], load_traceback(self._exc_info[2]))
 
     @property
     def loop(self):

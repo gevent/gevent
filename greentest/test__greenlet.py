@@ -275,6 +275,7 @@ class TestStuff(greentest.TestCase):
         self.assertRaises(ExpectedError, gevent.joinall, [x, y], raise_error=True)
         self.assertRaises(ExpectedError, gevent.joinall, [y], raise_error=True)
         x.join()
+    test_wait_error.ignore_leakcheck = True
 
     def test_joinall_exception_order(self):
         # if there're several exceptions raised, the earliest one must be raised by joinall
@@ -288,6 +289,7 @@ class TestStuff(greentest.TestCase):
         except ExpectedError as ex:
             assert 'second' in str(ex), repr(str(ex))
         gevent.joinall([a, b])
+    test_joinall_exception_order.ignore_leakcheck = True
 
     def test_joinall_count_raise_error(self):
         # When joinall is asked not to raise an error, the 'count' param still
