@@ -82,7 +82,12 @@ class TestCase(greentest.TestCase):
 
     def makefile(self, timeout=0.1, bufsize=1):
         sock = socket.socket()
-        sock.connect((self.server.server_host, self.server.server_port))
+        try:
+            sock.connect((self.server.server_host, self.server.server_port))
+        except:
+            # avoid ResourceWarning under Py3
+            sock.close()
+            raise
 
         if PY3:
             # Under Python3, you can't read and write to the same
@@ -107,7 +112,10 @@ class TestCase(greentest.TestCase):
     def assertConnectionRefused(self):
         try:
             conn = self.makefile()
-            raise AssertionError('Connection was not refused: %r' % (conn._sock, ))
+            try:
+                raise AssertionError('Connection was not refused: %r' % (conn._sock, ))
+            finally:
+                conn.close()
         except socket.error as ex:
             if ex.args[0] not in (errno.ECONNREFUSED, errno.EADDRNOTAVAIL):
                 raise
@@ -181,9 +189,6 @@ class TestCase(greentest.TestCase):
             self.assert_error(TypeError)
         finally:
             self.server.stop()
-            # XXX: There's an unreachable greenlet that has a traceback.
-            # We need to clear it to make the leak checks work
-            import gc; gc.collect()
 
     def ServerClass(self, *args, **kwargs):
         kwargs.setdefault('spawn', self.get_spawn())
@@ -313,6 +318,26 @@ class TestDefaultSpawn(TestCase):
             assert self.server.started
         gevent.sleep(0.1)
         assert self.server.started
+
+    def test_server_repr_when_handle_is_instancemethod(self):
+        # PR 501
+        self.init_server()
+        self.start_server()
+        self.assertTrue('<SimpleStreamServer' in repr(self.server))
+
+        self.server.set_handle(self.server.handle)
+        self.assertTrue('handle=<bound method SimpleStreamServer.handle of self>' in repr(self.server),
+                        repr(self.server))
+
+        self.server.set_handle(self.test_server_repr_when_handle_is_instancemethod)
+        self.assertTrue('test_server_repr_when_handle_is_instancemethod' in repr(self.server),
+                        repr(self.server))
+
+        def handle():
+            pass
+        self.server.set_handle(handle)
+        self.assertTrue('handle=<function' in repr(self.server),
+                        repr(self.server))
 
 
 class TestRawSpawn(TestDefaultSpawn):

@@ -13,9 +13,9 @@ Unreleased
 - Add support for PyPy.
 - Drop support for Python 2.5. Python 2.5 users can continue to use
   gevent 1.0.x.
-- Fix gevent.greenlet.joinall to not ignore ``count`` when
+- Fix ``gevent.greenlet.joinall`` to not ignore ``count`` when
   ``raise_error`` is False. PR #512 by Ivan Diao.
-- Fix subprocess.Popen to not ignore the ``bufsize`` argument. Note
+- Fix ``subprocess.Popen`` to not ignore the ``bufsize`` argument. Note
   that this changes the (platform dependent) default, typically from
   buffered to unbuffered. PR #542 by Romuald Brunet.
 - Upgraded c-ares to 1.10.0. PR #579 by Omer Katz.
@@ -34,6 +34,8 @@ Unreleased
   should assist things like Sentry to track the original problem. PRs
   #450 and #528 by Rodolfo and Eddi Linder.
 - Upgrade to libev 4.20. PR #590 by Peter Renström.
+- Fix ``gevent.baseserver.BaseServer`` to be printable when its
+  ``handle`` function is an instancemethod of itself. PR #501 by Joe Jevnik.
 
 Release 1.0.2
 -------------

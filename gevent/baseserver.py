@@ -208,9 +208,9 @@ class BaseServer(object):
             result += str(ex) or '<error>'
 
         handle = self.__dict__.get('handle')
-        try:
-            if handle is not None:
-                fself = getattr(handle, '__self__')
+        if handle is not None:
+            fself = getattr(handle, '__self__', None)
+            try:
                 if fself is self:
                     # Checks the __self__ of the handle in case it is a bound
                     # method of self to prevent recursivly defined reprs.
@@ -222,8 +222,8 @@ class BaseServer(object):
                     handle_repr = repr(handle)
 
                 result += ' handle=' + handle_repr
-        except AttributeError:
-            pass
+            except Exception as ex:
+                result += str(ex) or '<error>'
 
         return result
 
