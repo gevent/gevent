@@ -29,7 +29,7 @@ Taken verbatim from Jinja2.
 
 https://github.com/mitsuhiko/jinja2/blob/master/jinja2/debug.py#L267
 """
-import platform
+#import platform # XXX: gevent cannot import platform at the top level; interferes with monkey patching
 import sys
 
 
@@ -95,12 +95,13 @@ def _init_ugly_crap():
     return tb_set_next
 
 tb_set_next = None
-try:
-    if platform.python_implementation() == 'CPython':
-        tb_set_next = _init_ugly_crap()
-except Exception as exc:
-    sys.stderr.write("Failed to initialize cpython support: {!r}".format(exc))
-del _init_ugly_crap
+# try:
+#     if platform.python_implementation() == 'CPython':
+#         #tb_set_next = _init_ugly_crap()
+#         tb_set_next = None
+# except Exception as exc:
+#     sys.stderr.write("Failed to initialize cpython support: {!r}".format(exc))
+# del _init_ugly_crap
 
 # __init__.py
 try:
@@ -108,10 +109,9 @@ try:
 except ImportError:
     tproxy = None
 
-if not tb_set_next and not tproxy:
-    raise ImportError("Cannot use tblib. Runtime not supported.")
+#if not tb_set_next and not tproxy:
+#    raise ImportError("Cannot use tblib. Runtime not supported.")
 
-import sys
 
 from types import CodeType
 from types import TracebackType
@@ -140,9 +140,9 @@ class Code(object):
 
 class Frame(object):
     def __init__(self, frame):
-        self.f_globals = {
-            k: v for k, v in frame.f_globals.items() if k in ("__file__", "__name__")
-        }
+        # gevent: python 2.6 syntax fix
+        self.f_globals = {'__file__': frame.f_globals.get('__file__'),
+                          '__name__': frame.f_globals.get('__name__')}
         self.f_code = Code(frame.f_code)
 
 
@@ -202,12 +202,6 @@ class Traceback(object):
 # pickling_support.py
 
 
-try:
-    import copy_reg
-except ImportError:
-    import copyreg as copy_reg
-
-
 def unpickle_traceback(tb_frame, tb_lineno, tb_next):
     ret = object.__new__(Traceback)
     ret.tb_frame = tb_frame
@@ -221,23 +215,64 @@ def pickle_traceback(tb):
 
 
 def install():
-    copy_reg.pickle(TracebackType, pickle_traceback)
+    try:
+        import copy_reg
+    except ImportError:
+        import copyreg as copy_reg
 
-install()
+    copy_reg.pickle(TracebackType, pickle_traceback)
 
 # Added by gevent
 
-try:
-    from cPickle import dumps
-    from cPickle import loads
-except ImportError:
-    from pickle import dumps
-    from pickle import loads
+# We have to defer the initilization, and especially the import of platform,
+# until runtime.
+
+
+def _import_dump_load():
+    global dumps
+    global loads
+    try:
+        import cPickle as pickle
+    except ImportError:
+        import pickle
+    dumps = pickle.dumps
+    loads = pickle.loads
+
+dumps = loads = None
+
+_installed = False
+
+
+def _init():
+    global _installed
+    global tb_set_next
+    if _installed:
+        return
+
+    _installed = True
+    import platform
+    try:
+        if platform.python_implementation() == 'CPython':
+            tb_set_next = _init_ugly_crap()
+    except Exception as exc:
+        sys.stderr.write("Failed to initialize cpython support: {!r}".format(exc))
+
+    try:
+        from __pypy__ import tproxy
+    except ImportError:
+        tproxy = None
+
+    if not tb_set_next and not tproxy:
+        raise ImportError("Cannot use tblib. Runtime not supported.")
+    _import_dump_load()
+    install()
 
 
 def dump_traceback(tb):
+    _init()
     return dumps(tb)
 
 
 def load_traceback(s):
+    _init()
     return loads(s)
