@@ -6,12 +6,6 @@ import os
 import traceback
 
 import greenlet  # http://pypi.python.org/pypi/greenlet/
-greenlet_version = getattr(greenlet, '__version__', None)
-if greenlet_version:
-    greenlet_version_info = [int(x) for x in greenlet_version.split('.')]
-if not greenlet_version or greenlet_version_info[:3] < [0, 3, 2]:
-    raise ImportError('''Your version of greenlet (%s) is too old (required >= 0.3.2)
-             You can get a newer version of greenlet from http://pypi.python.org/pypi/greenlet/''' % (greenlet_version, ))
 from greenlet import greenlet, getcurrent, GreenletExit
 
 
