@@ -235,7 +235,7 @@ def patch_subprocess():
 
 
 def patch_all(socket=True, dns=True, time=True, select=True, thread=True, os=True, ssl=True, httplib=False,
-              subprocess=False, sys=False, aggressive=True, Event=False):
+              subprocess=True, sys=False, aggressive=True, Event=False):
     """Do all of the default monkey patching (calls every other function in this module."""
     # order is important
     if os:

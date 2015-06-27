@@ -307,8 +307,8 @@ class Popen(object):
             self.stderr.close()
 
         self.wait()
-        return (None if stdout is None else stdout.value or '',
-                None if stderr is None else stderr.value or '')
+        return (None if stdout is None else stdout.value or b'',
+                None if stderr is None else stderr.value or b'')
 
     def poll(self):
         return self._internal_poll()

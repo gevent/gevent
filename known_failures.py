@@ -76,6 +76,7 @@ if PYPY:
 
         # check_sendall_interrupted and testInterruptedTimeout fail due to
         # https://bitbucket.org/cffi/cffi/issue/152/handling-errors-from-signal-handlers-in
+        # See also patched_tests_setup and 'test_signal.InterProcessSignalTests.test_main'
         'test_socket.py',
     ]
 
