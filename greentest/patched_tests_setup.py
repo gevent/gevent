@@ -167,6 +167,25 @@ if sys.platform == 'darwin':
         # causes Mac OS X to show "Python crashes" dialog box which is annoying
     ]
 
+if hasattr(sys, 'pypy_version_info'):
+    disabled_tests += [
+        'test_subprocess.POSIXProcessTestCase.test_terminate_dead',
+        'test_subprocess.POSIXProcessTestCase.test_send_signal_dead',
+        'test_subprocess.POSIXProcessTestCase.test_kill_dead',
+        # Don't exist in the CPython test suite; with our monkey patch in place,
+        # they fail because the process they're looking for has been allowed to exit.
+        # Our monkey patch waits for the process with a watcher and so detects
+        # the exit before the normal polling mechanism would
+
+        'test_subprocess.POSIXProcessTestCase.test_preexec_errpipe_does_not_double_close_pipes',
+        # Does not exist in the CPython test suite. Subclasses Popen, and overrides
+        # _execute_child. But our version has a different parameter list than the
+        # version that comes with PyPy, so fails with a TypeError.
+
+        'test_signal.InterProcessSignalTests.test_main',
+        # Fails to get the signal to the correct handler due to
+        # https://bitbucket.org/cffi/cffi/issue/152/handling-errors-from-signal-handlers-in
+    ]
 
 # if 'signalfd' in os.environ.get('GEVENT_BACKEND', ''):
 #     # tests that don't interact well with signalfd
