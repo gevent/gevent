@@ -182,6 +182,12 @@ if hasattr(sys, 'pypy_version_info'):
         # _execute_child. But our version has a different parameter list than the
         # version that comes with PyPy, so fails with a TypeError.
 
+        'test_subprocess.ProcessTestCase.test_failed_child_execute_fd_leak',
+        # Does not exist in the CPython test suite, tests for a specific bug
+        # in PyPy's forking. Only runs on linux and is specific to the PyPy
+        # implementation of subprocess (possibly explains the extra parameter to
+        # _execut_child)
+
         'test_signal.InterProcessSignalTests.test_main',
         # Fails to get the signal to the correct handler due to
         # https://bitbucket.org/cffi/cffi/issue/152/handling-errors-from-signal-handlers-in
