@@ -97,6 +97,7 @@ class Group(object):
                     raise greenlet.exception
         else:
             self._empty_event.wait(timeout=timeout)
+        return self._empty_event.is_set()
 
     def kill(self, exception=GreenletExit, block=True, timeout=None):
         timer = Timeout.start_new(timeout)
@@ -189,6 +190,9 @@ class Group(object):
         """The same as imap() except that the ordering of the results from the
         returned iterator should be considered in arbitrary order."""
         return IMapUnordered.spawn(func, iterable, spawn=self.spawn)
+
+    def empty(self):
+        return self.__len__() == 0
 
     def full(self):
         return False
