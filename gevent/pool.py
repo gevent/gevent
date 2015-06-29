@@ -256,7 +256,6 @@ class IMapUnordered(_IMapBase):
             self.queue.put(greenlet.value)
         else:
             self.queue.put(Failure(greenlet.exception))
-            greenlet._exc_clear()
         if self.ready() and self.count <= 0 and not self.finished:
             self.queue.put(Failure(StopIteration))
             self.finished = True
@@ -266,7 +265,6 @@ class IMapUnordered(_IMapBase):
             return
         if not self.successful():
             self.queue.put(Failure(self.exception))
-            self._exc_clear()
             self.finished = True
             return
         if self.count <= 0:
@@ -316,7 +314,6 @@ class IMap(_IMapBase):
             self.queue.put((greenlet.index, greenlet.value))
         else:
             self.queue.put((greenlet.index, Failure(greenlet.exception)))
-            greenlet._exc_clear()
         if self.ready() and self.count <= 0 and not self.finished:
             self.maxindex += 1
             self.queue.put((self.maxindex, Failure(StopIteration)))
@@ -328,7 +325,6 @@ class IMap(_IMapBase):
         if not self.successful():
             self.maxindex += 1
             self.queue.put((self.maxindex, Failure(self.exception)))
-            self._exc_clear()
             self.finished = True
             return
         if self.count <= 0:

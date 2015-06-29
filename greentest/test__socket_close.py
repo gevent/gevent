@@ -36,7 +36,6 @@ class Test(greentest.TestCase):
             self.assertEqual(receiver.exception.errno, socket.EBADF)
         finally:
             receiver.kill()
-            receiver._exc_clear()
 
     def test_recv_twice(self):
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
