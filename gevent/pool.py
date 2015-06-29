@@ -203,6 +203,7 @@ class Group(object):
     def wait_available(self):
         pass
 
+
 class _IMapBase(Greenlet):
 
     _zipped = False
@@ -230,16 +231,6 @@ class _IMapBase(Greenlet):
         g.rawlink(self._on_result)
         return g
 
-
-class IMapUnordered(_IMapBase):
-
-    def next(self):
-        value = self.queue.get()
-        if isinstance(value, Failure):
-            raise value.exc
-        return value
-    __next__ = next
-
     def _run(self):
         try:
             func = self.func
@@ -249,6 +240,16 @@ class IMapUnordered(_IMapBase):
             self.__dict__.pop('spawn', None)
             self.__dict__.pop('func', None)
             self.__dict__.pop('iterable', None)
+
+
+class IMapUnordered(_IMapBase):
+
+    def next(self):
+        value = self.queue.get()
+        if isinstance(value, Failure):
+            raise value.exc
+        return value
+    __next__ = next
 
     def _on_result(self, greenlet):
         self.count -= 1
@@ -280,7 +281,6 @@ class IMap(_IMapBase):
         self.maxindex = -1
         _IMapBase.__init__(self, func, iterable, spawn, _zipped)
 
-
     def next(self):
         while True:
             if self.waiting and self.waiting[0][0] <= self.index:
@@ -296,17 +296,11 @@ class IMap(_IMapBase):
             return value
     __next__ = next
 
-    def _run(self):
-        try:
-            func = self.func
-            for item in self.iterable:
-                g = self._ispawn(func, item)
-                self.maxindex += 1
-                g.index = self.maxindex
-        finally:
-            self.__dict__.pop('spawn', None)
-            self.__dict__.pop('func', None)
-            self.__dict__.pop('iterable', None)
+    def _ispawn(self, func, item):
+        g = _IMapBase._ispawn(self, func, item)
+        self.maxindex += 1
+        g.index = self.maxindex
+        return g
 
     def _on_result(self, greenlet):
         self.count -= 1
