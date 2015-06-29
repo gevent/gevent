@@ -195,6 +195,11 @@ class TestTCP(greentest.TestCase):
             s.settimeout(1)
             self.assertEqual(socket.AF_INET, s.type)
 
+            s.setblocking(0)
+            std_socket = monkey.get_original('socket', 'socket')(socket.AF_INET, socket.SOCK_DGRAM, 0)
+            std_socket.setblocking(0)
+            self.assertEqual(std_socket.type, s.type)
+
 
 def get_port():
     tempsock = socket.socket()

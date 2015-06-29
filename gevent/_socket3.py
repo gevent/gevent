@@ -15,7 +15,7 @@ for key in _socketcommon.__dict__:
 __socket__ = _socketcommon.__socket__
 __implements__ = _socketcommon._implements
 __extensions__ = _socketcommon.__extensions__
-__imports__ = _socketcommon.__imports__
+__imports__ = _socketcommon.__imports__ + ['SocketType']
 __dns__ = _socketcommon.__dns__
 
 
@@ -377,9 +377,6 @@ class socket(object):
             self.hub.cancel_wait(self._read_event, cancel_wait_ex)
             self.hub.cancel_wait(self._write_event, cancel_wait_ex)
         self._sock.shutdown(how)
-
-
-SocketType = socket
 
 
 def fromfd(fd, family, type, proto=0):
