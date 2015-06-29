@@ -10,8 +10,13 @@ greenlets in the pool has already reached the limit, until there is a free slot.
 """
 
 from bisect import insort_right
+try:
+    from itertools import izip
+except ImportError:
+    # Python 3
+    izip = zip
 
-from gevent.hub import GreenletExit, getcurrent, kill as _kill, PY3
+from gevent.hub import GreenletExit, getcurrent, kill as _kill
 from gevent.greenlet import joinall, Greenlet
 from gevent.timeout import Timeout
 from gevent.event import Event
@@ -181,14 +186,16 @@ class Group(object):
         """
         return Greenlet.spawn(self.map_cb, func, iterable, callback)
 
-    def imap(self, func, iterable):
+    def imap(self, func, *iterables):
         """An equivalent of itertools.imap()"""
-        return IMap.spawn(func, iterable, spawn=self.spawn)
+        return IMap.spawn(func, izip(*iterables), spawn=self.spawn,
+                          _zipped=True)
 
-    def imap_unordered(self, func, iterable):
+    def imap_unordered(self, func, *iterables):
         """The same as imap() except that the ordering of the results from the
         returned iterator should be considered in arbitrary order."""
-        return IMapUnordered.spawn(func, iterable, spawn=self.spawn)
+        return IMapUnordered.spawn(func, izip(*iterables), spawn=self.spawn,
+                                   _zipped=True)
 
     def full(self):
         return False
@@ -196,14 +203,17 @@ class Group(object):
     def wait_available(self):
         pass
 
+class _IMapBase(Greenlet):
 
-class IMapUnordered(Greenlet):
+    _zipped = False
 
-    def __init__(self, func, iterable, spawn=None):
+    def __init__(self, func, iterable, spawn=None, _zipped=False):
         from gevent.queue import Queue
         Greenlet.__init__(self)
         if spawn is not None:
             self.spawn = spawn
+        if _zipped:
+            self._zipped = _zipped
         self.func = func
         self.iterable = iterable
         self.queue = Queue()
@@ -214,22 +224,27 @@ class IMapUnordered(Greenlet):
     def __iter__(self):
         return self
 
+    def _ispawn(self, func, item):
+        self.count += 1
+        g = self.spawn(func, item) if not self._zipped else self.spawn(func, *item)
+        g.rawlink(self._on_result)
+        return g
+
+
+class IMapUnordered(_IMapBase):
+
     def next(self):
         value = self.queue.get()
         if isinstance(value, Failure):
             raise value.exc
         return value
-
-    if PY3:
-        __next__ = next
-        del next
+    __next__ = next
 
     def _run(self):
         try:
             func = self.func
             for item in self.iterable:
-                self.count += 1
-                self.spawn(func, item).rawlink(self._on_result)
+                self._ispawn(func, item)
         finally:
             self.__dict__.pop('spawn', None)
             self.__dict__.pop('func', None)
@@ -259,25 +274,14 @@ class IMapUnordered(Greenlet):
             self.finished = True
 
 
-class IMap(Greenlet):
+class IMap(_IMapBase):
 
-    def __init__(self, func, iterable, spawn=None):
-        from gevent.queue import Queue
-        Greenlet.__init__(self)
-        if spawn is not None:
-            self.spawn = spawn
-        self.func = func
-        self.iterable = iterable
-        self.queue = Queue()
-        self.count = 0
+    def __init__(self, func, iterable, spawn=None, _zipped=False):
         self.waiting = []  # QQQ maybe deque will work faster there?
         self.index = 0
         self.maxindex = -1
-        self.finished = False
-        self.rawlink(self._on_finish)
+        _IMapBase.__init__(self, func, iterable, spawn, _zipped)
 
-    def __iter__(self):
-        return self
 
     def next(self):
         while True:
@@ -292,18 +296,13 @@ class IMap(Greenlet):
             if isinstance(value, Failure):
                 raise value.exc
             return value
-
-    if PY3:
-        __next__ = next
-        del next
+    __next__ = next
 
     def _run(self):
         try:
             func = self.func
             for item in self.iterable:
-                self.count += 1
-                g = self.spawn(func, item)
-                g.rawlink(self._on_result)
+                g = self._ispawn(func, item)
                 self.maxindex += 1
                 g.index = self.maxindex
         finally:
