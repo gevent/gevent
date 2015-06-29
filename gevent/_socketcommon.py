@@ -4,6 +4,7 @@ from __future__ import absolute_import
 # standard functions and classes that this module re-implements in a gevent-aware way:
 _implements = ['create_connection',
                'socket',
+               'SocketType',
                'fromfd',
                'socketpair']
 

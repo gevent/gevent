@@ -10,7 +10,7 @@ for key in _socketcommon.__dict__:
     globals()[key] = getattr(_socketcommon, key)
 
 __socket__ = _socketcommon.__socket__
-__implements__ = _socketcommon._implements + ['SocketType']
+__implements__ = _socketcommon._implements
 __extensions__ = _socketcommon.__extensions__
 __imports__ = _socketcommon.__imports__
 __dns__ = _socketcommon.__dns__
