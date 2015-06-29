@@ -4,6 +4,15 @@
 
 .. currentmodule:: gevent
 
+Unreleased
+==========
+
+- ``gevent.threadpool.ThreadPool.imap`` and ``imap_unordered`` now
+  accept multiple iterables.
+- (Experimental) Exceptions raised from iterating using the
+  ``ThreadPool`` or ``Group`` mapping/application functions should now
+  have the original traceback.
+
 
 1.1a1 (Jun 29, 2015)
 ====================

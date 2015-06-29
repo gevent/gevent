@@ -5,7 +5,7 @@ import os
 from gevent.hub import get_hub, getcurrent, sleep, integer_types
 from gevent.event import AsyncResult
 from gevent.greenlet import Greenlet
-from gevent.pool import IMap, IMapUnordered
+from gevent.pool import GroupMappingMixin
 from gevent.lock import Semaphore
 from gevent._threading import Lock, Queue, start_new_thread
 
@@ -17,7 +17,7 @@ __all__ = ['ThreadPool',
            'ThreadResult']
 
 
-class ThreadPool(object):
+class ThreadPool(GroupMappingMixin):
 
     def __init__(self, maxsize, hub=None):
         if hub is None:
@@ -224,57 +224,16 @@ class ThreadPool(object):
             return result
         raise result
 
-    def apply(self, func, args=None, kwds=None):
-        """Equivalent of the apply() builtin function. It blocks till the result is ready."""
-        if args is None:
-            args = ()
-        if kwds is None:
-            kwds = {}
-        return self.spawn(func, *args, **kwds).get()
+    def _apply_immediately(self):
+        # we always pass apply() off to the threadpool
+        return False
 
-    def apply_cb(self, func, args=None, kwds=None, callback=None):
-        result = self.apply(func, args, kwds)
-        if callback is not None:
-            callback(result)
-        return result
+    def _apply_async_cb_spawn(self, callback, result):
+        callback(result)
 
-    def apply_async(self, func, args=None, kwds=None, callback=None):
-        """A variant of the apply() method which returns a Greenlet object.
-
-        If callback is specified then it should be a callable which accepts a single argument. When the result becomes ready
-        callback is applied to it (unless the call failed)."""
-        if args is None:
-            args = ()
-        if kwds is None:
-            kwds = {}
-        return Greenlet.spawn(self.apply_cb, func, args, kwds, callback)
-
-    def map(self, func, iterable):
-        return list(self.imap(func, iterable))
-
-    def map_cb(self, func, iterable, callback=None):
-        result = self.map(func, iterable)
-        if callback is not None:
-            callback(result)
-        return result
-
-    def map_async(self, func, iterable, callback=None):
-        """
-        A variant of the map() method which returns a Greenlet object.
-
-        If callback is specified then it should be a callable which accepts a
-        single argument.
-        """
-        return Greenlet.spawn(self.map_cb, func, iterable, callback)
-
-    def imap(self, func, iterable):
-        """An equivalent of itertools.imap()"""
-        return IMap.spawn(func, iterable, spawn=self.spawn)
-
-    def imap_unordered(self, func, iterable):
-        """The same as imap() except that the ordering of the results from the
-        returned iterator should be considered in arbitrary order."""
-        return IMapUnordered.spawn(func, iterable, spawn=self.spawn)
+    def _apply_async_use_greenlet(self):
+        # Always go to Greenlet because our self.spawn uses threads
+        return True
 
 
 class ThreadResult(object):
