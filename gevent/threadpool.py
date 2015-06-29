@@ -9,9 +9,6 @@ from gevent.pool import IMap, IMapUnordered
 from gevent.lock import Semaphore
 from gevent._threading import Lock, Queue, start_new_thread
 
-# XXX apply_e is ugly and must not be needed
-# XXX apply() should re-raise everything
-
 
 __all__ = ['ThreadPool',
            'ThreadResult']
@@ -211,19 +208,6 @@ class ThreadPool(object):
             if need_decrease:
                 self._decrease_size()
 
-    # XXX apply() should re-raise error by default
-    # XXX because that's what builtin apply does
-    # XXX check gevent.pool.Pool.apply and multiprocessing.Pool.apply
-    def apply_e(self, expected_errors, function, args=None, kwargs=None):
-        if args is None:
-            args = ()
-        if kwargs is None:
-            kwargs = {}
-        success, result = self.spawn(wrap_errors, expected_errors, function, args, kwargs).get()
-        if success:
-            return result
-        raise result
-
     def apply(self, func, args=None, kwds=None):
         """Equivalent of the apply() builtin function. It blocks till the result is ready."""
         if args is None:
@@ -285,6 +269,7 @@ class ThreadResult(object):
         self.receiver = receiver
         self.hub = hub
         self.value = None
+        self.exception = None
         self.context = None
         self.exc_info = None
         self.async = hub.loop.async()
@@ -307,6 +292,7 @@ class ThreadResult(object):
         finally:
             self.receiver = None
             self.value = None
+            self.exception = None
 
     def set(self, value):
         self.value = value
@@ -315,15 +301,8 @@ class ThreadResult(object):
     def handle_error(self, context, exc_info):
         self.context = context
         self.exc_info = exc_info
+        self.exception = exc_info[1]
         self.async.send()
 
-    # link protocol:
     def successful(self):
-        return True
-
-
-def wrap_errors(errors, function, args, kwargs):
-    try:
-        return True, function(*args, **kwargs)
-    except errors as ex:
-        return False, ex
+        return self.exception is None
