@@ -1,6 +1,7 @@
 # Port of Python 3.3's socket module to gevent
 
 import io
+import sys
 import time
 from gevent import _socketcommon
 import _socket
@@ -379,8 +380,19 @@ class socket(object):
             self.hub.cancel_wait(self._write_event, cancel_wait_ex)
         self._sock.shutdown(how)
 
-
-SocketType = socket
+if sys.version_info[:2] == (3, 4) and sys.version_info[:3] <= (3, 4, 2):
+    # Python 3.4, up to and including 3.4.2, had a bug where the
+    # SocketType enumeration overwrote the SocketType class imported
+    # from _socket. This was fixed in 3.4.3 (http://bugs.python.org/issue20386
+    # and https://github.com/python/cpython/commit/0d2f85f38a9691efdfd1e7285c4262cab7f17db7).
+    # Prior to that, if we replace SocketType with our own class, the implementation
+    # of socket.type breaks with "OSError: [Errno 97] Address family not supported by protocol".
+    # Therefore, on these old versions, we must preserve it as an enum; while this
+    # seems like it could lead to non-green behaviour, code on those versions
+    # cannot possibly be using SocketType as a class anyway.
+    SocketType = __socket__.SocketType
+else:
+    SocketType = socket
 
 
 def fromfd(fd, family, type, proto=0):
