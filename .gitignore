@@ -14,3 +14,5 @@ doc/gevent.*.rst
 !doc/gevent.event.rst
 !doc/gevent.hub.rst
 !doc/gevent.queue.rst
+!doc/gevent.pool.rst
+!doc/gevent.threadpool.rst
