@@ -41,7 +41,11 @@ Unreleased
   return True, supporting its use-case as an "infinite" or unbounded
   semaphore providing no exclusing, and allowing the idiom ``if
   sem.acquire(): ...``. PR #544 by Mouad Benchchaoui.
-- Patch ``subprocess`` by default in ``gevent.monkey.patch_all``. See #446.
+- Patch ``subprocess`` by default in ``gevent.monkey.patch_all``. See
+  #446.
+- ``gevent.pool.Group.imap`` and ``imap_unordered`` not accept
+  multiple iterables like ``itertools.imap``. Issue #565 reported by
+  Thomas Steinacher.
 
 Release 1.0.2
 -------------
