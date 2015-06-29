@@ -391,8 +391,11 @@ if sys.version_info[:2] == (3, 4) and sys.version_info[:3] <= (3, 4, 2):
     # seems like it could lead to non-green behaviour, code on those versions
     # cannot possibly be using SocketType as a class anyway.
     SocketType = __socket__.SocketType
-    __implements__.remove('SocketType')
-    __imports__.append('SocketType')
+    # Fixup __all__; note that we get exec'd multiple times during unit tests
+    if 'SocketType' in __implements:
+        __implements__.remove('SocketType')
+    if 'SocketType' not in __imports__:
+        __imports__.append('SocketType')
 else:
     SocketType = socket
 
