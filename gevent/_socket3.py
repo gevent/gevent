@@ -392,7 +392,7 @@ if sys.version_info[:2] == (3, 4) and sys.version_info[:3] <= (3, 4, 2):
     # cannot possibly be using SocketType as a class anyway.
     SocketType = __socket__.SocketType
     # Fixup __all__; note that we get exec'd multiple times during unit tests
-    if 'SocketType' in __implements:
+    if 'SocketType' in __implements__:
         __implements__.remove('SocketType')
     if 'SocketType' not in __imports__:
         __imports__.append('SocketType')
