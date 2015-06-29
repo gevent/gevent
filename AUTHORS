@@ -53,7 +53,7 @@ Gevent is inspired by and uses some code from eventlet which was written by
   Bob Ipollito
   Donovan Preston
 
-The win32util module is taken from Twisted.
+The win32util module is taken from Twisted. The tblib module is taken from python-tblib by Ionel Cristian Mărieș.
 
 Some modules (local, ssl) contain code from the Python standard library.
 

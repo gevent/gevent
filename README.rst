@@ -1,5 +1,6 @@
-gevent_
-=======
+=========
+ gevent_
+=========
 
 gevent_ is a coroutine-based Python networking library.
 
@@ -12,25 +13,29 @@ Features include:
 * DNS queries performed through c-ares_ or a threadpool.
 * Ability to use standard library and 3rd party modules written for standard blocking sockets
 
-gevent_ is `inspired by eventlet`_ but features more consistent API, simpler implementation and better performance. Read why others `use gevent`_ and check out the list of the `open source projects based on gevent`_.
+gevent_ is `inspired by eventlet`_ but features more consistent API,
+simpler implementation and better performance. Read why others `use
+gevent`_ and check out the list of the `open source projects based on
+gevent`_.
 
 gevent_ is written and maintained by `Denis Bilenko`_ and is licensed under MIT license.
 
 
 get gevent
-----------
+==========
 
-Install Python 2.6 or newer and greenlet_ extension.
+Install Python 2.6, 2.7, 3.3 or 3.4 and greenlet_ extension.
 
 Download the latest release from `Python Package Index`_ or clone `the repository`_.
 
 Read the documentation online at http://www.gevent.org
 
-Post feedback and issues on the `bug tracker`_, `mailing list`_, blog_ and `twitter (@gevent)`_.
+Post feedback and issues on the `bug tracker`_, `mailing list`_, blog_
+and `twitter (@gevent)`_.
 
 
 installing from github
-----------------------
+======================
 
 To install the latest development version:
 
@@ -38,7 +43,7 @@ To install the latest development version:
 
 
 running tests
--------------
+=============
 
 There are a few different ways to run the tests. To simply run the
 tests on one version of Python during development, try this:
