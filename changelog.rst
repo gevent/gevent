@@ -16,9 +16,9 @@ Unreleased
   raised by the called function, the same as
   ``gevent.pool.Group``/``Pool`` and the builtin ``apply`` function.
   This obsoletes the undocumented ``apply_e`` function. Original PR
-  #556 by Robert Estelle.
+  :issue:`556` by Robert Estelle.
 - Monkey-patch the ``selectors`` module from ``patch_all`` and
-  ``patch_select`` on Python 3.4. See #591.
+  ``patch_select`` on Python 3.4. See :issue:`591`.
 
 1.1a1 (Jun 29, 2015)
 ====================
@@ -30,37 +30,37 @@ Unreleased
 - Drop support for Python 2.5. Python 2.5 users can continue to use
   gevent 1.0.x.
 - Fix ``gevent.greenlet.joinall`` to not ignore ``count`` when
-  ``raise_error`` is False. PR #512 by Ivan Diao.
+  ``raise_error`` is False. See :pr:`512` by Ivan Diao.
 - Fix ``subprocess.Popen`` to not ignore the ``bufsize`` argument. Note
   that this changes the (platform dependent) default, typically from
-  buffered to unbuffered. PR #542 by Romuald Brunet.
-- Upgraded c-ares to 1.10.0. PR #579 by Omer Katz.
-- Add a ``count`` argument to ``gevent.greenlet.wait``. PR #482 by
+  buffered to unbuffered. See :pr:`542` by Romuald Brunet.
+- Upgraded c-ares to 1.10.0. See :pr:`579` by Omer Katz.
+- Add a ``count`` argument to ``gevent.greenlet.wait``. See :pr:`482` by
   wiggin15.
 - Add a ``timeout`` argument to ``gevent.queue.JoinableQueue.wait``
   which now returns whether all items were waited for or not.
 - ``gevent.queue.JoinableQueue`` treats ``items`` passed to
   ``__init__`` as unfinished tasks, the same as if they were ``put``.
-  Initial PR #554 by DuLLSoN.
+  Initial :pr:`554` by DuLLSoN.
 - ``gevent.pywsgi`` no longer prints debugging information for the
-  normal conditions of a premature client disconnect. Issue #136,
-  fixed in PR #377 by Paul Collier.
+  normal conditions of a premature client disconnect. See :issue:`136`,
+  fixed in :pr:`377` by Paul Collier.
 - (Experimental.) Waiting on or getting results from greenlets that
   raised exceptions now usually raises the original traceback. This
-  should assist things like Sentry to track the original problem. PRs
-  #450 and #528 by Rodolfo and Eddi Linder.
-- Upgrade to libev 4.20. PR #590 by Peter Renström.
+  should assist things like Sentry to track the original problem. See
+  :issue:`450` and :issue:`528` by Rodolfo and Eddi Linder.
+- Upgrade to libev 4.20. See :pr:`590` by Peter Renström.
 - Fix ``gevent.baseserver.BaseServer`` to be printable when its
-  ``handle`` function is an instancemethod of itself. PR #501 by Joe
+  ``handle`` function is an instancemethod of itself. See :pr:`501` by Joe
   Jevnik.
 - Make the ``acquire`` method of ``gevent.lock.DummySemaphore`` always
   return True, supporting its use-case as an "infinite" or unbounded
   semaphore providing no exclusing, and allowing the idiom ``if
-  sem.acquire(): ...``. PR #544 by Mouad Benchchaoui.
+  sem.acquire(): ...``. See :pr:`544` by Mouad Benchchaoui.
 - Patch ``subprocess`` by default in ``gevent.monkey.patch_all``. See
-  #446.
+  :issue:`446`.
 - ``gevent.pool.Group.imap`` and ``imap_unordered`` now accept
-  multiple iterables like ``itertools.imap``. Issue #565 reported by
+  multiple iterables like ``itertools.imap``. :issue:`565` reported by
   Thomas Steinacher.
 - Potentially breaking change: ``gevent.baseserver.BaseServer`` and
   its subclass ``gevent.server.StreamServer`` now deterministically
@@ -76,17 +76,17 @@ Unreleased
 Release 1.0.2
 =============
 
-- Fix LifoQueue.peek() to return correct element. PR #456. Patch by Christine Spang.
+- Fix LifoQueue.peek() to return correct element. :pr:`456`. Patch by Christine Spang.
 - Upgrade to libev 4.19
 - Remove SSL3 entirely as default TLS protocol
-- Import socket on Windows (closes #459)
-- Fix C90 syntax error (PR #449)
-- Add compatibility with Python 2.7.9's SSL changes. Issue #477.
+- Import socket on Windows (closes :issue:`459`)
+- Fix C90 syntax error (:pr:`449`)
+- Add compatibility with Python 2.7.9's SSL changes. :issue:`477`.
 
 Release 1.0.1
 =============
 
-- Fix #423: Pool's imap/imap_unordered could hang forever. Based on patch and test by Jianfei Wang.
+- Fix :issue:`423`: Pool's imap/imap_unordered could hang forever. Based on patch and test by Jianfei Wang.
 
 
 Release 1.0 (Nov 26, 2013)
@@ -101,36 +101,36 @@ Release 1.0 (Nov 26, 2013)
 Release 1.0rc3 (Sep 14, 2013)
 =============================
 
-- Fix #251: crash in gevent.core when accessing destroyed loop.
-- Fix #235: Replace self._threadpool.close() with self._threadpool.kill() in hub.py. Patch by Jan-Philip Gehrcke.
-- Remove unused timeout from select.py (#254). Patch by Saúl Ibarra Corretgé.
-- Rename Greenlet.link()'s argument to 'callback' (closes #244).
-- Fix parallel build (#193). Patch by Yichao Yu.
-- Fix #263: potential UnboundLocalError: 'length' in gevent.pywsgi.
-- Simplify psycopg2_pool.py (#239). Patch by Alex Gaynor.
-- pywsgi: allow Content-Length in GET requests (#264). Patch by 陈小玉.
-- documentation fixes (#281) [philipaconrad].
-- Fix old documentation about default blocking behavior of kill, killall (#306). Patch by Daniel Farina.
-- Fix #6: patch sys after thread. Patch by Anton Patrushev.
-- subprocess: fix check_output on Py2.6 and older (#265). Thanks to Marc Sibson for test.
-- Fix #302: "python -m gevent.monkey" now sets __file__ properly.
-- pywsgi: fix logging when bound on unix socket (#295). Thanks to Chris Meyers, Eugene Pankov.
+- Fix :issue:`251`: crash in gevent.core when accessing destroyed loop.
+- Fix :issue:`235`: Replace self._threadpool.close() with self._threadpool.kill() in hub.py. Patch by Jan-Philip Gehrcke.
+- Remove unused timeout from select.py (:issue:`254`). Patch by Saúl Ibarra Corretgé.
+- Rename Greenlet.link()'s argument to 'callback' (closes :issue:`244`).
+- Fix parallel build (:issue:`193`). Patch by Yichao Yu.
+- Fix :issue:`263`: potential UnboundLocalError: 'length' in gevent.pywsgi.
+- Simplify psycopg2_pool.py (:issue:`239`). Patch by Alex Gaynor.
+- pywsgi: allow Content-Length in GET requests (:issue:`264`). Patch by 陈小玉.
+- documentation fixes (:issue:`281`) [philipaconrad].
+- Fix old documentation about default blocking behavior of kill, killall (:issue:`306`). Patch by Daniel Farina.
+- Fix :issue:`6`: patch sys after thread. Patch by Anton Patrushev.
+- subprocess: fix check_output on Py2.6 and older (:issue:`265`). Thanks to Marc Sibson for test.
+- Fix :issue:`302`: "python -m gevent.monkey" now sets __file__ properly.
+- pywsgi: fix logging when bound on unix socket (:issue:`295`). Thanks to Chris Meyers, Eugene Pankov.
 - pywsgi: readout request data to prevent ECONNRESET
-- Fix #303: 'requestline' AttributeError in pywsgi. Thanks to Neil Chintomby.
-- Fix #79: Properly handle HTTP versions. Patch by Luca Wehrstedt.
-- Fix #216: propagate errors raised by Pool.map/imap
+- Fix :issue:`303`: 'requestline' AttributeError in pywsgi. Thanks to Neil Chintomby.
+- Fix :issue:`79`: Properly handle HTTP versions. Patch by Luca Wehrstedt.
+- Fix :issue:`216`: propagate errors raised by Pool.map/imap
 
 
 Release 1.0rc2 (Dec 10, 2012)
 =============================
 
-- Fixed #210: callbacks were not run for non-default loop (bug introduced in 1.0rc1).
+- Fixed :issue:`210`: callbacks were not run for non-default loop (bug introduced in 1.0rc1).
 - patch_all() no longer patches subprocess unless `subprocess=True` is passed.
 - Fixed AttributeError in hub.Waiter.
-- Fixed #181: make hidden imports visible to freezing tools like py2exe. Patch by Ralf Schmitt.
-- Fixed #202: periodically yield when running callbacks (sleep(0) cannot block the event loop now).
-- Fixed #204: os.tp_read/tp_write did not propogate errors to the caller.
-- Fixed #217: do not set SO_REUSEADDR on Windows.
+- Fixed :issue:`181`: make hidden imports visible to freezing tools like py2exe. Patch by Ralf Schmitt.
+- Fixed :issue:`202`: periodically yield when running callbacks (sleep(0) cannot block the event loop now).
+- Fixed :issue:`204`: os.tp_read/tp_write did not propogate errors to the caller.
+- Fixed :issue:`217`: do not set SO_REUSEADDR on Windows.
 - Fixed bug in --module argument for gevent.monkey. Patch by Örjan Persson.
 - Remove warning from threadpool.py about mixing fork() and threads.
 - Cleaned up hub.py from code that was needed to support older greenlets. Patch by Saúl Ibarra Corretgé.
@@ -151,13 +151,13 @@ Release 1.0rc1 (Oct 30, 2012)
 - Fixed socket, ssl and fileobject to not mask EBADF error - it is now propogated to the caller. Previously EBADF was converted to empty read/write. Thanks to Vitaly Kruglikov
 - Removed gevent.event.waitall()
 - Renamed FileObjectThreadPool -> FileObjectThread
-- Greenlet: Fixed #143: greenlet links are now executed in the order they were added
+- Greenlet: Fixed :issue:`143`: greenlet links are now executed in the order they were added
 - Synchronize access to FileObjectThread with Semaphore
 - EINVAL is no longer handled in fileobject.
 
 monkey:
 
-- Fixed #178: disable monkey patch os.read/os.write
+- Fixed :issue:`178`: disable monkey patch os.read/os.write
 - Fixed monkey.patch_thread() to patch threading._DummyThread to avoid leak in threading._active. Original patch by Wil Tan.
 - added Event=False argument to patch_all() and patch_thread
 - added patch_sys() which patches stdin, stdout, stderr with FileObjectThread wrappers. Experimental / buggy.
@@ -169,14 +169,14 @@ socket:
 
 pywsgi:
 
-- Fixed #86: bytearray is now supported. Original patch by Aaron Westendorf.
-- Fixed #116: Multiline HTTP headers are now handled properly. Patch by Ralf Schmitt.
+- Fixed :issue:`86`: bytearray is now supported. Original patch by Aaron Westendorf.
+- Fixed :issue:`116`: Multiline HTTP headers are now handled properly. Patch by Ralf Schmitt.
 
 subprocess:
 
 - Fixed Windows compatibility. The wait() method now also supports 'timeout' argument on Windows.
 - Popen: Added rawlink() method, which makes Popen objects supported by gevent.wait(). Updated examples/processes.py
-- Fixed #148: read from errpipe_read in small chunks, to avoid trigger EINVAL issue on Mac OS X. Patch by Vitaly Kruglikov
+- Fixed :issue:`148`: read from errpipe_read in small chunks, to avoid trigger EINVAL issue on Mac OS X. Patch by Vitaly Kruglikov
 - Do os._exit() in "finally" section to avoid executing unrelated code. Patch by Vitaly Kruglikov.
 
 resolver_ares:
@@ -219,8 +219,8 @@ Release 1.0b4 (Sep 6, 2012)
 
 - Added gevent.os module with 'read' and 'write' functions. Patch by Geert Jansen.
 - Moved gevent.hub.fork to gevent.os module (it is still available as gevent.fork).
-- Fixed issue #148: Made fileobject handle EINVAL, which is randomly raised by os.read/os.write on Mac OS X. Thanks to Mark Hingston.
-- Fixed issue #150: gevent.fileobject.SocketAdapter.sendall() could needlessly wait for write event on the descriptor. Original patch by Mark Hingston.
+- Fixed :issue:`148`: Made fileobject handle EINVAL, which is randomly raised by os.read/os.write on Mac OS X. Thanks to Mark Hingston.
+- Fixed :issue:`150`: gevent.fileobject.SocketAdapter.sendall() could needlessly wait for write event on the descriptor. Original patch by Mark Hingston.
 - Fixed AttributeError in baseserver. In case of error, start() would call kill() which was renamed to close(). Thanks to Vitaly Kruglikov.
 
 
@@ -230,8 +230,8 @@ Release 1.0b3 (Jul 27, 2012)
 - New gevent.subprocess module
 - New gevent.fileobject module
 - Fixed ThreadPool to discard references of the objects passed to it (function, arguments) asap. Previously they could be stored for unlimited time until the thread gets a new job.
-- Fixed #138: gevent.pool.Pool().imap_unordered hangs with an empty iterator. Thanks to exproxus.
-- Fixed #127: ssl.py could raise TypeError in certain cases. Thanks to Johan Mjones.
+- Fixed :issue:`138`: gevent.pool.Pool().imap_unordered hangs with an empty iterator. Thanks to exproxus.
+- Fixed :issue:`127`: ssl.py could raise TypeError in certain cases. Thanks to Johan Mjones.
 - Fixed socket.makefile() to keep the timeout setting of the socket instance. Thanks to Colin Marc.
 - Added 'copy()' method to queues.
 - The 'nochild' event loop config option is removed. The install_sigchld offer more flexible way of enabling child watchers.
@@ -241,7 +241,7 @@ Release 1.0b3 (Jul 27, 2012)
 - Updated libev to the latest CVS version
 - Made pywsgi to raise an AssertionError if non-zero content-length is passed to start_response(204/304) or if non-empty body is attempted to be written for 304/204 response
 - Removed pywsgi feature to capitalize the passed headers.
-- Fixed util/cythonpp.py to work on python3.2 (#123). Patch by Alexandre Kandalintsev.
+- Fixed util/cythonpp.py to work on python3.2 (:issue:`123`). Patch by Alexandre Kandalintsev.
 - Added 'closed' readonly property to socket.
 - Added 'ref' read/write property to socket.
 - setup.py now parses CARES_EMBED and LIBEV_EMBED parameters, in addition to EMBED.
@@ -333,15 +333,15 @@ misc:
 - Hub got a new property: threadpool.
 
 ares.pyx:
-- Fixed issue #104: made ares_host_result pickable. Thanks to Shaun Cutts.
+- Fixed :issue:`104`: made ares_host_result pickable. Thanks to Shaun Cutts.
 
 pywsgi:
 - Removed unused deprecated 'wfile' property from WSGIHandler
-- Fixed issue #92: raise IOError on truncated POST requests.
-- Fixed issue #93: do not sent multiple "100 continue" responses
+- Fixed :issue:`92`: raise IOError on truncated POST requests.
+- Fixed :issue:`93`: do not sent multiple "100 continue" responses
 
 core:
-- Fixed issue #97: the timer watcher now calls ev_now_update() in start() and again() unless 'update' keyword is passed and set to False.
+- Fixed :issue:`97`: the timer watcher now calls ev_now_update() in start() and again() unless 'update' keyword is passed and set to False.
 - add set_syserr_cb() function; it's used by gevent internally.
 - gevent now installs syserr callback using libev's set_syserr_cb. This callback is called when libev encounters an error it cannot recover from. The default action is to print a message and abort. With the callback installed, a SystemError() is now raised in the main greenlet.
 - renamed 'backend_fd' property to 'fileno()' method. (not available if you build gevent against system libev)
@@ -358,13 +358,13 @@ resolver_ares:
 
 socket:
 - Fixed close() method not to reference any globals
-- Fixed issue #115: _dummy gets unexpected Timeout arg
+- Fixed :issue:`115`: _dummy gets unexpected Timeout arg
 - Removed _fileobject used for python 2.4 compatibility in socket.py
-- Fixed issue #94: fallback to buffer if memoryview fails in _get_memory on python 2.7
+- Fixed :issue:`94`: fallback to buffer if memoryview fails in _get_memory on python 2.7
 
 monkey:
 - Removed patch_httplib()
-- Fixed issue #112: threading._sleep is not patched. Thanks to David LaBissoniere.
+- Fixed :issue:`112`: threading._sleep is not patched. Thanks to David LaBissoniere.
 - Added get_unpatched() function. However, it is slightly broken at the moment.
 
 backdoor:
@@ -486,15 +486,19 @@ Release highlights:
 
 The :mod:`gevent.socket` module:
 
-- DNS functions now use c-ares library rather than libevent-dns. This fixes a number of problems with name resolving:
-  - Issue #2: DNS resolver no longer breaks after `fork()`. You still need to call :func:`gevent.fork` (`os.fork` is monkey
-    patched with it if `monkey.patch_all()` was called).
+- DNS functions now use c-ares library rather than libevent-dns. This
+  fixes a number of problems with name resolving:
+
+  - Fix :issue:`2`: DNS resolver no longer breaks after `fork()`. You still need to call :func:`gevent.fork` (`os.fork` is monkey
+     patched with it if `monkey.patch_all()` was called).
   - DNS resolver no longer ignores `/etc/resolv.conf` and `/etc/hosts`.
+
 - The following functions were added to socket module
   - gethostbyname_ex
   - getnameinfo
   - gethostbyaddr
   - getfqdn
+
 - Removed undocumented bind_and_listen and tcp_listener
 
 The :class:`Hub` object:
@@ -528,18 +532,18 @@ Miscellaneous:
 Release 0.13.8 (September 6, 2012)
 ==================================
 
-- Fixed issue #80: gevent.httplib failed with RequestFailed errors because timeout was reset to 1s. Patch by Tomasz Prus.
+- Fixed :issue:`80`: gevent.httplib failed with RequestFailed errors because timeout was reset to 1s. Patch by Tomasz Prus.
 - core: fix compilation with the latest Cython: remove emit_ifdef/emit_else/emit_endif.
-- Fixed issue #132: gevent.socket.gethostbyname(<unicode>) now does ascii encoding and uses gevent's resolver rather than calling built-in resolver. Patch by Alexey Borzenkov.
+- Fixed :issue:`132`: gevent.socket.gethostbyname(<unicode>) now does ascii encoding and uses gevent's resolver rather than calling built-in resolver. Patch by Alexey Borzenkov.
 
 
 Release 0.13.7 (April 12, 2012)
 ===============================
 
-- Fixed #94: fallback to buffer if memoryview fails in _get_memory on python 2.7.
-- Fixed #103: ``Queue(None).full()`` returns ``False`` now (previously it returned ``True``).
-- Fixed #112: threading._sleep is not patched. Thanks to David LaBissoniere.
-- Fixed #115: _dummy gets unexpected Timeout arg.
+- Fixed :issue:`94`: fallback to buffer if memoryview fails in _get_memory on python 2.7.
+- Fixed :issue:`103`: ``Queue(None).full()`` returns ``False`` now (previously it returned ``True``).
+- Fixed :issue:`112`: threading._sleep is not patched. Thanks to David LaBissoniere.
+- Fixed :issue:`115`: _dummy gets unexpected Timeout arg.
 
 
 Release 0.13.6 (May 2, 2011)
@@ -547,7 +551,7 @@ Release 0.13.6 (May 2, 2011)
 
 - Added ``__copy__`` method to :class:`gevent.local.local` class that implements copy semantics compatible with built-in ``threading.local``. Patch by **Galfy Pundee**.
 - Fixed :class:`StreamServer` class to catch ``EWOULDBLOCK`` rather than ``EAGAIN``. This fixes lots of spurious tracebacks on Windows where these two constants are not the same. Patch by **Alexey Borzenkov**.
-- Fixed issue #65: :func:`fork` now calls ``event_reinit`` only in the child process; otherwise the process could hang when using libevent2. Patch by **Alexander Boudkar**.
+- Fixed :issue:`65`: :func:`fork` now calls ``event_reinit`` only in the child process; otherwise the process could hang when using libevent2. Patch by **Alexander Boudkar**.
 
 
 Release 0.13.5 (Apr 21, 2011)
@@ -560,12 +564,12 @@ Release 0.13.4 (Apr 11, 2011)
 =============================
 
 - Fixed :exc:`TypeError` that occurred when ``environ["wsgi.input"].read`` function was called with an integer argument.
-- Fixed issue #63: :func:`monkey.patch_thread` now patches :mod:`threading` too, even if it's already imported. Patch by **Shaun Lindsay**.
-- Fixed issue #64: :func:`joinall` and :func:`killall` functions used to hang if their argument contained duplicate greenlets.
-- Fixed issue #69: :class:`pywsgi.WSGIServer` reported "Connection reset by peer" if the client did not close the connection gracefully after the last request. Such errors are now ignored.
-- Fixed issue #67: Made :class:`wsgi.WSGIServer` add ``REQUEST_URI`` to environ. Patch by **Andreas Blixt**.
-- Fixed issue #71: monkey patching ``httplib`` with :mod:`gevent.httplib` used to break ``HTTPSConnection``. Patch by **Nick Barkas**.
-- Fixed issue #74: :func:`create_connection <gevent.socket.create_connection>` now raises proper exception when ``getaddrinfo`` fails.
+- Fixed :issue:`63`: :func:`monkey.patch_thread` now patches :mod:`threading` too, even if it's already imported. Patch by **Shaun Lindsay**.
+- Fixed :issue:`64`: :func:`joinall` and :func:`killall` functions used to hang if their argument contained duplicate greenlets.
+- Fixed :issue:`69`: :class:`pywsgi.WSGIServer` reported "Connection reset by peer" if the client did not close the connection gracefully after the last request. Such errors are now ignored.
+- Fixed :issue:`67`: Made :class:`wsgi.WSGIServer` add ``REQUEST_URI`` to environ. Patch by **Andreas Blixt**.
+- Fixed :issue:`71`: monkey patching ``httplib`` with :mod:`gevent.httplib` used to break ``HTTPSConnection``. Patch by **Nick Barkas**.
+- Fixed :issue:`74`: :func:`create_connection <gevent.socket.create_connection>` now raises proper exception when ``getaddrinfo`` fails.
 - Fixed :meth:`BaseServer.__repr__` method, :attr:`BaseServer.server_host` and :attr:`BaseServer.server_port` attributes to handle the case of ``AF_UNIX`` addresses properly. Previously they assumed address is always a tuple.
 - Fixed :class:`pywsgi.WSGIServer` to handle ``AF_UNIX`` listeners. The server now sets ``environ["SERVER_NAME"]`` and ``environ["SERVER_PORT"]`` to empty string in such case.
 - Make :class:`StreamServer` (and thus :class:`pywsgi.WSGIServer`) accept up to 100 connections per one readiness notification. This behaviour is controlled by :attr:`StreamServer.max_accept` class attribute.
@@ -582,12 +586,12 @@ Release 0.13.3 (Feb 7, 2011)
 Release 0.13.2 (Jan 28, 2011)
 =============================
 
-- Added :mod:`gevent.httplib` -- **experimental** support for libevent-http client (issue #9). Thanks to **Tommie Gannert**, **Örjan Persson**.
-- Fixed crash on Mac OS X (issue #31). Patch by **Alexey Borzenkov**.
-- Fixed compatiblity of :mod:`gevent.wsgi` with libevent2 (issue #62).
+- Added :mod:`gevent.httplib` -- **experimental** support for libevent-http client (:issue:`9`). Thanks to **Tommie Gannert**, **Örjan Persson**.
+- Fixed crash on Mac OS X (:issue:`31`). Patch by **Alexey Borzenkov**.
+- Fixed compatiblity of :mod:`gevent.wsgi` with libevent2 (:issue:`62`).
 - Fixed compilation issues with libevent2. Patch by **Ralf Schmitt**.
 - Fixed :mod:`pywsgi` not to use chunked transfer encoding in case of 304 and 204 responses as it creates a non-empty message body which is against RFC and causes some browsers to fail. Patch by **Nicholas Piël**.
-- Fixed :func:`socket.getaddrinfo` to handle ``AF_UNSPEC`` properly and resolve service names (issue #56). Thanks to **Elizabeth Jennifer Myers**.
+- Fixed :func:`socket.getaddrinfo` to handle ``AF_UNSPEC`` properly and resolve service names (:issue:`56`). Thanks to **Elizabeth Jennifer Myers**.
 - Fixed :func:`socket.getaddrinfo` to handle international domain names.
 - Fixed leaking of traceback object when switching out of greenlet with ``sys.exc_info`` set. Leaking is prevented by not preserving traceback at all and only keeping the value of the exception. Thanks to **Ned Rockson**.
 - Fixed :meth:`ssl.SSLSocket.unwrap` to shutdown :class:`SSLSocket` properly, without raising ``SSLError(read operation timeout)``.
@@ -598,7 +602,7 @@ Release 0.13.2 (Jan 28, 2011)
 - Added proper implementation of :meth:`imap_unordered <gevent.pool.Group.imap_unordered>` to :class:`Pool` class. Unlike previous "dummy" implementation this one starts yielding the results as soon as they are ready.
 - Implemented iterator protocol in :class:`Queue <gevent.queue.Queue>`. The main use case is the implementation of :meth:`Pool.imap_unordered`.
 - Fixed :attr:`BaseServer.started` property: it is now set to ``True`` after :meth:`start <StreamServer.start>` until :meth:`stop <StreamServer.stop>` or :meth:`kill <StreamServer.kill>`. Previously it could become ``False`` for short period of times, because :class:`StreamServer` could stop accepting for a while in presence of errors and :attr:`StreamServer.started` was defined as "whether the server is currently accepting".
-- Fixed :class:`wsgi.WSGIServer` to reply with 500 error immediatelly if the application raises an error (issue #58). Thanks to **Jon Aslund**.
+- Fixed :class:`wsgi.WSGIServer` to reply with 500 error immediatelly if the application raises an error (:issue:`58`). Thanks to **Jon Aslund**.
 - Added :func:`monkey.patch_httplib` function which is disabled by default.
 - Added *httplib* parameter to :func:`monkey.patch_all` (defaults to ``False``).
 - Added :func:`write <core.buffer.write>` method to :class:`core.buffer`.
@@ -616,11 +620,11 @@ Release highlights:
 
 - Fixed :mod:`monkey` to patch :func:`socket.create_connection <gevent.socket.create_connection>`.
 - Updated :mod:`gevent.ssl` module to fully match the functionality of :mod:`ssl` on Python 2.7.
-- Fixed :meth:`Group.join` to handle ``raise_error=True`` properly, it used to raise :exc:`TypeError` (issue #36). Thanks to by **David Hain**.
-- Fixed :mod:`gevent.wsgi` and :mod:`gevent.pywsgi` to join multiple ``Cookie`` headers (issue #40).
+- Fixed :meth:`Group.join` to handle ``raise_error=True`` properly, it used to raise :exc:`TypeError` (:issue:`36`). Thanks to by **David Hain**.
+- Fixed :mod:`gevent.wsgi` and :mod:`gevent.pywsgi` to join multiple ``Cookie`` headers (:issue:`40`).
 - Fixed :func:`select <gevent.select.select>` to recognize ``long`` arguments in addition to ``int``.
-- Fixed :meth:`Semaphore.acquire` to return ``False`` when timeout expires instead of raising :exc:`AssertionError` (issue #39). Patch by **Erik Näslund**.
-- Fixed :meth:`JoinableQueue.join` to return immediatelly if queue is already empty (issue #45). Patch by **Dmitry Chechik**.
+- Fixed :meth:`Semaphore.acquire` to return ``False`` when timeout expires instead of raising :exc:`AssertionError` (:issue:`39`). Patch by **Erik Näslund**.
+- Fixed :meth:`JoinableQueue.join` to return immediatelly if queue is already empty (:issue:`45`). Patch by **Dmitry Chechik**.
 - Deprecated :mod:`gevent.sslold` module.
 
 :mod:`gevent.socket` module:
@@ -640,7 +644,7 @@ Release highlights:
 
 - Added support for *ciphers* argument.
 - Updated ``SSLSocket.send`` and ``SSLSocket.recv`` methods to match the behavior of stdlib :mod:`ssl` better.
-- Fixed :class:`ssl.SSLObject` to delete events used by other greenlets when closing the instance (issue #34).
+- Fixed :class:`ssl.SSLObject` to delete events used by other greenlets when closing the instance (:issue:`34`).
 
 Miscellaneous:
 
@@ -665,14 +669,14 @@ Release highlights:
 - Added :mod:`gevent.server` module with :class:`StreamServer` class for easy implementing of TCP and SSL servers.
 - Added :mod:`gevent.baseserver` module with :class:`BaseServer` class.
 - Added new implementation of :mod:`gevent.pywsgi` based on :mod:`gevent.server`. Contributed by **Ralf Schmitt**.
-- Added :mod:`gevent.local` module. Fixed issue #24. Thanks to **Ted Suzman**.
+- Added :mod:`gevent.local` module. Fixed :issue:`24`. Thanks to **Ted Suzman**.
 - Fixed a number of bugs in :mod:`gevent.wsgi` module.
-- Fixed issue #26: closing a socket now interrupts all pending read/write operations on it.
+- Fixed :issue:`26`: closing a socket now interrupts all pending read/write operations on it.
 - Implemented workaround that prevents greenlets from leaking ``exc_info``.
 - Fixed :meth:`socket.sendall` to use buffer object to prevent string copies.
 - Made the interfaces of :mod:`gevent.wsgi` and :mod:`gevent.pywsgi` much more similar to each other.
 - Fixed compilation on Windows with libevent-2.
-- Improved Windows compatibility. Fixed issue #30. Thanks to **Luigi Pugnetti**.
+- Improved Windows compatibility. Fixed :issue:`30`. Thanks to **Luigi Pugnetti**.
 - Fixed compatibility with Python 2.7.
 
 Backward-incompatible changes:
@@ -700,10 +704,10 @@ Backward-incompatible changes:
 
 :mod:`gevent.socket` module:
 
-- Fixed issues #26 and #34: closing the socket while reading/writing/connecting is now safe. Thanks to **Cyril Bay**.
+- Fixed issues :issue:`26` and :issue:`34`: closing the socket while reading/writing/connecting is now safe. Thanks to **Cyril Bay**.
 - Imported :func:`getfqdn` from :mod:`socket` module.
 - The module now uses ``sys.platform`` to detect Windows rather than :mod:`platform` module.
-- Fixed issue #27: :func:`getaddrinfo` used to handle the case when *socktype* or *proto* were equal to ``0``. Thanks to **Randall Leeds**.
+- Fixed :issue:`27`: :func:`getaddrinfo` used to handle the case when *socktype* or *proto* were equal to ``0``. Thanks to **Randall Leeds**.
 
 :mod:`gevent.coros` module:
 
@@ -762,7 +766,7 @@ Miscellaneous:
 - Changed :mod:`gevent.thread` to use :class:`Greenlet` instead of raw greenlets. This means monkey patched thread will become :class:`Greenlet` too.
 - Added :attr:`started` property to :class:`Greenlet`.
 - Put common server code in :mod:`gevent.baseserver` module. All servers in gevent package are now derived from :class:`BaseServer`.
-- Fixed issue #20: :func:`sleep` now raises :exc:`IOError` if passed a negative argument.
+- Fixed :issue:`20`: :func:`sleep` now raises :exc:`IOError` if passed a negative argument.
 - Remove the code related to finding out libevent version from setup.py as macro ``USE_LIBEVENT_?`` is no longer needed to build ``gevent.core``.
 - Increased default backlog in all servers (from 5 to 256). Thanks to **Nicholas Piël**.
 - Fixed doc/conf.py to work in Python older than 2.6. Thanks to **Örjan Persson**.
