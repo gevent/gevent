@@ -24,7 +24,7 @@ RUN_ALONE = [
 ]
 
 
-def run_many(tests, expected=None, failfast=False):
+def run_many(tests, expected=(), failfast=False):
     global NWORKERS
     start = time.time()
     total = 0

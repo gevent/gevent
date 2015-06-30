@@ -204,7 +204,8 @@ def patch_ssl():
 def patch_select(aggressive=True):
     """Replace :func:`select.select` with :func:`gevent.select.select`.
 
-    If aggressive is true (the default), also remove other blocking functions the :mod:`select`.
+    If ``aggressive`` is true (the default), also remove other blocking functions from :mod:`select`
+    and (on Python 3.4 and above) :mod:`selectors`.
     """
     patch_module('select')
     if aggressive:
@@ -219,7 +220,8 @@ def patch_select(aggressive=True):
 
     if sys.version_info[:2] >= (3, 4):
         # Python 3 wants to use `select.select` as a member function,
-        # leading to this error in selectors.py
+        # leading to this error in selectors.py (because gevent.select.select is
+        # not a builtin and doesn't get the magic auto-static that they do)
         #    r, w, _ = self._select(self._readers, self._writers, [], timeout)
         #    TypeError: select() takes from 3 to 4 positional arguments but 5 were given
         select = __import__('select')
@@ -228,6 +230,15 @@ def patch_select(aggressive=True):
             def _select(self, *args, **kwargs):
                 return select.select(*args, **kwargs)
             selectors.SelectSelector._select = _select
+
+        if aggressive:
+            # If `selectors` had already been imported before we removed
+            # select.poll|epoll|kqueue, these may have been defined in terms
+            # of those functions. They'll fail at runtime.
+            remove_item(selectors, 'PollSelector')
+            remove_item(selectors, 'EpollSelector')
+            remove_item(selectors, 'KqueueSelector')
+            selectors.DefaultSelector = selectors.SelectSelector
 
 
 def patch_subprocess():

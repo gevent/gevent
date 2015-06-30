@@ -17,7 +17,8 @@ Unreleased
   ``gevent.pool.Group``/``Pool`` and the builtin ``apply`` function.
   This obsoletes the undocumented ``apply_e`` function. Original PR
   #556 by Robert Estelle.
-
+- Monkey-patch the ``selectors`` module from ``patch_all`` and
+  ``patch_select`` on Python 3.4. See #591.
 
 1.1a1 (Jun 29, 2015)
 ====================
