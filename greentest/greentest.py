@@ -47,8 +47,10 @@ else:
 gettotalrefcount = getattr(sys, 'gettotalrefcount', None)
 OPTIONAL_MODULES = ['resolver_ares']
 
+
 class ExpectedException(Exception):
     """An exception whose traceback should be ignored"""
+
 
 def wrap_switch_count_check(method):
     @wraps(method)
