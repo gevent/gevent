@@ -7,6 +7,7 @@ API reference
    networking
    synchronization
    gevent.pool
+   gevent.threadpool
    servers
    gevent.local
    gevent.monkey

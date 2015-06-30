@@ -62,6 +62,16 @@ Unreleased
 - ``gevent.pool.Group.imap`` and ``imap_unordered`` now accept
   multiple iterables like ``itertools.imap``. Issue #565 reported by
   Thomas Steinacher.
+- Potentially breaking change: ``gevent.baseserver.BaseServer`` and
+  its subclass ``gevent.server.StreamServer`` now deterministically
+  close the client socket when the request handler returns.
+  Previously, the socket was left at the mercies of the garbage
+  collector; under CPython 2.x this meant when the last reference went
+  away, which was usually, but not necessarily, when the request
+  handler returned, but under PyPy it was some arbitrary point in the
+  future and under CPython 3.x a ResourceWarning could be generated.
+  This was undocumented behaviour, and the client socket could be kept
+  open after the request handler returned either accidentally or intentionally.
 
 Release 1.0.2
 =============

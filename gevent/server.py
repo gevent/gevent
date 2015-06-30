@@ -41,6 +41,8 @@ class StreamServer(BaseServer):
 
     The delay starts with :attr:`min_delay` and doubles with each successive error until it reaches :attr:`max_delay`.
     A successful :func:`accept` resets the delay to :attr:`min_delay` again.
+
+    See :class:`BaseServer` for information on defining the *handle* function and important restrictions on it.
     """
     # the default backlog to use if none was provided in __init__
     backlog = 256

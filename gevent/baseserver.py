@@ -12,23 +12,39 @@ __all__ = ['BaseServer']
 
 
 class BaseServer(object):
-    """An abstract base class that implements some common functionality for the servers in gevent.
+    """
+    An abstract base class that implements some common functionality for the servers in gevent.
 
-    *listener* can either be an address that the server should bind on or a :class:`gevent.socket.socket`
-    instance that is already bound (and put into listening mode in case of TCP socket).
+    :param listener: Either be an address that the server should bind
+        on or a :class:`gevent.socket.socket` instance that is already
+        bound (and put into listening mode in case of TCP socket).
 
-    *spawn*, if provided, is called to create a new greenlet to run the handler. By default, :func:`gevent.spawn` is used.
+    :keyword handle: If given, the request handler. The request
+        handler can be defined in a few ways. Most commonly,
+        subclasses will implement a ``handle`` method as an
+        instance method. Alternatively, a function can be passed
+        as the ``handle`` argument to the constructor. In either
+        case, the handler can later be changed by calling
+        :meth:`set_handle`.
 
-    Possible values for *spawn*:
+        When the request handler returns, the socket used for the
+        request will be closed. (New in gevent 1.1a1.)
 
-    * a :class:`gevent.pool.Pool` instance -- *handle* will be executed
-      using :meth:`Pool.spawn` method only if the pool is not full.
-      While it is full, all the connection are dropped;
-    * :func:`gevent.spawn_raw` -- *handle* will be executed in a raw
-      greenlet which have a little less overhead then :class:`gevent.Greenlet` instances spawned by default;
-    * ``None`` -- *handle* will be executed right away, in the :class:`Hub` greenlet.
-      *handle* cannot use any blocking functions as it means switching to the :class:`Hub`.
-    * an integer -- a shortcut for ``gevent.pool.Pool(integer)``
+    :keyword spawn: If provided, is called to create a new
+        greenlet to run the handler. By default,
+        :func:`gevent.spawn` is used (meaning there is no
+        artificial limit on the number of concurrent requests). Possible values for *spawn*:
+
+        - a :class:`gevent.pool.Pool` instance -- ``handle`` will be executed
+          using :meth:`gevent.pool.Pool.spawn` only if the pool is not full.
+          While it is full, all the connection are dropped;
+        - :func:`gevent.spawn_raw` -- ``handle`` will be executed in a raw
+          greenlet which have a little less overhead then :class:`gevent.Greenlet` instances spawned by default;
+        - ``None`` -- ``handle`` will be executed right away, in the :class:`Hub` greenlet.
+          ``handle`` cannot use any blocking functions as it means switching to the :class:`Hub`.
+        - an integer -- a shortcut for ``gevent.pool.Pool(integer)``
+
+
     """
     # the number of seconds to sleep in case there was an error in accept() call
     # for consecutive errors the delay will double until it reaches max_delay

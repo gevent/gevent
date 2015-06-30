@@ -51,8 +51,7 @@ More examples are available in the `code repository`_:
 
 .. toctree::
 
+   gevent.baseserver
    gevent.server
    gevent.pywsgi
    gevent.wsgi
-
-
