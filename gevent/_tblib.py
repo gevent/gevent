@@ -185,7 +185,10 @@ class Traceback(object):
             except:
                 tb = sys.exc_info()[2].tb_next
                 tb_set_next(tb, self.tb_next and self.tb_next.as_traceback())
-                return tb
+                try:
+                    return tb
+                finally:
+                    del tb
         else:
             raise RuntimeError("Cannot re-create traceback !")
 

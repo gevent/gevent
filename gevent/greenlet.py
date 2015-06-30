@@ -121,6 +121,9 @@ class Greenlet(greenlet):
     def _links(self):
         return deque()
 
+    def _has_links(self):
+        return '_links' in self.__dict__ and self._links
+
     def _raise_exception(self):
         reraise(*self.exc_info)
 
@@ -351,7 +354,7 @@ class Greenlet(greenlet):
     def _report_result(self, result):
         self._exc_info = (None, None, None)
         self.value = result
-        if self._links and not self._notifier:
+        if self._has_links() and not self._notifier:
             self._notifier = self.parent.loop.run_callback(self._notify_links)
 
     def _report_error(self, exc_info):
@@ -361,10 +364,13 @@ class Greenlet(greenlet):
 
         self._exc_info = exc_info[0], exc_info[1], dump_traceback(exc_info[2])
 
-        if self._links and not self._notifier:
+        if self._has_links() and not self._notifier:
             self._notifier = self.parent.loop.run_callback(self._notify_links)
 
-        self.parent.handle_error(self, *exc_info)
+        try:
+            self.parent.handle_error(self, *exc_info)
+        finally:
+            del exc_info
 
     def run(self):
         try:

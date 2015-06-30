@@ -57,7 +57,6 @@ class PoolBasicTests(TestCase):
         try:
             pool.apply(raiser)
         except ExpectedException:
-            import traceback; traceback.print_exc()
             pass
         else:
             self.fail("Should have raised ExpectedException")

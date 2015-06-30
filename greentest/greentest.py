@@ -47,6 +47,8 @@ else:
 gettotalrefcount = getattr(sys, 'gettotalrefcount', None)
 OPTIONAL_MODULES = ['resolver_ares']
 
+class ExpectedException(Exception):
+    """An exception whose traceback should be ignored"""
 
 def wrap_switch_count_check(method):
     @wraps(method)
@@ -93,7 +95,7 @@ def wrap_refcount(method):
         return method
 
     # Some builtin things that we ignore
-    IGNORED_TYPES = (tuple, dict, types.FrameType)
+    IGNORED_TYPES = (tuple, dict, types.FrameType, types.TracebackType)
 
     def type_hist():
         import collections
@@ -328,11 +330,19 @@ _original_Hub = gevent.hub.Hub
 
 class CountingHub(_original_Hub):
 
+    EXPECTED_TEST_ERROR = (ExpectedException,)
+
     switch_count = 0
 
     def switch(self, *args):
         self.switch_count += 1
         return _original_Hub.switch(self, *args)
+
+    def handle_error(self, context, type, value, tb):
+        if issubclass(type, self.EXPECTED_TEST_ERROR):
+            # Don't print these to cut down on the noise in the test logs
+            return
+        return _original_Hub.handle_error(self, context, type, value, tb)
 
 if gettotalrefcount is None:
     gevent.hub.Hub = CountingHub
@@ -409,10 +419,6 @@ class GenericGetTestCase(TestCase):
         delay = time.time() - start
         assert 0.01 - 0.001 <= delay < 0.01 + 0.01 + 0.1, delay
         self.cleanup()
-
-
-class ExpectedException(Exception):
-    """An exception whose traceback should be ignored"""
 
 
 def walk_modules(basedir=None, modpath=None, include_so=False, recursive=False):

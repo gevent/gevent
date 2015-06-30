@@ -32,7 +32,7 @@ DELAY = 0.01
 greentest.TestCase.error_fatal = False
 
 
-class ExpectedError(Exception):
+class ExpectedError(greentest.ExpectedException):
     pass
 
 
