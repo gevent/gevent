@@ -2,8 +2,9 @@
 """Basic synchronization primitives: Event and AsyncResult"""
 
 import sys
-from gevent.hub import get_hub, getcurrent, _NONE, PY3
+from gevent.hub import get_hub, getcurrent, _NONE, PY3, reraise
 from gevent.timeout import Timeout
+from gevent._tblib import dump_traceback, load_traceback
 from collections import deque
 if PY3:
     xrange = range
@@ -160,6 +161,7 @@ class AsyncResult(object):
         self._links = deque()
         self.value = None
         self._exception = _NONE
+        self._exc_info = ()
         self.hub = get_hub()
         self._notifier = None
 
@@ -185,8 +187,8 @@ class AsyncResult(object):
     def exception(self):
         """Holds the exception instance passed to :meth:`set_exception` if :meth:`set_exception` was called.
         Otherwise ``None``."""
-        if self._exception is not _NONE:
-            return self._exception
+        if self._exc_info:
+            return self._exc_info[1]
 
     def set(self, value=None):
         """Store the value. Wake up the waiters.
@@ -199,15 +201,23 @@ class AsyncResult(object):
         if self._links and not self._notifier:
             self._notifier = self.hub.loop.run_callback(self._notify_links)
 
-    def set_exception(self, exception):
+    def set_exception(self, exception, exc_info=None):
         """Store the exception. Wake up the waiters.
 
         All greenlets blocking on :meth:`get` or :meth:`wait` are woken up.
         Sequential calls to :meth:`wait` and :meth:`get` will not block at all.
         """
         self._exception = exception
+        if exc_info:
+            self._exc_info = (exc_info[0], exc_info[1], dump_traceback(exc_info[2]))
+
         if self._links and not self._notifier:
             self._notifier = self.hub.loop.run_callback(self._notify_links)
+
+    def _raise_exception(self):
+        if self._exc_info:
+            reraise(self._exc_info[0], self._exc_info[1], load_traceback(self._exc_info[2]))
+        raise self._exception
 
     def get(self, block=True, timeout=None):
         """Return the stored value or raise the exception.
@@ -223,7 +233,7 @@ class AsyncResult(object):
         if self._exception is not _NONE:
             if self._exception is None:
                 return self.value
-            raise self._exception
+            self._raise_exception()
         elif block:
             switch = getcurrent().switch
             self.rawlink(switch)
@@ -239,7 +249,7 @@ class AsyncResult(object):
                 raise
             if self._exception is None:
                 return self.value
-            raise self._exception
+            self._raise_exception()
         else:
             raise Timeout
 
@@ -318,4 +328,4 @@ class AsyncResult(object):
         if source.successful():
             self.set(source.value)
         else:
-            self.set_exception(source.exception)
+            self.set_exception(source.exception, getattr(source, 'exc_info', None))

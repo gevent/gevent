@@ -122,7 +122,7 @@ class Greenlet(greenlet):
         return deque()
 
     def _raise_exception(self):
-        reraise(self._exc_info[0], self._exc_info[1], load_traceback(self._exc_info[2]))
+        reraise(*self.exc_info)
 
     @property
     def loop(self):
@@ -189,6 +189,14 @@ class Greenlet(greenlet):
         Otherwise ``None``.
         """
         return self._exc_info[1] if self._exc_info else None
+
+    @property
+    def exc_info(self):
+        """Holds the exc_info three-tuple raised by the function if the greenlet finished with an error.
+        Otherwise a false value."""
+        e = self._exc_info
+        if e:
+            return (e[0], e[1], load_traceback(e[2]))
 
     def throw(self, *args):
         """Immediatelly switch into the greenlet and raise an exception in it.

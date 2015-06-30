@@ -65,7 +65,7 @@ class FileObjectThread(object):
 
     def _apply(self, func, args=None, kwargs=None):
         with self.lock:
-            return self.threadpool.apply_e(BaseException, func, args, kwargs)
+            return self.threadpool.apply(func, args, kwargs)
 
     def close(self):
         fobj = self._fobj

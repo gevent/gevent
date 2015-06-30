@@ -34,6 +34,21 @@ class TestCoroutinePool(unittest.TestCase):
         result = pool.apply(some_work)
         self.assertEqual(value, result)
 
+    def test_apply_raises(self):
+        pool = self.klass(1)
+        def raiser():
+            raise ExpectedException()
+        try:
+            pool.apply(raiser)
+        except ExpectedException:
+            pass
+        else:
+            self.fail("Should have raised ExpectedException")
+    # Don't let the metaclass automatically force any error
+    # that reaches the hub from a spawned greenlet to become
+    # fatal; that defeats the point of the test.
+    test_apply_raises.error_fatal = False
+
     def test_multiple_coros(self):
         evt = Event()
         results = []

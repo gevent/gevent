@@ -5,6 +5,7 @@ import weakref
 import greentest
 from gevent.threadpool import ThreadPool
 import gevent
+from greentest import ExpectedException
 import six
 import gc
 
@@ -46,6 +47,24 @@ class PoolBasicTests(TestCase):
         self.pool = pool = ThreadPool(1)
         result = pool.apply(lambda a: ('foo', a), (1, ))
         self.assertEqual(result, ('foo', 1))
+
+    def test_apply_raises(self):
+        self.pool = pool = ThreadPool(1)
+
+        def raiser():
+            raise ExpectedException()
+
+        try:
+            pool.apply(raiser)
+        except ExpectedException:
+            import traceback; traceback.print_exc()
+            pass
+        else:
+            self.fail("Should have raised ExpectedException")
+    # Don't let the metaclass automatically force any error
+    # that reaches the hub from a spawned greenlet to become
+    # fatal; that defeats the point of the test.
+    test_apply_raises.error_fatal = False
 
     def test_init_valueerror(self):
         self.switch_expected = False

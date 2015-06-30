@@ -12,6 +12,11 @@ Unreleased
 - (Experimental) Exceptions raised from iterating using the
   ``ThreadPool`` or ``Group`` mapping/application functions should now
   have the original traceback.
+- ``gevent.threadpool.ThreadPool.apply`` now raises any exception
+  raised by the called function, the same as
+  ``gevent.pool.Group``/``Pool`` and the builtin ``apply`` function.
+  This obsoletes the undocumented ``apply_e`` function. Original PR
+  #556 by Robert Estelle.
 
 
 1.1a1 (Jun 29, 2015)

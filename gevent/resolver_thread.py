@@ -29,16 +29,16 @@ class Resolver(object):
     # below are thread-safe in Python, even if they are not thread-safe in C.
 
     def gethostbyname(self, *args):
-        return self.pool.apply_e(self.expected_errors, _socket.gethostbyname, args)
+        return self.pool.apply(_socket.gethostbyname, args)
 
     def gethostbyname_ex(self, *args):
-        return self.pool.apply_e(self.expected_errors, _socket.gethostbyname_ex, args)
+        return self.pool.apply( _socket.gethostbyname_ex, args)
 
     def getaddrinfo(self, *args, **kwargs):
-        return self.pool.apply_e(self.expected_errors, _socket.getaddrinfo, args, kwargs)
+        return self.pool.apply(_socket.getaddrinfo, args, kwargs)
 
     def gethostbyaddr(self, *args, **kwargs):
-        return self.pool.apply_e(self.expected_errors, _socket.gethostbyaddr, args, kwargs)
+        return self.pool.apply(_socket.gethostbyaddr, args, kwargs)
 
     def getnameinfo(self, *args, **kwargs):
-        return self.pool.apply_e(self.expected_errors, _socket.getnameinfo, args, kwargs)
+        return self.pool.apply(_socket.getnameinfo, args, kwargs)

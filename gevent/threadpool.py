@@ -9,9 +9,6 @@ from gevent.pool import GroupMappingMixin
 from gevent.lock import Semaphore
 from gevent._threading import Lock, Queue, start_new_thread
 
-# XXX apply_e is ugly and must not be needed
-# XXX apply() should re-raise everything
-
 
 __all__ = ['ThreadPool',
            'ThreadResult']
@@ -211,18 +208,14 @@ class ThreadPool(GroupMappingMixin):
             if need_decrease:
                 self._decrease_size()
 
-    # XXX apply() should re-raise error by default
-    # XXX because that's what builtin apply does
-    # XXX check gevent.pool.Pool.apply and multiprocessing.Pool.apply
     def apply_e(self, expected_errors, function, args=None, kwargs=None):
-        if args is None:
-            args = ()
-        if kwargs is None:
-            kwargs = {}
-        success, result = self.spawn(wrap_errors, expected_errors, function, args, kwargs).get()
-        if success:
-            return result
-        raise result
+        # Deprecated but never documented. In the past, before
+        # self.apply() allowed all errors to be raised to the caller,
+        # expected_errors allowed a caller to specify a set of errors
+        # they wanted to be raised, through the wrap_errors function.
+        # In practice, it always took the value Exception or
+        # BaseException.
+        return self.apply(function, args, kwargs)
 
     def _apply_immediately(self):
         # we always pass apply() off to the threadpool
@@ -238,6 +231,8 @@ class ThreadPool(GroupMappingMixin):
 
 class ThreadResult(object):
 
+    exc_info = ()
+
     def __init__(self, receiver, hub=None):
         if hub is None:
             hub = get_hub()
@@ -245,27 +240,28 @@ class ThreadResult(object):
         self.hub = hub
         self.value = None
         self.context = None
-        self.exc_info = None
         self.async = hub.loop.async()
         self.async.start(self._on_async)
+
+    @property
+    def exception(self):
+        return self.exc_info[1] if self.exc_info else None
 
     def _on_async(self):
         self.async.stop()
         try:
-            if self.exc_info is not None:
-                try:
-                    self.hub.handle_error(self.context, *self.exc_info)
-                finally:
-                    self.exc_info = None
+            if self.exc_info:
+                self.hub.handle_error(self.context, *self.exc_info)
             self.context = None
             self.async = None
             self.hub = None
             if self.receiver is not None:
-                # XXX exception!!!?
                 self.receiver(self)
         finally:
             self.receiver = None
             self.value = None
+            if self.exc_info:
+                self.exc_info = (self.exc_info[0], self.exc_info[1], None)
 
     def set(self, value):
         self.value = value
@@ -278,10 +274,11 @@ class ThreadResult(object):
 
     # link protocol:
     def successful(self):
-        return True
+        return self.exception is None
 
 
 def wrap_errors(errors, function, args, kwargs):
+    # Deprecated but never documented.
     try:
         return True, function(*args, **kwargs)
     except errors as ex:
