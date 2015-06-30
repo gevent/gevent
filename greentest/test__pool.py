@@ -36,6 +36,7 @@ class TestCoroutinePool(unittest.TestCase):
 
     def test_apply_raises(self):
         pool = self.klass(1)
+
         def raiser():
             raise ExpectedException()
         try:

@@ -32,7 +32,7 @@ class Resolver(object):
         return self.pool.apply(_socket.gethostbyname, args)
 
     def gethostbyname_ex(self, *args):
-        return self.pool.apply( _socket.gethostbyname_ex, args)
+        return self.pool.apply(_socket.gethostbyname_ex, args)
 
     def getaddrinfo(self, *args, **kwargs):
         return self.pool.apply(_socket.getaddrinfo, args, kwargs)
