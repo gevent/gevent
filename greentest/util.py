@@ -212,13 +212,27 @@ class TestServer(unittest.TestCase):
     args = []
     before_delay = 3
     after_delay = 0.5
+    popen = None
+    server = None # subclasses define this to be the path to the server.py
+
+    def start(self):
+        return start([sys.executable, '-u', self.server] + self.args, cwd=self.cwd)
+
+    def running_server(self):
+        from contextlib import contextmanager
+
+        @contextmanager
+        def running_server():
+            with self.start() as popen:
+                self.popen = popen
+                self.before()
+                yield
+                self.after()
+        return running_server()
 
     def test(self):
-        with start([sys.executable, '-u', self.server] + self.args, cwd=self.cwd) as popen:
-            self.popen = popen
-            self.before()
+        with self.running_server():
             self._run_all_tests()
-            self.after()
 
     def before(self):
         if self.before_delay is not None:

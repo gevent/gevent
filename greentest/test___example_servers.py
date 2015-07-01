@@ -7,23 +7,25 @@ else:
     import urllib2
 
 import util
-
+import socket
 import ssl
 
 
 class Test_wsgiserver(util.TestServer):
     server = 'wsgiserver.py'
     URL = 'http://127.0.0.1:8088'
+    PORT = 8088
     not_found_message = b'<h1>Not Found</h1>'
     ssl_ctx = None
+    _use_ssl = False
 
     def read(self, path='/'):
         url = self.URL + path
         try:
             if self.ssl_ctx is not None:
-                response = urllib2.urlopen(url, context=self.ssl_ctx)
+                response = urllib2.urlopen(url, None, 2, context=self.ssl_ctx)
             else:
-                response = urllib2.urlopen(url)
+                response = urllib2.urlopen(url, None, 2)
         except urllib2.HTTPError:
             response = sys.exc_info()[1]
         result = '%s %s' % (response.code, response.msg), response.read()
@@ -42,10 +44,41 @@ class Test_wsgiserver(util.TestServer):
         self.assertEqual(status, '404 Not Found')
         self.assertEqual(data, self.not_found_message)
 
+    def test_a_blocking_client(self):
+        with self.running_server():
+            # First, make sure we can talk to it.
+            self._test_hello()
+            # Now create a connection and only partway finish
+            # the transaction
+            sock = socket.create_connection(('127.0.0.1', self.PORT))
+            ssl_sock = None
+            if self._use_ssl:
+                ssl_sock = ssl.wrap_socket(sock)
+                sock_file = ssl_sock.makefile(mode='rwb')
+            else:
+                sock_file = sock.makefile(mode='rwb')
+            sock_file.write(b'GET /xxx HTTP/1.0\r\n\r\n')
+            sock_file.flush()
+            # Leave it open and not doing anything
+            # while the other request runs to completion.
+            # This demonstrates that a blocking client
+            # doesn't hang the whole server
+            self._test_hello()
+
+            line = sock_file.readline()
+            self.assertEqual(line, b'HTTP/1.1 404 Not Found\r\n')
+
+            sock.close()
+            sock_file.close()
+            if ssl_sock is not None:
+                ssl_sock.close()
+
 
 class Test_wsgiserver_ssl(Test_wsgiserver):
     server = 'wsgiserver_ssl.py'
     URL = 'https://127.0.0.1:8443'
+    PORT = 8443
+    _use_ssl = True
 
     if hasattr(ssl, '_create_unverified_context'):
         # Disable verification for our self-signed cert
