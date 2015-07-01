@@ -85,11 +85,6 @@ if PYPY:
         'test_socket.py',
     ]
 
-if PYGTE279 or PY3:
-    FAILING_TESTS += [
-        # SSL is blocking; see https://github.com/gevent/gevent/issues/597
-        'test___example_servers.py'
-    ]
 
 if PY3:
     # No idea / TODO

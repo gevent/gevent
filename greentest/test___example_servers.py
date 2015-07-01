@@ -83,6 +83,7 @@ class Test_wsgiserver(util.TestServer):
     def test_a_blocking_client(self):
         self._do_test_a_blocking_client()
 
+
 class Test_wsgiserver_ssl(Test_wsgiserver):
     server = 'wsgiserver_ssl.py'
     URL = 'https://127.0.0.1:8443'
