@@ -44,8 +44,8 @@ intersphinx_mapping = {'http://docs.python.org/': None}
 
 extlinks = {'issue': ('https://github.com/gevent/gevent/issues/%s',
                       'issue #'),
-            'pr':    ('https://github.com/gevent/gevent/pull/%s',
-                      'pull request #')}
+            'pr': ('https://github.com/gevent/gevent/pull/%s',
+                   'pull request #')}
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']

@@ -24,3 +24,13 @@ if hasattr(os, 'fork'):
     assert 'built-in' not in repr(os.fork), repr(os.fork)
 
 assert monkey.saved
+
+assert not monkey.is_object_patched('threading', 'Event')
+monkey.patch_thread(Event=True)
+assert monkey.is_object_patched('threading', 'Event')
+
+for modname in monkey.saved:
+    assert monkey.is_module_patched(modname)
+
+    for objname in monkey.saved[modname]:
+        assert monkey.is_object_patched(modname, objname)

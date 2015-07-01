@@ -19,6 +19,9 @@ Unreleased
   :issue:`556` by Robert Estelle.
 - Monkey-patch the ``selectors`` module from ``patch_all`` and
   ``patch_select`` on Python 3.4. See :issue:`591`.
+- Additional query functions for the :mod:`gevent.monkey` module
+  allow knowing what was patched. Discussed in :issue:`135` and
+  implemented in :pr:`325` by Nathan Hoad.
 
 1.1a1 (Jun 29, 2015)
 ====================

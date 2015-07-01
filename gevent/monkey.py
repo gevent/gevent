@@ -12,7 +12,11 @@ __all__ = ['patch_all',
            'patch_select',
            'patch_thread',
            'patch_subprocess',
-           'patch_sys']
+           'patch_sys',
+           # query functions
+           'get_original',
+           'is_module_patched',
+           'is_object_patched', ]
 
 
 if sys.version_info[0] >= 3:
@@ -29,6 +33,16 @@ else:
 saved = {}
 
 
+def is_module_patched(modname):
+    """Check if a module has been replaced with a cooperative version."""
+    return modname in saved
+
+
+def is_object_patched(modname, objname):
+    """Check if an object in a module has been replaced with a cooperative version."""
+    return is_module_patched(modname) and objname in saved[modname]
+
+
 def _get_original(name, items):
     d = saved.get(name, {})
     values = []
@@ -43,11 +57,20 @@ def _get_original(name, items):
     return values
 
 
-def get_original(name, item):
-    if isinstance(item, string_types):
-        return _get_original(name, [item])[0]
+def get_original(mod_name, item_name):
+    """Retrieve the original object from a module.
+
+    If the object has not been patched, then that object will still be retrieved.
+
+    :param item_name: A string or sequenc of strings naming the attribute(s) on the module
+        ``mod_name`` to return.
+    :return: The original value if a string was given for ``item_name`` or a sequence
+        of original values if a sequence was passed.
+    """
+    if isinstance(item_name, string_types):
+        return _get_original(mod_name, [item_name])[0]
     else:
-        return _get_original(name, item)
+        return _get_original(mod_name, item_name)
 
 
 def patch_item(module, attr, newitem):
@@ -132,11 +155,11 @@ def patch_thread(threading=True, _threading_local=True, Event=False):
         threading = __import__('threading')
         if Event:
             from gevent.event import Event
-            threading.Event = Event
+            patch_item(threading, 'Event', Event)
     if _threading_local:
         _threading_local = __import__('_threading_local')
         from gevent.local import local
-        _threading_local.local = local
+        patch_item(_threading_local, 'local', local)
 
     if sys.version_info[:2] >= (3, 4):
         # Issue 18808 changes the nature of Thread.join() to use
@@ -174,7 +197,7 @@ def patch_thread(threading=True, _threading_local=True, Event=False):
 def patch_socket(dns=True, aggressive=True):
     """Replace the standard socket object with gevent's cooperative sockets.
 
-    If *dns* is true, also patch dns functions in :mod:`socket`.
+    If ``dns`` is true, also patch dns functions in :mod:`socket`.
     """
     from gevent import socket
     # Note: although it seems like it's not strictly necessary to monkey patch 'create_connection',
@@ -193,11 +216,20 @@ def patch_socket(dns=True, aggressive=True):
 
 
 def patch_dns():
+    """Replace DNS functions in :mod:`socket` with cooperative versions.
+
+    This is only useful if :func:`patch_socket` has been called and is done automatically
+    by that method if requested.
+    """
     from gevent import socket
     patch_module('socket', items=socket.__dns__)
 
 
 def patch_ssl():
+    """Replace SSLSocket object and socket wrapping functions in :mod:`ssl` with cooperative versions.
+
+    This is only useful if :func:`patch_socket` has been called.
+    """
     patch_module('ssl')
 
 
@@ -242,12 +274,14 @@ def patch_select(aggressive=True):
 
 
 def patch_subprocess():
+    """Replace :func:`subprocess.call`, :func:`subprocess.check_call`,
+    :func:`subprocess.check_output` and :func:`subprocess.Popen` with cooperative versions."""
     patch_module('subprocess')
 
 
 def patch_all(socket=True, dns=True, time=True, select=True, thread=True, os=True, ssl=True, httplib=False,
               subprocess=True, sys=False, aggressive=True, Event=False):
-    """Do all of the default monkey patching (calls every other function in this module."""
+    """Do all of the default monkey patching (calls every other applicable function in this module)."""
     # order is important
     if os:
         patch_os()
