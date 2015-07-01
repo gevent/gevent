@@ -44,7 +44,10 @@ class Test_wsgiserver(util.TestServer):
         self.assertEqual(status, '404 Not Found')
         self.assertEqual(data, self.not_found_message)
 
-    def test_a_blocking_client(self):
+    def _do_test_a_blocking_client(self):
+        # We spawn this in a separate server because if it's broken
+        # the whole server hangs
+        print("Checking blocking")
         with self.running_server():
             # First, make sure we can talk to it.
             self._test_hello()
@@ -57,7 +60,8 @@ class Test_wsgiserver(util.TestServer):
                 sock_file = ssl_sock.makefile(mode='rwb')
             else:
                 sock_file = sock.makefile(mode='rwb')
-            sock_file.write(b'GET /xxx HTTP/1.0\r\n\r\n')
+            # write an incomplete request
+            sock_file.write(b'GET /xxx HTTP/1.0\r\n')
             sock_file.flush()
             # Leave it open and not doing anything
             # while the other request runs to completion.
@@ -65,6 +69,9 @@ class Test_wsgiserver(util.TestServer):
             # doesn't hang the whole server
             self._test_hello()
 
+            # now finish the original request
+            sock_file.write(b'\r\n')
+            sock_file.flush()
             line = sock_file.readline()
             self.assertEqual(line, b'HTTP/1.1 404 Not Found\r\n')
 
@@ -73,6 +80,8 @@ class Test_wsgiserver(util.TestServer):
             if ssl_sock is not None:
                 ssl_sock.close()
 
+    def test_a_blocking_client(self):
+        self._do_test_a_blocking_client()
 
 class Test_wsgiserver_ssl(Test_wsgiserver):
     server = 'wsgiserver_ssl.py'
@@ -96,6 +105,10 @@ class Test_webproxy(Test_wsgiserver):
         status, data = self.read('/http://www.google.com')
         self.assertEqual(status, '200 OK')
         assert b'google' in data.lower(), repr(data)
+
+    def _do_test_a_blocking_client(self):
+        # Not applicable
+        return
 
 
 # class Test_webpy(Test_wsgiserver):

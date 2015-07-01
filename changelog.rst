@@ -22,6 +22,9 @@ Unreleased
 - Additional query functions for the :mod:`gevent.monkey` module
   allow knowing what was patched. Discussed in :issue:`135` and
   implemented in :pr:`325` by Nathan Hoad.
+- In non-monkey-patched environments under Python 2.7.9 or above or
+  Python 3, using a gevent SSL socket could cause the greenlet to
+  block. See :issue:`597` by David Ford.
 
 1.1a1 (Jun 29, 2015)
 ====================
