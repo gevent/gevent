@@ -63,10 +63,10 @@ get_ident = thread.get_ident
 MAIN_THREAD = get_ident()
 
 
-def spawn_raw(function, *args, **kwargs):
+def spawn_raw(function, *args):
     hub = get_hub()
     g = greenlet(function, hub)
-    hub.loop.run_callback(g.switch, *args, **kwargs)
+    hub.loop.run_callback(g.switch, *args)
     return g
 
 
