@@ -20,14 +20,19 @@ _fileobject = __socket__._fileobject
 if sys.version_info[:2] < (2, 7):
     _get_memory = buffer
 else:
-    def _get_memory(string, offset):
+    def _get_memory(data):
         try:
-            return memoryview(string)[offset:]
+            mv = memoryview(data)
+            if mv.shape:
+                return mv
+            # No shape, probably working with a ctypes object,
+            # or something else exotic that supports the buffer interface
+            return mv.tobytes()
         except TypeError:
             # fixes "python2.7 array.array doesn't support memoryview used in
             # gevent.socket.send" issue
             # (http://code.google.com/p/gevent/issues/detail?id=94)
-            return buffer(string, offset)
+            return buffer(data)
 
 
 class _closedsocket(object):
@@ -287,17 +292,18 @@ class socket(object):
             data = data.encode()
         # this sendall is also reused by gevent.ssl.SSLSocket subclass,
         # so it should not call self._sock methods directly
+        data_memory = _get_memory(data)
         if self.timeout is None:
             data_sent = 0
-            while data_sent < len(data):
-                data_sent += self.send(_get_memory(data, data_sent), flags)
+            while data_sent < len(data_memory):
+                data_sent += self.send(data_memory[data_sent:], flags)
         else:
             timeleft = self.timeout
             end = time.time() + timeleft
             data_sent = 0
             while True:
-                data_sent += self.send(_get_memory(data, data_sent), flags, timeout=timeleft)
-                if data_sent >= len(data):
+                data_sent += self.send(data_memory[data_sent:], flags, timeout=timeleft)
+                if data_sent >= len(data_memory):
                     return
                 timeleft = end - time.time()
                 if timeleft <= 0:

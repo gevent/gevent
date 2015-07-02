@@ -95,11 +95,12 @@ class SocketAdapter(object):
 
     def sendall(self, data):
         fileno = self.fileno()
-        bytes_total = len(data)
+        data_memory = _get_memory(data)
+        bytes_total = len(data_memory)
         bytes_written = 0
         while True:
             try:
-                bytes_written += _write(fileno, _get_memory(data, bytes_written))
+                bytes_written += _write(fileno, data_memory[bytes_written:])
             except (IOError, OSError) as ex:
                 code = ex.args[0]
                 if code not in ignored_errors:

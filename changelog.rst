@@ -25,6 +25,9 @@ Unreleased
 - In non-monkey-patched environments under Python 2.7.9 or above or
   Python 3, using a gevent SSL socket could cause the greenlet to
   block. See :issue:`597` by David Ford.
+- ``gevent.socket.socket.sendall`` supports arbitrary objects that
+  implement the buffer protocol (such as ctypes structurs), just like
+  native sockets. Reported in :issue:`466` by tzickel.
 
 1.1a1 (Jun 29, 2015)
 ====================
