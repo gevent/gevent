@@ -35,6 +35,9 @@ for name in dir(__ssl__):
         continue
     if name.startswith('__'):
         continue
+    if name == 'socket':
+        # SSLSocket *must* subclass gevent.socket.socket; see issue 597
+        continue
     value = getattr(__ssl__, name)
     globals()[name] = value
     __imports__.append(name)

@@ -3,6 +3,13 @@ Changelog
 
 .. currentmodule:: gevent
 
+Release 1.0.3 (unreleased)
+--------------------------
+
+- In non-monkey-patched environments under Python 2.7.9 or above,
+  using a gevent SSL socket could cause the greenlet to block. See
+  issue #597 by David Ford and issue #584 by SuiperLolo.
+
 
 Release 1.0.2 (May 23, 2015)
 -------------
