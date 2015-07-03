@@ -800,6 +800,8 @@ class loop(object):
 
 class callback(object):
 
+    __slots__ = ('callback', 'args')
+
     def __init__(self, callback, args):
         self.callback = callback
         self.args = args
@@ -824,6 +826,18 @@ class callback(object):
 
     def _format(self):
         return ''
+
+    def __repr__(self):
+        result = "<%s at 0x%x" % (self.__class__.__name__, id(self))
+        if self.pending:
+            result += " pending"
+        if self.callback is not None:
+            result += " callback=%r" % (self.callback, )
+        if self.args is not None:
+            result += " args=%r" % (self.args, )
+        if self.callback is None and self.args is None:
+            result += " stopped"
+        return result + ">"
 
 
 class watcher(object):
