@@ -26,11 +26,17 @@ Unreleased
   Python 3, using a gevent SSL socket could cause the greenlet to
   block. See :issue:`597` by David Ford.
 - ``gevent.socket.socket.sendall`` supports arbitrary objects that
-  implement the buffer protocol (such as ctypes structurs), just like
+  implement the buffer protocol (such as ctypes structures), just like
   native sockets. Reported in :issue:`466` by tzickel.
 - Added support for the ``onerror`` attribute present in CFFI 1.2.0
   for better signal handling under PyPy. Thanks to Armin Rigo and Omer
   Katz. (See https://bitbucket.org/cffi/cffi/issue/152/handling-errors-from-signal-handlers-in)
+- The ``gevent.subprocess`` module is closer in behaviour to the
+  standard library under Python 3, at least on POSIX. The
+  ``pass_fds``, ``restore_signals``, and ``start_new_session``
+  arguments are still unimplemented.
+- An exception starting a child process with the ``gevent.subprocess``
+  module no longer leaks file descriptors. Reported in :pr:`374` by 陈小玉.
 
 1.1a1 (Jun 29, 2015)
 ====================

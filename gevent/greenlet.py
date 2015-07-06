@@ -451,15 +451,26 @@ def _kill(greenlet, exception, waiter):
 
 
 def joinall(greenlets, timeout=None, raise_error=False, count=None):
+    """
+    Wait for the ``greenlets`` to finish.
+
+    :param greenlets: A sequence of greenlets to wait for.
+    :keyword float timeout: If given, the maximum number of seconds to wait.
+    :return: A sequence of the greenlets that finished before the timeout (if any)
+        expired.
+    """
     if not raise_error:
-        wait(greenlets, timeout=timeout, count=count)
-    else:
-        for obj in iwait(greenlets, timeout=timeout, count=count):
-            if getattr(obj, 'exception', None) is not None:
-                if hasattr(obj, '_raise_exception'):
-                    obj._raise_exception()
-                else:
-                    raise obj.exception
+        return wait(greenlets, timeout=timeout, count=count)
+
+    done = []
+    for obj in iwait(greenlets, timeout=timeout, count=count):
+        if getattr(obj, 'exception', None) is not None:
+            if hasattr(obj, '_raise_exception'):
+                obj._raise_exception()
+            else:
+                raise obj.exception
+        done.append(obj)
+    return done
 
 
 def _killall3(greenlets, exception, waiter):

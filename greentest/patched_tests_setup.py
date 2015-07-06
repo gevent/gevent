@@ -197,6 +197,55 @@ if hasattr(sys, 'pypy_version_info'):
             # https://bitbucket.org/cffi/cffi/issue/152/handling-errors-from-signal-handlers-in
         ]
 
+if sys.version_info[:2] >= (3, 4):
+    disabled_tests += [
+        'test_subprocess.ProcessTestCase.test_threadsafe_wait',
+        # XXX: It seems that threading.Timer is not being greened properly, possibly
+        # due to a similar issue to what gevent.threading documents for normal threads.
+        # In any event, this test hangs forever
+
+        'test_subprocess.ProcessTestCase.test_io_buffered_by_default',
+        'test_subprocess.ProcessTestCase.test_io_unbuffered_works',
+        # These tests want to assert on the type of the class that implements
+        # `Popen.stdin`; we use a FileObject, but they expect different subclasses
+        # from the `io` module
+
+        'test_subprocess.POSIXProcessTestCase.test_terminate_dead',
+        'test_subprocess.POSIXProcessTestCase.test_send_signal_dead',
+        'test_subprocess.POSIXProcessTestCase.test_kill_dead',
+        # With our monkey patch in place,
+        # they fail because the process they're looking for has been allowed to exit.
+        # Our monkey patch waits for the process with a watcher and so detects
+        # the exit before the normal polling mechanism would
+
+        'test_subprocess.POSIXProcessTestCase.test_close_fds',
+        'test_subprocess.POSIXProcessTestCase.test_pass_fds',
+        'test_subprocess.POSIXProcessTestCase.test_pass_fds_inheritable',
+        # XXX: We don't implement the pass_fds option yet
+
+        'test_subprocess.POSIXProcessTestCase.test_restore_signals',
+        # XXX: We don't implement the restore_signals option yet
+
+        'test_subprocess.POSIXProcessTestCase.test_start_new_session',
+        # XXX: We don't implement the start_new_session option yet
+
+        'test_subprocess.POSIXProcessTestCase.test_exception_bad_args_0',
+        'test_subprocess.POSIXProcessTestCase.test_exception_bad_executable',
+        'test_subprocess.POSIXProcessTestCase.test_exception_cwd',
+        # These all want to inspect the string value of an exception raised
+        # by the exec() call in the child. The _posixsubprocess module arranges
+        # for better exception handling and printing than we do.
+
+        'test_subprocess.POSIXProcessTestCase.test_preexec_errpipe_does_not_double_close_pipes',
+        # Subclasses Popen, and overrides _execute_child. Expects things to be done
+        # in a particular order in an exception case, but we don't follow that
+        # exact order
+
+        'test_subprocess.POSIXProcessTestCase.test_small_errpipe_write_fd',
+        # Python 3 fixed a bug if the stdio file descriptors were closed;
+        # we still have that bug
+    ]
+
 # if 'signalfd' in os.environ.get('GEVENT_BACKEND', ''):
 #     # tests that don't interact well with signalfd
 #     disabled_tests.extend([
