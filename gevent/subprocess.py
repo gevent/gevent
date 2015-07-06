@@ -318,40 +318,9 @@ class Popen(object):
          c2pread, c2pwrite,
          errread, errwrite) = self._get_handles(stdin, stdout, stderr)
 
-        self._closed_child_pipe_fds = False
-        try:
-            self._execute_child(args, executable, preexec_fn, close_fds,
-                                cwd, env, universal_newlines,
-                                startupinfo, creationflags, shell,
-                                p2cread, p2cwrite,
-                                c2pread, c2pwrite,
-                                errread, errwrite)
-        except:
-            # Cleanup if the child failed starting.
-            # (gevent: New in python3, but reported as gevent bug in #347)
-            for f in filter(None, (self.stdin, self.stdout, self.stderr)):
-                try:
-                    f.close()
-                except OSError:
-                    pass  # Ignore EBADF or other errors.
-
-            if not self._closed_child_pipe_fds:
-                to_close = []
-                if stdin == PIPE:
-                    to_close.append(p2cread)
-                if stdout == PIPE:
-                    to_close.append(c2pwrite)
-                if stderr == PIPE:
-                    to_close.append(errwrite)
-                if hasattr(self, '_devnull'):
-                    to_close.append(self._devnull)
-                for fd in to_close:
-                    try:
-                        os.close(fd)
-                    except OSError:
-                        pass
-
-            raise
+        # We wrap OS handles *before* launching the child, otherwise a
+        # quickly terminating child could make our fds unwrappable
+        # (see #8458).
 
         if mswindows:
             if p2cwrite is not None:
@@ -379,6 +348,43 @@ class Popen(object):
                 self.stderr = FileObject(errread, 'rU', bufsize)
             else:
                 self.stderr = FileObject(errread, 'rb', bufsize)
+
+        self._closed_child_pipe_fds = False
+        try:
+            self._execute_child(args, executable, preexec_fn, close_fds,
+                                cwd, env, universal_newlines,
+                                startupinfo, creationflags, shell,
+                                p2cread, p2cwrite,
+                                c2pread, c2pwrite,
+                                errread, errwrite)
+        except:
+            # Cleanup if the child failed starting.
+            # (gevent: New in python3, but reported as gevent bug in #347.
+            # Note that under Py2, any error raised below will replace the
+            # original error. This could be worked around using hub.reraise)
+            for f in filter(None, (self.stdin, self.stdout, self.stderr)):
+                try:
+                    f.close()
+                except OSError:
+                    pass  # Ignore EBADF or other errors.
+
+            if not self._closed_child_pipe_fds:
+                to_close = []
+                if stdin == PIPE:
+                    to_close.append(p2cread)
+                if stdout == PIPE:
+                    to_close.append(c2pwrite)
+                if stderr == PIPE:
+                    to_close.append(errwrite)
+                if hasattr(self, '_devnull'):
+                    to_close.append(self._devnull)
+                for fd in to_close:
+                    try:
+                        os.close(fd)
+                    except OSError:
+                        pass
+
+            raise
 
     def __repr__(self):
         return '<%s at 0x%x pid=%r returncode=%r>' % (self.__class__.__name__, id(self), self.pid, self.returncode)
