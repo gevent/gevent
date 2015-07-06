@@ -336,7 +336,9 @@ class Popen(object):
 
         if p2cwrite is not None:
             if PY3 and universal_newlines:
-                self.stdin = FileObject(p2cwrite, 'w', bufsize)
+                # Under Python 3, if we left on the 'b' we'd get different results
+                # depending on whether we used FileObjectPosix or FileObjectThread
+                self.stdin = FileObject(p2cwrite, 'wb', bufsize)
                 self.stdin._tranlate = True
                 self.stdin.io = io.TextIOWrapper(self.stdin.io, write_through=True,
                                                  line_buffering=(bufsize == 1))
@@ -344,12 +346,24 @@ class Popen(object):
                 self.stdin = FileObject(p2cwrite, 'wb', bufsize)
         if c2pread is not None:
             if universal_newlines:
-                self.stdout = FileObject(c2pread, 'rU', bufsize)
+                if PY3:
+                    # FileObjectThread doesn't support the 'U' qualifier
+                    # with a bufsize of 0
+                    self.stdout = FileObject(c2pread, 'rb', bufsize)
+                    self.stdout.io = io.TextIOWrapper(self.stdout.io)
+                    self.stdout._tranlate = True
+                else:
+                    self.stdout = FileObject(c2pread, 'rU', bufsize)
             else:
                 self.stdout = FileObject(c2pread, 'rb', bufsize)
         if errread is not None:
             if universal_newlines:
-                self.stderr = FileObject(errread, 'rU', bufsize)
+                if PY3:
+                    self.stderr = FileObject(errread, 'rb', bufsize)
+                    self.stderr.io = io.TextIOWrapper(self.stderr.io)
+                    self.stderr._tranlate = True
+                else:
+                    self.stderr = FileObject(errread, 'rU', bufsize)
             else:
                 self.stderr = FileObject(errread, 'rb', bufsize)
 
@@ -371,7 +385,7 @@ class Popen(object):
             for f in filter(None, (self.stdin, self.stdout, self.stderr)):
                 try:
                     f.close()
-                except OSError:
+                except (OSError, IOError):
                     pass  # Ignore EBADF or other errors.
 
             if not self._closed_child_pipe_fds:
@@ -387,7 +401,7 @@ class Popen(object):
                 for fd in to_close:
                     try:
                         os.close(fd)
-                    except OSError:
+                    except (OSError, IOError):
                         pass
             if not PY3:
                 try:

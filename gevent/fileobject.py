@@ -59,7 +59,7 @@ class FileObjectThread(object):
                 # we cannot do this, since fdopen object will close the descriptor
                 raise TypeError('FileObjectThread does not support close=False')
             fobj = os.fdopen(fobj, *args)
-        self._fobj = fobj
+        self.io = fobj
         if self.threadpool is None:
             self.threadpool = get_hub().threadpool
 
@@ -68,10 +68,10 @@ class FileObjectThread(object):
             return self.threadpool.apply(func, args, kwargs)
 
     def close(self):
-        fobj = self._fobj
+        fobj = self.io
         if fobj is None:
             return
-        self._fobj = None
+        self.io = None
         try:
             self.flush(_fobj=fobj)
         finally:
@@ -82,24 +82,25 @@ class FileObjectThread(object):
         if _fobj is not None:
             fobj = _fobj
         else:
-            fobj = self._fobj
+            fobj = self.io
         if fobj is None:
             raise FileObjectClosed
         return self._apply(fobj.flush)
 
     def __repr__(self):
-        return '<%s _fobj=%r threadpool=%r>' % (self.__class__.__name__, self._fobj, self.threadpool)
+        return '<%s _fobj=%r threadpool=%r>' % (self.__class__.__name__, self.io, self.threadpool)
 
     def __getattr__(self, item):
-        assert item != '_fobj'
-        if self._fobj is None:
+        if self.io is None:
+            if item == 'closed':
+                return True
             raise FileObjectClosed
-        return getattr(self._fobj, item)
+        return getattr(self.io, item)
 
     for method in ['read', 'readinto', 'readline', 'readlines', 'write', 'writelines', 'xreadlines']:
 
         exec('''def %s(self, *args, **kwargs):
-    fobj = self._fobj
+    fobj = self.io
     if fobj is None:
         raise FileObjectClosed
     return self._apply(fobj.%s, args, kwargs)
@@ -133,16 +134,16 @@ class FileObjectBlock(object):
                 # we cannot do this, since fdopen object will close the descriptor
                 raise TypeError('FileObjectBlock does not support close=False')
             fobj = os.fdopen(fobj, *args)
-        self._fobj = fobj
+        self.io = fobj
 
     def __repr__(self):
-        return '<%s %r>' % (self._fobj, )
+        return '<%s %r>' % (self.io, )
 
     def __getattr__(self, item):
         assert item != '_fobj'
-        if self._fobj is None:
+        if self.io is None:
             raise FileObjectClosed
-        return getattr(self._fobj, item)
+        return getattr(self.io, item)
 
 
 config = os.environ.get('GEVENT_FILE')
