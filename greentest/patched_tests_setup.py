@@ -187,11 +187,15 @@ if hasattr(sys, 'pypy_version_info'):
         # in PyPy's forking. Only runs on linux and is specific to the PyPy
         # implementation of subprocess (possibly explains the extra parameter to
         # _execut_child)
-
-        'test_signal.InterProcessSignalTests.test_main',
-        # Fails to get the signal to the correct handler due to
-        # https://bitbucket.org/cffi/cffi/issue/152/handling-errors-from-signal-handlers-in
     ]
+
+    import cffi
+    if cffi.__version_info__ < (1, 2, 0):
+        disabled_tests += [
+            'test_signal.InterProcessSignalTests.test_main',
+            # Fails to get the signal to the correct handler due to
+            # https://bitbucket.org/cffi/cffi/issue/152/handling-errors-from-signal-handlers-in
+        ]
 
 # if 'signalfd' in os.environ.get('GEVENT_BACKEND', ''):
 #     # tests that don't interact well with signalfd

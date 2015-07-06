@@ -77,13 +77,17 @@ if PYPY:
         # non-traceability? (Is it even repeatable? Possibly not; a lot of the test time is spent in,
         # e.g., test__socket_dns.py doing network stuff.)
         'test__threading_vs_settrace.py',
-
-
-        # check_sendall_interrupted and testInterruptedTimeout fail due to
-        # https://bitbucket.org/cffi/cffi/issue/152/handling-errors-from-signal-handlers-in
-        # See also patched_tests_setup and 'test_signal.InterProcessSignalTests.test_main'
-        'test_socket.py',
     ]
+
+    import cffi
+    if cffi.__version_info__ < (1, 2, 0):
+        FAILING_TESTS += [
+
+            # check_sendall_interrupted and testInterruptedTimeout fail due to
+            # https://bitbucket.org/cffi/cffi/issue/152/handling-errors-from-signal-handlers-in
+            # See also patched_tests_setup and 'test_signal.InterProcessSignalTests.test_main'
+            'test_socket.py',
+        ]
 
 
 if PY3:

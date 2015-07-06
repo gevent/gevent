@@ -26,6 +26,19 @@ def st_nlink_type():
         return "unsigned long"
     return "long long"
 
+import cffi
+if cffi.__version_info__ >= (1, 2, 0):
+    # See https://bitbucket.org/cffi/cffi/issue/152/handling-errors-from-signal-handlers-in.
+    # With this version, bundled with PyPy 2.7.0 and above, we can more reliably
+    # handle signals and other exceptions. With this support, we could simplify
+    # _python_callback and _python_handle_error in addition to the simplifications for
+    # signals and KeyboardInterrupt. However, because we need to support PyPy 2.5.0+,
+    # we keep as much as practical shared.
+    _cffi_supports_on_error = True
+else:
+    # In older versions, including the 2.5.0 currently on Travis CI, we
+    # have to use a kludge
+    _cffi_supports_on_error = False
 
 from cffi import FFI
 ffi = FFI()
@@ -499,6 +512,13 @@ def time():
 _default_loop_destroyed = False
 
 
+def _loop_callback(*args, **kwargs):
+    if _cffi_supports_on_error:
+        return ffi.callback(*args, **kwargs)
+    kwargs.pop('onerror')
+    return ffi.callback(*args, **kwargs)
+
+
 class loop(object):
 
     error_handler = None
@@ -510,13 +530,17 @@ class loop(object):
         # self._check is a watcher that runs in each iteration of the
         # mainloop, just after the blocking call
         self._check = ffi.new("struct ev_check *")
-        self._check_callback_ffi = ffi.callback("void(*)(struct ev_loop *, void*, int)", self._check_callback)
+        self._check_callback_ffi = _loop_callback("void(*)(struct ev_loop *, void*, int)",
+                                                  self._check_callback,
+                                                  onerror=self._check_callback_handle_error)
         libev.ev_check_init(self._check, self._check_callback_ffi)
 
         # self._prepare is a watcher that runs in each iteration of the mainloop,
         # just before the blocking call
         self._prepare = ffi.new("struct ev_prepare *")
-        self._prepare_callback_ffi = ffi.callback("void(*)(struct ev_loop *, void*, int)", self._run_callbacks)
+        self._prepare_callback_ffi = _loop_callback("void(*)(struct ev_loop *, void*, int)",
+                                                    self._run_callbacks,
+                                                    onerror=self._check_callback_handle_error)
         libev.ev_prepare_init(self._prepare, self._prepare_callback_ffi)
 
         self._timer0 = ffi.new("struct ev_timer *")
@@ -546,21 +570,34 @@ class loop(object):
         libev.ev_check_start(self._ptr, self._check)
         self.unref()
 
-        if default:
-            signalmodule.signal(2, self.int_handler)
-        self.ate_keyboard_interrupt = False
-        self.keyboard_interrupt_allowed = True
         self._keepaliveset = set()
 
-    def _check_callback(self, *args):
-        if self.ate_keyboard_interrupt:
-            self.handle_error(self, KeyboardInterrupt, KeyboardInterrupt(), None)
+        if not _cffi_supports_on_error:
+            if default:
+                signalmodule.signal(2, self.int_handler)
             self.ate_keyboard_interrupt = False
+            self.keyboard_interrupt_allowed = True
 
-    def int_handler(self, *args):
-        if self.keyboard_interrupt_allowed:
-            raise KeyboardInterrupt
-        self.ate_keyboard_interrupt = True
+    def _check_callback_handle_error(self, t, v, tb):
+        # None as the context argument causes the exception to be raised
+        # in the main greenlet.
+        self.handle_error(None, t, v, tb)
+
+    if _cffi_supports_on_error:
+        def _check_callback(self, *args):
+            # If we have the onerror callback, this is a no-op; all the real
+            # work to rethrow the exception is done by the onerror callback
+            pass
+    else:
+        def _check_callback(self, *args):
+            if self.ate_keyboard_interrupt:
+                self.handle_error(self, KeyboardInterrupt, KeyboardInterrupt(), None)
+                self.ate_keyboard_interrupt = False
+
+        def int_handler(self, *args):
+            if self.keyboard_interrupt_allowed:
+                raise KeyboardInterrupt
+            self.ate_keyboard_interrupt = True
 
     def _run_callbacks(self, evloop, _, revents):
         count = 1000
@@ -608,7 +645,7 @@ class loop(object):
                 _default_loop_destroyed = True
             libev.ev_loop_destroy(self._ptr)
             self._ptr = ffi.NULL
-        # XXX restore default_int_signal handler
+        # XXX restore default_int_signal handler if we set it (_cffi_supports_on_error is False)
 
     @property
     def ptr(self):

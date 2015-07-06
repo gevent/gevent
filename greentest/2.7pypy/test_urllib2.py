@@ -279,6 +279,7 @@ class MockHTTPClass:
         self.data = None
         self.raise_on_endheaders = False
         self._tunnel_headers = {}
+        self.sock = None # gevent: compat with 2.7.0+
 
     def __call__(self, host, timeout=socket._GLOBAL_DEFAULT_TIMEOUT):
         self.host = host
