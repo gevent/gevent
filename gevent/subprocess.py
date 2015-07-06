@@ -9,6 +9,7 @@ import traceback
 from gevent.event import AsyncResult
 from gevent.hub import get_hub, linkproxy, sleep, getcurrent, integer_types, string_types, xrange
 from gevent.hub import PY3
+from gevent.hub import reraise
 from gevent.fileobject import FileObject
 from gevent.greenlet import Greenlet, joinall
 spawn = Greenlet.spawn
@@ -164,14 +165,17 @@ if PY3:
         CalledProcessError object will have the return code in the returncode
         attribute and output in the output attribute.
         The arguments are the same as for the Popen constructor.  Example:
-        >>> check_output(["ls", "-l", "/dev/null"])
-        b'crw-rw-rw- 1 root root 1, 3 Oct 18  2007 /dev/null\n'
+        >>> check_output(["ls", "-1", "/dev/null"])
+        b'/dev/null\n'
+
         The stdout argument is not allowed as it is used internally.
+
         To capture standard error in the result, use stderr=STDOUT.
         >>> check_output(["/bin/sh", "-c",
         ...               "ls -l non_existent_file ; exit 0"],
         ...              stderr=STDOUT)
         b'ls: non_existent_file: No such file or directory\n'
+
         There is an additional optional argument, "input", allowing you to
         pass a string to the subprocess's stdin.  If you use this argument
         you may not also use the Popen constructor's "stdin" argument, as
@@ -179,6 +183,7 @@ if PY3:
         >>> check_output(["sed", "-e", "s/foo/bar/"],
         ...              input=b"when in the course of fooman events\n")
         b'when in the course of barman events\n'
+
         If universal_newlines=True is passed, the return value will be a
         string rather than bytes.
         """
@@ -321,7 +326,6 @@ class Popen(object):
         # We wrap OS handles *before* launching the child, otherwise a
         # quickly terminating child could make our fds unwrappable
         # (see #8458).
-
         if mswindows:
             if p2cwrite is not None:
                 p2cwrite = msvcrt.open_osfhandle(p2cwrite.Detach(), 0)
@@ -361,7 +365,9 @@ class Popen(object):
             # Cleanup if the child failed starting.
             # (gevent: New in python3, but reported as gevent bug in #347.
             # Note that under Py2, any error raised below will replace the
-            # original error. This could be worked around using hub.reraise)
+            # original error so we have to use reraise)
+            if not PY3:
+                exc_info = sys.exc_info()
             for f in filter(None, (self.stdin, self.stdout, self.stderr)):
                 try:
                     f.close()
@@ -383,7 +389,11 @@ class Popen(object):
                         os.close(fd)
                     except OSError:
                         pass
-
+            if not PY3:
+                try:
+                    reraise(*exc_info)
+                finally:
+                    del exc_info
             raise
 
     def __repr__(self):

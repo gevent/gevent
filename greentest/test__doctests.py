@@ -45,9 +45,9 @@ if __name__ == '__main__':
         tests_count = 0
         modules_count = 0
         for m, path in sorted(modules):
-            with open(path, 'r') as f:
+            with open(path, 'rb') as f:
                 contents = f.read()
-            if re.search(r'^\s*>>> ', contents, re.M):
+            if re.search(br'^\s*>>> ', contents, re.M):
                 try:
                     s = doctest.DocTestSuite(m, extraglobs=globs)
                     test_count = len(s._tests) # pylint: disable=W0212
