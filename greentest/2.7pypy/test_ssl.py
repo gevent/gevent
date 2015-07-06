@@ -181,7 +181,11 @@ class BasicSocketTests(unittest.TestCase):
         self.assertGreaterEqual(fix, 0)
         self.assertLess(fix, 256)
         self.assertGreaterEqual(patch, 0)
-        self.assertLessEqual(patch, 26)
+        if sys.pypy_version_info[:3] < (2, 7, 0):
+            # gevent: compat with 2.7.0+; actually, this might depend on the local build environment
+            self.assertLessEqual(patch, 26)
+        else:
+            self.assertLessEqual(patch, 29)
         self.assertGreaterEqual(status, 0)
         self.assertLessEqual(status, 15)
         # Version string as returned by OpenSSL, the format might change
