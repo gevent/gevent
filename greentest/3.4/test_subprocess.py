@@ -359,7 +359,7 @@ class ProcessTestCase(BaseTestCase):
         # is relative.
         python_dir, python_base = self._split_python_path()
         rel_python = os.path.join(os.curdir, python_base)
-        with support.temp_cwd() as wrong_dir:
+        with support.temp_cwd('test_cwd_with_relative_arg') as wrong_dir: # gevent: use distinct name, avoid Travis CI failure
             # Before calling with the correct cwd, confirm that the call fails
             # without cwd and with the wrong cwd.
             self.assertRaises(FileNotFoundError, subprocess.Popen,
@@ -376,7 +376,7 @@ class ProcessTestCase(BaseTestCase):
         python_dir, python_base = self._split_python_path()
         rel_python = os.path.join(os.curdir, python_base)
         doesntexist = "somethingyoudonthave"
-        with support.temp_cwd() as wrong_dir:
+        with support.temp_cwd('test_cwd_with_relative_executable') as wrong_dir:  # gevent: use distinct name, avoid Travis CI failure
             # Before calling with the correct cwd, confirm that the call fails
             # without cwd and with the wrong cwd.
             self.assertRaises(FileNotFoundError, subprocess.Popen,
