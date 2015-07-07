@@ -311,6 +311,8 @@ class Group(GroupMappingMixin):
             self._empty_event.wait(timeout=timeout)
             for greenlet in greenlets:
                 if greenlet.exception is not None:
+                    if hasattr(greenlet, '_raise_exception'):
+                        greenlet._raise_exception()
                     raise greenlet.exception
         else:
             self._empty_event.wait(timeout=timeout)
