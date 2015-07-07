@@ -113,11 +113,14 @@ def patch_sys(stdin=True, stdout=True, stderr=True):
     """Patch sys.std[in,out,err] to use a cooperative IO via a threadpool.
 
     This is relatively dangerous and can have unintended consequences such as hanging
-    the process or misinterpreting control keys.
+    the process or `misinterpreting control keys`_ when ``input`` and ``raw_input``
+    are used.
 
     This method does nothing on Python 3. The Python 3 interpreter wants to flush
     the TextIOWrapper objects that make up stderr/stdout at shutdown time, but
     using a threadpool at that time leads to a hang.
+
+    .. _`misinterpreting control keys`: https://github.com/gevent/gevent/issues/274
     """
     # test__issue6.py demonstrates the hang if these lines are removed;
     # strangely enough that test passes even without monkey-patching sys
