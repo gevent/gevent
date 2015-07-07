@@ -34,7 +34,10 @@ Unreleased
 - The ``gevent.subprocess`` module is closer in behaviour to the
   standard library under Python 3, at least on POSIX. The
   ``pass_fds``, ``restore_signals``, and ``start_new_session``
-  arguments are still unimplemented.
+  arguments are now unimplemented, as are the ``timeout`` parameters
+  to various functions. Under Python 2, the previously undocumented ``timeout``
+  parameter to ``Popen.communicate`` raises an exception like it's
+  Python 3 counterpart.
 - An exception starting a child process with the ``gevent.subprocess``
   module no longer leaks file descriptors. Reported in :pr:`374` by 陈小玉.
 
