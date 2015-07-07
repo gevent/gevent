@@ -284,7 +284,6 @@ class Popen(object):
             else:
                 close_fds = False
 
-
         if mswindows:
             if preexec_fn is not None:
                 raise ValueError("preexec_fn is not supported on Windows "
@@ -1016,6 +1015,9 @@ class Popen(object):
                                     sig = getattr(signal, sig, None)
                                     if sig is not None:
                                         signal.signal(sig, signal.SIG_DFL)
+
+                            if start_new_session:
+                                os.setsid()
 
                             if env is None:
                                 os.execvp(executable, args)
