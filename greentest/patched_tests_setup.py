@@ -218,9 +218,6 @@ if sys.version_info[:2] >= (3, 4):
         # Our monkey patch waits for the process with a watcher and so detects
         # the exit before the normal polling mechanism would
 
-        'test_subprocess.POSIXProcessTestCase.test_restore_signals',
-        # XXX: We don't implement the restore_signals option yet
-
         'test_subprocess.POSIXProcessTestCase.test_start_new_session',
         # XXX: We don't implement the start_new_session option yet
 

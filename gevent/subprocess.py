@@ -1009,6 +1009,14 @@ class Popen(object):
                                     except:
                                         pass
 
+                            if restore_signals:
+                                # restore the documented signals back to sig_dfl;
+                                # not all will be defined on every platform
+                                for sig in 'SIGPIPE', 'SIGXFZ', 'SIGXFSZ':
+                                    sig = getattr(signal, sig, None)
+                                    if sig is not None:
+                                        signal.signal(sig, signal.SIG_DFL)
+
                             if env is None:
                                 os.execvp(executable, args)
                             else:
