@@ -124,11 +124,6 @@ class Test(greentest.TestCase):
                              bufsize=1)
         try:
             stdout = p.stdout.read()
-            if PY3 and isinstance(stdout, bytes):
-                # OS X gives us binary back from stdout.read, but linux (travis ci)
-                # gives us text...text is correct because we're in universal newline
-                # mode
-                stdout = stdout.decode('ascii')
             if python_universal_newlines:
                 # Interpreter with universal newline support
                 self.assertEqual(stdout,
@@ -145,7 +140,8 @@ class Test(greentest.TestCase):
         def test_nonblock_removed(self):
             # see issue #134
             r, w = os.pipe()
-            p = subprocess.Popen(['grep', 'text'], stdin=subprocess.FileObject(r))
+            stdin = subprocess.FileObject(r)
+            p = subprocess.Popen(['grep', 'text'], stdin=stdin)
             try:
                 # Closing one half of the pipe causes Python 3 on OS X to terminate the
                 # child process; it exits with code 1 and the assert that p.poll is None
@@ -158,6 +154,8 @@ class Test(greentest.TestCase):
             finally:
                 if p.poll() is None:
                     p.kill()
+                stdin.close()
+                os.close(w)
 
     def test_issue148(self):
         for i in range(7):
@@ -180,6 +178,9 @@ class Test(greentest.TestCase):
     def test_popen_bufsize(self):
         # Test that subprocess has unbuffered output by default
         # (as the vanilla subprocess module)
+        if PY3:
+            # The default changed under python 3.
+            return
         p = subprocess.Popen([sys.executable, '-u', '-c',
                               'import sys; sys.stdout.write(sys.stdin.readline())'],
                              stdin=subprocess.PIPE, stdout=subprocess.PIPE)
