@@ -235,6 +235,13 @@ if sys.version_info[:2] >= (3, 4):
         # we still have that bug
     ]
 
+    if os.environ.get('TRAVIS') == 'true':
+        disabled_tests += [
+            'test_subprocess.ProcessTestCase.test_double_close_on_error',
+            # This test is racy or OS-dependent. It passes locally (sufficiently fast machine)
+            # but fails under Travis
+        ]
+
 # if 'signalfd' in os.environ.get('GEVENT_BACKEND', ''):
 #     # tests that don't interact well with signalfd
 #     disabled_tests.extend([
