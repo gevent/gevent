@@ -16,7 +16,7 @@ class Test(util.TestServer):
             else:
                 kwargs = {'bufsize': 1}
             kwargs['mode'] = 'rb'
-            conn = create_connection(('127.0.0.1', 6000))
+            conn = create_connection(('127.0.0.1', 16000))
             conn.settimeout(0.1)
             rfile = conn.makefile(**kwargs)
 

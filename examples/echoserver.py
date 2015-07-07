@@ -1,8 +1,8 @@
 #!/usr/bin/env python
-"""Simple server that listens on port 6000 and echos back every input to the client.
+"""Simple server that listens on port 16000 and echos back every input to the client.
 
 Connect to it with:
-  telnet localhost 6000
+  telnet localhost 16000
 
 Terminate the connection by terminating telnet (typically Ctrl-] and then 'quit').
 """
@@ -30,8 +30,8 @@ def echo(socket, address):
 
 if __name__ == '__main__':
     # to make the server use SSL, pass certfile and keyfile arguments to the constructor
-    server = StreamServer(('0.0.0.0', 6000), echo)
+    server = StreamServer(('0.0.0.0', 16000), echo)
     # to start the server asynchronously, use its start() method;
     # we use blocking serve_forever() here because we have no other jobs
-    print('Starting echo server on port 6000')
+    print('Starting echo server on port 16000')
     server.serve_forever()

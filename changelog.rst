@@ -40,6 +40,8 @@ Unreleased
   Python 3 counterpart.
 - An exception starting a child process with the ``gevent.subprocess``
   module no longer leaks file descriptors. Reported in :pr:`374` by 陈小玉.
+- The example ``echoserver.py`` no longer binds to the standard X11
+  TCP port. Reported in :issue:`485` by minusf.
 
 1.1a1 (Jun 29, 2015)
 ====================
