@@ -49,6 +49,8 @@ Unreleased
   forked child process, such as with ``multiprocessing.Process``.
   Previously the child process would hang indefinitely. Reported in
   :issue:`230` by Lx Yu.
+- Fork watchers are more likely to (eventually) get called in a
+  multi-threaded program.
 
 1.1a1 (Jun 29, 2015)
 ====================
