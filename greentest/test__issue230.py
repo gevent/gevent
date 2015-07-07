@@ -7,8 +7,10 @@ import multiprocessing
 # Make sure that using the resolver in a forked process
 # doesn't hang forever.
 
+
 def block():
-	socket.getaddrinfo('localhost', 8001)
+    socket.getaddrinfo('localhost', 8001)
+
 
 def main():
     socket.getaddrinfo('localhost', 8001)
