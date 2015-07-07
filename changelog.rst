@@ -45,6 +45,10 @@ Unreleased
 - ``gevent.iwait`` no longer throws ``LoopExit`` if the caller
   switches greenlets between return values. Reported and initial patch
   in :pr:`467` by Alexey Borzenkov.
+- The default threadpool and default threaded resolver work in a
+  forked child process, such as with ``multiprocessing.Process``.
+  Previously the child process would hang indefinitely. Reported in
+  :issue:`230` by Lx Yu.
 
 1.1a1 (Jun 29, 2015)
 ====================

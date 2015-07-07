@@ -153,6 +153,21 @@ def reinit():
     hub = _get_hub()
     if hub is not None:
         hub.loop.reinit()
+        # XXX: libev's fork watchers seem not to be firing for some reason
+        # in both the cython (core.ppyx) and CFFI (corecffi.py) implementations
+        # (at least on OS X; confirm on other platforms)
+        # This breaks the threadpool and anything that uses it, including
+        # resolver_thread in the forked process (if there was already one thread
+        # in the pool before fork, adding an additional task will hang forever post-fork)
+        # The below is a kludge. The correct fix is to figure out why the fork watchers
+        # don't work. Fortunately, both of these methods are idempotent and can be called
+        # multiple times following a fork if the suddenly started working, or were already
+        # working on some platforms.
+        if hasattr(hub.threadpool, '_on_fork'):
+            hub.threadpool._on_fork()
+        # resolver_ares also has a fork watcher that's not firing
+        if hasattr(hub.resolver, '_on_fork'):
+            hub.resolver._on_fork()
 
 
 def get_hub_class():

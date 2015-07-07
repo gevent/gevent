@@ -36,6 +36,7 @@ class Resolver(object):
         return '<gevent.resolver_ares.Resolver at 0x%x ares=%r>' % (id(self), self.ares)
 
     def _on_fork(self):
+        # NOTE: See comment in gevent.hub.reinit.
         pid = os.getpid()
         if pid != self.pid:
             self.hub.loop.run_callback(self.ares.destroy)
