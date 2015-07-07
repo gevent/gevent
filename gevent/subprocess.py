@@ -252,24 +252,38 @@ else:
 
 class Popen(object):
 
-    def __init__(self, args, bufsize=0, executable=None,
+    def __init__(self, args, bufsize=None, executable=None,
                  stdin=None, stdout=None, stderr=None,
-                 preexec_fn=None, close_fds=False, shell=False,
+                 preexec_fn=None, close_fds=None, shell=False,
                  cwd=None, env=None, universal_newlines=False,
-                 startupinfo=None, creationflags=0, threadpool=None):
+                 startupinfo=None, creationflags=0, threadpool=None,
+                 **kwargs):
         """Create new Popen instance."""
-        # XXX: On Python 3, we don't implement these keyword arguments:
-        # (see patched_tests_setup)
-        # - pass_fds,
-        # - start_new_session,
-        # - restore_signals
+
+        if not PY3 and kwargs:
+            raise TypeError("Got unexpected keyword arguments", kwargs)
+        pass_fds = kwargs.pop('pass_fds', ())
+        start_new_session = kwargs.pop('start_new_session', False)
+        restore_signals = kwargs.pop('restore_signals', True)
 
         hub = get_hub()
 
-        if bufsize is None and PY3:
-            bufsize = -1 # restore default
+        if bufsize is None:
+            # bufsize has different defaults on Py3 and Py2
+            if PY3:
+                bufsize = -1
+            else:
+                bufsize = 0
         if not isinstance(bufsize, integer_types):
             raise TypeError("bufsize must be an integer")
+
+        if close_fds is None:
+            # close_fds has different defaults on Py3/Py2
+            if PY3:
+                close_fds = True
+            else:
+                close_fds = False
+
 
         if mswindows:
             if preexec_fn is not None:
@@ -285,6 +299,10 @@ class Popen(object):
             self._waiting = False
         else:
             # POSIX
+            if pass_fds and not close_fds:
+                import warnings
+                warnings.warn("pass_fds overriding close_fds.", RuntimeWarning)
+                close_fds = True
             if startupinfo is not None:
                 raise ValueError("startupinfo is only supported on Windows "
                                  "platforms")
@@ -370,11 +388,12 @@ class Popen(object):
         self._closed_child_pipe_fds = False
         try:
             self._execute_child(args, executable, preexec_fn, close_fds,
-                                cwd, env, universal_newlines,
+                                pass_fds, cwd, env, universal_newlines,
                                 startupinfo, creationflags, shell,
                                 p2cread, p2cwrite,
                                 c2pread, c2pwrite,
-                                errread, errwrite)
+                                errread, errwrite,
+                                restore_signals, start_new_session)
         except:
             # Cleanup if the child failed starting.
             # (gevent: New in python3, but reported as gevent bug in #347.
@@ -613,12 +632,15 @@ class Popen(object):
             return w9xpopen
 
         def _execute_child(self, args, executable, preexec_fn, close_fds,
-                           cwd, env, universal_newlines,
+                           pass_fds, cwd, env, universal_newlines,
                            startupinfo, creationflags, shell,
                            p2cread, p2cwrite,
                            c2pread, c2pwrite,
-                           errread, errwrite):
+                           errread, errwrite,
+                           restore_signals, start_new_session):
             """Execute program (MS Windows version)"""
+
+            assert not pass_fds, "pass_fds not supported on Windows."
 
             if not isinstance(args, string_types):
                 args = list2cmdline(args)
@@ -833,13 +855,36 @@ class Popen(object):
             self._set_cloexec_flag(w)
             return r, w
 
-        def _close_fds(self, but):
+        def _close_fds(self, keep):
+            # `keep` is a set of fds, so we
+            # use os.closerange from 3 to min(keep)
+            # and then from max(keep + 1) to MAXFD and
+            # loop through filling in the gaps.
+            # Under new python versions, we need to explicitly set
+            # passed fds to be inheritable or they will go away on exec
+            if hasattr(os, 'set_inheritable'):
+                set_inheritable = os.set_inheritable
+            else:
+                set_inheritable = lambda i, v: True
             if hasattr(os, 'closerange'):
-                os.closerange(3, but)
-                os.closerange(but + 1, MAXFD)
+                keep = sorted(keep)
+                min_keep = min(keep)
+                max_keep = max(keep)
+                os.closerange(3, min_keep)
+                os.closerange(max_keep + 1, MAXFD)
+                for i in xrange(min_keep, max_keep):
+                    if i in keep:
+                        set_inheritable(i, True)
+                        continue
+
+                    try:
+                        os.close(i)
+                    except:
+                        pass
             else:
                 for i in xrange(3, MAXFD):
-                    if i == but:
+                    if i in keep:
+                        set_inheritable(i, True)
                         continue
                     try:
                         os.close(i)
@@ -847,11 +892,12 @@ class Popen(object):
                         pass
 
         def _execute_child(self, args, executable, preexec_fn, close_fds,
-                           cwd, env, universal_newlines,
+                           pass_fds, cwd, env, universal_newlines,
                            startupinfo, creationflags, shell,
                            p2cread, p2cwrite,
                            c2pread, c2pwrite,
-                           errread, errwrite):
+                           errread, errwrite,
+                           restore_signals, start_new_session):
             """Execute program (POSIX version)"""
 
             if PY3 and isinstance(args, (str, bytes)):
@@ -936,15 +982,32 @@ class Popen(object):
                                     os.close(fd)
                                     closed.add(fd)
 
-                            # Close all other fds, if asked for
-                            if close_fds:
-                                self._close_fds(but=errpipe_write)
-
                             if cwd is not None:
                                 os.chdir(cwd)
 
                             if preexec_fn:
                                 preexec_fn()
+
+                            # Close all other fds, if asked for. This must be done
+                            # after preexec_fn runs.
+                            if close_fds:
+                                fds_to_keep = set(pass_fds)
+                                fds_to_keep.add(errpipe_write)
+                                self._close_fds(fds_to_keep)
+                            elif hasattr(os, 'get_inheritable'):
+                                # close_fds was false, and we're on
+                                # Python 3.4 or newer, so "all file
+                                # descriptors except standard streams
+                                # are closed, and inheritable handles
+                                # are only inherited if the close_fds
+                                # parameter is False."
+                                for i in xrange(3, MAXFD):
+                                    try:
+                                        if i == errpipe_write or os.get_inheritable(i):
+                                            continue
+                                        os.close(i)
+                                    except:
+                                        pass
 
                             if env is None:
                                 os.execvp(executable, args)
