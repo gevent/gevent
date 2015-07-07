@@ -42,6 +42,9 @@ Unreleased
   module no longer leaks file descriptors. Reported in :pr:`374` by 陈小玉.
 - The example ``echoserver.py`` no longer binds to the standard X11
   TCP port. Reported in :issue:`485` by minusf.
+- ``gevent.iwait`` no longer throws ``LoopExit`` if the caller
+  switches greenlets between return values. Reported and initial patch
+  in :pr:`467` by Alexey Borzenkov.
 
 1.1a1 (Jun 29, 2015)
 ====================

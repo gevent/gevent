@@ -598,6 +598,41 @@ class Waiter(object):
     # and unwraps it in wait() thus checking that switch() was indeed called
 
 
+class _MultipleWaiter(Waiter):
+    """
+    An internal extension of Waiter that can be used if multiple objects
+    must be waited on, and there is a chance that in between waits greenlets
+    might be switched out. All greenlets that switch to this waiter
+    will have their value returned.
+
+    This does not handle exceptions or throw methods.
+    """
+    _DEQUE = None
+    __slots__ = ['_values']
+
+    def __init__(self, *args, **kwargs):
+        Waiter.__init__(self, *args, **kwargs)
+        self._values = self._deque()
+
+    @classmethod
+    def _deque(cls):
+        if cls._DEQUE is None:
+            from collections import deque
+            cls._DEQUE = deque
+        return cls._DEQUE()
+
+    def switch(self, value):
+        self._values.append(value)
+        Waiter.switch(self, True)
+
+    def get(self):
+        if not self._values:
+            Waiter.get(self)
+            Waiter.clear(self)
+
+        return self._values.popleft()
+
+
 def iwait(objects, timeout=None, count=None):
     """
     Yield objects as they are ready, until all (or `count`) are ready or `timeout` expired.
@@ -612,14 +647,13 @@ def iwait(objects, timeout=None, count=None):
         yield get_hub().join(timeout=timeout)
         return
 
-    waiter = Waiter()
+    count = len(objects) if count is None else min(count, len(objects))
+    waiter = _MultipleWaiter()
     switch = waiter.switch
 
     if timeout is not None:
         timer = get_hub().loop.timer(timeout, priority=-1)
-        timer.start(waiter.switch, _NONE)
-
-    count = len(objects) if count is None else min(count, len(objects))
+        timer.start(switch, _NONE)
 
     try:
         for obj in objects:

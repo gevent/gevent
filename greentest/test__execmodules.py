@@ -12,9 +12,8 @@ def make_exec_test(path, module):
 
     def test(self):
         #sys.stderr.write('%s %s\n' % (module, path))
-        f = open(path)
-        src = f.read()
-        f.close()
+        with open(path, 'rb') as f:
+            src = f.read()
         six.exec_(src, {})
 
     name = "test_" + module.replace(".", "_")
