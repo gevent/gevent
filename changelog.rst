@@ -4,8 +4,8 @@
 
 .. currentmodule:: gevent
 
-Unreleased
-==========
+1.1a2 (Jul 8, 2015)
+===================
 
 - ``gevent.threadpool.ThreadPool.imap`` and ``imap_unordered`` now
   accept multiple iterables.
@@ -36,7 +36,7 @@ Unreleased
   ``pass_fds``, ``restore_signals``, and ``start_new_session``
   arguments are now unimplemented, as are the ``timeout`` parameters
   to various functions. Under Python 2, the previously undocumented ``timeout``
-  parameter to ``Popen.communicate`` raises an exception like it's
+  parameter to ``Popen.communicate`` raises an exception like its
   Python 3 counterpart.
 - An exception starting a child process with the ``gevent.subprocess``
   module no longer leaks file descriptors. Reported in :pr:`374` by 陈小玉.
