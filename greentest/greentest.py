@@ -28,6 +28,7 @@ import time
 import os
 from os.path import basename, splitext
 import gevent
+import gevent.core
 from patched_tests_setup import get_switch_expected
 from gevent.hub import _get_hub
 from functools import wraps
@@ -105,6 +106,12 @@ def wrap_refcount(method):
         for x in gc.get_objects():
             k = type(x)
             if k in IGNORED_TYPES:
+                continue
+            if k == gevent.core.callback and x.callback is None and x.args is None:
+                # these represent callbacks that have been stopped, but
+                # the event loop hasn't cycled around to run them. The only
+                # known cause of this is killing greenlets before they get a chance
+                # to run for the first time.
                 continue
             d[k] += 1
         return d

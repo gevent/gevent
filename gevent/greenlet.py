@@ -189,6 +189,11 @@ class Greenlet(greenlet):
             # prevent self from ever being started in the future
             self._start_event = _cancelled_start_event
         # cancel any pending start event
+        # NOTE: If this was a real pending start event, this will leave a
+        # "dangling" callback/timer object in the hub.loop.callbacks list;
+        # depending on where we are in the event loop, it may even be in a local
+        # variable copy of that list (in _run_callbacks). This isn't a problem,
+        # except for the leak-tests.
         self._start_event.stop()
 
     def __handle_death_before_start(self, *args):
