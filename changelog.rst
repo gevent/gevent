@@ -58,6 +58,11 @@ Unreleased
   collection as soon as the greenlet finishes running, matching the
   behaviour of the built-in ``threading.local`` (when implemented
   natively). Reported in :issue:`387` by AusIV.
+- Killing a greenlet (with ``gevent.kill`` or
+  ``gevent.greenlet.Greenlet.kill``) before it is actually started and
+  switched to now prevents the greenlet from ever running, instead of
+  raising an exception when it is later switched to. See :issue:`330`
+  reported by Jonathan Kamens.
 
 1.1a1 (Jun 29, 2015)
 ====================

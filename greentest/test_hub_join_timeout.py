@@ -51,7 +51,7 @@ for _a in xrange(2):
         with expected_time(SMALL):
             result = gevent.wait(timeout=SMALL)
         assert result is False, repr(result)
-        assert not x.dead, x
+        assert not x.dead, (x, x._start_event)
         x.kill()
         with no_time():
             result = gevent.wait()

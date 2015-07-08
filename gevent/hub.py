@@ -107,9 +107,20 @@ def kill(greenlet, exception=GreenletExit):
         more (and the same caveats listed there apply here). However, the MAIN
         greenlet - the one that exists initially - does not have a
         ``kill()`` method so you have to use this function.
+
+    .. versionchanged:: 1.1a2
+        If the ``greenlet`` has a ``kill`` method, calls it. This prevents a
+        greenlet from being switched to for the first time after it's been
+        killed.
     """
     if not greenlet.dead:
-        get_hub().loop.run_callback(greenlet.throw, exception)
+        if hasattr(greenlet, 'kill'):
+            # dealing with gevent.greenlet.Greenlet. Use it, especially
+            # to avoid allowing one to be switched to for the first time
+            # after it's been killed
+            greenlet.kill(block=False)
+        else:
+            get_hub().loop.run_callback(greenlet.throw, exception)
 
 
 class signal(object):

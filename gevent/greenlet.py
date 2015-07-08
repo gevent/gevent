@@ -105,6 +105,13 @@ class Greenlet(greenlet):
     value = None
     _exc_info = ()
     _notifier = None
+
+    #: An event, such as a timer or a callback that fires. It is established in
+    #: start() and start_later() as those two objects, respectively.
+    #: Once this becomes non-None, the Greenlet cannot be started again. Conversely,
+    #: kill() and throw() check for non-None to determine if this object has ever been
+    #: scheduled for starting. A placeholder _dummy_event is assigned by them to prevent
+    #: the greenlet from being started in the future, if necessary.
     _start_event = None
     args = ()
 
@@ -136,11 +143,71 @@ class Greenlet(greenlet):
         return self._start_event is not None and self._exc_info is Greenlet._exc_info
     __nonzero__ = __bool__
 
+    ### Lifecycle
+
     if PYPY:
         # oops - pypy's .dead relies on __nonzero__ which we overriden above
         @property
         def dead(self):
-            return self._greenlet__started and not (self._greenlet__main or _continulet.is_pending(self))
+            if self._greenlet__main:
+                return False
+            if self.__start_cancelled_by_kill or self.__started_but_aborted:
+                return True
+
+            return self._greenlet__started and not _continulet.is_pending(self)
+    else:
+        @property
+        def dead(self):
+            return self.__start_cancelled_by_kill or self.__started_but_aborted or greenlet.dead.__get__(self)
+
+    @property
+    def __never_started_or_killed(self):
+        return self._start_event is None
+
+    @property
+    def __start_pending(self):
+        return (self._start_event is not None
+                and (self._start_event.pending or getattr(self._start_event, 'active', False)))
+
+    @property
+    def __start_cancelled_by_kill(self):
+        return self._start_event is _cancelled_start_event
+
+    @property
+    def __start_completed(self):
+        return self._start_event is _start_completed_event
+
+    @property
+    def __started_but_aborted(self):
+        return (not self.__never_started_or_killed # we have been started or killed
+                and not self.__start_cancelled_by_kill # we weren't killed, so we must have been started
+                and not self.__start_completed # the start never completed
+                and not self.__start_pending) # and we're not pending, so we must have been aborted
+
+    def __cancel_start(self):
+        if self._start_event is None:
+            # prevent self from ever being started in the future
+            self._start_event = _cancelled_start_event
+        # cancel any pending start event
+        self._start_event.stop()
+
+    def __handle_death_before_start(self, *args):
+        # args is (t, v, tb) or simply t or v
+        if self._exc_info is Greenlet._exc_info and self.dead:
+            # the greenlet was never switched to before and it will never be, _report_error was not called
+            # the result was not set and the links weren't notified. let's do it here.
+            # checking that self.dead is true is essential, because throw() does not necessarily kill the greenlet
+            # (if the exception raised by throw() is caught somewhere inside the greenlet).
+            if len(args) == 1:
+                arg = args[0]
+                #if isinstance(arg, type):
+                if type(arg) is type(Exception):
+                    args = (arg, arg(), None)
+                else:
+                    args = (type(arg), arg, None)
+            elif not args:
+                args = (GreenletExit, GreenletExit(), None)
+            self._report_error(args)
 
     @property
     def started(self):
@@ -211,28 +278,17 @@ class Greenlet(greenlet):
         a) cancel the event that will start it
         b) fire the notifications as if an exception was raised in a greenlet
         """
-        if self._start_event is None:
-            self._start_event = _dummy_event
-        else:
-            self._start_event.stop()
+        self.__cancel_start()
+
         try:
-            greenlet.throw(self, *args)
+            if not self.dead:
+                # Prevent switching into a greenlet *at all* if we had never
+                # started it. Usually this is the same thing that happens by throwing,
+                # but if this is done from the hub with nothing else running, prevents a
+                # LoopExit.
+                greenlet.throw(self, *args)
         finally:
-            if self._exc_info is Greenlet._exc_info and self.dead:
-                # the greenlet was never switched to before and it will never be, _report_error was not called
-                # the result was not set and the links weren't notified. let's do it here.
-                # checking that self.dead is true is essential, because throw() does not necessarily kill the greenlet
-                # (if the exception raised by throw() is caught somewhere inside the greenlet).
-                if len(args) == 1:
-                    arg = args[0]
-                    #if isinstance(arg, type):
-                    if type(arg) is type(Exception):
-                        args = (arg, arg(), None)
-                    else:
-                        args = (type(arg), arg, None)
-                elif not args:
-                    args = (GreenletExit, GreenletExit(), None)
-                self._report_error(args)
+            self.__handle_death_before_start(*args)
 
     def start(self):
         """Schedule the greenlet to run in this loop iteration"""
@@ -286,14 +342,14 @@ class Greenlet(greenlet):
 
         .. versionchanged:: 0.13.0
             *block* is now ``True`` by default.
+        .. versionchanged:: 1.1a2
+            If this greenlet had never been switched to, killing it will prevent it from ever being switched to.
         """
-        # XXX this function should not switch out if greenlet is not started but it does
-        # XXX fix it (will have to override 'dead' property of greenlet.greenlet)
-        if self._start_event is None:
-            self._start_event = _dummy_event
+        self.__cancel_start()
+
+        if self.dead:
+            self.__handle_death_before_start()
         else:
-            self._start_event.stop()
-        if not self.dead:
             waiter = Waiter()
             self.parent.loop.run_callback(_kill, self, exception, waiter)
             if block:
@@ -386,10 +442,9 @@ class Greenlet(greenlet):
 
     def run(self):
         try:
-            if self._start_event is None:
-                self._start_event = _dummy_event
-            else:
-                self._start_event.stop()
+            self.__cancel_start()
+            self._start_event = _start_completed_event
+
             try:
                 result = self._run(*self.args, **self.kwargs)
             except:
@@ -445,12 +500,16 @@ class Greenlet(greenlet):
 
 
 class _dummy_event(object):
+    pending = False
+    active = False
 
     def stop(self):
         pass
 
 
-_dummy_event = _dummy_event()
+_cancelled_start_event = _dummy_event()
+_start_completed_event = _dummy_event()
+del _dummy_event
 
 
 def _kill(greenlet, exception, waiter):
