@@ -1012,6 +1012,11 @@ class io(watcher):
             raise ValueError('illegal event mask: %r' % events)
         watcher.__init__(self, loop, ref=ref, priority=priority, args=(fd, events))
 
+    def start(self, callback, pass_events=False, *args):
+        if pass_events:
+            args = (GEVENT_CORE_EVENTS, ) + args
+        super(io, self).start(callback, *args)
+
     def _get_fd(self):
         return libev.vfd_get(self._watcher.fd)
 
