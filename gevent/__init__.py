@@ -8,8 +8,8 @@ See http://www.gevent.org/ for the documentation.
 
 from __future__ import absolute_import
 
-version_info = (1, 1, 'a2', None, None)
-__version__ = '1.1a2'
+version_info = (1, 1, 'a3', 'dev', 0)
+__version__ = '1.1a3.dev0'
 
 
 __all__ = ['get_hub',
