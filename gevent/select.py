@@ -5,6 +5,11 @@ from gevent.hub import get_hub
 from gevent.hub import integer_types
 from select import POLLIN, POLLOUT
 
+try:
+    from select import poll as original_poll
+except ImportError:
+    original_poll = None
+
 __implements__ = ['select', 'poll']
 __all__ = ['error'] + __implements__
 
@@ -76,14 +81,14 @@ class PollResult(object):
     __slots__ = ['events', 'event']
 
     def __init__(self):
-        self.events = []
+        self.events = set()
         self.event = Event()
 
     def add_event(self, events, fd):
         result_flags = 0
         result_flags |= POLLIN if events & 1 else 0
         result_flags |= POLLOUT if events & 2 else 0
-        self.events.append((fd, result_flags))
+        self.events.add((fd, result_flags))
         self.event.set()
 
 
@@ -91,6 +96,11 @@ class poll(object):
     def __init__(self):
         self.fds = {}
         self.loop = get_hub().loop
+        # Using the original poll to handle immediate response polling.
+        # Using the ev based way, we receive a signal on the first descriptor.
+        self.poll_obj = None
+        if original_poll is not None:
+            self.poll_obj = original_poll()
 
     def register(self, fd, eventmask=POLLIN | POLLOUT):
         flags = 0
@@ -99,11 +109,19 @@ class poll(object):
         watcher = self.loop.io(get_fileno(fd), flags)
         watcher.priority = self.loop.MAXPRI
         self.fds[fd] = watcher
+        if self.poll_obj:
+            self.poll_obj.register(fd, eventmask)
 
     def modify(self, fd, eventmask):
         self.register(fd, eventmask)
+        if self.poll_obj:
+            self.poll_obj.modify(fd, eventmask)
 
     def poll(self, timeout=None):
+        if self.poll_obj:
+            results = self.poll_obj.poll(0)
+            if results:
+                return results
         result = PollResult()
         try:
             for fd in self.fds:
@@ -111,10 +129,12 @@ class poll(object):
             if timeout is not None and -1 < timeout:
                 timeout /= 1000.0
             result.event.wait(timeout=timeout)
-            return result.events
+            return list(result.events)
         finally:
             for fd in self.fds:
                 self.fds[fd].stop()
 
     def unregister(self, fd):
         self.fds.pop(fd, None)
+        if self.poll_obj:
+            self.poll_obj.unregister(fd)
