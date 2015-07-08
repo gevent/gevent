@@ -21,6 +21,22 @@ class A(local):
 class Obj(object):
     pass
 
+# These next two classes have to be global to avoid the leakchecks
+deleted_sentinels = []
+created_sentinels = []
+
+
+class Sentinel(object):
+    def __del__(self):
+        deleted_sentinels.append(id(self))
+
+
+class MyLocal(local):
+    def __init__(self):
+        local.__init__(self)
+        self.sentinel = Sentinel()
+        created_sentinels.append(id(self.sentinel))
+
 
 class GeventLocalTestCase(greentest.TestCase):
 
@@ -61,27 +77,14 @@ class GeventLocalTestCase(greentest.TestCase):
     def test_locals_collected_when_greenlet_dead_but_still_referenced(self):
         # https://github.com/gevent/gevent/issues/387
         import gevent
-        deleted_sentinels = []
-        created_sentinels = []
-
-        class Sentinel(object):
-            def __del__(self):
-                deleted_sentinels.append(id(self))
-
-        class MyLocal(local):
-            def __init__(self):
-                local.__init__(self)
-                self.sentinel = Sentinel()
-                created_sentinels.append(id(self.sentinel))
 
         my_local = MyLocal()
         my_local.sentinel = None
         if greentest.PYPY:
             import gc
             gc.collect()
-        # drop the original
-        created_sentinels.pop()
-        deleted_sentinels.pop()
+        del created_sentinels[:]
+        del deleted_sentinels[:]
 
         def demonstrate_my_local():
             # Get the important parts
