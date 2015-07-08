@@ -23,7 +23,6 @@ if sys.platform != 'win32':
                 os.close(r)
                 os.close(w)
 
-
     class TestPollRead(greentest.GenericWaitTestCase):
         def wait(self, timeout):
             r, w = os.pipe()

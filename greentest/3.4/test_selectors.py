@@ -436,7 +436,7 @@ class SelectSelectorTestCase(BaseSelectorTestCase):
 
 @unittest.skipUnless(hasattr(selectors, 'PollSelector'),
                      "Test needs selectors.PollSelector")
-class PollSelectorTestCase(BaseSelectorTestCase, ScalableSelectorMixIn):
+class PollSelectorTestCase(BaseSelectorTestCase):
 
     SELECTOR = getattr(selectors, 'PollSelector', None)
 
