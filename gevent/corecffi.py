@@ -295,6 +295,8 @@ libev.vfd_free = lambda fd: None
 @ffi.callback("int(void* handle, int revents)")
 def _python_callback(handle, revents):
     watcher = ffi.from_handle(handle)
+    if len(watcher.args) > 0 and watcher.args[0] == GEVENT_CORE_EVENTS:
+        watcher.args = (revents, ) + watcher.args[1:]
     try:
         watcher.callback(*watcher.args)
     except:
