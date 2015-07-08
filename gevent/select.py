@@ -3,11 +3,13 @@ from __future__ import absolute_import
 from gevent.event import Event
 from gevent.hub import get_hub
 from gevent.hub import integer_types
+from select import POLLIN, POLLOUT
 
-__implements__ = ['select']
+__implements__ = ['select', 'poll']
 __all__ = ['error'] + __implements__
 
 import select as __select__
+
 error = __select__.error
 
 
@@ -16,14 +18,13 @@ def get_fileno(obj):
         fileno_f = obj.fileno
     except AttributeError:
         if not isinstance(obj, integer_types):
-            raise TypeError('argument must be an int, or have a fileno() method: %r' % (obj, ))
+            raise TypeError('argument must be an int, or have a fileno() method: %r' % (obj,))
         return obj
     else:
         return fileno_f()
 
 
 class SelectResult(object):
-
     __slots__ = ['read', 'write', 'event']
 
     def __init__(self):
@@ -69,3 +70,49 @@ def select(rlist, wlist, xlist, timeout=None):
     finally:
         for watcher in watchers:
             watcher.stop()
+
+
+class PollResult(object):
+    __slots__ = ['events', 'event']
+
+    def __init__(self):
+        self.events = []
+        self.event = Event()
+
+    def add_event(self, events, fd):
+        result_flags = 0
+        result_flags |= POLLIN if events & 1 else 0
+        result_flags |= POLLOUT if events & 2 else 0
+        self.events.append((fd, result_flags))
+        self.event.set()
+
+
+class poll(object):
+    def __init__(self):
+        self.fds = {}
+        self.loop = get_hub().loop
+
+    def register(self, fd, eventmask=POLLIN | POLLOUT):
+        flags = 0
+        flags |= 1 if eventmask & POLLIN else 0
+        flags |= 2 if eventmask & POLLOUT else 0
+        watcher = self.loop.io(get_fileno(fd), flags)
+        watcher.priority = self.loop.MAXPRI
+        self.fds[fd] = watcher
+
+    def modify(self, fd, eventmask):
+        self.register(fd, eventmask)
+
+    def poll(self, timeout=None):
+        result = PollResult()
+        try:
+            for fd in self.fds:
+                self.fds[fd].start(result.add_event, get_fileno(fd), pass_events=True)
+            result.event.wait(timeout=timeout)
+            return result.events
+        finally:
+            for fd in self.fds:
+                self.fds[fd].stop()
+
+    def unregister(self, fd):
+        self.fds.pop(fd, None)

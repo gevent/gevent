@@ -248,7 +248,6 @@ def patch_select(aggressive=True):
         # since these are blocking we're removing them here. This makes some other
         # modules (e.g. asyncore)  non-blocking, as they use select that we provide
         # when none of these are available.
-        remove_item(select, 'poll')
         remove_item(select, 'epoll')
         remove_item(select, 'kqueue')
         remove_item(select, 'kevent')
@@ -268,9 +267,8 @@ def patch_select(aggressive=True):
 
         if aggressive:
             # If `selectors` had already been imported before we removed
-            # select.poll|epoll|kqueue, these may have been defined in terms
+            # select.epoll|kqueue, these may have been defined in terms
             # of those functions. They'll fail at runtime.
-            remove_item(selectors, 'PollSelector')
             remove_item(selectors, 'EpollSelector')
             remove_item(selectors, 'KqueueSelector')
             selectors.DefaultSelector = selectors.SelectSelector
