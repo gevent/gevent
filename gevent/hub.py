@@ -150,6 +150,9 @@ class signal(object):
 
 
 def reinit():
+    # An internal, undocumented function. Called by gevent.os.fork
+    # in the child process. The loop reinit function in turn calls
+    # libev's ev_loop_fork function.
     hub = _get_hub()
     if hub is not None:
         hub.loop.reinit()
@@ -659,7 +662,7 @@ def iwait(objects, timeout=None, count=None):
     """
     Yield objects as they are ready, until all (or `count`) are ready or `timeout` expired.
 
-    :param objects: A list (supporting `len`) containing objects
+    :param objects: A sequence (supporting :func:`len`) containing objects
         implementing the wait protocol (rawlink() and unlink()).
     :param count: If not `None`, then a number specifying the maximum number
         of objects to wait for.
@@ -718,7 +721,7 @@ def wait(objects=None, timeout=None, count=None):
     - all servers were stopped
     - all event loop watchers were stopped.
 
-    If ``count`` is ``None`` (the default), wait for all ``object``s
+    If ``count`` is ``None`` (the default), wait for all ``objects``
     to become ready.
 
     If ``count`` is a number, wait for (up to) ``count`` objects to become

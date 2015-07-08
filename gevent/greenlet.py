@@ -454,7 +454,7 @@ def joinall(greenlets, timeout=None, raise_error=False, count=None):
     """
     Wait for the ``greenlets`` to finish.
 
-    :param greenlets: A sequence of greenlets to wait for.
+    :param greenlets: A sequence (supporting :func:`len`) of greenlets to wait for.
     :keyword float timeout: If given, the maximum number of seconds to wait.
     :return: A sequence of the greenlets that finished before the timeout (if any)
         expired.
@@ -496,6 +496,26 @@ def _killall(greenlets, exception):
 
 
 def killall(greenlets, exception=GreenletExit, block=True, timeout=None):
+    """
+    Forceably terminate all the ``greenlets`` by causing them to raise ``exception``.
+
+    :param greenlets: A bounded iterable of the non-None greenlets to terminate.
+       *All* the items in this iterable must be greenlets that belong to the same thread.
+    :keyword exception: The exception to raise in the greenlets. By default this is
+        :class:`GreenletExit`.
+    :keyword bool block: If True (the default) then this function only returns when all the
+        greenlets are dead; the current greenlet is unscheduled during that process.
+        If greenlets ignore the initial exception raised in them,
+        then they will be joined (with :func:`gevent.joinall`) and allowed to die naturally.
+        If False, this function returns immediately and greenlets will raise
+        the exception asynchronously.
+    :keyword float timeout: A time in seconds to wait for greenlets to die. If given, it is
+        only honored when ``block`` is True.
+    :raises Timeout: If blocking and a timeout is given that elapses before
+        all the greenlets are dead.
+    """
+    # support non-indexable containers like iterators or set objects
+    greenlets = list(greenlets)
     if not greenlets:
         return
     loop = greenlets[0].loop

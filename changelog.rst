@@ -51,6 +51,9 @@ Unreleased
   :issue:`230` by Lx Yu.
 - Fork watchers are more likely to (eventually) get called in a
   multi-threaded program.
+- ``gevent.killall`` accepts an arbitrary iterable for the greenlets
+  to kill. Reported in :issue:`404` by Martin Bachwerk; seen in
+  combination with older versions of simple-requests.
 
 1.1a1 (Jun 29, 2015)
 ====================

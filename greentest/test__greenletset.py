@@ -2,6 +2,7 @@ import time
 import greentest
 import gevent
 from gevent import pool
+from gevent.timeout import Timeout
 
 DELAY = 0.1
 
@@ -120,6 +121,36 @@ class Test(greentest.TestCase):
         p2 = GreenletSubclass.spawn(lambda: gevent.sleep(10))
         s = pool.Group([p1, p2])
         s.kill()
+
+    def test_killall_iterable_argument_non_block(self):
+        p1 = GreenletSubclass.spawn(lambda: gevent.sleep(0.5))
+        p2 = GreenletSubclass.spawn(lambda: gevent.sleep(0.5))
+        s = set()
+        s.add(p1)
+        s.add(p2)
+        gevent.killall(s, block=False)
+        gevent.sleep(0.5)
+        for g in s:
+            assert g.dead
+
+    def test_killall_iterable_argument_timeout(self):
+        def f():
+            try:
+                gevent.sleep(1.5)
+            except:
+                gevent.sleep(1)
+        p1 = GreenletSubclass.spawn(f)
+        p2 = GreenletSubclass.spawn(f)
+        s = set()
+        s.add(p1)
+        s.add(p2)
+        try:
+            gevent.killall(s, timeout=0.5)
+        except Timeout:
+            for g in s:
+                assert not g.dead
+        else:
+            self.fail("Should raise timeout")
 
 
 class GreenletSubclass(gevent.Greenlet):
