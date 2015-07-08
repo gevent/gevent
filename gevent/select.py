@@ -108,6 +108,8 @@ class poll(object):
         try:
             for fd in self.fds:
                 self.fds[fd].start(result.add_event, get_fileno(fd), pass_events=True)
+            if timeout is not None and -1 < timeout:
+                timeout /= 1000.0
             result.event.wait(timeout=timeout)
             return result.events
         finally:
