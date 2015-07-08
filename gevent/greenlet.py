@@ -205,7 +205,7 @@ class Greenlet(greenlet):
         """Immediatelly switch into the greenlet and raise an exception in it.
 
         Should only be called from the HUB, otherwise the current greenlet is left unscheduled forever.
-        To raise an exception in a safely manner from any greenlet, use :meth:`kill`.
+        To raise an exception in a safe manner from any greenlet, use :meth:`kill`.
 
         If a greenlet was started but never switched to yet, then also
         a) cancel the event that will start it
@@ -266,14 +266,26 @@ class Greenlet(greenlet):
         return g
 
     def kill(self, exception=GreenletExit, block=True, timeout=None):
-        """Raise the exception in the greenlet.
+        """Raise the ``exception`` in the greenlet.
 
-        If block is ``True`` (the default), wait until the greenlet dies or the optional timeout expires.
+        If ``block`` is ``True`` (the default), wait until the greenlet dies or the optional timeout expires.
         If block is ``False``, the current greenlet is not unscheduled.
 
         The function always returns ``None`` and never raises an error.
 
-        `Changed in version 0.13.0:` *block* is now ``True`` by default.
+        .. note::
+
+            Depending on what this greenlet is executing and the state of the event loop,
+            the exception may or may not be raised immediately when this greenlet resumes
+            execution. It may be raised an a subsequent green call, or, if this greenlet
+            exits before making such a call, it may not be raised at all. As of 1.1, an example
+            where the exception is raised later is if this greenlet had called ``sleep(0)``; an
+            example where the exception is raised immediately is if this greenlet had called ``sleep(0.1)``.
+
+        See also :func:`gevent.kill`.
+
+        .. versionchanged:: 0.13.0
+            *block* is now ``True`` by default.
         """
         # XXX this function should not switch out if greenlet is not started but it does
         # XXX fix it (will have to override 'dead' property of greenlet.greenlet)
@@ -454,7 +466,7 @@ def joinall(greenlets, timeout=None, raise_error=False, count=None):
     """
     Wait for the ``greenlets`` to finish.
 
-    :param greenlets: A sequence of greenlets to wait for.
+    :param greenlets: A sequence (supporting :func:`len`) of greenlets to wait for.
     :keyword float timeout: If given, the maximum number of seconds to wait.
     :return: A sequence of the greenlets that finished before the timeout (if any)
         expired.
@@ -496,6 +508,26 @@ def _killall(greenlets, exception):
 
 
 def killall(greenlets, exception=GreenletExit, block=True, timeout=None):
+    """
+    Forceably terminate all the ``greenlets`` by causing them to raise ``exception``.
+
+    :param greenlets: A bounded iterable of the non-None greenlets to terminate.
+       *All* the items in this iterable must be greenlets that belong to the same thread.
+    :keyword exception: The exception to raise in the greenlets. By default this is
+        :class:`GreenletExit`.
+    :keyword bool block: If True (the default) then this function only returns when all the
+        greenlets are dead; the current greenlet is unscheduled during that process.
+        If greenlets ignore the initial exception raised in them,
+        then they will be joined (with :func:`gevent.joinall`) and allowed to die naturally.
+        If False, this function returns immediately and greenlets will raise
+        the exception asynchronously.
+    :keyword float timeout: A time in seconds to wait for greenlets to die. If given, it is
+        only honored when ``block`` is True.
+    :raises Timeout: If blocking and a timeout is given that elapses before
+        all the greenlets are dead.
+    """
+    # support non-indexable containers like iterators or set objects
+    greenlets = list(greenlets)
     if not greenlets:
         return
     loop = greenlets[0].loop

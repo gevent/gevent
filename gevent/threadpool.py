@@ -86,7 +86,8 @@ class ThreadPool(GroupMappingMixin):
 
     def _on_fork(self):
         # fork() only leaves one thread; also screws up locks;
-        # let's re-create locks and threads
+        # let's re-create locks and threads.
+        # NOTE: See comment in gevent.hub.reinit.
         pid = os.getpid()
         if pid != self.pid:
             self.pid = pid

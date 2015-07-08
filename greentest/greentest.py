@@ -257,7 +257,7 @@ class TestCaseMetaClass(type):
 
 
 class TestCase(TestCaseMetaClass("NewBase", (BaseTestCase,), {})):
-    __timeout__ = 1
+    __timeout__ = 1 if not os.environ.get('TRAVIS') else 2 # Travis is slow and overloaded
     switch_expected = 'default'
     error_fatal = True
 

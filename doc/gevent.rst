@@ -48,7 +48,7 @@ Being a greenlet__ subclass, :class:`Greenlet` also has ``switch()`` and ``throw
 However, these should not be used at the application level. Prefer higher-level safe
 classes, like :class:`Event <gevent.event.Event>` and :class:`Queue <gevent.queue.Queue>`, instead.
 
-__ http://codespeak.net/py/0.9.2/greenlet.html
+__ http://greenlet.readthedocs.org/en/latest/#instantiation
 
 .. exception:: GreenletExit
 

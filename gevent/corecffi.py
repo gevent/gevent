@@ -551,6 +551,7 @@ class loop(object):
         c_flags = _flags_to_int(flags)
         _check_flags(c_flags)
         c_flags |= libev.EVFLAG_NOENV
+        c_flags |= libev.EVFLAG_FORKCHECK
         if default is None:
             default = True
             if _default_loop_destroyed:
