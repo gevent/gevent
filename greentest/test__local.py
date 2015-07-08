@@ -58,5 +58,49 @@ class GeventLocalTestCase(greentest.TestCase):
 
         self.assertNotEqual(a.path, b.path, 'The values in the two objects must be different')
 
+    def test_locals_collected_when_greenlet_dead_but_still_referenced(self):
+        # https://github.com/gevent/gevent/issues/387
+        import gevent
+        deleted_sentinels = []
+        created_sentinels = []
+
+        class Sentinel(object):
+            def __del__(self):
+                deleted_sentinels.append(id(self))
+
+        class MyLocal(local):
+            def __init__(self):
+                local.__init__(self)
+                self.sentinel = Sentinel()
+                created_sentinels.append(id(self.sentinel))
+
+        my_local = MyLocal()
+        my_local.sentinel = None
+        if greentest.PYPY:
+            import gc
+            gc.collect()
+        # drop the original
+        created_sentinels.pop()
+        deleted_sentinels.pop()
+
+        def demonstrate_my_local():
+            # Get the important parts
+            getattr(my_local, 'sentinel')
+
+        # Create and reference greenlets
+        greenlets = [gevent.spawn(demonstrate_my_local) for _ in range(5)]
+        gevent.sleep()
+
+        self.assertEqual(len(created_sentinels), len(greenlets))
+
+        for g in greenlets:
+            assert g.dead
+        gevent.sleep() # let the callbacks run
+        if greentest.PYPY:
+            gc.collect()
+
+        # The sentinels should be gone too
+        self.assertEqual(len(deleted_sentinels), len(greenlets))
+
 if __name__ == '__main__':
     greentest.main()

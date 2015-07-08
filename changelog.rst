@@ -54,6 +54,10 @@ Unreleased
 - ``gevent.killall`` accepts an arbitrary iterable for the greenlets
   to kill. Reported in :issue:`404` by Martin Bachwerk; seen in
   combination with older versions of simple-requests.
+- ``gevent.local.local`` objects are now eligible for garbage
+  collection as soon as the greenlet finishes running, matching the
+  behaviour of the built-in ``threading.local`` (when implemented
+  natively). Reported in :issue:`387` by AusIV.
 
 1.1a1 (Jun 29, 2015)
 ====================
