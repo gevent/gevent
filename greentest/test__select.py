@@ -29,7 +29,7 @@ if sys.platform != 'win32':
             try:
                 poll = select.poll()
                 poll.register(r)
-                poll.poll(timeout)
+                poll.poll(timeout * 1000)
                 poll.unregister(r)
             finally:
                 os.close(r)
