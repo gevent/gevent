@@ -4,11 +4,10 @@ Table Of Contents
 .. toctree::
 
    intro
-   reference
    whatsnew_1_0
+   reference
    changelog
 
 * :ref:`genindex`
 * :ref:`modindex`
 * :ref:`search`
-
