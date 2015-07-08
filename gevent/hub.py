@@ -98,11 +98,15 @@ def idle(priority=0):
 
 
 def kill(greenlet, exception=GreenletExit):
-    """Kill greenlet asynchronously. The current greenlet is not unscheduled.
+    """
+    Kill greenlet asynchronously. The current greenlet is not unscheduled.
 
-    Note, that :meth:`gevent.Greenlet.kill` method does the same and more. However,
-    MAIN greenlet - the one that exists initially - does not have ``kill()`` method
-    so you have to use this function.
+    .. note::
+
+        The method :meth:`gevent.Greenlet.kill` method does the same and
+        more (and the same caveats listed there apply here). However, the MAIN
+        greenlet - the one that exists initially - does not have a
+        ``kill()`` method so you have to use this function.
     """
     if not greenlet.dead:
         get_hub().loop.run_callback(greenlet.throw, exception)

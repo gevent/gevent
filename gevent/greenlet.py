@@ -205,7 +205,7 @@ class Greenlet(greenlet):
         """Immediatelly switch into the greenlet and raise an exception in it.
 
         Should only be called from the HUB, otherwise the current greenlet is left unscheduled forever.
-        To raise an exception in a safely manner from any greenlet, use :meth:`kill`.
+        To raise an exception in a safe manner from any greenlet, use :meth:`kill`.
 
         If a greenlet was started but never switched to yet, then also
         a) cancel the event that will start it
@@ -266,14 +266,26 @@ class Greenlet(greenlet):
         return g
 
     def kill(self, exception=GreenletExit, block=True, timeout=None):
-        """Raise the exception in the greenlet.
+        """Raise the ``exception`` in the greenlet.
 
-        If block is ``True`` (the default), wait until the greenlet dies or the optional timeout expires.
+        If ``block`` is ``True`` (the default), wait until the greenlet dies or the optional timeout expires.
         If block is ``False``, the current greenlet is not unscheduled.
 
         The function always returns ``None`` and never raises an error.
 
-        `Changed in version 0.13.0:` *block* is now ``True`` by default.
+        .. note::
+
+            Depending on what this greenlet is executing and the state of the event loop,
+            the exception may or may not be raised immediately when this greenlet resumes
+            execution. It may be raised an a subsequent green call, or, if this greenlet
+            exits before making such a call, it may not be raised at all. As of 1.1, an example
+            where the exception is raised later is if this greenlet had called ``sleep(0)``; an
+            example where the exception is raised immediately is if this greenlet had called ``sleep(0.1)``.
+
+        See also :func:`gevent.kill`.
+
+        .. versionchanged:: 0.13.0
+            *block* is now ``True`` by default.
         """
         # XXX this function should not switch out if greenlet is not started but it does
         # XXX fix it (will have to override 'dead' property of greenlet.greenlet)
