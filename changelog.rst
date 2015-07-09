@@ -11,6 +11,8 @@ Unreleased
   in :issue:`319` by Ivan Smirnov.
 - ``setup.py`` can build with newer versions of clang on OS X. They
   enforce the distinction between CFLAGS and CPPFLAGS.
+- ``gevent.lock.Semaphore`` is atomic on PyPy, just like it is on
+  CPython. This comes at a small performance cost.
 
 1.1a2 (Jul 8, 2015)
 ===================

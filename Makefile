@@ -16,9 +16,15 @@ gevent/gevent.ares.c: gevent/ares.pyx gevent/*.pxd
 	$(CYTHON) -o gevent.ares.c gevent/ares.pyx
 	mv gevent.ares.* gevent/
 
-gevent/gevent._semaphore.c: gevent/_semaphore.py
+gevent/gevent._semaphore.c: gevent/_semaphore.pyx gevent/_semaphore.pxd
+# For PyPy, we need to have _semaphore named as a .pyx file so it doesn't
+# get loaded in preference to the .so. But we want to keep the definitions
+# separate in a .pxd file for ease of reading, and that only works
+# with .py files.
+	cp gevent/_semaphore.pyx gevent/_semaphore.py
 	$(CYTHON) -o gevent._semaphore.c gevent/_semaphore.py
 	mv gevent._semaphore.* gevent/
+	rm gevent/_semaphore.py
 
 gevent/gevent._util.c: gevent/_util.pyx
 	$(CYTHON) -o gevent._util.c gevent/_util.pyx

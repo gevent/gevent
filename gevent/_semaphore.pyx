@@ -6,6 +6,7 @@ from gevent.timeout import Timeout
 __all__ = ['Semaphore']
 
 
+
 class Semaphore(object):
     """A semaphore manages a counter representing the number of release() calls minus the number of acquire() calls,
     plus an initial value. The acquire() method blocks if necessary until it can return without making the counter
@@ -22,6 +23,7 @@ class Semaphore(object):
         self._links = []
         self.counter = value
         self._notifier = None
+        self._dirty = False
         # we don't want to do get_hub() here to allow module-level locks
         # without initializing the hub
 
@@ -129,5 +131,5 @@ class Semaphore(object):
     def __enter__(self):
         self.acquire()
 
-    def __exit__(self, *args):
+    def __exit__(self, t, v, tb):
         self.release()

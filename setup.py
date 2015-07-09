@@ -209,14 +209,14 @@ else:
     ARES.libraries.append('cares')
     ARES.define_macros += [('HAVE_NETDB_H', '')]
 
-
-def make(done=[]):
-    if not done:
+_ran_make = []
+def make(targets=''):
+    if not _ran_make:
         if os.path.exists('Makefile'):
             if "PYTHON" not in os.environ:
                 os.environ["PYTHON"] = sys.executable
-            system('make')
-        done.append(1)
+            system('make ' + targets)
+        _ran_make.append(1)
 
 
 class sdist(_sdist):
@@ -317,9 +317,16 @@ elif PYPY:
     system('touch gevent/libev/__init__.py')
     system('cd gevent/libev && ./configure > configure_output.txt')
     from gevent import corecffi
-    ext_modules = [corecffi.ffi.verifier.get_extension()]
+    ext_modules = [corecffi.ffi.verifier.get_extension(),
+                   # By building the semaphore with Cython under PyPy, we get
+                   # atomic operations (specifically, exiting/releasing), at the
+                   # cost of some speed (one trivial semaphore micro-benchmark put the pure-python version
+                   # at around 1s and the compiled version at around 4s). Some clever subclassing
+                   # and having only the bare minimum be in cython might help reduce that penalty.
+                   Extension(name="gevent._semaphore",
+                             sources=["gevent/gevent._semaphore.c"])]
     include_package_data = True
-    run_make = False
+    run_make = 'gevent/gevent._semaphore.c'
 else:
     ext_modules = [CORE,
                    ARES,
@@ -333,7 +340,10 @@ else:
 
 def run_setup(ext_modules, run_make):
     if run_make:
-        make()
+        if isinstance(run_make, str):
+            make(run_make)
+        else:
+            make()
     setup(
         name='gevent',
         version=__version__,
@@ -374,5 +384,5 @@ if __name__ == '__main__':
             raise
         ext_modules.remove(ARES)
         run_setup(ext_modules, run_make=run_make)
-    if ARES not in ext_modules:
+    if not PYPY and ARES not in ext_modules:
         sys.stderr.write('\nWARNING: The gevent.ares extension has been disabled.\n')
