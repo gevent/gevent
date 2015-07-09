@@ -103,10 +103,6 @@ class StreamServer(BaseServer):
                 if not sock.timeout:
                     return
                 raise
-            except _socket.error as err:
-                if err.args[0] == EWOULDBLOCK:
-                    return
-                raise
             sock = socket(sock.family, sock.type, sock.proto, fileno=fd)
             # XXX Python issue #7995?
             return sock, address
