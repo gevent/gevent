@@ -210,6 +210,8 @@ else:
     ARES.define_macros += [('HAVE_NETDB_H', '')]
 
 _ran_make = []
+
+
 def make(targets=''):
     if not _ran_make:
         if os.path.exists('Makefile'):
