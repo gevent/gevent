@@ -7,6 +7,7 @@ import re
 import shutil
 import traceback
 from os.path import join, abspath, basename, dirname
+from subprocess import check_call
 from glob import glob
 
 PYPY = hasattr(sys, 'pypy_version_info')
@@ -28,6 +29,8 @@ with open('gevent/__init__.py') as _:
     __version__ = re.search(r"__version__\s*=\s*'(.*)'", _.read(), re.M).group(1)
 assert __version__
 
+def _quoted_abspath(p):
+    return '"' + abspath(p) + '"'
 
 def parse_environ(key):
     value = os.environ.get(key)
@@ -55,8 +58,8 @@ CARES_EMBED = get_config_value('CARES_EMBED', 'EMBED', 'c-ares')
 
 define_macros = []
 libraries = []
-libev_configure_command = ' '.join(["/bin/sh", abspath('libev/configure'), '> configure-output.txt'])
-ares_configure_command = ' '.join(["/bin/sh", abspath('c-ares/configure'), 'CONFIG_COMMANDS= CONFIG_FILES= > configure-output.txt'])
+libev_configure_command = ' '.join(["(cd ", _quoted_abspath('libev/'), " && /bin/sh ./configure && mv config.h \"$OLDPWD\")", '> configure-output.txt'])
+ares_configure_command = ' '.join(["(cd ", _quoted_abspath('c-ares/'), " && if [ -e ares_build.h ]; then cp ares_build.h ares_build.h.orig; fi && /bin/sh ./configure CONFIG_COMMANDS= CONFIG_FILES= && cp ares_config.h ares_build.h \"$OLDPWD\" && mv ares_build.h.orig ares_build.h)", "> configure-output.txt"])
 
 
 if sys.platform == 'win32':
@@ -110,7 +113,7 @@ def make_universal_header(filename, *defines):
 
 def _system(cmd):
     sys.stdout.write('Running %r in %s\n' % (cmd, os.getcwd()))
-    return os.system(cmd)
+    return check_call(cmd, shell=True)
 
 
 def system(cmd):
@@ -174,7 +177,7 @@ if LIBEV_EMBED:
                            ("EV_PERIODIC_ENABLE", '0')]
     CORE.configure = configure_libev
     if sys.platform == "darwin":
-        os.environ["CFLAGS"] = ("%s %s" % (os.environ.get("CFLAGS", ""), "-U__llvm__")).lstrip()
+        os.environ["CPPFLAGS"] = ("%s %s" % (os.environ.get("CPPFLAGS", ""), "-U__llvm__")).lstrip()
     if os.environ.get('GEVENTSETUP_EV_VERIFY') is not None:
         CORE.define_macros.append(('EV_VERIFY', os.environ['GEVENTSETUP_EV_VERIFY']))
 else:
