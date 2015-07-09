@@ -7,7 +7,10 @@
 Unreleased
 ==========
 
-- Nothing yet.
+- ``setup.py`` can be run from a directory containing spaces. Reported
+  in :issue:`319` by Ivan Smirnov.
+- ``setup.py`` can build with newer versions of clang on OS X. They
+  enforce the distinction between CFLAGS and CPPFLAGS.
 
 1.1a2 (Jul 8, 2015)
 ===================
