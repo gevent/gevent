@@ -453,7 +453,7 @@ class WSGIHandler(object):
             finally:
                 # Avoid dangling circular ref
                 exc_info = None
-        self.code = int(status.split(' ', 1)[0])
+        self.code = int(status.split(b' ', 1)[0])
         self.status = status
         self.response_headers = headers
 
