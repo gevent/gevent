@@ -29,8 +29,10 @@ with open('gevent/__init__.py') as _:
     __version__ = re.search(r"__version__\s*=\s*'(.*)'", _.read(), re.M).group(1)
 assert __version__
 
+
 def _quoted_abspath(p):
     return '"' + abspath(p) + '"'
+
 
 def parse_environ(key):
     value = os.environ.get(key)
@@ -58,8 +60,16 @@ CARES_EMBED = get_config_value('CARES_EMBED', 'EMBED', 'c-ares')
 
 define_macros = []
 libraries = []
-libev_configure_command = ' '.join(["(cd ", _quoted_abspath('libev/'), " && /bin/sh ./configure && mv config.h \"$OLDPWD\")", '> configure-output.txt'])
-ares_configure_command = ' '.join(["(cd ", _quoted_abspath('c-ares/'), " && if [ -e ares_build.h ]; then cp ares_build.h ares_build.h.orig; fi && /bin/sh ./configure CONFIG_COMMANDS= CONFIG_FILES= && cp ares_config.h ares_build.h \"$OLDPWD\" && mv ares_build.h.orig ares_build.h)", "> configure-output.txt"])
+libev_configure_command = ' '.join(["(cd ", _quoted_abspath('libev/'),
+                                    " && /bin/sh ./configure ",
+                                    " && mv config.h \"$OLDPWD\")",
+                                    '> configure-output.txt'])
+ares_configure_command = ' '.join(["(cd ", _quoted_abspath('c-ares/'),
+                                   " && if [ -e ares_build.h ]; then cp ares_build.h ares_build.h.orig; fi ",
+                                   " && /bin/sh ./configure CONFIG_COMMANDS= CONFIG_FILES= ",
+                                   " && cp ares_config.h ares_build.h \"$OLDPWD\" ",
+                                   " && mv ares_build.h.orig ares_build.h)",
+                                   "> configure-output.txt"])
 
 
 if sys.platform == 'win32':
