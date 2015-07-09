@@ -7,10 +7,11 @@ from select import POLLIN, POLLOUT
 
 try:
     from select import poll as original_poll
+    __implements__ = ['select', 'poll']
 except ImportError:
     original_poll = None
+    __implements__ = ['select']
 
-__implements__ = ['select', 'poll']
 __all__ = ['error'] + __implements__
 
 import select as __select__
