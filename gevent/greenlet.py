@@ -225,7 +225,11 @@ class Greenlet(greenlet):
 
     def successful(self):
         """Return true if and only if the greenlet has finished execution successfully,
-        that is, without raising an error."""
+        that is, without raising an error.
+
+        .. note:: A greenlet that has been killed with the default :class:`GreenletExit` exception
+            is considered successful. That is, ``GreenletExit`` is not considered an error.
+        """
         return self._exc_info and self._exc_info[1] is None
 
     def __repr__(self):
