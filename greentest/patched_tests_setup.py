@@ -233,6 +233,12 @@ if sys.version_info[:2] >= (3, 4):
         'test_subprocess.POSIXProcessTestCase.test_small_errpipe_write_fd',
         # Python 3 fixed a bug if the stdio file descriptors were closed;
         # we still have that bug
+
+        'test_selectors.PollSelectorTestCase.test_above_fd_setsize',
+        # This test attempts to open many many file descriptors and
+        # poll on them, expecting them all to be ready at once. But
+        # libev limits the number of events it will return at once. Specifically,
+        # on linux with epoll, it returns a max of 64 (ev_epoll.c).
     ]
 
     if os.environ.get('TRAVIS') == 'true':
