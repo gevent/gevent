@@ -357,7 +357,7 @@ class Greenlet(greenlet):
         self.__cancel_start()
 
         if self.dead:
-            self.__handle_death_before_start()
+            self.__handle_death_before_start(exception)
         else:
             waiter = Waiter()
             self.parent.loop.run_callback(_kill, self, exception, waiter)
