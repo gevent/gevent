@@ -3,10 +3,11 @@ from __future__ import absolute_import
 from gevent.event import Event
 from gevent.hub import get_hub
 from gevent.hub import integer_types
-from select import POLLIN, POLLOUT
+
 
 try:
     from select import poll as original_poll
+    from select import POLLIN, POLLOUT
     __implements__ = ['select', 'poll']
 except ImportError:
     original_poll = None
@@ -96,9 +97,6 @@ if original_poll is not None:
         def __init__(self):
             self.fds = {}
             self.loop = get_hub().loop
-            # Using the original poll to handle immediate response polling.
-            # Using the ev based way, we receive a signal on the first descriptor.
-            self.poll_obj = original_poll()
 
         def register(self, fd, eventmask=POLLIN | POLLOUT):
             flags = 0
@@ -107,16 +105,11 @@ if original_poll is not None:
             watcher = self.loop.io(get_fileno(fd), flags)
             watcher.priority = self.loop.MAXPRI
             self.fds[fd] = watcher
-            self.poll_obj.register(fd, eventmask)
 
         def modify(self, fd, eventmask):
             self.register(fd, eventmask)
-            self.poll_obj.modify(fd, eventmask)
 
         def poll(self, timeout=None):
-            results = self.poll_obj.poll(0)
-            if results:
-                return results
             result = PollResult()
             try:
                 for fd in self.fds:
@@ -131,4 +124,3 @@ if original_poll is not None:
 
         def unregister(self, fd):
             self.fds.pop(fd, None)
-            self.poll_obj.unregister(fd)
