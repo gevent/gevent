@@ -46,6 +46,20 @@ It also a good idea to override :meth:`__str__`: if :meth:`_run` raises an excep
 .. automethod:: Greenlet.unlink
 
 
+Greenlet objects have a boolean value (``__nonzero__`` or ``__bool__``) which is true if it's active: started but not dead yet.
+
+It's possible to use it like this::
+
+  g = gevent.spawn(...)
+  while g:
+      # do something while g is alive
+
+The Greenlet's ``__nonzero__`` is an improvement on greenlet's
+``__nonzero__``. The greenlet's `__nonzero__` returns False if greenlet has
+not been switched to yet or already dead. While the latter is OK, the
+former is not good, because a just spawned Greenlet has not been
+switched to yet and thus would evaluate to False.
+
 Being a greenlet__ subclass, :class:`Greenlet` also has ``switch()`` and ``throw()`` methods.
 However, these should not be used at the application level. Prefer higher-level safe
 classes, like :class:`Event <gevent.event.Event>` and :class:`Queue <gevent.queue.Queue>`, instead.
