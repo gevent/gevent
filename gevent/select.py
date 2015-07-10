@@ -92,7 +92,6 @@ if original_poll is not None:
             self.events.add((fd, result_flags))
             self.event.set()
 
-
     class poll(object):
         def __init__(self):
             self.fds = {}
