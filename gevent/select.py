@@ -77,65 +77,59 @@ def select(rlist, wlist, xlist, timeout=None):
         for watcher in watchers:
             watcher.stop()
 
+if original_poll is not None:
+    class PollResult(object):
+        __slots__ = ['events', 'event']
 
-class PollResult(object):
-    __slots__ = ['events', 'event']
+        def __init__(self):
+            self.events = set()
+            self.event = Event()
 
-    def __init__(self):
-        self.events = set()
-        self.event = Event()
-
-    def add_event(self, events, fd):
-        result_flags = 0
-        result_flags |= POLLIN if events & 1 else 0
-        result_flags |= POLLOUT if events & 2 else 0
-        self.events.add((fd, result_flags))
-        self.event.set()
+        def add_event(self, events, fd):
+            result_flags = 0
+            result_flags |= POLLIN if events & 1 else 0
+            result_flags |= POLLOUT if events & 2 else 0
+            self.events.add((fd, result_flags))
+            self.event.set()
 
 
-class poll(object):
-    def __init__(self):
-        self.fds = {}
-        self.loop = get_hub().loop
-        # Using the original poll to handle immediate response polling.
-        # Using the ev based way, we receive a signal on the first descriptor.
-        self.poll_obj = None
-        if original_poll is not None:
+    class poll(object):
+        def __init__(self):
+            self.fds = {}
+            self.loop = get_hub().loop
+            # Using the original poll to handle immediate response polling.
+            # Using the ev based way, we receive a signal on the first descriptor.
             self.poll_obj = original_poll()
 
-    def register(self, fd, eventmask=POLLIN | POLLOUT):
-        flags = 0
-        flags |= 1 if eventmask & POLLIN else 0
-        flags |= 2 if eventmask & POLLOUT else 0
-        watcher = self.loop.io(get_fileno(fd), flags)
-        watcher.priority = self.loop.MAXPRI
-        self.fds[fd] = watcher
-        if self.poll_obj:
+        def register(self, fd, eventmask=POLLIN | POLLOUT):
+            flags = 0
+            flags |= 1 if eventmask & POLLIN else 0
+            flags |= 2 if eventmask & POLLOUT else 0
+            watcher = self.loop.io(get_fileno(fd), flags)
+            watcher.priority = self.loop.MAXPRI
+            self.fds[fd] = watcher
             self.poll_obj.register(fd, eventmask)
 
-    def modify(self, fd, eventmask):
-        self.register(fd, eventmask)
-        if self.poll_obj:
+        def modify(self, fd, eventmask):
+            self.register(fd, eventmask)
             self.poll_obj.modify(fd, eventmask)
 
-    def poll(self, timeout=None):
-        if self.poll_obj:
+        def poll(self, timeout=None):
             results = self.poll_obj.poll(0)
             if results:
                 return results
-        result = PollResult()
-        try:
-            for fd in self.fds:
-                self.fds[fd].start(result.add_event, get_fileno(fd), pass_events=True)
-            if timeout is not None and -1 < timeout:
-                timeout /= 1000.0
-            result.event.wait(timeout=timeout)
-            return list(result.events)
-        finally:
-            for fd in self.fds:
-                self.fds[fd].stop()
+            result = PollResult()
+            try:
+                for fd in self.fds:
+                    self.fds[fd].start(result.add_event, get_fileno(fd), pass_events=True)
+                if timeout is not None and -1 < timeout:
+                    timeout /= 1000.0
+                result.event.wait(timeout=timeout)
+                return list(result.events)
+            finally:
+                for fd in self.fds:
+                    self.fds[fd].stop()
 
-    def unregister(self, fd):
-        self.fds.pop(fd, None)
-        if self.poll_obj:
+        def unregister(self, fd):
+            self.fds.pop(fd, None)
             self.poll_obj.unregister(fd)
