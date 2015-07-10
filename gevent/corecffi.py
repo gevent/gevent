@@ -295,6 +295,8 @@ libev.vfd_free = lambda fd: None
 @ffi.callback("int(void* handle, int revents)")
 def _python_callback(handle, revents):
     watcher = ffi.from_handle(handle)
+    if len(watcher.args) > 0 and watcher.args[0] == GEVENT_CORE_EVENTS:
+        watcher.args = (revents, ) + watcher.args[1:]
     try:
         watcher.callback(*watcher.args)
     except:
@@ -1012,6 +1014,11 @@ class io(watcher):
         if events & ~(libev.EV__IOFDSET | libev.EV_READ | libev.EV_WRITE):
             raise ValueError('illegal event mask: %r' % events)
         watcher.__init__(self, loop, ref=ref, priority=priority, args=(fd, events))
+
+    def start(self, callback, *args, **kwargs):
+        if kwargs.get('pass_events'):
+            args = (GEVENT_CORE_EVENTS, ) + args
+        super(io, self).start(callback, *args)
 
     def _get_fd(self):
         return libev.vfd_get(self._watcher.fd)
