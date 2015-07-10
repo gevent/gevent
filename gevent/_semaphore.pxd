@@ -12,3 +12,8 @@ cdef class Semaphore:
     cpdef acquire(self, int blocking=*, object timeout=*)
     cpdef __enter__(self)
     cpdef __exit__(self, object t, object v, object tb)
+
+cdef class BoundedSemaphore(Semaphore):
+    cdef readonly int _initial_value
+
+    cpdef release(self)

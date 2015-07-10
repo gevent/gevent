@@ -1,6 +1,11 @@
 import greentest
 import gevent
 from gevent.lock import Semaphore
+from gevent.thread import allocate_lock
+try:
+    from _thread import allocate_lock as std_allocate_lock
+except ImportError: # Py2
+    from thread import allocate_lock as std_allocate_lock
 
 
 class TestTimeoutAcquire(greentest.TestCase):
@@ -20,6 +25,25 @@ class TestTimeoutAcquire(greentest.TestCase):
         s.release()
         gevent.sleep(0.001)
         self.assertEqual(result, ['a', 'b'])
+
+
+class TestLock(greentest.TestCase):
+
+    def test_release_unheld_lock(self):
+        std_lock = std_allocate_lock()
+        g_lock = allocate_lock()
+        try:
+            std_lock.release()
+            self.fail("Should have thrown an exception")
+        except Exception as e:
+            std_exc = e
+
+        try:
+            g_lock.release()
+            self.fail("Should have thrown an exception")
+        except Exception as e:
+            g_exc = e
+        self.assertTrue(isinstance(g_exc, type(std_exc)), (g_exc, std_exc))
 
 
 if __name__ == '__main__':

@@ -27,6 +27,12 @@ Unreleased
   monkey-patch. Implemented in :pr:`604` by Eddi Linder.
 - Allow passing of events to the io callback under PyPy. Reported in
   :issue:`531` by M. Nunberg and implemented in :pr:`604`.
+- ``gevent.thread.allocate_lock`` (and so a monkey-patched standard
+  library ``allocate_lock``) more closely matches the behaviour of the
+  builtin: an unlocked lock cannot be released, and attempting to do
+  so throws the correct exception (``thread.error`` on Python 2,
+  ``RuntimeError`` on Python 3). Previously, over-releasing a lock was
+  silently ignored. Reported in :issue:`308` by Jędrzej Nowak.
 
 1.1a2 (Jul 8, 2015)
 ===================

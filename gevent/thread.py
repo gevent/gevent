@@ -32,7 +32,7 @@ else:
 error = __thread__.error
 from gevent.hub import getcurrent, GreenletExit
 from gevent.greenlet import Greenlet
-from gevent.lock import Semaphore as LockType
+from gevent.lock import BoundedSemaphore
 from gevent.local import local as _local
 
 
@@ -47,6 +47,11 @@ def start_new_thread(function, args=(), kwargs={}):
     greenlet = Greenlet.spawn(function, *args, **kwargs)
     return get_ident(greenlet)
 
+
+class LockType(BoundedSemaphore):
+    # Change the ValueError into the appropriate thread error
+    # and any other API changes we need to make to match behaviour
+    _OVER_RELEASE_ERROR = __thread__.error
 
 allocate_lock = LockType
 

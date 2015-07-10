@@ -3,18 +3,20 @@ from gevent.hub import get_hub, getcurrent
 from gevent.timeout import Timeout
 
 
-__all__ = ['Semaphore']
+__all__ = ['Semaphore', 'BoundedSemaphore']
 
 
 
 class Semaphore(object):
-    """A semaphore manages a counter representing the number of release() calls minus the number of acquire() calls,
-    plus an initial value. The acquire() method blocks if necessary until it can return without making the counter
-    negative.
+    """
+    A semaphore manages a counter representing the number of release()
+    calls minus the number of acquire() calls, plus an initial value.
+    The acquire() method blocks if necessary until it can return
+    without making the counter negative.
 
-    If not given, value defaults to 1.
+    If not given, ``value`` defaults to 1.
 
-    This Semaphore's __exit__ method does not call the trace function.
+    This Semaphore's ``__exit__`` method does not call the trace function.
     """
 
     def __init__(self, value=1):
@@ -133,3 +135,25 @@ class Semaphore(object):
 
     def __exit__(self, t, v, tb):
         self.release()
+
+class BoundedSemaphore(Semaphore):
+    """
+    A bounded semaphore checks to make sure its current value doesn't
+    exceed its initial value. If it does, :class:`ValueError` is
+    raised. In most situations semaphores are used to guard resources
+    with limited capacity. If the semaphore is released too many times
+    it's a sign of a bug.
+
+    If not given, *value* defaults to 1.
+    """
+
+    _OVER_RELEASE_ERROR = ValueError
+
+    def __init__(self, value=1):
+        Semaphore.__init__(self, value)
+        self._initial_value = value
+
+    def release(self):
+        if self.counter >= self._initial_value:
+            raise self._OVER_RELEASE_ERROR("Semaphore released too many times")
+        return Semaphore.release(self)
