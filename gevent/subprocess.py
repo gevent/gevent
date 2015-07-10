@@ -935,7 +935,7 @@ class Popen(object):
                     # write to stderr -> hang.  http://bugs.python.org/issue1336
                     gc.disable()
                     try:
-                        self.pid = fork_and_watch(self._on_child, self._loop, fork)
+                        self.pid = fork_and_watch(self._on_child, self._loop, True, fork)
                     except:
                         if gc_was_enabled:
                             gc.enable()

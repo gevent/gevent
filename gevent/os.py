@@ -165,7 +165,7 @@ if hasattr(os, 'fork'):
             # we're not watching it
             return _waitpid(pid, options)
 
-        def fork_and_watch(callback=None, loop=None, fork=fork):
+        def fork_and_watch(callback=None, loop=None, ref=False, fork=fork):
             """
             Fork a child process and start a child watcher for it in the parent process.
 
