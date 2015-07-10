@@ -16,6 +16,12 @@ Unreleased
 - Fixed regression that failed to set the ``successful`` value to
   False when killing a greenlet before it ran with a non-default
   exception. Fixed in :pr:`608` by Heungsub Lee.
+- libev's child watchers caused ``os.waitpid`` to become unreliable
+  due to the use of signals on POSIX platforms. This was especially
+  noticeable when using ``gevent.subprocess`` in combination with
+  ``multiprocessing``. Now, the monkey-patched ``os`` module provides
+  a ``waitpid`` function that seeks to ameliorate this. Reported in
+  :issue:`600` by champax and :issue:`452` by Łukasz Kawczyński.
 
 1.1a2 (Jul 8, 2015)
 ===================

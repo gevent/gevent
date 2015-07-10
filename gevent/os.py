@@ -102,6 +102,99 @@ if hasattr(os, 'fork'):
             reinit()
         return result
 
+    if hasattr(os, 'WNOWAIT') or hasattr(os, 'WNOHANG'):
+        # We can only do this on POSIX
+        import time
+
+        _waitpid = os.waitpid
+        _WNOHANG = os.WNOHANG
+
+        # {pid -> watcher or tuple(pid, rstatus, timestamp)}
+        _watched_children = {}
+
+        def _on_child(watcher, callback):
+            # XXX: Could handle tracing here by not stopping
+            # until the pid is terminated
+            watcher.stop()
+            _watched_children[watcher.pid] = (watcher.pid, watcher.rstatus, time.time())
+            if callback:
+                callback(watcher)
+            # now is as good a time as any to reap children
+            _reap_children()
+
+        def _reap_children(timeout=60):
+            # Remove all the dead children that haven't been waited on
+            # for the *timeout*
+            now = time.time()
+            oldest_allowed = now - timeout
+            for pid in _watched_children.keys():
+                val = _watched_children[pid]
+                if isinstance(val, tuple) and val[2] < oldest_allowed:
+                    del _watched_children[pid]
+
+        def waitpid(pid, options):
+            # XXX Does not handle tracing children
+            if pid <= 0:
+                # magic functions for multiple children. Pass.
+                return _waitpid(pid, options)
+
+            if pid in _watched_children:
+                # yes, we're watching it
+                if options & _WNOHANG or isinstance(_watched_children[pid], tuple):
+                    # We're either asked not to block, or it already finished, in which
+                    # case blocking doesn't matter
+                    result = _watched_children[pid]
+                    if isinstance(result, tuple):
+                        # it finished. libev child watchers
+                        # are one-shot
+                        del _watched_children[pid]
+                        return result[:2]
+                    # it's not finished
+                    return (0, 0)
+                else:
+                    # we should block. Let the underlying OS call block; it should
+                    # eventually die with OSError, depending on signal delivery
+                    try:
+                        return _waitpid(pid, options)
+                    except OSError:
+                        if pid in _watched_children and isinstance(_watched_children, tuple):
+                            result = _watched_children[pid]
+                            del _watched_children[pid]
+                            return result[:2]
+                        raise
+            # we're not watching it
+            return _waitpid(pid, options)
+
+        def fork_and_watch(callback=None, loop=None, ref=False, fork=fork):
+            """
+            Fork a child process and start a child watcher for it in the parent process.
+
+            This call cooperates with the :func:`waitpid`` function defined in this module.
+
+            :keyword callback: If given, a callable that will be called with the child watcher
+                when the child finishes.
+            :keyword loop: The loop to start the watcher in. Defaults to the
+                current loop.
+            :keyword fork: The fork function. Defaults to the one defined in this
+                module.
+
+            .. versionadded: 1.1a3
+            """
+            pid = fork()
+            if pid:
+                # parent
+                loop = loop or get_hub().loop
+                watcher = loop.child(pid)
+                _watched_children[pid] = watcher
+                watcher.start(_on_child, watcher, callback)
+            return pid
+
+        # Watch children by default
+        fork = fork_and_watch
+
+        __extensions__.append('fork_and_watch')
+        __implements__.append("waitpid")
+
 else:
     __implements__.remove('fork')
 

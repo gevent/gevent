@@ -112,6 +112,7 @@ else:
     import pickle
     from gevent import monkey
     fork = monkey.get_original('os', 'fork')
+    from gevent.os import fork_and_watch
 
 if PY3:
     def call(*popenargs, **kwargs):
@@ -934,7 +935,7 @@ class Popen(object):
                     # write to stderr -> hang.  http://bugs.python.org/issue1336
                     gc.disable()
                     try:
-                        self.pid = fork()
+                        self.pid = fork_and_watch(self._on_child, self._loop, True, fork)
                     except:
                         if gc_was_enabled:
                             gc.enable()
@@ -1040,8 +1041,6 @@ class Popen(object):
                             os._exit(1)
 
                     # Parent
-                    self._watcher = self._loop.child(self.pid)
-                    self._watcher.start(self._on_child, self._watcher)
 
                     if gc_was_enabled:
                         gc.enable()
