@@ -22,6 +22,11 @@ Unreleased
   ``multiprocessing``. Now, the monkey-patched ``os`` module provides
   a ``waitpid`` function that seeks to ameliorate this. Reported in
   :issue:`600` by champax and :issue:`452` by Łukasz Kawczyński.
+- On platforms that implement ``select.poll``, provide a
+  gevent-friendly ``gevent.select.poll`` and corresponding
+  monkey-patch. Implemented in :pr:`604` by Eddi Linder.
+- Allow passing of events to the io callback under PyPy. Reported in
+  :issue:`531` by M. Nunberg and implemented in :pr:`604`.
 
 1.1a2 (Jul 8, 2015)
 ===================
