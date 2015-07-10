@@ -2,7 +2,7 @@ cdef class Semaphore:
     cdef public int counter
     cdef readonly object _links
     cdef readonly object _notifier
-    cdef readonly int _dirty
+    cdef public int _dirty
 
     cpdef locked(self)
     cpdef release(self)

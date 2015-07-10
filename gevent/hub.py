@@ -343,6 +343,10 @@ class Hub(greenlet):
         return result + '>'
 
     def handle_error(self, context, type, value, tb):
+        if isinstance(value, str):
+            # Cython can raise errors where the value is a plain string
+            # e.g., AttributeError, "_semaphore.Semaphore has no attr", <traceback>
+            value = type(value)
         if not issubclass(type, self.NOT_ERROR):
             self.print_exception(context, type, value, tb)
         if context is None or issubclass(type, self.SYSTEM_ERROR):
