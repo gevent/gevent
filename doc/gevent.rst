@@ -5,6 +5,8 @@
 
 The most common functions and classes are available in the :mod:`gevent` top level package.
 
+.. autodata:: __version__
+
 
 Greenlet objects
 ----------------

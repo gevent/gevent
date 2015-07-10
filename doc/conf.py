@@ -117,7 +117,7 @@ modindex_common_prefix = ['gevent.']
 # Sphinx are currently 'default' and 'sphinxdoc'.
 html_theme = 'mytheme'
 html_theme_path = ['.']
-
+html_theme_options = {'gevent_version': __version__}
 # Theme options are theme-specific and customize the look and feel of a theme
 # further.  For a list of options available for each theme, see the
 # documentation.

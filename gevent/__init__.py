@@ -9,6 +9,7 @@ See http://www.gevent.org/ for the documentation.
 from __future__ import absolute_import
 
 version_info = (1, 1, 'a3', 'dev', 0)
+#: The human-readable PEP 440 version identifier
 __version__ = '1.1a3.dev0'
 
 
