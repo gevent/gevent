@@ -13,6 +13,9 @@ Unreleased
   enforce the distinction between CFLAGS and CPPFLAGS.
 - ``gevent.lock.Semaphore`` is atomic on PyPy, just like it is on
   CPython. This comes at a small performance cost.
+- Fixed regression that failed to set the ``successful`` value to
+  False when killing a greenlet before it ran with a non-default
+  exception. Fixed in :pr:`608` by Heungsub Lee.
 
 1.1a2 (Jul 8, 2015)
 ===================
