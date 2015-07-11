@@ -34,7 +34,13 @@ Unreleased
   ``RuntimeError`` on Python 3). Previously, over-releasing a lock was
   silently ignored. Reported in :issue:`308` by Jędrzej Nowak.
 - ``gevent.fileobject.FileObjectThread`` uses the threadpool to close
-  the underling file-like object. Reported in :issue:`201` by vitaly-krugl.
+  the underling file-like object. Reported in :issue:`201` by
+  vitaly-krugl.
+- Malicious or malformed HTTP chunked transfer encoding data sent to
+  the ``gevent.pywsgi`` handler is handled more robustly, resulting in
+  "HTTP 400 bad request" responses instead of a 500 error or, in the
+  worst case, a server-side hang. Reported in :issue:`229` by Björn
+  Lindqvist.
 
 1.1a2 (Jul 8, 2015)
 ===================
