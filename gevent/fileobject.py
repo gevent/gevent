@@ -5,6 +5,7 @@ from gevent._fileobjectcommon import FileObjectClosed
 from gevent.hub import get_hub
 from gevent.hub import integer_types
 from gevent.hub import PY3
+from gevent.hub import reraise
 from gevent.lock import Semaphore, DummySemaphore
 
 
@@ -81,7 +82,16 @@ class FileObjectThread(object):
                 # so acquiring the lock could potentially introduce deadlocks
                 # that weren't present before. Avoiding the lock doesn't make
                 # the existing race condition any worse.
-                self.threadpool.apply(fobj.close)
+                # We wrap the close in an exception handler and re-raise directly
+                # to avoid the (common, expected) IOError from being logged
+                def close():
+                    try:
+                        fobj.close()
+                    except:
+                        return sys.exc_info()
+                exc_info = self.threadpool.apply(close)
+                if exc_info:
+                    reraise(*exc_info)
 
     def flush(self, _fobj=None):
         if _fobj is not None:
