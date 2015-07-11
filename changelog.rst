@@ -33,6 +33,8 @@ Unreleased
   so throws the correct exception (``thread.error`` on Python 2,
   ``RuntimeError`` on Python 3). Previously, over-releasing a lock was
   silently ignored. Reported in :issue:`308` by Jędrzej Nowak.
+- ``gevent.fileobject.FileObjectThread`` uses the threadpool to close
+  the underling file-like object. Reported in :issue:`201` by vitaly-krugl.
 
 1.1a2 (Jul 8, 2015)
 ===================
@@ -123,7 +125,8 @@ Unreleased
 - (Experimental.) Waiting on or getting results from greenlets that
   raised exceptions now usually raises the original traceback. This
   should assist things like Sentry to track the original problem. See
-  :issue:`450` and :issue:`528` by Rodolfo and Eddi Linder.
+  :issue:`450` and :issue:`528` by Rodolfo and Eddi Linder and
+  :issue:`240` by Erik Allik.
 - Upgrade to libev 4.20. See :pr:`590` by Peter Renström.
 - Fix ``gevent.baseserver.BaseServer`` to be printable when its
   ``handle`` function is an instancemethod of itself. See :pr:`501` by Joe

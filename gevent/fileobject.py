@@ -76,7 +76,12 @@ class FileObjectThread(object):
             self.flush(_fobj=fobj)
         finally:
             if self._close:
-                fobj.close()
+                # Note that we're not using self._apply; older code
+                # did fobj.close() without going through the threadpool at all,
+                # so acquiring the lock could potentially introduce deadlocks
+                # that weren't present before. Avoiding the lock doesn't make
+                # the existing race condition any worse.
+                self.threadpool.apply(fobj.close)
 
     def flush(self, _fobj=None):
         if _fobj is not None:
