@@ -568,6 +568,56 @@ class TestChunkedPost(TestCase):
         fd.write(data.replace(b'/a', b'/c'))
         read_http(fd, body='oh hai')
 
+    def test_229_incorrect_chunk_no_newline(self):
+        # Giving both a Content-Length and a Transfer-Encoding,
+        # TE is preferred. But if the chunking is bad from the client,
+        # missing its terminating newline,
+        # the server doesn't hang
+        data = (b'POST /a HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n'
+                b'Content-Length: 12\r\n'
+                b'Transfer-Encoding: chunked\r\n\r\n'
+                b'{"hi": "ho"}')
+        fd = self.makefile()
+        fd.write(data)
+        read_http(fd, code=400)
+
+    def test_229_incorrect_chunk_non_hex(self):
+        # Giving both a Content-Length and a Transfer-Encoding,
+        # TE is preferred. But if the chunking is bad from the client,
+        # the server doesn't hang
+        data = (b'POST /a HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n'
+                b'Content-Length: 12\r\n'
+                b'Transfer-Encoding: chunked\r\n\r\n'
+                b'{"hi": "ho"}\r\n')
+        fd = self.makefile()
+        fd.write(data)
+        read_http(fd, code=400)
+
+    def test_229_correct_chunk_quoted_ext(self):
+        data = (b'POST /a HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n'
+                b'Transfer-Encoding: chunked\r\n\r\n'
+                b'2;token="oh hi"\r\noh\r\n4\r\n hai\r\n0\r\n\r\n')
+        fd = self.makefile()
+        fd.write(data)
+        read_http(fd, body='oh hai')
+
+    def test_229_correct_chunk_token_ext(self):
+        data = (b'POST /a HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n'
+                b'Transfer-Encoding: chunked\r\n\r\n'
+                b'2;token=oh_hi\r\noh\r\n4\r\n hai\r\n0\r\n\r\n')
+        fd = self.makefile()
+        fd.write(data)
+        read_http(fd, body='oh hai')
+
+    def test_229_incorrect_chunk_token_ext_too_long(self):
+        data = (b'POST /a HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n'
+                b'Transfer-Encoding: chunked\r\n\r\n'
+                b'2;token=oh_hi\r\noh\r\n4\r\n hai\r\n0\r\n\r\n')
+        data = data.replace(b'oh_hi', b'_oh_hi' * 4000)
+        fd = self.makefile()
+        fd.write(data)
+        read_http(fd, code=400)
+
 
 class TestUseWrite(TestCase):
 
@@ -857,7 +907,7 @@ class TestContentLength304(TestCase):
         body = "Invalid Content-Length for 304 response: '100' (must be absent or zero)"
         read_http(fd, code=200, reason='Raised', body=body, chunks=False)
         garbage = fd.read()
-        self.assert_(garbage == b"", "got garbage: %r" % garbage)
+        self.assertTrue(garbage == b"", "got garbage: %r" % garbage)
 
 
 class TestBody304(TestCase):

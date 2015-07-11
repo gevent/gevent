@@ -2,6 +2,8 @@
 # Copyright (c) 2009-2011, gevent contributors
 
 import errno
+from io import BytesIO
+import string
 import sys
 import time
 import traceback
@@ -26,11 +28,27 @@ _WEEKDAYNAME = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
 _MONTHNAME = [None,  # Dummy so we can use 1-based month numbers
               "Jan", "Feb", "Mar", "Apr", "May", "Jun",
               "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
+
+# The contents of the "HEX" grammar rule for HTTP, upper and lowercase A-F plus digits,
+# in byte form for comparing to the network.
+_HEX = string.hexdigits.encode('ascii')
+
+# Errors
+_ERRORS = dict()
 _INTERNAL_ERROR_STATUS = '500 Internal Server Error'
 _INTERNAL_ERROR_BODY = b'Internal Server Error'
 _INTERNAL_ERROR_HEADERS = [('Content-Type', 'text/plain'),
                            ('Connection', 'close'),
                            ('Content-Length', str(len(_INTERNAL_ERROR_BODY)))]
+_ERRORS[500] = (_INTERNAL_ERROR_STATUS, _INTERNAL_ERROR_HEADERS, _INTERNAL_ERROR_BODY)
+
+_BAD_REQUEST_STATUS = '400 Bad Request'
+_BAD_REQUEST_BODY = ''
+_BAD_REQUEST_HEADERS = [('Content-Type', 'text/plain'),
+                        ('Connection', 'close'),
+                        ('Content-Length', str(len(_BAD_REQUEST_BODY)))]
+_ERRORS[400] = (_BAD_REQUEST_STATUS, _BAD_REQUEST_HEADERS, _BAD_REQUEST_BODY)
+
 _REQUEST_TOO_LONG_RESPONSE = b"HTTP/1.1 414 Request URI Too Long\r\nConnection: close\r\nContent-length: 0\r\n\r\n"
 _BAD_REQUEST_RESPONSE = b"HTTP/1.1 400 Bad Request\r\nConnection: close\r\nContent-length: 0\r\n\r\n"
 _CONTINUE_RESPONSE = b"HTTP/1.1 100 Continue\r\n\r\n"
@@ -41,7 +59,17 @@ def format_date_time(timestamp):
     return "%s, %02d %3s %4d %02d:%02d:%02d GMT" % (_WEEKDAYNAME[wd], day, _MONTHNAME[month], year, hh, mm, ss)
 
 
+class _InvalidClientInput(IOError):
+    # Internal exception raised by Input indicating that the
+    # client sent invalid data. The result *should* be a HTTP 400
+    # error.
+    pass
+
+
 class Input(object):
+
+    __slots__ = ('rfile', 'content_length', 'socket', 'position',
+                 'chunked_input', 'chunk_length', '_chunked_input_error')
 
     def __init__(self, rfile, content_length, socket=None, chunked_input=False):
         self.rfile = rfile
@@ -50,8 +78,17 @@ class Input(object):
         self.position = 0
         self.chunked_input = chunked_input
         self.chunk_length = -1
+        self._chunked_input_error = False
 
     def _discard(self):
+        if self._chunked_input_error:
+            # We are in an unknown state, so we can't necessarily discard
+            # the body (e.g., if the client keeps the socket open, we could hang
+            # here forever).
+            # In this case, we've raised an exception and the user of this object
+            # is going to close the socket, so we don't have to discard
+            return
+
         if self.socket is None and (self.position < (self.content_length or 0) or self.chunked_input):
             # ## Read and discard body
             while 1:
@@ -90,6 +127,68 @@ class Input(object):
 
         return read
 
+    def __read_chunk_length(self, rfile):
+        # Read and return the next integer chunk length. If no
+        # chunk length can be read, raises _InvalidClientInput.
+
+        # Here's the production for a chunk:
+        # (http://www.w3.org/Protocols/rfc2616/rfc2616-sec3.html)
+        #   chunk          = chunk-size [ chunk-extension ] CRLF
+        #                    chunk-data CRLF
+        #   chunk-size     = 1*HEX
+        #   chunk-extension= *( ";" chunk-ext-name [ "=" chunk-ext-val ] )
+        #   chunk-ext-name = token
+        #   chunk-ext-val  = token | quoted-string
+
+        # To cope with malicious or broken clients that fail to send valid
+        # chunk lines, the strategy is to read character by character until we either reach
+        # a ; or newline. If at any time we read a non-HEX digit, we bail. If we hit a
+        # ;, indicating an chunk-extension, we'll read up to the next MAX_REQUEST_LINE charaters
+        # looking for the CRLF, and if we don't find it, we bail. If we read more than 16 hex characters,
+        # (the number needed to represent a 64-bit chunk size), we bail (this protects us from
+        # a client that sends an infinite stream of `F`, for example).
+
+        buf = BytesIO()
+        while 1:
+            char = rfile.read(1)
+            if not char:
+                self._chunked_input_error = True
+                raise _InvalidClientInput("EOF before chunk end reached")
+            if char == b'\r':
+                break
+            if char == b';':
+                break
+
+            if char not in _HEX:
+                self._chunked_input_error = True
+                raise _InvalidClientInput("Non-hex data", char)
+            buf.write(char)
+            if buf.tell() > 16:
+                self._chunked_input_error = True
+                raise _InvalidClientInput("Chunk-size too large.")
+
+        if char == b';':
+            i = 0
+            while i < MAX_REQUEST_LINE:
+                char = rfile.read(1)
+                if char == b'\r':
+                    break
+                i += 1
+            else:
+                # we read more than MAX_REQUEST_LINE without
+                # hitting CR
+                self._chunked_input_error = True
+                raise _InvalidClientInput("Too large chunk extension")
+
+        if char == b'\r':
+            # We either got here from the main loop or from the
+            # end of an extension
+            char = rfile.read(1)
+            if char != b'\n':
+                self._chunked_input_error = True
+                raise _InvalidClientInput("Line didn't end in CRLF")
+            return int(buf.getvalue(), 16)
+
     def _chunked_read(self, length=None, use_readline=False):
         rfile = self.rfile
         self._send_100_continue()
@@ -115,6 +214,7 @@ class Input(object):
                 data = reader(maxreadlen)
                 if not data:
                     self.chunk_length = 0
+                    self._chunked_input_error = True
                     raise IOError("unexpected end of file while parsing chunked data")
 
                 datalen = len(data)
@@ -131,14 +231,12 @@ class Input(object):
                 if use_readline and data[-1] == b"\n"[0]:
                     break
             else:
-                line = rfile.readline()
-                if not line.endswith(b"\n"):
-                    self.chunk_length = 0
-                    raise IOError("unexpected end of file while reading chunked data header")
-
-                self.chunk_length = int(line.split(b";", 1)[0], 16)
+                # We're at the beginning of a chunk, so we need to
+                # determine the next size to read
+                self.chunk_length = self.__read_chunk_length(rfile)
                 self.position = 0
                 if self.chunk_length == 0:
+                    # Last chunk. Terminates with a CRLF.
                     rfile.readline()
         return b''.join(response)
 
@@ -224,6 +322,7 @@ class WSGIHandler(object):
             while self.socket is not None:
                 self.time_start = time.time()
                 self.time_finish = 0
+
                 result = self.handle_one_request()
                 if result is None:
                     break
@@ -331,6 +430,13 @@ class WSGIHandler(object):
             traceback.print_exc()
 
     def read_requestline(self):
+        """
+        Read and return the HTTP request line.
+
+        Under both Python 2 and 3, this should return the native
+        ``str`` type; under Python 3, this probably means the bytes read
+        from the network need to be decoded.
+        """
         line = self.rfile.readline(MAX_REQUEST_LINE)
         if PY3:
             line = line.decode('latin-1')
@@ -368,6 +474,7 @@ class WSGIHandler(object):
 
         self.environ = self.get_environ()
         self.application = self.server.application
+
         self.handle_one_response()
 
         if self.close_connection:
@@ -536,7 +643,17 @@ class WSGIHandler(object):
                 close = getattr(self.result, 'close', None)
                 if close is not None:
                     close()
-                self.wsgi_input._discard()
+                try:
+                    self.wsgi_input._discard()
+                except (socket.error, IOError):
+                    # Don't let exceptions during discarding
+                    # input override any exception that may have been
+                    # raised by the application, such as our own _InvalidClientInput.
+                    # In the general case, these aren't even worth logging (see the comment
+                    # just below)
+                    pass
+        except _InvalidClientInput:
+            self._send_error_response_if_possible(400)
         except socket.error as ex:
             if ex.args[0] in (errno.EPIPE, errno.ECONNRESET):
                 # Broken pipe, connection reset by peer.
@@ -555,15 +672,19 @@ class WSGIHandler(object):
             self.time_finish = time.time()
             self.log_request()
 
+    def _send_error_response_if_possible(self, error_code):
+        if self.response_length:
+            self.close_connection = True
+        else:
+            status, headers, body = _ERRORS[error_code]
+            self.start_response(status, headers[:])
+            self.write(body)
+
     def handle_error(self, type, value, tb):
         if not issubclass(type, GreenletExit):
             self.server.loop.handle_error(self.environ, type, value, tb)
         del tb
-        if self.response_length:
-            self.close_connection = True
-        else:
-            self.start_response(_INTERNAL_ERROR_STATUS, _INTERNAL_ERROR_HEADERS[:])
-            self.write(_INTERNAL_ERROR_BODY)
+        self._send_error_response_if_possible(500)
 
     def _headers(self):
         key = None
