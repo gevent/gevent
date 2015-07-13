@@ -263,13 +263,20 @@ class AsyncResult(object):
     def wait(self, timeout=None):
         """Block until the instance is ready.
 
-        If this instance already holds a value / an exception, return immediatelly.
-        Otherwise, block until another thread calls :meth:`set` or :meth:`set_exception` or
-        until the optional timeout occurs.
+        If this instance already holds a value, it is returned immediately. If this
+        instance already holds an exception, ``None`` is returned immediately.
+
+        Otherwise, block until another thread calls :meth:`set` or :meth:`set_exception`
+        (at which point either the value or ``None`` will be returned, respectively),
+        or until the optional timeout expires (at which point ``None`` will also be
+        returned).
 
         When the *timeout* argument is present and not ``None``, it should be a
         floating point number specifying a timeout for the operation in seconds
         (or fractions thereof).
+
+        .. note:: If a timeout is given and expires, ``None`` will be returned
+            (no timeout exception will be raised).
 
         Return :attr:`value`.
         """
