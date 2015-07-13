@@ -50,6 +50,11 @@ Unreleased
   ``FileObjectPosix``. This unifies the code with the Python 3
   implementation, and fixes problems with using ``seek()``. See
   :issue:`151`.
+- Under Python 2, importing a module that uses gevent blocking
+  functions at its top level from multiple greenlets no longer
+  produces import errors (Python 3 handles this case natively).
+  Reported in :issue:`108` by shaun and initial fix based on code by
+  Sylvain Zimmer.
 
 1.1a2 (Jul 8, 2015)
 ===================

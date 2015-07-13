@@ -280,8 +280,18 @@ def patch_subprocess():
     patch_module('subprocess')
 
 
+def patch_builtins():
+    """Make the builtin __import__ function greenlet safe under Python 2"""
+    # https://github.com/gevent/gevent/issues/108
+    # Note that this is only needed in Python 2; under Python 3 (at least the versions
+    # we support) import locks are not global, they're per-module.
+    if sys.version_info[:2] < (3, 3):
+        patch_module('builtins')
+
+
 def patch_all(socket=True, dns=True, time=True, select=True, thread=True, os=True, ssl=True, httplib=False,
-              subprocess=True, sys=False, aggressive=True, Event=False):
+              subprocess=True, sys=False, aggressive=True, Event=False,
+              builtins=True):
     """Do all of the default monkey patching (calls every other applicable function in this module)."""
     # order is important
     if os:
@@ -304,6 +314,8 @@ def patch_all(socket=True, dns=True, time=True, select=True, thread=True, os=Tru
         raise ValueError('gevent.httplib is no longer provided, httplib must be False')
     if subprocess:
         patch_subprocess()
+    if builtins:
+        patch_builtins()
 
 
 if __name__ == '__main__':
