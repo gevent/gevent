@@ -37,16 +37,23 @@ def __import__(*args, **kwargs):
         # however, so this is necessary.
         args = args[1:]
     imp.acquire_lock()
-    _g_import_lock.acquire()
     try:
-        result = _import(*args, **kwargs)
+        try:
+            _g_import_lock.acquire()
+        except RuntimeError:
+            # we've seen this under PyPy, a recursion error
+            # importing 'platform'
+            return _import(*args, **kwargs)
+
+        try:
+            result = _import(*args, **kwargs)
+        finally:
+            _g_import_lock.release()
     finally:
-        _g_import_lock.release()
         imp.release_lock()
     return result
 
-
-if sys.version_info[:2] < (3, 3):
+if sys.version_info[:2] >= (3, 3):
     __implements__ = []
 else:
     __implements__ = ['__import__']

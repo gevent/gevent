@@ -59,13 +59,13 @@ if LEAKTEST:
 
 if PYPY:
     FAILING_TESTS += [
-        # Different in PyPy:
+        ## Different in PyPy:
 
-        # Not implemented:
+        ## Not implemented:
 
-        # ---
+        ## ---
 
-        # BUGS:
+        ## BUGS:
 
     ]
 
