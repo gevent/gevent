@@ -50,6 +50,7 @@ if _get_ident() not in __threading__._active and len(__threading__._active) == 1
     # Avoid printing an error on shutdown trying to remove the thread entry
     # we just replaced if we're not fully monkey patched in
     _MAIN_THREAD = __threading__._get_ident() if hasattr(__threading__, '_get_ident') else __threading__.get_ident()
+
     class _active(dict):
         def __delitem__(self, k):
             if k == _MAIN_THREAD and k not in self:
@@ -57,7 +58,6 @@ if _get_ident() not in __threading__._active and len(__threading__._active) == 1
             dict.__delitem__(self, k)
 
     __threading__._active = _active(__threading__._active)
-
 
 
 import sys
