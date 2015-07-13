@@ -41,6 +41,11 @@ Unreleased
   "HTTP 400 bad request" responses instead of a 500 error or, in the
   worst case, a server-side hang. Reported in :issue:`229` by Björn
   Lindqvist.
+- Importing the standard library ``threading`` module *before* using
+  ``gevent.monkey.patch_all()`` no longer causes Python 3.4 to fail to
+  get the ``repr`` of the main thread, and other CPython platforms to
+  return an unjoinable DummyThread. (Note that this is not
+  recommended.) Reported in :issue:`153`.
 
 1.1a2 (Jul 8, 2015)
 ===================

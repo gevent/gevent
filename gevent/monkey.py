@@ -175,7 +175,7 @@ def patch_thread(threading=True, _threading_local=True, Event=False):
         if threading.current_thread() == threading.main_thread():
             main_thread = threading.main_thread()
             _greenlet = main_thread._greenlet = greenlet.getcurrent()
-            from .hub import sleep
+            from gevent.hub import sleep
 
             def join(timeout=None):
                 if threading.current_thread() is main_thread:

@@ -36,14 +36,15 @@ class _DummyThread(_DummyThread_):
     def _Thread__stop(self):
         pass
 
-if PYPY:
-    # Make sure the MainThread can be found by our current greenlet ID,
-    # otherwise we get a new DummyThread, which cannot be joined.
-    # Fixes tests in test_threading_2
-    if _get_ident() not in __threading__._active and len(__threading__._active) == 1:
-        k, v = next(iter(__threading__._active.items()))
-        del __threading__._active[k]
-        __threading__._active[_get_ident()] = v
+# Make sure the MainThread can be found by our current greenlet ID,
+# otherwise we get a new DummyThread, which cannot be joined.
+# Fixes tests in test_threading_2 under PyPy, and generally makes things nicer
+# when threading is imported before monkey patching
+# XXX: This assumes that the import is happening in the "main" greenlet
+if _get_ident() not in __threading__._active and len(__threading__._active) == 1:
+    k, v = next(iter(__threading__._active.items()))
+    del __threading__._active[k]
+    __threading__._active[_get_ident()] = v
 
 import sys
 if sys.version_info[:2] >= (3, 4):
@@ -85,6 +86,12 @@ if sys.version_info[:2] >= (3, 4):
             raise NotImplementedError()
 
     __implements__.append('Thread')
+
+    # The main thread is patched up with more care in monkey.py
+    #t = __threading__.current_thread()
+    #if isinstance(t, __threading__.Thread):
+    #    t.__class__ = Thread
+    #    t._greenlet = getcurrent()
 
 if sys.version_info[:2] >= (3, 3):
     __implements__.remove('_get_ident')
