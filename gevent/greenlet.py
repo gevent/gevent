@@ -100,7 +100,8 @@ class _lazy(object):
 
 
 class Greenlet(greenlet):
-    """A light-weight cooperatively-scheduled execution unit."""
+    """A light-weight cooperatively-scheduled execution unit.
+    """
 
     value = None
     _exc_info = ()
@@ -114,15 +115,41 @@ class Greenlet(greenlet):
     #: the greenlet from being started in the future, if necessary.
     _start_event = None
     args = ()
+    _kwargs = None
 
     def __init__(self, run=None, *args, **kwargs):
+        """
+        Greenlet constructor.
+
+        :param args: The arguments passed to the ``run`` function.
+        :param kwargs: The keyword arguments passed to the ``run`` function.
+        :keyword run: The callable object to run. If not given, this object's
+            `_run` method will be invoked (typically defined by subclasses).
+
+        .. versionchanged:: 1.1a3
+            The ``run`` argument to the constructor is now verified to be a callable
+            object. Previously, passing a non-callable object would fail after the greenlet
+            was spawned.
+        """
         hub = get_hub()
         greenlet.__init__(self, parent=hub)
         if run is not None:
             self._run = run
+
+        # If they didn't pass a callable at all, then they must
+        # already have one. Note that subclassing to override the run() method
+        # itself has never been documented or supported.
+        if not callable(self._run):
+            raise TypeError("The run argument or self._run must be callable")
+
         if args:
             self.args = args
-        self.kwargs = kwargs
+        if kwargs:
+            self._kwargs = kwargs
+
+    @property
+    def kwargs(self):
+        return self._kwargs or {}
 
     @_lazy
     def _links(self):
@@ -253,8 +280,8 @@ class Greenlet(greenlet):
             args = []
             if self.args:
                 args = [repr(x)[:50] for x in self.args]
-            if self.kwargs:
-                args.extend(['%s=%s' % (key, repr(value)[:50]) for (key, value) in self.kwargs.items()])
+            if self._kwargs:
+                args.extend(['%s=%s' % (key, repr(value)[:50]) for (key, value) in self._kwargs.items()])
             if args:
                 result += '(' + ', '.join(args) + ')'
             # it is important to save the result here, because once the greenlet exits '_run' attribute will be removed
@@ -312,7 +339,9 @@ class Greenlet(greenlet):
 
     @classmethod
     def spawn(cls, *args, **kwargs):
-        """Return a new :class:`Greenlet` object, scheduled to start.
+        """
+        Create a new :class:`Greenlet` object and schedule it to run ``function(*args, **kwargs)``.
+        This can be used as ``gevent.spawn`` or ``Greenlet.spawn``.
 
         The arguments are passed to :meth:`Greenlet.__init__`.
         """
@@ -322,10 +351,21 @@ class Greenlet(greenlet):
 
     @classmethod
     def spawn_later(cls, seconds, *args, **kwargs):
-        """Return a Greenlet object, scheduled to start *seconds* later.
+        """
+        Create and return a new Greenlet object scheduled to run ``function(*args, **kwargs)``
+        in the future loop iteration *seconds* later. This can be used as ``Greenlet.spawn_later``
+        or ``gevent.spawn_later``.
 
         The arguments are passed to :meth:`Greenlet.__init__`.
+
+        .. versionchanged:: 1.1a3
+           If a callable argument (the first argument or the ``run`` keyword )
+           is given to this method (and not a subclass),
+           it is verified to be callable. Previously, the spawned greenlet would have failed
+           when it started running.
         """
+        if cls is Greenlet and not args and 'run' not in kwargs:
+            raise TypeError("")
         g = cls(*args, **kwargs)
         g.start_later(seconds)
         return g
@@ -464,6 +504,15 @@ class Greenlet(greenlet):
             self.__dict__.pop('_run', None)
             self.__dict__.pop('args', None)
             self.__dict__.pop('kwargs', None)
+
+    def _run(self):
+        """Subclasses may override this method to take any number of arguments and keyword arguments.
+
+        .. versionadded: 1.1a3
+            Previously, if no callable object was passed to the constructor, the spawned greenlet would
+            later fail with an AttributeError.
+        """
+        return
 
     def rawlink(self, callback):
         """Register a callable to be executed when the greenlet finishes the execution.

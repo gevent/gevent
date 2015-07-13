@@ -64,6 +64,18 @@ MAIN_THREAD = get_ident()
 
 
 def spawn_raw(function, *args):
+    """
+    Create a new :class:`greenlet.greenlet` object and schedule it to run ``function(*args, **kwargs)``.
+
+    As this returns a raw greenlet, it does not have all the useful methods that
+    :class:`gevent.Greenlet` has and should only be used as an optimization.
+
+    .. versionchanged:: 1.1a3
+        Verify that ``function`` is callable, raising a TypeError if not. Previously,
+        the spawned greenlet would have failed the first time it was switched to.
+    """
+    if not callable(function):
+        raise TypeError("function must be callable")
     hub = get_hub()
     g = greenlet(function, hub)
     hub.loop.run_callback(g.switch, *args)

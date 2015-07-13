@@ -22,10 +22,17 @@ or use classmethod :meth:`spawn` which is a shortcut that does the same:
 
 >>> g = Greenlet.spawn(myfunction, 'arg1', 'arg2', kwarg1=1)
 
-To subclass a :class:`Greenlet`, override its _run() method and call ``Greenlet.__init__(self)`` in :meth:`__init__`:
-It also a good idea to override :meth:`__str__`: if :meth:`_run` raises an exception, its string representation will be printed after the traceback it generated.
+To subclass a :class:`Greenlet`, override its ``_run()`` method and
+call ``Greenlet.__init__(self)`` in :meth:`__init__`: It also a good
+idea to override :meth:`__str__`: if :meth:`_run` raises an exception,
+its string representation will be printed after the traceback it
+generated.
+
+    .. note:: You SHOULD NOT attempt to override the ``run()`` method.
 
 .. class:: Greenlet
+
+.. automethod:: Greenlet.__init__
 
 .. attribute:: Greenlet.value
 
@@ -78,22 +85,11 @@ __ http://greenlet.readthedocs.org/en/latest/#instantiation
 Spawn helpers
 -------------
 
-.. function:: spawn(function, *args, **kwargs)
+.. autofunction:: spawn(function, *args, **kwargs)
+.. autofunction:: spawn_later(seconds, function, *args, **kwargs)
+.. autofunction:: spawn_raw
 
-    Create a new :class:`Greenlet` object and schedule it to run ``function(*args, **kwargs)``.
-    This is an alias for :meth:`Greenlet.spawn`.
 
-.. function:: spawn_later(seconds, function, *args, **kwargs)
-
-    Create a new :class:`Greenlet` object and schedule it to run ``function(*args, **kwargs)``
-    in the future loop iteration *seconds* later.
-    This is an alias for :meth:`Greenlet.spawn_later`.
-
-.. function:: spawn_raw(function, *args, **kwargs)
-
-    Create a new :class:`greenlet` object and schedule it to run ``function(*args, **kwargs)``.
-    As this returns a raw greenlet, it does not have all the useful methods that
-    :class:`gevent.Greenlet` has and should only be used as an optimization.
 
 
 Useful general functions

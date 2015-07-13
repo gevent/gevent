@@ -55,6 +55,11 @@ Unreleased
   produces import errors (Python 3 handles this case natively).
   Reported in :issue:`108` by shaun and initial fix based on code by
   Sylvain Zimmer.
+- ``gevent.spawn``, ``spawn_raw`` and ``spawn_later``, as well as the
+  ``Greenlet`` constructor, immediately produce useful ``TypeError``s
+  if asked to run something that cannot be run. Previously, the
+  spawned greenlet would die with an uncaught ``TypeError`` the first
+  time it was switched to. Reported in :issue:`119` by stephan.
 
 1.1a2 (Jul 8, 2015)
 ===================

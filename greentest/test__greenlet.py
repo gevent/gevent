@@ -476,6 +476,15 @@ class TestJoinAll(greentest.GenericWaitTestCase):
 
 class TestBasic(greentest.TestCase):
 
+    def test_spawn_non_callable(self):
+        self.assertRaises(TypeError, gevent.spawn, 1)
+        self.assertRaises(TypeError, gevent.spawn_raw, 1)
+
+        # Not passing the run argument, just the seconds argument
+        self.assertRaises(TypeError, gevent.spawn_later, 1)
+        # Passing both, but not implemented
+        self.assertRaises(TypeError, gevent.spawn_later, 1, 1)
+
     def test_simple_exit(self):
         link_test = []
 
