@@ -14,7 +14,8 @@ MAPPING = {'gevent.local': '_threading_local',
            'gevent.thread': '_thread' if six.PY3 else 'thread',
            'gevent.subprocess': 'subprocess',
            'gevent.os': 'os',
-           'gevent.threading': 'threading'}
+           'gevent.threading': 'threading',
+           'gevent.builtins': 'builtins' if six.PY3 else '__builtin__', }
 
 
 class ANY(object):
@@ -28,7 +29,8 @@ NOT_IMPLEMENTED = {
     'thread': ['allocate', 'exit_thread', 'interrupt_main', 'start_new'],
     'select': ANY,
     'os': ANY,
-    'threading': ANY}
+    'threading': ANY,
+    'builtins' if six.PY3 else '__builtin__': ANY, }
 
 COULD_BE_MISSING = {
     'socket': ['create_connection', 'RAND_add', 'RAND_egd', 'RAND_status']}
