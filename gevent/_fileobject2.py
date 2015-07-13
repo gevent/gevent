@@ -29,6 +29,8 @@ class NA(object):
 
 NA = NA()
 
+__all__ = ['FileObjectPosix', 'SocketAdapter']
+
 
 class SocketAdapter(object):
     """Socket-like API on top of a file descriptor.
