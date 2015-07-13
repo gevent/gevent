@@ -39,25 +39,30 @@ class _DummyThread(_DummyThread_):
 # Make sure the MainThread can be found by our current greenlet ID,
 # otherwise we get a new DummyThread, which cannot be joined.
 # Fixes tests in test_threading_2 under PyPy, and generally makes things nicer
-# when threading is imported before monkey patching
+# when gevent.threading is imported before monkey patching or not at all
 # XXX: This assumes that the import is happening in the "main" greenlet
 if _get_ident() not in __threading__._active and len(__threading__._active) == 1:
     k, v = next(iter(__threading__._active.items()))
     del __threading__._active[k]
     v._Thread__ident = _get_ident()
     __threading__._active[_get_ident()] = v
+    del k
+    del v
 
     # Avoid printing an error on shutdown trying to remove the thread entry
     # we just replaced if we're not fully monkey patched in
-    _MAIN_THREAD = __threading__._get_ident() if hasattr(__threading__, '_get_ident') else __threading__.get_ident()
+    # XXX: This causes a hang on PyPy for some unknown reason (as soon as class _active
+    # defines __delitem__, shutdown hangs. Maybe due to something with the GC?)
+    if not PYPY:
+        _MAIN_THREAD = __threading__._get_ident() if hasattr(__threading__, '_get_ident') else __threading__.get_ident()
 
-    class _active(dict):
-        def __delitem__(self, k):
-            if k == _MAIN_THREAD and k not in self:
-                return
-            dict.__delitem__(self, k)
+        class _active(dict):
+            def __delitem__(self, k):
+                if k == _MAIN_THREAD and k not in self:
+                    return
+                dict.__delitem__(self, k)
 
-    __threading__._active = _active(__threading__._active)
+        __threading__._active = _active(__threading__._active)
 
 
 import sys

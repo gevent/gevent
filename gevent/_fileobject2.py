@@ -4,19 +4,19 @@ import sys
 from types import UnboundMethodType
 
 from gevent._fileobjectcommon import cancel_wait_ex
-from gevent._fileobjectcommon import FileObjectClosed
 from gevent._socket2 import _fileobject
 from gevent._socket2 import _get_memory
-from gevent.hub import get_hub, PYPY, integer_types
+from gevent.hub import get_hub, integer_types
 from gevent.os import _read
 from gevent.os import _write
 from gevent.os import ignored_errors
 from gevent.os import make_nonblocking
 from gevent.socket import EBADF
 
+from gevent._fileobjectposix import FileObjectPosix
 
 try:
-    from gevent._util import SocketAdapter__del__, noop
+    from gevent._util import SocketAdapter__del__
 except ImportError:
     SocketAdapter__del__ = None
     noop = None
@@ -147,61 +147,3 @@ class SocketAdapter(object):
 
 if SocketAdapter__del__:
     SocketAdapter.__del__ = UnboundMethodType(SocketAdapter__del__, None, SocketAdapter)
-
-
-class FileObjectPosix(_fileobject):
-
-    def __init__(self, fobj=None, mode='rb', bufsize=-1, close=True):
-        if isinstance(fobj, integer_types):
-            fileno = fobj
-            fobj = None
-        else:
-            fileno = fobj.fileno()
-        sock = SocketAdapter(fileno, mode, close=close)
-        self._fobj = fobj
-        self._closed = False
-        _fileobject.__init__(self, sock, mode=mode, bufsize=bufsize, close=close)
-        if PYPY:
-            sock._drop()
-
-    def __repr__(self):
-        if self._sock is None:
-            return '<%s closed>' % self.__class__.__name__
-        elif self._fobj is None:
-            return '<%s %s>' % (self.__class__.__name__, self._sock)
-        else:
-            return '<%s %s _fobj=%r>' % (self.__class__.__name__, self._sock, self._fobj)
-
-    def close(self):
-        if self._closed:
-            # make sure close() is only ran once when called concurrently
-            # cannot rely on self._sock for this because we need to keep that until flush() is done
-            return
-        self._closed = True
-        sock = self._sock
-        if sock is None:
-            return
-        try:
-            self.flush()
-        finally:
-            if self._fobj is not None or not self._close:
-                sock.detach()
-            else:
-                sock._drop()
-            self._sock = None
-            self._fobj = None
-
-    def __getattr__(self, item):
-        assert item != '_fobj'
-        if self._fobj is None:
-            raise FileObjectClosed
-        return getattr(self._fobj, item)
-
-    if not noop:
-
-        def __del__(self):
-            # disable _fileobject's __del__
-            pass
-
-if noop:
-    FileObjectPosix.__del__ = UnboundMethodType(FileObjectPosix, None, noop)

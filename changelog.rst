@@ -46,6 +46,10 @@ Unreleased
   get the ``repr`` of the main thread, and other CPython platforms to
   return an unjoinable DummyThread. (Note that this is not
   recommended.) Reported in :issue:`153`.
+- Under Python 2, use the ``io`` package to implement
+  ``FileObjectPosix``. This unifies the code with the Python 3
+  implementation, and fixes problems with using ``seek()``. See
+  :issue:`151`.
 
 1.1a2 (Jul 8, 2015)
 ===================

@@ -46,7 +46,7 @@ sys.stdout.write("..finishing..")
 """
 
 
-class ThreadTrace(unittest.TestCase):
+class TestTrace(unittest.TestCase):
     def test_untraceable_lock(self):
         if hasattr(sys, 'gettrace'):
             old = sys.gettrace()
@@ -66,8 +66,10 @@ class ThreadTrace(unittest.TestCase):
 
         self.failUnless(lst == [], "trace not empty")
 
-    def run_script(self, more_args=[]):
-        rc = subprocess.call([sys.executable, "-c", script] + more_args)
+    def run_script(self, more_args=()):
+        args = [sys.executable, "-c", script]
+        args.extend(more_args)
+        rc = subprocess.call(args)
         self.failIf(rc == 2, "interpreter was blocked")
         self.failUnless(rc == 0, "Unexpected error")
 
@@ -79,8 +81,5 @@ class ThreadTrace(unittest.TestCase):
 
 
 if __name__ == "__main__":
-    try:
-        from test import support
-    except ImportError:
-        from test import test_support as support
-    support.run_unittest(ThreadTrace)
+    import greentest
+    greentest.main()

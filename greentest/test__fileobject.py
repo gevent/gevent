@@ -1,5 +1,6 @@
 import os
 import sys
+import tempfile
 import greentest
 import gevent
 from gevent.fileobject import FileObject, FileObjectThread
@@ -18,14 +19,16 @@ class Test(greentest.TestCase):
         if PYPY:
             s.close()
         else:
-            del s
+            del s # Deliberately getting ResourceWarning under Py3
         try:
             os.close(w)
         except OSError:
             pass  # expected, because SocketAdapter already closed it
         else:
             raise AssertionError('os.close(%r) must not succeed' % w)
-        self.assertEqual(FileObject(r).read(), b'x')
+        fobj = FileObject(r, 'rb')
+        self.assertEqual(fobj.read(), b'x')
+        fobj.close()
 
     def test_del(self):
         self._test_del()
@@ -52,10 +55,38 @@ class Test(greentest.TestCase):
         lines = [b'line1\n', b'line2\r', b'line3\r\n', b'line4\r\nline5', b'\nline6']
         g = gevent.spawn(writer, FileObject(w, 'wb'), lines)
         try:
-            result = FileObject(r, 'rU').read()
+            fobj = FileObject(r, 'rU')
+            result = fobj.read()
+            fobj.close()
             self.assertEqual('line1\nline2\nline3\nline4\nline5\nline6', result)
         finally:
             g.kill()
+
+    def test_seek(self):
+        fileno, path = tempfile.mkstemp()
+
+        s = b'a' * 1024
+        os.write(fileno, b'B' * 15)
+        os.write(fileno, s)
+        os.close(fileno)
+        try:
+            with open(path, 'rb') as f:
+                f.seek(15)
+                native_data = f.read(1024)
+
+            with open(path, 'rb') as f_raw:
+                f = FileObject(f_raw, 'rb')
+                if hasattr(f, 'seekable'):
+                    # Py3
+                    self.assertTrue(f.seekable())
+                f.seek(15)
+                self.assertEqual(15, f.tell())
+                fileobj_data = f.read(1024)
+
+            self.assertEqual(native_data, s)
+            self.assertEqual(native_data, fileobj_data)
+        finally:
+            os.remove(path)
 
 
 def writer(fobj, line):
