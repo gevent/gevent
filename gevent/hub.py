@@ -165,23 +165,41 @@ class signal(object):
 
 
 def reinit():
-    # An internal, undocumented function. Called by gevent.os.fork
-    # in the child process. The loop reinit function in turn calls
-    # libev's ev_loop_fork function.
+    """
+    Prepare the gevent hub to run in a new process.
+
+    This should be called *immediately* after :func:`os.fork` in the
+    child process. This is done automatically by
+    :func:`gevent.os.fork` or if the :mod:`os` module has been
+    monkey-patched. If this function is not called in a forked
+    process, symptoms may include hanging of functions like
+    :func:`socket.getaddrinfo`, and the hub's threadpool is unlikely
+    to work.
+
+    .. note:: Registered fork watchers may or may not run before
+       this function (and thus ``gevent.os.fork``) return. If they have
+       not run, they will run "soon", after an iteration of the event loop.
+       You can force this by inserting a few small (but non-zero) calls to :func:`sleep`.
+    """
+    # The loop reinit function in turn calls libev's ev_loop_fork
+    # function.
     hub = _get_hub()
+
     if hub is not None:
+        # Note that we reinit the existing loop, not destroy it.
+        # See https://github.com/gevent/gevent/issues/200.
         hub.loop.reinit()
         # libev's fork watchers are slow to fire because the only fire
         # at the beginning of a loop; due to our use of callbacks that
         # run at the end of the loop, that may be too late. The
         # threadpool and resolvers depend on the fork handlers being
-        # run ( specifically, the threadpool will fail in the forked
+        # run (specifically, the threadpool will fail in the forked
         # child if there were any threads in it, which there will be
         # if the resolver_thread was in use (the default) before the
         # fork.)
         #
         # If the forked process wants to use the threadpool or
-        # resolver immediately, it would hang.
+        # resolver immediately (in a queued callback), it would hang.
         #
         # The below is a workaround. Fortunately, both of these
         # methods are idempotent and can be called multiple times
@@ -193,6 +211,15 @@ def reinit():
         # resolver_ares also has a fork watcher that's not firing
         if hasattr(hub.resolver, '_on_fork'):
             hub.resolver._on_fork()
+
+        # TODO: We'd like to sleep for a non-zero amount of time to force the loop to make a
+        # pass around before returning to this greenlet. That will allow any
+        # user-provided fork watchers to run. (Two calls are necessary.) HOWEVER, if
+        # we do this, certain tests that heavily mix threads and forking,
+        # like 2.7/test_threading:test_reinit_tls_after_fork, fail. It's not immediately clear
+        # why.
+        #sleep(0.00001)
+        #sleep(0.00001)
 
 
 def get_hub_class():

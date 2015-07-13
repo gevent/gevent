@@ -19,7 +19,7 @@ Lock = _allocate_lock
 
 
 def _cleanup(g):
-    __threading__._active.pop(id(g))
+    __threading__._active.pop(id(g), None)
 
 
 class _DummyThread(_DummyThread_):
@@ -44,7 +44,21 @@ class _DummyThread(_DummyThread_):
 if _get_ident() not in __threading__._active and len(__threading__._active) == 1:
     k, v = next(iter(__threading__._active.items()))
     del __threading__._active[k]
+    v._Thread__ident = _get_ident()
     __threading__._active[_get_ident()] = v
+
+    # Avoid printing an error on shutdown trying to remove the thread entry
+    # we just replaced if we're not fully monkey patched in
+    _MAIN_THREAD = __threading__._get_ident() if hasattr(__threading__, '_get_ident') else __threading__.get_ident()
+    class _active(dict):
+        def __delitem__(self, k):
+            if k == _MAIN_THREAD and k not in self:
+                return
+            dict.__delitem__(self, k)
+
+    __threading__._active = _active(__threading__._active)
+
+
 
 import sys
 if sys.version_info[:2] >= (3, 4):

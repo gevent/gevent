@@ -169,14 +169,17 @@ if hasattr(os, 'fork'):
             """
             Fork a child process and start a child watcher for it in the parent process.
 
-            This call cooperates with the :func:`waitpid`` function defined in this module.
+            This call cooperates with the :func:`gevent.os.waitpid` to enable cooperatively waiting
+            for children to finish.
 
             :keyword callback: If given, a callable that will be called with the child watcher
                 when the child finishes.
             :keyword loop: The loop to start the watcher in. Defaults to the
-                current loop.
+                loop of the current hub.
             :keyword fork: The fork function. Defaults to the one defined in this
-                module.
+                module (which automatically calls :func:`gevent.hub.reinit`).
+                Pass the builtin :func:`os.fork` function if you do not need to
+                initialize gevent in the child process.
 
             .. versionadded: 1.1a3
             """
