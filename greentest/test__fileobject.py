@@ -88,6 +88,14 @@ class Test(greentest.TestCase):
         finally:
             os.remove(path)
 
+    def test_close_pipe(self):
+        # Issue #190, 203
+        r, w = os.pipe()
+        x = FileObject(r)
+        y = FileObject(w, 'w')
+        x.close()
+        y.close()
+
 
 def writer(fobj, line):
     for character in line:
