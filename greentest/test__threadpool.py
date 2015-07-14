@@ -228,6 +228,8 @@ class TestPool2(TestPool):
 
         result = p.apply(a)
         self.assertEqual(result, "B")
+    # Asking for the hub in the new thread shows up as a "leak"
+    test_recursive_apply.ignore_leakcheck = True
 
 
 class TestPool3(TestPool):
