@@ -64,7 +64,15 @@ Unreleased
   raises a ``LoopExit`` error (using ``ThreadPool.spawn`` and then
   ``get`` on the result still could; you must be careful to use the
   correct hub). Reported in :issue:`131` by 8mayday.
-
+- When the ``threading`` module is monkey-patched, the module-level
+  lock in the ``logging`` module is made greenlet-aware, as are the
+  instance locks of any configured handlers. This makes it safer to
+  import modules that use the standard pattern of creating a
+  module-level ``Logger`` instance before monkey-patching. Configuring
+  ``logging`` with a basic configuration and then monkey-patching is
+  also safer (but not configurations that involve such things as the
+  ``SocketHandler``).
+- Fix monkey-patching of ``threading.RLock`` under Python 3.
 
 1.1a2 (Jul 8, 2015)
 ===================

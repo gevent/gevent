@@ -147,10 +147,13 @@ def patch_time():
     patch_item(time, 'sleep', sleep)
 
 
-def patch_thread(threading=True, _threading_local=True, Event=False):
+def patch_thread(threading=True, _threading_local=True, Event=False, logging=True):
     """Replace the standard :mod:`thread` module to make it greenlet-based.
-    If *threading* is true (the default), also patch ``threading``.
-    If *_threading_local* is true (the default), also patch ``_threading_local.local``.
+
+    - If *threading* is true (the default), also patch ``threading``.
+    - If *_threading_local* is true (the default), also patch ``_threading_local.local``.
+    - If *logging* is True (the default), also patch locks taken if the logging module has
+      been configured.
     """
     patch_module('thread')
     if threading:
@@ -159,6 +162,17 @@ def patch_thread(threading=True, _threading_local=True, Event=False):
         if Event:
             from gevent.event import Event
             patch_item(threading, 'Event', Event)
+        if logging and 'logging' in sys.modules:
+            logging = __import__('logging')
+            patch_item(logging, '_lock', threading.RLock())
+            for wr in logging._handlerList:
+                # In py26, these are actual handlers, not weakrefs
+                handler = wr() if callable(wr) else wr
+                if handler is None:
+                    continue
+                assert hasattr(handler, 'lock'), "Unknown/unsupported handler %r" % handler
+                handler.lock = threading.RLock()
+
     if _threading_local:
         _threading_local = __import__('_threading_local')
         from gevent.local import local

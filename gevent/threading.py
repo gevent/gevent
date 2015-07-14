@@ -117,3 +117,13 @@ if sys.version_info[:2] >= (3, 3):
     __implements__.append('get_ident')
     get_ident = _get_ident
     __implements__.remove('_sleep')
+
+    # Python 3 changed the implementation of threading.RLock
+    # Previously it was a factory function around threading._RLock
+    # which in turn used _allocate_lock. Now, it wants to use
+    # threading._CRLock, which is imported from _thread.RLock and as such
+    # is implemented in C. So it bypasses our _allocate_lock function.
+    # Fortunately they left the Python fallback in place
+    assert hasattr(__threading__, '_CRLock'), "Unsupported Python version"
+    _CRLock = None
+    __implements__.append('_CRLock')
