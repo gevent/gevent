@@ -212,6 +212,23 @@ class TestPool(TestCase):
 class TestPool2(TestPool):
     size = 2
 
+    def test_recursive_apply(self):
+        p = self.pool
+
+        def a():
+            return p.apply(b)
+
+        def b():
+            # make sure we can do both types of callbacks
+            # (loop iteration and end-of-loop) in the recursive
+            # call
+            gevent.sleep()
+            gevent.sleep(0.001)
+            return "B"
+
+        result = p.apply(a)
+        self.assertEqual(result, "B")
+
 
 class TestPool3(TestPool):
     size = 3

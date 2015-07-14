@@ -60,6 +60,11 @@ Unreleased
   if asked to run something that cannot be run. Previously, the
   spawned greenlet would die with an uncaught ``TypeError`` the first
   time it was switched to. Reported in :issue:`119` by stephan.
+- Recursive use of ``gevent.threadpool.ThreadPool.apply`` no longer
+  raises a ``LoopExit`` error (using ``ThreadPool.spawn`` and then
+  ``get`` on the result still could; you must be careful to use the
+  correct hub). Reported in :issue:`131` by 8mayday.
+
 
 1.1a2 (Jul 8, 2015)
 ===================

@@ -235,8 +235,12 @@ class ThreadPool(GroupMappingMixin):
         return self.apply(function, args, kwargs)
 
     def _apply_immediately(self):
-        # we always pass apply() off to the threadpool
-        return False
+        # If we're being called from a different thread than the one that
+        # created us, e.g., because a worker task is trying to use apply()
+        # recursively, we have no choice but to run the task immediately;
+        # if we try to AsyncResult.get() in the worker thread, it's likely to have
+        # nothing to switch to and lead to a LoopExit.
+        return get_hub() is not self.hub
 
     def _apply_async_cb_spawn(self, callback, result):
         callback(result)
