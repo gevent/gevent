@@ -97,6 +97,7 @@ class ThreadPool(GroupMappingMixin):
             self._init(self._maxsize)
 
     def join(self):
+        """Waits until all outstanding tasks have been completed."""
         delay = 0.0005
         while self.task_queue.unfinished_tasks > 0:
             sleep(delay)
@@ -144,22 +145,33 @@ class ThreadPool(GroupMappingMixin):
             raise
 
     def spawn(self, func, *args, **kwargs):
+        """
+        Add a new task to the threadpool that will run ``func(*args, **kwargs)``.
+
+        Waits until a slot is available. Creates a new thread if necessary.
+
+        :return: A :class:`gevent.event.AsyncResult`.
+        """
         while True:
             semaphore = self._semaphore
             semaphore.acquire()
             if semaphore is self._semaphore:
                 break
+
+        thread_result = None
         try:
             task_queue = self.task_queue
             result = AsyncResult()
-            thread_result = ThreadResult(result, hub=self.hub)
+            # XXX We're calling the semaphore release function in the hub, otherwise
+            # we get LoopExit (why?). Previously it was done with a rawlink on the
+            # AsyncResult and the comment that it is "competing for order with get(); this is not
+            # good, just make ThreadResult release the semaphore before doing anything else"
+            thread_result = ThreadResult(result, hub=self.hub, call_when_ready=semaphore.release)
             task_queue.put((func, args, kwargs, thread_result))
             self.adjust()
-            # rawlink() must be the last call
-            result.rawlink(lambda *args: self._semaphore.release())
-            # XXX this _semaphore.release() is competing for order with get()
-            # XXX this is not good, just make ThreadResult release the semaphore before doing anything else
         except:
+            if thread_result is not None:
+                thread_result.destroy()
             semaphore.release()
             raise
         return result
@@ -210,6 +222,10 @@ class ThreadPool(GroupMappingMixin):
                 self._decrease_size()
 
     def apply_e(self, expected_errors, function, args=None, kwargs=None):
+        """
+        .. deprecated:: 1.1a2
+           Identical to :meth:`apply`; the ``expected_errors`` argument is ignored.
+        """
         # Deprecated but never documented. In the past, before
         # self.apply() allowed all errors to be raised to the caller,
         # expected_errors allowed a caller to specify a set of errors
@@ -233,8 +249,9 @@ class ThreadPool(GroupMappingMixin):
 class ThreadResult(object):
 
     exc_info = ()
+    _call_when_ready = None
 
-    def __init__(self, receiver, hub=None):
+    def __init__(self, receiver, hub=None, call_when_ready=None):
         if hub is None:
             hub = get_hub()
         self.receiver = receiver
@@ -243,6 +260,8 @@ class ThreadResult(object):
         self.context = None
         self.async = hub.loop.async()
         self.async.start(self._on_async)
+        if call_when_ready:
+            self._call_when_ready = call_when_ready
 
     @property
     def exception(self):
@@ -250,12 +269,18 @@ class ThreadResult(object):
 
     def _on_async(self):
         self.async.stop()
+        if self._call_when_ready:
+            # Typically this is pool.semaphore.release and we have to
+            # call this in the Hub; if we don't we get the dreaded
+            # LoopExit (XXX: Why?)
+            self._call_when_ready()
         try:
             if self.exc_info:
                 self.hub.handle_error(self.context, *self.exc_info)
             self.context = None
             self.async = None
             self.hub = None
+            self._call_when_ready = None
             if self.receiver is not None:
                 self.receiver(self)
         finally:
@@ -264,14 +289,27 @@ class ThreadResult(object):
             if self.exc_info:
                 self.exc_info = (self.exc_info[0], self.exc_info[1], None)
 
+    def destroy(self):
+        if self.async is not None:
+            self.async.stop()
+        self.async = None
+        self.context = None
+        self.hub = None
+        self._call_when_ready = None
+        self.receiver = None
+
+    def _ready(self):
+        if self.async is not None:
+            self.async.send()
+
     def set(self, value):
         self.value = value
-        self.async.send()
+        self._ready()
 
     def handle_error(self, context, exc_info):
         self.context = context
         self.exc_info = exc_info
-        self.async.send()
+        self._ready()
 
     # link protocol:
     def successful(self):
@@ -279,7 +317,10 @@ class ThreadResult(object):
 
 
 def wrap_errors(errors, function, args, kwargs):
-    # Deprecated but never documented.
+    """
+    .. deprecated:: 1.1a2
+       Only used by ThreadPool.apply_e.
+    """
     try:
         return True, function(*args, **kwargs)
     except errors as ex:

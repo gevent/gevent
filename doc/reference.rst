@@ -28,3 +28,4 @@ API reference
    gevent.thread
    gevent.util
    gevent.wsgi
+   gevent.hub

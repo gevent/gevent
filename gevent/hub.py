@@ -115,10 +115,11 @@ def kill(greenlet, exception=GreenletExit):
 
     .. note::
 
-        The method :meth:`gevent.Greenlet.kill` method does the same and
+        The method :meth:`Greenlet.kill` method does the same and
         more (and the same caveats listed there apply here). However, the MAIN
         greenlet - the one that exists initially - does not have a
-        ``kill()`` method so you have to use this function.
+        ``kill()`` method, and neither do any created with :func:`spawn_raw`,
+        so you have to use this function.
 
     .. versionchanged:: 1.1a2
         If the ``greenlet`` has a ``kill`` method, calls it. This prevents a
@@ -178,7 +179,7 @@ class signal(object):
 
 def reinit():
     """
-    Prepare the gevent hub to run in a new process.
+    Prepare the gevent hub to run in a new (forked) process.
 
     This should be called *immediately* after :func:`os.fork` in the
     child process. This is done automatically by
@@ -191,7 +192,15 @@ def reinit():
     .. note:: Registered fork watchers may or may not run before
        this function (and thus ``gevent.os.fork``) return. If they have
        not run, they will run "soon", after an iteration of the event loop.
-       You can force this by inserting a few small (but non-zero) calls to :func:`sleep`.
+       You can force this by inserting a few small (but non-zero) calls to :func:`sleep`
+       after fork returns. (As of gevent 1.1 and before, fork watchers will
+       not have run, but this may change in the future.)
+
+    .. note:: This function may be removed in a future major release
+       if the fork process can be more smoothly managed.
+
+    .. warning:: See remarks in :func:`gevent.os.fork` about greenlets
+       and libev watchers in the child process.
     """
     # The loop reinit function in turn calls libev's ev_loop_fork
     # function.

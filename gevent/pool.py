@@ -208,6 +208,11 @@ class GroupMappingMixin(object):
             return self.spawn(func, *args, **kwds).get()
 
     def map(self, func, iterable):
+        """Return a list made by applying the *func* to each element of
+        the iterable.
+
+        .. seealso:: :meth:`imap`
+        """
         return list(self.imap(func, iterable))
 
     def map_cb(self, func, iterable, callback=None):

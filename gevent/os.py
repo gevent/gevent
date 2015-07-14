@@ -1,5 +1,6 @@
 """
 This module provides cooperative versions of os.read() and os.write().
+
 On Posix platforms this uses non-blocking IO, on Windows a threadpool
 is used.
 """
@@ -33,6 +34,9 @@ if fcntl:
     __extensions__ += ['make_nonblocking', 'nb_read', 'nb_write']
 
     def make_nonblocking(fd):
+        """Put the file descriptor *fd* into non-blocking mode if possible.
+
+        :return: A boolean value that evaluates to True if successful."""
         flags = fcntl.fcntl(fd, fcntl.F_GETFL, 0)
         if not bool(flags & os.O_NONBLOCK):
             fcntl.fcntl(fd, fcntl.F_SETFL, flags | os.O_NONBLOCK)
@@ -81,15 +85,21 @@ if fcntl:
 
 
 def tp_read(fd, n):
-    """Read up to `n` bytes from file descriptor `fd`. Return a string
+    """Read up to *n* bytes from file descriptor *fd*. Return a string
     containing the bytes read. If end-of-file is reached, an empty string
-    is returned."""
+    is returned.
+
+    Reading is done using the threadpool.
+    """
     return get_hub().threadpool.apply(_read, (fd, n))
 
 
 def tp_write(fd, buf):
-    """Write bytes from buffer `buf` to file descriptor `fd`. Return the
-    number of bytes written."""
+    """Write bytes from buffer *buf* to file descriptor *fd*. Return the
+    number of bytes written.
+
+    Writing is done using the threadpool.
+    """
     return get_hub().threadpool.apply(_write, (fd, buf))
 
 
@@ -170,7 +180,15 @@ if hasattr(os, 'fork'):
             Fork a child process and start a child watcher for it in the parent process.
 
             This call cooperates with the :func:`gevent.os.waitpid` to enable cooperatively waiting
-            for children to finish.
+            for children to finish. When monkey-patching, these functions are patched in as
+            :func:`os.fork` and :func:`os.waitpid`, respectively.
+
+            In the child process, this function calls :func:`gevent.hub.reinit` before returning.
+
+            .. warning:: Forking a process that uses greenlets does not eliminate all non-running
+               greenlets. Any that were scheduled in the hub of the forking thread in the parent
+               remain scheduled in the child; compare this to how normal threads operate. (This behaviour
+               may change is a subsequent major release.)
 
             :keyword callback: If given, a callable that will be called with the child watcher
                 when the child finishes.

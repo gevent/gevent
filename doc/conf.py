@@ -40,7 +40,8 @@ if not os.path.exists('changelog.rst') and os.path.exists('../changelog.rst'):
 extensions = ['sphinx.ext.autodoc', 'sphinx.ext.doctest', 'sphinx.ext.coverage', 'sphinx.ext.intersphinx', 'mysphinxext',
               'sphinx.ext.extlinks']
 
-intersphinx_mapping = {'http://docs.python.org/': None}
+intersphinx_mapping = {'http://docs.python.org/': None,
+                       'https://greenlet.readthedocs.org/en/latest/': None}
 
 extlinks = {'issue': ('https://github.com/gevent/gevent/issues/%s',
                       'issue #'),

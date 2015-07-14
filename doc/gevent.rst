@@ -95,7 +95,11 @@ Spawn helpers
 Useful general functions
 ------------------------
 
-.. autofunction:: getcurrent
+.. function:: getcurrent()
+
+   Return the currently executing greenlet (the one that called this
+   function). Note that this may be an instance of :class:`Greenlet`
+   or :class:`greenlet.greenlet`.
 
 .. autofunction:: sleep
 

@@ -9,4 +9,6 @@
 
 .. autofunction:: get_hub
 
+.. autofunction:: reinit
+
 .. autoclass:: Waiter

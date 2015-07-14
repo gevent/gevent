@@ -382,7 +382,7 @@ class Greenlet(greenlet):
 
             Depending on what this greenlet is executing and the state of the event loop,
             the exception may or may not be raised immediately when this greenlet resumes
-            execution. It may be raised an a subsequent green call, or, if this greenlet
+            execution. It may be raised on a subsequent green call, or, if this greenlet
             exits before making such a call, it may not be raised at all. As of 1.1, an example
             where the exception is raised later is if this greenlet had called ``sleep(0)``; an
             example where the exception is raised immediately is if this greenlet had called ``sleep(0.1)``.
