@@ -3,4 +3,4 @@
 # if the monkey patch is done when the importlib import lock is held
 # (e.g., during recursive imports) we could fail to release the lock.
 # This is surprisingly common.
-import _import_import_patch
+__import__('_import_import_patch')

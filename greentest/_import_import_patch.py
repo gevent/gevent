@@ -1,1 +1,1 @@
-import _import_patch
+__import__('_import_patch')
