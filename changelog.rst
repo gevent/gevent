@@ -73,6 +73,12 @@ Unreleased
   also safer (but not configurations that involve such things as the
   ``SocketHandler``).
 - Fix monkey-patching of ``threading.RLock`` under Python 3.
+- Under Python 3, monkey-patching at the top-level of a module that
+  was imported by another module could result in a ``RuntimeError``
+  from ``importlib``. Reported in :issue:`615` by Daniel Mizyrycki.
+  (The same thing could happen under Python 2 if a ``threading.RLock``
+  was held around the monkey-patching call; this is less likely but
+  not impossible with import hooks.)
 
 1.1a2 (Jul 8, 2015)
 ===================
@@ -178,7 +184,7 @@ Unreleased
 - ``gevent.pool.Group.imap`` and ``imap_unordered`` now accept
   multiple iterables like ``itertools.imap``. :issue:`565` reported by
   Thomas Steinacher.
-- Potentially breaking change: ``gevent.baseserver.BaseServer`` and
+- *Compatibility note*: ``gevent.baseserver.BaseServer`` and
   its subclass ``gevent.server.StreamServer`` now deterministically
   close the client socket when the request handler returns.
   Previously, the socket was left at the mercies of the garbage
@@ -188,6 +194,13 @@ Unreleased
   future and under CPython 3.x a ResourceWarning could be generated.
   This was undocumented behaviour, and the client socket could be kept
   open after the request handler returned either accidentally or intentionally.
+- *Compatibility note*: ``pywsgi`` now ensures that headers can be
+  encoded in latin-1 (ISO-8859-1). This improves adherence to the HTTP
+  standard (and is necessary under Python 3). Under certain
+  conditions, previous versions could have allowed non-ISO-8859-1
+  headers to be sent, but their interpretation by a conforming
+  recipient is unknown; now, a UnicodeError will be raised. See :issue:`614`.
+
 
 Release 1.0.2
 =============

@@ -147,13 +147,47 @@ def patch_time():
     patch_item(time, 'sleep', sleep)
 
 
-def patch_thread(threading=True, _threading_local=True, Event=False, logging=True):
+def _patch_existing_locks(threading):
+    if len(list(threading.enumerate())) != 1:
+        return
+    tid = threading.current_thread().ident
+    rlock_type = type(threading.RLock())
+    try:
+        import importlib._bootstrap
+    except NameError:
+        class _ModuleLock(object):
+            pass
+    else:
+        _ModuleLock = importlib._bootstrap._ModuleLock
+    # It might be possible to walk up all the existing stack frames to find
+    # locked objects...at least if they use `with`. To be sure, we look at every object
+    # Since we're supposed to be done very early in the process, there shouldn't be
+    # too many.
+    gc = __import__('gc')
+    for o in gc.get_objects():
+        if isinstance(o, rlock_type):
+            if o._RLock__owner is not None:
+                # By definition there's only one thread running,
+                # so this was the old (native) thread id. Make
+                # it our current greenlet id so that when it wants to unlock
+                # and compare self.__owner with _get_ident(), they match
+                o._RLock__owner = tid
+        elif isinstance(o, _ModuleLock):
+            if o.owner is not None:
+                o.owner = tid
+
+
+def patch_thread(threading=True, _threading_local=True, Event=False, logging=True,
+                 existing_locks=True):
     """Replace the standard :mod:`thread` module to make it greenlet-based.
 
     - If *threading* is true (the default), also patch ``threading``.
     - If *_threading_local* is true (the default), also patch ``_threading_local.local``.
     - If *logging* is True (the default), also patch locks taken if the logging module has
       been configured.
+    - If *existing_locks* is True (the default), and the process is still single threaded,
+      make sure than any :class:`threading.RLock` (and, under Python 3, :class:`importlib._bootstrap._ModuleLock`)
+      instances that are currently locked can be properly unlocked.
     """
     patch_module('thread')
     if threading:
@@ -162,6 +196,10 @@ def patch_thread(threading=True, _threading_local=True, Event=False, logging=Tru
         if Event:
             from gevent.event import Event
             patch_item(threading, 'Event', Event)
+
+        if existing_locks:
+            _patch_existing_locks(threading)
+
         if logging and 'logging' in sys.modules:
             logging = __import__('logging')
             patch_item(logging, '_lock', threading.RLock())
@@ -179,6 +217,7 @@ def patch_thread(threading=True, _threading_local=True, Event=False, logging=Tru
         patch_item(_threading_local, 'local', local)
 
     if sys.version_info[:2] >= (3, 4):
+
         # Issue 18808 changes the nature of Thread.join() to use
         # locks. This means that a greenlet spawned in the main thread
         # (which is already running) cannot wait for the main thread---it
