@@ -150,7 +150,10 @@ def patch_time():
 def _patch_existing_locks(threading):
     if len(list(threading.enumerate())) != 1:
         return
-    tid = threading.current_thread().ident
+    try:
+        tid = threading.get_ident()
+    except AttributeError:
+        tid = threading._get_ident()
     rlock_type = type(threading.RLock())
     try:
         import importlib._bootstrap
