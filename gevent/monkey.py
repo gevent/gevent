@@ -154,7 +154,7 @@ def _patch_existing_locks(threading):
     rlock_type = type(threading.RLock())
     try:
         import importlib._bootstrap
-    except NameError:
+    except ImportError:
         class _ModuleLock(object):
             pass
     else:
