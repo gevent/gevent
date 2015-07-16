@@ -15,6 +15,7 @@ Features include:
 * Subprocess support (through :mod:`gevent.subprocess`)
 * Thread pools
 
+.. _installation:
 
 Installation
 ------------
@@ -222,4 +223,3 @@ __ http://sdiehl.github.io/gevent-tutorial/
 .. rubric:: Footnotes
 
 .. [#f1] This was not the case before 0.13.0, :meth:`kill <Greenlet>` method in 0.12.2 and older was asynchronous by default.
-
