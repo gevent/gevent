@@ -10,6 +10,8 @@ from os.path import join, abspath, basename, dirname
 from subprocess import check_call
 from glob import glob
 
+import sysconfig  # to get CFLAGS to pass into c-ares configure script
+
 PYPY = hasattr(sys, 'pypy_version_info')
 
 try:
@@ -64,9 +66,14 @@ libev_configure_command = ' '.join(["(cd ", _quoted_abspath('libev/'),
                                     " && /bin/sh ./configure ",
                                     " && mv config.h \"$OLDPWD\")",
                                     '> configure-output.txt'])
+if "m32" in sysconfig.get_config_var("CFLAGS"):
+    _m32 = "CFLAGS=-m32 "
+else:
+    _m32 = ""
+
 ares_configure_command = ' '.join(["(cd ", _quoted_abspath('c-ares/'),
                                    " && if [ -e ares_build.h ]; then cp ares_build.h ares_build.h.orig; fi ",
-                                   " && /bin/sh ./configure CONFIG_COMMANDS= CONFIG_FILES= ",
+                                   " && /bin/sh ./configure " + _m32 + "CONFIG_COMMANDS= CONFIG_FILES= ",
                                    " && cp ares_config.h ares_build.h \"$OLDPWD\" ",
                                    " && mv ares_build.h.orig ares_build.h)",
                                    "> configure-output.txt"])
