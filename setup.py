@@ -339,6 +339,10 @@ else:
     include_package_data = False
     run_make = True
 
+if run_make and os.path.exists("Makefile"):
+    setup_requires = ['cython']
+else:
+    setup_requires = []
 
 def run_setup(ext_modules, run_make):
     if run_make:
@@ -359,6 +363,7 @@ def run_setup(ext_modules, run_make):
         ext_modules=ext_modules,
         cmdclass=dict(build_ext=my_build_ext, sdist=sdist),
         install_requires=install_requires,
+        setup_requires=setup_requires,
         zip_safe=False,
         classifiers=[
             "License :: OSI Approved :: MIT License",
