@@ -1,16 +1,17 @@
-What's new gevent 1.0
----------------------
+==========================
+ What's new in gevent 1.0
+==========================
 
 The detailed information is available in changelog. Below is the summary of all changes since 0.13.8.
 
 Gevent 1.0 supports Python 2.5 - 2.7. The version of greenlet required is 0.3.2. The source distribution
-now includes the dependencies (libev and c-ares) and has not dependencies other than greenlet.
+now includes the dependencies (libev and c-ares) and has no dependencies other than greenlet.
 
 
 New core
-~~~~~~~~
+========
 
-New event loop is used libev instead of libevent (see http://blog.gevent.org/2011/04/28/libev-and-libevent/ for motivation).
+Now the event loop is using libev instead of libevent (see http://blog.gevent.org/2011/04/28/libev-and-libevent/ for motivation).
 
 The new :mod:`gevent.core` has been rewritten to wrap libev's API. (On Windows, the :mod:`gevent.core` accepts Windows handles
 rather than stdio file descriptors.).
@@ -26,7 +27,7 @@ Thus ``sys.exit()`` when run inside a greenlet is no longer trapped and kills th
 
 
 New dns resolver
-~~~~~~~~~~~~~~~~
+================
 
 Two new DNS resolvers: threadpool-based one (enabled by default) and c-ares based one. That threadpool-based resolver was added mostly for Windows and Mac OS X platforms where c-ares might behave differently w.r.t system configuration. On Linux, however, the c-ares based resolver is probably a better choice. To enable c-ares resolver set GEVENT_RESOLVER=ares environment variable.
 
@@ -46,7 +47,7 @@ It is possible to implement your own DNS resolver and make gevent use it. The GE
 
 
 New API
-~~~~~~~
+=======
 
 - :func:`gevent.wait` and :func:`gevent.iwait`
 - UDP server: gevent.server.DatagramServer
@@ -66,10 +67,10 @@ New API
 
 
 Breaking changes
-~~~~~~~~~~~~~~~~
+================
 
 Removed features
-^^^^^^^^^^^^^^^^
+----------------
 
 - gevent.dns module (wrapper around libevent-dns)
 - gevent.http module (wrapper around libevent-http)
@@ -84,20 +85,20 @@ Renamed gevent.coros to gevent.lock. The gevent.coros is still available but dep
 
 
 API changes
-^^^^^^^^^^^
+-----------
 
 In all servers, method "kill" was renamed to "close". The old name is available as deprecated alias.
 
 - ``Queue(0)`` is now equivalent to an unbound queue and raises :exc:`DeprecationError`. Use :class:`gevent.queue.Channel` if you need a channel.
 
-The :class:`Greenlet` objects:
+The :class:`gevent.Greenlet` objects:
 
 - Added ``__nonzero__`` implementation that returns `True` after greenlet was started until it's dead. This overrides
   greenlet's __nonzero__ which returned `False` after `start()` until it was first switched to.
 
 
 Bugfixes
-~~~~~~~~
+========
 
 - Issue #302: "python -m gevent.monkey" now sets __file__ properly.
 - Issue #143: greenlet links are now executed in the order they were added

@@ -48,6 +48,9 @@ extlinks = {'issue': ('https://github.com/gevent/gevent/issues/%s',
             'pr': ('https://github.com/gevent/gevent/pull/%s',
                    'pull request #')}
 
+autodoc_default_flags = ['members', 'show-inheritance']
+autoclass_content = 'both'
+
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
 
@@ -99,14 +102,14 @@ add_function_parentheses = True
 
 # If true, the current module name will be prepended to all description
 # unit titles (such as .. function::).
-add_module_names = True
+add_module_names = False
 
 # If true, sectionauthor and moduleauthor directives will be shown in the
 # output. They are ignored by default.
 #show_authors = False
 
 # The name of the Pygments (syntax highlighting) style to use.
-pygments_style = 'sphinx'
+pygments_style = 'perldoc'
 
 # A list of ignored prefixes for module index sorting.
 modindex_common_prefix = ['gevent.']
@@ -252,4 +255,4 @@ class MyClassDocumenter(ClassDocumenter):
         members.sort(key=key)
         return members_check_module, members
 
-autodoc.ClassDocumenter = MyClassDocumenter
+#autodoc.ClassDocumenter = MyClassDocumenter
