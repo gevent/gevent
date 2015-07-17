@@ -53,8 +53,10 @@ if sys.platform == 'win32':
 
 
 if LEAKTEST:
-    FAILING_TESTS += ['FLAKY test__backdoor.py']
-    FAILING_TESTS += ['FLAKY test__os.py']
+    FAILING_TESTS += [
+        'FLAKY test__backdoor.py',
+        'FLAKY test__socket_errors.py'
+    ]
 
 
 if PYPY:

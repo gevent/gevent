@@ -397,6 +397,16 @@ class TestPoolUnlimit(TestPool):
     size = None
 
 
+class TestPool0(greentest.TestCase):
+    size = 0
+
+    def test_wait_full(self):
+        p = pool.Pool(size=0)
+        self.assertEqual(0, p.free_count())
+        self.assertTrue(p.full())
+        self.assertEqual(0, p.wait_available(timeout=0.01))
+
+
 class TestJoinSleep(greentest.GenericWaitTestCase):
 
     def wait(self, timeout):

@@ -1,12 +1,17 @@
 # Copyright (c) 2009-2011 Denis Bilenko. See LICENSE for details.
-"""Managing greenlets in a group.
+"""
+Managing greenlets in a group.
 
-The :class:`Group` class in this module abstracts a group of running greenlets.
-When a greenlet dies, it's automatically removed from the group.
+The :class:`Group` class in this module abstracts a group of running
+greenlets. When a greenlet dies, it's automatically removed from the
+group. All running greenlets in a group can be waited on with
+:meth:`Group.joinall`, or all running greenlets can be killed with
+:meth:`Group.kill`.
 
-The :class:`Pool` which a subclass of :class:`Group` provides a way to limit
-concurrency: its :meth:`spawn <Pool.spawn>` method blocks if the number of
-greenlets in the pool has already reached the limit, until there is a free slot.
+The :class:`Pool` class, which is a subclass of :class:`Group`,
+provides a way to limit concurrency: its :meth:`spawn <Pool.spawn>`
+method blocks if the number of greenlets in the pool has already
+reached the limit, until there is a free slot.
 """
 
 from bisect import insort_right
@@ -233,7 +238,8 @@ class GroupMappingMixin(object):
 
     def map_async(self, func, iterable, callback=None):
         """
-        A variant of the map() method which returns a Greenlet object.
+        A variant of the map() method which returns a Greenlet object that is executing
+        the map function.
 
         If callback is specified then it should be a callable which accepts a
         single argument.
@@ -308,10 +314,21 @@ class Group(GroupMappingMixin):
             unlink(self._discard)
 
     def start(self, greenlet):
+        """
+        Start the un-started *greenlet* and add it to the collection of greenlets
+        this group is monitoring.
+        """
         self.add(greenlet)
         greenlet.start()
 
     def spawn(self, *args, **kwargs):
+        """
+        Begin a new greenlet with the given arguments (which are passed
+        to the greenlet constructor) and add it to the collection of greenlets
+        this group is monitoring.
+
+        :return: The newly started greenlet.
+        """
         greenlet = self.greenlet_class(*args, **kwargs)
         self.start(greenlet)
         return greenlet
@@ -399,6 +416,24 @@ class Failure(object):
 class Pool(Group):
 
     def __init__(self, size=None, greenlet_class=None):
+        """
+        Create a new pool.
+
+        A pool is like a group, but the maximum number of members
+        is governed by the *size* parameter.
+
+        :keyword int size: If given, this non-negative integer is the
+            maximum count of active greenlets that will be allowed in
+            this pool. A few values have special significance:
+
+            * ``None`` (the default) places no limit on the number of
+              greenlets. This is useful when you need to track, but not limit,
+              greenlets, as with :class:`gevent.pywsgi.WSGIServer`
+            * ``0`` creates a pool that can never have any active greenlets. Attempting
+              to spawn in this pool will block forever. This is only useful
+              if an application uses :meth:`wait_available` with a timeout and checks
+              :meth:`free_count` before attempting to spawn.
+        """
         if size is not None and size < 0:
             raise ValueError('size must not be negative: %r' % (size, ))
         Group.__init__(self)
@@ -410,13 +445,36 @@ class Pool(Group):
         else:
             self._semaphore = Semaphore(size)
 
-    def wait_available(self):
-        self._semaphore.wait()
+    def wait_available(self, timeout=None):
+        """
+        Wait until it's possible to spawn a greenlet in this pool.
+
+        :param float timeout: If given, only wait the specified number
+            of seconds.
+
+        .. warning:: If the pool was initialized with a size of 0, this
+           method will block forever unless a timeout is given.
+
+        :return: A number indicating how many new greenlets can be put into
+           the pool without blocking.
+
+        .. versionchanged:: 1.1a3
+            Added the ``timeout`` parameter.
+        """
+        return self._semaphore.wait(timeout=timeout)
 
     def full(self):
+        """
+        Return a boolean indicating whether this pool has any room for
+        members. (True if it does, False if it doesn't.)
+        """
         return self.free_count() <= 0
 
     def free_count(self):
+        """
+        Return a number indicating approximately how many more members
+        can be added to this pool.
+        """
         if self.size is None:
             return 1
         return max(0, self.size - len(self))
