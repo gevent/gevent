@@ -135,10 +135,9 @@ reduce the cases of undocumented or non-standard behaviour.
   the HTTP specification, and their interpretation by the recipient is
   unknown. Now, a UnicodeError will be raised.
 
-  Most applications that adhered to the WSGI PEP, `PEP 3333`_ will not
+  Most applications that adhered to the WSGI PEP, :pep:`3333`, will not
   need to make any changes. See :issue:`614` for more discussion.
 
-  .. _`PEP 3333`: https://www.python.org/dev/peps/pep-3333/
 
 - Under Python 2, the previously undocumented ``timeout`` parameter to
   :meth:`Popen.wait <gevent.subprocess.Popen.wait>` (a gevent extension

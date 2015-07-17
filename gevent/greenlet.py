@@ -254,7 +254,7 @@ class Greenlet(greenlet):
         """Return true if and only if the greenlet has finished execution successfully,
         that is, without raising an error.
 
-        .. note:: A greenlet that has been killed with the default :class:`GreenletExit` exception
+        .. tip:: A greenlet that has been killed with the default :class:`GreenletExit` exception
             is considered successful. That is, ``GreenletExit`` is not considered an error.
         """
         return self._exc_info and self._exc_info[1] is None
@@ -359,8 +359,8 @@ class Greenlet(greenlet):
         The arguments are passed to :meth:`Greenlet.__init__`.
 
         .. versionchanged:: 1.1a3
-           If a callable argument (the first argument or the ``run`` keyword )
-           is given to this method (and not a subclass),
+           If an argument that's meant to be a function (the first argument in *args*, or the ``run`` keyword )
+           is given to this classmethod (and not a classmethod of a subclass),
            it is verified to be callable. Previously, the spawned greenlet would have failed
            when it started running.
         """
@@ -515,9 +515,11 @@ class Greenlet(greenlet):
         return
 
     def rawlink(self, callback):
-        """Register a callable to be executed when the greenlet finishes the execution.
+        """Register a callable to be executed when the greenlet finishes execution.
 
-        WARNING: the callable will be called in the HUB greenlet.
+        The *callback* will be called with this instance as an argument.
+
+        .. caution:: The callable will be called in the HUB greenlet.
         """
         if not callable(callback):
             raise TypeError('Expected callable: %r' % (callback, ))
@@ -541,11 +543,11 @@ class Greenlet(greenlet):
             pass
 
     def link_value(self, callback, SpawnedLink=SuccessSpawnedLink):
-        """Like :meth:`link` but *callback* is only notified when the greenlet has completed successfully"""
+        """Like :meth:`link` but *callback* is only notified when the greenlet has completed successfully."""
         self.link(callback, SpawnedLink=SpawnedLink)
 
     def link_exception(self, callback, SpawnedLink=FailureSpawnedLink):
-        """Like :meth:`link` but *callback* is only notified when the greenlet dies because of unhandled exception"""
+        """Like :meth:`link` but *callback* is only notified when the greenlet dies because of an unhandled exception."""
         self.link(callback, SpawnedLink=SpawnedLink)
 
     def _notify_links(self):

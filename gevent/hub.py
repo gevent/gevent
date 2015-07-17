@@ -67,8 +67,10 @@ def spawn_raw(function, *args):
     """
     Create a new :class:`greenlet.greenlet` object and schedule it to run ``function(*args, **kwargs)``.
 
-    As this returns a raw greenlet, it does not have all the useful methods that
-    :class:`gevent.Greenlet` has and should only be used as an optimization.
+    This returns a raw greenlet which does not have all the useful methods that
+    :class:`gevent.Greenlet` has. Typically, applications should prefer :func:`gevent.spawn`,
+    but this method may occasionally be useful as an optimization if there are many greenlets
+    involved.
 
     .. versionchanged:: 1.1a3
         Verify that ``function`` is callable, raising a TypeError if not. Previously,
@@ -83,12 +85,22 @@ def spawn_raw(function, *args):
 
 
 def sleep(seconds=0, ref=True):
-    """Put the current greenlet to sleep for at least *seconds*.
+    """
+    Put the current greenlet to sleep for at least *seconds*.
 
-    *seconds* may be specified as an integer, or a float if fractional seconds
-    are desired.
+    *seconds* may be specified as an integer, or a float if fractional
+    seconds are desired.
 
-    If *ref* is false, the greenlet running sleep() will not prevent gevent.wait()
+    .. tip:: In the current implementation, a value of 0 (the default)
+       means to yield execution to any other runnable greenlets, but
+       this greenlet may be scheduled again before the event loop
+       cycles (in an extreme case, a greenlet that repeatedly sleeps
+       with 0 can prevent greenlets that are ready to do I/O from
+       being scheduled for some (small) period of time); a value greater than
+       0, on the other hand, will delay running this greenlet until
+       the next iteration of the loop.
+
+    If *ref* is False, the greenlet running ``sleep()`` will not prevent :func:`gevent.wait`
     from exiting.
     """
     hub = get_hub()
@@ -137,6 +149,15 @@ def kill(greenlet, exception=GreenletExit):
 
 
 class signal(object):
+    """
+    Call the *handler* with the *args* and *kwargs* when the process
+    receives the signal *signalnum*.
+
+    The *handler* will be run in a new greenlet when the signal is delivered.
+
+    This returns an object with the useful method ``cancel``, which, when called,
+    will prevent future deliveries of *signalnum* from calling *handler*.
+    """
 
     greenlet_class = None
 
@@ -727,12 +748,15 @@ class _MultipleWaiter(Waiter):
 
 def iwait(objects, timeout=None, count=None):
     """
-    Yield objects as they are ready, until all (or `count`) are ready or `timeout` expired.
+    Iteratively yield objects as they are ready, until all (or `count`) are ready
+    or `timeout` expired.
 
     :param objects: A sequence (supporting :func:`len`) containing objects
         implementing the wait protocol (rawlink() and unlink()).
     :param count: If not `None`, then a number specifying the maximum number
         of objects to wait for.
+
+    .. seealso:: :func:`wait`
     """
     # QQQ would be nice to support iterable here that can be generated slowly (why?)
     if objects is None:
@@ -773,7 +797,7 @@ def wait(objects=None, timeout=None, count=None):
     """
     Wait for ``objects`` to become ready or for event loop to finish.
 
-    If ``objects`` is provided, it must be an list containing objects
+    If ``objects`` is provided, it must be a list containing objects
     implementing the wait protocol (rawlink() and unlink() methods):
 
     - :class:`gevent.Greenlet` instance
@@ -782,7 +806,7 @@ def wait(objects=None, timeout=None, count=None):
     - :class:`gevent.subprocess.Popen` instance
 
     If ``objects`` is ``None`` (the default), ``wait()`` blocks until
-    all event loops have nothing to do (or until ``timeout`` passes):
+    the current event loop has nothing to do (or until ``timeout`` passes):
 
     - all greenlets have finished
     - all servers were stopped
@@ -800,6 +824,8 @@ def wait(objects=None, timeout=None, count=None):
 
     Returns the list of ready objects, in the order in which they were
     ready.
+
+    .. seealso:: :func:`iwait`
     """
     if objects is None:
         return get_hub().join(timeout=timeout)

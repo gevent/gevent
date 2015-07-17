@@ -1,10 +1,11 @@
 # Copyright (c) 2009-2010 Denis Bilenko. See LICENSE for details.
-"""Timeouts.
+"""
+Timeouts.
 
 Many functions in :mod:`gevent` have a *timeout* argument that allows
-to limit function's execution time. When that is not enough, the :class:`Timeout`
-class and :func:`with_timeout` function in this module add timeouts
-to arbitrary code.
+limiting the time the function will block. When that is not available,
+the :class:`Timeout` class and :func:`with_timeout` function in this
+module add timeouts to arbitrary code.
 
 .. warning::
 
@@ -20,7 +21,8 @@ __all__ = ['Timeout',
 
 
 class Timeout(BaseException):
-    """Raise *exception* in the current greenlet after given time period::
+    """
+    Raise *exception* in the current greenlet after given time period::
 
         timeout = Timeout(seconds, exception)
         timeout.start()
@@ -28,6 +30,11 @@ class Timeout(BaseException):
             ...  # exception will be raised here, after *seconds* passed since start() call
         finally:
             timeout.cancel()
+
+    .. note:: If the code that the timeout was protecting finishes
+       executing before the timeout elapses, be sure to ``cancel`` the timeout
+       so it is not unexpectedly raised in the future. Even if it is raised, it is a best
+       practice to cancel it. This ``try/finally`` construct is a recommended pattern.
 
     When *exception* is omitted or ``None``, the :class:`Timeout` instance itself is raised:
 
@@ -38,16 +45,17 @@ class Timeout(BaseException):
          ...
         Timeout: 0.1 seconds
 
-    For Python 2.5 and newer ``with`` statement can be used::
+    To simplify starting and canceling timeouts, the ``with`` statement can be used::
 
         with gevent.Timeout(seconds, exception) as timeout:
             pass  # ... code block ...
 
-    This is equivalent to try/finally block above with one additional feature:
-    if *exception* is ``False``, the timeout is still raised, but context manager
+    This is equivalent to the try/finally block above with one additional feature:
+    if *exception* is ``False``, the timeout is still raised, but the context manager
     suppresses it, so the code outside the with-block won't see it.
 
-    This is handy for adding a timeout to the functions that don't support *timeout* parameter themselves::
+    This is handy for adding a timeout to the functions that don't
+    support a *timeout* parameter themselves::
 
         data = None
         with gevent.Timeout(5, False):
@@ -57,12 +65,14 @@ class Timeout(BaseException):
         else:
             ...  # a line was read within 5 seconds
 
-    Note that, if ``readline()`` above catches and doesn't re-raise :class:`BaseException`
-    (for example, with ``except:``), then your timeout is screwed.
+    .. caution:: If ``readline()`` above catches and doesn't re-raise :class:`BaseException`
+       (for example, with a bare ``except:``), then your timeout will fail to function and control
+       won't be returned to you when you expect.
 
-    When catching timeouts, keep in mind that the one you catch maybe not the
-    one you have set; if you going to silent a timeout, always check that it's
-    the one you need::
+    When catching timeouts, keep in mind that the one you catch may
+    not be the one you have set (a calling function may have set its
+    own timeout); if you going to silence a timeout, always check that
+    it's the instance you need::
 
         timeout = Timeout(1)
         timeout.start()
@@ -71,6 +81,11 @@ class Timeout(BaseException):
         except Timeout as t:
             if t is not timeout:
                 raise # not my timeout
+
+    If the *seconds* argument is not given or is ``None`` (e.g.,
+    ``Timeout()``), then the timeout will never expire and never raise
+    *exception*. This is convenient for creating functions which take
+    an optional timeout parameter of their own.
     """
 
     def __init__(self, seconds=None, exception=None, ref=True, priority=-1):
@@ -95,7 +110,8 @@ class Timeout(BaseException):
 
         This is a shortcut, the exact action depends on *timeout*'s type:
 
-        * If *timeout* is a :class:`Timeout`, then call its :meth:`start` method.
+        * If *timeout* is a :class:`Timeout`, then call its :meth:`start` method
+          if it's not already begun.
         * Otherwise, create a new :class:`Timeout` instance, passing (*timeout*, *exception*) as
           arguments, then call its :meth:`start` method.
 

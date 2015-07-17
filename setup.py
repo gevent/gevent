@@ -344,6 +344,7 @@ if run_make and os.path.exists("Makefile"):
 else:
     setup_requires = []
 
+
 def run_setup(ext_modules, run_make):
     if run_make:
         if isinstance(run_make, str):

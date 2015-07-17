@@ -1,5 +1,6 @@
-:mod:`gevent` -- basic utilities
-================================
+==================================
+ :mod:`gevent` -- basic utilities
+==================================
 
 .. module:: gevent
 
@@ -7,9 +8,10 @@ The most common functions and classes are available in the :mod:`gevent` top lev
 
 .. autodata:: __version__
 
+.. autodata:: version_info
 
 Greenlet objects
-----------------
+================
 
 :class:`Greenlet` is a light-weight cooperatively-scheduled execution unit.
 
@@ -28,7 +30,7 @@ idea to override :meth:`__str__`: if :meth:`_run` raises an exception,
 its string representation will be printed after the traceback it
 generated.
 
-    .. note:: You SHOULD NOT attempt to override the ``run()`` method.
+    .. important:: You *SHOULD NOT* attempt to override the ``run()`` method.
 
 .. class:: Greenlet
 
@@ -36,7 +38,13 @@ generated.
 
 .. attribute:: Greenlet.value
 
-    Holds the value returned by the function if the greenlet has finished successfully. Otherwise ``None``.
+    Holds the value returned by the function if the greenlet has
+    finished successfully. Until then, or if it finished in error, ``None``.
+
+    .. tip:: Recall that a greenlet killed with the default
+             :class:`GreenletExit` is considered to have finished
+             successfully, and the ``GreenletExit`` exception will be
+             its value.
 
 .. autoattribute:: Greenlet.exception
 
@@ -50,28 +58,41 @@ generated.
 .. automethod:: Greenlet.link(callback)
 .. automethod:: Greenlet.link_value(callback)
 .. automethod:: Greenlet.link_exception(callback)
+.. automethod:: Greenlet.rawlink
 .. automethod:: Greenlet.unlink
 
+Boolean Contexts
+----------------
 
-Greenlet objects have a boolean value (``__nonzero__`` or ``__bool__``) which is true if it's active: started but not dead yet.
+Greenlet objects have a boolean value (``__nonzero__`` or
+``__bool__``) which is true if it's active: started but not dead yet.
 
 It's possible to use it like this::
 
-  g = gevent.spawn(...)
-  while g:
-      # do something while g is alive
+    >>> g = gevent.spawn(...)
+    >>> while g:
+           # do something while g is alive
 
 The Greenlet's ``__nonzero__`` is an improvement on greenlet's
-``__nonzero__``. The greenlet's `__nonzero__` returns False if greenlet has
-not been switched to yet or already dead. While the latter is OK, the
+``__nonzero__``. The greenlet's :meth:`__nonzero__
+<greenlet.greenlet.__nonzero__>` returns False if greenlet has not
+been switched to yet or is already dead. While the latter is OK, the
 former is not good, because a just spawned Greenlet has not been
 switched to yet and thus would evaluate to False.
 
-Being a greenlet__ subclass, :class:`Greenlet` also has ``switch()`` and ``throw()`` methods.
-However, these should not be used at the application level. Prefer higher-level safe
-classes, like :class:`Event <gevent.event.Event>` and :class:`Queue <gevent.queue.Queue>`, instead.
+Raw greenlet Methods
+--------------------
+
+Being a greenlet__ subclass, :class:`Greenlet` also has `switch()
+<switching>`_ and `throw() <throw>`_ methods. However, these should
+not be used at the application level as they can very easily lead to
+greenlets that are forever unscheduled. Prefer higher-level safe
+classes, like :class:`Event <gevent.event.Event>` and :class:`Queue
+<gevent.queue.Queue>`, instead.
 
 __ http://greenlet.readthedocs.org/en/latest/#instantiation
+.. _switching: https://greenlet.readthedocs.org/en/latest/#switching
+.. _throw: https://greenlet.readthedocs.org/en/latest/#methods-and-attributes-of-greenlets
 
 .. exception:: GreenletExit
 
@@ -83,17 +104,15 @@ __ http://greenlet.readthedocs.org/en/latest/#instantiation
     property as if it was returned by the greenlet, not raised.
 
 Spawn helpers
--------------
+=============
 
 .. autofunction:: spawn(function, *args, **kwargs)
 .. autofunction:: spawn_later(seconds, function, *args, **kwargs)
 .. autofunction:: spawn_raw
 
 
-
-
 Useful general functions
-------------------------
+========================
 
 .. function:: getcurrent()
 
@@ -117,7 +136,7 @@ Useful general functions
 
 
 Timeouts
---------
+========
 
 .. autoclass:: Timeout
     :members:
@@ -127,7 +146,7 @@ Timeouts
 
 
 Waiting
--------
+=======
 
 .. autofunction:: wait
 

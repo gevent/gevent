@@ -8,7 +8,15 @@ See http://www.gevent.org/ for the documentation.
 
 from __future__ import absolute_import
 
-version_info = (1, 1, 'a3', 'dev', 0)
+from collections import namedtuple
+
+_version_info = namedtuple('version_info',
+                           ('major', 'minor', 'micro', 'releaselevel', 'serial'))
+
+#: The programatic version identifier. The fields have (roughly) the
+#: same meaning as :data:`sys.version_info`
+version_info = _version_info(1, 1, 0, 'alpha', '3')
+
 #: The human-readable PEP 440 version identifier
 __version__ = '1.1a3.dev0'
 
