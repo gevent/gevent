@@ -4,8 +4,8 @@
 
 .. currentmodule:: gevent
 
-Unreleased
-==========
+1.1b1 (Jul 17, 2015)
+====================
 
 - ``setup.py`` can be run from a directory containing spaces. Reported
   in :issue:`319` by Ivan Smirnov.
