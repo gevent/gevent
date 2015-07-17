@@ -79,6 +79,9 @@ Unreleased
   (The same thing could happen under Python 2 if a ``threading.RLock``
   was held around the monkey-patching call; this is less likely but
   not impossible with import hooks.)
+- Fix configuring c-ares for a 32-bit Python when running on a 64-bit
+  platform. Reported in :issue:`381` and fixed in :pr:`616` by Chris
+  Lane.
 
 1.1a2 (Jul 8, 2015)
 ===================

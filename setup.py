@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+"""gevent build & installation script"""
 from __future__ import print_function
 import sys
 import os
@@ -67,6 +69,7 @@ libev_configure_command = ' '.join(["(cd ", _quoted_abspath('libev/'),
                                     " && mv config.h \"$OLDPWD\")",
                                     '> configure-output.txt'])
 
+# See #616, trouble building for a 32-bit python against a 64-bit platform
 _config_vars = distutils.sysconfig.get_config_var("CFLAGS")
 if _config_vars and "m32" in _config_vars:
     _m32 = 'CFLAGS="' + os.getenv('CFLAGS', '') + ' -m32"'
