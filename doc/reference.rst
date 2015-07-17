@@ -6,26 +6,17 @@ API reference
    gevent
    networking
    synchronization
-   gevent.pool
-   gevent.threadpool
    servers
+   gevent.backdoor
+   gevent.fileobject
+   gevent.hub
    gevent.local
    gevent.monkey
-   gevent.backdoor
-   gevent.baseserver
-   gevent.event
-   gevent.fileobject
-   gevent.lock
    gevent.os
    gevent.pool
-   gevent.pywsgi
    gevent.queue
-   gevent.select
    gevent.server
-   gevent.socket
-   gevent.ssl
    gevent.subprocess
    gevent.thread
+   gevent.threadpool
    gevent.util
-   gevent.wsgi
-   gevent.hub

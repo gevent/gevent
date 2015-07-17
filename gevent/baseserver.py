@@ -28,7 +28,7 @@ class BaseServer(object):
         :meth:`set_handle`.
 
         When the request handler returns, the socket used for the
-        request will be closed. (New in gevent 1.1a1.)
+        request will be closed.
 
     :keyword spawn: If provided, is called to create a new
         greenlet to run the handler. By default,
@@ -37,32 +37,36 @@ class BaseServer(object):
 
         - a :class:`gevent.pool.Pool` instance -- ``handle`` will be executed
           using :meth:`gevent.pool.Pool.spawn` only if the pool is not full.
-          While it is full, all the connection are dropped;
+          While it is full, no new connections are accepted;
         - :func:`gevent.spawn_raw` -- ``handle`` will be executed in a raw
-          greenlet which have a little less overhead then :class:`gevent.Greenlet` instances spawned by default;
+          greenlet which has a little less overhead then :class:`gevent.Greenlet` instances spawned by default;
         - ``None`` -- ``handle`` will be executed right away, in the :class:`Hub` greenlet.
-          ``handle`` cannot use any blocking functions as it means switching to the :class:`Hub`.
+          ``handle`` cannot use any blocking functions as it would mean switching to the :class:`Hub`.
         - an integer -- a shortcut for ``gevent.pool.Pool(integer)``
 
+    .. versionchanged:: 1.1a1
+       When the *handle* function returns from processing a connection,
+       the client socket will be closed. This resolves the non-deterministic
+       closing of the socket, fixing ResourceWarnings under Python 3 and PyPy.
 
     """
-    # the number of seconds to sleep in case there was an error in accept() call
-    # for consecutive errors the delay will double until it reaches max_delay
-    # when accept() finally succeeds the delay will be reset to min_delay again
+    #: the number of seconds to sleep in case there was an error in accept() call
+    #: for consecutive errors the delay will double until it reaches max_delay
+    #: when accept() finally succeeds the delay will be reset to min_delay again
     min_delay = 0.01
     max_delay = 1
 
-    # Sets the maximum number of consecutive accepts that a process may perform on
-    # a single wake up. High values give higher priority to high connection rates,
-    # while lower values give higher priority to already established connections.
-    # Default is 100. Note, that in case of multiple working processes on the same
-    # listening value, it should be set to a lower value. (pywsgi.WSGIServer sets it
-    # to 1 when environ["wsgi.multiprocess"] is true)
+    #: Sets the maximum number of consecutive accepts that a process may perform on
+    #: a single wake up. High values give higher priority to high connection rates,
+    #: while lower values give higher priority to already established connections.
+    #: Default is 100. Note, that in case of multiple working processes on the same
+    #: listening value, it should be set to a lower value. (pywsgi.WSGIServer sets it
+    #: to 1 when environ["wsgi.multiprocess"] is true)
     max_accept = 100
 
     _spawn = Greenlet.spawn
 
-    # the default timeout that we wait for the client connections to close in stop()
+    #: the default timeout that we wait for the client connections to close in stop()
     stop_timeout = 1
 
     fatal_errors = (errno.EBADF, errno.EINVAL, errno.ENOTSOCK)
@@ -305,11 +309,19 @@ class BaseServer(object):
         return not hasattr(self, 'socket')
 
     def stop(self, timeout=None):
-        """Stop accepting the connections and close the listening socket.
+        """
+        Stop accepting the connections and close the listening socket.
 
-        If the server uses a pool to spawn the requests, then :meth:`stop` also waits
-        for all the handlers to exit. If there are still handlers executing after *timeout*
-        has expired (default 1 second), then the currently running handlers in the pool are killed."""
+        If the server uses a pool to spawn the requests, then
+        :meth:`stop` also waits for all the handlers to exit. If there
+        are still handlers executing after *timeout* has expired
+        (default 1 second, :attr:`stop_timeout`), then the currently
+        running handlers in the pool are killed.
+
+        If the server does not use a pool, then this merely stops accepting connections;
+        any spawned greenlets that are handling requests continue running until
+        they naturally complete.
+        """
         self.close()
         if timeout is None:
             timeout = self.stop_timeout

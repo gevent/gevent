@@ -236,7 +236,10 @@ class TestCase(greentest.TestCase):
     application = None
 
     def init_server(self, application):
-        self.server = pywsgi.WSGIServer(('127.0.0.1', 0), application)
+        import logging
+        logger = logging.getLogger('gevent.pywsgi')
+        self.server = pywsgi.WSGIServer(('127.0.0.1', 0), application,
+                                        log=logger, error_log=logger)
 
     def setUp(self):
         application = self.application
@@ -847,7 +850,7 @@ class TestEmptyYield(TestCase):
         read_http(fd, body='', chunks=chunks)
 
         garbage = fd.read()
-        self.assert_(garbage == b"", "got garbage: %r" % garbage)
+        self.assertEqual(garbage, b"", "got garbage: %r" % garbage)
 
 
 class TestFirstEmptyYield(TestCase):
@@ -886,7 +889,7 @@ class TestEmptyYield304(TestCase):
         fd.write('GET / HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n')
         read_http(fd, code=304, body='', chunks=False)
         garbage = fd.read()
-        self.assert_(garbage == b"", "got garbage: %r" % garbage)
+        self.assertEqual(garbage, b"", "got garbage: %r" % garbage)
 
 
 class TestContentLength304(TestCase):
@@ -907,7 +910,7 @@ class TestContentLength304(TestCase):
         body = "Invalid Content-Length for 304 response: '100' (must be absent or zero)"
         read_http(fd, code=200, reason='Raised', body=body, chunks=False)
         garbage = fd.read()
-        self.assertTrue(garbage == b"", "got garbage: %r" % garbage)
+        self.assertEqual(garbage, b"", "got garbage: %r" % garbage)
 
 
 class TestBody304(TestCase):

@@ -1,6 +1,14 @@
 # Copyright (c) 2005-2009, eventlet contributors
-# Copyright (c) 2009-2011, gevent contributors
+# Copyright (c) 2009-2015, gevent contributors
+"""
+A pure-Python, gevent-friendly WSGI server.
 
+The server is provided in :class:`WSGIServer`, but most of the actual
+WSGI work is handled by :class:`WSGIHandler` --- a new instance is
+created for each request. The server can be customized to use
+different subclasses of :class:`WSGIHandler`.
+
+"""
 import errno
 from io import BytesIO
 import string
@@ -19,7 +27,7 @@ from gevent.server import StreamServer
 from gevent.hub import GreenletExit, PY3, reraise
 
 
-__all__ = ['WSGIHandler', 'WSGIServer']
+__all__ = ['WSGIHandler', 'WSGIServer', 'LoggingLogAdapter']
 
 
 MAX_REQUEST_LINE = 8192
@@ -318,6 +326,12 @@ class WSGIHandler(object):
             self.rfile = rfile
 
     def handle(self):
+        """
+        The main request handling method, called by the server.
+
+        This method runs until all requests on the connection have
+        been handled (that is, it implements pipelining).
+        """
         try:
             while self.socket is not None:
                 self.time_start = time.time()
@@ -361,6 +375,12 @@ class WSGIHandler(object):
         return True
 
     def read_request(self, raw_requestline):
+        """
+        Process the incoming request. Parse various headers.
+
+        :raises ValueError: If the request is invalid. This error will
+           not be logged (because it's a client issue, not a server problem).
+        """
         self.requestline = raw_requestline.rstrip()
         words = self.requestline.split()
         if len(words) == 3:
@@ -424,8 +444,9 @@ class WSGIHandler(object):
             message = '%s: %s' % (self.socket, message)
         except Exception:
             pass
+
         try:
-            sys.stderr.write(message + '\n')
+            self.server.error_log.write(message + '\n')
         except Exception:
             traceback.print_exc()
 
@@ -435,7 +456,8 @@ class WSGIHandler(object):
 
         Under both Python 2 and 3, this should return the native
         ``str`` type; under Python 3, this probably means the bytes read
-        from the network need to be decoded.
+        from the network need to be decoded (using the ISO-8859-1 charset, aka
+        latin-1).
         """
         line = self.rfile.readline(MAX_REQUEST_LINE)
         if PY3:
@@ -593,9 +615,7 @@ class WSGIHandler(object):
         return self.write
 
     def log_request(self):
-        log = self.server.log
-        if log:
-            log.write(self.format_request() + '\n')
+        self.server.log.write(self.format_request() + '\n')
 
     def format_request(self):
         now = datetime.now().replace(microsecond=0)
@@ -747,10 +767,91 @@ class WSGIHandler(object):
         return env
 
 
+class _NoopLog(object):
+
+    def write(self, *args, **kwargs):
+        return
+
+
+class LoggingLogAdapter(object):
+    """
+    An adapter for :class:`logging.Logger` instances
+    to let them be used with :class:`WSGIServer`.
+
+    .. warning:: Unless the entire process is monkey-patched at a very
+        early part of the lifecycle (before logging is configured),
+        loggers are likely to not be gevent-cooperative. For example,
+        the socket and syslog handlers use the socket module in a way
+        that can block, and most handlers acquire threading locks.
+
+    .. warning:: It *may* be possible for the logging functions to be
+       called in the :class:`gevent.Hub` greenlet. Code running in the
+       hub greenlet cannot use any gevent blocking functions without triggering
+       a ``LoopExit``.
+
+    .. versionadded:: 1.1a3
+    """
+
+    # gevent avoids importing and using logging because importing it and
+    # creating loggers creates native locks unless monkey-patched.
+
+    def __init__(self, logger, level=20):
+        """
+        Write information to the *logger* at the given *level* (default to INFO).
+        """
+        self.logger = logger
+        self.level = level
+
+    def write(self, msg):
+        self.logger.log(self.level, msg)
+
+    def flush(self):
+        "No-op; required to be a file-like object"
+        pass
+
+    def writelines(self, lines):
+        for line in lines:
+            self.write(line)
+
+
 class WSGIServer(StreamServer):
-    """A WSGI server based on :class:`StreamServer` that supports HTTPS."""
+    """
+    A WSGI server based on :class:`StreamServer` that supports HTTPS.
+
+
+    :keyword log: If given, an object with a ``write`` method to which
+        request logs will be written. If not given, defaults to
+        :obj:`sys.stderr`. You may pass ``None`` to disable request
+        logging. You may use a wrapper, around e.g., :mod:`logging`,
+        to support objects that don't implement a ``write`` method.
+        (If you pass a :class:`logging.Logger` instance, it will be
+        logged to at the :data:`logging.INFO` level.)
+
+    :keyword error_log: If given, a file-like object with a ``write`` method to
+        which error logs will be written. If not given, defaults to
+        :obj:`sys.stderr`. You may pass ``None`` to disable error
+        logging (not recommended). You may use a wrapper, around e.g.,
+        :mod:`logging`, to support objects that don't implement a
+        ``write`` method. (If you pass a :class:`logging.Logger` instance, it will
+        be logged to at the :data:`logging.ERROR` level.)
+
+    .. seealso:: :class:`LoggingLogAdapter`
+
+    .. versionchanged:: 1.1a3
+        Added the ``error_log`` parameter, and set ``wsgi.errors`` in the WSGI
+        environment to this value.
+    """
 
     handler_class = WSGIHandler
+
+    #: The object to which request logs will be written.
+    #: It will never be None.
+    log = None
+
+    #: The object to which error logs will be written.
+    #: It will never be None.
+    error_log = None
+
     base_env = {'GATEWAY_INTERFACE': 'CGI/1.1',
                 'SERVER_SOFTWARE': 'gevent/%d.%d Python/%d.%d' % (gevent.version_info[:2] + sys.version_info[:2]),
                 'SCRIPT_NAME': '',
@@ -759,17 +860,29 @@ class WSGIServer(StreamServer):
                 'wsgi.multiprocess': False,
                 'wsgi.run_once': False}
 
-    def __init__(self, listener, application=None, backlog=None, spawn='default', log='default', handler_class=None,
+    def __init__(self, listener, application=None, backlog=None, spawn='default',
+                 log='default', error_log='default',
+                 handler_class=None,
                  environ=None, **ssl_args):
         StreamServer.__init__(self, listener, backlog=backlog, spawn=spawn, **ssl_args)
         if application is not None:
             self.application = application
         if handler_class is not None:
             self.handler_class = handler_class
-        if log == 'default':
-            self.log = sys.stderr
-        else:
-            self.log = log
+
+        # Note that we can't initialize these as class variables:
+        # sys.stderr might get monkey patched at runtime.
+        def _make_log(l, level=20):
+            if l == 'default':
+                return sys.stderr
+            if l is None:
+                return _NoopLog()
+            if not hasattr(l, 'write') and hasattr(l, 'log'):
+                return LoggingLogAdapter(l, level)
+            return l
+        self.log = _make_log(log)
+        self.error_log = _make_log(error_log, 40) # logging.ERROR
+
         self.set_environ(environ)
         self.set_max_accept()
 
@@ -785,7 +898,7 @@ class WSGIServer(StreamServer):
         if environ_update is not None:
             self.environ.update(environ_update)
         if self.environ.get('wsgi.errors') is None:
-            self.environ['wsgi.errors'] = sys.stderr
+            self.environ['wsgi.errors'] = self.error_log
 
     def set_max_accept(self):
         if self.environ.get('wsgi.multiprocess'):
@@ -799,6 +912,11 @@ class WSGIServer(StreamServer):
         self.update_environ()
 
     def update_environ(self):
+        """
+        Called before the first request is handled to fill in WSGI environment values.
+
+        This includes getting the correct server name and port.
+        """
         address = self.address
         if isinstance(address, tuple):
             if 'SERVER_NAME' not in self.environ:
@@ -815,5 +933,10 @@ class WSGIServer(StreamServer):
             self.environ.setdefault('SERVER_PORT', '')
 
     def handle(self, socket, address):
+        """
+        Create an instance of :attr:`handler_class` to handle the request.
+
+        This method blocks until the handler returns.
+        """
         handler = self.handler_class(socket, address, self)
         handler.handle()

@@ -1,9 +1,13 @@
 .. implementing-servers:
 
-Implementing servers
---------------------
+======================
+ Implementing servers
+======================
 
-There are a few classes to simplify server implementation with gevent. They all share the similar interface::
+.. currentmodule:: gevent.baseserver
+
+There are a few classes to simplify server implementation with gevent.
+They all share a similar interface, inherited from :class:`BaseServer`::
 
   def handle(socket, address):
        print('new connection!')
@@ -12,28 +16,33 @@ There are a few classes to simplify server implementation with gevent. They all 
   server.start() # start accepting new connections
 
 At this point, any new connection accepted on ``127.0.0.1:1234`` will result in a new
-:class:`Greenlet` spawned using *handle* function. To stop a server use :meth:`stop` method.
+:class:`gevent.Greenlet` spawned running the *handle* function. To stop a server use :meth:`BaseServer.stop` method.
 
-In case of a :class:`WSGIServer`, handle must be a WSGI application callable.
+In case of a :class:`gevent.pywsgi.WSGIServer`, *handle* must be a WSGI application callable.
 
-It is possible to limit the maximum number of concurrent connections, by passing a :class:`Pool` instance::
+It is possible to limit the maximum number of concurrent connections,
+by passing a :class:`gevent.pool.Pool` instance. In addition, passing
+a pool allows the :meth:`BaseServer.stop` method to kill requests that
+are in progress::
 
   pool = Pool(10000) # do not accept more than 10000 connections
   server = StreamServer(('127.0.0.1', 1234), handle, spawn=pool)
   server.serve_forever()
 
-The :meth:`serve_forever` method calls :meth:`start` and then waits until interrupted or until the server is stopped.
 
-The difference between :class:`wsgi.WSGIServer <gevent.wsgi.WSGIServer>` and :class:`pywsgi.WSGIServer <gevent.pywsgi.WSGIServer>`
-is that the first one is very fast as it uses libevent's http server implementation but it shares the issues that
-libevent-http has. In particular:
+.. tip:: If you don't want to limit concurrency, but you *do* want to
+         be able to kill outstanding requests, use a pool created with
+         a size of ``None``.
 
-- `does not support streaming`_: the responses are fully buffered in memory before sending; likewise, the incoming requests are loaded in memory in full;
-- `pipelining does not work`_: the server uses ``"Connection: close"`` by default;
-- does not support SSL.
 
-The :class:`pywsgi.WSGIServer <gevent.pywsgi.WSGIServer>` does not have these limitations.
-In addition, gunicorn_ is a stand-alone server that supports gevent. Gunicorn has its own HTTP parser but can also use :mod:`gevent.wsgi` module.
+The :meth:`BaseServer.serve_forever` method calls
+:meth:`BaseServer.start` and then waits until interrupted or until the
+server is stopped.
+
+The :mod:`gevent.pywsgi` module contains an implementation of a :pep:`3333`
+:class:`WSGI server <gevent.pywsgi.WSGIServer>`. In addition,
+gunicorn_ is a stand-alone server that supports gevent. Gunicorn has
+its own HTTP parser but can also use :mod:`gevent.wsgi` module.
 
 More examples are available in the `code repository`_:
 
@@ -42,8 +51,6 @@ More examples are available in the `code repository`_:
 - `wsgiserver_ssl.py`_ - demonstrates :class:`pywsgi.WSGIServer <gevent.pywsgi.WSGIServer>`
 
 .. _`code repository`: https://github.com/gevent/gevent/tree/master/examples
-.. _`does not support streaming`: http://code.google.com/p/gevent/issues/detail?id=4
-.. _`pipelining does not work`: http://code.google.com/p/gevent/issues/detail?id=32
 .. _gunicorn: http://gunicorn.org
 .. _`echoserver.py`: https://github.com/gevent/gevent/blob/master/examples/echoserver.py#L34
 .. _`wsgiserver.py`: https://github.com/gevent/gevent/blob/master/examples/wsgiserver.py#L18

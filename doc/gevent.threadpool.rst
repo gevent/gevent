@@ -1,10 +1,12 @@
 
-:mod:`gevent.threadpool`
-========================
+=====================================================
+ :mod:`gevent.threadpool` - A pool of native threads
+=====================================================
 
 .. currentmodule:: gevent.threadpool
 
 .. autoclass:: ThreadPool
+    :inherited-members:
     :members: imap, imap_unordered, map, map_async, apply_async, kill,
               join, spawn
 
