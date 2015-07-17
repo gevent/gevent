@@ -137,10 +137,11 @@ if hasattr(os, 'fork'):
             # for the *timeout*
             now = time.time()
             oldest_allowed = now - timeout
-            for pid in _watched_children.keys():
-                val = _watched_children[pid]
-                if isinstance(val, tuple) and val[2] < oldest_allowed:
-                    del _watched_children[pid]
+            dead = [pid for pid, val
+                    in _watched_children.items()
+                    if isinstance(val, tuple) and val[2] < oldest_allowed]
+            for pid in dead:
+                del _watched_children[pid]
 
         def waitpid(pid, options):
             # XXX Does not handle tracing children
