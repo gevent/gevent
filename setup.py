@@ -69,7 +69,7 @@ libev_configure_command = ' '.join(["(cd ", _quoted_abspath('libev/'),
 
 _config_vars = distutils.sysconfig.get_config_var("CFLAGS")
 if _config_vars and "m32" in _config_vars:
-    _m32 = 'CFLAGS="' + os.getenv('CFLAGS','') + ' -m32"'
+    _m32 = 'CFLAGS="' + os.getenv('CFLAGS', '') + ' -m32"'
 else:
     _m32 = ''
 
