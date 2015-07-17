@@ -840,6 +840,9 @@ class WSGIServer(StreamServer):
     .. versionchanged:: 1.1a3
         Added the ``error_log`` parameter, and set ``wsgi.errors`` in the WSGI
         environment to this value.
+    .. versionchanged:: 1.1a3
+        Add support for passing :class:`logging.Logger` objects to the ``log`` and
+        ``error_log`` arguments.
     """
 
     handler_class = WSGIHandler

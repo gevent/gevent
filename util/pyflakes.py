@@ -77,9 +77,12 @@ def pyflakes(args):
 pyflakes('examples/ greentest/*.py util/ *.py')
 
 if sys.version_info[0] == 3:
-    ignored_files = ['gevent/_util_py2.py', 'gevent/_socket2.py', 'gevent/_fileobject2.py']
+    ignored_files = ['gevent/_util_py2.py', 'gevent/_socket2.py', 'gevent/_fileobject2.py',
+                     'gevent/builtins.py']
 else:
     ignored_files = ['gevent/_socket3.py']
+
+ignored_files.append('gevent/wsgi.py')
 
 py = set(glob.glob('gevent/*.py')) - set(ignored_files)
 pyflakes(' '.join(py))
