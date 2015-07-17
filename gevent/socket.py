@@ -4,11 +4,11 @@
 
 This module provides socket operations and some related functions.
 The API of the functions and classes matches the API of the corresponding
-items in standard :mod:`socket` module exactly, but the synchronous functions
+items in the standard :mod:`socket` module exactly, but the synchronous functions
 in this module only block the current greenlet and let the others run.
 
 For convenience, exceptions (like :class:`error <socket.error>` and :class:`timeout <socket.timeout>`)
-as well as the constants from :mod:`socket` module are imported into this module.
+as well as the constants from the :mod:`socket` module are imported into this module.
 """
 
 import sys
@@ -43,7 +43,7 @@ def create_connection(address, timeout=_GLOBAL_DEFAULT_TIMEOUT, source_address=N
     global default timeout setting returned by :func:`getdefaulttimeout`
     is used. If *source_address* is set it must be a tuple of (host, port)
     for the socket to bind as a source address before making the connection.
-    An host of '' or port 0 tells the OS to use the default.
+    A host of '' or port 0 tells the OS to use the default.
     """
 
     host, port = address

@@ -1,3 +1,6 @@
+"""
+Secure Sockets Layer (SSL/TLS) module.
+"""
 from gevent.hub import PY3
 from gevent.hub import PYGTE279
 

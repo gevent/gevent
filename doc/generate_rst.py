@@ -42,6 +42,12 @@ def generate_rst_for_module(module, do=True):
     m = getattr(m, module)
     title = getattr(m, '__doc__', None)
     if title:
+        lines = title.strip().splitlines()
+        for line in lines:
+            # skip leading blanks. Support both styles of docstrings.
+            if line:
+                title = line
+                break
         title = title.strip().split('\n')[0]
         title = title.strip(' .')
     prefix = ':mod:`gevent.%s`' % module

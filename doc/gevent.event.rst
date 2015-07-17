@@ -8,6 +8,7 @@
 
     .. method:: is_set()
                 isSet()
+                ready()
 
        Return true if and only if the internal flag is true.
 
@@ -15,8 +16,3 @@
 .. autoclass:: gevent.event.AsyncResult
     :members:
     :undoc-members:
-
-    .. attribute:: value
-
-       Holds the value passed to :meth:`set` if :meth:`set` was called. Otherwise ``None``.
-

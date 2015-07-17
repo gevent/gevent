@@ -39,8 +39,12 @@ class Event(object):
     ready = is_set  # makes it compatible with AsyncResult and Greenlet (for example in wait())
 
     def set(self):
-        """Set the internal flag to true. All greenlets waiting for it to become true are awakened.
-        Greenlets that call :meth:`wait` once the flag is true will not block at all.
+        """
+        Set the internal flag to true.
+
+        All greenlets waiting for it to become true are awakened.
+        Greenlets that call :meth:`wait` once the flag is true will
+        not block at all.
         """
         self._flag = True
         self._todo.update(self._links)
@@ -48,14 +52,17 @@ class Event(object):
             self._notifier = self.hub.loop.run_callback(self._notify_links)
 
     def clear(self):
-        """Reset the internal flag to false.
-        Subsequently, threads calling :meth:`wait`
-        will block until :meth:`set` is called to set the internal flag to true again.
+        """
+        Reset the internal flag to false.
+
+        Subsequently, threads calling :meth:`wait` will block until
+        :meth:`set` is called to set the internal flag to true again.
         """
         self._flag = False
 
     def wait(self, timeout=None):
         """Block until the internal flag is true.
+
         If the internal flag is true on entry, return immediately. Otherwise,
         block until another thread calls :meth:`set` to set the flag to true,
         or until the optional timeout occurs.
@@ -64,26 +71,27 @@ class Event(object):
         floating point number specifying a timeout for the operation in seconds
         (or fractions thereof).
 
-        Return the value of the internal flag (``True`` or ``False``).
+        :return: The value of the internal flag (``True`` or ``False``).
+           (If no timeout was given, the only possible return value is ``True``.)
         """
         if self._flag:
             return self._flag
-        else:
-            switch = getcurrent().switch
-            self.rawlink(switch)
+
+        switch = getcurrent().switch
+        self.rawlink(switch)
+        try:
+            timer = Timeout.start_new(timeout)
             try:
-                timer = Timeout.start_new(timeout)
                 try:
-                    try:
-                        result = self.hub.switch()
-                        assert result is self, 'Invalid switch into Event.wait(): %r' % (result, )
-                    except Timeout as ex:
-                        if ex is not timer:
-                            raise
-                finally:
-                    timer.cancel()
+                    result = self.hub.switch()
+                    assert result is self, 'Invalid switch into Event.wait(): %r' % (result, )
+                except Timeout as ex:
+                    if ex is not timer:
+                        raise
             finally:
-                self.unlink(switch)
+                timer.cancel()
+        finally:
+            self.unlink(switch)
         return self._flag
 
     def rawlink(self, callback):
@@ -125,11 +133,11 @@ class Event(object):
 class AsyncResult(object):
     """A one-time event that stores a value or an exception.
 
-    Like :class:`Event` it wakes up all the waiters when :meth:`set` or :meth:`set_exception` method
+    Like :class:`Event` it wakes up all the waiters when :meth:`set` or :meth:`set_exception`
     is called. Waiters may receive the passed value or exception by calling :meth:`get`
-    method instead of :meth:`wait`. An :class:`AsyncResult` instance cannot be reset.
+    instead of :meth:`wait`. An :class:`AsyncResult` instance cannot be reset.
 
-    To pass a value call :meth:`set`. Calls to :meth:`get` (those that currently blocking as well as
+    To pass a value call :meth:`set`. Calls to :meth:`get` (those that are currently blocking as well as
     those made in the future) will return the value:
 
         >>> result = AsyncResult()
@@ -157,13 +165,35 @@ class AsyncResult(object):
         ...     print('ZeroDivisionError')
         ZeroDivisionError
     """
+
+    _value = _NONE
+    _exc_info = ()
+    _notifier = None
+
     def __init__(self):
         self._links = deque()
-        self.value = None
-        self._exception = _NONE
-        self._exc_info = ()
         self.hub = get_hub()
-        self._notifier = None
+
+    @property
+    def _exception(self):
+        return self._exc_info[1] if self._exc_info else _NONE
+
+    @property
+    def value(self):
+        """
+        Holds the value passed to :meth:`set` if :meth:`set` was called. Otherwise,
+        ``None``
+        """
+        return self._value if self._value is not _NONE else None
+
+    @property
+    def exc_info(self):
+        """
+        The three-tuple of exception information if :meth:`set_exception` was called.
+        """
+        if self._exc_info:
+            return (self._exc_info[0], self._exc_info[1], load_traceback(self._exc_info[2]))
+        return ()
 
     def __str__(self):
         result = '<%s ' % (self.__class__.__name__, )
@@ -177,11 +207,11 @@ class AsyncResult(object):
 
     def ready(self):
         """Return true if and only if it holds a value or an exception"""
-        return self._exception is not _NONE
+        return self._exc_info or self._value is not _NONE
 
     def successful(self):
         """Return true if and only if it is ready and holds a value"""
-        return self._exception is None
+        return self._value is not _NONE
 
     @property
     def exception(self):
@@ -191,72 +221,81 @@ class AsyncResult(object):
             return self._exc_info[1]
 
     def set(self, value=None):
-        """Store the value. Wake up the waiters.
+        """Store the value and wake up any waiters.
 
-        All greenlets blocking on :meth:`get` or :meth:`wait` are woken up.
-        Sequential calls to :meth:`wait` and :meth:`get` will not block at all.
+        All greenlets blocking on :meth:`get` or :meth:`wait` are awakened.
+        Subsequent calls to :meth:`wait` and :meth:`get` will not block at all.
         """
-        self.value = value
-        self._exception = None
+        self._value = value
         if self._links and not self._notifier:
             self._notifier = self.hub.loop.run_callback(self._notify_links)
 
     def set_exception(self, exception, exc_info=None):
-        """Store the exception. Wake up the waiters.
+        """Store the exception and wake up any waiters.
 
-        All greenlets blocking on :meth:`get` or :meth:`wait` are woken up.
-        Sequential calls to :meth:`wait` and :meth:`get` will not block at all.
+        All greenlets blocking on :meth:`get` or :meth:`wait` are awakened.
+        Subsequent calls to :meth:`wait` and :meth:`get` will not block at all.
+
+        :keyword tuple exc_info: If given, a standard three-tuple of type, value, :class:`traceback`
+            as returned by :func:`sys.exc_info`. This will be used when the exception
+            is re-raised to propagate the correct traceback.
         """
-        self._exception = exception
         if exc_info:
             self._exc_info = (exc_info[0], exc_info[1], dump_traceback(exc_info[2]))
+        else:
+            self._exc_info = (type(exception), exception, dump_traceback(None))
 
         if self._links and not self._notifier:
             self._notifier = self.hub.loop.run_callback(self._notify_links)
 
     def _raise_exception(self):
-        if self._exc_info:
-            reraise(self._exc_info[0], self._exc_info[1], load_traceback(self._exc_info[2]))
-        raise self._exception
+        reraise(*self.exc_info)
 
     def get(self, block=True, timeout=None):
         """Return the stored value or raise the exception.
 
-        If this instance already holds a value / an exception, return / raise it immediatelly.
+        If this instance already holds a value or an exception, return  or raise it immediatelly.
         Otherwise, block until another greenlet calls :meth:`set` or :meth:`set_exception` or
         until the optional timeout occurs.
 
         When the *timeout* argument is present and not ``None``, it should be a
         floating point number specifying a timeout for the operation in seconds
         (or fractions thereof).
+
+        :keyword bool block: If set to ``False`` and this instance is not ready,
+            immediately raise a :class:`Timeout` exception.
         """
-        if self._exception is not _NONE:
-            if self._exception is None:
-                return self.value
-            self._raise_exception()
-        elif block:
-            switch = getcurrent().switch
-            self.rawlink(switch)
+        if self._value is not _NONE:
+            return self._value
+        if self._exc_info:
+            return self._raise_exception()
+
+        if not block:
+            # Not ready and not blocking, so immediately timeout
+            raise Timeout()
+
+        switch = getcurrent().switch
+        self.rawlink(switch)
+        try:
+            timer = Timeout.start_new(timeout)
             try:
-                timer = Timeout.start_new(timeout)
-                try:
-                    result = self.hub.switch()
-                    assert result is self, 'Invalid switch into AsyncResult.get(): %r' % (result, )
-                finally:
-                    timer.cancel()
-            except:
-                self.unlink(switch)
-                raise
-            if self._exception is None:
-                return self.value
-            self._raise_exception()
-        else:
-            raise Timeout
+                result = self.hub.switch()
+                assert result is self, 'Invalid switch into AsyncResult.get(): %r' % (result, )
+            finally:
+                timer.cancel()
+        except:
+            self.unlink(switch)
+            raise
+
+        # by definition we are now ready
+        return self.get(block=False)
 
     def get_nowait(self):
-        """Return the value or raise the exception without blocking.
+        """
+        Return the value or raise the exception without blocking.
 
-        If nothing is available, raise :class:`gevent.Timeout` immediatelly.
+        If this object is not yet :meth:`ready <ready>`, raise
+        :class:`gevent.Timeout` immediately.
         """
         return self.get(block=False)
 
@@ -266,7 +305,7 @@ class AsyncResult(object):
         If this instance already holds a value, it is returned immediately. If this
         instance already holds an exception, ``None`` is returned immediately.
 
-        Otherwise, block until another thread calls :meth:`set` or :meth:`set_exception`
+        Otherwise, block until another greenlet calls :meth:`set` or :meth:`set_exception`
         (at which point either the value or ``None`` will be returned, respectively),
         or until the optional timeout expires (at which point ``None`` will also be
         returned).
@@ -278,29 +317,28 @@ class AsyncResult(object):
         .. note:: If a timeout is given and expires, ``None`` will be returned
             (no timeout exception will be raised).
 
-        Return :attr:`value`.
         """
-        if self._exception is not _NONE:
+        if self.ready():
             return self.value
-        else:
-            switch = getcurrent().switch
-            self.rawlink(switch)
+
+        switch = getcurrent().switch
+        self.rawlink(switch)
+        try:
+            timer = Timeout.start_new(timeout)
             try:
-                timer = Timeout.start_new(timeout)
-                try:
-                    result = self.hub.switch()
-                    assert result is self, 'Invalid switch into AsyncResult.wait(): %r' % (result, )
-                finally:
-                    timer.cancel()
-            except Timeout as exc:
-                self.unlink(switch)
-                if exc is not timer:
-                    raise
-            except:
-                self.unlink(switch)
+                result = self.hub.switch()
+                assert result is self, 'Invalid switch into AsyncResult.wait(): %r' % (result, )
+            finally:
+                timer.cancel()
+        except Timeout as exc:
+            self.unlink(switch)
+            if exc is not timer:
                 raise
-            # not calling unlink() in non-exception case, because if switch()
-            # finished normally, link was already removed in _notify_links
+        except:
+            self.unlink(switch)
+            raise
+        # not calling unlink() in non-exception case, because if switch()
+        # finished normally, link was already removed in _notify_links
         return self.value
 
     def _notify_links(self):

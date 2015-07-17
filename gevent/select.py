@@ -1,4 +1,7 @@
 # Copyright (c) 2009-2011 Denis Bilenko. See LICENSE for details.
+"""
+Waiting for I/O completion.
+"""
 from __future__ import absolute_import
 from gevent.event import Event
 from gevent.hub import get_hub
