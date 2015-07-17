@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-"""gevent build & installation script"""
 from __future__ import print_function
 import sys
 import os
@@ -10,7 +8,9 @@ from os.path import join, abspath, basename, dirname
 from subprocess import check_call
 from glob import glob
 
-import sysconfig  # to get CFLAGS to pass into c-ares configure script
+import distutils
+import distutils.sysconfig  # to get CFLAGS to pass into c-ares configure script
+
 
 PYPY = hasattr(sys, 'pypy_version_info')
 
@@ -66,10 +66,12 @@ libev_configure_command = ' '.join(["(cd ", _quoted_abspath('libev/'),
                                     " && /bin/sh ./configure ",
                                     " && mv config.h \"$OLDPWD\")",
                                     '> configure-output.txt'])
-if "m32" in sysconfig.get_config_var("CFLAGS"):
-    _m32 = "CFLAGS=-m32 "
+
+_config_vars = distutils.sysconfig.get_config_var("CFLAGS")
+if _config_vars and "m32" in _config_vars:
+    _m32 = 'CFLAGS="' + os.getenv('CFLAGS','') + ' -m32"'
 else:
-    _m32 = ""
+    _m32 = ''
 
 ares_configure_command = ' '.join(["(cd ", _quoted_abspath('c-ares/'),
                                    " && if [ -e ares_build.h ]; then cp ares_build.h ares_build.h.orig; fi ",
@@ -350,6 +352,7 @@ if run_make and os.path.exists("Makefile"):
     setup_requires = ['cython']
 else:
     setup_requires = []
+
 
 def run_setup(ext_modules, run_make):
     if run_make:
