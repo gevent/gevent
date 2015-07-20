@@ -124,9 +124,19 @@ class GreenFileDescriptorIO(RawIOBase):
 
 
 class FileObjectPosix(object):
+    """
+    A file-like object that operates on non-blocking files.
+
+    .. sealso:: :func:`gevent.os.make_nonblocking`
+    """
     default_bufsize = io.DEFAULT_BUFFER_SIZE
 
     def __init__(self, fobj, mode='rb', bufsize=-1, close=True):
+        """
+        :param fobj: Either an integer fileno, or an object supporting the
+            usual :meth:`socket.fileno` method. The file will be
+            put in non-blocking mode.
+        """
         if isinstance(fobj, int):
             fileno = fobj
             fobj = None

@@ -1,10 +1,42 @@
+"""
+Wrappers to make file-like objects cooperative.
+
+.. class:: FileObject
+
+   The main entry point to the file-like gevent-compatible behaviour. It will be defined
+   to be the best available implementation.
+
+There are two main implementations of ``FileObject``. On all systems,
+there is :class:`FileObjectThread` which uses the built-in native
+threadpool to avoid blocking the entire interpreter. On UNIX systems
+(those that support the :mod:`fcntl` module), there is also
+:class:`FileObjectPosix` which uses native non-blocking semantics.
+
+A third class, :class:`FileObjectBlock`, is simply a wrapper that executes everything
+synchronously (and so is not gevent-compatible). It is provided for testing and debugging
+purposes.
+
+
+Configuration
+=============
+
+You may change the default value for ``FileObject`` using the
+``GEVENT_FILE`` environment variable. Set it to ``posix``, ``thread``,
+or ``block`` to choose from :class:`FileObjectPosix`,
+:class:`FileObjectThread` and :class:`FileObjectBlock`, respectively.
+You may also set it to the fully qualified class name of another
+object that implements the file interface to use one of your own
+objects.
+
+.. note:: The environment variable must be set at the time this module
+   is first imported.
+"""
 from __future__ import absolute_import
 import sys
 import os
 from gevent._fileobjectcommon import FileObjectClosed
 from gevent.hub import get_hub
 from gevent.hub import integer_types
-from gevent.hub import PY3
 from gevent.hub import reraise
 from gevent.lock import Semaphore, DummySemaphore
 
@@ -18,32 +50,39 @@ else:
     def _exc_clear():
         return
 
-try:
-    from fcntl import fcntl
-except ImportError:
-    fcntl = None
-
 
 __all__ = ['FileObjectPosix',
            'FileObjectThread',
            'FileObject']
 
-
-if fcntl is None:
-
-    __all__.remove('FileObjectPosix')
-
+try:
+    from fcntl import fcntl
+except ImportError:
+    __all__.remove("FileObjectPosix")
 else:
-
-    if PY3:
-        from gevent._fileobject3 import FileObjectPosix
-    else:
-        from gevent._fileobject2 import FileObjectPosix
+    del fcntl
+    from gevent._fileobjectposix import FileObjectPosix
 
 
 class FileObjectThread(object):
+    """
+    A file-like object wrapping another file-like object, performing all blocking
+    operations on that object in a background thread.
+    """
 
     def __init__(self, fobj, *args, **kwargs):
+        """
+        :param fobj: The underlying file-like object to wrap, or an integer fileno
+           that will be pass to :func:`os.fdopen` along with everything in *args*.
+        :keyword bool lock: If True (the default) then all operations will
+           be performed one-by-one. Note that this does not guarantee that, if using
+           this file object from multiple threads/greenlets, operations will be performed
+           in any particular order, only that no two operations will be attempted at the
+           same time. You can also pass your own :class:`gevent.lock.Semaphore` to synchronize
+           file operations with an external resource.
+        :keyword bool close: If True (the default) then when this object is closed,
+           the underlying object is closed as well.
+        """
         self._close = kwargs.pop('close', True)
         self.threadpool = kwargs.pop('threadpool', None)
         self.lock = kwargs.pop('lock', True)
@@ -112,15 +151,6 @@ class FileObjectThread(object):
             raise FileObjectClosed
         return getattr(self.io, item)
 
-    for method in ['read', 'readinto', 'readline', 'readlines', 'write', 'writelines', 'xreadlines']:
-
-        exec('''def %s(self, *args, **kwargs):
-    fobj = self.io
-    if fobj is None:
-        raise FileObjectClosed
-    return self._apply(fobj.%s, args, kwargs)
-''' % (method, method))
-
     def __iter__(self):
         return self
 
@@ -130,6 +160,20 @@ class FileObjectThread(object):
             return line
         raise StopIteration
     __next__ = next
+
+    def _wraps(method):
+        def x(self, *args, **kwargs):
+            fobj = self.io
+            if fobj is None:
+                raise FileObjectClosed
+            return self._apply(getattr(fobj, method), args, kwargs)
+        x.__name__ = method
+        return x
+
+    for method in ('read', 'readinto', 'readline', 'readlines', 'write', 'writelines', 'xreadlines'):
+        locals()[method] = _wraps(method)
+    del method
+    del _wraps
 
 
 try:
