@@ -1,8 +1,10 @@
-"""Greenlet-local objects.
+"""
+Greenlet-local objects.
 
-This module is based on `_threading_local.py`__ from the standard library.
+This module is based on `_threading_local.py`__ from the standard
+library of Python 3.4.
 
-__ http://svn.python.org/view/python/trunk/Lib/_threading_local.py?view=markup&pathrev=78336
+__ https://github.com/python/cpython/blob/3.4/Lib/_threading_local.py
 
 Greenlet-local objects support the management of greenlet-local data.
 If you have data that you want to be local to a greenlet, simply create

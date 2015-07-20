@@ -1,5 +1,7 @@
-# Copyright (c) 2009-2012 Denis Bilenko. See LICENSE for details.
-
+# Copyright (c) 2009-2015 Denis Bilenko. See LICENSE for details.
+"""
+Event-loop hub.
+"""
 from __future__ import absolute_import
 import sys
 import os
@@ -102,6 +104,8 @@ def sleep(seconds=0, ref=True):
 
     If *ref* is False, the greenlet running ``sleep()`` will not prevent :func:`gevent.wait`
     from exiting.
+
+    .. seealso:: :func:`idle`
     """
     hub = get_hub()
     loop = hub.loop
@@ -114,6 +118,16 @@ def sleep(seconds=0, ref=True):
 
 
 def idle(priority=0):
+    """
+    Cause the calling greenlet to wait until the event loop is idle.
+
+    Idle is defined as having no other events of the same or higher
+    *priority* pending. That is, as long as sockets, timeouts or even
+    signals of the same or higher priority are being processed, the loop
+    is not idle.
+
+    .. seealso:: :func:`sleep`
+    """
     hub = get_hub()
     watcher = hub.loop.idle()
     if priority:
@@ -280,9 +294,11 @@ def get_hub_class():
 
 
 def get_hub(*args, **kwargs):
-    """Return the hub for the current thread.
+    """
+    Return the hub for the current thread.
 
-    If hub does not exists in the current thread, the new one is created with call to :meth:`get_hub_class`.
+    If a hub does not exist in the current thread, a new one is
+    created of the type returned by :func:`get_hub_class`.
     """
     global _threadlocal
     try:
@@ -365,14 +381,30 @@ class Hub(greenlet):
     """A greenlet that runs the event loop.
 
     It is created automatically by :func:`get_hub`.
+
+    **Switching**
+
+    Every time this greenlet (i.e., the event loop) is switched *to*, if
+    the current greenlet has a ``switch_out`` method, it will be called. This
+    allows a greenlet to take some cleanup actions before yielding control. This method
+    should not call any gevent blocking functions.
     """
 
+    #: If instances of these classes are raised into the event loop,
+    #: they will be propagated out to the main greenlet (where they will
+    #: usually be caught by Python itself)
     SYSTEM_ERROR = (KeyboardInterrupt, SystemExit, SystemError)
+
+    #: Instances of these classes are not considered to be errors and
+    #: do not get logged/printed when raised by the event loop.
     NOT_ERROR = (GreenletExit, SystemExit)
     loop_class = config('gevent.core.loop', 'GEVENT_LOOP')
     resolver_class = ['gevent.resolver_thread.Resolver',
                       'gevent.resolver_ares.Resolver',
                       'gevent.socket.BlockingResolver']
+    #: The class or callable object, or the name of a factory function or class,
+    #: that will be used to create :attr:`resolver`. By default, configured according to
+    #: :doc:`dns`. If a list, a list of objects in preference order.
     resolver_class = resolver_config(resolver_class, 'GEVENT_RESOLVER')
     threadpool_class = config('gevent.threadpool.ThreadPool', 'GEVENT_THREADPOOL')
     backend = config(None, 'GEVENT_BACKEND')
@@ -412,6 +444,20 @@ class Hub(greenlet):
         return result + '>'
 
     def handle_error(self, context, type, value, tb):
+        """
+        Called by the event loop when an error occurs. The arguments
+        type, value, and tb are the standard tuple returned by :func:`sys.exc_info`.
+
+        Applications can set a property on the hub with this same signature
+        to override the error handling provided by this class.
+
+        Errors that are :attr:`system errors <SYSTEM_ERROR>` are passed
+        to :meth:`handle_system_error`.
+
+        :param context: If this is ``None``, indicates a system error that
+            should generally result in exiting the loop and being thrown to the
+            parent greenlet.
+        """
         if isinstance(value, str):
             # Cython can raise errors where the value is a plain string
             # e.g., AttributeError, "_semaphore.Semaphore has no attr", <traceback>
@@ -466,6 +512,17 @@ class Hub(greenlet):
         raise AssertionError('Impossible to call blocking function in the event loop callback')
 
     def wait(self, watcher):
+        """
+        Wait until the *watcher* (which should not be started) is ready.
+
+        The current greenlet will be unscheduled during this time.
+
+        .. seealso:: :class:`gevent.core.io`, :class:`gevent.core.timer`,
+            :class:`gevent.core.signal`, :class:`gevent.core.idle`, :class:`gevent.core.prepare`,
+            :class:`gevent.core.check`, :class:`gevent.core.fork`, :class:`gevent.core.async`,
+            :class:`gevent.core.child`, :class:`gevent.core.stat`
+
+        """
         waiter = Waiter()
         unique = object()
         watcher.start(waiter.switch, unique)
@@ -476,6 +533,10 @@ class Hub(greenlet):
             watcher.stop()
 
     def cancel_wait(self, watcher, error):
+        """
+        Cancel an in-progress call to :meth:`wait` by throwing the given *error*
+        in the waiting greenlet.
+        """
         if watcher.callback is not None:
             self.loop.run_callback(self._cancel_wait, watcher, error)
 
@@ -488,6 +549,15 @@ class Hub(greenlet):
                     greenlet.throw(error)
 
     def run(self):
+        """
+        Entry-point to running the loop. This method is called automatically
+        when the hub greenlet is scheduled; do not call it directly.
+
+        :raises LoopExit: If the loop finishes running. This means
+           that there are no other scheduled greenlets, and no active
+           watchers or servers. In some situations, this indicates a
+           programming error.
+        """
         assert self is getcurrent(), 'Do not call Hub.run() directly'
         while True:
             loop = self.loop
@@ -583,9 +653,10 @@ class LoopExit(Exception):
 
 
 class Waiter(object):
-    """A low level communication utility for greenlets.
+    """
+    A low level communication utility for greenlets.
 
-    Wrapper around greenlet's ``switch()`` and ``throw()`` calls that makes them somewhat safer:
+    Waiter is a wrapper around greenlet's ``switch()`` and ``throw()`` calls that makes them somewhat safer:
 
     * switching will occur only if the waiting greenlet is executing :meth:`get` method currently;
     * any error raised in the greenlet is handled inside :meth:`switch` and :meth:`throw`
@@ -613,9 +684,11 @@ class Waiter(object):
 
     .. warning::
 
-        This a limited and dangerous way to communicate between greenlets. It can easily
-        leave a greenlet unscheduled forever if used incorrectly. Consider using safer
-        :class:`Event`/:class:`AsyncResult`/:class:`Queue` classes.
+        This a limited and dangerous way to communicate between
+        greenlets. It can easily leave a greenlet unscheduled forever
+        if used incorrectly. Consider using safer classes such as
+        :class:`gevent.event.Event`, :class:`gevent.event.AsyncResult`,
+        or :class:`gevent.queue.Queue`.
     """
 
     __slots__ = ['hub', 'greenlet', 'value', '_exception']
@@ -748,13 +821,17 @@ class _MultipleWaiter(Waiter):
 
 def iwait(objects, timeout=None, count=None):
     """
-    Iteratively yield objects as they are ready, until all (or `count`) are ready
-    or `timeout` expired.
+    Iteratively yield *objects* as they are ready, until all (or *count*) are ready
+    or *timeout* expired.
 
     :param objects: A sequence (supporting :func:`len`) containing objects
         implementing the wait protocol (rawlink() and unlink()).
-    :param count: If not `None`, then a number specifying the maximum number
-        of objects to wait for.
+    :keyword int count: If not `None`, then a number specifying the maximum number
+        of objects to wait for. If ``None`` (the default), all objects
+        are waited for.
+    :keyword float timeout: If given, specifies a maximum number of seconds
+        to wait. If the timeout expires before the desired waited-for objects
+        are available, then this method returns immediately.
 
     .. seealso:: :func:`wait`
     """

@@ -1,4 +1,7 @@
-# Copyright (c) 2011 Denis Bilenko. See LICENSE for details.
+# Copyright (c) 2011-2015 Denis Bilenko. See LICENSE for details.
+"""
+c-ares based hostname resolver.
+"""
 from __future__ import absolute_import
 import os
 import sys
@@ -12,6 +15,21 @@ __all__ = ['Resolver']
 
 
 class Resolver(object):
+    """
+    Implementation of the resolver API using the `c-ares`_ library.
+
+    This implementation uses the c-ares library to handle name
+    resolution. c-ares is natively asynchronous at the socket level
+    and so integrates well into gevent's event loop.
+
+    In comparison to :class:`gevent.resolver_thread.Resolver`, the
+    implementation is much more complex. In addition, there have been
+    reports of it not properly honoring certain system configurations.
+    Finally, it is not available on PyPy. However, because it does not
+    use threads, it may scale better.
+
+    .. _c-ares: http://c-ares.haxx.se
+    """
 
     ares_class = channel
 

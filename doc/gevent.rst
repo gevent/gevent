@@ -120,19 +120,40 @@ Useful general functions
    function). Note that this may be an instance of :class:`Greenlet`
    or :class:`greenlet.greenlet`.
 
+Sleeping
+--------
+
 .. autofunction:: sleep
+
+.. autofunction:: idle
+
+Stopping Greenlets
+------------------
 
 .. autofunction:: kill(greenlet, exception=GreenletExit)
 
 .. autofunction:: killall(greenlets, exception=GreenletExit, block=True, timeout=None)
 
+Waiting
+-------
+
+.. autofunction:: wait
+
+.. autofunction:: iwait
+
 .. autofunction:: joinall
 
-.. autofunction:: signal
+Working with muliple processes
+------------------------------
 
 .. autofunction:: fork
 
 .. autofunction:: reinit
+
+Signals
+-------
+
+.. autofunction:: signal
 
 
 Timeouts
@@ -143,11 +164,3 @@ Timeouts
     :undoc-members:
 
 .. autofunction:: with_timeout
-
-
-Waiting
-=======
-
-.. autofunction:: wait
-
-.. autofunction:: iwait

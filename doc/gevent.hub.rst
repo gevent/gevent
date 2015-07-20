@@ -1,14 +1,13 @@
-:mod:`gevent.hub`
-=================
+====================================
+ :mod:`gevent.hub` - Event-loop hub
+====================================
 
 .. module:: gevent.hub
+
+.. autofunction:: get_hub
 
 .. autoclass:: Hub
     :members:
     :undoc-members:
-
-.. autofunction:: get_hub
-
-.. autofunction:: reinit
 
 .. autoclass:: Waiter

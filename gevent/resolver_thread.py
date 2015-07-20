@@ -1,4 +1,7 @@
-# Copyright (c) 2012 Denis Bilenko. See LICENSE for details.
+# Copyright (c) 2012-2015 Denis Bilenko. See LICENSE for details.
+"""
+Native thread-based hostname resolver.
+"""
 import _socket
 from gevent.hub import get_hub, text_type
 
@@ -11,9 +14,28 @@ text_type('foo').encode('idna')
 
 
 class Resolver(object):
+    """
+    Implementation of the resolver API using native threads and native resolution
+    functions.
 
-    expected_errors = Exception
+    Using the native resolution mechanisms ensures the highest
+    compatibility with what a non-gevent program would return
+    including good support for platform specific configuration
+    mechanisms. The use of native (non-greenlet) threads ensures that
+    a caller doesn't block other greenlets.
 
+    This implementation also has the benefit of being very simple in comparison to
+    :class:`gevent.resolver_ares.Resolver`.
+
+    .. tip::
+
+        Most users find this resolver to be quite reliable in a
+        properly monkey-patched environment. However, there have been
+        some reports of long delays, slow performance or even hangs,
+        particularly in long-lived programs that make many, many DNS
+        requests. If you suspect that may be happening to you, try the
+        ares resolver (and submit a bug report).
+    """
     def __init__(self, hub=None):
         if hub is None:
             hub = get_hub()

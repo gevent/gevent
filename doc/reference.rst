@@ -7,9 +7,9 @@ API reference
    networking
    synchronization
    servers
+   dns
    gevent.backdoor
    gevent.fileobject
-   gevent.hub
    gevent.local
    gevent.monkey
    gevent.os
@@ -20,3 +20,4 @@ API reference
    gevent.thread
    gevent.threadpool
    gevent.util
+   lowlevel
