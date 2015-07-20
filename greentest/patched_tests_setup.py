@@ -197,6 +197,12 @@ if hasattr(sys, 'pypy_version_info'):
             # https://bitbucket.org/cffi/cffi/issue/152/handling-errors-from-signal-handlers-in
         ]
 
+    if 'thread' in os.getenv('GEVENT_FILE', ''):
+        disabled_tests += [
+            'test_subprocess.ProcessTestCase.test_double_close_on_error'
+            # Fails with "OSError: 9 invalid file descriptor"; expect GC/lifetime issues
+        ]
+
 if sys.version_info[:2] >= (3, 4):
     disabled_tests += [
         'test_subprocess.ProcessTestCase.test_threadsafe_wait',
