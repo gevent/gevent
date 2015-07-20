@@ -6,7 +6,7 @@ from __future__ import absolute_import
 import os
 import sys
 from _socket import getservbyname, getaddrinfo, gaierror, error
-from gevent.hub import Waiter, get_hub, string_types, text_type, reraise, PY3
+from gevent.hub import Waiter, get_hub, string_types, text_type, integer_types, reraise, PY3
 from gevent.socket import AF_UNSPEC, AF_INET, AF_INET6, SOCK_STREAM, SOCK_DGRAM, SOCK_RAW, AI_NUMERICHOST, EAI_SERVICE, AI_PASSIVE
 from gevent.ares import channel, InvalidIP
 
@@ -25,8 +25,10 @@ class Resolver(object):
     In comparison to :class:`gevent.resolver_thread.Resolver`, the
     implementation is much more complex. In addition, there have been
     reports of it not properly honoring certain system configurations.
-    Finally, it is not available on PyPy. However, because it does not
-    use threads, it may scale better.
+    However, because it does not use threads, it may scale better.
+
+    .. note:: This module is considered experimental on PyPy, and
+       due to its implementation in cython, it may be slower.
 
     .. _c-ares: http://c-ares.haxx.se
     """
@@ -133,10 +135,10 @@ class Resolver(object):
                     raise error('Int or String expected')
         elif port is None:
             port = 0
-        elif isinstance(port, int):
+        elif isinstance(port, integer_types):
             pass
         else:
-            raise error('Int or String expected')
+            raise error('Int or String expected', port, type(port))
         port = int(port % 65536)
         if not socktypes and socktype:
             socktypes.append(socktype)

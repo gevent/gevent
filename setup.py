@@ -332,6 +332,7 @@ elif PYPY:
     system('cd gevent/libev && ./configure > configure_output.txt')
     from gevent import corecffi
     ext_modules = [corecffi.ffi.verifier.get_extension(),
+                   ARES,
                    # By building the semaphore with Cython under PyPy, we get
                    # atomic operations (specifically, exiting/releasing), at the
                    # cost of some speed (one trivial semaphore micro-benchmark put the pure-python version
@@ -404,5 +405,5 @@ if __name__ == '__main__':
             raise
         ext_modules.remove(ARES)
         run_setup(ext_modules, run_make=run_make)
-    if not PYPY and ARES not in ext_modules:
+    if ARES not in ext_modules:
         sys.stderr.write('\nWARNING: The gevent.ares extension has been disabled.\n')
