@@ -7,7 +7,7 @@
 Unreleased
 ==========
 
-- Nothing yet.
+- (Experimental) Enable the c-ares resolver extension for PyPy.
 
 1.1b1 (Jul 17, 2015)
 ====================
