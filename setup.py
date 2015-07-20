@@ -341,7 +341,7 @@ elif PYPY:
                    Extension(name="gevent._semaphore",
                              sources=["gevent/gevent._semaphore.c"])]
     include_package_data = True
-    run_make = 'gevent/gevent._semaphore.c'
+    run_make = 'gevent/gevent._semaphore.c gevent/gevent.ares.c'
 else:
     ext_modules = [CORE,
                    ARES,
