@@ -7,7 +7,10 @@
 Unreleased
 ==========
 
-- (Experimental) Enable the c-ares resolver extension for PyPy.
+- Enable the c-ares resolver extension for PyPy.
+- On some versions of PyPy on some platforms (notably 2.6.0 on 64-bit
+  Linux), enabling ``gevent.monkey.patch_builtins`` could cause PyPy
+  to crash. Reported in :issue:`618` by Jay Oster.
 
 1.1b1 (Jul 17, 2015)
 ====================

@@ -20,6 +20,22 @@ __all__ = ['Timeout',
            'with_timeout']
 
 
+class _FakeTimer(object):
+    # An object that mimics the API of get_hub().loop.timer, but
+    # without allocating any native resources. This is useful for timeouts
+    # that will never expire
+    pending = False
+    active = False
+
+    def start(self, *args, **kwargs):
+        raise AssertionError("non-expiring timer cannot be started")
+
+    def stop(self):
+        return
+
+_FakeTimer = _FakeTimer()
+
+
 class Timeout(BaseException):
     """
     Raise *exception* in the current greenlet after given time period::
@@ -86,19 +102,33 @@ class Timeout(BaseException):
     ``Timeout()``), then the timeout will never expire and never raise
     *exception*. This is convenient for creating functions which take
     an optional timeout parameter of their own.
+
+    .. versionchanged:: 1.1b2
+       If *seconds* is not given or is ``None``, no longer allocate a libev
+       timer that will never be started.
     """
 
     def __init__(self, seconds=None, exception=None, ref=True, priority=-1):
         self.seconds = seconds
         self.exception = exception
-        self.timer = get_hub().loop.timer(seconds or 0.0, ref=ref, priority=priority)
+        if seconds is None:
+            # Avoid going through the timer codepath if no timeout is
+            # desired; this avoids some CFFI interactions on PyPy that can lead to a
+            # RuntimeError if this implementation is used during an `import` statement. See
+            # https://bitbucket.org/pypy/pypy/issues/2089/crash-in-pypy-260-linux64-with-gevent-11b1
+            # and https://github.com/gevent/gevent/issues/618.
+            # Plus, in general, it should be more efficient
+            self.timer = _FakeTimer
+        else:
+            self.timer = get_hub().loop.timer(seconds or 0.0, ref=ref, priority=priority)
 
     def start(self):
         """Schedule the timeout."""
         assert not self.pending, '%r is already started; to restart it, cancel it first' % self
         if self.seconds is None:  # "fake" timeout (never expires)
-            pass
-        elif self.exception is None or self.exception is False or isinstance(self.exception, string_types):
+            return
+
+        if self.exception is None or self.exception is False or isinstance(self.exception, string_types):
             # timeout that raises self
             self.timer.start(getcurrent().throw, self)
         else:  # regular timeout with user-provided exception

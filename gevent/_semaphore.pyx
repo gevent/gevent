@@ -143,18 +143,20 @@ class Semaphore(object):
         switch = getcurrent().switch
         self.rawlink(switch)
         try:
-            timer = Timeout.start_new(timeout)
+            # As a tiny efficiency optimization, avoid allocating a timer
+            # if not needed.
+            timer = Timeout.start_new(timeout) if timeout is not None else None
             try:
                 try:
                     result = get_hub().switch()
                     assert result is self, 'Invalid switch into Semaphore.acquire(): %r' % (result, )
-                except Timeout:
-                    ex = sys.exc_info()[1]
+                except Timeout as ex:
                     if ex is timer:
                         return False
                     raise
             finally:
-                timer.cancel()
+                if timer is not None:
+                    timer.cancel()
         finally:
             self.unlink(switch)
         self.counter -= 1

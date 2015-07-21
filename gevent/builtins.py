@@ -38,13 +38,7 @@ def __import__(*args, **kwargs):
         args = args[1:]
     imp.acquire_lock()
     try:
-        try:
-            _g_import_lock.acquire()
-        except RuntimeError:
-            # we've seen this under PyPy, a recursion error
-            # importing 'platform'
-            return _import(*args, **kwargs)
-
+        _g_import_lock.acquire()
         try:
             result = _import(*args, **kwargs)
         finally:
