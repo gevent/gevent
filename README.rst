@@ -24,7 +24,8 @@ gevent_ is written and maintained by `Denis Bilenko`_ and is licensed under MIT 
 get gevent
 ==========
 
-Install Python 2.6, 2.7, 3.3 or 3.4 and greenlet_ extension.
+Install Python 2.6, 2.7, 3.3 or 3.4 along with the greenlet_
+extension. Or install PyPy 2.6 or above (but not PyPy3).
 
 Download the latest release from `Python Package Index`_ or clone `the repository`_.
 
