@@ -11,6 +11,8 @@ Unreleased
 - On some versions of PyPy on some platforms (notably 2.6.0 on 64-bit
   Linux), enabling ``gevent.monkey.patch_builtins`` could cause PyPy
   to crash. Reported in :issue:`618` by Jay Oster.
+- ``gevent.kill`` raises the correct exception in the target greenlet.
+  Reported in :issue:`623` by Jonathan Kamens.
 
 1.1b1 (Jul 17, 2015)
 ====================

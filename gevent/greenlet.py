@@ -399,7 +399,7 @@ class Greenlet(greenlet):
         if self.dead:
             self.__handle_death_before_start(exception)
         else:
-            waiter = Waiter()
+            waiter = Waiter() if block else None
             self.parent.loop.run_callback(_kill, self, exception, waiter)
             if block:
                 waiter.get()
@@ -578,7 +578,8 @@ def _kill(greenlet, exception, waiter):
     except:
         # XXX do we need this here?
         greenlet.parent.handle_error(greenlet, *sys.exc_info())
-    waiter.switch()
+    if waiter is not None:
+        waiter.switch()
 
 
 def joinall(greenlets, timeout=None, raise_error=False, count=None):

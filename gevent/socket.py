@@ -1,6 +1,6 @@
 # Copyright (c) 2009-2014 Denis Bilenko and gevent contributors. See LICENSE for details.
 
-"""Cooperative socket module.
+"""Cooperative low-level networking interface.
 
 This module provides socket operations and some related functions.
 The API of the functions and classes matches the API of the corresponding

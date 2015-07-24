@@ -157,7 +157,7 @@ def kill(greenlet, exception=GreenletExit):
             # dealing with gevent.greenlet.Greenlet. Use it, especially
             # to avoid allowing one to be switched to for the first time
             # after it's been killed
-            greenlet.kill(block=False)
+            greenlet.kill(exception=exception, block=False)
         else:
             get_hub().loop.run_callback(greenlet.throw, exception)
 

@@ -44,3 +44,24 @@ g2 = gevent.spawn(runner, 1)
 g.throw(gevent.GreenletExit)
 g2.throw(gevent.GreenletExit)
 check(g, g2)
+
+
+# Killing with gevent.kill gets the right exception
+class MyException(Exception):
+    pass
+
+
+def catcher():
+    try:
+        while True:
+            gevent.sleep(0)
+    except Exception as e:
+        switched_to[0] = e
+
+g = gevent.spawn(catcher)
+g.start()
+gevent.sleep()
+gevent.kill(g, MyException())
+gevent.sleep()
+
+assert isinstance(switched_to[0], MyException), switched_to
