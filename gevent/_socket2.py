@@ -1,20 +1,34 @@
 # Copyright (c) 2009-2014 Denis Bilenko and gevent contributors. See LICENSE for details.
-
+"""
+Python 2 socket module.
+"""
 import time
 from gevent import _socketcommon
 from gevent.hub import PYPY
 
 for key in _socketcommon.__dict__:
-    if key.startswith('__'):
+    if key.startswith('__') or key in _socketcommon.__py3_imports__:
         continue
     globals()[key] = getattr(_socketcommon, key)
 
 __socket__ = _socketcommon.__socket__
 __implements__ = _socketcommon._implements
 __extensions__ = _socketcommon.__extensions__
-__imports__ = _socketcommon.__imports__
+__imports__ = [i for i in _socketcommon.__imports__ if i not in _socketcommon.__py3_imports__]
 __dns__ = _socketcommon.__dns__
-_fileobject = __socket__._fileobject
+try:
+    _fileobject = __socket__._fileobject
+    _socketmethods = __socket__._socketmethods
+except AttributeError:
+    # Allow this module to be imported under Python 3
+    # for building the docs
+    _fileobject = object
+    _socketmethods = ('bind', 'connect', 'connect_ex',
+                      'fileno', 'listen', 'getpeername',
+                      'getsockname', 'getsockopt',
+                      'setsockopt', 'sendall',
+                      'setblocking', 'settimeout',
+                      'gettimeout', 'shutdown')
 
 
 if sys.version_info[:2] < (2, 7):
@@ -363,7 +377,7 @@ class socket(object):
 
     _s = ("def %s(self, *args): return self._sock.%s(*args)\n\n"
           "%s.__doc__ = _realsocket.%s.__doc__\n")
-    for _m in set(__socket__._socketmethods) - set(locals()):
+    for _m in set(_socketmethods) - set(locals()):
         exec(_s % (_m, _m, _m, _m))
     del _m, _s
 

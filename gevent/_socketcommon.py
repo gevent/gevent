@@ -43,16 +43,20 @@ __imports__ = ['error',
                'setdefaulttimeout',
                # Windows:
                'errorTab',
-               # Python 3
-               'AddressFamily',
-               'SocketKind',
-               'CMSG_LEN',
-               'CMSG_SPACE',
-               'dup',
-               'if_indextoname',
-               'if_nameindex',
-               'if_nametoindex',
-               'sethostname']
+               ]
+
+__py3_imports__ = [# Python 3
+                   'AddressFamily',
+                   'SocketKind',
+                   'CMSG_LEN',
+                   'CMSG_SPACE',
+                   'dup',
+                   'if_indextoname',
+                   'if_nameindex',
+                   'if_nametoindex',
+                   'sethostname']
+
+__imports__.extend(__py3_imports__)
 
 
 import sys

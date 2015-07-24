@@ -31,7 +31,9 @@ variable. Specify ``ares``, ``thread``, or ``block`` to use the
 :class:`gevent.resolver_ares.Resolver`,
 :class:`gevent.resolver_thread.Resolver`, or
 :class:`gevent.socket.BlockingResolver`, respectively, or set it to
-the fully-qualified name of an implementation of the standard functions.
+the fully-qualified name of an implementation of the standard
+functions.
+
 .. toctree::
 
    gevent.resolver_thread

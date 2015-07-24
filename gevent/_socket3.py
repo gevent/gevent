@@ -1,5 +1,7 @@
 # Port of Python 3.3's socket module to gevent
-
+"""
+Python 3 socket module.
+"""
 import io
 import sys
 import time
