@@ -127,7 +127,7 @@ class FileObjectPosix(object):
     """
     A file-like object that operates on non-blocking files.
 
-    .. seelso:: :func:`gevent.os.make_nonblocking`
+    .. seealso:: :func:`gevent.os.make_nonblocking`
     """
     default_bufsize = io.DEFAULT_BUFFER_SIZE
 
