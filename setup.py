@@ -359,7 +359,7 @@ else:
 
 
 def run_setup(ext_modules, run_make):
-    if run_make:
+    if run_make and not os.environ.get('APPVEYOR'):
         if isinstance(run_make, str):
             make(run_make)
         else:
