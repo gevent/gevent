@@ -54,6 +54,7 @@ test__execmodules.py
 test__socketpair.py
 test__makefile_ref.py
 FLAKY test__greenletset.py
+FLAKY test_hub_join_timeout.py
 '''.split('\n')
 
     if struct.calcsize('P') * 8 == 64:
@@ -74,7 +75,6 @@ FLAKY test__greenletset.py
             test__example_portforwarder.py
             test__socket_ex.py
             test__examples.py
-            test_hub_join_timeout.py
             test_subprocess.py
             test__issue600.py
             test__subprocess.py
