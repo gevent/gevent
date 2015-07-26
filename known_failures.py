@@ -1,8 +1,10 @@
 # This is a list of known failures (=bugs).
 # The tests listed there must fail (or testrunner.py will report error) unless they are prefixed with FLAKY
 # in which cases the result of them is simply ignored
+from __future__ import print_function
 import os
 import sys
+import struct
 
 
 LEAKTEST = os.getenv('GEVENTTEST_LEAKCHECK')
@@ -44,12 +46,27 @@ if sys.platform == 'win32':
     FAILING_TESTS += ['test__core_stat.py']
 
     # other Windows-related issues (need investigating)
-    FAILING_TESTS += [
-        'monkey_test test_threading.py',
-        'monkey_test --Event test_threading.py',
-        'monkey_test test_subprocess.py',
-        'monkey_test --Event test_subprocess.py'
-    ]
+    FAILING_TESTS += '''
+test__all__.py
+test__core_fork.py
+test__issues461_471.py
+test__execmodules.py
+test__socketpair.py
+test__makefile_ref.py
+FLAKY test__greenletset.py
+'''.split('\n')
+
+    if struct.calcsize('P') * 8 == 64:
+        # could be a problem of appveyor - not sure
+        #  ======================================================================
+        #   ERROR: test_af (__main__.TestIPv6Environment)
+        #  ----------------------------------------------------------------------
+        #   File "C:\Python27-x64\lib\ftplib.py", line 135, in connect
+        #     self.sock = socket.create_connection((self.host, self.port), self.timeout)
+        #   File "c:\projects\gevent\gevent\socket.py", line 73, in create_connection
+        #     raise err
+        #   error: [Errno 10049] [Error 10049] The requested address is not valid in its context.
+        FAILING_TESTS.append('test_ftplib.py')
 
 
 if LEAKTEST:
@@ -86,14 +103,14 @@ if PY3:
     # No idea / TODO
     FAILING_TESTS += '''
 FLAKY test__socket_dns.py
-'''.strip().split('\n')
+'''.split('\n')
 
     if LEAKTEST:
         FAILING_TESTS += ['FLAKY test__threadpool.py']
         # refcount problems:
         FAILING_TESTS += '''
             test__timeout.py
-            test__greenletset.py
+            FLAKY test__greenletset.py
             test__core.py
             test__systemerror.py
             test__exc_info.py
@@ -106,9 +123,10 @@ FLAKY test__socket_dns.py
             test__select.py
             test__greenlet.py
             FLAKY test__socket.py
-'''.strip().split()
+'''.split('\n')
+
+FAILING_TESTS = [x.strip() for x in FAILING_TESTS if x.strip()]
 
 
 if __name__ == '__main__':
-    import pprint
-    pprint.pprint(FAILING_TESTS)
+    print ('known_failures:\n', FAILING_TESTS)
