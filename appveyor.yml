@@ -18,13 +18,13 @@ environment:
       PYTHON_VERSION: "2.7.x" # currently 2.7.9
       PYTHON_ARCH: "64"
 
-    - PYTHON: "C:\\Python33"
-      PYTHON_VERSION: "3.3.x" # currently 3.3.5
-      PYTHON_ARCH: "32"
+    #- PYTHON: "C:\\Python33"
+    #  PYTHON_VERSION: "3.3.x" # currently 3.3.5
+    #  PYTHON_ARCH: "32"
 
-    - PYTHON: "C:\\Python33-x64"
-      PYTHON_VERSION: "3.3.x" # currently 3.3.5
-      PYTHON_ARCH: "64"
+    #- PYTHON: "C:\\Python33-x64"
+    #  PYTHON_VERSION: "3.3.x" # currently 3.3.5
+    #  PYTHON_ARCH: "64"
 
     - PYTHON: "C:\\Python34"
       PYTHON_VERSION: "3.4.x" # currently 3.4.3
@@ -37,9 +37,9 @@ environment:
     # Also test a Python version not pre-installed
     # See: https://github.com/ogrisel/python-appveyor-demo/issues/10
 
-    - PYTHON: "C:\\Python266"
-      PYTHON_VERSION: "2.6.6"
-      PYTHON_ARCH: "32"
+    #- PYTHON: "C:\\Python266"
+    #  PYTHON_VERSION: "2.6.6"
+    #  PYTHON_ARCH: "32"
 
 install:
   - ECHO "Filesystem root:"
