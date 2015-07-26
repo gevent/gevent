@@ -8,7 +8,6 @@ all: gevent/gevent.corecext.c gevent/gevent.ares.c gevent/gevent._semaphore.c ge
 
 gevent/gevent.corecext.c: gevent/core.ppyx gevent/libev.pxd
 	$(PYTHON) util/cythonpp.py -o gevent.corecext.c gevent/core.ppyx
-	echo                          >> gevent.corecext.c
 	echo '#include "callbacks.c"' >> gevent.corecext.c
 	mv gevent.corecext.* gevent/
 
