@@ -447,6 +447,9 @@ if hasattr(_socket, "socketpair"):
         b = socket(family, type, proto, b.detach())
         return a, b
 
+else:
+    __implements__.remove('socketpair')
+
 
 # PyPy needs drop and reuse
 def _do_reuse_or_drop(socket, methname):
