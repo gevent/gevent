@@ -13,6 +13,9 @@ Unreleased
   to crash. Reported in :issue:`618` by Jay Oster.
 - ``gevent.kill`` raises the correct exception in the target greenlet.
   Reported in :issue:`623` by Jonathan Kamens.
+- Various fixes on Windows. Reported in :issue:`625`, :issue:`627`,
+  and :issue:`628` by jacekt and Yuanteng (Jeff) Pei. Fixed in :pr:`624`.
+
 
 1.1b1 (Jul 17, 2015)
 ====================
