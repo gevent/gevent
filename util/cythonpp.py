@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 # Copyright (C) 2011-2012 Denis Bilenko (http://denisbilenko.com)
 import sys
 import os
@@ -547,6 +547,12 @@ def system(command, comment):
     log('Running %s  # %s', command, comment)
     result = os.system(command)
     if result:
+        # debugging code
+        log("Path: %s", os.getenv("PATH"))
+        bin_dir = os.path.dirname(sys.executable)
+        bin_files = os.listdir(bin_dir)
+        bin_files.sort()
+        log("Bin: %s files: %s", bin_dir, ' '.join(bin_files))
         raise AssertionError('%r failed with code %s' % (command, result))
 
 
