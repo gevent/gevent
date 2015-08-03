@@ -46,16 +46,19 @@ if sys.platform == 'win32':
     FAILING_TESTS += ['test__core_stat.py']
 
     # other Windows-related issues (need investigating)
-    FAILING_TESTS += '''
-test__all__.py
-test__core_fork.py
-test__issues461_471.py
-test__execmodules.py
-test__socketpair.py
-test__makefile_ref.py
-FLAKY test__greenletset.py
-FLAKY test_hub_join_timeout.py
-'''.split('\n')
+    FAILING_TESTS += [
+        'test__all__.py',
+        'test__core_fork.py',
+        'test__issues461_471.py',
+        'test__execmodules.py',
+        'test__socketpair.py',
+        'test__makefile_ref.py',
+        'FLAKY test__greenletset.py',
+        # The various timeout tests are flaky for unknown reasons
+        # on appveyor
+        'FLAKY test__timeout.py',
+        'FLAKY test_hub_join_timeout.py',
+    ]
 
     if struct.calcsize('P') * 8 == 64:
         # could be a problem of appveyor - not sure
@@ -71,18 +74,18 @@ FLAKY test_hub_join_timeout.py
 
     if PY3:
         # XXX need investigating
-        FAILING_TESTS += '''
-            test__example_portforwarder.py
-            test__socket_ex.py
-            test__examples.py
-            test_subprocess.py
-            test__issue600.py
-            test__subprocess.py
-            test_threading_2.py
-            test__api_timeout.py
-            test__subprocess_poll.py
-            test__example_udp_client.py
-        '''.split('\n')
+        FAILING_TESTS += [
+            'test__example_portforwarder.py',
+            'test__socket_ex.py',
+            'test__examples.py',
+            'test_subprocess.py',
+            'test__issue600.py',
+            'test__subprocess.py',
+            'test_threading_2.py',
+            'FLAKY test__api_timeout.py',
+            'test__subprocess_poll.py',
+            'test__example_udp_client.py'
+        ]
 
 
 if LEAKTEST:
@@ -117,32 +120,32 @@ if PYPY:
 
 if PY3:
     # No idea / TODO
-    FAILING_TESTS += '''
-FLAKY test__socket_dns.py
-'''.split('\n')
+    FAILING_TESTS += [
+        'FLAKY test__socket_dns.py',
+    ]
 
     if LEAKTEST:
         FAILING_TESTS += ['FLAKY test__threadpool.py']
         # refcount problems:
-        FAILING_TESTS += '''
-            test__timeout.py
-            FLAKY test__greenletset.py
-            test__core.py
-            test__systemerror.py
-            test__exc_info.py
-            test__api_timeout.py
-            test__event.py
-            test__api.py
-            test__hub.py
-            test__queue.py
-            test__socket_close.py
-            test__select.py
-            test__greenlet.py
-            FLAKY test__socket.py
-'''.split('\n')
+        FAILING_TESTS += [
+            'test__timeout.py',
+            'FLAKY test__greenletset.py',
+            'test__core.py',
+            'test__systemerror.py',
+            'test__exc_info.py',
+            'test__api_timeout.py',
+            'test__event.py',
+            'test__api.py',
+            'test__hub.py',
+            'test__queue.py',
+            'test__socket_close.py',
+            'test__select.py',
+            'test__greenlet.py',
+            'FLAKY test__socket.py',
+        ]
 
 FAILING_TESTS = [x.strip() for x in FAILING_TESTS if x.strip()]
 
 
 if __name__ == '__main__':
-    print ('known_failures:\n', FAILING_TESTS)
+    print('known_failures:\n', FAILING_TESTS)
