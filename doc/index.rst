@@ -33,8 +33,8 @@ If you like gevent, :doc:`donate <sfc>` to support the development.
 What are others saying?
 =======================
 
-Twitter
--------
+Twitter @gevent
+---------------
 
 .. raw:: html
 

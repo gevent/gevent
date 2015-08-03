@@ -1,6 +1,6 @@
 # Wrapper module for _ssl. Written by Bill Janssen.
 # Ported to gevent by Denis Bilenko.
-"""SSL wrapper for socket objects.
+"""SSL wrapper for socket objects on Python 2.7.9 and above.
 
 For the documentation, refer to :mod:`ssl` module manual.
 

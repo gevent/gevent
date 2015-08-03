@@ -1,6 +1,6 @@
 # Wrapper module for _ssl. Written by Bill Janssen.
 # Ported to gevent by Denis Bilenko.
-"""SSL wrapper for socket objects.
+"""SSL wrapper for socket objects on Python 2.7.8 and below.
 
 For the documentation, refer to :mod:`ssl` module manual.
 
@@ -20,6 +20,12 @@ import errno
 from gevent.socket import socket, _fileobject, timeout_default
 from gevent.socket import error as socket_error, EWOULDBLOCK
 from gevent.hub import string_types, PYPY
+
+try:
+    long
+except NameError:
+    # Make us importable under Py3k for documentation
+    long = int
 
 
 __implements__ = ['SSLSocket',

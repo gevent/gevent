@@ -16,6 +16,8 @@ doc/gevent.*.rst
 !doc/gevent.queue.rst
 !doc/gevent.pool.rst
 !doc/gevent.threadpool.rst
+!doc/gevent.socket.rst
+!doc/gevent.ssl.rst
 !doc/gevent.wsgi.rst
 
 # Artifacts of configuring in place

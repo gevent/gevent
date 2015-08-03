@@ -26,7 +26,8 @@ print('Imported gevent from %s' % (directory, ))
 modules = glob.glob(join(directory, '*.py')) + glob.glob(join(directory, '*.pyc'))
 modules = set(basename(filename).split('.')[0] for filename in modules)
 modules = set(name for name in modules
-              if name.startswith('_socket2') or name.startswith('_socket3') or not name.startswith('_'))
+              if name.startswith('_socket2') or name.startswith('_socket3') or name.startswith('_ssl')
+              or not name.startswith('_'))
 
 import warnings
 warnings.simplefilter('ignore', DeprecationWarning)
