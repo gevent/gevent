@@ -94,7 +94,7 @@ Unreleased
   not impossible with import hooks.)
 - Fix configuring c-ares for a 32-bit Python when running on a 64-bit
   platform. Reported in :issue:`381` and fixed in :pr:`616` by Chris
-  Lane.
+  Lane. Additional fix in :pr:`626` by Kevin Chen.
 - (Experimental) Let the ``pywsgi.WSGIServer`` accept a
   ``logging.Logger`` instance for its ``log`` and (new) ``error_log``
   parameters. Take care that the system is fully monkey-patched very
