@@ -23,6 +23,12 @@ CYTHON = os.environ.get('CYTHON') or 'cython'
 DEBUG = False
 WRITE_OUTPUT = False
 
+if os.getenv('READTHEDOCS'):
+    # Sometimes RTD fails to put our virtualenv bin directory
+    # on the PATH, meaning we can't run cython. Fix that.
+    new_path = os.environ['PATH'] + os.pathsep + os.path.dirname(sys.executable)
+    os.environ['PATH'] = new_path
+
 # Parameter name in macros must match this regex:
 param_name_re = re.compile('^[a-zA-Z_]\w*$')
 
