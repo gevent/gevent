@@ -28,6 +28,7 @@ greentest/test__server_pywsgi.py:
 gevent/core.py:\d+: 'from gevent.corecffi import *' used; unable to detect undefined names
 gevent/core.py:\d+: 'from gevent.corecext import *' used; unable to detect undefined names
 gevent/_sslgte279.py:.*
+gevent/os.py:\d+: redefinition of unused 'fork' from line
 '''
 
 IGNORED = IGNORED.strip().replace(' *', ' \\*').split('\n')
