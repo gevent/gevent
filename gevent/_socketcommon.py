@@ -18,7 +18,8 @@ __dns__ = ['getaddrinfo',
 _implements += __dns__
 
 # non-standard functions that this module provides:
-__extensions__ = ['wait_read',
+__extensions__ = ['cancel_wait',
+                  'wait_read',
                   'wait_write',
                   'wait_readwrite']
 
@@ -109,17 +110,39 @@ for name in __socket__.__all__:
 del name, value
 
 
-def wait(io, timeout=None, timeout_exc=timeout('timed out')):
-    """Block the current greenlet until *io* is ready.
+class _NONE(object):
 
-    If *timeout* is non-negative, then *timeout_exc* is raised after *timeout* second has passed.
-    By default *timeout_exc* is ``socket.timeout('timed out')``.
+    def __repr__(self):
+        return "<default value>"
 
-    If :func:`cancel_wait` is called, raise ``socket.error(EBADF, 'File descriptor was closed in another greenlet')``.
+_NONE = _NONE()
+
+
+def wait(io, timeout=None, timeout_exc=_NONE):
+    """
+    Block the current greenlet until *io* is ready.
+
+    If *timeout* is non-negative, then *timeout_exc* is raised after
+    *timeout* second has passed. By default *timeout_exc* is
+    ``socket.timeout('timed out')``.
+
+    If :func:`cancel_wait` is called on *io* by another greenlet,
+    raise an exception in this blocking greenlet
+    (``socket.error(EBADF, 'File descriptor was closed in another
+    greenlet')`` by default).
+
+    :param io: A libev watcher, most commonly an IO watcher obtained from
+        :meth:`gevent.core.loop.io`
+    :keyword timeout_exc: The exception to raise if the timeout expires.
+        By default, a :class:`socket.timeout` exception is raised.
+        If you pass a value for this keyword, it is interpreted as for
+        :class:`gevent.timeout.Timeout`.
     """
     assert io.callback is None, 'This socket is already used by another greenlet: %r' % (io.callback, )
     if timeout is not None:
+        timeout_exc = timeout_exc if timeout_exc is not _NONE else timeout('timed out')
         timeout = Timeout.start_new(timeout, timeout_exc)
+
     try:
         return get_hub().wait(io)
     finally:
@@ -128,47 +151,58 @@ def wait(io, timeout=None, timeout_exc=timeout('timed out')):
     # rename "io" to "watcher" because wait() works with any watcher
 
 
-def wait_read(fileno, timeout=None, timeout_exc=timeout('timed out')):
-    """Block the current greenlet until *fileno* is ready to read.
-
-    If *timeout* is non-negative, then *timeout_exc* is raised after *timeout* second has passed.
-    By default *timeout_exc* is ``socket.timeout('timed out')``.
-
-    If :func:`cancel_wait` is called, raise ``socket.error(EBADF, 'File descriptor was closed in another greenlet')``.
+def wait_read(fileno, timeout=None, timeout_exc=_NONE):
     """
+    Block the current greenlet until *fileno* is ready to read.
+
+    For the meaning of the other parameters and possible exceptions,
+    see :func:`wait`.
+
+    .. seealso: :func:`cancel_wait`
+     """
     io = get_hub().loop.io(fileno, 1)
     return wait(io, timeout, timeout_exc)
 
 
-def wait_write(fileno, timeout=None, timeout_exc=timeout('timed out'), event=None):
-    """Block the current greenlet until *fileno* is ready to write.
+def wait_write(fileno, timeout=None, timeout_exc=_NONE, event=_NONE):
+    """
+    Block the current greenlet until *fileno* is ready to write.
 
-    If *timeout* is non-negative, then *timeout_exc* is raised after *timeout* second has passed.
-    By default *timeout_exc* is ``socket.timeout('timed out')``.
+    For the meaning of the other parameters and possible exceptions,
+    see :func:`wait`.
 
-    If :func:`cancel_wait` is called, raise ``socket.error(EBADF, 'File descriptor was closed in another greenlet')``.
+    :keyword event: Ignored. Applications should not pass this parameter.
+       In the future, it may become an error.
+
+    .. seealso: :func:`cancel_wait`
     """
     io = get_hub().loop.io(fileno, 2)
     return wait(io, timeout, timeout_exc)
 
 
-def wait_readwrite(fileno, timeout=None, timeout_exc=timeout('timed out'), event=None):
-    """Block the current greenlet until *fileno* is ready to read or write.
+def wait_readwrite(fileno, timeout=None, timeout_exc=_NONE, event=_NONE):
+    """
+    Block the current greenlet until *fileno* is ready to read or
+    write.
 
-    If *timeout* is non-negative, then *timeout_exc* is raised after *timeout* second has passed.
-    By default *timeout_exc* is ``socket.timeout('timed out')``.
+    For the meaning of the other parameters and possible exceptions,
+    see :func:`wait`.
 
-    If :func:`cancel_wait` is called, raise ``socket.error(EBADF, 'File descriptor was closed in another greenlet')``.
+    :keyword event: Ignored. Applications should not pass this parameter.
+       In the future, it may become an error.
+
+    .. seealso: :func:`cancel_wait`
     """
     io = get_hub().loop.io(fileno, 3)
     return wait(io, timeout, timeout_exc)
 
-
+#: The exception raised by default on a call to :func:`cancel_wait`
 cancel_wait_ex = error(EBADF, 'File descriptor was closed in another greenlet')
 
 
-def cancel_wait(watcher):
-    get_hub().cancel_wait(watcher, cancel_wait_ex)
+def cancel_wait(watcher, error=cancel_wait_ex):
+    """See :meth:`gevent.hub.Hub.cancel_wait`"""
+    get_hub().cancel_wait(watcher, error)
 
 
 class BlockingResolver(object):
@@ -188,22 +222,69 @@ class BlockingResolver(object):
 
 
 def gethostbyname(hostname):
+    """
+    gethostbyname(host) -> address
+
+    Return the IP address (a string of the form '255.255.255.255') for a host.
+
+    .. seealso:: :doc:`dns`
+    """
     return get_hub().resolver.gethostbyname(hostname)
 
 
 def gethostbyname_ex(hostname):
+    """
+    gethostbyname_ex(host) -> (name, aliaslist, addresslist)
+
+    Return the true host name, a list of aliases, and a list of IP addresses,
+    for a host.  The host argument is a string giving a host name or IP number.
+    Resolve host and port into list of address info entries.
+
+    .. seealso:: :doc:`dns`
+    """
     return get_hub().resolver.gethostbyname_ex(hostname)
 
 
 def getaddrinfo(host, port, family=0, socktype=0, proto=0, flags=0):
+    """
+    Resolve host and port into list of address info entries.
+
+    Translate the host/port argument into a sequence of 5-tuples that contain
+    all the necessary arguments for creating a socket connected to that service.
+    host is a domain name, a string representation of an IPv4/v6 address or
+    None. port is a string service name such as 'http', a numeric port number or
+    None. By passing None as the value of host and port, you can pass NULL to
+    the underlying C API.
+
+    The family, type and proto arguments can be optionally specified in order to
+    narrow the list of addresses returned. Passing zero as a value for each of
+    these arguments selects the full range of results.
+
+    .. seealso:: :doc:`dns`
+    """
     return get_hub().resolver.getaddrinfo(host, port, family, socktype, proto, flags)
 
 
 def gethostbyaddr(ip_address):
+    """
+    gethostbyaddr(host) -> (name, aliaslist, addresslist)
+
+    Return the true host name, a list of aliases, and a list of IP addresses,
+    for a host.  The host argument is a string giving a host name or IP number.
+
+    .. seealso:: :doc:`dns`
+    """
     return get_hub().resolver.gethostbyaddr(ip_address)
 
 
 def getnameinfo(sockaddr, flags):
+    """
+    getnameinfo(sockaddr, flags) -> (host, port)
+
+    Get host and port for a sockaddr.
+
+    .. seealso:: :doc:`dns`
+    """
     return get_hub().resolver.getnameinfo(sockaddr, flags)
 
 

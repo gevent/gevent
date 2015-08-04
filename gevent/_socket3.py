@@ -11,7 +11,7 @@ from io import BlockingIOError
 from os import dup
 
 for key in _socketcommon.__dict__:
-    if key.startswith('__'):
+    if key.startswith('__') or key in _socketcommon.__extensions__:
         continue
     globals()[key] = getattr(_socketcommon, key)
 

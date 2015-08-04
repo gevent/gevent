@@ -7,7 +7,7 @@ from gevent import _socketcommon
 from gevent.hub import PYPY
 
 for key in _socketcommon.__dict__:
-    if key.startswith('__') or key in _socketcommon.__py3_imports__:
+    if key.startswith('__') or key in _socketcommon.__py3_imports__ or key in _socketcommon.__extensions__:
         continue
     globals()[key] = getattr(_socketcommon, key)
 

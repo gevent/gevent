@@ -27,10 +27,27 @@ Python 2 and Python 3, respectively.
    Python 3 interface <gevent._socket3>
    Python 2 interface <gevent._socket2>
 
+Gevent Extensions
+=================
 
-Shared Functions
-================
+Beyond the basic standard library interface, ``gevent.socket``
+provides some extensions. These are identical and shared by all
+versions of Python.
 
-These functions are identical and shared by all implementations.
+Waiting
+-------
 
-.. autofunction:: gevent.socket.create_connection
+These functions are used to block the current greenlet until an open
+file (socket) is ready to perform I/O operations. These are low-level
+functions not commonly used by many programs.
+
+.. note:: These use the underlying libev ``io`` watchers, which means
+          that they share the same implementation limits. For example,
+          on some platforms they can be used with more than just
+          sockets, while on others the applicability is more limited.
+
+.. autofunction:: gevent.socket.wait_read
+.. autofunction:: gevent.socket.wait_write
+.. autofunction:: gevent.socket.wait_readwrite
+.. autofunction:: gevent.socket.wait
+.. autofunction:: gevent.socket.cancel_wait

@@ -26,6 +26,19 @@ for key in _source.__dict__:
         continue
     globals()[key] = getattr(_source, key)
 
+# The _socket2 and _socket3 don't import things defined in
+# __extensions__, to help avoid confusing reference cycles in the
+# documentation and to prevent importing from the wrong place, but we
+# *do* need to expose them here. (NOTE: This may lead to some sphinx
+# warnings like:
+#    WARNING: missing attribute mentioned in :members: or __all__:
+#             module gevent._socket2, attribute cancel_wait
+# These can be ignored.)
+from gevent import _socketcommon
+for key in _socketcommon.__extensions__:
+    globals()[key] = getattr(_socketcommon, key)
+
+del key
 
 try:
     _GLOBAL_DEFAULT_TIMEOUT = __socket__._GLOBAL_DEFAULT_TIMEOUT
@@ -73,3 +86,8 @@ def create_connection(address, timeout=_GLOBAL_DEFAULT_TIMEOUT, source_address=N
         raise err
     else:
         raise error("getaddrinfo returns an empty list")
+
+# This is promised to be in the __all__ of the _source, but, for circularity reasons,
+# we implement it in this module. Mostly for documentation purposes, put it
+# in the _source too.
+_source.create_connection = create_connection

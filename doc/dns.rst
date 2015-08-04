@@ -1,6 +1,6 @@
-=====
- DNS
-=====
+=======================
+ Name Resolution (DNS)
+=======================
 
 gevent includes support for a pluggable hostname resolution system.
 Pluggable resolvers are (generally) intended to be cooperative.
