@@ -136,7 +136,12 @@ def patch_sys(stdin=True, stdout=True, stderr=True):
 
 
 def patch_os():
-    """Replace :func:`os.fork` with :func:`gevent.fork`. Does nothing if fork is not available."""
+    """
+    Replace :func:`os.fork` with :func:`gevent.fork`, and, on POSIX,
+    :func:`os.waitpid` with :func:`gevent.os.waitpid` (if the
+    environment variable ``GEVENT_NOWAITPID`` is not defined). Does
+    nothing if fork is not available.
+    """
     patch_module('os')
 
 
