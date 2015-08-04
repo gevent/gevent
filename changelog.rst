@@ -15,7 +15,8 @@ Unreleased
   Reported in :issue:`623` by Jonathan Kamens.
 - Various fixes on Windows. Reported in :issue:`625`, :issue:`627`,
   and :issue:`628` by jacekt and Yuanteng (Jeff) Pei. Fixed in :pr:`624`.
-
+- Add ``readable`` and ``writable`` methods to ``FileObjectPosix``;
+  this fixes e.g., help() on Python 3 when monkey-patched.
 
 1.1b1 (Jul 17, 2015)
 ====================

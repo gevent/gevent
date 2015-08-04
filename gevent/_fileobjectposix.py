@@ -216,6 +216,12 @@ class FileObjectPosix(object):
     def readlines(self, sizehint=0):
         return self.io.readlines(sizehint)
 
+    def readable(self):
+        return self.io.readable()
+
+    def writable(self):
+        return self.io.writable()
+
     def seek(self, *args, **kwargs):
         return self.io.seek(*args, **kwargs)
 
@@ -232,4 +238,6 @@ class FileObjectPosix(object):
         return self.io
 
     def __getattr__(self, name):
+        # XXX: Should this really be _fobj, or self.io?
+        # _fobj can easily be None but io never is
         return getattr(self._fobj, name)
