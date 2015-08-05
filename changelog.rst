@@ -4,8 +4,8 @@
 
 .. currentmodule:: gevent
 
-Unreleased
-==========
+1.1b2 (Aug 5, 2015)
+===================
 
 - Enable the c-ares resolver extension for PyPy.
 - On some versions of PyPy on some platforms (notably 2.6.0 on 64-bit
