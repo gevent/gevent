@@ -70,3 +70,13 @@ def __dependencies_for_freezing():
     import signal
 
 del __dependencies_for_freezing
+
+if PYPY:
+    # We need to make sure that the CFFI compilation is complete if
+    # need be. Without this, we can get ImportError(ImportError:
+    # Cannot import 'core' from ...) from the hub or
+    # DistutilsModuleError (on OS X) depending on who first imports and inits
+    # the hub. See https://github.com/gevent/gevent/issues/619 (There
+    # is no automated test for this.)
+    from gevent.core import loop
+    del loop

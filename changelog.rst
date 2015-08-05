@@ -7,7 +7,16 @@
 Unreleased
 ==========
 
-- Nothing yet.
+- Fix an ``AttributeError`` from ``gevent.monkey.patch_builtins`` on
+  Python 2 when the `future`_ library is also installed. Reported by
+  Carlos Sanchez.
+- PyPy: Fix a ``DistutilsModuleError`` or ``ImportError`` if the CFFI
+  module backing ``gevent.core`` needs to be compiled when the hub is
+  initialized. Now, the module will be compiled when gevent is
+  imported. Reported in :issue:`619` by Thinh Nguyen with
+  contributions by Jay Oster and Matt Dupre.
+
+.. _future: http://python-future.org
 
 1.1b2 (Aug 5, 2015)
 ===================
