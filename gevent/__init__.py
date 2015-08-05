@@ -15,10 +15,10 @@ _version_info = namedtuple('version_info',
 
 #: The programatic version identifier. The fields have (roughly) the
 #: same meaning as :data:`sys.version_info`
-version_info = _version_info(1, 1, 0, 'beta', '2')
+version_info = _version_info(1, 1, 0, 'beta', '3')
 
 #: The human-readable PEP 440 version identifier
-__version__ = '1.1b2'
+__version__ = '1.1b3.dev0'
 
 
 __all__ = ['get_hub',
