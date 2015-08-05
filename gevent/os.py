@@ -230,7 +230,7 @@ if hasattr(os, 'fork'):
 
             Availability: POSIX.
 
-            .. versionadded: 1.1a3
+            .. versionadded:: 1.1a3
             """
             # XXX Does not handle tracing children
             if pid <= 0:
@@ -285,7 +285,7 @@ if hasattr(os, 'fork'):
                 Pass the builtin :func:`os.fork` function if you do not need to
                 initialize gevent in the child process.
 
-            .. versionadded: 1.1a3
+            .. versionadded:: 1.1a3
             """
             pid = fork()
             if pid:
@@ -309,6 +309,8 @@ if hasattr(os, 'fork'):
                 This implementation of ``fork`` is a wrapper for :func:`fork_and_watch`
                 when the environment variable ``GEVENT_NOWAITPID`` is *not* defined.
                 This is the default and should be used by most applications.
+
+                .. versionchanged:: 1.1b2
                 """
                 # take any args to match fork_and_watch
                 return fork_and_watch(*args, **kwargs)

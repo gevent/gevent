@@ -508,7 +508,7 @@ class Greenlet(greenlet):
     def _run(self):
         """Subclasses may override this method to take any number of arguments and keyword arguments.
 
-        .. versionadded: 1.1a3
+        .. versionadded:: 1.1a3
             Previously, if no callable object was passed to the constructor, the spawned greenlet would
             later fail with an AttributeError.
         """
