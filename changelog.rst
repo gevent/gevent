@@ -75,7 +75,7 @@ Unreleased
   Reported in :issue:`108` by shaun and initial fix based on code by
   Sylvain Zimmer.
 - ``gevent.spawn``, ``spawn_raw`` and ``spawn_later``, as well as the
-  ``Greenlet`` constructor, immediately produce useful ``TypeError``s
+  ``Greenlet`` constructor, immediately produce useful ``TypeErrors``
   if asked to run something that cannot be run. Previously, the
   spawned greenlet would die with an uncaught ``TypeError`` the first
   time it was switched to. Reported in :issue:`119` by stephan.
@@ -204,7 +204,7 @@ Unreleased
   Jevnik.
 - Make the ``acquire`` method of ``gevent.lock.DummySemaphore`` always
   return True, supporting its use-case as an "infinite" or unbounded
-  semaphore providing no exclusing, and allowing the idiom ``if
+  semaphore providing no exclusion, and allowing the idiom ``if
   sem.acquire(): ...``. See :pr:`544` by Mouad Benchchaoui.
 - Patch ``subprocess`` by default in ``gevent.monkey.patch_all``. See
   :issue:`446`.
