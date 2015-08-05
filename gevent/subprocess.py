@@ -1,3 +1,13 @@
+"""
+Cooperative ``subprocess`` module.
+
+.. note:: The interface of this module is intended to match that of
+   the standard library :mod:`subprocess` module. There are some small
+   differences between the Python 2 and Python 3 versions of that
+   module and between the POSIX and Windows versions. The HTML
+   documentation here can only describe one version; for definitive
+   documentation, see the standard library or the source code.
+"""
 from __future__ import absolute_import
 import errno
 import gc
@@ -48,6 +58,7 @@ __extra__ = ['MAXFD',
              'list2cmdline',
              '_subprocess',
              # Python 2.5 does not have _subprocess, so we don't use it
+             # XXX We don't run on Py 2.5 anymore; can/could/should we use _subprocess?
              'WAIT_OBJECT_0',
              'WaitForSingleObject',
              'GetExitCodeProcess',
@@ -118,8 +129,10 @@ if PY3:
     def call(*popenargs, **kwargs):
         """Run command with arguments.  Wait for command to complete or
         timeout, then return the returncode attribute.
-        The arguments are the same as for the Popen constructor.  Example:
-        retcode = call(["ls", "-l"])
+
+        The arguments are the same as for the Popen constructor.  Example::
+
+            retcode = call(["ls", "-l"])
         """
         timeout = kwargs.pop('timeout', None)
         with Popen(*popenargs, **kwargs) as p:
@@ -134,9 +147,9 @@ else:
         """Run command with arguments.  Wait for command to complete, then
         return the returncode attribute.
 
-        The arguments are the same as for the Popen constructor.  Example:
+        The arguments are the same as for the Popen constructor.  Example::
 
-        retcode = call(["ls", "-l"])
+            retcode = call(["ls", "-l"])
         """
         return Popen(*popenargs, **kwargs).wait()
 
@@ -144,12 +157,12 @@ else:
 def check_call(*popenargs, **kwargs):
     """Run command with arguments.  Wait for command to complete.  If
     the exit code was zero then return, otherwise raise
-    CalledProcessError.  The CalledProcessError object will have the
+    :exc:`CalledProcessError`.  The ``CalledProcessError`` object will have the
     return code in the returncode attribute.
 
-    The arguments are the same as for the Popen constructor.  Example:
+    The arguments are the same as for the Popen constructor.  Example::
 
-    check_call(["ls", "-l"])
+        retcode = check_call(["ls", "-l"])
     """
     retcode = call(*popenargs, **kwargs)
     if retcode:
@@ -162,30 +175,36 @@ def check_call(*popenargs, **kwargs):
 if PY3:
     def check_output(*popenargs, **kwargs):
         r"""Run command with arguments and return its output.
-        If the exit code was non-zero it raises a CalledProcessError.  The
-        CalledProcessError object will have the return code in the returncode
+
+        If the exit code was non-zero it raises a :exc:`CalledProcessError`.  The
+        ``CalledProcessError`` object will have the return code in the returncode
         attribute and output in the output attribute.
-        The arguments are the same as for the Popen constructor.  Example:
-        >>> check_output(["ls", "-1", "/dev/null"])
-        b'/dev/null\n'
 
-        The stdout argument is not allowed as it is used internally.
 
-        To capture standard error in the result, use stderr=STDOUT.
-        >>> check_output(["/bin/sh", "-c",
-        ...               "ls -l non_existent_file ; exit 0"],
-        ...              stderr=STDOUT)
-        b'ls: non_existent_file: No such file or directory\n'
+        The arguments are the same as for the Popen constructor.  Example::
+
+            >>> check_output(["ls", "-1", "/dev/null"])
+            b'/dev/null\n'
+
+        The ``stdout`` argument is not allowed as it is used internally.
+
+        To capture standard error in the result, use ``stderr=STDOUT``::
+
+            >>> check_output(["/bin/sh", "-c",
+            ...               "ls -l non_existent_file ; exit 0"],
+            ...              stderr=STDOUT)
+            b'ls: non_existent_file: No such file or directory\n'
 
         There is an additional optional argument, "input", allowing you to
         pass a string to the subprocess's stdin.  If you use this argument
         you may not also use the Popen constructor's "stdin" argument, as
-        it too will be used internally.  Example:
-        >>> check_output(["sed", "-e", "s/foo/bar/"],
-        ...              input=b"when in the course of fooman events\n")
-        b'when in the course of barman events\n'
+        it too will be used internally.  Example::
 
-        If universal_newlines=True is passed, the return value will be a
+            >>> check_output(["sed", "-e", "s/foo/bar/"],
+            ...              input=b"when in the course of fooman events\n")
+            b'when in the course of barman events\n'
+
+        If ``universal_newlines=True`` is passed, the return value will be a
         string rather than bytes.
         """
         timeout = kwargs.pop('timeout', None)
@@ -459,7 +478,9 @@ class Popen(object):
         communicate() returns a tuple (stdout, stderr).
 
         :keyword timeout: Under Python 2, this is a gevent extension; if
-           given and it expires, we will raise :class:`gevent.timeout.Timeout`"""
+           given and it expires, we will raise :class:`gevent.timeout.Timeout`.
+           Under Python 3, this raises the standard :exc:`TimeoutExpired` exception.
+        """
         greenlets = []
         if self.stdin:
             greenlets.append(spawn(write_and_close, self.stdin, input))
@@ -1103,8 +1124,9 @@ class Popen(object):
             attribute.
 
             :keyword timeout: The floating point number of seconds to wait.
-                Under Python 2, this is a gevent extension. Under Python 3,
-                if this time elapses without finishing the process, TimeoutExpired
+                Under Python 2, this is a gevent extension, and we simply return if it
+                expires. Under Python 3,
+                if this time elapses without finishing the process, :exc:`TimeoutExpired`
                 is raised."""
             result = self.result.wait(timeout=timeout)
             if PY3 and timeout is not None and not self.result.ready():
