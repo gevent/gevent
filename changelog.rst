@@ -12,8 +12,8 @@ Unreleased
   Carlos Sanchez.
 - PyPy: Fix a ``DistutilsModuleError`` or ``ImportError`` if the CFFI
   module backing ``gevent.core`` needs to be compiled when the hub is
-  initialized. Now, the module will be compiled when gevent is
-  imported. Reported in :issue:`619` by Thinh Nguyen with
+  initialized. Now, the module will be automtically compiled when
+  gevent is imported. Reported in :issue:`619` by Thinh Nguyen with
   contributions by Jay Oster and Matt Dupre.
 
 .. _future: http://python-future.org
@@ -192,6 +192,12 @@ Unreleased
   that this changes the (platform dependent) default, typically from
   buffered to unbuffered. See :pr:`542` by Romuald Brunet.
 - Upgraded c-ares to 1.10.0. See :pr:`579` by Omer Katz.
+
+  .. caution:: The c-ares ``configure`` script is now more strict about the
+               contents of environment variables such as ``CFLAGS`` and ``LDFLAGS``
+               and they may have to be modified (for example, ``CFLAGS`` is no
+               longer allowed to include ``-I`` directives, which must instead be
+               placed in ``CPPFLAGS``).
 - Add a ``count`` argument to ``gevent.greenlet.wait``. See :pr:`482` by
   wiggin15.
 - Add a ``timeout`` argument to ``gevent.queue.JoinableQueue.wait``

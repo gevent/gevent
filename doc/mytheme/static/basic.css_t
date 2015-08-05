@@ -887,6 +887,18 @@ div.warning {
     border: 1px solid #f66;
 }
 
+
+div.caution {
+    background-color: #fff6f1;
+    border: 1px solid #ffaaa3;
+}
+
+div.hint, div.tip {
+    border-left-style: solid;
+    border-left-width: 2px;
+    border-left-color: #B7D897;
+}
+
 p.admonition-title {
     display: inline;
 }

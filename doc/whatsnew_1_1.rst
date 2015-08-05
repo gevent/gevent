@@ -111,6 +111,27 @@ include:
   another (e.g., :meth:`Greenlet.get <gevent.Greenlet.get>`),
   the original traceback is preserved and raised.
 
+Library Updates
+===============
+
+The two C libraries that are bundled with gevent have been updated.
+libev has been updated from 4.19 to 4.20 (`libev release notes`_) and
+c-ares has been updated from 1.9.1 to 1.10.0 (`c-ares release notes`_).
+
+.. caution:: The c-ares ``configure`` script is now *much* stricter
+             about the contents of compilation environment variables
+             such as ``$CFLAGS`` and ``$LDFLAGS``. For example,
+             ``$CFLAGS`` is no longer allowed to contain ``-I``
+             directives; instead, these must be placed in
+             ``$CPPFLAGS``. That's one common cause of an error
+             like the following when compiling from scratch on a POSIX
+             platform::
+
+                 Running '(cd  "/tmp/easy_install-NT921u/gevent-1.1b2/c-ares"  && if [ -e ares_build.h ]; then cp ares_build.h ares_build.h.orig; fi   && /bin/sh ./configure CONFIG_COMMANDS= CONFIG_FILES=   && cp ares_config.h ares_build.h "$OLDPWD"   && mv ares_build.h.orig ares_build.h) > configure-output.txt' in /tmp/easy_install-NT921u/gevent-1.1b2/build/temp.linux-x86_64-2.7/c-ares
+                 configure: error: Can not continue. Fix errors mentioned immediately above this line.
+
+.. _libev release notes: https://github.com/gevent/gevent/blob/master/libev/Changes#L17
+.. _c-ares release notes: https://raw.githubusercontent.com/bagder/c-ares/cares-1_10_0/RELEASE-NOTES
 
 Compatibility
 =============
