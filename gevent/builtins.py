@@ -5,14 +5,21 @@ from __future__ import absolute_import
 import imp
 import sys
 import gevent.lock
-try:
-    import builtins
-    allowed_module_name_types = (str,)
-    __target__ = 'builtins'
-except ImportError: # Py2
+
+# Normally we'd have the "expected" case inside the try
+# (Python 3, because Python 3 is the way forward). But
+# under Python 2, the popular `future` library *also* provides
+# a `builtins` module---which lacks the __import__ attribute.
+# So we test for the old, deprecated version first
+
+try: # Py2
     import __builtin__ as builtins
-    allowed_module_name_types = (basestring,)
+    _allowed_module_name_types = (basestring,)
     __target__ = '__builtin__'
+except ImportError:
+    import builtins
+    _allowed_module_name_types = (str,)
+    __target__ = 'builtins'
 
 _import = builtins.__import__
 
@@ -30,7 +37,7 @@ def __import__(*args, **kwargs):
     wraps the normal __import__ functionality in a recursive lock, ensuring that
     we're protected against greenlet import concurrency as well.
     """
-    if len(args) > 0 and not issubclass(type(args[0]), allowed_module_name_types):
+    if len(args) > 0 and not issubclass(type(args[0]), _allowed_module_name_types):
         # if a builtin has been acquired as a bound instance method,
         # python knows not to pass 'self' when the method is called.
         # No such protection exists for monkey-patched builtins,
