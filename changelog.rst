@@ -15,8 +15,14 @@ Unreleased
   initialized. Now, the module will be automtically compiled when
   gevent is imported. Reported in :issue:`619` by Thinh Nguyen with
   contributions by Jay Oster and Matt Dupre.
+- PyPy: Improve the performance of ``gevent.socket.socket:sendall``
+  with large inputs. `bench_sendall.py`_ now performs about as well on
+  PyPy as it does on CPython, an improvement of 10x (from ~60MB/s to
+  ~630MB/s). See this `pypy bug`_ for details.
 
 .. _future: http://python-future.org
+.. _bench_sendall.py: https://raw.githubusercontent.com/gevent/gevent/master/greentest/bench_sendall.py
+.. _pypy bug: https://bitbucket.org/pypy/pypy/issues/2091/non-blocking-socketsend-slow-gevent
 
 1.1b2 (Aug 5, 2015)
 ===================

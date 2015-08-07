@@ -327,6 +327,7 @@ class socket(object):
                 raise
 
     def sendall(self, data, flags=0):
+        # XXX When we run on PyPy3, see the notes in _socket2.py's sendall()
         data_memory = _get_memory(data)
         if self.timeout is None:
             data_sent = 0
