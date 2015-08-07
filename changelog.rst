@@ -13,8 +13,9 @@ Unreleased
 - PyPy: Fix a ``DistutilsModuleError`` or ``ImportError`` if the CFFI
   module backing ``gevent.core`` needs to be compiled when the hub is
   initialized. Now, the module will be automtically compiled when
-  gevent is imported. Reported in :issue:`619` by Thinh Nguyen with
-  contributions by Jay Oster and Matt Dupre.
+  gevent is imported. Reported in :issue:`619` by Thinh Nguyen and
+  :issue:`631` by Andy Freeland, with contributions by Jay Oster and
+  Matt Dupre.
 - PyPy: Improve the performance of ``gevent.socket.socket:sendall``
   with large inputs. `bench_sendall.py`_ now performs about as well on
   PyPy as it does on CPython, an improvement of 10x (from ~60MB/s to
