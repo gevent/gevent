@@ -148,9 +148,9 @@ def kill(greenlet, exception=GreenletExit):
         so you have to use this function.
 
     .. versionchanged:: 1.1a2
-        If the ``greenlet`` has a ``kill`` method, calls it. This prevents a
+        If the ``greenlet`` has a :meth:`kill <Greenlet.kill>` method, calls it. This prevents a
         greenlet from being switched to for the first time after it's been
-        killed.
+        killed but not yet executed.
     """
     if not greenlet.dead:
         if hasattr(greenlet, 'kill'):

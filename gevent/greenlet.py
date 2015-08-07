@@ -247,15 +247,27 @@ class Greenlet(greenlet):
         return bool(self)
 
     def ready(self):
-        """Return true if and only if the greenlet has finished execution."""
+        """
+        Return a true value if and only if the greenlet has finished
+        execution.
+
+        .. versionchanged:: 1.1
+            This function is only guaranteed to return true or false *values*, not
+            necessarily the literal constants ``True`` or ``False``.
+        """
         return self.dead or self._exc_info
 
     def successful(self):
-        """Return true if and only if the greenlet has finished execution successfully,
-        that is, without raising an error.
+        """
+        Return a true value if and only if the greenlet has finished execution
+        successfully, that is, without raising an error.
 
-        .. tip:: A greenlet that has been killed with the default :class:`GreenletExit` exception
-            is considered successful. That is, ``GreenletExit`` is not considered an error.
+        .. tip:: A greenlet that has been killed with the default
+            :class:`GreenletExit` exception is considered successful.
+            That is, ``GreenletExit`` is not considered an error.
+
+        .. note:: This function is only guaranteed to return true or false *values*,
+              not necessarily the literal constants ``True`` or ``False``.
         """
         return self._exc_info and self._exc_info[1] is None
 
@@ -371,7 +383,8 @@ class Greenlet(greenlet):
         return g
 
     def kill(self, exception=GreenletExit, block=True, timeout=None):
-        """Raise the ``exception`` in the greenlet.
+        """
+        Raise the ``exception`` in the greenlet.
 
         If ``block`` is ``True`` (the default), wait until the greenlet dies or the optional timeout expires.
         If block is ``False``, the current greenlet is not unscheduled.
@@ -380,14 +393,22 @@ class Greenlet(greenlet):
 
         .. note::
 
-            Depending on what this greenlet is executing and the state of the event loop,
-            the exception may or may not be raised immediately when this greenlet resumes
-            execution. It may be raised on a subsequent green call, or, if this greenlet
-            exits before making such a call, it may not be raised at all. As of 1.1, an example
-            where the exception is raised later is if this greenlet had called ``sleep(0)``; an
-            example where the exception is raised immediately is if this greenlet had called ``sleep(0.1)``.
+            Depending on what this greenlet is executing and the state
+            of the event loop, the exception may or may not be raised
+            immediately when this greenlet resumes execution. It may
+            be raised on a subsequent green call, or, if this greenlet
+            exits before making such a call, it may not be raised at
+            all. As of 1.1, an example where the exception is raised
+            later is if this greenlet had called :func:`sleep(0)
+            <gevent.sleep>`; an example where the exception is raised
+            immediately is if this greenlet had called
+            :func:`sleep(0.1) <gevent.sleep>`.
 
         See also :func:`gevent.kill`.
+
+        :keyword type exception: The type of exception to raise in the greenlet. The default
+            is :class:`GreenletExit`, which indicates a :meth:`successful` completion
+            of the greenlet.
 
         .. versionchanged:: 0.13.0
             *block* is now ``True`` by default.
