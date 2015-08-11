@@ -228,12 +228,19 @@ class TestCase(greentest.TestCase):
 
         return gevent_result
 
+    def _normalize_result(self, result):
+        return result
+
     def assertEqualResults(self, real_result, gevent_result, func, args):
-        errors = [socket.gaierror, socket.herror, TypeError]
-        if type(real_result) in errors and type(gevent_result) in errors:
+        errors = (socket.gaierror, socket.herror, TypeError)
+        if isinstance(real_result, errors) and isinstance(gevent_result, errors):
             if type(real_result) is not type(gevent_result):
                 log('WARNING: error type mismatch: %r (gevent) != %r (stdlib)', gevent_result, real_result)
             return
+
+        real_result = self._normalize_result(real_result)
+        gevent_result = self._normalize_result(gevent_result)
+
         real_result_repr = repr(real_result)
         gevent_result_repr = repr(gevent_result)
         if real_result_repr == gevent_result_repr:
@@ -311,7 +318,13 @@ for ip, host in re.findall(r'^\s*(\d+\.\d+\.\d+\.\d+)\s+([^\s]+)', etc_hosts, re
 
 
 class TestGeventOrg(TestCase):
-    pass
+
+    def _normalize_result(self, result):
+        if isinstance(result, (list, tuple)):
+            # Attempt to account for round-robin DNS responses
+            # that return the same results in different orders
+            result = sorted(result)
+        return result
 
 add(TestGeventOrg, 'gevent.org')
 
