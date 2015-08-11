@@ -27,16 +27,12 @@ through 2.5.1, 2.6.0 and pre-release versions of 2.7.0.
   to 2.7.0, signals could be delivered incorrectly or fail to be
   delivered during a blocking operation.
 - Overall performance seems to be quite acceptable with newer versions
-  of PyPy. Things that are known or expected to be slower under PyPy
-  include the :mod:`c-ares resolver <gevent.resolver_ares>` and
-  :meth:`socket.socket.sendall`. In particular,
-  :meth:`socket.socket.sendall` can be `relatively slow`_ for large
-  transmissions. This can be mitigated by setting a larger write
-  buffer on the socket, e.g, ``sock.setsockopt(socket.SOL_SOCKET,
-  socket.SO_SNDBUF, 1024*1024)`` Whether or not these matter will
+  of PyPy. The benchmarks distributed with gevent typically perform as
+  well or better on PyPy than on CPython. Things that are known or
+  expected to be (relatively) slower under PyPy include the
+  :mod:`c-ares resolver <gevent.resolver_ares>` and
+  :class:`gevent.lock.Semaphore`. Whether or not these matter will
   depend on the workload of each application.
-
-.. _relatively slow: https://bitbucket.org/pypy/pypy/issues/2091/non-blocking-socketsend-slow-gevent
 
 
 Improved subprocess support
