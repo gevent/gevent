@@ -249,6 +249,9 @@ class TestFunctions(greentest.TestCase):
         finally:
             gevent._socketcommon.get_hub = orig_get_hub
 
+    # Creating new types in the function takes a cycle to cleanup.
+    test_wait_timeout.ignore_leakcheck = True
+
 
 if __name__ == '__main__':
     greentest.main()
