@@ -222,6 +222,7 @@ class TestCreateConnection(greentest.TestCase):
         else:
             raise AssertionError('create_connection did not raise socket.error as expected')
 
+
 class TestFunctions(greentest.TestCase):
 
     def test_wait_timeout(self):
@@ -229,9 +230,11 @@ class TestFunctions(greentest.TestCase):
         import gevent.socket
         import gevent._socketcommon
         orig_get_hub = gevent.socket.get_hub
+
         class get_hub(object):
             def wait(self, io):
                 gevent.sleep(10)
+
         class io(object):
             callback = None
 

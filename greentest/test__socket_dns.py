@@ -318,15 +318,14 @@ for ip, host in re.findall(r'^\s*(\d+\.\d+\.\d+\.\d+)\s+([^\s]+)', etc_hosts, re
 
 
 class TestGeventOrg(TestCase):
+    pass
 
-    def _normalize_result(self, result):
-        if isinstance(result, (list, tuple)):
-            # Attempt to account for round-robin DNS responses
-            # that return the same results in different orders
-            result = sorted(result)
-        return result
-
-add(TestGeventOrg, 'gevent.org')
+# For this test to work correctly, it needs to resolve to
+# an address with a single A record; round-robin DNS and multiple A records
+# may mess it up (subsequent requests---and we always make two---may return
+# unequal results). We used to use gevent.org, but that now has multiple A records;
+# trying www.gevent.org which is a CNAME to readthedocs.org.
+add(TestGeventOrg, 'www.gevent.org')
 
 
 class TestFamily(TestCase):
