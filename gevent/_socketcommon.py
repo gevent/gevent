@@ -140,7 +140,7 @@ def wait(io, timeout=None, timeout_exc=_NONE):
     """
     assert io.callback is None, 'This socket is already used by another greenlet: %r' % (io.callback, )
     if timeout is not None:
-        timeout_exc = timeout_exc if timeout_exc is not _NONE else timeout('timed out')
+        timeout_exc = timeout_exc if timeout_exc is not _NONE else 'timed out'
         timeout = Timeout.start_new(timeout, timeout_exc)
 
     try:
