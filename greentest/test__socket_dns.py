@@ -318,14 +318,15 @@ for ip, host in re.findall(r'^\s*(\d+\.\d+\.\d+\.\d+)\s+([^\s]+)', etc_hosts, re
 
 
 class TestGeventOrg(TestCase):
-    pass
+
+    HOSTNAME = 'www.gevent.org'
 
 # For this test to work correctly, it needs to resolve to
 # an address with a single A record; round-robin DNS and multiple A records
 # may mess it up (subsequent requests---and we always make two---may return
 # unequal results). We used to use gevent.org, but that now has multiple A records;
 # trying www.gevent.org which is a CNAME to readthedocs.org.
-add(TestGeventOrg, 'www.gevent.org')
+add(TestGeventOrg, TestGeventOrg.HOSTNAME)
 
 
 class TestFamily(TestCase):
@@ -333,7 +334,7 @@ class TestFamily(TestCase):
     @classmethod
     def getresult(cls):
         if not hasattr(cls, '_result'):
-            cls._result = getattr(socket, 'getaddrinfo')('gevent.org', None)
+            cls._result = getattr(socket, 'getaddrinfo')(TestGeventOrg.HOSTNAME, None)
         return cls._result
 
     def assert_error(self, error, function, *args):
@@ -352,18 +353,18 @@ class TestFamily(TestCase):
             raise
 
     def test_inet(self):
-        self.assertEqual(gevent_socket.getaddrinfo('gevent.org', None, socket.AF_INET), self.getresult())
+        self.assertEqual(gevent_socket.getaddrinfo(TestGeventOrg.HOSTNAME, None, socket.AF_INET), self.getresult())
 
     def test_unspec(self):
-        self.assertEqual(gevent_socket.getaddrinfo('gevent.org', None, socket.AF_UNSPEC), self.getresult())
+        self.assertEqual(gevent_socket.getaddrinfo(TestGeventOrg.HOSTNAME, None, socket.AF_UNSPEC), self.getresult())
 
     def test_badvalue(self):
-        self._test('getaddrinfo', 'gevent.org', None, 255)
-        self._test('getaddrinfo', 'gevent.org', None, 255000)
-        self._test('getaddrinfo', 'gevent.org', None, -1)
+        self._test('getaddrinfo', TestGeventOrg.HOSTNAME, None, 255)
+        self._test('getaddrinfo', TestGeventOrg.HOSTNAME, None, 255000)
+        self._test('getaddrinfo', TestGeventOrg.HOSTNAME, None, -1)
 
     def test_badtype(self):
-        self._test('getaddrinfo', 'gevent.org', 'x')
+        self._test('getaddrinfo', TestGeventOrg.HOSTNAME, 'x')
 
 
 class Test_getaddrinfo(TestCase):
@@ -372,16 +373,16 @@ class Test_getaddrinfo(TestCase):
         self._test('getaddrinfo', *args)
 
     def test_80(self):
-        self._test_getaddrinfo('gevent.org', 80)
+        self._test_getaddrinfo(TestGeventOrg.HOSTNAME, 80)
 
     def test_int_string(self):
-        self._test_getaddrinfo('gevent.org', '80')
+        self._test_getaddrinfo(TestGeventOrg.HOSTNAME, '80')
 
     def test_0(self):
-        self._test_getaddrinfo('gevent.org', 0)
+        self._test_getaddrinfo(TestGeventOrg.HOSTNAME, 0)
 
     def test_http(self):
-        self._test_getaddrinfo('gevent.org', 'http')
+        self._test_getaddrinfo(TestGeventOrg.HOSTNAME, 'http')
 
     def test_notexistent_tld(self):
         self._test_getaddrinfo('myhost.mytld', 53)
@@ -390,10 +391,10 @@ class Test_getaddrinfo(TestCase):
         self._test_getaddrinfo('sdfsdfgu5e66098032453245wfdggd.com', 80)
 
     def test1(self):
-        return self._test_getaddrinfo('gevent.org', 52, socket.AF_UNSPEC, socket.SOCK_STREAM, 0, 0)
+        return self._test_getaddrinfo(TestGeventOrg.HOSTNAME, 52, socket.AF_UNSPEC, socket.SOCK_STREAM, 0, 0)
 
     def test2(self):
-        return self._test_getaddrinfo('gevent.org', 53, socket.AF_INET, socket.SOCK_DGRAM, 17)
+        return self._test_getaddrinfo(TestGeventOrg.HOSTNAME, 53, socket.AF_INET, socket.SOCK_DGRAM, 17)
 
     def test3(self):
         return self._test_getaddrinfo('google.com', 'http', socket.AF_INET6)
@@ -465,14 +466,14 @@ class Test_getnameinfo_127001(TestCase):
 class Test_getnameinfo_geventorg(TestCase):
 
     def test_NUMERICHOST(self):
-        self._test('getnameinfo', ('gevent.org', 80), 0)
-        self._test('getnameinfo', ('gevent.org', 80), socket.NI_NUMERICHOST)
+        self._test('getnameinfo', (TestGeventOrg.HOSTNAME, 80), 0)
+        self._test('getnameinfo', (TestGeventOrg.HOSTNAME, 80), socket.NI_NUMERICHOST)
 
     def test_NUMERICSERV(self):
-        self._test('getnameinfo', ('gevent.org', 80), socket.NI_NUMERICSERV)
+        self._test('getnameinfo', (TestGeventOrg.HOSTNAME, 80), socket.NI_NUMERICSERV)
 
     def test_domain1(self):
-        self._test('getnameinfo', ('gevent.org', 80), 0)
+        self._test('getnameinfo', (TestGeventOrg.HOSTNAME, 80), 0)
 
     def test_domain2(self):
         self._test('getnameinfo', ('www.gevent.org', 80), 0)
