@@ -20,6 +20,8 @@ Unreleased
   with large inputs. `bench_sendall.py`_ now performs about as well on
   PyPy as it does on CPython, an improvement of 10x (from ~60MB/s to
   ~630MB/s). See this `pypy bug`_ for details.
+- Fix a possible ``TypeError`` when calling ``gevent.socket.wait``.
+  Reported in #635 by lanstin.
 
 .. _future: http://python-future.org
 .. _bench_sendall.py: https://raw.githubusercontent.com/gevent/gevent/master/greentest/bench_sendall.py
