@@ -398,6 +398,7 @@ class Hub(greenlet):
     #: Instances of these classes are not considered to be errors and
     #: do not get logged/printed when raised by the event loop.
     NOT_ERROR = (GreenletExit, SystemExit)
+
     loop_class = config('gevent.core.loop', 'GEVENT_LOOP')
     resolver_class = ['gevent.resolver_thread.Resolver',
                       'gevent.resolver_ares.Resolver',

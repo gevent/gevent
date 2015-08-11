@@ -40,6 +40,10 @@ class Resolver(object):
         if hub is None:
             hub = get_hub()
         self.pool = hub.threadpool
+        if _socket.gaierror not in hub.NOT_ERROR:
+            # Do not cause lookup failures to get printed by the default
+            # error handler. This can be very noisy.
+            hub.NOT_ERROR += (_socket.gaierror, _socket.herror)
 
     def __repr__(self):
         return '<gevent.resolver_thread.Resolver at 0x%x pool=%r>' % (id(self), self.pool)
