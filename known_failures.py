@@ -10,6 +10,7 @@ import struct
 LEAKTEST = os.getenv('GEVENTTEST_LEAKCHECK')
 PYPY = hasattr(sys, 'pypy_version_info')
 PY3 = sys.version_info[0] >= 3
+PY26 = sys.version_info[0] == 2 and sys.version_info[1] == 6
 PYGTE279 = (
     sys.version_info[0] == 2
     and sys.version_info[1] >= 7
@@ -122,6 +123,12 @@ if PYPY:
             'test_socket.py',
         ]
 
+if PY26:
+    FAILING_TESTS += [
+        # http://bugs.python.org/issue9446, fixed in 2.7/3
+        # https://github.com/python/cpython/commit/a104f91ff4c4560bec7c336afecb094e73a5ab7e
+        'FLAKY test_urllib2.py'
+    ]
 
 if PY3:
     # No idea / TODO
