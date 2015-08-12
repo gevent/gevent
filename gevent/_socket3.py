@@ -349,7 +349,7 @@ class socket(object):
         try:
             return _socket.socket.sendto(self._sock, *args)
         except error as ex:
-            if ex.args[0] != EWOULDBLOCK or timeout == 0.0:
+            if ex.args[0] != EWOULDBLOCK or self.timeout == 0.0:
                 raise
             self._wait(self._write_event)
             try:

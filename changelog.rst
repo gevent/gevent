@@ -22,6 +22,14 @@ Unreleased
   ~630MB/s). See this `pypy bug`_ for details.
 - Fix a possible ``TypeError`` when calling ``gevent.socket.wait``.
   Reported in #635 by lanstin.
+- ``gevent.socket.socket:sendto`` properly respects the socket's
+  blocking status (meaning in can raise EWOULDBLOCK now in cases it
+  wouldn't have before). Reported in :pr:`634` by Mike Kaplinskiy.
+- Common lookup errors using the :mod:`threaded resolver
+  <gevent.resolver_thread>` are no longer always printed to stderr
+  since they are usually out of the programmer's control and caught
+  explicitly. (Programming errors like ``TypeError`` are still
+  printed.) Reported in :issue:`617` by Jay Oster and Carlos Sanchez.
 
 .. _future: http://python-future.org
 .. _bench_sendall.py: https://raw.githubusercontent.com/gevent/gevent/master/greentest/bench_sendall.py

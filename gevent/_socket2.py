@@ -381,7 +381,7 @@ class socket(object):
         try:
             return sock.sendto(*args)
         except error as ex:
-            if ex.args[0] != EWOULDBLOCK or timeout == 0.0:
+            if ex.args[0] != EWOULDBLOCK or self.timeout == 0.0:
                 raise
             sys.exc_clear()
             self._wait(self._write_event)
