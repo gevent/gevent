@@ -768,9 +768,17 @@ class WSGIHandler(object):
 
 
 class _NoopLog(object):
+    # Does nothing; implements just enough file-like methods
+    # to pass the WSGI validator
 
     def write(self, *args, **kwargs):
         return
+
+    def flush(self):
+        pass
+
+    def writelines(self, *args, **kwargs):
+        pass
 
 
 class LoggingLogAdapter(object):
@@ -820,22 +828,29 @@ class WSGIServer(StreamServer):
 
 
     :keyword log: If given, an object with a ``write`` method to which
-        request logs will be written. If not given, defaults to
+        request (access) logs will be written. If not given, defaults to
         :obj:`sys.stderr`. You may pass ``None`` to disable request
         logging. You may use a wrapper, around e.g., :mod:`logging`,
         to support objects that don't implement a ``write`` method.
-        (If you pass a :class:`logging.Logger` instance, it will be
-        logged to at the :data:`logging.INFO` level.)
+        (If you pass a :class:`logging.Logger` instance, such a
+        wrapper will automatically be created and it will be logged to
+        at the :data:`logging.INFO` level.)
 
-    :keyword error_log: If given, a file-like object with a ``write`` method to
-        which error logs will be written. If not given, defaults to
-        :obj:`sys.stderr`. You may pass ``None`` to disable error
-        logging (not recommended). You may use a wrapper, around e.g.,
-        :mod:`logging`, to support objects that don't implement a
-        ``write`` method. (If you pass a :class:`logging.Logger` instance, it will
-        be logged to at the :data:`logging.ERROR` level.)
+    :keyword error_log: If given, a file-like object with ``write``,
+        ``writelines`` and ``flush`` methods to which error logs will
+        be written. If not given, defaults to :obj:`sys.stderr`. You
+        may pass ``None`` to disable error logging (not recommended).
+        You may use a wrapper, around e.g., :mod:`logging`, to support
+        objects that don't implement the proper methods. (If you pass
+        a :class:`logging.Logger` instance, such a wrapper will
+        automatically be created, and it will be logged to at the
+        :data:`logging.ERROR` level.) This parameter will become the
+        value for ``wsgi.errors`` in the WSGI environment (if not already set).
 
-    .. seealso:: :class:`LoggingLogAdapter`
+    .. seealso::
+
+        :class:`LoggingLogAdapter`
+            See important warnings before attempting to use :mod:`logging`.
 
     .. versionchanged:: 1.1a3
         Added the ``error_log`` parameter, and set ``wsgi.errors`` in the WSGI
@@ -848,11 +863,13 @@ class WSGIServer(StreamServer):
     handler_class = WSGIHandler
 
     #: The object to which request logs will be written.
-    #: It will never be None.
+    #: It must never be None. Initialized from the ``log`` constructor
+    #: parameter.
     log = None
 
     #: The object to which error logs will be written.
-    #: It will never be None.
+    #: It must never be None. Initialized from the ``error_log`` constructor
+    #: parameter.
     error_log = None
 
     base_env = {'GATEWAY_INTERFACE': 'CGI/1.1',
