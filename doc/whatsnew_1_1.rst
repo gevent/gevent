@@ -2,20 +2,24 @@
  What's new in gevent 1.1
 ==========================
 
-Detailed information an what has changed is avaialble in the
+Detailed information an what has changed is available in the
 :doc:`changelog`. This document summarizes the most important changes
 since gevent 1.0.3.
 
 Platform Support
 ================
 
-gevent 1.1 support Python 2.6, 2.7, 3.3, and 3.4 on the CPython (python.org)
-interpreter. It also supports PyPy 2.5.0 and above (with best results
-being obtained on PyPy 2.7.0 and above); PyPy3 is not supported.
+gevent 1.1 supports Python 2.6, 2.7, 3.3, and 3.4 on the CPython
+(`python.org`_) interpreter. It also supports `PyPy`_ 2.5.0 and above (with
+best results being obtained on PyPy 2.7.0 and above); PyPy3 is not
+supported.
 
 Support for Python 2.5 was removed when support for Python 3 was
 added. Any further releases in the 1.0.x line will maintain support
 for Python 2.5.
+
+.. _python.org: http://www.python.org/downloads/
+.. _PyPy: http://pypy.org
 
 PyPy Notes
 ----------
@@ -154,7 +158,7 @@ reduce the cases of undocumented or non-standard behaviour.
   an indeterminate amount of time, and a reference leak would
   result in it never being closed. It also meant that Python 3
   would produce ResourceWarnings, and PyPy (which, unlike
-  CPython, does not use a reference-counted GC) would only close
+  CPython, `does not use a reference-counted GC`_) would only close
   (and flush) the socket at an arbitrary time in the future.
 
   If your application relied on the socket not being closed when
@@ -164,6 +168,8 @@ reduce the cases of undocumented or non-standard behaviour.
   subclass the server to prevent it from closing the socket; the
   former approach is strongly preferred.
 
+.. _does not use a reference-counted GC: http://doc.pypy.org/en/latest/cpython_differences.html#differences-related-to-garbage-collection-strategies
+
 - :class:`gevent.pywsgi.WSGIServer` ensures that headers set by the
   application can be encoded in the ISO-8859-1 charset.
 
@@ -172,7 +178,7 @@ reduce the cases of undocumented or non-standard behaviour.
   current default Python encoding. In some cases, this could allow
   non-Latin-1 characters to be sent in the headers, but this violated
   the HTTP specification, and their interpretation by the recipient is
-  unknown. Now, a UnicodeError will be raised.
+  unknown. Now, a :exc:`UnicodeError` will be raised.
 
   Most applications that adhered to the WSGI PEP, :pep:`3333`, will not
   need to make any changes. See :issue:`614` for more discussion.
