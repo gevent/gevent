@@ -12,10 +12,11 @@ Unreleased
   Carlos Sanchez.
 - PyPy: Fix a ``DistutilsModuleError`` or ``ImportError`` if the CFFI
   module backing ``gevent.core`` needs to be compiled when the hub is
-  initialized. Now, the module will be automtically compiled when
-  gevent is imported. Reported in :issue:`619` by Thinh Nguyen and
-  :issue:`631` by Andy Freeland, with contributions by Jay Oster and
-  Matt Dupre.
+  initialized (due to a missing or invalid ``__pycache__`` directory).
+  Now, the module will be automtically compiled when gevent is
+  imported (this may produce compiler output on stdout). Reported in
+  :issue:`619` by Thinh Nguyen and :issue:`631` by Andy Freeland, with
+  contributions by Jay Oster and Matt Dupre.
 - PyPy: Improve the performance of ``gevent.socket.socket:sendall``
   with large inputs. `bench_sendall.py`_ now performs about as well on
   PyPy as it does on CPython, an improvement of 10x (from ~60MB/s to
@@ -23,7 +24,7 @@ Unreleased
 - Fix a possible ``TypeError`` when calling ``gevent.socket.wait``.
   Reported in #635 by lanstin.
 - ``gevent.socket.socket:sendto`` properly respects the socket's
-  blocking status (meaning in can raise EWOULDBLOCK now in cases it
+  blocking status (meaning it can raise EWOULDBLOCK now in cases it
   wouldn't have before). Reported in :pr:`634` by Mike Kaplinskiy.
 - Common lookup errors using the :mod:`threaded resolver
   <gevent.resolver_thread>` are no longer always printed to stderr
@@ -38,7 +39,9 @@ Unreleased
 1.1b2 (Aug 5, 2015)
 ===================
 
-- Enable the c-ares resolver extension for PyPy.
+- Enable using the :mod:`c-ares resolver <gevent.resolver_ares>` under
+  PyPy. Note that its performance characteristics are probably
+  sub-optimal.
 - On some versions of PyPy on some platforms (notably 2.6.0 on 64-bit
   Linux), enabling ``gevent.monkey.patch_builtins`` could cause PyPy
   to crash. Reported in :issue:`618` by Jay Oster.
