@@ -4,8 +4,8 @@
 
 .. currentmodule:: gevent
 
-Unreleased
-==========
+1.1b3 (Aug 16, 2015)
+====================
 
 - Fix an ``AttributeError`` from ``gevent.monkey.patch_builtins`` on
   Python 2 when the `future`_ library is also installed. Reported by
