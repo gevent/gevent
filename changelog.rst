@@ -33,6 +33,15 @@ Unreleased
   printed.) Reported in :issue:`617` by Jay Oster and Carlos Sanchez.
 - PyPy: Fix a ``TypeError`` from ``gevent.idle()``. Reported in
   :issue:`639` by chilun2008.
+- The ``imap_unordered`` methods of a pool support a ``maxsize``
+  parameter to limit the number of results buffered waiting for the
+  consumer. Reported in :issue:`638` by Sylvain Zimmer.
+- The class ``gevent.queue.Queue`` now consistently orders multiple
+  blocked waiting ``put`` and ``get`` callers in the order they
+  arrived. Previously, due to an implementation quirk this was often
+  roughly the case under CPython, but not under PyPy. Now they both
+  behave the same.
+- The class ``gevent.queue.Queue`` now supports the ``len()`` function.
 
 .. _future: http://python-future.org
 .. _bench_sendall.py: https://raw.githubusercontent.com/gevent/gevent/master/greentest/bench_sendall.py

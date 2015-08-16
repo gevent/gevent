@@ -31,10 +31,27 @@ __all__ = ['Group', 'Pool']
 
 
 class IMapUnordered(Greenlet):
+    """
+    At iterator of map results.
+    """
 
     _zipped = False
+    _queue_max_size = None
 
-    def __init__(self, func, iterable, spawn=None, _zipped=False):
+    def __init__(self, func, iterable, spawn=None, maxsize=None, _zipped=False):
+        """
+        An iterator that.
+
+        :keyword int maxsize: If given and not-None, specifies the maximum number of
+            finished results that will be allowed to accumulated awaiting the reader;
+            more than that number of results will cause map function greenlets to begin
+            to block. This is most useful is there is a great disparity in the speed of
+            the mapping code and the consumer and the results consume a great deal of resources.
+            Using a bound is more computationally expensive than not using a bound.
+
+        .. versionchanged:: 1.1b3
+            Added the *maxsize* parameter.
+        """
         from gevent.queue import Queue
         Greenlet.__init__(self)
         if spawn is not None:
@@ -43,10 +60,20 @@ class IMapUnordered(Greenlet):
             self._zipped = _zipped
         self.func = func
         self.iterable = iterable
-        self.queue = Queue()
+        self.queue = Queue(maxsize)
+        if maxsize:
+            self._queue_max_size = maxsize
         self.count = 0
         self.finished = False
-        self.rawlink(self._on_finish)
+        # If the queue size is unbounded, then we want to call all
+        # the links (_on_finish and _on_result) directly in the hub greenlet
+        # for efficiency. However, if the queue is bounded, we can't do that if
+        # the queue might block (because if there's no waiter the hub can switch to,
+        # the queue simply raises Full). Therefore, in that case, we use
+        # the safer, somewhat-slower (because it spawns a greenlet) link() methods.
+        # This means that _on_finish and _on_result can be called and interleaved in any order
+        # if the call to self.queue.put() blocks.
+        self.rawlink(self._on_finish) if not maxsize else self.link(self._on_finish)
 
     def __iter__(self):
         return self
@@ -64,7 +91,7 @@ class IMapUnordered(Greenlet):
     def _ispawn(self, func, item):
         self.count += 1
         g = self.spawn(func, item) if not self._zipped else self.spawn(func, *item)
-        g.rawlink(self._on_result)
+        g.rawlink(self._on_result) if not self._queue_max_size else g.link(self._on_result)
         return g
 
     def _run(self):
@@ -78,28 +105,42 @@ class IMapUnordered(Greenlet):
             self.__dict__.pop('iterable', None)
 
     def _on_result(self, greenlet):
+        # This method can either be called in the hub greenlet (if the
+        # queue is unbounded) or its own greenlet. If it's called in
+        # its own greenlet, the calls to put() may block and switch
+        # greenlets, which in turn could mutate our state. So any
+        # state on this object that we need to look at, notably
+        # self.count, we need to capture or mutate *before* we put
         self.count -= 1
+        count = self.count
+        finished = self.finished
+        ready = self.ready()
+        put_finished = False
+
+        if ready and count <= 0 and not finished:
+            finished = self.finished = True
+            put_finished = True
+
         if greenlet.successful():
             self.queue.put(self._iqueue_value_for_success(greenlet))
         else:
             self.queue.put(self._iqueue_value_for_failure(greenlet))
 
-        if self.ready() and self.count <= 0 and not self.finished:
+        if put_finished:
             self.queue.put(self._iqueue_value_for_finished())
-            self.finished = True
 
     def _on_finish(self, _self):
         if self.finished:
             return
 
         if not self.successful():
-            self.queue.put(self._iqueue_value_for_self_failure())
             self.finished = True
+            self.queue.put(self._iqueue_value_for_self_failure())
             return
 
         if self.count <= 0:
-            self.queue.put(self._iqueue_value_for_finished())
             self.finished = True
+            self.queue.put(self._iqueue_value_for_finished())
 
     def _iqueue_value_for_success(self, greenlet):
         return greenlet.value
@@ -121,11 +162,11 @@ class IMap(IMapUnordered):
     # We do this by storing tuples (order, value) in the queue
     # not just value.
 
-    def __init__(self, func, iterable, spawn=None, _zipped=False):
+    def __init__(self, *args, **kwargs):
         self.waiting = []  # QQQ maybe deque will work faster there?
         self.index = 0
         self.maxindex = -1
-        IMapUnordered.__init__(self, func, iterable, spawn, _zipped)
+        IMapUnordered.__init__(self, *args, **kwargs)
 
     def _inext(self):
         while True:
@@ -246,16 +287,64 @@ class GroupMappingMixin(object):
         """
         return Greenlet.spawn(self.map_cb, func, iterable, callback)
 
-    def imap(self, func, *iterables):
-        """An equivalent of itertools.imap()"""
-        return IMap.spawn(func, izip(*iterables), spawn=self.spawn,
-                          _zipped=True)
+    def __imap(self, cls, func, *iterables, **kwargs):
+        # Python 2 doesn't support the syntax that lets us mix varargs and
+        # a named kwarg, so we have to unpack manually
+        maxsize = kwargs.pop('maxsize', None)
+        if kwargs:
+            raise TypeError("Unsupported keyword arguments")
+        return cls.spawn(func, izip(*iterables), spawn=self.spawn,
+                         _zipped=True, maxsize=maxsize)
 
-    def imap_unordered(self, func, *iterables):
-        """The same as imap() except that the ordering of the results from the
-        returned iterator should be considered in arbitrary order."""
-        return IMapUnordered.spawn(func, izip(*iterables), spawn=self.spawn,
-                                   _zipped=True)
+    def imap(self, func, *iterables, **kwargs):
+        """
+        imap(func, *iterables, maxsize=None) -> iterable
+
+        An equivalent of :func:`itertools.imap`, operating in parallel.
+        The *func* is applied to each element yielded from each
+        iterable in *iterables* in turn, collecting the result.
+
+        If this object has a bound on the number of active greenlets it can
+        contain (such as :class:`Pool`), then at most that number of tasks will operate
+        in parallel.
+
+        :keyword int maxsize: If given and not-None, specifies the maximum number of
+            finished results that will be allowed to accumulate awaiting the reader;
+            more than that number of results will cause map function greenlets to begin
+            to block. This is most useful is there is a great disparity in the speed of
+            the mapping code and the consumer and the results consume a great deal of resources.
+
+            .. note:: This is separate from any bound on the number of active parallel
+               tasks.
+
+            .. note:: Using a bound is slightly more computationally expensive than not using a bound.
+
+            .. tip:: The :meth:`imap_unordered` method makes much better
+                use of this parameter. Some additional, unspecified,
+                number of objects may be required to be kept in memory
+                to maintain order by this function.
+
+        :return: An iterable object.
+
+        .. versionchanged:: 1.1b3
+            Added the *maxsize* keyword parameter.
+        """
+        return self.__imap(IMap, func, *iterables, **kwargs)
+
+    def imap_unordered(self, func, *iterables, **kwargs):
+        """
+        imap_unordered(func, *iterables, maxsize=None) -> iterable
+
+        The same as :meth:`imap` except that the ordering of the results
+        from the returned iterator should be considered in arbitrary
+        order.
+
+        This is lighter weight than :meth:`imap` and should be preferred if order
+        doesn't matter.
+
+        .. seealso:: :meth:`imap` for more details.
+        """
+        return self.__imap(IMapUnordered, func, *iterables, **kwargs)
 
 
 class Group(GroupMappingMixin):

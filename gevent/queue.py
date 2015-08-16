@@ -5,8 +5,6 @@ The :mod:`gevent.queue` module implements multi-producer, multi-consumer queues
 that work across greenlets, with the API similar to the classes found in the
 standard :mod:`Queue` and :class:`multiprocessing <multiprocessing.Queue>` modules.
 
-Changed in version 1.0: Queue(0) now means queue of infinite size, not a channel.
-
 The classes in this module implement iterator protocol. Iterating over queue
 means repeatedly calling :meth:`get <Queue.get>` until :meth:`get <Queue.get>` returns ``StopIteration``.
 
@@ -18,6 +16,10 @@ means repeatedly calling :meth:`get <Queue.get>` until :meth:`get <Queue.get>` r
     ...    print(item)
     1
     2
+
+.. versionchanged:: 1.0
+       ``Queue(0)`` now means queue of infinite size, not a channel. A :exc:`DeprecationWarning`
+       will be issued with this argument.
 """
 
 from __future__ import absolute_import
@@ -40,9 +42,21 @@ __all__ = ['Queue', 'PriorityQueue', 'LifoQueue', 'JoinableQueue', 'Channel']
 
 
 class Queue(object):
-    """Create a queue object with a given maximum size.
+    """
+    Create a queue object with a given maximum size.
 
-    If *maxsize* is less than or equal to zero or ``None``, the queue size is infinite.
+    If *maxsize* is less than or equal to zero or ``None``, the queue
+    size is infinite.
+
+    .. versionchanged:: 1.1b3
+       Queue's now support :func:`len`; it behaves the same as :meth:`qsize`.
+    .. versionchanged:: 1.1b3
+       Multiple greenlets that block on a call to :meth:`put` for a full queue
+       will now be woken up to put their items into the queue in the order in which
+       they arrived. Likewise, multiple greenlets that block on a call to :meth:`get` for
+       an empty queue will now receive items in the order in which they blocked. An
+       implementation quirk under CPython *usually* ensured this was roughly the case
+       previously anyway, but that wasn't the case for PyPy.
     """
 
     def __init__(self, maxsize=None, items=None):
@@ -54,8 +68,20 @@ class Queue(object):
                               DeprecationWarning, stacklevel=2)
         else:
             self.maxsize = maxsize
-        self.getters = set()
-        self.putters = set()
+        # Explicitly maintain order for getters and putters that block
+        # so that callers can consistently rely on getting things out
+        # in the apparent order they went in. This is required by
+        # imap_unordered. Previously these were set() objects, and the
+        # items put in the set have default hash() and eq() methods;
+        # under CPython, since new objects tend to have increasing
+        # hash values, this tended to roughly maintain order anyway,
+        # but that's not true under PyPy. An alternative to a deque
+        # (to avoid the linear scan of remove()) might be an
+        # OrderedDict, but it's 2.7 only; we don't expect to have so
+        # many waiters that removing an arbitrary element is a
+        # bottleneck, though.
+        self.getters = collections.deque()
+        self.putters = collections.deque()
         self.hub = get_hub()
         self._event_unlock = None
         if items:
@@ -108,6 +134,29 @@ class Queue(object):
         """Return the size of the queue."""
         return len(self.queue)
 
+    def __len__(self):
+        """
+        Return the size of the queue. This is the same as :meth:`qsize`.
+
+        .. versionadded: 1.1b3
+
+            Previously, getting len() of a queue would raise a TypeError.
+        """
+
+        return self.qsize()
+
+    def __bool__(self):
+        """
+        A queue object is always True.
+
+        .. versionadded: 1.1b3
+
+           Now that queues support len(), they need to implement ``__bool__``
+           to return True for backwards compatibility.
+        """
+        return True
+    __nonzero__ = __bool__
+
     def empty(self):
         """Return ``True`` if the queue is empty, ``False`` otherwise."""
         return not self.qsize()
@@ -139,7 +188,7 @@ class Queue(object):
             # We're in the mainloop, so we cannot wait; we can switch to other greenlets though.
             # Check if possible to get a free slot in the queue.
             while self.getters and self.qsize() and self.qsize() >= self.maxsize:
-                getter = self.getters.pop()
+                getter = self.getters.popleft()
                 getter.switch(getter)
             if self.qsize() < self.maxsize:
                 self._put(item)
@@ -147,16 +196,20 @@ class Queue(object):
             raise Full
         elif block:
             waiter = ItemWaiter(item, self)
-            self.putters.add(waiter)
-            timeout = Timeout.start_new(timeout, Full)
+            self.putters.append(waiter)
+            timeout = Timeout.start_new(timeout, Full) if timeout is not None else None
             try:
                 if self.getters:
                     self._schedule_unlock()
                 result = waiter.get()
                 assert result is waiter, "Invalid switch into Queue.put: %r" % (result, )
             finally:
-                timeout.cancel()
-                self.putters.discard(waiter)
+                if timeout is not None:
+                    timeout.cancel()
+                try:
+                    self.putters.remove(waiter)
+                except ValueError:
+                    pass # removed by unlock
         else:
             raise Full
 
@@ -186,23 +239,27 @@ class Queue(object):
             # special case to make get_nowait() runnable in the mainloop greenlet
             # there are no items in the queue; try to fix the situation by unlocking putters
             while self.putters:
-                self.putters.pop().put_and_switch()
+                self.putters.popleft().put_and_switch()
                 if self.qsize():
                     return self._get()
             raise Empty
         elif block:
             waiter = Waiter()
-            timeout = Timeout.start_new(timeout, Empty)
+            timeout = Timeout.start_new(timeout, Empty) if timeout is not None else None
             try:
-                self.getters.add(waiter)
+                self.getters.append(waiter)
                 if self.putters:
                     self._schedule_unlock()
                 result = waiter.get()
                 assert result is waiter, 'Invalid switch into Queue.get: %r' % (result, )
                 return self._get()
             finally:
-                self.getters.discard(waiter)
-                timeout.cancel()
+                if timeout is not None:
+                    timeout.cancel()
+                try:
+                    self.getters.remove(waiter)
+                except ValueError:
+                    pass # Removed by _unlock
         else:
             raise Empty
 
@@ -259,7 +316,7 @@ class Queue(object):
             if self.putters and (self.maxsize is None or self.qsize() < self.maxsize):
                 repeat = True
                 try:
-                    putter = self.putters.pop()
+                    putter = self.putters.popleft()
                     self._put(putter.item)
                 except:
                     putter.throw(*sys.exc_info())
@@ -267,7 +324,7 @@ class Queue(object):
                     putter.switch(putter)
             if self.getters and self.qsize():
                 repeat = True
-                getter = self.getters.pop()
+                getter = self.getters.popleft()
                 getter.switch(getter)
             if not repeat:
                 return
