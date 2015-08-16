@@ -384,27 +384,32 @@ class TestPool(greentest.TestCase):
     def test_imap_unordered_bounded_queue(self):
         iterable = list(range(100))
 
+        running = [0]
+
         def short_running_func(i, j):
+            running[0] += 1
             return i
 
         # Send two iterables to make sure varargs and kwargs are handled
         # correctly
-        mapping = self.pool.imap_unordered(short_running_func, iterable, iterable,
-                                           maxsize=1)
-        mapping.start()
+        for meth in self.pool.imap_unordered, self.pool.imap:
+            running[0] = 0
+            mapping = meth(short_running_func, iterable, iterable,
+                           maxsize=1)
 
-        # Simulate a long running reader. No matter how many workers
-        # we have, we will never have a queue more than size 1
-        def reader():
-            result = []
-            for x in mapping:
-                result.append(x)
-                gevent.sleep(0.01)
-                self.assertEqual(len(mapping.queue), 1)
-            return result
+            # Simulate a long running reader. No matter how many workers
+            # we have, we will never have a queue more than size 1
+            def reader():
+                result = []
+                for i, x in enumerate(mapping):
+                    self.assertTrue(running[0] <= i + 2, running[0])
+                    result.append(x)
+                    gevent.sleep(0.01)
+                    self.assertTrue(len(mapping.queue) <= 2, len(mapping.queue))
+                return result
 
-        l = reader()
-        self.assertEqual(sorted(l), iterable)
+            l = reader()
+            self.assertEqual(sorted(l), iterable)
 
 
 class TestPool2(TestPool):

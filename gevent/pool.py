@@ -36,7 +36,6 @@ class IMapUnordered(Greenlet):
     """
 
     _zipped = False
-    _queue_max_size = None
 
     def __init__(self, func, iterable, spawn=None, maxsize=None, _zipped=False):
         """
@@ -60,9 +59,26 @@ class IMapUnordered(Greenlet):
             self._zipped = _zipped
         self.func = func
         self.iterable = iterable
-        self.queue = Queue(maxsize)
+        self.queue = Queue()
         if maxsize:
-            self._queue_max_size = maxsize
+            # Bounding the queue is not enough if we want to keep from
+            # accumulating objects; the result value will be around as
+            # the greenlet's result, blocked on self.queue.put(), and
+            # we'll go on to spawn another greenlet, which in turn can
+            # create the result. So we need a semaphore to prevent a
+            # greenlet from exiting while the queue is full so that we
+            # don't spawn the next greenlet (assuming that self.spawn
+            # is of course bounded). (Alternatively we could have the
+            # greenlet itself do the insert into the pool, but that
+            # takes some rework).
+            #
+            # Given the use of a semaphore at this level, sizing the queue becomes
+            # redundant, and that lets us avoid having to use self.link() instead
+            # of self.rawlink() to avoid having blocking methods called in the
+            # hub greenlet.
+            self._result_semaphore = Semaphore(maxsize)
+        else:
+            self._result_semaphore = DummySemaphore()
         self.count = 0
         self.finished = False
         # If the queue size is unbounded, then we want to call all
@@ -72,13 +88,15 @@ class IMapUnordered(Greenlet):
         # the queue simply raises Full). Therefore, in that case, we use
         # the safer, somewhat-slower (because it spawns a greenlet) link() methods.
         # This means that _on_finish and _on_result can be called and interleaved in any order
-        # if the call to self.queue.put() blocks.
-        self.rawlink(self._on_finish) if not maxsize else self.link(self._on_finish)
+        # if the call to self.queue.put() blocks..
+        # Note that right now we're not bounding the queue, instead using a semaphore.
+        self.rawlink(self._on_finish)
 
     def __iter__(self):
         return self
 
     def next(self):
+        self._result_semaphore.release()
         value = self._inext()
         if isinstance(value, Failure):
             raise value.exc
@@ -89,9 +107,10 @@ class IMapUnordered(Greenlet):
         return self.queue.get()
 
     def _ispawn(self, func, item):
+        self._result_semaphore.acquire()
         self.count += 1
         g = self.spawn(func, item) if not self._zipped else self.spawn(func, *item)
-        g.rawlink(self._on_result) if not self._queue_max_size else g.link(self._on_result)
+        g.rawlink(self._on_result)
         return g
 
     def _run(self):
@@ -110,7 +129,9 @@ class IMapUnordered(Greenlet):
         # its own greenlet, the calls to put() may block and switch
         # greenlets, which in turn could mutate our state. So any
         # state on this object that we need to look at, notably
-        # self.count, we need to capture or mutate *before* we put
+        # self.count, we need to capture or mutate *before* we put.
+        # (Note that right now we're not bounding the queue, but we may
+        # choose to do so in the future so this implementation will be left in case.)
         self.count -= 1
         count = self.count
         finished = self.finished
@@ -315,7 +336,8 @@ class GroupMappingMixin(object):
             the mapping code and the consumer and the results consume a great deal of resources.
 
             .. note:: This is separate from any bound on the number of active parallel
-               tasks.
+               tasks, though they may have some interaction (for example, limiting the
+               number of parallel tasks to the smallest bound).
 
             .. note:: Using a bound is slightly more computationally expensive than not using a bound.
 

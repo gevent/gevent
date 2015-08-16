@@ -70,7 +70,7 @@ class Queue(object):
             self.maxsize = maxsize
         # Explicitly maintain order for getters and putters that block
         # so that callers can consistently rely on getting things out
-        # in the apparent order they went in. This is required by
+        # in the apparent order they went in. This was once required by
         # imap_unordered. Previously these were set() objects, and the
         # items put in the set have default hash() and eq() methods;
         # under CPython, since new objects tend to have increasing
