@@ -228,7 +228,8 @@ _watcher_types = ['ev_io',
                   'ev_fork',
                   'ev_async',
                   'ev_child',
-                  'ev_stat', ]
+                  'ev_stat',
+                  'ev_idle', ]
 
 _source = """   // passed to the real C compiler
 #define LIBEV_EMBED 1

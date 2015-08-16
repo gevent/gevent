@@ -31,6 +31,8 @@ Unreleased
   since they are usually out of the programmer's control and caught
   explicitly. (Programming errors like ``TypeError`` are still
   printed.) Reported in :issue:`617` by Jay Oster and Carlos Sanchez.
+- PyPy: Fix a ``TypeError`` from ``gevent.idle()``. Reported in
+  :issue:`639` by chilun2008.
 
 .. _future: http://python-future.org
 .. _bench_sendall.py: https://raw.githubusercontent.com/gevent/gevent/master/greentest/bench_sendall.py
