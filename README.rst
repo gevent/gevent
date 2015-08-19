@@ -18,7 +18,7 @@ simpler implementation and better performance. Read why others `use
 gevent`_ and check out the list of the `open source projects based on
 gevent`_.
 
-gevent_ is written and maintained by `Denis Bilenko`_ and is licensed under MIT license.
+gevent is licensed under MIT license.
 
 
 get gevent
@@ -72,7 +72,6 @@ can be done using tox:
 .. _inspired by eventlet: http://blog.gevent.org/2010/02/27/why-gevent/
 .. _use gevent: http://groups.google.com/group/gevent/browse_thread/thread/4de9703e5dca8271
 .. _open source projects based on gevent: https://github.com/gevent/gevent/wiki/Projects
-.. _Denis Bilenko: http://denisbilenko.com
 .. _Python Package Index: http://pypi.python.org/pypi/gevent
 .. _the repository: https://github.com/gevent/gevent
 .. _bug tracker: https://github.com/gevent/gevent/wiki/Projects
