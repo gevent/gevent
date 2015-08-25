@@ -145,13 +145,19 @@ class FileObjectPosix(object):
         if not isinstance(fileno, int):
             raise TypeError('fileno must be int: %r' % fileno)
 
+        orig_mode = mode
         mode = (mode or 'rb').replace('b', '')
         if 'U' in mode:
             self._translate = True
             mode = mode.replace('U', '')
         else:
             self._translate = False
-        assert len(mode) == 1, 'mode can only be [rb, rU, wb]'
+        if len(mode) != 1:
+            # Python 3 builtin `open` raises a ValueError for invalid modes;
+            # Python 2 ignores in. In the past, we raised an AssertionError, if __debug__ was
+            # enabled (which it usually was). Match Python 3 because it makes more sense
+            # and because __debug__ may not be enabled
+            raise ValueError('mode can only be [rb, rU, wb], not %r' % (orig_mode,))
 
         self._fobj = fobj
         self._closed = False

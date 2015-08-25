@@ -43,6 +43,9 @@ def __import__(*args, **kwargs):
         # No such protection exists for monkey-patched builtins,
         # however, so this is necessary.
         args = args[1:]
+    # TODO: It would be nice not to have to acquire the locks
+    # if the module is already imported (in sys.modules), but the interpretation
+    # of the arguments is somewhat complex
     imp.acquire_lock()
     try:
         _g_import_lock.acquire()

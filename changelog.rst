@@ -7,7 +7,11 @@
 1.1b4 (Unreleased)
 ==================
 
-- TBD
+- Detect and raise an error for several important types of
+  programming errors even if Python interpreter optimizations are
+  enabled with ``-O`` or ``PYTHONOPTIMIZE``. Previously these would go
+  undetected if optimizations were enabled, potentially leading to
+  erratic, difficult to debug behaviour.
 
 1.1b3 (Aug 16, 2015)
 ====================

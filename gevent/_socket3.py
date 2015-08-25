@@ -116,7 +116,8 @@ class socket(object):
 
         If :func:`cancel_wait` is called, raise ``socket.error(EBADF, 'File descriptor was closed in another greenlet')``.
         """
-        assert watcher.callback is None, 'This socket is already used by another greenlet: %r' % (watcher.callback, )
+        if watcher.callback is not None:
+            raise _socketcommon.ConcurrentObjectUseError('This socket is already used by another greenlet: %r' % (watcher.callback, ))
         if self.timeout is not None:
             timeout = Timeout.start_new(self.timeout, timeout_exc, ref=False)
         else:

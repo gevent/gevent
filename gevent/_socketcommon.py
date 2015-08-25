@@ -62,6 +62,7 @@ __imports__.extend(__py3_imports__)
 
 import sys
 from gevent.hub import get_hub, string_types, integer_types
+from gevent.hub import ConcurrentObjectUseError
 from gevent.timeout import Timeout
 
 is_windows = sys.platform == 'win32'
@@ -139,7 +140,8 @@ def wait(io, timeout=None, timeout_exc=_NONE):
         If you pass a value for this keyword, it is interpreted as for
         :class:`gevent.timeout.Timeout`.
     """
-    assert io.callback is None, 'This socket is already used by another greenlet: %r' % (io.callback, )
+    if io.callback is not None:
+        raise ConcurrentObjectUseError('This socket is already used by another greenlet: %r' % (io.callback, ))
     if timeout is not None:
         timeout_exc = timeout_exc if timeout_exc is not _NONE else _timeout_error('timed out')
         timeout = Timeout.start_new(timeout, timeout_exc)

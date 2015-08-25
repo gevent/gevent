@@ -65,6 +65,26 @@ get_ident = thread.get_ident
 MAIN_THREAD = get_ident()
 
 
+class LoopExit(Exception):
+    pass
+
+
+class BlockingSwitchOutError(AssertionError):
+    pass
+
+
+class InvalidSwitchError(AssertionError):
+    pass
+
+
+class ConcurrentObjectUseError(AssertionError):
+    # raised when an object is used (waited on) by two greenlets
+    # independently, meaning the object was entered into a blocking
+    # state by one greenlet and then another while still blocking in the
+    # first one
+    pass
+
+
 def spawn_raw(function, *args):
     """
     Create a new :class:`greenlet.greenlet` object and schedule it to run ``function(*args, **kwargs)``.
@@ -510,7 +530,7 @@ class Hub(greenlet):
         return greenlet.switch(self)
 
     def switch_out(self):
-        raise AssertionError('Impossible to call blocking function in the event loop callback')
+        raise BlockingSwitchOutError('Impossible to call blocking function in the event loop callback')
 
     def wait(self, watcher):
         """
@@ -529,7 +549,8 @@ class Hub(greenlet):
         watcher.start(waiter.switch, unique)
         try:
             result = waiter.get()
-            assert result is unique, 'Invalid switch into %s: %r (expected %r)' % (getcurrent(), result, unique)
+            if result is not unique:
+                raise InvalidSwitchError('Invalid switch into %s: %r (expected %r)' % (getcurrent(), result, unique))
         finally:
             watcher.stop()
 
@@ -649,10 +670,6 @@ class Hub(greenlet):
     threadpool = property(_get_threadpool, _set_threadpool, _del_threadpool)
 
 
-class LoopExit(Exception):
-    pass
-
-
 class Waiter(object):
     """
     A low level communication utility for greenlets.
@@ -768,7 +785,8 @@ class Waiter(object):
             else:
                 getcurrent().throw(*self._exception)
         else:
-            assert self.greenlet is None, 'This Waiter is already used by %r' % (self.greenlet, )
+            if self.greenlet is not None:
+                raise ConcurrentObjectUseError('This Waiter is already used by %r' % (self.greenlet, ))
             self.greenlet = getcurrent()
             try:
                 return self.hub.switch()

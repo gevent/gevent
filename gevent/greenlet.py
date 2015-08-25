@@ -2,6 +2,7 @@
 
 import sys
 from gevent.hub import GreenletExit
+from gevent.hub import InvalidSwitchError
 from gevent.hub import PY3
 from gevent.hub import PYPY
 from gevent.hub import Waiter
@@ -448,7 +449,8 @@ class Greenlet(greenlet):
             t = Timeout.start_new(timeout)
             try:
                 result = self.parent.switch()
-                assert result is self, 'Invalid switch into Greenlet.get(): %r' % (result, )
+                if result is not self:
+                    raise InvalidSwitchError('Invalid switch into Greenlet.get(): %r' % (result, ))
             finally:
                 t.cancel()
         except:
@@ -478,7 +480,8 @@ class Greenlet(greenlet):
             t = Timeout.start_new(timeout)
             try:
                 result = self.parent.switch()
-                assert result is self, 'Invalid switch into Greenlet.join(): %r' % (result, )
+                if result is not self:
+                    raise InvalidSwitchError('Invalid switch into Greenlet.join(): %r' % (result, ))
             finally:
                 t.cancel()
         except Timeout as ex:

@@ -324,7 +324,7 @@ class TestCase(TestCaseMetaClass("NewBase", (BaseTestCase,), {})):
         if error is None:
             error = self.get_error()
         if type is not None:
-            assert error[1] is type, error
+            assert issubclass(error[1], type), error
         if value is not None:
             if isinstance(value, str):
                 assert str(error[2]) == value, error

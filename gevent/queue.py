@@ -36,6 +36,7 @@ Empty = __queue__.Empty
 
 from gevent.timeout import Timeout
 from gevent.hub import get_hub, Waiter, getcurrent, PY3
+from gevent.hub import InvalidSwitchError
 
 
 __all__ = ['Queue', 'PriorityQueue', 'LifoQueue', 'JoinableQueue', 'Channel']
@@ -202,7 +203,8 @@ class Queue(object):
                 if self.getters:
                     self._schedule_unlock()
                 result = waiter.get()
-                assert result is waiter, "Invalid switch into Queue.put: %r" % (result, )
+                if result is not waiter:
+                    raise InvalidSwitchError("Invalid switch into Queue.put: %r" % (result, ))
             finally:
                 if timeout is not None:
                     timeout.cancel()
@@ -251,7 +253,8 @@ class Queue(object):
                 if self.putters:
                     self._schedule_unlock()
                 result = waiter.get()
-                assert result is waiter, 'Invalid switch into Queue.get: %r' % (result, )
+                if result is not waiter:
+                    raise InvalidSwitchError('Invalid switch into Queue.get: %r' % (result, ))
                 return self._get()
             finally:
                 if timeout is not None:
@@ -299,7 +302,8 @@ class Queue(object):
                 if self.putters:
                     self._schedule_unlock()
                 result = waiter.get()
-                assert result is waiter, 'Invalid switch into Queue.peek: %r' % (result, )
+                if result is not waiter:
+                    raise InvalidSwitchError('Invalid switch into Queue.peek: %r' % (result, ))
                 return self._peek()
             finally:
                 self.getters.discard(waiter)
@@ -520,7 +524,8 @@ class Channel(object):
             if self.getters:
                 self._schedule_unlock()
             result = waiter.get()
-            assert result is waiter, "Invalid switch into Channel.put: %r" % (result, )
+            if result is not waiter:
+                raise InvalidSwitchError("Invalid switch into Channel.put: %r" % (result, ))
         except:
             self._discard(item)
             raise

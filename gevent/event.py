@@ -3,6 +3,7 @@
 
 import sys
 from gevent.hub import get_hub, getcurrent, _NONE, PY3, reraise
+from gevent.hub import InvalidSwitchError
 from gevent.timeout import Timeout
 from gevent._tblib import dump_traceback, load_traceback
 from collections import deque
@@ -84,7 +85,8 @@ class Event(object):
             try:
                 try:
                     result = self.hub.switch()
-                    assert result is self, 'Invalid switch into Event.wait(): %r' % (result, )
+                    if result is not self:
+                        raise InvalidSwitchError('Invalid switch into Event.wait(): %r' % (result, ))
                 except Timeout as ex:
                     if ex is not timer:
                         raise
@@ -280,7 +282,8 @@ class AsyncResult(object):
             timer = Timeout.start_new(timeout)
             try:
                 result = self.hub.switch()
-                assert result is self, 'Invalid switch into AsyncResult.get(): %r' % (result, )
+                if result is not self:
+                    raise InvalidSwitchError('Invalid switch into AsyncResult.get(): %r' % (result, ))
             finally:
                 timer.cancel()
         except:
@@ -327,7 +330,8 @@ class AsyncResult(object):
             timer = Timeout.start_new(timeout)
             try:
                 result = self.hub.switch()
-                assert result is self, 'Invalid switch into AsyncResult.wait(): %r' % (result, )
+                if result is not self:
+                    raise InvalidSwitchError('Invalid switch into AsyncResult.wait(): %r' % (result, ))
             finally:
                 timer.cancel()
         except Timeout as exc:

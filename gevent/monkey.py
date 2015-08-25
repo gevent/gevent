@@ -221,7 +221,8 @@ def patch_thread(threading=True, _threading_local=True, Event=False, logging=Tru
                 handler = wr() if callable(wr) else wr
                 if handler is None:
                     continue
-                assert hasattr(handler, 'lock'), "Unknown/unsupported handler %r" % handler
+                if not hasattr(handler, 'lock'):
+                    raise TypeError("Unknown/unsupported handler %r" % handler)
                 handler.lock = threading.RLock()
 
     if _threading_local:
