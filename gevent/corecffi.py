@@ -29,7 +29,7 @@ def st_nlink_type():
 import cffi
 if cffi.__version_info__ >= (1, 2, 0):
     # See https://bitbucket.org/cffi/cffi/issue/152/handling-errors-from-signal-handlers-in.
-    # With this version, bundled with PyPy 2.7.0 and above, we can more reliably
+    # With this version, bundled with PyPy 2.6.1 and above, we can more reliably
     # handle signals and other exceptions. With this support, we could simplify
     # _python_callback and _python_handle_error in addition to the simplifications for
     # signals and KeyboardInterrupt. However, because we need to support PyPy 2.5.0+,

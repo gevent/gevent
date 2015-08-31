@@ -11,7 +11,7 @@ Platform Support
 
 gevent 1.1 supports Python 2.6, 2.7, 3.3, and 3.4 on the CPython
 (`python.org`_) interpreter. It also supports `PyPy`_ 2.5.0 and above (with
-best results being obtained on PyPy 2.7.0 and above); PyPy3 is not
+best results being obtained on PyPy 2.6.1 and above); PyPy3 is not
 supported.
 
 Support for Python 2.5 was removed when support for Python 3 was
@@ -25,11 +25,14 @@ PyPy Notes
 ----------
 
 PyPy has been tested on OS X and 64-bit Linux from version 2.5.0
-through 2.5.1, 2.6.0 and pre-release versions of 2.7.0.
+through 2.5.1, 2.6.0, 2.6.1, and pre-release versions of 2.7.0.
 
-- Version 2.7.0 is required for the most robust signal handling. Prior
-  to 2.7.0, signals could be delivered incorrectly or fail to be
-  delivered during a blocking operation.
+- Version 2.6.1 is required for the most robust signal handling. Prior
+  to 2.6.1 and its inclusion of `cffi 1.3.0`_, signals could be
+  delivered incorrectly or fail to be delivered during a blocking
+  operation. (PyPy 2.5.0 includes CFFI 0.8.6 while 2.6.0 has 1.1.0;
+  the necessary feature was added in `1.2.0`_ which is not itself
+  directly present in any PyPy release.)
 - Overall performance seems to be quite acceptable with newer versions
   of PyPy. The benchmarks distributed with gevent typically perform as
   well or better on PyPy than on CPython. Things that are known or
@@ -38,6 +41,8 @@ through 2.5.1, 2.6.0 and pre-release versions of 2.7.0.
   :class:`gevent.lock.Semaphore`. Whether or not these matter will
   depend on the workload of each application.
 
+.. _cffi 1.3.0: https://bitbucket.org/cffi/cffi/src/ad3140a30a7b0ca912185ef500546a9fb5525ece/doc/source/whatsnew.rst?at=default
+.. _1.2.0: https://cffi.readthedocs.org/en/latest/whatsnew.html#v1-2-0
 
 Improved subprocess support
 ===========================
