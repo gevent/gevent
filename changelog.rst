@@ -12,6 +12,8 @@
   enabled with ``-O`` or ``PYTHONOPTIMIZE``. Previously these would go
   undetected if optimizations were enabled, potentially leading to
   erratic, difficult to debug behaviour.
+- Fix an ``AttributeError`` from ``gevent.queue.Queue`` when ``peek``
+  was called on an empty ``Queue``. Reported in :issue:`643` by michaelvol.
 
 1.1b3 (Aug 16, 2015)
 ====================

@@ -298,7 +298,7 @@ class Queue(object):
             waiter = Waiter()
             timeout = Timeout.start_new(timeout, Empty)
             try:
-                self.getters.add(waiter)
+                self.getters.append(waiter)
                 if self.putters:
                     self._schedule_unlock()
                 result = waiter.get()
@@ -306,7 +306,7 @@ class Queue(object):
                     raise InvalidSwitchError('Invalid switch into Queue.peek: %r' % (result, ))
                 return self._peek()
             finally:
-                self.getters.discard(waiter)
+                self.getters.remove(waiter)
                 timeout.cancel()
         else:
             raise Empty

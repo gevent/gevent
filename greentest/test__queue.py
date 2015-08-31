@@ -1,6 +1,6 @@
 from greentest import TestCase, main, GenericGetTestCase
 import gevent
-from gevent.hub import get_hub
+from gevent.hub import get_hub, LoopExit
 from gevent import util
 from gevent import queue
 from gevent.queue import Empty, Full
@@ -13,7 +13,19 @@ class TestQueue(TestCase):
         self.switch_expected = False
         q = queue.Queue()
         q.put('hi')
+        self.assertEquals(q.peek(), 'hi')
         self.assertEquals(q.get(), 'hi')
+
+    def test_peek_empty(self):
+        q = queue.Queue()
+        # No putters waiting, in the main loop: LoopExit
+        self.assertRaises(LoopExit, q.peek)
+
+        def waiter(q):
+            self.assertRaises(Empty, q.peek, timeout=0.01)
+        g = gevent.spawn(waiter, q)
+        gevent.sleep(0.1)
+        g.join()
 
     def test_send_last(self):
         q = queue.Queue()
@@ -68,7 +80,7 @@ class TestQueue(TestCase):
 
         p1 = gevent.spawn(sender, e1, q)
         gevent.sleep(0.001)
-        self.assert_(not e1.ready())
+        self.assertTrue(not e1.ready())
         p2 = gevent.spawn(receiver, e2, q)
         self.assertEquals(e2.get(), 'hi')
         self.assertEquals(e1.get(), 'done')
