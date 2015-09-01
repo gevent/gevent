@@ -1,3 +1,4 @@
+import errno
 import os
 import sys
 #os.environ['GEVENT_NOWAITPID'] = 'True'
@@ -34,6 +35,15 @@ if hasattr(signal, 'SIGCHLD'):
         with gevent.Timeout(1):
             while awaiting_child:
                 gevent.sleep(0.01)
+            # We should now be able to waitpid() for an arbitrary child
+            wpid, status = os.waitpid(-1, os.WNOHANG)
+            assert wpid == pid
+            # And a second call should raise ECHILD
+            try:
+                wpid, status = os.waitpid(-1, os.WNOHANG)
+                raise AssertionError("Should not be able to wait again")
+            except OSError as e:
+                assert e.errno == errno.ECHILD
             sys.exit(0)
 else:
     print("No SIGCHLD, not testing")
