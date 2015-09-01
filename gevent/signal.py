@@ -21,6 +21,7 @@ _child_handler = _INITIAL
 _signal_signal = _signal.signal
 _signal_getsignal = _signal.getsignal
 
+
 def getsignal(signalnum):
     if signalnum != _signal.SIGCHLD:
         return _signal_getsignal(signalnum)
