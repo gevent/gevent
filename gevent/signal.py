@@ -8,7 +8,6 @@ in a new greenlet when the signal is delivered (just like :class:`gevent.hub.sig
 
 from __future__ import absolute_import
 
-import os
 import signal as _signal
 
 __implements__ = []
