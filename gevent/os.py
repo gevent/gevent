@@ -180,6 +180,8 @@ if hasattr(os, 'fork'):
         _waitpid = os.waitpid
         _WNOHANG = os.WNOHANG
 
+        _on_child_hook = lambda: None
+
         # {pid -> watcher or tuple(pid, rstatus, timestamp)}
         _watched_children = {}
 
@@ -190,6 +192,8 @@ if hasattr(os, 'fork'):
             _watched_children[watcher.pid] = (watcher.pid, watcher.rstatus, time.time())
             if callback:
                 callback(watcher)
+            # dispatch an "event"; used by gevent.signal.signal
+            _on_child_hook()
             # now is as good a time as any to reap children
             _reap_children()
 

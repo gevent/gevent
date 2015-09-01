@@ -13,6 +13,7 @@ API reference
    gevent.local
    gevent.monkey
    gevent.os
+   gevent.signal
    gevent.pool
    gevent.queue
    gevent.server
