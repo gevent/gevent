@@ -220,6 +220,7 @@ class TestTCP(greentest.TestCase):
 
         s.close()
 
+
 def get_port():
     tempsock = socket.socket()
     tempsock.bind(('', 0))
