@@ -7,15 +7,18 @@ import types
 from greentest import walk_modules
 
 
-MAPPING = {'gevent.local': '_threading_local',
-           'gevent.socket': 'socket',
-           'gevent.select': 'select',
-           'gevent.ssl': 'ssl',
-           'gevent.thread': '_thread' if six.PY3 else 'thread',
-           'gevent.subprocess': 'subprocess',
-           'gevent.os': 'os',
-           'gevent.threading': 'threading',
-           'gevent.builtins': 'builtins' if six.PY3 else '__builtin__', }
+MAPPING = {
+    'gevent.local': '_threading_local',
+    'gevent.socket': 'socket',
+    'gevent.select': 'select',
+    'gevent.ssl': 'ssl',
+    'gevent.thread': '_thread' if six.PY3 else 'thread',
+    'gevent.subprocess': 'subprocess',
+    'gevent.os': 'os',
+    'gevent.threading': 'threading',
+    'gevent.builtins': 'builtins' if six.PY3 else '__builtin__',
+    'gevent.signal': 'signal',
+}
 
 
 class ANY(object):
@@ -30,7 +33,9 @@ NOT_IMPLEMENTED = {
     'select': ANY,
     'os': ANY,
     'threading': ANY,
-    'builtins' if six.PY3 else '__builtin__': ANY, }
+    'builtins' if six.PY3 else '__builtin__': ANY,
+    'signal': ANY,
+}
 
 COULD_BE_MISSING = {
     'socket': ['create_connection', 'RAND_add', 'RAND_egd', 'RAND_status']}

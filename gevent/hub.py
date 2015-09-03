@@ -191,6 +191,11 @@ class signal(object):
 
     This returns an object with the useful method ``cancel``, which, when called,
     will prevent future deliveries of *signalnum* from calling *handler*.
+
+    .. note::
+
+        This may not operate correctly with SIGCHLD if libev child watchers
+        are used (as they are by default with os.fork).
     """
 
     greenlet_class = None

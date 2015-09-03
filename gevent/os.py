@@ -180,6 +180,8 @@ if hasattr(os, 'fork'):
         _waitpid = os.waitpid
         _WNOHANG = os.WNOHANG
 
+        _on_child_hook = lambda: None
+
         # {pid -> watcher or tuple(pid, rstatus, timestamp)}
         _watched_children = {}
 
@@ -190,6 +192,8 @@ if hasattr(os, 'fork'):
             _watched_children[watcher.pid] = (watcher.pid, watcher.rstatus, time.time())
             if callback:
                 callback(watcher)
+            # dispatch an "event"; used by gevent.signal.signal
+            _on_child_hook()
             # now is as good a time as any to reap children
             _reap_children()
 
@@ -234,8 +238,18 @@ if hasattr(os, 'fork'):
             """
             # XXX Does not handle tracing children
             if pid <= 0:
-                # magic functions for multiple children. Pass.
-                return _waitpid(pid, options)
+                # magic functions for multiple children.
+                if pid == -1:
+                    # Any child. If we have one that we're watching and that finished,
+                    # we need to use that one. Otherwise, let the OS take care of it.
+                    for k, v in _watched_children.items():
+                        if isinstance(v, tuple):
+                            pid = k
+                            break
+                if pid <= 0:
+                    # If we didn't find anything, go to the OS. Otherwise,
+                    # handle waiting
+                    return _waitpid(pid, options)
 
             if pid in _watched_children:
                 # yes, we're watching it

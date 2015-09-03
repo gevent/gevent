@@ -13,6 +13,7 @@ __all__ = ['patch_all',
            'patch_thread',
            'patch_subprocess',
            'patch_sys',
+           'patch_signal',
            # query functions
            'get_original',
            'is_module_patched',
@@ -356,9 +357,18 @@ def patch_builtins():
         patch_module('builtins')
 
 
+def patch_signal():
+    """
+    Make the signal.signal function work with a monkey-patched os.
+
+    .. seealso:: :mod:`gevent.signal`
+    """
+    patch_module("signal")
+
+
 def patch_all(socket=True, dns=True, time=True, select=True, thread=True, os=True, ssl=True, httplib=False,
               subprocess=True, sys=False, aggressive=True, Event=False,
-              builtins=True):
+              builtins=True, signal=True):
     """Do all of the default monkey patching (calls every other applicable function in this module)."""
     # order is important
     if os:
@@ -383,6 +393,8 @@ def patch_all(socket=True, dns=True, time=True, select=True, thread=True, os=Tru
         patch_subprocess()
     if builtins:
         patch_builtins()
+    if signal:
+        patch_signal()
 
 
 if __name__ == '__main__':
