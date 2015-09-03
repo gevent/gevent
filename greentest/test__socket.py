@@ -198,7 +198,7 @@ class TestTCP(greentest.TestCase):
         client = self.create_connection()
         client.settimeout(0.1)
         fd = client.makefile(mode='rb')
-        self.assertRaises(socket.error, fd.readline)
+        self.assertRaises(socket.timeout, fd.readline)
         client.close()
         fd.close()
 
