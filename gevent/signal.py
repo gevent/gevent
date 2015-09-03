@@ -4,6 +4,8 @@ Cooperative implementation of special cases of :func:`signal.signal`.
 This module is designed to work with libev's child watchers, as used by
 default in :func:`gevent.os.fork` Note that each SIGCHLD handler will be run
 in a new greenlet when the signal is delivered (just like :class:`gevent.hub.signal`)
+
+.. versionadded:: 1.1b4
 """
 
 from __future__ import absolute_import

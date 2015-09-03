@@ -14,6 +14,9 @@
   erratic, difficult to debug behaviour.
 - Fix an ``AttributeError`` from ``gevent.queue.Queue`` when ``peek``
   was called on an empty ``Queue``. Reported in :issue:`643` by michaelvol.
+- Make ``SIGCHLD`` handlers specified to ``signal.signal`` work with
+  the child watchers that are used by default. Also make
+  ``os.waitpid`` work with a first argument of -1.
 
 1.1b3 (Aug 16, 2015)
 ====================
