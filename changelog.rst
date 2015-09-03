@@ -17,6 +17,9 @@
 - Make ``SIGCHLD`` handlers specified to ``signal.signal`` work with
   the child watchers that are used by default. Also make
   ``os.waitpid`` work with a first argument of -1.
+- Under Python 2, any timeout set on a socket would be ignored when
+  using the results of ``socket.makefile``. Reported in :issue:`644`
+  by Karan Lyons.
 
 1.1b3 (Aug 16, 2015)
 ====================

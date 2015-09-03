@@ -185,6 +185,23 @@ class TestTCP(greentest.TestCase):
         fd.close()
         acceptor.join()
 
+    def test_makefile_timeout(self):
+
+        def accept_once():
+            conn, addr = self.listener.accept()
+            try:
+                time.sleep(0.3)
+            finally:
+                conn.close()  # for pypy
+
+        acceptor = Thread(target=accept_once)
+        client = self.create_connection()
+        client.settimeout(0.1)
+        fd = client.makefile(mode='rb')
+        self.assertRaises(socket.error, fd.readline)
+        client.close()
+        fd.close()
+
     def test_attributes(self):
         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, 0)
         self.assertEqual(socket.AF_INET, s.type)

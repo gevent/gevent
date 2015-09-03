@@ -234,7 +234,8 @@ class socket(object):
         #    socket (hence creating a new instance)
         # 2) The resulting fileobject must keep the timeout in order
         #    to be compatible with the stdlib's socket.makefile.
-        fobj = _fileobject(type(self)(_sock=self._sock), mode, bufsize)
+        # Pass self as _sock to preserve timeout.
+        fobj = _fileobject(type(self)(_sock=self), mode, bufsize)
         if PYPY:
             self._sock._drop()
         return fobj
