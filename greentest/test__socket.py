@@ -198,9 +198,10 @@ class TestTCP(greentest.TestCase):
         client = self.create_connection()
         client.settimeout(0.1)
         fd = client.makefile(mode='rb')
-        self.assertRaises(socket.timeout, fd.readline)
+        self.assertRaises(self.TIMEOUT_ERROR, fd.readline)
         client.close()
         fd.close()
+        acceptor.join()
 
     def test_attributes(self):
         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, 0)
@@ -217,6 +218,7 @@ class TestTCP(greentest.TestCase):
             std_socket.setblocking(0)
             self.assertEqual(std_socket.type, s.type)
 
+        s.close()
 
 def get_port():
     tempsock = socket.socket()
