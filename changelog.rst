@@ -7,7 +7,8 @@
 1.1b5 (unreleased)
 ==================
 
-- Nothing yet
+- Fix a possible ``ValueError`` from ``gevent.queue.Queue:peek``.
+  Reported in :issue:`647` by Kevin Chen.
 
 1.1b4 (Sep 4, 2015)
 ===================

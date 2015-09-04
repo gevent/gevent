@@ -13,8 +13,8 @@ class TestQueue(TestCase):
         self.switch_expected = False
         q = queue.Queue()
         q.put('hi')
-        self.assertEquals(q.peek(), 'hi')
-        self.assertEquals(q.get(), 'hi')
+        self.assertEqual(q.peek(), 'hi')
+        self.assertEqual(q.get(), 'hi')
 
     def test_peek_empty(self):
         q = queue.Queue()
@@ -27,12 +27,22 @@ class TestQueue(TestCase):
         gevent.sleep(0.1)
         g.join()
 
+    def test_peek_multi_greenlet(self):
+        q = queue.Queue()
+        g = gevent.spawn(q.peek)
+        g.start()
+        gevent.sleep(0)
+        q.put(1)
+        g.join()
+        self.assertTrue(g.exception is None)
+        self.assertEqual(q.peek(), 1)
+
     def test_send_last(self):
         q = queue.Queue()
 
         def waiter(q):
             with gevent.Timeout(0.1):
-                self.assertEquals(q.get(), 'hi2')
+                self.assertEqual(q.get(), 'hi2')
             return "OK"
 
         p = gevent.spawn(waiter, q)
@@ -56,12 +66,12 @@ class TestQueue(TestCase):
 
         p = gevent.spawn(putter, q)
         gevent.sleep(0)
-        self.assertEquals(results, ['a', 'b'])
-        self.assertEquals(q.get(), 'a')
+        self.assertEqual(results, ['a', 'b'])
+        self.assertEqual(q.get(), 'a')
         gevent.sleep(0)
-        self.assertEquals(results, ['a', 'b', 'c'])
-        self.assertEquals(q.get(), 'b')
-        self.assertEquals(q.get(), 'c')
+        self.assertEqual(results, ['a', 'b', 'c'])
+        self.assertEqual(q.get(), 'b')
+        self.assertEqual(q.get(), 'c')
         assert p.get(timeout=0) == "OK"
 
     def test_zero_max_size(self):
@@ -82,8 +92,8 @@ class TestQueue(TestCase):
         gevent.sleep(0.001)
         self.assertTrue(not e1.ready())
         p2 = gevent.spawn(receiver, e2, q)
-        self.assertEquals(e2.get(), 'hi')
-        self.assertEquals(e1.get(), 'done')
+        self.assertEqual(e2.get(), 'hi')
+        self.assertEqual(e1.get(), 'done')
         with gevent.Timeout(0):
             gevent.joinall([p1, p2])
 
@@ -111,12 +121,12 @@ class TestQueue(TestCase):
             return len(results)
 
         q.put(sendings[0])
-        self.assertEquals(collect_pending_results(), 1)
+        self.assertEqual(collect_pending_results(), 1)
         q.put(sendings[1])
-        self.assertEquals(collect_pending_results(), 2)
+        self.assertEqual(collect_pending_results(), 2)
         q.put(sendings[2])
         q.put(sendings[3])
-        self.assertEquals(collect_pending_results(), 4)
+        self.assertEqual(collect_pending_results(), 4)
 
     def test_waiters_that_cancel(self):
         q = queue.Queue()
@@ -131,10 +141,10 @@ class TestQueue(TestCase):
 
         evt = AsyncResult()
         gevent.spawn(do_receive, q, evt)
-        self.assertEquals(evt.get(), 'timed out')
+        self.assertEqual(evt.get(), 'timed out')
 
         q.put('hi')
-        self.assertEquals(q.get(), 'hi')
+        self.assertEqual(q.get(), 'hi')
 
     def test_senders_that_die(self):
         q = queue.Queue()
@@ -143,7 +153,7 @@ class TestQueue(TestCase):
             q.put('sent')
 
         gevent.spawn(do_send, q)
-        self.assertEquals(q.get(), 'sent')
+        self.assertEqual(q.get(), 'sent')
 
     def test_two_waiters_one_dies(self):
 
@@ -165,8 +175,8 @@ class TestQueue(TestCase):
         gevent.spawn(waiter, q, waiting_evt)
         gevent.sleep(0.1)
         q.put('hi')
-        self.assertEquals(dying_evt.get(), 'timed out')
-        self.assertEquals(waiting_evt.get(), 'hi')
+        self.assertEqual(dying_evt.get(), 'timed out')
+        self.assertEqual(waiting_evt.get(), 'hi')
 
     def test_two_bogus_waiters(self):
         def do_receive(q, evt):
@@ -184,9 +194,9 @@ class TestQueue(TestCase):
         gevent.spawn(do_receive, q, e2)
         gevent.sleep(0.1)
         q.put('sent')
-        self.assertEquals(e1.get(), 'timed out')
-        self.assertEquals(e2.get(), 'timed out')
-        self.assertEquals(q.get(), 'sent')
+        self.assertEqual(e1.get(), 'timed out')
+        self.assertEqual(e2.get(), 'timed out')
+        self.assertEqual(q.get(), 'sent')
 
 
 class TestChannel(TestCase):

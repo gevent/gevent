@@ -41,6 +41,13 @@ from gevent.hub import InvalidSwitchError
 
 __all__ = ['Queue', 'PriorityQueue', 'LifoQueue', 'JoinableQueue', 'Channel']
 
+def _safe_remove(deq, item):
+    # For when the item may have been removed by
+    # Queue._unlock
+    try:
+        deq.remove(item)
+    except ValueError:
+        pass
 
 class Queue(object):
     """
@@ -208,10 +215,7 @@ class Queue(object):
             finally:
                 if timeout is not None:
                     timeout.cancel()
-                try:
-                    self.putters.remove(waiter)
-                except ValueError:
-                    pass # removed by unlock
+                _safe_remove(self.putters, waiter)
         else:
             raise Full
 
@@ -222,6 +226,43 @@ class Queue(object):
         Otherwise raise the :class:`Full` exception.
         """
         self.put(item, False)
+
+    def __get_or_peek(self, method, block, timeout):
+        # Internal helper method. The `method` should be either
+        # self._get when called from self.get() or self._peek when
+        # called from self.peek(). Call this after the initial check
+        # to see if there are items in the queue.
+
+        if self.hub is getcurrent():
+            # special case to make get_nowait() or peek_nowait() runnable in the mainloop greenlet
+            # there are no items in the queue; try to fix the situation by unlocking putters
+            while self.putters:
+                # Note: get() used popleft(), peek used pop(); popleft
+                # is almost certainly correct.
+                self.putters.popleft().put_and_switch()
+                if self.qsize():
+                    return method()
+            raise Empty()
+
+        if not block:
+            # We can't block, we're not the hub, and we have nothing
+            # to return. No choice...
+            raise Empty()
+
+        waiter = Waiter()
+        timeout = Timeout.start_new(timeout, Empty) if timeout is not None else None
+        try:
+            self.getters.append(waiter)
+            if self.putters:
+                self._schedule_unlock()
+            result = waiter.get()
+            if result is not waiter:
+                raise InvalidSwitchError('Invalid switch into Queue.get: %r' % (result, ))
+            return method()
+        finally:
+            if timeout is not None:
+                timeout.cancel()
+            _safe_remove(self.getters, waiter)
 
     def get(self, block=True, timeout=None):
         """Remove and return an item from the queue.
@@ -237,34 +278,8 @@ class Queue(object):
             if self.putters:
                 self._schedule_unlock()
             return self._get()
-        elif self.hub is getcurrent():
-            # special case to make get_nowait() runnable in the mainloop greenlet
-            # there are no items in the queue; try to fix the situation by unlocking putters
-            while self.putters:
-                self.putters.popleft().put_and_switch()
-                if self.qsize():
-                    return self._get()
-            raise Empty
-        elif block:
-            waiter = Waiter()
-            timeout = Timeout.start_new(timeout, Empty) if timeout is not None else None
-            try:
-                self.getters.append(waiter)
-                if self.putters:
-                    self._schedule_unlock()
-                result = waiter.get()
-                if result is not waiter:
-                    raise InvalidSwitchError('Invalid switch into Queue.get: %r' % (result, ))
-                return self._get()
-            finally:
-                if timeout is not None:
-                    timeout.cancel()
-                try:
-                    self.getters.remove(waiter)
-                except ValueError:
-                    pass # Removed by _unlock
-        else:
-            raise Empty
+
+        return self.__get_or_peek(self._get, block, timeout)
 
     def get_nowait(self):
         """Remove and return an item from the queue without blocking.
@@ -285,33 +300,17 @@ class Queue(object):
         (*timeout* is ignored in that case).
         """
         if self.qsize():
+            # XXX: Why doesn't this schedule an unlock like get() does?
             return self._peek()
-        elif self.hub is getcurrent():
-            # special case to make peek(False) runnable in the mainloop greenlet
-            # there are no items in the queue; try to fix the situation by unlocking putters
-            while self.putters:
-                self.putters.pop().put_and_switch()
-                if self.qsize():
-                    return self._peek()
-            raise Empty
-        elif block:
-            waiter = Waiter()
-            timeout = Timeout.start_new(timeout, Empty)
-            try:
-                self.getters.append(waiter)
-                if self.putters:
-                    self._schedule_unlock()
-                result = waiter.get()
-                if result is not waiter:
-                    raise InvalidSwitchError('Invalid switch into Queue.peek: %r' % (result, ))
-                return self._peek()
-            finally:
-                self.getters.remove(waiter)
-                timeout.cancel()
-        else:
-            raise Empty
+
+        return self.__get_or_peek(self._peek, block, timeout)
 
     def peek_nowait(self):
+        """Return an item from the queue without blocking.
+
+        Only return an item if one is immediately available. Otherwise
+        raise the :class:`Empty` exception.
+        """
         return self.peek(False)
 
     def _unlock(self):
@@ -519,7 +518,7 @@ class Channel(object):
         waiter = Waiter()
         item = (item, waiter)
         self.putters.append(item)
-        timeout = Timeout.start_new(timeout, Full)
+        timeout = Timeout.start_new(timeout, Full) if timeout is not None else None
         try:
             if self.getters:
                 self._schedule_unlock()
@@ -527,16 +526,11 @@ class Channel(object):
             if result is not waiter:
                 raise InvalidSwitchError("Invalid switch into Channel.put: %r" % (result, ))
         except:
-            self._discard(item)
+            _safe_remove(self.putters, item)
             raise
         finally:
-            timeout.cancel()
-
-    def _discard(self, item):
-        try:
-            self.putters.remove(item)
-        except ValueError:
-            pass
+            if timeout is not None:
+                timeout.cancel()
 
     def put_nowait(self, item):
         self.put(item, False)
