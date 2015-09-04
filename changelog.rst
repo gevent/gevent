@@ -4,8 +4,8 @@
 
 .. currentmodule:: gevent
 
-1.1b4 (Unreleased)
-==================
+1.1b4 (Sep 4, 2015)
+===================
 
 - Detect and raise an error for several important types of
   programming errors even if Python interpreter optimizations are
@@ -16,7 +16,7 @@
   was called on an empty ``Queue``. Reported in :issue:`643` by michaelvol.
 - Make ``SIGCHLD`` handlers specified to ``signal.signal`` work with
   the child watchers that are used by default. Also make
-  ``os.waitpid`` work with a first argument of -1.
+  ``os.waitpid`` work with a first argument of -1. Noted by users of gunicorn.
 - Under Python 2, any timeout set on a socket would be ignored when
   using the results of ``socket.makefile``. Reported in :issue:`644`
   by Karan Lyons.

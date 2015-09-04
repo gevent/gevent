@@ -6,9 +6,12 @@ gevent/core.pyx
 gevent/__pycache__
 gevent/libev
 *.egg-info
+Makefile.ext
+MANIFEST
 
 doc/changelog.rst
 doc/_build
+doc/__pycache__
 doc/gevent.*.rst
 !doc/gevent.core.rst
 !doc/gevent.event.rst

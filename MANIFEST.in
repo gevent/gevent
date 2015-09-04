@@ -5,6 +5,7 @@ recursive-include doc *
 recursive-include libev *
 recursive-include c-ares *
 recursive-include util *
+
 include LICENSE
 include README.rst
 include TODO
@@ -13,3 +14,11 @@ include MANIFEST.in
 include AUTHORS
 include Makefile.ext
 include known_failures.py
+include *.yml
+include *.txt
+
+include tox.ini
+include .pep8
+recursive-include benchmarks *.sh
+recursive-include appveyor *.cmd
+recursive-include appveyor *.ps1
