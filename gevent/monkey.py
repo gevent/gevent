@@ -63,7 +63,7 @@ def get_original(mod_name, item_name):
 
     If the object has not been patched, then that object will still be retrieved.
 
-    :param item_name: A string or sequenc of strings naming the attribute(s) on the module
+    :param item_name: A string or sequence of strings naming the attribute(s) on the module
         ``mod_name`` to return.
     :return: The original value if a string was given for ``item_name`` or a sequence
         of original values if a sequence was passed.

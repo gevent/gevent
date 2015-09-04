@@ -323,7 +323,7 @@ class ThreadResult(object):
 def wrap_errors(errors, function, args, kwargs):
     """
     .. deprecated:: 1.1a2
-       Only used by ThreadPool.apply_e.
+       Previously used by ThreadPool.apply_e.
     """
     try:
         return True, function(*args, **kwargs)

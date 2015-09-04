@@ -27,12 +27,12 @@ PyPy Notes
 PyPy has been tested on OS X and 64-bit Linux from version 2.5.0
 through 2.5.1, 2.6.0, 2.6.1, and pre-release versions of 2.7.0.
 
-- Version 2.6.1 is required for the most robust signal handling. Prior
-  to 2.6.1 and its inclusion of `cffi 1.3.0`_, signals could be
-  delivered incorrectly or fail to be delivered during a blocking
-  operation. (PyPy 2.5.0 includes CFFI 0.8.6 while 2.6.0 has 1.1.0;
-  the necessary feature was added in `1.2.0`_ which is not itself
-  directly present in any PyPy release.)
+- Version 2.6.1 or above is required for the most robust signal
+  handling. Prior to 2.6.1 and its inclusion of `cffi 1.3.0`_, signals
+  could be delivered incorrectly or fail to be delivered during a
+  blocking operation. (PyPy 2.5.0 includes CFFI 0.8.6 while 2.6.0 has
+  1.1.0; the necessary feature was added in `1.2.0`_ which is not
+  itself directly present in any PyPy release.)
 - Overall performance seems to be quite acceptable with newer versions
   of PyPy. The benchmarks distributed with gevent typically perform as
   well or better on PyPy than on CPython. Things that are known or
@@ -47,18 +47,20 @@ through 2.5.1, 2.6.0, 2.6.1, and pre-release versions of 2.7.0.
 Improved subprocess support
 ===========================
 
-In gevent 1.0, support and monkey patching for the ``subprocess``
+In gevent 1.0, support and monkey patching for the :mod:`subprocess`
 module was added. Monkey patching was off by default.
 
-In 1.1, monkey patching subprocess is on by default due to
+In 1.1, monkey patching ``subprocess`` is on by default due to
 improvements in handling child processes and requirements by
 downstream libraries, notably `gunicorn`_.
 
 - :func:`gevent.os.fork`, which is monkey patched by default (and
   should be used to fork a gevent-aware process that expects to use
   gevent in the child process) has been improved and cooperates with
-  :func:`gevent.os.waitpid` (again monkey patched by default).
-- fork-watchers will be called, even in multi-threaded programs.
+  :func:`gevent.os.waitpid` (again monkey patched by default) and
+  :func:`gevent.signal.signal` (which is monkey patched only for the
+  :data:`signal.SIGCHLD` case). The latter two patches are new in 1.1.
+- Fork-watchers will be called, even in multi-threaded programs.
 - The default threadpool and threaded resolver work in child
   processes.
 - File descriptors are no longer leaked if

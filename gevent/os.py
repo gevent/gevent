@@ -149,16 +149,18 @@ if hasattr(os, 'fork'):
 
         .. note::
 
-            The PID returned by this function may not be
-            waitable with either :func:`os.waitpid` or :func:`waitpid`
-            if libev child watchers are in use. For example, the
+            The PID returned by this function may not be waitable with
+            either :func:`os.waitpid` or :func:`waitpid` and it may
+            not generate SIGCHLD signals if libev child watchers are
+            or ever have been in use. For example, the
             :mod:`gevent.subprocess` module uses libev child watchers
-            (which parts of gevent use libev child watchers is subject to change
-            at any time). Most applications should use :func:`fork_and_watch`,
-            which is monkey-patched as the default replacement for :func:`os.fork`
-            and implements the ``fork`` function of this module by default, unless
-            the environment variable ``GEVENT_NOWAITPID`` is defined before this
-            module is imported.
+            (which parts of gevent use libev child watchers is subject
+            to change at any time). Most applications should use
+            :func:`fork_and_watch`, which is monkey-patched as the
+            default replacement for :func:`os.fork` and implements the
+            ``fork`` function of this module by default, unless the
+            environment variable ``GEVENT_NOWAITPID`` is defined
+            before this module is imported.
 
         .. versionadded:: 1.1b2
         """
@@ -295,11 +297,13 @@ if hasattr(os, 'fork'):
             :keyword loop: The loop to start the watcher in. Defaults to the
                 loop of the current hub.
             :keyword fork: The fork function. Defaults to :func:`the one defined in this
-                module <gevent_fork>` (which automatically calls :func:`gevent.hub.reinit`).
+                module <gevent.os.fork_gevent>` (which automatically calls :func:`gevent.hub.reinit`).
                 Pass the builtin :func:`os.fork` function if you do not need to
                 initialize gevent in the child process.
 
             .. versionadded:: 1.1a3
+            .. seealso::
+                :func:`gevent.monkey.get_original` To access the builtin :func:`os.fork`.
             """
             pid = fork()
             if pid:
@@ -318,7 +322,7 @@ if hasattr(os, 'fork'):
             def fork(*args, **kwargs):
                 """
                 Forks a child process and starts a child watcher for it in the
-                parent process.
+                parent process so that ``waitpid`` and SIGCHLD work as expected.
 
                 This implementation of ``fork`` is a wrapper for :func:`fork_and_watch`
                 when the environment variable ``GEVENT_NOWAITPID`` is *not* defined.
@@ -333,7 +337,7 @@ if hasattr(os, 'fork'):
             def fork():
                 """
                 Forks a child process, initializes gevent in the child,
-                but *does not* prepare the parent to wait for the child.
+                but *does not* prepare the parent to wait for the child or receive SIGCHLD.
 
                 This implementation of ``fork`` is a wrapper for :func:`fork_gevent`
                 when the environment variable ``GEVENT_NOWAITPID`` *is* defined.
