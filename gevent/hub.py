@@ -820,19 +820,16 @@ class _MultipleWaiter(Waiter):
 
     This does not handle exceptions or throw methods.
     """
-    _DEQUE = None
     __slots__ = ['_values']
 
     def __init__(self, *args, **kwargs):
         Waiter.__init__(self, *args, **kwargs)
-        self._values = self._deque()
-
-    @classmethod
-    def _deque(cls):
-        if cls._DEQUE is None:
-            from collections import deque
-            cls._DEQUE = deque
-        return cls._DEQUE()
+        # we typically expect a relatively small number of these to be outstanding.
+        # since we pop from the left, a deque might be slightly
+        # more efficient, but since we're in the hub we avoid imports if
+        # we can help it to better support monkey-patching, and delaying the import
+        # here can be impractical (see https://github.com/gevent/gevent/issues/652)
+        self._values = list()
 
     def switch(self, value):
         self._values.append(value)
@@ -843,7 +840,7 @@ class _MultipleWaiter(Waiter):
             Waiter.get(self)
             Waiter.clear(self)
 
-        return self._values.popleft()
+        return self._values.pop(0)
 
 
 def iwait(objects, timeout=None, count=None):

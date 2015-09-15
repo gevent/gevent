@@ -36,6 +36,13 @@
   ``subprocess.run`` but impacts all versions (``timeout`` is an
   official argument under Python 3 and a gevent extension with
   slightly different semantics under Python 2).
+- gevent blocking operations performed at the top-level of a module
+  after the system was monkey-patched under Python 2 could result in
+  raising a ``LoopExit`` instead of completing the expected blocking
+  operation. Note that performing gevent blocking operations in the
+  top-level of a module is typically not recommended, but this
+  situation can arise when monkey-patching existing scripts. Reported
+  in :issue:`651` and :issue:`652` by Mike Kaplinskiy.
 
 .. _WSGI specification: https://www.python.org/dev/peps/pep-3333/#the-start-response-callable
 
