@@ -21,10 +21,12 @@ for Python 2.5.
 Python 3.5 has preliminary support, which means that gevent is
 expected to generally run and function with the same level of support
 as on Python 3.4, but new features and APIs introduced in 3.5 may not
-be properly supported.
+be properly supported (e.g., `DevpollSelector`_) and due to the recent
+arrival of Python 3.5, the level of testing it has received is lower.
 
 .. _python.org: http://www.python.org/downloads/
 .. _PyPy: http://pypy.org
+.. _DevpollSelector: https://docs.python.org/3.5/whatsnew/3.5.html#selectors
 
 PyPy Notes
 ----------

@@ -9,6 +9,8 @@
 
 - Fix a possible ``ValueError`` from ``gevent.queue.Queue:peek``.
   Reported in :issue:`647` by Kevin Chen.
+- ``gevent.subprocess`` works under Python 3.5. In general, Python 3.5
+  has preliminary support. Reported in :issue:`653` by Squeaky.
 
 1.1b4 (Sep 4, 2015)
 ===================

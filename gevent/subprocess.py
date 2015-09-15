@@ -77,7 +77,21 @@ if sys.version_info[:2] >= (3, 3):
     __imports__ += ['DEVNULL',
                     'getstatusoutput',
                     'getoutput',
+                    'SubprocessError',
                     'TimeoutExpired']
+
+if sys.version_info[:2] >= (3, 5):
+    __imports__ += ['run', # in 3.5, `run` is implemented in terms of `with Popen`
+                    'CompletedProcess',
+    ]
+    # Removed in Python 3.5:
+    # https://hg.python.org/cpython/rev/f98b0a5e5ef5
+    __extra__.remove('MAXFD')
+    try:
+        MAXFD = os.sysconf("SC_OPEN_MAX")
+    except:
+        MAXFD = 256
+
 
 for name in __imports__[:]:
     try:
