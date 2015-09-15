@@ -11,6 +11,10 @@
   Reported in :issue:`647` by Kevin Chen.
 - ``gevent.subprocess`` works under Python 3.5. In general, Python 3.5
   has preliminary support. Reported in :issue:`653` by Squeaky.
+- Restore backwards compatibility for using ``gevent.signal`` as a
+  callable, which, depending on the order of imports, could be broken
+  after the addition of the ``gevent.signal`` module. Reported in
+  :issue:`648` by Sylvain Zimmer.
 
 1.1b4 (Sep 4, 2015)
 ===================
