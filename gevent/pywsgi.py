@@ -63,8 +63,14 @@ _CONTINUE_RESPONSE = b"HTTP/1.1 100 Continue\r\n\r\n"
 
 
 def format_date_time(timestamp):
+    # Return a byte-string of the date and time in HTTP format
+    # .. versionchanged:: 1.1b5
+    #  Return a byte string, not a native string
     year, month, day, hh, mm, ss, wd, _y, _z = time.gmtime(timestamp)
-    return "%s, %02d %3s %4d %02d:%02d:%02d GMT" % (_WEEKDAYNAME[wd], day, _MONTHNAME[month], year, hh, mm, ss)
+    value = "%s, %02d %3s %4d %02d:%02d:%02d GMT" % (_WEEKDAYNAME[wd], day, _MONTHNAME[month], year, hh, mm, ss)
+    if PY3:
+        value = value.encode("latin-1")
+    return value
 
 
 class _InvalidClientInput(IOError):
@@ -325,6 +331,11 @@ class WSGIHandler(object):
         else:
             self.rfile = rfile
 
+        # Instance variables added later:
+        # self.response_headers: A list of tuples of bytes: [(b'Header', b'value')]
+        # self.status: The bytes of the status line: b'200 ok'
+        # self.code: An integer giving the HTTP status: 200
+
     def handle(self):
         """
         The main request handling method, called by the server.
@@ -509,17 +520,21 @@ class WSGIHandler(object):
 
     def finalize_headers(self):
         if self.provided_date is None:
-            self.response_headers.append(('Date', format_date_time(time.time())))
+            self.response_headers.append((b'Date', format_date_time(time.time())))
 
         if self.code not in (304, 204):
             # the reply will include message-body; make sure we have either Content-Length or chunked
             if self.provided_content_length is None:
                 if hasattr(self.result, '__len__'):
-                    self.response_headers.append(('Content-Length', str(sum(len(chunk) for chunk in self.result))))
+                    total_len = sum(len(chunk) for chunk in self.result)
+                    total_len_str = str(total_len)
+                    if PY3:
+                        total_len_str = total_len_str.encode("latin-1")
+                    self.response_headers.append((b'Content-Length', total_len_str))
                 else:
                     if self.request_version != 'HTTP/1.0':
                         self.response_use_chunked = True
-                        self.response_headers.append(('Transfer-Encoding', 'chunked'))
+                        self.response_headers.append((b'Transfer-Encoding', b'chunked'))
 
     def _sendall(self, data):
         try:
@@ -555,9 +570,15 @@ class WSGIHandler(object):
         self.headers_sent = True
         self.finalize_headers()
 
-        towrite.extend(('HTTP/1.1 %s\r\n' % self.status).encode('latin-1'))
-        for header in self.response_headers:
-            towrite.extend(('%s: %s\r\n' % header).encode('latin-1'))
+        # self.response_headers and self.status are already in latin-1, as encoded by self.start_response
+        towrite.extend(b'HTTP/1.1 ')
+        towrite.extend(self.status)
+        towrite.extend(b'\r\n')
+        for header, value in self.response_headers:
+            towrite.extend(header)
+            towrite.extend(b': ')
+            towrite.extend(value)
+            towrite.extend(b"\r\n")
 
         towrite.extend(b'\r\n')
         if data:
@@ -570,10 +591,11 @@ class WSGIHandler(object):
                 try:
                     towrite.extend(data)
                 except TypeError:
-                    raise TypeError("Not an bytestring", data)
+                    raise TypeError("Not a bytestring", data)
         self._sendall(towrite)
 
     def start_response(self, status, headers, exc_info=None):
+        # .. versionchanged:: 1.1b5 handle header/status encoding here
         if exc_info:
             try:
                 if self.headers_sent:
@@ -582,9 +604,54 @@ class WSGIHandler(object):
             finally:
                 # Avoid dangling circular ref
                 exc_info = None
-        self.code = int(status.split(' ', 1)[0])
-        self.status = status
-        self.response_headers = headers
+
+        # Pep 3333, "The start_response callable":
+        # https://www.python.org/dev/peps/pep-3333/#the-start-response-callable
+        # "Servers should check for errors in the headers at the time
+        # start_response is called, so that an error can be raised
+        # while the application is still running." Here, we check the encoding.
+        # This aids debuging: headers especially are generated programatically
+        # and an encoding error in a loop or list comprehension yields an opaque
+        # UnicodeError without any clue which header was wrong.
+        # Note that this results in copying the header list at this point, not modifying it,
+        # although we are allowed to do so if needed. This slightly increases memory usage.
+        response_headers = []
+        header = None
+        value = None
+        try:
+            for header, value in headers:
+                if not isinstance(header, str):
+                    raise UnicodeError("The header must be a native string", header, value)
+                if not isinstance(value, str):
+                    raise UnicodeError("The value must be a native string", header, value)
+                # Either we're on Python 2, in which case bytes is correct, or
+                # we're on Python 3 and the user screwed up (because it should be a native
+                # string). In either case, make sure that this is latin-1 compatible. Under
+                # Python 2, bytes.encode() will take a round-trip through the system encoding,
+                # which may be ascii, which is not really what we want. However, the latin-1 encoding
+                # can encode everything except control characters and the block from 0x7F to 0x9F, so
+                # explicitly round-tripping bytes through the encoding is unlikely to be of much
+                # benefit, so we go for speed (the WSGI spec specifically calls out allowing the range
+                # from 0x00 to 0xFF, although the HTTP spec forbids the control characters).
+                # Note: Some Python 2 implementations, like Jython, may allow non-octet (above 255) values
+                # in their str implementation; this is mentioned in the WSGI spec, but we don't
+                # run on any platform like that so we can assume that a str value is pure bytes.
+                response_headers.append((header if not PY3 else header.encode("latin-1"),
+                                         value if not PY3 else value.encode("latin-1")))
+        except UnicodeEncodeError:
+            # If we get here, we're guaranteed to have a header and value
+            raise UnicodeError("Non-latin1 header", header, value)
+
+        # Same as above
+        if not isinstance(status, str):
+            raise UnicodeError("The status string must be a native string")
+        # don't assign to anything until the validation is complete, including parsing the
+        # code
+        code = int(status.split(' ', 1)[0])
+
+        self.status = status if not PY3 else status.encode("latin-1")
+        self.response_headers = response_headers
+        self.code = code
 
         provided_connection = None
         self.provided_date = None
@@ -600,7 +667,7 @@ class WSGIHandler(object):
                 self.provided_content_length = value
 
         if self.request_version == 'HTTP/1.0' and provided_connection is None:
-            headers.append(('Connection', 'close'))
+            response_headers.append((b'Connection', b'close'))
             self.close_connection = True
         elif provided_connection == 'close':
             self.close_connection = True
@@ -700,9 +767,14 @@ class WSGIHandler(object):
             self.start_response(status, headers[:])
             self.write(body)
 
-    def handle_error(self, type, value, tb):
-        if not issubclass(type, GreenletExit):
-            self.server.loop.handle_error(self.environ, type, value, tb)
+    def _log_error(self, t, v, tb):
+        # TODO: Shouldn't we dump this to wsgi.errors? If we did that now, it would
+        # wind up getting logged twice
+        if not issubclass(t, GreenletExit):
+            self.server.loop.handle_error(self.environ, t, v, tb)
+
+    def handle_error(self, t, v, tb):
+        self._log_error(t, v, tb)
         del tb
         self._send_error_response_if_possible(500)
 

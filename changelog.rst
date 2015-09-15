@@ -15,6 +15,22 @@
   callable, which, depending on the order of imports, could be broken
   after the addition of the ``gevent.signal`` module. Reported in
   :issue:`648` by Sylvain Zimmer.
+- ``gevent.pywsgi.WSGIServer`` does a better job detecting and
+  reporting potential encoding errors for headers and the status line
+  during ``start_response`` as recommended by `WSGI specification`_.
+  In addition, under Python 2, unnecessary encodings and decodings
+  (often a trip through the ASCII encoding) are avoided for conforming
+  applications. This is an enhancement of an already documented and
+  partially enforced constraint: beginning in 1.1a1, under Python 2,
+  ``u'abc'`` would typically previously have been allowed, but
+  ``u'\u1f4a3'`` would not; now, neither will be allowed, more closely
+  matching the specification, improving debugability and performance
+  and allowing for better error handling both by the application and
+  by gevent (previously, certain encoding errors could result in
+  gevent writing invalid/malformed HTTP responses). Reported by Greg
+  Higgins and Carlos Sanchez.
+
+.. _WSGI specification: https://www.python.org/dev/peps/pep-3333/#the-start-response-callable
 
 1.1b4 (Sep 4, 2015)
 ===================

@@ -184,8 +184,9 @@ reduce the cases of undocumented or non-standard behaviour.
 
 .. _does not use a reference-counted GC: http://doc.pypy.org/en/latest/cpython_differences.html#differences-related-to-garbage-collection-strategies
 
-- :class:`gevent.pywsgi.WSGIServer` ensures that headers set by the
-  application can be encoded in the ISO-8859-1 charset.
+- :class:`gevent.pywsgi.WSGIServer` ensures that headers and the
+  status line set by the application can be encoded in the ISO-8859-1
+  (Latin-1) charset and are of the *native string type*.
 
   Under gevent 1.0, non-``bytes`` headers (that is, ``unicode`` since
   gevent 1.0 only ran on Python 2) were encoded according to the

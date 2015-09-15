@@ -21,7 +21,11 @@ from __future__ import print_function
 from gevent import monkey
 monkey.patch_all(thread=False)
 
-import cgi
+try:
+    from urllib.parse import parse_qs
+except ImportError:
+    # Python 2
+    from cgi import parse_qs
 import os
 import sys
 try:
@@ -118,13 +122,13 @@ class Response(object):
         self.chunks = False
         try:
             version, code, self.reason = status_line[:-2].split(' ', 2)
+            self.code = int(code)
+            HTTP, self.version = version.split('/')
+            assert HTTP == 'HTTP', repr(HTTP)
+            assert self.version in ('1.0', '1.1'), repr(self.version)
         except Exception:
             print('Error: %r' % status_line)
             raise
-        self.code = int(code)
-        HTTP, self.version = version.split('/')
-        assert HTTP == 'HTTP', repr(HTTP)
-        assert self.version in ('1.0', '1.1'), repr(self.version)
 
     def __iter__(self):
         yield self.status_line
@@ -235,9 +239,13 @@ class TestCase(greentest.TestCase):
     validator = staticmethod(validator)
     application = None
 
-    def init_server(self, application):
+    def init_logger(self):
         import logging
         logger = logging.getLogger('gevent.pywsgi')
+        return logger
+
+    def init_server(self, application):
+        logger = self.logger = self.init_logger()
         self.server = pywsgi.WSGIServer(('127.0.0.1', 0), application,
                                         log=logger, error_log=logger)
 
@@ -480,7 +488,7 @@ class TestGetArg(TestCase):
         body = env['wsgi.input'].read(3)
         if PY3:
             body = body.decode('ascii')
-        a = cgi.parse_qs(body).get('a', [1])[0]
+        a = parse_qs(body).get('a', [1])[0]
         start_response('200 OK', [('Content-Type', 'text/plain')])
         return [('a is %s, body is %s' % (a, body)).encode('ascii')]
 
@@ -736,6 +744,49 @@ Connection: close
 
 '''.replace(b'\n', b'\r\n'))
         read_http(sock.makefile(), reason='PASSED', chunks=False, body='', content_length=0)
+
+
+class TestNonLatin1HeaderFromApplication(TestCase):
+    error_fatal = False # Allow sending the exception response, don't kill the greenlet
+
+    validator = None # Don't validate the application, it's deliberately bad
+    header = b'\xe1\xbd\x8a3' # bomb in utf-8 bytes
+    should_error = PY3 # non-native string under Py3
+
+    def init_server(self, app):
+        TestCase.init_server(self, app)
+        self.errors = list()
+
+    def application(self, environ, start_response):
+        # We return a header that cannot be encoded in latin-1
+        try:
+            start_response("200 PASSED",
+                           [('Content-Type', 'text/plain'),
+                            ('Custom-Header', self.header)])
+        except:
+            self.errors.append(sys.exc_info()[:2])
+            raise
+        return []
+
+    def test(self):
+        sock = self.connect()
+        sock.sendall(b'''GET / HTTP/1.1\r\n\r\n''')
+        if self.should_error:
+            read_http(sock.makefile(), code=500, reason='Internal Server Error')
+            self.assertEqual(len(self.errors), 1)
+            t, v = self.errors[0]
+            self.assertTrue(isinstance(v, UnicodeError))
+        else:
+            read_http(sock.makefile(), code=200, reason='PASSED')
+            self.assertEqual(len(self.errors), 0)
+
+
+class TestNonLatin1UnicodeHeaderFromApplication(TestNonLatin1HeaderFromApplication):
+    # Flip-flop of the superclass: Python 3 native string, Python 2 unicode object
+    header = u"\u1f4a3" # bomb in unicode
+    # Error both on py3 and py2. On py2, non-native string. On py3, native string
+    # that cannot be encoded to latin-1
+    should_error = True
 
 
 class TestInputReadline(TestCase):
