@@ -153,8 +153,30 @@ Working with muliple processes
 Signals
 -------
 
-.. autofunction:: signal
+.. function:: signal(signalnum, handler, *args, **kwargs)
 
+    Call the *handler* with the *args* and *kwargs* when the process
+    receives the signal *signalnum*.
+
+    The *handler* will be run in a new greenlet when the signal is delivered.
+
+    This returns an object with the useful method ``cancel``, which, when called,
+    will prevent future deliveries of *signalnum* from calling *handler*.
+
+    .. note::
+
+        This may not operate correctly with SIGCHLD if libev child watchers
+        are used (as they are by default with :func:`gevent.os.fork`).
+
+    .. versionchanged:: 1.1b4
+
+         This is an alias for ``gevent.hub.signal``, included for
+         backwards compatibility; the new module :doc:`gevent.signal <gevent.signal>`
+         is replacing this name. This alias will be removed in a
+         future release.
+
+.. This is also in the docstring of gevent.hub.signal, which is the
+   actual callable invoked
 
 Timeouts
 ========

@@ -1,5 +1,9 @@
 from __future__ import print_function
 import sys
+# Using a direct import of signal (deprecated).
+# We are also called from test__core_loop_run_sig_mod.py,
+# which has already done 'import gevent.signal' to be sure we work
+# when the module has been imported.
 from gevent import core, signal
 loop = core.loop()
 

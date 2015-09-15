@@ -198,6 +198,9 @@ class signal(object):
         are used (as they are by default with os.fork).
     """
 
+    # XXX: This is manually documented in gevent.rst while it is aliased in
+    # the gevent module.
+
     greenlet_class = None
 
     def __init__(self, signalnum, handler, *args, **kwargs):
