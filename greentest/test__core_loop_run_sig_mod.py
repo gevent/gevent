@@ -1,9 +1,9 @@
 import sys
-import types
 import gevent.signal
 assert gevent.signal # Get gevent.signal as a module, make sure our backwards compatibility kicks in
 
 import test__core_loop_run # this runs main tests, fails if signal() is not callable.
+assert test__core_loop_run # pyflakes
 
 from gevent.hub import signal as hub_signal
 from gevent import signal
