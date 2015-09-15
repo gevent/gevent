@@ -24,8 +24,9 @@ gevent is licensed under MIT license.
 get gevent
 ==========
 
-Install Python 2.6, 2.7, 3.3 or 3.4 along with the greenlet_
-extension. Or install PyPy 2.6 or above (but not PyPy3).
+Install Python 2.6, 2.7, 3.3 or 3.4 along with the greenlet_ extension
+(Python 3.5 has preliminary support). Or install PyPy 2.6 or above
+(but not PyPy3).
 
 Download the latest release from `Python Package Index`_ or clone `the repository`_.
 

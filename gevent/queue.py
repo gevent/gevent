@@ -41,6 +41,7 @@ from gevent.hub import InvalidSwitchError
 
 __all__ = ['Queue', 'PriorityQueue', 'LifoQueue', 'JoinableQueue', 'Channel']
 
+
 def _safe_remove(deq, item):
     # For when the item may have been removed by
     # Queue._unlock
@@ -48,6 +49,7 @@ def _safe_remove(deq, item):
         deq.remove(item)
     except ValueError:
         pass
+
 
 class Queue(object):
     """
