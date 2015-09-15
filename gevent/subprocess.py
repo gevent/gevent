@@ -548,6 +548,20 @@ class Popen(object):
         else:
             stderr = None
 
+        # If we were given stdin=stdout=stderr=None, we have no way to
+        # communicate with the child, and thus no greenlets to wait
+        # on. This is a nonsense case, but it comes up in the test
+        # case for Python 3.5 (test_subprocess.py
+        # RunFuncTestCase.test_timeout). Instead, we go directly to
+        # self.wait
+        if not greenlets and timeout is not None:
+            result = self.wait(timeout=timeout)
+            # Python 3 would have already raised, but Python 2 would not
+            # so we need to do that manually
+            if result is None:
+                from gevent.timeout import Timeout
+                raise Timeout(timeout)
+
         done = joinall(greenlets, timeout=timeout)
         if timeout is not None and len(done) != len(greenlets):
             if PY3:

@@ -29,6 +29,13 @@
   by gevent (previously, certain encoding errors could result in
   gevent writing invalid/malformed HTTP responses). Reported by Greg
   Higgins and Carlos Sanchez.
+- ``gevent.subprocess.Popen.communicate`` honors a ``timeout``
+  argument even if there is no way to communicate with the child
+  process (none of stdin, stdout and stderr were set to ``PIPE``).
+  Noticed as part of the Python 3.5 test suite for the new function
+  ``subprocess.run`` but impacts all versions (``timeout`` is an
+  official argument under Python 3 and a gevent extension with
+  slightly different semantics under Python 2).
 
 .. _WSGI specification: https://www.python.org/dev/peps/pep-3333/#the-start-response-callable
 
