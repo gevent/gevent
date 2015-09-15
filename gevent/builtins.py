@@ -2,7 +2,7 @@
 """gevent friendly implementations of builtin functions."""
 from __future__ import absolute_import
 
-import imp
+import imp # deprecated since 3.4; issues PendingDeprecationWarning in 3.5
 import sys
 import gevent.lock
 

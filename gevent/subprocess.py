@@ -27,57 +27,80 @@ import subprocess as __subprocess__
 
 
 # Standard functions and classes that this module re-implements in a gevent-aware way.
-__implements__ = ['Popen',
-                  'call',
-                  'check_call',
-                  'check_output']
+__implements__ = [
+    'Popen',
+    'call',
+    'check_call',
+    'check_output',
+]
 if PY3:
     __implements__.append("_posixsubprocess")
     _posixsubprocess = None
 
 
 # Standard functions and classes that this module re-imports.
-__imports__ = ['PIPE',
-               'STDOUT',
-               'CalledProcessError',
-               # Windows:
-               'CREATE_NEW_CONSOLE',
-               'CREATE_NEW_PROCESS_GROUP',
-               'STD_INPUT_HANDLE',
-               'STD_OUTPUT_HANDLE',
-               'STD_ERROR_HANDLE',
-               'SW_HIDE',
-               'STARTF_USESTDHANDLES',
-               'STARTF_USESHOWWINDOW']
+__imports__ = [
+    'PIPE',
+    'STDOUT',
+    'CalledProcessError',
+    # Windows:
+    'CREATE_NEW_CONSOLE',
+    'CREATE_NEW_PROCESS_GROUP',
+    'STD_INPUT_HANDLE',
+    'STD_OUTPUT_HANDLE',
+    'STD_ERROR_HANDLE',
+    'SW_HIDE',
+    'STARTF_USESTDHANDLES',
+    'STARTF_USESHOWWINDOW',
+]
 
 
-__extra__ = ['MAXFD',
-             '_eintr_retry_call',
-             'STARTUPINFO',
-             'pywintypes',
-             'list2cmdline',
-             '_subprocess',
-             # Python 2.5 does not have _subprocess, so we don't use it
-             # XXX We don't run on Py 2.5 anymore; can/could/should we use _subprocess?
-             'WAIT_OBJECT_0',
-             'WaitForSingleObject',
-             'GetExitCodeProcess',
-             'GetStdHandle',
-             'CreatePipe',
-             'DuplicateHandle',
-             'GetCurrentProcess',
-             'DUPLICATE_SAME_ACCESS',
-             'GetModuleFileName',
-             'GetVersion',
-             'CreateProcess',
-             'INFINITE',
-             'TerminateProcess']
+__extra__ = [
+    'MAXFD',
+    '_eintr_retry_call',
+    'STARTUPINFO',
+    'pywintypes',
+    'list2cmdline',
+    '_subprocess',
+    # Python 2.5 does not have _subprocess, so we don't use it
+    # XXX We don't run on Py 2.5 anymore; can/could/should we use _subprocess?
+    'WAIT_OBJECT_0',
+    'WaitForSingleObject',
+    'GetExitCodeProcess',
+    'GetStdHandle',
+    'CreatePipe',
+    'DuplicateHandle',
+    'GetCurrentProcess',
+    'DUPLICATE_SAME_ACCESS',
+    'GetModuleFileName',
+    'GetVersion',
+    'CreateProcess',
+    'INFINITE',
+    'TerminateProcess',
+]
 
 if sys.version_info[:2] >= (3, 3):
-    __imports__ += ['DEVNULL',
-                    'getstatusoutput',
-                    'getoutput',
-                    'TimeoutExpired']
+    __imports__ += [
+        'DEVNULL',
+        'getstatusoutput',
+        'getoutput',
+        'SubprocessError',
+        'TimeoutExpired',
+    ]
+
+if sys.version_info[:2] >= (3, 5):
+    __imports__ += [
+        'run', # in 3.5, `run` is implemented in terms of `with Popen`
+        'CompletedProcess',
+    ]
+    # Removed in Python 3.5; this is the exact code that was removed:
+    # https://hg.python.org/cpython/rev/f98b0a5e5ef5
+    __extra__.remove('MAXFD')
+    try:
+        MAXFD = os.sysconf("SC_OPEN_MAX")
+    except:
+        MAXFD = 256
+
 
 for name in __imports__[:]:
     try:

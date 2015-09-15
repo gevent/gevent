@@ -9,6 +9,7 @@ import functools
 
 __all__ = ['wrap_errors']
 
+
 class wrap_errors(object):
     """
     Helper to make function return an exception, rather than raise it.
