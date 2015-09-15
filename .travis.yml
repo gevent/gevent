@@ -6,6 +6,7 @@ python:
     - pypy
     - 3.3
     - 3.4
+    - 3.5
 env:
     - LINT=true
     - LINT=false
