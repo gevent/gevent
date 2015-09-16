@@ -125,12 +125,15 @@ def discover(tests=None, ignore=None, coverage=False):
     ignore = set(ignore or [])
     if coverage:
         ignore.update(IGNORE_COVERAGE)
+        print("Ignoring", ignore)
 
     if not tests:
         tests = set(glob.glob('test_*.py')) - set(['test_support.py'])
         if ignore:
             tests -= ignore
         tests = sorted(tests)
+        if coverage:
+            print("Tests", tests)
 
     to_process = []
     default_options = {'timeout': TIMEOUT}

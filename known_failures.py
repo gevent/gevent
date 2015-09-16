@@ -164,6 +164,7 @@ if COVERAGE:
     FAILING_TESTS += [
         'FLAKY test__issue302monkey.py',
         'FLAKY test__example_portforwarder.py',
+        'FLAKY test__threading_vs_settrace.py',
     ]
 
 FAILING_TESTS = [x.strip() for x in FAILING_TESTS if x.strip()]
