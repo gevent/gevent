@@ -414,7 +414,7 @@ if hasattr(os, 'fork'):
                     """
                     Like :func:`fork`, but using :func:`os.forkpty`
 
-                    This implementation of ``forkptf`` is a wrapper for :func:`forkpty_gevent`
+                    This implementation of ``forkpty`` is a wrapper for :func:`forkpty_gevent`
                     when the environment variable ``GEVENT_NOWAITPID`` *is* defined.
                     This is not recommended for most applications.
 
