@@ -21,7 +21,7 @@ install:
     # means that installing cython on cpython 3.5 cannot use the wheel cache, which
     # means that the LINT=true case is quite slow (2.5 minutes). If this takes very long to fix,
     # we might want to do some refactoring to move installation into the makefile or a script.
-    - travis_retry pip install -U tox cython greenlet pep8 pyflakes
+    - travis_retry pip install -U tox cython greenlet pep8 pyflakes "coverage>=4.0b3" "coveralls>=1.0b1"
 script:
     - if [[ $TRAVIS_PYTHON_VERSION == '2.7' && $LINT == true ]]; then python setup.py develop && make travis_test_linters; elif [[ $LINT == false && $TRAVIS_PYTHON_VERSION == 'pypy' ]]; then python setup.py develop && make fulltoxtest; elif [[ $LINT == false ]]; then python setup.py develop && make fulltoxtest; fi
 notifications:

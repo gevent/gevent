@@ -9,6 +9,10 @@ gevent/libev
 Makefile.ext
 MANIFEST
 
+greentest/.coverage\.*
+greentest/htmlcov
+greentest/.coverage
+
 doc/changelog.rst
 doc/_build
 doc/__pycache__

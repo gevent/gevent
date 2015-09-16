@@ -56,12 +56,18 @@ travistest:
 
 	${PYTHON} -c 'import greenlet; print(greenlet, greenlet.__version__)'
 
-	${PYTHON} setup.py install
+# develop, not install, so that coverage doesn't think it's part of the stdlib
+	${PYTHON} setup.py develop
 	make bench
 
+# combine after each step so we don't lose anything (append is the default). This also
+# moves the coverage file from greentest to the root.
 	cd greentest && GEVENT_RESOLVER=thread ${PYTHON} testrunner.py --config ../known_failures.py
+	coverage combine greentest/
 	cd greentest && GEVENT_RESOLVER=ares GEVENTARES_SERVERS=8.8.8.8 ${PYTHON} testrunner.py --config ../known_failures.py --ignore tests_that_dont_use_resolver.txt
+	coverage combine greentest/
 	cd greentest && GEVENT_FILE=thread ${PYTHON} testrunner.py --config ../known_failures.py `grep -l subprocess test_*.py`
+	coverage combine greentest/
 
 toxtest:
 	cd greentest && GEVENT_RESOLVER=thread python testrunner.py --config ../known_failures.py
@@ -91,7 +97,9 @@ travis_cpython:
 
 travis_test_linters:
 	make lint
-	make leaktest
+	GEVENTTEST_COVERAGE=1 make leaktest
+	coverage combine
+	coveralls
 
 
 .PHONY: clean all doc pep8 whitespace pyflakes lint travistest travis

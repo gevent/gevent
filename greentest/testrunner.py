@@ -23,6 +23,18 @@ RUN_ALONE = [
     'test__examples.py'
 ]
 
+# tests that can't be run when coverage is enabled
+IGNORE_COVERAGE = [
+    # Hangs forever
+    'test__threading_vs_settrace.py',
+    # XXX ?
+    'test__issue302monkey.py'
+]
+
+if os.environ.get('TRAVIS'):
+    # Flaky on travis, unknown why
+    IGNORE_COVERAGE.append("test_subprocess.py")
+
 
 def run_many(tests, expected=(), failfast=False):
     global NWORKERS
@@ -106,17 +118,26 @@ def run_many(tests, expected=(), failfast=False):
     report(total, failed, passed, took=time.time() - start, expected=expected)
 
 
-def discover(tests=None, ignore=None):
+def discover(tests=None, ignore=(), coverage=False):
     if isinstance(ignore, six.string_types):
         ignore = load_list_from_file(ignore)
 
-    ignore = set(ignore or [])
+    ignore = set(ignore or ())
+    if coverage:
+        ignore.update(IGNORE_COVERAGE)
 
     if not tests:
         tests = set(glob.glob('test_*.py')) - set(['test_support.py'])
-        if ignore:
-            tests -= ignore
-        tests = sorted(tests)
+    else:
+        tests = set(tests)
+
+    if ignore:
+        # Always ignore the designated list, even if tests were specified
+        # on the command line. This fixes a nasty interaction with test__threading_vs_settrace.py
+        # being run under coverage when 'grep -l subprocess test*py' is used to list the tests
+        # to run.
+        tests -= ignore
+    tests = sorted(tests)
 
     to_process = []
     default_options = {'timeout': TIMEOUT}
@@ -128,14 +149,15 @@ def discover(tests=None, ignore=None):
             # try to decode those as ASCII, which fails with UnicodeDecodeError.
             # Thus, be sure to open and compare in binary mode.
             contents = f.read()
-        if b'TESTRUNNER' in contents:
+        if b'TESTRUNNER' in contents: # test__monkey_patching.py
             module = __import__(filename.rsplit('.', 1)[0])
             for cmd, options in module.TESTRUNNER():
                 if remove_options(cmd)[-1] in ignore:
                     continue
                 to_process.append((cmd, options))
         else:
-            to_process.append(([sys.executable, '-u', filename], default_options.copy()))
+            cmd = [sys.executable, '-u', filename]
+            to_process.append((cmd, default_options.copy()))
 
     return to_process
 
@@ -241,13 +263,25 @@ def main():
     parser.add_option('--full', action='store_true')
     parser.add_option('--config')
     parser.add_option('--failfast', action='store_true')
+    parser.add_option("--coverage", action="store_true")
     options, args = parser.parse_args()
     FAILING_TESTS = []
+    coverage = False
+    if options.coverage or os.environ.get("GEVENTTEST_COVERAGE"):
+        coverage = True
+        # NOTE: This must be run from the greentest directory
+        os.environ['COVERAGE_PROCESS_START'] = os.path.abspath(".coveragerc")
+        os.environ['PYTHONPATH'] = os.path.abspath("coveragesite") + os.pathsep + os.environ.get("PYTHONPATH", "")
+        # We change directory often, use an absolute path to keep all the
+        # coverage files (which will have distinct suffixes because of parallel=true in .coveragerc
+        # in this directory; makes them easier to combine and use with coverage report)
+        os.environ['COVERAGE_FILE'] = os.path.abspath(".") + os.sep + ".coverage"
+        print("Enabling coverage to", os.environ['COVERAGE_FILE'])
     if options.config:
         config = {}
         six.exec_(open(options.config).read(), config)
         FAILING_TESTS = config['FAILING_TESTS']
-    tests = discover(args, options.ignore)
+    tests = discover(args, options.ignore, coverage)
     if options.discover:
         for cmd, options in tests:
             print(util.getname(cmd, env=options.get('env'), setenv=options.get('setenv')))
