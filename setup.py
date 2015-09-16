@@ -320,7 +320,11 @@ else:
 
 # If we are running info / help commands, we don't need to build anything
 if len(sys.argv) >= 2 and ('--help' in sys.argv[1:] or
-   sys.argv[1] in ('--help-commands', 'egg_info', '--version', 'clean')):
+                           sys.argv[1] in ('--help-commands',
+                                           'egg_info',
+                                           '--version',
+                                           'clean',
+                                           '--long-description')):
     ext_modules = []
     include_package_data = PYPY
     run_make = False

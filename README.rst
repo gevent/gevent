@@ -1,6 +1,6 @@
-=========
- gevent_
-=========
+========
+ gevent
+========
 
 gevent_ is a coroutine-based Python networking library.
 
@@ -21,7 +21,7 @@ gevent`_.
 gevent is licensed under MIT license.
 
 
-get gevent
+Get gevent
 ==========
 
 Install Python 2.6, 2.7, 3.3 or 3.4 along with the greenlet_ extension
@@ -36,34 +36,56 @@ Post feedback and issues on the `bug tracker`_, `mailing list`_, blog_
 and `twitter (@gevent)`_.
 
 
-installing from github
-======================
+Development
+===========
 
-To install the latest development version:
+To install the latest development version::
 
   pip install cython git+git://github.com/gevent/gevent.git#egg=gevent
 
 
-running tests
-=============
+Running Tests
+-------------
 
 There are a few different ways to run the tests. To simply run the
-tests on one version of Python during development, try this:
+tests on one version of Python during development, try this::
 
   python setup.py build
-
   cd greentest
-
   PYTHONPATH=.. python testrunner.py --config ../known_failures.py
 
 Before submitting a pull request, it's a good idea to run the tests
 across all supported versions of Python, and to check the code quality
 using pep8 and pyflakes. This is what is done on Travis CI. Locally it
-can be done using tox:
+can be done using tox::
 
   pip install tox
-
   tox
+
+
+The testrunner accepts a ``--coverage`` argument to enable code
+coverage metrics through the `coverage.py`_ package. That would go
+something like this::
+
+  cd greentest
+  PYTHONPATH=.. python testrunner.py --config ../known_failures.py --coverage
+  coverage combine
+  coverage html
+  <open htmlcov/index.html>
+
+Builds on Travis CI automatically submit updates to `coveralls.io`_.
+
+.. image:: https://coveralls.io/repos/gevent/gevent/badge.svg?branch=master&service=github
+   :target: https://coveralls.io/github/gevent/gevent?branch=master
+
+Continuous integration
+----------------------
+
+A test suite is run for every push and pull request submitted. Travis
+CI is used to test on Linux, and `AppVeyor`_ runs the builds on Windows.
+
+.. image:: https://travis-ci.org/gevent/gevent.svg?branch=master
+   :target: https://travis-ci.org/gevent/gevent
 
 
 .. _gevent: http://www.gevent.org
@@ -79,3 +101,6 @@ can be done using tox:
 .. _mailing list: http://groups.google.com/group/gevent
 .. _blog: http://blog.gevent.org
 .. _twitter (@gevent): http://twitter.com/gevent
+.. _coverage.py: https://pypi.python.org/pypi/coverage/
+.. _coveralls.io: https://coveralls.io/github/gevent/gevent
+.. _AppVeyor: https://ci.appveyor.com/project/denik/gevent
