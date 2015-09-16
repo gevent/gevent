@@ -20,8 +20,13 @@ from gevent import socket as gevent_socket
 assert socket.create_connection is gevent_socket.create_connection
 
 import os
-if hasattr(os, 'fork'):
-    assert 'built-in' not in repr(os.fork), repr(os.fork)
+import types
+for name in ('fork', 'forkpty'):
+    if hasattr(os, name):
+        attr = getattr(os, name)
+        assert 'built-in' not in repr(attr), repr(attr)
+        assert not isinstance(attr, types.BuiltinFunctionType), repr(attr)
+        assert isinstance(attr, types.FunctionType), repr(attr)
 
 assert monkey.saved
 

@@ -30,7 +30,7 @@ be done with the threadpool.
 Child Processes
 ===============
 
-The functions :func:`fork` and (on POSIX) :func:`waitpid` can be used
+The functions :func:`fork` and (on POSIX) :func:`forkpty` and :func:`waitpid` can be used
 to manage child processes.
 
 .. warning::
@@ -150,17 +150,18 @@ if hasattr(os, 'fork'):
         .. note::
 
             The PID returned by this function may not be waitable with
-            either :func:`os.waitpid` or :func:`waitpid` and it may
-            not generate SIGCHLD signals if libev child watchers are
-            or ever have been in use. For example, the
-            :mod:`gevent.subprocess` module uses libev child watchers
-            (which parts of gevent use libev child watchers is subject
-            to change at any time). Most applications should use
-            :func:`fork_and_watch`, which is monkey-patched as the
-            default replacement for :func:`os.fork` and implements the
-            ``fork`` function of this module by default, unless the
-            environment variable ``GEVENT_NOWAITPID`` is defined
-            before this module is imported.
+            either the original :func:`os.waitpid` or this module's
+            :func:`waitpid` and it may not generate SIGCHLD signals if
+            libev child watchers are or ever have been in use. For
+            example, the :mod:`gevent.subprocess` module uses libev
+            child watchers (which parts of gevent use libev child
+            watchers is subject to change at any time). Most
+            applications should use :func:`fork_and_watch`, which is
+            monkey-patched as the default replacement for
+            :func:`os.fork` and implements the ``fork`` function of
+            this module by default, unless the environment variable
+            ``GEVENT_NOWAITPID`` is defined before this module is
+            imported.
 
         .. versionadded:: 1.1b2
         """
@@ -174,6 +175,33 @@ if hasattr(os, 'fork'):
         A wrapper for :func:`fork_gevent` for non-POSIX platforms.
         """
         return fork_gevent()
+
+    if hasattr(os, 'forkpty'):
+        _raw_forkpty = os.forkpty
+
+        def forkpty_gevent():
+            """
+            Forks the process using :func:`os.forkpty` and prepares the
+            child process to continue using gevent before returning.
+
+            Returns a tuple (pid, master_fd). The `master_fd` is *not* put into
+            non-blocking mode.
+
+            Availability: Some Unix systems.
+
+            .. seealso:: This function has the same limitations as :func:`fork_gevent`.
+
+            .. versionadded:: 1.1b5
+            """
+            pid, master_fd = _raw_forkpty()
+            if not pid:
+                reinit()
+            return pid, master_fd
+
+        forkpty = forkpty_gevent
+
+        __implements__.append('forkpty')
+        __extensions__.append("forkpty_gevent")
 
     if hasattr(os, 'WNOWAIT') or hasattr(os, 'WNOHANG'):
         # We can only do this on POSIX
@@ -317,8 +345,30 @@ if hasattr(os, 'fork'):
         __extensions__.append('fork_and_watch')
         __extensions__.append('fork_gevent')
 
+        if 'forkpty' in __implements__:
+            def forkpty_and_watch(callback=None, loop=None, ref=False, forkpty=forkpty_gevent):
+                """
+                Like :func:`fork_and_watch`, except using :func:`forkpty_gevent`.
+
+                Availability: Some Unix systems.
+
+                .. versionadded:: 1.1b5
+                """
+                result = []
+
+                def _fork():
+                    pid_and_fd = forkpty()
+                    result.append(pid_and_fd)
+                    return pid_and_fd[0]
+                fork_and_watch(callback, loop, ref, _fork)
+                return result[0]
+
+            __extensions__.append('forkpty_and_watch')
+
         # Watch children by default
         if not os.getenv('GEVENT_NOWAITPID'):
+            # Broken out into separate functions instead of simple name aliases
+            # for documentation purposes.
             def fork(*args, **kwargs):
                 """
                 Forks a child process and starts a child watcher for it in the
@@ -332,6 +382,20 @@ if hasattr(os, 'fork'):
                 """
                 # take any args to match fork_and_watch
                 return fork_and_watch(*args, **kwargs)
+
+            if 'forkpty' in __implements__:
+                def forkpty(*args, **kwargs):
+                    """
+                    Like :func:`fork`, but using :func:`forkpty_gevent`.
+
+                    This implementation of ``forkpty`` is a wrapper for :func:`forkpty_and_watch`
+                    when the environment variable ``GEVENT_NOWAITPID`` is *not* defined.
+                    This is the default and should be used by most applications.
+
+                    .. versionadded:: 1.1b5
+                    """
+                    # take any args to match fork_and_watch
+                    return forkpty_and_watch(*args, **kwargs)
             __implements__.append("waitpid")
         else:
             def fork():
@@ -344,6 +408,19 @@ if hasattr(os, 'fork'):
                 This is not recommended for most applications.
                 """
                 return fork_gevent()
+
+            if 'forkpty' in __implements__:
+                def forkpty():
+                    """
+                    Like :func:`fork`, but using :func:`os.forkpty`
+
+                    This implementation of ``forkptf`` is a wrapper for :func:`forkpty_gevent`
+                    when the environment variable ``GEVENT_NOWAITPID`` *is* defined.
+                    This is not recommended for most applications.
+
+                    .. versionadded:: 1.1b5
+                    """
+                    return forkpty_gevent()
             __extensions__.append("waitpid")
 
 else:

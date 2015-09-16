@@ -43,6 +43,10 @@
   top-level of a module is typically not recommended, but this
   situation can arise when monkey-patching existing scripts. Reported
   in :issue:`651` and :issue:`652` by Mike Kaplinskiy.
+- ``SIGCHLD`` and ``waitpid`` now work for the pids returned by the
+  (monkey-patched) ``os.forkpty`` and ``pty.fork`` functions in the
+  same way they do for the ``os.fork`` function. Reported in
+  :issue:`650` by Erich Heine.
 
 .. _WSGI specification: https://www.python.org/dev/peps/pep-3333/#the-start-response-callable
 
