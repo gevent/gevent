@@ -1,12 +1,12 @@
 language: python
 sudo: false
 python:
-#    - 2.6
+    - 2.6
     - 2.7
-#    - pypy
-#    - 3.3
-#    - 3.4
-#    - 3.5
+    - pypy
+    - 3.3
+    - 3.4
+    - 3.5
 env:
     - LINT=true
     - LINT=false
