@@ -464,7 +464,7 @@ def main():
     args = {}
     argv = sys.argv[1:]
     verbose = False
-    script_help = _get_script_help()
+    script_help, patch_all_args, modules = _get_script_help()
     while argv and argv[0].startswith('--'):
         option = argv[0][2:]
         if option == 'verbose':
@@ -493,6 +493,7 @@ def main():
     if argv:
         sys.argv = argv
         __package__ = None
+        assert __package__ is None
         globals()['__file__'] = sys.argv[0]  # issue #302
         with open(sys.argv[0]) as f:
             exec(f.read())
@@ -514,9 +515,9 @@ specify a module to patch with --module, e.g. --socket. In the latter
 case only the modules specified on the command line will be patched.
 
 MONKEY OPTIONS: --verbose %s""" % ', '.join('--[no-]%s' % m for m in modules)
-    return script_help
+    return script_help, patch_all_args, modules
 
-main.__doc__ = _get_script_help()
+main.__doc__ = _get_script_help()[0]
 
 if __name__ == '__main__':
     main()

@@ -12,3 +12,4 @@ else:
     import socket
     assert 'gevent' in repr(socket.socket), repr(socket.socket)
     assert __file__ == 'test__issue302monkey.py', repr(__file__)
+    assert __package__ is None, __package__
