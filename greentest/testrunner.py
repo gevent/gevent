@@ -128,6 +128,8 @@ def discover(tests=None, ignore=(), coverage=False):
 
     if not tests:
         tests = set(glob.glob('test_*.py')) - set(['test_support.py'])
+    else:
+        tests = set(tests)
 
     if ignore:
         # Always ignore the designated list, even if tests were specified
