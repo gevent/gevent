@@ -8,6 +8,7 @@ import struct
 
 
 LEAKTEST = os.getenv('GEVENTTEST_LEAKCHECK')
+COVERAGE = os.getenv("COVERAGE_PROCESS_START")
 PYPY = hasattr(sys, 'pypy_version_info')
 PY3 = sys.version_info[0] >= 3
 PY26 = sys.version_info[0] == 2 and sys.version_info[1] == 6
@@ -155,6 +156,15 @@ if PY3:
             'test__greenlet.py',
             'FLAKY test__socket.py',
         ]
+
+if COVERAGE:
+    # The gevent concurrency plugin tends to slow things
+    # down and get us past our default timeout value. These
+    # tests in particular are sensitive to it
+    FAILING_TESTS += [
+        'FLAKY test__issue302monkey.py',
+        'FLAKY test__example_portforwarder.py',
+    ]
 
 FAILING_TESTS = [x.strip() for x in FAILING_TESTS if x.strip()]
 

@@ -1,0 +1,5 @@
+[run]
+concurrency = gevent
+parallel = True
+source = gevent
+omit = test_*
