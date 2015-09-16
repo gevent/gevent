@@ -31,6 +31,10 @@ IGNORE_COVERAGE = [
     'test__issue302monkey.py'
 ]
 
+if os.environ.get('TRAVIS'):
+    # Flaky on travis, unknown why
+    IGNORE_COVERAGE.append("test_subprocess.py")
+
 
 def run_many(tests, expected=(), failfast=False):
     global NWORKERS
