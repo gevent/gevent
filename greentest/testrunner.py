@@ -255,7 +255,9 @@ def main():
     parser.add_option("--coverage", action="store_true")
     options, args = parser.parse_args()
     FAILING_TESTS = []
-    if options.coverage:
+    coverage = False
+    if options.coverage or os.environ.get("GEVENTTEST_COVERAGE"):
+        coverage = True
         # NOTE: This must be run from the greentest directory
         os.environ['COVERAGE_PROCESS_START'] = os.path.abspath(".coveragerc")
         os.environ['PYTHONPATH'] = os.path.abspath("coveragesite") + os.pathsep + os.environ.get("PYTHONPATH", "")
@@ -267,7 +269,7 @@ def main():
         config = {}
         six.exec_(open(options.config).read(), config)
         FAILING_TESTS = config['FAILING_TESTS']
-    tests = discover(args, options.ignore, options.coverage)
+    tests = discover(args, options.ignore, coverage)
     if options.discover:
         for cmd, options in tests:
             print(util.getname(cmd, env=options.get('env'), setenv=options.get('setenv')))

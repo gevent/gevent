@@ -91,7 +91,7 @@ travis_cpython:
 
 travis_test_linters:
 	make lint
-	make leaktest
+	GEVENTTEST_COVERAGE=1 make leaktest
 # XXX Can we do this here? It would be nice to get these reports, but
 # first, it may cause issues with the leak tests. And second, 'coverage combine'
 # chokes if a datafile hasn't been fully written, which can happen when
