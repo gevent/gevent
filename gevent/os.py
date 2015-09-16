@@ -25,7 +25,7 @@ available. On those platforms (and on POSIX), cooperative IO can
 be done with the threadpool.
 
 - :func:`tp_read`
-- :func:`tb_write`
+- :func:`tp_write`
 
 Child Processes
 ===============
