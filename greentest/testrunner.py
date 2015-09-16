@@ -118,22 +118,24 @@ def run_many(tests, expected=(), failfast=False):
     report(total, failed, passed, took=time.time() - start, expected=expected)
 
 
-def discover(tests=None, ignore=None, coverage=False):
+def discover(tests=None, ignore=(), coverage=False):
     if isinstance(ignore, six.string_types):
         ignore = load_list_from_file(ignore)
 
-    ignore = set(ignore or [])
+    ignore = set(ignore or ())
     if coverage:
         ignore.update(IGNORE_COVERAGE)
-        print("Ignoring", ignore)
 
     if not tests:
         tests = set(glob.glob('test_*.py')) - set(['test_support.py'])
-        if ignore:
-            tests -= ignore
-        tests = sorted(tests)
-        if coverage:
-            print("Tests", tests)
+
+    if ignore:
+        # Always ignore the designated list, even if tests were specified
+        # on the command line. This fixes a nasty interaction with test__threading_vs_settrace.py
+        # being run under coverage when 'grep -l subprocess test*py' is used to list the tests
+        # to run.
+        tests -= ignore
+    tests = sorted(tests)
 
     to_process = []
     default_options = {'timeout': TIMEOUT}
@@ -272,6 +274,7 @@ def main():
         # coverage files (which will have distinct suffixes because of parallel=true in .coveragerc
         # in this directory; makes them easier to combine and use with coverage report)
         os.environ['COVERAGE_FILE'] = os.path.abspath(".") + os.sep + ".coverage"
+        print("Enabling coverage to", os.environ['COVERAGE_FILE'])
     if options.config:
         config = {}
         six.exec_(open(options.config).read(), config)
