@@ -60,14 +60,11 @@ travistest:
 	${PYTHON} setup.py develop
 	make bench
 
-# combine after each step so we don't lose anything (append is the default). This also
-# moves the coverage file from greentest to the root. It's necessary to specify the current
-# directory to include all results previously combined too.
 	cd greentest && GEVENT_RESOLVER=thread ${PYTHON} testrunner.py --config ../known_failures.py
-	coverage combine . greentest/
 	cd greentest && GEVENT_RESOLVER=ares GEVENTARES_SERVERS=8.8.8.8 ${PYTHON} testrunner.py --config ../known_failures.py --ignore tests_that_dont_use_resolver.txt
-	coverage combine . greentest/
 	cd greentest && GEVENT_FILE=thread ${PYTHON} testrunner.py --config ../known_failures.py `grep -l subprocess test_*.py`
+# because we set parallel=true, each run produces new and different coverage files; they all need
+# to be combined
 	coverage combine . greentest/
 
 toxtest:
@@ -99,7 +96,6 @@ travis_cpython:
 travis_test_linters:
 	make lint
 	GEVENTTEST_COVERAGE=1 make leaktest
-	coverage combine
 	coveralls
 
 
