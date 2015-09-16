@@ -97,6 +97,11 @@ if original_poll is not None:
             self.event.set()
 
     class poll(object):
+        """
+        An implementation of :class:`select.poll` that blocks only the current greenlet.
+
+        .. versionadded:: 1.1b1
+        """
         def __init__(self):
             self.fds = {}
             self.loop = get_hub().loop

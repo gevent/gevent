@@ -1,23 +1,73 @@
 # Copyright (c) 2009-2012 Denis Bilenko. See LICENSE for details.
-"""Make the standard library cooperative."""
+"""
+Make the standard library cooperative.
+
+Patching
+========
+
+The primary purpose of this module is to carefully patch, in place,
+portions of the standard library with gevent-friendly functions that
+behave in the same way as the original (at least as closely as possible).
+
+The primary interface to this is the :func:`patch_all` function, which
+performs all the available patches. It accepts arguments to limit the
+patching to certain modules, but most programs will want to use the
+default values as they receive the most wide-spread testing.
+
+Patching *should be done as early as possible* in the lifecycle of the
+program. For example, the main module (the one that tests against ``__main__``
+or is otherwise the first imported) should begin with this code::
+
+    from gevent import monkey
+    monkey.patch_all()
+
+.. tip::
+
+    Some frameworks, such as gunicorn, handle monkey-patching for you.
+    Check their documentation to be sure.
+
+Querying
+--------
+
+Sometimes it is helpful to know if objects have been monkey-patched, and in
+advanced cases even to have access to the original standard library functions. This
+module provides functions for that purpose.
+
+- :func:`is_module_patched`
+- :func:`is_object_patched`
+- :func:`get_original`
+
+Use as a module
+===============
+
+Sometimes it is useful to run existing python scripts or modules that
+were not built to be gevent aware under gevent. To do so, this module
+can be run as the main module, passing the script and its arguments.
+For details, see the :func:`main` function.
+
+"""
 from __future__ import absolute_import
 from __future__ import print_function
 import sys
 
-__all__ = ['patch_all',
-           'patch_socket',
-           'patch_ssl',
-           'patch_os',
-           'patch_time',
-           'patch_select',
-           'patch_thread',
-           'patch_subprocess',
-           'patch_sys',
-           'patch_signal',
-           # query functions
-           'get_original',
-           'is_module_patched',
-           'is_object_patched', ]
+__all__ = [
+    'patch_all',
+    'patch_socket',
+    'patch_ssl',
+    'patch_os',
+    'patch_time',
+    'patch_select',
+    'patch_thread',
+    'patch_subprocess',
+    'patch_sys',
+    'patch_signal',
+    # query functions
+    'get_original',
+    'is_module_patched',
+    'is_object_patched',
+    # module functions
+    'main',
+]
 
 
 if sys.version_info[0] >= 3:
@@ -305,10 +355,21 @@ def patch_ssl():
 
 
 def patch_select(aggressive=True):
-    """Replace :func:`select.select` with :func:`gevent.select.select`.
+    """
+    Replace :func:`select.select` with :func:`gevent.select.select`
+    and :func:`select.poll` with :class:`gevent.select.poll` (where available).
 
-    If ``aggressive`` is true (the default), also remove other blocking functions from :mod:`select`
-    and (on Python 3.4 and above) :mod:`selectors`.
+    If ``aggressive`` is true (the default), also remove other
+    blocking functions from :mod:`select` and (on Python 3.4 and
+    above) :mod:`selectors`:
+
+    - :func:`select.epoll`
+    - :func:`select.kqueue`
+    - :func:`select.kevent`
+    - :func:`select.devpoll` (Python 3.5+)
+    - :class:`selectors.EpollSelector`
+    - :class:`selectors.KqueueSelector`
+    - :class:`selectors.DevpollSelector` (Python 3.5+)
     """
     patch_module('select')
     if aggressive:
@@ -319,6 +380,7 @@ def patch_select(aggressive=True):
         remove_item(select, 'epoll')
         remove_item(select, 'kqueue')
         remove_item(select, 'kevent')
+        remove_item(select, 'devpoll')
 
     if sys.version_info[:2] >= (3, 4):
         # Python 3 wants to use `select.select` as a member function,
@@ -335,16 +397,17 @@ def patch_select(aggressive=True):
 
         if aggressive:
             # If `selectors` had already been imported before we removed
-            # select.epoll|kqueue, these may have been defined in terms
+            # select.epoll|kqueue|devpoll, these may have been defined in terms
             # of those functions. They'll fail at runtime.
             remove_item(selectors, 'EpollSelector')
             remove_item(selectors, 'KqueueSelector')
+            remove_item(selectors, 'DevpollSelector')
             selectors.DefaultSelector = selectors.SelectSelector
 
 
 def patch_subprocess():
     """Replace :func:`subprocess.call`, :func:`subprocess.check_call`,
-    :func:`subprocess.check_output` and :func:`subprocess.Popen` with cooperative versions."""
+    :func:`subprocess.check_output` and :class:`subprocess.Popen` with cooperative versions."""
     patch_module('subprocess')
 
 
@@ -397,23 +460,11 @@ def patch_all(socket=True, dns=True, time=True, select=True, thread=True, os=Tru
         patch_signal()
 
 
-if __name__ == '__main__':
-    from inspect import getargspec
-    patch_all_args = getargspec(patch_all)[0]
-    modules = [x for x in patch_all_args if 'patch_' + x in globals()]
-    script_help = """gevent.monkey - monkey patch the standard modules to use gevent.
-
-USAGE: python -m gevent.monkey [MONKEY OPTIONS] script [SCRIPT OPTIONS]
-
-If no OPTIONS present, monkey patches all the modules it can patch.
-You can exclude a module with --no-module, e.g. --no-thread. You can
-specify a module to patch with --module, e.g. --socket. In the latter
-case only the modules specified on the command line will be patched.
-
-MONKEY OPTIONS: --verbose %s""" % ', '.join('--[no-]%s' % m for m in modules)
+def main():
     args = {}
     argv = sys.argv[1:]
     verbose = False
+    script_help = _get_script_help()
     while argv and argv[0].startswith('--'):
         option = argv[0][2:]
         if option == 'verbose':
@@ -447,3 +498,25 @@ MONKEY OPTIONS: --verbose %s""" % ', '.join('--[no-]%s' % m for m in modules)
             exec(f.read())
     else:
         print(script_help)
+
+
+def _get_script_help():
+    from inspect import getargspec
+    patch_all_args = getargspec(patch_all)[0]
+    modules = [x for x in patch_all_args if 'patch_' + x in globals()]
+    script_help = """gevent.monkey - monkey patch the standard modules to use gevent.
+
+USAGE: python -m gevent.monkey [MONKEY OPTIONS] script [SCRIPT OPTIONS]
+
+If no OPTIONS present, monkey patches all the modules it can patch.
+You can exclude a module with --no-module, e.g. --no-thread. You can
+specify a module to patch with --module, e.g. --socket. In the latter
+case only the modules specified on the command line will be patched.
+
+MONKEY OPTIONS: --verbose %s""" % ', '.join('--[no-]%s' % m for m in modules)
+    return script_help
+
+main.__doc__ = _get_script_help()
+
+if __name__ == '__main__':
+    main()
