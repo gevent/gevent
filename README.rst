@@ -70,7 +70,7 @@ something like this::
   cd greentest
   PYTHONPATH=.. python testrunner.py --config ../known_failures.py --coverage
   coverage combine
-  coverage html
+  coverage html -i
   <open htmlcov/index.html>
 
 Builds on Travis CI automatically submit updates to `coveralls.io`_.

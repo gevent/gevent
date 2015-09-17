@@ -1,5 +1,26 @@
 [run]
-concurrency = gevent
+# In coverage 4.0b3, concurrency=gevent is exactly equivalent to
+# concurrency=greenlet, except it causes coverage itself to import
+# gevent. That messes up our coverage numbers for top-level
+# statements, so we use greenlet instead. See https://github.com/gevent/gevent/pull/655#issuecomment-141198002
+concurrency = greenlet
 parallel = True
 source = gevent
 omit = test_*
+
+[report]
+# Coverage is run on Linux under cPython 2, so
+# exclude branches that are windows specific or pypy/python3
+# specific
+exclude_lines =
+    pragma: no cover
+    def __repr__
+    raise AssertionError
+    raise NotImplementedError
+    except ImportError:
+    if __name__ == .__main__.:
+	if PYPY:
+    if PY3:
+    if sys.platform == 'win32':
+    if mswindows:
+    if sys.version_info.*>=.*3
