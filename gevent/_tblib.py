@@ -228,7 +228,25 @@ def install():
 # Added by gevent
 
 # We have to defer the initilization, and especially the import of platform,
-# until runtime.
+# until runtime. If we're monkey patched, we need to be sure to use
+# the original __import__ to avoid switching through the hub due to
+# import locks on Python 2. See also builtins.py for details.
+
+
+def _unlocked_imports(f):
+    def g(a):
+        gb = None
+        if 'gevent.builtins' in sys.modules:
+            gb = sys.modules['gevent.builtins']
+            gb._unlock_imports()
+        try:
+            return f(a)
+        finally:
+            if gb is not None:
+                gb._lock_imports()
+    g.__name__ = f.__name__
+    g.__module__ = f.__module__
+    return g
 
 
 def _import_dump_load():
@@ -271,11 +289,16 @@ def _init():
     install()
 
 
+@_unlocked_imports
 def dump_traceback(tb):
+    # Both _init and dump/load have to be unlocked, because
+    # copy_reg and pickle can do imports to resolve class names; those
+    # class names are in this module and greenlet safe though
     _init()
     return dumps(tb)
 
 
+@_unlocked_imports
 def load_traceback(s):
     _init()
     return loads(s)

@@ -29,6 +29,8 @@ _import = builtins.__import__
 # module lock is used such that this fix is not necessary.
 _g_import_lock = gevent.lock.RLock()
 
+__lock_imports = True
+
 
 def __import__(*args, **kwargs):
     """
@@ -45,7 +47,10 @@ def __import__(*args, **kwargs):
         args = args[1:]
     # TODO: It would be nice not to have to acquire the locks
     # if the module is already imported (in sys.modules), but the interpretation
-    # of the arguments is somewhat complex
+    # of the arguments is somewhat complex.
+    if not __lock_imports:
+        return _import(*args, **kwargs)
+
     imp.acquire_lock()
     try:
         _g_import_lock.acquire()
@@ -56,6 +61,27 @@ def __import__(*args, **kwargs):
     finally:
         imp.release_lock()
     return result
+
+
+def _unlock_imports():
+    """
+    Internal function, called when gevent needs to perform imports
+    lazily, but does not know the state of the system. It may be impossible
+    to take the import lock because there are no other running greenlets, for
+    example. This causes a monkey-patched __import__ to avoid taking any locks.
+    until the corresponding call to lock_imports. This should only be done for limited
+    amounts of time and when the set of imports is statically known to be "safe".
+    """
+    global __lock_imports
+    # This could easily become a list that we push/pop from or an integer
+    # we increment if we need to do this recursively, but we shouldn't get
+    # that complex.
+    __lock_imports = False
+
+
+def _lock_imports():
+    global __lock_imports
+    __lock_imports = True
 
 if sys.version_info[:2] >= (3, 3):
     __implements__ = []

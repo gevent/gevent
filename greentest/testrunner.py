@@ -28,12 +28,9 @@ IGNORE_COVERAGE = [
     # Hangs forever
     'test__threading_vs_settrace.py',
     # XXX ?
-    'test__issue302monkey.py'
+    'test__issue302monkey.py',
+    "test_subprocess.py",
 ]
-
-if os.environ.get('TRAVIS'):
-    # Flaky on travis, unknown why
-    IGNORE_COVERAGE.append("test_subprocess.py")
 
 
 def run_many(tests, expected=(), failfast=False):

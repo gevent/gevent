@@ -446,13 +446,14 @@ class Greenlet(greenlet):
         switch = getcurrent().switch
         self.rawlink(switch)
         try:
-            t = Timeout.start_new(timeout)
+            t = Timeout.start_new(timeout) if timeout is not None else None
             try:
                 result = self.parent.switch()
                 if result is not self:
                     raise InvalidSwitchError('Invalid switch into Greenlet.get(): %r' % (result, ))
             finally:
-                t.cancel()
+                if t is not None:
+                    t.cancel()
         except:
             # unlinking in 'except' instead of finally is an optimization:
             # if switch occurred normally then link was already removed in _notify_links
