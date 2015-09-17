@@ -318,13 +318,14 @@ if PYPY:
 else:
     install_requires = ['greenlet >= 0.4.7']
 
-# If we are running info / help commands, we don't need to build anything
-if len(sys.argv) >= 2 and ('--help' in sys.argv[1:] or
+# If we are running info / help commands, or we're being imported by
+# tools like pyroma, we don't need to build anything
+if (len(sys.argv) >= 2 and ('--help' in sys.argv[1:] or
                            sys.argv[1] in ('--help-commands',
                                            'egg_info',
                                            '--version',
                                            'clean',
-                                           '--long-description')):
+                                           '--long-description'))) or __name__ != '__main__':
     ext_modules = []
     include_package_data = PYPY
     run_make = False
@@ -373,6 +374,8 @@ def run_setup(ext_modules, run_make):
         version=__version__,
         description='Coroutine-based network library',
         long_description=read('README.rst'),
+        license="MIT",
+        keywords="greenlet coroutine cooperative multitasking light threads monkey",
         author='Denis Bilenko',
         author_email='denis.bilenko@gmail.com',
         url='http://www.gevent.org/',
@@ -383,6 +386,7 @@ def run_setup(ext_modules, run_make):
         install_requires=install_requires,
         setup_requires=setup_requires,
         zip_safe=False,
+        test_suite="greentest.testrunner",
         classifiers=[
             "License :: OSI Approved :: MIT License",
             "Programming Language :: Python :: 2.6",
@@ -400,20 +404,22 @@ def run_setup(ext_modules, run_make):
             "Development Status :: 4 - Beta"]
     )
 
+# Tools like pyroma expect the actual call to `setup` to be performed
+# at the top-level at import time, so don't stash it away behind 'if
+# __name__ == __main__'
 
-if __name__ == '__main__':
-    if os.getenv('READTHEDOCS'):
-        # Sometimes RTD fails to put our virtualenv bin directory
-        # on the PATH, meaning we can't run cython. Fix that.
-        new_path = os.environ['PATH'] + os.pathsep + os.path.dirname(sys.executable)
-        os.environ['PATH'] = new_path
+if os.getenv('READTHEDOCS'):
+    # Sometimes RTD fails to put our virtualenv bin directory
+    # on the PATH, meaning we can't run cython. Fix that.
+    new_path = os.environ['PATH'] + os.pathsep + os.path.dirname(sys.executable)
+    os.environ['PATH'] = new_path
 
-    try:
-        run_setup(ext_modules, run_make=run_make)
-    except BuildFailed:
-        if ARES not in ext_modules:
-            raise
-        ext_modules.remove(ARES)
-        run_setup(ext_modules, run_make=run_make)
+try:
+    run_setup(ext_modules, run_make=run_make)
+except BuildFailed:
     if ARES not in ext_modules:
-        sys.stderr.write('\nWARNING: The gevent.ares extension has been disabled.\n')
+        raise
+    ext_modules.remove(ARES)
+    run_setup(ext_modules, run_make=run_make)
+if ARES not in ext_modules and __name__ == '__main__':
+    sys.stderr.write('\nWARNING: The gevent.ares extension has been disabled.\n')

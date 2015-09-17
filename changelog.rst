@@ -47,8 +47,10 @@
   (monkey-patched) ``os.forkpty`` and ``pty.fork`` functions in the
   same way they do for the ``os.fork`` function. Reported in
   :issue:`650` by Erich Heine.
+- Code coverage by tests is now reported on `coveralls.io`_.
 
 .. _WSGI specification: https://www.python.org/dev/peps/pep-3333/#the-start-response-callable
+.. _coveralls.io: https://coveralls.io/github/gevent/gevent
 
 1.1b4 (Sep 4, 2015)
 ===================
