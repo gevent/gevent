@@ -96,7 +96,7 @@ travis_cpython:
 travis_test_linters:
 	make lint
 	GEVENTTEST_COVERAGE=1 make leaktest
-	coveralls
+	coveralls --rcfile=greentest/.coveragerc
 
 
 .PHONY: clean all doc pep8 whitespace pyflakes lint travistest travis
