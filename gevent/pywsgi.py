@@ -27,7 +27,11 @@ from gevent.server import StreamServer
 from gevent.hub import GreenletExit, PY3, reraise
 
 
-__all__ = ['WSGIHandler', 'WSGIServer', 'LoggingLogAdapter']
+__all__ = [
+    'WSGIServer',
+    'WSGIHandler',
+    'LoggingLogAdapter',
+]
 
 
 MAX_REQUEST_LINE = 8192
@@ -313,6 +317,20 @@ except ImportError:
 
 
 class WSGIHandler(object):
+    """
+    Handles HTTP requests from a socket, creates the WSGI environment, and
+    interacts with the WSGI application.
+
+    This is the default value of :attr:`WSGIServer.handler_class`.
+    This class may be subclassed carefully, and that class set on a
+    :class:`WSGIServer` instance through a keyword argument at
+    construction time.
+
+    Instances are constructed with the same arguments as passed to the
+    server's :meth:`WSGIServer.handle` method followed by the server
+    itself. The application and environment are obtained from the server.
+
+    """
     protocol_version = 'HTTP/1.1'
     if PY3:
         # if we do like Py2, then headers_factory unconditionally
@@ -340,8 +358,10 @@ class WSGIHandler(object):
         """
         The main request handling method, called by the server.
 
-        This method runs until all requests on the connection have
-        been handled (that is, it implements pipelining).
+        This method runs a request handling loop, calling
+        :meth:`handle_one_request` until all requests on the
+        connection have been handled (that is, it implements
+        keep-alive).
         """
         try:
             while self.socket is not None:
@@ -353,6 +373,7 @@ class WSGIHandler(object):
                     break
                 if result is True:
                     continue
+
                 self.status, response_body = result
                 self.socket.sendall(response_body)
                 if self.time_finish == 0:
@@ -387,10 +408,17 @@ class WSGIHandler(object):
 
     def read_request(self, raw_requestline):
         """
-        Process the incoming request. Parse various headers.
+        Process the incoming request.
+
+        Parses various headers into ``self.headers`` using
+        :attr:`MessageClass`.
+
+        :param str raw_requestline: A native :class:`str` representing
+           the request line. A processed version of this will be stored
+           into ``self.requestline``.
 
         :raises ValueError: If the request is invalid. This error will
-           not be logged (because it's a client issue, not a server problem).
+           not be logged as a traceback (because it's a client issue, not a server problem).
         """
         self.requestline = raw_requestline.rstrip()
         words = self.requestline.split()
@@ -476,6 +504,42 @@ class WSGIHandler(object):
         return line
 
     def handle_one_request(self):
+        """
+        Handles one HTTP request using ``self.socket`` and ``self.rfile``.
+
+        Each invocation of this method will do several things, including (but not limited to):
+
+        - Read the request line using :meth:`read_requestline`;
+        - Read the rest of the request, including headers, with :meth:`read_request`;
+        - Construct a new WSGI environment in ``self.environ`` using :meth:`get_environ`;
+        - Store the application in ``self.application``, retrieving it from the server;
+        - Handle the remainder of the request, including invoking the application,
+          with :meth:`handle_one_response`
+
+        There are several possible return values to indicate the state
+        of the client connection:
+
+        - ``None``
+            The client connection is already closed or should
+            be closed because the WSGI application or client set the
+            ``Connection: close`` header. The request handling
+            loop should terminate and perform cleanup steps.
+        - (status, body)
+            An HTTP status and body tuple. The request was in error,
+            as detailed by the status and body. The request handling
+            loop should terminate, close the connection, and perform
+            cleanup steps. Note that the ``body`` is the complete contents
+            to send to the client, including all headers and the initial
+            status line.
+        - ``True``
+            The literal ``True`` value. The request was successfully handled
+            and the response sent to the client by :meth:`handle_one_response`.
+            The connection remains open to process more requests and the connection
+            handling loop should call this method again. This is the typical return
+            value.
+
+        .. seealso:: :meth:`handle`
+        """
         if self.rfile.closed:
             return
         try:
@@ -501,7 +565,7 @@ class WSGIHandler(object):
                 return ('400', _BAD_REQUEST_RESPONSE)
         except Exception as ex:
             if not isinstance(ex, ValueError):
-                traceback.print_exc()
+                traceback.print_exc() # Why not self.handle_error?
             self.log_error('Invalid request: %s', str(ex) or ex.__class__.__name__)
             return ('400', _BAD_REQUEST_RESPONSE)
 
@@ -796,6 +860,16 @@ class WSGIHandler(object):
             yield 'HTTP_' + key, value.strip()
 
     def get_environ(self):
+        """
+        Construct and return a new WSGI environment dictionary for a specific request.
+
+        This should begin with asking the server for the base environment
+        using :meth:`WSGIServer.get_environ`, and then proceed to add the
+        request specific values.
+
+        By the time this method is invoked the request line and request shall have
+        been parsed and ``self.headers`` shall be populated.
+        """
         env = self.server.get_environ()
         env['REQUEST_METHOD'] = self.command
         env['SCRIPT_NAME'] = ''
@@ -932,6 +1006,14 @@ class WSGIServer(StreamServer):
         ``error_log`` arguments.
     """
 
+    #: A callable taking three arguments: (socket, address, server) and returning
+    #: an object with a ``handle()`` method. The callable is called once for
+    #: each incoming socket request, as is its handle method. The handle method should not
+    #: return until all use of the socket is complete.
+    #:
+    #: This class uses the :class:`WSGIHandler` object as the default value. You may
+    #: subclass this class and set a different default value, or you may pass
+    #: a value to use in the ``handler_class`` keyword constructor argument.
     handler_class = WSGIHandler
 
     #: The object to which request logs will be written.
@@ -948,7 +1030,7 @@ class WSGIServer(StreamServer):
                 'SERVER_SOFTWARE': 'gevent/%d.%d Python/%d.%d' % (gevent.version_info[:2] + sys.version_info[:2]),
                 'SCRIPT_NAME': '',
                 'wsgi.version': (1, 0),
-                'wsgi.multithread': False,
+                'wsgi.multithread': False, # XXX: Aren't we really, though?
                 'wsgi.multiprocess': False,
                 'wsgi.run_once': False}
 
