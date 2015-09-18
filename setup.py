@@ -320,12 +320,14 @@ else:
 
 # If we are running info / help commands, or we're being imported by
 # tools like pyroma, we don't need to build anything
-if (len(sys.argv) >= 2 and ('--help' in sys.argv[1:] or
-                           sys.argv[1] in ('--help-commands',
-                                           'egg_info',
-                                           '--version',
-                                           'clean',
-                                           '--long-description'))) or __name__ != '__main__':
+if ((len(sys.argv) >= 2
+     and ('--help' in sys.argv[1:]
+          or sys.argv[1] in ('--help-commands',
+                             'egg_info',
+                             '--version',
+                             'clean',
+                             '--long-description')))
+    or __name__ != '__main__'):
     ext_modules = []
     include_package_data = PYPY
     run_make = False
