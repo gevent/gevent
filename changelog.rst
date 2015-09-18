@@ -4,31 +4,11 @@
 
 .. currentmodule:: gevent
 
-1.1b5 (unreleased)
-==================
+1.1b5 (Sep 18, 2015)
+====================
 
-- Fix a possible ``ValueError`` from ``gevent.queue.Queue:peek``.
-  Reported in :issue:`647` by Kevin Chen.
 - ``gevent.subprocess`` works under Python 3.5. In general, Python 3.5
   has preliminary support. Reported in :issue:`653` by Squeaky.
-- Restore backwards compatibility for using ``gevent.signal`` as a
-  callable, which, depending on the order of imports, could be broken
-  after the addition of the ``gevent.signal`` module. Reported in
-  :issue:`648` by Sylvain Zimmer.
-- ``gevent.pywsgi.WSGIServer`` does a better job detecting and
-  reporting potential encoding errors for headers and the status line
-  during ``start_response`` as recommended by `WSGI specification`_.
-  In addition, under Python 2, unnecessary encodings and decodings
-  (often a trip through the ASCII encoding) are avoided for conforming
-  applications. This is an enhancement of an already documented and
-  partially enforced constraint: beginning in 1.1a1, under Python 2,
-  ``u'abc'`` would typically previously have been allowed, but
-  ``u'\u1f4a3'`` would not; now, neither will be allowed, more closely
-  matching the specification, improving debugability and performance
-  and allowing for better error handling both by the application and
-  by gevent (previously, certain encoding errors could result in
-  gevent writing invalid/malformed HTTP responses). Reported by Greg
-  Higgins and Carlos Sanchez.
 - ``gevent.subprocess.Popen.communicate`` honors a ``timeout``
   argument even if there is no way to communicate with the child
   process (none of stdin, stdout and stderr were set to ``PIPE``).
@@ -36,6 +16,12 @@
   ``subprocess.run`` but impacts all versions (``timeout`` is an
   official argument under Python 3 and a gevent extension with
   slightly different semantics under Python 2).
+- Fix a possible ``ValueError`` from ``gevent.queue.Queue:peek``.
+  Reported in :issue:`647` by Kevin Chen.
+- Restore backwards compatibility for using ``gevent.signal`` as a
+  callable, which, depending on the order of imports, could be broken
+  after the addition of the ``gevent.signal`` module. Reported in
+  :issue:`648` by Sylvain Zimmer.
 - gevent blocking operations performed at the top-level of a module
   after the system was monkey-patched under Python 2 could result in
   raising a ``LoopExit`` instead of completing the expected blocking
@@ -47,6 +33,20 @@
   (monkey-patched) ``os.forkpty`` and ``pty.fork`` functions in the
   same way they do for the ``os.fork`` function. Reported in
   :issue:`650` by Erich Heine.
+- ``gevent.pywsgi.WSGIServer`` (``WSGIHandler``) does a better job detecting and
+  reporting potential encoding errors for headers and the status line
+  during ``start_response`` as recommended by the `WSGI specification`_.
+  In addition, under Python 2, unnecessary encodings and decodings
+  (often a trip through the ASCII encoding) are avoided for conforming
+  applications. This is an enhancement of an already documented and
+  partially enforced constraint: beginning in 1.1a1, under Python 2,
+  ``u'abc'`` would typically previously have been allowed, but
+  ``u'\u1f4a3'`` would not; now, neither will be allowed, more closely
+  matching the specification, improving debugability and performance
+  and allowing for better error handling both by the application and
+  by gevent (previously, certain encoding errors could result in
+  gevent writing invalid/malformed HTTP responses). Reported by Greg
+  Higgins and Carlos Sanchez.
 - Code coverage by tests is now reported on `coveralls.io`_.
 
 .. _WSGI specification: https://www.python.org/dev/peps/pep-3333/#the-start-response-callable
