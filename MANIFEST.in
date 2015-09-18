@@ -22,3 +22,23 @@ include .pep8
 recursive-include benchmarks *.sh
 recursive-include appveyor *.cmd
 recursive-include appveyor *.ps1
+
+### Artifacts of configuring/building in place
+# These we want, they come from the Makefile step
+#- recursive-exclude gevent core.pyx *.c *.h
+# This we want if we're on PyPy it's moved there ahead of time
+# by setup.py
+#- prune gevent/libev
+prune */__pycache__
+global-exclude *.so
+global-exclude config.log config.status
+prune doc/_build
+global-exclude *.pyc
+recursive-exclude greentest .coverage
+prune greentest/htmlcov
+recursive-exclude c-ares stamp-h? ares_build.h.orig
+prune libev/.deps
+recursive-exclude libev Makefile libtool stamp-h?
+# See comments in Makefile; this is renamed to Makefile.ext
+# this exclude keeps check-manifest from complaining
+exclude Makefile
