@@ -341,6 +341,11 @@ class WSGIHandler(object):
         MessageClass = headers_factory
 
     def __init__(self, socket, address, server, rfile=None):
+        # Deprecation: The rfile kwarg was introduced in 1.0a1 as part
+        # of a refactoring. It was never documented or used. It is
+        # considered DEPRECATED and may be removed in the future. Its
+        # use is not supported.
+
         self.socket = socket
         self.client_address = address
         self.server = server
