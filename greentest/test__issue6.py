@@ -8,6 +8,9 @@ if not sys.argv[1:]:
     code = p.poll()
     assert p.poll() == 0, (out, err, code)
     assert out.strip() == b'11 chars.', (out, err, code)
+    # XXX: This is seen sometimes to fail on Travis with the following value in err but a code of 0;
+    # it seems load related:
+    #  'Unhandled exception in thread started by \nsys.excepthook is missing\nlost sys.stderr\n'
     assert err == b'', (out, err, code)
 
 elif sys.argv[1:] == ['subprocess']:

@@ -24,6 +24,11 @@ FAILING_TESTS = [
     # Sometimes fails with AssertionError: ...\nIOError: close() called during concurrent operation on the same file object.\n'
     # Sometimes it contains "\nUnhandled exception in thread started by \nsys.excepthook is missing\nlost sys.stderr\n"
     "FLAKY test__subprocess_interrupted.py",
+    # test__issue6 (see comments in test file) is really flaky on both Travis and Appveyor;
+    # on Travis we could just run the test again (but that gets old fast), but on appveyor
+    # we don't have that option without a new commit---and sometimes we really need a build
+    # to succeed in order to get a release wheel
+    'FLAKY test__issue6.py',
 ]
 
 
@@ -60,11 +65,6 @@ if sys.platform == 'win32':
         # on appveyor
         'FLAKY test__timeout.py',
         'FLAKY test_hub_join_timeout.py',
-        # test__issue6 is rarely flaky on both Travis and Appveyor;
-        # on travis we can just run the test again, but on appveyor
-        # we don't have that option without a new commit---and sometimes we really need a build
-        # to succeed in order to get a release wheel
-        'FLAKY test__issue6.py',
     ]
 
     if struct.calcsize('P') * 8 == 64:
