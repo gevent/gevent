@@ -7,7 +7,10 @@
 1.1b6 (unreleased)
 ==================
 
-- TDB
+- PyPy: Fix a memory leak for code that allocated and disposed of many
+  ``gevent.lock.Semaphore`` subclasses. If monkey-patched, this could
+  also apply to ``threading.Semaphore`` objects. Reported in
+  :issue:`660` by Jay Oster.
 
 1.1b5 (Sep 18, 2015)
 ====================

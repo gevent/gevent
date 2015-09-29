@@ -614,6 +614,7 @@ class loop(object):
                 callback = cb.callback
                 args = cb.args
                 if callback is None or args is None:
+                    # it's been stopped
                     continue
 
                 cb.callback = None
@@ -799,6 +800,7 @@ class loop(object):
         cb = callback(func, args)
         self._callbacks.append(cb)
         self.ref()
+
         return cb
 
     def _format(self):
@@ -838,6 +840,11 @@ class loop(object):
             raise ValueError('operation on destroyed loop')
         return self._ptr.activecnt
 
+# For times when *args is captured but often not passed (empty),
+# we can avoid keeping the new tuple that was created for *args
+# around by using a constant.
+_NOARGS = ()
+
 
 class callback(object):
 
@@ -845,7 +852,7 @@ class callback(object):
 
     def __init__(self, callback, args):
         self.callback = callback
-        self.args = args
+        self.args = args or _NOARGS
 
     def stop(self):
         self.callback = None
@@ -883,7 +890,7 @@ class callback(object):
 
 class watcher(object):
 
-    def __init__(self, _loop, ref=True, priority=None, args=tuple()):
+    def __init__(self, _loop, ref=True, priority=None, args=_NOARGS):
         self.loop = _loop
         if ref:
             self._flags = 0
@@ -892,6 +899,7 @@ class watcher(object):
         self.args = None
         self._callback = None
         self._handle = ffi.new_handle(self)
+        # XXX This parses the C every time. Is that expensive? Can we do better?
         self._gwatcher = ffi.new('struct gevent_' + self._watcher_type + '*')
         self._watcher = ffi.addressof(self._gwatcher.watcher)
         self._gwatcher.handle = self._handle
@@ -959,7 +967,7 @@ class watcher(object):
         if callback is None:
             raise TypeError('callback must be callable, not None')
         self.callback = callback
-        self.args = args
+        self.args = args or _NOARGS
         self._libev_unref()
         self._watcher_start(self.loop._ptr, self._watcher)
         self.loop._keepaliveset.add(self)
@@ -985,7 +993,7 @@ class watcher(object):
 
     def feed(self, revents, callback, *args):
         self.callback = callback
-        self.args = args
+        self.args = args or _NOARGS
         if self._flags & 6 == 4:
             self.loop.unref()
             self._flags |= 2
@@ -1017,6 +1025,7 @@ class io(watcher):
         watcher.__init__(self, loop, ref=ref, priority=priority, args=(fd, events))
 
     def start(self, callback, *args, **kwargs):
+        args = args or _NOARGS
         if kwargs.get('pass_events'):
             args = (GEVENT_CORE_EVENTS, ) + args
         super(io, self).start(callback, *args)
@@ -1067,7 +1076,7 @@ class timer(watcher):
             raise TypeError('callback must be callable, not None')
         update = kw.get("update", True)
         self.callback = callback
-        self.args = args
+        self.args = args or _NOARGS
 
         self._libev_unref()  # LIBEV_UNREF
 
@@ -1083,7 +1092,7 @@ class timer(watcher):
     def again(self, callback, *args, **kw):
         update = kw.get("update", True)
         self.callback = callback
-        self.args = args
+        self.args = args or _NOARGS
         self._libev_unref()
         if update:
             libev.ev_now_update(self.loop._ptr)

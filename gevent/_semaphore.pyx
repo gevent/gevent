@@ -6,9 +6,10 @@ from gevent.timeout import Timeout
 __all__ = ['Semaphore', 'BoundedSemaphore']
 
 
-
 class Semaphore(object):
     """
+    Semaphore(value=1) -> Semaphore
+
     A semaphore manages a counter representing the number of release()
     calls minus the number of acquire() calls, plus an initial value.
     The acquire() method blocks if necessary until it can return
@@ -22,15 +23,30 @@ class Semaphore(object):
     def __init__(self, value=1):
         if value < 0:
             raise ValueError("semaphore initial value must be >= 0")
-        self._links = []
         self.counter = value
-        self._notifier = None
         self._dirty = False
-        # we don't want to do get_hub() here to allow module-level locks
+        # In PyPy 2.6.1 with Cython 0.23, `cdef public` or `cdef
+        # readonly` attributes of type `object` can appear to leak if
+        # a Python subclass is used (this is visible simply
+        # instantiating this subclass if _links=[]). Our _links and
+        # _notifier are such attributes, and gevent.thread subclasses
+        # this class. Thus, we carefully manage the lifetime of the
+        # objects we put in these attributes so that, in the normal
+        # case of a semaphore used correctly (dealloced when it's not
+        # locked and no one is waiting), the leak goes away (because
+        # these objects are back to None). This can also be solved on PyPy
+        # by simply not declaring these objects in the pxd file, but that doesn't work for
+        # CPython ("No attribute..."); it might be possible to simply `cdef` them,
+        # but that's a minor backwards incompatibility (because they'd be inaccessible
+        # to python)
+        # See https://github.com/gevent/gevent/issues/660
+        self._links = None
+        self._notifier = None
+        # we don't want to do get_hub() here to allow defining module-level locks
         # without initializing the hub
 
     def __str__(self):
-        params = (self.__class__.__name__, self.counter, len(self._links))
+        params = (self.__class__.__name__, self.counter, len(self._links) if self._links else 0)
         return '<%s counter=%s _links[%s]>' % params
 
     def locked(self):
@@ -45,51 +61,99 @@ class Semaphore(object):
 
     def _start_notify(self):
         if self._links and self.counter > 0 and not self._notifier:
-            self._notifier = get_hub().loop.run_callback(self._notify_links)
+            # We create a new self._notifier each time through the loop,
+            # if needed. (it has a __bool__ method that tells whether it has
+            # been run; once it's run once---at the end of the loop---it becomes
+            # false.)
+            # Note that we pass Semaphore.__notify_links and not self._notify_links.
+            # This avoids having Cython create a bound method, which on PyPy 2.6.1,
+            # shows up as a leak, at least in the short term (possibly due to the cycles?)
+            # Simply passing it to Python, where Python doesn't keep a reference to it,
+            # shows as a leak.
+            # Note2: The method and tuple objects still show as a leak until the event
+            # loop is allowed to run, e.g., with gevent.sleep(). Manually running the callbacks
+            # isn't enough.
+            self._notifier = get_hub().loop.run_callback(Semaphore._notify_links, self)
 
     def _notify_links(self):
-        while True:
-            self._dirty = False
-            for link in self._links:
-                if self.counter <= 0:
+        # Subclasses CANNOT override. This is a cdef method.
+
+        # We release self._notifier here. We are called by it
+        # at the end of the loop, and it is now false in a boolean way (as soon
+        # as this method returns).
+        # If we get acquired/released again, we will create a new one, but there's
+        # no need to keep it around until that point (making it potentially climb
+        # into older GC generations, notably on PyPy)
+        notifier = self._notifier
+        try:
+            while True:
+                self._dirty = False
+                if not self._links:
+                    # In case we were manually unlinked before
+                    # the callback. Which shouldn't happen
                     return
-                try:
-                    link(self)
-                except:
-                    getcurrent().handle_error((link, self), *sys.exc_info())
-                if self._dirty:
-                    break
-            if not self._dirty:
-                return
+                for link in self._links:
+                    if self.counter <= 0:
+                        return
+                    try:
+                        link(self)
+                    except:
+                        getcurrent().handle_error((link, self), *sys.exc_info())
+                    if self._dirty:
+                        # We mutated self._links so we need to start over
+                        break
+                if not self._dirty:
+                    return
+        finally:
+            # We should not have created a new notifier even if callbacks
+            # released us because we loop through *all* of our links on the
+            # same callback while self._notifier is still true.
+            assert self._notifier is notifier
+            self._notifier = None
 
     def rawlink(self, callback):
-        """Register a callback to call when a counter is more than zero.
+        """
+        rawlink(callback) -> None
+
+        Register a callback to call when a counter is more than zero.
 
         *callback* will be called in the :class:`Hub <gevent.hub.Hub>`, so it must not use blocking gevent API.
         *callback* will be passed one argument: this instance.
         """
         if not callable(callback):
-            raise TypeError('Expected callable: %r' % (callback, ))
-        self._links.append(callback)
+            raise TypeError('Expected callable:', callback)
+        if self._links is None:
+            self._links = [callback]
+        else:
+            self._links.append(callback)
         self._dirty = True
 
     def unlink(self, callback):
-        """Remove the callback set by :meth:`rawlink`"""
+        """
+        unlink(callback) -> None
+
+        Remove the callback set by :meth:`rawlink`
+        """
         try:
             self._links.remove(callback)
             self._dirty = True
-        except ValueError:
+        except (ValueError, AttributeError):
             pass
+        if not self._links:
+            self._links = None
+            # TODO: Cancel a notifier if there are no links?
 
     def wait(self, timeout=None):
         """
+        wait(timeout=None) -> int
+
         Wait until it is possible to acquire this semaphore, or until the optional
         *timeout* elapses.
 
         .. warning:: If this semaphore was initialized with a size of 0,
            this method will block forever if no timeout is given.
 
-        :param float timeout: If given, specifies the maximum amount of seconds
+        :keyword float timeout: If given, specifies the maximum amount of seconds
            this method will block.
         :return: A number indicating how many times the semaphore can be acquired
             before blocking.
@@ -117,6 +181,8 @@ class Semaphore(object):
 
     def acquire(self, blocking=True, timeout=None):
         """
+        acquire(blocking=True, timeout=None) -> bool
+
         Acquire the semaphore.
 
         .. warning:: If this semaphore was initialized with a size of 0,
@@ -170,6 +236,7 @@ class Semaphore(object):
 
     def __exit__(self, t, v, tb):
         self.release()
+
 
 class BoundedSemaphore(Semaphore):
     """
