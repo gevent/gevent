@@ -17,12 +17,7 @@ install:
     - travis_retry pip install -U pip
     # Then start installing our deps so they can be cached. Note that use of --build-options / --global-options / --install-options
     # disables the cache.
-    # Bug https://bitbucket.org/pypa/wheel/issues/146/wheel-building-fails-on-cpython-350b3
-    # means that installing cython on cpython 3.5 cannot use the wheel cache, which
-    # means that the LINT=true case is quite slow (2.5 minutes). If this takes very long to fix,
-    # we might want to do some refactoring to move installation into the makefile or a script (so the LINT=true case
-    # isn't slowed down).
-    # That was fixed in wheel 0.25, but now we're hitting https://bitbucket.org/pypa/wheel/issues/148/unorderable-types-error-for-python-3
+    # We need wheel>=0.26 on Python 3.5. See previous revisions.
     - travis_retry pip install -U wheel
     - travis_retry pip install -U tox cython greenlet pep8 pyflakes "coverage>=4.0b3" "coveralls>=1.0b1"
 script:
