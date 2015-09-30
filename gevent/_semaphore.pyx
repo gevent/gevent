@@ -26,7 +26,7 @@ class Semaphore(object):
         self.counter = value
         self._dirty = False
         # In PyPy 2.6.1 with Cython 0.23, `cdef public` or `cdef
-        # readonly` attributes of type `object` can appear to leak if
+        # readonly` or simply `cdef` attributes of type `object` can appear to leak if
         # a Python subclass is used (this is visible simply
         # instantiating this subclass if _links=[]). Our _links and
         # _notifier are such attributes, and gevent.thread subclasses
@@ -36,9 +36,7 @@ class Semaphore(object):
         # locked and no one is waiting), the leak goes away (because
         # these objects are back to None). This can also be solved on PyPy
         # by simply not declaring these objects in the pxd file, but that doesn't work for
-        # CPython ("No attribute..."); it might be possible to simply `cdef` them,
-        # but that's a minor backwards incompatibility (because they'd be inaccessible
-        # to python)
+        # CPython ("No attribute...")
         # See https://github.com/gevent/gevent/issues/660
         self._links = None
         self._notifier = None
