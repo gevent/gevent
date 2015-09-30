@@ -157,6 +157,15 @@ if PY3:
             'FLAKY test__socket.py',
         ]
 
+if sys.version_info[:2] == (3, 3) and os.environ.get('TRAVIS') == 'true':
+    # Builds after Sept 29th 2015 have all been failing here, but no code that could
+    # affect this was changed. Travis is using 3.3.5;
+    # locally I cannot reproduce with 3.3.6. Don't mark this FLAKY so that if it starts to
+    # work again we get a failure and can remove this
+    FAILING_TESTS += [
+        'test__refcount_core.py'
+    ]
+
 if COVERAGE:
     # The gevent concurrency plugin tends to slow things
     # down and get us past our default timeout value. These
