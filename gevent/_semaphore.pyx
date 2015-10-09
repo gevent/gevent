@@ -67,7 +67,7 @@ class Semaphore(object):
             # This avoids having Cython create a bound method, which on PyPy 2.6.1,
             # shows up as a leak, at least in the short term (possibly due to the cycles?)
             # Simply passing it to Python, where Python doesn't keep a reference to it,
-            # shows as a leak.
+            # shows as a leak. (It's probably this is the same leak as the CallOneArg leak documented in _notify_links.)
             # Note2: The method and tuple objects still show as a leak until the event
             # loop is allowed to run, e.g., with gevent.sleep(). Manually running the callbacks
             # isn't enough.
@@ -83,6 +83,11 @@ class Semaphore(object):
         # no need to keep it around until that point (making it potentially climb
         # into older GC generations, notably on PyPy)
         notifier = self._notifier
+        # XXX Cython 0.23.3 and before, at least, have a bug calling arguments of one method on PyPy,
+        # such that a tuple leaks every time.
+        # See https://bitbucket.org/pypy/pypy/issues/2149/memory-leak-for-python-subclass-of-cpyext#comment-22371546
+        # So we do a workaround and force tuple packing/unpacking
+        args = (self,)
         try:
             while True:
                 self._dirty = False
@@ -94,7 +99,7 @@ class Semaphore(object):
                     if self.counter <= 0:
                         return
                     try:
-                        link(self)
+                        link(*args)
                     except:
                         getcurrent().handle_error((link, self), *sys.exc_info())
                     if self._dirty:
@@ -123,7 +128,7 @@ class Semaphore(object):
         if self._links is None:
             self._links = [callback]
         else:
-            self._links.append(callback)
+            self._links.append(callback) # XXX might leak a tuple on PyPy. See _notify_links
         self._dirty = True
 
     def unlink(self, callback):
@@ -133,7 +138,7 @@ class Semaphore(object):
         Remove the callback set by :meth:`rawlink`
         """
         try:
-            self._links.remove(callback)
+            self._links.remove(callback) # XXX might leak a tuple on PyPy. See _notify_links
             self._dirty = True
         except (ValueError, AttributeError):
             pass
@@ -152,6 +157,7 @@ class Semaphore(object):
         try:
             # As a tiny efficiency optimization, avoid allocating a timer
             # if not needed.
+            # XXX might leak a tuple on PyPy. See _notify_links
             timer = Timeout.start_new(timeout) if timeout is not None else None
             try:
                 try:
