@@ -316,7 +316,7 @@ def read(name, *args):
 if PYPY:
     install_requires = []
 else:
-    install_requires = ['greenlet >= 0.4.7']
+    install_requires = ['greenlet >= 0.4.9']
 
 # If we are running info / help commands, or we're being imported by
 # tools like pyroma, we don't need to build anything
