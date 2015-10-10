@@ -74,7 +74,7 @@ def get_switch_expected(fullname):
 
 
 disabled_tests = [
-    'test_threading.ThreadTests.test_PyThreadState_SetAsyncExc'
+    'test_threading.ThreadTests.test_PyThreadState_SetAsyncExc',
     # uses some internal C API of threads not available when threads are emulated with greenlets
 
     'test_threading.ThreadTests.test_join_nondaemon_on_shutdown',
