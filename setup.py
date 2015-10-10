@@ -345,6 +345,8 @@ elif PYPY:
                    # cost of some speed (one trivial semaphore micro-benchmark put the pure-python version
                    # at around 1s and the compiled version at around 4s). Some clever subclassing
                    # and having only the bare minimum be in cython might help reduce that penalty.
+                   # NOTE: You must use version 0.23.4 or later to avoid a memory leak.
+                   # https://mail.python.org/pipermail/cython-devel/2015-October/004571.html
                    Extension(name="gevent._semaphore",
                              sources=["gevent/gevent._semaphore.c"])]
     include_package_data = True
@@ -360,7 +362,10 @@ else:
     run_make = True
 
 if run_make and os.path.exists("Makefile"):
-    setup_requires = ['cython']
+    # This is effectively pointless and serves only for
+    # documentation/metadata, because we run 'make' *before* we run
+    # setup(), so installing cython happens too late.
+    setup_requires = ['cython >= 0.23.4']
 else:
     setup_requires = []
 

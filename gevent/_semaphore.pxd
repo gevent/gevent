@@ -9,7 +9,7 @@ cdef class Semaphore:
     cpdef rawlink(self, object callback)
     cpdef unlink(self, object callback)
     cpdef _start_notify(self)
-    cdef _notify_links(self)
+    cpdef _notify_links(self)
     cdef _do_wait(self, object timeout)
     cpdef int wait(self, object timeout=*) except -1000
     cpdef bint acquire(self, int blocking=*, object timeout=*) except -1000

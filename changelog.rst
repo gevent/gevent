@@ -11,10 +11,10 @@
   ``gevent.lock.Semaphore`` subclasses. If monkey-patched, this could
   also apply to ``threading.Semaphore`` objects. Reported in
   :issue:`660` by Jay Oster.
-- PyPy: Work around the worst case of a bug in Cython 0.23.3 that
-  caused tuples to leak when releasing ``gevent.lock.Semaphore``
-  objects that were linked to (e.g., when a StreamServer had a spawn
-  limit).
+- PyPy: Cython version 0.23.4 or later must be used to avoid a memory
+  leak (`details`_). Thanks to Jay Oster.
+
+.. _details: https://mail.python.org/pipermail/cython-devel/2015-October/004571.html
 
 1.1b5 (Sep 18, 2015)
 ====================

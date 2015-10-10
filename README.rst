@@ -41,8 +41,9 @@ Development
 
 To install the latest development version::
 
-  pip install cython git+git://github.com/gevent/gevent.git#egg=gevent
+  pip install 'cython>=0.23.4' git+git://github.com/gevent/gevent.git#egg=gevent
 
+.. note:: You must have Cython installed to build a checkout.
 
 Running Tests
 -------------
@@ -50,6 +51,7 @@ Running Tests
 There are a few different ways to run the tests. To simply run the
 tests on one version of Python during development, try this::
 
+  pip install cython>=0.23.4
   python setup.py build
   cd greentest
   PYTHONPATH=.. python testrunner.py --config ../known_failures.py
