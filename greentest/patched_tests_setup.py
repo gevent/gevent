@@ -73,76 +73,80 @@ def get_switch_expected(fullname):
     return True
 
 
-disabled_tests = \
-    [ 'test_threading.ThreadTests.test_PyThreadState_SetAsyncExc'
+disabled_tests = [
+    'test_threading.ThreadTests.test_PyThreadState_SetAsyncExc'
     # uses some internal C API of threads not available when threads are emulated with greenlets
 
-    , 'test_threading.ThreadTests.test_join_nondaemon_on_shutdown'
+    'test_threading.ThreadTests.test_join_nondaemon_on_shutdown',
     # asserts that repr(sleep) is '<built-in function sleep>'
 
-    , 'test_urllib2net.TimeoutTest.test_ftp_no_timeout'
-    , 'test_urllib2net.TimeoutTest.test_ftp_timeout'
-    , 'test_urllib2net.TimeoutTest.test_http_no_timeout'
-    , 'test_urllib2net.TimeoutTest.test_http_timeout'
+    'test_urllib2net.TimeoutTest.test_ftp_no_timeout',
+    'test_urllib2net.TimeoutTest.test_ftp_timeout',
+    'test_urllib2net.TimeoutTest.test_http_no_timeout',
+    'test_urllib2net.TimeoutTest.test_http_timeout',
     # accesses _sock.gettimeout() which is always in non-blocking mode
 
-    , 'test_urllib2net.OtherNetworkTests.test_ftp'
+    'test_urllib2net.OtherNetworkTests.test_ftp',
     # too slow
 
-    , 'test_urllib2net.OtherNetworkTests.test_urlwithfrag'
+    'test_urllib2net.OtherNetworkTests.test_urlwithfrag',
     # fails dues to some changes on python.org
 
-    , 'test_urllib2net.OtherNetworkTests.test_sites_no_connection_close'
+    'test_urllib2net.OtherNetworkTests.test_sites_no_connection_close',
     # flaky
 
-    , 'test_socket.UDPTimeoutTest.testUDPTimeout'
+    'test_socket.UDPTimeoutTest.testUDPTimeout',
     # has a bug which makes it fail with error: (107, 'Transport endpoint is not connected')
     # (it creates a TCP socket, not UDP)
 
-    , 'test_socket.GeneralModuleTests.testRefCountGetNameInfo'
+    'test_socket.GeneralModuleTests.testRefCountGetNameInfo',
     # fails with "socket.getnameinfo loses a reference" while the reference is only "lost"
     # because it is referenced by the traceback - any Python function would lose a reference like that.
     # the original getnameinfo does not "lose" it because it's in C.
 
-    , 'test_socket.NetworkConnectionNoServer.test_create_connection_timeout'
+    'test_socket.NetworkConnectionNoServer.test_create_connection_timeout',
     # replaces socket.socket with MockSocket and then calls create_connection.
     # this unfortunately does not work with monkey patching, because gevent.socket.create_connection
     # is bound to gevent.socket.socket and updating socket.socket does not affect it.
     # this issues also manifests itself when not monkey patching DNS: http://code.google.com/p/gevent/issues/detail?id=54
     # create_connection still uses gevent.socket.getaddrinfo while it should be using socket.getaddrinfo
 
-    , 'test_asyncore.BaseTestAPI.test_handle_expt'
+    'test_asyncore.BaseTestAPI.test_handle_expt',
     # sends some OOB data and expect it to be detected as such; gevent.select.select does not support that
 
-    , 'test_signal.WakeupSignalTests.test_wakeup_fd_early'
+    'test_signal.WakeupSignalTests.test_wakeup_fd_early',
     # expects time.sleep() to return prematurely in case of a signal;
     # gevent.sleep() is better than that and does not get interrupted (unless signal handler raises an error)
 
-    , 'test_signal.WakeupSignalTests.test_wakeup_fd_during'
-    # expects select.select() to raise select.error(EINTR, 'interrupted system call')
+    'test_signal.WakeupSignalTests.test_wakeup_fd_during',
+    # expects select.select() to raise select.error(EINTR'interrupted system call')
     # gevent.select.select() does not get interrupted (unless signal handler raises an error)
     # maybe it should?
 
-    , 'test_signal.SiginterruptTest.test_without_siginterrupt'
-    , 'test_signal.SiginterruptTest.test_siginterrupt_on'
+    'test_signal.SiginterruptTest.test_without_siginterrupt',
+    'test_signal.SiginterruptTest.test_siginterrupt_on',
     # these rely on os.read raising EINTR which never happens with gevent.os.read
 
-    , 'test_subprocess.test_leak_fast_process_del_killed'
-    , 'test_subprocess.test_zombie_fast_process_del'
+    'test_subprocess.test_leak_fast_process_del_killed',
+    'test_subprocess.test_zombie_fast_process_del',
     # relies on subprocess._active which we don't use
 
-    , 'test_ssl.ThreadedTests.test_default_ciphers'
-    , 'test_ssl.ThreadedTests.test_empty_cert'
-    , 'test_ssl.ThreadedTests.test_malformed_cert'
-    , 'test_ssl.ThreadedTests.test_malformed_key'
-    , 'test_ssl.NetworkedTests.test_non_blocking_connect_ex'
+    'test_ssl.ThreadedTests.test_default_ciphers',
+    'test_ssl.ThreadedTests.test_empty_cert',
+    'test_ssl.ThreadedTests.test_malformed_cert',
+    'test_ssl.ThreadedTests.test_malformed_key',
+    'test_ssl.NetworkedTests.test_non_blocking_connect_ex',
     # XXX needs investigating
 
-    , 'test_urllib2.HandlerTests.test_cookie_redirect'
+    'test_ssl.NetworkedTests.test_algorithms',
+    # The host this wants to use, sha256.tbs-internet.com, is not resolvable
+    # right now (2015-10-10), and we need to get Windows wheels
+
+    'test_urllib2.HandlerTests.test_cookie_redirect',
     # this uses cookielib which we don't care about
 
-    , 'test_thread.ThreadRunningTests.test__count'
-    , 'test_thread.TestForkInThread.test_forkinthread'
+    'test_thread.ThreadRunningTests.test__count',
+    'test_thread.TestForkInThread.test_forkinthread',
     # XXX needs investigating
 ]
 
@@ -163,7 +167,7 @@ test_httpservers.SimpleHTTPServerTestCase.test_get
 
 if sys.platform == 'darwin':
     disabled_tests += [
-        'test_subprocess.POSIXProcessTestCase.test_run_abort'
+        'test_subprocess.POSIXProcessTestCase.test_run_abort',
         # causes Mac OS X to show "Python crashes" dialog box which is annoying
     ]
 
