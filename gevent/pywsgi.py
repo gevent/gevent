@@ -78,9 +78,17 @@ def format_date_time(timestamp):
 
 
 class _InvalidClientInput(IOError):
-    # Internal exception raised by Input indicating that the
-    # client sent invalid data. The result *should* be a HTTP 400
-    # error.
+    # Internal exception raised by Input indicating that the client
+    # sent invalid data at the lowest level of the stream. The result
+    # *should* be a HTTP 400 error.
+    pass
+
+
+class _InvalidClientRequest(ValueError):
+    # Internal exception raised by WSGIHandler.read_request
+    # indicating that the client sent an HTTP request that cannot
+    # be parsed (e.g., invalid grammar). The result *should* be an
+    # HTTP 400 error
     pass
 
 
@@ -413,10 +421,11 @@ class WSGIHandler(object):
 
     def read_request(self, raw_requestline):
         """
-        Process the incoming request.
+        Parse the incoming request.
 
         Parses various headers into ``self.headers`` using
-        :attr:`MessageClass`.
+        :attr:`MessageClass`. Other attributes that are set upon a successful
+        return of this method include ``self.content_length`` and ``self.close_connection``.
 
         :param str raw_requestline: A native :class:`str` representing
            the request line. A processed version of this will be stored
@@ -424,30 +433,33 @@ class WSGIHandler(object):
 
         :raises ValueError: If the request is invalid. This error will
            not be logged as a traceback (because it's a client issue, not a server problem).
+        :return: A boolean value indicating whether the request was successfully parsed.
+           This method should either return a true value or have raised a ValueError
+           with details about the parsing error.
+
+        .. versionchanged:: 1.1b6
+           Raise the previously documented :exc:`ValueError` in more cases instead of returning a
+           false value; this allows subclasses more opportunity to customize behaviour.
         """
         self.requestline = raw_requestline.rstrip()
         words = self.requestline.split()
         if len(words) == 3:
             self.command, self.path, self.request_version = words
             if not self._check_http_version():
-                self.log_error('Invalid http version: %r', raw_requestline)
-                return
+                raise _InvalidClientRequest('Invalid http version: %r', raw_requestline)
         elif len(words) == 2:
             self.command, self.path = words
             if self.command != "GET":
-                self.log_error('Expected GET method: %r', raw_requestline)
-                return
+                raise _InvalidClientRequest('Expected GET method: %r', raw_requestline)
             self.request_version = "HTTP/0.9"
             # QQQ I'm pretty sure we can drop support for HTTP/0.9
         else:
-            self.log_error('Invalid HTTP method: %r', raw_requestline)
-            return
+            raise _InvalidClientRequest('Invalid HTTP method: %r', raw_requestline)
 
         self.headers = self.MessageClass(self.rfile, 0)
 
         if self.headers.status:
-            self.log_error('Invalid headers status: %r', self.headers.status)
-            return
+            raise _InvalidClientRequest('Invalid headers status: %r', self.headers.status)
 
         if self.headers.get("transfer-encoding", "").lower() == "chunked":
             try:
@@ -459,11 +471,10 @@ class WSGIHandler(object):
         if content_length is not None:
             content_length = int(content_length)
             if content_length < 0:
-                self.log_error('Invalid Content-Length: %r', content_length)
-                return
+                raise _InvalidClientRequest('Invalid Content-Length: %r', content_length)
+
             if content_length and self.command in ('HEAD', ):
-                self.log_error('Unexpected Content-Length')
-                return
+                raise _InvalidClientRequest('Unexpected Content-Length')
 
         self.content_length = content_length
 
@@ -544,6 +555,11 @@ class WSGIHandler(object):
             value.
 
         .. seealso:: :meth:`handle`
+
+        .. versionchanged:: 1.1b6
+           Funnel exceptions having to do with invalid HTTP requests through
+           :meth:`_handle_client_error` to allow subclasses to customize. Note that
+           this is experimental and may change in the future.
         """
         if self.rfile.closed:
             return
@@ -566,13 +582,16 @@ class WSGIHandler(object):
 
         try:
             # for compatibility with older versions of pywsgi, we pass self.requestline as an argument there
+            # NOTE: read_request is supposed to raise ValueError on invalid input; allow old
+            # subclasses that return a False value instead.
             if not self.read_request(self.requestline):
                 return ('400', _BAD_REQUEST_RESPONSE)
         except Exception as ex:
-            if not isinstance(ex, ValueError):
-                traceback.print_exc() # Why not self.handle_error?
-            self.log_error('Invalid request: %s', str(ex) or ex.__class__.__name__)
-            return ('400', _BAD_REQUEST_RESPONSE)
+            # Notice we don't use self.handle_error because it reports
+            # a 500 error to the client, and this is almost certainly
+            # a client error.
+            # Provide a hook for subclasses.
+            return self._handle_client_error(ex)
 
         self.environ = self.get_environ()
         self.application = self.server.application
@@ -843,9 +862,25 @@ class WSGIHandler(object):
             self.server.loop.handle_error(self.environ, t, v, tb)
 
     def handle_error(self, t, v, tb):
+        # Called for internal, unexpected errors, NOT invalid client input
         self._log_error(t, v, tb)
         del tb
         self._send_error_response_if_possible(500)
+
+    def _handle_client_error(self, ex):
+        # Called for invalid client input
+        # Returns the appropriate error response.
+        if not isinstance(ex, ValueError):
+            # XXX: Why not self._log_error to send it through the loop's
+            # handle_error method?
+            traceback.print_exc()
+        if isinstance(ex, _InvalidClientRequest):
+            # These come with good error messages, and we want to let
+            # log_error deal with the formatting, especially to handle encoding
+            self.log_error(*ex.args)
+        else:
+            self.log_error('Invalid request: %s', str(ex) or ex.__class__.__name__)
+        return ('400', _BAD_REQUEST_RESPONSE)
 
     def _headers(self):
         key = None

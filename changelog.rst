@@ -13,6 +13,8 @@
   :issue:`660` by Jay Oster.
 - PyPy: Cython version 0.23.4 or later must be used to avoid a memory
   leak (`details`_). Thanks to Jay Oster.
+- Allow subclasses of ``WSGIHandler`` to handle invalid HTTP client
+  requests. Reported by not-bob.
 
 .. _details: https://mail.python.org/pipermail/cython-devel/2015-October/004571.html
 
