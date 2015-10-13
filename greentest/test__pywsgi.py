@@ -1446,23 +1446,23 @@ class Test414(TestCase):
 
 class Test663(TestCase):
 
+    # Something that gets wrapped in a LoggingLogAdapter
+    class Logger(object):
+        accessed = None
+        logged = None
+        thing = None
+
+        def log(self, level, msg):
+            self.logged = (level, msg)
+
+        def access(self, msg):
+            self.accessed = msg
+
+        def get_thing(self):
+            return self.thing
+
     def init_logger(self):
-        # Something that gets wrapped in a LoggingLogAdapter
-        class Logger(object):
-            accessed = None
-            logged = None
-            thing = None
-
-            def log(self, level, msg):
-                self.logged = (level, msg)
-
-            def access(self, msg):
-                self.accessed = msg
-
-            def get_thing(self):
-                return self.thing
-
-        return Logger()
+        return self.Logger()
 
     def test_proxy_methods_on_log(self):
         # An object that looks like a logger gets wrapped
