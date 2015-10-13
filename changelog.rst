@@ -15,6 +15,10 @@
   leak (`details`_). Thanks to Jay Oster.
 - Allow subclasses of ``WSGIHandler`` to handle invalid HTTP client
   requests. Reported by not-bob.
+- ``WSGIServer`` more robustly supports ``Logger``-like parameters for
+  ``log`` and ``error_log`` (as introduced in 1.1b1, this could cause
+  integration issues with gunicorn). Reported in :issue:`663` by Jay
+  Oster.
 
 .. _details: https://mail.python.org/pipermail/cython-devel/2015-October/004571.html
 

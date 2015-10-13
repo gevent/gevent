@@ -1444,6 +1444,43 @@ class Test414(TestCase):
         read_http(fd, code=414)
 
 
+class Test663(TestCase):
+
+    def init_logger(self):
+        # Something that gets wrapped in a LoggingLogAdapter
+        class Logger(object):
+            accessed = None
+            logged = None
+            thing = None
+
+            def log(self, level, msg):
+                self.logged = (level, msg)
+
+            def access(self, msg):
+                self.accessed = msg
+
+            def get_thing(self):
+                return self.thing
+
+        return Logger()
+
+    def test_proxy_methods_on_log(self):
+        # An object that looks like a logger gets wrapped
+        # with a proxy that
+        self.assertTrue(isinstance(self.server.log, pywsgi.LoggingLogAdapter))
+        self.server.log.access("access")
+        self.server.log.write("write")
+        self.assertEqual(self.server.log.accessed, "access")
+        self.assertEqual(self.server.log.logged, (20, "write"))
+
+    def test_set_attributes(self):
+        # Not defined by the wrapper, it goes to the logger
+        self.server.log.thing = 42
+        self.assertEqual(self.server.log.get_thing(), 42)
+
+        del self.server.log.thing
+        self.assertEqual(self.server.log.get_thing(), None)
+
 del CommonTests
 
 if __name__ == '__main__':

@@ -984,20 +984,27 @@ class LoggingLogAdapter(object):
        a ``LoopExit``.
 
     .. versionadded:: 1.1a3
+
+    .. versionchanged:: 1.1b6
+       Attributes not present on this object are proxied to the underlying
+       logger instance. This permits using custom :class:`~logging.Logger`
+       subclasses (or indeed, even duck-typed objects).
     """
 
     # gevent avoids importing and using logging because importing it and
     # creating loggers creates native locks unless monkey-patched.
 
+    __slots__ = ('_logger', '_level')
+
     def __init__(self, logger, level=20):
         """
         Write information to the *logger* at the given *level* (default to INFO).
         """
-        self.logger = logger
-        self.level = level
+        self._logger = logger
+        self._level = level
 
     def write(self, msg):
-        self.logger.log(self.level, msg)
+        self._logger.log(self._level, msg)
 
     def flush(self):
         "No-op; required to be a file-like object"
@@ -1007,6 +1014,18 @@ class LoggingLogAdapter(object):
         for line in lines:
             self.write(line)
 
+    def __getattr__(self, name):
+        return getattr(self._logger, name)
+
+    def __setattr__(self, name, value):
+        if name not in LoggingLogAdapter.__slots__:
+            setattr(self._logger, name, value)
+        else:
+            object.__setattr__(self, name, value)
+
+    def __delattr__(self, name):
+        delattr(self._logger, name)
+
 
 class WSGIServer(StreamServer):
     """
@@ -1014,24 +1033,26 @@ class WSGIServer(StreamServer):
 
 
     :keyword log: If given, an object with a ``write`` method to which
-        request (access) logs will be written. If not given, defaults to
-        :obj:`sys.stderr`. You may pass ``None`` to disable request
+        request (access) logs will be written. If not given, defaults
+        to :obj:`sys.stderr`. You may pass ``None`` to disable request
         logging. You may use a wrapper, around e.g., :mod:`logging`,
         to support objects that don't implement a ``write`` method.
-        (If you pass a :class:`logging.Logger` instance, such a
-        wrapper will automatically be created and it will be logged to
-        at the :data:`logging.INFO` level.)
+        (If you pass a :class:`~logging.Logger` instance, or in
+        general something that provides a ``log`` method but not a
+        ``write`` method, such a wrapper will automatically be created
+        and it will be logged to at the :data:`~logging.INFO` level.)
 
     :keyword error_log: If given, a file-like object with ``write``,
         ``writelines`` and ``flush`` methods to which error logs will
         be written. If not given, defaults to :obj:`sys.stderr`. You
         may pass ``None`` to disable error logging (not recommended).
         You may use a wrapper, around e.g., :mod:`logging`, to support
-        objects that don't implement the proper methods. (If you pass
-        a :class:`logging.Logger` instance, such a wrapper will
-        automatically be created, and it will be logged to at the
-        :data:`logging.ERROR` level.) This parameter will become the
-        value for ``wsgi.errors`` in the WSGI environment (if not already set).
+        objects that don't implement the proper methods. This
+        parameter will become the value for ``wsgi.errors`` in the
+        WSGI environment (if not already set). (As with *log*,
+        wrappers for :class:`~logging.Logger` instances and the like
+        will be created automatically and logged to at the :data:`~logging.ERROR`
+        level.)
 
     .. seealso::
 
