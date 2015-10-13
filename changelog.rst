@@ -8,17 +8,23 @@
 ==================
 
 - PyPy: Fix a memory leak for code that allocated and disposed of many
-  ``gevent.lock.Semaphore`` subclasses. If monkey-patched, this could
-  also apply to ``threading.Semaphore`` objects. Reported in
+  :class:`gevent.lock.Semaphore` subclasses. If monkey-patched, this could
+  also apply to :class:`threading.Semaphore` objects. Reported in
   :issue:`660` by Jay Oster.
 - PyPy: Cython version 0.23.4 or later must be used to avoid a memory
   leak (`details`_). Thanks to Jay Oster.
-- Allow subclasses of ``WSGIHandler`` to handle invalid HTTP client
+- Allow subclasses of :class:`~.WSGIHandler` to handle invalid HTTP client
   requests. Reported by not-bob.
-- ``WSGIServer`` more robustly supports ``Logger``-like parameters for
+- :class:`~.WSGIServer` more robustly supports :class:`~logging.Logger`-like parameters for
   ``log`` and ``error_log`` (as introduced in 1.1b1, this could cause
   integration issues with gunicorn). Reported in :issue:`663` by Jay
   Oster.
+- :class:`~gevent.threading._DummyThread` objects, created in a
+  monkey-patched system when :func:`threading.current_thread` is
+  called in a new greenlet (which often happens implicitly, such as
+  when logging) are much lighter weight. For example, they no longer
+  allocate and then delete a :class:`~gevent.lock.Semaphore`, which is
+  especially important for PyPy.
 
 .. _details: https://mail.python.org/pipermail/cython-devel/2015-October/004571.html
 
