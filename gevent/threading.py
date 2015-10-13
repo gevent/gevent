@@ -23,17 +23,63 @@ def _cleanup(g):
 
 
 class _DummyThread(_DummyThread_):
-    # instances of this will cleanup its own entry
+    # We avoid calling the superclass constructor. This makes us about
+    # twice as fast (1.16 vs 0.68usec on PyPy, 29.3 vs 17.7usec on
+    # CPython 2.7), and has the important effect of avoiding
+    # allocation and then immediate deletion of _Thread__block, a
+    # lock. This is especially important on PyPy where locks go
+    # through the cpyext API and Cython, which is known to be slow and
+    # potentially buggy (e.g.,
+    # https://bitbucket.org/pypy/pypy/issues/2149/memory-leak-for-python-subclass-of-cpyext#comment-22347393)
+
+    # These objects are constructed quite frequently in some cases, so
+    # the optimization matters: for example, in gunicorn, which uses
+    # pywsgi.WSGIServer, every request is handled in a new greenlet,
+    # and every request uses a logging.Logger to write the access log,
+    # and every call to a log method captures the current thread (by
+    # default).
+    #
+    # (Obviously we have to duplicate the effects of the constructor,
+    # at least for external state purposes, which is potentially
+    # slightly fragile.)
+
+    # For the same reason, instances of this class will cleanup their own entry
     # in ``threading._active``
 
+    # Capture the static things as class vars to save on memory/
+    # construction time.
+    # In Py2, they're all private; in Py3, they become protected
+    _Thread__stopped = _is_stopped = _stopped = False
+    _Thread__initialized = _initialized = True
+    _Thread__daemonic = _daemonic = True
+    _Thread__args = _args = ()
+    _Thread__kwargs = _kwargs = None
+    _Thread__target = _target = None
+    _Thread_ident = _ident = None
+    _Thread__started = _started = __threading__.Event()
+    _Thread__started.set()
+    _tstate_lock = None
+
     def __init__(self):
-        _DummyThread_.__init__(self)
+        #_DummyThread_.__init__(self)
+
+        # It'd be nice to use a pattern like "greenlet-%d", but maybe somebody out
+        # there is checking thread names...
+        self._name = self._Thread__name = __threading__._newname("DummyThread-%d")
+        self._set_ident()
+
+        __threading__._active[_get_ident()] = self
         g = getcurrent()
         rawlink = getattr(g, 'rawlink', None)
         if rawlink is not None:
             rawlink(_cleanup)
 
     def _Thread__stop(self):
+        pass
+
+    _stop = _Thread__stop # py3
+
+    def _wait_for_tstate_lock(self, *args, **kwargs):
         pass
 
 # Make sure the MainThread can be found by our current greenlet ID,
@@ -52,7 +98,8 @@ if _get_ident() not in __threading__._active and len(__threading__._active) == 1
     # Avoid printing an error on shutdown trying to remove the thread entry
     # we just replaced if we're not fully monkey patched in
     # XXX: This causes a hang on PyPy for some unknown reason (as soon as class _active
-    # defines __delitem__, shutdown hangs. Maybe due to something with the GC?)
+    # defines __delitem__, shutdown hangs. Maybe due to something with the GC?
+    # XXX: This may be fixed in 2.6.1+
     if not PYPY:
         _MAIN_THREAD = __threading__._get_ident() if hasattr(__threading__, '_get_ident') else __threading__.get_ident()
 
