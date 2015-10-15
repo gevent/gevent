@@ -65,6 +65,8 @@ def generate_rst_for_module(module, do=True):
     params = globals().copy()
     params.update(locals())
     result = template % params
+    if getattr(m, '_no_undoc_members', True):
+        result = '\n'.join(result.splitlines()[:-1])
     if exists:
         if _read(rst_filename, len(result) + 1) == result:
             return  # already exists one which is the same

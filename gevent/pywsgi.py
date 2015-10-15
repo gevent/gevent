@@ -26,6 +26,7 @@ import gevent
 from gevent.server import StreamServer
 from gevent.hub import GreenletExit, PY3, reraise
 
+_no_undoc_members = True # Don't put undocumented things into sphinx
 
 __all__ = [
     'WSGIServer',
@@ -348,6 +349,33 @@ class WSGIHandler(object):
     else:
         MessageClass = headers_factory
 
+    # Attributes reset at various times for each request; not public
+    # documented. Class attributes to keep the constructor fast
+    # (but not make lint tools complain)
+
+    status = None # byte string: b'200 OK'
+    _orig_status = None # native string: '200 OK'
+    response_headers = None # list of tuples (b'name', b'value')
+    code = None # Integer parsed from status
+    provided_date = None
+    provided_content_length = None
+    close_connection = False
+    time_start = 0 # time.time() when begin handling request
+    time_finish = 0 # time.time() when done handling request
+    headers_sent = False # Have we already sent headers?
+    response_use_chunked = False # Write with transfer-encoding chunked
+    environ = None # Dict from self.get_environ
+    application = None # application callable from self.server.application
+    requestline = None # native str 'GET / HTTP/1.1'
+    response_length = 0 # How much data we sent
+    result = None # The return value of the WSGI application
+    wsgi_input = None # Instance of Input()
+    content_length = 0 # From application-provided headers
+    headers = None # Incoming request headers, instance of MessageClass
+    request_version = None # str: 'HTTP 1.1'
+    command = None # str: 'GET'
+    path = None # str: '/'
+
     def __init__(self, socket, address, server, rfile=None):
         # Deprecation: The rfile kwarg was introduced in 1.0a1 as part
         # of a refactoring. It was never documented or used. It is
@@ -361,11 +389,6 @@ class WSGIHandler(object):
             self.rfile = socket.makefile('rb', -1)
         else:
             self.rfile = rfile
-
-        # Instance variables added later:
-        # self.response_headers: A list of tuples of bytes: [(b'Header', b'value')]
-        # self.status: The bytes of the status line: b'200 ok'
-        # self.code: An integer giving the HTTP status: 200
 
     def handle(self):
         """
@@ -784,11 +807,11 @@ class WSGIHandler(object):
         return '%s - - [%s] "%s" %s %s %s' % (
             client_address or '-',
             now,
-            getattr(self, 'requestline', ''),
+            self.requestline or '',
             # Use the native string version of the status, saved so we don't have to
             # decode. But fallback to the encoded 'status' in case of subclasses
             # (Is that really necessary? At least there's no overhead.)
-            (getattr(self, '_orig_status', None) or getattr(self, 'status', None) or '000').split()[0],
+            (self._orig_status or self.status or '000').split()[0],
             length,
             delta)
 
