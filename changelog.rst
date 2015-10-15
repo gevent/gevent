@@ -25,6 +25,8 @@
   when logging) are much lighter weight. For example, they no longer
   allocate and then delete a :class:`~gevent.lock.Semaphore`, which is
   especially important for PyPy.
+- Request logging by :mod:`gevent.pywsgi` formats the status code
+  correctly on Python 3. Reported in :issue:`664` by Kevin Chen.
 
 .. _details: https://mail.python.org/pipermail/cython-devel/2015-October/004571.html
 

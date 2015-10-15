@@ -738,6 +738,7 @@ class WSGIHandler(object):
         code = int(status.split(' ', 1)[0])
 
         self.status = status if not PY3 else status.encode("latin-1")
+        self._orig_status = status # Preserve the native string for logging
         self.response_headers = response_headers
         self.code = code
 
@@ -784,7 +785,10 @@ class WSGIHandler(object):
             client_address or '-',
             now,
             getattr(self, 'requestline', ''),
-            (getattr(self, 'status', None) or '000').split()[0],
+            # Use the native string version of the status, saved so we don't have to
+            # decode. But fallback to the encoded 'status' in case of subclasses
+            # (Is that really necessary? At least there's no overhead.)
+            (getattr(self, '_orig_status', None) or getattr(self, 'status', None) or '000').split()[0],
             length,
             delta)
 

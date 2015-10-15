@@ -1444,7 +1444,7 @@ class Test414(TestCase):
         read_http(fd, code=414)
 
 
-class Test663(TestCase):
+class TestLogging(TestCase):
 
     # Something that gets wrapped in a LoggingLogAdapter
     class Logger(object):
@@ -1464,6 +1464,13 @@ class Test663(TestCase):
     def init_logger(self):
         return self.Logger()
 
+    @staticmethod
+    def application(env, start_response):
+        start_response('200 OK', [('Content-Type', 'text/plain')])
+        return [b'hello']
+
+    # Tests for issue #663
+
     def test_proxy_methods_on_log(self):
         # An object that looks like a logger gets wrapped
         # with a proxy that
@@ -1480,6 +1487,12 @@ class Test663(TestCase):
 
         del self.server.log.thing
         self.assertEqual(self.server.log.get_thing(), None)
+
+    def test_status_log(self):
+        # Issue 664: Make sure we format the status line as a string
+        self.urlopen()
+        self.assertTrue('"GET / HTTP/1.1" 200 ' in self.server.log.logged[1],
+                        self.server.log.logged[1])
 
 del CommonTests
 
