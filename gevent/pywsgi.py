@@ -371,7 +371,11 @@ class WSGIHandler(object):
     result = None # The return value of the WSGI application
     wsgi_input = None # Instance of Input()
     content_length = 0 # From application-provided headers
-    headers = None # Incoming request headers, instance of MessageClass
+    headers = headers_factory(BytesIO()) # Incoming request headers,
+                                    # instance of MessageClass
+                                    # (gunicorn uses hasattr on this
+                                    # so the default value needs to be
+                                    # compatible with the API)
     request_version = None # str: 'HTTP 1.1'
     command = None # str: 'GET'
     path = None # str: '/'
