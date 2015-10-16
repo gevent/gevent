@@ -125,17 +125,36 @@ class GreenFileDescriptorIO(RawIOBase):
 
 class FileObjectPosix(object):
     """
-    A file-like object that operates on non-blocking files.
+    A file-like object that operates on non-blocking files but
+    provides a synchronous, cooperative interface.
 
-    .. seealso:: :func:`gevent.os.make_nonblocking`
+    .. note::
+         Random read/write (e.g., ``mode='rwb'``) is not supported.
+         For that, use :class:`io.BufferedRWPair` around two instance of this
+         class.
+
+    .. tip::
+         Although this object provides a :meth:`fileno` method and
+         so can itself be passed to :func:`fcntl.fcntl`, setting the
+         :data:`os.O_NONBLOCK` flag will have no effect; likewise, removing
+         that flag will cause this object to no longer be cooperative.
     """
+
+    #: platform specific default for the *bufsize* parameter
     default_bufsize = io.DEFAULT_BUFFER_SIZE
 
     def __init__(self, fobj, mode='rb', bufsize=-1, close=True):
         """
-        :param fobj: Either an integer fileno, or an object supporting the
-            usual :meth:`socket.fileno` method. The file will be
-            put in non-blocking mode.
+        :keyword fobj: Either an integer fileno, or an object supporting the
+            usual :meth:`socket.fileno` method. The file *will* be
+            put in non-blocking mode using :func:`gevent.os.make_nonblocking`.
+        :keyword str mode: The manner of access to the file, one of "rb", "rU" or "wb"
+            (where the "b" or "U" can be omitted).
+            If "U" is part of the mode, IO will be done on text, otherwise bytes.
+        :keyword int bufsize: If given, the size of the buffer to use. The default
+            value means to use a platform-specific default, and a value of 0 is translated
+            to a value of 1. Other values are interpreted as for the :mod:`io` package.
+            Buffering is ignored in text mode.
         """
         if isinstance(fobj, int):
             fileno = fobj
@@ -152,11 +171,14 @@ class FileObjectPosix(object):
             mode = mode.replace('U', '')
         else:
             self._translate = False
-        if len(mode) != 1:
+
+        if len(mode) != 1 and mode not in 'rw': # pragma: no cover
             # Python 3 builtin `open` raises a ValueError for invalid modes;
-            # Python 2 ignores in. In the past, we raised an AssertionError, if __debug__ was
+            # Python 2 ignores it. In the past, we raised an AssertionError, if __debug__ was
             # enabled (which it usually was). Match Python 3 because it makes more sense
-            # and because __debug__ may not be enabled
+            # and because __debug__ may not be enabled.
+            # NOTE: This is preventing a mode like 'rwb' for binary random access;
+            # that code was never tested and was explicitly marked as "not used"
             raise ValueError('mode can only be [rb, rU, wb], not %r' % (orig_mode,))
 
         self._fobj = fobj
@@ -165,23 +187,20 @@ class FileObjectPosix(object):
 
         self.fileio = GreenFileDescriptorIO(fileno, mode, closefd=close)
 
-        if bufsize < 0:
+        if bufsize < 0 or bufsize == 1:
             bufsize = self.default_bufsize
+        elif bufsize == 0:
+            bufsize = 1
+
         if mode == 'r':
-            if bufsize == 0:
-                bufsize = 1
-            elif bufsize == 1:
-                bufsize = self.default_bufsize
             self.io = BufferedReader(self.fileio, bufsize)
-        elif mode == 'w':
-            if bufsize == 0:
-                bufsize = 1
-            elif bufsize == 1:
-                bufsize = self.default_bufsize
-            self.io = BufferedWriter(self.fileio, bufsize)
         else:
-            # QQQ: not used
-            self.io = BufferedRandom(self.fileio, bufsize)
+            assert mode == 'w'
+            self.io = BufferedWriter(self.fileio, bufsize)
+        #else: # QQQ: not used, not reachable
+        #
+        #    self.io = BufferedRandom(self.fileio, bufsize)
+
         if self._translate:
             self.io = TextIOWrapper(self.io)
 
@@ -192,7 +211,7 @@ class FileObjectPosix(object):
 
     def close(self):
         if self._closed:
-            # make sure close() is only ran once when called concurrently
+            # make sure close() is only run once when called concurrently
             return
         self._closed = True
         try:
