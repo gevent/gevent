@@ -40,7 +40,13 @@
 #ifdef _WIN32
 
 /* timeb.h is actually xsi legacy functionality */
+/* JAM: gevent: A CHANGES entry says that GetSystemTimeAsFileTime is now
+ * used instead of timeb. So maybe this isn't needed? It breaks the build
+ * on Visual Studio 2014.
+ */
+#if 0
 #include <sys/timeb.h>
+#endif
 
 /* note: the comment below could not be substantiated, but what would I care */
 /* MSDN says this is required to handle SIGFPE */
@@ -160,4 +166,3 @@ ev_time (void)
 }
 
 #endif
-
