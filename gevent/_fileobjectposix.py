@@ -1,7 +1,6 @@
 from __future__ import absolute_import
 import os
 import io
-from io import BufferedRandom
 from io import BufferedReader
 from io import BufferedWriter
 from io import BytesIO
