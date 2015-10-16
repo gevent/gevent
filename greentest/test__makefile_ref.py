@@ -18,6 +18,9 @@ PY3 = sys.version_info[0] >= 3
 
 
 def get_open_files():
+    # XXX: This could be done in a more portable with with psutil
+    # (https://pypi.python.org/pypi/psutil). right now it makes this
+    # whole suite fail on windews
     if os.system(lsof_command):
         raise OSError('lsof failed')
     with open(tmpname) as fobj:
