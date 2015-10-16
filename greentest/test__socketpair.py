@@ -3,9 +3,9 @@ import socket
 import unittest
 
 
-class Test(unittest.TestCase):
+class TestSocketpair(unittest.TestCase):
 
-    def test(self):
+    def test_makefile(self):
         msg = b'hello world'
         x, y = socket.socketpair()
         x.sendall(msg)

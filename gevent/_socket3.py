@@ -449,7 +449,11 @@ if hasattr(_socket, "socketpair"):
         b = socket(family, type, proto, b.detach())
         return a, b
 
-else:
+elif 'socketpair' in __implements__:
+    # Win32: not available
+    # Multiple imports can cause this to be missing if _socketcommon
+    # was successfully imported, leading to subsequent imports to cause
+    # ValueError
     __implements__.remove('socketpair')
 
 

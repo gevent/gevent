@@ -31,6 +31,7 @@
   :class:`gevent.lock.Semaphore`, which was unintentionally removed
   as part of making ``Semaphore`` atomic on PyPy on 1.1b1. Reported in
   :issue:`666` by Ivan-Zhu.
+- Build Windows wheels for Python 3.5. Reported in :pr:`665` by Hexchain Tong.
 
 .. _details: https://mail.python.org/pipermail/cython-devel/2015-October/004571.html
 
