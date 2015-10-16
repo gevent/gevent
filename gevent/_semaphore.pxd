@@ -3,6 +3,7 @@ cdef class Semaphore:
     cdef readonly object _links
     cdef readonly object _notifier
     cdef public int _dirty
+    cdef object __weakref__
 
     cpdef bint locked(self)
     cpdef int release(self) except -1000

@@ -2,13 +2,14 @@ import greentest
 import gevent
 from gevent.lock import Semaphore
 from gevent.thread import allocate_lock
+import weakref
 try:
     from _thread import allocate_lock as std_allocate_lock
 except ImportError: # Py2
     from thread import allocate_lock as std_allocate_lock
 
 
-class TestTimeoutAcquire(greentest.TestCase):
+class TestSemaphore(greentest.TestCase):
 
     # issue 39
     def test_acquire_returns_false_after_timeout(self):
@@ -25,6 +26,12 @@ class TestTimeoutAcquire(greentest.TestCase):
         s.release()
         gevent.sleep(0.001)
         self.assertEqual(result, ['a', 'b'])
+
+    def test_semaphore_weakref(self):
+        s = Semaphore()
+        r = weakref.ref(s)
+        self.assertEqual(s, r())
+
 
 
 class TestLock(greentest.TestCase):

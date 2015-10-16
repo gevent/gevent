@@ -27,6 +27,10 @@
   especially important for PyPy.
 - Request logging by :mod:`gevent.pywsgi` formats the status code
   correctly on Python 3. Reported in :issue:`664` by Kevin Chen.
+- Restore the ability to take a weak reference to instances of exactly
+  :class:`gevent.lock.Semaphore`, which was unintentionally removed
+  as part of making ``Semaphore`` atomic on PyPy on 1.1b1. Reported in
+  :issue:`666` by Ivan-Zhu.
 
 .. _details: https://mail.python.org/pipermail/cython-devel/2015-October/004571.html
 
@@ -162,7 +166,7 @@
 - ``setup.py`` can build with newer versions of clang on OS X. They
   enforce the distinction between CFLAGS and CPPFLAGS.
 - ``gevent.lock.Semaphore`` is atomic on PyPy, just like it is on
-  CPython. This comes at a small performance cost.
+  CPython. This comes at a small performance cost on PyPy.
 - Fixed regression that failed to set the ``successful`` value to
   False when killing a greenlet before it ran with a non-default
   exception. Fixed in :pr:`608` by Heungsub Lee.
