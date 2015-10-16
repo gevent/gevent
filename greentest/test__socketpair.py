@@ -10,8 +10,10 @@ class TestSocketpair(unittest.TestCase):
         x, y = socket.socketpair()
         x.sendall(msg)
         x.close()
-        read = y.makefile('rb').read()
+        with y.makefile('rb') as f:
+            read = f.read()
         self.assertEqual(msg, read)
+        y.close()
 
     def test_fromfd(self):
         msg = b'hello world'
@@ -23,8 +25,10 @@ class TestSocketpair(unittest.TestCase):
 
         xx.sendall(msg)
         xx.close()
-        read = yy.makefile('rb').read()
+        with yy.makefile('rb') as f:
+            read = f.read()
         self.assertEqual(msg, read)
+        yy.close()
 
 
 if __name__ == '__main__':

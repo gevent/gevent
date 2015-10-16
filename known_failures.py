@@ -12,6 +12,7 @@ COVERAGE = os.getenv("COVERAGE_PROCESS_START")
 PYPY = hasattr(sys, 'pypy_version_info')
 PY3 = sys.version_info[0] >= 3
 PY26 = sys.version_info[0] == 2 and sys.version_info[1] == 6
+PY35 = sys.version_info[0] >= 3 and sys.version_info[1] >= 5
 PYGTE279 = (
     sys.version_info[0] == 2
     and sys.version_info[1] >= 7
@@ -58,7 +59,6 @@ if sys.platform == 'win32':
         'test__core_fork.py',
         'test__issues461_471.py',
         'test__execmodules.py',
-        'test__socketpair.py',
         'test__makefile_ref.py',
         'FLAKY test__greenletset.py',
         # The various timeout tests are flaky for unknown reasons
@@ -66,6 +66,14 @@ if sys.platform == 'win32':
         'FLAKY test__timeout.py',
         'FLAKY test_hub_join_timeout.py',
     ]
+
+    if not PY35:
+        # Py35 added socket.socketpair, all other releases
+        # are missing it
+        FAILING_TESTS += [
+            'test__socketpair.py',
+        ]
+
 
     if struct.calcsize('P') * 8 == 64:
         # could be a problem of appveyor - not sure
