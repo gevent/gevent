@@ -65,6 +65,9 @@ if sys.platform == 'win32':
         # on appveyor
         'FLAKY test__timeout.py',
         'FLAKY test_hub_join_timeout.py',
+        # This has been seen to fail on Py3 and Py2 due to socket reuse
+        # errors, probably timing related again.
+        'FLAKY test___example_servers.py',
     ]
 
     if not PY35:
