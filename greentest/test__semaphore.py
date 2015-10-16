@@ -33,7 +33,6 @@ class TestSemaphore(greentest.TestCase):
         self.assertEqual(s, r())
 
 
-
 class TestLock(greentest.TestCase):
 
     def test_release_unheld_lock(self):
