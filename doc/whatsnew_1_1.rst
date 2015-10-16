@@ -48,8 +48,21 @@ through 2.5.1, 2.6.0, 2.6.1, and pre-release versions of 2.7.0.
   :class:`gevent.lock.Semaphore`. Whether or not these matter will
   depend on the workload of each application.
 
+.. note:: Released versions of PyPy through at least 2.6.1 have `a
+          bug`_ that can cause a memory leak when subclassing
+          objects that are implemented in Cython, as are the two
+          things mentioned above. The `Semaphore` class is
+          subclassed to become :class:`gevent.thread.LockType`,
+          which in turn is used as the basis for
+          :class:`threading.Lock`. The `Semaphore` object is coded
+          carefully to avoid this leak, assuming it is deallocated
+          when not acquired (which should be the typical case). The
+          ``c-ares`` package has not been audited for this issue.
+
+
 .. _cffi 1.3.0: https://bitbucket.org/cffi/cffi/src/ad3140a30a7b0ca912185ef500546a9fb5525ece/doc/source/whatsnew.rst?at=default
 .. _1.2.0: https://cffi.readthedocs.org/en/latest/whatsnew.html#v1-2-0
+.. _a bug: https://bitbucket.org/pypy/pypy/issues/2149/memory-leak-for-python-subclass-of-cpyext
 
 Improved subprocess support
 ===========================
