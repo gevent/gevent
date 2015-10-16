@@ -89,6 +89,8 @@ CI is used to test on Linux, and `AppVeyor`_ runs the builds on Windows.
 .. image:: https://travis-ci.org/gevent/gevent.svg?branch=master
    :target: https://travis-ci.org/gevent/gevent
 
+.. image:: https://ci.appveyor.com/api/projects/status/q4kl21ng2yo2ixur?svg=true
+   :target: https://ci.appveyor.com/project/denik/gevent
 
 .. _gevent: http://www.gevent.org
 .. _greenlet: http://pypi.python.org/pypi/greenlet
