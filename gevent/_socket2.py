@@ -38,7 +38,9 @@ else:
         #_fileobject.__enter__ = lambda self: self
         #_fileobject.__exit__ = lambda self, *args: self.close() if not self.closed else None
         # or we could subclass. subclassing has the benefit of not
-        # changing the behaviour of the stdlib if we're just imported
+        # changing the behaviour of the stdlib if we're just imported; OTOH,
+        # under Python 2.6, test_urllib2net.py asserts that the class IS
+        # socket._fileobject (sigh), so we have to work around that.
         class _fileobject(_fileobject):
 
             def __enter__(self):

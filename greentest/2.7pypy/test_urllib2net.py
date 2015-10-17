@@ -80,11 +80,11 @@ class CloseSocketTest(unittest.TestCase):
         # delve deep into response to fetch socket._socketobject
         response = _urlopen_with_retry("http://www.example.com/")
         abused_fileobject = response.fp
-        self.assertIs(abused_fileobject.__class__, socket._fileobject)
+        #self.assertIs(abused_fileobject.__class__, socket._fileobject) JAM gevent: disable
         httpresponse = abused_fileobject._sock
         self.assertIs(httpresponse.__class__, httplib.HTTPResponse)
         fileobject = httpresponse.fp
-        self.assertIs(fileobject.__class__, socket._fileobject)
+        #self.assertIs(fileobject.__class__, socket._fileobject) JAM gevent: disable
 
         self.assertTrue(not fileobject.closed)
         response.close()
