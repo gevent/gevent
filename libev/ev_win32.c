@@ -43,6 +43,8 @@
 /* JAM: gevent: A CHANGES entry says that GetSystemTimeAsFileTime is now
  * used instead of timeb. So maybe this isn't needed? It breaks the build
  * on Visual Studio 2014.
+ * UPDATE: upstream confirms this isn't needed and has removed it from what will
+ * become 4.22. See http://lists.schmorp.de/pipermail/libev/2015q4/002586.html
  */
 #if 0
 #include <sys/timeb.h>
