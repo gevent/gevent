@@ -77,7 +77,6 @@ if sys.platform == 'win32':
             'test__socketpair.py',
         ]
 
-
     if struct.calcsize('P') * 8 == 64:
         # could be a problem of appveyor - not sure
         #  ======================================================================

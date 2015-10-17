@@ -29,7 +29,24 @@ except AttributeError:
                       'setsockopt', 'sendall',
                       'setblocking', 'settimeout',
                       'gettimeout', 'shutdown')
+else:
+    # Python 2 doesn't natively support with statements on _fileobject;
+    # but it eases our test cases if we can do the same with on both Py3
+    # and Py2. Implementation copied from Python 3
+    if not hasattr(_fileobject, '__enter__'):
+        # we could either patch in place:
+        #_fileobject.__enter__ = lambda self: self
+        #_fileobject.__exit__ = lambda self, *args: self.close() if not self.closed else None
+        # or we could subclass. subclassing has the benefit of not
+        # changing the behaviour of the stdlib if we're just imported
+        class _fileobject(_fileobject):
 
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *args):
+                if not self.closed:
+                    self.close()
 
 if sys.version_info[:2] < (2, 7):
     _get_memory = buffer
