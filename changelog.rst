@@ -4,8 +4,8 @@
 
 .. currentmodule:: gevent
 
-1.1b6 (unreleased)
-==================
+1.1b6 (Oct 17, 2015)
+====================
 
 - PyPy: Fix a memory leak for code that allocated and disposed of many
   :class:`gevent.lock.Semaphore` subclasses. If monkey-patched, this could

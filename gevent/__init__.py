@@ -18,7 +18,7 @@ _version_info = namedtuple('version_info',
 version_info = _version_info(1, 1, 0, 'beta', '6')
 
 #: The human-readable PEP 440 version identifier
-__version__ = '1.1b6.dev0'
+__version__ = '1.1b6'
 
 
 __all__ = ['get_hub',
