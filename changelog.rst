@@ -4,6 +4,11 @@
 
 .. currentmodule:: gevent
 
+1.1b7 (unreleased)
+==================
+
+- TBD
+
 1.1b6 (Oct 17, 2015)
 ====================
 
