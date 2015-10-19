@@ -112,7 +112,8 @@ class Test(unittest.TestCase):
     def check_extensions_actually_extend(self):
         """Check that the module actually defines new entries in __extensions__"""
         for name in self.__extensions__:
-            assert not hasattr(self.stdlib_module, name)
+            if hasattr(self.stdlib_module, name):
+                raise AssertionError("'%r' is not an extension, it is found in %r" % (name, self.stdlib_module))
 
     def check_completeness(self):
         """Check that __all__ (or dir()) of the corresponsing stdlib is a subset of __all__ of this module"""
