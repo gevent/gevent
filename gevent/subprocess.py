@@ -297,6 +297,7 @@ else:
 
 _PLATFORM_DEFAULT_CLOSE_FDS = object()
 
+
 class Popen(object):
 
     def __init__(self, args, bufsize=None, executable=None,
@@ -633,12 +634,26 @@ class Popen(object):
             c2pread, c2pwrite = None, None
             errread, errwrite = None, None
 
+            try:
+                DEVNULL
+            except NameError:
+                _devnull = object()
+            else:
+                _devnull = DEVNULL
+
             if stdin is None:
                 p2cread = GetStdHandle(STD_INPUT_HANDLE)
                 if p2cread is None:
                     p2cread, _ = CreatePipe(None, 0)
+                    if PY3:
+                        p2cread = Handle(p2cread)
+                        CloseHandle(_)
             elif stdin == PIPE:
                 p2cread, p2cwrite = CreatePipe(None, 0)
+                if PY3:
+                    p2cread, p2cwrite = Handle(p2cread), Handle(p2cwrite)
+            elif stdin == _devnull:
+                p2cread = msvcrt.get_osfhandle(self._get_devnull())
             elif isinstance(stdin, int):
                 p2cread = msvcrt.get_osfhandle(stdin)
             else:
@@ -650,8 +665,15 @@ class Popen(object):
                 c2pwrite = GetStdHandle(STD_OUTPUT_HANDLE)
                 if c2pwrite is None:
                     _, c2pwrite = CreatePipe(None, 0)
+                    if PY3:
+                        c2pwrite = Handle(c2pwrite)
+                        CloseHandle(_)
             elif stdout == PIPE:
                 c2pread, c2pwrite = CreatePipe(None, 0)
+                if PY3:
+                    c2pread, c2pwrite = Handle(c2pread), Handle(c2pwrite)
+            elif stdout == _devnull:
+                c2pwrite = msvcrt.get_osfhandle(self._get_devnull())
             elif isinstance(stdout, int):
                 c2pwrite = msvcrt.get_osfhandle(stdout)
             else:
@@ -663,10 +685,17 @@ class Popen(object):
                 errwrite = GetStdHandle(STD_ERROR_HANDLE)
                 if errwrite is None:
                     _, errwrite = CreatePipe(None, 0)
+                    if PY3:
+                        errwrite = Handle(errwrite)
+                        CloseHandle(_)
             elif stderr == PIPE:
                 errread, errwrite = CreatePipe(None, 0)
+                if PY3:
+                    errred, errwrite = Handle(errread), Handle(errwrite)
             elif stderr == STDOUT:
                 errwrite = c2pwrite
+            elif stderr == _devnull:
+                errwrite = msvcrt.get_osfhandle(self._get_devnull())
             elif isinstance(stderr, int):
                 errwrite = msvcrt.get_osfhandle(stderr)
             else:
@@ -705,7 +734,7 @@ class Popen(object):
                            p2cread, p2cwrite,
                            c2pread, c2pwrite,
                            errread, errwrite,
-                           restore_signals, start_new_session):
+                           unused_restore_signals, unused_start_new_session):
             """Execute program (MS Windows version)"""
 
             assert not pass_fds, "pass_fds not supported on Windows."
@@ -771,9 +800,12 @@ class Popen(object):
                     c2pwrite.Close()
                 if errwrite is not None:
                     errwrite.Close()
+                if hasattr(self, '_devnull'):
+                    os.close(self._devnull)
 
             # Retain the process handle, but close the thread handle
-            self._handle = hp
+            self._child_created = True
+            self._handle = Handle(hp) if not hasattr(hp, 'Close') else hp
             self.pid = pid
             _winapi.CloseHandle(ht) if not hasattr(ht, 'Close') else ht.Close()
 
@@ -1109,7 +1141,7 @@ class Popen(object):
                             os._exit(1)
 
                     # Parent
-
+                    self._child_created = True
                     if gc_was_enabled:
                         gc.enable()
                 finally:
