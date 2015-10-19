@@ -12,9 +12,16 @@ class TestClosedSocket(greentest.TestCase):
         sock.close()
         try:
             sock.send(b'a', timeout=1)
+            raise AssertionError("Should not get here")
         except (socket.error, OSError) as ex:
             if ex.args[0] != errno.EBADF:
-                raise
+                if sys.platform.startswith('win'):
+                    # Windows/Py3 raises "OSError: [WinError 10038] "
+                    # which is not standard and not what it does
+                    # on Py2.
+                    pass
+                else:
+                    raise
 
 
 class TestRef(greentest.TestCase):
