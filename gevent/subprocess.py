@@ -440,8 +440,13 @@ class Popen(object):
                 if PY3:
                     # FileObjectThread doesn't support the 'U' qualifier
                     # with a bufsize of 0
-                    # XXX: Universal newlines seem broken on windows?
                     self.stdout = FileObject(c2pread, 'rb', bufsize)
+                    # NOTE: Universal Newlines are broken on Windows/Py3, at least
+                    # in some cases. This is true in the stdlib subprocess module
+                    # as well; the following line would fix the test cases in
+                    # test__subprocess.py that depend on python_universal_newlines,
+                    # but would be inconsistent with the stdlib:
+                    #msvcrt.setmode(self.stdout.fileno(), os.O_TEXT)
                     self.stdout.io = io.TextIOWrapper(self.stdout.io)
                     self.stdout.io.mode = 'r'
                     self.stdout._translate = True

@@ -20,6 +20,13 @@ else:
 
 
 python_universal_newlines = hasattr(sys.stdout, 'newlines')
+# The stdlib of Python 3 on Windows doesn't properly handle universal newlines
+# (it produces broken results compared to Python 2)
+# See gevent.subprocess for more details.
+if PY3 and subprocess.mswindows:
+    python_universal_newlines_broken = True
+else:
+    python_universal_newlines_broken = False
 
 
 class Test(greentest.TestCase):
@@ -93,8 +100,13 @@ class Test(greentest.TestCase):
             stdout = p.stdout.read()
             if python_universal_newlines:
                 # Interpreter with universal newline support
-                self.assertEqual(stdout,
-                                 "line1\nline2\nline3\nline4\nline5\nline6")
+                if not python_universal_newlines_broken:
+                    self.assertEqual(stdout,
+                                     "line1\nline2\nline3\nline4\nline5\nline6")
+                else:
+                    # Note the extra newline after line 3
+                    self.assertEqual(stdout,
+                                     'line1\nline2\nline3\n\nline4\n\nline5\nline6')
             else:
                 # Interpreter without universal newline support
                 self.assertEqual(stdout,
@@ -121,8 +133,13 @@ class Test(greentest.TestCase):
             stdout = p.stdout.read()
             if python_universal_newlines:
                 # Interpreter with universal newline support
-                self.assertEqual(stdout,
-                                 "line1\nline2\nline3\nline4\nline5\nline6")
+                if not python_universal_newlines_broken:
+                    self.assertEqual(stdout,
+                                     "line1\nline2\nline3\nline4\nline5\nline6")
+                else:
+                    # Note the extra newline after line 3
+                    self.assertEqual(stdout,
+                                     'line1\nline2\nline3\n\nline4\n\nline5\nline6')
             else:
                 # Interpreter without universal newline support
                 self.assertEqual(stdout,
