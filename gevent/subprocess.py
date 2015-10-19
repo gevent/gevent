@@ -8,7 +8,7 @@ Cooperative ``subprocess`` module.
    documentation here can only describe one version; for definitive
    documentation, see the standard library or the source code.
 """
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function
 import errno
 import gc
 import io
@@ -758,7 +758,8 @@ class Popen(object):
             """Execute program (MS Windows version)"""
 
             assert not pass_fds, "pass_fds not supported on Windows."
-
+            print("Executing", executable, args, file=sys.stderr)
+            import traceback; traceback.print_stack()
             if not isinstance(args, string_types):
                 args = list2cmdline(args)
 
@@ -806,6 +807,8 @@ class Popen(object):
                 # a subclass of OSError.  FIXME: We should really
                 # translate errno using _sys_errlist (or similar), but
                 # how can this be done from Python?
+                if PY3:
+                    raise # don't remap here
                 raise WindowsError(*e.args)
             finally:
                 # Child is launched. Close the parent's copy of those pipe
@@ -844,6 +847,7 @@ class Popen(object):
             return self.returncode
 
         def rawlink(self, callback):
+            print("RAWLINK", callback, file=sys.stderr)
             if not self.result.ready() and not self._waiting:
                 self._waiting = True
                 Greenlet.spawn(self._wait)
@@ -851,20 +855,26 @@ class Popen(object):
             # XXX unlink
 
         def _blocking_wait(self):
+            print("BLOCKING WAIT", file=sys.stderr)
             WaitForSingleObject(self._handle, INFINITE)
+            print("DONE BLACKING WAIT", file=sys.stderr)
             self.returncode = GetExitCodeProcess(self._handle)
             return self.returncode
 
         def _wait(self):
+            print("RUN _WAIT", file=sys.stderr)
             self.threadpool.spawn(self._blocking_wait).rawlink(self.result)
 
         def wait(self, timeout=None):
             """Wait for child process to terminate.  Returns returncode
             attribute."""
+            print("RUN WAIT", timeout, "rc", self.returncode, 'waiting', self._waiting, file=sys.stderr)
             if self.returncode is None:
+
                 if not self._waiting:
                     self._waiting = True
                     self._wait()
+            print("WAIT on result", file=sys.stderr)
             return self.result.wait(timeout=timeout)
 
         def send_signal(self, sig):
@@ -882,6 +892,7 @@ class Popen(object):
         def terminate(self):
             """Terminates the process
             """
+            print("TERMINATE", file=sys.stderr)
             TerminateProcess(self._handle, 1)
 
         kill = terminate
