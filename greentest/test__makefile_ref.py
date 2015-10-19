@@ -15,6 +15,9 @@ lsof_command = 'lsof -p %s > %s' % (pid, tmpname)
 
 import sys
 PY3 = sys.version_info[0] >= 3
+fd_types = int
+if not PY3:
+    fd_types = (int, long)
 
 
 def get_open_files():
@@ -56,24 +59,24 @@ class Test(unittest.TestCase):
         raise AssertionError('NOT RAISED EBADF: %r() returned %r' % (func, result))
 
     def assert_fd_open(self, fileno):
-        assert isinstance(fileno, int)
+        assert isinstance(fileno, fd_types)
         open_files = get_open_files()
         if fileno not in open_files:
             raise AssertionError('%r is not open:\n%s' % (fileno, open_files['data']))
 
     def assert_fd_closed(self, fileno):
-        assert isinstance(fileno, int), repr(fileno)
+        assert isinstance(fileno, fd_types), repr(fileno)
         assert fileno > 0, fileno
         open_files = get_open_files()
         if fileno in open_files:
             raise AssertionError('%r is not closed:\n%s' % (fileno, open_files['data']))
 
     def assert_open(self, sock, *rest):
-        if isinstance(sock, int):
+        if isinstance(sock, fd_types):
             self.assert_fd_open(sock)
         else:
             fileno = sock.fileno()
-            assert isinstance(fileno, int), fileno
+            assert isinstance(fileno, fd_types), fileno
             sockname = sock.getsockname()
             assert isinstance(sockname, tuple), sockname
             self.assert_fd_open(fileno)
@@ -81,7 +84,7 @@ class Test(unittest.TestCase):
             self.assert_open(rest[0], *rest[1:])
 
     def assert_closed(self, sock, *rest):
-        if isinstance(sock, int):
+        if isinstance(sock, fd_types):
             self.assert_fd_closed(sock)
         else:
             # Under Python3, the socket module returns -1 for a fileno
