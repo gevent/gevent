@@ -62,6 +62,7 @@ __extra__ = [
     'pywintypes',
     'list2cmdline',
     '_subprocess',
+    '_winapi',
     # Python 2.5 does not have _subprocess, so we don't use it
     # XXX We don't run on Py 2.5 anymore; can/could/should we use _subprocess?
     'WAIT_OBJECT_0',
@@ -114,27 +115,29 @@ if sys.version_info[:2] <= (2, 6):
     __implements__.remove('check_output')
     __extra__.append('check_output')
 
-_subprocess = getattr(__subprocess__, '_subprocess', None)
+# In Python 3 on Windows, a lot of the functions previously
+# in _subprocess moved to _winapi
 _NONE = object()
+_subprocess = getattr(__subprocess__, '_subprocess', _NONE)
+_winapi = getattr(__subprocess__, '_winapi', _NONE)
 
-for name in __extra__[:]:
+_attr_resolution_order = [__subprocess__, _subprocess, _winapi]
+
+for name in list(__extra__):
     if name in globals():
         continue
     value = _NONE
-    try:
-        value = getattr(__subprocess__, name)
-    except AttributeError:
-        if _subprocess is not None:
-            try:
-                value = getattr(_subprocess, name)
-            except AttributeError:
-                pass
+    for place in _attr_resolution_order:
+        value = getattr(place, name, _NONE)
+        if value is not _NONE:
+            break
+
     if value is _NONE:
         __extra__.remove(name)
     else:
         globals()[name] = value
 
-
+del _attr_resolution_order
 __all__ = __implements__ + __imports__
 
 
@@ -742,7 +745,7 @@ class Popen(object):
                                                  env,
                                                  cwd,
                                                  startupinfo)
-            except pywintypes.error as e:
+            except IOError as e: # From 2.6 on, pywintypes.error was defined as IOError
                 # Translate pywintypes.error to WindowsError, which is
                 # a subclass of OSError.  FIXME: We should really
                 # translate errno using _sys_errlist (or similar), but

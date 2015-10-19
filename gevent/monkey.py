@@ -1,4 +1,5 @@
 # Copyright (c) 2009-2012 Denis Bilenko. See LICENSE for details.
+# pylint: disable=redefined-outer-name
 """
 Make the standard library cooperative.
 
@@ -15,8 +16,9 @@ patching to certain modules, but most programs will want to use the
 default values as they receive the most wide-spread testing.
 
 Patching *should be done as early as possible* in the lifecycle of the
-program. For example, the main module (the one that tests against ``__main__``
-or is otherwise the first imported) should begin with this code::
+program. For example, the main module (the one that tests against
+``__main__`` or is otherwise the first imported) should begin with
+this code, ideally before any other imports::
 
     from gevent import monkey
     monkey.patch_all()
@@ -44,7 +46,6 @@ Sometimes it is useful to run existing python scripts or modules that
 were not built to be gevent aware under gevent. To do so, this module
 can be run as the main module, passing the script and its arguments.
 For details, see the :func:`main` function.
-
 """
 from __future__ import absolute_import
 from __future__ import print_function
@@ -52,15 +53,17 @@ import sys
 
 __all__ = [
     'patch_all',
+    'patch_builtins',
+    'patch_dns',
+    'patch_os',
+    'patch_select',
+    'patch_signal',
     'patch_socket',
     'patch_ssl',
-    'patch_os',
-    'patch_time',
-    'patch_select',
-    'patch_thread',
     'patch_subprocess',
     'patch_sys',
-    'patch_signal',
+    'patch_thread',
+    'patch_time',
     # query functions
     'get_original',
     'is_module_patched',
@@ -78,6 +81,10 @@ else:
     string_types = __builtin__.basestring
     PY3 = False
 
+if sys.platform.startswith("win"):
+    WIN = True
+else:
+    WIN = False
 
 # maps module name -> attribute name -> original item
 # e.g. "time" -> "sleep" -> built-in function sleep
@@ -406,16 +413,30 @@ def patch_select(aggressive=True):
 
 
 def patch_subprocess():
-    """Replace :func:`subprocess.call`, :func:`subprocess.check_call`,
-    :func:`subprocess.check_output` and :class:`subprocess.Popen` with cooperative versions."""
+    """
+    Replace :func:`subprocess.call`, :func:`subprocess.check_call`,
+    :func:`subprocess.check_output` and :class:`subprocess.Popen` with
+    :mod:`cooperative versions <gevent.subprocess>`.
+
+    .. note::
+       On Windows under Python 3, the API support may not completely match
+       the standard library.
+
+    """
     patch_module('subprocess')
 
 
 def patch_builtins():
-    """Make the builtin __import__ function greenlet safe under Python 2"""
-    # https://github.com/gevent/gevent/issues/108
-    # Note that this is only needed in Python 2; under Python 3 (at least the versions
-    # we support) import locks are not global, they're per-module.
+    """
+    Make the builtin __import__ function `greenlet safe`_ under Python 2.
+
+    .. note::
+       This does nothing under Python 3 as it is not necessary. Python 3 features
+       improved import locks that are per-module, not global.
+
+    .. _greenlet safe: https://github.com/gevent/gevent/issues/108
+
+    """
     if sys.version_info[:2] < (3, 3):
         patch_module('builtins')
 
