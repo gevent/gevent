@@ -691,7 +691,7 @@ class Popen(object):
             elif stderr == PIPE:
                 errread, errwrite = CreatePipe(None, 0)
                 if PY3:
-                    errred, errwrite = Handle(errread), Handle(errwrite)
+                    errread, errwrite = Handle(errread), Handle(errwrite)
             elif stderr == STDOUT:
                 errwrite = c2pwrite
             elif stderr == _devnull:
