@@ -98,6 +98,7 @@ if 'waitpid' in gevent.os.__implements__ and hasattr(_signal, 'SIGCHLD'):
     __implements__.append("signal")
     __implements__.append("getsignal")
 else:
+    # XXX: This breaks test__all__ on windows
     __extensions__.append("signal")
     __extensions__.append("getsignal")
 
