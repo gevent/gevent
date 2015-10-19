@@ -92,7 +92,6 @@ if sys.platform == 'win32':
     if PY3:
         # XXX need investigating
         FAILING_TESTS += [
-            'test__socket_ex.py',
             'test__subprocess.py', # universal newlines are borked?
             'FLAKY test__api_timeout.py',
         ]

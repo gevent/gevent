@@ -1,5 +1,6 @@
 import greentest
 from gevent import socket
+import errno
 
 
 class TestClosedSocket(greentest.TestCase):
@@ -11,8 +12,8 @@ class TestClosedSocket(greentest.TestCase):
         sock.close()
         try:
             sock.send(b'a', timeout=1)
-        except socket.error as ex:
-            if ex.args[0] != 9:
+        except (socket.error, OSError) as ex:
+            if ex.args[0] != errno.EBADF:
                 raise
 
 
@@ -27,6 +28,7 @@ class TestRef(greentest.TestCase):
         assert sock.ref is False, sock.ref
         assert sock._read_event.ref is False, sock.ref
         assert sock._write_event.ref is False, sock.ref
+        sock.close()
 
 
 if __name__ == '__main__':
