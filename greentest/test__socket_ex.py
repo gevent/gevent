@@ -1,6 +1,7 @@
 import greentest
 from gevent import socket
 import errno
+import sys
 
 
 class TestClosedSocket(greentest.TestCase):
