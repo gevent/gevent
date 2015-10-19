@@ -7,7 +7,10 @@
 1.1b7 (unreleased)
 ==================
 
-- TBD
+- Windows/Python 3: Port the :mod:`gevent.subprocess` module, fixing a
+  large number of failing tests. Universal newline support, however,
+  still has some edge cases. Examples of failures are in :issue:`668`
+  and :issue:`669` srossross.
 
 1.1b6 (Oct 17, 2015)
 ====================
