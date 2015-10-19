@@ -144,6 +144,26 @@ __all__ = __implements__ + __imports__
 mswindows = sys.platform == 'win32'
 if mswindows:
     import msvcrt
+    if PY3:
+        class Handle(int):
+            closed = False
+
+            def Close(self):
+                if not self.closed:
+                    self.closed = True
+                    _winapi.CloseHandle(self)
+
+            def Detach(self):
+                if not self.closed:
+                    self.closed = True
+                    return int(self)
+                raise ValueError("already closed")
+
+            def __repr__(self):
+                return "Handle(%d)" % int(self)
+
+            __del__ = Close
+            __str__ = __repr__
 else:
     import fcntl
     import pickle
@@ -647,7 +667,7 @@ class Popen(object):
                     p2cread, _ = CreatePipe(None, 0)
                     if PY3:
                         p2cread = Handle(p2cread)
-                        CloseHandle(_)
+                        _winapi.CloseHandle(_)
             elif stdin == PIPE:
                 p2cread, p2cwrite = CreatePipe(None, 0)
                 if PY3:
@@ -667,7 +687,7 @@ class Popen(object):
                     _, c2pwrite = CreatePipe(None, 0)
                     if PY3:
                         c2pwrite = Handle(c2pwrite)
-                        CloseHandle(_)
+                        _winapi.CloseHandle(_)
             elif stdout == PIPE:
                 c2pread, c2pwrite = CreatePipe(None, 0)
                 if PY3:
@@ -687,7 +707,7 @@ class Popen(object):
                     _, errwrite = CreatePipe(None, 0)
                     if PY3:
                         errwrite = Handle(errwrite)
-                        CloseHandle(_)
+                        _winapi.CloseHandle(_)
             elif stderr == PIPE:
                 errread, errwrite = CreatePipe(None, 0)
                 if PY3:
