@@ -91,11 +91,6 @@ class Test(greentest.TestCase):
                              bufsize=1)
         try:
             stdout = p.stdout.read()
-            if PY3 and isinstance(stdout, bytes):
-                # OS X gives us binary back from stdout.read, but linux (travis ci)
-                # gives us text...text is correct because we're in universal newline
-                # mode
-                stdout = stdout.decode('ascii')
             if python_universal_newlines:
                 # Interpreter with universal newline support
                 self.assertEqual(stdout,

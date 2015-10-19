@@ -430,7 +430,7 @@ class Popen(object):
                 # Under Python 3, if we left on the 'b' we'd get different results
                 # depending on whether we used FileObjectPosix or FileObjectThread
                 self.stdin = FileObject(p2cwrite, 'wb', bufsize)
-                self.stdin._tranlate = True
+                self.stdin._translate = True
                 self.stdin.io = io.TextIOWrapper(self.stdin.io, write_through=True,
                                                  line_buffering=(bufsize == 1))
             else:
@@ -440,9 +440,11 @@ class Popen(object):
                 if PY3:
                     # FileObjectThread doesn't support the 'U' qualifier
                     # with a bufsize of 0
+                    # XXX: Universal newlines seem broken on windows?
                     self.stdout = FileObject(c2pread, 'rb', bufsize)
                     self.stdout.io = io.TextIOWrapper(self.stdout.io)
-                    self.stdout._tranlate = True
+                    self.stdout.io.mode = 'r'
+                    self.stdout._translate = True
                 else:
                     self.stdout = FileObject(c2pread, 'rU', bufsize)
             else:
@@ -452,7 +454,7 @@ class Popen(object):
                 if PY3:
                     self.stderr = FileObject(errread, 'rb', bufsize)
                     self.stderr.io = io.TextIOWrapper(self.stderr.io)
-                    self.stderr._tranlate = True
+                    self.stderr._translate = True
                 else:
                     self.stderr = FileObject(errread, 'rU', bufsize)
             else:

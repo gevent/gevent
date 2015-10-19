@@ -90,26 +90,11 @@ if sys.platform == 'win32':
         FAILING_TESTS.append('test_ftplib.py')
 
     if PY3:
-        # Lets see how close we get
-        #FAILING_TESTS += [
-            # We don't have an implementation of subprocess
-            # on PY3/Windows...
-            #'test__subprocess_poll.py',
-            # Therefore we don't monkey-patch it by default because
-            # it breaks subprocess completely
-            #'test_subprocess.py',
-        #]
-
         # XXX need investigating
         FAILING_TESTS += [
-            'test__example_portforwarder.py',
             'test__socket_ex.py',
-            'test__examples.py',
-            'test__issue600.py',
-            'test__subprocess.py',
-            'test_threading_2.py',
+            'test__subprocess.py', # universal newlines are borked?
             'FLAKY test__api_timeout.py',
-            'test__example_udp_client.py'
         ]
 
 
