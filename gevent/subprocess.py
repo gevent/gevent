@@ -814,12 +814,16 @@ class Popen(object):
                 # output pipe are maintained in this process or else the
                 # pipe will not close when the child process exits and the
                 # ReadFile will hang.
-                if p2cread is not None:
-                    p2cread.Close()
-                if c2pwrite is not None:
-                    c2pwrite.Close()
-                if errwrite is not None:
-                    errwrite.Close()
+                def _close(x):
+                    if x is not None and x != -1:
+                        if hasattr(x, 'Close'):
+                            x.Close()
+                        else:
+                            _winapi.CloseHandle(x)
+
+                _close(p2cread)
+                _close(c2pwrite)
+                _close(errwrite)
                 if hasattr(self, '_devnull'):
                     os.close(self._devnull)
 
