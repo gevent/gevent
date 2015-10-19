@@ -295,12 +295,13 @@ else:
             raise ex
         return output
 
+_PLATFORM_DEFAULT_CLOSE_FDS = object()
 
 class Popen(object):
 
     def __init__(self, args, bufsize=None, executable=None,
                  stdin=None, stdout=None, stderr=None,
-                 preexec_fn=None, close_fds=None, shell=False,
+                 preexec_fn=None, close_fds=_PLATFORM_DEFAULT_CLOSE_FDS, shell=False,
                  cwd=None, env=None, universal_newlines=False,
                  startupinfo=None, creationflags=0, threadpool=None,
                  **kwargs):
@@ -323,19 +324,18 @@ class Popen(object):
         if not isinstance(bufsize, integer_types):
             raise TypeError("bufsize must be an integer")
 
-        if close_fds is None:
-            # close_fds has different defaults on Py3/Py2
-            if PY3:
-                close_fds = True
-            else:
-                close_fds = False
-
         if mswindows:
             if preexec_fn is not None:
                 raise ValueError("preexec_fn is not supported on Windows "
                                  "platforms")
-            if close_fds and (stdin is not None or stdout is not None or
-                              stderr is not None):
+            any_stdio_set = (stdin is not None or stdout is not None or
+                             stderr is not None)
+            if close_fds is _PLATFORM_DEFAULT_CLOSE_FDS:
+                if any_stdio_set:
+                    close_fds = False
+                else:
+                    close_fds = True
+            elif close_fds and any_stdio_set:
                 raise ValueError("close_fds is not supported on Windows "
                                  "platforms if you redirect stdin/stdout/stderr")
             if threadpool is None:
@@ -344,6 +344,13 @@ class Popen(object):
             self._waiting = False
         else:
             # POSIX
+            if close_fds is _PLATFORM_DEFAULT_CLOSE_FDS:
+                # close_fds has different defaults on Py3/Py2
+                if PY3:
+                    close_fds = True
+                else:
+                    close_fds = False
+
             if pass_fds and not close_fds:
                 import warnings
                 warnings.warn("pass_fds overriding close_fds.", RuntimeWarning)
@@ -768,7 +775,7 @@ class Popen(object):
             # Retain the process handle, but close the thread handle
             self._handle = hp
             self.pid = pid
-            ht.Close()
+            _winapi.CloseHandle(ht) if not hasattr(ht, 'Close') else ht.Close()
 
         def _internal_poll(self):
             """Check if child process has terminated.  Returns returncode

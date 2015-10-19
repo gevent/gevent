@@ -38,7 +38,9 @@ NOT_IMPLEMENTED = {
 }
 
 COULD_BE_MISSING = {
-    'socket': ['create_connection', 'RAND_add', 'RAND_egd', 'RAND_status']}
+    'socket': ['create_connection', 'RAND_add', 'RAND_egd', 'RAND_status'],
+    'subprocess': ['_posixsubprocess'],
+}
 
 NO_ALL = ['gevent.threading', 'gevent._util',
           'gevent._socketcommon',
@@ -83,7 +85,7 @@ class Test(unittest.TestCase):
         for name in self.__implements__ + self.__imports__:
             if name in self.stdlib_all:
                 continue
-            if name in COULD_BE_MISSING.get(self.stdlib_name, []):
+            if name in COULD_BE_MISSING.get(self.stdlib_name, ()):
                 continue
             if name in dir(self.stdlib_module):  # like thread._local which is not in thread.__all__
                 continue
