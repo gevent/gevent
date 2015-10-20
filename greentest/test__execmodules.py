@@ -1,5 +1,3 @@
-import sys
-from gevent.hub import PYGTE279
 from greentest import walk_modules, BaseTestCase, main, NON_APPLICABLE_SUFFIXES
 import six
 
