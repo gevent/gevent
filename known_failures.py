@@ -50,9 +50,6 @@ else:
     ]
 
 if sys.platform == 'win32':
-    # currently gevent.core.stat watcher does not implement 'prev' and 'attr' attributes on Windows
-    FAILING_TESTS += ['test__core_stat.py']
-
     # other Windows-related issues (need investigating)
     FAILING_TESTS += [
         'test__all__.py',

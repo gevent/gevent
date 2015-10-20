@@ -2,6 +2,7 @@ from __future__ import print_function
 import gevent
 import gevent.core
 import os
+import sys
 import time
 
 
@@ -12,6 +13,8 @@ hub = gevent.get_hub()
 DELAY = 0.5
 
 EV_USE_INOTIFY = getattr(gevent.core, 'EV_USE_INOTIFY', None)
+
+WIN = sys.platform.startswith('win')
 
 try:
     open(filename, 'wb', buffering=0).close()
@@ -33,6 +36,28 @@ try:
         assert watcher.path == filename
     assert watcher.interval == -1
 
+    def check_attr(name, none):
+        # Deals with the complex behaviour of the 'attr' and 'prev'
+        # attributes on Windows. This codifies it, rather than simply letting
+        # the test fail, so we know exactly when and what changes it.
+        try:
+            x = getattr(watcher, name)
+        except ImportError:
+            if WIN:
+                # the 'posix' module is not available
+                pass
+            else:
+                raise
+        else:
+            if WIN:
+                # The ImportError is only raised for the first time;
+                # after that, the attribute starts returning None
+                assert x is None, "Only None is supported on Windows"
+            if none:
+                assert x is None, x
+            else:
+                assert x is not None, x
+
     with gevent.Timeout(5 + DELAY + 0.5):
         hub.wait(watcher)
 
@@ -41,8 +66,8 @@ try:
     if reaction >= DELAY and EV_USE_INOTIFY:
         print('WARNING: inotify failed (write)')
     assert reaction >= 0.0, 'Watcher %s reacted too early (write): %.3fs' % (watcher, reaction)
-    assert watcher.attr is not None, watcher.attr
-    assert watcher.prev is not None, watcher.prev
+    check_attr('attr', False)
+    check_attr('prev', False)
     # The watcher interval changed after it started; -1 is illegal
     assert watcher.interval != -1
 
@@ -59,8 +84,8 @@ try:
     if reaction >= DELAY and EV_USE_INOTIFY:
         print('WARNING: inotify failed (unlink)')
     assert reaction >= 0.0, 'Watcher %s reacted too early (unlink): %.3fs' % (watcher, reaction)
-    assert watcher.attr is None, watcher.attr
-    assert watcher.prev is not None, watcher.prev
+    check_attr('attr', True)
+    check_attr('prev', False)
 
 finally:
     if os.path.exists(filename):
