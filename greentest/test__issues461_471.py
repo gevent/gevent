@@ -7,6 +7,7 @@ handling of KeyboardInterrupt.
 '''
 
 import sys
+WIN = sys.platform.startswith("win")
 
 if sys.argv[1:] == ['subprocess']:
     import gevent
@@ -15,10 +16,12 @@ if sys.argv[1:] == ['subprocess']:
         sys.stdout.write('ready\n')
         sys.stdout.flush()
         gevent.sleep(30)
+
     try:
         gevent.spawn(task).get()
     except KeyboardInterrupt:
         pass
+
 else:
     import signal
     from subprocess import Popen, PIPE
@@ -33,8 +36,16 @@ else:
     line = p.stdout.readline()
     if not isinstance(line, str):
         line = line.decode('ascii')
-    assert line == 'ready\n'
-    p.send_signal(signal.SIGINT)
+    # Windows needs the \n in the string to write (because of buffering), but
+    # because of newline handling it doesn't make it through the read; whereas
+    # it does on other platforms. Universal newlines is broken on Py3, so the best
+    # thing to do is to strip it
+    line = line.strip()
+    assert line == 'ready', line
+    # On Windows, we have to send the CTRL_BREAK_EVENT (which seems to terminate the process); SIGINT triggers
+    # "ValueError: Unsupported signal: 2". The CTRL_C_EVENT is ignored on Python 3 (but not Python 2).
+    # So this test doesn't test much on Windows.
+    p.send_signal(signal.SIGINT if not WIN else getattr(signal, 'CTRL_BREAK_EVENT'))
     # Wait up to 3 seconds for child process to die
     for i in range(30):
         if p.poll() is not None:
@@ -45,4 +56,10 @@ else:
         p.terminate()
         p.wait()
         sys.exit(1)
-    sys.exit(p.returncode)
+
+    # If we get here, it's because we caused the process to exit; it
+    # didn't hang. Under Windows, however, we have to use CTRL_BREAK_EVENT,
+    # which has an arbitrary returncode depending on versions (so does CTRL_C_EVENT
+    # on Python 2). We still
+    # count this as success.
+    sys.exit(p.returncode if not WIN else 0)
