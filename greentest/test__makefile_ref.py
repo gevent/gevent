@@ -55,6 +55,7 @@ else:
     # (Running 14 tests takes 3.964s with lsof and 0.046 with psutil)
     # However, it still doesn't completely solve the issue on Windows: fds are reported
     # as -1 there, so we can't fully check those.
+    # XXX: Note: installing psutil on the travis linux vm caused failures.
     process = psutil.Process()
 
     def get_open_files():
@@ -461,7 +462,7 @@ class TestSSL(Test):
             self.assertEqual(f.read(), 'test_serverssl_makefile2')
             self.assertEqual(f.read(), '')
             f.close()
-            if WIN and psutil and not PY3:
+            if WIN and psutil:
                 # Hmm?
                 self.extra_allowed_open_states = (psutil.CONN_CLOSE_WAIT,)
             self.assert_open(client_socket, fileno)
