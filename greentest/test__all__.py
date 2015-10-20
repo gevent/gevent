@@ -5,6 +5,7 @@ import sys
 import unittest
 import types
 from greentest import walk_modules
+from greentest import PLATFORM_SPECIFIC_SUFFIXES
 
 
 MAPPING = {
@@ -162,13 +163,7 @@ are missing from %r:
             raise AssertionError(msg)
 
     def _test(self, modname):
-        # Generally, ignore the portions that are only implemented
-        # on particular platforms; they generally contain partial
-        # implementations completed in different modules.
-        ignored_suffixes = ['2', '279', '3']
-        if sys.platform.startswith('win'):
-            ignored_suffixes.append('posix')
-        for x in ignored_suffixes:
+        for x in PLATFORM_SPECIFIC_SUFFIXES:
             if modname.endswith(x):
                 return
 

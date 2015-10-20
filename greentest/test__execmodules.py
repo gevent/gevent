@@ -1,6 +1,6 @@
 import sys
 from gevent.hub import PYGTE279
-from greentest import walk_modules, BaseTestCase, main
+from greentest import walk_modules, BaseTestCase, main, NON_APPLICABLE_SUFFIXES
 import six
 
 
@@ -22,12 +22,14 @@ def make_exec_test(path, module):
 
 
 for path, module in walk_modules():
-    if sys.version_info[0] == 3 and path.endswith('2.py'):
+    ignored = False
+    for x in NON_APPLICABLE_SUFFIXES:
+        if module.endswith(x):
+            ignored = True
+            break
+    if ignored:
         continue
-    if sys.version_info[0] == 2 and path.endswith('3.py'):
-        continue
-    if not PYGTE279 and path.endswith('279.py'):
-        continue
+
     make_exec_test(path, module)
 
 

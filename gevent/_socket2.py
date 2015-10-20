@@ -475,7 +475,7 @@ if hasattr(_socket, 'socketpair'):
             one._drop()
             two._drop()
         return result
-else:
+elif 'socketpair' in __implements__:
     __implements__.remove('socketpair')
 
 if hasattr(_socket, 'fromfd'):
@@ -487,7 +487,7 @@ if hasattr(_socket, 'fromfd'):
             s._drop()
         return result
 
-else:
+elif 'fromfd' in __implements__:
     __implements__.remove('fromfd')
 
 if hasattr(__socket__, 'ssl'):

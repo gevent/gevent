@@ -55,7 +55,6 @@ if sys.platform == 'win32':
         # fork watchers don't get called in multithreaded programs on windows
         # No idea why.
         'test__core_fork.py',
-        'test__execmodules.py',
         'FLAKY test__greenletset.py',
         # The various timeout tests are flaky for unknown reasons
         # on appveyor
