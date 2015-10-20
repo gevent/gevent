@@ -1,5 +1,6 @@
 from __future__ import print_function
 from gevent import monkey; monkey.patch_all(subprocess=True)
+import signal
 import sys
 import socket
 from time import sleep
@@ -13,6 +14,12 @@ import util
 class Test(util.TestServer):
     server = 'portforwarder.py'
     args = ['127.0.0.1:10011', '127.0.0.1:10012']
+
+    if sys.platform.startswith('win'):
+        from subprocess import CREATE_NEW_PROCESS_GROUP
+        # Must be in a new process group to use CTRL_C_EVENT, otherwise
+        # we get killed too
+        start_kwargs = {'creationflags': CREATE_NEW_PROCESS_GROUP}
 
     def after(self):
         if sys.platform == 'win32':
@@ -37,27 +44,22 @@ class Test(util.TestServer):
             conn = socket.create_connection(('127.0.0.1', 10011))
             conn.sendall(b'msg1')
             sleep(0.1)
-            self.popen.send_signal(15)
+            # On Windows, SIGTERM actually abruptly terminates the process;
+            # it can't be caught. However, CTRL_C_EVENT results in a KeyboardInterrupt
+            # being raised, so we can shut down properly.
+            self.popen.send_signal(getattr(signal, 'CTRL_C_EVENT') if hasattr(signal, 'CTRL_C_EVENT')
+                                   else signal.SIGTERM)
             sleep(0.1)
-            try:
-                conn.sendall(b'msg2')
-                conn.close()
-            except socket.error:
-                if sys.platform != 'win32':
-                    raise
-                # On Windows, signal/15 kills the process rather than actually sends a signal
-                # so, sendall('msg2') fails with
-                # error: [Errno 10054] An existing connection was forcibly closed by the remote host
-                # XXX maybe it could be made working with CTRL_C_EVENT somehow?
-            with gevent.Timeout(0.1):
+
+            conn.sendall(b'msg2')
+            conn.close()
+
+            with gevent.Timeout(1.1):
                 self.popen.wait()
         finally:
             server.close()
 
-        if sys.platform == 'win32':
-            self.assertEqual([b'msg1'], log)
-        else:
-            self.assertEqual([b'msg1', b'msg2'], log)
+        self.assertEqual([b'msg1', b'msg2'], log)
 
 
 if __name__ == '__main__':

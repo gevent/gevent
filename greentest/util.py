@@ -214,9 +214,11 @@ class TestServer(unittest.TestCase):
     after_delay = 0.5
     popen = None
     server = None # subclasses define this to be the path to the server.py
+    start_kwargs = None
 
     def start(self):
-        return start([sys.executable, '-u', self.server] + self.args, cwd=self.cwd)
+        kwargs = self.start_kwargs or {}
+        return start([sys.executable, '-u', self.server] + self.args, cwd=self.cwd, **kwargs)
 
     def running_server(self):
         from contextlib import contextmanager

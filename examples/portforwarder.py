@@ -11,6 +11,7 @@ it closes the listening socket and waits for all existing
 connections to finish. The existing connections will remain unaffected.
 The program will exit once the last connection has been closed.
 """
+import socket
 import sys
 import signal
 import gevent
@@ -31,8 +32,8 @@ class PortForwarder(StreamServer):
         except IOError as ex:
             log('%s:%s failed to connect to %s:%s: %s', address[0], address[1], self.dest[0], self.dest[1], ex)
             return
-        forwarders = (gevent.spawn(forward, source, dest),
-                      gevent.spawn(forward, dest, source))
+        forwarders = (gevent.spawn(forward, source, dest, self),
+                      gevent.spawn(forward, dest, source, self))
         # if we return from this method, the stream will be closed out
         # from under us, so wait for our children
         gevent.joinall(forwarders)
@@ -45,19 +46,31 @@ class PortForwarder(StreamServer):
             StreamServer.close(self)
 
 
-def forward(source, dest):
+def forward(source, dest, server):
     source_address = '%s:%s' % source.getpeername()[:2]
     dest_address = '%s:%s' % dest.getpeername()[:2]
     try:
         while True:
-            data = source.recv(1024)
-            log('%s->%s: %r', source_address, dest_address, data)
-            if not data:
+            try:
+                data = source.recv(1024)
+                log('%s->%s: %r', source_address, dest_address, data)
+                if not data:
+                    break
+                dest.sendall(data)
+            except KeyboardInterrupt:
+                # On Windows, a Ctrl-C signal (sent by a program) usually winds
+                # up here, not in the installed signal handler.
+                if not server.closed:
+                    server.close()
                 break
-            dest.sendall(data)
+            except socket.error:
+                if not server.closed:
+                    server.close()
+                break
     finally:
         source.close()
         dest.close()
+        server = None
 
 
 def parse_address(address):
