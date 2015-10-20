@@ -296,7 +296,7 @@
   Previously the child process would hang indefinitely. Reported in
   :issue:`230` by Lx Yu.
 - Fork watchers are more likely to (eventually) get called in a
-  multi-threaded program. See :issue:`154`.
+  multi-threaded program (except on Windows). See :issue:`154`.
 - ``gevent.killall`` accepts an arbitrary iterable for the greenlets
   to kill. Reported in :issue:`404` by Martin Bachwerk; seen in
   combination with older versions of simple-requests.

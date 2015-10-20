@@ -80,7 +80,8 @@ downstream libraries, notably `gunicorn`_.
   :func:`gevent.os.waitpid` (again monkey patched by default) and
   :func:`gevent.signal.signal` (which is monkey patched only for the
   :data:`signal.SIGCHLD` case). The latter two patches are new in 1.1.
-- Fork-watchers will be called, even in multi-threaded programs.
+- Fork-watchers will be called, even in multi-threaded programs
+  (except on Windows).
 - The default threadpool and threaded resolver work in child
   processes.
 - File descriptors are no longer leaked if

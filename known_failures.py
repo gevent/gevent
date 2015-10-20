@@ -56,6 +56,8 @@ if sys.platform == 'win32':
     # other Windows-related issues (need investigating)
     FAILING_TESTS += [
         'test__all__.py',
+        # fork watchers don't get called in multithreaded programs on windows
+        # No idea why.
         'test__core_fork.py',
         'test__issues461_471.py',
         'test__execmodules.py',
