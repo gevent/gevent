@@ -47,6 +47,13 @@ NO_ALL = ['gevent.threading', 'gevent._util',
           'gevent._fileobjectcommon', 'gevent._fileobjectposix',
           'gevent._tblib']
 
+# A list of modules that may contain things that aren't actually, technically,
+# extensions, but that need to be in __extensions__ anyway due to the way,
+# for example, monkey patching, needs to work.
+EXTRA_EXTENSIONS = []
+if sys.platform.startswith('win'):
+    EXTRA_EXTENSIONS.append('gevent.signal')
+
 
 class Test(unittest.TestCase):
 
@@ -111,6 +118,8 @@ class Test(unittest.TestCase):
 
     def check_extensions_actually_extend(self):
         """Check that the module actually defines new entries in __extensions__"""
+        if self.modname in EXTRA_EXTENSIONS:
+            return
         for name in self.__extensions__:
             if hasattr(self.stdlib_module, name):
                 raise AssertionError("'%r' is not an extension, it is found in %r" % (name, self.stdlib_module))
@@ -153,10 +162,16 @@ are missing from %r:
             raise AssertionError(msg)
 
     def _test(self, modname):
-        if modname.endswith('2') or modname.endswith("279"):
-            return
-        if modname.endswith('3'):
-            return
+        # Generally, ignore the portions that are only implemented
+        # on particular platforms; they generally contain partial
+        # implementations completed in different modules.
+        ignored_suffixes = ['2', '279', '3']
+        if sys.platform.startswith('win'):
+            ignored_suffixes.append('posix')
+        for x in ignored_suffixes:
+            if modname.endswith(x):
+                return
+
         self.modname = modname
         six.exec_("import %s" % modname, {})
         self.module = sys.modules[modname]
