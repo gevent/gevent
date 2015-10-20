@@ -45,7 +45,7 @@ if '--debug-greentest' in sys.argv:
 else:
     DEBUG = False
 
-gettotalrefcount = getattr(sys, 'gettotalrefcount', None)
+RUN_LEAKCHECKS = os.getenv('GEVENTTEST_LEAKCHECK')
 OPTIONAL_MODULES = ['resolver_ares']
 
 # Generally, ignore the portions that are only implemented
@@ -114,7 +114,7 @@ def wrap_timeout(timeout, method):
 
 
 def wrap_refcount(method):
-    if not os.getenv('GEVENTTEST_LEAKCHECK'):
+    if not RUN_LEAKCHECKS:
         return method
 
     if getattr(method, 'ignore_leakcheck', False):
@@ -265,7 +265,7 @@ class TestCaseMetaClass(type):
         timeout = classDict.get('__timeout__', 'NONE')
         if timeout == 'NONE':
             timeout = getattr(bases[0], '__timeout__', None)
-            if gettotalrefcount is not None and timeout is not None:
+            if RUN_LEAKCHECKS and timeout is not None:
                 timeout *= 6
         check_totalrefcount = _get_class_attr(classDict, bases, 'check_totalrefcount', True)
         error_fatal = _get_class_attr(classDict, bases, 'error_fatal', True)
@@ -287,7 +287,9 @@ class TestCaseMetaClass(type):
 
 
 class TestCase(TestCaseMetaClass("NewBase", (BaseTestCase,), {})):
-    __timeout__ = 1 if not os.environ.get('TRAVIS') else 2 # Travis is slow and overloaded
+    # Travis is slow and overloaded; Appveyor is usually faster, but at times
+    # it's slow too
+    __timeout__ = 1 if not os.environ.get('TRAVIS') and not os.environ.get('APPVEYOR') else 3
     switch_expected = 'default'
     error_fatal = True
 
@@ -376,7 +378,7 @@ class CountingHub(_original_Hub):
             return
         return _original_Hub.handle_error(self, context, type, value, tb)
 
-if gettotalrefcount is None:
+if not RUN_LEAKCHECKS:
     gevent.hub.Hub = CountingHub
 
 
