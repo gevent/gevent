@@ -60,7 +60,6 @@ if sys.platform == 'win32':
         # No idea why.
         'test__core_fork.py',
         'test__execmodules.py',
-        'test__makefile_ref.py',
         'FLAKY test__greenletset.py',
         # The various timeout tests are flaky for unknown reasons
         # on appveyor
