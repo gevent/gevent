@@ -90,14 +90,20 @@ downstream libraries, notably `gunicorn`_.
 In addition, simple use of :class:`multiprocessing.Process` is now
 possible in a monkey patched system, at least on POSIX platforms.
 
-.. note:: All of the above entail forking a child process. Forking
-		  a child process that uses gevent, greenlets, and libev
-		  can have some unexpected consequences if the child
-		  doesn't immediately ``exec`` a new binary. Be sure you
-		  understand these consequences before using this
-		  functionality, especially late in a program's lifecycle.
-		  For a more robust solution to certain uses of child
-		  process, consider `gipc`_.
+.. caution:: Use of :class:`multiprocessing.Queue` when :mod:`thread`
+             has been monkey-patched will lead to a hang due to
+             ``Queue``'s internal use of a blocking pipe and threads. For the same
+             reason, :class:`concurrent.futures.ProcessPoolExecutor`,
+             which internally uses a ``Queue``, will hang.
+
+.. tip:: All of the above entail forking a child process. Forking
+		 a child process that uses gevent, greenlets, and libev
+		 can have some unexpected consequences if the child
+		 doesn't immediately ``exec`` a new binary. Be sure you
+		 understand these consequences before using this
+		 functionality, especially late in a program's lifecycle.
+		 For a more robust solution to certain uses of child
+		 process, consider `gipc`_.
 
 .. _gunicorn: http://gunicorn.org
 .. _gipc: https://gehrcke.de/gipc/
