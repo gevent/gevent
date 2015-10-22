@@ -272,23 +272,23 @@ def patch_thread(threading=True, _threading_local=True, Event=False, logging=Tru
     """
     # Description of the hang:
     # There is an incompatibility with patching 'thread' and the 'multiprocessing' module:
-	# The problem is that multiprocessing.queues.Queue uses a half-duplex multiprocessing.Pipe,
-	# which is implemented with os.pipe() and _multiprocessing.Connection. os.pipe isn't patched
-	# by gevent, as it returns just a fileno. _multiprocessing.Connection is an internal implementation
-	# class implemented in C, which exposes a 'poll(timeout)' method; under the covers, this issues a
-	# (blocking) select() call: hence the need for a real thread. Except for that method, we could
-	# almost replace Connection with gevent.fileobject.SocketAdapter, plus a trivial
-	# patch to os.pipe (below). Sigh, so close. (With a little work, we could replicate that method)
+    # The problem is that multiprocessing.queues.Queue uses a half-duplex multiprocessing.Pipe,
+    # which is implemented with os.pipe() and _multiprocessing.Connection. os.pipe isn't patched
+    # by gevent, as it returns just a fileno. _multiprocessing.Connection is an internal implementation
+    # class implemented in C, which exposes a 'poll(timeout)' method; under the covers, this issues a
+    # (blocking) select() call: hence the need for a real thread. Except for that method, we could
+    # almost replace Connection with gevent.fileobject.SocketAdapter, plus a trivial
+    # patch to os.pipe (below). Sigh, so close. (With a little work, we could replicate that method)
 
-	# import os
-	# import fcntl
-	# os_pipe = os.pipe
-	# def _pipe():
-	# 	r, w = os_pipe()
-	# 	fcntl.fcntl(r, fcntl.F_SETFL, os.O_NONBLOCK)
-	# 	fcntl.fcntl(w, fcntl.F_SETFL, os.O_NONBLOCK)
-	# 	return r, w
-	# os.pipe = _pipe
+    # import os
+    # import fcntl
+    # os_pipe = os.pipe
+    # def _pipe():
+    #   r, w = os_pipe()
+    #   fcntl.fcntl(r, fcntl.F_SETFL, os.O_NONBLOCK)
+    #   fcntl.fcntl(w, fcntl.F_SETFL, os.O_NONBLOCK)
+    #   return r, w
+    # os.pipe = _pipe
 
     patch_module('thread')
     if threading:

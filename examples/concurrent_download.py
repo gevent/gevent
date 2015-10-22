@@ -3,15 +3,15 @@
 
 """Spawn multiple workers and wait for them to complete"""
 from __future__ import print_function
-import sys
-
-urls = ['http://www.google.com', 'http://www.yandex.ru', 'http://www.python.org']
-
 import gevent
 from gevent import monkey
 
 # patches stdlib (including socket and ssl modules) to cooperate with other greenlets
 monkey.patch_all()
+
+import sys
+
+urls = ['http://www.google.com', 'http://www.yandex.ru', 'http://www.python.org']
 
 
 if sys.version_info[0] == 3:
