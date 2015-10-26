@@ -127,6 +127,27 @@ class FileObjectPosix(object):
     A file-like object that operates on non-blocking files but
     provides a synchronous, cooperative interface.
 
+    .. caution::
+         This object is most effective wrapping files that can be used appropriately
+         with :func:`select.select` such as sockets and pipes.
+
+         In general, on most platforms, operations on regular files
+         (e.g., ``open('/etc/hosts')``) are considered non-blocking
+         already, even though they can take some time to complete as
+         data is copied to the kernel and flushed to disk (this time
+         is relatively bounded compared to sockets or pipes, though).
+         A :func:`~os.read` or :func:`~os.write` call on such a file
+         will still effectively block for some small period of time.
+         Therefore, wrapping this class around a regular file is
+         unlikely to make IO gevent-friendly: reading or writing large
+         amounts of data could still block the event loop.
+
+         If you'll be working with regular files and doing IO in large
+         chunks, you may consider using
+         :class:`~gevent.fileobject.FileObjectThread` or
+         :func:`~gevent.os.tp_read` and :func:`~gevent.os.tp_write` to bypass this
+         concern.
+
     .. note::
          Random read/write (e.g., ``mode='rwb'``) is not supported.
          For that, use :class:`io.BufferedRWPair` around two instance of this

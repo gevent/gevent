@@ -16,7 +16,6 @@ A third class, :class:`FileObjectBlock`, is simply a wrapper that executes every
 synchronously (and so is not gevent-compatible). It is provided for testing and debugging
 purposes.
 
-
 Configuration
 =============
 
@@ -30,6 +29,9 @@ objects.
 
 .. note:: The environment variable must be set at the time this module
    is first imported.
+
+Classes
+=======
 """
 from __future__ import absolute_import
 import sys
