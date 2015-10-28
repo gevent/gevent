@@ -13,6 +13,9 @@
 - Python 3: The SSLSocket class should return an empty ``bytes``
   object on an EOF instead of a ``str``. Fixed in :pr:`674` by Dahoon
   Kim.
+- Python 2: Workaround a buffering bug in the stdlib ``io`` module
+  that caused ``FileObjectPosix`` to be slower than necessary in some
+  cases. Reported in :issue:`675` by WGH-.
 
 1.1b6 (Oct 17, 2015)
 ====================

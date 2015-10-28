@@ -75,9 +75,16 @@ class GreenFileDescriptorIO(RawIOBase):
             self._fileno = None
             os.close(fileno)
 
-    def read(self, n=1):
+    # RawIOBase provides a 'read' method that will call readall() if
+    # the `size` was missing or -1 and otherwise call readinto(). We
+    # want to take advantage of this to avoid single byte reads when
+    # possible. This is highlighted by a bug in BufferedIOReader that
+    # calls read() in a loop when its readall() method is invoked;
+    # this was fixed in Python 3.3. See
+    # https://github.com/gevent/gevent/issues/675)
+    def __read(self, n):
         if not self._readable:
-            raise UnsupportedOperation('readinto')
+            raise UnsupportedOperation('read')
         while True:
             try:
                 return _read(self._fileno, n)
@@ -89,14 +96,14 @@ class GreenFileDescriptorIO(RawIOBase):
     def readall(self):
         ret = BytesIO()
         while True:
-            data = self.read(DEFAULT_BUFFER_SIZE)
+            data = self.__read(DEFAULT_BUFFER_SIZE)
             if not data:
                 break
             ret.write(data)
         return ret.getvalue()
 
     def readinto(self, b):
-        data = self.read(len(b))
+        data = self.__read(len(b))
         n = len(data)
         try:
             b[:n] = data
