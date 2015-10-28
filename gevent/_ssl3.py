@@ -173,7 +173,7 @@ class SSLSocket(socket):
             except SSLError as ex:
                 if ex.args[0] == SSL_ERROR_EOF and self.suppress_ragged_eofs:
                     if buffer is None:
-                        return ''
+                        return b''
                     else:
                         return 0
                 else:
