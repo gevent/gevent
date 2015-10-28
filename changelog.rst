@@ -10,6 +10,9 @@
 - Windows/Python 3: Port the :mod:`gevent.subprocess` module, fixing a
   large number of failing tests. Examples of failures are in
   :issue:`668` and :issue:`669` srossross.
+- Python 3: The SSLSocket class should return an empty ``bytes``
+  object on an EOF instead of a ``str``. Fixed in :pr:`674` by Dahoon
+  Kim.
 
 1.1b6 (Oct 17, 2015)
 ====================
