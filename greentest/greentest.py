@@ -378,8 +378,7 @@ class CountingHub(_original_Hub):
             return
         return _original_Hub.handle_error(self, context, type, value, tb)
 
-if not RUN_LEAKCHECKS:
-    gevent.hub.Hub = CountingHub
+gevent.hub.Hub = CountingHub
 
 
 def test_outer_timeout_is_not_lost(self):
