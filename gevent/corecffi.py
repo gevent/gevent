@@ -964,19 +964,25 @@ class watcher(object):
         self.args = None
         self._callback = None
         self._handle = ffi.new_handle(self)
-        # XXX This parses the C every time. Is that expensive? Can we do better?
-        self._gwatcher = ffi.new('struct gevent_' + self._watcher_type + '*')
+        self._gwatcher = ffi.new(self._watcher_struct_pointer_type)
         self._watcher = ffi.addressof(self._gwatcher.watcher)
         self._gwatcher.handle = self._handle
         if priority is not None:
             libev.ev_set_priority(self._watcher, priority)
         self._watcher_init(self._watcher,
-                           getattr(libev, '_gevent_' + self._watcher_type + '_callback'),
+                           self._watcher_callback,
                            *args)
 
     # A string identifying the type of libev object we watch, e.g., 'ev_io'
     # This should be a class attribute.
     _watcher_type = None
+    # A cffi ctype object identifying the struct pointer we create.
+    # This is a class attribute set based on the _watcher_type
+    _watcher_struct_pointer_type = None
+    # The attribute of the libev object identifying the custom
+    # callback function for this type of watcher. This is a class
+    # attribute set based on the _watcher_type
+    _watcher_callback = None
 
     def _watcher_init(self, watcher_ptr, cb, *args):
         "Init the watcher. Subclasses must define."
@@ -989,6 +995,13 @@ class watcher(object):
     def _watcher_stop(self, loop_ptr, watcher_ptr):
         "Stop the watcher. Subclasses must define."
         raise NotImplementedError()
+
+    @classmethod
+    def _init_subclasses(cls):
+        for subclass in cls.__subclasses__():
+            watcher_type = subclass._watcher_type
+            subclass._watcher_struct_pointer_type = ffi.typeof('struct gevent_' + watcher_type + '*')
+            subclass._watcher_callback = getattr(libev, '_gevent_' + watcher_type + '_callback')
 
     # this is not needed, since we keep alive the watcher while it's started
     #def __del__(self):
@@ -1315,6 +1328,11 @@ class stat(watcher):
     @property
     def interval(self):
         return self._watcher.interval
+
+# All watcher subclasses must be declared above. Now we do some
+# initialization; this is not only a minor optimization, it protects
+# against later runtime typos and attribute errors
+watcher._init_subclasses()
 
 
 def _syserr_cb(msg):
