@@ -24,6 +24,9 @@ as on Python 3.4, but new features and APIs introduced in 3.5 may not
 be properly supported (e.g., `DevpollSelector`_) and due to the recent
 arrival of Python 3.5, the level of testing it has received is lower.
 
+For ease of installation on Windows and OS X, gevent 1.1 is
+distributed as pre-compiled binary wheels, in addition to source code.
+
 .. _python.org: http://www.python.org/downloads/
 .. _PyPy: http://pypy.org
 .. _DevpollSelector: https://docs.python.org/3.5/whatsnew/3.5.html#selectors
@@ -32,7 +35,7 @@ PyPy Notes
 ----------
 
 PyPy has been tested on OS X and 64-bit Linux from version 2.5.0
-through 2.5.1, 2.6.0, 2.6.1, and pre-release versions of 2.7.0.
+through 2.5.1, 2.6.0, 2.6.1, 4.0.0.
 
 - Version 2.6.1 or above is required for the most robust signal
   handling. Prior to 2.6.1 and its inclusion of `cffi 1.3.0`_, signals
@@ -48,7 +51,7 @@ through 2.5.1, 2.6.0, 2.6.1, and pre-release versions of 2.7.0.
   :class:`gevent.lock.Semaphore`. Whether or not these matter will
   depend on the workload of each application.
 
-.. note:: Released versions of PyPy through at least 2.6.1 have `a
+.. note:: Released versions of PyPy through at least 4.0.0 have `a
           bug`_ that can cause a memory leak when subclassing
           objects that are implemented in Cython, as are the two
           things mentioned above. The `Semaphore` class is
@@ -136,14 +139,21 @@ include:
   :class:`gevent.pool.Pool`, :class:`gevent.threadpool.ThreadPool`)
   support the same improved APIs: ``imap`` and ``imap_unordered``
   accept multiple iterables, ``apply`` raises any exception raised by
-  the target callable.
+  the target callable, etc.
 - Killing a greenlet (with :func:`gevent.kill` or
   :meth:`Greenlet.kill <gevent.Greenlet.kill>`) before it is actually started and
   switched to now prevents the greenlet from ever running, instead of
-  raising an exception when it is later switched to.
+  raising an exception when it is later switched to. Attempting to
+  spawn a greenlet with an invalid target now immediately produces
+  a useful TypeError, instead of spawning a greenlet that would
+  immediately die the first time it was switched to.
 - Almost anywhere that gevent raises an exception from one greenlet to
   another (e.g., :meth:`Greenlet.get <gevent.Greenlet.get>`),
   the original traceback is preserved and raised.
+- The WSGI server found in :mod:`gevent.pywsgi` is more robust against
+  errors in either the client or the WSGI application, fixing several
+  hangs or HTTP protocol violations. It also supports new
+  functionality such as configurable error handling and logging.
 
 Library Updates
 ===============
