@@ -16,6 +16,7 @@
 - Python 2: Workaround a buffering bug in the stdlib ``io`` module
   that caused ``FileObjectPosix`` to be slower than necessary in some
   cases. Reported in :issue:`675` by WGH-.
+- PyPy: Fix a potential crash. Reported in :issue:`676` by Jay Oster.
 
 1.1b6 (Oct 17, 2015)
 ====================

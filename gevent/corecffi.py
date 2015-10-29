@@ -1,4 +1,5 @@
-from __future__ import absolute_import
+# pylint: disable=too-many-lines, protected-access, redefined-outer-name
+from __future__ import absolute_import, print_function
 import sys
 import os
 import traceback
@@ -272,13 +273,25 @@ for _watcher_type in _watcher_types:
     {
         // invoke self.callback()
         void* handle = ((struct gevent_%s *)watcher)->handle;
-        if( python_callback(handle, revents) < 0) {
-            /* in case of exception, call self.loop.handle_error */
-            python_handle_error(handle, revents);
-        }
-        // Code to stop the event
-        if (!ev_is_active(watcher)) {
-            python_stop(handle);
+        int cb_result = python_callback(handle, revents);
+        switch(cb_result) {
+            case -1:
+                // in case of exception, call self.loop.handle_error;
+                // this function is also responsible for stopping the watcher
+                // and allowing memory to be freed
+                python_handle_error(handle, revents);
+                break;
+            case 0:
+                // Code to stop the event. Note that if python_callback
+                // has disposed of the last reference to the handle,
+                // `watcher` could now be invalid/disposed memory!
+                if (!ev_is_active(watcher)) {
+                    python_stop(handle);
+                }
+                break;
+            default:
+                assert(cb_result == 1);
+                // watcher is already stopped and dead, nothing to do.
         }
     }
     """ % (_watcher_type, _watcher_type, _watcher_type)
@@ -292,41 +305,96 @@ del thisdir, include_dirs, _watcher_type, _watcher_types
 libev.vfd_open = libev.vfd_get = lambda fd: fd
 libev.vfd_free = lambda fd: None
 
+#####
+## Note on CFFI objects, callbacks and the lifecycle of watcher objects
+#
+# Each subclass of `watcher` allocates a C structure of the
+# appropriate type e.g., struct gevent_ev_io and holds this pointer in
+# its `_gwatcher` attribute. When that watcher instance is garbage
+# collected, then the C structure is also freed. The C structure is
+# passed to libev from the watcher's start() method and then to the
+# appropriate C callback function, e.g., _gevent_ev_io_callback, which
+# passes it back to python's _python_callback where we need the
+# watcher instance. Therefore, as long as that callback is active (the
+# watcher is started), the watcher instance must not be allowed to get
+# GC'd---any access at the C level or even the FFI level to the freed
+# memory could crash the process.
+#
+# However, the typical idiom calls for writing something like this:
+#  loop.io(fd, python_cb).start()
+# thus forgetting the newly created watcher subclass and allowing it to be immediately
+# GC'd. To combat this, when the watcher is started, it places itself into the loop's
+# `_keepaliveset`, and it only removes itself when the watcher's `stop()` method is called.
+# Often, this is the *only* reference keeping the watcher object, and hence its C structure,
+# alive.
+#
+# This is slightly complicated by the fact that the python-level
+# callback, called from the C callback, could choose to manually stop
+# the watcher. When we return to the C level callback, we now have an
+# invalid pointer, and attempting to pass it back to Python (e.g., to
+# handle an error) could crash. Hence, _python_callback,
+# _gevent_io_callback, and _python_handle_error cooperate to make sure
+# that the watcher instance stays in the loops `_keepaliveset` while
+# the C code could be running---and if it gets removed, to not call back
+# to Python again.
+# See also https://github.com/gevent/gevent/issues/676
+####
+
 
 @ffi.callback("int(void* handle, int revents)")
 def _python_callback(handle, revents):
-    watcher = ffi.from_handle(handle)
-    if len(watcher.args) > 0 and watcher.args[0] == GEVENT_CORE_EVENTS:
-        watcher.args = (revents, ) + watcher.args[1:]
+    """
+    Returns an integer having one of three values:
+
+    - -1
+      An exception occurred during the callback and you must call
+      :func:`_python_handle_error` to deal with it. The Python watcher
+      object will have the exception tuple saved in ``_exc_info``.
+    - 0
+      Everything went according to plan. You should check to see if the libev
+      watcher is still active, and call :func:`_python_stop` if so. This will
+      clean up the memory.
+    - 1
+      Everything went according to plan, but the watcher has already
+      been stopped. Its memory may no longer be valid.
+    """
     try:
+        # Even dereferencing the handle needs to be inside the try/except;
+        # if we don't return normally (e.g., a signal) then we wind up going
+        # to the 'onerror' handler if _cffi_supports_on_error is True, which
+        # is not what we want; that can permanently wedge the loop depending
+        # on which callback was executing
+        watcher = ffi.from_handle(handle)
+        if len(watcher.args) > 0 and watcher.args[0] == GEVENT_CORE_EVENTS:
+            watcher.args = (revents, ) + watcher.args[1:]
         watcher.callback(*watcher.args)
     except:
         watcher._exc_info = sys.exc_info()
+        # Depending on when the exception happened, the watcher
+        # may or may not have been stopped. We need to make sure its
+        # memory stays valid so we can stop it at the ev level if needed.
+        watcher.loop._keepaliveset.add(watcher)
         return -1
     else:
-        return 0
+        if watcher in watcher.loop._keepaliveset:
+            # It didn't stop itself
+            return 0
+        return 1 # It stopped itself
 libev.python_callback = _python_callback
-
-# After _python_callback is called, the handle may no longer be
-# valid. The callback itself might have called watcher.stop(),
-# which would remove the object from loop.keepaliveset, and if
-# that was the last reference to it, the handle would be GC'd.
-# Therefore the other functions need to correctly deal with an
-# invalid handle
 
 
 @ffi.callback("void(void* handle, int revents)")
 def _python_handle_error(handle, revents):
     try:
         watcher = ffi.from_handle(handle)
-    except RuntimeError:
-        return
-
-    exc_info = watcher._exc_info
-    del watcher._exc_info
-    try:
+        exc_info = watcher._exc_info
+        del watcher._exc_info
         watcher.loop.handle_error(watcher, *exc_info)
     finally:
+        # XXX Since we're here on an error condition, and we
+        # made sure that the watcher object was put in loop._keepaliveset,
+        # what about not stopping the watcher? Looks like a possible
+        # memory leak?
         if revents & (libev.EV_READ | libev.EV_WRITE):
             try:
                 watcher.stop()
@@ -338,10 +406,7 @@ libev.python_handle_error = _python_handle_error
 
 @ffi.callback("void(void* handle)")
 def _python_stop(handle):
-    try:
-        watcher = ffi.from_handle(handle)
-    except RuntimeError:
-        return
+    watcher = ffi.from_handle(handle)
     watcher.stop()
 libev.python_stop = _python_stop
 
@@ -909,13 +974,29 @@ class watcher(object):
                            getattr(libev, '_gevent_' + self._watcher_type + '_callback'),
                            *args)
 
+    # A string identifying the type of libev object we watch, e.g., 'ev_io'
+    # This should be a class attribute.
+    _watcher_type = None
+
+    def _watcher_init(self, watcher_ptr, cb, *args):
+        "Init the watcher. Subclasses must define."
+        raise NotImplementedError()
+
+    def _watcher_start(self, loop_ptr, watcher_ptr):
+        "Start the watcher. Subclasses must define."
+        raise NotImplementedError()
+
+    def _watcher_stop(self, loop_ptr, watcher_ptr):
+        "Stop the watcher. Subclasses must define."
+        raise NotImplementedError()
+
     # this is not needed, since we keep alive the watcher while it's started
     #def __del__(self):
     #    self._watcher_stop(self.loop._ptr, self._watcher)
 
     def __repr__(self):
-        format = self._format()
-        result = "<%s at 0x%x%s" % (self.__class__.__name__, id(self), format)
+        formats = self._format()
+        result = "<%s at 0x%x%s" % (self.__class__.__name__, id(self), formats)
         if self.pending:
             result += " pending"
         if self.callback is not None:
@@ -924,6 +1005,7 @@ class watcher(object):
             result += " args=%r" % (self.args, )
         if self.callback is None and self.args is None:
             result += " stopped"
+        result += " handle=%s" % (self._gwatcher.handle)
         return result + ">"
 
     def _format(self):
@@ -957,10 +1039,10 @@ class watcher(object):
     def _get_callback(self):
         return self._callback
 
-    def _set_callback(self, callback):
-        if not callable(callback) and callback is not None:
-            raise TypeError("Expected callable, not %r" % (callback, ))
-        self._callback = callback
+    def _set_callback(self, cb):
+        if not callable(cb) and cb is not None:
+            raise TypeError("Expected callable, not %r" % (cb, ))
+        self._callback = cb
     callback = property(_get_callback, _set_callback)
 
     def start(self, callback, *args):
@@ -1072,12 +1154,12 @@ class timer(watcher):
         watcher.__init__(self, loop, ref=ref, priority=priority, args=(after, repeat))
 
     def start(self, callback, *args, **kw):
+        # XXX: Almost the same as watcher.start
         if callback is None:
             raise TypeError('callback must be callable, not None')
         update = kw.get("update", True)
         self.callback = callback
         self.args = args or _NOARGS
-
         self._libev_unref()  # LIBEV_UNREF
 
         if update:

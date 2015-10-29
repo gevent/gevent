@@ -1,6 +1,6 @@
 # Copyright (c) 2009-2011 Denis Bilenko. See LICENSE for details.
 """Basic synchronization primitives: Event and AsyncResult"""
-
+from __future__ import print_function
 import sys
 from gevent.hub import get_hub, getcurrent, _NONE, PY3, reraise
 from gevent.hub import InvalidSwitchError
@@ -81,7 +81,7 @@ class Event(object):
         switch = getcurrent().switch
         self.rawlink(switch)
         try:
-            timer = Timeout.start_new(timeout)
+            timer = Timeout.start_new(timeout) if timeout is not None else None
             try:
                 try:
                     result = self.hub.switch()
@@ -91,7 +91,8 @@ class Event(object):
                     if ex is not timer:
                         raise
             finally:
-                timer.cancel()
+                if timer is not None:
+                    timer.cancel()
         finally:
             self.unlink(switch)
         return self._flag
