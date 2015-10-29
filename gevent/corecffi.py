@@ -1123,7 +1123,7 @@ class io(watcher):
         args = args or _NOARGS
         if kwargs.get('pass_events'):
             args = (GEVENT_CORE_EVENTS, ) + args
-        super(io, self).start(callback, *args)
+        watcher.start(self, callback, *args)
 
     def _get_fd(self):
         return libev.vfd_get(self._watcher.fd)
@@ -1167,31 +1167,30 @@ class timer(watcher):
         watcher.__init__(self, loop, ref=ref, priority=priority, args=(after, repeat))
 
     def start(self, callback, *args, **kw):
-        # XXX: Almost the same as watcher.start
-        if callback is None:
-            raise TypeError('callback must be callable, not None')
         update = kw.get("update", True)
-        self.callback = callback
-        self.args = args or _NOARGS
-        self._libev_unref()  # LIBEV_UNREF
-
         if update:
+            # Quoth the libev doc: "This is a costly operation and is
+            # usually done automatically within ev_run(). This
+            # function is rarely useful, but when some event callback
+            # runs for a very long time without entering the event
+            # loop, updating libev's idea of the current time is a
+            # good idea."
+            # So do we really need to default to true?
             libev.ev_now_update(self.loop._ptr)
-        libev.ev_timer_start(self.loop._ptr, self._watcher)
-        self.loop._keepaliveset.add(self)
+        watcher.start(self, callback, *args)
 
     @property
     def at(self):
         return self._watcher.at
 
     def again(self, callback, *args, **kw):
-        update = kw.get("update", True)
-        self.callback = callback
-        self.args = args or _NOARGS
-        self._libev_unref()
-        if update:
-            libev.ev_now_update(self.loop._ptr)
-        libev.ev_timer_again(self.loop._ptr, self._watcher)
+        # Exactly the same as start(), just with a different initializer
+        # function
+        self._watcher_start = libev.ev_timer_again
+        try:
+            self.start(callback, *args, **kw)
+        finally:
+            del self._watcher_start
 
 
 class signal(watcher):
