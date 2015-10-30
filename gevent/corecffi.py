@@ -221,16 +221,18 @@ void ev_sleep (ev_tstamp delay); /* sleep for a while */
 """
 
 
-_watcher_types = ['ev_io',
-                  'ev_timer',
-                  'ev_signal',
-                  'ev_prepare',
-                  'ev_check',
-                  'ev_fork',
-                  'ev_async',
-                  'ev_child',
-                  'ev_stat',
-                  'ev_idle', ]
+_watcher_types = [
+    'ev_async',
+    'ev_check',
+    'ev_child',
+    'ev_fork',
+    'ev_idle',
+    'ev_io',
+    'ev_prepare',
+    'ev_signal',
+    'ev_stat',
+    'ev_timer',
+]
 
 _source = """   // passed to the real C compiler
 #define LIBEV_EMBED 1
@@ -254,7 +256,12 @@ _source += _cbs
 for _watcher_type in _watcher_types:
     _cdef += """
    struct gevent_%s {
+        // recall that the address of a struct is the
+        // same as the address of its first member, so
+        // this struct is interchangable with the ev_XX
+        // that is its first member.
         struct %s watcher;
+        // the CFFI handle to the Python watcher object
         void* handle;
         ...;
     };
@@ -976,25 +983,22 @@ class watcher(object):
     # A string identifying the type of libev object we watch, e.g., 'ev_io'
     # This should be a class attribute.
     _watcher_type = None
+    # A class attribute that is the callback on the libev object that init's the C struct,
+    # e.g., libev.ev_io_init. If None, will be set by _init_subclasses.
+    _watcher_init = None
+    # A class attribute that is the callback on the libev object that starts the C watcher,
+    # e.g., libev.ev_io_start. If None, will be set by _init_subclasses.
+    _watcher_start = None
+    # A class attribute that is the callback on the libev object that stops the C watcher,
+    # e.g., libev.ev_io_stop. If None, will be set by _init_subclasses.
+    _watcher_stop = None
     # A cffi ctype object identifying the struct pointer we create.
     # This is a class attribute set based on the _watcher_type
     _watcher_struct_pointer_type = None
     # The attribute of the libev object identifying the custom
     # callback function for this type of watcher. This is a class
-    # attribute set based on the _watcher_type
+    # attribute set based on the _watcher_type in _init_subclasses.
     _watcher_callback = None
-
-    def _watcher_init(self, watcher_ptr, cb, *args):
-        "Init the watcher. Subclasses must define."
-        raise NotImplementedError()
-
-    def _watcher_start(self, loop_ptr, watcher_ptr):
-        "Start the watcher. Subclasses must define."
-        raise NotImplementedError()
-
-    def _watcher_stop(self, loop_ptr, watcher_ptr):
-        "Stop the watcher. Subclasses must define."
-        raise NotImplementedError()
 
     @classmethod
     def _init_subclasses(cls):
@@ -1002,6 +1006,12 @@ class watcher(object):
             watcher_type = subclass._watcher_type
             subclass._watcher_struct_pointer_type = ffi.typeof('struct gevent_' + watcher_type + '*')
             subclass._watcher_callback = getattr(libev, '_gevent_' + watcher_type + '_callback')
+            for name in 'start', 'stop', 'init':
+                ev_name = watcher_type + '_' + name
+                watcher_name = '_watcher' + '_' + name
+                if getattr(subclass, watcher_name) is None:
+                    setattr(subclass, watcher_name,
+                            getattr(libev, ev_name))
 
     # this is not needed, since we keep alive the watcher while it's started
     #def __del__(self):
@@ -1064,8 +1074,8 @@ class watcher(object):
         self.callback = callback
         self.args = args or _NOARGS
         self._libev_unref()
-        self._watcher_start(self.loop._ptr, self._watcher)
         self.loop._keepaliveset.add(self)
+        self._watcher_start(self.loop._ptr, self._watcher)
 
     def stop(self):
         if self._flags & 2:
@@ -1107,9 +1117,6 @@ class watcher(object):
 
 
 class io(watcher):
-    _watcher_start = libev.ev_io_start
-    _watcher_stop = libev.ev_io_stop
-    _watcher_init = libev.ev_io_init
     _watcher_type = 'ev_io'
 
     def __init__(self, loop, fd, events, ref=True, priority=None):
@@ -1156,9 +1163,6 @@ class io(watcher):
 
 
 class timer(watcher):
-    _watcher_start = libev.ev_timer_start
-    _watcher_stop = libev.ev_timer_stop
-    _watcher_init = libev.ev_timer_init
     _watcher_type = 'ev_timer'
 
     def __init__(self, loop, after=0.0, repeat=0.0, ref=True, priority=None):
@@ -1194,9 +1198,6 @@ class timer(watcher):
 
 
 class signal(watcher):
-    _watcher_start = libev.ev_signal_start
-    _watcher_stop = libev.ev_signal_stop
-    _watcher_init = libev.ev_signal_init
     _watcher_type = 'ev_signal'
 
     def __init__(self, loop, signalnum, ref=True, priority=None):
@@ -1211,37 +1212,22 @@ class signal(watcher):
 
 
 class idle(watcher):
-    _watcher_start = libev.ev_idle_start
-    _watcher_stop = libev.ev_idle_stop
-    _watcher_init = libev.ev_idle_init
     _watcher_type = 'ev_idle'
 
 
 class prepare(watcher):
-    _watcher_start = libev.ev_prepare_start
-    _watcher_stop = libev.ev_prepare_stop
-    _watcher_init = libev.ev_prepare_init
     _watcher_type = 'ev_prepare'
 
 
 class check(watcher):
-    _watcher_start = libev.ev_check_start
-    _watcher_stop = libev.ev_check_stop
-    _watcher_init = libev.ev_check_init
     _watcher_type = 'ev_check'
 
 
 class fork(watcher):
-    _watcher_start = libev.ev_fork_start
-    _watcher_stop = libev.ev_fork_stop
-    _watcher_init = libev.ev_fork_init
     _watcher_type = 'ev_fork'
 
 
 class async(watcher):
-    _watcher_start = libev.ev_async_start
-    _watcher_stop = libev.ev_async_stop
-    _watcher_init = libev.ev_async_init
     _watcher_type = 'ev_async'
 
     def send(self):
@@ -1253,9 +1239,6 @@ class async(watcher):
 
 
 class child(watcher):
-    _watcher_start = libev.ev_child_start
-    _watcher_stop = libev.ev_child_stop
-    _watcher_init = libev.ev_child_init
     _watcher_type = 'ev_child'
 
     def __init__(self, loop, pid, trace=0, ref=True):
@@ -1289,9 +1272,6 @@ class child(watcher):
 
 
 class stat(watcher):
-    _watcher_start = libev.ev_stat_start
-    _watcher_stop = libev.ev_stat_stop
-    _watcher_init = libev.ev_stat_init
     _watcher_type = 'ev_stat'
 
     def __init__(self, _loop, path, interval=0.0, ref=True, priority=None):
