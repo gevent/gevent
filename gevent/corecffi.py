@@ -618,8 +618,18 @@ class loop(object):
                                                     onerror=self._check_callback_handle_error)
         libev.ev_prepare_init(self._prepare, self._prepare_callback_ffi)
 
+        # A timer we start and stop on demand. If we have callbacks,
+        # too many to run in one iteration of _run_callbacks, we turn this
+        # on so as to have the next iteration of the run loop return to us
+        # as quickly as possible.
+        # TODO: There may be a more efficient way to do this using ev_timer_again;
+        # see the "ev_timer" section of the ev manpage (http://linux.die.net/man/3/ev)
         self._timer0 = ffi.new("struct ev_timer *")
         libev.ev_timer_init(self._timer0, libev.gevent_noop, 0.0, 0.0)
+
+        # TODO: We may be able to do something nicer and use the existing python_callback
+        # combined with onerror and the class check/timer/prepare to simplify things
+        # and unify our handling
 
         c_flags = _flags_to_int(flags)
         _check_flags(c_flags)
@@ -695,7 +705,29 @@ class loop(object):
                     self.keyboard_interrupt_allowed = True
                     callback(*args)
                 except:
-                    self.handle_error(cb, *sys.exc_info())
+                    # If we allow an exception to escape this method (while we are running the ev callback),
+                    # then CFFI will print the error and libev will continue executing.
+                    # There are two problems with this. The first is that the code after
+                    # the loop won't run. The second is that any remaining callbacks scheduled
+                    # for this loop iteration will be silently dropped; they won't run, but they'll
+                    # also not be *stopped* (which is not a huge deal unless you're looking for
+                    # consistency or checking the boolean/pending status; the loop doesn't keep
+                    # a reference to them like it does to watchers...*UNLESS* the callback itself had
+                    # a reference to a watcher; then I don't know what would happen, it depends on
+                    # the state of the watcher---a leak or crash is not totally inconceivable).
+                    # The Cython implementation in core.ppyx uses gevent_call from callbacks.c
+                    # to run the callback, which uses gevent_handle_error to handle any errors the
+                    # Python callback raises...it unconditionally simply prints any error raised
+                    # by loop.handle_error and clears it, so callback handling continues.
+                    # We take a similar approach (but are extra careful about printing)
+                    try:
+                        self.handle_error(cb, *sys.exc_info())
+                    except:
+                        try:
+                            print("Exception while handling another error", file=sys.stderr)
+                            traceback.print_exc()
+                        except:
+                            pass # Nothing we can do here
                 finally:
                     self.keyboard_interrupt_allowed = False
                     # Note, this must be reset here, because cb.args is used as a flag in callback class,

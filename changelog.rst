@@ -17,6 +17,9 @@
   that caused ``FileObjectPosix`` to be slower than necessary in some
   cases. Reported in :issue:`675` by WGH-.
 - PyPy: Fix a potential crash. Reported in :issue:`676` by Jay Oster.
+- PyPy: Exceptions raised while handling an error raised by a loop
+  callback function behave like the CPython implementation: the
+  exception is printed, and the rest of the callbacks continue processing.
 
 1.1b6 (Oct 17, 2015)
 ====================
