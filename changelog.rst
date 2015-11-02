@@ -19,7 +19,12 @@
 - PyPy: Fix a potential crash. Reported in :issue:`676` by Jay Oster.
 - PyPy: Exceptions raised while handling an error raised by a loop
   callback function behave like the CPython implementation: the
-  exception is printed, and the rest of the callbacks continue processing.
+  exception is printed, and the rest of the callbacks continue
+  processing.
+- If a Hub object with active watchers, was destroyed and then another
+  one created for the same thread which itself was then destroyed with
+  ``destroy_loop=True``, the process could crash. Documented in
+  :issue:`237` and fix based on :pr:`238`, both by Jan-Philip Gehrcke.
 
 1.1b6 (Oct 17, 2015)
 ====================

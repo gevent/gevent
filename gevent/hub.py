@@ -58,9 +58,22 @@ if sys.version_info[0] <= 2:
     import thread
 else:
     import _thread as thread
+
+# These must be the "real" native thread versions,
+# not monkey-patched.
 threadlocal = thread._local
-_threadlocal = threadlocal()
-_threadlocal.Hub = None
+
+
+class _threadlocal(threadlocal):
+
+    def __init__(self):
+        threadlocal.__init__(self)
+        self.Hub = None
+        self.loop = None
+        self.hub = None
+
+_threadlocal = _threadlocal()
+
 get_ident = thread.get_ident
 MAIN_THREAD = get_ident()
 
@@ -311,11 +324,7 @@ def get_hub_class():
 
     If there's no type of hub for the current thread yet, 'gevent.hub.Hub' is used.
     """
-    global _threadlocal
-    try:
-        hubtype = _threadlocal.Hub
-    except AttributeError:
-        hubtype = None
+    hubtype = _threadlocal.Hub
     if hubtype is None:
         hubtype = _threadlocal.Hub = Hub
     return hubtype
@@ -328,13 +337,11 @@ def get_hub(*args, **kwargs):
     If a hub does not exist in the current thread, a new one is
     created of the type returned by :func:`get_hub_class`.
     """
-    global _threadlocal
-    try:
-        return _threadlocal.hub
-    except AttributeError:
+    hub = _threadlocal.hub
+    if hub is None:
         hubtype = get_hub_class()
         hub = _threadlocal.hub = hubtype(*args, **kwargs)
-        return hub
+    return hub
 
 
 def _get_hub():
@@ -342,11 +349,7 @@ def _get_hub():
 
     Return ``None`` if no hub has been created yet.
     """
-    global _threadlocal
-    try:
-        return _threadlocal.hub
-    except AttributeError:
-        pass
+    return _threadlocal.hub
 
 
 def set_hub(hub):
@@ -446,6 +449,11 @@ class Hub(greenlet):
             if default is not None:
                 raise TypeError("Unexpected argument: default")
             self.loop = loop
+        elif _threadlocal.loop is not None:
+            # Reuse a loop instance previously set by
+            # destroying a hub without destroying the associated
+            # loop. See #237 and #238.
+            self.loop = _threadlocal.loop
         else:
             if default is None and get_ident() != MAIN_THREAD:
                 default = False
@@ -632,7 +640,6 @@ class Hub(greenlet):
         return False
 
     def destroy(self, destroy_loop=None):
-        global _threadlocal
         if self._resolver is not None:
             self._resolver.close()
             del self._resolver
@@ -642,10 +649,18 @@ class Hub(greenlet):
         if destroy_loop is None:
             destroy_loop = not self.loop.default
         if destroy_loop:
+            if _threadlocal.loop is self.loop:
+                # Don't let anyone try to reuse this
+                _threadlocal.loop = None
             self.loop.destroy()
+        else:
+            # Store in case another hub is created for this
+            # thread.
+            _threadlocal.loop = self.loop
+
         self.loop = None
-        if getattr(_threadlocal, 'hub', None) is self:
-            del _threadlocal.hub
+        if _threadlocal.hub is self:
+            _threadlocal.hub = None
 
     def _get_resolver(self):
         if self._resolver is None:
