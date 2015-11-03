@@ -5,7 +5,7 @@ Managing greenlets in a group.
 The :class:`Group` class in this module abstracts a group of running
 greenlets. When a greenlet dies, it's automatically removed from the
 group. All running greenlets in a group can be waited on with
-:meth:`Group.joinall`, or all running greenlets can be killed with
+:meth:`Group.join`, or all running greenlets can be killed with
 :meth:`Group.kill`.
 
 The :class:`Pool` class, which is a subclass of :class:`Group`,
