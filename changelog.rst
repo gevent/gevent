@@ -21,10 +21,14 @@
   callback function behave like the CPython implementation: the
   exception is printed, and the rest of the callbacks continue
   processing.
-- If a Hub object with active watchers, was destroyed and then another
-  one created for the same thread which itself was then destroyed with
+- If a Hub object with active watchers was destroyed and then another
+  one created for the same thread, which itself was then destroyed with
   ``destroy_loop=True``, the process could crash. Documented in
   :issue:`237` and fix based on :pr:`238`, both by Jan-Philip Gehrcke.
+- Python 3: Initializing gevent's hub for the first time in a native
+  background thread created during import could fail with
+  ``AttributeError`` and ``ImportError``. Reported in :issue:`687` by
+  Gregory Petukhov.
 
 1.1b6 (Oct 17, 2015)
 ====================

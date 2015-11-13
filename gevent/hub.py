@@ -67,6 +67,10 @@ threadlocal = thread._local
 class _threadlocal(threadlocal):
 
     def __init__(self):
+        # Use a class with an initializer so that we can test
+        # for 'is None' instead of catching AttributeError, making
+        # the code cleaner and possibly solving some corner cases
+        # (like #687)
         threadlocal.__init__(self)
         self.Hub = None
         self.loop = None
