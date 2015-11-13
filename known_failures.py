@@ -94,8 +94,14 @@ if sys.platform == 'win32':
 if LEAKTEST:
     FAILING_TESTS += [
         'FLAKY test__backdoor.py',
-        'FLAKY test__socket_errors.py'
+        'FLAKY test__socket_errors.py',
     ]
+
+    if os.environ.get("TRAVIS") == "true":
+        FAILING_TESTS += [
+            # On Travis, this very frequently fails due to timing
+            'FLAKY test_signal.py',
+        ]
 
 
 if PYPY:
