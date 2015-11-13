@@ -4,7 +4,9 @@ from threading import Thread
 import time
 
 # The first time we init the hub is in the native
-# thread with time.sleep().
+# thread with time.sleep(), needing multiple
+# threads at the same time. Note: this is very timing
+# dependent.
 # See #687
 
 
@@ -14,7 +16,7 @@ def func():
 
 def main():
     threads = []
-    for _ in range(2):
+    for _ in range(3):
         th = Thread(target=func)
         th.start()
         threads.append(th)

@@ -82,6 +82,16 @@ get_ident = thread.get_ident
 MAIN_THREAD = get_ident()
 
 
+class _NONE(object):
+    "A special thingy you must never pass to any of gevent API"
+    __slots__ = ()
+
+    def __repr__(self):
+        return '<_NONE>'
+
+_NONE = _NONE()
+
+
 class LoopExit(Exception):
     pass
 
@@ -412,6 +422,9 @@ _resolvers = {'ares': 'gevent.resolver_ares.Resolver',
               'block': 'gevent.socket.BlockingResolver'}
 
 
+_DEFAULT_LOOP_CLASS = 'gevent.core.loop'
+
+
 class Hub(greenlet):
     """A greenlet that runs the event loop.
 
@@ -434,7 +447,20 @@ class Hub(greenlet):
     #: do not get logged/printed when raised by the event loop.
     NOT_ERROR = (GreenletExit, SystemExit)
 
-    loop_class = config('gevent.core.loop', 'GEVENT_LOOP')
+    loop_class = config(_DEFAULT_LOOP_CLASS, 'GEVENT_LOOP')
+    # For the standard class, go ahead and import it when this class
+    # is defined. This is no loss of generality because the envvar is
+    # only read when this class is defined, and we know that the
+    # standard class will be available. This can solve problems with
+    # the class being imported from multiple threads at once, leading
+    # to one of the imports failing. Only do this for the object we
+    # need in the constructor, as the rest of the factories are
+    # themselves handled lazily. See #687. (People using a custom loop_class
+    # can probably manage to get_hub() from the main thread or otherwise import
+    # that loop_class themselves.)
+    if loop_class == [_DEFAULT_LOOP_CLASS]:
+        loop_class = [_import(loop_class)]
+
     resolver_class = ['gevent.resolver_thread.Resolver',
                       'gevent.resolver_ares.Resolver',
                       'gevent.socket.BlockingResolver']
@@ -965,13 +991,3 @@ class linkproxy(object):
         self.callback = None
         self.obj = None
         callback(obj)
-
-
-class _NONE(object):
-    "A special thingy you must never pass to any of gevent API"
-    __slots__ = []
-
-    def __repr__(self):
-        return '<_NONE>'
-
-_NONE = _NONE()
