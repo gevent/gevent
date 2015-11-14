@@ -171,9 +171,12 @@ if sys.version_info[:2] == (3, 3) and os.environ.get('TRAVIS') == 'true':
     # Builds after Sept 29th 2015 have all been failing here, but no code that could
     # affect this was changed. Travis is using 3.3.5;
     # locally I cannot reproduce with 3.3.6. Don't mark this FLAKY so that if it starts to
-    # work again we get a failure and can remove this
+    # work again we get a failure and can remove this.
+    # XXX: Builds after Nov 13, 2015 have suddenly started to work again. The
+    # Python version reported by Travis is unchanged. Commenting out for now since
+    # it's such a bizarre thing I'm expecting it to come back again.
     FAILING_TESTS += [
-        'test__refcount_core.py'
+        #'test__refcount_core.py'
     ]
 
 if COVERAGE:
