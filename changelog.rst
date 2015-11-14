@@ -4,19 +4,24 @@
 
 .. currentmodule:: gevent
 
-1.1b7 (unreleased)
-==================
+1.1rc1 (Nov 14, 2015)
+=====================
 
-- Windows/Python 3: Port the :mod:`gevent.subprocess` module, fixing a
+- Windows/Python 3: Finish porting the :mod:`gevent.subprocess` module, fixing a
   large number of failing tests. Examples of failures are in
-  :issue:`668` and :issue:`669` srossross.
+  :issue:`668` and :issue:`669` reported by srossross.
 - Python 3: The SSLSocket class should return an empty ``bytes``
   object on an EOF instead of a ``str``. Fixed in :pr:`674` by Dahoon
   Kim.
 - Python 2: Workaround a buffering bug in the stdlib ``io`` module
   that caused ``FileObjectPosix`` to be slower than necessary in some
   cases. Reported in :issue:`675` by WGH-.
-- PyPy: Fix a potential crash. Reported in :issue:`676` by Jay Oster.
+- PyPy: Fix a crash. Reported in :issue:`676` by Jay Oster.
+
+  .. caution:: There are some remaining, relatively rare, PyPy
+               crashes, but their ultimate cause is unknown (gevent,
+               CFFI, greenlet, the PyPy GC?). PyPy users can
+               contribute to :issue:`677` to help track them down.
 - PyPy: Exceptions raised while handling an error raised by a loop
   callback function behave like the CPython implementation: the
   exception is printed, and the rest of the callbacks continue
@@ -25,8 +30,8 @@
   one created for the same thread, which itself was then destroyed with
   ``destroy_loop=True``, the process could crash. Documented in
   :issue:`237` and fix based on :pr:`238`, both by Jan-Philip Gehrcke.
-- Python 3: Initializing gevent's hub for the first time in a native
-  background thread created during import could fail with
+- Python 3: Initializing gevent's hub for the first time
+  simultaneously in multiple native background threads could fail with
   ``AttributeError`` and ``ImportError``. Reported in :issue:`687` by
   Gregory Petukhov.
 
