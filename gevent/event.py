@@ -81,7 +81,7 @@ class Event(object):
         switch = getcurrent().switch
         self.rawlink(switch)
         try:
-            timer = Timeout.start_new(timeout) if timeout is not None else None
+            timer = Timeout._start_new_or_dummy(timeout)
             try:
                 try:
                     result = self.hub.switch()
@@ -91,8 +91,7 @@ class Event(object):
                     if ex is not timer:
                         raise
             finally:
-                if timer is not None:
-                    timer.cancel()
+                timer.cancel()
         finally:
             self.unlink(switch)
         return self._flag
@@ -280,7 +279,7 @@ class AsyncResult(object):
         switch = getcurrent().switch
         self.rawlink(switch)
         try:
-            timer = Timeout.start_new(timeout)
+            timer = Timeout._start_new_or_dummy(timeout)
             try:
                 result = self.hub.switch()
                 if result is not self:
@@ -328,7 +327,7 @@ class AsyncResult(object):
         switch = getcurrent().switch
         self.rawlink(switch)
         try:
-            timer = Timeout.start_new(timeout)
+            timer = Timeout._start_new_or_dummy(timeout)
             try:
                 result = self.hub.switch()
                 if result is not self:

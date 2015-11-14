@@ -228,7 +228,7 @@ class GroupMappingMixin(object):
 
     # - self.spawn(func, *args, **kwargs): a function that runs `func` with `args`
     # and `awargs`, potentially asynchronously. Return a value with a `get` method that
-    # blocks until the results of func are available
+    # blocks until the results of func are available, and a `link` method.
 
     # - self._apply_immediately(): should the function passed to apply be called immediately,
     # synchronously?
@@ -240,16 +240,28 @@ class GroupMappingMixin(object):
     # asynchronously, possibly synchronously.
 
     def apply_cb(self, func, args=None, kwds=None, callback=None):
+        """
+        :meth:`apply` the given *func*, and, if a *callback* is given, run it with the
+        results of *func* (unless an exception was raised.)
+
+        The *callback* may be called synchronously or asynchronously. If called
+        asynchronously, it will not be tracked by this group. (:class:`Group` and :class:`Pool`
+        call it asynchronously in a new greenlet; :class:`~gevent.threadpool.ThreadPool` calls
+        it synchronously in the current greenlet.)
+        """
         result = self.apply(func, args, kwds)
         if callback is not None:
             self._apply_async_cb_spawn(callback, result)
         return result
 
     def apply_async(self, func, args=None, kwds=None, callback=None):
-        """A variant of the apply() method which returns a Greenlet object.
+        """
+        A variant of the apply() method which returns a Greenlet object.
 
-        If callback is specified then it should be a callable which accepts a single argument. When the result becomes ready
-        callback is applied to it (unless the call failed)."""
+        If *callback* is specified, then it should be a callable which
+        accepts a single argument. When the result becomes ready
+        callback is applied to it (unless the call failed).
+        """
         if args is None:
             args = ()
         if kwds is None:
@@ -274,6 +286,9 @@ class GroupMappingMixin(object):
         if the current greenlet or thread is already one that was
         spawned by this pool, the pool may choose to immediately run
         the `func` synchronously.
+
+        Any exception ``func`` raises will be propagated to the caller of ``apply`` (that is,
+        this method will raise the exception that ``func`` raised).
         """
         if args is None:
             args = ()
@@ -370,10 +385,20 @@ class GroupMappingMixin(object):
 
 
 class Group(GroupMappingMixin):
-    """Maintain a group of greenlets that are still running.
+    """
+    Maintain a group of greenlets that are still running, without
+    limiting their number.
 
     Links to each item and removes it upon notification.
+
+    Groups can be iterated to discover what greenlets they are tracking,
+    they can be tested to see if they contain a greenlet, and they know the
+    number (len) of greenlets they are tracking. If they are not tracking any
+    greenlets, they are False in a boolean context.
     """
+
+    #: The type of Greenlet object we will :meth:`spawn`. This can be changed
+    #: on an instance or in a subclass.
     greenlet_class = Greenlet
 
     def __init__(self, *args):
@@ -391,15 +416,31 @@ class Group(GroupMappingMixin):
         return '<%s at 0x%x %s>' % (self.__class__.__name__, id(self), self.greenlets)
 
     def __len__(self):
+        """
+        Answer how many greenlets we are tracking. Note that if we are empty,
+        we are False in a boolean context.
+        """
         return len(self.greenlets)
 
     def __contains__(self, item):
+        """
+        Answer if we are tracking the given greenlet.
+        """
         return item in self.greenlets
 
     def __iter__(self):
+        """
+        Iterate across all the greenlets we are tracking, in no particular order.
+        """
         return iter(self.greenlets)
 
     def add(self, greenlet):
+        """
+        Begin tracking the greenlet.
+
+        If this group is :meth:`full`, then this method may block
+        until it is possible to track the greenlet.
+        """
         try:
             rawlink = greenlet.rawlink
         except AttributeError:
@@ -416,6 +457,9 @@ class Group(GroupMappingMixin):
             self._empty_event.set()
 
     def discard(self, greenlet):
+        """
+        Stop tracking the greenlet.
+        """
         self._discard(greenlet)
         try:
             unlink = greenlet.unlink
@@ -449,6 +493,11 @@ class Group(GroupMappingMixin):
 #         self.add = RaiseException("This %s has been closed" % self.__class__.__name__)
 
     def join(self, timeout=None, raise_error=False):
+        """
+        Wait for the group to become empty at least once. Note that by the
+        time the waiting code runs again, some other greenlet may have been
+        added.
+        """
         if raise_error:
             greenlets = self.greenlets.copy()
             self._empty_event.wait(timeout=timeout)
@@ -461,7 +510,10 @@ class Group(GroupMappingMixin):
             self._empty_event.wait(timeout=timeout)
 
     def kill(self, exception=GreenletExit, block=True, timeout=None):
-        timer = Timeout.start_new(timeout)
+        """
+        Kill all greenlets being tracked by this group.
+        """
+        timer = Timeout._start_new_or_dummy(timeout)
         try:
             try:
                 while self.greenlets:
@@ -484,6 +536,10 @@ class Group(GroupMappingMixin):
             timer.cancel()
 
     def killone(self, greenlet, exception=GreenletExit, block=True, timeout=None):
+        """
+        If the given *greenlet* is running and being tracked by this group,
+        kill it.
+        """
         if greenlet not in self.dying and greenlet in self.greenlets:
             greenlet.kill(exception, block=False)
             self.dying.add(greenlet)
@@ -491,9 +547,21 @@ class Group(GroupMappingMixin):
                 greenlet.join(timeout)
 
     def full(self):
+        """
+        Return a value indicating whether this group can track more greenlets.
+
+        In this implementation, because there are no limits on the number of
+        tracked greenlets, this will always return a ``False`` value.
+        """
         return False
 
-    def wait_available(self):
+    def wait_available(self, timeout=None):
+        """
+        Block until it is possible to :meth:`spawn` a new greenlet.
+
+        In this implementation, because there are no limits on the number
+        of tracked greenlets, this will always return immediately.
+        """
         pass
 
     # MappingMixin methods
@@ -539,7 +607,8 @@ class Pool(Group):
 
             * ``None`` (the default) places no limit on the number of
               greenlets. This is useful when you need to track, but not limit,
-              greenlets, as with :class:`gevent.pywsgi.WSGIServer`
+              greenlets, as with :class:`gevent.pywsgi.WSGIServer`. A :class:`Group`
+              may be a more efficient way to achieve the same effect.
             * ``0`` creates a pool that can never have any active greenlets. Attempting
               to spawn in this pool will block forever. This is only useful
               if an application uses :meth:`wait_available` with a timeout and checks
@@ -583,7 +652,7 @@ class Pool(Group):
 
     def free_count(self):
         """
-        Return a number indicating approximately how many more members
+        Return a number indicating *approximately* how many more members
         can be added to this pool.
         """
         if self.size is None:
@@ -591,6 +660,11 @@ class Pool(Group):
         return max(0, self.size - len(self))
 
     def add(self, greenlet):
+        """
+        Begin tracking the given greenlet, blocking until space is available.
+
+        .. seealso:: :meth:`Group.add`
+        """
         self._semaphore.acquire()
         try:
             Group.add(self, greenlet)

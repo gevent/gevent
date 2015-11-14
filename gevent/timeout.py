@@ -23,7 +23,8 @@ __all__ = ['Timeout',
 class _FakeTimer(object):
     # An object that mimics the API of get_hub().loop.timer, but
     # without allocating any native resources. This is useful for timeouts
-    # that will never expire
+    # that will never expire.
+    # Also partially mimics the API of Timeout itself for use in _start_new_or_dummy
     pending = False
     active = False
 
@@ -31,6 +32,9 @@ class _FakeTimer(object):
         raise AssertionError("non-expiring timer cannot be started")
 
     def stop(self):
+        return
+
+    def cancel(self):
         return
 
 _FakeTimer = _FakeTimer()
@@ -109,6 +113,7 @@ class Timeout(BaseException):
     """
 
     def __init__(self, seconds=None, exception=None, ref=True, priority=-1):
+        BaseException.__init__(self)
         self.seconds = seconds
         self.exception = exception
         if seconds is None:
@@ -154,6 +159,21 @@ class Timeout(BaseException):
         timeout = cls(timeout, exception, ref=ref)
         timeout.start()
         return timeout
+
+    @staticmethod
+    def _start_new_or_dummy(timeout, exception=None):
+        # Internal use only in 1.1
+        # Return an object with a 'cancel' method; if timeout is None,
+        # this will be a shared instance object that does nothing. Otherwise,
+        # return an actual Timeout.
+        # This saves the previously common idiom of 'timer = Timeout.start_new(t) if t is not None else None'
+        # followed by 'if timer is not None: timer.cancel()'.
+        # That idiom was used to avoid any object allocations.
+        # A staticmethod is slightly faster under CPython, compared to a classmethod;
+        # under PyPy in synthetic benchmarks it makes no difference.
+        if timeout is None:
+            return _FakeTimer
+        return Timeout.start_new(timeout, exception)
 
     @property
     def pending(self):

@@ -207,7 +207,7 @@ class Queue(object):
         elif block:
             waiter = ItemWaiter(item, self)
             self.putters.append(waiter)
-            timeout = Timeout.start_new(timeout, Full) if timeout is not None else None
+            timeout = Timeout._start_new_or_dummy(timeout, Full)
             try:
                 if self.getters:
                     self._schedule_unlock()
@@ -215,8 +215,7 @@ class Queue(object):
                 if result is not waiter:
                     raise InvalidSwitchError("Invalid switch into Queue.put: %r" % (result, ))
             finally:
-                if timeout is not None:
-                    timeout.cancel()
+                timeout.cancel()
                 _safe_remove(self.putters, waiter)
         else:
             raise Full
@@ -252,7 +251,7 @@ class Queue(object):
             raise Empty()
 
         waiter = Waiter()
-        timeout = Timeout.start_new(timeout, Empty) if timeout is not None else None
+        timeout = Timeout._start_new_or_dummy(timeout, Empty)
         try:
             self.getters.append(waiter)
             if self.putters:
@@ -262,8 +261,7 @@ class Queue(object):
                 raise InvalidSwitchError('Invalid switch into Queue.get: %r' % (result, ))
             return method()
         finally:
-            if timeout is not None:
-                timeout.cancel()
+            timeout.cancel()
             _safe_remove(self.getters, waiter)
 
     def get(self, block=True, timeout=None):
@@ -520,7 +518,7 @@ class Channel(object):
         waiter = Waiter()
         item = (item, waiter)
         self.putters.append(item)
-        timeout = Timeout.start_new(timeout, Full) if timeout is not None else None
+        timeout = Timeout._start_new_or_dummy(timeout, Full)
         try:
             if self.getters:
                 self._schedule_unlock()
@@ -531,8 +529,7 @@ class Channel(object):
             _safe_remove(self.putters, item)
             raise
         finally:
-            if timeout is not None:
-                timeout.cancel()
+            timeout.cancel()
 
     def put_nowait(self, item):
         self.put(item, False)
@@ -548,7 +545,7 @@ class Channel(object):
             timeout = 0
 
         waiter = Waiter()
-        timeout = Timeout.start_new(timeout, Empty)
+        timeout = Timeout._start_new_or_dummy(timeout, Empty)
         try:
             self.getters.append(waiter)
             if self.putters:

@@ -15,6 +15,10 @@ __all__ = ['ThreadPool',
 
 
 class ThreadPool(GroupMappingMixin):
+    """
+    .. note:: The method :meth:`apply_async` will always return a new
+       greenlet, bypassing the threadpool entirely.
+    """
 
     def __init__(self, maxsize, hub=None):
         if hub is None:

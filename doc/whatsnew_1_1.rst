@@ -4,7 +4,7 @@
 
 Detailed information an what has changed is available in the
 :doc:`changelog`. This document summarizes the most important changes
-since gevent 1.0.3.
+since gevent 1.0.2.
 
 Platform Support
 ================
@@ -62,6 +62,10 @@ through 2.5.1, 2.6.0, 2.6.1, 4.0.0.
           when not acquired (which should be the typical case). The
           ``c-ares`` package has not been audited for this issue.
 
+.. note:: PyPy 4.0.0 on Linux is known to *rarely* (once per 24 hours)
+          encounter crashes when running heavily loaded, heavily
+          networked gevent programs. The exact cause is unknown and is
+          being tracked in :issue:`677`.
 
 .. _cffi 1.3.0: https://bitbucket.org/cffi/cffi/src/ad3140a30a7b0ca912185ef500546a9fb5525ece/doc/source/whatsnew.rst?at=default
 .. _1.2.0: https://cffi.readthedocs.org/en/latest/whatsnew.html#v1-2-0
@@ -71,7 +75,7 @@ Improved subprocess support
 ===========================
 
 In gevent 1.0, support and monkey patching for the :mod:`subprocess`
-module was added. Monkey patching was off by default.
+module was added. Monkey patching this module was off by default.
 
 In 1.1, monkey patching ``subprocess`` is on by default due to
 improvements in handling child processes and requirements by
@@ -127,26 +131,27 @@ include:
 
 - A gevent-friendly version of :obj:`select.poll` (on platforms that
   implement it).
-- :class:`gevent.fileobject.FileObjectPosix` uses the :mod:`io`
-  package on both Python 2 and Python 3, increasing its functionality
+- :class:`~gevent.fileobject.FileObjectPosix` uses the :mod:`io`
+  package on both Python 2 and Python 3, increasing its functionality,
   correctness, and performance. (Previously, the Python 2 implementation used the
-  undocumented :class:`socket._fileobject`.)
+  undocumented class :class:`socket._fileobject`.)
 - Locks raise the same error as standard library locks if they are
   over-released.
 - :meth:`ThreadPool.apply <gevent.threadpool.ThreadPool.apply>` can
   now be used recursively.
-- The various pool objects (:class:`gevent.pool.Group`,
-  :class:`gevent.pool.Pool`, :class:`gevent.threadpool.ThreadPool`)
-  support the same improved APIs: ``imap`` and ``imap_unordered``
-  accept multiple iterables, ``apply`` raises any exception raised by
-  the target callable, etc.
+- The various pool objects (:class:`~gevent.pool.Group`,
+  :class:`~gevent.pool.Pool`, :class:`~gevent.threadpool.ThreadPool`)
+  support the same improved APIs: :meth:`imap <gevent.pool.Group.imap>`
+  and :meth:`imap_unordered <gevent.pool.Group.imap_unordered>` accept
+  multiple iterables, :meth:`apply <gevent.pool.Group.apply>` raises any exception raised by the
+  target callable, etc.
 - Killing a greenlet (with :func:`gevent.kill` or
   :meth:`Greenlet.kill <gevent.Greenlet.kill>`) before it is actually started and
   switched to now prevents the greenlet from ever running, instead of
   raising an exception when it is later switched to. Attempting to
   spawn a greenlet with an invalid target now immediately produces
-  a useful TypeError, instead of spawning a greenlet that would
-  immediately die the first time it was switched to.
+  a useful :exc:`TypeError`, instead of spawning a greenlet that would
+  (usually) immediately die the first time it was switched to.
 - Almost anywhere that gevent raises an exception from one greenlet to
   another (e.g., :meth:`Greenlet.get <gevent.Greenlet.get>`),
   the original traceback is preserved and raised.
@@ -195,22 +200,25 @@ reduce the cases of undocumented or non-standard behaviour.
   :class:`gevent.pywsgi.WSGIServer` close the client socket.
 
   In gevent 1.0, the client socket was left to the mercies of the
-  garbage collector. In the typical case, the socket would still
-  be closed as soon as the request handler returned due to
-  CPython's reference-counting garbage collector. But this meant
-  that a reference cycle could leave a socket dangling open for
-  an indeterminate amount of time, and a reference leak would
-  result in it never being closed. It also meant that Python 3
-  would produce ResourceWarnings, and PyPy (which, unlike
-  CPython, `does not use a reference-counted GC`_) would only close
-  (and flush) the socket at an arbitrary time in the future.
+  garbage collector (this was undocumented). In the typical case, the
+  socket would still be closed as soon as the request handler returned
+  due to CPython's reference-counting garbage collector. But this
+  meant that a reference cycle could leave a socket dangling open for
+  an indeterminate amount of time, and a reference leak would result
+  in it never being closed. It also meant that Python 3 would produce
+  ResourceWarnings, and PyPy (which, unlike CPython, `does not use a
+  reference-counted GC`_) would only close (and flush!) the socket at
+  an arbitrary time in the future.
 
-  If your application relied on the socket not being closed when
-  the request handler returned (e.g., you spawned a greenlet that
+  If your application relied on the socket not being closed when the
+  request handler returned (e.g., you spawned a greenlet that
   continued to use the socket) you will need to keep the request
-  handler from returning (e.g., ``join`` the greenlet) or
-  subclass the server to prevent it from closing the socket; the
-  former approach is strongly preferred.
+  handler from returning (e.g., ``join`` the greenlet). If for some
+  reason that isn't possible, you may subclass the server to prevent
+  it from closing the socket, at which point the responsibility for
+  closing and flushing the socket is now yours; *but* the former
+  approach is strongly preferred, and subclassing the server for this
+  reason may not be supported in the future.
 
 .. _does not use a reference-counted GC: http://doc.pypy.org/en/latest/cpython_differences.html#differences-related-to-garbage-collection-strategies
 
@@ -218,12 +226,13 @@ reduce the cases of undocumented or non-standard behaviour.
   status line set by the application can be encoded in the ISO-8859-1
   (Latin-1) charset and are of the *native string type*.
 
-  Under gevent 1.0, non-``bytes`` headers (that is, ``unicode`` since
+  Under gevent 1.0, non-``bytes`` headers (that is, ``unicode``, since
   gevent 1.0 only ran on Python 2) were encoded according to the
   current default Python encoding. In some cases, this could allow
   non-Latin-1 characters to be sent in the headers, but this violated
   the HTTP specification, and their interpretation by the recipient is
-  unknown. Now, a :exc:`UnicodeError` will be raised.
+  unknown. In other cases, gevent could send malformed partial HTTP
+  responses. Now, a :exc:`UnicodeError` will be raised proactively.
 
   Most applications that adhered to the WSGI PEP, :pep:`3333`, will not
   need to make any changes. See :issue:`614` for more discussion.
