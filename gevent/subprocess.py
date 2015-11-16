@@ -1,15 +1,15 @@
 """
 Cooperative ``subprocess`` module.
 
-.. caution:: This module is not usable from native threads other than
-   the main thread; attempting to do so will raise a :exc:`TypeError`.
-   This module depends on libev's fork watchers. On POSIX systems,
-   fork watchers are implemented using signals, and the thread to
-   which process-directed signals are delivered `is not defined`_.
-   Because each native thread has its own gevent/libev loop, this
-   means that a fork watcher registered with one loop (thread) may
-   never see the signal about a child it spawned if the signal is sent
-   to a different thread.
+.. caution:: On POSIX platforms, this module is not usable from native
+   threads other than the main thread; attempting to do so will raise
+   a :exc:`TypeError`. This module depends on libev's fork watchers.
+   On POSIX systems, fork watchers are implemented using signals, and
+   the thread to which process-directed signals are delivered `is not
+   defined`_. Because each native thread has its own gevent/libev
+   loop, this means that a fork watcher registered with one loop
+   (thread) may never see the signal about a child it spawned if the
+   signal is sent to a different thread.
 
 .. note:: The interface of this module is intended to match that of
    the standard library :mod:`subprocess` module. There are some small

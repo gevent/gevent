@@ -199,30 +199,33 @@ class Test(greentest.TestCase):
         r = p.stdout.readline()
         self.assertEqual(r, b'foobar\n')
 
-    def test_subprocess_in_native_thread(self):
-        # gevent.subprocess doesn't work from a background
-        # native thread. See #688
-        from gevent import monkey
+    if sys.platform != 'win32':
 
-        # must be a native thread; defend against monkey-patching
-        ex = []
-        Thread = monkey.get_original('threading', 'Thread')
+        def test_subprocess_in_native_thread(self):
+            # gevent.subprocess doesn't work from a background
+            # native thread. See #688
+            from gevent import monkey
 
-        def fn():
-            try:
-                gevent.subprocess.Popen('echo 123', shell=True)
-                raise AssertionError("Should not be able to construct Popen")
-            except Exception as e:
-                ex.append(e)
+            # must be a native thread; defend against monkey-patching
+            ex = []
+            Thread = monkey.get_original('threading', 'Thread')
 
-        thread = Thread(target=fn)
-        thread.start()
-        thread.join()
+            def fn():
+                try:
+                    gevent.subprocess.Popen('echo 123', shell=True)
+                    raise AssertionError("Should not be able to construct Popen")
+                except Exception as e:
+                    ex.append(e)
 
-        self.assertEqual(len(ex), 1)
-        self.assertTrue(isinstance(ex[0], TypeError), ex)
-        self.assertEqual(ex[0].args[0], 'child watchers are only available on the default loop')
+            thread = Thread(target=fn)
+            thread.start()
+            thread.join()
 
+            self.assertEqual(len(ex), 1)
+            self.assertTrue(isinstance(ex[0], TypeError), ex)
+            self.assertEqual(ex[0].args[0], 'child watchers are only available on the default loop')
+
+        test_subprocess_in_native_thread.ignore_leakcheck = True
 
 if __name__ == '__main__':
     greentest.main()
