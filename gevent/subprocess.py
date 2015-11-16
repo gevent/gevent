@@ -1,12 +1,24 @@
 """
 Cooperative ``subprocess`` module.
 
+.. caution:: This module is not usable from native threads other than
+   the main thread; attempting to do so will raise a :exc:`TypeError`.
+   This module depends on libev's fork watchers. On POSIX systems,
+   fork watchers are implemented using signals, and the thread to
+   which process-directed signals are delivered `is not defined`_.
+   Because each native thread has its own gevent/libev loop, this
+   means that a fork watcher registered with one loop (thread) may
+   never see the signal about a child it spawned if the signal is sent
+   to a different thread.
+
 .. note:: The interface of this module is intended to match that of
    the standard library :mod:`subprocess` module. There are some small
    differences between the Python 2 and Python 3 versions of that
    module and between the POSIX and Windows versions. The HTML
    documentation here can only describe one version; for definitive
    documentation, see the standard library or the source code.
+
+.. _is not defined: http://www.linuxprogrammingblog.com/all-about-linux-signals?page=11
 """
 from __future__ import absolute_import, print_function
 import errno

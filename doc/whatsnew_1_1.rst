@@ -103,6 +103,9 @@ possible in a monkey patched system, at least on POSIX platforms.
              reason, :class:`concurrent.futures.ProcessPoolExecutor`,
              which internally uses a ``Queue``, will hang.
 
+.. caution:: It is not possible to use :mod:`gevent.subprocess` from
+             native threads. See :mod:`gevent.subprocess` for details.
+
 .. tip:: All of the above entail forking a child process. Forking
 		 a child process that uses gevent, greenlets, and libev
 		 can have some unexpected consequences if the child
