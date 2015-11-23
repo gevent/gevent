@@ -31,7 +31,6 @@ libev = gevent._corecffi.lib
 # The C implementation does several things specially for Windows;
 # a possibly incomplete list is:
 #
-# - special handle mapping through libev_vfd.h when LIBEV_EMBED is defined;
 # - the loop runs a periodic signal checker;
 # - the io watcher constructor is different and it has a destructor;
 # - the child watcher is not defined
@@ -39,23 +38,6 @@ libev = gevent._corecffi.lib
 # The CFFI implementation does none of these things, and so
 # is possibly NOT FUNCTIONALLY CORRECT on Win32
 #####
-
-# The C implementation defines special versions of these functions on
-# Windows and includes them (libev_vfd.h), making them a part of libev
-# itself (effectively). Our implementation does not. Prior to CFFI
-# 1.0, we could let attributes on the libev FFI library, but with
-# set_source/compile, we cannot do that anymore, so instead of using
-# 'libev.vfd_open(...)', we make them global functions
-def vfd_open(fd):
-    return fd
-
-
-def vfd_get(fd):
-    return fd
-
-
-def vfd_free(fd):
-    return
 
 #####
 ## Note on CFFI objects, callbacks and the lifecycle of watcher objects
@@ -875,6 +857,8 @@ class io(watcher):
     _watcher_type = 'ev_io'
 
     def __init__(self, loop, fd, events, ref=True, priority=None):
+        # XXX: Win32: Need to vfd_open the fd and free the old one?
+        # XXX: Win32: Need a destructor to free the old fd?
         if fd < 0:
             raise ValueError('fd must be non-negative: %r' % fd)
         if events & ~(libev.EV__IOFDSET | libev.EV_READ | libev.EV_WRITE):
@@ -888,24 +872,24 @@ class io(watcher):
         watcher.start(self, callback, *args)
 
     def _get_fd(self):
-        return vfd_get(self._watcher.fd)
+        return libev.vfd_get(self._watcher.fd)
 
     def _set_fd(self, fd):
         if libev.ev_is_active(self._watcher):
             raise AttributeError("'io' watcher attribute 'fd' is read-only while watcher is active")
-        vfd = vfd_open(fd)
-        vfd_free(self._watcher.fd)
-        libev.ev_io_init(self._watcher, self._cb, vfd, self._watcher.events)
+        vfd = libev.vfd_open(fd)
+        libev.vfd_free(self._watcher.fd)
+        self._watcher_init(self._watcher, self._watcher_callback, vfd, self._watcher.events)
 
     fd = property(_get_fd, _set_fd)
 
     def _get_events(self):
-        return vfd_get(self._watcher.fd)
+        return libev.vfd_get(self._watcher.fd)
 
     def _set_events(self, events):
         if libev.ev_is_active(self._watcher):
             raise AttributeError("'io' watcher attribute 'events' is read-only while watcher is active")
-        libev.ev_io_init(self._watcher, self._cb, self._watcher.fd, events)
+        self._watcher_init(self._watcher, self._watcher_callback, self._watcher.fd, events)
 
     events = property(_get_events, _set_events)
 

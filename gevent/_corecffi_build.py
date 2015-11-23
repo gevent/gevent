@@ -203,8 +203,16 @@ void gevent_install_sigchld_handler();
 
 void (*gevent_noop)(struct ev_loop *_loop, struct ev_timer *w, int revents);
 void ev_sleep (ev_tstamp delay); /* sleep for a while */
+
+typedef int... vfd_socket_t;
+int vfd_open(vfd_socket_t);
+vfd_socket_t vfd_get(int);
+void vfd_free(int);
 """
 
+# Note that we do not cdef the vfd_* family of functions,
+# nor do we include libev_vfd.h in the _source; we'd need to get
+# the correct parameter types to do so (which )
 
 _watcher_types = [
     'ev_async',
@@ -221,6 +229,7 @@ _watcher_types = [
 
 _source = """   // passed to the real C compiler
 #define LIBEV_EMBED 1
+#include "libev_vfd.h"
 #include "libev.h"
 
 static void

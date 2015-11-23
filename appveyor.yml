@@ -10,44 +10,59 @@ environment:
     # Pre-installed Python versions, which Appveyor may upgrade to
     # a later point release.
 
+    - PYTHON: "C:\\pypy-4.0.1-win32"
+      PYTHON_ID: "pypy"
+      PYTHON_EXE: pypy
+      PYTHON_VERSION: "2.7.x"
+      PYTHON_ARCH: "32"
+
     - PYTHON: "C:\\Python35"
       PYTHON_VERSION: "3.5.x" # currently 3.5.0
       PYTHON_ARCH: "32"
+      PYTHON_EXE: python
 
-    - PYTHON: "C:\\Python27-x64"
-      PYTHON_VERSION: "2.7.x" # currently 2.7.9
-      PYTHON_ARCH: "64"
+    # - PYTHON: "C:\\Python27-x64"
+    #   PYTHON_VERSION: "2.7.x" # currently 2.7.9
+    #   PYTHON_ARCH: "64"
+    #   PYTHON_EXE: python
 
-    - PYTHON: "C:\\Python35-x64"
-      PYTHON_VERSION: "3.5.x" # currently 3.5.0
-      PYTHON_ARCH: "64"
+    # - PYTHON: "C:\\Python35-x64"
+    #   PYTHON_VERSION: "3.5.x" # currently 3.5.0
+    #   PYTHON_ARCH: "64"
+    #   PYTHON_EXE: python
 
-    - PYTHON: "C:\\Python27"
-      PYTHON_VERSION: "2.7.x" # currently 2.7.9
-      PYTHON_ARCH: "32"
+    # - PYTHON: "C:\\Python27"
+    #   PYTHON_VERSION: "2.7.x" # currently 2.7.9
+    #   PYTHON_ARCH: "32"
+    #   PYTHON_EXE: python
 
     #- PYTHON: "C:\\Python33"
     #  PYTHON_VERSION: "3.3.x" # currently 3.3.5
     #  PYTHON_ARCH: "32"
+    #   PYTHON_EXE: python
 
     #- PYTHON: "C:\\Python33-x64"
     #  PYTHON_VERSION: "3.3.x" # currently 3.3.5
     #  PYTHON_ARCH: "64"
+    #   PYTHON_EXE: python
 
-    - PYTHON: "C:\\Python34"
-      PYTHON_VERSION: "3.4.x" # currently 3.4.3
-      PYTHON_ARCH: "32"
+    # - PYTHON: "C:\\Python34"
+    #   PYTHON_VERSION: "3.4.x" # currently 3.4.3
+    #   PYTHON_ARCH: "32"
+    #   PYTHON_EXE: python
 
-    - PYTHON: "C:\\Python34-x64"
-      PYTHON_VERSION: "3.4.x" # currently 3.4.3
-      PYTHON_ARCH: "64"
+    # - PYTHON: "C:\\Python34-x64"
+    #   PYTHON_VERSION: "3.4.x" # currently 3.4.3
+    #   PYTHON_ARCH: "64"
+    #   PYTHON_EXE: python
 
     # Also test a Python version not pre-installed
     # See: https://github.com/ogrisel/python-appveyor-demo/issues/10
 
-    #- PYTHON: "C:\\Python266"
-    #  PYTHON_VERSION: "2.6.6"
-    #  PYTHON_ARCH: "32"
+    # - PYTHON: "C:\\Python266"
+    #   PYTHON_VERSION: "2.6.6"
+    #   PYTHON_ARCH: "32"
+    #   PYTHON_EXE: python
 
 install:
   - ECHO "Filesystem root:"
@@ -58,25 +73,48 @@ install:
 
   # Install Python (from the official .msi of http://python.org) and pip when
   # not already installed.
-  - ps: if (-not(Test-Path($env:PYTHON))) { & appveyor\install.ps1 }
+  # PyPy portion based on https://github.com/wbond/asn1crypto/blob/master/appveyor.yml
+  - ps:
+      $env:PYTMP = "${env:TMP}\py";
+      if (!(Test-Path "$env:PYTMP")) {
+        New-Item -ItemType directory -Path "$env:PYTMP" | Out-Null;
+      }
+      if ("${env:PYTHON_ID}" -eq "pypy") {
+        if (!(Test-Path "${env:PYTMP}\pypy-4.0.1-win32.zip")) {
+          (New-Object Net.WebClient).DownloadFile('https://bitbucket.org/pypy/pypy/downloads/pypy-4.0.1-win32.zip', "${env:PYTMP}\pypy-4.0.1-win32.zip");
+        }
+        7z x -y "${env:PYTMP}\pypy-4.0.1-win32.zip" -oC:\ | Out-Null;
+        if (!(Test-Path "${env:PYTMP}\get-pip.py")) {
+          (New-Object Net.WebClient).DownloadFile('https://bootstrap.pypa.io/get-pip.py', "${env:PYTMP}\get-pip.py");
+        }
+        & "${env:PYTHON}\pypy.exe" "${env:PYTMP}\get-pip.py";
+
+      }
+      elseif (-not(Test-Path($env:PYTHON))) {
+        & appveyor\install.ps1;
+      }
 
   # Prepend newly installed Python to the PATH of this build (this cannot be
   # done from inside the powershell script as it would require to restart
   # the parent CMD process).
-  - "SET PATH=%PYTHON%;%PYTHON%\\Scripts;%PATH%"
+  - "SET PATH=%PYTHON%;%PYTHON%\\Scripts;%PYTHON%\\bin;%PATH%"
+  - "SET PYEXE=%PYTHON%\\%PYTHON_EXE%.exe"
 
   # Check that we have the expected version and architecture for Python
-  - "python --version"
-  - "python -c \"import struct; print(struct.calcsize('P') * 8)\""
+  - "%PYEXE% --version"
+  - "%PYEXE% -c \"import struct; print(struct.calcsize('P') * 8)\""
 
   # Install the build dependencies of the project. If some dependencies contain
   # compiled extensions and are not provided as pre-built wheel packages,
   # pip will build them from source using the MSVC compiler matching the
   # target Python version and architecture
-  - "%CMD_IN_ENV% pip install -U cython greenlet psutil"
+  - "%CMD_IN_ENV% pip install -U cython greenlet"
+
+  - ps: "if(Test-Path(\"${env:PYTHON}\\bin\")) {ls ${env:PYTHON}\\bin;}"
+  - ps: "if(Test-Path(\"${env:PYTHON}\\Scripts\")) {ls ${env:PYTHON}\\Scripts;}"
 
   # XXX: Most of this is a copy of the Makefile. Remember to update.
-  - "python util/cythonpp.py -o gevent.corecext.c gevent/core.ppyx"
+  - "%PYEXE% util/cythonpp.py -o gevent.corecext.c gevent/core.ppyx"
   - "type gevent\\callbacks.c >> gevent.corecext.c"
   - "move gevent.corecext.* gevent"
   - "cython -o gevent.ares.c gevent/ares.pyx"
@@ -88,17 +126,20 @@ install:
   - "cython -o gevent._util.c gevent/_util.pyx"
   - "move gevent._util.* gevent"
 
+cache:
+  - "%TMP%\\py\\"
+
 build: false  # Not a C# project, build stuff at the test step instead.
 
 test_script:
   # Build the compiled extension and run the project tests
   - "%CMD_IN_ENV% python setup.py develop"
-  - "cd greentest && python testrunner.py --config ../known_failures.py && cd .."
+  - "cd greentest && %PYEXE% testrunner.py --config ../known_failures.py && cd .."
 
 after_test:
   # If tests are successful, create a whl package for the project.
   - "%CMD_IN_ENV% pip install -U wheel"
-  - "%CMD_IN_ENV% python setup.py bdist_wheel bdist_wininst"
+  - "%CMD_IN_ENV% %PYEXE% setup.py bdist_wheel bdist_wininst"
   - ps: "ls dist"
 
 artifacts:

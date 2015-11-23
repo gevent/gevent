@@ -36,10 +36,21 @@ class Test(TestCase):
     def test_io(self):
         if sys.platform == 'win32':
             Error = IOError
+            win32 = True
         else:
             Error = ValueError
+            win32 = False
         self.assertRaises(Error, core.loop().io, -1, 1)
         self.assertRaises(ValueError, core.loop().io, 1, core.TIMER)
+        # Test we can set events and io before it's started
+        if not win32:
+            # We can't do this with arbitrary FDs on windows;
+            # see libev_vfd.h
+            io = core.loop().io(1, core.READ)
+            io.fd = 2
+            self.assertEqual(io.fd, 2)
+            io.events = core.WRITE
+            self.assertEqual(io.events, core.WRITE)
 
     def test_timer(self):
         self.assertRaises(ValueError, core.loop().timer, 1, -1)
