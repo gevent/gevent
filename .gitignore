@@ -5,6 +5,8 @@ gevent.*.[ch]
 gevent/core.pyx
 gevent/__pycache__
 gevent/libev
+gevent/_corecffi.c
+gevent/_corecffi.o
 *.egg-info
 Makefile.ext
 MANIFEST

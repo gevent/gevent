@@ -315,8 +315,12 @@ def read(name, *args):
 
 if PYPY:
     install_requires = []
+    cffi_modules = ['gevent/_corecffi_build.py:ffi']
+    setup_kwds = {'cffi_modules': cffi_modules}
 else:
     install_requires = ['greenlet >= 0.4.9']
+    setup_kwds = {}
+
 
 # If we are running info / help commands, or we're being imported by
 # tools like pyroma, we don't need to build anything
@@ -337,18 +341,25 @@ elif PYPY:
     system('cp -r libev gevent/libev')
     system('touch gevent/libev/__init__.py')
     system('cd gevent/libev && ./configure > configure_output.txt')
-    from gevent import corecffi
-    ext_modules = [corecffi.ffi.verifier.get_extension(),
-                   ARES,
-                   # By building the semaphore with Cython under PyPy, we get
-                   # atomic operations (specifically, exiting/releasing), at the
-                   # cost of some speed (one trivial semaphore micro-benchmark put the pure-python version
-                   # at around 1s and the compiled version at around 4s). Some clever subclassing
-                   # and having only the bare minimum be in cython might help reduce that penalty.
-                   # NOTE: You must use version 0.23.4 or later to avoid a memory leak.
-                   # https://mail.python.org/pipermail/cython-devel/2015-October/004571.html
-                   Extension(name="gevent._semaphore",
-                             sources=["gevent/gevent._semaphore.c"])]
+    # XXX: Note that we're NOT adding the distutils extension module, but
+    # doing so compiles the module already: import gevent._corecffi_build
+    # imports gevent, which imports the hub, which imports the core,
+    # which compiles the module in-place. Instead we use the setup-time
+    # support of cffi_modules
+    #from gevent import _corecffi_build
+    ext_modules = [
+        #_corecffi_build.ffi.distutils_extension(),
+        ARES,
+        # By building the semaphore with Cython under PyPy, we get
+        # atomic operations (specifically, exiting/releasing), at the
+        # cost of some speed (one trivial semaphore micro-benchmark put the pure-python version
+        # at around 1s and the compiled version at around 4s). Some clever subclassing
+        # and having only the bare minimum be in cython might help reduce that penalty.
+        # NOTE: You must use version 0.23.4 or later to avoid a memory leak.
+        # https://mail.python.org/pipermail/cython-devel/2015-October/004571.html
+        Extension(name="gevent._semaphore",
+                  sources=["gevent/gevent._semaphore.c"]),
+    ]
     include_package_data = True
     run_make = 'gevent/gevent._semaphore.c gevent/gevent.ares.c'
 else:
@@ -409,7 +420,8 @@ def run_setup(ext_modules, run_make):
             "Topic :: Internet",
             "Topic :: Software Development :: Libraries :: Python Modules",
             "Intended Audience :: Developers",
-            "Development Status :: 4 - Beta"]
+            "Development Status :: 4 - Beta"],
+        **setup_kwds
     )
 
 # Tools like pyroma expect the actual call to `setup` to be performed

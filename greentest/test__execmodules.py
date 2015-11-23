@@ -12,7 +12,7 @@ def make_exec_test(path, module):
         #sys.stderr.write('%s %s\n' % (module, path))
         with open(path, 'rb') as f:
             src = f.read()
-        six.exec_(src, {})
+        six.exec_(src, {'__file__': path})
 
     name = "test_" + module.replace(".", "_")
     test.__name__ = name
