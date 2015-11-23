@@ -252,6 +252,7 @@ static void (*python_stop)(void* handle);
 """
 _cdef += _cbs
 _source += _cbs
+_watcher_type = None
 
 for _watcher_type in _watcher_types:
     _cdef += """
@@ -305,6 +306,27 @@ for _watcher_type in _watcher_types:
 
 thisdir = os.path.dirname(os.path.realpath(__file__))
 include_dirs = [thisdir, os.path.join(thisdir, 'libev')]
+#####
+## XXX NOTE:
+#
+# In recent versions of CFFI on CPython, doing something like
+# `libev._gevent_ev_io_callback` returns <built-in function
+# _gevent_ev_io_callback> ("for performance"). These have the
+# important property of not being able to pass them to any other libev
+# functions without generating `TypeError: Expected cdata`.
+# On PyPy, the same expression returns a cdata, and we rely on this below
+# (see watcher._init_subclasses).
+#
+# The behaviour is the same though (they both return <built-in function>)
+# when you use `ffi.set_source` instead of the deprecated `ffi.verify` function.
+# In order to pass such attributes to other libev functions, you have to do
+# `ffi.addressof(libev, '_gevent_ev_io_callback)`... Unfortunately, this fails
+# when you use `ffi.verify`. So:
+#
+# - Using FFI on CPython cannot use ffi.verify();
+# - Using set_source() and not verify() requires PyPy >= 2.6.0
+# - Upgrading to set_source() will require moderate source changes;
+#####
 ffi.cdef(_cdef)
 libev = C = ffi.verify(_source, include_dirs=include_dirs)
 del thisdir, include_dirs, _watcher_type, _watcher_types
