@@ -227,8 +227,13 @@ _watcher_types = [
     'ev_timer',
 ]
 
-_source = """   // passed to the real C compiler
+_source = """
+// passed to the real C compiler
 #define LIBEV_EMBED 1
+#ifdef _WIN32
+#define EV_STANDALONE 1
+#endif
+
 #include "libev_vfd.h"
 #include "libev.h"
 

@@ -340,7 +340,8 @@ elif PYPY:
     # XXX ugly - need to find a better way
     system('cp -r libev gevent/libev')
     system('touch gevent/libev/__init__.py')
-    system('cd gevent/libev && ./configure > configure_output.txt')
+    if sys.platform != 'win32':
+        system('cd gevent/libev && ./configure > configure_output.txt')
     # XXX: Note that we're NOT adding the distutils extension module, but
     # doing so compiles the module already: import gevent._corecffi_build
     # imports gevent, which imports the hub, which imports the core,
