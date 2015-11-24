@@ -2,6 +2,7 @@
 build/
 *.so
 *.pyd
+.runtimes
 gevent.*.[ch]
 gevent/core.pyx
 gevent/__pycache__

@@ -14,9 +14,12 @@ PYPY = hasattr(sys, 'pypy_version_info')
 WIN = sys.platform.startswith('win')
 
 if PYPY and WIN and not os.environ.get("PYPY_WIN_BUILD_ANYWAY"):
-    # The MS VC Compiler for Python (VC9.0) fails to properly
-    # link CFFI extensions (many unresolved symbols). Fail early
-    # so the user doesn't have to sit through all the cython compiles
+    # We can't properly handle (hah!) file-descriptors and
+    # handle mapping on Windows/CFFI, because the file needed,
+    # libev_vfd.h, can't be included, linked, and used: it uses
+    # Python API functions, and you're not supposed to do that from
+    # CFFI code. Plus I could never get the libraries= line to ffi.compile()
+    # correct to make linking work.
     raise Exception("Unable to install on PyPy/Windows")
 
 if WIN:
@@ -227,7 +230,7 @@ else:
 if CARES_EMBED:
     ARES.sources += expand('c-ares/*.c')
     ARES.configure = configure_ares
-    if sys.platform == 'win32':
+    if WIN:
         ARES.libraries += ['advapi32']
         ARES.define_macros += [('CARES_STATICLIB', '')]
     else:

@@ -216,7 +216,6 @@ typedef int... vfd_socket_t;
 int vfd_open(vfd_socket_t);
 vfd_socket_t vfd_get(int);
 void vfd_free(int);
-#endif
 """
 
 # Note that we do not cdef the vfd_* family of functions,
@@ -319,4 +318,9 @@ ffi.cdef(_cdef)
 ffi.set_source('gevent._corecffi', _source, include_dirs=include_dirs)
 
 if __name__ == '__main__':
+    # XXX: Note, on Windows, we would need to specify the external libraries
+    # that should be linked in, such as ws2_32 and (because libev_vfd.h makes
+    # Python.h calls) the proper Python library---at least for PyPy. I never got
+    # that to work though, and calling python functions is strongly discouraged
+    # from CFFI code.
     ffi.compile()

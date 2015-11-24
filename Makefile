@@ -1,8 +1,16 @@
 # This file is renamed to "Makefile.ext" in release tarballs so that setup.py won't try to
 # run it.  If you want setup.py to run "make" automatically, rename it back to "Makefile".
 
-PYTHON ?= python${TRAVIS_PYTHON_VERSION}
-CYTHON ?= cython
+# The pyvenv multiple runtime support is based on https://github.com/DRMacIver/hypothesis/blob/master/Makefile
+
+PYTHON?=python${TRAVIS_PYTHON_VERSION}
+CYTHON?=cython
+
+
+
+export PATH:=$(BUILD_RUNTIMES)/snakepit:$(TOOLS):$(PATH)
+export LC_ALL=C.UTF-8
+
 
 all: gevent/gevent.corecext.c gevent/gevent.ares.c gevent/gevent._semaphore.c gevent/gevent._util.c
 
@@ -71,9 +79,11 @@ toxtest:
 	cd greentest && GEVENT_RESOLVER=thread python testrunner.py --config ../known_failures.py
 
 fulltoxtest:
-	cd greentest && GEVENT_RESOLVER=thread python testrunner.py --config ../known_failures.py
-	cd greentest && GEVENT_RESOLVER=ares GEVENTARES_SERVERS=8.8.8.8 python testrunner.py --config ../known_failures.py --ignore tests_that_dont_use_resolver.txt
-	cd greentest && GEVENT_FILE=thread python testrunner.py --config ../known_failures.py `grep -l subprocess test_*.py`
+	which ${PYTHON}
+	${PYTHON} --version
+	cd greentest && GEVENT_RESOLVER=thread ${PYTHON} testrunner.py --config ../known_failures.py
+	cd greentest && GEVENT_RESOLVER=ares GEVENTARES_SERVERS=8.8.8.8 ${PYTHON} testrunner.py --config ../known_failures.py --ignore tests_that_dont_use_resolver.txt
+	cd greentest && GEVENT_FILE=thread ${PYTHON} testrunner.py --config ../known_failures.py `grep -l subprocess test_*.py`
 
 leaktest:
 	GEVENTSETUP_EV_VERIFY=3 GEVENTTEST_LEAKCHECK=1 make travistest
@@ -100,3 +110,78 @@ travis_test_linters:
 
 
 .PHONY: clean all doc pep8 whitespace pyflakes lint travistest travis
+
+# Managing runtimes
+
+BUILD_RUNTIMES?=$(PWD)/.runtimes
+
+PY26=$(BUILD_RUNTIMES)/snakepit/python2.6
+PY27=$(BUILD_RUNTIMES)/snakepit/python2.7
+PY33=$(BUILD_RUNTIMES)/snakepit/python3.3
+PY34=$(BUILD_RUNTIMES)/snakepit/python3.4
+PY35=$(BUILD_RUNTIMES)/snakepit/python3.5
+PYPY=$(BUILD_RUNTIMES)/snakepit/pypy
+
+TOOLS=$(BUILD_RUNTIMES)/tools
+
+TOX=$(TOOLS)/tox
+
+TOOL_VIRTUALENV=$(BUILD_RUNTIMES)/virtualenvs/tools
+ISORT_VIRTUALENV=$(BUILD_RUNTIMES)/virtualenvs/isort
+TOOL_PYTHON=$(TOOL_VIRTUALENV)/bin/python
+TOOL_PIP=$(TOOL_VIRTUALENV)/bin/pip
+TOOL_INSTALL=$(TOOL_PIP) install --upgrade
+
+$(PY26):
+	scripts/install.sh 2.6
+
+$(PY27):
+	scripts/install.sh 2.7
+
+$(PY33):
+	scripts/install.sh 3.3
+
+$(PY34):
+	scripts/install.sh 3.4
+
+$(PY35):
+	scripts/install.sh 3.5
+
+$(PYPY):
+	scripts/install.sh pypy
+
+PIP?=$(BUILD_RUNTIMES)/versions/$(PYTHON)/bin/pip
+
+develop:
+	echo $(PIP) $(PYTHON)
+# First install a newer pip so that it can use the wheel cache
+# (only needed until travis upgrades pip to 7.x; note that the 3.5
+# environment uses pip 7.1 by default)
+	${PIP} install -U pip
+# Then start installing our deps so they can be cached. Note that use of --build-options / --global-options / --install-options
+# disables the cache.
+# We need wheel>=0.26 on Python 3.5. See previous revisions.
+	${PIP} install -U wheel
+	${PIP} install -U tox cython greenlet pep8 pyflakes "coverage>=4.0" "coveralls>=1.0"
+	${PYTHON} setup.py develop
+
+lint-py27: $(PY27)
+	PYTHON=python2.7 PATH=$(BUILD_RUNTIMES)/versions/python2.7/bin:$(PATH) make develop travis_test_linters
+
+test-py27: $(PY27)
+	PYTHON=python2.7 PATH=$(BUILD_RUNTIMES)/versions/python2.7/bin:$(PATH) make develop fulltoxtest
+
+test-py26: $(PY26)
+	PYTHON=python2.6 PATH=$(BUILD_RUNTIMES)/versions/python2.6/bin:$(PATH) make develop fulltoxtest
+
+test-py33: $(PY33)
+	PYTHON=python3.3 PATH=$(BUILD_RUNTIMES)/versions/python3.3/bin:$(PATH) make develop fulltoxtest
+
+test-py34: $(PY34)
+	PYTHON=python3.4 PATH=$(BUILD_RUNTIMES)/versions/python3.4/bin:$(PATH) make develop fulltoxtest
+
+test-py35: $(PY35)
+	PYTHON=python3.5 PATH=$(BUILD_RUNTIMES)/versions/python3.5/bin:$(PATH) make develop fulltoxtest
+
+test-pypy: $(PYPY)
+	PYTHON=pypy PATH=$(BUILD_RUNTIMES)/versions/pypy/bin:$(PATH) make develop fulltoxtest
