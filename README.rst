@@ -25,8 +25,10 @@ Get gevent
 ==========
 
 Install Python 2.6, 2.7, 3.3 or 3.4 along with the greenlet_ extension
-(Python 3.5 has preliminary support). Or install PyPy 2.6 or above
-(but not PyPy3).
+(Python 3.5 has preliminary support). Or install PyPy 4.0.1 or above
+(but not PyPy3) (*note*: PyPy is not supported in Windows). On all
+platforms, installing setuptools is recommended (this is done
+automatically if working in a virtual environment).
 
 Download the latest release from `Python Package Index`_ or clone `the repository`_.
 
@@ -41,7 +43,7 @@ Development
 
 To install the latest development version::
 
-  pip install 'cython>=0.23.4' git+git://github.com/gevent/gevent.git#egg=gevent
+  pip install setuptools 'cython>=0.23.4' git+git://github.com/gevent/gevent.git#egg=gevent
 
 .. note:: You must have Cython installed to build a checkout.
 
@@ -51,7 +53,7 @@ Running Tests
 There are a few different ways to run the tests. To simply run the
 tests on one version of Python during development, try this::
 
-  pip install cython>=0.23.4
+  pip install setuptools cython>=0.23.4
   python setup.py build
   cd greentest
   PYTHONPATH=.. python testrunner.py --config ../known_failures.py

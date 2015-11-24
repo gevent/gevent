@@ -25,6 +25,14 @@ except ImportError:
 ffi = gevent._corecffi.ffi
 libev = gevent._corecffi.lib
 
+if hasattr(libev, 'vfd_open'):
+    # Must be on windows
+    assert sys.platform.startswith("win"), "vfd functions only needed on windows"
+    vfd_open = libev.vfd_open
+    vfd_free = libev.vfd_free
+    vfd_get = libev.vfd_get
+else:
+    vfd_open = vfd_free = vfd_get = lambda fd: fd
 
 #####
 ## NOTE on Windows:
@@ -872,19 +880,19 @@ class io(watcher):
         watcher.start(self, callback, *args)
 
     def _get_fd(self):
-        return libev.vfd_get(self._watcher.fd)
+        return vfd_get(self._watcher.fd)
 
     def _set_fd(self, fd):
         if libev.ev_is_active(self._watcher):
             raise AttributeError("'io' watcher attribute 'fd' is read-only while watcher is active")
-        vfd = libev.vfd_open(fd)
-        libev.vfd_free(self._watcher.fd)
+        vfd = vfd_open(fd)
+        vfd_free(self._watcher.fd)
         self._watcher_init(self._watcher, self._watcher_callback, vfd, self._watcher.events)
 
     fd = property(_get_fd, _set_fd)
 
     def _get_events(self):
-        return libev.vfd_get(self._watcher.fd)
+        return self._watcher.events
 
     def _set_events(self, events):
         if libev.ev_is_active(self._watcher):

@@ -1,6 +1,7 @@
 *.py[co]
 build/
 *.so
+*.pyd
 gevent.*.[ch]
 gevent/core.pyx
 gevent/__pycache__

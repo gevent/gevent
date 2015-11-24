@@ -11,13 +11,22 @@ from subprocess import check_call
 from glob import glob
 
 PYPY = hasattr(sys, 'pypy_version_info')
+WIN = sys.platform.startswith('win')
 
-try:
+if PYPY and WIN and not os.environ.get("PYPY_WIN_BUILD_ANYWAY"):
+    # The MS VC Compiler for Python (VC9.0) fails to properly
+    # link CFFI extensions (many unresolved symbols). Fail early
+    # so the user doesn't have to sit through all the cython compiles
+    raise Exception("Unable to install on PyPy/Windows")
+
+if WIN:
     # https://bugs.python.org/issue23246
-    import setuptools
-except ImportError:
-    if sys.platform.startswith("win"):
-        raise
+    # We must have setuptools on windows
+    __import__('setuptools')
+
+    # Make sure the env vars that make.cmd needs are set
+    if not os.environ.get('PYTHON_EXE'):
+        os.environ['PYTHON_EXE'] = 'pypy' if PYPY else 'python'
 
 
 import distutils
@@ -31,6 +40,7 @@ except ImportError:
         # need setuptools for include_package_data to work
         raise
     from distutils.core import Extension, setup
+
 from distutils.command.build_ext import build_ext
 from distutils.command.sdist import sdist as _sdist
 from distutils.errors import CCompilerError, DistutilsExecError, DistutilsPlatformError
@@ -92,7 +102,7 @@ ares_configure_command = ' '.join(["(cd ", _quoted_abspath('c-ares/'),
                                    "> configure-output.txt"])
 
 
-if sys.platform == 'win32':
+if WIN:
     libraries += ['ws2_32']
     define_macros += [('FD_SETSIZE', '1024'), ('_WIN32', '1')]
 
@@ -152,7 +162,7 @@ def system(cmd):
 
 
 def configure_libev(bext, ext):
-    if sys.platform == "win32":
+    if WIN:
         CORE.define_macros.append(('EV_STANDALONE', '1'))
         return
 
@@ -181,7 +191,7 @@ def configure_ares(bext, ext):
     if not os.path.isdir(bdir):
         os.makedirs(bdir)
 
-    if sys.platform == "win32":
+    if WIN:
         shutil.copy("c-ares\\ares_build.h.dist", os.path.join(bdir, "ares_build.h"))
         return
 
@@ -233,11 +243,18 @@ _ran_make = []
 
 
 def make(targets=''):
+    # NOTE: We have two copies of the makefile, one
+    # for posix, one for windows
     if not _ran_make:
-        if os.path.exists('Makefile'):
-            if "PYTHON" not in os.environ:
-                os.environ["PYTHON"] = sys.executable
-            system('make ' + targets)
+        if WIN:
+            # make.cmd handles checking for PyPy and only making the
+            # right things, so we can ignore the targets
+            system("appveyor\\make.cmd")
+        else:
+            if os.path.exists('Makefile'):
+                if "PYTHON" not in os.environ:
+                    os.environ["PYTHON"] = sys.executable
+                system('make ' + targets)
         _ran_make.append(1)
 
 
@@ -346,11 +363,17 @@ if ((len(sys.argv) >= 2
 elif PYPY:
     sys.path.insert(0, '.')
     # XXX ugly - need to find a better way
-    system('cp -r libev gevent/libev')
-    system('touch gevent/libev/__init__.py')
+    cp_cmd = 'cp -r'
+    if WIN:
+        cp_cmd = "copy"
+    system(cp_cmd + ' libev gevent/libev')
+    if WIN:
+        system('echo > gevent/libev/__init__.py')
+    else:
+        system('touch gevent/libev/__init__.py')
     if sys.platform != 'win32':
         system('cd gevent/libev && ./configure > configure_output.txt')
-    # XXX: Note that we're NOT adding the distutils extension module, but
+    # NOTE that we're NOT adding the distutils extension module, as
     # doing so compiles the module already: import gevent._corecffi_build
     # imports gevent, which imports the hub, which imports the core,
     # which compiles the module in-place. Instead we use the setup-time
@@ -391,7 +414,7 @@ else:
 
 
 def run_setup(ext_modules, run_make):
-    if run_make and not os.environ.get('APPVEYOR'):
+    if run_make:
         if isinstance(run_make, str):
             make(run_make)
         else:

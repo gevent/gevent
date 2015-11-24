@@ -203,11 +203,20 @@ void gevent_install_sigchld_handler();
 
 void (*gevent_noop)(struct ev_loop *_loop, struct ev_timer *w, int revents);
 void ev_sleep (ev_tstamp delay); /* sleep for a while */
+"""
 
+if sys.platform.startswith('win'):
+    # We must have the vfd_open, etc, functions on
+    # Windows. But on other platforms, going through
+    # CFFI to just return the file-descriptor is slower
+    # than just doing it in Python, so we check for and
+    # workaround their absence in corecffi.py
+    _cdef += """
 typedef int... vfd_socket_t;
 int vfd_open(vfd_socket_t);
 vfd_socket_t vfd_get(int);
 void vfd_free(int);
+#endif
 """
 
 # Note that we do not cdef the vfd_* family of functions,
@@ -232,9 +241,10 @@ _source = """
 #define LIBEV_EMBED 1
 #ifdef _WIN32
 #define EV_STANDALONE 1
+#include "libev_vfd.h"
 #endif
 
-#include "libev_vfd.h"
+
 #include "libev.h"
 
 static void

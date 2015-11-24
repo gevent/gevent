@@ -10,21 +10,22 @@ environment:
     # Pre-installed Python versions, which Appveyor may upgrade to
     # a later point release.
 
-    - PYTHON: "C:\\pypy-4.0.1-win32"
-      PYTHON_ID: "pypy"
-      PYTHON_EXE: pypy
-      PYTHON_VERSION: "2.7.x"
-      PYTHON_ARCH: "32"
+    # XXX: Sadly, PyPy won't link CFFI on Win32
+    # - PYTHON: "C:\\pypy-4.0.1-win32"
+    #   PYTHON_ID: "pypy"
+    #   PYTHON_EXE: pypy
+    #   PYTHON_VERSION: "2.7.x"
+    #   PYTHON_ARCH: "32"
 
     - PYTHON: "C:\\Python35"
       PYTHON_VERSION: "3.5.x" # currently 3.5.0
       PYTHON_ARCH: "32"
       PYTHON_EXE: python
 
-    # - PYTHON: "C:\\Python27-x64"
-    #   PYTHON_VERSION: "2.7.x" # currently 2.7.9
-    #   PYTHON_ARCH: "64"
-    #   PYTHON_EXE: python
+    - PYTHON: "C:\\Python27-x64"
+      PYTHON_VERSION: "2.7.x" # currently 2.7.9
+      PYTHON_ARCH: "64"
+      PYTHON_EXE: python
 
     # - PYTHON: "C:\\Python35-x64"
     #   PYTHON_VERSION: "3.5.x" # currently 3.5.0
@@ -36,12 +37,12 @@ environment:
     #   PYTHON_ARCH: "32"
     #   PYTHON_EXE: python
 
-    #- PYTHON: "C:\\Python33"
+    # - PYTHON: "C:\\Python33"
     #  PYTHON_VERSION: "3.3.x" # currently 3.3.5
     #  PYTHON_ARCH: "32"
     #   PYTHON_EXE: python
 
-    #- PYTHON: "C:\\Python33-x64"
+    # - PYTHON: "C:\\Python33-x64"
     #  PYTHON_VERSION: "3.3.x" # currently 3.3.5
     #  PYTHON_ARCH: "64"
     #   PYTHON_EXE: python
@@ -92,6 +93,7 @@ install:
       }
       elseif (-not(Test-Path($env:PYTHON))) {
         & appveyor\install.ps1;
+        & "${env:CMD_IN_ENV}" pip install -U psutil;
       }
 
   # Prepend newly installed Python to the PATH of this build (this cannot be
@@ -112,9 +114,6 @@ install:
 
   - ps: "if(Test-Path(\"${env:PYTHON}\\bin\")) {ls ${env:PYTHON}\\bin;}"
   - ps: "if(Test-Path(\"${env:PYTHON}\\Scripts\")) {ls ${env:PYTHON}\\Scripts;}"
-
-  # XXX: Most of this is a copy of the Makefile. Remember to update.
-  - cmd: .\appveyor\make.cmd
 
 cache:
   - "%TMP%\\py\\"

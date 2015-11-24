@@ -50,7 +50,7 @@ class Test(TestCase):
             io.fd = 2
             self.assertEqual(io.fd, 2)
             io.events = core.WRITE
-            self.assertEqual(io.events, core.WRITE)
+            self.assertEqual(core._events_to_str(io.events), 'WRITE|_IOFDSET')
 
     def test_timer(self):
         self.assertRaises(ValueError, core.loop().timer, 1, -1)
