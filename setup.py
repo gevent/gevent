@@ -10,11 +10,19 @@ from os.path import join, abspath, basename, dirname
 from subprocess import check_call
 from glob import glob
 
+PYPY = hasattr(sys, 'pypy_version_info')
+
+try:
+    # https://bugs.python.org/issue23246
+    import setuptools
+except ImportError:
+    if sys.platform.startswith("win"):
+        raise
+
+
 import distutils
 import distutils.sysconfig  # to get CFLAGS to pass into c-ares configure script
 
-
-PYPY = hasattr(sys, 'pypy_version_info')
 
 try:
     from setuptools import Extension, setup
