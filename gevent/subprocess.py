@@ -755,7 +755,7 @@ class Popen(object):
                                    DUPLICATE_SAME_ACCESS)
 
         def _find_w9xpopen(self):
-            """Find and return absolut path to w9xpopen.exe"""
+            """Find and return absolute path to w9xpopen.exe"""
             w9xpopen = os.path.join(os.path.dirname(GetModuleFileName(0)),
                                     "w9xpopen.exe")
             if not os.path.exists(w9xpopen):

@@ -233,7 +233,7 @@ class FileObjectPosix(object):
 
     @property
     def closed(self):
-        """True if the file is cloed"""
+        """True if the file is closed"""
         return self._closed
 
     def close(self):
