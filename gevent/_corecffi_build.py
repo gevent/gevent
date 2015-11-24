@@ -218,10 +218,6 @@ vfd_socket_t vfd_get(int);
 void vfd_free(int);
 """
 
-# Note that we do not cdef the vfd_* family of functions,
-# nor do we include libev_vfd.h in the _source; we'd need to get
-# the correct parameter types to do so (which )
-
 _watcher_types = [
     'ev_async',
     'ev_check',

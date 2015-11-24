@@ -184,4 +184,4 @@ test-py35: $(PY35)
 	PYTHON=python3.5 PATH=$(BUILD_RUNTIMES)/versions/python3.5/bin:$(PATH) make develop fulltoxtest
 
 test-pypy: $(PYPY)
-	PYTHON=pypy PATH=$(BUILD_RUNTIMES)/versions/pypy/bin:$(PATH) make develop fulltoxtest
+	PYTHON=pypy PATH=$(BUILD_RUNTIMES)/versions/pypy/bin:$(PATH) make develop toxtest
