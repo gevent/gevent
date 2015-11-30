@@ -1,32 +1,39 @@
-language: python
+# .travis.yml based on https://github.com/DRMacIver/hypothesis/blob/master/.travis.yml
+language: c
 sudo: false
-python:
-    - 2.6
-    - 2.7
-    - pypy
-    - 3.3
-    - 3.4
-    - 3.5
+
 env:
-    - LINT=true
-    - LINT=false
-install:
-    # First install a newer pip so that it can use the wheel cache
-    # (only needed until travis upgrades pip to 7.x; note that the 3.5
-    # environment uses pip 7.1 by default)
-    - travis_retry pip install -U pip
-    # Then start installing our deps so they can be cached. Note that use of --build-options / --global-options / --install-options
-    # disables the cache.
-    # We need wheel>=0.26 on Python 3.5. See previous revisions.
-    - travis_retry pip install -U wheel
-    - travis_retry pip install -U tox cython greenlet pep8 pyflakes "coverage>=4.0" "coveralls>=1.0"
+    global:
+        - BUILD_RUNTIMES=$HOME/.runtimes
+
+    matrix:
+      # These are ordered to get as much diversity in the
+      # first group of parallel runs (4) as posible
+      - TASK=test-pypy
+      - TASK=lint-py27
+      - TASK=test-py35
+      - TASK=test-py26
+      - TASK=test-py27
+      - TASK=test-py33
+      - TASK=test-py34
+
+
+matrix:
+  fast_finish: true
+
 script:
-    - if [[ $TRAVIS_PYTHON_VERSION == '2.7' && $LINT == true ]]; then python setup.py develop && make travis_test_linters; elif [[ $LINT == false && $TRAVIS_PYTHON_VERSION == 'pypy' ]]; then python setup.py develop && make fulltoxtest; elif [[ $LINT == false ]]; then python setup.py develop && make fulltoxtest; fi
+    - make $TASK
+
 notifications:
   email: false
+
 # cache: pip seems not to work if `install` is replaced (https://github.com/travis-ci/travis-ci/issues/3239)
 cache:
   directories:
     - $HOME/.cache/pip
+    - $HOME/.venv
+    - $HOME/.runtimes
+    - $HOME/.wheelhouse
+
 before_cache:
     - rm -f $HOME/.cache/pip/log/debug.log

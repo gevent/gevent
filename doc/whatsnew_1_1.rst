@@ -34,8 +34,10 @@ distributed as pre-compiled binary wheels, in addition to source code.
 PyPy Notes
 ----------
 
-PyPy has been tested on OS X and 64-bit Linux from version 2.5.0
-through 2.5.1, 2.6.0, 2.6.1, 4.0.0.
+PyPy has been tested on OS X and 64-bit Linux from version 2.6.1
+through 4.0.0 and 4.0.1.
+
+.. note:: PyPy is not supported on Windows.
 
 - Version 2.6.1 or above is required for the most robust signal
   handling. Prior to 2.6.1 and its inclusion of `cffi 1.3.0`_, signals
@@ -62,7 +64,7 @@ through 2.5.1, 2.6.0, 2.6.1, 4.0.0.
           when not acquired (which should be the typical case). The
           ``c-ares`` package has not been audited for this issue.
 
-.. note:: PyPy 4.0.0 on Linux is known to *rarely* (once per 24 hours)
+.. note:: PyPy 4.0.x on Linux is known to *rarely* (once per 24 hours)
           encounter crashes when running heavily loaded, heavily
           networked gevent programs. The exact cause is unknown and is
           being tracked in :issue:`677`.

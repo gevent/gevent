@@ -10,11 +10,31 @@ from os.path import join, abspath, basename, dirname
 from subprocess import check_call
 from glob import glob
 
+PYPY = hasattr(sys, 'pypy_version_info')
+WIN = sys.platform.startswith('win')
+
+if PYPY and WIN and not os.environ.get("PYPY_WIN_BUILD_ANYWAY"):
+    # We can't properly handle (hah!) file-descriptors and
+    # handle mapping on Windows/CFFI, because the file needed,
+    # libev_vfd.h, can't be included, linked, and used: it uses
+    # Python API functions, and you're not supposed to do that from
+    # CFFI code. Plus I could never get the libraries= line to ffi.compile()
+    # correct to make linking work.
+    raise Exception("Unable to install on PyPy/Windows")
+
+if WIN:
+    # https://bugs.python.org/issue23246
+    # We must have setuptools on windows
+    __import__('setuptools')
+
+    # Make sure the env vars that make.cmd needs are set
+    if not os.environ.get('PYTHON_EXE'):
+        os.environ['PYTHON_EXE'] = 'pypy' if PYPY else 'python'
+
+
 import distutils
 import distutils.sysconfig  # to get CFLAGS to pass into c-ares configure script
 
-
-PYPY = hasattr(sys, 'pypy_version_info')
 
 try:
     from setuptools import Extension, setup
@@ -23,6 +43,7 @@ except ImportError:
         # need setuptools for include_package_data to work
         raise
     from distutils.core import Extension, setup
+
 from distutils.command.build_ext import build_ext
 from distutils.command.sdist import sdist as _sdist
 from distutils.errors import CCompilerError, DistutilsExecError, DistutilsPlatformError
@@ -84,7 +105,7 @@ ares_configure_command = ' '.join(["(cd ", _quoted_abspath('c-ares/'),
                                    "> configure-output.txt"])
 
 
-if sys.platform == 'win32':
+if WIN:
     libraries += ['ws2_32']
     define_macros += [('FD_SETSIZE', '1024'), ('_WIN32', '1')]
 
@@ -144,7 +165,7 @@ def system(cmd):
 
 
 def configure_libev(bext, ext):
-    if sys.platform == "win32":
+    if WIN:
         CORE.define_macros.append(('EV_STANDALONE', '1'))
         return
 
@@ -173,7 +194,7 @@ def configure_ares(bext, ext):
     if not os.path.isdir(bdir):
         os.makedirs(bdir)
 
-    if sys.platform == "win32":
+    if WIN:
         shutil.copy("c-ares\\ares_build.h.dist", os.path.join(bdir, "ares_build.h"))
         return
 
@@ -209,7 +230,7 @@ else:
 if CARES_EMBED:
     ARES.sources += expand('c-ares/*.c')
     ARES.configure = configure_ares
-    if sys.platform == 'win32':
+    if WIN:
         ARES.libraries += ['advapi32']
         ARES.define_macros += [('CARES_STATICLIB', '')]
     else:
@@ -225,11 +246,18 @@ _ran_make = []
 
 
 def make(targets=''):
+    # NOTE: We have two copies of the makefile, one
+    # for posix, one for windows
     if not _ran_make:
-        if os.path.exists('Makefile'):
-            if "PYTHON" not in os.environ:
-                os.environ["PYTHON"] = sys.executable
-            system('make ' + targets)
+        if WIN:
+            # make.cmd handles checking for PyPy and only making the
+            # right things, so we can ignore the targets
+            system("appveyor\\make.cmd")
+        else:
+            if os.path.exists('Makefile'):
+                if "PYTHON" not in os.environ:
+                    os.environ["PYTHON"] = sys.executable
+                system('make ' + targets)
         _ran_make.append(1)
 
 
@@ -315,8 +343,12 @@ def read(name, *args):
 
 if PYPY:
     install_requires = []
+    cffi_modules = ['gevent/_corecffi_build.py:ffi']
+    setup_kwds = {'cffi_modules': cffi_modules}
 else:
     install_requires = ['greenlet >= 0.4.9']
+    setup_kwds = {}
+
 
 # If we are running info / help commands, or we're being imported by
 # tools like pyroma, we don't need to build anything
@@ -334,21 +366,35 @@ if ((len(sys.argv) >= 2
 elif PYPY:
     sys.path.insert(0, '.')
     # XXX ugly - need to find a better way
-    system('cp -r libev gevent/libev')
-    system('touch gevent/libev/__init__.py')
-    system('cd gevent/libev && ./configure > configure_output.txt')
-    from gevent import corecffi
-    ext_modules = [corecffi.ffi.verifier.get_extension(),
-                   ARES,
-                   # By building the semaphore with Cython under PyPy, we get
-                   # atomic operations (specifically, exiting/releasing), at the
-                   # cost of some speed (one trivial semaphore micro-benchmark put the pure-python version
-                   # at around 1s and the compiled version at around 4s). Some clever subclassing
-                   # and having only the bare minimum be in cython might help reduce that penalty.
-                   # NOTE: You must use version 0.23.4 or later to avoid a memory leak.
-                   # https://mail.python.org/pipermail/cython-devel/2015-October/004571.html
-                   Extension(name="gevent._semaphore",
-                             sources=["gevent/gevent._semaphore.c"])]
+    cp_cmd = 'cp -r'
+    if WIN:
+        cp_cmd = "copy"
+    system(cp_cmd + ' libev gevent/libev')
+    if WIN:
+        system('echo > gevent/libev/__init__.py')
+    else:
+        system('touch gevent/libev/__init__.py')
+    if sys.platform != 'win32':
+        system('cd gevent/libev && ./configure > configure_output.txt')
+    # NOTE that we're NOT adding the distutils extension module, as
+    # doing so compiles the module already: import gevent._corecffi_build
+    # imports gevent, which imports the hub, which imports the core,
+    # which compiles the module in-place. Instead we use the setup-time
+    # support of cffi_modules
+    #from gevent import _corecffi_build
+    ext_modules = [
+        #_corecffi_build.ffi.distutils_extension(),
+        ARES,
+        # By building the semaphore with Cython under PyPy, we get
+        # atomic operations (specifically, exiting/releasing), at the
+        # cost of some speed (one trivial semaphore micro-benchmark put the pure-python version
+        # at around 1s and the compiled version at around 4s). Some clever subclassing
+        # and having only the bare minimum be in cython might help reduce that penalty.
+        # NOTE: You must use version 0.23.4 or later to avoid a memory leak.
+        # https://mail.python.org/pipermail/cython-devel/2015-October/004571.html
+        Extension(name="gevent._semaphore",
+                  sources=["gevent/gevent._semaphore.c"]),
+    ]
     include_package_data = True
     run_make = 'gevent/gevent._semaphore.c gevent/gevent.ares.c'
 else:
@@ -371,7 +417,7 @@ else:
 
 
 def run_setup(ext_modules, run_make):
-    if run_make and not os.environ.get('APPVEYOR'):
+    if run_make:
         if isinstance(run_make, str):
             make(run_make)
         else:
@@ -409,7 +455,8 @@ def run_setup(ext_modules, run_make):
             "Topic :: Internet",
             "Topic :: Software Development :: Libraries :: Python Modules",
             "Intended Audience :: Developers",
-            "Development Status :: 4 - Beta"]
+            "Development Status :: 4 - Beta"],
+        **setup_kwds
     )
 
 # Tools like pyroma expect the actual call to `setup` to be performed

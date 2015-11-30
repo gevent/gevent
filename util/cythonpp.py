@@ -526,11 +526,11 @@ class Str_sourceline(str):
 
 def atomic_write(filename, data):
     tmpname = filename + '.tmp.%s' % os.getpid()
-    f = open(tmpname, 'w')
-    f.write(data)
-    f.flush()
-    os.fsync(f.fileno())
-    f.close()
+    with open(tmpname, 'w') as f:
+        f.write(data)
+        f.flush()
+        os.fsync(f.fileno())
+
     if os.path.exists(filename):
         os.unlink(filename)
     os.rename(tmpname, filename)
@@ -571,35 +571,35 @@ def postprocess_cython_output(filename, banner):
     #    confuse merger
     result = ['/* %s */\n' % (banner)]
 
-    input = open(filename)
-    firstline = input.readline()
+    with open(filename) as finput:
+        firstline = finput.readline()
 
-    m = cython_header_re.match(firstline.strip())
-    if m:
-        result.append('/* %s */' % m.group(1))
-    else:
-        result.append(firstline)
-
-    in_comment = False
-    for line in input:
-
-        if line.endswith('\n'):
-            line = line[:-1].rstrip() + '\n'
-
-        if in_comment:
-            if '*/' in line:
-                in_comment = False
-                result.append(line)
-            else:
-                result.append(line.replace('\n', newline_token))
+        m = cython_header_re.match(firstline.strip())
+        if m:
+            result.append('/* %s */' % m.group(1))
         else:
-            if line.lstrip().startswith('/* ') and '*/' not in line:
-                line = line.lstrip()  # cython adds space before /* for some reason
-                line = line.replace('\n', newline_token)
-                result.append(line)
-                in_comment = True
+            result.append(firstline)
+
+        in_comment = False
+        for line in finput:
+
+            if line.endswith('\n'):
+                line = line[:-1].rstrip() + '\n'
+
+            if in_comment:
+                if '*/' in line:
+                    in_comment = False
+                    result.append(line)
+                else:
+                    result.append(line.replace('\n', newline_token))
             else:
-                result.append(line)
+                if line.lstrip().startswith('/* ') and '*/' not in line:
+                    line = line.lstrip()  # cython adds space before /* for some reason
+                    line = line.replace('\n', newline_token)
+                    result.append(line)
+                    in_comment = True
+                else:
+                    result.append(line)
     return ''.join(result)
 
 

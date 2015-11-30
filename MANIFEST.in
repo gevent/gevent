@@ -22,6 +22,7 @@ include .pep8
 recursive-include benchmarks *.sh
 recursive-include appveyor *.cmd
 recursive-include appveyor *.ps1
+recursive-include scripts *.sh
 
 ### Artifacts of configuring/building in place
 # These we want, they come from the Makefile step

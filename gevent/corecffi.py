@@ -4,7 +4,6 @@ import sys
 import os
 import traceback
 import signal as signalmodule
-import struct
 
 
 __all__ = ['get_version',
@@ -15,324 +14,38 @@ __all__ = ['get_version',
            'time',
            'loop']
 
+try:
+    import gevent._corecffi
+except ImportError:
+    # Not built yet
+    import gevent._corecffi_build
+    gevent._corecffi_build.ffi.compile()
+    import gevent._corecffi
 
-def system_bits():
-    return struct.calcsize('P') * 8
+ffi = gevent._corecffi.ffi
+libev = gevent._corecffi.lib
 
-
-def st_nlink_type():
-    if sys.platform == "darwin":
-        return "short"
-    elif system_bits() == 32:
-        return "unsigned long"
-    return "long long"
-
-import cffi
-if cffi.__version_info__ >= (1, 2, 0):
-    # See https://bitbucket.org/cffi/cffi/issue/152/handling-errors-from-signal-handlers-in.
-    # With this version, bundled with PyPy 2.6.1 and above, we can more reliably
-    # handle signals and other exceptions. With this support, we could simplify
-    # _python_callback and _python_handle_error in addition to the simplifications for
-    # signals and KeyboardInterrupt. However, because we need to support PyPy 2.5.0+,
-    # we keep as much as practical shared.
-    _cffi_supports_on_error = True
+if hasattr(libev, 'vfd_open'):
+    # Must be on windows
+    assert sys.platform.startswith("win"), "vfd functions only needed on windows"
+    vfd_open = libev.vfd_open
+    vfd_free = libev.vfd_free
+    vfd_get = libev.vfd_get
 else:
-    # In older versions, including the 2.5.0 currently on Travis CI, we
-    # have to use a kludge
-    _cffi_supports_on_error = False
+    vfd_open = vfd_free = vfd_get = lambda fd: fd
 
-from cffi import FFI
-ffi = FFI()
-_cdef = """
-#define EV_MINPRI ...
-#define EV_MAXPRI ...
-
-#define EV_VERSION_MAJOR ...
-#define EV_VERSION_MINOR ...
-
-#define EV_UNDEF ...
-#define EV_NONE ...
-#define EV_READ ...
-#define EV_WRITE ...
-#define EV__IOFDSET ...
-#define EV_TIMER ...
-#define EV_PERIODIC ...
-#define EV_SIGNAL ...
-#define EV_CHILD ...
-#define EV_STAT ...
-#define EV_IDLE ...
-#define EV_PREPARE ...
-#define EV_CHECK ...
-#define EV_EMBED ...
-#define EV_FORK ...
-#define EV_CLEANUP ...
-#define EV_ASYNC ...
-#define EV_CUSTOM ...
-#define EV_ERROR ...
-
-#define EVFLAG_AUTO ...
-#define EVFLAG_NOENV ...
-#define EVFLAG_FORKCHECK ...
-#define EVFLAG_NOINOTIFY ...
-#define EVFLAG_SIGNALFD ...
-#define EVFLAG_NOSIGMASK ...
-
-#define EVBACKEND_SELECT ...
-#define EVBACKEND_POLL ...
-#define EVBACKEND_EPOLL ...
-#define EVBACKEND_KQUEUE ...
-#define EVBACKEND_DEVPOLL ...
-#define EVBACKEND_PORT ...
-/* #define EVBACKEND_IOCP ... */
-
-#define EVBACKEND_ALL ...
-#define EVBACKEND_MASK ...
-
-#define EVRUN_NOWAIT ...
-#define EVRUN_ONCE ...
-
-#define EVBREAK_CANCEL ...
-#define EVBREAK_ONE ...
-#define EVBREAK_ALL ...
-
-struct ev_loop {
-    int backend_fd;
-    int activecnt;
-    ...;
-};
-struct ev_io {
-    int fd;
-    int events;
-    ...;
-};
-struct ev_timer {
-    double at;
-    ...;
-};
-struct ev_signal {...;};
-struct ev_idle  {...;};
-struct ev_prepare {...;};
-struct ev_check {...;};
-struct ev_fork  {...;};
-struct ev_async  {...;};
-struct ev_child {
-    int pid;
-    int rpid;
-    int rstatus;
-    ...;
-};
-struct stat {
-    """ + st_nlink_type() + """ st_nlink;
-    ...;
-};
-
-struct ev_stat {
-    struct stat attr;
-    const char* path;
-    struct stat prev;
-    double interval;
-    ...;
-};
-
-typedef double ev_tstamp;
-
-int ev_version_major();
-int ev_version_minor();
-
-unsigned int ev_supported_backends (void);
-unsigned int ev_recommended_backends (void);
-unsigned int ev_embeddable_backends (void);
-
-ev_tstamp ev_time (void);
-void ev_set_syserr_cb(void *);
-
-int ev_priority(void*);
-void ev_set_priority(void*, int);
-
-int ev_is_pending(void*);
-int ev_is_active(void*);
-void ev_io_init(struct ev_io*, void* callback, int fd, int events);
-void ev_io_start(struct ev_loop*, struct ev_io*);
-void ev_io_stop(struct ev_loop*, struct ev_io*);
-void ev_feed_event(struct ev_loop*, void*, int);
-
-void ev_timer_init(struct ev_timer*, void (*callback)(struct ev_loop *_loop, struct ev_timer *w, int revents), double, double);
-void ev_timer_start(struct ev_loop*, struct ev_timer*);
-void ev_timer_stop(struct ev_loop*, struct ev_timer*);
-void ev_timer_again(struct ev_loop*, struct ev_timer*);
-
-void ev_signal_init(struct ev_signal*, void* callback, int);
-void ev_signal_start(struct ev_loop*, struct ev_signal*);
-void ev_signal_stop(struct ev_loop*, struct ev_signal*);
-
-void ev_idle_init(struct ev_idle*, void* callback);
-void ev_idle_start(struct ev_loop*, struct ev_idle*);
-void ev_idle_stop(struct ev_loop*, struct ev_idle*);
-
-void ev_prepare_init(struct ev_prepare*, void* callback);
-void ev_prepare_start(struct ev_loop*, struct ev_prepare*);
-void ev_prepare_stop(struct ev_loop*, struct ev_prepare*);
-
-void ev_check_init(struct ev_check*, void* callback);
-void ev_check_start(struct ev_loop*, struct ev_check*);
-void ev_check_stop(struct ev_loop*, struct ev_check*);
-
-void ev_fork_init(struct ev_fork*, void* callback);
-void ev_fork_start(struct ev_loop*, struct ev_fork*);
-void ev_fork_stop(struct ev_loop*, struct ev_fork*);
-
-void ev_async_init(struct ev_async*, void* callback);
-void ev_async_start(struct ev_loop*, struct ev_async*);
-void ev_async_stop(struct ev_loop*, struct ev_async*);
-void ev_async_send(struct ev_loop*, struct ev_async*);
-int ev_async_pending(struct ev_async*);
-
-void ev_child_init(struct ev_child*, void* callback, int, int);
-void ev_child_start(struct ev_loop*, struct ev_child*);
-void ev_child_stop(struct ev_loop*, struct ev_child*);
-
-void ev_stat_init(struct ev_stat*, void* callback, char*, double);
-void ev_stat_start(struct ev_loop*, struct ev_stat*);
-void ev_stat_stop(struct ev_loop*, struct ev_stat*);
-
-struct ev_loop *ev_default_loop (unsigned int flags);
-struct ev_loop* ev_loop_new(unsigned int flags);
-void ev_loop_destroy(struct ev_loop*);
-void ev_loop_fork(struct ev_loop*);
-int ev_is_default_loop (struct ev_loop *);
-unsigned int ev_iteration(struct ev_loop*);
-unsigned int ev_depth(struct ev_loop*);
-unsigned int ev_backend(struct ev_loop*);
-void ev_verify(struct ev_loop*);
-void ev_run(struct ev_loop*, int flags);
-
-ev_tstamp ev_now (struct ev_loop *);
-void ev_now_update (struct ev_loop *); /* update event loop time */
-void ev_ref(struct ev_loop*);
-void ev_unref(struct ev_loop*);
-void ev_break(struct ev_loop*, int);
-unsigned int ev_pending_count(struct ev_loop*);
-
-struct ev_loop* gevent_ev_default_loop(unsigned int flags);
-void gevent_install_sigchld_handler();
-
-void (*gevent_noop)(struct ev_loop *_loop, struct ev_timer *w, int revents);
-void ev_sleep (ev_tstamp delay); /* sleep for a while */
-"""
-
-
-_watcher_types = [
-    'ev_async',
-    'ev_check',
-    'ev_child',
-    'ev_fork',
-    'ev_idle',
-    'ev_io',
-    'ev_prepare',
-    'ev_signal',
-    'ev_stat',
-    'ev_timer',
-]
-
-_source = """   // passed to the real C compiler
-#define LIBEV_EMBED 1
-#include "libev.h"
-
-static void
-_gevent_noop(struct ev_loop *_loop, struct ev_timer *w, int revents) { }
-
-void (*gevent_noop)(struct ev_loop *, struct ev_timer *, int) = &_gevent_noop;
-"""
-
-# Setup the watcher callbacks
-_cbs = """
-static int (*python_callback)(void* handle, int revents);
-static void (*python_handle_error)(void* handle, int revents);
-static void (*python_stop)(void* handle);
-"""
-_cdef += _cbs
-_source += _cbs
-_watcher_type = None
-
-for _watcher_type in _watcher_types:
-    _cdef += """
-   struct gevent_%s {
-        // recall that the address of a struct is the
-        // same as the address of its first member, so
-        // this struct is interchangable with the ev_XX
-        // that is its first member.
-        struct %s watcher;
-        // the CFFI handle to the Python watcher object
-        void* handle;
-        ...;
-    };
-    static void _gevent_%s_callback(struct ev_loop* loop, struct %s* watcher, int revents);
-    """ % (_watcher_type, _watcher_type, _watcher_type, _watcher_type)
-
-    _source += """
-    struct gevent_%s {
-        struct %s watcher;
-        void* handle;
-    };
-    """ % (_watcher_type, _watcher_type)
-
-    _source += """
-    static void _gevent_%s_callback(struct ev_loop* loop, struct %s* watcher, int revents)
-    {
-        // invoke self.callback()
-        void* handle = ((struct gevent_%s *)watcher)->handle;
-        int cb_result = python_callback(handle, revents);
-        switch(cb_result) {
-            case -1:
-                // in case of exception, call self.loop.handle_error;
-                // this function is also responsible for stopping the watcher
-                // and allowing memory to be freed
-                python_handle_error(handle, revents);
-                break;
-            case 0:
-                // Code to stop the event. Note that if python_callback
-                // has disposed of the last reference to the handle,
-                // `watcher` could now be invalid/disposed memory!
-                if (!ev_is_active(watcher)) {
-                    python_stop(handle);
-                }
-                break;
-            default:
-                assert(cb_result == 1);
-                // watcher is already stopped and dead, nothing to do.
-        }
-    }
-    """ % (_watcher_type, _watcher_type, _watcher_type)
-
-thisdir = os.path.dirname(os.path.realpath(__file__))
-include_dirs = [thisdir, os.path.join(thisdir, 'libev')]
 #####
-## XXX NOTE:
+## NOTE on Windows:
+# The C implementation does several things specially for Windows;
+# a possibly incomplete list is:
 #
-# In recent versions of CFFI on CPython, doing something like
-# `libev._gevent_ev_io_callback` returns <built-in function
-# _gevent_ev_io_callback> ("for performance"). These have the
-# important property of not being able to pass them to any other libev
-# functions without generating `TypeError: Expected cdata`.
-# On PyPy, the same expression returns a cdata, and we rely on this below
-# (see watcher._init_subclasses).
+# - the loop runs a periodic signal checker;
+# - the io watcher constructor is different and it has a destructor;
+# - the child watcher is not defined
 #
-# The behaviour is the same though (they both return <built-in function>)
-# when you use `ffi.set_source` instead of the deprecated `ffi.verify` function.
-# In order to pass such attributes to other libev functions, you have to do
-# `ffi.addressof(libev, '_gevent_ev_io_callback)`... Unfortunately, this fails
-# when you use `ffi.verify`. So:
-#
-# - Using FFI on CPython cannot use ffi.verify();
-# - Using set_source() and not verify() requires PyPy >= 2.6.0
-# - Upgrading to set_source() will require moderate source changes;
+# The CFFI implementation does none of these things, and so
+# is possibly NOT FUNCTIONALLY CORRECT on Win32
 #####
-ffi.cdef(_cdef)
-libev = C = ffi.verify(_source, include_dirs=include_dirs)
-del thisdir, include_dirs, _watcher_type, _watcher_types
-
-libev.vfd_open = libev.vfd_get = lambda fd: fd
-libev.vfd_free = lambda fd: None
 
 #####
 ## Note on CFFI objects, callbacks and the lifecycle of watcher objects
@@ -390,7 +103,7 @@ def _python_callback(handle, revents):
     try:
         # Even dereferencing the handle needs to be inside the try/except;
         # if we don't return normally (e.g., a signal) then we wind up going
-        # to the 'onerror' handler if _cffi_supports_on_error is True, which
+        # to the 'onerror' handler, which
         # is not what we want; that can permanently wedge the loop depending
         # on which callback was executing
         watcher = ffi.from_handle(handle)
@@ -483,21 +196,21 @@ EVENTS = GEVENT_CORE_EVENTS = _EVENTSType()
 
 
 def get_version():
-    return 'libev-%d.%02d' % (C.ev_version_major(), C.ev_version_minor())
+    return 'libev-%d.%02d' % (libev.ev_version_major(), libev.ev_version_minor())
 
 
 def get_header_version():
-    return 'libev-%d.%02d' % (C.EV_VERSION_MAJOR, C.EV_VERSION_MINOR)
+    return 'libev-%d.%02d' % (libev.EV_VERSION_MAJOR, libev.EV_VERSION_MINOR)
 
-_flags = [(C.EVBACKEND_PORT, 'port'),
-          (C.EVBACKEND_KQUEUE, 'kqueue'),
-          (C.EVBACKEND_EPOLL, 'epoll'),
-          (C.EVBACKEND_POLL, 'poll'),
-          (C.EVBACKEND_SELECT, 'select'),
-          (C.EVFLAG_NOENV, 'noenv'),
-          (C.EVFLAG_FORKCHECK, 'forkcheck'),
-          (C.EVFLAG_SIGNALFD, 'signalfd'),
-          (C.EVFLAG_NOSIGMASK, 'nosigmask')]
+_flags = [(libev.EVBACKEND_PORT, 'port'),
+          (libev.EVBACKEND_KQUEUE, 'kqueue'),
+          (libev.EVBACKEND_EPOLL, 'epoll'),
+          (libev.EVBACKEND_POLL, 'poll'),
+          (libev.EVBACKEND_SELECT, 'select'),
+          (libev.EVFLAG_NOENV, 'noenv'),
+          (libev.EVFLAG_FORKCHECK, 'forkcheck'),
+          (libev.EVFLAG_SIGNALFD, 'signalfd'),
+          (libev.EVFLAG_NOSIGMASK, 'nosigmask')]
 
 _flags_str2int = dict((string, flag) for (flag, string) in _flags)
 
@@ -604,15 +317,12 @@ def embeddable_backends():
 
 
 def time():
-    return C.ev_time()
+    return libev.ev_time()
 
 _default_loop_destroyed = False
 
 
 def _loop_callback(*args, **kwargs):
-    if _cffi_supports_on_error:
-        return ffi.callback(*args, **kwargs)
-    kwargs.pop('onerror')
     return ffi.callback(*args, **kwargs)
 
 
@@ -680,32 +390,15 @@ class loop(object):
 
         self._keepaliveset = set()
 
-        if not _cffi_supports_on_error:
-            if default:
-                signalmodule.signal(2, self.int_handler)
-            self.ate_keyboard_interrupt = False
-            self.keyboard_interrupt_allowed = True
-
     def _check_callback_handle_error(self, t, v, tb):
         # None as the context argument causes the exception to be raised
         # in the main greenlet.
         self.handle_error(None, t, v, tb)
 
-    if _cffi_supports_on_error:
-        def _check_callback(self, *args):
-            # If we have the onerror callback, this is a no-op; all the real
-            # work to rethrow the exception is done by the onerror callback
-            pass
-    else:
-        def _check_callback(self, *args):
-            if self.ate_keyboard_interrupt:
-                self.handle_error(self, KeyboardInterrupt, KeyboardInterrupt(), None)
-                self.ate_keyboard_interrupt = False
-
-        def int_handler(self, *args):
-            if self.keyboard_interrupt_allowed:
-                raise KeyboardInterrupt
-            self.ate_keyboard_interrupt = True
+    def _check_callback(self, *args):
+        # If we have the onerror callback, this is a no-op; all the real
+        # work to rethrow the exception is done by the onerror callback
+        pass
 
     def _run_callbacks(self, evloop, _, revents):
         count = 1000
@@ -724,7 +417,6 @@ class loop(object):
                 cb.callback = None
 
                 try:
-                    self.keyboard_interrupt_allowed = True
                     callback(*args)
                 except:
                     # If we allow an exception to escape this method (while we are running the ev callback),
@@ -751,7 +443,6 @@ class loop(object):
                         except:
                             pass # Nothing we can do here
                 finally:
-                    self.keyboard_interrupt_allowed = False
                     # Note, this must be reset here, because cb.args is used as a flag in callback class,
                     cb.args = None
                     count -= 1
@@ -776,7 +467,6 @@ class loop(object):
                 _default_loop_destroyed = True
             libev.ev_loop_destroy(self._ptr)
             self._ptr = ffi.NULL
-        # XXX restore default_int_signal handler if we set it (_cffi_supports_on_error is False)
 
     @property
     def ptr(self):
@@ -1059,7 +749,8 @@ class watcher(object):
         for subclass in cls.__subclasses__():
             watcher_type = subclass._watcher_type
             subclass._watcher_struct_pointer_type = ffi.typeof('struct gevent_' + watcher_type + '*')
-            subclass._watcher_callback = getattr(libev, '_gevent_' + watcher_type + '_callback')
+            subclass._watcher_callback = ffi.addressof(libev,
+                                                       '_gevent_' + watcher_type + '_callback')
             for name in 'start', 'stop', 'init':
                 ev_name = watcher_type + '_' + name
                 watcher_name = '_watcher' + '_' + name
@@ -1174,6 +865,8 @@ class io(watcher):
     _watcher_type = 'ev_io'
 
     def __init__(self, loop, fd, events, ref=True, priority=None):
+        # XXX: Win32: Need to vfd_open the fd and free the old one?
+        # XXX: Win32: Need a destructor to free the old fd?
         if fd < 0:
             raise ValueError('fd must be non-negative: %r' % fd)
         if events & ~(libev.EV__IOFDSET | libev.EV_READ | libev.EV_WRITE):
@@ -1187,24 +880,24 @@ class io(watcher):
         watcher.start(self, callback, *args)
 
     def _get_fd(self):
-        return libev.vfd_get(self._watcher.fd)
+        return vfd_get(self._watcher.fd)
 
     def _set_fd(self, fd):
         if libev.ev_is_active(self._watcher):
             raise AttributeError("'io' watcher attribute 'fd' is read-only while watcher is active")
-        vfd = libev.vfd_open(fd)
-        libev.vfd_free(self._watcher.fd)
-        libev.ev_io_init(self._watcher, self._cb, vfd, self._watcher.events)
+        vfd = vfd_open(fd)
+        vfd_free(self._watcher.fd)
+        self._watcher_init(self._watcher, self._watcher_callback, vfd, self._watcher.events)
 
     fd = property(_get_fd, _set_fd)
 
     def _get_events(self):
-        return libev.vfd_get(self._watcher.fd)
+        return self._watcher.events
 
     def _set_events(self, events):
         if libev.ev_is_active(self._watcher):
             raise AttributeError("'io' watcher attribute 'events' is read-only while watcher is active")
-        libev.ev_io_init(self._watcher, self._cb, self._watcher.fd, events)
+        self._watcher_init(self._watcher, self._watcher_callback, self._watcher.fd, events)
 
     events = property(_get_events, _set_events)
 

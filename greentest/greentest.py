@@ -479,7 +479,8 @@ def walk_modules(basedir=None, modpath=None, include_so=False, recursive=False):
             x = fn[:-3]
             if x.endswith('_d'):
                 x = x[:-2]
-            if x in ['__init__', 'core', 'ares', '_util', '_semaphore', 'corecffi']:
+            if x in ['__init__', 'core', 'ares', '_util', '_semaphore',
+                     'corecffi', '_corecffi', '_corecffi_build']:
                 continue
             if x in OPTIONAL_MODULES:
                 try:
@@ -488,6 +489,8 @@ def walk_modules(basedir=None, modpath=None, include_so=False, recursive=False):
                     continue
             yield path, modpath + x
         elif include_so and fn.endswith('.so'):
+            if '.pypy-' in fn:
+                continue
             if fn.endswith('_d.so'):
                 yield path, modpath + fn[:-5]
             else:
