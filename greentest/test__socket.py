@@ -146,11 +146,13 @@ class TestTCP(greentest.TestCase):
     # On Windows send() accepts whatever is thrown at it
     if sys.platform != 'win32':
 
+        _test_sendall_timeout_check_time = True
+        # Travis-CI container infrastructure is configured with
+        # large socket buffers, at least 2MB, as-of Jun 3, 2015,
+        # so we must be sure to send more data than that.
+        _test_sendall_data = b'hello' * 1000000
+
         def test_sendall_timeout(self):
-            # Travis-CI container infrastructure is configured with
-            # large socket buffers, at least 2MB, as-of Jun 3, 2015,
-            # so we must be sure to send more data than that.
-            data_sent = b'hello' * 1000000
             client_sock = []
             acceptor = Thread(target=lambda: client_sock.append(self.listener.accept()))
             client = self.create_connection()
@@ -159,9 +161,10 @@ class TestTCP(greentest.TestCase):
             client.settimeout(0.1)
             start = time.time()
             try:
-                self.assertRaises(self.TIMEOUT_ERROR, client.sendall, data_sent)
-                took = time.time() - start
-                assert 0.1 - 0.01 <= took <= 0.1 + 0.1, took
+                self.assertRaises(self.TIMEOUT_ERROR, client.sendall, self._test_sendall_data)
+                if self._test_sendall_timeout_check_time:
+                    took = time.time() - start
+                    assert 0.09 <= took <= 0.2, took
             finally:
                 acceptor.join()
                 client.close()

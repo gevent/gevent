@@ -7,7 +7,16 @@
 1.1rc2 (unreleased)
 ===================
 
-- TBD
+- Exceptions raised by gevent's SSL sockets are more consistent with
+  the standard library (e.g., gevent's Python 3 SSL sockets raise
+  :exc:`socket.timeout` instead of :exc:`ssl.SSLError`, a change
+  introduced in Python 3.2).
+- Python 2: gevent's socket's ``sendall`` method could ignore timeouts
+  in some cases. The timeout now refers to the total time taken by
+  ``sendall``.
+- gevent's SSL socket's ``sendall`` method should no longer raise ``SSL3_WRITE_PENDING``
+  in rare cases when sending large buffers. Reported in :issue:`317`.
+
 
 1.1rc1 (Nov 14, 2015)
 =====================
