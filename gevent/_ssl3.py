@@ -430,11 +430,9 @@ class SSLSocket(socket):
 
 # Python 3.2 onwards raise normal timeout errors, not SSLError.
 # See https://bugs.python.org/issue10272
-t = __import__('socket').timeout
-_SSLErrorReadTimeout = t('The read operation timed out')
-_SSLErrorWriteTimeout = t('The write operation timed out')
-_SSLErrorHandshakeTimeout = t('The handshake operation timed out')
-del t
+_SSLErrorReadTimeout = _socket_timeout('The read operation timed out')
+_SSLErrorWriteTimeout = _socket_timeout('The write operation timed out')
+_SSLErrorHandshakeTimeout = _socket_timeout('The handshake operation timed out')
 
 
 def wrap_socket(sock, keyfile=None, certfile=None,
