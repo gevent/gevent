@@ -170,7 +170,8 @@ class Input(object):
         # To cope with malicious or broken clients that fail to send valid
         # chunk lines, the strategy is to read character by character until we either reach
         # a ; or newline. If at any time we read a non-HEX digit, we bail. If we hit a
-        # ;, indicating an chunk-extension, we'll read up to the next MAX_REQUEST_LINE charaters
+        # ;, indicating an chunk-extension, we'll read up to the next
+        # MAX_REQUEST_LINE characters
         # looking for the CRLF, and if we don't find it, we bail. If we read more than 16 hex characters,
         # (the number needed to represent a 64-bit chunk size), we bail (this protects us from
         # a client that sends an infinite stream of `F`, for example).
@@ -724,7 +725,7 @@ class WSGIHandler(object):
         # "Servers should check for errors in the headers at the time
         # start_response is called, so that an error can be raised
         # while the application is still running." Here, we check the encoding.
-        # This aids debuging: headers especially are generated programatically
+        # This aids debugging: headers especially are generated programatically
         # and an encoding error in a loop or list comprehension yields an opaque
         # UnicodeError without any clue which header was wrong.
         # Note that this results in copying the header list at this point, not modifying it,

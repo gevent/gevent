@@ -43,7 +43,7 @@ class _ErrorFormatter(object):
         L{win32api.FormatMessage}).
 
     @ivar errorTab: A mapping from integer error numbers to C{str} messages
-        which correspond to those erorrs (like L{socket.errorTab}).
+        which correspond to those errors (like L{socket.errorTab}).
     """
     def __init__(self, WinError, FormatMessage, errorTab):
         self.winError = WinError

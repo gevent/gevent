@@ -216,7 +216,7 @@ class SSLSocket(socket):
             socket.__init__(self, _sock=sock._sock)
 
         # The initializer for socket overrides the methods send(), recv(), etc.
-        # in the instancce, which we don't need -- but we want to provide the
+        # in the instance, which we don't need -- but we want to provide the
         # methods defined in SSLSocket.
         for attr in _delegate_methods:
             try:

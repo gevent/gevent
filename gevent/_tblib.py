@@ -227,7 +227,7 @@ def install():
 
 # Added by gevent
 
-# We have to defer the initilization, and especially the import of platform,
+# We have to defer the initialization, and especially the import of platform,
 # until runtime. If we're monkey patched, we need to be sure to use
 # the original __import__ to avoid switching through the hub due to
 # import locks on Python 2. See also builtins.py for details.

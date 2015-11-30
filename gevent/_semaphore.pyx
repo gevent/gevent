@@ -32,7 +32,7 @@ class Semaphore(object):
         # _notifier are such attributes, and gevent.thread subclasses
         # this class. Thus, we carefully manage the lifetime of the
         # objects we put in these attributes so that, in the normal
-        # case of a semaphore used correctly (dealloced when it's not
+        # case of a semaphore used correctly (deallocated when it's not
         # locked and no one is waiting), the leak goes away (because
         # these objects are back to None). This can also be solved on PyPy
         # by simply not declaring these objects in the pxd file, but that doesn't work for
