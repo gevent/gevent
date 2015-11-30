@@ -15,6 +15,7 @@ _ssl = __ssl__._ssl
 import errno
 from gevent.socket import socket, timeout_default
 from gevent.socket import error as socket_error
+from gevent.socket import timeout as _socket_timeout
 from gevent.hub import PYPY
 
 __implements__ = ['SSLContext',
@@ -364,28 +365,33 @@ class SSLSocket(socket):
         else:
             return self._sslobj.compression()
 
+    def __check_flags(self, meth, flags):
+        if flags != 0:
+            raise ValueError(
+                "non-zero flags not allowed in calls to %s on %s" %
+                (meth, self.__class__))
+
     def send(self, data, flags=0, timeout=timeout_default):
         self._checkClosed()
+        self.__check_flags('send', flags)
+
         if timeout is timeout_default:
             timeout = self.timeout
-        if self._sslobj:
-            if flags != 0:
-                raise ValueError(
-                    "non-zero flags not allowed in calls to send() on %s" %
-                    self.__class__)
-            while True:
-                try:
-                    return self._sslobj.write(data)
-                except SSLWantReadError:
-                    if self.timeout == 0.0:
-                        return 0
-                    self._wait(self._read_event)
-                except SSLWantWriteError:
-                    if self.timeout == 0.0:
-                        return 0
-                    self._wait(self._write_event)
-        else:
+
+        if not self._sslobj:
             return socket.send(self, data, flags, timeout)
+
+        while True:
+            try:
+                return self._sslobj.write(data)
+            except SSLWantReadError:
+                if self.timeout == 0.0:
+                    return 0
+                self._wait(self._read_event)
+            except SSLWantWriteError:
+                if self.timeout == 0.0:
+                    return 0
+                self._wait(self._write_event)
 
     def sendto(self, data, flags_or_addr, addr=None):
         self._checkClosed()
@@ -405,19 +411,17 @@ class SSLSocket(socket):
 
     def sendall(self, data, flags=0):
         self._checkClosed()
-        if self._sslobj:
-            if flags != 0:
-                raise ValueError(
-                    "non-zero flags not allowed in calls to sendall() on %s" %
-                    self.__class__)
-            amount = len(data)
-            count = 0
-            while (count < amount):
-                v = self.send(data[count:])
-                count += v
-            return amount
-        else:
-            return socket.sendall(self, data, flags)
+        self.__check_flags('sendall', flags)
+
+        try:
+            socket.sendall(self, data)
+        except _socket_timeout as ex:
+            if self.timeout == 0.0:
+                # Python 2 simply *hangs* in this case, which is bad, but
+                # Python 3 raises SSLWantWriteError. We do the same.
+                raise SSLWantWriteError("The operation did not complete (write)")
+            # Convert the socket.timeout back to the sslerror
+            raise SSLError(*ex.args)
 
     def recv(self, buflen=1024, flags=0):
         self._checkClosed()

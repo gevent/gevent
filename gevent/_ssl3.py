@@ -15,7 +15,7 @@ _ssl = __ssl__._ssl
 import errno
 from gevent.socket import socket, timeout_default
 from gevent.socket import error as socket_error
-
+from gevent.socket import timeout as _socket_timeout
 
 __implements__ = ['SSLContext',
                   'SSLSocket',
@@ -273,14 +273,14 @@ class SSLSocket(socket):
                 raise ValueError(
                     "non-zero flags not allowed in calls to sendall() on %s" %
                     self.__class__)
-            amount = len(data)
-            count = 0
-            while (count < amount):
-                v = self.send(data[count:])
-                count += v
-            return amount
-        else:
+
+        try:
             return socket.sendall(self, data, flags)
+        except _socket_timeout:
+            if self.timeout == 0.0:
+                # Raised by the stdlib on non-blocking sockets
+                raise SSLWantWriteError("The operation did not complete (write)")
+            raise
 
     def recv(self, buflen=1024, flags=0):
         self._checkClosed()
@@ -428,9 +428,11 @@ class SSLSocket(socket):
         return self._sslobj.tls_unique_cb()
 
 
-_SSLErrorReadTimeout = SSLError('The read operation timed out')
-_SSLErrorWriteTimeout = SSLError('The write operation timed out')
-_SSLErrorHandshakeTimeout = SSLError('The handshake operation timed out')
+# Python 3.2 onwards raise normal timeout errors, not SSLError.
+# See https://bugs.python.org/issue10272
+_SSLErrorReadTimeout = _socket_timeout('The read operation timed out')
+_SSLErrorWriteTimeout = _socket_timeout('The write operation timed out')
+_SSLErrorHandshakeTimeout = _socket_timeout('The handshake operation timed out')
 
 
 def wrap_socket(sock, keyfile=None, certfile=None,

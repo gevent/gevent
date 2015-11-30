@@ -19,6 +19,7 @@ import sys
 import errno
 from gevent.socket import socket, _fileobject, timeout_default
 from gevent.socket import error as socket_error, EWOULDBLOCK
+from gevent.socket import timeout as _socket_timeout
 from gevent.hub import string_types, PYPY
 
 try:
@@ -192,6 +193,17 @@ class SSLSocket(socket):
         else:
             return socket.send(self, data, flags, timeout)
     # is it possible for sendall() to send some data without encryption if another end shut down SSL?
+
+    def sendall(self, data, flags=0):
+        try:
+            socket.sendall(self, data)
+        except _socket_timeout as ex:
+            if self.timeout == 0.0:
+                # Python 2 simply *hangs* in this case, which is bad, but
+                # Python 3 raises SSLWantWriteError. We do the same.
+                raise SSLError(SSL_ERROR_WANT_WRITE)
+            # Convert the socket.timeout back to the sslerror
+            raise SSLError(*ex.args)
 
     def sendto(self, *args):
         if self._sslobj:

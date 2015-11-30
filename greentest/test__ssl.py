@@ -1,31 +1,60 @@
 from gevent import monkey; monkey.patch_all()
 import os
+import sys
 import socket
 import greentest
-from test__socket import TestTCP
+# Be careful not to have TestTCP as a bare attribute in this module,
+# even aliased, to avoid running duplicate tests
+import test__socket
 import ssl
 
 
-class TestSSL(TestTCP):
+class TestSSL(test__socket.TestTCP):
 
     certfile = os.path.join(os.path.dirname(__file__), 'test_server.crt')
     privfile = os.path.join(os.path.dirname(__file__), 'test_server.key')
-    # Python 2.x has socket.sslerror, which we need to be sure is an alias for
-    # ssl.SSLError. That's gone in Py3 though.
-    TIMEOUT_ERROR = getattr(socket, 'sslerror', ssl.SSLError)
+    # Python 2.x has socket.sslerror (which  is an alias for
+    # ssl.SSLError); That's gone in Py3 though. In Python 2, most timeouts are raised
+    # as SSLError, but Python 3 raises the normal socket.timeout instead. So this has
+    # the effect of making TIMEOUT_ERROR be SSLError on Py2 and socket.timeout on Py3
+    # See https://bugs.python.org/issue10272
+    TIMEOUT_ERROR = getattr(socket, 'sslerror', socket.timeout)
 
     def setUp(self):
         greentest.TestCase.setUp(self)
-        self.listener, raw_listener = ssl_listener(('127.0.0.1', 0), self.privfile, self.certfile)
+        self.listener, _raw_listener = ssl_listener(('127.0.0.1', 0), self.privfile, self.certfile)
         self.port = self.listener.getsockname()[1]
 
     def create_connection(self):
         return ssl.wrap_socket(super(TestSSL, self).create_connection())
 
-    def test_sendall_timeout(self):
-        pass
+    if not sys.platform.startswith('win32'):
 
-del TestTCP
+        # The SSL library can take a long time to buffer the large amount of data we're trying
+        # to send, so we can't compare to the timeout values
+        _test_sendall_timeout_check_time = False
+
+        # The SSL layer has extra buffering, so test_sendall needs
+        # to send a very large amount to make it timeout
+        _test_sendall_data = data_sent = b'hello' * 100000000
+
+        def test_sendall_timeout0(self):
+            # Issue #317: SSL_WRITE_PENDING in some corner cases
+
+            server_sock = []
+            acceptor = test__socket.Thread(target=lambda: server_sock.append(self.listener.accept()))
+            client = self.create_connection()
+            client.setblocking(False)
+            try:
+                # Python 3 raises ssl.SSLWantWriteError; Python 2 simply *hangs*
+                # on non-blocking sockets because it's a simple loop around
+                # send(). Python 2.6 doesn't have SSLWantWriteError
+                expected = getattr(ssl, 'SSLWantWriteError', ssl.SSLError)
+                self.assertRaises(expected, client.sendall, self._test_sendall_data)
+            finally:
+                acceptor.join()
+                client.close()
+                server_sock[0][0].close()
 
 
 def ssl_listener(address, private_key, certificate):
