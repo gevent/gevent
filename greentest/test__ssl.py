@@ -7,7 +7,6 @@ import greentest
 # even aliased, to avoid running duplicate tests
 import test__socket
 import ssl
-import time
 
 
 class TestSSL(test__socket.TestTCP):
