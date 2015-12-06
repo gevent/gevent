@@ -15,28 +15,31 @@ def handle(*args):
         # This is the opposite of gunicorn.
         os.waitpid(-1, os.WNOHANG)
 # The signal watcher must be installed *before* monkey patching
-signal.signal(signal.SIGCHLD, handle)
+if hasattr(signal, 'SIGCHLD'):
+    signal.signal(signal.SIGCHLD, handle)
 
-pid = os.fork()
+    pid = os.fork()
 
-if pid: # parent
-    try:
-        _, stat = os.waitpid(pid, 0)
-    except OSError:
-        # Interrupted system call
-        _, stat = os.waitpid(pid, 0)
-    assert stat == 0, stat
+    if pid: # parent
+        try:
+            _, stat = os.waitpid(pid, 0)
+        except OSError:
+            # Interrupted system call
+            _, stat = os.waitpid(pid, 0)
+        assert stat == 0, stat
+    else:
+        import gevent.monkey
+        gevent.monkey.patch_all()
+        signal.signal(signal.SIGCHLD, signal.SIG_DFL)
+        # Under Python 2, os.popen() directly uses the popen call, and
+        # popen's file uses the pclose() system call to
+        # wait for the child. If it's already waited on,
+        # it raises the same exception.
+        # Python 3 uses the subprocess module directly which doesn't
+        # have this problem.
+        f = os.popen('true')
+        f.close()
+
+        sys.exit(0)
 else:
-    import gevent.monkey
-    gevent.monkey.patch_all()
-    signal.signal(signal.SIGCHLD, signal.SIG_DFL)
-    # Under Python 2, os.popen() directly uses the popen call, and
-    # popen's file uses the pclose() system call to
-    # wait for the child. If it's already waited on,
-    # it raises the same exception.
-    # Python 3 uses the subprocess module directly which doesn't
-    # have this problem.
-    f = os.popen('true')
-    f.close()
-
-    sys.exit(0)
+    print("No SIGCHLD, not testing")
