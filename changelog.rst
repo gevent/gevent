@@ -16,7 +16,10 @@
   ``sendall``.
 - gevent's SSL socket's ``sendall`` method should no longer raise ``SSL3_WRITE_PENDING``
   in rare cases when sending large buffers. Reported in :issue:`317`.
-
+- ``gevent.signal`` now allows resetting (SIG_DFL) and ignoring (SIG_IGN) the
+  SIGCHLD signal at the process level (although this may allow race
+  conditions with libev child watchers). Reported in :issue:`696` by
+  Adam Ning.
 
 1.1rc1 (Nov 14, 2015)
 =====================

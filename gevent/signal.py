@@ -61,6 +61,11 @@ def signal(signalnum, handler):
        the builtin :func:`signal.signal` would be triggered either;
        libev typically overwrites such a handler at the C level. At
        the very least, it's full of race conditions.)
+
+    .. note::
+
+        Use of ``SIG_IGN`` and ``SIG_DFL`` may also have race conditions
+        with libev child watchers and the :mod:`gevent.subprocess` module.
     """
     if signalnum != _signal.SIGCHLD:
         return _signal_signal(signalnum, handler)
@@ -75,6 +80,11 @@ def signal(signalnum, handler):
     old_handler = getsignal(signalnum)
     global _child_handler
     _child_handler = handler
+    if handler == _signal.SIG_IGN or handler == _signal.SIG_DFL:
+        # Allow resetting/ignoring this signal at the process level.
+        # Note that this conflicts with gevent.subprocess and other users
+        # of child watchers.
+        _signal_signal(signalnum, handler)
     return old_handler
 
 
