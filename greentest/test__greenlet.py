@@ -485,6 +485,17 @@ class TestBasic(greentest.TestCase):
         # Passing both, but not implemented
         self.assertRaises(TypeError, gevent.spawn_later, 1, 1)
 
+    def test_spawn_raw_kwargs(self):
+        value = []
+        def f(*args, **kwargs):
+            value.append(args)
+            value.append(kwargs)
+
+        g = gevent.spawn_raw(f, 1, name='value')
+        gevent.sleep(0.01)
+        self.assertEqual(value[0], (1,))
+        self.assertEqual(value[1], {'name': 'value'})
+
     def test_simple_exit(self):
         link_test = []
 

@@ -518,9 +518,8 @@ class loop(object):
         if once:
             flags |= libev.EVRUN_ONCE
 
-        self.keyboard_interrupt_allowed = False
         libev.ev_run(self._ptr, flags)
-        self.keyboard_interrupt_allowed = True
+
 
     def reinit(self):
         libev.ev_loop_fork(self._ptr)

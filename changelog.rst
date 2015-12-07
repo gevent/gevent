@@ -20,6 +20,10 @@
   SIGCHLD signal at the process level (although this may allow race
   conditions with libev child watchers). Reported in :issue:`696` by
   Adam Ning.
+- :func:`gevent.spawn_raw` now accepts keyword arguments, as
+  previously (incorrectly) documented. Reported in :issue:`680` by Ron
+  Rothman.
+- PyPy: PyPy 2.6.1 or later is now required (4.0.1 or later is recommended).
 
 1.1rc1 (Nov 14, 2015)
 =====================

@@ -3,8 +3,9 @@
 Event-loop hub.
 """
 from __future__ import absolute_import
-import sys
+from functools import partial as _functools_partial
 import os
+import sys
 import traceback
 
 from greenlet import greenlet, getcurrent, GreenletExit
@@ -112,14 +113,20 @@ class ConcurrentObjectUseError(AssertionError):
     pass
 
 
-def spawn_raw(function, *args):
+def spawn_raw(function, *args, **kwargs):
     """
-    Create a new :class:`greenlet.greenlet` object and schedule it to run ``function(*args, **kwargs)``.
+    Create a new :class:`greenlet.greenlet` object and schedule it to
+    run ``function(*args, **kwargs)``.
 
-    This returns a raw greenlet which does not have all the useful methods that
-    :class:`gevent.Greenlet` has. Typically, applications should prefer :func:`gevent.spawn`,
-    but this method may occasionally be useful as an optimization if there are many greenlets
-    involved.
+    This returns a raw :class:`~greenlet.greenlet` which does not have all the useful
+    methods that :class:`gevent.Greenlet` has. Typically, applications
+    should prefer :func:`~gevent.spawn`, but this method may
+    occasionally be useful as an optimization if there are many
+    greenlets involved.
+
+    .. versionchanged:: 1.1rc2
+        Accept keyword arguments for ``function`` as previously (incorrectly)
+        documented. Note that this may incur an additional expense.
 
     .. versionchanged:: 1.1a3
         Verify that ``function`` is callable, raising a TypeError if not. Previously,
@@ -128,8 +135,17 @@ def spawn_raw(function, *args):
     if not callable(function):
         raise TypeError("function must be callable")
     hub = get_hub()
-    g = greenlet(function, hub)
-    hub.loop.run_callback(g.switch, *args)
+
+    # The callback class object that we use to run this doesn't
+    # accept kwargs (and those objects are heavily used, as well as being
+    # implemented twice in core.ppyx and corecffi.py) so do it with a partial
+    if kwargs:
+        function = _functools_partial(function, *args, **kwargs)
+        g = greenlet(function, hub)
+        hub.loop.run_callback(g.switch)
+    else:
+        g = greenlet(function, hub)
+        hub.loop.run_callback(g.switch, *args)
     return g
 
 
