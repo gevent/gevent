@@ -487,6 +487,7 @@ class TestBasic(greentest.TestCase):
 
     def test_spawn_raw_kwargs(self):
         value = []
+
         def f(*args, **kwargs):
             value.append(args)
             value.append(kwargs)

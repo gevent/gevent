@@ -520,7 +520,6 @@ class loop(object):
 
         libev.ev_run(self._ptr, flags)
 
-
     def reinit(self):
         libev.ev_loop_fork(self._ptr)
 

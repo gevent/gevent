@@ -1210,6 +1210,9 @@ else:
             """Connecting to an SSLv23 server with various client options"""
             if test_support.verbose:
                 sys.stdout.write("\n")
+            if sys.version_info[:3] >= (2, 7, 11):
+                # http://bugs.python.org/issue25530
+                self.skipTest("SSLv23 Disabled in 2.7.11")
             try_protocol_combo(ssl.PROTOCOL_SSLv23, ssl.PROTOCOL_SSLv3, True)
             try_protocol_combo(ssl.PROTOCOL_SSLv23, ssl.PROTOCOL_SSLv23, True)
             try_protocol_combo(ssl.PROTOCOL_SSLv23, ssl.PROTOCOL_TLSv1, True)
