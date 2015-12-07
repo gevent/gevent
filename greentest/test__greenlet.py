@@ -493,6 +493,7 @@ class TestBasic(greentest.TestCase):
 
         g = gevent.spawn_raw(f, 1, name='value')
         gevent.sleep(0.01)
+        assert not g
         self.assertEqual(value[0], (1,))
         self.assertEqual(value[1], {'name': 'value'})
 
