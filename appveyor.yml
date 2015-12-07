@@ -127,6 +127,10 @@ test_script:
 
 after_test:
   # If tests are successful, create a whl package for the project.
+  # NOTE: Even though it's much faster to create the wheel when we
+  # initially run setup.py develop, the built wheel is faulty (doesn't
+  # include the DLLs). So we live with running the 3-5 minute make.cmd
+  # again.
   - "%CMD_IN_ENV% pip install -U wheel"
   - "%CMD_IN_ENV% %PYEXE% setup.py bdist_wheel bdist_wininst"
   - ps: "ls dist"

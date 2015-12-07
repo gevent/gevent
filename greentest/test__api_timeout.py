@@ -48,7 +48,7 @@ class Test(greentest.TestCase):
         # An exception will be raised if it's not
         try:
             with Timeout(DELAY) as t:
-                sleep(DELAY * 2)
+                sleep(DELAY * 10)
         except Timeout as ex:
             assert ex is t, (ex, t)
         else:
@@ -57,14 +57,14 @@ class Test(greentest.TestCase):
         # You can customize the exception raised:
         try:
             with Timeout(DELAY, IOError("Operation takes way too long")):
-                sleep(DELAY * 2)
+                sleep(DELAY * 10)
         except IOError as ex:
             assert str(ex) == "Operation takes way too long", repr(ex)
 
         # Providing classes instead of values should be possible too:
         try:
             with Timeout(DELAY, ValueError):
-                sleep(DELAY * 2)
+                sleep(DELAY * 10)
         except ValueError:
             pass
 
@@ -73,7 +73,7 @@ class Test(greentest.TestCase):
         except:
             try:
                 with Timeout(DELAY, sys.exc_info()[0]):
-                    sleep(DELAY * 2)
+                    sleep(DELAY * 10)
                     raise AssertionError('should not get there')
                 raise AssertionError('should not get there')
             except ZeroDivisionError:
@@ -92,7 +92,7 @@ class Test(greentest.TestCase):
         with Timeout(XDELAY, False):
             sleep(XDELAY * 2)
         delta = (time.time() - start)
-        assert delta < XDELAY * 2, delta
+        self.assertTimeWithinRange(delta, 0, XDELAY * 2)
 
         # passing None as seconds disables the timer
         with Timeout(None):
@@ -110,24 +110,24 @@ class Test(greentest.TestCase):
 
     def test_nested_timeout(self):
         with Timeout(DELAY, False):
-            with Timeout(DELAY * 2, False):
-                sleep(DELAY * 3)
+            with Timeout(DELAY * 10, False):
+                sleep(DELAY * 3 * 20)
             raise AssertionError('should not get there')
 
         with Timeout(DELAY) as t1:
-            with Timeout(DELAY * 2) as t2:
+            with Timeout(DELAY * 20) as t2:
                 try:
-                    sleep(DELAY * 3)
+                    sleep(DELAY * 30)
                 except Timeout as ex:
                     assert ex is t1, (ex, t1)
                 assert not t1.pending, t1
                 assert t2.pending, t2
             assert not t2.pending, t2
 
-        with Timeout(DELAY * 2) as t1:
+        with Timeout(DELAY * 20) as t1:
             with Timeout(DELAY) as t2:
                 try:
-                    sleep(DELAY * 3)
+                    sleep(DELAY * 30)
                 except Timeout as ex:
                     assert ex is t2, (ex, t2)
                 assert t1.pending, t1

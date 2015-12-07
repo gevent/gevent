@@ -11,11 +11,16 @@ FUZZY = SMALL / 2
 # setting up signal does not affect join()
 gevent.signal(1, lambda: None)  # wouldn't work on windows
 
+from greentest import RUNNING_ON_APPVEYOR
+
 
 @contextmanager
 def expected_time(expected, fuzzy=None):
     if fuzzy is None:
-        fuzzy = expected / 2.
+        if RUNNING_ON_APPVEYOR:
+            fuzzy = expected * 2.0
+        else:
+            fuzzy = expected / 2.0
     start = time()
     yield
     elapsed = time() - start

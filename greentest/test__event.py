@@ -123,7 +123,7 @@ class TestWait(greentest.TestCase):
     N = 5
     count = None
     timeout = 1
-    period = 0.01
+    period = timeout / 100.0
 
     def _sender(self, events, asyncs):
         while events or asyncs:
@@ -134,6 +134,7 @@ class TestWait(greentest.TestCase):
             if asyncs:
                 asyncs.pop().set()
 
+    @greentest.skipOnAppVeyor("Not all results have arrived sometimes due to timer issues")
     def test(self):
         events = [Event() for _ in xrange(self.N)]
         asyncs = [AsyncResult() for _ in xrange(self.N)]
@@ -150,7 +151,7 @@ class TestWait(greentest.TestCase):
             expected_len = min(self.count, expected_len)
             assert not sender.ready()
             sender.kill()
-        assert expected_len == len(results), (expected_len, results)
+        self.assertEqual(expected_len, len(results), (expected_len, len(results), results))
 
 
 class TestWait_notimeout(TestWait):

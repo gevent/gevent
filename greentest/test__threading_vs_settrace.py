@@ -70,8 +70,8 @@ class TestTrace(unittest.TestCase):
         args = [sys.executable, "-c", script]
         args.extend(more_args)
         rc = subprocess.call(args)
-        self.failIf(rc == 2, "interpreter was blocked")
-        self.failUnless(rc == 0, "Unexpected error")
+        self.assertNotEqual(rc, 2, "interpreter was blocked")
+        self.assertEqual(rc, 0, "Unexpected error")
 
     def test_finalize_with_trace(self):
         self.run_script()

@@ -1,8 +1,13 @@
 import greentest
 import gevent
 from gevent.hub import get_hub
+import sys
 
-DELAY = 0.01
+SHOULD_EXPIRE = 0.01
+if not greentest.RUNNING_ON_APPVEYOR:
+    SHOULD_NOT_EXPIRE = SHOULD_EXPIRE * 2.0
+else:
+    SHOULD_NOT_EXPIRE = SHOULD_EXPIRE * 20.0
 
 
 class TestDirectRaise(greentest.TestCase):
@@ -28,38 +33,117 @@ class Test(greentest.TestCase):
     def _test(self, timeout):
         try:
             get_hub().switch()
-            raise AssertionError('Must raise Timeout')
+            self.fail('Must raise Timeout')
         except gevent.Timeout as ex:
             if ex is not timeout:
                 raise
+            return ex
 
-    def test(self):
-        timeout = gevent.Timeout(0.01)
+    def _check_expires(self, timeout):
         timeout.start()
         self._test(timeout)
+        # Restart
         timeout.start()
-        self._test(timeout)
+        return self._test(timeout)
 
-    def test_false(self):
-        timeout = gevent.Timeout(0.01, False)
+    def test_expires(self):
+        timeout = gevent.Timeout(SHOULD_EXPIRE)
+        self._check_expires(timeout)
+
+    def test_expires_false(self):
+        # A False exception value only matters to a
+        # context manager
+        timeout = gevent.Timeout(SHOULD_EXPIRE, False)
+        self._check_expires(timeout)
+
+    def test_expires_str(self):
+        # str values are accepted but not documented; they change
+        # the message
+        timeout = gevent.Timeout(SHOULD_EXPIRE, 'XXX')
+        ex = self._check_expires(timeout)
+        self.assertTrue(str(ex).endswith('XXX'))
+
+    def test_expires_non_exception(self):
+        timeout = gevent.Timeout(SHOULD_EXPIRE, object())
         timeout.start()
-        self._test(timeout)
+        try:
+            get_hub().switch()
+            self.fail("Most raise TypeError")
+        except TypeError as ex:
+            self.assertTrue("exceptions must be" in str(ex), str(ex))
+
+        timeout.cancel()
+
+        class OldStyle:
+            pass
+        timeout = gevent.Timeout(SHOULD_EXPIRE, OldStyle) # Type
         timeout.start()
-        self._test(timeout)
+        try:
+            get_hub().switch()
+            self.fail("Must raise OldStyle")
+        except TypeError as ex:
+            self.assertTrue(greentest.PY3, "Py3 raises a TypeError for non-BaseExceptions")
+            self.assertTrue("exceptions must be" in str(ex), str(ex))
+        except:
+            self.assertTrue(greentest.PY2, "Old style classes can only be raised on Py2")
+            t = sys.exc_info()[0]
+            self.assertEqual(t, OldStyle)
+        timeout.cancel()
+
+        timeout = gevent.Timeout(SHOULD_EXPIRE, OldStyle()) # instance
+        timeout.start()
+        try:
+            get_hub().switch()
+            self.fail("Must raise OldStyle")
+        except TypeError as ex:
+            self.assertTrue(greentest.PY3, "Py3 raises a TypeError for non-BaseExceptions")
+            self.assertTrue("exceptions must be" in str(ex), str(ex))
+        except:
+            self.assertTrue(greentest.PY2, "Old style classes can only be raised on Py2")
+            t = sys.exc_info()[0]
+            self.assertEqual(t, OldStyle)
+        timeout.cancel()
+
+    def _check_context_manager_expires(self, timeout, raises=True):
+        try:
+            with timeout:
+                get_hub().switch()
+        except gevent.Timeout as ex:
+            if ex is not timeout:
+                raise
+            return ex
+
+        if raises:
+            self.fail("Must raise Timeout")
+
+    def test_context_manager(self):
+        timeout = gevent.Timeout(SHOULD_EXPIRE)
+        self._check_context_manager_expires(timeout)
+
+    def test_context_manager_false(self):
+        # Suppress the exception
+        timeout = gevent.Timeout(SHOULD_EXPIRE, False)
+        self._check_context_manager_expires(timeout, raises=False)
+        self.assertTrue(str(timeout).endswith('(silent)'), str(timeout))
+
+    def test_context_manager_str(self):
+        timeout = gevent.Timeout(SHOULD_EXPIRE, 'XXX')
+        ex = self._check_context_manager_expires(timeout)
+        self.assertTrue(str(ex).endswith('XXX'), str(ex))
 
     def test_cancel(self):
-        timeout = gevent.Timeout(0.01)
+        timeout = gevent.Timeout(SHOULD_EXPIRE)
         timeout.start()
         timeout.cancel()
-        gevent.sleep(0.02)
+        gevent.sleep(SHOULD_NOT_EXPIRE)
         assert not timeout.pending, timeout
 
     def test_with_timeout(self):
-        self.assertRaises(gevent.Timeout, gevent.with_timeout, DELAY, gevent.sleep, DELAY * 2)
+        self.assertRaises(gevent.Timeout, gevent.with_timeout, SHOULD_EXPIRE, gevent.sleep, SHOULD_NOT_EXPIRE)
         X = object()
-        r = gevent.with_timeout(DELAY, gevent.sleep, DELAY * 2, timeout_value=X)
+        r = gevent.with_timeout(SHOULD_EXPIRE, gevent.sleep, SHOULD_NOT_EXPIRE, timeout_value=X)
         assert r is X, (r, X)
-        r = gevent.with_timeout(DELAY * 2, gevent.sleep, DELAY, timeout_value=X)
+        r = gevent.with_timeout(SHOULD_NOT_EXPIRE, gevent.sleep, SHOULD_EXPIRE, timeout_value=X)
         assert r is None, r
 
 

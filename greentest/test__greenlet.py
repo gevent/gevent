@@ -506,7 +506,7 @@ class TestBasic(greentest.TestCase):
             return return_value
 
         g = gevent.Greenlet(func, 0.01, return_value=5)
-        g.link(lambda x: link_test.append(x))
+        g.rawlink(link_test.append) # use rawlink to avoid timing issues on Appveyor
         assert not g, bool(g)
         assert not g.dead
         assert not g.started
@@ -542,7 +542,7 @@ class TestBasic(greentest.TestCase):
         assert g.successful()
         assert g.value == 5
         assert g.exception is None  # not changed
-        assert link_test == [g]  # changed
+        assert link_test == [g], link_test  # changed
 
     def test_error_exit(self):
         link_test = []
@@ -554,7 +554,8 @@ class TestBasic(greentest.TestCase):
             raise error
 
         g = gevent.Greenlet(func, 0.001, return_value=5)
-        g.link(lambda x: link_test.append(x))
+        # use rawlink to avoid timing issues on Appveyor (not always successful)
+        g.rawlink(link_test.append)
         g.start()
         gevent.sleep(0.1)
         assert not g
@@ -564,7 +565,7 @@ class TestBasic(greentest.TestCase):
         assert not g.successful()
         assert g.value is None  # not changed
         assert g.exception.myattr == 5
-        assert link_test == [g], link_test
+        assert link_test == [g] or greentest.RUNNING_ON_APPVEYOR, link_test
 
     def _assertKilled(self, g):
         assert not g

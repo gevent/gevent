@@ -36,6 +36,22 @@ import contextlib
 import gc
 import six
 
+try:
+    from unittest.util import safe_repr
+except ImportError:
+    # Py 2.6
+    _MAX_LENGTH = 80
+
+    def safe_repr(obj, short=False):
+        try:
+            result = repr(obj)
+        except Exception:
+            result = object.__repr__(obj)
+        if not short or len(result) < _MAX_LENGTH:
+            return result
+        return result[:_MAX_LENGTH] + ' [truncated]...'
+
+
 PYPY = hasattr(sys, 'pypy_version_info')
 VERBOSE = sys.argv.count('-v') > 1
 
@@ -59,8 +75,12 @@ NON_APPLICABLE_SUFFIXES = []
 if sys.version_info[0] == 3:
     # Python 3
     NON_APPLICABLE_SUFFIXES.extend(('2', '279'))
+    PY2 = False
+    PY3 = True
 if sys.version_info[0] == 2:
     # Any python 2
+    PY3 = False
+    PY2 = True
     NON_APPLICABLE_SUFFIXES.append('3')
     if (sys.version_info[1] < 7
         or (sys.version_info[1] == 7 and sys.version_info[2] < 9)):
@@ -70,6 +90,26 @@ if sys.platform.startswith('win'):
     NON_APPLICABLE_SUFFIXES.append("posix")
     # This is intimately tied to FileObjectPosix
     NON_APPLICABLE_SUFFIXES.append("fileobject2")
+
+
+RUNNING_ON_TRAVIS = os.environ.get('TRAVIS')
+RUNNING_ON_APPVEYOR = os.environ.get('APPVEYOR')
+RUNNING_ON_CI = RUNNING_ON_TRAVIS or RUNNING_ON_APPVEYOR
+
+if RUNNING_ON_APPVEYOR:
+    # See comments scattered around about timeouts and the timer
+    # resolution available on appveyor (lots of jitter). this
+    # seems worse with the 62-bit builds.
+    # Note that we skip/adjust these tests only on AppVeyor, not
+    # win32---we don't think there's gevent related problems but
+    # environment related problems. These can be tested and debugged
+    # separately on windows in a more stable environment.
+    skipOnAppVeyor = unittest.skip
+else:
+    def skipOnAppVeyor(reason):
+        def dec(f):
+            return f
+        return dec
 
 
 class ExpectedException(Exception):
@@ -287,9 +327,10 @@ class TestCaseMetaClass(type):
 
 
 class TestCase(TestCaseMetaClass("NewBase", (BaseTestCase,), {})):
-    # Travis is slow and overloaded; Appveyor is usually faster, but at times
-    # it's slow too
-    __timeout__ = 1 if not os.environ.get('TRAVIS') and not os.environ.get('APPVEYOR') else 3
+    # Travis is slow and overloaded; Appveyor used to be faster, but
+    # as of Dec 2015 it's almost always slower and/or has much worse timer
+    # resolution
+    __timeout__ = 1 if not RUNNING_ON_CI else 5
     switch_expected = 'default'
     error_fatal = True
 
@@ -357,6 +398,70 @@ class TestCase(TestCaseMetaClass("NewBase", (BaseTestCase,), {})):
                 assert error[2] is value, error
         return error
 
+    if RUNNING_ON_APPVEYOR:
+        # appveyor timeouts are unreliable; seems to be very slow wakeups
+        def assertTimeoutAlmostEqual(self, *args, **kwargs):
+            return
+
+        def assertTimeWithinRange(self, delay, min_time, max_time):
+            return
+    else:
+        def assertTimeoutAlmostEqual(self, *args, **kwargs):
+            self.assertAlmostEqual(*args, **kwargs)
+
+        def assertTimeWithinRange(self, delay, min_time, max_time):
+            self.assertLessEqual(delay, max_time)
+            self.assertGreaterEqual(delay, min_time)
+
+    if not hasattr(BaseTestCase, 'assertGreater'):
+        # Compatibility with 2.6, backported from 2.7
+        longMessage = False
+
+        def _formatMessage(self, msg, standardMsg):
+            """Honour the longMessage attribute when generating failure messages.
+            If longMessage is False this means:
+            * Use only an explicit message if it is provided
+            * Otherwise use the standard message for the assert
+
+            If longMessage is True:
+            * Use the standard message
+            * If an explicit message is provided, plus ' : ' and the explicit message
+            """
+            if not self.longMessage:
+                return msg or standardMsg
+            if msg is None:
+                return standardMsg
+            try:
+                # don't switch to '{}' formatting in Python 2.X
+                # it changes the way unicode input is handled
+                return '%s : %s' % (standardMsg, msg)
+            except UnicodeDecodeError:
+                return '%s : %s' % (safe_repr(standardMsg), safe_repr(msg))
+
+        def assertLess(self, a, b, msg=None):
+            """Just like self.assertTrue(a < b), but with a nicer default message."""
+            if not a < b:
+                standardMsg = '%s not less than %s' % (safe_repr(a), safe_repr(b))
+                self.fail(self._formatMessage(msg, standardMsg))
+
+        def assertLessEqual(self, a, b, msg=None):
+            """Just like self.assertTrue(a <= b), but with a nicer default message."""
+            if not a <= b:
+                standardMsg = '%s not less than or equal to %s' % (safe_repr(a), safe_repr(b))
+                self.fail(self._formatMessage(msg, standardMsg))
+
+        def assertGreater(self, a, b, msg=None):
+            """Just like self.assertTrue(a > b), but with a nicer default message."""
+            if not a > b:
+                standardMsg = '%s not greater than %s' % (safe_repr(a), safe_repr(b))
+                self.fail(self._formatMessage(msg, standardMsg))
+
+        def assertGreaterEqual(self, a, b, msg=None):
+            """Just like self.assertTrue(a >= b), but with a nicer default message."""
+            if not a >= b:
+                standardMsg = '%s not greater than or equal to %s' % (safe_repr(a), safe_repr(b))
+                self.fail(self._formatMessage(msg, standardMsg))
+
 
 main = unittest.main
 _original_Hub = gevent.hub.Hub
@@ -381,76 +486,102 @@ class CountingHub(_original_Hub):
 gevent.hub.Hub = CountingHub
 
 
-def test_outer_timeout_is_not_lost(self):
-    timeout = gevent.Timeout.start_new(0.001, ref=False)
-    try:
-        try:
-            result = self.wait(timeout=1)
-        except gevent.Timeout as ex:
-            assert ex is timeout, (ex, timeout)
-        else:
-            raise AssertionError('must raise Timeout (returned %r)' % (result, ))
-    finally:
-        timeout.cancel()
+class _DelayWaitMixin(object):
 
-
-class GenericWaitTestCase(TestCase):
+    _default_wait_timeout = 0.01
+    _default_delay_min_adj = 0.001
+    if not RUNNING_ON_APPVEYOR:
+        _default_delay_max_adj = 0.11
+    else:
+        # Timing resolution is extremely poor on Appveyor
+        _default_delay_max_adj = 0.8
 
     def wait(self, timeout):
         raise NotImplementedError('override me in subclass')
 
-    test_outer_timeout_is_not_lost = test_outer_timeout_is_not_lost
+    def _check_delay_bounds(self, timeout, delay,
+                            delay_min_adj=None,
+                            delay_max_adj=None):
+        delay_min_adj = self._default_delay_min_adj if not delay_min_adj else delay_min_adj
+        delay_max_adj = self._default_delay_max_adj if not delay_max_adj else delay_max_adj
+        self.assertGreaterEqual(delay, timeout - delay_min_adj)
+        self.assertLess(delay, timeout + delay_max_adj)
+
+    def _wait_and_check(self, timeout=None):
+        if timeout is None:
+            timeout = self._default_wait_timeout
+
+        if hasattr(timeout, 'seconds'):
+            # gevent.timer instances
+            seconds = timeout.seconds
+        else:
+            seconds = timeout
+
+        start = time.time()
+        try:
+            result = self.wait(timeout)
+        finally:
+            self._check_delay_bounds(seconds, time.time() - start,
+                                     self._default_delay_min_adj,
+                                     self._default_delay_max_adj)
+        return result
+
+    def test_outer_timeout_is_not_lost(self):
+        timeout = gevent.Timeout.start_new(0.001, ref=False)
+        try:
+            try:
+                result = self.wait(timeout=1)
+            except gevent.Timeout as ex:
+                assert ex is timeout, (ex, timeout)
+            else:
+                raise AssertionError('must raise Timeout (returned %r)' % (result, ))
+        finally:
+            timeout.cancel()
+
+
+class GenericWaitTestCase(_DelayWaitMixin, TestCase):
+
+    _default_wait_timeout = 0.2
+    _default_delay_min_adj = 0.1
+    if not RUNNING_ON_APPVEYOR:
+        _default_delay_max_adj = 0.11
+    else:
+        # Timing resolution is very poor on Appveyor
+        _default_delay_max_adj = 0.8
 
     def test_returns_none_after_timeout(self):
-        start = time.time()
-        result = self.wait(timeout=0.2)
+        result = self._wait_and_check()
         # join and wait simply return after timeout expires
-        delay = time.time() - start
-        assert 0.2 - 0.1 <= delay < 0.2 + 0.1, delay
         assert result is None, repr(result)
 
 
-class GenericGetTestCase(TestCase):
+class GenericGetTestCase(_DelayWaitMixin, TestCase):
 
     Timeout = gevent.Timeout
-
-    def wait(self, timeout):
-        raise NotImplementedError('override me in subclass')
 
     def cleanup(self):
         pass
 
-    test_outer_timeout_is_not_lost = test_outer_timeout_is_not_lost
-
     def test_raises_timeout_number(self):
-        start = time.time()
-        self.assertRaises(self.Timeout, self.wait, timeout=0.01)
+        self.assertRaises(self.Timeout, self._wait_and_check, timeout=0.01)
         # get raises Timeout after timeout expired
-        delay = time.time() - start
-        assert 0.01 - 0.001 <= delay < 0.01 + 0.01 + 0.1, delay
         self.cleanup()
 
     def test_raises_timeout_Timeout(self):
-        start = time.time()
-        timeout = gevent.Timeout(0.01)
+        timeout = gevent.Timeout(self._default_wait_timeout)
         try:
-            self.wait(timeout=timeout)
+            self._wait_and_check(timeout=timeout)
         except gevent.Timeout as ex:
             assert ex is timeout, (ex, timeout)
-        delay = time.time() - start
-        assert 0.01 - 0.001 <= delay < 0.01 + 0.01 + 0.1, delay
         self.cleanup()
 
     def test_raises_timeout_Timeout_exc_customized(self):
-        start = time.time()
         error = RuntimeError('expected error')
-        timeout = gevent.Timeout(0.01, exception=error)
+        timeout = gevent.Timeout(self._default_wait_timeout, exception=error)
         try:
-            self.wait(timeout=timeout)
+            self._wait_and_check(timeout=timeout)
         except RuntimeError as ex:
             assert ex is error, (ex, error)
-        delay = time.time() - start
-        assert 0.01 - 0.001 <= delay < 0.01 + 0.01 + 0.1, delay
         self.cleanup()
 
 

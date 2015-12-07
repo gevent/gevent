@@ -1,3 +1,4 @@
+import greentest
 from greentest import TestCase, main, GenericGetTestCase
 import gevent
 from gevent.hub import get_hub, LoopExit
@@ -41,7 +42,7 @@ class TestQueue(TestCase):
         q = queue.Queue()
 
         def waiter(q):
-            with gevent.Timeout(0.1):
+            with gevent.Timeout(0.1 if not greentest.RUNNING_ON_APPVEYOR else 0.5):
                 self.assertEqual(q.get(), 'hi2')
             return "OK"
 

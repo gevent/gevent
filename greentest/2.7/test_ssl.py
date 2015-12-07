@@ -109,6 +109,9 @@ class BasicSocketTests(unittest.TestCase):
         ssl.CERT_REQUIRED
 
     def test_random(self):
+        if not hasattr(ssl, 'RAND_egd'):
+            # gevent: seen on appveyor on windows with 2.7.10
+            self.skipTest("RAND support not available")
         v = ssl.RAND_status()
         if test_support.verbose:
             sys.stdout.write("\n RAND_status is %d (%s)\n"

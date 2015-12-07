@@ -138,7 +138,7 @@ class TestTCP(greentest.TestCase):
         start = time.time()
         self.assertRaises(self.TIMEOUT_ERROR, client.recv, 1024)
         took = time.time() - start
-        assert 1 - 0.1 <= took <= 1 + 0.1, (time.time() - start)
+        self.assertTimeWithinRange(took, 1 - 0.1, 1 + 0.1)
         acceptor.join()
         client.close()
         client_sock[0][0].close()

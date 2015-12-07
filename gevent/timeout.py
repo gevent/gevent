@@ -52,9 +52,11 @@ class Timeout(BaseException):
             timeout.cancel()
 
     .. note:: If the code that the timeout was protecting finishes
-       executing before the timeout elapses, be sure to ``cancel`` the timeout
-       so it is not unexpectedly raised in the future. Even if it is raised, it is a best
-       practice to cancel it. This ``try/finally`` construct is a recommended pattern.
+       executing before the timeout elapses, be sure to ``cancel`` the
+       timeout so it is not unexpectedly raised in the future. Even if
+       it is raised, it is a best practice to cancel it. This
+       ``try/finally`` construct or a ``with`` statement is a
+       recommended pattern.
 
     When *exception* is omitted or ``None``, the :class:`Timeout` instance itself is raised:
 
@@ -71,7 +73,7 @@ class Timeout(BaseException):
             pass  # ... code block ...
 
     This is equivalent to the try/finally block above with one additional feature:
-    if *exception* is ``False``, the timeout is still raised, but the context manager
+    if *exception* is the literal ``False``, the timeout is still raised, but the context manager
     suppresses it, so the code outside the with-block won't see it.
 
     This is handy for adding a timeout to the functions that don't
@@ -205,16 +207,14 @@ class Timeout(BaseException):
         """
         if self.seconds is None:
             return ''
-        if self.seconds == 1:
-            suffix = ''
-        else:
-            suffix = 's'
+
+        suffix = '' if self.seconds == 1 else 's'
+
         if self.exception is None:
             return '%s second%s' % (self.seconds, suffix)
-        elif self.exception is False:
+        if self.exception is False:
             return '%s second%s (silent)' % (self.seconds, suffix)
-        else:
-            return '%s second%s: %s' % (self.seconds, suffix, self.exception)
+        return '%s second%s: %s' % (self.seconds, suffix, self.exception)
 
     def __enter__(self):
         if not self.pending:

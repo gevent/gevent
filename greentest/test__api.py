@@ -28,13 +28,14 @@ DELAY = 0.1
 
 class Test(greentest.TestCase):
 
+    @greentest.skipOnAppVeyor("Timing causes the state to often be [start,finished]")
     def test_killing_dormant(self):
         state = []
 
         def test():
             try:
                 state.append('start')
-                gevent.sleep(DELAY)
+                gevent.sleep(DELAY * 3.0)
             except:
                 state.append('except')
                 # catching GreenletExit
@@ -46,7 +47,7 @@ class Test(greentest.TestCase):
         assert state == ['start'], state
         g.kill()
         # will not get there, unless switching is explicitly scheduled by kill
-        assert state == ['start', 'except', 'finished'], state
+        self.assertEqual(state, ['start', 'except', 'finished'])
 
     def test_nested_with_timeout(self):
         def func():

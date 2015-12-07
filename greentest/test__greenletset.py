@@ -29,7 +29,7 @@ class Undead(object):
 class Test(greentest.TestCase):
 
     def test_basic(self):
-        DELAY = 0.05
+        DELAY = 0.05 if not greentest.RUNNING_ON_APPVEYOR else 0.1
         s = pool.Group()
         s.spawn(gevent.sleep, DELAY)
         assert len(s) == 1, s
@@ -50,7 +50,7 @@ class Test(greentest.TestCase):
         delta = time.time() - start
         assert not s, s
         assert len(s) == 0, s
-        assert DELAY * 1.9 <= delta <= DELAY * 2.5, (delta, DELAY)
+        self.assertTimeWithinRange(delta, DELAY * 1.9, DELAY * 2.5)
 
     def test_kill_block(self):
         s = pool.Group()

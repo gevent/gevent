@@ -1,7 +1,7 @@
 '''Test for GitHub issues 461 and 471.
 
 When moving to Python 3, handling of KeyboardInterrupt exceptions caused
-by a Ctrl-C raise an exception while printing the traceback for a
+by a Ctrl-C raised an exception while printing the traceback for a
 greenlet preventing the process from exiting. This test tests for proper
 handling of KeyboardInterrupt.
 '''
@@ -21,6 +21,8 @@ if sys.argv[1:] == ['subprocess']:
         gevent.spawn(task).get()
     except KeyboardInterrupt:
         pass
+
+    sys.exit(0)
 
 else:
     import signal
@@ -45,14 +47,25 @@ else:
     # On Windows, we have to send the CTRL_BREAK_EVENT (which seems to terminate the process); SIGINT triggers
     # "ValueError: Unsupported signal: 2". The CTRL_C_EVENT is ignored on Python 3 (but not Python 2).
     # So this test doesn't test much on Windows.
-    p.send_signal(signal.SIGINT if not WIN else getattr(signal, 'CTRL_BREAK_EVENT'))
-    # Wait up to 3 seconds for child process to die
-    for i in range(30):
+    signal_to_send = signal.SIGINT if not WIN else getattr(signal, 'CTRL_BREAK_EVENT')
+    p.send_signal(signal_to_send)
+    # Wait a few seconds for child process to die. Sometimes signal delivery is delayed
+    # or even swallowed by Python, so send the signal a few more times if necessary
+    wait_seconds = 10.0
+    now = time.time()
+    midtime = now + (wait_seconds / 2.0)
+    endtime = time.time() + wait_seconds
+    while time.time() < endtime:
         if p.poll() is not None:
             break
+        if time.time() > midtime:
+            p.send_signal(signal_to_send)
+            midtime = endtime + 1 # only once
         time.sleep(0.1)
     else:
         # Kill unresponsive child and exit with error 1
+        sys.stderr.write(__file__)
+        sys.stderr.write(": Failed to wait for child\n")
         p.terminate()
         p.wait()
         sys.exit(1)

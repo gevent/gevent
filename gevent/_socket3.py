@@ -88,7 +88,15 @@ class socket(object):
 
     def __repr__(self):
         """Wrap __repr__() to reveal the real class name."""
-        s = _socket.socket.__repr__(self._sock)
+        try:
+            s = _socket.socket.__repr__(self._sock)
+        except Exception as ex:
+            # Observed on Windows Py3.3, printing the repr of a socket
+            # that just sufferred a ConnectionResetError [WinError 10054]:
+            # "OverflowError: no printf formatter to display the socket descriptor in decimal"
+            # Not sure what the actual cause is or if there's a better way to handle this
+            s = '<socket [%r]>' % ex
+
         if s.startswith("<socket object"):
             s = "<%s.%s%s%s" % (self.__class__.__module__,
                                 self.__class__.__name__,
