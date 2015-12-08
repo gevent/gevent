@@ -22,22 +22,25 @@ Features include:
 Installation and Requirements
 =============================
 
-gevent runs on Python 2 and Python 3. Versions 2.6 and 2.7 of Python 2
-are supported, and versions 3.3, 3.4, and 3.5 of Python 3 are
-supported. gevent requires the greenlet__ library.
+`gevent 1.1`_ runs on Python 2 and Python 3. Versions 2.6 and 2.7 of
+Python 2 are supported, and versions 3.3, 3.4, and 3.5 of Python 3 are
+supported. (Users of older versions of Python need to install gevent
+1.0.x.) gevent requires the greenlet__ library.
 
-gevent also runs on PyPy 2.5.0 and above, although 2.6.1 or above is
+gevent 1.1 also runs on PyPy 2.6.1 and above, although 4.0 or above is
 strongly recommended. On PyPy, there are no external dependencies.
 
 gevent and greenlet can both be installed with `pip`_, e.g., ``pip
-install gevent``. On Windows, both gevent and greenlet are distributed
-as binary `wheels`_, so no C compiler is required (so long as pip is
-at least version 1.4). On Linux and Mac OS X, a C compiler (Xcode on
-OS X) and the Python development package are required.
+install gevent``. On Windows and OS X, both gevent and greenlet are
+distributed as binary `wheels`_, so no C compiler is required (so long
+as pip is at least version 1.4). On Linux or for Mac OS X variants
+without pre-built wheels or if wheel installation is disabled, a C compiler
+(Xcode on OS X) and the Python development package are required.
 
 __ http://pypi.python.org/pypi/greenlet
 .. _`pip`: https://pip.pypa.io/en/stable/installing/
 .. _`wheels`: http://pythonwheels.com
+.. _`gevent 1.1`: whatsnew_1_1.html
 
 Example
 =======
