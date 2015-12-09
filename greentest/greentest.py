@@ -494,7 +494,7 @@ class _DelayWaitMixin(object):
         _default_delay_max_adj = 0.11
     else:
         # Timing resolution is extremely poor on Appveyor
-        _default_delay_max_adj = 0.8
+        _default_delay_max_adj = 0.9
 
     def wait(self, timeout):
         raise NotImplementedError('override me in subclass')
@@ -511,11 +511,9 @@ class _DelayWaitMixin(object):
         if timeout is None:
             timeout = self._default_wait_timeout
 
-        if hasattr(timeout, 'seconds'):
-            # gevent.timer instances
-            seconds = timeout.seconds
-        else:
-            seconds = timeout
+        # gevent.timer instances have a 'seconds' attribute,
+        # otherwise it's the raw number
+        seconds = getattr(timeout, 'seconds', timeout)
 
         start = time.time()
         try:
@@ -547,7 +545,7 @@ class GenericWaitTestCase(_DelayWaitMixin, TestCase):
         _default_delay_max_adj = 0.11
     else:
         # Timing resolution is very poor on Appveyor
-        _default_delay_max_adj = 0.8
+        _default_delay_max_adj = 0.9
 
     def test_returns_none_after_timeout(self):
         result = self._wait_and_check()

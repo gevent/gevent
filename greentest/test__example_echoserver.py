@@ -1,7 +1,6 @@
 from gevent.socket import create_connection, timeout
-from unittest import main
+import greentest
 import gevent
-from gevent.hub import PY3
 
 import util
 
@@ -11,13 +10,13 @@ class Test(util.TestServer):
 
     def _run_all_tests(self):
         def test_client(message):
-            if PY3:
+            if greentest.PY3:
                 kwargs = {'buffering': 1}
             else:
                 kwargs = {'bufsize': 1}
             kwargs['mode'] = 'rb'
             conn = create_connection(('127.0.0.1', 16000))
-            conn.settimeout(0.1)
+            conn.settimeout(0.1 if not greentest.RUNNING_ON_APPVEYOR else 1.0)
             rfile = conn.makefile(**kwargs)
 
             welcome = rfile.readline()
@@ -38,4 +37,4 @@ class Test(util.TestServer):
 
 
 if __name__ == '__main__':
-    main()
+    greentest.main()

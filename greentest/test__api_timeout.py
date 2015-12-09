@@ -34,6 +34,7 @@ class Error(Exception):
 
 class Test(greentest.TestCase):
 
+    @greentest.skipOnAppVeyor("Timing is flaky, especially under Py 3.4/64-bit")
     def test_api(self):
         # Nothing happens if with-block finishes before the timeout expires
         t = Timeout(DELAY * 2)

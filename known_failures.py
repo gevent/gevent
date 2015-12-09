@@ -56,10 +56,6 @@ if sys.platform == 'win32':
         # No idea why.
         'test__core_fork.py',
         'FLAKY test__greenletset.py',
-        # The various timeout tests are flaky for unknown reasons
-        # on appveyor
-        'FLAKY test__timeout.py',
-        'FLAKY test_hub_join_timeout.py',
         # This has been seen to fail on Py3 and Py2 due to socket reuse
         # errors, probably timing related again.
         'FLAKY test___example_servers.py',
@@ -85,10 +81,7 @@ if sys.platform == 'win32':
         FAILING_TESTS.append('test_ftplib.py')
 
     if PY3:
-        # XXX need investigating
-        FAILING_TESTS += [
-            'FLAKY test__api_timeout.py',
-        ]
+        pass
 
 
 if LEAKTEST:
@@ -116,15 +109,6 @@ if PYPY:
 
     ]
 
-    import cffi
-    if cffi.__version_info__ < (1, 2, 0):
-        FAILING_TESTS += [
-
-            # check_sendall_interrupted and testInterruptedTimeout fail due to
-            # https://bitbucket.org/cffi/cffi/issue/152/handling-errors-from-signal-handlers-in
-            # See also patched_tests_setup and 'test_signal.InterProcessSignalTests.test_main'
-            'test_socket.py',
-        ]
 
 if PY26:
     FAILING_TESTS += [
@@ -179,6 +163,12 @@ if sys.version_info[:2] == (3, 3) and os.environ.get('TRAVIS') == 'true':
         #'test__refcount_core.py'
     ]
 
+if sys.version_info[:2] >= (3, 4) and os.environ.get('APPVEYOR'):
+    FAILING_TESTS += [
+        # Timing issues on appveyor
+        'FLAKY test_selectors.py'
+    ]
+
 if COVERAGE:
     # The gevent concurrency plugin tends to slow things
     # down and get us past our default timeout value. These
@@ -189,7 +179,7 @@ if COVERAGE:
         'FLAKY test__threading_vs_settrace.py',
     ]
 
-FAILING_TESTS = [x.strip() for x in FAILING_TESTS if x.strip()]
+FAILING_TESTS = [x.strip() for x in set(FAILING_TESTS) if x.strip()]
 
 
 if __name__ == '__main__':

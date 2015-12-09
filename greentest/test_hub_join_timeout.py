@@ -18,13 +18,14 @@ from greentest import RUNNING_ON_APPVEYOR
 def expected_time(expected, fuzzy=None):
     if fuzzy is None:
         if RUNNING_ON_APPVEYOR:
-            fuzzy = expected * 2.0
+            # The noted timer jitter issues on appveyor
+            fuzzy = expected * 5.0
         else:
             fuzzy = expected / 2.0
     start = time()
     yield
     elapsed = time() - start
-    assert expected - fuzzy <= elapsed <= expected + fuzzy, 'Expected: %r; elapsed: %r' % (expected, elapsed)
+    assert expected - fuzzy <= elapsed <= expected + fuzzy, 'Expected: %r; elapsed: %r; fuzzy %r' % (expected, elapsed, fuzzy)
 
 
 def no_time(fuzzy=0.001):
