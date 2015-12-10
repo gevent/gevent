@@ -1035,23 +1035,46 @@ class child(watcher):
 class stat(watcher):
     _watcher_type = 'ev_stat'
 
+    @staticmethod
+    def _encode_path(path):
+        if isinstance(path, bytes):
+            return path
+
+        # encode for the filesystem. Not all systems (e.g., Unix)
+        # will have an encoding specified
+        encoding = sys.getfilesystemencoding() or 'utf-8'
+        try:
+            path = path.encode(encoding, 'surrogateescape')
+        except LookupError:
+            # Can't encode it, and the error handler doesn't
+            # exist. Probably on Python 2 with an astral character.
+            # Not sure how to handle this.
+            raise UnicodeEncodeError("Can't encode path to filesystem encoding")
+        return path
+
     def __init__(self, _loop, path, interval=0.0, ref=True, priority=None):
-        if not isinstance(path, bytes):
-            # XXX: Filesystem encoding? Python itself has issues here, were they fixed?
-            path = path.encode('utf-8')
+        # Store the encoded path in the same attribute that corecext does
+        self._paths = self._encode_path(path)
+
+        # Keep the original path to avoid re-encoding, especially on Python 3
+        self._path = path
+
+        # Although CFFI would automatically convert a bytes object into a char* when
+        # calling ev_stat_init(..., char*, ...), on PyPy the char* pointer is not
+        # guaranteed to live past the function call. On CPython, only with a constant/interned
+        # bytes object is the pointer guaranteed to last path the function call. (And since
+        # Python 3 is pretty much guaranteed to produce a newly-encoded bytes object above, thats
+        # rarely the case). Therefore, we must keep a reference to the produced cdata object
+        # so that the struct ev_stat_watcher's `path` pointer doesn't become invalid/deallocated
+        self._cpath = ffi.new('char[]', self._paths)
 
         watcher.__init__(self, _loop, ref=ref, priority=priority,
-                         # cffi doesn't automatically marshal byte strings to
-                         # char* in the function call; instead it passes an
-                         # empty string or garbage pointer. If the watcher's
-                         # path is incorrect, watching silently fails
-                         # (the underlying call to lstat() keeps erroring out)
-                         args=(ffi.new('char[]', path),
+                         args=(self._cpath,
                                interval))
 
     @property
     def path(self):
-        return ffi.string(self._watcher.path)
+        return self._path
 
     @property
     def attr(self):

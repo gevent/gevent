@@ -34,6 +34,10 @@
 - The CFFI backend now call the callback of a watcher whose ``args`` attribute is
   set to ``None``, just like the Cython backend does. It also only
   allows ``args`` to be a tuple or ``None``, again matching the Cython backend.
+- PyPy/CFFI: Fix a potential crash when using stat watchers.
+- PyPy/CFFI: Encode unicode paths for stat watchers using
+  :meth:`sys.getfilesystemencoding` like the Cython backend.
+
 
 1.1rc1 (Nov 14, 2015)
 =====================

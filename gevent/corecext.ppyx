@@ -1053,6 +1053,7 @@ cdef public class stat(watcher) [object PyGeventStatObject, type PyGeventStat_Ty
             self._paths = paths
         else:
             paths = <bytes>path
+            self._paths = paths
         libev.ev_stat_init(&self._watcher, <void *>gevent_callback_stat, <char*>paths, interval)
         self.loop = loop
         if ref:

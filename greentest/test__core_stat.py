@@ -5,6 +5,7 @@ import os
 import sys
 import time
 
+#pylint: disable=protected-access
 
 filename = 'tmp.test__core_stat.%s' % os.getpid()
 
@@ -21,9 +22,8 @@ try:
     assert os.path.exists(filename), filename
 
     def write():
-        f = open(filename, 'wb', buffering=0)
-        f.write(b'x')
-        f.close()
+        with open(filename, 'wb', buffering=0) as f:
+            f.write(b'x')
 
     start = time.time()
     greenlet = gevent.spawn_later(DELAY, write)
@@ -32,8 +32,9 @@ try:
     # which is about 5 seconds. If we go below it's minimum check
     # threshold, it bumps it up to the minimum.
     watcher = hub.loop.stat(filename, interval=-1)
-    if hasattr(watcher, 'path'):
-        assert watcher.path == filename
+    assert watcher.path == filename, (watcher.path, filename)
+    filenames = filename if isinstance(filename, bytes) else filename.encode('ascii')
+    assert watcher._paths == filenames, (watcher._paths, filenames)
     assert watcher.interval == -1
 
     def check_attr(name, none):
