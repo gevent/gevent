@@ -46,7 +46,8 @@ COULD_BE_MISSING = {
 NO_ALL = ['gevent.threading', 'gevent._util',
           'gevent._socketcommon',
           'gevent._fileobjectcommon', 'gevent._fileobjectposix',
-          'gevent._tblib']
+          'gevent._tblib',
+          'gevent._corecffi']
 
 # A list of modules that may contain things that aren't actually, technically,
 # extensions, but that need to be in __extensions__ anyway due to the way,
