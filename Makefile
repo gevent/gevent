@@ -74,7 +74,7 @@ fulltoxtest: test_prelim
 	cd greentest && GEVENT_FILE=thread ${PYTHON} testrunner.py --config ../known_failures.py `grep -l subprocess test_*.py`
 
 leaktest:
-	GEVENTSETUP_EV_VERIFY=3 GEVENTTEST_LEAKCHECK=1 make travistest
+	GEVENTSETUP_EV_VERIFY=3 GEVENTTEST_LEAKCHECK=1 make fulltoxtest
 
 bench:
 	${PYTHON} greentest/bench_sendall.py
