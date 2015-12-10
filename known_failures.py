@@ -63,13 +63,16 @@ if sys.platform == 'win32':
     ]
 
     if APPVEYOR:
-        # These both run on port 9000 and can step on each other...seems like the
-        # appveyor containers aren't fully port safe? Or it takes longer
-        # for the processes to shut down? Or we run them in a different order
-        # in the process pool than we do other places?
         FAILING_TESTS += [
+            # These both run on port 9000 and can step on each other...seems like the
+            # appveyor containers aren't fully port safe? Or it takes longer
+            # for the processes to shut down? Or we run them in a different order
+            # in the process pool than we do other places?
             'FLAKY test__example_udp_client.py',
             'FLAKY test__example_udp_server.py',
+            # This one sometimes times out, often after output "The process with PID XXX could not be
+            # terminated. Reason: There is no running instance of the task."
+            'FLAKY test__example_portforwarder.py',
         ]
 
     if not PY35:
