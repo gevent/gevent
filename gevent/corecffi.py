@@ -108,9 +108,14 @@ def _python_callback(handle, revents):
         # is not what we want; that can permanently wedge the loop depending
         # on which callback was executing
         watcher = ffi.from_handle(handle)
-        if len(watcher.args) > 0 and watcher.args[0] == GEVENT_CORE_EVENTS:
-            watcher.args = (revents, ) + watcher.args[1:]
-        watcher.callback(*watcher.args)
+        args = watcher.args
+        if args is None:
+            # Legacy behaviour from corecext: convert None into ()
+            # See test__core_watcher.py
+            args = _NOARGS
+        if len(args) > 0 and args[0] == GEVENT_CORE_EVENTS:
+            args = (revents, ) + args[1:]
+        watcher.callback(*args)
     except:
         watcher._exc_info = sys.exc_info()
         # Depending on when the exception happened, the watcher
@@ -711,7 +716,7 @@ class watcher(object):
             self._flags = 0
         else:
             self._flags = 4
-        self.args = None
+        self._args = None
         self._callback = None
         self._handle = ffi.new_handle(self)
         self._gwatcher = ffi.new(self._watcher_struct_pointer_type)
@@ -811,6 +816,16 @@ class watcher(object):
             raise TypeError("Expected callable, not %r" % (cb, ))
         self._callback = cb
     callback = property(_get_callback, _set_callback)
+
+    def _get_args(self):
+        return self._args
+
+    def _set_args(self, args):
+        if not isinstance(args, tuple) and args is not None:
+            raise TypeError("args must be a tuple or None")
+        self._args = args
+
+    args = property(_get_args, _set_args)
 
     def start(self, callback, *args):
         if callback is None:

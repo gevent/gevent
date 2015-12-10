@@ -23,7 +23,17 @@
 - :func:`gevent.spawn_raw` now accepts keyword arguments, as
   previously (incorrectly) documented. Reported in :issue:`680` by Ron
   Rothman.
-- PyPy: PyPy 2.6.1 or later is now required (4.0.1 or later is recommended).
+- PyPy: PyPy 2.6.1 or later is now required (4.0.1 or later is
+  recommended).
+- The CFFI backend is now built and usable on CPython implementations
+  (except on Windows) if ``cffi`` is installed before gevent is
+  installed. To use the CFFI backend, set the environment variable
+  ``GEVENT_CORE_CFFI_ONLY`` before starting Python. This can aid
+  debugging in some cases and helps ensure parity across all
+  combinations of supported platforms.
+- The CFFI backend now call the callback of a watcher whose ``args`` attribute is
+  set to ``None``, just like the Cython backend does. It also only
+  allows ``args`` to be a tuple or ``None``, again matching the Cython backend.
 
 1.1rc1 (Nov 14, 2015)
 =====================
