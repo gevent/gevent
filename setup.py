@@ -360,7 +360,7 @@ else:
 
 try:
     __import__('cffi')
-except NameError:
+except ImportError:
     setup_kwds = {}
 else:
     _kwds = {'cffi_modules': cffi_modules}
