@@ -308,8 +308,11 @@ for _watcher_type in _watcher_types:
     }
     """ % (_watcher_type, _watcher_type, _watcher_type)
 
-thisdir = os.path.dirname(os.path.realpath(__file__))
-include_dirs = [thisdir, os.path.join(thisdir, 'libev')]
+thisdir = os.path.dirname(os.path.abspath(__file__))
+include_dirs = [
+    thisdir, # libev_vfd.h
+    os.path.abspath(os.path.join(thisdir, '..', 'libev')),
+]
 ffi.cdef(_cdef)
 ffi.set_source('gevent._corecffi', _source, include_dirs=include_dirs)
 

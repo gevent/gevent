@@ -4,7 +4,7 @@ build/
 *.pyd
 .runtimes
 gevent.*.[ch]
-gevent/core.pyx
+gevent/corecext.pyx
 gevent/__pycache__
 gevent/libev
 gevent/_corecffi.c
@@ -37,9 +37,14 @@ c-ares/config.status
 c-ares/stamp-h1
 c-ares/stamp-h2
 c-ares/ares_build.h.orig
+c-ares/ares_config.h
 libev/.deps
 libev/Makefile
 libev/config.log
+libev/config.h
 libev/config.status
 libev/libtool
 libev/stamp-h1
+# running setup.py on PyPy
+config.h
+configure-output.txt

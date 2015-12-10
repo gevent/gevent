@@ -1,5 +1,5 @@
 IF "%PYTHON_EXE%" == "python" (
-    %PYEXE% util/cythonpp.py -o gevent.corecext.c gevent/core.ppyx
+    %PYEXE% util/cythonpp.py -o gevent.corecext.c gevent/corecext.ppyx
 	type gevent\\callbacks.c >> gevent.corecext.c
     move gevent.corecext.* gevent
 )

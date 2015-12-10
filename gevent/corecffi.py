@@ -17,6 +17,7 @@ __all__ = ['get_version',
 try:
     import gevent._corecffi
 except ImportError:
+    traceback.print_exc()
     # Not built yet
     import gevent._corecffi_build
     gevent._corecffi_build.ffi.compile()

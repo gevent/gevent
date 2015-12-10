@@ -16,6 +16,7 @@ env:
       - TASK=test-py27
       - TASK=test-py33
       - TASK=test-py34
+      - TASK=test-py27-cffi
 
 
 matrix:

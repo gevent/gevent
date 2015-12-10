@@ -14,8 +14,8 @@ export LC_ALL=C.UTF-8
 
 all: gevent/gevent.corecext.c gevent/gevent.ares.c gevent/gevent._semaphore.c gevent/gevent._util.c
 
-gevent/gevent.corecext.c: gevent/core.ppyx gevent/libev.pxd
-	$(PYTHON) util/cythonpp.py -o gevent.corecext.c gevent/core.ppyx
+gevent/gevent.corecext.c: gevent/corecext.ppyx gevent/libev.pxd
+	$(PYTHON) util/cythonpp.py -o gevent.corecext.c gevent/corecext.ppyx
 	echo '#include "callbacks.c"' >> gevent.corecext.c
 	mv gevent.corecext.* gevent/
 
@@ -38,7 +38,7 @@ gevent/gevent._util.c: gevent/_util.pyx
 	mv gevent._util.* gevent/
 
 clean:
-	rm -f gevent.core.c gevent.core.h core.pyx gevent/gevent.core.c gevent/gevent.core.h gevent/core.pyx
+	rm -f corecext.pyx gevent/corecext.pyx
 	rm -f gevent.corecext.c gevent.corecext.h gevent/gevent.corecext.c gevent/gevent.corecext.h
 	rm -f gevent.ares.c gevent.ares.h gevent/gevent.ares.c gevent/gevent.ares.h
 	rm -f gevent._semaphore.c gevent._semaphore.h gevent/gevent._semaphore.c gevent/gevent._semaphore.h
@@ -48,7 +48,7 @@ doc:
 	cd doc && PYTHONPATH=.. make html
 
 whitespace:
-	! find . -not -path "./.eggs/*" -not -path "./greentest/htmlcov/*" -not -path "./greentest/.coverage.*" -not -path "./.tox/*" -not -path "*/__pycache__/*" -not -path "*.so" -not -path "*.pyc" -not -path "./.git/*" -not -path "./build/*" -not -path "./libev/*" -not -path "./gevent/libev/*" -not -path "./gevent.egg-info/*" -not -path "./dist/*" -not -path "./.DS_Store" -not -path "./c-ares/*" -not -path "./gevent/gevent.*.[ch]" -not -path "./gevent/core.pyx" -not -path "./doc/_build/*" -not -path "./doc/mytheme/static/*" -type f | xargs egrep -l " $$"
+	! find . -not -path "./.eggs/*" -not -path "./greentest/htmlcov/*" -not -path "./greentest/.coverage.*" -not -path "./.tox/*" -not -path "*/__pycache__/*" -not -path "*.so" -not -path "*.pyc" -not -path "./.git/*" -not -path "./build/*" -not -path "./libev/*" -not -path "./gevent/libev/*" -not -path "./gevent.egg-info/*" -not -path "./dist/*" -not -path "./.DS_Store" -not -path "./c-ares/*" -not -path "./gevent/gevent.*.[ch]" -not -path "./gevent/corecext.pyx" -not -path "./doc/_build/*" -not -path "./doc/mytheme/static/*" -type f | xargs egrep -l " $$"
 
 pep8:
 	${PYTHON} `which pep8` .
@@ -58,29 +58,17 @@ pyflakes:
 
 lint: whitespace pyflakes pep8
 
-travistest:
+test_prelim:
 	which ${PYTHON}
 	${PYTHON} --version
-
 	${PYTHON} -c 'import greenlet; print(greenlet, greenlet.__version__)'
-
-# develop, not install, so that coverage doesn't think it's part of the stdlib
-	${PYTHON} setup.py develop
+	${PYTHON} -c 'import gevent.core; print(gevent.core.loop)'
 	make bench
 
-	cd greentest && GEVENT_RESOLVER=thread ${PYTHON} testrunner.py --config ../known_failures.py
-	cd greentest && GEVENT_RESOLVER=ares GEVENTARES_SERVERS=8.8.8.8 ${PYTHON} testrunner.py --config ../known_failures.py --ignore tests_that_dont_use_resolver.txt
-	cd greentest && GEVENT_FILE=thread ${PYTHON} testrunner.py --config ../known_failures.py `grep -l subprocess test_*.py`
-# because we set parallel=true, each run produces new and different coverage files; they all need
-# to be combined
-	coverage combine . greentest/
-
-toxtest:
+toxtest: test_prelim
 	cd greentest && GEVENT_RESOLVER=thread python testrunner.py --config ../known_failures.py
 
-fulltoxtest:
-	which ${PYTHON}
-	${PYTHON} --version
+fulltoxtest: test_prelim
 	cd greentest && GEVENT_RESOLVER=thread ${PYTHON} testrunner.py --config ../known_failures.py
 	cd greentest && GEVENT_RESOLVER=ares GEVENTARES_SERVERS=8.8.8.8 ${PYTHON} testrunner.py --config ../known_failures.py --ignore tests_that_dont_use_resolver.txt
 	cd greentest && GEVENT_FILE=thread ${PYTHON} testrunner.py --config ../known_failures.py `grep -l subprocess test_*.py`
@@ -91,21 +79,14 @@ leaktest:
 bench:
 	${PYTHON} greentest/bench_sendall.py
 
-travis_pypy:
-	which ${PYTHON}
-	${PYTHON} --version
-	${PYTHON} setup.py install
-	make bench
-	cd greentest && ${PYTHON} testrunner.py --config ../known_failures.py
-
-travis_cpython:
-	pip install cython greenlet
-
-	make travistest
 
 travis_test_linters:
 	make lint
 	GEVENTTEST_COVERAGE=1 make leaktest
+# because we set parallel=true, each run produces new and different coverage files; they all need
+# to be combined
+	coverage combine . greentest/
+
 	coveralls --rcfile=greentest/.coveragerc
 
 
@@ -162,7 +143,7 @@ develop:
 # disables the cache.
 # We need wheel>=0.26 on Python 3.5. See previous revisions.
 	${PIP} install -U wheel
-	${PIP} install -U tox cython greenlet pep8 pyflakes "coverage>=4.0" "coveralls>=1.0"
+	${PIP} install -U tox cython cffi greenlet pep8 pyflakes "coverage>=4.0" "coveralls>=1.0"
 	${PYTHON} setup.py develop
 
 lint-py27: $(PY27)
@@ -185,3 +166,6 @@ test-py35: $(PY35)
 
 test-pypy: $(PYPY)
 	PYTHON=pypy PATH=$(BUILD_RUNTIMES)/versions/pypy/bin:$(PATH) make develop toxtest
+
+test-py27-cffi: $(PY27)
+	GEVENT_CORE_CFFI_ONLY=1 PYTHON=python2.7 PATH=$(BUILD_RUNTIMES)/versions/python2.7/bin:$(PATH) make develop toxtest

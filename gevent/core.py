@@ -1,16 +1,16 @@
-from gevent.hub import PYPY
+# Copyright (c) 2009-2015 Denis Bilenko and gevent contributors. See LICENSE for details.
+from __future__ import absolute_import
 
-if PYPY:
-    from gevent import corecffi as _core
-else:
-    # NOTE: On CPython, this file is never imported (and there is no
-    # corecext module). Instead, the core.so file that should be build
-    # is imported in preference.
-    # NOTE: CFFI is now usable on CPython, and the performance is
-    # mostly comparable, so this could be refactored to allow that
-    # (along with the makefile, etc)
+import os
+
+try:
+    if os.environ.get('GEVENT_CORE_CFFI_ONLY'):
+        raise ImportError("Not attempting corecext")
+
     from gevent import corecext as _core
-
+except ImportError:
+    # CFFI/PyPy
+    from gevent import corecffi as _core
 
 for item in dir(_core):
     if item.startswith('__'):

@@ -12,8 +12,9 @@ from glob import glob
 
 PYPY = hasattr(sys, 'pypy_version_info')
 WIN = sys.platform.startswith('win')
+CFFI_WIN_BUILD_ANYWAY = os.environ.get("PYPY_WIN_BUILD_ANYWAY")
 
-if PYPY and WIN and not os.environ.get("PYPY_WIN_BUILD_ANYWAY"):
+if PYPY and WIN and not CFFI_WIN_BUILD_ANYWAY:
     # We can't properly handle (hah!) file-descriptors and
     # handle mapping on Windows/CFFI, because the file needed,
     # libev_vfd.h, can't be included, linked, and used: it uses
@@ -85,10 +86,18 @@ CARES_EMBED = get_config_value('CARES_EMBED', 'EMBED', 'c-ares')
 
 define_macros = []
 libraries = []
-libev_configure_command = ' '.join(["(cd ", _quoted_abspath('libev/'),
-                                    " && /bin/sh ./configure ",
-                                    " && mv config.h \"$OLDPWD\")",
-                                    '> configure-output.txt'])
+# Configure libev in place; but cp the config.h to the old directory;
+# if we're building a CPython extension, the old directory will be
+# the build/temp.XXX/libev/ directory. If we're building from a
+# source checkout on pypy, OLDPWD will be the location of setup.py
+# and the PyPy branch will clean it up.
+libev_configure_command = ' '.join([
+    "(cd ", _quoted_abspath('libev/'),
+    " && /bin/sh ./configure ",
+    " && cp config.h \"$OLDPWD\"",
+    ")",
+    '> configure-output.txt'
+])
 
 # See #616, trouble building for a 32-bit python against a 64-bit platform
 _config_vars = distutils.sysconfig.get_config_var("CFLAGS")
@@ -118,7 +127,7 @@ def expand(*lst):
     return result
 
 
-CORE = Extension(name='gevent.core',
+CORE = Extension(name='gevent.corecext',
                  sources=['gevent/gevent.corecext.c'],
                  include_dirs=['libev'] if LIBEV_EMBED else [],
                  libraries=libraries,
@@ -341,14 +350,29 @@ def read(name, *args):
     except OSError:
         return ''
 
+cffi_modules = ['gevent/_corecffi_build.py:ffi']
+
 if PYPY:
     install_requires = []
-    cffi_modules = ['gevent/_corecffi_build.py:ffi']
-    setup_kwds = {'cffi_modules': cffi_modules}
 else:
     install_requires = ['greenlet >= 0.4.9']
     setup_kwds = {}
 
+try:
+    __import__('cffi')
+except NameError:
+    setup_kwds = {}
+else:
+    _kwds = {'cffi_modules': cffi_modules}
+    # We already checked for PyPy on Windows above and excluded it
+    if PYPY:
+        setup_kwds = _kwds
+    elif LIBEV_EMBED and (not WIN or CFFI_WIN_BUILD_ANYWAY):
+        # If we're on CPython, we can only reliably build
+        # the CFFI module if we're embedding libev (in some cases
+        # we wind up embedding it anyway, which may not be what the
+        # distributor wanted).
+        setup_kwds = _kwds
 
 # If we are running info / help commands, or we're being imported by
 # tools like pyroma, we don't need to build anything
@@ -364,18 +388,12 @@ if ((len(sys.argv) >= 2
     include_package_data = PYPY
     run_make = False
 elif PYPY:
-    sys.path.insert(0, '.')
-    # XXX ugly - need to find a better way
-    cp_cmd = 'cp -r'
-    if WIN:
-        cp_cmd = "copy"
-    system(cp_cmd + ' libev gevent/libev')
-    if WIN:
-        system('echo > gevent/libev/__init__.py')
-    else:
-        system('touch gevent/libev/__init__.py')
-    if sys.platform != 'win32':
-        system('cd gevent/libev && ./configure > configure_output.txt')
+    if not WIN:
+        # We need to configure libev because the CORE Extension
+        # won't do it (since we're not building it)
+        system(libev_configure_command)
+        # Then get rid of the extra copy created in place
+        system('rm config.h')
     # NOTE that we're NOT adding the distutils extension module, as
     # doing so compiles the module already: import gevent._corecffi_build
     # imports gevent, which imports the hub, which imports the core,

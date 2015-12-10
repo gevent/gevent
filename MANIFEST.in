@@ -26,7 +26,7 @@ recursive-include scripts *.sh
 
 ### Artifacts of configuring/building in place
 # These we want, they come from the Makefile step
-#- recursive-exclude gevent core.pyx *.c *.h
+#- recursive-exclude gevent corecext.pyx *.c *.h
 # This we want if we're on PyPy it's moved there ahead of time
 # by setup.py
 #- prune gevent/libev
