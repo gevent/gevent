@@ -54,7 +54,7 @@ class Test(util.TestServer):
             conn.sendall(b'msg2')
             conn.close()
 
-            with gevent.Timeout(1.1):
+            with gevent.Timeout(2.1):
                 self.popen.wait()
         finally:
             server.close()

@@ -37,6 +37,9 @@
 - PyPy/CFFI: Fix a potential crash when using stat watchers.
 - PyPy/CFFI: Encode unicode paths for stat watchers using
   :meth:`sys.getfilesystemencoding` like the Cython backend.
+- The internal implementation modules ``gevent._fileobject2`` and
+  ``gevent._fileobject3`` were removed. These haven't been used or
+  tested since 1.1b1.
 
 
 1.1rc1 (Nov 14, 2015)

@@ -247,3 +247,6 @@ reduce the cases of undocumented or non-standard behaviour.
   :meth:`Popen.wait <gevent.subprocess.Popen.wait>` (a gevent extension
   ) now throws an exception, just like the documented parameter to the
   same stdlib method in Python 3.
+
+- The previously undocumented class
+  ``gevent.fileobject.SocketAdapter`` has been removed.

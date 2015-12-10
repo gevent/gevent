@@ -18,6 +18,12 @@ from gevent.os import make_nonblocking
 
 
 class GreenFileDescriptorIO(RawIOBase):
+
+    # Note that RawIOBase has a __del__ method that calls
+    # self.close(). (In C implementations like CPython, this is
+    # the type's tp_dealloc slot; prior to Python 3, the object doesn't
+    # appear to have a __del__ method, even though it functionally does)
+
     def __init__(self, fileno, mode='r', closefd=True):
         RawIOBase.__init__(self)
         self._closed = False

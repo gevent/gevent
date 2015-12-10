@@ -1,6 +1,8 @@
+from __future__ import print_function
 import os
 import sys
 import tempfile
+import gc
 import greentest
 import gevent
 from gevent.fileobject import FileObject, FileObjectThread
@@ -12,43 +14,66 @@ PYPY = hasattr(sys, 'pypy_version_info')
 class Test(greentest.TestCase):
 
     def _test_del(self, **kwargs):
-        r, w = os.pipe()
-        s = FileObject(w, 'wb')
-        s.write(b'x')
-        s.flush()
-        if PYPY:
-            s.close()
-        else:
-            del s # Deliberately getting ResourceWarning under Py3
+        pipe = os.pipe()
         try:
-            os.close(w)
-        except OSError:
-            pass  # expected, because SocketAdapter already closed it
+            self._do_test_del(pipe, **kwargs)
+        finally:
+            for f in pipe:
+                try:
+                    os.close(f)
+                except (IOError, OSError):
+                    pass
+
+    def _do_test_del(self, pipe, **kwargs):
+        r, w = pipe
+        s = FileObject(w, 'wb', **kwargs)
+        ts = type(s)
+        s.write(b'x')
+        try:
+            s.flush()
+        except IOError:
+            # Sometimes seen on Windows/AppVeyor
+            print("Failed flushing fileobject", repr(s), file=sys.stderr)
+            import traceback
+            traceback.print_exc()
+
+        del s # Deliberately getting ResourceWarning with FileObject(Thread) under Py3
+        gc.collect() # PyPy
+
+        if kwargs.get("close", True):
+            try:
+                os.close(w)
+            except (OSError, IOError):
+                pass  # expected, because FileObject already closed it
+            else:
+                raise AssertionError('os.close(%r) must not succeed on %r' % (w, ts))
         else:
-            raise AssertionError('os.close(%r) must not succeed' % w)
+            os.close(w)
+
         fobj = FileObject(r, 'rb')
         self.assertEqual(fobj.read(), b'x')
         fobj.close()
 
     def test_del(self):
+        # Close should be true by default
         self._test_del()
 
     def test_del_close(self):
         self._test_del(close=True)
 
     if FileObject is not FileObjectThread:
-
+        # FileObjectThread uses os.fdopen() when passed a file-descriptor, which returns
+        # an object with a destructor that can't be bypassed, so we can't even
+        # create one that way
         def test_del_noclose(self):
-            r, w = os.pipe()
-            s = FileObject(w, 'wb', close=False)
-            s.write(b'x')
-            s.flush()
-            if PYPY:
-                s.close()
-            else:
-                del s
-            os.close(w)
-            self.assertEqual(FileObject(r).read(), b'x')
+            self._test_del(close=False)
+    else:
+        def test_del_noclose(self):
+            try:
+                self._test_del(close=False)
+                self.fail("Shouldn't be able to create a FileObjectThread with close=False")
+            except TypeError as e:
+                self.assertEqual(str(e), 'FileObjectThread does not support close=False')
 
     def test_newlines(self):
         r, w = os.pipe()
@@ -102,45 +127,6 @@ def writer(fobj, line):
         fobj.write(character)
         fobj.flush()
     fobj.close()
-
-
-try:
-    from gevent.fileobject import SocketAdapter
-except ImportError:
-    pass
-else:
-
-    class TestSocketAdapter(greentest.TestCase):
-
-        def _test_del(self, **kwargs):
-            r, w = os.pipe()
-            s = SocketAdapter(w)
-            s.sendall(b'x')
-            if PYPY:
-                s.close()
-            else:
-                del s
-            try:
-                os.close(w)
-            except OSError:
-                pass  # expected, because SocketAdapter already closed it
-            else:
-                raise AssertionError('os.close(%r) must not succeed' % w)
-            self.assertEqual(FileObject(r).read(), b'x')
-
-        def test_del(self):
-            self._test_del()
-
-        def test_del_close(self):
-            self._test_del(close=True)
-
-        def test_del_noclose(self):
-            r, w = os.pipe()
-            s = SocketAdapter(w, close=False)
-            s.sendall(b'x')
-            del s
-            os.close(w)
-            self.assertEqual(FileObject(r).read(), b'x')
 
 
 if __name__ == '__main__':

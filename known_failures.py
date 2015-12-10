@@ -7,6 +7,7 @@ import sys
 import struct
 
 
+APPVEYOR = os.getenv('APPVEYOR')
 LEAKTEST = os.getenv('GEVENTTEST_LEAKCHECK')
 COVERAGE = os.getenv("COVERAGE_PROCESS_START")
 PYPY = hasattr(sys, 'pypy_version_info')
@@ -60,6 +61,16 @@ if sys.platform == 'win32':
         # errors, probably timing related again.
         'FLAKY test___example_servers.py',
     ]
+
+    if APPVEYOR:
+        # These both run on port 9000 and can step on each other...seems like the
+        # appveyor containers aren't fully port safe? Or it takes longer
+        # for the processes to shut down? Or we run them in a different order
+        # in the process pool than we do other places?
+        FAILING_TESTS += [
+            'FLAKY test__example_udp_client.py',
+            'FLAKY test__example_udp_server.py',
+        ]
 
     if not PY35:
         # Py35 added socket.socketpair, all other releases
@@ -163,7 +174,7 @@ if sys.version_info[:2] == (3, 3) and os.environ.get('TRAVIS') == 'true':
         #'test__refcount_core.py'
     ]
 
-if sys.version_info[:2] >= (3, 4) and os.environ.get('APPVEYOR'):
+if sys.version_info[:2] >= (3, 4) and APPVEYOR:
     FAILING_TESTS += [
         # Timing issues on appveyor
         'FLAKY test_selectors.py'

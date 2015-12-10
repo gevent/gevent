@@ -12,7 +12,7 @@ export PATH:=$(BUILD_RUNTIMES)/snakepit:$(TOOLS):$(PATH)
 export LC_ALL=C.UTF-8
 
 
-all: gevent/gevent.corecext.c gevent/gevent.ares.c gevent/gevent._semaphore.c gevent/gevent._util.c
+all: gevent/gevent.corecext.c gevent/gevent.ares.c gevent/gevent._semaphore.c
 
 gevent/gevent.corecext.c: gevent/corecext.ppyx gevent/libev.pxd
 	$(PYTHON) util/cythonpp.py -o gevent.corecext.c gevent/corecext.ppyx
@@ -33,16 +33,11 @@ gevent/gevent._semaphore.c: gevent/_semaphore.pyx gevent/_semaphore.pxd
 	mv gevent._semaphore.* gevent/
 	rm gevent/_semaphore.py
 
-gevent/gevent._util.c: gevent/_util.pyx
-	$(CYTHON) -o gevent._util.c gevent/_util.pyx
-	mv gevent._util.* gevent/
-
 clean:
 	rm -f corecext.pyx gevent/corecext.pyx
 	rm -f gevent.corecext.c gevent.corecext.h gevent/gevent.corecext.c gevent/gevent.corecext.h
 	rm -f gevent.ares.c gevent.ares.h gevent/gevent.ares.c gevent/gevent.ares.h
 	rm -f gevent._semaphore.c gevent._semaphore.h gevent/gevent._semaphore.c gevent/gevent._semaphore.h
-	rm -f gevent._util.c gevent._util.h gevent/gevent._util.c gevent/gevent._util.h
 
 doc:
 	cd doc && PYTHONPATH=.. make html

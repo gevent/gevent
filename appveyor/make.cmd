@@ -9,5 +9,3 @@ move gevent\\_semaphore.pyx gevent\\_semaphore.py
 cython -o gevent._semaphore.c gevent/_semaphore.py
 move gevent._semaphore.* gevent
 del gevent\\_semaphore.py
-cython -o gevent._util.c gevent/_util.pyx
-move gevent._util.* gevent
