@@ -10,8 +10,8 @@ Platform Support
 ================
 
 gevent 1.1 supports Python 2.6, 2.7, 3.3, and 3.4 on the CPython
-(`python.org`_) interpreter. It also supports `PyPy`_ 2.5.0 and above (with
-best results being obtained on PyPy 2.6.1 and above); PyPy3 is not
+(`python.org`_) interpreter. It also supports `PyPy`_ 2.6.1 and above (with
+best results being obtained on PyPy 4.0.1 and above); PyPy3 is not
 supported.
 
 Support for Python 2.5 was removed when support for Python 3 was
@@ -39,17 +39,18 @@ through 4.0.0 and 4.0.1.
 
 .. note:: PyPy is not supported on Windows.
 
-- Version 2.6.1 or above is required for the most robust signal
-  handling. Prior to 2.6.1 and its inclusion of `cffi 1.3.0`_, signals
-  could be delivered incorrectly or fail to be delivered during a
-  blocking operation. (PyPy 2.5.0 includes CFFI 0.8.6 while 2.6.0 has
-  1.1.0; the necessary feature was added in `1.2.0`_ which is not
-  itself directly present in any PyPy release.)
+- Version 2.6.1 or above is required for proper signal handling. Prior
+  to 2.6.1 and its inclusion of `cffi 1.3.0`_, signals could be
+  delivered incorrectly or fail to be delivered during a blocking
+  operation. (PyPy 2.5.0 includes CFFI 0.8.6 while 2.6.0 has 1.1.0;
+  the necessary feature was added in `1.2.0`_ which is not itself
+  directly present in any PyPy release.) CFFI 1.3.0 also allows using
+  the CFFI backend on CPython.
 - Overall performance seems to be quite acceptable with newer versions
   of PyPy. The benchmarks distributed with gevent typically perform as
-  well or better on PyPy than on CPython. Things that are known or
-  expected to be (relatively) slower under PyPy include the
-  :mod:`c-ares resolver <gevent.resolver_ares>` and
+  well or better on PyPy than on CPython at least on some platforms.
+  Things that are known or expected to be (relatively) slower under
+  PyPy include the :mod:`c-ares resolver <gevent.resolver_ares>` and
   :class:`gevent.lock.Semaphore`. Whether or not these matter will
   depend on the workload of each application.
 

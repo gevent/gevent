@@ -20,5 +20,5 @@ Python 3, Python 2.7.9 and above, and Python 2.7.8 and below, respectively.
 .. toctree::
 
    Python 3 interface <gevent._ssl3>
-   Python 2.7.9 and above interface (including PyPy 2.6.0) <gevent._sslgte279>
-   Python 2.7.8 and below interface (including PyPy 2.5.0) <gevent._ssl2>
+   Python 2.7.9 and above interface (including PyPy 2.6.1 and above) <gevent._sslgte279>
+   Python 2.7.8 and below interface <gevent._ssl2>

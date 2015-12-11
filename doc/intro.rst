@@ -30,17 +30,23 @@ supported. (Users of older versions of Python need to install gevent
 gevent 1.1 also runs on PyPy 2.6.1 and above, although 4.0 or above is
 strongly recommended. On PyPy, there are no external dependencies.
 
+.. note:: gevent does *not* run on PyPy on Windows as the CFFI backend
+          does not build.
+
 gevent and greenlet can both be installed with `pip`_, e.g., ``pip
 install gevent``. On Windows and OS X, both gevent and greenlet are
 distributed as binary `wheels`_, so no C compiler is required (so long
 as pip is at least version 1.4). On Linux or for Mac OS X variants
 without pre-built wheels or if wheel installation is disabled, a C compiler
 (Xcode on OS X) and the Python development package are required.
+`cffi`_ can optionally be installed to build the CFFI backend in
+addition to the Cython backend on CPython.
 
 __ http://pypi.python.org/pypi/greenlet
 .. _`pip`: https://pip.pypa.io/en/stable/installing/
 .. _`wheels`: http://pythonwheels.com
 .. _`gevent 1.1`: whatsnew_1_1.html
+.. _`cffi`: http://cffi.readthedocs.org
 
 Example
 =======

@@ -43,10 +43,14 @@ Development
 
 To install the latest development version::
 
-  pip install setuptools 'cython>=0.23.4' git+git://github.com/gevent/gevent.git#egg=gevent
+  pip install setuptools cffi tox 'cython>=0.23.4' git+git://github.com/gevent/gevent.git#egg=gevent
 
-.. note:: You must have Cython, a C compiler, and the Python
-          development headers installed to build a checkout.
+.. note::
+   You must have Cython, a C compiler, and the Python
+   development headers installed to build a checkout. Installing CFFI
+   on CPython (it's standard on PyPy) allows building the CFFI backend
+   for testing, and tox is the command used to test multiple versions
+   of Python.
 
 Running Tests
 -------------
@@ -54,8 +58,7 @@ Running Tests
 There are a few different ways to run the tests. To simply run the
 tests on one version of Python during development, try this::
 
-  pip install setuptools cython>=0.23.4
-  python setup.py build
+  python setup.py develop
   cd greentest
   PYTHONPATH=.. python testrunner.py --config ../known_failures.py
 
