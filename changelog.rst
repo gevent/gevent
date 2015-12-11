@@ -4,8 +4,8 @@
 
 .. currentmodule:: gevent
 
-1.1rc2 (unreleased)
-===================
+1.1rc2 (Dec 11, 2015)
+=====================
 
 - Exceptions raised by gevent's SSL sockets are more consistent with
   the standard library (e.g., gevent's Python 3 SSL sockets raise
