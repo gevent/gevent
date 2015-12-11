@@ -11,7 +11,7 @@
   the standard library (e.g., gevent's Python 3 SSL sockets raise
   :exc:`socket.timeout` instead of :exc:`ssl.SSLError`, a change
   introduced in Python 3.2).
-- Python 2: gevent's socket's ``sendall`` method could ignore timeouts
+- Python 2: gevent's socket's ``sendall`` method could completely ignore timeouts
   in some cases. The timeout now refers to the total time taken by
   ``sendall``.
 - gevent's SSL socket's ``sendall`` method should no longer raise ``SSL3_WRITE_PENDING``
@@ -31,15 +31,15 @@
   ``GEVENT_CORE_CFFI_ONLY`` before starting Python. This can aid
   debugging in some cases and helps ensure parity across all
   combinations of supported platforms.
-- The CFFI backend now call the callback of a watcher whose ``args`` attribute is
+- The CFFI backend now calls the callback of a watcher whose ``args`` attribute is
   set to ``None``, just like the Cython backend does. It also only
   allows ``args`` to be a tuple or ``None``, again matching the Cython backend.
 - PyPy/CFFI: Fix a potential crash when using stat watchers.
 - PyPy/CFFI: Encode unicode paths for stat watchers using
   :meth:`sys.getfilesystemencoding` like the Cython backend.
-- The internal implementation modules ``gevent._fileobject2`` and
-  ``gevent._fileobject3`` were removed. These haven't been used or
-  tested since 1.1b1.
+- The internal implementation modules ``gevent._fileobject2``,
+  ``gevent._fileobject3``, and ``gevent._util`` were removed. These
+  haven't been used or tested since 1.1b1.
 
 
 1.1rc1 (Nov 14, 2015)
