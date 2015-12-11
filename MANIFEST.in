@@ -32,6 +32,7 @@ recursive-include scripts *.sh
 #- prune gevent/libev
 prune */__pycache__
 global-exclude *.so
+global-exclude *.o
 global-exclude config.log config.status
 prune doc/_build
 global-exclude *.pyc
@@ -39,7 +40,10 @@ recursive-exclude greentest .coverage
 prune greentest/htmlcov
 recursive-exclude c-ares stamp-h? ares_build.h.orig
 prune libev/.deps
-recursive-exclude libev Makefile libtool stamp-h?
+recursive-exclude libev Makefile libtool stamp-h? config.h
+# This is the output of _corecffi_build.py and may be particular
+# to each CFFI version/platform
+recursive-exclude gevent _corecffi.c
 # See comments in Makefile; this is renamed to Makefile.ext
 # this exclude keeps check-manifest from complaining
 exclude Makefile
