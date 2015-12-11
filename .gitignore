@@ -12,6 +12,7 @@ gevent/_corecffi.o
 *.egg-info
 Makefile.ext
 MANIFEST
+*_flymake.py
 
 greentest/.coverage\.*
 greentest/htmlcov

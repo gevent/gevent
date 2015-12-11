@@ -359,20 +359,27 @@ else:
     setup_kwds = {}
 
 try:
-    __import__('cffi')
+    cffi = __import__('cffi')
 except ImportError:
     setup_kwds = {}
 else:
+    _min_cffi_version = (1, 3, 0)
+    _cffi_version_is_supported = cffi.__version_info__ >= _min_cffi_version
     _kwds = {'cffi_modules': cffi_modules}
     # We already checked for PyPy on Windows above and excluded it
     if PYPY:
+        if not _cffi_version_is_supported:
+            raise Exception("PyPy 2.6.1 or higher is required")
         setup_kwds = _kwds
     elif LIBEV_EMBED and (not WIN or CFFI_WIN_BUILD_ANYWAY):
-        # If we're on CPython, we can only reliably build
-        # the CFFI module if we're embedding libev (in some cases
-        # we wind up embedding it anyway, which may not be what the
-        # distributor wanted).
-        setup_kwds = _kwds
+        if not _cffi_version_is_supported:
+            print("WARNING: CFFI version 1.3.0 is required to build CFFI backend", file=sys.stderr)
+        else:
+            # If we're on CPython, we can only reliably build
+            # the CFFI module if we're embedding libev (in some cases
+            # we wind up embedding it anyway, which may not be what the
+            # distributor wanted).
+            setup_kwds = _kwds
 
 # If we are running info / help commands, or we're being imported by
 # tools like pyroma, we don't need to build anything
