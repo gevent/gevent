@@ -47,6 +47,8 @@ class TestSemaphore(greentest.TestCase):
         gc.collect()
         gc.collect()
 
+    test_semaphore_in_class_with_del.ignore_leakcheck = True
+
 
 class TestLock(greentest.TestCase):
 
