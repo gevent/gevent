@@ -417,11 +417,15 @@ elif PYPY:
         # and having only the bare minimum be in cython might help reduce that penalty.
         # NOTE: You must use version 0.23.4 or later to avoid a memory leak.
         # https://mail.python.org/pipermail/cython-devel/2015-October/004571.html
-        Extension(name="gevent._semaphore",
-                  sources=["gevent/gevent._semaphore.c"]),
+        # However, that's all for naught on up to and including PyPy 4.0.1 which
+        # have some serious crashing bugs with GC interacting with cython,
+        # so this is disabled (would need to add gevent/gevent._semaphore.c back to
+        # the run_make line)
+        #Extension(name="gevent._semaphore",
+        #          sources=["gevent/gevent._semaphore.c"]),
     ]
     include_package_data = True
-    run_make = 'gevent/gevent._semaphore.c gevent/gevent.ares.c'
+    run_make = 'gevent/gevent.ares.c'
 else:
     ext_modules = [
         CORE,

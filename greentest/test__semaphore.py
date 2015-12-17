@@ -32,6 +32,21 @@ class TestSemaphore(greentest.TestCase):
         r = weakref.ref(s)
         self.assertEqual(s, r())
 
+    def test_semaphore_in_class_with_del(self):
+        # Issue #704. This used to crash the process
+        # under PyPy through at least 4.0.1
+        class X(object):
+            def __init__(self):
+                self.s = Semaphore()
+
+            def __del__(self):
+                self.s.acquire()
+
+        X()
+        import gc
+        gc.collect()
+        gc.collect()
+
 
 class TestLock(greentest.TestCase):
 

@@ -2,7 +2,7 @@ from __future__ import print_function
 import sys
 import subprocess
 import unittest
-import gevent.thread
+from gevent.thread import allocate_lock
 
 script = """
 from gevent import monkey
@@ -52,19 +52,25 @@ class TestTrace(unittest.TestCase):
             old = sys.gettrace()
         else:
             old = None
+        PYPY = hasattr(sys, 'pypy_version_info')
         lst = []
         try:
             def trace(frame, ev, arg):
                 lst.append((frame.f_code.co_filename, frame.f_lineno, ev))
-                print("TRACE: %s:%s %s" % lst[-1])
+                if not PYPY:
+                    print("TRACE: %s:%s %s" % lst[-1])
                 return trace
 
-            with gevent.thread.allocate_lock():
+            with allocate_lock():
                 sys.settrace(trace)
         finally:
             sys.settrace(old)
 
-        self.failUnless(lst == [], "trace not empty")
+        if not PYPY:
+            self.assertEqual(lst, [], "trace not empty")
+        else:
+            # Have an assert so that we know if we miscompile
+            self.assertTrue(len(lst) > 0, "should not compile on pypy")
 
     def run_script(self, more_args=()):
         args = [sys.executable, "-c", script]

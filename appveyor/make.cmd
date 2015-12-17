@@ -5,7 +5,5 @@ IF "%PYTHON_EXE%" == "python" (
 )
 cython -o gevent.ares.c gevent/ares.pyx
 move gevent.ares.* gevent
-move gevent\\_semaphore.pyx gevent\\_semaphore.py
 cython -o gevent._semaphore.c gevent/_semaphore.py
 move gevent._semaphore.* gevent
-del gevent\\_semaphore.py

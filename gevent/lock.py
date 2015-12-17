@@ -1,11 +1,54 @@
 # Copyright (c) 2009-2012 Denis Bilenko. See LICENSE for details.
 """Locking primitives"""
+from __future__ import absolute_import
 
-from gevent.hub import getcurrent
+from gevent.hub import getcurrent, PYPY
 from gevent._semaphore import Semaphore, BoundedSemaphore
 
 
 __all__ = ['Semaphore', 'DummySemaphore', 'BoundedSemaphore', 'RLock']
+
+# On PyPy, we don't compile the Semaphore class with Cython. Under
+# Cython, each individual method holds the GIL for its entire
+# duration, ensuring that no other thread can interrupt us in an
+# unsafe state (only when we _do_wait do we call back into Python and
+# allow switching threads). Simulate that here through the use of a manual
+# lock. (In theory we could use a lock per Semaphore and thus potentially
+# scale better than the GIL, but it probably doesn't matter.)
+if PYPY:
+    # TODO: Need to use monkey.get_original?
+    from thread import allocate_lock as _allocate_lock
+    _sem_lock = _allocate_lock()
+
+    # acquire, wait, and release all acquire the lock on entry and release it
+    # on exit. acquire and wait can call _do_wait, which must release it on entry
+    # and re-acquire it for them on exit.
+    class _locked(object):
+        def __enter__(self):
+            _sem_lock.acquire()
+
+        def __exit__(self, t, v, tb):
+            _sem_lock.release()
+
+    class _unlocked(object):
+
+        def __enter__(self):
+            _sem_lock.release()
+
+        def __exit__(self, t, v, tb):
+            _sem_lock.acquire()
+
+    def _decorate(func, cm):
+        # functools.wrap?
+        def wrapped(*args, **kwargs):
+            with cm:
+                return func(*args, **kwargs)
+        return wrapped
+
+    Semaphore._py3k_acquire = Semaphore.acquire = _decorate(Semaphore.acquire, _locked())
+    Semaphore.release = _decorate(Semaphore.release, _locked())
+    Semaphore.wait = _decorate(Semaphore.wait, _locked())
+    Semaphore._do_wait = _decorate(Semaphore._do_wait, _unlocked())
 
 
 class DummySemaphore(object):
