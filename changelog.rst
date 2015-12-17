@@ -7,7 +7,11 @@
 1.1rc3 (Unreleased)
 ===================
 
-- TBD
+- Support the new PEP 466 :mod:`ssl` interfaces on any Python 2
+  version that supplies them, not just on the versions it officially
+  shipped with. Some Linux distributions, including RedHat/CentOS and
+  Amazon have backported the changes to older versions. Reported in
+  :issue:`702`.
 
 1.1rc2 (Dec 11, 2015)
 =====================
