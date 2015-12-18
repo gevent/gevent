@@ -48,6 +48,12 @@ sys.stdout.write("..finishing..")
 
 class TestTrace(unittest.TestCase):
     def test_untraceable_lock(self):
+        # Untraceable locks were part of the solution to https://bugs.python.org/issue1733757
+        # which details a deadlock that could happen if a trace function invoked
+        # threading.currentThread at shutdown time---the cleanup lock would be held
+        # by the VM, and calling currentThread would try to acquire it again. The interpreter
+        # changed in 2.6 to use the `with` statement (https://hg.python.org/cpython/rev/76f577a9ec03/),
+        # which apparently doesn't trace in quite the same way.
         if hasattr(sys, 'gettrace'):
             old = sys.gettrace()
         else:
@@ -57,7 +63,7 @@ class TestTrace(unittest.TestCase):
         try:
             def trace(frame, ev, arg):
                 lst.append((frame.f_code.co_filename, frame.f_lineno, ev))
-                if not PYPY:
+                if not PYPY: # because we expect to trace on PyPy
                     print("TRACE: %s:%s %s" % lst[-1])
                 return trace
 

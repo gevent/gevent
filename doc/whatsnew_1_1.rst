@@ -50,25 +50,24 @@ through 4.0.0 and 4.0.1.
   of PyPy. The benchmarks distributed with gevent typically perform as
   well or better on PyPy than on CPython at least on some platforms.
   Things that are known or expected to be (relatively) slower under
-  PyPy include the :mod:`c-ares resolver <gevent.resolver_ares>` and
-  :class:`gevent.lock.Semaphore`. Whether or not these matter will
-  depend on the workload of each application.
+  PyPy include the :mod:`c-ares resolver <gevent.resolver_ares>`.
+  Whether or not these matter will depend on the workload of each
+  application.
 
-.. note:: Released versions of PyPy through at least 4.0.0 have `a
-          bug`_ that can cause a memory leak when subclassing
-          objects that are implemented in Cython, as are the two
-          things mentioned above. The `Semaphore` class is
-          subclassed to become :class:`gevent.thread.LockType`,
-          which in turn is used as the basis for
-          :class:`threading.Lock`. The `Semaphore` object is coded
-          carefully to avoid this leak, assuming it is deallocated
-          when not acquired (which should be the typical case). The
-          ``c-ares`` package has not been audited for this issue.
+.. caution:: The ``c-ares`` resolver is not recommended for use under
+             PyPy. Released versions of PyPy through at least 4.0.1
+             have `a bug`_ that can cause a memory leak when
+             subclassing objects that are implemented in Cython, as is
+             the c-ares resolver. things mentioned above. The
+             ``c-ares`` package has not been audited for this issue.
+             In addition, thanks to reports like :issue:`704`, we know
+             that the PyPy garbage collector can interact badly with
+             Cython-compiled code, leading to crashes.
 
 .. note:: PyPy 4.0.x on Linux is known to *rarely* (once per 24 hours)
           encounter crashes when running heavily loaded, heavily
-          networked gevent programs. The exact cause is unknown and is
-          being tracked in :issue:`677`.
+          networked gevent programs (even without ``c-ares``). The
+          exact cause is unknown and is being tracked in :issue:`677`.
 
 .. _cffi 1.3.0: https://bitbucket.org/cffi/cffi/src/ad3140a30a7b0ca912185ef500546a9fb5525ece/doc/source/whatsnew.rst?at=default
 .. _1.2.0: https://cffi.readthedocs.org/en/latest/whatsnew.html#v1-2-0

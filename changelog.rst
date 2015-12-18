@@ -12,6 +12,14 @@
   shipped with. Some Linux distributions, including RedHat/CentOS and
   Amazon have backported the changes to older versions. Reported in
   :issue:`702`.
+- PyPy: An interaction between Cython compiled code and the garbage
+  collector caused PyPy to crash when a previously-allocated Semaphore
+  was used in a ``__del__`` method, something done in the popular
+  libraries ``requests`` and ``urllib3``. Due to this and other Cython
+  related issues, the Semaphore class is no longer compiled by Cython.
+  This means that it is now traceable and not exactly as atomic as the
+  Cython version, though the overall semantics should remain the same.
+  Reported in :issue:`704` by Shaun Crampton.
 
 1.1rc2 (Dec 11, 2015)
 =====================

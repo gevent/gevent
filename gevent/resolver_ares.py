@@ -27,8 +27,9 @@ class Resolver(object):
     reports of it not properly honoring certain system configurations.
     However, because it does not use threads, it may scale better.
 
-    .. note:: This module is considered experimental on PyPy, and
-       due to its implementation in cython, it may be slower.
+    .. caution:: This module is considered extremely experimental on PyPy, and
+       due to its implementation in cython, it may be slower. It may also lead to
+       interpreter crashes.
 
     .. _c-ares: http://c-ares.haxx.se
     """
