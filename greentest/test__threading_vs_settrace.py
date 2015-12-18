@@ -78,6 +78,72 @@ class TestTrace(unittest.TestCase):
             # Have an assert so that we know if we miscompile
             self.assertTrue(len(lst) > 0, "should not compile on pypy")
 
+    def test_untraceable_lock_uses_different_lock(self):
+        if hasattr(sys, 'gettrace'):
+            old = sys.gettrace()
+        else:
+            old = None
+        PYPY = hasattr(sys, 'pypy_version_info')
+        lst = []
+        # we should be able to use unrelated locks from within the trace function
+        l = allocate_lock()
+        try:
+            def trace(frame, ev, arg):
+                with l:
+                    lst.append((frame.f_code.co_filename, frame.f_lineno, ev))
+                if not PYPY: # because we expect to trace on PyPy
+                    print("TRACE: %s:%s %s" % lst[-1])
+                return trace
+
+            l2 = allocate_lock()
+            sys.settrace(trace)
+            # Separate functions, not the C-implemented `with` so the trace
+            # function gets a crack at them
+            l2.acquire()
+            l2.release()
+        finally:
+            sys.settrace(old)
+
+        if not PYPY:
+            self.assertEqual(lst, [], "trace not empty")
+        else:
+            # Have an assert so that we know if we miscompile
+            self.assertTrue(len(lst) > 0, "should not compile on pypy")
+
+    def test_untraceable_lock_uses_same_lock(self):
+        from gevent.hub import LoopExit
+        if hasattr(sys, 'gettrace'):
+            old = sys.gettrace()
+        else:
+            old = None
+        PYPY = hasattr(sys, 'pypy_version_info')
+        lst = []
+        e = None
+        # we should not be able to use the same lock from within the trace function
+        # because it's over acquired but instead of deadlocking it raises an exception
+        l = allocate_lock()
+        try:
+            def trace(frame, ev, arg):
+                with l:
+                    lst.append((frame.f_code.co_filename, frame.f_lineno, ev))
+                return trace
+
+            sys.settrace(trace)
+            # Separate functions, not the C-implemented `with` so the trace
+            # function gets a crack at them
+            l.acquire()
+        except LoopExit as ex:
+            e = ex
+        finally:
+            sys.settrace(old)
+
+        if not PYPY:
+            self.assertEqual(lst, [], "trace not empty")
+        else:
+            # Have an assert so that we know if we miscompile
+            self.assertTrue(len(lst) > 0, "should not compile on pypy")
+            self.assertTrue(isinstance(e, LoopExit))
+
     def run_script(self, more_args=()):
         args = [sys.executable, "-c", script]
         args.extend(more_args)
