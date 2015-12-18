@@ -26,20 +26,31 @@ if PYPY:
         def __init__(self):
             self._owner = None
             self._block = _allocate_lock()
-            self._locking = 0
+            self._locking = {}
             self._count = 0
 
         def untraceable(f):
-            # Don't allow re-entry to these functions, as can
+            # Don't allow re-entry to these functions in a single thread, as can
             # happen if a sys.settrace is used
             def wrapper(self):
-                if self._locking:
-                    return
+                me = _get_ident()
                 try:
-                    self._locking += 1
+                    count = self._locking[me]
+                except KeyError:
+                    count = self._locking[me] = 1
+                else:
+                    count = self._locking[me] = count + 1
+                if count:
+                    return
+
+                try:
                     return f(self)
                 finally:
-                    self._locking -= 1
+                    count = count - 1
+                    if not count:
+                        del self._locking[me]
+                    else:
+                        self._locking[me] = count
             return wrapper
 
         @untraceable
