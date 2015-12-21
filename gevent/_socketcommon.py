@@ -161,7 +161,7 @@ def wait_read(fileno, timeout=None, timeout_exc=_NONE):
     For the meaning of the other parameters and possible exceptions,
     see :func:`wait`.
 
-    .. seealso: :func:`cancel_wait`
+    .. seealso:: :func:`cancel_wait`
      """
     io = get_hub().loop.io(fileno, 1)
     return wait(io, timeout, timeout_exc)
@@ -177,7 +177,7 @@ def wait_write(fileno, timeout=None, timeout_exc=_NONE, event=_NONE):
     :keyword event: Ignored. Applications should not pass this parameter.
        In the future, it may become an error.
 
-    .. seealso: :func:`cancel_wait`
+    .. seealso:: :func:`cancel_wait`
     """
     io = get_hub().loop.io(fileno, 2)
     return wait(io, timeout, timeout_exc)
@@ -194,7 +194,7 @@ def wait_readwrite(fileno, timeout=None, timeout_exc=_NONE, event=_NONE):
     :keyword event: Ignored. Applications should not pass this parameter.
        In the future, it may become an error.
 
-    .. seealso: :func:`cancel_wait`
+    .. seealso:: :func:`cancel_wait`
     """
     io = get_hub().loop.io(fileno, 3)
     return wait(io, timeout, timeout_exc)

@@ -10,6 +10,7 @@ from os.path import join, abspath, basename, dirname
 from subprocess import check_call
 from glob import glob
 
+
 PYPY = hasattr(sys, 'pypy_version_info')
 WIN = sys.platform.startswith('win')
 CFFI_WIN_BUILD_ANYWAY = os.environ.get("PYPY_WIN_BUILD_ANYWAY")
@@ -31,6 +32,8 @@ if WIN:
     # Make sure the env vars that make.cmd needs are set
     if not os.environ.get('PYTHON_EXE'):
         os.environ['PYTHON_EXE'] = 'pypy' if PYPY else 'python'
+    if not os.environ.get('PYEXE'):
+        os.environ['PYEXE'] = os.environ['PYTHON_EXE']
 
 
 import distutils
@@ -417,11 +420,15 @@ elif PYPY:
         # and having only the bare minimum be in cython might help reduce that penalty.
         # NOTE: You must use version 0.23.4 or later to avoid a memory leak.
         # https://mail.python.org/pipermail/cython-devel/2015-October/004571.html
-        Extension(name="gevent._semaphore",
-                  sources=["gevent/gevent._semaphore.c"]),
+        # However, that's all for naught on up to and including PyPy 4.0.1 which
+        # have some serious crashing bugs with GC interacting with cython,
+        # so this is disabled (would need to add gevent/gevent._semaphore.c back to
+        # the run_make line)
+        #Extension(name="gevent._semaphore",
+        #          sources=["gevent/gevent._semaphore.c"]),
     ]
     include_package_data = True
-    run_make = 'gevent/gevent._semaphore.c gevent/gevent.ares.c'
+    run_make = 'gevent/gevent.ares.c'
 else:
     ext_modules = [
         CORE,

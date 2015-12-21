@@ -1,15 +1,122 @@
 # Copyright (c) 2009-2012 Denis Bilenko. See LICENSE for details.
 """Locking primitives"""
+from __future__ import absolute_import
 
-from gevent.hub import getcurrent
+from gevent.hub import getcurrent, PYPY
 from gevent._semaphore import Semaphore, BoundedSemaphore
 
 
 __all__ = ['Semaphore', 'DummySemaphore', 'BoundedSemaphore', 'RLock']
 
+# On PyPy, we don't compile the Semaphore class with Cython. Under
+# Cython, each individual method holds the GIL for its entire
+# duration, ensuring that no other thread can interrupt us in an
+# unsafe state (only when we _do_wait do we call back into Python and
+# allow switching threads). Simulate that here through the use of a manual
+# lock. (We use a separate lock for each semaphore to allow sys.settrace functions
+# to use locks *other* than the one being traced.)
+if PYPY:
+    # TODO: Need to use monkey.get_original?
+    from thread import allocate_lock as _allocate_lock
+    from thread import get_ident as _get_ident
+    _sem_lock = _allocate_lock()
+
+    class _OwnedLock(object):
+
+        def __init__(self):
+            self._owner = None
+            self._block = _allocate_lock()
+            self._locking = {}
+            self._count = 0
+
+        def untraceable(f):
+            # Don't allow re-entry to these functions in a single thread, as can
+            # happen if a sys.settrace is used
+            def wrapper(self):
+                me = _get_ident()
+                try:
+                    count = self._locking[me]
+                except KeyError:
+                    count = self._locking[me] = 1
+                else:
+                    count = self._locking[me] = count + 1
+                if count:
+                    return
+
+                try:
+                    return f(self)
+                finally:
+                    count = count - 1
+                    if not count:
+                        del self._locking[me]
+                    else:
+                        self._locking[me] = count
+            return wrapper
+
+        @untraceable
+        def acquire(self):
+            me = _get_ident()
+            if self._owner == me:
+                self._count += 1
+                return
+
+            self._owner = me
+            self._block.acquire()
+            self._count = 1
+
+        @untraceable
+        def release(self):
+            self._count = count = self._count - 1
+            if not count:
+                self._block.release()
+                self._owner = None
+
+    # acquire, wait, and release all acquire the lock on entry and release it
+    # on exit. acquire and wait can call _do_wait, which must release it on entry
+    # and re-acquire it for them on exit.
+    class _around(object):
+        before = None
+        after = None
+
+        def __enter__(self):
+            self.before()
+
+        def __exit__(self, t, v, tb):
+            self.after()
+
+    def _decorate(func, cmname):
+        # functools.wrap?
+        def wrapped(self, *args, **kwargs):
+            with getattr(self, cmname):
+                return func(self, *args, **kwargs)
+        return wrapped
+
+    Semaphore._py3k_acquire = Semaphore.acquire = _decorate(Semaphore.acquire, '_lock_locked')
+    Semaphore.release = _decorate(Semaphore.release, '_lock_locked')
+    Semaphore.wait = _decorate(Semaphore.wait, '_lock_locked')
+    Semaphore._do_wait = _decorate(Semaphore._do_wait, '_lock_unlocked')
+
+    _Sem_init = Semaphore.__init__
+
+    def __init__(self, *args, **kwargs):
+        l = self._lock_lock = _OwnedLock()
+        self._lock_locked = _around()
+        self._lock_locked.before = l.acquire
+        self._lock_locked.after = l.release
+        self._lock_unlocked = _around()
+        self._lock_unlocked.before = l.release
+        self._lock_unlocked.after = l.acquire
+        _Sem_init(self, *args, **kwargs)
+
+    Semaphore.__init__ = __init__
+
+    del _decorate
+
 
 class DummySemaphore(object):
     """
+    DummySemaphore(value=None) -> DummySemaphore
+
     A Semaphore initialized with "infinite" initial value. None of its
     methods ever block.
 
@@ -34,6 +141,13 @@ class DummySemaphore(object):
     # determines whether it should lock around IO to the underlying
     # file object.
 
+    def __init__(self, value=None):
+        """
+        .. versionchanged:: 1.1rc3
+            Accept and ignore a *value* argument for compatibility with Semaphore.
+        """
+        pass
+
     def __str__(self):
         return '<%s>' % self.__class__.__name__
 
@@ -42,6 +156,7 @@ class DummySemaphore(object):
         return False
 
     def release(self):
+        """Releasing a dummy semaphore does nothing."""
         pass
 
     def rawlink(self, callback):
@@ -52,6 +167,7 @@ class DummySemaphore(object):
         pass
 
     def wait(self, timeout=None):
+        """Waiting for a DummySemaphore returns immediately."""
         pass
 
     def acquire(self, blocking=True, timeout=None):

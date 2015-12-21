@@ -17,7 +17,13 @@ class Semaphore(object):
 
     If not given, ``value`` defaults to 1.
 
-    This Semaphore's ``__exit__`` method does not call the trace function.
+    The semaphore is a context manager and can be used in ``with`` statements.
+
+    This Semaphore's ``__exit__`` method does not call the trace function
+    on CPython, but does under PyPy.
+
+    .. seealso:: :class:`BoundedSemaphore` for a safer version that prevents
+       some classes of bugs.
     """
 
     def __init__(self, value=1):
@@ -53,6 +59,9 @@ class Semaphore(object):
         return self.counter <= 0
 
     def release(self):
+        """
+        Release the semaphore, notifying any waiters if needed.
+        """
         self.counter += 1
         self._start_notify()
         return self.counter
@@ -112,6 +121,9 @@ class Semaphore(object):
 
         *callback* will be called in the :class:`Hub <gevent.hub.Hub>`, so it must not use blocking gevent API.
         *callback* will be passed one argument: this instance.
+
+        This method is normally called automatically by :meth:`acquire` and :meth:`wait`; most code
+        will not need to use it.
         """
         if not callable(callback):
             raise TypeError('Expected callable:', callback)
@@ -125,7 +137,10 @@ class Semaphore(object):
         """
         unlink(callback) -> None
 
-        Remove the callback set by :meth:`rawlink`
+        Remove the callback set by :meth:`rawlink`.
+
+        This method is normally called automatically by :meth:`acquire`  and :meth:`wait`; most
+        code will not need to use it.
         """
         try:
             self._links.remove(callback)
@@ -169,7 +184,7 @@ class Semaphore(object):
         Wait until it is possible to acquire this semaphore, or until the optional
         *timeout* elapses.
 
-        .. warning:: If this semaphore was initialized with a size of 0,
+        .. caution:: If this semaphore was initialized with a size of 0,
            this method will block forever if no timeout is given.
 
         :keyword float timeout: If given, specifies the maximum amount of seconds
@@ -189,7 +204,7 @@ class Semaphore(object):
 
         Acquire the semaphore.
 
-        .. warning:: If this semaphore was initialized with a size of 0,
+        .. caution:: If this semaphore was initialized with a size of 0,
            this method will block forever (unless a timeout is given or blocking is
            set to false).
 
@@ -233,6 +248,8 @@ class Semaphore(object):
 
 class BoundedSemaphore(Semaphore):
     """
+    BoundedSemaphore(value=1) -> BoundedSemaphore
+
     A bounded semaphore checks to make sure its current value doesn't
     exceed its initial value. If it does, :class:`ValueError` is
     raised. In most situations semaphores are used to guard resources
@@ -242,11 +259,12 @@ class BoundedSemaphore(Semaphore):
     If not given, *value* defaults to 1.
     """
 
+    #: For monkey-patching, allow changing the class of error we raise
     _OVER_RELEASE_ERROR = ValueError
 
-    def __init__(self, value=1):
-        Semaphore.__init__(self, value)
-        self._initial_value = value
+    def __init__(self, *args, **kwargs):
+        Semaphore.__init__(self, *args, **kwargs)
+        self._initial_value = self.counter
 
     def release(self):
         if self.counter >= self._initial_value:
