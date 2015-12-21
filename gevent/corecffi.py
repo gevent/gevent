@@ -719,9 +719,9 @@ class watcher(object):
         self._args = None
         self._callback = None
         self._handle = ffi.new_handle(self)
-        self._gwatcher = ffi.new(self._watcher_struct_pointer_type)
-        self._watcher = ffi.addressof(self._gwatcher.watcher)
-        self._gwatcher.handle = self._handle
+
+        self._watcher = ffi.new(self._watcher_struct_pointer_type)
+        self._watcher.data = self._handle
         if priority is not None:
             libev.ev_set_priority(self._watcher, priority)
         self._watcher_init(self._watcher,
@@ -752,9 +752,9 @@ class watcher(object):
     def _init_subclasses(cls):
         for subclass in cls.__subclasses__():
             watcher_type = subclass._watcher_type
-            subclass._watcher_struct_pointer_type = ffi.typeof('struct gevent_' + watcher_type + '*')
+            subclass._watcher_struct_pointer_type = ffi.typeof('struct ' + watcher_type + '*')
             subclass._watcher_callback = ffi.addressof(libev,
-                                                       '_gevent_' + watcher_type + '_callback')
+                                                       '_gevent_generic_callback')
             for name in 'start', 'stop', 'init':
                 ev_name = watcher_type + '_' + name
                 watcher_name = '_watcher' + '_' + name
@@ -777,7 +777,7 @@ class watcher(object):
             result += " args=%r" % (self.args, )
         if self.callback is None and self.args is None:
             result += " stopped"
-        result += " handle=%s" % (self._gwatcher.handle)
+        result += " handle=%s" % (self._watcher.data)
         return result + ">"
 
     def _format(self):

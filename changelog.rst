@@ -20,6 +20,8 @@
   This means that it is now traceable and not exactly as atomic as the
   Cython version, though the overall semantics should remain the same.
   Reported in :issue:`704` by Shaun Crampton.
+- PyPy: Optimize the CFFI backend to use less memory (two pointers per
+  watcher).
 
 1.1rc2 (Dec 11, 2015)
 =====================

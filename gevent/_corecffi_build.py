@@ -85,25 +85,51 @@ struct ev_loop {
     int activecnt;
     ...;
 };
+
+// Watcher types
+// base for all watchers
+struct ev_watcher{...;};
+
 struct ev_io {
     int fd;
     int events;
+    void* data;
     ...;
 };
 struct ev_timer {
     double at;
+    void* data;
     ...;
 };
-struct ev_signal {...;};
-struct ev_idle  {...;};
-struct ev_prepare {...;};
-struct ev_check {...;};
-struct ev_fork  {...;};
-struct ev_async  {...;};
+struct ev_signal {
+    void* data;
+    ...;
+};
+struct ev_idle {
+    void* data;
+    ...;
+};
+struct ev_prepare {
+    void* data;
+    ...;
+};
+struct ev_check {
+    void* data;
+    ...;
+};
+struct ev_fork {
+    void* data;
+    ...;
+};
+struct ev_async {
+    void* data;
+    ...;
+};
 struct ev_child {
     int pid;
     int rpid;
     int rstatus;
+    void* data;
     ...;
 };
 struct stat {
@@ -116,6 +142,7 @@ struct ev_stat {
     const char* path;
     struct stat prev;
     double interval;
+    void* data;
     ...;
 };
 
@@ -141,7 +168,7 @@ void ev_io_start(struct ev_loop*, struct ev_io*);
 void ev_io_stop(struct ev_loop*, struct ev_io*);
 void ev_feed_event(struct ev_loop*, void*, int);
 
-void ev_timer_init(struct ev_timer*, void (*callback)(struct ev_loop *_loop, struct ev_timer *w, int revents), double, double);
+void ev_timer_init(struct ev_timer*, void *callback, double, double);
 void ev_timer_start(struct ev_loop*, struct ev_timer*);
 void ev_timer_stop(struct ev_loop*, struct ev_timer*);
 void ev_timer_again(struct ev_loop*, struct ev_timer*);
@@ -234,6 +261,7 @@ _watcher_types = [
 _source = """
 // passed to the real C compiler
 #define LIBEV_EMBED 1
+
 #ifdef _WIN32
 #define EV_STANDALONE 1
 #include "libev_vfd.h"
@@ -258,55 +286,41 @@ _cdef += _cbs
 _source += _cbs
 _watcher_type = None
 
-for _watcher_type in _watcher_types:
-    _cdef += """
-   struct gevent_%s {
-        // recall that the address of a struct is the
-        // same as the address of its first member, so
-        // this struct is interchangable with the ev_XX
-        // that is its first member.
-        struct %s watcher;
-        // the CFFI handle to the Python watcher object
-        void* handle;
-        ...;
-    };
-    static void _gevent_%s_callback(struct ev_loop* loop, struct %s* watcher, int revents);
-    """ % (_watcher_type, _watcher_type, _watcher_type, _watcher_type)
+# We use a single C callback for every watcher type, which in turn calls the
+# Python callbacks. The ev_watcher pointer type can be used for every watcher type
+# because they all start with the same members---libev itself relies on this. Each
+# watcher types has a 'void* data' that stores the CFFI handle to the Python watcher
+# object.
+_cdef += """
+static void _gevent_generic_callback(struct ev_loop* loop, struct ev_watcher* watcher, int revents);
+"""
 
-    _source += """
-    struct gevent_%s {
-        struct %s watcher;
-        void* handle;
-    };
-    """ % (_watcher_type, _watcher_type)
-
-    _source += """
-    static void _gevent_%s_callback(struct ev_loop* loop, struct %s* watcher, int revents)
-    {
-        // invoke self.callback()
-        void* handle = ((struct gevent_%s *)watcher)->handle;
-        int cb_result = python_callback(handle, revents);
-        switch(cb_result) {
-            case -1:
-                // in case of exception, call self.loop.handle_error;
-                // this function is also responsible for stopping the watcher
-                // and allowing memory to be freed
-                python_handle_error(handle, revents);
-                break;
-            case 0:
-                // Code to stop the event. Note that if python_callback
-                // has disposed of the last reference to the handle,
-                // `watcher` could now be invalid/disposed memory!
-                if (!ev_is_active(watcher)) {
-                    python_stop(handle);
-                }
-                break;
-            default:
-                assert(cb_result == 1);
-                // watcher is already stopped and dead, nothing to do.
-        }
+_source += """
+static void _gevent_generic_callback(struct ev_loop* loop, struct ev_watcher* watcher, int revents)
+{
+    void* handle = watcher->data;
+    int cb_result = python_callback(handle, revents);
+    switch(cb_result) {
+        case -1:
+            // in case of exception, call self.loop.handle_error;
+            // this function is also responsible for stopping the watcher
+            // and allowing memory to be freed
+            python_handle_error(handle, revents);
+        break;
+        case 0:
+            // Code to stop the event. Note that if python_callback
+            // has disposed of the last reference to the handle,
+            // `watcher` could now be invalid/disposed memory!
+            if (!ev_is_active(watcher)) {
+                python_stop(handle);
+            }
+        break;
+        default:
+            assert(cb_result == 1);
+            // watcher is already stopped and dead, nothing to do.
     }
-    """ % (_watcher_type, _watcher_type, _watcher_type)
+}
+"""
 
 thisdir = os.path.dirname(os.path.abspath(__file__))
 include_dirs = [
