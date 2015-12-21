@@ -37,7 +37,8 @@ PyPy Notes
 PyPy has been tested on OS X and 64-bit Linux from version 2.6.1
 through 4.0.0 and 4.0.1.
 
-.. note:: PyPy is not supported on Windows.
+.. note:: PyPy is not supported on Windows. (gevent's CFFI backend is not
+          available on Windows.)
 
 - Version 2.6.1 or above is required for proper signal handling. Prior
   to 2.6.1 and its inclusion of `cffi 1.3.0`_, signals could be
@@ -50,19 +51,20 @@ through 4.0.0 and 4.0.1.
   of PyPy. The benchmarks distributed with gevent typically perform as
   well or better on PyPy than on CPython at least on some platforms.
   Things that are known or expected to be (relatively) slower under
-  PyPy include the :mod:`c-ares resolver <gevent.resolver_ares>`.
-  Whether or not these matter will depend on the workload of each
-  application.
+  PyPy include the :mod:`c-ares resolver <gevent.resolver_ares>` and
+  :class:`~gevent.lock.Semaphore`. Whether or not these matter will
+  depend on the workload of each application.
 
-.. caution:: The ``c-ares`` resolver is not recommended for use under
-             PyPy. Released versions of PyPy through at least 4.0.1
-             have `a bug`_ that can cause a memory leak when
-             subclassing objects that are implemented in Cython, as is
-             the c-ares resolver. things mentioned above. The
-             ``c-ares`` package has not been audited for this issue.
-             In addition, thanks to reports like :issue:`704`, we know
-             that the PyPy garbage collector can interact badly with
-             Cython-compiled code, leading to crashes.
+.. caution:: The ``c-ares`` resolver is considered highly experimental
+             under PyPy and is not recommended for production use.
+             Released versions of PyPy through at least 4.0.1 have `a
+             bug`_ that can cause a memory leak when subclassing
+             objects that are implemented in Cython, as is the c-ares
+             resolver. In addition, thanks to reports like
+             :issue:`704`, we know that the PyPy garbage collector can
+             interact badly with Cython-compiled code, leading to
+             crashes. While the intended use of the ares resolver has
+             been loosely audited for these issues, no guarantees are made.
 
 .. note:: PyPy 4.0.x on Linux is known to *rarely* (once per 24 hours)
           encounter crashes when running heavily loaded, heavily

@@ -10,6 +10,7 @@ from os.path import join, abspath, basename, dirname
 from subprocess import check_call
 from glob import glob
 
+
 PYPY = hasattr(sys, 'pypy_version_info')
 WIN = sys.platform.startswith('win')
 CFFI_WIN_BUILD_ANYWAY = os.environ.get("PYPY_WIN_BUILD_ANYWAY")
@@ -31,6 +32,8 @@ if WIN:
     # Make sure the env vars that make.cmd needs are set
     if not os.environ.get('PYTHON_EXE'):
         os.environ['PYTHON_EXE'] = 'pypy' if PYPY else 'python'
+    if not os.environ.get('PYEXE'):
+        os.environ['PYEXE'] = os.environ['PYTHON_EXE']
 
 
 import distutils

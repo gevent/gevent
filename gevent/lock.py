@@ -13,8 +13,8 @@ __all__ = ['Semaphore', 'DummySemaphore', 'BoundedSemaphore', 'RLock']
 # duration, ensuring that no other thread can interrupt us in an
 # unsafe state (only when we _do_wait do we call back into Python and
 # allow switching threads). Simulate that here through the use of a manual
-# lock. (In theory we could use a lock per Semaphore and thus potentially
-# scale better than the GIL, but it probably doesn't matter.)
+# lock. (We use a separate lock for each semaphore to allow sys.settrace functions
+# to use locks *other* than the one being traced.)
 if PYPY:
     # TODO: Need to use monkey.get_original?
     from thread import allocate_lock as _allocate_lock
@@ -115,6 +115,8 @@ if PYPY:
 
 class DummySemaphore(object):
     """
+    DummySemaphore(value=None) -> DummySemaphore
+
     A Semaphore initialized with "infinite" initial value. None of its
     methods ever block.
 
@@ -139,6 +141,13 @@ class DummySemaphore(object):
     # determines whether it should lock around IO to the underlying
     # file object.
 
+    def __init__(self, value=None):
+        """
+        .. versionchanged:: 1.1rc3
+            Accept and ignore a *value* argument for compatibility with Semaphore.
+        """
+        pass
+
     def __str__(self):
         return '<%s>' % self.__class__.__name__
 
@@ -147,6 +156,7 @@ class DummySemaphore(object):
         return False
 
     def release(self):
+        """Releasing a dummy semaphore does nothing."""
         pass
 
     def rawlink(self, callback):
@@ -157,6 +167,7 @@ class DummySemaphore(object):
         pass
 
     def wait(self, timeout=None):
+        """Waiting for a DummySemaphore returns immediately."""
         pass
 
     def acquire(self, blocking=True, timeout=None):
