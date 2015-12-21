@@ -19,7 +19,7 @@ def system_bits():
 
 
 def st_nlink_type():
-    if sys.platform == "darwin":
+    if sys.platform == "darwin" or sys.platform.startswith("freebsd"):
         return "short"
     elif system_bits() == 32:
         return "unsigned long"
