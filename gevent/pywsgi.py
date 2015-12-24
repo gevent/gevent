@@ -949,7 +949,7 @@ class WSGIHandler(object):
             path, query = self.path.split('?', 1)
         else:
             path, query = self.path, ''
-        env['PATH_INFO'] = unquote(path)
+        env['PATH_INFO'] = unquote(path, encoding='latin-1')
         env['QUERY_STRING'] = query
 
         if self.headers.typeheader is not None:
