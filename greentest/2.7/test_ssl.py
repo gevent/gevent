@@ -234,6 +234,7 @@ class BasicSocketTests(unittest.TestCase):
 
 class NetworkedTests(unittest.TestCase):
 
+    @unittest.skipIf(True, "svn.python.org cert changed; see https://bugs.python.org/issue25940")
     def test_connect(self):
         with test_support.transient_internet("svn.python.org"):
             s = ssl.wrap_socket(socket.socket(socket.AF_INET),
@@ -263,6 +264,7 @@ class NetworkedTests(unittest.TestCase):
             finally:
                 s.close()
 
+    @unittest.skipIf(True, "svn.python.org cert changed; see https://bugs.python.org/issue25940")
     def test_connect_ex(self):
         # Issue #11326: check connect_ex() implementation
         with test_support.transient_internet("svn.python.org"):
@@ -352,6 +354,7 @@ class NetworkedTests(unittest.TestCase):
             if test_support.verbose:
                 sys.stdout.write("\nNeeded %d calls to do_handshake() to establish session.\n" % count)
 
+    @unittest.skipIf(True, "svn.python.org cert changed; see https://bugs.python.org/issue25940")
     def test_get_server_certificate(self):
         with test_support.transient_internet("svn.python.org"):
             pem = ssl.get_server_certificate(("svn.python.org", 443))

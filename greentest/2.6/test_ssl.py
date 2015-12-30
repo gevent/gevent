@@ -113,6 +113,9 @@ class BasicTests(unittest.TestCase):
 class NetworkedTests(unittest.TestCase):
 
     def test_connect(self):
+        if True:
+            print "svn.python.org cert changed; see https://bugs.python.org/issue25940"
+            return
         s = ssl.wrap_socket(socket.socket(socket.AF_INET),
                             cert_reqs=ssl.CERT_NONE)
         s.connect(("svn.python.org", 443))
@@ -190,6 +193,9 @@ class NetworkedTests(unittest.TestCase):
             sys.stdout.write("\nNeeded %d calls to do_handshake() to establish session.\n" % count)
 
     def test_get_server_certificate(self):
+        if True:
+            print "svn.python.org cert changed; see https://bugs.python.org/issue25940"
+            return
         pem = ssl.get_server_certificate(("svn.python.org", 443))
         if not pem:
             self.fail("No server certificate on svn.python.org:443!")
