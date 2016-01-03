@@ -73,6 +73,14 @@ if sys.platform == 'win32':
             # This one sometimes times out, often after output "The process with PID XXX could not be
             # terminated. Reason: There is no running instance of the task."
             'FLAKY test__example_portforwarder.py',
+            # We only use FileObjectThread on Win32. Sometimes the
+            # visibility of the 'close' operation, which happens in a
+            # background thread, doesn't make it to the foreground
+            # thread in a timely fashion, leading to 'os.close(4) must
+            # not succeed' in test_del_close. We have the same thing
+            # with flushing and closing in test_newlines. Both of
+            # these are most commonly (only?) observed on Py27/64-bit
+            'FLAKY test__fileobject.py',
         ]
 
     if not PY35:
