@@ -100,7 +100,9 @@ if sys.platform == 'win32':
         #   File "c:\projects\gevent\gevent\socket.py", line 73, in create_connection
         #     raise err
         #   error: [Errno 10049] [Error 10049] The requested address is not valid in its context.
-        FAILING_TESTS.append('test_ftplib.py')
+        # XXX: On Jan 3 2016 this suddenly started passing on Py27/64; no idea why, the python version
+        # was 2.7.11 before and after.
+        FAILING_TESTS.append('FLAKY test_ftplib.py')
 
     if PY3:
         pass
