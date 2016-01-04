@@ -4,10 +4,15 @@
 
 .. currentmodule:: gevent
 
+1.1rc4 (unreleased)
+===================
+
+- TBD
+
 1.1rc3 (Jan 04, 2016)
 =====================
 
-- Support the new PEP 466 :mod:`ssl` interfaces on any Python 2
+- Python 2: Support the new PEP 466 :mod:`ssl` interfaces on any Python 2
   version that supplies them, not just on the versions it officially
   shipped with. Some Linux distributions, including RedHat/CentOS and
   Amazon have backported the changes to older versions. Reported in
@@ -16,14 +21,14 @@
   collector caused PyPy to crash when a previously-allocated Semaphore
   was used in a ``__del__`` method, something done in the popular
   libraries ``requests`` and ``urllib3``. Due to this and other Cython
-  related issues, the Semaphore class is no longer compiled by Cython.
-  This means that it is now traceable and not exactly as atomic as the
-  Cython version, though the overall semantics should remain the same.
-  Reported in :issue:`704` by Shaun Crampton.
+  related issues, the Semaphore class is no longer compiled by Cython
+  on PyPy. This means that it is now traceable and not exactly as
+  atomic as the Cython version, though the overall semantics should
+  remain the same. Reported in :issue:`704` by Shaun Crampton.
 - PyPy: Optimize the CFFI backend to use less memory (two pointers per
   watcher).
 - Python 3: The WSGI ``PATH_INFO`` entry is decoded from URL escapes
-  using latin-1, not UTF-8. This improves compliance with PEP 333 and
+  using latin-1, not UTF-8. This improves compliance with PEP 3333 and
   compatibility with some frameworks like Django. Fixed in :pr:`712`
   by Ruben De Visscher.
 
