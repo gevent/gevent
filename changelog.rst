@@ -4,8 +4,8 @@
 
 .. currentmodule:: gevent
 
-1.1rc3 (Unreleased)
-===================
+1.1rc3 (Jan 04, 2016)
+=====================
 
 - Support the new PEP 466 :mod:`ssl` interfaces on any Python 2
   version that supplies them, not just on the versions it officially
