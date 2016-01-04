@@ -956,6 +956,8 @@ class WSGIHandler(object):
             path, query = self.path.split('?', 1)
         else:
             path, query = self.path, ''
+        # Note that self.path contains the original str object; if it contains
+        # encoded escapes, it will NOT match PATH_INFO.
         env['PATH_INFO'] = unquote_latin1(path)
         env['QUERY_STRING'] = query
 

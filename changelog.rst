@@ -22,6 +22,10 @@
   Reported in :issue:`704` by Shaun Crampton.
 - PyPy: Optimize the CFFI backend to use less memory (two pointers per
   watcher).
+- Python 3: The WSGI ``PATH_INFO`` entry is decoded from URL escapes
+  using latin-1, not UTF-8. This improves compliance with PEP 333 and
+  compatibility with some frameworks like Django. Fixed in :pr:`712`
+  by Ruben De Visscher.
 
 1.1rc2 (Dec 11, 2015)
 =====================
