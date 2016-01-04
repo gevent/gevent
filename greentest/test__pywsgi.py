@@ -731,7 +731,7 @@ class TestInternational(TestCase):
         if not PY3:
             self.assertEqual(environ['PATH_INFO'], '/\xd0\xbf\xd1\x80\xd0\xb8\xd0\xb2\xd0\xb5\xd1\x82')
         else:
-            self.assertEqual(environ['PATH_INFO'], '/\u043f\u0440\u0438\u0432\u0435\u0442')
+            self.assertEqual(environ['PATH_INFO'], '/\u043f\u0440\u0438\u0432\u0435\u0442'.encode('utf-8').decode('latin-1'))
         self.assertEqual(environ['QUERY_STRING'], '%D0%B2%D0%BE%D0%BF%D1%80%D0%BE%D1%81=%D0%BE%D1%82%D0%B2%D0%B5%D1%82')
         start_response("200 PASSED", [('Content-Type', 'text/plain')])
         return []

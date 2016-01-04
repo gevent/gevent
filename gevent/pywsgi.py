@@ -16,6 +16,7 @@ import sys
 import time
 import traceback
 from datetime import datetime
+
 try:
     from urllib import unquote
 except ImportError:
@@ -25,6 +26,12 @@ from gevent import socket
 import gevent
 from gevent.server import StreamServer
 from gevent.hub import GreenletExit, PY3, reraise
+
+from functools import partial
+if PY3:
+    unquote_latin1 = partial(unquote, encoding='latin-1')
+else:
+    unquote_latin1 = unquote
 
 _no_undoc_members = True # Don't put undocumented things into sphinx
 
@@ -949,7 +956,7 @@ class WSGIHandler(object):
             path, query = self.path.split('?', 1)
         else:
             path, query = self.path, ''
-        env['PATH_INFO'] = unquote(path)
+        env['PATH_INFO'] = unquote_latin1(path)
         env['QUERY_STRING'] = query
 
         if self.headers.typeheader is not None:
