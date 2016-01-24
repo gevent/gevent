@@ -31,7 +31,7 @@ automatically if working in a virtual environment).
 
 While gevent v1.1 is not yet released, it has release candidates which are
 currently considered quite stable, with many bugfixes over v1.0.
-v1.1 is also necessary if you are running OS X 10.11.
+v1.1 is also necessary if you are running OS X 10.11 and/or Python 3.
 To install one of these release candidates, you can run::
 
     pip install --pre gevent
