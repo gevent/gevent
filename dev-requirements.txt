@@ -1,0 +1,6 @@
+setuptools
+cython>=0.23.4
+greenlet>=0.4.9
+coverage>=4.0
+cffi
+-e .

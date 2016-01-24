@@ -49,7 +49,15 @@ Development
 
 To install the latest development version::
 
-  pip install setuptools cffi tox 'cython>=0.23.4' git+git://github.com/gevent/gevent.git#egg=gevent
+  pip install setuptools 'cython>=0.23.4' git+git://github.com/gevent/gevent.git#egg=gevent
+
+To hack on gevent (using a virtualenv)::
+
+  $ git clone https://github.com/gevent/gevent.git
+  $ cd gevent
+  $ virtualenv env
+  $ source env/bin/activate
+  (env) $ pip install -r dev-requirements.txt
 
 .. note::
    You must have Cython, a C compiler, and the Python
