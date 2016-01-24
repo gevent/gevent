@@ -24,11 +24,17 @@ gevent is licensed under MIT license.
 Get gevent
 ==========
 
-Install Python 2.6, 2.7, 3.3 or 3.4 along with the greenlet_ extension
-(Python 3.5 has preliminary support). Or install PyPy 4.0.1 or above
+Gevent runs on Python >= 2.6, Python >= 3.3, or PyPy >= 4.0.1
 (but not PyPy3) (*Note*: PyPy is not supported in Windows). On all
 platforms, installing setuptools is recommended (this is done
 automatically if working in a virtual environment).
+
+While gevent v1.1 is not yet released, it has release candidates which are
+currently considered quite stable, with many bugfixes over v1.0.
+v1.1 is also necessary if you are running OS X 10.11.
+To install one of these release candidates, you can run::
+
+    pip install --pre gevent
 
 Download the latest release from `Python Package Index`_ or clone `the repository`_.
 
