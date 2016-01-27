@@ -7,7 +7,9 @@
 1.1rc4 (unreleased)
 ===================
 
-- TBD
+- Python 2: Using the blocking API at import time when multiple
+  greenlets are also importing should not lead to ``LoopExit``.
+  Reported in :issue:`798` by Garrett Heel.
 
 1.1rc3 (Jan 04, 2016)
 =====================

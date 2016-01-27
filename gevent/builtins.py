@@ -4,7 +4,8 @@ from __future__ import absolute_import
 
 import imp # deprecated since 3.4; issues PendingDeprecationWarning in 3.5
 import sys
-import gevent.lock
+import weakref
+from gevent.lock import RLock
 
 # Normally we'd have the "expected" case inside the try
 # (Python 3, because Python 3 is the way forward). But
@@ -27,13 +28,43 @@ _import = builtins.__import__
 # And the order matters. Note that under 3.4, the global import lock
 # and imp module are deprecated. It seems that in all Py3 versions, a
 # module lock is used such that this fix is not necessary.
-_g_import_lock = gevent.lock.RLock()
+
+# We emulate the per-module locking system under Python 2 in order to
+# avoid issues acquiring locks in multiple-level-deep imports
+# that attempt to use the gevent blocking API at runtime; using one lock
+# could lead to a LoopExit error as a greenlet attempts to block on it while
+# it's already held by the main greenlet (issue #798).
+
+# We base this approach on a simplification of what `importlib._boonstrap`
+# does; notably, we don't check for deadlocks
+
+_g_import_locks = {} # name -> wref of RLock
 
 __lock_imports = True
 
 
+def __module_lock(name):
+    # Return the lock for the given module, creating it if necessary.
+    # It will be removed when no longer needed
+    lock = None
+    try:
+        lock = _g_import_locks[name]()
+    except KeyError:
+        pass
+
+    if lock is None:
+        lock = RLock()
+
+        def cb(_):
+            del _g_import_locks[name]
+        _g_import_locks[name] = weakref.ref(lock, cb)
+    return lock
+
+
 def __import__(*args, **kwargs):
     """
+    __import__(name, globals=None, locals=None, fromlist=(), level=0) -> object
+
     Normally python protects imports against concurrency by doing some locking
     at the C level (at least, it does that in CPython).  This function just
     wraps the normal __import__ functionality in a recursive lock, ensuring that
@@ -45,19 +76,18 @@ def __import__(*args, **kwargs):
         # No such protection exists for monkey-patched builtins,
         # however, so this is necessary.
         args = args[1:]
-    # TODO: It would be nice not to have to acquire the locks
-    # if the module is already imported (in sys.modules), but the interpretation
-    # of the arguments is somewhat complex.
+
     if not __lock_imports:
         return _import(*args, **kwargs)
 
+    module_lock = __module_lock(args[0]) # Get a lock for the module name
     imp.acquire_lock()
     try:
-        _g_import_lock.acquire()
+        module_lock.acquire()
         try:
             result = _import(*args, **kwargs)
         finally:
-            _g_import_lock.release()
+            module_lock.release()
     finally:
         imp.release_lock()
     return result
