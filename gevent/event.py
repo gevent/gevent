@@ -20,9 +20,22 @@ class Event(object):
     An event object manages an internal flag that can be set to true with the
     :meth:`set` method and reset to false with the :meth:`clear` method. The :meth:`wait` method
     blocks until the flag is true.
+
+    .. note::
+        The order and timing in which waiting greenlets are awakened is not determined.
+        As an implementation note, in gevent 1.1 and 1.0, waiting greenlets are awakened in a
+        undetermined order sometime *after* the current greenlet yields to the event loop. Other greenlets
+        (those not waiting to be awakened) may run between the current greenlet yielding and
+        the waiting greenlets being awakened. These details may change in the future.
     """
 
     def __init__(self):
+        # XXX: TODO: AsyncResult guarantees the order that waiting
+        # greenlets are called by using a deque(), and also doesn't
+        # make a copy (_todo). Should we use a deque? Should
+        # AsyncResult copy? It seems we should be consistent. And if
+        # we did, we could share a great deal of the common code in
+        # that case.
         self._links = set()
         self._todo = set()
         self._flag = False
@@ -43,9 +56,10 @@ class Event(object):
         """
         Set the internal flag to true.
 
-        All greenlets waiting for it to become true are awakened.
-        Greenlets that call :meth:`wait` once the flag is true will
-        not block at all.
+        All greenlets waiting for it to become true are awakened in
+        some order at some time in the future. Greenlets that call
+        :meth:`wait` once the flag is true will not block at all
+        (until :meth:`clear` is called).
         """
         self._flag = True
         self._todo.update(self._links)
@@ -62,10 +76,11 @@ class Event(object):
         self._flag = False
 
     def wait(self, timeout=None):
-        """Block until the internal flag is true.
+        """
+        Block until the internal flag is true.
 
         If the internal flag is true on entry, return immediately. Otherwise,
-        block until another thread calls :meth:`set` to set the flag to true,
+        block until another thread (greenlet) calls :meth:`set` to set the flag to true,
         or until the optional timeout occurs.
 
         When the *timeout* argument is present and not ``None``, it should be a

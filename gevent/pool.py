@@ -494,9 +494,24 @@ class Group(GroupMappingMixin):
 
     def join(self, timeout=None, raise_error=False):
         """
-        Wait for the group to become empty at least once. Note that by the
-        time the waiting code runs again, some other greenlet may have been
-        added.
+        Wait for this group to become empty *at least once*.
+
+        If there are no greenlets in the group, returns immediately.
+
+        .. note:: By the time the waiting code (the caller of this
+           method) regains control, a greenlet may have been added to
+           this group, and so this object may no longer be empty. (That
+           is, ``group.join(); assert len(group) == 0`` is not
+           guaranteed to hold.) This method only guarantees that the group
+           reached a ``len`` of 0 at some point.
+
+        :keyword bool raise_error: If True (*not* the default), if any
+            greenlet that finished while the join was in progress raised
+            an exception, that exception will be raised to the caller of
+            this method. If multiple greenlets raised exceptions, which
+            one gets re-raised is not determined. Only greenlets currently
+            in the group when this method is called are guaranteed to
+            be checked for exceptions.
         """
         if raise_error:
             greenlets = self.greenlets.copy()
