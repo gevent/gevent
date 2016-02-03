@@ -58,9 +58,11 @@ class TestTCP(greentest.TestCase):
                 pass
             del self.listener
 
-    def create_connection(self):
+    def create_connection(self, port=None, timeout=None):
         sock = socket.socket()
-        sock.connect(('127.0.0.1', self.port))
+        sock.connect(('127.0.0.1', port or self.port))
+        if timeout is not None:
+            sock.settimeout(timeout)
         return sock
 
     def _test_sendall(self, data):

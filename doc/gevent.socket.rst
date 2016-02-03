@@ -14,7 +14,7 @@ and let the others run.
              socket). The results of attempting to use the socket in
              another thread (for example, passing it to the
              threadpool) are not defined (but one common outcome is a
-             ``LoopExit`` exception).
+             :exc:`~gevent.hub.LoopExit` exception).
 
 For convenience, exceptions (like :class:`error <socket.error>` and
 :class:`timeout <socket.timeout>`) as well as the constants from the
@@ -52,7 +52,9 @@ functions not commonly used by many programs.
 .. note:: These use the underlying libev ``io`` watchers, which means
           that they share the same implementation limits. For example,
           on some platforms they can be used with more than just
-          sockets, while on others the applicability is more limited.
+          sockets, while on others the applicability is more limited
+          (POSIX platforms like Linux and OS X can use pipes and fifos
+          but Windows is limited to sockets).
 
 .. autofunction:: gevent.socket.wait_read
 .. autofunction:: gevent.socket.wait_write

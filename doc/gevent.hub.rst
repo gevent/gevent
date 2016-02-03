@@ -11,3 +11,5 @@
     :undoc-members:
 
 .. autoclass:: Waiter
+
+.. autoclass:: LoopExit

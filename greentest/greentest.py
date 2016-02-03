@@ -333,6 +333,7 @@ class TestCase(TestCaseMetaClass("NewBase", (BaseTestCase,), {})):
     __timeout__ = 1 if not RUNNING_ON_CI else 5
     switch_expected = 'default'
     error_fatal = True
+    close_on_teardown = ()
 
     def run(self, *args, **kwargs):
         if self.switch_expected == 'default':
@@ -345,6 +346,21 @@ class TestCase(TestCaseMetaClass("NewBase", (BaseTestCase,), {})):
         if hasattr(self, 'cleanup'):
             self.cleanup()
         self._error = self._none
+        for x in self.close_on_teardown:
+            try:
+                x.close()
+            except Exception:
+                pass
+        try:
+            del self.close_on_teardown
+        except AttributeError:
+            pass
+
+    def _close_on_teardown(self, resource):
+        if 'close_on_teardown' not in self.__dict__:
+            self.close_on_teardown = []
+        self.close_on_teardown.append(resource)
+        return resource
 
     @property
     def testname(self):
