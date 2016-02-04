@@ -2,18 +2,109 @@
 """Basic synchronization primitives: Event and AsyncResult"""
 from __future__ import print_function
 import sys
-from gevent.hub import get_hub, getcurrent, _NONE, PY3, reraise
+from gevent.hub import get_hub, getcurrent, _NONE, reraise
 from gevent.hub import InvalidSwitchError
 from gevent.timeout import Timeout
 from gevent._tblib import dump_traceback, load_traceback
-from collections import deque
-if PY3:
-    xrange = range
 
 __all__ = ['Event', 'AsyncResult']
 
 
-class Event(object):
+class _AbstractLinkable(object):
+    # Encapsulates the standard parts of the linking and notifying protocol
+    # common to both repeatable events and one-time events (AsyncResolt).
+
+    _notifier = None
+
+    def __init__(self):
+        # Store all active links twice, in order to guard
+        # against a client removing itself or others.
+        # Previously, AsyncResult did not do this, making it somewhat cheaper.
+        # Also previously, AsyncResult maintained the order of notifications, but Event
+        # did not; this implementation does not.
+        self._links = set()
+        self._todo = set() # This is "append only"; it is reset during _notify_links
+        self.hub = get_hub()
+
+    def ready(self):
+        # Instances must define this
+        raise NotImplementedError()
+
+    def _check_and_notify(self):
+        # If this object is ready to be notified, begin the process.
+        if self.ready():
+            self._todo.update(self._links)
+            if self._todo and not self._notifier:
+                self._notifier = self.hub.loop.run_callback(self._notify_links)
+
+    def rawlink(self, callback):
+        """
+        Register a callback to call when this object is ready.
+
+        *callback* will be called in the :class:`Hub <gevent.hub.Hub>`, so it must not use blocking gevent API.
+        *callback* will be passed one argument: this instance.
+        """
+        if not callable(callback):
+            raise TypeError('Expected callable: %r' % (callback, ))
+        self._links.add(callback)
+        self._check_and_notify()
+
+    def unlink(self, callback):
+        """Remove the callback set by :meth:`rawlink`"""
+        try:
+            self._links.remove(callback)
+            # No need to remove from _todo, checking is handled at
+            # notification time
+        except KeyError:
+            pass
+
+    def _notify_links(self):
+        # Actually call the notification callbacks. Those callbacks in _todo that are
+        # still in _links are called. _todo is reset to a new queue before iterating to avoid
+        # concurrent modification. Keep checking for anything in self._todo in case items were
+        # linked in during notification
+        while self._todo:
+            todo = self._todo
+            self._todo = set()
+            for link in todo:
+                if link in self._links:  # check that link was not notified yet and was not removed by the client
+                    try:
+                        link(self)
+                    except:
+                        self.hub.handle_error((link, self), *sys.exc_info())
+
+    def _wait_core(self, timeout, catch=Timeout):
+        # The core of the wait implementation, handling
+        # switching and linking. If *catch* is set to (),
+        # a timeout that elapses will be allowed to be raised.
+        switch = getcurrent().switch
+        self.rawlink(switch)
+        try:
+            timer = Timeout._start_new_or_dummy(timeout)
+            try:
+                try:
+                    result = self.hub.switch()
+                    if result is not self: # pragma: no cover
+                        raise InvalidSwitchError('Invalid switch into Event.wait(): %r' % (result, ))
+                except catch as ex:
+                    if ex is not timer:
+                        raise
+            finally:
+                timer.cancel()
+        finally:
+            self.unlink(switch)
+
+    _wait_return_value = None
+
+    def _wait(self, timeout=None):
+        if self.ready():
+            return getattr(self, self._wait_return_value)
+
+        self._wait_core(timeout)
+        return getattr(self, self._wait_return_value)
+
+
+class Event(_AbstractLinkable):
     """A synchronization primitive that allows one greenlet to wake up one or more others.
     It has the same interface as :class:`threading.Event` but works across greenlets.
 
@@ -29,18 +120,7 @@ class Event(object):
         the waiting greenlets being awakened. These details may change in the future.
     """
 
-    def __init__(self):
-        # XXX: TODO: AsyncResult guarantees the order that waiting
-        # greenlets are called by using a deque(), and also doesn't
-        # make a copy (_todo). Should we use a deque? Should
-        # AsyncResult copy? It seems we should be consistent. And if
-        # we did, we could share a great deal of the common code in
-        # that case.
-        self._links = set()
-        self._todo = set()
-        self._flag = False
-        self.hub = get_hub()
-        self._notifier = None
+    _flag = False
 
     def __str__(self):
         return '<%s %s _links[%s]>' % (self.__class__.__name__, (self._flag and 'set') or 'clear', len(self._links))
@@ -62,9 +142,7 @@ class Event(object):
         (until :meth:`clear` is called).
         """
         self._flag = True
-        self._todo.update(self._links)
-        if self._todo and not self._notifier:
-            self._notifier = self.hub.loop.run_callback(self._notify_links)
+        self._check_and_notify()
 
     def clear(self):
         """
@@ -74,6 +152,8 @@ class Event(object):
         :meth:`set` is called to set the internal flag to true again.
         """
         self._flag = False
+
+    _wait_return_value = '_flag'
 
     def wait(self, timeout=None):
         """
@@ -90,64 +170,16 @@ class Event(object):
         :return: The value of the internal flag (``True`` or ``False``).
            (If no timeout was given, the only possible return value is ``True``.)
         """
-        if self._flag:
-            return self._flag
+        return self._wait(timeout)
 
-        switch = getcurrent().switch
-        self.rawlink(switch)
-        try:
-            timer = Timeout._start_new_or_dummy(timeout)
-            try:
-                try:
-                    result = self.hub.switch()
-                    if result is not self:
-                        raise InvalidSwitchError('Invalid switch into Event.wait(): %r' % (result, ))
-                except Timeout as ex:
-                    if ex is not timer:
-                        raise
-            finally:
-                timer.cancel()
-        finally:
-            self.unlink(switch)
-        return self._flag
-
-    def rawlink(self, callback):
-        """Register a callback to call when the internal flag is set to true.
-
-        *callback* will be called in the :class:`Hub <gevent.hub.Hub>`, so it must not use blocking gevent API.
-        *callback* will be passed one argument: this instance.
-        """
-        if not callable(callback):
-            raise TypeError('Expected callable: %r' % (callback, ))
-        self._links.add(callback)
-        if self._flag and not self._notifier:
-            self._todo.add(callback)
-            self._notifier = self.hub.loop.run_callback(self._notify_links)
-
-    def unlink(self, callback):
-        """Remove the callback set by :meth:`rawlink`"""
-        try:
-            self._links.remove(callback)
-        except ValueError:
-            pass
-
-    def _notify_links(self):
-        while self._todo:
-            link = self._todo.pop()
-            if link in self._links:  # check that link was not notified yet and was not removed by the client
-                try:
-                    link(self)
-                except:
-                    self.hub.handle_error((link, self), *sys.exc_info())
-
-    def _reset_internal_locks(self):
+    def _reset_internal_locks(self): # pragma: no cover
         # for compatibility with threading.Event (only in case of patch_all(Event=True), by default Event is not patched)
         #  Exception AttributeError: AttributeError("'Event' object has no attribute '_reset_internal_locks'",)
         # in <module 'threading' from '/usr/lib/python2.7/threading.pyc'> ignored
         pass
 
 
-class AsyncResult(object):
+class AsyncResult(_AbstractLinkable):
     """A one-time event that stores a value or an exception.
 
     Like :class:`Event` it wakes up all the waiters when :meth:`set` or :meth:`set_exception`
@@ -181,15 +213,18 @@ class AsyncResult(object):
         ... except ZeroDivisionError:
         ...     print('ZeroDivisionError')
         ZeroDivisionError
+
+    .. note::
+        The order and timing in which waiting greenlets are awakened is not determined.
+        As an implementation note, in gevent 1.1 and 1.0, waiting greenlets are awakened in a
+        undetermined order sometime *after* the current greenlet yields to the event loop. Other greenlets
+        (those not waiting to be awakened) may run between the current greenlet yielding and
+        the waiting greenlets being awakened. These details may change in the future.
     """
 
     _value = _NONE
     _exc_info = ()
     _notifier = None
-
-    def __init__(self):
-        self._links = deque()
-        self.hub = get_hub()
 
     @property
     def _exception(self):
@@ -244,8 +279,7 @@ class AsyncResult(object):
         Subsequent calls to :meth:`wait` and :meth:`get` will not block at all.
         """
         self._value = value
-        if self._links and not self._notifier:
-            self._notifier = self.hub.loop.run_callback(self._notify_links)
+        self._check_and_notify()
 
     def set_exception(self, exception, exc_info=None):
         """Store the exception and wake up any waiters.
@@ -262,8 +296,7 @@ class AsyncResult(object):
         else:
             self._exc_info = (type(exception), exception, dump_traceback(None))
 
-        if self._links and not self._notifier:
-            self._notifier = self.hub.loop.run_callback(self._notify_links)
+        self._check_and_notify()
 
     def _raise_exception(self):
         reraise(*self.exc_info)
@@ -277,7 +310,8 @@ class AsyncResult(object):
 
         When the *timeout* argument is present and not ``None``, it should be a
         floating point number specifying a timeout for the operation in seconds
-        (or fractions thereof).
+        (or fractions thereof). If the *timeout* elapses, the *Timeout* exception will
+        be raised.
 
         :keyword bool block: If set to ``False`` and this instance is not ready,
             immediately raise a :class:`Timeout` exception.
@@ -291,19 +325,8 @@ class AsyncResult(object):
             # Not ready and not blocking, so immediately timeout
             raise Timeout()
 
-        switch = getcurrent().switch
-        self.rawlink(switch)
-        try:
-            timer = Timeout._start_new_or_dummy(timeout)
-            try:
-                result = self.hub.switch()
-                if result is not self:
-                    raise InvalidSwitchError('Invalid switch into AsyncResult.get(): %r' % (result, ))
-            finally:
-                timer.cancel()
-        except:
-            self.unlink(switch)
-            raise
+        # Wait, raising a timeout that elapses
+        self._wait_core(timeout, ())
 
         # by definition we are now ready
         return self.get(block=False)
@@ -316,6 +339,8 @@ class AsyncResult(object):
         :class:`gevent.Timeout` immediately.
         """
         return self.get(block=False)
+
+    _wait_return_value = 'value'
 
     def wait(self, timeout=None):
         """Block until the instance is ready.
@@ -336,56 +361,7 @@ class AsyncResult(object):
             (no timeout exception will be raised).
 
         """
-        if self.ready():
-            return self.value
-
-        switch = getcurrent().switch
-        self.rawlink(switch)
-        try:
-            timer = Timeout._start_new_or_dummy(timeout)
-            try:
-                result = self.hub.switch()
-                if result is not self:
-                    raise InvalidSwitchError('Invalid switch into AsyncResult.wait(): %r' % (result, ))
-            finally:
-                timer.cancel()
-        except Timeout as exc:
-            self.unlink(switch)
-            if exc is not timer:
-                raise
-        except:
-            self.unlink(switch)
-            raise
-        # not calling unlink() in non-exception case, because if switch()
-        # finished normally, link was already removed in _notify_links
-        return self.value
-
-    def _notify_links(self):
-        while self._links:
-            link = self._links.popleft()
-            try:
-                link(self)
-            except:
-                self.hub.handle_error((link, self), *sys.exc_info())
-
-    def rawlink(self, callback):
-        """Register a callback to call when a value or an exception is set.
-
-        *callback* will be called in the :class:`Hub <gevent.hub.Hub>`, so it must not use blocking gevent API.
-        *callback* will be passed one argument: this instance.
-        """
-        if not callable(callback):
-            raise TypeError('Expected callable: %r' % (callback, ))
-        self._links.append(callback)
-        if self.ready() and not self._notifier:
-            self._notifier = self.hub.loop.run_callback(self._notify_links)
-
-    def unlink(self, callback):
-        """Remove the callback set by :meth:`rawlink`"""
-        try:
-            self._links.remove(callback)
-        except ValueError:
-            pass
+        return self._wait(timeout)
 
     # link protocol
     def __call__(self, source):

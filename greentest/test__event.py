@@ -11,6 +11,9 @@ class TestEventWait(greentest.GenericWaitTestCase):
     def wait(self, timeout):
         Event().wait(timeout=timeout)
 
+    def test_cover(self):
+        str(Event())
+
 
 class TestWaitEvent(greentest.GenericWaitTestCase):
 
@@ -38,9 +41,18 @@ class TestAsyncResultGet(greentest.GenericGetTestCase):
 
 class TestAsyncResult(greentest.TestCase):
 
+    def test_link(self):
+        ar = AsyncResult()
+        self.assertRaises(TypeError, ar.rawlink, None)
+        ar.unlink(None) # doesn't raise
+        ar.unlink(None) # doesn't raise
+        str(ar) # cover
+
     def test_set_exc(self):
         log = []
         e = AsyncResult()
+        self.assertEqual(e.exc_info, ())
+        self.assertEqual(e.exception, None)
 
         def waiter():
             try:
@@ -70,6 +82,11 @@ class TestAsyncResult(greentest.TestCase):
         finally:
             t.cancel()
             g.kill()
+
+    def test_nonblocking_get(self):
+        ar = AsyncResult()
+        self.assertRaises(gevent.Timeout, ar.get, block=False)
+        self.assertRaises(gevent.Timeout, ar.get_nowait)
 
 
 class TestAsyncResultAsLinkTarget(greentest.TestCase):
