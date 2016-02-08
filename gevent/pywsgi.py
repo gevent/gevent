@@ -157,7 +157,7 @@ class Input(object):
 
         # On Python 2, self.rfile is usually socket.makefile(), which
         # uses cStringIO.StringIO. If *length* is greater than the C
-        # sizeof(int) (typically 32 bits), parsing the argument to
+        # sizeof(int) (typically 32 bits signed), parsing the argument to
         # readline raises OverflowError. StringIO.read(), OTOH, uses
         # PySize_t, typically a long (64 bits). In a bare readline()
         # case, because the header lines we're trying to read with
