@@ -11,6 +11,22 @@ from gevent.hub import string_types, integer_types, get_hub, xrange
 __all__ = ['BaseServer']
 
 
+# We define a helper function to handle closing the socket in
+# do_handle; We'd like to bind it to a kwarg to avoid *any* lookups at
+# all, but that's incompatible with the calling convention of
+# do_handle. On CPython, this is ~20% faster than creating and calling
+# a closure and ~10% faster than using a @staticmethod. (In theory, we
+# could create a closure only once in set_handle, to wrap self._handle,
+# but this is safer from a  backwards compat standpoint.)
+# we also avoid unpacking the *args tuple when calling/spawning this object
+# for a tiny improvement (benchmark shows a wash)
+def _handle_and_close_when_done(handle, close, args_tuple):
+    try:
+        return handle(*args_tuple)
+    finally:
+        close(*args_tuple)
+
+
 class BaseServer(object):
     """
     An abstract base class that implements some common functionality for the servers in gevent.
@@ -147,20 +163,15 @@ class BaseServer(object):
     def do_handle(self, *args):
         spawn = self._spawn
         handle = self._handle
-
-        def _close_when_done(*args):
-            try:
-                return handle(*args)
-            finally:
-                self.do_close(*args)
+        close = self.do_close
 
         try:
             if spawn is None:
-                _close_when_done(*args)
+                _handle_and_close_when_done(handle, close, args)
             else:
-                spawn(_close_when_done, *args)
+                spawn(_handle_and_close_when_done, handle, close, args)
         except:
-            self.do_close(*args)
+            close(*args)
             raise
 
     def do_close(self, *args):
