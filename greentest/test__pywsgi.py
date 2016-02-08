@@ -29,7 +29,11 @@ except ImportError:
 import os
 import sys
 try:
-    from StringIO import StringIO
+    # On Python 2, we want the C-optimized version if
+    # available; it has different corner-case behaviour than
+    # the Python implementation, and it used by socket.makefile
+    # by default.
+    from cStringIO import StringIO
 except ImportError:
     from io import BytesIO as StringIO
 import weakref
@@ -42,7 +46,7 @@ except ImportError:
 
 import greentest
 import gevent
-from gevent.hub import PY3
+from gevent.hub import PY3, PYPY
 from gevent import socket
 from gevent import pywsgi
 from gevent.pywsgi import Input
@@ -1431,6 +1435,37 @@ class TestInputRaw(greentest.BaseTestCase):
     def test_chunked_short_chunk_readline(self):
         i = self.make_input("2\r\n1", chunked_input=True)
         self.assertRaises(IOError, i.readline)
+
+    def test_32bit_overflow(self):
+        # https://github.com/gevent/gevent/issues/289
+        # Should not raise an OverflowError on Python 2
+        data = b'asdf\nghij\n'
+        long_data = b'a' * (pywsgi.MAX_REQUEST_LINE + 10)
+        long_data += b'\n'
+        data = data + long_data
+        partial_data = b'qjk\n' # Note terminating \n
+        n = 25 * 1000000000
+        if hasattr(n, 'bit_length'):
+            self.assertEqual(n.bit_length(), 35)
+        if not PY3 and not PYPY:
+            # Make sure we have the impl we think we do
+            self.assertRaises(OverflowError, StringIO(data).readline, n)
+
+        i = self.make_input(data, content_length=n)
+        # No size hint, but we have too large a content_length to fit
+        self.assertEqual(i.readline(), b'asdf\n')
+        # Large size hint
+        self.assertEqual(i.readline(n), b'ghij\n')
+        self.assertEqual(i.readline(n), long_data)
+
+        # Now again with the real content length, assuring we can't read past it
+        i = self.make_input(data + partial_data, content_length=len(data) + 1)
+        self.assertEqual(i.readline(), b'asdf\n')
+        self.assertEqual(i.readline(n), b'ghij\n')
+        self.assertEqual(i.readline(n), long_data)
+        # Now we've reached content_length so we shouldn't be able to
+        # read anymore except the one byte remaining
+        self.assertEqual(i.readline(n), b'q')
 
 
 class Test414(TestCase):

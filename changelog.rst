@@ -10,6 +10,11 @@
 - Python 2: Using the blocking API at import time when multiple
   greenlets are also importing should not lead to ``LoopExit``.
   Reported in :issue:`798` by Garrett Heel.
+- Python 2: Don't raise ``OverflowError`` when using the ``readline``
+  method of the WSGI input stream without a size hint or with a large
+  size hint when the client is uploading a large amount of data.
+  Reported in :issue:`289` by ggjjlldd, with contributions by Nathan
+  Hoad.
 
 1.1rc3 (Jan 04, 2016)
 =====================

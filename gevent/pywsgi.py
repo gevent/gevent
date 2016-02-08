@@ -145,6 +145,7 @@ class Input(object):
             # Either Content-Length or "Transfer-Encoding: chunked" must be present in a request with a body
             # if it was chunked, then this function would have not been called
             return b''
+
         self._send_100_continue()
         left = content_length - self.position
         if length is None:
@@ -153,7 +154,31 @@ class Input(object):
             length = left
         if not length:
             return b''
-        read = reader(length)
+
+        # On Python 2, self.rfile is usually socket.makefile(), which
+        # uses cStringIO.StringIO. If *length* is greater than the C
+        # sizeof(int) (typically 32 bits), parsing the argument to
+        # readline raises OverflowError. StringIO.read(), OTOH, uses
+        # PySize_t, typically a long (64 bits). In a bare readline()
+        # case, because the header lines we're trying to read with
+        # readline are typically expected to be small, we can correct
+        # that failure by simply doing a smaller call to readline and
+        # appending; failures in read we let propagate.
+        try:
+            read = reader(length)
+        except OverflowError:
+            if not use_readline:
+                # Expecting to read more than 64 bits of data. Ouch!
+                raise
+            # We could loop on calls to smaller readline(), appending them
+            # until we actually get a newline. For uses in this module,
+            # we expect the actual length to be small, but WSGI applications
+            # are allowed to pass in an arbitrary length. (This loop isn't optimal,
+            # but even client applications *probably* have short lines.)
+            read = b''
+            while len(read) < length and not read.endswith(b'\n'):
+                read += reader(MAX_REQUEST_LINE)
+
         self.position += len(read)
         if len(read) < length:
             if (use_readline and not read.endswith(b"\n")) or not use_readline:
