@@ -12,9 +12,12 @@
   Reported in :issue:`798` by Garrett Heel.
 - Python 2: Don't raise ``OverflowError`` when using the ``readline``
   method of the WSGI input stream without a size hint or with a large
-  size hint when the client is uploading a large amount of data.
+  size hint when the client is uploading a large amount of data. (This
+  only impacted CPython 2; PyPy and Python 3 already handled this.)
   Reported in :issue:`289` by ggjjlldd, with contributions by Nathan
   Hoad.
+- ``BaseServer`` and its subclasses like ``WSGIServer`` avoid
+  allocating a new closure for each request, reducing overhead.
 
 1.1rc3 (Jan 04, 2016)
 =====================

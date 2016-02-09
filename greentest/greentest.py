@@ -510,7 +510,8 @@ class _DelayWaitMixin(object):
         _default_delay_max_adj = 0.11
     else:
         # Timing resolution is extremely poor on Appveyor
-        _default_delay_max_adj = 0.9
+        # and subject to jitter.
+        _default_delay_max_adj = 0.98
 
     def wait(self, timeout):
         raise NotImplementedError('override me in subclass')
