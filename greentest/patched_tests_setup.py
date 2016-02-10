@@ -166,6 +166,11 @@ disabled_tests = [
     # version that comes with PyPy/CPython, so fails with a TypeError.
 ]
 
+if 'thread' in os.getenv('GEVENT_FILE', ''):
+    disabled_tests += [
+        'test_subprocess.ProcessTestCase.test_double_close_on_error'
+        # Fails with "OSError: 9 invalid file descriptor"; expect GC/lifetime issues
+    ]
 
 def disabled_tests_extend(lines):
     disabled_tests.extend(lines.strip().split('\n'))
@@ -204,12 +209,6 @@ if hasattr(sys, 'pypy_version_info'):
             'test_signal.InterProcessSignalTests.test_main',
             # Fails to get the signal to the correct handler due to
             # https://bitbucket.org/cffi/cffi/issue/152/handling-errors-from-signal-handlers-in
-        ]
-
-    if 'thread' in os.getenv('GEVENT_FILE', ''):
-        disabled_tests += [
-            'test_subprocess.ProcessTestCase.test_double_close_on_error'
-            # Fails with "OSError: 9 invalid file descriptor"; expect GC/lifetime issues
         ]
 
 if sys.version_info[:2] >= (3, 4):
