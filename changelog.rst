@@ -18,6 +18,14 @@
   Hoad.
 - ``BaseServer`` and its subclasses like ``WSGIServer`` avoid
   allocating a new closure for each request, reducing overhead.
+- Python 2: Under 2.7.9 and above (or when the PEP 466 SSL interfaces
+  are available), perform the same hostname validation that the
+  standard library does; previously some cases were ignored. Also,
+  reading, writing, or handshaking a closed ``SSLSocket`` now raises
+  the same ``ValueError`` the standard library does, instead of an
+  ``AttributeError``. Found by updating gevent's copy of the
+  standard library test cases. Initially reported in :issue:`735` by
+  Dmitrij D. Czarkoff.
 
 1.1rc3 (Jan 04, 2016)
 =====================

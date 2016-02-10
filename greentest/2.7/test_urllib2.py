@@ -8,6 +8,11 @@ import StringIO
 import urllib2
 from urllib2 import Request, OpenerDirector
 
+try:
+    import ssl
+except ImportError:
+    ssl = None
+
 # XXX
 # Request
 # CacheFTPHandler (hard to write)
@@ -20,7 +25,7 @@ class TrivialTests(unittest.TestCase):
         self.assertRaises(ValueError, urllib2.urlopen, 'bogus url')
 
         # XXX Name hacking to get this to work on Windows.
-        fname = os.path.abspath(urllib2.__file__).replace('\\', '/')
+        fname = os.path.abspath(urllib2.__file__).replace(os.sep, '/')
 
         # And more hacking to get it to work on MacOS. This assumes
         # urllib.pathname2url works, unfortunately...
@@ -46,6 +51,14 @@ class TrivialTests(unittest.TestCase):
                  ('a="b\\"c", d="e\\,f", g="h\\\\i"', ['a="b"c"', 'd="e,f"', 'g="h\\i"'])]
         for string, list in tests:
             self.assertEqual(urllib2.parse_http_list(string), list)
+
+    @unittest.skipUnless(ssl, "ssl module required")
+    def test_cafile_and_context(self):
+        context = ssl.create_default_context()
+        with self.assertRaises(ValueError):
+            urllib2.urlopen(
+                "https://localhost", cafile="/nonexistent/path", context=context
+            )
 
 
 def test_request_headers_dict():
@@ -591,8 +604,8 @@ class OpenerDirectorTests(unittest.TestCase):
                 self.assertIsInstance(args[0], Request)
                 # response from opener.open is None, because there's no
                 # handler that defines http_open to handle it
-                self.assertTrue(args[1] is None or
-                             isinstance(args[1], MockResponse))
+                if args[1] is not None:
+                    self.assertIsInstance(args[1], MockResponse)
 
 
 def sanepathname2url(path):
@@ -924,7 +937,8 @@ class HandlerTests(unittest.TestCase):
                            MockHeaders({"location": to_url}))
                 except urllib2.HTTPError:
                     # 307 in response to POST requires user OK
-                    self.assertTrue(code == 307 and data is not None)
+                    self.assertEqual(code, 307)
+                    self.assertIsNotNone(data)
                 self.assertEqual(o.req.get_full_url(), to_url)
                 try:
                     self.assertEqual(o.req.get_method(), "GET")
@@ -1001,7 +1015,7 @@ class HandlerTests(unittest.TestCase):
         # cookies shouldn't leak into redirected requests
         from cookielib import CookieJar
 
-        from test_cookielib import interact_netscape
+        from test.test_cookielib import interact_netscape
 
         cj = CookieJar()
         interact_netscape(cj, "http://www.example.com/", "spam=eggs")
@@ -1106,11 +1120,29 @@ class HandlerTests(unittest.TestCase):
         self._test_basic_auth(opener, auth_handler, "Authorization",
                               realm, http_handler, password_manager,
                               "http://acme.example.com/protected",
-                              "http://acme.example.com/protected",
-                              )
+                              "http://acme.example.com/protected"
+                             )
 
     def test_basic_auth_with_single_quoted_realm(self):
         self.test_basic_auth(quote_char="'")
+
+    def test_basic_auth_with_unquoted_realm(self):
+        opener = OpenerDirector()
+        password_manager = MockPasswordManager()
+        auth_handler = urllib2.HTTPBasicAuthHandler(password_manager)
+        realm = "ACME Widget Store"
+        http_handler = MockHTTPHandler(
+            401, 'WWW-Authenticate: Basic realm=%s\r\n\r\n' % realm)
+        opener.add_handler(auth_handler)
+        opener.add_handler(http_handler)
+        msg = "Basic Auth Realm was unquoted"
+        with test_support.check_warnings((msg, UserWarning)):
+            self._test_basic_auth(opener, auth_handler, "Authorization",
+                                  realm, http_handler, password_manager,
+                                  "http://acme.example.com/protected",
+                                  "http://acme.example.com/protected"
+                                 )
+
 
     def test_proxy_basic_auth(self):
         opener = OpenerDirector()
@@ -1130,7 +1162,7 @@ class HandlerTests(unittest.TestCase):
                               )
 
     def test_basic_and_digest_auth_handlers(self):
-        # HTTPDigestAuthHandler threw an exception if it couldn't handle a 40*
+        # HTTPDigestAuthHandler raised an exception if it couldn't handle a 40*
         # response (http://python.org/sf/1479302), where it should instead
         # return None to allow another handler (especially
         # HTTPBasicAuthHandler) to handle the response.
@@ -1318,19 +1350,35 @@ class RequestTests(unittest.TestCase):
         req = Request(url)
         self.assertEqual(req.get_full_url(), url)
 
-def test_HTTPError_interface():
-    """
-    Issue 13211 reveals that HTTPError didn't implement the URLError
-    interface even though HTTPError is a subclass of URLError.
+    def test_HTTPError_interface(self):
+        """
+        Issue 13211 reveals that HTTPError didn't implement the URLError
+        interface even though HTTPError is a subclass of URLError.
 
-    >>> err = urllib2.HTTPError(msg='something bad happened', url=None, code=None, hdrs=None, fp=None)
-    >>> assert hasattr(err, 'reason')
-    >>> err.reason
-    'something bad happened'
-    """
+        >>> err = urllib2.HTTPError(msg='something bad happened', url=None, code=None, hdrs=None, fp=None)
+        >>> assert hasattr(err, 'reason')
+        >>> err.reason
+        'something bad happened'
+        """
+
+    def test_HTTPError_interface_call(self):
+        """
+        Issue 15701= - HTTPError interface has info method available from URLError.
+        """
+        err = urllib2.HTTPError(msg='something bad happened', url=None,
+                                code=None, hdrs='Content-Length:42', fp=None)
+        self.assertTrue(hasattr(err, 'reason'))
+        assert hasattr(err, 'reason')
+        assert hasattr(err, 'info')
+        assert callable(err.info)
+        try:
+            err.info()
+        except AttributeError:
+            self.fail("err.info() failed")
+        self.assertEqual(err.info(), "Content-Length:42")
 
 def test_main(verbose=None):
-    import test_urllib2
+    from test import test_urllib2
     test_support.run_doctest(test_urllib2, verbose)
     test_support.run_doctest(urllib2, verbose)
     tests = (TrivialTests,
