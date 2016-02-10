@@ -192,10 +192,14 @@ if sys.platform == 'darwin':
         # causes Mac OS X to show "Python crashes" dialog box which is annoying
     ]
 
+if sys.platform.startswith('win'):
+    disabled_tests += [
+        # Issue with Unix vs DOS newlines in the file vs from the server
+        'test_ssl.ThreadedTests.test_socketserver',
+    ]
+
 if hasattr(sys, 'pypy_version_info'):
     disabled_tests += [
-
-
         'test_subprocess.ProcessTestCase.test_failed_child_execute_fd_leak',
         # Does not exist in the CPython test suite, tests for a specific bug
         # in PyPy's forking. Only runs on linux and is specific to the PyPy
