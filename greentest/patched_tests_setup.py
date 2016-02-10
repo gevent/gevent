@@ -74,6 +74,9 @@ def get_switch_expected(fullname):
 
 
 disabled_tests = [
+    # The server side takes awhile to shut down
+    'test_httplib.HTTPSTest.test_local_bad_hostname',
+
     'test_threading.ThreadTests.test_PyThreadState_SetAsyncExc',
     # uses some internal C API of threads not available when threads are emulated with greenlets
 
@@ -148,6 +151,19 @@ disabled_tests = [
     'test_thread.ThreadRunningTests.test__count',
     'test_thread.TestForkInThread.test_forkinthread',
     # XXX needs investigating
+
+    'test_subprocess.POSIXProcessTestCase.test_terminate_dead',
+    'test_subprocess.POSIXProcessTestCase.test_send_signal_dead',
+    'test_subprocess.POSIXProcessTestCase.test_kill_dead',
+    # Don't exist in the test suite until 2.7.4+; with our monkey patch in place,
+    # they fail because the process they're looking for has been allowed to exit.
+    # Our monkey patch waits for the process with a watcher and so detects
+    # the exit before the normal polling mechanism would
+
+    'test_subprocess.POSIXProcessTestCase.test_preexec_errpipe_does_not_double_close_pipes',
+    # Does not exist in the test suite until 2.7.4+. Subclasses Popen, and overrides
+    # _execute_child. But our version has a different parameter list than the
+    # version that comes with PyPy/CPython, so fails with a TypeError.
 ]
 
 
@@ -173,18 +189,7 @@ if sys.platform == 'darwin':
 
 if hasattr(sys, 'pypy_version_info'):
     disabled_tests += [
-        'test_subprocess.POSIXProcessTestCase.test_terminate_dead',
-        'test_subprocess.POSIXProcessTestCase.test_send_signal_dead',
-        'test_subprocess.POSIXProcessTestCase.test_kill_dead',
-        # Don't exist in the CPython test suite; with our monkey patch in place,
-        # they fail because the process they're looking for has been allowed to exit.
-        # Our monkey patch waits for the process with a watcher and so detects
-        # the exit before the normal polling mechanism would
 
-        'test_subprocess.POSIXProcessTestCase.test_preexec_errpipe_does_not_double_close_pipes',
-        # Does not exist in the CPython test suite. Subclasses Popen, and overrides
-        # _execute_child. But our version has a different parameter list than the
-        # version that comes with PyPy, so fails with a TypeError.
 
         'test_subprocess.ProcessTestCase.test_failed_child_execute_fd_leak',
         # Does not exist in the CPython test suite, tests for a specific bug

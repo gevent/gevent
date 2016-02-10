@@ -29,9 +29,9 @@ class SelectTestCase(unittest.TestCase):
         self.assertIsNot(w, x)
 
     def test_select(self):
-        cmd = 'for i in 0 1 2 3 4 5 6 7 8 9; do echo testing...; sleep 0.1; done'
+        cmd = 'for i in 0 1 2 3 4 5 6 7 8 9; do echo testing...; sleep 1; done'
         p = os.popen(cmd, 'r')
-        for tout in (0, 0.1, 0.2, 0.4, 0.8, 1.6) + (None,)*10:
+        for tout in (0, 1, 2, 4, 8, 16) + (None,)*10:
             if test_support.verbose:
                 print 'timeout =', tout
             rfd, wfd, xfd = select.select([p], [], [], tout)
@@ -49,6 +49,15 @@ class SelectTestCase(unittest.TestCase):
             self.fail('Unexpected return values from select():', rfd, wfd, xfd)
         p.close()
 
+    # Issue 16230: Crash on select resized list
+    def test_select_mutated(self):
+        a = []
+        class F:
+            def fileno(self):
+                del a[-1]
+                return sys.__stdout__.fileno()
+        a[:] = [F()] * 10
+        self.assertEqual(select.select([], a, []), ([], a[:5], []))
 
 def test_main():
     test_support.run_unittest(SelectTestCase)
