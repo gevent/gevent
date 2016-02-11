@@ -175,19 +175,23 @@ if 'thread' in os.getenv('GEVENT_FILE', ''):
         # Fails with "OSError: 9 invalid file descriptor"; expect GC/lifetime issues
     ]
 
-def disabled_tests_extend(lines):
-    disabled_tests.extend(lines.strip().split('\n'))
+if sys.version_info[:2] == (2, 6):
 
 
-if sys.version_info[:2] == (2, 6) and os.environ.get('TRAVIS') == 'true':
-    # somehow these fail with "Permission denied" on travis
-    disabled_tests_extend('''
-test_httpservers.CGIHTTPServerTestCase.test_post
-test_httpservers.CGIHTTPServerTestCase.test_headers_and_content
-test_httpservers.CGIHTTPServerTestCase.test_authorization
-test_httpservers.SimpleHTTPServerTestCase.test_get
-''')
+    disabled_tests += [
+        # SSLv2 May or may not be available depending on the build
+        'test_ssl.BasicTests.test_constants',
+    ]
 
+
+    if os.environ.get('TRAVIS') == 'true':
+        # somehow these fail with "Permission denied" on travis
+        disabled_tests += [
+            'test_httpservers.CGIHTTPServerTestCase.test_post',
+            'test_httpservers.CGIHTTPServerTestCase.test_headers_and_content',
+            'test_httpservers.CGIHTTPServerTestCase.test_authorization',
+            'test_httpservers.SimpleHTTPServerTestCase.test_get'
+        ]
 
 if sys.platform == 'darwin':
     disabled_tests += [
@@ -224,6 +228,7 @@ if sys.version_info[:2] == (3, 4) and sys.version_info[:3] < (3, 4, 4):
         'test_ssl.ContextTests.test_options',
         'test_ssl.ThreadedTests.test_protocol_sslv23',
         'test_ssl.ThreadedTests.test_protocol_sslv3',
+        'test_httplib.HTTPSTest.test_networked',
     ]
 
 if sys.version_info[:2] >= (3, 4):
