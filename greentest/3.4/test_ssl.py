@@ -2292,7 +2292,7 @@ else:
                                         chatty=True,
                                         connectionchatty=True)
             wrapped = False
-            support.verbose = True
+
             with server:
                 s = socket.socket()
                 s.setblocking(1)
