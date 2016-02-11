@@ -63,6 +63,7 @@ class SSLContext(orig_SSLContext):
         # Python 3.3 lacks this
         check_hostname = False
 
+
 class _contextawaresock(socket._gevent_sock_class):
     # We have to pass the raw stdlib socket to SSLContext.wrap_socket.
     # That method in turn can pass that object on to things like SNI callbacks.
