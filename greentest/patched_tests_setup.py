@@ -218,6 +218,14 @@ if hasattr(sys, 'pypy_version_info'):
             # https://bitbucket.org/cffi/cffi/issue/152/handling-errors-from-signal-handlers-in
         ]
 
+if sys.version_info[:2] == (3, 4) and sys.version_info[:3] < (3, 4, 4):
+    # Older versions have some issues with the SSL tests. Seen on Appveyor
+    disabled_tests += [
+        'test_ssl.ContextTests.test_options',
+        'test_ssl.ThreadedTests.test_protocol_sslv23',
+        'test_ssl.ThreadedTests.test_protocol_sslv3',
+    ]
+
 if sys.version_info[:2] >= (3, 4):
     disabled_tests += [
         'test_subprocess.ProcessTestCase.test_threadsafe_wait',
