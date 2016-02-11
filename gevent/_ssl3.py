@@ -59,6 +59,9 @@ class SSLContext(orig_SSLContext):
                          server_hostname=server_hostname,
                          _context=self)
 
+    if not hasattr(orig_SSLContext, 'check_hostname'):
+        # Python 3.3 lacks this
+        check_hostname = False
 
 class _contextawaresock(socket._gevent_sock_class):
     # We have to pass the raw stdlib socket to SSLContext.wrap_socket.
@@ -68,7 +71,10 @@ class _contextawaresock(socket._gevent_sock_class):
     # solution is to keep a weak reference to the SSLSocket on the raw
     # socket and delegate.
 
-    _sslsock = None
+    # We keep it in a slot to avoid having the ability to set any attributes
+    # we're not prepared for (because we don't know what to delegate.)
+
+    __slots__ = ('_sslsock',)
 
     @property
     def context(self):
@@ -79,7 +85,12 @@ class _contextawaresock(socket._gevent_sock_class):
         self._sslsock().context = ctx
 
     def __getattr__(self, name):
-        return getattr(self._sslsock(), name)
+        try:
+            return getattr(self._sslsock(), name)
+        except RuntimeError:
+            # XXX: If the attribute doesn't exist,
+            # we infinitely recurse
+            raise AttributeError(name)
 
 
 class SSLSocket(socket):
