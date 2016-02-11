@@ -145,6 +145,9 @@ disabled_tests = [
     # The host this wants to use, sha256.tbs-internet.com, is not resolvable
     # right now (2015-10-10), and we need to get Windows wheels
 
+    # Relies on the repr of objects (Py3)
+    'test_ssl.BasicSocketTests.test_dealloc_warn',
+
     'test_urllib2.HandlerTests.test_cookie_redirect',
     # this uses cookielib which we don't care about
 

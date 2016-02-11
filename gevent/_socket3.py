@@ -51,11 +51,13 @@ _closedsocket.close()
 
 class socket(object):
 
+    _gevent_sock_class = _wrefsocket
+
     def __init__(self, family=AF_INET, type=SOCK_STREAM, proto=0, fileno=None):
         # Take the same approach as socket2: wrap a real socket object,
         # don't subclass it. This lets code that needs the raw _sock (not tied to the hub)
         # get it. This shows up in tests like test__example_udp_server.
-        self._sock = _wrefsocket(family, type, proto, fileno)
+        self._sock = self._gevent_sock_class(family, type, proto, fileno)
         self._io_refs = 0
         self._closed = False
         _socket.socket.setblocking(self._sock, False)

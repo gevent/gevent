@@ -26,6 +26,8 @@
   ``AttributeError``. Found by updating gevent's copy of the
   standard library test cases. Initially reported in :issue:`735` by
   Dmitrij D. Czarkoff.
+- Python 3: Fix ``SSLSocket.unwrap`` and SNI callbacks. Also raise the
+  correct exceptions for unconnected sockets and properly validate hostnames.
 
 1.1rc3 (Jan 04, 2016)
 =====================
