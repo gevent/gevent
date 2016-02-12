@@ -27,7 +27,10 @@
   standard library test cases. Initially reported in :issue:`735` by
   Dmitrij D. Czarkoff.
 - Python 3: Fix ``SSLSocket.unwrap`` and SNI callbacks. Also raise the
-  correct exceptions for unconnected sockets and properly validate hostnames.
+  correct exceptions for unconnected SSL sockets and properly validate
+  SSL hostnames.
+- Python 3.5: Add support for ``socket.sendfile``.
+- Python 3.4+: Add support for ``socket.get/set_inheritable``.
 
 1.1rc3 (Jan 04, 2016)
 =====================

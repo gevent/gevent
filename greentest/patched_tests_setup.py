@@ -273,6 +273,7 @@ if sys.version_info[:2] >= (3, 4):
         # poll on them, expecting them all to be ready at once. But
         # libev limits the number of events it will return at once. Specifically,
         # on linux with epoll, it returns a max of 64 (ev_epoll.c).
+
     ]
 
     if os.environ.get('TRAVIS') == 'true':
@@ -281,6 +282,20 @@ if sys.version_info[:2] >= (3, 4):
             # This test is racy or OS-dependent. It passes locally (sufficiently fast machine)
             # but fails under Travis
         ]
+
+if sys.version_info[:2] >= (3, 5):
+    disabled_tests += [
+        # XXX: Hangs
+        'test_ssl.ThreadedTests.test_nonblocking_send',
+        'test_ssl.ThreadedTests.test_socketserver',
+
+        # Relies on implementation details
+        'test_socket.GeneralModuleTests.test_SocketType_is_socketobject',
+        'test_socket.GeneralModuleTests.test_dealloc_warn',
+        'test_socket.GeneralModuleTests.test_repr',
+        'test_socket.GeneralModuleTests.test_str_for_enums',
+        'test_socket.GeneralModuleTests.testGetaddrinfo',
+    ]
 
 # if 'signalfd' in os.environ.get('GEVENT_BACKEND', ''):
 #     # tests that don't interact well with signalfd

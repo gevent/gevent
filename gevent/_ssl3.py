@@ -91,7 +91,8 @@ class _contextawaresock(socket._gevent_sock_class):
         except RuntimeError:
             # XXX: If the attribute doesn't exist,
             # we infinitely recurse
-            raise AttributeError(name)
+            pass
+        raise AttributeError(name)
 
 
 class SSLSocket(socket):
@@ -283,6 +284,30 @@ class SSLSocket(socket):
             return None
         else:
             return self._sslobj.selected_npn_protocol()
+
+    if hasattr(_ssl, 'HAS_ALPN'):
+        # 3.5+
+        def selected_alpn_protocol(self):
+            self._checkClosed()
+            if not self._sslobj or not _ssl.HAS_ALPN:
+                return None
+            else:
+                return self._sslobj.selected_alpn_protocol()
+
+        def shared_ciphers(self):
+            """Return a list of ciphers shared by the client during the handshake or
+            None if this is not a valid server connection.
+            """
+            return self._sslobj.shared_ciphers()
+
+        def version(self):
+            """Return a string identifying the protocol version used by the
+            current SSL channel. """
+            if not self._sslobj:
+                return None
+            return self._sslobj.version()
+
+        # We inherit sendfile from super(); it always uses `send`
 
     def cipher(self):
         self._checkClosed()
