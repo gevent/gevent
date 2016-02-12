@@ -293,6 +293,17 @@ if sys.version_info[:2] >= (3, 5):
         # We don't handle the Linux-only SOCK_NONBLOCK option
         'test_socket.NonblockConstantTest.test_SOCK_NONBLOCK',
 
+        # Tries to use multiprocessing which doesn't quite work in
+        # monkey_test module (Windows only)
+        'test_socket.TestSocketSharing.testShare',
+
+        # Windows-only: Sockets have a 'ioctl' method in Python 3
+        # implemented in the C code. This test tries to check
+        # for the presence of the method in the class, which we don't
+        # have because we don't inherit the C implementation. But
+        # it should be found at runtime.
+        'test_socket.GeneralModuleTests.test_sock_ioctl',
+
         # Relies on implementation details
         'test_socket.GeneralModuleTests.test_SocketType_is_socketobject',
         'test_socket.GeneralModuleTests.test_dealloc_warn',
@@ -300,6 +311,14 @@ if sys.version_info[:2] >= (3, 5):
         'test_socket.GeneralModuleTests.test_str_for_enums',
         'test_socket.GeneralModuleTests.testGetaddrinfo',
     ]
+
+    if os.environ.get('GEVENT_RESOLVER') == 'ares':
+        disabled_tests += [
+            # These raise different errors or can't resolve
+            # the IP address correctly
+            'test_socket.GeneralModuleTests.test_host_resolution',
+            'test_socket.GeneralModuleTests.test_getnameinfo',
+        ]
 
 # if 'signalfd' in os.environ.get('GEVENT_BACKEND', ''):
 #     # tests that don't interact well with signalfd
