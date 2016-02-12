@@ -30,7 +30,7 @@ if sys.version_info[:2] <= (2, 6):
 __file__ = os.path.join(os.getcwd(), test_filename)
 
 test_name = os.path.splitext(test_filename)[0]
-if sys.version_info[1] >= 3:
+if sys.version_info[0] >= 3:
     module_file = open(test_filename, encoding='utf-8')
 else:
     module_file = open(test_filename)
