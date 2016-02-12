@@ -288,6 +288,7 @@ if sys.version_info[:2] >= (3, 5):
         # XXX: Hangs
         'test_ssl.ThreadedTests.test_nonblocking_send',
         'test_ssl.ThreadedTests.test_socketserver',
+        'test_socket.NonBlockingTCPTests.testInitNonBlocking',
 
         # Relies on implementation details
         'test_socket.GeneralModuleTests.test_SocketType_is_socketobject',
