@@ -45,7 +45,11 @@ __lock_imports = True
 
 def __module_lock(name):
     # Return the lock for the given module, creating it if necessary.
-    # It will be removed when no longer needed
+    # It will be removed when no longer needed.
+    # Nothing in this function yields, so we're multi-greenlet safe
+    # (But not multi-threading safe.)
+    # XXX: What about on PyPy, where the GC is asynchronous (not ref-counting)?
+    # (Does it stop-the-world first?)
     lock = None
     try:
         lock = _g_import_locks[name]()
@@ -56,7 +60,8 @@ def __module_lock(name):
         lock = RLock()
 
         def cb(_):
-            del _g_import_locks[name]
+            # We've seen a KeyError on PyPy on RPi2
+            _g_import_locks.pop(name, None)
         _g_import_locks[name] = weakref.ref(lock, cb)
     return lock
 
