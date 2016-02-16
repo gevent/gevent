@@ -4,12 +4,17 @@
 
 .. currentmodule:: gevent
 
+1.1rc5 (unreleased)
+===================
+
+- TBD.
+
 1.1rc4 (Feb 16, 2016)
 =====================
 
 - Python 2: Using the blocking API at import time when multiple
   greenlets are also importing should not lead to ``LoopExit``.
-  Reported in :issue:`798` by Garrett Heel.
+  Reported in :issue:`728` by Garrett Heel.
 - Python 2: Don't raise ``OverflowError`` when using the ``readline``
   method of the WSGI input stream without a size hint or with a large
   size hint when the client is uploading a large amount of data. (This
