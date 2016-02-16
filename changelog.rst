@@ -4,8 +4,8 @@
 
 .. currentmodule:: gevent
 
-1.1rc4 (unreleased)
-===================
+1.1rc4 (Feb 16, 2016)
+=====================
 
 - Python 2: Using the blocking API at import time when multiple
   greenlets are also importing should not lead to ``LoopExit``.
