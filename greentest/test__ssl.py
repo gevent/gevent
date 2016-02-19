@@ -56,15 +56,15 @@ class TestSSL(test__socket.TestTCP):
                 client.close()
                 server_sock[0][0].close()
 
-        def test_empty_send(self):
-            # Issue 719
-            # Sending empty bytes with the 'send' method raises
-            # ssl.SSLEOFError in the stdlib. PyPy 4.0 and CPython 2.6
-            # both just raise the superclass, ssl.SSLError.
-            expected = ssl.SSLError
-            self.assertRaises(expected, self._test_sendall,
-                              b'',
-                              client_method='send')
+    def test_empty_send(self):
+        # Issue 719
+        # Sending empty bytes with the 'send' method raises
+        # ssl.SSLEOFError in the stdlib. PyPy 4.0 and CPython 2.6
+        # both just raise the superclass, ssl.SSLError.
+        expected = ssl.SSLError
+        self.assertRaises(expected, self._test_sendall,
+                          b'',
+                          client_method='send')
 
 
 def ssl_listener(address, private_key, certificate):
