@@ -25,8 +25,8 @@ class TestSSL(test__socket.TestTCP):
         self.listener, _raw_listener = ssl_listener(('127.0.0.1', 0), self.privfile, self.certfile)
         self.port = self.listener.getsockname()[1]
 
-    def create_connection(self):
-        return ssl.wrap_socket(super(TestSSL, self).create_connection())
+    def create_connection(self, *args, **kwargs):
+        return ssl.wrap_socket(super(TestSSL, self).create_connection(*args, **kwargs))
 
     if not sys.platform.startswith('win32'):
 
@@ -38,7 +38,7 @@ class TestSSL(test__socket.TestTCP):
         # to send a very large amount to make it timeout
         _test_sendall_data = data_sent = b'hello' * 100000000
 
-        def test_sendall_timeout0(self):
+        def test_ssl_sendall_timeout0(self):
             # Issue #317: SSL_WRITE_PENDING in some corner cases
 
             server_sock = []
@@ -56,6 +56,14 @@ class TestSSL(test__socket.TestTCP):
                 client.close()
                 server_sock[0][0].close()
 
+        def test_empty_send(self):
+            # Sending empty bytes with the 'send' method
+            # raises ssl.SSLEOFError in the stdlib. (just ssl.SSLError on
+            # py26). Issue 719
+            expected = getattr(ssl, 'SSLEOFError', ssl.SSLError)
+            self.assertRaises(expected, self._test_sendall,
+                              b'',
+                              client_method='send')
 
 def ssl_listener(address, private_key, certificate):
     raw_listener = socket.socket()

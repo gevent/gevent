@@ -7,7 +7,13 @@
 1.1rc5 (unreleased)
 ===================
 
-- TBD.
+- SSL: Attempting to send empty data using the ``sendall`` method of a
+  gevent SSL socket that hase a timeout now returns immediately (like
+  the standard library does), instead of incorrectly raising
+  ``SSLEOFError``. (Note that sending empty data with the ``send`` method
+  *does* raise ``SSLEOFError`` in both gevent and the standard
+  library.) Reported in :issue:`719` by Mustafa Atik, with a
+  reproducible test case provided by Timo Savola.
 
 1.1rc4 (Feb 16, 2016)
 =====================

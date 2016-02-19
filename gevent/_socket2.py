@@ -360,6 +360,10 @@ class socket(object):
         # so it should not call self._sock methods directly
         data_memory = _get_memory(data)
         len_data_memory = len(data_memory)
+        if not len_data_memory:
+            # Don't send empty data, can cause SSL EOFError.
+            # See issue 719
+            return 0
 
         # On PyPy up through 2.6.0, subviews of a memoryview() object
         # copy the underlying bytes the first time the builtin

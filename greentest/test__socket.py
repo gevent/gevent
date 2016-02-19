@@ -58,14 +58,15 @@ class TestTCP(greentest.TestCase):
                 pass
             del self.listener
 
-    def create_connection(self, port=None, timeout=None):
+    def create_connection(self, host='127.0.0.1', port=None, timeout=None):
         sock = socket.socket()
-        sock.connect(('127.0.0.1', port or self.port))
+        sock.connect((host, port or self.port))
         if timeout is not None:
             sock.settimeout(timeout)
-        return sock
+        return self._close_on_teardown(sock)
 
-    def _test_sendall(self, data):
+    def _test_sendall(self, data, match_data=None, client_method='sendall',
+                      **client_args):
 
         read_data = []
 
@@ -81,11 +82,18 @@ class TestTCP(greentest.TestCase):
                 os._exit(1)
 
         server = Thread(target=accept_and_read)
-        client = self.create_connection()
-        client.sendall(data)
-        client.close()
+        client = self.create_connection(**client_args)
+
+        try:
+            getattr(client, client_method)(data)
+        finally:
+            client.shutdown(socket.SHUT_RDWR)
+            client.close()
+
         server.join()
-        self.assertEqual(read_data[0], self.long_data)
+        if match_data is None:
+            match_data = self.long_data
+        self.assertEqual(read_data[0], match_data)
 
     def test_sendall_str(self):
         self._test_sendall(self.long_data)
@@ -97,6 +105,20 @@ class TestTCP(greentest.TestCase):
     def test_sendall_array(self):
         data = array.array("B", self.long_data)
         self._test_sendall(data)
+
+    def test_sendall_empty(self):
+        data = b''
+        self._test_sendall(data, data)
+
+    def test_sendall_empty_with_timeout(self):
+        # Issue 719
+        data = b''
+        self._test_sendall(data, data, timeout=10)
+
+    def test_empty_send(self):
+        # Issue 719
+        data = b''
+        self._test_sendall(data, data, client_method='send')
 
     def test_fullduplex(self):
 
