@@ -11,8 +11,8 @@
   :meth:`~socket.socket.sendall` method of a gevent SSL socket that has
   a timeout now returns immediately (like the standard library does),
   instead of incorrectly raising :exc:`ssl.SSLEOFError`. (Note that
-  sending empty data with the :meth:`~socket.socket.send` or
-  :meth:`~socket.socket.write` method *does* raise ``SSLEOFError`` in
+  sending empty data with the :meth:`~socket.socket.send`
+  method *does* raise ``SSLEOFError`` in
   both gevent and the standard library.) Reported in :issue:`719` by
   Mustafa Atik and Tymur Maryokhin, with a reproducible test case
   provided by Timo Savola.
