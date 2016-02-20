@@ -7,13 +7,15 @@
 1.1rc5 (unreleased)
 ===================
 
-- SSL: Attempting to send empty data using the ``sendall`` method of a
-  gevent SSL socket that hase a timeout now returns immediately (like
-  the standard library does), instead of incorrectly raising
-  ``SSLEOFError``. (Note that sending empty data with the ``send`` method
-  *does* raise ``SSLEOFError`` in both gevent and the standard
-  library.) Reported in :issue:`719` by Mustafa Atik, with a
-  reproducible test case provided by Timo Savola.
+- SSL: Attempting to send empty data using the
+  :meth:`~socket.socket.sendall` method of a gevent SSL socket that has
+  a timeout now returns immediately (like the standard library does),
+  instead of incorrectly raising :exc:`ssl.SSLEOFError`. (Note that
+  sending empty data with the :meth:`~socket.socket.send` or
+  :meth:`~socket.socket.write` method *does* raise ``SSLEOFError`` in
+  both gevent and the standard library.) Reported in :issue:`719` by
+  Mustafa Atik and Tymur Maryokhin, with a reproducible test case
+  provided by Timo Savola.
 
 1.1rc4 (Feb 16, 2016)
 =====================
@@ -21,27 +23,31 @@
 - Python 2: Using the blocking API at import time when multiple
   greenlets are also importing should not lead to ``LoopExit``.
   Reported in :issue:`728` by Garrett Heel.
-- Python 2: Don't raise ``OverflowError`` when using the ``readline``
+- Python 2: Don't raise :exc:`OverflowError` when using the ``readline``
   method of the WSGI input stream without a size hint or with a large
   size hint when the client is uploading a large amount of data. (This
   only impacted CPython 2; PyPy and Python 3 already handled this.)
   Reported in :issue:`289` by ggjjlldd, with contributions by Nathan
   Hoad.
-- ``BaseServer`` and its subclasses like ``WSGIServer`` avoid
-  allocating a new closure for each request, reducing overhead.
+- :class:`~gevent.baseserver.BaseServer` and its subclasses like
+  :class:`~gevent.pywsgi.WSGIServer` avoid allocating a new closure for
+  each request, reducing overhead.
 - Python 2: Under 2.7.9 and above (or when the PEP 466 SSL interfaces
   are available), perform the same hostname validation that the
   standard library does; previously some cases were ignored. Also,
-  reading, writing, or handshaking a closed ``SSLSocket`` now raises
-  the same ``ValueError`` the standard library does, instead of an
-  ``AttributeError``. Found by updating gevent's copy of the
-  standard library test cases. Initially reported in :issue:`735` by
-  Dmitrij D. Czarkoff.
-- Python 3: Fix ``SSLSocket.unwrap`` and SNI callbacks. Also raise the
-  correct exceptions for unconnected SSL sockets and properly validate
-  SSL hostnames.
-- Python 3.5: Add support for ``socket.sendfile``.
-- Python 3.4+: Add support for ``socket.get/set_inheritable``.
+  reading, writing, or handshaking a closed
+  :class:`~ssl.SSLSocket` now raises the same :exc:`ValueError`
+  the standard library does, instead of an :exc:`AttributeError`.
+  Found by updating gevent's copy of the standard library test cases.
+  Initially reported in :issue:`735` by Dmitrij D. Czarkoff.
+- Python 3: Fix :meth:`~ssl.SSLSocket.unwrap` and SNI callbacks.
+  Also raise the correct exceptions for unconnected SSL sockets and
+  properly validate SSL hostnames. Found via updated standard library
+  tests.
+- Python 3: Add missing support for ``socket.socket.sendfile``. Found via updated
+  standard library tests.
+- Python 3.4+: Add missing support for ``socket.get/set_inheritable``. Found
+  via updated standard library tests.
 
 1.1rc3 (Jan 04, 2016)
 =====================
