@@ -4,8 +4,8 @@
 
 .. currentmodule:: gevent
 
-1.1rc5 (unreleased)
-===================
+1.1rc5 (Feb 24, 2016)
+=====================
 
 - SSL: Attempting to send empty data using the
   :meth:`~socket.socket.sendall` method of a gevent SSL socket that has
