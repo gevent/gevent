@@ -365,6 +365,8 @@ class GroupMappingMixin(object):
 
         .. versionchanged:: 1.1b3
             Added the *maxsize* keyword parameter.
+        .. versionchanged:: 1.1a1
+            Accept multiple *iterables* to iterate in parallel.
         """
         return self.__imap(IMap, func, *iterables, **kwargs)
 

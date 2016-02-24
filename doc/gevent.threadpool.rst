@@ -25,4 +25,8 @@
        .. note:: As implemented, attempting to use
           :meth:`Threadpool.appy` from inside another function that
           was itself spawned in a threadpool (any threadpool) will
-          cause the function to be run immediatesly.
+          cause the function to be run immediately.
+
+       .. versionchanged:: 1.1a2
+          Now raises any exception raised by *func* instead of
+          dropping it.

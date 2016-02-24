@@ -275,9 +275,15 @@ class FileObjectPosix(object):
         return self.io.readlines(sizehint)
 
     def readable(self):
+        """
+        .. versionadded:: 1.1b2
+        """
         return self.io.readable()
 
     def writable(self):
+        """
+        .. versionadded:: 1.1b2
+        """
         return self.io.writable()
 
     def seek(self, *args, **kwargs):

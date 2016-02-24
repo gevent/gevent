@@ -127,6 +127,12 @@ affects what we see:
   11
 
 >>> del mydata
+
+.. versionchanged:: 1.1a2
+   Update the implementation to match Python 3.4 instead of Python 2.5.
+   This results in locals being eligible for garbage collection as soon
+   as their greenlet exits.
+
 """
 
 from copy import copy
@@ -225,6 +231,9 @@ def _patch(self):
 
 
 class local(object):
+    """
+    An object whose attributes are greenlet-local.
+    """
     __slots__ = '_local__impl', '__dict__'
 
     def __new__(cls, *args, **kw):

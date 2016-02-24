@@ -163,6 +163,7 @@ include:
 - Almost anywhere that gevent raises an exception from one greenlet to
   another (e.g., :meth:`Greenlet.get <gevent.Greenlet.get>`),
   the original traceback is preserved and raised.
+- Various logging/debugging outputs have been cleaned up.
 - The WSGI server found in :mod:`gevent.pywsgi` is more robust against
   errors in either the client or the WSGI application, fixing several
   hangs or HTTP protocol violations. It also supports new

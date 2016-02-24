@@ -742,7 +742,12 @@ class WSGIHandler(object):
         self._sendall(towrite)
 
     def start_response(self, status, headers, exc_info=None):
-        # .. versionchanged:: 1.1b5 handle header/status encoding here
+        """
+         .. versionchanged:: 1.1b5
+            Pro-actively handle checking the encoding of the status line
+            and headers during this method. On Python 2, avoid some
+            extra encodings.
+        """
         if exc_info:
             try:
                 if self.headers_sent:

@@ -127,7 +127,7 @@ class Greenlet(greenlet):
         :keyword run: The callable object to run. If not given, this object's
             `_run` method will be invoked (typically defined by subclasses).
 
-        .. versionchanged:: 1.1a3
+        .. versionchanged:: 1.1b1
             The ``run`` argument to the constructor is now verified to be a callable
             object. Previously, passing a non-callable object would fail after the greenlet
             was spawned.
@@ -357,6 +357,10 @@ class Greenlet(greenlet):
         This can be used as ``gevent.spawn`` or ``Greenlet.spawn``.
 
         The arguments are passed to :meth:`Greenlet.__init__`.
+
+        .. versionchanged:: 1.1b1
+            If a *function* is given that is not callable, immediately raise a :exc:`TypeError`
+            instead of spawning a greenlet that will raise an uncaught TypeError.
         """
         g = cls(*args, **kwargs)
         g.start()
@@ -371,7 +375,7 @@ class Greenlet(greenlet):
 
         The arguments are passed to :meth:`Greenlet.__init__`.
 
-        .. versionchanged:: 1.1a3
+        .. versionchanged:: 1.1b1
            If an argument that's meant to be a function (the first argument in *args*, or the ``run`` keyword )
            is given to this classmethod (and not a classmethod of a subclass),
            it is verified to be callable. Previously, the spawned greenlet would have failed
@@ -655,7 +659,7 @@ def killall(greenlets, exception=GreenletExit, block=True, timeout=None):
     """
     Forceably terminate all the ``greenlets`` by causing them to raise ``exception``.
 
-    :param greenlets: A bounded iterable of the non-None greenlets to terminate.
+    :param greenlets: A **bounded** iterable of the non-None greenlets to terminate.
        *All* the items in this iterable must be greenlets that belong to the same thread.
     :keyword exception: The exception to raise in the greenlets. By default this is
         :class:`GreenletExit`.
@@ -667,8 +671,12 @@ def killall(greenlets, exception=GreenletExit, block=True, timeout=None):
         the exception asynchronously.
     :keyword float timeout: A time in seconds to wait for greenlets to die. If given, it is
         only honored when ``block`` is True.
-    :raises Timeout: If blocking and a timeout is given that elapses before
+    :raise Timeout: If blocking and a timeout is given that elapses before
         all the greenlets are dead.
+
+    .. versionchanged:: 1.1a2
+        *greenlets* can be any iterable of greenlets, like an iterator or a set.
+        Previously it had to be a list or tuple.
     """
     # support non-indexable containers like iterators or set objects
     greenlets = list(greenlets)
