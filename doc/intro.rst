@@ -105,9 +105,15 @@ modules using the :func:`gevent.monkey.patch_all` function::
     >>> import subprocess # it's usable from multiple greenlets now
 
 
-.. note:: When monkey patching, it is recommended to do so as early as
-		  possible in the lifetime of the process. If possible,
-		  monkey patching should be the first lines executed.
+.. tip::
+
+   When monkey patching, it is recommended to do so as early as
+   possible in the lifetime of the process. If possible,
+   monkey patching should be the first lines executed. Monkey
+   patching later, especially if native threads have been
+   created, :mod:`atexit` or signal handlers have been installed,
+   or sockets have been created, may lead to unpredictable
+   results including unexpected :exc:`~gevent.hub.LoopExit` errors.
 
 __ https://github.com/gevent/gevent/blob/master/examples/concurrent_download.py#L1
 
@@ -151,7 +157,7 @@ information.
 .. _`libev documentation`: http://pod.tst.eu/http://cvs.schmorp.de/libev/ev.pod#FUNCTIONS_CONTROLLING_EVENT_LOOPS
 
 The Libev API is available under the :mod:`gevent.core` module. Note that
-the callbacks supplied to the libev API are run in the :class:`gevent.hub.Hub`
+the callbacks supplied to the libev API are run in the :class:`~gevent.hub.Hub`
 greenlet and thus cannot use the synchronous gevent API. It is possible to
 use the asynchronous API there, like :func:`gevent.spawn` and
 :meth:`gevent.event.Event.set`.
