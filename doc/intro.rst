@@ -24,13 +24,14 @@ Installation and Requirements
 
 `gevent 1.1`_ runs on Python 2 and Python 3. Versions 2.6 and 2.7 of
 Python 2 are supported, and versions 3.3, 3.4, and 3.5 of Python 3 are
-supported. (Users of older versions of Python need to install gevent
-1.0.x.) gevent requires the greenlet__ library.
+supported. (Users of older versions of Python 2 need to install gevent
+1.0.x; Python 3 is not supported by 1.0.) gevent requires the
+greenlet__ library.
 
 gevent 1.1 also runs on PyPy 2.6.1 and above, although 4.0 or above is
 strongly recommended. On PyPy, there are no external dependencies.
 
-.. note:: gevent does *not* run on PyPy on Windows as the CFFI backend
+.. note:: gevent does *not* run on PyPy on Windows because the CFFI backend
           does not build.
 
 gevent and greenlet can both be installed with `pip`_, e.g., ``pip
