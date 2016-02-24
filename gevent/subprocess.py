@@ -331,6 +331,15 @@ _PLATFORM_DEFAULT_CLOSE_FDS = object()
 
 
 class Popen(object):
+    """
+    The underlying process creation and management in this module is
+    handled by the Popen class. It offers a lot of flexibility so that
+    developers are able to handle the less common cases not covered by
+    the convenience functions.
+
+    .. seealso:: :class:`subprocess.Popen`
+       This class should have the same interface as the standard library class.
+    """
 
     def __init__(self, args, bufsize=None, executable=None,
                  stdin=None, stdout=None, stderr=None,

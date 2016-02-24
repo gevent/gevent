@@ -143,7 +143,8 @@ include:
   correctness, and performance. (Previously, the Python 2 implementation used the
   undocumented class :class:`socket._fileobject`.)
 - Locks raise the same error as standard library locks if they are
-  over-released.
+  over-released. Likewise, SSL sockets raise the same errors as their
+  bundled counterparts if they are read or written after being closed.
 - :meth:`ThreadPool.apply <gevent.threadpool.ThreadPool.apply>` can
   now be used recursively.
 - The various pool objects (:class:`~gevent.pool.Group`,

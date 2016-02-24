@@ -43,6 +43,14 @@ without pre-built wheels or if wheel installation is disabled, a C compiler
 `cffi`_ can optionally be installed to build the CFFI backend in
 addition to the Cython backend on CPython.
 
+
+.. tip:: Some Linux distributions are now mounting their temporary
+         directories with the ``noexec`` option. This can cause a
+         standard ``pip install gevent`` to fail with an error like
+         ``cannot run C compiled programs``. One fix is to mount the
+         temporary directory without that option. See :issue:`570` and
+         :issue:`612` for examples.
+
 __ http://pypi.python.org/pypi/greenlet
 .. _`pip`: https://pip.pypa.io/en/stable/installing/
 .. _`wheels`: http://pythonwheels.com
