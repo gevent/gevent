@@ -160,9 +160,7 @@ class Semaphore(object):
         switch = getcurrent().switch
         self.rawlink(switch)
         try:
-            # As a tiny efficiency optimization, avoid allocating a timer
-            # if not needed.
-            timer = Timeout.start_new(timeout) if timeout is not None else None
+            timer = Timeout._start_new_or_dummy(timeout)
             try:
                 try:
                     result = get_hub().switch()
@@ -172,8 +170,7 @@ class Semaphore(object):
                         raise
                     return ex
             finally:
-                if timer is not None:
-                    timer.cancel()
+                timer.cancel()
         finally:
             self.unlink(switch)
 

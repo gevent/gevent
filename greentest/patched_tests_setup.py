@@ -222,6 +222,33 @@ if hasattr(sys, 'pypy_version_info'):
             # https://bitbucket.org/cffi/cffi/issue/152/handling-errors-from-signal-handlers-in
         ]
 
+# Generic Python 3
+
+if sys.version_info[0] == 3:
+
+    disabled_tests += [
+        # Triggers the crash reporter
+        'test_threading.SubinterpThreadingTests.test_daemon_threads_fatal_error',
+
+        # Relies on an implementation detail, Thread._tstate_lock
+        'test_threading.ThreadTests.test_tstate_lock',
+        # Relies on an implementation detail (reprs); we have our own version
+        'test_threading.ThreadTests.test_various_ops',
+        'test_threading.ThreadTests.test_various_ops_large_stack',
+        'test_threading.ThreadTests.test_various_ops_small_stack',
+
+        # Relies on Event having a _cond and an _reset_internal_locks()
+        # XXX: These are commented out in the source code of test_threading because
+        # this doesn't work.
+        # 'lock_tests.EventTests.test_reset_internal_locks',
+
+        # Python bug 13502. We may or may not suffer from this as its
+        # basically a timing race condition.
+        # XXX Same as above
+        # 'lock_tests.EventTests.test_set_and_clear',
+
+    ]
+
 if sys.version_info[:2] == (3, 4) and sys.version_info[:3] < (3, 4, 4):
     # Older versions have some issues with the SSL tests. Seen on Appveyor
     disabled_tests += [
@@ -310,6 +337,14 @@ if sys.version_info[:2] >= (3, 5):
         'test_socket.GeneralModuleTests.test_repr',
         'test_socket.GeneralModuleTests.test_str_for_enums',
         'test_socket.GeneralModuleTests.testGetaddrinfo',
+
+        # Relies on the regex of the repr having the locked state (TODO: it'd be nice if
+        # we did that).
+        # XXX: These are commented out in the source code of test_threading because
+        # this doesn't work.
+        # 'lock_tests.LockTests.lest_locked_repr',
+        # 'lock_tests.LockTests.lest_repr',
+
     ]
 
     if os.environ.get('GEVENT_RESOLVER') == 'ares':

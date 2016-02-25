@@ -7,7 +7,12 @@
 1.1rc6 (unreleased)
 ===================
 
-- TBD
+- Python 3: A monkey-patched :class:`threading.RLock` now properly
+  blocks (or deadlocks) in ``acquire`` if the default value for
+  *timeout* of -1 is used (which differs from gevent's default of
+  None). The ``acquire`` method also raises the same :exc:`ValueError`
+  exceptions that the standard library does for invalid parameters.
+  Reported in :issue:`750` by Joy Zheng.
 
 1.1rc5 (Feb 24, 2016)
 =====================

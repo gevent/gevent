@@ -282,6 +282,18 @@ reduce the cases of undocumented or non-standard behaviour.
   ) now throws an exception, just like the documented parameter to the
   same stdlib method in Python 3.
 
+- Under Python 3, several standard library methods added ``timeout``
+  parameters. These often default to -1 to mean "no timeout", whereas
+  gevent uses a default of ``None`` to mean the same thing,
+  potentially leading to great confusion and bugs in portable code. In
+  gevent, using a negative value has always been ill-defined and hard
+  to reason about. Because of those two things, as of this release,
+  negative ``timeout`` values should be considered deprecated (unless
+  otherwise documented). The current ill-defined behaviour is
+  maintained, but future releases may choose to treat it the same as
+  ``None`` or raise an error. No runtime warnings are issued for this
+  change for performance reasons.
+
 - The previously undocumented class
   ``gevent.fileobject.SocketAdapter`` has been removed, as have the
   internal ``gevent._util`` module and some internal implementation modules
