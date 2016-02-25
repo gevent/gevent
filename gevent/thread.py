@@ -30,7 +30,7 @@ else:
                     'interrupt_main',
                     'start_new']
 error = __thread__.error
-from gevent.hub import getcurrent, GreenletExit
+from gevent.hub import getcurrent, GreenletExit, PY3
 from gevent.greenlet import Greenlet
 from gevent.lock import BoundedSemaphore
 from gevent.local import local as _local
@@ -52,6 +52,26 @@ class LockType(BoundedSemaphore):
     # Change the ValueError into the appropriate thread error
     # and any other API changes we need to make to match behaviour
     _OVER_RELEASE_ERROR = __thread__.error
+
+    if PY3:
+        _TIMEOUT_MAX = __thread__.TIMEOUT_MAX
+
+        def acquire(self, blocking=True, timeout=-1):
+            # Transform the default -1 argument into the None that our
+            # semaphore implementation expects, and raise the same error
+            # the stdlib implementation does.
+            if timeout == -1:
+                timeout = None
+            if not blocking and timeout is not None:
+                raise ValueError("can't specify a timeout for a non-blocking call")
+            if timeout is not None:
+                if timeout < 0:
+                    # in C: if(timeout < 0 && timeout != -1)
+                    raise ValueError("timeout value must be strictly positive")
+                if timeout > self._TIMEOUT_MAX:
+                    raise OverflowError('timeout value is too large')
+
+            return BoundedSemaphore.acquire(self, blocking, timeout)
 
 allocate_lock = LockType
 

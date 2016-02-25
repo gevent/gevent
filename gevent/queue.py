@@ -59,7 +59,7 @@ class Queue(object):
     size is infinite.
 
     .. versionchanged:: 1.1b3
-       Queue's now support :func:`len`; it behaves the same as :meth:`qsize`.
+       Queues now support :func:`len`; it behaves the same as :meth:`qsize`.
     .. versionchanged:: 1.1b3
        Multiple greenlets that block on a call to :meth:`put` for a full queue
        will now be woken up to put their items into the queue in the order in which
@@ -404,9 +404,19 @@ class LifoQueue(Queue):
 
 
 class JoinableQueue(Queue):
-    '''A subclass of :class:`Queue` that additionally has :meth:`task_done` and :meth:`join` methods.'''
+    """
+    A subclass of :class:`Queue` that additionally has
+    :meth:`task_done` and :meth:`join` methods.
+    """
 
     def __init__(self, maxsize=None, items=None, unfinished_tasks=None):
+        """
+
+        .. versionchanged:: 1.1a1
+           If *unfinished_tasks* is not given, then all the given *items*
+           (if any) will be considered unfinished.
+
+        """
         from gevent.event import Event
         Queue.__init__(self, maxsize, items)
         self._cond = Event()
@@ -454,7 +464,8 @@ class JoinableQueue(Queue):
             self._cond.set()
 
     def join(self, timeout=None):
-        '''Block until all items in the queue have been gotten and processed.
+        '''
+        Block until all items in the queue have been gotten and processed.
 
         The count of unfinished tasks goes up whenever an item is added to the queue.
         The count goes down whenever a consumer thread calls :meth:`task_done` to indicate
@@ -465,6 +476,9 @@ class JoinableQueue(Queue):
             for all tasks to finish.
         :return: ``True`` if all tasks have finished; if ``timeout`` was given and expired before
             all tasks finished, ``False``.
+
+        .. versionchanged:: 1.1a1
+           Add the *timeout* parameter.
         '''
         return self._cond.wait(timeout=timeout)
 

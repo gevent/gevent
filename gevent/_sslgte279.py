@@ -227,6 +227,8 @@ class SSLSocket(socket):
         if server_side and server_hostname:
             raise ValueError("server_hostname can only be specified "
                              "in client mode")
+        if self._context.check_hostname and not server_hostname:
+            raise ValueError("check_hostname requires server_hostname")
         self.server_side = server_side
         self.server_hostname = server_hostname
         self.do_handshake_on_connect = do_handshake_on_connect
@@ -292,6 +294,9 @@ class SSLSocket(socket):
     def read(self, len=0, buffer=None):
         """Read up to LEN bytes and return them.
         Return zero-length string on EOF."""
+        self._checkClosed()
+        if not self._sslobj:
+            raise ValueError("Read on closed or unwrapped SSL socket.")
         while True:
             try:
                 if buffer is not None:
@@ -319,6 +324,9 @@ class SSLSocket(socket):
     def write(self, data):
         """Write DATA to the underlying SSL channel.  Returns
         number of bytes of DATA actually transmitted."""
+        self._checkClosed()
+        if not self._sslobj:
+            raise ValueError("Write on closed or unwrapped SSL socket.")
         while True:
             try:
                 return self._sslobj.write(data)
@@ -350,6 +358,15 @@ class SSLSocket(socket):
             return None
         else:
             return self._sslobj.selected_npn_protocol()
+
+    if hasattr(_ssl, 'HAS_ALPN'):
+        # 2.7.10+
+        def selected_alpn_protocol(self):
+            self._checkClosed()
+            if not self._sslobj or not _ssl.HAS_ALPN:
+                return None
+            else:
+                return self._sslobj.selected_alpn_protocol()
 
     def cipher(self):
         self._checkClosed()
@@ -537,9 +554,11 @@ class SSLSocket(socket):
 
     def do_handshake(self):
         """Perform a TLS/SSL handshake."""
+        self._check_connected()
         while True:
             try:
-                return self._sslobj.do_handshake()
+                self._sslobj.do_handshake()
+                break
             except SSLWantReadError:
                 if self.timeout == 0.0:
                     raise

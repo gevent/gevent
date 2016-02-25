@@ -269,6 +269,9 @@ def patch_thread(threading=True, _threading_local=True, Event=False, logging=Tru
         :class:`multiprocessing.Queue` or
         :class:`concurrent.futures.ProcessPoolExecutor` (which uses a
         ``Queue``) will hang the process.
+
+    .. versionchanged:: 1.1b1
+        Add *logging* and *existing_locks* params.
     """
     # Description of the hang:
     # There is an incompatibility with patching 'thread' and the 'multiprocessing' module:

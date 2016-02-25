@@ -171,8 +171,12 @@ class DummySemaphore(object):
         pass
 
     def acquire(self, blocking=True, timeout=None):
-        """A DummySemaphore can always be acquired immediately so this always
+        """
+        A DummySemaphore can always be acquired immediately so this always
         returns True and ignores its arguments.
+
+        .. versionchanged:: 1.1a1
+           Always return *true*.
         """
         return True
 

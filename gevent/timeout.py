@@ -107,11 +107,19 @@ class Timeout(BaseException):
     If the *seconds* argument is not given or is ``None`` (e.g.,
     ``Timeout()``), then the timeout will never expire and never raise
     *exception*. This is convenient for creating functions which take
-    an optional timeout parameter of their own.
+    an optional timeout parameter of their own. (Note that this is not the same thing
+    as a *seconds* value of 0.)
+
+    .. caution::
+       A *seconds* value less than 0.0 (e.g., -1) is poorly defined. In the future,
+       support for negative values is likely to do the same thing as a value
+       if ``None``.
 
     .. versionchanged:: 1.1b2
        If *seconds* is not given or is ``None``, no longer allocate a libev
        timer that will never be started.
+    .. versionchanged:: 1.1
+       Add warning about negative *seconds* values.
     """
 
     def __init__(self, seconds=None, exception=None, ref=True, priority=-1):
@@ -167,7 +175,9 @@ class Timeout(BaseException):
         # Internal use only in 1.1
         # Return an object with a 'cancel' method; if timeout is None,
         # this will be a shared instance object that does nothing. Otherwise,
-        # return an actual Timeout.
+        # return an actual Timeout. Because negative values are hard to reason about,
+        # and are often used as sentinels in Python APIs, in the future it's likely
+        # that a negative timeout will also return the shared instance.
         # This saves the previously common idiom of 'timer = Timeout.start_new(t) if t is not None else None'
         # followed by 'if timer is not None: timer.cancel()'.
         # That idiom was used to avoid any object allocations.

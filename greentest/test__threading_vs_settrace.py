@@ -84,6 +84,7 @@ class TestTrace(unittest.TestCase):
         else:
             old = None
         PYPY = hasattr(sys, 'pypy_version_info')
+        PY3 = sys.version_info[0] > 2
         lst = []
         # we should be able to use unrelated locks from within the trace function
         l = allocate_lock()
@@ -104,7 +105,8 @@ class TestTrace(unittest.TestCase):
         finally:
             sys.settrace(old)
 
-        if not PYPY:
+        if not PYPY and not PY3:
+            # Py3 overrides acquire in Python to do argument checking
             self.assertEqual(lst, [], "trace not empty")
         else:
             # Have an assert so that we know if we miscompile
@@ -117,6 +119,7 @@ class TestTrace(unittest.TestCase):
         else:
             old = None
         PYPY = hasattr(sys, 'pypy_version_info')
+        PY3 = sys.version_info[0] > 2
         lst = []
         e = None
         # we should not be able to use the same lock from within the trace function
@@ -137,7 +140,8 @@ class TestTrace(unittest.TestCase):
         finally:
             sys.settrace(old)
 
-        if not PYPY:
+        if not PYPY and not PY3:
+            # Py3 overrides acquire in Python to do argument checking
             self.assertEqual(lst, [], "trace not empty")
         else:
             # Have an assert so that we know if we miscompile

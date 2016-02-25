@@ -134,6 +134,10 @@ def spawn_raw(function, *args, **kwargs):
     occasionally be useful as an optimization if there are many
     greenlets involved.
 
+    .. versionchanged:: 1.1b1
+       If *function* is not callable, immediately raise a :exc:`TypeError`
+       instead of spawning a greenlet that will raise an uncaught TypeError.
+
     .. versionchanged:: 1.1rc2
         Accept keyword arguments for ``function`` as previously (incorrectly)
         documented. Note that this may incur an additional expense.
@@ -929,6 +933,12 @@ def iwait(objects, timeout=None, count=None):
         are available, then this method returns immediately.
 
     .. seealso:: :func:`wait`
+
+    .. versionchanged:: 1.1a1
+       Add the *count* parameter.
+    .. versionchanged:: 1.1a2
+       No longer raise :exc:`LoopExit` if our caller switches greenlets
+       in between items yielded by this function.
     """
     # QQQ would be nice to support iterable here that can be generated slowly (why?)
     if objects is None:

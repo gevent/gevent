@@ -24,13 +24,14 @@ Installation and Requirements
 
 `gevent 1.1`_ runs on Python 2 and Python 3. Versions 2.6 and 2.7 of
 Python 2 are supported, and versions 3.3, 3.4, and 3.5 of Python 3 are
-supported. (Users of older versions of Python need to install gevent
-1.0.x.) gevent requires the greenlet__ library.
+supported. (Users of older versions of Python 2 need to install gevent
+1.0.x; Python 3 is not supported by 1.0.) gevent requires the
+greenlet__ library.
 
 gevent 1.1 also runs on PyPy 2.6.1 and above, although 4.0 or above is
 strongly recommended. On PyPy, there are no external dependencies.
 
-.. note:: gevent does *not* run on PyPy on Windows as the CFFI backend
+.. note:: gevent does *not* run on PyPy on Windows because the CFFI backend
           does not build.
 
 gevent and greenlet can both be installed with `pip`_, e.g., ``pip
@@ -41,6 +42,16 @@ without pre-built wheels or if wheel installation is disabled, a C compiler
 (Xcode on OS X) and the Python development package are required.
 `cffi`_ can optionally be installed to build the CFFI backend in
 addition to the Cython backend on CPython.
+
+
+.. tip:: Some Linux distributions are now mounting their temporary
+         directories with the ``noexec`` option. This can cause a
+         standard ``pip install gevent`` to fail with an error like
+         ``cannot run C compiled programs``. One fix is to mount the
+         temporary directory without that option. Another may be to
+         use the ``--build`` option to ``pip install`` to specify
+         another directory. See :issue:`570` and :issue:`612` for
+         examples.
 
 __ http://pypi.python.org/pypi/greenlet
 .. _`pip`: https://pip.pypa.io/en/stable/installing/
@@ -105,9 +116,15 @@ modules using the :func:`gevent.monkey.patch_all` function::
     >>> import subprocess # it's usable from multiple greenlets now
 
 
-.. note:: When monkey patching, it is recommended to do so as early as
-		  possible in the lifetime of the process. If possible,
-		  monkey patching should be the first lines executed.
+.. tip::
+
+   When monkey patching, it is recommended to do so as early as
+   possible in the lifetime of the process. If possible,
+   monkey patching should be the first lines executed. Monkey
+   patching later, especially if native threads have been
+   created, :mod:`atexit` or signal handlers have been installed,
+   or sockets have been created, may lead to unpredictable
+   results including unexpected :exc:`~gevent.hub.LoopExit` errors.
 
 __ https://github.com/gevent/gevent/blob/master/examples/concurrent_download.py#L1
 
@@ -151,7 +168,7 @@ information.
 .. _`libev documentation`: http://pod.tst.eu/http://cvs.schmorp.de/libev/ev.pod#FUNCTIONS_CONTROLLING_EVENT_LOOPS
 
 The Libev API is available under the :mod:`gevent.core` module. Note that
-the callbacks supplied to the libev API are run in the :class:`gevent.hub.Hub`
+the callbacks supplied to the libev API are run in the :class:`~gevent.hub.Hub`
 greenlet and thus cannot use the synchronous gevent API. It is possible to
 use the asynchronous API there, like :func:`gevent.spawn` and
 :meth:`gevent.event.Event.set`.

@@ -3,6 +3,7 @@
 Python 3 socket module.
 """
 import io
+import os
 import sys
 import time
 from gevent import _socketcommon
@@ -51,11 +52,13 @@ _closedsocket.close()
 
 class socket(object):
 
+    _gevent_sock_class = _wrefsocket
+
     def __init__(self, family=AF_INET, type=SOCK_STREAM, proto=0, fileno=None):
         # Take the same approach as socket2: wrap a real socket object,
         # don't subclass it. This lets code that needs the raw _sock (not tied to the hub)
         # get it. This shows up in tests like test__example_udp_server.
-        self._sock = _wrefsocket(family, type, proto, fileno)
+        self._sock = self._gevent_sock_class(family, type, proto, fileno)
         self._io_refs = 0
         self._closed = False
         _socket.socket.setblocking(self._sock, False)
@@ -338,9 +341,15 @@ class socket(object):
     def sendall(self, data, flags=0):
         # XXX When we run on PyPy3, see the notes in _socket2.py's sendall()
         data_memory = _get_memory(data)
+        len_data_memory = len(data_memory)
+        if not len_data_memory:
+            # Don't try to send empty data at all, no point, and breaks ssl
+            # See issue 719
+            return 0
+
         if self.timeout is None:
             data_sent = 0
-            while data_sent < len(data_memory):
+            while data_sent < len_data_memory:
                 data_sent += self.send(data_memory[data_sent:], flags)
         else:
             timeleft = self.timeout
@@ -348,7 +357,7 @@ class socket(object):
             data_sent = 0
             while True:
                 data_sent += self.send(data_memory[data_sent:], flags, timeout=timeleft)
-                if data_sent >= len(data_memory):
+                if data_sent >= len_data_memory:
                     break
                 timeleft = end - time.time()
                 if timeleft <= 0:
@@ -397,6 +406,100 @@ class socket(object):
             self.hub.cancel_wait(self._read_event, cancel_wait_ex)
             self.hub.cancel_wait(self._write_event, cancel_wait_ex)
         self._sock.shutdown(how)
+
+    # sendfile: new in 3.5. But there's no real reason to not
+    # support it everywhere. Note that we can't use os.sendfile()
+    # because it's not cooperative.
+    def _sendfile_use_sendfile(self, file, offset=0, count=None):
+        # This is called directly by tests
+        raise __socket__._GiveupOnSendfile()
+
+    def _sendfile_use_send(self, file, offset=0, count=None):
+        self._check_sendfile_params(file, offset, count)
+        if self.gettimeout() == 0:
+            raise ValueError("non-blocking sockets are not supported")
+        if offset:
+            file.seek(offset)
+        blocksize = min(count, 8192) if count else 8192
+        total_sent = 0
+        # localize variable access to minimize overhead
+        file_read = file.read
+        sock_send = self.send
+        try:
+            while True:
+                if count:
+                    blocksize = min(count - total_sent, blocksize)
+                    if blocksize <= 0:
+                        break
+                data = memoryview(file_read(blocksize))
+                if not data:
+                    break  # EOF
+                while True:
+                    try:
+                        sent = sock_send(data)
+                    except BlockingIOError:
+                        continue
+                    else:
+                        total_sent += sent
+                        if sent < len(data):
+                            data = data[sent:]
+                        else:
+                            break
+            return total_sent
+        finally:
+            if total_sent > 0 and hasattr(file, 'seek'):
+                file.seek(offset + total_sent)
+
+    def _check_sendfile_params(self, file, offset, count):
+        if 'b' not in getattr(file, 'mode', 'b'):
+            raise ValueError("file should be opened in binary mode")
+        if not self.type & SOCK_STREAM:
+            raise ValueError("only SOCK_STREAM type sockets are supported")
+        if count is not None:
+            if not isinstance(count, int):
+                raise TypeError(
+                    "count must be a positive integer (got {!r})".format(count))
+            if count <= 0:
+                raise ValueError(
+                    "count must be a positive integer (got {!r})".format(count))
+
+    def sendfile(self, file, offset=0, count=None):
+        """sendfile(file[, offset[, count]]) -> sent
+
+        Send a file until EOF is reached by using high-performance
+        os.sendfile() and return the total number of bytes which
+        were sent.
+        *file* must be a regular file object opened in binary mode.
+        If os.sendfile() is not available (e.g. Windows) or file is
+        not a regular file socket.send() will be used instead.
+        *offset* tells from where to start reading the file.
+        If specified, *count* is the total number of bytes to transmit
+        as opposed to sending the file until EOF is reached.
+        File position is updated on return or also in case of error in
+        which case file.tell() can be used to figure out the number of
+        bytes which were sent.
+        The socket must be of SOCK_STREAM type.
+        Non-blocking sockets are not supported.
+        """
+        return self._sendfile_use_send(file, offset, count)
+
+    # get/set_inheritable new in 3.4
+    if hasattr(os, 'get_inheritable') or hasattr(os, 'get_handle_inheritable'):
+        if os.name == 'nt':
+            def get_inheritable(self):
+                return os.get_handle_inheritable(self.fileno())
+
+            def set_inheritable(self, inheritable):
+                os.set_handle_inheritable(self.fileno(), inheritable)
+        else:
+            def get_inheritable(self):
+                return os.get_inheritable(self.fileno())
+
+            def set_inheritable(self, inheritable):
+                os.set_inheritable(self.fileno(), inheritable)
+        get_inheritable.__doc__ = "Get the inheritable flag of the socket"
+        set_inheritable.__doc__ = "Set the inheritable flag of the socket"
+
 
 if sys.version_info[:2] == (3, 4) and sys.version_info[:3] <= (3, 4, 2):
     # Python 3.4, up to and including 3.4.2, had a bug where the

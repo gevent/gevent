@@ -30,7 +30,12 @@ if sys.version_info[:2] <= (2, 6):
 __file__ = os.path.join(os.getcwd(), test_filename)
 
 test_name = os.path.splitext(test_filename)[0]
-module_source = open(test_filename).read()
+if sys.version_info[0] >= 3:
+    module_file = open(test_filename, encoding='utf-8')
+else:
+    module_file = open(test_filename)
+with module_file:
+    module_source = module_file.read()
 module_source = disable_tests_in_source(module_source, test_name)
 module_code = compile(module_source, test_filename, 'exec')
 exec(module_code, globals())

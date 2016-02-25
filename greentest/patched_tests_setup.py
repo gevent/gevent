@@ -74,6 +74,9 @@ def get_switch_expected(fullname):
 
 
 disabled_tests = [
+    # The server side takes awhile to shut down
+    'test_httplib.HTTPSTest.test_local_bad_hostname',
+
     'test_threading.ThreadTests.test_PyThreadState_SetAsyncExc',
     # uses some internal C API of threads not available when threads are emulated with greenlets
 
@@ -142,28 +145,53 @@ disabled_tests = [
     # The host this wants to use, sha256.tbs-internet.com, is not resolvable
     # right now (2015-10-10), and we need to get Windows wheels
 
+    # Relies on the repr of objects (Py3)
+    'test_ssl.BasicSocketTests.test_dealloc_warn',
+
     'test_urllib2.HandlerTests.test_cookie_redirect',
     # this uses cookielib which we don't care about
 
     'test_thread.ThreadRunningTests.test__count',
     'test_thread.TestForkInThread.test_forkinthread',
     # XXX needs investigating
+
+    'test_subprocess.POSIXProcessTestCase.test_terminate_dead',
+    'test_subprocess.POSIXProcessTestCase.test_send_signal_dead',
+    'test_subprocess.POSIXProcessTestCase.test_kill_dead',
+    # Don't exist in the test suite until 2.7.4+; with our monkey patch in place,
+    # they fail because the process they're looking for has been allowed to exit.
+    # Our monkey patch waits for the process with a watcher and so detects
+    # the exit before the normal polling mechanism would
+
+    'test_subprocess.POSIXProcessTestCase.test_preexec_errpipe_does_not_double_close_pipes',
+    # Does not exist in the test suite until 2.7.4+. Subclasses Popen, and overrides
+    # _execute_child. But our version has a different parameter list than the
+    # version that comes with PyPy/CPython, so fails with a TypeError.
 ]
 
+if 'thread' in os.getenv('GEVENT_FILE', ''):
+    disabled_tests += [
+        'test_subprocess.ProcessTestCase.test_double_close_on_error'
+        # Fails with "OSError: 9 invalid file descriptor"; expect GC/lifetime issues
+    ]
 
-def disabled_tests_extend(lines):
-    disabled_tests.extend(lines.strip().split('\n'))
+if sys.version_info[:2] == (2, 6):
 
 
-if sys.version_info[:2] == (2, 6) and os.environ.get('TRAVIS') == 'true':
-    # somehow these fail with "Permission denied" on travis
-    disabled_tests_extend('''
-test_httpservers.CGIHTTPServerTestCase.test_post
-test_httpservers.CGIHTTPServerTestCase.test_headers_and_content
-test_httpservers.CGIHTTPServerTestCase.test_authorization
-test_httpservers.SimpleHTTPServerTestCase.test_get
-''')
+    disabled_tests += [
+        # SSLv2 May or may not be available depending on the build
+        'test_ssl.BasicTests.test_constants',
+    ]
 
+
+    if os.environ.get('TRAVIS') == 'true':
+        # somehow these fail with "Permission denied" on travis
+        disabled_tests += [
+            'test_httpservers.CGIHTTPServerTestCase.test_post',
+            'test_httpservers.CGIHTTPServerTestCase.test_headers_and_content',
+            'test_httpservers.CGIHTTPServerTestCase.test_authorization',
+            'test_httpservers.SimpleHTTPServerTestCase.test_get'
+        ]
 
 if sys.platform == 'darwin':
     disabled_tests += [
@@ -171,21 +199,14 @@ if sys.platform == 'darwin':
         # causes Mac OS X to show "Python crashes" dialog box which is annoying
     ]
 
+if sys.platform.startswith('win'):
+    disabled_tests += [
+        # Issue with Unix vs DOS newlines in the file vs from the server
+        'test_ssl.ThreadedTests.test_socketserver',
+    ]
+
 if hasattr(sys, 'pypy_version_info'):
     disabled_tests += [
-        'test_subprocess.POSIXProcessTestCase.test_terminate_dead',
-        'test_subprocess.POSIXProcessTestCase.test_send_signal_dead',
-        'test_subprocess.POSIXProcessTestCase.test_kill_dead',
-        # Don't exist in the CPython test suite; with our monkey patch in place,
-        # they fail because the process they're looking for has been allowed to exit.
-        # Our monkey patch waits for the process with a watcher and so detects
-        # the exit before the normal polling mechanism would
-
-        'test_subprocess.POSIXProcessTestCase.test_preexec_errpipe_does_not_double_close_pipes',
-        # Does not exist in the CPython test suite. Subclasses Popen, and overrides
-        # _execute_child. But our version has a different parameter list than the
-        # version that comes with PyPy, so fails with a TypeError.
-
         'test_subprocess.ProcessTestCase.test_failed_child_execute_fd_leak',
         # Does not exist in the CPython test suite, tests for a specific bug
         # in PyPy's forking. Only runs on linux and is specific to the PyPy
@@ -201,11 +222,41 @@ if hasattr(sys, 'pypy_version_info'):
             # https://bitbucket.org/cffi/cffi/issue/152/handling-errors-from-signal-handlers-in
         ]
 
-    if 'thread' in os.getenv('GEVENT_FILE', ''):
-        disabled_tests += [
-            'test_subprocess.ProcessTestCase.test_double_close_on_error'
-            # Fails with "OSError: 9 invalid file descriptor"; expect GC/lifetime issues
-        ]
+# Generic Python 3
+
+if sys.version_info[0] == 3:
+
+    disabled_tests += [
+        # Triggers the crash reporter
+        'test_threading.SubinterpThreadingTests.test_daemon_threads_fatal_error',
+
+        # Relies on an implementation detail, Thread._tstate_lock
+        'test_threading.ThreadTests.test_tstate_lock',
+        # Relies on an implementation detail (reprs); we have our own version
+        'test_threading.ThreadTests.test_various_ops',
+        'test_threading.ThreadTests.test_various_ops_large_stack',
+        'test_threading.ThreadTests.test_various_ops_small_stack',
+
+        # Relies on Event having a _cond and an _reset_internal_locks()
+        # XXX: These are commented out in the source code of test_threading because
+        # this doesn't work.
+        # 'lock_tests.EventTests.test_reset_internal_locks',
+
+        # Python bug 13502. We may or may not suffer from this as its
+        # basically a timing race condition.
+        # XXX Same as above
+        # 'lock_tests.EventTests.test_set_and_clear',
+
+    ]
+
+if sys.version_info[:2] == (3, 4) and sys.version_info[:3] < (3, 4, 4):
+    # Older versions have some issues with the SSL tests. Seen on Appveyor
+    disabled_tests += [
+        'test_ssl.ContextTests.test_options',
+        'test_ssl.ThreadedTests.test_protocol_sslv23',
+        'test_ssl.ThreadedTests.test_protocol_sslv3',
+        'test_httplib.HTTPSTest.test_networked',
+    ]
 
 if sys.version_info[:2] >= (3, 4):
     disabled_tests += [
@@ -249,6 +300,7 @@ if sys.version_info[:2] >= (3, 4):
         # poll on them, expecting them all to be ready at once. But
         # libev limits the number of events it will return at once. Specifically,
         # on linux with epoll, it returns a max of 64 (ev_epoll.c).
+
     ]
 
     if os.environ.get('TRAVIS') == 'true':
@@ -256,6 +308,51 @@ if sys.version_info[:2] >= (3, 4):
             'test_subprocess.ProcessTestCase.test_double_close_on_error',
             # This test is racy or OS-dependent. It passes locally (sufficiently fast machine)
             # but fails under Travis
+        ]
+
+if sys.version_info[:2] >= (3, 5):
+    disabled_tests += [
+        # XXX: Hangs
+        'test_ssl.ThreadedTests.test_nonblocking_send',
+        'test_ssl.ThreadedTests.test_socketserver',
+        # XXX: Hangs (Linux only)
+        'test_socket.NonBlockingTCPTests.testInitNonBlocking',
+        # We don't handle the Linux-only SOCK_NONBLOCK option
+        'test_socket.NonblockConstantTest.test_SOCK_NONBLOCK',
+
+        # Tries to use multiprocessing which doesn't quite work in
+        # monkey_test module (Windows only)
+        'test_socket.TestSocketSharing.testShare',
+
+        # Windows-only: Sockets have a 'ioctl' method in Python 3
+        # implemented in the C code. This test tries to check
+        # for the presence of the method in the class, which we don't
+        # have because we don't inherit the C implementation. But
+        # it should be found at runtime.
+        'test_socket.GeneralModuleTests.test_sock_ioctl',
+
+        # Relies on implementation details
+        'test_socket.GeneralModuleTests.test_SocketType_is_socketobject',
+        'test_socket.GeneralModuleTests.test_dealloc_warn',
+        'test_socket.GeneralModuleTests.test_repr',
+        'test_socket.GeneralModuleTests.test_str_for_enums',
+        'test_socket.GeneralModuleTests.testGetaddrinfo',
+
+        # Relies on the regex of the repr having the locked state (TODO: it'd be nice if
+        # we did that).
+        # XXX: These are commented out in the source code of test_threading because
+        # this doesn't work.
+        # 'lock_tests.LockTests.lest_locked_repr',
+        # 'lock_tests.LockTests.lest_repr',
+
+    ]
+
+    if os.environ.get('GEVENT_RESOLVER') == 'ares':
+        disabled_tests += [
+            # These raise different errors or can't resolve
+            # the IP address correctly
+            'test_socket.GeneralModuleTests.test_host_resolution',
+            'test_socket.GeneralModuleTests.test_getnameinfo',
         ]
 
 # if 'signalfd' in os.environ.get('GEVENT_BACKEND', ''):

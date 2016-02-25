@@ -4,15 +4,14 @@
 
 Detailed information an what has changed is available in the
 :doc:`changelog`. This document summarizes the most important changes
-since gevent 1.0.2.
+since :doc:`gevent 1.0.2 <whatsnew_1_0>`.
 
-Platform Support
-================
+Broader Platform Support
+========================
 
 gevent 1.1 supports Python 2.6, 2.7, 3.3, and 3.4 on the CPython
-(`python.org`_) interpreter. It also supports `PyPy`_ 2.6.1 and above (with
-best results being obtained on PyPy 4.0.1 and above); PyPy3 is not
-supported.
+(`python.org`_) interpreter. It also supports `PyPy`_ 2.6.1 and above
+(PyPy 4.0.1 or higher is recommended); PyPy3 is not supported.
 
 Support for Python 2.5 was removed when support for Python 3 was
 added. Any further releases in the 1.0.x line will maintain support
@@ -35,12 +34,14 @@ PyPy Notes
 ----------
 
 PyPy has been tested on OS X and 64-bit Linux from version 2.6.1
-through 4.0.0 and 4.0.1.
+through 4.0.0 and 4.0.1, and on 32-bit ARM on Raspbian with version 4.0.1.
 
 .. note:: PyPy is not supported on Windows. (gevent's CFFI backend is not
           available on Windows.)
 
-- Version 2.6.1 or above is required for proper signal handling. Prior
+- Version 4.0.1 or above is **highly recommended** due to its extensive
+  bug fixes relative to earlier versions.
+- Version 2.6.1 or above is **required** for proper signal handling. Prior
   to 2.6.1 and its inclusion of `cffi 1.3.0`_, signals could be
   delivered incorrectly or fail to be delivered during a blocking
   operation. (PyPy 2.5.0 includes CFFI 0.8.6 while 2.6.0 has 1.1.0;
@@ -53,7 +54,8 @@ through 4.0.0 and 4.0.1.
   Things that are known or expected to be (relatively) slower under
   PyPy include the :mod:`c-ares resolver <gevent.resolver_ares>` and
   :class:`~gevent.lock.Semaphore`. Whether or not these matter will
-  depend on the workload of each application.
+  depend on the workload of each application (:pr:`708` mentions
+  some specific benchmarks for ``Semaphore``).
 
 .. caution:: The ``c-ares`` resolver is considered highly experimental
              under PyPy and is not recommended for production use.
@@ -74,6 +76,32 @@ through 4.0.0 and 4.0.1.
 .. _cffi 1.3.0: https://bitbucket.org/cffi/cffi/src/ad3140a30a7b0ca912185ef500546a9fb5525ece/doc/source/whatsnew.rst?at=default
 .. _1.2.0: https://cffi.readthedocs.org/en/latest/whatsnew.html#v1-2-0
 .. _a bug: https://bitbucket.org/pypy/pypy/issues/2149/memory-leak-for-python-subclass-of-cpyext
+
+Operating Systems
+-----------------
+
+gevent is regularly built and tested on Mac OS X, Ubuntu Linux, and
+Windows, in both 32- and 64-bit configurations. All three platforms
+are primarily tested on the x86/amd64 architecture, while Linux is
+also occasionally tested on Raspian on ARM.
+
+In general, gevent should work on any platform that both Python and
+`libev support`_. However, some less commonly used platforms may
+require tweaks to the gevent source code or user environment to
+compile (e.g., `SmartOS`_). Also, due to differences in
+things such as timing, some platforms may not be able to fully pass gevent's
+extensive test suite (e.g., `OpenBSD`_).
+
+.. _libev support: http://pod.tst.eu/http://cvs.schmorp.de/libev/ev.pod#PORTABILITY_NOTES
+.. _SmartOS: https://github.com/gevent/gevent/pull/711
+.. _OpenBSD: https://github.com/gevent/gevent/issues/737
+
+Bug Fixes
+=========
+
+Since 1.0.2, gevent 1.1 contains over 600 commits from nearly two
+dozen contributors. Over 200 issues were closed, and over 50 pull
+requests were merged.
 
 Improved subprocess support
 ===========================
@@ -133,8 +161,9 @@ determine if something has been monkey patched.
 API Additions
 =============
 
-Numerous APIs offer slightly expanded functionality in this version. Highlights
-include:
+Numerous APIs offer slightly expanded functionality in this version.
+Look for "changed in version 1.1" or "added in version 1.1" throughout
+the documentation for specifics. Highlights include:
 
 - A gevent-friendly version of :obj:`select.poll` (on platforms that
   implement it).
@@ -143,7 +172,8 @@ include:
   correctness, and performance. (Previously, the Python 2 implementation used the
   undocumented class :class:`socket._fileobject`.)
 - Locks raise the same error as standard library locks if they are
-  over-released.
+  over-released. Likewise, SSL sockets raise the same errors as their
+  bundled counterparts if they are read or written after being closed.
 - :meth:`ThreadPool.apply <gevent.threadpool.ThreadPool.apply>` can
   now be used recursively.
 - The various pool objects (:class:`~gevent.pool.Group`,
@@ -162,10 +192,12 @@ include:
 - Almost anywhere that gevent raises an exception from one greenlet to
   another (e.g., :meth:`Greenlet.get <gevent.Greenlet.get>`),
   the original traceback is preserved and raised.
+- Various logging/debugging outputs have been cleaned up.
 - The WSGI server found in :mod:`gevent.pywsgi` is more robust against
   errors in either the client or the WSGI application, fixing several
   hangs or HTTP protocol violations. It also supports new
   functionality such as configurable error handling and logging.
+- Documentation has been expanded and clarified.
 
 Library Updates
 ===============
@@ -250,5 +282,19 @@ reduce the cases of undocumented or non-standard behaviour.
   ) now throws an exception, just like the documented parameter to the
   same stdlib method in Python 3.
 
+- Under Python 3, several standard library methods added ``timeout``
+  parameters. These often default to -1 to mean "no timeout", whereas
+  gevent uses a default of ``None`` to mean the same thing,
+  potentially leading to great confusion and bugs in portable code. In
+  gevent, using a negative value has always been ill-defined and hard
+  to reason about. Because of those two things, as of this release,
+  negative ``timeout`` values should be considered deprecated (unless
+  otherwise documented). The current ill-defined behaviour is
+  maintained, but future releases may choose to treat it the same as
+  ``None`` or raise an error. No runtime warnings are issued for this
+  change for performance reasons.
+
 - The previously undocumented class
-  ``gevent.fileobject.SocketAdapter`` has been removed.
+  ``gevent.fileobject.SocketAdapter`` has been removed, as have the
+  internal ``gevent._util`` module and some internal implementation modules
+  found in early pre-releases of 1.1.

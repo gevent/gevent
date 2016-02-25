@@ -59,7 +59,8 @@ for name in dir(__ssl__):
 
 del name, value
 
-__all__ = __implements__ + __imports__
+# Py2.6 can get RAND_status added twice
+__all__ = list(set(__implements__) | set(__imports__))
 
 
 class SSLSocket(socket):

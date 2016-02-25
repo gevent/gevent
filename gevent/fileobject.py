@@ -110,6 +110,11 @@ class FileObjectThread(object):
             return self.threadpool.apply(func, args, kwargs)
 
     def close(self):
+        """
+        .. versionchanged:: 1.1b1
+           The file object is closed using the threadpool. Note that whether or
+           not this action is synchronous or asynchronous is not documented.
+        """
         fobj = self.io
         if fobj is None:
             return

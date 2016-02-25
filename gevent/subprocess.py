@@ -331,6 +331,15 @@ _PLATFORM_DEFAULT_CLOSE_FDS = object()
 
 
 class Popen(object):
+    """
+    The underlying process creation and management in this module is
+    handled by the Popen class. It offers a lot of flexibility so that
+    developers are able to handle the less common cases not covered by
+    the convenience functions.
+
+    .. seealso:: :class:`subprocess.Popen`
+       This class should have the same interface as the standard library class.
+    """
 
     def __init__(self, args, bufsize=None, executable=None,
                  stdin=None, stdout=None, stderr=None,
@@ -338,7 +347,13 @@ class Popen(object):
                  cwd=None, env=None, universal_newlines=False,
                  startupinfo=None, creationflags=0, threadpool=None,
                  **kwargs):
-        """Create new Popen instance."""
+        """Create new Popen instance.
+
+        :param kwargs: *Only* allowed under Python 3; under Python 2, any
+          unrecognized keyword arguments will result in a :exc:`TypeError`.
+          Under Python 3, keyword arguments can include ``pass_fds``, ``start_new_session``,
+          and ``restore_signals``.
+        """
 
         if not PY3 and kwargs:
             raise TypeError("Got unexpected keyword arguments", kwargs)
@@ -553,6 +568,13 @@ class Popen(object):
         :keyword timeout: Under Python 2, this is a gevent extension; if
            given and it expires, we will raise :class:`gevent.timeout.Timeout`.
            Under Python 3, this raises the standard :exc:`TimeoutExpired` exception.
+
+        .. versionchanged:: 1.1a2
+           Under Python 2, if the *timeout* elapses, raise the :exc:`gevent.timeout.Timeout`
+           exception. Previously, we silently returned.
+        .. versionchanged:: 1.1b5
+           Honor a *timeout* even if there's no way to communicate with the child
+           (stdin, stdout, and stderr are not pipes).
         """
         greenlets = []
         if self.stdin:
@@ -640,6 +662,7 @@ class Popen(object):
                 None if stderr is None else stderr_value or b'')
 
     def poll(self):
+        """Check if child process has terminated. Set and return :attr:`returncode` attribute."""
         return self._internal_poll()
 
     if PY3:
@@ -918,6 +941,7 @@ class Popen(object):
         #
 
         def rawlink(self, callback):
+            # Not public documented, part of the link protocol
             self.result.rawlink(linkproxy(callback, self))
         # XXX unlink
 
@@ -1249,7 +1273,7 @@ class Popen(object):
             return self.returncode
 
         def wait(self, timeout=None):
-            """Wait for child process to terminate.  Returns returncode
+            """Wait for child process to terminate.  Returns :attr:`returncode`
             attribute.
 
             :keyword timeout: The floating point number of seconds to wait.

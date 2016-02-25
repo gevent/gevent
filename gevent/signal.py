@@ -66,6 +66,10 @@ def signal(signalnum, handler):
 
         Use of ``SIG_IGN`` and ``SIG_DFL`` may also have race conditions
         with libev child watchers and the :mod:`gevent.subprocess` module.
+
+    .. versionchanged:: 1.1rc2
+       Allow using ``SIG_IGN`` and ``SIG_DFL`` to reset and ignore ``SIGCHLD``.
+       However, this allows the possibility of a race condition.
     """
     if signalnum != _signal.SIGCHLD:
         return _signal_signal(signalnum, handler)

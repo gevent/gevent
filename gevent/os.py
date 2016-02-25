@@ -264,7 +264,7 @@ if hasattr(os, 'fork'):
 
             Availability: POSIX.
 
-            .. versionadded:: 1.1a3
+            .. versionadded:: 1.1b1
             """
             # XXX Does not handle tracing children
             if pid <= 0:
@@ -329,7 +329,7 @@ if hasattr(os, 'fork'):
                 Pass the builtin :func:`os.fork` function if you do not need to
                 initialize gevent in the child process.
 
-            .. versionadded:: 1.1a3
+            .. versionadded:: 1.1b1
             .. seealso::
                 :func:`gevent.monkey.get_original` To access the builtin :func:`os.fork`.
             """

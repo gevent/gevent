@@ -44,7 +44,7 @@ class Bunch(object):
                 self.finished.append(tid)
                 while not self._can_exit:
                     _wait()
-        for i in range(n):
+        for _ in range(n):
             start_new_thread(task, ())
 
     def wait_for_started(self):
@@ -72,6 +72,9 @@ class BaseLockTests(BaseTestCase):
     """
     Tests for both recursive and non-recursive locks.
     """
+
+    def locktype(self):
+        raise NotImplementedError()
 
     def test_constructor(self):
         lock = self.locktype()
@@ -244,6 +247,9 @@ class EventTests(BaseTestCase):
     Tests for Event objects.
     """
 
+    def eventtype(self):
+        raise NotImplementedError()
+
     def test_is_set(self):
         evt = self.eventtype()
         self.assertFalse(evt.is_set())
@@ -315,6 +321,9 @@ class ConditionTests(BaseTestCase):
     """
     Tests for condition variables.
     """
+
+    def condtype(self, *args):
+        raise NotImplementedError()
 
     def test_acquire(self):
         cond = self.condtype()
@@ -421,6 +430,9 @@ class BaseSemaphoreTests(BaseTestCase):
     Common tests for {bounded, unbounded} semaphore objects.
     """
 
+    def semtype(self, *args):
+        raise NotImplementedError()
+
     def test_constructor(self):
         self.assertRaises(ValueError, self.semtype, value = -1)
         # Py3 doesn't have sys.maxint
@@ -459,13 +471,13 @@ class BaseSemaphoreTests(BaseTestCase):
             _wait()
         self.assertEqual(results1 + results2, [0] * 6)
         phase_num = 1
-        for i in range(7):
+        for _ in range(7):
             sem.release()
         while len(results1) + len(results2) < 13:
             _wait()
         self.assertEqual(sorted(results1 + results2), [0] * 6 + [1] * 7)
         phase_num = 2
-        for i in range(6):
+        for _ in range(6):
             sem.release()
         while len(results1) + len(results2) < 19:
             _wait()
@@ -554,3 +566,6 @@ class BoundedSemaphoreTests(BaseSemaphoreTests):
         sem.acquire()
         sem.release()
         self.assertRaises(ValueError, sem.release)
+
+if __name__ == '__main__':
+    print("This module contains no tests; it is used by other test cases like test_threading_2")

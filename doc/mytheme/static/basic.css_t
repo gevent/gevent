@@ -979,6 +979,10 @@ dl.glossary dt {
     margin: 0;
 }
 
+th.field-name {
+	vertical-align: top;
+}
+
 .refcount {
     color: #060;
 }

@@ -17,13 +17,18 @@ from gevent.socket import socket, timeout_default
 from gevent.socket import error as socket_error
 from gevent.socket import timeout as _socket_timeout
 
-__implements__ = ['SSLContext',
-                  'SSLSocket',
-                  'wrap_socket',
-                  'get_server_certificate']
+from weakref import ref as _wref
+
+__implements__ = [
+    'SSLContext',
+    'SSLSocket',
+    'wrap_socket',
+    'get_server_certificate',
+]
 
 __imports__ = []
 
+name = value = None
 for name in dir(__ssl__):
     if name in __implements__:
         continue
@@ -54,8 +59,45 @@ class SSLContext(orig_SSLContext):
                          server_hostname=server_hostname,
                          _context=self)
 
+    if not hasattr(orig_SSLContext, 'check_hostname'):
+        # Python 3.3 lacks this
+        check_hostname = False
+
+
+class _contextawaresock(socket._gevent_sock_class):
+    # We have to pass the raw stdlib socket to SSLContext.wrap_socket.
+    # That method in turn can pass that object on to things like SNI callbacks.
+    # It wouldn't have access to any of the attributes on the SSLSocket, like
+    # context, that it's supposed to (see test_ssl.test_sni_callback). Our
+    # solution is to keep a weak reference to the SSLSocket on the raw
+    # socket and delegate.
+
+    # We keep it in a slot to avoid having the ability to set any attributes
+    # we're not prepared for (because we don't know what to delegate.)
+
+    __slots__ = ('_sslsock',)
+
+    @property
+    def context(self):
+        return self._sslsock().context
+
+    @context.setter
+    def context(self, ctx):
+        self._sslsock().context = ctx
+
+    def __getattr__(self, name):
+        try:
+            return getattr(self._sslsock(), name)
+        except RuntimeError:
+            # XXX: If the attribute doesn't exist,
+            # we infinitely recurse
+            pass
+        raise AttributeError(name)
+
 
 class SSLSocket(socket):
+
+    _gevent_sock_class = _contextawaresock
 
     def __init__(self, sock=None, keyfile=None, certfile=None,
                  server_side=False, cert_reqs=CERT_NONE,
@@ -67,7 +109,7 @@ class SSLSocket(socket):
                  _context=None):
 
         if _context:
-            self.context = _context
+            self._context = _context
         else:
             if server_side and not certfile:
                 raise ValueError("certfile must be specified for server-side "
@@ -76,16 +118,16 @@ class SSLSocket(socket):
                 raise ValueError("certfile must be specified")
             if certfile and not keyfile:
                 keyfile = certfile
-            self.context = SSLContext(ssl_version)
-            self.context.verify_mode = cert_reqs
+            self._context = SSLContext(ssl_version)
+            self._context.verify_mode = cert_reqs
             if ca_certs:
-                self.context.load_verify_locations(ca_certs)
+                self._context.load_verify_locations(ca_certs)
             if certfile:
-                self.context.load_cert_chain(certfile, keyfile)
+                self._context.load_cert_chain(certfile, keyfile)
             if npn_protocols:
-                self.context.set_npn_protocols(npn_protocols)
+                self._context.set_npn_protocols(npn_protocols)
             if ciphers:
-                self.context.set_ciphers(ciphers)
+                self._context.set_ciphers(ciphers)
             self.keyfile = keyfile
             self.certfile = certfile
             self.cert_reqs = cert_reqs
@@ -99,6 +141,9 @@ class SSLSocket(socket):
         if server_side and server_hostname:
             raise ValueError("server_hostname can only be specified "
                              "in client mode")
+        if self._context.check_hostname and not server_hostname:
+            raise ValueError("check_hostname requires server_hostname")
+
         self.server_side = server_side
         self.server_hostname = server_hostname
         self.do_handshake_on_connect = do_handshake_on_connect
@@ -125,13 +170,14 @@ class SSLSocket(socket):
         else:
             socket.__init__(self, family=family, type=type, proto=proto)
 
+        self._sock._sslsock = _wref(self)
         self._closed = False
         self._sslobj = None
         self._connected = connected
         if connected:
             # create the SSL object
             try:
-                self._sslobj = self.context._wrap_socket(getattr(self, '_sock', self), server_side,
+                self._sslobj = self.context._wrap_socket(self._sock, server_side,
                                                          server_hostname)
                 if do_handshake_on_connect:
                     timeout = self.gettimeout()
@@ -144,6 +190,15 @@ class SSLSocket(socket):
                 self.close()
                 raise x
 
+    @property
+    def context(self):
+        return self._context
+
+    @context.setter
+    def context(self, ctx):
+        self._context = ctx
+        self._sslobj.context = ctx
+
     def dup(self):
         raise NotImplementedError("Can't dup() %s instances" %
                                   self.__class__.__name__)
@@ -152,9 +207,21 @@ class SSLSocket(socket):
         # raise an exception here if you wish to check for spurious closes
         pass
 
+    def _check_connected(self):
+        if not self._connected:
+            # getpeername() will raise ENOTCONN if the socket is really
+            # not connected; note that we can be connected even without
+            # _connected being set, e.g. if connect() first returned
+            # EAGAIN.
+            self.getpeername()
+
     def read(self, len=1024, buffer=None):
         """Read up to LEN bytes and return them.
         Return zero-length string on EOF."""
+        self._checkClosed()
+        if not self._sslobj:
+            raise ValueError("Read on closed or unwrapped SSL socket.")
+
         while True:
             try:
                 if buffer is not None:
@@ -182,6 +249,10 @@ class SSLSocket(socket):
     def write(self, data):
         """Write DATA to the underlying SSL channel.  Returns
         number of bytes of DATA actually transmitted."""
+        self._checkClosed()
+        if not self._sslobj:
+            raise ValueError("Write on closed or unwrapped SSL socket.")
+
         while True:
             try:
                 return self._sslobj.write(data)
@@ -204,6 +275,7 @@ class SSLSocket(socket):
         certificate was provided, but not validated."""
 
         self._checkClosed()
+        self._check_connected()
         return self._sslobj.peer_certificate(binary_form)
 
     def selected_npn_protocol(self):
@@ -212,6 +284,30 @@ class SSLSocket(socket):
             return None
         else:
             return self._sslobj.selected_npn_protocol()
+
+    if hasattr(_ssl, 'HAS_ALPN'):
+        # 3.5+
+        def selected_alpn_protocol(self):
+            self._checkClosed()
+            if not self._sslobj or not _ssl.HAS_ALPN:
+                return None
+            else:
+                return self._sslobj.selected_alpn_protocol()
+
+        def shared_ciphers(self):
+            """Return a list of ciphers shared by the client during the handshake or
+            None if this is not a valid server connection.
+            """
+            return self._sslobj.shared_ciphers()
+
+        def version(self):
+            """Return a string identifying the protocol version used by the
+            current SSL channel. """
+            if not self._sslobj:
+                return None
+            return self._sslobj.version()
+
+        # We inherit sendfile from super(); it always uses `send`
 
     def cipher(self):
         self._checkClosed()
@@ -344,9 +440,27 @@ class SSLSocket(socket):
 
     def unwrap(self):
         if self._sslobj:
-            s = self._sslobj.shutdown()
+            while True:
+                try:
+                    s = self._sslobj.shutdown()
+                    break
+                except SSLWantReadError:
+                    if self.timeout == 0.0:
+                        return 0
+                    self._wait(self._read_event)
+                except SSLWantWriteError:
+                    if self.timeout == 0.0:
+                        return 0
+                    self._wait(self._write_event)
+
             self._sslobj = None
-            return s
+            # The return value of shutting down the SSLObject is the
+            # original wrapped socket, i.e., _contextawaresock. But that
+            # object doesn't have the gevent wrapper around it so it can't
+            # be used. We have to wrap it back up with a gevent wrapper.
+            sock = socket(family=s.family, type=s.type, proto=s.proto, fileno=s.fileno())
+            s.detach()
+            return sock
         else:
             raise ValueError("No SSL wrapper around " + str(self))
 
@@ -357,9 +471,11 @@ class SSLSocket(socket):
 
     def do_handshake(self):
         """Perform a TLS/SSL handshake."""
+        self._check_connected()
         while True:
             try:
-                return self._sslobj.do_handshake()
+                self._sslobj.do_handshake()
+                break
             except SSLWantReadError:
                 if self.timeout == 0.0:
                     raise
@@ -369,6 +485,12 @@ class SSLSocket(socket):
                     raise
                 self._wait(self._write_event, timeout_exc=_SSLErrorHandshakeTimeout)
 
+        if self.context.check_hostname:
+            if not self.server_hostname:
+                raise ValueError("check_hostname needs server_hostname "
+                                 "argument")
+            match_hostname(self.getpeercert(), self.server_hostname)
+
     def _real_connect(self, addr, connect_ex):
         if self.server_side:
             raise ValueError("can't connect in server-side mode")
@@ -376,7 +498,7 @@ class SSLSocket(socket):
         # connected at the time of the call.  We connect it, then wrap it.
         if self._connected:
             raise ValueError("attempt to connect already-connected SSLSocket!")
-        self._sslobj = self.context._wrap_socket(self, False, self.server_hostname)
+        self._sslobj = self.context._wrap_socket(self._sock, False, self.server_hostname)
         try:
             if connect_ex:
                 rc = socket.connect_ex(self, addr)

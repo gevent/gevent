@@ -4,12 +4,62 @@
 
 .. currentmodule:: gevent
 
-1.1rc4 (unreleased)
+1.1rc6 (unreleased)
 ===================
+
+- Python 3: A monkey-patched :class:`threading.RLock` now properly
+  blocks (or deadlocks) in ``acquire`` if the default value for
+  *timeout* of -1 is used (which differs from gevent's default of
+  None). The ``acquire`` method also raises the same :exc:`ValueError`
+  exceptions that the standard library does for invalid parameters.
+  Reported in :issue:`750` by Joy Zheng.
+
+1.1rc5 (Feb 24, 2016)
+=====================
+
+- SSL: Attempting to send empty data using the
+  :meth:`~socket.socket.sendall` method of a gevent SSL socket that has
+  a timeout now returns immediately (like the standard library does),
+  instead of incorrectly raising :exc:`ssl.SSLEOFError`. (Note that
+  sending empty data with the :meth:`~socket.socket.send`
+  method *does* raise ``SSLEOFError`` in
+  both gevent and the standard library.) Reported in :issue:`719` by
+  Mustafa Atik and Tymur Maryokhin, with a reproducible test case
+  provided by Timo Savola.
+
+1.1rc4 (Feb 16, 2016)
+=====================
 
 - Python 2: Using the blocking API at import time when multiple
   greenlets are also importing should not lead to ``LoopExit``.
-  Reported in :issue:`798` by Garrett Heel.
+  Reported in :issue:`728` by Garrett Heel.
+- Python 2: Don't raise :exc:`OverflowError` when using the ``readline``
+  method of the WSGI input stream without a size hint or with a large
+  size hint when the client is uploading a large amount of data. (This
+  only impacted CPython 2; PyPy and Python 3 already handled this.)
+  Reported in :issue:`289` by ggjjlldd, with contributions by Nathan
+  Hoad.
+- :class:`~gevent.baseserver.BaseServer` and its subclasses like
+  :class:`~gevent.pywsgi.WSGIServer` avoid allocating a new closure for
+  each request, reducing overhead.
+- Python 2: Under 2.7.9 and above (or when the PEP 466 SSL interfaces
+  are available), perform the same hostname validation that the
+  standard library does; previously some cases were ignored. Also,
+  reading, writing, or handshaking a closed
+  :class:`~ssl.SSLSocket` now raises the same :exc:`ValueError`
+  the standard library does, instead of an :exc:`AttributeError`.
+  Found by updating gevent's copy of the standard library test cases.
+  Initially reported in :issue:`735` by Dmitrij D. Czarkoff.
+- Python 3: Fix :meth:`~ssl.SSLSocket.unwrap` and SNI callbacks.
+  Also raise the correct exceptions for unconnected SSL sockets and
+  properly validate SSL hostnames. Found via updated standard library
+  tests.
+- Python 3: Add missing support for :meth:`socket.socket.sendfile`. Found via updated
+  standard library tests.
+- Python 3.4+: Add missing support for
+  :meth:`socket.socket.get_inheritable` and
+  :meth:`~socket.socket.set_inheritable`. Found via updated standard
+  library tests.
 
 1.1rc3 (Jan 04, 2016)
 =====================
@@ -46,7 +96,7 @@
   ``sendall``.
 - gevent's SSL socket's ``sendall`` method should no longer raise ``SSL3_WRITE_PENDING``
   in rare cases when sending large buffers. Reported in :issue:`317`.
-- ``gevent.signal`` now allows resetting (SIG_DFL) and ignoring (SIG_IGN) the
+- :func:`gevent.signal.signal` now allows resetting (SIG_DFL) and ignoring (SIG_IGN) the
   SIGCHLD signal at the process level (although this may allow race
   conditions with libev child watchers). Reported in :issue:`696` by
   Adam Ning.
@@ -137,16 +187,16 @@
 1.1b5 (Sep 18, 2015)
 ====================
 
-- ``gevent.subprocess`` works under Python 3.5. In general, Python 3.5
+- :mod:`gevent.subprocess` works under Python 3.5. In general, Python 3.5
   has preliminary support. Reported in :issue:`653` by Squeaky.
-- ``gevent.subprocess.Popen.communicate`` honors a ``timeout``
+- :func:`Popen.communicate <gevent.subprocess.Popen.communicate>` honors a ``timeout``
   argument even if there is no way to communicate with the child
   process (none of stdin, stdout and stderr were set to ``PIPE``).
   Noticed as part of the Python 3.5 test suite for the new function
   ``subprocess.run`` but impacts all versions (``timeout`` is an
   official argument under Python 3 and a gevent extension with
   slightly different semantics under Python 2).
-- Fix a possible ``ValueError`` from ``gevent.queue.Queue:peek``.
+- Fix a possible ``ValueError`` from :meth:`Queue.peek <gevent.queue.Queue.peek>`.
   Reported in :issue:`647` by Kevin Chen.
 - Restore backwards compatibility for using ``gevent.signal`` as a
   callable, which, depending on the order of imports, could be broken
@@ -154,7 +204,7 @@
   :issue:`648` by Sylvain Zimmer.
 - gevent blocking operations performed at the top-level of a module
   after the system was monkey-patched under Python 2 could result in
-  raising a ``LoopExit`` instead of completing the expected blocking
+  raising a :exc:`~gevent.hub.LoopExit` instead of completing the expected blocking
   operation. Note that performing gevent blocking operations in the
   top-level of a module is typically not recommended, but this
   situation can arise when monkey-patching existing scripts. Reported
@@ -163,20 +213,21 @@
   (monkey-patched) ``os.forkpty`` and ``pty.fork`` functions in the
   same way they do for the ``os.fork`` function. Reported in
   :issue:`650` by Erich Heine.
-- ``gevent.pywsgi.WSGIServer`` (``WSGIHandler``) does a better job detecting and
+- :class:`~gevent.pywsgi.WSGIServer` and
+  :class:`~gevent.pywsgi.WSGIHandler` do a better job detecting and
   reporting potential encoding errors for headers and the status line
-  during ``start_response`` as recommended by the `WSGI specification`_.
-  In addition, under Python 2, unnecessary encodings and decodings
-  (often a trip through the ASCII encoding) are avoided for conforming
-  applications. This is an enhancement of an already documented and
-  partially enforced constraint: beginning in 1.1a1, under Python 2,
-  ``u'abc'`` would typically previously have been allowed, but
-  ``u'\u1f4a3'`` would not; now, neither will be allowed, more closely
-  matching the specification, improving debugability and performance
-  and allowing for better error handling both by the application and
-  by gevent (previously, certain encoding errors could result in
-  gevent writing invalid/malformed HTTP responses). Reported by Greg
-  Higgins and Carlos Sanchez.
+  during :meth:`~gevent.pywsgi.WSGIHandler.start_response` as recommended by the `WSGI
+  specification`_. In addition, under Python 2, unnecessary encodings
+  and decodings (often a trip through the ASCII encoding) are avoided
+  for conforming applications. This is an enhancement of an already
+  documented and partially enforced constraint: beginning in 1.1a1,
+  under Python 2, ``u'abc'`` would typically previously have been
+  allowed, but ``u'\u1f4a3'`` would not; now, neither will be allowed,
+  more closely matching the specification, improving debugability and
+  performance and allowing for better error handling both by the
+  application and by gevent (previously, certain encoding errors could
+  result in gevent writing invalid/malformed HTTP responses). Reported
+  by Greg Higgins and Carlos Sanchez.
 - Code coverage by tests is now reported on `coveralls.io`_.
 
 .. _WSGI specification: https://www.python.org/dev/peps/pep-3333/#the-start-response-callable
@@ -192,9 +243,11 @@
   erratic, difficult to debug behaviour.
 - Fix an ``AttributeError`` from ``gevent.queue.Queue`` when ``peek``
   was called on an empty ``Queue``. Reported in :issue:`643` by michaelvol.
-- Make ``SIGCHLD`` handlers specified to ``signal.signal`` work with
+- Make ``SIGCHLD`` handlers specified to :func:`gevent.signal.signal` work with
   the child watchers that are used by default. Also make
-  ``os.waitpid`` work with a first argument of -1. Noted by users of gunicorn.
+  :func:`gevent.os.waitpid` work with a first argument of -1. (Also
+  applies to the corresponding monkey-patched stdlib functions.)
+  Noted by users of gunicorn.
 - Under Python 2, any timeout set on a socket would be ignored when
   using the results of ``socket.makefile``. Reported in :issue:`644`
   by Karan Lyons.
@@ -228,15 +281,16 @@
   printed.) Reported in :issue:`617` by Jay Oster and Carlos Sanchez.
 - PyPy: Fix a ``TypeError`` from ``gevent.idle()``. Reported in
   :issue:`639` by chilun2008.
-- The ``imap_unordered`` methods of a pool support a ``maxsize``
-  parameter to limit the number of results buffered waiting for the
-  consumer. Reported in :issue:`638` by Sylvain Zimmer.
-- The class ``gevent.queue.Queue`` now consistently orders multiple
+- The :func:`~gevent.pool.Pool.imap_unordered` methods of a pool-like
+  object support a ``maxsize`` parameter to limit the number of
+  results buffered waiting for the consumer. Reported in :issue:`638`
+  by Sylvain Zimmer.
+- The class :class:`gevent.queue.Queue` now consistently orders multiple
   blocked waiting ``put`` and ``get`` callers in the order they
   arrived. Previously, due to an implementation quirk this was often
   roughly the case under CPython, but not under PyPy. Now they both
   behave the same.
-- The class ``gevent.queue.Queue`` now supports the ``len()`` function.
+- The class :class:`gevent.queue.Queue` now supports the :func:`len` function.
 
 .. _future: http://python-future.org
 .. _bench_sendall.py: https://raw.githubusercontent.com/gevent/gevent/master/greentest/bench_sendall.py
@@ -251,12 +305,14 @@
 - On some versions of PyPy on some platforms (notably 2.6.0 on 64-bit
   Linux), enabling ``gevent.monkey.patch_builtins`` could cause PyPy
   to crash. Reported in :issue:`618` by Jay Oster.
-- ``gevent.kill`` raises the correct exception in the target greenlet.
+- :func:`gevent.kill` raises the correct exception in the target greenlet.
   Reported in :issue:`623` by Jonathan Kamens.
 - Various fixes on Windows. Reported in :issue:`625`, :issue:`627`,
   and :issue:`628` by jacekt and Yuanteng (Jeff) Pei. Fixed in :pr:`624`.
-- Add ``readable`` and ``writable`` methods to ``FileObjectPosix``;
-  this fixes e.g., help() on Python 3 when monkey-patched.
+- Add :meth:`~gevent.fileobject.FileObjectPosix.readable` and
+  :meth:`~gevent.fileobject.FileObjectPosix.writable` methods to
+  :class:`~gevent.fileobject.FileObjectPosix`; this fixes e.g., help() on Python 3 when
+  monkey-patched.
 
 1.1b1 (Jul 17, 2015)
 ====================
@@ -270,28 +326,28 @@
 - Fixed regression that failed to set the ``successful`` value to
   False when killing a greenlet before it ran with a non-default
   exception. Fixed in :pr:`608` by Heungsub Lee.
-- libev's child watchers caused ``os.waitpid`` to become unreliable
+- libev's child watchers caused :func:`os.waitpid` to become unreliable
   due to the use of signals on POSIX platforms. This was especially
-  noticeable when using ``gevent.subprocess`` in combination with
+  noticeable when using :mod:`gevent.subprocess` in combination with
   ``multiprocessing``. Now, the monkey-patched ``os`` module provides
-  a ``waitpid`` function that seeks to ameliorate this. Reported in
+  a :func:`~gevent.os.waitpid` function that seeks to ameliorate this. Reported in
   :issue:`600` by champax and :issue:`452` by Łukasz Kawczyński.
-- On platforms that implement ``select.poll``, provide a
-  gevent-friendly ``gevent.select.poll`` and corresponding
+- On platforms that implement :class:`select.poll`, provide a
+  gevent-friendly :class:`gevent.select.poll` and corresponding
   monkey-patch. Implemented in :pr:`604` by Eddi Linder.
 - Allow passing of events to the io callback under PyPy. Reported in
   :issue:`531` by M. Nunberg and implemented in :pr:`604`.
-- ``gevent.thread.allocate_lock`` (and so a monkey-patched standard
-  library ``allocate_lock``) more closely matches the behaviour of the
+- :func:`gevent.thread.allocate_lock` (and so a monkey-patched standard
+  library :func:`~thread.allocate_lock`) more closely matches the behaviour of the
   builtin: an unlocked lock cannot be released, and attempting to do
   so throws the correct exception (``thread.error`` on Python 2,
   ``RuntimeError`` on Python 3). Previously, over-releasing a lock was
   silently ignored. Reported in :issue:`308` by Jędrzej Nowak.
-- ``gevent.fileobject.FileObjectThread`` uses the threadpool to close
+- :class:`gevent.fileobject.FileObjectThread` uses the threadpool to close
   the underling file-like object. Reported in :issue:`201` by
   vitaly-krugl.
 - Malicious or malformed HTTP chunked transfer encoding data sent to
-  the ``gevent.pywsgi`` handler is handled more robustly, resulting in
+  the :class:`pywsgi handler <gevent.pywsgi.WSGIHandler>` is handled more robustly, resulting in
   "HTTP 400 bad request" responses instead of a 500 error or, in the
   worst case, a server-side hang. Reported in :issue:`229` by Björn
   Lindqvist.
@@ -301,7 +357,7 @@
   return an unjoinable DummyThread. (Note that this is not
   recommended.) Reported in :issue:`153`.
 - Under Python 2, use the ``io`` package to implement
-  ``FileObjectPosix``. This unifies the code with the Python 3
+  :class:`~gevent.fileobject.FileObjectPosix`. This unifies the code with the Python 3
   implementation, and fixes problems with using ``seek()``. See
   :issue:`151`.
 - Under Python 2, importing a module that uses gevent blocking
@@ -309,35 +365,37 @@
   produces import errors (Python 3 handles this case natively).
   Reported in :issue:`108` by shaun and initial fix based on code by
   Sylvain Zimmer.
-- ``gevent.spawn``, ``spawn_raw`` and ``spawn_later``, as well as the
-  ``Greenlet`` constructor, immediately produce useful ``TypeErrors``
+- :func:`gevent.spawn`, :func:`spawn_raw` and :func:`spawn_later`, as well as the
+  :class:`~gevent.Greenlet` constructor, immediately produce useful ``TypeErrors``
   if asked to run something that cannot be run. Previously, the
   spawned greenlet would die with an uncaught ``TypeError`` the first
   time it was switched to. Reported in :issue:`119` by stephan.
-- Recursive use of ``gevent.threadpool.ThreadPool.apply`` no longer
-  raises a ``LoopExit`` error (using ``ThreadPool.spawn`` and then
-  ``get`` on the result still could; you must be careful to use the
-  correct hub). Reported in :issue:`131` by 8mayday.
-- When the ``threading`` module is monkey-patched, the module-level
-  lock in the ``logging`` module is made greenlet-aware, as are the
-  instance locks of any configured handlers. This makes it safer to
-  import modules that use the standard pattern of creating a
-  module-level ``Logger`` instance before monkey-patching. Configuring
-  ``logging`` with a basic configuration and then monkey-patching is
-  also safer (but not configurations that involve such things as the
-  ``SocketHandler``).
-- Fix monkey-patching of ``threading.RLock`` under Python 3.
+- Recursive use of :meth:`ThreadPool.apply
+  <gevent.threadpool.ThreadPool.apply>` no longer raises a
+  ``LoopExit`` error (using ``ThreadPool.spawn`` and then ``get`` on
+  the result still could; you must be careful to use the correct hub).
+  Reported in :issue:`131` by 8mayday.
+- When the :mod:`threading` module is :func:`monkey-patched
+  <gevent.monkey.patch_thread>`, the module-level lock in the
+  :mod:`logging` module is made greenlet-aware, as are the instance
+  locks of any configured handlers. This makes it safer to import
+  modules that use the standard pattern of creating a module-level
+  :class:`~logging.Logger` instance before monkey-patching.
+  Configuring ``logging`` with a basic configuration and then
+  monkey-patching is also safer (but not configurations that involve
+  such things as the ``SocketHandler``).
+- Fix monkey-patching of :class:`threading.RLock` under Python 3.
 - Under Python 3, monkey-patching at the top-level of a module that
-  was imported by another module could result in a ``RuntimeError``
-  from ``importlib``. Reported in :issue:`615` by Daniel Mizyrycki.
+  was imported by another module could result in a :exc:`RuntimeError`
+  from :mod:`importlib`. Reported in :issue:`615` by Daniel Mizyrycki.
   (The same thing could happen under Python 2 if a ``threading.RLock``
   was held around the monkey-patching call; this is less likely but
   not impossible with import hooks.)
 - Fix configuring c-ares for a 32-bit Python when running on a 64-bit
   platform. Reported in :issue:`381` and fixed in :pr:`616` by Chris
   Lane. Additional fix in :pr:`626` by Kevin Chen.
-- (Experimental) Let the ``pywsgi.WSGIServer`` accept a
-  ``logging.Logger`` instance for its ``log`` and (new) ``error_log``
+- (Experimental) Let the :class:`pywsgi.WSGIServer` accept a
+  :class:`logging.Logger` instance for its ``log`` and (new) ``error_log``
   parameters. Take care that the system is fully monkey-patched very
   early in the process's lifetime if attempting this, and note that
   non-file handlers have not been tested. Fixes :issue:`106`.
@@ -350,11 +408,11 @@
 - (Experimental) Exceptions raised from iterating using the
   ``ThreadPool`` or ``Group`` mapping/application functions should now
   have the original traceback.
-- ``gevent.threadpool.ThreadPool.apply`` now raises any exception
+- :meth:`gevent.threadpool.ThreadPool.apply` now raises any exception
   raised by the called function, the same as
-  ``gevent.pool.Group``/``Pool`` and the builtin ``apply`` function.
-  This obsoletes the undocumented ``apply_e`` function. Original PR
-  :issue:`556` by Robert Estelle.
+  :class:`~gevent.pool.Group`/:class:`~gevent.pool.Pool` and the
+  builtin :func:`apply` function. This obsoletes the undocumented
+  ``apply_e`` function. Original PR :issue:`556` by Robert Estelle.
 - Monkey-patch the ``selectors`` module from ``patch_all`` and
   ``patch_select`` on Python 3.4. See :issue:`591`.
 - Additional query functions for the :mod:`gevent.monkey` module
@@ -363,41 +421,42 @@
 - In non-monkey-patched environments under Python 2.7.9 or above or
   Python 3, using a gevent SSL socket could cause the greenlet to
   block. See :issue:`597` by David Ford.
-- ``gevent.socket.socket.sendall`` supports arbitrary objects that
+- :meth:`gevent.socket.socket.sendall` supports arbitrary objects that
   implement the buffer protocol (such as ctypes structures), just like
   native sockets. Reported in :issue:`466` by tzickel.
 - Added support for the ``onerror`` attribute present in CFFI 1.2.0
   for better signal handling under PyPy. Thanks to Armin Rigo and Omer
   Katz. (See https://bitbucket.org/cffi/cffi/issue/152/handling-errors-from-signal-handlers-in)
-- The ``gevent.subprocess`` module is closer in behaviour to the
+- The :mod:`gevent.subprocess` module is closer in behaviour to the
   standard library under Python 3, at least on POSIX. The
   ``pass_fds``, ``restore_signals``, and ``start_new_session``
-  arguments are now unimplemented, as are the ``timeout`` parameters
-  to various functions. Under Python 2, the previously undocumented ``timeout``
-  parameter to ``Popen.communicate`` raises an exception like its
+  arguments are now implemented, as are the ``timeout`` parameters
+  to various functions. Under Python 2, the previously undocumented
+  ``timeout`` parameter to :meth:`Popen.communicate
+  <gevent.subprocess.Popen.communicate>` raises an exception like its
   Python 3 counterpart.
-- An exception starting a child process with the ``gevent.subprocess``
+- An exception starting a child process with the :mod:`gevent.subprocess`
   module no longer leaks file descriptors. Reported in :pr:`374` by 陈小玉.
 - The example ``echoserver.py`` no longer binds to the standard X11
   TCP port. Reported in :issue:`485` by minusf.
-- ``gevent.iwait`` no longer throws ``LoopExit`` if the caller
+- :func:`gevent.iwait` no longer throws :exc:`~gevent.hub.LoopExit` if the caller
   switches greenlets between return values. Reported and initial patch
-  in :pr:`467` by Alexey Borzenkov.
+  in :issue:`467` by Alexey Borzenkov.
 - The default threadpool and default threaded resolver work in a
-  forked child process, such as with ``multiprocessing.Process``.
+  forked child process, such as with :class:`multiprocessing.Process`.
   Previously the child process would hang indefinitely. Reported in
   :issue:`230` by Lx Yu.
 - Fork watchers are more likely to (eventually) get called in a
   multi-threaded program (except on Windows). See :issue:`154`.
-- ``gevent.killall`` accepts an arbitrary iterable for the greenlets
+- :func:`gevent.killall` accepts an arbitrary iterable for the greenlets
   to kill. Reported in :issue:`404` by Martin Bachwerk; seen in
   combination with older versions of simple-requests.
-- ``gevent.local.local`` objects are now eligible for garbage
+- :class:`gevent.local.local` objects are now eligible for garbage
   collection as soon as the greenlet finishes running, matching the
-  behaviour of the built-in ``threading.local`` (when implemented
+  behaviour of the built-in :class:`threading.local` (when implemented
   natively). Reported in :issue:`387` by AusIV.
-- Killing a greenlet (with ``gevent.kill`` or
-  ``gevent.greenlet.Greenlet.kill``) before it is actually started and
+- Killing a greenlet (with :func:`gevent.kill` or
+  :meth:`gevent.Greenlet.kill`) before it is actually started and
   switched to now prevents the greenlet from ever running, instead of
   raising an exception when it is later switched to. See :issue:`330`
   reported by Jonathan Kamens.
@@ -412,9 +471,9 @@
   you'll need a very recent PyPy build including CFFI 1.2.0.
 - Drop support for Python 2.5. Python 2.5 users can continue to use
   gevent 1.0.x.
-- Fix ``gevent.greenlet.joinall`` to not ignore ``count`` when
+- Fix :func:`gevent.joinall` to not ignore ``count`` when
   ``raise_error`` is False. See :pr:`512` by Ivan Diao.
-- Fix ``subprocess.Popen`` to not ignore the ``bufsize`` argument. Note
+- Fix :class:`gevent.subprocess.Popen` to not ignore the ``bufsize`` argument. Note
   that this changes the (platform dependent) default, typically from
   buffered to unbuffered. See :pr:`542` by Romuald Brunet.
 - Upgraded c-ares to 1.10.0. See :pr:`579` by Omer Katz.
@@ -424,9 +483,9 @@
                and they may have to be modified (for example, ``CFLAGS`` is no
                longer allowed to include ``-I`` directives, which must instead be
                placed in ``CPPFLAGS``).
-- Add a ``count`` argument to ``gevent.greenlet.wait``. See :pr:`482` by
+- Add a ``count`` argument to :func:`gevent.iwait`. See :pr:`482` by
   wiggin15.
-- Add a ``timeout`` argument to ``gevent.queue.JoinableQueue.wait``
+- Add a ``timeout`` argument to :meth:`gevent.queue.JoinableQueue.join`
   which now returns whether all items were waited for or not.
 - ``gevent.queue.JoinableQueue`` treats ``items`` passed to
   ``__init__`` as unfinished tasks, the same as if they were ``put``.
