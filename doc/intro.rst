@@ -48,8 +48,10 @@ addition to the Cython backend on CPython.
          directories with the ``noexec`` option. This can cause a
          standard ``pip install gevent`` to fail with an error like
          ``cannot run C compiled programs``. One fix is to mount the
-         temporary directory without that option. See :issue:`570` and
-         :issue:`612` for examples.
+         temporary directory without that option. Another may be to
+         use the ``--build`` option to ``pip install`` to specify
+         another directory. See :issue:`570` and :issue:`612` for
+         examples.
 
 __ http://pypi.python.org/pypi/greenlet
 .. _`pip`: https://pip.pypa.io/en/stable/installing/
