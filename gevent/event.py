@@ -77,6 +77,7 @@ class _AbstractLinkable(object):
         # The core of the wait implementation, handling
         # switching and linking. If *catch* is set to (),
         # a timeout that elapses will be allowed to be raised.
+        # Returns a true value if the wait succeeded without timing out.
         switch = getcurrent().switch
         self.rawlink(switch)
         try:
@@ -86,22 +87,27 @@ class _AbstractLinkable(object):
                     result = self.hub.switch()
                     if result is not self: # pragma: no cover
                         raise InvalidSwitchError('Invalid switch into Event.wait(): %r' % (result, ))
+                    return True
                 except catch as ex:
                     if ex is not timer:
                         raise
+                    # test_set_and_clear and test_timeout in test_threading
+                    # rely on the exact return values, not just truthish-ness
+                    return False
             finally:
                 timer.cancel()
         finally:
             self.unlink(switch)
 
-    _wait_return_value = None
+    def _wait_return_value(self, waited, wait_success):
+        return None
 
     def _wait(self, timeout=None):
         if self.ready():
-            return getattr(self, self._wait_return_value)
+            return self._wait_return_value(False, False)
 
-        self._wait_core(timeout)
-        return getattr(self, self._wait_return_value)
+        gotit = self._wait_core(timeout)
+        return self._wait_return_value(True, gotit)
 
 
 class Event(_AbstractLinkable):
@@ -153,7 +159,17 @@ class Event(_AbstractLinkable):
         """
         self._flag = False
 
-    _wait_return_value = '_flag'
+    def _wait_return_value(self, waited, gotit):
+        # To avoid the race condition outlined in http://bugs.python.org/issue13502,
+        # if we had to wait, then we need to return whether or not
+        # the condition got changed. Otherwise we simply echo
+        # the current state of the flag (which should be true)
+        if not waited:
+            flag = self._flag
+            assert flag, "if we didn't wait we should already be set"
+            return flag
+
+        return gotit
 
     def wait(self, timeout=None):
         """
@@ -167,8 +183,10 @@ class Event(_AbstractLinkable):
         floating point number specifying a timeout for the operation in seconds
         (or fractions thereof).
 
-        :return: The value of the internal flag (``True`` or ``False``).
-           (If no timeout was given, the only possible return value is ``True``.)
+        :return: This method returns true if and only if the internal flag has been set to
+            true, either before the wait call or after the wait starts, so it will
+            always return ``True`` except if a timeout is given and the operation
+            times out.
         """
         return self._wait(timeout)
 
@@ -340,7 +358,10 @@ class AsyncResult(_AbstractLinkable):
         """
         return self.get(block=False)
 
-    _wait_return_value = 'value'
+    def _wait_return_value(self, waited, gotit):
+        # Always return the value. Since this is a one-shot event,
+        # no race condition should reset it.
+        return self.value
 
     def wait(self, timeout=None):
         """Block until the instance is ready.

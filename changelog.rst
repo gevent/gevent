@@ -13,6 +13,13 @@
   None). The ``acquire`` method also raises the same :exc:`ValueError`
   exceptions that the standard library does for invalid parameters.
   Reported in :issue:`750` by Joy Zheng.
+- Fix a race condition in :class:`~gevent.event.Event` that
+  made it return ``False`` when the event was set and cleared by the
+  same greenlet before allowing a switch to the waiting greenlets.
+  (Found by the 3.4 and 3.5 standard library test suites; the same as
+  Python `bug 13502`_).
+
+.. _bug 13502: http://bugs.python.org/issue13502
 
 1.1rc5 (Feb 24, 2016)
 =====================

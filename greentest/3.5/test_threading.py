@@ -1090,10 +1090,6 @@ class CRLockTests(lock_tests.RLockTests):
 class EventTests(lock_tests.EventTests):
     eventtype = staticmethod(threading.Event)
 
-    @unittest.skip("gevent may/not suffer from Python bug 13502")
-    def test_set_and_clear(self):
-        pass
-
     @unittest.skip("not on gevent")
     def test_reset_internal_locks(self):
         pass
