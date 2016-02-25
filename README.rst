@@ -18,8 +18,11 @@ simpler implementation and better performance. Read why others `use
 gevent`_ and check out the list of the `open source projects based on
 gevent`_.
 
-gevent is licensed under MIT license.
+gevent is licensed under the MIT license.
 
+See `what's new`_ in the latest major release.
+
+Check out the detailed changelog_ for this version.
 
 Get gevent
 ==========
@@ -128,3 +131,5 @@ CI is used to test on Linux, and `AppVeyor`_ runs the builds on Windows.
 .. _coverage.py: https://pypi.python.org/pypi/coverage/
 .. _coveralls.io: https://coveralls.io/github/gevent/gevent
 .. _AppVeyor: https://ci.appveyor.com/project/denik/gevent
+.. _what's new: http://www.gevent.org/whatsnew_1_1.html
+.. _changelog: http://www.gevent.org/changelog.html
