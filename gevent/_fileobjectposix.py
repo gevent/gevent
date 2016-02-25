@@ -169,8 +169,13 @@ class FileObjectPosix(object):
     .. tip::
          Although this object provides a :meth:`fileno` method and
          so can itself be passed to :func:`fcntl.fcntl`, setting the
-         :data:`os.O_NONBLOCK` flag will have no effect; likewise, removing
+         :data:`os.O_NONBLOCK` flag will have no effect; however, removing
          that flag will cause this object to no longer be cooperative.
+
+    .. versionchanged:: 1.1
+       Now uses the :mod:`io` package internally. Under Python 2, previously
+       used the undocumented class :class:`socket._fileobject`. This provides
+       better file-like semantics (and portability to Python 3).
     """
 
     #: platform specific default for the *bufsize* parameter
