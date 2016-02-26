@@ -17,10 +17,6 @@ class _AbstractLinkable(object):
     _notifier = None
 
     def __init__(self):
-        # Store all active links twice, in order to guard
-        # against a client removing itself or others.
-        # Previously, AsyncResult did not do this, making it somewhat cheaper.
-
         # Also previously, AsyncResult maintained the order of notifications, but Event
         # did not; this implementation does not. (Event also only call callbacks one
         # time (set), but AsyncResult permitted duplicates.)
@@ -32,10 +28,6 @@ class _AbstractLinkable(object):
         # be an argument to maintain order. (One easy way to do that while guaranteeing
         # uniqueness would be with a 2.7+ OrderedDict.)
         self._links = set()
-        self._todo = set() # This is "append only"; it is reset during _notify_links
-        # TODO: It is probably possible to remove self._todo and replace it with
-        # an argument to self._notify_links, while still maintaining the safe iteration
-        # protocol, thus making these objects cheaper
         self.hub = get_hub()
 
     def ready(self):
@@ -45,8 +37,7 @@ class _AbstractLinkable(object):
     def _check_and_notify(self):
         # If this object is ready to be notified, begin the process.
         if self.ready():
-            self._todo.update(self._links)
-            if self._todo and not self._notifier:
+            if self._links and not self._notifier:
                 self._notifier = self.hub.loop.run_callback(self._notify_links)
 
     def rawlink(self, callback):
@@ -65,25 +56,36 @@ class _AbstractLinkable(object):
         """Remove the callback set by :meth:`rawlink`"""
         try:
             self._links.remove(callback)
-            # No need to remove from _todo, checking is handled at
-            # notification time
         except KeyError:
             pass
 
     def _notify_links(self):
-        # Actually call the notification callbacks. Those callbacks in _todo that are
-        # still in _links are called. _todo is reset to a new queue before iterating to avoid
-        # concurrent modification. Keep checking for anything in self._todo in case items were
-        # linked in during notification
-        while self._todo:
-            todo = self._todo
-            self._todo = set()
+        # Actually call the notification callbacks. Those callbacks in todo that are
+        # still in _links are called. This method is careful to avoid iterating
+        # over self._links, because links could be added or removed while this
+        # method runs. For the same reason, we loop, checking for new items in
+        # _links.
+
+        # We don't need to capture self._links as todo when establishing
+        # this callback; any links removed between now and then are handled
+        # by the `if` below; any links added are also grabbed
+        todo = set(self._links)
+        done = set()
+        while todo:
             for link in todo:
-                if link in self._links:  # check that link was not notified yet and was not removed by the client
+                # check that link was not notified yet and was not removed by the client
+                # We have to do this here, and not as part of the 'for' statement because
+                # a previous link(self) call might have altered self._links
+                if link in self._links:
                     try:
                         link(self)
                     except:
                         self.hub.handle_error((link, self), *sys.exc_info())
+            # Mark everything done
+            done.update(todo)
+            # Anything extra now in self._links but not yet done, loop
+            # again for
+            todo = self._links - done
 
     def _wait_core(self, timeout, catch=Timeout):
         # The core of the wait implementation, handling
