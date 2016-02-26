@@ -18,6 +18,10 @@
   same greenlet before allowing a switch to the waiting greenlets.
   (Found by the 3.4 and 3.5 standard library test suites; the same as
   Python `bug 13502`_).
+- :class:`~gevent.event.Event` and :class:`~.AsyncResult` now wake
+  waiting greenlets in the same (unspecified) order. Previously,
+  ``AsyncResult`` tended to use a FIFO order, but this was never
+  guaranteed.
 
 .. _bug 13502: http://bugs.python.org/issue13502
 

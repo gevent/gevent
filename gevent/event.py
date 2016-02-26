@@ -1,4 +1,4 @@
-# Copyright (c) 2009-2011 Denis Bilenko. See LICENSE for details.
+# Copyright (c) 2009-2016 Denis Bilenko, gevent contributors. See LICENSE for details.
 """Basic synchronization primitives: Event and AsyncResult"""
 from __future__ import print_function
 import sys
@@ -20,10 +20,22 @@ class _AbstractLinkable(object):
         # Store all active links twice, in order to guard
         # against a client removing itself or others.
         # Previously, AsyncResult did not do this, making it somewhat cheaper.
+
         # Also previously, AsyncResult maintained the order of notifications, but Event
-        # did not; this implementation does not.
+        # did not; this implementation does not. (Event also only call callbacks one
+        # time (set), but AsyncResult permitted duplicates.)
+
+        # HOWEVER, gevent.queue.Queue does guarantee the order of getters relative
+        # to putters. Some existing documentation out on the net likes to refer to
+        # gevent as "deterministic", such that running the same program twice will
+        # produce results in the same order (so long as I/O isn't involved). This could
+        # be an argument to maintain order. (One easy way to do that while guaranteeing
+        # uniqueness would be with a 2.7+ OrderedDict.)
         self._links = set()
         self._todo = set() # This is "append only"; it is reset during _notify_links
+        # TODO: It is probably possible to remove self._todo and replace it with
+        # an argument to self._notify_links, while still maintaining the safe iteration
+        # protocol, thus making these objects cheaper
         self.hub = get_hub()
 
     def ready(self):
@@ -187,6 +199,14 @@ class Event(_AbstractLinkable):
             true, either before the wait call or after the wait starts, so it will
             always return ``True`` except if a timeout is given and the operation
             times out.
+
+        .. versionchanged:: 1.1
+            The return value represents the flag during the elapsed wait, not
+            just after it elapses. This solves a race condition if one greenlet
+            sets and then clears the flag without switching, while other greenlets
+            are waiting. When the waiters wake up, this will return True; previously,
+            they would still wake up, but the return value would be False. This is most
+            noticeable when the *timeout* is present.
         """
         return self._wait(timeout)
 
@@ -238,6 +258,13 @@ class AsyncResult(_AbstractLinkable):
         undetermined order sometime *after* the current greenlet yields to the event loop. Other greenlets
         (those not waiting to be awakened) may run between the current greenlet yielding and
         the waiting greenlets being awakened. These details may change in the future.
+
+    .. versionchanged:: 1.1
+       The exact order in which waiting greenlets are awakened is not the same
+       as in 1.0.
+    .. versionchanged:: 1.1
+       Callbacks :meth:`linked <rawlink>` to this object are required to be hashable, and duplicates are
+       merged.
     """
 
     _value = _NONE
