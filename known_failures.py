@@ -94,6 +94,17 @@ if sys.platform == 'win32':
                 'FLAKY test__socket.py',
             ]
 
+        if PY3:
+            FAILING_TESTS += [
+                # test_set_and_clear in Py3 relies on 5 threads all starting and
+                # coming to an Event wait point while a sixth thread sleeps for a half
+                # second. The sixth thread then does something and checks that
+                # the 5 threads were all at the wait point. But the timing is sometimes
+                # too tight for appveyor. This happens even if Event isn't
+                # monkey-patched
+                'FLAKY test_threading.py',
+            ]
+
     if not PY35:
         # Py35 added socket.socketpair, all other releases
         # are missing it
