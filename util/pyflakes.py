@@ -6,30 +6,36 @@ import subprocess
 import glob
 
 
-IGNORED = r'''
-gevent/socket.py:\d+: undefined name
-gevent/_socket[23].py:\d+: undefined name
-gevent/_socketcommon.py:\d+: undefined name
-gevent/_socketcommon.py:\d+: .*imported but unused
-gevent/subprocess.py:\d+: undefined name
+IGNORED = r"""
+examples/webchat/urls.py:1: 'from django.conf.urls.defaults import *' used; unable to detect undefined names
 gevent/_?ssl[23]?.py:\d+: undefined name
-gevent/__init__.py:\d+:.*imported but unused
 gevent/__init__.py:\d+: redefinition of unused 'signal' from line
 gevent/__init__.py:\d+: redefinition of unused 'socket' from line
-gevent/coros.py:\d+: 'from gevent.lock import *' used; unable to detect undefined names
+gevent/__init__.py:\d+:.*imported but unused
+gevent/_socket[23].py:\d+: undefined name
+gevent/_socketcommon.py:\d+: .*imported but unused
+gevent/_socketcommon.py:\d+: undefined name
+gevent/_sslgte279.py:.*
+gevent/core.py:\d+: 'from gevent.corecext import *' used; unable to detect undefined names
+gevent/core.py:\d+: 'from gevent.corecffi import *' used; unable to detect undefined names
 gevent/coros.py:\d+: '__all__' imported but unused
+gevent/coros.py:\d+: 'from gevent.lock import *' used; unable to detect undefined names
 gevent/hub.py:\d+: 'reraise' imported but unused
+gevent/os.py:\d+: redefinition of unused 'fork' from line
+gevent/socket.py:\d+: undefined name
+gevent/subprocess.py:\d+: undefined name
 gevent/thread.py:\d+: '_local' imported but unused
 gevent/threading.py:\d+: '\w+' imported but unused
 gevent/wsgi.py:1: 'from gevent.pywsgi import *' used; unable to detect undefined names
-examples/webchat/urls.py:1: 'from django.conf.urls.defaults import *' used; unable to detect undefined names
 greentest/test__queue.py:\d+: undefined name 'GenericGetTestCase'
 greentest/test__server_pywsgi.py:
-gevent/core.py:\d+: 'from gevent.corecffi import *' used; unable to detect undefined names
-gevent/core.py:\d+: 'from gevent.corecext import *' used; unable to detect undefined names
-gevent/_sslgte279.py:.*
-gevent/os.py:\d+: redefinition of unused 'fork' from line
-'''
+"""
+
+# Travis runs this on Python 2, but this is only defined
+# and used, in Python 3
+IGNORED += r"""
+gevent/server.py:\d+: undefined name 'BlockingIOError'
+"""
 
 IGNORED = IGNORED.strip().replace(' *', ' \\*').split('\n')
 
