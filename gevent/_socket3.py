@@ -8,7 +8,6 @@ import sys
 import time
 from gevent import _socketcommon
 import _socket
-from io import BlockingIOError
 from os import dup
 
 for key in _socketcommon.__dict__:
@@ -44,7 +43,7 @@ class _wrefsocket(_socket.socket):
     # monkey patched to be the object from this module), but we still
     # need to make sure what we do create can be weakrefd.
 
-    __slots__ = ["__weakref__", ]
+    __slots__ = ("__weakref__", )
 
 _closedsocket = _wrefsocket()
 _closedsocket.close()
@@ -52,9 +51,13 @@ _closedsocket.close()
 
 class socket(object):
     """
-    gevent socket object.
+    gevent `socket.socket <https://docs.python.org/3/library/socket.html#socket-objects>`_
+    for Python 3.
     """
 
+    # Subclasses can set this to customize the type of the
+    # native _socket.socket we create. It MUST be a subclass
+    # of _wrefsocket. (gevent internal usage only)
     _gevent_sock_class = _wrefsocket
 
     def __init__(self, family=AF_INET, type=SOCK_STREAM, proto=0, fileno=None):

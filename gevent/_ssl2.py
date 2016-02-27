@@ -17,7 +17,8 @@ except AttributeError:
 
 import sys
 import errno
-from gevent.socket import socket, _fileobject, timeout_default
+from gevent._socket2 import socket
+from gevent.socket import _fileobject, timeout_default
 from gevent.socket import error as socket_error, EWOULDBLOCK
 from gevent.socket import timeout as _socket_timeout
 from gevent.hub import string_types, PYPY
@@ -64,6 +65,10 @@ __all__ = list(set(__implements__) | set(__imports__))
 
 
 class SSLSocket(socket):
+    """
+    gevent `ssl.SSLSocket <https://docs.python.org/2.6/library/ssl.html#sslsocket-objects>`_
+    for Pythons < 2.7.9.
+    """
 
     def __init__(self, sock, keyfile=None, certfile=None,
                  server_side=False, cert_reqs=CERT_NONE,

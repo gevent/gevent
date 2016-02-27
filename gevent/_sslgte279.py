@@ -13,7 +13,8 @@ import ssl as __ssl__
 _ssl = __ssl__._ssl
 
 import errno
-from gevent.socket import socket, timeout_default
+from gevent._socket2 import socket
+from gevent.socket import timeout_default
 from gevent.socket import error as socket_error
 from gevent.socket import timeout as _socket_timeout
 from gevent.hub import PYPY
@@ -166,6 +167,10 @@ _create_stdlib_context = _create_unverified_context
 
 
 class SSLSocket(socket):
+    """
+    gevent `ssl.SSLSocket <https://docs.python.org/2/library/ssl.html#ssl-sockets>`_
+    for Pythons >= 2.7.9 but less than 3.
+    """
 
     def __init__(self, sock=None, keyfile=None, certfile=None,
                  server_side=False, cert_reqs=CERT_NONE,

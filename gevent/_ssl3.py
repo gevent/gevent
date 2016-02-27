@@ -96,6 +96,10 @@ class _contextawaresock(socket._gevent_sock_class):
 
 
 class SSLSocket(socket):
+    """
+    gevent `ssl.SSLSocket <https://docs.python.org/3/library/ssl.html#ssl-sockets>`_
+    for Python 3.
+    """
 
     _gevent_sock_class = _contextawaresock
 

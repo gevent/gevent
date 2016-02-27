@@ -92,7 +92,8 @@ timeout_default = object()
 
 class socket(object):
     """
-    gevent socket object.
+    gevent `socket.socket <https://docs.python.org/2/library/socket.html#socket-objects>`_
+    for Python 2.
     """
 
     def __init__(self, family=AF_INET, type=SOCK_STREAM, proto=0, _sock=None):
