@@ -9,10 +9,12 @@ from gevent.thread import allocate_lock as Lock
 import threading
 threading.Event = Event
 threading.Lock = Lock
-# XXX: We're completely patching around the allocate_lock
+# NOTE: We're completely patching around the allocate_lock
 # patch we try to do with RLock; our monkey patch doesn't
-# behave this way, why do we do it in tests? Save it so we can
-# at least access it sometimes.
+# behave this way, but we do it in tests to make sure that
+# our RLock implementation behaves correctly by itself.
+# However, we must test the patched version too, so make it
+# available.
 threading.NativeRLock = threading.RLock
 threading.RLock = RLock
 threading.Semaphore = Semaphore
@@ -528,8 +530,8 @@ class RLockTests(lock_tests.RLockTests):
     locktype = staticmethod(threading.RLock)
 
 class NativeRLockTests(lock_tests.RLockTests):
-    # XXX: See comments at the top of the file for the difference
-    # between this and RLockTests, and why its weird.
+    # See comments at the top of the file for the difference
+    # between this and RLockTests, and why they both matter
     locktype = staticmethod(threading.NativeRLock)
 
 class EventTests(lock_tests.EventTests):

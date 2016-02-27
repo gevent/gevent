@@ -51,6 +51,9 @@ _closedsocket.close()
 
 
 class socket(object):
+    """
+    gevent socket object.
+    """
 
     _gevent_sock_class = _wrefsocket
 
@@ -175,12 +178,13 @@ class socket(object):
 
     def makefile(self, mode="r", buffering=None, *,
                  encoding=None, errors=None, newline=None):
-        """makefile(...) -> an I/O stream connected to the socket
+        """Return an I/O stream connected to the socket
 
         The arguments are as for io.open() after the filename,
         except the only mode characters supported are 'r', 'w' and 'b'.
-        The semantics are similar too.  (XXX refactor to share code?)
+        The semantics are similar too.
         """
+        # (XXX refactor to share code?)
         for c in mode:
             if c not in {"r", "w", "b"}:
                 raise ValueError("invalid mode %r (only r, w, b allowed)")
@@ -480,6 +484,10 @@ class socket(object):
         bytes which were sent.
         The socket must be of SOCK_STREAM type.
         Non-blocking sockets are not supported.
+
+        .. versionadded:: 1.1rc4
+           Added in Python 3.5, but available under all Python 3 versions in
+           gevent.
         """
         return self._sendfile_use_send(file, offset, count)
 
@@ -497,8 +505,10 @@ class socket(object):
 
             def set_inheritable(self, inheritable):
                 os.set_inheritable(self.fileno(), inheritable)
-        get_inheritable.__doc__ = "Get the inheritable flag of the socket"
-        set_inheritable.__doc__ = "Set the inheritable flag of the socket"
+        _added = "\n\n.. versionadded:: 1.1rc4 Added in Python 3.4"
+        get_inheritable.__doc__ = "Get the inheritable flag of the socket" + _added
+        set_inheritable.__doc__ = "Set the inheritable flag of the socket" + _added
+        del _added
 
 
 if sys.version_info[:2] == (3, 4) and sys.version_info[:3] <= (3, 4, 2):

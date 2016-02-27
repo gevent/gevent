@@ -4,7 +4,7 @@
 
 .. currentmodule:: gevent
 
-1.1rc6 (unreleased)
+1.1.0 (unreleased)
 ===================
 
 - Python 3: A monkey-patched :class:`threading.RLock` now properly
@@ -13,15 +13,16 @@
   None). The ``acquire`` method also raises the same :exc:`ValueError`
   exceptions that the standard library does for invalid parameters.
   Reported in :issue:`750` by Joy Zheng.
-- Fix a race condition in :class:`~gevent.event.Event` that
-  made it return ``False`` when the event was set and cleared by the
-  same greenlet before allowing a switch to the waiting greenlets.
-  (Found by the 3.4 and 3.5 standard library test suites; the same as
-  Python `bug 13502`_).
+- Fix a race condition in :class:`~gevent.event.Event` that made it
+  return ``False`` when the event was set and cleared by the same
+  greenlet before allowing a switch to already waiting greenlets. (Found
+  by the 3.4 and 3.5 standard library test suites; the same as Python
+  `bug 13502`_. Note that the Python 2 standard library still has this
+  race condition.)
 - :class:`~gevent.event.Event` and :class:`~.AsyncResult` now wake
   waiting greenlets in the same (unspecified) order. Previously,
   ``AsyncResult`` tended to use a FIFO order, but this was never
-  guaranteed.
+  guaranteed. Both classes also use less per-instance memory.
 
 .. _bug 13502: http://bugs.python.org/issue13502
 
@@ -55,7 +56,7 @@
   each request, reducing overhead.
 - Python 2: Under 2.7.9 and above (or when the PEP 466 SSL interfaces
   are available), perform the same hostname validation that the
-  standard library does; previously some cases were ignored. Also,
+  standard library does; previously this was skipped. Also,
   reading, writing, or handshaking a closed
   :class:`~ssl.SSLSocket` now raises the same :exc:`ValueError`
   the standard library does, instead of an :exc:`AttributeError`.

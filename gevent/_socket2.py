@@ -91,6 +91,9 @@ timeout_default = object()
 
 
 class socket(object):
+    """
+    gevent socket object.
+    """
 
     def __init__(self, family=AF_INET, type=SOCK_STREAM, proto=0, _sock=None):
         if _sock is None:
@@ -456,10 +459,10 @@ class socket(object):
 
     # delegate the functions that we haven't implemented to the real socket object
 
-    _s = ("def %s(self, *args): return self._sock.%s(*args)\n\n"
-          "%s.__doc__ = _realsocket.%s.__doc__\n")
+    _s = "def %s(self, *args): return self._sock.%s(*args)\n\n"
+
     for _m in set(_socketmethods) - set(locals()):
-        exec(_s % (_m, _m, _m, _m))
+        exec(_s % (_m, _m,))
     del _m, _s
 
     if PYPY:
