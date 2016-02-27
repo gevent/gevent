@@ -14,6 +14,7 @@ COVERAGE = os.getenv("COVERAGE_PROCESS_START")
 PYPY = hasattr(sys, 'pypy_version_info')
 PY3 = sys.version_info[0] >= 3
 PY26 = sys.version_info[0] == 2 and sys.version_info[1] == 6
+PY27 = sys.version_info[0] == 2 and sys.version_info[1] == 7
 PY35 = sys.version_info[0] >= 3 and sys.version_info[1] >= 5
 PYGTE279 = (
     sys.version_info[0] == 2
@@ -83,6 +84,15 @@ if sys.platform == 'win32':
             # these are most commonly (only?) observed on Py27/64-bit
             'FLAKY test__fileobject.py',
         ]
+
+        if PY27:
+            FAILING_TESTS += [
+                # This sometimes fails with a timeout, meaning
+                # one of the tests hangs (test_fullduplex, maybe?).
+                # But only sometimes, and only seen on Py2.7, beginning
+                # ~2016-02-24
+                'FLAKY test__socket.py',
+            ]
 
     if not PY35:
         # Py35 added socket.socketpair, all other releases
