@@ -16,7 +16,7 @@ class Test(util.TestServer):
                 kwargs = {'bufsize': 1}
             kwargs['mode'] = 'rb'
             conn = create_connection(('127.0.0.1', 16000))
-            conn.settimeout(0.1 if not greentest.RUNNING_ON_APPVEYOR else 1.0)
+            conn.settimeout(0.1 if not greentest.RUNNING_ON_APPVEYOR else 2.0)
             rfile = conn.makefile(**kwargs)
 
             welcome = rfile.readline()

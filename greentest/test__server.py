@@ -7,6 +7,10 @@ from gevent.server import StreamServer
 import errno
 import os
 
+# Timeouts very flaky on appveyor
+_DEFAULT_SOCKET_TIMEOUT = 0.1 if not greentest.RUNNING_ON_APPVEYOR else 1.0
+_DEFAULT_TEST_TIMEOUT = 5 if not greentest.RUNNING_ON_APPVEYOR else 10
+
 
 class SimpleStreamServer(StreamServer):
 
@@ -67,7 +71,7 @@ class Settings:
 
 class TestCase(greentest.TestCase):
 
-    __timeout__ = 5
+    __timeout__ = _DEFAULT_TEST_TIMEOUT
 
     def cleanup(self):
         if getattr(self, 'server', None) is not None:
@@ -80,7 +84,7 @@ class TestCase(greentest.TestCase):
         sock.listen(5)
         return sock
 
-    def makefile(self, timeout=0.1, bufsize=1):
+    def makefile(self, timeout=_DEFAULT_SOCKET_TIMEOUT, bufsize=1):
         sock = socket.socket()
         try:
             sock.connect((self.server.server_host, self.server.server_port))
@@ -103,7 +107,7 @@ class TestCase(greentest.TestCase):
         sock.close()
         return rconn
 
-    def send_request(self, url='/', timeout=0.1, bufsize=1):
+    def send_request(self, url='/', timeout=_DEFAULT_SOCKET_TIMEOUT, bufsize=1):
         conn = self.makefile(timeout=timeout, bufsize=bufsize)
         conn.write(('GET %s HTTP/1.0\r\n\r\n' % url).encode('latin-1'))
         conn.flush()
@@ -149,7 +153,7 @@ class TestCase(greentest.TestCase):
         assert result.startswith('HTTP/1.0 500 Internal Server Error'), repr(result)
         conn.close()
 
-    def assertRequestSucceeded(self, timeout=0.1):
+    def assertRequestSucceeded(self, timeout=_DEFAULT_SOCKET_TIMEOUT):
         conn = self.makefile(timeout=timeout)
         conn.write(b'GET /ping HTTP/1.0\r\n\r\n')
         result = conn.read()
