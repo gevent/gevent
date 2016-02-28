@@ -105,6 +105,10 @@ if RUNNING_ON_APPVEYOR:
     # environment related problems. These can be tested and debugged
     # separately on windows in a more stable environment.
     skipOnAppVeyor = unittest.skip
+
+    # We can't exec corecext on appveyor if we haven't run setup.py in
+    # 'develop' mode (i.e., we install)
+    NON_APPLICABLE_SUFFIXES.append('corecext')
 else:
     def skipOnAppVeyor(reason):
         def dec(f):

@@ -23,12 +23,12 @@ environment:
       PYTHON_EXE: python
 
     - PYTHON: "C:\\Python27-x64"
-      PYTHON_VERSION: "2.7.x" # currently 2.7.9
+      PYTHON_VERSION: "2.7.x" # currently 2.7.11
       PYTHON_ARCH: "64"
       PYTHON_EXE: python
 
     - PYTHON: "C:\\Python35-x64"
-      PYTHON_VERSION: "3.5.x" # currently 3.5.0
+      PYTHON_VERSION: "3.5.x" # currently 3.5.1
       PYTHON_ARCH: "64"
       PYTHON_EXE: python
 
@@ -43,7 +43,7 @@ environment:
       PYTHON_EXE: python
 
     - PYTHON: "C:\\Python27"
-      PYTHON_VERSION: "2.7.x" # currently 2.7.9
+      PYTHON_VERSION: "2.7.x" # currently 2.7.11
       PYTHON_ARCH: "32"
       PYTHON_EXE: python
 
@@ -67,6 +67,15 @@ environment:
     #   PYTHON_EXE: python
 
 install:
+  # If there is a newer build queued for the same PR, cancel this one.
+  # The AppVeyor 'rollout builds' option is supposed to serve the same
+  # purpose but it is problematic because it tends to cancel builds pushed
+  # directly to master instead of just PR builds (or the converse).
+  # credits: JuliaLang developers.
+  - ps: if ($env:APPVEYOR_PULL_REQUEST_NUMBER -and $env:APPVEYOR_BUILD_NUMBER -ne ((Invoke-RestMethod `
+        https://ci.appveyor.com/api/projects/$env:APPVEYOR_ACCOUNT_NAME/$env:APPVEYOR_PROJECT_SLUG/history?recordsNumber=50).builds | `
+        Where-Object pullRequestId -eq $env:APPVEYOR_PULL_REQUEST_NUMBER)[0].buildNumber) { `
+          throw "There are newer queued builds for this pull request, failing early." }
   - ECHO "Filesystem root:"
   - ps: "ls \"C:/\""
 
@@ -106,12 +115,16 @@ install:
   - "%PYEXE% --version"
   - "%PYEXE% -c \"import struct; print(struct.calcsize('P') * 8)\""
 
+  # Upgrade to the latest version of pip to avoid it displaying warnings
+  # about it being out of date.
+  - "%CMD_IN_ENV% pip install --disable-pip-version-check --user --upgrade pip"
+
   # Install the build dependencies of the project. If some dependencies contain
   # compiled extensions and are not provided as pre-built wheel packages,
   # pip will build them from source using the MSVC compiler matching the
   # target Python version and architecture
   # NOTE: psutil won't install under PyPy.
-  - "%CMD_IN_ENV% pip install -U cython greenlet psutil"
+  - "%CMD_IN_ENV% pip install -U wheel cython greenlet psutil"
 
   - ps: "if(Test-Path(\"${env:PYTHON}\\bin\")) {ls ${env:PYTHON}\\bin;}"
   - ps: "if(Test-Path(\"${env:PYTHON}\\Scripts\")) {ls ${env:PYTHON}\\Scripts;}"
@@ -119,21 +132,27 @@ install:
 cache:
   - "%TMP%\\py\\"
 
-build: false  # Not a C# project, build stuff at the test step instead.
+build_script:
+  # Build the compiled extension
+  - "%CMD_IN_ENV% %PYEXE% setup.py bdist_wheel bdist_wininst"
+  - ps: "ls dist"
+  # Now install the wheel.
+  # I couldn't get wildcards to work for pip install, so stuff it
+  # into a variable, using python to glob.
+  - "%PYEXE% -c \"import glob; print(glob.glob('dist/*whl')[0])\" > whl.txt"
+  - set /p PYWHL=<whl.txt
+  - pip install %PYWHL%
 
 test_script:
-  # Build the compiled extension and run the project tests
-  - "%CMD_IN_ENV% %PYEXE% setup.py develop"
+  # Run the project tests
   - "cd greentest && %PYEXE% testrunner.py --config ../known_failures.py && cd .."
 
 after_test:
-  # If tests are successful, create a whl package for the project.
-  # NOTE: Even though it's much faster to create the wheel when we
-  # initially run setup.py develop, the built wheel is faulty (doesn't
-  # include the DLLs). So we live with running the 3-5 minute make.cmd
-  # again.
-  - "%CMD_IN_ENV% pip install -U wheel"
-  - "%CMD_IN_ENV% %PYEXE% setup.py bdist_wheel bdist_wininst"
+  # We already built the wheel during build_script, because it's
+  # much faster to do that and install from the wheel than to
+  # rebuild it here (because we wind up re-building all the cython
+  # code, even though it's already built on disk; our make.cmd is not smart)
+  #- "%CMD_IN_ENV% %PYEXE% setup.py bdist_wheel bdist_wininst"
   - ps: "ls dist"
 
 artifacts:
