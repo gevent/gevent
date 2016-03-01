@@ -1059,6 +1059,10 @@ class LoggingLogAdapter(object):
        Attributes not present on this object are proxied to the underlying
        logger instance. This permits using custom :class:`~logging.Logger`
        subclasses (or indeed, even duck-typed objects).
+
+    .. versionchanged:: 1.1
+       Strip trailing newline characters on the message passed to :meth:`write`
+       because log handlers will usually add one themselves.
     """
 
     # gevent avoids importing and using logging because importing it and
@@ -1074,6 +1078,8 @@ class LoggingLogAdapter(object):
         self._level = level
 
     def write(self, msg):
+        if msg and msg.endswith('\n'):
+            msg = msg[:-1]
         self._logger.log(self._level, msg)
 
     def flush(self):

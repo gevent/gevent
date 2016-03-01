@@ -23,6 +23,9 @@
   waiting greenlets in the same (unspecified) order. Previously,
   ``AsyncResult`` tended to use a FIFO order, but this was never
   guaranteed. Both classes also use less per-instance memory.
+- Using a :class:`~logging.Logger` as a :mod:`pywsgi` error or request
+  log stream no longer produces extra newlines. Reported in
+  :issue:`756` by ael-code.
 
 .. _bug 13502: http://bugs.python.org/issue13502
 

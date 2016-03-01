@@ -1528,8 +1528,11 @@ class TestLogging(TestCase):
     def test_status_log(self):
         # Issue 664: Make sure we format the status line as a string
         self.urlopen()
-        self.assertTrue('"GET / HTTP/1.1" 200 ' in self.server.log.logged[1],
-                        self.server.log.logged[1])
+        msg = self.server.log.logged[1]
+        self.assertTrue('"GET / HTTP/1.1" 200 ' in msg, msg)
+
+        # Issue 756: Make sure we don't throw a newline on the end
+        self.assertTrue('\n' not in msg, msg)
 
 del CommonTests
 
