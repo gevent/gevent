@@ -132,8 +132,16 @@ class Greenlet(greenlet):
             object. Previously, passing a non-callable object would fail after the greenlet
             was spawned.
         """
-        hub = get_hub()
-        greenlet.__init__(self, parent=hub)
+        # greenlet.greenlet(run=None, parent=None)
+        # Calling it with both positional arguments instead of a keyword
+        # argument (parent=get_hub()) speeds up creation of this object ~30%:
+        # python -m timeit -s 'import gevent' 'gevent.Greenlet()'
+        # Python 3.5: 2.70usec with keywords vs 1.94usec with positional
+        # Python 3.4: 2.32usec with keywords vs 1.74usec with positional
+        # Python 3.3: 2.55usec with keywords vs 1.92usec with positional
+        # Python 2.7: 1.73usec with keywords vs 1.40usec with positional
+        greenlet.__init__(self, None, get_hub())
+
         if run is not None:
             self._run = run
 
