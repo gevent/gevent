@@ -53,6 +53,7 @@ addition to the Cython backend on CPython.
          another directory. See :issue:`570` and :issue:`612` for
          examples.
 
+.. tip:: On Windows, you need Pip 8.0 or later to install the binary wheels.
 
 .. tip::  On Windows, if you install from the PyPI sdist instead of a
           binary wheel, you will need to have ``cython`` installed
