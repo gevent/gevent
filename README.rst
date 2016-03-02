@@ -39,11 +39,6 @@ To install one of these release candidates, you can run::
 
     pip install --pre gevent
 
-.. tip::  On Windows, if you install from the sdist instead of a
-          binary wheel, you will need to have ``cython`` installed
-          *before* you attempt to install gevent. Most users will
-          use the binary wheel and can ignore this.
-
 .. tip:: On Windows, you need Pip 8.0 or later to install the binary wheel.
 
 Download the latest release from `Python Package Index`_ or clone `the repository`_.

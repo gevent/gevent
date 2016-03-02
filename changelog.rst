@@ -26,6 +26,10 @@
 - Using a :class:`~logging.Logger` as a :mod:`pywsgi` error or request
   log stream no longer produces extra newlines. Reported in
   :issue:`756` by ael-code.
+- Windows: Installing from an sdist (.tar.gz) on PyPI no longer
+  requires having Cython installed first. (Note that the binary installation
+  formats (wheels, exes, msis) are preferred on Windows.) Reported in
+  :issue:`757` by Ned Batchelder.
 
 .. _bug 13502: http://bugs.python.org/issue13502
 

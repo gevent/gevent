@@ -259,14 +259,19 @@ _ran_make = []
 
 def make(targets=''):
     # NOTE: We have two copies of the makefile, one
-    # for posix, one for windows
+    # for posix, one for windows. Our sdist command takes
+    # care of renaming the posix one so it doesn't get into
+    # the .tar.gz file (we don't want to re-run make in a released
+    # file). We trigger off the presence/absence of that file altogether
+    # to skip both posix and unix branches.
+    # See https://github.com/gevent/gevent/issues/757
     if not _ran_make:
-        if WIN:
-            # make.cmd handles checking for PyPy and only making the
-            # right things, so we can ignore the targets
-            system("appveyor\\make.cmd")
-        else:
-            if os.path.exists('Makefile'):
+        if os.path.exists('Makefile'):
+            if WIN:
+                # make.cmd handles checking for PyPy and only making the
+                # right things, so we can ignore the targets
+                system("appveyor\\make.cmd")
+            else:
                 if "PYTHON" not in os.environ:
                     os.environ["PYTHON"] = sys.executable
                 system('make ' + targets)
@@ -442,9 +447,6 @@ else:
 if run_make and os.path.exists("Makefile"):
     # The 'sdist' command renames our makefile after it
     # runs so we don't try to use it from a release tarball.
-    # XXX: FIXME: This doesn't work correctly on win32
-    # because we don't rename the appveyor\\make.cmd script.
-    # See https://github.com/gevent/gevent/issues/757.
 
     # NOTE: This is effectively pointless and serves only for
     # documentation/metadata, because we run 'make' *before* we run
