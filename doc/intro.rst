@@ -53,6 +53,15 @@ addition to the Cython backend on CPython.
          another directory. See :issue:`570` and :issue:`612` for
          examples.
 
+
+.. tip::  On Windows, if you install from the PyPI sdist instead of a
+          binary wheel, you will need to have ``cython`` installed
+          *before* you attempt to install gevent. (Cython is always
+          required when working from a source checkout.) Most users will
+          use the binary wheel and can ignore this.
+
+Development instructions can be found `on PyPI <https://pypi.python.org/pypi/gevent#development>`_.
+
 __ http://pypi.python.org/pypi/greenlet
 .. _`pip`: https://pip.pypa.io/en/stable/installing/
 .. _`wheels`: http://pythonwheels.com

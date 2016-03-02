@@ -440,7 +440,13 @@ else:
     run_make = True
 
 if run_make and os.path.exists("Makefile"):
-    # This is effectively pointless and serves only for
+    # The 'sdist' command renames our makefile after it
+    # runs so we don't try to use it from a release tarball.
+    # XXX: FIXME: This doesn't work correctly on win32
+    # because we don't rename the appveyor\\make.cmd script.
+    # See https://github.com/gevent/gevent/issues/757.
+
+    # NOTE: This is effectively pointless and serves only for
     # documentation/metadata, because we run 'make' *before* we run
     # setup(), so installing cython happens too late.
     setup_requires = ['cython >= 0.23.4']

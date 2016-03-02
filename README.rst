@@ -39,9 +39,15 @@ To install one of these release candidates, you can run::
 
     pip install --pre gevent
 
+.. tip::  On Windows, if you install from the sdist instead of a
+          binary wheel, you will need to have ``cython`` installed
+          *before* you attempt to install gevent. Most users will
+          use the binary wheel and can ignore this.
+
 Download the latest release from `Python Package Index`_ or clone `the repository`_.
 
-Read the documentation online at http://www.gevent.org
+Read the documentation online at http://www.gevent.org. Additional
+installation information can be found `here <http://www.gevent.org/intro.html#installation-and-requirements>`_.
 
 Post feedback and issues on the `bug tracker`_, `mailing list`_, blog_
 and `twitter (@gevent)`_.
@@ -63,6 +69,7 @@ To hack on gevent (using a virtualenv)::
   (env) $ pip install -r dev-requirements.txt
 
 .. note::
+
    You must have Cython, a C compiler, and the Python
    development headers installed to build a checkout. Installing CFFI
    on CPython (it's standard on PyPy) allows building the CFFI backend
