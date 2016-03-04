@@ -45,7 +45,7 @@ __implements__ = [
     'check_call',
     'check_output',
 ]
-if PY3:
+if PY3 and not sys.platform.startswith('win32'):
     __implements__.append("_posixsubprocess")
     _posixsubprocess = None
 
