@@ -53,6 +53,10 @@ class socket(object):
     """
     gevent `socket.socket <https://docs.python.org/3/library/socket.html#socket-objects>`_
     for Python 3.
+
+    This object should have the same API as the standard library socket linked to above. Not all
+    methods are specifically documented here; when they are they may point out a difference
+    to be aware of or may document a method the standard library does not.
     """
 
     # Subclasses can set this to customize the type of the

@@ -94,6 +94,10 @@ class socket(object):
     """
     gevent `socket.socket <https://docs.python.org/2/library/socket.html#socket-objects>`_
     for Python 2.
+
+    This object should have the same API as the standard library socket linked to above. Not all
+    methods are specifically documented here; when they are they may point out a difference
+    to be aware of or may document a method the standard library does not.
     """
 
     def __init__(self, family=AF_INET, type=SOCK_STREAM, proto=0, _sock=None):
@@ -454,9 +458,9 @@ class socket(object):
             self.hub.cancel_wait(self._write_event, cancel_wait_ex)
         self._sock.shutdown(how)
 
-    family = property(lambda self: self._sock.family, doc="the socket family")
-    type = property(lambda self: self._sock.type, doc="the socket type")
-    proto = property(lambda self: self._sock.proto, doc="the socket protocol")
+    family = property(lambda self: self._sock.family)
+    type = property(lambda self: self._sock.type)
+    proto = property(lambda self: self._sock.proto)
 
     # delegate the functions that we haven't implemented to the real socket object
 
