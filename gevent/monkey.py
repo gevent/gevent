@@ -89,8 +89,8 @@ if sys.platform.startswith("win"):
 else:
     WIN = False
 
-# maps module name -> attribute name -> original item
-# e.g. "time" -> "sleep" -> built-in function sleep
+# maps module name -> {attribute name: original item}
+# e.g. "time" -> {"sleep": built-in function sleep}
 saved = {}
 
 
@@ -161,6 +161,23 @@ def patch_module(name, items=None):
             raise AttributeError('%r does not have __implements__' % gevent_module)
     for attr in items:
         patch_item(module, attr, getattr(gevent_module, attr))
+    return module
+
+
+def _queue_warning(message, _warnings):
+    # Queues a warning to show after the monkey-patching process is all done.
+    # Done this way to avoid extra imports during the process itself, just
+    # in case. If we're calling a function one-off (unusual) go ahead and do it
+    if _warnings is None:
+        _process_warnings([message])
+    else:
+        _warnings.append(message)
+
+
+def _process_warnings(_warnings):
+    import warnings
+    for warning in _warnings:
+        warnings.warn(warning, RuntimeWarning, stacklevel=3)
 
 
 def _patch_sys_std(name):
@@ -202,6 +219,9 @@ def patch_os():
     :func:`os.waitpid` with :func:`gevent.os.waitpid` (if the
     environment variable ``GEVENT_NOWAITPID`` is not defined). Does
     nothing if fork is not available.
+
+    This method must be used with :func:`patch_signal` to have proper SIGCHLD
+    handling. :func:`patch_all` calls both by default.
     """
     patch_module('os')
 
@@ -252,7 +272,8 @@ def _patch_existing_locks(threading):
 
 
 def patch_thread(threading=True, _threading_local=True, Event=False, logging=True,
-                 existing_locks=True):
+                 existing_locks=True,
+                 _warnings=None):
     """
     Replace the standard :mod:`thread` module to make it greenlet-based.
 
@@ -293,10 +314,20 @@ def patch_thread(threading=True, _threading_local=True, Event=False, logging=Tru
     #   return r, w
     # os.pipe = _pipe
 
+    # The 'threading' module copies some attributes from the
+    # thread module the first time it is imported. If we patch 'thread'
+    # before that happens, then we store the wrong values in 'saved',
+    # So if we're going to patch threading, we either need to import it
+    # before we patch thread, or manually clean up the attributes that
+    # are in trouble. The latter is tricky because of the different names
+    # on different versions.
+    if threading:
+        __import__('threading')
+
     patch_module('thread')
     if threading:
-        patch_module('threading')
-        threading = __import__('threading')
+        threading = patch_module('threading')
+
         if Event:
             from gevent.event import Event
             patch_item(threading, 'Event', Event)
@@ -348,11 +379,20 @@ def patch_thread(threading=True, _threading_local=True, Event=False, logging=Tru
                         sleep(0.01)
 
             main_thread.join = join
+
+            # Patch up the ident of the main thread to match. This
+            # matters if threading was imported before monkey-patching
+            # thread
+            oldid = main_thread.ident
+            main_thread._ident = threading.get_ident()
+            if oldid in threading._active:
+                threading._active[main_thread.ident] = threading._active[oldid]
+            if oldid != main_thread.ident:
+                del threading._active[oldid]
         else:
-            # TODO: Can we use warnings here or does that mess up monkey patching?
-            print("Monkey-patching not on the main thread; "
-                  "threading.main_thread().join() will hang from a greenlet",
-                  file=sys.stderr)
+            _queue_warning("Monkey-patching not on the main thread; "
+                           "threading.main_thread().join() will hang from a greenlet",
+                           _warnings)
 
 
 def patch_socket(dns=True, aggressive=True):
@@ -478,15 +518,50 @@ def patch_signal():
     """
     Make the signal.signal function work with a monkey-patched os.
 
+    This method must be used with :func:`patch_os` to have proper SIGCHLD
+    handling. :func:`patch_all` calls both by default.
+
     .. seealso:: :mod:`gevent.signal`
     """
     patch_module("signal")
 
 
+def _check_repatching(**module_settings):
+    _warnings = []
+    key = '_gevent_saved_patch_all'
+    if saved.get(key, module_settings) != module_settings:
+        _queue_warning("Patching more than once will result in the union of all True"
+                       " parameters being patched",
+                       _warnings)
+
+    first_time = key not in saved
+    saved[key] = module_settings
+    return _warnings, first_time
+
+
 def patch_all(socket=True, dns=True, time=True, select=True, thread=True, os=True, ssl=True, httplib=False,
               subprocess=True, sys=False, aggressive=True, Event=False,
               builtins=True, signal=True):
-    """Do all of the default monkey patching (calls every other applicable function in this module)."""
+    """
+    Do all of the default monkey patching (calls every other applicable
+    function in this module).
+
+    .. versionchanged:: 1.1
+       Issue a :mod:`warning <warnings>` if this function is called multiple times
+       with different arguments. The second and subsequent calls will only add more
+       patches, they can never remove existing patches by setting an argument to ``False``.
+    .. versionchanged:: 1.1
+       Issue a :mod:`warning <warnings>` if this function is called with ``os=False``
+       and ``signal=True``. This will cause SIGCHLD handlers to not be called. This may
+       be an error in the future.
+    """
+    # Check to see if they're changing the patched list
+    _warnings, first_time = _check_repatching(**locals())
+    if not _warnings and not first_time:
+        # Nothing to do, identical args to what we just
+        # did
+        return
+
     # order is important
     if os:
         patch_os()
@@ -511,7 +586,15 @@ def patch_all(socket=True, dns=True, time=True, select=True, thread=True, os=Tru
     if builtins:
         patch_builtins()
     if signal:
+        if not os:
+            _queue_warning('Patching signal but not os will result in SIGCHLD handlers'
+                           ' installed after this not being called and os.waitpid may not'
+                           ' function correctly if gevent.subprocess is used. This may raise an'
+                           ' error in the future.',
+                           _warnings)
         patch_signal()
+
+    _process_warnings(_warnings)
 
 
 def main():
