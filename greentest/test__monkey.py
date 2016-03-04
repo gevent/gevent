@@ -39,3 +39,34 @@ for modname in monkey.saved:
 
     for objname in monkey.saved[modname]:
         assert monkey.is_object_patched(modname, objname)
+
+orig_saved = {}
+for k, v in monkey.saved.items():
+    orig_saved[k] = v.copy()
+
+import warnings
+with warnings.catch_warnings(record=True) as issued_warnings:
+    # Patch again, triggering two warnings, on for os=False/signal=True,
+    # one for repeated monkey-patching.
+    monkey.patch_all(os=False)
+    assert len(issued_warnings) == 2, len(issued_warnings)
+    assert 'SIGCHLD' in str(issued_warnings[-1].message), issued_warnings[-1]
+    assert 'more than once' in str(issued_warnings[0].message), issued_warnings[0]
+
+    # Patching with the exact same argument doesn't issue a second warning.
+    # (just repeats the signal warning)
+    del issued_warnings[:]
+    monkey.patch_all(os=False)
+    orig_saved['_gevent_saved_patch_all'] = monkey.saved['_gevent_saved_patch_all']
+
+    assert len(issued_warnings) == 1, len(issued_warnings)
+    assert 'SIGCHLD' in str(issued_warnings[-1].message), issued_warnings[-1]
+
+# Make sure that re-patching did not change the monkey.saved
+# attribute, overwriting the original functions
+assert orig_saved == monkey.saved
+
+# Make sure some problematic attributes stayed correct.
+# NOTE: This was only a problem if threading was not previously imported.
+for k, v in monkey.saved['threading'].items():
+    assert 'gevent' not in str(v), (k, v)

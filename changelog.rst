@@ -30,6 +30,16 @@
   requires having Cython installed first. (Note that the binary installation
   formats (wheels, exes, msis) are preferred on Windows.) Reported in
   :issue:`757` by Ned Batchelder.
+- Issue a warning when :func:`~gevent.monkey.patch_all` is called with
+  ``os`` set to False (*not* the default) but ``signal`` is still True
+  (the default). This combination of parameters will cause signal
+  handlers for ``SIGCHLD`` to not get called. In the future this might
+  raise an error. Reported by Josh Zuech.
+- Issue a warning when :func:`~gevent.monkey.patch_all` is called more
+  than once with different arguments. That causes the cumulative set of all True
+  arguments to be patched, which may cause unexpected results.
+- Fix returning the original values of certain ``threading``
+  attributes from :func:`gevent.monkey.get_original`.
 
 .. _bug 13502: http://bugs.python.org/issue13502
 
