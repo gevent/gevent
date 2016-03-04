@@ -219,6 +219,9 @@ def patch_os():
     :func:`os.waitpid` with :func:`gevent.os.waitpid` (if the
     environment variable ``GEVENT_NOWAITPID`` is not defined). Does
     nothing if fork is not available.
+
+    This method must be used with :func:`patch_signal` to have proper SIGCHLD
+    handling. :func:`patch_all` calls both by default.
     """
     patch_module('os')
 
@@ -515,6 +518,9 @@ def patch_signal():
     """
     Make the signal.signal function work with a monkey-patched os.
 
+    This method must be used with :func:`patch_os` to have proper SIGCHLD
+    handling. :func:`patch_all` calls both by default.
+
     .. seealso:: :mod:`gevent.signal`
     """
     patch_module("signal")
@@ -536,7 +542,19 @@ def _check_repatching(**module_settings):
 def patch_all(socket=True, dns=True, time=True, select=True, thread=True, os=True, ssl=True, httplib=False,
               subprocess=True, sys=False, aggressive=True, Event=False,
               builtins=True, signal=True):
-    """Do all of the default monkey patching (calls every other applicable function in this module)."""
+    """
+    Do all of the default monkey patching (calls every other applicable
+    function in this module).
+
+    .. versionchanged:: 1.1
+       Issue a :mod:`warning <warnings>` if this function is called multiple times
+       with different arguments. The second and subsequent calls will only add more
+       patches, they can never remove existing patches by setting an argument to ``False``.
+    .. versionchanged:: 1.1
+       Issue a :mod:`warning <warnings>` if this function is called with ``os=False``
+       and ``signal=True``. This will cause SIGCHLD handlers to not be called. This may
+       be an error in the future.
+    """
     # Check to see if they're changing the patched list
     _warnings, first_time = _check_repatching(**locals())
     if not _warnings and not first_time:
