@@ -164,21 +164,19 @@ def patch_module(name, items=None):
     return module
 
 
-_warnings = list()
-
-
-def _queue_warning(message):
+def _queue_warning(message, _warnings):
     # Queues a warning to show after the monkey-patching process is all done.
     # Done this way to avoid extra imports during the process itself, just
-    # in case
-    _warnings.append(message)
+    # in case. If we're calling a function one-off (unusual) go ahead and do it
+    if _warnings is None:
+        _process_warnings([message])
+    else:
+        _warnings.append(message)
 
 
-def _process_warnings():
+def _process_warnings(_warnings):
     import warnings
-    _w = list(_warnings)
-    del _warnings[:]
-    for warning in _w:
+    for warning in _warnings:
         warnings.warn(warning, RuntimeWarning, stacklevel=3)
 
 
@@ -271,7 +269,8 @@ def _patch_existing_locks(threading):
 
 
 def patch_thread(threading=True, _threading_local=True, Event=False, logging=True,
-                 existing_locks=True):
+                 existing_locks=True,
+                 _warnings=None):
     """
     Replace the standard :mod:`thread` module to make it greenlet-based.
 
@@ -389,7 +388,8 @@ def patch_thread(threading=True, _threading_local=True, Event=False, logging=Tru
                 del threading._active[oldid]
         else:
             _queue_warning("Monkey-patching not on the main thread; "
-                           "threading.main_thread().join() will hang from a greenlet")
+                           "threading.main_thread().join() will hang from a greenlet",
+                           _warnings)
 
 
 def patch_socket(dns=True, aggressive=True):
@@ -519,19 +519,30 @@ def patch_signal():
     """
     patch_module("signal")
 
-def _check_repatching(**module_settings):
-    if saved.get('_gevent_saved_patch_all', module_settings) != module_settings:
-        _queue_warning("Patching more than once will result in the union of all True"
-                       " parameters being patched")
 
-    saved['_gevent_saved_patch_all'] = module_settings
+def _check_repatching(**module_settings):
+    _warnings = []
+    key = '_gevent_saved_patch_all'
+    if saved.get(key, module_settings) != module_settings:
+        _queue_warning("Patching more than once will result in the union of all True"
+                       " parameters being patched",
+                       _warnings)
+
+    first_time = key not in saved
+    saved[key] = module_settings
+    return _warnings, first_time
+
 
 def patch_all(socket=True, dns=True, time=True, select=True, thread=True, os=True, ssl=True, httplib=False,
               subprocess=True, sys=False, aggressive=True, Event=False,
               builtins=True, signal=True):
     """Do all of the default monkey patching (calls every other applicable function in this module)."""
     # Check to see if they're changing the patched list
-    _check_repatching(**locals())
+    _warnings, first_time = _check_repatching(**locals())
+    if not _warnings and not first_time:
+        # Nothing to do, identical args to what we just
+        # did
+        return
 
     # order is important
     if os:
@@ -561,10 +572,11 @@ def patch_all(socket=True, dns=True, time=True, select=True, thread=True, os=Tru
             _queue_warning('Patching signal but not os will result in SIGCHLD handlers'
                            ' installed after this not being called and os.waitpid may not'
                            ' function correctly if gevent.subprocess is used. This may raise an'
-                           ' error in the future.')
+                           ' error in the future.',
+                           _warnings)
         patch_signal()
 
-    _process_warnings()
+    _process_warnings(_warnings)
 
 
 def main():

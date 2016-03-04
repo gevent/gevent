@@ -54,17 +54,16 @@ with warnings.catch_warnings(record=True) as issued_warnings:
     assert 'more than once' in str(issued_warnings[0].message), issued_warnings[0]
 
     # Patching with the exact same argument doesn't issue a second warning.
-    # (just repeats the signal warning)
+    # in fact, it doesn't do anything
     del issued_warnings[:]
     monkey.patch_all(os=False)
     orig_saved['_gevent_saved_patch_all'] = monkey.saved['_gevent_saved_patch_all']
 
-    assert len(issued_warnings) == 1, len(issued_warnings)
-    assert 'SIGCHLD' in str(issued_warnings[-1].message), issued_warnings[-1]
+    assert len(issued_warnings) == 0, len(issued_warnings)
 
 # Make sure that re-patching did not change the monkey.saved
-# attribute, overwriting the original functions
-assert orig_saved == monkey.saved
+# attribute, overwriting the original functions.
+assert orig_saved == monkey.saved, (orig_saved, monkey.saved)
 
 # Make sure some problematic attributes stayed correct.
 # NOTE: This was only a problem if threading was not previously imported.
