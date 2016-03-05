@@ -101,8 +101,8 @@ something like this::
 
 Builds on Travis CI automatically submit updates to `coveralls.io`_.
 
-.. image:: https://coveralls.io/repos/gevent/gevent/badge.svg?branch=master&service=github
-   :target: https://coveralls.io/github/gevent/gevent?branch=master
+.. image:: https://coveralls.io/repos/gevent/gevent/badge.svg?branch=maint/1.1.x&service=github
+   :target: https://coveralls.io/github/gevent/gevent?branch=maint/1.1.x
 
 Continuous integration
 ----------------------
@@ -113,7 +113,7 @@ CI is used to test on Linux, and `AppVeyor`_ runs the builds on Windows.
 .. image:: https://travis-ci.org/gevent/gevent.svg?branch=maint/1.1.x
    :target: https://travis-ci.org/gevent/gevent
 
-.. image:: https://ci.appveyor.com/api/projects/status/q4kl21ng2yo2ixur?svg=true
+.. image:: https://ci.appveyor.com/api/projects/status/q4kl21ng2yo2ixur/branch/maint/1.1.x?svg=true
    :target: https://ci.appveyor.com/project/denik/gevent
 
 .. _gevent: http://www.gevent.org
