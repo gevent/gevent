@@ -110,7 +110,7 @@ Continuous integration
 A test suite is run for every push and pull request submitted. Travis
 CI is used to test on Linux, and `AppVeyor`_ runs the builds on Windows.
 
-.. image:: https://travis-ci.org/gevent/gevent.svg?branch=maint/1.1.x
+.. image:: https://travis-ci.org/gevent/gevent.svg?branch=maint%2F1.1.x
    :target: https://travis-ci.org/gevent/gevent
 
 .. image:: https://ci.appveyor.com/api/projects/status/q4kl21ng2yo2ixur/branch/maint/1.1.x?svg=true
