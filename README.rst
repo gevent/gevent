@@ -32,14 +32,11 @@ Gevent runs on Python >= 2.6, Python >= 3.3, or PyPy >= 4.0.1
 platforms, installing setuptools is recommended (this is done
 automatically if working in a virtual environment).
 
-While gevent v1.1 is not yet released, it has release candidates which are
-currently considered quite stable, with many bugfixes over v1.0.
-v1.1 is also necessary if you are running OS X 10.11 and/or Python 3.
-To install one of these release candidates, you can run::
+You can use pip to install gevent::
 
-    pip install --pre gevent
+    pip install gevent
 
-.. tip:: On Windows, you need Pip 8.0 or later to install the binary wheel.
+.. tip:: You need Pip 8.0 or later to install the binary wheels for 1.1.
 
 Download the latest release from `Python Package Index`_ or clone `the repository`_.
 

@@ -37,7 +37,7 @@ strongly recommended. On PyPy, there are no external dependencies.
 gevent and greenlet can both be installed with `pip`_, e.g., ``pip
 install gevent``. On Windows and OS X, both gevent and greenlet are
 distributed as binary `wheels`_, so no C compiler is required (so long
-as pip is at least version 1.4). On Linux or for Mac OS X variants
+as pip is at least version 8.0). On Linux or for Mac OS X variants
 without pre-built wheels or if wheel installation is disabled, a C compiler
 (Xcode on OS X) and the Python development package are required.
 `cffi`_ can optionally be installed to build the CFFI backend in
@@ -52,8 +52,6 @@ addition to the Cython backend on CPython.
          use the ``--build`` option to ``pip install`` to specify
          another directory. See :issue:`570` and :issue:`612` for
          examples.
-
-.. tip:: On Windows, you need Pip 8.0 or later to install the binary wheels.
 
 Development instructions can be found `on PyPI <https://pypi.python.org/pypi/gevent#development>`_.
 
