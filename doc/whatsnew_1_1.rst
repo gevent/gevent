@@ -119,6 +119,11 @@ downstream libraries, notably `gunicorn`_.
   :func:`gevent.os.waitpid` (again monkey patched by default) and
   :func:`gevent.signal.signal` (which is monkey patched only for the
   :data:`signal.SIGCHLD` case). The latter two patches are new in 1.1.
+- In gevent 1.0, use of libev child watchers (which are used
+  internally by ``gevent.subprocess``) had race conditions with
+  user-provided ``SIGCHLD`` handlers, causing many types of
+  unpredictable breakage. The two new APIs described above are
+  intended to rectify this.
 - Fork-watchers will be called, even in multi-threaded programs
   (except on Windows).
 - The default threadpool and threaded resolver work in child
@@ -137,6 +142,12 @@ possible in a monkey patched system, at least on POSIX platforms.
 
 .. caution:: It is not possible to use :mod:`gevent.subprocess` from
              native threads. See :mod:`gevent.subprocess` for details.
+
+.. note:: If the ``SIGCHLD`` signal is to be handled, it is important
+          to monkey patch (or directly use) both :mod:`os` and
+          :mod:`signal`; this is the default for
+          :func:`~gevent.monkey.patch_all`. Failure to do so can
+          result in the ``SIGCHLD`` signal being lost.
 
 .. tip:: All of the above entail forking a child process. Forking
 		 a child process that uses gevent, greenlets, and libev

@@ -210,6 +210,7 @@ if hasattr(os, 'fork'):
         _waitpid = os.waitpid
         _WNOHANG = os.WNOHANG
 
+        # replaced by the signal module.
         _on_child_hook = lambda: None
 
         # {pid -> watcher or tuple(pid, rstatus, timestamp)}
