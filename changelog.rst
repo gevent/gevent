@@ -4,7 +4,7 @@
 
 .. currentmodule:: gevent
 
-1.1.0 (unreleased)
+1.1.0 (Mar 5, 2016)
 ===================
 
 - Python 3: A monkey-patched :class:`threading.RLock` now properly
