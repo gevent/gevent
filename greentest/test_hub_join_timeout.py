@@ -28,7 +28,7 @@ def expected_time(expected, fuzzy=None):
     assert expected - fuzzy <= elapsed <= expected + fuzzy, 'Expected: %r; elapsed: %r; fuzzy %r' % (expected, elapsed, fuzzy)
 
 
-def no_time(fuzzy=0.001):
+def no_time(fuzzy=(0.001 if not RUNNING_ON_APPVEYOR else 1.0)):
     return expected_time(0, fuzzy=fuzzy)
 
 
