@@ -113,7 +113,7 @@ CI is used to test on Linux, and `AppVeyor`_ runs the builds on Windows.
 .. image:: https://travis-ci.org/gevent/gevent.svg?branch=maint%2F1.1.x
    :target: https://travis-ci.org/gevent/gevent
 
-.. image:: https://ci.appveyor.com/api/projects/status/q4kl21ng2yo2ixur/branch/maint/1.1.x?svg=true
+.. image:: https://ci.appveyor.com/api/projects/status/q4kl21ng2yo2ixur/branch/maint%2F1.1.x?svg=true
    :target: https://ci.appveyor.com/project/denik/gevent
 
 .. _gevent: http://www.gevent.org
