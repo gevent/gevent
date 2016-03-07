@@ -17,7 +17,8 @@
 {%- set breakat = genindexcounts[loop.index0] // 2 %}
 {%- set numcols = 1 %}
 {%- set numitems = 0 %}
-{% for entryname, (links, subitems) in entries %}
+{% for entryname, links_subitems in entries %}
+{%- set links, subitems = links_subitems[:2] %}
 <dt>{%- if links -%}<a href="{{ links[0] }}">{{ entryname|e }}</a>
   {%- for link in links[1:] %}, <a href="{{ link }}">[{{ loop.index }}]</a>{% endfor -%}
   {%- else -%}

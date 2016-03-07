@@ -46,7 +46,10 @@ def missing_reference(app, env, node, contnode):
     for docname, items in env.indexentries.items():
         if noisy >= 2:
             print(docname)
-        for (i_type, i_string, i_target, i_aliasname) in items:
+        for _x in items:
+            if noisy >= 4:
+                print(_x)
+            (i_type, i_string, i_target, i_aliasname) = _x[:4]
             if noisy >= 3:
                 print('---', [i_type, i_string, i_target, i_aliasname])
             if i_aliasname.endswith(target):
