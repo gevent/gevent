@@ -5,4 +5,4 @@ __all__ = ['reraise']
 
 
 def reraise(type, value, tb):
-    raise type, value, tb
+    raise type(value).with_traceback(tb)
