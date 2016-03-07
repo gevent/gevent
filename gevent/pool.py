@@ -241,7 +241,7 @@ class GroupMappingMixin(object):
 
     def apply_cb(self, func, args=None, kwds=None, callback=None):
         """
-        :meth:`apply` the given *func*, and, if a *callback* is given, run it with the
+        :meth:`apply` the given *func(\*args, \*\*kwds)*, and, if a *callback* is given, run it with the
         results of *func* (unless an exception was raised.)
 
         The *callback* may be called synchronously or asynchronously. If called
@@ -256,18 +256,42 @@ class GroupMappingMixin(object):
 
     def apply_async(self, func, args=None, kwds=None, callback=None):
         """
-        A variant of the apply() method which returns a Greenlet object.
+        A variant of the :meth:`apply` method which returns a :class:`~.Greenlet` object.
+
+        When the returned greenlet gets to run, it *will* call :meth:`apply`,
+        passing in *func*, *args* and *kwds*.
 
         If *callback* is specified, then it should be a callable which
         accepts a single argument. When the result becomes ready
         callback is applied to it (unless the call failed).
+
+        This method will never block, even if this group is full (that is,
+        even if :meth:`spawn` would block, this method will not).
+
+        .. caution:: The returned greenlet may or may not be tracked
+           as part of this group, so :meth:`joining <join>` this group is
+           not a reliable way to wait for the results to be available or
+           for the returned greenlet to run; instead, join the returned
+           greenlet.
+
+        .. tip:: Because :class:`~.ThreadPool` objects do not track greenlets, the returned
+           greenlet will never be a part of it. To reduce overhead and improve performance,
+           :class:`Group` and :class:`Pool` may choose to track the returned
+           greenlet. These are implementation details that may change.
         """
         if args is None:
             args = ()
         if kwds is None:
             kwds = {}
         if self._apply_async_use_greenlet():
-            # cannot call spawn() directly because it will block
+            # cannot call self.spawn() directly because it will block
+            # XXX: This is always the case for ThreadPool, but for Group/Pool
+            # of greenlets, this is only the case when they are full...hence
+            # the weasely language about "may or may not be tracked". Should we make
+            # Group/Pool always return true as well so it's never tracked by any
+            # implementation? That would simplify that logic, but could increase
+            # the total number of greenlets in the system and add a layer of
+            # overhead for the simple cases when the pool isn't full.
             return Greenlet.spawn(self.apply_cb, func, args, kwds, callback)
 
         greenlet = self.spawn(func, *args, **kwds)
@@ -585,14 +609,18 @@ class Group(GroupMappingMixin):
 
     def _apply_immediately(self):
         # If apply() is called from one of our own
-        # worker greenlets, don't spawn a new one
+        # worker greenlets, don't spawn a new one---if we're full, that
+        # could deadlock.
         return getcurrent() in self
 
     def _apply_async_cb_spawn(self, callback, result):
         Greenlet.spawn(callback, result)
 
     def _apply_async_use_greenlet(self):
-        return self.full() # cannot call self.spawn() because it will block
+        # cannot call self.spawn() because it will block, so
+        # use a fresh, untracked greenlet that when run will
+        # (indirectly) call self.spawn() for us.
+        return self.full()
 
 
 class Failure(object):

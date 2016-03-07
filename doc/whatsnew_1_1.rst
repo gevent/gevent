@@ -272,17 +272,18 @@ reduce the cases of undocumented or non-standard behaviour.
 
 .. _does not use a reference-counted GC: http://doc.pypy.org/en/latest/cpython_differences.html#differences-related-to-garbage-collection-strategies
 
-- :class:`gevent.pywsgi.WSGIServer` ensures that headers and the
+- :class:`gevent.pywsgi.WSGIServer` ensures that headers (names and values) and the
   status line set by the application can be encoded in the ISO-8859-1
   (Latin-1) charset and are of the *native string type*.
 
   Under gevent 1.0, non-``bytes`` headers (that is, ``unicode``, since
-  gevent 1.0 only ran on Python 2) were encoded according to the
-  current default Python encoding. In some cases, this could allow
-  non-Latin-1 characters to be sent in the headers, but this violated
-  the HTTP specification, and their interpretation by the recipient is
-  unknown. In other cases, gevent could send malformed partial HTTP
-  responses. Now, a :exc:`UnicodeError` will be raised proactively.
+  gevent 1.0 only ran on Python 2, although objects like ``int`` were
+  also allowed) were encoded according to the current default Python
+  encoding. In some cases, this could allow non-Latin-1 characters to
+  be sent in the headers, but this violated the HTTP specification,
+  and their interpretation by the recipient is unknown. In other
+  cases, gevent could send malformed partial HTTP responses. Now, a
+  :exc:`UnicodeError` will be raised proactively.
 
   Most applications that adhered to the WSGI PEP, :pep:`3333`, will not
   need to make any changes. See :issue:`614` for more discussion.
