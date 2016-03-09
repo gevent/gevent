@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # A vendored version of part of https://github.com/ionelmc/python-tblib
 ####
-# Copyright (c) 2013-2014, Ionel Cristian Mărieș
+# Copyright (c) 2013-2016, Ionel Cristian Mărieș
 # All rights reserved.
 
 # Redistribution and use in source and binary forms, with or without modification, are permitted provided that the
@@ -196,7 +196,12 @@ class Traceback(object):
             except:
                 tb = sys.exc_info()[2].tb_next
                 tb_set_next(tb, self.tb_next and self.tb_next.as_traceback())
-                return tb
+                try:
+                    return tb
+                finally:
+                    # gevent: don't leak the traceback objects, this
+                    # makes our leaktests fail
+                    del tb
         else:
             raise RuntimeError("Cannot re-create traceback !")
 
