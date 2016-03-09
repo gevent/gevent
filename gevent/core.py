@@ -9,6 +9,9 @@ try:
 
     from gevent import corecext as _core
 except ImportError:
+    if os.environ.get('GEVENT_CORE_CEXT_ONLY'):
+        raise
+
     # CFFI/PyPy
     from gevent import corecffi as _core
 
