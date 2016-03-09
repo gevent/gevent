@@ -22,6 +22,7 @@ ares_library_init \- c-ares library initialization
 .B #include <ares.h>
 .PP
 .B int ares_library_init(int \fIflags\fP)
+.B int ares_library_init_mem(int \fIflags\fP, void *(*\fIamalloc\fP)(size_t), void (*\fIafree\fP)(void *))
 .PP
 .B cc file.c -lcares
 .fi
@@ -50,6 +51,12 @@ should be initialized, as described below. Set the desired bits by
 ORing the values together. In normal operation you should specify
 \fIARES_LIB_INIT_ALL\fP. Don't use any other value unless you are
 familiar with it and trying to control some internal c-ares feature.
+.PP
+The
+.B ares_library_init_mem
+function allows the caller to provide memory management
+functions that the c-ares library will be use instead of \fImalloc(3)\fP and
+\fIfree(3)\fP.
 .PP
 .B This function is not thread safe.
 You have to call it once the program has started, but this call must be done

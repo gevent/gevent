@@ -49,6 +49,13 @@ c-ares/adig
 c-ares/ahost
 c-ares/Makefile
 c-ares/libtool
+c-ares/libcares.pc
+c-ares/test/.deps
+c-ares/test/Makefile
+c-ares/test/config.log
+c-ares/test/config.status
+c-ares/test/libtool
+c-ares/test/stamp-h1
 libev/.deps
 libev/Makefile
 libev/config.log

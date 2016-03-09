@@ -1,5 +1,5 @@
 
-/* Copyright (C) 2010-2012 by Daniel Stenberg
+/* Copyright (C) 2010-2013 by Daniel Stenberg
  *
  * Permission to use, copy, modify, and distribute this
  * software and its documentation for any purpose and without
@@ -19,6 +19,10 @@
 
 #ifdef HAVE_ASSERT_H
 #  include <assert.h>
+#endif
+
+#ifdef HAVE_LIMITS_H
+#include <limits.h>
 #endif
 
 #if defined(__INTEL_COMPILER) && defined(__unix__)
@@ -65,20 +69,13 @@
 #  error "SIZEOF_INT not defined"
 #endif
 
-#if (CARES_SIZEOF_LONG == 2)
-#  define CARES_MASK_SLONG  0x7FFFL
-#  define CARES_MASK_ULONG  0xFFFFUL
-#elif (CARES_SIZEOF_LONG == 4)
-#  define CARES_MASK_SLONG  0x7FFFFFFFL
-#  define CARES_MASK_ULONG  0xFFFFFFFFUL
-#elif (CARES_SIZEOF_LONG == 8)
-#  define CARES_MASK_SLONG  0x7FFFFFFFFFFFFFFFL
-#  define CARES_MASK_ULONG  0xFFFFFFFFFFFFFFFFUL
-#elif (CARES_SIZEOF_LONG == 16)
-#  define CARES_MASK_SLONG  0x7FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFL
-#  define CARES_MASK_ULONG  0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFUL
+#ifndef HAVE_LIMITS_H
+/* systems without <limits.h> we guess have 32 bit longs */
+#define CARES_MASK_SLONG  0x7FFFFFFFL
+#define CARES_MASK_ULONG  0xFFFFFFFFUL
 #else
-#  error "CARES_SIZEOF_LONG not defined"
+#define CARES_MASK_ULONG  ULONG_MAX
+#define CARES_MASK_SLONG  LONG_MAX
 #endif
 
 /*

@@ -28,10 +28,6 @@ for name service lookups.  If it returns successfully, \fBares_dup(3)\fP will
 set the variable pointed to by \fIdest\fP to a handle used to identify the
 name service channel.  The caller should invoke \fIares_destroy(3)\fP on the
 handle when the channel is no longer needed.
-
-The \fBares_dup_options\fP function also initializes a name service channel,
-with additional options set exactly as the \fIsource\fP channel has them
-configured.
 .SH SEE ALSO
 .BR ares_destroy(3),
 .BR ares_init(3),

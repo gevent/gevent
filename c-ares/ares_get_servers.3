@@ -16,12 +16,13 @@
 .\"
 .TH ARES_GET_SERVERS 3 "5 March 2010"
 .SH NAME
-ares_get_servers \- Retrieve name servers from an initialized ares_channel
+ares_get_servers, ares_get_servers_ports \- Retrieve name servers from an initialized ares_channel
 .SH SYNOPSIS
 .nf
 .B #include <ares.h>
 .PP
 .B int ares_get_servers(ares_channel \fIchannel\fP, struct ares_addr_node **\fIservers\fP)
+.B int ares_get_servers_ports(ares_channel \fIchannel\fP, struct ares_addr_port_node **\fIservers\fP)
 .fi
 .SH DESCRIPTION
 The \fBares_get_servers(3)\fP function retrieves name servers configuration
@@ -32,8 +33,13 @@ as a linked list of ares_addr_node structs storing a pointer to the first
 node at the address specified by
 .IR servers .
 
+The \fBares_get_servers_ports(3)\fP function also retrieves any per-server
+port information that may have been previously configured, returning a linked
+list of ares_addr_port structures.
+
 Function caller may traverse the returned name server linked list, or may use
-it directly as suitable input for the \fBares_set_servers(3)\fP function, but
+it directly as suitable input for the \fBares_set_servers(3)\fP /
+\fBares_set_servers_ports(3)\fP functions, but
 shall not shrink or extend the list on its own.
 
 Each node of the name server linked list is stored in memory dynamically
@@ -47,8 +53,7 @@ optmask \fBARES_OPT_SERVERS\fP functionally obsolete except for
 IPv4-only name server usage.
 
 .SH RETURN VALUES
-.B ares_get_servers(3)
-may return any of the following values:
+This function may return any of the following values:
 .TP 15
 .B ARES_SUCCESS
 The name servers configuration was successfuly retrieved
@@ -57,7 +62,7 @@ The name servers configuration was successfuly retrieved
 The memory was exhausted
 .TP 15
 .B ARES_ENODATA
-The channel data identified by 
+The channel data identified by
 .IR channel
 was invalid.
 .SH SEE ALSO
@@ -65,7 +70,8 @@ was invalid.
 .BR ares_init_options (3),
 .BR ares_save_options(3)
 .SH AVAILABILITY
-ares_get_servers(3) was added in c-ares 1.7.1
+\fBares_get_servers(3)\fP was added in c-ares 1.7.1;
+\fBares_get_servers_ports(3)\fP was added in c-ares 1.11.0.
 .SH AUTHOR
 Implementation of this function and associated library internals are based
 on code, comments and feedback provided in November and December of 2008 by
