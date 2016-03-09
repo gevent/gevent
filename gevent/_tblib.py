@@ -146,6 +146,7 @@ class Code(object):
         self.co_flags = code.co_flags
         self.co_firstlineno = code.co_firstlineno
 
+
 class Frame(object):
     def __init__(self, frame):
         self.f_globals = dict([
