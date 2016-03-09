@@ -9,6 +9,7 @@
 
 - Update libev to version 4.22.
 - Update tblib to 1.3.0.
+- Remove support for Python 2.6.
 
 1.1.0 (Mar 5, 2016)
 ===================

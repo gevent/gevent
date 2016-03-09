@@ -22,10 +22,10 @@ Features include:
 Installation and Requirements
 =============================
 
-`gevent 1.1`_ runs on Python 2 and Python 3. Versions 2.6 and 2.7 of
-Python 2 are supported, and versions 3.3, 3.4, and 3.5 of Python 3 are
+`gevent 1.1`_ runs on Python 2 and Python 3. Version 2.7 of
+Python 2 is supported, and versions 3.3, 3.4, and 3.5 of Python 3 are
 supported. (Users of older versions of Python 2 need to install gevent
-1.0.x; Python 3 is not supported by 1.0.) gevent requires the
+1.0.x (2.5) or 1.1.x (2.6); Python 3 is not supported by 1.0.) gevent requires the
 greenlet__ library.
 
 gevent 1.1 also runs on PyPy 2.6.1 and above, although 4.0 or above is

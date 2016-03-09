@@ -307,7 +307,7 @@ class EventTests(BaseTestCase):
 
     def test_reset_internal_locks(self):
         evt = self.eventtype()
-        if not hasattr(evt, '_Event__cond'):
+        if not hasattr(evt, '_Event__cond') or sys.version_info[:3] <= (2, 7, 8):
             self.skipTest("gevent: internal impl difference")
         old_lock = evt._Event__cond._Condition__lock
         evt._reset_internal_locks()
