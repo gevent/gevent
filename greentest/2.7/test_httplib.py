@@ -730,16 +730,17 @@ class HTTPSTest(TestCase):
             resp = h.getresponse()
             self.assertIn('nginx', resp.getheader('server'))
 
-    @test_support.system_must_validate_cert
-    def test_networked_trusted_by_default_cert(self):
-        # Default settings: requires a valid cert from a trusted CA
-        test_support.requires('network')
-        with test_support.transient_internet('www.python.org'):
-            h = httplib.HTTPSConnection('www.python.org', 443)
-            h.request('GET', '/')
-            resp = h.getresponse()
-            content_type = resp.getheader('content-type')
-            self.assertIn('text/html', content_type)
+    if hasattr(test_support, 'system_must_validate_cert'): # gevent: run on 2.7.8
+        @test_support.system_must_validate_cert
+        def test_networked_trusted_by_default_cert(self):
+            # Default settings: requires a valid cert from a trusted CA
+            test_support.requires('network')
+            with test_support.transient_internet('www.python.org'):
+                h = httplib.HTTPSConnection('www.python.org', 443)
+                h.request('GET', '/')
+                resp = h.getresponse()
+                content_type = resp.getheader('content-type')
+                self.assertIn('text/html', content_type)
 
     def test_networked_good_cert(self):
         # We feed the server's cert as a validating cert

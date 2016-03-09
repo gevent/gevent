@@ -13,7 +13,7 @@ env:
       - TASK=test-pypy
       - TASK=lint-py27
       - TASK=test-py35
-      - TASK=test-py26
+      - TASK=test-py278
       - TASK=test-py27
       - TASK=test-py33
       - TASK=test-py34

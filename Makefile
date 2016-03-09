@@ -62,7 +62,7 @@ test_prelim:
 	make bench
 
 toxtest: test_prelim
-	cd greentest && GEVENT_RESOLVER=thread python testrunner.py --config ../known_failures.py
+	cd greentest && GEVENT_RESOLVER=thread ${PYTHON} testrunner.py --config ../known_failures.py
 
 fulltoxtest: test_prelim
 	cd greentest && GEVENT_RESOLVER=thread ${PYTHON} testrunner.py --config ../known_failures.py
@@ -92,7 +92,7 @@ travis_test_linters:
 
 BUILD_RUNTIMES?=$(PWD)/.runtimes
 
-PY26=$(BUILD_RUNTIMES)/snakepit/python2.6
+PY278=$(BUILD_RUNTIMES)/snakepit/python2.7.8
 PY27=$(BUILD_RUNTIMES)/snakepit/python2.7
 PY33=$(BUILD_RUNTIMES)/snakepit/python3.3
 PY34=$(BUILD_RUNTIMES)/snakepit/python3.4
@@ -109,8 +109,8 @@ TOOL_PYTHON=$(TOOL_VIRTUALENV)/bin/python
 TOOL_PIP=$(TOOL_VIRTUALENV)/bin/pip
 TOOL_INSTALL=$(TOOL_PIP) install --upgrade
 
-$(PY26):
-	scripts/install.sh 2.6
+$(PY278):
+	scripts/install.sh 2.7.8
 
 $(PY27):
 	scripts/install.sh 2.7
@@ -130,7 +130,8 @@ $(PYPY):
 PIP?=$(BUILD_RUNTIMES)/versions/$(PYTHON)/bin/pip
 
 develop:
-	echo $(PIP) $(PYTHON)
+	echo pip is at `which $(PIP)`
+	echo python is at `which $(PYTHON)`
 # First install a newer pip so that it can use the wheel cache
 # (only needed until travis upgrades pip to 7.x; note that the 3.5
 # environment uses pip 7.1 by default)
@@ -138,9 +139,7 @@ develop:
 # Then start installing our deps so they can be cached. Note that use of --build-options / --global-options / --install-options
 # disables the cache.
 # We need wheel>=0.26 on Python 3.5. See previous revisions.
-	${PIP} install -U wheel
-	${PIP} install -U tox cython cffi greenlet pep8 pyflakes "coverage>=4.0" "coveralls>=1.0"
-	${PYTHON} setup.py develop
+	${PIP} install -U -r dev-requirements.txt
 
 lint-py27: $(PY27)
 	PYTHON=python2.7 PATH=$(BUILD_RUNTIMES)/versions/python2.7/bin:$(PATH) make develop travis_test_linters
@@ -148,8 +147,9 @@ lint-py27: $(PY27)
 test-py27: $(PY27)
 	PYTHON=python2.7 PATH=$(BUILD_RUNTIMES)/versions/python2.7/bin:$(PATH) make develop fulltoxtest
 
-test-py26: $(PY26)
-	PYTHON=python2.6 PATH=$(BUILD_RUNTIMES)/versions/python2.6/bin:$(PATH) make develop fulltoxtest
+test-py278: $(PY278)
+	ls $(BUILD_RUNTIMES)/versions/python2.7.8/bin/
+	PYTHON=python2.7.8 PATH=$(BUILD_RUNTIMES)/versions/python2.7.8/bin:$(PATH) make develop fulltoxtest
 
 test-py33: $(PY33)
 	PYTHON=python3.3 PATH=$(BUILD_RUNTIMES)/versions/python3.3/bin:$(PATH) make develop fulltoxtest

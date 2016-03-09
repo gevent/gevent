@@ -496,7 +496,6 @@ def run_setup(ext_modules, run_make):
         test_suite="greentest.testrunner",
         classifiers=[
             "License :: OSI Approved :: MIT License",
-            "Programming Language :: Python :: 2.6",
             "Programming Language :: Python :: 2.7",
             "Programming Language :: Python :: 3.3",
             "Programming Language :: Python :: 3.4",
