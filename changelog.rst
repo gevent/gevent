@@ -4,6 +4,11 @@
 
 .. currentmodule:: gevent
 
+1.2a1 (unreleased)
+==================
+
+- Update libev to version 4.22.
+
 1.1.0 (Mar 5, 2016)
 ===================
 
