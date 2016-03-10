@@ -82,6 +82,7 @@ MANPAGES = ares_cancel.3		\
   ares_free_hostent.3			\
   ares_free_string.3			\
   ares_get_servers.3			\
+  ares_get_servers_ports.3			\
   ares_gethostbyaddr.3			\
   ares_gethostbyname.3			\
   ares_gethostbyname_file.3		\
@@ -107,8 +108,16 @@ MANPAGES = ares_cancel.3		\
   ares_save_options.3			\
   ares_search.3				\
   ares_send.3				\
+  ares_set_local_dev.3			\
+  ares_set_local_ip4.3			\
+  ares_set_local_ip6.3			\
   ares_set_servers.3			\
+  ares_set_servers_csv.3		\
+  ares_set_servers_ports.3		\
+  ares_set_servers_ports_csv.3		\
   ares_set_socket_callback.3		\
+  ares_set_socket_configure_callback.3	\
+  ares_set_sortlist.3			\
   ares_strerror.3			\
   ares_timeout.3			\
   ares_version.3		        \
@@ -126,6 +135,7 @@ HTMLPAGES = ares_cancel.html		\
   ares_free_hostent.html		\
   ares_free_string.html			\
   ares_get_servers.html			\
+  ares_get_servers_ports.html			\
   ares_gethostbyaddr.html		\
   ares_gethostbyname.html		\
   ares_gethostbyname_file.html		\
@@ -150,8 +160,16 @@ HTMLPAGES = ares_cancel.html		\
   ares_save_options.html		\
   ares_search.html			\
   ares_send.html			\
+  ares_set_local_dev.html		\
+  ares_set_local_ip4.html		\
+  ares_set_local_ip6.html		\
   ares_set_servers.html			\
+  ares_set_servers_csv.html		\
+  ares_set_servers_ports.html			\
+  ares_set_servers_ports_csv.html			\
   ares_set_socket_callback.html		\
+  ares_set_socket_configure_callback.html		\
+  ares_set_sortlist.html			\
   ares_strerror.html			\
   ares_timeout.html			\
   ares_version.html                     \
@@ -169,6 +187,7 @@ PDFPAGES = ares_cancel.pdf		\
   ares_free_hostent.pdf			\
   ares_free_string.pdf			\
   ares_get_servers.pdf			\
+  ares_get_servers_ports.pdf			\
   ares_gethostbyaddr.pdf		\
   ares_gethostbyname.pdf		\
   ares_gethostbyname_file.pdf		\
@@ -193,8 +212,16 @@ PDFPAGES = ares_cancel.pdf		\
   ares_save_options.pdf			\
   ares_search.pdf			\
   ares_send.pdf				\
+  ares_set_local_dev.pdf		\
+  ares_set_local_ip4.pdf		\
+  ares_set_local_ip6.pdf		\
   ares_set_servers.pdf			\
+  ares_set_servers_csv.pdf		\
+  ares_set_servers_ports.pdf			\
+  ares_set_servers_ports_csv.pdf			\
   ares_set_socket_callback.pdf		\
+  ares_set_socket_configure_callback.pdf		\
+  ares_set_sortlist.pdf			\
   ares_strerror.pdf			\
   ares_timeout.pdf			\
   ares_version.pdf                      \

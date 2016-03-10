@@ -1,5 +1,904 @@
    Changelog for the c-ares project. Generated with git2changes.pl
 
+Version 1.11.0 (19 Feb 2016)
+
+Daniel Stenberg (19 Feb 2016)
+- RELEASE-NOTES: final edits for 1.11.0
+
+David Drysdale (15 Feb 2016)
+- ares_dup.3: remove mention of nonexistent function
+  
+  ares_dup_options() doesn't exist, so don't document it.
+
+- test: skip repeated build steps
+  
+  Top-level buildconf/configure now triggers for the
+  test/ subdir too, so don't need to do explicitly.
+
+- test: namespaces unavailable when cross-compiling
+
+Daniel Stenberg (13 Feb 2016)
+- configure: only run configure in test when NOT cross-compiling
+  
+  ... as the tests won't run cross-compiled anyway
+
+David Drysdale (13 Feb 2016)
+- test: prefer ON_CALL to EXPECT_CALL to reduce flakes
+  
+  For UDP tests, there's a chance of a retry.  EXPECT_CALL only
+  expects a single request to arrive at the server; ON_CALL allows
+  for a UDP retry and repeats the same answer.
+  
+  Note that ON_CALL and EXPECT_CALL can't be mixed in the same
+  test, and that tests that have a varied sequence of responses
+  for the same repeated request still have to use EXPECT_CALL.
+
+Daniel Stenberg (13 Feb 2016)
+- configure: run configure in 'test' too
+  
+  Having the test dir completely stand-alone causes too many issues for
+  users and devs. It still needs to be built specifically.
+
+- configure: build silently by default
+
+- buildconf: run test/buildconf too if present
+
+- test/configure: build silently by default
+
+- [Gregor Jasny brought this change]
+
+  dist: Distribute README.md
+  
+  Closes #42
+
+Version 1.11.0 (11 Feb 2016)
+
+Daniel Stenberg (11 Feb 2016)
+- Makefile.am: distribute the test dir too
+
+- RELEASE-NOTES: synced with 385582bd14b68a
+
+- [Nicolas \"Pixel\" Noble brought this change]
+
+  ares_win32_init: make LoadLibrary work when using UNICODE too
+  
+  Closes #17
+
+David Drysdale (11 Feb 2016)
+- Use "resolve" as synonym of "dns" in nsswitch.conf
+  
+  Modern Linux systems may have libnss_resolve from systemd as the
+  resolver, which is then configured in /etc/nsswitch.conf with
+  the "resolve" keyword rather than "dns".
+  
+  Fixes #33
+
+- ares_set_socket_callback: make manpage match code
+  
+  The code in ares_process.c that invokes the socket creation/connection
+  callback only checks for rc < 0, not for standard ares error codes.
+
+- Merge pull request #36 from AGWA-forks/master
+  
+  Add ares_set_socket_configure_callback()
+
+- test: Update init tests to match behaviour
+  
+  Unreadable config files are now treated the same way
+  as absent config files.
+
+- [Fedor Indutny brought this change]
+
+  Ignore `fopen` errors to use default values
+  
+  After 46bb820be3a83520e70e6c5f0c5133253fcd69cd `init_by_resolv_conf`
+  errors are no longer swallowed in `ares_init_options`. This has exposed
+  a previously unknown bug in `lookups` initialization code.
+  
+  If there is no lookup configuration in `resolv.conf`,
+  `init_by_resolv_conf` will attempt to read it from other files available
+  on the system. However, some of these files may have restricted
+  permissions (like `600`), which will lead to `EACCESS` errno, which in
+  turn is handled like a fatal error by `init_by_resolv_conf`.
+  
+  However, it sounds illogical that this error should be handled as a
+  fatal. There is a `init_by_defaults` call that overrides `lookups` with
+  default value, and certainly possible absence of lookup information is
+  the reason why this function exists in a first place!
+  
+  I suggest handling any `fopen` errors as non-fatal ones, allowing to
+  pick up the `lookups` value from different config files, or to pick up
+  default value.
+
+Andrew Ayer (9 Feb 2016)
+- Document callback type in man page for ares_set_socket_callback
+
+- Add ares_set_socket_configure_callback()
+  
+  This function sets a callback that is invoked after the socket is
+  created, but before the connection is established.  This is an ideal
+  time to customize various socket options.
+
+David Drysdale (9 Feb 2016)
+- test: ares_set_socket_callback failure behaviour
+
+- test: Check ares_parse_txt_reply_ext() entrypoint
+
+- [Fedor Indutny brought this change]
+
+  txt: introduce `ares_parse_txt_reply_ext`
+  
+  Introduce `ares_txt_ext` structure with an extra `record_start`
+  field, which indicates a start of a new TXT record, thus allowing to
+  differentiate the chunks in the same record, from a chunks in a
+  different record.
+  
+  Introduce a new API method: `ares_parse_txt_reply_ext` that works with
+  this kind of struct.
+
+- doc: Update missed repo references
+
+- doc: Update docs on contributing
+
+- test: Run command line tools in Travis
+  
+  Do a quick execution of each of the command line tools
+  in the continuous integration build, so that any (say)
+  sanitizer failures show up.
+
+- acountry: drop inert test
+  
+  If ver_1 is true, then z0 and z1 must both be 'z', and so
+  (z0 != 'z' && z1 != 'z') can never be true.
+  
+  CID 56879, pointed out by Coverity.
+
+- doc: update badge locations to master repo
+
+- test: Enable maintainer mode + debug in Travis
+
+- test: Add an iOS build target
+
+- test: Ignore SIGPIPE in tests
+
+- test: More initialization tests
+
+- test: Improve containerized test mechanism
+  
+  Aim is to ensure that code coverage information can escape the
+  container.  To do this:
+   - Enter a new mount namespace too, so that we can...
+   - Bind mount the expected source directory into the container
+   - Share memory with the sub-process so coverage information is
+     shared too.
+
+- test: Make contained tests easier to write
+
+- test: Add framework for containerized testing
+  
+  On Linux we can potentially use user and UTS namespaces to run  a test
+  in a pseudo-container with:
+   - arbitrary filesystem (e.g. /etc/resolv.conf, /etc/nsswitch.conf, /etc/hosts)
+   - arbitrary hostname/domainname.
+  
+  Include a first pass at the framework code to allow this, along with a
+  first test case that uses the container.
+
+- test: Use a longer timeout for less flakiness
+  
+  Having occasional test failures from timeout before multiple
+  queries can complete, so up the default timeout for the test
+  from 100ms to 1500ms.
+
+- test: Make failure tests more robust
+  
+  Different platforms will do different numbers of allocations
+  in the processing of a given API call; just check that the
+  return code is either success or ENOMEM, and free off any
+  returned state in the former case.
+  
+  Also cope with ECONNREFUSED as well as ENOTFOUND.
+
+- test: Get test code building under Windows
+  
+   - Initial nmake file based off library nmake file
+   - Cast socket call arguments to (char *)
+   - Use wrapper sclose() that maps to closesocket() or close()
+   - Build a config.h indicating presence of headers
+   - Conditionally include netdb.h
+   - Remove unnecessary include of sys/socket.h
+   - Force longer bitmask for allocation failure tracking
+   - Call WSAStartup() / WSACleanup() in main()
+   - Set TCP_NODELAY for mock server
+   - Turn on tests in AppVeyor build
+
+- test: Disable tests that manipulate env on Windows
+
+- test: Move file lists into Makefile.inc
+  
+  In preparation for a Win32 build of the test suite.
+
+- test: Add a simple multi-server test
+  
+  Check rotate option does something
+
+- test: Allow for multiple mock servers
+  
+   - Update the MockServer to allow separate specification of
+     UDP and TCP ports
+   - Have an array of mock servers listening on consecutive
+     sets of ports.
+   - Rename Process(fd) to ProcessFD(fd) to avoid confusion.
+   - Initialize channel by using the new ares_set_servers_ports()
+     entrypoint, so multiple ports on the same loopback address
+     can be used.
+
+- test: Update test for set/get_servers variants
+  
+  Ports are significant in the _ports_ variant functions, so update test to cope.
+
+- test: Make GetNameServers() utility function port-aware
+  
+  Also make it generally available.
+
+- test: more testing, including of internal static functions
+
+- test: more tests, especially fallback processing
+  
+   - Make mock server listen on UDP + TCP in parallel.
+   - Test UDP->TCP fallback on truncation
+   - Test EDNS->no-EDNS fallback
+   - Test some environment init options
+   - Test nonsense reply
+  
+  test: short response
+
+- test: more tests, particularly of initialization
+
+- test: Run mock tests over both TCP and UDP
+  
+  With the exception of a few tests that make use of the timed
+  retry aspect of UDP.
+
+- test: Run mock tests over both IPv4 and IPv6
+
+- test: Add more tests for edge cases
+
+- test: more nooks and crannies of pton functions
+
+- test: More tests for PTR parsing
+
+- test: Use of HOSTALIAS environment variable
+
+- test: Add RAII utility classes for testing
+  
+   - TempFile holds specific contents
+   - EnvValue sets an environment variable
+
+- test: More search domain scenarios
+
+- test: Remove duplicate flags from Makefile.am
+
+- test: Make test code leak-free
+
+- test: More tests
+  
+   - test use of sortlist
+   - test gethostbyname(AF_UNSPEC)
+
+- test: Test ares_gethostbyname_file()
+
+- test: Add more tests of ares_getnameinfo()
+
+- test: Tweak tests, add alloc failure test
+
+- test: Test init with options
+
+- test: More tests
+  
+   - ares_inet_net_pton() variants
+   - ares_getsock() variants
+
+- test: Expose ProcessWork() function
+
+- test: More parsing tests
+  
+  Including:
+   - Split each parse function test set out into separate files.
+   - Add an allocation failure test for each parsing function.
+   - Add error check test for each parsing function.
+
+- test: Add various additional tests
+
+- test: More tests
+  
+  Include tests of internal functions, based on the value of the
+  CARES_SYMBOL_HIDING macro; need to configure the library with
+  --disable-symbol-hiding to enable these tests.
+
+- test: Allow command line override of mock server port
+
+- test: Add README.md documentation
+
+- test: Temporarily avoid latest Python requests package
+  
+  Currently get error from Travis on this install step, and downgrading one
+  version appears to fix the problem.
+  
+  "Could not find any downloads that satisfy the requirement pyOpenSSL>=0.13
+  (from requests[security])"
+
+- test: Add AppVeyor config file for Windows build
+
+- test: Add configuration for a Travis build
+  
+  Cover Linux & OSX on the container infrastructure, but install
+  a later G++ to satisfy the tests' need for C++11.
+  
+  Use a build matrix to include a variety of build variants:
+   - ASAN
+   - UBSAN
+   - LSAN
+   - Coverage via coveralls.io
+  
+  test: invoke ASAN and coverage in Travis build
+  
+  Also shift to use explicit build matrix
+  
+  test: Use coveralls.io for coverage tracking
+  
+  test: Add a build with UBSAN
+  
+  Also expand and re-order the setting of environment variables
+  for easier modification.
+  
+  test: Add LSAN build to Travis config
+
+- test: Add initial unit tests for c-ares library
+  
+  The tests are written in C++11, using the GoogleTest and GoogleMock
+  frameworks.  They have their own independent autoconf setup, so that
+  users of the library need not have a C++ compiler just to get c-ares
+  working (however, the test/configure.ac file does assume the use of
+  a shared top-level m4/ directory).  However, this autoconf setup has
+  only been tested on Linux and OSX so far.
+  
+  Run with "./arestest", or "./arestest -v" to see extra debug info.
+  The GoogleTest options for running specific tests are also
+  available (e.g. "./arestest --gtest_filter=*Live*").
+  
+  The tests are nowhere near complete yet (currently hitting around
+  60% coverage as reported by gcov), but they do include examples
+  of a few different styles of testing:
+  
+   - There are live tests (ares-test-live.cc), which assume that the
+     current machine has a valid DNS setup and connection to the
+     internet; these tests issue queries for real domains but don't
+     particularly check what gets returned.  The tests will fail on
+     an offline machine.
+  
+   - There a few mock tests (ares-test-mock.cc) that set up a fake DNS
+     server and inject its port into the c-ares library configuration.
+     These tests allow specific response messages to be crafted and
+     injected, and so are likely to be used for many more tests in
+     future.
+  
+      - To make this generation/injection easier, the dns-proto.h file
+        includes C++ helper classes for building DNS packets.
+  
+   - Other library entrypoints that don't require network activity
+     (e.g. ares_parse_*_reply) are tested directly.
+  
+   - There are few tests of library-internal functions that are not
+     normally visible to API users (in ares-test-internal.cc).
+  
+   - A couple of the tests use a helper method of the test fixture to
+     inject memory allocation failures, using the earlier change to the
+     library to allow override of malloc/realloc/free.
+  
+   - There is also an entrypoint to allow Clang's libfuzzer to drive
+     the packet parsing code in ares_parse_*_reply, together with a
+     standalone wrapper for it (./aresfuzz) to allow use of afl-fuzz
+     for further fuzz testing.
+
+- test: Add local copy of GoogleMock/GoogleTest 1.7.0
+  
+  Don't check in gtest/m4 files, as they are unused and interfere
+  with the top-level configure process.
+
+- doc: Show build badges in README.md
+  
+  Note that these URLs will need to be updated if/when the test branch
+  gets pulled into the master repo/branch.
+
+- doc: Convert README to README.md
+  
+  Gives better display on GitHub
+
+- doc: Update in preparation for next release
+  
+  Assume 1.11.0 is next (as there are various API additions).
+  Also add myself to AUTHORS.
+
+- build: Allow header compilation by Windows C++ compiler
+
+- build: Expose whether symbol hiding is on
+  
+  Adding the CARES_SYMBOL_HIDING definition allows the test suite to
+  detect whether internal symbols are available or not.
+
+- build: Add autoconf macros for C++11 code using pthreads
+  
+  Pull in testing macros from the GNU autoconf archive to allow
+  configure scripts to test for and setup use of a C++11 compiler
+  (AX_CXX_COMPILE_STDCXX_11) and the pthreads library (AX_PTHREAD).
+  
+  Note that these macros are not used by the main library autoconf,
+  just by the tests (which share the same m4/ directory).
+
+- build: Add a code coverage option
+  
+  Configure with:
+    ./configure --enable-code-coverage
+  Show coverage output with:
+    make code-coverage-capture
+  
+  Built on m4/ax_code_coverage.m4 from the GNU autoconf archive
+  to provide the macros to check for presence of gcov + lcov;
+  upstream macro modified to:
+   - Remove use of $(AM_DEFAULT_VERBOSITY) , as earlier versions of
+     autoconf (such as the one used by default on Travis) do not have this.
+   - Rather than automatically defining CODE_COVERAGE_RULES to be a set
+     of makefile rules that use ifeq/endif (which is GNU make-specific),
+     instead only define CODE_COVERAGE_RULES if coverages is turned on,
+     and in that case don't use conditionals in the makefile.
+
+- api: Add entrypoints to allow use of per-server ports
+  
+  Add user-visible entrypoints ares_{get,set}_servers_ports(3), which
+  take struct ares_addr_port_node rather than struct ares_addr_node.
+  This structure includes a UDP and TCP port number; if this is set
+  to zero, the channel-wide port values are used as before.
+  
+  Similarly, add a new ares_set_servers_ports_csv(3) entrypoint, which
+  is analogous to ares_set_servers(3) except it doesn't ignore any
+  specified port information; instead, any per-server specified port
+  is used as both the UDP and TCP port for that server.
+  
+  The internal struct ares_addr is extended to hold the UDP/TCP ports,
+  stored in network order, with the convention that a value of zero
+  indicates that the channel-wide UDP/TCP port should be used.
+  
+  For the internal implementation of ares_dup(3), shift to use the
+  _ports() version of the get/set functions, so port information is
+  transferred correctly to the new channel.
+  
+  Update manpages, and add missing ares_set_servers_csv to the lists
+  while we're at it
+
+- api: Add ares_set_sortlist(3) entrypoint
+  
+  Allow explicit configuration of the channel's sortlist, by
+  specifying a string in the same format as the equivalent
+  /etc/resolv.conf option.
+  
+  This allows library users to perform the same configuration
+  that is available via /etc/resolv.conf, but without needing
+  to change that file.
+
+- api: Allow injection of user-specified malloc/free functions
+  
+  Add a new ares_library_init_mem() initialization function for the
+  library which allows the library user to specify their own malloc,
+  realloc & free equivalents for use library-wide.
+  
+  Store these function pointers in library-wide global variables,
+  defaulting to libc's malloc(), realloc() and free().
+  
+  Change all calls to malloc, realloc and free to use the function pointer
+  instead.  Also ensure that ares_strdup() is always available
+  (even if the local environment includes strdup(3)), and change the
+  library code to always use it.
+  
+  Convert calls to calloc() to use ares_malloc() + memset
+
+- api: Add option to expose some internal functions
+  
+  Purely for testing, add --enable-expose-statics option to configure
+  which converts some static internal functions to be externally visible.
+
+- api: Expose the ares_library_initialized() function
+
+- ahost: Allow repeated -s <domain> options
+  
+  This also removes a potential leak where later -s options would
+  replace earlier ones without freeing the relevant string.
+
+- Mark unhittable lines
+  
+  Add comments for the benefit of the lcov tool, marking
+  lines that cannot be hit.  Typically these are fall-back
+  protection arms that are already covered by earlier checks,
+  and so it's not worth taking out the unhittable code (in case
+  someone changes the code between the two places in future).
+
+- ares_set_servers_csv.3: make return type match code
+
+- bitncmp: update comment to match code behaviour
+
+- ares_striendstr: fix so non-NULL return can happen
+  
+  This looks to have been broken since it was first introduced in 2005 in
+  commit aba0b775ea30 ("Added ares_getnameinfo which mimics the
+  getnameinfo API")
+
+- config_sortlist: free any existing sortlist on (re)alloc failure
+  
+  If we get an allocation failure on 2nd or later entry in the sortlist, the
+  code would return ENOMEM but still leave the initial entries allocated.
+  Ensure that *sortlist is set to NULL whenever ENOMEM is returned.
+
+- ares_dup: clear new channel on failure
+  
+  If the attempt to transfer IPv6 servers from the old to the new channel
+  fails, the previous code would still return a channel to the user even though
+  an error return code was generated.  This makes it likely that users would
+  leak the channel, so explicitly clear the channel in this case.
+
+- ares_init_options: don't lose init failure
+  
+  If (say) init_by_options() fails, the subsequent call to
+  init_by_defaults() was overwriting the return code with
+  success.  Still call init_by_defaults() regardless, but track
+  its return value separately
+
+- ares_gethostbyname: don't leak valid-but-empty hostent
+  
+  If an AF_UNSPEC query gets a valid response to its AAAA query,
+  but which has no IPv6 addresses in it, then the code chains on to
+  a A record query.  However, the hostent from the AAAA response
+  was being leaked along the way (because it gets replaced before
+  the follow-on end_hquery() invocation).
+
+- ares_parse_txt_reply: propagate errors from per-substring loop
+  
+  If we get an allocation failure when processing a particular substring in a
+  TXT record, that failure is silently lost; fix that by propagating errors from
+  the inner loop to the outer loop.
+
+- process_answer: fix things up correctly when removing EDNS option
+  
+  When a server rejects an EDNS-equipped request, we retry without
+  the EDNS option.  However, in TCP mode, the 2-byte length prefix was
+  being calculated wrong -- it was built from the answer length rather than
+  the length of the original request.
+  
+  Also, it is theoretically possible that the call to realloc() might change
+  the data pointed to; to allow for this, qbuf also needs updating.
+  
+  (Both these fixes were actually included in a patchset sent on the mailing
+  list in Oct 2012, but were included with other functional changes that
+  didn't get merged:
+  http://c-ares.haxx.se/mail/c-ares-archive-2012-10/0004.shtml)
+
+- ares__read_line: clear buf pointer on realloc failure
+
+- ares_expand_name: check for valid bits in label length
+  
+  The top two bits of the label length indicate whether this is a
+  label length (00) or an index to a name elsewhere in the message
+  (11).  RFC1035 4.1.4 says that the other possible values for the
+  top two bits (01, 10) are reserved for future use.
+
+Daniel Stenberg (23 Jan 2016)
+- [Gregor Jasny brought this change]
+
+  Fix typos detected by lintian
+  
+  Closes #32
+
+- [Gregor Jasny brought this change]
+
+  Distribute all man pages
+
+- README.cares: s/I/Daniel
+  
+  ... and add a pointer to an existing version of the original area 1.1.1
+  package.a
+
+- read_tcp_data: don't try to use NULL pointer after malloc failure
+  
+  CID 56884, pointed out by Coverity. We really should make this function
+  return an error code so that a malloc() failure can return back a major
+  failure.
+
+- configure_socket: explicitly ignore return code
+  
+  CID 56889 in Coverity pointed out the return code from setsocknonblock()
+  is ignored, and this added typecast to (void) makes it explicit.
+
+- ahost: check the select() return code
+  
+  Fixes CID 137189, pointed out by Coverity
+
+David Drysdale (18 Jan 2016)
+- Fix buildconf on platforms using glibtoolize
+  
+  Commit c49a87eea538 changed buildconf to only check for
+  libtoolize, but missed a line
+
+- Don't exit loop early leaving uninitialized entries
+  
+  Update for commit affc63cba875d.
+  
+  The original patch from Gregor Jasny did not have the break
+  statement; I incorrectly added it to prevent continuing the loop.
+  However, the later entries in the array would then be left
+  uninitialized, causing problems for later cleanup.
+  
+  So fix to match Gregor's original patch, with apologies.
+
+Daniel Stenberg (18 Jan 2016)
+- buildconf: remove check for libtool, it only requires libtoolize
+
+David Drysdale (17 Jan 2016)
+- [Gregor Jasny brought this change]
+
+  Use libresolv to initialize cares on iPhone targets
+  
+  On iPhone targets like iOS, watchOS or tvOS the file
+  /etc/resolv.conf cannot be used to configure cares.
+  
+  Instead the resolver library is queried for configuration
+  values.
+  
+  CC: Yury Kirpichev <ykirpichev@yandex-team.ru>
+
+Daniel Stenberg (17 Jan 2016)
+- README: updated to new repo URL
+
+David Drysdale (14 Jan 2016)
+- [Lei Shi brought this change]
+
+  Fixing slow DNS lookup issue
+  
+  This patch is fixing the dns lookup issue due to dummy dns information
+  of a disconnected adapter(in my case is a bluetooth adapter). I changed
+  the dns lookup policy to try GetNetworkParams first because the
+  GetNetworkParams provides the most reliable dns information (lots of
+  checks were done by system). I also filter out inoperable adapter in
+  DNS_AdaptersAddresses in case GetNetworkParams fail.
+
+- Merge pull request #30 from p-push/vs-2015
+  
+  Support Visual Studio 2015
+
+Oleg Pudeyev (3 Jan 2016)
+- [Gisle Vanem brought this change]
+
+  Support Visual Studio 2015
+
+David Drysdale (11 Nov 2015)
+- [Andrew Andkjar brought this change]
+
+  added another version case to Makefile.msvc
+  
+  nmake version 11.00.61030.0 resolves to CC_VERS_NUM = 110
+
+- Merge pull request #26 from bitbouncer/vs-2013
+  
+  added define for visual studio 2013
+
+svante karlsson (25 Jun 2015)
+- added define for visual studio 2013
+
+Jakub Hrozek (6 Nov 2014)
+- ares__read_line: free buf on realloc failure
+
+- Destroy options if ares_save_options fails
+  
+  It's possible that, if ares_save_options failed, the opts structure
+  would contain some allocated memory. Calling ares_destroy_options in
+  this case is safe, because ares_save_options zeroes out the memory
+  initially.
+
+- [David Drysdale brought this change]
+
+  Continue loop if space for hostname not large enough
+  
+  When attempting to build a search domain from the local hostname
+  (used as a fallback when no other methods have given a search
+  domain), the code doubles the buffer size on each loop iteration.
+  
+  However, the loop previously had a WHILE_FALSE terminator so the continue
+  statement exited the loop rather than going round again.
+
+Daniel Stenberg (30 Oct 2014)
+- ares_getnameinfo.3: there is no ares_getaddrinfo
+
+David Drysdale (30 Sep 2014)
+- [Gregor Jasny brought this change]
+
+  Prevent tmpbuf from overrunning
+  
+  Fix Coverity error CID 56886.
+  
+  Signed-off-by: Gregor Jasny <gjasny@googlemail.com>
+
+- [Gregor Jasny brought this change]
+
+  Re-start loop if select fails
+  
+  Fix Coverity error CID 56882
+  
+  Signed-off-by: Gregor Jasny <gjasny@googlemail.com>
+
+- [Gregor Jasny brought this change]
+
+  Free temporary variable in error path
+  
+  Fix Coverity CID 56890
+  
+  Signed-off-by: Gregor Jasny <gjasny@googlemail.com>
+
+- [Gregor Jasny brought this change]
+
+  Fix integer shift overflow if both tcp_socket and udp_socket are set
+  
+  The problem occurs if at the start of the loop the sockindex is at the
+  last valid ARES_GETSOCK_MAXNUM position. If then both udp_socket and
+  tcp_socket are valid, sockindex gets incremented for UDP first and
+  points one entry behind the array for the tcp block.
+  So the fix is to check after every increment of sockindex if it is still
+  valid.
+  
+  Fix Coverity error CID 56878
+  
+  Signed-off-by: Gregor Jasny <gjasny@googlemail.com>
+
+- [Gregor Jasny brought this change]
+
+  Null check before dereference
+  
+  Fix Coverity error CID 56880
+  
+  Signed-off-by: Gregor Jasny <gjasny@googlemail.com>
+
+Jakub Hrozek (28 Jul 2014)
+- [Gisle Vanem brought this change]
+
+  Comment in ares_ipv6.h
+
+David Drysdale (25 Jul 2014)
+- CONTRIBUTING: add file to indicate mailing list is preferred
+
+- Add -t u option to ahost
+  
+  Add an option to allow specification of the AF_UNSPEC
+  address family.
+
+Jakub Hrozek (24 Jul 2014)
+- host_callback: Fall back to AF_INET on searching with AF_UNSPEC
+  
+  Previously, when an ares_gethostbyname() searched with AF_UNSPEC and the
+  first AF_INET6 call only returned CNAMEs, the host_callback never
+  retried AF_INET.
+  
+  This patch makes sure than on ARES_SUCCESS, the result of AF_INET6 is
+  taken as authoritative only if the result contains some addresses.
+
+- [David Drysdale brought this change]
+
+  Move memset call below platform-specific declarations
+  
+  A GitHub commenter [1] says that my recent change to ahost.c has
+  problems compiling on Windows + C89 platforms.
+  
+  [1]  https://github.com/bagder/c-ares/commit/ee22246507c9#commitcomment-6587616
+
+- [David Drysdale brought this change]
+
+  Update ahost man page to describe -s option.
+  
+  Commit ee22246507c9 added the -s <domain> option to the
+  ahost command, but neglected to update the man page to
+  describe it.
+  
+  Also fix typo in description of -t option.
+
+- ares_parse_soa_reply: Do not leak rr_name on allocation failure
+  
+  If ares_malloc_data failed, already allocated rr_name would go out of
+  scope.
+
+- [David Drysdale brought this change]
+
+  Don't override explicitly specified search domains
+  
+  Only set search domains from /etc/resolv.conf if there isn't a value
+  already present in the channel.
+
+- [David Drysdale brought this change]
+
+  Allow specification of search domain in ahost
+  
+  Add the "-s domain" command line option to override the search
+  domains.
+
+Daniel Stenberg (12 May 2014)
+- Revert "ares_parse_aaaa_reply: fix leak when reply contains 1 alias and no address"
+  
+  This reverts commit 440110b303fdbfadb3ad53d30eeb98cc45d70451.
+
+- [Frederic Germain brought this change]
+
+  ares_parse_aaaa_reply: fix leak when reply contains 1 alias and no address
+
+- [Doug Kwan brought this change]
+
+  ares_build.h: fix building on 64-bit powerpc
+  
+  There are two issues.
+  
+  1. gcc actually does not use __ppc__ and __ppc64__ but __PPC__ and
+  __PPC64__.  The tests of __ILP32__ and __LP64__ are sufficient for gcc.
+  
+  2. clang defines __GNU__ and defines both __ppc64__ and __ppc__ when
+  targeting ppc64.  This makes CARES_SIZEOF_LONG to be 4 on a ppc64 system
+  when building with clang.
+  
+  My patch is two change the order of the checks so that we check the
+  64-bit case first.
+
+- refresh: updated now with automake 1.14
+
+- [David Drysdale brought this change]
+
+  single_domain: Invalid memory access for empty string input
+  
+  We noticed a small buglet in ares_search() when it gets an empty string
+  as input -- the single_domain() utility function in ares_search.c
+  accesses invalid memory (before the start of the string).
+
+Guenter Knauf (31 Aug 2013)
+- Fixed warning 'type specifier missing'.
+
+Daniel Stenberg (30 Aug 2013)
+- [Tor Arntsen brought this change]
+
+  ares_rules.h: CARES_SIZEOF_LONG doesn't exist anymore, don't test for it
+  
+  It was removed in f19387dd72432
+
+- nowarn: use <limits.h> instead of configure for size of long
+  
+  This makes the header file much more multi-arch friendly and can be used
+  as-is with both 32 bit and 64 bit builds.
+
+- timeoffset: made static and private
+  
+  ares__timeoffset() was only used once within this single source file
+
+- timeadd: make static
+  
+  ares__timeadd() was only ever used from within the same source
+
+Yang Tse (18 Jul 2013)
+- xc-am-iface.m4: comments refinement
+
+- configure: fix 'subdir-objects' distclean related issue
+  
+  See XC_AMEND_DISTCLEAN comments for details.
+
+- configure: automake 1.14 compatibility tweak (use XC_AUTOMAKE)
+
+- xc-am-iface.m4: provide XC_AUTOMAKE macro
+
+Daniel Stenberg (12 May 2013)
+- gitignore: ignore all ares_*pdf but also CHANGES.dist
+
+- bump: start working towards 1.10.1
+
 Version 1.10.0 (12 May 2013)
 
 Daniel Stenberg (12 May 2013)
@@ -2945,427 +3844,3 @@ Yang Tse (15 May 2008)
 Daniel Stenberg (13 May 2008)
 - - Introducing millisecond resolution support for the timeout option. See
     ares_init_options()'s ARES_OPT_TIMEOUTMS.
-
-Yang Tse (13 May 2008)
-- also ignore this
-
-- also ignore this
-
-- ignore this compilation time generated files
-
-- don't keep in CVS this compilation time generated file
-
-- add MSVC6 project for acountry sample program
-
-- update MSVC6 projects to use the multithreaded DLL runtime library
-
-- add MSVC6 project for acountry sample program
-
-- skip libtool C++ preprocessor compiler and linker checks
-
-- ignore libcares.pc
-
-- configure script will now define HAVE_CLOCK_GETTIME_MONOTONIC symbol only
-  when function clock_gettime() is available and the monotonic timer is
-  also available. Otherwise, in some cases, librt or libposix4 could be used
-  for linking even when finally not using the clock_gettime() function due
-  to lack of the monotonic clock.
-
-- fix syntax error: missing semicolon
-
-- Add library checking for clock_gettime() support
-
-- Use monotonic time source if available.
-
-Daniel Stenberg (9 May 2008)
-- Removed AC_PROG_CC_STDC again. It enforces C99/gnu99 stdandard which is too
-  liberal for me. Also, autoconf 2.61 and earlier doesn't work with icc 10.1
-  for this macro. (2.62 confirmed to work though). See discusson on the mailing
-  list starting here:
-  
-  http://daniel.haxx.se/projects/c-ares/mail/c-ares-archive-2008-05/0001.shtml
-
-- include strings.h (if available) for the strcasecmp() proto
-
-- check for strings.h in configure and use it for the strcasecmp() proto
-
-- adjusted to work with the updated configure.ac
-
-- - Sebastian made c-ares able to return all PTR-records when doing reverse
-    lookups. It is not common practice to have multiple PTR-Records for a single
-    IP, but its perfectly legal and some sites have those.
-
-- - Doug Goldstein provided a configure patch: updates autoconf 2.13 usage to
-    autoconf 2.57 usage (which is the version you have specified as the minimum
-    version). It's a minor change but it does clean up some warnings with newer
-    autoconf (specifically 2.62).
-
-Yang Tse (5 May 2008)
-- Improved parsing of resolver configuration files
-
-- make previous compiler warning fix more portable
-
-- fix compiler warning: indirection to slightly different base types
-
-- fix compiler warning: local variable may be used without having been initialized
-
-- fix compiler warning: unreferenced formal parameter
-
-- fix compiler warning: assignment within conditional expression
-
-Daniel Stenberg (4 Apr 2008)
-- - Alexey Simak fixed the VC dsp file by adding the missing source file
-    ares_expand_string.c
-
-- Alexey Simak made adig support NAPTR records
-
-- Eino Tuominen improved the code when a file is used to seed the randomizer
-
-Yang Tse (29 Feb 2008)
-- Force AIX xlc to fail and not generate object code if the source code has
-  compiled with errors. This behaviour is needed for autoconf macros which
-  rely on the ability to compile with or without errors, and is safer than
-  xlc's default of failing only upon severe errors.
-
-Gunter Knauf (27 Feb 2008)
-- added get_ver.awk since c-ares is a standalone project, and should therefore also compile when cURL is absent.
-
-- a couple of small fixes to the makefile:
-  fixed comments; fixed INSTDIR define, simplified rules;
-  changed to use get_ver.awk in current dir rather than the curl one.
-
-- fixed linker def file for tools when compiled with gcc/nlmconv.
-
-- added some files which were missing in release tarballs.
-
-- updated copyright for new year.
-
-Gisle Vanem (2 Jan 2008)
-- Added '-d' option for Watt-32 debugging.
-
-Yang Tse (18 Dec 2007)
-- MSVC 9.0 (VS2008) does not support Windows build targets prior to WinXP,
-  and makes wrong asumptions of build target when it isn't specified. So,
-  if no build target has been defined we will target WinXP when building
-  with MSVC 9.0 (VS2008).
-
-Daniel Stenberg (11 Dec 2007)
-- build acountry too
-
-Gisle Vanem (11 Dec 2007)
-- Added acountry.c.
-
-- Added build of acountry.nlm.
-
-- Added build of acountry.exe.
-
-- Build acountry.exe. Added 'socklen_t' define.
-
-- Another sample application that returns country-code and
-  name from an IPv4-address or host-name. Using the service of
-  countries.nerd.dk.
-
-Daniel Stenberg (10 Dec 2007)
-- grrr, the previous commit was meant to properly make sure that we don't
-  link any executables when doing debug builds since they kind of assume
-  symbols provided by libcurl, but it also wrongly included acountry.c
-
-- when building
-
-- build ahost and adig by default but don't install them
-
-Gisle Vanem (10 Dec 2007)
-- Fix for targets that do have 'struct in6_addr', but which doesn't
-  define 's6_addr' as a macro.
-
-Yang Tse (3 Dec 2007)
-- Fix three issues previous cleanup introduces.
-
-Daniel Stenberg (3 Dec 2007)
--  Erik Kline cleaned up ares_gethostbyaddr.c:next_lookup() somewhat
-
-- Brad Spencer fixed the configure script to assume that there's no
-  /dev/urandom when built cross-compiled as then the script cannot check for
-  it.
-
-- the gethostbyname fix applied here as well
-
-- fix next_lookup() to continue searching even if c-ares failed to load the
-  /etc/hosts file, pointed out by Erik Kline:
-  http://daniel.haxx.se/projects/c-ares/mail/c-ares-archive-2007-11/0027.shtml
-
-- Remove the check for libdl since that isn't actually used and it causes
-  warnings. Pointed out by Robin Cornelius.
-
-- pkgconfig fix by Andreas Schuldei
-
-- spellfix
-
-- and we start on 1.5.2!
-
-Version 1.5.1 (21 Nov 2007)
-
-Daniel Stenberg (21 Nov 2007)
-- change
-
-- oops
-
-- start working on 1.5.1 now
-
-Version 1.5.0 (21 Nov 2007)
-
-Daniel Stenberg (21 Nov 2007)
-- this is what 1.5.0 is
-
-- fill in missing copyrights
-
-Gunter Knauf (18 Nov 2007)
-- removed now obsolete defines;
-  updated external library versions to latest.
-
-Steinar H. Gunderson (16 Nov 2007)
-- Fix a double free.
-
-Yang Tse (15 Nov 2007)
-- Needed now that in6_addr is referenced in ares.h
-
-Steinar H. Gunderson (15 Nov 2007)
-- When looking up in DNS and then in the hosts file, return the error code from DNS if both fail, instead of returning the error code from the hosts file, as today. Patch from the Google tree.
-
-- Return TTL data from ares_parse_{a,aaaa}_reply, if the user is so inclined. Patch from the Google tree.
-
-Yang Tse (8 Nov 2007)
-- Define WIN32 when build target is Win32 API.
-  This also defines it for WinCE even though it is a subset of WIN32.
-
-- The only libraries actually needed for sample programs adig and
-  ahost are ws2_32.lib and advapi32.lib
-
-- MSVC versions prior to VS2005 do not complain about portable C functions
-
-- Windows build targets have socklen_t definition in ws2tcpip.h but some
-  versions of ws2tcpip.h do not have the definition. It seems that when
-  the socklen_t definition is missing from ws2tcpip.h the definition for
-  INET_ADDRSTRLEN is also missing, and that when one definition is present
-  the other one also is available.
-
-Gunter Knauf (22 Oct 2007)
-- removed dependency on gettimeofday() since we use only 1 sec resolution here.
-
-Yang Tse (20 Oct 2007)
-- Fix compiler warning: conversion from "int" to "unsigned short" may lose significant bits
-
-- Fix message shown when detecting icc version
-
-- Avoid shadowing a global declaration
-
-- Renamed a variable to avoid shadowing a global declaration
-
-- Renamed internal function to avoid a variable shadowing it
-
-- Fix compiler warning: feupdateenv is not implemented and will always fail.
-  Specifically for linux x86-64 with Intel's icc.
-
-- Sync PLATFORM_AIX_V3 detection and CURL_CC_DEBUG_OPTS()
-  icc warning level with libcurl's
-
-- Fix compiler warning: conversion from "int" to "unsigned char"
-  may lose significant bits
-
-- actually sync with lib/setup_once.h
-
-- sync with lib/setup_once.h
-
-Steinar H. Gunderson (16 Oct 2007)
-- Fix a bug where fallback from AF_INET6 to AF_INET would not work properly together with relative search; if you had a search path of .a.com and .b.com, and foo.a.com would return ARES_ENODATA and foo.b.com would return ARES_ENOTFOUND, the lookup would not properly retry with AF_INET as it forgot the first ARES_ENODATA.
-
-Dan Fandrich (15 Oct 2007)
-- Mention first version with CURLOPT_COPYPOSTFIELDS.
-  Don't confuse NUL with NULL.
-
-Gisle Vanem (8 Oct 2007)
-- Added needed 'HAVE_*' defines.
-
-- 'FD_CLOXEC' is meaningless on MSDOS/Watt-32.
-
-Steinar H. Gunderson (4 Oct 2007)
-- Removed a piece of redundant code (process_answer already takes care of it).
-
-- Another timeout fix in ares_getnameinfo().
-
-- Send the timeout count in ares_getnameinfo().
-
-- Moved the NULL check for channel upwards in ares_destroy().
-
-- Clarified the comment over ares_cancel.
-
-Yang Tse (2 Oct 2007)
-- Avoid a segfault when generating a DNS "Transaction ID" in internal
-  function init_id_key() under low memory conditions.
-
-- Add ares_llist.c and ares_llist.h to MSCV project file.
-
-Daniel Stenberg (2 Oct 2007)
-- Fixed the problem where next_lookup would use 'status' uninitialized. Now
-  it gets passed the initial value as an argument.
-
-Yang Tse (2 Oct 2007)
-- Avoid inline C99ism, and move c-ares routines for managing doubly-linked lists.
-
-Daniel Stenberg (1 Oct 2007)
-- ares_strerror() segfaulted if the input error number was out of the currently
-  supported range.
-
-- Prevent ares_strerror() from segfaulting if an invalid error code is passed
-  in as argument!
-
-Yang Tse (30 Sep 2007)
-- Fix compiler warning
-
-- check availability of <netinet/tcp.h>
-
-- improve portability, defining MAXDNAME and MAXCDNAME
-
-Steinar H. Gunderson (30 Sep 2007)
-- Fix a memory leak that I recently inadvertedly introduced.
-
-- Use ISDIGIT instead of isdigit; fixes a gcc warning.
-
-- Port the TCP socket fix made in ares_fds() to ares_getsock() as well.
-
-- Previously, processing a large batch of timeouts was O(n^2) in the number of
-  outstanding queries, and processing a DNS response packet was O(n) in the
-  number of outstanding queries. To speed things up in Google, we added a few circular,
-  doubly-linked lists of queries that are hash-bucketed based on
-  the attributes we care about, so most important operations are now O(1).
-  
-  It might be that the number of buckets are higher than most people would need,
-  but on a quick calculation it should only be 100kB or so even on a 64-bit
-  system, so I've let it stay as-is.
-
-Gisle Vanem (29 Sep 2007)
-- We should standarise on C comments.
-
-- Fix compiler warning in setsockopt().
-
-Steinar H. Gunderson (29 Sep 2007)
-- TCP queries can time out too, not just UDP queries. (Patch from the Google tree.)
-
-- Read and process as many packets as possible in read_udp_packets, to avoid having to run the entire event loop once per packet. (Patch from the Google tree.)
-
-- There are two different places in write_tcp_data() that advance the send_queue; however, they are slightly different and only the first one properly uses a while loop. Consolidate both into a single function that DTTR. (Patch from the Google tree.)
-
-- Reject names that are longer than 255 characters, to avoid problems with strict or buggy DNS server implementations. (Patch from the Google tree)
-
-- In ares_mkquery, make sure we set buflen and buf to reasonable values if there's an error. (Patch from the Google tree)
-
-- Be stricter about what's a valid IP address in fake_hostent. (Patch from the Google tree.)
-
-- Handle the root of the DNS tree correctly in ares_expand_name.
-
-Daniel Stenberg (28 Sep 2007)
-- today's modifications by Steinar and me
-
-- Bumped version to 1.5.0 for next release and soname bumped to 2 due to ABI
-  and API changes in the progress callback (and possibly more coming up from
-  Steinar)
-
-Steinar H. Gunderson (28 Sep 2007)
-- Unrevert previous 'missing' hunks. They were missing since the patch is still in for review :-)
-
-- Yet more missing hunks... Nggh.
-
-- Always register for TCP events even if there are no outstanding queries, as the other side could always close the connection, which is a valid event which should be responded to.
-
-- Forgot to include a few hunks from ares_process.c earlier. Fixing now.
-
-- Support a few more socket options, and refactor the option setting a bit. (Patch from the Google tree.)
-
-- Make the query callbacks return the number of timeouts that happened during the execution of a query, and update documentation accordingly. (Patch from the Google tree.)
-
-- Three fixes in one commit (sorry): a) Take care of the tcpbuf if it ends while queued for transmission, note broken servers and close them in the main loop, and store TCP socket generation number in order not to send the same query twice over the same socket.
-
-- Don't skip a server if it's the only one. (Bugfix from the Google tree.)
-
-Daniel Stenberg (27 Sep 2007)
-- wrong, revert the previous "fix" and instead check that the fd_set pointer
-  is non-NULL before we FD_CLR
-
-- eek, fix the conditions to return on either problem instead of requiring
-  both to occur
-
-- Steinar H. Gunderson fixed: Correctly clear sockets from the fd_set on in
-  several functions (write_tcp_data, read_tcp_data, read_udp_packets) so that
-  if it fails and the socket is closed the following code doesn't try to use
-  the file descriptor.
-
-- Steinar H. Gunderson modified c-ares to now also do to DNS retries even when
-  TCP is used since there are several edge cases where it still makes sense.
-
-- Brad House provided a fix for ares_save_options(): Apparently I overlooked
-  something with the ares_save_options() where it would try to do a malloc(0)
-  when no options of that type needed to be saved.  On most platforms, this was
-  fine because malloc(0) doesn't actually return NULL, but on AIX it does, so
-  ares_save_options would return ARES_ENOMEM.
-
-- added initial pkg-config file (attempt)
-
-Gunter Knauf (20 Jul 2007)
-- added curl include for debug builds.
-
-Daniel Stenberg (14 Jul 2007)
-- added another SEE ALSO
-
-- Brad House's fix to hish a win32 compiler warning
-
-- added Vlad's entire description of his valgrind fix
-
-- Vlad Dinulescu fixed two outstanding valgrind reports
-
-Gunter Knauf (8 Jul 2007)
-- added better CodeWarrior detection.
-
-- removed some obsolete include paths and defines.
-
-- add test for gettimeofday() so that HAVE_GETTIMEOFDAY gets defined.
-
-- although the check for HAVE_STRUCT_TIMEVAL solved the redefine it is incorrect; lets see if a check for HAVE_GETTIMEOFDAY also works; if gettimeofday() is present then we can assume we have the timezone struct too.
-
-- added check for sys/param.h.
-
-- trial to catch problem with Daniels cross-mingw ares builds.
-
-- added NetWare CLIB-own header to solve gcc warnings.
-
-- few minor changes to make ares compile for NetWare CLIB architecture.
-
-- changed to build for CLIB / LIBC.
-
-- sync'd with lib makefile changes: use var for awk; fixed RECV* / SEND* defines; debug var can be overwritten; added better compiler path handling.
-
-Daniel Stenberg (8 Jun 2007)
-- start working on 1.4.1
-
-Version 1.4.0 (8 Jun 2007)
-
-Daniel Stenberg (8 Jun 2007)
-- 1.4.0 preps
-
-- the revert
-
-- Revered Ashish Sharma's multiple entries patch, as it caused memory madness
-
-- minor edit since getting an ID seems pointless when failure happens
-
-- fix the bad bad bad mess this caused on name resolves returning more than
-  one name... Reported by James Bursa
-
-- Brad Spencer found and fixed three flaws in the code, found with the new
-  gcc 4.2.0 warning: -Waddress
-
-- Brad House fixed VS2005 compiler warnings due to time_t being 64bit.
-  He also made recent Microsoft compilers use _strdup() instead of strdup().
-
-- Ashish Sharma provided a patch for supporting multiple entries in the
-  /etc/hosts file. Patch edited for coding style and functionality by me
-  (Daniel).

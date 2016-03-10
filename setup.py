@@ -111,7 +111,7 @@ else:
 
 ares_configure_command = ' '.join(["(cd ", _quoted_abspath('c-ares/'),
                                    " && if [ -e ares_build.h ]; then cp ares_build.h ares_build.h.orig; fi ",
-                                   " && /bin/sh ./configure " + _m32 + "CONFIG_COMMANDS= CONFIG_FILES= ",
+                                   " && /bin/sh ./configure --disable-dependency-tracking " + _m32 + "CONFIG_COMMANDS= ",
                                    " && cp ares_config.h ares_build.h \"$OLDPWD\" ",
                                    " && mv ares_build.h.orig ares_build.h)",
                                    "> configure-output.txt"])

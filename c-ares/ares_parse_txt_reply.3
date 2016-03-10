@@ -22,13 +22,16 @@ ares_parse_txt_reply \- Parse a reply to a DNS query of type TXT
 .PP
 .B int ares_parse_txt_reply(const unsigned char* \fIabuf\fP, int \fIalen\fP,
 .B                         struct ares_txt_reply **\fItxt_out\fP);
+.PP
+.B int ares_parse_txt_reply_ext(const unsigned char* \fIabuf\fP, int \fIalen\fP,
+.B                              struct ares_txt_ext **\fItxt_out\fP);
 .fi
 .SH DESCRIPTION
 The
-.B ares_parse_txt_reply
+.BR "ares_parse_txt_reply" " (" "ares_parse_txt_reply_ext" ")"
 function parses the response to a query of type TXT into a
 linked list (one element per sub-string) of
-.I struct ares_txt_reply 
+.IR "struct ares_txt_reply" " (" "struct ares_txt_ext" ")"
 The parameters
 .I abuf
 and
@@ -55,8 +58,44 @@ struct ares_txt_reply {
 .fi
 .in
 .PP
+The structure
+.I ares_txt_ext
+contains the following fields:
+.sp
+.in +4n
+.nf
+struct ares_txt_ext {
+  struct ares_txt_ext  *next;
+  unsigned int  length;
+  unsigned char *txt;
+  unsigned char record_start;
+};
+.fi
+.in
+.PP
+The
+.I record_start
+field in
+.I struct ares_txt_ext
+is 1 if this structure is a start of a TXT record, and 0 if the structure is a
+continuation of a previous record. The linked list of the
+.I struct ares_txt_ext
+will have at least one item with
+.I record_start
+equal to 1, and may have some items with
+.I record_start
+equal to 0 between them.
+.PP
+These sequences of
+.I struct ares_txt_ext
+(starting from the item with
+.I record_start
+equal to 1, and ending right before the record start item) may be treated as
+either components of a single TXT record or as a multi-parted TXT record,
+depending on particular use case.
+.PP
 .SH RETURN VALUES
-.B ares_parse_txt_reply
+.BR "ares_parse_txt_reply" " (" "ares_parse_txt_reply_ext" ")"
 can return any of the following values:
 .TP 15
 .B ARES_SUCCESS
@@ -77,4 +116,5 @@ This function was first introduced in c-ares version 1.7.0.
 .BR ares_free_data (3)
 .SH AUTHOR
 Written by Jakub Hrozek <jhrozek@redhat.com>, on behalf of Red Hat, Inc http://www.redhat.com
-
+.PP
+Amended by Fedor Indutny <fedor@indutny.com>, on behalf of PayPal, Inc https://www.paypal.com

@@ -211,6 +211,11 @@
 /* Define to the return type of signal handlers (int or void). */
 #define RETSIGTYPE void
 
+#ifdef __cplusplus
+/* Compiling headers in C++ mode means bool is available */
+#define HAVE_BOOL_T
+#endif
+
 /* Define if ssize_t is not an available 'typedefed' type. */
 #ifndef _SSIZE_T_DEFINED
 #  if (defined(__WATCOMC__) && (__WATCOMC__ >= 1240)) || \

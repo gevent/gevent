@@ -125,6 +125,12 @@ CC_VERS_NUM = 110
 CC_VERS_NUM = 110
 !ELSEIF "$(_NMAKE_VER)" == "11.00.60315.1"
 CC_VERS_NUM = 110
+!ELSEIF "$(_NMAKE_VER)" == "11.00.61030.0"
+CC_VERS_NUM = 110
+!ELSEIF "$(_NMAKE_VER)" == "12.00.21005.1"
+CC_VERS_NUM = 120
+!ELSEIF "$(_NMAKE_VER)" == "14.00.23026.0"
+CC_VERS_NUM = 140
 !ELSE
 !  MESSAGE Unknown value for _NMAKE_VER macro: "$(_NMAKE_VER)"
 !  MESSAGE Please, report this condition on the c-ares development
