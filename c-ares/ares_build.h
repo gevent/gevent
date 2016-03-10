@@ -216,12 +216,12 @@
 /* ===================================== */
 
 #elif defined(__GNUC__)
-#  if defined(__ILP32__) || \
-      defined(__i386__) || defined(__ppc__) || defined(__arm__)
-#    define CARES_SIZEOF_LONG           4
-#  elif defined(__LP64__) || \
+#  if defined(__LP64__) || \
         defined(__x86_64__) || defined(__ppc64__)
 #    define CARES_SIZEOF_LONG           8
+#  elif defined(__ILP32__) || \
+      defined(__i386__) || defined(__ppc__) || defined(__arm__)
+#    define CARES_SIZEOF_LONG           4
 #  endif
 #  define CARES_TYPEOF_ARES_SOCKLEN_T socklen_t
 #  define CARES_SIZEOF_ARES_SOCKLEN_T 4

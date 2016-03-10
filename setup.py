@@ -111,7 +111,7 @@ else:
 
 ares_configure_command = ' '.join(["(cd ", _quoted_abspath('c-ares/'),
                                    " && if [ -e ares_build.h ]; then cp ares_build.h ares_build.h.orig; fi ",
-                                   " && /bin/sh ./configure " + _m32 + "CONFIG_COMMANDS= CONFIG_FILES= ",
+                                   " && /bin/sh ./configure --disable-dependency-tracking " + _m32 + "CONFIG_COMMANDS= ",
                                    " && cp ares_config.h ares_build.h \"$OLDPWD\" ",
                                    " && mv ares_build.h.orig ares_build.h)",
                                    "> configure-output.txt"])
@@ -215,7 +215,12 @@ def configure_ares(bext, ext):
     try:
         if os.path.exists('ares_config.h') and os.path.exists('ares_build.h'):
             return
-        rc = _system(ares_configure_command)
+        try:
+            rc = _system(ares_configure_command)
+        except:
+            with open('configure-output.txt', 'r') as t:
+                print(t.read(), file=sys.stderr)
+            raise
         if rc == 0 and sys.platform == 'darwin':
             make_universal_header('ares_build.h', 'CARES_SIZEOF_LONG')
             make_universal_header('ares_config.h', 'SIZEOF_LONG', 'SIZEOF_SIZE_T', 'SIZEOF_TIME_T')
@@ -241,6 +246,13 @@ else:
 
 if CARES_EMBED:
     ARES.sources += expand('c-ares/*.c')
+    # Strip the standalone binaries that would otherwise
+    # cause linking issues
+    for bin_c in ('acountry', 'adig', 'ahost'):
+        try:
+            ARES.sources.remove('c-ares/' + bin_c + '.c')
+        except ValueError:
+            pass
     ARES.configure = configure_ares
     if WIN:
         ARES.libraries += ['advapi32']

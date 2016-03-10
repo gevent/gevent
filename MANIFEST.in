@@ -33,6 +33,8 @@ recursive-include scripts *.sh
 prune */__pycache__
 global-exclude *.so
 global-exclude *.o
+global-exclude *.lo
+global-exclude *.la
 global-exclude config.log config.status
 prune doc/_build
 global-exclude *.pyc
