@@ -23,6 +23,7 @@ ignore-paths:
   # This file has invalid syntax for Python 3, which is how
   # landscape.io runs things
   - gevent/_util_py2.py
+  - greentest/getaddrinfo_module.py
 ignore-patterns:
   # disabled code
   - greentest/xtest_.*py
