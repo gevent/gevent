@@ -294,7 +294,8 @@ class BadHELOServerTests(unittest.TestCase):
 
 @unittest.skipUnless(threading, 'Threading required for this test.')
 class TooLongLineTests(unittest.TestCase):
-    respdata = '250 OK' + ('.' * smtplib._MAXLINE * 2) + '\n'
+    # gevent: run on 2.7.8
+    respdata = '250 OK' + ('.' * getattr(smtplib, '_MAXLINE', 1) * 2) + '\n'
 
     def setUp(self):
         self.old_stdout = sys.stdout

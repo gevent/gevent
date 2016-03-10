@@ -991,7 +991,7 @@ class ContextTests(unittest.TestCase):
         ctx = ssl.SSLContext(ssl.PROTOCOL_TLSv1)
         ctx.set_default_verify_paths()
 
-    @unittest.skipUnless(ssl.HAS_ECDH, "ECDH disabled on this OpenSSL build")
+    @unittest.skipUnless(ssl.HAS_ECDH, "ECDH disabled on this OpenSSL build") # gevent run on 2.7.8
     def test_set_ecdh_curve(self):
         ctx = ssl.SSLContext(ssl.PROTOCOL_TLSv1)
         ctx.set_ecdh_curve("prime256v1")

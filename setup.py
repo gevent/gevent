@@ -35,6 +35,8 @@ if WIN:
     if not os.environ.get('PYEXE'):
         os.environ['PYEXE'] = os.environ['PYTHON_EXE']
 
+if sys.version_info[:2] < (2, 7):
+    raise Exception("Please install gevent 1.1 for Python 2.6")
 
 import distutils
 import distutils.sysconfig  # to get CFLAGS to pass into c-ares configure script
@@ -496,7 +498,6 @@ def run_setup(ext_modules, run_make):
         test_suite="greentest.testrunner",
         classifiers=[
             "License :: OSI Approved :: MIT License",
-            "Programming Language :: Python :: 2.6",
             "Programming Language :: Python :: 2.7",
             "Programming Language :: Python :: 3.3",
             "Programming Language :: Python :: 3.4",
