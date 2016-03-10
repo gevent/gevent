@@ -4,18 +4,26 @@
 # can either give multiple identifier separated by comma (,) or put this option
 # multiple time (only on the command line, not in the configuration file where
 # it should appear only once).
-#disable=I0011,W0511,W0312,C0103,C0301,C0111,C0324,C0321,R0903,R0201,W0613,W0232,W0142,R0922,C0330
+# NOTE: comments must go between lines, not at the end; at the end of the line
+# disables that directive and all following!
 disable=wrong-import-position,
 	wrong-import-order,
 	missing-docstring,
 	ungrouped-imports,
-	invalid-name, # We get lots of these, especially in scripts. should fix many of them
-	protected-access, # We have many cases of this; legit ones need to be examinid and commented, then this removed
-	no-self-use, # common in superclasses with extension points
-	too-few-public-methods, # Exception and marker classes get tagged with this
-	exec-used, # should tag individual instances with this, there are some but not too many
-	global-statement, # should tag individual instances
-	multiple-statements, # "from gevent import monkey; monkey.patch_all()"
+	# We get lots of these, especially in scripts. should fix many of them
+	invalid-name,
+	# We have many cases of this; legit ones need to be examinid and commented, then this removed
+	protected-access,
+	# common in superclasses with extension points
+	no-self-use,
+	# Exception and marker classes get tagged with this
+	too-few-public-methods,
+	# should tag individual instances with this, there are some but not too many
+	exec-used,
+	# should tag individual instances
+	global-statement,
+	# "from gevent import monkey; monkey.patch_all()"
+	multiple-statements,
 
 [FORMAT]
 # duplicated from setup.cfg
