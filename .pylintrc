@@ -24,6 +24,10 @@ disable=wrong-import-position,
 	global-statement,
 	# "from gevent import monkey; monkey.patch_all()"
 	multiple-statements,
+	# yes, we know we're doing this. don't replace one warning with another
+	locally-disabled,
+	# most of these are deferred imports
+	cyclic-import,
 
 [FORMAT]
 # duplicated from setup.cfg

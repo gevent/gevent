@@ -2,6 +2,9 @@
 """
 Python 2 socket module.
 """
+# Our import magic sadly makes this warning useless
+# pylint: disable=undefined-variable
+
 import time
 from gevent import _socketcommon
 from gevent.hub import PYPY
@@ -510,6 +513,8 @@ if hasattr(__socket__, 'ssl'):
     def ssl(sock, keyfile=None, certfile=None):
         # deprecated in 2.7.9 but still present;
         # sometimes backported by distros. See ssl.py
+        # Note that we import gevent.ssl, not _ssl2, to get the correct
+        # version.
         from gevent import ssl as _sslmod
         # wrap_socket is 2.7.9/backport, sslwrap_simple is older. They take
         # the same arguments.

@@ -31,3 +31,9 @@ ignore-patterns:
 
 pyroma:
   run: true
+
+pyflakes:
+  disable:
+    # F821: undefined name; caught better by pylint, where it can be
+    # controlled for the whole file/per-line
+    - F821

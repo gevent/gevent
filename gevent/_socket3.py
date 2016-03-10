@@ -2,6 +2,9 @@
 """
 Python 3 socket module.
 """
+# Our import magic sadly makes this warning useless
+# pylint: disable=undefined-variable
+
 import io
 import os
 import sys
