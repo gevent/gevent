@@ -49,8 +49,7 @@ test_patched_threading.*
 def make_re(tests):
     tests = [x.strip().replace(r'\.', r'\\.').replace('*', '.*?')
              for x in tests.split('\n') if x.strip()]
-    tests = re.compile('^%s$' % '|'.join(tests))
-    return tests
+    return re.compile('^%s$' % '|'.join(tests))
 
 
 no_switch_tests = make_re(no_switch_tests)
@@ -68,6 +67,9 @@ def get_switch_expected(fullname):
     >>> get_switch_expected("test_patched_httplib.BasicTest.test_bad_status_repr")
     False
     """
+    # certain pylint versions mistype the globals as
+    # str, not re.
+    # pylint:disable=no-member
     if ignore_switch_tests.match(fullname) is not None:
         return None
     if no_switch_tests.match(fullname) is not None:

@@ -189,6 +189,7 @@ class ThreadPool(GroupMappingMixin):
                 self._size -= 1
 
     def _worker(self):
+        # pylint:disable=too-many-branches
         need_decrease = True
         try:
             while True:
@@ -205,7 +206,7 @@ class ThreadPool(GroupMappingMixin):
                     func, args, kwargs, thread_result = task
                     try:
                         value = func(*args, **kwargs)
-                    except:
+                    except: # pylint:disable=bare-except
                         exc_info = getattr(sys, 'exc_info', None)
                         if exc_info is None:
                             return
@@ -219,7 +220,7 @@ class ThreadPool(GroupMappingMixin):
                         del func, args, kwargs, thread_result, task
                 finally:
                     if sys is None:
-                        return
+                        return # pylint:disable=lost-exception
                     task_queue.task_done()
         finally:
             if need_decrease:
@@ -230,6 +231,7 @@ class ThreadPool(GroupMappingMixin):
         .. deprecated:: 1.1a2
            Identical to :meth:`apply`; the ``expected_errors`` argument is ignored.
         """
+        # pylint:disable=unused-argument
         # Deprecated but never documented. In the past, before
         # self.apply() allowed all errors to be raised to the caller,
         # expected_errors allowed a caller to specify a set of errors

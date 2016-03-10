@@ -376,7 +376,7 @@ class SSLSocket(socket):
         # 2.7.10+
         def selected_alpn_protocol(self):
             self._checkClosed()
-            if not self._sslobj or not _ssl.HAS_ALPN:
+            if not self._sslobj or not _ssl.HAS_ALPN: # pylint:disable=no-member
                 return None
             else:
                 return self._sslobj.selected_alpn_protocol()

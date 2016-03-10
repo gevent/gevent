@@ -27,6 +27,8 @@ ignore-paths:
   - gevent/_tblib.py
   # likewise
   - greentest/six.py
+  # sadly, this one is complicated
+  - setup.py
   - greentest/getaddrinfo_module.py
 ignore-patterns:
   # disabled code
@@ -55,3 +57,5 @@ pyflakes:
     - F401
     # F811: redefined function; same story
     - F811
+    # F403: wildcard import; same story
+    - F403

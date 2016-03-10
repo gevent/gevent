@@ -14,6 +14,8 @@
 - Remove module ``gevent.coros`` which was replaced by ``gevent.lock``
   and has been deprecated since 1.0b2.
 - The ``ref`` parameter to :func:`gevent.os.fork_and_watch` was being ignored.
+- Python 3: :class:`gevent.queue.Channel` is now correctly iterable, instead of
+  raising a :exc:`TypeError`.
 
 1.1.0 (Mar 5, 2016)
 ===================

@@ -99,7 +99,7 @@ class Semaphore(object):
                         return
                     try:
                         link(self) # Must use Cython >= 0.23.4 on PyPy else this leaks memory
-                    except:
+                    except: # pylint:disable=bare-except
                         getcurrent().handle_error((link, self), *sys.exc_info())
                     if self._dirty:
                         # We mutated self._links so we need to start over

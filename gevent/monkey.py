@@ -407,12 +407,12 @@ def patch_socket(dns=True, aggressive=True):
     # However, because gevent.socket.socket.connect is a Python function, the exception raised by it causes
     # _socket object to be referenced by the frame, thus causing the next invocation of bind(source_address) to fail.
     if dns:
-        items = socket.__implements__
+        items = socket.__implements__ # pylint:disable=no-member
     else:
-        items = set(socket.__implements__) - set(socket.__dns__)
+        items = set(socket.__implements__) - set(socket.__dns__) # pylint:disable=no-member
     patch_module('socket', items=items)
     if aggressive:
-        if 'ssl' not in socket.__implements__:
+        if 'ssl' not in socket.__implements__: # pylint:disable=no-member
             remove_item(socket, 'ssl')
 
 
@@ -423,7 +423,7 @@ def patch_dns():
     by that method if requested.
     """
     from gevent import socket
-    patch_module('socket', items=socket.__dns__)
+    patch_module('socket', items=socket.__dns__) # pylint:disable=no-member
 
 
 def patch_ssl():

@@ -29,6 +29,7 @@ class _FakeTimer(object):
     active = False
 
     def start(self, *args, **kwargs):
+        # pylint:disable=unused-argument
         raise AssertionError("non-expiring timer cannot be started")
 
     def stop(self):

@@ -58,7 +58,9 @@ generated-members=exc_clear
 # List of classes names for which member attributes should not be checked
 # (useful for classes with attributes dynamically set). This supports can work
 # with qualified names.
-ignored-classes=SSLContext, SSLSocket, greenlet
+# greenlet, Greenlet, parent, dead: all attempts to fix issues in greenlet.py
+# only seen on the service, e.g., self.parent.loop: class parent has no loop
+ignored-classes=SSLContext, SSLSocket, greenlet, Greenlet, parent, dead
 
 # List of module names for which member attributes should not be checked
 # (useful for modules/projects where namespaces are manipulated during runtime

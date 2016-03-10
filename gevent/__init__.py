@@ -44,7 +44,7 @@ __all__ = ['get_hub',
 import sys
 if sys.platform == 'win32':
     # trigger WSAStartup call
-    import socket  # pylint:disable=unused-import
+    import socket  # pylint:disable=unused-import,useless-suppression
     del socket
 
 from gevent.hub import get_hub, iwait, wait, PYPY
