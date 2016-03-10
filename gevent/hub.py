@@ -47,15 +47,15 @@ else:
     string_types = __builtin__.basestring,
     text_type = __builtin__.unicode
     integer_types = (int, __builtin__.long)
-    xrange = __builtin__.xrange
+    xrange = __builtin__.xrange # python 2: pylint:disable=redefined-variable-type
 
     from gevent._util_py2 import reraise # pylint:disable=import-error,unused-import,no-name-in-module
 
 
 if sys.version_info[0] <= 2:
-    import thread # pylint:disable=import-error,useless-suppression
+    import thread # pylint:disable=import-error
 else:
-    import _thread as thread
+    import _thread as thread # python 2 pylint:disable=import-error
 
 # These must be the "real" native thread versions,
 # not monkey-patched.

@@ -81,7 +81,7 @@ if sys.version_info[0] >= 3:
     PY3 = True
 else:
     import __builtin__ # pylint:disable=import-error
-    string_types = __builtin__.basestring
+    string_types = __builtin__.basestring,
     PY3 = False
 
 WIN = sys.platform.startswith("win")
@@ -244,7 +244,7 @@ def _patch_existing_locks(threading):
         class _ModuleLock(object):
             pass
     else:
-        _ModuleLock = importlib._bootstrap._ModuleLock
+        _ModuleLock = importlib._bootstrap._ModuleLock # python 2 pylint: disable=no-member
     # It might be possible to walk up all the existing stack frames to find
     # locked objects...at least if they use `with`. To be sure, we look at every object
     # Since we're supposed to be done very early in the process, there shouldn't be

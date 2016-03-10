@@ -5,10 +5,11 @@ or not).
 
 This module is missing 'Thread' class, but includes 'Queue'.
 """
+from __future__ import absolute_import
 try:
     from Queue import Full, Empty
 except ImportError:
-    from queue import Full, Empty
+    from queue import Full, Empty # pylint:disable=import-error
 from collections import deque
 import heapq
 from time import time as _time, sleep as _sleep
@@ -280,7 +281,7 @@ class Event(object):
             self.__cond.release()
 
 
-class Queue:
+class Queue: # pylint:disable=old-style-class
     """Create a queue object with a given maximum size.
 
     If maxsize is <= 0, the queue size is infinite.

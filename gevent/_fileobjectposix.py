@@ -28,7 +28,7 @@ class GreenFileDescriptorIO(RawIOBase):
     _write_event = None
 
     def __init__(self, fileno, mode='r', closefd=True):
-        RawIOBase.__init__(self)
+        RawIOBase.__init__(self) # Python 2: pylint:disable=no-member,non-parent-init-called
         self._closed = False
         self._closefd = closefd
         self._fileno = fileno

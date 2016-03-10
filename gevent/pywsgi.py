@@ -23,7 +23,7 @@ from datetime import datetime
 try:
     from urllib import unquote
 except ImportError:
-    from urllib.parse import unquote
+    from urllib.parse import unquote # python 2 pylint:disable=import-error,no-name-in-module
 
 from gevent import socket
 import gevent
@@ -336,11 +336,11 @@ try:
     headers_factory = mimetools.Message
 except ImportError:
     # adapt Python 3 HTTP headers to old API
-    from http import client
+    from http import client # pylint:disable=import-error
 
     class OldMessage(client.HTTPMessage):
         def __init__(self, **kwargs):
-            super().__init__(**kwargs)
+            super(client.HTTPMessage, self).__init__(**kwargs) # pylint:disable=bad-super-call
             self.status = ''
 
         def getheader(self, name, default=None):
@@ -1247,7 +1247,7 @@ class WSGIServer(StreamServer):
                 except socket.error:
                     name = str(address[0])
                 if PY3 and not isinstance(name, str):
-                    name = name.decode('ascii')
+                    name = name.decode('ascii') # python 2 pylint:disable=redefined-variable-type
                 self.environ['SERVER_NAME'] = name
             self.environ.setdefault('SERVER_PORT', str(address[1]))
         else:

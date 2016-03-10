@@ -122,7 +122,7 @@ if original_poll is not None:
             try:
                 for fd in self.fds:
                     self.fds[fd].start(result.add_event, get_fileno(fd), pass_events=True)
-                if timeout is not None and -1 < timeout:
+                if timeout is not None and timeout > -1:
                     timeout /= 1000.0
                 result.event.wait(timeout=timeout)
                 return list(result.events)

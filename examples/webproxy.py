@@ -22,6 +22,7 @@ try:
     from urlparse import urlparse
     from urllib import unquote
 except ImportError:
+    # pylint:disable=import-error,no-name-in-module
     from urllib import request as urllib2
     from urllib.parse import urlparse
     from urllib.parse import unquote
@@ -66,6 +67,7 @@ def application(env, start_response):
 
 
 def proxy(path, start_response, proxy_url):
+    # pylint:disable=too-many-locals
     if '://' not in path:
         path = 'http://' + path
     try:

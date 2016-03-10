@@ -21,8 +21,11 @@ ignore-paths:
   # likewise with scripts
   - scripts/
   # This file has invalid syntax for Python 3, which is how
-  # landscape.io runs things
+  # landscape.io runs things...
   - gevent/_util_py2.py
+  # ...and this file has invalid syntax for Python 2, which is how
+  # travis currently runs things. sigh.
+  - gevent/_socket3.py
   # This is vendored with minimal changes
   - gevent/_tblib.py
   # likewise

@@ -9,7 +9,7 @@ with other elements of the process.
 
 .. seealso:: :class:`code.InteractiveConsole`
 """
-from __future__ import print_function
+from __future__ import print_function, absolute_import
 import sys
 from code import InteractiveConsole
 
@@ -114,7 +114,7 @@ class BackdoorServer(StreamServer):
             import __builtin__
             _locals["__builtins__"] = __builtin__
         except ImportError:
-            import builtins
+            import builtins # pylint:disable=import-error
             _locals["builtins"] = builtins
             _locals['__builtins__'] = builtins
         return _locals

@@ -98,7 +98,7 @@ class StreamServer(BaseServer):
             sock = self.socket
             try:
                 fd, address = sock._accept()
-            except BlockingIOError:
+            except BlockingIOError: # python 2: pylint: disable=undefined-variable
                 if not sock.timeout:
                     return
                 raise

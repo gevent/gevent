@@ -93,7 +93,7 @@ class FileObjectThread(object):
         if self.lock is True:
             self.lock = Semaphore()
         elif not self.lock:
-            self.lock = DummySemaphore()
+            self.lock = DummySemaphore() # pylint:disable=redefined-variable-type
         if not hasattr(self.lock, '__enter__'):
             raise TypeError('Expected a Semaphore or boolean, got %r' % type(self.lock))
         if isinstance(fobj, integer_types):

@@ -30,7 +30,7 @@ import collections
 if sys.version_info[0] == 2:
     import Queue as __queue__
 else:
-    import queue as __queue__
+    import queue as __queue__ # python 2: pylint:disable=import-error
 Full = __queue__.Full
 Empty = __queue__.Empty
 

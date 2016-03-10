@@ -18,7 +18,7 @@ from gevent.hub import PY3
 
 
 if PY3:
-    from gevent import _socket3 as _source
+    from gevent import _socket3 as _source # python 2: pylint:disable=no-name-in-module
 else:
     from gevent import _socket2 as _source
 

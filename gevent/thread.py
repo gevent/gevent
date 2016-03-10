@@ -19,9 +19,9 @@ __implements__ = ['allocate_lock',
 
 __imports__ = ['error']
 if sys.version_info[0] <= 2:
-    import thread as __thread__ # pylint:disable=import-error,useless-suppression
+    import thread as __thread__ # pylint:disable=import-error
 else:
-    import _thread as __thread__
+    import _thread as __thread__ # pylint:disable=import-error
     __target__ = '_thread'
     __imports__ += ['RLock',
                     'TIMEOUT_MAX',
@@ -57,7 +57,7 @@ class LockType(BoundedSemaphore):
     _OVER_RELEASE_ERROR = __thread__.error
 
     if PY3:
-        _TIMEOUT_MAX = __thread__.TIMEOUT_MAX
+        _TIMEOUT_MAX = __thread__.TIMEOUT_MAX # python 2: pylint:disable=no-member
 
         def acquire(self, blocking=True, timeout=-1):
             # Transform the default -1 argument into the None that our

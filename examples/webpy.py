@@ -11,12 +11,12 @@ urls = ("/", "index",
         '/long', 'long_polling')
 
 
-class index:
+class index(object):
     def GET(self):
         return '<html>Hello, world!<br><a href="/long">/long</a></html>'
 
 
-class long_polling:
+class long_polling(object):
     # Since gevent's WSGIServer executes each incoming connection in a separate greenlet
     # long running requests such as this one don't block one another;
     # and thanks to "monkey.patch_all()" statement at the top, thread-local storage used by web.ctx

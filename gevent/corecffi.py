@@ -257,7 +257,7 @@ if sys.version_info[0] >= 3:
     integer_types = int,
 else:
     import __builtin__ # pylint:disable=import-error
-    basestring = __builtin__.basestring
+    basestring = __builtin__.basestring,
     integer_types = (int, __builtin__.long)
 
 

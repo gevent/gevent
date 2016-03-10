@@ -76,9 +76,11 @@ class IMapUnordered(Greenlet):
             # redundant, and that lets us avoid having to use self.link() instead
             # of self.rawlink() to avoid having blocking methods called in the
             # hub greenlet.
-            self._result_semaphore = Semaphore(maxsize)
+            factory = Semaphore
         else:
-            self._result_semaphore = DummySemaphore()
+            factory = DummySemaphore
+        self._result_semaphore = factory(maxsize)
+
         self.count = 0
         self.finished = False
         # If the queue size is unbounded, then we want to call all
@@ -666,9 +668,10 @@ class Pool(Group):
         if greenlet_class is not None:
             self.greenlet_class = greenlet_class
         if size is None:
-            self._semaphore = DummySemaphore()
+            factory = DummySemaphore
         else:
-            self._semaphore = Semaphore(size)
+            factory = Semaphore
+        self._semaphore = factory(size)
 
     def wait_available(self, timeout=None):
         """
