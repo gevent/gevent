@@ -19,7 +19,7 @@ __implements__ = ['allocate_lock',
 
 __imports__ = ['error']
 if sys.version_info[0] <= 2:
-    import thread as __thread__
+    import thread as __thread__ # pylint:disable=import-error,useless-suppression
 else:
     import _thread as __thread__
     __target__ = '_thread'
@@ -43,8 +43,11 @@ def get_ident(gr=None):
         return id(gr)
 
 
-def start_new_thread(function, args=(), kwargs={}):
-    greenlet = Greenlet.spawn(function, *args, **kwargs)
+def start_new_thread(function, args=(), kwargs=None):
+    if kwargs is not None:
+        greenlet = Greenlet.spawn(function, *args, **kwargs)
+    else:
+        greenlet = Greenlet.spawn(function, *args)
     return get_ident(greenlet)
 
 

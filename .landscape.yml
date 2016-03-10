@@ -53,3 +53,5 @@ pyflakes:
     - F821
     # F401: unused import; same story
     - F401
+    # F811: redefined function; same story
+    - F811

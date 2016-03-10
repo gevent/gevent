@@ -113,7 +113,7 @@ class IMapUnordered(Greenlet):
         g.rawlink(self._on_result)
         return g
 
-    def _run(self):
+    def _run(self): # pylint:disable=method-hidden
         try:
             func = self.func
             for item in self.iterable:
@@ -241,7 +241,7 @@ class GroupMappingMixin(object):
 
     def apply_cb(self, func, args=None, kwds=None, callback=None):
         """
-        :meth:`apply` the given *func(\*args, \*\*kwds)*, and, if a *callback* is given, run it with the
+        :meth:`apply` the given *func(\\*args, \\*\\*kwds)*, and, if a *callback* is given, run it with the
         results of *func* (unless an exception was raised.)
 
         The *callback* may be called synchronously or asynchronously. If called
@@ -556,23 +556,23 @@ class Group(GroupMappingMixin):
         """
         timer = Timeout._start_new_or_dummy(timeout)
         try:
-            try:
-                while self.greenlets:
-                    for greenlet in list(self.greenlets):
-                        if greenlet not in self.dying:
-                            try:
-                                kill = greenlet.kill
-                            except AttributeError:
-                                _kill(greenlet, exception)
-                            else:
-                                kill(exception, block=False)
-                            self.dying.add(greenlet)
-                    if not block:
-                        break
-                    joinall(self.greenlets)
-            except Timeout as ex:
-                if ex is not timer:
-                    raise
+            while self.greenlets:
+                for greenlet in list(self.greenlets):
+                    if greenlet in self.dying:
+                        continue
+                    try:
+                        kill = greenlet.kill
+                    except AttributeError:
+                        _kill(greenlet, exception)
+                    else:
+                        kill(exception, block=False)
+                    self.dying.add(greenlet)
+                if not block:
+                    break
+                joinall(self.greenlets)
+        except Timeout as ex:
+            if ex is not timer:
+                raise
         finally:
             timer.cancel()
 

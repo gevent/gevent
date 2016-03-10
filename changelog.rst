@@ -13,6 +13,7 @@
 - Update c-ares to version 1.11.0 (`release notes <https://raw.githubusercontent.com/c-ares/c-ares/cares-1_11_0/RELEASE-NOTES>`_).
 - Remove module ``gevent.coros`` which was replaced by ``gevent.lock``
   and has been deprecated since 1.0b2.
+- The ``ref`` parameter to :func:`gevent.os.fork_and_watch` was being ignored.
 
 1.1.0 (Mar 5, 2016)
 ===================

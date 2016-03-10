@@ -140,6 +140,8 @@ def tp_write(fd, buf):
 
 
 if hasattr(os, 'fork'):
+    # pylint:disable=function-redefined,redefined-outer-name
+
     _raw_fork = os.fork
 
     def fork_gevent():
@@ -338,7 +340,7 @@ if hasattr(os, 'fork'):
             if pid:
                 # parent
                 loop = loop or get_hub().loop
-                watcher = loop.child(pid)
+                watcher = loop.child(pid, ref=ref)
                 _watched_children[pid] = watcher
                 watcher.start(_on_child, watcher, callback)
             return pid

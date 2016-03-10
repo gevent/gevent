@@ -79,7 +79,7 @@ class _AbstractLinkable(object):
                 if link in self._links:
                     try:
                         link(self)
-                    except:
+                    except: # pylint:disable=bare-except
                         self.hub.handle_error((link, self), *sys.exc_info())
             # Mark everything done
             done.update(todo)
@@ -114,6 +114,7 @@ class _AbstractLinkable(object):
             self.unlink(switch)
 
     def _wait_return_value(self, waited, wait_success):
+        # pylint:disable=unused-argument
         return None
 
     def _wait(self, timeout=None):
@@ -388,6 +389,7 @@ class AsyncResult(_AbstractLinkable):
         return self.get(block=False)
 
     def _wait_return_value(self, waited, gotit):
+        # pylint:disable=unused-argument
         # Always return the value. Since this is a one-shot event,
         # no race condition should reset it.
         return self.value

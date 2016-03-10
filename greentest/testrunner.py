@@ -34,6 +34,7 @@ IGNORE_COVERAGE = [
 
 
 def run_many(tests, expected=(), failfast=False):
+    # pylint:disable=too-many-locals
     global NWORKERS
     start = time.time()
     total = 0
@@ -71,7 +72,7 @@ def run_many(tests, expected=(), failfast=False):
         while reap() > 0:
             time.sleep(0.1)
 
-    def spawn(args, kwargs):
+    def spawn(args, kwargs): # pylint:disable=unused-argument
         while True:
             if reap() < NWORKERS:
                 r = pool.apply_async(run_one, (cmd, ), options or {})
@@ -117,7 +118,7 @@ def run_many(tests, expected=(), failfast=False):
 
 def discover(tests=None, ignore=(), coverage=False):
     if isinstance(ignore, six.string_types):
-        ignore = load_list_from_file(ignore)
+        ignore = set(load_list_from_file(ignore))
 
     ignore = set(ignore or ())
     if coverage:
@@ -194,6 +195,7 @@ def format_seconds(seconds):
 
 
 def report(total, failed, passed, exit=True, took=None, expected=None):
+    # pylint:disable=redefined-builtin,too-many-branches
     runtimelog = util.runtimelog
     if runtimelog:
         log('\nLongest-running tests:')
@@ -253,7 +255,8 @@ def print_list(lst):
 
 
 def main():
-    import optparse
+    # FIXME: transition to argparse
+    import optparse # pylint:disable=deprecated-module
     parser = optparse.OptionParser()
     parser.add_option('--ignore')
     parser.add_option('--discover', action='store_true')
