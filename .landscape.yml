@@ -26,6 +26,8 @@ ignore-patterns:
   # standard library code
   - ^greentest/2.*
   - ^greentest/3.*
+  # benchmarks that aren't used/changed much
+  - ^greentest/bench_.*py
 
 pyroma:
   run: true
