@@ -7,10 +7,12 @@
 1.2a1 (unreleased)
 ==================
 
+- Remove support for Python 2.6.
 - Update libev to version 4.22.
 - Update tblib to 1.3.0.
 - Update c-ares to version 1.11.0 (`release notes <https://raw.githubusercontent.com/c-ares/c-ares/cares-1_11_0/RELEASE-NOTES>`_).
-- Remove support for Python 2.6.
+- Remove module ``gevent.coros`` which was replaced by ``gevent.lock``
+  and has been deprecated since 1.0b2.
 
 1.1.0 (Mar 5, 2016)
 ===================
