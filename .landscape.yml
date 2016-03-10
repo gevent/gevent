@@ -35,6 +35,12 @@ ignore-patterns:
 pyroma:
   run: true
 
+mccabe:
+  # We have way too many violations of the complexity measure.
+  # We should enable this and fix them one at a time, but that's
+  # more refactoring than I want to do initially.
+  run: false
+
 pyflakes:
   disable:
     # F821: undefined name; caught better by pylint, where it can be
