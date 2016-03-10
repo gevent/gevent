@@ -1,0 +1,16 @@
+doc-warnings: yes
+test-warnings: no
+strictness: veryhigh
+max-line-length: 160
+autodetect: yes
+requirements:
+    - dev-requirements.txt
+
+python-targets:
+  - 2
+  - 3
+ignore-paths:
+  - examples/webchat
+
+pyroma:
+  run: true
