@@ -10,7 +10,7 @@ python-targets:
   - 2
   - 3
 ignore-paths:
-  - examples/webchat
+  - examples/webchat/
   - doc/
   - build
   - dist
@@ -23,6 +23,10 @@ ignore-paths:
   # This file has invalid syntax for Python 3, which is how
   # landscape.io runs things
   - gevent/_util_py2.py
+  # This is vendored with minimal changes
+  - gevent/_tblib.py
+  # likewise
+  - greentest/six.py
   - greentest/getaddrinfo_module.py
 ignore-patterns:
   # disabled code
@@ -47,3 +51,5 @@ pyflakes:
     # F821: undefined name; caught better by pylint, where it can be
     # controlled for the whole file/per-line
     - F821
+    # F401: unused import; same story
+    - F401

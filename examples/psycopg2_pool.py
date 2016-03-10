@@ -1,4 +1,5 @@
 from __future__ import print_function
+# pylint:disable=import-error,broad-except,bare-except
 import sys
 import contextlib
 
@@ -146,7 +147,7 @@ class PostgresConnectionPool(DatabaseConnectionPool):
         return self.connect(*self.args, **self.kwargs)
 
 
-if __name__ == '__main__':
+def main():
     import time
     pool = PostgresConnectionPool("dbname=postgres", maxsize=3)
     start = time.time()
@@ -155,3 +156,6 @@ if __name__ == '__main__':
     gevent.wait()
     delay = time.time() - start
     print('Running "select pg_sleep(1);" 4 times with 3 connections. Should take about 2 seconds: %.2fs' % delay)
+
+if __name__ == '__main__':
+    main()

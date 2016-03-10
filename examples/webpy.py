@@ -5,7 +5,7 @@ from __future__ import print_function
 from gevent import monkey; monkey.patch_all()
 from gevent.pywsgi import WSGIServer
 import time
-import web
+import web # pylint:disable=import-error
 
 urls = ("/", "index",
         '/long', 'long_polling')

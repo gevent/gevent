@@ -7,6 +7,7 @@ import threading
 import subprocess
 import time
 
+# pylint: disable=broad-except,attribute-defined-outside-init
 
 runtimelog = []
 MIN_RUNTIME = 1.0

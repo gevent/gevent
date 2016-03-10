@@ -90,6 +90,7 @@ class RLock(object):
 
 
 class Condition(object):
+    # pylint:disable=method-hidden
 
     def __init__(self, lock=None):
         if lock is None:
@@ -127,7 +128,7 @@ class Condition(object):
     def _release_save(self):
         self.__lock.release()           # No state to save
 
-    def _acquire_restore(self, x):
+    def _acquire_restore(self, x): # pylint:disable=unused-argument
         self.__lock.acquire()           # Ignore saved state
 
     def _is_owned(self):
@@ -234,7 +235,7 @@ class BoundedSemaphore(Semaphore):
         self._initial_value = value
 
     def release(self):
-        if self.Semaphore__value >= self._initial_value:
+        if self.Semaphore__value >= self._initial_value: # pylint:disable=no-member
             raise ValueError("Semaphore released too many times")
         return Semaphore.release(self)
 
@@ -462,6 +463,7 @@ class Queue:
 
     # Initialize the queue representation
     def _init(self, maxsize):
+        # pylint:disable=unused-argument
         self.queue = deque()
 
     def _qsize(self, len=len):
@@ -489,9 +491,11 @@ class PriorityQueue(Queue):
         return len(self.queue)
 
     def _put(self, item, heappush=heapq.heappush):
+        # pylint:disable=arguments-differ
         heappush(self.queue, item)
 
     def _get(self, heappop=heapq.heappop):
+        # pylint:disable=arguments-differ
         return heappop(self.queue)
 
 

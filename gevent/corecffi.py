@@ -1,4 +1,4 @@
-# pylint: disable=too-many-lines, protected-access, redefined-outer-name
+# pylint: disable=too-many-lines, protected-access, redefined-outer-name, not-callable
 from __future__ import absolute_import, print_function
 import sys
 import os
@@ -6,13 +6,15 @@ import traceback
 import signal as signalmodule
 
 
-__all__ = ['get_version',
-           'get_header_version',
-           'supported_backends',
-           'recommended_backends',
-           'embeddable_backends',
-           'time',
-           'loop']
+__all__ = [
+    'get_version',
+    'get_header_version',
+    'supported_backends',
+    'recommended_backends',
+    'embeddable_backends',
+    'time',
+    'loop',
+]
 
 try:
     import gevent._corecffi
@@ -21,10 +23,10 @@ except ImportError:
     # Not built yet
     import gevent._corecffi_build
     gevent._corecffi_build.ffi.compile()
-    import gevent._corecffi
+    import gevent._corecffi # pylint: disable=no-member,no-name-in-module,useless-suppression
 
-ffi = gevent._corecffi.ffi
-libev = gevent._corecffi.lib
+ffi = gevent._corecffi.ffi # pylint:disable=no-member
+libev = gevent._corecffi.lib # pylint:disable=no-member
 
 if hasattr(libev, 'vfd_open'):
     # Must be on windows
@@ -107,24 +109,24 @@ def _python_callback(handle, revents):
         # to the 'onerror' handler, which
         # is not what we want; that can permanently wedge the loop depending
         # on which callback was executing
-        watcher = ffi.from_handle(handle)
-        args = watcher.args
+        the_watcher = ffi.from_handle(handle)
+        args = the_watcher.args
         if args is None:
             # Legacy behaviour from corecext: convert None into ()
             # See test__core_watcher.py
             args = _NOARGS
         if len(args) > 0 and args[0] == GEVENT_CORE_EVENTS:
             args = (revents, ) + args[1:]
-        watcher.callback(*args)
-    except:
-        watcher._exc_info = sys.exc_info()
+        the_watcher.callback(*args)
+    except: # pylint:disable=bare-except
+        the_watcher._exc_info = sys.exc_info()
         # Depending on when the exception happened, the watcher
         # may or may not have been stopped. We need to make sure its
         # memory stays valid so we can stop it at the ev level if needed.
-        watcher.loop._keepaliveset.add(watcher)
+        the_watcher.loop._keepaliveset.add(the_watcher)
         return -1
     else:
-        if watcher in watcher.loop._keepaliveset:
+        if the_watcher in the_watcher.loop._keepaliveset:
             # It didn't stop itself
             return 0
         return 1 # It stopped itself
@@ -146,9 +148,9 @@ def _python_handle_error(handle, revents):
         if revents & (libev.EV_READ | libev.EV_WRITE):
             try:
                 watcher.stop()
-            except:
+            except: # pylint:disable=bare-except
                 watcher.loop.handle_error(watcher, *sys.exc_info())
-            return
+            return # pylint:disable=lost-exception
 libev.python_handle_error = _python_handle_error
 
 
@@ -254,7 +256,7 @@ if sys.version_info[0] >= 3:
     basestring = (bytes, str)
     integer_types = int,
 else:
-    import __builtin__
+    import __builtin__ # pylint:disable=import-error
     basestring = __builtin__.basestring
     integer_types = (int, __builtin__.long)
 
@@ -289,9 +291,9 @@ def _check_flags(flags):
     flags &= libev.EVBACKEND_MASK
     if not flags:
         return
-    if not (flags & libev.EVBACKEND_ALL):
+    if not flags & libev.EVBACKEND_ALL:
         raise ValueError('Invalid value for backend: 0x%x' % flags)
-    if not (flags & libev.ev_supported_backends()):
+    if not flags & libev.ev_supported_backends():
         as_list = [_str_hex(x) for x in _flags_to_list(flags)]
         raise ValueError('Unsupported backend: %s' % '|'.join(as_list))
 
@@ -333,6 +335,7 @@ def _loop_callback(*args, **kwargs):
 
 
 class loop(object):
+    # pylint:disable=too-many-public-methods
 
     error_handler = None
 
@@ -406,7 +409,7 @@ class loop(object):
         # work to rethrow the exception is done by the onerror callback
         pass
 
-    def _run_callbacks(self, evloop, _, revents):
+    def _run_callbacks(self, _evloop, _, _revents):
         count = 1000
         libev.ev_timer_stop(self._ptr, self._timer0)
         while self._callbacks and count > 0:
@@ -424,7 +427,7 @@ class loop(object):
 
                 try:
                     callback(*args)
-                except:
+                except: # pylint:disable=bare-except
                     # If we allow an exception to escape this method (while we are running the ev callback),
                     # then CFFI will print the error and libev will continue executing.
                     # There are two problems with this. The first is that the code after
@@ -442,11 +445,11 @@ class loop(object):
                     # We take a similar approach (but are extra careful about printing)
                     try:
                         self.handle_error(cb, *sys.exc_info())
-                    except:
+                    except: # pylint:disable=bare-except
                         try:
                             print("Exception while handling another error", file=sys.stderr)
                             traceback.print_exc()
-                        except:
+                        except: # pylint:disable=bare-except
                             pass # Nothing we can do here
                 finally:
                     # Note, this must be reset here, because cb.args is used as a flag in callback class,
@@ -493,11 +496,11 @@ class loop(object):
     def _handle_syserr(self, message, errno):
         try:
             errno = os.strerror(errno)
-        except:
+        except: # pylint:disable=bare-except
             traceback.print_exc()
         try:
             message = '%s: %s' % (message, errno)
-        except:
+        except: # pylint:disable=bare-except
             traceback.print_exc()
         self.handle_error(None, SystemError, SystemError(message), None)
 
@@ -511,7 +514,7 @@ class loop(object):
         else:
             self._default_handle_error(context, type, value, tb)
 
-    def _default_handle_error(self, context, type, value, tb):
+    def _default_handle_error(self, context, type, value, tb): # pylint:disable=unused-argument
         # note: Hub sets its own error handler so this is not used by gevent
         # this is here to make core.loop usable without the rest of gevent
         traceback.print_exception(type, value, tb)
@@ -750,7 +753,7 @@ class watcher(object):
 
     @classmethod
     def _init_subclasses(cls):
-        for subclass in cls.__subclasses__():
+        for subclass in cls.__subclasses__(): # pylint:disable=no-member
             watcher_type = subclass._watcher_type
             subclass._watcher_struct_pointer_type = ffi.typeof('struct ' + watcher_type + '*')
             subclass._watcher_callback = ffi.addressof(libev,

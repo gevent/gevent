@@ -4,6 +4,7 @@ from gevent import socket
 
 
 def application(environ, start_response):
+    assert environ
     start_response('200 OK', [])
     return []
 

@@ -58,6 +58,9 @@ if PY3 and not sys.platform.startswith('win32'):
     __implements__.append("_posixsubprocess")
     _posixsubprocess = None
 
+# Some symbols we define that we expect to export;
+# useful for static analysis
+PIPE = "PIPE should be imported"
 
 # Standard functions and classes that this module re-imports.
 __imports__ = [

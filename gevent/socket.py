@@ -26,6 +26,15 @@ else:
 # needs to define these
 __implements__ = __dns__ = __all__ = __extensions__ = __imports__ = ()
 
+
+class error(Exception):
+    errno = None
+
+
+def getfqdn(*args):
+    # pylint:disable=unused-argument
+    raise NotImplementedError()
+
 for key in _source.__dict__:
     if key.startswith('__') and key not in '__implements__ __dns__ __all__ __extensions__ __imports__ __socket__'.split():
         continue
@@ -83,7 +92,7 @@ def create_connection(address, timeout=_GLOBAL_DEFAULT_TIMEOUT, source_address=N
             # that does not happen with regular sockets though, because _socket.socket.connect() is a built-in.
             # this is similar to "getnameinfo loses a reference" failure in test_socket.py
             if not PY3:
-                sys.exc_clear() # pylint:disable=no-member
+                sys.exc_clear() # pylint:disable=no-member,useless-suppression
             if sock is not None:
                 sock.close()
             err = ex

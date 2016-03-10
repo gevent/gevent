@@ -42,3 +42,32 @@ max-line-length=160
 #notes=FIXME,XXX,TODO
 # Disable that, we don't want them in the report (???)
 notes=
+
+[VARIABLES]
+
+dummy-variables-rgx=_.*
+
+[TYPECHECK]
+
+# List of members which are set dynamically and missed by pylint inference
+# system, and so shouldn't trigger E1101 when accessed. Python regular
+# expressions are accepted.
+# gevent: this is helpful for py3/py2 code.
+generated-members=exc_clear
+
+# List of classes names for which member attributes should not be checked
+# (useful for classes with attributes dynamically set). This supports can work
+# with qualified names.
+ignored-classes=SSLContext, SSLSocket, greenlet
+
+# List of module names for which member attributes should not be checked
+# (useful for modules/projects where namespaces are manipulated during runtime
+# and thus existing member attributes cannot be deduced by static analysis. It
+# supports qualified module names, as well as Unix pattern matching.
+ignored-modules=gevent._corecffi
+
+[DESIGN]
+max-attributes=10
+
+[BASIC]
+bad-functions=input

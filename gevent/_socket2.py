@@ -44,7 +44,7 @@ else:
         # changing the behaviour of the stdlib if we're just imported; OTOH,
         # under Python 2.6/2.7, test_urllib2net.py asserts that the class IS
         # socket._fileobject (sigh), so we have to work around that.
-        class _fileobject(_fileobject):
+        class _fileobject(_fileobject): # pylint:disable=function-redefined
 
             def __enter__(self):
                 return self
@@ -74,7 +74,7 @@ else:
 class _closedsocket(object):
     __slots__ = []
 
-    def _dummy(*args, **kwargs):
+    def _dummy(*args, **kwargs): # pylint:disable=no-method-argument,unused-argument
         raise error(EBADF, 'Bad file descriptor')
     # All _delegate_methods must also be initialized here.
     send = recv = recv_into = sendto = recvfrom = recvfrom_into = _dummy
@@ -132,6 +132,7 @@ class socket(object):
         return '<%s %s>' % (type(self).__name__, self._formatinfo())
 
     def _formatinfo(self):
+        # pylint:disable=broad-except
         try:
             fileno = self.fileno()
         except Exception as ex:
@@ -246,7 +247,7 @@ class socket(object):
         except timeout:
             return EAGAIN
         except error as ex:
-            if type(ex) is error:
+            if type(ex) is error: # pylint:disable=unidiomatic-typecheck
                 return ex.args[0]
             else:
                 raise  # gaierror is not silented by connect_ex
@@ -399,7 +400,7 @@ class socket(object):
         # example, bench_sendall.py yields ~264MB/s, while using 1MB yields
         # ~653MB/s (matching CPython). 1MB is arbitrary and might be better
         # chosen, say, to match a page size?
-        chunk_size = max(self.getsockopt(SOL_SOCKET, SO_SNDBUF), 1024 * 1024)
+        chunk_size = max(self.getsockopt(SOL_SOCKET, SO_SNDBUF), 1024 * 1024) # pylint:disable=no-member
 
         data_sent = 0
         end = None
@@ -468,7 +469,7 @@ class socket(object):
     # delegate the functions that we haven't implemented to the real socket object
 
     _s = "def %s(self, *args): return self._sock.%s(*args)\n\n"
-
+    _m = None
     for _m in set(_socketmethods) - set(locals()):
         exec(_s % (_m, _m,))
     del _m, _s

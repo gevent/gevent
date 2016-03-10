@@ -32,11 +32,12 @@ except AttributeError:
 class _Greenlet_stdreplace(Greenlet):
     # A greenlet that replaces sys.std[in/out/err] while running.
     _fileobj = None
+    saved = None
 
     def switch(self, *args, **kw):
         if self._fileobj is not None:
             self.switch_in()
-        Greenlet.switch(self, *args, **kw)
+        Greenlet.switch(self, *args, **kw) # pylint:disable=no-member
 
     def switch_in(self):
         self.saved = sys.stdin, sys.stderr, sys.stdout
@@ -118,7 +119,7 @@ class BackdoorServer(StreamServer):
             _locals['__builtins__'] = builtins
         return _locals
 
-    def handle(self, conn, address):
+    def handle(self, conn, _address): # pylint: disable=method-hidden
         """
         Interact with one remote user.
 

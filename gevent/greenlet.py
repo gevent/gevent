@@ -1,6 +1,7 @@
 # Copyright (c) 2009-2012 Denis Bilenko. See LICENSE for details.
-
+from __future__ import absolute_import
 import sys
+from greenlet import greenlet
 from gevent.hub import GreenletExit
 from gevent.hub import InvalidSwitchError
 from gevent.hub import PY3
@@ -8,7 +9,6 @@ from gevent.hub import PYPY
 from gevent.hub import Waiter
 from gevent.hub import get_hub
 from gevent.hub import getcurrent
-from gevent.hub import greenlet
 from gevent.hub import iwait
 from gevent.hub import reraise
 from gevent.hub import wait
@@ -18,9 +18,11 @@ from gevent._tblib import load_traceback
 from collections import deque
 
 
-__all__ = ['Greenlet',
-           'joinall',
-           'killall']
+__all__ = [
+    'Greenlet',
+    'joinall',
+    'killall',
+]
 
 
 if PYPY:

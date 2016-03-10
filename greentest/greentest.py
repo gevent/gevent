@@ -20,6 +20,8 @@
 # THE SOFTWARE.
 
 # package is named greentest, not test, so it won't be confused with test in stdlib
+# pylint:disable=broad-except,unused-argument,no-member,too-many-branches,unused-variable
+# pylint:disable=attribute-defined-outside-init,abstract-method
 import sys
 import types
 import unittest
@@ -83,7 +85,7 @@ if sys.version_info[0] == 2:
     PY2 = True
     NON_APPLICABLE_SUFFIXES.append('3')
     if (sys.version_info[1] < 7
-        or (sys.version_info[1] == 7 and sys.version_info[2] < 9)):
+            or (sys.version_info[1] == 7 and sys.version_info[2] < 9)):
         # Python 2, < 2.7.9
         NON_APPLICABLE_SUFFIXES.append('279')
 if sys.platform.startswith('win'):
@@ -305,7 +307,11 @@ class TestCaseMetaClass(type):
     # b) fatal error check
     # c) restore the hub's error handler (see expect_one_error)
     # d) totalrefcount check
-    def __new__(meta, classname, bases, classDict):
+    def __new__(cls, classname, bases, classDict):
+        # pylint and pep8 fight over what this should be called (mcs or cls).
+        # pylint gets it right, but we cant scope disable pep8, so we go with
+        # its convention.
+        # pylint: disable=bad-mcs-classmethod-argument
         timeout = classDict.get('__timeout__', 'NONE')
         if timeout == 'NONE':
             timeout = getattr(bases[0], '__timeout__', None)
@@ -327,7 +333,7 @@ class TestCaseMetaClass(type):
                 if check_totalrefcount:
                     value = wrap_refcount(value)
                 classDict[key] = value
-        return type.__new__(meta, classname, bases, classDict)
+        return type.__new__(cls, classname, bases, classDict)
 
 
 class TestCase(TestCaseMetaClass("NewBase", (BaseTestCase,), {})):

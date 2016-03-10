@@ -3,24 +3,28 @@
 Event-loop hub.
 """
 from __future__ import absolute_import
+# XXX: FIXME: Refactor to make this smaller
+# pylint:disable=too-many-lines
 from functools import partial as _functools_partial
 import os
 import sys
 import traceback
 
-from greenlet import greenlet, getcurrent, GreenletExit
+from greenlet import greenlet as RawGreenlet, getcurrent, GreenletExit
 
 
-__all__ = ['getcurrent',
-           'GreenletExit',
-           'spawn_raw',
-           'sleep',
-           'kill',
-           'signal',
-           'reinit',
-           'get_hub',
-           'Hub',
-           'Waiter']
+__all__ = [
+    'getcurrent',
+    'GreenletExit',
+    'spawn_raw',
+    'sleep',
+    'kill',
+    'signal',
+    'reinit',
+    'get_hub',
+    'Hub',
+    'Waiter',
+]
 
 PY2 = sys.version_info[0] == 2
 PY3 = sys.version_info[0] >= 3
@@ -33,23 +37,23 @@ if PY3:
     text_type = str
     xrange = range
 
-    def reraise(tp, value, tb=None):
+    def reraise(t, value, tb=None): # pylint:disable=unused-argument
         if value.__traceback__ is not tb:
             raise value.with_traceback(tb)
         raise value
 
 else:
-    import __builtin__
+    import __builtin__ # pylint:disable=import-error
     string_types = __builtin__.basestring,
     text_type = __builtin__.unicode
     integer_types = (int, __builtin__.long)
     xrange = __builtin__.xrange
 
-    from gevent._util_py2 import reraise
+    from gevent._util_py2 import reraise # pylint:disable=import-error,unused-import,no-name-in-module
 
 
 if sys.version_info[0] <= 2:
-    import thread
+    import thread # pylint:disable=import-error,useless-suppression
 else:
     import _thread as thread
 
@@ -155,10 +159,10 @@ def spawn_raw(function, *args, **kwargs):
     # implemented twice in core.ppyx and corecffi.py) so do it with a partial
     if kwargs:
         function = _functools_partial(function, *args, **kwargs)
-        g = greenlet(function, hub)
+        g = RawGreenlet(function, hub)
         hub.loop.run_callback(g.switch)
     else:
-        g = greenlet(function, hub)
+        g = RawGreenlet(function, hub)
         hub.loop.run_callback(g.switch, *args)
     return g
 
@@ -287,13 +291,13 @@ class signal(object):
         try:
             greenlet = self.greenlet_class(self.handle)
             greenlet.switch()
-        except:
-            self.hub.handle_error(None, *sys._exc_info())
+        except: # pylint:disable=bare-except
+            self.hub.handle_error(None, *sys._exc_info()) # pylint:disable=no-member
 
     def handle(self):
         try:
             self.handler(*self.args, **self.kwargs)
-        except:
+        except: # pylint:disable=bare-except
             self.hub.handle_error(None, *sys.exc_info())
 
 
@@ -401,24 +405,31 @@ def set_hub(hub):
 
 
 def _import(path):
+    # pylint:disable=too-many-branches
     if isinstance(path, list):
         if not path:
             raise ImportError('Cannot import from empty list: %r' % (path, ))
+
         for item in path[:-1]:
             try:
                 return _import(item)
             except ImportError:
                 pass
+
         return _import(path[-1])
+
     if not isinstance(path, string_types):
         return path
+
     if '.' not in path:
         raise ImportError("Cannot import %r (required format: [path/][package.]module.class)" % path)
+
     if '/' in path:
         package_path, path = path.rsplit('/', 1)
         sys.path = [package_path] + sys.path
     else:
         package_path = None
+
     try:
         module, item = path.rsplit('.', 1)
         x = __import__(module)
@@ -455,7 +466,7 @@ _resolvers = {'ares': 'gevent.resolver_ares.Resolver',
 _DEFAULT_LOOP_CLASS = 'gevent.core.loop'
 
 
-class Hub(greenlet):
+class Hub(RawGreenlet):
     """A greenlet that runs the event loop.
 
     It is created automatically by :func:`get_hub`.
@@ -504,7 +515,7 @@ class Hub(greenlet):
     threadpool_size = 10
 
     def __init__(self, loop=None, default=None):
-        greenlet.__init__(self)
+        RawGreenlet.__init__(self)
         if hasattr(loop, 'run'):
             if default is not None:
                 raise TypeError("Unexpected argument: default")
@@ -531,7 +542,7 @@ class Hub(greenlet):
         else:
             try:
                 info = self.loop._format()
-            except Exception as ex:
+            except Exception as ex: # pylint:disable=broad-except
                 info = str(ex) or repr(ex) or 'error'
         result = '<%s at 0x%x %s' % (self.__class__.__name__, id(self), info)
         if self._resolver is not None:
@@ -574,7 +585,7 @@ class Hub(greenlet):
             cb = None
             try:
                 cb = self.loop.run_callback(current.switch)
-            except:
+            except: # pylint:disable=bare-except
                 traceback.print_exc()
             try:
                 self.parent.throw(type, value)
@@ -594,7 +605,7 @@ class Hub(greenlet):
             if not isinstance(context, str):
                 try:
                     context = self.format_context(context)
-                except:
+                except: # pylint:disable=bare-except
                     traceback.print_exc()
                     context = repr(context)
             sys.stderr.write('%s failed with %s\n\n' % (context, getattr(type, '__name__', 'exception'), ))
@@ -603,7 +614,7 @@ class Hub(greenlet):
         switch_out = getattr(getcurrent(), 'switch_out', None)
         if switch_out is not None:
             switch_out()
-        return greenlet.switch(self)
+        return RawGreenlet.switch(self)
 
     def switch_out(self):
         raise BlockingSwitchOutError('Impossible to call blocking function in the event loop callback')
@@ -841,7 +852,7 @@ class Waiter(object):
             switch = greenlet.switch
             try:
                 switch(value)
-            except:
+            except: # pylint:disable=bare-except
                 self.hub.handle_error(switch, *sys.exc_info())
 
     def switch_args(self, *args):
@@ -857,7 +868,7 @@ class Waiter(object):
             throw = greenlet.throw
             try:
                 throw(*throw_args)
-            except:
+            except: # pylint:disable=bare-except
                 self.hub.handle_error(throw, *sys.exc_info())
 
     def get(self):
@@ -906,7 +917,7 @@ class _MultipleWaiter(Waiter):
         # here can be impractical (see https://github.com/gevent/gevent/issues/652)
         self._values = list()
 
-    def switch(self, value):
+    def switch(self, value): # pylint:disable=signature-differs
         self._values.append(value)
         Waiter.switch(self, True)
 
@@ -966,12 +977,12 @@ def iwait(objects, timeout=None, count=None):
     finally:
         if timeout is not None:
             timer.stop()
-        for obj in objects:
-            unlink = getattr(obj, 'unlink', None)
+        for aobj in objects:
+            unlink = getattr(aobj, 'unlink', None)
             if unlink:
                 try:
                     unlink(switch)
-                except:
+                except: # pylint:disable=bare-except
                     traceback.print_exc()
 
 

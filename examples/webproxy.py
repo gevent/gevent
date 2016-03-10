@@ -16,6 +16,7 @@ import sys
 import re
 import traceback
 from cgi import escape
+
 try:
     import urllib2
     from urlparse import urlparse
@@ -74,13 +75,14 @@ def proxy(path, start_response, proxy_url):
             response = ex
         print('%s: %s %s' % (path, response.code, response.msg))
         headers = [(k, v) for (k, v) in response.headers.items() if k not in drop_headers]
-        scheme, netloc, path, params, query, fragment = urlparse(path)
+        scheme, netloc, path, _params, _query, _fragment = urlparse(path)
         host = (scheme or 'http') + '://' + netloc
-    except Exception as ex:
+    except Exception as ex: # pylint:disable=broad-except
         sys.stderr.write('error while reading %s:\n' % path)
         traceback.print_exc()
         tb = traceback.format_exc()
         start_response('502 Bad Gateway', [('Content-Type', 'text/html')])
+        # pylint:disable=deprecated-method
         error_str = escape(str(ex) or ex.__class__.__name__ or 'Error')
         error_str = '<h1>%s</h1><h2>%s</h2><pre>%s</pre>' % (error_str, escape(path), escape(tb))
         return [_as_bytes(error_str)]

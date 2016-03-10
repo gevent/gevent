@@ -133,7 +133,7 @@ class FileObjectThread(object):
                 def close():
                     try:
                         fobj.close()
-                    except:
+                    except: # pylint:disable=bare-except
                         return sys.exc_info()
                 exc_info = self.threadpool.apply(close)
                 if exc_info:
@@ -168,19 +168,21 @@ class FileObjectThread(object):
         raise StopIteration
     __next__ = next
 
-    def _wraps(method):
-        def x(self, *args, **kwargs):
-            fobj = self.io
-            if fobj is None:
-                raise FileObjectClosed
-            return self._apply(getattr(fobj, method), args, kwargs)
-        x.__name__ = method
-        return x
 
-    for method in ('read', 'readinto', 'readline', 'readlines', 'write', 'writelines', 'xreadlines'):
-        locals()[method] = _wraps(method)
-    del method
-    del _wraps
+def _wraps(method):
+    def x(self, *args, **kwargs):
+        fobj = self.io
+        if fobj is None:
+            raise FileObjectClosed
+        return self._apply(getattr(fobj, method), args, kwargs)
+    x.__name__ = method
+    return x
+
+_method = None
+for _method in ('read', 'readinto', 'readline', 'readlines', 'write', 'writelines', 'xreadlines'):
+    setattr(FileObjectThread, _method, _wraps(_method))
+del _method
+del _wraps
 
 
 try:
@@ -203,7 +205,7 @@ class FileObjectBlock(object):
         self.io = fobj
 
     def __repr__(self):
-        return '<%s %r>' % (self.io, )
+        return '<%s %r>' % (self.__class__.__name__, self.io, )
 
     def __getattr__(self, item):
         assert item != '_fobj'

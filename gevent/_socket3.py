@@ -4,6 +4,8 @@ Python 3 socket module.
 """
 # Our import magic sadly makes this warning useless
 # pylint: disable=undefined-variable
+# pylint: disable=too-many-statements,too-many-branches
+# pylint: disable=too-many-public-methods,unused-argument
 
 import io
 import os
@@ -25,7 +27,7 @@ __imports__ = _socketcommon.__imports__
 __dns__ = _socketcommon.__dns__
 
 
-SocketIO = __socket__.SocketIO
+SocketIO = __socket__.SocketIO # pylint:disable=no-member
 
 
 def _get_memory(data):
@@ -91,7 +93,7 @@ class socket(object):
         def type(self):
             # See https://github.com/gevent/gevent/pull/399
             if self.timeout != 0.0:
-                return self._sock.type & ~_socket.SOCK_NONBLOCK
+                return self._sock.type & ~_socket.SOCK_NONBLOCK # pylint:disable=no-member
             else:
                 return self._sock.type
 
@@ -106,7 +108,7 @@ class socket(object):
         """Wrap __repr__() to reveal the real class name."""
         try:
             s = _socket.socket.__repr__(self._sock)
-        except Exception as ex:
+        except Exception as ex: # pylint:disable=broad-except
             # Observed on Windows Py3.3, printing the repr of a socket
             # that just sufferred a ConnectionResetError [WinError 10054]:
             # "OverflowError: no printf formatter to display the socket descriptor in decimal"
@@ -220,7 +222,7 @@ class socket(object):
         if reading and writing:
             buffer = io.BufferedRWPair(raw, raw, buffering)
         elif reading:
-            buffer = io.BufferedReader(raw, buffering)
+            buffer = io.BufferedReader(raw, buffering) # pylint:disable=redefined-variable-type
         else:
             assert writing
             buffer = io.BufferedWriter(raw, buffering)
@@ -295,7 +297,7 @@ class socket(object):
         except timeout:
             return EAGAIN
         except error as ex:
-            if type(ex) is error:
+            if type(ex) is error: # pylint:disable=unidiomatic-typecheck
                 return ex.args[0]
             else:
                 raise  # gaierror is not silented by connect_ex
@@ -426,7 +428,7 @@ class socket(object):
     # because it's not cooperative.
     def _sendfile_use_sendfile(self, file, offset=0, count=None):
         # This is called directly by tests
-        raise __socket__._GiveupOnSendfile()
+        raise __socket__._GiveupOnSendfile() # pylint:disable=no-member
 
     def _sendfile_use_send(self, file, offset=0, count=None):
         self._check_sendfile_params(file, offset, count)
@@ -503,6 +505,7 @@ class socket(object):
 
     # get/set_inheritable new in 3.4
     if hasattr(os, 'get_inheritable') or hasattr(os, 'get_handle_inheritable'):
+        # pylint:disable=no-member
         if os.name == 'nt':
             def get_inheritable(self):
                 return os.get_handle_inheritable(self.fileno())
@@ -531,7 +534,7 @@ if sys.version_info[:2] == (3, 4) and sys.version_info[:3] <= (3, 4, 2):
     # Therefore, on these old versions, we must preserve it as an enum; while this
     # seems like it could lead to non-green behaviour, code on those versions
     # cannot possibly be using SocketType as a class anyway.
-    SocketType = __socket__.SocketType
+    SocketType = __socket__.SocketType # pylint:disable=no-member
     # Fixup __all__; note that we get exec'd multiple times during unit tests
     if 'SocketType' in __implements__:
         __implements__.remove('SocketType')
@@ -591,9 +594,9 @@ elif 'socketpair' in __implements__:
 
 
 # PyPy needs drop and reuse
-def _do_reuse_or_drop(socket, methname):
+def _do_reuse_or_drop(sock, methname):
     try:
-        method = getattr(socket, methname)
+        method = getattr(sock, methname)
     except (AttributeError, TypeError):
         pass
     else:
@@ -660,7 +663,7 @@ class _basefileobject(object):
     def __del__(self):
         try:
             self.close()
-        except:
+        except: # pylint:disable=bare-except
             # close() may fail if __init__ didn't complete
             pass
 
@@ -695,7 +698,7 @@ class _basefileobject(object):
         self._wbuf.append(data)
         self._wbuf_len += len(data)
         if (self._wbufsize == 0 or (self._wbufsize == 1 and b'\n' in data) or
-            (self._wbufsize > 1 and self._wbuf_len >= self._wbufsize)):
+                (self._wbufsize > 1 and self._wbuf_len >= self._wbufsize)):
             self.flush()
 
     def writelines(self, list):
@@ -704,7 +707,7 @@ class _basefileobject(object):
         lines = filter(None, map(str, list))
         self._wbuf_len += sum(map(len, lines))
         self._wbuf.extend(lines)
-        if (self._wbufsize <= 1 or self._wbuf_len >= self._wbufsize):
+        if self._wbufsize <= 1 or self._wbuf_len >= self._wbufsize:
             self.flush()
 
     def read(self, size=-1):
@@ -775,6 +778,7 @@ class _basefileobject(object):
             return buf.getvalue()
 
     def readline(self, size=-1):
+        # pylint:disable=too-many-return-statements
         buf = self._rbuf
         buf.seek(0, 2)  # seek end
         if buf.tell() > 0:
@@ -786,7 +790,7 @@ class _basefileobject(object):
                 self._rbuf.write(buf.read())
                 return bline
             del bline
-        if size < 0:
+        if size < 0: # pylint:disable=too-many-nested-blocks
             # Read until \n or EOF, whichever comes first
             if self._rbufsize <= 1:
                 # Speed up unbuffered case
@@ -931,7 +935,7 @@ else:
         def __del__(self):
             try:
                 self.close()
-            except:
+            except: # pylint:disable=bare-except
                 # close() may fail if __init__ didn't complete
                 pass
 
