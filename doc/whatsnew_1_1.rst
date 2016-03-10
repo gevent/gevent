@@ -17,6 +17,10 @@ Support for Python 2.5 was removed when support for Python 3 was
 added. Any further releases in the 1.0.x line will maintain support
 for Python 2.5.
 
+.. note:: Version 1.1.x will be the last series of gevent releases
+          to support Python 2.6. The next major release will only
+          support Python 2.7 and above.
+
 Python 3.5 has preliminary support, which means that gevent is
 expected to generally run and function with the same level of support
 as on Python 3.4, but new features and APIs introduced in 3.5 may not
