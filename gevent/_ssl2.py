@@ -9,14 +9,11 @@ This module implements cooperative SSL socket wrappers.
 
 from __future__ import absolute_import
 # Our import magic sadly makes this warning useless
-# pylint: disable=undefined-variable
+# pylint: disable=undefined-variable,arguments-differ,no-member
 
 import ssl as __ssl__
 
-try:
-    _ssl = __ssl__._ssl
-except AttributeError:
-    _ssl = __ssl__._ssl2
+_ssl = __ssl__._ssl
 
 import sys
 import errno
@@ -443,8 +440,7 @@ def get_server_certificate(addr, ssl_version=PROTOCOL_SSLv23, ca_certs=None):
     If 'ca_certs' is specified, validate the server cert against it.
     If 'ssl_version' is specified, use it in the connection attempt."""
 
-    host, port = addr
-    if (ca_certs is not None):
+    if ca_certs is not None:
         cert_reqs = CERT_REQUIRED
     else:
         cert_reqs = CERT_NONE

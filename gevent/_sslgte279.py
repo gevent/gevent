@@ -8,6 +8,10 @@ This module implements cooperative SSL socket wrappers.
 """
 
 from __future__ import absolute_import
+# Our import magic sadly makes this warning useless
+# pylint: disable=undefined-variable
+
+
 import ssl as __ssl__
 
 _ssl = __ssl__._ssl

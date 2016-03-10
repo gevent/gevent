@@ -28,6 +28,10 @@ disable=wrong-import-position,
 	locally-disabled,
 	# most of these are deferred imports
 	cyclic-import,
+	# these are almost always because that's what the stdlib does
+	too-many-arguments,
+	# likewise: these tend to be keyword arguments like len= in the stdlib
+	redefined-builtin,
 
 [FORMAT]
 # duplicated from setup.cfg
