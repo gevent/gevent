@@ -22,6 +22,9 @@ if PY3:
 else:
     from gevent import _socket2 as _source
 
+# define some things we're expecting to overwrite; each module
+# needs to define these
+__implements__ = __dns__ = __all__ = __extensions__ = __imports__ = ()
 
 for key in _source.__dict__:
     if key.startswith('__') and key not in '__implements__ __dns__ __all__ __extensions__ __imports__ __socket__'.split():

@@ -80,14 +80,11 @@ if sys.version_info[0] >= 3:
     string_types = str,
     PY3 = True
 else:
-    import __builtin__
+    import __builtin__ # pylint:disable=import-error
     string_types = __builtin__.basestring
     PY3 = False
 
-if sys.platform.startswith("win"):
-    WIN = True
-else:
-    WIN = False
+WIN = sys.platform.startswith("win")
 
 # maps module name -> {attribute name: original item}
 # e.g. "time" -> {"sleep": built-in function sleep}
@@ -133,19 +130,19 @@ def get_original(mod_name, item_name):
     else:
         return _get_original(mod_name, item_name)
 
+_NONE = object()
+
 
 def patch_item(module, attr, newitem):
-    NONE = object()
-    olditem = getattr(module, attr, NONE)
-    if olditem is not NONE:
+    olditem = getattr(module, attr, _NONE)
+    if olditem is not _NONE:
         saved.setdefault(module.__name__, {}).setdefault(attr, olditem)
     setattr(module, attr, newitem)
 
 
 def remove_item(module, attr):
-    NONE = object()
-    olditem = getattr(module, attr, NONE)
-    if olditem is NONE:
+    olditem = getattr(module, attr, _NONE)
+    if olditem is _NONE:
         return
     saved.setdefault(module.__name__, {}).setdefault(attr, olditem)
     delattr(module, attr)
@@ -294,6 +291,9 @@ def patch_thread(threading=True, _threading_local=True, Event=False, logging=Tru
     .. versionchanged:: 1.1b1
         Add *logging* and *existing_locks* params.
     """
+    # XXX: Simplify
+    # pylint:disable=too-many-branches
+
     # Description of the hang:
     # There is an incompatibility with patching 'thread' and the 'multiprocessing' module:
     # The problem is that multiprocessing.queues.Queue uses a half-duplex multiprocessing.Pipe,
@@ -326,18 +326,18 @@ def patch_thread(threading=True, _threading_local=True, Event=False, logging=Tru
 
     patch_module('thread')
     if threading:
-        threading = patch_module('threading')
+        threading_mod = patch_module('threading')
 
         if Event:
             from gevent.event import Event
-            patch_item(threading, 'Event', Event)
+            patch_item(threading_mod, 'Event', Event)
 
         if existing_locks:
-            _patch_existing_locks(threading)
+            _patch_existing_locks(threading_mod)
 
         if logging and 'logging' in sys.modules:
             logging = __import__('logging')
-            patch_item(logging, '_lock', threading.RLock())
+            patch_item(logging, '_lock', threading_mod.RLock())
             for wr in logging._handlerList:
                 # In py26, these are actual handlers, not weakrefs
                 handler = wr() if callable(wr) else wr
@@ -345,7 +345,7 @@ def patch_thread(threading=True, _threading_local=True, Event=False, logging=Tru
                     continue
                 if not hasattr(handler, 'lock'):
                     raise TypeError("Unknown/unsupported handler %r" % handler)
-                handler.lock = threading.RLock()
+                handler.lock = threading_mod.RLock()
 
     if _threading_local:
         _threading_local = __import__('_threading_local')
@@ -359,15 +359,15 @@ def patch_thread(threading=True, _threading_local=True, Event=False, logging=Tru
         # (which is already running) cannot wait for the main thread---it
         # hangs forever. We patch around this if possible. See also
         # gevent.threading.
-        threading = __import__('threading')
+        threading_mod = __import__('threading')
         greenlet = __import__('greenlet')
-        if threading.current_thread() == threading.main_thread():
-            main_thread = threading.main_thread()
+        if threading_mod.current_thread() == threading_mod.main_thread():
+            main_thread = threading_mod.main_thread()
             _greenlet = main_thread._greenlet = greenlet.getcurrent()
             from gevent.hub import sleep
 
             def join(timeout=None):
-                if threading.current_thread() is main_thread:
+                if threading_mod.current_thread() is main_thread:
                     raise RuntimeError("Cannot join current thread")
                 if _greenlet.dead or not main_thread.is_alive():
                     return
@@ -384,11 +384,11 @@ def patch_thread(threading=True, _threading_local=True, Event=False, logging=Tru
             # matters if threading was imported before monkey-patching
             # thread
             oldid = main_thread.ident
-            main_thread._ident = threading.get_ident()
-            if oldid in threading._active:
-                threading._active[main_thread.ident] = threading._active[oldid]
+            main_thread._ident = threading_mod.get_ident()
+            if oldid in threading_mod._active:
+                threading_mod._active[main_thread.ident] = threading_mod._active[oldid]
             if oldid != main_thread.ident:
-                del threading._active[oldid]
+                del threading_mod._active[oldid]
         else:
             _queue_warning("Monkey-patching not on the main thread; "
                            "threading.main_thread().join() will hang from a greenlet",
@@ -471,7 +471,7 @@ def patch_select(aggressive=True):
         select = __import__('select')
         selectors = __import__('selectors')
         if selectors.SelectSelector._select is select.select:
-            def _select(self, *args, **kwargs):
+            def _select(self, *args, **kwargs): # pylint:disable=unused-argument
                 return select.select(*args, **kwargs)
             selectors.SelectSelector._select = _select
 
@@ -555,6 +555,8 @@ def patch_all(socket=True, dns=True, time=True, select=True, thread=True, os=Tru
        and ``signal=True``. This will cause SIGCHLD handlers to not be called. This may
        be an error in the future.
     """
+    # pylint:disable=too-many-locals,too-many-branches
+
     # Check to see if they're changing the patched list
     _warnings, first_time = _check_repatching(**locals())
     if not _warnings and not first_time:
@@ -640,7 +642,7 @@ def main():
 
 def _get_script_help():
     from inspect import getargspec
-    patch_all_args = getargspec(patch_all)[0]
+    patch_all_args = getargspec(patch_all)[0] # pylint:disable=deprecated-method
     modules = [x for x in patch_all_args if 'patch_' + x in globals()]
     script_help = """gevent.monkey - monkey patch the standard modules to use gevent.
 
