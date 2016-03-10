@@ -1,4 +1,4 @@
-doc-warnings: yes
+doc-warnings: no # experimental, raises an exception
 test-warnings: no
 strictness: veryhigh
 max-line-length: 160
@@ -11,6 +11,21 @@ python-targets:
   - 3
 ignore-paths:
   - examples/webchat
+  - doc/
+  - build
+  - dist
+  - .eggs
+  # util creates lots of warnings. ideally they should be fixed,
+  # but that code doesn't change often
+  - util
+  # likewise with scripts
+  - scripts/
+ignore-patterns:
+  # disabled code
+  - greentest/xtest_.*py
+  # standard library code
+  - ^greentest/2.*
+  - ^greentest/3.*
 
 pyroma:
   run: true

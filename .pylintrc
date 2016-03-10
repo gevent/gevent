@@ -1,0 +1,23 @@
+[MESSAGES CONTROL]
+
+# Disable the message, report, category or checker with the given id(s). You
+# can either give multiple identifier separated by comma (,) or put this option
+# multiple time (only on the command line, not in the configuration file where
+# it should appear only once).
+#disable=I0011,W0511,W0312,C0103,C0301,C0111,C0324,C0321,R0903,R0201,W0613,W0232,W0142,R0922,C0330
+disable=wrong-import-position,
+	wrong-import-order,
+	missing-docstring,
+	ungrouped-imports,
+	invalid-name, # We get lots of these, especially in scripts. should fix many of them
+	protected-access, # We have many cases of this; legit ones need to be examinid and commented, then this removed
+
+[FORMAT]
+# duplicated from setup.cfg
+max-line-length=160
+
+[MISCELLANEOUS]
+# List of note tags to take in consideration, separated by a comma.
+#notes=FIXME,XXX,TODO
+# Disable that, we don't want them in the report (???)
+notes=
