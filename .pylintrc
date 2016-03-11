@@ -1,3 +1,4 @@
+
 [MESSAGES CONTROL]
 
 # Disable the message, report, category or checker with the given id(s). You
@@ -43,7 +44,7 @@ disable=wrong-import-position,
     too-many-arguments,
     redefined-builtin,
 	useless-suppression,
-	undefined-all-variable
+#	undefined-all-variable
 
 
 [FORMAT]
@@ -86,3 +87,7 @@ max-attributes=10
 
 [BASIC]
 bad-functions=input
+# Prospector turns ot unsafe-load-any-extension by default, but
+# pylint leaves it off. This is the proximal cause of the
+# undefined-all-variable crash.
+#unsafe-load-any-extension = no
