@@ -7,7 +7,7 @@
 1.2a1 (unreleased)
 ==================
 
-- Remove support for Python 2.6.
+- Remove support for Python 2.6. See :pr:`766`.
 - Update libev to version 4.22.
 - Update tblib to 1.3.0.
 - Update c-ares to version 1.11.0 (`release notes <https://raw.githubusercontent.com/c-ares/c-ares/cares-1_11_0/RELEASE-NOTES>`_).
