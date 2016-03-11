@@ -30,6 +30,10 @@ ignore-paths:
   - gevent/_tblib.py
   # likewise
   - greentest/six.py
+  # This triggers https://github.com/PyCQA/pylint/issues/846 on Travis,
+  # but the file is really small, so it's better to skip this one
+  # file than disable that whole check.
+  - gevent/core.py
   # sadly, this one is complicated
   - setup.py
   - greentest/getaddrinfo_module.py

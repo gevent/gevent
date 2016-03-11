@@ -22,10 +22,11 @@
 # too-many-arguments, ; these are almost always because that's what the stdlib does
 # redefined-builtin, ; likewise: these tend to be keyword arguments like len= in the stdlib
 # undefined-all-variable,     ; XXX: This crashes with pylint 1.5.4 on Travis (but not locally on Py2/3
-#     ; or landscape.io on Py3). The file causing the problem is unclear.
+#     ; or landscape.io on Py3). The file causing the problem is unclear. UPDATE: identified and disabled
+#   that file.
+#   see https://github.com/PyCQA/pylint/issues/846
 # useless-suppression: the only way to avoid repeating it for specific statements everywhere that we
 #   do Py2/Py3 stuff is to put it here. Sadly this means that we might get better but not realize it.
-#   see https://github.com/PyCQA/pylint/issues/846
 disable=wrong-import-position,
     wrong-import-order,
     missing-docstring,
@@ -42,7 +43,7 @@ disable=wrong-import-position,
     too-many-arguments,
     redefined-builtin,
 	useless-suppression,
-#	undefined-all-variable
+	undefined-all-variable
 
 
 [FORMAT]
