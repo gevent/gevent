@@ -12,7 +12,7 @@ __all__ = ['Event', 'AsyncResult']
 
 class _AbstractLinkable(object):
     # Encapsulates the standard parts of the linking and notifying protocol
-    # common to both repeatable events and one-time events (AsyncResolt).
+    # common to both repeatable events and one-time events (AsyncResult).
 
     _notifier = None
 
