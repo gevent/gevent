@@ -2,7 +2,9 @@ doc-warnings: no # experimental, raises an exception
 test-warnings: no
 strictness: veryhigh
 max-line-length: 160
-autodetect: yes
+# We don't use any of the auto-detected things, and
+# auto-detection slows down startup
+autodetect: false
 requirements:
     - dev-requirements.txt
 
@@ -66,3 +68,53 @@ pyflakes:
     - F811
     # F403: wildcard import; same story
     - F403
+
+pep8:
+  disable:
+    # N805: first arg should be self; fails on metaclasses and
+    # classmethods; pylint does a better job
+    - N805
+    # N802: function names should be lower-case; comes from Windows
+    # funcs and unittest-style asserts and factory funcs
+    - N802
+    # N801: class names should use CapWords
+    - N801
+    # N803: argument name should be lower-case; comes up with using
+    # the class name as a keyword-argument
+    - N803
+    # N813: camelCase imported as lowercase; socketcommon
+    - N813
+    # N806: variable in function should be lowercase; but sometimes we
+    # want constant-looking names, especially for closures
+    - N806
+    # N812: lowercase imported as non-lowercase; from greenlet import
+    # greenlet as RawGreenlet
+    - N812
+    # E261: at least two spaces before inline comment. Really? Who does
+    # that?
+    - E261
+    # E265: Block comment should start with "# ". This arises from
+    # commenting out individual lines of code.
+    - E265
+    # N806: variable in function should be lowercase; but sometimes we
+    # want constant-looking names, especially for closures
+    - N806
+    # W503 line break before binary operator (I like and/or on the
+    # next line, it makes more sense)
+    - W503
+    # E266: too many leading '#' for block comment. (Multiple # can
+    # set off blocks)
+    - E266
+    # E402 module level import not at top of file. (happens in
+    # setup.py, some test cases)
+    - E402
+    # E702: multiple expressions on one line semicolon
+    # (happens for monkey-patch))
+    - E702
+    # E731: do not assign a lambda expression, use a def
+    # simpler than a def sometimes, and prevents redefinition warnings
+    - E731
+    # E302/303: Too many/too few blank lines (between classes, etc)
+    # This is *really* nitpicky.
+    - E302
+    - E303
