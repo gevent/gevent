@@ -20,6 +20,39 @@ class TestWaitEvent(greentest.GenericWaitTestCase):
     def wait(self, timeout):
         gevent.wait([Event()], timeout=timeout)
 
+    def test_set_during_wait(self):
+        # https://github.com/gevent/gevent/issues/771
+        # broke in the refactoring. we must not add new links
+        # while we're running the callback
+
+        event = Event()
+
+        def setter():
+            event.set()
+
+        def waiter():
+            s = gevent.spawn(setter)
+            # let the setter set() the event;
+            # when this method returns we'll be running in the Event._notify_links callback
+            # (that is, it switched to us)
+            res = event.wait()
+            self.assertTrue(res)
+            self.assertTrue(event.ready())
+            s.join() # make sure it's dead
+            # Clear the event. Now we can't wait for the event without
+            # another set to happen.
+            event.clear()
+            self.assertFalse(event.ready())
+
+            # Before the bug fix, this would return "immediately" with
+            # event in the result list, because the _notify_links loop would
+            # immediately add the waiter and call it
+            o = gevent.wait((event,), timeout=0.01)
+            self.assertFalse(event.ready())
+            self.assertFalse(event in o, o)
+
+        gevent.spawn(waiter).join()
+
 
 class TestAsyncResultWait(greentest.GenericWaitTestCase):
 

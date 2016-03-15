@@ -12,7 +12,7 @@ __all__ = ['Event', 'AsyncResult']
 
 class _AbstractLinkable(object):
     # Encapsulates the standard parts of the linking and notifying protocol
-    # common to both repeatable events and one-time events (AsyncResolt).
+    # common to both repeatable events and one-time events (AsyncResult).
 
     _notifier = None
 
@@ -63,29 +63,24 @@ class _AbstractLinkable(object):
         # Actually call the notification callbacks. Those callbacks in todo that are
         # still in _links are called. This method is careful to avoid iterating
         # over self._links, because links could be added or removed while this
-        # method runs. For the same reason, we loop, checking for new items in
-        # _links.
+        # method runs. Only links present when this method begins running
+        # will be called; if a callback adds a new link, it will not run
+        # until the next time notify_links is activated
 
         # We don't need to capture self._links as todo when establishing
         # this callback; any links removed between now and then are handled
         # by the `if` below; any links added are also grabbed
         todo = set(self._links)
-        done = set()
-        while todo:
-            for link in todo:
-                # check that link was not notified yet and was not removed by the client
-                # We have to do this here, and not as part of the 'for' statement because
-                # a previous link(self) call might have altered self._links
-                if link in self._links:
-                    try:
-                        link(self)
-                    except: # pylint:disable=bare-except
-                        self.hub.handle_error((link, self), *sys.exc_info())
-            # Mark everything done
-            done.update(todo)
-            # Anything extra now in self._links but not yet done, loop
-            # again for
-            todo = self._links - done
+        for link in todo:
+            # check that link was not notified yet and was not removed by the client
+            # We have to do this here, and not as part of the 'for' statement because
+            # a previous link(self) call might have altered self._links
+            if link in self._links:
+                try:
+                    link(self)
+                except: # pylint:disable=bare-except
+                    self.hub.handle_error((link, self), *sys.exc_info())
+
 
     def _wait_core(self, timeout, catch=Timeout):
         # The core of the wait implementation, handling
