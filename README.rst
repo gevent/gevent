@@ -99,16 +99,26 @@ something like this::
   coverage html -i
   <open htmlcov/index.html>
 
-Builds on Travis CI automatically submit updates to `coveralls.io`_.
+Builds on Travis CI automatically submit updates to `coveralls.io`_ to
+monitor test coverage.
 
 .. image:: https://coveralls.io/repos/gevent/gevent/badge.svg?branch=master&service=github
    :target: https://coveralls.io/github/gevent/gevent?branch=master
+
+Likewise, builds on Travis CI will automatically submit updates to
+`landscape.io`_ to monitor code health (adherence to PEP8, absence of
+common code smells, etc).
+
+.. image:: https://landscape.io/github/gevent/gevent/master/landscape.svg?style=flat
+   :target: https://landscape.io/github/gevent/gevent/master
+   :alt: Code Health
 
 Continuous integration
 ----------------------
 
 A test suite is run for every push and pull request submitted. Travis
-CI is used to test on Linux, and `AppVeyor`_ runs the builds on Windows.
+CI is used to test on Linux, and `AppVeyor`_ runs the builds on
+Windows.
 
 .. image:: https://travis-ci.org/gevent/gevent.svg?branch=master
    :target: https://travis-ci.org/gevent/gevent
@@ -134,3 +144,4 @@ CI is used to test on Linux, and `AppVeyor`_ runs the builds on Windows.
 .. _AppVeyor: https://ci.appveyor.com/project/denik/gevent
 .. _what's new: http://www.gevent.org/whatsnew_1_1.html
 .. _changelog: http://www.gevent.org/changelog.html
+.. _landscape.io: https://landscape.io/github/gevent/gevent

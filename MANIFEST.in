@@ -9,6 +9,7 @@ recursive-include util *
 include LICENSE
 include NOTICE
 include README.rst
+include CONTRIBUTING.rst
 include TODO
 include changelog.rst
 include MANIFEST.in

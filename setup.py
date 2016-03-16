@@ -405,6 +405,7 @@ else:
 
 # If we are running info / help commands, or we're being imported by
 # tools like pyroma, we don't need to build anything
+_BUILDING = True
 if ((len(sys.argv) >= 2
      and ('--help' in sys.argv[1:]
           or sys.argv[1] in ('--help-commands',
@@ -413,6 +414,7 @@ if ((len(sys.argv) >= 2
                              'clean',
                              '--long-description')))
     or __name__ != '__main__'):
+    _BUILDING = False
     ext_modules = []
     include_package_data = PYPY
     run_make = False
@@ -531,5 +533,5 @@ except BuildFailed:
         raise
     ext_modules.remove(ARES)
     run_setup(ext_modules, run_make=run_make)
-if ARES not in ext_modules and __name__ == '__main__':
+if ARES not in ext_modules and __name__ == '__main__' and _BUILDING:
     sys.stderr.write('\nWARNING: The gevent.ares extension has been disabled.\n')
