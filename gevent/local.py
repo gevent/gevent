@@ -223,7 +223,7 @@ def _patch(self):
         dct = impl.create_dict()
         args, kw = impl.localargs
         with impl.locallock:
-            self.__init__(*args, **kw)
+            object.__getattribute__(self, '__init__')(*args, **kw)
     with impl.locallock:
         object.__setattr__(self, '__dict__', dct)
         yield
@@ -259,7 +259,7 @@ class local(object):
         if name == '__dict__':
             raise AttributeError(
                 "%r object attribute '__dict__' is read-only"
-                % self.__class__.__name__)
+                % object.__getattribute__(self, '__class__').__name__)
         with _patch(self):
             return object.__setattr__(self, name, value)
 
@@ -267,7 +267,7 @@ class local(object):
         if name == '__dict__':
             raise AttributeError(
                 "%r object attribute '__dict__' is read-only"
-                % self.__class__.__name__)
+                % object.__getattribute__(self, '__class__').__name__)
         with _patch(self):
             return object.__delattr__(self, name)
 
