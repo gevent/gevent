@@ -2,8 +2,7 @@ setuptools
 wheel
 cython>=0.23.4
 greenlet>=0.4.9
-pep8
-pyflakes
+prospector[with_pyroma]
 coverage>=4.0
 coveralls>=1.0
 cffi

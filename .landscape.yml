@@ -1,0 +1,120 @@
+doc-warnings: no # experimental, raises an exception
+test-warnings: no
+strictness: veryhigh
+max-line-length: 160
+# We don't use any of the auto-detected things, and
+# auto-detection slows down startup
+autodetect: false
+requirements:
+    - dev-requirements.txt
+
+python-targets:
+  - 2
+  - 3
+ignore-paths:
+  - examples/webchat/
+  - doc/
+  - build
+  - dist
+  - .eggs
+  # util creates lots of warnings. ideally they should be fixed,
+  # but that code doesn't change often
+  - util
+  # likewise with scripts
+  - scripts/
+  # This file has invalid syntax for Python 3, which is how
+  # landscape.io runs things...
+  - gevent/_util_py2.py
+  # ...and this file has invalid syntax for Python 2, which is how
+  # travis currently runs things. sigh.
+  - gevent/_socket3.py
+  # This is vendored with minimal changes
+  - gevent/_tblib.py
+  # likewise
+  - greentest/six.py
+  # This triggers https://github.com/PyCQA/pylint/issues/846 on Travis,
+  # but the file is really small, so it's better to skip this one
+  # file than disable that whole check.
+  - gevent/core.py
+  # sadly, this one is complicated
+  - setup.py
+  - greentest/getaddrinfo_module.py
+ignore-patterns:
+  # disabled code
+  - greentest/xtest_.*py
+  # standard library code
+  - ^greentest/2.*
+  - ^greentest/3.*
+  # benchmarks that aren't used/changed much
+  - ^greentest/bench_.*py
+
+pyroma:
+  run: true
+
+mccabe:
+  # We have way too many violations of the complexity measure.
+  # We should enable this and fix them one at a time, but that's
+  # more refactoring than I want to do initially.
+  run: false
+
+pyflakes:
+  disable:
+    # F821: undefined name; caught better by pylint, where it can be
+    # controlled for the whole file/per-line
+    - F821
+    # F401: unused import; same story
+    - F401
+    # F811: redefined function; same story
+    - F811
+    # F403: wildcard import; same story
+    - F403
+
+pep8:
+  disable:
+    # N805: first arg should be self; fails on metaclasses and
+    # classmethods; pylint does a better job
+    - N805
+    # N802: function names should be lower-case; comes from Windows
+    # funcs and unittest-style asserts and factory funcs
+    - N802
+    # N801: class names should use CapWords
+    - N801
+    # N803: argument name should be lower-case; comes up with using
+    # the class name as a keyword-argument
+    - N803
+    # N813: camelCase imported as lowercase; socketcommon
+    - N813
+    # N806: variable in function should be lowercase; but sometimes we
+    # want constant-looking names, especially for closures
+    - N806
+    # N812: lowercase imported as non-lowercase; from greenlet import
+    # greenlet as RawGreenlet
+    - N812
+    # E261: at least two spaces before inline comment. Really? Who does
+    # that?
+    - E261
+    # E265: Block comment should start with "# ". This arises from
+    # commenting out individual lines of code.
+    - E265
+    # N806: variable in function should be lowercase; but sometimes we
+    # want constant-looking names, especially for closures
+    - N806
+    # W503 line break before binary operator (I like and/or on the
+    # next line, it makes more sense)
+    - W503
+    # E266: too many leading '#' for block comment. (Multiple # can
+    # set off blocks)
+    - E266
+    # E402 module level import not at top of file. (happens in
+    # setup.py, some test cases)
+    - E402
+    # E702: multiple expressions on one line semicolon
+    # (happens for monkey-patch))
+    - E702
+    # E731: do not assign a lambda expression, use a def
+    # simpler than a def sometimes, and prevents redefinition warnings
+    - E731
+    # E302/303: Too many/too few blank lines (between classes, etc)
+    # This is *really* nitpicky.
+    - E302
+    - E303

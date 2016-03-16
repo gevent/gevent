@@ -19,9 +19,9 @@ __implements__ = ['allocate_lock',
 
 __imports__ = ['error']
 if sys.version_info[0] <= 2:
-    import thread as __thread__
+    import thread as __thread__ # pylint:disable=import-error
 else:
-    import _thread as __thread__
+    import _thread as __thread__ # pylint:disable=import-error
     __target__ = '_thread'
     __imports__ += ['RLock',
                     'TIMEOUT_MAX',
@@ -43,8 +43,11 @@ def get_ident(gr=None):
         return id(gr)
 
 
-def start_new_thread(function, args=(), kwargs={}):
-    greenlet = Greenlet.spawn(function, *args, **kwargs)
+def start_new_thread(function, args=(), kwargs=None):
+    if kwargs is not None:
+        greenlet = Greenlet.spawn(function, *args, **kwargs)
+    else:
+        greenlet = Greenlet.spawn(function, *args)
     return get_ident(greenlet)
 
 
@@ -54,7 +57,7 @@ class LockType(BoundedSemaphore):
     _OVER_RELEASE_ERROR = __thread__.error
 
     if PY3:
-        _TIMEOUT_MAX = __thread__.TIMEOUT_MAX
+        _TIMEOUT_MAX = __thread__.TIMEOUT_MAX # python 2: pylint:disable=no-member
 
         def acquire(self, blocking=True, timeout=-1):
             # Transform the default -1 argument into the None that our

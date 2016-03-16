@@ -1,0 +1,93 @@
+
+[MESSAGES CONTROL]
+
+# Disable the message, report, category or checker with the given id(s). You
+# can either give multiple identifier separated by comma (,) or put this option
+# multiple time (only on the command line, not in the configuration file where
+# it should appear only once).
+# NOTE: comments must go ABOVE the statement. In Python 2, mixing in
+# comments disables all directives that follow, while in Python 3, putting
+# comments at the end of the line does the same thing (though Py3 supports
+# mixing)
+
+
+# invalid-name, ; We get lots of these, especially in scripts. should fix many of them
+# protected-access, ; We have many cases of this; legit ones need to be examinid and commented, then this removed
+# no-self-use, ; common in superclasses with extension points
+# too-few-public-methods, ; Exception and marker classes get tagged with this
+# exec-used, ; should tag individual instances with this, there are some but not too many
+# global-statement,     ; should tag individual instances
+# multiple-statements, ; "from gevent import monkey; monkey.patch_all()"
+# locally-disabled, ; yes, we know we're doing this. don't replace one warning with another
+# cyclic-import, ; most of these are deferred imports
+# too-many-arguments, ; these are almost always because that's what the stdlib does
+# redefined-builtin, ; likewise: these tend to be keyword arguments like len= in the stdlib
+# undefined-all-variable,     ; XXX: This crashes with pylint 1.5.4 on Travis (but not locally on Py2/3
+#     ; or landscape.io on Py3). The file causing the problem is unclear. UPDATE: identified and disabled
+#   that file.
+#   see https://github.com/PyCQA/pylint/issues/846
+# useless-suppression: the only way to avoid repeating it for specific statements everywhere that we
+#   do Py2/Py3 stuff is to put it here. Sadly this means that we might get better but not realize it.
+disable=wrong-import-position,
+    wrong-import-order,
+    missing-docstring,
+    ungrouped-imports,
+    invalid-name,
+    protected-access,
+    no-self-use,
+    too-few-public-methods,
+    exec-used,
+    global-statement,
+    multiple-statements,
+    locally-disabled,
+    cyclic-import,
+    too-many-arguments,
+    redefined-builtin,
+	useless-suppression,
+#	undefined-all-variable
+
+
+[FORMAT]
+# duplicated from setup.cfg
+max-line-length=160
+
+[MISCELLANEOUS]
+# List of note tags to take in consideration, separated by a comma.
+#notes=FIXME,XXX,TODO
+# Disable that, we don't want them in the report (???)
+notes=
+
+[VARIABLES]
+
+dummy-variables-rgx=_.*
+
+[TYPECHECK]
+
+# List of members which are set dynamically and missed by pylint inference
+# system, and so shouldn't trigger E1101 when accessed. Python regular
+# expressions are accepted.
+# gevent: this is helpful for py3/py2 code.
+generated-members=exc_clear
+
+# List of classes names for which member attributes should not be checked
+# (useful for classes with attributes dynamically set). This supports can work
+# with qualified names.
+# greenlet, Greenlet, parent, dead: all attempts to fix issues in greenlet.py
+# only seen on the service, e.g., self.parent.loop: class parent has no loop
+ignored-classes=SSLContext, SSLSocket, greenlet, Greenlet, parent, dead
+
+# List of module names for which member attributes should not be checked
+# (useful for modules/projects where namespaces are manipulated during runtime
+# and thus existing member attributes cannot be deduced by static analysis. It
+# supports qualified module names, as well as Unix pattern matching.
+ignored-modules=gevent._corecffi
+
+[DESIGN]
+max-attributes=10
+
+[BASIC]
+bad-functions=input
+# Prospector turns ot unsafe-load-any-extension by default, but
+# pylint leaves it off. This is the proximal cause of the
+# undefined-all-variable crash.
+#unsafe-load-any-extension = no

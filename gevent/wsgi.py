@@ -9,7 +9,7 @@ pipelining, and not supporting SSL.
    Use :mod:`gevent.pywsgi`
 """
 
-from gevent.pywsgi import *
+from gevent.pywsgi import * # pylint:disable=wildcard-import
 import gevent.pywsgi as _pywsgi
 __all__ = _pywsgi.__all__
 del _pywsgi

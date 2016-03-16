@@ -1,13 +1,15 @@
 from __future__ import absolute_import
 
 
-__implements__ = ['local',
-                  '_start_new_thread',
-                  '_allocate_lock',
-                  'Lock',
-                  '_get_ident',
-                  '_sleep',
-                  '_DummyThread']
+__implements__ = [
+    'local',
+    '_start_new_thread',
+    '_allocate_lock',
+    'Lock',
+    '_get_ident',
+    '_sleep',
+    '_DummyThread',
+]
 
 
 import threading as __threading__
@@ -15,6 +17,15 @@ _DummyThread_ = __threading__._DummyThread
 from gevent.local import local
 from gevent.thread import start_new_thread as _start_new_thread, allocate_lock as _allocate_lock, get_ident as _get_ident
 from gevent.hub import sleep as _sleep, getcurrent, PYPY
+
+# Exports, prevent unused import warnings
+local = local
+start_new_thread = _start_new_thread
+allocate_lock = _allocate_lock
+_get_ident = _get_ident
+_sleep = _sleep
+getcurrent = getcurrent
+
 Lock = _allocate_lock
 
 
@@ -61,7 +72,7 @@ class _DummyThread(_DummyThread_):
     _tstate_lock = None
 
     def __init__(self):
-        #_DummyThread_.__init__(self)
+        #_DummyThread_.__init__(self) # pylint:disable=super-init-not-called
 
         # It'd be nice to use a pattern like "greenlet-%d", but maybe somebody out
         # there is checking thread names...
@@ -88,12 +99,12 @@ class _DummyThread(_DummyThread_):
 # when gevent.threading is imported before monkey patching or not at all
 # XXX: This assumes that the import is happening in the "main" greenlet
 if _get_ident() not in __threading__._active and len(__threading__._active) == 1:
-    k, v = next(iter(__threading__._active.items()))
-    del __threading__._active[k]
-    v._Thread__ident = _get_ident()
-    __threading__._active[_get_ident()] = v
-    del k
-    del v
+    _k, _v = next(iter(__threading__._active.items()))
+    del __threading__._active[_k]
+    _v._Thread__ident = _get_ident()
+    __threading__._active[_get_ident()] = _v
+    del _k
+    del _v
 
     # Avoid printing an error on shutdown trying to remove the thread entry
     # we just replaced if we're not fully monkey patched in
@@ -101,6 +112,7 @@ if _get_ident() not in __threading__._active and len(__threading__._active) == 1
     # defines __delitem__, shutdown hangs. Maybe due to something with the GC?
     # XXX: This may be fixed in 2.6.1+
     if not PYPY:
+        # pylint:disable=no-member
         _MAIN_THREAD = __threading__._get_ident() if hasattr(__threading__, '_get_ident') else __threading__.get_ident()
 
         class _active(dict):

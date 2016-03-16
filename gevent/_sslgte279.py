@@ -8,9 +8,14 @@ This module implements cooperative SSL socket wrappers.
 """
 
 from __future__ import absolute_import
+# Our import magic sadly makes this warning useless
+# pylint: disable=undefined-variable
+# pylint: disable=too-many-instance-attributes,too-many-locals,too-many-statements,too-many-branches
+# pylint: disable=arguments-differ,too-many-public-methods
+
 import ssl as __ssl__
 
-_ssl = __ssl__._ssl
+_ssl = __ssl__._ssl # pylint:disable=no-member
 
 import errno
 from gevent._socket2 import socket
@@ -19,33 +24,35 @@ from gevent.socket import error as socket_error
 from gevent.socket import timeout as _socket_timeout
 from gevent.hub import PYPY
 
-__implements__ = ['SSLContext',
-                  'SSLSocket',
-                  'wrap_socket',
-                  'get_server_certificate',
-                  'create_default_context',
-                  '_create_unverified_context',
-                  '_create_default_https_context',
-                  '_create_stdlib_context']
+__implements__ = [
+    'SSLContext',
+    'SSLSocket',
+    'wrap_socket',
+    'get_server_certificate',
+    'create_default_context',
+    '_create_unverified_context',
+    '_create_default_https_context',
+    '_create_stdlib_context',
+]
 
 __imports__ = []
 
 # Import all symbols from Python's ssl.py, except those that we are implementing
 # and "private" symbols.
-value = None
-for name in dir(__ssl__):
-    if name in __implements__:
+_name = _value = None
+for _name in dir(__ssl__):
+    if _name in __implements__:
         continue
-    if name.startswith('__'):
+    if _name.startswith('__'):
         continue
-    if name == 'socket':
+    if _name == 'socket':
         # SSLSocket *must* subclass gevent.socket.socket; see issue 597
         continue
-    value = getattr(__ssl__, name)
-    globals()[name] = value
-    __imports__.append(name)
+    _value = getattr(__ssl__, _name)
+    globals()[_name] = _value
+    __imports__.append(_name)
 
-del name, value
+del _name, _value
 
 try:
     _delegate_methods
@@ -54,7 +61,7 @@ except NameError: # PyPy doesn't expose this detail
 
 __all__ = __implements__ + __imports__
 
-orig_SSLContext = __ssl__.SSLContext
+orig_SSLContext = __ssl__.SSLContext # pylint: disable=no-member
 
 
 class SSLContext(orig_SSLContext):
@@ -95,7 +102,7 @@ def create_default_context(purpose=Purpose.SERVER_AUTH, cafile=None,
     if purpose == Purpose.SERVER_AUTH:
         # verify certs and host name in client mode
         context.verify_mode = CERT_REQUIRED
-        context.check_hostname = True
+        context.check_hostname = True # pylint: disable=attribute-defined-outside-init
     elif purpose == Purpose.CLIENT_AUTH:
         # Prefer the server's ciphers by default so that we get stronger
         # encryption
@@ -118,9 +125,9 @@ def create_default_context(purpose=Purpose.SERVER_AUTH, cafile=None,
     return context
 
 def _create_unverified_context(protocol=PROTOCOL_SSLv23, cert_reqs=None,
-                           check_hostname=False, purpose=Purpose.SERVER_AUTH,
-                           certfile=None, keyfile=None,
-                           cafile=None, capath=None, cadata=None):
+                               check_hostname=False, purpose=Purpose.SERVER_AUTH,
+                               certfile=None, keyfile=None,
+                               cafile=None, capath=None, cadata=None):
     """Create a SSLContext object for Python stdlib modules
 
     All Python stdlib modules shall use this function to create SSLContext
@@ -140,7 +147,7 @@ def _create_unverified_context(protocol=PROTOCOL_SSLv23, cert_reqs=None,
 
     if cert_reqs is not None:
         context.verify_mode = cert_reqs
-    context.check_hostname = check_hostname
+    context.check_hostname = check_hostname # pylint: disable=attribute-defined-outside-init
 
     if keyfile and not certfile:
         raise ValueError("certfile must be specified")
@@ -180,7 +187,8 @@ class SSLSocket(socket):
                  suppress_ragged_eofs=True, npn_protocols=None, ciphers=None,
                  server_hostname=None,
                  _context=None):
-
+        # fileno is ignored
+        # pylint: disable=unused-argument
         if _context:
             self._context = _context
         else:
@@ -281,8 +289,8 @@ class SSLSocket(socket):
         self._sslobj.context = ctx
 
     def dup(self):
-        raise NotImplemented("Can't dup() %s instances" %
-                             self.__class__.__name__)
+        raise NotImplementedError("Can't dup() %s instances" %
+                                  self.__class__.__name__)
 
     def _checkClosed(self, msg=None):
         # raise an exception here if you wish to check for spurious closes
@@ -368,7 +376,7 @@ class SSLSocket(socket):
         # 2.7.10+
         def selected_alpn_protocol(self):
             self._checkClosed()
-            if not self._sslobj or not _ssl.HAS_ALPN:
+            if not self._sslobj or not _ssl.HAS_ALPN: # pylint:disable=no-member
                 return None
             else:
                 return self._sslobj.selected_alpn_protocol()
@@ -465,8 +473,8 @@ class SSLSocket(socket):
         if self._sslobj:
             if flags != 0:
                 raise ValueError(
-                  "non-zero flags not allowed in calls to recv_into() on %s" %
-                  self.__class__)
+                    "non-zero flags not allowed in calls to recv_into() on %s" %
+                    self.__class__)
             return self.read(nbytes, buffer)
         else:
             return socket.recv_into(self, buffer, nbytes, flags)
@@ -555,7 +563,7 @@ class SSLSocket(socket):
 
     def _real_close(self):
         self._sslobj = None
-        socket._real_close(self)
+        socket._real_close(self) # pylint: disable=no-member
 
     def do_handshake(self):
         """Perform a TLS/SSL handshake."""
@@ -619,9 +627,9 @@ class SSLSocket(socket):
 
         newsock, addr = socket.accept(self)
         newsock = self.context.wrap_socket(newsock,
-                    do_handshake_on_connect=self.do_handshake_on_connect,
-                    suppress_ragged_eofs=self.suppress_ragged_eofs,
-                    server_side=True)
+                                           do_handshake_on_connect=self.do_handshake_on_connect,
+                                           suppress_ragged_eofs=self.suppress_ragged_eofs,
+                                           server_side=True)
         return newsock, addr
 
     def makefile(self, mode='r', bufsize=-1):
@@ -644,8 +652,8 @@ class SSLSocket(socket):
             raise ValueError("Unsupported channel binding type")
         if cb_type != "tls-unique":
             raise NotImplementedError(
-                            "{0} channel binding type not implemented"
-                            .format(cb_type))
+                "{0} channel binding type not implemented"
+                .format(cb_type))
         if self._sslobj is None:
             return None
         return self._sslobj.tls_unique_cb()
@@ -696,7 +704,7 @@ def get_server_certificate(addr, ssl_version=PROTOCOL_SSLv23, ca_certs=None):
     If 'ca_certs' is specified, validate the server cert against it.
     If 'ssl_version' is specified, use it in the connection attempt."""
 
-    host, port = addr
+    _, _ = addr
     if ca_certs is not None:
         cert_reqs = CERT_REQUIRED
     else:

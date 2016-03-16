@@ -66,6 +66,8 @@ class BaseServer(object):
        closing of the socket, fixing ResourceWarnings under Python 3 and PyPy.
 
     """
+    # pylint: disable=too-many-instance-attributes,bare-except,broad-except
+
     #: the number of seconds to sleep in case there was an error in accept() call
     #: for consecutive errors the delay will double until it reaches max_delay
     #: when accept() finally succeeds the delay will be reset to min_delay again
@@ -92,6 +94,10 @@ class BaseServer(object):
         self._stop_event.set()
         self._watcher = None
         self._timer = None
+        self._handle = None
+        # XXX: FIXME: Subclasses rely on the presence or absence of the
+        # `socket` attribute to determine whether we are open/should be opened.
+        # Instead, have it be None.
         self.pool = None
         try:
             self.set_listener(listener)
@@ -213,6 +219,8 @@ class BaseServer(object):
                     break
 
     def full(self):
+        # copied from self.pool
+        # pylint: disable=method-hidden
         return False
 
     def __repr__(self):

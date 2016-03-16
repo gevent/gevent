@@ -2,6 +2,7 @@
 
 [1] http://pypi.python.org/pypi/py-sendfile/
 """
+# pylint:disable=import-error
 from errno import EAGAIN
 from sendfile import sendfile as original_sendfile
 from gevent.socket import wait_write

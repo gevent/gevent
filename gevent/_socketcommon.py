@@ -2,60 +2,69 @@
 from __future__ import absolute_import
 
 # standard functions and classes that this module re-implements in a gevent-aware way:
-_implements = ['create_connection',
-               'socket',
-               'SocketType',
-               'fromfd',
-               'socketpair']
+_implements = [
+    'create_connection',
+    'socket',
+    'SocketType',
+    'fromfd',
+    'socketpair',
+]
 
-__dns__ = ['getaddrinfo',
-           'gethostbyname',
-           'gethostbyname_ex',
-           'gethostbyaddr',
-           'getnameinfo',
-           'getfqdn']
+__dns__ = [
+    'getaddrinfo',
+    'gethostbyname',
+    'gethostbyname_ex',
+    'gethostbyaddr',
+    'getnameinfo',
+    'getfqdn',
+]
 
 _implements += __dns__
 
 # non-standard functions that this module provides:
-__extensions__ = ['cancel_wait',
-                  'wait_read',
-                  'wait_write',
-                  'wait_readwrite']
+__extensions__ = [
+    'cancel_wait',
+    'wait_read',
+    'wait_write',
+    'wait_readwrite',
+]
 
 # standard functions and classes that this module re-imports
-__imports__ = ['error',
-               'gaierror',
-               'herror',
-               'htonl',
-               'htons',
-               'ntohl',
-               'ntohs',
-               'inet_aton',
-               'inet_ntoa',
-               'inet_pton',
-               'inet_ntop',
-               'timeout',
-               'gethostname',
-               'getprotobyname',
-               'getservbyname',
-               'getservbyport',
-               'getdefaulttimeout',
-               'setdefaulttimeout',
-               # Windows:
-               'errorTab',
-               ]
+__imports__ = [
+    'error',
+    'gaierror',
+    'herror',
+    'htonl',
+    'htons',
+    'ntohl',
+    'ntohs',
+    'inet_aton',
+    'inet_ntoa',
+    'inet_pton',
+    'inet_ntop',
+    'timeout',
+    'gethostname',
+    'getprotobyname',
+    'getservbyname',
+    'getservbyport',
+    'getdefaulttimeout',
+    'setdefaulttimeout',
+    # Windows:
+    'errorTab',
+]
 
-__py3_imports__ = [# Python 3
-                   'AddressFamily',
-                   'SocketKind',
-                   'CMSG_LEN',
-                   'CMSG_SPACE',
-                   'dup',
-                   'if_indextoname',
-                   'if_nameindex',
-                   'if_nametoindex',
-                   'sethostname']
+__py3_imports__ = [
+    # Python 3
+    'AddressFamily',
+    'SocketKind',
+    'CMSG_LEN',
+    'CMSG_SPACE',
+    'dup',
+    'if_indextoname',
+    'if_nameindex',
+    'if_nametoindex',
+    'sethostname',
+]
 
 __imports__.extend(__py3_imports__)
 
@@ -66,7 +75,7 @@ from gevent.hub import ConcurrentObjectUseError
 from gevent.timeout import Timeout
 
 is_windows = sys.platform == 'win32'
-
+# pylint:disable=no-name-in-module,unused-import
 if is_windows:
     # no such thing as WSAEPERM or error code 10001 according to winsock.h or MSDN
     from errno import WSAEINVAL as EINVAL
@@ -94,21 +103,21 @@ import _socket
 _realsocket = _socket.socket
 import socket as __socket__
 
-
-for name in __imports__[:]:
+_name = _value = None
+for _name in __imports__[:]:
     try:
-        value = getattr(__socket__, name)
-        globals()[name] = value
+        _value = getattr(__socket__, _name)
+        globals()[_name] = _value
     except AttributeError:
-        __imports__.remove(name)
+        __imports__.remove(_name)
 
-for name in __socket__.__all__:
-    value = getattr(__socket__, name)
-    if isinstance(value, integer_types) or isinstance(value, string_types):
-        globals()[name] = value
-        __imports__.append(name)
+for _name in __socket__.__all__:
+    _value = getattr(__socket__, _name)
+    if isinstance(_value, integer_types) or isinstance(_value, string_types):
+        globals()[_name] = _value
+        __imports__.append(_name)
 
-del name, value
+del _name, _value
 
 
 class _NONE(object):
@@ -117,7 +126,7 @@ class _NONE(object):
         return "<default value>"
 
 _NONE = _NONE()
-_timeout_error = timeout
+_timeout_error = timeout # pylint: disable=undefined-variable
 
 
 def wait(io, timeout=None, timeout_exc=_NONE):
@@ -179,6 +188,7 @@ def wait_write(fileno, timeout=None, timeout_exc=_NONE, event=_NONE):
 
     .. seealso:: :func:`cancel_wait`
     """
+    # pylint:disable=unused-argument
     io = get_hub().loop.io(fileno, 2)
     return wait(io, timeout, timeout_exc)
 
@@ -196,11 +206,12 @@ def wait_readwrite(fileno, timeout=None, timeout_exc=_NONE, event=_NONE):
 
     .. seealso:: :func:`cancel_wait`
     """
+    # pylint:disable=unused-argument
     io = get_hub().loop.io(fileno, 3)
     return wait(io, timeout, timeout_exc)
 
 #: The exception raised by default on a call to :func:`cancel_wait`
-cancel_wait_ex = error(EBADF, 'File descriptor was closed in another greenlet')
+cancel_wait_ex = error(EBADF, 'File descriptor was closed in another greenlet') # pylint: disable=undefined-variable
 
 
 def cancel_wait(watcher, error=cancel_wait_ex):
@@ -300,11 +311,12 @@ def getfqdn(name=''):
     possibly existing aliases. In case no FQDN is available, hostname
     from gethostname() is returned.
     """
+    # pylint: disable=undefined-variable
     name = name.strip()
     if not name or name == '0.0.0.0':
         name = gethostname()
     try:
-        hostname, aliases, ipaddrs = gethostbyaddr(name)
+        hostname, aliases, _ = gethostbyaddr(name)
     except error:
         pass
     else:

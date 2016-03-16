@@ -77,6 +77,8 @@ class StreamServer(BaseServer):
 
     def init_socket(self):
         if not hasattr(self, 'socket'):
+            # FIXME: clean up the socket lifetime
+            # pylint:disable=attribute-defined-outside-init
             self.socket = self.get_listener(self.address, self.backlog, self.family)
             self.address = self.socket.getsockname()
         if self.ssl_args:
@@ -85,10 +87,10 @@ class StreamServer(BaseServer):
             self._handle = self.handle
 
     @classmethod
-    def get_listener(self, address, backlog=None, family=None):
+    def get_listener(cls, address, backlog=None, family=None):
         if backlog is None:
-            backlog = self.backlog
-        return _tcp_listener(address, backlog=backlog, reuse_addr=self.reuse_addr, family=family)
+            backlog = cls.backlog
+        return _tcp_listener(address, backlog=backlog, reuse_addr=cls.reuse_addr, family=family)
 
     if PY3:
 
@@ -96,7 +98,7 @@ class StreamServer(BaseServer):
             sock = self.socket
             try:
                 fd, address = sock._accept()
-            except BlockingIOError:
+            except BlockingIOError: # python 2: pylint: disable=undefined-variable
                 if not sock.timeout:
                     return
                 raise
@@ -118,8 +120,8 @@ class StreamServer(BaseServer):
                 client_socket._drop()
             return sockobj, address
 
-    def do_close(self, socket, *args):
-        socket.close()
+    def do_close(self, sock, *args):
+        sock.close()
 
     def wrap_socket_and_handle(self, client_socket, address):
         # used in case of ssl sockets
@@ -133,12 +135,16 @@ class DatagramServer(BaseServer):
     reuse_addr = DEFAULT_REUSE_ADDR
 
     def __init__(self, *args, **kwargs):
+        # The raw (non-gevent) socket, if possible
+        self._socket = None
         BaseServer.__init__(self, *args, **kwargs)
         from gevent.lock import Semaphore
         self._writelock = Semaphore()
 
     def init_socket(self):
         if not hasattr(self, 'socket'):
+            # FIXME: clean up the socket lifetime
+            # pylint:disable=attribute-defined-outside-init
             self.socket = self.get_listener(self.address, self.family)
             self.address = self.socket.getsockname()
         self._socket = self.socket
@@ -148,8 +154,8 @@ class DatagramServer(BaseServer):
             pass
 
     @classmethod
-    def get_listener(self, address, family=None):
-        return _udp_socket(address, reuse_addr=self.reuse_addr, family=family)
+    def get_listener(cls, address, family=None):
+        return _udp_socket(address, reuse_addr=cls.reuse_addr, family=family)
 
     def do_read(self):
         try:
@@ -186,6 +192,9 @@ def _tcp_listener(address, backlog=50, reuse_addr=None, family=_socket.AF_INET):
 
 
 def _udp_socket(address, backlog=50, reuse_addr=None, family=_socket.AF_INET):
+    # backlog argument for compat with tcp_listener
+    # pylint:disable=unused-argument
+
     # we want gevent.socket.socket here
     sock = socket(family=family, type=_socket.SOCK_DGRAM)
     if reuse_addr is not None:

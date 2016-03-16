@@ -46,13 +46,14 @@ doc:
 whitespace:
 	! find . -not -path "*.pem" -not -path "./.eggs/*" -not -path "./greentest/htmlcov/*" -not -path "./greentest/.coverage.*" -not -path "./.tox/*" -not -path "*/__pycache__/*" -not -path "*.so" -not -path "*.pyc" -not -path "./.git/*" -not -path "./build/*" -not -path "./libev/*" -not -path "./gevent/libev/*" -not -path "./gevent.egg-info/*" -not -path "./dist/*" -not -path "./.DS_Store" -not -path "./c-ares/*" -not -path "./gevent/gevent.*.[ch]" -not -path "./gevent/corecext.pyx" -not -path "./doc/_build/*" -not -path "./doc/mytheme/static/*" -type f | xargs egrep -l " $$"
 
-pep8:
-	${PYTHON} `which pep8` .
+prospector:
+	which prospector
+	which pylint
+# debugging
+#	pylint --rcfile=.pylintrc --init-hook="import sys, code; sys.excepthook = lambda exc, exc_type, tb: print(tb.tb_next.tb_next.tb_next.tb_next.tb_next.tb_next.tb_next.tb_next.tb_next.tb_next.tb_frame.f_locals['self'])" gevent greentest/* || true
+	${PYTHON} scripts/gprospector.py -X
 
-pyflakes:
-	${PYTHON} util/pyflakes.py
-
-lint: whitespace pyflakes pep8
+lint: whitespace prospector
 
 test_prelim:
 	which ${PYTHON}
@@ -86,7 +87,7 @@ travis_test_linters:
 	coveralls --rcfile=greentest/.coveragerc
 
 
-.PHONY: clean all doc pep8 whitespace pyflakes lint travistest travis
+.PHONY: clean all doc prospector whitespace lint travistest travis
 
 # Managing runtimes
 

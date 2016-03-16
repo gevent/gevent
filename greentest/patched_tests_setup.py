@@ -1,3 +1,4 @@
+# pylint:disable=missing-docstring,invalid-name
 from __future__ import print_function
 import sys
 import os
@@ -46,9 +47,9 @@ test_patched_threading.*
 
 
 def make_re(tests):
-    tests = [x.strip().replace('\.', '\\.').replace('*', '.*?') for x in tests.split('\n') if x.strip()]
-    tests = re.compile('^%s$' % '|'.join(tests))
-    return tests
+    tests = [x.strip().replace(r'\.', r'\\.').replace('*', '.*?')
+             for x in tests.split('\n') if x.strip()]
+    return re.compile('^%s$' % '|'.join(tests))
 
 
 no_switch_tests = make_re(no_switch_tests)
@@ -66,6 +67,9 @@ def get_switch_expected(fullname):
     >>> get_switch_expected("test_patched_httplib.BasicTest.test_bad_status_repr")
     False
     """
+    # certain pylint versions mistype the globals as
+    # str, not re.
+    # pylint:disable=no-member
     if ignore_switch_tests.match(fullname) is not None:
         return None
     if no_switch_tests.match(fullname) is not None:
@@ -280,7 +284,7 @@ if hasattr(sys, 'pypy_version_info'):
         # _execut_child)
     ]
 
-    import cffi
+    import cffi # pylint:disable=import-error,useless-suppression
     if cffi.__version_info__ < (1, 2, 0):
         disabled_tests += [
             'test_signal.InterProcessSignalTests.test_main',

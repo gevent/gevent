@@ -15,10 +15,10 @@ from gevent.lock import RLock
 
 try: # Py2
     import __builtin__ as builtins
-    _allowed_module_name_types = (basestring,)
+    _allowed_module_name_types = (basestring,) # pylint:disable=undefined-variable
     __target__ = '__builtin__'
 except ImportError:
-    import builtins
+    import builtins # pylint: disable=import-error
     _allowed_module_name_types = (str,)
     __target__ = 'builtins'
 

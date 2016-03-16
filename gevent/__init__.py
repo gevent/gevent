@@ -43,13 +43,16 @@ __all__ = ['get_hub',
 
 import sys
 if sys.platform == 'win32':
-    import socket  # trigger WSAStartup call
+    # trigger WSAStartup call
+    import socket  # pylint:disable=unused-import,useless-suppression
     del socket
 
 from gevent.hub import get_hub, iwait, wait, PYPY
 from gevent.greenlet import Greenlet, joinall, killall
+joinall = joinall # export for pylint
 spawn = Greenlet.spawn
 spawn_later = Greenlet.spawn_later
+
 from gevent.timeout import Timeout, with_timeout
 from gevent.hub import getcurrent, GreenletExit, spawn_raw, sleep, idle, kill, reinit
 try:
@@ -78,18 +81,18 @@ from gevent import signal as _signal_module
 
 class _signal_metaclass(type):
 
-    def __getattr__(self, name):
+    def __getattr__(cls, name):
         return getattr(_signal_module, name)
 
-    def __setattr__(self, name, value):
+    def __setattr__(cls, name, value):
         # Because we can't know whether to try to go to the module
         # or the class, we don't allow setting an attribute after the fact
         raise TypeError("Cannot set attribute")
 
-    def __instancecheck__(self, instance):
+    def __instancecheck__(cls, instance):
         return isinstance(instance, _signal_class)
 
-    def __dir__(self):
+    def __dir__(cls):
         return dir(_signal_module)
 
 
@@ -97,7 +100,7 @@ class signal(object):
 
     __doc__ = _signal_module.__doc__
 
-    def __new__(self, *args, **kwargs):
+    def __new__(cls, *args, **kwargs):
         return _signal_class(*args, **kwargs)
 
 
@@ -116,11 +119,11 @@ del sys
 # the following makes hidden imports visible to freezing tools like
 # py2exe. see https://github.com/gevent/gevent/issues/181
 def __dependencies_for_freezing():
-    from gevent import core, resolver_thread, resolver_ares, socket,\
+    from gevent import core, resolver_thread, resolver_ares, socket as _socket,\
         threadpool, thread, threading, select, subprocess
     import pprint
     import traceback
-    import signal
+    import signal as _signal
 
 del __dependencies_for_freezing
 
@@ -131,5 +134,6 @@ if PYPY:
     # DistutilsModuleError (on OS X) depending on who first imports and inits
     # the hub. See https://github.com/gevent/gevent/issues/619 (There
     # is no automated test for this.)
-    from gevent.core import loop
+    # XXX: As of 1.1, which prebuilds at install time, this is probably pointless
+    from gevent.core import loop # pylint:disable=no-name-in-module
     del loop

@@ -254,6 +254,12 @@ class TestChannel(TestCase):
         channel.task_done()
         assert channel.unfinished_tasks == 0, channel.unfinished_tasks
 
+    def test_iterable(self):
+        channel = queue.Channel()
+        gevent.spawn(channel.put, StopIteration)
+        r = list(channel)
+        self.assertEqual(r, [])
+
 
 class TestNoWait(TestCase):
 

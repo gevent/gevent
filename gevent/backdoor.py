@@ -9,7 +9,7 @@ with other elements of the process.
 
 .. seealso:: :class:`code.InteractiveConsole`
 """
-from __future__ import print_function
+from __future__ import print_function, absolute_import
 import sys
 from code import InteractiveConsole
 
@@ -32,11 +32,12 @@ except AttributeError:
 class _Greenlet_stdreplace(Greenlet):
     # A greenlet that replaces sys.std[in/out/err] while running.
     _fileobj = None
+    saved = None
 
     def switch(self, *args, **kw):
         if self._fileobj is not None:
             self.switch_in()
-        Greenlet.switch(self, *args, **kw)
+        Greenlet.switch(self, *args, **kw) # pylint:disable=no-member
 
     def switch_in(self):
         self.saved = sys.stdin, sys.stderr, sys.stdout
@@ -113,12 +114,12 @@ class BackdoorServer(StreamServer):
             import __builtin__
             _locals["__builtins__"] = __builtin__
         except ImportError:
-            import builtins
+            import builtins # pylint:disable=import-error
             _locals["builtins"] = builtins
             _locals['__builtins__'] = builtins
         return _locals
 
-    def handle(self, conn, address):
+    def handle(self, conn, _address): # pylint: disable=method-hidden
         """
         Interact with one remote user.
 

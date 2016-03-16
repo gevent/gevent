@@ -1,6 +1,7 @@
 # Copyright (c) 2009-2012 Denis Bilenko. See LICENSE for details.
-
+from __future__ import absolute_import
 import sys
+from greenlet import greenlet
 from gevent.hub import GreenletExit
 from gevent.hub import InvalidSwitchError
 from gevent.hub import PY3
@@ -8,7 +9,6 @@ from gevent.hub import PYPY
 from gevent.hub import Waiter
 from gevent.hub import get_hub
 from gevent.hub import getcurrent
-from gevent.hub import greenlet
 from gevent.hub import iwait
 from gevent.hub import reraise
 from gevent.hub import wait
@@ -18,13 +18,15 @@ from gevent._tblib import load_traceback
 from collections import deque
 
 
-__all__ = ['Greenlet',
-           'joinall',
-           'killall']
+__all__ = [
+    'Greenlet',
+    'joinall',
+    'killall',
+]
 
 
 if PYPY:
-    import _continuation
+    import _continuation # pylint:disable=import-error
     _continulet = _continuation.continulet
 
 
@@ -103,6 +105,7 @@ class _lazy(object):
 class Greenlet(greenlet):
     """A light-weight cooperatively-scheduled execution unit.
     """
+    # pylint:disable=too-many-public-methods,too-many-instance-attributes
 
     value = None
     _exc_info = ()
@@ -288,27 +291,29 @@ class Greenlet(greenlet):
             result += ': ' + formatted
         return result + '>'
 
+    _formatted_info = None
+
     def _formatinfo(self):
-        try:
-            return self._formatted_info
-        except AttributeError:
-            pass
+        info = self._formatted_info
+        if info is not None:
+            return info
+
         try:
             result = getfuncname(self.__dict__['_run'])
-        except Exception:
-            pass
-        else:
-            args = []
-            if self.args:
-                args = [repr(x)[:50] for x in self.args]
-            if self._kwargs:
-                args.extend(['%s=%s' % (key, repr(value)[:50]) for (key, value) in self._kwargs.items()])
-            if args:
-                result += '(' + ', '.join(args) + ')'
-            # it is important to save the result here, because once the greenlet exits '_run' attribute will be removed
-            self._formatted_info = result
-            return result
-        return ''
+        except Exception: # pylint:disable=broad-except
+            # Don't cache
+            return ''
+
+        args = []
+        if self.args:
+            args = [repr(x)[:50] for x in self.args]
+        if self._kwargs:
+            args.extend(['%s=%s' % (key, repr(value)[:50]) for (key, value) in self._kwargs.items()])
+        if args:
+            result += '(' + ', '.join(args) + ')'
+        # it is important to save the result here, because once the greenlet exits '_run' attribute will be removed
+        self._formatted_info = result
+        return result
 
     @property
     def exception(self):
@@ -532,7 +537,7 @@ class Greenlet(greenlet):
 
             try:
                 result = self._run(*self.args, **self.kwargs)
-            except:
+            except: # pylint:disable=bare-except
                 self._report_error(sys.exc_info())
                 return
             self._report_result(result)
@@ -548,6 +553,8 @@ class Greenlet(greenlet):
             Previously, if no callable object was passed to the constructor, the spawned greenlet would
             later fail with an AttributeError.
         """
+        # We usually override this in __init__
+        # pylint: disable=method-hidden
         return
 
     def rawlink(self, callback):
@@ -559,7 +566,7 @@ class Greenlet(greenlet):
         """
         if not callable(callback):
             raise TypeError('Expected callable: %r' % (callback, ))
-        self._links.append(callback)
+        self._links.append(callback) # pylint:disable=no-member
         if self.ready() and self._links and not self._notifier:
             self._notifier = self.parent.loop.run_callback(self._notify_links)
 
@@ -569,29 +576,34 @@ class Greenlet(greenlet):
         The *callback* will be called with this instance as an argument
         once this greenlet's dead. A callable is called in its own greenlet.
         """
+        # XXX: Is the redefinition of SpawnedLink supposed to just be an
+        # optimization, or do people use it? It's not documented
+        # pylint:disable=redefined-outer-name
         self.rawlink(SpawnedLink(callback))
 
     def unlink(self, callback):
         """Remove the callback set by :meth:`link` or :meth:`rawlink`"""
         try:
-            self._links.remove(callback)
+            self._links.remove(callback) # pylint:disable=no-member
         except ValueError:
             pass
 
     def link_value(self, callback, SpawnedLink=SuccessSpawnedLink):
         """Like :meth:`link` but *callback* is only notified when the greenlet has completed successfully."""
+        # pylint:disable=redefined-outer-name
         self.link(callback, SpawnedLink=SpawnedLink)
 
     def link_exception(self, callback, SpawnedLink=FailureSpawnedLink):
         """Like :meth:`link` but *callback* is only notified when the greenlet dies because of an unhandled exception."""
+        # pylint:disable=redefined-outer-name
         self.link(callback, SpawnedLink=SpawnedLink)
 
     def _notify_links(self):
         while self._links:
-            link = self._links.popleft()
+            link = self._links.popleft() # pylint:disable=no-member
             try:
                 link(self)
-            except:
+            except: # pylint:disable=bare-except
                 self.parent.handle_error((link, self), *sys.exc_info())
 
 
@@ -602,18 +614,21 @@ class _dummy_event(object):
     def stop(self):
         pass
 
+    def start(self, cb): # pylint:disable=unused-argument
+        raise AssertionError("Cannot start the dummy event")
+
 
 _cancelled_start_event = _dummy_event()
 _start_completed_event = _dummy_event()
 del _dummy_event
 
 
-def _kill(greenlet, exception, waiter):
+def _kill(glet, exception, waiter):
     try:
-        greenlet.throw(exception)
-    except:
+        glet.throw(exception)
+    except: # pylint:disable=bare-except
         # XXX do we need this here?
-        greenlet.parent.handle_error(greenlet, *sys.exc_info())
+        glet.parent.handle_error(glet, *sys.exc_info())
     if waiter is not None:
         waiter.switch()
 
@@ -647,7 +662,7 @@ def _killall3(greenlets, exception, waiter):
         if not g.dead:
             try:
                 g.throw(exception)
-            except:
+            except: # pylint:disable=bare-except
                 g.parent.handle_error(g, *sys.exc_info())
             if not g.dead:
                 diehards.append(g)
@@ -659,7 +674,7 @@ def _killall(greenlets, exception):
         if not g.dead:
             try:
                 g.throw(exception)
-            except:
+            except: # pylint:disable=bare-except
                 g.parent.handle_error(g, *sys.exc_info())
 
 

@@ -9,6 +9,9 @@ created for each request. The server can be customized to use
 different subclasses of :class:`WSGIHandler`.
 
 """
+# FIXME: Can we refactor to make smallor?
+# pylint:disable=too-many-lines
+
 import errno
 from io import BytesIO
 import string
@@ -20,7 +23,7 @@ from datetime import datetime
 try:
     from urllib import unquote
 except ImportError:
-    from urllib.parse import unquote
+    from urllib.parse import unquote # python 2 pylint:disable=import-error,no-name-in-module
 
 from gevent import socket
 import gevent
@@ -106,6 +109,7 @@ class Input(object):
                  'chunked_input', 'chunk_length', '_chunked_input_error')
 
     def __init__(self, rfile, content_length, socket=None, chunked_input=False):
+        # pylint:disable=redefined-outer-name
         self.rfile = rfile
         self.content_length = content_length
         self.socket = socket
@@ -250,6 +254,7 @@ class Input(object):
             return int(buf.getvalue(), 16)
 
     def _chunked_read(self, length=None, use_readline=False):
+        # pylint:disable=too-many-branches
         rfile = self.rfile
         self._send_100_continue()
 
@@ -312,6 +317,7 @@ class Input(object):
             return self._do_read(size, use_readline=True)
 
     def readlines(self, hint=None):
+        # pylint:disable=unused-argument
         return list(self)
 
     def __iter__(self):
@@ -330,11 +336,11 @@ try:
     headers_factory = mimetools.Message
 except ImportError:
     # adapt Python 3 HTTP headers to old API
-    from http import client
+    from http import client # pylint:disable=import-error
 
     class OldMessage(client.HTTPMessage):
         def __init__(self, **kwargs):
-            super().__init__(**kwargs)
+            super(client.HTTPMessage, self).__init__(**kwargs) # pylint:disable=bad-super-call
             self.status = ''
 
         def getheader(self, name, default=None):
@@ -349,7 +355,7 @@ except ImportError:
         def typeheader(self):
             return self.get('content-type')
 
-    def headers_factory(fp, *args):
+    def headers_factory(fp, *args): # pylint:disable=unused-argument
         try:
             ret = client.parse_headers(fp, _class=OldMessage)
         except client.LineTooLong:
@@ -373,6 +379,8 @@ class WSGIHandler(object):
     itself. The application and environment are obtained from the server.
 
     """
+    # pylint:disable=too-many-instance-attributes
+
     protocol_version = 'HTTP/1.1'
     if PY3:
         # if we do like Py2, then headers_factory unconditionally
@@ -412,17 +420,17 @@ class WSGIHandler(object):
     command = None # str: 'GET'
     path = None # str: '/'
 
-    def __init__(self, socket, address, server, rfile=None):
+    def __init__(self, sock, address, server, rfile=None):
         # Deprecation: The rfile kwarg was introduced in 1.0a1 as part
         # of a refactoring. It was never documented or used. It is
         # considered DEPRECATED and may be removed in the future. Its
         # use is not supported.
 
-        self.socket = socket
+        self.socket = sock
         self.client_address = address
         self.server = server
         if rfile is None:
-            self.rfile = socket.makefile('rb', -1)
+            self.rfile = sock.makefile('rb', -1)
         else:
             self.rfile = rfile
 
@@ -470,10 +478,10 @@ class WSGIHandler(object):
             self.__dict__.pop('rfile', None)
 
     def _check_http_version(self):
-        version = self.request_version
-        if not version.startswith("HTTP/"):
+        version_str = self.request_version
+        if not version_str.startswith("HTTP/"):
             return False
-        version = tuple(int(x) for x in version[5:].split("."))  # "HTTP/"
+        version = tuple(int(x) for x in version_str[5:].split("."))  # "HTTP/"
         if version[1] < 0 or version < (0, 9) or version >= (2, 0):
             return False
         return True
@@ -500,6 +508,7 @@ class WSGIHandler(object):
            Raise the previously documented :exc:`ValueError` in more cases instead of returning a
            false value; this allows subclasses more opportunity to customize behaviour.
         """
+        # pylint:disable=too-many-branches
         self.requestline = raw_requestline.rstrip()
         words = self.requestline.split()
         if len(words) == 3:
@@ -539,10 +548,7 @@ class WSGIHandler(object):
 
         if self.request_version == "HTTP/1.1":
             conntype = self.headers.get("Connection", "").lower()
-            if conntype == "close":
-                self.close_connection = True
-            else:
-                self.close_connection = False
+            self.close_connection = (conntype == 'close')
         else:
             self.close_connection = True
 
@@ -551,17 +557,17 @@ class WSGIHandler(object):
     def log_error(self, msg, *args):
         try:
             message = msg % args
-        except Exception:
+        except Exception: # pylint:disable=broad-except
             traceback.print_exc()
             message = '%r %r' % (msg, args)
         try:
             message = '%s: %s' % (self.socket, message)
-        except Exception:
+        except Exception: # pylint:disable=broad-except
             pass
 
         try:
             self.server.error_log.write(message + '\n')
-        except Exception:
+        except Exception: # pylint:disable=broad-except
             traceback.print_exc()
 
     def read_requestline(self):
@@ -620,8 +626,10 @@ class WSGIHandler(object):
            :meth:`_handle_client_error` to allow subclasses to customize. Note that
            this is experimental and may change in the future.
         """
+        # pylint:disable=too-many-return-statements
         if self.rfile.closed:
             return
+
         try:
             self.requestline = self.read_requestline()
             # Account for old subclasses that haven't done this
@@ -645,7 +653,7 @@ class WSGIHandler(object):
             # subclasses that return a False value instead.
             if not self.read_request(self.requestline):
                 return ('400', _BAD_REQUEST_RESPONSE)
-        except Exception as ex:
+        except Exception as ex: # pylint:disable=broad-except
             # Notice we don't use self.handle_error because it reports
             # a 500 error to the client, and this is almost certainly
             # a client error.
@@ -748,6 +756,7 @@ class WSGIHandler(object):
             and headers during this method. On Python 2, avoid some
             extra encodings.
         """
+        # pylint:disable=too-many-branches
         if exc_info:
             try:
                 if self.headers_sent:
@@ -909,7 +918,7 @@ class WSGIHandler(object):
                 self.close_connection = True
             else:
                 self.handle_error(*sys.exc_info())
-        except:
+        except: # pylint:disable=bare-except
             self.handle_error(*sys.exc_info())
         finally:
             self.time_finish = time.time()
@@ -1014,11 +1023,12 @@ class WSGIHandler(object):
                 env[key] = value
 
         if env.get('HTTP_EXPECT') == '100-continue':
-            socket = self.socket
+            sock = self.socket
         else:
-            socket = None
+            sock = None
+
         chunked = env.get('HTTP_TRANSFER_ENCODING', '').lower() == 'chunked'
-        self.wsgi_input = Input(self.rfile, self.content_length, socket=socket, chunked_input=chunked)
+        self.wsgi_input = Input(self.rfile, self.content_length, socket=sock, chunked_input=chunked)
         env['wsgi.input'] = self.wsgi_input
         return env
 
@@ -1028,6 +1038,7 @@ class _NoopLog(object):
     # to pass the WSGI validator
 
     def write(self, *args, **kwargs):
+        # pylint:disable=unused-argument
         return
 
     def flush(self):
@@ -1236,18 +1247,19 @@ class WSGIServer(StreamServer):
                 except socket.error:
                     name = str(address[0])
                 if PY3 and not isinstance(name, str):
-                    name = name.decode('ascii')
+                    name = name.decode('ascii') # python 2 pylint:disable=redefined-variable-type
                 self.environ['SERVER_NAME'] = name
             self.environ.setdefault('SERVER_PORT', str(address[1]))
         else:
             self.environ.setdefault('SERVER_NAME', '')
             self.environ.setdefault('SERVER_PORT', '')
 
-    def handle(self, socket, address):
+    def handle(self, sock, address):
         """
         Create an instance of :attr:`handler_class` to handle the request.
 
         This method blocks until the handler returns.
         """
-        handler = self.handler_class(socket, address, self)
+        # pylint:disable=method-hidden
+        handler = self.handler_class(sock, address, self)
         handler.handle()

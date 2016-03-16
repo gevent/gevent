@@ -6,11 +6,13 @@ For the documentation, refer to :mod:`ssl` module manual.
 
 This module implements cooperative SSL socket wrappers.
 """
+# Our import magic sadly makes this warning useless
+# pylint: disable=undefined-variable
 
 from __future__ import absolute_import
 import ssl as __ssl__
 
-_ssl = __ssl__._ssl
+_ssl = __ssl__._ssl # pylint:disable=no-member
 
 import errno
 from gevent.socket import socket, timeout_default
@@ -28,24 +30,24 @@ __implements__ = [
 
 __imports__ = []
 
-name = value = None
-for name in dir(__ssl__):
-    if name in __implements__:
+_name = _value = None
+for _name in dir(__ssl__):
+    if _name in __implements__:
         continue
-    if name.startswith('__'):
+    if _name.startswith('__'):
         continue
-    if name == 'socket':
+    if _name == 'socket':
         # SSLSocket *must* subclass gevent.socket.socket; see issue 597
         continue
-    value = getattr(__ssl__, name)
-    globals()[name] = value
-    __imports__.append(name)
+    _value = getattr(__ssl__, _name)
+    globals()[_name] = _value
+    __imports__.append(_name)
 
-del name, value
+del _name, _value
 
 __all__ = __implements__ + __imports__
 
-orig_SSLContext = __ssl__.SSLContext
+orig_SSLContext = __ssl__.SSLContext # pylint:disable=no-member
 
 
 class SSLContext(orig_SSLContext):
@@ -64,7 +66,7 @@ class SSLContext(orig_SSLContext):
         check_hostname = False
 
 
-class _contextawaresock(socket._gevent_sock_class):
+class _contextawaresock(socket._gevent_sock_class): # Python 2: pylint:disable=slots-on-old-class
     # We have to pass the raw stdlib socket to SSLContext.wrap_socket.
     # That method in turn can pass that object on to things like SNI callbacks.
     # It wouldn't have access to any of the attributes on the SSLSocket, like
@@ -101,6 +103,8 @@ class SSLSocket(socket):
     for Python 3.
     """
 
+    # pylint:disable=too-many-instance-attributes,too-many-public-methods
+
     _gevent_sock_class = _contextawaresock
 
     def __init__(self, sock=None, keyfile=None, certfile=None,
@@ -111,7 +115,7 @@ class SSLSocket(socket):
                  suppress_ragged_eofs=True, npn_protocols=None, ciphers=None,
                  server_hostname=None,
                  _context=None):
-
+        # pylint:disable=too-many-locals,too-many-statements,too-many-branches
         if _context:
             self._context = _context
         else:
@@ -222,6 +226,7 @@ class SSLSocket(socket):
     def read(self, len=1024, buffer=None):
         """Read up to LEN bytes and return them.
         Return zero-length string on EOF."""
+        # pylint:disable=too-many-branches
         self._checkClosed()
         if not self._sslobj:
             raise ValueError("Read on closed or unwrapped SSL socket.")
@@ -293,7 +298,7 @@ class SSLSocket(socket):
         # 3.5+
         def selected_alpn_protocol(self):
             self._checkClosed()
-            if not self._sslobj or not _ssl.HAS_ALPN:
+            if not self._sslobj or not _ssl.HAS_ALPN: # pylint:disable=no-member
                 return None
             else:
                 return self._sslobj.selected_alpn_protocol()
@@ -582,8 +587,8 @@ def get_server_certificate(addr, ssl_version=PROTOCOL_SSLv23, ca_certs=None):
     If 'ca_certs' is specified, validate the server cert against it.
     If 'ssl_version' is specified, use it in the connection attempt."""
 
-    host, port = addr
-    if (ca_certs is not None):
+    _, _ = addr
+    if ca_certs is not None:
         cert_reqs = CERT_REQUIRED
     else:
         cert_reqs = CERT_NONE

@@ -51,7 +51,7 @@ class SelectResult(object):
         self.event.set()
 
 
-def select(rlist, wlist, xlist, timeout=None):
+def select(rlist, wlist, xlist, timeout=None): # pylint:disable=unused-argument
     """An implementation of :meth:`select.select` that blocks only the current greenlet.
 
     Note: *xlist* is ignored.
@@ -78,8 +78,8 @@ def select(rlist, wlist, xlist, timeout=None):
         result.event.wait(timeout=timeout)
         return result.read, result.write, []
     finally:
-        for watcher in watchers:
-            watcher.stop()
+        for awatcher in watchers:
+            awatcher.stop()
 
 if original_poll is not None:
     class PollResult(object):
@@ -122,13 +122,13 @@ if original_poll is not None:
             try:
                 for fd in self.fds:
                     self.fds[fd].start(result.add_event, get_fileno(fd), pass_events=True)
-                if timeout is not None and -1 < timeout:
+                if timeout is not None and timeout > -1:
                     timeout /= 1000.0
                 result.event.wait(timeout=timeout)
                 return list(result.events)
             finally:
-                for fd in self.fds:
-                    self.fds[fd].stop()
+                for afd in self.fds:
+                    self.fds[afd].stop()
 
         def unregister(self, fd):
             self.fds.pop(fd, None)

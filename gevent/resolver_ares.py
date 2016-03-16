@@ -8,7 +8,7 @@ import sys
 from _socket import getservbyname, getaddrinfo, gaierror, error
 from gevent.hub import Waiter, get_hub, string_types, text_type, integer_types, reraise, PY3
 from gevent.socket import AF_UNSPEC, AF_INET, AF_INET6, SOCK_STREAM, SOCK_DGRAM, SOCK_RAW, AI_NUMERICHOST, EAI_SERVICE, AI_PASSIVE
-from gevent.ares import channel, InvalidIP
+from gevent.ares import channel, InvalidIP # pylint:disable=import-error,no-name-in-module
 
 
 __all__ = ['Resolver']
@@ -101,6 +101,7 @@ class Resolver(object):
                 # "self.ares is not ares" means channel was destroyed (because we were forked)
 
     def _lookup_port(self, port, socktype):
+        # pylint:disable=too-many-branches
         socktypes = []
         if isinstance(port, string_types):
             try:
@@ -146,6 +147,7 @@ class Resolver(object):
         return port, socktypes
 
     def _getaddrinfo(self, host, port, family=0, socktype=0, proto=0, flags=0):
+        # pylint:disable=too-many-locals,too-many-branches
         if isinstance(host, text_type):
             host = host.encode('idna')
         elif not isinstance(host, str) or (flags & AI_NUMERICHOST):
@@ -167,19 +169,19 @@ class Resolver(object):
         ares = self.ares
 
         if family == AF_UNSPEC:
-            values = Values(self.hub, 2)
-            ares.gethostbyname(values, host, AF_INET)
-            ares.gethostbyname(values, host, AF_INET6)
+            ares_values = Values(self.hub, 2)
+            ares.gethostbyname(ares_values, host, AF_INET)
+            ares.gethostbyname(ares_values, host, AF_INET6)
         elif family == AF_INET:
-            values = Values(self.hub, 1)
-            ares.gethostbyname(values, host, AF_INET)
+            ares_values = Values(self.hub, 1)
+            ares.gethostbyname(ares_values, host, AF_INET)
         elif family == AF_INET6:
-            values = Values(self.hub, 1)
-            ares.gethostbyname(values, host, AF_INET6)
+            ares_values = Values(self.hub, 1)
+            ares.gethostbyname(ares_values, host, AF_INET6)
         else:
             raise gaierror(5, 'ai_family not supported: %r' % (family, ))
 
-        values = values.get()
+        values = ares_values.get()
         if len(values) == 2 and values[0] == values[1]:
             values.pop()
 
@@ -281,7 +283,7 @@ class Resolver(object):
             reraise(*sys.exc_info())
         elif len(result) != 1:
             raise error('sockaddr resolved to multiple addresses')
-        family, socktype, proto, name, address = result[0]
+        family, _socktype, _proto, _name, address = result[0]
 
         if family == AF_INET:
             if len(sockaddr) != 2:
@@ -331,7 +333,8 @@ class Values(object):
         if self.values:
             return self.values
         else:
-            raise self.error
+            assert error is not None
+            raise self.error # pylint:disable=raising-bad-type
 
 
 def _resolve_special(hostname, family):

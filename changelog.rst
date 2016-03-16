@@ -11,6 +11,14 @@
 - Update libev to version 4.22.
 - Update tblib to 1.3.0.
 - Update c-ares to version 1.11.0 (`release notes <https://raw.githubusercontent.com/c-ares/c-ares/cares-1_11_0/RELEASE-NOTES>`_).
+- Remove module ``gevent.coros`` which was replaced by ``gevent.lock``
+  and has been deprecated since 1.0b2.
+- The ``ref`` parameter to :func:`gevent.os.fork_and_watch` was being ignored.
+- Python 3: :class:`gevent.queue.Channel` is now correctly iterable, instead of
+  raising a :exc:`TypeError`.
+- Nested callbacks that set and clear an Event no longer cause
+  ``wait`` to return prematurely. Reported in :issue:`771` by Sergey
+  Vasilyev.
 
 1.1.0 (Mar 5, 2016)
 ===================

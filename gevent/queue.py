@@ -30,7 +30,7 @@ import collections
 if sys.version_info[0] == 2:
     import Queue as __queue__
 else:
-    import queue as __queue__
+    import queue as __queue__ # python 2: pylint:disable=import-error
 Full = __queue__.Full
 Empty = __queue__.Empty
 
@@ -105,6 +105,8 @@ class Queue(object):
         return type(self)(self.maxsize, self.queue)
 
     def _init(self, maxsize, items=None):
+        # FIXME: Why is maxsize unused or even passed?
+        # pylint:disable=unused-argument
         if items:
             self.queue = collections.deque(items)
         else:
@@ -321,7 +323,7 @@ class Queue(object):
                 try:
                     putter = self.putters.popleft()
                     self._put(putter.item)
-                except:
+                except: # pylint:disable=bare-except
                     putter.throw(*sys.exc_info())
                 else:
                     putter.switch(putter)
@@ -378,9 +380,11 @@ class PriorityQueue(Queue):
             self.queue = []
 
     def _put(self, item, heappush=heapq.heappush):
+        # pylint:disable=arguments-differ
         heappush(self.queue, item)
 
     def _get(self, heappop=heapq.heappop):
+        # pylint:disable=arguments-differ
         return heappop(self.queue)
 
 
@@ -593,3 +597,5 @@ class Channel(object):
         if result is StopIteration:
             raise result
         return result
+
+    __next__ = next # py3

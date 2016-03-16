@@ -21,6 +21,15 @@ Cooperative ``subprocess`` module.
 .. _is not defined: http://www.linuxprogrammingblog.com/all-about-linux-signals?page=11
 """
 from __future__ import absolute_import, print_function
+# Can we split this up to make it cleaner? See https://github.com/gevent/gevent/issues/748
+# pylint: disable=too-many-lines
+# Import magic
+# pylint: disable=undefined-all-variable,undefined-variable
+# Most of this we inherit from the standard lib
+# pylint: disable=bare-except,too-many-locals,too-many-statements,bad-builtin,attribute-defined-outside-init
+# pylint: disable=too-many-branches,too-many-instance-attributes
+# Most of this is cross-platform
+# pylint: disable=no-member,expression-not-assigned,unused-argument,unused-variable
 import errno
 import gc
 import io
@@ -49,6 +58,9 @@ if PY3 and not sys.platform.startswith('win32'):
     __implements__.append("_posixsubprocess")
     _posixsubprocess = None
 
+# Some symbols we define that we expect to export;
+# useful for static analysis
+PIPE = "PIPE should be imported"
 
 # Standard functions and classes that this module re-imports.
 __imports__ = [
@@ -155,7 +167,7 @@ __all__ = __implements__ + __imports__
 
 mswindows = sys.platform == 'win32'
 if mswindows:
-    import msvcrt
+    import msvcrt # pylint: disable=import-error
     if PY3:
         class Handle(int):
             closed = False
@@ -394,7 +406,7 @@ class Popen(object):
             # POSIX
             if close_fds is _PLATFORM_DEFAULT_CLOSE_FDS:
                 # close_fds has different defaults on Py3/Py2
-                if PY3:
+                if PY3: # pylint: disable=simplifiable-if-statement
                     close_fds = True
                 else:
                     close_fds = False
@@ -669,7 +681,7 @@ class Popen(object):
         def __enter__(self):
             return self
 
-        def __exit__(self, type, value, traceback):
+        def __exit__(self, t, v, tb):
             if self.stdout:
                 self.stdout.close()
             if self.stderr:

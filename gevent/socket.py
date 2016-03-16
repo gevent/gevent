@@ -10,16 +10,30 @@ in this module only block the current greenlet and let the others run.
 For convenience, exceptions (like :class:`error <socket.error>` and :class:`timeout <socket.timeout>`)
 as well as the constants from the :mod:`socket` module are imported into this module.
 """
+# Our import magic sadly makes this warning useless
+# pylint: disable=undefined-variable
 
 import sys
 from gevent.hub import PY3
 
 
 if PY3:
-    from gevent import _socket3 as _source
+    from gevent import _socket3 as _source # python 2: pylint:disable=no-name-in-module
 else:
     from gevent import _socket2 as _source
 
+# define some things we're expecting to overwrite; each module
+# needs to define these
+__implements__ = __dns__ = __all__ = __extensions__ = __imports__ = ()
+
+
+class error(Exception):
+    errno = None
+
+
+def getfqdn(*args):
+    # pylint:disable=unused-argument
+    raise NotImplementedError()
 
 for key in _source.__dict__:
     if key.startswith('__') and key not in '__implements__ __dns__ __all__ __extensions__ __imports__ __socket__'.split():
@@ -62,7 +76,7 @@ def create_connection(address, timeout=_GLOBAL_DEFAULT_TIMEOUT, source_address=N
     host, port = address
     err = None
     for res in getaddrinfo(host, port, 0 if has_ipv6 else AF_INET, SOCK_STREAM):
-        af, socktype, proto, _canonname, sa = res
+        af, socktype, proto, _, sa = res
         sock = None
         try:
             sock = socket(af, socktype, proto)
@@ -78,12 +92,12 @@ def create_connection(address, timeout=_GLOBAL_DEFAULT_TIMEOUT, source_address=N
             # that does not happen with regular sockets though, because _socket.socket.connect() is a built-in.
             # this is similar to "getnameinfo loses a reference" failure in test_socket.py
             if not PY3:
-                sys.exc_clear()
+                sys.exc_clear() # pylint:disable=no-member,useless-suppression
             if sock is not None:
                 sock.close()
             err = ex
     if err is not None:
-        raise err
+        raise err # pylint:disable=raising-bad-type
     else:
         raise error("getaddrinfo returns an empty list")
 

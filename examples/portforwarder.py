@@ -25,7 +25,7 @@ class PortForwarder(StreamServer):
         StreamServer.__init__(self, listener, **kwargs)
         self.dest = dest
 
-    def handle(self, source, address):
+    def handle(self, source, address): # pylint:disable=method-hidden
         log('%s:%s accepted', *address[:2])
         try:
             dest = create_connection(self.dest)

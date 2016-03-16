@@ -15,9 +15,9 @@ urls = ['http://www.google.com', 'http://www.yandex.ru', 'http://www.python.org'
 
 
 if sys.version_info[0] == 3:
-    from urllib.request import urlopen
+    from urllib.request import urlopen # pylint:disable=import-error,no-name-in-module
 else:
-    from urllib2 import urlopen
+    from urllib2 import urlopen # pylint: disable=import-error
 
 
 def print_head(url):
@@ -25,6 +25,6 @@ def print_head(url):
     data = urlopen(url).read()
     print('%s: %s bytes: %r' % (url, len(data), data[:50]))
 
-jobs = [gevent.spawn(print_head, url) for url in urls]
+jobs = [gevent.spawn(print_head, _url) for _url in urls]
 
 gevent.wait(jobs)
