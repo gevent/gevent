@@ -11481,8 +11481,11 @@ CC="$lt_save_CC"
 
 
 
-
-for ac_header in sys/inotify.h sys/epoll.h sys/event.h port.h poll.h sys/select.h sys/eventfd.h sys/signalfd.h
+ck_headers=('sys/inotify.h' 'sys/epoll.h sys/event.h' 'port.h poll.h sys/select.h' 'sys/eventfd.h' 'sys/signalfd.h')
+if [[ "$host_os" =~ "^solaris" ]]; then
+    ck_headers=('sys/epoll.h sys/event.h' 'port.h poll.h sys/select.h' 'sys/eventfd.h' 'sys/signalfd.h')
+fi
+for ac_header in ${ch_headers[@]}
 do :
   as_ac_Header=`$as_echo "ac_cv_header_$ac_header" | $as_tr_sh`
 ac_fn_c_check_header_mongrel "$LINENO" "$ac_header" "$as_ac_Header" "$ac_includes_default"
@@ -11492,11 +11495,14 @@ if eval test \"x\$"$as_ac_Header"\" = x"yes"; then :
 _ACEOF
 
 fi
-
 done
 
 
-for ac_func in inotify_init epoll_ctl kqueue port_create poll select eventfd signalfd
+_func=('inotify_init' 'epoll_ctl' 'kqueue' 'port_create' 'poll' 'select' 'eventfd' 'signalfd')
+if [[ "$host_os" =~ "^solaris" ]]; then
+    ck_func=('epoll_ctl' 'kqueue' 'port_create' 'poll' 'select' 'eventfd' 'signalfd')
+fi
+for ac_func in ${ck_func[@]}
 do :
   as_ac_var=`$as_echo "ac_cv_func_$ac_func" | $as_tr_sh`
 ac_fn_c_check_func "$LINENO" "$ac_func" "$as_ac_var"
