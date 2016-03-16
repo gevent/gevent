@@ -81,6 +81,10 @@ class _AbstractLinkable(object):
                 except: # pylint:disable=bare-except
                     self.hub.handle_error((link, self), *sys.exc_info())
 
+        # save a tiny bit of memory by letting _notifier be collected
+        # bool(self._notifier) would turn to False as soon as we exit this
+        # method anyway.
+        del self._notifier
 
     def _wait_core(self, timeout, catch=Timeout):
         # The core of the wait implementation, handling

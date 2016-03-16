@@ -452,7 +452,9 @@ class loop(object):
                         except: # pylint:disable=bare-except
                             pass # Nothing we can do here
                 finally:
-                    # Note, this must be reset here, because cb.args is used as a flag in callback class,
+                    # NOTE: this must be reset here, because cb.args is used as a flag in
+                    # the callback class so that bool(cb) of a callback that has been run
+                    # becomes False
                     cb.args = None
                     count -= 1
         if self._callbacks:
@@ -681,13 +683,16 @@ class callback(object):
         self.callback = None
         self.args = None
 
-    # Note, that __nonzero__ and pending are different
-    # nonzero is used in contexts where we need to know whether to schedule another callback,
+    # Note that __nonzero__ and pending are different
+    # bool() is used in contexts where we need to know whether to schedule another callback,
     # so it's true if it's pending or currently running
-    # 'pending' has the same meaning as libev watchers: it is cleared before entering callback
+    # 'pending' has the same meaning as libev watchers: it is cleared before actually
+    # running the callback
 
     def __nonzero__(self):
         # it's nonzero if it's pending or currently executing
+        # NOTE: This depends on loop._run_callbacks setting the args property
+        # to None.
         return self.args is not None
     __bool__ = __nonzero__
 
