@@ -38,21 +38,6 @@ import contextlib
 import gc
 import six
 
-try:
-    from unittest.util import safe_repr
-except ImportError:
-    # Py 2.6
-    _MAX_LENGTH = 80
-
-    def safe_repr(obj, short=False):
-        try:
-            result = repr(obj)
-        except Exception:
-            result = object.__repr__(obj)
-        if not short or len(result) < _MAX_LENGTH:
-            return result
-        return result[:_MAX_LENGTH] + ' [truncated]...'
-
 
 PYPY = hasattr(sys, 'pypy_version_info')
 VERBOSE = sys.argv.count('-v') > 1
