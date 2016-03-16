@@ -306,6 +306,15 @@ class socket(object):
                     raise
             self._wait(self._read_event)
 
+    def recvmsg(self, *args):
+        while True:
+            try:
+                return _socket.socket.recvmsg(self._sock, *args)
+            except error as ex:
+                if ex.args[0] != EWOULDBLOCK or self.timeout == 0.0:
+                    raise
+            self._wait(self._read_event)
+
     def recvfrom(self, *args):
         while True:
             try:
@@ -383,6 +392,20 @@ class socket(object):
             self._wait(self._write_event)
             try:
                 return _socket.socket.sendto(self._sock, *args)
+            except error as ex2:
+                if ex2.args[0] == EWOULDBLOCK:
+                    return 0
+                raise
+
+    def sendmsg(self, *args):
+        try:
+            return _socket.socket.sendmsg(self._sock, *args)
+        except error as ex:
+            if ex.args[0] != EWOULDBLOCK or self.timeout == 0.0:
+                raise
+            self._wait(self._write_event)
+            try:
+                return _socket.socket.sendmsg(self._sock, *args)
             except error as ex2:
                 if ex2.args[0] == EWOULDBLOCK:
                     return 0
