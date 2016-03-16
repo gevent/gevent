@@ -439,55 +439,6 @@ class TestCase(TestCaseMetaClass("NewBase", (BaseTestCase,), {})):
             self.assertLessEqual(delay, max_time)
             self.assertGreaterEqual(delay, min_time)
 
-    if not hasattr(BaseTestCase, 'assertGreater'):
-        # Compatibility with 2.6, backported from 2.7
-        longMessage = False
-
-        def _formatMessage(self, msg, standardMsg):
-            """Honour the longMessage attribute when generating failure messages.
-            If longMessage is False this means:
-            * Use only an explicit message if it is provided
-            * Otherwise use the standard message for the assert
-
-            If longMessage is True:
-            * Use the standard message
-            * If an explicit message is provided, plus ' : ' and the explicit message
-            """
-            if not self.longMessage:
-                return msg or standardMsg
-            if msg is None:
-                return standardMsg
-            try:
-                # don't switch to '{}' formatting in Python 2.X
-                # it changes the way unicode input is handled
-                return '%s : %s' % (standardMsg, msg)
-            except UnicodeDecodeError:
-                return '%s : %s' % (safe_repr(standardMsg), safe_repr(msg))
-
-        def assertLess(self, a, b, msg=None):
-            """Just like self.assertTrue(a < b), but with a nicer default message."""
-            if not a < b:
-                standardMsg = '%s not less than %s' % (safe_repr(a), safe_repr(b))
-                self.fail(self._formatMessage(msg, standardMsg))
-
-        def assertLessEqual(self, a, b, msg=None):
-            """Just like self.assertTrue(a <= b), but with a nicer default message."""
-            if not a <= b:
-                standardMsg = '%s not less than or equal to %s' % (safe_repr(a), safe_repr(b))
-                self.fail(self._formatMessage(msg, standardMsg))
-
-        def assertGreater(self, a, b, msg=None):
-            """Just like self.assertTrue(a > b), but with a nicer default message."""
-            if not a > b:
-                standardMsg = '%s not greater than %s' % (safe_repr(a), safe_repr(b))
-                self.fail(self._formatMessage(msg, standardMsg))
-
-        def assertGreaterEqual(self, a, b, msg=None):
-            """Just like self.assertTrue(a >= b), but with a nicer default message."""
-            if not a >= b:
-                standardMsg = '%s not greater than or equal to %s' % (safe_repr(a), safe_repr(b))
-                self.fail(self._formatMessage(msg, standardMsg))
-
 
 main = unittest.main
 _original_Hub = gevent.hub.Hub
