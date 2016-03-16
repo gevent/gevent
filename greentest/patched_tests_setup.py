@@ -394,16 +394,26 @@ if sys.version_info[:2] >= (3, 4):
         'test_socket.GeneralModuleTests.test_str_for_enums',
         'test_socket.GeneralModuleTests.testGetaddrinfo',
 
-
-        # XXX: These all produce timeout errors that aren't supposed to
-        # be there. Needs investigation.
-        'test_socket.InterruptedRecvTimeoutTest.testInterruptedRecvIntoTimeout',
-        'test_socket.InterruptedRecvTimeoutTest.testInterruptedRecvTimeout',
-        'test_socket.InterruptedRecvTimeoutTest.testInterruptedRecvfromIntoTimeout',
-        'test_socket.InterruptedRecvTimeoutTest.testInterruptedRecvfromTimeout',
-        'test_socket.InterruptedRecvTimeoutTest.testInterruptedSendTimeout',
-        'test_socket.InterruptedRecvTimeoutTest.testInterruptedSendtoTimeout',
     ]
+
+    if sys.version_info[:2] == (3, 4):
+        disabled_tests += [
+            # These are all expecting that a signal (sigalarm) that
+            # arrives during a blocking call should raise
+            # InterruptedError with errno=EINTR. gevent does not do
+            # this, instead its loop keeps going and raises a timeout
+            # (which fails the test). HOWEVER: Python 3.5 fixed this
+            # problem and started raising a timeout,
+            # (https://docs.python.org/3/whatsnew/3.5.html#pep-475-retry-system-calls-failing-with-eintr)
+            # and removed these tests (InterruptedError is no longer
+            # raised). So basically, gevent was ahead of its time.
+            'test_socket.InterruptedRecvTimeoutTest.testInterruptedRecvIntoTimeout',
+            'test_socket.InterruptedRecvTimeoutTest.testInterruptedRecvTimeout',
+            'test_socket.InterruptedRecvTimeoutTest.testInterruptedRecvfromIntoTimeout',
+            'test_socket.InterruptedRecvTimeoutTest.testInterruptedRecvfromTimeout',
+            'test_socket.InterruptedRecvTimeoutTest.testInterruptedSendTimeout',
+            'test_socket.InterruptedRecvTimeoutTest.testInterruptedSendtoTimeout',
+        ]
 
     if os.environ.get('TRAVIS') == 'true':
         disabled_tests += [
