@@ -150,7 +150,7 @@ test-py27: $(PY27)
 
 test-py278: $(PY278)
 	ls $(BUILD_RUNTIMES)/versions/python2.7.8/bin/
-	PYTHON=python2.7.8 PATH=$(BUILD_RUNTIMES)/versions/python2.7.8/bin:$(PATH) make develop fulltoxtest
+	PYTHON=python2.7.8 PATH=$(BUILD_RUNTIMES)/versions/python2.7.8/bin:$(PATH) make develop toxtest
 
 test-py33: $(PY33)
 	PYTHON=python3.3 PATH=$(BUILD_RUNTIMES)/versions/python3.3/bin:$(PATH) make develop fulltoxtest
@@ -170,4 +170,4 @@ test-py27-cffi: $(PY27)
 test-py27-noembed: $(PY27)
 	cd libev && ./configure --disable-dependency-tracking && make
 	cd c-ares && ./configure --disable-dependency-tracking && make
-	CPPFLAGS="-Ilibev -Ic-ares" LDFLAGS="-Llibev/.libs -Lc-ares/.libs" LD_LIBRARY_PATH="$(PWD)/libev/.libs:$(PWD)/c-ares/.libs" EMBED=0 GEVENT_CORE_CEXT_ONLY=1 PYTHON=python2.7 PATH=$(BUILD_RUNTIMES)/versions/python2.7/bin:$(PATH) make develop fulltoxtest
+	CPPFLAGS="-Ilibev -Ic-ares" LDFLAGS="-Llibev/.libs -Lc-ares/.libs" LD_LIBRARY_PATH="$(PWD)/libev/.libs:$(PWD)/c-ares/.libs" EMBED=0 GEVENT_CORE_CEXT_ONLY=1 PYTHON=python2.7 PATH=$(BUILD_RUNTIMES)/versions/python2.7/bin:$(PATH) make develop toxtest
