@@ -540,17 +540,25 @@ class Group(GroupMappingMixin):
             one gets re-raised is not determined. Only greenlets currently
             in the group when this method is called are guaranteed to
             be checked for exceptions.
+
+        :return bool: A value indicating whether this group became empty.
+           If the timeout is specified and the group did not become empty
+           during that timeout, then this will be a false value. Otherwise
+           it will be a true value.
+
+        .. versionchanged:: 1.2a1
+           Add the return value.
         """
-        if raise_error:
-            greenlets = self.greenlets.copy()
-            self._empty_event.wait(timeout=timeout)
-            for greenlet in greenlets:
-                if greenlet.exception is not None:
-                    if hasattr(greenlet, '_raise_exception'):
-                        greenlet._raise_exception()
-                    raise greenlet.exception
-        else:
-            self._empty_event.wait(timeout=timeout)
+        greenlets = list(self.greenlets) if raise_error else ()
+        result = self._empty_event.wait(timeout=timeout)
+
+        for greenlet in greenlets:
+            if greenlet.exception is not None:
+                if hasattr(greenlet, '_raise_exception'):
+                    greenlet._raise_exception()
+                raise greenlet.exception
+
+        return result
 
     def kill(self, exception=GreenletExit, block=True, timeout=None):
         """

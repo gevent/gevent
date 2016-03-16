@@ -19,6 +19,9 @@
 - Nested callbacks that set and clear an Event no longer cause
   ``wait`` to return prematurely. Reported in :issue:`771` by Sergey
   Vasilyev.
+- :class:`~.Group` and :class:`~.Pool` now return whether
+  :meth:`~.Group.join` returned with an empty group. Suggested by Filippo Sironi in
+  :pr:`503`.
 
 1.1.0 (Mar 5, 2016)
 ===================

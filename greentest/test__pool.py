@@ -465,7 +465,8 @@ class TestJoinEmpty(greentest.TestCase):
 
     def test(self):
         p = pool.Pool()
-        p.join()
+        res = p.join()
+        self.assertTrue(res, "empty should return true")
 
 
 class TestSpawn(greentest.TestCase):
@@ -481,6 +482,16 @@ class TestSpawn(greentest.TestCase):
         gevent.sleep(0.19 if not greentest.RUNNING_ON_APPVEYOR else 0.5)
         self.assertEqual(len(p), 0)
 
+    def testSpawnAndWait(self):
+        p = pool.Pool(1)
+        self.assertEqual(len(p), 0)
+        p.spawn(gevent.sleep, 0.1)
+        self.assertEqual(len(p), 1)
+        res = p.join(0.01)
+        self.assertFalse(res, "waiting on a full pool should return false")
+        res = p.join()
+        self.assertTrue(res, "waiting to finish should be true")
+        self.assertEqual(len(p), 0)
 
 def error_iter():
     yield 1
