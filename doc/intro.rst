@@ -28,7 +28,7 @@ supported. (Users of older versions of Python 2 need to install gevent
 1.0.x (2.5) or 1.1.x (2.6); Python 3 is not supported by 1.0.) gevent requires the
 greenlet__ library.
 
-gevent 1.1 also runs on PyPy 2.6.1 and above, although 4.0 or above is
+gevent 1.1 also runs on PyPy 2.6.1 and above, although 5.0 or above is
 strongly recommended. On PyPy, there are no external dependencies.
 
 .. note:: gevent does *not* run on PyPy on Windows because the CFFI backend
@@ -332,4 +332,4 @@ __ http://sdiehl.github.io/gevent-tutorial/
 
 .. rubric:: Footnotes
 
-.. [#f1] This was not the case before 0.13.0, :meth:`kill <Greenlet>` method in 0.12.2 and older was asynchronous by default.
+.. [#f1] This was not the case before 0.13.0, :meth:`kill <gevent.greenlet.Greenlet.kill>` method in 0.12.2 and older was asynchronous by default.
