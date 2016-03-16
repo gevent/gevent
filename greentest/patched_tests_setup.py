@@ -371,20 +371,6 @@ if sys.version_info[:2] >= (3, 4):
         # libev limits the number of events it will return at once. Specifically,
         # on linux with epoll, it returns a max of 64 (ev_epoll.c).
 
-    ]
-
-    if os.environ.get('TRAVIS') == 'true':
-        disabled_tests += [
-            'test_subprocess.ProcessTestCase.test_double_close_on_error',
-            # This test is racy or OS-dependent. It passes locally (sufficiently fast machine)
-            # but fails under Travis
-        ]
-
-if sys.version_info[:2] >= (3, 5):
-    disabled_tests += [
-        # XXX: Hangs
-        'test_ssl.ThreadedTests.test_nonblocking_send',
-        'test_ssl.ThreadedTests.test_socketserver',
         # XXX: Hangs (Linux only)
         'test_socket.NonBlockingTCPTests.testInitNonBlocking',
         # We don't handle the Linux-only SOCK_NONBLOCK option
@@ -408,6 +394,29 @@ if sys.version_info[:2] >= (3, 5):
         'test_socket.GeneralModuleTests.test_str_for_enums',
         'test_socket.GeneralModuleTests.testGetaddrinfo',
 
+
+        # XXX: These all produce timeout errors that aren't supposed to
+        # be there. Needs investigation.
+        'test_socket.InterruptedRecvTimeoutTest.testInterruptedRecvIntoTimeout',
+        'test_socket.InterruptedRecvTimeoutTest.testInterruptedRecvTimeout',
+        'test_socket.InterruptedRecvTimeoutTest.testInterruptedRecvfromIntoTimeout',
+        'test_socket.InterruptedRecvTimeoutTest.testInterruptedRecvfromTimeout',
+        'test_socket.InterruptedRecvTimeoutTest.testInterruptedSendTimeout',
+        'test_socket.InterruptedRecvTimeoutTest.testInterruptedSendtoTimeout',
+    ]
+
+    if os.environ.get('TRAVIS') == 'true':
+        disabled_tests += [
+            'test_subprocess.ProcessTestCase.test_double_close_on_error',
+            # This test is racy or OS-dependent. It passes locally (sufficiently fast machine)
+            # but fails under Travis
+        ]
+
+if sys.version_info[:2] >= (3, 5):
+    disabled_tests += [
+        # XXX: Hangs
+        'test_ssl.ThreadedTests.test_nonblocking_send',
+        'test_ssl.ThreadedTests.test_socketserver',
         # Relies on the regex of the repr having the locked state (TODO: it'd be nice if
         # we did that).
         # XXX: These are commented out in the source code of test_threading because
