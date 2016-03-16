@@ -7,6 +7,7 @@ recursive-include c-ares *
 recursive-include util *
 
 include LICENSE
+include NOTICE
 include README.rst
 include TODO
 include changelog.rst
