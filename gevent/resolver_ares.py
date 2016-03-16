@@ -97,6 +97,11 @@ class Resolver(object):
                 return result
             except gaierror:
                 if ares is self.ares:
+                    if hostname == b'255.255.255.255':
+                        # The stdlib handles this case in 2.7 and 3.x, but ares does not.
+                        # It is tested by test_socket.py in 3.4.
+                        # HACK: So hardcode the expected return.
+                        return ('255.255.255.255', [], ['255.255.255.255'])
                     raise
                 # "self.ares is not ares" means channel was destroyed (because we were forked)
 
@@ -293,7 +298,17 @@ class Resolver(object):
 
         self.ares.getnameinfo(waiter, address, flags)
         node, service = waiter.get()
+
         if service is None:
+            if PY3:
+                # ares docs: "If the query did not complete
+                # successfully, or one of the values was not
+                # requested, node or service will be NULL ". Python 2
+                # allows that for the service, but Python 3 raises
+                # an error. This is tested by test_socket in py 3.4
+                err = gaierror('nodename nor servname provided, or not known')
+                err.errno = 8
+                raise err
             service = '0'
         return node, service
 
