@@ -17,6 +17,7 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
+# pylint: disable=too-many-lines,unused-argument
 from __future__ import print_function
 from gevent import monkey
 monkey.patch_all(thread=False)
@@ -1244,6 +1245,9 @@ Cookie: name2="value2"\n\n'''.replace('\n', '\r\n'))
 
 class TestLeakInput(TestCase):
 
+    _leak_wsgi_input = None
+    _leak_environ = None
+
     def application(self, environ, start_response):
         pi = environ["PATH_INFO"]
         self._leak_wsgi_input = environ["wsgi.input"]
@@ -1267,6 +1271,49 @@ class TestLeakInput(TestCase):
         d = fd.read()
         assert d.startswith(b"HTTP/1.1 200 OK"), "bad response: %r" % d
         self._leak_environ.pop('_leak')
+
+class TestHTTPResponseSplitting(TestCase):
+    # The validator would prevent the app from doing the
+    # bad things it needs to do
+    validator = None
+
+    status = '200 OK'
+    headers = ()
+    start_exc = None
+
+    def setUp(self):
+        TestCase.setUp(self)
+        self.start_exc = None
+        self.status = TestHTTPResponseSplitting.status
+        self.headers = TestHTTPResponseSplitting.headers
+
+    def application(self, environ, start_response):
+        try:
+            start_response(self.status, self.headers)
+        except Exception as e: # pylint: disable=broad-except
+            self.start_exc = e
+        else:
+            self.start_exc = None
+        return ()
+
+    def _assert_failure(self, message):
+        fd = self.makefile()
+        fd.write('GET / HTTP/1.0\r\nHost: localhost\r\n\r\n')
+        fd.read()
+        self.assertIsInstance(self.start_exc, ValueError)
+        self.assertEqual(self.start_exc.args[0], message)
+
+    def test_newline_in_status(self):
+        self.status = '200 OK\r\nConnection: close\r\nContent-Length: 0\r\n\r\n'
+        self._assert_failure('carriage return or newline in status')
+
+    def test_newline_in_header_value(self):
+        self.headers = [('Test', 'Hi\r\nConnection: close')]
+        self._assert_failure('carriage return or newline in header value')
+
+    def test_newline_in_header_name(self):
+        self.headers = [('Test\r\n', 'Hi')]
+        self._assert_failure('carriage return or newline in header name')
 
 
 class TestInvalidEnviron(TestCase):
