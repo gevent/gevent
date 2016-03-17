@@ -41,7 +41,7 @@ ignore-paths:
   - greentest/getaddrinfo_module.py
 ignore-patterns:
   # disabled code
-  - greentest/xtest_.*py
+  - ^greentest/xtest_.*py
   # standard library code
   - ^greentest/2.*
   - ^greentest/3.*

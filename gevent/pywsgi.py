@@ -751,12 +751,16 @@ class WSGIHandler(object):
 
     def start_response(self, status, headers, exc_info=None):
         """
+         .. versionchanged:: 1.2a1
+            Avoid HTTP header injection by raising a :exc:`ValueError`
+            if *status* or any *header* name or value contains a carriage
+            return or newline.
          .. versionchanged:: 1.1b5
             Pro-actively handle checking the encoding of the status line
             and headers during this method. On Python 2, avoid some
             extra encodings.
         """
-        # pylint:disable=too-many-branches
+        # pylint:disable=too-many-branches,too-many-statements
         if exc_info:
             try:
                 if self.headers_sent:
@@ -776,6 +780,7 @@ class WSGIHandler(object):
         # UnicodeError without any clue which header was wrong.
         # Note that this results in copying the header list at this point, not modifying it,
         # although we are allowed to do so if needed. This slightly increases memory usage.
+        # We also check for HTTP Response Splitting vulnerabilities
         response_headers = []
         header = None
         value = None
@@ -785,6 +790,10 @@ class WSGIHandler(object):
                     raise UnicodeError("The header must be a native string", header, value)
                 if not isinstance(value, str):
                     raise UnicodeError("The value must be a native string", header, value)
+                if '\r' in header or '\n' in header:
+                    raise ValueError('carriage return or newline in header name', header)
+                if '\r' in value or '\n' in value:
+                    raise ValueError('carriage return or newline in header value', value)
                 # Either we're on Python 2, in which case bytes is correct, or
                 # we're on Python 3 and the user screwed up (because it should be a native
                 # string). In either case, make sure that this is latin-1 compatible. Under
@@ -806,6 +815,8 @@ class WSGIHandler(object):
         # Same as above
         if not isinstance(status, str):
             raise UnicodeError("The status string must be a native string")
+        if '\r' in status or '\n' in status:
+            raise ValueError("carriage return or newline in status", status)
         # don't assign to anything until the validation is complete, including parsing the
         # code
         code = int(status.split(' ', 1)[0])
@@ -1263,3 +1274,30 @@ class WSGIServer(StreamServer):
         # pylint:disable=method-hidden
         handler = self.handler_class(sock, address, self)
         handler.handle()
+
+def _main():
+    # Provisional main handler, for quick tests, not production
+    # usage.
+    from gevent import monkey; monkey.patch_all()
+
+    import argparse
+    import importlib
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument("app", help="dotted name of WSGI app callable [module:callable]")
+    parser.add_argument("-b", "--bind",
+                        help="The socket to bind",
+                        default=":8080")
+
+    args = parser.parse_args()
+
+    module_name, app_name = args.app.split(':')
+    module = importlib.import_module(module_name)
+    app = getattr(module, app_name)
+    bind = args.bind
+
+    server = WSGIServer(bind, app)
+    server.serve_forever()
+
+if __name__ == '__main__':
+    _main()

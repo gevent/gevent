@@ -22,6 +22,10 @@
 - :class:`~.Group` and :class:`~.Pool` now return whether
   :meth:`~.Group.join` returned with an empty group. Suggested by Filippo Sironi in
   :pr:`503`.
+- Security: :mod:`gevent.pywsgi` now checks that the values passed to
+  ``start_response`` do not contain a carriage return or newline in
+  order to prevent HTTP response splitting (header injection), raising
+  a :exc:`ValueError` if they do. See :issue:`775`.
 
 1.1.0 (Mar 5, 2016)
 ===================
