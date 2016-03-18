@@ -26,6 +26,9 @@
   ``start_response`` do not contain a carriage return or newline in
   order to prevent HTTP response splitting (header injection), raising
   a :exc:`ValueError` if they do. See :issue:`775`.
+- Python 3: Add support for :meth:`socket.socket.sendmsg`,
+  :meth:`socket.socket.recvmsg` and :meth:`socket.socket.recvmsg_into`
+  on platforms where they are defined. Initial :pr:`773` by Jakub Klama.
 
 1.1.0 (Mar 5, 2016)
 ===================

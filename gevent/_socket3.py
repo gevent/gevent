@@ -334,6 +334,15 @@ class socket(object):
                         raise
                 self._wait(self._read_event)
 
+        def recvmsg_into(self, *args):
+            while True:
+                try:
+                    return _socket.socket.recvmsg_into(self._sock, *args)
+                except error as ex:
+                    if ex.args[0] != EWOULDBLOCK or self.timeout == 0.0:
+                        raise
+                self._wait(self._read_event)
+
     def recvfrom(self, *args):
         while True:
             try:
