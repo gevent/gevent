@@ -50,9 +50,6 @@ class _wrefsocket(_socket.socket):
 
     __slots__ = ("__weakref__", )
 
-_closedsocket = _wrefsocket()
-_closedsocket.close()
-
 
 class socket(object):
     """
@@ -243,7 +240,21 @@ class socket(object):
         self.hub.cancel_wait(self._read_event, cancel_wait_ex)
         self.hub.cancel_wait(self._write_event, cancel_wait_ex)
         _ss.close(self._sock)
-        self._sock = _closedsocket
+
+        # Break any references to the underlying socket object. Tested
+        # by test__refcount. (Why does this matter?). Be sure to
+        # preserve our same family/type/proto if possible (if we
+        # don't, we can get TypeError instead of OSError; see
+        # test_socket.SendmsgUDP6Test.testSendmsgAfterClose)... but
+        # this isn't always possible (see test_socket.test_unknown_socket_family_repr)
+        # TODO: Can we use a simpler proxy, like _socket2 does?
+        try:
+            self._sock = self._gevent_sock_class(self.family, self.type, self.proto)
+        except OSError:
+            pass
+        else:
+            _ss.close(self._sock)
+
 
     def close(self):
         # This function should not reference any globals. See Python issue #808164.

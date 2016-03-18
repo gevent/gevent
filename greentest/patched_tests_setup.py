@@ -396,6 +396,13 @@ if sys.version_info[:2] >= (3, 4):
 
     ]
 
+    if sys.platform == 'darwin':
+        disabled_tests += [
+            # These raise "OSError: 12 Cannot allocate memory" on both
+            # patched and unpatched runs
+            'test_socket.RecvmsgSCMRightsStreamTest.testFDPassEmpty',
+        ]
+
     if sys.version_info[:2] == (3, 4):
         disabled_tests += [
             # These are all expecting that a signal (sigalarm) that
@@ -413,6 +420,8 @@ if sys.version_info[:2] >= (3, 4):
             'test_socket.InterruptedRecvTimeoutTest.testInterruptedRecvfromTimeout',
             'test_socket.InterruptedRecvTimeoutTest.testInterruptedSendTimeout',
             'test_socket.InterruptedRecvTimeoutTest.testInterruptedSendtoTimeout',
+            'test_socket.InterruptedRecvTimeoutTest.testInterruptedRecvmsgTimeout',
+            'test_socket.InterruptedSendTimeoutTest.testInterruptedSendmsgTimeout',
         ]
 
     if os.environ.get('TRAVIS') == 'true':
@@ -454,6 +463,10 @@ if sys.version_info[:2] >= (3, 5):
 
 
 def disable_tests_in_source(source, name):
+    if name.startswith('./'):
+        # turn "./test_socket.py" (used for auto-complete) into "test_socket.py"
+        name = name[2:]
+
     my_disabled_tests = [x for x in disabled_tests if x.startswith(name + '.')]
     if not my_disabled_tests:
         return source
@@ -462,4 +475,5 @@ def disable_tests_in_source(source, name):
         testcase = test.split('.')[-1]
         source, n = re.subn(testcase, 'XXX' + testcase, source)
         print('Removed %s (%d)' % (testcase, n), file=sys.stderr)
+
     return source
