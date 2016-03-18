@@ -338,6 +338,48 @@ if sys.version_info[:2] >= (3, 5):
         'test_socket.GeneralModuleTests.test_str_for_enums',
         'test_socket.GeneralModuleTests.testGetaddrinfo',
 
+    ]
+
+    if sys.platform == 'darwin':
+        disabled_tests += [
+            # These raise "OSError: 12 Cannot allocate memory" on both
+            # patched and unpatched runs
+            'test_socket.RecvmsgSCMRightsStreamTest.testFDPassEmpty',
+        ]
+
+    if sys.version_info[:2] == (3, 4):
+        disabled_tests += [
+            # These are all expecting that a signal (sigalarm) that
+            # arrives during a blocking call should raise
+            # InterruptedError with errno=EINTR. gevent does not do
+            # this, instead its loop keeps going and raises a timeout
+            # (which fails the test). HOWEVER: Python 3.5 fixed this
+            # problem and started raising a timeout,
+            # (https://docs.python.org/3/whatsnew/3.5.html#pep-475-retry-system-calls-failing-with-eintr)
+            # and removed these tests (InterruptedError is no longer
+            # raised). So basically, gevent was ahead of its time.
+            'test_socket.InterruptedRecvTimeoutTest.testInterruptedRecvIntoTimeout',
+            'test_socket.InterruptedRecvTimeoutTest.testInterruptedRecvTimeout',
+            'test_socket.InterruptedRecvTimeoutTest.testInterruptedRecvfromIntoTimeout',
+            'test_socket.InterruptedRecvTimeoutTest.testInterruptedRecvfromTimeout',
+            'test_socket.InterruptedRecvTimeoutTest.testInterruptedSendTimeout',
+            'test_socket.InterruptedRecvTimeoutTest.testInterruptedSendtoTimeout',
+            'test_socket.InterruptedRecvTimeoutTest.testInterruptedRecvmsgTimeout',
+            'test_socket.InterruptedSendTimeoutTest.testInterruptedSendmsgTimeout',
+        ]
+
+    if os.environ.get('TRAVIS') == 'true':
+        disabled_tests += [
+            'test_subprocess.ProcessTestCase.test_double_close_on_error',
+            # This test is racy or OS-dependent. It passes locally (sufficiently fast machine)
+            # but fails under Travis
+        ]
+
+if sys.version_info[:2] >= (3, 5):
+    disabled_tests += [
+        # XXX: Hangs
+        'test_ssl.ThreadedTests.test_nonblocking_send',
+        'test_ssl.ThreadedTests.test_socketserver',
         # Relies on the regex of the repr having the locked state (TODO: it'd be nice if
         # we did that).
         # XXX: These are commented out in the source code of test_threading because
@@ -365,6 +407,10 @@ if sys.version_info[:2] >= (3, 5):
 
 
 def disable_tests_in_source(source, name):
+    if name.startswith('./'):
+        # turn "./test_socket.py" (used for auto-complete) into "test_socket.py"
+        name = name[2:]
+
     my_disabled_tests = [x for x in disabled_tests if x.startswith(name + '.')]
     if not my_disabled_tests:
         return source
@@ -373,4 +419,5 @@ def disable_tests_in_source(source, name):
         testcase = test.split('.')[-1]
         source, n = re.subn(testcase, 'XXX' + testcase, source)
         print('Removed %s (%d)' % (testcase, n), file=sys.stderr)
+
     return source
