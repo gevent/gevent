@@ -317,14 +317,17 @@ class socket(object):
                     raise
             self._wait(self._read_event)
 
-    def recvmsg(self, *args):
-        while True:
-            try:
-                return _socket.socket.recvmsg(self._sock, *args)
-            except error as ex:
-                if ex.args[0] != EWOULDBLOCK or self.timeout == 0.0:
-                    raise
-            self._wait(self._read_event)
+    if hasattr(_socket.socket, 'sendmsg'):
+        # Only on Unix
+
+        def recvmsg(self, *args):
+            while True:
+                try:
+                    return _socket.socket.recvmsg(self._sock, *args)
+                except error as ex:
+                    if ex.args[0] != EWOULDBLOCK or self.timeout == 0.0:
+                        raise
+                self._wait(self._read_event)
 
     def recvfrom(self, *args):
         while True:
@@ -408,19 +411,26 @@ class socket(object):
                     return 0
                 raise
 
-    def sendmsg(self, *args):
-        try:
-            return _socket.socket.sendmsg(self._sock, *args)
-        except error as ex:
-            if ex.args[0] != EWOULDBLOCK or self.timeout == 0.0:
-                raise
-            self._wait(self._write_event)
+    if hasattr(_socket.socket, 'sendmsg'):
+        # Only on Unix
+        def sendmsg(self, buffers, ancdata=(), flags=0, address=None):
             try:
-                return _socket.socket.sendmsg(self._sock, *args)
-            except error as ex2:
-                if ex2.args[0] == EWOULDBLOCK:
-                    return 0
-                raise
+                return _socket.socket.sendmsg(self._sock, buffers, ancdata, flags, address)
+            except error as ex:
+                if flags & getattr(_socket, 'MSG_DONTWAIT', 0):
+                    # Enable non-blocking behaviour
+                    # XXX: Do all platforms that have sendmsg have MSG_DONTWAIT?
+                    raise
+
+                if ex.args[0] != EWOULDBLOCK or self.timeout == 0.0:
+                    raise
+                self._wait(self._write_event)
+                try:
+                    return _socket.socket.sendmsg(self._sock, buffers, ancdata, flags, address)
+                except error as ex2:
+                    if ex2.args[0] == EWOULDBLOCK:
+                        return 0
+                    raise
 
     def setblocking(self, flag):
         if flag:
