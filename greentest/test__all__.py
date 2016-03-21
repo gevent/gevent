@@ -61,6 +61,13 @@ if sys.platform.startswith('win'):
 
 class Test(unittest.TestCase):
 
+    stdlib_has_all = False
+    stdlib_all = ()
+    stdlib_name = None
+    stdlib_module = None
+    module = None
+    __implements__ = __extensions__ = __imports__ = ()
+
     def check_all(self):
         "Check that __all__ is present and does not contain invalid entries"
         if not hasattr(self.module, '__all__'):
@@ -145,9 +152,13 @@ class Test(unittest.TestCase):
         not_implemented = NOT_IMPLEMENTED.get(self.stdlib_name)
         if not_implemented is not None:
             result = []
-            for name in missed[:]:
+            for name in missed:
                 if name in not_implemented:
-                    print('IncompleteImplWarning: %s.%s' % (self.modname, name))
+                    # We often don't want __all__ to be set because we wind up
+                    # documenting things that we just copy in from the stdlib.
+                    # But if we implement it, don't print a warning
+                    if getattr(self.module, name, self) is self:
+                        print('IncompleteImplWarning: %s.%s' % (self.modname, name))
                 else:
                     result.append(name)
             missed = result

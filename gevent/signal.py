@@ -15,14 +15,14 @@ information on configuring this not to be the case for advanced uses.
 """
 
 from __future__ import absolute_import
+from gevent._util import _NONE as _INITIAL
+from gevent._util import copy_globals
 
 import signal as _signal
 
 __implements__ = []
 __extensions__ = []
 
-
-_INITIAL = object()
 
 _child_handler = _INITIAL
 
@@ -115,5 +115,9 @@ else:
     # XXX: This breaks test__all__ on windows
     __extensions__.append("signal")
     __extensions__.append("getsignal")
+
+__imports__ = copy_globals(_signal, globals(),
+                           names_to_ignore=__implements__ + __extensions__,
+                           dunder_names_to_keep=())
 
 __all__ = __implements__ + __extensions__

@@ -47,6 +47,7 @@ import os
 import sys
 from gevent.hub import get_hub, reinit
 from gevent._compat import PY3
+from gevent._util import copy_globals
 import errno
 
 EAGAIN = getattr(errno, 'EAGAIN', 11)
@@ -430,5 +431,8 @@ if hasattr(os, 'fork'):
 else:
     __implements__.remove('fork')
 
+__imports__ = copy_globals(os, globals(),
+                           names_to_ignore=__implements__ + __extensions__,
+                           dunder_names_to_keep=())
 
-__all__ = __implements__ + __extensions__
+__all__ = list(set(__implements__ + __extensions__))

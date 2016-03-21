@@ -28,7 +28,11 @@
   a :exc:`ValueError` if they do. See :issue:`775`.
 - Python 3: Add support for :meth:`socket.socket.sendmsg`,
   :meth:`socket.socket.recvmsg` and :meth:`socket.socket.recvmsg_into`
-  on platforms where they are defined. Initial :pr:`773` by Jakub Klama.
+  on platforms where they are defined. Initial :pr:`773` by Jakub
+  Klama.
+- The modules :mod:`gevent.os`, :mod:`gevent.signal` and
+  :mod:`gevent.select` export all the attributes from their
+  corresponding standard library counterpart.
 
 1.1.0 (Mar 5, 2016)
 ===================

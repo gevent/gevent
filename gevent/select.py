@@ -6,6 +6,7 @@ from __future__ import absolute_import
 from gevent.event import Event
 from gevent.hub import get_hub
 from gevent._compat import integer_types
+from gevent._util import copy_globals
 
 
 try:
@@ -22,6 +23,9 @@ import select as __select__
 
 error = __select__.error
 
+__imports__ = copy_globals(__select__, globals(),
+                           names_to_ignore=__all__,
+                           dunder_names_to_keep=())
 
 def get_fileno(obj):
     try:
