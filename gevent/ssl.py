@@ -12,13 +12,13 @@ if PY2:
         # don't pollute the namespace
         from gevent import _sslgte279 as _source
     else:
-        from gevent import _ssl2 as _source
+        from gevent import _ssl2 as _source # pragma: no cover
 else:
     # Py3
-    from gevent import _ssl3 as _source
+    from gevent import _ssl3 as _source # pragma: no cover
 
 
 for key in _source.__dict__:
-    if key.startswith('__') and key not in '__implements__ __all__ __imports__'.split():
+    if key.startswith('__') and key not in ('__implements__', '__all__', ' __imports__'):
         continue
     globals()[key] = getattr(_source, key)

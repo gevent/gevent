@@ -279,7 +279,9 @@ def main():
         print("Enabling coverage to", os.environ['COVERAGE_FILE'])
     if options.config:
         config = {}
-        six.exec_(open(options.config).read(), config)
+        with open(options.config) as f:
+            config_data = f.read()
+        six.exec_(config_data, config)
         FAILING_TESTS = config['FAILING_TESTS']
     tests = discover(args, options.ignore, coverage)
     if options.discover:
