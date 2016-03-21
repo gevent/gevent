@@ -897,6 +897,7 @@ class WSGIHandler(object):
 
         try:
             try:
+                raise Exception
                 self.run_application()
             finally:
                 close = getattr(self.result, 'close', None)
