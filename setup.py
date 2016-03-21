@@ -109,8 +109,9 @@ if _config_vars and "m32" in _config_vars:
 else:
     _m32 = ''
 
+# Use -r, not -e, for support of old solaris. See https://github.com/gevent/gevent/issues/777
 ares_configure_command = ' '.join(["(cd ", _quoted_abspath('c-ares/'),
-                                   " && if [ -e ares_build.h ]; then cp ares_build.h ares_build.h.orig; fi ",
+                                   " && if [ -r ares_build.h ]; then cp ares_build.h ares_build.h.orig; fi ",
                                    " && /bin/sh ./configure " + _m32 + "CONFIG_COMMANDS= CONFIG_FILES= ",
                                    " && cp ares_config.h ares_build.h \"$OLDPWD\" ",
                                    " && mv ares_build.h.orig ares_build.h)",
