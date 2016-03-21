@@ -7,7 +7,7 @@ Python 2 socket module.
 
 import time
 from gevent import _socketcommon
-from gevent.hub import PYPY
+from gevent._compat import PYPY
 
 for key in _socketcommon.__dict__:
     if key.startswith('__') or key in _socketcommon.__py3_imports__ or key in _socketcommon.__extensions__:

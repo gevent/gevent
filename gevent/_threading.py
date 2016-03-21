@@ -15,7 +15,7 @@ import heapq
 from time import time as _time, sleep as _sleep
 
 from gevent import monkey
-from gevent.hub import PY3
+from gevent._compat import PY3
 
 
 __all__ = ['Condition',

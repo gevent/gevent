@@ -38,8 +38,8 @@ import sys
 import os
 from gevent._fileobjectcommon import FileObjectClosed
 from gevent.hub import get_hub
-from gevent.hub import integer_types
-from gevent.hub import reraise
+from gevent._compat import integer_types
+from gevent._compat import reraise
 from gevent.lock import Semaphore, DummySemaphore
 
 

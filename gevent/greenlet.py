@@ -2,19 +2,19 @@
 from __future__ import absolute_import
 import sys
 from greenlet import greenlet
+from gevent._compat import PY3
+from gevent._compat import PYPY
+from gevent._compat import reraise
+from gevent._tblib import dump_traceback
+from gevent._tblib import load_traceback
 from gevent.hub import GreenletExit
 from gevent.hub import InvalidSwitchError
-from gevent.hub import PY3
-from gevent.hub import PYPY
 from gevent.hub import Waiter
 from gevent.hub import get_hub
 from gevent.hub import getcurrent
 from gevent.hub import iwait
-from gevent.hub import reraise
 from gevent.hub import wait
 from gevent.timeout import Timeout
-from gevent._tblib import dump_traceback
-from gevent._tblib import load_traceback
 from collections import deque
 
 

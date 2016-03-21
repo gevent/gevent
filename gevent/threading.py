@@ -16,7 +16,8 @@ import threading as __threading__
 _DummyThread_ = __threading__._DummyThread
 from gevent.local import local
 from gevent.thread import start_new_thread as _start_new_thread, allocate_lock as _allocate_lock, get_ident as _get_ident
-from gevent.hub import sleep as _sleep, getcurrent, PYPY
+from gevent._compat import PYPY
+from gevent.hub import sleep as _sleep, getcurrent
 
 # Exports, prevent unused import warnings
 local = local

@@ -2,7 +2,8 @@
 from __future__ import absolute_import
 import sys
 import os
-from gevent.hub import get_hub, getcurrent, sleep, integer_types
+from gevent._compat import integer_types
+from gevent.hub import get_hub, getcurrent, sleep
 from gevent.event import AsyncResult
 from gevent.greenlet import Greenlet
 from gevent.pool import GroupMappingMixin

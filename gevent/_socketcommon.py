@@ -70,9 +70,10 @@ __imports__.extend(__py3_imports__)
 
 
 import sys
-from gevent.hub import get_hub, string_types, integer_types
+from gevent.hub import get_hub
 from gevent.hub import ConcurrentObjectUseError
 from gevent.timeout import Timeout
+from gevent._compat import string_types, integer_types
 
 is_windows = sys.platform == 'win32'
 # pylint:disable=no-name-in-module,unused-import

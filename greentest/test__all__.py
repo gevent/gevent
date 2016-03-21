@@ -43,7 +43,9 @@ COULD_BE_MISSING = {
     'subprocess': ['_posixsubprocess'],
 }
 
-NO_ALL = ['gevent.threading', 'gevent._util',
+NO_ALL = ['gevent.threading',
+          'gevent._util',
+          'gevent._compat',
           'gevent._socketcommon',
           'gevent._fileobjectcommon', 'gevent._fileobjectposix',
           'gevent._tblib',

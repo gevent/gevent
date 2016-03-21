@@ -1,6 +1,6 @@
 from __future__ import print_function
 import greentest
-from gevent.hub import PY3
+from greentest import PY3
 from gevent import socket
 import gevent
 from gevent.server import StreamServer

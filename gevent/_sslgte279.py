@@ -22,7 +22,7 @@ from gevent._socket2 import socket
 from gevent.socket import timeout_default
 from gevent.socket import error as socket_error
 from gevent.socket import timeout as _socket_timeout
-from gevent.hub import PYPY
+from gevent._compat import PYPY
 
 __implements__ = [
     'SSLContext',

@@ -21,7 +21,7 @@ from gevent._socket2 import socket
 from gevent.socket import _fileobject, timeout_default
 from gevent.socket import error as socket_error, EWOULDBLOCK
 from gevent.socket import timeout as _socket_timeout
-from gevent.hub import string_types, PYPY
+from gevent._compat import string_types, PYPY
 
 try:
     long

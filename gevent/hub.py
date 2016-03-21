@@ -26,31 +26,8 @@ __all__ = [
     'Waiter',
 ]
 
-PY2 = sys.version_info[0] == 2
-PY3 = sys.version_info[0] >= 3
-PYPY = hasattr(sys, 'pypy_version_info')
-
-
-if PY3:
-    string_types = str,
-    integer_types = int,
-    text_type = str
-    xrange = range
-
-    def reraise(t, value, tb=None): # pylint:disable=unused-argument
-        if value.__traceback__ is not tb:
-            raise value.with_traceback(tb)
-        raise value
-
-else:
-    import __builtin__ # pylint:disable=import-error
-    string_types = __builtin__.basestring,
-    text_type = __builtin__.unicode
-    integer_types = (int, __builtin__.long)
-    xrange = __builtin__.xrange # python 2: pylint:disable=redefined-variable-type
-
-    from gevent._util_py2 import reraise # pylint:disable=import-error,unused-import,no-name-in-module
-
+from gevent._compat import string_types
+from gevent._compat import xrange
 
 if sys.version_info[0] <= 2:
     import thread # pylint:disable=import-error
@@ -447,7 +424,7 @@ def _import(path):
 
 
 def config(default, envvar):
-    result = os.environ.get(envvar) or default
+    result = os.environ.get(envvar) or default # absolute import gets confused pylint: disable=no-member
     if isinstance(result, string_types):
         return result.split(',')
     return result

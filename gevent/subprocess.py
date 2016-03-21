@@ -38,9 +38,10 @@ import signal
 import sys
 import traceback
 from gevent.event import AsyncResult
-from gevent.hub import get_hub, linkproxy, sleep, getcurrent, integer_types, string_types, xrange
-from gevent.hub import PY3
-from gevent.hub import reraise
+from gevent.hub import get_hub, linkproxy, sleep, getcurrent
+from gevent._compat import integer_types, string_types, xrange
+from gevent._compat import PY3
+from gevent._compat import reraise
 from gevent.fileobject import FileObject
 from gevent.greenlet import Greenlet, joinall
 spawn = Greenlet.spawn

@@ -5,7 +5,7 @@ Waiting for I/O completion.
 from __future__ import absolute_import
 from gevent.event import Event
 from gevent.hub import get_hub
-from gevent.hub import integer_types
+from gevent._compat import integer_types
 
 
 try:

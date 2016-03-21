@@ -19,8 +19,9 @@ exclude_lines =
     raise NotImplementedError
     except ImportError:
     if __name__ == .__main__.:
-	if PYPY:
+    if PYPY:
     if PY3:
     if sys.platform == 'win32':
     if mswindows:
+    if is_windows:
     if sys.version_info.*>=.*3

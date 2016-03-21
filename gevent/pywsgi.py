@@ -28,7 +28,8 @@ except ImportError:
 from gevent import socket
 import gevent
 from gevent.server import StreamServer
-from gevent.hub import GreenletExit, PY3, reraise
+from gevent.hub import GreenletExit
+from gevent._compat import PY3, reraise
 
 from functools import partial
 if PY3:

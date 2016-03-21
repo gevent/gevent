@@ -45,7 +45,8 @@ from __future__ import absolute_import
 
 import os
 import sys
-from gevent.hub import get_hub, reinit, PY3
+from gevent.hub import get_hub, reinit
+from gevent._compat import PY3
 import errno
 
 EAGAIN = getattr(errno, 'EAGAIN', 11)

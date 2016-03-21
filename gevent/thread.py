@@ -30,7 +30,8 @@ else:
                     'interrupt_main',
                     'start_new']
 error = __thread__.error
-from gevent.hub import getcurrent, GreenletExit, PY3
+from gevent._compat import PY3
+from gevent.hub import getcurrent, GreenletExit
 from gevent.greenlet import Greenlet
 from gevent.lock import BoundedSemaphore
 from gevent.local import local as _local

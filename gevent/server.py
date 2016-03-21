@@ -4,7 +4,7 @@ import sys
 import _socket
 from gevent.baseserver import BaseServer
 from gevent.socket import EWOULDBLOCK, socket
-from gevent.hub import PYPY, PY3
+from gevent._compat import PYPY, PY3
 
 __all__ = ['StreamServer', 'DatagramServer']
 

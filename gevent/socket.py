@@ -14,7 +14,7 @@ as well as the constants from the :mod:`socket` module are imported into this mo
 # pylint: disable=undefined-variable
 
 import sys
-from gevent.hub import PY3
+from gevent._compat import PY3
 
 
 if PY3:

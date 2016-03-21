@@ -2,7 +2,8 @@
 """Locking primitives"""
 from __future__ import absolute_import
 
-from gevent.hub import getcurrent, PYPY
+from gevent.hub import getcurrent
+from gevent._compat import PYPY
 from gevent._semaphore import Semaphore, BoundedSemaphore # pylint:disable=no-name-in-module,import-error
 
 

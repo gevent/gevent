@@ -47,7 +47,8 @@ if sys.platform == 'win32':
     import socket  # pylint:disable=unused-import,useless-suppression
     del socket
 
-from gevent.hub import get_hub, iwait, wait, PYPY
+from gevent.hub import get_hub, iwait, wait
+from gevent._compat import PYPY
 from gevent.greenlet import Greenlet, joinall, killall
 joinall = joinall # export for pylint
 spawn = Greenlet.spawn

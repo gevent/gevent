@@ -35,7 +35,7 @@ Full = __queue__.Full
 Empty = __queue__.Empty
 
 from gevent.timeout import Timeout
-from gevent.hub import get_hub, Waiter, getcurrent, PY3
+from gevent.hub import get_hub, Waiter, getcurrent
 from gevent.hub import InvalidSwitchError
 
 
@@ -347,9 +347,8 @@ class Queue(object):
             raise result
         return result
 
-    if PY3:
-        __next__ = next
-        del next
+    __next__ = next
+
 
 
 class ItemWaiter(Waiter):

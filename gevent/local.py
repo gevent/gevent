@@ -138,7 +138,8 @@ affects what we see:
 from copy import copy
 from weakref import ref
 from contextlib import contextmanager
-from gevent.hub import getcurrent, PYPY
+from gevent.hub import getcurrent
+from gevent._compat import PYPY
 from gevent.lock import RLock
 
 __all__ = ["local"]

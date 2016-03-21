@@ -47,7 +47,7 @@ except ImportError:
 
 import greentest
 import gevent
-from gevent.hub import PY3, PYPY
+from greentest import PY3, PYPY
 from gevent import socket
 from gevent import pywsgi
 from gevent.pywsgi import Input

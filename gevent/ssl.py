@@ -1,7 +1,7 @@
 """
 Secure Sockets Layer (SSL/TLS) module.
 """
-from gevent.hub import PY2
+from gevent._compat import PY2
 
 
 if PY2:

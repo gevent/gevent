@@ -6,7 +6,8 @@ from __future__ import absolute_import
 import os
 import sys
 from _socket import getservbyname, getaddrinfo, gaierror, error
-from gevent.hub import Waiter, get_hub, string_types, text_type, integer_types, reraise, PY3
+from gevent.hub import Waiter, get_hub
+from gevent._compat import string_types, text_type, integer_types, reraise, PY3
 from gevent.socket import AF_UNSPEC, AF_INET, AF_INET6, SOCK_STREAM, SOCK_DGRAM, SOCK_RAW, AI_NUMERICHOST, EAI_SERVICE, AI_PASSIVE
 from gevent.ares import channel, InvalidIP # pylint:disable=import-error,no-name-in-module
 

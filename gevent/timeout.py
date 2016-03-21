@@ -14,7 +14,8 @@ module add timeouts to arbitrary code.
     which no switches occur, :class:`Timeout` is powerless.
 """
 
-from gevent.hub import getcurrent, _NONE, get_hub, string_types
+from gevent._compat import string_types
+from gevent.hub import getcurrent, _NONE, get_hub
 
 __all__ = ['Timeout',
            'with_timeout']

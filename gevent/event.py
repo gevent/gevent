@@ -2,7 +2,8 @@
 """Basic synchronization primitives: Event and AsyncResult"""
 from __future__ import print_function
 import sys
-from gevent.hub import get_hub, getcurrent, _NONE, reraise
+from gevent.hub import get_hub, getcurrent, _NONE
+from gevent._compat import reraise
 from gevent.hub import InvalidSwitchError
 from gevent.timeout import Timeout
 from gevent._tblib import dump_traceback, load_traceback
