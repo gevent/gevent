@@ -34,13 +34,14 @@ __implements__ = ['SSLSocket',
 # and "private" symbols.
 __imports__ = copy_globals(__ssl__, globals(),
                            # SSLSocket *must* subclass gevent.socket.socket; see issue 597
-                           names_to_ignore=__implements__ + ['socket', 'namedtuple'],
+                           names_to_ignore=__implements__ + ['socket'],
                            dunder_names_to_keep=())
 
 
 # Py2.6 can get RAND_status added twice
 __all__ = list(set(__implements__) | set(__imports__))
-
+if 'namedtuple' in __all__:
+    __all__.remove('namedtuple')
 
 class SSLSocket(socket):
     """

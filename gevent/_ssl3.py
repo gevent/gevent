@@ -33,10 +33,12 @@ __implements__ = [
 # and "private" symbols.
 __imports__ = copy_globals(__ssl__, globals(),
                            # SSLSocket *must* subclass gevent.socket.socket; see issue 597
-                           names_to_ignore=__implements__ + ['socket', 'namedtuple'],
+                           names_to_ignore=__implements__ + ['socket'],
                            dunder_names_to_keep=())
 
 __all__ = __implements__ + __imports__
+if 'namedtuple' in __all__:
+    __all__.remove('namedtuple')
 
 orig_SSLContext = __ssl__.SSLContext # pylint:disable=no-member
 
