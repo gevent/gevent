@@ -897,7 +897,6 @@ class WSGIHandler(object):
 
         try:
             try:
-                raise Exception
                 self.run_application()
             finally:
                 close = getattr(self.result, 'close', None)
@@ -942,7 +941,7 @@ class WSGIHandler(object):
 
     def _handle_server_error(self, ex):
         type, value, tb = sys.exc_info()
-        self.log_error('Server response error: %s failed with %s\n%s\n\n' % (self.environ, getattr(type, '__name__', 'exception'), tb))
+        self.log_error('Server response error\nContext %s\n failed with %s' % (self.environ, traceback.format_exc()))
         self._send_error_response_if_possible(500)
 
     def _handle_client_error(self, ex):
