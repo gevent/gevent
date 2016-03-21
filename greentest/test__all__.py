@@ -206,9 +206,14 @@ are missing from %r:
         self.check_completeness()
 
     for path, modname in walk_modules(include_so=True):
+        orig_modname = modname
         modname = modname.replace('gevent.', '').split('.')[0]
+        if not modname:
+            print("WARNING: No such module '%s' at '%s'" % (orig_modname, path),
+                  file=sys.stderr)
+            continue
         exec('''def test_%s(self): self._test("gevent.%s")''' % (modname, modname))
-    del path, modname
+    del path, modname, orig_modname
 
 
 if __name__ == "__main__":

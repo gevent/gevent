@@ -18,6 +18,7 @@ import errno
 from gevent.socket import socket, timeout_default
 from gevent.socket import error as socket_error
 from gevent.socket import timeout as _socket_timeout
+from gevent._util import copy_globals
 
 from weakref import ref as _wref
 
@@ -28,22 +29,12 @@ __implements__ = [
     'get_server_certificate',
 ]
 
-__imports__ = []
-
-_name = _value = None
-for _name in dir(__ssl__):
-    if _name in __implements__:
-        continue
-    if _name.startswith('__'):
-        continue
-    if _name == 'socket':
-        # SSLSocket *must* subclass gevent.socket.socket; see issue 597
-        continue
-    _value = getattr(__ssl__, _name)
-    globals()[_name] = _value
-    __imports__.append(_name)
-
-del _name, _value
+# Import all symbols from Python's ssl.py, except those that we are implementing
+# and "private" symbols.
+__imports__ = copy_globals(__ssl__, globals(),
+                           # SSLSocket *must* subclass gevent.socket.socket; see issue 597
+                           names_to_ignore=__implements__ + ['socket', 'namedtuple'],
+                           dunder_names_to_keep=())
 
 __all__ = __implements__ + __imports__
 

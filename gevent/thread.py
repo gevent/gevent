@@ -31,6 +31,7 @@ else:
                     'start_new']
 error = __thread__.error
 from gevent._compat import PY3
+from gevent._util import copy_globals
 from gevent.hub import getcurrent, GreenletExit
 from gevent.greenlet import Greenlet
 from gevent.lock import BoundedSemaphore
@@ -98,12 +99,9 @@ if hasattr(__thread__, 'stack_size'):
 else:
     __implements__.remove('stack_size')
 
-for name in __imports__[:]:
-    try:
-        value = getattr(__thread__, name)
-        globals()[name] = value
-    except AttributeError:
-        __imports__.remove(name)
+__imports__ = copy_globals(__thread__, globals(),
+                           only_names=__imports__,
+                           ignore_missing_names=True)
 
 __all__ = __implements__ + __imports__
 __all__.remove('_local')

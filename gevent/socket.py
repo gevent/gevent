@@ -15,6 +15,7 @@ as well as the constants from the :mod:`socket` module are imported into this mo
 
 import sys
 from gevent._compat import PY3
+from gevent._util import copy_globals
 
 
 if PY3:
@@ -35,10 +36,10 @@ def getfqdn(*args):
     # pylint:disable=unused-argument
     raise NotImplementedError()
 
-for key in _source.__dict__:
-    if key.startswith('__') and key not in '__implements__ __dns__ __all__ __extensions__ __imports__ __socket__'.split():
-        continue
-    globals()[key] = getattr(_source, key)
+copy_globals(_source, globals(),
+             dunder_names_to_keep=('__implements__', '__dns__', '__all__',
+                                   '__extensions__', '__imports__', '__socket__'),
+             cleanup_globs=False)
 
 # The _socket2 and _socket3 don't import things defined in
 # __extensions__, to help avoid confusing reference cycles in the
@@ -49,10 +50,8 @@ for key in _source.__dict__:
 #             module gevent._socket2, attribute cancel_wait
 # These can be ignored.)
 from gevent import _socketcommon
-for key in _socketcommon.__extensions__:
-    globals()[key] = getattr(_socketcommon, key)
-
-del key
+copy_globals(_socketcommon, globals(),
+             only_names=_socketcommon.__extensions__)
 
 try:
     _GLOBAL_DEFAULT_TIMEOUT = __socket__._GLOBAL_DEFAULT_TIMEOUT

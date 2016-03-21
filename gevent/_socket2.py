@@ -7,12 +7,12 @@ Python 2 socket module.
 
 import time
 from gevent import _socketcommon
+from gevent._util import copy_globals
 from gevent._compat import PYPY
 
-for key in _socketcommon.__dict__:
-    if key.startswith('__') or key in _socketcommon.__py3_imports__ or key in _socketcommon.__extensions__:
-        continue
-    globals()[key] = getattr(_socketcommon, key)
+copy_globals(_socketcommon, globals(),
+             names_to_ignore=_socketcommon.__py3_imports__ + _socketcommon.__extensions__,
+             dunder_names_to_keep=())
 
 __socket__ = _socketcommon.__socket__
 __implements__ = _socketcommon._implements

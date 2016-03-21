@@ -74,6 +74,8 @@ from gevent.hub import get_hub
 from gevent.hub import ConcurrentObjectUseError
 from gevent.timeout import Timeout
 from gevent._compat import string_types, integer_types
+from gevent._util import copy_globals
+from gevent._util import _NONE
 
 is_windows = sys.platform == 'win32'
 # pylint:disable=no-name-in-module,unused-import
@@ -105,12 +107,9 @@ _realsocket = _socket.socket
 import socket as __socket__
 
 _name = _value = None
-for _name in __imports__[:]:
-    try:
-        _value = getattr(__socket__, _name)
-        globals()[_name] = _value
-    except AttributeError:
-        __imports__.remove(_name)
+__imports__ = copy_globals(__socket__, globals(),
+                           only_names=__imports__,
+                           ignore_missing_names=True)
 
 for _name in __socket__.__all__:
     _value = getattr(__socket__, _name)
@@ -120,13 +119,6 @@ for _name in __socket__.__all__:
 
 del _name, _value
 
-
-class _NONE(object):
-
-    def __repr__(self):
-        return "<default value>"
-
-_NONE = _NONE()
 _timeout_error = timeout # pylint: disable=undefined-variable
 
 

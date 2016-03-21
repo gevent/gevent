@@ -2,7 +2,7 @@
 Secure Sockets Layer (SSL/TLS) module.
 """
 from gevent._compat import PY2
-
+from gevent._util import copy_globals
 
 if PY2:
     if hasattr(__import__('ssl'), 'SSLContext'):
@@ -18,7 +18,4 @@ else:
     from gevent import _ssl3 as _source # pragma: no cover
 
 
-for key in _source.__dict__:
-    if key.startswith('__') and key not in ('__implements__', '__all__', ' __imports__'):
-        continue
-    globals()[key] = getattr(_source, key)
+copy_globals(_source, globals())

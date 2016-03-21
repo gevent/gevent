@@ -21,13 +21,8 @@ from gevent._socket2 import socket
 from gevent.socket import _fileobject, timeout_default
 from gevent.socket import error as socket_error, EWOULDBLOCK
 from gevent.socket import timeout as _socket_timeout
-from gevent._compat import string_types, PYPY
-
-try:
-    long
-except NameError:
-    # Make us importable under Py3k for documentation
-    long = int
+from gevent._compat import PYPY
+from gevent._util import copy_globals
 
 
 __implements__ = ['SSLSocket',
@@ -35,30 +30,13 @@ __implements__ = ['SSLSocket',
                   'get_server_certificate',
                   'sslwrap_simple']
 
-__imports__ = ['SSLError',
-               'RAND_status',
-               'RAND_egd',
-               'RAND_add',
-               'cert_time_to_seconds',
-               'get_protocol_name',
-               'DER_cert_to_PEM_cert',
-               'PEM_cert_to_DER_cert']
+# Import all symbols from Python's ssl.py, except those that we are implementing
+# and "private" symbols.
+__imports__ = copy_globals(__ssl__, globals(),
+                           # SSLSocket *must* subclass gevent.socket.socket; see issue 597
+                           names_to_ignore=__implements__ + ['socket', 'namedtuple'],
+                           dunder_names_to_keep=())
 
-for name in __imports__[:]:
-    try:
-        value = getattr(__ssl__, name)
-        globals()[name] = value
-    except AttributeError:
-        __imports__.remove(name)
-
-for name in dir(__ssl__):
-    if not name.startswith('_'):
-        value = getattr(__ssl__, name)
-        if isinstance(value, (int, long, tuple)) or isinstance(value, string_types):
-            globals()[name] = value
-            __imports__.append(name)
-
-del name, value
 
 # Py2.6 can get RAND_status added twice
 __all__ = list(set(__implements__) | set(__imports__))

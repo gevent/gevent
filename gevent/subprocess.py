@@ -42,6 +42,8 @@ from gevent.hub import get_hub, linkproxy, sleep, getcurrent
 from gevent._compat import integer_types, string_types, xrange
 from gevent._compat import PY3
 from gevent._compat import reraise
+from gevent._util import _NONE
+from gevent._util import copy_globals
 from gevent.fileobject import FileObject
 from gevent.greenlet import Greenlet, joinall
 spawn = Greenlet.spawn
@@ -127,22 +129,18 @@ if sys.version_info[:2] >= (3, 5):
     except:
         MAXFD = 256
 
+actually_imported = copy_globals(__subprocess__, globals(),
+                                 only_names=__imports__,
+                                 ignore_missing_names=True)
+# anything we couldn't import from here we may need to find
+# elsewhere
+__extra__.extend(set(__imports__).difference(set(actually_imported)))
+__imports__ = actually_imported
+del actually_imported
 
-for name in __imports__[:]:
-    try:
-        value = getattr(__subprocess__, name)
-        globals()[name] = value
-    except AttributeError:
-        __imports__.remove(name)
-        __extra__.append(name)
-
-if sys.version_info[:2] <= (2, 6):
-    __implements__.remove('check_output')
-    __extra__.append('check_output')
 
 # In Python 3 on Windows, a lot of the functions previously
 # in _subprocess moved to _winapi
-_NONE = object()
 _subprocess = getattr(__subprocess__, '_subprocess', _NONE)
 _winapi = getattr(__subprocess__, '_winapi', _NONE)
 

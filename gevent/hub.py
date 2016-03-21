@@ -28,6 +28,7 @@ __all__ = [
 
 from gevent._compat import string_types
 from gevent._compat import xrange
+from gevent._util import _NONE
 
 if sys.version_info[0] <= 2:
     import thread # pylint:disable=import-error
@@ -57,14 +58,6 @@ get_ident = thread.get_ident
 MAIN_THREAD = get_ident()
 
 
-class _NONE(object):
-    "A special thingy you must never pass to any of gevent API"
-    __slots__ = ()
-
-    def __repr__(self):
-        return '<_NONE>'
-
-_NONE = _NONE()
 
 
 class LoopExit(Exception):

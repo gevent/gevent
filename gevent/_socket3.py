@@ -6,19 +6,19 @@ Python 3 socket module.
 # pylint: disable=undefined-variable
 # pylint: disable=too-many-statements,too-many-branches
 # pylint: disable=too-many-public-methods,unused-argument
-
+from __future__ import absolute_import
 import io
 import os
 import sys
 import time
 from gevent import _socketcommon
+from gevent._util import copy_globals
 import _socket
 from os import dup
 
-for key in _socketcommon.__dict__:
-    if key.startswith('__') or key in _socketcommon.__extensions__:
-        continue
-    globals()[key] = getattr(_socketcommon, key)
+copy_globals(_socketcommon, globals(),
+             names_to_ignore=_socketcommon.__extensions__,
+             dunder_names_to_keep=())
 
 __socket__ = _socketcommon.__socket__
 __implements__ = _socketcommon._implements
