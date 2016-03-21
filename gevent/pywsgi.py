@@ -654,10 +654,6 @@ class WSGIHandler(object):
             if not self.read_request(self.requestline):
                 return ('400', _BAD_REQUEST_RESPONSE)
         except Exception as ex: # pylint:disable=broad-except
-            # Notice we don't use self.handle_error because it reports
-            # a 500 error to the client, and this is almost certainly
-            # a client error.
-            # Provide a hook for subclasses.
             return self._handle_client_error(ex)
 
         self.environ = self.get_environ()
@@ -928,9 +924,9 @@ class WSGIHandler(object):
                     sys.exc_clear()
                 self.close_connection = True
             else:
-                self.handle_error(*sys.exc_info())
-        except: # pylint:disable=bare-except
-            self.handle_error(*sys.exc_info())
+                self._handle_server_error(ex)
+        except Exception as ex: # pylint:disable=bare-except
+            self._handle_server_error(ex)
         finally:
             self.time_finish = time.time()
             self.log_request()
@@ -943,24 +939,15 @@ class WSGIHandler(object):
             self.start_response(status, headers[:])
             self.write(body)
 
-    def _log_error(self, t, v, tb):
-        # TODO: Shouldn't we dump this to wsgi.errors? If we did that now, it would
-        # wind up getting logged twice
-        if not issubclass(t, GreenletExit):
-            self.server.loop.handle_error(self.environ, t, v, tb)
-
-    def handle_error(self, t, v, tb):
-        # Called for internal, unexpected errors, NOT invalid client input
-        self._log_error(t, v, tb)
-        del tb
+    def _handle_server_error(self, ex):
+        type, value, tb = sys.exc_info()
+        self.log_error('Server response error: %s failed with %s\n%s\n\n' % (self.environ, getattr(type, '__name__', 'exception'), tb))
         self._send_error_response_if_possible(500)
 
     def _handle_client_error(self, ex):
         # Called for invalid client input
         # Returns the appropriate error response.
         if not isinstance(ex, ValueError):
-            # XXX: Why not self._log_error to send it through the loop's
-            # handle_error method?
             traceback.print_exc()
         if isinstance(ex, _InvalidClientRequest):
             # These come with good error messages, and we want to let
