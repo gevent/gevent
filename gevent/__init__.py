@@ -48,7 +48,6 @@ if sys.platform == 'win32':
     del socket
 
 from gevent.hub import get_hub, iwait, wait
-from gevent._compat import PYPY
 from gevent.greenlet import Greenlet, joinall, killall
 joinall = joinall # export for pylint
 spawn = Greenlet.spawn
@@ -127,14 +126,3 @@ def __dependencies_for_freezing():
     import signal as _signal
 
 del __dependencies_for_freezing
-
-if PYPY:
-    # We need to make sure that the CFFI compilation is complete if
-    # need be. Without this, we can get ImportError(ImportError:
-    # Cannot import 'core' from ...) from the hub or
-    # DistutilsModuleError (on OS X) depending on who first imports and inits
-    # the hub. See https://github.com/gevent/gevent/issues/619 (There
-    # is no automated test for this.)
-    # XXX: As of 1.1, which prebuilds at install time, this is probably pointless
-    from gevent.core import loop # pylint:disable=no-name-in-module
-    del loop
