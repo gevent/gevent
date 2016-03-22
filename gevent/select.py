@@ -4,6 +4,8 @@ Waiting for I/O completion.
 """
 from __future__ import absolute_import
 
+import sys
+
 from gevent.event import Event
 from gevent.hub import get_hub
 from gevent.hub import sleep as _g_sleep
@@ -14,7 +16,13 @@ from gevent._util import copy_globals
 from gevent._util import _NONE
 
 from errno import EINTR
-from select import select as _original_select
+if sys.platform.startswith('win32'):
+    def _original_select(_r, _w, _x, _t):
+        # windows cant handle three empty lists, but we've always
+        # accepted that, so don't try the compliance check on windows
+        return ((), (), ())
+else:
+    from select import select as _original_select
 
 try:
     from select import poll as original_poll
@@ -128,6 +136,7 @@ def select(rlist, wlist, xlist, timeout=None): # pylint:disable=unused-argument
     # (Because libev tends to just return them as ready...)
     # We accept the *xlist* here even though we can't below because this is all about
     # error handling.
+    sel_results = ((), (), ())
     try:
         sel_results = _original_select(rlist, wlist, xlist, 0)
     except error as e:
@@ -135,7 +144,6 @@ def select(rlist, wlist, xlist, timeout=None): # pylint:disable=unused-argument
         if enumber != EINTR:
             # Ignore interrupted syscalls
             raise
-        sel_results = ((), (), ())
 
     if sel_results[0] or sel_results[1] or sel_results[2]:
         # If we actually had stuff ready, go ahead and return it. No need
