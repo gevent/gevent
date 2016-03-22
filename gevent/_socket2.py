@@ -100,6 +100,8 @@ class socket(object):
     to be aware of or may document a method the standard library does not.
     """
 
+    # pylint:disable=too-many-public-methods
+
     def __init__(self, family=AF_INET, type=SOCK_STREAM, proto=0, _sock=None):
         if _sock is None:
             self._sock = _realsocket(family, type, proto)
@@ -462,6 +464,15 @@ class socket(object):
     family = property(lambda self: self._sock.family)
     type = property(lambda self: self._sock.type)
     proto = property(lambda self: self._sock.proto)
+
+    def fileno(self):
+        return self._sock.fileno()
+
+    def getsockname(self):
+        return self._sock.getsockname()
+
+    def getpeername(self):
+        return self._sock.getpeername()
 
     # delegate the functions that we haven't implemented to the real socket object
 

@@ -4,6 +4,10 @@ Secure Sockets Layer (SSL/TLS) module.
 from gevent._compat import PY2
 from gevent._util import copy_globals
 
+# things we expect to override, here for static analysis
+def wrap_socket(sock, **kwargs): # pylint:disable=unused-argument
+    raise NotImplementedError()
+
 if PY2:
     if hasattr(__import__('ssl'), 'SSLContext'):
         # It's not sufficient to check for >= 2.7.9; some distributions
