@@ -39,6 +39,9 @@ clean:
 	rm -f gevent.corecext.c gevent.corecext.h gevent/gevent.corecext.c gevent/gevent.corecext.h
 	rm -f gevent.ares.c gevent.ares.h gevent/gevent.ares.c gevent/gevent.ares.h
 	rm -f gevent._semaphore.c gevent._semaphore.h gevent/gevent._semaphore.c gevent/gevent._semaphore.h
+	rm -f gevent/*.so
+	rm -rf gevent/__pycache__
+	rm -rf gevent/*.pyc
 
 doc:
 	cd doc && PYTHONPATH=.. make html
