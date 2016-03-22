@@ -572,7 +572,7 @@ class SSLSocket(socket):
                     raise
                 self._wait(self._write_event, timeout_exc=_SSLErrorHandshakeTimeout)
 
-        if self.context.check_hostname:
+        if self._context.check_hostname:
             if not self.server_hostname:
                 raise ValueError("check_hostname needs server_hostname "
                                  "argument")
@@ -585,7 +585,7 @@ class SSLSocket(socket):
         # connected at the time of the call.  We connect it, then wrap it.
         if self._connected:
             raise ValueError("attempt to connect already-connected SSLSocket!")
-        self._sslobj = self.context._wrap_socket(self._sock, False, self.server_hostname, ssl_sock=self)
+        self._sslobj = self._context._wrap_socket(self._sock, False, self.server_hostname, ssl_sock=self)
         try:
             if connect_ex:
                 rc = socket.connect_ex(self, addr)
@@ -617,10 +617,10 @@ class SSLSocket(socket):
         SSL channel, and the address of the remote client."""
 
         newsock, addr = socket.accept(self)
-        newsock = self.context.wrap_socket(newsock,
-                                           do_handshake_on_connect=self.do_handshake_on_connect,
-                                           suppress_ragged_eofs=self.suppress_ragged_eofs,
-                                           server_side=True)
+        newsock = self._context.wrap_socket(newsock,
+                                            do_handshake_on_connect=self.do_handshake_on_connect,
+                                            suppress_ragged_eofs=self.suppress_ragged_eofs,
+                                            server_side=True)
         return newsock, addr
 
     def makefile(self, mode='r', bufsize=-1):

@@ -34,7 +34,7 @@ def gevent_wait_callback(conn, timeout=None):
 extensions.set_wait_callback(gevent_wait_callback)
 
 
-class DatabaseConnectionPool(object):
+class AbstractDatabaseConnectionPool(object):
 
     def __init__(self, maxsize=100):
         if not isinstance(maxsize, integer_types):
@@ -42,6 +42,9 @@ class DatabaseConnectionPool(object):
         self.maxsize = maxsize
         self.pool = Queue()
         self.size = 0
+
+    def create_connection(self):
+        raise NotImplementedError()
 
     def get(self):
         pool = self.pool
@@ -134,14 +137,14 @@ class DatabaseConnectionPool(object):
                     yield item
 
 
-class PostgresConnectionPool(DatabaseConnectionPool):
+class PostgresConnectionPool(AbstractDatabaseConnectionPool):
 
     def __init__(self, *args, **kwargs):
         self.connect = kwargs.pop('connect', connect)
         maxsize = kwargs.pop('maxsize', None)
         self.args = args
         self.kwargs = kwargs
-        DatabaseConnectionPool.__init__(self, maxsize)
+        AbstractDatabaseConnectionPool.__init__(self, maxsize)
 
     def create_connection(self):
         return self.connect(*self.args, **self.kwargs)

@@ -184,6 +184,9 @@ class BaseServer(object):
     def do_close(self, *args):
         pass
 
+    def do_read(self):
+        raise NotImplementedError()
+
     def _do_read(self):
         for _ in xrange(self.max_accept):
             if self.full():
