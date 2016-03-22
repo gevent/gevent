@@ -1,8 +1,10 @@
 import six
 import sys
 import os
+import errno
 from gevent import select, socket
 import greentest
+import unittest
 
 
 class TestSelect(greentest.GenericWaitTestCase):
@@ -23,20 +25,59 @@ if sys.platform != 'win32':
                 os.close(r)
                 os.close(w)
 
-    if hasattr(select, 'poll') and sys.platform != 'darwin':
+        # Issue #12367: http://www.freebsd.org/cgi/query-pr.cgi?pr=kern/155606
+        @unittest.skipIf(sys.platform.startswith('freebsd'),
+                         'skip because of a FreeBSD bug: kern/155606')
+        def test_errno(self):
+            # Backported from test_select.py in 3.4
+            with open(__file__, 'rb') as fp:
+                fd = fp.fileno()
+                fp.close()
+                try:
+                    select.select([fd], [], [], 0)
+                except OSError as err:
+                    # Python 3
+                    self.assertEqual(err.errno, errno.EBADF)
+                except select.error as err: # pylint:disable=duplicate-except
+                    # Python 2 (select.error is OSError on py3)
+                    self.assertEqual(err.args[0], errno.EBADF)
+                else:
+                    self.fail("exception not raised")
+
+
+    if hasattr(select, 'poll'):
 
         class TestPollRead(greentest.GenericWaitTestCase):
             def wait(self, timeout):
+                # On darwin, the read pipe is reported as writable
+                # immediately, for some reason. So we carefully register
+                # it only for read events (the default is read and write)
                 r, w = os.pipe()
                 try:
                     poll = select.poll()
-                    poll.register(r)
+                    poll.register(r, select.POLLIN)
                     poll.poll(timeout * 1000)
-                    poll.unregister(r)
                 finally:
+                    poll.unregister(r)
                     os.close(r)
                     os.close(w)
 
+            def test_unregister_never_registered(self):
+                # "Attempting to remove a file descriptor that was
+                # never registered causes a KeyError exception to be
+                # raised."
+                poll = select.poll()
+                self.assertRaises(KeyError, poll.unregister, 5)
+
+            def test_poll_invalid(self):
+                with open(__file__, 'rb') as fp:
+                    fd = fp.fileno()
+                    fp.close()
+
+                    poll = select.poll()
+                    poll.register(fd, select.POLLIN)
+                    result = poll.poll(0)
+                    self.assertEqual(result, [(fd, select.POLLNVAL)]) # pylint:disable=no-member
 
 class TestSelectTypes(greentest.TestCase):
 

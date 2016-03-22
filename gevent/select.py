@@ -3,15 +3,20 @@
 Waiting for I/O completion.
 """
 from __future__ import absolute_import
+
 from gevent.event import Event
 from gevent.hub import get_hub
 from gevent._compat import integer_types
+from gevent._compat import iteritems
+from gevent._compat import itervalues
 from gevent._util import copy_globals
+from gevent._util import _NONE
 
+from select import select as _original_select
 
 try:
     from select import poll as original_poll
-    from select import POLLIN, POLLOUT
+    from select import POLLIN, POLLOUT, POLLNVAL
     __implements__ = ['select', 'poll']
 except ImportError:
     original_poll = None
@@ -27,6 +32,9 @@ __imports__ = copy_globals(__select__, globals(),
                            names_to_ignore=__all__,
                            dunder_names_to_keep=())
 
+_EV_READ = 1
+_EV_WRITE = 2
+
 def get_fileno(obj):
     try:
         fileno_f = obj.fileno
@@ -39,7 +47,7 @@ def get_fileno(obj):
 
 
 class SelectResult(object):
-    __slots__ = ['read', 'write', 'event']
+    __slots__ = ('read', 'write', 'event')
 
     def __init__(self):
         self.read = []
@@ -50,53 +58,99 @@ class SelectResult(object):
         self.read.append(socket)
         self.event.set()
 
+    add_read.event = _EV_READ
+
     def add_write(self, socket):
         self.write.append(socket)
         self.event.set()
+
+    add_write.event = _EV_WRITE
+
+    def __add_watchers(self, watchers, fdlist, callback, io, pri):
+        for fd in fdlist:
+            watcher = io(get_fileno(fd), callback.event)
+            watcher.priority = pri
+            watchers.append(watcher)
+            watcher.start(callback, fd)
+
+    def _make_watchers(self, watchers, rlist, wlist):
+        loop = get_hub().loop
+        io = loop.io
+        MAXPRI = loop.MAXPRI
+
+        try:
+            self.__add_watchers(watchers, rlist, self.add_read, io, MAXPRI)
+            self.__add_watchers(watchers, wlist, self.add_write, io, MAXPRI)
+        except IOError as ex:
+            raise error(*ex.args)
+
+    def _closeall(self, watchers):
+        for watcher in watchers:
+            watcher.stop()
+        del watchers[:]
+
+    def select(self, rlist, wlist, timeout):
+        watchers = []
+        try:
+            self._make_watchers(watchers, rlist, wlist)
+            self.event.wait(timeout=timeout)
+            return self.read, self.write, []
+        finally:
+            self._closeall(watchers)
 
 
 def select(rlist, wlist, xlist, timeout=None): # pylint:disable=unused-argument
     """An implementation of :meth:`select.select` that blocks only the current greenlet.
 
-    Note: *xlist* is ignored.
+    .. caution:: *xlist* is ignored.
+
+    .. versionchanged:: 1.2a1
+       Raise a :exc:`ValueError` if timeout is negative. This matches Python 3's
+       behaviour (Python 2 would raise a ``select.error``). Previously gevent had
+       undefined behaviour.
+    .. versionchanged:: 1.2a1
+       Raise an exception if any of the file descriptors are invalid.
     """
-    watchers = []
-    loop = get_hub().loop
-    io = loop.io
-    MAXPRI = loop.MAXPRI
+    if timeout is not None and timeout < 0:
+        # Raise an error like the real implementation; which error
+        # depends on the version. Python 3, where select.error is OSError,
+        # raises a ValueError (which makes sense). Older pythons raise
+        # the error from the select syscall...but we don't actually get there.
+        # We choose to just raise the ValueError as it makes more sense and is
+        # forward compatible (plus we don't have to import errno)
+        raise ValueError("timeout must be non-negative")
+
+    # First, do a poll with the original select system call. This
+    # is the most efficient way to check to see if any of the file descriptors
+    # have previously been closed and raise the correct corresponding exception.
+    sel_results = _original_select(rlist, wlist, [], 0)
+    if sel_results[0] or sel_results[1]:
+        # If we actually had stuff ready, go ahead and return it. No need
+        # to go through the trouble of doing our own stuff.
+        return sel_results
+
     result = SelectResult()
-    try:
-        try:
-            for readfd in rlist:
-                watcher = io(get_fileno(readfd), 1)
-                watcher.priority = MAXPRI
-                watcher.start(result.add_read, readfd)
-                watchers.append(watcher)
-            for writefd in wlist:
-                watcher = io(get_fileno(writefd), 2)
-                watcher.priority = MAXPRI
-                watcher.start(result.add_write, writefd)
-                watchers.append(watcher)
-        except IOError as ex:
-            raise error(*ex.args)
-        result.event.wait(timeout=timeout)
-        return result.read, result.write, []
-    finally:
-        for awatcher in watchers:
-            awatcher.stop()
+    return result.select(rlist, wlist, timeout)
+
 
 if original_poll is not None:
     class PollResult(object):
-        __slots__ = ['events', 'event']
+        __slots__ = ('events', 'event')
 
         def __init__(self):
             self.events = set()
             self.event = Event()
 
         def add_event(self, events, fd):
-            result_flags = 0
-            result_flags |= POLLIN if events & 1 else 0
-            result_flags |= POLLOUT if events & 2 else 0
+            if events < 0:
+                result_flags = POLLNVAL
+            else:
+                result_flags = 0
+                if events & _EV_READ:
+                    result_flags = POLLIN
+                if events & _EV_WRITE:
+                    result_flags |= POLLOUT
+
             self.events.add((fd, result_flags))
             self.event.set()
 
@@ -104,35 +158,62 @@ if original_poll is not None:
         """
         An implementation of :class:`select.poll` that blocks only the current greenlet.
 
+        .. caution:: ``POLLPRI`` data is not supported.
+
         .. versionadded:: 1.1b1
         """
         def __init__(self):
-            self.fds = {}
+            self.fds = {} # {int -> watcher}
             self.loop = get_hub().loop
 
-        def register(self, fd, eventmask=POLLIN | POLLOUT):
-            flags = 0
-            flags |= 1 if eventmask & POLLIN else 0
-            flags |= 2 if eventmask & POLLOUT else 0
-            watcher = self.loop.io(get_fileno(fd), flags)
+        def register(self, fd, eventmask=_NONE):
+            if eventmask is _NONE:
+                flags = _EV_READ | _EV_WRITE
+            else:
+                flags = 0
+                if eventmask & POLLIN:
+                    flags = _EV_READ
+                if eventmask & POLLOUT:
+                    flags |= _EV_WRITE
+                # If they ask for POLLPRI, we can't support
+                # that. Should we raise an error?
+
+            fileno = get_fileno(fd)
+            watcher = self.loop.io(fileno, flags)
             watcher.priority = self.loop.MAXPRI
-            self.fds[fd] = watcher
+            self.fds[fileno] = watcher
 
         def modify(self, fd, eventmask):
             self.register(fd, eventmask)
 
         def poll(self, timeout=None):
+            """
+            poll the registered fds.
+
+            .. versionchanged:: 1.2a1
+               File descriptors that are closed are reported with POLLNVAL.
+            """
             result = PollResult()
             try:
-                for fd in self.fds:
-                    self.fds[fd].start(result.add_event, get_fileno(fd), pass_events=True)
+                for fd, watcher in iteritems(self.fds):
+                    watcher.start(result.add_event, fd, pass_events=True)
                 if timeout is not None and timeout > -1:
                     timeout /= 1000.0
                 result.event.wait(timeout=timeout)
                 return list(result.events)
             finally:
-                for afd in self.fds:
-                    self.fds[afd].stop()
+                for awatcher in itervalues(self.fds):
+                    awatcher.stop()
 
         def unregister(self, fd):
-            self.fds.pop(fd, None)
+            """
+            Unregister the *fd*.
+
+            .. versionchanged:: 1.2a1
+               Raise a `KeyError` if *fd* was not registered, like the standard
+               library. Previously gevent did nothing.
+            """
+            fileno = get_fileno(fd)
+            del self.fds[fileno]
+
+del original_poll

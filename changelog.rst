@@ -33,6 +33,20 @@
 - The modules :mod:`gevent.os`, :mod:`gevent.signal` and
   :mod:`gevent.select` export all the attributes from their
   corresponding standard library counterpart.
+- Compliance: If :func:`gevent.select.select` is given a negative *timeout*
+  argument, raise an exception like the standard library does.
+- Compliance: If :func:`gevent.select.select` is given closed or invalid
+  file descriptors in any of its lists, raise the appropriate
+  ``EBADF`` exception like the standard library does. Previously,
+  libev would tend to return the descriptor as ready. In the worst
+  case, this adds an extra system call, but may also reduce latency if
+  descriptors are ready at the time of entry.
+- Compliance: :meth:`gevent.select.poll.unregister` raises an exception if *fd* is not
+  registered, like the standard library.
+- Compliance: :meth:`gevent.select.poll.poll` returns an event with
+  ``POLLNVAL`` for registered fds that are invalid. Previously it
+  would tend to report both read and write events.
+
 
 1.1.0 (Mar 5, 2016)
 ===================
