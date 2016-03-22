@@ -13,6 +13,7 @@ from gevent._compat import itervalues
 from gevent._util import copy_globals
 from gevent._util import _NONE
 
+from errno import EINTR
 from select import select as _original_select
 
 try:
@@ -118,15 +119,24 @@ def select(rlist, wlist, xlist, timeout=None): # pylint:disable=unused-argument
         # raises a ValueError (which makes sense). Older pythons raise
         # the error from the select syscall...but we don't actually get there.
         # We choose to just raise the ValueError as it makes more sense and is
-        # forward compatible (plus we don't have to import errno)
+        # forward compatible
         raise ValueError("timeout must be non-negative")
 
     # First, do a poll with the original select system call. This
     # is the most efficient way to check to see if any of the file descriptors
     # have previously been closed and raise the correct corresponding exception.
+    # (Because libev tends to just return them as ready...)
     # We accept the *xlist* here even though we can't below because this is all about
     # error handling.
-    sel_results = _original_select(rlist, wlist, xlist, 0)
+    try:
+        sel_results = _original_select(rlist, wlist, xlist, 0)
+    except error as e:
+        enumber = getattr(e, 'errno', None) or e.args[0]
+        if enumber != EINTR:
+            # Ignore interrupted syscalls
+            raise
+        sel_results = ((), (), ())
+
     if sel_results[0] or sel_results[1] or sel_results[2]:
         # If we actually had stuff ready, go ahead and return it. No need
         # to go through the trouble of doing our own stuff.
