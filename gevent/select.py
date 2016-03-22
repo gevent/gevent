@@ -6,6 +6,7 @@ from __future__ import absolute_import
 
 from gevent.event import Event
 from gevent.hub import get_hub
+from gevent.hub import sleep as _g_sleep
 from gevent._compat import integer_types
 from gevent._compat import iteritems
 from gevent._compat import itervalues
@@ -123,10 +124,16 @@ def select(rlist, wlist, xlist, timeout=None): # pylint:disable=unused-argument
     # First, do a poll with the original select system call. This
     # is the most efficient way to check to see if any of the file descriptors
     # have previously been closed and raise the correct corresponding exception.
-    sel_results = _original_select(rlist, wlist, [], 0)
-    if sel_results[0] or sel_results[1]:
+    # We accept the *xlist* here even though we can't below because this is all about
+    # error handling.
+    sel_results = _original_select(rlist, wlist, xlist, 0)
+    if sel_results[0] or sel_results[1] or sel_results[2]:
         # If we actually had stuff ready, go ahead and return it. No need
         # to go through the trouble of doing our own stuff.
+        # However, because this is typically a place where scheduling switches
+        # can occur, we need to make sure that's still the case; otherwise a single
+        # consumer could monopolize the thread. (shows up in test_ftplib.)
+        _g_sleep()
         return sel_results
 
     result = SelectResult()
