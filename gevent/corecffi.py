@@ -16,14 +16,7 @@ __all__ = [
     'loop',
 ]
 
-try:
-    import gevent._corecffi
-except ImportError:
-    traceback.print_exc()
-    # Not built yet
-    import gevent._corecffi_build
-    gevent._corecffi_build.ffi.compile()
-    import gevent._corecffi # pylint: disable=no-member,no-name-in-module,useless-suppression
+import gevent._corecffi # pylint:disable=no-name-in-module
 
 ffi = gevent._corecffi.ffi # pylint:disable=no-member
 libev = gevent._corecffi.lib # pylint:disable=no-member
