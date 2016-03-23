@@ -16,7 +16,7 @@ class Test(greentest.TestCase):
     error_fatal = False
 
     def setUp(self):
-        self.server = server.StreamServer(('', 0), readall)
+        self.server = server.StreamServer(('127.0.0.1', 0), readall)
         self.server.start()
 
     def tearDown(self):
