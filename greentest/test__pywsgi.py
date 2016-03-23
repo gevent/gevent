@@ -251,7 +251,9 @@ class TestCase(greentest.TestCase):
 
     def init_server(self, application):
         logger = self.logger = self.init_logger()
-        self.server = pywsgi.WSGIServer(('127.0.0.1', 0), application,
+        # Bind to default address, which should give us ipv6 (when available)
+        # and ipv4. (see self.connect())
+        self.server = pywsgi.WSGIServer(('', 0), application,
                                         log=logger, error_log=logger)
 
     def setUp(self):
@@ -284,6 +286,8 @@ class TestCase(greentest.TestCase):
         # XXX currently listening socket is kept open in gevent.wsgi
 
     def connect(self):
+        # connect on ipv4, even though we bound to ipv6 too
+        # to prove ipv4 works
         conn = socket.create_connection(('127.0.0.1', self.port))
         self.connected.append(weakref.ref(conn))
         result = conn

@@ -378,19 +378,20 @@ def _parse_address(address):
         if not address[0] or ':' in address[0]:
             return _socket.AF_INET6, address
         return _socket.AF_INET, address
-    elif isinstance(address, string_types):
-        if ':' in address:
-            host, port = address.rsplit(':', 1)
-            family, host = _extract_family(host)
-            if host == '*':
-                host = ''
-            return family, (host, int(port))
-        else:
-            return _socket.AF_INET6, ('', int(address))
-    elif isinstance(address, integer_types):
+
+    if ((isinstance(address, string_types) and ':' not in address)
+        or isinstance(address, integer_types)): # noqa (pep8 E129)
+        # Just a port
         return _socket.AF_INET6, ('', int(address))
-    else:
+
+    if not isinstance(address, string_types):
         raise TypeError('Expected tuple or string, got %s' % type(address))
+
+    host, port = address.rsplit(':', 1)
+    family, host = _extract_family(host)
+    if host == '*':
+        host = ''
+    return family, (host, int(port))
 
 
 def parse_address(address):

@@ -85,10 +85,19 @@ class TestCase(greentest.TestCase):
         return sock
 
     def makefile(self, timeout=_DEFAULT_SOCKET_TIMEOUT, bufsize=1):
-        sock = socket.socket()
+        server_host = self.server.server_host
+        if not server_host or server_host == '::':
+            server_host = 'localhost'
         try:
-            sock.connect((self.server.server_host, self.server.server_port))
-        except:
+            family = self.server.socket.family
+        except AttributeError:
+            # server deletes socket when closed
+            family = socket.AF_INET
+
+        sock = socket.socket(family=family)
+        try:
+            sock.connect((server_host, self.server.server_port))
+        except Exception as e:
             # avoid ResourceWarning under Py3
             sock.close()
             raise
@@ -176,7 +185,7 @@ class TestCase(greentest.TestCase):
         print('^^^^^')
 
     def init_server(self):
-        self.server = self.ServerSubClass(('127.0.0.1', 0))
+        self.server = self.ServerSubClass(('', 0))
         self.server.start()
         gevent.sleep(0.01)
 
@@ -186,9 +195,11 @@ class TestCase(greentest.TestCase):
 
     def _test_invalid_callback(self):
         try:
-            self.expect_one_error()
-            self.server = self.ServerClass(('127.0.0.1', 0), lambda: None)
+            self.server = self.ServerClass(('', 0), lambda: None)
             self.server.start()
+
+            self.expect_one_error()
+
             self.assert500()
             self.assert_error(TypeError)
         finally:
@@ -231,7 +242,7 @@ class TestDefaultSpawn(TestCase):
         self.assertRaises(TypeError, self.ServerClass, self.get_listener(), backlog=25, handle=False)
 
     def test_backlog_is_accepted_for_address(self):
-        self.server = self.ServerSubClass(('127.0.0.1', 0), backlog=25)
+        self.server = self.ServerSubClass(('', 0), backlog=25)
         self.assertConnectionRefused()
         self._test_server_start_stop(restartable=False)
 
@@ -246,7 +257,7 @@ class TestDefaultSpawn(TestCase):
         self._test_server_start_stop(restartable=True)
 
     def test_subclass_with_address(self):
-        self.server = self.ServerSubClass(('127.0.0.1', 0))
+        self.server = self.ServerSubClass(('', 0))
         self.assertConnectionRefused()
         self._test_server_start_stop(restartable=True)
 
@@ -272,7 +283,7 @@ class TestDefaultSpawn(TestCase):
         self._test_serve_forever()
 
     def test_serve_forever_after_start(self):
-        self.server = self.ServerSubClass(('127.0.0.1', 0))
+        self.server = self.ServerSubClass(('', 0))
         self.assertConnectionRefused()
         assert not self.server.started
         self.server.start()
@@ -280,7 +291,7 @@ class TestDefaultSpawn(TestCase):
         self._test_serve_forever()
 
     def test_server_closes_client_sockets(self):
-        self.server = self.ServerClass(('127.0.0.1', 0), lambda *args: [])
+        self.server = self.ServerClass(('', 0), lambda *args: [])
         self.server.start()
         conn = self.send_request()
         timeout = gevent.Timeout.start_new(1)
@@ -303,7 +314,7 @@ class TestDefaultSpawn(TestCase):
         self.stop_server()
 
     def init_server(self):
-        self.server = self.ServerSubClass(('127.0.0.1', 0))
+        self.server = self.ServerSubClass(('', 0))
         self.server.start()
         gevent.sleep(0.01)
 
@@ -399,7 +410,7 @@ class TestNoneSpawn(TestCase):
     def test_assertion_in_blocking_func(self):
         def sleep(*args):
             gevent.sleep(0)
-        self.server = Settings.ServerClass(('127.0.0.1', 0), sleep, spawn=None)
+        self.server = Settings.ServerClass(('', 0), sleep, spawn=None)
         self.server.start()
         self.expect_one_error()
         self.assert500()
