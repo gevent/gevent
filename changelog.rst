@@ -7,10 +7,10 @@
 1.2a1 (unreleased)
 ==================
 
-- Remove support for Python 2.6. See :pr:`766`.
-- Update libev to version 4.22.
-- Update tblib to 1.3.0.
-- Update c-ares to version 1.11.0 (`release notes <https://raw.githubusercontent.com/c-ares/c-ares/cares-1_11_0/RELEASE-NOTES>`_).
+- Platforms: Remove support for Python 2.6. See :pr:`766`.
+- libs: Update libev to version 4.22.
+- libs: Update tblib to 1.3.0.
+- libs: Update c-ares to version 1.11.0 (`release notes <https://raw.githubusercontent.com/c-ares/c-ares/cares-1_11_0/RELEASE-NOTES>`_).
 - Remove module ``gevent.coros`` which was replaced by ``gevent.lock``
   and has been deprecated since 1.0b2.
 - The ``ref`` parameter to :func:`gevent.os.fork_and_watch` was being ignored.
@@ -46,6 +46,10 @@
 - Compliance: :meth:`gevent.select.poll.poll` returns an event with
   ``POLLNVAL`` for registered fds that are invalid. Previously it
   would tend to report both read and write events.
+- PyPy/CFFI: The corecffi native extension is now only built at
+  installation time. Previously, if it wasn't available, a build was
+  attempted at every import. This could lead to scattered "gevent"
+  directories and undependable results.
 
 
 1.1.0 (Mar 5, 2016)
