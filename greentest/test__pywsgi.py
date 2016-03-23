@@ -287,8 +287,9 @@ class TestCase(greentest.TestCase):
 
     def connect(self):
         # connect on ipv4, even though we bound to ipv6 too
-        # to prove ipv4 works
-        conn = socket.create_connection(('127.0.0.1', self.port))
+        # to prove ipv4 works...except on Windows, it apparently doesn't.
+        # So use the hostname.
+        conn = socket.create_connection(('localhost', self.port))
         self.connected.append(weakref.ref(conn))
         result = conn
         if PY3:

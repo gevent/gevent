@@ -24,7 +24,7 @@ class Test(greentest.TestCase):
 
     def test_recv_closed(self):
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        sock.connect(('127.0.0.1', self.server.server_port))
+        sock.connect(('localhost', self.server.server_port))
         receiver = gevent.spawn(sock.recv, 25)
         try:
             gevent.sleep(0.001)
@@ -39,7 +39,7 @@ class Test(greentest.TestCase):
 
     def test_recv_twice(self):
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        sock.connect(('127.0.0.1', self.server.server_port))
+        sock.connect(('localhost', self.server.server_port))
         receiver = gevent.spawn(sock.recv, 25)
         try:
             gevent.sleep(0.001)

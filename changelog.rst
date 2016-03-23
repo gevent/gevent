@@ -51,8 +51,8 @@
   attempted at every import. This could lead to scattered "gevent"
   directories and undependable results.
 - Servers: Default to AF_INET6 when binding to all addresses. This
-  supports both IPv4 and IPv6 connections. Original change in
-  :pr:`495` by Felix Kaiser.
+  supports both IPv4 and IPv6 connections (except perhaps on Windows).
+  Original change in :pr:`495` by Felix Kaiser.
 
 
 1.1.0 (Mar 5, 2016)
