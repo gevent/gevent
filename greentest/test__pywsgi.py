@@ -38,12 +38,28 @@ try:
 except ImportError:
     from io import BytesIO as StringIO
 import weakref
-try:
-    from wsgiref.validate import validator
-except ImportError:
 
-    def validator(app):
-        return app
+import wsgiref.validate
+
+def validator(application):
+    # The wsgiref validator wants to enforce that the
+    # type(environ) is dict (which is specified in the
+    # PEP). But we use a subclass by default.
+    # Override this check.
+    valid_application = wsgiref.validate.validator(application)
+
+    def dict_env_application(environ, start_response):
+        ce = wsgiref.validate.check_environ
+
+        def check_environ(environ):
+            return ce(dict(environ))
+        wsgiref.validate.check_environ = check_environ
+        try:
+            return valid_application(environ, start_response)
+        finally:
+            wsgiref.validate.check_environ = ce
+
+    return dict_env_application
 
 import greentest
 import gevent
@@ -1585,6 +1601,94 @@ class TestLogging(TestCase):
 
         # Issue 756: Make sure we don't throw a newline on the end
         self.assertTrue('\n' not in msg, msg)
+
+class TestEnviron(TestCase):
+
+    def application(self, env, start_response):
+        self.assertIsInstance(env, pywsgi.SecureEnviron)
+        start_response('200 OK', [('Content-Type', 'text/plain')])
+        return []
+
+    def test_environ_is_secure_by_default(self):
+        self.urlopen()
+
+    def test_default_secure_repr(self):
+        environ = pywsgi.SecureEnviron()
+        self.assertIn('<pywsgi.SecureEnviron dict (keys: 0) at', repr(environ))
+        self.assertIn('<pywsgi.SecureEnviron dict (keys: 0) at', str(environ))
+
+        environ['key'] = 'value'
+        self.assertIn('<pywsgi.SecureEnviron dict (keys: 1) at', repr(environ))
+        self.assertIn('<pywsgi.SecureEnviron dict (keys: 1) at', str(environ))
+
+        environ.secure_repr = False
+        self.assertEqual(str({'key': 'value'}), str(environ))
+        self.assertEqual(repr({'key': 'value'}), repr(environ))
+
+        del environ.secure_repr
+
+        environ.whitelist_keys = ('missing value',)
+        self.assertEqual(str({'key': "<MASKED>"}), str(environ))
+        self.assertEqual(repr({'key': "<MASKED>"}), repr(environ))
+
+        environ.whitelist_keys = ('key',)
+        self.assertEqual(str({'key': 'value'}), str(environ))
+        self.assertEqual(repr({'key': 'value'}), repr(environ))
+
+        del environ.whitelist_keys
+
+    def test_override_class_defaults(self):
+        class EnvironClass(pywsgi.SecureEnviron):
+            __slots__ = ()
+
+        environ = EnvironClass()
+
+        self.assertTrue(environ.secure_repr)
+        EnvironClass.default_secure_repr = False
+        self.assertFalse(environ.secure_repr)
+
+        self.assertEqual(str({}), str(environ))
+        self.assertEqual(repr({}), repr(environ))
+
+        EnvironClass.default_secure_repr = True
+        EnvironClass.default_whitelist_keys = ('key',)
+
+        environ['key'] = 1
+        self.assertEqual(str({'key': 1}), str(environ))
+        self.assertEqual(repr({'key': 1}), repr(environ))
+
+        # Clean up for leaktests
+        del environ
+        del EnvironClass
+        import gc; gc.collect()
+
+
+    def test_copy_still_secure(self):
+        for cls in (pywsgi.Environ, pywsgi.SecureEnviron):
+            self.assertIsInstance(cls().copy(), cls)
+
+    def test_pickle_copy_returns_dict(self):
+        # Anything going through copy.copy/pickle should
+        # return the same pickle that a dict would.
+        import pickle
+        import json
+
+        for cls in (pywsgi.Environ, pywsgi.SecureEnviron):
+            bltin = {'key': 'value'}
+            env = cls(bltin)
+            self.assertIsInstance(env, cls)
+            self.assertEqual(bltin, env)
+            self.assertEqual(env, bltin)
+
+            for protocol in range(0, pickle.HIGHEST_PROTOCOL + 1):
+                # It's impossible to get a subclass of dict to pickle
+                # identically, but it can restore identically
+                env_dump = pickle.dumps(env, protocol)
+                self.assertNotIn(b'Environ', env_dump)
+                loaded = pickle.loads(env_dump)
+                self.assertEqual(type(loaded), dict)
+
+            self.assertEqual(json.dumps(bltin), json.dumps(env))
 
 del CommonTests
 

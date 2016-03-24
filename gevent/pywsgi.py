@@ -43,6 +43,8 @@ __all__ = [
     'WSGIServer',
     'WSGIHandler',
     'LoggingLogAdapter',
+    'Environ',
+    'SecureEnviron',
 ]
 
 
@@ -811,7 +813,7 @@ class WSGIHandler(object):
                                          value if not PY3 else value.encode("latin-1")))
         except UnicodeEncodeError:
             # If we get here, we're guaranteed to have a header and value
-            raise UnicodeError("Non-latin1 header", header, value)
+            raise UnicodeError("Non-latin1 header", repr(header), repr(value))
 
         # Same as above
         if not isinstance(status, str):
@@ -1125,6 +1127,111 @@ class LoggingLogAdapter(object):
     def __delattr__(self, name):
         delattr(self._logger, name)
 
+class Environ(dict):
+    """
+    The default class that's used for WSGI environment objects.
+
+    Provisional API.
+
+    .. versionadded:: 1.2a1
+    """
+
+    __slots__ = () # add no ivars or weakref ability
+
+    def copy(self):
+        return self.__class__(self)
+
+    if not hasattr(dict, 'iteritems'):
+        # Python 3
+        def iteritems(self):
+            return self.items()
+
+    def __reduce_ex__(self, proto):
+        return (dict, (), None, None, iter(self.iteritems()))
+
+class SecureEnviron(Environ):
+    """
+    An environment that does not print its keys and values
+    by default.
+
+    Provisional API.
+
+    This is intended to keep potentially sensitive information like
+    HTTP authorization and cookies from being inadvertently printed
+    or logged.
+
+    For debugging, each instance can have its *secure_repr* attribute
+    set to ``False``, which will cause it to print like a normal dict.
+
+    When *secure_repr* is ``True`` (the default), then the value of
+    the *whitelist_keys* attribute is consulted; if this value is
+    true-ish, it should be a container (something that responds to
+    ``in``) of key names (typically a list or set). Keys and values in
+    this dictionary that are in *whitelist_keys* will then be printed,
+    while all other values will be masked. These values may be
+    customized on the class by setting the *default_secure_repr* and
+    *default_whitelist_keys*, respectively::
+
+        >>> environ = SecureEnviron(key='value')
+        >>> environ # doctest: +ELLIPSIS
+        <pywsgi.SecureEnviron dict (keys: 1) at ...
+
+    If we whitelist the key, it gets printed::
+
+        >>> environ.whitelist_keys = {'key'}
+        >>> environ
+        {'key': 'value'}
+
+    A non-whitelisted key (*only*, to avoid doctest issues) is masked::
+
+        >>> environ['secure'] = 'secret'; del environ['key']
+        >>> environ
+        {'secure': '<MASKED>'}
+
+    We can turn it off entirely for the instance::
+
+        >>> environ.secure_repr = False
+        >>> environ
+        {'secure': 'secret'}
+
+    We can also customize it at the class level (here we use a new
+    class to be explicit and to avoid polluting the true default
+    values; we would set this class to be the ``environ_class`` of the
+    server)::
+
+        >>> class MyEnviron(SecureEnviron):
+        ...    default_whitelist_keys = ('key',)
+        ...
+        >>> environ = MyEnviron({'key': 'value'})
+        >>> environ
+        {'key': 'value'}
+
+    .. versionadded:: 1.2a1
+    """
+
+    default_secure_repr = True
+    default_whitelist_keys = ()
+
+    # Allow instances to override the class values,
+    # but inherit from the class if not present. Keeps instances
+    # small since we can't combine __slots__ with class attributes
+    # of the same name.
+    __slots__ = ('secure_repr', 'whitelist_keys',)
+
+    def __getattr__(self, name):
+        if name in SecureEnviron.__slots__:
+            return getattr(type(self), 'default_' + name)
+        raise AttributeError(name)
+
+    def __repr__(self):
+        if self.secure_repr:
+            if self.whitelist_keys:
+                return repr({k: self[k] if k in self.whitelist_keys else "<MASKED>" for k in self})
+            return "<pywsgi.SecureEnviron dict (keys: %d) at %s>" % (len(self), id(self))
+        return Environ.__repr__(self)
+    __str__ = __repr__
+
+
 
 class WSGIServer(StreamServer):
     """
@@ -1186,6 +1293,13 @@ class WSGIServer(StreamServer):
     #: parameter.
     error_log = None
 
+    #: The class of environ objects passed to the handlers.
+    #: Must be a dict subclass. By default this will be :class:`SecureEnviron`,
+    #: but this can be customized in a subclass or per-instance.
+    #:
+    #: .. versionadded:: 1.2a1
+    environ_class = SecureEnviron
+
     base_env = {'GATEWAY_INTERFACE': 'CGI/1.1',
                 'SERVER_SOFTWARE': 'gevent/%d.%d Python/%d.%d' % (gevent.version_info[:2] + sys.version_info[:2]),
                 'SCRIPT_NAME': '',
@@ -1224,7 +1338,8 @@ class WSGIServer(StreamServer):
         if environ is not None:
             self.environ = environ
         environ_update = getattr(self, 'environ', None)
-        self.environ = self.base_env.copy()
+
+        self.environ = self.environ_class(self.base_env)
         if self.ssl_enabled:
             self.environ['wsgi.url_scheme'] = 'https'
         else:

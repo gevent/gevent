@@ -53,6 +53,11 @@
 - Servers: Default to AF_INET6 when binding to all addresses (e.g.,
   ""). This supports both IPv4 and IPv6 connections (except on
   Windows). Original change in :pr:`495` by Felix Kaiser.
+- Security: The pywsgi ``environ`` dict doesn't print its contents by
+  default anymore, which could have lead to potential secure
+  information disclosure. Note that this is done using a subclass of
+  ``dict`` which is technically not compliant with PEP3333;
+  applications can configure pywsgi to use a ``dict`` again if required.
 
 
 1.1.0 (Mar 5, 2016)
