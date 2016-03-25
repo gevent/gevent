@@ -39,27 +39,7 @@ except ImportError:
     from io import BytesIO as StringIO
 import weakref
 
-import wsgiref.validate
-
-def validator(application):
-    # The wsgiref validator wants to enforce that the
-    # type(environ) is dict (which is specified in the
-    # PEP). But we use a subclass by default.
-    # Override this check.
-    valid_application = wsgiref.validate.validator(application)
-
-    def dict_env_application(environ, start_response):
-        ce = wsgiref.validate.check_environ
-
-        def check_environ(environ):
-            return ce(dict(environ))
-        wsgiref.validate.check_environ = check_environ
-        try:
-            return valid_application(environ, start_response)
-        finally:
-            wsgiref.validate.check_environ = ce
-
-    return dict_env_application
+from wsgiref.validate import validator
 
 import greentest
 import gevent
@@ -798,12 +778,14 @@ class TestNonLatin1HeaderFromApplication(TestCase):
 
     def test(self):
         sock = self.connect()
+        self.expect_one_error()
         sock.sendall(b'''GET / HTTP/1.1\r\n\r\n''')
         if self.should_error:
             read_http(sock.makefile(), code=500, reason='Internal Server Error')
+            self.assert_error(where_type=pywsgi.SecureEnviron)
             self.assertEqual(len(self.errors), 1)
             t, v = self.errors[0]
-            self.assertTrue(isinstance(v, UnicodeError))
+            self.assertIsInstance(v, UnicodeError)
         else:
             read_http(sock.makefile(), code=200, reason='PASSED')
             self.assertEqual(len(self.errors), 0)
@@ -952,7 +934,7 @@ class TestFirstEmptyYield(TestCase):
         read_http(fd, body='hello', chunks=chunks)
 
         garbage = fd.read()
-        self.assert_(garbage == b"", "got garbage: %r" % garbage)
+        self.assertTrue(garbage == b"", "got garbage: %r" % garbage)
 
 
 class TestEmptyYield304(TestCase):
@@ -1603,6 +1585,14 @@ class TestLogging(TestCase):
         self.assertTrue('\n' not in msg, msg)
 
 class TestEnviron(TestCase):
+
+    # The wsgiref validator asserts type(environ) is dict.
+    # https://mail.python.org/pipermail/web-sig/2016-March/005455.html
+    validator = None
+
+    def init_server(self, application):
+        super(TestEnviron, self).init_server(application)
+        self.server.environ_class = pywsgi.SecureEnviron
 
     def application(self, env, start_response):
         self.assertIsInstance(env, pywsgi.SecureEnviron)

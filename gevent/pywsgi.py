@@ -45,6 +45,7 @@ __all__ = [
     'LoggingLogAdapter',
     'Environ',
     'SecureEnviron',
+    'WSGISecureEnviron',
 ]
 
 
@@ -950,7 +951,10 @@ class WSGIHandler(object):
         # TODO: Shouldn't we dump this to wsgi.errors? If we did that now, it would
         # wind up getting logged twice
         if not issubclass(t, GreenletExit):
-            self.server.loop.handle_error(self.environ, t, v, tb)
+            context = self.environ
+            if not isinstance(context, self.server.secure_environ_class):
+                context = self.server.secure_environ_class(context)
+            self.server.loop.handle_error(context, t, v, tb)
 
     def handle_error(self, t, v, tb):
         # Called for internal, unexpected errors, NOT invalid client input
@@ -1211,12 +1215,13 @@ class SecureEnviron(Environ):
 
     default_secure_repr = True
     default_whitelist_keys = ()
+    default_print_masked_keys = True
 
     # Allow instances to override the class values,
     # but inherit from the class if not present. Keeps instances
     # small since we can't combine __slots__ with class attributes
     # of the same name.
-    __slots__ = ('secure_repr', 'whitelist_keys',)
+    __slots__ = ('secure_repr', 'whitelist_keys', 'print_masked_keys')
 
     def __getattr__(self, name):
         if name in SecureEnviron.__slots__:
@@ -1225,12 +1230,39 @@ class SecureEnviron(Environ):
 
     def __repr__(self):
         if self.secure_repr:
-            if self.whitelist_keys:
-                return repr({k: self[k] if k in self.whitelist_keys else "<MASKED>" for k in self})
+            whitelist = self.whitelist_keys
+            print_masked = self.print_masked_keys
+            if whitelist:
+                safe = {k: self[k] if k in whitelist else "<MASKED>"
+                        for k in self
+                        if k in whitelist or print_masked}
+                safe_repr = repr(safe)
+                if not print_masked and len(safe) != len(self):
+                    safe_repr = safe_repr[:-1] + ", (hidden keys: %d)}" % (len(self) - len(safe))
+                return safe_repr
             return "<pywsgi.SecureEnviron dict (keys: %d) at %s>" % (len(self), id(self))
         return Environ.__repr__(self)
     __str__ = __repr__
 
+
+class WSGISecureEnviron(SecureEnviron):
+    """
+    Specializes the default list of whitelisted keys to a few
+    common WSGI variables.
+
+    Example::
+
+       >>> environ = WSGISecureEnviron(REMOTE_ADDR='::1', HTTP_AUTHORIZATION='secret')
+       >>> environ
+       {'REMOTE_ADDR': '::1', (hidden keys: 1)}
+       >>> import pprint
+       >>> pprint.pprint(environ)
+       {'REMOTE_ADDR': '::1', (hidden keys: 1)}
+       >>> print(pprint.pformat(environ))
+       {'REMOTE_ADDR': '::1', (hidden keys: 1)}
+    """
+    default_whitelist_keys = ('REMOTE_ADDR', 'REMOTE_PORT', 'HTTP_HOST')
+    default_print_masked_keys = False
 
 
 class WSGIServer(StreamServer):
@@ -1294,11 +1326,17 @@ class WSGIServer(StreamServer):
     error_log = None
 
     #: The class of environ objects passed to the handlers.
-    #: Must be a dict subclass. By default this will be :class:`SecureEnviron`,
-    #: but this can be customized in a subclass or per-instance.
+    #: Must be a dict subclass. For compliance with :pep:`3333`
+    #: and libraries like WebOb, this is simply :class:`dict`
+    #: but this can be customized in a subclass or per-instance
+    #: (probably to :class:`WSGISecureEnviron`).
     #:
     #: .. versionadded:: 1.2a1
-    environ_class = SecureEnviron
+    environ_class = dict
+
+    # Undocumented internal detail: the class that WSGIHandler._log_error
+    # will cast to before passing to the loop.
+    secure_environ_class = WSGISecureEnviron
 
     base_env = {'GATEWAY_INTERFACE': 'CGI/1.1',
                 'SERVER_SOFTWARE': 'gevent/%d.%d Python/%d.%d' % (gevent.version_info[:2] + sys.version_info[:2]),
@@ -1354,7 +1392,7 @@ class WSGIServer(StreamServer):
             self.max_accept = 1
 
     def get_environ(self):
-        return self.environ.copy()
+        return self.environ_class(self.environ)
 
     def init_socket(self):
         StreamServer.init_socket(self)

@@ -481,8 +481,12 @@ class Hub(RawGreenlet):
     resolver_class = resolver_config(resolver_class, 'GEVENT_RESOLVER')
     threadpool_class = config('gevent.threadpool.ThreadPool', 'GEVENT_THREADPOOL')
     backend = config(None, 'GEVENT_BACKEND')
-    format_context = 'pprint.pformat'
     threadpool_size = 10
+
+    # using pprint.pformat can override custom __repr__ methods on dict/list
+    # subclasses, which can be a security concern
+    format_context = 'pprint.saferepr'
+
 
     def __init__(self, loop=None, default=None):
         RawGreenlet.__init__(self)

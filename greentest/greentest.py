@@ -397,7 +397,7 @@ class TestCase(TestCaseMetaClass("NewBase", (BaseTestCase,), {})):
         finally:
             self._error = self._none
 
-    def assert_error(self, type=None, value=None, error=None):
+    def assert_error(self, type=None, value=None, error=None, where_type=None):
         if error is None:
             error = self.get_error()
         if type is not None:
@@ -407,6 +407,8 @@ class TestCase(TestCaseMetaClass("NewBase", (BaseTestCase,), {})):
                 assert str(error[2]) == value, error
             else:
                 assert error[2] is value, error
+        if where_type is not None:
+            self.assertIsInstance(error[0], where_type)
         return error
 
     if RUNNING_ON_APPVEYOR:
