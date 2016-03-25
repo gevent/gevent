@@ -1131,9 +1131,27 @@ class LoggingLogAdapter(object):
     def __delattr__(self, name):
         delattr(self._logger, name)
 
+####
+## Environ classes.
+# These subclass dict. They could subclass collections.UserDict on
+# 3.3+ and proxy to the underlying real dict to avoid a copy if we
+# have to print them (on 2.7 it's slightly more complicated to be an
+# instance of collections.MutableMapping; UserDict.UserDict isn't.)
+# Then we could have either the WSGIHandler.get_environ or the
+# WSGIServer.get_environ return one of these proxies, and
+# WSGIHandler.run_application would know to access the `environ.data`
+# attribute to be able to pass the *real* dict to the application
+# (because PEP3333 requires no subclasses, only actual dict objects;
+# wsgiref.validator and webob.Request both enforce this). This has the
+# advantage of not being fragile if anybody else tries to print/log
+# self.environ (and not requiring a copy). However, if there are any
+# subclasses of Handler or Server, this could break if they don't know
+# to return this type.
+####
+
 class Environ(dict):
     """
-    The default class that's used for WSGI environment objects.
+    A base class that can be used for WSGI environment objects.
 
     Provisional API.
 
