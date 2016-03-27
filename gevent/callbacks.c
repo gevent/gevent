@@ -1,6 +1,8 @@
 /* Copyright (c) 2011-2012 Denis Bilenko. See LICENSE for details. */
 #ifdef Py_PYTHON_H
 
+#define _GEVENTLOOP struct __pyx_vtabstruct_8corecext_loop
+
 static void gevent_handle_error(struct PyGeventLoopObject* loop, PyObject* context) {
     PyThreadState *tstate;
     PyObject *type, *value, *traceback, *result;
@@ -19,7 +21,7 @@ static void gevent_handle_error(struct PyGeventLoopObject* loop, PyObject* conte
 
     PyErr_Clear();
 
-    result = ((struct __pyx_vtabstruct_6gevent_8corecext_loop *)loop->__pyx_vtab)->handle_error(loop, context, type, value, traceback, 0);
+    result = ((_GEVENTLOOP *)loop->__pyx_vtab)->handle_error(loop, context, type, value, traceback, 0);
 
     if (result) {
         Py_DECREF(result);
@@ -195,7 +197,7 @@ static void gevent_run_callbacks(struct ev_loop *_loop, void *watcher, int reven
     loop = GET_OBJECT(PyGeventLoopObject, watcher, _prepare);
     Py_INCREF(loop);
     gevent_check_signals(loop);
-    result = ((struct __pyx_vtabstruct_6gevent_8corecext_loop *)loop->__pyx_vtab)->_run_callbacks(loop);
+    result = ((_GEVENTLOOP *)loop->__pyx_vtab)->_run_callbacks(loop);
     if (result) {
         Py_DECREF(result);
     }
