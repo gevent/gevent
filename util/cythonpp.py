@@ -4,6 +4,7 @@
 from __future__ import print_function
 import sys
 import os
+import os.path
 import re
 import traceback
 import datetime
@@ -22,7 +23,10 @@ class Thread(threading.Thread):
     value = None
 
     def run(self):
-        self.value = self._target(*self._args)
+        target = getattr(self, '_target', None) # Py3
+        if target is None:
+            target = getattr(self, '_Thread__target', None)
+        self.value = target(*self._args)
 
 do_exec = None
 if sys.version_info >= (3, 0):
@@ -71,8 +75,6 @@ def _run_cython_on_file(configuration, pyx_filename,
                         output_filename,
                         counter, lines,
                         cache=None):
-    # XXX: Note that this causes cython to generate
-    # a "corecext" name instead of "gevent.corecext"
     value = ''.join(lines)
     sourcehash = md5(value.encode("utf-8")).hexdigest()
     comment = format_tag(frozenset(configuration))
@@ -80,14 +82,17 @@ def _run_cython_on_file(configuration, pyx_filename,
         raise ValueError("output cannot be absolute")
     # We can't change the actual name of the pyx file because
     # cython generates function names based in that string.
+    # XXX: Note that this causes cython to generate
+    # a "corecext" name instead of "gevent.corecext"
     tempdir = tempfile.mkdtemp()
-    #unique_pyx_filename = pyx_filename #os.path.join(tempdir, pyx_filename)
-    #unique_output_filename = output_filename #os.path.join(tempdir, output_filename)
-    unique_pyx_filename = os.path.join(tempdir, pyx_filename)
-    unique_output_filename = os.path.join(tempdir, output_filename)
+    unique_pyx_filename = pyx_filename
+    unique_output_filename = output_filename
+    #unique_pyx_filename = os.path.join(tempdir, pyx_filename)
+    #unique_output_filename = os.path.join(tempdir, output_filename)
+
     dirname = os.path.dirname(unique_pyx_filename) # output must be in same dir
     log("Output filename %s", unique_output_filename)
-    if dirname:
+    if dirname and not os.path.exists(dirname):
         print("Making dir", dirname)
         os.makedirs(dirname)
     try:
@@ -116,7 +121,7 @@ def _run_cython_on_files(pyx_filename, py_banner, banner, output_filename, prepr
                                     counter, lines,
                                     cache)))
         threads[-1].start()
-        #threads[-1].join()
+        threads[-1].join()
 
     for t in threads:
         t.join()

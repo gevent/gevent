@@ -1,7 +1,11 @@
 /* Copyright (c) 2011-2012 Denis Bilenko. See LICENSE for details. */
 #ifdef Py_PYTHON_H
 
+#if 0
 #define _GEVENTLOOP struct __pyx_vtabstruct_8corecext_loop
+#else
+#define _GEVENTLOOP struct __pyx_vtabstruct_6gevent_8corecext_loop
+#endif
 
 static void gevent_handle_error(struct PyGeventLoopObject* loop, PyObject* context) {
     PyThreadState *tstate;
