@@ -25,8 +25,11 @@ class Thread(threading.Thread):
     def run(self):
         target = getattr(self, '_target', None) # Py3
         if target is None:
-            target = getattr(self, '_Thread__target', None)
-        self.value = target(*self._args)
+            target = getattr(self, '_Thread__target')
+            args = getattr(self, '_Thread__args')
+        else:
+            args = self._args
+        self.value = target(*args)
 
 do_exec = None
 if sys.version_info >= (3, 0):

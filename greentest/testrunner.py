@@ -16,6 +16,8 @@ from util import log
 
 TIMEOUT = 180
 NWORKERS = int(os.environ.get('NWORKERS') or max(cpu_count() - 1, 4))
+if NWORKERS > 10:
+    NWORKERS = 10
 
 
 # tests that don't do well when run on busy box
