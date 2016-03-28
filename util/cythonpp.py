@@ -94,9 +94,9 @@ def _run_cython_on_file(configuration, pyx_filename,
     unique_output_filename = os.path.join(tempdir, output_filename)
 
     dirname = os.path.dirname(unique_pyx_filename) # output must be in same dir
-    log("Output filename %s", unique_output_filename)
+    dbg("Output filename %s", unique_output_filename)
     if dirname and not os.path.exists(dirname):
-        print("Making dir", dirname)
+        dbg("Making dir %s", dirname)
         os.makedirs(dirname)
     try:
         atomic_write(unique_pyx_filename, py_banner + value)
@@ -108,7 +108,7 @@ def _run_cython_on_file(configuration, pyx_filename,
             atomic_write(unique_output_filename + '.deb', output)
     finally:
         shutil.rmtree(tempdir, True)
-        #pass
+
     return attach_tags(output, configuration), configuration, sourcehash
 
 
@@ -124,7 +124,6 @@ def _run_cython_on_files(pyx_filename, py_banner, banner, output_filename, prepr
                                     counter, lines,
                                     cache)))
         threads[-1].start()
-        #threads[-1].join()
 
     for t in threads:
         t.join()
@@ -191,7 +190,7 @@ def process_filename(filename, output_filename=None):
     result = generate_merged(sources)
     result_hash = md5(result.encode("utf-8")).hexdigest()
     atomic_write(output_filename, result)
-    log('%s bytes (hash %s)\n', len(result), result_hash)
+    log('%s bytes\n', len(result))
 
     if filename != pyx_filename:
         log('Saving %s', pyx_filename)
@@ -306,29 +305,21 @@ def merge(sources):
      Str('everyone\n', [set([('defined(world)', False)])])]
     """
     sources = list(sources) # own copy
-    log("Merging %s", len(sources))
+    dbg("Merging %s", len(sources))
     if len(sources) <= 1:
         return [Str(str(x), simplify_tags(x.tags)) for x in sources[0]]
 
-    #return merge([_merge(sources[0], sources[1])] + sources[2:])
-
     pool = multiprocessing.Pool()
-    # class SerialPool(object):
-    #     def imap(self, func, iterable):
-    #         for args in iterable:
-    #             yield func(*args)
-
-    #pool = SerialPool()
     groups = []
 
     while len(sources) >= 2:
         one, two = sources.pop(), sources.pop()
         groups.append((one, two))
 
-    log("Merge groups %s", len(groups))
+    dbg("Merge groups %s", len(groups))
     # len sources == 0 or 1
     for merged in pool.imap(_merge, groups):
-        log("Completed a merge in %s", os.getpid())
+        dbg("Completed a merge in %s", os.getpid())
         sources.append(merged)
         # len sources == 1 or 2
 
@@ -338,17 +329,15 @@ def merge(sources):
             # len sources == 1
 
     # len sources should now be 1
-    print("Now merging", len(sources))
+    dbg("Now merging %s", len(sources))
     return merge(sources)
 
 
 def _merge(*args):
-    #log("imerging %s", len(args))
     if isinstance(args[0], tuple):
         a, b = args[0]
     else:
         a, b = args
-    #log("Merging %s and %s (%s %s) in %s", id(a), id(b), len(a), len(b), os.getpid())
     return list(_imerge(a, b))
 
 def _flatten(tags):
@@ -359,7 +348,6 @@ def _flatten(tags):
 
 def _imerge(a, b):
     # caching the tags speeds up serialization and future merges
-    flat_tag_cache = {}
     tag_cache = {}
     for tag, i1, i2, j1, j2 in difflib.SequenceMatcher(None, a, b).get_opcodes():
         if tag == 'equal':
@@ -408,19 +396,23 @@ def expand_to_match(items):
 
 def produce_preprocessor(iterable):
 
-    current_line = [0]
+    if DEBUG:
+        current_line = [0]
 
-    def wrap(line, log=True):
-        current_line[0] += 1
-        dbg('%5d: %s', current_line[0], repr(str(line))[1:-1])
-        return line
+        def wrap(line):
+            current_line[0] += 1
+            dbg('%5d: %s', current_line[0], repr(str(line))[1:-1])
+            return line
+    else:
+        def wrap(line):
+            return line
 
     state = None
     for line in iterable:
         key = line.tags or None
 
         if key == state:
-            yield wrap(line, key)
+            yield wrap(line)
         else:
             if exact_reverse(key, state):
                 yield wrap('#else /* %s */\n' % format_tags(state))
@@ -429,7 +421,7 @@ def produce_preprocessor(iterable):
                     yield wrap('#endif /* %s */\n' % format_tags(state))
                 if key:
                     yield wrap('#if %s\n' % format_tags(key))
-            yield wrap(line, key)
+            yield wrap(line)
             state = key
     if state:
         yield wrap('#endif /* %s */\n' % format_tags(state))
@@ -687,7 +679,7 @@ def atomic_write(filename, data):
 
 
 def run_cython(filename, sourcehash, output_filename, banner, comment, cache=None):
-    log("Cython output to %s hash %s", output_filename, sourcehash)
+    dbg("Cython output to %s hash %s", output_filename, sourcehash)
     result = cache.get(sourcehash) if cache is not None else None
     command = '%s -o %s -I gevent %s' % (CYTHON, pipes.quote(output_filename), pipes.quote(filename))
     if result is not None:
@@ -704,7 +696,7 @@ def system(command, comment):
     log('Running %s  # %s', command, comment)
     try:
         subprocess.check_call(command, shell=True)
-        log('\tDone running %s # %s', command, comment)
+        dbg('\tDone running %s # %s', command, comment)
     except subprocess.CalledProcessError:
         # debugging code
         log("Path: %s", os.getenv("PATH"))
