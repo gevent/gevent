@@ -88,10 +88,10 @@ def _run_cython_on_file(configuration, pyx_filename,
     # XXX: Note that this causes cython to generate
     # a "corecext" name instead of "gevent.corecext"
     tempdir = tempfile.mkdtemp()
-    unique_pyx_filename = pyx_filename
-    unique_output_filename = output_filename
-    #unique_pyx_filename = os.path.join(tempdir, pyx_filename)
-    #unique_output_filename = os.path.join(tempdir, output_filename)
+    #unique_pyx_filename = pyx_filename
+    #unique_output_filename = output_filename
+    unique_pyx_filename = os.path.join(tempdir, pyx_filename)
+    unique_output_filename = os.path.join(tempdir, output_filename)
 
     dirname = os.path.dirname(unique_pyx_filename) # output must be in same dir
     log("Output filename %s", unique_output_filename)
@@ -124,7 +124,7 @@ def _run_cython_on_files(pyx_filename, py_banner, banner, output_filename, prepr
                                     counter, lines,
                                     cache)))
         threads[-1].start()
-        threads[-1].join()
+        #threads[-1].join()
 
     for t in threads:
         t.join()
