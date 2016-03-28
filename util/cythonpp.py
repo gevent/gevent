@@ -80,7 +80,7 @@ def _run_cython_on_file(configuration, pyx_filename,
                         cache=None):
     value = ''.join(lines)
     sourcehash = md5(value.encode("utf-8")).hexdigest()
-    comment = format_tag(frozenset(configuration))
+    comment = format_tag(frozenset(configuration)) + " hash:" + str(sourcehash)
     if os.path.isabs(output_filename):
         raise ValueError("output cannot be absolute")
     # We can't change the actual name of the pyx file because
@@ -129,7 +129,7 @@ def _run_cython_on_files(pyx_filename, py_banner, banner, output_filename, prepr
     for t in threads:
         t.join()
 
-    same_results = {}
+    same_results = {} # {sourcehash: tagged_str}
     for t in threads:
         sourcehash = t.value[2]
         tagged_output = t.value[0]
@@ -145,12 +145,13 @@ def _run_cython_on_files(pyx_filename, py_banner, banner, output_filename, prepr
                 combined_lines.append(Str(line_a, simplify_tags(combined_tags)))
             same_results[sourcehash] = combined_lines
 
-    # ordered_results = []
-    # for t in threads:
-    #     if t.value[0] not in ordered_results:
-    #         ordered_results.append(same_results[t.value[2]])
+    # Order them as they were processed for repeatability
+    ordered_results = []
+    for t in threads:
+        if t.value[0] not in ordered_results:
+            ordered_results.append(same_results[t.value[2]])
 
-    return list(same_results.values())
+    return ordered_results
 
 def process_filename(filename, output_filename=None):
     """Process the .ppyx file with preprocessor and compile it with cython.
@@ -188,8 +189,9 @@ def process_filename(filename, output_filename=None):
 
     log('Generating %s ',  output_filename)
     result = generate_merged(sources)
+    result_hash = md5(result.encode("utf-8")).hexdigest()
     atomic_write(output_filename, result)
-    log('%s bytes\n', len(result))
+    log('%s bytes (hash %s)\n', len(result), result_hash)
 
     if filename != pyx_filename:
         log('Saving %s', pyx_filename)
@@ -325,7 +327,7 @@ def merge(sources):
 
     log("Merge groups %s", len(groups))
     # len sources == 0 or 1
-    for merged in pool.imap_unordered(_merge, groups):
+    for merged in pool.imap(_merge, groups):
         log("Completed a merge in %s", os.getpid())
         sources.append(merged)
         # len sources == 1 or 2
@@ -685,7 +687,7 @@ def atomic_write(filename, data):
 
 
 def run_cython(filename, sourcehash, output_filename, banner, comment, cache=None):
-    log("Cython output to %s", output_filename)
+    log("Cython output to %s hash %s", output_filename, sourcehash)
     result = cache.get(sourcehash) if cache is not None else None
     command = '%s -o %s -I gevent %s' % (CYTHON, pipes.quote(output_filename), pipes.quote(filename))
     if result is not None:

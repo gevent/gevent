@@ -14,7 +14,7 @@ export LC_ALL=C.UTF-8
 
 all: gevent/gevent.corecext.c gevent/gevent.ares.c gevent/gevent._semaphore.c
 
-gevent/gevent.corecext.c: gevent/corecext.ppyx gevent/libev.pxd
+gevent/gevent.corecext.c: gevent/corecext.ppyx gevent/libev.pxd util/cythonpp.py
 	$(PYTHON) util/cythonpp.py -o gevent.corecext.c gevent/corecext.ppyx
 	echo '#include "callbacks.c"' >> gevent.corecext.c
 	mv gevent.corecext.* gevent/
