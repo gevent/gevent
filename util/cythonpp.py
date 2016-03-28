@@ -447,6 +447,10 @@ def exact_reverse(tags1, tags2):
             if tag1[0] == tag2[0]:
                 return sorted([tag1[1], tag2[1]]) == [False, True]
 
+###
+# TODO: Rework conditions/tags to use custom classes+methods instead of
+# tuples and sets and functions for ease of debugging/reading.
+###
 
 def format_cond(cond):
     if isinstance(cond, tuple) and len(cond) == 2 and isinstance(cond[-1], bool):
