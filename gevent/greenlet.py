@@ -5,6 +5,7 @@ from greenlet import greenlet
 from gevent._compat import PY3
 from gevent._compat import PYPY
 from gevent._compat import reraise
+from gevent._util import Lazy
 from gevent._tblib import dump_traceback
 from gevent._tblib import load_traceback
 from gevent.hub import GreenletExit
@@ -86,22 +87,6 @@ class FailureSpawnedLink(SpawnedLink):
         if not source.successful():
             return SpawnedLink.__call__(self, source)
 
-
-class _lazy(object):
-
-    def __init__(self, func):
-        self.data = (func, func.__name__)
-
-    def __get__(self, inst, class_):
-        if inst is None:
-            return self
-
-        func, name = self.data
-        value = func(inst)
-        inst.__dict__[name] = value
-        return value
-
-
 class Greenlet(greenlet):
     """A light-weight cooperatively-scheduled execution unit.
     """
@@ -163,7 +148,7 @@ class Greenlet(greenlet):
     def kwargs(self):
         return self._kwargs or {}
 
-    @_lazy
+    @Lazy
     def _links(self):
         return deque()
 

@@ -29,6 +29,7 @@ __all__ = [
 from gevent._compat import string_types
 from gevent._compat import xrange
 from gevent._util import _NONE
+from gevent._util import readproperty
 
 if sys.version_info[0] <= 2:
     import thread # pylint:disable=import-error
@@ -567,14 +568,38 @@ class Hub(RawGreenlet):
                 if cb is not None:
                     cb.stop()
 
+    @readproperty
+    def exception_stream(self):
+        """
+        The stream to which exceptions will be written.
+        Defaults to ``sys.stderr`` unless assigned to.
+
+        .. versionadded:: 1.2a1
+        """
+
+        return sys.stderr
+
     def print_exception(self, context, type, value, tb):
         # Python 3 does not gracefully handle None value or tb in
         # traceback.print_exception() as previous versions did.
+        # pylint:disable=no-member
+        errstream = self.exception_stream
+
         if value is None:
-            sys.stderr.write('%s\n' % type.__name__)
+            errstream.write('%s\n' % type.__name__)
         else:
-            traceback.print_exception(type, value, tb)
+            traceback.print_exception(type, value, tb, file=errstream)
         del tb
+
+        try:
+            import time
+            errstream.write(time.ctime())
+            errstream.write(' ' if context is not None else '\n')
+        except: # pylint:disable=bare-except
+            # Possible not safe to import under certain
+            # error conditions in Python 2
+            pass
+
         if context is not None:
             if not isinstance(context, str):
                 try:
@@ -582,7 +607,7 @@ class Hub(RawGreenlet):
                 except: # pylint:disable=bare-except
                     traceback.print_exc()
                     context = repr(context)
-            sys.stderr.write('%s failed with %s\n\n' % (context, getattr(type, '__name__', 'exception'), ))
+            errstream.write('%s failed with %s\n\n' % (context, getattr(type, '__name__', 'exception'), ))
 
     def switch(self):
         switch_out = getattr(getcurrent(), 'switch_out', None)

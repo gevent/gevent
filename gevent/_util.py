@@ -69,3 +69,38 @@ def copy_globals(source,
             del globs['copy_globals']
 
     return copied
+
+class Lazy(object):
+    """
+    A non-data descriptor used just like @property. The
+    difference is the function value is assigned to the instance
+    dict the first time it is accessed and then the function is never
+    called agoin.
+    """
+    def __init__(self, func):
+        self.data = (func, func.__name__)
+
+    def __get__(self, inst, class_):
+        if inst is None:
+            return self
+
+        func, name = self.data
+        value = func(inst)
+        inst.__dict__[name] = value
+        return value
+
+class readproperty(object):
+    """
+    A non-data descriptor like @property. The difference is that
+    when the property is assigned to, it is cached in the instance
+    and the function is not called on that instance again.
+    """
+
+    def __init__(self, func):
+        self.func = func
+
+    def __get__(self, inst, class_):
+        if inst is None:
+            return self
+
+        return self.func(inst)

@@ -57,6 +57,8 @@
   longer print the entire WSGI environment by default. This avoids
   possible information disclosure vulnerabilities. Originally reported
   in :pr:`779` by sean-peters-au and changed in :pr:`781`.
+- Unhandled exception reports that kill a greenlet print now include a
+  timestamp. See :issue:`137`.
 
 1.1.0 (Mar 5, 2016)
 ===================
