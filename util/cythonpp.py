@@ -425,9 +425,9 @@ def _run_cython_on_file(configuration, pyx_filename,
     unique_output_filename = os.path.join(tempdir, output_filename)
 
     dirname = os.path.dirname(unique_pyx_filename) # output must be in same dir
-    dbg("Output filename %s", unique_output_filename)
+    log("Output filename %s", unique_output_filename)
     if dirname and not os.path.exists(dirname):
-        dbg("Making dir %s", dirname)
+        log("Making dir %s", dirname)
         os.makedirs(dirname)
     try:
         atomic_write(unique_pyx_filename, py_banner + value)
