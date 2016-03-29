@@ -1015,37 +1015,37 @@ def dbg(*args):
 
 
 def main():
-    import optparse
-    parser = optparse.OptionParser()
-    parser.add_option('--debug', action='store_true')
-    parser.add_option('--list', action='store_true', help='Show the list of different conditions')
-    parser.add_option('--list-cond', action='store_true')
-    parser.add_option('--ignore-cond', action='store_true', help='Ignore conditional directives (only expand definitions)')
-    parser.add_option('--write-intermediate', action='store_true', help='Save intermediate files produced by preprocessor and Cython')
-    parser.add_option('-o', '--output-file', help='Specify name of generated C file')
-
-    options, args = parser.parse_args()
-    if len(args) != 1:
-        sys.exit('Expected one argument (filename), got %r' % args)
-    filename = args[0]
+    import argparse
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--debug', action='store_true')
+    parser.add_argument('--list', action='store_true', help='Show the list of different conditions')
+    parser.add_argument('--list-cond', action='store_true')
+    parser.add_argument('--ignore-cond', action='store_true', help='Ignore conditional directives (only expand definitions)')
+    parser.add_argument('--write-intermediate', action='store_true', help='Save intermediate files produced by preprocessor and Cython')
+    parser.add_argument('-o', '--output-file', help='Specify name of generated C file')
+    parser.add_argument("input")
+    options = parser.parse_args()
+    filename = options.input
 
     if options.debug:
+        global DEBUG
         DEBUG = True
 
     if options.write_intermediate:
+        global WRITE_OUTPUT
         WRITE_OUTPUT = True
 
     run = True
 
     if options.list_cond:
         run = False
-        for x in get_conditions(filename):
-            sys.stdout.write('* %s\n' % (x, ))
+        for x in Configuration.get_configurations(filename):
+            print("* ", x)
 
     if options.list:
         run = False
-        for x in get_configurations(filename):
-            sys.stdout.write('* %s\n' % (x, ))
+        for x in Configuration.get_complete_configurations(filename):
+            print("* ", x)
 
     if options.ignore_cond:
         run = False
