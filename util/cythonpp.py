@@ -890,14 +890,17 @@ class Str_sourceline(str):
         return str(self), self.sourceline
 
 def atomic_write(filename, data):
-    tmpname = filename + '.tmp.%s' % os.getpid()
-    with open(tmpname, 'w') as f:
+    dirname = os.path.dirname(os.path.abspath(filename))
+    tmpfd, tmpname = tempfile.mkstemp(dir=dirname, text=True)
+    with os.fdopen(tmpfd, 'w') as f:
         f.write(data)
         f.flush()
         os.fsync(f.fileno())
 
     if os.path.exists(filename):
         os.unlink(filename)
+
+    dbg("Renaming %s to %s", tmpname, filename)
     try:
         os.rename(tmpname, filename)
     except:

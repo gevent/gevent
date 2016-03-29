@@ -1,4 +1,8 @@
 # Copyright (c) 2009-2012 Denis Bilenko. See LICENSE for details.
+# This directive, supported in Cython 0.24+, causes sources files to be
+# much smaller and thus cythonpp.py to be slightly faster. But it does make
+# debugging more difficult.
+# cython: emit_code_comments=False
 cimport cython
 cimport libev
 from python cimport *
