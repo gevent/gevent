@@ -8,7 +8,6 @@ import os.path
 import re
 import traceback
 import datetime
-import pipes
 import difflib
 from hashlib import md5
 from itertools import combinations, product
@@ -905,7 +904,9 @@ def atomic_write(filename, data):
 def run_cython(filename, sourcehash, output_filename, banner, comment, cache=None):
     dbg("Cython output to %s hash %s", output_filename, sourcehash)
     result = cache.get(sourcehash) if cache is not None else None
-    command = '%s -o %s -I gevent %s' % (CYTHON, pipes.quote(output_filename), pipes.quote(filename))
+    # Use an array for the argument so that filename arguments are properly
+    # quoted according to local convention
+    command = [CYTHON, '-o', output_filename, '-I', 'gevent', filename]
     if result is not None:
         log('Reusing %s  # %s', command, comment)
         return result
@@ -917,10 +918,11 @@ def run_cython(filename, sourcehash, output_filename, banner, comment, cache=Non
 
 
 def system(command, comment):
-    log('Running %s  # %s', command, comment)
+    command_str = ' '.join(command)
+    log('Running %s  # %s', command_str, comment)
     try:
-        subprocess.check_call(command, shell=True)
-        dbg('\tDone running %s # %s', command, comment)
+        subprocess.check_call(command)
+        dbg('\tDone running %s # %s', command_str, comment)
     except subprocess.CalledProcessError:
         # debugging code
         log("Path: %s", os.getenv("PATH"))
