@@ -547,74 +547,75 @@ def preprocess_filename(filename, config):
     definitions = {}
     result = []
     including_section = []
-    for line in open(filename):
-        linecount += 1
-        rstripped = line.rstrip()
-        stripped = rstripped.lstrip()
-        try:
-            if current_name is not None:
-                name = current_name
-                value = rstripped
-                if value.endswith('\\'):
-                    value = value[:-1].rstrip()
-                else:
-                    current_name = None
-                definitions[name]['lines'].append(value)
-            else:
-                if not including_section or including_section[-1]:
-                    m = define_re.match(stripped)
-                else:
-                    m = None
-                if m is not None:
-                    name, params, value = m.groups()
-                    value = value.strip()
+    with open(filename) as f:
+        for line in f:
+            linecount += 1
+            rstripped = line.rstrip()
+            stripped = rstripped.lstrip()
+            try:
+                if current_name is not None:
+                    name = current_name
+                    value = rstripped
                     if value.endswith('\\'):
                         value = value[:-1].rstrip()
-                        current_name = name
-                    definitions[name] = {'lines': [value]}
-                    if params is None:
-                        dbg('Adding definition for %r', name)
                     else:
-                        definitions[name]['params'] = parse_parameter_names(params)
-                        dbg('Adding definition for %r: %s', name, definitions[name]['params'])
+                        current_name = None
+                    definitions[name]['lines'].append(value)
                 else:
-                    m = Condition.match_condition(stripped)
-                    if m is not None and config is not None:
-                        if stripped == '#else':
-                            if not including_section:
-                                raise SyntaxError('unexpected "#else"')
-                            if including_section[-1]:
-                                including_section.pop()
-                                including_section.append(False)
-                            else:
-                                including_section.pop()
-                                including_section.append(True)
-                        elif stripped == '#endif':
-                            if not including_section:
-                                raise SyntaxError('unexpected "#endif"')
-                            including_section.pop()
-                        else:
-                            including_section.append(config.is_condition_true(stripped))
+                    if not including_section or including_section[-1]:
+                        m = define_re.match(stripped)
                     else:
-                        if including_section and not including_section[-1]:
-                            pass  # skip this line because last "#if" was false
+                        m = None
+                    if m is not None:
+                        name, params, value = m.groups()
+                        value = value.strip()
+                        if value.endswith('\\'):
+                            value = value[:-1].rstrip()
+                            current_name = name
+                        definitions[name] = {'lines': [value]}
+                        if params is None:
+                            dbg('Adding definition for %r', name)
                         else:
-                            if stripped.startswith('#'):
-                                # leave comments as is
-                                result.append(Str_sourceline(line, linecount - 1))
+                            definitions[name]['params'] = parse_parameter_names(params)
+                            dbg('Adding definition for %r: %s', name, definitions[name]['params'])
+                    else:
+                        m = Condition.match_condition(stripped)
+                        if m is not None and config is not None:
+                            if stripped == '#else':
+                                if not including_section:
+                                    raise SyntaxError('unexpected "#else"')
+                                if including_section[-1]:
+                                    including_section.pop()
+                                    including_section.append(False)
+                                else:
+                                    including_section.pop()
+                                    including_section.append(True)
+                            elif stripped == '#endif':
+                                if not including_section:
+                                    raise SyntaxError('unexpected "#endif"')
+                                including_section.pop()
                             else:
-                                lines = expand_definitions(line, definitions).split('\n')
-                                if lines and not lines[-1]:
-                                    del lines[-1]
-                                lines = [x + '\n' for x in lines]
-                                lines = [Str_sourceline(x, linecount - 1) for x in lines]
-                                result.extend(lines)
-        except BaseException as ex:
-            log('%s:%s: %s', filename, linecount, ex)
-            if isinstance(ex, SyntaxError):
-                sys.exit(1)
-            else:
-                raise
+                                including_section.append(config.is_condition_true(stripped))
+                        else:
+                            if including_section and not including_section[-1]:
+                                pass  # skip this line because last "#if" was false
+                            else:
+                                if stripped.startswith('#'):
+                                    # leave comments as is
+                                    result.append(Str_sourceline(line, linecount - 1))
+                                else:
+                                    lines = expand_definitions(line, definitions).split('\n')
+                                    if lines and not lines[-1]:
+                                        del lines[-1]
+                                    lines = [x + '\n' for x in lines]
+                                    lines = [Str_sourceline(x, linecount - 1) for x in lines]
+                                    result.extend(lines)
+            except BaseException as ex:
+                log('%s:%s: %s', filename, linecount, ex)
+                if isinstance(ex, SyntaxError):
+                    sys.exit(1)
+                else:
+                    raise
     return result
 
 
@@ -897,7 +898,11 @@ def atomic_write(filename, data):
 
     if os.path.exists(filename):
         os.unlink(filename)
-    os.rename(tmpname, filename)
+    try:
+        os.rename(tmpname, filename)
+    except:
+        log("Failed to rename '%s' to '%s", tmpname, filename)
+        raise
     dbg('Wrote %s bytes to %s', len(data), filename)
 
 
