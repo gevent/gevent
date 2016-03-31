@@ -59,6 +59,12 @@
   in :pr:`779` by sean-peters-au and changed in :pr:`781`.
 - Unhandled exception reports that kill a greenlet print now include a
   timestamp. See :issue:`137`.
+- Add :class:`gevent.threadpool.ThreadPoolExecutor` (a
+  :class:`concurrent.futures.ThreadPoolExecutor` variant that always
+  uses native threads) on platforms that have ``concurrent.futures``
+  available (Python 3 and Python 2 with the ``futures`` backport
+  installed). This is helpful for, e.g., grpc. Reported in
+  :issue:`786` by Markus Padourek.
 
 1.1.0 (Mar 5, 2016)
 ===================

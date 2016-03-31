@@ -30,3 +30,5 @@
        .. versionchanged:: 1.1a2
           Now raises any exception raised by *func* instead of
           dropping it.
+
+.. autoclass:: ThreadPoolExecutor

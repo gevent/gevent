@@ -336,3 +336,42 @@ def wrap_errors(errors, function, args, kwargs):
         return True, function(*args, **kwargs)
     except errors as ex:
         return False, ex
+
+try:
+    import concurrent.futures
+except ImportError:
+    pass
+else:
+    __all__.append("ThreadPoolExecutor")
+
+    class ThreadPoolExecutor(concurrent.futures.ThreadPoolExecutor):
+        """
+        A version of :class:`concurrent.futures.ThreadPoolExecutor` that
+        always uses native threads, even when threading is monkey-patched.
+
+        .. versionadded:: 1.2a1
+        """
+
+        def __init__(self, max_workers):
+            super(ThreadPoolExecutor, self).__init__(max_workers)
+            self._threadpool = ThreadPool(max_workers)
+
+        def submit(self, fn, *args, **kwargs):
+            future = super(ThreadPoolExecutor, self).submit(fn, *args, **kwargs)
+            with self._shutdown_lock:
+                work_item = self._work_queue.get()
+                assert work_item.fn is fn
+
+            self._threadpool.spawn(work_item.run)
+            return future
+
+        def shutdown(self, wait=True):
+            super(ThreadPoolExecutor, self).shutdown(wait)
+            self._threadpool.kill()
+
+        kill = shutdown # greentest compat
+
+        def _adjust_thread_count(self):
+            # Does nothing. We don't want to spawn any "threads",
+            # let the threadpool handle that.
+            pass

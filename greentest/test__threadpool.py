@@ -3,6 +3,7 @@ from time import time, sleep
 import random
 import weakref
 import greentest
+import gevent.threadpool
 from gevent.threadpool import ThreadPool
 import gevent
 from greentest import ExpectedException
@@ -100,24 +101,31 @@ def sqr_random_sleep(x):
 
 TIMEOUT1, TIMEOUT2, TIMEOUT3 = 0.082, 0.035, 0.14
 
-
-class TestPool(TestCase):
+class _AbstractPoolTest(TestCase):
     __timeout__ = 5
     size = 1
 
+    ClassUnderTest = ThreadPool
+    MAP_IS_GEN = False
+
     def setUp(self):
         greentest.TestCase.setUp(self)
-        self.pool = ThreadPool(self.size)
+        self.pool = self.ClassUnderTest(self.size)
+
+    def test_map(self):
+        pmap = self.pool.map
+        if self.MAP_IS_GEN:
+            pmap = lambda *args: list(self.pool.map(*args))
+        self.assertEqual(pmap(sqr, range(10)), list(map(sqr, range(10))))
+        self.assertEqual(pmap(sqr, range(100)), list(map(sqr, range(100))))
+
+
+class TestPool(_AbstractPoolTest):
 
     def test_apply(self):
         papply = self.pool.apply
         self.assertEqual(papply(sqr, (5,)), sqr(5))
         self.assertEqual(papply(sqr, (), {'x': 3}), sqr(x=3))
-
-    def test_map(self):
-        pmap = self.pool.map
-        self.assertEqual(pmap(sqr, range(10)), list(map(sqr, range(10))))
-        self.assertEqual(pmap(sqr, range(100)), list(map(sqr, range(100))))
 
     def test_async(self):
         res = self.pool.apply_async(sqr, (7, TIMEOUT1,))
@@ -417,6 +425,13 @@ class TestRefCount(TestCase):
         gevent.sleep(0)
         pool.kill()
 
+if hasattr(gevent.threadpool, 'ThreadPoolExecutor'):
+
+    class TestTPE(_AbstractPoolTest):
+
+        MAP_IS_GEN = True
+
+        ClassUnderTest = gevent.threadpool.ThreadPoolExecutor
 
 if __name__ == '__main__':
     greentest.main()

@@ -6,6 +6,7 @@ prospector[with_pyroma]
 coverage>=4.0
 coveralls>=1.0
 cffi
+futures
 # For viewing README.rst (restview --long-description),
 # CONTRIBUTING.rst, etc.
 # https://github.com/mgedmin/restview
