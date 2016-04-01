@@ -345,11 +345,48 @@ else:
     __all__.append("ThreadPoolExecutor")
 
     from gevent.timeout import Timeout as GTimeout
+    from gevent._util import Lazy
+    from concurrent.futures import _base as cfb
 
-    class FutureProxy(object):
+    class _FutureProxy(object):
 
         def __init__(self, asyncresult):
             self.asyncresult = asyncresult
+
+
+        # Internal implementation details of a c.f.Future
+
+        @Lazy
+        def _condition(self):
+            from gevent import monkey
+            if monkey.is_module_patched('threading') or self.done():
+                import threading
+                return threading.Condition()
+            # We can only properly work with conditions
+            # when we've been monkey-patched. This is necessary
+            # for the wait/as_completed module functions.
+            raise AttributeError("_condition")
+
+        @Lazy
+        def _waiters(self):
+            self.asyncresult.rawlink(self.__when_done)
+            return []
+
+        def __when_done(self, _):
+            # We should only be called when _waiters has
+            # already been accessed.
+            waiters = self.__dict__['_waiters']
+            for w in waiters:
+                if self.successful():
+                    w.add_result(self)
+                else:
+                    w.add_exception(self)
+
+        @property
+        def _state(self):
+            if self.done():
+                return cfb.FINISHED
+            return cfb.RUNNING
 
         def set_running_or_notify_cancel(self):
             # Does nothing, not even any consistency checks. It's
@@ -375,12 +412,21 @@ else:
             else:
                 def wrap(f):
                     # we're called with the async result, but
-                    # be sure to pass in ourself
+                    # be sure to pass in ourself. Also automatically
+                    # unlink ourself so that we don't get called multiple
+                    # times.
                     try:
                         fn(self)
                     except Exception: # pylint: disable=broad-except
                         f.hub.print_exception((fn, self), *sys.exc_info())
-                self.rawlink(wrap)
+                    finally:
+                        self.unlink(wrap)
+                self.asyncresult.rawlink(wrap)
+
+        def rawlink(self, fn):
+            def wrap(_aresult):
+                return fn(self)
+            self.asyncresult.rawlink(wrap)
 
         def __str__(self):
             return str(self.asyncresult)
@@ -393,7 +439,17 @@ else:
         A version of :class:`concurrent.futures.ThreadPoolExecutor` that
         always uses native threads, even when threading is monkey-patched.
 
+        The ``Future`` objects returned from this object can be used
+        with gevent waiting primitives like :func:`gevent.wait`.
+
+        .. caution:: If threading is *not* monkey-patched, then the ``Future``
+           objects returned by this object are not guaranteed to work with
+           :func:`~concurrent.futures.as_completed` and :func:`~concurrent.futures.wait`.
+           The individual blocking methods like :meth:`~concurrent.futures.Future.result`
+           and :meth:`~concurrent.futures.Future.exception` will always work.
+
         .. versionadded:: 1.2a1
+           This is a provisional API.
         """
 
         def __init__(self, max_workers):
@@ -403,7 +459,7 @@ else:
         def submit(self, fn, *args, **kwargs):
             with self._shutdown_lock:
                 future = self._threadpool.spawn(fn, *args, **kwargs)
-                return FutureProxy(future)
+                return _FutureProxy(future)
 
         def shutdown(self, wait=True):
             super(ThreadPoolExecutor, self).shutdown(wait)

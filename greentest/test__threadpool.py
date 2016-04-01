@@ -433,7 +433,8 @@ class TestRefCount(TestCase):
 if hasattr(gevent.threadpool, 'ThreadPoolExecutor'):
 
     from concurrent.futures import TimeoutError as FutureTimeoutError
-    #from concurrent.futures import CancelledError as FutureCancelledError
+    from concurrent.futures import wait as cf_wait
+    from concurrent.futures import as_completed as cf_as_completed
 
     from gevent import monkey
 
@@ -457,10 +458,11 @@ if hasattr(gevent.threadpool, 'ThreadPoolExecutor'):
                 return 42
 
             def callback(future):
-                future.calledback = True
+                future.calledback += 1
                 raise Exception("Expected, ignored")
 
             future = pool.submit(fn)
+            future.calledback = 0
             future.add_done_callback(callback)
             self.assertRaises(FutureTimeoutError, future.result, timeout=0.001)
 
@@ -478,7 +480,7 @@ if hasattr(gevent.threadpool, 'ThreadPoolExecutor'):
             # Make sure the notifier has a chance to run so the call back
             # gets called
             gevent.sleep()
-            self.assertEqual(getattr(future, 'calledback', None), True)
+            self.assertEqual(future.calledback, 1)
 
             self.assertTrue(spawned_greenlet.ready())
             self.assertEqual(spawned_greenlet.value, 2016)
@@ -486,6 +488,72 @@ if hasattr(gevent.threadpool, 'ThreadPoolExecutor'):
             # Adding the callback again runs immediately
             future.add_done_callback(lambda f: calledback.append(True))
             self.assertEqual(calledback, [True])
+
+            # We can wait on the finished future
+            done, _not_done = cf_wait((future,))
+            self.assertEqual(list(done), [future])
+
+            self.assertEqual(list(cf_as_completed((future,))), [future])
+            # Doing so does not call the callback again
+            self.assertEqual(future.calledback, 1)
+            # even after a trip around the event loop
+            gevent.sleep()
+            self.assertEqual(future.calledback, 1)
+
+
+        def test_future_wait_module_function(self):
+            # Instead of waiting on the result, we can wait
+            # on the future using the module functions
+            self.assertEqual(monkey.is_module_patched('threading'),
+                             self.MONKEY_PATCHED)
+            pool = self.pool = self.ClassUnderTest(1)
+
+            def fn():
+                gevent.sleep(0.5)
+                return 42
+
+            future = pool.submit(fn)
+            if self.MONKEY_PATCHED:
+                # Things work as expected when monkey-patched
+                _done, not_done = cf_wait((future,), timeout=0.001)
+                self.assertEqual(list(not_done), [future])
+
+                def spawned():
+                    return 2016
+
+                spawned_greenlet = gevent.spawn(spawned)
+
+                done, _not_done = cf_wait((future,))
+                self.assertEqual(list(done), [future])
+                self.assertTrue(spawned_greenlet.ready())
+                self.assertEqual(spawned_greenlet.value, 2016)
+            else:
+                # When not monkey-patched, raises an AttributeError
+                self.assertRaises(AttributeError, cf_wait, (future,))
+
+        def test_future_wait_gevent_function(self):
+            # The future object can be waited on with gevent functions.
+            self.assertEqual(monkey.is_module_patched('threading'),
+                             self.MONKEY_PATCHED)
+            pool = self.pool = self.ClassUnderTest(1)
+
+            def fn():
+                gevent.sleep(0.5)
+                return 42
+
+            future = pool.submit(fn)
+
+            def spawned():
+                return 2016
+
+            spawned_greenlet = gevent.spawn(spawned)
+
+            done = gevent.wait((future,))
+            self.assertEqual(list(done), [future])
+            self.assertTrue(spawned_greenlet.ready())
+            self.assertEqual(spawned_greenlet.value, 2016)
+
+
 
 if __name__ == '__main__':
     greentest.main()
