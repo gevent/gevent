@@ -16,11 +16,16 @@ PYPY = hasattr(sys, 'pypy_version_info')
 
 class TestCase(greentest.TestCase):
 
+    pool = None
+
     def cleanup(self):
         pool = getattr(self, 'pool', None)
         if pool is not None:
-            pool.kill()
+            kill = getattr(pool, 'kill', None) or getattr(pool, 'shutdown', None)
+            kill()
+            del kill
             del self.pool
+
 
 
 class PoolBasicTests(TestCase):
@@ -427,11 +432,60 @@ class TestRefCount(TestCase):
 
 if hasattr(gevent.threadpool, 'ThreadPoolExecutor'):
 
+    from concurrent.futures import TimeoutError as FutureTimeoutError
+    #from concurrent.futures import CancelledError as FutureCancelledError
+
+    from gevent import monkey
+
     class TestTPE(_AbstractPoolTest):
 
         MAP_IS_GEN = True
 
         ClassUnderTest = gevent.threadpool.ThreadPoolExecutor
+
+        MONKEY_PATCHED = False
+
+        def test_future(self):
+            self.assertEqual(monkey.is_module_patched('threading'),
+                             self.MONKEY_PATCHED)
+            pool = self.pool = self.ClassUnderTest(1)
+
+            calledback = []
+
+            def fn():
+                gevent.sleep(0.5)
+                return 42
+
+            def callback(future):
+                future.calledback = True
+                raise Exception("Expected, ignored")
+
+            future = pool.submit(fn)
+            future.add_done_callback(callback)
+            self.assertRaises(FutureTimeoutError, future.result, timeout=0.001)
+
+            def spawned():
+                return 2016
+
+            spawned_greenlet = gevent.spawn(spawned)
+
+            # Whether or not we are monkey patched, the background
+            # greenlet we spawned got to run while we waited.
+
+            self.assertEqual(future.result(), 42)
+            self.assertTrue(future.done())
+            self.assertFalse(future.cancelled())
+            # Make sure the notifier has a chance to run so the call back
+            # gets called
+            gevent.sleep()
+            self.assertEqual(getattr(future, 'calledback', None), True)
+
+            self.assertTrue(spawned_greenlet.ready())
+            self.assertEqual(spawned_greenlet.value, 2016)
+
+            # Adding the callback again runs immediately
+            future.add_done_callback(lambda f: calledback.append(True))
+            self.assertEqual(calledback, [True])
 
 if __name__ == '__main__':
     greentest.main()

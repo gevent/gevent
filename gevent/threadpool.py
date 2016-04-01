@@ -344,6 +344,50 @@ except ImportError:
 else:
     __all__.append("ThreadPoolExecutor")
 
+    from gevent.timeout import Timeout as GTimeout
+
+    class FutureProxy(object):
+
+        def __init__(self, asyncresult):
+            self.asyncresult = asyncresult
+
+        def set_running_or_notify_cancel(self):
+            # Does nothing, not even any consistency checks. It's
+            # meant to be internal to the executor and we don't use it.
+            return
+
+        def result(self, timeout=None):
+            try:
+                return self.asyncresult.result(timeout=timeout)
+            except GTimeout:
+                raise concurrent.futures.TimeoutError()
+
+        def exception(self, timeout=None):
+            try:
+                self.asyncresult.get(timeout=timeout)
+                return self.asyncresult.exception
+            except GTimeout:
+                raise concurrent.futures.TimeoutError()
+
+        def add_done_callback(self, fn):
+            if self.done():
+                fn(self)
+            else:
+                def wrap(f):
+                    # we're called with the async result, but
+                    # be sure to pass in ourself
+                    try:
+                        fn(self)
+                    except Exception: # pylint: disable=broad-except
+                        f.hub.print_exception((fn, self), *sys.exc_info())
+                self.rawlink(wrap)
+
+        def __str__(self):
+            return str(self.asyncresult)
+
+        def __getattr__(self, name):
+            return getattr(self.asyncresult, name)
+
     class ThreadPoolExecutor(concurrent.futures.ThreadPoolExecutor):
         """
         A version of :class:`concurrent.futures.ThreadPoolExecutor` that
@@ -357,13 +401,9 @@ else:
             self._threadpool = ThreadPool(max_workers)
 
         def submit(self, fn, *args, **kwargs):
-            future = super(ThreadPoolExecutor, self).submit(fn, *args, **kwargs)
             with self._shutdown_lock:
-                work_item = self._work_queue.get()
-                assert work_item.fn is fn
-
-            self._threadpool.spawn(work_item.run)
-            return future
+                future = self._threadpool.spawn(fn, *args, **kwargs)
+                return FutureProxy(future)
 
         def shutdown(self, wait=True):
             super(ThreadPoolExecutor, self).shutdown(wait)

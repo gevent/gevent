@@ -421,3 +421,23 @@ class AsyncResult(_AbstractLinkable):
             self.set(source.value)
         else:
             self.set_exception(source.exception, getattr(source, 'exc_info', None))
+
+    # Methods to make us more like concurrent.futures.Future
+
+    def result(self, timeout=None):
+        return self.get(timeout=timeout)
+
+    set_result = set
+
+    def done(self):
+        return self.ready()
+
+    # we don't support cancelling
+
+    def cancel(self):
+        return False
+
+    def cancelled(self):
+        return False
+
+    # exception is a method, we use it as a property
