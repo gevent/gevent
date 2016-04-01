@@ -83,7 +83,7 @@ ignored-classes=SSLContext, SSLSocket, greenlet, Greenlet, parent, dead
 ignored-modules=gevent._corecffi
 
 [DESIGN]
-max-attributes=10
+max-attributes=12
 
 [BASIC]
 bad-functions=input

@@ -143,6 +143,9 @@ def wrap_timeout(timeout, method):
 
     return wrapped
 
+def ignores_leakcheck(func):
+    func.ignore_leakcheck = True
+    return func
 
 def wrap_refcount(method):
     if not RUN_LEAKCHECKS:
@@ -212,7 +215,7 @@ def wrap_refcount(method):
                 # Reset and check for cycles
                 gc.collect()
                 if gc.garbage:
-                    raise AssertionError("Generated uncollectable garbage")
+                    raise AssertionError("Generated uncollectable garbage %r" % (gc.garbage,))
 
                 # the following configurations are classified as "no leak"
                 # [0, 0]

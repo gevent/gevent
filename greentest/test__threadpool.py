@@ -117,12 +117,17 @@ class _AbstractPoolTest(TestCase):
         greentest.TestCase.setUp(self)
         self.pool = self.ClassUnderTest(self.size)
 
+    @greentest.ignores_leakcheck
     def test_map(self):
         pmap = self.pool.map
         if self.MAP_IS_GEN:
             pmap = lambda *args: list(self.pool.map(*args))
         self.assertEqual(pmap(sqr, range(10)), list(map(sqr, range(10))))
         self.assertEqual(pmap(sqr, range(100)), list(map(sqr, range(100))))
+
+        self.pool.kill()
+        del self.pool
+        del pmap
 
 
 class TestPool(_AbstractPoolTest):
@@ -439,6 +444,7 @@ if hasattr(gevent.threadpool, 'ThreadPoolExecutor'):
     from gevent import monkey
 
     class TestTPE(_AbstractPoolTest):
+        size = 1
 
         MAP_IS_GEN = True
 
@@ -446,10 +452,11 @@ if hasattr(gevent.threadpool, 'ThreadPoolExecutor'):
 
         MONKEY_PATCHED = False
 
+        @greentest.ignores_leakcheck
         def test_future(self):
             self.assertEqual(monkey.is_module_patched('threading'),
                              self.MONKEY_PATCHED)
-            pool = self.pool = self.ClassUnderTest(1)
+            pool = self.pool
 
             calledback = []
 
@@ -500,13 +507,18 @@ if hasattr(gevent.threadpool, 'ThreadPoolExecutor'):
             gevent.sleep()
             self.assertEqual(future.calledback, 1)
 
+            pool.kill()
+            del future
+            del pool
+            del self.pool
 
+        @greentest.ignores_leakcheck
         def test_future_wait_module_function(self):
             # Instead of waiting on the result, we can wait
             # on the future using the module functions
             self.assertEqual(monkey.is_module_patched('threading'),
                              self.MONKEY_PATCHED)
-            pool = self.pool = self.ClassUnderTest(1)
+            pool = self.pool
 
             def fn():
                 gevent.sleep(0.5)
@@ -531,11 +543,17 @@ if hasattr(gevent.threadpool, 'ThreadPoolExecutor'):
                 # When not monkey-patched, raises an AttributeError
                 self.assertRaises(AttributeError, cf_wait, (future,))
 
+            pool.kill()
+            del future
+            del pool
+            del self.pool
+
+        @greentest.ignores_leakcheck
         def test_future_wait_gevent_function(self):
             # The future object can be waited on with gevent functions.
             self.assertEqual(monkey.is_module_patched('threading'),
                              self.MONKEY_PATCHED)
-            pool = self.pool = self.ClassUnderTest(1)
+            pool = self.pool
 
             def fn():
                 gevent.sleep(0.5)
@@ -553,6 +571,10 @@ if hasattr(gevent.threadpool, 'ThreadPoolExecutor'):
             self.assertTrue(spawned_greenlet.ready())
             self.assertEqual(spawned_greenlet.value, 2016)
 
+            pool.kill()
+            del future
+            del pool
+            del self.pool
 
 
 if __name__ == '__main__':

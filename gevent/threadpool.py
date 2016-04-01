@@ -3,7 +3,7 @@ from __future__ import absolute_import
 import sys
 import os
 from gevent._compat import integer_types
-from gevent.hub import get_hub, getcurrent, sleep
+from gevent.hub import get_hub, getcurrent, sleep, _get_hub
 from gevent.event import AsyncResult
 from gevent.greenlet import Greenlet
 from gevent.pool import GroupMappingMixin
@@ -189,6 +189,8 @@ class ThreadPool(GroupMappingMixin):
             with _lock:
                 self._size -= 1
 
+    _destroy_worker_hub = False
+
     def _worker(self):
         # pylint:disable=too-many-branches
         need_decrease = True
@@ -226,6 +228,11 @@ class ThreadPool(GroupMappingMixin):
         finally:
             if need_decrease:
                 self._decrease_size()
+            if sys is not None and self._destroy_worker_hub:
+                hub = _get_hub()
+                if hub is not None:
+                    hub.destroy(True)
+                del hub
 
     def apply_e(self, expected_errors, function, args=None, kwargs=None):
         """
@@ -259,20 +266,21 @@ class ThreadPool(GroupMappingMixin):
 
 class ThreadResult(object):
 
-    exc_info = ()
-    _call_when_ready = None
+    # Using slots here helps to debug reference cycles/leaks
+    __slots__ = ('exc_info', 'async', '_call_when_ready', 'value',
+                 'context', 'hub', 'receiver')
 
     def __init__(self, receiver, hub=None, call_when_ready=None):
         if hub is None:
             hub = get_hub()
         self.receiver = receiver
         self.hub = hub
-        self.value = None
         self.context = None
+        self.value = None
+        self.exc_info = ()
         self.async = hub.loop.async()
+        self._call_when_ready = call_when_ready
         self.async.start(self._on_async)
-        if call_when_ready:
-            self._call_when_ready = call_when_ready
 
     @property
     def exception(self):
@@ -348,11 +356,29 @@ else:
     from gevent._util import Lazy
     from concurrent.futures import _base as cfb
 
-    class _FutureProxy(object):
+    def _wrap_error(future, fn):
+        def cbwrap(_):
+            del _
+            # we're called with the async result, but
+            # be sure to pass in ourself. Also automatically
+            # unlink ourself so that we don't get called multiple
+            # times.
+            try:
+                fn(future)
+            except Exception: # pylint: disable=broad-except
+                future.hub.print_exception((fn, future), *sys.exc_info())
+        cbwrap.auto_unlink = True
+        return cbwrap
 
+    def _wrap(future, fn):
+        def f(_):
+            fn(future)
+        f.auto_unlink = True
+        return f
+
+    class _FutureProxy(object):
         def __init__(self, asyncresult):
             self.asyncresult = asyncresult
-
 
         # Internal implementation details of a c.f.Future
 
@@ -375,12 +401,14 @@ else:
         def __when_done(self, _):
             # We should only be called when _waiters has
             # already been accessed.
-            waiters = self.__dict__['_waiters']
+            waiters = getattr(self, '_waiters')
             for w in waiters:
                 if self.successful():
                     w.add_result(self)
                 else:
                     w.add_exception(self)
+
+        __when_done.auto_unlink = True
 
         @property
         def _state(self):
@@ -397,6 +425,8 @@ else:
             try:
                 return self.asyncresult.result(timeout=timeout)
             except GTimeout:
+                # XXX: Theoretically this could be a completely
+                # unrelated timeout instance. Do we care about that?
                 raise concurrent.futures.TimeoutError()
 
         def exception(self, timeout=None):
@@ -410,23 +440,10 @@ else:
             if self.done():
                 fn(self)
             else:
-                def wrap(f):
-                    # we're called with the async result, but
-                    # be sure to pass in ourself. Also automatically
-                    # unlink ourself so that we don't get called multiple
-                    # times.
-                    try:
-                        fn(self)
-                    except Exception: # pylint: disable=broad-except
-                        f.hub.print_exception((fn, self), *sys.exc_info())
-                    finally:
-                        self.unlink(wrap)
-                self.asyncresult.rawlink(wrap)
+                self.asyncresult.rawlink(_wrap_error(self, fn))
 
         def rawlink(self, fn):
-            def wrap(_aresult):
-                return fn(self)
-            self.asyncresult.rawlink(wrap)
+            self.asyncresult.rawlink(_wrap(self, fn))
 
         def __str__(self):
             return str(self.asyncresult)
@@ -455,15 +472,23 @@ else:
         def __init__(self, max_workers):
             super(ThreadPoolExecutor, self).__init__(max_workers)
             self._threadpool = ThreadPool(max_workers)
+            self._threadpool._destroy_worker_hub = True
 
         def submit(self, fn, *args, **kwargs):
             with self._shutdown_lock:
+                if self._shutdown:
+                    raise RuntimeError('cannot schedule new futures after shutdown')
+
                 future = self._threadpool.spawn(fn, *args, **kwargs)
                 return _FutureProxy(future)
 
         def shutdown(self, wait=True):
             super(ThreadPoolExecutor, self).shutdown(wait)
-            self._threadpool.kill()
+            # XXX: We don't implement wait properly
+            kill = getattr(self._threadpool, 'kill', None)
+            if kill:
+                self._threadpool.kill()
+            self._threadpool = None
 
         kill = shutdown # greentest compat
 

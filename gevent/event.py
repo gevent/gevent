@@ -81,10 +81,15 @@ class _AbstractLinkable(object):
                     link(self)
                 except: # pylint:disable=bare-except
                     self.hub.handle_error((link, self), *sys.exc_info())
+                if getattr(link, 'auto_unlink', None):
+                    # This attribute can avoid having to keep a reference to the function
+                    # *in* the function, which is a cycle
+                    self.unlink(link)
 
         # save a tiny bit of memory by letting _notifier be collected
         # bool(self._notifier) would turn to False as soon as we exit this
         # method anyway.
+        del todo
         del self._notifier
 
     def _wait_core(self, timeout, catch=Timeout):
