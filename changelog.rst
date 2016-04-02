@@ -68,6 +68,9 @@
 - Native threads created before monkey-patching threading can now be
   joined. Previously on Python < 3.4, doing so would raise a
   ``LoopExit`` error. reported in :issue:`747` by Sergey Vasilyev.
+- pywsgi: Chunks of data the application returns are no longer copied
+  before being sent to the socket when the transfer-encoding is
+  chunked, potentially reducing overhead for large responses.
 
 1.1.0 (Mar 5, 2016)
 ===================

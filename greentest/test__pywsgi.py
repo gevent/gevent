@@ -449,21 +449,19 @@ class TestYield(CommonTests):
             yield b"not found"
 
 
-if sys.version_info[:2] >= (2, 6):
+class TestBytearray(CommonTests):
 
-    class TestBytearray(CommonTests):
+    validator = None
 
-        validator = None
-
-        @staticmethod
-        def application(env, start_response):
-            path = env['PATH_INFO']
-            if path == '/':
-                start_response('200 OK', [('Content-Type', 'text/plain')])
-                return [bytearray(b"hello "), bytearray(b"world")]
-            else:
-                start_response('404 Not Found', [('Content-Type', 'text/plain')])
-                return [bytearray(b"not found")]
+    @staticmethod
+    def application(env, start_response):
+        path = env['PATH_INFO']
+        if path == '/':
+            start_response('200 OK', [('Content-Type', 'text/plain')])
+            return [bytearray(b"hello "), bytearray(b"world")]
+        else:
+            start_response('404 Not Found', [('Content-Type', 'text/plain')])
+            return [bytearray(b"not found")]
 
 
 class MultiLineHeader(TestCase):
@@ -514,6 +512,31 @@ class TestGetArg(TestCase):
         read_http(fd, body='a is a, body is a=a')
         fd.close()
 
+class TestCloseIter(TestCase):
+
+    # The *Validator* closes the iterators!
+    validator = None
+
+    def application(self, env, start_response):
+        start_response('200 OK', [('Content-Type', 'text/plain')])
+        return self
+
+    def __iter__(self):
+        yield bytearray(b"Hello World")
+        yield b"!"
+
+    closed = False
+
+    def close(self):
+        self.closed += 1
+
+    def test_close_is_called(self):
+        self.closed = False
+        fd = self.makefile()
+        fd.write('GET / HTTP/1.1\r\nHost: localhost\r\n\r\n')
+        read_http(fd, body=b"Hello World!", chunks=[b'Hello World', b'!'])
+        # We got closed exactly once.
+        self.assertEqual(self.closed, 1)
 
 class TestChunkedApp(TestCase):
 

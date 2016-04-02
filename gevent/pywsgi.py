@@ -707,13 +707,28 @@ class WSGIHandler(object):
 
     def _write(self, data):
         if not data:
+            # The application/middleware are allowed to yield
+            # empty bytestrings.
             return
+
         if self.response_use_chunked:
             ## Write the chunked encoding
-            data = ("%x\r\n" % len(data)).encode('ascii') + data + b'\r\n'
-        self._sendall(data)
+            header = ("%x\r\n" % len(data)).encode('ascii')
+            # socket.sendall will slice these small strings, as [0:],
+            # but that's special cased to return the original string.
+            # They're small enough we probably expect them to go down to the network
+            # buffers in one go anyway.
+            self._sendall(header)
+            self._sendall(data)
+            self._sendall(b'\r\n') # trailer
+        else:
+            self._sendall(data)
 
     def write(self, data):
+        # The write() callable we return from start_response.
+        # https://www.python.org/dev/peps/pep-3333/#the-write-callable
+        # Supposed to do pretty much the same thing as yielding values
+        # from the application's return.
         if self.code in (304, 204) and data:
             raise AssertionError('The %s response must have no body' % self.code)
 
@@ -740,18 +755,11 @@ class WSGIHandler(object):
             towrite.extend(b"\r\n")
 
         towrite.extend(b'\r\n')
-        if data:
-            if self.response_use_chunked:
-                ## Write the chunked encoding
-                towrite.extend(("%x\r\n" % len(data)).encode('latin-1'))
-                towrite.extend(data)
-                towrite.extend(b"\r\n")
-            else:
-                try:
-                    towrite.extend(data)
-                except TypeError:
-                    raise TypeError("Not a bytestring", data)
         self._sendall(towrite)
+        # No need to copy the data into towrite; we may make an extra syscall
+        # but the copy time could be substantial too, and it reduces the chances
+        # of sendall being able to send everything in one go
+        self._write(data)
 
     def start_response(self, status, headers, exc_info=None):
         """
@@ -885,14 +893,32 @@ class WSGIHandler(object):
             if data:
                 self.write(data)
         if self.status and not self.headers_sent:
+            # In other words, the application returned an empty
+            # result iterable (and did not use the write callable)
+            # Trigger the flush of the headers.
             self.write(b'')
         if self.response_use_chunked:
             self.socket.sendall(b'0\r\n\r\n')
             self.response_length += 5
 
     def run_application(self):
-        self.result = self.application(self.environ, self.start_response)
-        self.process_result()
+        assert self.result is None
+        try:
+            self.result = self.application(self.environ, self.start_response)
+            self.process_result()
+        finally:
+            close = getattr(self.result, 'close', None)
+            try:
+                if close is not None:
+                    close()
+            finally:
+                # Discard the result. If it's a generator this can
+                # free a lot of hidden resources (if we failed to iterate
+                # all the way through it---the frames are automatically
+                # cleaned up when StopIteration is raised); but other cases
+                # could still free up resources sooner than otherwise.
+                close = None
+                self.result = None
 
     def handle_one_response(self):
         self.time_start = time.time()
@@ -907,9 +933,6 @@ class WSGIHandler(object):
             try:
                 self.run_application()
             finally:
-                close = getattr(self.result, 'close', None)
-                if close is not None:
-                    close()
                 try:
                     self.wsgi_input._discard()
                 except (socket.error, IOError):
@@ -944,8 +967,13 @@ class WSGIHandler(object):
             self.close_connection = True
         else:
             status, headers, body = _ERRORS[error_code]
-            self.start_response(status, headers[:])
-            self.write(body)
+            try:
+                self.start_response(status, headers[:])
+                self.write(body)
+            except socket.error:
+                if not PY3:
+                    sys.exc_clear()
+                self.close_connection = True
 
     def _log_error(self, t, v, tb):
         # TODO: Shouldn't we dump this to wsgi.errors? If we did that now, it would
