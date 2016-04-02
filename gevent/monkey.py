@@ -570,7 +570,7 @@ def patch_all(socket=True, dns=True, time=True, select=True, thread=True, os=Tru
     if time:
         patch_time()
     if thread:
-        patch_thread(Event=Event)
+        patch_thread(Event=Event, _warnings=_warnings)
     # sys must be patched after thread. in other cases threading._shutdown will be
     # initiated to _MainThread with real thread ident
     if sys:
