@@ -94,15 +94,28 @@ class _DummyThread(_DummyThread_):
     def _wait_for_tstate_lock(self, *args, **kwargs):
         pass
 
+if hasattr(__threading__, 'main_thread'): # py 3.4+
+    def main_native_thread():
+        return __threading__.main_thread() # pylint:disable=no-member
+else:
+    _main_threads = [(_k, _v) for _k, _v in __threading__._active.items()
+                     if isinstance(_v, __threading__._MainThread)]
+    assert len(_main_threads) == 1, "Too many main threads"
+
+    def main_native_thread():
+        return _main_threads[0][1]
+
 # Make sure the MainThread can be found by our current greenlet ID,
 # otherwise we get a new DummyThread, which cannot be joined.
 # Fixes tests in test_threading_2 under PyPy, and generally makes things nicer
 # when gevent.threading is imported before monkey patching or not at all
-# XXX: This assumes that the import is happening in the "main" greenlet
-if _get_ident() not in __threading__._active and len(__threading__._active) == 1:
-    _k, _v = next(iter(__threading__._active.items()))
+# XXX: This assumes that the import is happening in the "main" greenlet/thread.
+# XXX: We should really only be doing this from gevent.monkey.
+if _get_ident() not in __threading__._active:
+    _v = main_native_thread()
+    _k = _v.ident
     del __threading__._active[_k]
-    _v._Thread__ident = _get_ident()
+    _v._ident = _v._Thread__ident = _get_ident()
     __threading__._active[_get_ident()] = _v
     del _k
     del _v

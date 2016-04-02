@@ -65,6 +65,9 @@
   available (Python 3 and Python 2 with the ``futures`` backport
   installed). This is helpful for, e.g., grpc. Reported in
   :issue:`786` by Markus Padourek.
+- Native threads created before monkey-patching threading can now be
+  joined. Previously on Python < 3.4, doing so would raise a
+  ``LoopExit`` error. reported in :issue:`747` by Sergey Vasilyev.
 
 1.1.0 (Mar 5, 2016)
 ===================

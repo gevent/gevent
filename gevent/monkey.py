@@ -292,7 +292,7 @@ def patch_thread(threading=True, _threading_local=True, Event=False, logging=Tru
         Add *logging* and *existing_locks* params.
     """
     # XXX: Simplify
-    # pylint:disable=too-many-branches
+    # pylint:disable=too-many-branches,too-many-locals
 
     # Description of the hang:
     # There is an incompatibility with patching 'thread' and the 'multiprocessing' module:
@@ -322,11 +322,19 @@ def patch_thread(threading=True, _threading_local=True, Event=False, logging=Tru
     # are in trouble. The latter is tricky because of the different names
     # on different versions.
     if threading:
-        __import__('threading')
+        threading_mod = __import__('threading')
+        # Capture the *real* current thread object before
+        # we start returning DummyThread objects, for comparison
+        # to the main thread.
+        orig_current_thread = threading_mod.current_thread()
+    else:
+        threading_mod = None
+        orig_current_thread = None
 
     patch_module('thread')
+
     if threading:
-        threading_mod = patch_module('threading')
+        patch_module('threading')
 
         if Event:
             from gevent.event import Event
@@ -352,6 +360,36 @@ def patch_thread(threading=True, _threading_local=True, Event=False, logging=Tru
         from gevent.local import local
         patch_item(_threading_local, 'local', local)
 
+    def make_join_func(thread, thread_greenlet):
+        from gevent.hub import sleep
+        from time import time
+
+        def join(timeout=None):
+            end = None
+            if threading_mod.current_thread() is thread:
+                raise RuntimeError("Cannot join current thread")
+            if thread_greenlet is not None and thread_greenlet.dead:
+                return
+            if not thread.is_alive():
+                return
+
+            if timeout:
+                end = time() + timeout
+
+            while thread.is_alive():
+                if end is not None and time() > end:
+                    return
+                sleep(0.01)
+        return join
+
+    if threading:
+        from gevent.threading import main_native_thread
+
+        for thread in threading_mod._active.values():
+            if thread == main_native_thread():
+                continue
+            thread.join = make_join_func(thread, None)
+
     if sys.version_info[:2] >= (3, 4):
 
         # Issue 18808 changes the nature of Thread.join() to use
@@ -359,26 +397,15 @@ def patch_thread(threading=True, _threading_local=True, Event=False, logging=Tru
         # (which is already running) cannot wait for the main thread---it
         # hangs forever. We patch around this if possible. See also
         # gevent.threading.
-        threading_mod = __import__('threading')
         greenlet = __import__('greenlet')
-        if threading_mod.current_thread() == threading_mod.main_thread():
+
+        if orig_current_thread == threading_mod.main_thread():
             main_thread = threading_mod.main_thread()
             _greenlet = main_thread._greenlet = greenlet.getcurrent()
             from gevent.hub import sleep
 
-            def join(timeout=None):
-                if threading_mod.current_thread() is main_thread:
-                    raise RuntimeError("Cannot join current thread")
-                if _greenlet.dead or not main_thread.is_alive():
-                    return
-                elif timeout:
-                    raise ValueError("Cannot use a timeout to join the main thread")
-                    # XXX: Make that work
-                else:
-                    while main_thread.is_alive():
-                        sleep(0.01)
 
-            main_thread.join = join
+            main_thread.join = make_join_func(main_thread, _greenlet)
 
             # Patch up the ident of the main thread to match. This
             # matters if threading was imported before monkey-patching
