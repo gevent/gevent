@@ -4,8 +4,8 @@
 
 .. currentmodule:: gevent
 
-1.1.1 (Unreleased)
-==================
+1.1.1 (Apr 4, 2016)
+===================
 
 - Nested callbacks that set and clear an Event no longer cause
   ``wait`` to return prematurely. Reported in :issue:`771` by Sergey

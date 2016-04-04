@@ -326,7 +326,7 @@ if sys.version_info[:2] >= (3, 4):
 
     ]
 
-   if sys.platform == 'darwin':
+    if sys.platform == 'darwin':
         disabled_tests += [
             # These raise "OSError: 12 Cannot allocate memory" on both
             # patched and unpatched runs
@@ -352,6 +352,7 @@ if sys.version_info[:2] >= (3, 4):
             'test_socket.InterruptedRecvTimeoutTest.testInterruptedSendTimeout',
             'test_socket.InterruptedRecvTimeoutTest.testInterruptedSendtoTimeout',
             'test_socket.InterruptedRecvTimeoutTest.testInterruptedRecvmsgTimeout',
+            'test_socket.InterruptedRecvTimeoutTest.testInterruptedRecvmsgIntoTimeout',
             'test_socket.InterruptedSendTimeoutTest.testInterruptedSendmsgTimeout',
         ]
 
