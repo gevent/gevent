@@ -250,7 +250,6 @@ class socket(object):
         else:
             _ss.close(self._sock)
 
-
     def close(self):
         # This function should not reference any globals. See Python issue #808164.
         self._closed = True
