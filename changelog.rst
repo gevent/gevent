@@ -13,12 +13,6 @@
 - libs: Update c-ares to version 1.11.0 (`release notes <https://raw.githubusercontent.com/c-ares/c-ares/cares-1_11_0/RELEASE-NOTES>`_).
 - Remove module ``gevent.coros`` which was replaced by ``gevent.lock``
   and has been deprecated since 1.0b2.
-- The ``ref`` parameter to :func:`gevent.os.fork_and_watch` was being ignored.
-- Python 3: :class:`gevent.queue.Channel` is now correctly iterable, instead of
-  raising a :exc:`TypeError`.
-- Nested callbacks that set and clear an Event no longer cause
-  ``wait`` to return prematurely. Reported in :issue:`771` by Sergey
-  Vasilyev.
 - :class:`~.Group` and :class:`~.Pool` now return whether
   :meth:`~.Group.join` returned with an empty group. Suggested by Filippo Sironi in
   :pr:`503`.
@@ -26,10 +20,6 @@
   ``start_response`` do not contain a carriage return or newline in
   order to prevent HTTP response splitting (header injection), raising
   a :exc:`ValueError` if they do. See :issue:`775`.
-- Python 3: Add support for :meth:`socket.socket.sendmsg`,
-  :meth:`socket.socket.recvmsg` and :meth:`socket.socket.recvmsg_into`
-  on platforms where they are defined. Initial :pr:`773` by Jakub
-  Klama.
 - The modules :mod:`gevent.os`, :mod:`gevent.signal` and
   :mod:`gevent.select` export all the attributes from their
   corresponding standard library counterpart.
@@ -71,6 +61,21 @@
 - pywsgi: Chunks of data the application returns are no longer copied
   before being sent to the socket when the transfer-encoding is
   chunked, potentially reducing overhead for large responses.
+
+1.1.1 (Apr 4, 2016)
+===================
+
+- Nested callbacks that set and clear an Event no longer cause
+  ``wait`` to return prematurely. Reported in :issue:`771` by Sergey
+  Vasilyev.
+- Fix build on Solaris 10. Reported in :issue:`777` by wiggin15.
+- The ``ref`` parameter to :func:`gevent.os.fork_and_watch` was being ignored.
+- Python 3: :class:`gevent.queue.Channel` is now correctly iterable, instead of
+  raising a :exc:`TypeError`.
+- Python 3: Add support for :meth:`socket.socket.sendmsg`,
+  :meth:`socket.socket.recvmsg` and :meth:`socket.socket.recvmsg_into`
+  on platforms where they are defined. Initial :pr:`773` by Jakub
+  Klama.
 
 1.1.0 (Mar 5, 2016)
 ===================
