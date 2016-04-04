@@ -301,7 +301,59 @@ if sys.version_info[:2] >= (3, 4):
         # libev limits the number of events it will return at once. Specifically,
         # on linux with epoll, it returns a max of 64 (ev_epoll.c).
 
+        # XXX: Hangs (Linux only)
+        'test_socket.NonBlockingTCPTests.testInitNonBlocking',
+        # We don't handle the Linux-only SOCK_NONBLOCK option
+        'test_socket.NonblockConstantTest.test_SOCK_NONBLOCK',
+
+        # Tries to use multiprocessing which doesn't quite work in
+        # monkey_test module (Windows only)
+        'test_socket.TestSocketSharing.testShare',
+
+        # Windows-only: Sockets have a 'ioctl' method in Python 3
+        # implemented in the C code. This test tries to check
+        # for the presence of the method in the class, which we don't
+        # have because we don't inherit the C implementation. But
+        # it should be found at runtime.
+        'test_socket.GeneralModuleTests.test_sock_ioctl',
+
+        # Relies on implementation details
+        'test_socket.GeneralModuleTests.test_SocketType_is_socketobject',
+        'test_socket.GeneralModuleTests.test_dealloc_warn',
+        'test_socket.GeneralModuleTests.test_repr',
+        'test_socket.GeneralModuleTests.test_str_for_enums',
+        'test_socket.GeneralModuleTests.testGetaddrinfo',
+
     ]
+
+   if sys.platform == 'darwin':
+        disabled_tests += [
+            # These raise "OSError: 12 Cannot allocate memory" on both
+            # patched and unpatched runs
+            'test_socket.RecvmsgSCMRightsStreamTest.testFDPassEmpty',
+        ]
+
+
+    if sys.version_info[:2] == (3, 4):
+        disabled_tests += [
+            # These are all expecting that a signal (sigalarm) that
+            # arrives during a blocking call should raise
+            # InterruptedError with errno=EINTR. gevent does not do
+            # this, instead its loop keeps going and raises a timeout
+            # (which fails the test). HOWEVER: Python 3.5 fixed this
+            # problem and started raising a timeout,
+            # (https://docs.python.org/3/whatsnew/3.5.html#pep-475-retry-system-calls-failing-with-eintr)
+            # and removed these tests (InterruptedError is no longer
+            # raised). So basically, gevent was ahead of its time.
+            'test_socket.InterruptedRecvTimeoutTest.testInterruptedRecvIntoTimeout',
+            'test_socket.InterruptedRecvTimeoutTest.testInterruptedRecvTimeout',
+            'test_socket.InterruptedRecvTimeoutTest.testInterruptedRecvfromIntoTimeout',
+            'test_socket.InterruptedRecvTimeoutTest.testInterruptedRecvfromTimeout',
+            'test_socket.InterruptedRecvTimeoutTest.testInterruptedSendTimeout',
+            'test_socket.InterruptedRecvTimeoutTest.testInterruptedSendtoTimeout',
+            'test_socket.InterruptedRecvTimeoutTest.testInterruptedRecvmsgTimeout',
+            'test_socket.InterruptedSendTimeoutTest.testInterruptedSendmsgTimeout',
+        ]
 
     if os.environ.get('TRAVIS') == 'true':
         disabled_tests += [
