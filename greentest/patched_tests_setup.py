@@ -363,6 +363,14 @@ if sys.version_info[:2] >= (3, 4):
             # but fails under Travis
         ]
 
+    if os.environ.get('GEVENT_RESOLVER') == 'ares':
+        disabled_tests += [
+            # These raise different errors or can't resolve
+            # the IP address correctly
+            'test_socket.GeneralModuleTests.test_host_resolution',
+            'test_socket.GeneralModuleTests.test_getnameinfo',
+        ]
+
 if sys.version_info[:2] >= (3, 5):
     disabled_tests += [
         # XXX: Hangs
