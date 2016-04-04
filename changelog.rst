@@ -7,47 +7,73 @@
 1.2a1 (unreleased)
 ==================
 
-- Platforms: Remove support for Python 2.6. See :pr:`766`.
-- libs: Update libev to version 4.22.
-- libs: Update tblib to 1.3.0.
-- libs: Update c-ares to version 1.11.0 (`release notes <https://raw.githubusercontent.com/c-ares/c-ares/cares-1_11_0/RELEASE-NOTES>`_).
+Incompatible Changes
+--------------------
+- Support for Python 2.6 has been removed. See :pr:`766`.
 - Remove module ``gevent.coros`` which was replaced by ``gevent.lock``
   and has been deprecated since 1.0b2.
-- :class:`~.Group` and :class:`~.Pool` now return whether
-  :meth:`~.Group.join` returned with an empty group. Suggested by Filippo Sironi in
-  :pr:`503`.
-- Security: :mod:`gevent.pywsgi` now checks that the values passed to
+
+Libraries
+---------
+
+- Update libev to version 4.22.
+- Update tblib to 1.3.0.
+- Update c-ares to version 1.11.0 (`release notes
+  <https://raw.githubusercontent.com/c-ares/c-ares/cares-1_11_0/RELEASE-NOTES>`_).
+- For the benefit of downstream package maintainers, gevent is now
+  tested with c-ares and libev linked dynamically and not embedded
+  (i.e., using the system libraries). However, only the versions
+  shipped with gevent are tested and known to work.
+- PyPy/CFFI: The corecffi native extension is now only built at
+  installation time. Previously, if it wasn't available, a build was
+  attempted at every import. This could lead to scattered "gevent"
+  directories and undependable results.
+
+
+Security
+--------
+- :mod:`gevent.pywsgi` now checks that the values passed to
   ``start_response`` do not contain a carriage return or newline in
   order to prevent HTTP response splitting (header injection), raising
   a :exc:`ValueError` if they do. See :issue:`775`.
+- Errors logged by :class:`~gevent.pywsgi.WSGIHandler` no
+  longer print the entire WSGI environment by default. This avoids
+  possible information disclosure vulnerabilities. Applications can
+  also opt-in to a higher security level for the WSGI environment if they
+  choose and their frameworks support it. Originally reported
+  in :pr:`779` by sean-peters-au and changed in :pr:`781`.
+
+
+Stdlib Compatibility
+--------------------
 - The modules :mod:`gevent.os`, :mod:`gevent.signal` and
   :mod:`gevent.select` export all the attributes from their
   corresponding standard library counterpart.
-- Compliance: If :func:`gevent.select.select` is given a negative *timeout*
+- If :func:`gevent.select.select` is given a negative *timeout*
   argument, raise an exception like the standard library does.
-- Compliance: If :func:`gevent.select.select` is given closed or invalid
+- If :func:`gevent.select.select` is given closed or invalid
   file descriptors in any of its lists, raise the appropriate
   ``EBADF`` exception like the standard library does. Previously,
   libev would tend to return the descriptor as ready. In the worst
   case, this adds an extra system call, but may also reduce latency if
   descriptors are ready at the time of entry.
-- Compliance: :meth:`gevent.select.poll.unregister` raises an exception if *fd* is not
+- :meth:`gevent.select.poll.unregister` raises an exception if *fd* is not
   registered, like the standard library.
-- Compliance: :meth:`gevent.select.poll.poll` returns an event with
+- :meth:`gevent.select.poll.poll` returns an event with
   ``POLLNVAL`` for registered fds that are invalid. Previously it
   would tend to report both read and write events.
-- PyPy/CFFI: The corecffi native extension is now only built at
-  installation time. Previously, if it wasn't available, a build was
-  attempted at every import. This could lead to scattered "gevent"
-  directories and undependable results.
+
+
+Other Changes
+-------------
+
+- :class:`~.Group` and :class:`~.Pool` now return whether
+  :meth:`~.Group.join` returned with an empty group. Suggested by Filippo Sironi in
+  :pr:`503`.
 - Servers: Default to AF_INET6 when binding to all addresses (e.g.,
   ""). This supports both IPv4 and IPv6 connections (except on
   Windows). Original change in :pr:`495` by Felix Kaiser.
-- Security: Errors logged by :class:`~gevent.pywsgi.WSGIHandler` no
-  longer print the entire WSGI environment by default. This avoids
-  possible information disclosure vulnerabilities. Originally reported
-  in :pr:`779` by sean-peters-au and changed in :pr:`781`.
-- Unhandled exception reports that kill a greenlet print now include a
+- Unhandled exception reports that kill a greenlet now include a
   timestamp. See :issue:`137`.
 - Add :class:`gevent.threadpool.ThreadPoolExecutor` (a
   :class:`concurrent.futures.ThreadPoolExecutor` variant that always
@@ -57,8 +83,8 @@
   :issue:`786` by Markus Padourek.
 - Native threads created before monkey-patching threading can now be
   joined. Previously on Python < 3.4, doing so would raise a
-  ``LoopExit`` error. reported in :issue:`747` by Sergey Vasilyev.
-- pywsgi: Chunks of data the application returns are no longer copied
+  ``LoopExit`` error. Reported in :issue:`747` by Sergey Vasilyev.
+- pywsgi/performance: Chunks of data the application returns are no longer copied
   before being sent to the socket when the transfer-encoding is
   chunked, potentially reducing overhead for large responses.
 
