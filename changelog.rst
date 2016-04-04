@@ -11,6 +11,13 @@
   ``wait`` to return prematurely. Reported in :issue:`771` by Sergey
   Vasilyev.
 - Fix build on Solaris 10. Reported in :issue:`777` by wiggin15.
+- The ``ref`` parameter to :func:`gevent.os.fork_and_watch` was being ignored.
+- Python 3: :class:`gevent.queue.Channel` is now correctly iterable, instead of
+  raising a :exc:`TypeError`.
+- Python 3: Add support for :meth:`socket.socket.sendmsg`,
+  :meth:`socket.socket.recvmsg` and :meth:`socket.socket.recvmsg_into`
+  on platforms where they are defined. Initial :pr:`773` by Jakub
+  Klama.
 
 1.1.0 (Mar 5, 2016)
 ===================
