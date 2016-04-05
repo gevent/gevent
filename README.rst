@@ -77,8 +77,8 @@ There are a few different ways to run the tests. To simply run the
 tests on one version of Python during development, try this::
 
   python setup.py develop
-  cd greentest
-  PYTHONPATH=.. python testrunner.py --config ../known_failures.py
+  cd src/greentest
+  PYTHONPATH=.. python testrunner.py --config known_failures.py
 
 Before submitting a pull request, it's a good idea to run the tests
 across all supported versions of Python, and to check the code quality
@@ -93,8 +93,8 @@ The testrunner accepts a ``--coverage`` argument to enable code
 coverage metrics through the `coverage.py`_ package. That would go
 something like this::
 
-  cd greentest
-  PYTHONPATH=.. python testrunner.py --config ../known_failures.py --coverage
+  cd src/greentest
+  PYTHONPATH=.. python testrunner.py --config known_failures.py --coverage
   coverage combine
   coverage html -i
   <open htmlcov/index.html>

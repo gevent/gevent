@@ -56,7 +56,7 @@ from distutils.errors import CCompilerError, DistutilsExecError, DistutilsPlatfo
 ext_errors = (CCompilerError, DistutilsExecError, DistutilsPlatformError, IOError)
 
 
-with open('gevent/__init__.py') as _:
+with open('src/gevent/__init__.py') as _:
     __version__ = re.search(r"__version__\s*=\s*'(.*)'", _.read(), re.M).group(1)
 assert __version__
 
@@ -86,8 +86,8 @@ def get_config_value(key, defkey, path):
     return os.path.exists(path)
 
 
-LIBEV_EMBED = get_config_value('LIBEV_EMBED', 'EMBED', 'libev')
-CARES_EMBED = get_config_value('CARES_EMBED', 'EMBED', 'c-ares')
+LIBEV_EMBED = get_config_value('LIBEV_EMBED', 'EMBED', 'deps/libev')
+CARES_EMBED = get_config_value('CARES_EMBED', 'EMBED', 'deps/c-ares')
 
 define_macros = []
 libraries = []
@@ -97,7 +97,7 @@ libraries = []
 # source checkout on pypy, OLDPWD will be the location of setup.py
 # and the PyPy branch will clean it up.
 libev_configure_command = ' '.join([
-    "(cd ", _quoted_abspath('libev/'),
+    "(cd ", _quoted_abspath('deps/libev/'),
     " && /bin/sh ./configure ",
     " && cp config.h \"$OLDPWD\"",
     ")",
@@ -112,7 +112,7 @@ else:
     _m32 = ''
 
 # Use -r, not -e, for support of old solaris. See https://github.com/gevent/gevent/issues/777
-ares_configure_command = ' '.join(["(cd ", _quoted_abspath('c-ares/'),
+ares_configure_command = ' '.join(["(cd ", _quoted_abspath('deps/c-ares/'),
                                    " && if [ -r ares_build.h ]; then cp ares_build.h ares_build.h.orig; fi ",
                                    " && /bin/sh ./configure --disable-dependency-tracking " + _m32 + "CONFIG_COMMANDS= ",
                                    " && cp ares_config.h ares_build.h \"$OLDPWD\" ",
@@ -134,19 +134,19 @@ def expand(*lst):
 
 
 CORE = Extension(name='gevent.corecext',
-                 sources=['gevent/gevent.corecext.c'],
-                 include_dirs=['libev'] if LIBEV_EMBED else [],
+                 sources=['src/gevent/gevent.corecext.c'],
+                 include_dirs=['deps/libev'] if LIBEV_EMBED else [],
                  libraries=libraries,
                  define_macros=define_macros,
-                 depends=expand('gevent/callbacks.*', 'gevent/stathelper.c', 'gevent/libev*.h', 'libev/*.*'))
+                 depends=expand('src/gevent/callbacks.*', 'src/gevent/stathelper.c', 'src/gevent/libev*.h', 'deps/libev/*.*'))
 # QQQ libev can also use -lm, however it seems to be added implicitly
 
 ARES = Extension(name='gevent.ares',
-                 sources=['gevent/gevent.ares.c'],
-                 include_dirs=['c-ares'] if CARES_EMBED else [],
+                 sources=['src/gevent/gevent.ares.c'],
+                 include_dirs=['deps/c-ares'] if CARES_EMBED else [],
                  libraries=libraries,
                  define_macros=define_macros,
-                 depends=expand('gevent/dnshelper.c', 'gevent/cares_*.*'))
+                 depends=expand('src/gevent/dnshelper.c', 'src/gevent/cares_*.*'))
 ARES.optional = True
 
 
@@ -210,7 +210,7 @@ def configure_ares(bext, ext):
         os.makedirs(bdir)
 
     if WIN:
-        shutil.copy("c-ares\\ares_build.h.dist", os.path.join(bdir, "ares_build.h"))
+        shutil.copy("deps\\c-ares\\ares_build.h.dist", os.path.join(bdir, "ares_build.h"))
         return
 
     cwd = os.getcwd()
@@ -248,12 +248,12 @@ else:
 
 
 if CARES_EMBED:
-    ARES.sources += expand('c-ares/*.c')
+    ARES.sources += expand('deps/c-ares/*.c')
     # Strip the standalone binaries that would otherwise
     # cause linking issues
     for bin_c in ('acountry', 'adig', 'ahost'):
         try:
-            ARES.sources.remove('c-ares/' + bin_c + '.c')
+            ARES.sources.remove('deps/c-ares/' + bin_c + '.c')
         except ValueError:
             pass
     ARES.configure = configure_ares
@@ -324,25 +324,25 @@ class my_build_ext(build_ext):
                 raise BuildFailed
             else:
                 raise
-        if not PYPY:
-            self.gevent_symlink(ext)
+        # if not PYPY:
+        #     self.gevent_symlink(ext)
         return result
 
-    def gevent_symlink(self, ext):
-        # hack: create a symlink from build/../core.so to gevent/core.so
-        # to prevent "ImportError: cannot import name core" failures
-        try:
-            fullname = self.get_ext_fullname(ext.name)
-            modpath = fullname.split('.')
-            filename = self.get_ext_filename(ext.name)
-            filename = os.path.split(filename)[-1]
-            if not self.inplace:
-                filename = os.path.join(*modpath[:-1] + [filename])
-                path_to_build_core_so = os.path.join(self.build_lib, filename)
-                path_to_core_so = join('gevent', basename(path_to_build_core_so))
-                link(path_to_build_core_so, path_to_core_so)
-        except Exception:
-            traceback.print_exc()
+    # def gevent_symlink(self, ext):
+    #     # hack: create a symlink from build/../core.so to gevent/core.so
+    #     # to prevent "ImportError: cannot import name core" failures
+    #     try:
+    #         fullname = self.get_ext_fullname(ext.name)
+    #         modpath = fullname.split('.')
+    #         filename = self.get_ext_filename(ext.name)
+    #         filename = os.path.split(filename)[-1]
+    #         if not self.inplace:
+    #             filename = os.path.join(*modpath[:-1] + [filename])
+    #             path_to_build_core_so = os.path.join(self.build_lib, filename)
+    #             path_to_core_so = join('gevent', basename(path_to_build_core_so))
+    #             link(path_to_build_core_so, path_to_core_so)
+    #     except Exception:
+    #         traceback.print_exc()
 
 
 def link(source, dest):
@@ -373,7 +373,7 @@ def read(name, *args):
     except OSError:
         return ''
 
-cffi_modules = ['gevent/_corecffi_build.py:ffi']
+cffi_modules = ['src/gevent/_corecffi_build.py:ffi']
 
 if PYPY:
     install_requires = []
@@ -425,7 +425,8 @@ elif PYPY:
         # won't do it (since we're not building it)
         system(libev_configure_command)
         # Then get rid of the extra copy created in place
-        system('rm config.h')
+        # XXX no more
+        #system('rm config.h')
     # NOTE that we're NOT adding the distutils extension module, as
     # doing so compiles the module already: import gevent._corecffi_build
     # imports gevent, which imports the hub, which imports the core,
@@ -450,13 +451,13 @@ elif PYPY:
         #          sources=["gevent/gevent._semaphore.c"]),
     ]
     include_package_data = True
-    run_make = 'gevent/gevent.ares.c'
+    run_make = 'src/gevent/gevent.ares.c'
 else:
     ext_modules = [
         CORE,
         ARES,
         Extension(name="gevent._semaphore",
-                  sources=["gevent/gevent._semaphore.c"]),
+                  sources=["src/gevent/gevent._semaphore.c"]),
     ]
     include_package_data = False
     run_make = True
@@ -491,6 +492,7 @@ def run_setup(ext_modules, run_make):
         maintainer='Jason Madden',
         maintainer_email='jason@nextthought.com',
         url='http://www.gevent.org/',
+        package_dir={'': 'src'},
         packages=['gevent'],
         include_package_data=include_package_data,
         ext_modules=ext_modules,
