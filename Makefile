@@ -20,7 +20,7 @@ src/gevent/gevent.corecext.c: src/gevent/corecext.ppyx src/gevent/libev.pxd util
 	mv gevent.corecext.* src/gevent/
 
 src/gevent/gevent.ares.c: src/gevent/ares.pyx src/gevent/*.pxd
-	$(CYTHON) -o gevent.ares.c gevent/ares.pyx
+	$(CYTHON) -o gevent.ares.c src/gevent/ares.pyx
 	mv gevent.ares.* src/gevent/
 
 src/gevent/gevent._semaphore.c: src/gevent/_semaphore.py src/gevent/_semaphore.pxd
