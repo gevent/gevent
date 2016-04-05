@@ -9,13 +9,13 @@ try:
     if os.environ.get('GEVENT_CORE_CFFI_ONLY'):
         raise ImportError("Not attempting corecext")
 
-    from gevent import corecext as _core
+    from gevent.libev import corecext as _core
 except ImportError:
     if os.environ.get('GEVENT_CORE_CEXT_ONLY'):
         raise
 
     # CFFI/PyPy
-    from gevent import corecffi as _core
+    from gevent.libev import corecffi as _core
 
 copy_globals(_core, globals())
 

@@ -12,12 +12,12 @@ export PATH:=$(BUILD_RUNTIMES)/snakepit:$(TOOLS):$(PATH)
 export LC_ALL=C.UTF-8
 
 
-all: src/gevent/gevent.corecext.c src/gevent/gevent.ares.c src/gevent/gevent._semaphore.c
+all: src/gevent/libev/gevent.corecext.c src/gevent/gevent.ares.c src/gevent/gevent._semaphore.c
 
-src/gevent/gevent.corecext.c: src/gevent/corecext.ppyx src/gevent/libev.pxd util/cythonpp.py
-	$(PYTHON) util/cythonpp.py -o gevent.corecext.c src/gevent/corecext.ppyx
+src/gevent/libev/gevent.corecext.c: src/gevent/libev/corecext.ppyx src/gevent/libev/libev.pxd util/cythonpp.py
+	$(PYTHON) util/cythonpp.py -o gevent.corecext.c src/gevent/libev/corecext.ppyx
 	echo '#include "callbacks.c"' >> gevent.corecext.c
-	mv gevent.corecext.* src/gevent/
+	mv gevent.corecext.* src/gevent/libev/
 
 src/gevent/gevent.ares.c: src/gevent/ares.pyx src/gevent/*.pxd
 	$(CYTHON) -o gevent.ares.c src/gevent/ares.pyx
@@ -35,13 +35,15 @@ src/gevent/gevent._semaphore.c: src/gevent/_semaphore.py src/gevent/_semaphore.p
 #	rm src/gevent/_semaphore.py
 
 clean:
-	rm -f corecext.pyx src/gevent/corecext.pyx
-	rm -f gevent.corecext.c gevent.corecext.h src/gevent/gevent.corecext.c src/gevent/gevent.corecext.h
+	rm -f corecext.pyx src/gevent/libev/corecext.pyx
+	rm -f gevent.corecext.c gevent.corecext.h src/gevent/libev/gevent.corecext.c src/gevent/libev/gevent.corecext.h
 	rm -f gevent.ares.c gevent.ares.h src/gevent/gevent.ares.c src/gevent/gevent.ares.h
 	rm -f gevent._semaphore.c gevent._semaphore.h src/gevent/gevent._semaphore.c src/gevent/gevent._semaphore.h
-	rm -f src/gevent/*.so
-	rm -rf src/gevent/__pycache__
-	rm -rf src/gevent/*.pyc
+	rm -f src/gevent/*.so src/gevent/libev/*.so
+	rm -rf src/gevent/libev/*.o src/gevent/*.o
+	rm -rf src/gevent/__pycache__ src/greentest/__pycache__ src/gevent/libev/__pycache__
+	rm -rf src/gevent/*.pyc src/greentest/*.pyc src/gevent/libev/*.pyc
+	rm -rf src/greentest/htmlcov src/greentest/.coverage
 
 doc:
 	cd doc && PYTHONPATH=.. make html

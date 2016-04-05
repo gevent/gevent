@@ -3,13 +3,13 @@ build/
 .runtimes
 .tox/
 *.so
+*.o
 *.egg-info
 gevent.*.[ch]
-src/gevent/corecext.pyx
+src/gevent/libev/corecext.pyx
 src/gevent/__pycache__
-src/gevent/libev
-src/gevent/_corecffi.c
-src/gevent/_corecffi.o
+src/gevent/libev/_corecffi.c
+src/gevent/libev/_corecffi.o
 Makefile.ext
 MANIFEST
 *_flymake.py

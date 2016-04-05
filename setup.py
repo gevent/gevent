@@ -10,6 +10,11 @@ from os.path import join, abspath, basename, dirname
 from subprocess import check_call
 from glob import glob
 
+# setuptools is *required* on Windows
+# (https://bugs.python.org/issue23246) and for PyPy. No reason not to
+# use it everywhere.
+from setuptools import Extension, setup
+from setuptools import find_packages
 
 PYPY = hasattr(sys, 'pypy_version_info')
 WIN = sys.platform.startswith('win')
@@ -25,10 +30,6 @@ if PYPY and WIN and not CFFI_WIN_BUILD_ANYWAY:
     raise Exception("Unable to install on PyPy/Windows")
 
 if WIN:
-    # https://bugs.python.org/issue23246
-    # We must have setuptools on windows
-    __import__('setuptools')
-
     # Make sure the env vars that make.cmd needs are set
     if not os.environ.get('PYTHON_EXE'):
         os.environ['PYTHON_EXE'] = 'pypy' if PYPY else 'python'
@@ -41,14 +42,6 @@ if sys.version_info[:2] < (2, 7):
 import distutils
 import distutils.sysconfig  # to get CFLAGS to pass into c-ares configure script
 
-
-try:
-    from setuptools import Extension, setup
-except ImportError:
-    if PYPY:
-        # need setuptools for include_package_data to work
-        raise
-    from distutils.core import Extension, setup
 
 from distutils.command.build_ext import build_ext
 from distutils.command.sdist import sdist as _sdist
@@ -133,12 +126,12 @@ def expand(*lst):
     return result
 
 
-CORE = Extension(name='gevent.corecext',
-                 sources=['src/gevent/gevent.corecext.c'],
+CORE = Extension(name='gevent.libev.corecext',
+                 sources=['src/gevent/libev/gevent.corecext.c'],
                  include_dirs=['deps/libev'] if LIBEV_EMBED else [],
                  libraries=libraries,
                  define_macros=define_macros,
-                 depends=expand('src/gevent/callbacks.*', 'src/gevent/stathelper.c', 'src/gevent/libev*.h', 'deps/libev/*.*'))
+                 depends=expand('src/gevent/libev/callbacks.*', 'src/gevent/libev/stathelper.c', 'src/gevent/libev/libev*.h', 'deps/libev/*.*'))
 # QQQ libev can also use -lm, however it seems to be added implicitly
 
 ARES = Extension(name='gevent.ares',
@@ -373,7 +366,7 @@ def read(name, *args):
     except OSError:
         return ''
 
-cffi_modules = ['src/gevent/_corecffi_build.py:ffi']
+cffi_modules = ['src/gevent/libev/_corecffi_build.py:ffi']
 
 if PYPY:
     install_requires = []
@@ -493,7 +486,7 @@ def run_setup(ext_modules, run_make):
         maintainer_email='jason@nextthought.com',
         url='http://www.gevent.org/',
         package_dir={'': 'src'},
-        packages=['gevent'],
+        packages=find_packages('src'),
         include_package_data=include_package_data,
         ext_modules=ext_modules,
         cmdclass=dict(build_ext=my_build_ext, sdist=sdist),

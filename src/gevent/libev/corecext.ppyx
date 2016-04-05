@@ -5,7 +5,10 @@
 # cython: emit_code_comments=False
 cimport cython
 cimport libev
+# Note this is not the standard cython 'cpython' (which has a backwards compat alias of 'python')
+# it's our custom def. If it's not on the include path, we get warned.
 from python cimport *
+
 # Work around lack of absolute_import in Cython
 # Note for PY3: not doing so will leave reference to locals() on import
 # (reproducible under Python 3.3, not under Python 3.4; see test__refcount_core.py)

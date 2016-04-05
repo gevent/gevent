@@ -29,6 +29,8 @@ Libraries
   attempted at every import. This could lead to scattered "gevent"
   directories and undependable results.
 - Update Cython to 0.24.
+- setuptools is now required at build time on all platforms.
+  Previously it was only required for Windows and PyPy.
 
 
 Security
