@@ -407,7 +407,8 @@ def _run_cython_on_file(configuration, pyx_filename,
                         py_banner, banner,
                         output_filename,
                         counter, lines,
-                        cache=None):
+                        cache=None,
+                        module_name=None):
     value = ''.join(lines)
     sourcehash = md5(value.encode("utf-8")).hexdigest()
     comment = configuration.format_tag() + " hash:" + str(sourcehash)
@@ -420,7 +421,7 @@ def _run_cython_on_file(configuration, pyx_filename,
     tempdir = tempfile.mkdtemp()
     #unique_pyx_filename = pyx_filename
     #unique_output_filename = output_filename
-    unique_pyx_filename = os.path.join(tempdir, pyx_filename)
+    unique_pyx_filename = os.path.join(tempdir, module_name or pyx_filename)
     unique_output_filename = os.path.join(tempdir, output_filename)
 
     dirname = os.path.dirname(unique_pyx_filename) # output must be in same dir
@@ -442,7 +443,8 @@ def _run_cython_on_file(configuration, pyx_filename,
     return configuration.attach_tags(output), configuration, sourcehash
 
 
-def _run_cython_on_files(pyx_filename, py_banner, banner, output_filename, preprocessed):
+def _run_cython_on_files(pyx_filename, py_banner, banner, output_filename, preprocessed,
+                         module_name=None):
     counter = 0
     threads = []
     cache = {}
@@ -452,7 +454,7 @@ def _run_cython_on_files(pyx_filename, py_banner, banner, output_filename, prepr
                               args=(configuration, pyx_filename,
                                     py_banner, banner, output_filename,
                                     counter, lines,
-                                    cache)))
+                                    cache, module_name)))
         threads[-1].start()
 
     for t in threads:
@@ -482,7 +484,7 @@ def _run_cython_on_files(pyx_filename, py_banner, banner, output_filename, prepr
 
     return ordered_results
 
-def process_filename(filename, output_filename=None):
+def process_filename(filename, output_filename=None, module_name=None):
     """Process the .ppyx file with preprocessor and compile it with cython.
 
     The algorithm is as following:
@@ -515,7 +517,7 @@ def process_filename(filename, output_filename=None):
     reference_pyx = preprocessed.pop(None)
 
     sources = _run_cython_on_files(pyx_filename, py_banner, banner, output_filename,
-                                   preprocessed)
+                                   preprocessed, module_name)
 
     log('Generating %s ',  output_filename)
     result = generate_merged(sources)
@@ -1026,6 +1028,9 @@ def main():
     parser.add_argument('--ignore-cond', action='store_true', help='Ignore conditional directives (only expand definitions)')
     parser.add_argument('--write-intermediate', action='store_true', help='Save intermediate files produced by preprocessor and Cython')
     parser.add_argument('-o', '--output-file', help='Specify name of generated C file')
+    # TODO: Derive the module name automatically from the input filename relative to the base
+    # dir.
+    parser.add_argument('--module-name', help="specify name of .pyx module")
     parser.add_argument("input")
     options = parser.parse_args()
     filename = options.input
@@ -1060,7 +1065,7 @@ def main():
         sys.stdout.write(preprocess_filename(filename, FakeConfig()))
 
     if run:
-        process_filename(filename, options.output_file)
+        process_filename(filename, options.output_file, options.module_name)
 
 
 if __name__ == '__main__':

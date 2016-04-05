@@ -15,7 +15,7 @@ export LC_ALL=C.UTF-8
 all: src/gevent/libev/gevent.corecext.c src/gevent/gevent.ares.c src/gevent/gevent._semaphore.c
 
 src/gevent/libev/gevent.corecext.c: src/gevent/libev/corecext.ppyx src/gevent/libev/libev.pxd util/cythonpp.py
-	$(PYTHON) util/cythonpp.py -o gevent.corecext.c src/gevent/libev/corecext.ppyx
+	$(PYTHON) util/cythonpp.py -o gevent.corecext.c --module-name gevent.libev.corecext.pyx src/gevent/libev/corecext.ppyx
 	echo '#include "callbacks.c"' >> gevent.corecext.c
 	mv gevent.corecext.* src/gevent/libev/
 
