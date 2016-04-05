@@ -5,7 +5,7 @@ import time
 import util
 
 
-cwd = '../examples/'
+cwd = '../../examples/'
 ignore = ['wsgiserver.py',
           'wsgiserver_ssl.py',
           'webproxy.py',
@@ -24,7 +24,7 @@ time_ranges = {
 
 def main(tests=None):
     if not tests:
-        tests = set(os.path.basename(x) for x in glob.glob('../examples/*.py'))
+        tests = set(os.path.basename(x) for x in glob.glob(cwd + '/*.py'))
         tests = sorted(tests)
 
     failed = []

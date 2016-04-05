@@ -209,7 +209,7 @@ def run(command, **kwargs):
 
 
 class TestServer(unittest.TestCase):
-    cwd = '../examples/'
+    cwd = '../../examples/'
     args = []
     before_delay = 3
     after_delay = 0.5

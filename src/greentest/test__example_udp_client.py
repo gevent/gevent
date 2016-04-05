@@ -17,7 +17,7 @@ class Test_udp_client(TestCase):
         server = DatagramServer('127.0.0.1:9000', handle)
         server.start()
         try:
-            run([sys.executable, '-u', 'udp_client.py', 'Test_udp_client'], timeout=10, cwd='../examples/')
+            run([sys.executable, '-u', 'udp_client.py', 'Test_udp_client'], timeout=10, cwd='../../examples/')
         finally:
             server.close()
         self.assertEqual(log, [b'Test_udp_client'])
