@@ -28,6 +28,7 @@ Libraries
   installation time. Previously, if it wasn't available, a build was
   attempted at every import. This could lead to scattered "gevent"
   directories and undependable results.
+- Update Cython to 0.24.
 
 
 Security

@@ -1,6 +1,6 @@
 setuptools
 wheel
-cython>=0.23.4
+cython>=0.24
 greenlet>=0.4.9
 prospector[with_pyroma]
 coverage>=4.0

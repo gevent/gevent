@@ -468,7 +468,7 @@ if run_make and os.path.exists("Makefile"):
     # NOTE: This is effectively pointless and serves only for
     # documentation/metadata, because we run 'make' *before* we run
     # setup(), so installing cython happens too late.
-    setup_requires = ['cython >= 0.23.4']
+    setup_requires = ['cython >= 0.24']
 else:
     setup_requires = []
 
