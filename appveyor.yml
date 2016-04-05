@@ -124,7 +124,7 @@ install:
   # pip will build them from source using the MSVC compiler matching the
   # target Python version and architecture
   # NOTE: psutil won't install under PyPy.
-  - "%CMD_IN_ENV% pip install -U wheel cython greenlet psutil"
+  - "%CMD_IN_ENV% pip install -U wheel cython==0.23.5 greenlet psutil"
 
   - ps: "if(Test-Path(\"${env:PYTHON}\\bin\")) {ls ${env:PYTHON}\\bin;}"
   - ps: "if(Test-Path(\"${env:PYTHON}\\Scripts\")) {ls ${env:PYTHON}\\Scripts;}"
