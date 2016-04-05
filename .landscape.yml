@@ -24,29 +24,29 @@ ignore-paths:
   - scripts/
   # This file has invalid syntax for Python 3, which is how
   # landscape.io runs things...
-  - gevent/_util_py2.py
+  - src/gevent/_util_py2.py
   # ...and this file has invalid syntax for Python 2, which is how
   # travis currently runs things. sigh.
-  - gevent/_socket3.py
+  - src/gevent/_socket3.py
   # This is vendored with minimal changes
-  - gevent/_tblib.py
+  - src/gevent/_tblib.py
   # likewise
-  - greentest/six.py
+  - src/greentest/six.py
   # This triggers https://github.com/PyCQA/pylint/issues/846 on Travis,
   # but the file is really small, so it's better to skip this one
   # file than disable that whole check.
-  - gevent/core.py
+  - src/gevent/core.py
   # sadly, this one is complicated
   - setup.py
-  - greentest/getaddrinfo_module.py
+  - src/greentest/getaddrinfo_module.py
 ignore-patterns:
   # disabled code
-  - ^greentest/xtest_.*py
+  - ^src/greentest/xtest_.*py
   # standard library code
-  - ^greentest/2.*
-  - ^greentest/3.*
+  - ^src/greentest/2.*
+  - ^src/greentest/3.*
   # benchmarks that aren't used/changed much
-  - ^greentest/bench_.*py
+  - ^src/greentest/bench_.*py
 
 pyroma:
   run: true
