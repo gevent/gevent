@@ -1,6 +1,6 @@
 IF "%PYTHON_EXE%" == "python" (
     %PYEXE% util\cythonpp.py -o gevent.corecext.c src\gevent\corecext.ppyx
-	type gevent\callbacks.c >> gevent.corecext.c
+	type src\gevent\callbacks.c >> gevent.corecext.c
     move gevent.corecext.* src\gevent
 )
 cython -o gevent.ares.c src\gevent\ares.pyx
