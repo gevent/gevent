@@ -75,6 +75,9 @@ if sys.platform == 'win32':
             # This one sometimes times out, often after output "The process with PID XXX could not be
             # terminated. Reason: There is no running instance of the task."
             'FLAKY test__example_portforwarder.py',
+            # This one sometimes randomly closes connections, but no indication
+            # of a server crash, only a client side close.
+            'FLAKY test__server_pywsgi.py',
             # We only use FileObjectThread on Win32. Sometimes the
             # visibility of the 'close' operation, which happens in a
             # background thread, doesn't make it to the foreground
@@ -85,14 +88,14 @@ if sys.platform == 'win32':
             'FLAKY test__fileobject.py',
         ]
 
-        if PY27:
-            FAILING_TESTS += [
-                # This sometimes fails with a timeout, meaning
-                # one of the tests hangs (test_fullduplex, maybe?).
-                # But only sometimes, and only seen on Py2.7, beginning
-                # ~2016-02-24
-                'FLAKY test__socket.py',
-            ]
+        FAILING_TESTS += [
+            # This sometimes fails with a timeout, meaning
+            # one of the tests hangs (test_fullduplex, maybe?).
+            # But only sometimes, and only seen on Py2.7, beginning
+            # ~2016-02-24.
+            # Beginning Apr 2016 sometimes also seen with Py 3.5
+            'FLAKY test__socket.py',
+        ]
 
         if PY3:
             FAILING_TESTS += [
