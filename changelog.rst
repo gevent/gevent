@@ -12,6 +12,9 @@ Incompatible Changes
 - Support for Python 2.6 has been removed. See :pr:`766`.
 - Remove module ``gevent.coros`` which was replaced by ``gevent.lock``
   and has been deprecated since 1.0b2.
+- The internal implementation modules ``gevent.corecext`` and
+  ``gevent.corecffi`` have been moved. Please import from
+  ``gevent.core`` instead.
 
 Libraries
 ---------
