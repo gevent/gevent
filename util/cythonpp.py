@@ -914,7 +914,7 @@ def run_cython(filename, sourcehash, output_filename, banner, comment, cache=Non
     result = cache.get(sourcehash) if cache is not None else None
     # Use an array for the argument so that filename arguments are properly
     # quoted according to local convention
-    command = [CYTHON, '-o', output_filename, '-I', 'gevent', filename]
+    command = [CYTHON, '-o', output_filename, '-I', os.path.join('src', 'gevent'), filename]
     if result is not None:
         log('Reusing %s  # %s', command, comment)
         return result
