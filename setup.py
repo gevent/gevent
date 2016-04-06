@@ -3,22 +3,19 @@
 from __future__ import print_function
 import sys
 import os
-import re
-import shutil
-import traceback
-from os.path import join, abspath, basename, dirname
-from subprocess import check_call
-from glob import glob
+
+from _setuputils import read
+from _setuputils import read_version
+from _setuputils import system
+from _setuputils import PYPY, WIN, CFFI_WIN_BUILD_ANYWAY
+from _setuputils import ConfiguringBuildExt
+from _setuputils import BuildFailed
 
 # setuptools is *required* on Windows
 # (https://bugs.python.org/issue23246) and for PyPy. No reason not to
 # use it everywhere.
 from setuptools import Extension, setup
 from setuptools import find_packages
-
-PYPY = hasattr(sys, 'pypy_version_info')
-WIN = sys.platform.startswith('win')
-CFFI_WIN_BUILD_ANYWAY = os.environ.get("PYPY_WIN_BUILD_ANYWAY")
 
 if PYPY and WIN and not CFFI_WIN_BUILD_ANYWAY:
     # We can't properly handle (hah!) file-descriptors and
@@ -39,228 +36,17 @@ if WIN:
 if sys.version_info[:2] < (2, 7):
     raise Exception("Please install gevent 1.1 for Python 2.6")
 
-import distutils
-import distutils.sysconfig  # to get CFLAGS to pass into c-ares configure script
-
-
-from distutils.command.build_ext import build_ext
 from distutils.command.sdist import sdist as _sdist
-from distutils.errors import CCompilerError, DistutilsExecError, DistutilsPlatformError
-ext_errors = (CCompilerError, DistutilsExecError, DistutilsPlatformError, IOError)
+
+__version__ = read_version()
 
 
-with open('src/gevent/__init__.py') as _:
-    __version__ = re.search(r"__version__\s*=\s*'(.*)'", _.read(), re.M).group(1)
-assert __version__
+from _setuplibev import libev_configure_command
+from _setuplibev import LIBEV_EMBED
+from _setuplibev import CORE
 
+from _setupares import ARES
 
-def _quoted_abspath(p):
-    return '"' + abspath(p) + '"'
-
-
-def parse_environ(key):
-    value = os.environ.get(key)
-    if not value:
-        return
-    value = value.lower().strip()
-    if value in ('1', 'true', 'on', 'yes'):
-        return True
-    elif value in ('0', 'false', 'off', 'no'):
-        return False
-    raise ValueError('Environment variable %r has invalid value %r. Please set it to 1, 0 or an empty string' % (key, value))
-
-
-def get_config_value(key, defkey, path):
-    value = parse_environ(key)
-    if value is None:
-        value = parse_environ(defkey)
-    if value is not None:
-        return value
-    return os.path.exists(path)
-
-
-LIBEV_EMBED = get_config_value('LIBEV_EMBED', 'EMBED', 'deps/libev')
-CARES_EMBED = get_config_value('CARES_EMBED', 'EMBED', 'deps/c-ares')
-
-define_macros = []
-libraries = []
-# Configure libev in place; but cp the config.h to the old directory;
-# if we're building a CPython extension, the old directory will be
-# the build/temp.XXX/libev/ directory. If we're building from a
-# source checkout on pypy, OLDPWD will be the location of setup.py
-# and the PyPy branch will clean it up.
-libev_configure_command = ' '.join([
-    "(cd ", _quoted_abspath('deps/libev/'),
-    " && /bin/sh ./configure ",
-    " && cp config.h \"$OLDPWD\"",
-    ")",
-    '> configure-output.txt'
-])
-
-# See #616, trouble building for a 32-bit python against a 64-bit platform
-_config_vars = distutils.sysconfig.get_config_var("CFLAGS")
-if _config_vars and "m32" in _config_vars:
-    _m32 = 'CFLAGS="' + os.getenv('CFLAGS', '') + ' -m32" '
-else:
-    _m32 = ''
-
-# Use -r, not -e, for support of old solaris. See https://github.com/gevent/gevent/issues/777
-ares_configure_command = ' '.join(["(cd ", _quoted_abspath('deps/c-ares/'),
-                                   " && if [ -r ares_build.h ]; then cp ares_build.h ares_build.h.orig; fi ",
-                                   " && /bin/sh ./configure --disable-dependency-tracking " + _m32 + "CONFIG_COMMANDS= ",
-                                   " && cp ares_config.h ares_build.h \"$OLDPWD\" ",
-                                   " && mv ares_build.h.orig ares_build.h)",
-                                   "> configure-output.txt"])
-
-
-if WIN:
-    libraries += ['ws2_32']
-    define_macros += [('FD_SETSIZE', '1024'), ('_WIN32', '1')]
-
-
-def expand(*lst):
-    result = []
-    for item in lst:
-        for name in sorted(glob(item)):
-            result.append(name)
-    return result
-
-
-CORE = Extension(name='gevent.libev.corecext',
-                 sources=['src/gevent/libev/gevent.corecext.c'],
-                 include_dirs=['deps/libev'] if LIBEV_EMBED else [],
-                 libraries=libraries,
-                 define_macros=define_macros,
-                 depends=expand('src/gevent/libev/callbacks.*', 'src/gevent/libev/stathelper.c', 'src/gevent/libev/libev*.h', 'deps/libev/*.*'))
-# QQQ libev can also use -lm, however it seems to be added implicitly
-
-ARES = Extension(name='gevent.ares',
-                 sources=['src/gevent/gevent.ares.c'],
-                 include_dirs=['deps/c-ares'] if CARES_EMBED else [],
-                 libraries=libraries,
-                 define_macros=define_macros,
-                 depends=expand('src/gevent/dnshelper.c', 'src/gevent/cares_*.*'))
-ARES.optional = True
-
-
-def make_universal_header(filename, *defines):
-    defines = [('#define %s ' % define, define) for define in defines]
-    with open(filename, 'r') as f:
-        lines = f.read().split('\n')
-    ifdef = 0
-    with open(filename, 'w') as f:
-        for line in lines:
-            if line.startswith('#ifdef'):
-                ifdef += 1
-            elif line.startswith('#endif'):
-                ifdef -= 1
-            elif not ifdef:
-                for prefix, define in defines:
-                    if line.startswith(prefix):
-                        line = '#ifdef __LP64__\n#define %s 8\n#else\n#define %s 4\n#endif' % (define, define)
-                        break
-            print(line, file=f)
-
-
-def _system(cmd):
-    sys.stdout.write('Running %r in %s\n' % (cmd, os.getcwd()))
-    return check_call(cmd, shell=True)
-
-
-def system(cmd):
-    if _system(cmd):
-        sys.exit(1)
-
-
-def configure_libev(bext, ext):
-    if WIN:
-        CORE.define_macros.append(('EV_STANDALONE', '1'))
-        return
-
-    bdir = os.path.join(bext.build_temp, 'libev')
-    ext.include_dirs.insert(0, bdir)
-
-    if not os.path.isdir(bdir):
-        os.makedirs(bdir)
-
-    cwd = os.getcwd()
-    os.chdir(bdir)
-    try:
-        if os.path.exists('config.h'):
-            return
-        rc = _system(libev_configure_command)
-        if rc == 0 and sys.platform == 'darwin':
-            make_universal_header('config.h', 'SIZEOF_LONG', 'SIZEOF_SIZE_T', 'SIZEOF_TIME_T')
-    finally:
-        os.chdir(cwd)
-
-
-def configure_ares(bext, ext):
-    bdir = os.path.join(bext.build_temp, 'c-ares')
-    ext.include_dirs.insert(0, bdir)
-
-    if not os.path.isdir(bdir):
-        os.makedirs(bdir)
-
-    if WIN:
-        shutil.copy("deps\\c-ares\\ares_build.h.dist", os.path.join(bdir, "ares_build.h"))
-        return
-
-    cwd = os.getcwd()
-    os.chdir(bdir)
-    try:
-        if os.path.exists('ares_config.h') and os.path.exists('ares_build.h'):
-            return
-        try:
-            rc = _system(ares_configure_command)
-        except:
-            with open('configure-output.txt', 'r') as t:
-                print(t.read(), file=sys.stderr)
-            raise
-        if rc == 0 and sys.platform == 'darwin':
-            make_universal_header('ares_build.h', 'CARES_SIZEOF_LONG')
-            make_universal_header('ares_config.h', 'SIZEOF_LONG', 'SIZEOF_SIZE_T', 'SIZEOF_TIME_T')
-    finally:
-        os.chdir(cwd)
-
-
-if LIBEV_EMBED:
-    CORE.define_macros += [('LIBEV_EMBED', '1'),
-                           ('EV_COMMON', ''),  # we don't use void* data
-                           # libev watchers that we don't use currently:
-                           ('EV_CLEANUP_ENABLE', '0'),
-                           ('EV_EMBED_ENABLE', '0'),
-                           ("EV_PERIODIC_ENABLE", '0')]
-    CORE.configure = configure_libev
-    if sys.platform == "darwin":
-        os.environ["CPPFLAGS"] = ("%s %s" % (os.environ.get("CPPFLAGS", ""), "-U__llvm__")).lstrip()
-    if os.environ.get('GEVENTSETUP_EV_VERIFY') is not None:
-        CORE.define_macros.append(('EV_VERIFY', os.environ['GEVENTSETUP_EV_VERIFY']))
-else:
-    CORE.libraries.append('ev')
-
-
-if CARES_EMBED:
-    ARES.sources += expand('deps/c-ares/*.c')
-    # Strip the standalone binaries that would otherwise
-    # cause linking issues
-    for bin_c in ('acountry', 'adig', 'ahost'):
-        try:
-            ARES.sources.remove('deps/c-ares/' + bin_c + '.c')
-        except ValueError:
-            pass
-    ARES.configure = configure_ares
-    if WIN:
-        ARES.libraries += ['advapi32']
-        ARES.define_macros += [('CARES_STATICLIB', '')]
-    else:
-        ARES.define_macros += [('HAVE_CONFIG_H', '')]
-        if sys.platform != 'darwin':
-            ARES.libraries += ['rt']
-    ARES.define_macros += [('CARES_EMBED', '1')]
-else:
-    ARES.libraries.append('cares')
-    ARES.define_macros += [('HAVE_NETDB_H', '')]
 
 _ran_make = []
 
@@ -301,70 +87,6 @@ class sdist(_sdist):
                 os.rename('Makefile.ext', 'Makefile')
 
 
-class my_build_ext(build_ext):
-
-    def gevent_prepare(self, ext):
-        configure = getattr(ext, 'configure', None)
-        if configure:
-            configure(self, ext)
-
-    def build_extension(self, ext):
-        self.gevent_prepare(ext)
-        try:
-            result = build_ext.build_extension(self, ext)
-        except ext_errors:
-            if getattr(ext, 'optional', False):
-                raise BuildFailed
-            else:
-                raise
-        # if not PYPY:
-        #     self.gevent_symlink(ext)
-        return result
-
-    # def gevent_symlink(self, ext):
-    #     # hack: create a symlink from build/../core.so to gevent/core.so
-    #     # to prevent "ImportError: cannot import name core" failures
-    #     try:
-    #         fullname = self.get_ext_fullname(ext.name)
-    #         modpath = fullname.split('.')
-    #         filename = self.get_ext_filename(ext.name)
-    #         filename = os.path.split(filename)[-1]
-    #         if not self.inplace:
-    #             filename = os.path.join(*modpath[:-1] + [filename])
-    #             path_to_build_core_so = os.path.join(self.build_lib, filename)
-    #             path_to_core_so = join('gevent', basename(path_to_build_core_so))
-    #             link(path_to_build_core_so, path_to_core_so)
-    #     except Exception:
-    #         traceback.print_exc()
-
-
-def link(source, dest):
-    source = abspath(source)
-    dest = abspath(dest)
-    if source == dest:
-        return
-    try:
-        os.unlink(dest)
-    except OSError:
-        pass
-    try:
-        os.symlink(source, dest)
-        sys.stdout.write('Linking %s to %s\n' % (source, dest))
-    except (OSError, AttributeError):
-        sys.stdout.write('Copying %s to %s\n' % (source, dest))
-        shutil.copyfile(source, dest)
-
-
-class BuildFailed(Exception):
-    pass
-
-
-def read(name, *args):
-    try:
-        with open(join(dirname(__file__), name)) as f:
-            return f.read(*args)
-    except OSError:
-        return ''
 
 cffi_modules = ['src/gevent/libev/_corecffi_build.py:ffi']
 
@@ -410,22 +132,19 @@ if ((len(sys.argv) >= 2
     or __name__ != '__main__'):
     _BUILDING = False
     ext_modules = []
-    include_package_data = PYPY
+    include_package_data = PYPY # XXX look into this. we're excluding c files? Why? Old pypy builds? not needed anymore.
     run_make = False
 elif PYPY:
     if not WIN:
         # We need to configure libev because the CORE Extension
         # won't do it (since we're not building it)
         system(libev_configure_command)
-        # Then get rid of the extra copy created in place
-        # XXX no more
-        #system('rm config.h')
+
     # NOTE that we're NOT adding the distutils extension module, as
     # doing so compiles the module already: import gevent._corecffi_build
     # imports gevent, which imports the hub, which imports the core,
     # which compiles the module in-place. Instead we use the setup-time
     # support of cffi_modules
-    #from gevent import _corecffi_build
     ext_modules = [
         #_corecffi_build.ffi.distutils_extension(),
         ARES,
@@ -489,7 +208,7 @@ def run_setup(ext_modules, run_make):
         packages=find_packages('src'),
         include_package_data=include_package_data,
         ext_modules=ext_modules,
-        cmdclass=dict(build_ext=my_build_ext, sdist=sdist),
+        cmdclass=dict(build_ext=ConfiguringBuildExt, sdist=sdist),
         install_requires=install_requires,
         setup_requires=setup_requires,
         zip_safe=False,

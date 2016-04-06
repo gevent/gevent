@@ -17,6 +17,7 @@ include Makefile.ext
 include known_failures.py
 include *.yml
 include *.txt
+include _setup*.py
 
 include tox.ini
 include .pep8
