@@ -173,4 +173,6 @@ class Extension(_Extension):
     def __init__(self, *args, **kwargs):
         self.libraries = []
         self.define_macros = []
-        super(Extension, self).__init__(*args, **kwargs)
+        # Python 2 has this as an old-style class for some reason
+        # so super() doesn't work.
+        _Extension.__init__(self, *args, **kwargs) # pylint:disable=no-member,non-parent-init-called
