@@ -74,7 +74,7 @@ deps/libuv/Makefile
 deps/libuv/config.log
 deps/libuv/config.h
 deps/libuv/config.status
-deps/libuv/libtool
+deps/libduv/libtool
 deps/libuv/stamp-h1
 deps/libuv/.libs
 deps/libuv/*.lo

@@ -127,6 +127,10 @@ def configure_libuv(_bext, _ext):
                    cwd=libuv_dir,
                    env=env)
         else:
+            # autogen: requires automake and libtool installed
+            system(['./autogen.sh'],
+                   cwd=libuv_dir,
+                   env=env)
             system(['./configure', '--disable-shared'],
                    cwd=libuv_dir,
                    env=env)
@@ -141,4 +145,4 @@ def configure_libuv(_bext, _ext):
         log.info('No need to build libuv.')
 
 if LIBUV_EMBED:
-    LIBUV.configureu = configure_libuv
+    LIBUV.configure = configure_libuv
