@@ -61,10 +61,10 @@ void vfd_free(int);
 
 include_dirs = [
     thisdir, # libev_vfd.h
-    os.path.abspath(os.path.join(thisdir, '..', 'libev')),
+    os.path.abspath(os.path.join(thisdir, '..', '..', '..', 'deps', 'libev')),
 ]
 ffi.cdef(_cdef)
-ffi.set_source('gevent._corecffi', _source, include_dirs=include_dirs)
+ffi.set_source('gevent.libev._corecffi', _source, include_dirs=include_dirs)
 
 if __name__ == '__main__':
     # XXX: Note, on Windows, we would need to specify the external libraries

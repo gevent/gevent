@@ -44,7 +44,7 @@ if __name__ == '__main__':
         sys.path.append('.')
         base = os.path.dirname(gevent.__file__)
         print(base)
-        os.chdir('..')
+        os.chdir('../..')
 
         globs = {'myfunction': myfunction, 'gevent': gevent, 'socket': socket}
 

@@ -12,48 +12,56 @@ export PATH:=$(BUILD_RUNTIMES)/snakepit:$(TOOLS):$(PATH)
 export LC_ALL=C.UTF-8
 
 
-all: gevent/gevent.corecext.c gevent/gevent.ares.c gevent/gevent._semaphore.c
+all: src/gevent/libev/gevent.corecext.c src/gevent/gevent.ares.c src/gevent/gevent._semaphore.c
 
-gevent/gevent.corecext.c: gevent/corecext.ppyx gevent/libev.pxd util/cythonpp.py
-	$(PYTHON) util/cythonpp.py -o gevent.corecext.c gevent/corecext.ppyx
+src/gevent/libev/gevent.corecext.c: src/gevent/libev/corecext.ppyx src/gevent/libev/libev.pxd util/cythonpp.py
+	$(PYTHON) util/cythonpp.py -o gevent.corecext.c --module-name gevent.libev.corecext.pyx src/gevent/libev/corecext.ppyx
 	echo '#include "callbacks.c"' >> gevent.corecext.c
-	mv gevent.corecext.* gevent/
+	mv gevent.corecext.* src/gevent/libev/
 
-gevent/gevent.ares.c: gevent/ares.pyx gevent/*.pxd
-	$(CYTHON) -o gevent.ares.c gevent/ares.pyx
-	mv gevent.ares.* gevent/
+src/gevent/gevent.ares.c: src/gevent/ares.pyx src/gevent/*.pxd
+	$(CYTHON) -o gevent.ares.c src/gevent/ares.pyx
+	mv gevent.ares.* src/gevent/
 
-gevent/gevent._semaphore.c: gevent/_semaphore.py gevent/_semaphore.pxd
+src/gevent/gevent._semaphore.c: src/gevent/_semaphore.py src/gevent/_semaphore.pxd
 # On PyPy, if we wanted to use Cython to compile _semaphore.py, we'd
 # need to have _semaphore named as a .pyx file so it doesn't get
 # loaded in preference to the .so. (We want to keep the definitions
 # separate in a .pxd file for ease of reading, and that only works
 # with .py files, so we'd have to copy them back and forth.)
-#	cp gevent/_semaphore.pyx gevent/_semaphore.py
-	$(CYTHON) -o gevent._semaphore.c gevent/_semaphore.py
-	mv gevent._semaphore.* gevent/
-#	rm gevent/_semaphore.py
+#	cp src/gevent/_semaphore.pyx src/gevent/_semaphore.py
+	$(CYTHON) -o gevent._semaphore.c src/gevent/_semaphore.py
+	mv gevent._semaphore.* src/gevent/
+#	rm src/gevent/_semaphore.py
 
 clean:
-	rm -f corecext.pyx gevent/corecext.pyx
-	rm -f gevent.corecext.c gevent.corecext.h gevent/gevent.corecext.c gevent/gevent.corecext.h
-	rm -f gevent.ares.c gevent.ares.h gevent/gevent.ares.c gevent/gevent.ares.h
-	rm -f gevent._semaphore.c gevent._semaphore.h gevent/gevent._semaphore.c gevent/gevent._semaphore.h
-	rm -f gevent/*.so
-	rm -rf gevent/__pycache__
-	rm -rf gevent/*.pyc
+	rm -f corecext.pyx src/gevent/libev/corecext.pyx
+	rm -f gevent.corecext.c gevent.corecext.h src/gevent/libev/gevent.corecext.c src/gevent/libev/gevent.corecext.h
+	rm -f gevent.ares.c gevent.ares.h src/gevent/gevent.ares.c src/gevent/gevent.ares.h
+	rm -f gevent._semaphore.c gevent._semaphore.h src/gevent/gevent._semaphore.c src/gevent/gevent._semaphore.h
+	rm -f src/gevent/*.so src/gevent/libev/*.so
+	rm -rf src/gevent/libev/*.o src/gevent/*.o
+	rm -rf src/gevent/__pycache__ src/greentest/__pycache__ src/gevent/libev/__pycache__
+	rm -rf src/gevent/*.pyc src/greentest/*.pyc src/gevent/libev/*.pyc
+	rm -rf src/greentest/htmlcov src/greentest/.coverage
+	rm -rf build
+
+distclean: clean
+	rm -rf dist
+	rm -rf deps/libev/config.h deps/libev/config.log deps/libev/config.status deps/libev/.deps deps/libev/.libs
+	rm -rf deps/c-ares/config.h deps/c-ares/config.log deps/c-ares/config.status deps/c-ares/.deps deps/c-ares/.libs
 
 doc:
 	cd doc && PYTHONPATH=.. make html
 
 whitespace:
-	! find . -not -path "*.pem" -not -path "./.eggs/*" -not -path "./greentest/htmlcov/*" -not -path "./greentest/.coverage.*" -not -path "./.tox/*" -not -path "*/__pycache__/*" -not -path "*.so" -not -path "*.pyc" -not -path "./.git/*" -not -path "./build/*" -not -path "./libev/*" -not -path "./gevent/libev/*" -not -path "./gevent.egg-info/*" -not -path "./dist/*" -not -path "./.DS_Store" -not -path "./c-ares/*" -not -path "./gevent/gevent.*.[ch]" -not -path "./gevent/corecext.pyx" -not -path "./doc/_build/*" -not -path "./doc/mytheme/static/*" -type f | xargs egrep -l " $$"
+	! find . -not -path "*.pem" -not -path "./.eggs/*" -not -path "./src/greentest/htmlcov/*" -not -path "./src/greentest/.coverage.*" -not -path "./.tox/*" -not -path "*/__pycache__/*" -not -path "*.so" -not -path "*.pyc" -not -path "./.git/*" -not -path "./build/*"  -not -path "./src/gevent/libev/*" -not -path "./src/gevent.egg-info/*" -not -path "./dist/*" -not -path "./.DS_Store" -not -path "./deps/*" -not -path "./src/gevent/gevent.*.[ch]" -not -path "./src/gevent/corecext.pyx" -not -path "./doc/_build/*" -not -path "./doc/mytheme/static/*" -type f | xargs egrep -l " $$"
 
 prospector:
 	which prospector
 	which pylint
 # debugging
-#	pylint --rcfile=.pylintrc --init-hook="import sys, code; sys.excepthook = lambda exc, exc_type, tb: print(tb.tb_next.tb_next.tb_next.tb_next.tb_next.tb_next.tb_next.tb_next.tb_next.tb_next.tb_frame.f_locals['self'])" gevent greentest/* || true
+#	pylint --rcfile=.pylintrc --init-hook="import sys, code; sys.excepthook = lambda exc, exc_type, tb: print(tb.tb_next.tb_next.tb_next.tb_next.tb_next.tb_next.tb_next.tb_next.tb_next.tb_next.tb_frame.f_locals['self'])" gevent src/greentest/* || true
 	${PYTHON} scripts/gprospector.py -X
 
 lint: whitespace prospector
@@ -66,18 +74,18 @@ test_prelim:
 	make bench
 
 toxtest: test_prelim
-	cd greentest && GEVENT_RESOLVER=thread ${PYTHON} testrunner.py --config ../known_failures.py
+	cd src/greentest && GEVENT_RESOLVER=thread ${PYTHON} testrunner.py --config known_failures.py
 
 fulltoxtest: test_prelim
-	cd greentest && GEVENT_RESOLVER=thread ${PYTHON} testrunner.py --config ../known_failures.py
-	cd greentest && GEVENT_RESOLVER=ares GEVENTARES_SERVERS=8.8.8.8 ${PYTHON} testrunner.py --config ../known_failures.py --ignore tests_that_dont_use_resolver.txt
-	cd greentest && GEVENT_FILE=thread ${PYTHON} testrunner.py --config ../known_failures.py `grep -l subprocess test_*.py`
+	cd src/greentest && GEVENT_RESOLVER=thread ${PYTHON} testrunner.py --config known_failures.py
+	cd src/greentest && GEVENT_RESOLVER=ares GEVENTARES_SERVERS=8.8.8.8 ${PYTHON} testrunner.py --config known_failures.py --ignore tests_that_dont_use_resolver.txt
+	cd src/greentest && GEVENT_FILE=thread ${PYTHON} testrunner.py --config known_failures.py `grep -l subprocess test_*.py`
 
 leaktest:
 	GEVENTSETUP_EV_VERIFY=3 GEVENTTEST_LEAKCHECK=1 make fulltoxtest
 
 bench:
-	${PYTHON} greentest/bench_sendall.py
+	${PYTHON} src/greentest/bench_sendall.py
 
 
 travis_test_linters:
@@ -85,9 +93,9 @@ travis_test_linters:
 	GEVENTTEST_COVERAGE=1 make leaktest
 # because we set parallel=true, each run produces new and different coverage files; they all need
 # to be combined
-	coverage combine . greentest/
+	coverage combine . src/greentest/
 
-	coveralls --rcfile=greentest/.coveragerc
+	coveralls --rcfile=src/greentest/.coveragerc
 
 
 .PHONY: clean all doc prospector whitespace lint travistest travis
@@ -171,6 +179,6 @@ test-py27-cffi: $(PY27)
 	GEVENT_CORE_CFFI_ONLY=1 PYTHON=python2.7 PATH=$(BUILD_RUNTIMES)/versions/python2.7/bin:$(PATH) make develop toxtest
 
 test-py27-noembed: $(PY27)
-	cd libev && ./configure --disable-dependency-tracking && make
-	cd c-ares && ./configure --disable-dependency-tracking && make
-	CPPFLAGS="-Ilibev -Ic-ares" LDFLAGS="-Llibev/.libs -Lc-ares/.libs" LD_LIBRARY_PATH="$(PWD)/libev/.libs:$(PWD)/c-ares/.libs" EMBED=0 GEVENT_CORE_CEXT_ONLY=1 PYTHON=python2.7 PATH=$(BUILD_RUNTIMES)/versions/python2.7/bin:$(PATH) make develop toxtest
+	cd deps/libev && ./configure --disable-dependency-tracking && make
+	cd deps/c-ares && ./configure --disable-dependency-tracking && make
+	CPPFLAGS="-Ideps/libev -Ideps/c-ares" LDFLAGS="-Ldeps/libev/.libs -Ldeps/c-ares/.libs" LD_LIBRARY_PATH="$(PWD)/deps/libev/.libs:$(PWD)/deps/c-ares/.libs" EMBED=0 GEVENT_CORE_CEXT_ONLY=1 PYTHON=python2.7 PATH=$(BUILD_RUNTIMES)/versions/python2.7/bin:$(PATH) make develop toxtest

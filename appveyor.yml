@@ -145,7 +145,7 @@ build_script:
 
 test_script:
   # Run the project tests
-  - "cd greentest && %PYEXE% testrunner.py --config ../known_failures.py && cd .."
+  - "cd src/greentest && %PYEXE% testrunner.py --config known_failures.py && cd ../.."
 
 after_test:
   # We already built the wheel during build_script, because it's
