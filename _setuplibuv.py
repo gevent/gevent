@@ -61,6 +61,7 @@ def prepare_windows_env(env):
         env.pop('PYTHON', None)
 
     if env.get('PYTHON'):
+        log.info("Using python from env %s", env['PYTHON'])
         return  # Already manually set by user.
 
     if sys.version_info[:2] == (2, 7):
