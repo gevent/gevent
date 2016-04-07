@@ -14,6 +14,7 @@ import struct
 
 __all__ = []
 
+WIN = sys.platform.startswith('win32')
 
 def system_bits():
     return struct.calcsize('P') * 8
@@ -40,9 +41,11 @@ _source = read_source('_corecffi_source.c')
 
 _cdef = _cdef.replace('#define GEVENT_ST_NLINK_T int', '')
 _cdef = _cdef.replace('#define GEVENT_STRUCT_DONE int', '')
+_cdef = _cdef.replace('#define GEVENT_UV_OS_SOCK_T int', '')
+
 _cdef = _cdef.replace('GEVENT_ST_NLINK_T', st_nlink_type())
 _cdef = _cdef.replace("GEVENT_STRUCT_DONE _;", '...;')
-
+_cdef = _cdef.replace("GEVENT_UV_OS_SOCK_T", 'int' if not WIN else 'SOCKET')
 
 # if sys.platform.startswith('win'):
 #     # We must have the vfd_open, etc, functions on
