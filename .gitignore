@@ -56,6 +56,7 @@ deps/c-ares/test/config.log
 deps/c-ares/test/config.status
 deps/c-ares/test/libtool
 deps/c-ares/test/stamp-h1
+
 deps/libev/.deps
 deps/libev/Makefile
 deps/libev/config.log
@@ -67,6 +68,19 @@ deps/libev/.libs
 deps/libev/*.lo
 deps/libev/*.la
 deps/libev/*.o
+
+deps/libuv/.deps
+deps/libuv/Makefile
+deps/libuv/config.log
+deps/libuv/config.h
+deps/libuv/config.status
+deps/libuv/libtool
+deps/libuv/stamp-h1
+deps/libuv/.libs
+deps/libuv/*.lo
+deps/libuv/*.la
+deps/libuv/*.o
+
 
 # running setup.py on PyPy
 config.h

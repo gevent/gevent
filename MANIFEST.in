@@ -44,6 +44,7 @@ recursive-exclude src/greentest .coverage
 prune src/greentest/htmlcov
 recursive-exclude deps/c-ares stamp-h? ares_build.h.orig
 prune deps/libev/.deps
+prune deps/libuv/.deps
 recursive-exclude deps/libev Makefile libtool stamp-h? config.h
 # This is the output of _corecffi_build.py and may be particular
 # to each CFFI version/platform

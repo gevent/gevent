@@ -54,6 +54,8 @@ from _setuplibev import CORE
 
 from _setupares import ARES
 
+from _setuplibuv import LIBUV
+
 SEMAPHORE = Extension(name="gevent._semaphore",
                       sources=["src/gevent/gevent._semaphore.c"])
 
@@ -61,9 +63,13 @@ EXT_MODULES = [
     CORE,
     ARES,
     SEMAPHORE,
+    LIBUV
 ]
 
-cffi_modules = ['src/gevent/libev/_corecffi_build.py:ffi']
+cffi_modules = [
+    'src/gevent/libev/_corecffi_build.py:ffi',
+    'src/gevent/libuv/_corecffi_build.py:ffi',
+]
 
 if PYPY:
     install_requires = []
