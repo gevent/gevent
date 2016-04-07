@@ -134,7 +134,7 @@ def _system(cmd, cwd=None, env=None):
 
 
 def system(cmd, cwd=None, env=None):
-    if _system(cmd, cwd=cwd, env=None):
+    if _system(cmd, cwd=cwd, env=env):
         sys.exit(1)
 
 

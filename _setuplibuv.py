@@ -70,7 +70,7 @@ def prepare_windows_env(env):
     # Try if `python` on PATH is the right one. If we would execute
     # `python` directly the current executable might be used so we
     # delegate this to cmd.
-    cmd = ['cmd.exe', '/C',  'python', '-c', 'import sys; '
+    cmd = ['cmd.exe', '/C', 'python', '-c', 'import sys; '
            'v = str(sys.version_info[:2]); sys.stdout.write(v); '
            'sys.stdout.flush()']
     try:
@@ -118,7 +118,10 @@ def configure_libuv(_bext, _ext):
     def build_libuv():
         cflags = '-fPIC'
         env = os.environ.copy()
-        env['CFLAGS'] = ' '.join(x for x in (cflags, env.get('CFLAGS', None), env.get('ARCHFLAGS', None)) if x)
+        env['CFLAGS'] = ' '.join(x for x in (cflags,
+                                             env.get('CFLAGS', None),
+                                             env.get('ARCHFLAGS', None))
+                                 if x)
         # Since we're building a static library, if link-time-optimization is requested, it
         # results in failure to properly create the library archive. This goes unnoticed on
         # OS X until import time because of '-undefined dynamic_lookup'. On the raspberry
@@ -126,7 +129,7 @@ def configure_libuv(_bext, _ext):
         if '-flto' in env['CFLAGS']:
             log.info("Removing LTO")
             env['CFLAGS'] = env['CFLAGS'].replace('-flto', '')
-        log.info('Building libuv...')
+        log.info('Building libuv with cflags %s', env['CFLAGS'])
         if WIN:
             prepare_windows_env(env)
             libuv_arch = {'32bit': 'x86', '64bit': 'x64'}[platform.architecture()[0]]
