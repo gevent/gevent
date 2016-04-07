@@ -57,7 +57,9 @@ _cdef = _cdef.replace("GEVENT_STRUCT_DONE _;", '...;')
 # void vfd_free(int);
 # """
 
-libuv_dir = os.path.abspath(os.path.join(thisdir, '..', '..', '..', 'deps', 'libuv'))
+setup_py_dir = os.path.abspath(os.path.join(thisdir, '..', '..', '..'))
+libuv_dir = os.path.abspath(os.path.join(setup_py_dir, 'deps', 'libuv'))
+sys.path.append(setup_py_dir)
 
 include_dirs = [
     thisdir, # libev_vfd.h
@@ -69,41 +71,16 @@ library_dirs = [
     os.path.join(libuv_dir, '.libs')
 ]
 
-# XXX: This is all duplicated from _setuplibuv.py
-if sys.platform.startswith('win'):
-    libuv_lib = os.path.join(libuv_dir, 'Release', 'lib', 'libuv.lib')
-    extra_link_args = ['/NODEFAULTLIB:libcmt', '/LTCG']
-else:
-    libuv_lib = os.path.join(libuv_dir, '.libs', 'libuv.a')
-    extra_link_args = []
-
-LIBUV_LIBRARIES = []
-if os.path.exists(libuv_lib):
-    extra_objects = [libuv_lib]
-else:
-    # Must be non-embedded
-    extra_objects = []
-    LIBUV_LIBRARIES = ['uv']
-
-if sys.platform.startswith('linux'):
-    LIBUV_LIBRARIES.append('rt')
-elif sys.platform.startswith("win"):
-    LIBUV_LIBRARIES.append('advapi32')
-    LIBUV_LIBRARIES.append('iphlpapi')
-    LIBUV_LIBRARIES.append('psapi')
-    LIBUV_LIBRARIES.append('shell32')
-    LIBUV_LIBRARIES.append('userenv')
-    LIBUV_LIBRARIES.append('ws2_32')
-elif sys.platform.startswith('freebsd'):
-    LIBUV_LIBRARIES.append('kvm')
+from _setuplibuv import LIBUV_LIBRARIES # pylint:disable=import-error
+from _setuplibuv import LIBUV # pylint:disable=import-error
 
 ffi.cdef(_cdef)
 ffi.set_source('gevent.libuv._corecffi', _source,
                include_dirs=include_dirs,
                library_dirs=library_dirs,
-               extra_objects=extra_objects,
-               extra_link_args=extra_link_args,
-               libraries=LIBUV_LIBRARIES)
+               extra_objects=list(LIBUV.extra_objects),
+               extra_link_args=list(LIBUV.extra_link_args),
+               libraries=list(LIBUV_LIBRARIES))
 
 if __name__ == '__main__':
     ffi.compile()
