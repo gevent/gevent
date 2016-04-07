@@ -119,6 +119,13 @@ def configure_libuv(_bext, _ext):
         cflags = '-fPIC'
         env = os.environ.copy()
         env['CFLAGS'] = ' '.join(x for x in (cflags, env.get('CFLAGS', None), env.get('ARCHFLAGS', None)) if x)
+        # Since we're building a static library, if link-time-optimization is requested, it
+        # results in failure to properly create the library archive. This goes unnoticed on
+        # OS X until import time because of '-undefined dynamic_lookup'. On the raspberry
+        # pi, it causes the linker to crash
+        if '-flto' in env['CFLAGS']:
+            log.info("Removing LTO")
+            env['CFLAGS'] = env['CFLAGS'].replace('-flto', '')
         log.info('Building libuv...')
         if WIN:
             prepare_windows_env(env)
