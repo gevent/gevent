@@ -69,16 +69,22 @@ library_dirs = [
     os.path.join(libuv_dir, '.libs')
 ]
 
+# XXX: This is all duplicated from _setuplibuv.py
 if sys.platform.startswith('win'):
     libuv_lib = os.path.join(libuv_dir, 'Release', 'lib', 'libuv.lib')
     extra_link_args = ['/NODEFAULTLIB:libcmt', '/LTCG']
-    extra_objects = [libuv_lib]
 else:
     libuv_lib = os.path.join(libuv_dir, '.libs', 'libuv.a')
-    extra_objects = [libuv_lib]
     extra_link_args = []
 
 LIBUV_LIBRARIES = []
+if os.path.exists(libuv_lib):
+    extra_objects = [libuv_lib]
+else:
+    # Must be non-embedded
+    extra_objects = []
+    LIBUV_LIBRARIES = ['uv']
+
 if sys.platform.startswith('linux'):
     LIBUV_LIBRARIES.append('rt')
 elif sys.platform.startswith("win"):

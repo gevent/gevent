@@ -189,5 +189,5 @@ test-py27-cffi: $(PY27)
 test-py27-noembed: $(PY27)
 	cd deps/libev && ./configure --disable-dependency-tracking && make
 	cd deps/c-ares && ./configure --disable-dependency-tracking && make
-	cd deps/libuv && ./autogen.sh && ./configure && make
+	cd deps/libuv && ./autogen.sh && ./configure --disable-static && make
 	CPPFLAGS="-Ideps/libev -Ideps/c-ares -Ideps/libuv/include" LDFLAGS="-Ldeps/libev/.libs -Ldeps/c-ares/.libs -Ldeps/libuv/.libs" LD_LIBRARY_PATH="$(PWD)/deps/libev/.libs:$(PWD)/deps/c-ares/.libs:$(PWD)/deps/libuv/.libs" EMBED=0 GEVENT_CORE_CEXT_ONLY=1 PYTHON=python2.7 PATH=$(BUILD_RUNTIMES)/versions/python2.7/bin:$(PATH) make develop toxtest
