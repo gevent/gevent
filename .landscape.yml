@@ -13,6 +13,7 @@ python-targets:
   - 3
 ignore-paths:
   - examples/webchat/
+  - deps/libuv/
   - doc/
   - build/
   - deps/
