@@ -77,7 +77,7 @@ def prepare_windows_env(env):
     try:
         sub = subprocess.Popen(cmd, stdout=subprocess.PIPE)
         stdout, _ = sub.communicate()
-        version = ast.literal_eval(stdout.decode(sys.stdout.encoding).strip())
+        version = ast.literal_eval(stdout.decode(sys.stdout.encoding).strip()) # pylint:disable=no-member
         if version == (2, 7):
             return  # Python on PATH is fine
     except OSError:
@@ -99,7 +99,7 @@ def prepare_windows_env(env):
 # This is a dummy extension that serves to let us hook into
 # when we need to compile libuv
 LIBUV = Extension(name='gevent.libuv._libuv',
-                  sources=[],
+                  sources=['src/gevent/libuv/_libuv.c'],
                   include_dirs=[LIBUV_INCLUDE_DIR],
                   libraries=LIBUV_LIBRARIES,
                   define_macros=list(DEFINE_MACROS),
