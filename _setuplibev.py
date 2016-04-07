@@ -20,6 +20,7 @@ from _setuputils import glob_many
 from _setuputils import dep_abspath
 from _setuputils import should_embed
 
+
 LIBEV_EMBED = should_embed('libev')
 
 # Configure libev in place; but cp the config.h to the old directory;

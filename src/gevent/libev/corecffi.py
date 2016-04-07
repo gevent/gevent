@@ -16,10 +16,10 @@ __all__ = [
     'loop',
 ]
 
-import gevent._corecffi # pylint:disable=no-name-in-module
+import gevent.libev._corecffi as _corecffi # pylint:disable=no-name-in-module
 
-ffi = gevent._corecffi.ffi # pylint:disable=no-member
-libev = gevent._corecffi.lib # pylint:disable=no-member
+ffi = _corecffi.ffi # pylint:disable=no-member
+libev = _corecffi.lib # pylint:disable=no-member
 
 if hasattr(libev, 'vfd_open'):
     # Must be on windows

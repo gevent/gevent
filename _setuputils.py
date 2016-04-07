@@ -15,6 +15,7 @@ from subprocess import check_call
 from glob import glob
 
 from setuptools.command.build_ext import build_ext
+from setuptools.command.sdist import sdist
 
 ## Exported configurations
 
@@ -78,6 +79,7 @@ def _parse_environ(key):
     raise ValueError('Environment variable %r has invalid value %r. '
                      'Please set it to 1, 0 or an empty string' % (key, value))
 
+IGNORE_CFFI = _parse_environ("GEVENT_NO_CFFI_BUILD")
 
 def _get_config_value(key, defkey, path=None):
     """
@@ -163,6 +165,52 @@ class ConfiguringBuildExt(build_ext):
             else:
                 raise
         return result
+
+
+class MakeSdist(sdist):
+    """
+    An sdist that runs make if needed, and makes sure
+    that the Makefile doesn't make it into the dist
+    archive.
+    """
+
+    _ran_make = False
+
+    @classmethod
+    def make(cls, targets=''):
+        # NOTE: We have two copies of the makefile, one
+        # for posix, one for windows. Our sdist command takes
+        # care of renaming the posix one so it doesn't get into
+        # the .tar.gz file (we don't want to re-run make in a released
+        # file). We trigger off the presence/absence of that file altogether
+        # to skip both posix and unix branches.
+        # See https://github.com/gevent/gevent/issues/757
+        if cls._ran_make:
+            return
+
+        if os.path.exists('Makefile'):
+            if WIN:
+                # make.cmd handles checking for PyPy and only making the
+                # right things, so we can ignore the targets
+                system("appveyor\\make.cmd")
+            else:
+                if "PYTHON" not in os.environ:
+                    os.environ["PYTHON"] = sys.executable
+                system('make ' + targets)
+        cls._ran_make = True
+
+    def run(self):
+        renamed = False
+        if os.path.exists('Makefile'):
+            self.make()
+            os.rename('Makefile', 'Makefile.ext')
+            renamed = True
+        try:
+            return sdist.run(self)
+        finally:
+            if renamed:
+                os.rename('Makefile.ext', 'Makefile')
+
 
 from setuptools import Extension as _Extension
 

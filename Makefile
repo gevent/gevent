@@ -44,6 +44,12 @@ clean:
 	rm -rf src/gevent/__pycache__ src/greentest/__pycache__ src/gevent/libev/__pycache__
 	rm -rf src/gevent/*.pyc src/greentest/*.pyc src/gevent/libev/*.pyc
 	rm -rf src/greentest/htmlcov src/greentest/.coverage
+	rm -rf build
+
+distclean: clean
+	rm -rf dist
+	rm -rf deps/libev/config.h deps/libev/config.log deps/libev/config.status deps/libev/.deps deps/libev/.libs
+	rm -rf deps/c-ares/config.h deps/c-ares/config.log deps/c-ares/config.status deps/c-ares/.deps deps/c-ares/.libs
 
 doc:
 	cd doc && PYTHONPATH=.. make html
