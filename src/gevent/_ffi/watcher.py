@@ -2,6 +2,7 @@
 Useful base classes for watchers. The available
 watchers will depend on the specific event loop.
 """
+# pylint:disable=not-callable
 from __future__ import absolute_import, print_function
 import sys
 import os
@@ -136,6 +137,7 @@ class watcher(object):
             import pdb; pdb.set_trace()
 
             raise
+
     def _watcher_ffi_set_priority(self, priority):
         pass
 

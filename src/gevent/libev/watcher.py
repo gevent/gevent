@@ -28,7 +28,7 @@ else:
 # The CFFI implementation does none of these things, and so
 # is possibly NOT FUNCTIONALLY CORRECT on Win32
 #####
-
+_NOARGS = ()
 _events = [(libev.EV_READ, 'READ'),
            (libev.EV_WRITE, 'WRITE'),
            (libev.EV__IOFDSET, '_IOFDSET'),
@@ -147,15 +147,6 @@ class watcher(_base.watcher):
 class io(_base.IoMixin, watcher):
 
     EVENT_MASK = libev.EV__IOFDSET | libev.EV_READ | libev.EV_WRITE
-
-    def __init__(self, loop, fd, events, ref=True, priority=None):
-        # XXX: Win32: Need to vfd_open the fd and free the old one?
-        # XXX: Win32: Need a destructor to free the old fd?
-        if fd < 0:
-            raise ValueError('fd must be non-negative: %r' % fd)
-        if events & ~(libev.EV__IOFDSET | libev.EV_READ | libev.EV_WRITE):
-            raise ValueError('illegal event mask: %r' % events)
-        watcher.__init__(self, loop, ref=ref, priority=priority, args=(fd, events))
 
     def _get_fd(self):
         return vfd_get(self._watcher.fd)

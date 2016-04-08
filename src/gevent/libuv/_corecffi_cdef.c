@@ -160,22 +160,25 @@ typedef void (*uv_fs_poll_cb)(uv_fs_poll_t* handle, int status, const uv_stat_t*
 
 // loop functions
 uv_loop_t *uv_default_loop();
+uv_loop_t* uv_loop_new(); // not documented
 int uv_loop_init(uv_loop_t* loop);
 int uv_loop_alive(const uv_loop_t *loop);
 int uv_loop_close(uv_loop_t* loop);
 int uv_run(uv_loop_t *, uv_run_mode mode);
+int uv_backend_fd(const uv_loop_t* loop);
+uint64_t uv_now(const uv_loop_t* loop);
 void uv_stop(uv_loop_t *);
 void uv_walk(uv_loop_t *loop, uv_walk_cb walk_cb, void *arg);
 
 // handle functions
 // uv_handle_t is the base type for all libuv handle types.
 
-void uv_ref(uv_handle_t *);
-void uv_unref(uv_handle_t *);
-int uv_has_ref(const uv_handle_t *);
-void uv_close(uv_handle_t *handle, uv_close_cb close_cb);
-int uv_is_active(const uv_handle_t *handle);
-int uv_is_closing(const uv_handle_t *handle);
+void uv_ref(void *);
+void uv_unref(void *);
+int uv_has_ref(void *);
+void uv_close(void *handle, uv_close_cb close_cb);
+int uv_is_active(void *handle);
+int uv_is_closing(void *handle);
 
 // idle functions
 // Idle handles will run the given callback once per loop iteration, right
@@ -277,7 +280,7 @@ int uv_fs_poll_stop(uv_fs_poll_t*);
 static int (*python_callback)(void* handle, int revents);
 static void (*python_handle_error)(void* handle, int revents);
 static void (*python_stop)(void* handle);
-
+static void (*gevent_noop)(void* handle);
 /*
  * We use a single C callback for every watcher type that shares the same signature, which in turn calls the
  * Python callbacks. The uv_handle_t pointer type can be used for every watcher type

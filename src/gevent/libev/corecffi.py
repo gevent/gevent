@@ -1,10 +1,6 @@
 # pylint: disable=too-many-lines, protected-access, redefined-outer-name, not-callable
 from __future__ import absolute_import, print_function
 import sys
-import os
-import traceback
-import signal as signalmodule
-
 
 __all__ = [
     'get_version',
@@ -188,23 +184,22 @@ def time():
 _default_loop_destroyed = False
 
 
-def _loop_callback(*args, **kwargs):
-    return ffi.callback(*args, **kwargs)
-
 from gevent._ffi.loop import AbstractLoop
 
-from gevent.libev.watcher import watcher
-from gevent.libev.watcher import io
-from gevent.libev.watcher import timer
-from gevent.libev.watcher import signal
-from gevent.libev.watcher import idle
-from gevent.libev.watcher import prepare
-from gevent.libev.watcher import check
-from gevent.libev.watcher import fork
-from gevent.libev.watcher import async
-from gevent.libev.watcher import child
-from gevent.libev.watcher import stat
-from gevent.libev.watcher import _events_to_str # exported
+# from gevent.libev.watcher import watcher
+# from gevent.libev.watcher import io
+# from gevent.libev.watcher import timer
+# from gevent.libev.watcher import signal
+# from gevent.libev.watcher import idle
+# from gevent.libev.watcher import prepare
+# from gevent.libev.watcher import check
+# from gevent.libev.watcher import fork
+# from gevent.libev.watcher import async
+# from gevent.libev.watcher import child
+# from gevent.libev.watcher import stat
+
+from gevent.libev import watcher as _watchers
+_events_to_str = _watchers._events_to_str # exported
 
 class loop(AbstractLoop):
     # pylint:disable=too-many-public-methods
@@ -220,7 +215,7 @@ class loop(AbstractLoop):
     _TIMER_POINTER = 'struct ev_timer *'
 
     def __init__(self, flags=None, default=None):
-        AbstractLoop.__init__(self, ffi, libev, flags, default)
+        AbstractLoop.__init__(self, ffi, libev, _watchers, flags, default)
 
     def _init_loop(self, flags, default):
         c_flags = _flags_to_int(flags)
@@ -284,11 +279,6 @@ class loop(AbstractLoop):
             if libev.ev_is_default_loop(ptr):
                 _default_loop_destroyed = True
             libev.ev_loop_destroy(ptr)
-
-
-    @property
-    def WatcherType(self):
-        return watcher
 
     @property
     def MAXPRI(self):
@@ -363,34 +353,7 @@ class loop(AbstractLoop):
     def pendingcnt(self):
         return libev.ev_pending_count(self._ptr)
 
-    def io(self, fd, events, ref=True, priority=None):
-        return io(self, fd, events, ref, priority)
-
-    def timer(self, after, repeat=0.0, ref=True, priority=None):
-        return timer(self, after, repeat, ref, priority)
-
-    def signal(self, signum, ref=True, priority=None):
-        return signal(self, signum, ref, priority)
-
-    def idle(self, ref=True, priority=None):
-        return idle(self, ref, priority)
-
-    def prepare(self, ref=True, priority=None):
-        return prepare(self, ref, priority)
-
-    def check(self, ref=True, priority=None):
-        return check(self, ref, priority)
-
-    def fork(self, ref=True, priority=None):
-        return fork(self, ref, priority)
-
-    def async(self, ref=True, priority=None):
-        return async(self, ref, priority)
-
     if sys.platform != "win32":
-
-        def child(self, pid, trace=0, ref=True):
-            return child(self, pid, trace, ref)
 
         def install_sigchld(self):
             libev.gevent_install_sigchld_handler()

@@ -15,8 +15,8 @@ class callback(object):
 
     __slots__ = ('callback', 'args')
 
-    def __init__(self, callback, args):
-        self.callback = callback
+    def __init__(self, cb, args):
+        self.callback = cb
         self.args = args or _NOARGS
 
     def stop(self):

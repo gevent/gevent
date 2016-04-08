@@ -4,6 +4,10 @@ static int (*python_callback)(void* handle, int revents);
 static void (*python_handle_error)(void* handle, int revents);
 static void (*python_stop)(void* handle);
 
+static void _gevent_noop(void*handle) {}
+
+static void (*gevent_noop)(void* handle) = &_gevent_noop;
+
 static void _gevent_generic_callback1(uv_handle_t* watcher, int arg)
 {
     void* handle = watcher->data;

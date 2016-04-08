@@ -106,8 +106,7 @@ class _Callbacks(object):
                 return 0
             return 1 # It stopped itself
 
-    def python_handle_error(self, handle, revents):
-        print("HANDLING ERROR", handle, revents)
+    def python_handle_error(self, handle, _revents):
         try:
             watcher = self.ffi.from_handle(handle)
             exc_info = watcher._exc_info
@@ -118,12 +117,13 @@ class _Callbacks(object):
             # made sure that the watcher object was put in loop._keepaliveset,
             # what about not stopping the watcher? Looks like a possible
             # memory leak?
-            if revents & (libev.EV_READ | libev.EV_WRITE):
-                try:
-                    watcher.stop()
-                except: # pylint:disable=bare-except
-                    watcher.loop.handle_error(watcher, *sys.exc_info())
-                return # pylint:disable=lost-exception
+            # XXX: This used to do "if revents & (libev.EV_READ | libev.EV_WRITE)"
+            # before stopping. Why?
+            try:
+                watcher.stop()
+            except: # pylint:disable=bare-except
+                watcher.loop.handle_error(watcher, *sys.exc_info())
+            return # pylint:disable=lost-exception
 
     def python_stop(self, handle):
         watcher = self.ffi.from_handle(handle)
@@ -177,9 +177,10 @@ class AbstractLoop(object):
     _PREPARE_POINTER = None
     _PREPARE_CALLBACK_SIG = None
 
-    def __init__(self, ffi, lib, flags=None, default=None):
+    def __init__(self, ffi, lib, watchers, flags=None, default=None):
         self._ffi = ffi
         self._lib = lib
+        self._watchers = watchers
         self._in_callback = False
         self._callbacks = []
         self._keepaliveset = set()
@@ -314,7 +315,7 @@ class AbstractLoop(object):
 
     @property
     def WatcherType(self):
-        return watcher
+        return self._watchers.watcher
 
     @property
     def MAXPRI(self):
@@ -398,46 +399,46 @@ class AbstractLoop(object):
 
     @property
     def backend(self):
-        return None
+        return "<default backend>"
 
     @property
     def pendingcnt(self):
         return 0
 
     def io(self, fd, events, ref=True, priority=None):
-        return io(self, fd, events, ref, priority)
+        return self._watchers.io(self, fd, events, ref, priority)
 
     def timer(self, after, repeat=0.0, ref=True, priority=None):
-        return timer(self, after, repeat, ref, priority)
+        return self._watchers.timer(self, after, repeat, ref, priority)
 
     def signal(self, signum, ref=True, priority=None):
-        return signal(self, signum, ref, priority)
+        return self._watchers.signal(self, signum, ref, priority)
 
     def idle(self, ref=True, priority=None):
-        return idle(self, ref, priority)
+        return self._watchers.idle(self, ref, priority)
 
     def prepare(self, ref=True, priority=None):
-        return prepare(self, ref, priority)
+        return self._watchers.prepare(self, ref, priority)
 
     def check(self, ref=True, priority=None):
-        return check(self, ref, priority)
+        return self._watchers.check(self, ref, priority)
 
     def fork(self, ref=True, priority=None):
-        return fork(self, ref, priority)
+        return self._watchers.fork(self, ref, priority)
 
     def async(self, ref=True, priority=None):
-        return async(self, ref, priority)
+        return self._watchers.async(self, ref, priority)
 
     if sys.platform != "win32":
 
         def child(self, pid, trace=0, ref=True):
-            return child(self, pid, trace, ref)
+            return self._watchers.child(self, pid, trace, ref)
 
         def install_sigchld(self):
             pass
 
     def stat(self, path, interval=0.0, ref=True, priority=None):
-        return stat(self, path, interval, ref, priority)
+        return self._watchers.stat(self, path, interval, ref, priority)
 
     def callback(self, priority=None):
         return callback(self, priority)
