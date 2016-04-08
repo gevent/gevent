@@ -311,6 +311,8 @@ class TimerMixin(object):
     def __init__(self, loop, after=0.0, repeat=0.0, ref=True, priority=None):
         if repeat < 0.0:
             raise ValueError("repeat must be positive or zero: %r" % repeat)
+        self._after = after
+        self._repeat = repeat
         super(TimerMixin, self).__init__(loop, ref=ref, priority=priority, args=(after, repeat))
 
     def start(self, callback, *args, **kw):

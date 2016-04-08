@@ -113,3 +113,29 @@ class async(_base.AsyncMixin, watcher):
     @property
     def pending(self):
         return None
+
+class timer(_base.TimerMixin, watcher):
+
+    def _update_now(self):
+        self.loop.update()
+
+    _again = False
+
+    def _watcher_ffi_init(self, args):
+        self._watcher_init(self.loop._ptr, self._watcher)
+        self._after, self._repeat = args
+
+    def _watcher_ffi_start(self):
+        if self._again:
+            libuv.uv_timer_again(self._watcher)
+        else:
+            self._watcher_start(self._watcher, self._watcher_callback,
+                                int(self._after * 1000),
+                                int(self._repeat * 1000))
+
+    def again(self, callback, *args, **kw):
+        self._again = True
+        try:
+            self.start(callback, *args, **kw)
+        finally:
+            del self._again

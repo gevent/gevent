@@ -166,6 +166,7 @@ int uv_loop_alive(const uv_loop_t *loop);
 int uv_loop_close(uv_loop_t* loop);
 int uv_run(uv_loop_t *, uv_run_mode mode);
 int uv_backend_fd(const uv_loop_t* loop);
+void uv_update_time(const uv_loop_t* loop);
 uint64_t uv_now(const uv_loop_t* loop);
 void uv_stop(uv_loop_t *);
 void uv_walk(uv_loop_t *loop, uv_walk_cb walk_cb, void *arg);
