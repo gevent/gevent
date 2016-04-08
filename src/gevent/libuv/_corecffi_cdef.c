@@ -289,4 +289,11 @@ static void _gevent_generic_callback0(uv_handle_t* handle); // no extra args
 static void _gevent_generic_callback1(uv_handle_t* handle, int arg); // one extra args. Everything will funnel through this
 static void _gevent_poll_callback2(uv_handle_t* handle, int status, int events);
 static void _gevent_fs_event_callback3(uv_handle_t* handle, const char* filename, int events, int status);
-static void _gevent_fs_poll_callback3(uv_handle_t* handle, int status, const uv_stat_t* prev, const uv_stat_t* curr);
+
+typedef struct _gevent_fs_poll_s {
+	uv_fs_poll_t handle;
+	uv_stat_t curr;
+	uv_stat_t prev;
+} gevent_fs_poll_t;
+
+static void _gevent_fs_poll_callback3(void* handle, int status, const uv_stat_t* prev, const uv_stat_t* curr);
