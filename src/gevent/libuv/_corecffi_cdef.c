@@ -113,24 +113,24 @@ typedef struct uv_fs_poll_s uv_fs_poll_t;
 
 
 // callbacks with the same signature
-typedef void (*uv_close_cb)(uv_handle_t *handle);
-typedef void (*uv_idle_cb)(uv_idle_t *handle);
-typedef void (*uv_timer_cb)(uv_timer_t *handle);
-typedef void (*uv_check_cb)(uv_check_t* handle);
-typedef void (*uv_async_cb)(uv_async_t* handle);
-typedef void (*uv_prepare_cb)(uv_prepare_t *handle);
+typedef void (*uv_close_cb)(void *handle);
+typedef void (*uv_idle_cb)(void *handle);
+typedef void (*uv_timer_cb)(void *handle);
+typedef void (*uv_check_cb)(void* handle);
+typedef void (*uv_async_cb)(void* handle);
+typedef void (*uv_prepare_cb)(void*handle);
 
 // callbacks with distinct sigs
-typedef void (*uv_walk_cb)(uv_handle_t *handle, void *arg);
-typedef void (*uv_poll_cb)(uv_poll_t *handle, int status, int events);
-typedef void (*uv_signal_cb)(uv_signal_t *handle, int signum);
+typedef void (*uv_walk_cb)(void *handle, void *arg);
+typedef void (*uv_poll_cb)(void *handle, int status, int events);
+typedef void (*uv_signal_cb)(void *handle, int signum);
 
 // Callback passed to uv_fs_event_start() which will be called
 // repeatedly after the handle is started. If the handle was started
 // with a directory the filename parameter will be a relative path to
 // a file contained in the directory. The events parameter is an ORed
 // mask of uv_fs_event elements.
-typedef void (*uv_fs_event_cb)(uv_fs_event_t* handle, const char* filename, int events, int status);
+typedef void (*uv_fs_event_cb)(void* handle, const char* filename, int events, int status);
 
 typedef struct {
     long tv_sec;
@@ -288,10 +288,10 @@ static void (*gevent_noop)(void* handle);
  * watcher types has a 'void* data' that stores the CFFI handle to the Python watcher
  * object.
  */
-static void _gevent_generic_callback0(uv_handle_t* handle); // no extra args
-static void _gevent_generic_callback1(uv_handle_t* handle, int arg); // one extra args. Everything will funnel through this
-static void _gevent_poll_callback2(uv_handle_t* handle, int status, int events);
-static void _gevent_fs_event_callback3(uv_handle_t* handle, const char* filename, int events, int status);
+static void _gevent_generic_callback0(void* handle); // no extra args
+static void _gevent_generic_callback1(void* handle, int arg); // one extra args. Everything will funnel through this
+static void _gevent_poll_callback2(void* handle, int status, int events);
+static void _gevent_fs_event_callback3(void* handle, const char* filename, int events, int status);
 
 typedef struct _gevent_fs_poll_s {
 	uv_fs_poll_t handle;

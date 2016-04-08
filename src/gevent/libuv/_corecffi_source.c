@@ -8,8 +8,9 @@ static void _gevent_noop(void*handle) {}
 
 static void (*gevent_noop)(void* handle) = &_gevent_noop;
 
-static void _gevent_generic_callback1(uv_handle_t* watcher, int arg)
+static void _gevent_generic_callback1(void* vwatcher, int arg)
 {
+	uv_handle_t* watcher = (uv_handle_t*)vwatcher;
     void* handle = watcher->data;
     int cb_result = python_callback(handle, arg);
     switch(cb_result) {
@@ -34,17 +35,17 @@ static void _gevent_generic_callback1(uv_handle_t* watcher, int arg)
 }
 
 
-static void _gevent_generic_callback0(uv_handle_t* handle)
+static void _gevent_generic_callback0(void* handle)
 {
 	_gevent_generic_callback1(handle, 0);
 }
 
-static void _gevent_poll_callback2(uv_handle_t* handle, int status, int events)
+static void _gevent_poll_callback2(void* handle, int status, int events)
 {
 	_gevent_generic_callback1(handle, status < 0 ? status : events);
 }
 
-static void _gevent_fs_event_callback3(uv_handle_t* handle, const char* filename, int events, int status)
+static void _gevent_fs_event_callback3(void* handle, const char* filename, int events, int status)
 {
 	_gevent_generic_callback1(handle, status < 0 ? status : events);
 }

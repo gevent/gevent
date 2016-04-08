@@ -57,13 +57,14 @@ class AbstractWatcherType(type):
 
     @classmethod
     def _fill_watcher(cls, name, bases, cls_dict):
-        def _mro_get(attr, bases):
+        def _mro_get(attr, bases, error=True):
             for b in bases:
                 try:
                     return getattr(b, attr)
                 except AttributeError:
                     continue
-            raise AttributeError(attr)
+            if error:
+                raise AttributeError(attr)
         _watcher_prefix = cls_dict.get('_watcher_prefix') or _mro_get('_watcher_prefix', bases)
 
         if '_watcher_type' not in cls_dict:
@@ -80,12 +81,19 @@ class AbstractWatcherType(type):
 
         LazyOnClass.lazy(cls_dict, _watcher_is_active)
 
+        watcher_struct_pattern = (cls_dict.get('_watcher_struct_pattern')
+                                  or _mro_get('_watcher_struct_pattern', bases, False)
+                                  or 'struct %s')
+        watcher_struct_name = watcher_struct_pattern % (watcher_type,)
+
         def _watcher_struct_pointer_type(self):
-            return self._FFI.typeof('struct ' + self._watcher_type + '*')
+            return self._FFI.typeof(watcher_struct_name + ' *')
 
         LazyOnClass.lazy(cls_dict, _watcher_struct_pointer_type)
 
-        callback_name = cls_dict.get('watcher_callback_name', '_gevent_generic_callback')
+        callback_name = (cls_dict.get('_watcher_callback_name')
+                         or _mro_get('_watcher_callback_name', bases, False)
+                         or '_gevent_generic_callback')
 
         def _watcher_callback(self):
             return self._FFI.addressof(self._LIB, callback_name)
@@ -146,6 +154,9 @@ class watcher(object):
 
     def _watcher_ffi_start(self):
         raise NotImplementedError()
+
+    def _watcher_ffi_stop(self):
+        self._watcher_stop(self.loop._ptr, self._watcher)
 
     def _watcher_ffi_ref(self):
         raise NotImplementedError()
@@ -238,7 +249,7 @@ class watcher(object):
 
     def stop(self):
         self._watcher_ffi_ref()
-        self._watcher_stop(self.loop._ptr, self._watcher)
+        self._watcher_ffi_stop()
         self.loop._keepaliveset.discard(self)
 
         self.callback = None
@@ -263,18 +274,29 @@ class watcher(object):
 
 watcher = AbstractWatcherType('watcher', (object,), dict(watcher.__dict__))
 
+import functools
+
+def not_while_active(func):
+    @functools.wraps(func)
+    def nw(self, *args, **kwargs):
+        if self.active:
+            raise AttributeError("not while active")
+        func(self, *args, **kwargs)
+    return nw
+
 class IoMixin(object):
 
     EVENT_MASK = 0
 
-    def __init__(self, loop, fd, events, ref=True, priority=None):
+    def __init__(self, loop, fd, events, ref=True, priority=None, _args=None):
         # XXX: Win32: Need to vfd_open the fd and free the old one?
         # XXX: Win32: Need a destructor to free the old fd?
         if fd < 0:
             raise ValueError('fd must be non-negative: %r' % fd)
         if events & ~self.EVENT_MASK:
             raise ValueError('illegal event mask: %r' % events)
-        super(IoMixin, self).__init__(loop, ref=ref, priority=priority, args=(fd, events))
+        super(IoMixin, self).__init__(loop, ref=ref, priority=priority,
+                                      args=_args or (fd, events))
 
     def start(self, callback, *args, **kwargs):
         args = args or _NOARGS
