@@ -7,7 +7,7 @@ from __future__ import absolute_import, print_function
 import sys
 import os
 import signal as signalmodule
-
+import functools
 
 from gevent._ffi.loop import GEVENT_CORE_EVENTS
 from gevent._ffi.loop import _NOARGS
@@ -15,6 +15,15 @@ from gevent._ffi.loop import _NOARGS
 __all__ = [
 
 ]
+
+
+def not_while_active(func):
+    @functools.wraps(func)
+    def nw(self, *args, **kwargs):
+        if self.active:
+            raise AttributeError("not while active")
+        func(self, *args, **kwargs)
+    return nw
 
 
 class LazyOnClass(object):
@@ -164,6 +173,12 @@ class watcher(object):
     def _watcher_ffi_unref(self):
         raise NotImplementedError()
 
+    def _watcher_ffi_start_unref(self):
+        self._watcher_ffi_unref()
+
+    def _watcher_ffi_stop_ref(self):
+        self._watcher_ffi_ref()
+
     # A string identifying the type of libev object we watch, e.g., 'ev_io'
     # This should be a class attribute.
     _watcher_type = None
@@ -243,12 +258,12 @@ class watcher(object):
             raise TypeError('callback must be callable, not None')
         self.callback = callback
         self.args = args or _NOARGS
-        self._watcher_ffi_unref()
+        self._watcher_ffi_start_unref()
         self.loop._keepaliveset.add(self)
         self._watcher_ffi_start()
 
     def stop(self):
-        self._watcher_ffi_ref()
+        self._watcher_ffi_stop_ref()
         self._watcher_ffi_stop()
         self.loop._keepaliveset.discard(self)
 
@@ -258,6 +273,7 @@ class watcher(object):
     def _get_priority(self):
         return None
 
+    @not_while_active
     def _set_priority(self, priority):
         pass
 
@@ -273,16 +289,6 @@ class watcher(object):
         return False
 
 watcher = AbstractWatcherType('watcher', (object,), dict(watcher.__dict__))
-
-import functools
-
-def not_while_active(func):
-    @functools.wraps(func)
-    def nw(self, *args, **kwargs):
-        if self.active:
-            raise AttributeError("not while active")
-        func(self, *args, **kwargs)
-    return nw
 
 class IoMixin(object):
 

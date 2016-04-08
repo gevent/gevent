@@ -41,6 +41,14 @@ class watcher(_base.watcher):
     def _watcher_ffi_unref(self):
         libuv.uv_unref(self._watcher)
 
+    def _watcher_ffi_start_unref(self):
+        # libev manipulates these refs at start and stop for
+        # some reason; we don't
+        pass
+
+    def _watcher_ffi_stop_ref(self):
+        pass
+
     def _get_ref(self):
         return libuv.uv_has_ref(self._watcher)
 
@@ -134,6 +142,12 @@ class timer(_base.TimerMixin, watcher):
                                 int(self._repeat * 1000))
 
     def again(self, callback, *args, **kw):
+        if not self.active:
+            # If we've never been started, this is the same as starting us.
+            # libuv makes the distinction, libev doesn't.
+            self.start(callback, *args, **kw)
+            return
+
         self._again = True
         try:
             self.start(callback, *args, **kw)

@@ -121,9 +121,8 @@ class watcher(_base.watcher):
     def _get_priority(self):
         return libev.ev_priority(self._watcher)
 
+    @_base.not_while_active
     def _set_priority(self, priority):
-        if libev.ev_is_active(self._watcher):
-            raise AttributeError("Cannot set priority of an active watcher")
         libev.ev_set_priority(self._watcher, priority)
 
     priority = property(_get_priority, _set_priority)
@@ -151,9 +150,8 @@ class io(_base.IoMixin, watcher):
     def _get_fd(self):
         return vfd_get(self._watcher.fd)
 
+    @_base.not_while_active
     def _set_fd(self, fd):
-        if libev.ev_is_active(self._watcher):
-            raise AttributeError("'io' watcher attribute 'fd' is read-only while watcher is active")
         vfd = vfd_open(fd)
         vfd_free(self._watcher.fd)
         self._watcher_init(self._watcher, self._watcher_callback, vfd, self._watcher.events)
@@ -163,9 +161,8 @@ class io(_base.IoMixin, watcher):
     def _get_events(self):
         return self._watcher.events
 
+    @_base.not_while_active
     def _set_events(self, events):
-        if libev.ev_is_active(self._watcher):
-            raise AttributeError("'io' watcher attribute 'events' is read-only while watcher is active")
         self._watcher_init(self._watcher, self._watcher_callback, self._watcher.fd, events)
 
     events = property(_get_events, _set_events)
