@@ -75,6 +75,10 @@ class loop(AbstractLoop):
         libuv.uv_check_stop(self._check)
         libuv.uv_ref(self._check)
 
+    def _setup_for_run_callback(self):
+        self._start_callback_timer()
+        libuv.uv_ref(self._timer0)
+
     def destroy(self):
         if self._ptr:
             ptr = self._ptr

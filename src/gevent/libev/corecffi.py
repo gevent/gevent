@@ -267,6 +267,9 @@ class loop(AbstractLoop):
             self.ref()
             libev.ev_check_stop(self._ptr, self._check)
 
+    def _setup_for_run_callback(self):
+        self.ref() # we should go through the loop now
+
     def destroy(self):
         global _default_loop_destroyed
         if self._ptr:

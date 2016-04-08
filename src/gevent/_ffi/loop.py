@@ -443,10 +443,13 @@ class AbstractLoop(object):
     def callback(self, priority=None):
         return callback(self, priority)
 
+    def _setup_for_run_callback(self):
+        raise NotImplementedError()
+
     def run_callback(self, func, *args):
         cb = callback(func, args)
         self._callbacks.append(cb)
-        self.ref()
+        self._setup_for_run_callback()
 
         return cb
 
