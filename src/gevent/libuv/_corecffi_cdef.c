@@ -156,7 +156,7 @@ typedef struct {
     uv_timespec_t st_birthtim;
 } uv_stat_t;
 
-typedef void (*uv_fs_poll_cb)(uv_fs_poll_t* handle, int status, const uv_stat_t* prev, const uv_stat_t* curr);
+typedef void (*uv_fs_poll_cb)(void* handle, int status, const uv_stat_t* prev, const uv_stat_t* curr);
 
 // loop functions
 uv_loop_t *uv_default_loop();
@@ -267,9 +267,9 @@ int uv_fs_event_getpath(uv_fs_event_t*, char* buffer, size_t* size);
 // handles can’t.
 //
 // This is a closer match to libev.
-int uv_fs_poll_init(uv_loop_t*, uv_fs_poll_t*);
-int uv_fs_poll_start(uv_fs_poll_t*, uv_fs_poll_cb, const char* path, unsigned int);
-int uv_fs_poll_stop(uv_fs_poll_t*);
+int uv_fs_poll_init(void*, void*);
+int uv_fs_poll_start(void*, uv_fs_poll_cb, const char* path, unsigned int);
+int uv_fs_poll_stop(void*);
 
 
 

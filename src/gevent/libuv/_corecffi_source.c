@@ -69,9 +69,13 @@ static void _gevent_fs_poll_callback3(void* handlep, int status, const uv_stat_t
 	// if given, copy them into our structure, where they can be reached
 	// from python, just like libev's watcher does, before calling
 	// the callback.
-	if(status < 0) {
-		return;
-	}
+
+	// The callback is invoked with status < 0 if path does not exist
+	// or is inaccessible. The watcher is not stopped but your
+	// callback is not called again until something changes (e.g. when
+	// the file is created or the error reason changes).
+	// In that case the fields will be 0 in curr/prev.
+
 
 	gevent_fs_poll_t* handle = (gevent_fs_poll_t*)handlep;
 	assert(status == 0);

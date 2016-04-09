@@ -153,3 +153,42 @@ class timer(_base.TimerMixin, watcher):
             self.start(callback, *args, **kw)
         finally:
             del self._again
+
+class stat(_base.StatMixin, watcher):
+    _watcher_type = 'fs_poll'
+    _watcher_struct_name = 'gevent_fs_poll_t'
+    _watcher_callback_name = '_gevent_fs_poll_callback3'
+
+    def _watcher_create(self, ref):
+        self._handle = type(self).new_handle(self)
+        self._watcher = type(self).new(self._watcher_struct_pointer_type)
+        self._watcher.handle.data = self._handle
+
+    def _watcher_ffi_init(self, args):
+        self._watcher_init(self.loop._ptr, self._watcher)
+
+    MIN_STAT_INTERVAL = 0.1074891 # match libev; 0.0 is default
+
+    def _watcher_ffi_start(self):
+        # libev changes this when the watcher is started
+        if self._interval < self.MIN_STAT_INTERVAL:
+            self._interval = self.MIN_STAT_INTERVAL
+        self._watcher_start(self._watcher, self._watcher_callback,
+                            self._cpath,
+                            int(self._interval * 1000))
+
+    @property
+    def _watcher_handle(self):
+        return self._watcher.handle.data
+
+    @property
+    def attr(self):
+        if not self._watcher.curr.st_nlink:
+            return
+        return self._watcher.curr
+
+    @property
+    def prev(self):
+        if not self._watcher.prev.st_nlink:
+            return
+        return self._watcher.prev

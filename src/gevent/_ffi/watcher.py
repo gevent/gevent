@@ -90,10 +90,12 @@ class AbstractWatcherType(type):
 
         LazyOnClass.lazy(cls_dict, _watcher_is_active)
 
-        watcher_struct_pattern = (cls_dict.get('_watcher_struct_pattern')
-                                  or _mro_get('_watcher_struct_pattern', bases, False)
-                                  or 'struct %s')
-        watcher_struct_name = watcher_struct_pattern % (watcher_type,)
+        watcher_struct_name = cls_dict.get('_watcher_struct_name')
+        if not watcher_struct_name:
+            watcher_struct_pattern = (cls_dict.get('_watcher_struct_pattern')
+                                      or _mro_get('_watcher_struct_pattern', bases, False)
+                                      or 'struct %s')
+            watcher_struct_name = watcher_struct_pattern % (watcher_type,)
 
         def _watcher_struct_pointer_type(self):
             return self._FFI.typeof(watcher_struct_name + ' *')
@@ -148,12 +150,7 @@ class watcher(object):
         self._handle = type(self).new_handle(self)
         self._watcher = type(self).new(self._watcher_struct_pointer_type)
         # XXX: Must GC the _watche in libuv: uv_close()
-        try:
-            self._watcher.data = self._handle
-        except AttributeError:
-            import pdb; pdb.set_trace()
-
-            raise
+        self._watcher.data = self._handle
 
     def _watcher_ffi_set_priority(self, priority):
         pass
@@ -216,8 +213,12 @@ class watcher(object):
             result += " args=%r" % (self.args, )
         if self.callback is None and self.args is None:
             result += " stopped"
-        result += " handle=%s" % (self._watcher.data)
+        result += " handle=%s" % (self._watcher_handle)
         return result + ">"
+
+    @property
+    def _watcher_handle(self):
+        return self._watcher.data
 
     def _format(self):
         return ''
