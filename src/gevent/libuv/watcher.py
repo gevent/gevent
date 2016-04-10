@@ -92,7 +92,7 @@ class io(_base.IoMixin, watcher):
     def _watcher_ffi_start(self):
         self._watcher_start(self._watcher, self._events, self._watcher_callback)
 
-class fork(object):
+class fork(_base.ForkMixin):
     # We'll have to implement this one completely manually
 
     def __init__(self, *args, **kwargs):
@@ -102,6 +102,21 @@ class fork(object):
         pass
 
     def stop(self, *args):
+        pass
+
+class child(_base.ChildMixin):
+    # We'll have to implement this one completely manually.
+    # Our approach is to use a SIGCHLD handler and the original
+    # os.waitpid call.
+
+    # On Unix, libuv's uv_process_t and uv_spawn use SIGCHLD,
+    # just like libev does for its child watchers. So
+    # we're not adding any new SIGCHLD related issues not already
+    # present in libev.
+
+    _CALL_SUPER_INIT = False
+
+    def start(self, cb, *args):
         pass
 
 class async(_base.AsyncMixin, watcher):

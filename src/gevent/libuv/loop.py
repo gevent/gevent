@@ -4,6 +4,9 @@ libuv loop implementation
 
 from __future__ import absolute_import, print_function
 
+import os
+import signal
+
 from gevent._ffi.loop import AbstractLoop
 from gevent.libuv import _corecffi # pylint:disable=no-name-in-module,import-error
 from gevent._ffi.loop import assign_standard_callbacks
@@ -32,6 +35,7 @@ class loop(AbstractLoop):
 
     def __init__(self, flags=None, default=None):
         AbstractLoop.__init__(self, ffi, libuv, _watchers, flags, default)
+        self.__loop_pid = os.getpid()
 
 
     def _init_loop(self, flags, default):
@@ -98,11 +102,30 @@ class loop(AbstractLoop):
         # TODO: How to implement? We probably have to simply
         # re-__init__ this whole class? Does it matter?
         # OR maybe we need to uv_walk() and close all the handles?
+
+        # XXX: libuv <= 1.9 simply CANNOT handle a fork unless you immediately
+        # exec() in the child. There are multiple calls to abort() that
+        # will kill the child process:
+        # - The OS X poll implementation (kqueue) aborts on an error return
+        # value; since kqueue FDs can't be inherited, then the next call
+        # to kqueue in the child will fail and get aborted; fork() is likely
+        # to be called during the gevent loop, meaning we're deep inside the
+        # runloop already, so we can't even close the loop that we're in:
+        # it's too late, the next call to kqueue is already scheduled.
+        # - The threadpool, should it be in use, also aborts
+        # (https://github.com/joyent/libuv/pull/1136)
+        # - There global shared state that breaks signal handling
+        # and leads to an abort() in the child, EVEN IF the loop in the parent
+        # had already been closed
+        # (https://github.com/joyent/libuv/issues/1405)
+
         raise NotImplementedError()
+
 
     def run(self, nowait=False, once=False):
         # we can only respect one flag or the other.
         # nowait takes precedence because it can't block
+        print("RUNNING LOOP from", self.__loop_pid, "in", os.getpid())
         mode = libuv.UV_RUN_DEFAULT
         if once:
             mode = libuv.UV_RUN_ONCE
@@ -124,3 +147,24 @@ class loop(AbstractLoop):
     def fileno(self):
         if self._ptr:
             return libuv.uv_backend_fd(self._ptr)
+
+    _sigchld_watcher = None
+    _sigchld_callback_ffi = None
+
+    def install_sigchld(self):
+        if not self.default:
+            return
+
+        if self._sigchld_watcher:
+            return
+
+        self._sigchld_watcher = ffi.new('uv_signal_t*')
+        libuv.uv_signal_init(self._ptr, self._sigchld_watcher)
+        self._sigchld_callback_ffi = ffi.callback('void(*)(void*, int)',
+                                                  self.__sigchld_callback)
+        libuv.uv_signal_start(self._sigchld_watcher,
+                              self._sigchld_callback_ffi,
+                              signal.SIGCHLD)
+
+    def __sigchld_callback(self, _handler, _signum):
+        print("SIGCHILD")

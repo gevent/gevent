@@ -47,6 +47,8 @@ enum uv_fs_event_flags {
     UV_FS_EVENT_RECURSIVE = 4
 };
 
+const char* uv_strerror(int);
+const char* uv_err_name(int);
 
 // handle structs and types
 struct uv_loop_s {
@@ -121,7 +123,7 @@ typedef void (*uv_async_cb)(void* handle);
 typedef void (*uv_prepare_cb)(void*handle);
 
 // callbacks with distinct sigs
-typedef void (*uv_walk_cb)(void *handle, void *arg);
+typedef void (*uv_walk_cb)(uv_handle_t *handle, void *arg);
 typedef void (*uv_poll_cb)(void *handle, int status, int events);
 typedef void (*uv_signal_cb)(void *handle, int signum);
 

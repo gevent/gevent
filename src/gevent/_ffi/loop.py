@@ -180,17 +180,21 @@ class AbstractLoop(object):
     def __init__(self, ffi, lib, watchers, flags=None, default=None):
         self._ffi = ffi
         self._lib = lib
+        self._ptr = None
         self._watchers = watchers
         self._in_callback = False
         self._callbacks = []
         self._keepaliveset = set()
+        self._init_loop_and_aux_watchers(flags, default)
+
+    def _init_loop_and_aux_watchers(self, flags=None, default=None):
 
         self._ptr = self._init_loop(flags, default)
 
         # self._check is a watcher that runs in each iteration of the
         # mainloop, just after the blocking call
-        self._check = ffi.new(self._CHECK_POINTER)
-        self._check_callback_ffi = _loop_callback(ffi,
+        self._check = self._ffi.new(self._CHECK_POINTER)
+        self._check_callback_ffi = _loop_callback(self._ffi,
                                                   self._CHECK_CALLBACK_SIG,
                                                   self._check_callback,
                                                   onerror=self._check_callback_handle_error)
@@ -198,8 +202,8 @@ class AbstractLoop(object):
 
         # self._prepare is a watcher that runs in each iteration of the mainloop,
         # just before the blocking call
-        self._prepare = ffi.new(self._PREPARE_POINTER)
-        self._prepare_callback_ffi = _loop_callback(ffi,
+        self._prepare = self._ffi.new(self._PREPARE_POINTER)
+        self._prepare_callback_ffi = _loop_callback(self._ffi,
                                                     self._PREPARE_CALLBACK_SIG,
                                                     self._run_callbacks,
                                                     onerror=self._check_callback_handle_error)
@@ -211,7 +215,7 @@ class AbstractLoop(object):
         # as quickly as possible.
         # TODO: There may be a more efficient way to do this using ev_timer_again;
         # see the "ev_timer" section of the ev manpage (http://linux.die.net/man/3/ev)
-        self._timer0 = ffi.new(self._TIMER_POINTER)
+        self._timer0 = self._ffi.new(self._TIMER_POINTER)
         self._init_callback_timer()
 
         # TODO: We may be able to do something nicer and use the existing python_callback

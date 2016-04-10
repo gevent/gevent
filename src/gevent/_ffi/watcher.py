@@ -388,12 +388,16 @@ class AsyncMixin(object):
 
 class ChildMixin(object):
 
+    # hack for libuv which doesn't extend watcher
+    _CALL_SUPER_INIT = True
+
     def __init__(self, loop, pid, trace=0, ref=True):
         if not loop.default:
             raise TypeError('child watchers are only available on the default loop')
         loop.install_sigchld()
         self._pid = pid
-        super(ChildMixin, self).__init__(loop, ref=ref, args=(pid, trace))
+        if self._CALL_SUPER_INIT:
+            super(ChildMixin, self).__init__(loop, ref=ref, args=(pid, trace))
 
     def _format(self):
         return ' pid=%r rstatus=%r' % (self.pid, self.rstatus)
