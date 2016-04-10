@@ -1,6 +1,5 @@
 # pylint: disable=too-many-lines, protected-access, redefined-outer-name, not-callable
 from __future__ import absolute_import, print_function
-import sys
 
 import gevent.libuv._corecffi as _corecffi # pylint:disable=no-name-in-module,import-error
 
@@ -50,7 +49,8 @@ class watcher(_base.watcher):
         pass
 
     def _get_ref(self):
-        return libuv.uv_has_ref(self._watcher)
+        # Convert 1/0 to True/False
+        return True if libuv.uv_has_ref(self._watcher) else False
 
     def _set_ref(self, value):
         if value:
@@ -192,3 +192,15 @@ class stat(_base.StatMixin, watcher):
         if not self._watcher.prev.st_nlink:
             return
         return self._watcher.prev
+
+class signal(_base.SignalMixin, watcher):
+
+    _watcher_callback_name = '_gevent_generic_callback1'
+
+    def _watcher_ffi_init(self, args):
+        self._watcher_init(self.loop._ptr, self._watcher)
+        self.ref = False # libev doesn't ref these by default
+
+    def _watcher_ffi_start(self):
+        self._watcher_start(self._watcher, self._watcher_callback,
+                            self._signalnum)

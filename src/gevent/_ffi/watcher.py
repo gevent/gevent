@@ -66,6 +66,8 @@ class AbstractWatcherType(type):
 
     @classmethod
     def _fill_watcher(cls, name, bases, cls_dict):
+        # TODO: refactor smaller
+        # pylint:disable=too-many-locals
         def _mro_get(attr, bases, error=True):
             for b in bases:
                 try:
@@ -353,6 +355,7 @@ class SignalMixin(object):
         #    EV_NSIG might be different from signal.NSIG on some platforms
         # 2) "libev: a signal must not be attached to two different loops"
         #    we probably could check that in LIBEV_EMBED mode, but not in general
+        self._signalnum = signalnum
         super(SignalMixin, self).__init__(loop, ref=ref, priority=priority, args=(signalnum, ))
 
 
