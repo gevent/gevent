@@ -16,9 +16,11 @@ vgcore.*
 /ar-lib
 /autom4te.cache/
 /compile
+/config.guess
 /config.log
 /config.status
 /config.sub
+/configure
 /depcomp
 /install-sh
 /libtool
