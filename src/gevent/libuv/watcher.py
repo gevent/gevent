@@ -1,6 +1,9 @@
 # pylint: disable=too-many-lines, protected-access, redefined-outer-name, not-callable
 from __future__ import absolute_import, print_function
 
+import os
+import sys
+
 import gevent.libuv._corecffi as _corecffi # pylint:disable=no-name-in-module,import-error
 
 ffi = _corecffi.ffi # pylint:disable=no-member
@@ -104,7 +107,8 @@ class fork(_base.ForkMixin):
     def stop(self, *args):
         pass
 
-class child(_base.ChildMixin):
+class child(_base.ChildMixin, watcher):
+    _watcher_skip_ffi = True
     # We'll have to implement this one completely manually.
     # Our approach is to use a SIGCHLD handler and the original
     # os.waitpid call.
@@ -114,10 +118,43 @@ class child(_base.ChildMixin):
     # we're not adding any new SIGCHLD related issues not already
     # present in libev.
 
-    _CALL_SUPER_INIT = False
+    def __init__(self, *args, **kwargs):
+        super(child, self).__init__(*args, **kwargs)
+        self._async = self.loop.async()
+
+    def _watcher_create(self, _args):
+        return
+
+    @property
+    def _watcher_handle(self):
+        return None
+
+    def _watcher_ffi_init(self, args):
+        return
 
     def start(self, cb, *args):
-        pass
+        self.loop._child_watchers[self._pid].append(self)
+        self.callback = cb
+        self.args = args
+        self._async.start(cb, *args)
+        #watcher.start(self, cb, *args)
+
+    @property
+    def active(self):
+        return self._async.active
+
+    def stop(self):
+        try:
+            self.loop._child_watchers[self._pid].remove(self)
+        except ValueError:
+            pass
+        self.callback = None
+        self.args = None
+        self._async.stop()
+
+    def _set_status(self, status):
+        self._rstatus = status
+        self._async.send()
 
 class async(_base.AsyncMixin, watcher):
 

@@ -60,7 +60,7 @@ class AbstractWatcherType(type):
     _LIB = None
 
     def __new__(cls, name, bases, cls_dict):
-        if name != 'watcher':
+        if name != 'watcher' and not cls_dict.get('_watcher_skip_ffi'):
             cls._fill_watcher(name, bases, cls_dict)
         return type.__new__(cls, name, bases, cls_dict)
 
@@ -410,9 +410,11 @@ class ChildMixin(object):
     def rpid(self):
         return os.getpid()
 
+    _rstatus = 0
+
     @property
     def rstatus(self):
-        return 0
+        return self._rstatus
 
 class StatMixin(object):
 

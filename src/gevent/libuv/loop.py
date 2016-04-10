@@ -5,7 +5,9 @@ libuv loop implementation
 from __future__ import absolute_import, print_function
 
 import os
+from collections import defaultdict
 import signal
+import sys
 
 from gevent._ffi.loop import AbstractLoop
 from gevent.libuv import _corecffi # pylint:disable=no-name-in-module,import-error
@@ -36,7 +38,7 @@ class loop(AbstractLoop):
     def __init__(self, flags=None, default=None):
         AbstractLoop.__init__(self, ffi, libuv, _watchers, flags, default)
         self.__loop_pid = os.getpid()
-
+        self._child_watchers = defaultdict(list)
 
     def _init_loop(self, flags, default):
         if default is None:
@@ -119,13 +121,13 @@ class loop(AbstractLoop):
         # had already been closed
         # (https://github.com/joyent/libuv/issues/1405)
 
-        raise NotImplementedError()
+        #raise NotImplementedError()
+        pass
 
 
     def run(self, nowait=False, once=False):
         # we can only respect one flag or the other.
         # nowait takes precedence because it can't block
-        print("RUNNING LOOP from", self.__loop_pid, "in", os.getpid())
         mode = libuv.UV_RUN_DEFAULT
         if once:
             mode = libuv.UV_RUN_ONCE
@@ -167,4 +169,15 @@ class loop(AbstractLoop):
                               signal.SIGCHLD)
 
     def __sigchld_callback(self, _handler, _signum):
-        print("SIGCHILD")
+        while True:
+            try:
+                pid, status, _usage = os.wait3(os.WNOHANG)
+            except OSError:
+                # Python 3 raises ChildProcessError
+                break
+
+            if pid == 0:
+                break
+            children_watchers = self._child_watchers.get(pid, []) + self._child_watchers.get(0, [])
+            for watcher in children_watchers:
+                watcher._set_status(status)
