@@ -3,6 +3,9 @@
 #define GEVENT_ST_NLINK_T int
 #define GEVENT_UV_OS_SOCK_T int
 
+#define UV_EBUSY ...
+
+
 typedef enum {
     UV_RUN_DEFAULT = 0,
     UV_RUN_ONCE,
@@ -115,7 +118,7 @@ typedef struct uv_fs_poll_s uv_fs_poll_t;
 
 
 // callbacks with the same signature
-typedef void (*uv_close_cb)(void *handle);
+typedef void (*uv_close_cb)(uv_handle_t *handle);
 typedef void (*uv_idle_cb)(void *handle);
 typedef void (*uv_timer_cb)(void *handle);
 typedef void (*uv_check_cb)(void* handle);

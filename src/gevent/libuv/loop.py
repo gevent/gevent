@@ -89,7 +89,27 @@ class loop(AbstractLoop):
         if self._ptr:
             ptr = self._ptr
             super(loop, self).destroy()
-            libuv.uv_loop_close(ptr)
+            libuv.uv_stop(ptr)
+            closed_failed = libuv.uv_loop_close(ptr)
+            if closed_failed:
+                assert closed_failed == libuv.UV_EBUSY
+                # Walk the open handlers, close them, then
+                # run the loop once to clear them out and
+                # close again.
+
+                def walk(handle, _arg):
+                    libuv.uv_close(handle, ffi.NULL)
+
+                libuv.uv_walk(ptr,
+                              ffi.callback("void(*)(uv_handle_t*,void*)",
+                                           walk),
+                              ffi.NULL)
+
+                ran_has_more_callbacks = libuv.uv_run(ptr, libuv.UV_RUN_ONCE)
+                if ran_has_more_callbacks:
+                    libuv.uv_run(ptr, libuv.UV_RUN_NOWAIT)
+                closed_failed = libuv.uv_loop_close(ptr)
+                assert not closed_failed, closed_failed
 
     def ref(self):
         pass
@@ -133,6 +153,17 @@ class loop(AbstractLoop):
             mode = libuv.UV_RUN_ONCE
         if nowait:
             mode = libuv.UV_RUN_NOWAIT
+
+        # if mode == libuv.UV_RUN_DEFAULT:
+        #     print("looping in python")
+        #     ptr = self._ptr
+        #     ran_error = 0
+        #     while ran_error == 0:
+        #         ran_error = libuv.uv_run(ptr, libuv.UV_RUN_ONCE)
+        #     if ran_error != 0:
+        #         print("Error running loop", libuv.uv_err_name(ran_error),
+        #               libuv.uv_strerror(ran_error))
+        #     return ran_error
 
         return libuv.uv_run(self._ptr, mode)
 

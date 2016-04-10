@@ -1,9 +1,6 @@
 # pylint: disable=too-many-lines, protected-access, redefined-outer-name, not-callable
 from __future__ import absolute_import, print_function
 
-import os
-import sys
-
 import gevent.libuv._corecffi as _corecffi # pylint:disable=no-name-in-module,import-error
 
 ffi = _corecffi.ffi # pylint:disable=no-member
@@ -11,6 +8,12 @@ libuv = _corecffi.lib # pylint:disable=no-member
 
 
 from gevent._ffi import watcher as _base
+
+_closing_handles = set()
+
+@ffi.callback("void(*)(uv_handle_t*)")
+def _uv_close_callback(handle):
+    _closing_handles.remove(handle)
 
 
 class watcher(_base.watcher):
@@ -21,6 +24,31 @@ class watcher(_base.watcher):
     _watcher_struct_pattern = '%s_t'
     _watcher_callback_name = '_gevent_generic_callback0'
 
+    def __del__(self):
+        # Managing the lifetime of _watcher is tricky.
+        # They have to be uv_close()'d, but that only
+        # queues them to be closed in the *next* loop iteration.
+        # The memory most stay valid for at least that long,
+        # or assert errors are triggered. We can't use a ffi.gc()
+        # pointer to queue the uv_close, because by the time the
+        # destructor is called, there's no way to keep the memory alive
+        # and it could be re-used.
+        # So here we resort to resurrecting the pointer object out
+        # of our scope, keeping it alive past this object's lifetime.
+        # We then use the uv_close callback to handle removing that
+        # reference. There's no context passed to the closs callback,
+        # so we have to do this globally.
+
+        # Sadly, doing this causes crashes if there were multiple
+        # watchers for a given FD. See https://github.com/gevent/gevent/issues/790#issuecomment-208076604
+        #print("Del", ffi.cast('void*', self._watcher), 'started', libuv.uv_is_active(self._watcher), type(self), id(self))
+        #if hasattr(self, '_fd'):
+        #    print("FD", self._fd)
+        if not libuv.uv_is_closing(self._watcher):
+            self._watcher.data = ffi.NULL
+            _closing_handles.add(self._watcher)
+            libuv.uv_close(self._watcher, _uv_close_callback)
+            self._watcher = None
 
     def _watcher_ffi_set_priority(self, priority):
         # libuv has no concept of priority

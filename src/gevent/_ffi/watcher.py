@@ -150,9 +150,12 @@ class watcher(object):
 
     def _watcher_create(self, ref): # pylint:disable=unused-argument
         self._handle = type(self).new_handle(self)
-        self._watcher = type(self).new(self._watcher_struct_pointer_type)
+        self._watcher = self._watcher_new()
         # XXX: Must GC the _watche in libuv: uv_close()
         self._watcher.data = self._handle
+
+    def _watcher_new(self):
+        return type(self).new(self._watcher_struct_pointer_type)
 
     def _watcher_ffi_set_priority(self, priority):
         pass

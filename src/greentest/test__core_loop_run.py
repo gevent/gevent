@@ -21,4 +21,5 @@ timer = loop.timer(0.5)
 timer.start(lambda: None)
 loop.run()
 
+loop.destroy()
 del loop
