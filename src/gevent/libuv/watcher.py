@@ -31,7 +31,7 @@ class watcher(_base.watcher):
         # Managing the lifetime of _watcher is tricky.
         # They have to be uv_close()'d, but that only
         # queues them to be closed in the *next* loop iteration.
-        # The memory most stay valid for at least that long,
+        # The memory must stay valid for at least that long,
         # or assert errors are triggered. We can't use a ffi.gc()
         # pointer to queue the uv_close, because by the time the
         # destructor is called, there's no way to keep the memory alive
@@ -39,19 +39,29 @@ class watcher(_base.watcher):
         # So here we resort to resurrecting the pointer object out
         # of our scope, keeping it alive past this object's lifetime.
         # We then use the uv_close callback to handle removing that
-        # reference. There's no context passed to the closs callback,
+        # reference. There's no context passed to the close callback,
         # so we have to do this globally.
 
         # Sadly, doing this causes crashes if there were multiple
         # watchers for a given FD. See https://github.com/gevent/gevent/issues/790#issuecomment-208076604
 
+        # We also have mysterious crashes for async objects.
+        # see test__pywsgi.py for an example. An async object
+        # that went out of scope and thus was closed (and had its
+        # uv_close_callback called) is still in the "queue" of async
+        # handlers, causing a crash on the next event loop. It's not clear
+        # how this state can arise.
+
         #print("Del", ffi.cast('void*', self._watcher), 'started', libuv.uv_is_active(self._watcher), type(self), id(self))
         if not libuv.uv_is_closing(self._watcher):
-            print("Closing handle", self._watcher)
-            self._watcher.data = ffi.NULL
+            #print("Closing handle", self._watcher)
             _closing_handles.add(self._watcher)
             libuv.uv_close(self._watcher, _uv_close_callback)
-        self._watcher = None
+
+        del self._handle
+        self._watcher.data = ffi.NULL
+        del self._watcher
+
 
     def _watcher_ffi_set_priority(self, priority):
         # libuv has no concept of priority
@@ -265,11 +275,13 @@ class child(_base.ChildMixin, watcher):
         self._rstatus = status
         self._async.send()
 
-
 class async(_base.AsyncMixin, watcher):
 
     def _watcher_ffi_init(self, args):
-        pass
+        # It's dangerous to have a raw, non-initted struct
+        # around; it will crash in uv_close() when we get GC'd,
+        # and send() will also crash.
+        self._watcher_ffi_stop()
 
     def _watcher_ffi_start(self):
         self._watcher_init(self.loop.ptr, self._watcher, self._watcher_callback)
@@ -278,6 +290,8 @@ class async(_base.AsyncMixin, watcher):
         self._watcher_init(self.loop.ptr, self._watcher, ffi.NULL)
 
     def send(self):
+        if libuv.uv_is_closing(self._watcher):
+            raise Exception("Closing handle")
         libuv.uv_async_send(self._watcher)
 
     @property

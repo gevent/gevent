@@ -49,13 +49,7 @@ static void _gevent_fs_event_callback3(void* handle, const char* filename, int e
 {
 	_gevent_generic_callback1(handle, status < 0 ? status : events);
 }
-/*
-typedef struct {
-	uv_fs_poll_t handle;
-	uv_stat_t curr;
-	uv_stat_t prev;
-} gevent_fs_poll_t;
-*/
+
 
 typedef struct _gevent_fs_poll_s {
 	uv_fs_poll_t handle;
