@@ -13,9 +13,9 @@ from gevent._ffi import watcher as _base
 
 _closing_handles = set()
 
+
 @ffi.callback("void(*)(uv_handle_t*)")
 def _uv_close_callback(handle):
-    #print("Handle callback", handle)
     _closing_handles.remove(handle)
 
 
@@ -26,6 +26,7 @@ class watcher(_base.watcher):
     _watcher_prefix = 'uv'
     _watcher_struct_pattern = '%s_t'
     _watcher_callback_name = '_gevent_generic_callback0'
+
 
     def __del__(self):
         # Managing the lifetime of _watcher is tricky.
@@ -43,16 +44,12 @@ class watcher(_base.watcher):
         # so we have to do this globally.
 
         # Sadly, doing this causes crashes if there were multiple
-        # watchers for a given FD. See https://github.com/gevent/gevent/issues/790#issuecomment-208076604
+        # watchers for a given FD, so we have to take special care
+        # about that. See https://github.com/gevent/gevent/issues/790#issuecomment-208076604
 
-        # We also have mysterious crashes for async objects.
-        # see test__pywsgi.py for an example. An async object
-        # that went out of scope and thus was closed (and had its
-        # uv_close_callback called) is still in the "queue" of async
-        # handlers, causing a crash on the next event loop. It's not clear
-        # how this state can arise.
+        if self._watcher is None:
+            return
 
-        #print("Del", ffi.cast('void*', self._watcher), 'started', libuv.uv_is_active(self._watcher), type(self), id(self))
         if not libuv.uv_is_closing(self._watcher):
             #print("Closing handle", self._watcher)
             _closing_handles.add(self._watcher)
@@ -281,13 +278,21 @@ class async(_base.AsyncMixin, watcher):
         # It's dangerous to have a raw, non-initted struct
         # around; it will crash in uv_close() when we get GC'd,
         # and send() will also crash.
-        self._watcher_ffi_stop()
+        # NOTE: uv_async_init is NOT idempotent. Calling it more than
+        # once adds the uv_async_t to the internal queue multiple times,
+        # and uv_close only cleans up one of them, meaning that we tend to
+        # crash. Thus we have to be very careful not to allow that.
+        self._watcher_init(self.loop.ptr, self._watcher, ffi.NULL)
 
     def _watcher_ffi_start(self):
-        self._watcher_init(self.loop.ptr, self._watcher, self._watcher_callback)
+        # we're created in a started state, but we didn't provide a
+        # callback (because if we did and we don't have a value in our
+        # callback attribute, then python_callback would crash.) Note that
+        # uv_async_t->async_cb is not technically documented as public.
+        self._watcher.async_cb = self._watcher_callback
 
     def _watcher_ffi_stop(self):
-        self._watcher_init(self.loop.ptr, self._watcher, ffi.NULL)
+        self._watcher.async_cb = ffi.NULL
 
     def send(self):
         if libuv.uv_is_closing(self._watcher):

@@ -91,6 +91,7 @@ struct uv_check_s {
 
 struct uv_async_s {
 	void *data;
+	void (*async_cb)(void*);
 	GEVENT_STRUCT_DONE _;
 };
 
