@@ -7,7 +7,7 @@ from __future__ import absolute_import, print_function
 import os
 from collections import defaultdict
 import signal
-import sys
+
 
 from gevent._ffi.loop import AbstractLoop
 from gevent.libuv import _corecffi # pylint:disable=no-name-in-module,import-error
@@ -39,6 +39,7 @@ class loop(AbstractLoop):
         AbstractLoop.__init__(self, ffi, libuv, _watchers, flags, default)
         self.__loop_pid = os.getpid()
         self._child_watchers = defaultdict(list)
+        self._io_watchers = dict()
 
     def _init_loop(self, flags, default):
         if default is None:
@@ -212,3 +213,16 @@ class loop(AbstractLoop):
             children_watchers = self._child_watchers.get(pid, []) + self._child_watchers.get(0, [])
             for watcher in children_watchers:
                 watcher._set_status(status)
+
+
+    def io(self, fd, events, ref=True, priority=None):
+        # XXX: Lifetime management. When can this root watcher
+        # go away?
+        io_watchers = self._io_watchers
+        try:
+            io_watcher = io_watchers[fd]
+        except KeyError:
+            io_watcher = self._watchers.io(self, fd, self._watchers.io.EVENT_MASK)
+            io_watchers[fd] = io_watcher
+
+        return io_watcher.multiplex(events)
