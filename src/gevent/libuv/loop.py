@@ -114,6 +114,8 @@ class loop(AbstractLoop):
         if self._ptr:
             ptr = self._ptr
             super(loop, self).destroy()
+
+            assert self._ptr is None
             libuv.uv_stop(ptr)
             closed_failed = libuv.uv_loop_close(ptr)
             if closed_failed:
@@ -134,7 +136,10 @@ class loop(AbstractLoop):
                 if ran_has_more_callbacks:
                     libuv.uv_run(ptr, libuv.UV_RUN_NOWAIT)
                 closed_failed = libuv.uv_loop_close(ptr)
-                assert not closed_failed, closed_failed
+                assert closed_failed == 0, closed_failed
+
+            # XXX: Do we need to uv_loop_delete the non-default loop?
+            # Probably...
 
     def debug(self):
         """

@@ -311,7 +311,9 @@ class AbstractLoop(object):
     def destroy(self):
         if self._ptr:
             self._stop_aux_watchers()
-            self._ptr = self._ffi.NULL
+            # not ffi.NULL, we don't want something that can be
+            # passed to C and crash later.
+            self._ptr = None
 
     @property
     def ptr(self):

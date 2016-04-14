@@ -5,7 +5,7 @@ import sys
 # which has already done 'import gevent.signal' to be sure we work
 # when the module has been imported.
 from gevent import core, signal
-loop = core.loop()
+loop = core.loop(default=False)
 
 
 signal = signal(2, sys.stderr.write, 'INTERRUPT!')
