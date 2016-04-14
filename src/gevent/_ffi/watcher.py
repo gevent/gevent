@@ -221,12 +221,17 @@ class watcher(object):
         if self.pending:
             result += " pending"
         if self.callback is not None:
-            result += " callback=%r" % (self.callback, )
+            fself = getattr(self.callback, '__self__', None)
+            if fself is self:
+                result += " callback=<bound method %s of self>" % (self.callback.__name__)
+            else:
+                result += " callback=%r" % (self.callback, )
         if self.args is not None:
             result += " args=%r" % (self.args, )
         if self.callback is None and self.args is None:
             result += " stopped"
         result += " handle=%s" % (self._watcher_handle)
+        result += " ref=%s" % (self.ref)
         return result + ">"
 
     @property

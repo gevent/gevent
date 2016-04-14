@@ -18,6 +18,8 @@ _closing_handles = set()
 def _uv_close_callback(handle):
     _closing_handles.remove(handle)
 
+def _dbg(*args, **kwargs):
+    pass
 
 class watcher(_base.watcher):
     _FFI = ffi
@@ -61,6 +63,7 @@ class watcher(_base.watcher):
 
 
     def _watcher_ffi_set_init_ref(self, ref):
+        _dbg("Creating", type(self), "with ref", ref)
         self.ref = ref
 
     def _watcher_ffi_set_priority(self, priority):
@@ -73,16 +76,28 @@ class watcher(_base.watcher):
                            *args)
 
     def _watcher_ffi_start(self):
+        _dbg("Starting", self)
         self._watcher_start(self._watcher, self._watcher_callback)
+        _dbg("\tStarted", self)
 
     def _watcher_ffi_stop(self):
+        _dbg("Stoping", self)
         self._watcher_stop(self._watcher)
+        _dbg("Stoped", self)
 
     def _watcher_ffi_ref(self):
+        _dbg("Reffing", self)
         libuv.uv_ref(self._watcher)
 
     def _watcher_ffi_unref(self):
+        _dbg("Unreffing", self)
         libuv.uv_unref(self._watcher)
+
+    def _watcher_ffi_start_unref(self):
+        pass
+
+    def _watcher_ffi_stop_ref(self):
+        pass
 
     def _get_ref(self):
         # Convert 1/0 to True/False
@@ -229,9 +244,9 @@ class child(_base.ChildMixin, watcher):
     # we're not adding any new SIGCHLD related issues not already
     # present in libev.
 
-    def __init__(self, *args, **kwargs):
-        super(child, self).__init__(*args, **kwargs)
-        self._async = self.loop.async()
+    def __init__(self, loop, *args, **kwargs):
+        self._async = loop.async()
+        super(child, self).__init__(loop, *args, **kwargs)
 
     def _watcher_create(self, _args):
         return
@@ -242,6 +257,9 @@ class child(_base.ChildMixin, watcher):
 
     def _watcher_ffi_init(self, args):
         return
+
+    def _watcher_ffi_set_init_ref(self, ref):
+        self._async.ref = ref
 
     def start(self, cb, *args):
         self.loop._child_watchers[self._pid].append(self)
@@ -304,16 +322,6 @@ class timer(_base.TimerMixin, watcher):
         self.loop.update()
 
     _again = False
-
-    def _watcher_ffi_start_unref(self):
-        # Don't manipulate the ref status different from
-        # how we were created. Doing so causes test__queue
-        # to have lots of LoopExit exceptions.
-        # XXX It's not totally clear why.
-        pass
-
-    def _watcher_ffi_stop_ref(self):
-        pass
 
     def _watcher_ffi_init(self, args):
         self._watcher_init(self.loop._ptr, self._watcher)

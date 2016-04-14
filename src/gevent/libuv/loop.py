@@ -147,6 +147,7 @@ class loop(AbstractLoop):
         pass
 
     def unref(self):
+        # XXX: Called by _run_callbacks.
         pass
 
     def break_(self, how=None):
