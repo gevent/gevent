@@ -179,6 +179,14 @@ if 'thread' in os.getenv('GEVENT_FILE', ''):
         # Fails with "OSError: 9 invalid file descriptor"; expect GC/lifetime issues
     ]
 
+if os.getenv('GEVENT_CORE_CFFI_ONLY') == 'libuv':
+    disabled_tests += [
+        # A 2.7 test. Tries to fork, and libuv cannot fork
+        'test_signal.InterProcessSignalTests.test_main',
+        # Likewise, a forking problem
+        'test_signal.SiginterruptTest.test_siginterrupt_off',
+    ]
+
 
 if sys.version_info[:3] <= (2, 7, 8):
 
