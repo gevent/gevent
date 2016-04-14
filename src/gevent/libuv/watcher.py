@@ -19,7 +19,10 @@ def _uv_close_callback(handle):
     _closing_handles.remove(handle)
 
 def _dbg(*args, **kwargs):
+    # pylint:disable=unused-argument
     pass
+
+#_dbg = print
 
 _events = [(libuv.UV_READABLE, "READ"),
            (libuv.UV_WRITABLE, "WRITE")]
@@ -124,7 +127,7 @@ class io(_base.IoMixin, watcher):
     _watcher_type = 'poll'
     _watcher_callback_name = '_gevent_poll_callback2'
 
-    EVENT_MASK = libuv.UV_READABLE | libuv.UV_WRITABLE
+    EVENT_MASK = libuv.UV_READABLE | libuv.UV_WRITABLE | libuv.UV_DISCONNECT
 
     _multiplex_watchers = None
 
@@ -212,14 +215,24 @@ class io(_base.IoMixin, watcher):
     def _io_callback(self, events):
         if events < 0:
             # actually a status error code
-            print("Callback error",
-                  ffi.string(libuv.uv_err_name(events)),
-                  ffi.string(libuv.uv_strerror(events)))
-            return
+            _dbg("Callback error on", self._fd,
+                 ffi.string(libuv.uv_err_name(events)),
+                 ffi.string(libuv.uv_strerror(events)))
+            # XXX: We've seen one half of a FileObjectPosix pair
+            # (the read side of a pipe) report errno 11 'bad file descriptor'
+            # after the write side was closed and its watcher removed. But
+            # we still need to attempt to read from it to clear out what's in
+            # its buffers--if we return with the watcher inactive before proceeding to wake up
+            # the reader, we get a LoopExit. So we can't return here and arguably shouldn't print it
+            # either. The negative events mask will match the watcher's mask.
+            # See test__fileobject.py:Test.test_newlines for an example.
+            #return
+
         for watcher_ref in self._multiplex_watchers:
             watcher = watcher_ref()
             if not watcher or not watcher.callback:
                 continue
+
             if events & watcher.events:
                 if not watcher.pass_events:
                     watcher.callback(*watcher.args)

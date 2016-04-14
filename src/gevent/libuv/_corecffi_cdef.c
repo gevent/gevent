@@ -18,9 +18,8 @@ typedef enum {
 enum uv_poll_event {
     UV_READABLE = 1,
     UV_WRITABLE = 2,
-/* new in 1.9
+	/* new in 1.9 */
 	UV_DISCONNECT = 4
-	*/
 };
 
 enum uv_fs_event {
