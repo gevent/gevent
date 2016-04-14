@@ -235,7 +235,9 @@ class loop(AbstractLoop):
 
     def fileno(self):
         if self._ptr:
-            return libuv.uv_backend_fd(self._ptr)
+            fd = libuv.uv_backend_fd(self._ptr)
+            if fd >= 0:
+                return fd
 
     _sigchld_watcher = None
     _sigchld_callback_ffi = None

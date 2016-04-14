@@ -4,9 +4,12 @@ import gevent
 from gevent import core
 
 
-if core.LIBEV_EMBED:
+if getattr(core, 'LIBEV_EMBED', False):
     # hub.loop.fileno is only defined when
-    # we embed libev for some reason
+    # we embed libev for some reason.
+    # Choosing specific backends is also only supported by libev
+    # (not libuv), and besides, libuv has a nasty tendency to
+    # abort() the process if its FD gets closed.
 
     for count in range(2):
         for backend in core.supported_backends():
