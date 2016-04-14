@@ -40,11 +40,14 @@ class Test(greentest.TestCase):
         # XXX why?
         io.args = None
         self.assertEqual(io.args, None)
-        start = core.time()
+        time_f = getattr(core, 'time', loop.now)
+        start = time_f()
         loop.run()
-        took = core.time() - start
+        took = time_f() - start
         self.assertEqual(lst, [()])
-        assert took < 1, took
+        if hasattr(core, 'time'):
+            # only useful on libev
+            assert took < 1, took
 
         io.start(reset, io, lst)
         del io
