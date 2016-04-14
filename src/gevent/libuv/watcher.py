@@ -431,3 +431,8 @@ class signal(_base.SignalMixin, watcher):
     def _watcher_ffi_start(self):
         self._watcher_start(self._watcher, self._watcher_callback,
                             self._signalnum)
+
+class idle(_base.IdleMixin, watcher):
+    # Because libuv doesn't support priorities, idle watchers are
+    # potentially quite a bit different than under libev
+    pass
