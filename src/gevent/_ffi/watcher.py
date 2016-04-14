@@ -17,6 +17,20 @@ __all__ = [
 ]
 
 
+def events_to_str(event_field, all_events):
+    result = []
+    for (flag, string) in all_events:
+        c_flag = flag
+        if event_field & c_flag:
+            result.append(string)
+            event_field = event_field & (~c_flag)
+        if not event_field:
+            break
+    if event_field:
+        result.append(hex(event_field))
+    return '|'.join(result)
+
+
 def not_while_active(func):
     @functools.wraps(func)
     def nw(self, *args, **kwargs):

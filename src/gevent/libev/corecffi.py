@@ -80,11 +80,8 @@ SIGNALFD = libev.EVFLAG_SIGNALFD
 NOSIGMASK = libev.EVFLAG_NOSIGMASK
 
 
-class _EVENTSType(object):
-    def __repr__(self):
-        return 'gevent.core.EVENTS'
-
-EVENTS = GEVENT_CORE_EVENTS = _EVENTSType()
+from gevent._ffi.loop import EVENTS
+GEVENT_CORE_EVENTS = EVENTS
 
 
 def get_version():

@@ -22,7 +22,28 @@ __all__ = [
 
 _callbacks = assign_standard_callbacks(ffi, libuv)
 
+from gevent._ffi.loop import EVENTS
+GEVENT_CORE_EVENTS = EVENTS # export
+
 from gevent.libuv import watcher as _watchers
+
+_events_to_str = _watchers._events_to_str # export
+
+READ = libuv.UV_READABLE
+WRITE = libuv.UV_WRITABLE
+
+def get_version():
+    uv_bytes = ffi.string(libuv.uv_version_string())
+    if not isinstance(uv_bytes, str):
+        # Py3
+        uv_str = uv_bytes.decode("ascii")
+    else:
+        uv_str = uv_bytes
+
+    return 'libuv-' + uv_str
+
+def get_header_version():
+    return 'libuv-%d.%d.%d' % (libuv.UV_VERSION_MAJOR, libuv.UV_VERSION_MINOR, libuv.UV_VERSION_PATCH)
 
 class loop(AbstractLoop):
 

@@ -46,21 +46,11 @@ _events = [(libev.EV_READ, 'READ'),
            (libev.EV_CUSTOM, 'CUSTOM'),
            (libev.EV_ERROR, 'ERROR')]
 
-def _events_to_str(events):
-    result = []
-    for (flag, string) in _events:
-        c_flag = flag
-        if events & c_flag:
-            result.append(string)
-            events = events & (~c_flag)
-        if not events:
-            break
-    if events:
-        result.append(hex(events))
-    return '|'.join(result)
-
-
 from gevent._ffi import watcher as _base
+
+def _events_to_str(events):
+    return _base.events_to_str(events, _events)
+
 
 
 class watcher(_base.watcher):

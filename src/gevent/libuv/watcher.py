@@ -21,6 +21,12 @@ def _uv_close_callback(handle):
 def _dbg(*args, **kwargs):
     pass
 
+_events = [(libuv.UV_READABLE, "READ"),
+           (libuv.UV_WRITABLE, "WRITE")]
+
+def _events_to_str(events): # export
+    return _base.events_to_str(events, _events)
+
 class watcher(_base.watcher):
     _FFI = ffi
     _LIB = libuv

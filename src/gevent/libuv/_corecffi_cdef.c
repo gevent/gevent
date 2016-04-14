@@ -5,6 +5,9 @@
 
 #define UV_EBUSY ...
 
+#define UV_VERSION_MAJOR ...
+#define UV_VERSION_MINOR ...
+#define UV_VERSION_PATCH ...
 
 typedef enum {
     UV_RUN_DEFAULT = 0,
@@ -52,6 +55,7 @@ enum uv_fs_event_flags {
 
 const char* uv_strerror(int);
 const char* uv_err_name(int);
+const char* uv_version_string(void);
 
 // handle structs and types
 struct uv_loop_s {

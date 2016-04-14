@@ -1,6 +1,7 @@
 import sys
 from greentest import TestCase, main
 from gevent import core
+import unittest
 
 
 class Test(TestCase):
@@ -16,6 +17,8 @@ class Test(TestCase):
         assert header_version, repr(header_version)
         self.assertEqual(version, header_version)
 
+    @unittest.skipIf(hasattr(core, 'libuv'),
+                     "flags are libev-only")
     def test_flags_conversion(self):
         if sys.platform != 'win32':
             self.assertEqual(core.loop(2, default=False).backend_int, 2)
@@ -41,7 +44,9 @@ class Test(TestCase):
             Error = ValueError
             win32 = False
         self.assertRaises(Error, core.loop().io, -1, 1)
-        self.assertRaises(ValueError, core.loop().io, 1, core.TIMER)
+        if hasattr(core, 'TIMER'):
+            # libev
+            self.assertRaises(ValueError, core.loop().io, 1, core.TIMER)
         # Test we can set events and io before it's started
         if not win32:
             # We can't do this with arbitrary FDs on windows;
@@ -50,7 +55,11 @@ class Test(TestCase):
             io.fd = 2
             self.assertEqual(io.fd, 2)
             io.events = core.WRITE
-            self.assertEqual(core._events_to_str(io.events), 'WRITE|_IOFDSET')
+            if not hasattr(core, 'libuv'):
+                # libev
+                self.assertEqual(core._events_to_str(io.events), 'WRITE|_IOFDSET')
+            else:
+                self.assertEqual(core._events_to_str(io.events), 'WRITE')
 
     def test_timer(self):
         self.assertRaises(ValueError, core.loop().timer, 1, -1)
