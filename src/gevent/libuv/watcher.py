@@ -370,9 +370,13 @@ class timer(_base.TimerMixin, watcher):
         if self._again:
             libuv.uv_timer_again(self._watcher)
         else:
-            self._watcher_start(self._watcher, self._watcher_callback,
-                                int(self._after * 1000),
-                                int(self._repeat * 1000))
+            try:
+                self._watcher_start(self._watcher, self._watcher_callback,
+                                    int(self._after * 1000),
+                                    int(self._repeat * 1000))
+            except ValueError:
+                # in case of non-ints in _after/_repeat
+                raise TypeError()
 
     def again(self, callback, *args, **kw):
         if not self.active:
