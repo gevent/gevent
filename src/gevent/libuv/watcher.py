@@ -81,14 +81,6 @@ class watcher(_base.watcher):
     def _watcher_ffi_unref(self):
         libuv.uv_unref(self._watcher)
 
-    def _watcher_ffi_start_unref(self):
-        # libev manipulates these refs at start and stop for
-        # some reason; we don't
-        pass
-
-    def _watcher_ffi_stop_ref(self):
-        pass
-
     def _get_ref(self):
         # Convert 1/0 to True/False
         return True if libuv.uv_has_ref(self._watcher) else False

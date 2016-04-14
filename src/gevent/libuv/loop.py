@@ -6,6 +6,7 @@ from __future__ import absolute_import, print_function
 
 import os
 from collections import defaultdict
+from collections import namedtuple
 import signal
 
 
@@ -111,6 +112,36 @@ class loop(AbstractLoop):
                     libuv.uv_run(ptr, libuv.UV_RUN_NOWAIT)
                 closed_failed = libuv.uv_loop_close(ptr)
                 assert not closed_failed, closed_failed
+
+    def debug(self):
+        """
+        Return all the handles that are open and their ref status.
+        """
+        handle_state = namedtuple("HandleState",
+                                  ['handle',
+                                   'watcher',
+                                   'ref',
+                                   'active',
+                                   'closing'])
+        handles = []
+
+        def walk(handle, _arg):
+            data = handle.data
+            if data:
+                watcher = ffi.from_handle(data)
+            else:
+                watcher = None
+            handles.append(handle_state(handle,
+                                        watcher,
+                                        libuv.uv_has_ref(handle),
+                                        libuv.uv_is_active(handle),
+                                        libuv.uv_is_closing(handle)))
+
+        libuv.uv_walk(self._ptr,
+                      ffi.callback("void(*)(uv_handle_t*,void*)",
+                                   walk),
+                      ffi.NULL)
+        return handles
 
     def ref(self):
         pass

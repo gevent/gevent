@@ -176,6 +176,10 @@ class watcher(object):
         raise NotImplementedError()
 
     def _watcher_ffi_start_unref(self):
+        # While a watcher is active, we don't keep it
+        # referenced. This allows a timer, for example, to be started,
+        # and still allow the loop to end if there is nothing
+        # else to do. see test__order.TestSleep0 for one example.
         self._watcher_ffi_unref()
 
     def _watcher_ffi_stop_ref(self):
