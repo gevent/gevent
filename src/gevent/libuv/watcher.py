@@ -345,6 +345,20 @@ class timer(_base.TimerMixin, watcher):
     def _watcher_ffi_init(self, args):
         self._watcher_init(self.loop._ptr, self._watcher)
         self._after, self._repeat = args
+        if self._after and self._after < 0.001:
+            import warnings
+            warnings.warn("libuv only supports millisecond timer resolution; "
+                          "all times less will be set to 1 ms",
+                          stacklevel=6)
+            # The alternative is to effectively pass in int(0.1) == 0, which
+            # means no sleep at all, which leads to excessive wakeups
+            self._after = 0.001
+        if self._repeat and self._repeat < 0.001:
+            import warnings
+            warnings.warn("libuv only supports millisecond timer resolution; "
+                          "all times less will be set to 1 ms",
+                          stacklevel=6)
+            self._repeat = 0.001
 
     def _watcher_ffi_start(self):
         if self._again:
