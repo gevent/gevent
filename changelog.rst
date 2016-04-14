@@ -93,6 +93,8 @@ Other Changes
 - pywsgi/performance: Chunks of data the application returns are no longer copied
   before being sent to the socket when the transfer-encoding is
   chunked, potentially reducing overhead for large responses.
+- :class:`~.PriorityQueue` now ensures that an initial items list is a
+  valid heap. Fixed in :pr:`793` by X.C.Dong.
 
 1.1.1 (Apr 4, 2016)
 ===================

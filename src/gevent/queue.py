@@ -370,6 +370,11 @@ class PriorityQueue(Queue):
     '''A subclass of :class:`Queue` that retrieves entries in priority order (lowest first).
 
     Entries are typically tuples of the form: ``(priority number, data)``.
+
+    .. versionchanged:: 1.2a1
+       Any *items* given to the constructor will now be passed through
+       :func:`heapq.heapify` to ensure the invariants of this class hold.
+       Previously it was just assumed that they were already a heap.
     '''
 
     def _init(self, maxsize, items=None):
