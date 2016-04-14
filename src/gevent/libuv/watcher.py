@@ -325,6 +325,12 @@ class async(_base.AsyncMixin, watcher):
 
     def _watcher_ffi_stop(self):
         self._watcher.async_cb = ffi.NULL
+        # We have to unref this because we're setting the cb behind libuv's
+        # back, basically: once a async watcher is started, it can't ever be
+        # stopped through libuv interfaces, so it would never lose its active
+        # status, and thus if it stays reffed it would keep the event loop
+        # from exiting.
+        self._watcher_ffi_unref()
 
     def send(self):
         if libuv.uv_is_closing(self._watcher):

@@ -5,6 +5,7 @@ libuv loop implementation
 from __future__ import absolute_import, print_function
 
 import os
+import sys
 from collections import defaultdict
 from collections import namedtuple
 import signal
@@ -45,6 +46,9 @@ def get_version():
 def get_header_version():
     return 'libuv-%d.%d.%d' % (libuv.UV_VERSION_MAJOR, libuv.UV_VERSION_MINOR, libuv.UV_VERSION_PATCH)
 
+def supported_backends():
+    return ['default']
+
 class loop(AbstractLoop):
 
     DEFAULT_LOOP_REGENERATES = True
@@ -80,6 +84,9 @@ class loop(AbstractLoop):
         if not ptr:
             raise SystemError("Failed to get loop")
         return ptr
+
+    def _check_callback(self, *args):
+        print("Loop timeout", libuv.uv_backend_timeout(self._ptr))
 
     def _init_and_start_check(self):
         libuv.uv_check_init(self._ptr, self._check)
@@ -225,7 +232,6 @@ class loop(AbstractLoop):
         #         print("Error running loop", libuv.uv_err_name(ran_error),
         #               libuv.uv_strerror(ran_error))
         #     return ran_error
-
         return libuv.uv_run(self._ptr, mode)
 
     def now(self):

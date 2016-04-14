@@ -405,7 +405,7 @@ class AbstractLoop(object):
 
     @property
     def backend(self):
-        return "<default backend>"
+        return "default"
 
     @property
     def pendingcnt(self):

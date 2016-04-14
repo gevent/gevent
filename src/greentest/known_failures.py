@@ -21,6 +21,7 @@ PYGTE279 = (
     and sys.version_info[1] >= 7
     and sys.version_info[2] >= 9
 )
+LIBUV = os.getenv('GEVENT_CORE_CFFI_ONLY') == 'libuv' # XXX: Formalize this better
 
 
 FAILING_TESTS = [
@@ -166,6 +167,13 @@ if PYPY:
             'FLAKY test_subprocess.py', # timeouts on one test.
         ]
 
+
+if LIBUV:
+
+    FAILING_TESTS += [
+        # libuv doesn't support fork without an immediate exec
+        'test__core_fork.py',
+    ]
 
 if PY26:
     FAILING_TESTS += [

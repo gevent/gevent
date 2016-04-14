@@ -169,10 +169,11 @@ typedef void (*uv_fs_poll_cb)(void* handle, int status, const uv_stat_t* prev, c
 
 // loop functions
 uv_loop_t *uv_default_loop();
-uv_loop_t* uv_loop_new(); // not documented
+uv_loop_t* uv_loop_new(); // not documented; neither is uv_loop_delete
 int uv_loop_init(uv_loop_t* loop);
 int uv_loop_alive(const uv_loop_t *loop);
 int uv_loop_close(uv_loop_t* loop);
+uint64_t uv_backend_timeout(uv_loop_t* loop);
 int uv_run(uv_loop_t *, uv_run_mode mode);
 int uv_backend_fd(const uv_loop_t* loop);
 void uv_update_time(const uv_loop_t* loop);
