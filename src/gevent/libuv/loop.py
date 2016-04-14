@@ -81,17 +81,33 @@ class loop(AbstractLoop):
         else:
             ptr = libuv.uv_loop_new()
 
+
         if not ptr:
             raise SystemError("Failed to get loop")
         return ptr
 
-    def _check_callback(self, *args):
-        print("Loop timeout", libuv.uv_backend_timeout(self._ptr))
+    _signal_idle = None
 
     def _init_and_start_check(self):
         libuv.uv_check_init(self._ptr, self._check)
         libuv.uv_check_start(self._check, self._check_callback_ffi)
         libuv.uv_unref(self._check)
+
+        # We also have to have an idle watcher to be able to handle
+        # signals in a timely manner. Without them, libuv won't loop again
+        # and call into its check and prepare handlers.
+        # Note that this basically forces us into a busy-loop
+        # XXX: As predicted, using an idle watcher causes our process
+        # to eat 100% CPU time. We instead use a timer with a max of a 1 second
+        # delay to notice signals.
+        # XXX: Perhaps we could optimize this to notice when there are other
+        # timers in the loop and start/stop it then
+        self._signal_idle = ffi.new("uv_timer_t*")
+        libuv.uv_timer_init(self._ptr, self._signal_idle)
+        libuv.uv_timer_start(self._signal_idle, self._check_callback_ffi,
+                             1000,
+                             1000)
+        libuv.uv_unref(self._signal_idle)
 
     def _init_and_start_prepare(self):
         libuv.uv_prepare_init(self._ptr, self._prepare)
@@ -112,6 +128,9 @@ class loop(AbstractLoop):
         libuv.uv_ref(self._prepare) # Why are we doing this?
         libuv.uv_check_stop(self._check)
         libuv.uv_ref(self._check)
+
+        libuv.uv_timer_stop(self._signal_idle)
+        libuv.uv_ref(self._signal_idle)
 
     def _setup_for_run_callback(self):
         self._start_callback_timer()
