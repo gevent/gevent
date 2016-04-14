@@ -277,6 +277,7 @@ if hasattr(os, 'fork'):
             .. versionchanged:: 1.2a1
                More cases are handled in a cooperative manner.
             """
+            # pylint: disable=too-many-return-statements
             # XXX Does not handle tracing children
 
             # So long as libev's loop doesn't run, it's OK to add

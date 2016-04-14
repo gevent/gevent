@@ -5,7 +5,6 @@ libuv loop implementation
 from __future__ import absolute_import, print_function
 
 import os
-import sys
 from collections import defaultdict
 from collections import namedtuple
 import signal
