@@ -47,6 +47,8 @@ def get_header_version():
 
 class loop(AbstractLoop):
 
+    DEFAULT_LOOP_REGENERATES = True
+
     error_handler = None
 
     _CHECK_POINTER = 'uv_check_t *'
