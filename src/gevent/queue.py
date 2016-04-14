@@ -375,6 +375,7 @@ class PriorityQueue(Queue):
     def _init(self, maxsize, items=None):
         if items:
             self.queue = list(items)
+            heapq.heapify(self.queue)
         else:
             self.queue = []
 

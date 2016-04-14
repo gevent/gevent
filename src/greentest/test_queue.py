@@ -237,6 +237,12 @@ class LifoQueueTest(BaseQueueTest):
 class PriorityQueueTest(BaseQueueTest):
     type2test = Queue.PriorityQueue
 
+    def test__init(self):
+        item1 = (2, 'b')
+        item2 = (1, 'a')
+        q = self.type2test(items=[item1, item2])
+        self.assertTupleEqual(item2, q.get_nowait())
+        self.assertTupleEqual(item1, q.get_nowait())
 
 
 # A Queue subclass that can provoke failure at a moment's notice :)
