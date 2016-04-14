@@ -60,6 +60,9 @@ class watcher(_base.watcher):
         del self._watcher
 
 
+    def _watcher_ffi_set_init_ref(self, ref):
+        self.ref = ref
+
     def _watcher_ffi_set_priority(self, priority):
         # libuv has no concept of priority
         pass
@@ -301,6 +304,16 @@ class timer(_base.TimerMixin, watcher):
         self.loop.update()
 
     _again = False
+
+    def _watcher_ffi_start_unref(self):
+        # Don't manipulate the ref status different from
+        # how we were created. Doing so causes test__queue
+        # to have lots of LoopExit exceptions.
+        # XXX It's not totally clear why.
+        pass
+
+    def _watcher_ffi_stop_ref(self):
+        pass
 
     def _watcher_ffi_init(self, args):
         self._watcher_init(self.loop._ptr, self._watcher)

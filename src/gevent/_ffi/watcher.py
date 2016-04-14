@@ -147,6 +147,7 @@ class watcher(object):
             self._watcher_ffi_set_priority(priority)
 
         self._watcher_ffi_init(args)
+        self._watcher_ffi_set_init_ref(ref)
 
     def _watcher_create(self, ref): # pylint:disable=unused-argument
         self._handle = type(self).new_handle(self)
@@ -156,6 +157,9 @@ class watcher(object):
 
     def _watcher_new(self):
         return type(self).new(self._watcher_struct_pointer_type)
+
+    def _watcher_ffi_set_init_ref(self, ref):
+        pass
 
     def _watcher_ffi_set_priority(self, priority):
         pass
@@ -268,9 +272,9 @@ class watcher(object):
             raise TypeError('callback must be callable, not None')
         self.callback = callback
         self.args = args or _NOARGS
-        self._watcher_ffi_start_unref()
         self.loop._keepaliveset.add(self)
         self._watcher_ffi_start()
+        self._watcher_ffi_start_unref()
 
     def stop(self):
         self._watcher_ffi_stop_ref()

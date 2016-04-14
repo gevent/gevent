@@ -68,6 +68,12 @@ class watcher(_base.watcher):
     _LIB = libev
     _watcher_prefix = 'ev'
 
+    # Flags is a bitfield with the following meaning:
+    # 0000 -> default, referenced (when active)
+    # 0010 -> ev_unref has been called
+    # 0100 -> not referenced; independent of 0010
+    _flags = 0
+
     def __init__(self, _loop, ref=True, priority=None, args=_base._NOARGS):
         if ref:
             self._flags = 0
@@ -88,14 +94,15 @@ class watcher(_base.watcher):
         self._watcher_start(self.loop._ptr, self._watcher)
 
     def _watcher_ffi_ref(self):
-        if self._flags & 2:
+        if self._flags & 2: # we've told libev we're not referenced
             self.loop.ref()
             self._flags &= ~2
 
     def _watcher_ffi_unref(self):
         if self._flags & 6 == 4:
+            # We're not referenced, but we haven't told libev that
             self.loop.unref()
-            self._flags |= 2
+            self._flags |= 2 # now we've told libev
 
     def _get_ref(self):
         return False if self._flags & 4 else True
@@ -110,10 +117,12 @@ class watcher(_base.watcher):
         else:
             if self._flags & 4:
                 return  # ref is already False
-            self._flags |= 4
+            self._flags |= 4 # we're not referenced
             if not self._flags & 2 and libev.ev_is_active(self._watcher):
+                # we haven't told libev we're not referenced, but it thinks we're
+                # active so we need to undo that
                 self.loop.unref()
-                self._flags |= 2
+                self._flags |= 2 # libev knows we're not referenced
 
     ref = property(_get_ref, _set_ref)
 
