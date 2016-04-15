@@ -89,6 +89,20 @@ def prepare_windows_env(env):
     if os.path.isfile(path):
         log.info('Using "%s" to build libuv...' % path)
         env['PYTHON'] = path
+        # Things needed for run_with_env.cmd
+        # What we're building for, not what we're building with
+        # (because it's just the C library)
+        env['PYTHON_VERSION'] = str(sys.version_info[0]) + '.' + str(sys.version_info[1]) + ".x"
+        # XXX: Just guessing here. Is PYTHON_ARCH correct?
+        if 'PYTHON_ARCH' not in env:
+            env['PYTHON_ARCH'] = '64' if platform.architecture()[0] == '64bit' else '32'
+        from distutils.msvc9compiler import query_vcvarsall
+        if sys.version_info[:2] >= (3, 5):
+            version = 14
+        else:
+            version = 9 # for 2.7, but probably not right for 3.4?
+
+        env.update(query_vcvarsall(version))
     else:
         raise DistutilsError('No appropriate Python version found. An '
                              'installation of 2.7 is required to '
@@ -134,9 +148,11 @@ def configure_libuv(_bext, _ext):
         if WIN:
             prepare_windows_env(env)
             libuv_arch = {'32bit': 'x86', '64bit': 'x64'}[platform.architecture()[0]]
-            system(['cmd.exe', '/C', 'vcbuild.bat', libuv_arch, 'release'],
+            system(["cmd", "/E:ON", "/V:ON", "/C", "..\\..\\appveyor\\run_with_env.cmd",
+                    'vcbuild.bat', libuv_arch, 'release'],
                    cwd=libuv_dir,
-                   env=env)
+                   env=env,
+                   shell=False)
         else:
             # autogen: requires automake and libtool installed
             system(['./autogen.sh'],

@@ -128,7 +128,8 @@ if defined nobuild goto run
 if defined VCINSTALLDIR goto msbuild-found
 if defined WindowsSDKDir goto msbuild-found
 echo Build skipped. To build, this file needs to run from VS cmd prompt.
-goto run
+@rem gevent: commented out, we parse vcvarsall.bat directly
+@rem goto run
 
 @rem Build the sln with msbuild.
 :msbuild-found

@@ -216,7 +216,7 @@ int uv_check_start(uv_check_t *check, uv_check_cb cb);
 int uv_check_stop(uv_check_t *check);
 
 // async functions
-// Async handles allow the user to “wakeup” the event loop and get a callback called from another thread.
+// Async handles allow the user to "wakeup" the event loop and get a callback called from another thread.
 
 int uv_async_init(uv_loop_t *, uv_async_t*, uv_async_cb);
 int uv_async_send(uv_async_t*);
@@ -255,7 +255,8 @@ int uv_signal_stop(uv_signal_t *handle);
 int uv_poll_init(uv_loop_t *loop, uv_poll_t *handle, int fd);
 // Initialize the handle using a socket descriptor. On Unix this is identical to uv_poll_init(). On windows it takes a SOCKET handle.
 // The socket is set to non-blocking mode.
-int uv_poll_init_socket(uv_loop_t* loop, uv_poll_t* handle, GEVENT_UV_OS_SOCK_T socket);
+// On Windows, how to get the SOCKET type defined?
+//int uv_poll_init_socket(uv_loop_t* loop, uv_poll_t* handle, GEVENT_UV_OS_SOCK_T socket);
 int uv_poll_start(uv_poll_t *handle, int events, uv_poll_cb cb);
 int uv_poll_stop(uv_poll_t *handle);
 
@@ -274,7 +275,7 @@ int uv_fs_event_getpath(uv_fs_event_t*, char* buffer, size_t* size);
 // FS Poll handles allow the user to monitor a given path for changes.
 // Unlike uv_fs_event_t, fs poll handles use stat to detect when a
 // file has changed so they can work on file systems where fs event
-// handles can’t.
+// handles can't.
 //
 // This is a closer match to libev.
 int uv_fs_poll_init(void*, void*);

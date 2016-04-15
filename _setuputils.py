@@ -128,13 +128,15 @@ def make_universal_header(filename, *defines):
 # Processes
 
 
-def _system(cmd, cwd=None, env=None):
+def _system(cmd, cwd=None, env=None, **kwargs):
     sys.stdout.write('Running %r in %s\n' % (cmd, cwd or os.getcwd()))
-    return check_call(cmd, shell=True, cwd=cwd, env=env)
+    if 'shell' not in kwargs:
+        kwargs['shell'] = True
+    return check_call(cmd, cwd=cwd, env=env, **kwargs)
 
 
-def system(cmd, cwd=None, env=None):
-    if _system(cmd, cwd=cwd, env=env):
+def system(cmd, cwd=None, env=None, **kwargs):
+    if _system(cmd, cwd=cwd, env=env, **kwargs):
         sys.exit(1)
 
 
