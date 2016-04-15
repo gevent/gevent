@@ -1,6 +1,7 @@
 # pylint: disable=too-many-lines, protected-access, redefined-outer-name, not-callable
 from __future__ import absolute_import, print_function
 
+import functools
 import weakref
 
 import gevent.libuv._corecffi as _corecffi # pylint:disable=no-name-in-module,import-error
@@ -30,22 +31,58 @@ _events = [(libuv.UV_READABLE, "READ"),
 def _events_to_str(events): # export
     return _base.events_to_str(events, _events)
 
-def _check_res(func):
-    # XXX: Better name.
-    # XXX: functools.wraps
-    # XXX: can do this with __getattribute__ or metaclass magic or even a libuv
-    # wrapper class given how regular these are.
-    def wrap(*args, **kwargs):
-        res = func(*args, **kwargs)
-        if res is not None and res < 0:
-            raise Exception(
-                ffi.string(libuv.uv_err_name(res)),
-                ffi.string(libuv.uv_strerror(res)))
-    return wrap
+class UVFuncallError(ValueError):
+    pass
+
+class libuv_error_wrapper(object):
+    # Makes sure that everything stored as a function
+    # on the wrapper instances (classes, actually,
+    # because this is used my the metaclass)
+    # checks its return value and raises an error.
+    # This expects that everything we call has an int
+    # or void return value and follows the conventions
+    # of error handling (that negative values are errors)
+    def __init__(self, uv):
+        self._libuv = uv
+
+    def __getattr__(self, name):
+        libuv_func = getattr(self._libuv, name)
+
+        @functools.wraps(libuv_func)
+        def wrap(*args, **kwargs):
+            if len(args) > 0 and isinstance(args[0], watcher):
+                args = args[1:]
+            res = libuv_func(*args, **kwargs)
+            if res is not None and res < 0:
+                raise UVFuncallError(
+                    str(ffi.string(libuv.uv_err_name(res)).decode('ascii')
+                        + ' '
+                        + ffi.string(libuv.uv_strerror(res)).decode('ascii')))
+            return res
+
+        setattr(self, name, wrap)
+
+        return wrap
+
+
+class ffi_unwrapper(object):
+    # undoes the wrapping of libuv_error_wrapper for
+    # the methods used by the metaclass that care
+
+    def __init__(self, ff):
+        self._ffi = ff
+
+    def __getattr__(self, name):
+        return getattr(self._ffi, name)
+
+    def addressof(self, lib, name):
+        assert isinstance(lib, libuv_error_wrapper)
+        return self._ffi.addressof(libuv, name)
+
 
 class watcher(_base.watcher):
-    _FFI = ffi
-    _LIB = libuv
+    _FFI = ffi_unwrapper(ffi)
+    _LIB = libuv_error_wrapper(libuv)
 
     _watcher_prefix = 'uv'
     _watcher_struct_pattern = '%s_t'
@@ -92,7 +129,6 @@ class watcher(_base.watcher):
         # libuv has no concept of priority
         pass
 
-    @_check_res
     def _watcher_ffi_init(self, args):
         # TODO: we could do a better job chokepointing this
         return self._watcher_init(self.loop.ptr,
@@ -257,6 +293,8 @@ class io(_base.IoMixin, watcher):
 
 class fork(_base.ForkMixin):
     # We'll have to implement this one completely manually
+    # Right now it doesn't matter much since libuv doesn't survive
+    # a fork anyway.
 
     def __init__(self, *args, **kwargs):
         pass
@@ -266,6 +304,7 @@ class fork(_base.ForkMixin):
 
     def stop(self, *args):
         pass
+
 
 class child(_base.ChildMixin, watcher):
     _watcher_skip_ffi = True
@@ -319,9 +358,9 @@ class child(_base.ChildMixin, watcher):
         self._rstatus = status
         self._async.send()
 
+
 class async(_base.AsyncMixin, watcher):
 
-    @_check_res
     def _watcher_ffi_init(self, args):
         # It's dangerous to have a raw, non-initted struct
         # around; it will crash in uv_close() when we get GC'd,
@@ -364,9 +403,8 @@ class timer(_base.TimerMixin, watcher):
 
     _again = False
 
-    @_check_res
     def _watcher_ffi_init(self, args):
-        res = self._watcher_init(self.loop._ptr, self._watcher)
+        self._watcher_init(self.loop._ptr, self._watcher)
         self._after, self._repeat = args
         if self._after and self._after < 0.001:
             import warnings
@@ -382,7 +420,6 @@ class timer(_base.TimerMixin, watcher):
                           "all times less will be set to 1 ms",
                           stacklevel=6)
             self._repeat = 0.001
-        return res
 
     def _watcher_ffi_start(self):
         if self._again:
@@ -409,6 +446,7 @@ class timer(_base.TimerMixin, watcher):
         finally:
             del self._again
 
+
 class stat(_base.StatMixin, watcher):
     _watcher_type = 'fs_poll'
     _watcher_struct_name = 'gevent_fs_poll_t'
@@ -419,7 +457,7 @@ class stat(_base.StatMixin, watcher):
         self._watcher = type(self).new(self._watcher_struct_pointer_type)
         self._watcher.handle.data = self._handle
 
-    @_check_res
+
     def _watcher_ffi_init(self, args):
         return self._watcher_init(self.loop._ptr, self._watcher)
 
@@ -449,19 +487,20 @@ class stat(_base.StatMixin, watcher):
             return
         return self._watcher.prev
 
+
 class signal(_base.SignalMixin, watcher):
 
     _watcher_callback_name = '_gevent_generic_callback1'
 
-    @_check_res
     def _watcher_ffi_init(self, args):
-        res = self._watcher_init(self.loop._ptr, self._watcher)
+        self._watcher_init(self.loop._ptr, self._watcher)
         self.ref = False # libev doesn't ref these by default
-        return res
+
 
     def _watcher_ffi_start(self):
         self._watcher_start(self._watcher, self._watcher_callback,
                             self._signalnum)
+
 
 class idle(_base.IdleMixin, watcher):
     # Because libuv doesn't support priorities, idle watchers are

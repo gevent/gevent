@@ -160,7 +160,16 @@ class watcher(object):
         if priority is not None:
             self._watcher_ffi_set_priority(priority)
 
-        self._watcher_ffi_init(args)
+        try:
+            self._watcher_ffi_init(args)
+        except:
+            # Let these be GC'd immediately.
+            # If we keep them around to when *we* are gc'd,
+            # they're probably invalid, meaning any native calls
+            # we do then to close() them are likely to fail
+            self._watcher = None
+            self._handle = None
+            raise
         self._watcher_ffi_set_init_ref(ref)
 
     def _watcher_create(self, ref): # pylint:disable=unused-argument
