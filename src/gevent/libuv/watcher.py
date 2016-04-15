@@ -30,6 +30,19 @@ _events = [(libuv.UV_READABLE, "READ"),
 def _events_to_str(events): # export
     return _base.events_to_str(events, _events)
 
+def _check_res(func):
+    # XXX: Better name.
+    # XXX: functools.wraps
+    # XXX: can do this with __getattribute__ or metaclass magic or even a libuv
+    # wrapper class given how regular these are.
+    def wrap(*args, **kwargs):
+        res = func(*args, **kwargs)
+        if res is not None and res < 0:
+            raise Exception(
+                ffi.string(libuv.uv_err_name(res)),
+                ffi.string(libuv.uv_strerror(res)))
+    return wrap
+
 class watcher(_base.watcher):
     _FFI = ffi
     _LIB = libuv
@@ -79,10 +92,12 @@ class watcher(_base.watcher):
         # libuv has no concept of priority
         pass
 
+    @_check_res
     def _watcher_ffi_init(self, args):
-        self._watcher_init(self.loop.ptr,
-                           self._watcher,
-                           *args)
+        # TODO: we could do a better job chokepointing this
+        return self._watcher_init(self.loop.ptr,
+                                  self._watcher,
+                                  *args)
 
     def _watcher_ffi_start(self):
         _dbg("Starting", self)
@@ -306,6 +321,7 @@ class child(_base.ChildMixin, watcher):
 
 class async(_base.AsyncMixin, watcher):
 
+    @_check_res
     def _watcher_ffi_init(self, args):
         # It's dangerous to have a raw, non-initted struct
         # around; it will crash in uv_close() when we get GC'd,
@@ -314,7 +330,7 @@ class async(_base.AsyncMixin, watcher):
         # once adds the uv_async_t to the internal queue multiple times,
         # and uv_close only cleans up one of them, meaning that we tend to
         # crash. Thus we have to be very careful not to allow that.
-        self._watcher_init(self.loop.ptr, self._watcher, ffi.NULL)
+        return self._watcher_init(self.loop.ptr, self._watcher, ffi.NULL)
 
     def _watcher_ffi_start(self):
         # we're created in a started state, but we didn't provide a
@@ -348,8 +364,9 @@ class timer(_base.TimerMixin, watcher):
 
     _again = False
 
+    @_check_res
     def _watcher_ffi_init(self, args):
-        self._watcher_init(self.loop._ptr, self._watcher)
+        res = self._watcher_init(self.loop._ptr, self._watcher)
         self._after, self._repeat = args
         if self._after and self._after < 0.001:
             import warnings
@@ -365,6 +382,7 @@ class timer(_base.TimerMixin, watcher):
                           "all times less will be set to 1 ms",
                           stacklevel=6)
             self._repeat = 0.001
+        return res
 
     def _watcher_ffi_start(self):
         if self._again:
@@ -401,8 +419,9 @@ class stat(_base.StatMixin, watcher):
         self._watcher = type(self).new(self._watcher_struct_pointer_type)
         self._watcher.handle.data = self._handle
 
+    @_check_res
     def _watcher_ffi_init(self, args):
-        self._watcher_init(self.loop._ptr, self._watcher)
+        return self._watcher_init(self.loop._ptr, self._watcher)
 
     MIN_STAT_INTERVAL = 0.1074891 # match libev; 0.0 is default
 
@@ -434,9 +453,11 @@ class signal(_base.SignalMixin, watcher):
 
     _watcher_callback_name = '_gevent_generic_callback1'
 
+    @_check_res
     def _watcher_ffi_init(self, args):
-        self._watcher_init(self.loop._ptr, self._watcher)
+        res = self._watcher_init(self.loop._ptr, self._watcher)
         self.ref = False # libev doesn't ref these by default
+        return res
 
     def _watcher_ffi_start(self):
         self._watcher_start(self._watcher, self._watcher_callback,

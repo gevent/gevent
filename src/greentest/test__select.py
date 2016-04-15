@@ -3,6 +3,7 @@ import sys
 import os
 import errno
 from gevent import select, socket
+import gevent.core
 import greentest
 import unittest
 
@@ -69,13 +70,19 @@ if sys.platform != 'win32':
                 poll = select.poll()
                 self.assertRaises(KeyError, poll.unregister, 5)
 
+            @unittest.skipIf(hasattr(gevent.core, 'libuv'),
+                             "Depending on whether the fileno is reused or not this either crashes or does nothing."
+                             "libuv won't open a watcher for a closed file on linux.")
             def test_poll_invalid(self):
                 with open(__file__, 'rb') as fp:
                     fd = fp.fileno()
-                    fp.close()
 
                     poll = select.poll()
                     poll.register(fd, select.POLLIN)
+                    # Close after registering; libuv refuses to even
+                    # create a watcher if it would get EBADF (so this turns into
+                    # a test of whether or not we successfully initted the watcher).
+                    fp.close()
                     result = poll.poll(0)
                     self.assertEqual(result, [(fd, select.POLLNVAL)]) # pylint:disable=no-member
 
