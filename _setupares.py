@@ -91,10 +91,14 @@ if CARES_EMBED:
     # Strip the standalone binaries that would otherwise
     # cause linking issues
     for bin_c in ('acountry', 'adig', 'ahost'):
-        try:
-            ARES.sources.remove('deps/c-ares/' + bin_c + '.c')
-        except ValueError:
-            pass
+        # Do it the hard way, we end up with entries like
+        # deps/c-aress\\acountry.c on Windows
+        filename = bin_c + '.c'
+        for source in ARES.sources:
+            if source.endswith(filename):
+                ARES.sources.remove(source)
+                break
+
     ARES.configure = configure_ares
     if WIN:
         ARES.libraries += ['advapi32']
