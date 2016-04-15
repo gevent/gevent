@@ -741,4 +741,4 @@ def test_main():
     run_unittest(*tests)
 
 if __name__ == "__main__":
-    import greentest; greentest.main()#test_main()
+    test_main()

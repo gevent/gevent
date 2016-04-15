@@ -187,6 +187,13 @@ if os.getenv('GEVENT_CORE_CFFI_ONLY') == 'libuv':
         'test_signal.SiginterruptTest.test_siginterrupt_off',
     ]
 
+    if sys.platform.startswith('linux'):
+        disabled_tests += [
+            # crashes with EPERM, which aborts the epoll loop, even
+            # though it was allowed in in the first place.
+            'test_asyncore.FileWrapperTest.test_dispatcher',
+        ]
+
 
 if sys.version_info[:3] <= (2, 7, 8):
 
