@@ -6,6 +6,7 @@ from __future__ import absolute_import, print_function
 import sys
 import os
 import traceback
+from weakref import ref as WeakRef
 
 from gevent._ffi.callback import callback
 
@@ -163,8 +164,9 @@ def _loop_callback(ffi, *args, **kwargs):
 
 _NOARGS = ()
 
+
 class AbstractLoop(object):
-    # pylint:disable=too-many-public-methods
+    # pylint:disable=too-many-public-methods,too-many-instance-attributes
 
     error_handler = None
 
@@ -186,6 +188,35 @@ class AbstractLoop(object):
         self._callbacks = []
         self._keepaliveset = set()
         self._init_loop_and_aux_watchers(flags, default)
+
+        # Stores a {ffi_watcher -> weakref(python watcher)} When the python watcher
+        # weakref goes away, the handle should be popped. The handle
+        # *must not* be involved in a cycle in the watcher instance
+        # (but it must not also be collected until the watcher is dead). Watcher constructors
+        # are responsible for calling loop._register_watcher.
+        # This stores ffi level objects (the ones that have .data = handle)
+        # to avoid any python-level cycles. Note that *anywhere* we keep the
+        # handle, we wind up with a ref cycle (unless we go through some crazy
+        # weakref gymnastics---maybe), so we do the simple thing and
+        # keep them on the python watcher
+        self._active_watchers = dict()
+
+
+    @classmethod
+    def __make_watcher_ref_callback(cls, typ, active_watchers, ffi_watcher):
+        # separate method to make sure we have no ref to the watcher
+        def callback(_):
+            active_watchers.pop(ffi_watcher)
+            typ._watcher_ffi_close(ffi_watcher)
+
+        return callback
+
+    def _register_watcher(self, python_watcher, ffi_watcher):
+        self._active_watchers[ffi_watcher] = WeakRef(python_watcher,
+                                                     self.__make_watcher_ref_callback(
+                                                         type(python_watcher),
+                                                         self._active_watchers,
+                                                         ffi_watcher))
 
     def _init_loop_and_aux_watchers(self, flags=None, default=None):
 
@@ -311,6 +342,7 @@ class AbstractLoop(object):
     def destroy(self):
         if self._ptr:
             self._stop_aux_watchers()
+
             # not ffi.NULL, we don't want something that can be
             # passed to C and crash later.
             self._ptr = None

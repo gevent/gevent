@@ -76,6 +76,8 @@ class AbstractWatcherType(type):
     def __new__(cls, name, bases, cls_dict):
         if name != 'watcher' and not cls_dict.get('_watcher_skip_ffi'):
             cls._fill_watcher(name, bases, cls_dict)
+        if '__del__' in cls_dict:
+            raise TypeError("CFFI watchers are not allowed to have __del__")
         return type.__new__(cls, name, bases, cls_dict)
 
     @classmethod
@@ -168,16 +170,21 @@ class watcher(object):
             # they're probably invalid, meaning any native calls
             # we do then to close() them are likely to fail
             self._watcher = None
-            self._handle = None
             raise
         self._watcher_ffi_set_init_ref(ref)
 
+    @classmethod
+    def _watcher_ffi_close(cls, ffi_handle):
+        pass
+
     def _watcher_create(self, ref): # pylint:disable=unused-argument
-        # XXX: Note that self._handle is now involved in a cycle
-        # with self. This is a big problem if self has a __del__ method
-        # on CPython < 3.4, because such cycles are immortal.
-        self._handle = type(self).new_handle(self)
+        self._handle = type(self).new_handle(self) # This is a GC cycle
         self._watcher = self._watcher_new()
+        # This call takes care of calling _watcher_ffi_close when
+        # self goes away, making sure self._watcher stays alive
+        # that long
+        self.loop._register_watcher(self, self._watcher)
+
         self._watcher.data = self._handle
 
     def _watcher_new(self):

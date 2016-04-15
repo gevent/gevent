@@ -79,9 +79,7 @@ class Test(greentest.TestCase):
         del tty_watcher
         # XXX: Note there is a cycle in the CFFI code
         # from watcher_handle._handle -> watcher_handle.
-        # So it doesn't go away until a GC runs. However, for libuv
-        # it only goes away on PyPy or CPython >= 3.4; prior to that the libuv
-        # __del__ method makes the cycle immortal!
+        # So it doesn't go away until a GC runs.
         import gc
         gc.collect()
 

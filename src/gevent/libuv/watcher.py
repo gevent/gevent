@@ -89,7 +89,8 @@ class watcher(_base.watcher):
     _watcher_callback_name = '_gevent_generic_callback0'
 
 
-    def __del__(self):
+    @classmethod
+    def _watcher_ffi_close(cls, ffi_watcher):
         # Managing the lifetime of _watcher is tricky.
         # They have to be uv_close()'d, but that only
         # queues them to be closed in the *next* loop iteration.
@@ -108,17 +109,20 @@ class watcher(_base.watcher):
         # watchers for a given FD, so we have to take special care
         # about that. See https://github.com/gevent/gevent/issues/790#issuecomment-208076604
 
-        if self._watcher is None:
-            return
+        # Note that this cannot be a __del__ method, because we store
+        # the CFFI handle to self on self, which is a cycle, and
+        # objects with a __del__ method cannot be collected on CPython < 3.4
 
-        if not libuv.uv_is_closing(self._watcher):
+        # Instead, this is arranged as a callback to GC when the
+        # watcher class dies. Obviously it's important to keep the ffi
+        # watcher alive.
+
+        if not libuv.uv_is_closing(ffi_watcher):
             #print("Closing handle", self._watcher)
-            _closing_handles.add(self._watcher)
-            libuv.uv_close(self._watcher, _uv_close_callback)
+            _closing_handles.add(ffi_watcher)
+            libuv.uv_close(ffi_watcher, _uv_close_callback)
 
-        del self._handle
-        self._watcher.data = ffi.NULL
-        del self._watcher
+        ffi_watcher.data = ffi.NULL
 
 
     def _watcher_ffi_set_init_ref(self, ref):
@@ -206,16 +210,14 @@ class io(_base.IoMixin, watcher):
         self._watcher_start(self._watcher, self._events, self._watcher_callback)
 
     class _multiplexwatcher(object):
-        callback = None
-        args = ()
-        pass_events = False
-        events = 0
-        # XXX: Can't handle ref counting like libev does
-        # when we multiplex.
-        ref = True
 
         def __init__(self, events, watcher):
             self.events = events
+            self.callback = None
+            self.args = ()
+            self.pass_events = False
+            self.ref = True
+
             # References:
             # These objects keep the original IO object alive;
             # the IO object SHOULD NOT keep these alive to avoid cycles
@@ -467,8 +469,8 @@ class stat(_base.StatMixin, watcher):
     def _watcher_create(self, ref):
         self._handle = type(self).new_handle(self)
         self._watcher = type(self).new(self._watcher_struct_pointer_type)
+        self.loop._register_watcher(watcher, self._handle)
         self._watcher.handle.data = self._handle
-
 
     def _watcher_ffi_init(self, args):
         return self._watcher_init(self.loop._ptr, self._watcher)
