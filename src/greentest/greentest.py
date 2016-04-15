@@ -26,6 +26,7 @@ import sys
 import types
 import unittest
 from unittest import TestCase as BaseTestCase
+from unittest.util import safe_repr
 import time
 import os
 from os.path import basename, splitext
@@ -456,6 +457,20 @@ class TestCase(TestCaseMetaClass("NewBase", (BaseTestCase,), {})):
             self.assertLessEqual(delay, max_time)
             self.assertGreaterEqual(delay, min_time)
 
+    if not hasattr(BaseTestCase, 'assertIsNot'):
+        # Methods added in 3.1, backport for 2.7
+        def assertIs(self, expr1, expr2, msg=None):
+            """Just like self.assertTrue(a is b), but with a nicer default message."""
+            if expr1 is not expr2:
+                standardMsg = '%s is not %s' % (safe_repr(expr1),
+                                                 safe_repr(expr2))
+                self.fail(self._formatMessage(msg, standardMsg))
+
+        def assertIsNot(self, expr1, expr2, msg=None):
+            """Just like self.assertTrue(a is not b), but with a nicer default message."""
+            if expr1 is expr2:
+                standardMsg = 'unexpectedly identical: %s' % (safe_repr(expr1),)
+                self.fail(self._formatMessage(msg, standardMsg))
 
 main = unittest.main
 _original_Hub = gevent.hub.Hub

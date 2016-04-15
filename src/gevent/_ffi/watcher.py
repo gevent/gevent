@@ -173,9 +173,11 @@ class watcher(object):
         self._watcher_ffi_set_init_ref(ref)
 
     def _watcher_create(self, ref): # pylint:disable=unused-argument
+        # XXX: Note that self._handle is now involved in a cycle
+        # with self. This is a big problem if self has a __del__ method
+        # on CPython < 3.4, because such cycles are immortal.
         self._handle = type(self).new_handle(self)
         self._watcher = self._watcher_new()
-        # XXX: Must GC the _watche in libuv: uv_close()
         self._watcher.data = self._handle
 
     def _watcher_new(self):

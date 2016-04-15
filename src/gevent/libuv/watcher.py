@@ -216,14 +216,20 @@ class io(_base.IoMixin, watcher):
 
         def __init__(self, events, watcher):
             self.events = events
-            self._watcher_ref = weakref.ref(watcher)
+            # References:
+            # These objects keep the original IO object alive;
+            # the IO object SHOULD NOT keep these alive to avoid cycles
+            # When they all go away, the original IO object can go
+            # away. Hopefully that means that the FD they were opened for
+            # has also gone away.
+            self._watcher_ref = watcher
 
         def start(self, callback, *args, **kwargs):
             self.pass_events = kwargs.get("pass_events")
             self.callback = callback
             self.args = args
 
-            watcher = self._watcher_ref()
+            watcher = self._watcher_ref
             if watcher is not None and not watcher.active:
                 watcher._io_start()
 
@@ -231,12 +237,17 @@ class io(_base.IoMixin, watcher):
             self.callback = None
             self.pass_events = None
             self.args = None
-            watcher = self._watcher_ref()
+            watcher = self._watcher_ref
             watcher._io_maybe_stop()
 
         @property
         def active(self):
             return self.callback is not None
+
+        @property
+        def _watcher(self):
+            # For testing.
+            return self._watcher_ref._watcher
 
 
     def _io_maybe_stop(self):
@@ -259,6 +270,7 @@ class io(_base.IoMixin, watcher):
 
         watcher = self._multiplexwatcher(events, self)
         watcher_ref = weakref.ref(watcher, self._multiplex_watchers.remove)
+        # We must not keep a hard ref to the returned object.
         self._multiplex_watchers.append(watcher_ref)
 
         return watcher

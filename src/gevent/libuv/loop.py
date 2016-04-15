@@ -8,6 +8,7 @@ import os
 from collections import defaultdict
 from collections import namedtuple
 import signal
+from weakref import WeakValueDictionary
 
 
 from gevent._ffi.loop import AbstractLoop
@@ -66,7 +67,7 @@ class loop(AbstractLoop):
         AbstractLoop.__init__(self, ffi, libuv, _watchers, flags, default)
         self.__loop_pid = os.getpid()
         self._child_watchers = defaultdict(list)
-        self._io_watchers = dict()
+        self._io_watchers = WeakValueDictionary()
 
     def _init_loop(self, flags, default):
         if default is None:
@@ -150,7 +151,8 @@ class loop(AbstractLoop):
                 # close again.
 
                 def walk(handle, _arg):
-                    libuv.uv_close(handle, ffi.NULL)
+                    if not libuv.uv_is_closing(handle):
+                        libuv.uv_close(handle, ffi.NULL)
 
                 libuv.uv_walk(ptr,
                               ffi.callback("void(*)(uv_handle_t*,void*)",
@@ -302,8 +304,11 @@ class loop(AbstractLoop):
 
 
     def io(self, fd, events, ref=True, priority=None):
-        # XXX: Lifetime management. When can this root watcher
-        # go away?
+        # We don't keep a hard ref to the root object;
+        # the caller should keep the multiplexed watcher
+        # alive as long as its in use.
+        # XXX: Note there is a cycle from io_watcher._handle -> io_watcher
+        # so these aren't collected as soon as you think/hope.
         io_watchers = self._io_watchers
         try:
             io_watcher = io_watchers[fd]
