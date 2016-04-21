@@ -70,9 +70,6 @@ include_dirs = [
 ]
 
 
-library_dirs = [
-    os.path.join(libuv_dir, '.libs')
-]
 
 from _setuplibuv import LIBUV_LIBRARIES # pylint:disable=import-error
 from _setuplibuv import LIBUV # pylint:disable=import-error
@@ -80,7 +77,7 @@ from _setuplibuv import LIBUV # pylint:disable=import-error
 ffi.cdef(_cdef)
 ffi.set_source('gevent.libuv._corecffi', _source,
                include_dirs=include_dirs,
-               library_dirs=library_dirs,
+               library_dirs=LIBUV.library_dirs,
                extra_objects=list(LIBUV.extra_objects),
                extra_link_args=list(LIBUV.extra_link_args),
                libraries=list(LIBUV_LIBRARIES))

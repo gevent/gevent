@@ -18,6 +18,7 @@ from _setuputils import dep_abspath
 from _setuputils import system
 from _setuputils import glob_many
 from _setuputils import should_embed
+from _setuputils import _parse_environ
 
 from distutils import log # pylint:disable=no-name-in-module
 from distutils.errors import DistutilsError # pylint: disable=no-name-in-module,import-error
@@ -30,6 +31,18 @@ if WIN and not LIBUV_EMBED:
     raise DistutilsError('using a system provided libuv is unsupported on Windows')
 
 LIBUV_INCLUDE_DIR = dep_abspath('libuv', 'include')
+# Set this to force dynamic linking of libuv, even when building the
+# embedded copy. This is most useful when upgrading/changing libuv
+# in place.
+LIBUV_DYNAMIC_EMBED = _parse_environ("GEVENT_LIBUV_DYNAMIC_EMBED")
+if LIBUV_DYNAMIC_EMBED is None:
+    # Not set in the environment. Are we developing?
+    # This is convenient for my workflow
+    # XXX Is there a better way to get this?
+    # This probably doesn't work for 'pip install -e .'
+    # or dev-requirments.txt
+    if 'develop' in sys.argv:
+        LIBUV_DYNAMIC_EMBED = LIBUV_EMBED
 
 LIBUV_LIBRARIES = []
 if sys.platform.startswith('linux'):
@@ -44,7 +57,7 @@ elif WIN:
 elif sys.platform.startswith('freebsd'):
     LIBUV_LIBRARIES.append('kvm')
 
-if not LIBUV_EMBED:
+if not LIBUV_EMBED or LIBUV_DYNAMIC_EMBED:
     LIBUV_LIBRARIES.append('uv')
 
 def prepare_windows_env(env):
@@ -122,12 +135,18 @@ LIBUV = Extension(name='gevent.libuv._libuv',
 if LIBUV_EMBED:
     libuv_dir = dep_abspath('libuv')
     if WIN:
-        libuv_lib = os.path.join(libuv_dir, 'Release', 'lib', 'libuv.lib')
+        libuv_library_dir = os.path.join(libuv_dir, 'Release', 'lib')
+        libuv_lib = os.path.join(libuv_library_dir, 'libuv.lib')
         LIBUV.extra_link_args.extend(['/NODEFAULTLIB:libcmt', '/LTCG'])
         LIBUV.extra_objects.append(libuv_lib)
     else:
-        libuv_lib = os.path.join(libuv_dir, '.libs', 'libuv.a')
-        LIBUV.extra_objects.append(libuv_lib)
+        libuv_library_dir = os.path.join(libuv_dir, '.libs')
+        libuv_lib = os.path.join(libuv_library_dir, 'libuv.a')
+        if not LIBUV_DYNAMIC_EMBED:
+            LIBUV.extra_objects.append(libuv_lib)
+        else:
+            LIBUV.library_dirs.append(libuv_library_dir)
+            LIBUV.extra_link_args.extend(["-Wl,-rpath", libuv_library_dir])
 
 def configure_libuv(_bext, _ext):
     def build_libuv():
@@ -158,7 +177,16 @@ def configure_libuv(_bext, _ext):
             system(['./autogen.sh'],
                    cwd=libuv_dir,
                    env=env)
-            system(['./configure', '--disable-shared'],
+            # On OS X, the linker will link to the full path
+            # of the library libuv *as encoded in the dylib it finds*.
+            # So the libdir is important and must match the actual location
+            # of the dynamic library if we want to dynamically link to it.
+            # Otherwise, we wind up linking to /usr/local/lib/libuv.dylib by
+            # default, which can't be found. `otool -D libuv.dylib` will show
+            # this name, and `otool -L src/gevent/libuv/_corecffi.so` will show
+            # what got linked. Note that this approach results in libuv.dylib
+            # apparently linking to *itself*, which is weird, but not harmful
+            system(['./configure', '--libdir=' + libuv_library_dir],
                    cwd=libuv_dir,
                    env=env)
             system(['make'],
