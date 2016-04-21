@@ -180,16 +180,18 @@ if 'thread' in os.getenv('GEVENT_FILE', ''):
     ]
 
 if os.getenv('GEVENT_CORE_CFFI_ONLY') == 'libuv':
-    if sys.platform.startswith("darwin"):
-        # epoll appears to work with these just fine;
-        # kqueue (at least on OS X, the only tested kqueue system)
-        # does not.
-        disabled_tests += [
-            # A 2.7 test. Tries to fork, and libuv cannot fork
-            'test_signal.InterProcessSignalTests.test_main',
-            # Likewise, a forking problem
-            'test_signal.SiginterruptTest.test_siginterrupt_off',
-        ]
+    # epoll appears to work with these just fine in some cases;
+    # kqueue (at least on OS X, the only tested kqueue system)
+    # never does (failing with abort())
+    # (epoll on Raspbian 8.0/Debian Jessie/Linux 4.1.20 works;
+    # on a VirtualBox image of Ubuntu 15.10/Linux 4.2.0 both tests fail;
+    # Travis CI Ubuntu 12.04 precise/Linux 3.13 causes one of these tests to hang forever)
+    disabled_tests += [
+        # A 2.7 test. Tries to fork, and libuv cannot fork
+        'test_signal.InterProcessSignalTests.test_main',
+        # Likewise, a forking problem
+        'test_signal.SiginterruptTest.test_siginterrupt_off',
+    ]
 
     if sys.platform.startswith('linux'):
         disabled_tests += [
