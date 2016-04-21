@@ -88,7 +88,6 @@ can be done using tox::
   pip install tox
   tox
 
-
 The testrunner accepts a ``--coverage`` argument to enable code
 coverage metrics through the `coverage.py`_ package. That would go
 something like this::
@@ -112,6 +111,9 @@ common code smells, etc).
 .. image:: https://landscape.io/github/gevent/gevent/master/landscape.svg?style=flat
    :target: https://landscape.io/github/gevent/gevent/master
    :alt: Code Health
+
+.. note:: On Debian, you will probably need ``libpythonX.Y-testsuite``
+          installed to run all the tests.
 
 Continuous integration
 ----------------------

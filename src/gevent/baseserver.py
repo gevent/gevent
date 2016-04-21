@@ -45,7 +45,8 @@ class BaseServer(object):
         :meth:`set_handle`.
 
         When the request handler returns, the socket used for the
-        request will be closed.
+        request will be closed. Therefore, the handler must not return if
+        the socket is still in use (for example, by manually spawned greenlets).
 
     :keyword spawn: If provided, is called to create a new
         greenlet to run the handler. By default,
