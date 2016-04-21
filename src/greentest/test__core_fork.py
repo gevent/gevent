@@ -48,7 +48,7 @@ if __name__ == '__main__':
     # fork watchers weren't firing in multi-threading processes.
     # This test is designed to prove that they are.
     # However, it fails on Windows: The fork watcher never runs!
-    if hasattr(gevent.core, 'libuv'):
+    if hasattr(gevent.core, 'libuv') and sys.platform.startswith("darwin"):
         # XXX: Formalize this check better.
         print("ERROR: forking crashes the child process if it doesn't exec")
         sys.exit(1)

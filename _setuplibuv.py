@@ -109,7 +109,7 @@ def prepare_windows_env(env):
         # XXX: Just guessing here. Is PYTHON_ARCH correct?
         if 'PYTHON_ARCH' not in env:
             env['PYTHON_ARCH'] = '64' if platform.architecture()[0] == '64bit' else '32'
-        from distutils.msvc9compiler import query_vcvarsall
+        from distutils.msvc9compiler import query_vcvarsall # pylint:disable=import-error,no-name-in-module
         if sys.version_info[:2] >= (3, 5):
             version = 14
         else:

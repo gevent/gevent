@@ -304,23 +304,76 @@ class io(_base.IoMixin, watcher):
                 else:
                     watcher.callback(events, *watcher.args)
 
+class _SimulatedWithAsyncMixin(object):
+    _watcher_skip_ffi = True
 
-class fork(_base.ForkMixin):
+    def __init__(self, loop, *args, **kwargs):
+        self._async = loop.async()
+        super(_SimulatedWithAsyncMixin, self).__init__(loop, *args, **kwargs)
+
+    def _watcher_create(self, _args):
+        return
+
+    @property
+    def _watcher_handle(self):
+        return None
+
+    def _watcher_ffi_init(self, _args):
+        return
+
+    def _watcher_ffi_set_init_ref(self, ref):
+        self._async.ref = ref
+
+    @property
+    def active(self):
+        return self._async.active
+
+    def start(self, cb, *args):
+        self._register_loop_callback()
+        self.callback = cb
+        self.args = args
+        self._async.start(cb, *args)
+        #watcher.start(self, cb, *args)
+
+    def stop(self):
+        self._unregister_loop_callback()
+        self.callback = None
+        self.args = None
+        self._async.stop()
+
+    def _register_loop_callback(self):
+        # called from start()
+        raise NotImplementedError()
+
+    def _unregister_loop_callback(self):
+        # called from stop
+        raise NotImplementedError()
+
+class fork(_SimulatedWithAsyncMixin,
+           _base.ForkMixin,
+           watcher):
     # We'll have to implement this one completely manually
     # Right now it doesn't matter much since libuv doesn't survive
-    # a fork anyway.
+    # a fork anyway. (That's a work in progress)
+    _watcher_skip_ffi = False
 
-    def __init__(self, *args, **kwargs):
-        pass
+    def _register_loop_callback(self):
+        self.loop._fork_watchers.add(self)
 
-    def start(self, *args):
-        pass
+    def _unregister_loop_callback(self):
+        try:
+            # stop() should be idempotent
+            self.loop._fork_watchers.remove(self)
+        except KeyError:
+            pass
 
-    def stop(self, *args):
-        pass
+    def _on_fork(self):
+        self._async.send()
 
 
-class child(_base.ChildMixin, watcher):
+class child(_SimulatedWithAsyncMixin,
+            _base.ChildMixin,
+            watcher):
     _watcher_skip_ffi = True
     # We'll have to implement this one completely manually.
     # Our approach is to use a SIGCHLD handler and the original
@@ -331,42 +384,16 @@ class child(_base.ChildMixin, watcher):
     # we're not adding any new SIGCHLD related issues not already
     # present in libev.
 
-    def __init__(self, loop, *args, **kwargs):
-        self._async = loop.async()
-        super(child, self).__init__(loop, *args, **kwargs)
 
-    def _watcher_create(self, _args):
-        return
-
-    @property
-    def _watcher_handle(self):
-        return None
-
-    def _watcher_ffi_init(self, args):
-        return
-
-    def _watcher_ffi_set_init_ref(self, ref):
-        self._async.ref = ref
-
-    def start(self, cb, *args):
+    def _register_loop_callback(self):
         self.loop._child_watchers[self._pid].append(self)
-        self.callback = cb
-        self.args = args
-        self._async.start(cb, *args)
-        #watcher.start(self, cb, *args)
 
-    @property
-    def active(self):
-        return self._async.active
-
-    def stop(self):
+    def _unregister_loop_callback(self):
         try:
+            # stop() should be idempotent
             self.loop._child_watchers[self._pid].remove(self)
         except ValueError:
             pass
-        self.callback = None
-        self.args = None
-        self._async.stop()
 
     def _set_status(self, status):
         self._rstatus = status

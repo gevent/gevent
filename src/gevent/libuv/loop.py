@@ -68,6 +68,8 @@ class loop(AbstractLoop):
         self.__loop_pid = os.getpid()
         self._child_watchers = defaultdict(list)
         self._io_watchers = WeakValueDictionary()
+        self._fork_watchers = set()
+        self._pid = os.getpid()
 
     def _init_loop(self, flags, default):
         if default is None:
@@ -99,7 +101,9 @@ class loop(AbstractLoop):
         # Note that this basically forces us into a busy-loop
         # XXX: As predicted, using an idle watcher causes our process
         # to eat 100% CPU time. We instead use a timer with a max of a 1 second
-        # delay to notice signals.
+        # delay to notice signals. Note that this timeout also implements fork
+        # watchers, effectively.
+
         # XXX: Perhaps we could optimize this to notice when there are other
         # timers in the loop and start/stop it then
         self._signal_idle = ffi.new("uv_timer_t*")
@@ -108,6 +112,15 @@ class loop(AbstractLoop):
                              1000,
                              1000)
         libuv.uv_unref(self._signal_idle)
+
+    def _run_callbacks(self, *args):
+        # Manually handle fork watchers.
+        curpid = os.getpid()
+        if curpid != self._pid:
+            self._pid = curpid
+            for watcher in self._fork_watchers:
+                watcher._on_fork()
+        super(loop, self)._run_callbacks(*args)
 
     def _init_and_start_prepare(self):
         libuv.uv_prepare_init(self._ptr, self._prepare)
