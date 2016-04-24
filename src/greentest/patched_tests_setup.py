@@ -462,6 +462,13 @@ if sys.version_info[:2] >= (3, 5):
 #         'test_socketserver.SocketServerTest.test_ForkingUDPServer',
 #         'test_socketserver.SocketServerTest.test_ForkingUnixStreamServer'])
 
+# LibreSSL reports OPENSSL_VERSION_INFO (2, 0, 0, 0, 0) regardless its version
+from ssl import OPENSSL_VERSION
+if OPENSSL_VERSION.startswith('LibreSSL'):
+    disabled_tests += [
+        'test_ssl.BasicSocketTests.test_openssl_version'
+    ]
+
 
 def disable_tests_in_source(source, name):
     if name.startswith('./'):
