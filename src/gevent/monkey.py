@@ -231,13 +231,17 @@ def patch_time():
 
 
 def _patch_existing_locks(threading):
+    import gevent.threading
     if len(list(threading.enumerate())) != 1:
         return
     try:
-        tid = threading.get_ident()
+        tid = gevent.threading.get_ident()
     except AttributeError:
-        tid = threading._get_ident()
+        tid = gevent.threading._get_ident()
+    lock_type = type(threading.Lock())
     rlock_type = type(threading.RLock())
+    if sys.version_info[0] >= 3:
+        pyrlock_type = type(threading._PyRLock())
     try:
         import importlib._bootstrap
     except ImportError:
@@ -254,18 +258,51 @@ def _patch_existing_locks(threading):
     # owner attributes were the old (native) thread id. Make it our
     # current greenlet id so that when it wants to unlock and compare
     # self.__owner with _get_ident(), they match.
+
+    # We also need to ensure the Lock the RLock is based on is green-safe.
+    # Blocking on a Lock created before monkeypatching will lock the native
+    # thread. On Py3 this is tricky because the default RLock implementation is
+    # written in C and doesn't have all the same attributes as the Python
+    # version, so swap out the whole RLock for a fresh one, being careful to
+    # preserve the locking level and owner.
     gc = __import__('gc')
     for o in gc.get_objects():
         if isinstance(o, rlock_type):
-            if hasattr(o, '_owner'): # Py3
-                if o._owner is not None:
-                    o._owner = tid
-            else:
-                if o._RLock__owner is not None:
-                    o._RLock__owner = tid
+            if (sys.version_info[0] == 2 and
+                    isinstance(o._RLock__block, lock_type)):
+                _fix_py2_rlock(o, tid)
+            elif (sys.version_info[0] >= 3 and
+                    not isinstance(o, pyrlock_type)):
+                _fix_py3_rlock(o)
         elif isinstance(o, _ModuleLock):
             if o.owner is not None:
                 o.owner = tid
+
+
+def _fix_py2_rlock(rlock, tid):
+    import gevent.threading
+    old = rlock._RLock__block
+    new = gevent.threading.Lock()
+    rlock._RLock__block = new
+    if old.locked():
+        new.acquire()
+    rlock._RLock__owner = tid
+
+
+def _fix_py3_rlock(old):
+    import gc
+    import threading
+    new = threading._PyRLock()
+    while old._is_owned():
+        old.release()
+        new.acquire()
+    if old._is_owned():
+        new.acquire()
+    gc.collect()
+    for ref in gc.get_referrers(old):
+        for k, v in vars(ref):
+            if v == old:
+                setattr(ref, k, new)
 
 
 def patch_thread(threading=True, _threading_local=True, Event=False, logging=True,
@@ -334,14 +371,14 @@ def patch_thread(threading=True, _threading_local=True, Event=False, logging=Tru
     patch_module('thread')
 
     if threading:
+        if existing_locks:
+            _patch_existing_locks(threading_mod)
+
         patch_module('threading')
 
         if Event:
             from gevent.event import Event
             patch_item(threading_mod, 'Event', Event)
-
-        if existing_locks:
-            _patch_existing_locks(threading_mod)
 
         if logging and 'logging' in sys.modules:
             logging = __import__('logging')
