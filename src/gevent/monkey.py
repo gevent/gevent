@@ -272,7 +272,7 @@ def _patch_existing_locks(threading):
                     isinstance(o._RLock__block, lock_type)):
                 _fix_py2_rlock(o, tid)
             elif (sys.version_info[0] >= 3 and
-                    not isinstance(o, pyrlock_type)):
+                  not isinstance(o, pyrlock_type)):
                 _fix_py3_rlock(o)
         elif isinstance(o, _ModuleLock):
             if o.owner is not None:
