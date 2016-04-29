@@ -99,6 +99,10 @@ Other Changes
   present in Python 2), :func:`gevent.ssl.get_server_certificate`
   would raise a :exc:`ValueError` if the system wasn't monkey-patched.
   Reported in :issue:`801` by Gleb Dubovik.
+- On Python 2.7.9 and Python 3, closing an SSL socket in one greenlet
+  while it's being read from or written to in a different greenlet is
+  less likely to raise a :exc:`TypeError` instead of a
+  :exc:`ValueError`. Reported in :issue:`800` by Kevin Chen.
 
 1.1.1 (Apr 4, 2016)
 ===================

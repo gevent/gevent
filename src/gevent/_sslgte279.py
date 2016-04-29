@@ -300,9 +300,11 @@ class SSLSocket(socket):
         """Read up to LEN bytes and return them.
         Return zero-length string on EOF."""
         self._checkClosed()
-        if not self._sslobj:
-            raise ValueError("Read on closed or unwrapped SSL socket.")
-        while True:
+
+        while 1:
+            if not self._sslobj:
+                raise ValueError("Read on closed or unwrapped SSL socket.")
+
             try:
                 if buffer is not None:
                     return self._sslobj.read(len, buffer)
@@ -330,9 +332,11 @@ class SSLSocket(socket):
         """Write DATA to the underlying SSL channel.  Returns
         number of bytes of DATA actually transmitted."""
         self._checkClosed()
-        if not self._sslobj:
-            raise ValueError("Write on closed or unwrapped SSL socket.")
-        while True:
+
+        while 1:
+            if not self._sslobj:
+                raise ValueError("Write on closed or unwrapped SSL socket.")
+
             try:
                 return self._sslobj.write(data)
             except SSLError as ex:
