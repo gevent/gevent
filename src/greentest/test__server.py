@@ -84,7 +84,7 @@ class TestCase(greentest.TestCase):
         sock.listen(5)
         return sock
 
-    def makefile(self, timeout=_DEFAULT_SOCKET_TIMEOUT, bufsize=1):
+    def get_server_host_port_family(self):
         server_host = self.server.server_host
         if not server_host or server_host == '::':
             server_host = 'localhost'
@@ -94,10 +94,15 @@ class TestCase(greentest.TestCase):
             # server deletes socket when closed
             family = socket.AF_INET
 
+        return server_host, self.server.server_port, family
+
+    def makefile(self, timeout=_DEFAULT_SOCKET_TIMEOUT, bufsize=1):
+        server_host, server_port, family = self.get_server_host_port_family()
+
         sock = socket.socket(family=family)
         try:
-            sock.connect((server_host, self.server.server_port))
-        except Exception as e:
+            sock.connect((server_host, server_port))
+        except Exception:
             # avoid ResourceWarning under Py3
             sock.close()
             raise
@@ -184,8 +189,11 @@ class TestCase(greentest.TestCase):
         os.system('sudo netstat -anp | grep %s' % os.getpid())
         print('^^^^^')
 
+    def _create_server(self):
+        return self.ServerSubClass(('', 0))
+
     def init_server(self):
-        self.server = self.ServerSubClass(('', 0))
+        self.server = self._create_server()
         self.server.start()
         gevent.sleep(0.01)
 
@@ -314,7 +322,7 @@ class TestDefaultSpawn(TestCase):
         self.stop_server()
 
     def init_server(self):
-        self.server = self.ServerSubClass(('', 0))
+        self.server = self._create_server()
         self.server.start()
         gevent.sleep(0.01)
 
@@ -438,6 +446,33 @@ if hasattr(socket, 'ssl'):
             listener = ssl(listener)
             self.assertRaises(TypeError, self.ServerSubClass, listener)
 
+try:
+    __import__('ssl')
+except ImportError:
+    pass
+else:
+
+    class TestSSLGetCertificate(TestCase):
+
+        def _create_server(self):
+            return self.ServerSubClass(('', 0),
+                                       keyfile='server.key',
+                                       certfile='server.crt')
+
+        def get_spawn(self):
+            return gevent.spawn
+
+        def test_certificate(self):
+            # Issue 801
+            from gevent import monkey, ssl
+            # only broken if *not* monkey patched
+            self.assertFalse(monkey.is_module_patched('ssl'))
+            self.assertFalse(monkey.is_module_patched('socket'))
+
+            self.init_server()
+
+            server_host, server_port, _family = self.get_server_host_port_family()
+            ssl.get_server_certificate((server_host, server_port))
 
 # test non-socket.error exception in accept call: fatal
 # test error in spawn(): non-fatal

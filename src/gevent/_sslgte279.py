@@ -20,6 +20,7 @@ _ssl = __ssl__._ssl # pylint:disable=no-member
 import errno
 from gevent._socket2 import socket
 from gevent.socket import timeout_default
+from gevent.socket import create_connection
 from gevent.socket import error as socket_error
 from gevent.socket import timeout as _socket_timeout
 from gevent._compat import PYPY
@@ -39,8 +40,8 @@ __implements__ = [
 # Import all symbols from Python's ssl.py, except those that we are implementing
 # and "private" symbols.
 __imports__ = copy_globals(__ssl__, globals(),
-                           # SSLSocket *must* subclass gevent.socket.socket; see issue 597
-                           names_to_ignore=__implements__ + ['socket'],
+                           # SSLSocket *must* subclass gevent.socket.socket; see issue 597 and 801
+                           names_to_ignore=__implements__ + ['socket', 'create_connection'],
                            dunder_names_to_keep=())
 
 try:

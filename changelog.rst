@@ -95,6 +95,10 @@ Other Changes
   chunked, potentially reducing overhead for large responses.
 - :class:`~.PriorityQueue` now ensures that an initial items list is a
   valid heap. Fixed in :pr:`793` by X.C.Dong.
+- On Python 2.7.9 and above (more generally, when the SSL backport is
+  present in Python 2), :func:`gevent.ssl.get_server_certificate`
+  would raise a :exc:`ValueError` if the system wasn't monkey-patched.
+  Reported in :issue:`801` by Gleb Dubovik.
 
 1.1.1 (Apr 4, 2016)
 ===================
