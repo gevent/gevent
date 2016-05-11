@@ -68,7 +68,8 @@ Stdlib Compatibility
 - :meth:`gevent.select.poll.poll` returns an event with
   ``POLLNVAL`` for registered fds that are invalid. Previously it
   would tend to report both read and write events.
-
+- Python 2: ``reload(site)`` no longer fails with a ``TypeError`` if
+  gevent has been imported. Reported in :issue:`805` by Jake Hilton.
 
 Other Changes
 -------------
@@ -83,7 +84,8 @@ Other Changes
   timestamp. See :issue:`137`.
 - Add :class:`gevent.threadpool.ThreadPoolExecutor` (a
   :class:`concurrent.futures.ThreadPoolExecutor` variant that always
-  uses native threads) on platforms that have ``concurrent.futures``
+  uses native threads even when the system has been monkey-patched)
+  on platforms that have ``concurrent.futures``
   available (Python 3 and Python 2 with the ``futures`` backport
   installed). This is helpful for, e.g., grpc. Reported in
   :issue:`786` by Markus Padourek.

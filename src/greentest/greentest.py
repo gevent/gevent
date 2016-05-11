@@ -58,13 +58,20 @@ PLATFORM_SPECIFIC_SUFFIXES = ['2', '279', '3']
 if sys.platform.startswith('win'):
     PLATFORM_SPECIFIC_SUFFIXES.append('posix')
 
+PY2 = None
+PY3 = None
+PY34 = None
+
 NON_APPLICABLE_SUFFIXES = []
 if sys.version_info[0] == 3:
     # Python 3
     NON_APPLICABLE_SUFFIXES.extend(('2', '279'))
     PY2 = False
     PY3 = True
-if sys.version_info[0] == 2:
+    if sys.version_info[1] >= 4:
+        PY34 = True
+
+elif sys.version_info[0] == 2:
     # Any python 2
     PY3 = False
     PY2 = True
@@ -73,6 +80,7 @@ if sys.version_info[0] == 2:
             or (sys.version_info[1] == 7 and sys.version_info[2] < 9)):
         # Python 2, < 2.7.9
         NON_APPLICABLE_SUFFIXES.append('279')
+
 if sys.platform.startswith('win'):
     NON_APPLICABLE_SUFFIXES.append("posix")
     # This is intimately tied to FileObjectPosix
