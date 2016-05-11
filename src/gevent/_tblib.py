@@ -329,6 +329,10 @@ def install():
 
 def _unlocked_imports(f):
     def g(a):
+        if sys is None: # pragma: no cover
+            # interpreter shutdown on Py2
+            return
+
         gb = None
         if 'gevent.builtins' in sys.modules:
             gb = sys.modules['gevent.builtins']

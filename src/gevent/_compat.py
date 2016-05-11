@@ -29,7 +29,7 @@ else:
 ## Exceptions
 if PY3:
     def reraise(t, value, tb=None): # pylint:disable=unused-argument
-        if value.__traceback__ is not tb:
+        if value.__traceback__ is not tb and tb is not None:
             raise value.with_traceback(tb)
         raise value
 
