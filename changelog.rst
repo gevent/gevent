@@ -34,6 +34,10 @@ Libraries
 - Update Cython to 0.24.
 - setuptools is now required at build time on all platforms.
   Previously it was only required for Windows and PyPy.
+- POSIX: Don't hardcode ``/bin/sh`` into the configuration command
+  line, instead relying on ``sh`` being on the ``PATH``, as
+  recommended by `the standard <http://pubs.opengroup.org/onlinepubs/9699919799/utilities/sh.html>`_.
+  Fixed in :pr:`809` by Fredrix Fornwall.
 
 
 Security
