@@ -30,7 +30,7 @@ LIBEV_EMBED = should_embed('libev')
 # and the PyPy branch will clean it up.
 libev_configure_command = ' '.join([
     "(cd ", quoted_dep_abspath('libev'),
-    " && /bin/sh ./configure ",
+    " && sh ./configure ",
     " && cp config.h \"$OLDPWD\"",
     ")",
     '> configure-output.txt'
