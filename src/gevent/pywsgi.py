@@ -655,6 +655,8 @@ class WSGIHandler(object):
             # for compatibility with older versions of pywsgi, we pass self.requestline as an argument there
             # NOTE: read_request is supposed to raise ValueError on invalid input; allow old
             # subclasses that return a False value instead.
+            # NOTE: This can mutate the value of self.headers, so self.get_environ() must not be
+            # called until AFTER this call is done.
             if not self.read_request(self.requestline):
                 return ('400', _BAD_REQUEST_RESPONSE)
         except Exception as ex: # pylint:disable=broad-except
