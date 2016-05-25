@@ -58,17 +58,21 @@ class TestTCP(greentest.TestCase):
                 pass
             del self.listener
 
-    def create_connection(self, host='127.0.0.1', port=None, timeout=None):
+    def create_connection(self, host='127.0.0.1', port=None, timeout=None,
+                          blocking=None):
         sock = socket.socket()
         sock.connect((host, port or self.port))
         if timeout is not None:
             sock.settimeout(timeout)
+        if blocking is not None:
+            sock.setblocking(blocking)
         return self._close_on_teardown(sock)
 
     def _test_sendall(self, data, match_data=None, client_method='sendall',
                       **client_args):
 
         read_data = []
+        server_exc_info = []
 
         def accept_and_read():
             try:
@@ -78,8 +82,7 @@ class TestTCP(greentest.TestCase):
                 r.close()
                 conn.close()
             except:
-                traceback.print_exc()
-                os._exit(1)
+                server_exc_info.append(sys.exc_info())
 
         server = Thread(target=accept_and_read)
         client = self.create_connection(**client_args)
@@ -94,6 +97,9 @@ class TestTCP(greentest.TestCase):
         if match_data is None:
             match_data = self.long_data
         self.assertEqual(read_data[0], match_data)
+
+        if server_exc_info:
+            six.reraise(*server_exc_info[0])
 
     def test_sendall_str(self):
         self._test_sendall(self.long_data)
@@ -114,6 +120,14 @@ class TestTCP(greentest.TestCase):
         # Issue 719
         data = b''
         self._test_sendall(data, data, timeout=10)
+
+    def test_sendall_nonblocking(self):
+        # https://github.com/benoitc/gunicorn/issues/1282
+        # Even if the socket is non-blocking, we make at least
+        # one attempt to send data. Under Py2 before this fix, we
+        # would incorrectly immediately raise a timeout error
+        data = b'hi\n'
+        self._test_sendall(data, data, blocking=False)
 
     def test_empty_send(self):
         # Issue 719

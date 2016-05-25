@@ -74,6 +74,8 @@ Stdlib Compatibility
   would tend to report both read and write events.
 - Python 2: ``reload(site)`` no longer fails with a ``TypeError`` if
   gevent has been imported. Reported in :issue:`805` by Jake Hilton.
+- Python 2: ``sendall`` on a non-blocking socket could spuriously fail
+  with a timeout.
 
 Other Changes
 -------------
