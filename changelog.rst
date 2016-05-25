@@ -4,6 +4,12 @@
 
 .. currentmodule:: gevent
 
+1.1.2 (TBD)
+===========
+
+- Python 2: ``sendall`` on a non-blocking socket could spuriously fail
+  with a timeout.
+
 1.1.1 (Apr 4, 2016)
 ===================
 

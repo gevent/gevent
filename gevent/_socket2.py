@@ -345,17 +345,19 @@ class socket(object):
         """
         data_sent = 0
         len_data_memory = len(data_memory)
+        started_timer = 0
         while data_sent < len_data_memory:
             chunk = data_memory[data_sent:]
             if timeleft is None:
                 data_sent += self.send(chunk, flags)
-            elif timeleft <= 0:
+            elif started_timer and timeleft <= 0:
                 # Check before sending to guarantee a check
                 # happens even if each chunk successfully sends its data
                 # (especially important for SSL sockets since they have large
                 # buffers)
                 raise timeout('timed out')
             else:
+                started_timer = 1
                 data_sent += self.send(chunk, flags, timeout=timeleft)
                 timeleft = end - time.time()
 
