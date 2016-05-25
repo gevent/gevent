@@ -66,6 +66,10 @@ class TestSSL(test__socket.TestTCP):
                           b'',
                           client_method='send')
 
+    def test_sendall_nonblocking(self):
+        # Override; doesn't work with SSL sockets.
+        pass
+
 
 def ssl_listener(address, private_key, certificate):
     raw_listener = socket.socket()
