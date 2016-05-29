@@ -61,4 +61,4 @@ Mailing List
 
 .. _coroutine: https://en.wikipedia.org/wiki/Coroutine
 .. _Python: http://python.org
-.. _greenlet: http://greenlet.readthedocs.org
+.. _greenlet: https://greenlet.readthedocs.io

@@ -90,9 +90,9 @@ greenlets that are forever unscheduled. Prefer higher-level safe
 classes, like :class:`Event <gevent.event.Event>` and :class:`Queue
 <gevent.queue.Queue>`, instead.
 
-__ http://greenlet.readthedocs.org/en/latest/#instantiation
-.. _switching: https://greenlet.readthedocs.org/en/latest/#switching
-.. _throw: https://greenlet.readthedocs.org/en/latest/#methods-and-attributes-of-greenlets
+__ https://greenlet.readthedocs.io/en/latest/#instantiation
+.. _switching: https://greenlet.readthedocs.io/en/latest/#switching
+.. _throw: https://greenlet.readthedocs.io/en/latest/#methods-and-attributes-of-greenlets
 
 .. exception:: GreenletExit
 

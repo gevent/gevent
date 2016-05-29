@@ -41,7 +41,7 @@ extensions = ['sphinx.ext.autodoc', 'sphinx.ext.doctest', 'sphinx.ext.coverage',
               'sphinx.ext.extlinks']
 
 intersphinx_mapping = {'http://docs.python.org/': None,
-                       'https://greenlet.readthedocs.org/en/latest/': None}
+                       'https://greenlet.readthedocs.io/en/latest/': None}
 
 extlinks = {'issue': ('https://github.com/gevent/gevent/issues/%s',
                       'issue #'),
