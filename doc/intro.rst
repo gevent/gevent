@@ -59,7 +59,7 @@ __ http://pypi.python.org/pypi/greenlet
 .. _`pip`: https://pip.pypa.io/en/stable/installing/
 .. _`wheels`: http://pythonwheels.com
 .. _`gevent 1.1`: whatsnew_1_1.html
-.. _`cffi`: http://cffi.readthedocs.org
+.. _`cffi`: https://cffi.readthedocs.io
 
 Example
 =======

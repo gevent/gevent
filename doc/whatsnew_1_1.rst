@@ -78,7 +78,7 @@ through 4.0.0 and 4.0.1, and on 32-bit ARM on Raspbian with version 4.0.1.
           exact cause is unknown and is being tracked in :issue:`677`.
 
 .. _cffi 1.3.0: https://bitbucket.org/cffi/cffi/src/ad3140a30a7b0ca912185ef500546a9fb5525ece/doc/source/whatsnew.rst?at=default
-.. _1.2.0: https://cffi.readthedocs.org/en/latest/whatsnew.html#v1-2-0
+.. _1.2.0: https://cffi.readthedocs.io/en/latest/whatsnew.html#v1-2-0
 .. _a bug: https://bitbucket.org/pypy/pypy/issues/2149/memory-leak-for-python-subclass-of-cpyext
 
 Operating Systems
