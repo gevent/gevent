@@ -21,7 +21,7 @@ gevent is `inspired by eventlet
 consistent API, simpler implementation and better performance. Read
 why others `use gevent
 <http://groups.google.com/group/gevent/browse_thread/thread/4de9703e5dca8271>`_
-and check out the list of the `open source projects based on gevent. <http://code.google.com/p/gevent/wiki/ProjectsUsingGevent>`_
+and check out the list of the `open source projects based on gevent. <https://github.com/gevent/gevent/wiki/Projects>`_
 
 gevent is written and maintained by `Denis Bilenko
 <http://denisbilenko.com/>`_ with help from the `contributors <https://github.com/gevent/gevent/blob/master/AUTHORS#L1>`_ and is licensed under the MIT license.
