@@ -23,10 +23,13 @@ class Resolver(object):
     resolution. c-ares is natively asynchronous at the socket level
     and so integrates well into gevent's event loop.
 
-    In comparison to :class:`gevent.resolver_thread.Resolver`, the
-    implementation is much more complex. In addition, there have been
-    reports of it not properly honoring certain system configurations.
-    However, because it does not use threads, it may scale better.
+    In comparison to :class:`gevent.resolver_thread.Resolver` (which
+    delegates to the native system resolver), the implementation is
+    much more complex. In addition, there have been reports of it not
+    properly honoring certain system configurations (for example, the
+    order in which IPv4 and IPv6 results are returned may not match
+    the threaded resolver). However, because it does not use threads,
+    it may scale better for applications that make many lookups.
 
     .. caution:: This module is considered extremely experimental on PyPy, and
        due to its implementation in cython, it may be slower. It may also lead to
@@ -211,6 +214,10 @@ class Resolver(object):
                     for socktype, proto in socktype_proto:
                         dest.append((AF_INET6, socktype, proto, '', sockaddr))
 
+        # As of 2016, some platforms return IPV6 first and some do IPV4 first,
+        # and some might even allow configuration of which is which. For backwards
+        # compatibility with earlier releases (but not necessarily resolver_thread!)
+        # we return 4 first. See https://github.com/gevent/gevent/issues/815 for more.
         result += result4 + result6
 
         if not result:

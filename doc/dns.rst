@@ -6,7 +6,7 @@ gevent includes support for a pluggable hostname resolution system.
 Pluggable resolvers are (generally) intended to be cooperative.
 This pluggable resolution system is used automatically when the system
 is :mod:`monkey patched <gevent.monkey>`, and may be used manually
-through the :attr:`resolver attribute <gevent.Hub.resolver>` of the
+through the :attr:`resolver attribute <gevent.hub.Hub.resolver>` of the
 :class:`gevent.hub.Hub` or the corresponding methods in the
 :mod:`gevent.socket` module.
 
