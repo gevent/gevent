@@ -111,6 +111,9 @@ Other Changes
   while it's being read from or written to in a different greenlet is
   less likely to raise a :exc:`TypeError` instead of a
   :exc:`ValueError`. Reported in :issue:`800` by Kevin Chen.
+- :class:`gevent.hub.signal` (aka :func:`gevent.signal`) now verifies
+  that its `handler` argument is callable, raising a :exc:`TypeError`
+  if it isn't. Reported in :issue:`818` by Peter Renström.
 
 1.1.1 (Apr 4, 2016)
 ===================

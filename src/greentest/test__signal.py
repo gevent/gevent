@@ -18,6 +18,9 @@ if hasattr(signal, 'SIGALRM'):
         error_fatal = False
         __timeout__ = 5
 
+        def test_handler(self):
+            self.assertRaises(TypeError, gevent.signal, signal.SIGALRM, 1)
+
         def test_alarm(self):
             sig = gevent.signal(signal.SIGALRM, raise_Expected)
             assert sig.ref is False, repr(sig.ref)

@@ -228,6 +228,9 @@ class signal(object):
 
         This may not operate correctly with SIGCHLD if libev child watchers
         are used (as they are by default with os.fork).
+
+    .. versionchanged:: 1.2a1
+       The ``handler`` argument is required to be callable at construction time.
     """
 
     # XXX: This is manually documented in gevent.rst while it is aliased in
@@ -236,6 +239,9 @@ class signal(object):
     greenlet_class = None
 
     def __init__(self, signalnum, handler, *args, **kwargs):
+        if not callable(handler):
+            raise TypeError("signal handler must be callable.")
+
         self.hub = get_hub()
         self.watcher = self.hub.loop.signal(signalnum, ref=False)
         self.watcher.start(self._start)

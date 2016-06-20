@@ -175,6 +175,10 @@ Signals
          is replacing this name. This alias will be removed in a
          future release.
 
+    .. versionchanged:: 1.2a1
+
+          The *handler* is required to be callable at construction time.
+
 .. This is also in the docstring of gevent.hub.signal, which is the
    actual callable invoked
 
