@@ -53,6 +53,9 @@ addition to the Cython backend on CPython.
          another directory. See :issue:`570` and :issue:`612` for
          examples.
 
+.. tip:: Also check for conflicts with environment variables like ``CFLAGS``. For
+         example, see :ref:`library_updates_label`.
+
 Development instructions can be found `on PyPI <https://pypi.python.org/pypi/gevent#development>`_.
 
 __ http://pypi.python.org/pypi/greenlet

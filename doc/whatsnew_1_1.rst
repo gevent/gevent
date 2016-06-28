@@ -214,6 +214,8 @@ the documentation for specifics. Highlights include:
   functionality such as configurable error handling and logging.
 - Documentation has been expanded and clarified.
 
+.. _library_updates_label:
+
 Library Updates
 ===============
 
