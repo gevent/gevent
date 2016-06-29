@@ -81,6 +81,8 @@ through 4.0.0 and 4.0.1, and on 32-bit ARM on Raspbian with version 4.0.1.
 .. _1.2.0: https://cffi.readthedocs.io/en/latest/whatsnew.html#v1-2-0
 .. _a bug: https://bitbucket.org/pypy/pypy/issues/2149/memory-leak-for-python-subclass-of-cpyext
 
+.. _operating_systems_label:
+
 Operating Systems
 -----------------
 

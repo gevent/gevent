@@ -43,19 +43,6 @@ without pre-built wheels or if wheel installation is disabled, a C compiler
 `cffi`_ can optionally be installed to build the CFFI backend in
 addition to the Cython backend on CPython.
 
-
-.. tip:: Some Linux distributions are now mounting their temporary
-         directories with the ``noexec`` option. This can cause a
-         standard ``pip install gevent`` to fail with an error like
-         ``cannot run C compiled programs``. One fix is to mount the
-         temporary directory without that option. Another may be to
-         use the ``--build`` option to ``pip install`` to specify
-         another directory. See :issue:`570` and :issue:`612` for
-         examples.
-
-.. tip:: Also check for conflicts with environment variables like ``CFLAGS``. For
-         example, see :ref:`library_updates_label`.
-
 Development instructions can be found `on PyPI <https://pypi.python.org/pypi/gevent#development>`_.
 
 __ http://pypi.python.org/pypi/greenlet
@@ -63,6 +50,31 @@ __ http://pypi.python.org/pypi/greenlet
 .. _`wheels`: http://pythonwheels.com
 .. _`gevent 1.1`: whatsnew_1_1.html
 .. _`cffi`: https://cffi.readthedocs.io
+
+Common Installation Issues
+--------------------------
+
+The following are some common installation problems and solutions for
+those compiling gevent from source.
+
+- Some Linux distributions are now mounting their temporary
+  directories with the ``noexec`` option. This can cause a
+  standard ``pip install gevent`` to fail with an error like
+  ``cannot run C compiled programs``. One fix is to mount the
+  temporary directory without that option. Another may be to
+  use the ``--build`` option to ``pip install`` to specify
+  another directory. See :issue:`570` and :issue:`612` for
+  examples.
+
+- Also check for conflicts with environment variables like ``CFLAGS``. For
+  example, see :ref:`library_updates_label`.
+
+- Users of a recent SmartOS release may need to customize
+  the ``CPPFLAGS`` (the environment variable containing the
+  default options for the C preprocessor) if they are using the
+  libev shipped with gevent. See :ref:`operating_systems_label` for
+  more information.
+
 
 Example
 =======
