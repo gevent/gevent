@@ -81,7 +81,7 @@ if PYPY:
     # have some serious crashing bugs with GC interacting with cython,
     # so this is disabled
 else:
-    install_requires = ['greenlet >= 0.4.9']
+    install_requires = ['greenlet >= 0.4.10'] # TODO: Replace this with platform markers?
     setup_requires = []
 
 
