@@ -650,6 +650,14 @@ class TestBasic(greentest.TestCase):
     def test_kill_running_noblock(self):
         self._test_kill_running(block=False)
 
+    def test_exc_info_no_error(self):
+        # Before running
+        self.assertFalse(greenlet.Greenlet().exc_info)
+        g = greenlet.Greenlet(gevent.sleep)
+        g.start()
+        g.join()
+        self.assertFalse(g.exc_info)
+
 
 class TestStart(greentest.TestCase):
 

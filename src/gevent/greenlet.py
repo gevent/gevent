@@ -309,10 +309,16 @@ class Greenlet(greenlet):
 
     @property
     def exc_info(self):
-        """Holds the exc_info three-tuple raised by the function if the greenlet finished with an error.
-        Otherwise a false value."""
+        """
+        Holds the exc_info three-tuple raised by the function if the
+        greenlet finished with an error. Otherwise a false value.
+
+        .. note:: This is a provisional API and may change.
+
+        .. versionadded:: 1.1
+        """
         e = self._exc_info
-        if e:
+        if e and e[0] is not None:
             return (e[0], e[1], load_traceback(e[2]))
 
     def throw(self, *args):
