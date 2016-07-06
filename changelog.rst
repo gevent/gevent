@@ -9,6 +9,7 @@
 
 - Python 2: ``sendall`` on a non-blocking socket could spuriously fail
   with a timeout.
+- Fix :issue:`825`.
 
 1.1.1 (Apr 4, 2016)
 ===================

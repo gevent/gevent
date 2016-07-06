@@ -585,19 +585,22 @@ class Hub(greenlet):
     def print_exception(self, context, type, value, tb):
         # Python 3 does not gracefully handle None value or tb in
         # traceback.print_exception() as previous versions did.
+        errstream = sys.stderr
+        if type(errstream).__name__ == 'FileObjectThread':
+            errstream = errstream.io # pylint:disable=no-member
         if value is None:
-            sys.stderr.write('%s\n' % type.__name__)
+            errstream.write('%s\n' % type.__name__)
         else:
-            traceback.print_exception(type, value, tb)
+            traceback.print_exception(type, value, tb, file=errstream)
         del tb
         if context is not None:
             if not isinstance(context, str):
                 try:
                     context = self.format_context(context)
                 except:
-                    traceback.print_exc()
+                    traceback.print_exc(file=errstream)
                     context = repr(context)
-            sys.stderr.write('%s failed with %s\n\n' % (context, getattr(type, '__name__', 'exception'), ))
+            errstream.write('%s failed with %s\n\n' % (context, getattr(type, '__name__', 'exception'), ))
 
     def switch(self):
         switch_out = getattr(getcurrent(), 'switch_out', None)
