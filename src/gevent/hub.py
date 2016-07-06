@@ -567,7 +567,7 @@ class Hub(RawGreenlet):
             try:
                 cb = self.loop.run_callback(current.switch)
             except: # pylint:disable=bare-except
-                traceback.print_exc()
+                traceback.print_exc(file=self.exception_stream)
             try:
                 self.parent.throw(type, value)
             finally:
@@ -587,7 +587,7 @@ class Hub(RawGreenlet):
         # called in error situations when it's not safe to import.
         stderr = sys.stderr
         if type(stderr).__name__ == 'FileObjectThread':
-            stderr = stderr.io
+            stderr = stderr.io # pylint:disable=no-member
         return stderr
 
     def print_exception(self, context, type, value, tb):
@@ -616,7 +616,7 @@ class Hub(RawGreenlet):
                 try:
                     context = self.format_context(context)
                 except: # pylint:disable=bare-except
-                    traceback.print_exc()
+                    traceback.print_exc(file=self.exception_stream)
                     context = repr(context)
             errstream.write('%s failed with %s\n\n' % (context, getattr(type, '__name__', 'exception'), ))
 
