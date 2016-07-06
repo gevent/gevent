@@ -36,7 +36,7 @@ from gevent.hub import _get_hub
 from functools import wraps
 import contextlib
 import gc
-import six
+import _six as six
 
 
 PYPY = hasattr(sys, 'pypy_version_info')

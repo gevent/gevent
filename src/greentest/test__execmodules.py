@@ -1,5 +1,5 @@
 from greentest import walk_modules, BaseTestCase, main, NON_APPLICABLE_SUFFIXES
-import six
+import _six as six
 
 
 class TestExec(BaseTestCase):

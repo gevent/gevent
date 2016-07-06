@@ -7,7 +7,7 @@ import traceback
 import time
 import greentest
 from functools import wraps
-import six
+import _six as six
 
 # we use threading on purpose so that we can test both regular and gevent sockets with the same code
 from threading import Thread as _Thread

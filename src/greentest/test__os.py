@@ -1,5 +1,5 @@
 import sys
-import six
+import _six as six
 from os import pipe
 from gevent import os
 from greentest import TestCase, main

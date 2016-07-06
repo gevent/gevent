@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 from __future__ import print_function
-import six
+import _six as six
 import sys
 import os
 import glob

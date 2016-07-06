@@ -7,7 +7,7 @@ import gevent.threadpool
 from gevent.threadpool import ThreadPool
 import gevent
 from greentest import ExpectedException
-import six
+import _six as six
 import gc
 
 

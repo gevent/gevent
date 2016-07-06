@@ -9,7 +9,7 @@ try:
     from test import support as test_support
 except ImportError:
     from test import test_support
-from six import xrange
+from _six import xrange
 
 QUEUE_SIZE = 5
 

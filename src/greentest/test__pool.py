@@ -6,7 +6,7 @@ from gevent.queue import Queue
 import greentest
 import random
 from greentest import ExpectedException
-import six
+import _six as six
 
 import unittest
 

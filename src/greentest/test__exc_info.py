@@ -1,7 +1,7 @@
 import gevent
 import sys
 import greentest
-import six
+import _six as six
 
 if not six.PY3:
     sys.exc_clear()

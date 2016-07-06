@@ -1,4 +1,4 @@
-import six
+import _six as six
 import sys
 import os
 import errno

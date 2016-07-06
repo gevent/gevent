@@ -1,5 +1,5 @@
 import sys
-from six import xrange
+from _six import xrange
 
 
 if 'runtestcase' in sys.argv[1:]:

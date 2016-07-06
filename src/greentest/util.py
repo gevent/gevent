@@ -1,6 +1,6 @@
 import sys
 import os
-import six
+import _six as six
 import traceback
 import unittest
 import threading

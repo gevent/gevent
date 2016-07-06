@@ -1363,6 +1363,21 @@ class TestInvalidEnviron(TestCase):
         read_http(fd)
 
 
+class TestInvalidHeadersDropped(TestCase):
+    validator = None
+    # check that invalid headers with a _ are dropped
+
+    def application(self, environ, start_response):
+        self.assertNotIn('HTTP_X_AUTH_USER', environ)
+        start_response('200 OK', [])
+        return []
+
+    def test(self):
+        fd = self.makefile()
+        fd.write('GET / HTTP/1.0\r\nx-auth_user: bob\r\n\r\n')
+        read_http(fd)
+
+
 class Handler(pywsgi.WSGIHandler):
 
     def read_requestline(self):

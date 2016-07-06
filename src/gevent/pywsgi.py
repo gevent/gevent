@@ -1010,18 +1010,23 @@ class WSGIHandler(object):
     def _headers(self):
         key = None
         value = None
+        IGNORED_KEYS = (None, 'CONTENT_TYPE', 'CONTENT_LENGTH')
         for header in self.headers.headers:
             if key is not None and header[:1] in " \t":
                 value += header
                 continue
 
-            if key not in (None, 'CONTENT_TYPE', 'CONTENT_LENGTH'):
+            if key not in IGNORED_KEYS:
                 yield 'HTTP_' + key, value.strip()
 
             key, value = header.split(':', 1)
-            key = key.replace('-', '_').upper()
+            if '_' in key:
+                # strip incoming bad veaders
+                key = None
+            else:
+                key = key.replace('-', '_').upper()
 
-        if key not in (None, 'CONTENT_TYPE', 'CONTENT_LENGTH'):
+        if key not in IGNORED_KEYS:
             yield 'HTTP_' + key, value.strip()
 
     def get_environ(self):

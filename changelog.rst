@@ -46,6 +46,8 @@ Security
   ``start_response`` do not contain a carriage return or newline in
   order to prevent HTTP response splitting (header injection), raising
   a :exc:`ValueError` if they do. See :issue:`775`.
+- Incoming headers containing an underscore are no longer placed in
+  the WSGI environ. See :issue:`819`.
 - Errors logged by :class:`~gevent.pywsgi.WSGIHandler` no
   longer print the entire WSGI environment by default. This avoids
   possible information disclosure vulnerabilities. Applications can
