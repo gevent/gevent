@@ -31,7 +31,7 @@ ignore-paths:
   # This is vendored with minimal changes
   - src/gevent/_tblib.py
   # likewise
-  - src/greentest/six.py
+  - src/greentest/_six.py
   # This triggers https://github.com/PyCQA/pylint/issues/846 on Travis,
   # but the file is really small, so it's better to skip this one
   # file than disable that whole check.
