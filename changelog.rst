@@ -114,6 +114,9 @@ Other Changes
 - :class:`gevent.hub.signal` (aka :func:`gevent.signal`) now verifies
   that its `handler` argument is callable, raising a :exc:`TypeError`
   if it isn't. Reported in :issue:`818` by Peter Renström.
+- If ``sys.stderr`` has been monkey-patched (not recommended),
+  exceptions that the hub reports aren't lost and can still be caught.
+  Reported in :issue:`825` by Jelle Smet.
 
 1.1.1 (Apr 4, 2016)
 ===================

@@ -582,8 +582,13 @@ class Hub(RawGreenlet):
 
         .. versionadded:: 1.2a1
         """
-
-        return sys.stderr
+        # Unwrap any FileObjectThread we have thrown around sys.stderr
+        # (because it can't be used in the hub). Tricky because we are
+        # called in error situations when it's not safe to import.
+        stderr = sys.stderr
+        if type(stderr).__name__ == 'FileObjectThread':
+            stderr = stderr.io
+        return stderr
 
     def print_exception(self, context, type, value, tb):
         # Python 3 does not gracefully handle None value or tb in

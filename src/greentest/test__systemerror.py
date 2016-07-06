@@ -12,8 +12,14 @@ MSG = 'should be re-raised and caught'
 
 
 class Test(greentest.TestCase):
-
+    x = None
     error_fatal = False
+
+    def start(self, *args):
+        raise NotImplementedError
+
+    def setUp(self):
+        self.x = None
 
     def test_sys_exit(self):
         self.start(sys.exit, MSG)
@@ -35,6 +41,19 @@ class Test(greentest.TestCase):
         else:
             raise AssertionError('must raise KeyboardInterrupt')
 
+    def test_keyboard_interrupt_stderr_patched(self):
+        from gevent import monkey
+        monkey.patch_sys(stdin=False, stdout=False, stderr=True)
+        try:
+            try:
+                self.start(raise_, KeyboardInterrupt)
+                while True:
+                    gevent.sleep(0.1)
+            except KeyboardInterrupt:
+                pass # expected
+        finally:
+            sys.stderr = monkey.get_original('sys', 'stderr')
+
     def test_system_error(self):
         self.start(raise_, SystemError(MSG))
 
@@ -53,7 +72,8 @@ class Test(greentest.TestCase):
 class TestCallback(Test):
 
     def tearDown(self):
-        assert not self.x.pending, self.x
+        if self.x is not None:
+            assert not self.x.pending, self.x
 
     def start(self, *args):
         self.x = get_hub().loop.run_callback(*args)
@@ -63,7 +83,8 @@ class TestSpawn(Test):
 
     def tearDown(self):
         gevent.sleep(0.0001)
-        assert self.x.dead, self.x
+        if self.x is not None:
+            assert self.x.dead, self.x
 
     def start(self, *args):
         self.x = gevent.spawn(*args)
