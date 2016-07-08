@@ -3,7 +3,7 @@
 from __future__ import absolute_import
 
 from gevent.hub import getcurrent
-from gevent._compat import PYPY
+from gevent._compat import PYPY, PY3
 from gevent._semaphore import Semaphore, BoundedSemaphore # pylint:disable=no-name-in-module,import-error
 
 
@@ -23,8 +23,12 @@ __all__ = [
 # to use locks *other* than the one being traced.)
 if PYPY:
     # TODO: Need to use monkey.get_original?
-    from thread import allocate_lock as _allocate_lock # pylint:disable=import-error,useless-suppression
-    from thread import get_ident as _get_ident # pylint:disable=import-error,useless-suppression
+    if PY3:
+        from _thread import allocate_lock as _allocate_lock # pylint:disable=import-error,useless-suppression
+        from _thread import get_ident as _get_ident # pylint:disable=import-error,useless-suppression
+    else:
+        from thread import allocate_lock as _allocate_lock # pylint:disable=import-error,useless-suppression
+        from thread import get_ident as _get_ident # pylint:disable=import-error,useless-suppression
     _sem_lock = _allocate_lock()
 
     def untraceable(f):
