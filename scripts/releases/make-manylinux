@@ -1,0 +1,25 @@
+#!/bin/bash
+# Initially based on a snippet from the greenlet project.
+# This needs to be run from the root of the project.
+set -e
+export PYTHONUNBUFFERED=1
+export PYTHONDONTWRITEBYTECODE=1
+
+if [ -d /gevent -a -d /opt/python ]; then
+    # Running inside docker
+    cd /gevent
+    rm -rf wheelhouse
+	# Make sure we have a new-enough auditwheel to repair the tag names
+	/opt/python/3.5.1m/bin/pip install -U auditwheel
+    for variant in /opt/python/3*; do
+        rm -rf dist build *.egg-info
+		make clean
+		$variant/bin/pip install -U cython cffi setuptools greenlet wheel
+        PATH=$variant/bin:$PATH $variant/bin/python setup.py bdist_wheel
+        /opt/python/3.5.1m/bin/auditwheel repair dist/*.whl
+    done
+    rm -rf dist build *.egg-info
+    exit 0
+fi
+
+docker run --rm -ti -v "$(pwd):/gevent" quay.io/pypa/manylinux1_x86_64 /gevent/$(basename $0)
