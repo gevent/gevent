@@ -3,6 +3,9 @@
 from __future__ import print_function
 import sys
 import os
+# XXX: This might be needed when using docker and host machine mounts.
+# See https://github.com/pypa/setuptools/issues/516.
+#del os.link
 import re
 import shutil
 import traceback

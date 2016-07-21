@@ -4,6 +4,11 @@
 
 .. currentmodule:: gevent
 
+1.1.3 (TBD)
+===========
+
+- Nothing yet.
+
 1.1.2 (Jul 21, 2016)
 ====================
 
