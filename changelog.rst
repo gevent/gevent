@@ -4,12 +4,14 @@
 
 .. currentmodule:: gevent
 
-1.1.2 (TBD)
-===========
+1.1.2 (Jul 21, 2016)
+====================
 
 - Python 2: ``sendall`` on a non-blocking socket could spuriously fail
   with a timeout.
-- Fix :issue:`825`.
+- If ``sys.stderr`` has been monkey-patched (not recommended),
+  exceptions that the hub reports aren't lost and can still be caught.
+  Reported in :issue:`825` by Jelle Smet.
 - :class:`selectors.SelectSelector` is properly monkey-patched
   regardless of the order of imports. Reported in :issue:`835` by
   Przemysław Węgrzyn.
