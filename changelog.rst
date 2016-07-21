@@ -69,6 +69,9 @@ Stdlib Compatibility
   libev would tend to return the descriptor as ready. In the worst
   case, this adds an extra system call, but may also reduce latency if
   descriptors are ready at the time of entry.
+- :class:`selectors.SelectSelector` is properly monkey-patched
+  regardless of the order of imports. Reported in :issue:`835` by
+  Przemysław Węgrzyn.
 - :meth:`gevent.select.poll.unregister` raises an exception if *fd* is not
   registered, like the standard library.
 - :meth:`gevent.select.poll.poll` returns an event with
