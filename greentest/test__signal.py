@@ -41,6 +41,30 @@ if hasattr(signal, 'SIGALRM'):
             finally:
                 sig.cancel()
 
+        @greentest.ignores_leakcheck
+        def test_reload(self):
+            # The site module tries to set attributes
+            # on all the modules that are loaded (specifically, __file__).
+            # If gevent.signal is loaded, and is our compatibility shim,
+            # this used to fail on Python 2: sys.modules['gevent.signal'] has no
+            # __loader__ attribute, so site.py's main() function tries to do
+            # gevent.signal.__file__ = os.path.abspath(gevent.signal.__file__), which
+            # used to not be allowed. (Under Python 3, __loader__ is present so this
+            # doesn't happen). See
+            # https://github.com/gevent/gevent/issues/805
+
+            import gevent.signal # make sure it's in sys.modules pylint:disable=redefined-outer-name
+            assert gevent.signal
+            import site
+            if greentest.PY34:
+                from importlib import reload as reload_module
+            elif greentest.PY3:
+                from imp import reload as reload_module
+            else:
+                # builtin on py2
+                reload_module = reload # pylint:disable=undefined-variable
+
+            reload_module(site)
 
 if __name__ == '__main__':
     greentest.main()

@@ -13,6 +13,8 @@
 - :class:`selectors.SelectSelector` is properly monkey-patched
   regardless of the order of imports. Reported in :issue:`835` by
   Przemysław Węgrzyn.
+- Python 2: ``reload(site)`` no longer fails with a ``TypeError`` if
+  gevent has been imported. Reported in :issue:`805` by Jake Hilton.
 
 1.1.1 (Apr 4, 2016)
 ===================

@@ -476,10 +476,10 @@ def patch_select(aggressive=True):
         assert select.select is not orig_select_select
         selectors = __import__('selectors')
         if selectors.SelectSelector._select in (select.select, orig_select_select):
-             def _select(self, *args, **kwargs): # pylint:disable=unused-argument
-                 return select.select(*args, **kwargs)
-             selectors.SelectSelector._select = _select
-             _select._gevent_monkey = True
+            def _select(self, *args, **kwargs): # pylint:disable=unused-argument
+                return select.select(*args, **kwargs)
+            selectors.SelectSelector._select = _select
+            _select._gevent_monkey = True
 
         if aggressive:
             # If `selectors` had already been imported before we removed

@@ -82,9 +82,10 @@ class _signal_metaclass(type):
         return getattr(_signal_module, name)
 
     def __setattr__(self, name, value):
-        # Because we can't know whether to try to go to the module
-        # or the class, we don't allow setting an attribute after the fact
-        raise TypeError("Cannot set attribute")
+        # For symmetry with getattr and dir, pass all
+        # attribute setting on to the module. (This makes
+        # reloading work, see issue #805)
+        setattr(_signal_module, name, value)
 
     def __instancecheck__(self, instance):
         return isinstance(instance, _signal_class)
