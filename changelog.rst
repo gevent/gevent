@@ -10,6 +10,9 @@
 - Python 2: ``sendall`` on a non-blocking socket could spuriously fail
   with a timeout.
 - Fix :issue:`825`.
+- :class:`selectors.SelectSelector` is properly monkey-patched
+  regardless of the order of imports. Reported in :issue:`835` by
+  Przemysław Węgrzyn.
 
 1.1.1 (Apr 4, 2016)
 ===================

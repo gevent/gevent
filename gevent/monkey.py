@@ -468,12 +468,18 @@ def patch_select(aggressive=True):
         # not a builtin and doesn't get the magic auto-static that they do)
         #    r, w, _ = self._select(self._readers, self._writers, [], timeout)
         #    TypeError: select() takes from 3 to 4 positional arguments but 5 were given
-        select = __import__('select')
+        # Note that this obviously only happens if selectors was imported after we had patched
+        # select; but there is a code path that leads to it being imported first (but now we've
+        # patched select---so we can't compare them identically)
+        select = __import__('select') # Should be gevent-patched now
+        orig_select_select = get_original('select', 'select')
+        assert select.select is not orig_select_select
         selectors = __import__('selectors')
-        if selectors.SelectSelector._select is select.select:
-            def _select(self, *args, **kwargs):
-                return select.select(*args, **kwargs)
-            selectors.SelectSelector._select = _select
+        if selectors.SelectSelector._select in (select.select, orig_select_select):
+             def _select(self, *args, **kwargs): # pylint:disable=unused-argument
+                 return select.select(*args, **kwargs)
+             selectors.SelectSelector._select = _select
+             _select._gevent_monkey = True
 
         if aggressive:
             # If `selectors` had already been imported before we removed
