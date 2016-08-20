@@ -313,6 +313,20 @@ class TestFunctions(greentest.TestCase):
     # Creating new types in the function takes a cycle to cleanup.
     test_wait_timeout.ignore_leakcheck = True
 
+    def test_connect_ex(self):
+        # Issue 841
+        cli = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        ret = cli.connect_ex(('localhost', get_port()))
+        self.assertEqual(type(ret), int)
+        cli.close()
+
+    def test_connect_ex_gaierror(self):
+        # Issue 841
+        cli = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        with self.assertRaises(socket.gaierror):
+            cli.connect_ex(('foo.bar.fizzbuzz', get_port()))
+        cli.close()
+
 
 if __name__ == '__main__':
     greentest.main()
