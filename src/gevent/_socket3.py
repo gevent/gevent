@@ -308,10 +308,10 @@ class socket(object):
         except timeout:
             return EAGAIN
         except error as ex:
-            if type(ex) is error: # pylint:disable=unidiomatic-typecheck
-                return ex.args[0]
-            else:
+            if type(ex) is gaierror: # pylint:disable=unidiomatic-typecheck
                 raise  # gaierror is not silented by connect_ex
+            else:
+                return ex.args[0]
 
     def recv(self, *args):
         while True:
