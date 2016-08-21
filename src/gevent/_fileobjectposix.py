@@ -183,6 +183,30 @@ class FileObjectPosix(object):
     #: platform specific default for the *bufsize* parameter
     default_bufsize = io.DEFAULT_BUFFER_SIZE
 
+    # List of methods we delegate to the wrapping IO object, if they
+    # implement them.
+    _delegate_methods = (
+        # General methods
+        'flush',
+        'fileno',
+        'writable',
+        'readable',
+        'seek',
+        'seekable',
+        'tell',
+
+        # Read
+        'read',
+        'readline',
+        'readlines',
+        'read1',
+
+        # Write
+        'write',
+        'writelines',
+        'truncate',
+    )
+
     def __init__(self, fobj, mode='rb', bufsize=-1, close=True):
         """
         :keyword fobj: Either an integer fileno, or an object supporting the
@@ -238,13 +262,27 @@ class FileObjectPosix(object):
             assert mode == 'w'
             IOFamily = BufferedWriter
 
-        self.io = IOFamily(self.fileio, bufsize)
+        self._io = IOFamily(self.fileio, bufsize)
         #else: # QQQ: not used, not reachable
         #
         #    self.io = BufferedRandom(self.fileio, bufsize)
 
         if self._translate:
-            self.io = TextIOWrapper(self.io)
+            self._io = TextIOWrapper(self._io)
+
+        self.__delegate_methods()
+
+    def __delegate_methods(self):
+        for meth_name in self._delegate_methods:
+            meth = getattr(self._io, meth_name, None)
+            if meth:
+                setattr(self, meth_name, meth)
+            elif hasattr(self, meth_name):
+                delattr(self, meth_name)
+
+    io = property(lambda s: s._io,
+                  # subprocess.py likes to swizzle our io object for universal_newlines
+                  lambda s, nv: setattr(s, '_io', nv) or s.__delegate_methods())
 
     @property
     def closed(self):
@@ -257,58 +295,13 @@ class FileObjectPosix(object):
             return
         self._closed = True
         try:
-            self.io.close()
+            self._io.close()
             self.fileio.close()
         finally:
             self._fobj = None
 
-    def flush(self):
-        self.io.flush()
-
-    def fileno(self):
-        return self.io.fileno()
-
-    def write(self, data):
-        self.io.write(data)
-
-    def writelines(self, lines):
-        self.io.writelines(lines)
-
-    def read(self, size=-1):
-        return self.io.read(size)
-
-    def readline(self, size=-1):
-        return self.io.readline(size)
-
-    def readlines(self, sizehint=0):
-        return self.io.readlines(sizehint)
-
-    def readable(self):
-        """
-        .. versionadded:: 1.1b2
-        """
-        return self.io.readable()
-
-    def writable(self):
-        """
-        .. versionadded:: 1.1b2
-        """
-        return self.io.writable()
-
-    def seek(self, *args, **kwargs):
-        return self.io.seek(*args, **kwargs)
-
-    def seekable(self):
-        return self.io.seekable()
-
-    def tell(self):
-        return self.io.tell()
-
-    def truncate(self, size=None):
-        return self.io.truncate(size)
-
     def __iter__(self):
-        return self.io
+        return self._io
 
     def __getattr__(self, name):
         # XXX: Should this really be _fobj, or self.io?

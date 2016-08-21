@@ -121,6 +121,14 @@ class Test(greentest.TestCase):
         x.close()
         y.close()
 
+    def test_read1(self):
+        # Issue #840
+        r, w = os.pipe()
+        x = FileObject(r)
+        y = FileObject(w, 'w')
+        assert hasattr(x, 'read1'), x
+        x.close()
+        y.close()
 
 def writer(fobj, line):
     for character in line:

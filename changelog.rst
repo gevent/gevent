@@ -81,6 +81,8 @@ Stdlib Compatibility
   gevent has been imported. Reported in :issue:`805` by Jake Hilton.
 - Python 2: ``sendall`` on a non-blocking socket could spuriously fail
   with a timeout.
+- ``FileObjectPosix`` exposes the ``read1`` method when in read mode,
+  and generally only exposes methods appropriate to the mode it is in.
 
 Other Changes
 -------------
