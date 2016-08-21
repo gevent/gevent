@@ -659,11 +659,10 @@ def get_open_files(pipes=False):
             continue
         split = re.split(r'\s+', line)
         command, pid, user, fd = split[:4]
-        # Pipes get an fd like "3" while normal files get an fd like "1u"
+        # Pipes (on OS X, at least) get an fd like "3" while normal files get an fd like "1u"
         if fd[:-1].isdigit() or fd.isdigit():
-            if not pipes and not fd[-1].isdigit():
+            if not pipes and fd[-1].isdigit():
                 continue
-            print(fd)
             fd = int(fd[:-1]) if not fd[-1].isdigit() else int(fd)
             if fd in results:
                 params = (fd, line, split, results.get(fd), data)
@@ -690,6 +689,8 @@ lsof_get_open_files = get_open_files
 try:
     import psutil
 except ImportError:
+    pass
+else:
     # If psutil is available (it is cross-platform) use that.
     # It is *much* faster than shelling out to lsof each time
     # (Running 14 tests takes 3.964s with lsof and 0.046 with psutil)
