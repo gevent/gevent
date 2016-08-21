@@ -633,69 +633,68 @@ def disabled_gc():
             gc.enable()
 
 
+import re
+# Linux/OS X/BSD platforms can implement this by calling out to lsof
+
+def _run_lsof():
+    import tempfile
+    pid = os.getpid()
+    fd, tmpname = tempfile.mkstemp('get_open_files')
+    os.close(fd)
+    lsof_command = 'lsof -p %s > %s' % (pid, tmpname)
+    if os.system(lsof_command):
+        raise OSError("lsof failed")
+    with open(tmpname) as fobj:
+        data = fobj.read().strip()
+    os.remove(tmpname)
+    return data
+
+def get_open_files(pipes=False):
+    data = _run_lsof()
+    results = {}
+    for line in data.split('\n'):
+        line = line.strip()
+        if not line or line.startswith("COMMAND"):
+            # Skip header and blank lines
+            continue
+        split = re.split(r'\s+', line)
+        command, pid, user, fd = split[:4]
+        # Pipes get an fd like "3" while normal files get an fd like "1u"
+        if fd[:-1].isdigit() or fd.isdigit():
+            if not pipes and not fd[-1].isdigit():
+                continue
+            print(fd)
+            fd = int(fd[:-1]) if not fd[-1].isdigit() else int(fd)
+            if fd in results:
+                params = (fd, line, split, results.get(fd), data)
+                raise AssertionError('error when parsing lsof output: duplicate fd=%r\nline=%r\nsplit=%r\nprevious=%r\ndata:\n%s' % params)
+            results[fd] = line
+    if not results:
+        raise AssertionError('failed to parse lsof:\n%s' % (data, ))
+    results['data'] = data
+    return results
+
+def get_number_open_files():
+    if os.path.exists('/proc/'):
+        # Linux only
+        fd_directory = '/proc/%d/fd' % os.getpid()
+        return len(os.listdir(fd_directory))
+    else:
+        try:
+            return len(get_open_files(pipes=True)) - 1
+        except (OSError, AssertionError):
+            return 0
+
+lsof_get_open_files = get_open_files
+
 try:
     import psutil
 except ImportError:
-    psutil = None
-    import re
-    # Linux/OS X/BSD platforms can implement this by calling out to lsof
-
-    def _run_lsof():
-        import tempfile
-        pid = os.getpid()
-        fd, tmpname = tempfile.mkstemp('get_open_files')
-        os.close(fd)
-        lsof_command = 'lsof -p %s > %s' % (pid, tmpname)
-        if os.system(lsof_command):
-            raise OSError("lsof failed")
-        with open(tmpname) as fobj:
-            data = fobj.read().strip()
-        os.remove(tmpname)
-        return data
-
-    def get_open_files(pipes=False):
-        data = _run_lsof()
-        results = {}
-        for line in data.split('\n'):
-            line = line.strip()
-            if not line or line.startswith("COMMAND"):
-                # Skip header and blank lines
-                continue
-            split = re.split(r'\s+', line)
-            command, pid, user, fd = split[:4]
-            # Pipes get an fd like "3" while normal files get an fd like "1u"
-            if fd[:-1].isdigit() or fd.isdigit():
-                if not pipes and not fd[-1].isdigit():
-                    continue
-                print(fd)
-                fd = int(fd[:-1]) if not fd[-1].isdigit() else int(fd)
-                if fd in results:
-                    params = (fd, line, split, results.get(fd), data)
-                    raise AssertionError('error when parsing lsof output: duplicate fd=%r\nline=%r\nsplit=%r\nprevious=%r\ndata:\n%s' % params)
-                results[fd] = line
-        if not results:
-            raise AssertionError('failed to parse lsof:\n%s' % (data, ))
-        results['data'] = data
-        return results
-
-    def get_number_open_files():
-        if os.path.exists('/proc/'):
-            # Linux only
-            fd_directory = '/proc/%d/fd' % os.getpid()
-            return len(os.listdir(fd_directory))
-        else:
-            try:
-                return len(get_open_files(pipes=True)) - 1
-            except (OSError, AssertionError):
-                return 0
-
-else:
     # If psutil is available (it is cross-platform) use that.
     # It is *much* faster than shelling out to lsof each time
     # (Running 14 tests takes 3.964s with lsof and 0.046 with psutil)
     # However, it still doesn't completely solve the issue on Windows: fds are reported
     # as -1 there, so we can't fully check those.
-    # XXX: Note: installing psutil on the travis linux vm caused failures in test__makefile_refs.
 
     def get_open_files():
         results = dict()
@@ -713,6 +712,10 @@ else:
         except AttributeError:
             # num_fds is unix only. Is num_handles close enough on Windows?
             return 0
+
+if RUNNING_ON_TRAVIS:
+    # XXX: Note: installing psutil on the travis linux vm caused failures in test__makefile_refs.
+    get_open_files = lsof_get_open_files
 
 if PYPY:
 
