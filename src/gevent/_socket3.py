@@ -307,11 +307,17 @@ class socket(object):
             return self.connect(address) or 0
         except timeout:
             return EAGAIN
+        except gaierror:
+            # gaierror/overflowerror/typerror is not silented by connect_ex;
+            # gaierror extends OSError (aka error) so catch it first
+            raise
         except error as ex:
-            if type(ex) is error: # pylint:disable=unidiomatic-typecheck
-                return ex.args[0]
-            else:
-                raise  # gaierror is not silented by connect_ex
+            # error is now OSError and it has various subclasses.
+            # Only those that apply to actually connecting are silenced by
+            # connect_ex.
+            if ex.errno:
+                return ex.errno
+            raise # pragma: no cover
 
     def recv(self, *args):
         while True:

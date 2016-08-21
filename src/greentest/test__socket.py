@@ -12,6 +12,7 @@ import _six as six
 # we use threading on purpose so that we can test both regular and gevent sockets with the same code
 from threading import Thread as _Thread
 
+errno_types = int
 
 def wrap_error(func):
 
@@ -261,6 +262,28 @@ class TestTCP(greentest.TestCase):
 
         s.close()
 
+    def test_connect_ex_nonblocking_bad_connection(self):
+        # Issue 841
+        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        s.setblocking(False)
+        ret = s.connect_ex(('localhost', get_port()))
+        self.assertIsInstance(ret, errno_types)
+        s.close()
+
+    def test_connect_ex_gaierror(self):
+        # Issue 841
+        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        with self.assertRaises(socket.gaierror):
+            s.connect_ex(('foo.bar.fizzbuzz', get_port()))
+        s.close()
+
+    def test_connect_ex_nonblocking_overflow(self):
+        # Issue 841
+        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        s.setblocking(False)
+        with self.assertRaises(OverflowError):
+            s.connect_ex(('localhost', 65539))
+        s.close()
 
 def get_port():
     tempsock = socket.socket()
