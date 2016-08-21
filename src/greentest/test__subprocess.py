@@ -60,8 +60,10 @@ class Test(greentest.TestCase):
         if PYPY:
             gc.collect()
             gc.collect()
+
         num_after = greentest.get_number_open_files()
         self.assertEqual(num_before, num_after)
+
 
     def test_communicate(self):
         p = subprocess.Popen([sys.executable, "-c",
