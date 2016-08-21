@@ -75,6 +75,10 @@ class FileObjectThread(FileObjectBase):
     A file-like object wrapping another file-like object, performing all blocking
     operations on that object in a background thread.
 
+    .. caution::
+        Attempting to change the threadpool or lock of an existing FileObjectThread
+        has undefined consequences.
+
     .. versionchanged:: 1.1b1
        The file object is closed using the threadpool. Note that whether or
        not this action is synchronous or asynchronous is not documented.
@@ -113,24 +117,23 @@ class FileObjectThread(FileObjectBase):
             else:
                 fobj = os.fdopen(fobj, mode, bufsize)
 
+        self.__io_holder = [fobj] # signal for _wrap_method
         super(FileObjectThread, self).__init__(fobj, closefd)
 
-    def _apply(self, func, args=None, kwargs=None):
-        with self.lock:
-            return self.threadpool.apply(func, args, kwargs)
-
     def _do_close(self, fobj, closefd):
+        self.__io_holder[0] = None # for _wrap_method
         try:
-            self._apply(fobj.flush)
+            with self.lock:
+                self.threadpool.apply(fobj.flush)
         finally:
             if closefd:
-                # Note that we're not using self._apply; older code
+                # Note that we're not taking the lock; older code
                 # did fobj.close() without going through the threadpool at all,
                 # so acquiring the lock could potentially introduce deadlocks
                 # that weren't present before. Avoiding the lock doesn't make
                 # the existing race condition any worse.
                 # We wrap the close in an exception handler and re-raise directly
-                # to avoid the (common, expected) IOError from being logged
+                # to avoid the (common, expected) IOError from being logged by the pool
                 def close():
                     try:
                         fobj.close()
@@ -144,6 +147,7 @@ class FileObjectThread(FileObjectBase):
         super(FileObjectThread, self)._do_delegate_methods()
         if not hasattr(self, 'read1') and 'r' in getattr(self._io, 'mode', ''):
             self.read1 = self.read
+        self.__io_holder[0] = self._io
 
     def _extra_repr(self):
         return ' threadpool=%r' % (self.threadpool,)
@@ -159,19 +163,22 @@ class FileObjectThread(FileObjectBase):
     __next__ = next
 
     def _wrap_method(self, method):
-        # NOTE: This introduces a refcycle within self:
-        # self.__dict__ has methods that directly refer to self.
-        # Options to eliminate this are weakrefs, using __getattribute__ to
-        # fake a method descriptor, other? They all seem more costly than
-        # the refcycle.
+        # NOTE: We are careful to avoid introducing a refcycle
+        # within self. Our wrapper cannot refer to self.
+        io_holder = self.__io_holder
+        lock = self.lock
+        threadpool = self.threadpool
+
         @functools.wraps(method)
         def thread_method(*args, **kwargs):
-            if self._io is None:
+            if io_holder[0] is None:
                 # This is different than FileObjectPosix, etc,
                 # because we want to save the expensive trip through
                 # the threadpool.
                 raise FileObjectClosed()
-            return self._apply(method, args, kwargs)
+            with lock:
+                return threadpool.apply(method, args, kwargs)
+
         return thread_method
 
 
