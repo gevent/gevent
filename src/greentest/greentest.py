@@ -707,7 +707,11 @@ else:
 
     def get_number_open_files():
         process = psutil.Process()
-        return process.num_fds()
+        try:
+            return process.num_fds()
+        except AttributeError:
+            # num_fds is unix only. Is num_handles close enough on Windows?
+            return 0
 
 if PYPY:
 
