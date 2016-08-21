@@ -73,7 +73,7 @@ class Test(greentest.TestCase):
                 self._test_del(close=False)
                 self.fail("Shouldn't be able to create a FileObjectThread with close=False")
             except TypeError as e:
-                self.assertEqual(str(e), 'FileObjectThread does not support close=False')
+                self.assertEqual(str(e), 'FileObjectThread does not support close=False on an fd.')
 
     def test_newlines(self):
         r, w = os.pipe()
@@ -129,6 +129,20 @@ class Test(greentest.TestCase):
         assert hasattr(x, 'read1'), x
         x.close()
         y.close()
+
+    #if FileObject is not FileObjectThread:
+    def test_bufsize_0(self):
+        # Issue #840
+        r, w = os.pipe()
+        x = FileObject(r, 'rb', bufsize=0)
+        y = FileObject(w, 'wb', bufsize=0)
+        y.write(b'a')
+        b = x.read(1)
+        self.assertEqual(b, b'a')
+
+        y.writelines([b'2'])
+        b = x.read(1)
+        self.assertEqual(b, b'2')
 
 def writer(fobj, line):
     for character in line:

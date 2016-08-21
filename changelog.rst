@@ -83,6 +83,8 @@ Stdlib Compatibility
   with a timeout.
 - ``FileObjectPosix`` exposes the ``read1`` method when in read mode,
   and generally only exposes methods appropriate to the mode it is in.
+- ``FileObjectPosix`` supports a *bufsize* of 0 in binary write modes.
+  Reported in :issue:`840` by Mike Lang.
 
 Other Changes
 -------------
@@ -124,6 +126,11 @@ Other Changes
 - If ``sys.stderr`` has been monkey-patched (not recommended),
   exceptions that the hub reports aren't lost and can still be caught.
   Reported in :issue:`825` by Jelle Smet.
+- The various ``FileObject`` implementations are more consistent with
+  each other.
+
+  .. note:: Writing to the *io* property of a FileObject should be
+            considered deprecated after it is constructed.
 
 1.1.2 (Jul 21, 2016)
 ====================

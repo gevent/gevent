@@ -34,9 +34,13 @@ Classes
 =======
 """
 from __future__ import absolute_import
+
+import functools
 import sys
 import os
+
 from gevent._fileobjectcommon import FileObjectClosed
+from gevent._fileobjectcommon import FileObjectBase
 from gevent.hub import get_hub
 from gevent._compat import integer_types
 from gevent._compat import reraise
@@ -66,16 +70,21 @@ else:
     from gevent._fileobjectposix import FileObjectPosix
 
 
-class FileObjectThread(object):
+class FileObjectThread(FileObjectBase):
     """
     A file-like object wrapping another file-like object, performing all blocking
     operations on that object in a background thread.
+
+    .. versionchanged:: 1.1b1
+       The file object is closed using the threadpool. Note that whether or
+       not this action is synchronous or asynchronous is not documented.
+
     """
 
-    def __init__(self, fobj, *args, **kwargs):
+    def __init__(self, fobj, mode=None, bufsize=-1, close=True, threadpool=None, lock=True):
         """
         :param fobj: The underlying file-like object to wrap, or an integer fileno
-           that will be pass to :func:`os.fdopen` along with everything in *args*.
+           that will be pass to :func:`os.fdopen` along with *mode* and *bufsize*.
         :keyword bool lock: If True (the default) then all operations will
            be performed one-by-one. Note that this does not guarantee that, if using
            this file object from multiple threads/greenlets, operations will be performed
@@ -85,11 +94,9 @@ class FileObjectThread(object):
         :keyword bool close: If True (the default) then when this object is closed,
            the underlying object is closed as well.
         """
-        self._close = kwargs.pop('close', True)
-        self.threadpool = kwargs.pop('threadpool', None)
-        self.lock = kwargs.pop('lock', True)
-        if kwargs:
-            raise TypeError('Unexpected arguments: %r' % kwargs.keys())
+        closefd = close
+        self.threadpool = threadpool
+        self.lock = lock
         if self.lock is True:
             self.lock = Semaphore()
         elif not self.lock:
@@ -97,32 +104,27 @@ class FileObjectThread(object):
         if not hasattr(self.lock, '__enter__'):
             raise TypeError('Expected a Semaphore or boolean, got %r' % type(self.lock))
         if isinstance(fobj, integer_types):
-            if not self._close:
+            if not closefd:
                 # we cannot do this, since fdopen object will close the descriptor
-                raise TypeError('FileObjectThread does not support close=False')
-            fobj = os.fdopen(fobj, *args)
-        self.io = fobj
+                raise TypeError('FileObjectThread does not support close=False on an fd.')
+            if mode is None:
+                assert bufsize == -1, "If you use the default mode, you can't choose a bufsize"
+                fobj = os.fdopen(fobj)
+            else:
+                fobj = os.fdopen(fobj, mode, bufsize)
         if self.threadpool is None:
             self.threadpool = get_hub().threadpool
+        super(FileObjectThread, self).__init__(fobj, closefd)
 
     def _apply(self, func, args=None, kwargs=None):
         with self.lock:
             return self.threadpool.apply(func, args, kwargs)
 
-    def close(self):
-        """
-        .. versionchanged:: 1.1b1
-           The file object is closed using the threadpool. Note that whether or
-           not this action is synchronous or asynchronous is not documented.
-        """
-        fobj = self.io
-        if fobj is None:
-            return
-        self.io = None
+    def _do_close(self, fobj, closefd):
         try:
-            self.flush(_fobj=fobj)
+            self._apply(fobj.flush)
         finally:
-            if self._close:
+            if closefd:
                 # Note that we're not using self._apply; older code
                 # did fobj.close() without going through the threadpool at all,
                 # so acquiring the lock could potentially introduce deadlocks
@@ -139,24 +141,13 @@ class FileObjectThread(object):
                 if exc_info:
                     reraise(*exc_info)
 
-    def flush(self, _fobj=None):
-        if _fobj is not None:
-            fobj = _fobj
-        else:
-            fobj = self.io
-        if fobj is None:
-            raise FileObjectClosed
-        return self._apply(fobj.flush)
+    def _do_delegate_methods(self):
+        super(FileObjectThread, self)._do_delegate_methods()
+        if not hasattr(self, 'read1') and 'r' in self._io.mode:
+            self.read1 = self.read
 
-    def __repr__(self):
-        return '<%s _fobj=%r threadpool=%r>' % (self.__class__.__name__, self.io, self.threadpool)
-
-    def __getattr__(self, item):
-        if self.io is None:
-            if item == 'closed':
-                return True
-            raise FileObjectClosed
-        return getattr(self.io, item)
+    def _extra_repr(self):
+        return ' threadpool=%r' % (self.threadpool,)
 
     def __iter__(self):
         return self
@@ -168,21 +159,16 @@ class FileObjectThread(object):
         raise StopIteration
     __next__ = next
 
-
-def _wraps(method):
-    def x(self, *args, **kwargs):
-        fobj = self.io
-        if fobj is None:
-            raise FileObjectClosed
-        return self._apply(getattr(fobj, method), args, kwargs)
-    x.__name__ = method
-    return x
-
-_method = None
-for _method in ('read', 'readinto', 'readline', 'readlines', 'write', 'writelines', 'xreadlines'):
-    setattr(FileObjectThread, _method, _wraps(_method))
-del _method
-del _wraps
+    def _wrap_method(self, method):
+        @functools.wraps(method)
+        def thread_method(*args, **kwargs):
+            if self._io is None:
+                # This is different than FileObjectPosix, etc,
+                # because we want to save the expensive trip through
+                # the threadpool.
+                raise FileObjectClosed()
+            return self._apply(method, args, kwargs)
+        return thread_method
 
 
 try:
@@ -191,28 +177,18 @@ except NameError:
     FileObject = FileObjectThread
 
 
-class FileObjectBlock(object):
+class FileObjectBlock(FileObjectBase):
 
     def __init__(self, fobj, *args, **kwargs):
-        self._close = kwargs.pop('close', True)
+        closefd = kwargs.pop('close', True)
         if kwargs:
             raise TypeError('Unexpected arguments: %r' % kwargs.keys())
         if isinstance(fobj, integer_types):
-            if not self._close:
+            if not closefd:
                 # we cannot do this, since fdopen object will close the descriptor
-                raise TypeError('FileObjectBlock does not support close=False')
+                raise TypeError('FileObjectBlock does not support close=False on an fd.')
             fobj = os.fdopen(fobj, *args)
-        self.io = fobj
-
-    def __repr__(self):
-        return '<%s %r>' % (self.__class__.__name__, self.io, )
-
-    def __getattr__(self, item):
-        assert item != '_fobj'
-        if self.io is None:
-            raise FileObjectClosed
-        return getattr(self.io, item)
-
+        super(FileObjectBlock, self).__init__(fobj, closefd)
 
 config = os.environ.get('GEVENT_FILE')
 if config:
