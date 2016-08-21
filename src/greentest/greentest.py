@@ -695,6 +695,7 @@ else:
     # (Running 14 tests takes 3.964s with lsof and 0.046 with psutil)
     # However, it still doesn't completely solve the issue on Windows: fds are reported
     # as -1 there, so we can't fully check those.
+    # XXX: Note: installing psutil on the travis linux vm caused failures in test__makefile_refs.
 
     def get_open_files():
         results = dict()

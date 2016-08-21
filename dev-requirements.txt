@@ -7,7 +7,9 @@ coverage>=4.0
 coveralls>=1.0
 cffi
 futures
-psutil
+# Makes tests faster, but causes issues on the old
+# linux version Travis CI uses.
+# psutil
 # For viewing README.rst (restview --long-description),
 # CONTRIBUTING.rst, etc.
 # https://github.com/mgedmin/restview
