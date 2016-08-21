@@ -19,51 +19,11 @@ if PY3:
 fd_types = (int, long)
 WIN = sys.platform.startswith("win")
 
+from greentest import get_open_files
 try:
     import psutil
 except ImportError:
     psutil = None
-    # Linux/OS X/BSD platforms can implement this by calling out to lsof
-    tmpname = '/tmp/test__makefile_ref.lsof.%s' % pid
-    lsof_command = 'lsof -p %s > %s' % (pid, tmpname)
-
-    def get_open_files():
-        if os.system(lsof_command):
-            raise OSError('lsof failed')
-        with open(tmpname) as fobj:
-            data = fobj.read().strip()
-        results = {}
-        for line in data.split('\n'):
-            line = line.strip()
-            if not line:
-                continue
-            split = re.split(r'\s+', line)
-            command, pid, user, fd = split[:4]
-            if fd[:-1].isdigit() and not fd[-1].isdigit():
-                fd = int(fd[:-1])
-                if fd in results:
-                    params = (fd, line, split, results.get(fd), data)
-                    raise AssertionError('error when parsing lsof output: duplicate fd=%r\nline=%r\nsplit=%r\nprevious=%r\ndata:\n%s' % params)
-                results[fd] = line
-        if not results:
-            raise AssertionError('failed to parse lsof:\n%s' % (data, ))
-        results['data'] = data
-        return results
-else:
-    # If psutil is available (it is cross-platform) use that.
-    # It is *much* faster than shelling out to lsof each time
-    # (Running 14 tests takes 3.964s with lsof and 0.046 with psutil)
-    # However, it still doesn't completely solve the issue on Windows: fds are reported
-    # as -1 there, so we can't fully check those.
-    # XXX: Note: installing psutil on the travis linux vm caused failures.
-    process = psutil.Process()
-
-    def get_open_files():
-        results = dict()
-        results['data'] = process.open_files() + process.connections('all')
-        for x in results['data']:
-            results[x.fd] = x
-        return results
 
 
 class Test(unittest.TestCase):

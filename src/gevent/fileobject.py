@@ -95,7 +95,7 @@ class FileObjectThread(FileObjectBase):
            the underlying object is closed as well.
         """
         closefd = close
-        self.threadpool = threadpool
+        self.threadpool = threadpool or get_hub().threadpool
         self.lock = lock
         if self.lock is True:
             self.lock = Semaphore()
@@ -112,8 +112,7 @@ class FileObjectThread(FileObjectBase):
                 fobj = os.fdopen(fobj)
             else:
                 fobj = os.fdopen(fobj, mode, bufsize)
-        if self.threadpool is None:
-            self.threadpool = get_hub().threadpool
+
         super(FileObjectThread, self).__init__(fobj, closefd)
 
     def _apply(self, func, args=None, kwargs=None):
@@ -160,6 +159,11 @@ class FileObjectThread(FileObjectBase):
     __next__ = next
 
     def _wrap_method(self, method):
+        # NOTE: This introduces a refcycle within self:
+        # self.__dict__ has methods that directly refer to self.
+        # Options to eliminate this are weakrefs, using __getattribute__ to
+        # fake a method descriptor, other? They all seem more costly than
+        # the refcycle.
         @functools.wraps(method)
         def thread_method(*args, **kwargs):
             if self._io is None:

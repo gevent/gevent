@@ -52,6 +52,8 @@ class Test(greentest.TestCase):
             raise AssertionError('Expected OSError: [Errno 2] No such file or directory')
 
     def test_leak(self):
+        from gevent.fileobject import FileObject, FileObjectThread
+
         num_before = greentest.get_number_open_files()
         p = subprocess.Popen([sys.executable, "-c", "print()"],
                              stdout=subprocess.PIPE)
@@ -60,8 +62,17 @@ class Test(greentest.TestCase):
         if PYPY:
             gc.collect()
             gc.collect()
+
         num_after = greentest.get_number_open_files()
+        if FileObject is FileObjectThread:
+            # There is (deliberately) a small refcycle within
+            # the instance itself
+            self.assertNotEqual(num_before, num_after)
+            gc.collect() # This produces a ResourceWarning
+            num_after = greentest.get_number_open_files()
+
         self.assertEqual(num_before, num_after)
+
 
     def test_communicate(self):
         p = subprocess.Popen([sys.executable, "-c",
