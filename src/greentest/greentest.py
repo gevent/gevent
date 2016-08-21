@@ -703,6 +703,7 @@ else:
         results['data'] = process.open_files() + process.connections('all')
         for x in results['data']:
             results[x.fd] = x
+        results['data'] += ['From psutil', process]
         return results
 
     def get_number_open_files():
