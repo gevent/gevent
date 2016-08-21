@@ -143,7 +143,7 @@ class FileObjectThread(FileObjectBase):
 
     def _do_delegate_methods(self):
         super(FileObjectThread, self)._do_delegate_methods()
-        if not hasattr(self, 'read1') and 'r' in self._io.mode:
+        if not hasattr(self, 'read1') and 'r' in getattr(self._io, 'mode', ''):
             self.read1 = self.read
 
     def _extra_repr(self):
