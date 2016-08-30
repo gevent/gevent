@@ -211,10 +211,10 @@ I/O functions that bypass the libev event loop.
 Synchronizing access to objects shared across the greenlets is
 unnecessary in most cases (because yielding control is usually
 explict), thus traditional synchronization devices like the
-:class:`~lock.BoundedSemaphore`, :class:`~lock.RLock` and
-:class:`~lock.Semaphore` classes, although present, aren't used very
-often. Other abstractions from threading and multiprocessing remain
-useful in the cooperative world:
+:class:`~lock.BoundedSemaphore`, :class:`~lock.RLock`,
+:class:`~lock.RWLock`, and :class:`~lock.Semaphore` classes, although
+present, aren't used very often. Other abstractions from threading and
+multiprocessing remain useful in the cooperative world:
 
 - :class:`~event.Event` allows one to wake up a number of greenlets that are calling :meth:`~event.Event.wait` method.
 - :class:`~event.AsyncResult` is similar to :class:`~event.Event` but allows passing a value or an exception to the waiters.

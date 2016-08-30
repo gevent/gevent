@@ -2,6 +2,7 @@
 """Locking primitives"""
 from __future__ import absolute_import
 
+from gevent.event import Event
 from gevent.hub import getcurrent
 from gevent._compat import PYPY
 from gevent._semaphore import Semaphore, BoundedSemaphore # pylint:disable=no-name-in-module,import-error
@@ -12,6 +13,7 @@ __all__ = [
     'DummySemaphore',
     'BoundedSemaphore',
     'RLock',
+    'RWLock',
 ]
 
 # On PyPy, we don't compile the Semaphore class with Cython. Under
@@ -253,3 +255,41 @@ class RLock(object):
 
     def _is_owned(self):
         return self._owner is getcurrent()
+
+
+class RWLock(object):
+    """
+    Provide RW and RO locks.
+
+    The idea is that multiple RO locks can be held, while
+    an RW lock must be unique and hold the RO locks too.
+    """
+
+    def __init__(self):
+        self.rw_lock = RLock()
+        self._zero_event = None
+        self._ro_count = 0
+
+    def acquire(self):
+        """Acquire the RW lock."""
+        self.rw_lock.acquire()
+        if self._ro_count > 0:
+            self._zero_event = Event()
+            self._zero_event.wait()
+            self._zero_event = None
+
+    def acquire_ro(self):
+        """Acquire an RO lock."""
+        self.rw_lock.acquire()
+        self._ro_count += 1
+        self.rw_lock.release()
+
+    def release(self):
+        """Release the RW lock."""
+        self.rw_lock.release()
+
+    def release_ro(self):
+        """Release an RO lock."""
+        self._ro_count -= 1
+        if self._ro_count == 0 and self._zero_event is not None:
+            self._zero_event.set()

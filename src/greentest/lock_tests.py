@@ -242,6 +242,26 @@ class RLockTests(BaseLockTests):
         self.assertFalse(lock._is_owned())
 
 
+class RWLockTests(BaseLockTests):
+    """
+    Tests for RW/RO locks.
+    """
+    def test_recursive_ro_locks(self):
+        lock = self.locktype()
+        # It's possible to acquire multiple RO locks
+        lock.acquire_ro()
+        lock.acquire_ro()
+        lock.acquire_ro()
+
+        # We need to release all of them before the RW lock can be acquired
+        lock.release_ro()
+        lock.release_ro()
+        lock.release_ro()
+
+        lock.acquire()
+        lock.release()
+
+
 class EventTests(BaseTestCase):
     """
     Tests for Event objects.

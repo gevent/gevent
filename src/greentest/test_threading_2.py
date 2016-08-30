@@ -529,6 +529,9 @@ class LockTests(lock_tests.LockTests):
 class RLockTests(lock_tests.RLockTests):
     locktype = staticmethod(threading.RLock)
 
+class RWLockTests(lock_tests.RWLockTests):
+    locktype = staticmethod(threading.RWLock)
+
 class NativeRLockTests(lock_tests.RLockTests):
     # See comments at the top of the file for the difference
     # between this and RLockTests, and why they both matter
@@ -556,7 +559,7 @@ class BoundedSemaphoreTests(lock_tests.BoundedSemaphoreTests):
 
 
 def main():
-    support.run_unittest(LockTests, RLockTests, EventTests,
+    support.run_unittest(LockTests, RLockTests, RWLockTests, EventTests,
                          ConditionAsRLockTests, ConditionTests,
                          SemaphoreTests, BoundedSemaphoreTests,
                          ThreadTests,
