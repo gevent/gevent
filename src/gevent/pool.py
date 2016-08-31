@@ -52,7 +52,7 @@ class IMapUnordered(object):
             Added the *maxsize* parameter.
         """
         from gevent.queue import Queue
-        self.manager_greenlet
+        self.manager_greenlet = None
         if spawn is not None:
             self.spawn = spawn
         if _zipped:
