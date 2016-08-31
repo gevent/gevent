@@ -279,11 +279,9 @@ class BasicSocketTests(unittest.TestCase):
         self.assertLessEqual(patch, 63)
         self.assertGreaterEqual(status, 0)
         self.assertLessEqual(status, 15)
-        # Version string as returned by {Open,Libre}SSL, the format might change
-        if "LibreSSL" in s:
-            self.assertTrue(s.startswith("LibreSSL {:d}.{:d}".format(major, minor)),
-                            (s, t))
-        else:
+        # Version string as returned by OpenSSL, the format might change
+        # LibreSSL's OPENSSL_VERSION_INFO is always (2, 0, 0, 0, 0)
+        if not "LibreSSL" in s:
             self.assertTrue(s.startswith("OpenSSL {:d}.{:d}.{:d}".format(major, minor, fix)),
                             (s, t))
 

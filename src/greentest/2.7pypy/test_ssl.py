@@ -189,8 +189,9 @@ class BasicSocketTests(unittest.TestCase):
         self.assertGreaterEqual(status, 0)
         self.assertLessEqual(status, 15)
         # Version string as returned by OpenSSL, the format might change
-        self.assertTrue(s.startswith("OpenSSL {:d}.{:d}.{:d}".format(major, minor, fix)),
-                        (s, t))
+        # LibreSSL's OPENSSL_VERSION_INFO is always (2, 0, 0, 0, 0)
+            self.assertTrue(s.startswith("OpenSSL {:d}.{:d}.{:d}".format(major, minor, fix)),
+                            (s, t))
 
     def test_ciphers(self):
         if not test_support.is_resource_enabled('network'):
