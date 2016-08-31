@@ -30,7 +30,7 @@ from gevent.lock import Semaphore, DummySemaphore
 __all__ = ['Group', 'Pool']
 
 
-class IMapUnordered(Greenlet):
+class IMapUnordered(object):
     """
     At iterator of map results.
     """
@@ -52,7 +52,7 @@ class IMapUnordered(Greenlet):
             Added the *maxsize* parameter.
         """
         from gevent.queue import Queue
-        Greenlet.__init__(self)
+        self.manager_greenlet
         if spawn is not None:
             self.spawn = spawn
         if _zipped:
@@ -83,6 +83,39 @@ class IMapUnordered(Greenlet):
 
         self.count = 0
         self.finished = False
+
+    def start(self):
+        """
+        Start processing.
+
+        Spawns a manager greenlet to oversee the work of processing results, and spawns worker
+        greenlets to process individual items.
+
+        You don't need to call this method, you can just do:
+
+            imap_unordered = IMapUnordered()
+            do_other_work()
+            for result in imap_unordered:
+                process_result(result)
+
+        However, no background work will be done during do_other_work(); item processing will start
+        when the for-loop is hit. If you add a call to .start(), then results can be processed in
+        the background and results may already be available when the for-loop is reached:
+
+            imap_unordered = IMapUnordered()
+            imap_unordered.start()
+            do_other_work()
+            for result in imap_unordered:
+                process_result(result)
+
+        This method is idempotent; multiple calls to .start() will have the same effect as a single
+        call.
+        """
+        if self.manager_greenlet is not None:
+            return
+
+        self.manager_greenlet = self.spawn(self._run)
+
         # If the queue size is unbounded, then we want to call all
         # the links (_on_finish and _on_result) directly in the hub greenlet
         # for efficiency. However, if the queue is bounded, we can't do that if
@@ -92,12 +125,13 @@ class IMapUnordered(Greenlet):
         # This means that _on_finish and _on_result can be called and interleaved in any order
         # if the call to self.queue.put() blocks..
         # Note that right now we're not bounding the queue, instead using a semaphore.
-        self.rawlink(self._on_finish)
+        self.manager_greenlet.rawlink(self._on_finish)
 
     def __iter__(self):
         return self
 
     def next(self):
+        self.start()  # idempotent
         self._result_semaphore.release()
         value = self._inext()
         if isinstance(value, Failure):
@@ -355,8 +389,10 @@ class GroupMappingMixin(object):
         maxsize = kwargs.pop('maxsize', None)
         if kwargs:
             raise TypeError("Unsupported keyword arguments")
-        return cls.spawn(func, izip(*iterables), spawn=self.spawn,
-                         _zipped=True, maxsize=maxsize)
+        result_iter = cls(func, izip(*iterables), spawn=self.spawn,
+                          _zipped=True, maxsize=maxsize)
+        result_iter.start()
+        return result_iter
 
     def imap(self, func, *iterables, **kwargs):
         """
