@@ -29,8 +29,12 @@ from gevent.lock import Semaphore, DummySemaphore
 
 __all__ = ['Group', 'Pool']
 
+get_imap_unordered_class_memo = {}
 
 def get_imap_unordered_class(greenlet_class):
+    if greenlet_class in get_imap_unordered_class_memo:
+        return get_imap_unordered_class_memo[greenlet_class]
+
     class IMapUnordered(greenlet_class):
         """
         An iterator of map results.
@@ -178,10 +182,16 @@ def get_imap_unordered_class(greenlet_class):
         def _iqueue_value_for_self_failure(self):
             return Failure(self.exception, self._raise_exception)
 
+    get_imap_unordered_class_memo[greenlet_class] = IMapUnordered
+
     return IMapUnordered
 
+get_imap_class_memo = {}
 
 def get_imap_class(greenlet_class):
+    if greenlet_class in get_imap_class_memo:
+        return get_imap_class_memo[greenlet_class]
+
     class IMap(get_imap_unordered_class(greenlet_class)):
         # A specialization of IMapUnordered that returns items
         # in the order in which they were generated, not
@@ -226,6 +236,8 @@ def get_imap_class(greenlet_class):
         def _iqueue_value_for_self_failure(self):
             self.maxindex += 1
             return (self.maxindex, super(IMap, self)._iqueue_value_for_self_failure())
+
+    get_imap_class_memo[greenlet_class] = IMap
 
     return IMap
 
