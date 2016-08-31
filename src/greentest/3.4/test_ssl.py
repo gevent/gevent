@@ -686,7 +686,8 @@ class ContextTests(unittest.TestCase):
             self.assertEqual(ssl.OP_ALL | ssl.OP_NO_TLSv1 | ssl.OP_NO_SSLv3,
                              ctx.options)
             ctx.options = 0
-            self.assertEqual(0, ctx.options)
+            # Ubuntu has OP_NO_SSLv3 forced on by default
+            self.assertEqual(0, ctx.options & ~ssl.OP_NO_SSLv3)
         else:
             with self.assertRaises(ValueError):
                 ctx.options = 0
@@ -1267,7 +1268,7 @@ class NetworkedTests(unittest.TestCase):
                 # Issue #19919: Windows machines or VMs hosted on Windows
                 # machines sometimes return EWOULDBLOCK.
                 errors = (
-                    errno.ECONNREFUSED, errno.EHOSTUNREACH,
+                    errno.ECONNREFUSED, errno.EHOSTUNREACH, errno.ETIMEDOUT,
                     errno.EWOULDBLOCK,
                 )
                 self.assertIn(rc, errors)
@@ -2292,7 +2293,6 @@ else:
                                         chatty=True,
                                         connectionchatty=True)
             wrapped = False
-
             with server:
                 s = socket.socket()
                 s.setblocking(1)
@@ -2309,7 +2309,6 @@ else:
                     else:
                         s.send(indata)
                         outdata = s.recv(1024)
-
                     msg = outdata.strip().lower()
                     if indata == b"STARTTLS" and msg.startswith(b"ok"):
                         # STARTTLS ok, switch to secure mode
