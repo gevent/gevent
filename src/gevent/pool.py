@@ -246,6 +246,10 @@ class GroupMappingMixin(object):
     # - self._apply_async_cb_spawn(callback, result): Run the given callback function, possiblly
     # asynchronously, possibly synchronously.
 
+    # Subclasses may define the greenlet_class attribute to use a greenlet class other than Greenlet.
+
+    greenlet_class = Greenlet
+
     def apply_cb(self, func, args=None, kwds=None, callback=None):
         """
         :meth:`apply` the given *func(\\*args, \\*\\*kwds)*, and, if a *callback* is given, run it with the
