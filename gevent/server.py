@@ -117,6 +117,8 @@ class StreamServer(BaseServer):
             try:
                 if self.full():
                     self.stop_accepting()
+                    self._start_accepting_timer = core.timer(self.delay, self.start_accepting)
+                    self.delay = min(self.max_delay, self.delay * 2)
                     return
                 try:
                     client_socket, address = self.socket.accept()
