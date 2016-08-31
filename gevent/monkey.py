@@ -87,7 +87,7 @@ def patch_thread(threading=True, _threading_local=True):
     If *threading* is true (the default), also patch ``threading.local``.
     If *_threading_local* is true (the default), also patch ``_threading_local.local``.
     """
-    from gevent import thread as green_thread
+    from gevent import thread as green_thread, getcurrent, Greenlet
     thread = __import__('thread')
     if thread.exit is not green_thread.exit:
         thread.get_ident = green_thread.get_ident
@@ -108,6 +108,28 @@ def patch_thread(threading=True, _threading_local=True):
             threading._get_ident = green_thread.get_ident
             from gevent.hub import sleep
             threading._sleep = sleep
+
+            def cleanup_greenlet(g):
+                with threading._active_limbo_lock:
+                    del threading._active[id(g)]
+
+            class _GreenDummyThread(threading._DummyThread):
+                # instances of this will cleanup its own entry
+                # in ``threading._active``
+                def __init__(self):
+                    threading._DummyThread.__init__(self)
+                    g = getcurrent()
+                    if isinstance(g, Greenlet):
+                        g.link(cleanup_greenlet)
+
+            def currentThread():
+                try:
+                    return threading._active[threading._get_ident()]
+                except KeyError:
+                    return _GreenDummyThread()
+            threading.currentThread = currentThread
+            threading.current_thread = currentThread
+
         if _threading_local:
             _threading_local = __import__('_threading_local')
             _threading_local.local = local
