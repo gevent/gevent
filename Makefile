@@ -109,7 +109,7 @@ PY27=$(BUILD_RUNTIMES)/snakepit/python2.7
 PY33=$(BUILD_RUNTIMES)/snakepit/python3.3
 PY34=$(BUILD_RUNTIMES)/snakepit/python3.4
 PY35=$(BUILD_RUNTIMES)/snakepit/python3.5
-PYPY=$(BUILD_RUNTIMES)/snakepit/pypy501
+PYPY=$(BUILD_RUNTIMES)/snakepit/pypy54
 
 TOOLS=$(BUILD_RUNTIMES)/tools
 
@@ -173,7 +173,7 @@ test-py35: $(PY35)
 	PYTHON=python3.5 PATH=$(BUILD_RUNTIMES)/versions/python3.5/bin:$(PATH) make develop fulltoxtest
 
 test-pypy: $(PYPY)
-	PYTHON=$(PYPY) PIP=pip PATH=$(BUILD_RUNTIMES)/versions/pypy501/bin:$(PATH) make develop toxtest
+	PYTHON=$(PYPY) PIP=pip PATH=$(BUILD_RUNTIMES)/versions/pypy54/bin:$(PATH) make develop toxtest
 
 test-py27-cffi: $(PY27)
 	GEVENT_CORE_CFFI_ONLY=1 PYTHON=python2.7 PATH=$(BUILD_RUNTIMES)/versions/python2.7/bin:$(PATH) make develop toxtest
