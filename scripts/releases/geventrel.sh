@@ -9,6 +9,12 @@ export WORKON_HOME=$HOME/Projects/VirtualEnvs
 export VIRTUALENVWRAPPER_LOG_DIR=~/.virtualenvs
 source `which virtualenvwrapper.sh`
 
+# Make sure there are no -march flags set
+# https://github.com/gevent/gevent/issues/791
+unset CFLAGS
+unset CXXFLAGS
+unset CPPFLAGS
+
 cd /tmp/gevent
 virtualenv -p $1 `basename $1`
 cd `basename $1`
