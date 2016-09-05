@@ -62,6 +62,8 @@ functions not commonly used by many programs.
           (POSIX platforms like Linux and OS X can use pipes and fifos
           but Windows is limited to sockets).
 
+.. note:: On Windows, gevent is limited to 1024 open sockets.
+
 .. autofunction:: gevent.socket.wait_read
 .. autofunction:: gevent.socket.wait_write
 .. autofunction:: gevent.socket.wait_readwrite

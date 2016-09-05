@@ -31,8 +31,14 @@ greenlet__ library.
 gevent 1.1 also runs on PyPy 2.6.1 and above, although 5.0 or above is
 strongly recommended. On PyPy, there are no external dependencies.
 
+gevent is tested on Windows, OS X, and Linux, and should run on most
+other Unix-like operating systems (e.g., FreeBSD, Solaris, etc.)
+
 .. note:: gevent does *not* run on PyPy on Windows because the CFFI backend
           does not build.
+
+.. note:: On Windows, gevent is limited to a maximum of 1024 open
+          sockets due to `limitations in libev`_.
 
 gevent and greenlet can both be installed with `pip`_, e.g., ``pip
 install gevent``. On Windows and OS X, both gevent and greenlet are
@@ -50,6 +56,7 @@ __ http://pypi.python.org/pypi/greenlet
 .. _`wheels`: http://pythonwheels.com
 .. _`gevent 1.1`: whatsnew_1_1.html
 .. _`cffi`: https://cffi.readthedocs.io
+.. _`limitations in libev`: http://pod.tst.eu/http://cvs.schmorp.de/libev/ev.pod#WIN32_PLATFORM_LIMITATIONS_AND_WORKA
 
 Common Installation Issues
 --------------------------
