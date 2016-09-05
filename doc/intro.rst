@@ -311,6 +311,24 @@ killing will remain blocked forever).
 		  <gevent.Greenlet.kill>` is not defined. See that function's
 		  documentation for more details.
 
+.. caution:: Use care when killing greenlets, especially arbitrary
+             greenlets spawned by a library or otherwise executing
+             code you are not familiar with. If the code being
+             executed is not prepared to deal with exceptions, object
+             state may be corrupted. For example, if it has acquired a
+             ``Lock`` but *does not* use a ``finally`` block to
+             release it, killing the greenlet at the wrong time could
+             result in the lock being permanently locked::
+
+               def func():
+                   # DON'T DO THIS
+                   lock.acquire()
+                   socket.sendall(data) # This could raise many exceptions, including GreenletExit
+                   lock.release()
+
+             `This document
+             <http://docs.oracle.com/javase/8/docs/technotes/guides/concurrency/threadPrimitiveDeprecation.html>`_
+             describes a similar situation for threads.
 Timeouts
 ========
 

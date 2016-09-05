@@ -413,6 +413,12 @@ class Greenlet(greenlet):
             immediately is if this greenlet had called
             :func:`sleep(0.1) <gevent.sleep>`.
 
+        .. caution::
+
+            Use care when killing greenlets. If the code executing is not
+            exception safe (e.g., makes proper use of ``finally``) then an
+            unexpected exception could result in corrupted state.
+
         See also :func:`gevent.kill`.
 
         :keyword type exception: The type of exception to raise in the greenlet. The default
@@ -672,6 +678,9 @@ def _killall(greenlets, exception):
 def killall(greenlets, exception=GreenletExit, block=True, timeout=None):
     """
     Forceably terminate all the ``greenlets`` by causing them to raise ``exception``.
+
+    .. caution:: Use care when killing greenlets. If they are not prepared for exceptions,
+       this could result in corrupted state.
 
     :param greenlets: A **bounded** iterable of the non-None greenlets to terminate.
        *All* the items in this iterable must be greenlets that belong to the same thread.

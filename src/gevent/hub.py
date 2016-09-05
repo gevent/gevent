@@ -199,6 +199,9 @@ def kill(greenlet, exception=GreenletExit):
         ``kill()`` method, and neither do any created with :func:`spawn_raw`,
         so you have to use this function.
 
+    .. caution:: Use care when killing greenlets. If they are not prepared for
+       exceptions, this could result in corrupted state.
+
     .. versionchanged:: 1.1a2
         If the ``greenlet`` has a :meth:`kill <Greenlet.kill>` method, calls it. This prevents a
         greenlet from being switched to for the first time after it's been
