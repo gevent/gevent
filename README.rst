@@ -27,7 +27,7 @@ Check out the detailed changelog_ for this version.
 Get gevent
 ==========
 
-Gevent runs on Python >= 2.7, Python >= 3.3, or PyPy >= 4.0.1
+Gevent runs on Python >= 2.7, Python >= 3.3.5, or PyPy >= 4.0.1
 (but not PyPy3) (*Note*: PyPy is not supported in Windows). On all
 platforms, installing setuptools is recommended (this is done
 automatically if working in a virtual environment).

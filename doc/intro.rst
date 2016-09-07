@@ -28,6 +28,12 @@ supported. (Users of older versions of Python 2 need to install gevent
 1.0.x (2.5) or 1.1.x (2.6); Python 3 is not supported by 1.0.) gevent requires the
 greenlet__ library.
 
+.. note:: For Python 3.3, version 3.3.5 or newer is required to use
+          the gevent's SSL support due to bugs in the standard library of older
+          versions. For Python 2, 2.7.9 or newer is recommended for
+          the best SSL support; 2.7.8 is also tested although it
+          offers a less-secure SSL module.
+
 gevent 1.1 also runs on PyPy 2.6.1 and above, although 5.0 or above is
 strongly recommended. On PyPy, there are no external dependencies.
 
