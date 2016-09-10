@@ -608,6 +608,9 @@ class loop(object):
         def install_sigchld(self):
             libev.gevent_install_sigchld_handler()
 
+        def reset_sigchld(self):
+            libev.gevent_reset_sigchld_handler()
+
     def stat(self, path, interval=0.0, ref=True, priority=None):
         return stat(self, path, interval, ref, priority)
 
