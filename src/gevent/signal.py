@@ -15,6 +15,7 @@ information on configuring this not to be the case for advanced uses.
 """
 
 from __future__ import absolute_import
+
 from gevent._util import _NONE as _INITIAL
 from gevent._util import copy_globals
 
@@ -34,6 +35,9 @@ def getsignal(signalnum):
     """
     Exactly the same as :func:`signal.signal` except where
     :const:`signal.SIGCHLD` is concerned.
+
+    For :const:`signal.SIGCHLD`, this cooperates with :func:`signal`
+    to provide consistent answers.
     """
     if signalnum != _signal.SIGCHLD:
         return _signal_getsignal(signalnum)
@@ -67,9 +71,16 @@ def signal(signalnum, handler):
         Use of ``SIG_IGN`` and ``SIG_DFL`` may also have race conditions
         with libev child watchers and the :mod:`gevent.subprocess` module.
 
+    .. versionchanged:: 1.2a1
+         If ``SIG_IGN`` or ``SIG_DFL`` are used to ignore ``SIGCHLD``, a
+         future use of ``gevent.subprocess`` and libev child watchers
+         will once again work. However, on Python 2, use of ``os.popen``
+         will fail.
+
     .. versionchanged:: 1.1rc2
-       Allow using ``SIG_IGN`` and ``SIG_DFL`` to reset and ignore ``SIGCHLD``.
-       However, this allows the possibility of a race condition.
+         Allow using ``SIG_IGN`` and ``SIG_DFL`` to reset and ignore ``SIGCHLD``.
+         However, this allows the possibility of a race condition if ``gevent.subprocess``
+         had already been used.
     """
     if signalnum != _signal.SIGCHLD:
         return _signal_signal(signalnum, handler)
@@ -87,8 +98,11 @@ def signal(signalnum, handler):
     if handler == _signal.SIG_IGN or handler == _signal.SIG_DFL:
         # Allow resetting/ignoring this signal at the process level.
         # Note that this conflicts with gevent.subprocess and other users
-        # of child watchers.
+        # of child watchers, until the next time gevent.subprocess/loop.install_sigchld()
+        # is called.
+        from gevent import get_hub # Are we always safe to import here?
         _signal_signal(signalnum, handler)
+        get_hub().loop.reset_sigchld()
     return old_handler
 
 

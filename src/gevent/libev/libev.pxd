@@ -205,3 +205,4 @@ cdef extern from "libev.h":
 
     ev_loop* gevent_ev_default_loop(unsigned int flags)
     void gevent_install_sigchld_handler()
+    void gevent_reset_sigchld_handler()

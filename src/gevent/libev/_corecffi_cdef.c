@@ -206,6 +206,7 @@ unsigned int ev_pending_count(struct ev_loop*);
 
 struct ev_loop* gevent_ev_default_loop(unsigned int flags);
 void gevent_install_sigchld_handler();
+void gevent_reset_sigchld_handler();
 
 void (*gevent_noop)(struct ev_loop *_loop, struct ev_timer *w, int revents);
 void ev_sleep (ev_tstamp delay); /* sleep for a while */

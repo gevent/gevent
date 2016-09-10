@@ -504,6 +504,9 @@ cdef public class loop [object PyGeventLoopObject, type PyGeventLoop_Type]:
     def install_sigchld(self):
         libev.gevent_install_sigchld_handler()
 
+    def reset_sigchld(self):
+        libev.gevent_reset_sigchld_handler()
+
 #endif
 
     def stat(self, str path, float interval=0.0, ref=True, priority=None):

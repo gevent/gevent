@@ -90,6 +90,16 @@ Stdlib Compatibility
   returning the errno due to the refactoring of the exception
   hierarchy in Python 3.3. Now the errno is returned. Reported in
   :issue:`841` by Dana Powers.
+- Setting SIGCHLD to SIG_IGN or SIG_DFL after :mod:`gevent.subprocess`
+  had been used previously could not be reversed, causing
+  ``Popen.wait`` and other calls to hang. Now, if SIGCHLD has been
+  ignored, the next time :mod:`gevent.subprocess` is used this will be
+  detected and corrected automatically. (This potentially leads to
+  issues with :func:`os.popen` on Python 2, but the signal can always
+  be reset again. Mixing the low-level process handling calls,
+  low-level signal management and high-level use of
+  :mod:`gevent.subprocess` is tricky.) Reported in :issue:`857` by
+  Chris Utz.
 
 Other Changes
 -------------
