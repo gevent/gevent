@@ -7,19 +7,18 @@ export PYTHONDONTWRITEBYTECODE=1
 
 if [ -d /gevent -a -d /opt/python ]; then
     # Running inside docker
+    yum -y install libffi-devel
     cd /gevent
     rm -rf wheelhouse
-	# Make sure we have a new-enough auditwheel to repair the tag names
-	/opt/python/3.5.1m/bin/pip install -U auditwheel
-    for variant in /opt/python/3*; do
+    for variant in `ls -d /opt/python/cp{27,3}*`; do
         rm -rf dist build *.egg-info
-		make clean
-		$variant/bin/pip install -U cython cffi setuptools greenlet wheel
+        make clean
+        $variant/bin/pip install -U cython cffi setuptools greenlet wheel
         PATH=$variant/bin:$PATH $variant/bin/python setup.py bdist_wheel
-        /opt/python/3.5.1m/bin/auditwheel repair dist/*.whl
+        auditwheel repair dist/*.whl
     done
     rm -rf dist build *.egg-info
     exit 0
 fi
 
-docker run --rm -ti -v "$(pwd):/gevent" quay.io/pypa/manylinux1_x86_64 /gevent/$(basename $0)
+docker run --rm -ti -v "$(pwd):/gevent" quay.io/pypa/manylinux1_x86_64 /gevent/scripts/releases/$(basename $0)
