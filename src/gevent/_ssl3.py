@@ -58,6 +58,24 @@ class SSLContext(orig_SSLContext):
         # Python 3.3 lacks this
         check_hostname = False
 
+    if hasattr(orig_SSLContext.options, 'setter'):
+        # In 3.6, these became properties. They want to access the
+        # property __set__ method in the superclass, and they do so by using
+        # super(SSLContext, SSLContext). But we rebind SSLContext when we monkey
+        # patch, which causes infinite recursion.
+        # https://github.com/python/cpython/commit/328067c468f82e4ec1b5c510a4e84509e010f296
+        @orig_SSLContext.options.setter
+        def options(self, value):
+            super(orig_SSLContext, orig_SSLContext).options.__set__(self, value)
+
+        @orig_SSLContext.verify_flags.setter
+        def verify_flags(self, value):
+            super(orig_SSLContext, orig_SSLContext).verify_flags.__set__(self, value)
+
+        @orig_SSLContext.verify_mode.setter
+        def verify_mode(self, value):
+            super(orig_SSLContext, orig_SSLContext).verify_mode.__set__(self, value)
+
 
 class _contextawaresock(socket._gevent_sock_class): # Python 2: pylint:disable=slots-on-old-class
     # We have to pass the raw stdlib socket to SSLContext.wrap_socket.

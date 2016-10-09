@@ -104,6 +104,8 @@ Stdlib Compatibility
   low-level signal management and high-level use of
   :mod:`gevent.subprocess` is tricky.) Reported in :issue:`857` by
   Chris Utz.
+- ``Popen.kill`` and ``send_signal`` no longer attempt to send signals
+  to processes that are known to be exited.
 
 Other Changes
 -------------

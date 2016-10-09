@@ -454,6 +454,13 @@ if sys.version_info[:2] >= (3, 5):
             'test_socket.GeneralModuleTests.test_getnameinfo',
         ]
 
+
+if sys.version_info[:2] >= (3, 6):
+    disabled_tests += [
+        'test_threading.MiscTestCase.test__all__',
+    ]
+
+
 # if 'signalfd' in os.environ.get('GEVENT_BACKEND', ''):
 #     # tests that don't interact well with signalfd
 #     disabled_tests.extend([
