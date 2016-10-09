@@ -39,7 +39,6 @@ Libraries
   recommended by `the standard <http://pubs.opengroup.org/onlinepubs/9699919799/utilities/sh.html>`_.
   Fixed in :pr:`809` by Fredrix Fornwall.
 
-
 Security
 --------
 - :mod:`gevent.pywsgi` now checks that the values passed to
@@ -55,6 +54,11 @@ Security
   choose and their frameworks support it. Originally reported
   in :pr:`779` by sean-peters-au and changed in :pr:`781`.
 
+Platforms
+---------
+
+- As mentioned above, Python 2.6 is no longer supported.
+- Python 3.6 is now tested on POSIX platforms.
 
 Stdlib Compatibility
 --------------------

@@ -106,9 +106,9 @@ BUILD_RUNTIMES?=$(PWD)/.runtimes
 
 PY278=$(BUILD_RUNTIMES)/snakepit/python2.7.8
 PY27=$(BUILD_RUNTIMES)/snakepit/python2.7
-PY33=$(BUILD_RUNTIMES)/snakepit/python3.3
 PY34=$(BUILD_RUNTIMES)/snakepit/python3.4
 PY35=$(BUILD_RUNTIMES)/snakepit/python3.5
+PY36=$(BUILD_RUNTIMES)/snakepit/python3.5
 PYPY=$(BUILD_RUNTIMES)/snakepit/pypy54
 
 TOOLS=$(BUILD_RUNTIMES)/tools
@@ -127,14 +127,14 @@ $(PY278):
 $(PY27):
 	scripts/install.sh 2.7
 
-$(PY33):
-	scripts/install.sh 3.3
-
 $(PY34):
 	scripts/install.sh 3.4
 
 $(PY35):
 	scripts/install.sh 3.5
+
+$(PY36):
+	scripts/install.sh 3.6
 
 $(PYPY):
 	scripts/install.sh pypy
@@ -163,14 +163,14 @@ test-py278: $(PY278)
 	ls $(BUILD_RUNTIMES)/versions/python2.7.8/bin/
 	PYTHON=python2.7.8 PATH=$(BUILD_RUNTIMES)/versions/python2.7.8/bin:$(PATH) make develop toxtest
 
-test-py33: $(PY33)
-	PYTHON=python3.3 PATH=$(BUILD_RUNTIMES)/versions/python3.3/bin:$(PATH) make develop fulltoxtest
-
 test-py34: $(PY34)
 	PYTHON=python3.4 PATH=$(BUILD_RUNTIMES)/versions/python3.4/bin:$(PATH) make develop fulltoxtest
 
 test-py35: $(PY35)
 	PYTHON=python3.5 PATH=$(BUILD_RUNTIMES)/versions/python3.5/bin:$(PATH) make develop fulltoxtest
+
+test-py36: $(PY36)
+	PYTHON=python3.6 PATH=$(BUILD_RUNTIMES)/versions/python3.6/bin:$(PATH) make develop fulltoxtest
 
 test-pypy: $(PYPY)
 	PYTHON=$(PYPY) PIP=pip PATH=$(BUILD_RUNTIMES)/versions/pypy54/bin:$(PATH) make develop toxtest
