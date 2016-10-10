@@ -164,10 +164,6 @@ _create_default_https_context = create_default_context
 # Backwards compatibility alias, even though it's not a public name.
 _create_stdlib_context = _create_unverified_context
 
-import sys
-# This changed with the fix for python bug #23804
-_DEFAULT_READ_LEN = 0 if sys.version_info[:3] < (2, 7, 12) else 1024
-
 class SSLSocket(socket):
     """
     gevent `ssl.SSLSocket <https://docs.python.org/2/library/ssl.html#ssl-sockets>`_
@@ -299,7 +295,7 @@ class SSLSocket(socket):
             # EAGAIN.
             self.getpeername()
 
-    def read(self, len=_DEFAULT_READ_LEN, buffer=None):
+    def read(self, len=1024, buffer=None):
         """Read up to LEN bytes and return them.
         Return zero-length string on EOF."""
         self._checkClosed()
