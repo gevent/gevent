@@ -467,6 +467,26 @@ if sys.version_info[:2] >= (3, 6):
         'test_threading.MiscTestCase.test__all__',
     ]
 
+    # We don't actually implement socket._sendfile_use_sendfile,
+    # so these tests, which think they're using that and os.sendfile,
+    # fail.
+    disabled_tests += [
+        'test_socket.SendfileUsingSendfileTest.testCount',
+        'test_socket.SendfileUsingSendfileTest.testCountSmall',
+        'test_socket.SendfileUsingSendfileTest.testCountWithOffset',
+        'test_socket.SendfileUsingSendfileTest.testOffset',
+        'test_socket.SendfileUsingSendfileTest.testRegularFile',
+        'test_socket.SendfileUsingSendfileTest.testWithTimeout',
+        'test_socket.SendfileUsingSendfileTest.testEmptyFileSend',
+        'test_socket.SendfileUsingSendfileTest.testNonBlocking',
+        'test_socket.SendfileUsingSendfileTest.test_errors',
+    ]
+
+    # Ditto
+    disabled_tests += [
+        'test_socket.GeneralModuleTests.test__sendfile_use_sendfile',
+    ]
+
 
 # if 'signalfd' in os.environ.get('GEVENT_BACKEND', ''):
 #     # tests that don't interact well with signalfd
