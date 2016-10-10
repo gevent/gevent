@@ -89,6 +89,7 @@ class _signal_metaclass(type):
             # reloading because os.path.abspath blows up on None.
             # It gracefully handles an AttributeError, though.
             raise AttributeError(name)
+        return val
 
     def __setattr__(cls, name, value):
         # For symmetry with getattr and dir, pass all
