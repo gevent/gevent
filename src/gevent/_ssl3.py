@@ -282,6 +282,8 @@ class SSLSocket(socket):
                 raise ValueError("Read on closed or unwrapped SSL socket.")
             if len == 0:
                 return b'' if buffer is None else 0
+            # Negative lengths are handled natively when the buffer is None
+            # to raise a ValueError
             try:
                 if buffer is not None:
                     return self._sslobj.read(len, buffer)
