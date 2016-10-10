@@ -58,7 +58,14 @@ Platforms
 ---------
 
 - As mentioned above, Python 2.6 is no longer supported.
-- Python 3.6 is now tested on POSIX platforms.
+- Python 3.6 is now tested on POSIX platforms. This includes a few
+  notable changes:
+
+  * SSLContext.wrap_socket accepts the ``session`` parameter, though
+    this parameter isn't useful prior to 3.6.
+  * SSLSocket.recv(0) or read(0) returns an empty byte string. This is
+    a fix for `Python bug #23804 <http://bugs.python.org/issue23804>`_
+    which has been merged into Python 2.7 and Python 3.
 
 Stdlib Compatibility
 --------------------

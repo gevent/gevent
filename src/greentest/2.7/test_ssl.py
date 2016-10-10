@@ -4,6 +4,7 @@
 import sys
 import unittest
 from test import test_support as support
+from test.script_helper import assert_python_ok
 import asyncore
 import socket
 import select
@@ -991,7 +992,7 @@ class ContextTests(unittest.TestCase):
         ctx = ssl.SSLContext(ssl.PROTOCOL_TLSv1)
         ctx.set_default_verify_paths()
 
-    @unittest.skipUnless(ssl.HAS_ECDH, "ECDH disabled on this OpenSSL build") # gevent run on 2.7.8
+    @unittest.skipUnless(ssl.HAS_ECDH, "ECDH disabled on this OpenSSL build")
     def test_set_ecdh_curve(self):
         ctx = ssl.SSLContext(ssl.PROTOCOL_TLSv1)
         ctx.set_ecdh_curve("prime256v1")
@@ -1173,6 +1174,57 @@ class ContextTests(unittest.TestCase):
         self.assertEqual(ctx.protocol, ssl.PROTOCOL_SSLv23)
         self.assertEqual(ctx.verify_mode, ssl.CERT_NONE)
         self.assertEqual(ctx.options & ssl.OP_NO_SSLv2, ssl.OP_NO_SSLv2)
+
+    def test__https_verify_certificates(self):
+        # Unit test to check the contect factory mapping
+        # The factories themselves are tested above
+        # This test will fail by design if run under PYTHONHTTPSVERIFY=0
+        # (as will various test_httplib tests)
+
+        # Uses a fresh SSL module to avoid affecting the real one
+        local_ssl = support.import_fresh_module("ssl")
+        # Certificate verification is enabled by default
+        self.assertIs(local_ssl._create_default_https_context,
+                      local_ssl.create_default_context)
+        # Turn default verification off
+        local_ssl._https_verify_certificates(enable=False)
+        self.assertIs(local_ssl._create_default_https_context,
+                      local_ssl._create_unverified_context)
+        # And back on
+        local_ssl._https_verify_certificates(enable=True)
+        self.assertIs(local_ssl._create_default_https_context,
+                      local_ssl.create_default_context)
+        # The default behaviour is to enable
+        local_ssl._https_verify_certificates(enable=False)
+        local_ssl._https_verify_certificates()
+        self.assertIs(local_ssl._create_default_https_context,
+                      local_ssl.create_default_context)
+
+    def test__https_verify_envvar(self):
+        # Unit test to check the PYTHONHTTPSVERIFY handling
+        # Need to use a subprocess so it can still be run under -E
+        https_is_verified = """import ssl, sys; \
+            status = "Error: _create_default_https_context does not verify certs" \
+                       if ssl._create_default_https_context is \
+                          ssl._create_unverified_context \
+                     else None; \
+            sys.exit(status)"""
+        https_is_not_verified = """import ssl, sys; \
+            status = "Error: _create_default_https_context verifies certs" \
+                       if ssl._create_default_https_context is \
+                          ssl.create_default_context \
+                     else None; \
+            sys.exit(status)"""
+        extra_env = {}
+        # Omitting it leaves verification on
+        assert_python_ok("-c", https_is_verified, **extra_env)
+        # Setting it to zero turns verification off
+        extra_env[ssl._https_verify_envvar] = "0"
+        assert_python_ok("-c", https_is_not_verified, **extra_env)
+        # Any other value should also leave it on
+        for setting in ("", "1", "enabled", "foo"):
+            extra_env[ssl._https_verify_envvar] = setting
+            assert_python_ok("-c", https_is_verified, **extra_env)
 
     def test_check_hostname(self):
         ctx = ssl.SSLContext(ssl.PROTOCOL_TLSv1)
@@ -2570,8 +2622,39 @@ else:
                         # consume data
                         s.read()
 
+                # read(-1, buffer) is supported, even though read(-1) is not
+                data = b"data"
+                s.send(data)
+                buffer = bytearray(len(data))
+                self.assertEqual(s.read(-1, buffer), len(data))
+                self.assertEqual(buffer, data)
+
                 s.write(b"over\n")
+
+                self.assertRaises(ValueError, s.recv, -1)
+                self.assertRaises(ValueError, s.read, -1)
+
                 s.close()
+
+        def test_recv_zero(self):
+            server = ThreadedEchoServer(CERTFILE)
+            server.__enter__()
+            self.addCleanup(server.__exit__, None, None)
+            s = socket.create_connection((HOST, server.port))
+            self.addCleanup(s.close)
+            s = ssl.wrap_socket(s, suppress_ragged_eofs=False)
+            self.addCleanup(s.close)
+
+            # recv/read(0) should return no data
+            s.send(b"data")
+            self.assertEqual(s.recv(0), b"")
+            self.assertEqual(s.read(0), b"")
+            self.assertEqual(s.read(), b"data")
+
+            # Should not block if the other end sends no data
+            s.setblocking(False)
+            self.assertEqual(s.recv(0), b"")
+            self.assertEqual(s.recv_into(bytearray()), 0)
 
         def test_handshake_timeout(self):
             # Issue #5103: SSL handshake must respect the socket timeout
