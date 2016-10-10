@@ -89,12 +89,17 @@ class _signal_metaclass(type):
             # reloading because os.path.abspath blows up on None.
             # It gracefully handles an AttributeError, though.
             raise AttributeError(name)
+        if name == '__cached__':
+            print("Returning", val, 'for __cached__ on', _signal_module)
         return val
 
     def __setattr__(cls, name, value):
         # For symmetry with getattr and dir, pass all
         # attribute setting on to the module. (This makes
         # reloading work, see issue #805)
+        if name in ('__cached__', '__file__'):
+            # Py 3.6 issue
+            return
         setattr(_signal_module, name, value)
 
     def __instancecheck__(cls, instance):
