@@ -72,6 +72,7 @@ if hasattr(signal, 'SIGALRM'):
             except TypeError:
                 assert greentest.PY36
                 assert greentest.RUNNING_ON_CI
+                import sys
                 for m in set(sys.modules.values()):
                     try:
                         if m.__cached__ is None:
