@@ -262,6 +262,13 @@ if sys.version_info[:3] <= (2, 7, 8):
         'test_httpservers.SimpleHTTPServerTestCase.test_get'
     ]
 
+if sys.version_info[:3] <= (2, 7, 11):
+
+    disabled_tests += [
+        # These were added/fixed in 2.7.12+
+        'test_ssl.ThreadedTests.test__https_verify_certificates',
+        'test_ssl.ThreadedTests.test__https_verify_envvar',
+    ]
 
 if sys.platform == 'darwin':
     disabled_tests += [
