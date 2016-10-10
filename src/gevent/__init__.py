@@ -82,7 +82,13 @@ from gevent import signal as _signal_module
 class _signal_metaclass(type):
 
     def __getattr__(cls, name):
-        return getattr(_signal_module, name)
+        val = getattr(_signal_module, name)
+        if name == '__cached__' and val is None:
+            # In 3.6b1 on Travis, the signal module's
+            # __cached__ is somehow None, which breaks
+            # reloading because os.path.abspath blows up on None.
+            # It gracefully handles an AttributeError, though.
+            raise AttributeError(name)
 
     def __setattr__(cls, name, value):
         # For symmetry with getattr and dir, pass all
