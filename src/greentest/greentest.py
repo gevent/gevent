@@ -61,6 +61,7 @@ if sys.platform.startswith('win'):
 PY2 = None
 PY3 = None
 PY34 = None
+PY36 = None
 
 NON_APPLICABLE_SUFFIXES = []
 if sys.version_info[0] == 3:
@@ -70,6 +71,8 @@ if sys.version_info[0] == 3:
     PY3 = True
     if sys.version_info[1] >= 4:
         PY34 = True
+    if sys.version_info[1] >= 6:
+        PY36 = True
 
 elif sys.version_info[0] == 2:
     # Any python 2
