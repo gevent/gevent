@@ -58,6 +58,7 @@ class Test(greentest.TestCase):
     def test_quit(self):
         server = backdoor.BackdoorServer(('127.0.0.1', 0))
         server.start()
+        conn = None
         try:
             conn = create_connection(('127.0.0.1', server.server_port))
             read_until(conn, '>>> ')
@@ -65,12 +66,14 @@ class Test(greentest.TestCase):
             line = readline(conn)
             self.assertEqual(line, '')
         finally:
-            conn.close()
+            if conn is not None:
+                conn.close()
             server.stop()
 
     def test_sys_exit(self):
         server = backdoor.BackdoorServer(('127.0.0.1', 0))
         server.start()
+        conn = None
         try:
             conn = create_connection(('127.0.0.1', server.server_port))
             read_until(conn, b'>>> ')
@@ -78,7 +81,8 @@ class Test(greentest.TestCase):
             line = readline(conn)
             self.assertEqual(line, '')
         finally:
-            conn.close()
+            if conn is not None:
+                conn.close()
             server.stop()
 
     def test_banner(self):
@@ -96,6 +100,7 @@ class Test(greentest.TestCase):
     def test_builtins(self):
         server = backdoor.BackdoorServer(('127.0.0.1', 0))
         server.start()
+        conn = None
         try:
             conn = create_connection(('127.0.0.1', server.server_port))
             read_until(conn, b'>>> ')
@@ -103,7 +108,8 @@ class Test(greentest.TestCase):
             response = read_until(conn, '>>> ')
             self.assertTrue(len(response) < 300, msg="locals() unusable: %s..." % response)
         finally:
-            conn.close()
+            if conn is not None:
+                conn.close()
             server.stop()
 
 

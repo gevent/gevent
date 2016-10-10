@@ -134,7 +134,12 @@ class BackdoorServer(StreamServer):
         getcurrent().switch_in()
         try:
             console = InteractiveConsole(self._create_interactive_locals())
-            console.interact(banner=self.banner)
+            if sys.version_info[:3] >= (3, 6, 0):
+                # Beginning in 3.6, the console likes to print "now exiting <class>"
+                # but probably our socket is already closed, so this just causes problems.
+                console.interact(banner=self.banner, exitmsg='')
+            else:
+                console.interact(banner=self.banner)
         except SystemExit:  # raised by quit()
             if hasattr(sys, 'exc_clear'): # py2
                 sys.exc_clear()
