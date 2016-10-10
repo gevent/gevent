@@ -82,24 +82,9 @@ from gevent import signal as _signal_module
 class _signal_metaclass(type):
 
     def __getattr__(cls, name):
-        val = getattr(_signal_module, name)
-        if name == '__cached__' and val is None:
-            # In 3.6b1 on Travis, the signal module's
-            # __cached__ is somehow None, which breaks
-            # reloading because os.path.abspath blows up on None.
-            # It gracefully handles an AttributeError, though.
-            raise AttributeError(name)
-        if name == '__cached__':
-            print("Returning", val, 'for __cached__ on', _signal_module)
-        return val
+        return getattr(_signal_module, name)
 
     def __setattr__(cls, name, value):
-        # For symmetry with getattr and dir, pass all
-        # attribute setting on to the module. (This makes
-        # reloading work, see issue #805)
-        if name in ('__cached__', '__file__'):
-            # Py 3.6 issue
-            return
         setattr(_signal_module, name, value)
 
     def __instancecheck__(cls, instance):
