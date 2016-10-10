@@ -315,7 +315,10 @@ class TestCaseMetaClass(type):
                 timeout *= 6
         check_totalrefcount = _get_class_attr(classDict, bases, 'check_totalrefcount', True)
         error_fatal = _get_class_attr(classDict, bases, 'error_fatal', True)
-        for key, value in list(classDict.items()): # Python 3: must copy, we mutate
+        # Python 3: must copy, we mutate the classDict. Interestingly enough,
+        # it doesn't actually error out, but under 3.6 we wind up wrapping
+        # and re-wrapping the same items over and over and over.
+        for key, value in list(classDict.items()):
             if key.startswith('test') and callable(value):
                 classDict.pop(key)
                 #value = wrap_switch_count_check(value)
