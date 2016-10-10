@@ -363,7 +363,10 @@ class Popen(object):
         :param kwargs: *Only* allowed under Python 3; under Python 2, any
           unrecognized keyword arguments will result in a :exc:`TypeError`.
           Under Python 3, keyword arguments can include ``pass_fds``, ``start_new_session``,
-          and ``restore_signals``.
+          ``restore_signals``, ``encoding`` and ``errors``
+
+        .. versionchanged:: 1.2b1
+           Add the ``encoding`` and ``errors`` parameters.
         """
 
         if not PY3 and kwargs:
@@ -371,6 +374,9 @@ class Popen(object):
         pass_fds = kwargs.pop('pass_fds', ())
         start_new_session = kwargs.pop('start_new_session', False)
         restore_signals = kwargs.pop('restore_signals', True)
+        # Added in 3.6. These are kept as ivars
+        encoding = self.encoding = kwargs.pop('encoding', None)
+        errors = self.errors = kwargs.pop('errors', None)
 
         hub = get_hub()
 
@@ -463,18 +469,21 @@ class Popen(object):
             if errread is not None:
                 errread = msvcrt.open_osfhandle(errread.Detach(), 0)
 
+        text_mode = PY3 and (self.encoding or self.errors or universal_newlines)
+
         if p2cwrite is not None:
-            if PY3 and universal_newlines:
+            if PY3 and text_mode:
                 # Under Python 3, if we left on the 'b' we'd get different results
                 # depending on whether we used FileObjectPosix or FileObjectThread
                 self.stdin = FileObject(p2cwrite, 'wb', bufsize)
                 self.stdin.translate_newlines(None,
                                               write_through=True,
-                                              line_buffering=(bufsize == 1))
+                                              line_buffering=(bufsize == 1),
+                                              encoding=self.encoding, errors=self.errors)
             else:
                 self.stdin = FileObject(p2cwrite, 'wb', bufsize)
         if c2pread is not None:
-            if universal_newlines:
+            if universal_newlines or text_mode:
                 if PY3:
                     # FileObjectThread doesn't support the 'U' qualifier
                     # with a bufsize of 0
@@ -485,16 +494,16 @@ class Popen(object):
                     # test__subprocess.py that depend on python_universal_newlines,
                     # but would be inconsistent with the stdlib:
                     #msvcrt.setmode(self.stdout.fileno(), os.O_TEXT)
-                    self.stdout.translate_newlines('r')
+                    self.stdout.translate_newlines('r', encoding=self.encoding, errors=self.errors)
                 else:
                     self.stdout = FileObject(c2pread, 'rU', bufsize)
             else:
                 self.stdout = FileObject(c2pread, 'rb', bufsize)
         if errread is not None:
-            if universal_newlines:
+            if universal_newlines or text_mode:
                 if PY3:
                     self.stderr = FileObject(errread, 'rb', bufsize)
-                    self.stderr.translate_newlines(None)
+                    self.stderr.translate_newlines(None, encoding=encoding, errors=errors)
                 else:
                     self.stderr = FileObject(errread, 'rU', bufsize)
             else:
@@ -1205,6 +1214,17 @@ class Popen(object):
                             if env is None:
                                 os.execvp(executable, args)
                             else:
+                                if PY3:
+                                    # Python 3.6 started testing for
+                                    # bytes values in the env; it also
+                                    # started encoding strs using
+                                    # fsencode and using a lower-level
+                                    # API that takes a list of keys
+                                    # and values. We don't have access
+                                    # to that API, so we go the reverse direction.
+                                    env = {os.fsdecode(k) if isinstance(k, bytes) else k:
+                                           os.fsdecode(v) if isinstance(v, bytes) else v
+                                           for k, v in env.items()}
                                 os.execvpe(executable, args, env)
 
                         except:
@@ -1316,6 +1336,9 @@ def write_and_close(fobj, data):
     try:
         if data:
             fobj.write(data)
+            if hasattr(fobj, 'flush'):
+                # 3.6 started expecting flush to be called.
+                fobj.flush()
     except (OSError, IOError) as ex:
         if ex.errno != errno.EPIPE and ex.errno != errno.EINVAL:
             raise

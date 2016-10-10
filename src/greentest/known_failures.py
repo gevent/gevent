@@ -189,7 +189,9 @@ if PY3:
             # test_cwd_with_relative_executable tends to fail
             # on Travis...it looks like the test processes are stepping
             # on each other and messing up their temp directories
-            'FLAKY test_subprocess.py'
+            # Disabling this...um, disablement for now. py36 has some genuine failures
+            # that we need to be sure to catch. And maybe this is solved now?
+            #'FLAKY test_subprocess.py'
         ]
 
     if LEAKTEST:
