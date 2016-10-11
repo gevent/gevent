@@ -262,6 +262,13 @@ if sys.version_info[:3] <= (2, 7, 8):
         'test_httpservers.SimpleHTTPServerTestCase.test_get'
     ]
 
+if sys.version_info[:3] <= (2, 7, 11):
+
+    disabled_tests += [
+        # These were added/fixed in 2.7.12+
+        'test_ssl.ThreadedTests.test__https_verify_certificates',
+        'test_ssl.ThreadedTests.test__https_verify_envvar',
+    ]
 
 if sys.platform == 'darwin':
     disabled_tests += [
@@ -446,6 +453,17 @@ if sys.version_info[:2] >= (3, 5):
 
     ]
 
+    if os.environ.get("TRAVIS") == "true":
+        disabled_tests += [
+            # test_cwd_with_relative_executable tends to fail
+            # on Travis...it looks like the test processes are stepping
+            # on each other and messing up their temp directories
+            # that we need to be sure to catch.
+            'test_subprocess.ProcessTestCase.test_cwd_with_relative_arg',
+            'test_subprocess.ProcessTestCaseNoPoll.test_cwd_with_relative_arg',
+        ]
+
+
     if os.environ.get('GEVENT_RESOLVER') == 'ares':
         disabled_tests += [
             # These raise different errors or can't resolve
@@ -453,6 +471,33 @@ if sys.version_info[:2] >= (3, 5):
             'test_socket.GeneralModuleTests.test_host_resolution',
             'test_socket.GeneralModuleTests.test_getnameinfo',
         ]
+
+
+if sys.version_info[:2] >= (3, 6):
+    disabled_tests += [
+        'test_threading.MiscTestCase.test__all__',
+    ]
+
+    # We don't actually implement socket._sendfile_use_sendfile,
+    # so these tests, which think they're using that and os.sendfile,
+    # fail.
+    disabled_tests += [
+        'test_socket.SendfileUsingSendfileTest.testCount',
+        'test_socket.SendfileUsingSendfileTest.testCountSmall',
+        'test_socket.SendfileUsingSendfileTest.testCountWithOffset',
+        'test_socket.SendfileUsingSendfileTest.testOffset',
+        'test_socket.SendfileUsingSendfileTest.testRegularFile',
+        'test_socket.SendfileUsingSendfileTest.testWithTimeout',
+        'test_socket.SendfileUsingSendfileTest.testEmptyFileSend',
+        'test_socket.SendfileUsingSendfileTest.testNonBlocking',
+        'test_socket.SendfileUsingSendfileTest.test_errors',
+    ]
+
+    # Ditto
+    disabled_tests += [
+        'test_socket.GeneralModuleTests.test__sendfile_use_sendfile',
+    ]
+
 
 # if 'signalfd' in os.environ.get('GEVENT_BACKEND', ''):
 #     # tests that don't interact well with signalfd

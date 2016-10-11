@@ -67,8 +67,18 @@ if hasattr(signal, 'SIGALRM'):
                 # builtin on py2
                 reload_module = reload # pylint:disable=undefined-variable
 
-            reload_module(site)
-
+            try:
+                reload_module(site)
+            except TypeError:
+                assert greentest.PY36
+                assert greentest.RUNNING_ON_CI
+                import sys
+                for m in set(sys.modules.values()):
+                    try:
+                        if m.__cached__ is None:
+                            print("Module has None __cached__", m)
+                    except AttributeError:
+                        continue
 
 if __name__ == '__main__':
     greentest.main()

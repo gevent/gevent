@@ -39,7 +39,6 @@ Libraries
   recommended by `the standard <http://pubs.opengroup.org/onlinepubs/9699919799/utilities/sh.html>`_.
   Fixed in :pr:`809` by Fredrix Fornwall.
 
-
 Security
 --------
 - :mod:`gevent.pywsgi` now checks that the values passed to
@@ -55,6 +54,18 @@ Security
   choose and their frameworks support it. Originally reported
   in :pr:`779` by sean-peters-au and changed in :pr:`781`.
 
+Platforms
+---------
+
+- As mentioned above, Python 2.6 is no longer supported.
+- Python 3.6 is now tested on POSIX platforms. This includes a few
+  notable changes:
+
+  * SSLContext.wrap_socket accepts the ``session`` parameter, though
+    this parameter isn't useful prior to 3.6.
+  * SSLSocket.recv(0) or read(0) returns an empty byte string. This is
+    a fix for `Python bug #23804 <http://bugs.python.org/issue23804>`_
+    which has been merged into Python 2.7 and Python 3.
 
 Stdlib Compatibility
 --------------------
@@ -100,6 +111,8 @@ Stdlib Compatibility
   low-level signal management and high-level use of
   :mod:`gevent.subprocess` is tricky.) Reported in :issue:`857` by
   Chris Utz.
+- ``Popen.kill`` and ``send_signal`` no longer attempt to send signals
+  to processes that are known to be exited.
 
 Other Changes
 -------------

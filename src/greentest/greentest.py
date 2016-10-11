@@ -61,6 +61,7 @@ if sys.platform.startswith('win'):
 PY2 = None
 PY3 = None
 PY34 = None
+PY36 = None
 
 NON_APPLICABLE_SUFFIXES = []
 if sys.version_info[0] == 3:
@@ -70,6 +71,8 @@ if sys.version_info[0] == 3:
     PY3 = True
     if sys.version_info[1] >= 4:
         PY34 = True
+    if sys.version_info[1] >= 6:
+        PY36 = True
 
 elif sys.version_info[0] == 2:
     # Any python 2
@@ -117,7 +120,7 @@ class ExpectedException(Exception):
 
 def wrap_switch_count_check(method):
     @wraps(method)
-    def wrapped(self, *args, **kwargs):
+    def wrap_switch_count_check(self, *args, **kwargs):
         initial_switch_count = getattr(_get_hub(), 'switch_count', None)
         self.switch_expected = getattr(self, 'switch_expected', True)
         if initial_switch_count is not None:
@@ -137,7 +140,7 @@ def wrap_switch_count_check(method):
             else:
                 raise AssertionError('Invalid value for switch_expected: %r' % (self.switch_expected, ))
         return result
-    return wrapped
+    return wrap_switch_count_check
 
 
 def wrap_timeout(timeout, method):
@@ -145,11 +148,11 @@ def wrap_timeout(timeout, method):
         return method
 
     @wraps(method)
-    def wrapped(self, *args, **kwargs):
+    def wrap_timeout(self, *args, **kwargs):
         with gevent.Timeout(timeout, 'test timed out', ref=False):
             return method(self, *args, **kwargs)
 
-    return wrapped
+    return wrap_timeout
 
 def ignores_leakcheck(func):
     func.ignore_leakcheck = True
@@ -193,7 +196,7 @@ def wrap_refcount(method):
         return diff
 
     @wraps(method)
-    def wrapped(self, *args, **kwargs):
+    def wrap_refcount(self, *args, **kwargs):
         gc.collect()
         gc.collect()
         gc.collect()
@@ -253,12 +256,12 @@ def wrap_refcount(method):
             gc.enable()
         self.skipTearDown = True
 
-    return wrapped
+    return wrap_refcount
 
 
 def wrap_error_fatal(method):
     @wraps(method)
-    def wrapped(self, *args, **kwargs):
+    def wrap_error_fatal(self, *args, **kwargs):
         # XXX should also be able to do gevent.SYSTEM_ERROR = object
         # which is a global default to all hubs
         SYSTEM_ERROR = gevent.get_hub().SYSTEM_ERROR
@@ -267,12 +270,12 @@ def wrap_error_fatal(method):
             return method(self, *args, **kwargs)
         finally:
             gevent.get_hub().SYSTEM_ERROR = SYSTEM_ERROR
-    return wrapped
+    return wrap_error_fatal
 
 
 def wrap_restore_handle_error(method):
     @wraps(method)
-    def wrapped(self, *args, **kwargs):
+    def wrap_restore_handle_error(self, *args, **kwargs):
         old = gevent.get_hub().handle_error
         try:
             return method(self, *args, **kwargs)
@@ -280,7 +283,7 @@ def wrap_restore_handle_error(method):
             gevent.get_hub().handle_error = old
         if self.peek_error()[0] is not None:
             gevent.getcurrent().throw(*self.peek_error()[1:])
-    return wrapped
+    return wrap_restore_handle_error
 
 
 def _get_class_attr(classDict, bases, attr, default=AttributeError):
@@ -315,7 +318,10 @@ class TestCaseMetaClass(type):
                 timeout *= 6
         check_totalrefcount = _get_class_attr(classDict, bases, 'check_totalrefcount', True)
         error_fatal = _get_class_attr(classDict, bases, 'error_fatal', True)
-        for key, value in classDict.items():
+        # Python 3: must copy, we mutate the classDict. Interestingly enough,
+        # it doesn't actually error out, but under 3.6 we wind up wrapping
+        # and re-wrapping the same items over and over and over.
+        for key, value in list(classDict.items()):
             if key.startswith('test') and callable(value):
                 classDict.pop(key)
                 #value = wrap_switch_count_check(value)

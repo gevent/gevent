@@ -22,19 +22,23 @@ Features include:
 Installation and Requirements
 =============================
 
-`gevent 1.1`_ runs on Python 2 and Python 3. Version 2.7 of
-Python 2 is supported, and versions 3.3, 3.4, and 3.5 of Python 3 are
+`gevent 1.2`_ runs on Python 2 and Python 3. Version 2.7 of
+Python 2 is supported, and versions 3.4, 3.5 and 3.6 of Python 3 are
 supported. (Users of older versions of Python 2 need to install gevent
 1.0.x (2.5) or 1.1.x (2.6); Python 3 is not supported by 1.0.) gevent requires the
 greenlet__ library.
 
-.. note:: For Python 3.3, version 3.3.5 or newer is required to use
-          the gevent's SSL support due to bugs in the standard library of older
-          versions. For Python 2, 2.7.9 or newer is recommended for
-          the best SSL support; 2.7.8 is also tested although it
-          offers a less-secure SSL module.
+.. note:: Python 3.3 is no longer actively supported since it is not
+          supported by the Python developers. However, it should
+          continue to work with gevent 1.2 with the same level of
+          support as gevent 1.1. For Python 3.3, version 3.3.5 or
+          newer is required to use the gevent's SSL support due to
+          bugs in the standard library of older versions. For Python
+          2, 2.7.9 or newer is recommended for the best SSL support;
+          2.7.8 is also tested although it offers a less-secure SSL
+          module.
 
-gevent 1.1 also runs on PyPy 2.6.1 and above, although 5.0 or above is
+gevent 1.2 also runs on PyPy 2.6.1 and above, although 5.0 or above is
 strongly recommended. On PyPy, there are no external dependencies.
 
 gevent is tested on Windows, OS X, and Linux, and should run on most
@@ -60,7 +64,7 @@ Development instructions can be found `on PyPI <https://pypi.python.org/pypi/gev
 __ http://pypi.python.org/pypi/greenlet
 .. _`pip`: https://pip.pypa.io/en/stable/installing/
 .. _`wheels`: http://pythonwheels.com
-.. _`gevent 1.1`: whatsnew_1_1.html
+.. _`gevent 1.2`: whatsnew_1_2.html
 .. _`cffi`: https://cffi.readthedocs.io
 .. _`limitations in libev`: http://pod.tst.eu/http://cvs.schmorp.de/libev/ev.pod#WIN32_PLATFORM_LIMITATIONS_AND_WORKA
 

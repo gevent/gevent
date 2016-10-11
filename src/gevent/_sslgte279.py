@@ -164,7 +164,6 @@ _create_default_https_context = create_default_context
 # Backwards compatibility alias, even though it's not a public name.
 _create_stdlib_context = _create_unverified_context
 
-
 class SSLSocket(socket):
     """
     gevent `ssl.SSLSocket <https://docs.python.org/2/library/ssl.html#ssl-sockets>`_
@@ -296,7 +295,7 @@ class SSLSocket(socket):
             # EAGAIN.
             self.getpeername()
 
-    def read(self, len=0, buffer=None):
+    def read(self, len=1024, buffer=None):
         """Read up to LEN bytes and return them.
         Return zero-length string on EOF."""
         self._checkClosed()
@@ -304,7 +303,11 @@ class SSLSocket(socket):
         while 1:
             if not self._sslobj:
                 raise ValueError("Read on closed or unwrapped SSL socket.")
-
+            if len == 0:
+                return b'' if buffer is None else 0
+            if len < 0 and buffer is None:
+                # This is handled natively in python 2.7.12+
+                raise ValueError("Negative read length")
             try:
                 if buffer is not None:
                     return self._sslobj.read(len, buffer)
@@ -456,13 +459,17 @@ class SSLSocket(socket):
                 raise ValueError(
                     "non-zero flags not allowed in calls to recv() on %s" %
                     self.__class__)
+            if buflen == 0:
+                return b''
             return self.read(buflen)
         else:
             return socket.recv(self, buflen, flags)
 
     def recv_into(self, buffer, nbytes=None, flags=0):
         self._checkClosed()
-        if buffer and (nbytes is None):
+        if buffer is not None and (nbytes is None):
+            # Fix for python bug #23804: bool(bytearray()) is False,
+            # but we should read 0 bytes.
             nbytes = len(buffer)
         elif nbytes is None:
             nbytes = 1024
