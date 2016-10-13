@@ -457,10 +457,12 @@ if sys.version_info[:2] >= (3, 5):
         disabled_tests += [
             # test_cwd_with_relative_executable tends to fail
             # on Travis...it looks like the test processes are stepping
-            # on each other and messing up their temp directories
-            # that we need to be sure to catch.
+            # on each other and messing up their temp directories. We tend to get things like
+            #    saved_dir = os.getcwd()
+            #   FileNotFoundError: [Errno 2] No such file or directory
             'test_subprocess.ProcessTestCase.test_cwd_with_relative_arg',
             'test_subprocess.ProcessTestCaseNoPoll.test_cwd_with_relative_arg',
+            'test_subprocess.ProcessTestCase.test_cwd_with_relative_executable',
         ]
 
 
