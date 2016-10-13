@@ -108,7 +108,7 @@ PY278=$(BUILD_RUNTIMES)/snakepit/python2.7.8
 PY27=$(BUILD_RUNTIMES)/snakepit/python2.7
 PY34=$(BUILD_RUNTIMES)/snakepit/python3.4
 PY35=$(BUILD_RUNTIMES)/snakepit/python3.5
-PY36=$(BUILD_RUNTIMES)/snakepit/python3.5
+PY36=$(BUILD_RUNTIMES)/snakepit/python3.6
 PYPY=$(BUILD_RUNTIMES)/snakepit/pypy54
 
 TOOLS=$(BUILD_RUNTIMES)/tools
