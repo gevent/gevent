@@ -87,5 +87,24 @@ if hasattr(os, 'make_nonblocking'):
             return os.nb_write(*args)
 
 
+if hasattr(os, 'fork_and_watch'):
+
+    class TestForkAndWatch(TestCase):
+
+        def test_waitpid_all(self):
+            # Cover this specific case.
+            pid = os.fork_and_watch()
+            if pid:
+                x, _ = os.waitpid(-1, 0)
+                self.assertEqual(x, pid)
+            else:
+                os._exit(0)
+
+        def test_waitpid_wrong_neg(self):
+            self.assertRaises(OSError, os.waitpid, -2, 0)
+
+        def test_waitpid_wrong_pos(self):
+            self.assertRaises(OSError, os.waitpid, 1, 0)
+
 if __name__ == '__main__':
     main()
