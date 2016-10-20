@@ -1,18 +1,10 @@
 import sys
 import _six as six
 from os import pipe
+import gevent
 from gevent import os
 from greentest import TestCase, main
 from gevent import Greenlet, joinall
-try:
-    import fcntl
-except ImportError:
-    fcntl = None
-
-try:
-    import errno
-except ImportError:
-    errno = None
 
 
 class TestOS_tp(TestCase):
@@ -91,13 +83,17 @@ if hasattr(os, 'fork_and_watch'):
 
     class TestForkAndWatch(TestCase):
 
+        __timeout__ = 5
+
         def test_waitpid_all(self):
             # Cover this specific case.
             pid = os.fork_and_watch()
             if pid:
-                x, _ = os.waitpid(-1, 0)
-                self.assertEqual(x, pid)
+                os.waitpid(-1, 0)
+                # Can't assert on what the pid actually was,
+                # our testrunner may have spawned multiple children.
             else:
+                gevent.sleep(2)
                 os._exit(0)
 
         def test_waitpid_wrong_neg(self):
