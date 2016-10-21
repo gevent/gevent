@@ -23,8 +23,13 @@ __all__ = [
 # to use locks *other* than the one being traced.)
 if PYPY:
     # TODO: Need to use monkey.get_original?
-    from thread import allocate_lock as _allocate_lock # pylint:disable=import-error,useless-suppression
-    from thread import get_ident as _get_ident # pylint:disable=import-error,useless-suppression
+    try:
+        from _thread import allocate_lock as _allocate_lock # pylint:disable=import-error,useless-suppression
+        from _thread import get_ident as _get_ident # pylint:disable=import-error,useless-suppression
+    except ImportError:
+        # Python 2
+        from thread import allocate_lock as _allocate_lock # pylint:disable=import-error,useless-suppression
+        from thread import get_ident as _get_ident # pylint:disable=import-error,useless-suppression
     _sem_lock = _allocate_lock()
 
     def untraceable(f):
