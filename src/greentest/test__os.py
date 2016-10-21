@@ -97,6 +97,16 @@ if hasattr(os, 'fork_and_watch'):
                 gevent.sleep(2)
                 os._exit(0)
 
+        def test_waitpid(self):
+            pid = os.fork_and_watch()
+            if pid:
+                pid_, stat = os.waitpid(pid, 0)
+                assert pid_ == pid
+                os._reap_children(0)
+            else:
+                gevent.sleep(2)
+                os._exit(0)
+
         def test_waitpid_wrong_neg(self):
             self.assertRaises(OSError, os.waitpid, -2, 0)
 
