@@ -161,6 +161,17 @@ Other Changes
             considered deprecated after it is constructed.
 - The :func:`gevent.os.waitpid` function is cooperative in more
   circumstances. Reported in :issue:`878` by Heungsub Lee.
+- The :mod:`gevent.subprocess` module now provides the
+  :func:`gevent.subprocess.run` function in a cooperative way even
+  when the system is not monkey patched, on all supported versions of
+  Python. (It was added officially in Python 3.5.)
+- Popen objects can be used as context managers even on Python 2.
+- Popen objects save their *args* attribute even on Python 2.
+- :exc:`gevent.subprocess.TimeoutExpired` is defined even on Python 2,
+  where it is a subclass of the :exc:`gevent.timeout.Timeout`
+  exception; all instances where a ``Timeout`` exception would
+  previously be thrown under Python 2 will now throw a
+  ``TimeoutExpired`` exception.
 
 1.1.2 (Jul 21, 2016)
 ====================
