@@ -92,6 +92,7 @@ if hasattr(os, 'fork_and_watch'):
                 os.waitpid(-1, 0)
                 # Can't assert on what the pid actually was,
                 # our testrunner may have spawned multiple children.
+                os._reap_children(0) # make the leakchecker happy
             else:
                 gevent.sleep(2)
                 os._exit(0)
