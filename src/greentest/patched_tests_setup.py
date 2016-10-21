@@ -324,6 +324,86 @@ if sys.version_info[0] == 3:
         # XXX Same as above
         # 'lock_tests.EventTests.test_set_and_clear',
 
+        # These tests want to assert on the type of the class that implements
+        # `Popen.stdin`; we use a FileObject, but they expect different subclasses
+        # from the `io` module
+        'test_subprocess.ProcessTestCase.test_io_buffered_by_default',
+        'test_subprocess.ProcessTestCase.test_io_unbuffered_works',
+
+        # These all want to inspect the string value of an exception raised
+        # by the exec() call in the child. The _posixsubprocess module arranges
+        # for better exception handling and printing than we do.
+        'test_subprocess.POSIXProcessTestCase.test_exception_bad_args_0',
+        'test_subprocess.POSIXProcessTestCase.test_exception_bad_executable',
+        'test_subprocess.POSIXProcessTestCase.test_exception_cwd',
+
+        # Python 3 fixed a bug if the stdio file descriptors were closed;
+        # we still have that bug
+        'test_subprocess.POSIXProcessTestCase.test_small_errpipe_write_fd',
+
+        # Relies on implementation details (some of these tests were added in 3.4,
+        # but PyPy3 is also shipping them.)
+        'test_socket.GeneralModuleTests.test_SocketType_is_socketobject',
+        'test_socket.GeneralModuleTests.test_dealloc_warn',
+        'test_socket.GeneralModuleTests.test_repr',
+        'test_socket.GeneralModuleTests.test_str_for_enums',
+        'test_socket.GeneralModuleTests.testGetaddrinfo',
+
+    ]
+    if os.environ.get("TRAVIS") == "true":
+        disabled_tests += [
+            # test_cwd_with_relative_executable tends to fail
+            # on Travis...it looks like the test processes are stepping
+            # on each other and messing up their temp directories. We tend to get things like
+            #    saved_dir = os.getcwd()
+            #   FileNotFoundError: [Errno 2] No such file or directory
+            'test_subprocess.ProcessTestCase.test_cwd_with_relative_arg',
+            'test_subprocess.ProcessTestCaseNoPoll.test_cwd_with_relative_arg',
+            'test_subprocess.ProcessTestCase.test_cwd_with_relative_executable',
+        ]
+
+
+# PyPy3 5.5.0-alpha
+
+if hasattr(sys, 'pypy_version_info') and sys.version_info[:2] == (3, 3):
+    # Almost all the SSL related tests are broken at this point due to age.
+    disabled_tests += [
+        'test_ssl.NetworkedTests.test_connect',
+        'test_ssl.NetworkedTests.test_connect_with_context',
+        'test_ssl.NetworkedTests.test_get_server_certificate',
+        'test_httplib.HTTPSTest.test_networked_bad_cert',
+    ]
+
+    disabled_tests += [
+        # This raises 'RuntimeError: reentrant call' when exiting the
+        # process tries to close the stdout stream; no other platform does this.
+        'test_signal.SiginterruptTest.test_siginterrupt_off',
+
+        # These are all expecting that a signal (sigalarm) that
+        # arrives during a blocking call should raise
+        # InterruptedError with errno=EINTR. gevent does not do
+        # this, instead its loop keeps going and raises a timeout
+        # (which fails the test). HOWEVER: Python 3.5 fixed this
+        # problem and started raising a timeout,
+        # (https://docs.python.org/3/whatsnew/3.5.html#pep-475-retry-system-calls-failing-with-eintr)
+        # and removed these tests (InterruptedError is no longer
+        # raised). So basically, gevent was ahead of its time.
+        # Why these were part of the PyPy3-5.5.0-alpha source release is beyond me.
+        'test_socket.InterruptedRecvTimeoutTest.testInterruptedRecvIntoTimeout',
+        'test_socket.InterruptedRecvTimeoutTest.testInterruptedRecvTimeout',
+        'test_socket.InterruptedRecvTimeoutTest.testInterruptedRecvfromIntoTimeout',
+        'test_socket.InterruptedRecvTimeoutTest.testInterruptedRecvfromTimeout',
+        'test_socket.InterruptedRecvTimeoutTest.testInterruptedSendTimeout',
+        'test_socket.InterruptedRecvTimeoutTest.testInterruptedSendtoTimeout',
+        'test_socket.InterruptedRecvTimeoutTest.testInterruptedRecvmsgTimeout',
+        'test_socket.InterruptedRecvTimeoutTest.testInterruptedRecvmsgIntoTimeout',
+        'test_socket.InterruptedSendTimeoutTest.testInterruptedSendmsgTimeout',
+
+        # This one can't resolve the IDNA name, at least on OS X with the threaded
+        # resolver. This doesn't seem to be a gevent problem, possible a test age
+        # problem, or transient DNS issue. (Python is reporting a DNS outage
+        # at the time of this writing: https://status.python.org/incidents/x97mmj5rqs5f)
+        'test_socket.GeneralModuleTests.test_idna',
     ]
 
 if sys.version_info[:2] == (3, 4) and sys.version_info[:3] < (3, 4, 4):
@@ -342,11 +422,6 @@ if sys.version_info[:2] >= (3, 4):
         # due to a similar issue to what gevent.threading documents for normal threads.
         # In any event, this test hangs forever
 
-        'test_subprocess.ProcessTestCase.test_io_buffered_by_default',
-        'test_subprocess.ProcessTestCase.test_io_unbuffered_works',
-        # These tests want to assert on the type of the class that implements
-        # `Popen.stdin`; we use a FileObject, but they expect different subclasses
-        # from the `io` module
 
         'test_subprocess.POSIXProcessTestCase.test_terminate_dead',
         'test_subprocess.POSIXProcessTestCase.test_send_signal_dead',
@@ -356,21 +431,13 @@ if sys.version_info[:2] >= (3, 4):
         # Our monkey patch waits for the process with a watcher and so detects
         # the exit before the normal polling mechanism would
 
-        'test_subprocess.POSIXProcessTestCase.test_exception_bad_args_0',
-        'test_subprocess.POSIXProcessTestCase.test_exception_bad_executable',
-        'test_subprocess.POSIXProcessTestCase.test_exception_cwd',
-        # These all want to inspect the string value of an exception raised
-        # by the exec() call in the child. The _posixsubprocess module arranges
-        # for better exception handling and printing than we do.
+
 
         'test_subprocess.POSIXProcessTestCase.test_preexec_errpipe_does_not_double_close_pipes',
         # Subclasses Popen, and overrides _execute_child. Expects things to be done
         # in a particular order in an exception case, but we don't follow that
         # exact order
 
-        'test_subprocess.POSIXProcessTestCase.test_small_errpipe_write_fd',
-        # Python 3 fixed a bug if the stdio file descriptors were closed;
-        # we still have that bug
 
         'test_selectors.PollSelectorTestCase.test_above_fd_setsize',
         # This test attempts to open many many file descriptors and
@@ -393,13 +460,6 @@ if sys.version_info[:2] >= (3, 4):
         # have because we don't inherit the C implementation. But
         # it should be found at runtime.
         'test_socket.GeneralModuleTests.test_sock_ioctl',
-
-        # Relies on implementation details
-        'test_socket.GeneralModuleTests.test_SocketType_is_socketobject',
-        'test_socket.GeneralModuleTests.test_dealloc_warn',
-        'test_socket.GeneralModuleTests.test_repr',
-        'test_socket.GeneralModuleTests.test_str_for_enums',
-        'test_socket.GeneralModuleTests.testGetaddrinfo',
 
     ]
 
@@ -452,19 +512,6 @@ if sys.version_info[:2] >= (3, 5):
         # 'lock_tests.LockTests.lest_repr',
 
     ]
-
-    if os.environ.get("TRAVIS") == "true":
-        disabled_tests += [
-            # test_cwd_with_relative_executable tends to fail
-            # on Travis...it looks like the test processes are stepping
-            # on each other and messing up their temp directories. We tend to get things like
-            #    saved_dir = os.getcwd()
-            #   FileNotFoundError: [Errno 2] No such file or directory
-            'test_subprocess.ProcessTestCase.test_cwd_with_relative_arg',
-            'test_subprocess.ProcessTestCaseNoPoll.test_cwd_with_relative_arg',
-            'test_subprocess.ProcessTestCase.test_cwd_with_relative_executable',
-        ]
-
 
     if os.environ.get('GEVENT_RESOLVER') == 'ares':
         disabled_tests += [

@@ -66,8 +66,10 @@ Platforms
   * SSLSocket.recv(0) or read(0) returns an empty byte string. This is
     a fix for `Python bug #23804 <http://bugs.python.org/issue23804>`_
     which has been merged into Python 2.7 and Python 3.
-- PyPy3 5.5.0 (supporting Python 3.3.5) is now tested and passes the
-  test suite. Thanks to btegs for :issue:`866`, XXX.
+- PyPy3 5.5.0 *alpha* (supporting Python 3.3.5) is now tested and passes the
+  test suite. Thanks to btegs for :issue:`866`, and Fabio Utzig for :pr:`826`.
+  Note that PyPy3 is not optimized for performance either by the PyPy
+  developers or under gevent, so it may be significantly slower than PyPy2.
 
 Stdlib Compatibility
 --------------------

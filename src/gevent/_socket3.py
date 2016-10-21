@@ -401,7 +401,10 @@ class socket(object):
                 raise
 
     def sendall(self, data, flags=0):
-        # XXX When we run on PyPy3, see the notes in _socket2.py's sendall()
+        # XXX Now that we run on PyPy3, see the notes in _socket2.py's sendall()
+        # and implement that here if needed.
+        # PyPy3 is not optimized for performance yet, and is known to be slower than
+        # PyPy2, so it's probably premature to do this.
         data_memory = _get_memory(data)
         len_data_memory = len(data_memory)
         if not len_data_memory:
