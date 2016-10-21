@@ -110,6 +110,7 @@ PY34=$(BUILD_RUNTIMES)/snakepit/python3.4
 PY35=$(BUILD_RUNTIMES)/snakepit/python3.5
 PY36=$(BUILD_RUNTIMES)/snakepit/python3.6
 PYPY=$(BUILD_RUNTIMES)/snakepit/pypy54
+PYPY3=$(BUILD_RUNTIMES)/snakepit/pypy3.3_5.5
 
 TOOLS=$(BUILD_RUNTIMES)/tools
 
@@ -138,6 +139,9 @@ $(PY36):
 
 $(PYPY):
 	scripts/install.sh pypy
+
+$(PYPY3):
+	scripts/install.sh pypy3
 
 PIP?=$(BUILD_RUNTIMES)/versions/$(PYTHON)/bin/pip
 
@@ -174,6 +178,9 @@ test-py36: $(PY36)
 
 test-pypy: $(PYPY)
 	PYTHON=$(PYPY) PIP=pip PATH=$(BUILD_RUNTIMES)/versions/pypy54/bin:$(PATH) make develop toxtest
+
+test-pypy3: $(PYPY3)
+	PYTHON=$(PYPY3) PIP=pip PATH=$(BUILD_RUNTIMES)/versions/pypy3.3_5.5/bin:$(PATH) make develop toxtest
 
 test-py27-cffi: $(PY27)
 	GEVENT_CORE_CFFI_ONLY=1 PYTHON=python2.7 PATH=$(BUILD_RUNTIMES)/versions/python2.7/bin:$(PATH) make develop toxtest

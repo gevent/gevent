@@ -105,5 +105,8 @@ for var in "$@"; do
     pypy)
       install pypy2-5.4 pypy54
       ;;
+    pypy3)
+      install pypy3-5.5-alpha pypy3.3_5.5
+      ;;
   esac
 done
