@@ -297,7 +297,8 @@ class ThreadTests(unittest.TestCase):
         try:
             import ctypes
             getattr(ctypes, 'pythonapi') # not available on PyPy
-        except (ImportError,AttributeError):
+            getattr(ctypes.pythonapi, 'PyGILState_Ensure') # not available on PyPy3
+        except (ImportError, AttributeError):
             if verbose:
                 print("test_finalize_with_runnning_thread can't import ctypes")
             return  # can't do anything
