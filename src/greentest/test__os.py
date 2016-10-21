@@ -1,6 +1,7 @@
 import sys
 import _six as six
 from os import pipe
+import functools
 import gevent
 from gevent import os
 from greentest import TestCase, main
@@ -81,31 +82,41 @@ if hasattr(os, 'make_nonblocking'):
 
 if hasattr(os, 'fork_and_watch'):
 
+    def watch_child(f):
+        @functools.wraps(f)
+        def wrapped(self):
+            pid = os.fork_and_watch()
+            if pid:
+                try:
+                    return f(self, pid)
+                finally:
+                    # Can't assert on what the pid actually was,
+                    # our testrunner may have spawned multiple children.
+                    os._reap_children(0)  # make the leakchecker happy
+            else:
+                gevent.sleep(2)
+                os._exit(0)
+        return wrapped
+
     class TestForkAndWatch(TestCase):
 
         __timeout__ = 5
 
-        def test_waitpid_all(self):
-            # Cover this specific case.
-            pid = os.fork_and_watch()
-            if pid:
-                os.waitpid(-1, 0)
-                # Can't assert on what the pid actually was,
-                # our testrunner may have spawned multiple children.
-                os._reap_children(0) # make the leakchecker happy
-            else:
-                gevent.sleep(2)
-                os._exit(0)
+        @watch_child
+        def test_waitpid_all(self, pid):
+            os.waitpid(-1, 0)
 
-        def test_waitpid(self):
-            pid = os.fork_and_watch()
-            if pid:
-                pid_, stat = os.waitpid(pid, 0)
-                assert pid_ == pid
-                os._reap_children(0)
-            else:
-                gevent.sleep(2)
-                os._exit(0)
+        @watch_child
+        def test_waitpid(self, pid):
+            dead_pid, stat = os.waitpid(pid, 0)
+            assert dead_pid == pid
+
+        @watch_child
+        def test_waitpid_timeout(self, pid):
+            def f():
+                with gevent.Timeout(0.5):
+                    os.waitpid(pid, 0)
+            self.assertRaises(gevent.Timeout, f)
 
         def test_waitpid_wrong_neg(self):
             self.assertRaises(OSError, os.waitpid, -2, 0)
