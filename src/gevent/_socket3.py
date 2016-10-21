@@ -13,6 +13,7 @@ import sys
 import time
 from gevent import _socketcommon
 from gevent._util import copy_globals
+from gevent._compat import PYPY
 import _socket
 from os import dup
 
@@ -49,6 +50,13 @@ class _wrefsocket(_socket.socket):
     # need to make sure what we do create can be weakrefd.
 
     __slots__ = ("__weakref__", )
+
+    if PYPY:
+        # server.py unwraps the socket object to get the raw _sock;
+        # it depends on having a timeout property alias, which PyPy does not
+        # provide.
+        timeout = property(lambda s: s.gettimeout(),
+                           lambda s, nv: s.settimeout(nv))
 
 
 class socket(object):
@@ -467,10 +475,10 @@ class socket(object):
             howlong = f()
             if howlong < 0.0:
                 raise ValueError('Timeout value out of range')
-        self.timeout = howlong
+        self.__dict__['timeout'] = howlong
 
     def gettimeout(self):
-        return self.timeout
+        return self.__dict__['timeout']
 
     def shutdown(self, how):
         if how == 0:  # SHUT_RD
