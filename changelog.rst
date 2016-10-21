@@ -159,6 +159,8 @@ Other Changes
 
   .. note:: Writing to the *io* property of a FileObject should be
             considered deprecated after it is constructed.
+- The :func:`gevent.os.waitpid` function is cooperative in more
+  circumstances. Reported in :issue:`878` by Heungsub Lee.
 
 1.1.2 (Jul 21, 2016)
 ====================
