@@ -372,6 +372,7 @@ if hasattr(sys, 'pypy_version_info') and sys.version_info[:2] == (3, 3):
         'test_ssl.NetworkedTests.test_connect_with_context',
         'test_ssl.NetworkedTests.test_get_server_certificate',
         'test_httplib.HTTPSTest.test_networked_bad_cert',
+        'test_httplib.HTTPSTest.test_networked_good_cert',
     ]
 
     disabled_tests += [
