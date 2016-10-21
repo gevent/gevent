@@ -31,6 +31,7 @@ else:
                     'start_new']
 error = __thread__.error
 from gevent._compat import PY3
+from gevent._compat import PYPY
 from gevent._util import copy_globals
 from gevent.hub import getcurrent, GreenletExit
 from gevent.greenlet import Greenlet
@@ -57,6 +58,9 @@ class LockType(BoundedSemaphore):
     # Change the ValueError into the appropriate thread error
     # and any other API changes we need to make to match behaviour
     _OVER_RELEASE_ERROR = __thread__.error
+
+    if PYPY and PY3:
+        _OVER_RELEASE_ERROR = RuntimeError
 
     if PY3:
         _TIMEOUT_MAX = __thread__.TIMEOUT_MAX # python 2: pylint:disable=no-member
