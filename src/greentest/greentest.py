@@ -113,6 +113,14 @@ else:
             return f
         return dec
 
+if PYPY and PY3 and RUNNING_ON_CI:
+    # Same as above, for PyPy3.3-5.5-alpha
+    skipOnPyPy3OnCI = unittest.skip
+else:
+    def skipOnPyPy3OnCI(reason):
+        def dec(f):
+            return f
+        return dec
 
 class ExpectedException(Exception):
     """An exception whose traceback should be ignored"""

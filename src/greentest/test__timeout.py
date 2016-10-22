@@ -63,6 +63,10 @@ class Test(greentest.TestCase):
         ex = self._check_expires(timeout)
         self.assertTrue(str(ex).endswith('XXX'))
 
+    def assert_type_err(self, ex):
+        # PyPy3 uses 'exceptions must derive', everyone else uses "exceptions must be"
+        self.assertTrue("exceptions must be" in str(ex) or "exceptions must derive" in str(ex), str(ex))
+
     def test_expires_non_exception(self):
         timeout = gevent.Timeout(SHOULD_EXPIRE, object())
         timeout.start()
@@ -70,8 +74,7 @@ class Test(greentest.TestCase):
             get_hub().switch()
             self.fail("Most raise TypeError")
         except TypeError as ex:
-            self.assertTrue("exceptions must be" in str(ex), str(ex))
-
+            self.assert_type_err(ex)
         timeout.cancel()
 
         class OldStyle:
@@ -83,7 +86,7 @@ class Test(greentest.TestCase):
             self.fail("Must raise OldStyle")
         except TypeError as ex:
             self.assertTrue(greentest.PY3, "Py3 raises a TypeError for non-BaseExceptions")
-            self.assertTrue("exceptions must be" in str(ex), str(ex))
+            self.assert_type_err(ex)
         except:
             self.assertTrue(greentest.PY2, "Old style classes can only be raised on Py2")
             t = sys.exc_info()[0]
@@ -97,7 +100,7 @@ class Test(greentest.TestCase):
             self.fail("Must raise OldStyle")
         except TypeError as ex:
             self.assertTrue(greentest.PY3, "Py3 raises a TypeError for non-BaseExceptions")
-            self.assertTrue("exceptions must be" in str(ex), str(ex))
+            self.assert_type_err(ex)
         except:
             self.assertTrue(greentest.PY2, "Old style classes can only be raised on Py2")
             t = sys.exc_info()[0]

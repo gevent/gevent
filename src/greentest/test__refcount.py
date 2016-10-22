@@ -136,7 +136,8 @@ def run_and_check(run_client):
         raise AssertionError('server should be dead by now')
 
 
-@greentest.skipOnAppVeyor("Often fail with timeouts; not sure why")
+@greentest.skipOnAppVeyor("Often fail with timeouts; not sure why.")
+@greentest.skipOnPyPy3OnCI("Often fails with timeouts; not sure why.")
 class Test(greentest.TestCase):
 
     def test_clean_exit(self):

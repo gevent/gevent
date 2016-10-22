@@ -13,6 +13,7 @@ import sys
 import time
 from gevent import _socketcommon
 from gevent._util import copy_globals
+from gevent._compat import PYPY
 import _socket
 from os import dup
 
@@ -49,6 +50,13 @@ class _wrefsocket(_socket.socket):
     # need to make sure what we do create can be weakrefd.
 
     __slots__ = ("__weakref__", )
+
+    if PYPY:
+        # server.py unwraps the socket object to get the raw _sock;
+        # it depends on having a timeout property alias, which PyPy does not
+        # provide.
+        timeout = property(lambda s: s.gettimeout(),
+                           lambda s, nv: s.settimeout(nv))
 
 
 class socket(object):
@@ -393,7 +401,10 @@ class socket(object):
                 raise
 
     def sendall(self, data, flags=0):
-        # XXX When we run on PyPy3, see the notes in _socket2.py's sendall()
+        # XXX Now that we run on PyPy3, see the notes in _socket2.py's sendall()
+        # and implement that here if needed.
+        # PyPy3 is not optimized for performance yet, and is known to be slower than
+        # PyPy2, so it's probably premature to do this.
         data_memory = _get_memory(data)
         len_data_memory = len(data_memory)
         if not len_data_memory:
@@ -467,10 +478,10 @@ class socket(object):
             howlong = f()
             if howlong < 0.0:
                 raise ValueError('Timeout value out of range')
-        self.timeout = howlong
+        self.__dict__['timeout'] = howlong
 
     def gettimeout(self):
-        return self.timeout
+        return self.__dict__['timeout']
 
     def shutdown(self, how):
         if how == 0:  # SHUT_RD

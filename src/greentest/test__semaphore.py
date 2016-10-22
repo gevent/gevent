@@ -67,7 +67,7 @@ class TestLock(greentest.TestCase):
             self.fail("Should have thrown an exception")
         except Exception as e:
             g_exc = e
-        self.assertTrue(isinstance(g_exc, type(std_exc)), (g_exc, std_exc))
+        self.assertIsInstance(g_exc, type(std_exc))
 
 
 if __name__ == '__main__':
