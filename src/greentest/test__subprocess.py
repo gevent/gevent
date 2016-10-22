@@ -277,14 +277,13 @@ class RunFuncTestCase(greentest.TestCase):
 
     def test_check_output_stdin_arg(self):
         # run() can be called with stdin set to a file
-        tf = tempfile.TemporaryFile()
-        self.addCleanup(tf.close)
-        tf.write(b'pear')
-        tf.seek(0)
-        cp = self.run_python(
-            "import sys; sys.stdout.write(sys.stdin.read().upper())",
-            stdin=tf, stdout=subprocess.PIPE)
-        self.assertIn(b'PEAR', cp.stdout)
+        with tempfile.TemporaryFile() as tf:
+            tf.write(b'pear')
+            tf.seek(0)
+            cp = self.run_python(
+                "import sys; sys.stdout.write(sys.stdin.read().upper())",
+                stdin=tf, stdout=subprocess.PIPE)
+            self.assertIn(b'PEAR', cp.stdout)
 
     def test_check_output_input_arg(self):
         # check_output() can be called with input set to a string
@@ -295,16 +294,15 @@ class RunFuncTestCase(greentest.TestCase):
 
     def test_check_output_stdin_with_input_arg(self):
         # run() refuses to accept 'stdin' with 'input'
-        tf = tempfile.TemporaryFile()
-        self.addCleanup(tf.close)
-        tf.write(b'pear')
-        tf.seek(0)
-        with self.assertRaises(ValueError,
-                               msg="Expected ValueError when stdin and input args supplied.") as c:
-            self.run_python("print('will not be run')",
-                            stdin=tf, input=b'hare')
-        self.assertIn('stdin', c.exception.args[0])
-        self.assertIn('input', c.exception.args[0])
+        with tempfile.TemporaryFile() as tf:
+            tf.write(b'pear')
+            tf.seek(0)
+            with self.assertRaises(ValueError,
+                                   msg="Expected ValueError when stdin and input args supplied.") as c:
+                self.run_python("print('will not be run')",
+                                stdin=tf, input=b'hare')
+            self.assertIn('stdin', c.exception.args[0])
+            self.assertIn('input', c.exception.args[0])
 
     def test_check_output_timeout(self):
         with self.assertRaises(subprocess.TimeoutExpired) as c:
