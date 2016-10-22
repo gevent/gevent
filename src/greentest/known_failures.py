@@ -158,6 +158,14 @@ if PYPY:
 
     ]
 
+    if PY3 and TRAVIS:
+        FAILING_TESTS += [
+            ## ---
+
+            ## Unknown; can't reproduce locally on OS X
+            'FLAKY test_subprocess.py', # timeouts on one test.
+        ]
+
 
 if PY26:
     FAILING_TESTS += [
