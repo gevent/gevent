@@ -124,11 +124,11 @@ class Timeout(BaseException):
        Add warning about negative *seconds* values.
     """
 
-    def __init__(self, seconds=None, exception=None, ref=True, priority=-1):
+    def __init__(self, seconds=None, exception=None, ref=True, priority=-1, _use_timer=True):
         BaseException.__init__(self)
         self.seconds = seconds
         self.exception = exception
-        if seconds is None:
+        if seconds is None or not _use_timer:
             # Avoid going through the timer codepath if no timeout is
             # desired; this avoids some CFFI interactions on PyPy that can lead to a
             # RuntimeError if this implementation is used during an `import` statement. See
