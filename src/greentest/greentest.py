@@ -712,6 +712,11 @@ else:
     # as -1 there, so we can't fully check those.
 
     def get_open_files():
+        """
+        Return a list of popenfile and pconn objects.
+
+        Note that other than `fd`, they have different attributes.
+        """
         results = dict()
         process = psutil.Process()
         results['data'] = process.open_files() + process.connections('all')
