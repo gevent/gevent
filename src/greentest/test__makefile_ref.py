@@ -1,3 +1,4 @@
+from __future__ import print_function
 import os
 from gevent import monkey; monkey.patch_all()
 import re
@@ -64,7 +65,7 @@ class Test(unittest.TestCase):
         open_files = get_open_files()
         sockname = sock.getsockname()
         for x in open_files['data']:
-            if x.laddr == sockname:
+            if getattr(x, 'laddr', None) == sockname:
                 assert x.status in (psutil.CONN_LISTEN, psutil.CONN_ESTABLISHED) + self.extra_allowed_open_states, x.status
                 return
         raise AssertionError("%r is not open:\n%s" % (sock, open_files['data']))
