@@ -14,7 +14,8 @@ Incompatible Changes
   and has been deprecated since 1.0b2.
 - The internal implementation modules ``gevent.corecext`` and
   ``gevent.corecffi`` have been moved. Please import from
-  ``gevent.core`` instead.
+  ``gevent.core`` instead; this has always been the only documented place to
+  import from.
 
 Libraries
 ---------
@@ -31,7 +32,8 @@ Libraries
   installation time. Previously, if it wasn't available, a build was
   attempted at every import. This could lead to scattered "gevent"
   directories and undependable results.
-- Update Cython to 0.24.
+- Update Cython to 0.24. Cython 0.25 beta is known to work and will
+  probably be used by a future 1.2 release.
 - setuptools is now required at build time on all platforms.
   Previously it was only required for Windows and PyPy.
 - POSIX: Don't hardcode ``/bin/sh`` into the configuration command
@@ -76,6 +78,14 @@ Stdlib Compatibility
 - The modules :mod:`gevent.os`, :mod:`gevent.signal` and
   :mod:`gevent.select` export all the attributes from their
   corresponding standard library counterpart.
+- Python 2: ``reload(site)`` no longer fails with a ``TypeError`` if
+  gevent has been imported. Reported in :issue:`805` by Jake Hilton.
+- Python 2: ``sendall`` on a non-blocking socket could spuriously fail
+  with a timeout.
+
+select/poll
+~~~~~~~~~~~
+
 - If :func:`gevent.select.select` is given a negative *timeout*
   argument, raise an exception like the standard library does.
 - If :func:`gevent.select.select` is given closed or invalid
@@ -92,10 +102,11 @@ Stdlib Compatibility
 - :meth:`gevent.select.poll.poll` returns an event with
   ``POLLNVAL`` for registered fds that are invalid. Previously it
   would tend to report both read and write events.
-- Python 2: ``reload(site)`` no longer fails with a ``TypeError`` if
-  gevent has been imported. Reported in :issue:`805` by Jake Hilton.
-- Python 2: ``sendall`` on a non-blocking socket could spuriously fail
-  with a timeout.
+
+
+File objects
+~~~~~~~~~~~~
+
 - ``FileObjectPosix`` exposes the ``read1`` method when in read mode,
   and generally only exposes methods appropriate to the mode it is in.
 - ``FileObjectPosix`` supports a *bufsize* of 0 in binary write modes.
@@ -105,6 +116,67 @@ Stdlib Compatibility
   returning the errno due to the refactoring of the exception
   hierarchy in Python 3.3. Now the errno is returned. Reported in
   :issue:`841` by Dana Powers.
+
+
+Other Changes
+-------------
+
+- :class:`~.Group` and :class:`~.Pool` now return whether
+  :meth:`~.Group.join` returned with an empty group. Suggested by Filippo Sironi in
+  :pr:`503`.
+- Unhandled exception reports that kill a greenlet now include a
+  timestamp. See :issue:`137`.
+- :class:`~.PriorityQueue` now ensures that an initial items list is a
+  valid heap. Fixed in :pr:`793` by X.C.Dong.
+- :class:`gevent.hub.signal` (aka :func:`gevent.signal`) now verifies
+  that its `handler` argument is callable, raising a :exc:`TypeError`
+  if it isn't. Reported in :issue:`818` by Peter Renström.
+- If ``sys.stderr`` has been monkey-patched (not recommended),
+  exceptions that the hub reports aren't lost and can still be caught.
+  Reported in :issue:`825` by Jelle Smet.
+- The :func:`gevent.os.waitpid` function is cooperative in more
+  circumstances. Reported in :issue:`878` by Heungsub Lee.
+- The various ``FileObject`` implementations are more consistent with
+  each other. **Note:** Writing to the *io* property of a FileObject should be
+  considered deprecated.
+
+Servers
+~~~~~~~
+- Default to AF_INET6 when binding to all addresses (e.g.,
+  ""). This supports both IPv4 and IPv6 connections (except on
+  Windows). Original change in :pr:`495` by Felix Kaiser.
+- pywsgi/performance: Chunks of data the application returns are no longer copied
+  before being sent to the socket when the transfer-encoding is
+  chunked, potentially reducing overhead for large responses.
+
+Threads
+~~~~~~~
+- Add :class:`gevent.threadpool.ThreadPoolExecutor` (a
+  :class:`concurrent.futures.ThreadPoolExecutor` variant that always
+  uses native threads even when the system has been monkey-patched)
+  on platforms that have ``concurrent.futures``
+  available (Python 3 and Python 2 with the ``futures`` backport
+  installed). This is helpful for, e.g., grpc. Reported in
+  :issue:`786` by Markus Padourek.
+- Native threads created before monkey-patching threading can now be
+  joined. Previously on Python < 3.4, doing so would raise a
+  ``LoopExit`` error. Reported in :issue:`747` by Sergey Vasilyev.
+
+SSL
+~~~
+- On Python 2.7.9 and above (more generally, when the SSL backport is
+  present in Python 2), :func:`gevent.ssl.get_server_certificate`
+  would raise a :exc:`ValueError` if the system wasn't monkey-patched.
+  Reported in :issue:`801` by Gleb Dubovik.
+- On Python 2.7.9 and Python 3, closing an SSL socket in one greenlet
+  while it's being read from or written to in a different greenlet is
+  less likely to raise a :exc:`TypeError` instead of a
+  :exc:`ValueError`. Reported in :issue:`800` by Kevin Chen.
+
+
+subprocess module
+~~~~~~~~~~~~~~~~~
+
 - Setting SIGCHLD to SIG_IGN or SIG_DFL after :mod:`gevent.subprocess`
   had been used previously could not be reversed, causing
   ``Popen.wait`` and other calls to hang. Now, if SIGCHLD has been
@@ -118,64 +190,30 @@ Stdlib Compatibility
 - ``Popen.kill`` and ``send_signal`` no longer attempt to send signals
   to processes that are known to be exited.
 
-Other Changes
--------------
+Several backwards compatible updates to the subprocess module have
+been backported from Python 3 to Python 2, making
+:mod:`gevent.subprocess` smaller, easier to maintain and in some cases
+safer.
 
-- :class:`~.Group` and :class:`~.Pool` now return whether
-  :meth:`~.Group.join` returned with an empty group. Suggested by Filippo Sironi in
-  :pr:`503`.
-- Servers: Default to AF_INET6 when binding to all addresses (e.g.,
-  ""). This supports both IPv4 and IPv6 connections (except on
-  Windows). Original change in :pr:`495` by Felix Kaiser.
-- Unhandled exception reports that kill a greenlet now include a
-  timestamp. See :issue:`137`.
-- Add :class:`gevent.threadpool.ThreadPoolExecutor` (a
-  :class:`concurrent.futures.ThreadPoolExecutor` variant that always
-  uses native threads even when the system has been monkey-patched)
-  on platforms that have ``concurrent.futures``
-  available (Python 3 and Python 2 with the ``futures`` backport
-  installed). This is helpful for, e.g., grpc. Reported in
-  :issue:`786` by Markus Padourek.
-- Native threads created before monkey-patching threading can now be
-  joined. Previously on Python < 3.4, doing so would raise a
-  ``LoopExit`` error. Reported in :issue:`747` by Sergey Vasilyev.
-- pywsgi/performance: Chunks of data the application returns are no longer copied
-  before being sent to the socket when the transfer-encoding is
-  chunked, potentially reducing overhead for large responses.
-- :class:`~.PriorityQueue` now ensures that an initial items list is a
-  valid heap. Fixed in :pr:`793` by X.C.Dong.
-- On Python 2.7.9 and above (more generally, when the SSL backport is
-  present in Python 2), :func:`gevent.ssl.get_server_certificate`
-  would raise a :exc:`ValueError` if the system wasn't monkey-patched.
-  Reported in :issue:`801` by Gleb Dubovik.
-- On Python 2.7.9 and Python 3, closing an SSL socket in one greenlet
-  while it's being read from or written to in a different greenlet is
-  less likely to raise a :exc:`TypeError` instead of a
-  :exc:`ValueError`. Reported in :issue:`800` by Kevin Chen.
-- :class:`gevent.hub.signal` (aka :func:`gevent.signal`) now verifies
-  that its `handler` argument is callable, raising a :exc:`TypeError`
-  if it isn't. Reported in :issue:`818` by Peter Renström.
-- If ``sys.stderr`` has been monkey-patched (not recommended),
-  exceptions that the hub reports aren't lost and can still be caught.
-  Reported in :issue:`825` by Jelle Smet.
-- The various ``FileObject`` implementations are more consistent with
-  each other.
-
-  .. note:: Writing to the *io* property of a FileObject should be
-            considered deprecated after it is constructed.
-- The :func:`gevent.os.waitpid` function is cooperative in more
-  circumstances. Reported in :issue:`878` by Heungsub Lee.
+- Popen objects can be used as context managers even on Python 2. The
+  high-level API functions (``call``, etc) use this for added safety.
 - The :mod:`gevent.subprocess` module now provides the
   :func:`gevent.subprocess.run` function in a cooperative way even
   when the system is not monkey patched, on all supported versions of
   Python. (It was added officially in Python 3.5.)
-- Popen objects can be used as context managers even on Python 2.
 - Popen objects save their *args* attribute even on Python 2.
 - :exc:`gevent.subprocess.TimeoutExpired` is defined even on Python 2,
   where it is a subclass of the :exc:`gevent.timeout.Timeout`
   exception; all instances where a ``Timeout`` exception would
   previously be thrown under Python 2 will now throw a
   ``TimeoutExpired`` exception.
+- :func:`gevent.subprocess.call` (and ``check_call``) accepts the
+  *timeout* keyword argument on Python 2. This is standard on Python
+  3, but a gevent extension on Python 2.
+- :func:`gevent.subprocess.check_output` accepts the *timeout* and
+  *input* arguments on Python 2. This is standard on Python 3, but a
+  gevent extension on Python 2.
+
 
 1.1.2 (Jul 21, 2016)
 ====================
