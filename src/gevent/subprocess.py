@@ -92,6 +92,7 @@ __extra__ = [
     '_winapi',
     # Python 2.5 does not have _subprocess, so we don't use it
     # XXX We don't run on Py 2.5 anymore; can/could/should we use _subprocess?
+    # It's only used on mswindows
     'WAIT_OBJECT_0',
     'WaitForSingleObject',
     'GetExitCodeProcess',
@@ -206,34 +207,30 @@ else:
     fork = monkey.get_original('os', 'fork')
     from gevent.os import fork_and_watch
 
-if PY3:
-    def call(*popenargs, **kwargs):
-        """Run command with arguments.  Wait for command to complete or
-        timeout, then return the returncode attribute.
+def call(*popenargs, **kwargs):
+    """
+    call(args, *, stdin=None, stdout=None, stderr=None, shell=False, timeout=None) -> returncode
 
-        The arguments are the same as for the Popen constructor.  Example::
+    Run command with arguments. Wait for command to complete or
+    timeout, then return the returncode attribute.
 
-            retcode = call(["ls", "-l"])
-        """
-        timeout = kwargs.pop('timeout', None)
-        with Popen(*popenargs, **kwargs) as p:
-            try:
-                return p.wait(timeout=timeout)
-            except:
-                p.kill()
-                p.wait()
-                raise
-else:
-    def call(*popenargs, **kwargs):
-        """Run command with arguments.  Wait for command to complete, then
-        return the returncode attribute.
+    The arguments are the same as for the Popen constructor.  Example::
 
-        The arguments are the same as for the Popen constructor.  Example::
+        retcode = call(["ls", "-l"])
 
-            retcode = call(["ls", "-l"])
-        """
-        return Popen(*popenargs, **kwargs).wait()
-
+    .. versionchanged:: 1.2a1
+       The ``timeout`` keyword argument is now accepted on all supported
+       versions of Python (not just Python 3) and if it expires will raise a
+       :exc:`TimeoutExpired` exception (under Python 2 this is a subclass of :exc:`~.Timeout`).
+    """
+    timeout = kwargs.pop('timeout', None)
+    with Popen(*popenargs, **kwargs) as p:
+        try:
+            return p.wait(timeout=timeout, _raise_exc=True)
+        except:
+            p.kill()
+            p.wait()
+            raise
 
 def check_call(*popenargs, **kwargs):
     """Run command with arguments.  Wait for command to complete.  If
@@ -747,6 +744,13 @@ class Popen(object):
             # blocks forever.
             self.wait()
 
+    def _gevent_result_wait(self, timeout=None, raise_exc=PY3):
+        result = self.result.wait(timeout=timeout)
+        if raise_exc and timeout is not None and not self.result.ready():
+            raise TimeoutExpired(self.args, timeout)
+        return result
+
+
     if mswindows:
         #
         # Windows methods
@@ -968,17 +972,14 @@ class Popen(object):
         def _wait(self):
             self.threadpool.spawn(self._blocking_wait).rawlink(self.result)
 
-        def wait(self, timeout=None):
+        def wait(self, timeout=None, _raise_exc=PY3):
             """Wait for child process to terminate.  Returns returncode
             attribute."""
             if self.returncode is None:
                 if not self._waiting:
                     self._waiting = True
                     self._wait()
-            result = self.result.wait(timeout=timeout)
-            if PY3 and timeout is not None and not self.result.ready():
-                raise TimeoutExpired(self.args, timeout)
-            return result
+            return self._gevent_result_wait(timeout, _raise_exc)
 
         def send_signal(self, sig):
             """Send a signal to the process
@@ -1347,7 +1348,7 @@ class Popen(object):
                         sleep(0.00001)
             return self.returncode
 
-        def wait(self, timeout=None):
+        def wait(self, timeout=None, _raise_exc=PY3):
             """
             Wait for child process to terminate.  Returns :attr:`returncode`
             attribute.
@@ -1358,10 +1359,7 @@ class Popen(object):
                 this time elapses without finishing the process,
                 :exc:`TimeoutExpired` is raised.
             """
-            result = self.result.wait(timeout=timeout)
-            if PY3 and timeout is not None and not self.result.ready():
-                raise TimeoutExpired(self.args, timeout)
-            return result
+            return self._gevent_result_wait(timeout, _raise_exc)
 
         def send_signal(self, sig):
             """Send a signal to the process
@@ -1416,6 +1414,10 @@ class CompletedProcess(object):
       - returncode: The exit code of the process, negative for signals.
       - stdout: The standard output (None if not captured).
       - stderr: The standard error (None if not captured).
+
+    .. versionadded:: 1.2a1
+       This first appeared in Python 3.5 and is available to all
+       Python versions in gevent.
     """
     def __init__(self, args, returncode, stdout=None, stderr=None):
         self.args = args
