@@ -68,6 +68,9 @@ if __name__ == '__main__':
             # 'cannot access'
             (re.compile('cannot access non_existent_file: No such file or directory'),
              'non_existent_file: No such file or directory'),
+            # Python 3 bytes add a "b".
+            (re.compile(r'b(".*?")'), r"\1"),
+            (re.compile(r"b('.*?')"), r"\1"),
         ))
 
         tests_count = 0

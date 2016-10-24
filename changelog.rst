@@ -176,8 +176,12 @@ Other Changes
   exception; all instances where a ``Timeout`` exception would
   previously be thrown under Python 2 will now throw a
   ``TimeoutExpired`` exception.
-- :func:`gevent.subprocess.call` accepts the *timeout* keyword
-  argument on Python 2.
+- :func:`gevent.subprocess.call` (and ``check_call``) accepts the
+  *timeout* keyword argument on Python 2. This is standard on Python
+  3, but a gevent extension on Python 2.
+- :func:`gevent.subprocess.check_output` accepts the *timeout* and
+  *input* arguments on Python 2. This is standard on Python 3, but a
+  gevent extension on Python 2.
 
 1.1.2 (Jul 21, 2016)
 ====================

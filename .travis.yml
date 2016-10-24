@@ -12,7 +12,7 @@ env:
 #      - TASK=test-py27-noembed
       - TASK=test-pypy
       - TASK=test-py36
-#      - TASK=lint-py27
+      - TASK=lint-py27
 #      - TASK=test-pypy3
 #      - TASK=test-py35
 #      - TASK=test-py278
