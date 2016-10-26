@@ -16,6 +16,7 @@ from code import InteractiveConsole
 from gevent.greenlet import Greenlet
 from gevent.hub import getcurrent
 from gevent.server import StreamServer
+from gevent.pool import Pool
 
 __all__ = ['BackdoorServer']
 
@@ -88,6 +89,10 @@ class BackdoorServer(StreamServer):
         Hello from gevent backdoor!
         >> print(foo)
         From defined scope!
+
+    .. versionchanged:: 1.2a1
+       Spawned greenlets are now tracked in a pool and killed when the server
+       is stopped.
     """
 
     def __init__(self, listener, locals=None, banner=None, **server_args):
@@ -96,7 +101,8 @@ class BackdoorServer(StreamServer):
             at the top-level.
         :keyword banner: If geven, a string that will be printed to each connecting user.
         """
-        StreamServer.__init__(self, listener, spawn=_Greenlet_stdreplace.spawn, **server_args)
+        group = Pool(greenlet_class=_Greenlet_stdreplace) # no limit on number
+        StreamServer.__init__(self, listener, spawn=group, **server_args)
         _locals = {'__doc__': None, '__name__': '__console__'}
         if locals:
             _locals.update(locals)

@@ -1,9 +1,8 @@
+from __future__ import print_function
 import greentest
 import gevent
 from gevent import socket
 from gevent import backdoor
-from _six import xrange
-
 
 def read_until(conn, postfix):
     read = b''
@@ -30,6 +29,7 @@ class Test(greentest.TestCase):
     def tearDown(self):
         self._server.stop()
         self._server = None
+        gevent.sleep() # let spawned greenlets die
         super(Test, self).tearDown()
 
     def _make_server(self, *args, **kwargs):
@@ -48,25 +48,29 @@ class Test(greentest.TestCase):
         line = readline(conn)
         self.assertEqual(line, '')
         conn.close()
+        self.close_on_teardown.remove(conn)
 
     def test_multi(self):
         self._make_server()
 
         def connect():
             conn = self._create_connection()
-            read_until(conn, '>>> ')
+            read_until(conn, b'>>> ')
             conn.sendall(b'2+2\r\n')
             line = readline(conn)
             self.assertEqual(line.strip(), '4', repr(line))
             self._close(conn)
 
-        jobs = [gevent.spawn(connect) for _ in xrange(10)]
-        gevent.joinall(jobs, raise_error=True)
+        jobs = [gevent.spawn(connect) for _ in range(10)]
+        done = gevent.joinall(jobs, raise_error=True)
+
+        self.assertEqual(len(done), len(jobs), done)
+
 
     def test_quit(self):
         self._make_server()
         conn = self._create_connection()
-        read_until(conn, '>>> ')
+        read_until(conn, b'>>> ')
         self._close(conn)
 
     def test_sys_exit(self):

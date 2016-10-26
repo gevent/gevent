@@ -141,8 +141,11 @@ Other Changes
   each other. **Note:** Writing to the *io* property of a FileObject should be
   considered deprecated.
 - Timeout exceptions (and other asynchronous exceptions) could cause
-  the Backdoor server to fail to properly manage the
-  stdout/stderr/stdin values. Reported with a patch in :pr:`874` by stefanmh.
+  the BackdoorServer to fail to properly manage the
+  stdout/stderr/stdin values. Reported with a patch in :pr:`874` by
+  stefanmh.
+- The BackDoorServer now tracks spawned greenlets (connections) and
+  kills them in its ``stop`` method.
 
 Servers
 ~~~~~~~
