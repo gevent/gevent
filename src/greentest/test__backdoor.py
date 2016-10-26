@@ -41,18 +41,22 @@ class Test(greentest.TestCase):
         conn.connect(('127.0.0.1', self._server.server_port))
         return conn
 
+    def _close(self, conn):
+        conn.sendall(b'quit()\r\n')
+        line = readline(conn)
+        self.assertEqual(line, '')
+        conn.close()
+
     def test(self):
         self._make_server()
 
         def connect():
             conn = self._create_connection()
-            try:
-                read_until(conn, '>>> ')
-                conn.sendall(b'2+2\r\n')
-                line = readline(conn)
-                self.assertEqual(line.strip(), '4', repr(line))
-            finally:
-                conn.close()
+            read_until(conn, '>>> ')
+            conn.sendall(b'2+2\r\n')
+            line = readline(conn)
+            self.assertEqual(line.strip(), '4', repr(line))
+            self._close(conn)
 
         jobs = [gevent.spawn(connect) for _ in xrange(10)]
         gevent.joinall(jobs, raise_error=True)
@@ -61,9 +65,7 @@ class Test(greentest.TestCase):
         self._make_server()
         conn = self._create_connection()
         read_until(conn, '>>> ')
-        conn.sendall(b'quit()\r\n')
-        line = readline(conn)
-        self.assertEqual(line, '')
+        self._close(conn)
 
     def test_sys_exit(self):
         self._make_server()
@@ -80,6 +82,8 @@ class Test(greentest.TestCase):
         response = read_until(conn, b'>>> ')
         self.assertEqual(response[:len(banner)], banner, response)
 
+        self._close(conn)
+
     def test_builtins(self):
         self._make_server()
         conn = self._create_connection()
@@ -87,6 +91,8 @@ class Test(greentest.TestCase):
         conn.sendall(b'locals()["__builtins__"]\r\n')
         response = read_until(conn, '>>> ')
         self.assertTrue(len(response) < 300, msg="locals() unusable: %s..." % response)
+
+        self._close(conn)
 
     def test_switch_exc(self):
         from gevent.queue import Queue, Empty
@@ -110,10 +116,7 @@ class Test(greentest.TestCase):
         response = response.replace('\r\n', '\n')
         self.assertEqual('switching out, then throwing in\nGot Empty\nswitching out\nswitched in\n>>> ', response)
 
-        conn.sendall(b'quit()\r\n')
-        line = readline(conn)
-        self.assertEqual(line, '')
-        conn.close()
+        self._close(conn)
 
 if __name__ == '__main__':
     greentest.main()
