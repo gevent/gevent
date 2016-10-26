@@ -46,7 +46,7 @@ class Test(greentest.TestCase):
         conn.connect(('127.0.0.1', self._server.server_port))
         return conn
 
-    def _close(self, conn, cmd='quit()\r\n)'):
+    def _close(self, conn, cmd=b'quit()\r\n)'):
         conn.sendall(cmd)
         line = readline(conn)
         self.assertEqual(line, '')
