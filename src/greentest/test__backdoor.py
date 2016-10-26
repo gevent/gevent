@@ -53,6 +53,7 @@ class Test(greentest.TestCase):
         conn.close()
         self.close_on_teardown.remove(conn)
 
+    @greentest.skipOnAppVeyor("Times out")
     def test_multi(self):
         self._make_server()
 
@@ -69,7 +70,7 @@ class Test(greentest.TestCase):
 
         self.assertEqual(len(done), len(jobs), done)
 
-
+    @greentest.skipOnAppVeyor("Times out")
     def test_quit(self):
         self._make_server()
         conn = self._create_connection()
@@ -83,6 +84,7 @@ class Test(greentest.TestCase):
         read_until(conn, b'>>> ')
         self._close(conn, b'import sys; sys.exit(0)\r\n')
 
+    @greentest.skipOnAppVeyor("Times out")
     def test_banner(self):
         banner = "Welcome stranger!" # native string
         self._make_server(banner=banner)
