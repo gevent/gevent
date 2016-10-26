@@ -76,6 +76,7 @@ class Test(greentest.TestCase):
         read_until(conn, b'>>> ')
         self._close(conn)
 
+    @greentest.skipOnAppVeyor("Times out")
     def test_sys_exit(self):
         self._make_server()
         conn = self._create_connection()
@@ -91,6 +92,7 @@ class Test(greentest.TestCase):
 
         self._close(conn)
 
+    @greentest.skipOnAppVeyor("Times out")
     def test_builtins(self):
         self._make_server()
         conn = self._create_connection()
