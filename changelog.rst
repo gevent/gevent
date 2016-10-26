@@ -4,8 +4,8 @@
 
 .. currentmodule:: gevent
 
-1.2a1 (unreleased)
-==================
+1.2a1 (Oct 26, 2016)
+====================
 
 Incompatible Changes
 --------------------
@@ -17,23 +17,24 @@ Incompatible Changes
   ``gevent.core`` instead; this has always been the only documented place to
   import from.
 
-Libraries
----------
+Libraries and Installation
+--------------------------
 
 - Update libev to version 4.22 (was 4.20).
 - Update tblib to 1.3.0.
-- Update Cython to 0.25 (was 0.24).
+- Update Cython to 0.25 (was 0.23.5).
 - Update c-ares to version 1.12.0 (was 1.10.0) (`release notes <https://c-ares.haxx.se/changelog.html>`_).
 - For the benefit of downstream package maintainers, gevent is now
   tested with c-ares and libev linked dynamically and not embedded
   (i.e., using the system libraries). However, only the versions
   shipped with gevent are tested and known to work.
+- The repository directory layout has been changed to make it easier
+  to include third-party dependencies. Likewise, the setup.py script
+  has been split to make it easier to build third-party dependencies.
 - PyPy/CFFI: The corecffi native extension is now only built at
   installation time. Previously, if it wasn't available, a build was
   attempted at every import. This could lead to scattered "gevent"
   directories and undependable results.
-- Update Cython to 0.24. Cython 0.25 beta is known to work and will
-  probably be used by a future 1.2 release.
 - setuptools is now required at build time on all platforms.
   Previously it was only required for Windows and PyPy.
 - POSIX: Don't hardcode ``/bin/sh`` into the configuration command
@@ -67,7 +68,7 @@ Platforms
     this parameter isn't useful prior to 3.6.
   * SSLSocket.recv(0) or read(0) returns an empty byte string. This is
     a fix for `Python bug #23804 <http://bugs.python.org/issue23804>`_
-    which has been merged into Python 2.7 and Python 3.
+    which has also been merged into Python 2.7 and Python 3.5.
 - PyPy3 5.5.0 *alpha* (supporting Python 3.3.5) is now tested and passes the
   test suite. Thanks to btegs for :issue:`866`, and Fabio Utzig for :pr:`826`.
   Note that PyPy3 is not optimized for performance either by the PyPy
