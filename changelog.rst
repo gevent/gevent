@@ -20,11 +20,10 @@ Incompatible Changes
 Libraries
 ---------
 
-- Update libev to version 4.22.
+- Update libev to version 4.22 (was 4.20).
 - Update tblib to 1.3.0.
-- Update Cython to 0.25.
-- Update c-ares to version 1.11.0 (`release notes
-  <https://raw.githubusercontent.com/c-ares/c-ares/cares-1_11_0/RELEASE-NOTES>`_).
+- Update Cython to 0.25 (was 0.24).
+- Update c-ares to version 1.12.0 (was 1.10.0) (`release notes <https://c-ares.haxx.se/changelog.html>`_).
 - For the benefit of downstream package maintainers, gevent is now
   tested with c-ares and libev linked dynamically and not embedded
   (i.e., using the system libraries). However, only the versions

@@ -4,6 +4,7 @@ c-ares
 [![Build Status](https://travis-ci.org/c-ares/c-ares.svg?branch=master)](https://travis-ci.org/c-ares/c-ares)
 [![Windows Build Status](https://ci.appveyor.com/api/projects/status/03i7151772eq3wn3/branch/master?svg=true)](https://ci.appveyor.com/project/c-ares/c-ares)
 [![Coverage Status](https://coveralls.io/repos/c-ares/c-ares/badge.svg?branch=master&service=github)](https://coveralls.io/github/c-ares/c-ares?branch=master)
+[![CII Best Practices](https://bestpractices.coreinfrastructure.org/projects/291/badge)](https://bestpractices.coreinfrastructure.org/projects/291)
 
 This is c-ares, an asynchronous resolver library.  It is intended for
 applications which need to perform DNS queries without blocking, or need to
@@ -22,7 +23,7 @@ c-ares is of course distributed under the same MIT-style license as the
 original ares.
 
 You'll find all c-ares details and news here:
-        http://c-ares.haxx.se/
+        https://c-ares.haxx.se/
 
 
 Notes for c-ares hackers

@@ -23,12 +23,9 @@ ares_destroy_options \- Destroy options initialized with ares_save_options
 .B void ares_destroy_options(struct ares_options *\fIoptions\fP)
 .fi
 .SH DESCRIPTION
-The
-.B ares_destroy_options
-function destroys the options struct identified by
-.IR options ,
-freeing all memory allocated by ares_save_options.
-
+The \fBares_destroy_options(3)\fP function destroys the options struct
+identified by \Ioptions\fP, freeing all memory allocated by
+\fBares_save_options(3)\fP.
 .SH SEE ALSO
 .BR ares_save_options (3),
 .BR ares_init_options (3)

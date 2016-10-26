@@ -321,7 +321,7 @@ PORTS
 Useful URLs
 ===========
 
-c-ares       http://c-ares.haxx.se/
+c-ares       https://c-ares.haxx.se/
 
 MingW        http://www.mingw.org/
 MinGW-w64    http://mingw-w64.sourceforge.net/

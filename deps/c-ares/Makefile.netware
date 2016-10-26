@@ -306,7 +306,6 @@ ifeq ($(LIBARCH),CLIB)
 	@echo $(DL)#define SEND_TYPE_ARG3 int$(DL) >> $@
 	@echo $(DL)#define SEND_TYPE_ARG4 int$(DL) >> $@
 	@echo $(DL)#define SEND_TYPE_RETV int$(DL) >> $@
-	@echo $(DL)#define SIZEOF_SIZE_T 4$(DL) >> $@
 else
 	@echo $(DL)#define OS "i586-pc-libc-NetWare"$(DL) >> $@
 	@echo $(DL)#define HAVE_DLFCN_H 1$(DL) >> $@
@@ -349,8 +348,6 @@ else
 	@echo $(DL)#define SEND_TYPE_ARG3 size_t$(DL) >> $@
 	@echo $(DL)#define SEND_TYPE_ARG4 int$(DL) >> $@
 	@echo $(DL)#define SEND_TYPE_RETV ssize_t$(DL) >> $@
-	@echo $(DL)#define SIZEOF_SIZE_T 8$(DL) >> $@
-	@echo $(DL)#define SIZEOF_STRUCT_IN6_ADDR 16$(DL) >> $@
 endif
 	@echo $(DL)#define HAVE_ARPA_INET_H 1$(DL) >> $@
 	@echo $(DL)#define HAVE_ASSERT_H 1$(DL) >> $@
@@ -397,9 +394,6 @@ endif
 	@echo $(DL)#define HAVE_UTIME_H 1$(DL) >> $@
 	@echo $(DL)#define HAVE_WRITEV 1$(DL) >> $@
 	@echo $(DL)#define RETSIGTYPE void$(DL) >> $@
-	@echo $(DL)#define SIZEOF_INT 4$(DL) >> $@
-	@echo $(DL)#define SIZEOF_SHORT 2$(DL) >> $@
-	@echo $(DL)#define SIZEOF_STRUCT_IN_ADDR 4$(DL) >> $@
 	@echo $(DL)#define STDC_HEADERS 1$(DL) >> $@
 	@echo $(DL)#define TIME_WITH_SYS_TIME 1$(DL) >> $@
 ifdef NW_WINSOCK
@@ -431,11 +425,8 @@ ares_build.h: Makefile.netware FORCE
 	@echo $(DL)#define __CARES_BUILD_H$(DL) >> $@
 ifeq ($(LIBARCH),CLIB)
 	@echo $(DL)#define CARES_TYPEOF_ARES_SOCKLEN_T int$(DL) >> $@
-	@echo $(DL)#define CARES_SIZEOF_ARES_SOCKLEN_T 4$(DL) >> $@
 else
 	@echo $(DL)#define CARES_TYPEOF_ARES_SOCKLEN_T unsigned int$(DL) >> $@
-	@echo $(DL)#define CARES_SIZEOF_ARES_SOCKLEN_T 4$(DL) >> $@
 endif
-	@echo $(DL)#define CARES_SIZEOF_LONG 4$(DL) >> $@
 	@echo $(DL)typedef CARES_TYPEOF_ARES_SOCKLEN_T ares_socklen_t;$(DL) >> $@
 	@echo $(DL)#endif /* __CARES_BUILD_H */$(DL) >> $@

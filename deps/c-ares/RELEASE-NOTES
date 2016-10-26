@@ -1,71 +1,46 @@
-c-ares version 1.11.0
+c-ares version 1.12.0
 
 Changes:
 
- o Add a unit test suite
- o Allow builds with code converage with --enable-code-coverage configure option
- o Allow library-wide override of malloc/free
- o Allow multiple -s options to the ahost command
- o api: Expose the ares_library_initialized() function
- o api: Add ares_set_sortlist(3) entrypoint
- o api: Add entrypoints to allow use of per-server ports
- o api: introduce `ares_parse_txt_reply_ext`
- o api: Add ares_set_socket_configure_callback()
-
+ o api: add ARES_OPT_NOROTATE optmask value
+ 
 Bug fixes:
 
- o timeadd: make static
- o timeoffset: made static and private
- o nowarn: use <limits.h> instead of configure for size of long
- o single_domain: Invalid memory access for empty string input
- o ares_build.h: fix building on 64-bit powerpc
- o Allow specification of search domain in ahost
- o Don't override explicitly specified search domains
- o ares_parse_soa_reply: Do not leak rr_name on allocation failure
- o Update ahost man page to describe -s option
- o host_callback: Fall back to AF_INET on searching with AF_UNSPEC
- o Add -t u option to ahost
- o CONTRIBUTING: added
- o ares_set_servers_csv: fix NULL dereference
- o Fix integer shift overflow if both tcp_socket and udp_socket are set
- o fix acountry memory leak
- o lookup_service: prevent tmpbuf from overrunning
- o ares_getnameinfo.3: there is no ares_getaddrinfo
- o init_by_defaults: Continue loop if space for hostname not large enough
- o Destroy options if ares_save_options fails
- o ares__read_line: free buf on realloc failure
- o added define for visual studio 2013
- o windows: fix slow DNS lookup issue
- o Use libresolv to initialize cares on iPhone targets
- o buildconf: remove check for libtool, it only requires libtoolize
- o init_by_resolv_conf: Don't exit loop early leaving uninitialized entries
- o ahost: check the select() return code
- o configure_socket: explicitly ignore return code
- o read_tcp_data: don't try to use NULL pointer after malloc failure
- o Distribute all man pages
- o ares_expand_name: check for valid bits in label length
- o ares__read_line: clear buf pointer on realloc failure
- o process_answer: fix things up correctly when removing EDNS option
- o ares_parse_txt_reply: propagate errors from per-substring loop
- o ares_gethostbyname: don't leak valid-but-empty hostent
- o ares_init_options: don't lose init failure
- o ares_dup: clear new channel on failure
- o config_sortlist: free any existing sortlist on (re)alloc failure
- o ares_striendstr: fix so non-NULL return can happen
- o bitncmp: update comment to match code behaviour
- o ares_set_servers_csv.3: make return type match code
- o init_by_resolv_conf: ignore `fopen` errors to use default values
- o Use "resolve" as synonym of "dns" in nsswitch.conf
- o ares_win32_init: make LoadLibrary work when using UNICODE too
- o dist: Distribute README.md
- o configure: build silently by default
- o ares_dup.3: remove mention of nonexistent function
-
+ o CVE-2016-5180: ares_create_query single byte out of buffer write [4]
+ o configure: acknowledge --disable-tests [1]
+ o man pages: fix typos detected by Lintian
+ o test: add missing #includes for dns-proto.cc
+ o test: avoid in6addr_* constants
+ o test: Build with MinGW on AppVeyor
+ o Makefile.m32: add support for extra flags
+ o Makefile.m32: add support for CROSSPREFIX
+ o configure: check if tests can get built before enabled
+ o ares_library_cleanup: reset ares_realloc too
+ o ahost.c: add cast to fix C++ compile
+ o test: Only pass unused args to GoogleTest
+ o build: commonize MSVC version detection
+ o msvc_ver.inc: support Visual Studio 2015 Update 1, 2, 3
+ o test: for AF_UNSPEC, return CNAME only for AAAA, but valid A record
+ o ares_getnameinfo: explicitly clear struct servent before use
+ o test: Update fuzzing function prototype
+ o init: fix nsort initialization
+ o test: add fuzzing check script to tests
+ o web: http => https
+ o read_tcp_data: remove superfluous NULL check
+ o LICENSE.md: add a stand-alone license file
+ o SECURITY.md: suggested "security process" for the project
+ o ares_init_options: only propagate init failures from options [2]
+ o headers: remove checks for and defines of variable sizes
+ o test: fix gMock to work with gcc >= 6.x [3]
+ 
 Thanks go to these friendly people for their efforts and contributions:
 
-  Andrew Andkjar, Andrew Ayer, Daniel Stenberg, David Drysdale,
-  Doug Kwan, Fedor Indutny, Frederic Germain, Gisle Vanem, Gregor Jasny,
-  Guenter Knauf, Jakub Hrozek, Lei Shi, Nicolas "Pixel" Noble,
-  Svante Karlsson, Tor Arntsen, Yang Tse
+  Alexander Drachevskiy, Brad House, Chris Araman, Daniel Stenberg,
+  David Drysdale, Gregor Jasny, Svante Karlsson, Viktor Szakats
 
-Have fun!
+References to bug reports and discussions on issues:
+
+ [1] = https://github.com/c-ares/c-ares/issues/44
+ [2] = https://github.com/c-ares/c-ares/issues/60
+ [3] = https://github.com/google/googletest/issues/705#issuecomment-235067917
+ [4] = https://c-ares.haxx.se/adv_20160929.html

@@ -234,19 +234,6 @@
 /*                            TYPE SIZES                            */
 /* ---------------------------------------------------------------- */
 
-/* Define to the size of `int', as computed by sizeof. */
-#define SIZEOF_INT 4
-
-/* Define to the size of `short', as computed by sizeof. */
-#define SIZEOF_SHORT 2
-
-/* Define to the size of `size_t', as computed by sizeof. */
-#if defined(_WIN64)
-#  define SIZEOF_SIZE_T 8
-#else
-#  define SIZEOF_SIZE_T 4
-#endif
-
 /* ---------------------------------------------------------------- */
 /*                          STRUCT RELATED                          */
 /* ---------------------------------------------------------------- */

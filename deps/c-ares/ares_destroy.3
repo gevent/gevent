@@ -23,18 +23,14 @@ ares_destroy \- Destroy a resolver channel
 .B void ares_destroy(ares_channel \fIchannel\fP)
 .fi
 .SH DESCRIPTION
-The
-.B ares_destroy
-function destroys the name service channel identified by
-.IR channel ,
-freeing all memory and closing all sockets used by the channel.
-.B ares_destroy
-invokes the callbacks for each pending query on the channel, passing a
-status of
-.BR ARES_EDESTRUCTION .
-These calls give the callbacks a chance to clean up any state which
-might have been stored in their arguments. A callback must not add new
-requests to a channel being destroyed.
+The \fBares_destroy(3)\fP function destroys the name service channel
+identified by \fIchannel\fP, freeing all memory and closing all sockets used
+by the channel.
+
+\fBares_destroy(3)\fP invokes the callbacks for each pending query on the
+channel, passing a status of \IARES_EDESTRUCTION\fP. These calls give the
+callbacks a chance to clean up any state which might have been stored in their
+arguments. A callback must not add new requests to a channel being destroyed.
 .SH SEE ALSO
 .BR ares_init (3),
 .BR ares_cancel (3)

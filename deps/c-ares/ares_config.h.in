@@ -81,6 +81,9 @@
 /* Define to 1 if you have the connect function. */
 #undef HAVE_CONNECT
 
+/* define if the compiler supports basic C++11 syntax */
+#undef HAVE_CXX11
+
 /* Define to 1 if you have the <dlfcn.h> header file. */
 #undef HAVE_DLFCN_H
 
@@ -441,27 +444,6 @@
 
 /* Define to the function return type for send. */
 #undef SEND_TYPE_RETV
-
-/* The size of `int', as computed by sizeof. */
-#undef SIZEOF_INT
-
-/* The size of `long', as computed by sizeof. */
-#undef SIZEOF_LONG
-
-/* The size of `short', as computed by sizeof. */
-#undef SIZEOF_SHORT
-
-/* The size of `size_t', as computed by sizeof. */
-#undef SIZEOF_SIZE_T
-
-/* The size of `struct in6_addr', as computed by sizeof. */
-#undef SIZEOF_STRUCT_IN6_ADDR
-
-/* The size of `struct in_addr', as computed by sizeof. */
-#undef SIZEOF_STRUCT_IN_ADDR
-
-/* The size of `time_t', as computed by sizeof. */
-#undef SIZEOF_TIME_T
 
 /* Define to 1 if you have the ANSI C header files. */
 #undef STDC_HEADERS

@@ -23,14 +23,15 @@ ares_cancel \- Cancel a resolve
 .B void ares_cancel(ares_channel \fIchannel\fP)
 .fi
 .SH DESCRIPTION
-The \fBares_cancel\fP function cancels all lookups/requests made on the the
-name service channel identified by \fIchannel\fP.  \fBares_cancel\fP invokes
-the callbacks for each pending query on the channel, passing a status of
+The \fBares_cancel(3)\fP function cancels all lookups/requests made on the the
+name service channel identified by \fIchannel\fP.  \fBares_cancel(3)\fP
+invokes the callbacks for each pending query on the channel, passing a status
+of
 .BR ARES_ECANCELLED .
-These calls give the callbacks a chance to clean up any state which
-might have been stored in their arguments. If such a callback invocation adds
-a new request to the channel, that request will \fInot\fP be cancelled by the
-current invocation of \fBares_cancel\fP.
+These calls give the callbacks a chance to clean up any state which might have
+been stored in their arguments. If such a callback invocation adds a new
+request to the channel, that request will \fInot\fP be cancelled by the
+current invocation of \fBares_cancel(3)\fP.
 .SH SEE ALSO
 .BR ares_init (3)
 .BR ares_destroy (3)

@@ -1,7 +1,7 @@
 AC_PREREQ(2.57)
 
 dnl Version not hardcoded here. Fetched later from ares_version.h
-AC_INIT([c-ares], [1.11.0],
+AC_INIT([c-ares], [1.12.0],
   [c-ares mailing list: http://cool.haxx.se/mailman/listinfo/c-ares])
 
 XC_OVR_ZZ50
@@ -82,6 +82,7 @@ dnl Get system canonical name
 AC_DEFINE_UNQUOTED(OS, "${host}", [cpu-machine-OS])
 
 XC_CHECK_PROG_CC
+AX_CXX_COMPILE_STDCXX_11([noext],[optional])
 
 XC_AUTOMAKE
 
@@ -481,12 +482,6 @@ AC_TYPE_SIZE_T
 AC_HEADER_TIME
 CURL_CHECK_STRUCT_TIMEVAL
 
-AC_CHECK_SIZEOF(size_t)
-AC_CHECK_SIZEOF(long)
-AC_CHECK_SIZEOF(int)
-AC_CHECK_SIZEOF(short)
-AC_CHECK_SIZEOF(time_t)
-
 AC_CHECK_TYPE(long long,
    [AC_DEFINE(HAVE_LONGLONG, 1,
      [Define to 1 if the compiler supports the 'long long' data type.])]
@@ -759,63 +754,6 @@ AC_CHECK_FUNCS([bitncmp \
 ])
 
 
-AC_CHECK_SIZEOF(struct in6_addr, ,
-[
-#undef inline
-#ifdef HAVE_WINDOWS_H
-#ifndef WIN32_LEAN_AND_MEAN
-#define WIN32_LEAN_AND_MEAN
-#endif
-#include <windows.h>
-#ifdef HAVE_WINSOCK2_H
-#include <winsock2.h>
-#ifdef HAVE_WS2TCPIP_H
-#include <ws2tcpip.h>
-#endif
-#endif
-#else
-#ifdef HAVE_SYS_TYPES_H
-#include <sys/types.h>
-#endif
-#ifdef HAVE_SYS_SOCKET_H
-#include <sys/socket.h>
-#endif
-#ifdef HAVE_NETINET_IN_H
-#include <netinet/in.h>
-#endif
-#endif
-]
-)
-
-AC_CHECK_SIZEOF(struct in_addr, ,
-[
-#undef inline
-#ifdef HAVE_WINDOWS_H
-#ifndef WIN32_LEAN_AND_MEAN
-#define WIN32_LEAN_AND_MEAN
-#endif
-#include <windows.h>
-#ifdef HAVE_WINSOCK2_H
-#include <winsock2.h>
-#ifdef HAVE_WS2TCPIP_H
-#include <ws2tcpip.h>
-#endif
-#endif
-#else
-#ifdef HAVE_SYS_TYPES_H
-#include <sys/types.h>
-#endif
-#ifdef HAVE_SYS_SOCKET_H
-#include <sys/socket.h>
-#endif
-#ifdef HAVE_NETINET_IN_H
-#include <netinet/in.h>
-#endif
-#endif
-]
-)
-
-
 dnl Check if the getnameinfo function is available
 dnl and get the types of five of its arguments.
 CURL_CHECK_FUNC_GETNAMEINFO
@@ -877,7 +815,29 @@ squeeze CARES_PRIVATE_LIBS
 
 XC_CHECK_BUILD_FLAGS
 
-if test "x$cross_compiling" = "xno"; then
+AC_MSG_CHECKING([whether to build tests])
+AC_ARG_ENABLE(tests,
+	AC_HELP_STRING([--enable-tests], [build test suite]),
+	[ build_tests="$enableval" ],
+	[ if test "x$HAVE_CXX11" = "x1" && test "x$cross_compiling" = "xno" ; then
+	    build_tests="yes"
+	  else
+	    build_tests="no"
+	  fi
+	]
+)
+
+if test "x$build_tests" = "xyes" ; then
+	if test "x$HAVE_CXX11" = "0" ; then
+		AC_MSG_ERROR([*** Building tests requires a CXX11 compiler])
+	fi
+	if test "x$cross_compiling" = "xyes" ; then
+		AC_MSG_ERROR([*** Tests not supported when cross compiling])
+	fi
+fi
+AC_MSG_RESULT([$build_tests])
+
+if test "x$build_tests" = "xyes" ; then
   AC_CONFIG_SUBDIRS([test])
 fi
 

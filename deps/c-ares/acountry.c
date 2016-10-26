@@ -15,7 +15,7 @@
  *
  * Ref: http://countries.nerd.dk/more.html
  *
- * Written by G. Vanem <gvanem@broadpark.no> 2006, 2007
+ * Written by G. Vanem <gvanem@yahoo.no> 2006, 2007
  *
  * NB! This program may not be big-endian aware.
  *
