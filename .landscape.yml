@@ -14,7 +14,8 @@ python-targets:
 ignore-paths:
   - examples/webchat/
   - doc/
-  - build
+  - build/
+  - deps/
   - dist
   - .eggs
   # util creates lots of warnings. ideally they should be fixed,
@@ -38,6 +39,9 @@ ignore-paths:
   - src/gevent/core.py
   # sadly, this one is complicated
   - setup.py
+  # This crashes (infinite recursion) trying to get the mro() of a class that extends
+  # build_ext
+  - _setuputils.py
   - src/greentest/getaddrinfo_module.py
 ignore-patterns:
   # disabled code
