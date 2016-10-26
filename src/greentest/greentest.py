@@ -350,7 +350,7 @@ class TestCase(TestCaseMetaClass("NewBase", (BaseTestCase,), {})):
     # Travis is slow and overloaded; Appveyor used to be faster, but
     # as of Dec 2015 it's almost always slower and/or has much worse timer
     # resolution
-    __timeout__ = 1 if not RUNNING_ON_CI else 5
+    __timeout__ = 1 if not RUNNING_ON_CI else 7
     switch_expected = 'default'
     error_fatal = True
     close_on_teardown = ()
