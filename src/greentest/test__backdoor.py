@@ -23,6 +23,8 @@ def readline(conn):
 
 class Test(greentest.TestCase):
 
+    __timeout__ = 10
+
     _server = None
 
     def tearDown(self):
@@ -47,7 +49,7 @@ class Test(greentest.TestCase):
         self.assertEqual(line, '')
         conn.close()
 
-    def test(self):
+    def test_multi(self):
         self._make_server()
 
         def connect():

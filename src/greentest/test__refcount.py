@@ -140,6 +140,8 @@ def run_and_check(run_client):
 @greentest.skipOnPyPy3OnCI("Often fails with timeouts; not sure why.")
 class Test(greentest.TestCase):
 
+    __timeout__ = 10
+
     def test_clean_exit(self):
         run_and_check(True)
         run_and_check(True)
