@@ -27,12 +27,15 @@ class Test(greentest.TestCase):
     _server = None
 
     def tearDown(self):
-        self._server.stop()
+        if self._server is not None:
+            self._server.stop()
+            self.close_on_teardown.remove(self._server.stop)
         self._server = None
         gevent.sleep() # let spawned greenlets die
         super(Test, self).tearDown()
 
     def _make_server(self, *args, **kwargs):
+        assert self._server is None
         self._server = backdoor.BackdoorServer(('127.0.0.1', 0), *args, **kwargs)
         self._close_on_teardown(self._server.stop)
         self._server.start()
@@ -43,8 +46,8 @@ class Test(greentest.TestCase):
         conn.connect(('127.0.0.1', self._server.server_port))
         return conn
 
-    def _close(self, conn):
-        conn.sendall(b'quit()\r\n')
+    def _close(self, conn, cmd='quit()\r\n)'):
+        conn.sendall(cmd)
         line = readline(conn)
         self.assertEqual(line, '')
         conn.close()
@@ -77,9 +80,7 @@ class Test(greentest.TestCase):
         self._make_server()
         conn = self._create_connection()
         read_until(conn, b'>>> ')
-        conn.sendall(b'import sys; sys.exit(0)\r\n')
-        line = readline(conn)
-        self.assertEqual(line, '')
+        self._close(conn, b'import sys; sys.exit(0)\r\n')
 
     def test_banner(self):
         banner = "Welcome stranger!" # native string
