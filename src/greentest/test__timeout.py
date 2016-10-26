@@ -4,7 +4,7 @@ from gevent.hub import get_hub
 import sys
 
 SHOULD_EXPIRE = 0.01
-if not greentest.RUNNING_ON_APPVEYOR:
+if not greentest.RUNNING_ON_CI:
     SHOULD_NOT_EXPIRE = SHOULD_EXPIRE * 2.0
 else:
     SHOULD_NOT_EXPIRE = SHOULD_EXPIRE * 20.0
