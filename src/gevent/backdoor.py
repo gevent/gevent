@@ -37,7 +37,12 @@ class _Greenlet_stdreplace(Greenlet):
     def switch(self, *args, **kw):
         if self._fileobj is not None:
             self.switch_in()
-        Greenlet.switch(self, *args, **kw) # pylint:disable=no-member
+        Greenlet.switch(self, *args, **kw)
+
+    def throw(self, *args):
+        if self._fileobj is not None:
+            self.switch_in()
+        Greenlet.throw(self, *args)
 
     def switch_in(self):
         self.saved = sys.stdin, sys.stderr, sys.stdout
