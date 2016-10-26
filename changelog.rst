@@ -140,6 +140,9 @@ Other Changes
 - The various ``FileObject`` implementations are more consistent with
   each other. **Note:** Writing to the *io* property of a FileObject should be
   considered deprecated.
+- Timeout exceptions (and other asynchronous exceptions) could cause
+  the Backdoor server to fail to properly manage the
+  stdout/stderr/stdin values. Reported with a patch in :pr:`874` by stefanmh.
 
 Servers
 ~~~~~~~

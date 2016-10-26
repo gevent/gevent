@@ -28,7 +28,6 @@ try:
 except AttributeError:
     sys.ps2 = '... '
 
-
 class _Greenlet_stdreplace(Greenlet):
     # A greenlet that replaces sys.std[in/out/err] while running.
     _fileobj = None
@@ -37,7 +36,7 @@ class _Greenlet_stdreplace(Greenlet):
     def switch(self, *args, **kw):
         if self._fileobj is not None:
             self.switch_in()
-        Greenlet.switch(self, *args, **kw) # pylint:disable=no-member
+        Greenlet.switch(self, *args, **kw)
 
     def switch_in(self):
         self.saved = sys.stdin, sys.stderr, sys.stdout
@@ -47,11 +46,16 @@ class _Greenlet_stdreplace(Greenlet):
         sys.stdin, sys.stderr, sys.stdout = self.saved
         self.saved = None
 
+    def throw(self, *args, **kwargs):
+        if self.saved is None and self._fileobj is not None:
+            self.switch_in()
+        Greenlet.throw(self, *args, **kwargs)
+
     def run(self):
         try:
             return Greenlet.run(self)
         finally:
-            # XXX why is this necessary?
+            # Make sure to restore the originals.
             self.switch_out()
 
 

@@ -367,8 +367,9 @@ class TestCase(TestCaseMetaClass("NewBase", (BaseTestCase,), {})):
             self.cleanup()
         self._error = self._none
         for x in self.close_on_teardown:
+            close = getattr(x, 'close', x)
             try:
-                x.close()
+                close()
             except Exception:
                 pass
         try:
