@@ -27,9 +27,9 @@ Check out the detailed changelog_ for this version.
 Get gevent
 ==========
 
-Gevent runs on Python >= 2.7, Python >= 3.3.5, or PyPy >= 4.0.1
-(but not PyPy3) (*Note*: PyPy is not supported in Windows). On all
-platforms, installing setuptools is recommended (this is done
+gevent runs on Python >= 2.7, Python >= 3.4, or PyPy >= 5.5 (including
+PyPy2 and PyPy3) (*Note*: PyPy is not supported in Windows). On all
+platforms, installing setuptools is required (this is done
 automatically if working in a virtual environment).
 
 You can use pip to install gevent::
@@ -52,7 +52,7 @@ Development
 
 To install the latest development version::
 
-  pip install setuptools 'cython>=0.23.4' git+git://github.com/gevent/gevent.git#egg=gevent
+  pip install setuptools 'cython>=0.25' git+git://github.com/gevent/gevent.git#egg=gevent
 
 To hack on gevent (using a virtualenv)::
 
@@ -144,6 +144,6 @@ Windows.
 .. _coverage.py: https://pypi.python.org/pypi/coverage/
 .. _coveralls.io: https://coveralls.io/github/gevent/gevent
 .. _AppVeyor: https://ci.appveyor.com/project/denik/gevent
-.. _what's new: http://www.gevent.org/whatsnew_1_1.html
+.. _what's new: http://www.gevent.org/whatsnew_1_2.html
 .. _changelog: http://www.gevent.org/changelog.html
 .. _landscape.io: https://landscape.io/github/gevent/gevent
