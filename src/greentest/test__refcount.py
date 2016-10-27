@@ -56,7 +56,8 @@ import socket
 socket._realsocket = Socket
 
 SOCKET_TIMEOUT = 0.1
-
+if greentest.RUNNING_ON_CI:
+    SOCKET_TIMEOUT *= 2
 
 def init_server():
     s = socket.socket()

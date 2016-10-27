@@ -15,7 +15,7 @@ Platform Support
 
 gevent 1.2 supports Python 2.7, 3.4, 3.5 and 3.6 on the CPython
 (`python.org`_) interpreter. It also supports `PyPy2`_ 4.0.1 and above
-(PyPy2 5.2 or higher is recommended) and PyPy3 5.5.0.
+(PyPy2 5.4 or higher is recommended) and PyPy3 5.5.0.
 
 
 .. caution:: Support for Python 2.6 was removed. Support for Python 3.3 is only
