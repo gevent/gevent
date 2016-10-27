@@ -112,7 +112,7 @@ File objects
   and generally only exposes methods appropriate to the mode it is in.
 - ``FileObjectPosix`` supports a *bufsize* of 0 in binary write modes.
   Reported in :issue:`840` by Mike Lang.
-- Python 3: meth:`gevent.socket.connect_ex` was letting
+- Python 3: :meth:`gevent.socket.connect_ex` was letting
   ``BlockingIOError`` (and possibly others) get raised instead of
   returning the errno due to the refactoring of the exception
   hierarchy in Python 3.3. Now the errno is returned. Reported in

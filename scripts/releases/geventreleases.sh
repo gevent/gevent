@@ -6,9 +6,6 @@
 
 mkdir /tmp/gevent/
 
-# 2.6 is provided by Apple, builds a 10_11_intel wheel
-# no python.org build available
-./geventrel.sh /usr/bin/python2.6
 
 # 2.7 is a python.org build, builds a 10_6_intel wheel
 ./geventrel.sh /usr/local/bin/python2.7

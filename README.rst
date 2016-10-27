@@ -36,7 +36,7 @@ You can use pip to install gevent::
 
     pip install gevent
 
-.. tip:: You need Pip 8.0 or later to install the binary wheels for 1.1.
+.. tip:: You need Pip 8.0 or later to install the binary wheels.
 
 Download the latest release from `Python Package Index`_ or clone `the repository`_.
 
