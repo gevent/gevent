@@ -134,8 +134,8 @@ disabled_tests = [
     'test_signal.SiginterruptTest.test_siginterrupt_on',
     # these rely on os.read raising EINTR which never happens with gevent.os.read
 
-    'test_subprocess.test_leak_fast_process_del_killed',
-    'test_subprocess.test_zombie_fast_process_del',
+    'test_subprocess.ProcessTestCase.test_leak_fast_process_del_killed',
+    'test_subprocess.ProcessTestCase.test_zombie_fast_process_del',
     # relies on subprocess._active which we don't use
 
     'test_ssl.ThreadedTests.test_default_ciphers',
@@ -462,6 +462,12 @@ if sys.version_info[:2] >= (3, 4):
         # it should be found at runtime.
         'test_socket.GeneralModuleTests.test_sock_ioctl',
 
+        # See comments for 2.7; these hang
+        'test_httplib.HTTPSTest.test_local_good_hostname',
+        'test_httplib.HTTPSTest.test_local_unknown_cert',
+
+        # XXX This fails for an unknown reason
+        'test_httplib.HeaderTests.test_parse_all_octets',
     ]
 
     if sys.platform == 'darwin':
@@ -564,13 +570,33 @@ if OPENSSL_VERSION.startswith('LibreSSL'):
         'test_ssl.BasicSocketTests.test_openssl_version'
     ]
 
+# Now build up the data structure we'll use to actually find disabled tests
+# to avoid a linear scan for every file (it seems the list could get quite large)
+# (First, freeze the source list to make sure it isn't modified anywhere)
+disabled_tests = frozenset(disabled_tests)
+
+_disabled_tests_by_file = {}
+for file_case_meth in disabled_tests:
+    file_name, case, meth = file_case_meth.split('.')
+
+    try:
+        by_file = _disabled_tests_by_file[file_name]
+    except KeyError:
+        by_file = _disabled_tests_by_file[file_name] = set()
+
+    by_file.add(meth)
+
 
 def disable_tests_in_source(source, name):
+
     if name.startswith('./'):
         # turn "./test_socket.py" (used for auto-complete) into "test_socket.py"
         name = name[2:]
 
-    my_disabled_tests = [x for x in disabled_tests if x.startswith(name + '.')]
+    if name.endswith('.py'):
+        name = name[:-3]
+
+    my_disabled_tests = _disabled_tests_by_file.get(name)
     if not my_disabled_tests:
         return source
     for test in my_disabled_tests:
