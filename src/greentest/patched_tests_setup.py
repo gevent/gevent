@@ -528,6 +528,15 @@ if sys.version_info[:2] >= (3, 5):
             'test_socket.GeneralModuleTests.test_getnameinfo',
         ]
 
+if sys.version_info[:3] <= (3, 5, 1):
+    # Python issue 26499 was fixed in 3.5.2 and these tests were added.
+    disabled_tests += [
+        'test_httplib.BasicTest.test_mixed_reads',
+        'test_httplib.BasicTest.test_read1_bound_content_length',
+        'test_httplib.BasicTest.test_read1_content_length',
+        'test_httplib.BasicTest.test_readline_bound_content_length',
+        'test_httplib.BasicTest.test_readlines_content_length',
+    ]
 
 if sys.version_info[:2] >= (3, 6):
     disabled_tests += [
