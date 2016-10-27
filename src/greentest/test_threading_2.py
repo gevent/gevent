@@ -1,6 +1,7 @@
 # testing gevent's Event, Lock, RLock, Semaphore, BoundedSemaphore with standard test_threading
 from __future__ import print_function
 from _six import xrange
+import greentest
 
 setup_ = '''from gevent import monkey; monkey.patch_all()
 from gevent.event import Event
@@ -450,6 +451,7 @@ class ThreadJoinOnShutdown(unittest.TestCase):
             """
         self._run_and_join(script)
 
+    @greentest.skipOnPyPy3OnCI("Sometimes randomly times out")
     def test_2_join_in_forked_process(self):
         # Like the test above, but from a forked interpreter
         import os
