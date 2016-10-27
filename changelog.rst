@@ -4,7 +4,7 @@
 
 .. currentmodule:: gevent
 
-1.2a1 (Oct 26, 2016)
+1.2a1 (Oct 27, 2016)
 ====================
 
 Incompatible Changes
