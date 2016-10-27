@@ -11,14 +11,13 @@ FUZZY = SMALL / 2
 # setting up signal does not affect join()
 gevent.signal(1, lambda: None)  # wouldn't work on windows
 
-from greentest import RUNNING_ON_APPVEYOR
-
+from greentest import EXPECT_POOR_TIMER_RESOLUTION
 
 @contextmanager
 def expected_time(expected, fuzzy=None):
     if fuzzy is None:
-        if RUNNING_ON_APPVEYOR:
-            # The noted timer jitter issues on appveyor
+        if EXPECT_POOR_TIMER_RESOLUTION:
+            # The noted timer jitter issues on appveyor/pypy3
             fuzzy = expected * 5.0
         else:
             fuzzy = expected / 2.0
@@ -28,7 +27,7 @@ def expected_time(expected, fuzzy=None):
     assert expected - fuzzy <= elapsed <= expected + fuzzy, 'Expected: %r; elapsed: %r; fuzzy %r' % (expected, elapsed, fuzzy)
 
 
-def no_time(fuzzy=(0.001 if not RUNNING_ON_APPVEYOR else 1.0)):
+def no_time(fuzzy=(0.001 if not EXPECT_POOR_TIMER_RESOLUTION else 1.0)):
     return expected_time(0, fuzzy=fuzzy)
 
 

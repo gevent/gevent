@@ -84,6 +84,8 @@ elif sys.version_info[0] == 2:
         # Python 2, < 2.7.9
         NON_APPLICABLE_SUFFIXES.append('279')
 
+PYPY3 = PYPY and PY3
+
 if sys.platform.startswith('win'):
     NON_APPLICABLE_SUFFIXES.append("posix")
     # This is intimately tied to FileObjectPosix
@@ -113,7 +115,7 @@ else:
             return f
         return dec
 
-if PYPY and PY3 and RUNNING_ON_CI:
+if PYPY3 and RUNNING_ON_CI:
     # Same as above, for PyPy3.3-5.5-alpha
     skipOnPyPy3OnCI = unittest.skip
 else:
@@ -121,6 +123,8 @@ else:
         def dec(f):
             return f
         return dec
+
+EXPECT_POOR_TIMER_RESOLUTION = PYPY3 or RUNNING_ON_APPVEYOR
 
 class ExpectedException(Exception):
     """An exception whose traceback should be ignored"""
