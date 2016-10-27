@@ -4,6 +4,11 @@
 
 .. currentmodule:: gevent
 
+1.2a2 (unreleased)
+==================
+
+- Nothing yet.
+
 1.2a1 (Oct 27, 2016)
 ====================
 
