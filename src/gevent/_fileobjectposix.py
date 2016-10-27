@@ -149,14 +149,14 @@ class FileObjectPosix(FileObjectBase):
     provides a synchronous, cooperative interface.
 
     .. caution::
-         This object is most effective wrapping files that can be used appropriately
+         This object is only effective wrapping files that can be used meaningfully
          with :func:`select.select` such as sockets and pipes.
 
          In general, on most platforms, operations on regular files
-         (e.g., ``open('/etc/hosts')``) are considered non-blocking
+         (e.g., ``open('a_file.txt')``) are considered non-blocking
          already, even though they can take some time to complete as
-         data is copied to the kernel and flushed to disk (this time
-         is relatively bounded compared to sockets or pipes, though).
+         data is copied to the kernel and flushed to disk: this time
+         is relatively bounded compared to sockets or pipes, though.
          A :func:`~os.read` or :func:`~os.write` call on such a file
          will still effectively block for some small period of time.
          Therefore, wrapping this class around a regular file is
@@ -175,15 +175,25 @@ class FileObjectPosix(FileObjectBase):
          class.
 
     .. tip::
-         Although this object provides a :meth:`fileno` method and
-         so can itself be passed to :func:`fcntl.fcntl`, setting the
-         :data:`os.O_NONBLOCK` flag will have no effect; however, removing
-         that flag will cause this object to no longer be cooperative.
+         Although this object provides a :meth:`fileno` method and so
+         can itself be passed to :func:`fcntl.fcntl`, setting the
+         :data:`os.O_NONBLOCK` flag will have no effect (reads will
+         still block the greenlet, although other greenlets can run).
+         However, removing that flag *will cause this object to no
+         longer be cooperative* (other greenlets will no longer run).
+
+         You can use the internal ``fileio`` attribute of this object
+         (a :class:`io.RawIOBase`) to perform non-blocking byte reads.
+         Note, however, that once you begin directly using this
+         attribute, the results from using methods of *this* object
+         are undefined, especially in text mode. (See :issue:`222`.)
 
     .. versionchanged:: 1.1
        Now uses the :mod:`io` package internally. Under Python 2, previously
        used the undocumented class :class:`socket._fileobject`. This provides
        better file-like semantics (and portability to Python 3).
+    .. versionchanged:: 1.2a1
+       Document the ``fileio`` attribute for non-blocking reads.
     """
 
     #: platform specific default for the *bufsize* parameter
@@ -191,7 +201,7 @@ class FileObjectPosix(FileObjectBase):
 
     def __init__(self, fobj, mode='rb', bufsize=-1, close=True):
         """
-        :keyword fobj: Either an integer fileno, or an object supporting the
+        :param fobj: Either an integer fileno, or an object supporting the
             usual :meth:`socket.fileno` method. The file *will* be
             put in non-blocking mode using :func:`gevent.os.make_nonblocking`.
         :keyword str mode: The manner of access to the file, one of "rb", "rU" or "wb"
@@ -239,6 +249,7 @@ class FileObjectPosix(FileObjectBase):
 
         self._fobj = fobj
 
+        # This attribute is documented as available for non-blocking reads.
         self.fileio = GreenFileDescriptorIO(fileno, mode, closefd=close)
 
         self._orig_bufsize = bufsize
