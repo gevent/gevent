@@ -15,10 +15,11 @@ Cooperative ``subprocess`` module.
    the standard library :mod:`subprocess` module (with many backwards
    compatible extensions from Python 3 backported to Python 2). There
    are some small differences between the Python 2 and Python 3
-   versions of that module and between the POSIX and Windows versions.
-   The HTML documentation here can only describe one version; for
-   definitive documentation, see the standard library or the source
-   code.
+   versions of that module (the Python 2 ``TimeoutExpired`` exception,
+   notably, extends ``Timeout`` and there is no ``SubprocessError``) and between the
+   POSIX and Windows versions. The HTML documentation here can only
+   describe one version; for definitive documentation, see the
+   standard library or the source code.
 
 .. _is not defined: http://www.linuxprogrammingblog.com/all-about-linux-signals?page=11
 """
@@ -396,7 +397,7 @@ class Popen(object):
           ``restore_signals``, ``encoding`` and ``errors``
 
         .. versionchanged:: 1.2b1
-           Add the ``encoding`` and ``errors`` parameters.
+           Add the ``encoding`` and ``errors`` parameters for Python 3.
         """
 
         if not PY3 and kwargs:
