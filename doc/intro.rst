@@ -51,15 +51,16 @@ other Unix-like operating systems (e.g., FreeBSD, Solaris, etc.)
           sockets due to `limitations in libev`_.
 
 gevent and greenlet can both be installed with `pip`_, e.g., ``pip
-install gevent``. On Windows and OS X, both gevent and greenlet are
+install gevent``. On Windows, OS X, and Linux, both gevent and greenlet are
 distributed as binary `wheels`_, so no C compiler is required (so long
-as pip is at least version 8.0). On Linux or for Mac OS X variants
+as pip is at least version 8.0). For other platforms
 without pre-built wheels or if wheel installation is disabled, a C compiler
 (Xcode on OS X) and the Python development package are required.
 `cffi`_ can optionally be installed to build the CFFI backend in
 addition to the Cython backend on CPython.
 
-Development instructions can be found `on PyPI <https://pypi.python.org/pypi/gevent#development>`_.
+Development instructions (including building from a source checkout)
+can be found `on PyPI <https://pypi.python.org/pypi/gevent#development>`_.
 
 __ http://pypi.python.org/pypi/greenlet
 .. _`pip`: https://pip.pypa.io/en/stable/installing/
@@ -91,7 +92,6 @@ those compiling gevent from source.
   default options for the C preprocessor) if they are using the
   libev shipped with gevent. See :ref:`operating_systems_label` for
   more information.
-
 
 Example
 =======

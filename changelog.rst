@@ -8,6 +8,10 @@
 ==================
 
 - Update libev to version 4.23.
+- Allow the ``MAKE`` environment variable to specify the make command
+  on non-Windows systems for ease of development on BSD systems where
+  ``make`` is BSD make and ``gmake`` is GNU make (gevent requires GNU
+  make). See :issue:`888`.
 
 1.2a1 (Oct 27, 2016)
 ====================

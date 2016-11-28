@@ -196,7 +196,10 @@ class MakeSdist(sdist):
             else:
                 if "PYTHON" not in os.environ:
                     os.environ["PYTHON"] = sys.executable
-                system('make ' + targets)
+                # Let the user specify the make program, helpful for BSD
+                # where GNU make might be called gmake
+                make_program = os.environ.get('MAKE', 'make')
+                system(make_program + ' ' + targets)
         cls._ran_make = True
 
     def run(self):
