@@ -19,7 +19,7 @@ try:
 except ImportError:
     _testcapi = None
 
-from test import lock_tests
+import lock_tests # gevent: use local copy
 
 # A trivial mutable counter.
 class Counter(object):
