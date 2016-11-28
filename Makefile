@@ -106,10 +106,10 @@ BUILD_RUNTIMES?=$(PWD)/.runtimes
 
 PY278=$(BUILD_RUNTIMES)/snakepit/python2.7.8
 PY27=$(BUILD_RUNTIMES)/snakepit/python2.7
-PY34=$(BUILD_RUNTIMES)/snakepit/python3.4
-PY35=$(BUILD_RUNTIMES)/snakepit/python3.5
-PY36=$(BUILD_RUNTIMES)/snakepit/python3.6
-PYPY=$(BUILD_RUNTIMES)/snakepit/pypy54
+PY34=$(BUILD_RUNTIMES)/snakepit/python3.4.5
+PY35=$(BUILD_RUNTIMES)/snakepit/python3.5.2
+PY36=$(BUILD_RUNTIMES)/snakepit/python3.6b4
+PYPY=$(BUILD_RUNTIMES)/snakepit/pypy56
 PYPY3=$(BUILD_RUNTIMES)/snakepit/pypy3.3_5.5
 
 TOOLS=$(BUILD_RUNTIMES)/tools
@@ -146,6 +146,7 @@ $(PYPY3):
 PIP?=$(BUILD_RUNTIMES)/versions/$(PYTHON)/bin/pip
 
 develop:
+	ls -l $(BUILD_RUNTIMES)/snakepit/
 	echo pip is at `which $(PIP)`
 	echo python is at `which $(PYTHON)`
 # First install a newer pip so that it can use the wheel cache
@@ -168,16 +169,16 @@ test-py278: $(PY278)
 	PYTHON=python2.7.8 PATH=$(BUILD_RUNTIMES)/versions/python2.7.8/bin:$(PATH) make develop toxtest
 
 test-py34: $(PY34)
-	PYTHON=python3.4 PATH=$(BUILD_RUNTIMES)/versions/python3.4/bin:$(PATH) make develop fulltoxtest
+	PYTHON=python3.4 PATH=$(BUILD_RUNTIMES)/versions/python3.4.5/bin:$(PATH) make develop toxtest
 
 test-py35: $(PY35)
-	PYTHON=python3.5 PATH=$(BUILD_RUNTIMES)/versions/python3.5/bin:$(PATH) make develop fulltoxtest
+	PYTHON=python3.5 PATH=$(BUILD_RUNTIMES)/versions/python3.5.2/bin:$(PATH) make develop fulltoxtest
 
 test-py36: $(PY36)
-	PYTHON=python3.6 PATH=$(BUILD_RUNTIMES)/versions/python3.6/bin:$(PATH) make develop fulltoxtest
+	PYTHON=python3.6 PATH=$(BUILD_RUNTIMES)/versions/python3.6b4/bin:$(PATH) make develop toxtest
 
 test-pypy: $(PYPY)
-	PYTHON=$(PYPY) PIP=pip PATH=$(BUILD_RUNTIMES)/versions/pypy54/bin:$(PATH) make develop toxtest
+	PYTHON=$(PYPY) PIP=pip PATH=$(BUILD_RUNTIMES)/versions/pypy56/bin:$(PATH) make develop toxtest
 
 test-pypy3: $(PYPY3)
 	PYTHON=$(PYPY3) PIP=pip PATH=$(BUILD_RUNTIMES)/versions/pypy3.3_5.5/bin:$(PATH) make develop toxtest
