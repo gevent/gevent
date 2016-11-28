@@ -360,6 +360,9 @@ if sys.version_info[0] == 3:
             'test_subprocess.ProcessTestCase.test_cwd_with_relative_arg',
             'test_subprocess.ProcessTestCaseNoPoll.test_cwd_with_relative_arg',
             'test_subprocess.ProcessTestCase.test_cwd_with_relative_executable',
+
+            # This test tends to timeout, starting at the end of November 2016
+            'test_subprocess.ProcessTestCase.test_leaking_fds_on_error',
         ]
 
 
