@@ -515,10 +515,10 @@ enum {
 
 /* method bits to be ored together */
 enum {
-  EVBACKEND_SELECT  = 0x00000001U, /* about anywhere */
-  EVBACKEND_POLL    = 0x00000002U, /* !win */
+  EVBACKEND_SELECT  = 0x00000001U, /* available just about anywhere */
+  EVBACKEND_POLL    = 0x00000002U, /* !win, !aix, broken on osx */
   EVBACKEND_EPOLL   = 0x00000004U, /* linux */
-  EVBACKEND_KQUEUE  = 0x00000008U, /* bsd */
+  EVBACKEND_KQUEUE  = 0x00000008U, /* bsd, broken on osx */
   EVBACKEND_DEVPOLL = 0x00000010U, /* solaris 8 */ /* NYI */
   EVBACKEND_PORT    = 0x00000020U, /* solaris 10 */
   EVBACKEND_ALL     = 0x0000003FU, /* all known backends */

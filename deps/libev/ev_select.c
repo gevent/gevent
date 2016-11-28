@@ -271,7 +271,8 @@ select_poll (EV_P_ ev_tstamp timeout)
 #endif
 }
 
-int inline_size
+inline_size
+int
 select_init (EV_P_ int flags)
 {
   backend_mintime = 1e-6;
@@ -300,7 +301,8 @@ select_init (EV_P_ int flags)
   return EVBACKEND_SELECT;
 }
 
-void inline_size
+inline_size
+void
 select_destroy (EV_P)
 {
   ev_free (vec_ri);
