@@ -39,7 +39,8 @@
 
 #include <poll.h>
 
-void inline_size
+inline_size
+void
 pollidx_init (int *base, int count)
 {
   /* consider using memset (.., -1, ...), which is practically guaranteed
@@ -126,7 +127,8 @@ poll_poll (EV_P_ ev_tstamp timeout)
       }
 }
 
-int inline_size
+inline_size
+int
 poll_init (EV_P_ int flags)
 {
   backend_mintime = 1e-3;
@@ -139,7 +141,8 @@ poll_init (EV_P_ int flags)
   return EVBACKEND_POLL;
 }
 
-void inline_size
+inline_size
+void
 poll_destroy (EV_P)
 {
   ev_free (pollidxs);
