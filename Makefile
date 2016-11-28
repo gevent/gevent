@@ -169,13 +169,13 @@ test-py278: $(PY278)
 	PYTHON=python2.7.8 PATH=$(BUILD_RUNTIMES)/versions/python2.7.8/bin:$(PATH) make develop toxtest
 
 test-py34: $(PY34)
-	PYTHON=python3.4 PATH=$(BUILD_RUNTIMES)/versions/python3.4.5/bin:$(PATH) make develop toxtest
+	PYTHON=python3.4.5 PIP=pip PATH=$(BUILD_RUNTIMES)/versions/python3.4.5/bin:$(PATH) make develop toxtest
 
 test-py35: $(PY35)
-	PYTHON=python3.5 PATH=$(BUILD_RUNTIMES)/versions/python3.5.2/bin:$(PATH) make develop fulltoxtest
+	PYTHON=python3.5.2 PIP=pip PATH=$(BUILD_RUNTIMES)/versions/python3.5.2/bin:$(PATH) make develop fulltoxtest
 
 test-py36: $(PY36)
-	PYTHON=python3.6 PATH=$(BUILD_RUNTIMES)/versions/python3.6b4/bin:$(PATH) make develop toxtest
+	PYTHON=python3.6b4 PIP=pip PATH=$(BUILD_RUNTIMES)/versions/python3.6b4/bin:$(PATH) make develop toxtest
 
 test-pypy: $(PYPY)
 	PYTHON=$(PYPY) PIP=pip PATH=$(BUILD_RUNTIMES)/versions/pypy56/bin:$(PATH) make develop toxtest
