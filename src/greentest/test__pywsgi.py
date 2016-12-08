@@ -742,7 +742,7 @@ class HttpsTestCase(TestCase):
         return [environ['wsgi.input'].read(10)]
 
 try:
-    from ssl import create_default_context as _
+    from gevent.ssl import create_default_context as _
 except ImportError:
     HAVE_SSLCONTEXT = False
 else:
@@ -757,7 +757,7 @@ else:
             # `SSLError: [SSL: PEER_DID_NOT_RETURN_A_CERTIFICATE] peer did not return a certificate`
             # (Neither of which happens in Python 3.) But the unverified context
             # works both places. See also test___example_servers.py
-            from ssl import _create_unverified_context
+            from gevent.ssl import _create_unverified_context
             context = _create_unverified_context()
             context.load_cert_chain(certfile=self.certfile, keyfile=self.keyfile)
             self.server = pywsgi.WSGIServer(('127.0.0.1', 0), application, ssl_context=context)

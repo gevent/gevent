@@ -17,21 +17,56 @@ else:
 
 
 class StreamServer(BaseServer):
-    """A generic TCP server. Accepts connections on a listening socket and spawns user-provided *handle*
-    for each connection with 2 arguments: the client socket and the client address.
+    """
+    A generic TCP server.
 
-    Server can assume an SSL mode via either direct client socket wrapper initialization or socket wrapping via an
-    :class:`SSLContext`.
+    Accepts connections on a listening socket and spawns user-provided
+    *handle* function for each connection with 2 arguments: the client
+    socket and the client address.
 
-    If *ssl_context* keyword argument is present, it should contain an :class:`SSLContext`. The following keyword
-    arguments may be used SSLContext mode (subject to Python API version):
+    Note that although the errors in a successfully spawned handler
+    will not affect the server or other connections, the errors raised
+    by :func:`accept` and *spawn* cause the server to stop accepting
+    for a short amount of time. The exact period depends on the values
+    of :attr:`min_delay` and :attr:`max_delay` attributes.
+
+    The delay starts with :attr:`min_delay` and doubles with each
+    successive error until it reaches :attr:`max_delay`. A successful
+    :func:`accept` resets the delay to :attr:`min_delay` again.
+
+    See :class:`~gevent.baseserver.BaseServer` for information on defining the *handle*
+    function and important restrictions on it.
+
+    **SSL Support**
+
+    The server can optionally work in SSL mode when given the correct
+    keyword arguments. (That is, the presence of any keyword arguments
+    will trigger SSL mode.) On Python 2.7.9 and later (any Python
+    version that supports the :class:`ssl.SSLContext`), this can be
+    done with a configured ``SSLContext``. On any Python version, it
+    can be done by passing the appropriate arguments for
+    :func:`ssl.wrap_socket`.
+
+    The incoming socket will be wrapped into an SSL socket before
+    being passed to the *handle* function.
+
+    If the *ssl_context* keyword argument is present, it should
+    contain an :class:`ssl.SSLContext`. The remaining keyword
+    arguments are passed to the :meth:`ssl.SSLContext.wrap_socket`
+    method of that object. Depending on the Python version, supported arguments
+    may include:
 
     - server_hostname
     - suppress_ragged_eofs
     - do_handshake_on_connect
 
-    Otherwise, if any of the following keyword arguments are present, then the server assumes SSL mode and uses these
-    arguments to create an SSL wrapper for the client socket before passing it to *handle*:
+    .. caution:: When using an SSLContext, it should either be
+       imported from :mod:`gevent.ssl`, or the process needs to be monkey-patched.
+       If the process is not monkey-patched and you pass the standard library
+       SSLContext, the resulting client sockets will not cooperate with gevent.
+
+    Otherwise, keyword arguments are assumed to apply to :func:`ssl.wrap_socket`.
+    These keyword arguments bay include:
 
     - keyfile
     - certfile
@@ -42,14 +77,9 @@ class StreamServer(BaseServer):
     - do_handshake_on_connect
     - ciphers
 
-    Note that although the errors in a successfully spawned handler will not affect the server or other connections,
-    the errors raised by :func:`accept` and *spawn* cause the server to stop accepting for a short amount of time. The
-    exact period depends on the values of :attr:`min_delay` and :attr:`max_delay` attributes.
+    .. versionchanged:: 1.2a2
+       Add support for the *ssl_context* keyword argument.
 
-    The delay starts with :attr:`min_delay` and doubles with each successive error until it reaches :attr:`max_delay`.
-    A successful :func:`accept` resets the delay to :attr:`min_delay` again.
-
-    See :class:`BaseServer` for information on defining the *handle* function and important restrictions on it.
     """
     # the default backlog to use if none was provided in __init__
     backlog = 256
