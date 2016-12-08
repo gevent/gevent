@@ -20,8 +20,18 @@ class StreamServer(BaseServer):
     """A generic TCP server. Accepts connections on a listening socket and spawns user-provided *handle*
     for each connection with 2 arguments: the client socket and the client address.
 
-    If any of the following keyword arguments are present, then the server assumes SSL mode and uses these arguments
-    to create an SSL wrapper for the client socket before passing it to *handle*:
+    Server can assume an SSL mode via either direct client socket wrapper initialization or socket wrapping via an
+    :class:`SSLContext`.
+
+    If *ssl_context* keyword argument is present, it should contain an :class:`SSLContext`. The following keyword
+    arguments may be used SSLContext mode (subject to Python API version):
+
+    - server_hostname
+    - suppress_ragged_eofs
+    - do_handshake_on_connect
+
+    Otherwise, if any of the following keyword arguments are present, then the server assumes SSL mode and uses these
+    arguments to create an SSL wrapper for the client socket before passing it to *handle*:
 
     - keyfile
     - certfile
@@ -51,9 +61,14 @@ class StreamServer(BaseServer):
         try:
             if ssl_args:
                 ssl_args.setdefault('server_side', True)
-                from gevent.ssl import wrap_socket
-                self.wrap_socket = wrap_socket
-                self.ssl_args = ssl_args
+                if 'ssl_context' in ssl_args:
+                    ssl_context = ssl_args.pop('ssl_context')
+                    self.wrap_socket = ssl_context.wrap_socket
+                    self.ssl_args = ssl_args
+                else:
+                    from gevent.ssl import wrap_socket
+                    self.wrap_socket = wrap_socket
+                    self.ssl_args = ssl_args
             else:
                 self.ssl_args = None
             if backlog is not None:
