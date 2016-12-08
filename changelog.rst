@@ -12,6 +12,8 @@
   on non-Windows systems for ease of development on BSD systems where
   ``make`` is BSD make and ``gmake`` is GNU make (gevent requires GNU
   make). See :issue:`888`.
+- Let :class:`gevent.server.StreamServer` accept an ``SSLContext`` on
+  Python versions that support it. Added in :pr:`904` by Arcadiy Ivanov.
 
 1.2a1 (Oct 27, 2016)
 ====================
