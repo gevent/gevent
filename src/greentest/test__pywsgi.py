@@ -19,7 +19,9 @@
 # THE SOFTWARE.
 # pylint: disable=too-many-lines,unused-argument
 from __future__ import print_function
+
 from gevent import monkey
+
 monkey.patch_all(thread=False)
 
 try:
@@ -740,6 +742,13 @@ class HttpsTestCase(TestCase):
         return [environ['wsgi.input'].read(10)]
 
 
+class HttpsSslContextTestCase(HttpsTestCase):
+    def init_server(self, application):
+        from ssl import create_default_context
+        context = create_default_context()
+        context.load_cert_chain(certfile=self.certfile, keyfile=self.keyfile)
+        self.server = pywsgi.WSGIServer(('127.0.0.1', 0), application, ssl_context=context)
+
 class TestHttps(HttpsTestCase):
 
     if hasattr(socket, 'ssl'):
@@ -752,6 +761,8 @@ class TestHttps(HttpsTestCase):
             result = self.urlopen()
             self.assertEquals(result.body, '')
 
+class TestHttpsWithContext(HttpsSslContextTestCase, TestHttps):
+    pass
 
 class TestInternational(TestCase):
     validator = None  # wsgiref.validate.IteratorWrapper([]) does not have __len__
