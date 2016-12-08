@@ -19,7 +19,9 @@
 # THE SOFTWARE.
 # pylint: disable=too-many-lines,unused-argument
 from __future__ import print_function
+
 from gevent import monkey
+
 monkey.patch_all(thread=False)
 
 try:
@@ -739,6 +741,26 @@ class HttpsTestCase(TestCase):
         start_response('200 OK', [('Content-Type', 'text/plain')])
         return [environ['wsgi.input'].read(10)]
 
+try:
+    from gevent.ssl import create_default_context as _
+except ImportError:
+    HAVE_SSLCONTEXT = False
+else:
+    HAVE_SSLCONTEXT = True
+
+    class HttpsSslContextTestCase(HttpsTestCase):
+        def init_server(self, application):
+            # On 2.7, our certs don't line up with hostname.
+            # If we just use create_default_context as-is, we get
+            # `ValueError: check_hostname requires server_hostname`.
+            # If we set check_hostname to False, we get
+            # `SSLError: [SSL: PEER_DID_NOT_RETURN_A_CERTIFICATE] peer did not return a certificate`
+            # (Neither of which happens in Python 3.) But the unverified context
+            # works both places. See also test___example_servers.py
+            from gevent.ssl import _create_unverified_context
+            context = _create_unverified_context()
+            context.load_cert_chain(certfile=self.certfile, keyfile=self.keyfile)
+            self.server = pywsgi.WSGIServer(('127.0.0.1', 0), application, ssl_context=context)
 
 class TestHttps(HttpsTestCase):
 
@@ -752,6 +774,9 @@ class TestHttps(HttpsTestCase):
             result = self.urlopen()
             self.assertEquals(result.body, '')
 
+if HAVE_SSLCONTEXT:
+    class TestHttpsWithContext(HttpsSslContextTestCase, TestHttps):
+        pass
 
 class TestInternational(TestCase):
     validator = None  # wsgiref.validate.IteratorWrapper([]) does not have __len__
