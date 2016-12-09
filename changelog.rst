@@ -4,8 +4,8 @@
 
 .. currentmodule:: gevent
 
-1.2a2 (unreleased)
-==================
+1.2a2 (Dec 9, 2017)
+===================
 
 - Update libev to version 4.23.
 - Allow the ``MAKE`` environment variable to specify the make command
