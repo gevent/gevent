@@ -10,7 +10,7 @@ requirements:
 
 python-targets:
   - 2
-  - 3
+#  - 3 # landscape.io seems to fail if we run both py2 and py3?
 ignore-paths:
   - examples/webchat/
   - doc/
