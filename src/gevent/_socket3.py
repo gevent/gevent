@@ -316,7 +316,7 @@ class socket(object):
         except timeout:
             return EAGAIN
         except gaierror:
-            # gaierror/overflowerror/typerror is not silented by connect_ex;
+            # gaierror/overflowerror/typerror is not silenced by connect_ex;
             # gaierror extends OSError (aka error) so catch it first
             raise
         except error as ex:
