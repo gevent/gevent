@@ -303,7 +303,7 @@ class TestCase(greentest.TestCase):
 
         # If we're using the ares resolver, allow the real resolver to generate an
         # error that the ares resolver actually gets an answer to.
-        assert RESOLVER_IS_ARES
+
         if (RESOLVER_IS_ARES
             and isinstance(real_result, errors)
             and not isinstance(gevent_result, errors)):
