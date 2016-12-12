@@ -32,12 +32,10 @@ class Test6_ds(Test6):
     host = 'ds.test-ipv6.com'
 
     def _normalize_result_gethostbyaddr(self, result):
-        if RESOLVER_IS_ARES:
-            # This test is effectively disabled. There are multiple address
-            # that resolve and which ones you get depend on the settings
-            # of the system and ares. They don't match exactly.
-            return ()
-        return result
+        # This test is effectively disabled. There are multiple address
+        # that resolve and which ones you get depend on the settings
+        # of the system and ares. They don't match exactly.
+        return ()
 
     _normalize_result_gethostbyname = _normalize_result_gethostbyaddr
 
