@@ -7,7 +7,9 @@
 1.2b1 (unreleased)
 ==================
 
-- TBD
+- The c-ares DNS resolver ignores bad flags to getnameinfo, like the
+  system resolver does. Discovered when cleaning up the DNS resolver
+  tests to produce more reliable results. See :issue:`774`.
 
 1.2a2 (Dec 9, 2017)
 ===================

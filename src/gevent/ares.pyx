@@ -446,4 +446,9 @@ cdef public class channel [object PyGeventAresChannelObject, type PyGeventAresCh
         cares.ares_getnameinfo(self.channel, x, length, flags, <void*>gevent_ares_nameinfo_callback, <void*>arg)
 
     def getnameinfo(self, object callback, tuple sockaddr, int flags):
-        return self._getnameinfo(callback, sockaddr, _convert_cares_flags(flags))
+        try:
+            flags = _convert_cares_flags(flags)
+        except gaierror:
+            # The stdlib just ignores bad flags
+            flags = 0
+        return self._getnameinfo(callback, sockaddr, flags)
