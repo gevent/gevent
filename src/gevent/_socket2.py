@@ -249,7 +249,7 @@ class socket(object):
             if type(ex) is error: # pylint:disable=unidiomatic-typecheck
                 return ex.args[0]
             else:
-                raise  # gaierror is not silented by connect_ex
+                raise  # gaierror is not silenced by connect_ex
 
     def dup(self):
         """dup() -> socket object

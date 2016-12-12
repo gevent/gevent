@@ -1518,7 +1518,7 @@ Miscellaneous:
 - Remove the code related to finding out libevent version from setup.py as macro ``USE_LIBEVENT_?`` is no longer needed to build ``gevent.core``.
 - Increased default backlog in all servers (from 5 to 256). Thanks to **Nicholas Piël**.
 - Fixed doc/conf.py to work in Python older than 2.6. Thanks to **Örjan Persson**.
-- Silented SystemError raised in :mod:`backdoor` when a client typed ``quit()``.
+- Silenced SystemError raised in :mod:`backdoor` when a client typed ``quit()``.
 - If importing :mod:`greenlet` failed with ImportError, keep the original error message,
   because sometimes the error originates in setuptools.
 - Changed :func:`select.select` to return all the file descriptors signalled, not just the first one.
