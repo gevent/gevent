@@ -47,7 +47,8 @@ class Resolver(object):
       ``herror(1)``.
     - The results for ``localhost`` may be different. In particular, some system
       resolvers will return more results from ``getaddrinfo`` than c-ares does,
-      such as SOCK_DGRAM results.
+      such as SOCK_DGRAM results, and c-ares may report more ips on a multi-homed
+      host.
 
     .. caution:: This module is considered extremely experimental on PyPy, and
        due to its implementation in cython, it may be slower. It may also lead to

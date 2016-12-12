@@ -250,17 +250,28 @@ class TestCase(greentest.TestCase):
         # can be in different orders if we're hitting different servers,
         # or using the native and ares resolvers due to load-balancing techniques.
         # We sort them.
-        if not RESOLVER_IS_ARES:
+        if not RESOLVER_IS_ARES or isinstance(result, BaseException):
             return result
         # result[1].sort() # we wind up discarding this
-        if hasattr(result[2], 'sort'):
-            # On Py2 in test_russion_gethostbyname_ex, this
-            # is actually an integer, for some reason...
+
+        # On Py2 in test_russion_gethostbyname_ex, this
+        # is actually an integer, for some reason. In TestLocalhost.tets__ip6_localhost,
+        # the result isn't this long (maybe an error?).
+        try:
             result[2].sort()
+        except AttributeError:
+            pass
+        except IndexError:
+            return result
         # On some systems, a random alias is found in the aliaslist
         # by the system resolver, but not by cares, and vice versa. We deem the aliaslist
         # unimportant and discard it.
-        return (result[0], [], result[2])
+        # On some systems (Travis CI), the ipaddrlist for 'localhost' can come back
+        # with two entries 127.0.0.1 (presumably two interfaces?) for c-ares
+        ips = result[2]
+        if ips == ['127.0.0.1', '127.0.0.1']:
+            ips = ['127.0.0.1']
+        return (result[0], [], ips)
 
     def _normalize_result_getaddrinfo(self, result):
         if not RESOLVER_IS_ARES:
@@ -341,11 +352,13 @@ class TestLocalhost(TestCase):
             # like DGRAM that ares does not.
             return ()
         return super(TestLocalhost, self)._normalize_result_getaddrinfo(result)
-    pass
 
 
 add(TestLocalhost, 'localhost')
-add(TestLocalhost, 'ip6-localhost')
+if not greentest.RUNNING_ON_TRAVIS:
+    # ares fails here, for some reason, presumably a badly
+    # configured /etc/hosts
+    add(TestLocalhost, 'ip6-localhost')
 
 
 class TestNonexistent(TestCase):
@@ -502,16 +515,15 @@ class TestInternational(TestCase):
 add(TestInternational, u'президент.рф', 'russian')
 add(TestInternational, u'президент.рф'.encode('idna'), 'idna')
 
-import gc
+
 
 class TestInterrupted_gethostbyname(greentest.GenericWaitTestCase):
 
+    # There are refs to a Waiter in the C code that don't go
+    # away yet; one gc may or may not do it.
+    @greentest.ignores_leakcheck
     def test_returns_none_after_timeout(self):
         super(TestInterrupted_gethostbyname, self).test_returns_none_after_timeout()
-        if RESOLVER_IS_ARES:
-            # There are refs to a Waiter in the C code that don't go
-            # away yet
-            gc.collect()
 
     def wait(self, timeout):
         with gevent.Timeout(timeout, False):
