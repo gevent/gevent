@@ -11,7 +11,7 @@
   system resolver does. Discovered when cleaning up the DNS resolver
   tests to produce more reliable results. See :issue:`774`.
 
-1.2a2 (Dec 9, 2017)
+1.2a2 (Dec 9, 2016)
 ===================
 
 - Update libev to version 4.23.
