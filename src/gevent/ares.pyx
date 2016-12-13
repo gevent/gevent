@@ -199,12 +199,12 @@ class ares_host_result(tuple):
 
 
 cdef void gevent_ares_host_callback(void *arg, int status, int timeouts, hostent* host):
+    cdef channel channel
+    cdef object callback
+    cdef object host_result
     with gil:
-        cdef channel channel
-        cdef object callback
         channel, callback = <tuple>arg
         Py_DECREF(<PyObjectPtr>arg)
-        cdef object host_result
         try:
             if status or not host:
                 callback(result(None, gaierror(status, strerror(status))))
@@ -220,13 +220,13 @@ cdef void gevent_ares_host_callback(void *arg, int status, int timeouts, hostent
 
 
 cdef void gevent_ares_nameinfo_callback(void *arg, int status, int timeouts, char *c_node, char *c_service):
+    cdef channel channel
+    cdef object callback
+    cdef object node
+    cdef object service
     with gil:
-        cdef channel channel
-        cdef object callback
         channel, callback = <tuple>arg
         Py_DECREF(<PyObjectPtr>arg)
-        cdef object node
-        cdef object service
         try:
             if status:
                 callback(result(None, gaierror(status, strerror(status))))
