@@ -26,6 +26,13 @@ class Test6(TestCase):
 class Test6_google(Test6):
     host = 'ipv6.google.com'
 
+    def _normalize_result_getnameinfo(self, result):
+        if greentest.RUNNING_ON_CI and RESOLVER_IS_ARES:
+            # Disabled, there are multiple possibilities
+            # and we can get different ones, rarely.
+            return ()
+        return result
+
 add(Test6, Test6.host)
 add(Test6_google, Test6_google.host)
 
