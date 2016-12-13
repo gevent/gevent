@@ -36,22 +36,6 @@ FAILING_TESTS = [
 ]
 
 
-if os.environ.get('GEVENT_RESOLVER') == 'ares' or LEAKTEST:
-    # XXX fix this
-    FAILING_TESTS += [
-        'FLAKY test__socket_dns.py',
-        'FLAKY test__socket_dns6.py',
-    ]
-else:
-    FAILING_TESTS += [
-        # A number of the host names hardcoded have multiple, load
-        # balanced DNS entries. Therefore, multiple sequential calls
-        # of the resolution function, whether gevent or stdlib, can
-        # return non-equal results, possibly dependent on the host
-        # dns configuration
-        'FLAKY test__socket_dns6.py',
-    ]
-
 if sys.platform == 'win32':
     # other Windows-related issues (need investigating)
     FAILING_TESTS += [
