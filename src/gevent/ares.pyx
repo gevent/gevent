@@ -199,47 +199,49 @@ class ares_host_result(tuple):
 
 
 cdef void gevent_ares_host_callback(void *arg, int status, int timeouts, hostent* host):
-    cdef channel channel
-    cdef object callback
-    channel, callback = <tuple>arg
-    Py_DECREF(<PyObjectPtr>arg)
-    cdef object host_result
-    try:
-        if status or not host:
-            callback(result(None, gaierror(status, strerror(status))))
-        else:
-            try:
-                host_result = ares_host_result(host.h_addrtype, (parse_h_name(host), parse_h_aliases(host), parse_h_addr_list(host)))
-            except:
-                callback(result(None, sys.exc_info()[1]))
+    with gil:
+        cdef channel channel
+        cdef object callback
+        channel, callback = <tuple>arg
+        Py_DECREF(<PyObjectPtr>arg)
+        cdef object host_result
+        try:
+            if status or not host:
+                callback(result(None, gaierror(status, strerror(status))))
             else:
-                callback(result(host_result))
-    except:
-        channel.loop.handle_error(callback, *sys.exc_info())
+                try:
+                    host_result = ares_host_result(host.h_addrtype, (parse_h_name(host), parse_h_aliases(host), parse_h_addr_list(host)))
+                except:
+                    callback(result(None, sys.exc_info()[1]))
+                else:
+                    callback(result(host_result))
+        except:
+            channel.loop.handle_error(callback, *sys.exc_info())
 
 
 cdef void gevent_ares_nameinfo_callback(void *arg, int status, int timeouts, char *c_node, char *c_service):
-    cdef channel channel
-    cdef object callback
-    channel, callback = <tuple>arg
-    Py_DECREF(<PyObjectPtr>arg)
-    cdef object node
-    cdef object service
-    try:
-        if status:
-            callback(result(None, gaierror(status, strerror(status))))
-        else:
-            if c_node:
-                node = PyUnicode_FromString(c_node)
+    with gil:
+        cdef channel channel
+        cdef object callback
+        channel, callback = <tuple>arg
+        Py_DECREF(<PyObjectPtr>arg)
+        cdef object node
+        cdef object service
+        try:
+            if status:
+                callback(result(None, gaierror(status, strerror(status))))
             else:
-                node = None
-            if c_service:
-                service = PyUnicode_FromString(c_service)
-            else:
-                service = None
-            callback(result((node, service)))
-    except:
-        channel.loop.handle_error(callback, *sys.exc_info())
+                if c_node:
+                    node = PyUnicode_FromString(c_node)
+                else:
+                    node = None
+                if c_service:
+                    service = PyUnicode_FromString(c_service)
+                else:
+                    service = None
+                callback(result((node, service)))
+        except:
+            channel.loop.handle_error(callback, *sys.exc_info())
 
 
 cdef public class channel [object PyGeventAresChannelObject, type PyGeventAresChannel_Type]:
@@ -403,7 +405,8 @@ cdef public class channel [object PyGeventAresChannelObject, type PyGeventAresCh
         # note that for file lookups still AF_INET can be returned for AF_INET6 request
         cdef object arg = (self, callback)
         Py_INCREF(<PyObjectPtr>arg)
-        cares.ares_gethostbyname(self.channel, name, family, <void*>gevent_ares_host_callback, <void*>arg)
+        with nogil:
+            cares.ares_gethostbyname(self.channel, name, family, <void*>gevent_ares_host_callback, <void*>arg)
 
     def gethostbyaddr(self, object callback, char* addr):
         if not self.channel:
@@ -422,7 +425,9 @@ cdef public class channel [object PyGeventAresChannelObject, type PyGeventAresCh
             raise InvalidIP(repr(addr))
         cdef object arg = (self, callback)
         Py_INCREF(<PyObjectPtr>arg)
-        cares.ares_gethostbyaddr(self.channel, addr_packed, length, family, <void*>gevent_ares_host_callback, <void*>arg)
+        
+        with nogil:
+            cares.ares_gethostbyaddr(self.channel, addr_packed, length, family, <void*>gevent_ares_host_callback, <void*>arg)
 
     cpdef _getnameinfo(self, object callback, tuple sockaddr, int flags):
         if not self.channel:
@@ -443,7 +448,8 @@ cdef public class channel [object PyGeventAresChannelObject, type PyGeventAresCh
         cdef object arg = (self, callback)
         Py_INCREF(<PyObjectPtr>arg)
         cdef sockaddr_t* x = <sockaddr_t*>&sa6
-        cares.ares_getnameinfo(self.channel, x, length, flags, <void*>gevent_ares_nameinfo_callback, <void*>arg)
+        with nogil:
+            cares.ares_getnameinfo(self.channel, x, length, flags, <void*>gevent_ares_nameinfo_callback, <void*>arg)
 
     def getnameinfo(self, object callback, tuple sockaddr, int flags):
         try:
