@@ -931,6 +931,10 @@ cdef public class timer(watcher) [object PyGeventTimerObject, type PyGeventTimer
         libev.ev_timer_again(self.loop._ptr, &self._watcher)
         PYTHON_INCREF
 
+    property remaining:
+
+        def __get__(self):
+            return  libev.ev_timer_remaining(self.loop._ptr, &self._watcher)
 
 cdef public class signal(watcher) [object PyGeventSignalObject, type PyGeventSignal_Type]:
 

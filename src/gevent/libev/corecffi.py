@@ -961,6 +961,10 @@ class timer(watcher):
         finally:
             del self._watcher_start
 
+    @property
+    def remaining(self):
+        return watcher.remaining
+
 
 class signal(watcher):
     _watcher_type = 'ev_signal'

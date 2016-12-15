@@ -151,6 +151,10 @@ class Timeout(BaseException):
         else:  # regular timeout with user-provided exception
             self.timer.start(getcurrent().throw, self.exception)
 
+    @property
+    def remaining(self):
+        return self.timer.remaining
+
     @classmethod
     def start_new(cls, timeout=None, exception=None, ref=True):
         """Create a started :class:`Timeout`.
