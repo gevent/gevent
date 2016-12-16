@@ -12,10 +12,11 @@ behave in the same way as the original (at least as closely as possible).
 
 The primary interface to this is the :func:`patch_all` function, which
 performs all the available patches. It accepts arguments to limit the
-patching to certain modules, but most programs will want to use the
-default values as they receive the most wide-spread testing.
+patching to certain modules, but most programs **should** use the
+default values as they receive the most wide-spread testing, and some monkey
+patches have dependencies on others.
 
-Patching *should be done as early as possible* in the lifecycle of the
+Patching **should be done as early as possible** in the lifecycle of the
 program. For example, the main module (the one that tests against
 ``__main__`` or is otherwise the first imported) should begin with
 this code, ideally before any other imports::
@@ -217,8 +218,12 @@ def patch_os():
     environment variable ``GEVENT_NOWAITPID`` is not defined). Does
     nothing if fork is not available.
 
-    This method must be used with :func:`patch_signal` to have proper SIGCHLD
-    handling. :func:`patch_all` calls both by default.
+    .. caution:: This method must be used with :func:`patch_signal` to have proper SIGCHLD
+         handling and thus correct results from ``waitpid``.
+         :func:`patch_all` calls both by default.
+
+    .. caution:: For SIGCHLD handling to work correctly, the event loop must run.
+         The easiest way to help ensure this is to use :func:`patch_all`.
     """
     patch_module('os')
 
@@ -551,8 +556,11 @@ def patch_signal():
     """
     Make the signal.signal function work with a monkey-patched os.
 
-    This method must be used with :func:`patch_os` to have proper SIGCHLD
-    handling. :func:`patch_all` calls both by default.
+    .. caution:: This method must be used with :func:`patch_os` to have proper SIGCHLD
+         handling. :func:`patch_all` calls both by default.
+
+    .. caution:: For proper SIGCHLD handling, you must yield to the event loop.
+         Using :func:`patch_all` is the easiest way to ensure this.
 
     .. seealso:: :mod:`gevent.signal`
     """
