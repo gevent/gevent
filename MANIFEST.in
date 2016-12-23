@@ -21,10 +21,13 @@ include _setup*.py
 
 include tox.ini
 include .pep8
+include .pylintrc
+recursive-include .github *.md
 recursive-include benchmarks *.sh
 recursive-include appveyor *.cmd
 recursive-include appveyor *.ps1
-recursive-include scripts *.sh
+recursive-include scripts *.sh *.py
+include scripts/releases/make-manylinux
 
 ### Artifacts of configuring/building in place
 # These we want, they come from the Makefile step
@@ -51,3 +54,4 @@ recursive-exclude src/gevent _corecffi.c
 # See comments in Makefile; this is renamed to Makefile.ext
 # this exclude keeps check-manifest from complaining
 exclude Makefile
+exclude configure-output
