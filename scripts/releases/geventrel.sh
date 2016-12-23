@@ -26,8 +26,8 @@ echo "Made tmpenv"
 echo `pwd`
 source bin/activate
 echo cloning $BASE
-git clone $BASE
-cd gevent
+git clone $BASE gevent
+cd ./gevent
 pip install -U pip
 pip install -U setuptools cython greenlet cffi
 pip install -U wheel
