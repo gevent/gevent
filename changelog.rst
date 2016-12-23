@@ -4,7 +4,7 @@
 
 .. currentmodule:: gevent
 
-1.2b1 (unreleased)
+1.2.0 (2016-12-23)
 ==================
 
 - The c-ares DNS resolver ignores bad flags to getnameinfo, like the
