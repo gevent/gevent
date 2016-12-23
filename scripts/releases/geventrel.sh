@@ -15,13 +15,18 @@ unset CFLAGS
 unset CXXFLAGS
 unset CPPFLAGS
 
+BASE=`pwd`/../../
+BASE=`greadlink -f $BASE`
+
+
 cd /tmp/gevent
 virtualenv -p $1 `basename $1`
 cd `basename $1`
 echo "Made tmpenv"
 echo `pwd`
 source bin/activate
-git clone https://github.com/gevent/gevent
+echo cloning $BASE
+git clone $BASE
 cd gevent
 pip install -U pip
 pip install -U setuptools cython greenlet cffi

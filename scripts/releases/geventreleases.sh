@@ -20,5 +20,9 @@ mkdir /tmp/gevent/
 # 3.5 is a python.org build, builds a 10_6_intel wheel
 ./geventrel.sh /usr/local/bin/python3.5
 
+# 3.6 is a python.org build, builds a 10_6_intel wheel
+./geventrel.sh /usr/local/bin/python3.6
+
+
 # PyPy 4.0
 ./geventrel.sh `which pypy`
