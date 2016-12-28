@@ -16,14 +16,35 @@ def helper():
 
 class Test(greentest.TestCase):
 
-    def test(self):
+    def _do_test(self, spawn):
         before = len(threading._active)
-        g = gevent.spawn(helper)
+        g = spawn(helper)
         gevent.sleep(0.1)
         self.assertEqual(len(threading._active), before + 1)
-        g.join()
+        try:
+            g.join()
+        except AttributeError:
+            while not g.dead:
+                gevent.sleep()
+            # Raw greenlet has no join(), uses a weakref to cleanup.
+            # so the greenlet has to die. On CPython, it's enough to
+            # simply delete our reference.
+            del g
+            # On PyPy, it might take a GC, but for some reason, even
+            # running several GC's doesn't clean it up under 5.6.0.
+            # So we skip the test.
+            #import gc
+            #gc.collect()
+
         self.assertEqual(len(threading._active), before)
 
+
+    def test_cleanup_gevent(self):
+        self._do_test(gevent.spawn)
+
+    @greentest.skipOnPyPy("weakref is not cleaned up in a timely fashion")
+    def test_cleanup_raw(self):
+        self._do_test(gevent.spawn_raw)
 
 if __name__ == '__main__':
     greentest.main()

@@ -4,6 +4,17 @@
 
 .. currentmodule:: gevent
 
+1.2.1 (unreleased)
+==================
+
+- The ``_DummyThread`` objects created by calling
+  :func:`threading.current_thread` from inside a raw
+  :class:`greenlet.greenlet` now clean up after themselves when the
+  greenlet dies (:class:`gevent.Greenlet`-based ``_DummyThreads`` have
+  always cleaned up). This requires the use of a :class:`weakref.ref`
+  (and may not be timely on PyPy).
+  Reported in :issue:`918` by frozenoctobeer.
+
 1.2.0 (2016-12-23)
 ==================
 
