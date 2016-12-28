@@ -18,7 +18,6 @@ src/greentest/.coverage\.*
 src/greentest/htmlcov
 src/greentest/.coverage
 
-doc/changelog.rst
 doc/_build
 doc/__pycache__
 doc/gevent.*.rst

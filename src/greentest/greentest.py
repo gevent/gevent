@@ -96,6 +96,11 @@ RUNNING_ON_TRAVIS = os.environ.get('TRAVIS')
 RUNNING_ON_APPVEYOR = os.environ.get('APPVEYOR')
 RUNNING_ON_CI = RUNNING_ON_TRAVIS or RUNNING_ON_APPVEYOR
 
+def _do_not_skip(reason):
+    def dec(f):
+        return f
+    return dec
+
 if RUNNING_ON_APPVEYOR:
     # See comments scattered around about timeouts and the timer
     # resolution available on appveyor (lots of jitter). this
@@ -110,19 +115,18 @@ if RUNNING_ON_APPVEYOR:
     # 'develop' mode (i.e., we install)
     NON_APPLICABLE_SUFFIXES.append('corecext')
 else:
-    def skipOnAppVeyor(reason):
-        def dec(f):
-            return f
-        return dec
+    skipOnAppVeyor = _do_not_skip
 
 if PYPY3 and RUNNING_ON_CI:
     # Same as above, for PyPy3.3-5.5-alpha
     skipOnPyPy3OnCI = unittest.skip
 else:
-    def skipOnPyPy3OnCI(reason):
-        def dec(f):
-            return f
-        return dec
+    skipOnPyPy3OnCI = _do_not_skip
+
+if PYPY:
+    skipOnPyPy = unittest.skip
+else:
+    skipOnPyPy = _do_not_skip
 
 EXPECT_POOR_TIMER_RESOLUTION = PYPY3 or RUNNING_ON_APPVEYOR
 

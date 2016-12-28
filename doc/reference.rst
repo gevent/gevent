@@ -19,6 +19,7 @@ API reference
    gevent.server
    gevent.subprocess
    gevent.thread
+   gevent.threading
    gevent.threadpool
    gevent.util
    lowlevel

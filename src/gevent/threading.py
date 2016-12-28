@@ -1,3 +1,13 @@
+"""
+Implementation of the standard :mod:`threading` using greenlets.
+
+.. note::
+
+    This module is a helper for :mod:`gevent.monkey` and is not
+    intended to be used directly. For spawning greenlets in your
+    applications, prefer higher level constructs like
+    :class:`gevent.Greenlet` class or :func:`gevent.spawn`.
+"""
 from __future__ import absolute_import
 
 
@@ -33,6 +43,12 @@ Lock = _allocate_lock
 def _cleanup(g):
     __threading__._active.pop(id(g), None)
 
+def _make_cleanup_id(gid):
+    def _(_r):
+        __threading__._active.pop(gid, None)
+    return _
+
+_weakref = None
 
 class _DummyThread(_DummyThread_):
     # We avoid calling the superclass constructor. This makes us about
@@ -80,11 +96,22 @@ class _DummyThread(_DummyThread_):
         self._name = self._Thread__name = __threading__._newname("DummyThread-%d")
         self._set_ident()
 
-        __threading__._active[_get_ident()] = self
         g = getcurrent()
+        gid = _get_ident(g) # same as id(g)
+        __threading__._active[gid] = self
         rawlink = getattr(g, 'rawlink', None)
         if rawlink is not None:
+            # raw greenlet.greenlet greenlets don't
+            # have rawlink...
             rawlink(_cleanup)
+        else:
+            # ... so for them we use weakrefs.
+            # See https://github.com/gevent/gevent/issues/918
+            global _weakref
+            if _weakref is None:
+                _weakref = __import__('weakref')
+            ref = _weakref.ref(g, _make_cleanup_id(gid))
+            self.__raw_ref = ref
 
     def _Thread__stop(self):
         pass
