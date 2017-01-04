@@ -654,9 +654,17 @@ if hasattr(_socket, "socketpair"):
         a = socket(family, type, proto, a.detach())
         b = socket(family, type, proto, b.detach())
         return a, b
+
 elif sys.version_info[:2] >= (3, 6):
     # Origin: https://gist.github.com/4325783, by Geert Jansen.  Public domain.
+
     # gevent: taken from 3.6 release. Expected to be used only on Win/3.6
+    # gevent: for testing on < 3.5, pass the default value of 128 to lsock.listen()
+    # (3.5+ uses this as a default and the original code passed no value)
+    # gevent: TODO: Expose this for all versions?
+    _LOCALHOST = '127.0.0.1'
+    _LOCALHOST_V6 = '::1'
+
     def socketpair(family=AF_INET, type=SOCK_STREAM, proto=0):
         if family == AF_INET:
             host = _LOCALHOST
@@ -675,7 +683,7 @@ elif sys.version_info[:2] >= (3, 6):
         lsock = socket(family, type, proto)
         try:
             lsock.bind((host, 0))
-            lsock.listen()
+            lsock.listen(128)
             # On IPv6, ignore flow_info and scope_id
             addr, port = lsock.getsockname()[:2]
             csock = socket(family, type, proto)
