@@ -105,7 +105,7 @@ travis_test_linters:
 BUILD_RUNTIMES?=$(PWD)/.runtimes
 
 PY278=$(BUILD_RUNTIMES)/snakepit/python2.7.8
-PY27=$(BUILD_RUNTIMES)/snakepit/python2.7
+PY27=$(BUILD_RUNTIMES)/snakepit/python2.7.13
 PY34=$(BUILD_RUNTIMES)/snakepit/python3.4.5
 PY35=$(BUILD_RUNTIMES)/snakepit/python3.5.2
 PY36=$(BUILD_RUNTIMES)/snakepit/python3.6.0
@@ -159,10 +159,10 @@ develop:
 	${PIP} install -U -r dev-requirements.txt
 
 lint-py27: $(PY27)
-	PYTHON=python2.7 PATH=$(BUILD_RUNTIMES)/versions/python2.7/bin:$(PATH) make develop travis_test_linters
+	PYTHON=python2.7.13 PATH=$(BUILD_RUNTIMES)/versions/python2.7.13/bin:$(PATH) make develop travis_test_linters
 
 test-py27: $(PY27)
-	PYTHON=python2.7 PATH=$(BUILD_RUNTIMES)/versions/python2.7/bin:$(PATH) make develop fulltoxtest
+	PYTHON=python2.7.13 PATH=$(BUILD_RUNTIMES)/versions/python2.7.13/bin:$(PATH) make develop fulltoxtest
 
 test-py278: $(PY278)
 	ls $(BUILD_RUNTIMES)/versions/python2.7.8/bin/

@@ -8,6 +8,7 @@ import os
 import sys
 import re
 import base64
+import ntpath
 import shutil
 import urllib
 import httplib
@@ -177,6 +178,12 @@ class BaseHTTPServerTestCase(BaseTestCase):
             self.send_header('Connection', 'close')
             self.end_headers()
 
+        def do_SEND_ERROR(self):
+            self.send_error(int(self.path[1:]))
+
+        def do_HEAD(self):
+            self.send_error(int(self.path[1:]))
+
     def setUp(self):
         BaseTestCase.setUp(self)
         self.con = httplib.HTTPConnection('localhost', self.PORT)
@@ -275,6 +282,38 @@ class BaseHTTPServerTestCase(BaseTestCase):
         res = self.con.getresponse()
         self.assertEqual(res.status, 999)
 
+    def test_send_error(self):
+        allow_transfer_encoding_codes = (205, 304)
+        for code in (101, 102, 204, 205, 304):
+            self.con.request('SEND_ERROR', '/{}'.format(code))
+            res = self.con.getresponse()
+            self.assertEqual(code, res.status)
+            self.assertEqual(None, res.getheader('Content-Length'))
+            self.assertEqual(None, res.getheader('Content-Type'))
+            if code not in allow_transfer_encoding_codes:
+                self.assertEqual(None, res.getheader('Transfer-Encoding'))
+
+            data = res.read()
+            self.assertEqual(b'', data)
+
+    def test_head_via_send_error(self):
+        allow_transfer_encoding_codes = (205, 304)
+        for code in (101, 200, 204, 205, 304):
+            self.con.request('HEAD', '/{}'.format(code))
+            res = self.con.getresponse()
+            self.assertEqual(code, res.status)
+            if code == 200:
+                self.assertEqual(None, res.getheader('Content-Length'))
+                self.assertIn('text/html', res.getheader('Content-Type'))
+            else:
+                self.assertEqual(None, res.getheader('Content-Length'))
+                self.assertEqual(None, res.getheader('Content-Type'))
+            if code not in allow_transfer_encoding_codes:
+                self.assertEqual(None, res.getheader('Transfer-Encoding'))
+
+            data = res.read()
+            self.assertEqual(b'', data)
+
 
 class SimpleHTTPServerTestCase(BaseTestCase):
     class request_handler(NoLogRequestHandler, SimpleHTTPRequestHandler):
@@ -288,6 +327,7 @@ class SimpleHTTPServerTestCase(BaseTestCase):
         self.data = 'We are the knights who say Ni!'
         self.tempdir = tempfile.mkdtemp(dir=basetempdir)
         self.tempdir_name = os.path.basename(self.tempdir)
+        self.base_url = '/' + self.tempdir_name
         temp = open(os.path.join(self.tempdir, 'test'), 'wb')
         temp.write(self.data)
         temp.close()
@@ -312,39 +352,39 @@ class SimpleHTTPServerTestCase(BaseTestCase):
 
     def test_get(self):
         #constructs the path relative to the root directory of the HTTPServer
-        response = self.request(self.tempdir_name + '/test')
+        response = self.request(self.base_url + '/test')
         self.check_status_and_reason(response, 200, data=self.data)
         # check for trailing "/" which should return 404. See Issue17324
-        response = self.request(self.tempdir_name + '/test/')
+        response = self.request(self.base_url + '/test/')
         self.check_status_and_reason(response, 404)
-        response = self.request(self.tempdir_name + '/')
+        response = self.request(self.base_url + '/')
         self.check_status_and_reason(response, 200)
-        response = self.request(self.tempdir_name)
+        response = self.request(self.base_url)
         self.check_status_and_reason(response, 301)
-        response = self.request(self.tempdir_name + '/?hi=2')
+        response = self.request(self.base_url + '/?hi=2')
         self.check_status_and_reason(response, 200)
-        response = self.request(self.tempdir_name + '?hi=1')
+        response = self.request(self.base_url + '?hi=1')
         self.check_status_and_reason(response, 301)
         self.assertEqual(response.getheader("Location"),
-                         self.tempdir_name + "/?hi=1")
+                         self.base_url + "/?hi=1")
         response = self.request('/ThisDoesNotExist')
         self.check_status_and_reason(response, 404)
         response = self.request('/' + 'ThisDoesNotExist' + '/')
         self.check_status_and_reason(response, 404)
         with open(os.path.join(self.tempdir_name, 'index.html'), 'w') as fp:
-            response = self.request('/' + self.tempdir_name + '/')
+            response = self.request(self.base_url + '/')
             self.check_status_and_reason(response, 200)
             # chmod() doesn't work as expected on Windows, and filesystem
             # permissions are ignored by root on Unix.
             if os.name == 'posix' and os.geteuid() != 0:
                 os.chmod(self.tempdir, 0)
-                response = self.request(self.tempdir_name + '/')
+                response = self.request(self.base_url + '/')
                 self.check_status_and_reason(response, 404)
                 os.chmod(self.tempdir, 0755)
 
     def test_head(self):
         response = self.request(
-            self.tempdir_name + '/test', method='HEAD')
+            self.base_url + '/test', method='HEAD')
         self.check_status_and_reason(response, 200)
         self.assertEqual(response.getheader('content-length'),
                          str(len(self.data)))
@@ -359,6 +399,22 @@ class SimpleHTTPServerTestCase(BaseTestCase):
         self.check_status_and_reason(response, 501)
         response = self.request('/', method='GETs')
         self.check_status_and_reason(response, 501)
+
+    def test_path_without_leading_slash(self):
+        response = self.request(self.tempdir_name + '/test')
+        self.check_status_and_reason(response, 200, data=self.data)
+        response = self.request(self.tempdir_name + '/test/')
+        self.check_status_and_reason(response, 404)
+        response = self.request(self.tempdir_name + '/')
+        self.check_status_and_reason(response, 200)
+        response = self.request(self.tempdir_name)
+        self.check_status_and_reason(response, 301)
+        response = self.request(self.tempdir_name + '/?hi=2')
+        self.check_status_and_reason(response, 200)
+        response = self.request(self.tempdir_name + '?hi=1')
+        self.check_status_and_reason(response, 301)
+        self.assertEqual(response.getheader("Location"),
+                         self.tempdir_name + "/?hi=1")
 
 
 cgi_file1 = """\
@@ -386,7 +442,7 @@ cgi_file4 = """\
 import os
 
 print("Content-type: text/html")
-print()
+print("")
 
 print(os.environ["%s"])
 """
@@ -586,6 +642,25 @@ class SimpleHTTPRequestHandlerTestCase(unittest.TestCase):
         self.assertEqual(path, self.translated)
         path = self.handler.translate_path('//filename?foo=bar')
         self.assertEqual(path, self.translated)
+
+    def test_windows_colon(self):
+        import SimpleHTTPServer
+        with test_support.swap_attr(SimpleHTTPServer.os, 'path', ntpath):
+            path = self.handler.translate_path('c:c:c:foo/filename')
+            path = path.replace(ntpath.sep, os.sep)
+            self.assertEqual(path, self.translated)
+
+            path = self.handler.translate_path('\\c:../filename')
+            path = path.replace(ntpath.sep, os.sep)
+            self.assertEqual(path, self.translated)
+
+            path = self.handler.translate_path('c:\\c:..\\foo/filename')
+            path = path.replace(ntpath.sep, os.sep)
+            self.assertEqual(path, self.translated)
+
+            path = self.handler.translate_path('c:c:foo\\c:c:bar/filename')
+            path = path.replace(ntpath.sep, os.sep)
+            self.assertEqual(path, self.translated)
 
 
 def test_main(verbose=None):
