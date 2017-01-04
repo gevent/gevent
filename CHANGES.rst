@@ -7,6 +7,7 @@
 1.2.1 (unreleased)
 ==================
 
+- CI services now test on 3.6.0.
 - The ``_DummyThread`` objects created by calling
   :func:`threading.current_thread` from inside a raw
   :class:`greenlet.greenlet` now clean up after themselves when the
