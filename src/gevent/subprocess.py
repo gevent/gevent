@@ -144,7 +144,7 @@ if sys.version_info[:2] >= (3, 5):
 if sys.version_info[:2] >= (3, 6):
     # This was added to __all__ for windows in 3.6
     __extra__.remove('STARTUPINFO')
-    __implements__.append('STARTUPINFO')
+    __imports__.append('STARTUPINFO')
 
 actually_imported = copy_globals(__subprocess__, globals(),
                                  only_names=__imports__,
