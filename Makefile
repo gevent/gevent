@@ -108,7 +108,7 @@ PY278=$(BUILD_RUNTIMES)/snakepit/python2.7.8
 PY27=$(BUILD_RUNTIMES)/snakepit/python2.7
 PY34=$(BUILD_RUNTIMES)/snakepit/python3.4.5
 PY35=$(BUILD_RUNTIMES)/snakepit/python3.5.2
-PY36=$(BUILD_RUNTIMES)/snakepit/python3.6b4
+PY36=$(BUILD_RUNTIMES)/snakepit/python3.6.0
 PYPY=$(BUILD_RUNTIMES)/snakepit/pypy56
 PYPY3=$(BUILD_RUNTIMES)/snakepit/pypy3.3_5.5
 
@@ -175,7 +175,7 @@ test-py35: $(PY35)
 	PYTHON=python3.5.2 PIP=pip PATH=$(BUILD_RUNTIMES)/versions/python3.5.2/bin:$(PATH) make develop fulltoxtest
 
 test-py36: $(PY36)
-	PYTHON=python3.6b4 PIP=pip PATH=$(BUILD_RUNTIMES)/versions/python3.6b4/bin:$(PATH) make develop toxtest
+	PYTHON=python3.6.0 PIP=pip PATH=$(BUILD_RUNTIMES)/versions/python3.6.0/bin:$(PATH) make develop toxtest
 
 test-pypy: $(PYPY)
 	PYTHON=$(PYPY) PIP=pip PATH=$(BUILD_RUNTIMES)/versions/pypy56/bin:$(PATH) make develop toxtest
