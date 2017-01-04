@@ -251,6 +251,12 @@ if sys.version_info[:3] <= (2, 7, 8):
         'test_threading_local.PyThreadingLocalTests.test_derived',
         'test_urllib.UtilityTests.test_toBytes',
         'test_httplib.HTTPSTest.test_networked_trusted_by_default_cert',
+
+        # Exposed as broken with the update of test_httpservers.py to 2.7.13
+        'test_httpservers.SimpleHTTPRequestHandlerTestCase.test_windows_colon',
+        'test_httpservers.BaseHTTPServerTestCase.test_head_via_send_error',
+        'test_httpservers.BaseHTTPServerTestCase.test_send_error',
+        'test_httpservers.SimpleHTTPServerTestCase.test_path_without_leading_slash',
     ]
 
 
