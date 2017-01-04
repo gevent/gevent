@@ -8,6 +8,9 @@
 ==================
 
 - CI services now test on 3.6.0.
+- Windows: Provide ``socket.socketpair`` on 3.6.
+- Windows: List ``subprocess.STARTUPINFO`` in ``subprocess.__all__``
+  on 3.6.
 - The ``_DummyThread`` objects created by calling
   :func:`threading.current_thread` from inside a raw
   :class:`greenlet.greenlet` now clean up after themselves when the
