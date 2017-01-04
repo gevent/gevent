@@ -15,6 +15,12 @@ unset CFLAGS
 unset CXXFLAGS
 unset CPPFLAGS
 
+# If we're building on 10.12, we have to exclude clock_gettime
+# because it's not available on earlier releases and leads to
+# segfaults because the symbol clock_gettime is NULL.
+# See https://github.com/gevent/gevent/issues/916
+export CPPFLAGS="-D_DARWIN_FEATURE_CLOCK_GETTIME=0"
+
 BASE=`pwd`/../../
 BASE=`greadlink -f $BASE`
 
