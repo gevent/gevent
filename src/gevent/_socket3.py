@@ -713,8 +713,6 @@ else:
             # was successfully imported, leading to subsequent imports to cause
             # ValueError
             __implements__.remove('socketpair')
-        if 'socketpair' not in __extensions__:
-            __extensions__.append('socketpair')
 
 
 # PyPy needs drop and reuse
