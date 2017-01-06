@@ -8,9 +8,12 @@
 ==================
 
 - CI services now test on 3.6.0.
-- Windows: Provide ``socket.socketpair`` on 3.6.
+- Windows: Provide ``socket.socketpair`` for all Python 3 versions.
+  This was added to Python 3.5, but tests were only added in 3.6.
+  (For versions older than 3.4 this is a gevent extension.) Previously
+  this was not supported on any Python 3 version.
 - Windows: List ``subprocess.STARTUPINFO`` in ``subprocess.__all__``
-  on 3.6.
+  for 3.6 compatibility.
 - The ``_DummyThread`` objects created by calling
   :func:`threading.current_thread` from inside a raw
   :class:`greenlet.greenlet` now clean up after themselves when the

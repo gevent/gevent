@@ -644,6 +644,10 @@ if hasattr(_socket, "socketpair"):
         socketpair() function.
         The arguments are the same as for socket() except the default family is
         AF_UNIX if defined on the platform; otherwise, the default is AF_INET.
+
+        .. versionchanged:: 1.2
+           All Python 3 versions on Windows supply this function (natively
+           supplied by Python 3.5 and above).
         """
         if family is None:
             try:
@@ -655,13 +659,13 @@ if hasattr(_socket, "socketpair"):
         b = socket(family, type, proto, b.detach())
         return a, b
 
-elif sys.version_info[:2] >= (3, 6):
+else:
     # Origin: https://gist.github.com/4325783, by Geert Jansen.  Public domain.
 
-    # gevent: taken from 3.6 release. Expected to be used only on Win/3.6
-    # gevent: for testing on < 3.5, pass the default value of 128 to lsock.listen()
+    # gevent: taken from 3.6 release. Expected to be used only on Win. Added to Win/3.5
+    # gevent: for < 3.5, pass the default value of 128 to lsock.listen()
     # (3.5+ uses this as a default and the original code passed no value)
-    # gevent: TODO: Expose this for all versions?
+
     _LOCALHOST = '127.0.0.1'
     _LOCALHOST_V6 = '::1'
 
@@ -702,12 +706,15 @@ elif sys.version_info[:2] >= (3, 6):
             lsock.close()
         return (ssock, csock)
 
-elif 'socketpair' in __implements__:
-    # Win32: not available prior to 3.6
-    # Multiple imports can cause this to be missing if _socketcommon
-    # was successfully imported, leading to subsequent imports to cause
-    # ValueError
-    __implements__.remove('socketpair')
+    if sys.version_info[:2] < (3, 5):
+        # Not provided natively
+        if 'socketpair' in __implements__:
+            # Multiple imports can cause this to be missing if _socketcommon
+            # was successfully imported, leading to subsequent imports to cause
+            # ValueError
+            __implements__.remove('socketpair')
+        if 'socketpair' not in __extensions__:
+            __extensions__.append('socketpair')
 
 
 # PyPy needs drop and reuse
