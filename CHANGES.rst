@@ -4,7 +4,7 @@
 
 .. currentmodule:: gevent
 
-1.2.1 (unreleased)
+1.2.1 (2017-01-12)
 ==================
 
 - CI services now test on 3.6.0.
