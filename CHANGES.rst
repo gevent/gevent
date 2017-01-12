@@ -16,11 +16,15 @@
   for 3.6 compatibility.
 - The ``_DummyThread`` objects created by calling
   :func:`threading.current_thread` from inside a raw
-  :class:`greenlet.greenlet` now clean up after themselves when the
+  :class:`greenlet.greenlet` in a system with monkey-patched
+  ``threading`` now clean up after themselves when the
   greenlet dies (:class:`gevent.Greenlet`-based ``_DummyThreads`` have
   always cleaned up). This requires the use of a :class:`weakref.ref`
   (and may not be timely on PyPy).
   Reported in :issue:`918` by frozenoctobeer.
+- Build OS X wheels with ``-D_DARWIN_FEATURE_CLOCK_GETTIME=0`` for
+  compatibility with OS X releases before 10.12 Sierra. Reported by
+  Ned Batchelder in :issue:`916`.
 
 1.2.0 (2016-12-23)
 ==================
