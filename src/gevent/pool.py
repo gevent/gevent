@@ -373,7 +373,7 @@ class GroupMappingMixin(object):
         :keyword int maxsize: If given and not-None, specifies the maximum number of
             finished results that will be allowed to accumulate awaiting the reader;
             more than that number of results will cause map function greenlets to begin
-            to block. This is most useful is there is a great disparity in the speed of
+            to block. This is most useful if there is a great disparity in the speed of
             the mapping code and the consumer and the results consume a great deal of resources.
 
             .. note:: This is separate from any bound on the number of active parallel
