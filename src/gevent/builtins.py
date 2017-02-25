@@ -35,7 +35,7 @@ _import = builtins.__import__
 # could lead to a LoopExit error as a greenlet attempts to block on it while
 # it's already held by the main greenlet (issue #798).
 
-# We base this approach on a simplification of what `importlib._boonstrap`
+# We base this approach on a simplification of what `importlib._bootstrap`
 # does; notably, we don't check for deadlocks
 
 _g_import_locks = {} # name -> wref of RLock
