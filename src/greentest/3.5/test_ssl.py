@@ -23,6 +23,9 @@ ssl = support.import_module("ssl")
 
 PROTOCOLS = sorted(ssl._PROTOCOL_NAMES)
 HOST = support.HOST
+IS_LIBRESSL = ssl.OPENSSL_VERSION.startswith('LibreSSL')
+IS_OPENSSL_1_1 = not IS_LIBRESSL and ssl.OPENSSL_VERSION_INFO >= (1, 1, 0)
+
 
 def data_file(*name):
     return os.path.join(os.path.dirname(__file__), *name)
@@ -68,6 +71,7 @@ NULLBYTECERT = data_file("nullbytecert.pem")
 DHFILE = data_file("dh1024.pem")
 BYTES_DHFILE = os.fsencode(DHFILE)
 
+PY353plus = sys.version_info[:3] >= (3, 5, 3)
 
 def handle_error(prefix):
     exc_format = ' '.join(traceback.format_exception(*sys.exc_info()))
@@ -144,7 +148,10 @@ class BasicSocketTests(unittest.TestCase):
         # Make sure that the PROTOCOL_* constants have enum-like string
         # reprs.
         proto = ssl.PROTOCOL_SSLv23
-        self.assertEqual(str(proto), '_SSLMethod.PROTOCOL_SSLv23')
+        if PY353plus:
+            self.assertEqual(str(proto), '_SSLMethod.PROTOCOL_TLS')
+        else:
+            self.assertEqual(str(proto), '_SSLMethod.PROTOCOL_SSLv23')
         ctx = ssl.SSLContext(proto)
         self.assertIs(ctx.protocol, proto)
 
@@ -312,8 +319,8 @@ class BasicSocketTests(unittest.TestCase):
         self.assertGreaterEqual(status, 0)
         self.assertLessEqual(status, 15)
         # Version string as returned by {Open,Libre}SSL, the format might change
-        if "LibreSSL" in s:
-            self.assertTrue(s.startswith("LibreSSL {:d}.{:d}".format(major, minor)),
+        if IS_LIBRESSL:
+            self.assertTrue(s.startswith("LibreSSL {:d}".format(major)),
                             (s, t, hex(n)))
         else:
             self.assertTrue(s.startswith("OpenSSL {:d}.{:d}.{:d}".format(major, minor, fix)),
@@ -790,7 +797,11 @@ class ContextTests(unittest.TestCase):
     def test_constructor(self):
         for protocol in PROTOCOLS:
             ssl.SSLContext(protocol)
-        self.assertRaises(TypeError, ssl.SSLContext)
+        if PY353plus:
+            ctx = ssl.SSLContext()
+            self.assertEqual(ctx.protocol, ssl.PROTOCOL_TLS)
+        else:
+            self.assertRaises(TypeError, ssl.SSLContext)
         self.assertRaises(ValueError, ssl.SSLContext, -1)
         self.assertRaises(ValueError, ssl.SSLContext, 42)
 
@@ -1749,13 +1760,19 @@ class NetworkedBIOTests(unittest.TestCase):
             sslobj = ctx.wrap_bio(incoming, outgoing, False, REMOTE_HOST)
             self.assertIs(sslobj._sslobj.owner, sslobj)
             self.assertIsNone(sslobj.cipher())
-            self.assertIsNone(sslobj.shared_ciphers())
+            if PY353plus:
+                self.assertIsNotNone(sslobj.shared_ciphers())
+            else:
+                self.assertIsNone(sslobj.shared_ciphers())
             self.assertRaises(ValueError, sslobj.getpeercert)
             if 'tls-unique' in ssl.CHANNEL_BINDING_TYPES:
                 self.assertIsNone(sslobj.get_channel_binding('tls-unique'))
             self.ssl_io_loop(sock, incoming, outgoing, sslobj.do_handshake)
             self.assertTrue(sslobj.cipher())
-            self.assertIsNone(sslobj.shared_ciphers())
+            if PY353plus:
+                self.assertIsNotNone(sslobj.shared_ciphers())
+            else:
+                self.assertIsNone(sslobj.shared_ciphers())
             self.assertTrue(sslobj.getpeercert())
             if 'tls-unique' in ssl.CHANNEL_BINDING_TYPES:
                 self.assertTrue(sslobj.get_channel_binding('tls-unique'))
@@ -3268,13 +3285,29 @@ else:
             client_context = ssl.SSLContext(ssl.PROTOCOL_TLSv1)
             client_context.verify_mode = ssl.CERT_REQUIRED
             client_context.load_verify_locations(SIGNING_CA)
-            client_context.set_ciphers("RC4")
-            server_context.set_ciphers("AES:RC4")
+            if PY353plus:
+                if ssl.OPENSSL_VERSION_INFO >= (1, 0, 2):
+                    client_context.set_ciphers("AES128:AES256")
+                    server_context.set_ciphers("AES256")
+                    alg1 = "AES256"
+                    alg2 = "AES-256"
+                else:
+                    client_context.set_ciphers("AES:3DES")
+                    server_context.set_ciphers("3DES")
+                    alg1 = "3DES"
+                    alg2 = "DES-CBC3"
+            else:
+                client_context.set_ciphers("RC4")
+                server_context.set_ciphers("AES:RC4")
             stats = server_params_test(client_context, server_context)
             ciphers = stats['server_shared_ciphers'][0]
             self.assertGreater(len(ciphers), 0)
             for name, tls_version, bits in ciphers:
-                self.assertIn("RC4", name.split("-"))
+                if PY353plus:
+                    if not alg1 in name.split("-") and alg2 not in name:
+                        self.fail(name)
+                else:
+                    self.assertIn("RC4", name.split("-"))
 
         def test_read_write_after_close_raises_valuerror(self):
             context = ssl.SSLContext(ssl.PROTOCOL_SSLv23)
