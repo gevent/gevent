@@ -97,7 +97,7 @@ for var in "$@"; do
       install 3.4.5 python3.4.5
       ;;
     3.5)
-      install 3.5.2 python3.5.2
+      install 3.5.3 python3.5.3
       ;;
     3.6)
       install 3.6.0 python3.6.0

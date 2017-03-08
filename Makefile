@@ -107,7 +107,7 @@ BUILD_RUNTIMES?=$(PWD)/.runtimes
 PY278=$(BUILD_RUNTIMES)/snakepit/python2.7.8
 PY27=$(BUILD_RUNTIMES)/snakepit/python2.7.13
 PY34=$(BUILD_RUNTIMES)/snakepit/python3.4.5
-PY35=$(BUILD_RUNTIMES)/snakepit/python3.5.2
+PY35=$(BUILD_RUNTIMES)/snakepit/python3.5.3
 PY36=$(BUILD_RUNTIMES)/snakepit/python3.6.0
 PYPY=$(BUILD_RUNTIMES)/snakepit/pypy56
 PYPY3=$(BUILD_RUNTIMES)/snakepit/pypy3.3_5.5
@@ -172,7 +172,7 @@ test-py34: $(PY34)
 	PYTHON=python3.4.5 PIP=pip PATH=$(BUILD_RUNTIMES)/versions/python3.4.5/bin:$(PATH) make develop toxtest
 
 test-py35: $(PY35)
-	PYTHON=python3.5.2 PIP=pip PATH=$(BUILD_RUNTIMES)/versions/python3.5.2/bin:$(PATH) make develop fulltoxtest
+	PYTHON=python3.5.3 PIP=pip PATH=$(BUILD_RUNTIMES)/versions/python3.5.3/bin:$(PATH) make develop fulltoxtest
 
 test-py36: $(PY36)
 	PYTHON=python3.6.0 PIP=pip PATH=$(BUILD_RUNTIMES)/versions/python3.6.0/bin:$(PATH) make develop toxtest
@@ -184,9 +184,9 @@ test-pypy3: $(PYPY3)
 	PYTHON=$(PYPY3) PIP=pip PATH=$(BUILD_RUNTIMES)/versions/pypy3.3_5.5/bin:$(PATH) make develop toxtest
 
 test-py27-cffi: $(PY27)
-	GEVENT_CORE_CFFI_ONLY=1 PYTHON=python2.7 PATH=$(BUILD_RUNTIMES)/versions/python2.7/bin:$(PATH) make develop toxtest
+	GEVENT_CORE_CFFI_ONLY=1 PYTHON=python2.7.13 PATH=$(BUILD_RUNTIMES)/versions/python2.7.13/bin:$(PATH) make develop toxtest
 
 test-py27-noembed: $(PY27)
 	cd deps/libev && ./configure --disable-dependency-tracking && make
 	cd deps/c-ares && ./configure --disable-dependency-tracking && make
-	CPPFLAGS="-Ideps/libev -Ideps/c-ares" LDFLAGS="-Ldeps/libev/.libs -Ldeps/c-ares/.libs" LD_LIBRARY_PATH="$(PWD)/deps/libev/.libs:$(PWD)/deps/c-ares/.libs" EMBED=0 GEVENT_CORE_CEXT_ONLY=1 PYTHON=python2.7 PATH=$(BUILD_RUNTIMES)/versions/python2.7/bin:$(PATH) make develop toxtest
+	CPPFLAGS="-Ideps/libev -Ideps/c-ares" LDFLAGS="-Ldeps/libev/.libs -Ldeps/c-ares/.libs" LD_LIBRARY_PATH="$(PWD)/deps/libev/.libs:$(PWD)/deps/c-ares/.libs" EMBED=0 GEVENT_CORE_CEXT_ONLY=1 PYTHON=python2.7.13 PATH=$(BUILD_RUNTIMES)/versions/python2.7.13/bin:$(PATH) make develop toxtest

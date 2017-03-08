@@ -520,6 +520,8 @@ if sys.version_info[:2] >= (3, 5):
         # XXX: Hangs
         'test_ssl.ThreadedTests.test_nonblocking_send',
         'test_ssl.ThreadedTests.test_socketserver',
+        # Uses direct sendfile, doesn't properly check for it being enabled
+        'test_socket.GeneralModuleTests.test__sendfile_use_sendfile',
         # Relies on the regex of the repr having the locked state (TODO: it'd be nice if
         # we did that).
         # XXX: These are commented out in the source code of test_threading because

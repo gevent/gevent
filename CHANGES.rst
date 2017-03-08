@@ -7,7 +7,8 @@
 1.2.2 (unreleased)
 ==================
 
-- TBD
+- Testing on Python 3.5 now uses Python 3.5.3 due to SSL changes. See
+  :issue:`943`.
 
 1.2.1 (2017-01-12)
 ==================
