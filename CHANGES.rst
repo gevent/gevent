@@ -9,6 +9,10 @@
 
 - Testing on Python 3.5 now uses Python 3.5.3 due to SSL changes. See
   :issue:`943`.
+- Python 2 sockets are compatible with the ``SOCK_CLOEXEC`` flag found
+  on Linux. They no longer pass the socket type or protocol to
+  ``getaddrinfo`` when ``connect`` is called. Reported in :issue:`944`
+  by Bernie Hackett.
 
 1.2.1 (2017-01-12)
 ==================

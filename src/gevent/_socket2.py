@@ -218,7 +218,7 @@ class socket(object):
             return self._sock.connect(address)
         sock = self._sock
         if isinstance(address, tuple):
-            r = getaddrinfo(address[0], address[1], sock.family, sock.type, sock.proto)
+            r = getaddrinfo(address[0], address[1], sock.family)
             address = r[0][-1]
         if self.timeout is not None:
             timer = Timeout.start_new(self.timeout, timeout('timed out'))
