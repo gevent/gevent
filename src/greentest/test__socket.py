@@ -5,6 +5,7 @@ import array
 import socket
 import traceback
 import time
+import unittest
 import greentest
 from functools import wraps
 import _six as six
@@ -212,7 +213,7 @@ class TestTCP(greentest.TestCase):
     def test_makefile(self):
 
         def accept_once():
-            conn, addr = self.listener.accept()
+            conn, _ = self.listener.accept()
             fd = conn.makefile(mode='wb')
             fd.write(b'hello\n')
             fd.close()
@@ -230,7 +231,7 @@ class TestTCP(greentest.TestCase):
     def test_makefile_timeout(self):
 
         def accept_once():
-            conn, addr = self.listener.accept()
+            conn, _ = self.listener.accept()
             try:
                 time.sleep(0.3)
             finally:
@@ -284,6 +285,32 @@ class TestTCP(greentest.TestCase):
         with self.assertRaises(OverflowError):
             s.connect_ex(('localhost', 65539))
         s.close()
+
+    @unittest.skipUnless(hasattr(socket, 'SOCK_CLOEXEC'),
+                         "Requires SOCK_CLOEXEC")
+    def test_connect_with_type_flags_ignored(self):
+        # Issue 944
+        # If we have SOCK_CLOEXEC or similar, we shouldn't be passing
+        # them through to the getaddrinfo call that connect() makes
+        SOCK_CLOEXEC = socket.SOCK_CLOEXEC
+        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM | SOCK_CLOEXEC)
+
+        def accept_once():
+            conn, _ = self.listener.accept()
+            fd = conn.makefile(mode='wb')
+            fd.write(b'hello\n')
+            fd.close()
+            conn.close()
+
+        acceptor = Thread(target=accept_once)
+        s.connect(('127.0.0.1', self.port))
+        fd = s.makefile(mode='rb')
+        self.assertEqual(fd.readline(), b'hello\n')
+
+        fd.close()
+        s.close()
+
+        acceptor.join()
 
 def get_port():
     tempsock = socket.socket()
