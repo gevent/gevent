@@ -45,7 +45,7 @@ IGNORE_COVERAGE = [
 ]
 
 
-def run_many(tests, expected=(), failfast=False):
+def run_many(tests, expected=(), failfast=False, quiet=False):
     # pylint:disable=too-many-locals
     global NWORKERS
     start = time.time()
@@ -59,6 +59,7 @@ def run_many(tests, expected=(), failfast=False):
     util.BUFFER_OUTPUT = NWORKERS > 1
 
     def run_one(cmd, **kwargs):
+        kwargs['quiet'] = quiet
         result = util.run(cmd, **kwargs)
         if result:
             if failfast:
@@ -84,7 +85,7 @@ def run_many(tests, expected=(), failfast=False):
         while reap() > 0:
             time.sleep(0.1)
 
-    def spawn(args, kwargs): # pylint:disable=unused-argument
+    def spawn(cmd, options):
         while True:
             if reap() < NWORKERS:
                 r = pool.apply_async(run_one, (cmd, ), options or {})
@@ -103,7 +104,7 @@ def run_many(tests, expected=(), failfast=False):
                 if matches(RUN_ALONE, cmd):
                     run_alone.append((cmd, options))
                 else:
-                    spawn((cmd, ), options)
+                    spawn(cmd, options)
             pool.close()
             pool.join()
 
@@ -276,6 +277,7 @@ def main():
     parser.add_option('--config')
     parser.add_option('--failfast', action='store_true')
     parser.add_option("--coverage", action="store_true")
+    parser.add_option("--quiet", action="store_true")
     options, args = parser.parse_args()
     FAILING_TESTS = []
     coverage = False
@@ -301,7 +303,7 @@ def main():
             print(util.getname(cmd, env=options.get('env'), setenv=options.get('setenv')))
         print('%s tests found.' % len(tests))
     else:
-        run_many(tests, expected=FAILING_TESTS, failfast=options.failfast)
+        run_many(tests, expected=FAILING_TESTS, failfast=options.failfast, quiet=options.quiet)
 
 
 if __name__ == '__main__':
