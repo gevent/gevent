@@ -12,6 +12,7 @@ import time
 runtimelog = []
 MIN_RUNTIME = 1.0
 BUFFER_OUTPUT = False
+QUIET = False
 
 
 class Popen(subprocess.Popen):
@@ -158,12 +159,11 @@ class RunResult(object):
         self.output = output
         self.name = name
 
-    if six.PY3:
-        def __bool__(self):
-            return bool(self.code)
-    else:
-        def __nonzero__(self):
-            return bool(self.code)
+
+    def __bool__(self):
+        return bool(self.code)
+
+    __nonzero__ = __bool__
 
     def __int__(self):
         return self.code
@@ -174,6 +174,8 @@ lock = threading.Lock()
 
 def run(command, **kwargs):
     buffer_output = kwargs.pop('buffer_output', BUFFER_OUTPUT)
+    quiet = kwargs.pop('quiet', QUIET)
+    verbose = not quiet
     if buffer_output:
         assert 'stdout' not in kwargs and 'stderr' not in kwargs, kwargs
         kwargs['stderr'] = subprocess.STDOUT
@@ -192,7 +194,8 @@ def run(command, **kwargs):
         kill(popen)
     assert not err
     with lock:
-        if out:
+        failed = bool(result)
+        if out and (failed or verbose):
             out = out.strip().decode('utf-8', 'ignore')
             if out:
                 out = '  ' + out.replace('\n', '\n  ')
