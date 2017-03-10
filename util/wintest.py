@@ -4,7 +4,7 @@ Unix utilities must be installed on target machine for this to work: http://unxu
 """
 import sys
 import os
-import optparse
+import argparse
 
 
 def system(cmd, exit=True):
@@ -16,13 +16,15 @@ def system(cmd, exit=True):
     return retcode
 
 
-parser = optparse.OptionParser()
-parser.add_option('--host')
-parser.add_option('--username', default='Administrator')
-parser.add_option('--source')
-parser.add_option('--dist', action='store_true')
-parser.add_option('--python', default='27')
-options, args = parser.parse_args()
+parser = argparse.ArgumentParser()
+parser.add_argument('--host')
+parser.add_argument('--username', default='Administrator')
+parser.add_argument('--source')
+parser.add_argument('--dist', action='store_true')
+parser.add_argument('--python', default='27')
+parser.add_argument('args', nargs='*')
+options = parser.parse_args()
+args = options.args
 
 
 def prepare():
