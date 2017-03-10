@@ -277,7 +277,7 @@ def main():
     parser.add_argument('--failfast', action='store_true')
     parser.add_argument("--coverage", action="store_true")
     parser.add_argument("--quiet", action="store_true")
-    parser.add_argument('tests', nargs='+')
+    parser.add_argument('tests', nargs='*')
     options = parser.parse_args()
     FAILING_TESTS = []
     coverage = False
