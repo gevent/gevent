@@ -13,6 +13,7 @@
   on Linux. They no longer pass the socket type or protocol to
   ``getaddrinfo`` when ``connect`` is called. Reported in :issue:`944`
   by Bernie Hackett.
+- Replace ``optparse`` module with ``argparse``. See :issue:`947`.
 
 1.2.1 (2017-01-12)
 ==================

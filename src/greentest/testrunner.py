@@ -268,17 +268,17 @@ def print_list(lst):
 
 
 def main():
-    # FIXME: transition to argparse
-    import optparse # pylint:disable=deprecated-module
-    parser = optparse.OptionParser()
-    parser.add_option('--ignore')
-    parser.add_option('--discover', action='store_true')
-    parser.add_option('--full', action='store_true')
-    parser.add_option('--config')
-    parser.add_option('--failfast', action='store_true')
-    parser.add_option("--coverage", action="store_true")
-    parser.add_option("--quiet", action="store_true")
-    options, args = parser.parse_args()
+    import argparse
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--ignore')
+    parser.add_argument('--discover', action='store_true')
+    parser.add_argument('--full', action='store_true')
+    parser.add_argument('--config')
+    parser.add_argument('--failfast', action='store_true')
+    parser.add_argument("--coverage", action="store_true")
+    parser.add_argument("--quiet", action="store_true")
+    parser.add_argument('tests', nargs='*')
+    options = parser.parse_args()
     FAILING_TESTS = []
     coverage = False
     if options.coverage or os.environ.get("GEVENTTEST_COVERAGE"):
@@ -297,7 +297,7 @@ def main():
             config_data = f.read()
         six.exec_(config_data, config)
         FAILING_TESTS = config['FAILING_TESTS']
-    tests = discover(args, options.ignore, coverage)
+    tests = discover(options.tests, options.ignore, coverage)
     if options.discover:
         for cmd, options in tests:
             print(util.getname(cmd, env=options.get('env'), setenv=options.get('setenv')))

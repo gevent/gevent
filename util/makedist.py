@@ -13,7 +13,7 @@ from __future__ import print_function
 import sys
 import os
 import glob
-import optparse
+import argparse
 from os.path import exists, join, abspath, basename
 from pipes import quote
 
@@ -76,11 +76,10 @@ def _makedist(version=None, dest=None):
 
 
 def main():
-    parser = optparse.OptionParser()
-    parser.add_option('--dest')
-    parser.add_option('--version')
-    options, args = parser.parse_args()
-    assert not args, 'Expected no arguments'
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--dest')
+    parser.add_argument('--version')
+    options = parser.parse_args()
     return makedist(options.version, dest=options.dest)
 
 
