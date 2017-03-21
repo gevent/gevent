@@ -158,21 +158,38 @@ class Frame(object):
 
 
 class Traceback(object):
+
+    tb_next = None
+
     def __init__(self, tb):
         self.tb_frame = Frame(tb.tb_frame)
         # noinspection SpellCheckingInspection
         self.tb_lineno = int(tb.tb_lineno)
-        if tb.tb_next is None:
-            self.tb_next = None
-        else:
-            self.tb_next = Traceback(tb.tb_next)
+
+        # Build in place to avoid exceeding the recursion limit
+        tb = tb.tb_next
+        prev_traceback = self
+        cls = type(self)
+        while tb is not None:
+            traceback = object.__new__(cls)
+            traceback.tb_frame = Frame(tb.tb_frame)
+            traceback.tb_lineno = int(tb.tb_lineno)
+            prev_traceback.tb_next = traceback
+            prev_traceback = traceback
+            tb = tb.tb_next
 
     def as_traceback(self):
         if tproxy:
             return tproxy(TracebackType, self.__tproxy_handler)
-        elif tb_set_next:
-            f_code = self.tb_frame.f_code
-            code = compile('\n' * (self.tb_lineno - 1) + 'raise __traceback_maker', self.tb_frame.f_code.co_filename, 'exec')
+        if not tb_set_next:
+            raise RuntimeError("Cannot re-create traceback !")
+
+        current = self
+        top_tb = None
+        tb = None
+        while current:
+            f_code = current.tb_frame.f_code
+            code = compile('\n' * (current.tb_lineno - 1) + 'raise __traceback_maker', current.tb_frame.f_code.co_filename, 'exec')
             if PY3:
                 code = CodeType(
                     0, code.co_kwonlyargcount,
@@ -192,18 +209,23 @@ class Traceback(object):
 
             # noinspection PyBroadException
             try:
-                exec(code, self.tb_frame.f_globals, {})
+                exec(code, current.tb_frame.f_globals, {})
             except:
-                tb = sys.exc_info()[2].tb_next
-                tb_set_next(tb, self.tb_next and self.tb_next.as_traceback())
-                try:
-                    return tb
-                finally:
-                    # gevent: don't leak the traceback objects, this
-                    # makes our leaktests fail
-                    del tb
-        else:
-            raise RuntimeError("Cannot re-create traceback !")
+                next_tb = sys.exc_info()[2].tb_next
+                if top_tb is None:
+                    top_tb = next_tb
+                if tb is not None:
+                    tb_set_next(tb, next_tb)
+                tb = next_tb
+                del next_tb
+
+            current = current.tb_next
+        try:
+            return top_tb
+        finally:
+            del top_tb
+            del tb
+
 
     # noinspection SpellCheckingInspection
     def __tproxy_handler(self, operation, *args, **kwargs):

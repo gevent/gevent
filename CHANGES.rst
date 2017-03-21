@@ -14,6 +14,8 @@
   ``getaddrinfo`` when ``connect`` is called. Reported in :issue:`944`
   by Bernie Hackett.
 - Replace ``optparse`` module with ``argparse``. See :issue:`947`.
+- Update to an unreleased version of ``tblib`` to fix :issue:`954`,
+  reported by ml31415.
 
 1.2.1 (2017-01-12)
 ==================
