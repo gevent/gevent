@@ -31,6 +31,7 @@ notifications:
 
 # cache: pip seems not to work if `install` is replaced (https://github.com/travis-ci/travis-ci/issues/3239)
 cache:
+  ccache: true
   directories:
     - $HOME/.cache/pip
     - $HOME/.venv
