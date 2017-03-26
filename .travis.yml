@@ -24,7 +24,7 @@ matrix:
   fast_finish: true
 
 script:
-    - make $TASK
+    - make $TASK CC='ccache gcc'
 
 notifications:
   email: false
@@ -40,3 +40,4 @@ cache:
 
 before_cache:
     - rm -f $HOME/.cache/pip/log/debug.log
+    - ccache -s
