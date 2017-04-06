@@ -19,7 +19,14 @@
 - Fix the name of the ``type`` parameter to
   :func:`gevent.socket.getaddrinfo` to be correct on Python 3. This
   would cause callers using keyword arguments to raise a :exc:`TypeError`.
-  Reported in :issue:`960` by js6626069.
+  Reported in :issue:`960` by js6626069. Likewise, correct the
+  argument names for ``fromfd`` and ``socketpair`` on Python 2,
+  although they cannot be called wit keyword arguments under CPython.
+
+  .. note:: The ``gethost*`` functions take different argument names
+            under CPython and PyPy. gevent follows the CPython
+            convention, although these functions cannot be called with
+            keyword arguments on CPython.
 
 1.2.1 (2017-01-12)
 ==================

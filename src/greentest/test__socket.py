@@ -365,7 +365,16 @@ class TestFunctions(greentest.TestCase):
 
     def test_signatures(self):
         # https://github.com/gevent/gevent/issues/960
-        self.assertMonkeyPatchedFuncSignatures('socket')
+        exclude = []
+        if greentest.PYPY:
+            # Up through at least PyPy 5.7.1, they define these as
+            # gethostbyname(host), whereas the official CPython argument name
+            # is hostname. But cpython doesn't allow calling with keyword args.
+            # Likewise for gethostbyaddr: PyPy uses host, cpython uses ip_address
+            exclude.append('gethostbyname')
+            exclude.append('gethostbyname_ex')
+            exclude.append('gethostbyaddr')
+        self.assertMonkeyPatchedFuncSignatures('socket', exclude=exclude)
 
 
 if __name__ == '__main__':

@@ -288,7 +288,7 @@ if PY3:
 
 def gethostbyaddr(ip_address):
     """
-    gethostbyaddr(host) -> (name, aliaslist, addresslist)
+    gethostbyaddr(ip_address) -> (name, aliaslist, addresslist)
 
     Return the true host name, a list of aliases, and a list of IP addresses,
     for a host.  The host argument is a string giving a host name or IP number.

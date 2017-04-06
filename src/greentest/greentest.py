@@ -461,7 +461,7 @@ class TestCase(TestCaseMetaClass("NewBase", (BaseTestCase,), {})):
             self.assertGreaterEqual(delay, min_time)
 
 
-    def assertMonkeyPatchedFuncSignatures(self, mod_name, *func_names):
+    def assertMonkeyPatchedFuncSignatures(self, mod_name, func_names=(), exclude=()):
         # We use inspect.getargspec because it's the only thing available
         # in Python 2.7, but it is deprecated
         # pylint:disable=deprecated-method
@@ -478,6 +478,8 @@ class TestCase(TestCaseMetaClass("NewBase", (BaseTestCase,), {})):
             func_names = getattr(gevent_module, '__implements__')
 
         for func_name in func_names:
+            if func_name in exclude:
+                continue
             gevent_func = getattr(gevent_module, func_name)
             if not inspect.isfunction(gevent_func) and not funcs_given:
                 continue
