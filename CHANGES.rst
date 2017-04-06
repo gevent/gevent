@@ -9,6 +9,9 @@
 
 - Testing on Python 3.5 now uses Python 3.5.3 due to SSL changes. See
   :issue:`943`.
+- Linux CI has been updated from Ubuntu 12.04 to Ubuntu 14.04 since
+  the former has reached EOL.
+- Linux CI now tests on PyPy2 5.7.1, updated from PyPy2 5.6.0.
 - Python 2 sockets are compatible with the ``SOCK_CLOEXEC`` flag found
   on Linux. They no longer pass the socket type or protocol to
   ``getaddrinfo`` when ``connect`` is called. Reported in :issue:`944`
