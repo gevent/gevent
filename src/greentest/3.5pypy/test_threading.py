@@ -1106,6 +1106,16 @@ class TimerTests(BaseTestCase):
 class LockTests(lock_tests.LockTests):
     locktype = staticmethod(threading.Lock)
 
+
+    @unittest.skip("not on gevent")
+    def test_locked_repr(self):
+        pass
+
+    @unittest.skip("not on gevent")
+    def test_repr(self):
+        pass
+
+
 class PyRLockTests(lock_tests.RLockTests):
     locktype = staticmethod(threading._PyRLock)
 
@@ -1115,6 +1125,11 @@ class CRLockTests(lock_tests.RLockTests):
 
 class EventTests(lock_tests.EventTests):
     eventtype = staticmethod(threading.Event)
+
+    @unittest.skip("not on gevent")
+    def test_reset_internal_locks(self):
+        pass
+
 
 class ConditionAsRLockTests(lock_tests.RLockTests):
     # Condition uses an RLock by default and exports its API.

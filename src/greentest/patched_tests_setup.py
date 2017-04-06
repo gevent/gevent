@@ -397,9 +397,6 @@ if hasattr(sys, 'pypy_version_info') and sys.version_info[:2] == (3, 3):
         ]
 
     disabled_tests += [
-        # This raises 'RuntimeError: reentrant call' when exiting the
-        # process tries to close the stdout stream; no other platform does this.
-        'test_signal.SiginterruptTest.test_siginterrupt_off',
 
         # These are all expecting that a signal (sigalarm) that
         # arrives during a blocking call should raise
@@ -426,6 +423,26 @@ if hasattr(sys, 'pypy_version_info') and sys.version_info[:2] == (3, 3):
         # problem, or transient DNS issue. (Python is reporting a DNS outage
         # at the time of this writing: https://status.python.org/incidents/x97mmj5rqs5f)
         'test_socket.GeneralModuleTests.test_idna',
+    ]
+
+if hasattr(sys, 'pypy_version_info') and sys.version_info[:2] >= (3, 3):
+
+
+    disabled_tests += [
+        # This raises 'RuntimeError: reentrant call' when exiting the
+        # process tries to close the stdout stream; no other platform does this.
+        # See in both 3.3 and 3.5
+        'test_signal.SiginterruptTest.test_siginterrupt_off',
+    ]
+
+
+if hasattr(sys, 'pypy_version_info') and sys.version_info[:2] >= (3, 5):
+    # 3.5 is beta. Hard to say what are real bugs in us vs real bugs in pypy
+
+    disabled_tests += [
+        # This fails to close all the FDs, at least on CI
+        'test_subprocess.POSIXProcessTestCase.test_close_fds_when_max_fd_is_lowered',
+
     ]
 
 if sys.version_info[:2] == (3, 4) and sys.version_info[:3] < (3, 4, 4):

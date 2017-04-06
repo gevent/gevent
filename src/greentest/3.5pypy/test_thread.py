@@ -213,6 +213,13 @@ class BarrierTest(BasicThreadTest):
 class LockTests(lock_tests.LockTests):
     locktype = thread.allocate_lock
 
+    @unittest.skip("not on gevent")
+    def test_locked_repr(self):
+        pass
+
+    @unittest.skip("not on gevent")
+    def test_repr(self):
+        pass
 
 class TestForkInThread(unittest.TestCase):
     def setUp(self):
