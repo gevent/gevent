@@ -535,7 +535,30 @@ class TestInterrupted_gethostbyname(greentest.GenericWaitTestCase):
             raise AssertionError('Timeout was not raised')
 
     def cleanup(self):
-        gevent.get_hub().threadpool.join()
+        # Depending on timing, this can raise:
+        # (This suddenly started happening on Apr 6 2016; www.x1000000.com
+        # is apparently no longer around)
+
+        #    File "test__socket_dns.py", line 538, in cleanup
+        #     gevent.get_hub().threadpool.join()
+        #   File "/home/travis/build/gevent/gevent/src/gevent/threadpool.py", line 108, in join
+        #     sleep(delay)
+        #   File "/home/travis/build/gevent/gevent/src/gevent/hub.py", line 169, in sleep
+        #     hub.wait(loop.timer(seconds, ref=ref))
+        #   File "/home/travis/build/gevent/gevent/src/gevent/hub.py", line 651, in wait
+        #     result = waiter.get()
+        #   File "/home/travis/build/gevent/gevent/src/gevent/hub.py", line 899, in get
+        #     return self.hub.switch()
+        #   File "/home/travis/build/gevent/gevent/src/greentest/greentest.py", line 520, in switch
+        #     return _original_Hub.switch(self, *args)
+        #   File "/home/travis/build/gevent/gevent/src/gevent/hub.py", line 630, in switch
+        #     return RawGreenlet.switch(self)
+        # gaierror: [Errno -2] Name or service not known
+        try:
+            gevent.get_hub().threadpool.join()
+        except Exception: # pylint:disable=broad-except
+            import traceback
+            traceback.print_exc()
 
 
 # class TestInterrupted_getaddrinfo(greentest.GenericWaitTestCase):

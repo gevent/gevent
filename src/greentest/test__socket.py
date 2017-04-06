@@ -336,6 +336,8 @@ class TestCreateConnection(greentest.TestCase):
 
 class TestFunctions(greentest.TestCase):
 
+    @greentest.ignores_leakcheck
+    # Creating new types in the function takes a cycle to cleanup.
     def test_wait_timeout(self):
         # Issue #635
         import gevent.socket
@@ -360,8 +362,19 @@ class TestFunctions(greentest.TestCase):
         finally:
             gevent._socketcommon.get_hub = orig_get_hub
 
-    # Creating new types in the function takes a cycle to cleanup.
-    test_wait_timeout.ignore_leakcheck = True
+
+    def test_signatures(self):
+        # https://github.com/gevent/gevent/issues/960
+        exclude = []
+        if greentest.PYPY:
+            # Up through at least PyPy 5.7.1, they define these as
+            # gethostbyname(host), whereas the official CPython argument name
+            # is hostname. But cpython doesn't allow calling with keyword args.
+            # Likewise for gethostbyaddr: PyPy uses host, cpython uses ip_address
+            exclude.append('gethostbyname')
+            exclude.append('gethostbyname_ex')
+            exclude.append('gethostbyaddr')
+        self.assertMonkeyPatchedFuncSignatures('socket', exclude=exclude)
 
 
 if __name__ == '__main__':

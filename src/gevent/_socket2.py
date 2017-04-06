@@ -499,8 +499,9 @@ SocketType = socket
 
 if hasattr(_socket, 'socketpair'):
 
-    def socketpair(*args):
-        one, two = _socket.socketpair(*args)
+    def socketpair(family=getattr(_socket, 'AF_UNIX', _socket.AF_INET),
+                   type=_socket.SOCK_STREAM, proto=0):
+        one, two = _socket.socketpair(family, type, proto)
         result = socket(_sock=one), socket(_sock=two)
         if PYPY:
             one._drop()
@@ -511,8 +512,8 @@ elif 'socketpair' in __implements__:
 
 if hasattr(_socket, 'fromfd'):
 
-    def fromfd(*args):
-        s = _socket.fromfd(*args)
+    def fromfd(fd, family, type, proto=0):
+        s = _socket.fromfd(fd, family, type, proto)
         result = socket(_sock=s)
         if PYPY:
             s._drop()

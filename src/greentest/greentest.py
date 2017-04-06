@@ -461,6 +461,50 @@ class TestCase(TestCaseMetaClass("NewBase", (BaseTestCase,), {})):
             self.assertGreaterEqual(delay, min_time)
 
 
+    def assertMonkeyPatchedFuncSignatures(self, mod_name, func_names=(), exclude=()):
+        # We use inspect.getargspec because it's the only thing available
+        # in Python 2.7, but it is deprecated
+        # pylint:disable=deprecated-method
+        import inspect
+        import warnings
+        from gevent.monkey import get_original
+        # XXX: Very similar to gevent.monkey.patch_module. Should refactor?
+        gevent_module = getattr(__import__('gevent.' + mod_name), mod_name)
+        module_name = getattr(gevent_module, '__target__', mod_name)
+
+        funcs_given = True
+        if not func_names:
+            funcs_given = False
+            func_names = getattr(gevent_module, '__implements__')
+
+        for func_name in func_names:
+            if func_name in exclude:
+                continue
+            gevent_func = getattr(gevent_module, func_name)
+            if not inspect.isfunction(gevent_func) and not funcs_given:
+                continue
+
+            func = get_original(module_name, func_name)
+
+            try:
+                with warnings.catch_warnings():
+                    warnings.simplefilter("ignore")
+                    gevent_sig = inspect.getargspec(gevent_func)
+                    sig = inspect.getargspec(func)
+            except TypeError:
+                if funcs_given:
+                    raise
+                # Can't do this one. If they specifically asked for it,
+                # it's an error, otherwise it's not.
+                # Python 3 can check a lot more than Python 2 can.
+                continue
+            self.assertEqual(sig.args, gevent_sig.args, func_name)
+            # The next three might not actually matter?
+            self.assertEqual(sig.varargs, gevent_sig.varargs, func_name)
+            self.assertEqual(sig.keywords, gevent_sig.keywords, func_name)
+            self.assertEqual(sig.defaults, gevent_sig.defaults, func_name)
+
+
 main = unittest.main
 _original_Hub = gevent.hub.Hub
 
@@ -547,6 +591,7 @@ class GenericWaitTestCase(_DelayWaitMixin, TestCase):
         # and subject to jitter
         _default_delay_max_adj = 1.5
 
+    @ignores_leakcheck # waiting checks can be very sensitive to timing
     def test_returns_none_after_timeout(self):
         result = self._wait_and_check()
         # join and wait simply return after timeout expires
