@@ -14,8 +14,12 @@
   ``getaddrinfo`` when ``connect`` is called. Reported in :issue:`944`
   by Bernie Hackett.
 - Replace ``optparse`` module with ``argparse``. See :issue:`947`.
-- Update to an unreleased version of ``tblib`` to fix :issue:`954`,
+- Update to version 1.3.1 of ``tblib`` to fix :issue:`954`,
   reported by ml31415.
+- Fix the name of the ``type`` parameter to
+  :func:`gevent.socket.getaddrinfo` to be correct on Python 3. This
+  would cause callers using keyword arguments to raise a :exc:`TypeError`.
+  Reported in :issue:`960` by js6626069.
 
 1.2.1 (2017-01-12)
 ==================

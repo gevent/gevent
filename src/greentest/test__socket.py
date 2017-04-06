@@ -336,6 +336,8 @@ class TestCreateConnection(greentest.TestCase):
 
 class TestFunctions(greentest.TestCase):
 
+    @greentest.ignores_leakcheck
+    # Creating new types in the function takes a cycle to cleanup.
     def test_wait_timeout(self):
         # Issue #635
         import gevent.socket
@@ -360,8 +362,10 @@ class TestFunctions(greentest.TestCase):
         finally:
             gevent._socketcommon.get_hub = orig_get_hub
 
-    # Creating new types in the function takes a cycle to cleanup.
-    test_wait_timeout.ignore_leakcheck = True
+
+    def test_signatures(self):
+        # https://github.com/gevent/gevent/issues/960
+        self.assertMonkeyPatchedFuncSignatures('socket')
 
 
 if __name__ == '__main__':

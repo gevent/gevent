@@ -73,7 +73,7 @@ import sys
 from gevent.hub import get_hub
 from gevent.hub import ConcurrentObjectUseError
 from gevent.timeout import Timeout
-from gevent._compat import string_types, integer_types
+from gevent._compat import string_types, integer_types, PY3
 from gevent._util import copy_globals
 from gevent._util import _NONE
 
@@ -270,6 +270,19 @@ def getaddrinfo(host, port, family=0, socktype=0, proto=0, flags=0):
     .. seealso:: :doc:`dns`
     """
     return get_hub().resolver.getaddrinfo(host, port, family, socktype, proto, flags)
+
+if PY3:
+    # The name of the socktype param changed to type in Python 3.
+    # See https://github.com/gevent/gevent/issues/960
+    # Using inspect here to directly detect the condition is painful because we have to
+    # wrap it with a try/except TypeError because not all Python 2
+    # versions can get the args of a builtin; we also have to use a with to suppress
+    # the deprecation warning.
+    d = getaddrinfo.__doc__
+    def getaddrinfo(host, port, family=0, type=0, proto=0, flags=0): # pylint:disable=function-redefined
+        return get_hub().resolver.getaddrinfo(host, port, family, type, proto, flags)
+    getaddrinfo.__doc__ = d
+    del d
 
 
 def gethostbyaddr(ip_address):
