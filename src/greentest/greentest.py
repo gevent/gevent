@@ -591,6 +591,7 @@ class GenericWaitTestCase(_DelayWaitMixin, TestCase):
         # and subject to jitter
         _default_delay_max_adj = 1.5
 
+    @ignores_leakcheck # waiting checks can be very sensitive to timing
     def test_returns_none_after_timeout(self):
         result = self._wait_and_check()
         # join and wait simply return after timeout expires
