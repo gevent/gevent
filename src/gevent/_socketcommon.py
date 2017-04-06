@@ -279,6 +279,7 @@ if PY3:
     # versions can get the args of a builtin; we also have to use a with to suppress
     # the deprecation warning.
     d = getaddrinfo.__doc__
+
     def getaddrinfo(host, port, family=0, type=0, proto=0, flags=0): # pylint:disable=function-redefined
         return get_hub().resolver.getaddrinfo(host, port, family, type, proto, flags)
     getaddrinfo.__doc__ = d
