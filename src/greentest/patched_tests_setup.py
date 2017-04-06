@@ -4,6 +4,8 @@ import sys
 import os
 import re
 
+TRAVIS = os.environ.get("TRAVIS") == "true"
+
 # By default, test cases are expected to switch and emit warnings if there was none
 # If a test is found in this list, it's expected not to switch.
 no_switch_tests = '''test_patched_select.SelectTestCase.test_error_conditions
@@ -356,7 +358,7 @@ if sys.version_info[0] == 3:
         'test_socket.GeneralModuleTests.testGetaddrinfo',
 
     ]
-    if os.environ.get("TRAVIS") == "true":
+    if TRAVIS:
         disabled_tests += [
             # test_cwd_with_relative_executable tends to fail
             # on Travis...it looks like the test processes are stepping
@@ -383,6 +385,15 @@ if hasattr(sys, 'pypy_version_info') and sys.version_info[:2] == (3, 3):
         'test_httplib.HTTPSTest.test_networked_bad_cert',
         'test_httplib.HTTPSTest.test_networked_good_cert',
     ]
+
+    if TRAVIS:
+        disabled_tests += [
+            # When we switched to Ubuntu 14.04 trusty, this started
+            # failing with "_ssl.SSLError: [SSL] dh key too small", but it
+            # was fine on 12.04. But we have to switch to be able to
+            # install PyPy? 5.7.1.
+            'test_ssl.ThreadedTests.test_dh_params',
+        ]
 
     disabled_tests += [
         # This raises 'RuntimeError: reentrant call' when exiting the
@@ -508,7 +519,7 @@ if sys.version_info[:2] >= (3, 4):
             'test_socket.InterruptedSendTimeoutTest.testInterruptedSendmsgTimeout',
         ]
 
-    if os.environ.get('TRAVIS') == 'true':
+    if TRAVIS:
         disabled_tests += [
             'test_subprocess.ProcessTestCase.test_double_close_on_error',
             # This test is racy or OS-dependent. It passes locally (sufficiently fast machine)

@@ -103,7 +103,7 @@ for var in "$@"; do
       install 3.6.0 python3.6.0
       ;;
     pypy)
-      install pypy2-5.6.0 pypy56
+      install pypy2-5.7.1 pypy571
       ;;
     pypy3)
       install pypy3.3-5.5-alpha pypy3.3_5.5
