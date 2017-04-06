@@ -109,8 +109,8 @@ PY27=$(BUILD_RUNTIMES)/snakepit/python2.7.13
 PY34=$(BUILD_RUNTIMES)/snakepit/python3.4.5
 PY35=$(BUILD_RUNTIMES)/snakepit/python3.5.3
 PY36=$(BUILD_RUNTIMES)/snakepit/python3.6.0
-PYPY=$(BUILD_RUNTIMES)/snakepit/pypy56
-PYPY3=$(BUILD_RUNTIMES)/snakepit/pypy3.3_5.5
+PYPY=$(BUILD_RUNTIMES)/snakepit/pypy571
+PYPY3=$(BUILD_RUNTIMES)/snakepit/pypy3.5_571
 
 TOOLS=$(BUILD_RUNTIMES)/tools
 
@@ -178,10 +178,10 @@ test-py36: $(PY36)
 	PYTHON=python3.6.0 PIP=pip PATH=$(BUILD_RUNTIMES)/versions/python3.6.0/bin:$(PATH) make develop toxtest
 
 test-pypy: $(PYPY)
-	PYTHON=$(PYPY) PIP=pip PATH=$(BUILD_RUNTIMES)/versions/pypy56/bin:$(PATH) make develop toxtest
+	PYTHON=$(PYPY) PIP=pip PATH=$(BUILD_RUNTIMES)/versions/pypy571/bin:$(PATH) make develop toxtest
 
 test-pypy3: $(PYPY3)
-	PYTHON=$(PYPY3) PIP=pip PATH=$(BUILD_RUNTIMES)/versions/pypy3.3_5.5/bin:$(PATH) make develop toxtest
+	PYTHON=$(PYPY3) PIP=pip PATH=$(BUILD_RUNTIMES)/versions/pypy3.5_571/bin:$(PATH) make develop toxtest
 
 test-py27-cffi: $(PY27)
 	GEVENT_CORE_CFFI_ONLY=1 PYTHON=python2.7.13 PATH=$(BUILD_RUNTIMES)/versions/python2.7.13/bin:$(PATH) make develop toxtest
