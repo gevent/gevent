@@ -377,6 +377,7 @@ if sys.version_info[0] == 3:
 # PyPy3 5.5.0-alpha
 
 if hasattr(sys, 'pypy_version_info') and sys.version_info[:2] == (3, 3):
+    # TODO: We don't test this version anymore, it can go
     # Almost all the SSL related tests are broken at this point due to age.
     disabled_tests += [
         'test_ssl.NetworkedTests.test_connect',

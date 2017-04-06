@@ -118,7 +118,7 @@ else:
     skipOnAppVeyor = _do_not_skip
 
 if PYPY3 and RUNNING_ON_CI:
-    # Same as above, for PyPy3.3-5.5-alpha
+    # Same as above, for PyPy3.3-5.5-alpha and 3.5-5.7.1-beta
     skipOnPyPy3OnCI = unittest.skip
 else:
     skipOnPyPy3OnCI = _do_not_skip
