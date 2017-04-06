@@ -156,6 +156,12 @@ class Frame(object):
         ])
         self.f_code = Code(frame.f_code)
 
+    def clear(self):
+        # For compatibility with PyPy 3.5;
+        # clear was added to frame in Python 3.4
+        # and is called by traceback.clear_frames(), which
+        # in turn is called by unittest.TestCase.assertRaises
+        pass
 
 class Traceback(object):
 
