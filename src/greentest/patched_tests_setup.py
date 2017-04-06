@@ -442,6 +442,11 @@ if hasattr(sys, 'pypy_version_info') and sys.version_info[:2] >= (3, 5):
     disabled_tests += [
         # This fails to close all the FDs, at least on CI
         'test_subprocess.POSIXProcessTestCase.test_close_fds_when_max_fd_is_lowered',
+        # we have n^2 behaviour for socket.sendall on partial writes,
+        # and this tests tries to send a large amount of data and provoke partial writes.
+        # We fixed this is python 2 and need to do so for Python 3 (if it's the same
+        # thing; it may not be, this is just supposition)
+        'test_wsgiref.IntegrationTests.test_interrupted_write',
     ]
 
     if TRAVIS:
