@@ -442,8 +442,16 @@ if hasattr(sys, 'pypy_version_info') and sys.version_info[:2] >= (3, 5):
     disabled_tests += [
         # This fails to close all the FDs, at least on CI
         'test_subprocess.POSIXProcessTestCase.test_close_fds_when_max_fd_is_lowered',
-
     ]
+
+    if TRAVIS:
+        disabled_tests += [
+            # This seems to be a buffering issue? Something isn't getting flushed
+            # I can't reproduce locally though in Ubuntu 16
+            'test_threading.ThreadJoinOnShutdown.test_2_join_in_forked_process',
+            'test_threading.ThreadJoinOnShutdown.test_1_join_in_forked_process',
+
+        ]
 
 if sys.version_info[:2] == (3, 4) and sys.version_info[:3] < (3, 4, 4):
     # Older versions have some issues with the SSL tests. Seen on Appveyor

@@ -5330,6 +5330,8 @@ class SendfileUsingSendTest(ThreadedTCPSocketTest):
 @unittest.skipUnless(thread, 'Threading required for this test.')
 @unittest.skipUnless(hasattr(os, "sendfile"),
                      'os.sendfile() required for this test.')
+@unittest.skipUnless(hasattr(os, 'gevent_uses_sendfile'),
+                     'gevent sockets do not support this')
 class SendfileUsingSendfileTest(SendfileUsingSendTest):
     """
     Test the sendfile() implementation of socket.sendfile().
