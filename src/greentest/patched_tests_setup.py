@@ -447,6 +447,10 @@ if hasattr(sys, 'pypy_version_info') and sys.version_info[:2] >= (3, 5):
         # We fixed this is python 2 and need to do so for Python 3 (if it's the same
         # thing; it may not be, this is just supposition)
         'test_wsgiref.IntegrationTests.test_interrupted_write',
+
+        # see extensive comments in this method. we don't actually disable it,
+        # we patched it.
+        # test_urllib2_localnet.TestUrlopen.test_https_with_cafile
     ]
 
     if TRAVIS:
