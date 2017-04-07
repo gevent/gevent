@@ -392,7 +392,6 @@ class socket(object):
         except error as ex:
             if ex.args[0] != EWOULDBLOCK or timeout == 0.0:
                 raise
-            print("Got exception", ex, ex.args)
             self._wait(self._write_event)
             try:
                 return _socket.socket.send(self._sock, data, flags)
