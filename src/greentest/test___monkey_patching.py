@@ -22,6 +22,7 @@ def get_absolute_pythonpath():
 
 def TESTRUNNER(tests=None):
     if not os.path.exists(directory):
+        util.log('WARNING: No test directory found at %s', directory)
         return
     with open(os.path.join(directory, 'version')) as f:
         preferred_version = f.read().strip()

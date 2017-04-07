@@ -377,6 +377,7 @@ if sys.version_info[0] == 3:
 # PyPy3 5.5.0-alpha
 
 if hasattr(sys, 'pypy_version_info') and sys.version_info[:2] == (3, 3):
+    # TODO: We don't test this version anymore, it can go
     # Almost all the SSL related tests are broken at this point due to age.
     disabled_tests += [
         'test_ssl.NetworkedTests.test_connect',
@@ -396,9 +397,6 @@ if hasattr(sys, 'pypy_version_info') and sys.version_info[:2] == (3, 3):
         ]
 
     disabled_tests += [
-        # This raises 'RuntimeError: reentrant call' when exiting the
-        # process tries to close the stdout stream; no other platform does this.
-        'test_signal.SiginterruptTest.test_siginterrupt_off',
 
         # These are all expecting that a signal (sigalarm) that
         # arrives during a blocking call should raise
@@ -426,6 +424,40 @@ if hasattr(sys, 'pypy_version_info') and sys.version_info[:2] == (3, 3):
         # at the time of this writing: https://status.python.org/incidents/x97mmj5rqs5f)
         'test_socket.GeneralModuleTests.test_idna',
     ]
+
+if hasattr(sys, 'pypy_version_info') and sys.version_info[:2] >= (3, 3):
+
+
+    disabled_tests += [
+        # This raises 'RuntimeError: reentrant call' when exiting the
+        # process tries to close the stdout stream; no other platform does this.
+        # See in both 3.3 and 3.5
+        'test_signal.SiginterruptTest.test_siginterrupt_off',
+    ]
+
+
+if hasattr(sys, 'pypy_version_info') and sys.pypy_version_info[:4] == (5, 7, 1, 'beta'):
+    # 3.5 is beta. Hard to say what are real bugs in us vs real bugs in pypy.
+    # For that reason, we pin these patches exactly to the version in use.
+
+    disabled_tests += [
+        # This fails to close all the FDs, at least on CI. On OS X, many of the
+        # POSIXProcessTestCase fd tests have issues.
+        'test_subprocess.POSIXProcessTestCase.test_close_fds_when_max_fd_is_lowered',
+
+        # see extensive comments in this method. we don't actually disable it,
+        # we patched it.
+        # test_urllib2_localnet.TestUrlopen.test_https_with_cafile
+    ]
+
+    if TRAVIS:
+        disabled_tests += [
+            # This seems to be a buffering issue? Something isn't getting flushed
+            # I can't reproduce locally though in Ubuntu 16 in a VM or a laptop with OS X.
+            'test_threading.ThreadJoinOnShutdown.test_2_join_in_forked_process',
+            'test_threading.ThreadJoinOnShutdown.test_1_join_in_forked_process',
+
+        ]
 
 if sys.version_info[:2] == (3, 4) and sys.version_info[:3] < (3, 4, 4):
     # Older versions have some issues with the SSL tests. Seen on Appveyor
@@ -533,6 +565,17 @@ if sys.version_info[:2] >= (3, 5):
         'test_ssl.ThreadedTests.test_socketserver',
         # Uses direct sendfile, doesn't properly check for it being enabled
         'test_socket.GeneralModuleTests.test__sendfile_use_sendfile',
+
+
+        # XXX: BUG: We simply don't handle this correctly. On CPython,
+        # we wind up raising a BlockingIOError and then
+        # BrokenPipeError and then some random TypeErrors, all on the
+        # server. CPython 3.5 goes directly to socket.send() (via
+        # socket.makefile), whereas CPython 3.6 uses socket.sendall().
+        # On PyPy, the behaviour is much worse: we hang indefinitely, perhaps exposing a problem
+        # with our signal handling.
+        'test_wsgiref.IntegrationTests.test_interrupted_write',
+
         # Relies on the regex of the repr having the locked state (TODO: it'd be nice if
         # we did that).
         # XXX: These are commented out in the source code of test_threading because

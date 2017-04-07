@@ -118,7 +118,7 @@ else:
     skipOnAppVeyor = _do_not_skip
 
 if PYPY3 and RUNNING_ON_CI:
-    # Same as above, for PyPy3.3-5.5-alpha
+    # Same as above, for PyPy3.3-5.5-alpha and 3.5-5.7.1-beta
     skipOnPyPy3OnCI = unittest.skip
 else:
     skipOnPyPy3OnCI = _do_not_skip
@@ -353,12 +353,17 @@ class TestCaseMetaClass(type):
                 classDict[key] = value
         return type.__new__(cls, classname, bases, classDict)
 
+# Travis is slow and overloaded; Appveyor used to be faster, but
+# as of Dec 2015 it's almost always slower and/or has much worse timer
+# resolution
+CI_TIMEOUT = 7
+if PY3 and PYPY:
+    # pypy3 is very slow right now
+    CI_TIMEOUT = 10
+LOCAL_TIMEOUT = 1
 
 class TestCase(TestCaseMetaClass("NewBase", (BaseTestCase,), {})):
-    # Travis is slow and overloaded; Appveyor used to be faster, but
-    # as of Dec 2015 it's almost always slower and/or has much worse timer
-    # resolution
-    __timeout__ = 1 if not RUNNING_ON_CI else 7
+    __timeout__ = LOCAL_TIMEOUT if not RUNNING_ON_CI else CI_TIMEOUT
     switch_expected = 'default'
     error_fatal = True
     close_on_teardown = ()
