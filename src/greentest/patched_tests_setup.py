@@ -436,8 +436,9 @@ if hasattr(sys, 'pypy_version_info') and sys.version_info[:2] >= (3, 3):
     ]
 
 
-if hasattr(sys, 'pypy_version_info') and sys.version_info[:2] >= (3, 5):
-    # 3.5 is beta. Hard to say what are real bugs in us vs real bugs in pypy
+if hasattr(sys, 'pypy_version_info') and sys.pypy_version_info[:4] == (5, 7, 1, 'beta'):
+    # 3.5 is beta. Hard to say what are real bugs in us vs real bugs in pypy.
+    # For that reason, we pin these patches exactly to the version in use.
 
     disabled_tests += [
         # This fails to close all the FDs, at least on CI
