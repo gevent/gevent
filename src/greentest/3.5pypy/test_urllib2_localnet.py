@@ -571,28 +571,6 @@ class TestUrlopen(unittest.TestCase):
             self.urlopen("https://localhost:%s/bizarre" % handler.port,
                          cafile=CERT_fakehostname)
 
-        # XXX: gevent: The error that was raised by that last call
-        # left a socket open on the server or client. The server gets
-        # to http/server.py(390)handle_one_request and blocks on
-        # self.rfile.readline which apparently is where the SSL
-        # handshake is done. That results in the exception being
-        # raised on the client above, but apparently *not* on the
-        # server. Consequently it sits trying to read from that
-        # socket. On CPython, when the client socket goes out of scope
-        # it is closed and the server raises an exception, closing the
-        # socket. On PyPy, we need a GC cycle for that to happen.
-        # Without the socket being closed and exception being raised,
-        # the server cannot be stopped (it runs each request in the
-        # same thread that would notice it had been stopped), and so
-        # the cleanup method added by start_https_server to stop the
-        # server blocks "forever".
-
-        # This is an important test, so rather than skip it in patched_tests_setup,
-        # we do the gc before we return.
-        import gc
-        gc.collect()
-        gc.collect()
-
     def test_https_with_cadefault(self):
         handler = self.start_https_server(certfile=CERT_localhost)
         # Self-signed cert should fail verification with system certificate store
