@@ -441,13 +441,9 @@ if hasattr(sys, 'pypy_version_info') and sys.pypy_version_info[:4] == (5, 7, 1, 
     # For that reason, we pin these patches exactly to the version in use.
 
     disabled_tests += [
-        # This fails to close all the FDs, at least on CI
+        # This fails to close all the FDs, at least on CI. On OS X, many of the
+        # POSIXProcessTestCase fd tests have issues.
         'test_subprocess.POSIXProcessTestCase.test_close_fds_when_max_fd_is_lowered',
-        # we have n^2 behaviour for socket.sendall on partial writes,
-        # and this tests tries to send a large amount of data and provoke partial writes.
-        # We fixed this is python 2 and need to do so for Python 3 (if it's the same
-        # thing; it may not be, this is just supposition)
-        'test_wsgiref.IntegrationTests.test_interrupted_write',
 
         # see extensive comments in this method. we don't actually disable it,
         # we patched it.
@@ -457,7 +453,7 @@ if hasattr(sys, 'pypy_version_info') and sys.pypy_version_info[:4] == (5, 7, 1, 
     if TRAVIS:
         disabled_tests += [
             # This seems to be a buffering issue? Something isn't getting flushed
-            # I can't reproduce locally though in Ubuntu 16
+            # I can't reproduce locally though in Ubuntu 16 in a VM or a laptop with OS X.
             'test_threading.ThreadJoinOnShutdown.test_2_join_in_forked_process',
             'test_threading.ThreadJoinOnShutdown.test_1_join_in_forked_process',
 
@@ -569,6 +565,17 @@ if sys.version_info[:2] >= (3, 5):
         'test_ssl.ThreadedTests.test_socketserver',
         # Uses direct sendfile, doesn't properly check for it being enabled
         'test_socket.GeneralModuleTests.test__sendfile_use_sendfile',
+
+
+        # XXX: BUG: We simply don't handle this correctly. On CPython,
+        # we wind up raising a BlockingIOError and then
+        # BrokenPipeError and then some random TypeErrors, all on the
+        # server. CPython 3.5 goes directly to socket.send() (via
+        # socket.makefile), whereas CPython 3.6 uses socket.sendall().
+        # On PyPy, the behaviour is much worse: we hang indefinitely, perhaps exposing a problem
+        # with our signal handling.
+        'test_wsgiref.IntegrationTests.test_interrupted_write',
+
         # Relies on the regex of the repr having the locked state (TODO: it'd be nice if
         # we did that).
         # XXX: These are commented out in the source code of test_threading because
