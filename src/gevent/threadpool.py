@@ -192,47 +192,53 @@ class ThreadPool(GroupMappingMixin):
     _destroy_worker_hub = False
 
     def _worker(self):
-        # pylint:disable=too-many-branches
-        need_decrease = True
         try:
-            while True:
-                task_queue = self.task_queue
-                task = task_queue.get()
-                try:
-                    if task is None:
-                        need_decrease = False
-                        self._decrease_size()
-                        # we want first to decrease size, then decrease unfinished_tasks
-                        # otherwise, _adjust might think there's one more idle thread that
-                        # needs to be killed
-                        return
-                    func, args, kwargs, thread_result = task
+            # pylint:disable=too-many-branches
+            need_decrease = True
+            try:
+                while True:
+                    task_queue = self.task_queue
+                    task = task_queue.get()
                     try:
-                        value = func(*args, **kwargs)
-                    except: # pylint:disable=bare-except
-                        exc_info = getattr(sys, 'exc_info', None)
-                        if exc_info is None:
+                        if task is None:
+                            need_decrease = False
+                            self._decrease_size()
+                            # we want first to decrease size, then decrease unfinished_tasks
+                            # otherwise, _adjust might think there's one more idle thread that
+                            # needs to be killed
                             return
-                        thread_result.handle_error((self, func), exc_info())
-                    else:
-                        if sys is None:
-                            return
-                        thread_result.set(value)
-                        del value
+                        func, args, kwargs, thread_result = task
+                        try:
+                            value = func(*args, **kwargs)
+                        except: # pylint:disable=bare-except
+                            exc_info = getattr(sys, 'exc_info', None)
+                            if exc_info is None:
+                                return
+                            thread_result.handle_error((self, func), exc_info())
+                        else:
+                            if sys is None:
+                                return
+                            thread_result.set(value)
+                            del value
+                        finally:
+                            del func, args, kwargs, thread_result, task
                     finally:
-                        del func, args, kwargs, thread_result, task
-                finally:
-                    if sys is None:
-                        return # pylint:disable=lost-exception
-                    task_queue.task_done()
-        finally:
-            if need_decrease:
-                self._decrease_size()
-            if sys is not None and self._destroy_worker_hub:
-                hub = _get_hub()
-                if hub is not None:
-                    hub.destroy(True)
-                del hub
+                        if sys is None:
+                            return # pylint:disable=lost-exception
+                        task_queue.task_done()
+            finally:
+                if need_decrease:
+                    self._decrease_size()
+                if sys is not None and self._destroy_worker_hub:
+                    hub = _get_hub()
+                    if hub is not None:
+                        hub.destroy(True)
+                    del hub
+        except:
+            # Ignore any exception at this point, to prevent the runtime
+            # from trying to (and usually failing) to output the exception
+            # to sys.stderr on exit.
+            pass
 
     def apply_e(self, expected_errors, function, args=None, kwargs=None):
         """
