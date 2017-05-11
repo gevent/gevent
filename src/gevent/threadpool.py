@@ -402,7 +402,7 @@ else:
             # We should only be called when _waiters has
             # already been accessed.
             waiters = getattr(self, '_waiters')
-            for w in waiters:
+            for w in waiters: # pylint:disable=not-an-iterable
                 if self.successful():
                     w.add_result(self)
                 else:
@@ -475,7 +475,7 @@ else:
             self._threadpool._destroy_worker_hub = True
 
         def submit(self, fn, *args, **kwargs):
-            with self._shutdown_lock:
+            with self._shutdown_lock: # pylint:disable=not-context-manager
                 if self._shutdown:
                     raise RuntimeError('cannot schedule new futures after shutdown')
 
@@ -486,7 +486,7 @@ else:
             super(ThreadPoolExecutor, self).shutdown(wait)
             # XXX: We don't implement wait properly
             kill = getattr(self._threadpool, 'kill', None)
-            if kill:
+            if kill: # pylint:disable=using-constant-test
                 self._threadpool.kill()
             self._threadpool = None
 

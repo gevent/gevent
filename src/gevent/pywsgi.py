@@ -317,8 +317,7 @@ class Input(object):
     def readline(self, size=None):
         if self.chunked_input:
             return self._chunked_read(size, True)
-        else:
-            return self._do_read(size, use_readline=True)
+        return self._do_read(size, use_readline=True)
 
     def readlines(self, hint=None):
         # pylint:disable=unused-argument
@@ -1465,7 +1464,7 @@ class WSGIServer(StreamServer):
                 except socket.error:
                     name = str(address[0])
                 if PY3 and not isinstance(name, str):
-                    name = name.decode('ascii') # python 2 pylint:disable=redefined-variable-type
+                    name = name.decode('ascii')
                 self.environ['SERVER_NAME'] = name
             self.environ.setdefault('SERVER_PORT', str(address[1]))
         else:

@@ -119,6 +119,7 @@ class _DummyThread(_DummyThread_):
     _stop = _Thread__stop # py3
 
     def _wait_for_tstate_lock(self, *args, **kwargs):
+        # pylint:disable=arguments-differ
         pass
 
 if hasattr(__threading__, 'main_thread'): # py 3.4+
@@ -202,6 +203,7 @@ if sys.version_info[:2] >= (3, 4):
             self._greenlet.join(timeout=timeout)
 
         def _wait_for_tstate_lock(self, *args, **kwargs):
+            # pylint:disable=arguments-differ
             raise NotImplementedError()
 
     __implements__.append('Thread')

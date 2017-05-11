@@ -75,7 +75,7 @@ def __import__(*args, **kwargs):
     wraps the normal __import__ functionality in a recursive lock, ensuring that
     we're protected against greenlet import concurrency as well.
     """
-    if len(args) > 0 and not issubclass(type(args[0]), _allowed_module_name_types):
+    if args and not issubclass(type(args[0]), _allowed_module_name_types):
         # if a builtin has been acquired as a bound instance method,
         # python knows not to pass 'self' when the method is called.
         # No such protection exists for monkey-patched builtins,

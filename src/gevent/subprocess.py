@@ -29,13 +29,12 @@ from __future__ import absolute_import, print_function
 # Import magic
 # pylint: disable=undefined-all-variable,undefined-variable
 # Most of this we inherit from the standard lib
-# pylint: disable=bare-except,too-many-locals,too-many-statements,bad-builtin,attribute-defined-outside-init
+# pylint: disable=bare-except,too-many-locals,too-many-statements,attribute-defined-outside-init
 # pylint: disable=too-many-branches,too-many-instance-attributes
 # Most of this is cross-platform
 # pylint: disable=no-member,expression-not-assigned,unused-argument,unused-variable
 import errno
 import gc
-import io
 import os
 import signal
 import sys

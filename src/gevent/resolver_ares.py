@@ -221,8 +221,8 @@ class Resolver(object):
             if addrs.family == AF_INET:
                 for addr in addrs[-1]:
                     sockaddr = (addr, port)
-                    for socktype, proto in socktype_proto:
-                        result4.append((AF_INET, socktype, proto, '', sockaddr))
+                    for socktype4, proto4 in socktype_proto:
+                        result4.append((AF_INET, socktype4, proto4, '', sockaddr))
             elif addrs.family == AF_INET6:
                 for addr in addrs[-1]:
                     if addr == '::1':
@@ -230,8 +230,8 @@ class Resolver(object):
                     else:
                         dest = result6
                     sockaddr = (addr, port, 0, 0)
-                    for socktype, proto in socktype_proto:
-                        dest.append((AF_INET6, socktype, proto, '', sockaddr))
+                    for socktype6, proto6 in socktype_proto:
+                        dest.append((AF_INET6, socktype6, proto6, '', sockaddr))
 
         # As of 2016, some platforms return IPV6 first and some do IPV4 first,
         # and some might even allow configuration of which is which. For backwards

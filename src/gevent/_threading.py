@@ -138,8 +138,7 @@ class Condition(object):
         if self.__lock.acquire(0):
             self.__lock.release()
             return False
-        else:
-            return True
+        return True
 
     def wait(self, timeout=None):
         if not self._is_owned():

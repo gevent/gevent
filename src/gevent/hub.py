@@ -835,10 +835,9 @@ class Waiter(object):
     def __str__(self):
         if self._exception is _NONE:
             return '<%s greenlet=%s>' % (type(self).__name__, self.greenlet)
-        elif self._exception is None:
+        if self._exception is None:
             return '<%s greenlet=%s value=%r>' % (type(self).__name__, self.greenlet, self.value)
-        else:
-            return '<%s greenlet=%s exc_info=%r>' % (type(self).__name__, self.greenlet, self.exc_info)
+        return '<%s greenlet=%s exc_info=%r>' % (type(self).__name__, self.greenlet, self.exc_info)
 
     def ready(self):
         """Return true if and only if it holds a value or an exception"""

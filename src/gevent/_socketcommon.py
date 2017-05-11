@@ -113,7 +113,7 @@ __imports__ = copy_globals(__socket__, globals(),
 
 for _name in __socket__.__all__:
     _value = getattr(__socket__, _name)
-    if isinstance(_value, integer_types) or isinstance(_value, string_types):
+    if isinstance(_value, (integer_types, string_types)):
         globals()[_name] = _value
         __imports__.append(_name)
 
@@ -332,7 +332,7 @@ def getfqdn(name=''):
         pass
     else:
         aliases.insert(0, hostname)
-        for name in aliases:
+        for name in aliases: # EWW! pylint:disable=redefined-argument-from-local
             if isinstance(name, bytes):
                 if b'.' in name:
                     break

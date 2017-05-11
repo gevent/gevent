@@ -99,8 +99,7 @@ class socket(object):
             # See https://github.com/gevent/gevent/pull/399
             if self.timeout != 0.0:
                 return self._sock.type & ~_socket.SOCK_NONBLOCK # pylint:disable=no-member
-            else:
-                return self._sock.type
+            return self._sock.type
 
     def __enter__(self):
         return self
@@ -227,7 +226,7 @@ class socket(object):
         if reading and writing:
             buffer = io.BufferedRWPair(raw, raw, buffering)
         elif reading:
-            buffer = io.BufferedReader(raw, buffering) # pylint:disable=redefined-variable-type
+            buffer = io.BufferedReader(raw, buffering)
         else:
             assert writing
             buffer = io.BufferedWriter(raw, buffering)

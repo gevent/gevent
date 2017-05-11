@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 # A vendored version of part of https://github.com/ionelmc/python-tblib
+# pylint:disable=redefined-outer-name,reimported,function-redefined,bare-except,no-else-return,broad-except
 ####
 # Copyright (c) 2013-2016, Ionel Cristian Mărieș
 # All rights reserved.
@@ -116,7 +117,7 @@ except ImportError:
     tproxy = None
 
 __version__ = '1.3.0'
-__all__ = 'Traceback',
+__all__ = ('Traceback',)
 
 PY3 = sys.version_info[0] == 3
 FRAME_RE = re.compile(r'^\s*File "(?P<co_filename>.+)", line (?P<tb_lineno>\d+)(, in (?P<co_name>.+))?$')

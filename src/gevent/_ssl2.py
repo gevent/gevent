@@ -146,8 +146,7 @@ class SSLSocket(socket):
     def cipher(self):
         if not self._sslobj:
             return None
-        else:
-            return self._sslobj.cipher()
+        return self._sslobj.cipher()
 
     def send(self, data, flags=0, timeout=timeout_default):
         if timeout is timeout_default:
@@ -253,8 +252,7 @@ class SSLSocket(socket):
     def pending(self):
         if self._sslobj:
             return self._sslobj.pending()
-        else:
-            return 0
+        return 0
 
     def _sslobj_shutdown(self):
         while True:

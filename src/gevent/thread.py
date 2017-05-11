@@ -43,9 +43,8 @@ from gevent.local import local as _local
 
 def get_ident(gr=None):
     if gr is None:
-        return id(getcurrent())
-    else:
-        return id(gr)
+        gr = getcurrent()
+    return id(gr)
 
 
 def start_new_thread(function, args=(), kwargs=None):

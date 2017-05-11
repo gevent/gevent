@@ -139,8 +139,7 @@ class Queue(object):
             result.append('putters[%s]' % len(self.putters))
         if result:
             return ' ' + ' '.join(result)
-        else:
-            return ''
+        return ''
 
     def qsize(self):
         """Return the size of the queue."""

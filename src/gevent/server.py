@@ -166,6 +166,7 @@ class StreamServer(BaseServer):
             return sockobj, address
 
     def do_close(self, sock, *args):
+        # pylint:disable=arguments-differ
         sock.close()
 
     def wrap_socket_and_handle(self, client_socket, address):

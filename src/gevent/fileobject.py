@@ -57,9 +57,11 @@ else:
         return
 
 
-__all__ = ['FileObjectPosix',
-           'FileObjectThread',
-           'FileObject']
+__all__ = [
+    'FileObjectPosix',
+    'FileObjectThread',
+    'FileObject',
+]
 
 try:
     from fcntl import fcntl
@@ -104,7 +106,7 @@ class FileObjectThread(FileObjectBase):
         if self.lock is True:
             self.lock = Semaphore()
         elif not self.lock:
-            self.lock = DummySemaphore() # pylint:disable=redefined-variable-type
+            self.lock = DummySemaphore()
         if not hasattr(self.lock, '__enter__'):
             raise TypeError('Expected a Semaphore or boolean, got %r' % type(self.lock))
         if isinstance(fobj, integer_types):
@@ -200,6 +202,9 @@ class FileObjectBlock(FileObjectBase):
                 raise TypeError('FileObjectBlock does not support close=False on an fd.')
             fobj = os.fdopen(fobj, *args)
         super(FileObjectBlock, self).__init__(fobj, closefd)
+
+    def _do_close(self, fobj, closefd):
+        fobj.close()
 
 config = os.environ.get('GEVENT_FILE')
 if config:

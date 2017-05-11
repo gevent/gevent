@@ -311,8 +311,7 @@ class SSLSocket(socket):
             try:
                 if buffer is not None:
                     return self._sslobj.read(len, buffer)
-                else:
-                    return self._sslobj.read(len or 1024)
+                return self._sslobj.read(len or 1024)
             except SSLWantReadError:
                 if self.timeout == 0.0:
                     raise
@@ -326,8 +325,7 @@ class SSLSocket(socket):
                 if ex.args[0] == SSL_ERROR_EOF and self.suppress_ragged_eofs:
                     if buffer is not None:
                         return 0
-                    else:
-                        return b''
+                    return b''
                 else:
                     raise
 
@@ -368,8 +366,7 @@ class SSLSocket(socket):
         self._checkClosed()
         if not self._sslobj or not _ssl.HAS_NPN:
             return None
-        else:
-            return self._sslobj.selected_npn_protocol()
+        return self._sslobj.selected_npn_protocol()
 
     if hasattr(_ssl, 'HAS_ALPN'):
         # 2.7.10+
@@ -377,22 +374,19 @@ class SSLSocket(socket):
             self._checkClosed()
             if not self._sslobj or not _ssl.HAS_ALPN: # pylint:disable=no-member
                 return None
-            else:
-                return self._sslobj.selected_alpn_protocol()
+            return self._sslobj.selected_alpn_protocol()
 
     def cipher(self):
         self._checkClosed()
         if not self._sslobj:
             return None
-        else:
-            return self._sslobj.cipher()
+        return self._sslobj.cipher()
 
     def compression(self):
         self._checkClosed()
         if not self._sslobj:
             return None
-        else:
-            return self._sslobj.compression()
+        return self._sslobj.compression()
 
     def __check_flags(self, meth, flags):
         if flags != 0:
@@ -510,8 +504,7 @@ class SSLSocket(socket):
         self._checkClosed()
         if self._sslobj:
             return self._sslobj.pending()
-        else:
-            return 0
+        return 0
 
     def shutdown(self, how):
         self._checkClosed()

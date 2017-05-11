@@ -179,7 +179,7 @@ class Event(_AbstractLinkable):
         """
         self._flag = False
 
-    def _wait_return_value(self, waited, gotit):
+    def _wait_return_value(self, waited, wait_success):
         # To avoid the race condition outlined in http://bugs.python.org/issue13502,
         # if we had to wait, then we need to return whether or not
         # the condition got changed. Otherwise we simply echo
@@ -189,7 +189,7 @@ class Event(_AbstractLinkable):
             assert flag, "if we didn't wait we should already be set"
             return flag
 
-        return gotit
+        return wait_success
 
     def wait(self, timeout=None):
         """
@@ -393,7 +393,7 @@ class AsyncResult(_AbstractLinkable):
         """
         return self.get(block=False)
 
-    def _wait_return_value(self, waited, gotit):
+    def _wait_return_value(self, waited, wait_success):
         # pylint:disable=unused-argument
         # Always return the value. Since this is a one-shot event,
         # no race condition should reset it.

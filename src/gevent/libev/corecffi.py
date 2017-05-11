@@ -1,11 +1,11 @@
-# pylint: disable=too-many-lines, protected-access, redefined-outer-name, not-callable
+# pylint:disable=too-many-lines, protected-access, redefined-outer-name, not-callable,
 from __future__ import absolute_import, print_function
 import sys
 import os
 import traceback
 import signal as signalmodule
 
-
+# pylint:disable=undefined-all-variable
 __all__ = [
     'get_version',
     'get_header_version',
@@ -108,7 +108,7 @@ def _python_callback(handle, revents):
             # Legacy behaviour from corecext: convert None into ()
             # See test__core_watcher.py
             args = _NOARGS
-        if len(args) > 0 and args[0] == GEVENT_CORE_EVENTS:
+        if args and args[0] == GEVENT_CORE_EVENTS:
             args = (revents, ) + args[1:]
         the_watcher.callback(*args)
     except: # pylint:disable=bare-except
@@ -247,7 +247,7 @@ def _flags_to_list(flags):
 
 if sys.version_info[0] >= 3:
     basestring = (bytes, str)
-    integer_types = int,
+    integer_types = (int,)
 else:
     import __builtin__ # pylint:disable=import-error
     basestring = __builtin__.basestring,
@@ -892,6 +892,7 @@ class io(watcher):
         watcher.__init__(self, loop, ref=ref, priority=priority, args=(fd, events))
 
     def start(self, callback, *args, **kwargs):
+        # pylint:disable=arguments-differ
         args = args or _NOARGS
         if kwargs.get('pass_events'):
             args = (GEVENT_CORE_EVENTS, ) + args
@@ -936,6 +937,7 @@ class timer(watcher):
         watcher.__init__(self, loop, ref=ref, priority=priority, args=(after, repeat))
 
     def start(self, callback, *args, **kw):
+        # pylint:disable=arguments-differ
         update = kw.get("update", True)
         if update:
             # Quoth the libev doc: "This is a costly operation and is

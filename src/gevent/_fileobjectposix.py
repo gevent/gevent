@@ -269,16 +269,11 @@ class FileObjectPosix(FileObjectBase):
                 # attribute.
                 IOFamily = FlushingBufferedWriter
 
-        io = IOFamily(self.fileio, bufsize)
-        #else: # QQQ: not used, not reachable
-        #
-        #    self.io = BufferedRandom(self.fileio, bufsize)
+        super(FileObjectPosix, self).__init__(IOFamily(self.fileio, bufsize), close)
 
-        super(FileObjectPosix, self).__init__(io, close)
-
-    def _do_close(self, io, closefd):
+    def _do_close(self, fobj, closefd):
         try:
-            io.close()
+            fobj.close()
             # self.fileio already knows whether or not to close the
             # file descriptor
             self.fileio.close()

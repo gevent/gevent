@@ -19,4 +19,4 @@ except ImportError:
 
 copy_globals(_core, globals())
 
-__all__ = _core.__all__
+__all__ = _core.__all__ # pylint:disable=no-member

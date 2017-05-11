@@ -113,7 +113,7 @@ class FileObjectBase(object):
         self._io = None
         self._do_close(io, self._close)
 
-    def _do_close(self, io, closefd):
+    def _do_close(self, fobj, closefd):
         raise NotImplementedError()
 
     def __getattr__(self, name):

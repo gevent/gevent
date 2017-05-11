@@ -322,8 +322,7 @@ class GroupMappingMixin(object):
             kwds = {}
         if self._apply_immediately():
             return func(*args, **kwds)
-        else:
-            return self.spawn(func, *args, **kwds).get()
+        return self.spawn(func, *args, **kwds).get()
 
     def map(self, func, iterable):
         """Return a list made by applying the *func* to each element of

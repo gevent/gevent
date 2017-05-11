@@ -78,11 +78,11 @@ __all__ = [
 
 
 if sys.version_info[0] >= 3:
-    string_types = str,
+    string_types = (str,)
     PY3 = True
 else:
     import __builtin__ # pylint:disable=import-error
-    string_types = __builtin__.basestring,
+    string_types = (__builtin__.basestring,)
     PY3 = False
 
 WIN = sys.platform.startswith("win")
@@ -128,8 +128,7 @@ def get_original(mod_name, item_name):
     """
     if isinstance(item_name, string_types):
         return _get_original(mod_name, [item_name])[0]
-    else:
-        return _get_original(mod_name, item_name)
+    return _get_original(mod_name, item_name)
 
 _NONE = object()
 
@@ -407,8 +406,6 @@ def patch_thread(threading=True, _threading_local=True, Event=False, logging=Tru
         if orig_current_thread == threading_mod.main_thread():
             main_thread = threading_mod.main_thread()
             _greenlet = main_thread._greenlet = greenlet.getcurrent()
-            from gevent.hub import sleep
-
 
             main_thread.join = make_join_func(main_thread, _greenlet)
 
