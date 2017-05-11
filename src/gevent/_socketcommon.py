@@ -204,7 +204,11 @@ def wait_readwrite(fileno, timeout=None, timeout_exc=_NONE, event=_NONE):
     return wait(io, timeout, timeout_exc)
 
 #: The exception raised by default on a call to :func:`cancel_wait`
-cancel_wait_ex = error(EBADF, 'File descriptor was closed in another greenlet') # pylint: disable=undefined-variable
+class cancel_wait_ex(error): # pylint: disable=undefined-variable
+    def __init__(self):
+        super(cancel_wait_ex, self).__init__(
+            EBADF,
+            'File descriptor was closed in another greenlet')
 
 
 def cancel_wait(watcher, error=cancel_wait_ex):

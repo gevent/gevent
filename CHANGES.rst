@@ -32,6 +32,11 @@
             under CPython and PyPy. gevent follows the CPython
             convention, although these functions cannot be called with
             keyword arguments on CPython.
+- The previously-singleton exception objects ``FileObjectClosed`` and
+  ``cancel_wait_ex`` were converted to classes. On Python 3, an
+  exception object is stateful, including references to its context
+  and possibly traceback, which could lead to objects remaining alive
+  longer than intended.
 
 1.2.1 (2017-01-12)
 ==================

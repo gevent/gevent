@@ -6,8 +6,18 @@ except ImportError:
 
 from io import TextIOWrapper
 
-cancel_wait_ex = IOError(EBADF, 'File descriptor was closed in another greenlet')
-FileObjectClosed = IOError(EBADF, 'Bad file descriptor (FileObject was closed)')
+class cancel_wait_ex(IOError):
+
+    def __init__(self):
+        super(cancel_wait_ex, self).__init__(
+            EBADF, 'File descriptor was closed in another greenlet')
+
+
+class FileObjectClosed(IOError):
+
+    def __init__(self):
+        super(FileObjectClosed, self).__init__(
+            EBADF, 'Bad file descriptor (FileObject was closed)')
 
 class FileObjectBase(object):
     """
