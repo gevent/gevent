@@ -175,7 +175,7 @@ class FileObjectThread(FileObjectBase):
                 # This is different than FileObjectPosix, etc,
                 # because we want to save the expensive trip through
                 # the threadpool.
-                raise FileObjectClosed()
+                raise FileObjectClosed
             with lock:
                 return threadpool.apply(method, args, kwargs)
 
