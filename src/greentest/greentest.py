@@ -136,7 +136,7 @@ class ExpectedException(Exception):
 
 def wrap_switch_count_check(method):
     @wraps(method)
-    def wrap_switch_count_check(self, *args, **kwargs):
+    def wrapper(self, *args, **kwargs):
         initial_switch_count = getattr(_get_hub(), 'switch_count', None)
         self.switch_expected = getattr(self, 'switch_expected', True)
         if initial_switch_count is not None:
@@ -156,7 +156,7 @@ def wrap_switch_count_check(method):
             else:
                 raise AssertionError('Invalid value for switch_expected: %r' % (self.switch_expected, ))
         return result
-    return wrap_switch_count_check
+    return wrapper
 
 
 def wrap_timeout(timeout, method):
@@ -164,11 +164,11 @@ def wrap_timeout(timeout, method):
         return method
 
     @wraps(method)
-    def wrap_timeout(self, *args, **kwargs):
+    def wrapper(self, *args, **kwargs):
         with gevent.Timeout(timeout, 'test timed out', ref=False):
             return method(self, *args, **kwargs)
 
-    return wrap_timeout
+    return wrapper
 
 def ignores_leakcheck(func):
     func.ignore_leakcheck = True
@@ -212,7 +212,7 @@ def wrap_refcount(method):
         return diff
 
     @wraps(method)
-    def wrap_refcount(self, *args, **kwargs):
+    def wrapper(self, *args, **kwargs):
         gc.collect()
         gc.collect()
         gc.collect()
@@ -272,12 +272,12 @@ def wrap_refcount(method):
             gc.enable()
         self.skipTearDown = True
 
-    return wrap_refcount
+    return wrapper
 
 
 def wrap_error_fatal(method):
     @wraps(method)
-    def wrap_error_fatal(self, *args, **kwargs):
+    def wrapper(self, *args, **kwargs):
         # XXX should also be able to do gevent.SYSTEM_ERROR = object
         # which is a global default to all hubs
         SYSTEM_ERROR = gevent.get_hub().SYSTEM_ERROR
@@ -286,12 +286,12 @@ def wrap_error_fatal(method):
             return method(self, *args, **kwargs)
         finally:
             gevent.get_hub().SYSTEM_ERROR = SYSTEM_ERROR
-    return wrap_error_fatal
+    return wrapper
 
 
 def wrap_restore_handle_error(method):
     @wraps(method)
-    def wrap_restore_handle_error(self, *args, **kwargs):
+    def wrapper(self, *args, **kwargs):
         old = gevent.get_hub().handle_error
         try:
             return method(self, *args, **kwargs)
@@ -299,7 +299,7 @@ def wrap_restore_handle_error(method):
             gevent.get_hub().handle_error = old
         if self.peek_error()[0] is not None:
             gevent.getcurrent().throw(*self.peek_error()[1:])
-    return wrap_restore_handle_error
+    return wrapper
 
 
 def _get_class_attr(classDict, bases, attr, default=AttributeError):
@@ -369,6 +369,7 @@ class TestCase(TestCaseMetaClass("NewBase", (BaseTestCase,), {})):
     close_on_teardown = ()
 
     def run(self, *args, **kwargs):
+        # pylint:disable=arguments-differ
         if self.switch_expected == 'default':
             self.switch_expected = get_switch_expected(self.fullname)
         return BaseTestCase.run(self, *args, **kwargs)
@@ -521,6 +522,7 @@ class CountingHub(_original_Hub):
     switch_count = 0
 
     def switch(self, *args):
+        # pylint:disable=arguments-differ
         self.switch_count += 1
         return _original_Hub.switch(self, *args)
 
@@ -722,7 +724,7 @@ def _run_lsof():
     os.remove(tmpname)
     return data
 
-def get_open_files(pipes=False):
+def default_get_open_files(pipes=False):
     data = _run_lsof()
     results = {}
     for line in data.split('\n'):
@@ -746,7 +748,7 @@ def get_open_files(pipes=False):
     results['data'] = data
     return results
 
-def get_number_open_files():
+def default_get_number_open_files():
     if os.path.exists('/proc/'):
         # Linux only
         fd_directory = '/proc/%d/fd' % os.getpid()
@@ -757,12 +759,13 @@ def get_number_open_files():
         except (OSError, AssertionError):
             return 0
 
-lsof_get_open_files = get_open_files
+lsof_get_open_files = default_get_open_files
 
 try:
     import psutil
 except ImportError:
-    pass
+    get_open_files = default_get_open_files
+    get_number_open_files = default_get_number_open_files
 else:
     # If psutil is available (it is cross-platform) use that.
     # It is *much* faster than shelling out to lsof each time

@@ -10,10 +10,10 @@ from psycopg2 import extensions, OperationalError, connect
 
 
 if sys.version_info[0] >= 3:
-    integer_types = int,
+    integer_types = (int,)
 else:
     import __builtin__
-    integer_types = int, __builtin__.long
+    integer_types = (int, __builtin__.long)
 
 
 def gevent_wait_callback(conn, timeout=None):
@@ -50,14 +50,14 @@ class AbstractDatabaseConnectionPool(object):
         pool = self.pool
         if self.size >= self.maxsize or pool.qsize():
             return pool.get()
-        else:
-            self.size += 1
-            try:
-                new_item = self.create_connection()
-            except:
-                self.size -= 1
-                raise
-            return new_item
+
+        self.size += 1
+        try:
+            new_item = self.create_connection()
+        except:
+            self.size -= 1
+            raise
+        return new_item
 
     def put(self, item):
         self.pool.put(item)

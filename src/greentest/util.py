@@ -193,7 +193,7 @@ def run(command, **kwargs):
     finally:
         kill(popen)
     assert not err
-    with lock:
+    with lock: # pylint:disable=not-context-manager
         failed = bool(result)
         if out and (failed or verbose):
             out = out.strip().decode('utf-8', 'ignore')

@@ -1,4 +1,5 @@
 # pylint:disable=too-many-lines, protected-access, redefined-outer-name, not-callable,
+# pylint:disable=no-member
 from __future__ import absolute_import, print_function
 import sys
 import os

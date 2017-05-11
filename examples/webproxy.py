@@ -104,12 +104,11 @@ def join(url1, *rest):
     if url1.endswith(b'/'):
         if url2.startswith(b'/'):
             return join(url1 + url2[1:], *rest)
-        else:
-            return join(url1 + url2, *rest)
+        return join(url1 + url2, *rest)
     elif url2.startswith(b'/'):
         return join(url1 + url2, *rest)
-    else:
-        return join(url1 + b'/' + url2, *rest)
+
+    return join(url1 + b'/' + url2, *rest)
 
 
 def fix_links(data, proxy_url, host_url):

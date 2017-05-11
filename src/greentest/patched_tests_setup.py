@@ -497,7 +497,7 @@ if hasattr(sys, 'pypy_version_info') and sys.version_info[:2] >= (3, 3):
     ]
 
 
-if hasattr(sys, 'pypy_version_info') and sys.pypy_version_info[:4] == (5, 7, 1, 'beta'):
+if hasattr(sys, 'pypy_version_info') and sys.pypy_version_info[:4] == (5, 7, 1, 'beta'): # pylint:disable=no-member
     # 3.5 is beta. Hard to say what are real bugs in us vs real bugs in pypy.
     # For that reason, we pin these patches exactly to the version in use.
 
@@ -728,7 +728,7 @@ def _build_test_structure(sequence_of_tests):
 
     disabled_tests_by_file = collections.defaultdict(set)
     for file_case_meth in _disabled_tests:
-        file_name, _case, meth = file_case_meth.split('.')
+        file_name, _case, _meth = file_case_meth.split('.')
 
         by_file = disabled_tests_by_file[file_name]
 
