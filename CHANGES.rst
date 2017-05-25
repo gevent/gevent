@@ -26,7 +26,7 @@
   would cause callers using keyword arguments to raise a :exc:`TypeError`.
   Reported in :issue:`960` by js6626069. Likewise, correct the
   argument names for ``fromfd`` and ``socketpair`` on Python 2,
-  although they cannot be called wit keyword arguments under CPython.
+  although they cannot be called with keyword arguments under CPython.
 
   .. note:: The ``gethost*`` functions take different argument names
             under CPython and PyPy. gevent follows the CPython
@@ -37,6 +37,9 @@
   exception object is stateful, including references to its context
   and possibly traceback, which could lead to objects remaining alive
   longer than intended.
+- Make sure that ``python -m gevent.monkey <script>`` runs code in the
+  global scope, not the scope of the ``main`` function. Fixed in
+  :pr:`975` by Shawn Bohrer.
 
 1.2.1 (2017-01-12)
 ==================

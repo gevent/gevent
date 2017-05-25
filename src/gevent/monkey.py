@@ -672,9 +672,9 @@ def main():
         __package__ = None
         assert __package__ is None
         globals()['__file__'] = sys.argv[0]  # issue #302
-        # Clear package so exec'd script doesn't appear in gevent package
-        globals()['__package__'] = None
+        globals()['__package__'] = None # issue #975: make script be its own package
         with open(sys.argv[0]) as f:
+            # Be sure to exec in globals to avoid import pollution. Also #975.
             exec(f.read(), globals())
     else:
         print(script_help)
