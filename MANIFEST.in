@@ -18,6 +18,7 @@ include known_failures.py
 include *.yml
 include *.txt
 include _setup*.py
+include CHANGES.rst
 
 include tox.ini
 include .pep8
@@ -55,3 +56,4 @@ recursive-exclude src/gevent _corecffi.c
 # this exclude keeps check-manifest from complaining
 exclude Makefile
 exclude configure-output
+include Makefile.ext
