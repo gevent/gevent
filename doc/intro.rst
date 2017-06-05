@@ -363,7 +363,7 @@ When these are not enough, the :class:`~gevent.timeout.Timeout` class can be use
 add timeouts to arbitrary sections of (cooperative, yielding) code.
 
 
-Futher reading
+Further reading
 ==============
 
 To limit concurrency, use the :class:`gevent.pool.Pool` class (see `example: dns_mass_resolve.py`_).
