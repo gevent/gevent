@@ -4,7 +4,7 @@
 
 .. currentmodule:: gevent
 
-1.2.2 (unreleased)
+1.2.2 (2017-06-05)
 ==================
 
 - Testing on Python 3.5 now uses Python 3.5.3 due to SSL changes. See
