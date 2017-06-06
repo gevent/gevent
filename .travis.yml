@@ -25,13 +25,14 @@ matrix:
   fast_finish: true
 
 script:
-    - make $TASK
+    - make $TASK CC='ccache gcc'
 
 notifications:
   email: false
 
 # cache: pip seems not to work if `install` is replaced (https://github.com/travis-ci/travis-ci/issues/3239)
 cache:
+  ccache: true
   directories:
     - $HOME/.cache/pip
     - $HOME/.venv
@@ -40,3 +41,4 @@ cache:
 
 before_cache:
     - rm -f $HOME/.cache/pip/log/debug.log
+    - ccache -s
