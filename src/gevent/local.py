@@ -133,6 +133,10 @@ affects what we see:
    This results in locals being eligible for garbage collection as soon
    as their greenlet exits.
 
+.. versionchanged:: 1.2.3
+   Use a weak-reference to clear the greenlet link we establish in case
+   the local object dies before the greenlet does.
+
 """
 
 from copy import copy
@@ -174,39 +178,44 @@ class _localimpl(object):
         thread = getcurrent()
         idt = id(thread)
 
-        # If we are working with a gevent.greenlet.Greenlet, we can
-        # pro-actively clear out with a link. Use rawlink to avoid
-        # spawning any more greenlets
+        wrdicts = ref(self.dicts)
+
+        def thread_deleted(_, idt=idt, wrdicts=wrdicts):
+            # When the thread is deleted, remove the local dict.
+            # Note that this is suboptimal if the thread object gets
+            # caught in a reference loop. We would like to be called
+            # as soon as the OS-level thread ends instead.
+
+            # If we are working with a gevent.greenlet.Greenlet, we
+            # can pro-actively clear out with a link, avoiding the
+            # issue described above.Use rawlink to avoid spawning any
+            # more greenlets.
+            dicts = wrdicts()
+            if dicts:
+                dicts.pop(idt, None)
+
         try:
             rawlink = thread.rawlink
         except AttributeError:
-            # Otherwise we need to do it with weak refs
-            def local_deleted(_, key=key):
-                # When the localimpl is deleted, remove the thread attribute.
-                thread = wrthread()
-                if thread is not None:
-                    del thread.__dict__[key]
-
-            def thread_deleted(_, idt=idt):
-                # When the thread is deleted, remove the local dict.
-                # Note that this is suboptimal if the thread object gets
-                # caught in a reference loop. We would like to be called
-                # as soon as the OS-level thread ends instead.
-                _local = wrlocal()
-                if _local is not None:
-                    _local.dicts.pop(idt, None)
-            wrlocal = ref(self, local_deleted)
             wrthread = ref(thread, thread_deleted)
-            thread.__dict__[key] = wrlocal
         else:
-            wrdicts = ref(self.dicts)
+            rawlink(thread_deleted)
+            wrthread = ref(thread)
 
-            def clear(_):
-                dicts = wrdicts()
-                if dicts:
-                    dicts.pop(idt, None)
-            rawlink(clear)
-            wrthread = None
+        def local_deleted(_, key=key, wrthread=wrthread):
+            # When the localimpl is deleted, remove the thread attribute.
+            thread = wrthread()
+            if thread is not None:
+                try:
+                    unlink = thread.unlink
+                except AttributeError:
+                    pass
+                else:
+                    unlink(thread_deleted)
+                del thread.__dict__[key]
+
+        wrlocal = ref(self, local_deleted)
+        thread.__dict__[key] = wrlocal
 
         self.dicts[idt] = wrthread, localdict
         return localdict
