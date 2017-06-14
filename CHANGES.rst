@@ -7,7 +7,11 @@
 1.2.3 (unreleased)
 ==================
 
-- Nothing changed yet.
+- If a single greenlet created and destroyed many
+  :class:`gevent.local.local` objects without ever exiting, there
+  would be a leak of the function objects intended to clean up the
+  locals after the greenlet exited. Introduce a weak reference to
+  avoid that. Reported in :issue:`981` by Heungsub Lee.
 
 
 1.2.2 (2017-06-05)

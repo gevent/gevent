@@ -25,7 +25,6 @@ class Obj(object):
 deleted_sentinels = []
 created_sentinels = []
 
-
 class Sentinel(object):
     def __del__(self):
         deleted_sentinels.append(id(self))
@@ -104,6 +103,44 @@ class GeventLocalTestCase(greentest.TestCase):
 
         # The sentinels should be gone too
         self.assertEqual(len(deleted_sentinels), len(greenlets))
+
+    def test_locals_collected_when_unreferenced_even_in_running_greenlet(self):
+        # https://github.com/gevent/gevent/issues/981
+        import gevent
+        import gc
+        gc.collect()
+
+        del created_sentinels[:]
+        del deleted_sentinels[:]
+
+        count = 1000
+
+        running_greenlet = None
+
+        def demonstrate_my_local():
+            for i in range(1000):
+                x = MyLocal()
+                self.assertIsNotNone(x.sentinel)
+                x = None
+
+            gc.collect()
+            gc.collect()
+
+            self.assertEqual(count, len(created_sentinels))
+            # They're all dead, even though this greenlet is
+            # still running
+            self.assertEqual(count, len(deleted_sentinels))
+
+            # The links were removed as well.
+            self.assertEqual(list(running_greenlet._links), [])
+
+
+        running_greenlet = gevent.spawn(demonstrate_my_local)
+        gevent.sleep()
+        running_greenlet.join()
+
+        self.assertEqual(count, len(deleted_sentinels))
+
 
 if __name__ == '__main__':
     greentest.main()
