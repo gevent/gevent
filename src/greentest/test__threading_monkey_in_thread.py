@@ -7,6 +7,7 @@ import greentest
 
 class Test(greentest.TestCase):
 
+    @greentest.ignores_leakcheck # can't be run multiple times
     def test_patch_in_thread(self):
         all_warnings = []
         try:
