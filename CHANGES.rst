@@ -13,6 +13,20 @@
   locals after the greenlet exited. Introduce a weak reference to
   avoid that. Reported in :issue:`981` by Heungsub Lee.
 
+- Defer adjusting the stdlib's list of active threads until
+  ``threading`` is monkey patched. Previously this was done when
+  :mod:`gevent.threading` was imported. That module is documented to
+  be used as a helper for monkey patching, so this should generally
+  functionally be the same, but some applications ignore the directly
+  import that module anyway.
+
+  A positive consequence is that ``import gevent.threading, threading;
+  threading.current_thread()`` will no longer return a DummyThread
+  before monkey-patching. Another positive consequence is that PyPy
+  will no longer print a ``KeyError`` on exit if
+  :mod:`gevent.threading` was imported *without* monkey-patching.
+
+  See :issue:`984`.
 
 1.2.2 (2017-06-05)
 ==================

@@ -24,6 +24,9 @@ this code, ideally before any other imports::
     from gevent import monkey
     monkey.patch_all()
 
+A corollary of the above is that patching **should be done on the main
+thread** and **should be done while the program is single-threaded**.
+
 .. tip::
 
     Some frameworks, such as gunicorn, handle monkey-patching for you.
@@ -148,7 +151,19 @@ def remove_item(module, attr):
     delattr(module, attr)
 
 
-def patch_module(name, items=None):
+def __call_module_hook(gevent_module, name, module, items, warn):
+    func_name = '_gevent_' + name + '_monkey_patch'
+    try:
+        func = getattr(gevent_module, func_name)
+    except AttributeError:
+        pass
+    else:
+        func(module, items, warn)
+
+def patch_module(name, items=None, _warnings=None):
+    def warn(message):
+        _queue_warning(message, _warnings)
+
     gevent_module = getattr(__import__('gevent.' + name), name)
     module_name = getattr(gevent_module, '__target__', name)
     module = __import__(module_name)
@@ -156,8 +171,14 @@ def patch_module(name, items=None):
         items = getattr(gevent_module, '__implements__', None)
         if items is None:
             raise AttributeError('%r does not have __implements__' % gevent_module)
+
+    __call_module_hook(gevent_module, 'will', module, items, warn)
+
     for attr in items:
         patch_item(module, attr, getattr(gevent_module, attr))
+
+    __call_module_hook(gevent_module, 'did', module, items, warn)
+
     return module
 
 
