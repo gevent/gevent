@@ -217,7 +217,7 @@ def _gevent_will_monkey_patch(native_module, items, warn): # pylint:disable=unus
     main_thread = main_native_thread()
     if __threading__.current_thread() != main_thread:
         warn("Monkey-patching outside the main native thread. Some APIs "
-             "will not be available.")
+             "will not be available. Expect a KeyError to be printed at shutdown.")
         return
 
     if _get_ident() not in __threading__._active:
