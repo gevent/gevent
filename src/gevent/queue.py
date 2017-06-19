@@ -1,12 +1,15 @@
 # Copyright (c) 2009-2012 Denis Bilenko. See LICENSE for details.
-"""Synchronized queues.
+"""
+Synchronized queues.
 
 The :mod:`gevent.queue` module implements multi-producer, multi-consumer queues
 that work across greenlets, with the API similar to the classes found in the
 standard :mod:`Queue` and :class:`multiprocessing <multiprocessing.Queue>` modules.
 
-The classes in this module implement iterator protocol. Iterating over queue
-means repeatedly calling :meth:`get <Queue.get>` until :meth:`get <Queue.get>` returns ``StopIteration``.
+The classes in this module implement the iterator protocol. Iterating
+over a queue means repeatedly calling :meth:`get <Queue.get>` until
+:meth:`get <Queue.get>` returns ``StopIteration`` (specifically that
+class, not an instance or subclass).
 
     >>> queue = gevent.queue.Queue()
     >>> queue.put(1)
@@ -58,11 +61,14 @@ class Queue(object):
     If *maxsize* is less than or equal to zero or ``None``, the queue
     size is infinite.
 
+    Queues have a ``len`` equal to the number of items in them (the :meth:`qsize`),
+    but in a boolean context they are always True.
+
     .. versionchanged:: 1.1b3
        Queues now support :func:`len`; it behaves the same as :meth:`qsize`.
     .. versionchanged:: 1.1b3
        Multiple greenlets that block on a call to :meth:`put` for a full queue
-       will now be woken up to put their items into the queue in the order in which
+       will now be awakened to put their items into the queue in the order in which
        they arrived. Likewise, multiple greenlets that block on a call to :meth:`get` for
        an empty queue will now receive items in the order in which they blocked. An
        implementation quirk under CPython *usually* ensured this was roughly the case
@@ -74,8 +80,10 @@ class Queue(object):
             self.maxsize = None
             if maxsize == 0:
                 import warnings
-                warnings.warn('Queue(0) now equivalent to Queue(None); if you want a channel, use Channel',
-                              DeprecationWarning, stacklevel=2)
+                warnings.warn(
+                    'Queue(0) now equivalent to Queue(None); if you want a channel, use Channel',
+                    DeprecationWarning,
+                    stacklevel=2)
         else:
             self.maxsize = maxsize
         # Explicitly maintain order for getters and putters that block

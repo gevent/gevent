@@ -339,6 +339,7 @@ killing will remain blocked forever).
              `This document
              <http://docs.oracle.com/javase/8/docs/technotes/guides/concurrency/threadPrimitiveDeprecation.html>`_
              describes a similar situation for threads.
+
 Timeouts
 ========
 
@@ -364,7 +365,7 @@ add timeouts to arbitrary sections of (cooperative, yielding) code.
 
 
 Further reading
-==============
+===============
 
 To limit concurrency, use the :class:`gevent.pool.Pool` class (see `example: dns_mass_resolve.py`_).
 
