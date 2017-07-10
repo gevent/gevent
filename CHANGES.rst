@@ -1027,7 +1027,7 @@ os:
 
 hub:
 
-- The system error is now raised immediatelly in main greenlet in all cases.
+- The system error is now raised immediately in main greenlet in all cases.
 - Dropped support for old greenlet versions (need >= 0.3.2 now)
 
 core:
@@ -1435,7 +1435,7 @@ Release 0.13.2 (Jan 28, 2011)
 - Added proper implementation of :meth:`imap_unordered <gevent.pool.Group.imap_unordered>` to :class:`Pool` class. Unlike previous "dummy" implementation this one starts yielding the results as soon as they are ready.
 - Implemented iterator protocol in :class:`Queue <gevent.queue.Queue>`. The main use case is the implementation of :meth:`Pool.imap_unordered`.
 - Fixed :attr:`BaseServer.started` property: it is now set to ``True`` after :meth:`start <StreamServer.start>` until :meth:`stop <StreamServer.stop>` or :meth:`kill <StreamServer.kill>`. Previously it could become ``False`` for short period of times, because :class:`StreamServer` could stop accepting for a while in presence of errors and :attr:`StreamServer.started` was defined as "whether the server is currently accepting".
-- Fixed :class:`wsgi.WSGIServer` to reply with 500 error immediatelly if the application raises an error (:issue:`58`). Thanks to **Jon Aslund**.
+- Fixed :class:`wsgi.WSGIServer` to reply with 500 error immediately if the application raises an error (:issue:`58`). Thanks to **Jon Aslund**.
 - Added :func:`monkey.patch_httplib` function which is disabled by default.
 - Added *httplib* parameter to :func:`monkey.patch_all` (defaults to ``False``).
 - Added :func:`write <core.buffer.write>` method to :class:`core.buffer`.
@@ -1457,7 +1457,7 @@ Release highlights:
 - Fixed :mod:`gevent.wsgi` and :mod:`gevent.pywsgi` to join multiple ``Cookie`` headers (:issue:`40`).
 - Fixed :func:`select <gevent.select.select>` to recognize ``long`` arguments in addition to ``int``.
 - Fixed :meth:`Semaphore.acquire` to return ``False`` when timeout expires instead of raising :exc:`AssertionError` (:issue:`39`). Patch by **Erik Näslund**.
-- Fixed :meth:`JoinableQueue.join` to return immediatelly if queue is already empty (:issue:`45`). Patch by **Dmitry Chechik**.
+- Fixed :meth:`JoinableQueue.join` to return immediately if queue is already empty (:issue:`45`). Patch by **Dmitry Chechik**.
 - Deprecated :mod:`gevent.sslold` module.
 
 :mod:`gevent.socket` module:

@@ -114,7 +114,7 @@ class TestTimers(greentest.TestCase):
 
         def func():
             gevent.spawn(lst.pop)
-            # exiting immediatelly, but self.lst.pop must be called
+            # exiting immediately, but self.lst.pop must be called
         gevent.spawn(func)
         gevent.sleep(0.01)
         assert lst == [], lst
