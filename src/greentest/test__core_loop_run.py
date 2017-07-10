@@ -10,8 +10,8 @@ loop = core.loop()
 
 signal = signal(2, sys.stderr.write, 'INTERRUPT!')
 
-print('must exit immediatelly...')
-loop.run()  # must exit immediatelly
+print('must exit immediately...')
+loop.run()  # must exit immediately
 print('...and once more...')
 loop.run()  # repeating does not fail
 print('..done')

@@ -364,7 +364,7 @@ class TestNoWait(TestCase):
 class TestJoinEmpty(TestCase):
 
     def test_issue_45(self):
-        """Test that join() exits immediatelly if not jobs were put into the queue"""
+        """Test that join() exits immediately if not jobs were put into the queue"""
         self.switch_expected = False
         q = queue.JoinableQueue()
         q.join()
