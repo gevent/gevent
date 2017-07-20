@@ -1,3 +1,4 @@
+# cython: auto_pickle=False
 import sys
 from gevent.hub import get_hub, getcurrent
 from gevent.timeout import Timeout
