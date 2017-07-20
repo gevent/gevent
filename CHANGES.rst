@@ -17,8 +17,8 @@
   ``threading`` is monkey patched. Previously this was done when
   :mod:`gevent.threading` was imported. That module is documented to
   be used as a helper for monkey patching, so this should generally
-  functionally be the same, but some applications ignore the directly
-  import that module anyway.
+  function the same, but some applications ignore the documentation
+  and directly import that module anyway.
 
   A positive consequence is that ``import gevent.threading, threading;
   threading.current_thread()`` will no longer return a DummyThread
@@ -27,6 +27,8 @@
   :mod:`gevent.threading` was imported *without* monkey-patching.
 
   See :issue:`984`.
+
+- gevent is now built and tested with Cython 0.26.
 
 1.2.2 (2017-06-05)
 ==================
