@@ -4,7 +4,7 @@
 
 .. currentmodule:: gevent
 
-1.2.3 (unreleased)
+1.3.0 (unreleased)
 ==================
 
 - If a single greenlet created and destroyed many
@@ -29,6 +29,10 @@
   See :issue:`984`.
 
 - gevent is now built and tested with Cython 0.26.
+
+- Specify the Requires-Python metadata for improved installation
+  support in certain tools (setuptools v24.2.1 or newer is required).
+  See :issue:`995`.
 
 1.2.2 (2017-06-05)
 ==================
