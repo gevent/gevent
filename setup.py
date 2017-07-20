@@ -15,7 +15,7 @@ from _setuputils import BuildFailed
 
 # setuptools is *required* on Windows
 # (https://bugs.python.org/issue23246) and for PyPy. No reason not to
-# use it everywhere.
+# use it everywhere. v24.2.0 is needed for python_requires
 from setuptools import Extension, setup
 from setuptools import find_packages
 
@@ -35,8 +35,6 @@ if WIN:
     if not os.environ.get('PYEXE'):
         os.environ['PYEXE'] = os.environ['PYTHON_EXE']
 
-if sys.version_info[:2] < (2, 7):
-    raise Exception("Please install gevent 1.1 for Python 2.6")
 
 if PYPY and sys.pypy_version_info[:3] < (2, 6, 1): # pylint:disable=no-member
     # We have to have CFFI >= 1.3.0, and this platform cannot upgrade
@@ -168,6 +166,7 @@ def run_setup(ext_modules, run_make):
             "Intended Audience :: Developers",
             "Development Status :: 4 - Beta"
         ],
+        python_requires=">=2.7,!=3.0.*,!=3.1.*,!=3.2.*", # !=3.3.*
     )
 
 # Tools like pyroma expect the actual call to `setup` to be performed
