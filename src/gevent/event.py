@@ -357,7 +357,7 @@ class AsyncResult(_AbstractLinkable):
     def get(self, block=True, timeout=None):
         """Return the stored value or raise the exception.
 
-        If this instance already holds a value or an exception, return  or raise it immediatelly.
+        If this instance already holds a value or an exception, return  or raise it immediately.
         Otherwise, block until another greenlet calls :meth:`set` or :meth:`set_exception` or
         until the optional timeout occurs.
 
