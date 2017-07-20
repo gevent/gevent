@@ -1,4 +1,9 @@
 # Copyright (c) 2011-2012 Denis Bilenko. See LICENSE for details.
+# Automatic pickling of cdef classes was added in 0.26. Unfortunately it
+# seems to be buggy (at least for the `result` class) and produces code that
+# can't compile ("local variable 'result' referenced before assignment").
+# See https://github.com/cython/cython/issues/1786
+# cython: auto_pickle=False
 cimport cares
 import sys
 from python cimport *
