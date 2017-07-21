@@ -470,7 +470,7 @@ class ThreadJoinOnShutdown(unittest.TestCase):
             """
         self._run_and_join(script)
 
-
+    @greentest.skipOnPyPy3("Buffering issue.")
     def test_3_join_in_forked_from_thread(self):
         # Like the test above, but fork() was called from a worker thread
         # In the forked process, the main Thread object must be marked as stopped.
@@ -500,11 +500,13 @@ class ThreadJoinOnShutdown(unittest.TestCase):
 
             w = threading.Thread(target=worker)
             w.start()
-            # In PyPy3 5.8.0, if we don't wait on this top-level "thread"
-            # we never see "end of thread". It's not clear why, since that's being
-            # done in a child of this process.
-            w.join()
             """
+        # In PyPy3 5.8.0, if we don't wait on this top-level "thread", 'w',
+        # we never see "end of thread". It's not clear why, since that's being
+        # done in a child of this process. Yet in normal CPython 3, waiting on this
+        # causes the whole process to lock up (possibly because of some loop within
+        # the interpreter waiting on thread locks, like the issue described in threading.py
+        # for Python 3.4? in any case, it doesn't hang in Python 2.)
         self._run_and_join(script)
 
 
