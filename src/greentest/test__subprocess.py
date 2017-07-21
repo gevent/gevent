@@ -4,6 +4,10 @@ import errno
 import greentest
 import gevent
 from gevent import subprocess
+
+if not hasattr(subprocess, 'mswindows'):
+    # PyPy3, native python subprocess
+    subprocess.mswindows = False
 import time
 import gc
 import tempfile
@@ -229,6 +233,36 @@ class Test(greentest.TestCase):
             self.assertEqual(ex[0].args[0], 'child watchers are only available on the default loop')
 
         test_subprocess_in_native_thread.ignore_leakcheck = True
+
+    def __test_no_output(self, kwargs, kind):
+        proc = subprocess.Popen([sys.executable, '-c', 'pass'],
+                                stdout=subprocess.PIPE,
+                                **kwargs)
+        stdout, stderr = proc.communicate()
+
+        self.assertIsInstance(stdout, kind)
+        self.assertIsNone(stderr)
+
+
+    def test_universal_newlines_text_mode_no_output_is_always_str(self):
+        # If the file is in universal_newlines mode, we should always get a str when
+        # there is no output.
+        # https://github.com/gevent/gevent/pull/939
+        kwargs = {'universal_newlines': True}
+        self.__test_no_output({'universal_newlines': True}, str)
+
+    @greentest.skipIf(sys.version_info[:2] < (3, 6), "Need encoding argument")
+    def test_encoded_text_mode_no_output_is_str(self):
+        # If the file is in universal_newlines mode, we should always get a str when
+        # there is no output.
+        # https://github.com/gevent/gevent/pull/939
+        self.__test_no_output({'encoding': 'utf-8'}, str)
+
+    def test_default_mode_no_output_is_always_str(self):
+        # If the file is in default mode, we should always get a str when
+        # there is no output.
+        # https://github.com/gevent/gevent/pull/939
+        self.__test_no_output({}, bytes)
 
 class RunFuncTestCase(greentest.TestCase):
     # Based on code from python 3.6

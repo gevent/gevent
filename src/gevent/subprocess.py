@@ -387,6 +387,10 @@ class Popen(object):
        restricted to Python 3.
     """
 
+    # The value returned from communicate() when there was nothing to read.
+    # Changes if we're in text mode or universal newlines mode.
+    _communicate_empty_value = b''
+
     def __init__(self, args, bufsize=None, executable=None,
                  stdin=None, stdout=None, stderr=None,
                  preexec_fn=None, close_fds=_PLATFORM_DEFAULT_CLOSE_FDS, shell=False,
@@ -504,6 +508,11 @@ class Popen(object):
                 errread = msvcrt.open_osfhandle(errread.Detach(), 0)
 
         text_mode = PY3 and (self.encoding or self.errors or universal_newlines)
+        if text_mode or universal_newlines:
+            # Always a native str in universal_newlines mode, even when that
+            # str type is bytes. Additionally, text_mode is only true under
+            # Python 3, so it's actually a unicode str
+            self._communicate_empty_value = ''
 
         if p2cwrite is not None:
             if PY3 and text_mode:
@@ -643,31 +652,33 @@ class Popen(object):
         # that no output should be lost in the event of a timeout.) Instead, we're
         # watching for the exception and ignoring it. It's not elegant,
         # but it works
-        if self.stdout:
-            def _read_out():
+        def _make_pipe_reader(pipe_name):
+            pipe = getattr(self, pipe_name)
+            buf_name = '_' + pipe_name + '_buffer'
+
+            def _read():
                 try:
-                    data = self.stdout.read()
+                    data = pipe.read()
                 except RuntimeError:
                     return
-                if self._stdout_buffer is not None:
-                    self._stdout_buffer += data
+                if not data:
+                    return
+                the_buffer = getattr(self, buf_name)
+                if the_buffer:
+                    the_buffer.append(data)
                 else:
-                    self._stdout_buffer = data
+                    setattr(self, buf_name, [data])
+            return _read
+
+        if self.stdout:
+            _read_out = _make_pipe_reader('stdout')
             stdout = spawn(_read_out)
             greenlets.append(stdout)
         else:
             stdout = None
 
         if self.stderr:
-            def _read_err():
-                try:
-                    data = self.stderr.read()
-                except RuntimeError:
-                    return
-                if self._stderr_buffer is not None:
-                    self._stderr_buffer += data
-                else:
-                    self._stderr_buffer = data
+            _read_err = _make_pipe_reader('stderr')
             stderr = spawn(_read_err)
             greenlets.append(stderr)
         else:
@@ -686,25 +697,30 @@ class Popen(object):
         if timeout is not None and len(done) != len(greenlets):
             raise TimeoutExpired(self.args, timeout)
 
-        if self.stdout:
-            try:
-                self.stdout.close()
-            except RuntimeError:
-                pass
-        if self.stderr:
-            try:
-                self.stderr.close()
-            except RuntimeError:
-                pass
+        for pipe in (self.stdout, self.stderr):
+            if pipe:
+                try:
+                    pipe.close()
+                except RuntimeError:
+                    pass
+
         self.wait()
-        stdout_value = self._stdout_buffer
-        self._stdout_buffer = None
-        stderr_value = self._stderr_buffer
-        self._stderr_buffer = None
-        # XXX: Under python 3 in universal newlines mode we should be
-        # returning str, not bytes
-        return (None if stdout is None else stdout_value or b'',
-                None if stderr is None else stderr_value or b'')
+
+        def _get_output_value(pipe_name):
+            buf_name = '_' + pipe_name + '_buffer'
+            buf_value = getattr(self, buf_name)
+            setattr(self, buf_name, None)
+            if buf_value:
+                buf_value = self._communicate_empty_value.join(buf_value)
+            else:
+                buf_value = self._communicate_empty_value
+            return buf_value
+
+        stdout_value = _get_output_value('stdout')
+        stderr_value = _get_output_value('stderr')
+
+        return (None if stdout is None else stdout_value,
+                None if stderr is None else stderr_value)
 
     def poll(self):
         """Check if child process has terminated. Set and return :attr:`returncode` attribute."""
