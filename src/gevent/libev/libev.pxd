@@ -149,6 +149,7 @@ cdef extern from "libev.h":
     void ev_timer_start(ev_loop*, ev_timer*)
     void ev_timer_stop(ev_loop*, ev_timer*)
     void ev_timer_again(ev_loop*, ev_timer*)
+    double ev_timer_remaining(ev_loop*, ev_timer*)
 
     void ev_signal_init(ev_signal*, void* callback, int)
     void ev_signal_start(ev_loop*, ev_signal*)

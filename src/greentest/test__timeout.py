@@ -134,6 +134,12 @@ class Test(greentest.TestCase):
         ex = self._check_context_manager_expires(timeout)
         self.assertTrue(str(ex).endswith('XXX'), str(ex))
 
+    def test_remaining(self):
+        timeout = gevent.Timeout(SHOULD_EXPIRE*10.0)
+        timeout.start()
+        gevent.sleep(SHOULD_EXPIRE*5.0)
+        self.assertTrue(SHOULD_EXPIRE*4.0<timeout.remaining and timeout.remaining<SHOULD_EXPIRE*5.0, str(timeout))
+
     def test_cancel(self):
         timeout = gevent.Timeout(SHOULD_EXPIRE)
         timeout.start()
