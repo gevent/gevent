@@ -10,10 +10,6 @@ mkdir /tmp/gevent/
 # 2.7 is a python.org build, builds a 10_6_intel wheel
 ./geventrel.sh /usr/local/bin/python2.7
 
-# 3.3 is built by macports, builds a 10_11_64 wheel
-# no python.org build available
-./geventrel.sh /opt/local/bin/python3.3
-
 # 3.4 is a python.org build, builds a 10_6_intel wheel
 ./geventrel.sh /usr/local/bin/python3.4
 
