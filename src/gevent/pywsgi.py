@@ -946,8 +946,8 @@ class WSGIHandler(object):
         except _InvalidClientInput:
             self._send_error_response_if_possible(400)
         except socket.error as ex:
-            if ex.args[0] in (errno.EPIPE, errno.ECONNRESET):
-                # Broken pipe, connection reset by peer.
+            if ex.args[0] in (errno.EPIPE, errno.ECONNRESET, errno.WSAECONNABORTED):
+                # Broken pipe, connection reset by peer, connection aborted.
                 # Swallow these silently to avoid spewing
                 # useless info on normal operating conditions,
                 # bloating logfiles. See https://github.com/gevent/gevent/pull/377
