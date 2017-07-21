@@ -110,7 +110,7 @@ PY34=$(BUILD_RUNTIMES)/snakepit/python3.4.5
 PY35=$(BUILD_RUNTIMES)/snakepit/python3.5.3
 PY36=$(BUILD_RUNTIMES)/snakepit/python3.6.0
 PYPY=$(BUILD_RUNTIMES)/snakepit/pypy571
-PYPY3=$(BUILD_RUNTIMES)/snakepit/pypy3.5_571
+PYPY3=$(BUILD_RUNTIMES)/snakepit/pypy3.5_580
 
 TOOLS=$(BUILD_RUNTIMES)/tools
 
