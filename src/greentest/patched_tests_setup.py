@@ -480,6 +480,12 @@ if hasattr(sys, 'pypy_version_info') and sys.pypy_version_info[:4] in ( # pylint
         'test_threading.ThreadJoinOnShutdown.test_1_join_in_forked_process',
     ]
 
+    if TRAVIS:
+        disabled_tests += [
+            # Likewise, but I haven't produced it locally.
+            'test_threading.ThreadJoinOnShutdown.test_1_join_on_shutdown',
+        ]
+
     wrapped_tests.update({
         # XXX: gevent: The error that was raised by that last call
         # left a socket open on the server or client. The server gets
