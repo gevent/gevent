@@ -13,7 +13,6 @@ LEAKTEST = os.getenv('GEVENTTEST_LEAKCHECK')
 COVERAGE = os.getenv("COVERAGE_PROCESS_START")
 PYPY = hasattr(sys, 'pypy_version_info')
 PY3 = sys.version_info[0] >= 3
-PY26 = sys.version_info[0] == 2 and sys.version_info[1] == 6
 PY27 = sys.version_info[0] == 2 and sys.version_info[1] == 7
 PY35 = sys.version_info[0] >= 3 and sys.version_info[1] >= 5
 PYGTE279 = (
@@ -140,6 +139,10 @@ if PYPY:
 
         ## BUGS:
 
+        ## UNKNOWN:
+        #   AssertionError: '>>> ' != ''
+        # test__backdoor.py:52
+        'FLAKY test__backdoor.py',
     ]
 
     if PY3 and TRAVIS:
@@ -150,25 +153,6 @@ if PYPY:
             'FLAKY test_subprocess.py', # timeouts on one test.
         ]
 
-
-if PY26:
-    FAILING_TESTS += [
-        # http://bugs.python.org/issue9446, fixed in 2.7/3
-        # https://github.com/python/cpython/commit/a104f91ff4c4560bec7c336afecb094e73a5ab7e
-        'FLAKY test_urllib2.py',
-    ]
-
-    if TRAVIS:
-        # Started seeing this with a fresh build of 2.6.9
-        # on 2016-02-11. Can't reproduce locally.
-        # test__all__.test_ssl: items 'name', 'value' from
-        # stdlib module not found in gevent module.
-        # Which makes no sense. 2.6 isn't supported by python.org
-        # anymore, though, and we're starting to get warnings about
-        # pip.
-        FAILING_TESTS += [
-            'test__all__.py',
-        ]
 
 if PY3:
     # No idea / TODO

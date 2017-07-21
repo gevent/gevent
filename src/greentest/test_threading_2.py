@@ -470,8 +470,7 @@ class ThreadJoinOnShutdown(unittest.TestCase):
             """
         self._run_and_join(script)
 
-    @greentest.skipOnPyPy3OnCI("Sometimes has buffering issues")
-    # probably our bug? Need to flush something
+
     def test_3_join_in_forked_from_thread(self):
         # Like the test above, but fork() was called from a worker thread
         # In the forked process, the main Thread object must be marked as stopped.
@@ -501,6 +500,10 @@ class ThreadJoinOnShutdown(unittest.TestCase):
 
             w = threading.Thread(target=worker)
             w.start()
+            # In PyPy3 5.8.0, if we don't wait on this top-level "thread"
+            # we never see "end of thread". It's not clear why, since that's being
+            # done in a child of this process.
+            w.join()
             """
         self._run_and_join(script)
 

@@ -43,6 +43,9 @@
   been tested. This merely removes the supporting Trove classifier and
   remaining test code. See :issue:`997`.
 
+- Linux CI now tests on PyPy3 3.5-5.8.0, updated from PyPy3 3.5-5.7.1.
+  See :issue:`1001`.
+
 1.2.2 (2017-06-05)
 ==================
 

@@ -181,7 +181,7 @@ test-pypy: $(PYPY)
 	PYTHON=$(PYPY) PIP=pip PATH=$(BUILD_RUNTIMES)/versions/pypy571/bin:$(PATH) make develop toxtest
 
 test-pypy3: $(PYPY3)
-	PYTHON=$(PYPY3) PIP=pip PATH=$(BUILD_RUNTIMES)/versions/pypy3.5_571/bin:$(PATH) make develop toxtest
+	PYTHON=$(PYPY3) PIP=pip PATH=$(BUILD_RUNTIMES)/versions/pypy3.5_580/bin:$(PATH) make develop toxtest
 
 test-py27-cffi: $(PY27)
 	GEVENT_CORE_CFFI_ONLY=1 PYTHON=python2.7.13 PATH=$(BUILD_RUNTIMES)/versions/python2.7.13/bin:$(PATH) make develop toxtest
