@@ -133,6 +133,8 @@ if PYPY3:
 else:
     skipOnPyPy3 = _do_not_skip
 
+skipIf = unittest.skipIf
+
 EXPECT_POOR_TIMER_RESOLUTION = PYPY3 or RUNNING_ON_APPVEYOR
 
 class ExpectedException(Exception):

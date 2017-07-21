@@ -46,6 +46,11 @@
 - Linux CI now tests on PyPy3 3.5-5.8.0, updated from PyPy3 3.5-5.7.1.
   See :issue:`1001`.
 
+- :meth:`gevent.subprocess.Popen.communicate` returns the correct type
+  of str (not bytes) in universal newline mode under Python 3, or when
+  an encoding has been specified. Initial patch in :pr:`939` by
+  William Grzybowski.
+
 1.2.2 (2017-06-05)
 ==================
 
