@@ -6,9 +6,11 @@ import contextlib
 import functools
 import sys
 import os
+import platform
 import re
 
 TRAVIS = os.environ.get("TRAVIS") == "true"
+OSX = bool(platform.mac_ver()[0])
 
 # By default, test cases are expected to switch and emit warnings if there was none
 # If a test is found in this list, it's expected not to switch.
@@ -345,14 +347,6 @@ if hasattr(sys, 'pypy_version_info'):
         # _execut_child)
     ]
 
-    import cffi # pylint:disable=import-error,useless-suppression
-    if cffi.__version_info__ < (1, 2, 0):
-        disabled_tests += [
-            'test_signal.InterProcessSignalTests.test_main',
-            # Fails to get the signal to the correct handler due to
-            # https://bitbucket.org/cffi/cffi/issue/152/handling-errors-from-signal-handlers-in
-        ]
-
 # Generic Python 3
 
 if sys.version_info[0] == 3:
@@ -443,32 +437,53 @@ if hasattr(sys, 'pypy_version_info') and sys.version_info[:2] >= (3, 3):
     disabled_tests += [
         # This raises 'RuntimeError: reentrant call' when exiting the
         # process tries to close the stdout stream; no other platform does this.
-        # See in both 3.3 and 3.5
+        # Seen in both 3.3 and 3.5 (5.7 and 5.8)
         'test_signal.SiginterruptTest.test_siginterrupt_off',
     ]
 
 
-if hasattr(sys, 'pypy_version_info') and sys.pypy_version_info[:4] == (5, 7, 1, 'beta'): # pylint:disable=no-member
+if hasattr(sys, 'pypy_version_info') and sys.pypy_version_info[:4] in ( # pylint:disable=no-member
+        (5, 8, 0, 'beta'),
+    ):
     # 3.5 is beta. Hard to say what are real bugs in us vs real bugs in pypy.
     # For that reason, we pin these patches exactly to the version in use.
-    # TODO: Upgrade to v5.8.
+
+
     disabled_tests += [
         # This fails to close all the FDs, at least on CI. On OS X, many of the
         # POSIXProcessTestCase fd tests have issues.
         'test_subprocess.POSIXProcessTestCase.test_close_fds_when_max_fd_is_lowered',
 
-        # see extensive comments in this method. we don't actually disable it,
-        # we patched it.
-        # test_urllib2_localnet.TestUrlopen.test_https_with_cafile
+        # This has the wrong constants in 5.8 (but worked in 5.7), at least on
+        # OS X. It finds "zlib compression" but expects "ZLIB".
+        'test_ssl.ThreadedTests.test_compression',
+    ]
+
+    if OSX:
+        disabled_tests += [
+            # These all fail with "invalid_literal for int() with base 10: b''"
+            'test_subprocess.POSIXProcessTestCase.test_close_fds',
+            'test_subprocess.POSIXProcessTestCase.test_close_fds_after_preexec',
+            'test_subprocess.POSIXProcessTestCase.test_pass_fds',
+            'test_subprocess.POSIXProcessTestCase.test_pass_fds_inheritable',
+            'test_subprocess.POSIXProcessTestCase.test_pipe_cloexec',
+        ]
+
+    disabled_tests += [
+        # This seems to be a buffering issue? Something isn't
+        # getting flushed. (The output is wrong). Under PyPy3 5.7,
+        # I couldn't reproduce locally in Ubuntu 16 in a VM
+        # or a laptop with OS X. Under 5.8.0, I can reproduce it, but only
+        # when run by the testrunner, not when run manually on the command line,
+        # so something is changing in stdout buffering in those situations.
+        'test_threading.ThreadJoinOnShutdown.test_2_join_in_forked_process',
+        'test_threading.ThreadJoinOnShutdown.test_1_join_in_forked_process',
     ]
 
     if TRAVIS:
         disabled_tests += [
-            # This seems to be a buffering issue? Something isn't getting flushed
-            # I can't reproduce locally though in Ubuntu 16 in a VM or a laptop with OS X.
-            'test_threading.ThreadJoinOnShutdown.test_2_join_in_forked_process',
-            'test_threading.ThreadJoinOnShutdown.test_1_join_in_forked_process',
-
+            # Likewise, but I haven't produced it locally.
+            'test_threading.ThreadJoinOnShutdown.test_1_join_on_shutdown',
         ]
 
     wrapped_tests.update({
