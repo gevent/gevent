@@ -435,56 +435,7 @@ if sys.version_info[0] == 3:
         'test_wsgiref.IntegrationTests.test_interrupted_write': _make_run_with_original('threading', 'get_ident')
     })
 
-# PyPy3 5.5.0-alpha
-
-if hasattr(sys, 'pypy_version_info') and sys.version_info[:2] == (3, 3):
-    # TODO: We don't test this version anymore, it can go
-    # Almost all the SSL related tests are broken at this point due to age.
-    disabled_tests += [
-        'test_ssl.NetworkedTests.test_connect',
-        'test_ssl.NetworkedTests.test_connect_with_context',
-        'test_ssl.NetworkedTests.test_get_server_certificate',
-        'test_httplib.HTTPSTest.test_networked_bad_cert',
-        'test_httplib.HTTPSTest.test_networked_good_cert',
-    ]
-
-    if TRAVIS:
-        disabled_tests += [
-            # When we switched to Ubuntu 14.04 trusty, this started
-            # failing with "_ssl.SSLError: [SSL] dh key too small", but it
-            # was fine on 12.04. But we have to switch to be able to
-            # install PyPy? 5.7.1.
-            'test_ssl.ThreadedTests.test_dh_params',
-        ]
-
-    disabled_tests += [
-
-        # These are all expecting that a signal (sigalarm) that
-        # arrives during a blocking call should raise
-        # InterruptedError with errno=EINTR. gevent does not do
-        # this, instead its loop keeps going and raises a timeout
-        # (which fails the test). HOWEVER: Python 3.5 fixed this
-        # problem and started raising a timeout,
-        # (https://docs.python.org/3/whatsnew/3.5.html#pep-475-retry-system-calls-failing-with-eintr)
-        # and removed these tests (InterruptedError is no longer
-        # raised). So basically, gevent was ahead of its time.
-        # Why these were part of the PyPy3-5.5.0-alpha source release is beyond me.
-        'test_socket.InterruptedRecvTimeoutTest.testInterruptedRecvIntoTimeout',
-        'test_socket.InterruptedRecvTimeoutTest.testInterruptedRecvTimeout',
-        'test_socket.InterruptedRecvTimeoutTest.testInterruptedRecvfromIntoTimeout',
-        'test_socket.InterruptedRecvTimeoutTest.testInterruptedRecvfromTimeout',
-        'test_socket.InterruptedRecvTimeoutTest.testInterruptedSendTimeout',
-        'test_socket.InterruptedRecvTimeoutTest.testInterruptedSendtoTimeout',
-        'test_socket.InterruptedRecvTimeoutTest.testInterruptedRecvmsgTimeout',
-        'test_socket.InterruptedRecvTimeoutTest.testInterruptedRecvmsgIntoTimeout',
-        'test_socket.InterruptedSendTimeoutTest.testInterruptedSendmsgTimeout',
-
-        # This one can't resolve the IDNA name, at least on OS X with the threaded
-        # resolver. This doesn't seem to be a gevent problem, possible a test age
-        # problem, or transient DNS issue. (Python is reporting a DNS outage
-        # at the time of this writing: https://status.python.org/incidents/x97mmj5rqs5f)
-        'test_socket.GeneralModuleTests.test_idna',
-    ]
+# PyPy3 3.5.5 v5.8-beta
 
 if hasattr(sys, 'pypy_version_info') and sys.version_info[:2] >= (3, 3):
 
@@ -500,7 +451,7 @@ if hasattr(sys, 'pypy_version_info') and sys.version_info[:2] >= (3, 3):
 if hasattr(sys, 'pypy_version_info') and sys.pypy_version_info[:4] == (5, 7, 1, 'beta'): # pylint:disable=no-member
     # 3.5 is beta. Hard to say what are real bugs in us vs real bugs in pypy.
     # For that reason, we pin these patches exactly to the version in use.
-
+    # TODO: Upgrade to v5.8.
     disabled_tests += [
         # This fails to close all the FDs, at least on CI. On OS X, many of the
         # POSIXProcessTestCase fd tests have issues.

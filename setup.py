@@ -152,7 +152,6 @@ def run_setup(ext_modules, run_make):
         classifiers=[
             "License :: OSI Approved :: MIT License",
             "Programming Language :: Python :: 2.7",
-            "Programming Language :: Python :: 3.3",
             "Programming Language :: Python :: 3.4",
             "Programming Language :: Python :: 3.5",
             "Programming Language :: Python :: 3.6",
@@ -166,7 +165,7 @@ def run_setup(ext_modules, run_make):
             "Intended Audience :: Developers",
             "Development Status :: 4 - Beta"
         ],
-        python_requires=">=2.7,!=3.0.*,!=3.1.*,!=3.2.*", # !=3.3.*
+        python_requires=">=2.7,!=3.0.*,!=3.1.*,!=3.2.*,!=3.3.*",
     )
 
 # Tools like pyroma expect the actual call to `setup` to be performed

@@ -88,7 +88,7 @@ class GreenFileDescriptorIO(RawIOBase):
     # want to take advantage of this to avoid single byte reads when
     # possible. This is highlighted by a bug in BufferedIOReader that
     # calls read() in a loop when its readall() method is invoked;
-    # this was fixed in Python 3.3. See
+    # this was fixed in Python 3.3, but we still need our workaround for 2.7. See
     # https://github.com/gevent/gevent/issues/675)
     def __read(self, n):
         if not self._readable:

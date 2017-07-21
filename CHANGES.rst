@@ -38,6 +38,11 @@
   :const:`errno.WSAECONNABORTED` on Windows. Initial patch in
   :pr:`999` by Jan van Valburg.
 
+- Drop support for Python 3.3. The documentation has only claimed
+  support for 3.4+ since gevent 1.2 was released, and only 3.4+ has
+  been tested. This merely removes the supporting Trove classifier and
+  remaining test code. See :issue:`997`.
+
 1.2.2 (2017-06-05)
 ==================
 
