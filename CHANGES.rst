@@ -34,6 +34,10 @@
   support in certain tools (setuptools v24.2.1 or newer is required).
   See :issue:`995`.
 
+- pywgi also catches and ignores by default
+  :const:`errno.WSAECONNABORTED` on Windows. Initial patch in
+  :pr:`999` by Jan van Valburg.
+
 1.2.2 (2017-06-05)
 ==================
 
