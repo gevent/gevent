@@ -1494,7 +1494,7 @@ Release highlights:
 
 - Imported a number of patches from stdlib by **Antoine Pitrou**:
 
-  - Calling :meth:`makefile` method on an SSL object would prevent the underlying socket from being closed until all objects get truely destroyed (Python issue #5238).
+  - Calling :meth:`makefile` method on an SSL object would prevent the underlying socket from being closed until all objects get truly destroyed (Python issue #5238).
   - SSL handshake would ignore the socket timeout and block indefinitely if the other end didn't respond (Python issue #5103).
   - When calling :meth:`getpeername` in ``SSLSocket.__init__``, only silence exceptions caused by the "socket not connected" condition.
 
