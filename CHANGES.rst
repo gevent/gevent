@@ -28,7 +28,7 @@
 
   See :issue:`984`.
 
-- gevent is now built and tested with Cython 0.26.
+- gevent is now built and tested with Cython 0.26.1.
 
 - Specify the Requires-Python metadata for improved installation
   support in certain tools (setuptools v24.2.1 or newer is required).
