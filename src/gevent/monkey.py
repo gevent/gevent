@@ -356,10 +356,10 @@ def patch_thread(threading=True, _threading_local=True, Event=False, logging=Tru
         threading_mod = None
         orig_current_thread = None
 
-    patch_module('thread')
+    patch_module('thread', _warnings=_warnings)
 
     if threading:
-        patch_module('threading')
+        patch_module('threading', _warnings=_warnings)
 
         if Event:
             from gevent.event import Event
@@ -476,12 +476,17 @@ def patch_dns():
     patch_module('socket', items=socket.__dns__) # pylint:disable=no-member
 
 
-def patch_ssl():
+def patch_ssl(_warnings=None):
     """Replace SSLSocket object and socket wrapping functions in :mod:`ssl` with cooperative versions.
 
     This is only useful if :func:`patch_socket` has been called.
     """
-    patch_module('ssl')
+    if 'ssl' in sys.modules and hasattr(sys.modules['ssl'], 'SSLContext'):
+        _queue_warning('Monkey-patching ssl after ssl has already been imported '
+                       'may lead to errors, including RecursionError on Python 3.6. '
+                       'Please monkey-patch earlier.',
+                       _warnings)
+    patch_module('ssl', _warnings=_warnings)
 
 
 def patch_select(aggressive=True):
@@ -639,7 +644,7 @@ def patch_all(socket=True, dns=True, time=True, select=True, thread=True, os=Tru
     if select:
         patch_select(aggressive=aggressive)
     if ssl:
-        patch_ssl()
+        patch_ssl(_warnings=_warnings)
     if httplib:
         raise ValueError('gevent.httplib is no longer provided, httplib must be False')
     if subprocess:
