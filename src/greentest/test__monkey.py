@@ -47,9 +47,9 @@ for k, v in monkey.saved.items():
 import warnings
 with warnings.catch_warnings(record=True) as issued_warnings:
     # Patch again, triggering three warnings, one for os=False/signal=True,
-    # one for repeated monkey-patching, one for patching after ssl
+    # one for repeated monkey-patching, one for patching after ssl (on python >= 2.7.9)
     monkey.patch_all(os=False)
-    assert len(issued_warnings) == 3, [str(x) for x in issued_warnings]
+    assert len(issued_warnings) >= 2, [str(x) for x in issued_warnings]
     assert 'SIGCHLD' in str(issued_warnings[-1].message), issued_warnings[-1]
     assert 'more than once' in str(issued_warnings[0].message), issued_warnings[0]
 
