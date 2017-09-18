@@ -668,6 +668,21 @@ if sys.version_info[:2] >= (3, 6):
         'test_socket.GeneralModuleTests.test__sendfile_use_sendfile',
     ]
 
+    disabled_tests += [
+        # This test requires Linux >= 4.3. When we were running 'dist:
+        # trusty' on the 4.4 kernel, it passed (~July 2017). But when
+        # trusty became the default dist in September 2017 and updated
+        # the kernel to 4.11.6, it begain failing. It fails on `res =
+        # op.recv(assoclen + len(plain) + taglen)` (where 'op' is the
+        # client socket) with 'OSError: [Errno 22] Invalid argument'
+        # for unknown reasons. This is *after* having successfully
+        # called `op.sendmsg_afalg`. Post 3.6.0, what we test with,
+        # the test was changed to require Linux 4.9 and the data was changed,
+        # so this is not our fault. We should eventually update this when we
+        # update our 3.6 version.
+        # See https://bugs.python.org/issue29324
+        'test_socket.LinuxKernelCryptoAPI.test_aead_aes_gcm',
+    ]
 
 # if 'signalfd' in os.environ.get('GEVENT_BACKEND', ''):
 #     # tests that don't interact well with signalfd
