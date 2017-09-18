@@ -34,8 +34,8 @@ class Test(greentest.TestCase):
         thread.start()
         thread.join()
 
-        self.assertFalse(isinstance(current, threading._DummyThread))
-        self.assertTrue(isinstance(current, monkey.get_original('threading', 'Thread')))
+        self.assertNotIsInstance(current, threading._DummyThread)
+        self.assertIsInstance(current, monkey.get_original('threading', 'Thread'))
 
 
         # We generated some warnings

@@ -15,6 +15,7 @@ as well as the constants from the :mod:`socket` module are imported into this mo
 
 import sys
 from gevent._compat import PY3
+from gevent._compat import reraise
 from gevent._util import copy_globals
 
 
@@ -74,6 +75,7 @@ def create_connection(address, timeout=_GLOBAL_DEFAULT_TIMEOUT, source_address=N
 
     host, port = address
     err = None
+    tb = None
     for res in getaddrinfo(host, port, 0 if has_ipv6 else AF_INET, SOCK_STREAM):
         af, socktype, proto, _, sa = res
         sock = None
@@ -90,13 +92,19 @@ def create_connection(address, timeout=_GLOBAL_DEFAULT_TIMEOUT, source_address=N
             # and the next bind() fails (see test__socket.TestCreateConnection)
             # that does not happen with regular sockets though, because _socket.socket.connect() is a built-in.
             # this is similar to "getnameinfo loses a reference" failure in test_socket.py
+            tb = sys.exc_info()[2]
             if not PY3:
                 sys.exc_clear() # pylint:disable=no-member,useless-suppression
             if sock is not None:
                 sock.close()
             err = ex
+            sock = None
     if err is not None:
-        raise err # pylint:disable=raising-bad-type
+        try:
+            reraise(type(err), err, tb) # pylint:disable=raising-bad-type
+        finally:
+            err = None
+            tb = None
     else:
         raise error("getaddrinfo returns an empty list")
 

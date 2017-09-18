@@ -677,12 +677,14 @@ if sys.version_info[:2] >= (3, 6):
 #         'test_socketserver.SocketServerTest.test_ForkingUDPServer',
 #         'test_socketserver.SocketServerTest.test_ForkingUnixStreamServer'])
 
-# LibreSSL reports OPENSSL_VERSION_INFO (2, 0, 0, 0, 0) regardless its version
-from ssl import OPENSSL_VERSION
-if OPENSSL_VERSION.startswith('LibreSSL'):
-    disabled_tests += [
-        'test_ssl.BasicSocketTests.test_openssl_version'
-    ]
+# LibreSSL reports OPENSSL_VERSION_INFO (2, 0, 0, 0, 0) regardless of its version,
+# so this is known to fail on some distros. We don't want to detect this because we
+# don't want to trigger the side-effects of importing ssl prematurely if we will
+# be monkey-patching, so we skip this test everywhere. It doesn't do much for us
+# anyway.
+disabled_tests += [
+    'test_ssl.BasicSocketTests.test_openssl_version'
+]
 
 # Now build up the data structure we'll use to actually find disabled tests
 # to avoid a linear scan for every file (it seems the list could get quite large)

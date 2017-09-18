@@ -242,6 +242,14 @@ class TestCase(greentest.TestCase):
     validator = staticmethod(validator)
     application = None
 
+    # Bind to default address, which should give us ipv6 (when available)
+    # and ipv4. (see self.connect())
+    listen_addr = ''
+    # connect on ipv4, even though we bound to ipv6 too
+    # to prove ipv4 works...except on Windows, it apparently doesn't.
+    # So use the hostname.
+    connect_addr = 'localhost'
+
     def init_logger(self):
         import logging
         logger = logging.getLogger('gevent.pywsgi')
@@ -249,9 +257,7 @@ class TestCase(greentest.TestCase):
 
     def init_server(self, application):
         logger = self.logger = self.init_logger()
-        # Bind to default address, which should give us ipv6 (when available)
-        # and ipv4. (see self.connect())
-        self.server = pywsgi.WSGIServer(('', 0), application,
+        self.server = pywsgi.WSGIServer((self.listen_addr, 0), application,
                                         log=logger, error_log=logger)
 
     def setUp(self):
@@ -284,10 +290,7 @@ class TestCase(greentest.TestCase):
         # XXX currently listening socket is kept open in gevent.wsgi
 
     def connect(self):
-        # connect on ipv4, even though we bound to ipv6 too
-        # to prove ipv4 works...except on Windows, it apparently doesn't.
-        # So use the hostname.
-        conn = socket.create_connection(('localhost', self.port))
+        conn = socket.create_connection((self.connect_addr, self.port))
         self.connected.append(weakref.ref(conn))
         result = conn
         if PY3:
@@ -718,7 +721,8 @@ class HttpsTestCase(TestCase):
     keyfile = os.path.join(os.path.dirname(__file__), 'test_server.key')
 
     def init_server(self, application):
-        self.server = pywsgi.WSGIServer(('127.0.0.1', 0), application, certfile=self.certfile, keyfile=self.keyfile)
+        self.server = pywsgi.WSGIServer((self.listen_addr, 0), application,
+                                        certfile=self.certfile, keyfile=self.keyfile)
 
     def urlopen(self, method='GET', post_body=None, **kwargs):
         import ssl
@@ -760,7 +764,8 @@ else:
             from gevent.ssl import _create_unverified_context
             context = _create_unverified_context()
             context.load_cert_chain(certfile=self.certfile, keyfile=self.keyfile)
-            self.server = pywsgi.WSGIServer(('127.0.0.1', 0), application, ssl_context=context)
+            self.server = pywsgi.WSGIServer((self.listen_addr, 0),
+                                            application, ssl_context=context)
 
 class TestHttps(HttpsTestCase):
 
@@ -1422,7 +1427,7 @@ class Handler(pywsgi.WSGIHandler):
             return data + self.rfile.readline()
 
 
-class TestSubclass1(TestCase):
+class TestHandlerSubclass(TestCase):
 
     validator = None
 
@@ -1431,7 +1436,9 @@ class TestSubclass1(TestCase):
         return []
 
     def init_server(self, application):
-        self.server = pywsgi.WSGIServer(('127.0.0.1', 0), application, handler_class=Handler)
+        self.server = pywsgi.WSGIServer((self.listen_addr, 0),
+                                        application,
+                                        handler_class=Handler)
 
     def test(self):
         fd = self.makefile()

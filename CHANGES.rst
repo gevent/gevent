@@ -51,6 +51,9 @@
   an encoding has been specified. Initial patch in :pr:`939` by
   William Grzybowski.
 
+- Monkey-patching after the :mod:`ssl` module has been imported now
+  prints a warning because this can produce ``RecursionError``.
+
 1.2.2 (2017-06-05)
 ==================
 
