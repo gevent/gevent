@@ -506,6 +506,7 @@ def patch_select(aggressive=True):
     - :class:`selectors.KqueueSelector`
     - :class:`selectors.DevpollSelector` (Python 3.5+)
     """
+
     patch_module('select')
     if aggressive:
         select = __import__('select')
@@ -535,6 +536,14 @@ def patch_select(aggressive=True):
                 return select.select(*args, **kwargs)
             selectors.SelectSelector._select = _select
             _select._gevent_monkey = True
+
+        # Python 3.7 refactors the poll-like selectors to use a common
+        # base class and capture a reference to select.poll, etc, at
+        # import time. selectors tends to get imported early
+        # (importing 'platform' does it: platform -> subprocess -> selectors),
+        # so we need to clean that up.
+        if hasattr(selectors, 'PollSelector') and hasattr(selectors.PollSelector, '_selector_cls'):
+            selectors.PollSelector._selector_cls = select.poll
 
         if aggressive:
             # If `selectors` had already been imported before we removed

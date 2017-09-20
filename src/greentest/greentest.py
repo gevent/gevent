@@ -769,6 +769,8 @@ def default_get_number_open_files():
 lsof_get_open_files = default_get_open_files
 
 try:
+    # psutil import subprocess which on Python 3 imports selectors.
+    # This can expose issues with monkey-patching.
     import psutil
 except ImportError:
     get_open_files = default_get_open_files

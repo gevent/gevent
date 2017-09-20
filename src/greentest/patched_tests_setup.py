@@ -6,11 +6,15 @@ import contextlib
 import functools
 import sys
 import os
-import platform
+# At least on 3.6+, importing platform
+# imports subprocess, which imports selectors. That
+# can expose issues with monkey patching. We don't need it
+# though.
+# import platform
 import re
 
 TRAVIS = os.environ.get("TRAVIS") == "true"
-OSX = bool(platform.mac_ver()[0])
+OSX = sys.platform == 'darwin'
 
 # By default, test cases are expected to switch and emit warnings if there was none
 # If a test is found in this list, it's expected not to switch.
