@@ -141,7 +141,7 @@ affects what we see:
 
 from copy import copy
 from weakref import ref
-from contextlib import contextmanager
+from functools import partial
 from gevent.hub import getcurrent
 from gevent._compat import PYPY
 from gevent.lock import RLock
@@ -152,10 +152,12 @@ __all__ = ["local"]
 class _wrefdict(dict):
     """A dict that can be weak referenced"""
 
+_osa = object.__setattr__
+_oga = object.__getattribute__
 
 class _localimpl(object):
     """A class managing thread-local dicts"""
-    __slots__ = 'key', 'dicts', 'localargs', 'locallock', '__weakref__'
+    __slots__ = ('key', 'dicts', 'localargs', 'locallock', '__weakref__', 'dict_setter')
 
     def __init__(self):
         # The key used in the Thread objects' attribute dicts.
@@ -221,10 +223,10 @@ class _localimpl(object):
         return localdict
 
 
-@contextmanager
-def _patch(self):
-    impl = object.__getattribute__(self, '_local__impl')
-    orig_dct = object.__getattribute__(self, '__dict__')
+def _get_dict(self):
+    impl = _oga(self, '_local__impl')
+    orig_dct = _oga(self, '__dict__')
+    lock = impl.locallock
     try:
         dct = impl.get_dict()
     except KeyError:
@@ -232,13 +234,14 @@ def _patch(self):
         # however, subclassed __init__ might switch, so we do need to acquire the lock here
         dct = impl.create_dict()
         args, kw = impl.localargs
-        with impl.locallock:
+        with lock:
             self.__init__(*args, **kw)
-    with impl.locallock:
-        object.__setattr__(self, '__dict__', dct)
-        yield
-        object.__setattr__(self, '__dict__', orig_dct)
 
+    setter = impl.dict_setter
+    return dct, orig_dct, lock, setter
+
+
+_marker = object()
 
 class local(object):
     """
@@ -254,7 +257,8 @@ class local(object):
         impl = _localimpl()
         impl.localargs = (args, kw)
         impl.locallock = RLock()
-        object.__setattr__(self, '_local__impl', impl)
+        impl.dict_setter = partial(_osa, self, '__dict__')
+        _osa(self, '_local__impl', impl)
         # We need to create the thread dict in anticipation of
         # __init__ being called, to make sure we don't call it
         # again ourselves.
@@ -262,24 +266,69 @@ class local(object):
         return self
 
     def __getattribute__(self, name):
-        with _patch(self):
-            return object.__getattribute__(self, name)
+        if name == '__class__':
+            return _oga(self, name)
+        dct, orig_dct, lock, setter = _get_dict(self)
+        if name == '__dict__':
+            return dct
+        # If there's no possible way we can switch, because this
+        # attribute is *not* found in the class where it might be a
+        # data descriptor (property), and it *is* in the dict
+        # then we don't need to swizzle the dict and take the lock.
+
+        # We don't have to worry about people overriding __getattribute__
+        # because if they did, the dict-swizzling would only last as
+        # long as we were in here anyway.
+        # Similarly, a __getattr__ will still be called by _oga() if needed
+        # if it's not in the dict.
+        if name in dct:
+            if not hasattr(type(self), name):
+                # We elide even setting the dict in the first place in
+                # this case.
+                return dct[name]
+        else:
+            # It's not in the dict at all. Is it in the type, but
+            # not a descriptor (has no __get__)? Then it can't execute any
+            # code and so doesn't need the lock or dct swizzle
+            type_attr = getattr(type(self), name, _marker)
+            if type_attr is not _marker and not hasattr(type_attr, '__get__'):
+                return type_attr
+
+        lock.acquire()
+        setter(dct)
+        try:
+            return _oga(self, name)
+        finally:
+            setter(orig_dct)
+            lock.release()
 
     def __setattr__(self, name, value):
         if name == '__dict__':
             raise AttributeError(
                 "%r object attribute '__dict__' is read-only"
                 % self.__class__.__name__)
-        with _patch(self):
-            return object.__setattr__(self, name, value)
+        dct, orig_dct, lock, setter = _get_dict(self)
+        lock.acquire()
+        setter(dct)
+        try:
+            return _osa(self, name, value)
+        finally:
+            setter(orig_dct)
+            lock.release()
 
     def __delattr__(self, name):
         if name == '__dict__':
             raise AttributeError(
                 "%r object attribute '__dict__' is read-only"
                 % self.__class__.__name__)
-        with _patch(self):
+        dct, orig_dct, lock, setter = _get_dict(self)
+        lock.acquire()
+        setter(dct)
+        try:
             return object.__delattr__(self, name)
+        finally:
+            setter(orig_dct)
+            lock.release()
 
     def __copy__(self):
         impl = object.__getattribute__(self, '_local__impl')

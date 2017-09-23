@@ -54,6 +54,9 @@
 - Monkey-patching after the :mod:`ssl` module has been imported now
   prints a warning because this can produce ``RecursionError``.
 
+- :class:`gevent.local.local` objects are now about 3.4 times faster
+  reading simple attributes. See :issue:`1020`.
+
 1.2.2 (2017-06-05)
 ==================
 
