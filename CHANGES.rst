@@ -54,8 +54,11 @@
 - Monkey-patching after the :mod:`ssl` module has been imported now
   prints a warning because this can produce ``RecursionError``.
 
-- :class:`gevent.local.local` objects are now about 3.4 times faster
-  reading simple attributes. See :issue:`1020`.
+- :class:`gevent.local.local` objects are now between 3 and 5 times faster
+  getting, setting and deleting attributes on CPython (the fastest
+  access occurs when ``local`` is not subclassed). This involved
+  implementing more of the attribute protocols directly. Please open
+  an issue if you have any compatibility problems. See :issue:`1020`.
 
 1.2.2 (2017-06-05)
 ==================
