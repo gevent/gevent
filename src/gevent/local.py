@@ -441,6 +441,13 @@ def __new__(cls, *args, **kw):
     return self
 
 try:
-    local.__new__ = __new__
+    # PyPy and CPython handle adding a __new__ to the class
+    # in different ways. In CPython, it must be wrapped with classmethod;
+    # in PyPy, it must not. In either case, the args that get passed to
+    # it are stil wrong.
+    import sys
+    local.__new__ = classmethod(__new__) if not hasattr(sys, 'pypy_version_info') else __new__
 except TypeError:
     pass
+finally:
+    del sys
