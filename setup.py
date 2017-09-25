@@ -55,10 +55,15 @@ from _setupares import ARES
 SEMAPHORE = Extension(name="gevent._semaphore",
                       sources=["src/gevent/gevent._semaphore.c"])
 
+LOCAL = Extension(name="gevent.local",
+                  sources=["src/gevent/gevent._local.c"])
+
+
 EXT_MODULES = [
     CORE,
     ARES,
     SEMAPHORE,
+    LOCAL,
 ]
 
 cffi_modules = ['src/gevent/libev/_corecffi_build.py:ffi']
@@ -67,6 +72,7 @@ if PYPY:
     install_requires = []
     setup_requires = []
     EXT_MODULES.remove(CORE)
+    EXT_MODULES.remove(LOCAL)
     EXT_MODULES.remove(SEMAPHORE)
     # By building the semaphore with Cython under PyPy, we get
     # atomic operations (specifically, exiting/releasing), at the

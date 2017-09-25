@@ -150,6 +150,7 @@ affects what we see:
    (which are shared across all greenlets) switches during ``__init__``.
 
 """
+from __future__ import print_function
 
 from copy import copy
 from weakref import ref
@@ -162,20 +163,23 @@ __all__ = ["local"]
 class _wrefdict(dict):
     """A dict that can be weak referenced"""
 
-_osa = object.__setattr__
-_oga = object.__getattribute__
-
 class _localimpl(object):
     """A class managing thread-local dicts"""
     __slots__ = ('key', 'dicts', 'localargs', '__weakref__',)
 
-    def __init__(self):
+    def __init__(self, args, kwargs):
         # The key used in the Thread objects' attribute dicts.
         # We keep it a string for speed but make it unlikely to clash with
         # a "real" attribute.
         self.key = '_threading_local._localimpl.' + str(id(self))
         # { id(Thread) -> (ref(Thread), thread-local dict) }
         self.dicts = _wrefdict()
+        self.localargs = args, kwargs
+
+        # We need to create the thread dict in anticipation of
+        # __init__ being called, to make sure we don't call it
+        # again ourselves. MUST do this before setting any attributes.
+        self.create_dict()
 
     def get_dict(self):
         """Return the dict for the current thread. Raises KeyError if none
@@ -214,7 +218,7 @@ class _localimpl(object):
             rawlink(thread_deleted)
             wrthread = ref(thread)
 
-        def local_deleted(_, key=key, wrthread=wrthread):
+        def local_deleted(_, key=key, wrthread=wrthread, thread_deleted=thread_deleted):
             # When the localimpl is deleted, remove the thread attribute.
             thread = wrthread()
             if thread is not None:
@@ -233,7 +237,6 @@ class _localimpl(object):
         return localdict
 
 
-_impl_getter = None
 _marker = object()
 
 class local(object):
@@ -242,26 +245,24 @@ class local(object):
     """
     __slots__ = ('_local__impl',)
 
-    def __new__(cls, *args, **kw):
+    def __cinit__(self, *args, **kw):
         if args or kw:
-            if cls.__init__ == object.__init__:
-                raise TypeError("Initialization arguments are not supported")
-        self = object.__new__(cls)
-        impl = _localimpl()
-        impl.localargs = (args, kw)
-        _osa(self, '_local__impl', impl)
-        # We need to create the thread dict in anticipation of
-        # __init__ being called, to make sure we don't call it
-        # again ourselves.
-        impl.create_dict()
-        return self
+            if type(self).__init__ == object.__init__:
+                raise TypeError("Initialization arguments are not supported", args, kw)
+        impl = _localimpl(args, kw)
+        self._local__impl = impl # pylint:disable=attribute-defined-outside-init
 
     def __getattribute__(self, name): # pylint:disable=too-many-return-statements
-        if name == '__class__':
-            return _oga(self, name)
+        if name in ('__class__', '_local__impl', '__cinit__'):
+            # The _local__impl and __cinit__ won't be hit by the
+            # Cython version, if we've done things right. If we haven't,
+            # they will be, and this will produce an error.
+            return object.__getattribute__(self, name)
 
         # Begin inlined function _get_dict()
-        impl = _impl_getter(self, local)
+        # Using object.__getattribute__ here disables Cython knowing the
+        # type of the object and using cdef calls to it.
+        impl = self._local__impl
         try:
             dct = impl.get_dict()
         except KeyError:
@@ -288,7 +289,7 @@ class local(object):
         # there can be no descriptors except for methods, which will
         # never need to use __dict__.
         if type_self is local:
-            return dct[name] if name in dct else _oga(self, name)
+            return dct[name] if name in dct else object.__getattribute__(self, name)
 
         # NOTE: If this is a descriptor, this will invoke its __get__.
         # A broken descriptor that doesn't return itself when called with
@@ -341,10 +342,14 @@ class local(object):
         if name == '__dict__':
             raise AttributeError(
                 "%r object attribute '__dict__' is read-only"
-                % self.__class__.__name__)
+                % type(self))
+
+        if name == '_local__impl':
+            object.__setattr__(self, '_local__impl', value)
+            return
 
         # Begin inlined function _get_dict()
-        impl = _impl_getter(self, local)
+        impl = self._local__impl
         try:
             dct = impl.get_dict()
         except KeyError:
@@ -388,7 +393,7 @@ class local(object):
         # Otherwise it goes directly in the dict
 
         # Begin inlined function _get_dict()
-        impl = _impl_getter(self, local)
+        impl = self._local__impl
         try:
             dct = impl.get_dict()
         except KeyError:
@@ -403,23 +408,50 @@ class local(object):
             raise AttributeError(name)
 
     def __copy__(self):
-        impl = _oga(self, '_local__impl')
-        current = getcurrent()
-        currentId = id(current)
+        impl = self._local__impl
+
         d = impl.get_dict()
         duplicate = copy(d)
 
         cls = type(self)
-        if cls.__init__ != object.__init__:
-            args, kw = impl.localargs
-            instance = cls(*args, **kw)
-        else:
-            instance = cls()
+        args, kw = impl.localargs
+        instance = cls(*args, **kw)
+        local._local__copy_dict_from(instance, impl, duplicate)
+        return instance
 
-        new_impl = object.__getattribute__(instance, '_local__impl')
+    def _local__copy_dict_from(self, impl, duplicate):
+        current = getcurrent()
+        currentId = id(current)
+        new_impl = self._local__impl
+        assert new_impl is not impl
         tpl = new_impl.dicts[currentId]
         new_impl.dicts[currentId] = (tpl[0], duplicate)
 
-        return instance
 
-_impl_getter = local._local__impl.__get__
+
+# Cython doesn't let us use __new__, it requires
+# __cinit__. But we need __new__ if we're not compiled
+# (e.g., on PyPy). So we set it at runtime. Cython
+# will raise an error if we're compiled.
+def __new__(cls, *args, **kw):
+    self = super(local, cls).__new__(cls)
+    # We get the cls in *args for some reason
+    # too when we do it this way....except on PyPy3, which does
+    # not *unless* it's wrapped in a classmethod (which it is)
+    self.__cinit__(*args[1:], **kw)
+    return self
+
+try:
+    # PyPy2/3 and CPython handle adding a __new__ to the class
+    # in different ways. In CPython and PyPy3, it must be wrapped with classmethod;
+    # in PyPy2, it must not. In either case, the args that get passed to
+    # it are stil wrong.
+    import sys
+    if hasattr(sys, 'pypy_version_info') and sys.version_info[:2] < (3, 0):
+        local.__new__ = __new__
+    else:
+        local.__new__ = classmethod(__new__)
+except TypeError:
+    pass
+finally:
+    del sys

@@ -54,11 +54,16 @@
 - Monkey-patching after the :mod:`ssl` module has been imported now
   prints a warning because this can produce ``RecursionError``.
 
-- :class:`gevent.local.local` objects are now between 3 and 5 times faster
-  getting, setting and deleting attributes on CPython (the fastest
-  access occurs when ``local`` is not subclassed). This involved
+- :class:`gevent.local.local` objects are now approximately 3.5 times faster
+  getting, setting and deleting attributes on PyPy. This involved
   implementing more of the attribute protocols directly. Please open
   an issue if you have any compatibility problems. See :issue:`1020`.
+
+- :class:`gevent.local.local` is compiled with Cython on CPython. It
+  was already 5 to 6 times faster due to the work on :issue:`1020`,
+  and compiling it with Cython makes it another 5 times faster, for a
+  total speed up of about 35 times. It is now in the same ball park as
+  the native :class:`threading.local` class.
 
 1.2.2 (2017-06-05)
 ==================

@@ -7,3 +7,5 @@ cython -o gevent.ares.c src\gevent\ares.pyx
 move gevent.ares.* src\gevent
 cython -o gevent._semaphore.c src\gevent\_semaphore.py
 move gevent._semaphore.* src\gevent
+cython -o gevent._local.c src\gevent\local.py
+move gevent._local.c src\gevent
