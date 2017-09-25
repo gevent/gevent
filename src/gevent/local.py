@@ -436,17 +436,21 @@ class local(object):
 def __new__(cls, *args, **kw):
     self = super(local, cls).__new__(cls)
     # We get the cls in *args for some reason
-    # too when we do it this way.
+    # too when we do it this way....except on PyPy3, which does
+    # not *unless* it's wrapped in a classmethod (which it is)
     self.__cinit__(*args[1:], **kw)
     return self
 
 try:
-    # PyPy and CPython handle adding a __new__ to the class
-    # in different ways. In CPython, it must be wrapped with classmethod;
-    # in PyPy, it must not. In either case, the args that get passed to
+    # PyPy2/3 and CPython handle adding a __new__ to the class
+    # in different ways. In CPython and PyPy3, it must be wrapped with classmethod;
+    # in PyPy2, it must not. In either case, the args that get passed to
     # it are stil wrong.
     import sys
-    local.__new__ = classmethod(__new__) if not hasattr(sys, 'pypy_version_info') else __new__
+    if hasattr(sys, 'pypy_version_info') and sys.version_info[:2] < (3, 0):
+        local.__new__ = __new__
+    else:
+        local.__new__ = classmethod(__new__)
 except TypeError:
     pass
 finally:
