@@ -67,7 +67,7 @@ class GeventLocalTestCase(greentest.TestCase):
 
     tearDown = setUp
 
-    def test_create_localot_subclass_init_args(self):
+    def test_create_local_subclass_init_args(self):
         with self.assertRaisesRegex(TypeError,
                                     "Initialization arguments are not supported"):
             local("foo")
@@ -89,6 +89,19 @@ class GeventLocalTestCase(greentest.TestCase):
 
         with self.assertRaises(AttributeError):
             del l.__dict__
+
+    def test_delete_with_no_dict(self):
+        l = local()
+        with self.assertRaises(AttributeError):
+            delattr(l, 'thing')
+
+        def del_local():
+            with self.assertRaises(AttributeError):
+                delattr(l, 'thing')
+
+        t = Thread(target=del_local)
+        t.start()
+        t.join()
 
     def test_slot_and_type_attributes(self):
         a = A(Obj())

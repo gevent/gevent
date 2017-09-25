@@ -233,25 +233,14 @@ class _localimpl(object):
         return localdict
 
 
-def _get_dict(self):
-    impl = _oga(self, '_local__impl')
-    try:
-        dct = impl.get_dict()
-    except KeyError:
-        dct = impl.create_dict()
-        args, kw = impl.localargs
-        self.__init__(*args, **kw)
-
-    return dct
-
-
+_impl_getter = None
 _marker = object()
 
 class local(object):
     """
     An object whose attributes are greenlet-local.
     """
-    __slots__ = '_local__impl', '__dict__'
+    __slots__ = ('_local__impl',)
 
     def __new__(cls, *args, **kw):
         if args or kw:
@@ -270,7 +259,17 @@ class local(object):
     def __getattribute__(self, name): # pylint:disable=too-many-return-statements
         if name == '__class__':
             return _oga(self, name)
-        dct = _get_dict(self)
+
+        # Begin inlined function _get_dict()
+        impl = _impl_getter(self, local)
+        try:
+            dct = impl.get_dict()
+        except KeyError:
+            dct = impl.create_dict()
+            args, kw = impl.localargs
+            self.__init__(*args, **kw)
+        # End inlined function _get_dict
+
         if name == '__dict__':
             return dct
         # If there's no possible way we can switch, because this
@@ -343,7 +342,17 @@ class local(object):
             raise AttributeError(
                 "%r object attribute '__dict__' is read-only"
                 % self.__class__.__name__)
-        dct = _get_dict(self)
+
+        # Begin inlined function _get_dict()
+        impl = _impl_getter(self, local)
+        try:
+            dct = impl.get_dict()
+        except KeyError:
+            dct = impl.create_dict()
+            args, kw = impl.localargs
+            self.__init__(*args, **kw)
+        # End inlined function _get_dict
+
 
         type_self = type(self)
         if type_self is local:
@@ -368,7 +377,6 @@ class local(object):
                 "%r object attribute '__dict__' is read-only"
                 % self.__class__.__name__)
 
-        dct = _get_dict(self)
         type_self = type(self)
         type_attr = getattr(type_self, name, _marker)
         if type_attr is not _marker:
@@ -378,13 +386,24 @@ class local(object):
                 type_type_attr.__delete__(type_attr, self)
                 return
         # Otherwise it goes directly in the dict
+
+        # Begin inlined function _get_dict()
+        impl = _impl_getter(self, local)
+        try:
+            dct = impl.get_dict()
+        except KeyError:
+            dct = impl.create_dict()
+            args, kw = impl.localargs
+            self.__init__(*args, **kw)
+        # End inlined function _get_dict
+
         try:
             del dct[name]
         except KeyError:
             raise AttributeError(name)
 
     def __copy__(self):
-        impl = object.__getattribute__(self, '_local__impl')
+        impl = _oga(self, '_local__impl')
         current = getcurrent()
         currentId = id(current)
         d = impl.get_dict()
@@ -402,3 +421,5 @@ class local(object):
         new_impl.dicts[currentId] = (tpl[0], duplicate)
 
         return instance
+
+_impl_getter = local._local__impl.__get__
