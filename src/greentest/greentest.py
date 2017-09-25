@@ -517,6 +517,8 @@ class TestCase(TestCaseMetaClass("NewBase", (BaseTestCase,), {})):
             self.assertEqual(sig.keywords, gevent_sig.keywords, func_name)
             self.assertEqual(sig.defaults, gevent_sig.defaults, func_name)
 
+if not hasattr(TestCase, 'assertRaisesRegex'):
+    TestCase.assertRaisesRegex = TestCase.assertRaisesRegexp
 
 main = unittest.main
 _original_Hub = gevent.hub.Hub

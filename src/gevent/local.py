@@ -154,7 +154,7 @@ affects what we see:
 from copy import copy
 from weakref import ref
 from gevent.hub import getcurrent
-from gevent._compat import PYPY
+
 
 __all__ = ["local"]
 
@@ -255,7 +255,7 @@ class local(object):
 
     def __new__(cls, *args, **kw):
         if args or kw:
-            if (PYPY and cls.__init__ == object.__init__) or (not PYPY and cls.__init__ is object.__init__):
+            if cls.__init__ == object.__init__:
                 raise TypeError("Initialization arguments are not supported")
         self = object.__new__(cls)
         impl = _localimpl()
@@ -291,6 +291,11 @@ class local(object):
         if type_self is local:
             return dct[name] if name in dct else _oga(self, name)
 
+        # NOTE: If this is a descriptor, this will invoke its __get__.
+        # A broken descriptor that doesn't return itself when called with
+        # a None for the instance argument could mess us up here.
+        # But this is faster than a loop over mro() checking each class __dict__
+        # manually.
         type_attr = getattr(type_self, name, _marker)
         if name in dct:
             if type_attr is _marker:
@@ -386,7 +391,7 @@ class local(object):
         duplicate = copy(d)
 
         cls = type(self)
-        if (PYPY and cls.__init__ != object.__init__) or (not PYPY and cls.__init__ is not object.__init__):
+        if cls.__init__ != object.__init__:
             args, kw = impl.localargs
             instance = cls(*args, **kw)
         else:
