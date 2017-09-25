@@ -12,7 +12,7 @@ export PATH:=$(BUILD_RUNTIMES)/snakepit:$(TOOLS):$(PATH)
 export LC_ALL=C.UTF-8
 
 
-all: src/gevent/libev/gevent.corecext.c src/gevent/gevent.ares.c src/gevent/gevent._semaphore.c
+all: src/gevent/libev/gevent.corecext.c src/gevent/gevent.ares.c src/gevent/gevent._semaphore.c src/gevent/gevent._local.c
 
 src/gevent/libev/gevent.corecext.c: src/gevent/libev/corecext.ppyx src/gevent/libev/libev.pxd util/cythonpp.py
 	$(PYTHON) util/cythonpp.py -o gevent.corecext.c --module-name gevent.libev.corecext.pyx src/gevent/libev/corecext.ppyx
@@ -34,11 +34,17 @@ src/gevent/gevent._semaphore.c: src/gevent/_semaphore.py src/gevent/_semaphore.p
 	mv gevent._semaphore.* src/gevent/
 #	rm src/gevent/_semaphore.py
 
+src/gevent/gevent._local.c: src/gevent/local.py
+	$(CYTHON) -o gevent._local.c src/gevent/local.py
+	mv gevent._local.* src/gevent/
+
+
 clean:
 	rm -f corecext.pyx src/gevent/libev/corecext.pyx
 	rm -f gevent.corecext.c gevent.corecext.h src/gevent/libev/gevent.corecext.c src/gevent/libev/gevent.corecext.h
 	rm -f gevent.ares.c gevent.ares.h src/gevent/gevent.ares.c src/gevent/gevent.ares.h
 	rm -f gevent._semaphore.c gevent._semaphore.h src/gevent/gevent._semaphore.c src/gevent/gevent._semaphore.h
+	rm -f gevent._local.c gevent._local.h src/gevent/gevent._local.c src/gevent/gevent._local.h
 	rm -f src/gevent/*.so src/gevent/libev/*.so
 	rm -rf src/gevent/libev/*.o src/gevent/*.o
 	rm -rf src/gevent/__pycache__ src/greentest/__pycache__ src/gevent/libev/__pycache__
