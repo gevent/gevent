@@ -137,14 +137,24 @@ affects what we see:
    Use a weak-reference to clear the greenlet link we establish in case
    the local object dies before the greenlet does.
 
+.. versionchanged:: 1.3a1
+   Implement the methods for attribute access directly, handling
+   descriptors directly here. This allows removing the use of a lock
+   and facilitates greatly improved performance.
+
+.. versionchanged:: 1.3a1
+   The ``__init__`` method of subclasses of ``local`` is no longer
+   called with a lock held. CPython does not use such a lock in its
+   native implementation. This could potentially show as a difference
+   if code that uses multiple dependent attributes in ``__slots__``
+   (which are shared across all greenlets) switches during ``__init__``.
+
 """
 
 from copy import copy
 from weakref import ref
-from contextlib import contextmanager
 from gevent.hub import getcurrent
-from gevent._compat import PYPY
-from gevent.lock import RLock
+
 
 __all__ = ["local"]
 
@@ -152,10 +162,12 @@ __all__ = ["local"]
 class _wrefdict(dict):
     """A dict that can be weak referenced"""
 
+_osa = object.__setattr__
+_oga = object.__getattribute__
 
 class _localimpl(object):
     """A class managing thread-local dicts"""
-    __slots__ = 'key', 'dicts', 'localargs', 'locallock', '__weakref__'
+    __slots__ = ('key', 'dicts', 'localargs', '__weakref__',)
 
     def __init__(self):
         # The key used in the Thread objects' attribute dicts.
@@ -221,75 +233,184 @@ class _localimpl(object):
         return localdict
 
 
-@contextmanager
-def _patch(self):
-    impl = object.__getattribute__(self, '_local__impl')
-    orig_dct = object.__getattribute__(self, '__dict__')
-    try:
-        dct = impl.get_dict()
-    except KeyError:
-        # it's OK to acquire the lock here and not earlier, because the above code won't switch out
-        # however, subclassed __init__ might switch, so we do need to acquire the lock here
-        dct = impl.create_dict()
-        args, kw = impl.localargs
-        with impl.locallock:
-            self.__init__(*args, **kw)
-    with impl.locallock:
-        object.__setattr__(self, '__dict__', dct)
-        yield
-        object.__setattr__(self, '__dict__', orig_dct)
-
+_impl_getter = None
+_marker = object()
 
 class local(object):
     """
     An object whose attributes are greenlet-local.
     """
-    __slots__ = '_local__impl', '__dict__'
+    __slots__ = ('_local__impl',)
 
     def __new__(cls, *args, **kw):
         if args or kw:
-            if (PYPY and cls.__init__ == object.__init__) or (not PYPY and cls.__init__ is object.__init__):
+            if cls.__init__ == object.__init__:
                 raise TypeError("Initialization arguments are not supported")
         self = object.__new__(cls)
         impl = _localimpl()
         impl.localargs = (args, kw)
-        impl.locallock = RLock()
-        object.__setattr__(self, '_local__impl', impl)
+        _osa(self, '_local__impl', impl)
         # We need to create the thread dict in anticipation of
         # __init__ being called, to make sure we don't call it
         # again ourselves.
         impl.create_dict()
         return self
 
-    def __getattribute__(self, name):
-        with _patch(self):
-            return object.__getattribute__(self, name)
+    def __getattribute__(self, name): # pylint:disable=too-many-return-statements
+        if name == '__class__':
+            return _oga(self, name)
+
+        # Begin inlined function _get_dict()
+        impl = _impl_getter(self, local)
+        try:
+            dct = impl.get_dict()
+        except KeyError:
+            dct = impl.create_dict()
+            args, kw = impl.localargs
+            self.__init__(*args, **kw)
+        # End inlined function _get_dict
+
+        if name == '__dict__':
+            return dct
+        # If there's no possible way we can switch, because this
+        # attribute is *not* found in the class where it might be a
+        # data descriptor (property), and it *is* in the dict
+        # then we don't need to swizzle the dict and take the lock.
+
+        # We don't have to worry about people overriding __getattribute__
+        # because if they did, the dict-swizzling would only last as
+        # long as we were in here anyway.
+        # Similarly, a __getattr__ will still be called by _oga() if needed
+        # if it's not in the dict.
+
+        type_self = type(self)
+        # Optimization: If we're not subclassed, then
+        # there can be no descriptors except for methods, which will
+        # never need to use __dict__.
+        if type_self is local:
+            return dct[name] if name in dct else _oga(self, name)
+
+        # NOTE: If this is a descriptor, this will invoke its __get__.
+        # A broken descriptor that doesn't return itself when called with
+        # a None for the instance argument could mess us up here.
+        # But this is faster than a loop over mro() checking each class __dict__
+        # manually.
+        type_attr = getattr(type_self, name, _marker)
+        if name in dct:
+            if type_attr is _marker:
+                # If there is a dict value, and nothing in the type,
+                # it can't possibly be a descriptor, so it is just returned.
+                return dct[name]
+
+            # It's in the type *and* in the dict. If the type value is
+            # a data descriptor (defines __get__ *and* either __set__ or
+            # __delete__), then the type wins. If it's a non-data descriptor
+            # (defines just __get__), then the instance wins. If it's not a
+            # descriptor at all (doesn't have __get__), the instance wins.
+            # NOTE that the docs for descriptors say that these methods must be
+            # defined on the *class* of the object in the type.
+            type_type_attr = type(type_attr)
+            if not hasattr(type_type_attr, '__get__'):
+                # Entirely not a descriptor. Instance wins.
+                return dct[name]
+            if hasattr(type_type_attr, '__set__') or hasattr(type_type_attr, '__delete__'):
+                # A data descriptor.
+                # arbitrary code execution while these run. If they touch self again,
+                # they'll call back into us and we'll repeat the dance.
+                return type_type_attr.__get__(type_attr, self, type_self)
+            # Last case is a non-data descriptor. Instance wins.
+            return dct[name]
+        elif type_attr is not _marker:
+            # It's not in the dict at all. Is it in the type?
+            type_type_attr = type(type_attr)
+            if not hasattr(type_type_attr, '__get__'):
+                # Not a descriptor, can't execute code
+                return type_attr
+            return type_type_attr.__get__(type_attr, self, type_self)
+
+        # It wasn't in the dict and it wasn't in the type.
+        # So the next step is to invoke type(self)__getattr__, if it
+        # exists, otherwise raise an AttributeError.
+        # we will invoke type(self).__getattr__ or raise an attribute error.
+        if hasattr(type_self, '__getattr__'):
+            return type_self.__getattr__(self, name)
+        raise AttributeError("%r object has no attribute '%s'"
+                             % (type_self.__name__, name))
 
     def __setattr__(self, name, value):
         if name == '__dict__':
             raise AttributeError(
                 "%r object attribute '__dict__' is read-only"
                 % self.__class__.__name__)
-        with _patch(self):
-            return object.__setattr__(self, name, value)
+
+        # Begin inlined function _get_dict()
+        impl = _impl_getter(self, local)
+        try:
+            dct = impl.get_dict()
+        except KeyError:
+            dct = impl.create_dict()
+            args, kw = impl.localargs
+            self.__init__(*args, **kw)
+        # End inlined function _get_dict
+
+
+        type_self = type(self)
+        if type_self is local:
+            # Optimization: If we're not subclassed, we can't
+            # have data descriptors, so this goes right in the dict.
+            dct[name] = value
+            return
+
+        type_attr = getattr(type_self, name, _marker)
+        if type_attr is not _marker:
+            type_type_attr = type(type_attr)
+            if hasattr(type_type_attr, '__set__'):
+                # A data descriptor, like a property or a slot.
+                type_type_attr.__set__(type_attr, self, value)
+                return
+        # Otherwise it goes directly in the dict
+        dct[name] = value
 
     def __delattr__(self, name):
         if name == '__dict__':
             raise AttributeError(
                 "%r object attribute '__dict__' is read-only"
                 % self.__class__.__name__)
-        with _patch(self):
-            return object.__delattr__(self, name)
+
+        type_self = type(self)
+        type_attr = getattr(type_self, name, _marker)
+        if type_attr is not _marker:
+            type_type_attr = type(type_attr)
+            if hasattr(type_type_attr, '__delete__'):
+                # A data descriptor, like a property or a slot.
+                type_type_attr.__delete__(type_attr, self)
+                return
+        # Otherwise it goes directly in the dict
+
+        # Begin inlined function _get_dict()
+        impl = _impl_getter(self, local)
+        try:
+            dct = impl.get_dict()
+        except KeyError:
+            dct = impl.create_dict()
+            args, kw = impl.localargs
+            self.__init__(*args, **kw)
+        # End inlined function _get_dict
+
+        try:
+            del dct[name]
+        except KeyError:
+            raise AttributeError(name)
 
     def __copy__(self):
-        impl = object.__getattribute__(self, '_local__impl')
+        impl = _oga(self, '_local__impl')
         current = getcurrent()
         currentId = id(current)
         d = impl.get_dict()
         duplicate = copy(d)
 
         cls = type(self)
-        if (PYPY and cls.__init__ != object.__init__) or (not PYPY and cls.__init__ is not object.__init__):
+        if cls.__init__ != object.__init__:
             args, kw = impl.localargs
             instance = cls(*args, **kw)
         else:
@@ -300,3 +421,5 @@ class local(object):
         new_impl.dicts[currentId] = (tpl[0], duplicate)
 
         return instance
+
+_impl_getter = local._local__impl.__get__
