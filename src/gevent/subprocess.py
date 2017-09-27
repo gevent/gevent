@@ -108,7 +108,6 @@ __extra__ = [
     'CreateProcess',
     'INFINITE',
     'TerminateProcess',
-    'GetExitCodeProcess',
     'STILL_ACTIVE',
 
     # These were added for 3.5, but we make them available everywhere.
@@ -1011,6 +1010,7 @@ class Popen(object):
                 if rc == STILL_ACTIVE:
                     raise
                 self.returncode = rc
+                self.result.set(self.returncode)
 
         kill = terminate
 
