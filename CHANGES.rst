@@ -28,7 +28,8 @@
 
   See :issue:`984`.
 
-- gevent is now built and tested with Cython 0.26.1.
+- gevent is now built and tested with Cython 0.27. This is required
+  for Python 3.7 support.
 
 - Specify the Requires-Python metadata for improved installation
   support in certain tools (setuptools v24.2.1 or newer is required).
@@ -44,7 +45,10 @@
   remaining test code. See :issue:`997`.
 
 - Linux CI now tests on PyPy3 3.5-5.8.0, updated from PyPy3 3.5-5.7.1.
-  See :issue:`1001`.
+  See :issue:`1001`. PyPy2 has been updated to 5.8.0 from 5.7.1,
+  Python 2.7 has been updated to 2.7.14 from 2.7.13, Python 3.4 is
+  updated to 3.4.7 from 3.4.5, Python 3.5 is now 3.5.4 from 3.5.3, and
+  Python 3.6 is now 3.6.2 from 3.6.0.
 
 - :meth:`gevent.subprocess.Popen.communicate` returns the correct type
   of str (not bytes) in universal newline mode under Python 3, or when
@@ -65,7 +69,8 @@
   total speed up of about 35 times. It is now in the same ball park as
   the native :class:`threading.local` class. See :pr:`1024`.
 
-- More safely terminate process on Windows. Reported in :issue:`1023`
+- More safely terminate subprocesses on Windows with
+  :meth:`gevent.subprocess.Popen.terminate`. Reported in :issue:`1023`
   by Giacomo Debidda.
 
 1.2.2 (2017-06-05)

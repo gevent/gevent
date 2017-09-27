@@ -1,6 +1,6 @@
 setuptools
 wheel
-cython>=0.26.1
+cython>=0.27
 greenlet>=0.4.10
 pylint>=1.7.1
 prospector[with_pyroma]
