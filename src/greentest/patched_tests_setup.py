@@ -171,14 +171,6 @@ disabled_tests = [
     'test_thread.TestForkInThread.test_forkinthread',
     # XXX needs investigating
 
-    'test_subprocess.POSIXProcessTestCase.test_terminate_dead',
-    'test_subprocess.POSIXProcessTestCase.test_send_signal_dead',
-    'test_subprocess.POSIXProcessTestCase.test_kill_dead',
-    # Don't exist in the test suite until 2.7.4+; with our monkey patch in place,
-    # they fail because the process they're looking for has been allowed to exit.
-    # Our monkey patch waits for the process with a watcher and so detects
-    # the exit before the normal polling mechanism would
-
     'test_subprocess.POSIXProcessTestCase.test_preexec_errpipe_does_not_double_close_pipes',
     # Does not exist in the test suite until 2.7.4+. Subclasses Popen, and overrides
     # _execute_child. But our version has a different parameter list than the

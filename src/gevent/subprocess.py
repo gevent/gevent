@@ -108,6 +108,8 @@ __extra__ = [
     'CreateProcess',
     'INFINITE',
     'TerminateProcess',
+    'GetExitCodeProcess',
+    'STILL_ACTIVE',
 
     # These were added for 3.5, but we make them available everywhere.
     'run',
@@ -995,7 +997,20 @@ class Popen(object):
         def terminate(self):
             """Terminates the process
             """
-            TerminateProcess(self._handle, 1)
+            # Don't terminate a process that we know has already died.
+            if self.returncode is not None:
+                return
+            try:
+                TerminateProcess(self._handle, 1)
+            except OSError as e:
+                # ERROR_ACCESS_DENIED (winerror 5) is received when the
+                # process already died.
+                if e.winerror != 5:
+                    raise
+                rc = GetExitCodeProcess(self._handle)
+                if rc == STILL_ACTIVE:
+                    raise
+                self.returncode = rc
 
         kill = terminate
 
