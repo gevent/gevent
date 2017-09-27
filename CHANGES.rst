@@ -65,6 +65,9 @@
   total speed up of about 35 times. It is now in the same ball park as
   the native :class:`threading.local` class. See :pr:`1024`.
 
+- More safely terminate process on Windows. Reported in :issue:`1023`
+  by Giacomo Debidda.
+
 1.2.2 (2017-06-05)
 ==================
 
