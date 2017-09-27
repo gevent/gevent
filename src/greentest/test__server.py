@@ -7,9 +7,9 @@ from gevent.server import StreamServer
 import errno
 import os
 
-# Timeouts very flaky on appveyor
-_DEFAULT_SOCKET_TIMEOUT = 0.1 if not greentest.RUNNING_ON_APPVEYOR else 1.0
-_DEFAULT_TEST_TIMEOUT = 5 if not greentest.RUNNING_ON_APPVEYOR else 10
+# Timeouts very flaky on appveyor and PyPy3
+_DEFAULT_SOCKET_TIMEOUT = 0.1 if not greentest.EXPECT_POOR_TIMER_RESOLUTION else 1.0
+_DEFAULT_TEST_TIMEOUT = 5 if not greentest.EXPECT_POOR_TIMER_RESOLUTION else 10
 
 
 class SimpleStreamServer(StreamServer):
@@ -451,13 +451,15 @@ try:
 except ImportError:
     pass
 else:
+    def _file(name, here=os.path.dirname(__file__)):
+        return os.path.abspath(os.path.join(here, name))
 
     class TestSSLGetCertificate(TestCase):
 
         def _create_server(self):
             return self.ServerSubClass(('', 0),
-                                       keyfile='server.key',
-                                       certfile='server.crt')
+                                       keyfile=_file('server.key'),
+                                       certfile=_file('server.crt'))
 
         def get_spawn(self):
             return gevent.spawn
