@@ -521,16 +521,6 @@ if sys.version_info[:2] >= (3, 4):
         # In any event, this test hangs forever
 
 
-        'test_subprocess.POSIXProcessTestCase.test_terminate_dead',
-        'test_subprocess.POSIXProcessTestCase.test_send_signal_dead',
-        'test_subprocess.POSIXProcessTestCase.test_kill_dead',
-        # With our monkey patch in place,
-        # they fail because the process they're looking for has been allowed to exit.
-        # Our monkey patch waits for the process with a watcher and so detects
-        # the exit before the normal polling mechanism would
-
-
-
         'test_subprocess.POSIXProcessTestCase.test_preexec_errpipe_does_not_double_close_pipes',
         # Subclasses Popen, and overrides _execute_child. Expects things to be done
         # in a particular order in an exception case, but we don't follow that
