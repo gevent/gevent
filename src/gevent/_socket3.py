@@ -114,7 +114,7 @@ class socket(object):
             s = _socket.socket.__repr__(self._sock)
         except Exception as ex: # pylint:disable=broad-except
             # Observed on Windows Py3.3, printing the repr of a socket
-            # that just sufferred a ConnectionResetError [WinError 10054]:
+            # that just suffered a ConnectionResetError [WinError 10054]:
             # "OverflowError: no printf formatter to display the socket descriptor in decimal"
             # Not sure what the actual cause is or if there's a better way to handle this
             s = '<socket [%r]>' % ex
