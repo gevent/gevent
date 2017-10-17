@@ -97,10 +97,10 @@ for var in "$@"; do
       install 3.6.2 python3.6.2
       ;;
     pypy)
-      install pypy2.7-5.8.0 pypy580
+      install pypy2.7-5.9.0 pypy590
       ;;
     pypy3)
-      install pypy3.5-5.8.0 pypy3.5_580
+      install pypy3.5-5.9.0 pypy3.5_590
       ;;
   esac
 done
