@@ -165,34 +165,34 @@ develop:
 	${PIP} install -U -r dev-requirements.txt
 
 lint-py27: $(PY27)
-	PYTHON=python2.7.13 PATH=$(BUILD_RUNTIMES)/versions/python2.7.13/bin:$(PATH) make develop travis_test_linters
+	PYTHON=python2.7.13 PATH=$PY27/bin:$(PATH) make develop travis_test_linters
 
 test-py27: $(PY27)
-	PYTHON=python2.7.14 PATH=$(BUILD_RUNTIMES)/versions/python2.7.14/bin:$(PATH) make develop fulltoxtest
+	PYTHON=python2.7.14 PATH=$PY27/bin:$(PATH) make develop fulltoxtest
 
 test-py278: $(PY278)
-	ls $(BUILD_RUNTIMES)/versions/python2.7.8/bin/
-	PYTHON=python2.7.8 PATH=$(BUILD_RUNTIMES)/versions/python2.7.8/bin:$(PATH) make develop toxtest
+	ls $PY278/bin/
+	PYTHON=python2.7.8 PATH=$PY278/bin:$(PATH) make develop toxtest
 
 test-py34: $(PY34)
-	PYTHON=python3.4.7 PIP=pip PATH=$(BUILD_RUNTIMES)/versions/python3.4.7/bin:$(PATH) make develop toxtest
+	PYTHON=python3.4.7 PIP=pip PATH=$PY34/bin:$(PATH) make develop toxtest
 
 test-py35: $(PY35)
-	PYTHON=python3.5.4 PIP=pip PATH=$(BUILD_RUNTIMES)/versions/python3.5.4/bin:$(PATH) make develop fulltoxtest
+	PYTHON=python3.5.4 PIP=pip PATH=$PY35/bin:$(PATH) make develop fulltoxtest
 
 test-py36: $(PY36)
-	PYTHON=python3.6.2 PIP=pip PATH=$(BUILD_RUNTIMES)/versions/python3.6.2/bin:$(PATH) make develop toxtest
+	PYTHON=python3.6.2 PIP=pip PATH=$PY36/bin:$(PATH) make develop toxtest
 
 test-pypy: $(PYPY)
-	PYTHON=$(PYPY) PIP=pip PATH=$(BUILD_RUNTIMES)/versions/pypy580/bin:$(PATH) make develop toxtest
+	PYTHON=$(PYPY) PIP=pip PATH=$PYPY/bin:$(PATH) make develop toxtest
 
 test-pypy3: $(PYPY3)
-	PYTHON=$(PYPY3) PIP=pip PATH=$(BUILD_RUNTIMES)/versions/pypy3.5_580/bin:$(PATH) make develop toxtest
+	PYTHON=$(PYPY3) PIP=pip PATH=$PYPY3/bin:$(PATH) make develop toxtest
 
 test-py27-cffi: $(PY27)
-	GEVENT_CORE_CFFI_ONLY=1 PYTHON=python2.7.14 PATH=$(BUILD_RUNTIMES)/versions/python2.7.14/bin:$(PATH) make develop toxtest
+	GEVENT_CORE_CFFI_ONLY=1 PYTHON=python2.7.14 PATH=$PY27/bin:$(PATH) make develop toxtest
 
 test-py27-noembed: $(PY27)
 	cd deps/libev && ./configure --disable-dependency-tracking && make
 	cd deps/c-ares && ./configure --disable-dependency-tracking && make
-	CPPFLAGS="-Ideps/libev -Ideps/c-ares" LDFLAGS="-Ldeps/libev/.libs -Ldeps/c-ares/.libs" LD_LIBRARY_PATH="$(PWD)/deps/libev/.libs:$(PWD)/deps/c-ares/.libs" EMBED=0 GEVENT_CORE_CEXT_ONLY=1 PYTHON=python2.7.14 PATH=$(BUILD_RUNTIMES)/versions/python2.7.14/bin:$(PATH) make develop toxtest
+	CPPFLAGS="-Ideps/libev -Ideps/c-ares" LDFLAGS="-Ldeps/libev/.libs -Ldeps/c-ares/.libs" LD_LIBRARY_PATH="$(PWD)/deps/libev/.libs:$(PWD)/deps/c-ares/.libs" EMBED=0 GEVENT_CORE_CEXT_ONLY=1 PYTHON=python2.7.14 PATH=$$PY27/bin:$(PATH) make develop toxtest
