@@ -7,6 +7,10 @@
 1.3.0 (unreleased)
 ==================
 
+- ``Pool.add`` now accepts ``blocking`` and ``timeout`` parameters,
+  which function similarly to their counterparts in ``Semaphore``.
+  See :pr:`1032` by Ron Rothman.
+
 - If a single greenlet created and destroyed many
   :class:`gevent.local.local` objects without ever exiting, there
   would be a leak of the function objects intended to clean up the
