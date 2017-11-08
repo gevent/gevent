@@ -742,9 +742,10 @@ class Pool(Group):
             Added the ``blocking`` and ```timeout`` parameters.
         """
         if not self._semaphore.acquire(blocking=blocking, timeout=timeout):
-            # We failed to acquire the semaphore. Presumably, blocking was False, because had it
-            # been True, we would have either acquired the semaphore or encountered a Timeout.
-            raise Full
+            # We failed to acquire the semaphore.
+            # If blocking was True, then there was a timeout. If blocking was
+            # False, then there was no capacity.
+            raise Timeout() if blocking else Full()
 
         try:
             Group.add(self, greenlet)
