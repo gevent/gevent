@@ -461,9 +461,12 @@ class Group(GroupMappingMixin):
         """
         return iter(self.greenlets)
 
-    def add(self, greenlet):
+    def add(self, greenlet, blocking=False, timeout=None):
         """
         Begin tracking the greenlet.
+
+        :keyword bool blocking: and :keyword bool timeout: are ignored
+        in this method; subclasses may use them (see :meth:`Pool.add`).
 
         If this group is :meth:`full`, then this method may block
         until it is possible to track the greenlet.
@@ -714,18 +717,38 @@ class Pool(Group):
             return 1
         return max(0, self.size - len(self))
 
-    def add(self, greenlet):
+    def add(self, greenlet, blocking=True, timeout=None):
         """
-        Begin tracking the given greenlet, blocking until space is available.
+        Begin tracking the given greenlet, possibly blocking until space is
+        available.
+
+        :keyword bool blocking: If True (the default), this function will block
+        until the pool has space or a timeout occurs.
+        :keyword float timeout: The maximum number of seconds this method will block.
+
+        :return: True if the greenlet was added; False if a Timeout occured or
+        if blocking is True and the pool is full.
 
         .. seealso:: :meth:`Group.add`
         """
-        self._semaphore.acquire()
+        try:
+            # NOTE: The docs for Semaphore.acquire indicate that it may raise a Timeout rather
+            # than return False under some circumstances, though I'm not sure exactly what those
+            # circumstances are.
+            was_acquired = self._semaphore.acquire(blocking=blocking, timeout=timeout)
+        except Timeout:
+            was_acquired = False
+
+        if not was_acquired:
+            return False
+
         try:
             Group.add(self, greenlet)
         except:
             self._semaphore.release()
             raise
+
+        return True
 
     def _discard(self, greenlet):
         Group._discard(self, greenlet)
