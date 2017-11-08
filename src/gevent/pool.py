@@ -27,7 +27,7 @@ from gevent.timeout import Timeout
 from gevent.event import Event
 from gevent.lock import Semaphore, DummySemaphore
 
-__all__ = ['Group', 'Pool']
+__all__ = ['Group', 'Pool', 'Full']
 
 
 class IMapUnordered(Greenlet):
@@ -461,12 +461,9 @@ class Group(GroupMappingMixin):
         """
         return iter(self.greenlets)
 
-    def add(self, greenlet, blocking=False, timeout=None):
+    def add(self, greenlet):
         """
         Begin tracking the greenlet.
-
-        :keyword bool blocking: and :keyword bool timeout: are ignored
-        in this method; subclasses may use them (see :meth:`Pool.add`).
 
         If this group is :meth:`full`, then this method may block
         until it is possible to track the greenlet.
@@ -649,6 +646,14 @@ class Failure(object):
             raise self.exc
 
 
+class Full(Exception):
+    """
+    Raised when a Pool is full and an attempt was made to
+    add a new greenlet to it.
+    """
+    pass
+
+
 class Pool(Group):
 
     def __init__(self, size=None, greenlet_class=None):
@@ -723,32 +728,29 @@ class Pool(Group):
         available.
 
         :keyword bool blocking: If True (the default), this function will block
-        until the pool has space or a timeout occurs.
-        :keyword float timeout: The maximum number of seconds this method will block.
+        until the pool has space or a timeout occurs. If False, this function
+        will immediately raise a Timeout if the pool is currently full.
+        :keyword float timeout: The maximum number of seconds this method will
+        block, if ``blocking`` is True. (Ignored if ``blocking`` is False.)
 
-        :return: True if the greenlet was added; False if a Timeout occured or
-        if blocking is True and the pool is full.
+        Raises ``Timeout`` on timeout, or `Full` if ``blocking`` is False and
+        the pool is full.
 
         .. seealso:: :meth:`Group.add`
-        """
-        try:
-            # NOTE: The docs for Semaphore.acquire indicate that it may raise a Timeout rather
-            # than return False under some circumstances, though I'm not sure exactly what those
-            # circumstances are.
-            was_acquired = self._semaphore.acquire(blocking=blocking, timeout=timeout)
-        except Timeout:
-            was_acquired = False
 
-        if not was_acquired:
-            return False
+        .. versionchanged:: 1.3.0
+            Added the ``blocking`` and ```timeout`` parameters.
+        """
+        if not self._semaphore.acquire(blocking=blocking, timeout=timeout):
+            # We failed to acquire the semaphore. Presumably, blocking was False, because had it
+            # been True, we would have either acquired the semaphore or encountered a Timeout.
+            raise Full
 
         try:
             Group.add(self, greenlet)
         except:
             self._semaphore.release()
             raise
-
-        return True
 
     def _discard(self, greenlet):
         Group._discard(self, greenlet)
