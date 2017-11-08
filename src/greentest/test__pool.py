@@ -3,6 +3,7 @@ import gevent
 from gevent import pool
 from gevent.event import Event
 from gevent.queue import Queue
+from gevent.timeout import Timeout
 import greentest
 import random
 from greentest import ExpectedException
@@ -199,6 +200,46 @@ class PoolBasicTests(greentest.TestCase):
                     timeout.cancel()
                 self.assertEqual(p.free_count(), 0)
                 self.assertEqual(len(p), 1)
+            finally:
+                second.kill()
+        finally:
+            first.kill()
+
+    def test_add_method_non_blocking(self):
+        p = self.klass(size=1)
+        first = gevent.spawn(gevent.sleep, 1000)
+        try:
+            second = gevent.spawn(gevent.sleep, 1000)
+            try:
+                p.add(first)
+                try:
+                    p.add(second, blocking=False)
+                except pool.Full:
+                    pass  # expected
+                except Exception:
+                    raise AssertionError('Expected pool.Full')
+                else:
+                    raise AssertionError('Expected pool.Full')
+            finally:
+                second.kill()
+        finally:
+            first.kill()
+
+    def test_add_method_timeout(self):
+        p = self.klass(size=1)
+        first = gevent.spawn(gevent.sleep, 1000)
+        try:
+            second = gevent.spawn(gevent.sleep, 1000)
+            try:
+                p.add(first)
+                try:
+                    p.add(second, timeout=0.100)
+                except Timeout:
+                    pass  # expected
+                except Exception:
+                    raise AssertionError('expected Timeout')
+                else:
+                    raise AssertionError('expected Timeout')
             finally:
                 second.kill()
         finally:
