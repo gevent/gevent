@@ -212,14 +212,8 @@ class PoolBasicTests(greentest.TestCase):
             second = gevent.spawn(gevent.sleep, 1000)
             try:
                 p.add(first)
-                try:
+                with self.assertRaises(pool.Full):
                     p.add(second, blocking=False)
-                except pool.Full:
-                    pass  # expected
-                except Exception:
-                    raise AssertionError('Expected pool.Full')
-                else:
-                    raise AssertionError('Expected pool.Full')
             finally:
                 second.kill()
         finally:
@@ -232,14 +226,8 @@ class PoolBasicTests(greentest.TestCase):
             second = gevent.spawn(gevent.sleep, 1000)
             try:
                 p.add(first)
-                try:
+                with self.assertRaises(Timeout):
                     p.add(second, timeout=0.100)
-                except Timeout:
-                    pass  # expected
-                except Exception:
-                    raise AssertionError('expected Timeout')
-                else:
-                    raise AssertionError('expected Timeout')
             finally:
                 second.kill()
         finally:
