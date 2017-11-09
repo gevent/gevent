@@ -7,6 +7,7 @@ Python 3 socket module.
 # pylint: disable=too-many-statements,too-many-branches
 # pylint: disable=too-many-public-methods,unused-argument
 from __future__ import absolute_import
+import errno
 import io
 import os
 import sys
@@ -389,7 +390,9 @@ class socket(object):
         try:
             return _socket.socket.send(self._sock, data, flags)
         except error as ex:
-            if ex.args[0] != EWOULDBLOCK or timeout == 0.0:
+            # macOS can return EPROTOTYPE when writing to a socket that is shutting
+            # Down. Retrying the write should return the expected EPIPE error.
+            if ex.args[0] not in (EWOULDBLOCK, errno.EPROTOTYPE) or timeout == 0.0:
                 raise
             self._wait(self._write_event)
             try:
