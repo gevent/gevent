@@ -23,6 +23,7 @@ except ImportError:
 
 from gevent.hub import GreenletExit, getcurrent, kill as _kill
 from gevent.greenlet import joinall, Greenlet
+from gevent.queue import Full as QueueFull
 from gevent.timeout import Timeout
 from gevent.event import Event
 from gevent.lock import Semaphore, DummySemaphore
@@ -646,7 +647,7 @@ class Failure(object):
             raise self.exc
 
 
-class Full(Exception):
+class PoolFull(QueueFull):
     """
     Raised when a Pool is full and an attempt was made to
     add a new greenlet to it.
@@ -733,7 +734,7 @@ class Pool(Group):
         :keyword float timeout: The maximum number of seconds this method will
         block, if ``blocking`` is True. (Ignored if ``blocking`` is False.)
 
-        Raises ``Timeout`` on timeout, or `Full` if ``blocking`` is False and
+        Raises ``Timeout`` on timeout, or `PoolFull` if ``blocking`` is False and
         the pool is full.
 
         .. seealso:: :meth:`Group.add`
@@ -745,7 +746,7 @@ class Pool(Group):
             # We failed to acquire the semaphore.
             # If blocking was True, then there was a timeout. If blocking was
             # False, then there was no capacity.
-            raise Timeout() if blocking else Full()
+            raise Timeout() if blocking else PoolFull()
 
         try:
             Group.add(self, greenlet)
