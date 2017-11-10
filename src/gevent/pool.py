@@ -23,11 +23,12 @@ except ImportError:
 
 from gevent.hub import GreenletExit, getcurrent, kill as _kill
 from gevent.greenlet import joinall, Greenlet
+from gevent.queue import Full as QueueFull
 from gevent.timeout import Timeout
 from gevent.event import Event
 from gevent.lock import Semaphore, DummySemaphore
 
-__all__ = ['Group', 'Pool']
+__all__ = ['Group', 'Pool', 'Full']
 
 
 class IMapUnordered(Greenlet):
@@ -646,6 +647,14 @@ class Failure(object):
             raise self.exc
 
 
+class PoolFull(QueueFull):
+    """
+    Raised when a Pool is full and an attempt was made to
+    add a new greenlet to it.
+    """
+    pass
+
+
 class Pool(Group):
 
     def __init__(self, size=None, greenlet_class=None):
@@ -714,13 +723,31 @@ class Pool(Group):
             return 1
         return max(0, self.size - len(self))
 
-    def add(self, greenlet):
+    def add(self, greenlet, blocking=True, timeout=None):
         """
-        Begin tracking the given greenlet, blocking until space is available.
+        Begin tracking the given greenlet, possibly blocking until space is
+        available.
+
+        :keyword bool blocking: If True (the default), this function will block
+        until the pool has space or a timeout occurs. If False, this function
+        will immediately raise a Timeout if the pool is currently full.
+        :keyword float timeout: The maximum number of seconds this method will
+        block, if ``blocking`` is True. (Ignored if ``blocking`` is False.)
+
+        Raises `PoolFull` if either ``blocking`` is False and the pool was full,
+        or if ``blocking`` is True and ``timeout`` was exceeded.
 
         .. seealso:: :meth:`Group.add`
+
+        .. versionchanged:: 1.3.0
+            Added the ``blocking`` and ```timeout`` parameters.
         """
-        self._semaphore.acquire()
+        if not self._semaphore.acquire(blocking=blocking, timeout=timeout):
+            # We failed to acquire the semaphore.
+            # If blocking was True, then there was a timeout. If blocking was
+            # False, then there was no capacity. Either way, raise PoolFull.
+            raise PoolFull()
+
         try:
             Group.add(self, greenlet)
         except:
