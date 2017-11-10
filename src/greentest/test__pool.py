@@ -212,7 +212,7 @@ class PoolBasicTests(greentest.TestCase):
             second = gevent.spawn(gevent.sleep, 1000)
             try:
                 p.add(first)
-                with self.assertRaises(pool.Full):
+                with self.assertRaises(pool.PoolFull):
                     p.add(second, blocking=False)
             finally:
                 second.kill()
