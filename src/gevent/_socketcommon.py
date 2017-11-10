@@ -78,6 +78,8 @@ from gevent._util import copy_globals
 from gevent._util import _NONE
 
 is_windows = sys.platform == 'win32'
+is_macos = sys.platform == 'darwin'
+
 # pylint:disable=no-name-in-module,unused-import
 if is_windows:
     # no such thing as WSAEPERM or error code 10001 according to winsock.h or MSDN
@@ -101,6 +103,17 @@ try:
     from errno import EBADF
 except ImportError:
     EBADF = 9
+
+# macOS can return EPROTOTYPE when writing to a socket that is shutting
+# Down. Retrying the write should return the expected EPIPE error.
+# Downstream classes (like pywsgi) know how to handle/ignore EPIPE.
+# This set is used by socket.send() to decide whether the write should
+# be retried. The default is to retry only on EWOULDBLOCK. Here we add
+# EPROTOTYPE on macOS to handle this platform-specific race condition.
+GSENDAGAIN = (EWOULDBLOCK,)
+if is_macos:
+    from errno import EPROTOTYPE
+    GSENDAGAIN += (EPROTOTYPE,)
 
 import _socket
 _realsocket = _socket.socket

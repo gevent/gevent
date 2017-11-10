@@ -389,7 +389,7 @@ class socket(object):
         try:
             return _socket.socket.send(self._sock, data, flags)
         except error as ex:
-            if ex.args[0] != EWOULDBLOCK or timeout == 0.0:
+            if ex.args[0] not in _socketcommon.GSENDAGAIN or timeout == 0.0:
                 raise
             self._wait(self._write_event)
             try:
