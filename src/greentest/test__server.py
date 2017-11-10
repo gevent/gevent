@@ -107,6 +107,7 @@ class TestCase(greentest.TestCase):
             sock.connect((server_host, server_port))
         except Exception:
             # avoid ResourceWarning under Py3
+            print("Failed to connect to", server_host, server_port, self.server.server_host)
             sock.close()
             raise
 
