@@ -28,7 +28,7 @@ from gevent.timeout import Timeout
 from gevent.event import Event
 from gevent.lock import Semaphore, DummySemaphore
 
-__all__ = ['Group', 'Pool', 'Full']
+__all__ = ['Group', 'Pool', 'PoolFull']
 
 
 class IMapUnordered(Greenlet):
@@ -650,9 +650,8 @@ class Failure(object):
 class PoolFull(QueueFull):
     """
     Raised when a Pool is full and an attempt was made to
-    add a new greenlet to it.
+    add a new greenlet to it in non-blocking mode.
     """
-    pass
 
 
 class Pool(Group):
