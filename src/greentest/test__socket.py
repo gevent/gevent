@@ -267,7 +267,7 @@ class TestTCP(greentest.TestCase):
         # Issue 841
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         s.setblocking(False)
-        ret = s.connect_ex(('localhost', get_port()))
+        ret = s.connect_ex((greentest.DEFAULT_LOCAL_HOST_ADDR, get_port()))
         self.assertIsInstance(ret, errno_types)
         s.close()
 
@@ -283,7 +283,7 @@ class TestTCP(greentest.TestCase):
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         s.setblocking(False)
         with self.assertRaises(OverflowError):
-            s.connect_ex(('localhost', 65539))
+            s.connect_ex((greentest.DEFAULT_LOCAL_HOST_ADDR, 65539))
         s.close()
 
     @unittest.skipUnless(hasattr(socket, 'SOCK_CLOEXEC'),

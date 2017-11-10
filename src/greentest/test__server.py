@@ -86,8 +86,11 @@ class TestCase(greentest.TestCase):
 
     def get_server_host_port_family(self):
         server_host = self.server.server_host
-        if not server_host or server_host == '::':
-            server_host = 'localhost'
+        if not server_host:
+            server_host = greentest.DEFAULT_LOCAL_HOST_ADDR
+        elif server_host == '::':
+            server_host = greentest.DEFAULT_LOCAL_HOST_ADDR6
+
         try:
             family = self.server.socket.family
         except AttributeError:

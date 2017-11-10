@@ -369,6 +369,18 @@ if PY3 and PYPY:
     CI_TIMEOUT = 10
 LOCAL_TIMEOUT = 1
 
+DEFAULT_LOCAL_HOST_ADDR = 'localhost'
+DEFAULT_LOCAL_HOST_ADDR6 = DEFAULT_LOCAL_HOST_ADDR
+
+if RUNNING_ON_TRAVIS:
+    # As of November 2017 (probably Sept or Oct), after a
+    # Travis upgrade, using "localhost" no longer works,
+    # producing 'OSError: [Errno 99] Cannot assign
+    # requested address'. This is apparently something to do with
+    # docker containers. Sigh.
+    DEFAULT_LOCAL_HOST_ADDR = '127.0.0.1'
+    DEFAULT_LOCAL_HOST_ADDR6 = '::1'
+
 class TestCase(TestCaseMetaClass("NewBase", (BaseTestCase,), {})):
     __timeout__ = LOCAL_TIMEOUT if not RUNNING_ON_CI else CI_TIMEOUT
     switch_expected = 'default'
