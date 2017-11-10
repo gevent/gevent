@@ -734,8 +734,8 @@ class Pool(Group):
         :keyword float timeout: The maximum number of seconds this method will
         block, if ``blocking`` is True. (Ignored if ``blocking`` is False.)
 
-        Raises ``Timeout`` on timeout, or `PoolFull` if ``blocking`` is False and
-        the pool is full.
+        Raises `PoolFull` if either ``blocking`` is False and the pool was full,
+        or if ``blocking`` is True and ``timeout`` was exceeded.
 
         .. seealso:: :meth:`Group.add`
 
@@ -745,8 +745,8 @@ class Pool(Group):
         if not self._semaphore.acquire(blocking=blocking, timeout=timeout):
             # We failed to acquire the semaphore.
             # If blocking was True, then there was a timeout. If blocking was
-            # False, then there was no capacity.
-            raise Timeout() if blocking else PoolFull()
+            # False, then there was no capacity. Either way, raise PoolFull.
+            raise PoolFull()
 
         try:
             Group.add(self, greenlet)
