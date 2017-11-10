@@ -205,6 +205,7 @@ class PoolBasicTests(greentest.TestCase):
         finally:
             first.kill()
 
+    @greentest.ignores_leakcheck
     def test_add_method_non_blocking(self):
         p = self.klass(size=1)
         first = gevent.spawn(gevent.sleep, 1000)
@@ -219,6 +220,7 @@ class PoolBasicTests(greentest.TestCase):
         finally:
             first.kill()
 
+    @greentest.ignores_leakcheck
     def test_add_method_timeout(self):
         p = self.klass(size=1)
         first = gevent.spawn(gevent.sleep, 1000)
@@ -228,6 +230,21 @@ class PoolBasicTests(greentest.TestCase):
                 p.add(first)
                 with self.assertRaises(pool.PoolFull):
                     p.add(second, timeout=0.100)
+            finally:
+                second.kill()
+        finally:
+            first.kill()
+
+    @greentest.ignores_leakcheck
+    def test_start_method_timeout(self):
+        p = self.klass(size=1)
+        first = gevent.spawn(gevent.sleep, 1000)
+        try:
+            second = gevent.Greenlet(gevent.sleep, 1000)
+            try:
+                p.add(first)
+                with self.assertRaises(pool.PoolFull):
+                    p.start(second, timeout=0.100)
             finally:
                 second.kill()
         finally:
