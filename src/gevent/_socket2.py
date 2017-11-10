@@ -5,6 +5,7 @@ Python 2 socket module.
 # Our import magic sadly makes this warning useless
 # pylint: disable=undefined-variable
 
+import errno
 import time
 from gevent import _socketcommon
 from gevent._util import copy_globals
@@ -322,7 +323,9 @@ class socket(object):
         try:
             return sock.send(data, flags)
         except error as ex:
-            if ex.args[0] != EWOULDBLOCK or timeout == 0.0:
+            # macOS can return EPROTOTYPE when writing to a socket that is shutting
+            # Down. Retrying the write should return the expected EPIPE error.
+            if ex.args[0] not in (EWOULDBLOCK, errno.EPROTOTYPE) or timeout == 0.0:
                 raise
             sys.exc_clear()
             self._wait(self._write_event)
