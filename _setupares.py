@@ -44,7 +44,7 @@ ares_configure_command = ' '.join([
     " && sh ./configure --disable-dependency-tracking " + _m32 + "CONFIG_COMMANDS= ",
     " && cp ares_config.h ares_build.h \"$OLDPWD\" ",
     " && cat ares_build.h ",
-    " && mv ares_build.h.orig ares_build.h)",
+    " && if [ -r ares_build.h.orig ]; then mv ares_build.h.orig ares_build.h; fi)",
     "> configure-output.txt"])
 
 
