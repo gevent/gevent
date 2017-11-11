@@ -21,6 +21,27 @@ ares_init_options \- Initialize a resolver channel
 .nf
 #include <ares.h>
 
+struct ares_options {
+  int flags;
+  int timeout; /* in seconds or milliseconds, depending on options */
+  int tries;
+  int ndots;
+  unsigned short udp_port;
+  unsigned short tcp_port;
+  int socket_send_buffer_size;
+  int socket_receive_buffer_size;
+  struct in_addr *servers;
+  int nservers;
+  char **domains;
+  int ndomains;
+  char *lookups;
+  ares_sock_state_cb sock_state_cb;
+  void *sock_state_cb_data;
+  struct apattern *sortlist;
+  int nsort;
+  int ednspsz;
+};
+
 int ares_init_options(ares_channel *\fIchannelptr\fP,
                       struct ares_options *\fIoptions\fP,
                       int \fIoptmask\fP)
