@@ -77,6 +77,7 @@ test_prelim:
 	${PYTHON} --version
 	${PYTHON} -c 'import greenlet; print(greenlet, greenlet.__version__)'
 	${PYTHON} -c 'import gevent.core; print(gevent.core.loop)'
+	${PYTHON} -c 'import gevent.ares; print(gevent.ares)'
 	make bench
 
 toxtest: test_prelim
@@ -162,7 +163,7 @@ develop:
 # Then start installing our deps so they can be cached. Note that use of --build-options / --global-options / --install-options
 # disables the cache.
 # We need wheel>=0.26 on Python 3.5. See previous revisions.
-	${PIP} install -U -r dev-requirements.txt
+	${PIP} install -vv -U -r dev-requirements.txt
 
 lint-py27: $(PY27)
 	PYTHON=python2.7.13 PATH=$(BUILD_RUNTIMES)/versions/python2.7.13/bin:$(PATH) make develop travis_test_linters
