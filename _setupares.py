@@ -43,6 +43,7 @@ ares_configure_command = ' '.join([
     " && if [ -r ares_build.h ]; then cp ares_build.h ares_build.h.orig; fi ",
     " && sh ./configure --disable-dependency-tracking " + _m32 + "CONFIG_COMMANDS= ",
     " && cp ares_config.h ares_build.h \"$OLDPWD\" ",
+    " && cat ares_build.h ",
     " && mv ares_build.h.orig ares_build.h)",
     "> configure-output.txt"])
 
@@ -70,6 +71,8 @@ def configure_ares(bext, ext):
             with open('configure-output.txt', 'r') as t:
                 print(t.read(), file=sys.stderr)
             raise
+        with open('configure-output.txt', 'r') as t:
+            print(t.read(), file=sys.stderr)
         if sys.platform == 'darwin':
             make_universal_header('ares_build.h', 'CARES_SIZEOF_LONG')
             make_universal_header('ares_config.h', 'SIZEOF_LONG', 'SIZEOF_SIZE_T', 'SIZEOF_TIME_T')

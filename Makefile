@@ -163,8 +163,7 @@ develop:
 # Then start installing our deps so they can be cached. Note that use of --build-options / --global-options / --install-options
 # disables the cache.
 # We need wheel>=0.26 on Python 3.5. See previous revisions.
-	${PIP} install -v -U -r dev-requirements.txt
-	cat deps/c-ares/ares_build.h
+	${PIP} install -U -r dev-requirements.txt
 
 lint-py27: $(PY27)
 	PYTHON=python2.7.13 PATH=$(BUILD_RUNTIMES)/versions/python2.7.13/bin:$(PATH) make develop travis_test_linters
