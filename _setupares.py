@@ -91,11 +91,10 @@ ARES.optional = not RUNNING_ON_TRAVIS
 
 if CARES_EMBED:
     ARES.sources += glob_many('deps/c-ares/*.c')
-    print("SOURCES", ARES.sources)
     # Strip the standalone binaries that would otherwise
     # cause linking issues
     for bin_c in ('acountry', 'adig', 'ahost'):
-        ARES.sources.remove('deps/c-ares/' + bin_c + '.c')
+        ARES.sources.remove('deps/c-ares' + os.sep + bin_c + '.c')
     ARES.configure = configure_ares
     if WIN:
         ARES.libraries += ['advapi32']
