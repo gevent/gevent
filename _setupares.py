@@ -23,6 +23,7 @@ from _setuputils import LIBRARIES
 from _setuputils import DEFINE_MACROS
 from _setuputils import glob_many
 from _setuputils import dep_abspath
+from _setuputils import RUNNING_ON_TRAVIS
 
 
 CARES_EMBED = should_embed('c-ares')
@@ -83,7 +84,8 @@ ARES = Extension(name='gevent.ares',
                  define_macros=list(DEFINE_MACROS),
                  depends=glob_many('src/gevent/dnshelper.c',
                                    'src/gevent/cares_*.[ch]'))
-ARES.optional = True
+
+ARES.optional = not RUNNING_ON_TRAVIS
 
 
 if CARES_EMBED:

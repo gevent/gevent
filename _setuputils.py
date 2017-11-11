@@ -22,6 +22,7 @@ from setuptools.command.sdist import sdist
 PYPY = hasattr(sys, 'pypy_version_info')
 WIN = sys.platform.startswith('win')
 CFFI_WIN_BUILD_ANYWAY = os.environ.get("PYPY_WIN_BUILD_ANYWAY")
+RUNNING_ON_TRAVIS = os.environ.get('TRAVIS')
 
 LIBRARIES = []
 DEFINE_MACROS = []

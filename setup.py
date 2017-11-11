@@ -187,7 +187,7 @@ if os.getenv('READTHEDOCS'):
 try:
     run_setup(EXT_MODULES, run_make=_BUILDING)
 except BuildFailed:
-    if ARES not in EXT_MODULES:
+    if ARES not in EXT_MODULES or not ARES.optional:
         raise
     EXT_MODULES.remove(ARES)
     run_setup(EXT_MODULES, run_make=_BUILDING)
