@@ -413,6 +413,21 @@ class TestCase(TestCaseMetaClass("NewBase", (BaseTestCase,), {})):
             del self.close_on_teardown
         except AttributeError:
             pass
+        super(TestCase, self).tearDown()
+
+    @classmethod
+    def setUpClass(cls):
+        import warnings
+        cls._warning_cm = warnings.catch_warnings()
+        cls._warning_cm.__enter__()
+        if not sys.warnoptions:
+            warnings.simplefilter('default')
+        super(TestCase, cls).setUpClass()
+
+    @classmethod
+    def tearDownClass(cls):
+        cls._warning_cm.__exit__(None, None, None)
+        super(TestCase, cls).tearDownClass()
 
     def _close_on_teardown(self, resource):
         if 'close_on_teardown' not in self.__dict__:

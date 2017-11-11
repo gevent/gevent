@@ -267,7 +267,7 @@ class ThreadPool(GroupMappingMixin):
 class ThreadResult(object):
 
     # Using slots here helps to debug reference cycles/leaks
-    __slots__ = ('exc_info', 'async', '_call_when_ready', 'value',
+    __slots__ = ('exc_info', 'async_watcher', '_call_when_ready', 'value',
                  'context', 'hub', 'receiver')
 
     def __init__(self, receiver, hub=None, call_when_ready=None):
@@ -278,16 +278,16 @@ class ThreadResult(object):
         self.context = None
         self.value = None
         self.exc_info = ()
-        self.async = hub.loop.async()
+        self.async_watcher = hub.loop.async()
         self._call_when_ready = call_when_ready
-        self.async.start(self._on_async)
+        self.async_watcher.start(self._on_async)
 
     @property
     def exception(self):
         return self.exc_info[1] if self.exc_info else None
 
     def _on_async(self):
-        self.async.stop()
+        self.async_watcher.stop()
         if self._call_when_ready:
             # Typically this is pool.semaphore.release and we have to
             # call this in the Hub; if we don't we get the dreaded
@@ -297,7 +297,7 @@ class ThreadResult(object):
             if self.exc_info:
                 self.hub.handle_error(self.context, *self.exc_info)
             self.context = None
-            self.async = None
+            self.async_watcher = None
             self.hub = None
             self._call_when_ready = None
             if self.receiver is not None:
@@ -309,17 +309,17 @@ class ThreadResult(object):
                 self.exc_info = (self.exc_info[0], self.exc_info[1], None)
 
     def destroy(self):
-        if self.async is not None:
-            self.async.stop()
-        self.async = None
+        if self.async_watcher is not None:
+            self.async_watcher.stop()
+        self.async_watcher = None
         self.context = None
         self.hub = None
         self._call_when_ready = None
         self.receiver = None
 
     def _ready(self):
-        if self.async is not None:
-            self.async.send()
+        if self.async_watcher is not None:
+            self.async_watcher.send()
 
     def set(self, value):
         self.value = value
