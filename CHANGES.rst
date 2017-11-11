@@ -77,6 +77,9 @@
   :meth:`gevent.subprocess.Popen.terminate`. Reported in :issue:`1023`
   by Giacomo Debidda.
 
+- ``socket.send()`` now catches ``EPROTYPE`` on macOS to handle a race
+  condition during shutdown. Fixed in :pr:`1035` by Jay Oster.
+
 1.2.2 (2017-06-05)
 ==================
 
