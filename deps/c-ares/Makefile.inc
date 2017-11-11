@@ -92,6 +92,7 @@ MANPAGES = ares_cancel.3		\
   ares_init_options.3			\
   ares_library_cleanup.3		\
   ares_library_init.3			\
+  ares_library_initialized.3		\
   ares_mkquery.3			\
   ares_create_query.3			\
   ares_parse_a_reply.3			\
@@ -145,6 +146,7 @@ HTMLPAGES = ares_cancel.html		\
   ares_init_options.html		\
   ares_library_cleanup.html		\
   ares_library_init.html		\
+  ares_library_initialized.html		\
   ares_mkquery.html			\
   ares_create_query.html			\
   ares_parse_a_reply.html		\
@@ -197,6 +199,7 @@ PDFPAGES = ares_cancel.pdf		\
   ares_init_options.pdf			\
   ares_library_cleanup.pdf		\
   ares_library_init.pdf			\
+  ares_library_initialized.pdf		\
   ares_mkquery.pdf			\
   ares_create_query.pdf			\
   ares_parse_a_reply.pdf		\

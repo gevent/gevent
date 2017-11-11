@@ -80,6 +80,8 @@
 - ``socket.send()`` now catches ``EPROTYPE`` on macOS to handle a race
   condition during shutdown. Fixed in :pr:`1035` by Jay Oster.
 
+- Update c-ares to 1.13.0. See :issue:`990`.
+
 1.2.2 (2017-06-05)
 ==================
 

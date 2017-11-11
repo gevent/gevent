@@ -15,43 +15,30 @@
 .\"
 .TH ARES_FDS 3 "23 July 1998"
 .SH NAME
-ares_fds \- Get file descriptors to select on for name service
+ares_fds \- return file descriptors to select on
 .SH SYNOPSIS
 .nf
-.B #include <ares.h>
-.PP
-.B int ares_fds(ares_channel \fIchannel\fP, fd_set *\fIread_fds\fP,
-.B	fd_set *\fIwrite_fds\fP)
+#include <ares.h>
+
+int ares_fds(ares_channel \fIchannel\fP,
+             fd_set *\fIread_fds\fP,
+	     fd_set *\fIwrite_fds\fP)
 .fi
 .SH DESCRIPTION
-The
-.B ares_fds
-function retrieves the set of file descriptors which the calling
-application should select on for reading and writing for the
+The \fBares_fds(3)\fP function retrieves the set of file descriptors which the
+calling application should select on for reading and writing for the
 processing of name service queries pending on the name service channel
-identified by
-.IR channel .
+identified by \fIchannel\fP.
+
 File descriptors will be set in the file descriptor sets pointed to by
-.I read_fds
-and
-.I write_fds
-as appropriate.  File descriptors already set in
-.I read_fds
-and
-.I write_fds
-will remain set; initialization of the file descriptor sets
-(using
-.BR FD_ZERO )
-is the responsibility of the caller.
+\fIread_fds\fP and \fIwrite_fds\fP as appropriate.  File descriptors already
+set in \fIread_fds\fP and \fIwrite_fds\fP will remain set; initialization of
+the file descriptor sets (using \fBFD_ZERO\fP) is the responsibility of the
+caller.
 .SH RETURN VALUES
-.B ares_fds
-returns one greater than the number of the highest socket set in either
-.I read_fds
-or
-.IR write_fds .
-If no queries are active,
-.B ares_fds
-will return 0.
+\fBares_fds(3)\fP returns a value that is one greater than the number of the
+highest socket set in either \fIread_fds\fP or \fIwrite_fds\fP.  If no queries
+are active, \fBares_fds(3)\fP returns 0.
 .SH SEE ALSO
 .BR ares_timeout (3),
 .BR ares_process (3)

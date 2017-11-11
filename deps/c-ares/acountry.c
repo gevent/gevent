@@ -273,7 +273,7 @@ static const struct search_list *list_lookup(int number, const struct search_lis
  */
 static const struct search_list country_list[] = {
        {   4, "af", "Afghanistan"                          },
-       { 248, "ax", "Åland Island"                         },
+       { 248, "ax", "Ã…land Island"                         },
        {   8, "al", "Albania"                              },
        {  12, "dz", "Algeria"                              },
        {  16, "as", "American Samoa"                       },
