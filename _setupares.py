@@ -71,8 +71,6 @@ def configure_ares(bext, ext):
             with open('configure-output.txt', 'r') as t:
                 print(t.read(), file=sys.stderr)
             raise
-        with open('configure-output.txt', 'r') as t:
-            print(t.read(), file=sys.stderr)
         if sys.platform == 'darwin':
             make_universal_header('ares_build.h', 'CARES_SIZEOF_LONG')
             make_universal_header('ares_config.h', 'SIZEOF_LONG', 'SIZEOF_SIZE_T', 'SIZEOF_TIME_T')
