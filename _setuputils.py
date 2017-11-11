@@ -23,6 +23,8 @@ PYPY = hasattr(sys, 'pypy_version_info')
 WIN = sys.platform.startswith('win')
 CFFI_WIN_BUILD_ANYWAY = os.environ.get("PYPY_WIN_BUILD_ANYWAY")
 RUNNING_ON_TRAVIS = os.environ.get('TRAVIS')
+RUNNING_ON_APPVEYOR = os.environ.get('APPVEYOR')
+RUNNING_ON_CI = RUNNING_ON_TRAVIS or RUNNING_ON_APPVEYOR
 
 LIBRARIES = []
 DEFINE_MACROS = []
