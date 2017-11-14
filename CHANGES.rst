@@ -7,8 +7,8 @@
 1.3.0 (unreleased)
 ==================
 
-- ``Pool.add`` now ignores any greenlet that has already completed.
-  Previously it would track completed greenlet.
+- ``Group.add`` (and ``Pool.add``) now ignore any greenlet that has
+  already completed. Previously they would track completed greenlets.
 
 - ``Pool.add`` now accepts ``blocking`` and ``timeout`` parameters,
   which function similarly to their counterparts in ``Semaphore``.
