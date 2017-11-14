@@ -205,6 +205,19 @@ class PoolBasicTests(greentest.TestCase):
         finally:
             first.kill()
 
+    def test_add_completed_greenlet(self):
+        p = self.klass()
+        g = gevent.spawn(lambda: None)
+        try:
+            # make sure greenlet completed
+            g.join()
+            assert g.ready()
+            assert len(p) == 0
+            p.add(g)  # should be a no-op
+            self.assertEqual(len(p), 0)
+        finally:
+            g.kill()
+
     @greentest.ignores_leakcheck
     def test_add_method_non_blocking(self):
         p = self.klass(size=1)
