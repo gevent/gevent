@@ -267,7 +267,7 @@ class TestTCP(greentest.TestCase):
         # Issue 841
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         s.setblocking(False)
-        ret = s.connect_ex(('localhost', get_port()))
+        ret = s.connect_ex((greentest.DEFAULT_LOCAL_HOST_ADDR, get_port()))
         self.assertIsInstance(ret, errno_types)
         s.close()
 
@@ -283,7 +283,7 @@ class TestTCP(greentest.TestCase):
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         s.setblocking(False)
         with self.assertRaises(OverflowError):
-            s.connect_ex(('localhost', 65539))
+            s.connect_ex((greentest.DEFAULT_LOCAL_HOST_ADDR, 65539))
         s.close()
 
     @unittest.skipUnless(hasattr(socket, 'SOCK_CLOEXEC'),
@@ -326,7 +326,9 @@ class TestCreateConnection(greentest.TestCase):
 
     def test(self):
         try:
-            socket.create_connection(('localhost', get_port()), timeout=30, source_address=('', get_port()))
+            socket.create_connection((greentest.DEFAULT_BIND_ADDR, get_port()),
+                                     timeout=30,
+                                     source_address=('', get_port()))
         except socket.error as ex:
             if 'refused' not in str(ex).lower():
                 raise

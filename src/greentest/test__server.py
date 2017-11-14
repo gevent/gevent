@@ -86,8 +86,11 @@ class TestCase(greentest.TestCase):
 
     def get_server_host_port_family(self):
         server_host = self.server.server_host
-        if not server_host or server_host == '::':
-            server_host = 'localhost'
+        if not server_host:
+            server_host = greentest.DEFAULT_LOCAL_HOST_ADDR
+        elif server_host == '::':
+            server_host = greentest.DEFAULT_LOCAL_HOST_ADDR6
+
         try:
             family = self.server.socket.family
         except AttributeError:
@@ -184,13 +187,13 @@ class TestCase(greentest.TestCase):
         self.assertConnectionRefused()
 
     def report_netstat(self, msg):
-        return
-        print(msg)
-        os.system('sudo netstat -anp | grep %s' % os.getpid())
-        print('^^^^^')
+        if 0:
+            print(msg)
+            os.system('sudo netstat -anp | grep %s' % os.getpid())
+            print('^^^^^')
 
     def _create_server(self):
-        return self.ServerSubClass(('', 0))
+        return self.ServerSubClass((greentest.DEFAULT_BIND_ADDR, 0))
 
     def init_server(self):
         self.server = self._create_server()
@@ -203,7 +206,7 @@ class TestCase(greentest.TestCase):
 
     def _test_invalid_callback(self):
         try:
-            self.server = self.ServerClass(('', 0), lambda: None)
+            self.server = self.ServerClass((greentest.DEFAULT_BIND_ADDR, 0), lambda: None)
             self.server.start()
 
             self.expect_one_error()
@@ -250,7 +253,7 @@ class TestDefaultSpawn(TestCase):
         self.assertRaises(TypeError, self.ServerClass, self.get_listener(), backlog=25, handle=False)
 
     def test_backlog_is_accepted_for_address(self):
-        self.server = self.ServerSubClass(('', 0), backlog=25)
+        self.server = self.ServerSubClass((greentest.DEFAULT_BIND_ADDR, 0), backlog=25)
         self.assertConnectionRefused()
         self._test_server_start_stop(restartable=False)
 
@@ -260,12 +263,13 @@ class TestDefaultSpawn(TestCase):
 
     def test_subclass_with_socket(self):
         self.server = self.ServerSubClass(self.get_listener())
-        # the connection won't be refused, because there exists a listening socket, but it won't be handled also
+        # the connection won't be refused, because there exists a
+        # listening socket, but it won't be handled also
         self.assertNotAccepted()
         self._test_server_start_stop(restartable=True)
 
     def test_subclass_with_address(self):
-        self.server = self.ServerSubClass(('', 0))
+        self.server = self.ServerSubClass((greentest.DEFAULT_BIND_ADDR, 0))
         self.assertConnectionRefused()
         self._test_server_start_stop(restartable=True)
 
@@ -291,7 +295,7 @@ class TestDefaultSpawn(TestCase):
         self._test_serve_forever()
 
     def test_serve_forever_after_start(self):
-        self.server = self.ServerSubClass(('', 0))
+        self.server = self.ServerSubClass((greentest.DEFAULT_BIND_ADDR, 0))
         self.assertConnectionRefused()
         assert not self.server.started
         self.server.start()
@@ -299,7 +303,7 @@ class TestDefaultSpawn(TestCase):
         self._test_serve_forever()
 
     def test_server_closes_client_sockets(self):
-        self.server = self.ServerClass(('', 0), lambda *args: [])
+        self.server = self.ServerClass((greentest.DEFAULT_BIND_ADDR, 0), lambda *args: [])
         self.server.start()
         conn = self.send_request()
         timeout = gevent.Timeout.start_new(1)
@@ -418,7 +422,7 @@ class TestNoneSpawn(TestCase):
     def test_assertion_in_blocking_func(self):
         def sleep(*args):
             gevent.sleep(0)
-        self.server = Settings.ServerClass(('', 0), sleep, spawn=None)
+        self.server = Settings.ServerClass((greentest.DEFAULT_BIND_ADDR, 0), sleep, spawn=None)
         self.server.start()
         self.expect_one_error()
         self.assert500()
@@ -457,7 +461,7 @@ else:
     class TestSSLGetCertificate(TestCase):
 
         def _create_server(self):
-            return self.ServerSubClass(('', 0),
+            return self.ServerSubClass((greentest.DEFAULT_BIND_ADDR, 0),
                                        keyfile=_file('server.key'),
                                        certfile=_file('server.crt'))
 

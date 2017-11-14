@@ -369,6 +369,22 @@ if PY3 and PYPY:
     CI_TIMEOUT = 10
 LOCAL_TIMEOUT = 1
 
+DEFAULT_LOCAL_HOST_ADDR = 'localhost'
+DEFAULT_LOCAL_HOST_ADDR6 = DEFAULT_LOCAL_HOST_ADDR
+DEFAULT_BIND_ADDR = ''
+
+if RUNNING_ON_TRAVIS:
+    # As of November 2017 (probably Sept or Oct), after a
+    # Travis upgrade, using "localhost" no longer works,
+    # producing 'OSError: [Errno 99] Cannot assign
+    # requested address'. This is apparently something to do with
+    # docker containers. Sigh.
+    DEFAULT_LOCAL_HOST_ADDR = '127.0.0.1'
+    DEFAULT_LOCAL_HOST_ADDR6 = '::1'
+    # Likewise, binding to '' appears to work, but it cannot be
+    # connected to with the same error.
+    DEFAULT_BIND_ADDR = '127.0.0.1'
+
 class TestCase(TestCaseMetaClass("NewBase", (BaseTestCase,), {})):
     __timeout__ = LOCAL_TIMEOUT if not RUNNING_ON_CI else CI_TIMEOUT
     switch_expected = 'default'
@@ -397,6 +413,21 @@ class TestCase(TestCaseMetaClass("NewBase", (BaseTestCase,), {})):
             del self.close_on_teardown
         except AttributeError:
             pass
+        super(TestCase, self).tearDown()
+
+    @classmethod
+    def setUpClass(cls):
+        import warnings
+        cls._warning_cm = warnings.catch_warnings()
+        cls._warning_cm.__enter__()
+        if not sys.warnoptions:
+            warnings.simplefilter('default')
+        super(TestCase, cls).setUpClass()
+
+    @classmethod
+    def tearDownClass(cls):
+        cls._warning_cm.__exit__(None, None, None)
+        super(TestCase, cls).tearDownClass()
 
     def _close_on_teardown(self, resource):
         if 'close_on_teardown' not in self.__dict__:

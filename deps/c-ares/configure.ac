@@ -1,7 +1,7 @@
 AC_PREREQ(2.57)
 
 dnl Version not hardcoded here. Fetched later from ares_version.h
-AC_INIT([c-ares], [1.12.0],
+AC_INIT([c-ares], [1.13.0],
   [c-ares mailing list: http://cool.haxx.se/mailman/listinfo/c-ares])
 
 XC_OVR_ZZ50
@@ -59,10 +59,13 @@ AC_SUBST([EGREP])
 
 dnl AR is mandatory for configure process and libtool.
 dnl This is target dependent, so check it as a tool.
-AC_PATH_TOOL([AR], [ar], [not_found],
-  [$PATH:/usr/bin:/usr/local/bin])
-if test -z "$AR" || test "$AR" = "not_found"; then
-  AC_MSG_ERROR([ar not found in PATH. Cannot continue without ar.])
+if test -z "$AR"; then
+  dnl allow it to be overridden
+  AC_PATH_TOOL([AR], [ar], [not_found],
+    [$PATH:/usr/bin:/usr/local/bin])
+  if test -z "$AR" || test "$AR" = "not_found"; then
+    AC_MSG_ERROR([ar not found in PATH. Cannot continue without ar.])
+  fi
 fi
 AC_SUBST([AR])
 
@@ -194,6 +197,7 @@ case X-"$ac_cv_native_windows" in
     CURL_CHECK_HEADER_WINSOCK
     CURL_CHECK_HEADER_WINSOCK2
     CURL_CHECK_HEADER_WS2TCPIP
+    CPPFLAGS="$CPPFLAGS -D_WIN32_WINNT=0x0600"
     ;;
   *)
     ac_cv_header_winsock_h="no"
@@ -388,11 +392,62 @@ ac_cv_func_strcasecmp="no"
 
 CARES_CHECK_LIBS_CONNECT
 
+dnl iOS 10?
+AS_IF([test "x$host_vendor" = "xapple"], [
+  AC_MSG_CHECKING([for iOS minimum version 10 or later])
+  AC_COMPILE_IFELSE([
+    AC_LANG_PROGRAM([[
+#include <stdio.h>
+#include <TargetConditionals.h>
+    ]], [[
+#if TARGET_OS_IPHONE == 0 || __IPHONE_OS_VERSION_MIN_REQUIRED < 100000
+#error Not iOS 10 or later
+#endif
+return 0;
+   ]])
+  ],[
+    AC_MSG_RESULT([yes])
+    ac_cv_ios_10="yes"
+  ],[
+    AC_MSG_RESULT([no])
+  ])
+])
+
+dnl macOS 10.12?
+AS_IF([test "x$host_vendor" = "xapple"], [
+  AC_MSG_CHECKING([for macOS minimum version 10.12 or later])
+  AC_COMPILE_IFELSE([
+    AC_LANG_PROGRAM([[
+#include <stdio.h>
+#include <TargetConditionals.h>
+    ]], [[
+#ifndef MAC_OS_X_VERSION_10_12
+#  define MAC_OS_X_VERSION_10_12 101200
+#endif
+#if MAC_OS_X_VERSION_MIN_REQUIRED < MAC_OS_X_VERSION_10_12
+#error Not macOS 10.12 or later
+#endif
+return 0;
+   ]])
+  ],[
+    AC_MSG_RESULT([yes])
+    ac_cv_macos_10_12="yes"
+  ],[
+    AC_MSG_RESULT([no])
+  ])
+])
+
 dnl **********************************************************************
 dnl In case that function clock_gettime with monotonic timer is available,
 dnl check for additional required libraries.
 dnl **********************************************************************
-CURL_CHECK_LIBS_CLOCK_GETTIME_MONOTONIC
+dnl Xcode 8 bug: iOS when targeting less than 10, or macOS when targeting less than 10.12 will
+dnl say clock_gettime exists, it is a weak symbol that only exists in iOS 10 or macOS 10.12 and will
+dnl cause a crash at runtime when running on older versions.  Skip finding CLOCK_MONOTONIC on older
+dnl Apple OS's.
+if test "x$host_vendor" != "xapple" || test "x$ac_cv_ios_10" = "xyes" || test "x$ac_cv_macos_10_12" = "xyes"; then
+  CURL_CHECK_LIBS_CLOCK_GETTIME_MONOTONIC
+fi
 
 AC_MSG_CHECKING([whether to use libgcc])
 AC_ARG_ENABLE(libgcc,
@@ -505,8 +560,12 @@ fi
 
 
 # check for ssize_t
-AC_CHECK_TYPE(ssize_t, ,
-   AC_DEFINE(ssize_t, int, [the signed version of size_t]))
+AC_CHECK_TYPE(ssize_t, [ CARES_TYPEOF_ARES_SSIZE_T=ssize_t ],
+  [ CARES_TYPEOF_ARES_SSIZE_T=int ])
+
+AC_DEFINE_UNQUOTED([CARES_TYPEOF_ARES_SSIZE_T], ${CARES_TYPEOF_ARES_SSIZE_T},
+  [the signed version of size_t])
+
 
 # check for bool type
 AC_CHECK_TYPE([bool],[

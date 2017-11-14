@@ -60,11 +60,6 @@
 
 #define BSD
 
-#if defined(__HIGHC__) || \
-    (defined(__GNUC__) && (__GNUC__ < 4))
-  #define ssize_t  int
-#endif
-
 /* Target HAVE_x section */
 
 #if defined(DJGPP)

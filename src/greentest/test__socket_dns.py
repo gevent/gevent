@@ -353,6 +353,15 @@ class TestLocalhost(TestCase):
             return ()
         return super(TestLocalhost, self)._normalize_result_getaddrinfo(result)
 
+    if greentest.RUNNING_ON_TRAVIS and greentest.PY2 and RESOLVER_IS_ARES:
+        def _normalize_result_gethostbyaddr(self, result):
+            # Beginning in November 2017 after an upgrade to Travis,
+            # we started seeing ares return ::1 for localhost, but
+            # the system resolver is still returning 127.0.0.1 under Python 2
+            result = super(TestLocalhost, self)._normalize_result_gethostbyaddr(result)
+            if isinstance(result, tuple):
+                result = (result[0], result[1], ['127.0.0.1'])
+            return result
 
 add(TestLocalhost, 'localhost')
 if not greentest.RUNNING_ON_TRAVIS:

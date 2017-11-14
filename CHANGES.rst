@@ -7,6 +7,10 @@
 1.3.0 (unreleased)
 ==================
 
+- ``Pool.add`` now accepts ``blocking`` and ``timeout`` parameters,
+  which function similarly to their counterparts in ``Semaphore``.
+  See :pr:`1032` by Ron Rothman.
+
 - If a single greenlet created and destroyed many
   :class:`gevent.local.local` objects without ever exiting, there
   would be a leak of the function objects intended to clean up the
@@ -72,6 +76,11 @@
 - More safely terminate subprocesses on Windows with
   :meth:`gevent.subprocess.Popen.terminate`. Reported in :issue:`1023`
   by Giacomo Debidda.
+
+- ``socket.send()`` now catches ``EPROTYPE`` on macOS to handle a race
+  condition during shutdown. Fixed in :pr:`1035` by Jay Oster.
+
+- Update c-ares to 1.13.0. See :issue:`990`.
 
 1.2.2 (2017-06-05)
 ==================

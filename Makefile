@@ -77,6 +77,7 @@ test_prelim:
 	${PYTHON} --version
 	${PYTHON} -c 'import greenlet; print(greenlet, greenlet.__version__)'
 	${PYTHON} -c 'import gevent.core; print(gevent.core.loop)'
+	${PYTHON} -c 'import gevent.ares; print(gevent.ares)'
 	make bench
 
 toxtest: test_prelim
