@@ -204,6 +204,19 @@ class PoolBasicTests(greentest.TestCase):
         finally:
             first.kill()
 
+    def test_add_completed_greenlet(self):
+        p = self.klass()
+        g = gevent.spawn(lambda: None)
+        try:
+            # make sure greenlet completed
+            g.join()
+            assert g.ready()
+            assert len(p) == 0
+            p.add(g)  # should be a no-op
+            self.assertEqual(len(p), 0)
+        finally:
+            g.kill()
+
     def test_apply(self):
         p = self.klass()
         result = p.apply(lambda a: ('foo', a), (1, ))

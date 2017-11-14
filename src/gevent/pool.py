@@ -465,9 +465,15 @@ class Group(GroupMappingMixin):
         """
         Begin tracking the greenlet.
 
+        If greenlet has already completed, do nothing.
+
         If this group is :meth:`full`, then this method may block
         until it is possible to track the greenlet.
         """
+        if greenlet.ready():
+            # greenlet has already finished execution
+            return
+
         try:
             rawlink = greenlet.rawlink
         except AttributeError:
