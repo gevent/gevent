@@ -59,6 +59,16 @@
   an encoding has been specified. Initial patch in :pr:`939` by
   William Grzybowski.
 
+- :meth:`gevent.subprocess.Popen.communicate` (and in general,
+  accessing ``Popen.stdout`` and ``Popen.stderr``) returns the correct
+  type of str (bytes) in universal newline mode under Python 2.
+  Previously it always returned unicode strings. Reported in
+  :issue:`1039` by Michal Petrucha.
+
+- :class:`gevent.fileobject.FileObjectPosix` returns native strings in
+  universal newline mode on Python 2. This is consistent with what
+  :class:`.FileObjectThread` does. See :issue:`1039`.
+
 - Monkey-patching after the :mod:`ssl` module has been imported now
   prints a warning because this can produce ``RecursionError``.
 

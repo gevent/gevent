@@ -53,6 +53,9 @@ class FileObjectBase(object):
     # Whether we are translating universal newlines or not.
     _translate = False
 
+    _translate_encoding = None
+    _translate_errors = None
+
     def __init__(self, io, closefd):
         """
         :param io: An io.IOBase-like object.
@@ -63,8 +66,9 @@ class FileObjectBase(object):
         self._close = closefd
 
         if self._translate:
-            # This automatically handles delegation.
-            self.translate_newlines(None)
+            # This automatically handles delegation by assigning to
+            # self.io
+            self.translate_newlines(None, self._translate_encoding, self._translate_errors)
         else:
             self._do_delegate_methods()
 

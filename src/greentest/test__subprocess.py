@@ -85,6 +85,30 @@ class Test(greentest.TestCase):
         else:
             self.assertEqual(stderr, b"pineapple")
 
+    @greentest.skipIf(subprocess.mswindows,
+                      "Windows does weird things here")
+    def test_communicate_universal(self):
+        # Native string all the things. See https://github.com/gevent/gevent/issues/1039
+        p = subprocess.Popen(
+            [
+                sys.executable, "-c",
+                'import sys,os;'
+                'sys.stderr.write("pineapple\\r\\n\\xff\\xff\\xf2\\xf9\\r\\n");'
+                'sys.stdout.write(sys.stdin.read())'
+            ],
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            universal_newlines=True)
+        (stdout, stderr) = p.communicate('banana\r\n\xff\xff\xf2\xf9\r\n')
+        self.assertIsInstance(stdout, str)
+        self.assertIsInstance(stderr, str)
+        self.assertEqual(stdout,
+                         'banana\n\xff\xff\xf2\xf9\n')
+
+        self.assertEqual(stderr,
+                         'pineapple\n\xff\xff\xf2\xf9\n')
+
     def test_universal1(self):
         p = subprocess.Popen([sys.executable, "-c",
                               'import sys,os;' + SETBINARY +
