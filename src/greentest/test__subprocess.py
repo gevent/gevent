@@ -85,6 +85,8 @@ class Test(greentest.TestCase):
         else:
             self.assertEqual(stderr, b"pineapple")
 
+    @greentest.skipIf(subprocess.mswindows,
+                      "Windows does weird things here")
     def test_communicate_universal(self):
         # Native string all the things. See https://github.com/gevent/gevent/issues/1039
         p = subprocess.Popen(
