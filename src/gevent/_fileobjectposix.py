@@ -250,6 +250,7 @@ class FileObjectPosix(FileObjectBase):
                 # all bytes, and second, decode all bytes once they've been read.
                 self._translate_encoding = 'latin-1'
                 import functools
+
                 def wrap_method(m):
                     if m.__name__.startswith("read"):
                         @functools.wraps(m)
