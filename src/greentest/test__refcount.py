@@ -70,7 +70,7 @@ def init_server():
 
 def handle_request(s, raise_on_timeout):
     try:
-        conn, address = s.accept()
+        conn, _ = s.accept()
     except socket.timeout:
         if raise_on_timeout:
             raise
@@ -83,7 +83,7 @@ def handle_request(s, raise_on_timeout):
     res = conn.send(b'bye')
     #print('handle_request - sent %r' % res)
     #print('handle_request - conn refcount: %s' % sys.getrefcount(conn))
-    #conn.close()
+    conn.close()
 
 
 def make_request(port):
@@ -96,7 +96,7 @@ def make_request(port):
     res = s.recv(100)
     assert res == b'bye', repr(res)
     #print('make_request - recvd %r' % res)
-    #s.close()
+    s.close()
 
 
 def run_interaction(run_client):

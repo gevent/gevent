@@ -90,6 +90,12 @@
 - ``socket.send()`` now catches ``EPROTYPE`` on macOS to handle a race
   condition during shutdown. Fixed in :pr:`1035` by Jay Oster.
 
+- :func:`gevent.socket.create_connection` now properly cleans up open
+  sockets if connecting or binding raises a :exc:`BaseException` like
+  :exc:`KeyboardInterrupt`, :exc:`greenlet.GreenletExit` or
+  :exc:`gevent.timeout.Timeout`. Reported in :issue:`1044` by
+  kochelmonster.
+
 - Update c-ares to 1.13.0. See :issue:`990`.
 
 1.2.2 (2017-06-05)

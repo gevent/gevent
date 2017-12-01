@@ -297,6 +297,16 @@ def main():
             config_data = f.read()
         six.exec_(config_data, config)
         FAILING_TESTS = config['FAILING_TESTS']
+
+    if 'PYTHONWARNINGS' not in os.environ and not sys.warnoptions:
+        # Enable default warnings such as ResourceWarning.
+        # On Python 3[.6], the system site.py module has
+        # "open(fullname, 'rU')" which produces the warning that
+        # 'U' is deprecated, so ignore warnings from site.py
+        os.environ['PYTHONWARNINGS'] = 'default,ignore:::site:'
+    if 'PYTHONFAULTHANDLER' not in os.environ:
+        os.environ['PYTHONFAULTHANDLER'] = 'true'
+
     tests = discover(options.tests, options.ignore, coverage)
     if options.discover:
         for cmd, options in tests:

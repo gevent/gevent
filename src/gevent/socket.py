@@ -74,7 +74,13 @@ def create_connection(address, timeout=_GLOBAL_DEFAULT_TIMEOUT, source_address=N
 
     host, port = address
     err = None
-    for res in getaddrinfo(host, port, 0 if has_ipv6 else AF_INET, SOCK_STREAM):
+    # getaddrinfo is documented as returning a list, but our interface
+    # is pluggable, so be sure it does.
+    addrs = list(getaddrinfo(host, port, 0 if has_ipv6 else AF_INET, SOCK_STREAM))
+    if not addrs:
+        raise error("getaddrinfo returns an empty list")
+
+    for res in addrs:
         af, socktype, proto, _, sa = res
         sock = None
         try:
@@ -84,24 +90,34 @@ def create_connection(address, timeout=_GLOBAL_DEFAULT_TIMEOUT, source_address=N
             if source_address:
                 sock.bind(source_address)
             sock.connect(sa)
-            return sock
-        except error as ex:
-            # without exc_clear(), if connect() fails once, the socket is referenced by the frame in exc_info
-            # and the next bind() fails (see test__socket.TestCreateConnection)
-            # that does not happen with regular sockets though, because _socket.socket.connect() is a built-in.
-            # this is similar to "getnameinfo loses a reference" failure in test_socket.py
-            if not PY3:
-                sys.exc_clear() # pylint:disable=no-member,useless-suppression
+        except error:
             if sock is not None:
                 sock.close()
-            err = ex
-    if err is not None:
-        try:
-            raise err # pylint:disable=raising-bad-type
-        finally:
-            err = None
-    else:
-        raise error("getaddrinfo returns an empty list")
+            if res is addrs[-1]:
+                raise
+            # without exc_clear(), if connect() fails once, the socket
+            # is referenced by the frame in exc_info and the next
+            # bind() fails (see test__socket.TestCreateConnection)
+            # that does not happen with regular sockets though,
+            # because _socket.socket.connect() is a built-in. this is
+            # similar to "getnameinfo loses a reference" failure in
+            # test_socket.py
+            try:
+                c = sys.exc_clear
+            except AttributeError:
+                pass # Python 3 doesn't have this
+            else:
+                c()
+        except BaseException:
+            # Things like GreenletExit,  Timeout and KeyboardInterrupt.
+            # These get raised immediately, being sure to
+            # close the socket
+            if sock is not None:
+                sock.close()
+            raise
+        else:
+            return sock
+
 
 # This is promised to be in the __all__ of the _source, but, for circularity reasons,
 # we implement it in this module. Mostly for documentation purposes, put it

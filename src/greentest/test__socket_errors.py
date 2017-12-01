@@ -34,6 +34,7 @@ class TestSocketErrors(greentest.TestCase):
 
     def test_connection_refused(self):
         s = socket()
+        self._close_on_teardown(s)
         try:
             s.connect(('127.0.0.1', 81))
         except error as ex:

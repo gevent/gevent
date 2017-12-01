@@ -430,6 +430,10 @@ class TestCase(TestCaseMetaClass("NewBase", (BaseTestCase,), {})):
         super(TestCase, cls).tearDownClass()
 
     def _close_on_teardown(self, resource):
+        """
+        *resource* either has a ``close`` method, or is a
+        callable.
+        """
         if 'close_on_teardown' not in self.__dict__:
             self.close_on_teardown = []
         self.close_on_teardown.append(resource)
