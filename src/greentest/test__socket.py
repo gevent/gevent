@@ -332,6 +332,7 @@ class TestCreateConnection(greentest.TestCase):
         ex = cm.exception
         self.assertIn('refused', str(ex).lower())
 
+    @greentest.ignores_leakcheck
     def test_base_exception(self):
         # such as a GreenletExit or a gevent.timeout.Timeout
 

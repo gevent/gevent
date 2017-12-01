@@ -599,6 +599,7 @@ class TestBadIP(TestCase):
 add(TestBadIP, '1.2.3.400')
 
 
+@greentest.skipIf(greentest.RUNNING_ON_TRAVIS, "Travis began returning ip6-localhost")
 class Test_getnameinfo_127001(TestCase):
 
     def test(self):
