@@ -403,6 +403,7 @@ class TestCase(TestCaseMetaClass("NewBase", (BaseTestCase,), {})):
         if hasattr(self, 'cleanup'):
             self.cleanup()
         self._error = self._none
+        # XXX: Should probably reverse this
         for x in self.close_on_teardown:
             close = getattr(x, 'close', x)
             try:

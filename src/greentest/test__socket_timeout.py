@@ -10,26 +10,33 @@ class Test(greentest.TestCase):
     server_port = None
 
     def _accept(self):
-        conn, _ = self.server.accept()
-        self._close_on_teardown(conn)
+        self.server.listen(1)
+        try:
+            conn, _ = self.server.accept()
+            self._close_on_teardown(conn)
+        except socket.error:
+            pass
 
     def setUp(self):
         super(Test, self).setUp()
         self.server = socket.socket()
         self._close_on_teardown(self.server)
         self.server.bind(('127.0.0.1', 0))
-        self.server.listen(1)
         self.server_port = self.server.getsockname()[1]
         self.acceptor = gevent.spawn(self._accept)
+        gevent.sleep(0)
 
     def tearDown(self):
-        self.acceptor.kill()
-        self.server.close()
-        del self.acceptor
-        del self.server
+        if self.acceptor is not None:
+            self.acceptor.kill()
+            self.acceptor = None
+        if self.server is not None:
+            self.server.close()
+            self.server = None
         super(Test, self).tearDown()
 
-    def test(self):
+    def test_timeout(self):
+        gevent.sleep(0)
         sock = socket.socket()
         self._close_on_teardown(sock)
         sock.connect(('127.0.0.1', self.server_port))

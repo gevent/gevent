@@ -92,6 +92,7 @@ def create_connection(address, timeout=_GLOBAL_DEFAULT_TIMEOUT, source_address=N
         except error:
             if sock is not None:
                 sock.close()
+            sock = None
             if res is addrs[-1]:
                 raise
             # without exc_clear(), if connect() fails once, the socket
@@ -113,6 +114,7 @@ def create_connection(address, timeout=_GLOBAL_DEFAULT_TIMEOUT, source_address=N
             # close the socket
             if sock is not None:
                 sock.close()
+            sock = None
             raise
         else:
             return sock

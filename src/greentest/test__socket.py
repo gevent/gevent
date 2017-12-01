@@ -322,7 +322,7 @@ def get_port():
 
 class TestCreateConnection(greentest.TestCase):
 
-    __timeout__ = 5000
+    __timeout__ = 5
 
     def test_refuses(self):
         with self.assertRaises(socket.error) as cm:
