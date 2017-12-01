@@ -363,11 +363,14 @@ class TestLocalhost(TestCase):
                 result = (result[0], result[1], ['127.0.0.1'])
             return result
 
-add(TestLocalhost, 'localhost')
+
 if not greentest.RUNNING_ON_TRAVIS:
     # ares fails here, for some reason, presumably a badly
     # configured /etc/hosts
     add(TestLocalhost, 'ip6-localhost')
+    # Beginning Dec 1 2017, ares started returning ip6-localhost
+    # instead of localhost
+    add(TestLocalhost, 'localhost')
 
 
 class TestNonexistent(TestCase):
@@ -385,7 +388,10 @@ add(Test1234, '1.2.3.4')
 class Test127001(TestCase):
     pass
 
-add(Test127001, '127.0.0.1')
+if not greentest.RUNNING_ON_TRAVIS:
+    # Beginning Dec 1 2017, ares started returning ip6-localhost
+    # instead of localhost
+    add(Test127001, '127.0.0.1')
 
 
 class TestBroadcast(TestCase):

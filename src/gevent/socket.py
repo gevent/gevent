@@ -73,7 +73,6 @@ def create_connection(address, timeout=_GLOBAL_DEFAULT_TIMEOUT, source_address=N
     """
 
     host, port = address
-    err = None
     # getaddrinfo is documented as returning a list, but our interface
     # is pluggable, so be sure it does.
     addrs = list(getaddrinfo(host, port, 0 if has_ipv6 else AF_INET, SOCK_STREAM))
