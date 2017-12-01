@@ -307,7 +307,7 @@ class ThreadTests(unittest.TestCase):
         del ctypes  # pyflakes fix
 
         import subprocess
-        rc = subprocess.call([sys.executable, "-c", """if 1:
+        rc = subprocess.call([sys.executable, "-W", "ignore", "-c", """if 1:
 %s
             import ctypes, sys, time
             try:
@@ -343,7 +343,7 @@ class ThreadTests(unittest.TestCase):
         # Issue 1722344
         # Raising SystemExit skipped threading._shutdown
         import subprocess
-        p = subprocess.Popen([sys.executable, "-c", """if 1:
+        p = subprocess.Popen([sys.executable, "-W", "ignore", "-c", """if 1:
 %s
                 import threading
                 from time import sleep
@@ -432,7 +432,7 @@ class ThreadJoinOnShutdown(unittest.TestCase):
         \n""" % setup_3 + script
 
         import subprocess
-        p = subprocess.Popen([sys.executable, "-c", script], stdout=subprocess.PIPE)
+        p = subprocess.Popen([sys.executable, "-W", "ignore", "-c", script], stdout=subprocess.PIPE)
         rc = p.wait()
         data = p.stdout.read().replace(b'\r', b'')
         self.assertEqual(data, b"end of main\nend of thread\n")

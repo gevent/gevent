@@ -12,12 +12,13 @@ def _send(socket):
         sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         sock.connect(('127.0.0.1', 12345))
         getattr(sock, meth)(anStructure)
+        sock.close()
 
         sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         sock.connect(('127.0.0.1', 12345))
         sock.settimeout(1.0)
         getattr(sock, meth)(anStructure)
-
+        sock.close()
 
 def TestSendBuiltinSocket():
     import socket

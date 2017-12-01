@@ -32,14 +32,13 @@ DELAY = 0.1
 class TestCloseSocketWhilePolling(greentest.TestCase):
 
     def test(self):
-        try:
+        with self.assertRaises(Exception):
             sock = socket.socket()
+            self._close_on_teardown(sock)
             get_hub().loop.timer(0, sock.close)
             sock.connect(('python.org', 81))
-        except Exception:
-            gevent.sleep(0)
-        else:
-            assert False, 'expected an error here'
+
+        gevent.sleep(0)
 
 
 class TestExceptionInMainloop(greentest.TestCase):

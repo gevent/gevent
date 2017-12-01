@@ -383,6 +383,7 @@ class TestPoolSpawn(TestDefaultSpawn):
         return 2
 
     @greentest.skipOnAppVeyor("Connection timeouts are flaky")
+    @greentest.skipOnPyPy3OnCI("Doesn't always raise timeout for some reason")
     def test_pool_full(self):
         self.init_server()
         short_request = self.send_request('/short')

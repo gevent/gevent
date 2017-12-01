@@ -71,7 +71,8 @@ class Test(greentest.TestCase):
 
 
     def test_communicate(self):
-        p = subprocess.Popen([sys.executable, "-c",
+        p = subprocess.Popen([sys.executable, "-W", "ignore",
+                              "-c",
                               'import sys,os;'
                               'sys.stderr.write("pineapple");'
                               'sys.stdout.write(sys.stdin.read())'],
@@ -91,7 +92,9 @@ class Test(greentest.TestCase):
         # Native string all the things. See https://github.com/gevent/gevent/issues/1039
         p = subprocess.Popen(
             [
-                sys.executable, "-c",
+                sys.executable,
+                "-W", "ignore",
+                "-c",
                 'import sys,os;'
                 'sys.stderr.write("pineapple\\r\\n\\xff\\xff\\xf2\\xf9\\r\\n");'
                 'sys.stdout.write(sys.stdin.read())'

@@ -716,8 +716,13 @@ def main():
 
 
 def _get_script_help():
-    from inspect import getargspec
-    patch_all_args = getargspec(patch_all)[0] # pylint:disable=deprecated-method
+    # pylint:disable=deprecated-method
+    import inspect
+    try:
+        getter = inspect.getfullargspec # deprecated in 3.5, un-deprecated in 3.6
+    except AttributeError:
+        getter = inspect.getargspec
+    patch_all_args = getter(patch_all)[0]
     modules = [x for x in patch_all_args if 'patch_' + x in globals()]
     script_help = """gevent.monkey - monkey patch the standard modules to use gevent.
 

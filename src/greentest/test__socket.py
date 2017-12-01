@@ -324,17 +324,58 @@ class TestCreateConnection(greentest.TestCase):
 
     __timeout__ = 5
 
-    def test(self):
-        try:
+    def test_refuses(self):
+        with self.assertRaises(socket.error) as cm:
             socket.create_connection((greentest.DEFAULT_BIND_ADDR, get_port()),
                                      timeout=30,
                                      source_address=('', get_port()))
-        except socket.error as ex:
-            if 'refused' not in str(ex).lower():
-                raise
-        else:
-            raise AssertionError('create_connection did not raise socket.error as expected')
+        ex = cm.exception
+        self.assertIn('refused', str(ex).lower())
 
+    @greentest.ignores_leakcheck
+    def test_base_exception(self):
+        # such as a GreenletExit or a gevent.timeout.Timeout
+
+        class E(BaseException):
+            pass
+
+        class MockSocket(object):
+
+            created = ()
+            closed = False
+
+            def __init__(self, *_):
+                MockSocket.created += (self,)
+
+            def connect(self, _):
+                raise E()
+
+            def close(self):
+                self.closed = True
+
+        def mockgetaddrinfo(*_):
+            return [(1, 2, 3, 3, 5),]
+
+        import gevent.socket as gsocket
+        # Make sure we're monkey patched
+        self.assertEqual(gsocket.create_connection, socket.create_connection)
+        orig_socket = gsocket.socket
+        orig_getaddrinfo = gsocket.getaddrinfo
+
+        try:
+            gsocket.socket = MockSocket
+            gsocket.getaddrinfo = mockgetaddrinfo
+
+            with self.assertRaises(E):
+                socket.create_connection(('host', 'port'))
+
+            self.assertEqual(1, len(MockSocket.created))
+            self.assertTrue(MockSocket.created[0].closed)
+
+        finally:
+            MockSocket.created = ()
+            gsocket.socket = orig_socket
+            gsocket.getaddrinfo = orig_getaddrinfo
 
 class TestFunctions(greentest.TestCase):
 

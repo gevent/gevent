@@ -1,12 +1,13 @@
 from __future__ import print_function
 import os
 from gevent import monkey; monkey.patch_all()
-import re
 import socket
 import ssl
 import threading
 import unittest
 import errno
+
+from greentest import TestCase
 
 dirname = os.path.dirname(os.path.abspath(__file__))
 certfile = os.path.join(dirname, '2.7/keycert.pem')
@@ -27,13 +28,13 @@ except ImportError:
     psutil = None
 
 
-class Test(unittest.TestCase):
+class Test(TestCase):
 
     extra_allowed_open_states = ()
 
     def tearDown(self):
         self.extra_allowed_open_states = ()
-        unittest.TestCase.tearDown(self)
+        super(Test, self).tearDown()
 
     def assert_raises_EBADF(self, func):
         try:
@@ -156,6 +157,7 @@ class TestSocket(Test):
         listener.listen(1)
 
         connector = socket.socket()
+        self._close_on_teardown(connector)
 
         def connect():
             connector.connect(('127.0.0.1', port))
@@ -180,6 +182,7 @@ class TestSocket(Test):
         listener.listen(1)
 
         connector = socket.socket()
+        self._close_on_teardown(connector)
 
         def connect():
             connector.connect(('127.0.0.1', port))
@@ -213,6 +216,7 @@ class TestSocket(Test):
         listener.listen(1)
 
         connector = socket.socket()
+        self._close_on_teardown(connector)
 
         def connect():
             connector.connect(('127.0.0.1', port))
@@ -282,10 +286,12 @@ class TestSSL(Test):
         listener.listen(1)
 
         connector = socket.socket()
+        self._close_on_teardown(connector)
 
         def connect():
             connector.connect(('127.0.0.1', port))
-            ssl.wrap_socket(connector)
+            x = ssl.wrap_socket(connector)
+            self._close_on_teardown(x)
 
         t = threading.Thread(target=connect)
         t.start()
@@ -303,15 +309,18 @@ class TestSSL(Test):
 
     def test_server_makefile1(self):
         listener = socket.socket()
+        self._close_on_teardown(listener)
         listener.bind(('127.0.0.1', 0))
         port = listener.getsockname()[1]
         listener.listen(1)
 
         connector = socket.socket()
+        self._close_on_teardown(connector)
 
         def connect():
             connector.connect(('127.0.0.1', port))
-            ssl.wrap_socket(connector)
+            x = ssl.wrap_socket(connector)
+            self._close_on_teardown(x)
 
         t = threading.Thread(target=connect)
         t.start()
@@ -338,10 +347,12 @@ class TestSSL(Test):
         listener.listen(1)
 
         connector = socket.socket()
+        self._close_on_teardown(connector)
 
         def connect():
             connector.connect(('127.0.0.1', port))
-            ssl.wrap_socket(connector)
+            x = ssl.wrap_socket(connector)
+            self._close_on_teardown(x)
 
         t = threading.Thread(target=connect)
         t.start()
@@ -372,10 +383,12 @@ class TestSSL(Test):
         listener = ssl.wrap_socket(listener, keyfile=certfile, certfile=certfile)
 
         connector = socket.socket()
+        self._close_on_teardown(connector)
 
         def connect():
             connector.connect(('127.0.0.1', port))
-            ssl.wrap_socket(connector)
+            x = ssl.wrap_socket(connector)
+            self._close_on_teardown(x)
 
         t = threading.Thread(target=connect)
         t.start()

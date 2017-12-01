@@ -5,11 +5,7 @@ from gevent import queue as Queue
 import threading
 import time
 import unittest
-try:
-    from test import support as test_support
-except ImportError:
-    from test import test_support
-from _six import xrange
+
 
 QUEUE_SIZE = 5
 
@@ -48,7 +44,7 @@ class _TriggerThread(threading.Thread):
 # is supposed to raise an exception, call do_exceptional_blocking_test()
 # instead.
 
-class BlockingTestMixin:
+class BlockingTestMixin(object):
 
     def do_blocking_test(self, block_func, block_args, trigger_func, trigger_args):
         self.t = _TriggerThread(trigger_func, trigger_args)
@@ -65,28 +61,25 @@ class BlockingTestMixin:
         return self.result
 
     # Call this instead if block_func is supposed to raise an exception.
-    def do_exceptional_blocking_test(self,block_func, block_args, trigger_func,
-                                   trigger_args, expected_exception_class):
+    def do_exceptional_blocking_test(self, block_func, block_args, trigger_func,
+                                     trigger_args, expected_exception_class):
         self.t = _TriggerThread(trigger_func, trigger_args)
         self.t.start()
         try:
-            try:
+            with self.assertRaises(expected_exception_class):
                 block_func(*block_args)
-            except expected_exception_class:
-                raise
-            else:
-                self.fail("expected exception of kind %r" %
-                                 expected_exception_class)
         finally:
             self.t.join(10) # make sure the thread terminates
             if self.t.isAlive():
                 self.fail("trigger function '%r' appeared to not return" %
-                                 trigger_func)
+                          trigger_func)
             if not self.t.startedEvent.isSet():
                 self.fail("trigger thread ended but event never set")
 
 
 class BaseQueueTest(unittest.TestCase, BlockingTestMixin):
+    type2test = Queue.Queue
+
     def setUp(self):
         self.cum = 0
         self.cumlock = threading.Lock()
@@ -100,26 +93,26 @@ class BaseQueueTest(unittest.TestCase, BlockingTestMixin):
         q.put(222)
         q.put(444)
         target_first_items = dict(
-            Queue = 111,
-            LifoQueue = 444,
-            PriorityQueue = 111)
+            Queue=111,
+            LifoQueue=444,
+            PriorityQueue=111)
         actual_first_item = (q.peek(), q.get())
-        self.assertEquals(actual_first_item,
-                          (target_first_items[q.__class__.__name__],
-                           target_first_items[q.__class__.__name__]),
-                          "q.peek() and q.get() are not equal!")
-        target_order = dict(Queue = [333, 222, 444],
-                            LifoQueue = [222, 333, 111],
-                            PriorityQueue = [222, 333, 444])
+        self.assertEqual(actual_first_item,
+                         (target_first_items[q.__class__.__name__],
+                          target_first_items[q.__class__.__name__]),
+                         "q.peek() and q.get() are not equal!")
+        target_order = dict(Queue=[333, 222, 444],
+                            LifoQueue=[222, 333, 111],
+                            PriorityQueue=[222, 333, 444])
         actual_order = [q.get(), q.get(), q.get()]
-        self.assertEquals(actual_order, target_order[q.__class__.__name__],
-                          "Didn't seem to queue the correct data!")
+        self.assertEqual(actual_order, target_order[q.__class__.__name__],
+                         "Didn't seem to queue the correct data!")
         for i in range(QUEUE_SIZE-1):
             q.put(i)
-            self.assert_(not q.empty(), "Queue should not be empty")
-        self.assert_(not q.full(), "Queue should not be full")
+            self.assertFalse(q.empty(), "Queue should not be empty")
+        self.assertFalse(q.full(), "Queue should not be full")
         q.put(999)
-        self.assert_(q.full(), "Queue should be full")
+        self.assertTrue(q.full(), "Queue should be full")
         try:
             q.put(888, block=0)
             self.fail("Didn't appear to block with a full queue")
@@ -130,14 +123,14 @@ class BaseQueueTest(unittest.TestCase, BlockingTestMixin):
             self.fail("Didn't appear to time-out with a full queue")
         except Queue.Full:
             pass
-        self.assertEquals(q.qsize(), QUEUE_SIZE)
+        self.assertEqual(q.qsize(), QUEUE_SIZE)
         # Test a blocking put
         self.do_blocking_test(q.put, (888,), q.get, ())
         self.do_blocking_test(q.put, (888, True, 10), q.get, ())
         # Empty it
         for i in range(QUEUE_SIZE):
             q.get()
-        self.assert_(q.empty(), "Queue should be empty")
+        self.assertTrue(q.empty(), "Queue should be empty")
         try:
             q.get(block=0)
             self.fail("Didn't appear to block with an empty queue")
@@ -164,14 +157,14 @@ class BaseQueueTest(unittest.TestCase, BlockingTestMixin):
 
     def queue_join_test(self, q):
         self.cum = 0
-        for i in (0,1):
+        for i in (0, 1):
             threading.Thread(target=self.worker, args=(q,)).start()
-        for i in xrange(100):
+        for i in range(100):
             q.put(i)
         q.join()
-        self.assertEquals(self.cum, sum(range(100)),
-                          "q.join() did not block until all tasks were done")
-        for i in (0,1):
+        self.assertEqual(self.cum, sum(range(100)),
+                         "q.join() did not block until all tasks were done")
+        for i in (0, 1):
             q.put(None)         # instruct the threads to close
         q.join()                # verify that you can join twice
 
@@ -227,10 +220,6 @@ class BaseQueueTest(unittest.TestCase, BlockingTestMixin):
         self.simple_queue_test(q)
         self.simple_queue_test(q)
 
-
-class QueueTest(BaseQueueTest):
-    type2test = Queue.Queue
-
 class LifoQueueTest(BaseQueueTest):
     type2test = Queue.LifoQueue
 
@@ -274,79 +263,59 @@ class FailingQueueTest(unittest.TestCase, BlockingTestMixin):
             q.put(i)
         # Test a failing non-blocking put.
         q.fail_next_put = True
-        try:
+        with self.assertRaises(FailingQueueException):
             q.put("oops", block=0)
-            self.fail("The queue didn't fail when it should have")
-        except FailingQueueException:
-            pass
+
         q.fail_next_put = True
-        try:
+        with self.assertRaises(FailingQueueException):
             q.put("oops", timeout=0.1)
-            self.fail("The queue didn't fail when it should have")
-        except FailingQueueException:
-            pass
         q.put(999)
-        self.assert_(q.full(), "Queue should be full")
+        self.assertTrue(q.full(), "Queue should be full")
         # Test a failing blocking put
         q.fail_next_put = True
-        try:
+        with self.assertRaises(FailingQueueException):
             self.do_blocking_test(q.put, (888,), q.get, ())
-            self.fail("The queue didn't fail when it should have")
-        except FailingQueueException:
-            pass
+
         # Check the Queue isn't damaged.
         # put failed, but get succeeded - re-add
         q.put(999)
         # Test a failing timeout put
         q.fail_next_put = True
-        try:
-            self.do_exceptional_blocking_test(q.put, (888, True, 10), q.get, (),
-                                              FailingQueueException)
-            self.fail("The queue didn't fail when it should have")
-        except FailingQueueException:
-            pass
+        self.do_exceptional_blocking_test(q.put, (888, True, 10), q.get, (),
+                                          FailingQueueException)
         # Check the Queue isn't damaged.
         # put failed, but get succeeded - re-add
         q.put(999)
-        self.assert_(q.full(), "Queue should be full")
+        self.assertTrue(q.full(), "Queue should be full")
         q.get()
-        self.assert_(not q.full(), "Queue should not be full")
+        self.assertFalse(q.full(), "Queue should not be full")
         q.put(999)
-        self.assert_(q.full(), "Queue should be full")
+        self.assertTrue(q.full(), "Queue should be full")
         # Test a blocking put
         self.do_blocking_test(q.put, (888,), q.get, ())
         # Empty it
         for i in range(QUEUE_SIZE):
             q.get()
-        self.assert_(q.empty(), "Queue should be empty")
+        self.assertTrue(q.empty(), "Queue should be empty")
         q.put("first")
         q.fail_next_get = True
-        try:
+        with self.assertRaises(FailingQueueException):
             q.get()
-            self.fail("The queue didn't fail when it should have")
-        except FailingQueueException:
-            pass
-        self.assert_(not q.empty(), "Queue should not be empty")
+
+        self.assertFalse(q.empty(), "Queue should not be empty")
         q.fail_next_get = True
-        try:
+        with self.assertRaises(FailingQueueException):
             q.get(timeout=0.1)
-            self.fail("The queue didn't fail when it should have")
-        except FailingQueueException:
-            pass
-        self.assert_(not q.empty(), "Queue should not be empty")
+        self.assertFalse(q.empty(), "Queue should not be empty")
         q.get()
-        self.assert_(q.empty(), "Queue should be empty")
+        self.assertTrue(q.empty(), "Queue should be empty")
         q.fail_next_get = True
-        try:
-            self.do_exceptional_blocking_test(q.get, (), q.put, ('empty',),
-                                              FailingQueueException)
-            self.fail("The queue didn't fail when it should have")
-        except FailingQueueException:
-            pass
+        self.do_exceptional_blocking_test(q.get, (), q.put, ('empty',),
+                                          FailingQueueException)
         # put succeeded, but get failed.
-        self.assert_(not q.empty(), "Queue should not be empty")
+        self.assertFalse(q.empty(), "Queue should not be empty")
         q.get()
-        self.assert_(q.empty(), "Queue should be empty")
+        self.assertTrue(q.empty(), "Queue should be empty")
 
     def test_failing_queue(self):
         # Test to make sure a queue is functioning correctly.
@@ -356,10 +325,5 @@ class FailingQueueTest(unittest.TestCase, BlockingTestMixin):
         self.failing_queue_test(q)
 
 
-def test_main():
-    test_support.run_unittest(QueueTest, LifoQueueTest, PriorityQueueTest,
-                              FailingQueueTest)
-
-
 if __name__ == "__main__":
-    test_main()
+    unittest.main()
