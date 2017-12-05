@@ -91,7 +91,7 @@ class _Callbacks(object):
                 # Legacy behaviour from corecext: convert None into ()
                 # See test__core_watcher.py
                 args = _NOARGS
-            if len(args) > 0 and args[0] == GEVENT_CORE_EVENTS:
+            if args and args[0] == GEVENT_CORE_EVENTS:
                 args = (revents, ) + args[1:]
             the_watcher.callback(*args)
         except: # pylint:disable=bare-except
@@ -148,7 +148,7 @@ def assign_standard_callbacks(ffi, lib):
 
 if sys.version_info[0] >= 3:
     basestring = (bytes, str)
-    integer_types = int,
+    integer_types = (int,)
 else:
     import __builtin__ # pylint:disable=import-error
     basestring = __builtin__.basestring,

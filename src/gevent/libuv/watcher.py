@@ -25,6 +25,14 @@ def _dbg(*args, **kwargs):
 
 #_dbg = print
 
+def _pid_dbg(*args, **kwargs):
+    import os
+    import sys
+    kwargs['file'] = sys.stderr
+    print(os.getpid(), *args, **kwargs)
+
+# _dbg = _pid_dbg
+
 _events = [(libuv.UV_READABLE, "READ"),
            (libuv.UV_WRITABLE, "WRITE")]
 
@@ -37,7 +45,7 @@ class UVFuncallError(ValueError):
 class libuv_error_wrapper(object):
     # Makes sure that everything stored as a function
     # on the wrapper instances (classes, actually,
-    # because this is used my the metaclass)
+    # because this is used by the metaclass)
     # checks its return value and raises an error.
     # This expects that everything we call has an int
     # or void return value and follows the conventions
@@ -50,7 +58,7 @@ class libuv_error_wrapper(object):
 
         @functools.wraps(libuv_func)
         def wrap(*args, **kwargs):
-            if len(args) > 0 and isinstance(args[0], watcher):
+            if args and isinstance(args[0], watcher):
                 args = args[1:]
             res = libuv_func(*args, **kwargs)
             if res is not None and res < 0:
@@ -116,9 +124,13 @@ class watcher(_base.watcher):
         # Instead, this is arranged as a callback to GC when the
         # watcher class dies. Obviously it's important to keep the ffi
         # watcher alive.
-
-        if not libuv.uv_is_closing(ffi_watcher):
-            #print("Closing handle", self._watcher)
+        _dbg("Request to close handle", ffi_watcher, ffi_watcher.type)
+        if ffi_watcher.type and not libuv.uv_is_closing(ffi_watcher):
+            # If the type isn't set, we were never properly initialized,
+            # and trying to close it results in libuv terminating the process.
+            # Sigh. Same thing if it's already in the process of being
+            # closed.
+            _dbg("Closing handle", ffi_watcher, ffi_watcher.type)
             _closing_handles.add(ffi_watcher)
             libuv.uv_close(ffi_watcher, _uv_close_callback)
 
@@ -165,6 +177,8 @@ class watcher(_base.watcher):
 
     def _get_ref(self):
         # Convert 1/0 to True/False
+        if self._watcher is None:
+            return None
         return True if libuv.uv_has_ref(self._watcher) else False
 
     def _set_ref(self, value):

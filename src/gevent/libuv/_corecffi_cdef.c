@@ -10,14 +10,36 @@
 #define UV_VERSION_PATCH ...
 
 typedef enum {
-    UV_RUN_DEFAULT = 0,
-    UV_RUN_ONCE,
-    UV_RUN_NOWAIT
+	UV_RUN_DEFAULT = 0,
+	UV_RUN_ONCE,
+	UV_RUN_NOWAIT
 } uv_run_mode;
 
+typedef enum {
+  UV_UNKNOWN_HANDLE = 0,
+  UV_ASYNC,
+  UV_CHECK,
+  UV_FS_EVENT,
+  UV_FS_POLL,
+  UV_HANDLE,
+  UV_IDLE,
+  UV_NAMED_PIPE,
+  UV_POLL,
+  UV_PREPARE,
+  UV_PROCESS,
+  UV_STREAM,
+  UV_TCP,
+  UV_TIMER,
+  UV_TTY,
+  UV_UDP,
+  UV_SIGNAL,
+  UV_FILE,
+  UV_HANDLE_TYPE_MAX
+} uv_handle_type;
+
 enum uv_poll_event {
-    UV_READABLE = 1,
-    UV_WRITABLE = 2,
+	UV_READABLE = 1,
+	UV_WRITABLE = 2,
 	/* new in 1.9 */
 	UV_DISCONNECT = 4
 };
@@ -28,28 +50,28 @@ enum uv_fs_event {
 };
 
 enum uv_fs_event_flags {
-    /*
-    * By default, if the fs event watcher is given a directory name, we will
-    * watch for all events in that directory. This flags overrides this behavior
-    * and makes fs_event report only changes to the directory entry itself. This
-    * flag does not affect individual files watched.
-    * This flag is currently not implemented yet on any backend.
-    */
-    UV_FS_EVENT_WATCH_ENTRY = 1,
-    /*
-    * By default uv_fs_event will try to use a kernel interface such as inotify
-    * or kqueue to detect events. This may not work on remote filesystems such
-    * as NFS mounts. This flag makes fs_event fall back to calling stat() on a
-    * regular interval.
-    * This flag is currently not implemented yet on any backend.
-    */
-    UV_FS_EVENT_STAT = 2,
-    /*
-    * By default, event watcher, when watching directory, is not registering
-    * (is ignoring) changes in it's subdirectories.
-    * This flag will override this behaviour on platforms that support it.
-    */
-    UV_FS_EVENT_RECURSIVE = 4
+	/*
+	* By default, if the fs event watcher is given a directory name, we will
+	* watch for all events in that directory. This flags overrides this behavior
+	* and makes fs_event report only changes to the directory entry itself. This
+	* flag does not affect individual files watched.
+	* This flag is currently not implemented yet on any backend.
+	*/
+	UV_FS_EVENT_WATCH_ENTRY = 1,
+	/*
+	* By default uv_fs_event will try to use a kernel interface such as inotify
+	* or kqueue to detect events. This may not work on remote filesystems such
+	* as NFS mounts. This flag makes fs_event fall back to calling stat() on a
+	* regular interval.
+	* This flag is currently not implemented yet on any backend.
+	*/
+	UV_FS_EVENT_STAT = 2,
+	/*
+	* By default, event watcher, when watching directory, is not registering
+	* (is ignoring) changes in it's subdirectories.
+	* This flag will override this behaviour on platforms that support it.
+	*/
+	UV_FS_EVENT_RECURSIVE = 4
 };
 
 const char* uv_strerror(int);
@@ -63,48 +85,67 @@ struct uv_loop_s {
 };
 struct uv_handle_s {
 	struct uv_loop_s* loop;
+	uv_handle_type type;
 	void *data;
 	GEVENT_STRUCT_DONE _;
 };
 struct uv_idle_s {
+	struct uv_loop_s* loop;
+	uv_handle_type type;
 	void *data;
 	GEVENT_STRUCT_DONE _;
 };
 struct uv_prepare_s {
+	struct uv_loop_s* loop;
+	uv_handle_type type;
 	void *data;
 	GEVENT_STRUCT_DONE _;
 };
 struct uv_timer_s {
+	struct uv_loop_s* loop;
+	uv_handle_type type;
 	void *data;
 	GEVENT_STRUCT_DONE _;
 };
 struct uv_signal_s {
+	struct uv_loop_s* loop;
+	uv_handle_type type;
 	void *data;
 	GEVENT_STRUCT_DONE _;
 };
 struct uv_poll_s {
+	struct uv_loop_s* loop;
+	uv_handle_type type;
 	void *data;
 	GEVENT_STRUCT_DONE _;
 };
 
 struct uv_check_s {
+	struct uv_loop_s* loop;
+	uv_handle_type type;
 	void *data;
 	GEVENT_STRUCT_DONE _;
 };
 
 struct uv_async_s {
+	struct uv_loop_s* loop;
+	uv_handle_type type;
 	void *data;
 	void (*async_cb)(void*);
 	GEVENT_STRUCT_DONE _;
 };
 
 struct uv_fs_event_s {
-	void* data;
+	struct uv_loop_s* loop;
+	uv_handle_type type;
+	void *data;
 	GEVENT_STRUCT_DONE _;
 };
 
 struct uv_fs_poll_s {
-	void* data;
+	struct uv_loop_s* loop;
+	uv_handle_type type;
+	void *data;
 	GEVENT_STRUCT_DONE _;
 };
 
@@ -142,27 +183,27 @@ typedef void (*uv_signal_cb)(void *handle, int signum);
 typedef void (*uv_fs_event_cb)(void* handle, const char* filename, int events, int status);
 
 typedef struct {
-    long tv_sec;
-    long tv_nsec;
+	long tv_sec;
+	long tv_nsec;
 } uv_timespec_t;
 
 typedef struct {
-    uint64_t st_dev;
-    uint64_t st_mode;
-    uint64_t st_nlink;
-    uint64_t st_uid;
-    uint64_t st_gid;
-    uint64_t st_rdev;
-    uint64_t st_ino;
-    uint64_t st_size;
-    uint64_t st_blksize;
-    uint64_t st_blocks;
-    uint64_t st_flags;
-    uint64_t st_gen;
-    uv_timespec_t st_atim;
-    uv_timespec_t st_mtim;
-    uv_timespec_t st_ctim;
-    uv_timespec_t st_birthtim;
+	uint64_t st_dev;
+	uint64_t st_mode;
+	uint64_t st_nlink;
+	uint64_t st_uid;
+	uint64_t st_gid;
+	uint64_t st_rdev;
+	uint64_t st_ino;
+	uint64_t st_size;
+	uint64_t st_blksize;
+	uint64_t st_blocks;
+	uint64_t st_flags;
+	uint64_t st_gen;
+	uv_timespec_t st_atim;
+	uv_timespec_t st_mtim;
+	uv_timespec_t st_ctim;
+	uv_timespec_t st_birthtim;
 } uv_stat_t;
 
 typedef void (*uv_fs_poll_cb)(void* handle, int status, const uv_stat_t* prev, const uv_stat_t* curr);
@@ -171,6 +212,7 @@ typedef void (*uv_fs_poll_cb)(void* handle, int status, const uv_stat_t* prev, c
 uv_loop_t *uv_default_loop();
 uv_loop_t* uv_loop_new(); // not documented; neither is uv_loop_delete
 int uv_loop_init(uv_loop_t* loop);
+int uv_loop_fork(uv_loop_t* loop);
 int uv_loop_alive(const uv_loop_t *loop);
 int uv_loop_close(uv_loop_t* loop);
 uint64_t uv_backend_timeout(uv_loop_t* loop);

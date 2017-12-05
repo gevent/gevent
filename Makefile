@@ -167,7 +167,7 @@ develop:
 	${PIP} install -U -r dev-requirements.txt
 
 lint-py27: $(PY27)
-	PYTHON=python2.7.13 PATH=$(BUILD_RUNTIMES)/versions/python2.7.13/bin:$(PATH) make develop travis_test_linters
+	PYTHON=python2.7.14 PATH=$(BUILD_RUNTIMES)/versions/python2.7.14/bin:$(PATH) make develop travis_test_linters
 
 test-py27: $(PY27)
 	PYTHON=python2.7.14 PATH=$(BUILD_RUNTIMES)/versions/python2.7.14/bin:$(PATH) make develop fulltoxtest

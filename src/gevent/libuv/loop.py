@@ -15,8 +15,8 @@ from gevent._ffi.loop import AbstractLoop
 from gevent.libuv import _corecffi # pylint:disable=no-name-in-module,import-error
 from gevent._ffi.loop import assign_standard_callbacks
 
-ffi = _corecffi.ffi
-libuv = _corecffi.lib
+ffi = _corecffi.ffi # pylint:disable=no-member
+libuv = _corecffi.lib # pylint:disable=no-member
 
 __all__ = [
 ]
@@ -26,7 +26,7 @@ _callbacks = assign_standard_callbacks(ffi, libuv)
 from gevent._ffi.loop import EVENTS
 GEVENT_CORE_EVENTS = EVENTS # export
 
-from gevent.libuv import watcher as _watchers
+from gevent.libuv import watcher as _watchers # pylint:disable=no-name-in-module
 
 _events_to_str = _watchers._events_to_str # export
 
@@ -226,7 +226,7 @@ class loop(AbstractLoop):
         # re-__init__ this whole class? Does it matter?
         # OR maybe we need to uv_walk() and close all the handles?
 
-        # XXX: libuv <= 1.9 simply CANNOT handle a fork unless you immediately
+        # XXX: libuv < 1.12 simply CANNOT handle a fork unless you immediately
         # exec() in the child. There are multiple calls to abort() that
         # will kill the child process:
         # - The OS X poll implementation (kqueue) aborts on an error return
@@ -242,8 +242,8 @@ class loop(AbstractLoop):
         # had already been closed
         # (https://github.com/joyent/libuv/issues/1405)
 
-        #raise NotImplementedError()
-        pass
+        # In 1.12, the uv_loop_fork function was added (by gevent!)
+        libuv.uv_loop_fork(self._ptr)
 
 
     def run(self, nowait=False, once=False):
@@ -300,6 +300,18 @@ class loop(AbstractLoop):
         libuv.uv_signal_start(self._sigchld_watcher,
                               self._sigchld_callback_ffi,
                               signal.SIGCHLD)
+
+    def reset_sigchld(self):
+        if not self.default or not self._sigchld_watcher:
+            return
+
+        libuv.uv_signal_stop(self._sigchld_watcher)
+        # Must go through this to manage the memory lifetime
+        # correctly. Alternately, we could just stop it and restart
+        # it in install_sigchld?
+        _watchers.watcher._watcher_ffi_close(self._sigchld_watcher)
+        del self._sigchld_watcher
+        del self._sigchld_callback_ffi
 
     def __sigchld_callback(self, _handler, _signum):
         while True:

@@ -136,10 +136,10 @@ class AbstractWatcherType(type):
             meth.__name__ = watcher_name
             return meth
 
-        for name in 'start', 'stop', 'init':
-            watcher_name = '_watcher' + '_' + name
+        for meth_name in 'start', 'stop', 'init':
+            watcher_name = '_watcher' + '_' + meth_name
             if watcher_name not in cls_dict:
-                LazyOnClass.lazy(cls_dict, _make_meth(name, watcher_name))
+                LazyOnClass.lazy(cls_dict, _make_meth(meth_name, watcher_name))
 
     def new_handle(cls, obj):
         return cls._FFI.new_handle(obj)
@@ -174,11 +174,11 @@ class watcher(object):
         self._watcher_ffi_set_init_ref(ref)
 
     @classmethod
-    def _watcher_ffi_close(cls, ffi_handle):
+    def _watcher_ffi_close(cls, ffi_watcher):
         pass
 
     def _watcher_create(self, ref): # pylint:disable=unused-argument
-        self._handle = type(self).new_handle(self) # This is a GC cycle
+        self._handle = type(self).new_handle(self) # This is a GC cycle pylint:disable=no-member
         self._watcher = self._watcher_new()
         # This call takes care of calling _watcher_ffi_close when
         # self goes away, making sure self._watcher stays alive
@@ -188,7 +188,7 @@ class watcher(object):
         self._watcher.data = self._handle
 
     def _watcher_new(self):
-        return type(self).new(self._watcher_struct_pointer_type)
+        return type(self).new(self._watcher_struct_pointer_type) # pylint:disable=no-member
 
     def _watcher_ffi_set_init_ref(self, ref):
         pass

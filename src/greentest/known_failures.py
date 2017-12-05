@@ -158,9 +158,6 @@ if PYPY:
 if LIBUV:
     if sys.platform.startswith("darwin"):
         FAILING_TESTS += [
-            # libuv doesn't support fork without an immediate exec
-            # on all platforms. It does appear to work with linux/epall
-            'test__core_fork.py',
         ]
 
 if PY3:

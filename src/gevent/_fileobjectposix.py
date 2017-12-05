@@ -256,7 +256,7 @@ class FileObjectPosix(FileObjectBase):
                         @functools.wraps(m)
                         def wrapped(*args, **kwargs):
                             result = m(*args, **kwargs)
-                            assert isinstance(result, unicode)
+                            assert isinstance(result, unicode) # pylint:disable=undefined-variable
                             return result.encode('latin-1')
                         return wrapped
                     return m
