@@ -65,14 +65,16 @@ EXT_MODULES = [
     CORE,
     ARES,
     SEMAPHORE,
-    LIBUV,
     LOCAL,
 ]
 
 cffi_modules = [
     'src/gevent/libev/_corecffi_build.py:ffi',
-    'src/gevent/libuv/_corecffi_build.py:ffi',
 ]
+
+if not WIN:
+    EXT_MODULES.append(LIBUV)
+    cffi_modules.append('src/gevent/libuv/_corecffi_build.py:ffi')
 
 if PYPY:
     install_requires = []
