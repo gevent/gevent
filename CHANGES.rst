@@ -87,7 +87,7 @@
   :meth:`gevent.subprocess.Popen.terminate`. Reported in :issue:`1023`
   by Giacomo Debidda.
 
-- ``socket.send()`` now catches ``EPROTYPE`` on macOS to handle a race
+- ``socket.send()`` now catches ``EPROTOTYPE`` on macOS to handle a race
   condition during shutdown. Fixed in :pr:`1035` by Jay Oster.
 
 - :func:`gevent.socket.create_connection` now properly cleans up open
@@ -97,6 +97,57 @@
   kochelmonster.
 
 - Update c-ares to 1.13.0. See :issue:`990`.
+
+- Add initial *experimental* support for using libuv as a backend
+  instead of libev, controlled by setting the environment variable
+  ``GEVENT_CORE_CFFI_ONLY=libuv`` before importing gevent. This only
+  works on POSIX systems and it still suffers a number of limitations
+  compared to libev, notably:
+
+  - Timers (such as ``gevent.sleep`` and ``gevent.Timeout``) only
+    support a resolution of 1ms. Attempting to use something smaller
+    will automatically increase it to 1ms and issue a warning.
+
+  - Using negative timeouts may behave differently from libev.
+
+  - Timers seem to suffer from more jitter than libev.
+
+  - libuv blocks delivery of all signals, so signals are handled using
+    an (arbitrary) 1 second timer. This means that signal handling
+    will be delayed by up to that amount, and that the longest the
+    event loop can sleep in the operating system's ``poll`` call is
+    that amount.
+
+  - libuv only supports one io watcher per file descriptor, whereas
+    libev and gevent have always supported many watchers using
+    different settings. The libev behaviour is emulated at the Python
+    level, but that adds overhead.
+
+  - Looping multiple times and expecting events for the same file
+    descriptor to be raised each time without any data being read or
+    written (as works with libev) does not appear to work correctly on
+    Linux when using ``gevent.select.poll`` or a monkey-patched
+    ``selectors.PollSelector``.
+
+  - The implementation uses more reference cycles and weak references
+    than either of the libev implementations (cython or CFFI), so
+    pressure on the garbage collector will be higher.
+
+  - The build system may not be correctly producing embedded static
+    libraries, at least on OS X. libuv 1.18 or higher is required.
+
+  - If anything unexpected happens, libuv likes to ``abort()`` the
+    entire process instead of reporting an error. For example, closing
+    a file descriptor it is using in a watcher may cause the entire
+    process to be exited.
+
+  Feedback and pull requests are welcome, especially to address the
+  issues mentioned above and for Windows support.
+
+  Again, this is extremely experimental and all of it is subject to
+  change.
+
+  See :issue:`790` for history and more in-depth discussion.
 
 1.2.2 (2017-06-05)
 ==================
