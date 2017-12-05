@@ -95,6 +95,13 @@ class _Callbacks(object):
                 args = (revents, ) + args[1:]
             the_watcher.callback(*args)
         except: # pylint:disable=bare-except
+            # It's possible for ``the_watcher`` to be undefined (UnboundLocalError)
+            # if we threw an exception on the line that created that variable.
+            # This is typically the case with a signal under libuv
+            try:
+                the_watcher
+            except UnboundLocalError:
+                the_watcher = self.ffi.from_handle(handle)
             the_watcher._exc_info = sys.exc_info()
             # Depending on when the exception happened, the watcher
             # may or may not have been stopped. We need to make sure its
