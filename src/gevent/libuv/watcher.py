@@ -266,11 +266,10 @@ class io(_base.IoMixin, watcher):
             # For testing.
             return self._watcher_ref._watcher
 
-        @property
-        def fd(self):
-            # ares.pyx depends on this property
-            return self._watcher_ref._fd
-
+        # ares.pyx depends on this property,
+        # and test__core uses it too
+        fd = property(lambda self: self._watcher_ref._fd,
+                      lambda self, nv: self._watcher_ref._set_fd(nv))
 
     def _io_maybe_stop(self):
         for r in self._multiplex_watchers:
