@@ -306,7 +306,7 @@ class io(_base.IoMixin, watcher):
             # the reader, we get a LoopExit. So we can't return here and arguably shouldn't print it
             # either. The negative events mask will match the watcher's mask.
             # See test__fileobject.py:Test.test_newlines for an example.
-            #return
+            # return
 
         for watcher_ref in self._multiplex_watchers:
             watcher = watcher_ref()
