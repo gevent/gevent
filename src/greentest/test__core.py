@@ -4,7 +4,7 @@ import unittest
 from greentest import main, skipOnLibuv
 from gevent import core
 
-@unittest.skip("Debugging")
+
 class TestCore(unittest.TestCase):
 
     def test_get_version(self):
@@ -16,6 +16,7 @@ class TestCore(unittest.TestCase):
         self.assertTrue(header_version)
         self.assertEqual(version, header_version)
 
+@unittest.skip("Debugging")
 class TestWatchers(unittest.TestCase):
 
     def test_io(self):
