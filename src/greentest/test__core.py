@@ -16,7 +16,7 @@ class TestCore(unittest.TestCase):
         self.assertTrue(header_version)
         self.assertEqual(version, header_version)
 
-@unittest.skip("Debugging")
+
 class TestWatchers(unittest.TestCase):
 
     def test_io(self):
