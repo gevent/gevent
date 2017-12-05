@@ -1,5 +1,5 @@
 from __future__ import absolute_import, print_function
-import unittest
+
 import greentest
 from gevent import core
 
@@ -58,16 +58,19 @@ class Test(greentest.TestCase):
         self.assertEqual(lst, [(), 25])
         loop.destroy()
 
+
     def test_invalid_fd(self):
         # XXX: windows?
         loop = core.loop(default=False)
 
-        # Negative case caught everywhere
-        self.assertRaises(ValueError, loop.io, -1, core.READ)
+        # Negative case caught everywhere. ValueError
+        # on POSIX, OSError on Windows
+        with self.assertRaises((ValueError, OSError)):
+            loop.io(-1, core.READ)
 
         loop.destroy()
 
-
+    @greentest.skipOnAppVeyor("Stdout can't be watched on Win32")
     def test_reuse_io(self):
         loop = core.loop(default=False)
 
