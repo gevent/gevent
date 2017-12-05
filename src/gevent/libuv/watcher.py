@@ -266,6 +266,11 @@ class io(_base.IoMixin, watcher):
             # For testing.
             return self._watcher_ref._watcher
 
+        @property
+        def fd(self):
+            # ares.pyx depends on this property
+            return self._watcher_ref._fd
+
 
     def _io_maybe_stop(self):
         for r in self._multiplex_watchers:
