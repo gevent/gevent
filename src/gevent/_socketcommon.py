@@ -73,11 +73,13 @@ import sys
 from gevent.hub import get_hub
 from gevent.hub import ConcurrentObjectUseError
 from gevent.timeout import Timeout
-from gevent._compat import string_types, integer_types
+from gevent._compat import string_types, integer_types, PY3
 from gevent._util import copy_globals
 from gevent._util import _NONE
 
 is_windows = sys.platform == 'win32'
+is_macos = sys.platform == 'darwin'
+
 # pylint:disable=no-name-in-module,unused-import
 if is_windows:
     # no such thing as WSAEPERM or error code 10001 according to winsock.h or MSDN
@@ -102,6 +104,17 @@ try:
 except ImportError:
     EBADF = 9
 
+# macOS can return EPROTOTYPE when writing to a socket that is shutting
+# Down. Retrying the write should return the expected EPIPE error.
+# Downstream classes (like pywsgi) know how to handle/ignore EPIPE.
+# This set is used by socket.send() to decide whether the write should
+# be retried. The default is to retry only on EWOULDBLOCK. Here we add
+# EPROTOTYPE on macOS to handle this platform-specific race condition.
+GSENDAGAIN = (EWOULDBLOCK,)
+if is_macos:
+    from errno import EPROTOTYPE
+    GSENDAGAIN += (EPROTOTYPE,)
+
 import _socket
 _realsocket = _socket.socket
 import socket as __socket__
@@ -113,7 +126,7 @@ __imports__ = copy_globals(__socket__, globals(),
 
 for _name in __socket__.__all__:
     _value = getattr(__socket__, _name)
-    if isinstance(_value, integer_types) or isinstance(_value, string_types):
+    if isinstance(_value, (integer_types, string_types)):
         globals()[_name] = _value
         __imports__.append(_name)
 
@@ -204,7 +217,11 @@ def wait_readwrite(fileno, timeout=None, timeout_exc=_NONE, event=_NONE):
     return wait(io, timeout, timeout_exc)
 
 #: The exception raised by default on a call to :func:`cancel_wait`
-cancel_wait_ex = error(EBADF, 'File descriptor was closed in another greenlet') # pylint: disable=undefined-variable
+class cancel_wait_ex(error): # pylint: disable=undefined-variable
+    def __init__(self):
+        super(cancel_wait_ex, self).__init__(
+            EBADF,
+            'File descriptor was closed in another greenlet')
 
 
 def cancel_wait(watcher, error=cancel_wait_ex):
@@ -271,10 +288,24 @@ def getaddrinfo(host, port, family=0, socktype=0, proto=0, flags=0):
     """
     return get_hub().resolver.getaddrinfo(host, port, family, socktype, proto, flags)
 
+if PY3:
+    # The name of the socktype param changed to type in Python 3.
+    # See https://github.com/gevent/gevent/issues/960
+    # Using inspect here to directly detect the condition is painful because we have to
+    # wrap it with a try/except TypeError because not all Python 2
+    # versions can get the args of a builtin; we also have to use a with to suppress
+    # the deprecation warning.
+    d = getaddrinfo.__doc__
+
+    def getaddrinfo(host, port, family=0, type=0, proto=0, flags=0): # pylint:disable=function-redefined
+        return get_hub().resolver.getaddrinfo(host, port, family, type, proto, flags)
+    getaddrinfo.__doc__ = d
+    del d
+
 
 def gethostbyaddr(ip_address):
     """
-    gethostbyaddr(host) -> (name, aliaslist, addresslist)
+    gethostbyaddr(ip_address) -> (name, aliaslist, addresslist)
 
     Return the true host name, a list of aliases, and a list of IP addresses,
     for a host.  The host argument is a string giving a host name or IP number.
@@ -314,7 +345,7 @@ def getfqdn(name=''):
         pass
     else:
         aliases.insert(0, hostname)
-        for name in aliases:
+        for name in aliases: # EWW! pylint:disable=redefined-argument-from-local
             if isinstance(name, bytes):
                 if b'.' in name:
                     break

@@ -317,8 +317,7 @@ class Input(object):
     def readline(self, size=None):
         if self.chunked_input:
             return self._chunked_read(size, True)
-        else:
-            return self._do_read(size, use_readline=True)
+        return self._do_read(size, use_readline=True)
 
     def readlines(self, hint=None):
         # pylint:disable=unused-argument
@@ -922,7 +921,33 @@ class WSGIHandler(object):
                 close = None
                 self.result = None
 
+    #: These errors are silently ignored by :meth:`handle_one_response` to avoid producing
+    #: excess log entries on normal operating conditions. They indicate
+    #: a remote client has disconnected and there is little or nothing
+    #: this process can be expected to do about it. You may change this
+    #: value in a subclass.
+    #:
+    #: The default value includes :data:`errno.EPIPE` and :data:`errno.ECONNRESET`.
+    #: On Windows this also includes :data:`errno.WSAECONNABORTED`.
+    #:
+    #: This is a provisional API, subject to change. See :pr:`377`, :pr:`999`
+    #: and :issue:`136`.
+    #:
+    #: .. versionadded:: 1.3
+    ignored_socket_errors = (errno.EPIPE, errno.ECONNRESET)
+    try:
+        ignored_socket_errors += (errno.WSAECONNABORTED,)
+    except AttributeError:
+        pass # Not windows
+
     def handle_one_response(self):
+        """
+        Invoke the application to produce one response.
+
+        This is called by :meth:`handle_one_request` after all the
+        state for the request has been established. It is responsible
+        for error handling.
+        """
         self.time_start = time.time()
         self.status = None
         self.headers_sent = False
@@ -947,12 +972,8 @@ class WSGIHandler(object):
         except _InvalidClientInput:
             self._send_error_response_if_possible(400)
         except socket.error as ex:
-            if ex.args[0] in (errno.EPIPE, errno.ECONNRESET):
-                # Broken pipe, connection reset by peer.
-                # Swallow these silently to avoid spewing
-                # useless info on normal operating conditions,
-                # bloating logfiles. See https://github.com/gevent/gevent/pull/377
-                # and https://github.com/gevent/gevent/issues/136.
+            if ex.args[0] in self.ignored_socket_errors:
+                # See description of self.ignored_socket_errors.
                 if not PY3:
                     sys.exc_clear()
                 self.close_connection = True
@@ -1465,7 +1486,7 @@ class WSGIServer(StreamServer):
                 except socket.error:
                     name = str(address[0])
                 if PY3 and not isinstance(name, str):
-                    name = name.decode('ascii') # python 2 pylint:disable=redefined-variable-type
+                    name = name.decode('ascii')
                 self.environ['SERVER_NAME'] = name
             self.environ.setdefault('SERVER_PORT', str(address[1]))
         else:

@@ -18,6 +18,7 @@
 # THE SOFTWARE.
 
 from greentest import TestCase, main, tcp_listener
+from greentest import skipOnPyPy
 import gevent
 from gevent import socket
 import sys
@@ -87,17 +88,19 @@ class TestGreenIo(TestCase):
         did_it_work(server)
         server_greenlet.kill()
 
+    @skipOnPyPy("GC is different")
     def test_del_closes_socket(self):
-        if PYPY:
-            return
         timer = gevent.Timeout.start_new(0.5)
 
         def accept_once(listener):
             # delete/overwrite the original conn
             # object, only keeping the file object around
             # closing the file object should close everything
+
+            # XXX: This is not exactly true on Python 3.
+            # This produces a ResourceWarning.
             try:
-                conn, addr = listener.accept()
+                conn, _ = listener.accept()
                 conn = conn.makefile(mode='wb')
                 conn.write(b'hello\n')
                 conn.close()

@@ -199,7 +199,7 @@ class ThreadableTest:
         clientTearDown ()
 
     Any new test functions within the class must then define
-    tests in pairs, where the test name is preceeded with a
+    tests in pairs, where the test name is preceded with a
     '_' to indicate the client portion of the test. Ex:
 
         def testFoo(self):
@@ -709,7 +709,7 @@ class GeneralModuleTests(unittest.TestCase):
             raise socket.gaierror
 
     def testSendtoErrors(self):
-        # Testing that sendto doesn't masks failures. See #10169.
+        # Testing that sendto doesn't mask failures. See #10169.
         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.addCleanup(s.close)
         s.bind(('', 0))
@@ -1304,7 +1304,7 @@ class GeneralModuleTests(unittest.TestCase):
         # socket.gethostbyaddr('испытание.python.org')
 
     def check_sendall_interrupted(self, with_timeout):
-        # socketpair() is not stricly required, but it makes things easier.
+        # socketpair() is not strictly required, but it makes things easier.
         if not hasattr(signal, 'alarm') or not hasattr(socket, 'socketpair'):
             self.skipTest("signal.alarm and socket.socketpair required for this test")
         # Our signal handlers clobber the C errno by calling a math function
@@ -1374,6 +1374,20 @@ class GeneralModuleTests(unittest.TestCase):
             self.assertRaises(ValueError, fp.writable)
             self.assertRaises(ValueError, fp.seekable)
 
+    def test_makefile_mode(self):
+        for mode in 'r', 'rb', 'rw', 'w', 'wb':
+            with self.subTest(mode=mode):
+                with socket.socket() as sock:
+                    with sock.makefile(mode) as fp:
+                        self.assertEqual(fp.mode, mode)
+
+    def test_makefile_invalid_mode(self):
+        for mode in 'rt', 'x', '+', 'a':
+            with self.subTest(mode=mode):
+                with socket.socket() as sock:
+                    with self.assertRaisesRegex(ValueError, 'invalid mode'):
+                        sock.makefile(mode)
+
     def test_pickle(self):
         sock = socket.socket()
         with sock:
@@ -1428,10 +1442,30 @@ class GeneralModuleTests(unittest.TestCase):
         # type and populates the socket object.
         #
         # On Windows this trick won't work, so the test is skipped.
-        fd, _ = tempfile.mkstemp()
+        fd, path = tempfile.mkstemp()
+        self.addCleanup(os.unlink, path)
         with socket.socket(family=42424, type=13331, fileno=fd) as s:
             self.assertEqual(s.family, 42424)
             self.assertEqual(s.type, 13331)
+
+    @unittest.skipUnless(hasattr(os, 'sendfile'), 'test needs os.sendfile()')
+    def test__sendfile_use_sendfile(self):
+        class File:
+            def __init__(self, fd):
+                self.fd = fd
+
+            def fileno(self):
+                return self.fd
+        with socket.socket() as sock:
+            fd = os.open(os.curdir, os.O_RDONLY)
+            os.close(fd)
+            with self.assertRaises(socket._GiveupOnSendfile):
+                sock._sendfile_use_sendfile(File(fd))
+            with self.assertRaises(OverflowError):
+                sock._sendfile_use_sendfile(File(2**1000))
+            with self.assertRaises(TypeError):
+                sock._sendfile_use_sendfile(File(None))
+
 
 @unittest.skipUnless(HAVE_SOCKET_CAN, 'SocketCan required for this test.')
 class BasicCANTest(unittest.TestCase):
@@ -4596,9 +4630,10 @@ class BufferIOTest(SocketConnectedTest):
         SocketConnectedTest.__init__(self, methodName=methodName)
 
     def testRecvIntoArray(self):
-        buf = bytearray(1024)
+        buf = array.array("B", [0] * len(MSG))
         nbytes = self.cli_conn.recv_into(buf)
         self.assertEqual(nbytes, len(MSG))
+        buf = buf.tobytes()
         msg = buf[:len(MSG)]
         self.assertEqual(msg, MSG)
 
@@ -4625,9 +4660,10 @@ class BufferIOTest(SocketConnectedTest):
     _testRecvIntoMemoryview = _testRecvIntoArray
 
     def testRecvFromIntoArray(self):
-        buf = bytearray(1024)
+        buf = array.array("B", [0] * len(MSG))
         nbytes, addr = self.cli_conn.recvfrom_into(buf)
         self.assertEqual(nbytes, len(MSG))
+        buf = buf.tobytes()
         msg = buf[:len(MSG)]
         self.assertEqual(msg, MSG)
 
@@ -4681,9 +4717,17 @@ def isTipcAvailable():
     """
     if not hasattr(socket, "AF_TIPC"):
         return False
-    if not os.path.isfile("/proc/modules"):
-        return False
-    with open("/proc/modules") as f:
+    try:
+        f = open("/proc/modules")
+    except IOError as e:
+        # It's ok if the file does not exist, is a directory or if we
+        # have not the permission to read it. In any other case it's a
+        # real error, so raise it again.
+        if e.errno in (errno.ENOENT, errno.EISDIR, errno.EACCES):
+            return False
+        else:
+            raise
+    with f:
         for line in f:
             if line.startswith("tipc "):
                 return True
@@ -4733,7 +4777,7 @@ class TIPCThreadableTest(unittest.TestCase, ThreadableTest):
         self.addCleanup(self.conn.close)
 
     def clientSetUp(self):
-        # The is a hittable race between serverExplicitReady() and the
+        # There is a hittable race between serverExplicitReady() and the
         # accept() call; sleep a little while to avoid it, otherwise
         # we could get an exception
         time.sleep(0.1)
@@ -4974,7 +5018,7 @@ class TestSocketSharing(SocketTCPTest):
 
     def compareSockets(self, org, other):
         # socket sharing is expected to work only for blocking socket
-        # since the internal python timout value isn't transfered.
+        # since the internal python timeout value isn't transferred.
         self.assertEqual(org.gettimeout(), None)
         self.assertEqual(org.gettimeout(), other.gettimeout())
 

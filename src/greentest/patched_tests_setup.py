@@ -1,8 +1,20 @@
 # pylint:disable=missing-docstring,invalid-name
-from __future__ import print_function
+from __future__ import print_function, absolute_import, division
+
+import collections
+import contextlib
+import functools
 import sys
 import os
+# At least on 3.6+, importing platform
+# imports subprocess, which imports selectors. That
+# can expose issues with monkey patching. We don't need it
+# though.
+# import platform
 import re
+
+TRAVIS = os.environ.get("TRAVIS") == "true"
+OSX = sys.platform == 'darwin'
 
 # By default, test cases are expected to switch and emit warnings if there was none
 # If a test is found in this list, it's expected not to switch.
@@ -159,14 +171,6 @@ disabled_tests = [
     'test_thread.TestForkInThread.test_forkinthread',
     # XXX needs investigating
 
-    'test_subprocess.POSIXProcessTestCase.test_terminate_dead',
-    'test_subprocess.POSIXProcessTestCase.test_send_signal_dead',
-    'test_subprocess.POSIXProcessTestCase.test_kill_dead',
-    # Don't exist in the test suite until 2.7.4+; with our monkey patch in place,
-    # they fail because the process they're looking for has been allowed to exit.
-    # Our monkey patch waits for the process with a watcher and so detects
-    # the exit before the normal polling mechanism would
-
     'test_subprocess.POSIXProcessTestCase.test_preexec_errpipe_does_not_double_close_pipes',
     # Does not exist in the test suite until 2.7.4+. Subclasses Popen, and overrides
     # _execute_child. But our version has a different parameter list than the
@@ -178,6 +182,7 @@ if 'thread' in os.getenv('GEVENT_FILE', ''):
         'test_subprocess.ProcessTestCase.test_double_close_on_error'
         # Fails with "OSError: 9 invalid file descriptor"; expect GC/lifetime issues
     ]
+
 
 if os.getenv('GEVENT_CORE_CFFI_ONLY') == 'libuv':
     # epoll appears to work with these just fine in some cases;
@@ -199,6 +204,48 @@ if os.getenv('GEVENT_CORE_CFFI_ONLY') == 'libuv':
             # though it was allowed in in the first place.
             'test_asyncore.FileWrapperTest.test_dispatcher',
         ]
+
+def _make_run_with_original(mod_name, func_name):
+    @contextlib.contextmanager
+    def with_orig():
+        mod = __import__(mod_name)
+        now = getattr(mod, func_name)
+        from gevent.monkey import get_original
+        orig = get_original(mod_name, func_name)
+        try:
+            setattr(mod, func_name, orig)
+            yield
+        finally:
+            setattr(mod, func_name, now)
+    return with_orig
+
+@contextlib.contextmanager
+def _gc_at_end():
+    try:
+        yield
+    finally:
+        import gc
+        gc.collect()
+        gc.collect()
+
+# Map from FQN to a context manager that will be wrapped around
+# that test.
+wrapped_tests = {
+}
+
+
+
+class _PatchedTest(object):
+    def __init__(self, test_fqn):
+        self._patcher = wrapped_tests[test_fqn]
+
+    def __call__(self, orig_test_fn):
+
+        @functools.wraps(orig_test_fn)
+        def test(*args, **kwargs):
+            with self._patcher():
+                return orig_test_fn(*args, **kwargs)
+        return test
 
 
 if sys.version_info[:3] <= (2, 7, 8):
@@ -272,6 +319,12 @@ if sys.version_info[:3] <= (2, 7, 8):
         'test_threading_local.PyThreadingLocalTests.test_derived',
         'test_urllib.UtilityTests.test_toBytes',
         'test_httplib.HTTPSTest.test_networked_trusted_by_default_cert',
+
+        # Exposed as broken with the update of test_httpservers.py to 2.7.13
+        'test_httpservers.SimpleHTTPRequestHandlerTestCase.test_windows_colon',
+        'test_httpservers.BaseHTTPServerTestCase.test_head_via_send_error',
+        'test_httpservers.BaseHTTPServerTestCase.test_send_error',
+        'test_httpservers.SimpleHTTPServerTestCase.test_path_without_leading_slash',
     ]
 
 
@@ -311,14 +364,6 @@ if hasattr(sys, 'pypy_version_info'):
         # implementation of subprocess (possibly explains the extra parameter to
         # _execut_child)
     ]
-
-    import cffi # pylint:disable=import-error,useless-suppression
-    if cffi.__version_info__ < (1, 2, 0):
-        disabled_tests += [
-            'test_signal.InterProcessSignalTests.test_main',
-            # Fails to get the signal to the correct handler due to
-            # https://bitbucket.org/cffi/cffi/issue/152/handling-errors-from-signal-handlers-in
-        ]
 
 # Generic Python 3
 
@@ -371,7 +416,7 @@ if sys.version_info[0] == 3:
         'test_socket.GeneralModuleTests.testGetaddrinfo',
 
     ]
-    if os.environ.get("TRAVIS") == "true":
+    if TRAVIS:
         disabled_tests += [
             # test_cwd_with_relative_executable tends to fail
             # on Travis...it looks like the test processes are stepping
@@ -381,52 +426,105 @@ if sys.version_info[0] == 3:
             'test_subprocess.ProcessTestCase.test_cwd_with_relative_arg',
             'test_subprocess.ProcessTestCaseNoPoll.test_cwd_with_relative_arg',
             'test_subprocess.ProcessTestCase.test_cwd_with_relative_executable',
+
+            # This test tends to timeout, starting at the end of November 2016
+            'test_subprocess.ProcessTestCase.test_leaking_fds_on_error',
         ]
 
+    wrapped_tests.update({
+        # XXX: BUG: We simply don't handle this correctly. On CPython,
+        # we wind up raising a BlockingIOError and then
+        # BrokenPipeError and then some random TypeErrors, all on the
+        # server. CPython 3.5 goes directly to socket.send() (via
+        # socket.makefile), whereas CPython 3.6 uses socket.sendall().
+        # On PyPy, the behaviour is much worse: we hang indefinitely, perhaps exposing a problem
+        # with our signal handling.
+        # In actuality, though, this test doesn't fully test the EINTR it expects
+        # to under gevent (because if its EWOULDBLOCK retry behaviour.)
+        # Instead, the failures were all due to `pthread_kill` trying to send a signal
+        # to a greenlet instead of a real thread. The solution is to deliver the signal
+        # to the real thread by letting it get the correct ID.
+        'test_wsgiref.IntegrationTests.test_interrupted_write': _make_run_with_original('threading', 'get_ident')
+    })
 
-# PyPy3 5.5.0-alpha
+# PyPy3 3.5.5 v5.8-beta
 
-if hasattr(sys, 'pypy_version_info') and sys.version_info[:2] == (3, 3):
-    # Almost all the SSL related tests are broken at this point due to age.
-    disabled_tests += [
-        'test_ssl.NetworkedTests.test_connect',
-        'test_ssl.NetworkedTests.test_connect_with_context',
-        'test_ssl.NetworkedTests.test_get_server_certificate',
-        'test_httplib.HTTPSTest.test_networked_bad_cert',
-        'test_httplib.HTTPSTest.test_networked_good_cert',
-    ]
+if hasattr(sys, 'pypy_version_info') and sys.version_info[:2] >= (3, 3):
+
 
     disabled_tests += [
         # This raises 'RuntimeError: reentrant call' when exiting the
         # process tries to close the stdout stream; no other platform does this.
+        # Seen in both 3.3 and 3.5 (5.7 and 5.8)
         'test_signal.SiginterruptTest.test_siginterrupt_off',
-
-        # These are all expecting that a signal (sigalarm) that
-        # arrives during a blocking call should raise
-        # InterruptedError with errno=EINTR. gevent does not do
-        # this, instead its loop keeps going and raises a timeout
-        # (which fails the test). HOWEVER: Python 3.5 fixed this
-        # problem and started raising a timeout,
-        # (https://docs.python.org/3/whatsnew/3.5.html#pep-475-retry-system-calls-failing-with-eintr)
-        # and removed these tests (InterruptedError is no longer
-        # raised). So basically, gevent was ahead of its time.
-        # Why these were part of the PyPy3-5.5.0-alpha source release is beyond me.
-        'test_socket.InterruptedRecvTimeoutTest.testInterruptedRecvIntoTimeout',
-        'test_socket.InterruptedRecvTimeoutTest.testInterruptedRecvTimeout',
-        'test_socket.InterruptedRecvTimeoutTest.testInterruptedRecvfromIntoTimeout',
-        'test_socket.InterruptedRecvTimeoutTest.testInterruptedRecvfromTimeout',
-        'test_socket.InterruptedRecvTimeoutTest.testInterruptedSendTimeout',
-        'test_socket.InterruptedRecvTimeoutTest.testInterruptedSendtoTimeout',
-        'test_socket.InterruptedRecvTimeoutTest.testInterruptedRecvmsgTimeout',
-        'test_socket.InterruptedRecvTimeoutTest.testInterruptedRecvmsgIntoTimeout',
-        'test_socket.InterruptedSendTimeoutTest.testInterruptedSendmsgTimeout',
-
-        # This one can't resolve the IDNA name, at least on OS X with the threaded
-        # resolver. This doesn't seem to be a gevent problem, possible a test age
-        # problem, or transient DNS issue. (Python is reporting a DNS outage
-        # at the time of this writing: https://status.python.org/incidents/x97mmj5rqs5f)
-        'test_socket.GeneralModuleTests.test_idna',
     ]
+
+
+if hasattr(sys, 'pypy_version_info') and sys.pypy_version_info[:4] in ( # pylint:disable=no-member
+        (5, 8, 0, 'beta'),
+    ):
+    # 3.5 is beta. Hard to say what are real bugs in us vs real bugs in pypy.
+    # For that reason, we pin these patches exactly to the version in use.
+
+
+    disabled_tests += [
+        # This fails to close all the FDs, at least on CI. On OS X, many of the
+        # POSIXProcessTestCase fd tests have issues.
+        'test_subprocess.POSIXProcessTestCase.test_close_fds_when_max_fd_is_lowered',
+
+        # This has the wrong constants in 5.8 (but worked in 5.7), at least on
+        # OS X. It finds "zlib compression" but expects "ZLIB".
+        'test_ssl.ThreadedTests.test_compression',
+    ]
+
+    if OSX:
+        disabled_tests += [
+            # These all fail with "invalid_literal for int() with base 10: b''"
+            'test_subprocess.POSIXProcessTestCase.test_close_fds',
+            'test_subprocess.POSIXProcessTestCase.test_close_fds_after_preexec',
+            'test_subprocess.POSIXProcessTestCase.test_pass_fds',
+            'test_subprocess.POSIXProcessTestCase.test_pass_fds_inheritable',
+            'test_subprocess.POSIXProcessTestCase.test_pipe_cloexec',
+        ]
+
+    disabled_tests += [
+        # This seems to be a buffering issue? Something isn't
+        # getting flushed. (The output is wrong). Under PyPy3 5.7,
+        # I couldn't reproduce locally in Ubuntu 16 in a VM
+        # or a laptop with OS X. Under 5.8.0, I can reproduce it, but only
+        # when run by the testrunner, not when run manually on the command line,
+        # so something is changing in stdout buffering in those situations.
+        'test_threading.ThreadJoinOnShutdown.test_2_join_in_forked_process',
+        'test_threading.ThreadJoinOnShutdown.test_1_join_in_forked_process',
+    ]
+
+    if TRAVIS:
+        disabled_tests += [
+            # Likewise, but I haven't produced it locally.
+            'test_threading.ThreadJoinOnShutdown.test_1_join_on_shutdown',
+        ]
+
+    wrapped_tests.update({
+        # XXX: gevent: The error that was raised by that last call
+        # left a socket open on the server or client. The server gets
+        # to http/server.py(390)handle_one_request and blocks on
+        # self.rfile.readline which apparently is where the SSL
+        # handshake is done. That results in the exception being
+        # raised on the client above, but apparently *not* on the
+        # server. Consequently it sits trying to read from that
+        # socket. On CPython, when the client socket goes out of scope
+        # it is closed and the server raises an exception, closing the
+        # socket. On PyPy, we need a GC cycle for that to happen.
+        # Without the socket being closed and exception being raised,
+        # the server cannot be stopped (it runs each request in the
+        # same thread that would notice it had been stopped), and so
+        # the cleanup method added by start_https_server to stop the
+        # server blocks "forever".
+
+        # This is an important test, so rather than skip it in patched_tests_setup,
+        # we do the gc before we return.
+        'test_urllib2_localnet.TestUrlopen.test_https_with_cafile': _gc_at_end,
+    })
 
 if sys.version_info[:2] == (3, 4) and sys.version_info[:3] < (3, 4, 4):
     # Older versions have some issues with the SSL tests. Seen on Appveyor
@@ -443,16 +541,6 @@ if sys.version_info[:2] >= (3, 4):
         # XXX: It seems that threading.Timer is not being greened properly, possibly
         # due to a similar issue to what gevent.threading documents for normal threads.
         # In any event, this test hangs forever
-
-
-        'test_subprocess.POSIXProcessTestCase.test_terminate_dead',
-        'test_subprocess.POSIXProcessTestCase.test_send_signal_dead',
-        'test_subprocess.POSIXProcessTestCase.test_kill_dead',
-        # With our monkey patch in place,
-        # they fail because the process they're looking for has been allowed to exit.
-        # Our monkey patch waits for the process with a watcher and so detects
-        # the exit before the normal polling mechanism would
-
 
 
         'test_subprocess.POSIXProcessTestCase.test_preexec_errpipe_does_not_double_close_pipes',
@@ -520,7 +608,7 @@ if sys.version_info[:2] >= (3, 4):
             'test_socket.InterruptedSendTimeoutTest.testInterruptedSendmsgTimeout',
         ]
 
-    if os.environ.get('TRAVIS') == 'true':
+    if TRAVIS:
         disabled_tests += [
             'test_subprocess.ProcessTestCase.test_double_close_on_error',
             # This test is racy or OS-dependent. It passes locally (sufficiently fast machine)
@@ -532,6 +620,10 @@ if sys.version_info[:2] >= (3, 5):
         # XXX: Hangs
         'test_ssl.ThreadedTests.test_nonblocking_send',
         'test_ssl.ThreadedTests.test_socketserver',
+        # Uses direct sendfile, doesn't properly check for it being enabled
+        'test_socket.GeneralModuleTests.test__sendfile_use_sendfile',
+
+
         # Relies on the regex of the repr having the locked state (TODO: it'd be nice if
         # we did that).
         # XXX: These are commented out in the source code of test_threading because
@@ -584,6 +676,21 @@ if sys.version_info[:2] >= (3, 6):
         'test_socket.GeneralModuleTests.test__sendfile_use_sendfile',
     ]
 
+    disabled_tests += [
+        # This test requires Linux >= 4.3. When we were running 'dist:
+        # trusty' on the 4.4 kernel, it passed (~July 2017). But when
+        # trusty became the default dist in September 2017 and updated
+        # the kernel to 4.11.6, it begain failing. It fails on `res =
+        # op.recv(assoclen + len(plain) + taglen)` (where 'op' is the
+        # client socket) with 'OSError: [Errno 22] Invalid argument'
+        # for unknown reasons. This is *after* having successfully
+        # called `op.sendmsg_afalg`. Post 3.6.0, what we test with,
+        # the test was changed to require Linux 4.9 and the data was changed,
+        # so this is not our fault. We should eventually update this when we
+        # update our 3.6 version.
+        # See https://bugs.python.org/issue29324
+        'test_socket.LinuxKernelCryptoAPI.test_aead_aes_gcm',
+    ]
 
 # if 'signalfd' in os.environ.get('GEVENT_BACKEND', ''):
 #     # tests that don't interact well with signalfd
@@ -593,46 +700,73 @@ if sys.version_info[:2] >= (3, 6):
 #         'test_socketserver.SocketServerTest.test_ForkingUDPServer',
 #         'test_socketserver.SocketServerTest.test_ForkingUnixStreamServer'])
 
-# LibreSSL reports OPENSSL_VERSION_INFO (2, 0, 0, 0, 0) regardless its version
-from ssl import OPENSSL_VERSION
-if OPENSSL_VERSION.startswith('LibreSSL'):
-    disabled_tests += [
-        'test_ssl.BasicSocketTests.test_openssl_version'
-    ]
+# LibreSSL reports OPENSSL_VERSION_INFO (2, 0, 0, 0, 0) regardless of its version,
+# so this is known to fail on some distros. We don't want to detect this because we
+# don't want to trigger the side-effects of importing ssl prematurely if we will
+# be monkey-patching, so we skip this test everywhere. It doesn't do much for us
+# anyway.
+disabled_tests += [
+    'test_ssl.BasicSocketTests.test_openssl_version'
+]
 
 # Now build up the data structure we'll use to actually find disabled tests
 # to avoid a linear scan for every file (it seems the list could get quite large)
 # (First, freeze the source list to make sure it isn't modified anywhere)
-disabled_tests = frozenset(disabled_tests)
 
-_disabled_tests_by_file = {}
-for file_case_meth in disabled_tests:
-    file_name, case, meth = file_case_meth.split('.')
+def _build_test_structure(sequence_of_tests):
 
-    try:
-        by_file = _disabled_tests_by_file[file_name]
-    except KeyError:
-        by_file = _disabled_tests_by_file[file_name] = set()
+    _disabled_tests = frozenset(sequence_of_tests)
 
-    by_file.add(meth)
+    disabled_tests_by_file = collections.defaultdict(set)
+    for file_case_meth in _disabled_tests:
+        file_name, _case, _meth = file_case_meth.split('.')
+
+        by_file = disabled_tests_by_file[file_name]
+
+        by_file.add(file_case_meth)
+
+    return disabled_tests_by_file
+
+_disabled_tests_by_file = _build_test_structure(disabled_tests)
+
+_wrapped_tests_by_file = _build_test_structure(wrapped_tests)
 
 
-def disable_tests_in_source(source, name):
+def disable_tests_in_source(source, filename):
 
-    if name.startswith('./'):
+    if filename.startswith('./'):
         # turn "./test_socket.py" (used for auto-complete) into "test_socket.py"
-        name = name[2:]
+        filename = filename[2:]
 
-    if name.endswith('.py'):
-        name = name[:-3]
+    if filename.endswith('.py'):
+        filename = filename[:-3]
 
-    my_disabled_tests = _disabled_tests_by_file.get(name)
-    if not my_disabled_tests:
-        return source
+
+    # XXX ignoring TestCase class name (just using function name).
+    # Maybe we should do this with the AST, or even after the test is
+    # imported.
+    my_disabled_tests = _disabled_tests_by_file.get(filename, ())
     for test in my_disabled_tests:
-        # XXX ignoring TestCase class name
         testcase = test.split('.')[-1]
+        # def foo_bar(self) -> def XXXfoo_bar(self)
         source, n = re.subn(testcase, 'XXX' + testcase, source)
         print('Removed %s (%d)' % (testcase, n), file=sys.stderr)
+
+    my_wrapped_tests = _wrapped_tests_by_file.get(filename, {})
+    for test in my_wrapped_tests:
+        testcase = test.split('.')[-1]
+        # def foo_bar(self)
+        # ->
+        # import patched_tests_setup as _GEVENT_PTS
+        # @_GEVENT_PTS._PatchedTest('file.Case.name')
+        # def foo_bar(self)
+        pattern = r"(\s*)def " + testcase
+        replacement = r"\1import patched_tests_setup as _GEVENT_PTS\n"
+        replacement += r"\1@_GEVENT_PTS._PatchedTest('%s')\n" % (test,)
+        replacement += r"\1def " + testcase
+
+        source, n = re.subn(pattern, replacement, source)
+        print('Wrapped %s (%d)' % (testcase, n), file=sys.stderr)
+
 
     return source

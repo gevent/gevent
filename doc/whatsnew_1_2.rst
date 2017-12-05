@@ -24,7 +24,7 @@ gevent 1.2 supports Python 2.7, 3.4, 3.5 and 3.6 on the CPython
 .. note:: PyPy is not supported on Windows. (gevent's CFFI backend is not
          available on Windows.)
 
-Python 3.6 is currently in beta and is supported at the same level as 3.5.
+Python 3.6 was released recently and is supported at the same level as 3.5.
 
 For ease of installation on Windows and OS X, gevent 1.2 is
 distributed as pre-compiled binary wheels, in addition to source code.
@@ -83,11 +83,11 @@ Library Updates
 ===============
 
 The two C libraries that are bundled with gevent have been updated.
-libev has been updated from 4.20 to 4.22 (`libev release notes`_) and
+libev has been updated from 4.20 to 4.23 (`libev release notes`_) and
 c-ares has been updated from 1.10.0 to 1.12.0 (`c-ares release notes`_).
 
 
-.. _libev release notes: https://github.com/gevent/gevent/blob/master/deps/libev/Changes#L17
+.. _libev release notes: https://github.com/gevent/gevent/blob/master/deps/libev/Changes
 .. _c-ares release notes: https://c-ares.haxx.se/changelog.html
 
 Compatibility

@@ -70,6 +70,9 @@ class TestSSL(test__socket.TestTCP):
         # Override; doesn't work with SSL sockets.
         pass
 
+    def test_connect_with_type_flags_ignored(self):
+        # Override; doesn't work with SSL sockets.
+        pass
 
 def ssl_listener(address, private_key, certificate):
     raw_listener = socket.socket()

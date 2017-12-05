@@ -1,9 +1,10 @@
-:mod:`gevent.queue` -- Synchronized queues
-==========================================
+============================================
+ :mod:`gevent.queue` -- Synchronized queues
+============================================
 
 .. automodule:: gevent.queue
-	:members:
-	:undoc-members:
+    :members:
+    :undoc-members:
 
 .. exception:: Full
 
@@ -12,6 +13,9 @@
 .. exception:: Empty
 
     An alias for :class:`Queue.Empty`
+
+Examples
+========
 
 Example of how to wait for enqueued tasks to be completed::
 
@@ -31,4 +35,3 @@ Example of how to wait for enqueued tasks to be completed::
        q.put(item)
 
    q.join()  # block until all tasks are done
-

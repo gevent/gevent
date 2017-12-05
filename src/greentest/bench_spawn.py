@@ -149,25 +149,19 @@ def all_functions():
 
 
 if __name__ == '__main__':
-    USAGE = 'USAGE: python %s [--with-kwargs] [--eventlet-hub HUB] %s' % (sys.argv[0], '|'.join(all()))
-    if not sys.argv[1:]:
-        sys.exit(USAGE)
-    import optparse
-    parser = optparse.OptionParser()
-    parser.add_option('--with-kwargs', default=False, action='store_true')
-    parser.add_option('--eventlet-hub')
-    parser.add_option('--ignore-import-errors', action='store_true')
-    options, args = parser.parse_args()
+    import argparse
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--with-kwargs', default=False, action='store_true')
+    parser.add_argument('--eventlet-hub')
+    parser.add_argument('--ignore-import-errors', action='store_true')
+    parser.add_argument('benchmark', choices=all() + ['all'])
+    options = parser.parse_args()
     if options.with_kwargs:
         options.kwargs = {'foo': 1, 'bar': 'hello'}
     else:
         options.kwargs = {}
-    if len(args) != 1:
-        sys.exit(USAGE)
-    if args[0] == 'all':
+    if options.benchmark == 'all':
         bench_all(options)
     else:
-        if args[0] not in all():
-            sys.exit(USAGE)
-        function = globals()['bench_' + args[0]]
+        function = globals()['bench_' + options.benchmark]
         function(options)

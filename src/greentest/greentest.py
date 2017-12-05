@@ -97,6 +97,11 @@ RUNNING_ON_TRAVIS = os.environ.get('TRAVIS')
 RUNNING_ON_APPVEYOR = os.environ.get('APPVEYOR')
 RUNNING_ON_CI = RUNNING_ON_TRAVIS or RUNNING_ON_APPVEYOR
 
+def _do_not_skip(reason):
+    def dec(f):
+        return f
+    return dec
+
 if RUNNING_ON_APPVEYOR:
     # See comments scattered around about timeouts and the timer
     # resolution available on appveyor (lots of jitter). this
@@ -111,19 +116,25 @@ if RUNNING_ON_APPVEYOR:
     # 'develop' mode (i.e., we install)
     NON_APPLICABLE_SUFFIXES.append('corecext')
 else:
-    def skipOnAppVeyor(reason):
-        def dec(f):
-            return f
-        return dec
+    skipOnAppVeyor = _do_not_skip
 
 if PYPY3 and RUNNING_ON_CI:
-    # Same as above, for PyPy3.3-5.5-alpha
+    # Same as above, for PyPy3.3-5.5-alpha and 3.5-5.7.1-beta and 3.5-5.8
     skipOnPyPy3OnCI = unittest.skip
 else:
-    def skipOnPyPy3OnCI(reason):
-        def dec(f):
-            return f
-        return dec
+    skipOnPyPy3OnCI = _do_not_skip
+
+if PYPY:
+    skipOnPyPy = unittest.skip
+else:
+    skipOnPyPy = _do_not_skip
+
+if PYPY3:
+    skipOnPyPy3 = unittest.skip
+else:
+    skipOnPyPy3 = _do_not_skip
+
+skipIf = unittest.skipIf
 
 EXPECT_POOR_TIMER_RESOLUTION = PYPY3 or RUNNING_ON_APPVEYOR
 
@@ -133,7 +144,7 @@ class ExpectedException(Exception):
 
 def wrap_switch_count_check(method):
     @wraps(method)
-    def wrap_switch_count_check(self, *args, **kwargs):
+    def wrapper(self, *args, **kwargs):
         initial_switch_count = getattr(_get_hub(), 'switch_count', None)
         self.switch_expected = getattr(self, 'switch_expected', True)
         if initial_switch_count is not None:
@@ -153,7 +164,7 @@ def wrap_switch_count_check(method):
             else:
                 raise AssertionError('Invalid value for switch_expected: %r' % (self.switch_expected, ))
         return result
-    return wrap_switch_count_check
+    return wrapper
 
 
 def wrap_timeout(timeout, method):
@@ -161,11 +172,11 @@ def wrap_timeout(timeout, method):
         return method
 
     @wraps(method)
-    def wrap_timeout(self, *args, **kwargs):
+    def wrapper(self, *args, **kwargs):
         with gevent.Timeout(timeout, 'test timed out', ref=False):
             return method(self, *args, **kwargs)
 
-    return wrap_timeout
+    return wrapper
 
 def ignores_leakcheck(func):
     func.ignore_leakcheck = True
@@ -209,7 +220,7 @@ def wrap_refcount(method):
         return diff
 
     @wraps(method)
-    def wrap_refcount(self, *args, **kwargs):
+    def wrapper(self, *args, **kwargs):
         gc.collect()
         gc.collect()
         gc.collect()
@@ -269,12 +280,12 @@ def wrap_refcount(method):
             gc.enable()
         self.skipTearDown = True
 
-    return wrap_refcount
+    return wrapper
 
 
 def wrap_error_fatal(method):
     @wraps(method)
-    def wrap_error_fatal(self, *args, **kwargs):
+    def wrapper(self, *args, **kwargs):
         # XXX should also be able to do gevent.SYSTEM_ERROR = object
         # which is a global default to all hubs
         SYSTEM_ERROR = gevent.get_hub().SYSTEM_ERROR
@@ -283,12 +294,12 @@ def wrap_error_fatal(method):
             return method(self, *args, **kwargs)
         finally:
             gevent.get_hub().SYSTEM_ERROR = SYSTEM_ERROR
-    return wrap_error_fatal
+    return wrapper
 
 
 def wrap_restore_handle_error(method):
     @wraps(method)
-    def wrap_restore_handle_error(self, *args, **kwargs):
+    def wrapper(self, *args, **kwargs):
         old = gevent.get_hub().handle_error
         try:
             return method(self, *args, **kwargs)
@@ -296,7 +307,7 @@ def wrap_restore_handle_error(method):
             gevent.get_hub().handle_error = old
         if self.peek_error()[0] is not None:
             gevent.getcurrent().throw(*self.peek_error()[1:])
-    return wrap_restore_handle_error
+    return wrapper
 
 
 def _get_class_attr(classDict, bases, attr, default=AttributeError):
@@ -350,17 +361,39 @@ class TestCaseMetaClass(type):
                 classDict[key] = value
         return type.__new__(cls, classname, bases, classDict)
 
+# Travis is slow and overloaded; Appveyor used to be faster, but
+# as of Dec 2015 it's almost always slower and/or has much worse timer
+# resolution
+CI_TIMEOUT = 7
+if PY3 and PYPY:
+    # pypy3 is very slow right now
+    CI_TIMEOUT = 10
+LOCAL_TIMEOUT = 1
+
+DEFAULT_LOCAL_HOST_ADDR = 'localhost'
+DEFAULT_LOCAL_HOST_ADDR6 = DEFAULT_LOCAL_HOST_ADDR
+DEFAULT_BIND_ADDR = ''
+
+if RUNNING_ON_TRAVIS:
+    # As of November 2017 (probably Sept or Oct), after a
+    # Travis upgrade, using "localhost" no longer works,
+    # producing 'OSError: [Errno 99] Cannot assign
+    # requested address'. This is apparently something to do with
+    # docker containers. Sigh.
+    DEFAULT_LOCAL_HOST_ADDR = '127.0.0.1'
+    DEFAULT_LOCAL_HOST_ADDR6 = '::1'
+    # Likewise, binding to '' appears to work, but it cannot be
+    # connected to with the same error.
+    DEFAULT_BIND_ADDR = '127.0.0.1'
 
 class TestCase(TestCaseMetaClass("NewBase", (BaseTestCase,), {})):
-    # Travis is slow and overloaded; Appveyor used to be faster, but
-    # as of Dec 2015 it's almost always slower and/or has much worse timer
-    # resolution
-    __timeout__ = 1 if not RUNNING_ON_CI else 7
+    __timeout__ = LOCAL_TIMEOUT if not RUNNING_ON_CI else CI_TIMEOUT
     switch_expected = 'default'
     error_fatal = True
     close_on_teardown = ()
 
     def run(self, *args, **kwargs):
+        # pylint:disable=arguments-differ
         if self.switch_expected == 'default':
             self.switch_expected = get_switch_expected(self.fullname)
         return BaseTestCase.run(self, *args, **kwargs)
@@ -371,6 +404,7 @@ class TestCase(TestCaseMetaClass("NewBase", (BaseTestCase,), {})):
         if hasattr(self, 'cleanup'):
             self.cleanup()
         self._error = self._none
+        # XXX: Should probably reverse this
         for x in self.close_on_teardown:
             close = getattr(x, 'close', x)
             try:
@@ -381,8 +415,27 @@ class TestCase(TestCaseMetaClass("NewBase", (BaseTestCase,), {})):
             del self.close_on_teardown
         except AttributeError:
             pass
+        super(TestCase, self).tearDown()
+
+    @classmethod
+    def setUpClass(cls):
+        import warnings
+        cls._warning_cm = warnings.catch_warnings()
+        cls._warning_cm.__enter__()
+        if not sys.warnoptions:
+            warnings.simplefilter('default')
+        super(TestCase, cls).setUpClass()
+
+    @classmethod
+    def tearDownClass(cls):
+        cls._warning_cm.__exit__(None, None, None)
+        super(TestCase, cls).tearDownClass()
 
     def _close_on_teardown(self, resource):
+        """
+        *resource* either has a ``close`` method, or is a
+        callable.
+        """
         if 'close_on_teardown' not in self.__dict__:
             self.close_on_teardown = []
         self.close_on_teardown.append(resource)
@@ -472,6 +525,52 @@ class TestCase(TestCaseMetaClass("NewBase", (BaseTestCase,), {})):
                 standardMsg = 'unexpectedly identical: %s' % (safe_repr(expr1),)
                 self.fail(self._formatMessage(msg, standardMsg))
 
+    def assertMonkeyPatchedFuncSignatures(self, mod_name, func_names=(), exclude=()):
+        # We use inspect.getargspec because it's the only thing available
+        # in Python 2.7, but it is deprecated
+        # pylint:disable=deprecated-method
+        import inspect
+        import warnings
+        from gevent.monkey import get_original
+        # XXX: Very similar to gevent.monkey.patch_module. Should refactor?
+        gevent_module = getattr(__import__('gevent.' + mod_name), mod_name)
+        module_name = getattr(gevent_module, '__target__', mod_name)
+
+        funcs_given = True
+        if not func_names:
+            funcs_given = False
+            func_names = getattr(gevent_module, '__implements__')
+
+        for func_name in func_names:
+            if func_name in exclude:
+                continue
+            gevent_func = getattr(gevent_module, func_name)
+            if not inspect.isfunction(gevent_func) and not funcs_given:
+                continue
+
+            func = get_original(module_name, func_name)
+
+            try:
+                with warnings.catch_warnings():
+                    warnings.simplefilter("ignore")
+                    gevent_sig = inspect.getargspec(gevent_func)
+                    sig = inspect.getargspec(func)
+            except TypeError:
+                if funcs_given:
+                    raise
+                # Can't do this one. If they specifically asked for it,
+                # it's an error, otherwise it's not.
+                # Python 3 can check a lot more than Python 2 can.
+                continue
+            self.assertEqual(sig.args, gevent_sig.args, func_name)
+            # The next three might not actually matter?
+            self.assertEqual(sig.varargs, gevent_sig.varargs, func_name)
+            self.assertEqual(sig.keywords, gevent_sig.keywords, func_name)
+            self.assertEqual(sig.defaults, gevent_sig.defaults, func_name)
+
+if not hasattr(TestCase, 'assertRaisesRegex'):
+    TestCase.assertRaisesRegex = TestCase.assertRaisesRegexp
+
 main = unittest.main
 _original_Hub = gevent.hub.Hub
 
@@ -483,6 +582,7 @@ class CountingHub(_original_Hub):
     switch_count = 0
 
     def switch(self, *args):
+        # pylint:disable=arguments-differ
         self.switch_count += 1
         return _original_Hub.switch(self, *args)
 
@@ -558,6 +658,7 @@ class GenericWaitTestCase(_DelayWaitMixin, TestCase):
         # and subject to jitter
         _default_delay_max_adj = 1.5
 
+    @ignores_leakcheck # waiting checks can be very sensitive to timing
     def test_returns_none_after_timeout(self):
         result = self._wait_and_check()
         # join and wait simply return after timeout expires
@@ -683,7 +784,7 @@ def _run_lsof():
     os.remove(tmpname)
     return data
 
-def get_open_files(pipes=False):
+def default_get_open_files(pipes=False):
     data = _run_lsof()
     results = {}
     for line in data.split('\n'):
@@ -707,7 +808,7 @@ def get_open_files(pipes=False):
     results['data'] = data
     return results
 
-def get_number_open_files():
+def default_get_number_open_files():
     if os.path.exists('/proc/'):
         # Linux only
         fd_directory = '/proc/%d/fd' % os.getpid()
@@ -718,12 +819,15 @@ def get_number_open_files():
         except (OSError, AssertionError):
             return 0
 
-lsof_get_open_files = get_open_files
+lsof_get_open_files = default_get_open_files
 
 try:
+    # psutil import subprocess which on Python 3 imports selectors.
+    # This can expose issues with monkey-patching.
     import psutil
 except ImportError:
-    pass
+    get_open_files = default_get_open_files
+    get_number_open_files = default_get_number_open_files
 else:
     # If psutil is available (it is cross-platform) use that.
     # It is *much* faster than shelling out to lsof each time

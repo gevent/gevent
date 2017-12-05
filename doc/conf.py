@@ -19,15 +19,6 @@ os.system('%s generate_rst.py generate' % sys.executable)
 
 sys.path.append('.')  # for mysphinxext
 
-if not os.path.exists('changelog.rst') and os.path.exists('../changelog.rst'):
-    print('Linking ../changelog.rst to changelog.rst')
-    if hasattr(os, 'symlink'):
-        os.symlink('../changelog.rst', 'changelog.rst')
-    else:
-        import shutil
-        shutil.copyfile('../changelog.rst', 'changelog.rst')
-
-
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.

@@ -52,7 +52,7 @@ LFLAGS += debug all
 CFLAGS += -d0
 !endif
 
-CFLAGS += -d_WIN32_WINNT=0x0501
+CFLAGS += -d_WIN32_WINNT=0x0600
 
 #
 # Change to suite.

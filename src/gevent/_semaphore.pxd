@@ -1,3 +1,4 @@
+# cython: auto_pickle=False
 cdef class Semaphore:
     cdef public int counter
     cdef readonly object _links

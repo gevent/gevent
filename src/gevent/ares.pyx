@@ -1,4 +1,9 @@
 # Copyright (c) 2011-2012 Denis Bilenko. See LICENSE for details.
+# Automatic pickling of cdef classes was added in 0.26. Unfortunately it
+# seems to be buggy (at least for the `result` class) and produces code that
+# can't compile ("local variable 'result' referenced before assignment").
+# See https://github.com/cython/cython/issues/1786
+# cython: auto_pickle=False
 cimport cares
 import sys
 from python cimport *
@@ -446,4 +451,9 @@ cdef public class channel [object PyGeventAresChannelObject, type PyGeventAresCh
         cares.ares_getnameinfo(self.channel, x, length, flags, <void*>gevent_ares_nameinfo_callback, <void*>arg)
 
     def getnameinfo(self, object callback, tuple sockaddr, int flags):
-        return self._getnameinfo(callback, sockaddr, _convert_cares_flags(flags))
+        try:
+            flags = _convert_cares_flags(flags)
+        except gaierror:
+            # The stdlib just ignores bad flags
+            flags = 0
+        return self._getnameinfo(callback, sockaddr, flags)

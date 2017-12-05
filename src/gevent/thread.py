@@ -1,10 +1,12 @@
-"""Implementation of the standard :mod:`thread` module that spawns greenlets.
+"""
+Implementation of the standard :mod:`thread` module that spawns greenlets.
 
 .. note::
 
-    This module is a helper for :mod:`gevent.monkey` and is not intended to be
-    used directly. For spawning greenlets in your applications, prefer
-    :class:`Greenlet` class.
+    This module is a helper for :mod:`gevent.monkey` and is not
+    intended to be used directly. For spawning greenlets in your
+    applications, prefer higher level constructs like
+    :class:`gevent.Greenlet` class or :func:`gevent.spawn`.
 """
 from __future__ import absolute_import
 import sys
@@ -41,9 +43,8 @@ from gevent.local import local as _local
 
 def get_ident(gr=None):
     if gr is None:
-        return id(getcurrent())
-    else:
-        return id(gr)
+        gr = getcurrent()
+    return id(gr)
 
 
 def start_new_thread(function, args=(), kwargs=None):

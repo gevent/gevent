@@ -2211,7 +2211,7 @@ Periodic watchers are also timers of a kind, but they are very versatile
 
 Unlike C<ev_timer>, periodic watchers are not based on real time (or
 relative time, the physical time that passes) but on wall clock time
-(absolute time, the thing you can read on your calender or clock). The
+(absolute time, the thing you can read on your calendar or clock). The
 difference is that wall clock time can run faster or slower than real
 time, and time jumps are not uncommon (e.g. when you adjust your
 wrist-watch).
@@ -5301,6 +5301,11 @@ structure (guaranteed by POSIX but not by ISO C for example), but it also
 assumes that the same (machine) code can be used to call any watcher
 callback: The watcher callbacks have different type signatures, but libev
 calls them using an C<ev_watcher *> internally.
+
+=item null pointers and integer zero are represented by 0 bytes
+
+Libev uses C<memset> to initialise structs and arrays to C<0> bytes, and
+relies on this setting pointers and integers to null.
 
 =item pointer accesses must be thread-atomic
 

@@ -9,7 +9,7 @@ from __future__ import print_function
 import sys
 import os
 import re
-from optparse import OptionParser
+from argparse import ArgumentParser
 from distutils.version import LooseVersion
 
 
@@ -132,26 +132,25 @@ def write(filename, data):
 
 def main():
     global options
-    parser = OptionParser()
-    parser.add_option('--version', default='dev')
-    parser.add_option('--dry-run', action='store_true')
-    options, args = parser.parse_args()
-    assert len(args) == 1, 'One argument is expected, got %s' % len(args)
+    parser = ArgumentParser()
+    parser.add_argument('--version', default='dev')
+    parser.add_argument('--dry-run', action='store_true')
+    parser.add_argument('filename')
+    options = parser.parse_args()
     version = options.version
     if version.lower() == 'dev':
         version = ''
     if version and strict_version_re.match(version) is None:
         sys.stderr.write('WARNING: Not a strict version: %r (bdist_msi will fail)' % version)
-    filename = args[0]
-    original_content, new_content = modify_version(filename, version)
+    original_content, new_content = modify_version(options.filename, version)
     if options.dry_run:
-        tmpname = '/tmp/' + os.path.basename(filename) + '.set_version'
+        tmpname = '/tmp/' + os.path.basename(options.filename) + '.set_version'
         write(tmpname, new_content)
-        if not os.system('diff -u %s %s' % (filename, tmpname)):
+        if not os.system('diff -u %s %s' % (options.filename, tmpname)):
             sys.exit('No differences applied')
     else:
-        write(filename, new_content)
-        print('Updated %s' % filename)
+        write(options.filename, new_content)
+        print('Updated %s' % options.filename)
 
 
 if __name__ == '__main__':

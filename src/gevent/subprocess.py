@@ -15,10 +15,11 @@ Cooperative ``subprocess`` module.
    the standard library :mod:`subprocess` module (with many backwards
    compatible extensions from Python 3 backported to Python 2). There
    are some small differences between the Python 2 and Python 3
-   versions of that module and between the POSIX and Windows versions.
-   The HTML documentation here can only describe one version; for
-   definitive documentation, see the standard library or the source
-   code.
+   versions of that module (the Python 2 ``TimeoutExpired`` exception,
+   notably, extends ``Timeout`` and there is no ``SubprocessError``) and between the
+   POSIX and Windows versions. The HTML documentation here can only
+   describe one version; for definitive documentation, see the
+   standard library or the source code.
 
 .. _is not defined: http://www.linuxprogrammingblog.com/all-about-linux-signals?page=11
 """
@@ -28,13 +29,12 @@ from __future__ import absolute_import, print_function
 # Import magic
 # pylint: disable=undefined-all-variable,undefined-variable
 # Most of this we inherit from the standard lib
-# pylint: disable=bare-except,too-many-locals,too-many-statements,bad-builtin,attribute-defined-outside-init
+# pylint: disable=bare-except,too-many-locals,too-many-statements,attribute-defined-outside-init
 # pylint: disable=too-many-branches,too-many-instance-attributes
 # Most of this is cross-platform
 # pylint: disable=no-member,expression-not-assigned,unused-argument,unused-variable
 import errno
 import gc
-import io
 import os
 import signal
 import sys
@@ -108,6 +108,7 @@ __extra__ = [
     'CreateProcess',
     'INFINITE',
     'TerminateProcess',
+    'STILL_ACTIVE',
 
     # These were added for 3.5, but we make them available everywhere.
     'run',
@@ -139,6 +140,11 @@ if sys.version_info[:2] >= (3, 5):
         MAXFD = os.sysconf("SC_OPEN_MAX")
     except:
         MAXFD = 256
+
+if sys.version_info[:2] >= (3, 6):
+    # This was added to __all__ for windows in 3.6
+    __extra__.remove('STARTUPINFO')
+    __imports__.append('STARTUPINFO')
 
 actually_imported = copy_globals(__subprocess__, globals(),
                                  only_names=__imports__,
@@ -382,6 +388,10 @@ class Popen(object):
        restricted to Python 3.
     """
 
+    # The value returned from communicate() when there was nothing to read.
+    # Changes if we're in text mode or universal newlines mode.
+    _communicate_empty_value = b''
+
     def __init__(self, args, bufsize=None, executable=None,
                  stdin=None, stdout=None, stderr=None,
                  preexec_fn=None, close_fds=_PLATFORM_DEFAULT_CLOSE_FDS, shell=False,
@@ -396,7 +406,7 @@ class Popen(object):
           ``restore_signals``, ``encoding`` and ``errors``
 
         .. versionchanged:: 1.2b1
-           Add the ``encoding`` and ``errors`` parameters.
+           Add the ``encoding`` and ``errors`` parameters for Python 3.
         """
 
         if not PY3 and kwargs:
@@ -499,6 +509,11 @@ class Popen(object):
                 errread = msvcrt.open_osfhandle(errread.Detach(), 0)
 
         text_mode = PY3 and (self.encoding or self.errors or universal_newlines)
+        if text_mode or universal_newlines:
+            # Always a native str in universal_newlines mode, even when that
+            # str type is bytes. Additionally, text_mode is only true under
+            # Python 3, so it's actually a unicode str
+            self._communicate_empty_value = ''
 
         if p2cwrite is not None:
             if PY3 and text_mode:
@@ -638,31 +653,33 @@ class Popen(object):
         # that no output should be lost in the event of a timeout.) Instead, we're
         # watching for the exception and ignoring it. It's not elegant,
         # but it works
-        if self.stdout:
-            def _read_out():
+        def _make_pipe_reader(pipe_name):
+            pipe = getattr(self, pipe_name)
+            buf_name = '_' + pipe_name + '_buffer'
+
+            def _read():
                 try:
-                    data = self.stdout.read()
+                    data = pipe.read()
                 except RuntimeError:
                     return
-                if self._stdout_buffer is not None:
-                    self._stdout_buffer += data
+                if not data:
+                    return
+                the_buffer = getattr(self, buf_name)
+                if the_buffer:
+                    the_buffer.append(data)
                 else:
-                    self._stdout_buffer = data
+                    setattr(self, buf_name, [data])
+            return _read
+
+        if self.stdout:
+            _read_out = _make_pipe_reader('stdout')
             stdout = spawn(_read_out)
             greenlets.append(stdout)
         else:
             stdout = None
 
         if self.stderr:
-            def _read_err():
-                try:
-                    data = self.stderr.read()
-                except RuntimeError:
-                    return
-                if self._stderr_buffer is not None:
-                    self._stderr_buffer += data
-                else:
-                    self._stderr_buffer = data
+            _read_err = _make_pipe_reader('stderr')
             stderr = spawn(_read_err)
             greenlets.append(stderr)
         else:
@@ -681,25 +698,30 @@ class Popen(object):
         if timeout is not None and len(done) != len(greenlets):
             raise TimeoutExpired(self.args, timeout)
 
-        if self.stdout:
-            try:
-                self.stdout.close()
-            except RuntimeError:
-                pass
-        if self.stderr:
-            try:
-                self.stderr.close()
-            except RuntimeError:
-                pass
+        for pipe in (self.stdout, self.stderr):
+            if pipe:
+                try:
+                    pipe.close()
+                except RuntimeError:
+                    pass
+
         self.wait()
-        stdout_value = self._stdout_buffer
-        self._stdout_buffer = None
-        stderr_value = self._stderr_buffer
-        self._stderr_buffer = None
-        # XXX: Under python 3 in universal newlines mode we should be
-        # returning str, not bytes
-        return (None if stdout is None else stdout_value or b'',
-                None if stderr is None else stderr_value or b'')
+
+        def _get_output_value(pipe_name):
+            buf_name = '_' + pipe_name + '_buffer'
+            buf_value = getattr(self, buf_name)
+            setattr(self, buf_name, None)
+            if buf_value:
+                buf_value = self._communicate_empty_value.join(buf_value)
+            else:
+                buf_value = self._communicate_empty_value
+            return buf_value
+
+        stdout_value = _get_output_value('stdout')
+        stderr_value = _get_output_value('stderr')
+
+        return (None if stdout is None else stdout_value,
+                None if stderr is None else stderr_value)
 
     def poll(self):
         """Check if child process has terminated. Set and return :attr:`returncode` attribute."""
@@ -974,7 +996,21 @@ class Popen(object):
         def terminate(self):
             """Terminates the process
             """
-            TerminateProcess(self._handle, 1)
+            # Don't terminate a process that we know has already died.
+            if self.returncode is not None:
+                return
+            try:
+                TerminateProcess(self._handle, 1)
+            except OSError as e:
+                # ERROR_ACCESS_DENIED (winerror 5) is received when the
+                # process already died.
+                if e.winerror != 5:
+                    raise
+                rc = GetExitCodeProcess(self._handle)
+                if rc == STILL_ACTIVE:
+                    raise
+                self.returncode = rc
+                self.result.set(self.returncode)
 
         kill = terminate
 

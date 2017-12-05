@@ -46,10 +46,10 @@ for k, v in monkey.saved.items():
 
 import warnings
 with warnings.catch_warnings(record=True) as issued_warnings:
-    # Patch again, triggering two warnings, on for os=False/signal=True,
-    # one for repeated monkey-patching.
+    # Patch again, triggering three warnings, one for os=False/signal=True,
+    # one for repeated monkey-patching, one for patching after ssl (on python >= 2.7.9)
     monkey.patch_all(os=False)
-    assert len(issued_warnings) == 2, len(issued_warnings)
+    assert len(issued_warnings) >= 2, [str(x) for x in issued_warnings]
     assert 'SIGCHLD' in str(issued_warnings[-1].message), issued_warnings[-1]
     assert 'more than once' in str(issued_warnings[0].message), issued_warnings[0]
 
@@ -59,7 +59,7 @@ with warnings.catch_warnings(record=True) as issued_warnings:
     monkey.patch_all(os=False)
     orig_saved['_gevent_saved_patch_all'] = monkey.saved['_gevent_saved_patch_all']
 
-    assert len(issued_warnings) == 0, len(issued_warnings)
+    assert not issued_warnings, [str(x) for x in issued_warnings]
 
 # Make sure that re-patching did not change the monkey.saved
 # attribute, overwriting the original functions.

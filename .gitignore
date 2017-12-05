@@ -18,7 +18,6 @@ src/greentest/.coverage\.*
 src/greentest/htmlcov
 src/greentest/.coverage
 
-doc/changelog.rst
 doc/_build
 doc/__pycache__
 doc/gevent.*.rst
@@ -39,6 +38,7 @@ deps/c-ares/stamp-h1
 deps/c-ares/stamp-h2
 deps/c-ares/ares_build.h.orig
 deps/c-ares/ares_config.h
+deps/c-ares/ares_build.h
 deps/c-ares/.libs
 deps/c-ares/*.o
 deps/c-ares/*.lo

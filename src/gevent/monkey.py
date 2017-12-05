@@ -12,16 +12,20 @@ behave in the same way as the original (at least as closely as possible).
 
 The primary interface to this is the :func:`patch_all` function, which
 performs all the available patches. It accepts arguments to limit the
-patching to certain modules, but most programs will want to use the
-default values as they receive the most wide-spread testing.
+patching to certain modules, but most programs **should** use the
+default values as they receive the most wide-spread testing, and some monkey
+patches have dependencies on others.
 
-Patching *should be done as early as possible* in the lifecycle of the
+Patching **should be done as early as possible** in the lifecycle of the
 program. For example, the main module (the one that tests against
 ``__main__`` or is otherwise the first imported) should begin with
 this code, ideally before any other imports::
 
     from gevent import monkey
     monkey.patch_all()
+
+A corollary of the above is that patching **should be done on the main
+thread** and **should be done while the program is single-threaded**.
 
 .. tip::
 
@@ -77,11 +81,11 @@ __all__ = [
 
 
 if sys.version_info[0] >= 3:
-    string_types = str,
+    string_types = (str,)
     PY3 = True
 else:
     import __builtin__ # pylint:disable=import-error
-    string_types = __builtin__.basestring,
+    string_types = (__builtin__.basestring,)
     PY3 = False
 
 WIN = sys.platform.startswith("win")
@@ -127,8 +131,7 @@ def get_original(mod_name, item_name):
     """
     if isinstance(item_name, string_types):
         return _get_original(mod_name, [item_name])[0]
-    else:
-        return _get_original(mod_name, item_name)
+    return _get_original(mod_name, item_name)
 
 _NONE = object()
 
@@ -148,7 +151,19 @@ def remove_item(module, attr):
     delattr(module, attr)
 
 
-def patch_module(name, items=None):
+def __call_module_hook(gevent_module, name, module, items, warn):
+    func_name = '_gevent_' + name + '_monkey_patch'
+    try:
+        func = getattr(gevent_module, func_name)
+    except AttributeError:
+        pass
+    else:
+        func(module, items, warn)
+
+def patch_module(name, items=None, _warnings=None):
+    def warn(message):
+        _queue_warning(message, _warnings)
+
     gevent_module = getattr(__import__('gevent.' + name), name)
     module_name = getattr(gevent_module, '__target__', name)
     module = __import__(module_name)
@@ -156,8 +171,14 @@ def patch_module(name, items=None):
         items = getattr(gevent_module, '__implements__', None)
         if items is None:
             raise AttributeError('%r does not have __implements__' % gevent_module)
+
+    __call_module_hook(gevent_module, 'will', module, items, warn)
+
     for attr in items:
         patch_item(module, attr, getattr(gevent_module, attr))
+
+    __call_module_hook(gevent_module, 'did', module, items, warn)
+
     return module
 
 
@@ -217,8 +238,12 @@ def patch_os():
     environment variable ``GEVENT_NOWAITPID`` is not defined). Does
     nothing if fork is not available.
 
-    This method must be used with :func:`patch_signal` to have proper SIGCHLD
-    handling. :func:`patch_all` calls both by default.
+    .. caution:: This method must be used with :func:`patch_signal` to have proper SIGCHLD
+         handling and thus correct results from ``waitpid``.
+         :func:`patch_all` calls both by default.
+
+    .. caution:: For SIGCHLD handling to work correctly, the event loop must run.
+         The easiest way to help ensure this is to use :func:`patch_all`.
     """
     patch_module('os')
 
@@ -331,10 +356,10 @@ def patch_thread(threading=True, _threading_local=True, Event=False, logging=Tru
         threading_mod = None
         orig_current_thread = None
 
-    patch_module('thread')
+    patch_module('thread', _warnings=_warnings)
 
     if threading:
-        patch_module('threading')
+        patch_module('threading', _warnings=_warnings)
 
         if Event:
             from gevent.event import Event
@@ -402,8 +427,6 @@ def patch_thread(threading=True, _threading_local=True, Event=False, logging=Tru
         if orig_current_thread == threading_mod.main_thread():
             main_thread = threading_mod.main_thread()
             _greenlet = main_thread._greenlet = greenlet.getcurrent()
-            from gevent.hub import sleep
-
 
             main_thread.join = make_join_func(main_thread, _greenlet)
 
@@ -453,12 +476,17 @@ def patch_dns():
     patch_module('socket', items=socket.__dns__) # pylint:disable=no-member
 
 
-def patch_ssl():
+def patch_ssl(_warnings=None):
     """Replace SSLSocket object and socket wrapping functions in :mod:`ssl` with cooperative versions.
 
     This is only useful if :func:`patch_socket` has been called.
     """
-    patch_module('ssl')
+    if 'ssl' in sys.modules and hasattr(sys.modules['ssl'], 'SSLContext'):
+        _queue_warning('Monkey-patching ssl after ssl has already been imported '
+                       'may lead to errors, including RecursionError on Python 3.6. '
+                       'Please monkey-patch earlier.',
+                       _warnings)
+    patch_module('ssl', _warnings=_warnings)
 
 
 def patch_select(aggressive=True):
@@ -478,6 +506,7 @@ def patch_select(aggressive=True):
     - :class:`selectors.KqueueSelector`
     - :class:`selectors.DevpollSelector` (Python 3.5+)
     """
+
     patch_module('select')
     if aggressive:
         select = __import__('select')
@@ -507,6 +536,14 @@ def patch_select(aggressive=True):
                 return select.select(*args, **kwargs)
             selectors.SelectSelector._select = _select
             _select._gevent_monkey = True
+
+        # Python 3.7 refactors the poll-like selectors to use a common
+        # base class and capture a reference to select.poll, etc, at
+        # import time. selectors tends to get imported early
+        # (importing 'platform' does it: platform -> subprocess -> selectors),
+        # so we need to clean that up.
+        if hasattr(selectors, 'PollSelector') and hasattr(selectors.PollSelector, '_selector_cls'):
+            selectors.PollSelector._selector_cls = select.poll
 
         if aggressive:
             # If `selectors` had already been imported before we removed
@@ -551,8 +588,11 @@ def patch_signal():
     """
     Make the signal.signal function work with a monkey-patched os.
 
-    This method must be used with :func:`patch_os` to have proper SIGCHLD
-    handling. :func:`patch_all` calls both by default.
+    .. caution:: This method must be used with :func:`patch_os` to have proper SIGCHLD
+         handling. :func:`patch_all` calls both by default.
+
+    .. caution:: For proper SIGCHLD handling, you must yield to the event loop.
+         Using :func:`patch_all` is the easiest way to ensure this.
 
     .. seealso:: :mod:`gevent.signal`
     """
@@ -613,7 +653,7 @@ def patch_all(socket=True, dns=True, time=True, select=True, thread=True, os=Tru
     if select:
         patch_select(aggressive=aggressive)
     if ssl:
-        patch_ssl()
+        patch_ssl(_warnings=_warnings)
     if httplib:
         raise ValueError('gevent.httplib is no longer provided, httplib must be False')
     if subprocess:
@@ -667,15 +707,22 @@ def main():
         __package__ = None
         assert __package__ is None
         globals()['__file__'] = sys.argv[0]  # issue #302
+        globals()['__package__'] = None # issue #975: make script be its own package
         with open(sys.argv[0]) as f:
-            exec(f.read())
+            # Be sure to exec in globals to avoid import pollution. Also #975.
+            exec(f.read(), globals())
     else:
         print(script_help)
 
 
 def _get_script_help():
-    from inspect import getargspec
-    patch_all_args = getargspec(patch_all)[0] # pylint:disable=deprecated-method
+    # pylint:disable=deprecated-method
+    import inspect
+    try:
+        getter = inspect.getfullargspec # deprecated in 3.5, un-deprecated in 3.6
+    except AttributeError:
+        getter = inspect.getargspec
+    patch_all_args = getter(patch_all)[0]
     modules = [x for x in patch_all_args if 'patch_' + x in globals()]
     script_help = """gevent.monkey - monkey patch the standard modules to use gevent.
 

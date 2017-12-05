@@ -43,7 +43,8 @@
 #include <string.h>
 #include <errno.h>
 
-void inline_speed
+inline_speed
+void
 kqueue_change (EV_P_ int fd, int filter, int flags, int fflags)
 {
   ++kqueue_changecnt;
@@ -152,7 +153,8 @@ kqueue_poll (EV_P_ ev_tstamp timeout)
     }
 }
 
-int inline_size
+inline_size
+int
 kqueue_init (EV_P_ int flags)
 {
   /* initialize the kernel queue */
@@ -176,14 +178,16 @@ kqueue_init (EV_P_ int flags)
   return EVBACKEND_KQUEUE;
 }
 
-void inline_size
+inline_size
+void
 kqueue_destroy (EV_P)
 {
   ev_free (kqueue_events);
   ev_free (kqueue_changes);
 }
 
-void inline_size
+inline_size
+void
 kqueue_fork (EV_P)
 {
   /* some BSD kernels don't just destroy the kqueue itself,

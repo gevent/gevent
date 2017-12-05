@@ -1,7 +1,7 @@
 environment:
   global:
     # SDK v7.0 MSVC Express 2008's SetEnv.cmd script will fail if the
-    # /E:ON and /V:ON options are not enabled in the batch script intepreter
+    # /E:ON and /V:ON options are not enabled in the batch script interpreter
     # See: http://stackoverflow.com/a/13751649/163740
     CMD_IN_ENV: "cmd /E:ON /V:ON /C .\\appveyor\\run_with_env.cmd"
 
@@ -17,43 +17,43 @@ environment:
     #   PYTHON_VERSION: "2.7.x"
     #   PYTHON_ARCH: "32"
 
-    - PYTHON: "C:\\Python34-x64"
-      PYTHON_VERSION: "3.4.x" # currently 3.4.3
+    - PYTHON: "C:\\Python36-x64"
+      PYTHON_VERSION: "3.6.x" # currently 3.6.0
       PYTHON_ARCH: "64"
       PYTHON_EXE: python
 
     - PYTHON: "C:\\Python27-x64"
-      PYTHON_VERSION: "2.7.x" # currently 2.7.11
+      PYTHON_VERSION: "2.7.x" # currently 2.7.13
+      PYTHON_ARCH: "64"
+      PYTHON_EXE: python
+
+    - PYTHON: "C:\\Python34-x64"
+      PYTHON_VERSION: "3.4.x" # currently 3.4.4
       PYTHON_ARCH: "64"
       PYTHON_EXE: python
 
     - PYTHON: "C:\\Python35-x64"
-      PYTHON_VERSION: "3.5.x" # currently 3.5.1
-      PYTHON_ARCH: "64"
-      PYTHON_EXE: python
-
-    - PYTHON: "C:\\Python33-x64"
-      PYTHON_VERSION: "3.3.x" # currently 3.3.5
+      PYTHON_VERSION: "3.5.x" # currently 3.5.2
       PYTHON_ARCH: "64"
       PYTHON_EXE: python
 
     - PYTHON: "C:\\Python35"
-      PYTHON_VERSION: "3.5.x" # currently 3.5.0
+      PYTHON_VERSION: "3.5.x" # currently 3.5.2
       PYTHON_ARCH: "32"
       PYTHON_EXE: python
 
     - PYTHON: "C:\\Python27"
-      PYTHON_VERSION: "2.7.x" # currently 2.7.11
-      PYTHON_ARCH: "32"
-      PYTHON_EXE: python
-
-    - PYTHON: "C:\\Python33"
-      PYTHON_VERSION: "3.3.x" # currently 3.3.5
+      PYTHON_VERSION: "2.7.x" # currently 2.7.13
       PYTHON_ARCH: "32"
       PYTHON_EXE: python
 
     - PYTHON: "C:\\Python34"
       PYTHON_VERSION: "3.4.x" # currently 3.4.3
+      PYTHON_ARCH: "32"
+      PYTHON_EXE: python
+
+    - PYTHON: "C:\\Python36"
+      PYTHON_VERSION: "3.6.x" # currently 3.6.0
       PYTHON_ARCH: "32"
       PYTHON_EXE: python
 
@@ -145,7 +145,7 @@ build_script:
 
 test_script:
   # Run the project tests
-  - "cd src/greentest && %PYEXE% testrunner.py --config known_failures.py && cd ../.."
+  - "cd src/greentest && %PYEXE% testrunner.py --config known_failures.py --quiet && cd ../.."
 
 after_test:
   # We already built the wheel during build_script, because it's

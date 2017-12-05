@@ -4,6 +4,10 @@ import errno
 import greentest
 import gevent
 from gevent import subprocess
+
+if not hasattr(subprocess, 'mswindows'):
+    # PyPy3, native python subprocess
+    subprocess.mswindows = False
 import time
 import gc
 import tempfile
@@ -67,7 +71,8 @@ class Test(greentest.TestCase):
 
 
     def test_communicate(self):
-        p = subprocess.Popen([sys.executable, "-c",
+        p = subprocess.Popen([sys.executable, "-W", "ignore",
+                              "-c",
                               'import sys,os;'
                               'sys.stderr.write("pineapple");'
                               'sys.stdout.write(sys.stdin.read())'],
@@ -80,6 +85,32 @@ class Test(greentest.TestCase):
             assert stderr.startswith(b'pineapple')
         else:
             self.assertEqual(stderr, b"pineapple")
+
+    @greentest.skipIf(subprocess.mswindows,
+                      "Windows does weird things here")
+    def test_communicate_universal(self):
+        # Native string all the things. See https://github.com/gevent/gevent/issues/1039
+        p = subprocess.Popen(
+            [
+                sys.executable,
+                "-W", "ignore",
+                "-c",
+                'import sys,os;'
+                'sys.stderr.write("pineapple\\r\\n\\xff\\xff\\xf2\\xf9\\r\\n");'
+                'sys.stdout.write(sys.stdin.read())'
+            ],
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            universal_newlines=True)
+        (stdout, stderr) = p.communicate('banana\r\n\xff\xff\xf2\xf9\r\n')
+        self.assertIsInstance(stdout, str)
+        self.assertIsInstance(stderr, str)
+        self.assertEqual(stdout,
+                         'banana\n\xff\xff\xf2\xf9\n')
+
+        self.assertEqual(stderr,
+                         'pineapple\n\xff\xff\xf2\xf9\n')
 
     def test_universal1(self):
         p = subprocess.Popen([sys.executable, "-c",
@@ -229,6 +260,36 @@ class Test(greentest.TestCase):
             self.assertEqual(ex[0].args[0], 'child watchers are only available on the default loop')
 
         test_subprocess_in_native_thread.ignore_leakcheck = True
+
+    def __test_no_output(self, kwargs, kind):
+        proc = subprocess.Popen([sys.executable, '-c', 'pass'],
+                                stdout=subprocess.PIPE,
+                                **kwargs)
+        stdout, stderr = proc.communicate()
+
+        self.assertIsInstance(stdout, kind)
+        self.assertIsNone(stderr)
+
+
+    def test_universal_newlines_text_mode_no_output_is_always_str(self):
+        # If the file is in universal_newlines mode, we should always get a str when
+        # there is no output.
+        # https://github.com/gevent/gevent/pull/939
+        kwargs = {'universal_newlines': True}
+        self.__test_no_output({'universal_newlines': True}, str)
+
+    @greentest.skipIf(sys.version_info[:2] < (3, 6), "Need encoding argument")
+    def test_encoded_text_mode_no_output_is_str(self):
+        # If the file is in universal_newlines mode, we should always get a str when
+        # there is no output.
+        # https://github.com/gevent/gevent/pull/939
+        self.__test_no_output({'encoding': 'utf-8'}, str)
+
+    def test_default_mode_no_output_is_always_str(self):
+        # If the file is in default mode, we should always get a str when
+        # there is no output.
+        # https://github.com/gevent/gevent/pull/939
+        self.__test_no_output({}, bytes)
 
 class RunFuncTestCase(greentest.TestCase):
     # Based on code from python 3.6

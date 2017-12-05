@@ -31,6 +31,25 @@ class Resolver(object):
     the threaded resolver). However, because it does not use threads,
     it may scale better for applications that make many lookups.
 
+    There are some known differences from the system resolver:
+
+    - ``gethostbyname_ex`` and ``gethostbyaddr`` may return different
+      for the ``aliaslist`` tuple member. (Sometimes the same,
+      sometimes in a different order, sometimes a different alias
+      altogether.)
+    - ``gethostbyname_ex`` may return the ``ipaddrlist`` in a different order.
+    - ``getaddrinfo`` does not return ``SOCK_RAW`` results.
+    - ``getaddrinfo`` may return results in a different order.
+    - Handling of ``.local`` (mDNS) names may be different, even if they are listed in
+      the hosts file.
+    - c-ares will not resolve ``broadcasthost``, even if listed in the hosts file.
+    - This implementation may raise ``gaierror(4)`` where the system implementation would raise
+      ``herror(1)``.
+    - The results for ``localhost`` may be different. In particular, some system
+      resolvers will return more results from ``getaddrinfo`` than c-ares does,
+      such as SOCK_DGRAM results, and c-ares may report more ips on a multi-homed
+      host.
+
     .. caution:: This module is considered extremely experimental on PyPy, and
        due to its implementation in cython, it may be slower. It may also lead to
        interpreter crashes.
@@ -202,8 +221,8 @@ class Resolver(object):
             if addrs.family == AF_INET:
                 for addr in addrs[-1]:
                     sockaddr = (addr, port)
-                    for socktype, proto in socktype_proto:
-                        result4.append((AF_INET, socktype, proto, '', sockaddr))
+                    for socktype4, proto4 in socktype_proto:
+                        result4.append((AF_INET, socktype4, proto4, '', sockaddr))
             elif addrs.family == AF_INET6:
                 for addr in addrs[-1]:
                     if addr == '::1':
@@ -211,8 +230,8 @@ class Resolver(object):
                     else:
                         dest = result6
                     sockaddr = (addr, port, 0, 0)
-                    for socktype, proto in socktype_proto:
-                        dest.append((AF_INET6, socktype, proto, '', sockaddr))
+                    for socktype6, proto6 in socktype_proto:
+                        dest.append((AF_INET6, socktype6, proto6, '', sockaddr))
 
         # As of 2016, some platforms return IPV6 first and some do IPV4 first,
         # and some might even allow configuration of which is which. For backwards

@@ -12,7 +12,7 @@ export PATH:=$(BUILD_RUNTIMES)/snakepit:$(TOOLS):$(PATH)
 export LC_ALL=C.UTF-8
 
 
-all: src/gevent/libev/gevent.corecext.c src/gevent/gevent.ares.c src/gevent/gevent._semaphore.c
+all: src/gevent/libev/gevent.corecext.c src/gevent/gevent.ares.c src/gevent/gevent._semaphore.c src/gevent/gevent._local.c
 
 src/gevent/libev/gevent.corecext.c: src/gevent/libev/corecext.ppyx src/gevent/libev/libev.pxd util/cythonpp.py
 	$(PYTHON) util/cythonpp.py -o gevent.corecext.c --module-name gevent.libev.corecext.pyx src/gevent/libev/corecext.ppyx
@@ -34,13 +34,19 @@ src/gevent/gevent._semaphore.c: src/gevent/_semaphore.py src/gevent/_semaphore.p
 	mv gevent._semaphore.* src/gevent/
 #	rm src/gevent/_semaphore.py
 
+src/gevent/gevent._local.c: src/gevent/local.py
+	$(CYTHON) -o gevent._local.c src/gevent/local.py
+	mv gevent._local.* src/gevent/
+
+
 clean:
 	rm -f corecext.pyx src/gevent/libev/corecext.pyx
 	rm -f gevent.corecext.c gevent.corecext.h src/gevent/libev/gevent.corecext.c src/gevent/libev/gevent.corecext.h
 	rm -f gevent.ares.c gevent.ares.h src/gevent/gevent.ares.c src/gevent/gevent.ares.h
 	rm -f gevent._semaphore.c gevent._semaphore.h src/gevent/gevent._semaphore.c src/gevent/gevent._semaphore.h
+	rm -f gevent._local.c gevent._local.h src/gevent/gevent._local.c src/gevent/gevent._local.h
 	rm -f src/gevent/*.so src/gevent/libev/*.so src/gevent/libuv/*.so
-	rm -rf src/gevent/libev/*.o src/gevent/*.o
+	rm -rf src/gevent/libev/*.o src/gevent/libuv/*.o src/gevent/*.o
 	rm -rf src/gevent/__pycache__ src/greentest/__pycache__ src/gevent/libev/__pycache__
 	rm -rf src/gevent/*.pyc src/greentest/*.pyc src/gevent/libev/*.pyc
 	rm -rf src/greentest/htmlcov src/greentest/.coverage
@@ -72,15 +78,16 @@ test_prelim:
 	${PYTHON} -c 'import greenlet; print(greenlet, greenlet.__version__)'
 	${PYTHON} -c 'import gevent.core; print(gevent.core.loop)'
 	${PYTHON} -c 'import gevent.libuv.corecffi; print(dir(gevent.libuv.corecffi.libuv))'
+	${PYTHON} -c 'import gevent.ares; print(gevent.ares)'
 	make bench
 
 toxtest: test_prelim
-	cd src/greentest && GEVENT_RESOLVER=thread ${PYTHON} testrunner.py --config known_failures.py
+	cd src/greentest && GEVENT_RESOLVER=thread ${PYTHON} testrunner.py --config known_failures.py --quiet
 
 fulltoxtest: test_prelim
-	cd src/greentest && GEVENT_RESOLVER=thread ${PYTHON} testrunner.py --config known_failures.py
-	cd src/greentest && GEVENT_RESOLVER=ares GEVENTARES_SERVERS=8.8.8.8 ${PYTHON} testrunner.py --config known_failures.py --ignore tests_that_dont_use_resolver.txt
-	cd src/greentest && GEVENT_FILE=thread ${PYTHON} testrunner.py --config known_failures.py `grep -l subprocess test_*.py`
+	cd src/greentest && GEVENT_RESOLVER=thread ${PYTHON} testrunner.py --config known_failures.py --quiet
+	cd src/greentest && GEVENT_RESOLVER=ares GEVENTARES_SERVERS=8.8.8.8 ${PYTHON} testrunner.py --config known_failures.py --ignore tests_that_dont_use_resolver.txt --quiet
+	cd src/greentest && GEVENT_FILE=thread ${PYTHON} testrunner.py --config known_failures.py `grep -l subprocess test_*.py` --quiet
 
 leaktest:
 	GEVENTSETUP_EV_VERIFY=3 GEVENTTEST_LEAKCHECK=1 make fulltoxtest
@@ -106,12 +113,12 @@ travis_test_linters:
 BUILD_RUNTIMES?=$(PWD)/.runtimes
 
 PY278=$(BUILD_RUNTIMES)/snakepit/python2.7.8
-PY27=$(BUILD_RUNTIMES)/snakepit/python2.7
-PY34=$(BUILD_RUNTIMES)/snakepit/python3.4
-PY35=$(BUILD_RUNTIMES)/snakepit/python3.5
-PY36=$(BUILD_RUNTIMES)/snakepit/python3.6
-PYPY=$(BUILD_RUNTIMES)/snakepit/pypy54
-PYPY3=$(BUILD_RUNTIMES)/snakepit/pypy3.3_5.5
+PY27=$(BUILD_RUNTIMES)/snakepit/python2.7.14
+PY34=$(BUILD_RUNTIMES)/snakepit/python3.4.7
+PY35=$(BUILD_RUNTIMES)/snakepit/python3.5.4
+PY36=$(BUILD_RUNTIMES)/snakepit/python3.6.2
+PYPY=$(BUILD_RUNTIMES)/snakepit/pypy580
+PYPY3=$(BUILD_RUNTIMES)/snakepit/pypy3.5_580
 
 TOOLS=$(BUILD_RUNTIMES)/tools
 
@@ -147,44 +154,45 @@ $(PYPY3):
 PIP?=$(BUILD_RUNTIMES)/versions/$(PYTHON)/bin/pip
 
 develop:
+	ls -l $(BUILD_RUNTIMES)/snakepit/
 	echo pip is at `which $(PIP)`
 	echo python is at `which $(PYTHON)`
 # First install a newer pip so that it can use the wheel cache
 # (only needed until travis upgrades pip to 7.x; note that the 3.5
 # environment uses pip 7.1 by default)
-	${PIP} install -U pip
+	${PIP} install -U pip setuptools
 # Then start installing our deps so they can be cached. Note that use of --build-options / --global-options / --install-options
 # disables the cache.
 # We need wheel>=0.26 on Python 3.5. See previous revisions.
 	${PIP} install -U -r dev-requirements.txt
 
 lint-py27: $(PY27)
-	PYTHON=python2.7 PATH=$(BUILD_RUNTIMES)/versions/python2.7/bin:$(PATH) make develop travis_test_linters
+	PYTHON=python2.7.13 PATH=$(BUILD_RUNTIMES)/versions/python2.7.13/bin:$(PATH) make develop travis_test_linters
 
 test-py27: $(PY27)
-	PYTHON=python2.7 PATH=$(BUILD_RUNTIMES)/versions/python2.7/bin:$(PATH) make develop fulltoxtest
+	PYTHON=python2.7.14 PATH=$(BUILD_RUNTIMES)/versions/python2.7.14/bin:$(PATH) make develop fulltoxtest
 
 test-py278: $(PY278)
 	ls $(BUILD_RUNTIMES)/versions/python2.7.8/bin/
 	PYTHON=python2.7.8 PATH=$(BUILD_RUNTIMES)/versions/python2.7.8/bin:$(PATH) make develop toxtest
 
 test-py34: $(PY34)
-	PYTHON=python3.4 PATH=$(BUILD_RUNTIMES)/versions/python3.4/bin:$(PATH) make develop fulltoxtest
+	PYTHON=python3.4.7 PIP=pip PATH=$(BUILD_RUNTIMES)/versions/python3.4.7/bin:$(PATH) make develop toxtest
 
 test-py35: $(PY35)
-	PYTHON=python3.5 PATH=$(BUILD_RUNTIMES)/versions/python3.5/bin:$(PATH) make develop fulltoxtest
+	PYTHON=python3.5.4 PIP=pip PATH=$(BUILD_RUNTIMES)/versions/python3.5.4/bin:$(PATH) make develop fulltoxtest
 
 test-py36: $(PY36)
-	PYTHON=python3.6 PATH=$(BUILD_RUNTIMES)/versions/python3.6/bin:$(PATH) make develop fulltoxtest
+	PYTHON=python3.6.2 PIP=pip PATH=$(BUILD_RUNTIMES)/versions/python3.6.2/bin:$(PATH) make develop toxtest
 
 test-pypy: $(PYPY)
-	PYTHON=$(PYPY) PIP=pip PATH=$(BUILD_RUNTIMES)/versions/pypy54/bin:$(PATH) make develop toxtest
+	PYTHON=$(PYPY) PIP=pip PATH=$(BUILD_RUNTIMES)/versions/pypy580/bin:$(PATH) make develop toxtest
 
 test-pypy3: $(PYPY3)
-	PYTHON=$(PYPY3) PIP=pip PATH=$(BUILD_RUNTIMES)/versions/pypy3.3_5.5/bin:$(PATH) make develop toxtest
+	PYTHON=$(PYPY3) PIP=pip PATH=$(BUILD_RUNTIMES)/versions/pypy3.5_580/bin:$(PATH) make develop toxtest
 
 test-py27-cffi: $(PY27)
-	GEVENT_CORE_CFFI_ONLY=1 PYTHON=python2.7 PATH=$(BUILD_RUNTIMES)/versions/python2.7/bin:$(PATH) make develop toxtest
+	GEVENT_CORE_CFFI_ONLY=1 PYTHON=python2.7.14 PATH=$(BUILD_RUNTIMES)/versions/python2.7.14/bin:$(PATH) make develop toxtest
 
 test-py27-libuv: $(PY27)
 	GEVENT_CORE_CFFI_ONLY=libuv PYTHON=python2.7 PATH=$(BUILD_RUNTIMES)/versions/python2.7/bin:$(PATH) make develop toxtest
@@ -193,4 +201,4 @@ test-py27-noembed: $(PY27)
 	cd deps/libev && ./configure --disable-dependency-tracking && make
 	cd deps/c-ares && ./configure --disable-dependency-tracking && make
 	cd deps/libuv && ./autogen.sh && ./configure --disable-static && make
-	CPPFLAGS="-Ideps/libev -Ideps/c-ares -Ideps/libuv/include" LDFLAGS="-Ldeps/libev/.libs -Ldeps/c-ares/.libs -Ldeps/libuv/.libs" LD_LIBRARY_PATH="$(PWD)/deps/libev/.libs:$(PWD)/deps/c-ares/.libs:$(PWD)/deps/libuv/.libs" EMBED=0 GEVENT_CORE_CEXT_ONLY=1 PYTHON=python2.7 PATH=$(BUILD_RUNTIMES)/versions/python2.7/bin:$(PATH) make develop toxtest
+	CPPFLAGS="-Ideps/libev -Ideps/c-ares -Ideps/libuv/include" LDFLAGS="-Ldeps/libev/.libs -Ldeps/c-ares/.libs -Ldeps/libuv/.libs" LD_LIBRARY_PATH="$(PWD)/deps/libev/.libs:$(PWD)/deps/c-ares/.libs:$(PWD)/deps/libuv/.libs" EMBED=0 GEVENT_CORE_CEXT_ONLY=1 PYTHON=python2.7.14 PATH=$(BUILD_RUNTIMES)/versions/python2.7.14/bin:$(PATH) make develop toxtest

@@ -15,8 +15,8 @@ PYPY = hasattr(sys, 'pypy_version_info')
 ## Types
 
 if PY3:
-    string_types = str,
-    integer_types = int,
+    string_types = (str,)
+    integer_types = (int,)
     text_type = str
 
 else:
@@ -42,8 +42,7 @@ if PY3:
     iteritems = dict.items
     itervalues = dict.values
     xrange = range
-
 else:
     iteritems = dict.iteritems # python 3: pylint:disable=no-member
     itervalues = dict.itervalues # python 3: pylint:disable=no-member
-    xrange = __builtin__.xrange # python 2: pylint:disable=redefined-variable-type
+    xrange = __builtin__.xrange

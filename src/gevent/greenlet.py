@@ -568,10 +568,13 @@ class Greenlet(greenlet):
             self._notifier = self.parent.loop.run_callback(self._notify_links)
 
     def link(self, callback, SpawnedLink=SpawnedLink):
-        """Link greenlet's completion to a callable.
+        """
+        Link greenlet's completion to a callable.
 
-        The *callback* will be called with this instance as an argument
-        once this greenlet's dead. A callable is called in its own greenlet.
+        The *callback* will be called with this instance as an
+        argument once this greenlet is dead. A callable is called in
+        its own :class:`greenlet.greenlet` (*not* a
+        :class:`Greenlet`).
         """
         # XXX: Is the redefinition of SpawnedLink supposed to just be an
         # optimization, or do people use it? It's not documented
@@ -586,7 +589,10 @@ class Greenlet(greenlet):
             pass
 
     def link_value(self, callback, SpawnedLink=SuccessSpawnedLink):
-        """Like :meth:`link` but *callback* is only notified when the greenlet has completed successfully."""
+        """
+        Like :meth:`link` but *callback* is only notified when the greenlet
+        has completed successfully.
+        """
         # pylint:disable=redefined-outer-name
         self.link(callback, SpawnedLink=SpawnedLink)
 

@@ -1,8 +1,9 @@
 # Copyright (c) 2009-2012 Denis Bilenko. See LICENSE for details.
 # This directive, supported in Cython 0.24+, causes sources files to be
 # much smaller and thus cythonpp.py to be slightly faster. But it does make
-# debugging more difficult.
-# cython: emit_code_comments=False
+# debugging more difficult. Auto-pickling was added in 0.26, and that's a new feature
+# that we don't need or want to allow in a gevent point release.
+# cython: emit_code_comments=False, auto_pickle=False
 cimport cython
 cimport libev
 # Note this is not the standard cython 'cpython' (which has a backwards compat alias of 'python')

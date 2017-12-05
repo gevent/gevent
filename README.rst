@@ -13,7 +13,7 @@ Features include:
 * DNS queries performed through c-ares_ or a threadpool.
 * Ability to use standard library and 3rd party modules written for standard blocking sockets
 
-gevent_ is `inspired by eventlet`_ but features more consistent API,
+gevent is `inspired by eventlet`_ but features more consistent API,
 simpler implementation and better performance. Read why others `use
 gevent`_ and check out the list of the `open source projects based on
 gevent`_.
@@ -64,11 +64,22 @@ To hack on gevent (using a virtualenv)::
 
 .. note::
 
-   You must have Cython, a C compiler, and the Python
+   You must have Cython, GNU Make, a C compiler, and the Python
    development headers installed to build a checkout. Installing CFFI
    on CPython (it's standard on PyPy) allows building the CFFI backend
    for testing, and tox is the command used to test multiple versions
    of Python.
+
+   BSD based systems like FreeBSD and OpenBSD often have BSD Make on
+   the PATH as the default ``make`` command, but building gevent from a
+   source checkout (not a source tarball distributed on PyPI) requires
+   GNU Make. GNU Make is often called ``gmake``. If you experience
+   Makefile-related problems building gevent from source on one of
+   these platforms, you can set the ``MAKE`` environment variable to
+   the executable that invokes GNU Make. For example::
+
+      $ MAKE=gmake python ./setup.py install
+
 
 Running Tests
 -------------

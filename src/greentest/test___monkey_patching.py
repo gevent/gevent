@@ -22,6 +22,7 @@ def get_absolute_pythonpath():
 
 def TESTRUNNER(tests=None):
     if not os.path.exists(directory):
+        util.log('WARNING: No test directory found at %s', directory)
         return
     with open(os.path.join(directory, 'version')) as f:
         preferred_version = f.read().strip()
@@ -46,17 +47,18 @@ def TESTRUNNER(tests=None):
     if tests:
         atexit.register(os.system, 'rm -f */@test*')
 
+    basic_args = [sys.executable, '-u', '-W', 'ignore', '-m' 'monkey_test']
     for filename in tests:
         if filename in version_tests:
             util.log("Overriding %s from %s with file from %s", filename, directory, full_directory)
             continue
-        yield [sys.executable, '-u', '-m', 'monkey_test', filename], options.copy()
-        yield [sys.executable, '-u', '-m', 'monkey_test', '--Event', filename], options.copy()
+        yield basic_args + [filename], options.copy()
+        yield basic_args + ['--Event', filename], options.copy()
 
     options['cwd'] = full_directory
     for filename in version_tests:
-        yield [sys.executable, '-u', '-m', 'monkey_test', filename], options.copy()
-        yield [sys.executable, '-u', '-m', 'monkey_test', '--Event', filename], options.copy()
+        yield basic_args + [filename], options.copy()
+        yield basic_args + ['--Event', filename], options.copy()
 
 
 def main():

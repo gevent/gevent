@@ -48,6 +48,7 @@ class _Greenlet_stdreplace(Greenlet):
         self.saved = None
 
     def throw(self, *args, **kwargs):
+        # pylint:disable=arguments-differ
         if self.saved is None and self._fileobj is not None:
             self.switch_in()
         Greenlet.throw(self, *args, **kwargs)
@@ -147,7 +148,7 @@ class BackdoorServer(StreamServer):
             if sys.version_info[:3] >= (3, 6, 0):
                 # Beginning in 3.6, the console likes to print "now exiting <class>"
                 # but probably our socket is already closed, so this just causes problems.
-                console.interact(banner=self.banner, exitmsg='')
+                console.interact(banner=self.banner, exitmsg='') # pylint:disable=unexpected-keyword-arg
             else:
                 console.interact(banner=self.banner)
         except SystemExit:  # raised by quit()

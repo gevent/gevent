@@ -99,8 +99,7 @@ class socket(object):
             # See https://github.com/gevent/gevent/pull/399
             if self.timeout != 0.0:
                 return self._sock.type & ~_socket.SOCK_NONBLOCK # pylint:disable=no-member
-            else:
-                return self._sock.type
+            return self._sock.type
 
     def __enter__(self):
         return self
@@ -115,7 +114,7 @@ class socket(object):
             s = _socket.socket.__repr__(self._sock)
         except Exception as ex: # pylint:disable=broad-except
             # Observed on Windows Py3.3, printing the repr of a socket
-            # that just sufferred a ConnectionResetError [WinError 10054]:
+            # that just suffered a ConnectionResetError [WinError 10054]:
             # "OverflowError: no printf formatter to display the socket descriptor in decimal"
             # Not sure what the actual cause is or if there's a better way to handle this
             s = '<socket [%r]>' % ex
@@ -227,7 +226,7 @@ class socket(object):
         if reading and writing:
             buffer = io.BufferedRWPair(raw, raw, buffering)
         elif reading:
-            buffer = io.BufferedReader(raw, buffering) # pylint:disable=redefined-variable-type
+            buffer = io.BufferedReader(raw, buffering)
         else:
             assert writing
             buffer = io.BufferedWriter(raw, buffering)
@@ -316,7 +315,7 @@ class socket(object):
         except timeout:
             return EAGAIN
         except gaierror:
-            # gaierror/overflowerror/typerror is not silented by connect_ex;
+            # gaierror/overflowerror/typerror is not silenced by connect_ex;
             # gaierror extends OSError (aka error) so catch it first
             raise
         except error as ex:
@@ -390,7 +389,7 @@ class socket(object):
         try:
             return _socket.socket.send(self._sock, data, flags)
         except error as ex:
-            if ex.args[0] != EWOULDBLOCK or timeout == 0.0:
+            if ex.args[0] not in _socketcommon.GSENDAGAIN or timeout == 0.0:
                 raise
             self._wait(self._write_event)
             try:
@@ -404,7 +403,8 @@ class socket(object):
         # XXX Now that we run on PyPy3, see the notes in _socket2.py's sendall()
         # and implement that here if needed.
         # PyPy3 is not optimized for performance yet, and is known to be slower than
-        # PyPy2, so it's probably premature to do this.
+        # PyPy2, so it's possibly premature to do this. However, there is a 3.5 test case that
+        # possibly exposes this in a severe way.
         data_memory = _get_memory(data)
         len_data_memory = len(data_memory)
         if not len_data_memory:
@@ -644,6 +644,10 @@ if hasattr(_socket, "socketpair"):
         socketpair() function.
         The arguments are the same as for socket() except the default family is
         AF_UNIX if defined on the platform; otherwise, the default is AF_INET.
+
+        .. versionchanged:: 1.2
+           All Python 3 versions on Windows supply this function (natively
+           supplied by Python 3.5 and above).
         """
         if family is None:
             try:
@@ -655,12 +659,60 @@ if hasattr(_socket, "socketpair"):
         b = socket(family, type, proto, b.detach())
         return a, b
 
-elif 'socketpair' in __implements__:
-    # Win32: not available
-    # Multiple imports can cause this to be missing if _socketcommon
-    # was successfully imported, leading to subsequent imports to cause
-    # ValueError
-    __implements__.remove('socketpair')
+else:
+    # Origin: https://gist.github.com/4325783, by Geert Jansen.  Public domain.
+
+    # gevent: taken from 3.6 release. Expected to be used only on Win. Added to Win/3.5
+    # gevent: for < 3.5, pass the default value of 128 to lsock.listen()
+    # (3.5+ uses this as a default and the original code passed no value)
+
+    _LOCALHOST = '127.0.0.1'
+    _LOCALHOST_V6 = '::1'
+
+    def socketpair(family=AF_INET, type=SOCK_STREAM, proto=0):
+        if family == AF_INET:
+            host = _LOCALHOST
+        elif family == AF_INET6:
+            host = _LOCALHOST_V6
+        else:
+            raise ValueError("Only AF_INET and AF_INET6 socket address families "
+                             "are supported")
+        if type != SOCK_STREAM:
+            raise ValueError("Only SOCK_STREAM socket type is supported")
+        if proto != 0:
+            raise ValueError("Only protocol zero is supported")
+
+        # We create a connected TCP socket. Note the trick with
+        # setblocking(False) that prevents us from having to create a thread.
+        lsock = socket(family, type, proto)
+        try:
+            lsock.bind((host, 0))
+            lsock.listen(128)
+            # On IPv6, ignore flow_info and scope_id
+            addr, port = lsock.getsockname()[:2]
+            csock = socket(family, type, proto)
+            try:
+                csock.setblocking(False)
+                try:
+                    csock.connect((addr, port))
+                except (BlockingIOError, InterruptedError):
+                    pass
+                csock.setblocking(True)
+                ssock, _ = lsock.accept()
+            except:
+                csock.close()
+                raise
+        finally:
+            lsock.close()
+        return (ssock, csock)
+
+    if sys.version_info[:2] < (3, 5):
+        # Not provided natively
+        if 'socketpair' in __implements__:
+            # Multiple imports can cause this to be missing if _socketcommon
+            # was successfully imported, leading to subsequent imports to cause
+            # ValueError
+            __implements__.remove('socketpair')
 
 
 # PyPy needs drop and reuse

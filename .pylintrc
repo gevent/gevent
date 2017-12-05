@@ -28,6 +28,7 @@
 #   see https://github.com/PyCQA/pylint/issues/846
 # useless-suppression: the only way to avoid repeating it for specific statements everywhere that we
 #   do Py2/Py3 stuff is to put it here. Sadly this means that we might get better but not realize it.
+# duplicate-code: Yeah, the compatibility ssl modules are much the same
 disable=wrong-import-position,
     wrong-import-order,
     missing-docstring,
@@ -44,12 +45,14 @@ disable=wrong-import-position,
     too-many-arguments,
     redefined-builtin,
 	useless-suppression,
-#	undefined-all-variable
+    duplicate-code,
+	undefined-all-variable
 
 
 [FORMAT]
 # duplicated from setup.cfg
 max-line-length=160
+max-module-lines=1070
 
 [MISCELLANEOUS]
 # List of note tags to take in consideration, separated by a comma.
@@ -80,7 +83,7 @@ ignored-classes=SSLContext, SSLSocket, greenlet, Greenlet, parent, dead
 # (useful for modules/projects where namespaces are manipulated during runtime
 # and thus existing member attributes cannot be deduced by static analysis. It
 # supports qualified module names, as well as Unix pattern matching.
-ignored-modules=gevent._corecffi
+ignored-modules=gevent._corecffi,gevent.os,os,greenlet,threading,gevent.libev.corecffi
 
 [DESIGN]
 max-attributes=12

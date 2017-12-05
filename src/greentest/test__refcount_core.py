@@ -9,8 +9,11 @@ try:
     assert weakref.ref(Dummy())() is None
 
     from gevent import socket
-
-    assert weakref.ref(socket.socket())() is None
+    s = socket.socket()
+    r = weakref.ref(s)
+    s.close()
+    del s
+    assert r() is None
 except AssertionError:
     import sys
     if hasattr(sys, 'pypy_version_info'):

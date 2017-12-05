@@ -55,7 +55,8 @@
 #include <string.h>
 #include <errno.h>
 
-void inline_speed
+inline_speed
+void
 port_associate_and_check (EV_P_ int fd, int ev)
 {
   if (0 >
@@ -136,7 +137,8 @@ port_poll (EV_P_ ev_tstamp timeout)
     }
 }
 
-int inline_size
+inline_size
+int
 port_init (EV_P_ int flags)
 {
   /* Initialize the kernel queue */
@@ -163,13 +165,15 @@ port_init (EV_P_ int flags)
   return EVBACKEND_PORT;
 }
 
-void inline_size
+inline_size
+void
 port_destroy (EV_P)
 {
   ev_free (port_events);
 }
 
-void inline_size
+inline_size
+void
 port_fork (EV_P)
 {
   close (backend_fd);

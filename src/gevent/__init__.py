@@ -15,10 +15,11 @@ _version_info = namedtuple('version_info',
 
 #: The programatic version identifier. The fields have (roughly) the
 #: same meaning as :data:`sys.version_info`
-version_info = _version_info(1, 2, 0, 'alpha', 2)
+#: Deprecated in 1.2.
+version_info = _version_info(1, 3, 0, 'dev', 0)
 
 #: The human-readable PEP 440 version identifier
-__version__ = '1.2a2.dev0'
+__version__ = '1.3.0.dev0'
 
 
 __all__ = ['get_hub',
@@ -116,9 +117,18 @@ del sys
 
 # the following makes hidden imports visible to freezing tools like
 # py2exe. see https://github.com/gevent/gevent/issues/181
+
 def __dependencies_for_freezing():
-    from gevent import core, resolver_thread, resolver_ares, socket as _socket,\
-        threadpool, thread, threading, select, subprocess
+    # pylint:disable=unused-variable
+    from gevent import core
+    from gevent import resolver_thread
+    from gevent import resolver_ares
+    from gevent import socket as _socket
+    from gevent import threadpool
+    from gevent import thread
+    from gevent import threading
+    from gevent import select
+    from gevent import subprocess
     import pprint
     import traceback
     import signal as _signal

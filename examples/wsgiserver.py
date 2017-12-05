@@ -8,9 +8,9 @@ def application(env, start_response):
     if env['PATH_INFO'] == '/':
         start_response('200 OK', [('Content-Type', 'text/html')])
         return [b"<b>hello world</b>"]
-    else:
-        start_response('404 Not Found', [('Content-Type', 'text/html')])
-        return [b'<h1>Not Found</h1>']
+
+    start_response('404 Not Found', [('Content-Type', 'text/html')])
+    return [b'<h1>Not Found</h1>']
 
 
 if __name__ == '__main__':

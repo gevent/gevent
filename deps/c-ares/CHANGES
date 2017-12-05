@@ -1,5 +1,373 @@
    Changelog for the c-ares project. Generated with git2changes.pl
 
+Version 1.13.0 (20 Jun 2017)
+
+Daniel Stenberg (20 Jun 2017)
+- RELEASE-NOTES: 1.13.0
+
+- ares_set_socket_functions.3: added in 1.13.0
+
+David Drysdale (18 Jun 2017)
+- ares_parse_naptr_reply: check sufficient data
+  
+  Check that there is enough data for the required elements
+  of an NAPTR record (2 int16, 3 bytes for string lengths)
+  before processing a record.
+
+- test: Feed in short NAPTR
+
+- test: Add fuzz input with short NAPTR
+
+- test: add ares_parse_naptr_reply to fuzzer
+
+- [noiz brought this change]
+
+  Update ares.h to support compiling with QNX
+
+- [Dionna Glaze brought this change]
+
+  Simple changes to appease stricter compilers.
+  
+  ares_process.c uses htonl, which needs <arpa/inet.h> included.
+  ares_getnameinfo.c uses a dynamically selected format string for
+  sprintf, which -Wformat-literal doesn't like. Usually one would use
+  inttypes.h and a format string "%" PRIu32, but C99 is too new for some
+  supported platforms.
+
+GitHub (16 Jun 2017)
+- [Gregor Jasny brought this change]
+
+  CMake: Emulate interface library on import (#108)
+  
+  Closes: #104
+  Signed-off-by: Gregor Jasny <gjasny@googlemail.com>
+
+Brad House (6 Jun 2017)
+- [ChristianAmmer brought this change]
+
+  Added support for Windows DNS Suffix Search List (#93)
+  
+  This change solves issue #53.
+  
+  Support for suffix search lists was already built in for Linux. The search list could be set via set_search. With this change the suffix search list from Windows is read from the registry and then set into the ares configuration via set_search. There are two sources for the search list:
+  
+  The global DNS suffix search list.
+  The primary and connection specific DNS suffixes if the global is not available.
+  
+  Contributed by @ChristianAmmer
+
+Daniel Stenberg (25 May 2017)
+- [Thomas Köckerbauer brought this change]
+
+  configure: do not heck for ar if specified manually
+  
+  Closes #62
+
+David Drysdale (23 May 2017)
+- ares_expand_name: limit number of indirections
+
+- test: fuzz input file that takes a while to process
+
+- test: copy data in fuzz regression driver
+  
+  Oops.
+
+GitHub (23 May 2017)
+- [David Drysdale brought this change]
+
+  Convert char from ISO-8859-1 to UTF-8 (#99)
+  
+  Fixes #97
+
+- [Gregor Jasny brought this change]
+
+  travis: Use trusty for cmake builds (#109)
+  
+  kubuntu-backports dropped the CMake package for Precise
+
+David Drysdale (2 May 2017)
+- [David Hotham brought this change]
+
+  msvc_ver.inc support most recent Visual Studio 2017 (#101)
+
+- test: use io.h not unistd.h for Windows
+
+- test: try building fuzz binaries on Windows
+
+- test: stick to int in ares-fuzz.c
+  
+  Using int rather than ares_ssize_t means this file
+  needs no c-ares dependency - it's a general driver for
+  any libFuzzer-style entrypoint.
+
+- test: force ARES_OPT_NOROTATE for no-rotate tests
+
+- test: check expected NOROTATE value
+
+- ares_create_query: use ares_free not naked free
+  
+  Accidentally added in commit 65c71be1cbe5
+  ("ares_create_query: avoid single-byte buffer overwrite")
+
+Brad House (17 Mar 2017)
+- Need ares.h for ares_ssize_t
+
+- tests should not use ssize_t, use ares_ssize_t
+
+GitHub (16 Mar 2017)
+- [Brad House brought this change]
+
+  Portability updates for legacy systems. (#92)
+  
+  Socklen_t should not be used in code, instead ares_socklen_t should be used.
+  Convert ssize_t to ares_ssize_t for portability since the public API now exposes this.
+
+David Drysdale (14 Mar 2017)
+- [Michael Osei brought this change]
+
+  Update msvc_ver.inc (#91)
+  
+  For Visual Studio 2017 builds
+
+Daniel Stenberg (13 Mar 2017)
+- [Brad House brought this change]
+
+  Windows DNS server sorting (#81)
+  
+  Original Patch From Brad Spencer:
+  https://c-ares.haxx.se/mail/c-ares-archive-2016-04/0000.shtml
+  
+  My modifications include:
+   * Dynamically find GetBestRoute2 since it is a Windows Vista+ symbol, and will fall back to prior behavior when not available.
+   * Prefer get_DNS_AdaptersAddresses as the modifications should alleviate the concerns which caused us to prefer get_DNS_NetworkParams
+   * Update AppVeyor to use MinGW-w64 instead of the legacy MinGW
+   * Fix compile error in test suite for Windows.
+  
+  Original message from patch below:
+  
+  From: Brad Spencer <bspencer@blackberry.com>
+  Date: Fri, 29 Apr 2016 14:26:23 -0300
+  
+  On Windows, the c-ares DNS resolver tries first to get a full list of
+  DNS server addresses by enumerating the system's IPv4/v6 interfaces and
+  then getting the per-interface DNS server lists from those interfaces
+  and joining them together. The OS, at least in the way the c-ares
+  prefers to query them (which also may be the only or best way in some
+  environments), does not provide a unified list of DNS servers ordered
+  according to "current network conditions". Currently, c-ares will then
+  try to use them in whatever order the nested enumeration produces, which
+  may result in DNS requests being sent to servers on one interface
+  (hosting the current default route, for example) that are only intended
+  to be used via another interface (intended to be used when the first
+  interface is not available, for example). This, in turn, can lead to
+  spurious failures and timeouts simply because of the server address
+  order that resulted because of the enumeration process.
+  
+  This patch makes the (safe?) assumption that there is no other better
+  rule to chose which interface's DNS server list should be prioritized.
+  After all, a DNS lookup isn't something "per network"; applications
+  don't look up "these DNS names on this interface and those DNS names on
+  that interface". There is a single resource pool of DNS servers and the
+  application should presume that any server will give it the "right"
+  answer. However, even if all DNS servers are assumed to give equally
+  useful responses, it is reasonable to expect that some DNS servers will
+  not accept requests on all interfaces. This patch avoids the problem by
+  sorting the DNS server addresses using the Windows IPv4/v6 routing tables.
+  
+  For example, a request to DNS server C on interface 2 that is actually
+  sent over interface 1 (which may happen to have the default route) may
+  be rejected by or not delivered to DNS server C. So, better to use DNS
+  servers A and B associated with interface 1, at least as a first try.
+  
+  By using the metric of the route to the DNS server itself as a proxy for
+  priority of the DNS server in the list, this patch is able to adapt
+  dynamically to changes in the interface list, the DNS server lists per
+  interface, which interfaces are active, the routing table, and so on,
+  while always picking a good "best" DNS server first.
+  
+  In cases where any DNS server on any interface will do, this patch still
+  seems useful because it will prioritize a lower-metric route's (and thus
+  interface's) servers.
+
+David Drysdale (22 Feb 2017)
+- [Sergii Pylypenko brought this change]
+
+  docs: fixed references to ares_set_local_ip4 and ares_set_local_ip6
+
+- [Calle Wilund brought this change]
+
+  ares test: fix win32 build errors with virtual socket function tests
+  
+  The added api requires both some typedefs not previously imported
+  into the test build + the test code did not fully deal with
+  socket differences on windows.
+
+- [Calle Wilund brought this change]
+
+  ares_process: fix return type of socket_create function (win32 warning)
+
+Daniel Stenberg (31 Jan 2017)
+- [Calle Wilund brought this change]
+
+  ares_set_socket_functions: Add man page
+  
+  Providing some rudimentary documentation for the added functionality
+  
+  Closes #72
+
+- [Calle Wilund brought this change]
+
+  ares-test: Add test helpers and cases for virtual socket IO
+  
+  * Added test case macro to automatically run tests twice, once "normal",
+    once with virtual IO.
+  * Changed most "live" query tests to run in dual mode to verify
+    at least simple socket IO via virtual functions
+  * Added test case for settings/duping socket functions & callback data
+
+- [elcallio brought this change]
+
+  Implement using virtual socket IO functions when set
+  
+  Uses virtual socket IO functions when set on a channel.
+  Note that no socket options are set, nor is any binding
+  done by the library in this case, since the client defining
+  these is probably more suited to deal with this.
+
+- [elcallio brought this change]
+
+  Add virtual function set for socket IO
+  
+  Defines a structure of basic create, close, read/write
+  functions as virtual function calls, settable for individual
+  c-ares channels.
+
+David Drysdale (30 Jan 2017)
+- test: ignore aresfuzzname binary
+
+Gregor Jasny (14 Jan 2017)
+- [Stephen Sorley brought this change]
+
+  Always use check_symbol_exists instead of check_function_exists.
+
+- Also add includes to TARGETS_INST_DEST
+
+- [Stephen Sorley brought this change]
+
+  Windows build fixes
+
+- CMake: Export targets
+
+- CMake: Use GNUInstallDirs for install location defaults
+
+David Drysdale (11 Jan 2017)
+- Update Makefile.am for renamed INSTALL.md
+
+GitHub (11 Jan 2017)
+- [David Drysdale brought this change]
+
+  docs: convert INSTALL to MarkDown & tweak (#83)
+
+- [Gregor Jasny brought this change]
+
+  Merge pull request #77 from stephen-sorley/cmake_modernize
+  
+  Updated CMake minimum version to 2.8.12.
+
+Stephen Sorley (4 Jan 2017)
+- Changed executables to depend directly on internal libcares target, instead of against
+  the external-facing alias targets.
+
+- Updated Travis to pull CMake 2.8.12 from kubuntu-backports ppa.
+
+- Updated CMake minimum version to 2.8.12.
+  
+  Changed the way usage requirements (include dirs, compile defs, dependent libraries) are specified, to match the recommended standard practice for modern CMake. This involves using target-specific functions (target_include_directories, target_compile_definitions, etc.), along with the PUBLIC, PRIVATE or INTERFACE modifiers.
+  
+  Updated chain-building support to imitate new-style Find modules (import libs), instead of old-style Find modules (cache variables).
+
+David Drysdale (26 Dec 2016)
+- [Chris Araman brought this change]
+
+  configure: clock_gettime workaround (#75)
+  
+  Commits 7518c26, c41726b, and bc14ee7 brought this workaround to the CMake build system. This expands it to the autoconf build system.
+  
+  Fixes #71
+
+- test: add fuzz entrypoint for ares_create_query()
+
+- test: Add gTest/gMock files to SOURCES
+  
+  Built tarballs are not including all of the files needed
+  to build the test suite because they are missing from the
+  <target>_SOURCES variable in Makefile.am.
+
+- travis: Move build scripts under travis/
+  
+  Travis doesn't always propagate errors in inline multi-line
+  scripts, so move them all to be explicit shell scripts, each
+  with set -e.
+
+- travis: check distributed tarball builds
+
+Daniel Stenberg (25 Oct 2016)
+- dist: ship msvc_ver.inc too
+  
+  Reported-by: Bruce Stephens
+  
+  Fixes #69
+
+- [Aaron Bieber brought this change]
+
+  fix build on OpenBSD
+
+- ares_version.h: bump, working on 1.12.1 now
+
+GitHub (18 Oct 2016)
+- [Gregor Jasny brought this change]
+
+  Merge pull request #64 from bradh352/master
+  
+  Add CMake build system support to C-Ares.
+
+Brad House (5 Oct 2016)
+- suggested PROJECT_NAME change broke chain building as it needs the magic PROJECT_NAME set in the ADD_LIBRARY for matching. Fix to make both goals work
+
+- update MacOSX 10.12 detection
+
+- Expand XCode clock_gettime fix to include MacOS 10.12, not just iOS10
+
+David Drysdale (4 Oct 2016)
+- Revert "travis: work around bug in PyCParser"
+  
+  This reverts commit a24a10a348fc00b8cfd684d91894a1df14880ea9.
+
+- travis: work around bug in PyCParser
+  
+  See https://github.com/pyca/cryptography/issues/3187
+
+Brad House (3 Oct 2016)
+- PROJECT_SOURCE_DIR instead of CMAKE_CURRENT_SOURCE_DIR as per @gjasny
+
+- use a project name of c-ares as per @gjasny
+
+- Import curl conversion of Makefile.inc to cmake form dynamically as per bdoetsch@ameritech.net to make maintaining multiple build systems easier
+
+Daniel Stenberg (30 Sep 2016)
+- dist: add ares_library_initialized.* to the tarball
+
+David Drysdale (30 Sep 2016)
+- test: check ares_create_query with too-long name
+
+Daniel Stenberg (30 Sep 2016)
+- man pages: minor formatting edits
+
+Brad House (29 Sep 2016)
+- merge fc7917e from @daviddrysdale ... travis build updates for cmake
+
+- cleanups as per @gjasny ... Use naked IF statements and use NOT DEFINED
+
 Version 1.12.0 (29 Sep 2016)
 
 Daniel Stenberg (29 Sep 2016)
@@ -17,6 +385,10 @@ Daniel Stenberg (29 Sep 2016)
   
   Bug: https://c-ares.haxx.se/adv_20160929.html
 
+Brad House (29 Sep 2016)
+- CMake: Unify library versioning with the libtool methodology to make keeping library versions in sync easier with the autotools build system
+
+Daniel Stenberg (29 Sep 2016)
 - ares_library_initialized.3: added
 
 - make: bump CARES_VERSION_INFO for release
@@ -27,6 +399,24 @@ David Drysdale (29 Sep 2016)
 Daniel Stenberg (29 Sep 2016)
 - ares_library_init.3: corrected the ares_library_init_mem proto
 
+Brad House (28 Sep 2016)
+- XCode v8 introduced clock_gettime() for iOS v10.  However, it is a weak symbol, which means when earlier iOS versions try to use clock_gettime() it results in a crash due to the missing symbol.  Detect this condition and do not set HAVE_CLOCK_GETTIME_MONOTONIC.
+
+- Adds cmake build system support to C-Ares.
+  
+  The patch does not modify any source files, it only adds 3 new files
+  (CMakelists.txt, ares_build.h.cmake, ares_config.h.cmake) which form the
+  build system.  I've tried to go through as much of the autotools tests and
+  extracted what I thought was appropriate, though many of the tests aren't
+  as in-depth in CMake as they are for autotools ... it is unclear why some
+  of them exist at all, I'm guessing for legacy systems that CMake probably
+  doesn't support anyhow.
+  
+  Building the library, and examples (adig, ahost, acountry) plus installation
+  should work across a large number of tested platforms.  The tests have not
+  yet been integrated.
+
+Daniel Stenberg (27 Sep 2016)
 - README.md: remove space from link
 
 - README: link to the correct c-ares badge!
@@ -3731,238 +4121,3 @@ Yang Tse (16 Oct 2008)
 Gisle Vanem (21 Sep 2008)
 - Added HAVE_NETDB_H, HAVE_ARPA_INET_H, HAVE_STRCASECMP
   and HAVE_STRNCASECMP.
-
-Yang Tse (19 Sep 2008)
-- icc adjustments:
-  
-    Disable remark #981: operands are evaluated in unspecified order
-  
-        Function calls which are triggering this remark, today, do not depend
-        on the order of evaluation of its arguments.
-  
-    Disable remark #1469: "cc" clobber ignored
-  
-        Remark triggered on htons() and ntohs() due to glibc header files.
-
-- icc adjustments
-
-- fix netdb.h prerequisite inclusion
-
-- improve detection of getservbyport_r()
-
-- On Linux Intel's icc uses gcc's header files, so
-  we select ANSI C89 dialect plus GNU extensions.
-
-- improve detection of gethostname()
-
-- NetWare builds include "nameser.h" from the c-ares subdir
-
-- include <strings.h>
-
-- Sync up with reality
-
-- adjust inclusion of "nameser.h"
-
-- reorder some lines in file
-
-- code cleanup
-
-- NetWare seems to have writev()
-
-- rearrange to allow internal/private use of ares_writev to any system
-  that lacks the writev function.
-
-- NetWare CLIB target has stricmp() and strnicmp()
-
-- include header file only when available
-
-- rearrange to allow internal/private use of ares_strcasecmp to any system that
-  lacks the strcasecmp function.
-
-- improve detection of:
-    strcasecmp()
-    strcmpi()
-    stricmp()
-    strncasecmp()
-    strncmpi()
-    strnicmp()
-
-- *** empty log message ***
-
-Gisle Vanem (12 Sep 2008)
-- djgpp does have strdup().
-
-Yang Tse (12 Sep 2008)
-- change CRLF into LF line endings
-
-- strdup() clone for systems/configurations which lack it
-
-- move inclusion of ares_private.h last
-
-- icc adjustments
-
-- icc adjustments
-
-- Select strict ANSI C89 conformance for icc
-
-- remove unnecessary typecasting of malloc()
-
-- remove unnecessary typecasting of realloc()
-
-Daniel Stenberg (29 Aug 2008)
-- we start over working towards 1.5.4
-
-Version 1.5.3 (29 Aug 2008)
-
-Daniel Stenberg (29 Aug 2008)
-- Version 1.5.3
-
-- added the three people from RELEASE-NOTES and sorted the list alphabetically
-
-Yang Tse (27 Aug 2008)
-- Don't abort configuration if recvfrom() is not available.
-
-- Functionality only possible if recvfrom() is available.
-
-- George Neill's fix acountry sample application compilation failure.
-
-- Brad House's validation that DNS response address matches the request address
-
-- fix the output name
-
-- Get rid of ENABLE_64BIT symbol definition and usage.
-  
-  Improve HAVE_LONGLONG symbol description.
-
-- Export 'ares_process_fd' too.
-
-Gisle Vanem (16 Aug 2008)
-- Ops, remove 'use_vc'.
-
-- Support Watt-32 under Win32.
-
-Yang Tse (10 Aug 2008)
-- Fix: Remove now this SIZEOF_CURL_OFF_T symbol definition.
-  
-  This should have been done with the initial 64-bit curl_off_t patch.
-
-- Improve CURL_CHECK_DEF
-
-- Fix IBM C and DEC/Compaq C compiler detection
-
-- Initial support of curlbuild.h and curlrules.h which allows
-  to have a curl_off_t data type no longer gated to off_t.
-
-- The minimum autoconf version required for this file is 2.50
-  
-  Avoid dot notation in aclocal serial file number, use a single number now.
-
-Daniel Stenberg (4 Aug 2008)
-- - Fix by Tofu Linden:
-  
-    The symptom:
-    * Users (usually, but not always) on 2-Wire routers and the Comcast service
-    and a wired connection to their router would find that the second and
-    subsequent DNS lookups from fresh processes using c-ares to resolve the same
-    address would cause the process to never see a reply (it keeps polling for
-    around 1m15s before giving up).
-  
-    The repro:
-    * On such a machine (and yeah, it took us a lot of QA to find the systems
-    that reproduce such a specific problem!), do 'ahost www.secondlife.com',
-    then do it again.  The first process's lookup will work, subsequent lookups
-    will time-out and fail.
-  
-    The cause:
-    * init_id_key() was calling randomize_key() *before* it initialized
-    key->state, meaning that the randomness generated by randomize_key() is
-    immediately overwritten with deterministic values. (/dev/urandom was also
-    being read incorrectly in the c-ares version we were using, but this was
-    fixed in a later version.)
-    * This makes the stream of generated query-IDs from any new c-ares process
-    be an identical and predictable sequence of IDs.
-    * This makes the 2-Wire's default built-in DNS server detect these queries
-    as probable-duplicates and (erroneously) not respond at all.
-
-Yang Tse (4 Aug 2008)
-- Autoconf 2.62 has changed the behaviour of the AC_AIX macro which we use.
-  Prior versions of autoconf defined _ALL_SOURCE if _AIX was defined. But,
-  autoconf 2.62 version of AC_AIX defines _ALL_SOURCE along with other four
-  preprocessor symbols no matter if the system is AIX or not. To keep the
-  traditional behaviour, as well as an uniform one, across autoconf versions
-  AC_AIX is replaced with our own internal macro.
-
-- Adjust DEC/Compaq C compiler settings.
-
-- Another AC_TRY_LINK conversion to AC_LINK_IFELSE.
-  Proper definition of HAVE_function if function is found deeper.
-
-- Sync up with reality
-
-- Rename reentrant.m4 to avoid filename clash.
-
-- Add file version serial number that might be used by 'aclocal' and others.
-  
-  Keep the '#' character as the first one on the line.
-
-- Update copyright year.
-
-- Sync comment with reality.
-
-- Reinstate the 'aclocal -I m4' in buildconf and 'ACLOCAL_AMFLAGS = -I m4' way of
-  including our local m4/reentrant.m4 file. This even takes care of including the
-  file in the distribution tarball.
-
-- Add quoting for the AC_DEFINE arguments.
-
-- Also remove the whitespace.
-
-- Also remove the extra quoting.
-
-- Replace some '@%:@' quadigraphs by its actual representation '#'.
-  
-  This quadigraph used before a C preprocessor 'define' directive could
-  be fooling M4, when processing this file, and make it think that the
-  line contains a pure M4 'define' macro.
-
-- Tests done using 'aclocal -I m4' in buildconf and 'ACLOCAL_AMFLAGS = -I m4
-  in top Makefile.am triggered a problem that prevented aclocal from running
-  successfully on SunOS 5.10 with GNU m4 1.4.5 and GNU Autoconf 2.61
-  
-  A tarball which reproduces mentioned problem is the one dated July-28-2008
-  http://cool.haxx.se/curl-daily/curl-7.19.0-20080728.tar.gz
-  
-  We actually don't need all the bells and whistles that the above mechanism
-  provides. We only need to include our m4/reentrant.m4 file in acinclude.m4
-  so here we go with this simpler mechanism.
-
-- for debugging purposes show ACLOCAL_FLAGS
-
-- These lines were unintentionally removed in previous commit
-
-- Partially undo change that prevented SED, GREP, EGREP and AR from being changed by libtool or autoconf.
-
-- Assert that SED and GREP are set
-
-- Require autoconf 2.57 or newer
-
-- When calling aclocal, user defined ACLOCAL_FLAGS will now precede ours.
-
-- move ACLOCAL_AMFLAGS after AUTOMAKE_OPTIONS
-
-- setup.h handles definition of _REENTRANT based on NEED_REENTRANT
-  definition which might be defined in config.h or config-*.h files
-
-- Remove explicit inclusion of our m4 files first. It was interesting as a test,
-  but it breaks aclocal execution on some systems, with the following error:
-  
-  Can't locate object method "rel2abs" via package "File::Spec" at /usr/local/bin/aclocal line 256.
-
-- Another step towards detecting if _REENTRANT is already defined or actually
-  needed, and being able to define it if appropriate for further configure tests
-  as well as for the generated config file.
-
-- Explicitly include our m4 files first. This might minimize the impact
-  that other package's underquoted m4 function definitions have on ours.
-
-- Add a 3 argument check for getprotobyname_r

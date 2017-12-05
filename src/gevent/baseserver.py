@@ -381,7 +381,7 @@ def _parse_address(address):
         return _socket.AF_INET, address
 
     if ((isinstance(address, string_types) and ':' not in address)
-        or isinstance(address, integer_types)): # noqa (pep8 E129)
+            or isinstance(address, integer_types)): # noqa (pep8 E129)
         # Just a port
         return _socket.AF_INET6, ('', int(address))
 

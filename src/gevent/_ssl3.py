@@ -48,7 +48,9 @@ class SSLContext(orig_SSLContext):
                     do_handshake_on_connect=True,
                     suppress_ragged_eofs=True,
                     server_hostname=None,
-                    session=None): # 3.6
+                    session=None):
+        # pylint:disable=arguments-differ
+        # (3.6 adds session)
         # Sadly, using *args and **kwargs doesn't work
         return SSLSocket(sock=sock, server_side=server_side,
                          do_handshake_on_connect=do_handshake_on_connect,
@@ -67,6 +69,7 @@ class SSLContext(orig_SSLContext):
         # super(SSLContext, SSLContext). But we rebind SSLContext when we monkey
         # patch, which causes infinite recursion.
         # https://github.com/python/cpython/commit/328067c468f82e4ec1b5c510a4e84509e010f296
+        # pylint:disable=no-member
         @orig_SSLContext.options.setter
         def options(self, value):
             super(orig_SSLContext, orig_SSLContext).options.__set__(self, value)
@@ -287,8 +290,7 @@ class SSLSocket(socket):
             try:
                 if buffer is not None:
                     return self._sslobj.read(len, buffer)
-                else:
-                    return self._sslobj.read(len or 1024)
+                return self._sslobj.read(len or 1024)
             except SSLWantReadError:
                 if self.timeout == 0.0:
                     raise
@@ -302,8 +304,7 @@ class SSLSocket(socket):
                 if ex.args[0] == SSL_ERROR_EOF and self.suppress_ragged_eofs:
                     if buffer is None:
                         return b''
-                    else:
-                        return 0
+                    return 0
                 else:
                     raise
 
@@ -350,8 +351,7 @@ class SSLSocket(socket):
         self._checkClosed()
         if not self._sslobj or not _ssl.HAS_NPN:
             return None
-        else:
-            return self._sslobj.selected_npn_protocol()
+        return self._sslobj.selected_npn_protocol()
 
     if hasattr(_ssl, 'HAS_ALPN'):
         # 3.5+
@@ -359,8 +359,7 @@ class SSLSocket(socket):
             self._checkClosed()
             if not self._sslobj or not _ssl.HAS_ALPN: # pylint:disable=no-member
                 return None
-            else:
-                return self._sslobj.selected_alpn_protocol()
+            return self._sslobj.selected_alpn_protocol()
 
         def shared_ciphers(self):
             """Return a list of ciphers shared by the client during the handshake or
@@ -381,15 +380,13 @@ class SSLSocket(socket):
         self._checkClosed()
         if not self._sslobj:
             return None
-        else:
-            return self._sslobj.cipher()
+        return self._sslobj.cipher()
 
     def compression(self):
         self._checkClosed()
         if not self._sslobj:
             return None
-        else:
-            return self._sslobj.compression()
+        return self._sslobj.compression()
 
     def send(self, data, flags=0, timeout=timeout_default):
         self._checkClosed()
@@ -502,8 +499,7 @@ class SSLSocket(socket):
         self._checkClosed()
         if self._sslobj:
             return self._sslobj.pending()
-        else:
-            return 0
+        return 0
 
     def shutdown(self, how):
         self._checkClosed()

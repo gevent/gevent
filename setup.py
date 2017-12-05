@@ -15,7 +15,7 @@ from _setuputils import BuildFailed
 
 # setuptools is *required* on Windows
 # (https://bugs.python.org/issue23246) and for PyPy. No reason not to
-# use it everywhere.
+# use it everywhere. v24.2.0 is needed for python_requires
 from setuptools import Extension, setup
 from setuptools import find_packages
 
@@ -35,8 +35,6 @@ if WIN:
     if not os.environ.get('PYEXE'):
         os.environ['PYEXE'] = os.environ['PYTHON_EXE']
 
-if sys.version_info[:2] < (2, 7):
-    raise Exception("Please install gevent 1.1 for Python 2.6")
 
 if PYPY and sys.pypy_version_info[:3] < (2, 6, 1): # pylint:disable=no-member
     # We have to have CFFI >= 1.3.0, and this platform cannot upgrade
@@ -59,11 +57,16 @@ from _setuplibuv import LIBUV
 SEMAPHORE = Extension(name="gevent._semaphore",
                       sources=["src/gevent/gevent._semaphore.c"])
 
+LOCAL = Extension(name="gevent.local",
+                  sources=["src/gevent/gevent._local.c"])
+
+
 EXT_MODULES = [
     CORE,
     ARES,
     SEMAPHORE,
-    LIBUV
+    LIBUV,
+    LOCAL,
 ]
 
 cffi_modules = [
@@ -75,6 +78,7 @@ if PYPY:
     install_requires = []
     setup_requires = []
     EXT_MODULES.remove(CORE)
+    EXT_MODULES.remove(LOCAL)
     EXT_MODULES.remove(SEMAPHORE)
     # By building the semaphore with Cython under PyPy, we get
     # atomic operations (specifically, exiting/releasing), at the
@@ -96,16 +100,17 @@ try:
 except ImportError:
     pass
 else:
-    if IGNORE_CFFI and not PYPY:
-        # Allow distributors to turn off CFFI builds
-        # even if it's available, because CFFI always embeds
-        # our copy of libev and they may not want that.
-        del cffi_modules[:]
     # Note that we don't add cffi to install_requires, it's
     # optional. We tend to build and distribute wheels with the CFFI
     # modules built and they can be imported if CFFI is installed.
     # install_requires.append('cffi >= 1.3.0')
+    pass
 
+if IGNORE_CFFI and not PYPY:
+    # Allow distributors to turn off CFFI builds
+    # even if it's available, because CFFI always embeds
+    # our copy of libev and they may not want that.
+    del cffi_modules[:]
 
 # If we are running info / help commands, or we're being imported by
 # tools like pyroma, we don't need to build anything
@@ -159,9 +164,9 @@ def run_setup(ext_modules, run_make):
         classifiers=[
             "License :: OSI Approved :: MIT License",
             "Programming Language :: Python :: 2.7",
-            "Programming Language :: Python :: 3.3",
             "Programming Language :: Python :: 3.4",
             "Programming Language :: Python :: 3.5",
+            "Programming Language :: Python :: 3.6",
             "Programming Language :: Python :: Implementation :: CPython",
             "Programming Language :: Python :: Implementation :: PyPy",
             "Operating System :: MacOS :: MacOS X",
@@ -172,6 +177,7 @@ def run_setup(ext_modules, run_make):
             "Intended Audience :: Developers",
             "Development Status :: 4 - Beta"
         ],
+        python_requires=">=2.7,!=3.0.*,!=3.1.*,!=3.2.*,!=3.3.*",
     )
 
 # Tools like pyroma expect the actual call to `setup` to be performed
@@ -187,7 +193,7 @@ if os.getenv('READTHEDOCS'):
 try:
     run_setup(EXT_MODULES, run_make=_BUILDING)
 except BuildFailed:
-    if ARES not in EXT_MODULES:
+    if ARES not in EXT_MODULES or not ARES.optional:
         raise
     EXT_MODULES.remove(ARES)
     run_setup(EXT_MODULES, run_make=_BUILDING)

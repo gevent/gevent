@@ -1,6 +1,7 @@
 # .travis.yml based on https://github.com/DRMacIver/hypothesis/blob/master/.travis.yml
 language: c
 sudo: false
+dist: trusty
 
 env:
     global:

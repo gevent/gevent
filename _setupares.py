@@ -23,6 +23,7 @@ from _setuputils import LIBRARIES
 from _setuputils import DEFINE_MACROS
 from _setuputils import glob_many
 from _setuputils import dep_abspath
+from _setuputils import RUNNING_ON_CI
 
 
 CARES_EMBED = should_embed('c-ares')
@@ -42,7 +43,8 @@ ares_configure_command = ' '.join([
     " && if [ -r ares_build.h ]; then cp ares_build.h ares_build.h.orig; fi ",
     " && sh ./configure --disable-dependency-tracking " + _m32 + "CONFIG_COMMANDS= ",
     " && cp ares_config.h ares_build.h \"$OLDPWD\" ",
-    " && mv ares_build.h.orig ares_build.h)",
+    " && cat ares_build.h ",
+    " && if [ -r ares_build.h.orig ]; then mv ares_build.h.orig ares_build.h; fi)",
     "> configure-output.txt"])
 
 
@@ -83,7 +85,8 @@ ARES = Extension(name='gevent.ares',
                  define_macros=list(DEFINE_MACROS),
                  depends=glob_many('src/gevent/dnshelper.c',
                                    'src/gevent/cares_*.[ch]'))
-ARES.optional = True
+
+ARES.optional = not RUNNING_ON_CI
 
 
 if CARES_EMBED:
@@ -91,14 +94,7 @@ if CARES_EMBED:
     # Strip the standalone binaries that would otherwise
     # cause linking issues
     for bin_c in ('acountry', 'adig', 'ahost'):
-        # Do it the hard way, we end up with entries like
-        # deps/c-aress\\acountry.c on Windows
-        filename = bin_c + '.c'
-        for source in ARES.sources:
-            if source.endswith(filename):
-                ARES.sources.remove(source)
-                break
-
+        ARES.sources.remove('deps/c-ares' + os.sep + bin_c + '.c')
     ARES.configure = configure_ares
     if WIN:
         ARES.libraries += ['advapi32']

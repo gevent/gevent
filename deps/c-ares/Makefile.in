@@ -321,7 +321,7 @@ CTAGS = ctags
 CSCOPE = cscope
 am__DIST_COMMON = $(srcdir)/Makefile.in $(srcdir)/Makefile.inc \
 	$(srcdir)/ares_build.h.in $(srcdir)/ares_config.h.in \
-	$(srcdir)/libcares.pc.in AUTHORS INSTALL NEWS TODO compile \
+	$(srcdir)/libcares.pc.in AUTHORS NEWS TODO compile \
 	config.guess config.sub depcomp install-sh ltmain.sh missing \
 	mkinstalldirs
 DISTFILES = $(DIST_COMMON) $(DIST_SOURCES) $(TEXINFOS) $(EXTRA_DIST)
@@ -535,8 +535,9 @@ ACLOCAL_AMFLAGS = -I m4
 @CURLDEBUG_TRUE@	-I$(top_srcdir) $(am__append_4)
 lib_LTLIBRARIES = libcares.la
 man_MANS = $(MANPAGES)
-MSVCFILES = vc/vc6aws.dsw vc/acountry/vc6acountry.dsp vc/adig/vc6adig.dsp \
- vc/ahost/vc6ahost.dsp vc/cares/vc6cares.dsp vc/cares/vc6cares.dsw
+MSVCFILES = vc/vc6aws.dsw vc/acountry/vc6acountry.dsp vc/adig/vc6adig.dsp	\
+ vc/ahost/vc6ahost.dsp vc/cares/vc6cares.dsp vc/cares/vc6cares.dsw		\
+ msvc_ver.inc
 
 @CURLDEBUG_FALSE@PROGS = ahost adig acountry
 @CURLDEBUG_TRUE@PROGS = 
@@ -547,7 +548,7 @@ EXTRA_DIST = AUTHORS CHANGES README.cares Makefile.inc Makefile.dj	   \
  Makefile.m32 Makefile.netware Makefile.msvc Makefile.Watcom $(man_MANS)   \
  config-win32.h RELEASE-NOTES libcares.pc.in buildconf get_ver.awk maketgz \
  TODO ares_build.h.in $(PDFPAGES) cares.rc README.msvc $(MSVCFILES)	   \
- $(CSOURCES) $(HHEADERS) config-dos.h acountry.1 adig.1 ahost.1 INSTALL	   \
+ $(CSOURCES) $(HHEADERS) config-dos.h acountry.1 adig.1 ahost.1 INSTALL.md	   \
  README.md LICENSE.md
 
 CLEANFILES = $(PDFPAGES) $(HTMLPAGES)
@@ -685,6 +686,7 @@ MANPAGES = ares_cancel.3		\
   ares_init_options.3			\
   ares_library_cleanup.3		\
   ares_library_init.3			\
+  ares_library_initialized.3		\
   ares_mkquery.3			\
   ares_create_query.3			\
   ares_parse_a_reply.3			\
@@ -738,6 +740,7 @@ HTMLPAGES = ares_cancel.html		\
   ares_init_options.html		\
   ares_library_cleanup.html		\
   ares_library_init.html		\
+  ares_library_initialized.html		\
   ares_mkquery.html			\
   ares_create_query.html			\
   ares_parse_a_reply.html		\
@@ -790,6 +793,7 @@ PDFPAGES = ares_cancel.pdf		\
   ares_init_options.pdf			\
   ares_library_cleanup.pdf		\
   ares_library_init.pdf			\
+  ares_library_initialized.pdf		\
   ares_mkquery.pdf			\
   ares_create_query.pdf			\
   ares_parse_a_reply.pdf		\

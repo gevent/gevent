@@ -18,6 +18,9 @@
 /* Definition to make a library symbol externally visible. */
 #undef CARES_SYMBOL_SCOPE_EXTERN
 
+/* the signed version of size_t */
+#undef CARES_TYPEOF_ARES_SSIZE_T
+
 /* Use resolver library to configure cares */
 #undef CARES_USE_LIBRESOLV
 
@@ -496,6 +499,3 @@
 
 /* Define to `unsigned int' if <sys/types.h> does not define. */
 #undef size_t
-
-/* the signed version of size_t */
-#undef ssize_t

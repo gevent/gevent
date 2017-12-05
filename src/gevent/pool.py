@@ -23,11 +23,12 @@ except ImportError:
 
 from gevent.hub import GreenletExit, getcurrent, kill as _kill
 from gevent.greenlet import joinall, Greenlet
+from gevent.queue import Full as QueueFull
 from gevent.timeout import Timeout
 from gevent.event import Event
 from gevent.lock import Semaphore, DummySemaphore
 
-__all__ = ['Group', 'Pool']
+__all__ = ['Group', 'Pool', 'PoolFull']
 
 
 class IMapUnordered(Greenlet):
@@ -322,8 +323,7 @@ class GroupMappingMixin(object):
             kwds = {}
         if self._apply_immediately():
             return func(*args, **kwds)
-        else:
-            return self.spawn(func, *args, **kwds).get()
+        return self.spawn(func, *args, **kwds).get()
 
     def map(self, func, iterable):
         """Return a list made by applying the *func* to each element of
@@ -373,7 +373,7 @@ class GroupMappingMixin(object):
         :keyword int maxsize: If given and not-None, specifies the maximum number of
             finished results that will be allowed to accumulate awaiting the reader;
             more than that number of results will cause map function greenlets to begin
-            to block. This is most useful is there is a great disparity in the speed of
+            to block. This is most useful if there is a great disparity in the speed of
             the mapping code and the consumer and the results consume a great deal of resources.
 
             .. note:: This is separate from any bound on the number of active parallel
@@ -464,10 +464,14 @@ class Group(GroupMappingMixin):
 
     def add(self, greenlet):
         """
-        Begin tracking the greenlet.
+        Begin tracking the *greenlet*.
 
         If this group is :meth:`full`, then this method may block
         until it is possible to track the greenlet.
+
+        Typically the *greenlet* should **not** be started when
+        it is added because if this object blocks in this method,
+        then the *greenlet* may run to completion before it is tracked.
         """
         try:
             rawlink = greenlet.rawlink
@@ -498,8 +502,8 @@ class Group(GroupMappingMixin):
 
     def start(self, greenlet):
         """
-        Start the un-started *greenlet* and add it to the collection of greenlets
-        this group is monitoring.
+        Add the **unstarted** *greenlet* to the collection of greenlets
+        this group is monitoring, nd then start it.
         """
         self.add(greenlet)
         greenlet.start()
@@ -647,6 +651,13 @@ class Failure(object):
             raise self.exc
 
 
+class PoolFull(QueueFull):
+    """
+    Raised when a Pool is full and an attempt was made to
+    add a new greenlet to it in non-blocking mode.
+    """
+
+
 class Pool(Group):
 
     def __init__(self, size=None, greenlet_class=None):
@@ -715,13 +726,53 @@ class Pool(Group):
             return 1
         return max(0, self.size - len(self))
 
-    def add(self, greenlet):
+    def start(self, greenlet, *args, **kwargs): # pylint:disable=arguments-differ
         """
-        Begin tracking the given greenlet, blocking until space is available.
+        start(greenlet, blocking=True, timeout=None) -> None
 
-        .. seealso:: :meth:`Group.add`
+        Add the **unstarted** *greenlet* to the collection of greenlets
+        this group is monitoring and then start it.
+
+        Parameters are as for :meth:`add`.
         """
-        self._semaphore.acquire()
+        self.add(greenlet, *args, **kwargs)
+        greenlet.start()
+
+    def add(self, greenlet, blocking=True, timeout=None): # pylint:disable=arguments-differ
+        """
+        Begin tracking the given **unstarted** greenlet, possibly blocking
+        until space is available.
+
+        Usually you should call :meth:`start` to track and start the greenlet
+        instead of using this lower-level method.
+
+        :keyword bool blocking: If True (the default), this function
+            will block until the pool has space or a timeout occurs.  If
+            False, this function will immediately raise a Timeout if the
+            pool is currently full.
+        :keyword float timeout: The maximum number of seconds this
+            method will block, if ``blocking`` is True.  (Ignored if
+            ``blocking`` is False.)
+        :raises PoolFull: if either ``blocking`` is False and the pool
+            was full, or if ``blocking`` is True and ``timeout`` was
+            exceeded.
+
+        ..  caution:: If the *greenlet* has already been started and
+            *blocking* is true, then the greenlet may run to completion
+            while the current greenlet blocks waiting to track it. This would
+            enable higher concurrency than desired.
+
+        ..  seealso:: :meth:`Group.add`
+
+        ..  versionchanged:: 1.3.0 Added the ``blocking`` and
+            ``timeout`` parameters.
+        """
+        if not self._semaphore.acquire(blocking=blocking, timeout=timeout):
+            # We failed to acquire the semaphore.
+            # If blocking was True, then there was a timeout. If blocking was
+            # False, then there was no capacity. Either way, raise PoolFull.
+            raise PoolFull()
+
         try:
             Group.add(self, greenlet)
         except:

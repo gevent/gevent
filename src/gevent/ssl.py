@@ -5,7 +5,8 @@ from gevent._compat import PY2
 from gevent._util import copy_globals
 
 # things we expect to override, here for static analysis
-def wrap_socket(sock, **kwargs): # pylint:disable=unused-argument
+def wrap_socket(_sock, **_kwargs):
+    # pylint:disable=unused-argument
     raise NotImplementedError()
 
 if PY2:

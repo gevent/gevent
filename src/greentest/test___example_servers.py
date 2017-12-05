@@ -13,7 +13,7 @@ import ssl
 
 class Test_wsgiserver(util.TestServer):
     server = 'wsgiserver.py'
-    URL = 'http://127.0.0.1:8088'
+    URL = 'http://localhost:8088'
     PORT = 8088
     not_found_message = b'<h1>Not Found</h1>'
     ssl_ctx = None
@@ -53,7 +53,7 @@ class Test_wsgiserver(util.TestServer):
             self._test_hello()
             # Now create a connection and only partway finish
             # the transaction
-            sock = socket.create_connection(('127.0.0.1', self.PORT))
+            sock = socket.create_connection(('localhost', self.PORT))
             ssl_sock = None
             if self._use_ssl:
                 ssl_sock = ssl.wrap_socket(sock)
@@ -86,7 +86,7 @@ class Test_wsgiserver(util.TestServer):
 
 class Test_wsgiserver_ssl(Test_wsgiserver):
     server = 'wsgiserver_ssl.py'
-    URL = 'https://127.0.0.1:8443'
+    URL = 'https://localhost:8443'
     PORT = 8443
     _use_ssl = True
 

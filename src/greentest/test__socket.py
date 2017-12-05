@@ -5,6 +5,7 @@ import array
 import socket
 import traceback
 import time
+import unittest
 import greentest
 from functools import wraps
 import _six as six
@@ -212,7 +213,7 @@ class TestTCP(greentest.TestCase):
     def test_makefile(self):
 
         def accept_once():
-            conn, addr = self.listener.accept()
+            conn, _ = self.listener.accept()
             fd = conn.makefile(mode='wb')
             fd.write(b'hello\n')
             fd.close()
@@ -230,7 +231,7 @@ class TestTCP(greentest.TestCase):
     def test_makefile_timeout(self):
 
         def accept_once():
-            conn, addr = self.listener.accept()
+            conn, _ = self.listener.accept()
             try:
                 time.sleep(0.3)
             finally:
@@ -266,7 +267,7 @@ class TestTCP(greentest.TestCase):
         # Issue 841
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         s.setblocking(False)
-        ret = s.connect_ex(('localhost', get_port()))
+        ret = s.connect_ex((greentest.DEFAULT_LOCAL_HOST_ADDR, get_port()))
         self.assertIsInstance(ret, errno_types)
         s.close()
 
@@ -282,8 +283,34 @@ class TestTCP(greentest.TestCase):
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         s.setblocking(False)
         with self.assertRaises(OverflowError):
-            s.connect_ex(('localhost', 65539))
+            s.connect_ex((greentest.DEFAULT_LOCAL_HOST_ADDR, 65539))
         s.close()
+
+    @unittest.skipUnless(hasattr(socket, 'SOCK_CLOEXEC'),
+                         "Requires SOCK_CLOEXEC")
+    def test_connect_with_type_flags_ignored(self):
+        # Issue 944
+        # If we have SOCK_CLOEXEC or similar, we shouldn't be passing
+        # them through to the getaddrinfo call that connect() makes
+        SOCK_CLOEXEC = socket.SOCK_CLOEXEC
+        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM | SOCK_CLOEXEC)
+
+        def accept_once():
+            conn, _ = self.listener.accept()
+            fd = conn.makefile(mode='wb')
+            fd.write(b'hello\n')
+            fd.close()
+            conn.close()
+
+        acceptor = Thread(target=accept_once)
+        s.connect(('127.0.0.1', self.port))
+        fd = s.makefile(mode='rb')
+        self.assertEqual(fd.readline(), b'hello\n')
+
+        fd.close()
+        s.close()
+
+        acceptor.join()
 
 def get_port():
     tempsock = socket.socket()
@@ -297,18 +324,63 @@ class TestCreateConnection(greentest.TestCase):
 
     __timeout__ = 5
 
-    def test(self):
-        try:
-            socket.create_connection(('localhost', get_port()), timeout=30, source_address=('', get_port()))
-        except socket.error as ex:
-            if 'refused' not in str(ex).lower():
-                raise
-        else:
-            raise AssertionError('create_connection did not raise socket.error as expected')
+    def test_refuses(self):
+        with self.assertRaises(socket.error) as cm:
+            socket.create_connection((greentest.DEFAULT_BIND_ADDR, get_port()),
+                                     timeout=30,
+                                     source_address=('', get_port()))
+        ex = cm.exception
+        self.assertIn('refused', str(ex).lower())
 
+    @greentest.ignores_leakcheck
+    def test_base_exception(self):
+        # such as a GreenletExit or a gevent.timeout.Timeout
+
+        class E(BaseException):
+            pass
+
+        class MockSocket(object):
+
+            created = ()
+            closed = False
+
+            def __init__(self, *_):
+                MockSocket.created += (self,)
+
+            def connect(self, _):
+                raise E()
+
+            def close(self):
+                self.closed = True
+
+        def mockgetaddrinfo(*_):
+            return [(1, 2, 3, 3, 5),]
+
+        import gevent.socket as gsocket
+        # Make sure we're monkey patched
+        self.assertEqual(gsocket.create_connection, socket.create_connection)
+        orig_socket = gsocket.socket
+        orig_getaddrinfo = gsocket.getaddrinfo
+
+        try:
+            gsocket.socket = MockSocket
+            gsocket.getaddrinfo = mockgetaddrinfo
+
+            with self.assertRaises(E):
+                socket.create_connection(('host', 'port'))
+
+            self.assertEqual(1, len(MockSocket.created))
+            self.assertTrue(MockSocket.created[0].closed)
+
+        finally:
+            MockSocket.created = ()
+            gsocket.socket = orig_socket
+            gsocket.getaddrinfo = orig_getaddrinfo
 
 class TestFunctions(greentest.TestCase):
 
+    @greentest.ignores_leakcheck
+    # Creating new types in the function takes a cycle to cleanup.
     def test_wait_timeout(self):
         # Issue #635
         import gevent.socket
@@ -333,8 +405,19 @@ class TestFunctions(greentest.TestCase):
         finally:
             gevent._socketcommon.get_hub = orig_get_hub
 
-    # Creating new types in the function takes a cycle to cleanup.
-    test_wait_timeout.ignore_leakcheck = True
+
+    def test_signatures(self):
+        # https://github.com/gevent/gevent/issues/960
+        exclude = []
+        if greentest.PYPY:
+            # Up through at least PyPy 5.7.1, they define these as
+            # gethostbyname(host), whereas the official CPython argument name
+            # is hostname. But cpython doesn't allow calling with keyword args.
+            # Likewise for gethostbyaddr: PyPy uses host, cpython uses ip_address
+            exclude.append('gethostbyname')
+            exclude.append('gethostbyname_ex')
+            exclude.append('gethostbyaddr')
+        self.assertMonkeyPatchedFuncSignatures('socket', exclude=exclude)
 
 
 if __name__ == '__main__':

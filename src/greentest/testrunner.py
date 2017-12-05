@@ -45,7 +45,7 @@ IGNORE_COVERAGE = [
 ]
 
 
-def run_many(tests, expected=(), failfast=False):
+def run_many(tests, expected=(), failfast=False, quiet=False):
     # pylint:disable=too-many-locals
     global NWORKERS
     start = time.time()
@@ -59,6 +59,7 @@ def run_many(tests, expected=(), failfast=False):
     util.BUFFER_OUTPUT = NWORKERS > 1
 
     def run_one(cmd, **kwargs):
+        kwargs['quiet'] = quiet
         result = util.run(cmd, **kwargs)
         if result:
             if failfast:
@@ -84,7 +85,7 @@ def run_many(tests, expected=(), failfast=False):
         while reap() > 0:
             time.sleep(0.1)
 
-    def spawn(args, kwargs): # pylint:disable=unused-argument
+    def spawn(cmd, options):
         while True:
             if reap() < NWORKERS:
                 r = pool.apply_async(run_one, (cmd, ), options or {})
@@ -103,7 +104,7 @@ def run_many(tests, expected=(), failfast=False):
                 if matches(RUN_ALONE, cmd):
                     run_alone.append((cmd, options))
                 else:
-                    spawn((cmd, ), options)
+                    spawn(cmd, options)
             pool.close()
             pool.join()
 
@@ -267,16 +268,17 @@ def print_list(lst):
 
 
 def main():
-    # FIXME: transition to argparse
-    import optparse # pylint:disable=deprecated-module
-    parser = optparse.OptionParser()
-    parser.add_option('--ignore')
-    parser.add_option('--discover', action='store_true')
-    parser.add_option('--full', action='store_true')
-    parser.add_option('--config')
-    parser.add_option('--failfast', action='store_true')
-    parser.add_option("--coverage", action="store_true")
-    options, args = parser.parse_args()
+    import argparse
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--ignore')
+    parser.add_argument('--discover', action='store_true')
+    parser.add_argument('--full', action='store_true')
+    parser.add_argument('--config')
+    parser.add_argument('--failfast', action='store_true')
+    parser.add_argument("--coverage", action="store_true")
+    parser.add_argument("--quiet", action="store_true")
+    parser.add_argument('tests', nargs='*')
+    options = parser.parse_args()
     FAILING_TESTS = []
     coverage = False
     if options.coverage or os.environ.get("GEVENTTEST_COVERAGE"):
@@ -295,13 +297,23 @@ def main():
             config_data = f.read()
         six.exec_(config_data, config)
         FAILING_TESTS = config['FAILING_TESTS']
-    tests = discover(args, options.ignore, coverage)
+
+    if 'PYTHONWARNINGS' not in os.environ and not sys.warnoptions:
+        # Enable default warnings such as ResourceWarning.
+        # On Python 3[.6], the system site.py module has
+        # "open(fullname, 'rU')" which produces the warning that
+        # 'U' is deprecated, so ignore warnings from site.py
+        os.environ['PYTHONWARNINGS'] = 'default,ignore:::site:'
+    if 'PYTHONFAULTHANDLER' not in os.environ:
+        os.environ['PYTHONFAULTHANDLER'] = 'true'
+
+    tests = discover(options.tests, options.ignore, coverage)
     if options.discover:
         for cmd, options in tests:
             print(util.getname(cmd, env=options.get('env'), setenv=options.get('setenv')))
         print('%s tests found.' % len(tests))
     else:
-        run_many(tests, expected=FAILING_TESTS, failfast=options.failfast)
+        run_many(tests, expected=FAILING_TESTS, failfast=options.failfast, quiet=options.quiet)
 
 
 if __name__ == '__main__':

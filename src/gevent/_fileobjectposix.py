@@ -88,7 +88,7 @@ class GreenFileDescriptorIO(RawIOBase):
     # want to take advantage of this to avoid single byte reads when
     # possible. This is highlighted by a bug in BufferedIOReader that
     # calls read() in a loop when its readall() method is invoked;
-    # this was fixed in Python 3.3. See
+    # this was fixed in Python 3.3, but we still need our workaround for 2.7. See
     # https://github.com/gevent/gevent/issues/675)
     def __read(self, n):
         if not self._readable:
@@ -206,11 +206,19 @@ class FileObjectPosix(FileObjectBase):
             put in non-blocking mode using :func:`gevent.os.make_nonblocking`.
         :keyword str mode: The manner of access to the file, one of "rb", "rU" or "wb"
             (where the "b" or "U" can be omitted).
-            If "U" is part of the mode, IO will be done on text, otherwise bytes.
+            If "U" is part of the mode, universal newlines will be used. On Python 2,
+            if 't' is not in the mode, this will result in returning byte (native) strings;
+            putting 't'  in the mode will return text strings. This may cause
+            :exc:`UnicodeDecodeError` to be raised.
         :keyword int bufsize: If given, the size of the buffer to use. The default
             value means to use a platform-specific default
             Other values are interpreted as for the :mod:`io` package.
             Buffering is ignored in text mode.
+
+        .. versionchanged:: 1.3a1
+
+           On Python 2, enabling universal newlines no longer forces unicode
+           IO.
 
         .. versionchanged:: 1.2a1
 
@@ -234,9 +242,30 @@ class FileObjectPosix(FileObjectBase):
         mode = (mode or 'rb').replace('b', '')
         if 'U' in mode:
             self._translate = True
+            if bytes is str and 't' not in mode:
+                # We're going to be producing unicode objects, but
+                # universal newlines doesn't do that in the stdlib,
+                # so fix that to return str objects. The fix is two parts:
+                # first, set an encoding on the stream that can round-trip
+                # all bytes, and second, decode all bytes once they've been read.
+                self._translate_encoding = 'latin-1'
+                import functools
+
+                def wrap_method(m):
+                    if m.__name__.startswith("read"):
+                        @functools.wraps(m)
+                        def wrapped(*args, **kwargs):
+                            result = m(*args, **kwargs)
+                            assert isinstance(result, unicode)
+                            return result.encode('latin-1')
+                        return wrapped
+                    return m
+                self._wrap_method = wrap_method
             mode = mode.replace('U', '')
         else:
             self._translate = False
+
+        mode = mode.replace('t', '')
 
         if len(mode) != 1 and mode not in 'rw': # pragma: no cover
             # Python 3 builtin `open` raises a ValueError for invalid modes;
@@ -269,16 +298,11 @@ class FileObjectPosix(FileObjectBase):
                 # attribute.
                 IOFamily = FlushingBufferedWriter
 
-        io = IOFamily(self.fileio, bufsize)
-        #else: # QQQ: not used, not reachable
-        #
-        #    self.io = BufferedRandom(self.fileio, bufsize)
+        super(FileObjectPosix, self).__init__(IOFamily(self.fileio, bufsize), close)
 
-        super(FileObjectPosix, self).__init__(io, close)
-
-    def _do_close(self, io, closefd):
+    def _do_close(self, fobj, closefd):
         try:
-            io.close()
+            fobj.close()
             # self.fileio already knows whether or not to close the
             # file descriptor
             self.fileio.close()

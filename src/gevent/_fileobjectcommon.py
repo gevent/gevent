@@ -6,8 +6,18 @@ except ImportError:
 
 from io import TextIOWrapper
 
-cancel_wait_ex = IOError(EBADF, 'File descriptor was closed in another greenlet')
-FileObjectClosed = IOError(EBADF, 'Bad file descriptor (FileObject was closed)')
+class cancel_wait_ex(IOError):
+
+    def __init__(self):
+        super(cancel_wait_ex, self).__init__(
+            EBADF, 'File descriptor was closed in another greenlet')
+
+
+class FileObjectClosed(IOError):
+
+    def __init__(self):
+        super(FileObjectClosed, self).__init__(
+            EBADF, 'Bad file descriptor (FileObject was closed)')
 
 class FileObjectBase(object):
     """
@@ -43,6 +53,9 @@ class FileObjectBase(object):
     # Whether we are translating universal newlines or not.
     _translate = False
 
+    _translate_encoding = None
+    _translate_errors = None
+
     def __init__(self, io, closefd):
         """
         :param io: An io.IOBase-like object.
@@ -53,8 +66,9 @@ class FileObjectBase(object):
         self._close = closefd
 
         if self._translate:
-            # This automatically handles delegation.
-            self.translate_newlines(None)
+            # This automatically handles delegation by assigning to
+            # self.io
+            self.translate_newlines(None, self._translate_encoding, self._translate_errors)
         else:
             self._do_delegate_methods()
 
@@ -103,7 +117,7 @@ class FileObjectBase(object):
         self._io = None
         self._do_close(io, self._close)
 
-    def _do_close(self, io, closefd):
+    def _do_close(self, fobj, closefd):
         raise NotImplementedError()
 
     def __getattr__(self, name):

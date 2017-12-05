@@ -218,7 +218,7 @@ class socket(object):
             return self._sock.connect(address)
         sock = self._sock
         if isinstance(address, tuple):
-            r = getaddrinfo(address[0], address[1], sock.family, sock.type, sock.proto)
+            r = getaddrinfo(address[0], address[1], sock.family)
             address = r[0][-1]
         if self.timeout is not None:
             timer = Timeout.start_new(self.timeout, timeout('timed out'))
@@ -249,7 +249,7 @@ class socket(object):
             if type(ex) is error: # pylint:disable=unidiomatic-typecheck
                 return ex.args[0]
             else:
-                raise  # gaierror is not silented by connect_ex
+                raise  # gaierror is not silenced by connect_ex
 
     def dup(self):
         """dup() -> socket object
@@ -322,7 +322,7 @@ class socket(object):
         try:
             return sock.send(data, flags)
         except error as ex:
-            if ex.args[0] != EWOULDBLOCK or timeout == 0.0:
+            if ex.args[0] not in _socketcommon.GSENDAGAIN or timeout == 0.0:
                 raise
             sys.exc_clear()
             self._wait(self._write_event)
@@ -499,8 +499,9 @@ SocketType = socket
 
 if hasattr(_socket, 'socketpair'):
 
-    def socketpair(*args):
-        one, two = _socket.socketpair(*args)
+    def socketpair(family=getattr(_socket, 'AF_UNIX', _socket.AF_INET),
+                   type=_socket.SOCK_STREAM, proto=0):
+        one, two = _socket.socketpair(family, type, proto)
         result = socket(_sock=one), socket(_sock=two)
         if PYPY:
             one._drop()
@@ -511,8 +512,8 @@ elif 'socketpair' in __implements__:
 
 if hasattr(_socket, 'fromfd'):
 
-    def fromfd(*args):
-        s = _socket.fromfd(*args)
+    def fromfd(fd, family, type, proto=0):
+        s = _socket.fromfd(fd, family, type, proto)
         result = socket(_sock=s)
         if PYPY:
             s._drop()
