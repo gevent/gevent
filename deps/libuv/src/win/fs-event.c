@@ -66,11 +66,12 @@ static void uv_fs_event_queue_readdirchanges(uv_loop_t* loop,
 static void uv_relative_path(const WCHAR* filename,
                              const WCHAR* dir,
                              WCHAR** relpath) {
+  size_t relpathlen;
+  size_t filenamelen = wcslen(filename);
   size_t dirlen = wcslen(dir);
   if (dirlen > 0 && dir[dirlen - 1] == '\\')
     dirlen--;
-  size_t filenamelen = wcslen(filename);
-  size_t relpathlen = filenamelen - dirlen - 1;
+  relpathlen = filenamelen - dirlen - 1;
   *relpath = uv__malloc((relpathlen + 1) * sizeof(WCHAR));
   if (!*relpath)
     uv_fatal_error(ERROR_OUTOFMEMORY, "uv__malloc");
@@ -80,8 +81,17 @@ static void uv_relative_path(const WCHAR* filename,
 
 static int uv_split_path(const WCHAR* filename, WCHAR** dir,
     WCHAR** file) {
-  int len = wcslen(filename);
-  int i = len;
+  size_t len, i;
+ 
+  if (filename == NULL) {
+    if (dir != NULL)
+      *dir = NULL;
+    *file = NULL;
+    return 0;
+  }
+
+  len = wcslen(filename);
+  i = len;
   while (i > 0 && filename[--i] != '\\' && filename[i] != '/');
 
   if (i == 0) {
@@ -130,8 +140,7 @@ int uv_fs_event_init(uv_loop_t* loop, uv_fs_event_t* handle) {
   handle->short_filew = NULL;
   handle->dirw = NULL;
 
-  uv_req_init(loop, (uv_req_t*)&handle->req);
-  handle->req.type = UV_FS_EVENT_REQ;
+  UV_REQ_INIT(&handle->req, UV_FS_EVENT_REQ);
   handle->req.data = handle;
 
   return 0;
@@ -145,7 +154,8 @@ int uv_fs_event_start(uv_fs_event_t* handle,
   int name_size, is_path_dir;
   DWORD attr, last_error;
   WCHAR* dir = NULL, *dir_to_watch, *pathw = NULL;
-  WCHAR short_path[MAX_PATH];
+  WCHAR short_path_buffer[MAX_PATH];
+  WCHAR* short_path;
 
   if (uv__is_active(handle))
     return UV_EINVAL;
@@ -187,7 +197,6 @@ int uv_fs_event_start(uv_fs_event_t* handle,
 
   if (is_path_dir) {
      /* path is a directory, so that's the directory that we will watch. */
-    handle->dirw = pathw;
     dir_to_watch = pathw;
   } else {
     /*
@@ -196,9 +205,9 @@ int uv_fs_event_start(uv_fs_event_t* handle,
      */
 
     /* Convert to short path. */
+    short_path = short_path_buffer;
     if (!GetShortPathNameW(pathw, short_path, ARRAY_SIZE(short_path))) {
-      last_error = GetLastError();
-      goto error;
+      short_path = NULL;
     }
 
     if (uv_split_path(pathw, &dir, &handle->filew) != 0) {
@@ -273,6 +282,8 @@ int uv_fs_event_start(uv_fs_event_t* handle,
     goto error;
   }
 
+  assert(is_path_dir ? pathw != NULL : pathw == NULL);
+  handle->dirw = pathw;
   handle->req_pending = 1;
   return 0;
 
@@ -303,6 +314,9 @@ error:
     uv__free(handle->buffer);
     handle->buffer = NULL;
   }
+
+  if (uv__is_active(handle))
+    uv__handle_stop(handle);
 
   return uv_translate_sys_error(last_error);
 }
@@ -343,12 +357,32 @@ int uv_fs_event_stop(uv_fs_event_t* handle) {
 }
 
 
+static int file_info_cmp(WCHAR* str, WCHAR* file_name, size_t file_name_len) {
+  size_t str_len;
+
+  if (str == NULL)
+    return -1;
+
+  str_len = wcslen(str);
+
+  /*
+    Since we only care about equality, return early if the strings
+    aren't the same length
+  */
+  if (str_len != (file_name_len / sizeof(WCHAR)))
+    return -1;
+
+  return _wcsnicmp(str, file_name, str_len);
+}
+
+
 void uv_process_fs_event_req(uv_loop_t* loop, uv_req_t* req,
     uv_fs_event_t* handle) {
   FILE_NOTIFY_INFORMATION* file_info;
   int err, sizew, size;
   char* filename = NULL;
-  WCHAR* filenamew, *long_filenamew = NULL;
+  WCHAR* filenamew = NULL;
+  WCHAR* long_filenamew = NULL;
   DWORD offset = 0;
 
   assert(req->type == UV_FS_EVENT_REQ);
@@ -373,6 +407,7 @@ void uv_process_fs_event_req(uv_loop_t* loop, uv_req_t* req,
       do {
         file_info = (FILE_NOTIFY_INFORMATION*)((char*)file_info + offset);
         assert(!filename);
+        assert(!filenamew);
         assert(!long_filenamew);
 
         /*
@@ -380,10 +415,12 @@ void uv_process_fs_event_req(uv_loop_t* loop, uv_req_t* req,
          * or if the filename filter matches.
          */
         if (handle->dirw ||
-          _wcsnicmp(handle->filew, file_info->FileName,
-            file_info->FileNameLength / sizeof(WCHAR)) == 0 ||
-          _wcsnicmp(handle->short_filew, file_info->FileName,
-            file_info->FileNameLength / sizeof(WCHAR)) == 0) {
+            file_info_cmp(handle->filew,
+                          file_info->FileName,
+                          file_info->FileNameLength) == 0 ||
+            file_info_cmp(handle->short_filew,
+                          file_info->FileName,
+                          file_info->FileNameLength) == 0) {
 
           if (handle->dirw) {
             /*
@@ -404,7 +441,7 @@ void uv_process_fs_event_req(uv_loop_t* loop, uv_req_t* req,
               }
 
               _snwprintf(filenamew, size, L"%s\\%.*s", handle->dirw,
-                file_info->FileNameLength / sizeof(WCHAR),
+                file_info->FileNameLength / (DWORD)sizeof(WCHAR),
                 file_info->FileName);
 
               filenamew[size - 1] = L'\0';
@@ -437,14 +474,17 @@ void uv_process_fs_event_req(uv_loop_t* loop, uv_req_t* req,
                 uv__free(long_filenamew);
                 long_filenamew = filenamew;
                 sizew = -1;
+              } else {
+                /* We couldn't get the long filename, use the one reported. */
+                filenamew = file_info->FileName;
+                sizew = file_info->FileNameLength / sizeof(WCHAR);
               }
-            }
-            /*
-             * Removed or renamed events cannot be resolved to the long form.
-             * We therefore use the name given by ReadDirectoryChangesW.
-             * This may be the long form or the 8.3 short name in some cases.
-             */
-            if (!long_filenamew) {
+            } else {
+              /*
+               * Removed or renamed events cannot be resolved to the long form.
+               * We therefore use the name given by ReadDirectoryChangesW.
+               * This may be the long form or the 8.3 short name in some cases.
+               */
               filenamew = file_info->FileName;
               sizew = file_info->FileNameLength / sizeof(WCHAR);
             }
@@ -454,38 +494,8 @@ void uv_process_fs_event_req(uv_loop_t* loop, uv_req_t* req,
             sizew = -1;
           }
 
-          if (filenamew) {
-            /* Convert the filename to utf8. */
-            size = WideCharToMultiByte(CP_UTF8,
-                                       0,
-                                       filenamew,
-                                       sizew,
-                                       NULL,
-                                       0,
-                                       NULL,
-                                       NULL);
-            if (size) {
-              filename = (char*)uv__malloc(size + 1);
-              if (!filename) {
-                uv_fatal_error(ERROR_OUTOFMEMORY, "uv__malloc");
-              }
-
-              size = WideCharToMultiByte(CP_UTF8,
-                                         0,
-                                         filenamew,
-                                         sizew,
-                                         filename,
-                                         size,
-                                         NULL,
-                                         NULL);
-              if (size) {
-                filename[size] = '\0';
-              } else {
-                uv__free(filename);
-                filename = NULL;
-              }
-            }
-          }
+          /* Convert the filename to utf8. */
+          uv__convert_utf16_to_utf8(filenamew, sizew, &filename);
 
           switch (file_info->Action) {
             case FILE_ACTION_ADDED:
@@ -504,6 +514,7 @@ void uv_process_fs_event_req(uv_loop_t* loop, uv_req_t* req,
           filename = NULL;
           uv__free(long_filenamew);
           long_filenamew = NULL;
+          filenamew = NULL;
         }
 
         offset = file_info->NextEntryOffset;

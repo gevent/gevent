@@ -31,6 +31,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
+#include <sys/ioctl.h>
 #include <sys/socket.h>
 #include <sys/un.h>
 #include <netinet/in.h>
@@ -40,11 +41,9 @@
 #include <sys/resource.h> /* getrusage */
 #include <pwd.h>
 
-#ifdef __linux__
-# include <sys/ioctl.h>
-#endif
-
 #ifdef __sun
+# include <netdb.h> /* MAXHOSTNAMELEN on Solaris */
+# include <sys/filio.h>
 # include <sys/types.h>
 # include <sys/wait.h>
 #endif
@@ -52,20 +51,26 @@
 #ifdef __APPLE__
 # include <mach-o/dyld.h> /* _NSGetExecutablePath */
 # include <sys/filio.h>
-# include <sys/ioctl.h>
 # if defined(O_CLOEXEC)
 #  define UV__O_CLOEXEC O_CLOEXEC
 # endif
 #endif
 
-#if defined(__FreeBSD__) || defined(__DragonFly__)
+#if defined(__DragonFly__)      || \
+    defined(__FreeBSD__)        || \
+    defined(__FreeBSD_kernel__) || \
+    defined(__NetBSD__)
 # include <sys/sysctl.h>
 # include <sys/filio.h>
-# include <sys/ioctl.h>
 # include <sys/wait.h>
 # define UV__O_CLOEXEC O_CLOEXEC
 # if defined(__FreeBSD__) && __FreeBSD__ >= 10
 #  define uv__accept4 accept4
+# endif
+# if defined(__NetBSD__)
+#  define uv__accept4(a, b, c, d) paccept((a), (b), (c), NULL, (d))
+# endif
+# if (defined(__FreeBSD__) && __FreeBSD__ >= 10) || defined(__NetBSD__)
 #  define UV__SOCK_NONBLOCK SOCK_NONBLOCK
 #  define UV__SOCK_CLOEXEC  SOCK_CLOEXEC
 # endif
@@ -74,12 +79,21 @@
 # endif
 #endif
 
-#ifdef _AIX
+#if defined(__ANDROID_API__) && __ANDROID_API__ < 21
+# include <dlfcn.h>  /* for dlsym */
+#endif
+
+#if defined(__MVS__)
 #include <sys/ioctl.h>
 #endif
 
-#if defined(__ANDROID_API__) && __ANDROID_API__ < 21
-# include <dlfcn.h>  /* for dlsym */
+#if !defined(__MVS__)
+#include <sys/param.h> /* MAXHOSTNAMELEN on Linux and the BSDs */
+#endif
+
+/* Fallback for the maximum hostname length */
+#ifndef MAXHOSTNAMELEN
+# define MAXHOSTNAMELEN 256
 #endif
 
 static int uv__run_pending(uv_loop_t* loop);
@@ -100,7 +114,7 @@ uint64_t uv_hrtime(void) {
 
 
 void uv_close(uv_handle_t* handle, uv_close_cb close_cb) {
-  assert(!(handle->flags & (UV_CLOSING | UV_CLOSED)));
+  assert(!uv__is_closing(handle));
 
   handle->flags |= UV_CLOSING;
   handle->close_cb = close_cb;
@@ -454,7 +468,9 @@ int uv__accept(int sockfd) {
   assert(sockfd >= 0);
 
   while (1) {
-#if defined(__linux__) || (defined(__FreeBSD__) && __FreeBSD__ >= 10)
+#if defined(__linux__)                          || \
+    (defined(__FreeBSD__) && __FreeBSD__ >= 10) || \
+    defined(__NetBSD__)
     static int no_accept4;
 
     if (no_accept4)
@@ -508,8 +524,8 @@ int uv__close_nocheckstdio(int fd) {
   rc = close(fd);
   if (rc == -1) {
     rc = -errno;
-    if (rc == -EINTR)
-      rc = -EINPROGRESS;  /* For platform/libc consistency. */
+    if (rc == -EINTR || rc == -EINPROGRESS)
+      rc = 0;    /* The close is in progress, not an error. */
     errno = saved_errno;
   }
 
@@ -519,14 +535,14 @@ int uv__close_nocheckstdio(int fd) {
 
 int uv__close(int fd) {
   assert(fd > STDERR_FILENO);  /* Catch stdio close bugs. */
+#if defined(__MVS__)
+  epoll_file_close(fd);
+#endif
   return uv__close_nocheckstdio(fd);
 }
 
 
-#if defined(__linux__) || defined(__FreeBSD__) || defined(__APPLE__) || \
-    defined(_AIX) || defined(__DragonFly__)
-
-int uv__nonblock(int fd, int set) {
+int uv__nonblock_ioctl(int fd, int set) {
   int r;
 
   do
@@ -540,7 +556,8 @@ int uv__nonblock(int fd, int set) {
 }
 
 
-int uv__cloexec(int fd, int set) {
+#if !defined(__CYGWIN__) && !defined(__MSYS__)
+int uv__cloexec_ioctl(int fd, int set) {
   int r;
 
   do
@@ -552,11 +569,10 @@ int uv__cloexec(int fd, int set) {
 
   return 0;
 }
+#endif
 
-#else /* !(defined(__linux__) || defined(__FreeBSD__) || defined(__APPLE__) || \
-	   defined(_AIX) || defined(__DragonFly__)) */
 
-int uv__nonblock(int fd, int set) {
+int uv__nonblock_fcntl(int fd, int set) {
   int flags;
   int r;
 
@@ -587,7 +603,7 @@ int uv__nonblock(int fd, int set) {
 }
 
 
-int uv__cloexec(int fd, int set) {
+int uv__cloexec_fcntl(int fd, int set) {
   int flags;
   int r;
 
@@ -616,9 +632,6 @@ int uv__cloexec(int fd, int set) {
 
   return 0;
 }
-
-#endif /* defined(__linux__) || defined(__FreeBSD__) || defined(__APPLE__) || \
-	  defined(_AIX) || defined(__DragonFly__) */
 
 
 /* This function is not execve-safe, there is a race window
@@ -762,7 +775,7 @@ static int uv__run_pending(uv_loop_t* loop) {
     QUEUE_REMOVE(q);
     QUEUE_INIT(q);
     w = QUEUE_DATA(q, uv__io_t, pending_queue);
-    w->cb(loop, w, UV__POLLOUT);
+    w->cb(loop, w, POLLOUT);
   }
 
   return 1;
@@ -833,7 +846,7 @@ void uv__io_init(uv__io_t* w, uv__io_cb cb, int fd) {
 
 
 void uv__io_start(uv_loop_t* loop, uv__io_t* w, unsigned int events) {
-  assert(0 == (events & ~(UV__POLLIN | UV__POLLOUT | UV__POLLRDHUP)));
+  assert(0 == (events & ~(POLLIN | POLLOUT | UV__POLLRDHUP | UV__POLLPRI)));
   assert(0 != events);
   assert(w->fd >= 0);
   assert(w->fd < INT_MAX);
@@ -846,13 +859,8 @@ void uv__io_start(uv_loop_t* loop, uv__io_t* w, unsigned int events) {
    * every tick of the event loop but the other backends allow us to
    * short-circuit here if the event mask is unchanged.
    */
-  if (w->events == w->pevents) {
-    if (w->events == 0 && !QUEUE_EMPTY(&w->watcher_queue)) {
-      QUEUE_REMOVE(&w->watcher_queue);
-      QUEUE_INIT(&w->watcher_queue);
-    }
+  if (w->events == w->pevents)
     return;
-  }
 #endif
 
   if (QUEUE_EMPTY(&w->watcher_queue))
@@ -866,7 +874,7 @@ void uv__io_start(uv_loop_t* loop, uv__io_t* w, unsigned int events) {
 
 
 void uv__io_stop(uv_loop_t* loop, uv__io_t* w, unsigned int events) {
-  assert(0 == (events & ~(UV__POLLIN | UV__POLLOUT | UV__POLLRDHUP)));
+  assert(0 == (events & ~(POLLIN | POLLOUT | UV__POLLRDHUP | UV__POLLPRI)));
   assert(0 != events);
 
   if (w->fd == -1)
@@ -898,7 +906,7 @@ void uv__io_stop(uv_loop_t* loop, uv__io_t* w, unsigned int events) {
 
 
 void uv__io_close(uv_loop_t* loop, uv__io_t* w) {
-  uv__io_stop(loop, w, UV__POLLIN | UV__POLLOUT | UV__POLLRDHUP);
+  uv__io_stop(loop, w, POLLIN | POLLOUT | UV__POLLRDHUP | UV__POLLPRI);
   QUEUE_REMOVE(&w->pending_queue);
 
   /* Remove stale events for this file descriptor */
@@ -913,7 +921,7 @@ void uv__io_feed(uv_loop_t* loop, uv__io_t* w) {
 
 
 int uv__io_active(const uv__io_t* w, unsigned int events) {
-  assert(0 == (events & ~(UV__POLLIN | UV__POLLOUT | UV__POLLRDHUP)));
+  assert(0 == (events & ~(POLLIN | POLLOUT | UV__POLLRDHUP | UV__POLLPRI)));
   assert(0 != events);
   return 0 != (w->pevents & events);
 }
@@ -931,6 +939,7 @@ int uv_getrusage(uv_rusage_t* rusage) {
   rusage->ru_stime.tv_sec = usage.ru_stime.tv_sec;
   rusage->ru_stime.tv_usec = usage.ru_stime.tv_usec;
 
+#if !defined(__MVS__)
   rusage->ru_maxrss = usage.ru_maxrss;
   rusage->ru_ixrss = usage.ru_ixrss;
   rusage->ru_idrss = usage.ru_idrss;
@@ -945,6 +954,7 @@ int uv_getrusage(uv_rusage_t* rusage) {
   rusage->ru_nsignals = usage.ru_nsignals;
   rusage->ru_nvcsw = usage.ru_nvcsw;
   rusage->ru_nivcsw = usage.ru_nivcsw;
+#endif
 
   return 0;
 }
@@ -986,7 +996,7 @@ int uv__open_cloexec(const char* path, int flags) {
 
 int uv__dup2_cloexec(int oldfd, int newfd) {
   int r;
-#if defined(__FreeBSD__) && __FreeBSD__ >= 10
+#if (defined(__FreeBSD__) && __FreeBSD__ >= 10) || defined(__NetBSD__)
   r = dup3(oldfd, newfd, O_CLOEXEC);
   if (r == -1)
     return -errno;
@@ -1243,4 +1253,103 @@ void uv_os_free_passwd(uv_passwd_t* pwd) {
 
 int uv_os_get_passwd(uv_passwd_t* pwd) {
   return uv__getpwuid_r(pwd);
+}
+
+
+int uv_translate_sys_error(int sys_errno) {
+  /* If < 0 then it's already a libuv error. */
+  return sys_errno <= 0 ? sys_errno : -sys_errno;
+}
+
+
+int uv_os_getenv(const char* name, char* buffer, size_t* size) {
+  char* var;
+  size_t len;
+
+  if (name == NULL || buffer == NULL || size == NULL || *size == 0)
+    return -EINVAL;
+
+  var = getenv(name);
+
+  if (var == NULL)
+    return -ENOENT;
+
+  len = strlen(var);
+
+  if (len >= *size) {
+    *size = len + 1;
+    return -ENOBUFS;
+  }
+
+  memcpy(buffer, var, len + 1);
+  *size = len;
+
+  return 0;
+}
+
+
+int uv_os_setenv(const char* name, const char* value) {
+  if (name == NULL || value == NULL)
+    return -EINVAL;
+
+  if (setenv(name, value, 1) != 0)
+    return -errno;
+
+  return 0;
+}
+
+
+int uv_os_unsetenv(const char* name) {
+  if (name == NULL)
+    return -EINVAL;
+
+  if (unsetenv(name) != 0)
+    return -errno;
+
+  return 0;
+}
+
+
+int uv_os_gethostname(char* buffer, size_t* size) {
+  /*
+    On some platforms, if the input buffer is not large enough, gethostname()
+    succeeds, but truncates the result. libuv can detect this and return ENOBUFS
+    instead by creating a large enough buffer and comparing the hostname length
+    to the size input.
+  */
+  char buf[MAXHOSTNAMELEN + 1];
+  size_t len;
+
+  if (buffer == NULL || size == NULL || *size == 0)
+    return -EINVAL;
+
+  if (gethostname(buf, sizeof(buf)) != 0)
+    return -errno;
+
+  buf[sizeof(buf) - 1] = '\0'; /* Null terminate, just to be safe. */
+  len = strlen(buf);
+
+  if (len >= *size) {
+    *size = len + 1;
+    return -ENOBUFS;
+  }
+
+  memcpy(buffer, buf, len + 1);
+  *size = len;
+  return 0;
+}
+
+
+uv_os_fd_t uv_get_osfhandle(int fd) {
+  return fd;
+}
+
+
+uv_pid_t uv_os_getpid(void) {
+  return getpid();
+}
+
+
+uv_pid_t uv_os_getppid(void) {
+  return getppid();
 }

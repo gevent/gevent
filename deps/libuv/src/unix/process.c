@@ -40,7 +40,7 @@
 extern char **environ;
 #endif
 
-#ifdef __linux__
+#if defined(__linux__) || defined(__GLIBC__)
 # include <grp.h>
 #endif
 
@@ -232,7 +232,7 @@ static int uv__process_open_stream(uv_stdio_container_t* container,
     return 0;
 
   err = uv__close(pipefds[1]);
-  if (err != 0 && err != -EINPROGRESS)
+  if (err != 0)
     abort();
 
   pipefds[1] = -1;
@@ -279,9 +279,12 @@ static void uv__process_child_init(const uv_process_options_t* options,
                                    int stdio_count,
                                    int (*pipes)[2],
                                    int error_fd) {
+  sigset_t set;
   int close_fd;
   int use_fd;
+  int err;
   int fd;
+  int n;
 
   if (options->flags & UV_PROCESS_DETACHED)
     setsid();
@@ -323,7 +326,7 @@ static void uv__process_child_init(const uv_process_options_t* options,
     }
 
     if (fd == use_fd)
-      uv__cloexec(use_fd, 0);
+      uv__cloexec_fcntl(use_fd, 0);
     else
       fd = dup2(use_fd, fd);
 
@@ -333,7 +336,7 @@ static void uv__process_child_init(const uv_process_options_t* options,
     }
 
     if (fd <= 2)
-      uv__nonblock(fd, 0);
+      uv__nonblock_fcntl(fd, 0);
 
     if (close_fd >= stdio_count)
       uv__close(close_fd);
@@ -376,6 +379,31 @@ static void uv__process_child_init(const uv_process_options_t* options,
     environ = options->env;
   }
 
+  /* Reset signal disposition.  Use a hard-coded limit because NSIG
+   * is not fixed on Linux: it's either 32, 34 or 64, depending on
+   * whether RT signals are enabled.  We are not allowed to touch
+   * RT signal handlers, glibc uses them internally.
+   */
+  for (n = 1; n < 32; n += 1) {
+    if (n == SIGKILL || n == SIGSTOP)
+      continue;  /* Can't be changed. */
+
+    if (SIG_ERR != signal(n, SIG_DFL))
+      continue;
+
+    uv__write_int(error_fd, -errno);
+    _exit(127);
+  }
+
+  /* Reset signal mask. */
+  sigemptyset(&set);
+  err = pthread_sigmask(SIG_SETMASK, &set, NULL);
+
+  if (err != 0) {
+    uv__write_int(error_fd, -err);
+    _exit(127);
+  }
+
   execvp(options->file, options->args);
   uv__write_int(error_fd, -errno);
   _exit(127);
@@ -391,6 +419,7 @@ int uv_spawn(uv_loop_t* loop,
   return -ENOSYS;
 #else
   int signal_pipe[2] = { -1, -1 };
+  int pipes_storage[8][2];
   int (*pipes)[2];
   int stdio_count;
   ssize_t r;
@@ -415,7 +444,10 @@ int uv_spawn(uv_loop_t* loop,
     stdio_count = 3;
 
   err = -ENOMEM;
-  pipes = uv__malloc(stdio_count * sizeof(*pipes));
+  pipes = pipes_storage;
+  if (stdio_count > (int) ARRAY_SIZE(pipes_storage))
+    pipes = uv__malloc(stdio_count * sizeof(*pipes));
+
   if (pipes == NULL)
     goto error;
 
@@ -520,7 +552,9 @@ int uv_spawn(uv_loop_t* loop,
   process->pid = pid;
   process->exit_cb = options->exit_cb;
 
-  uv__free(pipes);
+  if (pipes != pipes_storage)
+    uv__free(pipes);
+
   return exec_errorno;
 
 error:
@@ -534,7 +568,9 @@ error:
       if (pipes[i][1] != -1)
         uv__close_nocheckstdio(pipes[i][1]);
     }
-    uv__free(pipes);
+
+    if (pipes != pipes_storage)
+      uv__free(pipes);
   }
 
   return err;

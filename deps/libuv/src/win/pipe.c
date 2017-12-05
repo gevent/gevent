@@ -31,6 +31,9 @@
 #include "stream-inl.h"
 #include "req-inl.h"
 
+#include <aclapi.h>
+#include <accctrl.h>
+
 typedef struct uv__ipc_queue_item_s uv__ipc_queue_item_t;
 
 struct uv__ipc_queue_item_s {
@@ -85,7 +88,7 @@ static void eof_timer_close_cb(uv_handle_t* handle);
 
 
 static void uv_unique_pipe_name(char* ptr, char* name, size_t size) {
-  snprintf(name, size, "\\\\?\\pipe\\uv\\%p-%u", ptr, GetCurrentProcessId());
+  snprintf(name, size, "\\\\?\\pipe\\uv\\%p-%lu", ptr, GetCurrentProcessId());
 }
 
 
@@ -103,7 +106,7 @@ int uv_pipe_init(uv_loop_t* loop, uv_pipe_t* handle, int ipc) {
   handle->pipe.conn.non_overlapped_writes_tail = NULL;
   handle->pipe.conn.readfile_thread = NULL;
 
-  uv_req_init(loop, (uv_req_t*) &handle->pipe.conn.ipc_header_write_req);
+  UV_REQ_INIT(&handle->pipe.conn.ipc_header_write_req, UV_UNKNOWN_REQ);
 
   return 0;
 }
@@ -202,7 +205,7 @@ int uv_stdio_pipe_server(uv_loop_t* loop, uv_pipe_t* handle, DWORD access,
     uv_unique_pipe_name(ptr, name, nameSize);
 
     pipeHandle = CreateNamedPipeA(name,
-      access | FILE_FLAG_OVERLAPPED | FILE_FLAG_FIRST_PIPE_INSTANCE,
+      access | FILE_FLAG_OVERLAPPED | FILE_FLAG_FIRST_PIPE_INSTANCE | WRITE_DAC,
       PIPE_TYPE_BYTE | PIPE_READMODE_BYTE | PIPE_WAIT, 1, 65536, 65536, 0,
       NULL);
 
@@ -505,8 +508,7 @@ int uv_pipe_bind(uv_pipe_t* handle, const char* name) {
 
   for (i = 0; i < handle->pipe.serv.pending_instances; i++) {
     req = &handle->pipe.serv.accept_reqs[i];
-    uv_req_init(loop, (uv_req_t*) req);
-    req->type = UV_ACCEPT;
+    UV_REQ_INIT(req, UV_ACCEPT);
     req->data = handle;
     req->pipeHandle = INVALID_HANDLE_VALUE;
     req->next_pending = NULL;
@@ -535,7 +537,7 @@ int uv_pipe_bind(uv_pipe_t* handle, const char* name) {
    */
   handle->pipe.serv.accept_reqs[0].pipeHandle = CreateNamedPipeW(handle->name,
       PIPE_ACCESS_DUPLEX | FILE_FLAG_OVERLAPPED |
-      FILE_FLAG_FIRST_PIPE_INSTANCE,
+      FILE_FLAG_FIRST_PIPE_INSTANCE | WRITE_DAC,
       PIPE_TYPE_BYTE | PIPE_READMODE_BYTE | PIPE_WAIT,
       PIPE_UNLIMITED_INSTANCES, 65536, 65536, 0, NULL);
 
@@ -626,8 +628,7 @@ void uv_pipe_connect(uv_connect_t* req, uv_pipe_t* handle,
   HANDLE pipeHandle = INVALID_HANDLE_VALUE;
   DWORD duplex_flags;
 
-  uv_req_init(loop, (uv_req_t*) req);
-  req->type = UV_CONNECT;
+  UV_REQ_INIT(req, UV_CONNECT);
   req->handle = (uv_stream_t*) handle;
   req->cb = cb;
 
@@ -805,7 +806,7 @@ static void uv_pipe_queue_accept(uv_loop_t* loop, uv_pipe_t* handle,
     assert(req->pipeHandle == INVALID_HANDLE_VALUE);
 
     req->pipeHandle = CreateNamedPipeW(handle->name,
-        PIPE_ACCESS_DUPLEX | FILE_FLAG_OVERLAPPED,
+        PIPE_ACCESS_DUPLEX | FILE_FLAG_OVERLAPPED | WRITE_DAC,
         PIPE_TYPE_BYTE | PIPE_READMODE_BYTE | PIPE_WAIT,
         PIPE_UNLIMITED_INSTANCES, 65536, 65536, 0, NULL);
 
@@ -962,7 +963,7 @@ static DWORD WINAPI uv_pipe_zero_readfile_thread_proc(void* parameter) {
     uv_mutex_lock(m); /* mutex controls *setting* of readfile_thread */
     if (DuplicateHandle(GetCurrentProcess(), GetCurrentThread(),
                         GetCurrentProcess(), &hThread,
-                        0, TRUE, DUPLICATE_SAME_ACCESS)) {
+                        0, FALSE, DUPLICATE_SAME_ACCESS)) {
       handle->pipe.conn.readfile_thread = hThread;
     } else {
       hThread = NULL;
@@ -970,27 +971,31 @@ static DWORD WINAPI uv_pipe_zero_readfile_thread_proc(void* parameter) {
     uv_mutex_unlock(m);
   }
 restart_readfile:
-  result = ReadFile(handle->handle,
-                    &uv_zero_,
-                    0,
-                    &bytes,
-                    NULL);
-  if (!result) {
-    err = GetLastError();
-    if (err == ERROR_OPERATION_ABORTED &&
-        handle->flags & UV_HANDLE_PIPE_READ_CANCELABLE) {
-      if (handle->flags & UV_HANDLE_READING) {
-        /* just a brief break to do something else */
-        handle->pipe.conn.readfile_thread = NULL;
-        /* resume after it is finished */
-        uv_mutex_lock(m);
-        handle->pipe.conn.readfile_thread = hThread;
-        uv_mutex_unlock(m);
-        goto restart_readfile;
-      } else {
-        result = 1; /* successfully stopped reading */
+  if (handle->flags & UV_HANDLE_READING) {
+    result = ReadFile(handle->handle,
+                      &uv_zero_,
+                      0,
+                      &bytes,
+                      NULL);
+    if (!result) {
+      err = GetLastError();
+      if (err == ERROR_OPERATION_ABORTED &&
+          handle->flags & UV_HANDLE_PIPE_READ_CANCELABLE) {
+        if (handle->flags & UV_HANDLE_READING) {
+          /* just a brief break to do something else */
+          handle->pipe.conn.readfile_thread = NULL;
+          /* resume after it is finished */
+          uv_mutex_lock(m);
+          handle->pipe.conn.readfile_thread = hThread;
+          uv_mutex_unlock(m);
+          goto restart_readfile;
+        } else {
+          result = 1; /* successfully stopped reading */
+        }
       }
     }
+  } else {
+    result = 1; /* successfully aborted read before it even started */
   }
   if (hThread) {
     assert(hThread == handle->pipe.conn.readfile_thread);
@@ -1239,8 +1244,7 @@ static int uv_pipe_write_impl(uv_loop_t* loop,
 
   assert(handle->handle != INVALID_HANDLE_VALUE);
 
-  uv_req_init(loop, (uv_req_t*) req);
-  req->type = UV_WRITE;
+  UV_REQ_INIT(req, UV_WRITE);
   req->handle = (uv_stream_t*) handle;
   req->cb = cb;
   req->ipc_header = 0;
@@ -1301,8 +1305,7 @@ static int uv_pipe_write_impl(uv_loop_t* loop,
         }
       }
 
-      uv_req_init(loop, (uv_req_t*) ipc_header_req);
-      ipc_header_req->type = UV_WRITE;
+      UV_REQ_INIT(ipc_header_req, UV_WRITE);
       ipc_header_req->handle = (uv_stream_t*) handle;
       ipc_header_req->cb = NULL;
       ipc_header_req->ipc_header = 1;
@@ -1519,7 +1522,10 @@ static void uv_pipe_read_error(uv_loop_t* loop, uv_pipe_t* handle, int error,
 
 static void uv_pipe_read_error_or_eof(uv_loop_t* loop, uv_pipe_t* handle,
     int error, uv_buf_t buf) {
-  if (error == ERROR_BROKEN_PIPE) {
+  if (error == ERROR_OPERATION_ABORTED) {
+    /* do nothing (equivalent to EINTR) */
+  }
+  else if (error == ERROR_BROKEN_PIPE) {
     uv_pipe_read_eof(loop, handle, buf);
   } else {
     uv_pipe_read_error(loop, handle, error, buf);
@@ -1634,8 +1640,9 @@ void uv_process_pipe_read_req(uv_loop_t* loop, uv_pipe_t* handle,
         }
       }
 
+      buf = uv_buf_init(NULL, 0);
       handle->alloc_cb((uv_handle_t*) handle, avail, &buf);
-      if (buf.len == 0) {
+      if (buf.base == NULL || buf.len == 0) {
         handle->read_cb((uv_stream_t*) handle, UV_ENOBUFS, &buf);
         break;
       }
@@ -1909,6 +1916,7 @@ int uv_pipe_open(uv_pipe_t* pipe, uv_file file) {
   if (os_handle == INVALID_HANDLE_VALUE)
     return UV_EBADF;
 
+  uv__once_init();
   /* In order to avoid closing a stdio file descriptor 0-2, duplicate the
    * underlying OS handle and forget about the original fd.
    * We could also opt to use the original OS handle and just never close it,
@@ -1964,7 +1972,7 @@ int uv_pipe_open(uv_pipe_t* pipe, uv_file file) {
 
   if (pipe->ipc) {
     assert(!(pipe->flags & UV_HANDLE_NON_OVERLAPPED_PIPE));
-    pipe->pipe.conn.ipc_pid = uv_parent_pid();
+    pipe->pipe.conn.ipc_pid = uv_os_getppid();
     assert(pipe->pipe.conn.ipc_pid != -1);
   }
   return 0;
@@ -1982,6 +1990,7 @@ static int uv__pipe_getname(const uv_pipe_t* handle, char* buffer, size_t* size)
   unsigned int name_len;
   int err;
 
+  uv__once_init();
   name_info = NULL;
 
   if (handle->handle == INVALID_HANDLE_VALUE) {
@@ -2075,7 +2084,6 @@ static int uv__pipe_getname(const uv_pipe_t* handle, char* buffer, size_t* size)
   buffer[addrlen] = '\0';
 
   err = 0;
-  goto cleanup;
 
 error:
   uv__free(name_info);
@@ -2126,4 +2134,81 @@ uv_handle_type uv_pipe_pending_type(uv_pipe_t* handle) {
     return UV_UNKNOWN_HANDLE;
   else
     return UV_TCP;
+}
+
+int uv_pipe_chmod(uv_pipe_t* handle, int mode) {
+  SID_IDENTIFIER_AUTHORITY sid_world = SECURITY_WORLD_SID_AUTHORITY;
+  PACL old_dacl, new_dacl;
+  PSECURITY_DESCRIPTOR sd;
+  EXPLICIT_ACCESS ea;
+  PSID everyone;
+  int error;
+
+  if (handle == NULL || handle->handle == INVALID_HANDLE_VALUE)
+    return UV_EBADF;
+
+  if (mode != UV_READABLE &&
+      mode != UV_WRITABLE &&
+      mode != (UV_WRITABLE | UV_READABLE))
+    return UV_EINVAL;
+
+  if (!AllocateAndInitializeSid(&sid_world,
+                                1,
+                                SECURITY_WORLD_RID,
+                                0, 0, 0, 0, 0, 0, 0,
+                                &everyone)) {
+    error = GetLastError();
+    goto done;
+  }
+
+  if (GetSecurityInfo(handle->handle,
+                      SE_KERNEL_OBJECT,
+                      DACL_SECURITY_INFORMATION,
+                      NULL,
+                      NULL,
+                      &old_dacl,
+                      NULL,
+                      &sd)) {
+    error = GetLastError();
+    goto clean_sid;
+  }
+ 
+  memset(&ea, 0, sizeof(EXPLICIT_ACCESS));
+  if (mode & UV_READABLE)
+    ea.grfAccessPermissions |= GENERIC_READ | FILE_WRITE_ATTRIBUTES;
+  if (mode & UV_WRITABLE)
+    ea.grfAccessPermissions |= GENERIC_WRITE | FILE_READ_ATTRIBUTES;
+  ea.grfAccessPermissions |= SYNCHRONIZE;
+  ea.grfAccessMode = SET_ACCESS;
+  ea.grfInheritance = NO_INHERITANCE;
+  ea.Trustee.TrusteeForm = TRUSTEE_IS_SID;
+  ea.Trustee.TrusteeType = TRUSTEE_IS_WELL_KNOWN_GROUP;
+  ea.Trustee.ptstrName = (LPTSTR)everyone;
+
+  if (SetEntriesInAcl(1, &ea, old_dacl, &new_dacl)) {
+    error = GetLastError();
+    goto clean_sd;
+  }
+
+  if (SetSecurityInfo(handle->handle,
+                      SE_KERNEL_OBJECT,
+                      DACL_SECURITY_INFORMATION,
+                      NULL,
+                      NULL,
+                      new_dacl,
+                      NULL)) {
+    error = GetLastError();
+    goto clean_dacl;
+  }
+
+  error = 0;
+
+clean_dacl:
+  LocalFree((HLOCAL) new_dacl);
+clean_sd:
+  LocalFree((HLOCAL) sd);
+clean_sid:
+  FreeSid(everyone);
+done:
+  return uv_translate_sys_error(error);
 }

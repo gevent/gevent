@@ -408,11 +408,24 @@
 #elif defined(__APPLE__) || \
       defined(__DragonFly__) || \
       defined(__FreeBSD__) || \
+      defined(__FreeBSD_kernel__) || \
       defined(__NetBSD__) || \
       defined(__OpenBSD__)
 # define UV__EHOSTDOWN (-64)
 #else
 # define UV__EHOSTDOWN (-4031)
+#endif
+
+#if defined(EREMOTEIO) && !defined(_WIN32)
+# define UV__EREMOTEIO (-EREMOTEIO)
+#else
+# define UV__EREMOTEIO (-4030)
+#endif
+
+#if defined(ENOTTY) && !defined(_WIN32)
+# define UV__ENOTTY (-ENOTTY)
+#else
+# define UV__ENOTTY (-4029)
 #endif
 
 #endif /* UV_ERRNO_H_ */

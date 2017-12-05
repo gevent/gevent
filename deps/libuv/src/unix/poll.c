@@ -33,17 +33,30 @@ static void uv__poll_io(uv_loop_t* loop, uv__io_t* w, unsigned int events) {
 
   handle = container_of(w, uv_poll_t, io_watcher);
 
-  if (events & UV__POLLERR) {
-    uv__io_stop(loop, w, UV__POLLIN | UV__POLLOUT | UV__POLLRDHUP);
+  /*
+   * As documented in the kernel source fs/kernfs/file.c #780
+   * poll will return POLLERR|POLLPRI in case of sysfs
+   * polling. This does not happen in case of out-of-band
+   * TCP messages.
+   *
+   * The above is the case on (at least) FreeBSD and Linux.
+   *
+   * So to properly determine a POLLPRI or a POLLERR we need
+   * to check for both.
+   */
+  if ((events & POLLERR) && !(events & UV__POLLPRI)) {
+    uv__io_stop(loop, w, POLLIN | POLLOUT | UV__POLLRDHUP | UV__POLLPRI);
     uv__handle_stop(handle);
     handle->poll_cb(handle, -EBADF, 0);
     return;
   }
 
   pevents = 0;
-  if (events & UV__POLLIN)
+  if (events & POLLIN)
     pevents |= UV_READABLE;
-  if (events & UV__POLLOUT)
+  if (events & UV__POLLPRI)
+    pevents |= UV_PRIORITIZED;
+  if (events & POLLOUT)
     pevents |= UV_WRITABLE;
   if (events & UV__POLLRDHUP)
     pevents |= UV_DISCONNECT;
@@ -59,7 +72,14 @@ int uv_poll_init(uv_loop_t* loop, uv_poll_t* handle, int fd) {
   if (err)
     return err;
 
+  /* If ioctl(FIONBIO) reports ENOTTY, try fcntl(F_GETFL) + fcntl(F_SETFL).
+   * Workaround for e.g. kqueue fds not supporting ioctls.
+   */
   err = uv__nonblock(fd, 1);
+  if (err == -ENOTTY)
+    if (uv__nonblock == uv__nonblock_ioctl)
+      err = uv__nonblock_fcntl(fd, 1);
+
   if (err)
     return err;
 
@@ -79,13 +99,14 @@ int uv_poll_init_socket(uv_loop_t* loop, uv_poll_t* handle,
 static void uv__poll_stop(uv_poll_t* handle) {
   uv__io_stop(handle->loop,
               &handle->io_watcher,
-              UV__POLLIN | UV__POLLOUT | UV__POLLRDHUP);
+              POLLIN | POLLOUT | UV__POLLRDHUP | UV__POLLPRI);
   uv__handle_stop(handle);
+  uv__platform_invalidate_fd(handle->loop, handle->io_watcher.fd);
 }
 
 
 int uv_poll_stop(uv_poll_t* handle) {
-  assert(!(handle->flags & (UV_CLOSING | UV_CLOSED)));
+  assert(!uv__is_closing(handle));
   uv__poll_stop(handle);
   return 0;
 }
@@ -94,8 +115,9 @@ int uv_poll_stop(uv_poll_t* handle) {
 int uv_poll_start(uv_poll_t* handle, int pevents, uv_poll_cb poll_cb) {
   int events;
 
-  assert((pevents & ~(UV_READABLE | UV_WRITABLE | UV_DISCONNECT)) == 0);
-  assert(!(handle->flags & (UV_CLOSING | UV_CLOSED)));
+  assert((pevents & ~(UV_READABLE | UV_WRITABLE | UV_DISCONNECT |
+                      UV_PRIORITIZED)) == 0);
+  assert(!uv__is_closing(handle));
 
   uv__poll_stop(handle);
 
@@ -104,9 +126,11 @@ int uv_poll_start(uv_poll_t* handle, int pevents, uv_poll_cb poll_cb) {
 
   events = 0;
   if (pevents & UV_READABLE)
-    events |= UV__POLLIN;
+    events |= POLLIN;
+  if (pevents & UV_PRIORITIZED)
+    events |= UV__POLLPRI;
   if (pevents & UV_WRITABLE)
-    events |= UV__POLLOUT;
+    events |= POLLOUT;
   if (pevents & UV_DISCONNECT)
     events |= UV__POLLRDHUP;
 

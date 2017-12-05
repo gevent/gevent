@@ -49,6 +49,7 @@ typedef struct pollfd {
 
 #include <process.h>
 #include <signal.h>
+#include <fcntl.h>
 #include <sys/stat.h>
 
 #if defined(_MSC_VER) && _MSC_VER < 1600
@@ -116,7 +117,7 @@ typedef struct pollfd {
          {0xb5367df0, 0xcbac, 0x11cf,                                         \
          {0x95, 0xca, 0x00, 0x80, 0x5f, 0x48, 0xa1, 0x92}}
 
-  typedef BOOL PASCAL (*LPFN_ACCEPTEX)
+  typedef BOOL (PASCAL *LPFN_ACCEPTEX)
                       (SOCKET sListenSocket,
                        SOCKET sAcceptSocket,
                        PVOID lpOutputBuffer,
@@ -126,7 +127,7 @@ typedef struct pollfd {
                        LPDWORD lpdwBytesReceived,
                        LPOVERLAPPED lpOverlapped);
 
-  typedef BOOL PASCAL (*LPFN_CONNECTEX)
+  typedef BOOL (PASCAL *LPFN_CONNECTEX)
                       (SOCKET s,
                        const struct sockaddr* name,
                        int namelen,
@@ -135,7 +136,7 @@ typedef struct pollfd {
                        LPDWORD lpdwBytesSent,
                        LPOVERLAPPED lpOverlapped);
 
-  typedef void PASCAL (*LPFN_GETACCEPTEXSOCKADDRS)
+  typedef void (PASCAL *LPFN_GETACCEPTEXSOCKADDRS)
                       (PVOID lpOutputBuffer,
                        DWORD dwReceiveDataLength,
                        DWORD dwLocalAddressLength,
@@ -145,13 +146,13 @@ typedef struct pollfd {
                        LPSOCKADDR* RemoteSockaddr,
                        LPINT RemoteSockaddrLength);
 
-  typedef BOOL PASCAL (*LPFN_DISCONNECTEX)
+  typedef BOOL (PASCAL *LPFN_DISCONNECTEX)
                       (SOCKET hSocket,
                        LPOVERLAPPED lpOverlapped,
                        DWORD dwFlags,
                        DWORD reserved);
 
-  typedef BOOL PASCAL (*LPFN_TRANSMITFILE)
+  typedef BOOL (PASCAL *LPFN_TRANSMITFILE)
                       (SOCKET hSocket,
                        HANDLE hFile,
                        DWORD nNumberOfBytesToWrite,
@@ -221,6 +222,7 @@ typedef struct uv_buf_t {
 typedef int uv_file;
 typedef SOCKET uv_os_sock_t;
 typedef HANDLE uv_os_fd_t;
+typedef int uv_pid_t;
 
 typedef HANDLE uv_thread_t;
 
@@ -483,7 +485,8 @@ RB_HEAD(uv_timer_tree_s, uv_timer_s);
   union {                                                                     \
     struct {                                                                  \
       /* Used for readable TTY handles */                                     \
-      HANDLE read_line_handle;                                                \
+      /* TODO: remove me in v2.x. */                                          \
+      HANDLE unused_;                                                         \
       uv_buf_t read_line_buffer;                                              \
       HANDLE read_raw_wait;                                                   \
       /* Fields used for translating win keystrokes into vt100 characters */  \
@@ -646,3 +649,28 @@ RB_HEAD(uv_timer_tree_s, uv_timer_s);
 #ifndef X_OK
 #define X_OK 1
 #endif
+
+/* fs open() flags supported on this platform: */
+#define UV_FS_O_APPEND       _O_APPEND
+#define UV_FS_O_CREAT        _O_CREAT
+#define UV_FS_O_EXCL         _O_EXCL
+#define UV_FS_O_RANDOM       _O_RANDOM
+#define UV_FS_O_RDONLY       _O_RDONLY
+#define UV_FS_O_RDWR         _O_RDWR
+#define UV_FS_O_SEQUENTIAL   _O_SEQUENTIAL
+#define UV_FS_O_SHORT_LIVED  _O_SHORT_LIVED
+#define UV_FS_O_TEMPORARY    _O_TEMPORARY
+#define UV_FS_O_TRUNC        _O_TRUNC
+#define UV_FS_O_WRONLY       _O_WRONLY
+
+/* fs open() flags supported on other platforms (or mapped on this platform): */
+#define UV_FS_O_DIRECT       0x02000000 /* FILE_FLAG_NO_BUFFERING */
+#define UV_FS_O_DIRECTORY    0
+#define UV_FS_O_DSYNC        0x04000000 /* FILE_FLAG_WRITE_THROUGH */
+#define UV_FS_O_EXLOCK       0x10000000 /* EXCLUSIVE SHARING MODE */
+#define UV_FS_O_NOATIME      0
+#define UV_FS_O_NOCTTY       0
+#define UV_FS_O_NOFOLLOW     0
+#define UV_FS_O_NONBLOCK     0
+#define UV_FS_O_SYMLINK      0
+#define UV_FS_O_SYNC         0x08000000 /* FILE_FLAG_WRITE_THROUGH */

@@ -136,20 +136,12 @@ const char* fmt(double d);
 /* Reserved test exit codes. */
 enum test_status {
   TEST_OK = 0,
-  TEST_TODO,
   TEST_SKIP
 };
 
 #define RETURN_OK()                                                           \
   do {                                                                        \
     return TEST_OK;                                                           \
-  } while (0)
-
-#define RETURN_TODO(explanation)                                              \
-  do {                                                                        \
-    fprintf(stderr, "%s\n", explanation);                                     \
-    fflush(stderr);                                                           \
-    return TEST_TODO;                                                         \
   } while (0)
 
 #define RETURN_SKIP(explanation)                                              \
@@ -216,5 +208,25 @@ UNUSED static int can_ipv6(void) {
   uv_free_interface_addresses(addr, count);
   return supported;
 }
+
+#if defined(__MVS__) || defined(__CYGWIN__) || defined(__MSYS__)
+# define NO_FS_EVENTS "Filesystem watching not supported on this platform."
+#endif
+
+#if defined(__MSYS__)
+# define NO_SEND_HANDLE_ON_PIPE \
+  "MSYS2 runtime does not support sending handles on pipes."
+#elif defined(__CYGWIN__)
+# define NO_SEND_HANDLE_ON_PIPE \
+  "Cygwin runtime does not support sending handles on pipes."
+#endif
+
+#if defined(__MSYS__)
+# define NO_SELF_CONNECT \
+  "MSYS2 runtime hangs on listen+connect in same process."
+#elif defined(__CYGWIN__)
+# define NO_SELF_CONNECT \
+  "Cygwin runtime hangs on listen+connect in same process."
+#endif
 
 #endif /* TASK_H_ */

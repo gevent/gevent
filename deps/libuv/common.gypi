@@ -1,6 +1,5 @@
 {
   'variables': {
-    'visibility%': 'hidden',         # V8's visibility setting
     'target_arch%': 'ia32',          # set v8's target architecture
     'host_arch%': 'ia32',            # set v8's host architecture
     'uv_library%': 'static_library', # allow override to 'shared_library' for DLL/.so builds
@@ -12,7 +11,7 @@
     'configurations': {
       'Debug': {
         'defines': [ 'DEBUG', '_DEBUG' ],
-        'cflags': [ '-g', '-O0', '-fwrapv' ],
+        'cflags': [ '-g' ],
         'msvs_settings': {
           'VCCLCompilerTool': {
             'target_conditions': [
@@ -33,9 +32,11 @@
         },
         'xcode_settings': {
           'GCC_OPTIMIZATION_LEVEL': '0',
-          'OTHER_CFLAGS': [ '-Wno-strict-aliasing' ],
         },
         'conditions': [
+          ['OS != "zos"', {
+            'cflags': [ '-O0', '-fwrapv' ]
+          }],
           ['OS == "android"', {
             'cflags': [ '-fPIE' ],
             'ldflags': [ '-fPIE', '-pie' ]
@@ -46,10 +47,6 @@
         'defines': [ 'NDEBUG' ],
         'cflags': [
           '-O3',
-          '-fstrict-aliasing',
-          '-fomit-frame-pointer',
-          '-fdata-sections',
-          '-ffunction-sections',
         ],
         'msvs_settings': {
           'VCCLCompilerTool': {
@@ -80,6 +77,15 @@
             'LinkIncremental': 1, # disable incremental linking
           },
         },
+        'conditions': [
+          ['OS != "zos"', {
+            'cflags': [
+              '-fomit-frame-pointer',
+              '-fdata-sections',
+              '-ffunction-sections',
+            ],
+          }],
+        ]
       }
     },
     'msvs_settings': {
@@ -152,12 +158,9 @@
             'cflags': [ '-pthreads' ],
             'ldflags': [ '-pthreads' ],
           }],
-          [ 'OS not in "solaris android"', {
+          [ 'OS not in "solaris android zos"', {
             'cflags': [ '-pthread' ],
             'ldflags': [ '-pthread' ],
-          }],
-          [ 'visibility=="hidden"', {
-            'cflags': [ '-fvisibility=hidden' ],
           }],
         ],
       }],
@@ -170,20 +173,15 @@
           'GCC_ENABLE_CPP_EXCEPTIONS': 'NO',        # -fno-exceptions
           'GCC_ENABLE_CPP_RTTI': 'NO',              # -fno-rtti
           'GCC_ENABLE_PASCAL_STRINGS': 'NO',        # No -mpascal-strings
-          # GCC_INLINES_ARE_PRIVATE_EXTERN maps to -fvisibility-inlines-hidden
-          'GCC_INLINES_ARE_PRIVATE_EXTERN': 'YES',
-          'GCC_SYMBOLS_PRIVATE_EXTERN': 'YES',      # -fvisibility=hidden
           'GCC_THREADSAFE_STATICS': 'NO',           # -fno-threadsafe-statics
           'PREBINDING': 'NO',                       # No -Wl,-prebind
           'USE_HEADERMAP': 'NO',
-          'OTHER_CFLAGS': [
-            '-fstrict-aliasing',
-          ],
           'WARNING_CFLAGS': [
             '-Wall',
             '-Wendif-labels',
             '-W',
             '-Wno-unused-parameter',
+            '-Wstrict-prototypes',
           ],
         },
         'conditions': [

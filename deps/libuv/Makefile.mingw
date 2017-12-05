@@ -17,9 +17,11 @@ CC ?= gcc
 CFLAGS += -Wall \
           -Wextra \
           -Wno-unused-parameter \
+          -Wstrict-prototypes \
           -Iinclude \
           -Isrc \
           -Isrc/win \
+          -DWIN32_LEAN_AND_MEAN \
           -D_WIN32_WINNT=0x0600
 
 INCLUDES = include/stdint-msvc2008.h \
@@ -47,6 +49,7 @@ OBJS = src/fs-poll.o \
        src/version.o \
        src/win/async.o \
        src/win/core.o \
+       src/win/detect-wakeup.o \
        src/win/dl.o \
        src/win/error.o \
        src/win/fs-event.o \

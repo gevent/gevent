@@ -47,7 +47,6 @@ int uv_pipe_bind(uv_pipe_t* handle, const char* name) {
   int err;
 
   pipe_fname = NULL;
-  sockfd = -1;
 
   /* Already bound? */
   if (uv__stream_fd(handle) >= 0)
@@ -76,16 +75,16 @@ int uv_pipe_bind(uv_pipe_t* handle, const char* name) {
     /* Convert ENOENT to EACCES for compatibility with Windows. */
     if (err == -ENOENT)
       err = -EACCES;
-    goto err_bind;
+
+    uv__close(sockfd);
+    goto err_socket;
   }
 
   /* Success. */
+  handle->flags |= UV_HANDLE_BOUND;
   handle->pipe_fname = pipe_fname; /* Is a strdup'ed copy. */
   handle->io_watcher.fd = sockfd;
   return 0;
-
-err_bind:
-  uv__close(sockfd);
 
 err_socket:
   uv__free((void*)pipe_fname);
@@ -97,12 +96,20 @@ int uv_pipe_listen(uv_pipe_t* handle, int backlog, uv_connection_cb cb) {
   if (uv__stream_fd(handle) == -1)
     return -EINVAL;
 
+#if defined(__MVS__)
+  /* On zOS, backlog=0 has undefined behaviour */
+  if (backlog == 0)
+    backlog = 1;
+  else if (backlog < 0)
+    backlog = SOMAXCONN;
+#endif
+
   if (listen(uv__stream_fd(handle), backlog))
     return -errno;
 
   handle->connection_cb = cb;
   handle->io_watcher.cb = uv__server_io;
-  uv__io_start(handle->loop, &handle->io_watcher, UV__POLLIN);
+  uv__io_start(handle->loop, &handle->io_watcher, POLLIN);
   return 0;
 }
 
@@ -174,6 +181,14 @@ void uv_pipe_connect(uv_connect_t* req,
 
   if (r == -1 && errno != EINPROGRESS) {
     err = -errno;
+#if defined(__CYGWIN__) || defined(__MSYS__)
+    /* EBADF is supposed to mean that the socket fd is bad, but
+       Cygwin reports EBADF instead of ENOTSOCK when the file is
+       not a socket.  We do not expect to see a bad fd here
+       (e.g. due to new_sock), so translate the error.  */
+    if (err == -EBADF)
+      err = -ENOTSOCK;
+#endif
     goto out;
   }
 
@@ -185,7 +200,7 @@ void uv_pipe_connect(uv_connect_t* req,
   }
 
   if (err == 0)
-    uv__io_start(handle->loop, &handle->io_watcher, UV__POLLIN | UV__POLLOUT);
+    uv__io_start(handle->loop, &handle->io_watcher, POLLIN | POLLOUT);
 
 out:
   handle->delayed_error = err;
@@ -286,4 +301,57 @@ uv_handle_type uv_pipe_pending_type(uv_pipe_t* handle) {
     return UV_UNKNOWN_HANDLE;
   else
     return uv__handle_type(handle->accepted_fd);
+}
+
+
+int uv_pipe_chmod(uv_pipe_t* handle, int mode) {
+  unsigned desired_mode;
+  struct stat pipe_stat;
+  char* name_buffer;
+  size_t name_len;
+  int r;
+
+  if (handle == NULL || uv__stream_fd(handle) == -1)
+    return -EBADF;
+
+  if (mode != UV_READABLE &&
+      mode != UV_WRITABLE &&
+      mode != (UV_WRITABLE | UV_READABLE))
+    return -EINVAL;
+
+  if (fstat(uv__stream_fd(handle), &pipe_stat) == -1)
+    return -errno;
+
+  desired_mode = 0;
+  if (mode & UV_READABLE)
+    desired_mode |= S_IRUSR | S_IRGRP | S_IROTH;
+  if (mode & UV_WRITABLE)
+    desired_mode |= S_IWUSR | S_IWGRP | S_IWOTH;
+
+  /* Exit early if pipe already has desired mode. */
+  if ((pipe_stat.st_mode & desired_mode) == desired_mode)
+    return 0;
+
+  pipe_stat.st_mode |= desired_mode;
+
+  /* Unfortunately fchmod does not work on all platforms, we will use chmod. */
+  name_len = 0;
+  r = uv_pipe_getsockname(handle, NULL, &name_len);
+  if (r != UV_ENOBUFS)
+    return r;
+
+  name_buffer = uv__malloc(name_len);
+  if (name_buffer == NULL)
+    return UV_ENOMEM;
+
+  r = uv_pipe_getsockname(handle, name_buffer, &name_len);
+  if (r != 0) {
+    uv__free(name_buffer);
+    return r;
+  }
+
+  r = chmod(name_buffer, pipe_stat.st_mode);
+  uv__free(name_buffer);
+
+  return r != -1 ? 0 : -errno;
 }
