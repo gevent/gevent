@@ -42,6 +42,7 @@ import _six as six
 
 PYPY = hasattr(sys, 'pypy_version_info')
 VERBOSE = sys.argv.count('-v') > 1
+LIBUV = os.getenv('GEVENT_CORE_CFFI_ONLY') == 'libuv' # XXX: Formalize this better
 
 if '--debug-greentest' in sys.argv:
     sys.argv.remove('--debug-greentest')
@@ -137,6 +138,11 @@ else:
 skipIf = unittest.skipIf
 
 EXPECT_POOR_TIMER_RESOLUTION = PYPY3 or RUNNING_ON_APPVEYOR
+
+if LIBUV:
+    skipOnLibuv = unittest.skip
+else:
+    skipOnLibuv = _do_not_skip
 
 class ExpectedException(Exception):
     """An exception whose traceback should be ignored"""
