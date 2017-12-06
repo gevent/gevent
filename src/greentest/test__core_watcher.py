@@ -58,14 +58,12 @@ class Test(greentest.TestCase):
         self.assertEqual(lst, [(), 25])
         loop.destroy()
 
-
     def test_invalid_fd(self):
-        # XXX: windows?
         loop = core.loop(default=False)
 
         # Negative case caught everywhere. ValueError
-        # on POSIX, OSError on Windows
-        with self.assertRaises((ValueError, OSError)):
+        # on POSIX, OSError on Windows Py3, IOError on Windows Py2
+        with self.assertRaises((ValueError, OSError, IOError)):
             loop.io(-1, core.READ)
 
         loop.destroy()
