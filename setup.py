@@ -59,6 +59,7 @@ EXT_MODULES = [
     LOCAL,
 ]
 
+LIBEV_CFFI_MODULE = 'src/gevent/libev/_corecffi_build.py:ffi'
 cffi_modules = []
 
 if not WIN:
@@ -69,7 +70,7 @@ if not WIN:
     # CFFI code. Plus I could never get the libraries= line to ffi.compile()
     # correct to make linking work.
     cffi_modules.append(
-        'src/gevent/libev/_corecffi_build.py:ffi'
+        LIBEV_CFFI_MODULE
     )
 
 if not WIN:
@@ -137,7 +138,8 @@ def run_setup(ext_modules, run_make):
             # to build the CFFI module. We need to configure libev
             # because the CORE Extension won't.
             # TODO: Generalize this.
-            system(libev_configure_command)
+            if LIBEV_CFFI_MODULE in cffi_modules and not WIN:
+                system(libev_configure_command)
 
         MakeSdist.make()
 
