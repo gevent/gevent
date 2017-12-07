@@ -336,7 +336,7 @@ class TestMaxsize(TestCase):
         self.pool = ThreadPool(0)
         done = []
         gevent.spawn(self.pool.spawn, done.append, 1)
-        gevent.spawn_later(0.0001, self.pool.spawn, done.append, 2)
+        gevent.spawn_later(0.001, self.pool.spawn, done.append, 2)
         gevent.sleep(0.01)
         self.assertEqual(done, [])
         self.pool.maxsize = 1

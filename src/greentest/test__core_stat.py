@@ -70,7 +70,7 @@ try:
     check_attr('attr', False)
     check_attr('prev', False)
     # The watcher interval changed after it started; -1 is illegal
-    assert watcher.interval != -1
+    assert watcher.interval != -1, watcher.interval
 
     greenlet.join()
     gevent.spawn_later(DELAY, os.unlink, filename)

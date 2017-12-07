@@ -15,7 +15,12 @@ except ImportError:
         raise
 
     # CFFI/PyPy
-    from gevent.libev import corecffi as _core
+    lib = os.environ.get('GEVENT_CORE_CFFI_ONLY')
+    if lib == 'libuv':
+        from gevent.libuv import loop as _core
+    else:
+        from gevent.libev import corecffi as _core
+
 
 copy_globals(_core, globals())
 

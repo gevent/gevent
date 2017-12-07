@@ -45,8 +45,8 @@ clean:
 	rm -f gevent.ares.c gevent.ares.h src/gevent/gevent.ares.c src/gevent/gevent.ares.h
 	rm -f gevent._semaphore.c gevent._semaphore.h src/gevent/gevent._semaphore.c src/gevent/gevent._semaphore.h
 	rm -f gevent._local.c gevent._local.h src/gevent/gevent._local.c src/gevent/gevent._local.h
-	rm -f src/gevent/*.so src/gevent/libev/*.so
-	rm -rf src/gevent/libev/*.o src/gevent/*.o
+	rm -f src/gevent/*.so src/gevent/libev/*.so src/gevent/libuv/*.so
+	rm -rf src/gevent/libev/*.o src/gevent/libuv/*.o src/gevent/*.o
 	rm -rf src/gevent/__pycache__ src/greentest/__pycache__ src/gevent/libev/__pycache__
 	rm -rf src/gevent/*.pyc src/greentest/*.pyc src/gevent/libev/*.pyc
 	rm -rf src/greentest/htmlcov src/greentest/.coverage
@@ -77,6 +77,7 @@ test_prelim:
 	${PYTHON} --version
 	${PYTHON} -c 'import greenlet; print(greenlet, greenlet.__version__)'
 	${PYTHON} -c 'import gevent.core; print(gevent.core.loop)'
+	${PYTHON} -c 'import gevent.libuv.corecffi; print(dir(gevent.libuv.corecffi.libuv))'
 	${PYTHON} -c 'import gevent.ares; print(gevent.ares)'
 	make bench
 
@@ -166,7 +167,7 @@ develop:
 	${PIP} install -U -r dev-requirements.txt
 
 lint-py27: $(PY27)
-	PYTHON=python2.7.13 PATH=$(BUILD_RUNTIMES)/versions/python2.7.13/bin:$(PATH) make develop travis_test_linters
+	PYTHON=python2.7.14 PATH=$(BUILD_RUNTIMES)/versions/python2.7.14/bin:$(PATH) make develop travis_test_linters
 
 test-py27: $(PY27)
 	PYTHON=python2.7.14 PATH=$(BUILD_RUNTIMES)/versions/python2.7.14/bin:$(PATH) make develop fulltoxtest
@@ -184,6 +185,9 @@ test-py35: $(PY35)
 test-py36: $(PY36)
 	PYTHON=python3.6.2 PIP=pip PATH=$(BUILD_RUNTIMES)/versions/python3.6.2/bin:$(PATH) make develop toxtest
 
+test-py36-libuv: $(PY36)
+	GEVENT_CORE_CFFI_ONLY=libuv make test-py36
+
 test-pypy: $(PYPY)
 	PYTHON=$(PYPY) PIP=pip PATH=$(BUILD_RUNTIMES)/versions/pypy580/bin:$(PATH) make develop toxtest
 
@@ -193,7 +197,11 @@ test-pypy3: $(PYPY3)
 test-py27-cffi: $(PY27)
 	GEVENT_CORE_CFFI_ONLY=1 PYTHON=python2.7.14 PATH=$(BUILD_RUNTIMES)/versions/python2.7.14/bin:$(PATH) make develop toxtest
 
+test-py27-libuv: $(PY27)
+	GEVENT_CORE_CFFI_ONLY=libuv make test-py27
+
 test-py27-noembed: $(PY27)
 	cd deps/libev && ./configure --disable-dependency-tracking && make
 	cd deps/c-ares && ./configure --disable-dependency-tracking && make
-	CPPFLAGS="-Ideps/libev -Ideps/c-ares" LDFLAGS="-Ldeps/libev/.libs -Ldeps/c-ares/.libs" LD_LIBRARY_PATH="$(PWD)/deps/libev/.libs:$(PWD)/deps/c-ares/.libs" EMBED=0 GEVENT_CORE_CEXT_ONLY=1 PYTHON=python2.7.14 PATH=$(BUILD_RUNTIMES)/versions/python2.7.14/bin:$(PATH) make develop toxtest
+	cd deps/libuv && ./autogen.sh && ./configure --disable-static && make
+	CPPFLAGS="-Ideps/libev -Ideps/c-ares -Ideps/libuv/include" LDFLAGS="-Ldeps/libev/.libs -Ldeps/c-ares/.libs -Ldeps/libuv/.libs" LD_LIBRARY_PATH="$(PWD)/deps/libev/.libs:$(PWD)/deps/c-ares/.libs:$(PWD)/deps/libuv/.libs" EMBED=0 GEVENT_CORE_CEXT_ONLY=1 PYTHON=python2.7.14 PATH=$(BUILD_RUNTIMES)/versions/python2.7.14/bin:$(PATH) make develop toxtest

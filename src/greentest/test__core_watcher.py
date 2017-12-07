@@ -1,13 +1,16 @@
+from __future__ import absolute_import, print_function
+
 import greentest
 from gevent import core
 
+IS_CFFI = hasattr(core, 'libuv') or hasattr(core, 'libev')
 
 class Test(greentest.TestCase):
 
     __timeout__ = None
 
     def test_types(self):
-        loop = core.loop()
+        loop = core.loop(default=False)
         lst = []
 
         io = loop.timer(0.01)
@@ -40,17 +43,51 @@ class Test(greentest.TestCase):
         # XXX why?
         io.args = None
         self.assertEqual(io.args, None)
-        start = core.time()
+        time_f = getattr(core, 'time', loop.now)
+        start = time_f()
         loop.run()
-        took = core.time() - start
+        took = time_f() - start
         self.assertEqual(lst, [()])
-        assert took < 1, took
+        if hasattr(core, 'time'):
+            # only useful on libev
+            assert took < 1, took
 
         io.start(reset, io, lst)
         del io
         loop.run()
         self.assertEqual(lst, [(), 25])
+        loop.destroy()
 
+    def test_invalid_fd(self):
+        loop = core.loop(default=False)
+
+        # Negative case caught everywhere. ValueError
+        # on POSIX, OSError on Windows Py3, IOError on Windows Py2
+        with self.assertRaises((ValueError, OSError, IOError)):
+            loop.io(-1, core.READ)
+
+        loop.destroy()
+
+    @greentest.skipOnAppVeyor("Stdout can't be watched on Win32")
+    def test_reuse_io(self):
+        loop = core.loop(default=False)
+
+        # Watchers aren't reused once all outstanding
+        # refs go away
+        tty_watcher = loop.io(1, core.WRITE)
+        watcher_handle = tty_watcher._watcher if IS_CFFI else tty_watcher
+
+        del tty_watcher
+        # XXX: Note there is a cycle in the CFFI code
+        # from watcher_handle._handle -> watcher_handle.
+        # So it doesn't go away until a GC runs.
+        import gc
+        gc.collect()
+
+        tty_watcher = loop.io(1, core.WRITE)
+        self.assertIsNot(tty_watcher._watcher if IS_CFFI else tty_watcher, watcher_handle)
+
+        loop.destroy()
 
 def reset(watcher, lst):
     watcher.args = None

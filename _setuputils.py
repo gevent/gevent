@@ -1,8 +1,6 @@
 # -*- coding: utf-8 -*-
 """
 gevent build utilities.
-
-.. $Id$
 """
 
 from __future__ import print_function, absolute_import, division
@@ -133,13 +131,15 @@ def make_universal_header(filename, *defines):
 # Processes
 
 
-def _system(cmd):
-    sys.stdout.write('Running %r in %s\n' % (cmd, os.getcwd()))
-    return check_call(cmd, shell=True)
+def _system(cmd, cwd=None, env=None, **kwargs):
+    sys.stdout.write('Running %r in %s\n' % (cmd, cwd or os.getcwd()))
+    if 'shell' not in kwargs:
+        kwargs['shell'] = True
+    return check_call(cmd, cwd=cwd, env=env, **kwargs)
 
 
-def system(cmd):
-    if _system(cmd):
+def system(cmd, cwd=None, env=None, **kwargs):
+    if _system(cmd, cwd=cwd, env=env, **kwargs):
         sys.exit(1)
 
 

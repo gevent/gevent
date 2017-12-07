@@ -277,6 +277,7 @@ if hasattr(os, 'fork'):
             .. versionchanged:: 1.2a1
                More cases are handled in a cooperative manner.
             """
+            # pylint: disable=too-many-return-statements
             # XXX Does not handle tracing children
 
             # So long as libev's loop doesn't run, it's OK to add
@@ -341,6 +342,12 @@ if hasattr(os, 'fork'):
 
             # we're not watching it and it may not even  be our child,
             # so we must go to the OS to be sure to get the right semantics (exception)
+            # XXX
+            # libuv has a race condition because the signal
+            # handler is a Python function, so the InterruptedError
+            # is raised before the signal handler runs and calls the
+            # child watcher
+            # we're not watching it
             return _waitpid(pid, options)
 
         def fork_and_watch(callback=None, loop=None, ref=False, fork=fork_gevent):

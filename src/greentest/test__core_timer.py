@@ -16,7 +16,7 @@ def main():
     x.start(f)
     if hasattr(loop, '_keepaliveset'):
         assert x in loop._keepaliveset
-    assert x.active, x.pending
+    assert x.active, ("active", x.active, "pending", x.pending)
     try:
         x.priority = 1
         raise AssertionError('must not be able to change priority of active watcher')
@@ -27,9 +27,10 @@ def main():
     assert called == [1], called
     assert x.callback is None, x.callback
     assert x.args is None, x.args
-    assert x.priority == 0, x
-    x.priority = 1
-    assert x.priority == 1, x
+    if x.priority is not None:
+        assert x.priority == 0, (x, x.priority)
+        x.priority = 1
+        assert x.priority == 1, x
     x.stop()
     if hasattr(loop, '_keepaliveset'):
         assert x not in loop._keepaliveset

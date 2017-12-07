@@ -20,6 +20,7 @@ PYGTE279 = (
     and sys.version_info[1] >= 7
     and sys.version_info[2] >= 9
 )
+LIBUV = os.getenv('GEVENT_CORE_CFFI_ONLY') == 'libuv' # XXX: Formalize this better
 
 
 FAILING_TESTS = [
@@ -153,6 +154,11 @@ if PYPY:
             'FLAKY test_subprocess.py', # timeouts on one test.
         ]
 
+
+if LIBUV:
+    if sys.platform.startswith("darwin"):
+        FAILING_TESTS += [
+        ]
 
 if PY3:
     # No idea / TODO

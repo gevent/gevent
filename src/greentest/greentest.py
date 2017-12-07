@@ -26,6 +26,7 @@ import sys
 import types
 import unittest
 from unittest import TestCase as BaseTestCase
+from unittest.util import safe_repr
 import time
 import os
 from os.path import basename, splitext
@@ -41,6 +42,7 @@ import _six as six
 
 PYPY = hasattr(sys, 'pypy_version_info')
 VERBOSE = sys.argv.count('-v') > 1
+LIBUV = os.getenv('GEVENT_CORE_CFFI_ONLY') == 'libuv' # XXX: Formalize this better
 
 if '--debug-greentest' in sys.argv:
     sys.argv.remove('--debug-greentest')
@@ -136,6 +138,11 @@ else:
 skipIf = unittest.skipIf
 
 EXPECT_POOR_TIMER_RESOLUTION = PYPY3 or RUNNING_ON_APPVEYOR
+
+if LIBUV:
+    skipOnLibuv = unittest.skip
+else:
+    skipOnLibuv = _do_not_skip
 
 class ExpectedException(Exception):
     """An exception whose traceback should be ignored"""
@@ -509,6 +516,20 @@ class TestCase(TestCaseMetaClass("NewBase", (BaseTestCase,), {})):
             self.assertLessEqual(delay, max_time)
             self.assertGreaterEqual(delay, min_time)
 
+    if not hasattr(BaseTestCase, 'assertIsNot'):
+        # Methods added in 3.1, backport for 2.7
+        def assertIs(self, expr1, expr2, msg=None):
+            """Just like self.assertTrue(a is b), but with a nicer default message."""
+            if expr1 is not expr2:
+                standardMsg = '%s is not %s' % (safe_repr(expr1),
+                                                safe_repr(expr2))
+                self.fail(self._formatMessage(msg, standardMsg))
+
+        def assertIsNot(self, expr1, expr2, msg=None):
+            """Just like self.assertTrue(a is not b), but with a nicer default message."""
+            if expr1 is expr2:
+                standardMsg = 'unexpectedly identical: %s' % (safe_repr(expr1),)
+                self.fail(self._formatMessage(msg, standardMsg))
 
     def assertMonkeyPatchedFuncSignatures(self, mod_name, func_names=(), exclude=()):
         # We use inspect.getargspec because it's the only thing available

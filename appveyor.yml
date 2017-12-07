@@ -53,7 +53,7 @@ environment:
       PYTHON_EXE: python
 
     - PYTHON: "C:\\Python36"
-      PYTHON_VERSION: "3.6.x" # currently 3.6.0
+      PYTHON_VERSION: "3.6.x" # currently 3.6.3
       PYTHON_ARCH: "32"
       PYTHON_EXE: python
 

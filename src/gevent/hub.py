@@ -688,7 +688,10 @@ class Hub(RawGreenlet):
                 loop.run()
             finally:
                 loop.error_handler = None  # break the refcount cycle
-            self.parent.throw(LoopExit('This operation would block forever', self))
+            debug = []
+            if hasattr(loop, 'debug'):
+                debug = loop.debug()
+            self.parent.throw(LoopExit('This operation would block forever', self, debug))
         # this function must never return, as it will cause switch() in the parent greenlet
         # to return an unexpected value
         # It is still possible to kill this greenlet with throw. However, in that case

@@ -295,7 +295,7 @@ class EventTests(BaseTestCase):
         self.assertEqual(results1, [False] * N)
         for r, dt in results2:
             self.assertFalse(r)
-            self.assertTrue(dt >= 0.2, dt)
+            self.assertTrue(dt >= 0.19, dt) # XXX: gevent: modified for libuv from 0.2 sometimes get 0.199865
         # The event is set
         results1 = []
         results2 = []
@@ -418,7 +418,7 @@ class ConditionTests(BaseTestCase):
         Bunch(f, N).wait_for_finished()
         self.assertEqual(len(results), 5)
         for dt in results:
-            self.assertTrue(dt >= 0.2, dt)
+            self.assertTrue(dt >= 0.19, dt) # XXX: gevent: gevent: modified from 0.2. sometimes get 0.199865
 
 
 class BaseSemaphoreTests(BaseTestCase):

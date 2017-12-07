@@ -35,6 +35,9 @@ assert hub.loop.ptr != initloop.ptr
 # Destroy hub including default loop, create new hub with non-default loop.
 hub.destroy(destroy_loop=True)
 hub = gevent.get_hub()
-assert not hub.loop.default, hub
+if not getattr(hub.loop, 'DEFAULT_LOOP_REGENERATES', False):
+    assert not hub.loop.default, hub
+else:
+    assert hub.loop.default
 
 hub.destroy()
