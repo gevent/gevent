@@ -91,7 +91,7 @@ install:
       }
       if ("${env:PYTHON_ID}" -eq "pypy") {
         if (!(Test-Path "${env:PYTMP}\pypy2-v5.9.0-win32.zip")) {
-          (New-Object Net.WebClient).DownloadFile('https://bitbucket.org/pypy/pypy/downloads/pypy2-5.9.0-win32.zip', "${env:PYTMP}\pypy2-v5.9.0-win32.zip");
+          (New-Object Net.WebClient).DownloadFile('https://bitbucket.org/pypy/pypy/downloads/pypy2-v5.9.0-win32.zip', "${env:PYTMP}\pypy2-v5.9.0-win32.zip");
         }
         7z x -y "${env:PYTMP}\pypy2-v5.9.0-win32.zip" -oC:\ | Out-Null;
         & "${env:PYTHON}\pypy.exe" "-mensurepip";
