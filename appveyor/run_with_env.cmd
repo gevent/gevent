@@ -82,16 +82,6 @@ IF %PYTHON_ARCH% == 64 (
         call %COMMAND_TO_RUN% || EXIT 1
     )
 ) ELSE (
-  :: gevent: doing this breaks Python 3.5 and 3.6 entirely for 32 bit building libev.
-  :: see https://ci.appveyor.com/project/denik/gevent/build/1.0.1096/job/53098otce10au8ik
-  :: and https://ci.appveyor.com/project/denik/gevent/build/1.0.1096/job/v8wa3jadaga4f3ej
-  ::  ECHO Configuring Windows SDK %WINDOWS_SDK_VERSION% for Python %MAJOR_PYTHON_VERSION% on a 32 bit architecture
-  ::  SET DISTUTILS_USE_SDK=1
-  ::  SET MSSdk=1
-  ::  "%WIN_SDK_ROOT%\%WINDOWS_SDK_VERSION%\Setup\WindowsSdkVer.exe" -q -version:%WINDOWS_SDK_VERSION%
-  ::  "%WIN_SDK_ROOT%\%WINDOWS_SDK_VERSION%\Bin\SetEnv.cmd" /x86 /release
-  ::  ECHO Executing: %COMMAND_TO_RUN%
-  ::  call %COMMAND_TO_RUN% || EXIT 1
     ECHO Using default MSVC build environment for 32 bit architecture
     ECHO Executing: %COMMAND_TO_RUN%
     call %COMMAND_TO_RUN% || EXIT 1
