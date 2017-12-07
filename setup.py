@@ -44,6 +44,7 @@ from _setuplibev import CORE
 from _setupares import ARES
 
 from _setuplibuv import LIBUV
+from _setuplibuv import configure_libuv
 
 SEMAPHORE = Extension(name="gevent._semaphore",
                       sources=["src/gevent/gevent._semaphore.c"])
@@ -60,6 +61,7 @@ EXT_MODULES = [
 ]
 
 LIBEV_CFFI_MODULE = 'src/gevent/libev/_corecffi_build.py:ffi'
+LIBUV_CFFI_MODULE = 'src/gevent/libuv/_corecffi_build.py:ffi'
 cffi_modules = []
 
 if not WIN:
@@ -77,7 +79,7 @@ if not WIN:
     EXT_MODULES.append(LIBUV)
 
 if not WIN or PYPY:
-    cffi_modules.append('src/gevent/libuv/_corecffi_build.py:ffi')
+    cffi_modules.append(LIBUV_CFFI_MODULE)
 
 if PYPY:
     install_requires = []
@@ -127,7 +129,7 @@ if ((len(sys.argv) >= 2
                              '--version',
                              'clean',
                              '--long-description')))
-    or __name__ != '__main__'):
+        or __name__ != '__main__'):
     _BUILDING = False
 
 
@@ -140,6 +142,8 @@ def run_setup(ext_modules, run_make):
             # TODO: Generalize this.
             if LIBEV_CFFI_MODULE in cffi_modules and not WIN:
                 system(libev_configure_command)
+            if LIBUV_CFFI_MODULE in cffi_modules and PYPY and WIN:
+                configure_libuv(None, None) # This actually also builds it too
 
         MakeSdist.make()
 
