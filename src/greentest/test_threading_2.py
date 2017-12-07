@@ -595,4 +595,7 @@ def main():
 
 if __name__ == "__main__":
     import greentest
-    greentest.main()
+    if greentest.PYPY3 and greentest.RUNNING_ON_CI:
+        print("SKIPPED: Timeout on PyPy3 on Travis")
+    else:
+        greentest.main()

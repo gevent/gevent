@@ -26,7 +26,7 @@ RUNNING_ON_CI = RUNNING_ON_TRAVIS or RUNNING_ON_APPVEYOR
 
 if RUNNING_ON_CI:
     # Too many and we get spurious timeouts
-    NWORKERS = 6
+    NWORKERS = 4
 
 
 # tests that don't do well when run on busy box
