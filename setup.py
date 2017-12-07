@@ -7,7 +7,7 @@ import os
 from _setuputils import read
 from _setuputils import read_version
 from _setuputils import system
-from _setuputils import PYPY, WIN, CFFI_WIN_BUILD_ANYWAY
+from _setuputils import PYPY, WIN
 from _setuputils import IGNORE_CFFI
 from _setuputils import ConfiguringBuildExt
 from _setuputils import MakeSdist
@@ -18,15 +18,6 @@ from _setuputils import BuildFailed
 # use it everywhere. v24.2.0 is needed for python_requires
 from setuptools import Extension, setup
 from setuptools import find_packages
-
-if PYPY and WIN and not CFFI_WIN_BUILD_ANYWAY:
-    # We can't properly handle (hah!) file-descriptors and
-    # handle mapping on Windows/CFFI, because the file needed,
-    # libev_vfd.h, can't be included, linked, and used: it uses
-    # Python API functions, and you're not supposed to do that from
-    # CFFI code. Plus I could never get the libraries= line to ffi.compile()
-    # correct to make linking work.
-    raise Exception("Unable to install on PyPy/Windows")
 
 if WIN:
     # Make sure the env vars that make.cmd needs are set
@@ -68,12 +59,23 @@ EXT_MODULES = [
     LOCAL,
 ]
 
-cffi_modules = [
-    'src/gevent/libev/_corecffi_build.py:ffi',
-]
+cffi_modules = []
+
+if not WIN:
+    # We can't properly handle (hah!) file-descriptors and
+    # handle mapping on Windows/CFFI with libev, because the file needed,
+    # libev_vfd.h, can't be included, linked, and used: it uses
+    # Python API functions, and you're not supposed to do that from
+    # CFFI code. Plus I could never get the libraries= line to ffi.compile()
+    # correct to make linking work.
+    cffi_modules.append(
+        'src/gevent/libev/_corecffi_build.py:ffi'
+    )
 
 if not WIN:
     EXT_MODULES.append(LIBUV)
+
+if not WIN or PYPY:
     cffi_modules.append('src/gevent/libuv/_corecffi_build.py:ffi')
 
 if PYPY:
