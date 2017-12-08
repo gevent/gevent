@@ -19,8 +19,10 @@ except ImportError:
     if lib == 'libuv':
         from gevent.libuv import loop as _core
     else:
-        from gevent.libev import corecffi as _core
-
+        try:
+            from gevent.libev import corecffi as _core
+        except ImportError:
+            from gevent.libuv import loop as _core
 
 copy_globals(_core, globals())
 
