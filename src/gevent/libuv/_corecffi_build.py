@@ -47,39 +47,182 @@ _cdef = _cdef.replace('GEVENT_ST_NLINK_T', st_nlink_type())
 _cdef = _cdef.replace("GEVENT_STRUCT_DONE _;", '...;')
 _cdef = _cdef.replace("GEVENT_UV_OS_SOCK_T", 'int' if not WIN else 'SOCKET')
 
-# if sys.platform.startswith('win'):
-#     # We must have the vfd_open, etc, functions on
-#     # Windows. But on other platforms, going through
-#     # CFFI to just return the file-descriptor is slower
-#     # than just doing it in Python, so we check for and
-#     # workaround their absence in corecffi.py
-#     _cdef += """
-# typedef int... vfd_socket_t;
-# int vfd_open(vfd_socket_t);
-# vfd_socket_t vfd_get(int);
-# void vfd_free(int);
-# """
 
 setup_py_dir = os.path.abspath(os.path.join(thisdir, '..', '..', '..'))
 libuv_dir = os.path.abspath(os.path.join(setup_py_dir, 'deps', 'libuv'))
-sys.path.append(setup_py_dir)
 
-include_dirs = [
+
+LIBUV_INCLUDE_DIRS = [
     thisdir, # libev_vfd.h
     os.path.join(libuv_dir, 'include'),
+    os.path.join(libuv_dir, 'src'),
 ]
 
+# Initially based on https://github.com/saghul/pyuv/blob/v1.x/setup_libuv.py
+
+def _libuv_source(rel_path):
+    path = os.path.join(libuv_dir, 'src', rel_path)
+    assert os.path.isfile(path), path
+    return path
+
+LIBUV_SOURCES = [
+    _libuv_source('fs-poll.c'),
+    _libuv_source('inet.c'),
+    _libuv_source('threadpool.c'),
+    _libuv_source('uv-common.c'),
+    _libuv_source('version.c'),
+]
+
+if WIN:
+    LIBUV_SOURCES += [
+        _libuv_source('win/async.c'),
+        _libuv_source('win/core.c'),
+        _libuv_source('win/detect-wakeup.c'),
+        _libuv_source('win/dl.c'),
+        _libuv_source('win/error.c'),
+        _libuv_source('win/fs-event.c'),
+        _libuv_source('win/fs.c'),
+        _libuv_source('win/getaddrinfo.c'),
+        _libuv_source('win/getnameinfo.c'),
+        _libuv_source('win/handle.c'),
+        _libuv_source('win/loop-watcher.c'),
+        _libuv_source('win/pipe.c'),
+        _libuv_source('win/poll.c'),
+        _libuv_source('win/process-stdio.c'),
+        _libuv_source('win/process.c'),
+        _libuv_source('win/req.c'),
+        _libuv_source('win/signal.c'),
+        _libuv_source('win/snprintf.c'),
+        _libuv_source('win/stream.c'),
+        _libuv_source('win/tcp.c'),
+        _libuv_source('win/thread.c'),
+        _libuv_source('win/timer.c'),
+        _libuv_source('win/tty.c'),
+        _libuv_source('win/udp.c'),
+        _libuv_source('win/util.c'),
+        _libuv_source('win/winapi.c'),
+        _libuv_source('win/winsock.c'),
+    ]
+else:
+    LIBUV_SOURCES += [
+        _libuv_source('unix/async.c'),
+        _libuv_source('unix/core.c'),
+        _libuv_source('unix/dl.c'),
+        _libuv_source('unix/fs.c'),
+        _libuv_source('unix/getaddrinfo.c'),
+        _libuv_source('unix/getnameinfo.c'),
+        _libuv_source('unix/loop-watcher.c'),
+        _libuv_source('unix/loop.c'),
+        _libuv_source('unix/pipe.c'),
+        _libuv_source('unix/poll.c'),
+        _libuv_source('unix/process.c'),
+        _libuv_source('unix/signal.c'),
+        _libuv_source('unix/stream.c'),
+        _libuv_source('unix/tcp.c'),
+        _libuv_source('unix/thread.c'),
+        _libuv_source('unix/timer.c'),
+        _libuv_source('unix/tty.c'),
+        _libuv_source('unix/udp.c'),
+    ]
 
 
-from _setuplibuv import LIBUV_LIBRARIES # pylint:disable=import-error
-from _setuplibuv import LIBUV # pylint:disable=import-error
+if sys.platform.startswith('linux'):
+    LIBUV_SOURCES += [
+        _libuv_source('unix/linux-core.c'),
+        _libuv_source('unix/linux-inotify.c'),
+        _libuv_source('unix/linux-syscalls.c'),
+        _libuv_source('unix/procfs-exepath.c'),
+        _libuv_source('unix/proctitle.c'),
+        _libuv_source('unix/sysinfo-loadavg.c'),
+        _libuv_source('unix/sysinfo-memory.c'),
+    ]
+elif sys.platform == 'darwin':
+    LIBUV_SOURCES += [
+        _libuv_source('unix/bsd-ifaddrs.c'),
+        _libuv_source('unix/darwin.c'),
+        _libuv_source('unix/darwin-proctitle.c'),
+        _libuv_source('unix/fsevents.c'),
+        _libuv_source('unix/kqueue.c'),
+        _libuv_source('unix/proctitle.c'),
+    ]
+elif sys.platform.startswith(('freebsd', 'dragonfly')):
+    LIBUV_SOURCES += [
+        _libuv_source('unix/bsd-ifaddrs.c'),
+        _libuv_source('unix/freebsd.c'),
+        _libuv_source('unix/kqueue.c'),
+        _libuv_source('unix/posix-hrtime.c'),
+    ]
+elif sys.platform.startswith('openbsd'):
+    LIBUV_SOURCES += [
+        _libuv_source('unix/bsd-ifaddrs.c'),
+        _libuv_source('unix/kqueue.c'),
+        _libuv_source('unix/openbsd.c'),
+        _libuv_source('unix/posix-hrtime.c'),
+    ]
+elif sys.platform.startswith('netbsd'):
+    LIBUV_SOURCES += [
+        _libuv_source('unix/bsd-ifaddrs.c'),
+        _libuv_source('unix/kqueue.c'),
+        _libuv_source('unix/netbsd.c'),
+        _libuv_source('unix/posix-hrtime.c'),
+    ]
+
+elif sys.platform.startswith('sunos'):
+    LIBUV_SOURCES += [
+        _libuv_source('unix/no-proctitle.c'),
+        _libuv_source('unix/sunos.c'),
+    ]
+
+
+LIBUV_MACROS = []
+
+def _define_macro(name, value):
+    LIBUV_MACROS.append((name, value))
+
+LIBUV_LIBRARIES = []
+
+def _add_library(name):
+    LIBUV_LIBRARIES.append(name)
+
+if sys.platform != 'win32':
+    _define_macro('_LARGEFILE_SOURCE', 1)
+    _define_macro('_FILE_OFFSET_BITS', 64)
+
+if sys.platform.startswith('linux'):
+    _add_library('dl')
+    _add_library('rt')
+elif sys.platform == 'darwin':
+    _define_macro('_DARWIN_USE_64_BIT_INODE', 1)
+    _define_macro('_DARWIN_UNLIMITED_SELECT', 1)
+elif sys.platform.startswith('netbsd'):
+    _add_library('kvm')
+elif sys.platform.startswith('sunos'):
+    _define_macro('__EXTENSIONS__', 1)
+    _define_macro('_XOPEN_SOURCE', 500)
+    _add_library('kstat')
+    _add_library('nsl')
+    _add_library('sendfile')
+    _add_library('socket')
+elif WIN:
+    _define_macro('_GNU_SOURCE', 1)
+    _define_macro('WIN32', 1)
+    _define_macro('_CRT_SECURE_NO_DEPRECATE', 1)
+    _define_macro('_CRT_NONSTDC_NO_DEPRECATE', 1)
+    _define_macro('_WIN32_WINNT', '0x0600')
+    _add_library('advapi32')
+    _add_library('iphlpapi')
+    _add_library('psapi')
+    _add_library('shell32')
+    _add_library('user32')
+    _add_library('userenv')
+    _add_library('ws2_32')
 
 ffi.cdef(_cdef)
-ffi.set_source('gevent.libuv._corecffi', _source,
-               include_dirs=include_dirs,
-               library_dirs=LIBUV.library_dirs,
-               extra_objects=list(LIBUV.extra_objects),
-               extra_link_args=list(LIBUV.extra_link_args),
+ffi.set_source('gevent.libuv._corecffi',
+               _source,
+               sources=LIBUV_SOURCES,
+               depends=LIBUV_SOURCES,
+               include_dirs=LIBUV_INCLUDE_DIRS,
                libraries=list(LIBUV_LIBRARIES))
 
 if __name__ == '__main__':

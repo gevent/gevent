@@ -163,6 +163,11 @@ typedef struct uv_fs_poll_s uv_fs_poll_t;
 
 
 // callbacks with the same signature
+// XXX: Note that these, and all callbacks, are defined to take
+// a void* or handle* instead of the more specific, correct,
+// value. This allows us to use the same gevent_generic_callback
+// without having to do a bunch of casts everywhere. This does produce
+// minor warnings when compiling the CFFI extension, though.
 typedef void (*uv_close_cb)(uv_handle_t *handle);
 typedef void (*uv_idle_cb)(void *handle);
 typedef void (*uv_timer_cb)(void *handle);
