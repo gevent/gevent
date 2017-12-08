@@ -119,7 +119,7 @@ install:
   # compiled extensions and are not provided as pre-built wheel packages,
   # pip will build them from source using the MSVC compiler matching the
   # target Python version and architecture
-  # Note that psutil won't build under PyPy on windows.
+  # Note that psutil won't build under PyPy on Windows.
   - "%CMD_IN_ENV% pip install -U wheel cython greenlet cffi"
 
   - ps:
