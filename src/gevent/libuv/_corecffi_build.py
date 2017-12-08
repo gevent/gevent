@@ -61,8 +61,11 @@ LIBUV_INCLUDE_DIRS = [
 # Initially based on https://github.com/saghul/pyuv/blob/v1.x/setup_libuv.py
 
 def _libuv_source(rel_path):
-    path = os.path.join(libuv_dir, 'src', rel_path)
-    assert os.path.isfile(path), path
+    # Certain versions of setuptools, notably on windows, are *very*
+    # picky about what we feed to sources= "setup() arguments must
+    # *always* be /-separated paths relative to the setup.py
+    # directory, *never* absolute paths." POSIX doesn't have that issue.
+    path = os.path.join('deps', 'libuv', 'src', rel_path)
     return path
 
 LIBUV_SOURCES = [
