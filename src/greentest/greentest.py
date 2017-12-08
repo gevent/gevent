@@ -42,8 +42,11 @@ import _six as six
 
 PYPY = hasattr(sys, 'pypy_version_info')
 VERBOSE = sys.argv.count('-v') > 1
-LIBUV = os.getenv('GEVENT_CORE_CFFI_ONLY') == 'libuv' # XXX: Formalize this better
 WIN = sys.platform.startswith("win")
+
+# XXX: Formalize this better
+LIBUV = os.getenv('GEVENT_CORE_CFFI_ONLY') == 'libuv' or (PYPY and WIN)
+
 
 if '--debug-greentest' in sys.argv:
     sys.argv.remove('--debug-greentest')
