@@ -24,6 +24,8 @@ from distutils import log # pylint:disable=no-name-in-module
 from distutils.errors import DistutilsError # pylint: disable=no-name-in-module,import-error
 
 # Inspired by code from https://github.com/saghul/pyuv
+# Note that they as of June 2017, they now use setuptools to build libuv
+# See https://github.com/saghul/pyuv/commit/2c398a9fe47deaebbf47f7bd37d9bb0c350656d1#diff-b30741570389940d7935f51cd0c084cb
 
 LIBUV_EMBED = should_embed('libuv')
 
@@ -167,7 +169,8 @@ def configure_libuv(_bext, _ext):
         if WIN:
             prepare_windows_env(env)
             libuv_arch = {'32bit': 'x86', '64bit': 'x64'}[platform.architecture()[0]]
-            system(["cmd", "/E:ON", "/V:ON", "/C", "..\\..\\appveyor\\run_with_env.cmd",
+            system(["cmd", "/E:ON", "/V:ON", "/C",
+                    #"..\\..\\appveyor\\run_with_env.cmd",
                     'vcbuild.bat', libuv_arch, 'release'],
                    cwd=libuv_dir,
                    env=env,
