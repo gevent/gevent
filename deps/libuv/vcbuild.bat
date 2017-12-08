@@ -109,7 +109,8 @@ goto select-target
 if not defined VS90COMNTOOLS goto vc-set-notfound
 if not exist "%VS90COMNTOOLS%\..\..\vc\vcvarsall.bat" goto vc-set-notfound
 call "%VS90COMNTOOLS%\..\..\vc\vcvarsall.bat" %vs_toolset%
-set GYP_MSVS_VERSION=2008
+@rem gevent: set to an 2005 instead of 2008 because 2008 generates too new a solution file
+set GYP_MSVS_VERSION=2005
 echo Using Visual Studio 2008
 goto select-target
 
