@@ -376,10 +376,10 @@ class TestCaseMetaClass(type):
 # Travis is slow and overloaded; Appveyor used to be faster, but
 # as of Dec 2015 it's almost always slower and/or has much worse timer
 # resolution
-CI_TIMEOUT = 7
+CI_TIMEOUT = 10
 if PY3 and PYPY:
     # pypy3 is very slow right now
-    CI_TIMEOUT = 10
+    CI_TIMEOUT = 15
 LOCAL_TIMEOUT = 1
 
 DEFAULT_LOCAL_HOST_ADDR = 'localhost'
