@@ -300,10 +300,16 @@ int uv_signal_stop(uv_signal_t *handle);
 // Unix any file descriptor that would be accepted by poll(2) can be
 // used.
 int uv_poll_init(uv_loop_t *loop, uv_poll_t *handle, int fd);
-// Initialize the handle using a socket descriptor. On Unix this is identical to uv_poll_init(). On windows it takes a SOCKET handle.
-// The socket is set to non-blocking mode.
-// On Windows, how to get the SOCKET type defined?
-//int uv_poll_init_socket(uv_loop_t* loop, uv_poll_t* handle, GEVENT_UV_OS_SOCK_T socket);
+
+// Initialize the handle using a socket descriptor. On Unix this is
+// identical to uv_poll_init(). On windows it takes a SOCKET handle;
+// SOCKET handles are another name for HANDLE objects in win32, and
+// those are defined as PVOID, even though they are not actually
+// pointers (they're small integers). CPython and PyPy both return
+// the SOCKET (as cast to an int) from the socket.fileno() method.
+// libuv uses ``uv_os_sock_t`` for this type, which is defined as an
+// int on unix.
+int uv_poll_init_socket(uv_loop_t* loop, uv_poll_t* handle, GEVENT_UV_OS_SOCK_T socket);
 int uv_poll_start(uv_poll_t *handle, int events, uv_poll_cb cb);
 int uv_poll_stop(uv_poll_t *handle);
 

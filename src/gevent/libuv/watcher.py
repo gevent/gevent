@@ -3,6 +3,7 @@
 from __future__ import absolute_import, print_function
 
 import functools
+import sys
 import weakref
 
 import gevent.libuv._corecffi as _corecffi # pylint:disable=no-name-in-module,import-error
@@ -28,7 +29,6 @@ def _dbg(*args, **kwargs):
 
 def _pid_dbg(*args, **kwargs):
     import os
-    import sys
     kwargs['file'] = sys.stderr
     print(os.getpid(), *args, **kwargs)
 
@@ -223,6 +223,12 @@ class io(_base.IoMixin, watcher):
 
     def _watcher_ffi_start(self):
         self._watcher_start(self._watcher, self._events, self._watcher_callback)
+
+    if sys.platform.startswith('win32'):
+        # We can only handle sockets. We smuggle the SOCKET through disguised
+        # as a fileno
+        _watcher_init = watcher._LIB.uv_poll_init_socket
+
 
     class _multiplexwatcher(object):
 

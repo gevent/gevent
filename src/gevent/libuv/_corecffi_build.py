@@ -45,7 +45,12 @@ _cdef = _cdef.replace('#define GEVENT_UV_OS_SOCK_T int', '')
 
 _cdef = _cdef.replace('GEVENT_ST_NLINK_T', st_nlink_type())
 _cdef = _cdef.replace("GEVENT_STRUCT_DONE _;", '...;')
-_cdef = _cdef.replace("GEVENT_UV_OS_SOCK_T", 'int' if not WIN else 'SOCKET')
+# uv_os_sock_t is int on POSIX and SOCKET on Win32, but socket is
+# just another name for handle, which is just another name for 'void*'
+# which we will treat as an 'unsigned long' or 'unsigned long long'
+# since it comes through 'fileno()' where it has been cast as an int.
+_void_pointer_as_integer = 'unsigned long' if system_bits() == 32 else 'unsigned long long'
+_cdef = _cdef.replace("GEVENT_UV_OS_SOCK_T", 'int' if not WIN else _void_pointer_as_integer)
 
 
 setup_py_dir = os.path.abspath(os.path.join(thisdir, '..', '..', '..'))
