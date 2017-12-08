@@ -21,7 +21,8 @@ class TestWatchers(unittest.TestCase):
 
     def test_io(self):
         if sys.platform == 'win32':
-            Error = IOError
+            # libev raises IOError, libuv raises ValueError
+            Error = (IOError,ValueError)
             win32 = True
         else:
             Error = ValueError

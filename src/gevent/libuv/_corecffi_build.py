@@ -82,8 +82,18 @@ if WIN:
         _libuv_source('win/error.c'),
         _libuv_source('win/fs-event.c'),
         _libuv_source('win/fs.c'),
-        _libuv_source('win/getaddrinfo.c'),
-        _libuv_source('win/getnameinfo.c'),
+        # getaddrinfo.c refers to ConvertInterfaceIndexToLuid
+        # and ConvertInterfaceLuidToNameA, which are supposedly in iphlpapi.h
+        # and iphlpapi.lib/dll. But on Windows 10 with Python 3.5 and VC 14 (Visual Studio 2015),
+        # I get an undefined warning from the compiler for those functions and
+        # a link error from the linker, so this file can't be included.
+        # This is possibly because the functions are defined for Windows Vista, and
+        # Python 3.5 builds with at earlier SDK?
+        # Fortunately we don't use those functions.
+        #_libuv_source('win/getaddrinfo.c'),
+        # getnameinfo.c refers to uv__getaddrinfo_translate_error from
+        # getaddrinfo.c, which we don't have.
+        #_libuv_source('win/getnameinfo.c'),
         _libuv_source('win/handle.c'),
         _libuv_source('win/loop-watcher.c'),
         _libuv_source('win/pipe.c'),

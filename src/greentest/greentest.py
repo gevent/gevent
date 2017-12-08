@@ -43,6 +43,7 @@ import _six as six
 PYPY = hasattr(sys, 'pypy_version_info')
 VERBOSE = sys.argv.count('-v') > 1
 LIBUV = os.getenv('GEVENT_CORE_CFFI_ONLY') == 'libuv' # XXX: Formalize this better
+WIN = sys.platform.startswith("win")
 
 if '--debug-greentest' in sys.argv:
     sys.argv.remove('--debug-greentest')
@@ -57,7 +58,7 @@ OPTIONAL_MODULES = ['resolver_ares']
 # on particular platforms; they generally contain partial
 # implementations completed in different modules.
 PLATFORM_SPECIFIC_SUFFIXES = ['2', '279', '3']
-if sys.platform.startswith('win'):
+if WIN:
     PLATFORM_SPECIFIC_SUFFIXES.append('posix')
 
 PY2 = None
@@ -88,7 +89,7 @@ elif sys.version_info[0] == 2:
 
 PYPY3 = PYPY and PY3
 
-if sys.platform.startswith('win'):
+if WIN:
     NON_APPLICABLE_SUFFIXES.append("posix")
     # This is intimately tied to FileObjectPosix
     NON_APPLICABLE_SUFFIXES.append("fileobject2")
@@ -102,6 +103,11 @@ def _do_not_skip(reason):
     def dec(f):
         return f
     return dec
+
+if WIN:
+    skipOnWindows = unittest.skip
+else:
+    skipOnWindows = _do_not_skip
 
 if RUNNING_ON_APPVEYOR:
     # See comments scattered around about timeouts and the timer
