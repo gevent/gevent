@@ -126,6 +126,7 @@ install:
       if ("${env:PYTHON_ID}" -ne "pypy") {
          pip install psutil | Out-Null;
       }
+  - ps: "ls \"C:/Program Files (x86)/MSBuild/\""
   - ps: "if(Test-Path(\"${env:PYTHON}\\bin\")) {ls ${env:PYTHON}\\bin;}"
   - ps: "if(Test-Path(\"${env:PYTHON}\\Scripts\")) {ls ${env:PYTHON}\\Scripts;}"
 
