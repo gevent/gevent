@@ -2,6 +2,7 @@ import unittest
 from test import test_support
 
 import errno
+import itertools
 import socket
 import select
 import time
@@ -11,9 +12,14 @@ import sys
 import os
 import array
 import contextlib
-from weakref import proxy
 import signal
 import math
+import weakref
+try:
+    import _socket
+except ImportError:
+    _socket = None
+
 
 def try_address(host, port=0, family=socket.AF_INET):
     """Try to bind a socket on the given host:port and return True
@@ -80,7 +86,7 @@ class ThreadableTest:
         clientTearDown ()
 
     Any new test functions within the class must then define
-    tests in pairs, where the test name is preceeded with a
+    tests in pairs, where the test name is preceded with a
     '_' to indicate the client portion of the test. Ex:
 
         def testFoo(self):
@@ -243,9 +249,22 @@ class SocketPairTest(unittest.TestCase, ThreadableTest):
 
 class GeneralModuleTests(unittest.TestCase):
 
+    @unittest.skipUnless(_socket is not None, 'need _socket module')
+    def test_csocket_repr(self):
+        s = _socket.socket(_socket.AF_INET, _socket.SOCK_STREAM)
+        try:
+            expected = ('<socket object, fd=%s, family=%s, type=%s, protocol=%s>'
+                        % (s.fileno(), s.family, s.type, s.proto))
+            self.assertEqual(repr(s), expected)
+        finally:
+            s.close()
+        expected = ('<socket object, fd=-1, family=%s, type=%s, protocol=%s>'
+                    % (s.family, s.type, s.proto))
+        self.assertEqual(repr(s), expected)
+
     def test_weakref(self):
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        p = proxy(s)
+        p = weakref.proxy(s)
         self.assertEqual(p.fileno(), s.fileno())
         s.close()
         s = None
@@ -256,6 +275,14 @@ class GeneralModuleTests(unittest.TestCase):
             pass
         else:
             self.fail('Socket proxy still exists')
+
+    def test_weakref__sock(self):
+        s = socket.socket()._sock
+        w = weakref.ref(s)
+        self.assertIs(w(), s)
+        del s
+        test_support.gc_collect()
+        self.assertIsNone(w())
 
     def testSocketError(self):
         # Testing socket module exceptions
@@ -273,7 +300,7 @@ class GeneralModuleTests(unittest.TestCase):
                               "Error raising socket exception.")
 
     def testSendtoErrors(self):
-        # Testing that sendto doens't masks failures. See #10169.
+        # Testing that sendto doesn't mask failures. See #10169.
         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.addCleanup(s.close)
         s.bind(('', 0))
@@ -603,17 +630,24 @@ class GeneralModuleTests(unittest.TestCase):
         sock.close()
 
     def test_getsockaddrarg(self):
-        host = '0.0.0.0'
-        port = self._get_unused_port(bind_address=host)
+        sock = socket.socket()
+        self.addCleanup(sock.close)
+        port = test_support.find_unused_port()
         big_port = port + 65536
         neg_port = port - 65536
-        sock = socket.socket()
-        try:
-            self.assertRaises((OverflowError, ValueError), sock.bind, (host, big_port))
-            self.assertRaises((OverflowError, ValueError), sock.bind, (host, neg_port))
-            sock.bind((host, port))
-        finally:
-            sock.close()
+        self.assertRaises((OverflowError, ValueError), sock.bind, (HOST, big_port))
+        self.assertRaises((OverflowError, ValueError), sock.bind, (HOST, neg_port))
+        # Since find_unused_port() is inherently subject to race conditions, we
+        # call it a couple times if necessary.
+        for i in itertools.count():
+            port = test_support.find_unused_port()
+            try:
+                sock.bind((HOST, port))
+            except OSError as e:
+                if e.errno != errno.EADDRINUSE or i == 5:
+                    raise
+            else:
+                break
 
     @unittest.skipUnless(os.name == "nt", "Windows specific")
     def test_sock_ioctl(self):
@@ -677,7 +711,7 @@ class GeneralModuleTests(unittest.TestCase):
                 pass
 
     def check_sendall_interrupted(self, with_timeout):
-        # socketpair() is not stricly required, but it makes things easier.
+        # socketpair() is not strictly required, but it makes things easier.
         if not hasattr(signal, 'alarm') or not hasattr(socket, 'socketpair'):
             self.skipTest("signal.alarm and socket.socketpair required for this test")
         # Our signal handlers clobber the C errno by calling a math function
@@ -706,7 +740,6 @@ class GeneralModuleTests(unittest.TestCase):
             c.close()
             s.close()
 
-    @unittest.skip("Needs fix in CFFI; hangs forever")
     def test_sendall_interrupted(self):
         self.check_sendall_interrupted(False)
 
@@ -797,7 +830,7 @@ class BasicTCPTest(SocketConnectedTest):
         self.serv_conn.sendall(big_chunk)
 
     @unittest.skipUnless(hasattr(socket, 'fromfd'),
-                         'socket.fromfd not availble')
+                         'socket.fromfd not available')
     def testFromFd(self):
         # Testing fromfd()
         fd = self.cli_conn.fileno()
@@ -1292,15 +1325,11 @@ class NetworkConnectionNoServer(unittest.TestCase):
     def mocked_socket_module(self):
         """Return a socket which times out on connect"""
         old_socket = socket.socket
-        import gevent.socket
-        old_g_socket = gevent.socket.socket
         socket.socket = self.MockSocket
-        gevent.socket.socket = self.MockSocket
         try:
             yield
         finally:
             socket.socket = old_socket
-            gevent.socket.socket = old_g_socket
 
     def test_connect(self):
         port = test_support.find_unused_port()
@@ -1734,7 +1763,7 @@ class TIPCThreadableTest(unittest.TestCase, ThreadableTest):
         self.conn, self.connaddr = self.srv.accept()
 
     def clientSetUp(self):
-        # The is a hittable race between serverExplicitReady() and the
+        # There is a hittable race between serverExplicitReady() and the
         # accept() call; sleep a little while to avoid it, otherwise
         # we could get an exception
         time.sleep(0.1)

@@ -64,7 +64,7 @@ def test():
             hub.wait(watcher)
 
         now = time.time()
-        if now - start <= 0.0:
+        if now - start - DELAY <= 0.0:
             # Sigh. This is especially true on PyPy.
             assert WIN, ("Bad timer resolution expected on Windows, test is useless", start, now)
             return

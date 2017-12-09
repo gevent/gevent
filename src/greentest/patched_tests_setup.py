@@ -15,6 +15,12 @@ import re
 
 TRAVIS = os.environ.get("TRAVIS") == "true"
 OSX = sys.platform == 'darwin'
+PYPY = hasattr(sys, 'pypy_version_info')
+WIN = sys.platform.startswith("win")
+
+# XXX: Formalize this better
+LIBUV = os.getenv('GEVENT_CORE_CFFI_ONLY') == 'libuv' or (PYPY and WIN)
+
 
 # By default, test cases are expected to switch and emit warnings if there was none
 # If a test is found in this list, it's expected not to switch.
@@ -184,7 +190,7 @@ if 'thread' in os.getenv('GEVENT_FILE', ''):
     ]
 
 
-if os.getenv('GEVENT_CORE_CFFI_ONLY') == 'libuv':
+if LIBUV:
     # epoll appears to work with these just fine in some cases;
     # kqueue (at least on OS X, the only tested kqueue system)
     # never does (failing with abort())
@@ -216,6 +222,14 @@ if os.getenv('GEVENT_CORE_CFFI_ONLY') == 'libuv':
             # Alternately, this comes right after a call to s.select(0); perhaps libuv
             # isn't reporting twice? We cache the watchers, maybe we need a new watcher?
             'test_selectors.PollSelectorTestCase.test_timeout',
+        ]
+
+    if WIN and PYPY:
+        # From PyPy2-v5.9.0, but tested against tests from
+        # python 2.7.8, which do work on linux and darwin
+        disabled_tests += [
+            # appears to timeout?
+            'test_threading.ThreadTests.test_finalize_with_trace'
         ]
 
 def _make_run_with_original(mod_name, func_name):
@@ -516,6 +530,8 @@ if hasattr(sys, 'pypy_version_info') and sys.pypy_version_info[:4] in ( # pylint
             # Likewise, but I haven't produced it locally.
             'test_threading.ThreadJoinOnShutdown.test_1_join_on_shutdown',
         ]
+
+if hasattr(sys, 'pypy_version_info'):
 
     wrapped_tests.update({
         # XXX: gevent: The error that was raised by that last call

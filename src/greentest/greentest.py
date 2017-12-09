@@ -380,8 +380,9 @@ class TestCaseMetaClass(type):
 # as of Dec 2015 it's almost always slower and/or has much worse timer
 # resolution
 CI_TIMEOUT = 10
-if PY3 and PYPY:
-    # pypy3 is very slow right now
+if (PY3 and PYPY) or (PYPY and WIN and LIBUV):
+    # pypy3 is very slow right now,
+    # as is PyPy2 on windows (which only has libuv)
     CI_TIMEOUT = 15
 if PYPY and WIN and LIBUV:
     # slow and flaky timeouts
@@ -423,6 +424,14 @@ class TestCase(TestCaseMetaClass("NewBase", (BaseTestCase,), {})):
         if hasattr(self, 'cleanup'):
             self.cleanup()
         self._error = self._none
+        self._tearDownCloseOnTearDown()
+        try:
+            del self.close_on_teardown
+        except AttributeError:
+            pass
+        super(TestCase, self).tearDown()
+
+    def _tearDownCloseOnTearDown(self):
         # XXX: Should probably reverse this
         for x in self.close_on_teardown:
             close = getattr(x, 'close', x)
@@ -430,11 +439,7 @@ class TestCase(TestCaseMetaClass("NewBase", (BaseTestCase,), {})):
                 close()
             except Exception:
                 pass
-        try:
-            del self.close_on_teardown
-        except AttributeError:
-            pass
-        super(TestCase, self).tearDown()
+
 
     @classmethod
     def setUpClass(cls):
@@ -477,6 +482,7 @@ class TestCase(TestCaseMetaClass("NewBase", (BaseTestCase,), {})):
         return splitext(basename(self.modulename))[0] + '.' + self.testcasename
 
     _none = (None, None, None)
+    # (context, kind, value)
     _error = _none
 
     def expect_one_error(self):
@@ -484,12 +490,12 @@ class TestCase(TestCaseMetaClass("NewBase", (BaseTestCase,), {})):
         self._old_handle_error = gevent.get_hub().handle_error
         gevent.get_hub().handle_error = self._store_error
 
-    def _store_error(self, where, type, value, tb):
+    def _store_error(self, where, t, value, tb):
         del tb
         if self._error != self._none:
-            gevent.get_hub().parent.throw(type, value)
+            gevent.get_hub().parent.throw(t, value)
         else:
-            self._error = (where, type, value)
+            self._error = (where, t, value)
 
     def peek_error(self):
         return self._error
@@ -500,18 +506,20 @@ class TestCase(TestCaseMetaClass("NewBase", (BaseTestCase,), {})):
         finally:
             self._error = self._none
 
-    def assert_error(self, type=None, value=None, error=None, where_type=None):
+    def assert_error(self, kind=None, value=None, error=None, where_type=None):
         if error is None:
             error = self.get_error()
-        if type is not None:
-            assert issubclass(error[1], type), error
+        econtext, ekind, evalue = error
+        if kind is not None:
+            self.assertIsInstance(kind, type)
+            assert issubclass(ekind, kind), error
         if value is not None:
             if isinstance(value, str):
-                assert str(error[2]) == value, error
+                self.assertEqual(str(evalue), value)
             else:
-                assert error[2] is value, error
+                self.assertIs(evalue, value)
         if where_type is not None:
-            self.assertIsInstance(error[0], where_type)
+            self.assertIsInstance(econtext, where_type)
         return error
 
     if RUNNING_ON_APPVEYOR:
@@ -881,9 +889,9 @@ else:
             # num_fds is unix only. Is num_handles close enough on Windows?
             return 0
 
-if RUNNING_ON_TRAVIS:
-    # XXX: Note: installing psutil on the travis linux vm caused failures in test__makefile_refs.
-    get_open_files = lsof_get_open_files
+#if RUNNING_ON_TRAVIS:
+#    # XXX: Note: installing psutil on the travis linux vm caused failures in test__makefile_refs.
+#    get_open_files = lsof_get_open_files
 
 if PYPY:
 

@@ -6,6 +6,7 @@ import ssl
 import threading
 import unittest
 import errno
+import weakref
 
 from greentest import TestCase
 
@@ -112,6 +113,19 @@ class Test(TestCase):
         self.assert_open(s, s.fileno())
         return s
 
+    def _close_on_teardown(self, resource):
+        # Keeping raw sockets alive keeps SSL sockets
+        # from being closed too, at least on CPython, so we
+        # need to use weakrefs
+        if 'close_on_teardown' not in self.__dict__:
+            self.close_on_teardown = []
+        self.close_on_teardown.append(weakref.ref(resource))
+        return resource
+
+    def _tearDownCloseOnTearDown(self):
+        self.close_on_teardown = [r() for r in self.close_on_teardown if r() is not None]
+        super(Test, self)._tearDownCloseOnTearDown()
+        self._tearDownCloseOnTearDown = ()
 
 class TestSocket(Test):
 
@@ -275,9 +289,8 @@ class TestSSL(Test):
 
     def test_makefile1(self):
         s = self.make_open_socket()
-        fileno = s.fileno()
-
         s = ssl.wrap_socket(s)
+
         self._close_on_teardown(s)
         fileno = s.fileno()
         self.assert_open(s, fileno)
