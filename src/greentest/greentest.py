@@ -512,7 +512,12 @@ class TestCase(TestCaseMetaClass("NewBase", (BaseTestCase,), {})):
         econtext, ekind, evalue = error
         if kind is not None:
             self.assertIsInstance(kind, type)
-            assert issubclass(ekind, kind), error
+            try:
+                assert issubclass(ekind, kind), error
+            except TypeError as e:
+                # Seen on PyPy on Windows
+                print("TYPE ERROR", e, ekind, kind, type(kind))
+                raise
         if value is not None:
             if isinstance(value, str):
                 self.assertEqual(str(evalue), value)
@@ -889,9 +894,11 @@ else:
             # num_fds is unix only. Is num_handles close enough on Windows?
             return 0
 
-#if RUNNING_ON_TRAVIS:
-#    # XXX: Note: installing psutil on the travis linux vm caused failures in test__makefile_refs.
-#    get_open_files = lsof_get_open_files
+if RUNNING_ON_TRAVIS:
+    # XXX: Note: installing psutil on the travis linux vm caused
+    # failures in test__makefile_refs. Specifically, it didn't find
+    # open files we expected.
+    get_open_files = lsof_get_open_files
 
 if PYPY:
 
