@@ -11,7 +11,6 @@ import gevent.libuv._corecffi as _corecffi # pylint:disable=no-name-in-module,im
 ffi = _corecffi.ffi
 libuv = _corecffi.lib
 
-
 from gevent._ffi import watcher as _base
 
 _closing_handles = set()
@@ -32,7 +31,7 @@ def _pid_dbg(*args, **kwargs):
     kwargs['file'] = sys.stderr
     print(os.getpid(), *args, **kwargs)
 
-# _dbg = _pid_dbg
+#_dbg = _pid_dbg
 
 _events = [(libuv.UV_READABLE, "READ"),
            (libuv.UV_WRITABLE, "WRITE")]
@@ -232,12 +231,13 @@ class io(_base.IoMixin, watcher):
 
     class _multiplexwatcher(object):
 
+        callback = None
+        args = ()
+        pass_events = False
+        ref = True
+
         def __init__(self, events, watcher):
             self.events = events
-            self.callback = None
-            self.args = ()
-            self.pass_events = False
-            self.ref = True
 
             # References:
             # These objects keep the original IO object alive;
@@ -248,6 +248,7 @@ class io(_base.IoMixin, watcher):
             self._watcher_ref = watcher
 
         def start(self, callback, *args, **kwargs):
+            _dbg("Starting IO multiplex watcher for", self.fd, callback)
             self.pass_events = kwargs.get("pass_events")
             self.callback = callback
             self.args = args
@@ -257,6 +258,7 @@ class io(_base.IoMixin, watcher):
                 watcher._io_start()
 
         def stop(self):
+            _dbg("Stopping IO multiplex watcher for", self.fd, self.callback)
             self.callback = None
             self.pass_events = None
             self.args = None
@@ -316,14 +318,22 @@ class io(_base.IoMixin, watcher):
             # the reader, we get a LoopExit. So we can't return here and arguably shouldn't print it
             # either. The negative events mask will match the watcher's mask.
             # See test__fileobject.py:Test.test_newlines for an example.
+
+            # On Windows (at least with PyPy), we can get ENOTSOCK (socket operation on non-socket)
+            # if a socket gets closed. If we don't pass the events on, we hang.
+            # See test__makefile_ref.TestSSL for examples.
             # return
 
+        _dbg("Callback event for watcher", self._fd, "event", events)
         for watcher_ref in self._multiplex_watchers:
             watcher = watcher_ref()
             if not watcher or not watcher.callback:
                 continue
 
-            if events & watcher.events:
+            _dbg("Event for watcher", self._fd, events, watcher.events, events & watcher.events)
+
+            send_event = (events & watcher.events) or events < 0
+            if send_event:
                 if not watcher.pass_events:
                     watcher.callback(*watcher.args)
                 else:

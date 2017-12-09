@@ -45,7 +45,7 @@ VERBOSE = sys.argv.count('-v') > 1
 WIN = sys.platform.startswith("win")
 
 # XXX: Formalize this better
-LIBUV = os.getenv('GEVENT_CORE_CFFI_ONLY') == 'libuv' or (PYPY and WIN)
+LIBUV = os.getenv('GEVENT_CORE_CFFI_ONLY') == 'libuv' or (PYPY and WIN) or hasattr(gevent.core, 'libuv')
 
 
 if '--debug-greentest' in sys.argv:
@@ -383,7 +383,11 @@ CI_TIMEOUT = 10
 if PY3 and PYPY:
     # pypy3 is very slow right now
     CI_TIMEOUT = 15
-LOCAL_TIMEOUT = 1
+if PYPY and WIN and LIBUV:
+    # slow and flaky timeouts
+    LOCAL_TIMEOUT = CI_TIMEOUT
+else:
+    LOCAL_TIMEOUT = 1
 
 DEFAULT_LOCAL_HOST_ADDR = 'localhost'
 DEFAULT_LOCAL_HOST_ADDR6 = DEFAULT_LOCAL_HOST_ADDR
@@ -793,11 +797,16 @@ def _run_lsof():
     os.close(fd)
     lsof_command = 'lsof -p %s > %s' % (pid, tmpname)
     if os.system(lsof_command):
-        raise OSError("lsof failed")
+        # XXX: This prints to the console an annoying message: 'lsof is not recognized'
+        raise unittest.SkipTest("lsof failed")
     with open(tmpname) as fobj:
         data = fobj.read().strip()
     os.remove(tmpname)
     return data
+
+if WIN:
+    def _run_lsof():
+        raise unittest.SkipTest("lsof not expected on Windows")
 
 def default_get_open_files(pipes=False):
     data = _run_lsof()
@@ -831,7 +840,7 @@ def default_get_number_open_files():
     else:
         try:
             return len(get_open_files(pipes=True)) - 1
-        except (OSError, AssertionError):
+        except (OSError, AssertionError, unittest.SkipTest):
             return 0
 
 lsof_get_open_files = default_get_open_files

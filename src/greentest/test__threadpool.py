@@ -15,7 +15,8 @@ PYPY = hasattr(sys, 'pypy_version_info')
 
 
 class TestCase(greentest.TestCase):
-
+    # These generally need more time
+    __timeout__ = greentest.CI_TIMEOUT
     pool = None
 
     def cleanup(self):
@@ -107,7 +108,7 @@ def sqr_random_sleep(x):
 TIMEOUT1, TIMEOUT2, TIMEOUT3 = 0.082, 0.035, 0.14
 
 class _AbstractPoolTest(TestCase):
-    __timeout__ = 5
+
     size = 1
 
     ClassUnderTest = ThreadPool
@@ -256,7 +257,7 @@ class TestPool3(TestPool):
 
 class TestPool10(TestPool):
     size = 10
-    __timeout__ = 5
+
 
 
 # class TestJoinSleep(greentest.GenericGetTestCase):
