@@ -8,19 +8,20 @@ import unittest
 import errno
 import weakref
 
-from greentest import TestCase
+import greentest
+
 
 dirname = os.path.dirname(os.path.abspath(__file__))
 certfile = os.path.join(dirname, '2.7/keycert.pem')
 pid = os.getpid()
 
-import sys
-PY3 = sys.version_info[0] >= 3
+PY3 = greentest.PY3
+PYPY = greentest.PYPY
 fd_types = int
 if PY3:
     long = int
 fd_types = (int, long)
-WIN = sys.platform.startswith("win")
+WIN = greentest.WIN
 
 from greentest import get_open_files
 try:
@@ -29,7 +30,7 @@ except ImportError:
     psutil = None
 
 
-class Test(TestCase):
+class Test(greentest.TestCase):
 
     extra_allowed_open_states = ()
 
@@ -113,19 +114,28 @@ class Test(TestCase):
         self.assert_open(s, s.fileno())
         return s
 
-    def _close_on_teardown(self, resource):
-        # Keeping raw sockets alive keeps SSL sockets
-        # from being closed too, at least on CPython, so we
-        # need to use weakrefs
-        if 'close_on_teardown' not in self.__dict__:
-            self.close_on_teardown = []
-        self.close_on_teardown.append(weakref.ref(resource))
-        return resource
+    if not PYPY or not greentest.RUNNING_ON_TRAVIS:
 
-    def _tearDownCloseOnTearDown(self):
-        self.close_on_teardown = [r() for r in self.close_on_teardown if r() is not None]
-        super(Test, self)._tearDownCloseOnTearDown()
-        self._tearDownCloseOnTearDown = ()
+        def _close_on_teardown(self, resource):
+            # Keeping raw sockets alive keeps SSL sockets
+            # from being closed too, at least on CPython, so we
+            # need to use weakrefs
+            if 'close_on_teardown' not in self.__dict__:
+                self.close_on_teardown = []
+            self.close_on_teardown.append(weakref.ref(resource))
+            return resource
+
+        def _tearDownCloseOnTearDown(self):
+            self.close_on_teardown = [r() for r in self.close_on_teardown if r() is not None]
+            super(Test, self)._tearDownCloseOnTearDown()
+            self._tearDownCloseOnTearDown = ()
+
+    else:
+        # Seeing a weird GC? interaction on linux.
+        # I can't reproduce locally. Define these as no-ops
+        # there
+        def _close_on_teardown(self, resource):
+            return resource
 
 class TestSocket(Test):
 
