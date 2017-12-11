@@ -117,8 +117,8 @@ PY27=$(BUILD_RUNTIMES)/snakepit/python2.7.14
 PY34=$(BUILD_RUNTIMES)/snakepit/python3.4.7
 PY35=$(BUILD_RUNTIMES)/snakepit/python3.5.4
 PY36=$(BUILD_RUNTIMES)/snakepit/python3.6.2
-PYPY=$(BUILD_RUNTIMES)/snakepit/pypy580
-PYPY3=$(BUILD_RUNTIMES)/snakepit/pypy3.5_580
+PYPY=$(BUILD_RUNTIMES)/snakepit/pypy590
+PYPY3=$(BUILD_RUNTIMES)/snakepit/pypy3.5_590
 
 TOOLS=$(BUILD_RUNTIMES)/tools
 
@@ -151,20 +151,18 @@ $(PYPY):
 $(PYPY3):
 	scripts/install.sh pypy3
 
-PIP?=$(BUILD_RUNTIMES)/versions/$(PYTHON)/bin/pip
 
 develop:
 	ls -l $(BUILD_RUNTIMES)/snakepit/
-	echo pip is at `which $(PIP)`
 	echo python is at `which $(PYTHON)`
 # First install a newer pip so that it can use the wheel cache
 # (only needed until travis upgrades pip to 7.x; note that the 3.5
 # environment uses pip 7.1 by default)
-	${PIP} install -U pip setuptools
+	python -m pip install -U pip setuptools
 # Then start installing our deps so they can be cached. Note that use of --build-options / --global-options / --install-options
 # disables the cache.
 # We need wheel>=0.26 on Python 3.5. See previous revisions.
-	${PIP} install -U -r dev-requirements.txt
+	python -m pip install -U -r dev-requirements.txt
 
 lint-py27: $(PY27)
 	PYTHON=python2.7.14 PATH=$(BUILD_RUNTIMES)/versions/python2.7.14/bin:$(PATH) make develop travis_test_linters
@@ -177,22 +175,23 @@ test-py278: $(PY278)
 	PYTHON=python2.7.8 PATH=$(BUILD_RUNTIMES)/versions/python2.7.8/bin:$(PATH) make develop toxtest
 
 test-py34: $(PY34)
-	PYTHON=python3.4.7 PIP=pip PATH=$(BUILD_RUNTIMES)/versions/python3.4.7/bin:$(PATH) make develop toxtest
+	PYTHON=python3.4.7 PATH=$(BUILD_RUNTIMES)/versions/python3.4.7/bin:$(PATH) make develop toxtest
 
 test-py35: $(PY35)
-	PYTHON=python3.5.4 PIP=pip PATH=$(BUILD_RUNTIMES)/versions/python3.5.4/bin:$(PATH) make develop fulltoxtest
+	PYTHON=python3.5.4 PATH=$(BUILD_RUNTIMES)/versions/python3.5.4/bin:$(PATH) make develop fulltoxtest
 
 test-py36: $(PY36)
-	PYTHON=python3.6.2 PIP=pip PATH=$(BUILD_RUNTIMES)/versions/python3.6.2/bin:$(PATH) make develop toxtest
+	PYTHON=python3.6.2 PATH=$(BUILD_RUNTIMES)/versions/python3.6.2/bin:$(PATH) make develop toxtest
 
 test-py36-libuv: $(PY36)
 	GEVENT_CORE_CFFI_ONLY=libuv make test-py36
 
 test-pypy: $(PYPY)
-	PYTHON=$(PYPY) PIP=pip PATH=$(BUILD_RUNTIMES)/versions/pypy580/bin:$(PATH) make develop toxtest
+	ls $(BUILD_RUNTIMES)/versions/pypy590/bin/
+	PYTHON=$(PYPY) PATH=$(BUILD_RUNTIMES)/versions/pypy590/bin:$(PATH) make develop toxtest
 
 test-pypy3: $(PYPY3)
-	PYTHON=$(PYPY3) PIP=pip PATH=$(BUILD_RUNTIMES)/versions/pypy3.5_580/bin:$(PATH) make develop toxtest
+	PYTHON=$(PYPY3) PATH=$(BUILD_RUNTIMES)/versions/pypy3.5_590/bin:$(PATH) make develop toxtest
 
 test-py27-cffi: $(PY27)
 	GEVENT_CORE_CFFI_ONLY=1 PYTHON=python2.7.14 PATH=$(BUILD_RUNTIMES)/versions/python2.7.14/bin:$(PATH) make develop toxtest

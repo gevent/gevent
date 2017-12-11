@@ -6,9 +6,10 @@ import greentest
 # XXX also test: send, sendall, recvfrom, recvfrom_into, sendto
 
 
-def readall(socket, address):
-    while socket.recv(1024):
+def readall(sock, _):
+    while sock.recv(1024):
         pass
+    sock.close()
 
 
 class Test(greentest.TestCase):
@@ -32,7 +33,7 @@ class Test(greentest.TestCase):
             receiver.join(timeout=0.1)
             assert receiver.ready(), receiver
             self.assertEqual(receiver.value, None)
-            assert isinstance(receiver.exception, socket.error)
+            self.assertIsInstance(receiver.exception, socket.error)
             self.assertEqual(receiver.exception.errno, socket.EBADF)
         finally:
             receiver.kill()
@@ -47,6 +48,7 @@ class Test(greentest.TestCase):
             self.assertRaises(AssertionError, sock.recv, 25)
         finally:
             receiver.kill()
+            sock.close()
 
 
 if __name__ == '__main__':

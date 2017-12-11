@@ -3,13 +3,13 @@ import _six as six
 from os import pipe
 import gevent
 from gevent import os
-from greentest import TestCase, main
+from greentest import TestCase, main, CI_TIMEOUT
 from gevent import Greenlet, joinall
 
 
 class TestOS_tp(TestCase):
 
-    __timeout__ = 5
+    __timeout__ = CI_TIMEOUT
 
     def pipe(self):
         return pipe()
@@ -83,7 +83,7 @@ if hasattr(os, 'fork_and_watch'):
 
     class TestForkAndWatch(TestCase):
 
-        __timeout__ = 5
+        __timeout__ = CI_TIMEOUT
 
         def test_waitpid_all(self):
             # Cover this specific case.

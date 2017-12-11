@@ -1,13 +1,14 @@
-"""Regresssion tests for urllib"""
+"""Regression tests for urllib"""
 
+import collections
 import urllib
 import httplib
+import io
 import unittest
 import os
 import sys
 import mimetools
 import tempfile
-import StringIO
 
 from test import test_support
 from base64 import b64encode
@@ -21,37 +22,43 @@ def hexescape(char):
     return "%" + hex_repr
 
 
+def fakehttp(fakedata):
+    class FakeSocket(io.BytesIO):
+
+        def sendall(self, data):
+            FakeHTTPConnection.buf = data
+
+        def makefile(self, *args, **kwds):
+            return self
+
+        def read(self, amt=None):
+            if self.closed:
+                return b""
+            return io.BytesIO.read(self, amt)
+
+        def readline(self, length=None):
+            if self.closed:
+                return b""
+            return io.BytesIO.readline(self, length)
+
+    class FakeHTTPConnection(httplib.HTTPConnection):
+
+        # buffer to store data for verification in urlopen tests.
+        buf = ""
+
+        def connect(self):
+            self.sock = FakeSocket(self.fakedata)
+            self.__class__.fakesock = self.sock
+    FakeHTTPConnection.fakedata = fakedata
+
+    return FakeHTTPConnection
+
+
 class FakeHTTPMixin(object):
     def fakehttp(self, fakedata):
-        class FakeSocket(StringIO.StringIO):
-
-            def sendall(self, data):
-                FakeHTTPConnection.buf = data
-
-            def makefile(self, *args, **kwds):
-                return self
-
-            def read(self, amt=None):
-                if self.closed:
-                    return ""
-                return StringIO.StringIO.read(self, amt)
-
-            def readline(self, length=None):
-                if self.closed:
-                    return ""
-                return StringIO.StringIO.readline(self, length)
-
-        class FakeHTTPConnection(httplib.HTTPConnection):
-
-            # buffer to store data for verification in urlopen tests.
-            buf = ""
-
-            def connect(self):
-                self.sock = FakeSocket(fakedata)
-
         assert httplib.HTTP._connection_class == httplib.HTTPConnection
 
-        httplib.HTTP._connection_class = FakeHTTPConnection
+        httplib.HTTP._connection_class = fakehttp(fakedata)
 
     def unfakehttp(self):
         httplib.HTTP._connection_class = httplib.HTTPConnection
@@ -158,8 +165,71 @@ class ProxyTests(unittest.TestCase):
         # getproxies_environment use lowered case truncated (no '_proxy') keys
         self.assertEqual('localhost', proxies['no'])
         # List of no_proxies with space.
-        self.env.set('NO_PROXY', 'localhost, anotherdomain.com, newdomain.com')
+        self.env.set('NO_PROXY', 'localhost, anotherdomain.com, newdomain.com:1234')
         self.assertTrue(urllib.proxy_bypass_environment('anotherdomain.com'))
+        self.assertTrue(urllib.proxy_bypass_environment('anotherdomain.com:8888'))
+        self.assertTrue(urllib.proxy_bypass_environment('newdomain.com:1234'))
+
+    def test_proxy_cgi_ignore(self):
+        try:
+            self.env.set('HTTP_PROXY', 'http://somewhere:3128')
+            proxies = urllib.getproxies_environment()
+            self.assertEqual('http://somewhere:3128', proxies['http'])
+            self.env.set('REQUEST_METHOD', 'GET')
+            proxies = urllib.getproxies_environment()
+            self.assertNotIn('http', proxies)
+        finally:
+            self.env.unset('REQUEST_METHOD')
+            self.env.unset('HTTP_PROXY')
+
+    def test_proxy_bypass_environment_host_match(self):
+        bypass = urllib.proxy_bypass_environment
+        self.env.set('NO_PROXY',
+            'localhost, anotherdomain.com, newdomain.com:1234')
+        self.assertTrue(bypass('localhost'))
+        self.assertTrue(bypass('LocalHost'))                 # MixedCase
+        self.assertTrue(bypass('LOCALHOST'))                 # UPPERCASE
+        self.assertTrue(bypass('newdomain.com:1234'))
+        self.assertTrue(bypass('anotherdomain.com:8888'))
+        self.assertTrue(bypass('www.newdomain.com:1234'))
+        self.assertFalse(bypass('prelocalhost'))
+        self.assertFalse(bypass('newdomain.com'))            # no port
+        self.assertFalse(bypass('newdomain.com:1235'))       # wrong port
+
+class ProxyTests_withOrderedEnv(unittest.TestCase):
+
+    def setUp(self):
+        # We need to test conditions, where variable order _is_ significant
+        self._saved_env = os.environ
+        # Monkey patch os.environ, start with empty fake environment
+        os.environ = collections.OrderedDict()
+
+    def tearDown(self):
+        os.environ = self._saved_env
+
+    def test_getproxies_environment_prefer_lowercase(self):
+        # Test lowercase preference with removal
+        os.environ['no_proxy'] = ''
+        os.environ['No_Proxy'] = 'localhost'
+        self.assertFalse(urllib.proxy_bypass_environment('localhost'))
+        self.assertFalse(urllib.proxy_bypass_environment('arbitrary'))
+        os.environ['http_proxy'] = ''
+        os.environ['HTTP_PROXY'] = 'http://somewhere:3128'
+        proxies = urllib.getproxies_environment()
+        self.assertEqual({}, proxies)
+        # Test lowercase preference of proxy bypass and correct matching including ports
+        os.environ['no_proxy'] = 'localhost, noproxy.com, my.proxy:1234'
+        os.environ['No_Proxy'] = 'xyz.com'
+        self.assertTrue(urllib.proxy_bypass_environment('localhost'))
+        self.assertTrue(urllib.proxy_bypass_environment('noproxy.com:5678'))
+        self.assertTrue(urllib.proxy_bypass_environment('my.proxy:1234'))
+        self.assertFalse(urllib.proxy_bypass_environment('my.proxy'))
+        self.assertFalse(urllib.proxy_bypass_environment('arbitrary'))
+        # Test lowercase preference with replacement
+        os.environ['http_proxy'] = 'http://somewhere:3128'
+        os.environ['Http_Proxy'] = 'http://somewhereelse:3128'
+        proxies = urllib.getproxies_environment()
+        self.assertEqual('http://somewhere:3128', proxies['http'])
 
 
 class urlopen_HttpTests(unittest.TestCase, FakeHTTPMixin):
@@ -209,9 +279,25 @@ Connection: close
 Content-Type: text/html; charset=iso-8859-1
 """)
         try:
-            self.assertRaises(IOError, urllib.urlopen, "http://python.org/")
+            msg = "Redirection to url 'file:"
+            with self.assertRaisesRegexp(IOError, msg):
+                urllib.urlopen("http://python.org/")
         finally:
             self.unfakehttp()
+
+    def test_redirect_limit_independent(self):
+        # Ticket #12923: make sure independent requests each use their
+        # own retry limit.
+        for i in range(urllib.FancyURLopener().maxtries):
+            self.fakehttp(b'''HTTP/1.1 302 Found
+Location: file://guidocomputer.athome.com:/python/license
+Connection: close
+''')
+            try:
+                self.assertRaises(IOError, urllib.urlopen,
+                    "http://something")
+            finally:
+                self.unfakehttp()
 
     def test_empty_socket(self):
         # urlopen() raises IOError if the underlying socket does not send any
@@ -773,21 +859,55 @@ class Pathname_Tests(unittest.TestCase):
 
 class Utility_Tests(unittest.TestCase):
     """Testcase to test the various utility functions in the urllib."""
+    # In Python 3 this test class is moved to test_urlparse.
+
+    def test_splittype(self):
+        splittype = urllib.splittype
+        self.assertEqual(splittype('type:opaquestring'), ('type', 'opaquestring'))
+        self.assertEqual(splittype('opaquestring'), (None, 'opaquestring'))
+        self.assertEqual(splittype(':opaquestring'), (None, ':opaquestring'))
+        self.assertEqual(splittype('type:'), ('type', ''))
+        self.assertEqual(splittype('type:opaque:string'), ('type', 'opaque:string'))
+
+    def test_splithost(self):
+        splithost = urllib.splithost
+        self.assertEqual(splithost('//www.example.org:80/foo/bar/baz.html'),
+                         ('www.example.org:80', '/foo/bar/baz.html'))
+        self.assertEqual(splithost('//www.example.org:80'),
+                         ('www.example.org:80', ''))
+        self.assertEqual(splithost('/foo/bar/baz.html'),
+                         (None, '/foo/bar/baz.html'))
+
+    def test_splituser(self):
+        splituser = urllib.splituser
+        self.assertEqual(splituser('User:Pass@www.python.org:080'),
+                         ('User:Pass', 'www.python.org:080'))
+        self.assertEqual(splituser('@www.python.org:080'),
+                         ('', 'www.python.org:080'))
+        self.assertEqual(splituser('www.python.org:080'),
+                         (None, 'www.python.org:080'))
+        self.assertEqual(splituser('User:Pass@'),
+                         ('User:Pass', ''))
+        self.assertEqual(splituser('User@example.com:Pass@www.python.org:080'),
+                         ('User@example.com:Pass', 'www.python.org:080'))
 
     def test_splitpasswd(self):
-        """Some of the password examples are not sensible, but it is added to
-        confirming to RFC2617 and addressing issue4675.
-        """
-        self.assertEqual(('user', 'ab'),urllib.splitpasswd('user:ab'))
-        self.assertEqual(('user', 'a\nb'),urllib.splitpasswd('user:a\nb'))
-        self.assertEqual(('user', 'a\tb'),urllib.splitpasswd('user:a\tb'))
-        self.assertEqual(('user', 'a\rb'),urllib.splitpasswd('user:a\rb'))
-        self.assertEqual(('user', 'a\fb'),urllib.splitpasswd('user:a\fb'))
-        self.assertEqual(('user', 'a\vb'),urllib.splitpasswd('user:a\vb'))
-        self.assertEqual(('user', 'a:b'),urllib.splitpasswd('user:a:b'))
-        self.assertEqual(('user', 'a b'),urllib.splitpasswd('user:a b'))
-        self.assertEqual(('user 2', 'ab'),urllib.splitpasswd('user 2:ab'))
-        self.assertEqual(('user+1', 'a+b'),urllib.splitpasswd('user+1:a+b'))
+        # Some of the password examples are not sensible, but it is added to
+        # confirming to RFC2617 and addressing issue4675.
+        splitpasswd = urllib.splitpasswd
+        self.assertEqual(splitpasswd('user:ab'), ('user', 'ab'))
+        self.assertEqual(splitpasswd('user:a\nb'), ('user', 'a\nb'))
+        self.assertEqual(splitpasswd('user:a\tb'), ('user', 'a\tb'))
+        self.assertEqual(splitpasswd('user:a\rb'), ('user', 'a\rb'))
+        self.assertEqual(splitpasswd('user:a\fb'), ('user', 'a\fb'))
+        self.assertEqual(splitpasswd('user:a\vb'), ('user', 'a\vb'))
+        self.assertEqual(splitpasswd('user:a:b'), ('user', 'a:b'))
+        self.assertEqual(splitpasswd('user:a b'), ('user', 'a b'))
+        self.assertEqual(splitpasswd('user 2:ab'), ('user 2', 'ab'))
+        self.assertEqual(splitpasswd('user+1:a+b'), ('user+1', 'a+b'))
+        self.assertEqual(splitpasswd('user:'), ('user', ''))
+        self.assertEqual(splitpasswd('user'), ('user', None))
+        self.assertEqual(splitpasswd(':ab'), ('', 'ab'))
 
     def test_splitport(self):
         splitport = urllib.splitport
@@ -796,6 +916,9 @@ class Utility_Tests(unittest.TestCase):
         self.assertEqual(splitport('parrot:'), ('parrot', None))
         self.assertEqual(splitport('127.0.0.1'), ('127.0.0.1', None))
         self.assertEqual(splitport('parrot:cheese'), ('parrot:cheese', None))
+        self.assertEqual(splitport('[::1]:88'), ('[::1]', '88'))
+        self.assertEqual(splitport('[::1]'), ('[::1]', None))
+        self.assertEqual(splitport(':88'), ('', '88'))
 
     def test_splitnport(self):
         splitnport = urllib.splitnport
@@ -808,6 +931,59 @@ class Utility_Tests(unittest.TestCase):
         self.assertEqual(splitnport('127.0.0.1', 55), ('127.0.0.1', 55))
         self.assertEqual(splitnport('parrot:cheese'), ('parrot', None))
         self.assertEqual(splitnport('parrot:cheese', 55), ('parrot', None))
+
+    def test_splitquery(self):
+        # Normal cases are exercised by other tests; ensure that we also
+        # catch cases with no port specified (testcase ensuring coverage)
+        splitquery = urllib.splitquery
+        self.assertEqual(splitquery('http://python.org/fake?foo=bar'),
+                         ('http://python.org/fake', 'foo=bar'))
+        self.assertEqual(splitquery('http://python.org/fake?foo=bar?'),
+                         ('http://python.org/fake?foo=bar', ''))
+        self.assertEqual(splitquery('http://python.org/fake'),
+                         ('http://python.org/fake', None))
+        self.assertEqual(splitquery('?foo=bar'), ('', 'foo=bar'))
+
+    def test_splittag(self):
+        splittag = urllib.splittag
+        self.assertEqual(splittag('http://example.com?foo=bar#baz'),
+                         ('http://example.com?foo=bar', 'baz'))
+        self.assertEqual(splittag('http://example.com?foo=bar#'),
+                         ('http://example.com?foo=bar', ''))
+        self.assertEqual(splittag('#baz'), ('', 'baz'))
+        self.assertEqual(splittag('http://example.com?foo=bar'),
+                         ('http://example.com?foo=bar', None))
+        self.assertEqual(splittag('http://example.com?foo=bar#baz#boo'),
+                         ('http://example.com?foo=bar#baz', 'boo'))
+
+    def test_splitattr(self):
+        splitattr = urllib.splitattr
+        self.assertEqual(splitattr('/path;attr1=value1;attr2=value2'),
+                         ('/path', ['attr1=value1', 'attr2=value2']))
+        self.assertEqual(splitattr('/path;'), ('/path', ['']))
+        self.assertEqual(splitattr(';attr1=value1;attr2=value2'),
+                         ('', ['attr1=value1', 'attr2=value2']))
+        self.assertEqual(splitattr('/path'), ('/path', []))
+
+    def test_splitvalue(self):
+        # Normal cases are exercised by other tests; test pathological cases
+        # with no key/value pairs. (testcase ensuring coverage)
+        splitvalue = urllib.splitvalue
+        self.assertEqual(splitvalue('foo=bar'), ('foo', 'bar'))
+        self.assertEqual(splitvalue('foo='), ('foo', ''))
+        self.assertEqual(splitvalue('=bar'), ('', 'bar'))
+        self.assertEqual(splitvalue('foobar'), ('foobar', None))
+        self.assertEqual(splitvalue('foo=bar=baz'), ('foo', 'bar=baz'))
+
+    def test_toBytes(self):
+        result = urllib.toBytes(u'http://www.python.org')
+        self.assertEqual(result, 'http://www.python.org')
+        self.assertRaises(UnicodeError, urllib.toBytes,
+                          test_support.u(r'http://www.python.org/medi\u00e6val'))
+
+    def test_unwrap(self):
+        url = urllib.unwrap('<URL:type://host/path>')
+        self.assertEqual(url, 'type://host/path')
 
 
 class URLopener_Tests(unittest.TestCase):
@@ -924,6 +1100,8 @@ def test_main():
             Pathname_Tests,
             Utility_Tests,
             URLopener_Tests,
+            ProxyTests,
+            ProxyTests_withOrderedEnv,
             #FTPWrapperTests,
         )
 

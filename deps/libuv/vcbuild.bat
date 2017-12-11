@@ -157,7 +157,9 @@ goto run
 
 @rem Build the sln with msbuild.
 :msbuild-found
-msbuild uv.sln /t:%target% /p:Configuration=%config% /p:Platform="%msbuild_platform%" /clp:NoSummary;NoItemAndPropertyList;Verbosity=minimal /nologo
+msbuild /ver
+where msbuild
+msbuild uv.sln /t:%target% /p:Configuration=%config% /p:Platform="%msbuild_platform%" /clp:NoSummary;NoItemAndPropertyList;Verbosity=minimal
 if errorlevel 1 exit /b 1
 
 :run

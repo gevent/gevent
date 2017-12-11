@@ -68,7 +68,7 @@ class Test(greentest.TestCase):
 
         loop.destroy()
 
-    @greentest.skipOnAppVeyor("Stdout can't be watched on Win32")
+    @greentest.skipOnWindows("Stdout can't be watched on Win32")
     def test_reuse_io(self):
         loop = core.loop(default=False)
 

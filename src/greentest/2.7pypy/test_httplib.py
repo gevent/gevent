@@ -1,14 +1,24 @@
 import httplib
+import itertools
 import array
-import httplib
 import StringIO
 import socket
 import errno
+import os
+import tempfile
 
 import unittest
 TestCase = unittest.TestCase
 
 from test import test_support
+
+here = os.path.dirname(__file__)
+# Self-signed cert file for 'localhost'
+CERT_localhost = os.path.join(here, 'keycert.pem')
+# Self-signed cert file for 'fakehostname'
+CERT_fakehostname = os.path.join(here, 'keycert2.pem')
+# Self-signed cert file for self-signed.pythontest.net
+CERT_selfsigned_pythontestdotnet = os.path.join(here, 'selfsigned_pythontestdotnet.pem')
 
 HOST = test_support.HOST
 
@@ -17,6 +27,7 @@ class FakeSocket:
         self.text = text
         self.fileclass = fileclass
         self.data = ''
+        self.file_closed = False
         self.host = host
         self.port = port
 
@@ -26,7 +37,13 @@ class FakeSocket:
     def makefile(self, mode, bufsize=None):
         if mode != 'r' and mode != 'rb':
             raise httplib.UnimplementedFileMode()
-        return self.fileclass(self.text)
+        # keep the file around so we can check how much was read from it
+        self.file = self.fileclass(self.text)
+        self.file.close = self.file_close #nerf close ()
+        return self.file
+
+    def file_close(self):
+        self.file_closed = True
 
     def close(self):
         pass
@@ -107,21 +124,59 @@ class HeaderTests(TestCase):
                     self.content_length = kv[1].strip()
                 list.append(self, item)
 
-        # POST with empty body
-        conn = httplib.HTTPConnection('example.com')
-        conn.sock = FakeSocket(None)
-        conn._buffer = ContentLengthChecker()
-        conn.request('POST', '/', '')
-        self.assertEqual(conn._buffer.content_length, '0',
-                        'Header Content-Length not set')
+        # Here, we're testing that methods expecting a body get a
+        # content-length set to zero if the body is empty (either None or '')
+        bodies = (None, '')
+        methods_with_body = ('PUT', 'POST', 'PATCH')
+        for method, body in itertools.product(methods_with_body, bodies):
+            conn = httplib.HTTPConnection('example.com')
+            conn.sock = FakeSocket(None)
+            conn._buffer = ContentLengthChecker()
+            conn.request(method, '/', body)
+            self.assertEqual(
+                conn._buffer.content_length, '0',
+                'Header Content-Length incorrect on {}'.format(method)
+            )
 
-        # PUT request with empty body
-        conn = httplib.HTTPConnection('example.com')
-        conn.sock = FakeSocket(None)
-        conn._buffer = ContentLengthChecker()
-        conn.request('PUT', '/', '')
-        self.assertEqual(conn._buffer.content_length, '0',
-                        'Header Content-Length not set')
+        # For these methods, we make sure that content-length is not set when
+        # the body is None because it might cause unexpected behaviour on the
+        # server.
+        methods_without_body = (
+             'GET', 'CONNECT', 'DELETE', 'HEAD', 'OPTIONS', 'TRACE',
+        )
+        for method in methods_without_body:
+            conn = httplib.HTTPConnection('example.com')
+            conn.sock = FakeSocket(None)
+            conn._buffer = ContentLengthChecker()
+            conn.request(method, '/', None)
+            self.assertEqual(
+                conn._buffer.content_length, None,
+                'Header Content-Length set for empty body on {}'.format(method)
+            )
+
+        # If the body is set to '', that's considered to be "present but
+        # empty" rather than "missing", so content length would be set, even
+        # for methods that don't expect a body.
+        for method in methods_without_body:
+            conn = httplib.HTTPConnection('example.com')
+            conn.sock = FakeSocket(None)
+            conn._buffer = ContentLengthChecker()
+            conn.request(method, '/', '')
+            self.assertEqual(
+                conn._buffer.content_length, '0',
+                'Header Content-Length incorrect on {}'.format(method)
+            )
+
+        # If the body is set, make sure Content-Length is set.
+        for method in itertools.chain(methods_without_body, methods_with_body):
+            conn = httplib.HTTPConnection('example.com')
+            conn.sock = FakeSocket(None)
+            conn._buffer = ContentLengthChecker()
+            conn.request(method, '/', ' ')
+            self.assertEqual(
+                conn._buffer.content_length, '1',
+                'Header Content-Length incorrect on {}'.format(method)
+            )
 
     def test_putheader(self):
         conn = httplib.HTTPConnection('example.com')
@@ -130,9 +185,36 @@ class HeaderTests(TestCase):
         conn.putheader('Content-length',42)
         self.assertIn('Content-length: 42', conn._buffer)
 
+        conn.putheader('Foo', ' bar ')
+        self.assertIn(b'Foo:  bar ', conn._buffer)
+        conn.putheader('Bar', '\tbaz\t')
+        self.assertIn(b'Bar: \tbaz\t', conn._buffer)
+        conn.putheader('Authorization', 'Bearer mytoken')
+        self.assertIn(b'Authorization: Bearer mytoken', conn._buffer)
+        conn.putheader('IterHeader', 'IterA', 'IterB')
+        self.assertIn(b'IterHeader: IterA\r\n\tIterB', conn._buffer)
+        conn.putheader('LatinHeader', b'\xFF')
+        self.assertIn(b'LatinHeader: \xFF', conn._buffer)
+        conn.putheader('Utf8Header', b'\xc3\x80')
+        self.assertIn(b'Utf8Header: \xc3\x80', conn._buffer)
+        conn.putheader('C1-Control', b'next\x85line')
+        self.assertIn(b'C1-Control: next\x85line', conn._buffer)
+        conn.putheader('Embedded-Fold-Space', 'is\r\n allowed')
+        self.assertIn(b'Embedded-Fold-Space: is\r\n allowed', conn._buffer)
+        conn.putheader('Embedded-Fold-Tab', 'is\r\n\tallowed')
+        self.assertIn(b'Embedded-Fold-Tab: is\r\n\tallowed', conn._buffer)
+        conn.putheader('Key Space', 'value')
+        self.assertIn(b'Key Space: value', conn._buffer)
+        conn.putheader('KeySpace ', 'value')
+        self.assertIn(b'KeySpace : value', conn._buffer)
+        conn.putheader(b'Nonbreak\xa0Space', 'value')
+        self.assertIn(b'Nonbreak\xa0Space: value', conn._buffer)
+        conn.putheader(b'\xa0NonbreakSpace', 'value')
+        self.assertIn(b'\xa0NonbreakSpace: value', conn._buffer)
+
     def test_ipv6host_header(self):
-        # Default host header on IPv6 transaction should wrapped by [] if
-        # its actual IPv6 address
+        # Default host header on IPv6 transaction should be wrapped by [] if
+        # it is an IPv6 address
         expected = 'GET /foo HTTP/1.1\r\nHost: [2001::]:81\r\n' \
                    'Accept-Encoding: identity\r\n\r\n'
         conn = httplib.HTTPConnection('[2001::]:81')
@@ -148,6 +230,159 @@ class HeaderTests(TestCase):
         conn.sock = sock
         conn.request('GET', '/foo')
         self.assertTrue(sock.data.startswith(expected))
+
+    def test_malformed_headers_coped_with(self):
+        # Issue 19996
+        body = "HTTP/1.1 200 OK\r\nFirst: val\r\n: nval\r\nSecond: val\r\n\r\n"
+        sock = FakeSocket(body)
+        resp = httplib.HTTPResponse(sock)
+        resp.begin()
+
+        self.assertEqual(resp.getheader('First'), 'val')
+        self.assertEqual(resp.getheader('Second'), 'val')
+
+    def test_malformed_truncation(self):
+        # Other malformed header lines, especially without colons, used to
+        # cause the rest of the header section to be truncated
+        resp = (
+            b'HTTP/1.1 200 OK\r\n'
+            b'Public-Key-Pins: \n'
+            b'pin-sha256="xxx=";\n'
+            b'report-uri="https://..."\r\n'
+            b'Transfer-Encoding: chunked\r\n'
+            b'\r\n'
+            b'4\r\nbody\r\n0\r\n\r\n'
+        )
+        resp = httplib.HTTPResponse(FakeSocket(resp))
+        resp.begin()
+        self.assertIsNotNone(resp.getheader('Public-Key-Pins'))
+        self.assertEqual(resp.getheader('Transfer-Encoding'), 'chunked')
+        self.assertEqual(resp.read(), b'body')
+
+    def test_blank_line_forms(self):
+        # Test that both CRLF and LF blank lines can terminate the header
+        # section and start the body
+        for blank in (b'\r\n', b'\n'):
+            resp = b'HTTP/1.1 200 OK\r\n' b'Transfer-Encoding: chunked\r\n'
+            resp += blank
+            resp += b'4\r\nbody\r\n0\r\n\r\n'
+            resp = httplib.HTTPResponse(FakeSocket(resp))
+            resp.begin()
+            self.assertEqual(resp.getheader('Transfer-Encoding'), 'chunked')
+            self.assertEqual(resp.read(), b'body')
+
+            resp = b'HTTP/1.0 200 OK\r\n' + blank + b'body'
+            resp = httplib.HTTPResponse(FakeSocket(resp))
+            resp.begin()
+            self.assertEqual(resp.read(), b'body')
+
+        # A blank line ending in CR is not treated as the end of the HTTP
+        # header section, therefore header fields following it should be
+        # parsed if possible
+        resp = (
+            b'HTTP/1.1 200 OK\r\n'
+            b'\r'
+            b'Name: value\r\n'
+            b'Transfer-Encoding: chunked\r\n'
+            b'\r\n'
+            b'4\r\nbody\r\n0\r\n\r\n'
+        )
+        resp = httplib.HTTPResponse(FakeSocket(resp))
+        resp.begin()
+        self.assertEqual(resp.getheader('Transfer-Encoding'), 'chunked')
+        self.assertEqual(resp.read(), b'body')
+
+        # No header fields nor blank line
+        resp = b'HTTP/1.0 200 OK\r\n'
+        resp = httplib.HTTPResponse(FakeSocket(resp))
+        resp.begin()
+        self.assertEqual(resp.read(), b'')
+
+    def test_from_line(self):
+        # The parser handles "From" lines specially, so test this does not
+        # affect parsing the rest of the header section
+        resp = (
+            b'HTTP/1.1 200 OK\r\n'
+            b'From start\r\n'
+            b' continued\r\n'
+            b'Name: value\r\n'
+            b'From middle\r\n'
+            b' continued\r\n'
+            b'Transfer-Encoding: chunked\r\n'
+            b'From end\r\n'
+            b'\r\n'
+            b'4\r\nbody\r\n0\r\n\r\n'
+        )
+        resp = httplib.HTTPResponse(FakeSocket(resp))
+        resp.begin()
+        self.assertIsNotNone(resp.getheader('Name'))
+        self.assertEqual(resp.getheader('Transfer-Encoding'), 'chunked')
+        self.assertEqual(resp.read(), b'body')
+
+        resp = (
+            b'HTTP/1.0 200 OK\r\n'
+            b'From alone\r\n'
+            b'\r\n'
+            b'body'
+        )
+        resp = httplib.HTTPResponse(FakeSocket(resp))
+        resp.begin()
+        self.assertEqual(resp.read(), b'body')
+
+    def test_parse_all_octets(self):
+        # Ensure no valid header field octet breaks the parser
+        body = (
+            b'HTTP/1.1 200 OK\r\n'
+            b"!#$%&'*+-.^_`|~: value\r\n"  # Special token characters
+            b'VCHAR: ' + bytearray(range(0x21, 0x7E + 1)) + b'\r\n'
+            b'obs-text: ' + bytearray(range(0x80, 0xFF + 1)) + b'\r\n'
+            b'obs-fold: text\r\n'
+            b' folded with space\r\n'
+            b'\tfolded with tab\r\n'
+            b'Content-Length: 0\r\n'
+            b'\r\n'
+        )
+        sock = FakeSocket(body)
+        resp = httplib.HTTPResponse(sock)
+        resp.begin()
+        self.assertEqual(resp.getheader('Content-Length'), '0')
+        self.assertEqual(resp.getheader("!#$%&'*+-.^_`|~"), 'value')
+        vchar = ''.join(map(chr, range(0x21, 0x7E + 1)))
+        self.assertEqual(resp.getheader('VCHAR'), vchar)
+        self.assertIsNotNone(resp.getheader('obs-text'))
+        folded = resp.getheader('obs-fold')
+        self.assertTrue(folded.startswith('text'))
+        self.assertIn(' folded with space', folded)
+        self.assertTrue(folded.endswith('folded with tab'))
+
+    def test_invalid_headers(self):
+        conn = httplib.HTTPConnection('example.com')
+        conn.sock = FakeSocket('')
+        conn.putrequest('GET', '/')
+
+        # http://tools.ietf.org/html/rfc7230#section-3.2.4, whitespace is no
+        # longer allowed in header names
+        cases = (
+            (b'Invalid\r\nName', b'ValidValue'),
+            (b'Invalid\rName', b'ValidValue'),
+            (b'Invalid\nName', b'ValidValue'),
+            (b'\r\nInvalidName', b'ValidValue'),
+            (b'\rInvalidName', b'ValidValue'),
+            (b'\nInvalidName', b'ValidValue'),
+            (b' InvalidName', b'ValidValue'),
+            (b'\tInvalidName', b'ValidValue'),
+            (b'Invalid:Name', b'ValidValue'),
+            (b':InvalidName', b'ValidValue'),
+            (b'ValidName', b'Invalid\r\nValue'),
+            (b'ValidName', b'Invalid\rValue'),
+            (b'ValidName', b'Invalid\nValue'),
+            (b'ValidName', b'InvalidValue\r\n'),
+            (b'ValidName', b'InvalidValue\r'),
+            (b'ValidName', b'InvalidValue\n'),
+        )
+        for name, value in cases:
+            with self.assertRaisesRegexp(ValueError, 'Invalid header'):
+                conn.putheader(name, value)
 
 
 class BasicTest(TestCase):
@@ -262,6 +497,13 @@ class BasicTest(TestCase):
         if resp.read() != "":
             self.fail("Did not expect response from HEAD request")
 
+    def test_too_many_headers(self):
+        headers = '\r\n'.join('Header%d: foo' % i for i in xrange(200)) + '\r\n'
+        text = ('HTTP/1.1 200 OK\r\n' + headers)
+        s = FakeSocket(text)
+        r = httplib.HTTPResponse(s)
+        self.assertRaises(httplib.HTTPException, r.begin)
+
     def test_send_file(self):
         expected = 'GET /foo HTTP/1.1\r\nHost: example.com\r\n' \
                    'Accept-Encoding: identity\r\nContent-Length:'
@@ -272,6 +514,22 @@ class BasicTest(TestCase):
         conn.sock = sock
         conn.request('GET', '/foo', body)
         self.assertTrue(sock.data.startswith(expected))
+        self.assertIn('def test_send_file', sock.data)
+
+    def test_send_tempfile(self):
+        expected = ('GET /foo HTTP/1.1\r\nHost: example.com\r\n'
+                    'Accept-Encoding: identity\r\nContent-Length: 9\r\n\r\n'
+                    'fake\ndata')
+
+        with tempfile.TemporaryFile() as body:
+            body.write('fake\ndata')
+            body.seek(0)
+
+            conn = httplib.HTTPConnection('example.com')
+            sock = FakeSocket(body)
+            conn.sock = sock
+            conn.request('GET', '/foo', body)
+        self.assertEqual(sock.data, expected)
 
     def test_send(self):
         expected = 'this is a test this is only a test'
@@ -381,7 +639,7 @@ class BasicTest(TestCase):
         self.assertTrue(hasattr(resp,'fileno'),
                 'HTTPResponse should expose a fileno attribute')
 
-    # Test lines overflowing the max line size (_MAXLINE in http.client)
+    # Test lines overflowing the max line size (_MAXLINE in httplib)
 
     def test_overflowing_status_line(self):
         self.skipTest("disabled for HTTP 0.9 support")
@@ -418,12 +676,42 @@ class BasicTest(TestCase):
         self.assertEqual(resp.read(), '')
         self.assertTrue(resp.isclosed())
 
+    def test_error_leak(self):
+        # Test that the socket is not leaked if getresponse() fails
+        conn = httplib.HTTPConnection('example.com')
+        response = []
+        class Response(httplib.HTTPResponse):
+            def __init__(self, *pos, **kw):
+                response.append(self)  # Avoid garbage collector closing the socket
+                httplib.HTTPResponse.__init__(self, *pos, **kw)
+        conn.response_class = Response
+        conn.sock = FakeSocket('')  # Emulate server dropping connection
+        conn.request('GET', '/')
+        self.assertRaises(httplib.BadStatusLine, conn.getresponse)
+        self.assertTrue(response)
+        #self.assertTrue(response[0].closed)
+        self.assertTrue(conn.sock.file_closed)
+
+    def test_proxy_tunnel_without_status_line(self):
+        # Issue 17849: If a proxy tunnel is created that does not return
+        # a status code, fail.
+        body = 'hello world'
+        conn = httplib.HTTPConnection('example.com', strict=False)
+        conn.set_tunnel('foo')
+        conn.sock = FakeSocket(body)
+        with self.assertRaisesRegexp(socket.error, "Invalid response"):
+            conn._tunnel()
+
 class OfflineTest(TestCase):
     def test_responses(self):
         self.assertEqual(httplib.responses[httplib.NOT_FOUND], "Not Found")
 
 
-class SourceAddressTest(TestCase):
+class TestServerMixin:
+    """A limited socket server mixin.
+
+    This is used by test cases for testing http connection end points.
+    """
     def setUp(self):
         self.serv = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.port = test_support.bind_port(self.serv)
@@ -438,6 +726,7 @@ class SourceAddressTest(TestCase):
         self.serv.close()
         self.serv = None
 
+class SourceAddressTest(TestServerMixin, TestCase):
     def testHTTPConnectionSourceAddress(self):
         self.conn = httplib.HTTPConnection(HOST, self.port,
                 source_address=('', self.source_port))
@@ -449,9 +738,27 @@ class SourceAddressTest(TestCase):
     def testHTTPSConnectionSourceAddress(self):
         self.conn = httplib.HTTPSConnection(HOST, self.port,
                 source_address=('', self.source_port))
-        # We don't test anything here other the constructor not barfing as
+        # We don't test anything here other than the constructor not barfing as
         # this code doesn't deal with setting up an active running SSL server
         # for an ssl_wrapped connect() to actually return from.
+
+
+class HTTPTest(TestServerMixin, TestCase):
+    def testHTTPConnection(self):
+        self.conn = httplib.HTTP(host=HOST, port=self.port, strict=None)
+        self.conn.connect()
+        self.assertEqual(self.conn._conn.host, HOST)
+        self.assertEqual(self.conn._conn.port, self.port)
+
+    def testHTTPWithConnectHostPort(self):
+        testhost = 'unreachable.test.domain'
+        testport = '80'
+        self.conn = httplib.HTTP(host=testhost, port=testport)
+        self.conn.connect(host=HOST, port=self.port)
+        self.assertNotEqual(self.conn._conn.host, testhost)
+        self.assertNotEqual(self.conn._conn.port, testport)
+        self.assertEqual(self.conn._conn.host, HOST)
+        self.assertEqual(self.conn._conn.port, self.port)
 
 
 class TimeoutTest(TestCase):
@@ -500,35 +807,138 @@ class TimeoutTest(TestCase):
         httpConn.close()
 
 
-class HTTPSTimeoutTest(TestCase):
-# XXX Here should be tests for HTTPS, there isn't any right now!
+class HTTPSTest(TestCase):
+
+    def setUp(self):
+        if not hasattr(httplib, 'HTTPSConnection'):
+            self.skipTest('ssl support required')
+
+    def make_server(self, certfile):
+        from test.ssl_servers import make_https_server
+        return make_https_server(self, certfile=certfile)
 
     def test_attributes(self):
-        # simple test to check it's storing it
-        if hasattr(httplib, 'HTTPSConnection'):
-            h = httplib.HTTPSConnection(HOST, TimeoutTest.PORT, timeout=30)
-            self.assertEqual(h.timeout, 30)
+        # simple test to check it's storing the timeout
+        h = httplib.HTTPSConnection(HOST, TimeoutTest.PORT, timeout=30)
+        self.assertEqual(h.timeout, 30)
 
-    @unittest.skipIf(not hasattr(httplib, 'HTTPS'), 'httplib.HTTPS not available')
+    def test_networked(self):
+        # Default settings: requires a valid cert from a trusted CA
+        import ssl
+        test_support.requires('network')
+        with test_support.transient_internet('self-signed.pythontest.net'):
+            h = httplib.HTTPSConnection('self-signed.pythontest.net', 443)
+            with self.assertRaises(ssl.SSLError) as exc_info:
+                h.request('GET', '/')
+            self.assertEqual(exc_info.exception.reason, 'CERTIFICATE_VERIFY_FAILED')
+
+    def test_networked_noverification(self):
+        # Switch off cert verification
+        import ssl
+        test_support.requires('network')
+        with test_support.transient_internet('self-signed.pythontest.net'):
+            context = ssl._create_stdlib_context()
+            h = httplib.HTTPSConnection('self-signed.pythontest.net', 443,
+                                        context=context)
+            h.request('GET', '/')
+            resp = h.getresponse()
+            self.assertIn('nginx', resp.getheader('server'))
+
+    @test_support.system_must_validate_cert
+    def test_networked_trusted_by_default_cert(self):
+        # Default settings: requires a valid cert from a trusted CA
+        test_support.requires('network')
+        with test_support.transient_internet('www.python.org'):
+            h = httplib.HTTPSConnection('www.python.org', 443)
+            h.request('GET', '/')
+            resp = h.getresponse()
+            content_type = resp.getheader('content-type')
+            self.assertIn('text/html', content_type)
+
+    def test_networked_good_cert(self):
+        # We feed the server's cert as a validating cert
+        import ssl
+        test_support.requires('network')
+        with test_support.transient_internet('self-signed.pythontest.net'):
+            context = ssl.SSLContext(ssl.PROTOCOL_TLSv1)
+            context.verify_mode = ssl.CERT_REQUIRED
+            context.load_verify_locations(CERT_selfsigned_pythontestdotnet)
+            h = httplib.HTTPSConnection('self-signed.pythontest.net', 443, context=context)
+            h.request('GET', '/')
+            resp = h.getresponse()
+            server_string = resp.getheader('server')
+            self.assertIn('nginx', server_string)
+
+    def test_networked_bad_cert(self):
+        # We feed a "CA" cert that is unrelated to the server's cert
+        import ssl
+        test_support.requires('network')
+        with test_support.transient_internet('self-signed.pythontest.net'):
+            context = ssl.SSLContext(ssl.PROTOCOL_TLSv1)
+            context.verify_mode = ssl.CERT_REQUIRED
+            context.load_verify_locations(CERT_localhost)
+            h = httplib.HTTPSConnection('self-signed.pythontest.net', 443, context=context)
+            with self.assertRaises(ssl.SSLError) as exc_info:
+                h.request('GET', '/')
+            self.assertEqual(exc_info.exception.reason, 'CERTIFICATE_VERIFY_FAILED')
+
+    def test_local_unknown_cert(self):
+        # The custom cert isn't known to the default trust bundle
+        import ssl
+        server = self.make_server(CERT_localhost)
+        h = httplib.HTTPSConnection('localhost', server.port)
+        with self.assertRaises(ssl.SSLError) as exc_info:
+            h.request('GET', '/')
+        self.assertEqual(exc_info.exception.reason, 'CERTIFICATE_VERIFY_FAILED')
+
+    def test_local_good_hostname(self):
+        # The (valid) cert validates the HTTP hostname
+        import ssl
+        server = self.make_server(CERT_localhost)
+        context = ssl.SSLContext(ssl.PROTOCOL_TLSv1)
+        context.verify_mode = ssl.CERT_REQUIRED
+        context.load_verify_locations(CERT_localhost)
+        h = httplib.HTTPSConnection('localhost', server.port, context=context)
+        h.request('GET', '/nonexistent')
+        resp = h.getresponse()
+        self.assertEqual(resp.status, 404)
+
+    def test_local_bad_hostname(self):
+        # The (valid) cert doesn't validate the HTTP hostname
+        import ssl
+        server = self.make_server(CERT_fakehostname)
+        context = ssl.SSLContext(ssl.PROTOCOL_TLSv1)
+        context.verify_mode = ssl.CERT_REQUIRED
+        context.check_hostname = True
+        context.load_verify_locations(CERT_fakehostname)
+        h = httplib.HTTPSConnection('localhost', server.port, context=context)
+        with self.assertRaises(ssl.CertificateError):
+            h.request('GET', '/')
+        h.close()
+        # With context.check_hostname=False, the mismatching is ignored
+        context.check_hostname = False
+        h = httplib.HTTPSConnection('localhost', server.port, context=context)
+        h.request('GET', '/nonexistent')
+        resp = h.getresponse()
+        self.assertEqual(resp.status, 404)
+
     def test_host_port(self):
         # Check invalid host_port
 
-        # Note that httplib does not accept user:password@ in the host-port.
         for hp in ("www.python.org:abc", "user:password@www.python.org"):
-            self.assertRaises(httplib.InvalidURL, httplib.HTTP, hp)
+            self.assertRaises(httplib.InvalidURL, httplib.HTTPSConnection, hp)
 
-        for hp, h, p in (("[fe80::207:e9ff:fe9b]:8000", "fe80::207:e9ff:fe9b",
-                          8000),
-                         ("pypi.python.org:443", "pypi.python.org", 443),
-                         ("pypi.python.org", "pypi.python.org", 443),
-                         ("pypi.python.org:", "pypi.python.org", 443),
-                         ("[fe80::207:e9ff:fe9b]", "fe80::207:e9ff:fe9b", 443)):
-            http = httplib.HTTPS(hp)
-            c = http._conn
-            if h != c.host:
-                self.fail("Host incorrectly parsed: %s != %s" % (h, c.host))
-            if p != c.port:
-                self.fail("Port incorrectly parsed: %s != %s" % (p, c.host))
+        for hp, h, p in (("[fe80::207:e9ff:fe9b]:8000",
+                          "fe80::207:e9ff:fe9b", 8000),
+                         ("www.python.org:443", "www.python.org", 443),
+                         ("www.python.org:", "www.python.org", 443),
+                         ("www.python.org", "www.python.org", 443),
+                         ("[fe80::207:e9ff:fe9b]", "fe80::207:e9ff:fe9b", 443),
+                         ("[fe80::207:e9ff:fe9b]:", "fe80::207:e9ff:fe9b",
+                             443)):
+            c = httplib.HTTPSConnection(hp)
+            self.assertEqual(h, c.host)
+            self.assertEqual(p, c.port)
 
 
 class TunnelTests(TestCase):
@@ -556,10 +966,12 @@ class TunnelTests(TestCase):
 
         self.assertEqual(conn.sock.host, 'proxy.com')
         self.assertEqual(conn.sock.port, 80)
-        self.assertTrue('CONNECT destination.com' in conn.sock.data)
-        self.assertTrue('Host: destination.com' in conn.sock.data)
+        self.assertIn('CONNECT destination.com', conn.sock.data)
+        # issue22095
+        self.assertNotIn('Host: destination.com:None', conn.sock.data)
+        self.assertIn('Host: destination.com', conn.sock.data)
 
-        self.assertTrue('Host: proxy.com' not in conn.sock.data)
+        self.assertNotIn('Host: proxy.com', conn.sock.data)
 
         conn.close()
 
@@ -570,9 +982,11 @@ class TunnelTests(TestCase):
         self.assertTrue('Host: destination.com' in conn.sock.data)
 
 
+@test_support.reap_threads
 def test_main(verbose=None):
     test_support.run_unittest(HeaderTests, OfflineTest, BasicTest, TimeoutTest,
-                              HTTPSTimeoutTest, SourceAddressTest, TunnelTests)
+                              HTTPTest, HTTPSTest, SourceAddressTest,
+                              TunnelTests)
 
 if __name__ == '__main__':
     test_main()

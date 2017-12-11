@@ -42,7 +42,12 @@ import _six as six
 
 PYPY = hasattr(sys, 'pypy_version_info')
 VERBOSE = sys.argv.count('-v') > 1
-LIBUV = os.getenv('GEVENT_CORE_CFFI_ONLY') == 'libuv' # XXX: Formalize this better
+WIN = sys.platform.startswith("win")
+LINUX = sys.platform.startswith('linux')
+
+# XXX: Formalize this better
+LIBUV = os.getenv('GEVENT_CORE_CFFI_ONLY') == 'libuv' or (PYPY and WIN) or hasattr(gevent.core, 'libuv')
+
 
 if '--debug-greentest' in sys.argv:
     sys.argv.remove('--debug-greentest')
@@ -57,7 +62,7 @@ OPTIONAL_MODULES = ['resolver_ares']
 # on particular platforms; they generally contain partial
 # implementations completed in different modules.
 PLATFORM_SPECIFIC_SUFFIXES = ['2', '279', '3']
-if sys.platform.startswith('win'):
+if WIN:
     PLATFORM_SPECIFIC_SUFFIXES.append('posix')
 
 PY2 = None
@@ -88,7 +93,7 @@ elif sys.version_info[0] == 2:
 
 PYPY3 = PYPY and PY3
 
-if sys.platform.startswith('win'):
+if WIN:
     NON_APPLICABLE_SUFFIXES.append("posix")
     # This is intimately tied to FileObjectPosix
     NON_APPLICABLE_SUFFIXES.append("fileobject2")
@@ -102,6 +107,11 @@ def _do_not_skip(reason):
     def dec(f):
         return f
     return dec
+
+if WIN:
+    skipOnWindows = unittest.skip
+else:
+    skipOnWindows = _do_not_skip
 
 if RUNNING_ON_APPVEYOR:
     # See comments scattered around about timeouts and the timer
@@ -370,11 +380,16 @@ class TestCaseMetaClass(type):
 # Travis is slow and overloaded; Appveyor used to be faster, but
 # as of Dec 2015 it's almost always slower and/or has much worse timer
 # resolution
-CI_TIMEOUT = 7
-if PY3 and PYPY:
-    # pypy3 is very slow right now
-    CI_TIMEOUT = 10
-LOCAL_TIMEOUT = 1
+CI_TIMEOUT = 10
+if (PY3 and PYPY) or (PYPY and WIN and LIBUV):
+    # pypy3 is very slow right now,
+    # as is PyPy2 on windows (which only has libuv)
+    CI_TIMEOUT = 15
+if PYPY and WIN and LIBUV:
+    # slow and flaky timeouts
+    LOCAL_TIMEOUT = CI_TIMEOUT
+else:
+    LOCAL_TIMEOUT = 1
 
 DEFAULT_LOCAL_HOST_ADDR = 'localhost'
 DEFAULT_LOCAL_HOST_ADDR6 = DEFAULT_LOCAL_HOST_ADDR
@@ -410,6 +425,14 @@ class TestCase(TestCaseMetaClass("NewBase", (BaseTestCase,), {})):
         if hasattr(self, 'cleanup'):
             self.cleanup()
         self._error = self._none
+        self._tearDownCloseOnTearDown()
+        try:
+            del self.close_on_teardown
+        except AttributeError:
+            pass
+        super(TestCase, self).tearDown()
+
+    def _tearDownCloseOnTearDown(self):
         # XXX: Should probably reverse this
         for x in self.close_on_teardown:
             close = getattr(x, 'close', x)
@@ -417,11 +440,7 @@ class TestCase(TestCaseMetaClass("NewBase", (BaseTestCase,), {})):
                 close()
             except Exception:
                 pass
-        try:
-            del self.close_on_teardown
-        except AttributeError:
-            pass
-        super(TestCase, self).tearDown()
+
 
     @classmethod
     def setUpClass(cls):
@@ -464,6 +483,7 @@ class TestCase(TestCaseMetaClass("NewBase", (BaseTestCase,), {})):
         return splitext(basename(self.modulename))[0] + '.' + self.testcasename
 
     _none = (None, None, None)
+    # (context, kind, value)
     _error = _none
 
     def expect_one_error(self):
@@ -471,12 +491,12 @@ class TestCase(TestCaseMetaClass("NewBase", (BaseTestCase,), {})):
         self._old_handle_error = gevent.get_hub().handle_error
         gevent.get_hub().handle_error = self._store_error
 
-    def _store_error(self, where, type, value, tb):
+    def _store_error(self, where, t, value, tb):
         del tb
         if self._error != self._none:
-            gevent.get_hub().parent.throw(type, value)
+            gevent.get_hub().parent.throw(t, value)
         else:
-            self._error = (where, type, value)
+            self._error = (where, t, value)
 
     def peek_error(self):
         return self._error
@@ -487,18 +507,25 @@ class TestCase(TestCaseMetaClass("NewBase", (BaseTestCase,), {})):
         finally:
             self._error = self._none
 
-    def assert_error(self, type=None, value=None, error=None, where_type=None):
+    def assert_error(self, kind=None, value=None, error=None, where_type=None):
         if error is None:
             error = self.get_error()
-        if type is not None:
-            assert issubclass(error[1], type), error
+        econtext, ekind, evalue = error
+        if kind is not None:
+            self.assertIsInstance(kind, type)
+            try:
+                assert issubclass(ekind, kind), error
+            except TypeError as e:
+                # Seen on PyPy on Windows
+                print("TYPE ERROR", e, ekind, kind, type(kind))
+                raise
         if value is not None:
             if isinstance(value, str):
-                assert str(error[2]) == value, error
+                self.assertEqual(str(evalue), value)
             else:
-                assert error[2] is value, error
+                self.assertIs(evalue, value)
         if where_type is not None:
-            self.assertIsInstance(error[0], where_type)
+            self.assertIsInstance(econtext, where_type)
         return error
 
     if RUNNING_ON_APPVEYOR:
@@ -777,18 +804,24 @@ def disabled_gc():
 import re
 # Linux/OS X/BSD platforms can implement this by calling out to lsof
 
-def _run_lsof():
-    import tempfile
-    pid = os.getpid()
-    fd, tmpname = tempfile.mkstemp('get_open_files')
-    os.close(fd)
-    lsof_command = 'lsof -p %s > %s' % (pid, tmpname)
-    if os.system(lsof_command):
-        raise OSError("lsof failed")
-    with open(tmpname) as fobj:
-        data = fobj.read().strip()
-    os.remove(tmpname)
-    return data
+
+if WIN:
+    def _run_lsof():
+        raise unittest.SkipTest("lsof not expected on Windows")
+else:
+    def _run_lsof():
+        import tempfile
+        pid = os.getpid()
+        fd, tmpname = tempfile.mkstemp('get_open_files')
+        os.close(fd)
+        lsof_command = 'lsof -p %s > %s' % (pid, tmpname)
+        if os.system(lsof_command):
+            # XXX: This prints to the console an annoying message: 'lsof is not recognized'
+            raise unittest.SkipTest("lsof failed")
+        with open(tmpname) as fobj:
+            data = fobj.read().strip()
+        os.remove(tmpname)
+        return data
 
 def default_get_open_files(pipes=False):
     data = _run_lsof()
@@ -822,7 +855,7 @@ def default_get_number_open_files():
     else:
         try:
             return len(get_open_files(pipes=True)) - 1
-        except (OSError, AssertionError):
+        except (OSError, AssertionError, unittest.SkipTest):
             return 0
 
 lsof_get_open_files = default_get_open_files
@@ -846,6 +879,11 @@ else:
         Return a list of popenfile and pconn objects.
 
         Note that other than `fd`, they have different attributes.
+
+        .. important:: If you want to find open sockets, on Windows
+           and linux, it is important that the socket at least be listening
+           (socket.listen(1)). Unlike the lsof implementation, this will only
+           return sockets in a state like that.
         """
         results = dict()
         process = psutil.Process()
@@ -863,9 +901,6 @@ else:
             # num_fds is unix only. Is num_handles close enough on Windows?
             return 0
 
-if RUNNING_ON_TRAVIS:
-    # XXX: Note: installing psutil on the travis linux vm caused failures in test__makefile_refs.
-    get_open_files = lsof_get_open_files
 
 if PYPY:
 

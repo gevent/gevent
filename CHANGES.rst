@@ -101,8 +101,7 @@
 - Add initial *experimental* support for using libuv as a backend
   instead of libev, controlled by setting the environment variable
   ``GEVENT_CORE_CFFI_ONLY=libuv`` before importing gevent. This only
-  works on POSIX systems and it still suffers a number of limitations
-  compared to libev, notably:
+  suffers a number of limitations compared to libev, notably:
 
   - Timers (such as ``gevent.sleep`` and ``gevent.Timeout``) only
     support a resolution of 1ms. Attempting to use something smaller
@@ -133,8 +132,9 @@
     than either of the libev implementations (cython or CFFI), so
     pressure on the garbage collector will be higher.
 
-  - The build system may not be correctly producing embedded static
-    libraries, at least on OS X. libuv 1.18 or higher is required.
+  - The build system does not support using a system libuv; the
+    embedded copy must be used. Using setuptools to compile libuv was
+    the most portable method found.
 
   - If anything unexpected happens, libuv likes to ``abort()`` the
     entire process instead of reporting an error. For example, closing
@@ -142,7 +142,7 @@
     process to be exited.
 
   Feedback and pull requests are welcome, especially to address the
-  issues mentioned above and for Windows support.
+  issues mentioned above.
 
   Again, this is extremely experimental and all of it is subject to
   change.

@@ -6,20 +6,22 @@ import ssl
 import threading
 import unittest
 import errno
+import weakref
 
-from greentest import TestCase
+import greentest
+
 
 dirname = os.path.dirname(os.path.abspath(__file__))
 certfile = os.path.join(dirname, '2.7/keycert.pem')
 pid = os.getpid()
 
-import sys
-PY3 = sys.version_info[0] >= 3
+PY3 = greentest.PY3
+PYPY = greentest.PYPY
 fd_types = int
 if PY3:
     long = int
 fd_types = (int, long)
-WIN = sys.platform.startswith("win")
+WIN = greentest.WIN
 
 from greentest import get_open_files
 try:
@@ -28,7 +30,7 @@ except ImportError:
     psutil = None
 
 
-class Test(TestCase):
+class Test(greentest.TestCase):
 
     extra_allowed_open_states = ()
 
@@ -105,12 +107,27 @@ class Test(TestCase):
     def make_open_socket(self):
         s = socket.socket()
         s.bind(('127.0.0.1', 0))
-        if WIN:
-            # Windows doesn't show as open until this
+        self._close_on_teardown(s)
+        if WIN or greentest.LINUX:
+            # Windows and linux (with psutil) doesn't show as open until
+            # we call listen (linux with lsof accepts either)
             s.listen(1)
         self.assert_open(s, s.fileno())
         return s
 
+    def _close_on_teardown(self, resource):
+        # Keeping raw sockets alive keeps SSL sockets
+        # from being closed too, at least on CPython, so we
+        # need to use weakrefs
+        if 'close_on_teardown' not in self.__dict__:
+            self.close_on_teardown = []
+        self.close_on_teardown.append(weakref.ref(resource))
+        return resource
+
+    def _tearDownCloseOnTearDown(self):
+        self.close_on_teardown = [r() for r in self.close_on_teardown if r() is not None]
+        super(Test, self)._tearDownCloseOnTearDown()
+        self.close_on_teardown = []
 
 class TestSocket(Test):
 
@@ -239,12 +256,55 @@ class TestSocket(Test):
             listener.close()
 
 
+
 class TestSSL(Test):
+
+    def _ssl_connect_task(self, connector, port):
+        connector.connect(('127.0.0.1', port))
+        try:
+            # Note: We get ResourceWarning about 'x'
+            # on Python 3 if we don't join the spawned thread
+            x = ssl.wrap_socket(connector)
+        except socket.error:
+            # Observed on Windows with PyPy2 5.9.0 and libuv:
+            # if we don't switch in a timely enough fashion,
+            # the server side runs ahead of us and closes
+            # our socket first, so this fails.
+            pass
+        else:
+            self._close_on_teardown(x)
+
+    def _make_ssl_connect_task(self, connector, port):
+        t = threading.Thread(target=self._ssl_connect_task, args=(connector, port))
+        t.daemon = True
+        return t
+
+    def __cleanup(self, task, *sockets):
+        # workaround for test_server_makefile1, test_server_makefile2,
+        # test_server_simple, test_serverssl_makefile1.
+
+        # On PyPy on Linux, it is important to join the SSL Connect
+        # Task FIRST, before closing the sockets. If we do it after
+        # (which makes more sense) we hang. It's not clear why, except
+        # that it has something to do with context switches. Inserting a call to
+        # gevent.sleep(0.1) instead of joining the task has the same
+        # effect. If the previous tests hang, then later tests can fail with
+        # SSLError: unknown alert type.
+
+        # XXX: Why do those two things happen?
+
+        # On PyPy on macOS, we don't have that problem and can use the
+        # more logical order.
+
+        task.join()
+        for s in sockets:
+            s.close()
 
     def test_simple_close(self):
         s = self.make_open_socket()
         fileno = s.fileno()
         s = ssl.wrap_socket(s)
+        self._close_on_teardown(s)
         fileno = s.fileno()
         self.assert_open(s, fileno)
         s.close()
@@ -252,9 +312,9 @@ class TestSSL(Test):
 
     def test_makefile1(self):
         s = self.make_open_socket()
-        fileno = s.fileno()
-
         s = ssl.wrap_socket(s)
+
+        self._close_on_teardown(s)
         fileno = s.fileno()
         self.assert_open(s, fileno)
         f = s.makefile()
@@ -269,6 +329,7 @@ class TestSSL(Test):
         fileno = s.fileno()
 
         s = ssl.wrap_socket(s)
+        self._close_on_teardown(s)
         fileno = s.fileno()
         self.assert_open(s, fileno)
         f = s.makefile()
@@ -288,24 +349,20 @@ class TestSSL(Test):
         connector = socket.socket()
         self._close_on_teardown(connector)
 
-        def connect():
-            connector.connect(('127.0.0.1', port))
-            x = ssl.wrap_socket(connector)
-            self._close_on_teardown(x)
-
-        t = threading.Thread(target=connect)
+        t = self._make_ssl_connect_task(connector, port)
         t.start()
 
         try:
             client_socket, _addr = listener.accept()
+            self._close_on_teardown(client_socket)
             client_socket = ssl.wrap_socket(client_socket, keyfile=certfile, certfile=certfile, server_side=True)
+            self._close_on_teardown(client_socket)
             fileno = client_socket.fileno()
             self.assert_open(client_socket, fileno)
             client_socket.close()
             self.assert_closed(client_socket, fileno)
         finally:
-            t.join()
-            listener.close()
+            self.__cleanup(t, listener, connector)
 
     def test_server_makefile1(self):
         listener = socket.socket()
@@ -314,20 +371,18 @@ class TestSSL(Test):
         port = listener.getsockname()[1]
         listener.listen(1)
 
+
         connector = socket.socket()
         self._close_on_teardown(connector)
 
-        def connect():
-            connector.connect(('127.0.0.1', port))
-            x = ssl.wrap_socket(connector)
-            self._close_on_teardown(x)
-
-        t = threading.Thread(target=connect)
+        t = self._make_ssl_connect_task(connector, port)
         t.start()
 
         try:
             client_socket, _addr = listener.accept()
+            self._close_on_teardown(client_socket)
             client_socket = ssl.wrap_socket(client_socket, keyfile=certfile, certfile=certfile, server_side=True)
+            self._close_on_teardown(client_socket)
             fileno = client_socket.fileno()
             self.assert_open(client_socket, fileno)
             f = client_socket.makefile()
@@ -337,8 +392,8 @@ class TestSSL(Test):
             f.close()
             self.assert_closed(client_socket, fileno)
         finally:
-            t.join()
-            connector.close()
+            self.__cleanup(t, listener, connector)
+
 
     def test_server_makefile2(self):
         listener = socket.socket()
@@ -349,17 +404,14 @@ class TestSSL(Test):
         connector = socket.socket()
         self._close_on_teardown(connector)
 
-        def connect():
-            connector.connect(('127.0.0.1', port))
-            x = ssl.wrap_socket(connector)
-            self._close_on_teardown(x)
-
-        t = threading.Thread(target=connect)
+        t = self._make_ssl_connect_task(connector, port)
         t.start()
 
         try:
             client_socket, _addr = listener.accept()
+            self._close_on_teardown(client_socket)
             client_socket = ssl.wrap_socket(client_socket, keyfile=certfile, certfile=certfile, server_side=True)
+            self._close_on_teardown(client_socket)
             fileno = client_socket.fileno()
             self.assert_open(client_socket, fileno)
             f = client_socket.makefile()
@@ -370,9 +422,7 @@ class TestSSL(Test):
             client_socket.close()
             self.assert_closed(client_socket, fileno)
         finally:
-            t.join()
-            listener.close()
-            connector.close()
+            self.__cleanup(t, connector, listener, client_socket)
 
     def test_serverssl_makefile1(self):
         listener = socket.socket()
@@ -385,12 +435,7 @@ class TestSSL(Test):
         connector = socket.socket()
         self._close_on_teardown(connector)
 
-        def connect():
-            connector.connect(('127.0.0.1', port))
-            x = ssl.wrap_socket(connector)
-            self._close_on_teardown(x)
-
-        t = threading.Thread(target=connect)
+        t = self._make_ssl_connect_task(connector, port)
         t.start()
 
         try:
@@ -404,9 +449,7 @@ class TestSSL(Test):
             f.close()
             self.assert_closed(client_socket, fileno)
         finally:
-            t.join()
-            listener.close()
-            connector.close()
+            self.__cleanup(t, listener, connector)
 
     def test_serverssl_makefile2(self):
         listener = socket.socket()
@@ -425,6 +468,7 @@ class TestSSL(Test):
             connector.close()
 
         t = threading.Thread(target=connect)
+        t.daemon = True
         t.start()
 
         try:
@@ -443,8 +487,7 @@ class TestSSL(Test):
             client_socket.close()
             self.assert_closed(client_socket, fileno)
         finally:
-            t.join()
-            listener.close()
+            self.__cleanup(t, listener)
 
 
 if __name__ == '__main__':

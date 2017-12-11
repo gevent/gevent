@@ -185,6 +185,13 @@ class loop(AbstractLoop):
         """
         Return all the handles that are open and their ref status.
         """
+
+        # XXX: Disabled because, at least on Windows, the times this
+        # gets called often produce `SystemError: ffi.from_handle():
+        # dead or bogus handle object`, and sometimes that crashes the process.
+        return []
+
+    def _really_debug(self):
         handle_state = namedtuple("HandleState",
                                   ['handle',
                                    'watcher',

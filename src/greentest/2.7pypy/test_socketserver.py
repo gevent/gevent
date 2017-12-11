@@ -158,6 +158,8 @@ class SocketServerTest(unittest.TestCase):
         if verbose: print "waiting for server"
         server.shutdown()
         t.join()
+        server.server_close()
+        self.assertRaises(socket.error, server.socket.fileno)
         if verbose: print "done"
 
     def stream_examine(self, proto, addr):
@@ -173,6 +175,8 @@ class SocketServerTest(unittest.TestCase):
 
     def dgram_examine(self, proto, addr):
         s = socket.socket(proto, socket.SOCK_DGRAM)
+        if HAVE_UNIX_SOCKETS and proto == socket.AF_UNIX:
+            s.bind(self.pickaddr(proto))
         s.sendto(TEST_STR, addr)
         buf = data = receive(s, 100)
         while data and '\n' not in buf:
@@ -267,27 +271,24 @@ class SocketServerTest(unittest.TestCase):
             # Make sure select was called again:
             self.assertGreater(mock_select.called, 1)
 
-    # Alas, on Linux (at least) recvfrom() doesn't return a meaningful
-    # client address so this cannot work:
+    @requires_unix_sockets
+    def test_UnixDatagramServer(self):
+        self.run_server(SocketServer.UnixDatagramServer,
+                        SocketServer.DatagramRequestHandler,
+                        self.dgram_examine)
 
-    # @requires_unix_sockets
-    # def test_UnixDatagramServer(self):
-    #     self.run_server(SocketServer.UnixDatagramServer,
-    #                     SocketServer.DatagramRequestHandler,
-    #                     self.dgram_examine)
-    #
-    # @requires_unix_sockets
-    # def test_ThreadingUnixDatagramServer(self):
-    #     self.run_server(SocketServer.ThreadingUnixDatagramServer,
-    #                     SocketServer.DatagramRequestHandler,
-    #                     self.dgram_examine)
-    #
-    # @requires_unix_sockets
-    # @requires_forking
-    # def test_ForkingUnixDatagramServer(self):
-    #     self.run_server(SocketServer.ForkingUnixDatagramServer,
-    #                     SocketServer.DatagramRequestHandler,
-    #                     self.dgram_examine)
+    @requires_unix_sockets
+    def test_ThreadingUnixDatagramServer(self):
+        self.run_server(SocketServer.ThreadingUnixDatagramServer,
+                        SocketServer.DatagramRequestHandler,
+                        self.dgram_examine)
+
+    @requires_unix_sockets
+    @requires_forking
+    def test_ForkingUnixDatagramServer(self):
+        self.run_server(ForkingUnixDatagramServer,
+                        SocketServer.DatagramRequestHandler,
+                        self.dgram_examine)
 
     @reap_threads
     def test_shutdown(self):
@@ -313,6 +314,40 @@ class SocketServerTest(unittest.TestCase):
             s.shutdown()
         for t, s in threads:
             t.join()
+
+    def test_tcpserver_bind_leak(self):
+        # Issue #22435: the server socket wouldn't be closed if bind()/listen()
+        # failed.
+        # Create many servers for which bind() will fail, to see if this result
+        # in FD exhaustion.
+        for i in range(1024):
+            with self.assertRaises(OverflowError):
+                SocketServer.TCPServer((HOST, -1),
+                                       SocketServer.StreamRequestHandler)
+
+
+class MiscTestCase(unittest.TestCase):
+
+    def test_shutdown_request_called_if_verify_request_false(self):
+        # Issue #26309: BaseServer should call shutdown_request even if
+        # verify_request is False
+
+        class MyServer(SocketServer.TCPServer):
+            def verify_request(self, request, client_address):
+                return False
+
+            shutdown_called = 0
+            def shutdown_request(self, request):
+                self.shutdown_called += 1
+                SocketServer.TCPServer.shutdown_request(self, request)
+
+        server = MyServer((HOST, 0), SocketServer.StreamRequestHandler)
+        s = socket.socket(server.address_family, socket.SOCK_STREAM)
+        s.connect(server.server_address)
+        s.close()
+        server.handle_request()
+        self.assertEqual(server.shutdown_called, 1)
+        server.server_close()
 
 
 def test_main():

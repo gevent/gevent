@@ -11,6 +11,7 @@ import sys
 PY2 = sys.version_info[0] == 2
 PY3 = sys.version_info[0] >= 3
 PYPY = hasattr(sys, 'pypy_version_info')
+WIN = sys.platform.startswith("win")
 
 ## Types
 
@@ -21,7 +22,7 @@ if PY3:
 
 else:
     import __builtin__ # pylint:disable=import-error
-    string_types = __builtin__.basestring,
+    string_types = (__builtin__.basestring,)
     text_type = __builtin__.unicode
     integer_types = (int, __builtin__.long)
 
