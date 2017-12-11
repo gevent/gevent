@@ -22,7 +22,7 @@ if PY3:
 
 else:
     import __builtin__ # pylint:disable=import-error
-    string_types = __builtin__.basestring,
+    string_types = (__builtin__.basestring,)
     text_type = __builtin__.unicode
     integer_types = (int, __builtin__.long)
 
