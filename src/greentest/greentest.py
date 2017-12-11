@@ -43,6 +43,7 @@ import _six as six
 PYPY = hasattr(sys, 'pypy_version_info')
 VERBOSE = sys.argv.count('-v') > 1
 WIN = sys.platform.startswith("win")
+LINUX = sys.platform.startswith('linux')
 
 # XXX: Formalize this better
 LIBUV = os.getenv('GEVENT_CORE_CFFI_ONLY') == 'libuv' or (PYPY and WIN) or hasattr(gevent.core, 'libuv')
@@ -878,6 +879,11 @@ else:
         Return a list of popenfile and pconn objects.
 
         Note that other than `fd`, they have different attributes.
+
+        .. important:: If you want to find open sockets, on Windows
+           and linux, it is important that the socket at least be listening
+           (socket.listen(1)). Unlike the lsof implementation, this will only
+           return sockets in a state like that.
         """
         results = dict()
         process = psutil.Process()
@@ -895,11 +901,6 @@ else:
             # num_fds is unix only. Is num_handles close enough on Windows?
             return 0
 
-if RUNNING_ON_TRAVIS:
-    # XXX: Note: installing psutil on the travis linux vm caused
-    # failures in test__makefile_refs. Specifically, it didn't find
-    # open files we expected.
-    get_open_files = lsof_get_open_files
 
 if PYPY:
 

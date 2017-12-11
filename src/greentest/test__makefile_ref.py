@@ -108,34 +108,26 @@ class Test(greentest.TestCase):
         s = socket.socket()
         s.bind(('127.0.0.1', 0))
         self._close_on_teardown(s)
-        if WIN:
-            # Windows doesn't show as open until this
+        if WIN or greentest.LINUX:
+            # Windows and linux (with psutil) doesn't show as open until
+            # we call listen (linux with lsof accepts either)
             s.listen(1)
         self.assert_open(s, s.fileno())
         return s
 
-    if not PYPY or not greentest.RUNNING_ON_TRAVIS:
+    def _close_on_teardown(self, resource):
+        # Keeping raw sockets alive keeps SSL sockets
+        # from being closed too, at least on CPython, so we
+        # need to use weakrefs
+        if 'close_on_teardown' not in self.__dict__:
+            self.close_on_teardown = []
+        self.close_on_teardown.append(weakref.ref(resource))
+        return resource
 
-        def _close_on_teardown(self, resource):
-            # Keeping raw sockets alive keeps SSL sockets
-            # from being closed too, at least on CPython, so we
-            # need to use weakrefs
-            if 'close_on_teardown' not in self.__dict__:
-                self.close_on_teardown = []
-            self.close_on_teardown.append(weakref.ref(resource))
-            return resource
-
-        def _tearDownCloseOnTearDown(self):
-            self.close_on_teardown = [r() for r in self.close_on_teardown if r() is not None]
-            super(Test, self)._tearDownCloseOnTearDown()
-            self._tearDownCloseOnTearDown = ()
-
-    else:
-        # Seeing a weird GC? interaction on linux.
-        # I can't reproduce locally. Define these as no-ops
-        # there
-        def _close_on_teardown(self, resource):
-            return resource
+    def _tearDownCloseOnTearDown(self):
+        self.close_on_teardown = [r() for r in self.close_on_teardown if r() is not None]
+        super(Test, self)._tearDownCloseOnTearDown()
+        self.close_on_teardown = []
 
 class TestSocket(Test):
 
@@ -287,6 +279,27 @@ class TestSSL(Test):
         t.daemon = True
         return t
 
+    def __cleanup(self, task, *sockets):
+        # workaround for test_server_makefile1, test_server_makefile2,
+        # test_server_simple, test_serverssl_makefile1.
+
+        # On PyPy on Linux, it is important to join the SSL Connect
+        # Task FIRST, before closing the sockets. If we do it after
+        # (which makes more sense) we hang. It's not clear why, except
+        # that it has something to do with context switches. Inserting a call to
+        # gevent.sleep(0.1) instead of joining the task has the same
+        # effect. If the previous tests hang, then later tests can fail with
+        # SSLError: unknown alert type.
+
+        # XXX: Why do those two things happen?
+
+        # On PyPy on macOS, we don't have that problem and can use the
+        # more logical order.
+
+        task.join()
+        for s in sockets:
+            s.close()
+
     def test_simple_close(self):
         s = self.make_open_socket()
         fileno = s.fileno()
@@ -349,9 +362,7 @@ class TestSSL(Test):
             client_socket.close()
             self.assert_closed(client_socket, fileno)
         finally:
-            listener.close()
-            connector.close()
-            t.join()
+            self.__cleanup(t, listener, connector)
 
     def test_server_makefile1(self):
         listener = socket.socket()
@@ -381,9 +392,8 @@ class TestSSL(Test):
             f.close()
             self.assert_closed(client_socket, fileno)
         finally:
-            listener.close()
-            connector.close()
-            t.join()
+            self.__cleanup(t, listener, connector)
+
 
     def test_server_makefile2(self):
         listener = socket.socket()
@@ -412,10 +422,7 @@ class TestSSL(Test):
             client_socket.close()
             self.assert_closed(client_socket, fileno)
         finally:
-            connector.close()
-            listener.close()
-            client_socket.close()
-            t.join()
+            self.__cleanup(t, connector, listener, client_socket)
 
     def test_serverssl_makefile1(self):
         listener = socket.socket()
@@ -442,9 +449,7 @@ class TestSSL(Test):
             f.close()
             self.assert_closed(client_socket, fileno)
         finally:
-            listener.close()
-            connector.close()
-            t.join()
+            self.__cleanup(t, listener, connector)
 
     def test_serverssl_makefile2(self):
         listener = socket.socket()
@@ -482,8 +487,7 @@ class TestSSL(Test):
             client_socket.close()
             self.assert_closed(client_socket, fileno)
         finally:
-            listener.close()
-            t.join()
+            self.__cleanup(t, listener)
 
 
 if __name__ == '__main__':
