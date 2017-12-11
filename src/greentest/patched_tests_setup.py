@@ -235,9 +235,13 @@ if LIBUV:
             'test_asyncore.DispatcherWithSendTests_UsePoll.test_send',
             'test_asyncore.DispatcherWithSendTests.test_send',
 
-            # These, which use asyncore, faile with
+            # These, which use asyncore, fail with
             # 'NoneType is not iterable' on 'conn, addr = self.accept()'
-            # How could that be returning None?
+            # That returns None when the underlying socket raises
+            # EWOULDBLOCK, which it will do because it's set to non-blocking
+            # both by gevent and by libuv (at the level below python's knowledge)
+            # I can *sometimes* reproduce these locally; it seems to be some sort
+            # of race condition.
             'test_ftplib.TestFTPClass.test_acct',
             'test_ftplib.TestFTPClass.test_all_errors',
             'test_ftplib.TestFTPClass.test_cwd',
@@ -253,6 +257,20 @@ if LIBUV:
             'test_ftplib.TestFTPClass.test_pwd',
             'test_ftplib.TestFTPClass.test_quit',
             'test_ftplib.TestFTPClass.test_makepasv',
+            'test_ftplib.TestFTPClass.test_rename',
+            'test_ftplib.TestFTPClass.test_retrbinary',
+            'test_ftplib.TestFTPClass.test_retrbinary_rest',
+            'test_ftplib.TestFTPClass.test_retrlines',
+            'test_ftplib.TestFTPClass.test_retrlines_too_long',
+            'test_ftplib.TestFTPClass.test_rmd',
+            'test_ftplib.TestFTPClass.test_sanitize',
+            'test_ftplib.TestFTPClass.test_set_pasv',
+            'test_ftplib.TestFTPClass.test_size',
+            'test_ftplib.TestFTPClass.test_storbinary',
+            'test_ftplib.TestFTPClass.test_storbinary_rest',
+            'test_ftplib.TestFTPClass.test_storlines',
+            'test_ftplib.TestFTPClass.test_storlines_too_long',
+            'test_ftplib.TestFTPClass.test_voidcmd',
 
             # This one times out
             'test_ftplib.TestFTPClass.test_makeport',

@@ -803,23 +803,24 @@ def disabled_gc():
 import re
 # Linux/OS X/BSD platforms can implement this by calling out to lsof
 
-def _run_lsof():
-    import tempfile
-    pid = os.getpid()
-    fd, tmpname = tempfile.mkstemp('get_open_files')
-    os.close(fd)
-    lsof_command = 'lsof -p %s > %s' % (pid, tmpname)
-    if os.system(lsof_command):
-        # XXX: This prints to the console an annoying message: 'lsof is not recognized'
-        raise unittest.SkipTest("lsof failed")
-    with open(tmpname) as fobj:
-        data = fobj.read().strip()
-    os.remove(tmpname)
-    return data
 
 if WIN:
     def _run_lsof():
         raise unittest.SkipTest("lsof not expected on Windows")
+else:
+    def _run_lsof():
+        import tempfile
+        pid = os.getpid()
+        fd, tmpname = tempfile.mkstemp('get_open_files')
+        os.close(fd)
+        lsof_command = 'lsof -p %s > %s' % (pid, tmpname)
+        if os.system(lsof_command):
+            # XXX: This prints to the console an annoying message: 'lsof is not recognized'
+            raise unittest.SkipTest("lsof failed")
+        with open(tmpname) as fobj:
+            data = fobj.read().strip()
+        os.remove(tmpname)
+        return data
 
 def default_get_open_files(pipes=False):
     data = _run_lsof()

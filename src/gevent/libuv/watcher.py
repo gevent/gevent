@@ -324,13 +324,13 @@ class io(_base.IoMixin, watcher):
             # See test__makefile_ref.TestSSL for examples.
             # return
 
-        _dbg("Callback event for watcher", self._fd, "event", events)
+        #_dbg("Callback event for watcher", self._fd, "event", events)
         for watcher_ref in self._multiplex_watchers:
             watcher = watcher_ref()
             if not watcher or not watcher.callback:
                 continue
 
-            _dbg("Event for watcher", self._fd, events, watcher.events, events & watcher.events)
+            #_dbg("Event for watcher", self._fd, events, watcher.events, events & watcher.events)
 
             send_event = (events & watcher.events) or events < 0
             if send_event:
