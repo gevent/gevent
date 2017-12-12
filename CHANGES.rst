@@ -156,6 +156,10 @@
     ``filename`` attribute set.
   - The :class:`threading.Timer` class is now monkey-patched and can
     be joined.
+  - :meth:`gevent.ssl.SSLSocket.unwrap` behaves more like the standard
+    library, including returning a SSLSocket and allowing certain
+    timeout-related SSL errors to propagate. The added standard
+    library tests ``test_ftplib.py`` now passes.
 
 1.2.2 (2017-06-05)
 ==================
