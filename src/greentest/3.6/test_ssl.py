@@ -18,6 +18,10 @@ import asyncore
 import weakref
 import platform
 import functools
+try:
+    import ctypes
+except ImportError:
+    ctypes = None
 
 ssl = support.import_module("ssl")
 
@@ -172,6 +176,13 @@ class BasicSocketTests(unittest.TestCase):
             ssl.OP_NO_COMPRESSION
         self.assertIn(ssl.HAS_SNI, {True, False})
         self.assertIn(ssl.HAS_ECDH, {True, False})
+        ssl.OP_NO_SSLv2
+        ssl.OP_NO_SSLv3
+        ssl.OP_NO_TLSv1
+        ssl.OP_NO_TLSv1_3
+    if ssl.OPENSSL_VERSION_INFO >= (1, 0, 1):
+            ssl.OP_NO_TLSv1_1
+            ssl.OP_NO_TLSv1_2
 
     def test_str_for_enums(self):
         # Make sure that the PROTOCOL_* constants have enum-like string
@@ -1736,6 +1747,7 @@ class SimpleBackgroundTests(unittest.TestCase):
         sslobj = ctx.wrap_bio(incoming, outgoing, False, 'localhost')
         self.assertIs(sslobj._sslobj.owner, sslobj)
         self.assertIsNone(sslobj.cipher())
+        self.assertIsNone(sslobj.version())
         self.assertIsNotNone(sslobj.shared_ciphers())
         self.assertRaises(ValueError, sslobj.getpeercert)
         if 'tls-unique' in ssl.CHANNEL_BINDING_TYPES:
@@ -1743,6 +1755,7 @@ class SimpleBackgroundTests(unittest.TestCase):
         self.ssl_io_loop(sock, incoming, outgoing, sslobj.do_handshake)
         self.assertTrue(sslobj.cipher())
         self.assertIsNotNone(sslobj.shared_ciphers())
+        self.assertIsNotNone(sslobj.version())
         self.assertTrue(sslobj.getpeercert())
         if 'tls-unique' in ssl.CHANNEL_BINDING_TYPES:
             self.assertTrue(sslobj.get_channel_binding('tls-unique'))
@@ -1792,34 +1805,6 @@ class NetworkedTests(unittest.TestCase):
         with support.transient_internet('ipv6.google.com'):
             _test_get_server_certificate(self, 'ipv6.google.com', 443)
             _test_get_server_certificate_fail(self, 'ipv6.google.com', 443)
-
-    def test_algorithms(self):
-        # Issue #8484: all algorithms should be available when verifying a
-        # certificate.
-        # SHA256 was added in OpenSSL 0.9.8
-        if ssl.OPENSSL_VERSION_INFO < (0, 9, 8, 0, 15):
-            self.skipTest("SHA256 not available on %r" % ssl.OPENSSL_VERSION)
-        # sha256.tbs-internet.com needs SNI to use the correct certificate
-        if not ssl.HAS_SNI:
-            self.skipTest("SNI needed for this test")
-        # https://sha2.hboeck.de/ was used until 2011-01-08 (no route to host)
-        remote = ("sha256.tbs-internet.com", 443)
-        sha256_cert = os.path.join(os.path.dirname(__file__), "sha256.pem")
-        with support.transient_internet("sha256.tbs-internet.com"):
-            ctx = ssl.SSLContext(ssl.PROTOCOL_TLSv1)
-            ctx.verify_mode = ssl.CERT_REQUIRED
-            ctx.load_verify_locations(sha256_cert)
-            s = ctx.wrap_socket(socket.socket(socket.AF_INET),
-                                server_hostname="sha256.tbs-internet.com")
-            try:
-                s.connect(remote)
-                if support.verbose:
-                    sys.stdout.write("\nCipher with %r is %r\n" %
-                                     (remote, s.cipher()))
-                    sys.stdout.write("Certificate is:\n%s\n" %
-                                     pprint.pformat(s.getpeercert()))
-            finally:
-                s.close()
 
 
 def _test_get_server_certificate(test, host, port, cert=None):
@@ -1871,15 +1856,22 @@ if _have_threads:
                         self.sock, server_side=True)
                     self.server.selected_npn_protocols.append(self.sslconn.selected_npn_protocol())
                     self.server.selected_alpn_protocols.append(self.sslconn.selected_alpn_protocol())
-                except (ssl.SSLError, ConnectionResetError) as e:
+                except (ssl.SSLError, ConnectionResetError, OSError) as e:
                     # We treat ConnectionResetError as though it were an
                     # SSLError - OpenSSL on Ubuntu abruptly closes the
                     # connection when asked to use an unsupported protocol.
                     #
+                    # OSError may occur with wrong protocols, e.g. both
+                    # sides use PROTOCOL_TLS_SERVER.
+                    #
                     # XXX Various errors can have happened here, for example
                     # a mismatching protocol version, an invalid certificate,
                     # or a low-level bug. This should be made more discriminating.
-                    self.server.conn_errors.append(e)
+                    #
+                    # bpo-31323: Store the exception as string to prevent
+                    # a reference leak: server -> conn_errors -> exception
+                    # -> traceback -> self (ConnectionHandler) -> server
+                    self.server.conn_errors.append(str(e))
                     if self.server.chatty:
                         handle_error("\n server:  bad connection attempt from " + repr(self.addr) + ":\n")
                     self.running = False
@@ -2065,7 +2057,7 @@ if _have_threads:
 
         class EchoServer (asyncore.dispatcher):
 
-            class ConnectionHandler (asyncore.dispatcher_with_send):
+            class ConnectionHandler(asyncore.dispatcher_with_send):
 
                 def __init__(self, conn, certfile):
                     self.socket = test_wrap_socket(conn, server_side=True,
@@ -2156,6 +2148,8 @@ if _have_threads:
             self.join()
             if support.verbose:
                 sys.stdout.write(" cleanup: successfully joined.\n")
+            # make sure that ConnectionHandler is removed from socket_map
+            asyncore.close_all(ignore_all=True)
 
         def start (self, flag=None):
             self.flag = flag
@@ -2903,7 +2897,13 @@ if _have_threads:
                 s.send(data)
                 buffer = bytearray(len(data))
                 self.assertEqual(s.read(-1, buffer), len(data))
-                self.assertEqual(buffer, data)
+                self.assertEqual(buffer, data)  # sendall accepts bytes-like objects
+
+                if ctypes is not None:
+                    ubyte = ctypes.c_ubyte * len(data)
+                    byteslike = ubyte.from_buffer_copy(data)
+                    s.sendall(byteslike)
+                    self.assertEqual(s.read(), data)
 
                 # Make sure sendmsg et al are disallowed to avoid
                 # inadvertent disclosure of data and/or corruption
@@ -3085,7 +3085,7 @@ if _have_threads:
                 with context.wrap_socket(socket.socket()) as s:
                     with self.assertRaises(OSError):
                         s.connect((HOST, server.port))
-            self.assertIn("no shared cipher", str(server.conn_errors[0]))
+            self.assertIn("no shared cipher", server.conn_errors[0])
 
         def test_version_basic(self):
             """
@@ -3102,12 +3102,33 @@ if _have_threads:
                     self.assertEqual(s.version(), 'TLSv1')
                 self.assertIs(s.version(), None)
 
+        @unittest.skipUnless(ssl.HAS_TLSv1_3,
+                             "test requires TLSv1.3 enabled OpenSSL")
+        def test_tls1_3(self):
+            context = ssl.SSLContext(ssl.PROTOCOL_TLS)
+            context.load_cert_chain(CERTFILE)
+            # disable all but TLS 1.3
+            context.options |= (
+                ssl.OP_NO_TLSv1 | ssl.OP_NO_TLSv1_1 | ssl.OP_NO_TLSv1_2
+            )
+            with ThreadedEchoServer(context=context) as server:
+                with context.wrap_socket(socket.socket()) as s:
+                    s.connect((HOST, server.port))
+                    self.assertIn(s.cipher()[0], [
+                        'TLS13-AES-256-GCM-SHA384',
+                        'TLS13-CHACHA20-POLY1305-SHA256',
+                        'TLS13-AES-128-GCM-SHA256',
+                    ])
+
         @unittest.skipUnless(ssl.HAS_ECDH, "test requires ECDH-enabled OpenSSL")
         def test_default_ecdh_curve(self):
             # Issue #21015: elliptic curve-based Diffie Hellman key exchange
             # should be enabled by default on SSL contexts.
             context = ssl.SSLContext(ssl.PROTOCOL_SSLv23)
             context.load_cert_chain(CERTFILE)
+            # TLSv1.3 defaults to PFS key agreement and no longer has KEA in
+            # cipher name.
+            context.options |= ssl.OP_NO_TLSv1_3
             # Prior to OpenSSL 1.0.0, ECDH ciphers have to be enabled
             # explicitly using the 'ECCdraft' cipher alias.  Otherwise,
             # our default cipher list should prefer ECDH-based ciphers
@@ -3256,8 +3277,9 @@ if _have_threads:
                 except ssl.SSLError as e:
                     stats = e
 
-                if expected is None and IS_OPENSSL_1_1:
-                    # OpenSSL 1.1.0 raises handshake error
+                if (expected is None and IS_OPENSSL_1_1
+                        and ssl.OPENSSL_VERSION_INFO < (1, 1, 0, 6)):
+                    # OpenSSL 1.1.0 to 1.1.0e raises handshake error
                     self.assertIsInstance(stats, ssl.SSLError)
                 else:
                     msg = "failed trying %s (s) and %s (c).\n" \
@@ -3475,7 +3497,7 @@ if _have_threads:
             client_context.verify_mode = ssl.CERT_REQUIRED
             client_context.load_verify_locations(SIGNING_CA)
 
-            # first conncetion without session
+            # first connection without session
             stats = server_params_test(client_context, server_context)
             session = stats['session']
             self.assertTrue(session.id)
@@ -3534,6 +3556,10 @@ if _have_threads:
             context2.verify_mode = ssl.CERT_REQUIRED
             context2.load_verify_locations(CERTFILE)
             context2.load_cert_chain(CERTFILE)
+
+            # TODO: session reuse does not work with TLS 1.3
+            context.options |= ssl.OP_NO_TLSv1_3
+            context2.options |= ssl.OP_NO_TLSv1_3
 
             server = ThreadedEchoServer(context=context, chatty=False)
             with server:

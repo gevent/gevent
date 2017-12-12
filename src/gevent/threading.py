@@ -188,11 +188,13 @@ if sys.version_info[:2] >= (3, 4):
 
     __implements__.append('Thread')
 
-    # The main thread is patched up with more care in monkey.py
-    #t = __threading__.current_thread()
-    #if isinstance(t, __threading__.Thread):
-    #    t.__class__ = Thread
-    #    t._greenlet = getcurrent()
+    class Timer(Thread, __threading__.Timer): # pylint:disable=abstract-method,inherit-non-class
+        pass
+
+    __implements__.append('Timer')
+
+    # The main thread is patched up with more care
+    # in _gevent_will_monkey_patch
 
 if sys.version_info[:2] >= (3, 3):
     __implements__.remove('_get_ident')

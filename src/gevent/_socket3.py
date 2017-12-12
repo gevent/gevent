@@ -464,6 +464,11 @@ class socket(object):
                     raise
 
     def setblocking(self, flag):
+        # Beginning in 3.6.0b3 this is supposed to raise
+        # if the file descriptor is closed, but the test for it
+        # involves closing the fileno directly. Since we
+        # don't touch the fileno here, it doesn't make sense for
+        # us.
         if flag:
             self.timeout = None
         else:

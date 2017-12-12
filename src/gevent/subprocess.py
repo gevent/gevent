@@ -1236,7 +1236,11 @@ class Popen(object):
                                     closed.add(fd)
 
                             if cwd is not None:
-                                os.chdir(cwd)
+                                try:
+                                    os.chdir(cwd)
+                                except OSError as e:
+                                    e._failed_chdir = True
+                                    raise
 
                             if preexec_fn:
                                 preexec_fn()
@@ -1340,6 +1344,10 @@ class Popen(object):
                 for fd in (p2cwrite, c2pread, errread):
                     if fd is not None:
                         os.close(fd)
+                if isinstance(child_exception, OSError):
+                    child_exception.filename = executable
+                    if hasattr(child_exception, '_failed_chdir'):
+                        child_exception.filename = cwd
                 raise child_exception
 
         def _handle_exitstatus(self, sts):

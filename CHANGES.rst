@@ -149,6 +149,14 @@
 
   See :issue:`790` for history and more in-depth discussion.
 
+- gevent is now tested on Python 3.6.3. This includes the following
+  fixes and changes:
+
+  - Errors raised from :mod:`gevent.subprocess` will have a
+    ``filename`` attribute set.
+  - The :class:`threading.Timer` class is now monkey-patched and can
+    be joined.
+
 1.2.2 (2017-06-05)
 ==================
 

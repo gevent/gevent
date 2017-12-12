@@ -484,12 +484,20 @@ if sys.version_info[0] == 3:
         'test_subprocess.ProcessTestCase.test_io_buffered_by_default',
         'test_subprocess.ProcessTestCase.test_io_unbuffered_works',
 
+        # 3.3 exposed the `endtime` argument to wait accidentally.
+        # It is documented as deprecated and not to be used since 3.4
+        # This test in 3.6.3 wants to use it though, and we don't have it.
+        'test_subprocess.ProcessTestCase.test_wait_endtime',
+
         # These all want to inspect the string value of an exception raised
         # by the exec() call in the child. The _posixsubprocess module arranges
         # for better exception handling and printing than we do.
         'test_subprocess.POSIXProcessTestCase.test_exception_bad_args_0',
         'test_subprocess.POSIXProcessTestCase.test_exception_bad_executable',
         'test_subprocess.POSIXProcessTestCase.test_exception_cwd',
+        # Relies on a 'fork_exec' attribute that we don't provide
+        'test_subprocess.POSIXProcessTestCase.test_exception_errpipe_bad_data',
+        'test_subprocess.POSIXProcessTestCase.test_exception_errpipe_normal',
 
         # Python 3 fixed a bug if the stdio file descriptors were closed;
         # we still have that bug
@@ -721,6 +729,18 @@ if sys.version_info[:2] >= (3, 5):
         # 'lock_tests.LockTests.lest_locked_repr',
         # 'lock_tests.LockTests.lest_repr',
 
+        # Added between 3.6.0 and 3.6.3, uses _testcapi and internals
+        # of the subprocess module.
+        'test_subprocess.POSIXProcessTestCase.test_stopped',
+
+        # This test opens a socket, creates a new socket with the same fileno,
+        # closes the original socket (and hence fileno) and then
+        # expects that the calling setblocking() on the duplicate socket
+        # will raise an error. Our implementation doesn't work that way because
+        # setblocking() doesn't actually touch the file descriptor.
+        # That's probably OK because this was a GIL state error in CPython
+        # see https://github.com/python/cpython/commit/fa22b29960b4e683f4e5d7e308f674df2620473c
+        'test_socket.TestExceptions.test_setblocking_invalidfd',
     ]
 
     if os.environ.get('GEVENT_RESOLVER') == 'ares':
