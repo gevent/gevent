@@ -116,7 +116,7 @@ PY278=$(BUILD_RUNTIMES)/snakepit/python2.7.8
 PY27=$(BUILD_RUNTIMES)/snakepit/python2.7.14
 PY34=$(BUILD_RUNTIMES)/snakepit/python3.4.7
 PY35=$(BUILD_RUNTIMES)/snakepit/python3.5.4
-PY36=$(BUILD_RUNTIMES)/snakepit/python3.6.2
+PY36=$(BUILD_RUNTIMES)/snakepit/python3.6.3
 PYPY=$(BUILD_RUNTIMES)/snakepit/pypy590
 PYPY3=$(BUILD_RUNTIMES)/snakepit/pypy3.5_590
 
@@ -181,7 +181,7 @@ test-py35: $(PY35)
 	PYTHON=python3.5.4 PATH=$(BUILD_RUNTIMES)/versions/python3.5.4/bin:$(PATH) make develop fulltoxtest
 
 test-py36: $(PY36)
-	PYTHON=python3.6.2 PATH=$(BUILD_RUNTIMES)/versions/python3.6.2/bin:$(PATH) make develop toxtest
+	PYTHON=python3.6.3 PATH=$(BUILD_RUNTIMES)/versions/python3.6.3/bin:$(PATH) make develop toxtest
 
 test-py36-libuv: $(PY36)
 	GEVENT_CORE_CFFI_ONLY=libuv make test-py36

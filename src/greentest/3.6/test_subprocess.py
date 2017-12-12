@@ -3,6 +3,7 @@ from unittest import mock
 from test import support
 import subprocess
 import sys
+import platform
 import signal
 import io
 import os
@@ -17,9 +18,21 @@ import gc
 import textwrap
 
 try:
+    import ctypes
+except ImportError:
+    ctypes = None
+else:
+    import ctypes.util
+
+try:
     import threading
 except ImportError:
     threading = None
+
+try:
+    import _testcapi
+except ImportError:
+    _testcapi = None
 
 if support.PGO:
     raise unittest.SkipTest("test is not helpful for PGO")
@@ -36,6 +49,8 @@ if mswindows:
 else:
     SETBINARY = ''
 
+NONEXISTING_CMD = ('nonexisting_i_hope',)
+
 
 class BaseTestCase(unittest.TestCase):
     def setUp(self):
@@ -48,6 +63,8 @@ class BaseTestCase(unittest.TestCase):
             inst.wait()
         subprocess._cleanup()
         self.assertFalse(subprocess._active, "subprocess._active not empty")
+        self.doCleanups()
+        support.reap_children()
 
     def assertStderrEqual(self, stderr, expected, msg=None):
         # In a debug build, stuff like "[6580 refs]" is printed to stderr at
@@ -293,7 +310,8 @@ class ProcessTestCase(BaseTestCase):
         # Verify first that the call succeeds without the executable arg.
         pre_args = [sys.executable, "-c"]
         self._assert_python(pre_args)
-        self.assertRaises(FileNotFoundError, self._assert_python, pre_args,
+        self.assertRaises((FileNotFoundError, PermissionError),
+                          self._assert_python, pre_args,
                           executable="doesnotexist")
 
     @unittest.skipIf(mswindows, "executable argument replaces shell")
@@ -339,6 +357,16 @@ class ProcessTestCase(BaseTestCase):
         temp_dir = tempfile.gettempdir()
         temp_dir = self._normalize_cwd(temp_dir)
         self._assert_cwd(temp_dir, sys.executable, cwd=temp_dir)
+
+    def test_cwd_with_pathlike(self):
+        temp_dir = tempfile.gettempdir()
+        temp_dir = self._normalize_cwd(temp_dir)
+
+        class _PathLikeObj:
+            def __fspath__(self):
+                return temp_dir
+
+        self._assert_cwd(temp_dir, sys.executable, cwd=_PathLikeObj())
 
     @unittest.skipIf(mswindows, "pending resolution of issue #15533")
     def test_cwd_with_relative_arg(self):
@@ -626,6 +654,46 @@ class ProcessTestCase(BaseTestCase):
                  # Mac OS X adds __CF_USER_TEXT_ENCODING variable to an empty
                  # environment
                  b"['__CF_USER_TEXT_ENCODING']"))
+
+    def test_invalid_cmd(self):
+        # null character in the command name
+        cmd = sys.executable + '\0'
+        with self.assertRaises(ValueError):
+            subprocess.Popen([cmd, "-c", "pass"])
+
+        # null character in the command argument
+        with self.assertRaises(ValueError):
+            subprocess.Popen([sys.executable, "-c", "pass#\0"])
+
+    def test_invalid_env(self):
+        # null character in the enviroment variable name
+        newenv = os.environ.copy()
+        newenv["FRUIT\0VEGETABLE"] = "cabbage"
+        with self.assertRaises(ValueError):
+            subprocess.Popen([sys.executable, "-c", "pass"], env=newenv)
+
+        # null character in the enviroment variable value
+        newenv = os.environ.copy()
+        newenv["FRUIT"] = "orange\0VEGETABLE=cabbage"
+        with self.assertRaises(ValueError):
+            subprocess.Popen([sys.executable, "-c", "pass"], env=newenv)
+
+        # equal character in the enviroment variable name
+        newenv = os.environ.copy()
+        newenv["FRUIT=ORANGE"] = "lemon"
+        with self.assertRaises(ValueError):
+            subprocess.Popen([sys.executable, "-c", "pass"], env=newenv)
+
+        # equal character in the enviroment variable value
+        newenv = os.environ.copy()
+        newenv["FRUIT"] = "orange=lemon"
+        with subprocess.Popen([sys.executable, "-c",
+                               'import sys, os;'
+                               'sys.stdout.write(os.getenv("FRUIT"))'],
+                              stdout=subprocess.PIPE,
+                              env=newenv) as p:
+            stdout, stderr = p.communicate()
+            self.assertEqual(stdout, b"orange=lemon")
 
     def test_communicate_stdin(self):
         p = subprocess.Popen([sys.executable, "-c",
@@ -1014,6 +1082,19 @@ class ProcessTestCase(BaseTestCase):
         # time to start.
         self.assertEqual(p.wait(timeout=3), 0)
 
+    def test_wait_endtime(self):
+        """Confirm that the deprecated endtime parameter warns."""
+        p = subprocess.Popen([sys.executable, "-c", "pass"])
+        try:
+            with self.assertWarns(DeprecationWarning) as warn_cm:
+                p.wait(endtime=time.time()+0.01)
+        except subprocess.TimeoutExpired:
+            pass  # We're not testing endtime timeout behavior.
+        finally:
+            p.kill()
+        self.assertIn('test_subprocess.py', warn_cm.filename)
+        self.assertIn('endtime', str(warn_cm.warning))
+
     def test_invalid_bufsize(self):
         # an invalid type of the bufsize argument should raise
         # TypeError.
@@ -1041,10 +1122,11 @@ class ProcessTestCase(BaseTestCase):
             p.stdin.write(line) # expect that it flushes the line in text mode
             os.close(p.stdin.fileno()) # close it without flushing the buffer
             read_line = p.stdout.readline()
-            try:
-                p.stdin.close()
-            except OSError:
-                pass
+            with support.SuppressCrashReport():
+                try:
+                    p.stdin.close()
+                except OSError:
+                    pass
             p.stdin = None
         self.assertEqual(p.returncode, 0)
         self.assertEqual(read_line, expected)
@@ -1069,12 +1151,53 @@ class ProcessTestCase(BaseTestCase):
         # 1024 times (each call leaked two fds).
         for i in range(1024):
             with self.assertRaises(OSError) as c:
-                subprocess.Popen(['nonexisting_i_hope'],
+                subprocess.Popen(NONEXISTING_CMD,
                                  stdout=subprocess.PIPE,
                                  stderr=subprocess.PIPE)
             # ignore errors that indicate the command was not found
             if c.exception.errno not in (errno.ENOENT, errno.EACCES):
                 raise c.exception
+
+    def test_nonexisting_with_pipes(self):
+        # bpo-30121: Popen with pipes must close properly pipes on error.
+        # Previously, os.close() was called with a Windows handle which is not
+        # a valid file descriptor.
+        #
+        # Run the test in a subprocess to control how the CRT reports errors
+        # and to get stderr content.
+        try:
+            import msvcrt
+            msvcrt.CrtSetReportMode
+        except (AttributeError, ImportError):
+            self.skipTest("need msvcrt.CrtSetReportMode")
+
+        code = textwrap.dedent(f"""
+            import msvcrt
+            import subprocess
+
+            cmd = {NONEXISTING_CMD!r}
+
+            for report_type in [msvcrt.CRT_WARN,
+                                msvcrt.CRT_ERROR,
+                                msvcrt.CRT_ASSERT]:
+                msvcrt.CrtSetReportMode(report_type, msvcrt.CRTDBG_MODE_FILE)
+                msvcrt.CrtSetReportFile(report_type, msvcrt.CRTDBG_FILE_STDERR)
+
+            try:
+                subprocess.Popen([cmd],
+                                 stdout=subprocess.PIPE,
+                                 stderr=subprocess.PIPE)
+            except OSError:
+                pass
+        """)
+        cmd = [sys.executable, "-c", code]
+        proc = subprocess.Popen(cmd,
+                                stderr=subprocess.PIPE,
+                                universal_newlines=True)
+        with proc:
+            stderr = proc.communicate()[1]
+        self.assertEqual(stderr, "")
+        self.assertEqual(proc.returncode, 0)
 
     @unittest.skipIf(threading is None, "threading required")
     def test_double_close_on_error(self):
@@ -1088,7 +1211,7 @@ class ProcessTestCase(BaseTestCase):
         t.start()
         try:
             with self.assertRaises(EnvironmentError):
-                subprocess.Popen(['nonexisting_i_hope'],
+                subprocess.Popen(NONEXISTING_CMD,
                                  stdin=subprocess.PIPE,
                                  stdout=subprocess.PIPE,
                                  stderr=subprocess.PIPE)
@@ -1252,6 +1375,18 @@ class ProcessTestCase(BaseTestCase):
         fds_after_exception = os.listdir(fd_directory)
         self.assertEqual(fds_before_popen, fds_after_exception)
 
+    @unittest.skipIf(mswindows, "behavior currently not supported on Windows")
+    def test_file_not_found_includes_filename(self):
+        with self.assertRaises(FileNotFoundError) as c:
+            subprocess.call(['/opt/nonexistent_binary', 'with', 'some', 'args'])
+        self.assertEqual(c.exception.filename, '/opt/nonexistent_binary')
+
+    @unittest.skipIf(mswindows, "behavior currently not supported on Windows")
+    def test_file_not_found_with_bad_cwd(self):
+        with self.assertRaises(FileNotFoundError) as c:
+            subprocess.Popen(['exit', '0'], cwd='/some/nonexistent/directory')
+        self.assertEqual(c.exception.filename, '/some/nonexistent/directory')
+
 
 class RunFuncTestCase(BaseTestCase):
     def run_python(self, code, **kwargs):
@@ -1409,6 +1544,53 @@ class POSIXProcessTestCase(BaseTestCase):
             self.assertEqual(desired_exception.strerror, e.strerror)
         else:
             self.fail("Expected OSError: %s" % desired_exception)
+
+    # We mock the __del__ method for Popen in the next two tests
+    # because it does cleanup based on the pid returned by fork_exec
+    # along with issuing a resource warning if it still exists. Since
+    # we don't actually spawn a process in these tests we can forego
+    # the destructor. An alternative would be to set _child_created to
+    # False before the destructor is called but there is no easy way
+    # to do that
+    class PopenNoDestructor(subprocess.Popen):
+        def __del__(self):
+            pass
+
+    @mock.patch("subprocess._posixsubprocess.fork_exec")
+    def test_exception_errpipe_normal(self, fork_exec):
+        """Test error passing done through errpipe_write in the good case"""
+        def proper_error(*args):
+            errpipe_write = args[13]
+            # Write the hex for the error code EISDIR: 'is a directory'
+            err_code = '{:x}'.format(errno.EISDIR).encode()
+            os.write(errpipe_write, b"OSError:" + err_code + b":")
+            return 0
+
+        fork_exec.side_effect = proper_error
+
+        with self.assertRaises(IsADirectoryError):
+            self.PopenNoDestructor(["non_existent_command"])
+
+    @mock.patch("subprocess._posixsubprocess.fork_exec")
+    def test_exception_errpipe_bad_data(self, fork_exec):
+        """Test error passing done through errpipe_write where its not
+        in the expected format"""
+        error_data = b"\xFF\x00\xDE\xAD"
+        def bad_error(*args):
+            errpipe_write = args[13]
+            # Anything can be in the pipe, no assumptions should
+            # be made about its encoding, so we'll write some
+            # arbitrary hex bytes to test it out
+            os.write(errpipe_write, error_data)
+            return 0
+
+        fork_exec.side_effect = bad_error
+
+        with self.assertRaises(subprocess.SubprocessError) as e:
+            self.PopenNoDestructor(["non_existent_command"])
+
+        self.assertIn(repr(error_data), str(e.exception))
+
 
     def test_restore_signals(self):
         # Code coverage for both values of restore_signals to make sure it
@@ -2354,7 +2536,7 @@ class POSIXProcessTestCase(BaseTestCase):
         # should trigger the wait() of p
         time.sleep(0.2)
         with self.assertRaises(OSError) as c:
-            with subprocess.Popen(['nonexisting_i_hope'],
+            with subprocess.Popen(NONEXISTING_CMD,
                                   stdout=subprocess.PIPE,
                                   stderr=subprocess.PIPE) as proc:
                 pass
@@ -2401,7 +2583,7 @@ class POSIXProcessTestCase(BaseTestCase):
                 with self.assertRaises(TypeError):
                     _posixsubprocess.fork_exec(
                         args, exe_list,
-                        True, [], cwd, env_list,
+                        True, (), cwd, env_list,
                         -1, -1, -1, -1,
                         1, 2, 3, 4,
                         True, True, func)
@@ -2413,6 +2595,16 @@ class POSIXProcessTestCase(BaseTestCase):
     def test_fork_exec_sorted_fd_sanity_check(self):
         # Issue #23564: sanity check the fork_exec() fds_to_keep sanity check.
         import _posixsubprocess
+        class BadInt:
+            first = True
+            def __init__(self, value):
+                self.value = value
+            def __int__(self):
+                if self.first:
+                    self.first = False
+                    return self.value
+                raise ValueError
+
         gc_enabled = gc.isenabled()
         try:
             gc.enable()
@@ -2423,6 +2615,7 @@ class POSIXProcessTestCase(BaseTestCase):
                 (18, 23, 42, 2**63),  # Out of range.
                 (5, 4),  # Not sorted.
                 (6, 7, 7, 8),  # Duplicate.
+                (BadInt(1), BadInt(2)),
             ):
                 with self.assertRaises(
                         ValueError,
@@ -2484,6 +2677,25 @@ class POSIXProcessTestCase(BaseTestCase):
             proc.communicate(timeout=999)
             mock_proc_stdin.close.assert_called_once_with()
 
+    @unittest.skipUnless(_testcapi is not None
+                         and hasattr(_testcapi, 'W_STOPCODE'),
+                         'need _testcapi.W_STOPCODE')
+    def test_stopped(self):
+        """Test wait() behavior when waitpid returns WIFSTOPPED; issue29335."""
+        args = [sys.executable, '-c', 'pass']
+        proc = subprocess.Popen(args)
+
+        # Wait until the real process completes to avoid zombie process
+        pid = proc.pid
+        pid, status = os.waitpid(pid, 0)
+        self.assertEqual(status, 0)
+
+        status = _testcapi.W_STOPCODE(3)
+        with mock.patch('subprocess.os.waitpid', return_value=(pid, status)):
+            returncode = proc.wait()
+
+        self.assertEqual(returncode, -3)
+
 
 @unittest.skipUnless(mswindows, "Windows specific tests")
 class Win32ProcessTestCase(BaseTestCase):
@@ -2522,6 +2734,15 @@ class Win32ProcessTestCase(BaseTestCase):
                            "import sys; sys.exit(47)"],
                           stdout=subprocess.PIPE,
                           close_fds=True)
+
+    @support.cpython_only
+    def test_issue31471(self):
+        # There shouldn't be an assertion failure in Popen() in case the env
+        # argument has a bad keys() method.
+        class BadEnv(dict):
+            keys = None
+        with self.assertRaises(TypeError):
+            subprocess.Popen([sys.executable, "-c", "pass"], env=BadEnv())
 
     def test_close_fds(self):
         # close file descriptors
@@ -2753,8 +2974,8 @@ class ContextManagerTests(BaseTestCase):
             self.assertEqual(proc.returncode, 1)
 
     def test_invalid_args(self):
-        with self.assertRaises(FileNotFoundError) as c:
-            with subprocess.Popen(['nonexisting_i_hope'],
+        with self.assertRaises((FileNotFoundError, PermissionError)) as c:
+            with subprocess.Popen(NONEXISTING_CMD,
                                   stdout=subprocess.PIPE,
                                   stderr=subprocess.PIPE) as proc:
                 pass
@@ -2775,20 +2996,6 @@ class ContextManagerTests(BaseTestCase):
         self.assertEqual(proc.returncode, 0)
         self.assertTrue(proc.stdin.closed)
 
-
-def test_main():
-    unit_tests = (ProcessTestCase,
-                  POSIXProcessTestCase,
-                  Win32ProcessTestCase,
-                  MiscTests,
-                  ProcessTestCaseNoPoll,
-                  CommandsWithSpaces,
-                  ContextManagerTests,
-                  RunFuncTestCase,
-                  )
-
-    support.run_unittest(*unit_tests)
-    support.reap_children()
 
 if __name__ == "__main__":
     unittest.main()
