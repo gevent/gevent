@@ -160,6 +160,10 @@
     library, including returning a SSLSocket and allowing certain
     timeout-related SSL errors to propagate. The added standard
     library tests ``test_ftplib.py`` now passes.
+  - :class:`gevent.subprocess.Popen` accepts a "path-like object" for
+    the *cwd* parameter on all platforms. Previously this only worked
+    on POSIX platforms under Python 3.6. Now it also works on Windows under
+    Python 3.6 (as expected) and is backported to all previous versions.
 
 1.2.2 (2017-06-05)
 ==================

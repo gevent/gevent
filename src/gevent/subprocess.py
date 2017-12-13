@@ -44,6 +44,7 @@ from gevent.hub import get_hub, linkproxy, sleep, getcurrent
 from gevent._compat import integer_types, string_types, xrange
 from gevent._compat import PY3
 from gevent._compat import reraise
+from gevent._compat import fspath
 from gevent._util import _NONE
 from gevent._util import copy_globals
 from gevent.fileobject import FileObject
@@ -386,6 +387,11 @@ class Popen(object):
     .. versionchanged:: 1.2a1
        Instances now save the ``args`` attribute under Python 2.7. Previously this was
        restricted to Python 3.
+
+    .. versionchanged:: 1.3a1
+       Accept "path-like" objects for the *cwd* parameter on all platforms.
+       This was added to Python 3.6. Previously with gevent, it only worked
+       on POSIX platforms on 3.6.
     """
 
     # The value returned from communicate() when there was nothing to read.
@@ -554,6 +560,10 @@ class Popen(object):
                 self.stderr = FileObject(errread, 'rb', bufsize)
 
         self._closed_child_pipe_fds = False
+        # Convert here for the sake of all platforms. os.chdir accepts
+        # path-like objects natively under 3.6, but CreateProcess
+        # doesn't.
+        cwd = fspath(cwd) if cwd is not None else None
         try:
             self._execute_child(args, executable, preexec_fn, close_fds,
                                 pass_fds, cwd, env, universal_newlines,
