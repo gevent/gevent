@@ -47,8 +47,8 @@ class TestTCP(greentest.TestCase):
 
     def setUp(self):
         super(TestTCP, self).setUp()
-        listener = socket.socket()
-        self._close_on_teardown(listener)
+        self.listener = self._close_on_teardown(self._setup_listener())
+
         # XXX: On Windows (at least with libev), if we have a cleanup/tearDown method
         # that does 'del self.listener' AND we haven't sometime
         # previously closed the listener (while the test body was executing)
@@ -64,10 +64,12 @@ class TestTCP(greentest.TestCase):
 
         # Perhaps our logic is wrong in libev_vfd in the way we use
         # _open_osfhandle and determine we can close it?
-        greentest.bind_and_listen(listener, ('127.0.0.1', 0))
-        self.listener = listener
-        self.port = listener.getsockname()[1]
+        self.port = self.listener.getsockname()[1]
 
+    def _setup_listener(self):
+        listener = socket.socket()
+        greentest.bind_and_listen(listener, ('127.0.0.1', 0))
+        return listener
 
     def create_connection(self, host='127.0.0.1', port=None, timeout=None,
                           blocking=None):

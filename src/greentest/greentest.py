@@ -254,8 +254,10 @@ def wrap_refcount(method):
                 d = sum(hist_before.values())
 
                 self.setUp()
-                method(self, *args, **kwargs)
-                self.tearDown()
+                try:
+                    method(self, *args, **kwargs)
+                finally:
+                    self.tearDown()
 
                 # Grab post snapshot
                 if 'urlparse' in sys.modules:

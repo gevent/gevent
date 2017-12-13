@@ -119,15 +119,12 @@ class Test(greentest.TestCase):
         # Keeping raw sockets alive keeps SSL sockets
         # from being closed too, at least on CPython, so we
         # need to use weakrefs
-        if 'close_on_teardown' not in self.__dict__:
-            self.close_on_teardown = []
         self.close_on_teardown.append(weakref.ref(resource))
         return resource
 
     def _tearDownCloseOnTearDown(self):
         self.close_on_teardown = [r() for r in self.close_on_teardown if r() is not None]
         super(Test, self)._tearDownCloseOnTearDown()
-        self.close_on_teardown = []
 
 class TestSocket(Test):
 
