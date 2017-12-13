@@ -20,10 +20,10 @@ class TestSSL(test__socket.TestTCP):
     # See https://bugs.python.org/issue10272
     TIMEOUT_ERROR = getattr(socket, 'sslerror', socket.timeout)
 
-    def setUp(self):
-        greentest.TestCase.setUp(self)
-        self.listener, _raw_listener = ssl_listener(('127.0.0.1', 0), self.privfile, self.certfile)
-        self.port = self.listener.getsockname()[1]
+    def _setup_listener(self):
+        listener, raw_listener = ssl_listener(('127.0.0.1', 0), self.privfile, self.certfile)
+        self._close_on_teardown(raw_listener)
+        return listener
 
     def create_connection(self, *args, **kwargs):
         return ssl.wrap_socket(super(TestSSL, self).create_connection(*args, **kwargs))
@@ -50,26 +50,33 @@ class TestSSL(test__socket.TestTCP):
                 # on non-blocking sockets because it's a simple loop around
                 # send(). Python 2.6 doesn't have SSLWantWriteError
                 expected = getattr(ssl, 'SSLWantWriteError', ssl.SSLError)
-                self.assertRaises(expected, client.sendall, self._test_sendall_data)
+                with self.assertRaises(expected):
+                    client.sendall(self._test_sendall_data)
             finally:
                 acceptor.join()
                 client.close()
                 server_sock[0][0].close()
 
+    @greentest.ignores_leakcheck
     def test_empty_send(self):
         # Issue 719
         # Sending empty bytes with the 'send' method raises
         # ssl.SSLEOFError in the stdlib. PyPy 4.0 and CPython 2.6
         # both just raise the superclass, ssl.SSLError.
-        expected = ssl.SSLError
-        self.assertRaises(expected, self._test_sendall,
-                          b'',
-                          client_method='send')
 
+        # Ignored during leakchecks because the third or fourth iteration of the
+        # test hangs on CPython 2/posix for some reason, likely due to
+        # the use of _close_on_teardown keeping something alive longer than intended.
+        # cf test__makefile_ref
+        with self.assertRaises(ssl.SSLError):
+            super(TestSSL, self).test_empty_send()
+
+    @greentest.ignores_leakcheck
     def test_sendall_nonblocking(self):
         # Override; doesn't work with SSL sockets.
         pass
 
+    @greentest.ignores_leakcheck
     def test_connect_with_type_flags_ignored(self):
         # Override; doesn't work with SSL sockets.
         pass

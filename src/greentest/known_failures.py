@@ -72,15 +72,6 @@ if sys.platform == 'win32':
             'FLAKY test__fileobject.py',
         ]
 
-        FAILING_TESTS += [
-            # This sometimes fails with a timeout, meaning
-            # one of the tests hangs (test_fullduplex, maybe?).
-            # But only sometimes, and only seen on Py2.7, beginning
-            # ~2016-02-24.
-            # Beginning Apr 2016 sometimes also seen with Py 3.5
-            'FLAKY test__socket.py',
-        ]
-
         if PY3:
             FAILING_TESTS += [
                 # test_set_and_clear in Py3 relies on 5 threads all starting and

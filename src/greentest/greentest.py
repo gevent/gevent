@@ -97,6 +97,9 @@ if WIN:
     NON_APPLICABLE_SUFFIXES.append("posix")
     # This is intimately tied to FileObjectPosix
     NON_APPLICABLE_SUFFIXES.append("fileobject2")
+    SHARED_OBJECT_EXTENSION = ".pyd"
+else:
+    SHARED_OBJECT_EXTENSION = ".so"
 
 
 RUNNING_ON_TRAVIS = os.environ.get('TRAVIS')
@@ -251,8 +254,10 @@ def wrap_refcount(method):
                 d = sum(hist_before.values())
 
                 self.setUp()
-                method(self, *args, **kwargs)
-                self.tearDown()
+                try:
+                    method(self, *args, **kwargs)
+                finally:
+                    self.tearDown()
 
                 # Grab post snapshot
                 if 'urlparse' in sys.modules:
@@ -419,6 +424,10 @@ class TestCase(TestCaseMetaClass("NewBase", (BaseTestCase,), {})):
             self.switch_expected = get_switch_expected(self.fullname)
         return BaseTestCase.run(self, *args, **kwargs)
 
+    def setUp(self):
+        super(TestCase, self).setUp()
+        self.close_on_teardown = []
+
     def tearDown(self):
         if getattr(self, 'skipTearDown', False):
             return
@@ -426,10 +435,7 @@ class TestCase(TestCaseMetaClass("NewBase", (BaseTestCase,), {})):
             self.cleanup()
         self._error = self._none
         self._tearDownCloseOnTearDown()
-        try:
-            del self.close_on_teardown
-        except AttributeError:
-            pass
+        self.close_on_teardown = []
         super(TestCase, self).tearDown()
 
     def _tearDownCloseOnTearDown(self):
@@ -440,7 +446,6 @@ class TestCase(TestCaseMetaClass("NewBase", (BaseTestCase,), {})):
                 close()
             except Exception:
                 pass
-
 
     @classmethod
     def setUpClass(cls):
@@ -461,8 +466,6 @@ class TestCase(TestCaseMetaClass("NewBase", (BaseTestCase,), {})):
         *resource* either has a ``close`` method, or is a
         callable.
         """
-        if 'close_on_teardown' not in self.__dict__:
-            self.close_on_teardown = []
         self.close_on_teardown.append(resource)
         return resource
 
@@ -762,7 +765,7 @@ def walk_modules(basedir=None, modpath=None, include_so=False, recursive=False):
                 except ImportError:
                     continue
             yield path, modpath + x
-        elif include_so and fn.endswith('.so'):
+        elif include_so and fn.endswith(SHARED_OBJECT_EXTENSION):
             if '.pypy-' in fn:
                 continue
             if fn.endswith('_d.so'):
