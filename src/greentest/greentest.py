@@ -422,6 +422,10 @@ class TestCase(TestCaseMetaClass("NewBase", (BaseTestCase,), {})):
             self.switch_expected = get_switch_expected(self.fullname)
         return BaseTestCase.run(self, *args, **kwargs)
 
+    def setUp(self):
+        super(TestCase, self).setUp()
+        self.close_on_teardown = []
+
     def tearDown(self):
         if getattr(self, 'skipTearDown', False):
             return
@@ -429,10 +433,7 @@ class TestCase(TestCaseMetaClass("NewBase", (BaseTestCase,), {})):
             self.cleanup()
         self._error = self._none
         self._tearDownCloseOnTearDown()
-        try:
-            del self.close_on_teardown
-        except AttributeError:
-            pass
+        self.close_on_teardown = []
         super(TestCase, self).tearDown()
 
     def _tearDownCloseOnTearDown(self):
@@ -443,7 +444,6 @@ class TestCase(TestCaseMetaClass("NewBase", (BaseTestCase,), {})):
                 close()
             except Exception:
                 pass
-
 
     @classmethod
     def setUpClass(cls):
@@ -464,8 +464,6 @@ class TestCase(TestCaseMetaClass("NewBase", (BaseTestCase,), {})):
         *resource* either has a ``close`` method, or is a
         callable.
         """
-        if 'close_on_teardown' not in self.__dict__:
-            self.close_on_teardown = []
         self.close_on_teardown.append(resource)
         return resource
 

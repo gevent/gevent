@@ -46,19 +46,28 @@ class TestTCP(greentest.TestCase):
         long_data = long_data.encode('ascii')
 
     def setUp(self):
-        greentest.TestCase.setUp(self)
+        super(TestTCP, self).setUp()
         listener = socket.socket()
+        self._close_on_teardown(listener)
+        # XXX: On Windows (at least with libev), if we have a cleanup/tearDown method
+        # that does 'del self.listener' AND we haven't sometime
+        # previously closed the listener (while the test body was executing)
+        # we tend to sometimes see hangs when tests run in succession;
+        # notably test_empty_send followed by test_makefile produces a hang
+        # in test_makefile when it tries to read from the client_file, because
+        # the accept() call in accept_once has not yet returned a new socket to
+        # write to.
+
+        # The cause *seems* to be that the listener socket in both tests gets the
+        # same fileno(); or, at least, if we don't del the listener object,
+        # we get a different fileno, and that scenario works.
+
+        # Perhaps our logic is wrong in libev_vfd in the way we use
+        # _open_osfhandle and determine we can close it?
         greentest.bind_and_listen(listener, ('127.0.0.1', 0))
         self.listener = listener
         self.port = listener.getsockname()[1]
 
-    def cleanup(self):
-        if hasattr(self, 'listener'):
-            try:
-                self.listener.close()
-            except:
-                pass
-            del self.listener
 
     def create_connection(self, host='127.0.0.1', port=None, timeout=None,
                           blocking=None):
@@ -77,14 +86,19 @@ class TestTCP(greentest.TestCase):
         server_exc_info = []
 
         def accept_and_read():
+            conn = None
             try:
                 conn, _ = self.listener.accept()
                 r = conn.makefile(mode='rb')
                 read_data.append(r.read())
+                r.flush()
                 r.close()
-                conn.close()
-            except:
+            except: # pylint:disable=bare-except
                 server_exc_info.append(sys.exc_info())
+            finally:
+                if conn:
+                    conn.close()
+                self.listener.close()
 
         server = Thread(target=accept_and_read)
         client = self.create_connection(**client_args)
@@ -137,7 +151,6 @@ class TestTCP(greentest.TestCase):
         self._test_sendall(data, data, client_method='send')
 
     def test_fullduplex(self):
-
         N = 100000
 
         def server():
@@ -152,6 +165,7 @@ class TestTCP(greentest.TestCase):
             self.assertEqual(result, b'hello world')
             sender.join()
             remote_client.close()
+            self.listener.close()
 
         server_thread = Thread(target=server)
         client = self.create_connection()
@@ -211,21 +225,24 @@ class TestTCP(greentest.TestCase):
                 client_sock[0][0].close()
 
     def test_makefile(self):
-
         def accept_once():
             conn, _ = self.listener.accept()
             fd = conn.makefile(mode='wb')
             fd.write(b'hello\n')
+            fd.flush()
             fd.close()
             conn.close()  # for pypy
+            self.listener.close()
 
         acceptor = Thread(target=accept_once)
         client = self.create_connection()
-        fd = client.makefile(mode='rb')
+        # Closing the socket doesn't close the file
+        client_file = client.makefile(mode='rb')
         client.close()
-        assert fd.readline() == b'hello\n'
-        assert fd.read() == b''
-        fd.close()
+        line = client_file.readline()
+        self.assertEqual(line, b'hello\n')
+        self.assertEqual(client_file.read(), b'')
+        client_file.close()
         acceptor.join()
 
     def test_makefile_timeout(self):
