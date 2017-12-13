@@ -97,6 +97,9 @@ if WIN:
     NON_APPLICABLE_SUFFIXES.append("posix")
     # This is intimately tied to FileObjectPosix
     NON_APPLICABLE_SUFFIXES.append("fileobject2")
+    SHARED_OBJECT_EXTENSION = ".pyd"
+else:
+    SHARED_OBJECT_EXTENSION = ".so"
 
 
 RUNNING_ON_TRAVIS = os.environ.get('TRAVIS')
@@ -762,7 +765,7 @@ def walk_modules(basedir=None, modpath=None, include_so=False, recursive=False):
                 except ImportError:
                     continue
             yield path, modpath + x
-        elif include_so and fn.endswith('.so'):
+        elif include_so and fn.endswith(SHARED_OBJECT_EXTENSION):
             if '.pypy-' in fn:
                 continue
             if fn.endswith('_d.so'):
