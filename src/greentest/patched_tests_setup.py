@@ -17,6 +17,7 @@ TRAVIS = os.environ.get("TRAVIS") == "true"
 OSX = sys.platform == 'darwin'
 PYPY = hasattr(sys, 'pypy_version_info')
 WIN = sys.platform.startswith("win")
+PY3 = sys.version_info[0] >= 3
 
 # XXX: Formalize this better
 LIBUV = os.getenv('GEVENT_CORE_CFFI_ONLY') == 'libuv' or (PYPY and WIN)
@@ -292,6 +293,19 @@ if LIBUV:
             # so we have to disable it.
             'test_urllib2_localnet.TestUrlopen.test_https_with_cafile',
         ]
+
+    if WIN:
+
+        disabled_tests += [
+            # This test winds up hanging a long time.
+            # Inserting GCs doesn't fix it.
+            'test_ssl.ThreadedTests.test_handshake_timeout',
+        ]
+
+        if PY3:
+
+            disabled_tests += [
+            ]
 
 def _make_run_with_original(mod_name, func_name):
     @contextlib.contextmanager

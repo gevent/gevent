@@ -5,6 +5,7 @@ import gevent
 from gevent import monkey
 monkey.patch_all()
 
+import sys
 from multiprocessing import Process
 from gevent.subprocess import Popen, PIPE
 
@@ -14,7 +15,7 @@ def test_invoke():
     # libev is handling SIGCHLD. This could *probably* be simplified to use
     # just hub.loop.install_sigchld
 
-    p = Popen("true", stdout=PIPE, stderr=PIPE)
+    p = Popen([sys.executable, '-V'], stdout=PIPE, stderr=PIPE)
     gevent.sleep(0)
     p.communicate()
     gevent.sleep(0)

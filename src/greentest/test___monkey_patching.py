@@ -44,7 +44,7 @@ def TESTRUNNER(tests=None):
                'timeout': TIMEOUT,
                'setenv': {'PYTHONPATH': PYTHONPATH}}
 
-    if tests:
+    if tests and not sys.platform.startswith("win"):
         atexit.register(os.system, 'rm -f */@test*')
 
     basic_args = [sys.executable, '-u', '-W', 'ignore', '-m' 'monkey_test']

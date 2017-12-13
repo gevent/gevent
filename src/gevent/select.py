@@ -16,13 +16,17 @@ from gevent._util import copy_globals
 from gevent._util import _NONE
 
 from errno import EINTR
+from select import select as _real_original_select
 if sys.platform.startswith('win32'):
-    def _original_select(_r, _w, _x, _t):
+    def _original_select(r, w, x, t):
         # windows cant handle three empty lists, but we've always
-        # accepted that, so don't try the compliance check on windows
-        return ((), (), ())
+        # accepted that
+        if not r and not w and not x:
+            return ((), (), ())
+        return _real_original_select(r, w, x, t)
 else:
-    from select import select as _original_select
+    _original_select = _real_original_select
+
 
 try:
     from select import poll as original_poll

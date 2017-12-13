@@ -11,7 +11,13 @@ monkey.patch_all()
 
 import sys
 
-urls = ['http://www.google.com', 'http://www.yandex.ru', 'http://www.python.org']
+# Note that all of these redirect to HTTPS, so
+# this demonstrates that SSL works.
+urls = [
+    'http://www.google.com',
+    'http://www.apple.com',
+    'http://www.python.org'
+]
 
 
 if sys.version_info[0] == 3:

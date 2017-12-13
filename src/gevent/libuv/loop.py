@@ -10,7 +10,8 @@ from collections import namedtuple
 import signal
 from weakref import WeakValueDictionary
 
-
+from gevent._compat import PYPY
+from gevent._compat import WIN
 from gevent._ffi.loop import AbstractLoop
 from gevent.libuv import _corecffi # pylint:disable=no-name-in-module,import-error
 from gevent._ffi.loop import assign_standard_callbacks
@@ -48,6 +49,20 @@ def get_header_version():
 
 def supported_backends():
     return ['default']
+
+if PYPY and WIN:
+    def gcsOnPyPy(f):
+        import functools
+        import gc
+
+        @functools.wraps(f)
+        def m(self, *args):
+            gc.collect()
+            return f(self, *args)
+        return m
+else:
+    def gcsOnPyPy(f):
+        return f
 
 class loop(AbstractLoop):
 
@@ -335,12 +350,17 @@ class loop(AbstractLoop):
                 watcher._set_status(status)
 
 
+    @gcsOnPyPy
     def io(self, fd, events, ref=True, priority=None):
         # We don't keep a hard ref to the root object;
-        # the caller should keep the multiplexed watcher
+        # the caller must keep the multiplexed watcher
         # alive as long as its in use.
-        # XXX: Note there is a cycle from io_watcher._handle -> io_watcher
-        # so these aren't collected as soon as you think/hope.
+
+        # We go to great pains to avoid GC cycles here, otherwise
+        # CPython tests (e.g., test_asyncore) fail on Windows.
+        # For PyPy, though, avoiding cycles isn't enough and we must
+        # do a GC to force cleaning up old objects.
+
         io_watchers = self._io_watchers
         try:
             io_watcher = io_watchers[fd]

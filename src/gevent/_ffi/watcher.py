@@ -151,7 +151,7 @@ class watcher(object):
 
     _callback = None
     _args = None
-    _handle = None # FFI object to self
+    _handle = None # FFI object to self. This is a GC cycle. See _watcher_create
     _watcher = None
 
     def __init__(self, _loop, ref=True, priority=None, args=_NOARGS):
@@ -178,7 +178,11 @@ class watcher(object):
         pass
 
     def _watcher_create(self, ref): # pylint:disable=unused-argument
-        self._handle = type(self).new_handle(self) # This is a GC cycle pylint:disable=no-member
+        # self._handle has a reference to self, keeping it alive.
+        # We must keep self._handle alive for ffi.from_handle() to be
+        # able to work.
+        # THIS IS A GC CYCLE.
+        self._handle = type(self).new_handle(self) # pylint:disable=no-member
         self._watcher = self._watcher_new()
         # This call takes care of calling _watcher_ffi_close when
         # self goes away, making sure self._watcher stays alive
@@ -346,8 +350,8 @@ class IoMixin(object):
     EVENT_MASK = 0
 
     def __init__(self, loop, fd, events, ref=True, priority=None, _args=None):
-        # XXX: Win32: Need to vfd_open the fd and free the old one?
-        # XXX: Win32: Need a destructor to free the old fd?
+        # Win32 only works with sockets, and only when we use libuv, because
+        # we don't use _open_osfhandle. See libuv/watchers.py:io for a description.
         if fd < 0:
             raise ValueError('fd must be non-negative: %r' % fd)
         if events & ~self.EVENT_MASK:
