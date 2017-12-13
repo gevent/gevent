@@ -142,6 +142,7 @@ class SSLSocket(socket):
                  server_hostname=None,
                  _session=None, # 3.6
                  _context=None):
+
         # pylint:disable=too-many-locals,too-many-statements,too-many-branches
         if _context:
             self._context = _context
@@ -513,22 +514,32 @@ class SSLSocket(socket):
                     s = self._sslobj.shutdown()
                     break
                 except SSLWantReadError:
+                    # Callers of this method expect to get a socket
+                    # back, so we can't simply return 0, we have
+                    # to let these be raised
                     if self.timeout == 0.0:
-                        return 0
+                        raise
                     self._wait(self._read_event)
                 except SSLWantWriteError:
                     if self.timeout == 0.0:
-                        return 0
+                        raise
                     self._wait(self._write_event)
 
             self._sslobj = None
+
             # The return value of shutting down the SSLObject is the
-            # original wrapped socket, i.e., _contextawaresock. But that
-            # object doesn't have the gevent wrapper around it so it can't
-            # be used. We have to wrap it back up with a gevent wrapper.
-            sock = socket(family=s.family, type=s.type, proto=s.proto, fileno=s.fileno())
-            s.detach()
-            return sock
+            # original wrapped socket passed to _wrap_socket, i.e.,
+            # _contextawaresock. But that object doesn't have the
+            # gevent wrapper around it so it can't be used. We have to
+            # wrap it back up with a gevent wrapper.
+            assert s is self._sock
+            # In the stdlib, SSLSocket subclasses socket.socket and passes itself
+            # to _wrap_socket, so it gets itself back. We can't do that, we have to
+            # pass our subclass of _socket.socket, _contextawaresock.
+            # So ultimately we should return ourself.
+
+            # See test_ftplib.py:TestTLS_FTPClass.test_ccc
+            return self
         else:
             raise ValueError("No SSL wrapper around " + str(self))
 
