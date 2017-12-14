@@ -10,9 +10,9 @@ static void (*gevent_noop)(void* handle) = &_gevent_noop;
 
 static void _gevent_generic_callback1(void* vwatcher, int arg)
 {
-	uv_handle_t* watcher = (uv_handle_t*)vwatcher;
-    void* handle = watcher->data;
-    int cb_result = python_callback(handle, arg);
+    const uv_handle_t* watcher = (uv_handle_t*)vwatcher;
+    const void* handle = watcher->data; // Python code may set this to NULL.
+    const int cb_result = python_callback(handle, arg);
     switch(cb_result) {
         case -1:
             // in case of exception, call self.loop.handle_error;

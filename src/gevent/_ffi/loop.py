@@ -8,6 +8,9 @@ import os
 import traceback
 from weakref import ref as WeakRef
 
+from gevent._ffi import _dbg
+from gevent._ffi import GEVENT_DEBUG
+from gevent._ffi import TRACE
 from gevent._ffi.callback import callback
 
 __all__ = [
@@ -59,9 +62,23 @@ EVENTS = GEVENT_CORE_EVENTS = _EVENTSType()
 ####
 class _Callbacks(object):
 
-    def __init__(self, ffi):
-        self.ffi = ffi
-        self.callbacks = []
+    if GEVENT_DEBUG >= TRACE:
+        def __init__(self, ffi):
+            self.ffi = ffi
+            self.callbacks = []
+
+        def from_handle(self, handle): # pylint:disable=method-hidden
+            _dbg("Getting from handle", handle)
+            traceback.print_stack()
+            x = self.ffi.from_handle(handle)
+            _dbg("Got from handle", handle, x)
+            return x
+
+    else:
+        def __init__(self, ffi):
+            self.ffi = ffi
+            self.callbacks = []
+            self.from_handle = self.ffi.from_handle
 
     def python_callback(self, handle, revents):
         """
@@ -79,13 +96,15 @@ class _Callbacks(object):
           Everything went according to plan, but the watcher has already
           been stopped. Its memory may no longer be valid.
         """
+        orig_ffi_watcher = None
         try:
             # Even dereferencing the handle needs to be inside the try/except;
             # if we don't return normally (e.g., a signal) then we wind up going
             # to the 'onerror' handler, which
             # is not what we want; that can permanently wedge the loop depending
             # on which callback was executing
-            the_watcher = self.ffi.from_handle(handle)
+            the_watcher = self.from_handle(handle)
+            orig_ffi_watcher = the_watcher._watcher
             args = the_watcher.args
             if args is None:
                 # Legacy behaviour from corecext: convert None into ()
@@ -101,7 +120,7 @@ class _Callbacks(object):
             try:
                 the_watcher
             except UnboundLocalError:
-                the_watcher = self.ffi.from_handle(handle)
+                the_watcher = self.from_handle(handle)
             the_watcher._exc_info = sys.exc_info()
             # Depending on when the exception happened, the watcher
             # may or may not have been stopped. We need to make sure its
@@ -109,14 +128,17 @@ class _Callbacks(object):
             the_watcher.loop._keepaliveset.add(the_watcher)
             return -1
         else:
-            if the_watcher in the_watcher.loop._keepaliveset:
-                # It didn't stop itself
+            if the_watcher in the_watcher.loop._keepaliveset and the_watcher._watcher is orig_ffi_watcher:
+                # It didn't stop itself, *and* it didn't stop itself, reset
+                # its watcher, and start itself again. libuv's io watchers MAY
+                # do that.
+                _dbg("The watcher has not stopped itself", the_watcher)
                 return 0
             return 1 # It stopped itself
 
     def python_handle_error(self, handle, _revents):
         try:
-            watcher = self.ffi.from_handle(handle)
+            watcher = self.from_handle(handle)
             exc_info = watcher._exc_info
             del watcher._exc_info
             # In the past, we passed the ``watcher`` itself as the context,
@@ -147,13 +169,13 @@ class _Callbacks(object):
         # This is supposed to be called for signals, etc.
         if tb is not None:
             handle = tb.tb_frame.f_locals['handle']
-            watcher = self.ffi.from_handle(handle)
+            watcher = self.from_handle(handle)
             watcher.loop._check_callback_handle_error(t, v, tb)
         else:
             raise v
 
     def python_stop(self, handle):
-        watcher = self.ffi.from_handle(handle)
+        watcher = self.from_handle(handle)
         watcher.stop()
 
 

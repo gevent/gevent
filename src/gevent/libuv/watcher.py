@@ -12,6 +12,7 @@ ffi = _corecffi.ffi
 libuv = _corecffi.lib
 
 from gevent._ffi import watcher as _base
+from gevent._ffi import _dbg
 
 _closing_handles = set()
 
@@ -20,18 +21,6 @@ _closing_handles = set()
 def _uv_close_callback(handle):
     _closing_handles.remove(handle)
 
-def _dbg(*args, **kwargs):
-    # pylint:disable=unused-argument
-    pass
-
-#_dbg = print
-
-def _pid_dbg(*args, **kwargs):
-    import os
-    kwargs['file'] = sys.stderr
-    print(os.getpid(), *args, **kwargs)
-
-# _dbg = _pid_dbg
 
 _events = [(libuv.UV_READABLE, "READ"),
            (libuv.UV_WRITABLE, "WRITE")]
@@ -157,14 +146,16 @@ class watcher(_base.watcher):
         _dbg("\tStarted", self)
 
     def _watcher_ffi_stop(self):
-        _dbg("Stoping", self)
+        _dbg("Stopping", self, self._watcher_stop)
         self._watcher_stop(self._watcher)
-        _dbg("Stoped", self)
+        _dbg("Stopped", self)
 
+    @_base.only_if_watcher
     def _watcher_ffi_ref(self):
         _dbg("Reffing", self)
         libuv.uv_ref(self._watcher)
 
+    @_base.only_if_watcher
     def _watcher_ffi_unref(self):
         _dbg("Unreffing", self)
         libuv.uv_unref(self._watcher)
@@ -195,6 +186,34 @@ class watcher(_base.watcher):
 class io(_base.IoMixin, watcher):
     _watcher_type = 'poll'
     _watcher_callback_name = '_gevent_poll_callback2'
+
+    # On Windows is critical to be able to garbage collect these
+    # objects in a timely fashion so that they don't get reused
+    # for multiplexing completely different sockets. This is because
+    # uv_poll_init_socket does a lot of setup for the socket to make
+    # polling work. If get reused for another socket that has the same
+    # fileno, things break badly. (In theory this could be a problem
+    # on posix too, but in practice it isn't).
+
+    # TODO: We should probably generalize this to all
+    # ffi watchers. Avoiding GC cycles as much as possible
+    # is a good thing, and potentially allocating new handles
+    # as needed gets us better memory locality.
+
+    # Especially on Windows, we must also account for the case that a
+    # reference to this object has leaked (e.g., the socket object is
+    # still around), but the fileno has been closed and a new one
+    # opened. We must still get a new native watcher at that point. We
+    # handle this case by simply making sure that we don't even have
+    # a native watcher until the object is started, and we shut it down
+    # when the object is stopped.
+
+    # XXX: I was able to solve at least Windows test_ftplib.py issues with more of a
+    # careful use of io objects in socket.py, so delaying this entirely is at least
+    # temporarily on hold. Instead sticking with the _watcher_create
+    # function override for the moment.
+
+    #_watcher_init_on_init = False
 
     EVENT_MASK = libuv.UV_READABLE | libuv.UV_WRITABLE | libuv.UV_DISCONNECT
 
@@ -239,6 +258,17 @@ class io(_base.IoMixin, watcher):
     def _set_events(self, events):
         self._events = events
 
+    # This is what we'd do if we set _watcher_init_on_init to False:
+    # def start(self, *args, **kwargs):
+    #    assert self._watcher is None
+    #    self._watcher_full_init()
+    #    super(io, self).start(*args, **kwargs)
+
+    # Along with disposing of self._watcher in _watcher_ffi_stop.
+    # In that method, it's possible that we might be started again right after this,
+    # in which case we will create a new set of FFI objects.
+    # TODO: Does anything leak in that case? Verify...
+
     def _watcher_ffi_start(self):
         assert self._handle is None
         self._handle = self._watcher.data = type(self).new_handle(self)
@@ -248,6 +278,7 @@ class io(_base.IoMixin, watcher):
         # We may or may not have been started yet, so
         # we may or may not have a handle; either way,
         # drop it.
+        _dbg("Stopping io watcher", self)
         self._handle = None
         self._watcher.data = ffi.NULL
         super(io, self)._watcher_ffi_stop()
@@ -347,6 +378,7 @@ class io(_base.IoMixin, watcher):
         self.stop()
 
     def _io_start(self):
+        _dbg("IO start on behalf of multiplex", self)
         self.start(self._io_callback, pass_events=True)
 
     def multiplex(self, events):

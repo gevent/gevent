@@ -11,7 +11,6 @@ import signal
 from weakref import WeakValueDictionary
 
 from gevent._compat import PYPY
-from gevent._compat import WIN
 from gevent._ffi.loop import AbstractLoop
 from gevent.libuv import _corecffi # pylint:disable=no-name-in-module,import-error
 from gevent._ffi.loop import assign_standard_callbacks
@@ -50,8 +49,8 @@ def get_header_version():
 def supported_backends():
     return ['default']
 
-if PYPY and WIN:
-    def gcsOnPyPy(f):
+if PYPY:
+    def gcBefore(f):
         import functools
         import gc
 
@@ -61,7 +60,7 @@ if PYPY and WIN:
             return f(self, *args)
         return m
 else:
-    def gcsOnPyPy(f):
+    def gcBefore(f):
         return f
 
 class loop(AbstractLoop):
@@ -350,7 +349,7 @@ class loop(AbstractLoop):
                 watcher._set_status(status)
 
 
-    @gcsOnPyPy
+    @gcBefore
     def io(self, fd, events, ref=True, priority=None):
         # We don't keep a hard ref to the root object;
         # the caller must keep the multiplexed watcher

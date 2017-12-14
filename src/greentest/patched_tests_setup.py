@@ -14,6 +14,7 @@ import os
 import re
 
 TRAVIS = os.environ.get("TRAVIS") == "true"
+APPVEYOR = os.environ.get('APPVEYOR')
 OSX = sys.platform == 'darwin'
 PYPY = hasattr(sys, 'pypy_version_info')
 WIN = sys.platform.startswith("win")
@@ -306,6 +307,11 @@ if LIBUV:
 
             disabled_tests += [
             ]
+
+            if APPVEYOR:
+
+                disabled_tests += [
+                ]
 
 def _make_run_with_original(mod_name, func_name):
     @contextlib.contextmanager

@@ -20,7 +20,7 @@ def main():
     try:
         x.priority = 1
         raise AssertionError('must not be able to change priority of active watcher')
-    except AttributeError:
+    except (AttributeError, ValueError):
         pass
     loop.run()
     assert x.pending == 0, x.pending

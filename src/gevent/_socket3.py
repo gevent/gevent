@@ -237,6 +237,7 @@ class socket(object):
         return text
 
     def _decref_socketios(self):
+        # Called by SocketIO when it is closed.
         if self._io_refs > 0:
             self._io_refs -= 1
         if self._closed:
@@ -244,8 +245,17 @@ class socket(object):
 
     def _real_close(self, _ss=_socket.socket, cancel_wait_ex=cancel_wait_ex):
         # This function should not reference any globals. See Python issue #808164.
-        self.hub.cancel_wait(self._read_event, cancel_wait_ex)
-        self.hub.cancel_wait(self._write_event, cancel_wait_ex)
+
+        # Break any reference to the loop.io objects. Our fileno,
+        # which they were tied to, is now free to be reused, so these
+        # objects are no longer functional.
+
+        if self._read_event is not None:
+            self.hub.cancel_wait(self._read_event, cancel_wait_ex)
+            self._read_event = None
+        if self._write_event is not None:
+            self.hub.cancel_wait(self._write_event, cancel_wait_ex)
+            self._write_event = None
         _ss.close(self._sock)
 
         # Break any references to the underlying socket object. Tested
