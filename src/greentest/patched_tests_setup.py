@@ -215,6 +215,8 @@ if LIBUV:
             # it raises EPERM. It is disabled on windows already.
             # It depends on whether we had a fd already open and multiplexed with
             'test_socket.GeneralModuleTests.test_unknown_socket_family_repr',
+            # And yes, there's a typo in some versions.
+            'test_socket.GeneralModuleTests.test_uknown_socket_family_repr',
         ]
 
 
