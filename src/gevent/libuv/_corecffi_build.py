@@ -50,7 +50,7 @@ _cdef = _cdef.replace("GEVENT_STRUCT_DONE _;", '...;')
 # which we will treat as an 'unsigned long' or 'unsigned long long'
 # since it comes through 'fileno()' where it has been cast as an int.
 # See class watcher.io
-_void_pointer_as_integer = 'intptr_t' #'unsigned long' if system_bits() == 32 else 'unsigned long long'
+_void_pointer_as_integer = 'intptr_t'
 _cdef = _cdef.replace("GEVENT_UV_OS_SOCK_T", 'int' if not WIN else _void_pointer_as_integer)
 
 

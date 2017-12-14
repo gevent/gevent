@@ -207,6 +207,17 @@ if LIBUV:
         'test_signal.SiginterruptTest.test_siginterrupt_off',
     ]
 
+    if PY3:
+
+        disabled_tests += [
+            # This test wants to pass an arbitrary fileno
+            # to a socket and do things with it. libuv doesn't like this,
+            # it raises EPERM. It is disabled on windows already.
+            # It depends on whether we had a fd already open and multiplexed with
+            'test_socket.GeneralModuleTests.test_unknown_socket_family_repr',
+        ]
+
+
     if sys.platform.startswith('linux'):
         disabled_tests += [
             # crashes with EPERM, which aborts the epoll loop, even
@@ -225,6 +236,8 @@ if LIBUV:
             # isn't reporting twice? We cache the watchers, maybe we need a new watcher?
             'test_selectors.PollSelectorTestCase.test_timeout',
         ]
+
+
 
     if WIN and PYPY:
         # From PyPy2-v5.9.0, using its version of tests,

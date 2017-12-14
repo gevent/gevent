@@ -17,6 +17,8 @@ EV_USE_INOTIFY = getattr(gevent.core, 'EV_USE_INOTIFY', None)
 
 WIN = sys.platform.startswith('win')
 
+LIBUV = getattr(gevent.core, 'libuv', None)
+
 def test():
     try:
         open(filename, 'wb', buffering=0).close()
@@ -51,10 +53,10 @@ def test():
                 else:
                     raise
             else:
-                if WIN:
+                if WIN and not LIBUV:
                     # The ImportError is only raised for the first time;
                     # after that, the attribute starts returning None
-                    assert x is None, "Only None is supported on Windows"
+                    assert x is None, ("Only None is supported on Windows", x)
                 if none:
                     assert x is None, x
                 else:
@@ -67,6 +69,7 @@ def test():
         if now - start - DELAY <= 0.0:
             # Sigh. This is especially true on PyPy.
             assert WIN, ("Bad timer resolution expected on Windows, test is useless", start, now)
+            print("On windows, bad timer resolution prevents this test from running")
             return
         reaction = now - start - DELAY
         print('Watcher %s reacted after %.4f seconds (write)' % (watcher, reaction))
