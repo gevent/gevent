@@ -29,6 +29,12 @@
 # useless-suppression: the only way to avoid repeating it for specific statements everywhere that we
 #   do Py2/Py3 stuff is to put it here. Sadly this means that we might get better but not realize it.
 # duplicate-code: Yeah, the compatibility ssl modules are much the same
+# In pylint 1.8.0, inconsistent-return-statements are created for the wrong reasons.
+# This code raises it, even though there's only one return (the implicit 'return None' is presumably
+# what triggers it):
+#  def foo():
+#    if baz:
+#      return 1
 disable=wrong-import-position,
     wrong-import-order,
     missing-docstring,
@@ -44,9 +50,10 @@ disable=wrong-import-position,
     cyclic-import,
     too-many-arguments,
     redefined-builtin,
-	useless-suppression,
+    useless-suppression,
     duplicate-code,
-	undefined-all-variable
+    undefined-all-variable,
+    inconsistent-return-statements
 
 
 [FORMAT]

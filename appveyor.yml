@@ -10,16 +10,24 @@ environment:
     # Pre-installed Python versions, which Appveyor may upgrade to
     # a later point release.
 
-    - PYTHON: "C:\\pypy2-v5.9.0-win32"
-      PYTHON_ID: "pypy"
-      PYTHON_EXE: pypy
-      PYTHON_VERSION: "2.7.x"
-      PYTHON_ARCH: "32"
+    # We're not quite ready for PyPy+libuv, it doesn't even
+    # work correctly on Posix.
+    # - PYTHON: "C:\\pypy2-v5.9.0-win32"
+    #   PYTHON_ID: "pypy"
+    #   PYTHON_EXE: pypy
+    #   PYTHON_VERSION: "2.7.x"
+    #   PYTHON_ARCH: "32"
 
     - PYTHON: "C:\\Python36-x64"
       PYTHON_VERSION: "3.6.x" # currently 3.6.0
       PYTHON_ARCH: "64"
       PYTHON_EXE: python
+
+    - PYTHON: "C:\\Python36-x64"
+      PYTHON_VERSION: "3.6.x" # currently 3.6.0
+      PYTHON_ARCH: "64"
+      PYTHON_EXE: python
+      GEVENT_CORE_CFFI_ONLY: libuv
 
     - PYTHON: "C:\\Python27-x64"
       PYTHON_VERSION: "2.7.x" # currently 2.7.13
@@ -149,6 +157,7 @@ build_script:
 
 test_script:
   # Run the project tests
+  - "%PYEXE% -c \"import gevent.core; print(gevent.core.loop)\""
   - "cd src/greentest && %PYEXE% testrunner.py --config known_failures.py --quiet && cd ../.."
 
 after_test:

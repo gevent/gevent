@@ -30,7 +30,7 @@ static void _gevent_generic_callback(struct ev_loop* loop,
             // and allowing memory to be freed
             python_handle_error(handle, revents);
         break;
-        case 0:
+        case 1:
             // Code to stop the event. Note that if python_callback
             // has disposed of the last reference to the handle,
             // `watcher` could now be invalid/disposed memory!
@@ -38,8 +38,16 @@ static void _gevent_generic_callback(struct ev_loop* loop,
                 python_stop(handle);
             }
         break;
-        default:
-            assert(cb_result == 1);
+        case 2:
             // watcher is already stopped and dead, nothing to do.
+        break;
+        default:
+            fprintf(stderr,
+                    "WARNING: gevent: Unexpected return value %d from Python callback "
+                    "for watcher %p and handle %d\n",
+                    cb_result,
+                    watcher, handle);
+            // XXX: Possible leaking of resources here? Should we be
+            // closing the watcher?
     }
 }

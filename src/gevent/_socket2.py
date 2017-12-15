@@ -202,12 +202,21 @@ class socket(object):
 
     def close(self, _closedsocket=_closedsocket, cancel_wait_ex=cancel_wait_ex):
         # This function should not reference any globals. See Python issue #808164.
-        self.hub.cancel_wait(self._read_event, cancel_wait_ex)
-        self.hub.cancel_wait(self._write_event, cancel_wait_ex)
+
+        # Also break any reference to the loop.io objects. Our fileno, which they were
+        # tied to, is now free to be reused, so these objects are no longer functional.
+
+        if self._read_event is not None:
+            self.hub.cancel_wait(self._read_event, cancel_wait_ex)
+            self._read_event = None
+        if self._write_event is not None:
+            self.hub.cancel_wait(self._write_event, cancel_wait_ex)
+            self._write_event = None
         s = self._sock
         self._sock = _closedsocket()
         if PYPY:
             s._drop()
+
 
     @property
     def closed(self):
@@ -261,7 +270,10 @@ class socket(object):
     def makefile(self, mode='r', bufsize=-1):
         # Two things to look out for:
         # 1) Closing the original socket object should not close the
-        #    socket (hence creating a new instance)
+        #    socket (hence creating a new socket instance);
+        #    An alternate approach is what _socket3.py does, which is to
+        #    keep count of the times makefile objects have been opened (Py3's
+        #    SocketIO helps with that).
         # 2) The resulting fileobject must keep the timeout in order
         #    to be compatible with the stdlib's socket.makefile.
         # Pass self as _sock to preserve timeout.

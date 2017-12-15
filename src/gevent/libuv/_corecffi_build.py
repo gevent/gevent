@@ -49,7 +49,8 @@ _cdef = _cdef.replace("GEVENT_STRUCT_DONE _;", '...;')
 # just another name for handle, which is just another name for 'void*'
 # which we will treat as an 'unsigned long' or 'unsigned long long'
 # since it comes through 'fileno()' where it has been cast as an int.
-_void_pointer_as_integer = 'unsigned long' if system_bits() == 32 else 'unsigned long long'
+# See class watcher.io
+_void_pointer_as_integer = 'intptr_t'
 _cdef = _cdef.replace("GEVENT_UV_OS_SOCK_T", 'int' if not WIN else _void_pointer_as_integer)
 
 

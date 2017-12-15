@@ -8,6 +8,10 @@ import os
 import traceback
 from weakref import ref as WeakRef
 
+from gevent._ffi import _dbg
+from gevent._ffi import GEVENT_DEBUG
+from gevent._ffi import TRACE
+from gevent._ffi import CRITICAL
 from gevent._ffi.callback import callback
 
 __all__ = [
@@ -59,9 +63,18 @@ EVENTS = GEVENT_CORE_EVENTS = _EVENTSType()
 ####
 class _Callbacks(object):
 
+
     def __init__(self, ffi):
         self.ffi = ffi
         self.callbacks = []
+        if GEVENT_DEBUG < TRACE:
+            self.from_handle = ffi.from_handle
+
+    def from_handle(self, handle): # pylint:disable=method-hidden
+        _dbg("Getting from handle", handle)
+        x = self.ffi.from_handle(handle)
+        _dbg("Got from handle", handle, x)
+        return x
 
     def python_callback(self, handle, revents):
         """
@@ -71,21 +84,35 @@ class _Callbacks(object):
           An exception occurred during the callback and you must call
           :func:`_python_handle_error` to deal with it. The Python watcher
           object will have the exception tuple saved in ``_exc_info``.
-        - 0
-          Everything went according to plan. You should check to see if the libev
-          watcher is still active, and call :func:`_python_stop` if so. This will
-          clean up the memory.
         - 1
+          Everything went according to plan. You should check to see if the libev
+          watcher is still active, and call :func:`python_stop` if it is not. This will
+          clean up the memory. Finding the watcher still active at the event loop level,
+          but not having stopped itself at the gevent level is a buggy scenario and
+          shouldn't happen.
+        - 2
           Everything went according to plan, but the watcher has already
           been stopped. Its memory may no longer be valid.
+
+        This function should never return 0, as that's the default value that
+        Python exceptions will produce.
         """
+        orig_ffi_watcher = None
         try:
             # Even dereferencing the handle needs to be inside the try/except;
             # if we don't return normally (e.g., a signal) then we wind up going
-            # to the 'onerror' handler, which
+            # to the 'onerror' handler (unhandled_onerror), which
             # is not what we want; that can permanently wedge the loop depending
-            # on which callback was executing
-            the_watcher = self.ffi.from_handle(handle)
+            # on which callback was executing.
+            # XXX: See comments in that function. We may be able to restart and do better?
+            if not handle:
+                # Hmm, a NULL handle. That's not supposed to happen.
+                # We can easily get into a loop if we deref it and allow that
+                # to raise.
+                _dbg("python_callback got null handle")
+                return 1
+            the_watcher = self.from_handle(handle)
+            orig_ffi_watcher = the_watcher._watcher
             args = the_watcher.args
             if args is None:
                 # Legacy behaviour from corecext: convert None into ()
@@ -95,13 +122,14 @@ class _Callbacks(object):
                 args = (revents, ) + args[1:]
             the_watcher.callback(*args)
         except: # pylint:disable=bare-except
+            _dbg("Got exception servicing watcher with handle", handle)
             # It's possible for ``the_watcher`` to be undefined (UnboundLocalError)
-            # if we threw an exception on the line that created that variable.
+            # if we threw an exception (signal) on the line that created that variable.
             # This is typically the case with a signal under libuv
             try:
                 the_watcher
             except UnboundLocalError:
-                the_watcher = self.ffi.from_handle(handle)
+                the_watcher = self.from_handle(handle)
             the_watcher._exc_info = sys.exc_info()
             # Depending on when the exception happened, the watcher
             # may or may not have been stopped. We need to make sure its
@@ -109,14 +137,23 @@ class _Callbacks(object):
             the_watcher.loop._keepaliveset.add(the_watcher)
             return -1
         else:
-            if the_watcher in the_watcher.loop._keepaliveset:
-                # It didn't stop itself
-                return 0
-            return 1 # It stopped itself
+            if the_watcher in the_watcher.loop._keepaliveset and the_watcher._watcher is orig_ffi_watcher:
+                # It didn't stop itself, *and* it didn't stop itself, reset
+                # its watcher, and start itself again. libuv's io watchers MAY
+                # do that.
+                # The normal, expected scenario when we find the watcher still
+                # in the keepaliveset is that it is still active at the event loop
+                # level, so we don't expect that python_stop gets called.
+                _dbg("The watcher has not stopped itself, possibly still active", the_watcher)
+                return 1
+            return 2 # it stopped itself
 
     def python_handle_error(self, handle, _revents):
+        _dbg("Handling error for handle", handle)
+        if not handle:
+            return
         try:
-            watcher = self.ffi.from_handle(handle)
+            watcher = self.from_handle(handle)
             exc_info = watcher._exc_info
             del watcher._exc_info
             # In the past, we passed the ``watcher`` itself as the context,
@@ -145,15 +182,45 @@ class _Callbacks(object):
 
     def unhandled_onerror(self, t, v, tb):
         # This is supposed to be called for signals, etc.
+        # This is the onerror= value for CFFI.
+        # If we return None, C will get a value of 0/NULL;
+        # if we raise, CFFI will print the exception and then
+        # return 0/NULL; (unless error= was configured)
+        # If things go as planned, we return the value that asks
+        # C to call back and check on if the watcher needs to be closed or
+        # not.
+
+        # XXX: TODO: Could this cause events to be lost? Maybe we need to return
+        # a value that causes the C loop to try the callback again?
+        # at least for signals under libuv, which are delivered at very odd times.
+        # Hopefully the event still shows up when we poll the next time.
+
+        watcher = None
         if tb is not None:
             handle = tb.tb_frame.f_locals['handle']
-            watcher = self.ffi.from_handle(handle)
+            if handle: # handle could be NULL
+                watcher = self.from_handle(handle)
+        if watcher is not None:
             watcher.loop._check_callback_handle_error(t, v, tb)
+            return 1
         else:
             raise v
 
     def python_stop(self, handle):
-        watcher = self.ffi.from_handle(handle)
+        if not handle:
+            print(
+                "WARNING: gevent: Unable to dereference handle; not stopping watcher. "
+                "Native resources may leak. This is most likely a bug in gevent.",
+                file=sys.stderr)
+            # The alternative is to crash with no helpful information
+            # NOTE: Raising exceptions here does nothing, they're swallowed by CFFI.
+            # Since the C level passed in a null pointer, even dereferencing the handle
+            # will just produce some exceptions.
+            if GEVENT_DEBUG < CRITICAL:
+                return
+            import pdb; pdb.set_trace()
+        _dbg("python_stop: stopping watcher with handle", handle)
+        watcher = self.from_handle(handle)
         watcher.stop()
 
 
@@ -490,7 +557,7 @@ class AbstractLoop(object):
     def fork(self, ref=True, priority=None):
         return self._watchers.fork(self, ref, priority)
 
-    def async(self, ref=True, priority=None):
+    def async(self, ref=True, priority=None): # XXX: Yeah, we know. pylint:disable=assign-to-new-keyword
         return self._watchers.async(self, ref, priority)
 
     if sys.platform != "win32":

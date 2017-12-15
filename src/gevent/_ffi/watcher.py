@@ -9,6 +9,7 @@ import os
 import signal as signalmodule
 import functools
 
+from gevent._ffi import _dbg
 from gevent._ffi.loop import GEVENT_CORE_EVENTS
 from gevent._ffi.loop import _NOARGS
 
@@ -16,6 +17,12 @@ __all__ = [
 
 ]
 
+class _NoWatcherResult(int):
+
+    def __repr__(self):
+        return "<NoWatcher>"
+
+_NoWatcherResult = _NoWatcherResult(0)
 
 def events_to_str(event_field, all_events):
     result = []
@@ -35,10 +42,25 @@ def not_while_active(func):
     @functools.wraps(func)
     def nw(self, *args, **kwargs):
         if self.active:
-            raise AttributeError("not while active")
+            raise ValueError("not while active")
         func(self, *args, **kwargs)
     return nw
 
+def only_if_watcher(func):
+    @functools.wraps(func)
+    def if_w(self):
+        if self._watcher:
+            return func(self)
+        return _NoWatcherResult
+    return if_w
+
+def error_if_no_watcher(func):
+    @functools.wraps(func)
+    def no_w(self):
+        if not self._watcher:
+            raise ValueError("No watcher present", self)
+        func(self)
+    return no_w
 
 class LazyOnClass(object):
 
@@ -151,11 +173,29 @@ class watcher(object):
 
     _callback = None
     _args = None
-    _handle = None # FFI object to self
+    _handle = None # FFI object to self. This is a GC cycle. See _watcher_create
     _watcher = None
+
+    # Do we create the native resources when this class is created?
+    # If so, we call _watcher_full_init from the constructor.
+    # Otherwise, it must be called before we are started.
+    # If a subclass sets this to false, they must make that call.
+    # Currently unused. Experimental functionality for libuv.
+    _watcher_init_on_init = True
 
     def __init__(self, _loop, ref=True, priority=None, args=_NOARGS):
         self.loop = _loop
+        self.__init_priority = priority
+        self.__init_args = args
+        self.__init_ref = ref
+
+        if self._watcher_init_on_init:
+            self._watcher_full_init()
+
+    def _watcher_full_init(self):
+        priority = self.__init_priority
+        ref = self.__init_ref
+        args = self.__init_args
 
         self._watcher_create(ref)
 
@@ -178,7 +218,11 @@ class watcher(object):
         pass
 
     def _watcher_create(self, ref): # pylint:disable=unused-argument
-        self._handle = type(self).new_handle(self) # This is a GC cycle pylint:disable=no-member
+        # self._handle has a reference to self, keeping it alive.
+        # We must keep self._handle alive for ffi.from_handle() to be
+        # able to work.
+        # THIS IS A GC CYCLE.
+        self._handle = type(self).new_handle(self) # pylint:disable=no-member
         self._watcher = self._watcher_new()
         # This call takes care of calling _watcher_ffi_close when
         # self goes away, making sure self._watcher stays alive
@@ -262,13 +306,15 @@ class watcher(object):
             result += " args=%r" % (self.args, )
         if self.callback is None and self.args is None:
             result += " stopped"
+        result += " watcher=%s" % (self._watcher)
         result += " handle=%s" % (self._watcher_handle)
         result += " ref=%s" % (self.ref)
         return result + ">"
 
     @property
     def _watcher_handle(self):
-        return self._watcher.data
+        if self._watcher:
+            return self._watcher.data
 
     def _format(self):
         return ''
@@ -314,10 +360,11 @@ class watcher(object):
         self._watcher_ffi_start_unref()
 
     def stop(self):
+        _dbg("Main stop for", self, "keepalive?", self in self.loop._keepaliveset)
         self._watcher_ffi_stop_ref()
         self._watcher_ffi_stop()
         self.loop._keepaliveset.discard(self)
-
+        _dbg("Finished main stop for", self, "keepalive?", self in self.loop._keepaliveset)
         self.callback = None
         self.args = None
 
@@ -333,7 +380,9 @@ class watcher(object):
 
     @property
     def active(self):
-        return True if self._watcher_is_active(self._watcher) else False
+        if self._watcher is not None and self._watcher_is_active(self._watcher):
+            return True
+        return False
 
     @property
     def pending(self):
@@ -346,8 +395,8 @@ class IoMixin(object):
     EVENT_MASK = 0
 
     def __init__(self, loop, fd, events, ref=True, priority=None, _args=None):
-        # XXX: Win32: Need to vfd_open the fd and free the old one?
-        # XXX: Win32: Need a destructor to free the old fd?
+        # Win32 only works with sockets, and only when we use libuv, because
+        # we don't use _open_osfhandle. See libuv/watchers.py:io for a description.
         if fd < 0:
             raise ValueError('fd must be non-negative: %r' % fd)
         if events & ~self.EVENT_MASK:

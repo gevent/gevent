@@ -14,9 +14,11 @@ import os
 import re
 
 TRAVIS = os.environ.get("TRAVIS") == "true"
+APPVEYOR = os.environ.get('APPVEYOR')
 OSX = sys.platform == 'darwin'
 PYPY = hasattr(sys, 'pypy_version_info')
 WIN = sys.platform.startswith("win")
+PY3 = sys.version_info[0] >= 3
 
 # XXX: Formalize this better
 LIBUV = os.getenv('GEVENT_CORE_CFFI_ONLY') == 'libuv' or (PYPY and WIN)
@@ -205,6 +207,19 @@ if LIBUV:
         'test_signal.SiginterruptTest.test_siginterrupt_off',
     ]
 
+    if PY3:
+
+        disabled_tests += [
+            # This test wants to pass an arbitrary fileno
+            # to a socket and do things with it. libuv doesn't like this,
+            # it raises EPERM. It is disabled on windows already.
+            # It depends on whether we had a fd already open and multiplexed with
+            'test_socket.GeneralModuleTests.test_unknown_socket_family_repr',
+            # And yes, there's a typo in some versions.
+            'test_socket.GeneralModuleTests.test_uknown_socket_family_repr',
+        ]
+
+
     if sys.platform.startswith('linux'):
         disabled_tests += [
             # crashes with EPERM, which aborts the epoll loop, even
@@ -223,6 +238,8 @@ if LIBUV:
             # isn't reporting twice? We cache the watchers, maybe we need a new watcher?
             'test_selectors.PollSelectorTestCase.test_timeout',
         ]
+
+
 
     if WIN and PYPY:
         # From PyPy2-v5.9.0, using its version of tests,
@@ -292,6 +309,24 @@ if LIBUV:
             # so we have to disable it.
             'test_urllib2_localnet.TestUrlopen.test_https_with_cafile',
         ]
+
+    if WIN:
+
+        disabled_tests += [
+            # This test winds up hanging a long time.
+            # Inserting GCs doesn't fix it.
+            'test_ssl.ThreadedTests.test_handshake_timeout',
+        ]
+
+        if PY3:
+
+            disabled_tests += [
+            ]
+
+            if APPVEYOR:
+
+                disabled_tests += [
+                ]
 
 def _make_run_with_original(mod_name, func_name):
     @contextlib.contextmanager
