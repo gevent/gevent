@@ -106,7 +106,7 @@ class Greenlet(greenlet):
     args = ()
     _kwargs = None
 
-    def __init__(self, run=None, *args, **kwargs):
+    def __init__(self, run=None, *args, **kwargs): # pylint:disable=keyword-arg-before-vararg
         """
         Greenlet constructor.
 

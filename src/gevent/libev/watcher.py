@@ -210,7 +210,7 @@ class fork(_base.ForkMixin, watcher):
     pass
 
 
-class async(_base.AsyncMixin, watcher):
+class async(_base.AsyncMixin, watcher): # XXX: Yeah, we know. pylint:disable=assign-to-new-keyword
 
     def send(self):
         libev.ev_async_send(self.loop._ptr, self._watcher)

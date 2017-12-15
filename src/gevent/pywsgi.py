@@ -517,20 +517,20 @@ class WSGIHandler(object):
         if len(words) == 3:
             self.command, self.path, self.request_version = words
             if not self._check_http_version():
-                raise _InvalidClientRequest('Invalid http version: %r', raw_requestline)
+                raise _InvalidClientRequest('Invalid http version: %r' % (raw_requestline,))
         elif len(words) == 2:
             self.command, self.path = words
             if self.command != "GET":
-                raise _InvalidClientRequest('Expected GET method: %r', raw_requestline)
+                raise _InvalidClientRequest('Expected GET method: %r' % (raw_requestline,))
             self.request_version = "HTTP/0.9"
             # QQQ I'm pretty sure we can drop support for HTTP/0.9
         else:
-            raise _InvalidClientRequest('Invalid HTTP method: %r', raw_requestline)
+            raise _InvalidClientRequest('Invalid HTTP method: %r' % (raw_requestline,))
 
         self.headers = self.MessageClass(self.rfile, 0)
 
         if self.headers.status:
-            raise _InvalidClientRequest('Invalid headers status: %r', self.headers.status)
+            raise _InvalidClientRequest('Invalid headers status: %r' % (self.headers.status,))
 
         if self.headers.get("transfer-encoding", "").lower() == "chunked":
             try:
@@ -542,7 +542,7 @@ class WSGIHandler(object):
         if content_length is not None:
             content_length = int(content_length)
             if content_length < 0:
-                raise _InvalidClientRequest('Invalid Content-Length: %r', content_length)
+                raise _InvalidClientRequest('Invalid Content-Length: %r' % (content_length,))
 
             if content_length and self.command in ('HEAD', ):
                 raise _InvalidClientRequest('Unexpected Content-Length')

@@ -1,3 +1,5 @@
+[MASTER]
+extension-pkg-whitelist=gevent.libuv._corecffi,gevent.libev._corecffi,gevent.local
 
 [MESSAGES CONTROL]
 
@@ -59,7 +61,7 @@ disable=wrong-import-position,
 [FORMAT]
 # duplicated from setup.cfg
 max-line-length=160
-max-module-lines=1070
+max-module-lines=1100
 
 [MISCELLANEOUS]
 # List of note tags to take in consideration, separated by a comma.
