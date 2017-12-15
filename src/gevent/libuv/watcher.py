@@ -372,7 +372,7 @@ class io(_base.IoMixin, watcher):
             if w is not None and w.callback is not None:
                 # There's still a reference to it, and it's started,
                 # so we can't stop.
-                continue
+                return
         # If we get here, nothing was started
         # so we can take ourself out of the polling set
         self.stop()
@@ -523,7 +523,7 @@ class child(_SimulatedWithAsyncMixin,
         self._async.send()
 
 
-class async(_base.AsyncMixin, watcher):
+class async(_base.AsyncMixin, watcher): # XXX: Yeah, we know pylint:disable=assign-to-new-keyword
 
     def _watcher_ffi_init(self, args):
         # It's dangerous to have a raw, non-initted struct

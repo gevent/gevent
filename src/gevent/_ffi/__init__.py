@@ -17,8 +17,17 @@ def _pid_dbg(*args, **kwargs):
     print(os.getpid(), *args, **kwargs)
 
 GEVENT_DEBUG = 0
+CRITICAL = 1
+ERROR = 3
+DEBUG = 5
 TRACE = 9
 
-if os.getenv('GEVENT_DEBUG') == 'trace':
+if os.getenv("GEVENT_DEBUG") == 'critical':
+    GEVENT_DEBUG = CRITICAL
+elif os.getenv("GEVENT_DEBUG") == 'error':
+    GEVENT_DEBUG = ERROR
+elif os.getenv('GEVENT_DEBUG') == 'debug':
+    GEVENT_DEBUG = DEBUG
+elif os.getenv('GEVENT_DEBUG') == 'trace':
     _dbg = _pid_dbg
     GEVENT_DEBUG = TRACE

@@ -307,6 +307,9 @@ def main():
     if 'PYTHONFAULTHANDLER' not in os.environ:
         os.environ['PYTHONFAULTHANDLER'] = 'true'
 
+    if 'GEVENT_DEBUG' not in os.environ:
+        os.environ['GEVENT_DEBUG'] = 'error'
+
     tests = discover(options.tests, options.ignore, coverage)
     if options.discover:
         for cmd, options in tests:
