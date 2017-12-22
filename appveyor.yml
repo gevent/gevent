@@ -10,11 +10,15 @@ environment:
     # Pre-installed Python versions, which Appveyor may upgrade to
     # a later point release.
 
-    - PYTHON: "C:\\pypy2-v5.9.0-win32"
-      PYTHON_ID: "pypy"
-      PYTHON_EXE: pypy
-      PYTHON_VERSION: "2.7.x"
-      PYTHON_ARCH: "32"
+    # We're not quite ready for PyPy+libuv.
+    # It works correctly on POSIX (linux and darwin),
+    # but has some strange errors and many timeouts on Windows.
+    # Most recent build: https://ci.appveyor.com/project/denik/gevent/build/1.0.1174/job/cv63181yj3ebb9cs
+    # - PYTHON: "C:\\pypy2-v5.9.0-win32"
+    #   PYTHON_ID: "pypy"
+    #   PYTHON_EXE: pypy
+    #   PYTHON_VERSION: "2.7.x"
+    #   PYTHON_ARCH: "32"
 
     - PYTHON: "C:\\Python36-x64"
       PYTHON_VERSION: "3.6.x" # currently 3.6.0
