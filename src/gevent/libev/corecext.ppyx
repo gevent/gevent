@@ -808,6 +808,9 @@ cdef public class io(watcher) [object PyGeventIOObject, type PyGeventIO_Type]:
 
     PENDING
 
+    def close(self):
+        pass
+
 #ifdef _WIN32
 
     def __init__(self, loop loop, libev.vfd_socket_t fd, int events, ref=True, priority=None):

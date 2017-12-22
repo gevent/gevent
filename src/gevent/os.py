@@ -90,7 +90,10 @@ if fcntl:
         hub, event = None, None
         while True:
             try:
-                return _read(fd, n)
+                result = _read(fd, n)
+                if event is not None:
+                    event.close()
+                return result
             except OSError as e:
                 if e.errno not in ignored_errors:
                     raise
@@ -101,6 +104,7 @@ if fcntl:
                 event = hub.loop.io(fd, 1)
             hub.wait(event)
 
+
     def nb_write(fd, buf):
         """Write bytes from buffer `buf` to file descriptor `fd`. Return the
         number of bytes written.
@@ -110,7 +114,10 @@ if fcntl:
         hub, event = None, None
         while True:
             try:
-                return _write(fd, buf)
+                result = _write(fd, buf)
+                if event is not None:
+                    event.close()
+                return result
             except OSError as e:
                 if e.errno not in ignored_errors:
                     raise

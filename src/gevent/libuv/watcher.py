@@ -217,6 +217,8 @@ class io(_base.IoMixin, watcher):
 
     EVENT_MASK = libuv.UV_READABLE | libuv.UV_WRITABLE | libuv.UV_DISCONNECT
 
+    _multiplex_watchers = ()
+
     def __init__(self, loop, fd, events, ref=True, priority=None):
         super(io, self).__init__(loop, fd, events, ref=ref, priority=priority, _args=(fd,))
         self._fd = fd
@@ -254,9 +256,16 @@ class io(_base.IoMixin, watcher):
     def _get_events(self):
         return self._events
 
-    @_base.not_while_active
     def _set_events(self, events):
+        if events == self._events:
+            return
+        _dbg("Changing event mask for", self, "from", self._events, "to", events)
         self._events = events
+        if self.active:
+            # We're running but libuv specifically says we can
+            # call start again to change our event mask.
+            assert self._handle is not None
+            self._watcher_start(self._watcher, self._events, self._watcher_callback)
 
     # This is what we'd do if we set _watcher_init_on_init to False:
     # def start(self, *args, **kwargs):
@@ -272,6 +281,7 @@ class io(_base.IoMixin, watcher):
     def _watcher_ffi_start(self):
         assert self._handle is None
         self._handle = self._watcher.data = type(self).new_handle(self)
+        _dbg("Starting watcher", self, "with events", self._events)
         self._watcher_start(self._watcher, self._events, self._watcher_callback)
 
     def _watcher_ffi_stop(self):
@@ -320,7 +330,7 @@ class io(_base.IoMixin, watcher):
         ref = True
 
         def __init__(self, events, watcher):
-            self.events = events
+            self._events = events
 
             # References:
             # These objects keep the original IO object alive;
@@ -330,9 +340,13 @@ class io(_base.IoMixin, watcher):
             # has also gone away.
             self._watcher_ref = watcher
 
+        @property
+        def events(self):
+            return self._events
+
         def start(self, callback, *args, **kwargs):
             _dbg("Starting IO multiplex watcher for", self.fd,
-                 "callback", callback,
+                 "callback", callback, "events", self.events,
                  "owner", self._watcher_ref)
             self.pass_events = kwargs.get("pass_events")
             self.callback = callback
@@ -344,13 +358,18 @@ class io(_base.IoMixin, watcher):
 
         def stop(self):
             _dbg("Stopping IO multiplex watcher for", self.fd,
-                 "callback", self.callback,
+                 "callback", self.callback, "events", self.events,
                  "owner", self._watcher_ref)
             self.callback = None
             self.pass_events = None
             self.args = None
             watcher = self._watcher_ref
             watcher._io_maybe_stop()
+
+        def close(self):
+            if self._watcher_ref is not None:
+                self._watcher_ref._multiplex_closed(self)
+            self._watcher_ref = None
 
         @property
         def active(self):
@@ -367,9 +386,8 @@ class io(_base.IoMixin, watcher):
                       lambda self, nv: self._watcher_ref._set_fd(nv))
 
     def _io_maybe_stop(self):
-        for r in self._multiplex_watchers:
-            w = r()
-            if w is not None and w.callback is not None:
+        for w in self._multiplex_watchers:
+            if w.callback is not None:
                 # There's still a reference to it, and it's started,
                 # so we can't stop.
                 return
@@ -378,19 +396,40 @@ class io(_base.IoMixin, watcher):
         self.stop()
 
     def _io_start(self):
-        _dbg("IO start on behalf of multiplex", self)
+        _dbg("IO start on behalf of multiplex", self, "fd", self._fd, "events", self._events)
         self.start(self._io_callback, pass_events=True)
 
+    def _calc_and_update_events(self):
+        events = 0
+        for watcher in self._multiplex_watchers:
+            events |= watcher.events
+        self._set_events(events)
+
+
     def multiplex(self, events):
-        if not self._multiplex_watchers:
-            self._multiplex_watchers = []
-
         watcher = self._multiplexwatcher(events, self)
-        watcher_ref = weakref.ref(watcher, self._multiplex_watchers.remove)
+        #watcher_ref = weakref.ref(watcher, self._multiplex_watchers.remove)
         # We must not keep a hard ref to the returned object.
-        self._multiplex_watchers.append(watcher_ref)
+        #self._multiplex_watchers.append(watcher_ref)
+        self._multiplex_watchers.append(watcher)
 
+        self._calc_and_update_events()
         return watcher
+
+    def _multiplex_closed(self, watcher):
+        self._multiplex_watchers.remove(watcher)
+        if not self._multiplex_watchers:
+            _dbg("IO Watcher", self, "has no more multiplexes")
+            self.stop() # should already be stopped
+            self._no_more_watchers()
+            del self._multiplex_watchers
+        else:
+            self._calc_and_update_events()
+            _dbg("IO Watcher", self, "has remaining multiplex:",
+                 self._multiplex_watchers)
+
+    def _no_more_watchers(self):
+        pass
 
     def _io_callback(self, events):
         if events < 0:
@@ -412,13 +451,14 @@ class io(_base.IoMixin, watcher):
             # See test__makefile_ref.TestSSL for examples.
             # return
 
-        #_dbg("Callback event for watcher", self._fd, "event", events)
-        for watcher_ref in self._multiplex_watchers:
-            watcher = watcher_ref()
-            if not watcher or not watcher.callback:
+        _dbg("Callback event for watcher", self._fd, "event", events)
+        for watcher in self._multiplex_watchers:
+            if not watcher.callback:
+                # Stopped
+                _dbg("Watcher", self, "has stopped multiplex", watcher)
                 continue
-
-            #_dbg("Event for watcher", self._fd, events, watcher.events, events & watcher.events)
+            assert watcher._watcher_ref is self, (self, watcher._watcher_ref)
+            _dbg("Event for watcher", self._fd, events, watcher.events, events & watcher.events)
 
             send_event = (events & watcher.events) or events < 0
             if send_event:

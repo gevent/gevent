@@ -101,6 +101,7 @@ class SelectResult(object):
     def _closeall(self, watchers):
         for watcher in watchers:
             watcher.stop()
+            watcher.close()
         del watchers[:]
 
     def select(self, rlist, wlist, timeout):
@@ -208,6 +209,9 @@ if original_poll is not None:
                 # that. Should we raise an error?
 
             fileno = get_fileno(fd)
+            if fileno in self.fds:
+                self.fds[fileno].close()
+
             watcher = self.loop.io(fileno, flags)
             watcher.priority = self.loop.MAXPRI
             self.fds[fileno] = watcher
@@ -243,6 +247,8 @@ if original_poll is not None:
                library. Previously gevent did nothing.
             """
             fileno = get_fileno(fd)
+            io = self.fds[fileno]
+            io.close()
             del self.fds[fileno]
 
 del original_poll

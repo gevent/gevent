@@ -381,6 +381,7 @@ cdef public class channel [object PyGeventAresChannelObject, type PyGeventAresCh
             watcher.events = events
         else:
             watcher.stop()
+            watcher.close()
             self._watchers.pop(socket, None)
             if not self._watchers:
                 self._timer.stop()

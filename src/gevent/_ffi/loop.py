@@ -144,7 +144,7 @@ class _Callbacks(object):
                 # The normal, expected scenario when we find the watcher still
                 # in the keepaliveset is that it is still active at the event loop
                 # level, so we don't expect that python_stop gets called.
-                _dbg("The watcher has not stopped itself, possibly still active", the_watcher)
+                #_dbg("The watcher has not stopped itself, possibly still active", the_watcher)
                 return 1
             return 2 # it stopped itself
 

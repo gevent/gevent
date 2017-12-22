@@ -410,6 +410,9 @@ class IoMixin(object):
             args = (GEVENT_CORE_EVENTS, ) + args
         super(IoMixin, self).start(callback, *args)
 
+    def close(self):
+        pass
+
 
 class TimerMixin(object):
     _watcher_type = 'timer'
