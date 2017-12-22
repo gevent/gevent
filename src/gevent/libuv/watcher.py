@@ -4,7 +4,6 @@ from __future__ import absolute_import, print_function
 
 import functools
 import sys
-import weakref
 
 import gevent.libuv._corecffi as _corecffi # pylint:disable=no-name-in-module,import-error
 
@@ -208,12 +207,18 @@ class io(_base.IoMixin, watcher):
     # a native watcher until the object is started, and we shut it down
     # when the object is stopped.
 
-    # XXX: I was able to solve at least Windows test_ftplib.py issues with more of a
-    # careful use of io objects in socket.py, so delaying this entirely is at least
-    # temporarily on hold. Instead sticking with the _watcher_create
-    # function override for the moment.
+    # XXX: I was able to solve at least Windows test_ftplib.py issues
+    # with more of a careful use of io objects in socket.py, so
+    # delaying this entirely is at least temporarily on hold. Instead
+    # sticking with the _watcher_create function override for the
+    # moment.
 
-    #_watcher_init_on_init = False
+    # XXX: Note 2: Moving to a deterministic close model, which was necessary
+    # for PyPy, also seems to solve the Windows issues. So we're completely taking
+    # this object out of the loop's registration; we don't want GC callbacks and
+    # uv_close anywhere *near* this object.
+
+    _watcher_registers_with_loop_on_create = False
 
     EVENT_MASK = libuv.UV_READABLE | libuv.UV_WRITABLE | libuv.UV_DISCONNECT
 
@@ -224,26 +229,6 @@ class io(_base.IoMixin, watcher):
         self._fd = fd
         self._events = events
         self._multiplex_watchers = []
-
-    def _watcher_create(self, ref):
-        super(io, self)._watcher_create(ref)
-        # Immediately break the GC cycle. We restore the cycle before
-        # we are started and break it again when we are stopped.
-
-        # On Windows is critical to be able to garbage collect these
-        # objects in a timely fashion so that they don't get reused
-        # for multiplexing completely different sockets. This is because
-        # uv_poll_init_socket does a lot of setup for the socket to make
-        # polling work. If get reused for another socket that has the same
-        # fileno, things break badly. (In theory this could be a problem
-        # on posix too, but in practice it isn't).
-
-        # TODO: We should probably generalize this to all
-        # ffi watchers. Avoiding GC cycles as much as possible
-        # is a good thing, and potentially allocating new handles
-        # as needed gets us better memory locality.
-        self._handle = None
-        self._watcher.data = ffi.NULL
 
     def _get_fd(self):
         return self._fd
@@ -267,31 +252,9 @@ class io(_base.IoMixin, watcher):
             assert self._handle is not None
             self._watcher_start(self._watcher, self._events, self._watcher_callback)
 
-    # This is what we'd do if we set _watcher_init_on_init to False:
-    # def start(self, *args, **kwargs):
-    #    assert self._watcher is None
-    #    self._watcher_full_init()
-    #    super(io, self).start(*args, **kwargs)
-
-    # Along with disposing of self._watcher in _watcher_ffi_stop.
-    # In that method, it's possible that we might be started again right after this,
-    # in which case we will create a new set of FFI objects.
-    # TODO: Does anything leak in that case? Verify...
-
     def _watcher_ffi_start(self):
-        assert self._handle is None
-        self._handle = self._watcher.data = type(self).new_handle(self)
         _dbg("Starting watcher", self, "with events", self._events)
         self._watcher_start(self._watcher, self._events, self._watcher_callback)
-
-    def _watcher_ffi_stop(self):
-        # We may or may not have been started yet, so
-        # we may or may not have a handle; either way,
-        # drop it.
-        _dbg("Stopping io watcher", self)
-        self._handle = None
-        self._watcher.data = ffi.NULL
-        super(io, self)._watcher_ffi_stop()
 
     if sys.platform.startswith('win32'):
         # uv_poll can only handle sockets on Windows, but the plain
@@ -333,11 +296,10 @@ class io(_base.IoMixin, watcher):
             self._events = events
 
             # References:
-            # These objects keep the original IO object alive;
+            # These objects must keep the original IO object alive;
             # the IO object SHOULD NOT keep these alive to avoid cycles
-            # When they all go away, the original IO object can go
-            # away. *Hopefully* that means that the FD they were opened for
-            # has also gone away.
+            # We MUST NOT rely on GC to clean up the IO objects, but the explicit
+            # calls to close(); see _multiplex_closed.
             self._watcher_ref = watcher
 
         events = property(
@@ -409,11 +371,7 @@ class io(_base.IoMixin, watcher):
 
     def multiplex(self, events):
         watcher = self._multiplexwatcher(events, self)
-        #watcher_ref = weakref.ref(watcher, self._multiplex_watchers.remove)
-        # We must not keep a hard ref to the returned object.
-        #self._multiplex_watchers.append(watcher_ref)
         self._multiplex_watchers.append(watcher)
-
         self._calc_and_update_events()
         return watcher
 
@@ -423,6 +381,18 @@ class io(_base.IoMixin, watcher):
             _dbg("IO Watcher", self, "has no more multiplexes")
             self.stop() # should already be stopped
             self._no_more_watchers()
+            # It is absolutely critical that we control when the call
+            # to uv_close() gets made. uv_close() of a uv_poll_t
+            # handle winds up calling uv__platform_invalidate_fd,
+            # which, as the name implies, destroys any outstanding
+            # events for the *fd* that haven't been delivered yet, and also removes
+            # the *fd* from the poll set. So if this happens later, at some
+            # non-deterministic time when (cyclic or otherwise) GC runs,
+            # *and* we've opened a new watcher for the fd, that watcher will
+            # suddenly and mysteriously stop seeing events. So we do this now;
+            # this method is smart enough not to close the handle twice.
+            self._watcher_ffi_close(self._watcher)
+            self._watcher = None
             del self._multiplex_watchers
         else:
             self._calc_and_update_events()
@@ -430,6 +400,8 @@ class io(_base.IoMixin, watcher):
                  self._multiplex_watchers)
 
     def _no_more_watchers(self):
+        # The loop sets this on an individual watcher to delete it from
+        # the active list where it keeps hard references.
         pass
 
     def _io_callback(self, events):

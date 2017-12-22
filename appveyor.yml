@@ -10,13 +10,11 @@ environment:
     # Pre-installed Python versions, which Appveyor may upgrade to
     # a later point release.
 
-    # We're not quite ready for PyPy+libuv, it doesn't even
-    # work correctly on Posix.
-    # - PYTHON: "C:\\pypy2-v5.9.0-win32"
-    #   PYTHON_ID: "pypy"
-    #   PYTHON_EXE: pypy
-    #   PYTHON_VERSION: "2.7.x"
-    #   PYTHON_ARCH: "32"
+    - PYTHON: "C:\\pypy2-v5.9.0-win32"
+      PYTHON_ID: "pypy"
+      PYTHON_EXE: pypy
+      PYTHON_VERSION: "2.7.x"
+      PYTHON_ARCH: "32"
 
     - PYTHON: "C:\\Python36-x64"
       PYTHON_VERSION: "3.6.x" # currently 3.6.0

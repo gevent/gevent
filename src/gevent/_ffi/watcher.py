@@ -176,21 +176,14 @@ class watcher(object):
     _handle = None # FFI object to self. This is a GC cycle. See _watcher_create
     _watcher = None
 
-    # Do we create the native resources when this class is created?
-    # If so, we call _watcher_full_init from the constructor.
-    # Otherwise, it must be called before we are started.
-    # If a subclass sets this to false, they must make that call.
-    # Currently unused. Experimental functionality for libuv.
-    _watcher_init_on_init = True
+    _watcher_registers_with_loop_on_create = True
 
     def __init__(self, _loop, ref=True, priority=None, args=_NOARGS):
         self.loop = _loop
         self.__init_priority = priority
         self.__init_args = args
         self.__init_ref = ref
-
-        if self._watcher_init_on_init:
-            self._watcher_full_init()
+        self._watcher_full_init()
 
     def _watcher_full_init(self):
         priority = self.__init_priority
@@ -226,8 +219,13 @@ class watcher(object):
         self._watcher = self._watcher_new()
         # This call takes care of calling _watcher_ffi_close when
         # self goes away, making sure self._watcher stays alive
-        # that long
-        self.loop._register_watcher(self, self._watcher)
+        # that long.
+
+        # XXX: All watchers should go to a model like libuv's
+        # IO watcher that gets explicitly closed so that we can always
+        # have control over when this gets done.
+        if self._watcher_registers_with_loop_on_create:
+            self.loop._register_watcher(self, self._watcher)
 
         self._watcher.data = self._handle
 
@@ -401,6 +399,7 @@ class IoMixin(object):
             raise ValueError('fd must be non-negative: %r' % fd)
         if events & ~self.EVENT_MASK:
             raise ValueError('illegal event mask: %r' % events)
+        self._fd = fd
         super(IoMixin, self).__init__(loop, ref=ref, priority=priority,
                                       args=_args or (fd, events))
 
@@ -413,6 +412,8 @@ class IoMixin(object):
     def close(self):
         pass
 
+    def _format(self):
+        return ' fd=%d' % self._fd
 
 class TimerMixin(object):
     _watcher_type = 'timer'

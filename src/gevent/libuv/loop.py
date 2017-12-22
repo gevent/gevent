@@ -352,14 +352,9 @@ class loop(AbstractLoop):
 
     @gcBefore
     def io(self, fd, events, ref=True, priority=None):
-        # We don't keep a hard ref to the root object;
-        # the caller must keep the multiplexed watcher
-        # alive as long as its in use.
-
-        # We go to great pains to avoid GC cycles here, otherwise
-        # CPython tests (e.g., test_asyncore) fail on Windows.
-        # For PyPy, though, avoiding cycles isn't enough and we must
-        # do a GC to force cleaning up old objects.
+        # We rely on hard references here and explicit calls to
+        # close() on the returned object to correctly manage
+        # the watcher lifetimes.
 
         io_watchers = self._io_watchers
         try:

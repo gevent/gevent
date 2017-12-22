@@ -187,8 +187,10 @@ test-py36-libuv: $(PY36)
 	GEVENT_CORE_CFFI_ONLY=libuv make test-py36
 
 test-pypy: $(PYPY)
-	ls $(BUILD_RUNTIMES)/versions/pypy590/bin/
 	PYTHON=$(PYPY) PATH=$(BUILD_RUNTIMES)/versions/pypy590/bin:$(PATH) make develop toxtest
+
+test-pypy-libuv: $(PY36)
+	GEVENT_CORE_CFFI_ONLY=libuv make test-pypy
 
 test-pypy3: $(PYPY3)
 	PYTHON=$(PYPY3) PATH=$(BUILD_RUNTIMES)/versions/pypy3.5_590/bin:$(PATH) make develop toxtest

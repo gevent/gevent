@@ -296,10 +296,11 @@ class AbstractLoop(object):
 
 
     @classmethod
-    def __make_watcher_ref_callback(cls, typ, active_watchers, ffi_watcher):
+    def __make_watcher_ref_callback(cls, typ, active_watchers, ffi_watcher, debug):
         # separate method to make sure we have no ref to the watcher
         def callback(_):
             active_watchers.pop(ffi_watcher)
+            _dbg("Python weakref callback closing", debug)
             typ._watcher_ffi_close(ffi_watcher)
 
         return callback
@@ -309,7 +310,8 @@ class AbstractLoop(object):
                                                      self.__make_watcher_ref_callback(
                                                          type(python_watcher),
                                                          self._active_watchers,
-                                                         ffi_watcher))
+                                                         ffi_watcher,
+                                                         repr(python_watcher)))
 
     def _init_loop_and_aux_watchers(self, flags=None, default=None):
 
