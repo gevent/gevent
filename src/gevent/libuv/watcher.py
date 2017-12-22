@@ -340,9 +340,9 @@ class io(_base.IoMixin, watcher):
             # has also gone away.
             self._watcher_ref = watcher
 
-        @property
-        def events(self):
-            return self._events
+        events = property(
+            lambda self: self._events,
+            _base.not_while_active(lambda self, nv: setattr(self, '_events', nv)))
 
         def start(self, callback, *args, **kwargs):
             _dbg("Starting IO multiplex watcher for", self.fd,
@@ -364,7 +364,8 @@ class io(_base.IoMixin, watcher):
             self.pass_events = None
             self.args = None
             watcher = self._watcher_ref
-            watcher._io_maybe_stop()
+            if watcher is not None:
+                watcher._io_maybe_stop()
 
         def close(self):
             if self._watcher_ref is not None:
@@ -382,7 +383,7 @@ class io(_base.IoMixin, watcher):
 
         # ares.pyx depends on this property,
         # and test__core uses it too
-        fd = property(lambda self: self._watcher_ref._fd,
+        fd = property(lambda self: getattr(self._watcher_ref, '_fd', -1),
                       lambda self, nv: self._watcher_ref._set_fd(nv))
 
     def _io_maybe_stop(self):

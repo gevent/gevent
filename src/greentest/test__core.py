@@ -22,7 +22,7 @@ class TestWatchers(unittest.TestCase):
     def test_io(self):
         if sys.platform == 'win32':
             # libev raises IOError, libuv raises ValueError
-            Error = (IOError,ValueError)
+            Error = (IOError, ValueError)
             win32 = True
         else:
             Error = ValueError
@@ -47,6 +47,7 @@ class TestWatchers(unittest.TestCase):
                 self.assertEqual(core._events_to_str(io.events), 'WRITE|_IOFDSET')
             else:
                 self.assertEqual(core._events_to_str(io.events), 'WRITE')
+            io.close()
 
     def test_timer_constructor(self):
         with self.assertRaises(ValueError):
