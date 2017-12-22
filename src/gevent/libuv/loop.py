@@ -7,8 +7,9 @@ from __future__ import absolute_import, print_function
 import os
 from collections import defaultdict
 from collections import namedtuple
+from operator import delitem
 import signal
-from weakref import WeakValueDictionary
+
 
 from gevent._compat import PYPY
 from gevent._ffi.loop import AbstractLoop
@@ -81,7 +82,7 @@ class loop(AbstractLoop):
         AbstractLoop.__init__(self, ffi, libuv, _watchers, flags, default)
         self.__loop_pid = os.getpid()
         self._child_watchers = defaultdict(list)
-        self._io_watchers = WeakValueDictionary()
+        self._io_watchers = dict()
         self._fork_watchers = set()
         self._pid = os.getpid()
 
@@ -351,20 +352,20 @@ class loop(AbstractLoop):
 
     @gcBefore
     def io(self, fd, events, ref=True, priority=None):
-        # We don't keep a hard ref to the root object;
-        # the caller must keep the multiplexed watcher
-        # alive as long as its in use.
-
-        # We go to great pains to avoid GC cycles here, otherwise
-        # CPython tests (e.g., test_asyncore) fail on Windows.
-        # For PyPy, though, avoiding cycles isn't enough and we must
-        # do a GC to force cleaning up old objects.
+        # We rely on hard references here and explicit calls to
+        # close() on the returned object to correctly manage
+        # the watcher lifetimes.
 
         io_watchers = self._io_watchers
         try:
             io_watcher = io_watchers[fd]
+            assert io_watcher._multiplex_watchers, ("IO Watcher %s unclosed but should be dead" % io_watcher)
         except KeyError:
-            io_watcher = self._watchers.io(self, fd, self._watchers.io.EVENT_MASK)
+            # Start the watcher with just the events that we're interested in.
+            # as multiplexers are added, the real event mask will be updated to keep in sync.
+            # If we watch for too much, we get spurious wakeups and busy loops.
+            io_watcher = self._watchers.io(self, fd, 0)
             io_watchers[fd] = io_watcher
+            io_watcher._no_more_watchers = lambda: delitem(io_watchers, fd)
 
         return io_watcher.multiplex(events)

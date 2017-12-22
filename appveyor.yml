@@ -10,8 +10,10 @@ environment:
     # Pre-installed Python versions, which Appveyor may upgrade to
     # a later point release.
 
-    # We're not quite ready for PyPy+libuv, it doesn't even
-    # work correctly on Posix.
+    # We're not quite ready for PyPy+libuv.
+    # It works correctly on POSIX (linux and darwin),
+    # but has some strange errors and many timeouts on Windows.
+    # Most recent build: https://ci.appveyor.com/project/denik/gevent/build/1.0.1174/job/cv63181yj3ebb9cs
     # - PYTHON: "C:\\pypy2-v5.9.0-win32"
     #   PYTHON_ID: "pypy"
     #   PYTHON_EXE: pypy

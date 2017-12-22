@@ -179,7 +179,10 @@ def wait_read(fileno, timeout=None, timeout_exc=_NONE):
     .. seealso:: :func:`cancel_wait`
      """
     io = get_hub().loop.io(fileno, 1)
-    return wait(io, timeout, timeout_exc)
+    try:
+        return wait(io, timeout, timeout_exc)
+    finally:
+        io.close()
 
 
 def wait_write(fileno, timeout=None, timeout_exc=_NONE, event=_NONE):
@@ -196,7 +199,10 @@ def wait_write(fileno, timeout=None, timeout_exc=_NONE, event=_NONE):
     """
     # pylint:disable=unused-argument
     io = get_hub().loop.io(fileno, 2)
-    return wait(io, timeout, timeout_exc)
+    try:
+        return wait(io, timeout, timeout_exc)
+    finally:
+        io.close()
 
 
 def wait_readwrite(fileno, timeout=None, timeout_exc=_NONE, event=_NONE):
@@ -214,7 +220,10 @@ def wait_readwrite(fileno, timeout=None, timeout_exc=_NONE, event=_NONE):
     """
     # pylint:disable=unused-argument
     io = get_hub().loop.io(fileno, 3)
-    return wait(io, timeout, timeout_exc)
+    try:
+        return wait(io, timeout, timeout_exc)
+    finally:
+        io.close()
 
 #: The exception raised by default on a call to :func:`cancel_wait`
 class cancel_wait_ex(error): # pylint: disable=undefined-variable

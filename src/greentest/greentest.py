@@ -390,7 +390,7 @@ if (PY3 and PYPY) or (PYPY and WIN and LIBUV):
     # pypy3 is very slow right now,
     # as is PyPy2 on windows (which only has libuv)
     CI_TIMEOUT = 15
-if PYPY and WIN and LIBUV:
+if PYPY and LIBUV:
     # slow and flaky timeouts
     LOCAL_TIMEOUT = CI_TIMEOUT
 else:

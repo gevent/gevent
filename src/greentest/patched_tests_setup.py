@@ -158,6 +158,14 @@ disabled_tests = [
     'test_subprocess.ProcessTestCase.test_zombie_fast_process_del',
     # relies on subprocess._active which we don't use
 
+    # Very slow, tries to open lots and lots of subprocess and files,
+    # tends to timeout on CI.
+    'test_subprocess.ProcessTestCase.test_no_leaking',
+
+    # This test is also very slow, and has been timing out on Travis
+    # since November of 2016 on Python 3, but now also seen on Python 2/Pypy.
+    'test_subprocess.ProcessTestCase.test_leaking_fds_on_error',
+
     'test_ssl.ThreadedTests.test_default_ciphers',
     'test_ssl.ThreadedTests.test_empty_cert',
     'test_ssl.ThreadedTests.test_malformed_cert',
@@ -558,8 +566,6 @@ if sys.version_info[0] == 3:
             'test_subprocess.ProcessTestCaseNoPoll.test_cwd_with_relative_arg',
             'test_subprocess.ProcessTestCase.test_cwd_with_relative_executable',
 
-            # This test tends to timeout, starting at the end of November 2016
-            'test_subprocess.ProcessTestCase.test_leaking_fds_on_error',
         ]
 
     wrapped_tests.update({

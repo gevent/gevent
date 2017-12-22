@@ -67,7 +67,7 @@ if hasattr(os, 'make_nonblocking'):
     class TestOS_nb(TestOS_tp):
 
         def pipe(self):
-            r, w = pipe()
+            r, w = super(TestOS_nb, self).pipe()
             os.make_nonblocking(r)
             os.make_nonblocking(w)
             return r, w

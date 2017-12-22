@@ -208,9 +208,11 @@ class socket(object):
 
         if self._read_event is not None:
             self.hub.cancel_wait(self._read_event, cancel_wait_ex)
+            self._read_event.close()
             self._read_event = None
         if self._write_event is not None:
             self.hub.cancel_wait(self._write_event, cancel_wait_ex)
+            self._write_event.close()
             self._write_event = None
         s = self._sock
         self._sock = _closedsocket()

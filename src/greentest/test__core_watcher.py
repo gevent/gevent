@@ -73,10 +73,10 @@ class Test(greentest.TestCase):
         loop = core.loop(default=False)
 
         # Watchers aren't reused once all outstanding
-        # refs go away
+        # refs go away BUT THEY MUST BE CLOSED
         tty_watcher = loop.io(1, core.WRITE)
         watcher_handle = tty_watcher._watcher if IS_CFFI else tty_watcher
-
+        tty_watcher.close()
         del tty_watcher
         # XXX: Note there is a cycle in the CFFI code
         # from watcher_handle._handle -> watcher_handle.
@@ -86,7 +86,7 @@ class Test(greentest.TestCase):
 
         tty_watcher = loop.io(1, core.WRITE)
         self.assertIsNot(tty_watcher._watcher if IS_CFFI else tty_watcher, watcher_handle)
-
+        tty_watcher.close()
         loop.destroy()
 
 def reset(watcher, lst):

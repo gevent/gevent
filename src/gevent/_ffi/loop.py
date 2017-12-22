@@ -144,7 +144,7 @@ class _Callbacks(object):
                 # The normal, expected scenario when we find the watcher still
                 # in the keepaliveset is that it is still active at the event loop
                 # level, so we don't expect that python_stop gets called.
-                _dbg("The watcher has not stopped itself, possibly still active", the_watcher)
+                #_dbg("The watcher has not stopped itself, possibly still active", the_watcher)
                 return 1
             return 2 # it stopped itself
 
@@ -296,10 +296,11 @@ class AbstractLoop(object):
 
 
     @classmethod
-    def __make_watcher_ref_callback(cls, typ, active_watchers, ffi_watcher):
+    def __make_watcher_ref_callback(cls, typ, active_watchers, ffi_watcher, debug):
         # separate method to make sure we have no ref to the watcher
         def callback(_):
             active_watchers.pop(ffi_watcher)
+            _dbg("Python weakref callback closing", debug)
             typ._watcher_ffi_close(ffi_watcher)
 
         return callback
@@ -309,7 +310,8 @@ class AbstractLoop(object):
                                                      self.__make_watcher_ref_callback(
                                                          type(python_watcher),
                                                          self._active_watchers,
-                                                         ffi_watcher))
+                                                         ffi_watcher,
+                                                         repr(python_watcher)))
 
     def _init_loop_and_aux_watchers(self, flags=None, default=None):
 
