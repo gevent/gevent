@@ -278,7 +278,7 @@ class ThreadResult(object):
         self.context = None
         self.value = None
         self.exc_info = ()
-        self.async_watcher = hub.loop.async()
+        self.async_watcher = hub.loop.async_()
         self._call_when_ready = call_when_ready
         self.async_watcher.start(self._on_async)
 

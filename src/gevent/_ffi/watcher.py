@@ -106,6 +106,11 @@ class AbstractWatcherType(type):
     def _fill_watcher(cls, name, bases, cls_dict):
         # TODO: refactor smaller
         # pylint:disable=too-many-locals
+        if name.endswith('_'):
+            # Strip trailing _ added to avoid keyword duplications
+            # e.g., async_
+            name = name[:-1]
+
         def _mro_get(attr, bases, error=True):
             for b in bases:
                 try:

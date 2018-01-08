@@ -444,7 +444,7 @@ class _SimulatedWithAsyncMixin(object):
     _watcher_skip_ffi = True
 
     def __init__(self, loop, *args, **kwargs):
-        self._async = loop.async()
+        self._async = loop.async_()
         super(_SimulatedWithAsyncMixin, self).__init__(loop, *args, **kwargs)
 
     def _watcher_create(self, _args):
@@ -536,7 +536,7 @@ class child(_SimulatedWithAsyncMixin,
         self._async.send()
 
 
-class async(_base.AsyncMixin, watcher): # XXX: Yeah, we know pylint:disable=assign-to-new-keyword
+class async_(_base.AsyncMixin, watcher):
 
     def _watcher_ffi_init(self, args):
         # It's dangerous to have a raw, non-initted struct
@@ -572,6 +572,8 @@ class async(_base.AsyncMixin, watcher): # XXX: Yeah, we know pylint:disable=assi
     @property
     def pending(self):
         return None
+
+locals()['async'] = async_
 
 class timer(_base.TimerMixin, watcher):
 

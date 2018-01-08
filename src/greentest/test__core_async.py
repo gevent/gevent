@@ -9,7 +9,10 @@ except ImportError:
 
 
 hub = gevent.get_hub()
-watcher = hub.loop.async()
+watcher = hub.loop.async_()
+
+# BWC for <3.7: This should still be an attribute
+assert hasattr(hub.loop, 'async')
 
 gevent.spawn_later(0.1, thread.start_new_thread, watcher.send, ())
 

@@ -13,6 +13,8 @@ if hasattr(sys, 'pypy_version_info'):
     directory += 'pypy'
     full_directory += 'pypy'
 version = '%s.%s.%s' % sys.version_info[:3]
+if sys.version_info[3] == 'alpha':
+    version += 'a%s' % sys.version_info[4]
 
 
 def get_absolute_pythonpath():

@@ -559,8 +559,11 @@ class AbstractLoop(object):
     def fork(self, ref=True, priority=None):
         return self._watchers.fork(self, ref, priority)
 
-    def async(self, ref=True, priority=None): # XXX: Yeah, we know. pylint:disable=assign-to-new-keyword
-        return self._watchers.async(self, ref, priority)
+    def async_(self, ref=True, priority=None):
+        return self._watchers.async_(self, ref, priority)
+
+    # Provide BWC for those that can use 'async' as is
+    locals()['async'] = async_
 
     if sys.platform != "win32":
 

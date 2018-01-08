@@ -44,6 +44,10 @@ orig_SSLContext = __ssl__.SSLContext # pylint:disable=no-member
 
 
 class SSLContext(orig_SSLContext):
+
+    # Added in Python 3.7
+    sslsocket_class = None # SSLSocket is assigned later
+
     def wrap_socket(self, sock, server_side=False,
                     do_handshake_on_connect=True,
                     suppress_ragged_eofs=True,
@@ -52,12 +56,13 @@ class SSLContext(orig_SSLContext):
         # pylint:disable=arguments-differ
         # (3.6 adds session)
         # Sadly, using *args and **kwargs doesn't work
-        return SSLSocket(sock=sock, server_side=server_side,
-                         do_handshake_on_connect=do_handshake_on_connect,
-                         suppress_ragged_eofs=suppress_ragged_eofs,
-                         server_hostname=server_hostname,
-                         _context=self,
-                         _session=session)
+        return self.sslsocket_class(
+            sock=sock, server_side=server_side,
+            do_handshake_on_connect=do_handshake_on_connect,
+            suppress_ragged_eofs=suppress_ragged_eofs,
+            server_hostname=server_hostname,
+            _context=self,
+            _session=session)
 
     if not hasattr(orig_SSLContext, 'check_hostname'):
         # Python 3.3 lacks this
@@ -630,6 +635,9 @@ class SSLSocket(socket):
             return None
         return self._sslobj.tls_unique_cb()
 
+
+# Python does not support forward declaration of types
+SSLContext.sslsocket_class = SSLSocket
 
 # Python 3.2 onwards raise normal timeout errors, not SSLError.
 # See https://bugs.python.org/issue10272
