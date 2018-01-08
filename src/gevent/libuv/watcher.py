@@ -444,7 +444,7 @@ class _SimulatedWithAsyncMixin(object):
     _watcher_skip_ffi = True
 
     def __init__(self, loop, *args, **kwargs):
-        self._async = loop.async()
+        self._async = loop.async_()
         super(_SimulatedWithAsyncMixin, self).__init__(loop, *args, **kwargs)
 
     def _watcher_create(self, _args):
@@ -537,8 +537,6 @@ class child(_SimulatedWithAsyncMixin,
 
 
 class async_(_base.AsyncMixin, watcher):
-
-    _watcher_struct_name = 'uv_async_t'
 
     def _watcher_ffi_init(self, args):
         # It's dangerous to have a raw, non-initted struct
