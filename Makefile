@@ -145,6 +145,9 @@ $(PY35):
 $(PY36):
 	scripts/install.sh 3.6
 
+$(PY37):
+	scripts/install.sh 3.7
+
 $(PYPY):
 	scripts/install.sh pypy
 
@@ -182,6 +185,9 @@ test-py35: $(PY35)
 
 test-py36: $(PY36)
 	PYTHON=python3.6.3 PATH=$(BUILD_RUNTIMES)/versions/python3.6.3/bin:$(PATH) make develop toxtest
+
+test-py37: $(PY37)
+	PYTHON=python3.7.0a3 PATH=$(BUILD_RUNTIMES)/versions/python3.7.0a3/bin:$(PATH) make develop toxtest
 
 test-py36-libuv: $(PY36)
 	GEVENT_CORE_CFFI_ONLY=libuv make test-py36

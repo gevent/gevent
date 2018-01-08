@@ -493,8 +493,11 @@ cdef public class loop [object PyGeventLoopObject, type PyGeventLoop_Type]:
     def fork(self, ref=True, priority=None):
         return fork(self, ref, priority)
 
-    def async(self, ref=True, priority=None):
-        return async(self, ref, priority)
+    def async_(self, ref=True, priority=None):
+        return async_(self, ref, priority)
+
+    # cython doesn't enforce async as a keyword
+    async = async_
 
 #ifdef _WIN32
 #else
@@ -986,7 +989,7 @@ cdef public class fork(watcher) [object PyGeventForkObject, type PyGeventFork_Ty
     INIT(fork,,)
 
 
-cdef public class async(watcher) [object PyGeventAsyncObject, type PyGeventAsync_Type]:
+cdef public class async_(watcher) [object PyGeventAsyncObject, type PyGeventAsync_Type]:
 
     WATCHER_BASE(async)
 
@@ -1004,6 +1007,8 @@ cdef public class async(watcher) [object PyGeventAsyncObject, type PyGeventAsync
     def send(self):
         CHECK_LOOP2(self.loop)
         libev.ev_async_send(self.loop._ptr, &self._watcher)
+
+async = async_
 
 #ifdef _WIN32
 #else

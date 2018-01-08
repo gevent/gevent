@@ -7,6 +7,15 @@
 1.3.0 (unreleased)
 ==================
 
+- Add initial support for Python 3.7a3. It has the same level of
+  support as Python 3.6.
+
+  - Using unreleased Cython 0.28 and greenlet 0.4.13; requires Python 3.7a3.
+
+  - The ``async`` functions and classes have been renamed to
+    ``async_`` due to ``async`` becoming a keyword in Python 3.7.
+    Aliases are still in place for older versions. See :issue:`1047`.
+
 - ``Pool.add`` now accepts ``blocking`` and ``timeout`` parameters,
   which function similarly to their counterparts in ``Semaphore``.
   See :pr:`1032` by Ron Rothman.

@@ -392,6 +392,10 @@ class Popen(object):
        Accept "path-like" objects for the *cwd* parameter on all platforms.
        This was added to Python 3.6. Previously with gevent, it only worked
        on POSIX platforms on 3.6.
+
+    .. versionchanged:: 1.3a1
+       Add the ``text`` argument as a synonym for ``universal_newlines``,
+       as added on Python 3.7.
     """
 
     # The value returned from communicate() when there was nothing to read.
@@ -401,7 +405,7 @@ class Popen(object):
     def __init__(self, args, bufsize=None, executable=None,
                  stdin=None, stdout=None, stderr=None,
                  preexec_fn=None, close_fds=_PLATFORM_DEFAULT_CLOSE_FDS, shell=False,
-                 cwd=None, env=None, universal_newlines=False,
+                 cwd=None, env=None, universal_newlines=None,
                  startupinfo=None, creationflags=0, threadpool=None,
                  **kwargs):
         """Create new Popen instance.
@@ -423,6 +427,8 @@ class Popen(object):
         # Added in 3.6. These are kept as ivars
         encoding = self.encoding = kwargs.pop('encoding', None)
         errors = self.errors = kwargs.pop('errors', None)
+        # Added in 3.7. Not an ivar directly
+        text = kwargs.pop("text", None)
 
         hub = get_hub()
 
@@ -475,6 +481,13 @@ class Popen(object):
             assert threadpool is None
             self._loop = hub.loop
 
+        # Validate the combinations of text and universal_newlines
+        if (text is not None and universal_newlines is not None
+                and bool(universal_newlines) != bool(text)):
+            raise SubprocessError('Cannot disambiguate when both text '
+                                  'and universal_newlines are supplied but '
+                                  'different. Pass one or the other.')
+
         self.args = args # Previously this was Py3 only.
         self.stdin = None
         self.stdout = None
@@ -514,7 +527,7 @@ class Popen(object):
             if errread is not None:
                 errread = msvcrt.open_osfhandle(errread.Detach(), 0)
 
-        text_mode = PY3 and (self.encoding or self.errors or universal_newlines)
+        text_mode = PY3 and (self.encoding or self.errors or universal_newlines or text)
         if text_mode or universal_newlines:
             # Always a native str in universal_newlines mode, even when that
             # str type is bytes. Additionally, text_mode is only true under
