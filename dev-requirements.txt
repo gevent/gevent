@@ -8,7 +8,8 @@ greenlet>=0.4.10 ; python_version < '3.7'
 # Thread state changes again; requires 0.4.13, as yet unreleased
 git+https://github.com/python-greenlet/greenlet#egg=greenlet ; python_version >= '3.7'
 pylint>=1.8.0
-prospector[with_pyroma]
+# pyyaml is included here and doesn't install on travis with 3.7a3
+prospector[with_pyroma] ; python_version < '3.7'
 coverage>=4.0
 coveralls>=1.0
 cffi

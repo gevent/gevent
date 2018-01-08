@@ -110,6 +110,7 @@ class AbstractWatcherType(type):
             # Strip trailing _ added to avoid keyword duplications
             # e.g., async_
             name = name[:-1]
+
         def _mro_get(attr, bases, error=True):
             for b in bases:
                 try:
