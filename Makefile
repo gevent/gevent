@@ -117,6 +117,7 @@ PY27=$(BUILD_RUNTIMES)/snakepit/python2.7.14
 PY34=$(BUILD_RUNTIMES)/snakepit/python3.4.7
 PY35=$(BUILD_RUNTIMES)/snakepit/python3.5.4
 PY36=$(BUILD_RUNTIMES)/snakepit/python3.6.3
+PY37=$(BUILD_RUNTIMES)/snakepit/python3.7.0a3
 PYPY=$(BUILD_RUNTIMES)/snakepit/pypy590
 PYPY3=$(BUILD_RUNTIMES)/snakepit/pypy3.5_590
 
