@@ -538,6 +538,8 @@ class child(_SimulatedWithAsyncMixin,
 
 class async_(_base.AsyncMixin, watcher):
 
+    _watcher_struct_name = 'uv_async_t'
+
     def _watcher_ffi_init(self, args):
         # It's dangerous to have a raw, non-initted struct
         # around; it will crash in uv_close() when we get GC'd,
