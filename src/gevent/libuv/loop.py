@@ -150,6 +150,40 @@ class loop(AbstractLoop):
 
     def _start_callback_timer(self):
         libuv.uv_timer_start(self._timer0, libuv.gevent_noop, 0, 0)
+        # XXX: The purpose of the callback timer is to ensure that we run
+        # callbacks as soon as possible on the next iteration of the event loop.
+        # In libev, a 0 timer expires *after* the IO poll is done (it actually
+        # determines the time that the IO poll will block for), so
+        # having the timer present simply spins the loop, and our normal
+        # prepare watcher kicks in to run the callbacks.
+
+        # In libuv, however, timers are run *first*, before prepare callbacks
+        # and before polling for IO. So this 0 time timer actually does *nothing*.
+        # From the loop inside uv_run:
+        # while True:
+        #   uv__run_timers(loop);
+        #   ran_pending = uv__run_pending(loop);
+        #   uv__run_idle(loop);
+        #   uv__run_prepare(loop);
+        #   ...
+        #   uv__io_poll(loop, timeout);
+
+        # libuv looks something like this (pseudo code because the real code is
+        # hard to read):
+        #
+        # do {
+        #    run_prepare_callbacks();
+        #    timeout = min(time of all timers or normal block time)
+        #    io_poll()
+        #    run_timers()
+        #    run_pending()
+        # }
+
+        # We need to rethink this to get better behaviour. See
+        # test__systemerror:TestCallback for an example of an issue
+        # this reveals. Instead of gevent_noop, we probably need to actually run
+        # callbacks.
+
 
     def _stop_aux_watchers(self):
         libuv.uv_prepare_stop(self._prepare)

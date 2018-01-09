@@ -2,7 +2,7 @@
 """
 Event-loop hub.
 """
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function
 # XXX: FIXME: Refactor to make this smaller
 # pylint:disable=too-many-lines
 from functools import partial as _functools_partial
@@ -644,7 +644,7 @@ class Hub(RawGreenlet):
             :class:`gevent.core.child`, :class:`gevent.core.stat`
 
         """
-        waiter = Waiter()
+        waiter = Waiter(self)
         unique = object()
         watcher.start(waiter.switch, unique)
         try:

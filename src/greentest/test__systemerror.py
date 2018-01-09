@@ -3,7 +3,6 @@ import greentest
 import gevent
 from gevent.hub import get_hub
 
-
 def raise_(ex):
     raise ex
 
@@ -63,18 +62,24 @@ class Test(greentest.TestCase):
 
     def test_exception(self):
         self.start(raise_, Exception('regular exception must not kill the program'))
-        # XXX: libuv: libuv only allows a 0.001 minimum sleep time argument.
-        # If we pass that, sometimes TestCallback finds that the callback has not run
-        # when it tries to tearDown the test. Doubling that actually lets the callback run.
-        # So there's some interaction with minimum timers and the callback timer (?) which
-        # uses a timer of 0, asking to be run immediately on the next loop.
-        gevent.sleep(0.002)
+        gevent.sleep(0.001)
 
 
 class TestCallback(Test):
 
     def tearDown(self):
         if self.x is not None:
+            # XXX: Yield to other greenlets and specifically to other callbacks.
+            # It's possible that our callback from `start` got scheduled
+            # *after* the callback from sleep. Or at least, that's what it looks like.
+            # Only under libuv have we seen test_exception fail with the callback still
+            # pending. Yielding here (or doubling the time of the sleep) solves the issue
+            # and lets the callback run.
+
+            # What's happening is that sleep timer is running before the prepare callback
+            # that normally runs callbacks *sometimes*, depending on timing.
+            # See libuv/loop.py for an explanation.
+            gevent.sleep(0)
             assert not self.x.pending, self.x
 
     def start(self, *args):

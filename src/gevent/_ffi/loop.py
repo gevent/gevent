@@ -341,6 +341,7 @@ class AbstractLoop(object):
         # as quickly as possible.
         # TODO: There may be a more efficient way to do this using ev_timer_again;
         # see the "ev_timer" section of the ev manpage (http://linux.die.net/man/3/ev)
+        # Alternatively, setting the ev maximum block time may also work.
         self._timer0 = self._ffi.new(self._TIMER_POINTER)
         self._init_callback_timer()
 
