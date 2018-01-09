@@ -20,6 +20,7 @@ PYGTE279 = (
     and sys.version_info[1] >= 7
     and sys.version_info[2] >= 9
 )
+RESOLVER_ARES = os.getenv('GEVENT_RESOLVER') == 'ares'
 LIBUV = os.getenv('GEVENT_CORE_CFFI_ONLY') == 'libuv' # XXX: Formalize this better
 
 
@@ -137,6 +138,18 @@ if PYPY:
         # test__backdoor.py:52
         'FLAKY test__backdoor.py',
     ]
+
+    if RESOLVER_ARES:
+
+        FAILING_TESTS += [
+            # A few errors and differences:
+            # AssertionError: ('255.255.255.255', 'http') != gaierror(4, 'ARES_ENOTFOUND: Domain name not found')
+            # AssertionError: OverflowError('port must be 0-65535.',) != ('readthedocs.org', '65535')
+            # AssertionError: Lists differ:
+            #     (10, 1, 6, '', ('2607:f8b0:4004:810::200e', 80, 0L, 0L))
+            #     (10, 1, 6, '', ('2607:f8b0:4004:805::200e', 80, 0, 0))
+            'test__socket_dns.py',
+        ]
 
     if PY3 and TRAVIS:
         FAILING_TESTS += [

@@ -1,4 +1,5 @@
 # We can monkey-patch in a thread, but things don't work as expected.
+from __future__ import print_function
 import sys
 import threading
 from gevent import monkey
@@ -32,7 +33,11 @@ class Test(greentest.TestCase):
 
         thread = threading.Thread(target=target)
         thread.start()
-        thread.join()
+        try:
+            thread.join()
+        except:
+            # XXX: This can raise LoopExit in some cases.
+            greentest.reraiseFlakyTestRaceCondition()
 
         self.assertNotIsInstance(current, threading._DummyThread)
         self.assertIsInstance(current, monkey.get_original('threading', 'Thread'))

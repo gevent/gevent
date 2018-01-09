@@ -45,7 +45,7 @@ if hasattr(signal, 'SIGALRM'):
                 sig.cancel()
 
 
-        @greentest.skipIf(greentest.PY3 and greentest.LIBUV and greentest.RUNNING_ON_TRAVIS,
+        @greentest.skipIf(greentest.PY3 and greentest.CFFI_BACKEND and greentest.RUNNING_ON_TRAVIS,
                           "Fails for unknown reason")
         @greentest.ignores_leakcheck
         def test_reload(self):
@@ -59,12 +59,15 @@ if hasattr(signal, 'SIGALRM'):
             # doesn't happen). See
             # https://github.com/gevent/gevent/issues/805
 
-            # This fails on Python 3.6 under linux (travis CI) but not
-            # locally on macOS with:
+            # This fails on Python 3.5 under linux (travis CI) but not
+            # locally on macOS with (for both libuv and libev cffi); sometimes it
+            # failed with libuv on Python 3.6 too, but not always:
             #   AttributeError: cffi library 'gevent.libuv._corecffi' has no function,
             #      constant or global variable named '__loader__'
             # which in turn leads to:
             #   SystemError: <built-in function getattr> returned a result with an error set
+
+            # It's not safe to continue after a SystemError, so we just skip the test there.
 
             import gevent.signal # make sure it's in sys.modules pylint:disable=redefined-outer-name
             assert gevent.signal

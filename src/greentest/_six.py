@@ -38,3 +38,10 @@ else:
     xrange = builtins.xrange
     string_types = builtins.basestring,
     text_type = builtins.unicode
+
+    exec_("""def reraise(tp, value, tb=None):
+    try:
+        raise tp, value, tb
+    finally:
+        tb = None
+""")

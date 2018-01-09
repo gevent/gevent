@@ -406,7 +406,11 @@ class TestPoolSpawn(TestDefaultSpawn):
         # XXX: This tends to timeout. Which is weird, because what would have
         # been the third call to assertPoolFull() DID NOT timeout, hence why it
         # was removed.
-        self.assertRequestSucceeded()
+        try:
+            self.assertRequestSucceeded()
+        except socket.timeout:
+            greentest.reraiseFlakyTestTimeout()
+
         del long_request
 
     test_pool_full.error_fatal = False

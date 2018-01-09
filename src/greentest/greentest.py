@@ -47,7 +47,7 @@ LINUX = sys.platform.startswith('linux')
 
 # XXX: Formalize this better
 LIBUV = os.getenv('GEVENT_CORE_CFFI_ONLY') == 'libuv' or (PYPY and WIN) or hasattr(gevent.core, 'libuv')
-
+CFFI_BACKEND = bool(os.getenv('GEVENT_CORE_CFFI_ONLY')) or PYPY
 
 if '--debug-greentest' in sys.argv:
     sys.argv.remove('--debug-greentest')
@@ -158,8 +158,47 @@ else:
     skipOnLibuv = _do_not_skip
 
 class ExpectedException(Exception):
-    """An exception whose traceback should be ignored"""
+    """An exception whose traceback should be ignored by the hub"""
 
+
+# The next exceptions allow us to raise them in a highly
+# greppable way so that we can debug them later.
+
+class FlakyTest(unittest.SkipTest):
+    """
+    A unittest exception that causes the test to be skipped when raised.
+
+    Use this carefully, it is a code smell and indicates an undebugged problem.
+    """
+
+class FlakyTestRaceCondition(FlakyTest):
+    """
+    Use this when the flaky test is definitely caused by a race condition.
+    """
+
+class FlakyTestTimeout(FlakyTest):
+    """
+    Use this when the flaky test is definitely caused by an
+    unexpected timeout.
+    """
+
+
+if RUNNING_ON_CI:
+    def reraiseFlakyTestRaceCondition():
+        six.reraise(FlakyTestRaceCondition,
+                    FlakyTestRaceCondition('\n'.join(dump_stacks())),
+                    sys.exc_info()[2])
+
+    def reraiseFlakyTestTimeout():
+        six.reraise(FlakyTestTimeout,
+                    None,
+                    sys.exc_info()[2])
+
+else:
+    def reraiseFlakyTestRaceCondition():
+        six.reraise(*sys.exc_info())
+
+    reraiseFlakyTestTimeout = reraiseFlakyTestRaceCondition
 
 def wrap_switch_count_check(method):
     @wraps(method)
@@ -914,3 +953,41 @@ else:
 
     def getrefcount(*args):
         return sys.getrefcount(*args)
+
+def dump_stacks():
+    """
+    Request information about the running threads of the current process.
+
+    :return: A sequence of text lines detailing the stacks of running
+            threads and greenlets. (One greenlet will duplicate one thread,
+            the current thread and greenlet.)
+    """
+    dump = []
+
+    # threads
+    import threading  # Late import this stuff because it may get monkey-patched
+    import traceback
+    from greenlet import greenlet
+
+    threads = {th.ident: th.name for th in threading.enumerate()}
+
+    for thread, frame in sys._current_frames().items():
+        dump.append('Thread 0x%x (%s)\n' % (thread, threads.get(thread)))
+        dump.append(''.join(traceback.format_stack(frame)))
+        dump.append('\n')
+
+    # greenlets
+
+    # if greenlet is present, let's dump each greenlet stack
+    # Use the gc module to inspect all objects to find the greenlets
+    # since there isn't a global registry
+    for ob in gc.get_objects():
+        if not isinstance(ob, greenlet):
+            continue
+        if not ob:
+            continue  # not running anymore or not started
+        dump.append('Greenlet %s\n' % ob)
+        dump.append(''.join(traceback.format_stack(ob.gr_frame)))
+        dump.append('\n')
+
+    return dump
