@@ -196,7 +196,7 @@ if RUNNING_ON_CI:
 
     def reraiseFlakyTestTimeout():
         six.reraise(FlakyTestTimeout,
-                    None,
+                    FlakyTestTimeout(),
                     sys.exc_info()[2])
 
 else:
