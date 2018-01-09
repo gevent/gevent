@@ -157,6 +157,11 @@ if LIBUV:
 else:
     skipOnLibuv = _do_not_skip
 
+if LIBUV and RUNNING_ON_CI:
+    skipOnLibuvOnCI = unittest.skip
+else:
+    skipOnLibuvOnCI = _do_not_skip
+
 class ExpectedException(Exception):
     """An exception whose traceback should be ignored by the hub"""
 

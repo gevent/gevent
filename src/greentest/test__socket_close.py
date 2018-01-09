@@ -38,6 +38,9 @@ class Test(greentest.TestCase):
         finally:
             receiver.kill()
 
+    # XXX: This is possibly due to the bad behaviour of small sleeps?
+    # The timeout is the global test timeout, 10s
+    @greentest.skipOnLibuvOnCI("Sometimes randomly times out")
     def test_recv_twice(self):
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         sock.connect(('localhost', self.server.server_port))

@@ -57,16 +57,18 @@ class Test(greentest.TestCase):
     def test_system_error(self):
         self.start(raise_, SystemError(MSG))
 
-        try:
-            gevent.sleep(0.001)
-        except SystemError as ex:
-            assert str(ex) == MSG, repr(str(ex))
-        else:
-            raise AssertionError('must raise SystemError')
+        with self.assertRaisesRegex(SystemError,
+                                    MSG):
+            gevent.sleep(0.002)
 
     def test_exception(self):
         self.start(raise_, Exception('regular exception must not kill the program'))
-        gevent.sleep(0.001)
+        # XXX: libuv: libuv only allows a 0.001 minimum sleep time argument.
+        # If we pass that, sometimes TestCallback finds that the callback has not run
+        # when it tries to tearDown the test. Doubling that actually lets the callback run.
+        # So there's some interaction with minimum timers and the callback timer (?) which
+        # uses a timer of 0, asking to be run immediately on the next loop.
+        gevent.sleep(0.002)
 
 
 class TestCallback(Test):
