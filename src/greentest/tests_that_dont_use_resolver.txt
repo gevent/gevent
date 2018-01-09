@@ -68,6 +68,46 @@ test__threading_vs_settrace.py
 test__threadpool.py
 test__timeout.py
 
+test__compat.py
+test__core_fork.py
+test__doctests.py
+test__core_loop_run_sig_mod.py
+test__execmodules.py
+test__greenio.py
+test__greenness.py
+test__hub.py
+test__import_blocking_in_greenlet.py
+test__import_wait.py
+test__issue230.py
+test__issue302monkey.py
+test__issue330.py
+test__issue467.py
+test__issue6.py
+test__issue600.py
+test__issue607.py
+test__issue461_471.py
+test__monkey_builtins_future.py
+test__monkey_hub_in_thread.py
+test__monkey_logging.py
+test__monkey_multiple_imports.py
+test__monkey_scope.py
+test__monkey_selectors.py
+test__monkey_sigchld.py
+test__monkey_sigchld_2.py
+test__nondefaultloop.py
+test__monkey_sigchld_3.py
+test__real_greenlet.py
+test__refcount.py
+test__sleep0.py
+test__subprocess_poll.py
+test__threading.py
+test__threading_before_monkey.py
+test__threading_holding_lock_while_monkey.py
+test__threading_monkey_in_thread.py
+test__threading_native_before_monkey.py
+test__threadpool_executor_patched.py
+
+
 # monkey patched standard tests:
 test_queue.py
 test_select.py
@@ -76,3 +116,10 @@ test_subprocess.py
 test_threading_local.py
 test_threading.py
 test_thread.py
+test_selectors.py
+test_timeout.py
+
+# test_asyncore probably does use the resolver, but only
+# implicitly for localhost, which is covered well enough
+# elsewhere that we don't need to spend the 20s (*2)
+test_asyncore.py

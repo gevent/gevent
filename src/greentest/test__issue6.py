@@ -10,8 +10,11 @@ if not sys.argv[1:]:
     assert out.strip() == b'11 chars.', (out, err, code)
     # XXX: This is seen sometimes to fail on Travis with the following value in err but a code of 0;
     # it seems load related:
-    #  'Unhandled exception in thread started by \nsys.excepthook is missing\nlost sys.stderr\n'
-    assert err == b'', (out, err, code)
+    #  'Unhandled exception in thread started by \nsys.excepthook is missing\nlost sys.stderr\n'.
+    # If warnings are enabled, Python 3 has started producing this:
+    # '...importlib/_bootstrap.py:219: ImportWarning: can't resolve package from __spec__
+    #    or __package__, falling back on __name__ and __path__\n  return f(*args, **kwds)\n'
+    assert err == b'' or b'sys.excepthook' in err or b'ImportWarning' in err, (out, err, code)
 
 elif sys.argv[1:] == ['subprocess']:
     import gevent

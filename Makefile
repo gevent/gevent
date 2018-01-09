@@ -85,6 +85,14 @@ basictest: test_prelim
 
 alltest: basictest
 	cd src/greentest && GEVENT_RESOLVER=ares GEVENTARES_SERVERS=8.8.8.8 ${PYTHON} testrunner.py --config known_failures.py --ignore tests_that_dont_use_resolver.txt --quiet
+# In the past, we included all test files that had a reference to 'subprocess'' somewhere in their
+# text. The monkey-patched stdlib tests were specifically included here.
+# However, we now always also test on AppVeyor (Windows) which only has GEVENT_FILE=thread,
+# so we can save a lot of CI time by reducing the set and excluding the stdlib tests without
+# losing any coverage. See the `threadfiletest` for what command used to run.
+	cd src/greentest && GEVENT_FILE=thread ${PYTHON} testrunner.py --config known_failures.py test__*subprocess*.py --quiet
+
+threadfiletest:
 	cd src/greentest && GEVENT_FILE=thread ${PYTHON} testrunner.py --config known_failures.py `grep -l subprocess test_*.py` --quiet
 
 allbackendtest:
