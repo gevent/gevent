@@ -10,9 +10,6 @@ env:
     matrix:
       # These are ordered to get as much diversity in the
       # first group of parallel runs (4) as posible
-      - TASK=test-py27-libuv
-      - TASK=test-py36-libuv
-      - TASK=test-pypy-libuv
       - TASK=test-py27-noembed
       - TASK=test-pypy
       - TASK=test-py36
@@ -23,7 +20,6 @@ env:
       - TASK=test-py278
       - TASK=test-py27
       - TASK=test-py34
-      - TASK=test-py27-cffi
 
 matrix:
   fast_finish: true

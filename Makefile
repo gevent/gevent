@@ -77,20 +77,23 @@ test_prelim:
 	${PYTHON} --version
 	${PYTHON} -c 'import greenlet; print(greenlet, greenlet.__version__)'
 	${PYTHON} -c 'import gevent.core; print(gevent.core.loop)'
-	${PYTHON} -c 'import gevent.libuv.corecffi; print(dir(gevent.libuv.corecffi.libuv))'
 	${PYTHON} -c 'import gevent.ares; print(gevent.ares)'
 	make bench
 
-toxtest: test_prelim
+basictest: test_prelim
 	cd src/greentest && GEVENT_RESOLVER=thread ${PYTHON} testrunner.py --config known_failures.py --quiet
 
-fulltoxtest: test_prelim
-	cd src/greentest && GEVENT_RESOLVER=thread ${PYTHON} testrunner.py --config known_failures.py --quiet
+alltest: basictest
 	cd src/greentest && GEVENT_RESOLVER=ares GEVENTARES_SERVERS=8.8.8.8 ${PYTHON} testrunner.py --config known_failures.py --ignore tests_that_dont_use_resolver.txt --quiet
 	cd src/greentest && GEVENT_FILE=thread ${PYTHON} testrunner.py --config known_failures.py `grep -l subprocess test_*.py` --quiet
 
+allbackendtest:
+	GEVENT_CORE_CFFI_ONLY= make alltest
+	GEVENT_CORE_CFFI_ONLY=libev make alltest
+	GEVENT_CORE_CFFI_ONLY=libuv make alltest
+
 leaktest:
-	GEVENTSETUP_EV_VERIFY=3 GEVENTTEST_LEAKCHECK=1 make fulltoxtest
+	GEVENTSETUP_EV_VERIFY=3 GEVENTTEST_LEAKCHECK=1 make alltest
 
 bench:
 	${PYTHON} src/greentest/bench_sendall.py
@@ -172,44 +175,32 @@ lint-py27: $(PY27)
 	PYTHON=python2.7.14 PATH=$(BUILD_RUNTIMES)/versions/python2.7.14/bin:$(PATH) make develop travis_test_linters
 
 test-py27: $(PY27)
-	PYTHON=python2.7.14 PATH=$(BUILD_RUNTIMES)/versions/python2.7.14/bin:$(PATH) make develop fulltoxtest
+	PYTHON=python2.7.14 PATH=$(BUILD_RUNTIMES)/versions/python2.7.14/bin:$(PATH) make develop allbackendtest
 
 test-py278: $(PY278)
 	ls $(BUILD_RUNTIMES)/versions/python2.7.8/bin/
-	PYTHON=python2.7.8 PATH=$(BUILD_RUNTIMES)/versions/python2.7.8/bin:$(PATH) make develop toxtest
+	PYTHON=python2.7.8 PATH=$(BUILD_RUNTIMES)/versions/python2.7.8/bin:$(PATH) make develop basictest
 
 test-py34: $(PY34)
-	PYTHON=python3.4.7 PATH=$(BUILD_RUNTIMES)/versions/python3.4.7/bin:$(PATH) make develop toxtest
+	PYTHON=python3.4.7 PATH=$(BUILD_RUNTIMES)/versions/python3.4.7/bin:$(PATH) make develop allbackendtest
 
 test-py35: $(PY35)
-	PYTHON=python3.5.4 PATH=$(BUILD_RUNTIMES)/versions/python3.5.4/bin:$(PATH) make develop fulltoxtest
+	PYTHON=python3.5.4 PATH=$(BUILD_RUNTIMES)/versions/python3.5.4/bin:$(PATH) make develop allbackendtest
 
 test-py36: $(PY36)
-	PYTHON=python3.6.3 PATH=$(BUILD_RUNTIMES)/versions/python3.6.3/bin:$(PATH) make develop toxtest
+	PYTHON=python3.6.3 PATH=$(BUILD_RUNTIMES)/versions/python3.6.3/bin:$(PATH) make develop allbackendtest
 
 test-py37: $(PY37)
-	PYTHON=python3.7.0a3 PATH=$(BUILD_RUNTIMES)/versions/python3.7.0a3/bin:$(PATH) make develop toxtest
-
-test-py36-libuv: $(PY36)
-	GEVENT_CORE_CFFI_ONLY=libuv make test-py36
+	PYTHON=python3.7.0a3 PATH=$(BUILD_RUNTIMES)/versions/python3.7.0a3/bin:$(PATH) make develop allbackendtest
 
 test-pypy: $(PYPY)
-	PYTHON=$(PYPY) PATH=$(BUILD_RUNTIMES)/versions/pypy590/bin:$(PATH) make develop toxtest
-
-test-pypy-libuv: $(PYPY)
-	GEVENT_CORE_CFFI_ONLY=libuv make test-pypy
+	PYTHON=$(PYPY) PATH=$(BUILD_RUNTIMES)/versions/pypy590/bin:$(PATH) make develop allbackendtest
 
 test-pypy3: $(PYPY3)
-	PYTHON=$(PYPY3) PATH=$(BUILD_RUNTIMES)/versions/pypy3.5_590/bin:$(PATH) make develop toxtest
-
-test-py27-cffi: $(PY27)
-	GEVENT_CORE_CFFI_ONLY=1 PYTHON=python2.7.14 PATH=$(BUILD_RUNTIMES)/versions/python2.7.14/bin:$(PATH) make develop toxtest
-
-test-py27-libuv: $(PY27)
-	GEVENT_CORE_CFFI_ONLY=libuv make test-py27
+	PYTHON=$(PYPY3) PATH=$(BUILD_RUNTIMES)/versions/pypy3.5_590/bin:$(PATH) make develop basictest
 
 test-py27-noembed: $(PY27)
 	cd deps/libev && ./configure --disable-dependency-tracking && make
 	cd deps/c-ares && ./configure --disable-dependency-tracking && make
 	cd deps/libuv && ./autogen.sh && ./configure --disable-static && make
-	CPPFLAGS="-Ideps/libev -Ideps/c-ares -Ideps/libuv/include" LDFLAGS="-Ldeps/libev/.libs -Ldeps/c-ares/.libs -Ldeps/libuv/.libs" LD_LIBRARY_PATH="$(PWD)/deps/libev/.libs:$(PWD)/deps/c-ares/.libs:$(PWD)/deps/libuv/.libs" EMBED=0 GEVENT_CORE_CEXT_ONLY=1 PYTHON=python2.7.14 PATH=$(BUILD_RUNTIMES)/versions/python2.7.14/bin:$(PATH) make develop toxtest
+	CPPFLAGS="-Ideps/libev -Ideps/c-ares -Ideps/libuv/include" LDFLAGS="-Ldeps/libev/.libs -Ldeps/c-ares/.libs -Ldeps/libuv/.libs" LD_LIBRARY_PATH="$(PWD)/deps/libev/.libs:$(PWD)/deps/c-ares/.libs:$(PWD)/deps/libuv/.libs" EMBED=0 GEVENT_CORE_CEXT_ONLY=1 PYTHON=python2.7.14 PATH=$(BUILD_RUNTIMES)/versions/python2.7.14/bin:$(PATH) make develop basictest
