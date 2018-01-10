@@ -46,7 +46,7 @@ if hasattr(signal, 'SIGALRM'):
                 sig.cancel()
 
 
-        @greentest.skipIf(greentest.PY3 and greentest.CFFI_BACKEND,
+        @greentest.skipIf(greentest.PY3 and greentest.CFFI_BACKEND and greentest.RUNNING_ON_CI,
                           "https://bitbucket.org/cffi/cffi/issues/352/systemerror-returned-a-result-with-an")
         @greentest.ignores_leakcheck
         def test_reload(self):
@@ -90,9 +90,15 @@ if hasattr(signal, 'SIGALRM'):
                 reload_module(site)
             except TypeError:
                 # Non-CFFI on Travis triggers this, for some reason,
-                # but only on 3.6, not 3.4 or 3.5, and not yet on 3.7
+                # but only on 3.6, not 3.4 or 3.5, and not yet on 3.7.
+
+                # The only module seen to trigger this is __main__, i.e., this module.
+
+                # This is hard to trigger in a virtualenv since it appears they
+                # install their own site.py, different from the one that ships with
+                # Python 3.6., and at least the version I have doesn't mess with
+                # __cached__
                 assert greentest.PY36
-                assert greentest.RUNNING_ON_CI
                 import sys
                 for m in set(sys.modules.values()):
                     try:

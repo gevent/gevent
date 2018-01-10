@@ -18,6 +18,11 @@ try:
     import _testcapi
 except ImportError:
     _testcapi = None
+except:
+    # gevent: a distutils.errors.LinkError is sometimes raised.
+    # It appears that it happens during concurrent test runs;
+    # some lib_pypy/_testcapimodule.o file is truncated
+    _testcapi = None
 
 import lock_tests # gevent: use local copy
 
