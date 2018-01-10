@@ -271,7 +271,8 @@ class Test(greentest.TestCase):
         self.assertIsInstance(stdout, kind)
         self.assertIsNone(stderr)
 
-
+    @greentest.skipOnLibuvOnCIOnPyPy("Sometimes segfaults; "
+                                     "https://travis-ci.org/gevent/gevent/jobs/327357682")
     def test_universal_newlines_text_mode_no_output_is_always_str(self):
         # If the file is in universal_newlines mode, we should always get a str when
         # there is no output.

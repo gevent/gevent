@@ -448,6 +448,10 @@ class TestSSL(Test):
         finally:
             self.__cleanup(t, listener, connector)
 
+    @greentest.skipIf(greentest.RUNNING_ON_TRAVIS and greentest.PY37 and greentest.LIBUV,
+                      "Often segfaults, cannot reproduce locally. "
+                      "Not too worried about this before Python 3.7rc1. "
+                      "https://travis-ci.org/gevent/gevent/jobs/327357684")
     def test_serverssl_makefile2(self):
         listener = socket.socket()
         listener.bind(('127.0.0.1', 0))
