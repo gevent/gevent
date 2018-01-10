@@ -13,6 +13,8 @@ import os
 # import platform
 import re
 
+# XXX: These are mainly repeats of what's in greentest. Extract these to a common module.
+
 TRAVIS = os.environ.get("TRAVIS") == "true"
 APPVEYOR = os.environ.get('APPVEYOR')
 OSX = sys.platform == 'darwin'
@@ -335,6 +337,17 @@ if LIBUV:
 
                 disabled_tests += [
                 ]
+
+    if PYPY:
+
+        if TRAVIS:
+
+            disabled_tests += [
+                # This sometimes causes a segfault for no apparent reason.
+                # See https://travis-ci.org/gevent/gevent/jobs/327328704
+                # Can't reproduce locally.
+                'test_subprocess.ProcessTestCase.test_universal_newlines_communicate',
+            ]
 
 def _make_run_with_original(mod_name, func_name):
     @contextlib.contextmanager

@@ -152,15 +152,17 @@ skipIf = unittest.skipIf
 
 EXPECT_POOR_TIMER_RESOLUTION = PYPY3 or RUNNING_ON_APPVEYOR
 
+skipOnLibuv = _do_not_skip
+skipOnLibuvOnCI = _do_not_skip
+skipOnLibuvOnCIOnPyPy = _do_not_skip
+
 if LIBUV:
     skipOnLibuv = unittest.skip
-else:
-    skipOnLibuv = _do_not_skip
 
-if LIBUV and RUNNING_ON_CI:
-    skipOnLibuvOnCI = unittest.skip
-else:
-    skipOnLibuvOnCI = _do_not_skip
+    if RUNNING_ON_CI:
+        skipOnLibuvOnCI = unittest.skip
+        if PYPY:
+            skipOnLibuvOnCIOnPyPy = unittest.skip
 
 class ExpectedException(Exception):
     """An exception whose traceback should be ignored by the hub"""

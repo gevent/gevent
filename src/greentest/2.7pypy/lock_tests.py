@@ -418,7 +418,11 @@ class ConditionTests(BaseTestCase):
         Bunch(f, N).wait_for_finished()
         self.assertEqual(len(results), 5)
         for dt in results:
-            self.assertTrue(dt >= 0.2, dt)
+            #self.assertTrue(dt >= 0.2, dt)
+            # gevent: With libuv, timers are slightly variable
+            # (and coalesce?). Sometimes the sleep is
+            # 0.00004 less than expected, e.g., 0.199996
+            self.assertTrue(dt >= 0.18, dt)
 
 
 class BaseSemaphoreTests(BaseTestCase):

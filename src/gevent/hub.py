@@ -405,6 +405,12 @@ def _import(path):
         raise ImportError("Cannot import %r (required format: [path/][package.]module.class)" % path)
 
     if '/' in path:
+        # This is dangerous, subject to race conditions, and
+        # may not work properly for things like namespace packages
+        import warnings
+        warnings.warn("Absolute paths are deprecated. Please put the package "
+                      "on sys.path first",
+                      DeprecationWarning)
         package_path, path = path.rsplit('/', 1)
         sys.path = [package_path] + sys.path
     else:
@@ -420,10 +426,11 @@ def _import(path):
                 raise ImportError('Cannot import %r from %r' % (attr, oldx))
         return x
     finally:
-        try:
-            sys.path.remove(package_path)
-        except ValueError:
-            pass
+        if '/' in path:
+            try:
+                sys.path.remove(package_path)
+            except ValueError:
+                pass
 
 
 def config(default, envvar):

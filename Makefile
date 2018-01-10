@@ -127,7 +127,7 @@ PY278=$(BUILD_RUNTIMES)/snakepit/python2.7.8
 PY27=$(BUILD_RUNTIMES)/snakepit/python2.7.14
 PY34=$(BUILD_RUNTIMES)/snakepit/python3.4.7
 PY35=$(BUILD_RUNTIMES)/snakepit/python3.5.4
-PY36=$(BUILD_RUNTIMES)/snakepit/python3.6.3
+PY36=$(BUILD_RUNTIMES)/snakepit/python3.6.4
 PY37=$(BUILD_RUNTIMES)/snakepit/python3.7.0a3
 PYPY=$(BUILD_RUNTIMES)/snakepit/pypy590
 PYPY3=$(BUILD_RUNTIMES)/snakepit/pypy3.5_590
@@ -196,9 +196,13 @@ test-py35: $(PY35)
 	PYTHON=python3.5.4 PATH=$(BUILD_RUNTIMES)/versions/python3.5.4/bin:$(PATH) make develop allbackendtest
 
 test-py36: $(PY36)
-	PYTHON=python3.6.3 PATH=$(BUILD_RUNTIMES)/versions/python3.6.3/bin:$(PATH) make develop allbackendtest
+	PYTHON=python3.6.4 PATH=$(BUILD_RUNTIMES)/versions/python3.6.4/bin:$(PATH) make develop allbackendtest
 
 test-py37: $(PY37)
+# Locally I could produce odd failures with a miscompiled cffi. compiling from scratch with -g
+# and no opts fixed it. This shouldn't be necessary post release. One hopes.
+	PYTHON=python3.7.0a3 PATH=$(BUILD_RUNTIMES)/versions/python3.7.0a3/bin:$(PATH) python -m pip uninstall -y cffi
+	CFLAGS=-g PYTHON=python3.7.0a3 PATH=$(BUILD_RUNTIMES)/versions/python3.7.0a3/bin:$(PATH) python -m pip install -v -U --no-binary cffi cffi
 	PYTHON=python3.7.0a3 PATH=$(BUILD_RUNTIMES)/versions/python3.7.0a3/bin:$(PATH) make develop allbackendtest
 
 test-pypy: $(PYPY)

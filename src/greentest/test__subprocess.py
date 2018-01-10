@@ -88,6 +88,7 @@ class Test(greentest.TestCase):
 
     @greentest.skipIf(subprocess.mswindows,
                       "Windows does weird things here")
+    @greentest.skipOnLibuvOnCIOnPyPy("Sometimes segfaults")
     def test_communicate_universal(self):
         # Native string all the things. See https://github.com/gevent/gevent/issues/1039
         p = subprocess.Popen(
