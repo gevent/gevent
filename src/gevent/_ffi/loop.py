@@ -381,7 +381,9 @@ class AbstractLoop(object):
         # work to rethrow the exception is done by the onerror callback
         pass
 
-    def _run_callbacks(self, *args):
+    def _run_callbacks(self, *_args):
+        # libuv and libev have different signatures for their prepare/check/timer
+        # watchers, which is what calls this. We should probably have different methods.
         count = 1000
         self._stop_callback_timer()
         while self._callbacks and count > 0:

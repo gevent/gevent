@@ -10,7 +10,7 @@ from collections import namedtuple
 from operator import delitem
 import signal
 
-
+from gevent._ffi import _dbg # pylint: disable=unused-import
 from gevent._compat import PYPY
 from gevent._ffi.loop import AbstractLoop
 from gevent.libuv import _corecffi # pylint:disable=no-name-in-module,import-error
@@ -76,7 +76,7 @@ class loop(AbstractLoop):
     _PREPARE_POINTER = 'uv_prepare_t *'
     _PREPARE_CALLBACK_SIG = "void(*)(void*)"
 
-    _TIMER_POINTER = 'uv_timer_t *'
+    _TIMER_POINTER = _CHECK_POINTER # This is poorly named. It's for the callback "timer"
 
     def __init__(self, flags=None, default=None):
         AbstractLoop.__init__(self, ffi, libuv, _watchers, flags, default)
@@ -120,7 +120,8 @@ class loop(AbstractLoop):
         # watchers, effectively.
 
         # XXX: Perhaps we could optimize this to notice when there are other
-        # timers in the loop and start/stop it then
+        # timers in the loop and start/stop it then. When we have a callback
+        # scheduled, this should also be the same and unnecessary?
         self._signal_idle = ffi.new("uv_timer_t*")
         libuv.uv_timer_init(self._ptr, self._signal_idle)
         libuv.uv_timer_start(self._signal_idle, self._check_callback_ffi,
@@ -128,14 +129,14 @@ class loop(AbstractLoop):
                              1000)
         libuv.uv_unref(self._signal_idle)
 
-    def _run_callbacks(self, *args):
+    def _run_callbacks(self, handle): # pylint:disable=arguments-differ
         # Manually handle fork watchers.
         curpid = os.getpid()
         if curpid != self._pid:
             self._pid = curpid
             for watcher in self._fork_watchers:
                 watcher._on_fork()
-        super(loop, self)._run_callbacks(*args)
+        super(loop, self)._run_callbacks(handle)
 
     def _init_and_start_prepare(self):
         libuv.uv_prepare_init(self._ptr, self._prepare)
@@ -143,22 +144,27 @@ class loop(AbstractLoop):
         libuv.uv_unref(self._prepare)
 
     def _init_callback_timer(self):
-        libuv.uv_timer_init(self._ptr, self._timer0)
+        libuv.uv_check_init(self._ptr, self._timer0)
 
     def _stop_callback_timer(self):
-        libuv.uv_timer_stop(self._timer0)
+        libuv.uv_check_stop(self._timer0)
 
     def _start_callback_timer(self):
-        libuv.uv_timer_start(self._timer0, libuv.gevent_noop, 0, 0)
-        # XXX: The purpose of the callback timer is to ensure that we run
+        # The purpose of the callback timer is to ensure that we run
         # callbacks as soon as possible on the next iteration of the event loop.
-        # In libev, a 0 timer expires *after* the IO poll is done (it actually
-        # determines the time that the IO poll will block for), so
-        # having the timer present simply spins the loop, and our normal
-        # prepare watcher kicks in to run the callbacks.
 
-        # In libuv, however, timers are run *first*, before prepare callbacks
-        # and before polling for IO. So this 0 time timer actually does *nothing*.
+        # In libev, we set a 0 duration timer with a no-op callback.
+        # This executes immediately *after* the IO poll is done (it
+        # actually determines the time that the IO poll will block
+        # for), so having the timer present simply spins the loop, and
+        # our normal prepare watcher kicks in to run the callbacks.
+
+        # In libuv, however, timers are run *first*, before prepare
+        # callbacks and before polling for IO. So a no-op 0 duration
+        # timer actually does *nothing*. (Also note that libev queues all
+        # watchers found during IO poll to run at the end (I think), while libuv
+        # runs them in uv__io_poll itself.)
+
         # From the loop inside uv_run:
         # while True:
         #   uv__run_timers(loop);
@@ -167,6 +173,7 @@ class loop(AbstractLoop):
         #   uv__run_prepare(loop);
         #   ...
         #   uv__io_poll(loop, timeout);
+        #   uv__run_check(loop);
 
         # libuv looks something like this (pseudo code because the real code is
         # hard to read):
@@ -179,10 +186,18 @@ class loop(AbstractLoop):
         #    run_pending()
         # }
 
-        # We need to rethink this to get better behaviour. See
-        # test__systemerror:TestCallback for an example of an issue
-        # this reveals. Instead of gevent_noop, we probably need to actually run
-        # callbacks.
+        # So instead of running a no-op and letting the side-effect of spinning
+        # the loop run the callbacks, we must explicitly run them here.
+
+        # If we don't, test__systemerror:TestCallback will be flaky, failing
+        # one time out of ~20, depending on timing.
+
+        # To get them to run immediately after this current loop,
+        # we use a check watcher, instead of a 0 duration timer entirely.
+        # If we use a 0 duration timer, we can get stuck in a timer loop.
+        # Python 3.6 fails in test_ftplib.py
+
+        libuv.uv_check_start(self._timer0, self._prepare_callback_ffi)
 
 
     def _stop_aux_watchers(self):

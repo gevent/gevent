@@ -1,3 +1,4 @@
+from __future__ import print_function
 import signal
 import greentest
 import gevent
@@ -45,8 +46,8 @@ if hasattr(signal, 'SIGALRM'):
                 sig.cancel()
 
 
-        @greentest.skipIf(greentest.PY3 and greentest.CFFI_BACKEND and greentest.RUNNING_ON_TRAVIS,
-                          "Fails for unknown reason")
+        @greentest.skipIf(greentest.PY3 and greentest.CFFI_BACKEND,
+                          "https://bitbucket.org/cffi/cffi/issues/352/systemerror-returned-a-result-with-an")
         @greentest.ignores_leakcheck
         def test_reload(self):
             # The site module tries to set attributes
@@ -69,6 +70,11 @@ if hasattr(signal, 'SIGALRM'):
 
             # It's not safe to continue after a SystemError, so we just skip the test there.
 
+            # As of Jan 2018 with CFFI 1.11.2 this happens reliably on macOS 3.6 and 3.7
+            # as well.
+
+            # See https://bitbucket.org/cffi/cffi/issues/352/systemerror-returned-a-result-with-an
+
             import gevent.signal # make sure it's in sys.modules pylint:disable=redefined-outer-name
             assert gevent.signal
             import site
@@ -83,13 +89,15 @@ if hasattr(signal, 'SIGALRM'):
             try:
                 reload_module(site)
             except TypeError:
+                # Non-CFFI on Travis triggers this, for some reason,
+                # but only on 3.6, not 3.4 or 3.5, and not yet on 3.7
                 assert greentest.PY36
                 assert greentest.RUNNING_ON_CI
                 import sys
                 for m in set(sys.modules.values()):
                     try:
                         if m.__cached__ is None:
-                            print("Module has None __cached__", m)
+                            print("Module has None __cached__", m, file=sys.stderr)
                     except AttributeError:
                         continue
 

@@ -69,17 +69,10 @@ class TestCallback(Test):
 
     def tearDown(self):
         if self.x is not None:
-            # XXX: Yield to other greenlets and specifically to other callbacks.
-            # It's possible that our callback from `start` got scheduled
-            # *after* the callback from sleep. Or at least, that's what it looks like.
-            # Only under libuv have we seen test_exception fail with the callback still
-            # pending. Yielding here (or doubling the time of the sleep) solves the issue
-            # and lets the callback run.
-
-            # What's happening is that sleep timer is running before the prepare callback
-            # that normally runs callbacks *sometimes*, depending on timing.
-            # See libuv/loop.py for an explanation.
-            gevent.sleep(0)
+            # libuv: See the notes in libuv/loop.py:loop._start_callback_timer
+            # If that's broken, test_exception can fail sporadically.
+            # If the issue is the same, then adding `gevent.sleep(0)` here
+            # will solve it.
             assert not self.x.pending, self.x
 
     def start(self, *args):
