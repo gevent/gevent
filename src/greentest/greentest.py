@@ -192,8 +192,15 @@ class FlakyTestTimeout(FlakyTest):
     unexpected timeout.
     """
 
+def reraiseFlakyTestRaceCondition():
+    six.reraise(*sys.exc_info())
+
+reraiseFlakyTestTimeout = reraiseFlakyTestRaceCondition
+reraiseFlakyTestRaceConditionLibuv = reraiseFlakyTestRaceCondition
+reraiseFlakyTestTimeoutLibuv = reraiseFlakyTestRaceCondition
 
 if RUNNING_ON_CI:
+    # pylint: disable=function-redefined
     def reraiseFlakyTestRaceCondition():
         six.reraise(FlakyTestRaceCondition,
                     FlakyTestRaceCondition('\n'.join(dump_stacks())),
@@ -204,11 +211,10 @@ if RUNNING_ON_CI:
                     FlakyTestTimeout(),
                     sys.exc_info()[2])
 
-else:
-    def reraiseFlakyTestRaceCondition():
-        six.reraise(*sys.exc_info())
+    if LIBUV:
+        reraiseFlakyTestRaceConditionLibuv = reraiseFlakyTestRaceCondition
+        reraiseFlakyTestTimeoutLibuv = reraiseFlakyTestTimeout
 
-    reraiseFlakyTestTimeout = reraiseFlakyTestRaceCondition
 
 def wrap_switch_count_check(method):
     @wraps(method)

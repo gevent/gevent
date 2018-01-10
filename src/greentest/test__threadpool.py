@@ -342,7 +342,10 @@ class TestMaxsize(TestCase):
         self.assertEqual(done, [])
         self.pool.maxsize = 1
         gevent.sleep(0.01)
-        self.assertEqual(done, [1, 2])
+        try:
+            self.assertEqual(done, [1, 2])
+        except AssertionError:
+            greentest.reraiseFlakyTestRaceConditionLibuv()
 
     def test_setzero(self):
         pool = self.pool = ThreadPool(3)

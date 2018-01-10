@@ -93,10 +93,8 @@ class TestCoroutinePool(unittest.TestCase):
         pool.apply_async(evt.set)
         evt.wait()
 
+    @greentest.skipOnPyPy("Does not work on PyPy") # Why?
     def test_stderr_raising(self):
-        if greentest.PYPY:
-            # Does not work on PyPy
-            return
         # testing that really egregious errors in the error handling code
         # (that prints tracebacks to stderr) don't cause the pool to lose
         # any members
@@ -301,7 +299,7 @@ TIMEOUT1, TIMEOUT2, TIMEOUT3 = 0.082, 0.035, 0.14
 
 
 class TestPool(greentest.TestCase):
-    __timeout__ = 5 if not greentest.RUNNING_ON_APPVEYOR else 20
+    __timeout__ = max(greentest.TestCase.__timeout__, 5)
     size = 1
 
     def setUp(self):

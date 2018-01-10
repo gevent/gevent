@@ -295,7 +295,12 @@ class EventTests(BaseTestCase):
         self.assertEqual(results1, [False] * N)
         for r, dt in results2:
             self.assertFalse(r)
-            self.assertTrue(dt >= 0.2, dt)
+            #self.assertTrue(dt >= 0.2, dt)
+            # gevent: With libuv, timers are slightly variable
+            # (and coalesce?). Sometimes the sleep is
+            # 0.00004 less than expected, e.g., 0.199996
+            self.assertTrue(dt >= 0.18, dt)
+
         # The event is set
         results1 = []
         results2 = []
