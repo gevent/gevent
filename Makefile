@@ -97,6 +97,9 @@ threadfiletest:
 
 allbackendtest:
 	GEVENT_CORE_CFFI_ONLY= make alltest
+	make cffibackendtest
+
+cffibackendtest:
 	GEVENT_CORE_CFFI_ONLY=libev make alltest
 	GEVENT_CORE_CFFI_ONLY=libuv make alltest
 
@@ -202,7 +205,7 @@ test-py37: $(PY37)
 	PYTHON=python3.7.0a3 PATH=$(BUILD_RUNTIMES)/versions/python3.7.0a3/bin:$(PATH) make develop allbackendtest
 
 test-pypy: $(PYPY)
-	PYTHON=$(PYPY) PATH=$(BUILD_RUNTIMES)/versions/pypy590/bin:$(PATH) make develop allbackendtest
+	PYTHON=$(PYPY) PATH=$(BUILD_RUNTIMES)/versions/pypy590/bin:$(PATH) make develop cffibackendtest
 
 test-pypy3: $(PYPY3)
 	PYTHON=$(PYPY3) PATH=$(BUILD_RUNTIMES)/versions/pypy3.5_590/bin:$(PATH) make develop basictest
