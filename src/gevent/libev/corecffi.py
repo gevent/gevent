@@ -42,9 +42,23 @@ else:
 #####
 
 
-
+from gevent._ffi.loop import AbstractCallbacks
 from gevent._ffi.loop import assign_standard_callbacks
-_callbacks = assign_standard_callbacks(ffi, libev)
+
+class _Callbacks(AbstractCallbacks):
+    # pylint:disable=arguments-differ
+
+    def python_check_callback(self, _loop, watcher_ptr, _events):
+        pass
+
+    def python_prepare_callback(self, _loop_ptr, watcher_ptr, _events):
+        AbstractCallbacks.python_prepare_callback(self, watcher_ptr)
+
+    def _find_loop_from_c_watcher(self, watcher_ptr):
+        loop_handle = ffi.cast('struct ev_watcher*', watcher_ptr).data
+        return self.from_handle(loop_handle)
+
+_callbacks = assign_standard_callbacks(ffi, libev, _Callbacks)
 
 
 UNDEF = libev.EV_UNDEF
@@ -206,10 +220,8 @@ class loop(AbstractLoop):
     error_handler = None
 
     _CHECK_POINTER = 'struct ev_check *'
-    _CHECK_CALLBACK_SIG = "void(*)(struct ev_loop *, void*, int)"
 
     _PREPARE_POINTER = 'struct ev_prepare *'
-    _PREPARE_CALLBACK_SIG = "void(*)(struct ev_loop *, void*, int)"
 
     _TIMER_POINTER = 'struct ev_timer *'
 
@@ -240,12 +252,13 @@ class loop(AbstractLoop):
         return ptr
 
     def _init_and_start_check(self):
-        libev.ev_check_init(self._check, self._check_callback_ffi)
+        libev.ev_check_init(self._check, libev.python_check_callback)
+        self._check.data = self._handle_to_self
         libev.ev_check_start(self._ptr, self._check)
         self.unref()
 
     def _init_and_start_prepare(self):
-        libev.ev_prepare_init(self._prepare, self._prepare_callback_ffi)
+        libev.ev_prepare_init(self._prepare, libev.python_prepare_callback)
         libev.ev_prepare_start(self._ptr, self._prepare)
         self.unref()
 
@@ -376,7 +389,7 @@ class loop(AbstractLoop):
         return self._ptr.activecnt
 
 
-
+@ffi.def_extern()
 def _syserr_cb(msg):
     try:
         msg = ffi.string(msg)
@@ -385,8 +398,6 @@ def _syserr_cb(msg):
         set_syserr_cb(None)
         raise  # let cffi print the traceback
 
-_syserr_cb._cb = ffi.callback("void(*)(char *msg)", _syserr_cb)
-
 
 def set_syserr_cb(callback):
     global __SYSERR_CALLBACK
@@ -394,7 +405,7 @@ def set_syserr_cb(callback):
         libev.ev_set_syserr_cb(ffi.NULL)
         __SYSERR_CALLBACK = None
     elif callable(callback):
-        libev.ev_set_syserr_cb(_syserr_cb._cb)
+        libev.ev_set_syserr_cb(libev._syserr_cb)
         __SYSERR_CALLBACK = callback
     else:
         raise TypeError('Expected callable or None, got %r' % (callback, ))

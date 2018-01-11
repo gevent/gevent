@@ -15,6 +15,7 @@ from gevent._compat import PYPY
 from gevent._ffi.loop import AbstractLoop
 from gevent.libuv import _corecffi # pylint:disable=no-name-in-module,import-error
 from gevent._ffi.loop import assign_standard_callbacks
+from gevent._ffi.loop import AbstractCallbacks
 
 ffi = _corecffi.ffi
 libuv = _corecffi.lib
@@ -22,7 +23,18 @@ libuv = _corecffi.lib
 __all__ = [
 ]
 
-_callbacks = assign_standard_callbacks(ffi, libuv)
+
+class _Callbacks(AbstractCallbacks):
+
+    def _find_loop_from_c_watcher(self, watcher_ptr):
+        loop_handle = ffi.cast('uv_handle_t*', watcher_ptr).data
+        return self.from_handle(loop_handle)
+
+    def python_sigchld_callback(self, watcher_ptr, _signum):
+        self.from_handle(ffi.cast('uv_handle_t*', watcher_ptr).data)._sigchld_callback()
+
+_callbacks = assign_standard_callbacks(ffi, libuv, _Callbacks,
+                                       [('python_sigchld_callback', None)])
 
 from gevent._ffi.loop import EVENTS
 GEVENT_CORE_EVENTS = EVENTS # export
@@ -71,7 +83,6 @@ class loop(AbstractLoop):
     error_handler = None
 
     _CHECK_POINTER = 'uv_check_t *'
-    _CHECK_CALLBACK_SIG = "void(*)(void*)"
 
     _PREPARE_POINTER = 'uv_prepare_t *'
     _PREPARE_CALLBACK_SIG = "void(*)(void*)"
@@ -107,8 +118,9 @@ class loop(AbstractLoop):
 
     def _init_and_start_check(self):
         libuv.uv_check_init(self._ptr, self._check)
-        libuv.uv_check_start(self._check, self._check_callback_ffi)
+        libuv.uv_check_start(self._check, libuv.python_check_callback)
         libuv.uv_unref(self._check)
+        _dbg("Started check watcher", ffi.cast('void*', self._check))
 
         # We also have to have an idle watcher to be able to handle
         # signals in a timely manner. Without them, libuv won't loop again
@@ -124,23 +136,24 @@ class loop(AbstractLoop):
         # scheduled, this should also be the same and unnecessary?
         self._signal_idle = ffi.new("uv_timer_t*")
         libuv.uv_timer_init(self._ptr, self._signal_idle)
-        libuv.uv_timer_start(self._signal_idle, self._check_callback_ffi,
+        self._signal_idle.data = self._handle_to_self
+        libuv.uv_timer_start(self._signal_idle, libuv.python_check_callback,
                              1000,
                              1000)
         libuv.uv_unref(self._signal_idle)
 
-    def _run_callbacks(self, handle): # pylint:disable=arguments-differ
+    def _run_callbacks(self):
         # Manually handle fork watchers.
         curpid = os.getpid()
         if curpid != self._pid:
             self._pid = curpid
             for watcher in self._fork_watchers:
                 watcher._on_fork()
-        super(loop, self)._run_callbacks(handle)
+        super(loop, self)._run_callbacks()
 
     def _init_and_start_prepare(self):
         libuv.uv_prepare_init(self._ptr, self._prepare)
-        libuv.uv_prepare_start(self._prepare, self._prepare_callback_ffi)
+        libuv.uv_prepare_start(self._prepare, libuv.python_prepare_callback)
         libuv.uv_unref(self._prepare)
 
     def _init_callback_timer(self):
@@ -197,7 +210,7 @@ class loop(AbstractLoop):
         # If we use a 0 duration timer, we can get stuck in a timer loop.
         # Python 3.6 fails in test_ftplib.py
 
-        libuv.uv_check_start(self._timer0, self._prepare_callback_ffi)
+        libuv.uv_check_start(self._timer0, libuv.python_prepare_callback)
 
 
     def _stop_aux_watchers(self):
@@ -366,10 +379,10 @@ class loop(AbstractLoop):
 
         self._sigchld_watcher = ffi.new('uv_signal_t*')
         libuv.uv_signal_init(self._ptr, self._sigchld_watcher)
-        self._sigchld_callback_ffi = ffi.callback('void(*)(void*, int)',
-                                                  self.__sigchld_callback)
+        self._sigchld_watcher.data = self._handle_to_self
+
         libuv.uv_signal_start(self._sigchld_watcher,
-                              self._sigchld_callback_ffi,
+                              libuv.python_sigchld_callback,
                               signal.SIGCHLD)
 
     def reset_sigchld(self):
@@ -382,9 +395,9 @@ class loop(AbstractLoop):
         # it in install_sigchld?
         _watchers.watcher._watcher_ffi_close(self._sigchld_watcher)
         del self._sigchld_watcher
-        del self._sigchld_callback_ffi
 
-    def __sigchld_callback(self, _handler, _signum):
+
+    def _sigchld_callback(self):
         while True:
             try:
                 pid, status, _usage = os.wait3(os.WNOHANG)

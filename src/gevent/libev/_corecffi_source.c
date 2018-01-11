@@ -13,9 +13,10 @@ static void
 _gevent_noop(struct ev_loop *_loop, struct ev_timer *w, int revents) { }
 
 void (*gevent_noop)(struct ev_loop *, struct ev_timer *, int) = &_gevent_noop;
-static int (*python_callback)(void* handle, int revents);
-static void (*python_handle_error)(void* handle, int revents);
-static void (*python_stop)(void* handle);
+
+static int python_callback(void* handle, int revents);
+static void python_handle_error(void* handle, int revents);
+static void python_stop(void* handle);
 
 static void _gevent_generic_callback(struct ev_loop* loop,
 									 struct ev_watcher* watcher,

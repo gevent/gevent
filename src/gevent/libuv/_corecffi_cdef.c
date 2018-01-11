@@ -341,12 +341,25 @@ int uv_fs_poll_stop(void*);
 
 
 /* gevent callbacks */
-// variables that we fill in. In the case of poll callbacks and fs
+// Implemented in Python code as 'def_extern'. In the case of poll callbacks and fs
 // callbacks, if *status* is less than 0, it will be passed in the revents
 // field. In cases of no extra arguments, revents will be 0.
-static int (*python_callback)(void* handle, int revents);
-static void (*python_handle_error)(void* handle, int revents);
-static void (*python_stop)(void* handle);
+// These will be created as static functions at the end of the
+// _source.c and must be pre-declared at the top of that file if we
+// call them
+extern "Python" {
+	// Standard gevent._ffi.loop callbacks.
+	int python_callback(void* handle, int revents);
+	void python_handle_error(void* handle, int revents);
+	void python_stop(void* handle);
+	void python_check_callback(void* handle);
+	void python_prepare_callback(void* handle);
+
+	// libuv specific callback
+	void _uv_close_callback(uv_handle_t* handle);
+	void python_sigchld_callback(void* handle, int signum);
+}
+// A variable we fill in.
 static void (*gevent_noop)(void* handle);
 /*
  * We use a single C callback for every watcher type that shares the same signature, which in turn calls the

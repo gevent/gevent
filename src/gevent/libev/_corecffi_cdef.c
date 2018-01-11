@@ -64,7 +64,8 @@ struct ev_loop {
 // Watcher types
 // base for all watchers
 struct ev_watcher{
-	GEVENT_STRUCT_DONE _;
+    void* data;
+    GEVENT_STRUCT_DONE _;
 };
 
 struct ev_io {
@@ -136,6 +137,9 @@ unsigned int ev_embeddable_backends (void);
 
 ev_tstamp ev_time (void);
 void ev_set_syserr_cb(void *);
+
+void ev_set_userdata(struct ev_loop*, void*);
+void* ev_userdata(struct ev_loop*);
 
 int ev_priority(void*);
 void ev_set_priority(void*, int);
@@ -212,10 +216,19 @@ void (*gevent_noop)(struct ev_loop *_loop, struct ev_timer *w, int revents);
 void ev_sleep (ev_tstamp delay); /* sleep for a while */
 
 /* gevent callbacks */
-static int (*python_callback)(void* handle, int revents);
-static void (*python_handle_error)(void* handle, int revents);
-static void (*python_stop)(void* handle);
+/* These will be created as static functions at the end of the
+ * _source.c and must be declared there too.
+ */
+extern "Python" {
+	int python_callback(void* handle, int revents);
+	void python_handle_error(void* handle, int revents);
+	void python_stop(void* handle);
+	void python_check_callback(struct ev_loop*, void*, int);
+	void python_prepare_callback(struct ev_loop*, void*, int);
 
+	// libev specific
+	void _syserr_cb(char*);
+}
 /*
  * We use a single C callback for every watcher type, which in turn calls the
  * Python callbacks. The ev_watcher pointer type can be used for every watcher type

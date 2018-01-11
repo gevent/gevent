@@ -9,7 +9,6 @@ import os
 
 # Timeouts very flaky on appveyor and PyPy3
 _DEFAULT_SOCKET_TIMEOUT = 0.1 if not greentest.EXPECT_POOR_TIMER_RESOLUTION else 1.0
-_DEFAULT_TEST_TIMEOUT = 5 if not greentest.EXPECT_POOR_TIMER_RESOLUTION else 10
 
 
 class SimpleStreamServer(StreamServer):
@@ -71,7 +70,7 @@ class Settings:
 
 class TestCase(greentest.TestCase):
 
-    __timeout__ = _DEFAULT_TEST_TIMEOUT
+    __timeout__ = greentest.LARGE_TIMEOUT
 
     def cleanup(self):
         if getattr(self, 'server', None) is not None:

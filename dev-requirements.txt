@@ -12,6 +12,7 @@ pylint>=1.8.0
 prospector[with_pyroma] ; python_version < '3.7'
 coverage>=4.0
 coveralls>=1.0
+# See version requirements in setup.py
 cffi
 futures
 # Makes tests faster

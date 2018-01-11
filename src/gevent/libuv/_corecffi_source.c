@@ -1,8 +1,8 @@
 #include "uv.h"
 
-static int (*python_callback)(void* handle, int revents);
-static void (*python_handle_error)(void* handle, int revents);
-static void (*python_stop)(void* handle);
+static int python_callback(void* handle, int revents);
+static void python_handle_error(void* handle, int revents);
+static void python_stop(void* handle);
 
 static void _gevent_noop(void*handle) {}
 

@@ -158,7 +158,7 @@
 
   See :issue:`790` for history and more in-depth discussion.
 
-- gevent is now tested on Python 3.6.3. This includes the following
+- gevent is now tested on Python 3.6.4. This includes the following
   fixes and changes:
 
   - Errors raised from :mod:`gevent.subprocess` will have a
@@ -173,6 +173,9 @@
     the *cwd* parameter on all platforms. Previously this only worked
     on POSIX platforms under Python 3.6. Now it also works on Windows under
     Python 3.6 (as expected) and is backported to all previous versions.
+
+- gevent now uses cffi's "extern 'Python'" callbacks. These should be
+  faster and more stable. This requires at least cffi 1.4.0. See :issue:`1049`.
 
 1.2.2 (2017-06-05)
 ==================

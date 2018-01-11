@@ -16,7 +16,7 @@ from gevent._ffi import _dbg
 _closing_handles = set()
 
 
-@ffi.callback("void(*)(uv_handle_t*)")
+@ffi.def_extern()
 def _uv_close_callback(handle):
     _closing_handles.remove(handle)
 
@@ -120,7 +120,7 @@ class watcher(_base.watcher):
             # closed.
             _dbg("Closing handle", ffi_watcher, ffi_watcher.type)
             _closing_handles.add(ffi_watcher)
-            libuv.uv_close(ffi_watcher, _uv_close_callback)
+            libuv.uv_close(ffi_watcher, libuv._uv_close_callback)
 
         ffi_watcher.data = ffi.NULL
 
@@ -146,7 +146,12 @@ class watcher(_base.watcher):
 
     def _watcher_ffi_stop(self):
         _dbg("Stopping", self, self._watcher_stop)
-        self._watcher_stop(self._watcher)
+        if self._watcher:
+            # The multiplexed io watcher deletes self._watcher
+            # when it closes down. If that's in the process of
+            # an error handler, AbstractCallbacks.unhandled_onerror
+            # will try to close us again.
+            self._watcher_stop(self._watcher)
         _dbg("Stopped", self)
 
     @_base.only_if_watcher

@@ -61,7 +61,7 @@ EVENTS = GEVENT_CORE_EVENTS = _EVENTSType()
 # to Python again.
 # See also https://github.com/gevent/gevent/issues/676
 ####
-class _Callbacks(object):
+class AbstractCallbacks(object):
 
 
     def __init__(self, ffi):
@@ -194,14 +194,12 @@ class _Callbacks(object):
         # a value that causes the C loop to try the callback again?
         # at least for signals under libuv, which are delivered at very odd times.
         # Hopefully the event still shows up when we poll the next time.
-
         watcher = None
-        if tb is not None:
-            handle = tb.tb_frame.f_locals['handle']
-            if handle: # handle could be NULL
-                watcher = self.from_handle(handle)
+        handle = tb.tb_frame.f_locals['handle'] if tb is not None else None
+        if handle: # handle could be NULL
+            watcher = self.from_handle(handle)
         if watcher is not None:
-            watcher.loop._check_callback_handle_error(t, v, tb)
+            watcher.loop.handle_error(None, t, v, tb)
             return 1
         else:
             raise v
@@ -218,23 +216,62 @@ class _Callbacks(object):
             # will just produce some exceptions.
             if GEVENT_DEBUG < CRITICAL:
                 return
-            import pdb; pdb.set_trace()
         _dbg("python_stop: stopping watcher with handle", handle)
         watcher = self.from_handle(handle)
         watcher.stop()
 
+    def python_check_callback(self, watcher_ptr):
+        # If we have the onerror callback, this is a no-op; all the real
+        # work to rethrow the exception is done by the onerror callback
 
-def assign_standard_callbacks(ffi, lib):
-    # ns keeps these cdata objects alive at the python level
-    callbacks = _Callbacks(ffi)
-    for sig, func in (("int(void* handle, int revents)", callbacks.python_callback),
-                      ("void(void* handle, int revents)", callbacks.python_handle_error),
-                      ("void(void* handle)", callbacks.python_stop)):
-        callback = ffi.callback(sig, onerror=callbacks.unhandled_onerror)(func)
+        # NOTE: Unlike the rest of the functions, this is called with a pointer
+        # to the C level structure, *not* a pointer to the void* that represents a
+        # <cdata> for the Python Watcher object.
+        pass
+
+    def python_prepare_callback(self, watcher_ptr):
+        loop = self._find_loop_from_c_watcher(watcher_ptr)
+        loop._run_callbacks()
+
+    def check_callback_onerror(self, t, v, tb):
+        watcher_ptr = tb.tb_frame.f_locals['watcher_ptr'] if tb is not None else None
+        if watcher_ptr:
+            loop = self._find_loop_from_c_watcher(watcher_ptr)
+        if loop is not None:
+            # None as the context argument causes the exception to be raised
+            # in the main greenlet.
+            loop.handle_error(None, t, v, tb)
+            return None
+        else:
+            raise v # Let CFFI print
+
+    def _find_loop_from_c_watcher(self, watcher_ptr):
+        raise NotImplementedError()
+
+
+
+def assign_standard_callbacks(ffi, lib, callbacks_class, extras=()): # pylint:disable=unused-argument
+    # callbacks keeps these cdata objects alive at the python level
+    callbacks = callbacks_class(ffi)
+    extras = tuple([(getattr(callbacks, name), error) for name, error in extras])
+    for (func, error_func) in ((callbacks.python_callback, None),
+                               (callbacks.python_handle_error, None),
+                               (callbacks.python_stop, None),
+                               (callbacks.python_check_callback,
+                                callbacks.check_callback_onerror),
+                               (callbacks.python_prepare_callback,
+                                callbacks.check_callback_onerror)) + extras:
+        # The name of the callback function matches the 'extern Python' declaration.
+        error_func = error_func or callbacks.unhandled_onerror
+        callback = ffi.def_extern(onerror=error_func)(func)
         # keep alive the cdata
+        # (def_extern returns the original function, and it requests that
+        # the function be "global", so maybe it keeps a hard reference to it somewhere now
+        # unlike ffi.callback(), and we don't need to do this?)
         callbacks.callbacks.append(callback)
-        # pass to the library C variable
-        setattr(lib, func.__name__, callback)
+
+        # At this point, the library C variable (static function, actually)
+        # is filled in.
 
     return callbacks
 
@@ -252,9 +289,6 @@ else:
 _default_loop_destroyed = False
 
 
-def _loop_callback(ffi, *args, **kwargs):
-    return ffi.callback(*args, **kwargs)
-
 _NOARGS = ()
 
 
@@ -264,18 +298,17 @@ class AbstractLoop(object):
     error_handler = None
 
     _CHECK_POINTER = None
-    _CHECK_CALLBACK_SIG = None
 
     _TIMER_POINTER = None
     _TIMER_CALLBACK_SIG = None
 
     _PREPARE_POINTER = None
-    _PREPARE_CALLBACK_SIG = None
 
     def __init__(self, ffi, lib, watchers, flags=None, default=None):
         self._ffi = ffi
         self._lib = lib
         self._ptr = None
+        self._handle_to_self = self._ffi.new_handle(self) # XXX: Reference cycle?
         self._watchers = watchers
         self._in_callback = False
         self._callbacks = []
@@ -317,22 +350,17 @@ class AbstractLoop(object):
 
         self._ptr = self._init_loop(flags, default)
 
+
         # self._check is a watcher that runs in each iteration of the
         # mainloop, just after the blocking call
         self._check = self._ffi.new(self._CHECK_POINTER)
-        self._check_callback_ffi = _loop_callback(self._ffi,
-                                                  self._CHECK_CALLBACK_SIG,
-                                                  self._check_callback,
-                                                  onerror=self._check_callback_handle_error)
+        self._check.data = self._handle_to_self
         self._init_and_start_check()
 
         # self._prepare is a watcher that runs in each iteration of the mainloop,
         # just before the blocking call
         self._prepare = self._ffi.new(self._PREPARE_POINTER)
-        self._prepare_callback_ffi = _loop_callback(self._ffi,
-                                                    self._PREPARE_CALLBACK_SIG,
-                                                    self._run_callbacks,
-                                                    onerror=self._check_callback_handle_error)
+        self._prepare.data = self._handle_to_self
         self._init_and_start_prepare()
 
         # A timer we start and stop on demand. If we have callbacks,
@@ -343,6 +371,7 @@ class AbstractLoop(object):
         # see the "ev_timer" section of the ev manpage (http://linux.die.net/man/3/ev)
         # Alternatively, setting the ev maximum block time may also work.
         self._timer0 = self._ffi.new(self._TIMER_POINTER)
+        self._timer0.data = self._handle_to_self
         self._init_callback_timer()
 
         # TODO: We may be able to do something nicer and use the existing python_callback
@@ -372,16 +401,9 @@ class AbstractLoop(object):
         raise NotImplementedError()
 
     def _check_callback_handle_error(self, t, v, tb):
-        # None as the context argument causes the exception to be raised
-        # in the main greenlet.
         self.handle_error(None, t, v, tb)
 
-    def _check_callback(self, *args):
-        # If we have the onerror callback, this is a no-op; all the real
-        # work to rethrow the exception is done by the onerror callback
-        pass
-
-    def _run_callbacks(self, *_args):
+    def _run_callbacks(self):
         # libuv and libev have different signatures for their prepare/check/timer
         # watchers, which is what calls this. We should probably have different methods.
         count = 1000

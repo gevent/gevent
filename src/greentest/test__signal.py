@@ -2,7 +2,14 @@ from __future__ import print_function
 import signal
 import greentest
 import gevent
+import pkg_resources
 
+try:
+    cffi_version = pkg_resources.get_distribution('cffi').parsed_version
+except Exception:
+    # No cffi installed. Shouldn't happen to gevent standard tests,
+    # but maybe some downstream distributor removed it.
+    cffi_version = None
 
 class Expected(Exception):
     pass
@@ -17,7 +24,7 @@ if hasattr(signal, 'SIGALRM'):
     class TestSignal(greentest.TestCase):
 
         error_fatal = False
-        __timeout__ = 5
+        __timeout__ = greentest.LARGE_TIMEOUT
 
         def test_handler(self):
             self.assertRaises(TypeError, gevent.signal, signal.SIGALRM, 1)
@@ -46,7 +53,9 @@ if hasattr(signal, 'SIGALRM'):
                 sig.cancel()
 
 
-        @greentest.skipIf(greentest.PY3 and greentest.CFFI_BACKEND and greentest.RUNNING_ON_CI,
+        @greentest.skipIf((greentest.PY3
+                           and greentest.CFFI_BACKEND
+                           and cffi_version < pkg_resources.parse_version('1.11.3')),
                           "https://bitbucket.org/cffi/cffi/issues/352/systemerror-returned-a-result-with-an")
         @greentest.ignores_leakcheck
         def test_reload(self):
@@ -74,6 +83,8 @@ if hasattr(signal, 'SIGALRM'):
             # as well.
 
             # See https://bitbucket.org/cffi/cffi/issues/352/systemerror-returned-a-result-with-an
+
+            # This is fixed in 1.11.3
 
             import gevent.signal # make sure it's in sys.modules pylint:disable=redefined-outer-name
             assert gevent.signal

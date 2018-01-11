@@ -105,13 +105,15 @@ else:
     # Note that we don't add cffi to install_requires, it's
     # optional. We tend to build and distribute wheels with the CFFI
     # modules built and they can be imported if CFFI is installed.
-    # install_requires.append('cffi >= 1.3.0')
+    # We need cffi 1.4.0 for new style callbacks;
+    # we need cffi 1.11.3 (on CPython 3) to avoid test errors
+    # install_requires.append('cffi >= 1.4.0')
     pass
 
 if IGNORE_CFFI and not PYPY:
     # Allow distributors to turn off CFFI builds
     # even if it's available, because CFFI always embeds
-    # our copy of libev and they may not want that.
+    # our copy of libev/libuv and they may not want that.
     del cffi_modules[:]
 
 # If we are running info / help commands, or we're being imported by
