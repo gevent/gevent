@@ -150,8 +150,18 @@
     a file descriptor it is using in a watcher may cause the entire
     process to be exited.
 
+  - There may be occasional otherwise unexplained and hard to
+    duplicate crashes. If you can duplicate a crash, **please** submit
+    an issue.
+
   Feedback and pull requests are welcome, especially to address the
   issues mentioned above.
+
+  Other differences include:
+
+  - The order in which timers and other callbacks are invoked may be
+    different than in libev. In particular, timers and IO callbacks
+    happen in a different order.
 
   Again, this is extremely experimental and all of it is subject to
   change.

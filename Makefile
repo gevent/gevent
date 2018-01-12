@@ -193,7 +193,6 @@ lint-py27: $(PY27)
 
 test-py27: $(PY27)
 	PYTHON=python2.7.14 PATH=$(BUILD_RUNTIMES)/versions/python2.7.14/bin:$(PATH) make develop allbackendtest
-	PYTHON=python2.7.14 PATH=$(BUILD_RUNTIMES)/versions/python2.7.14/bin:$(PATH) TRAVIS= cd src/greentest/2.7 && PYTHONFAULTHANDLER=1 && PYTHONPATH=.. GEVENT_CORE_CFFI_ONLY=libuv ${PYTHON} -m monkey_test test_subprocess.py
 
 test-py278: $(PY278)
 	ls $(BUILD_RUNTIMES)/versions/python2.7.8/bin/

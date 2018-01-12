@@ -180,6 +180,7 @@ class loop(AbstractLoop):
 
         # From the loop inside uv_run:
         # while True:
+        #   uv__update_time(loop);
         #   uv__run_timers(loop);
         #   ran_pending = uv__run_pending(loop);
         #   uv__run_idle(loop);
@@ -188,13 +189,14 @@ class loop(AbstractLoop):
         #   uv__io_poll(loop, timeout);
         #   uv__run_check(loop);
 
-        # libuv looks something like this (pseudo code because the real code is
+        # libev looks something like this (pseudo code because the real code is
         # hard to read):
         #
         # do {
         #    run_prepare_callbacks();
         #    timeout = min(time of all timers or normal block time)
         #    io_poll()
+        #    update_now(); calculate_expired_timers();
         #    run_timers()
         #    run_pending()
         # }
@@ -209,6 +211,13 @@ class loop(AbstractLoop):
         # we use a check watcher, instead of a 0 duration timer entirely.
         # If we use a 0 duration timer, we can get stuck in a timer loop.
         # Python 3.6 fails in test_ftplib.py
+
+        # As a final note, if we have not yet entered the loop *at
+        # all*, and a timer was created with a duration shorter than
+        # the amount of time it took for us to enter the loop in the
+        # first place, it may expire and get called before our callback
+        # does. This could also lead to test__systemerror:TestCallback
+        # appearing to be flaky.
 
         libuv.uv_check_start(self._timer0, libuv.python_prepare_callback)
 
@@ -331,6 +340,7 @@ class loop(AbstractLoop):
 
 
     def run(self, nowait=False, once=False):
+        _dbg("Entering libuv.uv_run")
         # we can only respect one flag or the other.
         # nowait takes precedence because it can't block
         mode = libuv.UV_RUN_DEFAULT

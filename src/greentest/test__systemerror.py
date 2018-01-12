@@ -72,12 +72,24 @@ class TestCallback(Test):
             # libuv: See the notes in libuv/loop.py:loop._start_callback_timer
             # If that's broken, test_exception can fail sporadically.
             # If the issue is the same, then adding `gevent.sleep(0)` here
-            # will solve it.
+            # will solve it. There's also a race condition for the first loop,
+            # so we sleep twice.
             assert not self.x.pending, self.x
 
     def start(self, *args):
         self.x = get_hub().loop.run_callback(*args)
 
+    if greentest.LIBUV:
+        def test_exception(self):
+            # This call will enter the loop for the very first time (if we're running
+            # standalone). On libuv, where timers run first, that means that depending on the
+            # amount of time that elapses between the call to uv_timer_start and uv_run,
+            # this timer might fire before our check or prepare watchers, and hence callbacks,
+            # run.
+            # We make this call now so that the call in the super class is guaranteed to be
+            # somewhere in the loop and not subject to that race condition.
+            gevent.sleep(0.001)
+            super(TestCallback, self).test_exception()
 
 class TestSpawn(Test):
 
