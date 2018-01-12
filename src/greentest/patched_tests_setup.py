@@ -231,6 +231,7 @@ if LIBUV:
                     # 2.7.14 on macOS or 2.7.12 in local Ubuntu 16.04
                     'test_subprocess.POSIXProcessTestCase.test_close_fd_0',
                     'test_subprocess.POSIXProcessTestCase.test_close_fds_0_1',
+                    'test_subprocess.POSIXProcessTestCase.test_close_fds_0_2',
                 ]
 
     if PY3:
