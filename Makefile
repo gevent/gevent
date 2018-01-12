@@ -104,7 +104,7 @@ allbackendtest:
 	make cffibackendtest
 
 cffibackendtest:
-	cd src/greentest && PYTHONFAULTHANDLER=1 GEVENT_CORE_CFFI_ONLY=libuv GEVENT_DEBUG=trace ${PYTHON} test__threadpool.py -v
+	cd src/greentest && PYTHONFAULTHANDLER=1 GEVENT_CORE_CFFI_ONLY=libuv GEVENT_DEBUG=trace TRAVIS= ${PYTHON} test__threadpool.py -v TestJoinEmpty.test
 	GEVENT_CORE_CFFI_ONLY=libuv make alltest
 	GEVENT_CORE_CFFI_ONLY=libev make alltest
 
@@ -193,7 +193,7 @@ lint-py27: $(PY27)
 
 test-py27: $(PY27)
 	PYTHON=python2.7.14 PATH=$(BUILD_RUNTIMES)/versions/python2.7.14/bin:$(PATH) make develop allbackendtest
-	PYTHON=python2.7.14 PATH=$(BUILD_RUNTIMES)/versions/python2.7.14/bin:$(PATH) TRAVIS= cd src/greentest/2.7 && PYTHONFAULTHANDLER=1 && PYTHONPATH=.. GEVENT_CORE_CFFI_ONLY=libuv GEVENT_DEBUG=trace ${PYTHON} -m monkey_test test_subprocess.py
+	PYTHON=python2.7.14 PATH=$(BUILD_RUNTIMES)/versions/python2.7.14/bin:$(PATH) TRAVIS= cd src/greentest/2.7 && PYTHONFAULTHANDLER=1 && PYTHONPATH=.. GEVENT_CORE_CFFI_ONLY=libuv ${PYTHON} -m monkey_test test_subprocess.py
 
 test-py278: $(PY278)
 	ls $(BUILD_RUNTIMES)/versions/python2.7.8/bin/
