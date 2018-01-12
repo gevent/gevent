@@ -81,11 +81,12 @@ test_prelim:
 	make bench
 
 # Folding from https://github.com/travis-ci/travis-rubies/blob/9f7962a881c55d32da7c76baefc58b89e3941d91/build.sh#L38-L44
+# 	echo -e "travis_fold:start:${GEVENT_CORE_CFFI_ONLY}\033[33;1m${GEVENT_CORE_CFFI_ONLY}\033[0m"
+# Make calls /bin/echo, which doesn't support the -e option, which is part of the bash builtin.
+# we need a python script to do this, or possible the GNU make shell function
 
 basictest: test_prelim
-	echo -e "travis_fold:start:${GEVENT_CORE_CFFI_ONLY}\033[33;1m${GEVENT_CORE_CFFI_ONLY}\033[0m"
 	cd src/greentest && GEVENT_RESOLVER=thread ${PYTHON} testrunner.py --config known_failures.py --quiet
-	echo -e "\ntravis_fold:end:${GEVENT_CORE_CFFI_ONLY}\r"
 
 alltest: basictest
 	cd src/greentest && GEVENT_RESOLVER=ares GEVENTARES_SERVERS=8.8.8.8 ${PYTHON} testrunner.py --config known_failures.py --ignore tests_that_dont_use_resolver.txt --quiet
@@ -104,7 +105,6 @@ allbackendtest:
 	make cffibackendtest
 
 cffibackendtest:
-	cd src/greentest && PYTHONFAULTHANDLER=1 GEVENT_CORE_CFFI_ONLY=libuv GEVENT_DEBUG=trace TRAVIS= ${PYTHON} test__threadpool.py -v TestJoinEmpty.test
 	GEVENT_CORE_CFFI_ONLY=libuv make alltest
 	GEVENT_CORE_CFFI_ONLY=libev make alltest
 

@@ -230,6 +230,7 @@ if LIBUV:
                     # but only on CPython 2.7.14 on Travis. Cannot reproduce in
                     # 2.7.14 on macOS or 2.7.12 in local Ubuntu 16.04
                     'test_subprocess.POSIXProcessTestCase.test_close_fd_0',
+                    'test_subprocess.POSIXProcessTestCase.test_close_fds_0_1',
                 ]
 
     if PY3:
@@ -954,7 +955,6 @@ def disable_tests_in_source(source, filename):
         pattern = r"^([ \t]+)def " + testcase
         replacement = r"\1@_GEVENT_UTS.skip('Removed by patched_tests_setup: %s')\n" % (test,)
         replacement += r"\g<0>"
-        sb = source
         source, n = re.subn(pattern, replacement, source, 0, re.MULTILINE)
         print('Skipped %s (%d)' % (testcase, n), file=sys.stderr)
 

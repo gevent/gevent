@@ -282,6 +282,8 @@ class TestJoinEmpty(TestCase):
     @greentest.skipIf(greentest.PYPY and greentest.LIBUV and greentest.RUNNING_ON_TRAVIS,
                       "This sometimes appears to crash in PyPy2 5.9.0, "
                       "but never crashes on macOS or local Ubunto with same PyPy version")
+    # Running this test standalone doesn't crash PyPy, only when it's run
+    # as part of this whole file. Removing it does solve the crash though.
     def test(self):
         self.pool = ThreadPool(1)
         self.pool.join()
