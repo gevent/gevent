@@ -19,7 +19,9 @@ TRAVIS = os.environ.get("TRAVIS") == "true"
 APPVEYOR = os.environ.get('APPVEYOR')
 OSX = sys.platform == 'darwin'
 PYPY = hasattr(sys, 'pypy_version_info')
+CPYTHON = not PYPY
 WIN = sys.platform.startswith("win")
+PY2 = sys.version_info[0] < 3
 PY3 = sys.version_info[0] >= 3
 
 # XXX: Formalize this better
@@ -216,6 +218,19 @@ if LIBUV:
         # Likewise, a forking problem
         'test_signal.SiginterruptTest.test_siginterrupt_off',
     ]
+
+    if PY2:
+
+        if TRAVIS:
+
+            if CPYTHON:
+
+                disabled_tests += [
+                    # This appears to crash the process, for some reason,
+                    # but only on CPython 2.7.14 on Travis. Cannot reproduce in
+                    # 2.7.14 on macOS or 2.7.12 in local Ubuntu 16.04
+                    'test_subprocess.POSIXProcessTestCase.test_close_fd_0',
+                ]
 
     if PY3:
 
@@ -910,27 +925,51 @@ def disable_tests_in_source(source, filename):
     # Maybe we should do this with the AST, or even after the test is
     # imported.
     my_disabled_tests = _disabled_tests_by_file.get(filename, ())
+    my_wrapped_tests = _wrapped_tests_by_file.get(filename, {})
+
+
+    if my_disabled_tests or my_wrapped_tests:
+        # Insert our imports early in the file.
+        # If we do it on a def-by-def basis, we can break syntax
+        # if the function is already decorated
+        pattern = r'^import .*'
+        replacement = r'import patched_tests_setup as _GEVENT_PTS\n'
+        replacement += r'import unittest as _GEVENT_UTS\n'
+        replacement += r'\g<0>'
+        source, n = re.subn(pattern, replacement, source, 1, re.MULTILINE)
+
+        print("Added imports", n)
+
+    # Test cases will always be indented some,
+    # so use [ \t]+. Without indentation, test_main, commonly used as the
+    # __main__ function at the top level, could get matched. \s matches
+    # newlines even in MULTILINE mode so it would still match that.
+
     for test in my_disabled_tests:
         testcase = test.split('.')[-1]
-        # def foo_bar(self) -> def XXXfoo_bar(self)
-        source, n = re.subn(testcase, 'XXX' + testcase, source)
-        print('Removed %s (%d)' % (testcase, n), file=sys.stderr)
+        # def foo_bar(self)
+        # ->
+        # @_GEVENT_UTS.skip('Removed by patched_tests_setup')
+        # def foo_bar(self)
+        pattern = r"^([ \t]+)def " + testcase
+        replacement = r"\1@_GEVENT_UTS.skip('Removed by patched_tests_setup: %s')\n" % (test,)
+        replacement += r"\g<0>"
+        sb = source
+        source, n = re.subn(pattern, replacement, source, 0, re.MULTILINE)
+        print('Skipped %s (%d)' % (testcase, n), file=sys.stderr)
 
-    my_wrapped_tests = _wrapped_tests_by_file.get(filename, {})
+
     for test in my_wrapped_tests:
         testcase = test.split('.')[-1]
         # def foo_bar(self)
         # ->
-        # import patched_tests_setup as _GEVENT_PTS
         # @_GEVENT_PTS._PatchedTest('file.Case.name')
         # def foo_bar(self)
-        pattern = r"(\s*)def " + testcase
-        replacement = r"\1import patched_tests_setup as _GEVENT_PTS\n"
-        replacement += r"\1@_GEVENT_PTS._PatchedTest('%s')\n" % (test,)
-        replacement += r"\1def " + testcase
+        pattern = r"^([ \t]+)def " + testcase
+        replacement = r"\1@_GEVENT_PTS._PatchedTest('%s')\n" % (test,)
+        replacement += r"\g<0>"
 
-        source, n = re.subn(pattern, replacement, source)
+        source, n = re.subn(pattern, replacement, source, 0, re.MULTILINE)
         print('Wrapped %s (%d)' % (testcase, n), file=sys.stderr)
-
 
     return source

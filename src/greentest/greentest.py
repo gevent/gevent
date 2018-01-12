@@ -192,6 +192,11 @@ class FlakyTestTimeout(FlakyTest):
     unexpected timeout.
     """
 
+class FlakyTestCrashes(FlakyTest):
+    """
+    Use this when the test sometimes crashes.
+    """
+
 def reraiseFlakyTestRaceCondition():
     six.reraise(*sys.exc_info())
 
