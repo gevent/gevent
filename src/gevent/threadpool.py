@@ -67,7 +67,7 @@ class ThreadPool(GroupMappingMixin):
             self.manager.kill()
         while self._size < size:
             self._add_thread()
-        delay = 0.0001
+        delay = getattr(self.hub.loop, 'min_sleep_time', 0.0001) # For libuv
         while self._size > size:
             while self._size - size > self.task_queue.unfinished_tasks:
                 self.task_queue.put(None)

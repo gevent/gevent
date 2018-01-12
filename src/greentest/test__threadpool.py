@@ -341,16 +341,16 @@ class TestMaxsize(TestCase):
     def test_inc(self):
         self.pool = ThreadPool(0)
         done = []
+        # Try to be careful not to tick over the libuv timer.
+        # See libuv/loop.py:_start_callback_timer
         gevent.spawn(self.pool.spawn, done.append, 1)
-        gevent.spawn_later(0.001, self.pool.spawn, done.append, 2)
-        gevent.sleep(0.01)
+        gevent.spawn_later(0.01, self.pool.spawn, done.append, 2)
+        gevent.sleep(0.02)
         self.assertEqual(done, [])
         self.pool.maxsize = 1
-        gevent.sleep(0.01)
-        try:
-            self.assertEqual(done, [1, 2])
-        except AssertionError:
-            greentest.reraiseFlakyTestRaceConditionLibuv()
+        gevent.sleep(0.02)
+
+        self.assertEqualFlakyRaceCondition(done, [1, 2])
 
     def test_setzero(self):
         pool = self.pool = ThreadPool(3)

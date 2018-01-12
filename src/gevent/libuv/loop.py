@@ -78,6 +78,10 @@ else:
 
 class loop(AbstractLoop):
 
+    # XXX: Undocumented. Maybe better named 'timer_resolution'? We can't
+    # know this in general on libev
+    min_sleep_time = 0.001 # 1ms
+
     DEFAULT_LOOP_REGENERATES = True
 
     error_handler = None
@@ -218,6 +222,24 @@ class loop(AbstractLoop):
         # first place, it may expire and get called before our callback
         # does. This could also lead to test__systemerror:TestCallback
         # appearing to be flaky.
+
+        # As yet another final note, if we are currently running a
+        # timer callback, meaning we're inside uv__run_timers() in C,
+        # and the Python starts a new timer, if the Python code then
+        # update's the loop's time, it's possible that timer will
+        # expire *and be run in the same iteration of the loop*. This
+        # is trivial to do: In sequential code, anything after
+        # `gevent.sleep(0.1)` is running in a timer callback. Starting
+        # a new timer---e.g., another gevent.sleep() call---will
+        # update the time, *before* uv__run_timers exits, meaning
+        # other timers get a chance to run before our check or prepare
+        # watcher callbacks do. Therefore, we do indeed have to have a 0
+        # timer to run callbacks---it gets inserted before any other user
+        # timers---ideally, this should be especially careful about how much time
+        # it runs for.
+
+        # AND YET: We can't actually do that. We get timeouts that I haven't fully
+        # investigated if we do. Probably stuck in a timer loop.
 
         libuv.uv_check_start(self._timer0, libuv.python_prepare_callback)
 

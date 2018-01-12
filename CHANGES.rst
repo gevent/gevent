@@ -113,8 +113,9 @@
   suffers a number of limitations compared to libev, notably:
 
   - Timers (such as ``gevent.sleep`` and ``gevent.Timeout``) only
-    support a resolution of 1ms. Attempting to use something smaller
-    will automatically increase it to 1ms and issue a warning.
+    support a resolution of 1ms (in practice, it's closer to 1.5ms).
+    Attempting to use something smaller will automatically increase it
+    to 1ms and issue a warning.
 
   - Using negative timeouts may behave differently from libev.
 
@@ -161,7 +162,8 @@
 
   - The order in which timers and other callbacks are invoked may be
     different than in libev. In particular, timers and IO callbacks
-    happen in a different order.
+    happen in a different order, and timers may easily be off by up to
+    half of the supposed 1ms resolution. See :issue:`1057`.
 
   Again, this is extremely experimental and all of it is subject to
   change.
