@@ -152,7 +152,7 @@ class Timeout(BaseException):
             self.timer.start(getcurrent().throw, self.exception)
 
     @classmethod
-    def start_new(cls, timeout=None, exception=None, ref=True):
+    def start_new(cls, timeout=None, exception=None, ref=True, _update=None):
         """Create a started :class:`Timeout`.
 
         This is a shortcut, the exact action depends on *timeout*'s type:
@@ -169,6 +169,8 @@ class Timeout(BaseException):
                 timeout.start()
             return timeout
         timeout = cls(timeout, exception, ref=ref)
+        if _update:
+            get_hub().loop.update()
         timeout.start()
         return timeout
 
@@ -187,7 +189,9 @@ class Timeout(BaseException):
         # under PyPy in synthetic benchmarks it makes no difference.
         if timeout is None:
             return _FakeTimer
-        return Timeout.start_new(timeout, exception)
+        # If we don't update the time here (and the timer watcher doesn't),
+        # as under libuv, then certain tests hang, notably the monkey-patched test_telnetlib
+        return Timeout.start_new(timeout, exception, _update=True)
 
     @property
     def pending(self):
