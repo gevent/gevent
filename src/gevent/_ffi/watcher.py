@@ -423,6 +423,8 @@ class IoMixin(object):
 class TimerMixin(object):
     _watcher_type = 'timer'
 
+    update_loop_time_on_start = True
+
     def __init__(self, loop, after=0.0, repeat=0.0, ref=True, priority=None):
         if repeat < 0.0:
             raise ValueError("repeat must be positive or zero: %r" % repeat)
@@ -431,7 +433,7 @@ class TimerMixin(object):
         super(TimerMixin, self).__init__(loop, ref=ref, priority=priority, args=(after, repeat))
 
     def start(self, callback, *args, **kw):
-        update = kw.get("update", True)
+        update = kw.get("update", self.update_loop_time_on_start)
         if update:
             # Quoth the libev doc: "This is a costly operation and is
             # usually done automatically within ev_run(). This

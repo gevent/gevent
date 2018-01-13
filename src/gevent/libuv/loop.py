@@ -241,6 +241,9 @@ class loop(AbstractLoop):
         # AND YET: We can't actually do that. We get timeouts that I haven't fully
         # investigated if we do. Probably stuck in a timer loop.
 
+        # As a partial remedy to this, unlike libev, our timer watcher
+        # class doesn't update the loop time by default.
+
         libuv.uv_check_start(self._timer0, libuv.python_prepare_callback)
 
 

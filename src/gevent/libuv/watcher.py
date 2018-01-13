@@ -582,6 +582,15 @@ locals()['async'] = async_
 
 class timer(_base.TimerMixin, watcher):
 
+    # In libuv, timer callbacks continue running while any timer is
+    # expired, including newly added timers. Newly added non-zero
+    # timers (especially of small duration) can be seen to be expired
+    # if the loop time is updated while we are in a timer callback.
+    # This can lead to us being stuck running timers for a terribly
+    # long time, which is not good. So default to not updating the
+    # time.
+    update_loop_time_on_start = False
+
     def _update_now(self):
         self.loop.update()
 

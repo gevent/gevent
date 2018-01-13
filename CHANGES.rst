@@ -107,19 +107,44 @@
 
 - Update c-ares to 1.13.0. See :issue:`990`.
 
+
+- gevent is now tested on Python 3.6.4. This includes the following
+  fixes and changes:
+
+  - Errors raised from :mod:`gevent.subprocess` will have a
+    ``filename`` attribute set.
+  - The :class:`threading.Timer` class is now monkey-patched and can
+    be joined.
+  - :meth:`gevent.ssl.SSLSocket.unwrap` behaves more like the standard
+    library, including returning a SSLSocket and allowing certain
+    timeout-related SSL errors to propagate. The added standard
+    library tests ``test_ftplib.py`` now passes.
+  - :class:`gevent.subprocess.Popen` accepts a "path-like object" for
+    the *cwd* parameter on all platforms. Previously this only worked
+    on POSIX platforms under Python 3.6. Now it also works on Windows under
+    Python 3.6 (as expected) and is backported to all previous versions.
+
+- gevent now uses cffi's "extern 'Python'" callbacks. These should be
+  faster and more stable. This requires at least cffi 1.4.0. See :issue:`1049`.
+
+
+libuv
+-----
+
 - Add initial *experimental* support for using libuv as a backend
   instead of libev, controlled by setting the environment variable
-  ``GEVENT_CORE_CFFI_ONLY=libuv`` before importing gevent. This only
+  ``GEVENT_CORE_CFFI_ONLY=libuv`` before importing gevent. This
   suffers a number of limitations compared to libev, notably:
 
   - Timers (such as ``gevent.sleep`` and ``gevent.Timeout``) only
     support a resolution of 1ms (in practice, it's closer to 1.5ms).
     Attempting to use something smaller will automatically increase it
-    to 1ms and issue a warning.
+    to 1ms and issue a warning. Because libuv only supports
+    millisecond resolution by rounding a higher-precision clock to an
+    integer number of milliseconds, timers apparently suffer from more
+    jitter.
 
   - Using negative timeouts may behave differently from libev.
-
-  - Timers seem to suffer from more jitter than libev.
 
   - libuv blocks delivery of all signals, so signals are handled using
     an (arbitrary) 1 second timer. This means that signal handling
@@ -165,29 +190,17 @@
     happen in a different order, and timers may easily be off by up to
     half of the supposed 1ms resolution. See :issue:`1057`.
 
+  - Starting timers does not update the loop's time by default. This
+    is because, unlike libev, a timer callback can cause other timer
+    callbacks to be run if they expire because the loop's time
+    updated, without cycling the event loop. See :issue:`1057`.
+
+    .. note:: libev might be changed to follow this behaviour.
+
   Again, this is extremely experimental and all of it is subject to
   change.
 
   See :issue:`790` for history and more in-depth discussion.
-
-- gevent is now tested on Python 3.6.4. This includes the following
-  fixes and changes:
-
-  - Errors raised from :mod:`gevent.subprocess` will have a
-    ``filename`` attribute set.
-  - The :class:`threading.Timer` class is now monkey-patched and can
-    be joined.
-  - :meth:`gevent.ssl.SSLSocket.unwrap` behaves more like the standard
-    library, including returning a SSLSocket and allowing certain
-    timeout-related SSL errors to propagate. The added standard
-    library tests ``test_ftplib.py`` now passes.
-  - :class:`gevent.subprocess.Popen` accepts a "path-like object" for
-    the *cwd* parameter on all platforms. Previously this only worked
-    on POSIX platforms under Python 3.6. Now it also works on Windows under
-    Python 3.6 (as expected) and is backported to all previous versions.
-
-- gevent now uses cffi's "extern 'Python'" callbacks. These should be
-  faster and more stable. This requires at least cffi 1.4.0. See :issue:`1049`.
 
 1.2.2 (2017-06-05)
 ==================
@@ -2110,3 +2123,9 @@ Besides having less bugs and less code to care about the goals of the fork are:
 * Use the interfaces and conventions from the standard Python library where possible.
 
 .. _eventlet: http://bitbucket.org/denis/eventlet
+
+..
+
+   Local Variables:
+   flycheck-mode: nil
+   End:
