@@ -1,4 +1,4 @@
-from __future__ import print_function
+from __future__ import print_function, division
 import unittest
 import errno
 import os
@@ -10,9 +10,7 @@ from gevent import socket
 import gevent
 from gevent.server import StreamServer
 
-# Timeouts very flaky on appveyor and PyPy3
 _DEFAULT_SOCKET_TIMEOUT = 0.1 if not greentest.EXPECT_POOR_TIMER_RESOLUTION else 1.0
-
 
 class SimpleStreamServer(StreamServer):
 
@@ -41,7 +39,7 @@ class SimpleStreamServer(StreamServer):
             fd.close()
 
 
-class _Settings(object):
+class Settings(object):
     ServerClass = StreamServer
     ServerSubClass = SimpleStreamServer
     restartable = True
@@ -71,11 +69,15 @@ class _Settings(object):
         with inst.assertRaises(socket.timeout):
             inst.assertRequestSucceeded(timeout=0.01)
 
+    @staticmethod
+    def fill_default_server_args(inst, kwargs):
+        kwargs.setdefault('spawn', inst.get_spawn())
+        return kwargs
 
 class TestCase(greentest.TestCase):
-
+    # pylint: disable=too-many-public-methods
     __timeout__ = greentest.LARGE_TIMEOUT
-    Settings = _Settings
+    Settings = Settings
     server = None
 
     def cleanup(self):
@@ -221,13 +223,16 @@ class TestCase(greentest.TestCase):
             # so far I can't reproduce it locally on OS X.
             import gc; gc.collect()
 
+    def fill_default_server_args(self, kwargs):
+        return self.Settings.fill_default_server_args(self, kwargs)
+
     def ServerClass(self, *args, **kwargs):
-        kwargs.setdefault('spawn', self.get_spawn())
-        return self.Settings.ServerClass(*args, **kwargs)
+        return self.Settings.ServerClass(*args,
+                                         **self.fill_default_server_args(kwargs))
 
     def ServerSubClass(self, *args, **kwargs):
-        kwargs.setdefault('spawn', self.get_spawn())
-        return self.Settings.ServerSubClass(*args, **kwargs)
+        return self.Settings.ServerSubClass(*args,
+                                            **self.fill_default_server_args(kwargs))
 
     def get_spawn(self):
         return None
@@ -339,7 +344,7 @@ class TestDefaultSpawn(TestCase):
 
     def test_error_in_spawn(self):
         self.init_server()
-        assert self.server.started
+        self.assertTrue(self.server.started)
         error = ExpectedError('test_error_in_spawn')
         self.server._spawn = lambda *args: gevent.getcurrent().throw(error)
         self.expect_one_error()
@@ -350,21 +355,19 @@ class TestDefaultSpawn(TestCase):
         # PR 501
         self.init_server()
         self.start_server()
-        self.assertTrue('Server' in repr(self.server))
+        self.assertIn('Server', repr(self.server))
 
         self.server.set_handle(self.server.handle)
-        self.assertTrue('handle=<bound method' in repr(self.server) and 'of self>' in repr(self.server),
-                        repr(self.server))
+        self.assertIn('handle=<bound method', repr(self.server))
+        self.assertIn('of self>', repr(self.server))
 
         self.server.set_handle(self.test_server_repr_when_handle_is_instancemethod)
-        self.assertTrue('test_server_repr_when_handle_is_instancemethod' in repr(self.server),
-                        repr(self.server))
+        self.assertIn('test_server_repr_when_handle_is_instancemethod', repr(self.server))
 
         def handle():
             pass
         self.server.set_handle(handle)
-        self.assertTrue('handle=<function' in repr(self.server),
-                        repr(self.server))
+        self.assertIn('handle=<function', repr(self.server))
 
 
 class TestRawSpawn(TestDefaultSpawn):
@@ -378,14 +381,17 @@ class TestPoolSpawn(TestDefaultSpawn):
     def get_spawn(self):
         return 2
 
-    @greentest.skipOnAppVeyor("Connection timeouts are flaky")
-    @greentest.skipOnPyPy3OnCI("Doesn't always raise timeout for some reason")
+    @greentest.skipIf(greentest.EXPECT_POOR_TIMER_RESOLUTION,
+                      "If we have bad timer resolution and hence increase timeouts, "
+                      "it can be hard to sleep for a correct amount of time that lets "
+                      "requests in the pool be full.")
     def test_pool_full(self):
         self.init_server()
         short_request = self.send_request('/short')
         long_request = self.send_request('/long')
         # keep long_request in scope, otherwise the connection will be closed
-        gevent.sleep(0.01)
+        gevent.get_hub().loop.update_now()
+        gevent.sleep(_DEFAULT_SOCKET_TIMEOUT / 10.0)
         self.assertPoolFull()
         self.assertPoolFull()
         # XXX Not entirely clear why this fails (timeout) on appveyor;
@@ -398,7 +404,7 @@ class TestPoolSpawn(TestDefaultSpawn):
             short_request.close()
         # gevent.http and gevent.wsgi cannot detect socket close, so sleep a little
         # to let /short request finish
-        gevent.sleep(0.1)
+        gevent.sleep(_DEFAULT_SOCKET_TIMEOUT)
         # XXX: This tends to timeout. Which is weird, because what would have
         # been the third call to assertPoolFull() DID NOT timeout, hence why it
         # was removed.

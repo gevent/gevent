@@ -42,7 +42,7 @@ Content-length: 31
 Service Temporarily Unavailable'''.replace(b'\n', b'\r\n')
 
 
-class Settings(object):
+class Settings(test__server.Settings):
     ServerClass = pywsgi.WSGIServer
     ServerSubClass = SimpleWSGIServer
     close_socket_detected = True
@@ -76,6 +76,12 @@ class Settings(object):
         conn = inst.makefile()
         result = conn.read()
         inst.assertFalse(result)
+
+    @staticmethod
+    def fill_default_server_args(inst, kwargs):
+        kwargs = test__server.Settings.fill_default_server_args(inst, kwargs)
+        kwargs.setdefault('log', pywsgi._NoopLog())
+        return kwargs
 
 
 class TestCase(test__server.TestCase):
