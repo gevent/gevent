@@ -641,7 +641,7 @@ class Hub(RawGreenlet):
 
     def wait(self, watcher):
         """
-        Wait until the *watcher* (which should not be started) is ready.
+        Wait until the *watcher* (which must not be started) is ready.
 
         The current greenlet will be unscheduled during this time.
 
@@ -829,10 +829,7 @@ class Waiter(object):
     __slots__ = ['hub', 'greenlet', 'value', '_exception']
 
     def __init__(self, hub=None):
-        if hub is None:
-            self.hub = get_hub()
-        else:
-            self.hub = hub
+        self.hub = get_hub() if hub is None else hub
         self.greenlet = None
         self.value = None
         self._exception = _NONE

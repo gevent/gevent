@@ -115,7 +115,7 @@ class Timeout(BaseException):
     .. caution::
        A *seconds* value less than 0.0 (e.g., -1) is poorly defined. In the future,
        support for negative values is likely to do the same thing as a value
-       if ``None``.
+       of ``None``.
 
     .. versionchanged:: 1.1b2
        If *seconds* is not given or is ``None``, no longer allocate a libev
@@ -137,6 +137,7 @@ class Timeout(BaseException):
             # Plus, in general, it should be more efficient
             self.timer = _FakeTimer
         else:
+            # XXX: A zero second timer could cause libuv to block the loop.
             self.timer = get_hub().loop.timer(seconds or 0.0, ref=ref, priority=priority)
 
     def start(self):

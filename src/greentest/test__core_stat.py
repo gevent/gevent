@@ -1,105 +1,116 @@
 from __future__ import print_function
+
+import os
+import tempfile
+import time
+
 import gevent
 import gevent.core
-import os
-import sys
-import time
+
+import greentest
 
 #pylint: disable=protected-access
 
-filename = 'tmp.test__core_stat.%s' % os.getpid()
-
-hub = gevent.get_hub()
 
 DELAY = 0.5
 
-EV_USE_INOTIFY = getattr(gevent.core, 'EV_USE_INOTIFY', None)
+WIN = greentest.WIN
 
-WIN = sys.platform.startswith('win')
+LIBUV = greentest.LIBUV
 
-LIBUV = getattr(gevent.core, 'libuv', None)
+class TestCoreStat(greentest.TestCase):
 
-def test():
-    try:
-        open(filename, 'wb', buffering=0).close()
-        assert os.path.exists(filename), filename
+    __timeout__ = greentest.LARGE_TIMEOUT
 
-        def write():
-            with open(filename, 'wb', buffering=0) as f:
-                f.write(b'x')
-
-        start = time.time()
-        greenlet = gevent.spawn_later(DELAY, write)
+    def setUp(self):
+        super(TestCoreStat, self).setUp()
+        fd, path = tempfile.mkstemp(suffix='.gevent_test_core_stat')
+        os.close(fd)
+        self.temp_path = path
+        self.hub = gevent.get_hub()
         # If we don't specify an interval, we default to zero.
         # libev interprets that as meaning to use its default interval,
         # which is about 5 seconds. If we go below it's minimum check
         # threshold, it bumps it up to the minimum.
-        watcher = hub.loop.stat(filename, interval=-1)
-        assert watcher.path == filename, (watcher.path, filename)
-        filenames = filename if isinstance(filename, bytes) else filename.encode('ascii')
-        assert watcher._paths == filenames, (watcher._paths, filenames)
-        assert watcher.interval == -1
+        self.watcher = self.hub.loop.stat(self.temp_path, interval=-1)
 
-        def check_attr(name, none):
-            # Deals with the complex behaviour of the 'attr' and 'prev'
-            # attributes on Windows. This codifies it, rather than simply letting
-            # the test fail, so we know exactly when and what changes it.
-            try:
-                x = getattr(watcher, name)
-            except ImportError:
-                if WIN:
-                    # the 'posix' module is not available
-                    pass
-                else:
-                    raise
+    def tearDown(self):
+        if os.path.exists(self.temp_path):
+            os.unlink(self.temp_path)
+        super(TestCoreStat, self).tearDown()
+
+    def _write(self):
+        with open(self.temp_path, 'wb', buffering=0) as f:
+            f.write(b'x')
+
+    def _check_attr(self, name, none):
+        # Deals with the complex behaviour of the 'attr' and 'prev'
+        # attributes on Windows. This codifies it, rather than simply letting
+        # the test fail, so we know exactly when and what changes it.
+        try:
+            x = getattr(self.watcher, name)
+        except ImportError:
+            if WIN:
+                # the 'posix' module is not available
+                pass
             else:
-                if WIN and not LIBUV:
-                    # The ImportError is only raised for the first time;
-                    # after that, the attribute starts returning None
-                    assert x is None, ("Only None is supported on Windows", x)
-                if none:
-                    assert x is None, x
-                else:
-                    assert x is not None, x
+                raise
+        else:
+            if WIN and not LIBUV:
+                # The ImportError is only raised for the first time;
+                # after that, the attribute starts returning None
+                self.assertIsNone(x, "Only None is supported on Windows")
+            if none:
+                self.assertIsNone(x, name)
+            else:
+                self.assertIsNotNone(x, name)
 
-        with gevent.Timeout(5 + DELAY + 0.5):
-            hub.wait(watcher)
-
-        now = time.time()
-        if now - start - DELAY <= 0.0:
-            # Sigh. This is especially true on PyPy.
-            assert WIN, ("Bad timer resolution expected on Windows, test is useless", start, now)
-            print("On windows, bad timer resolution prevents this test from running")
-            return
-        reaction = now - start - DELAY
-        print('Watcher %s reacted after %.4f seconds (write)' % (watcher, reaction))
-        if reaction >= DELAY and EV_USE_INOTIFY:
-            print('WARNING: inotify failed (write)')
-        assert reaction >= 0.0, 'Watcher %s reacted too early (write): %.3fs' % (watcher, reaction)
-        check_attr('attr', False)
-        check_attr('prev', False)
-        # The watcher interval changed after it started; -1 is illegal
-        assert watcher.interval != -1, watcher.interval
-
-        greenlet.join()
-        gevent.spawn_later(DELAY, os.unlink, filename)
-
+    def _wait_on_greenlet(self, func, *greenlet_args):
         start = time.time()
 
+        self.hub.loop.update()
+        greenlet = gevent.spawn_later(DELAY, func, *greenlet_args)
         with gevent.Timeout(5 + DELAY + 0.5):
-            hub.wait(watcher)
+            self.hub.wait(self.watcher)
+        now = time.time()
 
-        reaction = time.time() - start - DELAY
-        print('Watcher %s reacted after %.4f seconds (unlink)' % (watcher, reaction))
-        if reaction >= DELAY and EV_USE_INOTIFY:
-            print('WARNING: inotify failed (unlink)')
-        assert reaction >= 0.0, 'Watcher %s reacted too early (unlink): %.3fs' % (watcher, reaction)
-        check_attr('attr', True)
-        check_attr('prev', False)
+        self.assertGreaterEqual(now, start, "Time must move forward")
 
-    finally:
-        if os.path.exists(filename):
-            os.unlink(filename)
+        wait_duration = now - start
+        reaction = wait_duration - DELAY
+
+        if reaction <= 0.0:
+            # Sigh. This is especially true on PyPy on Windows
+            raise greentest.FlakyTestRaceCondition(
+                "Bad timer resolution (on Windows?), test is useless. Start %s, now %s" % (start, now))
+
+        self.assertGreaterEqual(
+            reaction, 0.0,
+            'Watcher %s reacted too early: %.3fs' % (self.watcher, reaction))
+
+        greenlet.join()
+
+    def test_watcher_basics(self):
+        watcher = self.watcher
+        filename = self.temp_path
+        self.assertEqual(watcher.path, filename)
+        filenames = filename if isinstance(filename, bytes) else filename.encode('ascii')
+        self.assertEqual(watcher._paths, filenames)
+        self.assertEqual(watcher.interval, -1)
+
+    def test_write(self):
+        self._wait_on_greenlet(self._write)
+
+        self._check_attr('attr', False)
+        self._check_attr('prev', False)
+        # The watcher interval changed after it started; -1 is illegal
+        self.assertNotEqual(self.watcher.interval, -1)
+
+    def test_unlink(self):
+        self._wait_on_greenlet(os.unlink, self.temp_path)
+
+        self._check_attr('attr', True)
+        self._check_attr('prev', False)
 
 if __name__ == '__main__':
-    test()
+    greentest.main()
