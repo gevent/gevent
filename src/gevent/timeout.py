@@ -191,6 +191,7 @@ class Timeout(BaseException):
             return _FakeTimer
         # If we don't update the time here (and the timer watcher doesn't),
         # as under libuv, then certain tests hang, notably the monkey-patched test_telnetlib
+        # in test_read_eager_A. libev does not demonstrate this behaviour.
         return Timeout.start_new(timeout, exception, _update=True)
 
     @property

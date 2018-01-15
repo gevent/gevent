@@ -893,13 +893,17 @@ cdef public class timer(watcher) [object PyGeventTimerObject, type PyGeventTimer
 
     WATCHER_BASE(timer)
 
-    def start(self, object callback, *args, update=True):
+    update_loop_time_on_start = False
+
+    def start(self, object callback, *args, update=None):
         CHECK_LOOP2(self.loop)
         if callback is None:
             raise TypeError('callback must be callable, not None')
         self.callback = callback
         self.args = args
         LIBEV_UNREF
+        if update is None:
+            update = self.update_loop_time_on_start
         if update:
             libev.ev_now_update(self.loop._ptr)
         libev.ev_timer_start(self.loop._ptr, &self._watcher)

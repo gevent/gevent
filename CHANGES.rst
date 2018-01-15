@@ -190,17 +190,18 @@ libuv
     happen in a different order, and timers may easily be off by up to
     half of the supposed 1ms resolution. See :issue:`1057`.
 
-  - Starting timers does not update the loop's time by default. This
-    is because, unlike libev, a timer callback can cause other timer
-    callbacks to be run if they expire because the loop's time
-    updated, without cycling the event loop. See :issue:`1057`.
+  - Starting a ``timer`` watcher does not update the loop's time by
+    default. This is because, unlike libev, a timer callback can cause
+    other timer callbacks to be run if they expire because the loop's
+    time updated, without cycling the event loop. See :issue:`1057`.
 
-    .. note:: libev might be changed to follow this behaviour.
+    libev has also been changed to follow this behaviour.
 
   Again, this is extremely experimental and all of it is subject to
   change.
 
   See :issue:`790` for history and more in-depth discussion.
+
 
 1.2.2 (2017-06-05)
 ==================

@@ -423,7 +423,7 @@ class IoMixin(object):
 class TimerMixin(object):
     _watcher_type = 'timer'
 
-    update_loop_time_on_start = True
+    update_loop_time_on_start = False
 
     def __init__(self, loop, after=0.0, repeat=0.0, ref=True, priority=None):
         if repeat < 0.0:
@@ -441,7 +441,8 @@ class TimerMixin(object):
             # runs for a very long time without entering the event
             # loop, updating libev's idea of the current time is a
             # good idea."
-            # So do we really need to default to true?
+            # 1.3 changed the default for this to False. Note that
+            # starting Timeout objects internally still sets this to true.
             self._update_now()
         super(TimerMixin, self).start(callback, *args)
 

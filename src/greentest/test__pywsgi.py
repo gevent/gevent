@@ -64,9 +64,8 @@ try:
 except ImportError:
     pass
 
-if greentest.PYPY or PY3:
-    from errno import ECONNRESET
-    CONN_ABORTED_ERRORS.append(ECONNRESET)
+from errno import ECONNRESET
+CONN_ABORTED_ERRORS.append(ECONNRESET)
 
 REASONS = {200: 'OK',
            500: 'Internal Server Error'}
@@ -92,7 +91,7 @@ def read_headers(fd):
         except:
             print('Failed to split: %r' % (line, ))
             raise
-        assert key.lower() not in [x.lower() for x in headers.keys()], 'Header %r:%r sent more than once: %r' % (key, value, headers)
+        assert key.lower() not in {x.lower() for x in headers}, 'Header %r:%r sent more than once: %r' % (key, value, headers)
         headers[key] = value
     return response_line, headers
 
@@ -375,12 +374,17 @@ class CommonTests(TestCase):
         fd.write('GET / HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n')
         read_http(fd)
         fd.write('GET / HTTP/1.1\r\nHost: localhost\r\n\r\n')
+        # This may either raise, or it may return an empty response,
+        # depend on timing and the Python version.
         try:
             result = fd.readline()
-            assert not result, 'The remote side is expected to close the connection, but it send %r' % (result, )
         except socket.error as ex:
             if ex.args[0] not in CONN_ABORTED_ERRORS:
                 raise
+        else:
+            self.assertFalse(
+                result,
+                'The remote side is expected to close the connection, but it sent %r' % (result,))
 
     def SKIP_test_006_reject_long_urls(self):
         fd = self.makefile()
@@ -1413,16 +1417,16 @@ class Handler(pywsgi.WSGIHandler):
     def read_requestline(self):
         data = self.rfile.read(7)
         if data[0] == b'<'[0]:
-            try:
-                data += self.rfile.read(15)
-                if data.lower() == b'<policy-file-request/>':
-                    self.socket.sendall(b'HELLO')
-                else:
-                    self.log_error('Invalid request: %r', data)
-            finally:
-                self.socket.shutdown(socket.SHUT_WR)
-                self.socket.close()
-                self.socket = None
+            # Returning nothing stops handle_one_request()
+            # Note that closing or even deleting self.socket() here
+            # can lead to the read side throwing Connection Reset By Peer,
+            # depending on the Python version and OS
+            data += self.rfile.read(15)
+            if data.lower() == b'<policy-file-request/>':
+                self.socket.sendall(b'HELLO')
+            else:
+                self.log_error('Invalid request: %r', data)
+            return None
         else:
             return data + self.rfile.readline()
 
@@ -1452,6 +1456,7 @@ class TestHandlerSubclass(TestCase):
         read_http(fd)
 
         fd = self.makefile()
+        # Trigger an error
         fd.write('<policy-file-XXXuest/>\x00')
         fd.flush()
         self.assertEqual(fd.read(), b'')
