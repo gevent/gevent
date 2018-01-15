@@ -7,6 +7,18 @@
 1.3.0 (unreleased)
 ==================
 
+Dependencies
+------------
+
+- gevent is now built and tested with Cython 0.27. This is required
+  for Python 3.7 support.
+
+- Update c-ares to 1.13.0. See :issue:`990`.
+
+
+Platform Support
+----------------
+
 - Add initial support for Python 3.7a3. It has the same level of
   support as Python 3.6.
 
@@ -15,6 +27,42 @@
   - The ``async`` functions and classes have been renamed to
     ``async_`` due to ``async`` becoming a keyword in Python 3.7.
     Aliases are still in place for older versions. See :issue:`1047`.
+
+- gevent is now tested on Python 3.6.4. This includes the following
+  fixes and changes:
+
+  - Errors raised from :mod:`gevent.subprocess` will have a
+    ``filename`` attribute set.
+  - The :class:`threading.Timer` class is now monkey-patched and can
+    be joined.
+  - :meth:`gevent.ssl.SSLSocket.unwrap` behaves more like the standard
+    library, including returning a SSLSocket and allowing certain
+    timeout-related SSL errors to propagate. The added standard
+    library tests ``test_ftplib.py`` now passes.
+  - :class:`gevent.subprocess.Popen` accepts a "path-like object" for
+    the *cwd* parameter on all platforms. Previously this only worked
+    on POSIX platforms under Python 3.6. Now it also works on Windows under
+    Python 3.6 (as expected) and is backported to all previous versions.
+
+- Linux CI now tests on PyPy3 3.5-5.8.0, updated from PyPy3 3.5-5.7.1.
+  See :issue:`1001`. PyPy2 has been updated to 5.8.0 from 5.7.1,
+  Python 2.7 has been updated to 2.7.14 from 2.7.13, Python 3.4 is
+  updated to 3.4.7 from 3.4.5, Python 3.5 is now 3.5.4 from 3.5.3, and
+  Python 3.6 is now 3.6.2 from 3.6.0.
+
+- Drop support for Python 3.3. The documentation has only claimed
+  support for 3.4+ since gevent 1.2 was released, and only 3.4+ has
+  been tested. This merely removes the supporting Trove classifier and
+  remaining test code. See :issue:`997`.
+
+- Due to security concerns, official support for Python 2.7.8 and
+  earlier (without a modern SSL implementation) has been dropped.
+  These versions are no longer tested with gevent, but gevent can
+  still be installed on them. Supporting code will be removed in the
+  next version of gevent. See :issue:`1073`.
+
+Other Changes
+-------------
 
 - ``Pool.add`` now accepts ``blocking`` and ``timeout`` parameters,
   which function similarly to their counterparts in ``Semaphore``.
@@ -41,9 +89,6 @@
 
   See :issue:`984`.
 
-- gevent is now built and tested with Cython 0.27. This is required
-  for Python 3.7 support.
-
 - Specify the Requires-Python metadata for improved installation
   support in certain tools (setuptools v24.2.1 or newer is required).
   See :issue:`995`.
@@ -51,17 +96,6 @@
 - pywgi also catches and ignores by default
   :const:`errno.WSAECONNABORTED` on Windows. Initial patch in
   :pr:`999` by Jan van Valburg.
-
-- Drop support for Python 3.3. The documentation has only claimed
-  support for 3.4+ since gevent 1.2 was released, and only 3.4+ has
-  been tested. This merely removes the supporting Trove classifier and
-  remaining test code. See :issue:`997`.
-
-- Linux CI now tests on PyPy3 3.5-5.8.0, updated from PyPy3 3.5-5.7.1.
-  See :issue:`1001`. PyPy2 has been updated to 5.8.0 from 5.7.1,
-  Python 2.7 has been updated to 2.7.14 from 2.7.13, Python 3.4 is
-  updated to 3.4.7 from 3.4.5, Python 3.5 is now 3.5.4 from 3.5.3, and
-  Python 3.6 is now 3.6.2 from 3.6.0.
 
 - :meth:`gevent.subprocess.Popen.communicate` returns the correct type
   of str (not bytes) in universal newline mode under Python 3, or when
@@ -89,7 +123,7 @@
 - :class:`gevent.local.local` is compiled with Cython on CPython. It
   was already 5 to 6 times faster due to the work on :issue:`1020`,
   and compiling it with Cython makes it another 5 to 6 times faster, for a
-  total speed up of about 35 times. It is now in the same ball park as
+  total speed up of about 35 times. It is now in the same ballpark as
   the native :class:`threading.local` class. See :pr:`1024`.
 
 - More safely terminate subprocesses on Windows with
@@ -104,25 +138,6 @@
   :exc:`KeyboardInterrupt`, :exc:`greenlet.GreenletExit` or
   :exc:`gevent.timeout.Timeout`. Reported in :issue:`1044` by
   kochelmonster.
-
-- Update c-ares to 1.13.0. See :issue:`990`.
-
-
-- gevent is now tested on Python 3.6.4. This includes the following
-  fixes and changes:
-
-  - Errors raised from :mod:`gevent.subprocess` will have a
-    ``filename`` attribute set.
-  - The :class:`threading.Timer` class is now monkey-patched and can
-    be joined.
-  - :meth:`gevent.ssl.SSLSocket.unwrap` behaves more like the standard
-    library, including returning a SSLSocket and allowing certain
-    timeout-related SSL errors to propagate. The added standard
-    library tests ``test_ftplib.py`` now passes.
-  - :class:`gevent.subprocess.Popen` accepts a "path-like object" for
-    the *cwd* parameter on all platforms. Previously this only worked
-    on POSIX platforms under Python 3.6. Now it also works on Windows under
-    Python 3.6 (as expected) and is backported to all previous versions.
 
 - gevent now uses cffi's "extern 'Python'" callbacks. These should be
   faster and more stable. This requires at least cffi 1.4.0. See :issue:`1049`.

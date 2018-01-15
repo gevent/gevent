@@ -17,7 +17,6 @@ env:
       - TASK=lint-py27
       - TASK=test-pypy3
       - TASK=test-py35
-      - TASK=test-py278
       - TASK=test-py27
       - TASK=test-py34
 

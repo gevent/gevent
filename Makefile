@@ -194,10 +194,6 @@ lint-py27: $(PY27)
 test-py27: $(PY27)
 	PYTHON=python2.7.14 PATH=$(BUILD_RUNTIMES)/versions/python2.7.14/bin:$(PATH) make develop allbackendtest
 
-test-py278: $(PY278)
-	ls $(BUILD_RUNTIMES)/versions/python2.7.8/bin/
-	PYTHON=python2.7.8 PATH=$(BUILD_RUNTIMES)/versions/python2.7.8/bin:$(PATH) make develop basictest
-
 test-py34: $(PY34)
 	PYTHON=python3.4.7 PATH=$(BUILD_RUNTIMES)/versions/python3.4.7/bin:$(PATH) make develop allbackendtest
 
