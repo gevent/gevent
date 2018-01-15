@@ -1204,39 +1204,49 @@ class ChunkedInputTests(TestCase):
         read_http(fd, body='this is chunked\nline 2\nline3')
 
     def test_close_before_finished(self):
-        if server_implements_chunked:
-            self.expect_one_error()
+        self.expect_one_error()
         body = b'4\r\nthi'
         req = b"POST /short-read HTTP/1.1\r\ntransfer-encoding: Chunked\r\n\r\n" + body
         sock = self.connect()
         fd = sock.makefile(bufsize=1, mode='wb')
         fd.write(req)
         fd.close()
-        if PY3:
-            # Python 3 keeps the socket open even though the only
-            # makefile is gone; python 2 closed them both (because there were
-            # no outstanding references to the socket). Closing is essential for the server
-            # to get the message that the read will fail. It's better to be explicit
-            # to avoid a ResourceWarning
-            sock.close()
-        else:
-            # Under Py2 it still needs to go away, which was implicit before
-            del sock
 
+        # Python 3 keeps the socket open even though the only
+        # makefile is gone; python 2 closed them both (because there were
+        # no outstanding references to the socket). Closing is essential for the server
+        # to get the message that the read will fail. It's better to be explicit
+        # to avoid a ResourceWarning
+        sock.close()
+        # Under Py2 it still needs to go away, which was implicit before
+        del fd
+        del sock
+
+        gevent.get_hub().loop.update_now()
         gevent.sleep(0.01) # timing needed for cpython
 
-        if server_implements_chunked:
-            if greentest.PYPY:
-                # XXX: Something is keeping the socket alive,
-                # by which I mean, the close event is not propagating to the server
-                # and waking up its recv() loop...we are stuck with the three bytes of
-                # 'thi' in the buffer and trying to read the forth. No amount of tinkering
-                # with the timing changes this...the only thing that does is running a
-                # GC and letting some object get collected. Might this be a problem in real life?
-                import gc
-                gc.collect()
-                gevent.sleep(0.01)
-            self.assert_error(IOError, 'unexpected end of file while parsing chunked data')
+        if greentest.PYPY:
+            # XXX: Something is keeping the socket alive,
+            # by which I mean, the close event is not propagating to the server
+            # and waking up its recv() loop...we are stuck with the three bytes of
+            # 'thi' in the buffer and trying to read the forth. No amount of tinkering
+            # with the timing changes this...the only thing that does is running a
+            # GC and letting some object get collected. Might this be a problem in real life?
+
+            import gc
+            gc.collect()
+            gevent.sleep(0.01)
+            gevent.get_hub().loop.update_now()
+            gc.collect()
+            gevent.sleep(0.01)
+
+        # XXX2: Sometimes windows and PyPy/Travis fail to get this error, leading to a test failure.
+        # This would have to be due to the socket being kept around and open,
+        # not closed at the low levels. I haven't seen this locally.
+        # In the PyPy case, I've seen the IOError reported on the console, but not
+        # captured in the variables.
+        # https://travis-ci.org/gevent/gevent/jobs/329232976#L1374
+        self.assert_error(IOError, 'unexpected end of file while parsing chunked data')
 
 
 class Expect100ContinueTests(TestCase):
