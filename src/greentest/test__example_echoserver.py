@@ -4,6 +4,8 @@ import gevent
 
 import util
 
+_DEFAULT_SOCKET_TIMEOUT = 0.1 if not greentest.EXPECT_POOR_TIMER_RESOLUTION else 2.0
+
 
 class Test(util.TestServer):
     server = 'echoserver.py'
@@ -16,7 +18,7 @@ class Test(util.TestServer):
                 kwargs = {'bufsize': 1}
             kwargs['mode'] = 'rb'
             conn = create_connection(('127.0.0.1', 16000))
-            conn.settimeout(0.1 if not greentest.RUNNING_ON_APPVEYOR else 2.0)
+            conn.settimeout(_DEFAULT_SOCKET_TIMEOUT)
             rfile = conn.makefile(**kwargs)
 
             welcome = rfile.readline()
