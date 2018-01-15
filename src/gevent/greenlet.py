@@ -322,7 +322,7 @@ class Greenlet(greenlet):
             return (e[0], e[1], load_traceback(e[2]))
 
     def throw(self, *args):
-        """Immediatelly switch into the greenlet and raise an exception in it.
+        """Immediately switch into the greenlet and raise an exception in it.
 
         Should only be called from the HUB, otherwise the current greenlet is left unscheduled forever.
         To raise an exception in a safe manner from any greenlet, use :meth:`kill`.
