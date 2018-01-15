@@ -589,6 +589,14 @@ class timer(_base.TimerMixin, watcher):
     # This can lead to us being stuck running timers for a terribly
     # long time, which is not good. So default to not updating the
     # time.
+
+    # Also, newly-added timers of 0 duration can *also* stall the loop, because
+    # they'll be seen to be expired immediately. Updating the time can prevent that,
+    # *if* there was already a timer for a longer duration scheduled.
+
+    # XXX: Have our loop implementation turn 0 duration timers into prepare or
+    # check watchers instead?
+
     update_loop_time_on_start = False
 
     def _update_now(self):

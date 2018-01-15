@@ -578,12 +578,10 @@ class TestCase(TestCaseMetaClass("NewBase", (BaseTestCase,), {})):
         econtext, ekind, evalue = error
         if kind is not None:
             self.assertIsInstance(kind, type)
-            try:
-                assert issubclass(ekind, kind), error
-            except TypeError as e:
-                # Seen on PyPy on Windows
-                print("TYPE ERROR", e, ekind, kind, type(kind))
-                raise
+            self.assertIsNotNone(
+                ekind,
+                "Error must not be none %r" % (error,))
+            assert issubclass(ekind, kind), error
         if value is not None:
             if isinstance(value, str):
                 self.assertEqual(str(evalue), value)

@@ -13,7 +13,7 @@ module add timeouts to arbitrary code.
     If a blocking function is called or an intense calculation is ongoing during
     which no switches occur, :class:`Timeout` is powerless.
 """
-
+from __future__ import absolute_import, print_function, division
 from gevent._compat import string_types
 from gevent.hub import getcurrent, _NONE, get_hub
 
@@ -152,7 +152,7 @@ class Timeout(BaseException):
             self.timer.start(getcurrent().throw, self.exception)
 
     @classmethod
-    def start_new(cls, timeout=None, exception=None, ref=True, _update=None):
+    def start_new(cls, timeout=None, exception=None, ref=True):
         """Create a started :class:`Timeout`.
 
         This is a shortcut, the exact action depends on *timeout*'s type:
@@ -169,8 +169,6 @@ class Timeout(BaseException):
                 timeout.start()
             return timeout
         timeout = cls(timeout, exception, ref=ref)
-        if _update:
-            get_hub().loop.update()
         timeout.start()
         return timeout
 
@@ -189,10 +187,7 @@ class Timeout(BaseException):
         # under PyPy in synthetic benchmarks it makes no difference.
         if timeout is None:
             return _FakeTimer
-        # If we don't update the time here (and the timer watcher doesn't),
-        # as under libuv, then certain tests hang, notably the monkey-patched test_telnetlib
-        # in test_read_eager_A. libev does not demonstrate this behaviour.
-        return Timeout.start_new(timeout, exception, _update=True)
+        return Timeout.start_new(timeout, exception)
 
     @property
     def pending(self):

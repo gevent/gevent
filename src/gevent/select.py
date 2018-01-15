@@ -150,9 +150,16 @@ def select(rlist, wlist, xlist, timeout=None): # pylint:disable=unused-argument
             # Ignore interrupted syscalls
             raise
 
-    if sel_results[0] or sel_results[1] or sel_results[2]:
+    if sel_results[0] or sel_results[1] or sel_results[2] or (timeout is not None and timeout == 0):
         # If we actually had stuff ready, go ahead and return it. No need
         # to go through the trouble of doing our own stuff.
+
+        # Likewise, if the timeout is 0, we already did a 0 timeout
+        # select and we don't need to do it again. Note that in libuv,
+        # zero duration timers may be called immediately, without
+        # cycling the event loop at all. 2.7/test_telnetlib.py "hangs"
+        # calling zero-duration timers if we go to the loop here.
+
         # However, because this is typically a place where scheduling switches
         # can occur, we need to make sure that's still the case; otherwise a single
         # consumer could monopolize the thread. (shows up in test_ftplib.)

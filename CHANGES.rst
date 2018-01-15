@@ -197,6 +197,15 @@ libuv
 
     libev has also been changed to follow this behaviour.
 
+  - Timers of zero duration do not necessarily cause the event loop to
+    cycle, as they do in libev. Instead, they may be called
+    immediately. If zero duration timers are added from other zero
+    duration timer callbacks, this can lead the loop to appear to
+    hang, as no IO will actually be done.
+
+    In the future, zero duration timers may automatically be changed
+    to check or prepare watchers.
+
   Again, this is extremely experimental and all of it is subject to
   change.
 
