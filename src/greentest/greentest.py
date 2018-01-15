@@ -26,7 +26,6 @@ import sys
 import types
 import unittest
 from unittest import TestCase as BaseTestCase
-from unittest.util import safe_repr
 import time
 import os
 from os.path import basename, splitext
@@ -153,7 +152,7 @@ else:
 
 skipIf = unittest.skipIf
 
-EXPECT_POOR_TIMER_RESOLUTION = PYPY3 or RUNNING_ON_APPVEYOR
+EXPECT_POOR_TIMER_RESOLUTION = PYPY3 or RUNNING_ON_APPVEYOR or (LIBUV and PYPY)
 
 skipOnLibuv = _do_not_skip
 skipOnLibuvOnCI = _do_not_skip
@@ -166,6 +165,18 @@ if LIBUV:
         skipOnLibuvOnCI = unittest.skip
         if PYPY:
             skipOnLibuvOnCIOnPyPy = unittest.skip
+
+CONN_ABORTED_ERRORS = []
+try:
+    from errno import WSAECONNABORTED
+    CONN_ABORTED_ERRORS.append(WSAECONNABORTED)
+except ImportError:
+    pass
+
+from errno import ECONNRESET
+CONN_ABORTED_ERRORS.append(ECONNRESET)
+
+CONN_ABORTED_ERRORS = frozenset(CONN_ABORTED_ERRORS)
 
 class ExpectedException(Exception):
     """An exception whose traceback should be ignored by the hub"""
@@ -622,7 +633,7 @@ class TestCase(TestCaseMetaClass("NewBase", (BaseTestCase,), {})):
     def assertMonkeyPatchedFuncSignatures(self, mod_name, func_names=(), exclude=()):
         # We use inspect.getargspec because it's the only thing available
         # in Python 2.7, but it is deprecated
-        # pylint:disable=deprecated-method
+        # pylint:disable=deprecated-method,too-many-locals
         import inspect
         import warnings
         from gevent.monkey import get_original
@@ -738,8 +749,7 @@ class _DelayWaitMixin(object):
         timeout = gevent.Timeout.start_new(0.001, ref=False)
         try:
             with self.assertRaises(gevent.Timeout) as exc:
-                result = self.wait(timeout=1)
-
+                self.wait(timeout=1)
             self.assertIs(exc.exception, timeout)
         finally:
             timeout.cancel()
@@ -760,7 +770,7 @@ class GenericWaitTestCase(_DelayWaitMixin, TestCase):
     def test_returns_none_after_timeout(self):
         result = self._wait_and_check()
         # join and wait simply return after timeout expires
-        assert result is None, repr(result)
+        self.assertIsNone(result)
 
 
 class GenericGetTestCase(_DelayWaitMixin, TestCase):
@@ -787,10 +797,10 @@ class GenericGetTestCase(_DelayWaitMixin, TestCase):
     def test_raises_timeout_Timeout_exc_customized(self):
         error = RuntimeError('expected error')
         timeout = gevent.Timeout(self._default_wait_timeout, exception=error)
-        try:
+        with self.assertRaises(RuntimeError) as exc:
             self._wait_and_check(timeout=timeout)
-        except RuntimeError as ex:
-            self.assertIs(ex, error)
+
+        self.assertIs(exc.exception, error)
         self.cleanup()
 
 

@@ -52,20 +52,11 @@ from gevent.pywsgi import Input
 
 
 CONTENT_LENGTH = 'Content-Length'
-CONN_ABORTED_ERRORS = []
+CONN_ABORTED_ERRORS = greentest.CONN_ABORTED_ERRORS
 server_implements_chunked = True
 server_implements_pipeline = True
 server_implements_100continue = True
 DEBUG = '-v' in sys.argv
-
-try:
-    from errno import WSAECONNABORTED
-    CONN_ABORTED_ERRORS.append(WSAECONNABORTED)
-except ImportError:
-    pass
-
-from errno import ECONNRESET
-CONN_ABORTED_ERRORS.append(ECONNRESET)
 
 REASONS = {200: 'OK',
            500: 'Internal Server Error'}

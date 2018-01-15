@@ -1,11 +1,14 @@
 from __future__ import print_function
+import unittest
+import errno
+import os
+
+
 import greentest
 from greentest import PY3
 from gevent import socket
 import gevent
 from gevent.server import StreamServer
-import errno
-import os
 
 # Timeouts very flaky on appveyor and PyPy3
 _DEFAULT_SOCKET_TIMEOUT = 0.1 if not greentest.EXPECT_POOR_TIMER_RESOLUTION else 1.0
@@ -13,14 +16,14 @@ _DEFAULT_SOCKET_TIMEOUT = 0.1 if not greentest.EXPECT_POOR_TIMER_RESOLUTION else
 
 class SimpleStreamServer(StreamServer):
 
-    def handle(self, client_socket, address):
+    def handle(self, client_socket, _address):
         fd = client_socket.makefile()
         try:
             request_line = fd.readline()
             if not request_line:
                 return
             try:
-                method, path, rest = request_line.split(' ', 3)
+                _method, path, _rest = request_line.split(' ', 3)
             except Exception:
                 print('Failed to parse request line: %r' % (request_line, ))
                 raise
@@ -38,39 +41,42 @@ class SimpleStreamServer(StreamServer):
             fd.close()
 
 
-class Settings:
+class _Settings(object):
     ServerClass = StreamServer
     ServerSubClass = SimpleStreamServer
     restartable = True
     close_socket_detected = True
 
     @staticmethod
-    def assertAcceptedConnectionError(self):
-        conn = self.makefile()
+    def assertAcceptedConnectionError(inst):
+        conn = inst.makefile()
         result = conn.read()
-        assert not result, repr(result)
+        inst.assertFalse(result)
 
     assert500 = assertAcceptedConnectionError
 
     @staticmethod
-    def assert503(self):
+    def assert503(inst):
         # regular reads timeout
-        self.assert500()
+        inst.assert500()
         # attempt to send anything reset the connection
         try:
-            self.send_request()
+            inst.send_request()
         except socket.error as ex:
-            if ex.args[0] != errno.ECONNRESET:
+            if ex.args[0] not in greentest.CONN_ABORTED_ERRORS:
                 raise
 
     @staticmethod
-    def assertPoolFull(self):
-        self.assertRaises(socket.timeout, self.assertRequestSucceeded, timeout=0.01)
+    def assertPoolFull(inst):
+        with inst.assertRaises(socket.timeout):
+            inst.assertRequestSucceeded(timeout=0.01)
 
 
 class TestCase(greentest.TestCase):
 
     __timeout__ = greentest.LARGE_TIMEOUT
+    Settings = _Settings
+    server = None
 
     def cleanup(self):
         if getattr(self, 'server', None) is not None:
@@ -130,27 +136,24 @@ class TestCase(greentest.TestCase):
         return conn
 
     def assertConnectionRefused(self):
-        try:
+        with self.assertRaises(socket.error) as exc:
             conn = self.makefile()
-            try:
-                raise AssertionError('Connection was not refused: %r' % (conn._sock, ))
-            finally:
-                conn.close()
-        except socket.error as ex:
-            if ex.args[0] not in (errno.ECONNREFUSED, errno.EADDRNOTAVAIL):
-                raise
+            conn.close()
+
+        ex = exc.exception
+        self.assertIn(ex.args[0], (errno.ECONNREFUSED, errno.EADDRNOTAVAIL))
 
     def assert500(self):
-        Settings.assert500(self)
+        self.Settings.assert500(self)
 
     def assert503(self):
-        Settings.assert503(self)
+        self.Settings.assert503(self)
 
     def assertAcceptedConnectionError(self):
-        Settings.assertAcceptedConnectionError(self)
+        self.Settings.assertAcceptedConnectionError(self)
 
     def assertPoolFull(self):
-        Settings.assertPoolFull(self)
+        self.Settings.assertPoolFull(self)
 
     def assertNotAccepted(self):
         conn = self.makefile()
@@ -185,11 +188,10 @@ class TestCase(greentest.TestCase):
         self.server.stop()
         self.assertConnectionRefused()
 
-    def report_netstat(self, msg):
-        if 0:
-            print(msg)
-            os.system('sudo netstat -anp | grep %s' % os.getpid())
-            print('^^^^^')
+    def report_netstat(self, _msg):
+        # At one point this would call 'sudo netstat -anp | grep PID'
+        # with os.system. We can probably do better with psutil.
+        return
 
     def _create_server(self):
         return self.ServerSubClass((greentest.DEFAULT_BIND_ADDR, 0))
@@ -221,12 +223,14 @@ class TestCase(greentest.TestCase):
 
     def ServerClass(self, *args, **kwargs):
         kwargs.setdefault('spawn', self.get_spawn())
-        return Settings.ServerClass(*args, **kwargs)
+        return self.Settings.ServerClass(*args, **kwargs)
 
     def ServerSubClass(self, *args, **kwargs):
         kwargs.setdefault('spawn', self.get_spawn())
-        return Settings.ServerSubClass(*args, **kwargs)
+        return self.Settings.ServerSubClass(*args, **kwargs)
 
+    def get_spawn(self):
+        return None
 
 class TestDefaultSpawn(TestCase):
 
@@ -237,7 +241,7 @@ class TestDefaultSpawn(TestCase):
         self.report_netstat('before start')
         self.start_server()
         self.report_netstat('after start')
-        if restartable and Settings.restartable:
+        if restartable and self.Settings.restartable:
             self.server.stop_accepting()
             self.report_netstat('after stop_accepting')
             self.assertNotAccepted()
@@ -341,13 +345,6 @@ class TestDefaultSpawn(TestCase):
         self.expect_one_error()
         self.assertAcceptedConnectionError()
         self.assert_error(ExpectedError, error)
-        return
-        if Settings.restartable:
-            assert not self.server.started
-        else:
-            assert self.server.started
-        gevent.sleep(0.1)
-        assert self.server.started
 
     def test_server_repr_when_handle_is_instancemethod(self):
         # PR 501
@@ -424,9 +421,9 @@ class TestNoneSpawn(TestCase):
         self._test_invalid_callback()
 
     def test_assertion_in_blocking_func(self):
-        def sleep(*args):
+        def sleep(*_args):
             gevent.sleep(0)
-        self.server = Settings.ServerClass((greentest.DEFAULT_BIND_ADDR, 0), sleep, spawn=None)
+        self.server = self.Settings.ServerClass((greentest.DEFAULT_BIND_ADDR, 0), sleep, spawn=None)
         self.server.start()
         self.expect_one_error()
         self.assert500()
@@ -437,52 +434,48 @@ class ExpectedError(Exception):
     pass
 
 
-if hasattr(socket, 'ssl'):
 
-    class TestSSLSocketNotAllowed(TestCase):
+class TestSSLSocketNotAllowed(TestCase):
 
-        switch_expected = False
+    switch_expected = False
 
-        def get_spawn(self):
-            return gevent.spawn
+    def get_spawn(self):
+        return gevent.spawn
 
-        def test(self):
-            from gevent.socket import ssl, socket
-            listener = socket()
-            listener.bind(('0.0.0.0', 0))
-            listener.listen(5)
-            listener = ssl(listener)
-            self.assertRaises(TypeError, self.ServerSubClass, listener)
+    @unittest.skipUnless(hasattr(socket, 'ssl'), "Uses socket.ssl")
+    def test(self):
+        from gevent.socket import ssl
+        from gevent.socket import socket as gsocket
+        listener = gsocket()
+        listener.bind(('0.0.0.0', 0))
+        listener.listen(5)
+        listener = ssl(listener)
+        self.assertRaises(TypeError, self.ServerSubClass, listener)
 
-try:
-    __import__('ssl')
-except ImportError:
-    pass
-else:
-    def _file(name, here=os.path.dirname(__file__)):
-        return os.path.abspath(os.path.join(here, name))
+def _file(name, here=os.path.dirname(__file__)):
+    return os.path.abspath(os.path.join(here, name))
 
-    class TestSSLGetCertificate(TestCase):
+class TestSSLGetCertificate(TestCase):
 
-        def _create_server(self):
-            return self.ServerSubClass((greentest.DEFAULT_BIND_ADDR, 0),
-                                       keyfile=_file('server.key'),
-                                       certfile=_file('server.crt'))
+    def _create_server(self):
+        return self.ServerSubClass((greentest.DEFAULT_BIND_ADDR, 0),
+                                   keyfile=_file('server.key'),
+                                   certfile=_file('server.crt'))
 
-        def get_spawn(self):
-            return gevent.spawn
+    def get_spawn(self):
+        return gevent.spawn
 
-        def test_certificate(self):
-            # Issue 801
-            from gevent import monkey, ssl
-            # only broken if *not* monkey patched
-            self.assertFalse(monkey.is_module_patched('ssl'))
-            self.assertFalse(monkey.is_module_patched('socket'))
+    def test_certificate(self):
+        # Issue 801
+        from gevent import monkey, ssl
+        # only broken if *not* monkey patched
+        self.assertFalse(monkey.is_module_patched('ssl'))
+        self.assertFalse(monkey.is_module_patched('socket'))
 
-            self.init_server()
+        self.init_server()
 
-            server_host, server_port, _family = self.get_server_host_port_family()
-            ssl.get_server_certificate((server_host, server_port))
+        server_host, server_port, _family = self.get_server_host_port_family()
+        ssl.get_server_certificate((server_host, server_port))
 
 # test non-socket.error exception in accept call: fatal
 # test error in spawn(): non-fatal
