@@ -75,6 +75,8 @@ class Queue(object):
        previously anyway, but that wasn't the case for PyPy.
     """
 
+    _warn_depth = 2
+
     def __init__(self, maxsize=None, items=None):
         if maxsize is not None and maxsize <= 0:
             self.maxsize = None
@@ -83,7 +85,7 @@ class Queue(object):
                 warnings.warn(
                     'Queue(0) now equivalent to Queue(None); if you want a channel, use Channel',
                     DeprecationWarning,
-                    stacklevel=2)
+                    stacklevel=self._warn_depth)
         else:
             self.maxsize = maxsize
         # Explicitly maintain order for getters and putters that block
@@ -424,6 +426,8 @@ class JoinableQueue(Queue):
     A subclass of :class:`Queue` that additionally has
     :meth:`task_done` and :meth:`join` methods.
     """
+
+    _warn_depth = 3
 
     def __init__(self, maxsize=None, items=None, unfinished_tasks=None):
         """

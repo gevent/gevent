@@ -110,7 +110,7 @@ def getname(command, env=None, setenv=None):
     env.update(setenv or {})
 
     for key, value in sorted(env.items()):
-        if key.startswith('GEVENT_') or key.startswith('GEVENTARES_'):
+        if key.startswith('GEVENT'):
             result.append('%s=%s' % (key, value))
 
     if isinstance(command, six.string_types):

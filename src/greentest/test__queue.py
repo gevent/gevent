@@ -107,7 +107,7 @@ class TestQueue(TestCase):
 
         sendings = ['1', '2', '3', '4']
         evts = [AsyncResult() for x in sendings]
-        for i, x in enumerate(sendings):
+        for i, _ in enumerate(sendings):
             gevent.spawn(waiter, q, evts[i])  # XXX use waitall for them
 
         gevent.sleep(0.01)  # get 'em all waiting
@@ -244,21 +244,23 @@ class TestChannel(TestCase):
         self.assertEqual(['waiting', 'sending hello', 'hello', 'sending world', 'world', 'sent world'], events)
         g.get()
 
-    def test_task_done(self):
-        channel = queue.JoinableQueue(0)
-        X = object()
-        gevent.spawn(channel.put, X)
-        result = channel.get()
-        assert result is X, (result, X)
-        assert channel.unfinished_tasks == 1, channel.unfinished_tasks
-        channel.task_done()
-        assert channel.unfinished_tasks == 0, channel.unfinished_tasks
-
     def test_iterable(self):
         channel = queue.Channel()
         gevent.spawn(channel.put, StopIteration)
         r = list(channel)
         self.assertEqual(r, [])
+
+class TestJoinableQueue(TestCase):
+
+    def test_task_done(self):
+        channel = queue.JoinableQueue()
+        X = object()
+        gevent.spawn(channel.put, X)
+        result = channel.get()
+        self.assertIs(result, X)
+        self.assertEqual(1, channel.unfinished_tasks)
+        channel.task_done()
+        self.assertEqual(0, channel.unfinished_tasks)
 
 
 class TestNoWait(TestCase):
@@ -370,44 +372,62 @@ class TestJoinEmpty(TestCase):
         q.join()
 
 
-def make_get_interrupt(queue_type):
+class TestGetInterrupt(GenericGetTestCase):
 
-    class TestGetInterrupt(GenericGetTestCase):
+    Timeout = Empty
 
-        Timeout = Empty
+    kind = queue.Queue
 
-        def wait(self, timeout):
-            return queue_type().get(timeout=timeout)
+    def wait(self, timeout):
+        return self._makeOne().get(timeout=timeout)
 
-    TestGetInterrupt.__name__ += '_' + queue_type.__name__
-    return TestGetInterrupt
+    def _makeOne(self):
+        return self.kind()
 
+class TestGetInterruptJoinableQueue(TestGetInterrupt):
+    kind = queue.JoinableQueue
 
-for queue_type in [queue.Queue, queue.JoinableQueue, queue.LifoQueue, queue.PriorityQueue, queue.Channel]:
-    klass = make_get_interrupt(queue_type)
-    globals()[klass.__name__] = klass
-del klass, queue_type
+class TestGetInterruptLifoQueue(TestGetInterrupt):
+    kind = queue.LifoQueue
 
+class TestGetInterruptPriorityQueue(TestGetInterrupt):
+    kind = queue.PriorityQueue
 
-def make_put_interrupt(queue):
-
-    class TestPutInterrupt(GenericGetTestCase):
-
-        Timeout = Full
-
-        def wait(self, timeout):
-            while not queue.full():
-                queue.put(1)
-            return queue.put(2, timeout=timeout)
-
-    TestPutInterrupt.__name__ += '_' + queue.__class__.__name__
-    return TestPutInterrupt
+class TestGetInterruptChannel(TestGetInterrupt):
+    kind = queue.Channel
 
 
-for obj in [queue.Queue(1), queue.JoinableQueue(1), queue.LifoQueue(1), queue.PriorityQueue(1), queue.Channel()]:
-    klass = make_put_interrupt(obj)
-    globals()[klass.__name__] = klass
-del klass, obj
+class TestPutInterrupt(GenericGetTestCase):
+    kind = queue.Queue
+    Timeout = Full
+
+    def setUp(self):
+        super(TestPutInterrupt, self).setUp()
+        self.queue = self._makeOne()
+
+    def wait(self, timeout):
+        while not self.queue.full():
+            self.queue.put(1)
+        return self.queue.put(2, timeout=timeout)
+
+    def _makeOne(self):
+        return self.kind(1)
+
+
+class TestPutInterruptJoinableQueue(TestPutInterrupt):
+    kind = queue.JoinableQueue
+
+class TestPutInterruptLifoQueue(TestPutInterrupt):
+    kind = queue.LifoQueue
+
+class TestPutInterruptPriorityQueue(TestPutInterrupt):
+    kind = queue.PriorityQueue
+
+class TestPutInterruptChannel(TestPutInterrupt):
+    kind = queue.Channel
+
+    def _makeOne(self):
+        return self.kind()
 
 
 del GenericGetTestCase

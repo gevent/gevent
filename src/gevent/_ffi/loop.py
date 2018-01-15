@@ -531,10 +531,19 @@ class AbstractLoop(object):
         pass
 
     def now(self):
+        "Return the loop's notion of the current time."
+        raise NotImplementedError()
+
+    def update_now(self):
+        "Update the loop's notion of the current time."
         raise NotImplementedError()
 
     def update(self):
-        raise NotImplementedError()
+        import warnings
+        warnings.warn("'update' is deprecated; use 'update_now'",
+                      DeprecationWarning,
+                      stacklevel=2)
+        self.update_now()
 
     def __repr__(self):
         return '<%s at 0x%x %s>' % (self.__class__.__name__, id(self), self._format())

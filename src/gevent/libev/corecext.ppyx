@@ -420,9 +420,11 @@ cdef public class loop [object PyGeventLoopObject, type PyGeventLoop_Type]:
         CHECK_LOOP2(self)
         return libev.ev_now(self._ptr)
 
-    def update(self):
+    def update_now(self):
         CHECK_LOOP2(self)
         libev.ev_now_update(self._ptr)
+
+    update = update_now # Old name, deprecated.
 
     def __repr__(self):
         return '<%s at 0x%x %s>' % (self.__class__.__name__, id(self), self._format())

@@ -334,7 +334,7 @@ class loop(AbstractLoop):
     def now(self):
         return libev.ev_now(self._ptr)
 
-    def update(self):
+    def update_now(self):
         libev.ev_now_update(self._ptr)
 
     def __repr__(self):

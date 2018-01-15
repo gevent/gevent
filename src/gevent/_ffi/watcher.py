@@ -443,11 +443,8 @@ class TimerMixin(object):
             # good idea."
             # 1.3 changed the default for this to False. Note that
             # starting Timeout objects internally still sets this to true.
-            self._update_now()
+            self.loop.update()
         super(TimerMixin, self).start(callback, *args)
-
-    def _update_now(self):
-        raise NotImplementedError()
 
     def again(self, callback, *args, **kw):
         raise NotImplementedError()

@@ -389,7 +389,7 @@ class loop(AbstractLoop):
     def now(self):
         return libuv.uv_now(self._ptr)
 
-    def update(self):
+    def update_now(self):
         libuv.uv_update_time(self._ptr)
 
     @property

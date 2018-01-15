@@ -270,6 +270,11 @@ def wrap_refcount(method):
 
     # Some builtin things that we ignore
     IGNORED_TYPES = (tuple, dict, types.FrameType, types.TracebackType)
+    try:
+        callback_kind = gevent.core.callback
+    except AttributeError:
+        # Must be using FFI.
+        from gevent._ffi.callback import callback as callback_kind
 
     def type_hist():
         import collections
@@ -278,7 +283,7 @@ def wrap_refcount(method):
             k = type(x)
             if k in IGNORED_TYPES:
                 continue
-            if k == gevent.core.callback and x.callback is None and x.args is None:
+            if k == callback_kind and x.callback is None and x.args is None:
                 # these represent callbacks that have been stopped, but
                 # the event loop hasn't cycled around to run them. The only
                 # known cause of this is killing greenlets before they get a chance
@@ -488,6 +493,13 @@ class TestCase(TestCaseMetaClass("NewBase", (BaseTestCase,), {})):
 
     def setUp(self):
         super(TestCase, self).setUp()
+        # Especially if we're running in leakcheck mode, where
+        # the same test gets executed repeatedly, we need to update the
+        # current time. Tests don't always go through the full event loop,
+        # so that doesn't always happen. test__pool.py:TestPoolYYY.test_async
+        # tends to show timeouts that are too short if we don't.
+        # XXX: Should some core part of the loop call this?
+        gevent.get_hub().loop.update_now()
         self.close_on_teardown = []
 
     def tearDown(self):
@@ -606,20 +618,6 @@ class TestCase(TestCaseMetaClass("NewBase", (BaseTestCase,), {})):
             self.assertLessEqual(delay, max_time)
             self.assertGreaterEqual(delay, min_time)
 
-    if not hasattr(BaseTestCase, 'assertIsNot'):
-        # Methods added in 3.1, backport for 2.7
-        def assertIs(self, expr1, expr2, msg=None):
-            """Just like self.assertTrue(a is b), but with a nicer default message."""
-            if expr1 is not expr2:
-                standardMsg = '%s is not %s' % (safe_repr(expr1),
-                                                safe_repr(expr2))
-                self.fail(self._formatMessage(msg, standardMsg))
-
-        def assertIsNot(self, expr1, expr2, msg=None):
-            """Just like self.assertTrue(a is not b), but with a nicer default message."""
-            if expr1 is expr2:
-                standardMsg = 'unexpectedly identical: %s' % (safe_repr(expr1),)
-                self.fail(self._formatMessage(msg, standardMsg))
 
     def assertMonkeyPatchedFuncSignatures(self, mod_name, func_names=(), exclude=()):
         # We use inspect.getargspec because it's the only thing available
@@ -739,12 +737,10 @@ class _DelayWaitMixin(object):
     def test_outer_timeout_is_not_lost(self):
         timeout = gevent.Timeout.start_new(0.001, ref=False)
         try:
-            try:
+            with self.assertRaises(gevent.Timeout) as exc:
                 result = self.wait(timeout=1)
-            except gevent.Timeout as ex:
-                assert ex is timeout, (ex, timeout)
-            else:
-                raise AssertionError('must raise Timeout (returned %r)' % (result, ))
+
+            self.assertIs(exc.exception, timeout)
         finally:
             timeout.cancel()
 
@@ -775,7 +771,8 @@ class GenericGetTestCase(_DelayWaitMixin, TestCase):
         pass
 
     def test_raises_timeout_number(self):
-        self.assertRaises(self.Timeout, self._wait_and_check, timeout=0.01)
+        with self.assertRaises(self.Timeout):
+            self._wait_and_check(timeout=0.01)
         # get raises Timeout after timeout expired
         self.cleanup()
 
@@ -784,7 +781,7 @@ class GenericGetTestCase(_DelayWaitMixin, TestCase):
         try:
             self._wait_and_check(timeout=timeout)
         except gevent.Timeout as ex:
-            assert ex is timeout, (ex, timeout)
+            self.assertIs(ex, timeout)
         self.cleanup()
 
     def test_raises_timeout_Timeout_exc_customized(self):
@@ -793,7 +790,7 @@ class GenericGetTestCase(_DelayWaitMixin, TestCase):
         try:
             self._wait_and_check(timeout=timeout)
         except RuntimeError as ex:
-            assert ex is error, (ex, error)
+            self.assertIs(ex, error)
         self.cleanup()
 
 
