@@ -23,6 +23,7 @@ CPYTHON = not PYPY
 WIN = sys.platform.startswith("win")
 PY2 = sys.version_info[0] < 3
 PY3 = sys.version_info[0] >= 3
+ARES = os.environ.get('GEVENT_RESOLVER') == 'ares'
 
 # XXX: Formalize this better
 LIBUV = os.getenv('GEVENT_CORE_CFFI_ONLY') == 'libuv' or (PYPY and WIN)
@@ -233,6 +234,16 @@ if LIBUV:
                     'test_subprocess.POSIXProcessTestCase.test_close_fds_0_1',
                     'test_subprocess.POSIXProcessTestCase.test_close_fds_0_2',
                 ]
+
+            if PYPY:
+
+                if ARES:
+
+                    disabled_tests += [
+                        # This can timeout with a socket timeout in ssl.wrap_socket(c)
+                        # on Travis. I can't reproduce locally.
+                        'test_ssl.ThreadedTests.test_handshake_timeout',
+                    ]
 
     if PY3:
 
@@ -814,7 +825,7 @@ if sys.version_info[:2] >= (3, 5):
         'test_socket.TestExceptions.test_setblocking_invalidfd',
     ]
 
-    if os.environ.get('GEVENT_RESOLVER') == 'ares':
+    if ARES:
         disabled_tests += [
             # These raise different errors or can't resolve
             # the IP address correctly

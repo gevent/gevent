@@ -575,7 +575,7 @@ class TestCase(TestCaseMetaClass("NewBase", (BaseTestCase,), {})):
     _error = _none
 
     def expect_one_error(self):
-        assert self._error == self._none, self._error
+        self.assertEqual(self._error, self._none)
         self._old_handle_error = gevent.get_hub().handle_error
         gevent.get_hub().handle_error = self._store_error
 
