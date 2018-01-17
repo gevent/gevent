@@ -2,7 +2,8 @@ import sys
 import os
 import glob
 import time
-import util
+
+from greentest import util
 
 
 cwd = '../../examples/'

@@ -5,13 +5,13 @@ try:
 except ImportError:
     import urllib2
 from unittest import SkipTest
-import util
+
 import socket
 import ssl
 
 from greentest import DEFAULT_XPC_SOCKET_TIMEOUT
 from greentest import main
-
+from greentest import util
 
 class Test_wsgiserver(util.TestServer):
     server = 'wsgiserver.py'

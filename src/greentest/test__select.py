@@ -1,4 +1,4 @@
-import _six as six
+from greentest import six
 import sys
 import os
 import errno

@@ -1,8 +1,14 @@
-from greentest import walk_modules, BaseTestCase, main, NON_APPLICABLE_SUFFIXES
-import _six as six
+import unittest
+
+from greentest.modules import walk_modules
+from greentest import main
+from greentest.sysinfo import NON_APPLICABLE_SUFFIXES
 
 
-class TestExec(BaseTestCase):
+from greentest import six
+
+
+class TestExec(unittest.TestCase):
     pass
 
 

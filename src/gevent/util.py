@@ -58,3 +58,49 @@ class wrap_errors(object):
 
     def __getattr__(self, name):
         return getattr(self.__func, name)
+
+def dump_stacks():
+    """
+    Request information about the running threads of the current process.
+
+    This is a debugging utility. Its output has no guarantees other than being
+    intended for human consumption.
+
+    :return: A sequence of text lines detailing the stacks of running
+            threads and greenlets. (One greenlet will duplicate one thread,
+            the current thread and greenlet.)
+
+    .. versionadded:: 1.3a1
+    """
+    dump = []
+
+    # threads
+    import threading  # Late import this stuff because it may get monkey-patched
+    import traceback
+    import sys
+    import gc
+
+    from greenlet import greenlet
+
+    threads = {th.ident: th.name for th in threading.enumerate()}
+
+    for thread, frame in sys._current_frames().items():
+        dump.append('Thread 0x%x (%s)\n' % (thread, threads.get(thread)))
+        dump.append(''.join(traceback.format_stack(frame)))
+        dump.append('\n')
+
+    # greenlets
+
+    # if greenlet is present, let's dump each greenlet stack
+    # Use the gc module to inspect all objects to find the greenlets
+    # since there isn't a global registry
+    for ob in gc.get_objects():
+        if not isinstance(ob, greenlet):
+            continue
+        if not ob:
+            continue  # not running anymore or not started
+        dump.append('Greenlet %s\n' % ob)
+        dump.append(''.join(traceback.format_stack(ob.gr_frame)))
+        dump.append('\n')
+
+    return dump

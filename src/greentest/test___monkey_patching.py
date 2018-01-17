@@ -1,10 +1,11 @@
 import sys
 import os
 import glob
-import util
+
 import atexit
 # subprocess: include in subprocess tests
 
+from greentest import util
 
 TIMEOUT = 120
 directory = '%s.%s' % sys.version_info[:2]

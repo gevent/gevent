@@ -8,7 +8,7 @@ from time import sleep
 import gevent
 from gevent.server import StreamServer
 
-import util
+from greentest import util
 
 
 class Test(util.TestServer):
@@ -23,16 +23,16 @@ class Test(util.TestServer):
 
     def after(self):
         if sys.platform == 'win32':
-            assert self.popen.poll() is not None
+            self.assertIsNotNone(self.popen.poll())
         else:
             self.assertEqual(self.popen.poll(), 0)
 
     def _run_all_tests(self):
         log = []
 
-        def handle(socket, address):
+        def handle(sock, _address):
             while True:
-                data = socket.recv(1024)
+                data = sock.recv(1024)
                 print('got %r' % data)
                 if not data:
                     break
@@ -47,8 +47,7 @@ class Test(util.TestServer):
             # On Windows, SIGTERM actually abruptly terminates the process;
             # it can't be caught. However, CTRL_C_EVENT results in a KeyboardInterrupt
             # being raised, so we can shut down properly.
-            self.popen.send_signal(getattr(signal, 'CTRL_C_EVENT') if hasattr(signal, 'CTRL_C_EVENT')
-                                   else signal.SIGTERM)
+            self.popen.send_signal(getattr(signal, 'CTRL_C_EVENT', signal.SIGTERM))
             sleep(0.1)
 
             conn.sendall(b'msg2')

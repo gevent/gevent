@@ -2,7 +2,7 @@ from gevent.socket import create_connection, timeout
 import greentest
 import gevent
 
-import util
+from greentest import util
 
 class Test(util.TestServer):
     server = 'echoserver.py'

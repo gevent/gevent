@@ -1,6 +1,6 @@
 # testing gevent's Event, Lock, RLock, Semaphore, BoundedSemaphore with standard test_threading
 from __future__ import print_function
-from _six import xrange
+from greentest.six import xrange
 import greentest
 
 setup_ = '''from gevent import monkey; monkey.patch_all()

@@ -1,6 +1,6 @@
 # test for issue #210
 from gevent import core
-from util import alarm
+from greentest.util import alarm
 
 
 alarm(1)

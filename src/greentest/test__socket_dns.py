@@ -1,6 +1,6 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
-import _six as six
+
 import re
 import greentest
 import unittest
@@ -8,8 +8,9 @@ import socket
 from time import time
 import gevent
 import gevent.socket as gevent_socket
-from util import log
-from _six import xrange
+from greentest.util import log
+from greentest import six
+from greentest.six import xrange
 
 
 resolver = gevent.get_hub().resolver

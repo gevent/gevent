@@ -1,6 +1,7 @@
 import socket
-from unittest import main
-import util
+
+from greentest import util
+from greentest import main
 
 
 class Test(util.TestServer):
@@ -10,7 +11,7 @@ class Test(util.TestServer):
         sock = socket.socket(type=socket.SOCK_DGRAM)
         sock.connect(('127.0.0.1', 9000))
         sock.send(b'Test udp_server')
-        data, address = sock.recvfrom(8192)
+        data, _address = sock.recvfrom(8192)
         self.assertEqual(data, b'Received 15 bytes')
         sock.close()
 

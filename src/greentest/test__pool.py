@@ -7,7 +7,7 @@ from gevent.timeout import Timeout
 import greentest
 import random
 from greentest import ExpectedException
-import _six as six
+from greentest import six
 
 import unittest
 

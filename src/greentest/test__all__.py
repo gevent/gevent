@@ -1,11 +1,11 @@
 """Check __all__, __implements__, __extensions__, __imports__ of the modules"""
 from __future__ import print_function
-import _six as six
+from greentest import six
 import sys
 import unittest
 import types
-from greentest import walk_modules
-from greentest import PLATFORM_SPECIFIC_SUFFIXES
+from greentest.modules import walk_modules
+from greentest.sysinfo import PLATFORM_SPECIFIC_SUFFIXES
 
 
 MAPPING = {
@@ -215,6 +215,8 @@ are missing from %r:
         self.check_imports_actually_imports()
         self.check_extensions_actually_extend()
         self.check_completeness()
+
+    path = modname = orig_modname = None
 
     for path, modname in walk_modules(include_so=True):
         orig_modname = modname

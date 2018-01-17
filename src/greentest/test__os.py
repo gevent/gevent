@@ -1,15 +1,15 @@
 import sys
-import _six as six
+from greentest import six
 from os import pipe
 import gevent
 from gevent import os
-from greentest import TestCase, main, CI_TIMEOUT
+from greentest import TestCase, main, LARGE_TIMEOUT
 from gevent import Greenlet, joinall
 
 
 class TestOS_tp(TestCase):
 
-    __timeout__ = CI_TIMEOUT
+    __timeout__ = LARGE_TIMEOUT
 
     def pipe(self):
         return pipe()
@@ -83,7 +83,7 @@ if hasattr(os, 'fork_and_watch'):
 
     class TestForkAndWatch(TestCase):
 
-        __timeout__ = CI_TIMEOUT
+        __timeout__ = LARGE_TIMEOUT
 
         def test_waitpid_all(self):
             # Cover this specific case.

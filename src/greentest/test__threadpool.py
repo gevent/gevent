@@ -1,5 +1,6 @@
 import sys
 from time import time, sleep
+import contextlib
 import random
 import weakref
 import greentest
@@ -7,16 +8,27 @@ import gevent.threadpool
 from gevent.threadpool import ThreadPool
 import gevent
 from greentest import ExpectedException
-import _six as six
+from greentest import six
 import gc
 
 
 PYPY = hasattr(sys, 'pypy_version_info')
 
 
+@contextlib.contextmanager
+def disabled_gc():
+    was_enabled = gc.isenabled()
+    gc.disable()
+    try:
+        yield
+    finally:
+        if was_enabled:
+            gc.enable()
+
+
 class TestCase(greentest.TestCase):
     # These generally need more time
-    __timeout__ = greentest.CI_TIMEOUT
+    __timeout__ = greentest.LARGE_TIMEOUT
     pool = None
 
     def cleanup(self):
@@ -402,7 +414,7 @@ class TestRef(TestCase):
         func = obj.func
         del obj
 
-        with greentest.disabled_gc():
+        with disabled_gc():
             # we do this:
             #     result = func(Object(), kwarg1=Object())
             # but in a thread pool and see that arguments', result's and func's references are not leaked

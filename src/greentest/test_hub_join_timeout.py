@@ -3,7 +3,7 @@ import gevent
 import gevent.core
 from gevent.event import Event
 from time import time
-from _six import xrange
+from greentest.six import xrange
 
 
 SMALL = 0.1

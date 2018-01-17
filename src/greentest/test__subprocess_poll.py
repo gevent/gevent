@@ -1,6 +1,6 @@
 import sys
 from gevent.subprocess import Popen
-from util import alarm
+from greentest.util import alarm
 
 alarm(3)
 
