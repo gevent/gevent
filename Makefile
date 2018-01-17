@@ -121,7 +121,7 @@ cffibackendtest:
 	${PYTHON} scripts/travis.py fold_end libev
 
 leaktest:
-	GEVENTSETUP_EV_VERIFY=3 GEVENTTEST_LEAKCHECK=1 make alltest
+	GEVENTTEST_LEAKCHECK=1 make alltest
 
 bench:
 	${PYTHON} src/greentest/bench_sendall.py
@@ -202,7 +202,7 @@ develop:
 	${PYTHON} scripts/travis.py fold_end install
 
 lint-py27: $(PY27)
-	PYTHON=python2.7.14 PATH=$(BUILD_RUNTIMES)/versions/python2.7.14/bin:$(PATH) make develop travis_test_linters
+	PYTHON=python2.7.14 PATH=$(BUILD_RUNTIMES)/versions/python2.7.14/bin:$(PATH) GEVENTSETUP_EV_VERIFY=3 make develop travis_test_linters
 
 test-py27: $(PY27)
 	PYTHON=python2.7.14 PATH=$(BUILD_RUNTIMES)/versions/python2.7.14/bin:$(PATH) make develop allbackendtest
