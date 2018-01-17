@@ -86,28 +86,39 @@ test_prelim:
 # we need a python script to do this, or possible the GNU make shell function
 
 basictest: test_prelim
+	${PYTHON} scripts/travis.py fold_start basictest "Running basic tests"
 	cd src/greentest && GEVENT_RESOLVER=thread ${PYTHON} testrunner.py --config known_failures.py --quiet
+	${PYTHON} scripts/travis.py fold_end basictest
 
 alltest: basictest
+	${PYTHON} scripts/travis.py fold_start ares "Running c-ares tests"
 	cd src/greentest && GEVENT_RESOLVER=ares GEVENTARES_SERVERS=8.8.8.8 ${PYTHON} testrunner.py --config known_failures.py --ignore tests_that_dont_use_resolver.txt --quiet
+	${PYTHON} scripts/travis.py fold_end ares
 # In the past, we included all test files that had a reference to 'subprocess'' somewhere in their
 # text. The monkey-patched stdlib tests were specifically included here.
 # However, we now always also test on AppVeyor (Windows) which only has GEVENT_FILE=thread,
 # so we can save a lot of CI time by reducing the set and excluding the stdlib tests without
 # losing any coverage. See the `threadfiletest` for what command used to run.
+	${PYTHON} scripts/travis.py fold_start thread "Running GEVENT_FILE=thread tests"
 	cd src/greentest && GEVENT_FILE=thread ${PYTHON} testrunner.py --config known_failures.py test__*subprocess*.py --quiet
+	${PYTHON} scripts/travis.py fold_end thread
 
 threadfiletest:
 	cd src/greentest && GEVENT_FILE=thread ${PYTHON} testrunner.py --config known_failures.py `grep -l subprocess test_*.py` --quiet
 
 allbackendtest:
+	${PYTHON} scripts/travis.py fold_start default "Testing default backend"
 	GEVENT_CORE_CFFI_ONLY= make alltest
+	${PYTHON} scripts/travis.py fold_end default
 	make cffibackendtest
 
 cffibackendtest:
+	${PYTHON} scripts/travis.py fold_start libuv "Testing libuv backend"
 	GEVENT_CORE_CFFI_ONLY=libuv make alltest
+	${PYTHON} scripts/travis.py fold_end libuv
+	${PYTHON} scripts/travis.py fold_start libev "Testing libev CFFI backend"
 	GEVENT_CORE_CFFI_ONLY=libev make alltest
-
+	${PYTHON} scripts/travis.py fold_end libev
 
 leaktest:
 	GEVENTSETUP_EV_VERIFY=3 GEVENTTEST_LEAKCHECK=1 make alltest
