@@ -4,9 +4,6 @@ import gevent
 
 import util
 
-_DEFAULT_SOCKET_TIMEOUT = 0.1 if not greentest.EXPECT_POOR_TIMER_RESOLUTION else 2.0
-
-
 class Test(util.TestServer):
     server = 'echoserver.py'
 
@@ -18,11 +15,11 @@ class Test(util.TestServer):
                 kwargs = {'bufsize': 1}
             kwargs['mode'] = 'rb'
             conn = create_connection(('127.0.0.1', 16000))
-            conn.settimeout(_DEFAULT_SOCKET_TIMEOUT)
+            conn.settimeout(greentest.DEFAULT_XPC_SOCKET_TIMEOUT)
             rfile = conn.makefile(**kwargs)
 
             welcome = rfile.readline()
-            assert b'Welcome' in welcome, repr(welcome)
+            self.assertIn(b'Welcome', welcome)
 
             conn.sendall(message)
             received = rfile.read(len(message))

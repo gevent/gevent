@@ -6,11 +6,11 @@ import os
 
 import greentest
 from greentest import PY3
+from greentest import DEFAULT_SOCKET_TIMEOUT as _DEFAULT_SOCKET_TIMEOUT
 from gevent import socket
 import gevent
 from gevent.server import StreamServer
 
-_DEFAULT_SOCKET_TIMEOUT = 0.1 if not greentest.EXPECT_POOR_TIMER_RESOLUTION else 1.0
 
 class SimpleStreamServer(StreamServer):
 

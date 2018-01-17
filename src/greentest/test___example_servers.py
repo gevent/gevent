@@ -1,14 +1,16 @@
 import sys
-#import time
-from unittest import main
-if sys.version_info[0] == 3:
-    from urllib import request as urllib2
-else:
-    import urllib2
 
+try:
+    from urllib import request as urllib2
+except ImportError:
+    import urllib2
+from unittest import SkipTest
 import util
 import socket
 import ssl
+
+from greentest import DEFAULT_XPC_SOCKET_TIMEOUT
+from greentest import main
 
 
 class Test_wsgiserver(util.TestServer):
@@ -22,10 +24,13 @@ class Test_wsgiserver(util.TestServer):
     def read(self, path='/'):
         url = self.URL + path
         try:
+            kwargs = {}
             if self.ssl_ctx is not None:
-                response = urllib2.urlopen(url, None, 2, context=self.ssl_ctx)
-            else:
-                response = urllib2.urlopen(url, None, 2)
+                kwargs = {'context': self.ssl_ctx}
+
+            response = urllib2.urlopen(url, None,
+                                       DEFAULT_XPC_SOCKET_TIMEOUT,
+                                       **kwargs)
         except urllib2.HTTPError:
             response = sys.exc_info()[1]
         result = '%s %s' % (response.code, response.msg), response.read()
@@ -47,7 +52,6 @@ class Test_wsgiserver(util.TestServer):
     def _do_test_a_blocking_client(self):
         # We spawn this in a separate server because if it's broken
         # the whole server hangs
-        print("Checking blocking")
         with self.running_server():
             # First, make sure we can talk to it.
             self._test_hello()
@@ -75,10 +79,10 @@ class Test_wsgiserver(util.TestServer):
             line = sock_file.readline()
             self.assertEqual(line, b'HTTP/1.1 404 Not Found\r\n')
 
-            sock.close()
             sock_file.close()
             if ssl_sock is not None:
                 ssl_sock.close()
+            sock.close()
 
     def test_a_blocking_client(self):
         self._do_test_a_blocking_client()
@@ -102,14 +106,14 @@ class Test_webproxy(Test_wsgiserver):
     def _run_all_tests(self):
         status, data = self.read('/')
         self.assertEqual(status, '200 OK')
-        assert b"gevent example" in data, repr(data)
+        self.assertIn(b"gevent example", data)
         status, data = self.read('/http://www.google.com')
         self.assertEqual(status, '200 OK')
-        assert b'google' in data.lower(), repr(data)
+        self.assertIn(b'google', data.lower())
 
-    def _do_test_a_blocking_client(self):
+    def test_a_blocking_client(self):
         # Not applicable
-        return
+        raise SkipTest("Not applicable")
 
 
 # class Test_webpy(Test_wsgiserver):

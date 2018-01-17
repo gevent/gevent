@@ -490,6 +490,12 @@ if RUNNING_ON_TRAVIS:
     # connected to with the same error.
     DEFAULT_BIND_ADDR = '127.0.0.1'
 
+# For in-process sockets
+DEFAULT_SOCKET_TIMEOUT = 0.1 if not EXPECT_POOR_TIMER_RESOLUTION else 2.0
+
+# For cross-process sockets
+DEFAULT_XPC_SOCKET_TIMEOUT = 2.0 if not EXPECT_POOR_TIMER_RESOLUTION else 4.0
+
 class TestCase(TestCaseMetaClass("NewBase", (BaseTestCase,), {})):
     __timeout__ = LOCAL_TIMEOUT if not RUNNING_ON_CI else CI_TIMEOUT
     switch_expected = 'default'
