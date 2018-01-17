@@ -23,11 +23,14 @@ import unittest
 
 from greentest import sysinfo
 
+
 def _do_not_skip(reason):
     assert reason
+
     def dec(f):
         return f
     return dec
+
 
 if sysinfo.WIN:
     skipOnWindows = unittest.skip

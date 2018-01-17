@@ -20,9 +20,11 @@
 
 from functools import wraps
 
+
 def wrap_error_fatal(method):
     import gevent
-    SYSTEM_ERROR = gevent.get_hub().SYSTEM_ERROR
+    system_error = gevent.get_hub().SYSTEM_ERROR
+
     @wraps(method)
     def wrapper(self, *args, **kwargs):
         # XXX should also be able to do gevent.SYSTEM_ERROR = object
@@ -32,13 +34,14 @@ def wrap_error_fatal(method):
         try:
             return method(self, *args, **kwargs)
         finally:
-            gevent.get_hub().SYSTEM_ERROR = SYSTEM_ERROR
+            gevent.get_hub().SYSTEM_ERROR = system_error
     return wrapper
 
 
 def wrap_restore_handle_error(method):
     import gevent
     old = gevent.get_hub().handle_error
+
     @wraps(method)
     def wrapper(self, *args, **kwargs):
         try:

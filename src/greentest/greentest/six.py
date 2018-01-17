@@ -1,4 +1,5 @@
 import sys
+# pylint:disable=unused-argument,import-error
 
 PY3 = sys.version_info[0] >= 3
 
@@ -18,7 +19,7 @@ if PY3:
         raise value
 
     xrange = range
-    string_types = str,
+    string_types = (str,)
     text_type = str
 
 else:
@@ -36,7 +37,7 @@ else:
 
     import __builtin__ as builtins
     xrange = builtins.xrange
-    string_types = builtins.basestring,
+    string_types = (builtins.basestring,)
     text_type = builtins.unicode
 
     exec_("""def reraise(tp, value, tb=None):

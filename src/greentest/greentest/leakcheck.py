@@ -18,9 +18,11 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
+import sys
 import gc
 import collections
 import types
+from functools import wraps
 
 import gevent.core
 
@@ -68,7 +70,7 @@ def wrap_refcount(method):
         return diff
 
     @wraps(method)
-    def wrapper(self, *args, **kwargs):
+    def wrapper(self, *args, **kwargs): # pylint:disable=too-many-branches
         gc.collect()
         gc.collect()
         gc.collect()
