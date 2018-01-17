@@ -105,3 +105,6 @@ from greentest.timing import AbstractGenericWaitTestCase as GenericWaitTestCase
 from greentest.modules import walk_modules
 
 BaseTestCase = unittest.TestCase
+
+from greentest.flaky import reraiseFlakyTestTimeout
+from greentest.flaky import reraiseFlakyTestRaceCondition
