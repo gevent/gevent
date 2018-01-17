@@ -188,6 +188,7 @@ $(PYPY3):
 
 
 develop:
+	${PYTHON} scripts/travis.py fold_start install "Installing gevent"
 	ls -l $(BUILD_RUNTIMES)/snakepit/
 	echo python is at `which $(PYTHON)`
 # First install a newer pip so that it can use the wheel cache
@@ -198,6 +199,7 @@ develop:
 # disables the cache.
 # We need wheel>=0.26 on Python 3.5. See previous revisions.
 	python -m pip install -U -r dev-requirements.txt
+	${PYTHON} scripts/travis.py fold_end install
 
 lint-py27: $(PY27)
 	PYTHON=python2.7.14 PATH=$(BUILD_RUNTIMES)/versions/python2.7.14/bin:$(PATH) make develop travis_test_linters
