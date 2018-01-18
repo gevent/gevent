@@ -642,8 +642,7 @@ if PYPY3:
 
 
 if PYPY and sys.pypy_version_info[:4] in ( # pylint:disable=no-member
-        (5, 8, 0, 'beta'), (5, 9, 0, 'beta'),
-    ):
+        (5, 8, 0, 'beta'), (5, 9, 0, 'beta'),):
     # 3.5 is beta. Hard to say what are real bugs in us vs real bugs in pypy.
     # For that reason, we pin these patches exactly to the version in use.
 
@@ -956,7 +955,7 @@ def disable_tests_in_source(source, filename):
         # If we do it on a def-by-def basis, we can break syntax
         # if the function is already decorated
         pattern = r'^import .*'
-        replacement = r'import patched_tests_setup as _GEVENT_PTS\n'
+        replacement = r'from greentest import patched_tests_setup as _GEVENT_PTS\n'
         replacement += r'import unittest as _GEVENT_UTS\n'
         replacement += r'\g<0>'
         source, n = re.subn(pattern, replacement, source, 1, re.MULTILINE)

@@ -25,7 +25,7 @@ from gevent.hub import _get_hub
 
 from greentest.hub import QuietHub
 
-from patched_tests_setup import get_switch_expected
+from greentest.patched_tests_setup import get_switch_expected
 
 def wrap_switch_count_check(method):
     @wraps(method)
