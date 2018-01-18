@@ -853,10 +853,10 @@ if PY35:
             'test_socket.GeneralModuleTests.test_getnameinfo',
         ]
 
-        if LIBUV and sys.version_info[1] == 5:
+        if sys.version_info[1] == 5:
             disabled_tests += [
                 # This test tends to time out, but only under 3.5, not under
-                # 3.6 or 3.7
+                # 3.6 or 3.7. Seen with both libev and libuv
                 'test_socket.SendfileUsingSendTest.testWithTimeoutTriggeredSend',
             ]
 
