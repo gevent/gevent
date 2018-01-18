@@ -225,7 +225,7 @@ class TestCase(TestCaseMetaClass("NewBase", (BaseTestCase,), {})):
             self.assertIsInstance(econtext, where_type)
         return error
 
-    if sysinfo.RUNNING_ON_APPVEYOR:
+    if sysinfo.EXPECT_POOR_TIMER_RESOLUTION:
         # pylint:disable=unused-argument
         # appveyor timeouts are unreliable; seems to be very slow wakeups
         def assertTimeoutAlmostEqual(self, *args, **kwargs):
@@ -237,9 +237,9 @@ class TestCase(TestCaseMetaClass("NewBase", (BaseTestCase,), {})):
         def assertTimeoutAlmostEqual(self, *args, **kwargs):
             self.assertAlmostEqual(*args, **kwargs)
 
-        def assertTimeWithinRange(self, delay, min_time, max_time):
-            self.assertLessEqual(delay, max_time)
-            self.assertGreaterEqual(delay, min_time)
+        def assertTimeWithinRange(self, time_taken, min_time, max_time):
+            self.assertLessEqual(time_taken, max_time)
+            self.assertGreaterEqual(time_taken, min_time)
 
 
     def assertMonkeyPatchedFuncSignatures(self, mod_name, func_names=(), exclude=()):

@@ -107,7 +107,10 @@ if RUNNING_ON_APPVEYOR:
     # 'develop' mode (i.e., we install)
     NON_APPLICABLE_SUFFIXES.append('corecext')
 
-EXPECT_POOR_TIMER_RESOLUTION = PYPY3 or RUNNING_ON_APPVEYOR or (LIBUV and PYPY)
+EXPECT_POOR_TIMER_RESOLUTION = (PYPY3
+                                or RUNNING_ON_APPVEYOR
+                                or (LIBUV and PYPY)
+                                or (CFFI_BACKEND and RUN_COVERAGE))
 
 
 CONN_ABORTED_ERRORS = []

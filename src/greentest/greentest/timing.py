@@ -46,8 +46,9 @@ class _DelayWaitMixin(object):
                             delay_max_adj=None):
         delay_min_adj = self._default_delay_min_adj if not delay_min_adj else delay_min_adj
         delay_max_adj = self._default_delay_max_adj if not delay_max_adj else delay_max_adj
-        self.assertGreaterEqual(delay, timeout - delay_min_adj)
-        self.assertLess(delay, timeout + delay_max_adj)
+        self.assertTimeWithinRange(delay,
+                                   timeout - delay_min_adj,
+                                   timeout + delay_max_adj)
 
     def _wait_and_check(self, timeout=None):
         if timeout is None:
