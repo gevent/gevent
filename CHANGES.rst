@@ -93,7 +93,7 @@ Other Changes
   support in certain tools (setuptools v24.2.1 or newer is required).
   See :issue:`995`.
 
-- pywgi also catches and ignores by default
+- pywsgi also catches and ignores by default
   :const:`errno.WSAECONNABORTED` on Windows. Initial patch in
   :pr:`999` by Jan van Valburg.
 
@@ -218,8 +218,9 @@ libuv
     duration timer callbacks, this can lead the loop to appear to
     hang, as no IO will actually be done.
 
-    In the future, zero duration timers may automatically be changed
-    to check or prepare watchers.
+    To mitigate this issue, ``loop.timer()`` detects attempts to use
+    zero duration timers and turns them into a check watcher. check
+    watchers do not support the ``again`` method.
 
   Again, this is extremely experimental and all of it is subject to
   change.

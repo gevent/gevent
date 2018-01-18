@@ -590,17 +590,17 @@ class timer(_base.TimerMixin, watcher):
     # long time, which is not good. So default to not updating the
     # time.
 
-    # Also, newly-added timers of 0 duration can *also* stall the loop, because
-    # they'll be seen to be expired immediately. Updating the time can prevent that,
-    # *if* there was already a timer for a longer duration scheduled.
+    # Also, newly-added timers of 0 duration can *also* stall the
+    # loop, because they'll be seen to be expired immediately.
+    # Updating the time can prevent that, *if* there was already a
+    # timer for a longer duration scheduled.
 
-    # XXX: Have our loop implementation turn 0 duration timers into prepare or
-    # check watchers instead?
+    # To mitigate the above problems, our loop implementation turns
+    # zero duration timers into check watchers instead using OneShotCheck.
+    # This ensures the loop cycles. Of course, the 'again' method does
+    # nothing on them and doesn't exist. In practice that's not an issue.
 
     update_loop_time_on_start = False
-
-    def _update_now(self):
-        self.loop.update()
 
     _again = False
 
@@ -706,4 +706,22 @@ class signal(_base.SignalMixin, watcher):
 class idle(_base.IdleMixin, watcher):
     # Because libuv doesn't support priorities, idle watchers are
     # potentially quite a bit different than under libev
+    pass
+
+
+class check(_base.CheckMixin, watcher):
+    pass
+
+class OneShotCheck(check):
+
+    _watcher_skip_ffi = True
+
+    def start(self, callback, *args):
+        @functools.wraps(callback)
+        def _callback(*args):
+            self.stop()
+            return callback(*args)
+        return check.start(self, _callback, *args)
+
+class prepare(_base.PrepareMixin, watcher):
     pass

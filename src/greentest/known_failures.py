@@ -6,22 +6,17 @@ import os
 import sys
 import struct
 
+from greentest.sysinfo import RUNNING_ON_APPVEYOR as APPVEYOR
+from greentest.sysinfo import RUNNING_ON_TRAVIS as TRAVIS
+from greentest.sysinfo import RUN_LEAKCHECKS as LEAKTEST
+from greentest.sysinfo import RUN_COVERAGE as COVERAGE
+from greentest.sysinfo import RESOLVER_ARES
 
-APPVEYOR = os.getenv('APPVEYOR')
-TRAVIS = os.getenv('TRAVIS')
-LEAKTEST = os.getenv('GEVENTTEST_LEAKCHECK')
-COVERAGE = os.getenv("COVERAGE_PROCESS_START")
-PYPY = hasattr(sys, 'pypy_version_info')
-PY3 = sys.version_info[0] >= 3
-PY27 = sys.version_info[0] == 2 and sys.version_info[1] == 7
-PY35 = sys.version_info[0] >= 3 and sys.version_info[1] >= 5
-PYGTE279 = (
-    sys.version_info[0] == 2
-    and sys.version_info[1] >= 7
-    and sys.version_info[2] >= 9
-)
-RESOLVER_ARES = os.getenv('GEVENT_RESOLVER') == 'ares'
-LIBUV = os.getenv('GEVENT_CORE_CFFI_ONLY') == 'libuv' # XXX: Formalize this better
+from greentest.sysinfo import PYPY
+from greentest.sysinfo import PY3
+from greentest.sysinfo import PY35
+
+from greentest.sysinfo import LIBUV
 
 
 FAILING_TESTS = [

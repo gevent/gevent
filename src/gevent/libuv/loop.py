@@ -466,3 +466,10 @@ class loop(AbstractLoop):
             io_watcher._no_more_watchers = lambda: delitem(io_watchers, fd)
 
         return io_watcher.multiplex(events)
+
+    def timer(self, after, repeat=0.0, ref=True, priority=None):
+        if after <= 0 and repeat <= 0:
+            # Make sure we can spin the loop. See timer.
+            # XXX: Note that this doesn't have a `again` method.
+            return self._watchers.OneShotCheck(self, ref, priority)
+        return super(loop, self).timer(after, repeat, ref, priority)

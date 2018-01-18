@@ -1,3 +1,4 @@
+from __future__ import absolute_import, print_function, division
 import greentest
 import gevent
 from gevent.event import Event, AsyncResult
@@ -49,7 +50,7 @@ class TestWaitEvent(greentest.GenericWaitTestCase):
             # immediately add the waiter and call it
             o = gevent.wait((event,), timeout=0.01)
             self.assertFalse(event.ready())
-            self.assertFalse(event in o, o)
+            self.assertNotIn(event, o)
 
         gevent.spawn(waiter).join()
 
@@ -87,31 +88,40 @@ class TestAsyncResult(greentest.TestCase):
         self.assertEqual(e.exc_info, ())
         self.assertEqual(e.exception, None)
 
+        class MyException(Exception):
+            pass
+
         def waiter():
-            try:
-                result = e.get()
-                log.append(('received', result))
-            except Exception as ex:
-                log.append(('catched', ex))
+            with self.assertRaises(MyException) as exc:
+                e.get()
+            log.append(('caught', exc.exception))
         gevent.spawn(waiter)
-        obj = Exception()
+        obj = MyException()
         e.set_exception(obj)
         gevent.sleep(0)
-        assert log == [('catched', obj)], log
+        self.assertEqual(log, [('caught', obj)])
 
     def test_set(self):
         event1 = AsyncResult()
         event2 = AsyncResult()
 
+        class MyException(Exception):
+            pass
+
+        timer_exc = MyException('interrupted')
+
         g = gevent.spawn_later(DELAY / 2.0, event1.set, 'hello event1')
-        t = gevent.Timeout.start_new(0, ValueError('interrupted'))
+        t = gevent.Timeout.start_new(0, timer_exc)
         try:
-            try:
-                result = event1.get()
-            except ValueError:
-                X = object()
-                result = gevent.with_timeout(DELAY, event2.get, timeout_value=X)
-                assert result is X, 'Nobody sent anything to event2 yet it received %r' % (result, )
+            with self.assertRaises(MyException) as exc:
+                event1.get()
+            self.assertEqual(timer_exc, exc.exception)
+
+            X = object()
+            result = gevent.with_timeout(DELAY, event2.get, timeout_value=X)
+            self.assertIs(
+                result, X,
+                'Nobody sent anything to event2 yet it received %r' % (result, ))
         finally:
             t.cancel()
             g.kill()
@@ -131,9 +141,11 @@ class TestAsyncResultAsLinkTarget(greentest.TestCase):
         g.link(s1)
         g.link_value(s2)
         g.link_exception(s3)
-        assert s1.get() == 1
-        assert s2.get() == 1
-        assert gevent.with_timeout(DELAY, s3.get, timeout_value=X) is X
+        self.assertEqual(s1.get(), 1)
+        self.assertEqual(s2.get(), 1)
+        X = object()
+        result = gevent.with_timeout(DELAY, s3.get, timeout_value=X)
+        self.assertIs(result, X)
 
     def test_set_exception(self):
         def func():
@@ -144,7 +156,9 @@ class TestAsyncResultAsLinkTarget(greentest.TestCase):
         g.link_value(s2)
         g.link_exception(s3)
         self.assertRaises(greentest.ExpectedException, s1.get)
-        assert gevent.with_timeout(DELAY, s2.get, timeout_value=X) is X
+        X = object()
+        result = gevent.with_timeout(DELAY, s2.get, timeout_value=X)
+        self.assertIs(result, X)
         self.assertRaises(greentest.ExpectedException, s3.get)
 
 
@@ -215,8 +229,6 @@ class TestWait_count1(TestWait):
 class TestWait_count2(TestWait):
     count = 2
 
-
-X = object()
 
 if __name__ == '__main__':
     greentest.main()

@@ -142,15 +142,21 @@ class Timeout(BaseException):
 
     def start(self):
         """Schedule the timeout."""
-        assert not self.pending, '%r is already started; to restart it, cancel it first' % self
-        if self.seconds is None:  # "fake" timeout (never expires)
+        if self.pending:
+            raise AssertionError('%r is already started; to restart it, cancel it first' % self)
+
+        if self.seconds is None:
+            # "fake" timeout (never expires)
             return
 
         if self.exception is None or self.exception is False or isinstance(self.exception, string_types):
             # timeout that raises self
-            self.timer.start(getcurrent().throw, self)
-        else:  # regular timeout with user-provided exception
-            self.timer.start(getcurrent().throw, self.exception)
+            throws = self
+        else:
+            # regular timeout with user-provided exception
+            throws = self.exception
+
+        self.timer.start(getcurrent().throw, throws)
 
     @classmethod
     def start_new(cls, timeout=None, exception=None, ref=True):

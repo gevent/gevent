@@ -39,6 +39,7 @@ else:
     DEBUG = False
 
 RUN_LEAKCHECKS = os.getenv('GEVENTTEST_LEAKCHECK')
+RUN_COVERAGE = os.getenv("COVERAGE_PROCESS_START")
 
 # Generally, ignore the portions that are only implemented
 # on particular platforms; they generally contain partial
@@ -50,6 +51,7 @@ if WIN:
 PY2 = None
 PY3 = None
 PY34 = None
+PY35 = None
 PY36 = None
 PY37 = None
 
@@ -61,6 +63,8 @@ if sys.version_info[0] == 3:
     PY3 = True
     if sys.version_info[1] >= 4:
         PY34 = True
+    if sys.version_info[1] >= 5:
+        PY35 = True
     if sys.version_info[1] >= 6:
         PY36 = True
     if sys.version_info[1] >= 7:
@@ -77,6 +81,12 @@ elif sys.version_info[0] == 2:
         NON_APPLICABLE_SUFFIXES.append('279')
 
 PYPY3 = PYPY and PY3
+
+PYGTE279 = (
+    sys.version_info[0] == 2
+    and sys.version_info[1] >= 7
+    and sys.version_info[2] >= 9
+)
 
 if WIN:
     NON_APPLICABLE_SUFFIXES.append("posix")
@@ -110,3 +120,5 @@ from errno import ECONNRESET
 CONN_ABORTED_ERRORS.append(ECONNRESET)
 
 CONN_ABORTED_ERRORS = frozenset(CONN_ABORTED_ERRORS)
+
+RESOLVER_ARES = os.getenv('GEVENT_RESOLVER') == 'ares'
