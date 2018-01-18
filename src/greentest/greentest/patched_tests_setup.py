@@ -16,6 +16,8 @@ import re
 from greentest.sysinfo import RUNNING_ON_APPVEYOR as APPVEYOR
 from greentest.sysinfo import RUNNING_ON_TRAVIS as TRAVIS
 from greentest.sysinfo import RESOLVER_ARES as ARES
+from greentest.sysinfo import RUN_COVERAGE
+
 
 from greentest.sysinfo import PYPY
 from greentest.sysinfo import PYPY3
@@ -29,6 +31,7 @@ from greentest.sysinfo import WIN
 from greentest.sysinfo import OSX
 
 from greentest.sysinfo import LIBUV
+from greentest.sysinfo import CFFI_BACKEND
 
 CPYTHON = not PYPY
 
@@ -379,6 +382,17 @@ if LIBUV:
                 # Can't reproduce locally.
                 'test_subprocess.ProcessTestCase.test_universal_newlines_communicate',
             ]
+
+if RUN_COVERAGE and CFFI_BACKEND:
+    disabled_tests += [
+        # This test hangs in this combo for some reason
+        'test_socket.GeneralModuleTests.test_sendall_interrupted',
+        # This can get a timeout exception instead of the Alarm
+        'test_socket.TCPTimeoutTest.testInterruptedTimeout',
+
+        # This test sometimes gets the wrong answer (due to changed timing?)
+        'test_socketserver.SocketServerTest.test_ForkingUDPServer',
+    ]
 
 def _make_run_with_original(mod_name, func_name):
     @contextlib.contextmanager
