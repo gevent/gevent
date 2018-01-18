@@ -40,7 +40,7 @@ else:
     DEBUG = False
 
 RUN_LEAKCHECKS = os.getenv('GEVENTTEST_LEAKCHECK')
-RUN_COVERAGE = os.getenv("COVERAGE_PROCESS_START")
+RUN_COVERAGE = os.getenv("COVERAGE_PROCESS_START") or os.getenv("GEVENTTEST_COVERAGE")
 
 # Generally, ignore the portions that are only implemented
 # on particular platforms; they generally contain partial
