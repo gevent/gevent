@@ -392,6 +392,10 @@ if RUN_COVERAGE and CFFI_BACKEND:
 
         # This test sometimes gets the wrong answer (due to changed timing?)
         'test_socketserver.SocketServerTest.test_ForkingUDPServer',
+
+        # Timing and signals are off, so a handler exception doesn't get raised.
+        # Seen under libev
+        'test_signal.InterProcessSignalTests.test_main',
     ]
 
 def _make_run_with_original(mod_name, func_name):
