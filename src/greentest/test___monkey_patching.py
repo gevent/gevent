@@ -50,7 +50,7 @@ def TESTRUNNER(tests=None):
     if tests and not sys.platform.startswith("win"):
         atexit.register(os.system, 'rm -f */@test*')
 
-    basic_args = [sys.executable, '-u', '-W', 'ignore', '-m' 'monkey_test']
+    basic_args = [sys.executable, '-u', '-W', 'ignore', '-m' 'greentest.monkey_test']
     for filename in tests:
         if filename in version_tests:
             util.log("Overriding %s from %s with file from %s", filename, directory, full_directory)
@@ -65,7 +65,7 @@ def TESTRUNNER(tests=None):
 
 
 def main():
-    import testrunner
+    from greentest import testrunner
     return testrunner.run_many(list(TESTRUNNER(sys.argv[1:])))
 
 

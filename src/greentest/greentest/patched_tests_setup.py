@@ -13,21 +13,24 @@ import os
 # import platform
 import re
 
-# XXX: These are mainly repeats of what's in greentest. Extract these to a common module.
+from greentest.sysinfo import RUNNING_ON_APPVEYOR as APPVEYOR
+from greentest.sysinfo import RUNNING_ON_TRAVIS as TRAVIS
+from greentest.sysinfo import RESOLVER_ARES as ARES
 
-TRAVIS = os.environ.get("TRAVIS") == "true"
-APPVEYOR = os.environ.get('APPVEYOR')
-OSX = sys.platform == 'darwin'
-PYPY = hasattr(sys, 'pypy_version_info')
+from greentest.sysinfo import PYPY
+from greentest.sysinfo import PYPY3
+from greentest.sysinfo import PY3
+from greentest.sysinfo import PY2
+from greentest.sysinfo import PY34
+from greentest.sysinfo import PY35
+from greentest.sysinfo import PY36
+
+from greentest.sysinfo import WIN
+from greentest.sysinfo import OSX
+
+from greentest.sysinfo import LIBUV
+
 CPYTHON = not PYPY
-WIN = sys.platform.startswith("win")
-PY2 = sys.version_info[0] < 3
-PY3 = sys.version_info[0] >= 3
-ARES = os.environ.get('GEVENT_RESOLVER') == 'ares'
-
-# XXX: Formalize this better
-LIBUV = os.getenv('GEVENT_CORE_CFFI_ONLY') == 'libuv' or (PYPY and WIN)
-
 
 # By default, test cases are expected to switch and emit warnings if there was none
 # If a test is found in this list, it's expected not to switch.
@@ -516,19 +519,19 @@ if sys.version_info[:3] <= (2, 7, 11):
         'test_ssl.ThreadedTests.test__https_verify_envvar',
     ]
 
-if sys.platform == 'darwin':
+if OSX:
     disabled_tests += [
         'test_subprocess.POSIXProcessTestCase.test_run_abort',
         # causes Mac OS X to show "Python crashes" dialog box which is annoying
     ]
 
-if sys.platform.startswith('win'):
+if WIN:
     disabled_tests += [
         # Issue with Unix vs DOS newlines in the file vs from the server
         'test_ssl.ThreadedTests.test_socketserver',
     ]
 
-if hasattr(sys, 'pypy_version_info'):
+if PYPY:
     disabled_tests += [
         'test_subprocess.ProcessTestCase.test_failed_child_execute_fd_leak',
         # Does not exist in the CPython test suite, tests for a specific bug
@@ -539,7 +542,7 @@ if hasattr(sys, 'pypy_version_info'):
 
 # Generic Python 3
 
-if sys.version_info[0] == 3:
+if PY3:
 
     disabled_tests += [
         # Triggers the crash reporter
@@ -627,7 +630,7 @@ if sys.version_info[0] == 3:
 
 # PyPy3 3.5.5 v5.8-beta
 
-if hasattr(sys, 'pypy_version_info') and sys.version_info[:2] >= (3, 3):
+if PYPY3:
 
 
     disabled_tests += [
@@ -638,7 +641,7 @@ if hasattr(sys, 'pypy_version_info') and sys.version_info[:2] >= (3, 3):
     ]
 
 
-if hasattr(sys, 'pypy_version_info') and sys.pypy_version_info[:4] in ( # pylint:disable=no-member
+if PYPY and sys.pypy_version_info[:4] in ( # pylint:disable=no-member
         (5, 8, 0, 'beta'), (5, 9, 0, 'beta'),
     ):
     # 3.5 is beta. Hard to say what are real bugs in us vs real bugs in pypy.
@@ -682,7 +685,7 @@ if hasattr(sys, 'pypy_version_info') and sys.pypy_version_info[:4] in ( # pylint
             'test_threading.ThreadJoinOnShutdown.test_1_join_on_shutdown',
         ]
 
-if hasattr(sys, 'pypy_version_info'):
+if PYPY:
 
     wrapped_tests.update({
         # XXX: gevent: The error that was raised by that last call
@@ -706,7 +709,7 @@ if hasattr(sys, 'pypy_version_info'):
         'test_urllib2_localnet.TestUrlopen.test_https_with_cafile': _gc_at_end,
     })
 
-if sys.version_info[:2] == (3, 4) and sys.version_info[:3] < (3, 4, 4):
+if PY34 and sys.version_info[:3] < (3, 4, 4):
     # Older versions have some issues with the SSL tests. Seen on Appveyor
     disabled_tests += [
         'test_ssl.ContextTests.test_options',
@@ -715,7 +718,7 @@ if sys.version_info[:2] == (3, 4) and sys.version_info[:3] < (3, 4, 4):
         'test_httplib.HTTPSTest.test_networked',
     ]
 
-if sys.version_info[:2] >= (3, 4):
+if PY34:
     disabled_tests += [
         'test_subprocess.ProcessTestCase.test_threadsafe_wait',
         # XXX: It seems that threading.Timer is not being greened properly, possibly
@@ -759,7 +762,7 @@ if sys.version_info[:2] >= (3, 4):
         'test_httplib.HeaderTests.test_parse_all_octets',
     ]
 
-    if sys.platform == 'darwin':
+    if OSX:
         disabled_tests += [
             # These raise "OSError: 12 Cannot allocate memory" on both
             # patched and unpatched runs
@@ -795,7 +798,7 @@ if sys.version_info[:2] >= (3, 4):
             # but fails under Travis
         ]
 
-if sys.version_info[:2] >= (3, 5):
+if PY35:
     disabled_tests += [
         # XXX: Hangs
         'test_ssl.ThreadedTests.test_nonblocking_send',
@@ -833,6 +836,13 @@ if sys.version_info[:2] >= (3, 5):
             'test_socket.GeneralModuleTests.test_getnameinfo',
         ]
 
+        if LIBUV and sys.version_info[1] == 5:
+            disabled_tests += [
+                # This test tends to time out, but only under 3.5, not under
+                # 3.6 or 3.7
+                'test_socket.SendfileUsingSendTest.testWithTimeoutTriggeredSend',
+            ]
+
 if sys.version_info[:3] <= (3, 5, 1):
     # Python issue 26499 was fixed in 3.5.2 and these tests were added.
     disabled_tests += [
@@ -843,7 +853,7 @@ if sys.version_info[:3] <= (3, 5, 1):
         'test_httplib.BasicTest.test_readlines_content_length',
     ]
 
-if sys.version_info[:2] >= (3, 6):
+if PY36:
     disabled_tests += [
         'test_threading.MiscTestCase.test__all__',
     ]

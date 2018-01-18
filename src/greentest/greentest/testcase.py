@@ -32,7 +32,7 @@ from greentest import leakcheck
 from greentest import errorhandler
 from greentest import flaky
 
-from patched_tests_setup import get_switch_expected
+from greentest.patched_tests_setup import get_switch_expected
 
 
 

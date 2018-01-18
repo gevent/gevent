@@ -27,6 +27,7 @@ PYPY = hasattr(sys, 'pypy_version_info')
 VERBOSE = sys.argv.count('-v') > 1
 WIN = sys.platform.startswith("win")
 LINUX = sys.platform.startswith('linux')
+OSX = sys.platform == 'darwin'
 
 # XXX: Formalize this better
 LIBUV = os.getenv('GEVENT_CORE_CFFI_ONLY') == 'libuv' or (PYPY and WIN) or hasattr(gevent.core, 'libuv')

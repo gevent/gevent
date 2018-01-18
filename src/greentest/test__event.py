@@ -72,6 +72,8 @@ class TestAsyncResultGet(greentest.GenericGetTestCase):
     def wait(self, timeout):
         AsyncResult().get(timeout=timeout)
 
+class MyException(Exception):
+    pass
 
 class TestAsyncResult(greentest.TestCase):
 
@@ -88,9 +90,6 @@ class TestAsyncResult(greentest.TestCase):
         self.assertEqual(e.exc_info, ())
         self.assertEqual(e.exception, None)
 
-        class MyException(Exception):
-            pass
-
         def waiter():
             with self.assertRaises(MyException) as exc:
                 e.get()
@@ -104,9 +103,6 @@ class TestAsyncResult(greentest.TestCase):
     def test_set(self):
         event1 = AsyncResult()
         event2 = AsyncResult()
-
-        class MyException(Exception):
-            pass
 
         timer_exc = MyException('interrupted')
 
