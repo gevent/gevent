@@ -120,8 +120,10 @@ cffibackendtest:
 	GEVENT_CORE_CFFI_ONLY=libev make alltest
 	${PYTHON} scripts/travis.py fold_end libev
 
-leaktest:
-	GEVENTTEST_LEAKCHECK=1 make alltest
+leaktest: test_prelim
+	${PYTHON} scripts/travis.py fold_start leaktest "Running leak tests"
+	cd src/greentest && GEVENT_RESOLVER=thread GEVENTTEST_LEAKCHECK=1 ${PYTHON} testrunner.py --config known_failures.py --quiet --ignore tests_that_dont_do_leakchecks.txt
+	${PYTHON} scripts/travis.py fold_end leaktest
 
 bench:
 	${PYTHON} src/greentest/bench_sendall.py
@@ -130,6 +132,7 @@ bench:
 travis_test_linters:
 	make lint
 	GEVENTTEST_COVERAGE=1 make leaktest
+	GEVENTTEST_COVERAGE=1 make cffibackendtest
 # because we set parallel=true, each run produces new and different coverage files; they all need
 # to be combined
 	coverage combine . src/greentest/
