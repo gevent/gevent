@@ -11,7 +11,6 @@ from operator import delitem
 import signal
 
 from gevent._ffi import _dbg # pylint: disable=unused-import
-from gevent._compat import PYPY
 from gevent._ffi.loop import AbstractLoop
 from gevent.libuv import _corecffi # pylint:disable=no-name-in-module,import-error
 from gevent._ffi.loop import assign_standard_callbacks
@@ -62,19 +61,6 @@ def get_header_version():
 def supported_backends():
     return ['default']
 
-if PYPY:
-    def gcBefore(f):
-        import functools
-        import gc
-
-        @functools.wraps(f)
-        def m(self, *args):
-            gc.collect()
-            return f(self, *args)
-        return m
-else:
-    def gcBefore(f):
-        return f
 
 class loop(AbstractLoop):
 
@@ -447,7 +433,6 @@ class loop(AbstractLoop):
                 watcher._set_status(status)
 
 
-    @gcBefore
     def io(self, fd, events, ref=True, priority=None):
         # We rely on hard references here and explicit calls to
         # close() on the returned object to correctly manage

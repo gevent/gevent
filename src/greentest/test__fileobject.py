@@ -3,13 +3,13 @@ import os
 import sys
 import tempfile
 import gc
-import greentest
+
 import gevent
 from gevent.fileobject import FileObject, FileObjectThread
 
-
-PYPY = hasattr(sys, 'pypy_version_info')
-
+import greentest
+from greentest.sysinfo import PY3
+from greentest.flaky import reraiseFlakyTestRaceConditionLibuv
 
 class Test(greentest.TestCase):
 
@@ -41,18 +41,14 @@ class Test(greentest.TestCase):
         gc.collect() # PyPy
 
         if kwargs.get("close", True):
-            try:
+            with self.assertRaises((OSError, IOError)):
+                # expected, because FileObject already closed it
                 os.close(w)
-            except (OSError, IOError):
-                pass  # expected, because FileObject already closed it
-            else:
-                raise AssertionError('os.close(%r) must not succeed on %r' % (w, ts))
         else:
             os.close(w)
 
-        fobj = FileObject(r, 'rb')
-        self.assertEqual(fobj.read(), b'x')
-        fobj.close()
+        with FileObject(r, 'rb') as fobj:
+            self.assertEqual(fobj.read(), b'x')
 
     def test_del(self):
         # Close should be true by default
@@ -69,11 +65,9 @@ class Test(greentest.TestCase):
             self._test_del(close=False)
     else:
         def test_del_noclose(self):
-            try:
+            with self.assertRaisesRegex(TypeError,
+                                        'FileObjectThread does not support close=False on an fd.'):
                 self._test_del(close=False)
-                self.fail("Shouldn't be able to create a FileObjectThread with close=False")
-            except TypeError as e:
-                self.assertEqual(str(e), 'FileObjectThread does not support close=False on an fd.')
 
     def test_newlines(self):
         r, w = os.pipe()
@@ -101,10 +95,17 @@ class Test(greentest.TestCase):
             native_data = f.read(1024)
 
         with open(path, 'rb') as f_raw:
-            print("Opened", f_raw)
-            f = FileObject(f_raw, 'rb')
-            if hasattr(f, 'seekable'):
-                # Py3
+            try:
+                f = FileObject(f_raw, 'rb')
+            except ValueError:
+                # libuv on Travis can raise EPERM
+                # from FileObjectPosix. I can't produce it on mac os locally,
+                # don't know what the issue is. This started happening on Jan 19,
+                # in the branch that caused all watchers to be explicitly closed.
+                # That shouldn't have any effect on io watchers, though, which were
+                # already being explicitly closed.
+                reraiseFlakyTestRaceConditionLibuv()
+            if PY3 or FileObject is not FileObjectThread:
                 self.assertTrue(f.seekable())
             f.seek(15)
             self.assertEqual(15, f.tell())
@@ -126,9 +127,9 @@ class Test(greentest.TestCase):
         r, w = os.pipe()
         x = FileObject(r)
         y = FileObject(w, 'w')
-        assert hasattr(x, 'read1'), x
-        x.close()
-        y.close()
+        self._close_on_teardown(x)
+        self._close_on_teardown(y)
+        self.assertTrue(hasattr(x, 'read1'))
 
     #if FileObject is not FileObjectThread:
     def test_bufsize_0(self):
@@ -136,6 +137,8 @@ class Test(greentest.TestCase):
         r, w = os.pipe()
         x = FileObject(r, 'rb', bufsize=0)
         y = FileObject(w, 'wb', bufsize=0)
+        self._close_on_teardown(x)
+        self._close_on_teardown(y)
         y.write(b'a')
         b = x.read(1)
         self.assertEqual(b, b'a')

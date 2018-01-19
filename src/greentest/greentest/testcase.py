@@ -291,5 +291,5 @@ class TestCase(TestCaseMetaClass("NewBase", (BaseTestCase,), {})):
         except AssertionError:
             flaky.reraiseFlakyTestRaceCondition()
 
-if not hasattr(TestCase, 'assertRaisesRegex'):
-    TestCase.assertRaisesRegex = TestCase.assertRaisesRegexp
+    assertRaisesRegex = getattr(BaseTestCase, 'assertRaisesRegex',
+                                getattr(BaseTestCase, 'assertRaisesRegexp'))

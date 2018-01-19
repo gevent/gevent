@@ -54,7 +54,7 @@ class libuv_error_wrapper(object):
                     str(ffi.string(libuv.uv_err_name(res)).decode('ascii')
                         + ' '
                         + ffi.string(libuv.uv_strerror(res)).decode('ascii'))
-                    + "Args: " + repr(args) + "KWARGS: " + repr(kwargs)
+                    + " Args: " + repr(args) + " KWARGS: " + repr(kwargs)
                 )
             return res
 

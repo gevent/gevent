@@ -26,10 +26,11 @@ class GreenFileDescriptorIO(RawIOBase):
 
     _read_event = None
     _write_event = None
+    _closed = False
+    _seekable = None
 
     def __init__(self, fileno, mode='r', closefd=True):
         RawIOBase.__init__(self) # Python 2: pylint:disable=no-member,non-parent-init-called
-        self._closed = False
         self._closefd = closefd
         self._fileno = fileno
         make_nonblocking(fileno)
@@ -43,8 +44,6 @@ class GreenFileDescriptorIO(RawIOBase):
 
         if writable:
             self._write_event = io_watcher(fileno, 2)
-
-        self._seekable = None
 
     def readable(self):
         return self._read_event is not None
@@ -81,11 +80,9 @@ class GreenFileDescriptorIO(RawIOBase):
         self._read_event = self._write_event = None
 
         if read_event is not None:
-            self.hub.cancel_wait(read_event, cancel_wait_ex)
-            read_event.close()
+            self.hub.cancel_wait(read_event, cancel_wait_ex, True)
         if write_event is not None:
-            self.hub.cancel_wait(write_event, cancel_wait_ex)
-            write_event.close()
+            self.hub.cancel_wait(write_event, cancel_wait_ex, True)
 
         fileno = self._fileno
         if self._closefd:
