@@ -110,7 +110,7 @@ if RUNNING_ON_APPVEYOR:
 EXPECT_POOR_TIMER_RESOLUTION = (PYPY3
                                 or RUNNING_ON_APPVEYOR
                                 or (LIBUV and PYPY)
-                                or (CFFI_BACKEND and RUN_COVERAGE))
+                                or RUN_COVERAGE)
 
 
 CONN_ABORTED_ERRORS = []

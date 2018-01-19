@@ -10,6 +10,8 @@ from gevent.fileobject import FileObject, FileObjectThread
 import greentest
 from greentest.sysinfo import PY3
 from greentest.flaky import reraiseFlakyTestRaceConditionLibuv
+from greentest.skipping import skipOnLibuvOnCIOnPyPy
+
 
 class Test(greentest.TestCase):
 
@@ -80,6 +82,8 @@ class Test(greentest.TestCase):
         finally:
             g.kill()
 
+    @skipOnLibuvOnCIOnPyPy("This appears to crash on libuv/pypy/travis.")
+    # No idea why, can't duplicate locally.
     def test_seek(self):
         fileno, path = tempfile.mkstemp('.gevent.test__fileobject.test_seek')
         self.addCleanup(os.remove, path)
