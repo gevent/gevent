@@ -88,30 +88,30 @@ class Test(greentest.TestCase):
             g.kill()
 
     def test_seek(self):
-        fileno, path = tempfile.mkstemp()
+        fileno, path = tempfile.mkstemp('.gevent.test__fileobject.test_seek')
+        self.addCleanup(os.remove, path)
 
         s = b'a' * 1024
         os.write(fileno, b'B' * 15)
         os.write(fileno, s)
         os.close(fileno)
-        try:
-            with open(path, 'rb') as f:
-                f.seek(15)
-                native_data = f.read(1024)
 
-            with open(path, 'rb') as f_raw:
-                f = FileObject(f_raw, 'rb')
-                if hasattr(f, 'seekable'):
-                    # Py3
-                    self.assertTrue(f.seekable())
-                f.seek(15)
-                self.assertEqual(15, f.tell())
-                fileobj_data = f.read(1024)
+        with open(path, 'rb') as f:
+            f.seek(15)
+            native_data = f.read(1024)
 
-            self.assertEqual(native_data, s)
-            self.assertEqual(native_data, fileobj_data)
-        finally:
-            os.remove(path)
+        with open(path, 'rb') as f_raw:
+            print("Opened", f_raw)
+            f = FileObject(f_raw, 'rb')
+            if hasattr(f, 'seekable'):
+                # Py3
+                self.assertTrue(f.seekable())
+            f.seek(15)
+            self.assertEqual(15, f.tell())
+            fileobj_data = f.read(1024)
+
+        self.assertEqual(native_data, s)
+        self.assertEqual(native_data, fileobj_data)
 
     def test_close_pipe(self):
         # Issue #190, 203

@@ -130,3 +130,9 @@ class FileObjectBase(object):
 
     def _extra_repr(self):
         return ''
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *args):
+        self.close()
