@@ -231,13 +231,16 @@ if hasattr(os, 'fork'):
             # XXX: Could handle tracing here by not stopping
             # until the pid is terminated
             watcher.stop()
-            _watched_children[watcher.pid] = (watcher.pid, watcher.rstatus, time.time())
-            if callback:
-                callback(watcher)
-            # dispatch an "event"; used by gevent.signal.signal
-            _on_child_hook()
-            # now is as good a time as any to reap children
-            _reap_children()
+            try:
+                _watched_children[watcher.pid] = (watcher.pid, watcher.rstatus, time.time())
+                if callback:
+                    callback(watcher)
+                # dispatch an "event"; used by gevent.signal.signal
+                _on_child_hook()
+                # now is as good a time as any to reap children
+                _reap_children()
+            finally:
+                watcher.close()
 
         def _reap_children(timeout=60):
             # Remove all the dead children that haven't been waited on
@@ -311,9 +314,9 @@ if hasattr(os, 'fork'):
                     # pass through to the OS.
                     if pid == -1 and options == 0:
                         hub = get_hub()
-                        watcher = hub.loop.child(0, False)
-                        hub.wait(watcher)
-                        return watcher.rpid, watcher.rstatus
+                        with hub.loop.child(0, False) as watcher:
+                            hub.wait(watcher)
+                            return watcher.rpid, watcher.rstatus
                     # There were funky options/pid, so we must go to the OS.
                     return _waitpid(pid, options)
 
@@ -336,8 +339,8 @@ if hasattr(os, 'fork'):
                     watcher = _watched_children[pid]
                     # We can't start a watcher that's already started,
                     # so we can't reuse the existing watcher.
-                    new_watcher = watcher.loop.child(pid, False)
-                    get_hub().wait(new_watcher)
+                    with watcher.loop.child(pid, False) as new_watcher:
+                        get_hub().wait(new_watcher)
                     # Ok, so now the new watcher is done. That means
                     # the old watcher's callback (_on_child) should
                     # have fired, potentially taking this child out of

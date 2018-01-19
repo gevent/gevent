@@ -118,11 +118,8 @@ class TestCoroutinePool(unittest.TestCase):
             gevent.sleep(0)
             self.assertEqual(pool.free_count(), 1)
             # shouldn't block when trying to get
-            t = gevent.Timeout.start_new(0.1)
-            try:
+            with gevent.Timeout.start_new(0.1):
                 pool.apply(gevent.sleep, (0, ))
-            finally:
-                t.cancel()
         finally:
             sys.stderr = normal_err
             pool.join()
@@ -195,7 +192,7 @@ class PoolBasicTests(greentest.TestCase):
                 else:
                     raise AssertionError('Expected timeout')
                 finally:
-                    timeout.cancel()
+                    timeout.close()
                 self.assertEqual(p.free_count(), 0)
                 self.assertEqual(len(p), 1)
             finally:

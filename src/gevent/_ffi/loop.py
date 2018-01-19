@@ -6,10 +6,9 @@ from __future__ import absolute_import, print_function
 import sys
 import os
 import traceback
-from weakref import ref as WeakRef
 
 from gevent._ffi import _dbg
-from gevent._ffi import GEVENT_DEBUG
+from gevent._ffi import GEVENT_DEBUG_LEVEL
 from gevent._ffi import TRACE
 from gevent._ffi import CRITICAL
 from gevent._ffi.callback import callback
@@ -67,7 +66,7 @@ class AbstractCallbacks(object):
     def __init__(self, ffi):
         self.ffi = ffi
         self.callbacks = []
-        if GEVENT_DEBUG < TRACE:
+        if GEVENT_DEBUG_LEVEL < TRACE:
             self.from_handle = ffi.from_handle
 
     def from_handle(self, handle): # pylint:disable=method-hidden
@@ -122,7 +121,9 @@ class AbstractCallbacks(object):
                 args = (revents, ) + args[1:]
             the_watcher.callback(*args)
         except: # pylint:disable=bare-except
-            _dbg("Got exception servicing watcher with handle", handle)
+            _dbg("Got exception servicing watcher with handle", handle, sys.exc_info())
+            import traceback
+            traceback.print_exc()
             # It's possible for ``the_watcher`` to be undefined (UnboundLocalError)
             # if we threw an exception (signal) on the line that created that variable.
             # This is typically the case with a signal under libuv
@@ -137,7 +138,9 @@ class AbstractCallbacks(object):
             the_watcher.loop._keepaliveset.add(the_watcher)
             return -1
         else:
-            if the_watcher in the_watcher.loop._keepaliveset and the_watcher._watcher is orig_ffi_watcher:
+            if (the_watcher.loop is not None
+                    and the_watcher in the_watcher.loop._keepaliveset
+                    and the_watcher._watcher is orig_ffi_watcher):
                 # It didn't stop itself, *and* it didn't stop itself, reset
                 # its watcher, and start itself again. libuv's io watchers MAY
                 # do that.
@@ -205,7 +208,7 @@ class AbstractCallbacks(object):
             raise v
 
     def python_stop(self, handle):
-        if not handle:
+        if not handle: # pragma: no cover
             print(
                 "WARNING: gevent: Unable to dereference handle; not stopping watcher. "
                 "Native resources may leak. This is most likely a bug in gevent.",
@@ -214,7 +217,7 @@ class AbstractCallbacks(object):
             # NOTE: Raising exceptions here does nothing, they're swallowed by CFFI.
             # Since the C level passed in a null pointer, even dereferencing the handle
             # will just produce some exceptions.
-            if GEVENT_DEBUG < CRITICAL:
+            if GEVENT_DEBUG_LEVEL < CRITICAL:
                 return
         _dbg("python_stop: stopping watcher with handle", handle)
         watcher = self.from_handle(handle)
@@ -312,39 +315,10 @@ class AbstractLoop(object):
         self._watchers = watchers
         self._in_callback = False
         self._callbacks = []
+        # Stores python watcher objects while they are started
         self._keepaliveset = set()
         self._init_loop_and_aux_watchers(flags, default)
 
-        # Stores a {ffi_watcher -> weakref(python watcher)} When the python watcher
-        # weakref goes away, the handle should be popped. The handle
-        # *must not* be involved in a cycle in the watcher instance
-        # (but it must not also be collected until the watcher is dead). Watcher constructors
-        # are responsible for calling loop._register_watcher.
-        # This stores ffi level objects (the ones that have .data = handle)
-        # to avoid any python-level cycles. Note that *anywhere* we keep the
-        # handle, we wind up with a ref cycle (unless we go through some crazy
-        # weakref gymnastics---maybe), so we do the simple thing and
-        # keep them on the python watcher
-        self._active_watchers = dict()
-
-
-    @classmethod
-    def __make_watcher_ref_callback(cls, typ, active_watchers, ffi_watcher, debug):
-        # separate method to make sure we have no ref to the watcher
-        def callback(_):
-            active_watchers.pop(ffi_watcher)
-            _dbg("Python weakref callback closing", debug)
-            typ._watcher_ffi_close(ffi_watcher)
-
-        return callback
-
-    def _register_watcher(self, python_watcher, ffi_watcher):
-        self._active_watchers[ffi_watcher] = WeakRef(python_watcher,
-                                                     self.__make_watcher_ref_callback(
-                                                         type(python_watcher),
-                                                         self._active_watchers,
-                                                         ffi_watcher,
-                                                         repr(python_watcher)))
 
     def _init_loop_and_aux_watchers(self, flags=None, default=None):
 

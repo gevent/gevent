@@ -219,6 +219,7 @@ class Greenlet(greenlet):
         # variable copy of that list (in _run_callbacks). This isn't a problem,
         # except for the leak-tests.
         self._start_event.stop()
+        self._start_event.close()
 
     def __handle_death_before_start(self, *args):
         # args is (t, v, tb) or simply t or v
@@ -620,6 +621,7 @@ class _dummy_event(object):
     def start(self, cb): # pylint:disable=unused-argument
         raise AssertionError("Cannot start the dummy event")
 
+    close = stop
 
 _cancelled_start_event = _dummy_event()
 _start_completed_event = _dummy_event()

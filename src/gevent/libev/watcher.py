@@ -140,7 +140,7 @@ class watcher(_base.watcher):
 
     @property
     def pending(self):
-        return True if libev.ev_is_pending(self._watcher) else False
+        return True if self._watcher and libev.ev_is_pending(self._watcher) else False
 
 
 class io(_base.IoMixin, watcher):
@@ -222,15 +222,34 @@ class async_(_base.AsyncMixin, watcher):
 # Provide BWC for those that have async
 locals()['async'] = async_
 
+class _ClosedWatcher(object):
+    __slots__ = ('pid', 'rpid', 'rstatus')
+
+    def __init__(self, other):
+        self.pid = other.pid
+        self.rpid = other.rpid
+        self.rstatus = other.rstatus
+
+    def __bool__(self):
+        return False
+    __nonzero__ = __bool__
+
 class child(_base.ChildMixin, watcher):
     _watcher_type = 'child'
+
+    def close(self):
+        # Capture the properties we defer to our _watcher, because
+        # we're about to discard it.
+        closed_watcher = _ClosedWatcher(self._watcher)
+        super(child, self).close()
+        self._watcher = closed_watcher
 
     @property
     def pid(self):
         return self._watcher.pid
 
     @property
-    def rpid(self, ):
+    def rpid(self):
         return self._watcher.rpid
 
     @rpid.setter

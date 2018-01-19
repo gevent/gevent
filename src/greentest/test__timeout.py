@@ -30,21 +30,23 @@ class TestDirectRaise(greentest.TestCase):
 
 class Test(greentest.TestCase):
 
-    def _test(self, timeout):
+    def _test(self, timeout, close):
         try:
             get_hub().switch()
             self.fail('Must raise Timeout')
         except gevent.Timeout as ex:
             if ex is not timeout:
                 raise
+            if close:
+                ex.close()
             return ex
 
     def _check_expires(self, timeout):
         timeout.start()
-        self._test(timeout)
+        self._test(timeout, False)
         # Restart
         timeout.start()
-        return self._test(timeout)
+        return self._test(timeout, True)
 
     def test_expires(self):
         timeout = gevent.Timeout(SHOULD_EXPIRE)
@@ -75,7 +77,7 @@ class Test(greentest.TestCase):
             self.fail("Most raise TypeError")
         except TypeError as ex:
             self.assert_type_err(ex)
-        timeout.cancel()
+        timeout.close()
 
         class OldStyle:
             pass
@@ -91,7 +93,7 @@ class Test(greentest.TestCase):
             self.assertTrue(greentest.PY2, "Old style classes can only be raised on Py2")
             t = sys.exc_info()[0]
             self.assertEqual(t, OldStyle)
-        timeout.cancel()
+        timeout.close()
 
         timeout = gevent.Timeout(SHOULD_EXPIRE, OldStyle()) # instance
         timeout.start()
@@ -105,7 +107,7 @@ class Test(greentest.TestCase):
             self.assertTrue(greentest.PY2, "Old style classes can only be raised on Py2")
             t = sys.exc_info()[0]
             self.assertEqual(t, OldStyle)
-        timeout.cancel()
+        timeout.close()
 
     def _check_context_manager_expires(self, timeout, raises=True):
         try:
@@ -140,6 +142,7 @@ class Test(greentest.TestCase):
         timeout.cancel()
         gevent.sleep(SHOULD_NOT_EXPIRE)
         assert not timeout.pending, timeout
+        timeout.close()
 
     def test_with_timeout(self):
         self.assertRaises(gevent.Timeout, gevent.with_timeout, SHOULD_EXPIRE, gevent.sleep, SHOULD_NOT_EXPIRE)

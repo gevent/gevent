@@ -33,24 +33,24 @@ class GreenFileDescriptorIO(RawIOBase):
         self._closefd = closefd
         self._fileno = fileno
         make_nonblocking(fileno)
-        self._readable = 'r' in mode
-        self._writable = 'w' in mode
+        readable = 'r' in mode
+        writable = 'w' in mode
         self.hub = get_hub()
 
         io_watcher = self.hub.loop.io
-        if self._readable:
+        if readable:
             self._read_event = io_watcher(fileno, 1)
 
-        if self._writable:
+        if writable:
             self._write_event = io_watcher(fileno, 2)
 
         self._seekable = None
 
     def readable(self):
-        return self._readable
+        return self._read_event is not None
 
     def writable(self):
-        return self._writable
+        return self._write_event is not None
 
     def seekable(self):
         if self._seekable is None:
@@ -73,11 +73,20 @@ class GreenFileDescriptorIO(RawIOBase):
         if self._closed:
             return
         self.flush()
+        # TODO: Can we use 'read_event is not None and write_event is
+        # not None' to mean _closed?
         self._closed = True
-        if self._readable:
-            self.hub.cancel_wait(self._read_event, cancel_wait_ex)
-        if self._writable:
-            self.hub.cancel_wait(self._write_event, cancel_wait_ex)
+        read_event = self._read_event
+        write_event = self._write_event
+        self._read_event = self._write_event = None
+
+        if read_event is not None:
+            self.hub.cancel_wait(read_event, cancel_wait_ex)
+            read_event.close()
+        if write_event is not None:
+            self.hub.cancel_wait(write_event, cancel_wait_ex)
+            write_event.close()
+
         fileno = self._fileno
         if self._closefd:
             self._fileno = None
@@ -91,7 +100,7 @@ class GreenFileDescriptorIO(RawIOBase):
     # this was fixed in Python 3.3, but we still need our workaround for 2.7. See
     # https://github.com/gevent/gevent/issues/675)
     def __read(self, n):
-        if not self._readable:
+        if self._read_event is None:
             raise UnsupportedOperation('read')
         while True:
             try:
@@ -123,7 +132,7 @@ class GreenFileDescriptorIO(RawIOBase):
         return n
 
     def write(self, b):
-        if not self._writable:
+        if self._write_event is None:
             raise UnsupportedOperation('write')
         while True:
             try:

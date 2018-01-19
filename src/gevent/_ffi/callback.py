@@ -23,6 +23,8 @@ class callback(object):
         self.callback = None
         self.args = None
 
+    close = stop
+
     # Note that __nonzero__ and pending are different
     # bool() is used in contexts where we need to know whether to schedule another callback,
     # so it's true if it's pending or currently running

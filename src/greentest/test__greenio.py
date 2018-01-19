@@ -99,14 +99,19 @@ class TestGreenIo(TestCase):
 
             # XXX: This is not exactly true on Python 3.
             # This produces a ResourceWarning.
+            oconn = None
             try:
                 conn, _ = listener.accept()
+                if PY3:
+                    oconn = conn
                 conn = conn.makefile(mode='wb')
                 conn.write(b'hello\n')
                 conn.close()
                 _write_to_closed(conn, b'a')
             finally:
                 listener.close()
+                if oconn is not None:
+                    oconn.close()
 
         server = tcp_listener(('0.0.0.0', 0))
         gevent.spawn(accept_once, server)
@@ -116,7 +121,7 @@ class TestGreenIo(TestCase):
         assert fd.read() == 'hello\n'
         assert fd.read() == ''
 
-        timer.cancel()
+        timer.close()
 
 if __name__ == '__main__':
     main()

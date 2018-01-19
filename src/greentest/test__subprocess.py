@@ -246,11 +246,10 @@ class Test(greentest.TestCase):
             Thread = monkey.get_original('threading', 'Thread')
 
             def fn():
-                try:
+                with self.assertRaises(TypeError) as exc:
                     gevent.subprocess.Popen('echo 123', shell=True)
                     raise AssertionError("Should not be able to construct Popen")
-                except Exception as e:
-                    ex.append(e)
+                ex.append(exc.exception)
 
             thread = Thread(target=fn)
             thread.start()

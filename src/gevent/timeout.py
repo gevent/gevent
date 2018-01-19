@@ -39,6 +39,14 @@ class _FakeTimer(object):
     def cancel(self):
         return
 
+    stop = close = cancel
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, _t, _v, _tb):
+        return
+
 _FakeTimer = _FakeTimer()
 
 
@@ -124,10 +132,12 @@ class Timeout(BaseException):
        Add warning about negative *seconds* values.
     """
 
-    def __init__(self, seconds=None, exception=None, ref=True, priority=-1, _use_timer=True):
+    def __init__(self, seconds=None, exception=None, ref=True, priority=-1,
+                 _use_timer=True, _one_shot=False):
         BaseException.__init__(self)
         self.seconds = seconds
         self.exception = exception
+        self._one_shot = _one_shot
         if seconds is None or not _use_timer:
             # Avoid going through the timer codepath if no timeout is
             # desired; this avoids some CFFI interactions on PyPy that can lead to a
@@ -159,7 +169,7 @@ class Timeout(BaseException):
         self.timer.start(getcurrent().throw, throws)
 
     @classmethod
-    def start_new(cls, timeout=None, exception=None, ref=True):
+    def start_new(cls, timeout=None, exception=None, ref=True, _one_shot=False):
         """Create a started :class:`Timeout`.
 
         This is a shortcut, the exact action depends on *timeout*'s type:
@@ -175,12 +185,12 @@ class Timeout(BaseException):
             if not timeout.pending:
                 timeout.start()
             return timeout
-        timeout = cls(timeout, exception, ref=ref)
+        timeout = cls(timeout, exception, ref=ref, _one_shot=_one_shot)
         timeout.start()
         return timeout
 
     @staticmethod
-    def _start_new_or_dummy(timeout, exception=None):
+    def _start_new_or_dummy(timeout, exception=None, ref=True):
         # Internal use only in 1.1
         # Return an object with a 'cancel' method; if timeout is None,
         # this will be a shared instance object that does nothing. Otherwise,
@@ -194,7 +204,7 @@ class Timeout(BaseException):
         # under PyPy in synthetic benchmarks it makes no difference.
         if timeout is None:
             return _FakeTimer
-        return Timeout.start_new(timeout, exception)
+        return Timeout.start_new(timeout, exception, ref, _one_shot=True)
 
     @property
     def pending(self):
@@ -204,6 +214,12 @@ class Timeout(BaseException):
     def cancel(self):
         """If the timeout is pending, cancel it. Otherwise, do nothing."""
         self.timer.stop()
+        if self._one_shot:
+            self.close()
+
+    def close(self):
+        self.timer.stop()
+        self.timer.close()
 
     def __repr__(self):
         classname = type(self).__name__
@@ -241,9 +257,15 @@ class Timeout(BaseException):
         return self
 
     def __exit__(self, typ, value, tb):
-        self.cancel()
+        """
+        Stop the timer.
+        .. versionchanged:: 1.3a1
+           The underlying native timer is also stopped. This object cannot be
+           used again.
+        """
+        self.close()
         if value is self and self.exception is False:
-            return True
+            return True # Suppress the exception
 
 
 def with_timeout(seconds, function, *args, **kwds):
@@ -256,7 +278,7 @@ def with_timeout(seconds, function, *args, **kwds):
     Keyword argument *timeout_value* is not passed to *function*.
     """
     timeout_value = kwds.pop("timeout_value", _NONE)
-    timeout = Timeout.start_new(seconds)
+    timeout = Timeout.start_new(seconds, _one_shot=True)
     try:
         try:
             return function(*args, **kwds)

@@ -31,7 +31,7 @@ class Test(greentest.TestCase):
             gevent.sleep(0.001)
             sock.close()
             receiver.join(timeout=0.1)
-            assert receiver.ready(), receiver
+            self.assertTrue(receiver.ready(), receiver)
             self.assertEqual(receiver.value, None)
             self.assertIsInstance(receiver.exception, socket.error)
             self.assertEqual(receiver.exception.errno, socket.EBADF)

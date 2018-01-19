@@ -178,6 +178,10 @@ class _fileobject(object):
     def __getattr__(self, name):
         return getattr(self._fobj, name)
 
+    def close(self):
+        self._fobj.close()
+        self._sock.close()
+
     def write(self, data):
         if not isinstance(data, bytes):
             data = data.encode('utf-8')

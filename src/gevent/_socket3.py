@@ -148,15 +148,12 @@ class socket(object):
         """
         if watcher.callback is not None:
             raise _socketcommon.ConcurrentObjectUseError('This socket is already used by another greenlet: %r' % (watcher.callback, ))
-        if self.timeout is not None:
-            timeout = Timeout.start_new(self.timeout, timeout_exc, ref=False)
-        else:
-            timeout = None
+
+        timer = Timeout._start_new_or_dummy(self.timeout, timeout_exc, ref=False)
         try:
             self.hub.wait(watcher)
         finally:
-            if timeout is not None:
-                timeout.cancel()
+            timer.close()
 
     def dup(self):
         """dup() -> socket object
@@ -251,12 +248,10 @@ class socket(object):
         # objects are no longer functional.
 
         if self._read_event is not None:
-            self.hub.cancel_wait(self._read_event, cancel_wait_ex)
-            self._read_event.close()
+            self.hub.cancel_wait(self._read_event, cancel_wait_ex, True)
             self._read_event = None
         if self._write_event is not None:
-            self.hub.cancel_wait(self._write_event, cancel_wait_ex)
-            self._write_event.close()
+            self.hub.cancel_wait(self._write_event, cancel_wait_ex, True)
             self._write_event = None
         _ss.close(self._sock)
 
@@ -301,11 +296,8 @@ class socket(object):
         if isinstance(address, tuple):
             r = getaddrinfo(address[0], address[1], self.family)
             address = r[0][-1]
-        if self.timeout is not None:
-            timer = Timeout.start_new(self.timeout, timeout('timed out'))
-        else:
-            timer = None
-        try:
+
+        with Timeout._start_new_or_dummy(self.timeout, timeout("timed out")):
             while True:
                 err = self.getsockopt(SOL_SOCKET, SO_ERROR)
                 if err:
@@ -317,9 +309,6 @@ class socket(object):
                     self._wait(self._write_event)
                 else:
                     raise error(result, strerror(result))
-        finally:
-            if timer is not None:
-                timer.cancel()
 
     def connect_ex(self, address):
         try:

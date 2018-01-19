@@ -166,7 +166,8 @@ def sleep(seconds=0, ref=True):
         loop.run_callback(waiter.switch)
         waiter.get()
     else:
-        hub.wait(loop.timer(seconds, ref=ref))
+        with loop.timer(seconds, ref=ref) as t:
+            hub.wait(t)
 
 
 def idle(priority=0):
@@ -661,17 +662,29 @@ class Hub(RawGreenlet):
         finally:
             watcher.stop()
 
-    def cancel_wait(self, watcher, error):
+    def cancel_wait(self, watcher, error, close_watcher=False):
         """
         Cancel an in-progress call to :meth:`wait` by throwing the given *error*
         in the waiting greenlet.
+
+        .. versionchanged:: 1.3a1
+           Added the *close_watcher* parameter. If true, the watcher
+           will be closed after the exception is thrown.
         """
         if watcher.callback is not None:
-            self.loop.run_callback(self._cancel_wait, watcher, error)
+            self.loop.run_callback(self._cancel_wait, watcher, error, close_watcher)
+        elif close_watcher:
+            watcher.close()
 
-    def _cancel_wait(self, watcher, error):
-        if watcher.active:
-            switch = watcher.callback
+    def _cancel_wait(self, watcher, error, close_watcher):
+        # We have to check again to see if it was still active by the time
+        # our callback actually runs.
+        active = watcher.active
+        cb = watcher.callback
+        if close_watcher:
+            watcher.close()
+        if active:
+            switch = cb
             if switch is not None:
                 greenlet = getattr(switch, '__self__', None)
                 if greenlet is not None:
@@ -731,6 +744,7 @@ class Hub(RawGreenlet):
         finally:
             if timeout is not None:
                 timeout.stop()
+                timeout.close()
         return False
 
     def destroy(self, destroy_loop=None):
@@ -995,7 +1009,7 @@ def iwait(objects, timeout=None, count=None):
             yield item
     finally:
         if timeout is not None:
-            timer.stop()
+            timer.close()
         for aobj in objects:
             unlink = getattr(aobj, 'unlink', None)
             if unlink:

@@ -8,14 +8,29 @@ import sys
 import os
 import signal as signalmodule
 import functools
+import warnings
+
+try:
+    from tracemalloc import get_object_traceback
+except ImportError:
+    def get_object_traceback(_obj):
+        return None
 
 from gevent._ffi import _dbg
+from gevent._ffi import GEVENT_DEBUG_LEVEL
+from gevent._ffi import CRITICAL
 from gevent._ffi.loop import GEVENT_CORE_EVENTS
 from gevent._ffi.loop import _NOARGS
 
 __all__ = [
 
 ]
+
+try:
+    ResourceWarning
+except NameError:
+    class ResourceWarning(Warning):
+        "Python 2 fallback"
 
 class _NoWatcherResult(int):
 
@@ -98,7 +113,7 @@ class AbstractWatcherType(type):
     def __new__(cls, name, bases, cls_dict):
         if name != 'watcher' and not cls_dict.get('_watcher_skip_ffi'):
             cls._fill_watcher(name, bases, cls_dict)
-        if '__del__' in cls_dict:
+        if '__del__' in cls_dict and GEVENT_DEBUG_LEVEL < CRITICAL:
             raise TypeError("CFFI watchers are not allowed to have __del__")
         return type.__new__(cls, name, bases, cls_dict)
 
@@ -178,10 +193,14 @@ class watcher(object):
 
     _callback = None
     _args = None
-    _handle = None # FFI object to self. This is a GC cycle. See _watcher_create
     _watcher = None
-
-    _watcher_registers_with_loop_on_create = True
+    # self._handle has a reference to self, keeping it alive.
+    # We must keep self._handle alive for ffi.from_handle() to be
+    # able to work. We only fill this in when we are started,
+    # and when we are stopped we destroy it.
+    # NOTE: This is a GC cycle, so we keep it around for as short
+    # as possible.
+    _handle = None
 
     def __init__(self, _loop, ref=True, priority=None, args=_NOARGS):
         self.loop = _loop
@@ -189,6 +208,7 @@ class watcher(object):
         self.__init_args = args
         self.__init_ref = ref
         self._watcher_full_init()
+
 
     def _watcher_full_init(self):
         priority = self.__init_priority
@@ -216,23 +236,7 @@ class watcher(object):
         pass
 
     def _watcher_create(self, ref): # pylint:disable=unused-argument
-        # self._handle has a reference to self, keeping it alive.
-        # We must keep self._handle alive for ffi.from_handle() to be
-        # able to work.
-        # THIS IS A GC CYCLE.
-        self._handle = type(self).new_handle(self) # pylint:disable=no-member
         self._watcher = self._watcher_new()
-        # This call takes care of calling _watcher_ffi_close when
-        # self goes away, making sure self._watcher stays alive
-        # that long.
-
-        # XXX: All watchers should go to a model like libuv's
-        # IO watcher that gets explicitly closed so that we can always
-        # have control over when this gets done.
-        if self._watcher_registers_with_loop_on_create:
-            self.loop._register_watcher(self, self._watcher)
-
-        self._watcher.data = self._handle
 
     def _watcher_new(self):
         return type(self).new(self._watcher_struct_pointer_type) # pylint:disable=no-member
@@ -289,10 +293,35 @@ class watcher(object):
     _watcher_callback = None
     _watcher_is_active = None
 
+    def close(self):
+        if self._watcher is None:
+            return
 
-    # this is not needed, since we keep alive the watcher while it's started
-    #def __del__(self):
-    #    self._watcher_stop(self.loop._ptr, self._watcher)
+        self.stop()
+        _watcher = self._watcher
+        self._watcher = None
+        _watcher.data = self._FFI.NULL # pylint: disable=no-member
+        self._watcher_ffi_close(_watcher)
+        self.loop = None
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, t, v, tb):
+        self.close()
+
+    if GEVENT_DEBUG_LEVEL >= CRITICAL:
+        def __del__(self):
+            if self._watcher:
+                tb = get_object_traceback(self)
+                tb_msg = ''
+                if tb is not None:
+                    tb_msg = '\n'.join(tb.format())
+                    tb_msg = '\nTraceback:\n' + tb_msg
+                warnings.warn("Failed to close watcher %r%s" % (self, tb_msg),
+                              ResourceWarning)
+                self.close()
+
 
     def __repr__(self):
         formats = self._format()
@@ -359,14 +388,20 @@ class watcher(object):
         self.callback = callback
         self.args = args or _NOARGS
         self.loop._keepaliveset.add(self)
+        self._handle = self._watcher.data = type(self).new_handle(self) # pylint:disable=no-member
         self._watcher_ffi_start()
         self._watcher_ffi_start_unref()
 
     def stop(self):
+        if self._callback is None:
+            assert self.loop is None or self not in self.loop._keepaliveset
+            return
         _dbg("Main stop for", self, "keepalive?", self in self.loop._keepaliveset)
         self._watcher_ffi_stop_ref()
         self._watcher_ffi_stop()
         self.loop._keepaliveset.discard(self)
+        self._handle = None
+        self._watcher.data = self._FFI.NULL
         _dbg("Finished main stop for", self, "keepalive?", self in self.loop._keepaliveset)
         self.callback = None
         self.args = None
@@ -413,9 +448,6 @@ class IoMixin(object):
         if kwargs.get('pass_events'):
             args = (GEVENT_CORE_EVENTS, ) + args
         super(IoMixin, self).start(callback, *args)
-
-    def close(self):
-        pass
 
     def _format(self):
         return ' fd=%d' % self._fd

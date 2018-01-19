@@ -602,6 +602,8 @@ cdef public class callback [object PyGeventCallbackObject, type PyGeventCallback
         self.callback = None
         self.args = None
 
+    close = stop
+
     # Note, that __nonzero__ and pending are different
     # nonzero is used in contexts where we need to know whether to schedule another callback,
     # so it's true if it's pending or currently running
@@ -791,6 +793,16 @@ cdef public class watcher [object PyGeventWatcherObject, type PyGeventWatcher_Ty
     def _format(self):
         return ''
 
+    def close(self):
+        pass
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, t, v, tb):
+        self.close()
+        return
+
 
 cdef public class io(watcher) [object PyGeventIOObject, type PyGeventIO_Type]:
 
@@ -813,8 +825,6 @@ cdef public class io(watcher) [object PyGeventIOObject, type PyGeventIO_Type]:
 
     PENDING
 
-    def close(self):
-        pass
 
 #ifdef _WIN32
 

@@ -380,6 +380,10 @@ class io(_base.IoMixin, watcher):
         self._calc_and_update_events()
         return watcher
 
+    def close(self):
+        super(io, self).close()
+        del self._multiplex_watchers
+
     def _multiplex_closed(self, watcher):
         self._multiplex_watchers.remove(watcher)
         if not self._multiplex_watchers:
@@ -396,9 +400,7 @@ class io(_base.IoMixin, watcher):
             # *and* we've opened a new watcher for the fd, that watcher will
             # suddenly and mysteriously stop seeing events. So we do this now;
             # this method is smart enough not to close the handle twice.
-            self._watcher_ffi_close(self._watcher)
-            self._watcher = None
-            del self._multiplex_watchers
+            self.close()
         else:
             self._calc_and_update_events()
             _dbg("IO Watcher", self, "has remaining multiplex:",
@@ -450,7 +452,11 @@ class _SimulatedWithAsyncMixin(object):
 
     def __init__(self, loop, *args, **kwargs):
         self._async = loop.async_()
-        super(_SimulatedWithAsyncMixin, self).__init__(loop, *args, **kwargs)
+        try:
+            super(_SimulatedWithAsyncMixin, self).__init__(loop, *args, **kwargs)
+        except:
+            self._async.close()
+            raise
 
     def _watcher_create(self, _args):
         return
@@ -481,6 +487,12 @@ class _SimulatedWithAsyncMixin(object):
         self.callback = None
         self.args = None
         self._async.stop()
+
+    def close(self):
+        if self._async is not None:
+            a = self._async
+            #self._async = None
+            a.close()
 
     def _register_loop_callback(self):
         # called from start()

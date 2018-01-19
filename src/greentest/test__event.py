@@ -119,7 +119,7 @@ class TestAsyncResult(greentest.TestCase):
                 result, X,
                 'Nobody sent anything to event2 yet it received %r' % (result, ))
         finally:
-            t.cancel()
+            t.close()
             g.kill()
 
     def test_nonblocking_get(self):

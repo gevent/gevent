@@ -163,9 +163,11 @@ class BaseServer(object):
     def stop_accepting(self):
         if self._watcher is not None:
             self._watcher.stop()
+            self._watcher.close()
             self._watcher = None
         if self._timer is not None:
             self._timer.stop()
+            self._timer.close()
             self._timer = None
 
     def do_handle(self, *args):

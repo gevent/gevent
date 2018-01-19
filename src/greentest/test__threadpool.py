@@ -86,7 +86,8 @@ class PoolBasicTests(TestCase):
 
     def test_init_valueerror(self):
         self.switch_expected = False
-        self.assertRaises(ValueError, ThreadPool, -1)
+        with self.assertRaises(ValueError):
+            ThreadPool(-1)
         self.pool = None
 
 #

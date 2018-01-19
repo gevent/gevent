@@ -171,8 +171,11 @@ class StreamServer(BaseServer):
 
     def wrap_socket_and_handle(self, client_socket, address):
         # used in case of ssl sockets
-        ssl_socket = self.wrap_socket(client_socket, **self.ssl_args)
-        return self.handle(ssl_socket, address)
+        try:
+            ssl_socket = self.wrap_socket(client_socket, **self.ssl_args)
+            return self.handle(ssl_socket, address)
+        finally:
+            ssl_socket.close()
 
 
 class DatagramServer(BaseServer):

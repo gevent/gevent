@@ -29,7 +29,11 @@ class ThreadPool(GroupMappingMixin):
         self.manager = None
         self.pid = os.getpid()
         self.fork_watcher = hub.loop.fork(ref=False)
-        self._init(maxsize)
+        try:
+            self._init(maxsize)
+        except:
+            self.fork_watcher.close()
+            raise
 
     def _set_maxsize(self, maxsize):
         if not isinstance(maxsize, integer_types):
@@ -110,6 +114,7 @@ class ThreadPool(GroupMappingMixin):
 
     def kill(self):
         self.size = 0
+        self.fork_watcher.close()
 
     def _adjust_step(self):
         # if there is a possibility & necessity for adding a thread, do it
@@ -288,6 +293,7 @@ class ThreadResult(object):
 
     def _on_async(self):
         self.async_watcher.stop()
+        self.async_watcher.close()
         if self._call_when_ready:
             # Typically this is pool.semaphore.release and we have to
             # call this in the Hub; if we don't we get the dreaded
@@ -311,6 +317,7 @@ class ThreadResult(object):
     def destroy(self):
         if self.async_watcher is not None:
             self.async_watcher.stop()
+            self.async_watcher.close()
         self.async_watcher = None
         self.context = None
         self.hub = None

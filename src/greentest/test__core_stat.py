@@ -35,6 +35,7 @@ class TestCoreStat(greentest.TestCase):
         self.watcher = self.hub.loop.stat(self.temp_path, interval=-1)
 
     def tearDown(self):
+        self.watcher.close()
         if os.path.exists(self.temp_path):
             os.unlink(self.temp_path)
         super(TestCoreStat, self).tearDown()
@@ -68,7 +69,7 @@ class TestCoreStat(greentest.TestCase):
     def _wait_on_greenlet(self, func, *greenlet_args):
         start = time.time()
 
-        self.hub.loop.update()
+        self.hub.loop.update_now()
         greenlet = gevent.spawn_later(DELAY, func, *greenlet_args)
         with gevent.Timeout(5 + DELAY + 0.5):
             self.hub.wait(self.watcher)

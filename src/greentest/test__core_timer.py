@@ -1,62 +1,79 @@
 from __future__ import print_function
 from gevent import core
 
-called = []
+from greentest import TestCase
+from greentest import main
+from greentest import LARGE_TIMEOUT
+from greentest.sysinfo import CFFI_BACKEND
 
 
-def f(x=None):
-    called.append(1)
-    if x is not None:
+class Test(TestCase):
+    __timeout__ = LARGE_TIMEOUT
+    repeat = 0
+
+    def setUp(self):
+        self.called = []
+        self.loop = core.loop(default=True)
+        self.timer = self.loop.timer(0.001, repeat=self.repeat)
+
+    def tearDown(self):
+        self.timer.close()
+
+    def f(self, x=None):
+        self.called.append(1)
+        if x is not None:
+            x.stop()
+
+    def assertTimerInKeepalive(self):
+        if CFFI_BACKEND:
+            self.assertIn(self.timer, self.loop._keepaliveset)
+
+    def assertTimerNotInKeepalive(self):
+        if CFFI_BACKEND:
+            self.assertNotIn(self.timer, self.loop._keepaliveset)
+
+    def test_main(self):
+        loop = self.loop
+        x = self.timer
+        x.start(self.f)
+        self.assertTimerInKeepalive()
+        self.assertTrue(x.active, x)
+
+        with self.assertRaises((AttributeError, ValueError)):
+            x.priority = 1
+
+        loop.run()
+        self.assertEqual(x.pending, 0)
+        self.assertEqual(self.called, [1])
+        self.assertIsNone(x.callback)
+        self.assertIsNone(x.args)
+
+        if x.priority is not None:
+            self.assertEqual(x.priority, 0)
+            x.priority = 1
+            self.assertEqual(x.priority, 1)
+
         x.stop()
+        self.assertTimerNotInKeepalive()
 
+class TestAgain(Test):
+    repeat = 1
 
-def main():
-    loop = core.loop(default=True)
-    x = loop.timer(0.001)
-    x.start(f)
-    if hasattr(loop, '_keepaliveset'):
-        assert x in loop._keepaliveset
-    assert x.active, ("active", x.active, "pending", x.pending)
-    try:
-        x.priority = 1
-        raise AssertionError('must not be able to change priority of active watcher')
-    except (AttributeError, ValueError):
-        pass
-    loop.run()
-    assert x.pending == 0, x.pending
-    assert called == [1], called
-    assert x.callback is None, x.callback
-    assert x.args is None, x.args
-    if x.priority is not None:
-        assert x.priority == 0, (x, x.priority)
-        x.priority = 1
-        assert x.priority == 1, x
-    x.stop()
-    if hasattr(loop, '_keepaliveset'):
-        assert x not in loop._keepaliveset
+    def test_main(self):
+        # Again works for a new timer
+        x = self.timer
+        x.again(self.f, x)
+        self.assertTimerInKeepalive()
 
-    # Again works for a new timer
-    x = loop.timer(0.001, repeat=1)
-    x.again(f, x)
-    if hasattr(loop, '_keepaliveset'):
-        assert x in loop._keepaliveset
+        self.assertEqual(x.args, (x,))
 
-    assert x.args == (x,), x.args
-    loop.run()
-    assert called == [1, 1], called
+        self.loop.run()
 
-    x.stop()
-    if hasattr(loop, '_keepaliveset'):
-        assert x not in loop._keepaliveset
+        self.assertEqual(self.called, [1])
+
+        x.stop()
+        self.assertTimerNotInKeepalive()
 
 
 if __name__ == '__main__':
-    import sys
-    gettotalrefcount = getattr(sys, 'gettotalrefcount', None)
-    called[:] = []
-    if gettotalrefcount is not None:
-        print(gettotalrefcount())
     main()
-    called[:] = []
-    if gettotalrefcount is not None:
-        print(gettotalrefcount())

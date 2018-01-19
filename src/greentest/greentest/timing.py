@@ -74,7 +74,7 @@ class _DelayWaitMixin(object):
                 self.wait(timeout=1)
             self.assertIs(exc.exception, timeout)
         finally:
-            timeout.cancel()
+            timeout.close()
 
 
 class AbstractGenericWaitTestCase(_DelayWaitMixin, TestCase):
@@ -116,13 +116,18 @@ class AbstractGenericGetTestCase(_DelayWaitMixin, TestCase):
             self._wait_and_check(timeout=timeout)
         except gevent.Timeout as ex:
             self.assertIs(ex, timeout)
+        finally:
+            timeout.close()
         self.cleanup()
 
     def test_raises_timeout_Timeout_exc_customized(self):
         error = RuntimeError('expected error')
         timeout = gevent.Timeout(self._default_wait_timeout, exception=error)
-        with self.assertRaises(RuntimeError) as exc:
-            self._wait_and_check(timeout=timeout)
+        try:
+            with self.assertRaises(RuntimeError) as exc:
+                self._wait_and_check(timeout=timeout)
 
-        self.assertIs(exc.exception, error)
-        self.cleanup()
+                self.assertIs(exc.exception, error)
+                self.cleanup()
+        finally:
+            timeout.close()
