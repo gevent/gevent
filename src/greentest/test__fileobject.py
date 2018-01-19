@@ -27,7 +27,6 @@ class Test(greentest.TestCase):
     def _do_test_del(self, pipe, **kwargs):
         r, w = pipe
         s = FileObject(w, 'wb', **kwargs)
-        ts = type(s)
         s.write(b'x')
         try:
             s.flush()

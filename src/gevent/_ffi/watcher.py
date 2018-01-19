@@ -342,6 +342,7 @@ class watcher(object):
     def _watcher_set_data(self, the_watcher, data):
         # This abstraction exists for the sole benefit of
         # libuv.watcher.stat, which "subclasses" uv_handle_t.
+        # Can we do something to avoid this extra function call?
         the_watcher.data = data
         return data
 

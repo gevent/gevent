@@ -206,10 +206,10 @@ class TestWait(greentest.TestCase):
         else:
             expected_len = min(max_len, self.timeout / self.period)
         if self.count is None:
-            assert sender.ready()
+            self.assertTrue(sender.ready(), sender)
         else:
             expected_len = min(self.count, expected_len)
-            assert not sender.ready()
+            self.assertFalse(sender.ready(), sender)
             sender.kill()
         self.assertEqual(expected_len, len(results), (expected_len, len(results), results))
 

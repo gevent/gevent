@@ -794,7 +794,7 @@ cdef public class watcher [object PyGeventWatcherObject, type PyGeventWatcher_Ty
         return ''
 
     def close(self):
-        pass
+        self.stop()
 
     def __enter__(self):
         return self
