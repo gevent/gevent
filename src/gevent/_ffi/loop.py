@@ -122,8 +122,6 @@ class AbstractCallbacks(object):
             the_watcher.callback(*args)
         except: # pylint:disable=bare-except
             _dbg("Got exception servicing watcher with handle", handle, sys.exc_info())
-            import traceback
-            traceback.print_exc()
             # It's possible for ``the_watcher`` to be undefined (UnboundLocalError)
             # if we threw an exception (signal) on the line that created that variable.
             # This is typically the case with a signal under libuv

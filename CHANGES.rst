@@ -222,6 +222,22 @@ libuv
     zero duration timers and turns them into a check watcher. check
     watchers do not support the ``again`` method.
 
+  - All watchers (e.g., ``loop.io``) and the ``Timeout`` class have a
+    ``close`` method that should be called when code is done using the
+    object (they also function as context managers and a ``with``
+    statement will automatically close them). gevent does this
+    internally for sockets, file objects and internal timeouts.
+    Neglecting to close an object may result in leaking native
+    resources. To debug this, set the environment variables
+    ``GEVENT_DEBUG=debug`` and ``PYTHONTRACEMALLOC=n`` before starting
+    the process.
+
+    The traditional cython-based libev backend will not leak if
+    ``close`` is not called and will not produce warnings. The
+    CFFI-based libev backend will not currently leak but will produce
+    warnings. The CFFI-based libuv backend may leak and will produce
+    warnings.
+
   Again, this is extremely experimental and all of it is subject to
   change.
 

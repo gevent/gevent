@@ -49,25 +49,26 @@ class TestExceptionInMainloop(greentest.TestCase):
         gevent.sleep(DELAY)
         delay = time.time() - start
 
-        assert delay >= DELAY * 0.9, 'sleep returned after %s seconds (was scheduled for %s)' % (delay, DELAY)
+        delay_range = DELAY * 0.9
+        self.assertTimeWithinRange(delay, DELAY - delay_range, DELAY + delay_range)
 
         error = greentest.ExpectedException('TestExceptionInMainloop.test_sleep/fail')
 
         def fail():
             raise error
 
-        t = get_hub().loop.timer(0.001)
-        t.start(fail)
+        with get_hub().loop.timer(0.001) as t:
+            t.start(fail)
 
-        self.expect_one_error()
+            self.expect_one_error()
 
-        start = time.time()
-        gevent.sleep(DELAY)
-        delay = time.time() - start
+            start = time.time()
+            gevent.sleep(DELAY)
+            delay = time.time() - start
 
-        self.assert_error(value=error)
+            self.assert_error(value=error)
+            self.assertTimeWithinRange(delay, DELAY - delay_range, DELAY + delay_range)
 
-        assert delay >= DELAY * 0.9, 'sleep returned after %s seconds (was scheduled for %s)' % (delay, DELAY)
 
 
 class TestSleep(greentest.GenericWaitTestCase):
@@ -86,12 +87,9 @@ class TestWaiterGet(greentest.GenericWaitTestCase):
         self.waiter = Waiter()
 
     def wait(self, timeout):
-        evt = get_hub().loop.timer(timeout)
-        evt.start(self.waiter.switch)
-        try:
+        with get_hub().loop.timer(timeout) as evt:
+            evt.start(self.waiter.switch)
             return self.waiter.get()
-        finally:
-            evt.stop()
 
 
 class TestWaiter(greentest.TestCase):

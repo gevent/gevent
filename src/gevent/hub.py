@@ -820,6 +820,7 @@ class Waiter(object):
         >>> timer.start(result.switch, 'hello from Waiter')
         >>> result.get() # blocks for 0.1 seconds
         'hello from Waiter'
+        >>> timer.close()
 
     If switch is called before the greenlet gets a chance to call :meth:`get` then
     :class:`Waiter` stores the value.
@@ -830,6 +831,7 @@ class Waiter(object):
         >>> sleep(0.2)
         >>> result.get() # returns immediately without blocking
         'hi from Waiter'
+        >>> timer.close()
 
     .. warning::
 

@@ -12,15 +12,49 @@ import warnings
 
 try:
     from tracemalloc import get_object_traceback
-except ImportError:
-    def get_object_traceback(_obj):
-        return None
+
+    def tracemalloc(init):
+        # PYTHONTRACEMALLOC env var controls this.
+        return init
+except ImportError: # Python < 3.4
+    if os.getenv('PYTHONTRACEMALLOC'):
+        # Use the same env var to turn this on for Python 2
+        import traceback
+
+        class _TB(object):
+            __slots__ = ('lines',)
+
+            def __init__(self, lines):
+                # These end in newlines, which we don't want for consistency
+                self.lines = [x.rstrip() for x in lines]
+
+            def format(self):
+                return self.lines
+
+        def tracemalloc(init):
+            @functools.wraps(init)
+            def traces(self, *args, **kwargs):
+                init(self, *args, **kwargs)
+                self._captured_malloc = _TB(traceback.format_stack())
+            return traces
+
+        def get_object_traceback(obj):
+            return obj._captured_malloc
+
+    else:
+        def get_object_traceback(_obj):
+            return None
+
+        def tracemalloc(init):
+            return init
 
 from gevent._ffi import _dbg
 from gevent._ffi import GEVENT_DEBUG_LEVEL
-from gevent._ffi import CRITICAL
+from gevent._ffi import DEBUG
 from gevent._ffi.loop import GEVENT_CORE_EVENTS
 from gevent._ffi.loop import _NOARGS
+
+ALLOW_WATCHER_DEL = GEVENT_DEBUG_LEVEL >= DEBUG
 
 __all__ = [
 
@@ -113,7 +147,7 @@ class AbstractWatcherType(type):
     def __new__(cls, name, bases, cls_dict):
         if name != 'watcher' and not cls_dict.get('_watcher_skip_ffi'):
             cls._fill_watcher(name, bases, cls_dict)
-        if '__del__' in cls_dict and GEVENT_DEBUG_LEVEL < CRITICAL:
+        if '__del__' in cls_dict and not ALLOW_WATCHER_DEL:
             raise TypeError("CFFI watchers are not allowed to have __del__")
         return type.__new__(cls, name, bases, cls_dict)
 
@@ -202,6 +236,7 @@ class watcher(object):
     # as possible.
     _handle = None
 
+    @tracemalloc
     def __init__(self, _loop, ref=True, priority=None, args=_NOARGS):
         self.loop = _loop
         self.__init_priority = priority
@@ -300,9 +335,15 @@ class watcher(object):
         self.stop()
         _watcher = self._watcher
         self._watcher = None
-        _watcher.data = self._FFI.NULL # pylint: disable=no-member
+        self._watcher_set_data(_watcher, self._FFI.NULL) # pylint: disable=no-member
         self._watcher_ffi_close(_watcher)
         self.loop = None
+
+    def _watcher_set_data(self, the_watcher, data):
+        # This abstraction exists for the sole benefit of
+        # libuv.watcher.stat, which "subclasses" uv_handle_t.
+        the_watcher.data = data
+        return data
 
     def __enter__(self):
         return self
@@ -310,7 +351,7 @@ class watcher(object):
     def __exit__(self, t, v, tb):
         self.close()
 
-    if GEVENT_DEBUG_LEVEL >= CRITICAL:
+    if ALLOW_WATCHER_DEL:
         def __del__(self):
             if self._watcher:
                 tb = get_object_traceback(self)
@@ -320,6 +361,8 @@ class watcher(object):
                     tb_msg = '\nTraceback:\n' + tb_msg
                 warnings.warn("Failed to close watcher %r%s" % (self, tb_msg),
                               ResourceWarning)
+
+                # may fail if __init__ did; will be harmlessly printed
                 self.close()
 
 
@@ -388,7 +431,7 @@ class watcher(object):
         self.callback = callback
         self.args = args or _NOARGS
         self.loop._keepaliveset.add(self)
-        self._handle = self._watcher.data = type(self).new_handle(self) # pylint:disable=no-member
+        self._handle = self._watcher_set_data(self._watcher, type(self).new_handle(self)) # pylint:disable=no-member
         self._watcher_ffi_start()
         self._watcher_ffi_start_unref()
 
@@ -401,7 +444,7 @@ class watcher(object):
         self._watcher_ffi_stop()
         self.loop._keepaliveset.discard(self)
         self._handle = None
-        self._watcher.data = self._FFI.NULL
+        self._watcher_set_data(self._watcher, self._FFI.NULL) # pylint:disable=no-member
         _dbg("Finished main stop for", self, "keepalive?", self in self.loop._keepaliveset)
         self.callback = None
         self.args = None

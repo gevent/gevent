@@ -120,7 +120,6 @@ def wrap_refcount(method):
                     break
                 elif len(deltas) >= 3 and deltas[-1] > 0 and deltas[-1] == deltas[-2] and deltas[-2] == deltas[-3]:
                     diff = report_diff(hist_before, hist_after)
-                    print(gevent.get_hub().loop._active_watchers)
                     raise AssertionError('refcount increased by %r\n%s' % (deltas, diff))
                 # OK, we don't know for sure yet. Let's search for more
                 if sum(deltas[-3:]) <= 0 or sum(deltas[-4:]) <= 0 or deltas[-4:].count(0) >= 2:

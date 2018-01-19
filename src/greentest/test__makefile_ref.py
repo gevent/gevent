@@ -188,6 +188,7 @@ class TestSocket(Test):
         finally:
             t.join()
             listener.close()
+            connector.close()
 
     def test_server_makefile1(self):
         listener = socket.socket()
@@ -222,6 +223,7 @@ class TestSocket(Test):
         finally:
             t.join()
             listener.close()
+            connector.close()
 
     def test_server_makefile2(self):
         listener = socket.socket()
@@ -251,6 +253,7 @@ class TestSocket(Test):
         finally:
             t.join()
             listener.close()
+            connector.close()
 
 
 
@@ -308,8 +311,8 @@ class TestSSL(Test):
         self.assert_closed(s, fileno)
 
     def test_makefile1(self):
-        s = self.make_open_socket()
-        s = ssl.wrap_socket(s)
+        raw_s = self.make_open_socket()
+        s = ssl.wrap_socket(raw_s)
 
         self._close_on_teardown(s)
         fileno = s.fileno()
@@ -319,7 +322,9 @@ class TestSSL(Test):
         s.close()
         self.assert_open(s, fileno)
         f.close()
+        raw_s.close()
         self.assert_closed(s, fileno)
+
 
     def test_makefile2(self):
         s = self.make_open_socket()

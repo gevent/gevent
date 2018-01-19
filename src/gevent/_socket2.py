@@ -36,22 +36,35 @@ else:
     # Python 2 doesn't natively support with statements on _fileobject;
     # but it eases our test cases if we can do the same with on both Py3
     # and Py2. Implementation copied from Python 3
-    if not hasattr(_fileobject, '__enter__'):
-        # we could either patch in place:
-        #_fileobject.__enter__ = lambda self: self
-        #_fileobject.__exit__ = lambda self, *args: self.close() if not self.closed else None
-        # or we could subclass. subclassing has the benefit of not
-        # changing the behaviour of the stdlib if we're just imported; OTOH,
-        # under Python 2.6/2.7, test_urllib2net.py asserts that the class IS
-        # socket._fileobject (sigh), so we have to work around that.
-        class _fileobject(_fileobject): # pylint:disable=function-redefined
+    assert not hasattr(_fileobject, '__enter__')
+    # we could either patch in place:
+    #_fileobject.__enter__ = lambda self: self
+    #_fileobject.__exit__ = lambda self, *args: self.close() if not self.closed else None
+    # or we could subclass. subclassing has the benefit of not
+    # changing the behaviour of the stdlib if we're just imported; OTOH,
+    # under Python 2.6/2.7, test_urllib2net.py asserts that the class IS
+    # socket._fileobject (sigh), so we have to work around that.
 
-            def __enter__(self):
-                return self
+    # We also make it call our custom socket closing method that disposes
+    # if IO watchers but not the actual socket itself.
 
-            def __exit__(self, *args):
-                if not self.closed:
-                    self.close()
+    # Python 2 relies on reference counting to close sockets, so this is all
+    # very ugly and fragile.
+
+    class _fileobject(_fileobject): # pylint:disable=function-redefined
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args):
+            if not self.closed:
+                self.close()
+
+        def close(self):
+            if self._sock is not None:
+                self._sock._drop_events()
+            super(_fileobject, self).close()
+
 
 def _get_memory(data):
     try:
@@ -108,11 +121,13 @@ class socket(object):
             self.timeout = _socket.getdefaulttimeout()
         else:
             if hasattr(_sock, '_sock'):
+                # passed a gevent socket
                 self._sock = _sock._sock
                 self.timeout = getattr(_sock, 'timeout', False)
                 if self.timeout is False:
                     self.timeout = _socket.getdefaulttimeout()
             else:
+                # passed a native socket
                 self._sock = _sock
                 self.timeout = _socket.getdefaulttimeout()
             if PYPY:
@@ -197,23 +212,25 @@ class socket(object):
             client_socket._drop()
         return sockobj, address
 
-    def close(self, _closedsocket=_closedsocket, cancel_wait_ex=cancel_wait_ex):
-        # This function should not reference any globals. See Python issue #808164.
-
-        # Also break any reference to the loop.io objects. Our fileno, which they were
-        # tied to, is now free to be reused, so these objects are no longer functional.
-
+    def _drop_events(self, cancel_wait_ex=cancel_wait_ex):
         if self._read_event is not None:
             self.hub.cancel_wait(self._read_event, cancel_wait_ex, True)
             self._read_event = None
         if self._write_event is not None:
             self.hub.cancel_wait(self._write_event, cancel_wait_ex, True)
             self._write_event = None
+
+
+    def close(self, _closedsocket=_closedsocket):
+        # This function should not reference any globals. See Python issue #808164.
+
+        # Also break any reference to the loop.io objects. Our fileno, which they were
+        # tied to, is now free to be reused, so these objects are no longer functional.
+        self._drop_events()
         s = self._sock
         self._sock = _closedsocket()
         if PYPY:
             s._drop()
-
 
     @property
     def closed(self):
@@ -264,10 +281,14 @@ class socket(object):
     def makefile(self, mode='r', bufsize=-1):
         # Two things to look out for:
         # 1) Closing the original socket object should not close the
-        #    socket (hence creating a new socket instance);
+        #    fileobject (hence creating a new socket instance);
         #    An alternate approach is what _socket3.py does, which is to
         #    keep count of the times makefile objects have been opened (Py3's
-        #    SocketIO helps with that).
+        #    SocketIO helps with that). But the newly created socket, which
+        #    has its own read/write watchers, does need those to be closed
+        #    when the fileobject is; our custom subclass does that. Note that
+        #    we can't pass the 'close=True' argument, as that causes reference counts
+        #    to get screwed up, and Python2 sockets rely on those.
         # 2) The resulting fileobject must keep the timeout in order
         #    to be compatible with the stdlib's socket.makefile.
         # Pass self as _sock to preserve timeout.

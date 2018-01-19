@@ -43,9 +43,14 @@ def TESTRUNNER(tests=None):
     tests = [os.path.basename(x) for x in tests]
     version_tests = [os.path.basename(x) for x in version_tests]
 
-    options = {'cwd': directory,
-               'timeout': TIMEOUT,
-               'setenv': {'PYTHONPATH': PYTHONPATH}}
+    options = {
+        'cwd': directory,
+        'timeout': TIMEOUT,
+        'setenv': {
+            'PYTHONPATH': PYTHONPATH,
+            'GEVENT_DEBUG': 'error',
+        }
+    }
 
     if tests and not sys.platform.startswith("win"):
         atexit.register(os.system, 'rm -f */@test*')

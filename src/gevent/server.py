@@ -1,9 +1,16 @@
 # Copyright (c) 2009-2012 Denis Bilenko. See LICENSE for details.
 """TCP/SSL server"""
 import sys
-import _socket
+
+from _socket import error as SocketError
+from _socket import SOL_SOCKET
+from _socket import SO_REUSEADDR
+from _socket import AF_INET
+from _socket import SOCK_DGRAM
+
 from gevent.baseserver import BaseServer
-from gevent.socket import EWOULDBLOCK, socket
+from gevent.socket import EWOULDBLOCK
+from gevent.socket import socket as GeventSocket
 from gevent._compat import PYPY, PY3
 
 __all__ = ['StreamServer', 'DatagramServer']
@@ -147,7 +154,8 @@ class StreamServer(BaseServer):
                 if not sock.timeout:
                     return
                 raise
-            sock = socket(sock.family, sock.type, sock.proto, fileno=fd)
+
+            sock = GeventSocket(sock.family, sock.type, sock.proto, fileno=fd)
             # XXX Python issue #7995?
             return sock, address
 
@@ -156,13 +164,20 @@ class StreamServer(BaseServer):
         def do_read(self):
             try:
                 client_socket, address = self.socket.accept()
-            except _socket.error as err:
+            except SocketError as err:
                 if err.args[0] == EWOULDBLOCK:
                     return
                 raise
-            sockobj = socket(_sock=client_socket)
-            if PYPY:
-                client_socket._drop()
+            # XXX: When would this not be the case? In Python 3 it makes sense
+            # because we're using the low-level _accept method,
+            # but not in Python 2.
+            if not isinstance(client_socket, GeventSocket):
+                # This leads to a leak of the watchers in client_socket
+                sockobj = GeventSocket(_sock=client_socket)
+                if PYPY:
+                    client_socket._drop()
+            else:
+                sockobj = client_socket
             return sockobj, address
 
     def do_close(self, sock, *args):
@@ -209,7 +224,7 @@ class DatagramServer(BaseServer):
     def do_read(self):
         try:
             data, address = self._socket.recvfrom(8192)
-        except _socket.error as err:
+        except SocketError as err:
             if err.args[0] == EWOULDBLOCK:
                 return
             raise
@@ -223,14 +238,14 @@ class DatagramServer(BaseServer):
             self._writelock.release()
 
 
-def _tcp_listener(address, backlog=50, reuse_addr=None, family=_socket.AF_INET):
+def _tcp_listener(address, backlog=50, reuse_addr=None, family=AF_INET):
     """A shortcut to create a TCP socket, bind it and put it into listening state."""
-    sock = socket(family=family)
+    sock = GeventSocket(family=family)
     if reuse_addr is not None:
-        sock.setsockopt(_socket.SOL_SOCKET, _socket.SO_REUSEADDR, reuse_addr)
+        sock.setsockopt(SOL_SOCKET, SO_REUSEADDR, reuse_addr)
     try:
         sock.bind(address)
-    except _socket.error as ex:
+    except SocketError as ex:
         strerror = getattr(ex, 'strerror', None)
         if strerror is not None:
             ex.strerror = strerror + ': ' + repr(address)
@@ -240,17 +255,17 @@ def _tcp_listener(address, backlog=50, reuse_addr=None, family=_socket.AF_INET):
     return sock
 
 
-def _udp_socket(address, backlog=50, reuse_addr=None, family=_socket.AF_INET):
+def _udp_socket(address, backlog=50, reuse_addr=None, family=AF_INET):
     # backlog argument for compat with tcp_listener
     # pylint:disable=unused-argument
 
     # we want gevent.socket.socket here
-    sock = socket(family=family, type=_socket.SOCK_DGRAM)
+    sock = GeventSocket(family=family, type=SOCK_DGRAM)
     if reuse_addr is not None:
-        sock.setsockopt(_socket.SOL_SOCKET, _socket.SO_REUSEADDR, reuse_addr)
+        sock.setsockopt(SOL_SOCKET, SO_REUSEADDR, reuse_addr)
     try:
         sock.bind(address)
-    except _socket.error as ex:
+    except SocketError as ex:
         strerror = getattr(ex, 'strerror', None)
         if strerror is not None:
             ex.strerror = strerror + ': ' + repr(address)

@@ -112,17 +112,21 @@ class watcher(_base.watcher):
         # Instead, this is arranged as a callback to GC when the
         # watcher class dies. Obviously it's important to keep the ffi
         # watcher alive.
-        _dbg("Request to close handle", ffi_watcher, ffi_watcher.type)
-        if ffi_watcher.type and not libuv.uv_is_closing(ffi_watcher):
+        _dbg("Request to close handle", ffi_watcher)
+        # We can pass in "subclasses" if uv_handle_t that line up at the C level,
+        # but that don't in CFFI without a cast. But be careful what we use the cast
+        # for, don't pass it back to C.
+        ffi_handle_watcher = cls._FFI.cast('uv_handle_t*', ffi_watcher)
+        if ffi_handle_watcher.type and not libuv.uv_is_closing(ffi_watcher):
             # If the type isn't set, we were never properly initialized,
             # and trying to close it results in libuv terminating the process.
             # Sigh. Same thing if it's already in the process of being
             # closed.
-            _dbg("Closing handle", ffi_watcher, ffi_watcher.type)
+            _dbg("Closing handle", ffi_watcher)
             _closing_handles.add(ffi_watcher)
             libuv.uv_close(ffi_watcher, libuv._uv_close_callback)
 
-        ffi_watcher.data = ffi.NULL
+        ffi_handle_watcher.data = ffi.NULL
 
 
     def _watcher_ffi_set_init_ref(self, ref):
@@ -665,11 +669,9 @@ class stat(_base.StatMixin, watcher):
     _watcher_struct_name = 'gevent_fs_poll_t'
     _watcher_callback_name = '_gevent_fs_poll_callback3'
 
-    def _watcher_create(self, ref):
-        self._handle = type(self).new_handle(self)
-        self._watcher = type(self).new(self._watcher_struct_pointer_type)
-        self.loop._register_watcher(watcher, self._handle)
-        self._watcher.handle.data = self._handle
+    def _watcher_set_data(self, the_watcher, data):
+        the_watcher.handle.data = data
+        return data
 
     def _watcher_ffi_init(self, args):
         return self._watcher_init(self.loop._ptr, self._watcher)

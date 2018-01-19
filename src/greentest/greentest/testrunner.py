@@ -301,12 +301,17 @@ def main():
         # On Python 3[.6], the system site.py module has
         # "open(fullname, 'rU')" which produces the warning that
         # 'U' is deprecated, so ignore warnings from site.py
-        os.environ['PYTHONWARNINGS'] = 'default,ignore:::site:'
+
+        # importlib/_bootstrap.py likes to spit out "ImportWarning:
+        # can't resolve package from __spec__ or __package__, falling
+        # back on __name__ and __path__". I have no idea what that means, but it seems harmless
+        # and is annoying.
+        os.environ['PYTHONWARNINGS'] = 'default,ignore:::site:,ignore:::importlib._bootstrap:,ignore:::importlib._bootstrap_external:'
     if 'PYTHONFAULTHANDLER' not in os.environ:
         os.environ['PYTHONFAULTHANDLER'] = 'true'
 
     if 'GEVENT_DEBUG' not in os.environ:
-        os.environ['GEVENT_DEBUG'] = 'error'
+        os.environ['GEVENT_DEBUG'] = 'debug'
 
     tests = discover(options.tests, options.ignore, coverage)
     if options.discover:

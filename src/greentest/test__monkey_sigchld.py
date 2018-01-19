@@ -63,7 +63,7 @@ if hasattr(signal, 'SIGCHLD'):
                     raise
                 raise AssertionError("Failed to wait using", func)
             finally:
-                timeout.cancel()
+                timeout.close()
     sys.exit(0)
 else:
     print("No SIGCHLD, not testing")
