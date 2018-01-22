@@ -15,6 +15,7 @@ import subprocess
 import multiprocessing
 import tempfile
 import shutil
+from collections import OrderedDict
 
 import threading
 
@@ -376,7 +377,7 @@ class ConfigurationGroups(tuple):
         if self._simplified:
             return self
 
-        for tag1, tag2 in combinations(self, 2):
+        for tag1, tag2 in sorted(combinations(self, 2)):
             if tag1 == tag2:
                 tags = list(self)
                 tags.remove(tag1)
@@ -555,7 +556,7 @@ def preprocess_filename(filename, config):
     """
     linecount = 0
     current_name = None
-    definitions = {}
+    definitions = OrderedDict()
     result = []
     including_section = []
     with open(filename) as f:

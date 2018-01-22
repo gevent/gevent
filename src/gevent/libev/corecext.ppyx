@@ -666,32 +666,8 @@ cdef public class callback [object PyGeventCallbackObject, type PyGeventCallback
 # bit #3 set if user wants to call ev_unref() before start()
 
 #define WATCHER_BASE(TYPE)                                                              \
-    cdef public loop loop                                                               \
-    cdef object _callback                                                               \
-    cdef public tuple args                                                              \
-    cdef readonly int _flags                                                            \
     cdef libev.ev_##TYPE _watcher                                                       \
                                                                                         \
-    @property                                                                           \
-    def ref(self):                                                                      \
-        return False if self._flags & 4 else True                                       \
-    \
-    @ref.setter \
-    def ref(self, object value):                                                    \
-        _check_loop(self.loop)                                                      \
-        if value:                                                                   \
-            if not self._flags & 4:                                                 \
-               return  # ref is already True                                       \
-            if self._flags & 2:  # ev_unref was called, undo                        \
-               libev.ev_ref(self.loop._ptr)                                        \
-            self._flags &= ~6  # do not want unref, no outstanding unref            \
-        else:                                                                       \
-            if self._flags & 4:                                                     \
-               return  # ref is already False                                      \
-            self._flags |= 4                                                        \
-            if not self._flags & 2 and libev.ev_is_active(&self._watcher):          \
-               libev.ev_unref(self.loop._ptr)                                      \
-               self._flags |= 2                                                    \
     \
     @property \
     def callback(self):                                                                  \
@@ -768,20 +744,46 @@ cdef public class callback [object PyGeventCallbackObject, type PyGeventCallback
 #define COMMA ,
 
 
-#define INIT(TYPE, ARGS_INITIALIZERS, ARGS)                                                \
-    def __init__(self, loop loop ARGS_INITIALIZERS, ref=True, priority=None):              \
-        libev.ev_##TYPE##_init(&self._watcher, <void *>gevent_callback_##TYPE ARGS)        \
-        self.loop = loop                                                                   \
-        if ref:                                                                            \
-            self._flags = 0                                                                \
-        else:                                                                              \
-            self._flags = 4                                                                \
-        if priority is not None:                                                           \
-            libev.ev_set_priority(&self._watcher, priority)
-
-
 cdef public class watcher [object PyGeventWatcherObject, type PyGeventWatcher_Type]:
     """Abstract base class for all the watchers"""
+    cdef public loop loop
+    cdef object _callback
+    cdef public tuple args
+    cdef readonly int _flags
+    cdef libev.ev_watcher* __watcher
+
+    def __init__(self, loop loop, ref=True, priority=None):
+        if not self.__watcher:
+            raise ValueError("Cannot construct a bare watcher")
+        self.loop = loop
+        if ref:
+            self._flags = 0
+        else:
+            self._flags = 4
+        if priority is not None:
+            libev.ev_set_priority(self.__watcher, priority)
+
+    @property
+    def ref(self):
+        return False if self._flags & 4 else True
+
+    @ref.setter
+    def ref(self, object value):
+        _check_loop(self.loop)
+        if value:
+            if not self._flags & 4:
+               return  # ref is already True
+            if self._flags & 2:  # ev_unref was called, undo
+               libev.ev_ref(self.loop._ptr)
+            self._flags &= ~6  # do not want unref, no outstanding unref
+        else:
+            if self._flags & 4:
+               return  # ref is already False
+            self._flags |= 4
+            if not self._flags & 2 and libev.ev_is_active(self.__watcher):
+               libev.ev_unref(self.loop._ptr)
+               self._flags |= 2
+
 
     def __repr__(self):
         if Py_ReprEnter(<PyObjectPtr>self) != 0:
@@ -836,40 +838,35 @@ cdef public class io(watcher) [object PyGeventIOObject, type PyGeventIO_Type]:
 
     PENDING
 
-
-#ifdef _WIN32
-
-    def __init__(self, loop loop, libev.vfd_socket_t fd, int events, ref=True, priority=None):
-        if events & ~(libev.EV__IOFDSET | libev.EV_READ | libev.EV_WRITE):
-            raise ValueError('illegal event mask: %r' % events)
-        cdef int vfd = libev.vfd_open(fd)
-        libev.vfd_free(self._watcher.fd)
-        libev.ev_io_init(&self._watcher, <void *>gevent_callback_io, vfd, events)
-        self.loop = loop
-        if ref:
-            self._flags = 0
-        else:
-            self._flags = 4
-        if priority is not None:
-            libev.ev_set_priority(&self._watcher, priority)
-
-#else
-
-    def __init__(self, loop loop, int fd, int events, ref=True, priority=None):
+    cpdef __posix_cinit(self, loop loop, int fd, int events, ref=True, priority=None):
         if fd < 0:
             raise ValueError('fd must be non-negative: %r' % fd)
         if events & ~(libev.EV__IOFDSET | libev.EV_READ | libev.EV_WRITE):
             raise ValueError('illegal event mask: %r' % events)
         libev.ev_io_init(&self._watcher, <void *>gevent_callback_io, fd, events)
-        self.loop = loop
-        if ref:
-            self._flags = 0
-        else:
-            self._flags = 4
-        if priority is not None:
-            libev.ev_set_priority(&self._watcher, priority)
+        self.__watcher = <libev.ev_watcher*>&self._watcher
+
+
+#ifdef _WIN32
+
+    def __cinit__(self, loop loop, libev.vfd_socket_t fd, int events, ref=True, priority=None):
+        if events & ~(libev.EV__IOFDSET | libev.EV_READ | libev.EV_WRITE):
+            raise ValueError('illegal event mask: %r' % events)
+        cdef int vfd = libev.vfd_open(fd)
+        self.__posix_cinit(loop, vfd, events, ref, priority)
+
+    def __init__(self, loop loop, libev.vfd_socket_t fd, int events, ref=True, priority=None):
+        watcher.__init__(self, loop, ref, priority)
+
+    def __dealloc__(self):
+        libev.vfd_free(self._watcher.fd)
+
+    # cythonpp can produce code that cannot compile if the same methods are
+    # defined in blocks too close together. So the POSIX version of this
+    # has to be defined several methods down.
 
 #endif
+
 
     @property
     def fd(self):
@@ -901,14 +898,18 @@ cdef public class io(watcher) [object PyGeventIOObject, type PyGeventIO_Type]:
         return ' fd=%s events=%s' % (self.fd, self.events_str)
 
 #ifdef _WIN32
+#else
 
-    def __cinit__(self):
-        self._watcher.fd = -1;
+    def __cinit__(self, loop loop, int fd, int events, ref=True, priority=None):
+        self.__posix_cinit(loop, fd, events, ref, priority)
 
-    def __dealloc__(self):
-        libev.vfd_free(self._watcher.fd)
+    def __init__(self, loop loop, int fd, int events, ref=True, priority=None):
+        watcher.__init__(self, loop, ref, priority)
+
 
 #endif
+
+
 
 
 cdef public class timer(watcher) [object PyGeventTimerObject, type PyGeventTimer_Type]:
@@ -935,17 +936,14 @@ cdef public class timer(watcher) [object PyGeventTimerObject, type PyGeventTimer
 
     PENDING
 
-    def __init__(self, loop loop, double after=0.0, double repeat=0.0, ref=True, priority=None):
+    def __cinit__(self, loop loop, double after=0.0, double repeat=0.0, ref=True, priority=None):
         if repeat < 0.0:
             raise ValueError("repeat must be positive or zero: %r" % repeat)
         libev.ev_timer_init(&self._watcher, <void *>gevent_callback_timer, after, repeat)
-        self.loop = loop
-        if ref:
-            self._flags = 0
-        else:
-            self._flags = 4
-        if priority is not None:
-            libev.ev_set_priority(&self._watcher, priority)
+        self.__watcher = <libev.ev_watcher*>&self._watcher
+
+    def __init__(self, loop loop, double after=0.0, double repeat=0.0, ref=True, priority=None):
+        watcher.__init__(self, loop, ref, priority)
 
     @property
     def at(self):
@@ -968,7 +966,7 @@ cdef public class signal(watcher) [object PyGeventSignalObject, type PyGeventSig
 
     WATCHER(signal)
 
-    def __init__(self, loop loop, int signalnum, ref=True, priority=None):
+    def __cinit__(self, loop loop, int signalnum, ref=True, priority=None):
         if signalnum < 1 or signalnum >= signalmodule.NSIG:
             raise ValueError('illegal signal number: %r' % signalnum)
         # still possible to crash on one of libev's asserts:
@@ -977,41 +975,47 @@ cdef public class signal(watcher) [object PyGeventSignalObject, type PyGeventSig
         # 2) "libev: a signal must not be attached to two different loops"
         #    we probably could check that in LIBEV_EMBED mode, but not in general
         libev.ev_signal_init(&self._watcher, <void *>gevent_callback_signal, signalnum)
-        self.loop = loop
-        if ref:
-            self._flags = 0
-        else:
-            self._flags = 4
-        if priority is not None:
-            libev.ev_set_priority(&self._watcher, priority)
+        self.__watcher = <libev.ev_watcher*>&self._watcher
+
+    def __init__(self, loop loop, int signalnum, ref=True, priority=None):
+        watcher.__init__(self, loop, ref, priority)
 
 
 cdef public class idle(watcher) [object PyGeventIdleObject, type PyGeventIdle_Type]:
 
     WATCHER(idle)
 
-    INIT(idle,,)
+    def __cinit__(self, loop loop, ref=True, priority=None):
+        libev.ev_idle_init(&self._watcher, <void*>gevent_callback_idle)
+        self.__watcher = <libev.ev_watcher*>&self._watcher
 
 
 cdef public class prepare(watcher) [object PyGeventPrepareObject, type PyGeventPrepare_Type]:
 
     WATCHER(prepare)
 
-    INIT(prepare,,)
+    def __cinit__(self, loop loop, ref=True, priority=None):
+        libev.ev_prepare_init(&self._watcher, <void*>gevent_callback_prepare)
+        self.__watcher = <libev.ev_watcher*>&self._watcher
 
 
 cdef public class check(watcher) [object PyGeventCheckObject, type PyGeventCheck_Type]:
 
     WATCHER(check)
 
-    INIT(check,,)
+    def __cinit__(self, loop loop, ref=True, priority=None):
+        libev.ev_check_init(&self._watcher, <void*>gevent_callback_check)
+        self.__watcher = <libev.ev_watcher*>&self._watcher
 
 
 cdef public class fork(watcher) [object PyGeventForkObject, type PyGeventFork_Type]:
 
     WATCHER(fork)
 
-    INIT(fork,,)
+    def __cinit__(self, loop loop, ref=True, priority=None):
+        libev.ev_fork_init(&self._watcher, <void*>gevent_callback_fork)
+        self.__watcher = <libev.ev_watcher*>&self._watcher
+
 
 
 cdef public class async_(watcher) [object PyGeventAsyncObject, type PyGeventAsync_Type]:
@@ -1027,7 +1031,9 @@ cdef public class async_(watcher) [object PyGeventAsyncObject, type PyGeventAsyn
         # Note the use of ev_async_pending instead of ev_is_pending
         return True if libev.ev_async_pending(&self._watcher) else False
 
-    INIT(async,,)
+    def __cinit__(self, loop loop, ref=True, priority=None):
+        libev.ev_async_init(&self._watcher, <void*>gevent_callback_async)
+        self.__watcher = <libev.ev_watcher*>&self._watcher
 
     def send(self):
         _check_loop(self.loop)
@@ -1042,16 +1048,15 @@ cdef public class child(watcher) [object PyGeventChildObject, type PyGeventChild
 
     WATCHER(child)
 
-    def __init__(self, loop loop, int pid, bint trace=0, ref=True):
+    def __cinit__(self, loop loop, int pid, bint trace=0, ref=True):
         if not loop.default:
             raise TypeError('child watchers are only available on the default loop')
         libev.gevent_install_sigchld_handler()
         libev.ev_child_init(&self._watcher, <void *>gevent_callback_child, pid, trace)
-        self.loop = loop
-        if ref:
-            self._flags = 0
-        else:
-            self._flags = 4
+        self.__watcher = <libev.ev_watcher*>&self._watcher
+
+    def __init__(self, loop loop, int pid, bint trace=0, ref=True):
+        watcher.__init__(self, loop, ref, None)
 
     def _format(self):
         return ' pid=%r rstatus=%r' % (self.pid, self.rstatus)
@@ -1085,7 +1090,7 @@ cdef public class stat(watcher) [object PyGeventStatObject, type PyGeventStat_Ty
     cdef readonly str path
     cdef readonly bytes _paths
 
-    def __init__(self, loop loop, str path, float interval=0.0, ref=True, priority=None):
+    def __cinit__(self, loop loop, str path, float interval=0.0, ref=True, priority=None):
         self.path = path
         cdef bytes paths
         if isinstance(path, unicode):
@@ -1098,13 +1103,10 @@ cdef public class stat(watcher) [object PyGeventStatObject, type PyGeventStat_Ty
             paths = <bytes>path
             self._paths = paths
         libev.ev_stat_init(&self._watcher, <void *>gevent_callback_stat, <char*>paths, interval)
-        self.loop = loop
-        if ref:
-            self._flags = 0
-        else:
-            self._flags = 4
-        if priority is not None:
-            libev.ev_set_priority(&self._watcher, priority)
+        self.__watcher = <libev.ev_watcher*>&self._watcher
+
+    def __init__(self, loop loop, str path, float interval=0.0, ref=True, priority=None):
+        watcher.__init__(self, loop, ref, priority)
 
     @property
     def attr(self):

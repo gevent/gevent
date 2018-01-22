@@ -87,6 +87,9 @@ cdef extern from "libev.h":
         int sigfd
         unsigned int origflags
 
+    struct ev_watcher:
+        void* data;
+
     struct ev_io:
         int fd
         int events

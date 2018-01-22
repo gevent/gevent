@@ -179,11 +179,16 @@ static void gevent_call(struct PyGeventLoopObject* loop, struct PyGeventCallback
     Py_DECREF(loop);
 }
 
+/*
+ * PyGeventWatcherObject is the first member of all the structs, so
+ * it is the same in all of them and they can all safely be cast to
+ * it. We could also use the *data member of the libev watcher objects.
+ */
 
 #undef DEFINE_CALLBACK
 #define DEFINE_CALLBACK(WATCHER_LC, WATCHER_TYPE) \
     static void gevent_callback_##WATCHER_LC(struct ev_loop *_loop, void *c_watcher, int revents) {                  \
-        struct PyGevent##WATCHER_TYPE##Object* watcher = GET_OBJECT(PyGevent##WATCHER_TYPE##Object, c_watcher, _watcher);    \
+        struct PyGeventWatcherObject* watcher = GET_OBJECT(PyGevent##WATCHER_TYPE##Object, c_watcher, _watcher);    \
         gevent_callback(watcher->loop, watcher->_callback, watcher->args, (PyObject*)watcher, c_watcher, revents); \
     }
 
