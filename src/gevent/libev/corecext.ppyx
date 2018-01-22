@@ -665,10 +665,8 @@ cdef public class callback [object PyGeventCallbackObject, type PyGeventCallback
 # bit #2 set if ev_unref() was called and we must call ev_ref() later
 # bit #3 set if user wants to call ev_unref() before start()
 
-#define WATCHER_BASE(TYPE)                                                              \
+#define WATCHER(TYPE)                                                              \
     cdef libev.ev_##TYPE _watcher                                                       \
-                                                                                        \
-                                                                                        \
                                                                                         \
     def stop(self):                                                                     \
         _check_loop(self.loop)                                                          \
@@ -689,27 +687,11 @@ cdef public class callback [object PyGeventCallbackObject, type PyGeventCallback
         self.args = args                                                                \
         LIBEV_UNREF                                                                     \
         libev.ev_feed_event(self.loop._ptr, &self._watcher, revents)                    \
-        PYTHON_INCREF
+        PYTHON_INCREF                                                                   \
+                                                                                        \
+    cdef void _do_libev_start(self):                                                    \
+        libev.ev_##TYPE##_start(self.loop._ptr, &self._watcher)
 
-
-#define START(TYPE) def start(self, object callback, *args):       \
-        _check_loop(self.loop)                                     \
-        if callback is None:                                       \
-            raise TypeError('callback must be callable, not None') \
-        self.callback = callback                                   \
-        self.args = args                                           \
-        LIBEV_UNREF                                                \
-        libev.ev_##TYPE##_start(self.loop._ptr, &self._watcher)    \
-        PYTHON_INCREF
-
-
-
-
-#define WATCHER(TYPE) WATCHER_BASE(TYPE) \
-                                         \
-    START(TYPE)                          \
-
-#define COMMA ,
 
 
 cdef public class watcher [object PyGeventWatcherObject, type PyGeventWatcher_Type]:
@@ -780,6 +762,20 @@ cdef public class watcher [object PyGeventWatcherObject, type PyGeventWatcher_Ty
     def pending(self):
         return True if libev.ev_is_pending(self.__watcher) else False
 
+    def start(self, object callback, *args):
+        _check_loop(self.loop)
+        if callback is None:
+            raise TypeError("Expected a callable, not None")
+        self.callback = callback
+        self.args = args
+        LIBEV_UNREF
+        self._do_libev_start()
+        PYTHON_INCREF
+
+    cdef void _do_libev_start(self):
+        # This is not allowed to fail, and must be implemented by subclasses.
+        return
+
     def __repr__(self):
         if Py_ReprEnter(<PyObjectPtr>self) != 0:
             return "<...>"
@@ -814,21 +810,12 @@ cdef public class watcher [object PyGeventWatcherObject, type PyGeventWatcher_Ty
 
 cdef public class io(watcher) [object PyGeventIOObject, type PyGeventIO_Type]:
 
-    WATCHER_BASE(io)
+    WATCHER(io)
 
     def start(self, object callback, *args, pass_events=False):
-        _check_loop(self.loop)
-        if callback is None:
-            raise TypeError('callback must be callable, not None')
-        self.callback = callback
         if pass_events:
-            self.args = (GEVENT_CORE_EVENTS, ) + args
-        else:
-            self.args = args
-        LIBEV_UNREF
-        libev.ev_io_start(self.loop._ptr, &self._watcher)
-        PYTHON_INCREF
-
+            args = (GEVENT_CORE_EVENTS, ) + args
+        watcher.start(self, callback, *args)
 
     cpdef __posix_cinit(self, loop loop, int fd, int events, ref=True, priority=None):
         if fd < 0:
@@ -904,24 +891,16 @@ cdef public class io(watcher) [object PyGeventIOObject, type PyGeventIO_Type]:
 
 cdef public class timer(watcher) [object PyGeventTimerObject, type PyGeventTimer_Type]:
 
-    WATCHER_BASE(timer)
+    WATCHER(timer)
 
     update_loop_time_on_start = False
 
     def start(self, object callback, *args, update=None):
-        _check_loop(self.loop)
-        if callback is None:
-            raise TypeError('callback must be callable, not None')
-        self.callback = callback
-        self.args = args
-        LIBEV_UNREF
         if update is None:
             update = self.update_loop_time_on_start
         if update:
             libev.ev_now_update(self.loop._ptr)
-        libev.ev_timer_start(self.loop._ptr, &self._watcher)
-        PYTHON_INCREF
-
+        watcher.start(self, callback, *args)
 
     def __cinit__(self, loop loop, double after=0.0, double repeat=0.0, ref=True, priority=None):
         if repeat < 0.0:
@@ -1007,10 +986,7 @@ cdef public class fork(watcher) [object PyGeventForkObject, type PyGeventFork_Ty
 
 cdef public class async_(watcher) [object PyGeventAsyncObject, type PyGeventAsync_Type]:
 
-    WATCHER_BASE(async)
-
-    START(async)
-
+    WATCHER(async)
 
     @property
     def pending(self):
