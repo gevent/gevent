@@ -249,7 +249,7 @@ libev
 
 - The C extension has been updated to use more modern Cython idioms
   and generate less code for simplicity, faster compilation and better
-  cache usage.
+  cache usage. See :issue:`1076`.
 
 - The ``sigfd`` property that was only conditionally available on
   certain platforms and when libev was embedded, and only in the C

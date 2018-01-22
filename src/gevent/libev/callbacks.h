@@ -11,20 +11,11 @@
     DEFINE_CALLBACK(check, Check);     \
     DEFINE_CALLBACK(fork, Fork);       \
     DEFINE_CALLBACK(async, Async);     \
-    DEFINE_CALLBACK(stat, Stat);
+    DEFINE_CALLBACK(stat, Stat);       \
+    DEFINE_CALLBACK(child, Child);
 
-
-#ifndef _WIN32
-
-#define DEFINE_CALLBACKS               \
-    DEFINE_CALLBACKS0                  \
-    DEFINE_CALLBACK(child, Child)
-
-#else
 
 #define DEFINE_CALLBACKS DEFINE_CALLBACKS0
-
-#endif
 
 
 DEFINE_CALLBACKS
