@@ -682,15 +682,6 @@ cdef public class callback [object PyGeventCallbackObject, type PyGeventCallback
             Py_DECREF(<PyObjectPtr>self)                                                \
             self._flags &= ~1                                                           \
                                                                                         \
-    @property                                                                           \
-    def priority(self):                                                                 \
-        return libev.ev_priority(&self._watcher)                                        \
-                                                                                        \
-    @priority.setter                          \
-    def priority(self, int priority): \
-        if libev.ev_is_active(&self._watcher):                                      \
-           raise AttributeError("Cannot set priority of an active watcher")        \
-        libev.ev_set_priority(&self._watcher, priority)                             \
                                                                                         \
     def feed(self, int revents, object callback, *args):                                \
         _check_loop(self.loop)                                                          \
@@ -700,10 +691,6 @@ cdef public class callback [object PyGeventCallbackObject, type PyGeventCallback
         libev.ev_feed_event(self.loop._ptr, &self._watcher, revents)                    \
         PYTHON_INCREF
 
-#define ACTIVE \
-    @property \
-    def active(self):                                                  \
-        return True if libev.ev_is_active(&self._watcher) else False
 
 #define START(TYPE) def start(self, object callback, *args):       \
         _check_loop(self.loop)                                     \
@@ -716,21 +703,11 @@ cdef public class callback [object PyGeventCallbackObject, type PyGeventCallback
         PYTHON_INCREF
 
 
-#define PENDING                                                            \
-    @property \
-    def pending(self):                                                      \
-        return True if libev.ev_is_pending(&self._watcher) else False
-
 
 
 #define WATCHER(TYPE) WATCHER_BASE(TYPE) \
                                          \
     START(TYPE)                          \
-                                         \
-    ACTIVE                               \
-                                         \
-    PENDING
-
 
 #define COMMA ,
 
@@ -785,6 +762,24 @@ cdef public class watcher [object PyGeventWatcherObject, type PyGeventWatcher_Ty
            raise TypeError("Expected callable, not %r" % (callback, ))
         self._callback = callback
 
+    @property
+    def priority(self):
+        return libev.ev_priority(self.__watcher)
+
+    @priority.setter
+    def priority(self, int priority):
+        if libev.ev_is_active(self.__watcher):
+           raise AttributeError("Cannot set priority of an active watcher")
+        libev.ev_set_priority(self.__watcher, priority)
+
+    @property
+    def active(self):
+        return True if libev.ev_is_active(self.__watcher) else False
+
+    @property
+    def pending(self):
+        return True if libev.ev_is_pending(self.__watcher) else False
+
     def __repr__(self):
         if Py_ReprEnter(<PyObjectPtr>self) != 0:
             return "<...>"
@@ -834,9 +829,6 @@ cdef public class io(watcher) [object PyGeventIOObject, type PyGeventIO_Type]:
         libev.ev_io_start(self.loop._ptr, &self._watcher)
         PYTHON_INCREF
 
-    ACTIVE
-
-    PENDING
 
     cpdef __posix_cinit(self, loop loop, int fd, int events, ref=True, priority=None):
         if fd < 0:
@@ -910,8 +902,6 @@ cdef public class io(watcher) [object PyGeventIOObject, type PyGeventIO_Type]:
 #endif
 
 
-
-
 cdef public class timer(watcher) [object PyGeventTimerObject, type PyGeventTimer_Type]:
 
     WATCHER_BASE(timer)
@@ -932,9 +922,6 @@ cdef public class timer(watcher) [object PyGeventTimerObject, type PyGeventTimer
         libev.ev_timer_start(self.loop._ptr, &self._watcher)
         PYTHON_INCREF
 
-    ACTIVE
-
-    PENDING
 
     def __cinit__(self, loop loop, double after=0.0, double repeat=0.0, ref=True, priority=None):
         if repeat < 0.0:
@@ -1024,7 +1011,6 @@ cdef public class async_(watcher) [object PyGeventAsyncObject, type PyGeventAsyn
 
     START(async)
 
-    ACTIVE
 
     @property
     def pending(self):
