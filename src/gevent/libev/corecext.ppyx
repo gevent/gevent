@@ -680,15 +680,6 @@ cdef public class callback [object PyGeventCallbackObject, type PyGeventCallback
             Py_DECREF(<PyObjectPtr>self)                                                \
             self._flags &= ~1                                                           \
                                                                                         \
-                                                                                        \
-    def feed(self, int revents, object callback, *args):                                \
-        _check_loop(self.loop)                                                          \
-        self.callback = callback                                                        \
-        self.args = args                                                                \
-        LIBEV_UNREF                                                                     \
-        libev.ev_feed_event(self.loop._ptr, &self._watcher, revents)                    \
-        PYTHON_INCREF                                                                   \
-                                                                                        \
     cdef void _do_libev_start(self):                                                    \
         libev.ev_##TYPE##_start(self.loop._ptr, &self._watcher)
 
@@ -775,6 +766,14 @@ cdef public class watcher [object PyGeventWatcherObject, type PyGeventWatcher_Ty
     cdef void _do_libev_start(self):
         # This is not allowed to fail, and must be implemented by subclasses.
         return
+
+    def feed(self, int revents, object callback, *args):
+        _check_loop(self.loop)
+        self.callback = callback
+        self.args = args
+        LIBEV_UNREF
+        libev.ev_feed_event(self.loop._ptr, self.__watcher, revents)
+        PYTHON_INCREF
 
     def __repr__(self):
         if Py_ReprEnter(<PyObjectPtr>self) != 0:
