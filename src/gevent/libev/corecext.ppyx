@@ -1,9 +1,25 @@
 # Copyright (c) 2009-2012 Denis Bilenko. See LICENSE for details.
-# This directive, supported in Cython 0.24+, causes sources files to be
-# much smaller and thus cythonpp.py to be slightly faster. But it does make
-# debugging more difficult. Auto-pickling was added in 0.26, and that's a new feature
-# that we don't need or want to allow in a gevent point release.
+
+# This first directive, supported in Cython 0.24+, causes sources
+# files to be *much* smaller when it's false (139,027 LOC vs 35,000
+# LOC) and thus cythonpp.py (and probably the compiler; also Visual C
+# has limits on source file sizes) to be faster (73s vs 46s). But it does
+# make debugging more difficult. Auto-pickling was added in 0.26, and
+# that's a new feature that we don't need or want to allow in a gevent
+# point release.
+
 # cython: emit_code_comments=False, auto_pickle=False
+
+# NOTE: We generally cannot use the Cython IF directive as documented
+# at
+# http://cython.readthedocs.io/en/latest/src/userguide/language_basics.html#conditional-compilation
+# (e.g., IF UNAME_SYSNAME == "Windows") because when Cython says
+# "compilation", it means when *Cython* compiles, not when the C
+# compiler compiles. We distribute an sdist with a single pre-compiled
+# C file for all platforms so that end users that don't use a binary
+# wheel don't have to sit through cythonpp and other steps the Makefile does.
+# See https://github.com/gevent/gevent/issues/1076
+
 cimport cython
 cimport libev
 # Note this is not the standard cython 'cpython' (which has a backwards compat alias of 'python')
@@ -232,25 +248,19 @@ def embeddable_backends():
 def time():
     return libev.ev_time()
 
+cdef bint _check_loop(loop loop) except -1:
+    if not loop._ptr:
+        raise ValueError('operation on destroyed loop')
+    return 1
 
 #define LOOP_PROPERTY(NAME) property NAME:  \
                                             \
         def __get__(self):                  \
-            CHECK_LOOP3(self)               \
+            _check_loop(self)               \
             return self._ptr.NAME
 
 
 cdef bint _default_loop_destroyed = False
-
-
-#define CHECK_LOOP2(LOOP)                                   \
-        if not LOOP._ptr:                                   \
-            raise ValueError('operation on destroyed loop')
-
-
-#define CHECK_LOOP3(LOOP)                                       \
-            if not LOOP._ptr:                                   \
-                raise ValueError('operation on destroyed loop')
 
 
 
@@ -387,7 +397,7 @@ cdef public class loop [object PyGeventLoopObject, type PyGeventLoop_Type]:
             libev.ev_break(self._ptr, libev.EVBREAK_ONE)
 
     def run(self, nowait=False, once=False):
-        CHECK_LOOP2(self)
+        _check_loop(self)
         cdef unsigned int flags = 0
         if nowait:
             flags |= libev.EVRUN_NOWAIT
@@ -401,27 +411,27 @@ cdef public class loop [object PyGeventLoopObject, type PyGeventLoop_Type]:
             libev.ev_loop_fork(self._ptr)
 
     def ref(self):
-        CHECK_LOOP2(self)
+        _check_loop(self)
         libev.ev_ref(self._ptr)
 
     def unref(self):
-        CHECK_LOOP2(self)
+        _check_loop(self)
         libev.ev_unref(self._ptr)
 
     def break_(self, int how=libev.EVBREAK_ONE):
-        CHECK_LOOP2(self)
+        _check_loop(self)
         libev.ev_break(self._ptr, how)
 
     def verify(self):
-        CHECK_LOOP2(self)
+        _check_loop(self)
         libev.ev_verify(self._ptr)
 
     def now(self):
-        CHECK_LOOP2(self)
+        _check_loop(self)
         return libev.ev_now(self._ptr)
 
     def update_now(self):
-        CHECK_LOOP2(self)
+        _check_loop(self)
         libev.ev_now_update(self._ptr)
 
     update = update_now # Old name, deprecated.
@@ -432,31 +442,31 @@ cdef public class loop [object PyGeventLoopObject, type PyGeventLoop_Type]:
     property default:
 
         def __get__(self):
-            CHECK_LOOP3(self)
+            _check_loop(self)
             return True if libev.ev_is_default_loop(self._ptr) else False
 
     property iteration:
 
         def __get__(self):
-            CHECK_LOOP3(self)
+            _check_loop(self)
             return libev.ev_iteration(self._ptr)
 
     property depth:
 
         def __get__(self):
-            CHECK_LOOP3(self)
+            _check_loop(self)
             return libev.ev_depth(self._ptr)
 
     property backend_int:
 
         def __get__(self):
-            CHECK_LOOP3(self)
+            _check_loop(self)
             return libev.ev_backend(self._ptr)
 
     property backend:
 
         def __get__(self):
-            CHECK_LOOP3(self)
+            _check_loop(self)
             cdef unsigned int backend = libev.ev_backend(self._ptr)
             for key, value in _flags:
                 if key == backend:
@@ -466,7 +476,7 @@ cdef public class loop [object PyGeventLoopObject, type PyGeventLoop_Type]:
     property pendingcnt:
 
         def __get__(self):
-            CHECK_LOOP3(self)
+            _check_loop(self)
             return libev.ev_pending_count(self._ptr)
 
 #ifdef _WIN32
@@ -519,7 +529,7 @@ cdef public class loop [object PyGeventLoopObject, type PyGeventLoop_Type]:
         return stat(self, path, interval, ref, priority)
 
     def run_callback(self, func, *args):
-        CHECK_LOOP2(self)
+        _check_loop(self)
         cdef callback cb = callback(func, args)
         self._callbacks.append(cb)
         libev.ev_ref(self._ptr)
@@ -578,13 +588,13 @@ cdef public class loop [object PyGeventLoopObject, type PyGeventLoop_Type]:
     property origflags:
 
         def __get__(self):
-            CHECK_LOOP3(self)
+            _check_loop(self)
             return _flags_to_list(self._ptr.origflags)
 
     property origflags_int:
 
         def __get__(self):
-            CHECK_LOOP3(self)
+            _check_loop(self)
             return self._ptr.origflags
 
 #endif
@@ -666,7 +676,7 @@ cdef public class callback [object PyGeventCallbackObject, type PyGeventCallback
             return False if self._flags & 4 else True                                   \
                                                                                         \
         def __set__(self, object value):                                                \
-            CHECK_LOOP3(self.loop)                                                      \
+            _check_loop(self.loop)                                                      \
             if value:                                                                   \
                 if not self._flags & 4:                                                 \
                     return  # ref is already True                                       \
@@ -692,7 +702,7 @@ cdef public class callback [object PyGeventCallbackObject, type PyGeventCallback
             self._callback = callback                                                   \
                                                                                         \
     def stop(self):                                                                     \
-        CHECK_LOOP2(self.loop)                                                          \
+        _check_loop(self.loop)                                                          \
         if self._flags & 2:                                                             \
             libev.ev_ref(self.loop._ptr)                                                \
             self._flags &= ~2                                                           \
@@ -714,7 +724,7 @@ cdef public class callback [object PyGeventCallbackObject, type PyGeventCallback
             libev.ev_set_priority(&self._watcher, priority)                             \
                                                                                         \
     def feed(self, int revents, object callback, *args):                                \
-        CHECK_LOOP2(self.loop)                                                          \
+        _check_loop(self.loop)                                                          \
         self.callback = callback                                                        \
         self.args = args                                                                \
         LIBEV_UNREF                                                                     \
@@ -727,7 +737,7 @@ cdef public class callback [object PyGeventCallbackObject, type PyGeventCallback
             return True if libev.ev_is_active(&self._watcher) else False
 
 #define START(TYPE) def start(self, object callback, *args):       \
-        CHECK_LOOP2(self.loop)                                     \
+        _check_loop(self.loop)                                     \
         if callback is None:                                       \
             raise TypeError('callback must be callable, not None') \
         self.callback = callback                                   \
@@ -809,7 +819,7 @@ cdef public class io(watcher) [object PyGeventIOObject, type PyGeventIO_Type]:
     WATCHER_BASE(io)
 
     def start(self, object callback, *args, pass_events=False):
-        CHECK_LOOP2(self.loop)
+        _check_loop(self.loop)
         if callback is None:
             raise TypeError('callback must be callable, not None')
         self.callback = callback
@@ -908,7 +918,7 @@ cdef public class timer(watcher) [object PyGeventTimerObject, type PyGeventTimer
     update_loop_time_on_start = False
 
     def start(self, object callback, *args, update=None):
-        CHECK_LOOP2(self.loop)
+        _check_loop(self.loop)
         if callback is None:
             raise TypeError('callback must be callable, not None')
         self.callback = callback
@@ -945,7 +955,7 @@ cdef public class timer(watcher) [object PyGeventTimerObject, type PyGeventTimer
     # QQQ: add 'after' and 'repeat' properties?
 
     def again(self, object callback, *args, update=True):
-        CHECK_LOOP2(self.loop)
+        _check_loop(self.loop)
         self.callback = callback
         self.args = args
         LIBEV_UNREF
@@ -1021,7 +1031,7 @@ cdef public class async_(watcher) [object PyGeventAsyncObject, type PyGeventAsyn
     INIT(async,,)
 
     def send(self):
-        CHECK_LOOP2(self.loop)
+        _check_loop(self.loop)
         libev.ev_async_send(self.loop._ptr, &self._watcher)
 
 async = async_

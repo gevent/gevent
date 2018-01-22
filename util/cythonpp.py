@@ -39,6 +39,7 @@ else:
 
 CYTHON = os.environ.get('CYTHON') or 'cython'
 DEBUG = os.environ.get('CYTHONPP_DEBUG', False)
+TRACE = DEBUG == 'trace'
 WRITE_OUTPUT = False
 
 if os.getenv('READTHEDOCS'):
@@ -438,7 +439,8 @@ def _run_cython_on_file(configuration, pyx_filename,
         if WRITE_OUTPUT:
             atomic_write(unique_output_filename + '.deb', output)
     finally:
-        shutil.rmtree(tempdir, True)
+        if not DEBUG:
+            shutil.rmtree(tempdir, True)
 
     return configuration.attach_tags(output), configuration, sourcehash
 
@@ -462,6 +464,10 @@ def _run_cython_on_files(pyx_filename, py_banner, banner, output_filename, prepr
 
     same_results = {} # {sourcehash: tagged_str}
     for t in threads:
+        if not t.value:
+            log("Thread %s failed.", t)
+            return
+
         sourcehash = t.value[2]
         tagged_output = t.value[0]
         if sourcehash not in same_results:
@@ -518,6 +524,9 @@ def process_filename(filename, output_filename=None, module_name=None):
 
     sources = _run_cython_on_files(pyx_filename, py_banner, banner, output_filename,
                                    preprocessed, module_name)
+    if sources is None:
+        log("At least one thread failed to run")
+        sys.exit(1)
 
     log('Generating %s ',  output_filename)
     result = generate_merged(sources)
@@ -576,10 +585,10 @@ def preprocess_filename(filename, config):
                             current_name = name
                         definitions[name] = {'lines': [value]}
                         if params is None:
-                            dbg('Adding definition for %r', name)
+                            trace('Adding definition for %r', name)
                         else:
                             definitions[name]['params'] = parse_parameter_names(params)
-                            dbg('Adding definition for %r: %s', name, definitions[name]['params'])
+                            trace('Adding definition for %r: %s', name, definitions[name]['params'])
                     else:
                         m = Condition.match_condition(stripped)
                         if m is not None and config is not None:
@@ -734,7 +743,7 @@ def expand_to_match(items):
 
 def produce_preprocessor(iterable):
 
-    if DEBUG:
+    if TRACE:
         current_line = [0]
 
         def wrap(line):
@@ -853,9 +862,9 @@ def expand_definitions(code, definitions):
                 arguments = None
             if arguments and len(params) == len(arguments):
                 local_definitions = {}
-                dbg('Macro %r params=%r arguments=%r source=%r', token, params, arguments, m.groups())
+                trace('Macro %r params=%r arguments=%r source=%r', token, params, arguments, m.groups())
                 for key, value in zip(params, arguments):
-                    dbg('Adding argument %r=%r', key, value)
+                    trace('Adding argument %r=%r', key, value)
                     local_definitions[key] = {'lines': [value]}
                 result = expand_definitions('\n'.join(definition['lines']), local_definitions)
             else:
@@ -868,7 +877,7 @@ def expand_definitions(code, definitions):
                 result += m.group(3)
         if m.group(1) != '##':
             result = m.group(1) + result
-        dbg('Replace %r with %r', m.group(0), result)
+        trace('Replace %r with %r', m.group(0), result)
         return result
 
     for _ in range(20000):
@@ -936,7 +945,8 @@ def system(command, comment):
     try:
         subprocess.check_call(command)
         dbg('\tDone running %s # %s', command_str, comment)
-    except subprocess.CalledProcessError:
+    except (subprocess.CalledProcessError, OSError):
+        # Python 2 can raise OSError: No such file or directory
         # debugging code
         log("Path: %s", os.getenv("PATH"))
         bin_dir = os.path.dirname(sys.executable)
@@ -1012,11 +1022,16 @@ def log(message, *args):
     else:
         print(string, file=sys.stderr)
 
-
-def dbg(*args):
-    if not DEBUG:
+if DEBUG:
+    dbg = log
+else:
+    def dbg(*_):
         return
-    return log(*args)
+if TRACE:
+    trace = log
+else:
+    def trace(*_):
+        return
 
 
 def main():
