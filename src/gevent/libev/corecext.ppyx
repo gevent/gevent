@@ -652,18 +652,6 @@ cdef public class callback [object PyGeventCallbackObject, type PyGeventCallback
         return ''
 
 
-#define PYTHON_INCREF if not self._flags & 1:  \
-            Py_INCREF(<PyObjectPtr>self)       \
-            self._flags |= 1
-
-#define LIBEV_UNREF if self._flags & 6 == 4:   \
-            libev.ev_unref(self.loop._ptr)     \
-            self._flags |= 2
-
-# about readonly _flags attribute:
-# bit #1 set if object owns Python reference to itself (Py_INCREF was called and we must call Py_DECREF later)
-# bit #2 set if ev_unref() was called and we must call ev_ref() later
-# bit #3 set if user wants to call ev_unref() before start()
 
 #define WATCHER(TYPE)                                                              \
     cdef libev.ev_##TYPE _watcher                                                       \
@@ -674,23 +662,43 @@ cdef public class callback [object PyGeventCallbackObject, type PyGeventCallback
     cdef void _do_libev_stop(self):                                                     \
         libev.ev_##TYPE##_stop(self.loop._ptr, &self._watcher)                          \
 
+# about readonly _flags attribute:
+
+# bit #1 set if object owns Python reference to itself (Py_INCREF was
+# called and we must call Py_DECREF later)
+DEF FLAG_WATCHER_OWNS_PYREF = 1 << 0 # 0x1
+# bit #2 set if ev_unref() was called and we must call ev_ref() later
+DEF FLAG_WATCHER_NEEDS_EVREF = 1 << 1 # 0x2
+# bit #3 set if user wants to call ev_unref() before start()
+DEF FLAG_WATCHER_UNREF_BEFORE_START = 1 << 2 # 0x4
+# bits 2 and 3 are *both* set when we are active, but the user
+# request us not to be ref'd anymore. We unref us (because going active will
+# ref us) and then make a note of this in the future
+DEF FLAG_WATCHER_MASK_UNREF_NEEDS_REF = 0x6
+
+cdef void _python_incref(watcher self):
+    if not self._flags & FLAG_WATCHER_OWNS_PYREF:
+        Py_INCREF(<PyObjectPtr>self)
+        self._flags |= FLAG_WATCHER_OWNS_PYREF
+
+cdef void _libev_unref(watcher self):
+    if self._flags & FLAG_WATCHER_MASK_UNREF_NEEDS_REF == FLAG_WATCHER_UNREF_BEFORE_START:
+        libev.ev_unref(self.loop._ptr)
+        self._flags |= FLAG_WATCHER_NEEDS_EVREF
 
 cdef public class watcher [object PyGeventWatcherObject, type PyGeventWatcher_Type]:
     """Abstract base class for all the watchers"""
     cdef public loop loop
     cdef object _callback
     cdef public tuple args
-    cdef readonly int _flags
+    cdef readonly unsigned int _flags
     cdef libev.ev_watcher* __watcher
 
     def __init__(self, loop loop, ref=True, priority=None):
         if not self.__watcher:
             raise ValueError("Cannot construct a bare watcher")
         self.loop = loop
-        if ref:
-            self._flags = 0
-        else:
-            self._flags = 4
+        self._flags = 0 if ref else FLAG_WATCHER_UNREF_BEFORE_START
         if priority is not None:
             libev.ev_set_priority(self.__watcher, priority)
 
@@ -702,18 +710,22 @@ cdef public class watcher [object PyGeventWatcherObject, type PyGeventWatcher_Ty
     def ref(self, object value):
         _check_loop(self.loop)
         if value:
-            if not self._flags & 4:
+            # self.ref should be true after this.
+            if self.ref:
                return  # ref is already True
-            if self._flags & 2:  # ev_unref was called, undo
+
+            if self._flags & FLAG_WATCHER_NEEDS_EVREF:  # ev_unref was called, undo
                libev.ev_ref(self.loop._ptr)
-            self._flags &= ~6  # do not want unref, no outstanding unref
+			# do not want unref, no outstanding unref
+            self._flags &= ~FLAG_WATCHER_MASK_UNREF_NEEDS_REF
         else:
-            if self._flags & 4:
+			# self.ref must be false after this
+            if not self.ref:
                return  # ref is already False
-            self._flags |= 4
-            if not self._flags & 2 and libev.ev_is_active(self.__watcher):
+            self._flags |= FLAG_WATCHER_UNREF_BEFORE_START
+            if not self._flags & FLAG_WATCHER_NEEDS_EVREF and libev.ev_is_active(self.__watcher):
                libev.ev_unref(self.loop._ptr)
-               self._flags |= 2
+               self._flags |= FLAG_WATCHER_NEEDS_EVREF
 
     @property
     def callback(self):
@@ -749,9 +761,9 @@ cdef public class watcher [object PyGeventWatcherObject, type PyGeventWatcher_Ty
             raise TypeError("Expected a callable, not None")
         self.callback = callback
         self.args = args
-        LIBEV_UNREF
+        _libev_unref(self)
         self._do_libev_start()
-        PYTHON_INCREF
+        _python_incref(self)
 
     cdef void _do_libev_start(self):
         # This is not allowed to fail, and must be implemented by subclasses.
@@ -777,9 +789,9 @@ cdef public class watcher [object PyGeventWatcherObject, type PyGeventWatcher_Ty
         _check_loop(self.loop)
         self.callback = callback
         self.args = args
-        LIBEV_UNREF
+        _libev_unref(self)
         libev.ev_feed_event(self.loop._ptr, self.__watcher, revents)
-        PYTHON_INCREF
+        _python_incref(self)
 
     def __repr__(self):
         if Py_ReprEnter(<PyObjectPtr>self) != 0:
@@ -926,11 +938,11 @@ cdef public class timer(watcher) [object PyGeventTimerObject, type PyGeventTimer
         _check_loop(self.loop)
         self.callback = callback
         self.args = args
-        LIBEV_UNREF
+        _libev_unref(self)
         if update:
             libev.ev_now_update(self.loop._ptr)
         libev.ev_timer_again(self.loop._ptr, &self._watcher)
-        PYTHON_INCREF
+        _python_incref(self)
 
 
 cdef public class signal(watcher) [object PyGeventSignalObject, type PyGeventSignal_Type]:
