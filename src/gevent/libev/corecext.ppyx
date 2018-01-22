@@ -668,16 +668,7 @@ cdef public class callback [object PyGeventCallbackObject, type PyGeventCallback
 #define WATCHER_BASE(TYPE)                                                              \
     cdef libev.ev_##TYPE _watcher                                                       \
                                                                                         \
-    \
-    @property \
-    def callback(self):                                                                  \
-        return self._callback                                                       \
-    \
-    @callback.setter \
-    def callback(self, object callback): \
-        if not PyCallable_Check(<PyObjectPtr>callback) and callback is not None:    \
-           raise TypeError("Expected callable, not %r" % (callback, ))             \
-        self._callback = callback                                                   \
+                                                                                        \
                                                                                         \
     def stop(self):                                                                     \
         _check_loop(self.loop)                                                          \
@@ -691,11 +682,11 @@ cdef public class callback [object PyGeventCallbackObject, type PyGeventCallback
             Py_DECREF(<PyObjectPtr>self)                                                \
             self._flags &= ~1                                                           \
                                                                                         \
-    @property                                                                                    \
-    def priority(self): \
-        return libev.ev_priority(&self._watcher)                                    \
+    @property                                                                           \
+    def priority(self):                                                                 \
+        return libev.ev_priority(&self._watcher)                                        \
                                                                                         \
-    @priority.setter \
+    @priority.setter                          \
     def priority(self, int priority): \
         if libev.ev_is_active(&self._watcher):                                      \
            raise AttributeError("Cannot set priority of an active watcher")        \
@@ -784,6 +775,15 @@ cdef public class watcher [object PyGeventWatcherObject, type PyGeventWatcher_Ty
                libev.ev_unref(self.loop._ptr)
                self._flags |= 2
 
+    @property
+    def callback(self):
+        return self._callback
+
+    @callback.setter
+    def callback(self, object callback):
+        if callback is not None and not callable(callback):
+           raise TypeError("Expected callable, not %r" % (callback, ))
+        self._callback = callback
 
     def __repr__(self):
         if Py_ReprEnter(<PyObjectPtr>self) != 0:
