@@ -668,21 +668,11 @@ cdef public class callback [object PyGeventCallbackObject, type PyGeventCallback
 #define WATCHER(TYPE)                                                              \
     cdef libev.ev_##TYPE _watcher                                                       \
                                                                                         \
-    def stop(self):                                                                     \
-        _check_loop(self.loop)                                                          \
-        if self._flags & 2:                                                             \
-            libev.ev_ref(self.loop._ptr)                                                \
-            self._flags &= ~2                                                           \
-        libev.ev_##TYPE##_stop(self.loop._ptr, &self._watcher)                          \
-        self._callback = None                                                           \
-        self.args = None                                                                \
-        if self._flags & 1:                                                             \
-            Py_DECREF(<PyObjectPtr>self)                                                \
-            self._flags &= ~1                                                           \
-                                                                                        \
     cdef void _do_libev_start(self):                                                    \
-        libev.ev_##TYPE##_start(self.loop._ptr, &self._watcher)
-
+        libev.ev_##TYPE##_start(self.loop._ptr, &self._watcher)                         \
+                                                                                        \
+    cdef void _do_libev_stop(self):                                                     \
+        libev.ev_##TYPE##_stop(self.loop._ptr, &self._watcher)                          \
 
 
 cdef public class watcher [object PyGeventWatcherObject, type PyGeventWatcher_Type]:
@@ -765,6 +755,22 @@ cdef public class watcher [object PyGeventWatcherObject, type PyGeventWatcher_Ty
 
     cdef void _do_libev_start(self):
         # This is not allowed to fail, and must be implemented by subclasses.
+        return
+
+    def stop(self):
+        _check_loop(self.loop)
+        if self._flags & 2:
+            libev.ev_ref(self.loop._ptr)
+            self._flags &= ~2
+        self._do_libev_stop()
+        self._callback = None
+        self.args = None
+        if self._flags & 1:
+            Py_DECREF(<PyObjectPtr>self)
+            self._flags &= ~1
+
+    cdef void _do_libev_stop(self):
+        # like _do_libev_start
         return
 
     def feed(self, int revents, object callback, *args):
