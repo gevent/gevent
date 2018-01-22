@@ -264,17 +264,16 @@ cdef public class loop [object PyGeventLoopObject, type PyGeventLoop_Type]:
     cdef libev.ev_prepare _prepare
     cdef public list _callbacks
     cdef libev.ev_timer _timer0
-#ifdef _WIN32
+    # We'll only actually start this timer if we're on Windows,
+    # but it doesn't hurt to compile it in on all platforms.
     cdef libev.ev_timer _periodic_signal_checker
-#endif
 
     def __init__(self, object flags=None, object default=None, size_t ptr=0):
         cdef unsigned int c_flags
         cdef object old_handler = None
         libev.ev_prepare_init(&self._prepare, <void*>gevent_run_callbacks)
-#ifdef _WIN32
-        libev.ev_timer_init(&self._periodic_signal_checker, <void*>gevent_periodic_signal_check, 0.3, 0.3)
-#endif
+        libev.ev_timer_init(&self._periodic_signal_checker, <void*>gevent_periodic_signal_check,
+                            0.3, 0.3)
         libev.ev_timer_init(&self._timer0, <void*>gevent_noop, 0.0, 0.0)
         if ptr:
             self._ptr = <libev.ev_loop*>ptr
@@ -291,10 +290,9 @@ cdef public class loop [object PyGeventLoopObject, type PyGeventLoop_Type]:
                 self._ptr = libev.gevent_ev_default_loop(c_flags)
                 if not self._ptr:
                     raise SystemError("ev_default_loop(%s) failed" % (c_flags, ))
-#ifdef _WIN32
-                libev.ev_timer_start(self._ptr, &self._periodic_signal_checker)
-                libev.ev_unref(self._ptr)
-#endif
+                if sys.platform == "win32":
+                    libev.ev_timer_start(self._ptr, &self._periodic_signal_checker)
+                    libev.ev_unref(self._ptr)
             else:
                 self._ptr = libev.ev_loop_new(c_flags)
                 if not self._ptr:
@@ -324,11 +322,9 @@ cdef public class loop [object PyGeventLoopObject, type PyGeventLoop_Type]:
         if libev.ev_is_active(&self._prepare):
             libev.ev_ref(self._ptr)
             libev.ev_prepare_stop(self._ptr, &self._prepare)
-#ifdef _WIN32
         if libev.ev_is_active(&self._periodic_signal_checker):
             libev.ev_ref(self._ptr)
             libev.ev_timer_stop(self._ptr, &self._periodic_signal_checker)
-#endif
 
     def destroy(self):
         global _default_loop_destroyed

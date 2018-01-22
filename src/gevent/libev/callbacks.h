@@ -36,8 +36,8 @@ static void gevent_handle_error(struct PyGeventLoopObject* loop, PyObject* conte
 struct PyGeventCallbackObject;
 static void gevent_call(struct PyGeventLoopObject* loop, struct PyGeventCallbackObject* cb);
 
-#if defined(_WIN32)
-static void gevent_periodic_signal_check(struct ev_loop *, void *, int);
-#endif
+static void gevent_noop(struct ev_loop *_loop, void *watcher, int revents) {
+}
 
-static void gevent_noop(struct ev_loop *_loop, void *watcher, int revents) { }
+/* Only used on Win32 */
+static void gevent_periodic_signal_check(struct ev_loop *, void *, int);

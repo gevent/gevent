@@ -162,10 +162,11 @@ libuv
   - Using negative timeouts may behave differently from libev.
 
   - libuv blocks delivery of all signals, so signals are handled using
-    an (arbitrary) 1 second timer. This means that signal handling
+    an (arbitrary) 0.3 second timer. This means that signal handling
     will be delayed by up to that amount, and that the longest the
     event loop can sleep in the operating system's ``poll`` call is
-    that amount.
+    that amount. Note that this is what gevent does for libev on
+    Windows too.
 
   - libuv only supports one io watcher per file descriptor, whereas
     libev and gevent have always supported many watchers using

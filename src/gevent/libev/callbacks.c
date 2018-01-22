@@ -216,7 +216,7 @@ static void gevent_run_callbacks(struct ev_loop *_loop, void *watcher, int reven
     GIL_RELEASE;
 }
 
-#if defined(_WIN32)
+/* This is only used on Win32 */
 
 static void gevent_periodic_signal_check(struct ev_loop *_loop, void *watcher, int revents) {
     GIL_DECLARE;
@@ -225,6 +225,5 @@ static void gevent_periodic_signal_check(struct ev_loop *_loop, void *watcher, i
     GIL_RELEASE;
 }
 
-#endif  /* _WIN32 */
 
 #endif  /* Py_PYTHON_H */
