@@ -344,25 +344,21 @@ cdef public class loop [object PyGeventLoopObject, type PyGeventLoop_Type]:
                 libev.ev_loop_destroy(self._ptr)
             self._ptr = NULL
 
-    property ptr:
+    @property
+    def ptr(self):
+        return <size_t>self._ptr
 
-        def __get__(self):
-            return <size_t>self._ptr
+    @property
+    def WatcherType(self):
+        return watcher
 
-    property WatcherType:
+    @property
+    def MAXPRI(self):
+        return libev.EV_MAXPRI
 
-        def __get__(self):
-            return watcher
-
-    property MAXPRI:
-
-       def __get__(self):
-           return libev.EV_MAXPRI
-
-    property MINPRI:
-
-        def __get__(self):
-            return libev.EV_MINPRI
+    @property
+    def MINPRI(self):
+        return libev.EV_MINPRI
 
     def _handle_syserr(self, message, errno):
         if sys.version_info[0] >= 3:
@@ -429,45 +425,39 @@ cdef public class loop [object PyGeventLoopObject, type PyGeventLoop_Type]:
     def __repr__(self):
         return '<%s at 0x%x %s>' % (self.__class__.__name__, id(self), self._format())
 
-    property default:
+    @property
+    def default(self):
+        _check_loop(self)
+        return True if libev.ev_is_default_loop(self._ptr) else False
 
-        def __get__(self):
-            _check_loop(self)
-            return True if libev.ev_is_default_loop(self._ptr) else False
+    @property
+    def iteration(self):
+        _check_loop(self)
+        return libev.ev_iteration(self._ptr)
 
-    property iteration:
+    @property
+    def depth(self):
+        _check_loop(self)
+        return libev.ev_depth(self._ptr)
 
-        def __get__(self):
-            _check_loop(self)
-            return libev.ev_iteration(self._ptr)
+    @property
+    def backend_int(self):
+        _check_loop(self)
+        return libev.ev_backend(self._ptr)
 
-    property depth:
+    @property
+    def backend(self):
+        _check_loop(self)
+        cdef unsigned int backend = libev.ev_backend(self._ptr)
+        for key, value in _flags:
+            if key == backend:
+                return value
+        return backend
 
-        def __get__(self):
-            _check_loop(self)
-            return libev.ev_depth(self._ptr)
-
-    property backend_int:
-
-        def __get__(self):
-            _check_loop(self)
-            return libev.ev_backend(self._ptr)
-
-    property backend:
-
-        def __get__(self):
-            _check_loop(self)
-            cdef unsigned int backend = libev.ev_backend(self._ptr)
-            for key, value in _flags:
-                if key == backend:
-                    return value
-            return backend
-
-    property pendingcnt:
-
-        def __get__(self):
-            _check_loop(self)
-            return libev.ev_pending_count(self._ptr)
+    @property
+    def pendingcnt(self):
+        _check_loop(self)
+        return libev.ev_pending_count(self._ptr)
 
 #ifdef _WIN32
     def io(self, libev.vfd_socket_t fd, int events, ref=True, priority=None):
