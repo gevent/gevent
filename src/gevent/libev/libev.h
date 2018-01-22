@@ -62,5 +62,10 @@ static void gevent_reset_sigchld_handler(void) {
 
 #define gevent_ev_default_loop ev_default_loop
 static void gevent_install_sigchld_handler(void) { }
+static void gevent_reset_sigchld_handler(void) { }
+
+// Fake child functions that we can link to.
+static void ev_child_start(struct ev_loop* loop, ev_child* w) {};
+static void ev_child_stop(struct ev_loop* loop, ev_child* w) {};
 
 #endif /* _WIN32 */
