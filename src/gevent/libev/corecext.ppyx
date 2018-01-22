@@ -459,13 +459,8 @@ cdef public class loop [object PyGeventLoopObject, type PyGeventLoop_Type]:
         _check_loop(self)
         return libev.ev_pending_count(self._ptr)
 
-#ifdef _WIN32
     def io(self, libev.vfd_socket_t fd, int events, ref=True, priority=None):
         return io(self, fd, events, ref, priority)
-#else
-    def io(self, int fd, int events, ref=True, priority=None):
-        return io(self, fd, events, ref, priority)
-#endif
 
     def timer(self, double after, double repeat=0.0, ref=True, priority=None):
         return timer(self, after, repeat, ref, priority)
@@ -660,6 +655,7 @@ cdef void _libev_unref(watcher self):
         libev.ev_unref(self.loop._ptr)
         self._flags |= FLAG_WATCHER_NEEDS_EVREF
 
+
 cdef public class watcher [object PyGeventWatcherObject, type PyGeventWatcher_Type]:
     """Abstract base class for all the watchers"""
     cdef public loop loop
@@ -798,7 +794,6 @@ cdef public class watcher [object PyGeventWatcherObject, type PyGeventWatcher_Ty
         self.close()
         return
 
-
 cdef public class io(watcher) [object PyGeventIOObject, type PyGeventIO_Type]:
 
     WATCHER(io)
@@ -808,35 +803,21 @@ cdef public class io(watcher) [object PyGeventIOObject, type PyGeventIO_Type]:
             args = (GEVENT_CORE_EVENTS, ) + args
         watcher.start(self, callback, *args)
 
-    cpdef __posix_cinit(self, loop loop, int fd, int events, ref=True, priority=None):
+    def __init__(self, loop loop, libev.vfd_socket_t fd, int events, ref=True, priority=None):
+        watcher.__init__(self, loop, ref, priority)
+
+    def __cinit__(self, loop loop, libev.vfd_socket_t fd, int events, ref=True, priority=None):
         if fd < 0:
             raise ValueError('fd must be non-negative: %r' % fd)
         if events & ~(libev.EV__IOFDSET | libev.EV_READ | libev.EV_WRITE):
             raise ValueError('illegal event mask: %r' % events)
+        # All the vfd_functions are no-ops on POSIX
+        cdef int vfd = libev.vfd_open(fd)
         libev.ev_io_init(&self._watcher, <void *>gevent_callback_io, fd, events)
         self.__watcher = <libev.ev_watcher*>&self._watcher
 
-
-#ifdef _WIN32
-
-    def __cinit__(self, loop loop, libev.vfd_socket_t fd, int events, ref=True, priority=None):
-        if events & ~(libev.EV__IOFDSET | libev.EV_READ | libev.EV_WRITE):
-            raise ValueError('illegal event mask: %r' % events)
-        cdef int vfd = libev.vfd_open(fd)
-        self.__posix_cinit(loop, vfd, events, ref, priority)
-
-    def __init__(self, loop loop, libev.vfd_socket_t fd, int events, ref=True, priority=None):
-        watcher.__init__(self, loop, ref, priority)
-
     def __dealloc__(self):
         libev.vfd_free(self._watcher.fd)
-
-    # cythonpp can produce code that cannot compile if the same methods are
-    # defined in blocks too close together. So the POSIX version of this
-    # has to be defined several methods down.
-
-#endif
-
 
     @property
     def fd(self):
@@ -866,18 +847,6 @@ cdef public class io(watcher) [object PyGeventIOObject, type PyGeventIO_Type]:
 
     def _format(self):
         return ' fd=%s events=%s' % (self.fd, self.events_str)
-
-#ifdef _WIN32
-#else
-
-    def __cinit__(self, loop loop, int fd, int events, ref=True, priority=None):
-        self.__posix_cinit(loop, fd, events, ref, priority)
-
-    def __init__(self, loop loop, int fd, int events, ref=True, priority=None):
-        watcher.__init__(self, loop, ref, priority)
-
-
-#endif
 
 
 cdef public class timer(watcher) [object PyGeventTimerObject, type PyGeventTimer_Type]:

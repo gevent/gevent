@@ -1,11 +1,14 @@
 #ifdef _WIN32
-#ifdef _WIN64
+
+# ifdef _WIN64
 typedef PY_LONG_LONG vfd_socket_t;
-#define vfd_socket_object PyLong_FromLongLong
-#else
+# define vfd_socket_object PyLong_FromLongLong
+# else /* _WIN32 && !_WIN64 */
 typedef long vfd_socket_t;
-#define vfd_socket_object PyInt_FromLong
-#endif
+# define vfd_socket_object PyInt_FromLong
+
+#endif /* _WIN64 */
+
 #ifdef LIBEV_EMBED
 /*
  * If libev on win32 is embedded, then we can use an
@@ -53,13 +56,13 @@ static CRITICAL_SECTION* vfd_make_lock()
 #define VFD_GIL_DECLARE PyGILState_STATE ___save
 #define VFD_GIL_ENSURE  ___save = PyGILState_Ensure()
 #define VFD_GIL_RELEASE PyGILState_Release(___save)
-#else
+#else /* ! WITH_THREAD */
 #define VFD_LOCK_ENTER
 #define VFD_LOCK_LEAVE
 #define VFD_GIL_DECLARE
 #define VFD_GIL_ENSURE
 #define VFD_GIL_RELEASE
-#endif
+#endif /*_WITH_THREAD */
 
 /*
  * Given a virtual fd returns an OS handle or -1
@@ -201,7 +204,7 @@ done:
 #define vfd_free(fd) vfd_free_((fd), 0)
 #define EV_WIN32_CLOSE_FD(fd) vfd_free_((fd), 1)
 
-#else
+#else /* !LIBEV_EMBED */
 /*
  * If libev on win32 is not embedded in gevent, then
  * the only way to map vfds is to use the default of
@@ -211,8 +214,9 @@ done:
 #define vfd_get(fd) _get_osfhandle((fd))
 #define vfd_open(fd) _open_osfhandle((fd), 0)
 #define vfd_free(fd)
-#endif
-#else
+#endif /* LIBEV_EMBED */
+
+#else /* !_WIN32 */
 /*
  * On non-win32 platforms vfd_* are noop macros
  */
@@ -220,4 +224,4 @@ typedef int vfd_socket_t;
 #define vfd_get(fd) (fd)
 #define vfd_open(fd) ((int)(fd))
 #define vfd_free(fd)
-#endif
+#endif /* _WIN32 */

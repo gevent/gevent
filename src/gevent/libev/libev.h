@@ -1,13 +1,13 @@
 #if defined(LIBEV_EMBED)
 #include "ev.c"
-#else
+#else /* !LIBEV_EMBED */
 #include "ev.h"
 
 #ifndef _WIN32
 #include <signal.h>
-#endif
+#endif /* !_WIN32 */
 
-#endif
+#endif /* LIBEV_EMBED */
 
 #ifndef _WIN32
 
@@ -58,9 +58,9 @@ static void gevent_reset_sigchld_handler(void) {
    }
 }
 
-#else
+#else /* !_WIN32 */
 
 #define gevent_ev_default_loop ev_default_loop
 static void gevent_install_sigchld_handler(void) { }
 
-#endif
+#endif /* _WIN32 */
