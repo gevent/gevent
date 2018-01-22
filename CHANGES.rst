@@ -244,6 +244,16 @@ libuv
 
   See :issue:`790` for history and more in-depth discussion.
 
+libev
+-----
+
+- The C extension has been updated to use more modern Cython idioms
+  and generate less code for simplicity, faster compilation and better
+  cache usage.
+
+- The ``sigfd`` property that was only conditionally available on
+  certain platforms and when libev was embedded, and only in the C
+  implementation, not the CFFI implementation, has been removed.
 
 1.2.2 (2017-06-05)
 ==================

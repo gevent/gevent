@@ -532,7 +532,6 @@ cdef public class loop [object PyGeventLoopObject, type PyGeventLoop_Type]:
     def _format_details(self):
         cdef str msg = ''
         cdef object fileno = self.fileno()
-        cdef object sigfd = None
         cdef object activecnt = None
         try:
             sigfd = self.sigfd
@@ -546,8 +545,6 @@ cdef public class loop [object PyGeventLoopObject, type PyGeventLoop_Type]:
             msg += ' ref=' + repr(activecnt)
         if fileno is not None:
             msg += ' fileno=' + repr(fileno)
-        if sigfd is not None and sigfd != -1:
-            msg += ' sigfd=' + repr(sigfd)
         return msg
 
     def fileno(self):
@@ -566,15 +563,6 @@ cdef public class loop [object PyGeventLoopObject, type PyGeventLoop_Type]:
     def sig_pending(self):
         _check_loop(self)
         return self._ptr.sig_pending
-
-
-#if EV_USE_SIGNALFD
-    @property
-    def sigfd(self):
-        _check_loop(self)
-        return self._ptr.sigfd
-
-#endif
 
     @property
     def origflags(self):
