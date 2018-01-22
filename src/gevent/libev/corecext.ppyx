@@ -253,12 +253,6 @@ cdef bint _check_loop(loop loop) except -1:
         raise ValueError('operation on destroyed loop')
     return 1
 
-#define LOOP_PROPERTY(NAME) property NAME:  \
-                                            \
-        def __get__(self):                  \
-            _check_loop(self)               \
-            return self._ptr.NAME
-
 
 cdef bint _default_loop_destroyed = False
 
@@ -577,25 +571,34 @@ cdef public class loop [object PyGeventLoopObject, type PyGeventLoop_Type]:
             if fd >= 0:
                 return fd
 
-    LOOP_PROPERTY(activecnt)
+    @property
+    def activecnt(self):
+        _check_loop(self)
+        return self._ptr.activecnt
 
-    LOOP_PROPERTY(sig_pending)
+    @property
+    def sig_pending(self):
+        _check_loop(self)
+        return self._ptr.sig_pending
+
 
 #if EV_USE_SIGNALFD
-    LOOP_PROPERTY(sigfd)
+    @property
+    def sigfd(self):
+        _check_loop(self)
+        return self._ptr.sigfd
+
 #endif
 
-    property origflags:
+    @property
+    def origflags(self):
+        _check_loop(self)
+        return _flags_to_list(self._ptr.origflags)
 
-        def __get__(self):
-            _check_loop(self)
-            return _flags_to_list(self._ptr.origflags)
-
-    property origflags_int:
-
-        def __get__(self):
-            _check_loop(self)
-            return self._ptr.origflags
+    @property
+    def origflags_int(self):
+        _check_loop(self)
+        return self._ptr.origflags
 
 #endif
 
@@ -623,10 +626,9 @@ cdef public class callback [object PyGeventCallbackObject, type PyGeventCallback
         # it's nonzero if it's pending or currently executing
         return self.args is not None
 
-    property pending:
-
-        def __get__(self):
-            return self.callback is not None
+    @property
+    def pending(self):
+        return self.callback is not None
 
     def __repr__(self):
         if Py_ReprEnter(<PyObjectPtr>self) != 0:
@@ -670,36 +672,36 @@ cdef public class callback [object PyGeventCallbackObject, type PyGeventCallback
     cdef readonly int _flags                                                            \
     cdef libev.ev_##TYPE _watcher                                                       \
                                                                                         \
-    property ref:                                                                       \
-                                                                                        \
-        def __get__(self):                                                              \
-            return False if self._flags & 4 else True                                   \
-                                                                                        \
-        def __set__(self, object value):                                                \
-            _check_loop(self.loop)                                                      \
-            if value:                                                                   \
-                if not self._flags & 4:                                                 \
-                    return  # ref is already True                                       \
-                if self._flags & 2:  # ev_unref was called, undo                        \
-                    libev.ev_ref(self.loop._ptr)                                        \
-                self._flags &= ~6  # do not want unref, no outstanding unref            \
-            else:                                                                       \
-                if self._flags & 4:                                                     \
-                    return  # ref is already False                                      \
-                self._flags |= 4                                                        \
-                if not self._flags & 2 and libev.ev_is_active(&self._watcher):          \
-                    libev.ev_unref(self.loop._ptr)                                      \
-                    self._flags |= 2                                                    \
-                                                                                        \
-    property callback:                                                                  \
-                                                                                        \
-        def __get__(self):                                                              \
-            return self._callback                                                       \
-                                                                                        \
-        def __set__(self, object callback):                                             \
-            if not PyCallable_Check(<PyObjectPtr>callback) and callback is not None:    \
-                raise TypeError("Expected callable, not %r" % (callback, ))             \
-            self._callback = callback                                                   \
+    @property                                                                           \
+    def ref(self):                                                                      \
+        return False if self._flags & 4 else True                                       \
+    \
+    @ref.setter \
+    def ref(self, object value):                                                    \
+        _check_loop(self.loop)                                                      \
+        if value:                                                                   \
+            if not self._flags & 4:                                                 \
+               return  # ref is already True                                       \
+            if self._flags & 2:  # ev_unref was called, undo                        \
+               libev.ev_ref(self.loop._ptr)                                        \
+            self._flags &= ~6  # do not want unref, no outstanding unref            \
+        else:                                                                       \
+            if self._flags & 4:                                                     \
+               return  # ref is already False                                      \
+            self._flags |= 4                                                        \
+            if not self._flags & 2 and libev.ev_is_active(&self._watcher):          \
+               libev.ev_unref(self.loop._ptr)                                      \
+               self._flags |= 2                                                    \
+    \
+    @property \
+    def callback(self):                                                                  \
+        return self._callback                                                       \
+    \
+    @callback.setter \
+    def callback(self, object callback): \
+        if not PyCallable_Check(<PyObjectPtr>callback) and callback is not None:    \
+           raise TypeError("Expected callable, not %r" % (callback, ))             \
+        self._callback = callback                                                   \
                                                                                         \
     def stop(self):                                                                     \
         _check_loop(self.loop)                                                          \
@@ -713,15 +715,15 @@ cdef public class callback [object PyGeventCallbackObject, type PyGeventCallback
             Py_DECREF(<PyObjectPtr>self)                                                \
             self._flags &= ~1                                                           \
                                                                                         \
-    property priority:                                                                  \
+    @property                                                                                    \
+    def priority(self): \
+        return libev.ev_priority(&self._watcher)                                    \
                                                                                         \
-        def __get__(self):                                                              \
-            return libev.ev_priority(&self._watcher)                                    \
-                                                                                        \
-        def __set__(self, int priority):                                                \
-            if libev.ev_is_active(&self._watcher):                                      \
-                raise AttributeError("Cannot set priority of an active watcher")        \
-            libev.ev_set_priority(&self._watcher, priority)                             \
+    @priority.setter \
+    def priority(self, int priority): \
+        if libev.ev_is_active(&self._watcher):                                      \
+           raise AttributeError("Cannot set priority of an active watcher")        \
+        libev.ev_set_priority(&self._watcher, priority)                             \
                                                                                         \
     def feed(self, int revents, object callback, *args):                                \
         _check_loop(self.loop)                                                          \
@@ -731,10 +733,10 @@ cdef public class callback [object PyGeventCallbackObject, type PyGeventCallback
         libev.ev_feed_event(self.loop._ptr, &self._watcher, revents)                    \
         PYTHON_INCREF
 
-#define ACTIVE property active:                                             \
-                                                                            \
-        def __get__(self):                                                  \
-            return True if libev.ev_is_active(&self._watcher) else False
+#define ACTIVE \
+    @property \
+    def active(self):                                                  \
+        return True if libev.ev_is_active(&self._watcher) else False
 
 #define START(TYPE) def start(self, object callback, *args):       \
         _check_loop(self.loop)                                     \
@@ -748,10 +750,9 @@ cdef public class callback [object PyGeventCallbackObject, type PyGeventCallback
 
 
 #define PENDING                                                            \
-    property pending:                                                      \
-                                                                           \
-        def __get__(self):                                                 \
-            return True if libev.ev_is_pending(&self._watcher) else False
+    @property \
+    def pending(self):                                                      \
+        return True if libev.ev_is_pending(&self._watcher) else False
 
 
 
@@ -870,32 +871,31 @@ cdef public class io(watcher) [object PyGeventIOObject, type PyGeventIO_Type]:
 
 #endif
 
-    property fd:
+    @property
+    def fd(self):
+        return libev.vfd_get(self._watcher.fd)
 
-        def __get__(self):
-            return libev.vfd_get(self._watcher.fd)
+    @fd.setter
+    def fd(self, long fd):
+        if libev.ev_is_active(&self._watcher):
+            raise AttributeError("'io' watcher attribute 'fd' is read-only while watcher is active")
+        cdef int vfd = libev.vfd_open(fd)
+        libev.vfd_free(self._watcher.fd)
+        libev.ev_io_init(&self._watcher, <void *>gevent_callback_io, vfd, self._watcher.events)
 
-        def __set__(self, long fd):
-            if libev.ev_is_active(&self._watcher):
-                raise AttributeError("'io' watcher attribute 'fd' is read-only while watcher is active")
-            cdef int vfd = libev.vfd_open(fd)
-            libev.vfd_free(self._watcher.fd)
-            libev.ev_io_init(&self._watcher, <void *>gevent_callback_io, vfd, self._watcher.events)
+    @property
+    def events(self):
+        return self._watcher.events
 
-    property events:
+    @events.setter
+    def events(self, int events):
+        if libev.ev_is_active(&self._watcher):
+            raise AttributeError("'io' watcher attribute 'events' is read-only while watcher is active")
+        libev.ev_io_init(&self._watcher, <void *>gevent_callback_io, self._watcher.fd, events)
 
-        def __get__(self):
-            return self._watcher.events
-
-        def __set__(self, int events):
-            if libev.ev_is_active(&self._watcher):
-                raise AttributeError("'io' watcher attribute 'events' is read-only while watcher is active")
-            libev.ev_io_init(&self._watcher, <void *>gevent_callback_io, self._watcher.fd, events)
-
-    property events_str:
-
-        def __get__(self):
-            return _events_to_str(self._watcher.events)
+    @property
+    def events_str(self):
+        return _events_to_str(self._watcher.events)
 
     def _format(self):
         return ' fd=%s events=%s' % (self.fd, self.events_str)
@@ -947,10 +947,9 @@ cdef public class timer(watcher) [object PyGeventTimerObject, type PyGeventTimer
         if priority is not None:
             libev.ev_set_priority(&self._watcher, priority)
 
-    property at:
-
-        def __get__(self):
-            return self._watcher.at
+    @property
+    def at(self):
+        return self._watcher.at
 
     # QQQ: add 'after' and 'repeat' properties?
 
@@ -1023,10 +1022,10 @@ cdef public class async_(watcher) [object PyGeventAsyncObject, type PyGeventAsyn
 
     ACTIVE
 
-    property pending:
-
-        def __get__(self):
-            return True if libev.ev_async_pending(&self._watcher) else False
+    @property
+    def pending(self):
+        # Note the use of ev_async_pending instead of ev_is_pending
+        return True if libev.ev_async_pending(&self._watcher) else False
 
     INIT(async,,)
 
@@ -1057,26 +1056,25 @@ cdef public class child(watcher) [object PyGeventChildObject, type PyGeventChild
     def _format(self):
         return ' pid=%r rstatus=%r' % (self.pid, self.rstatus)
 
-    property pid:
+    @property
+    def pid(self):
+        return self._watcher.pid
 
-        def __get__(self):
-            return self._watcher.pid
+    @property
+    def rpid(self):
+        return self._watcher.rpid
 
-    property rpid:
+    @rpid.setter
+    def rpid(self, int value):
+        self._watcher.rpid = value
 
-        def __get__(self):
-            return self._watcher.rpid
+    @property
+    def rstatus(self):
+        return self._watcher.rstatus
 
-        def __set__(self, int value):
-            self._watcher.rpid = value
-
-    property rstatus:
-
-        def __get__(self):
-            return self._watcher.rstatus
-
-        def __set__(self, int value):
-            self._watcher.rstatus = value
+    @rstatus.setter
+    def rstatus(self, int value):
+        self._watcher.rstatus = value
 
 #endif
 
@@ -1108,24 +1106,21 @@ cdef public class stat(watcher) [object PyGeventStatObject, type PyGeventStat_Ty
         if priority is not None:
             libev.ev_set_priority(&self._watcher, priority)
 
-    property attr:
+    @property
+    def attr(self):
+        if not self._watcher.attr.st_nlink:
+            return
+        return _pystat_fromstructstat(&self._watcher.attr)
 
-        def __get__(self):
-            if not self._watcher.attr.st_nlink:
-                return
-            return _pystat_fromstructstat(&self._watcher.attr)
+    @property
+    def prev(self):
+        if not self._watcher.prev.st_nlink:
+            return
+        return _pystat_fromstructstat(&self._watcher.prev)
 
-    property prev:
-
-       def __get__(self):
-            if not self._watcher.prev.st_nlink:
-                return
-            return _pystat_fromstructstat(&self._watcher.prev)
-
-    property interval:
-
-        def __get__(self):
-            return self._watcher.interval
+    @property
+    def interval(self):
+        return self._watcher.interval
 
 
 __SYSERR_CALLBACK = None
