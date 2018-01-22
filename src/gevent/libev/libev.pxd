@@ -1,13 +1,23 @@
+# From cython/includes/libc/stdint.pxd
+# Longness only used for type promotion.
+# Actual compile time size used for conversions.
+
+# 7.18 Integer types <stdint.h>
+cdef extern from "<stdint.h>" nogil:
+
+    # 7.18.1.4 Integer types capable of holding object pointers
+    ctypedef ssize_t intptr_t
+
 cdef extern from "libev_vfd.h":
 # cython doesn't process pre-processor directives, so they
 # don't matter in this file. It just takes the last definition it sees.
-    ctypedef long long vfd_socket_t
+    ctypedef intptr_t vfd_socket_t
 
     long vfd_get(int)
     int vfd_open(long) except -1
     void vfd_free(int)
 
-cdef extern from "libev.h":
+cdef extern from "libev.h" nogil:
     int EV_MINPRI
     int EV_MAXPRI
 

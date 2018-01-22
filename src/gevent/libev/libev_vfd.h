@@ -1,13 +1,11 @@
 #ifdef _WIN32
-
-# ifdef _WIN64
-typedef PY_LONG_LONG vfd_socket_t;
-# define vfd_socket_object PyLong_FromLongLong
-# else /* _WIN32 && !_WIN64 */
-typedef long vfd_socket_t;
-# define vfd_socket_object PyInt_FromLong
-
-#endif /* _WIN64 */
+/* see discussion in the libuv directory: this is a SOCKET which is a
+   HANDLE which is a PVOID (even though they're really small ints),
+   and CPython and PyPy return that SOCKET cast to an int from
+   fileno()
+*/
+typedef intptr_t vfd_socket_t;
+#define vfd_socket_object PyLong_FromLongLong
 
 #ifdef LIBEV_EMBED
 /*

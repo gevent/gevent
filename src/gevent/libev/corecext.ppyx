@@ -810,7 +810,7 @@ cdef public class io(watcher) [object PyGeventIOObject, type PyGeventIO_Type]:
             raise ValueError('illegal event mask: %r' % events)
         # All the vfd_functions are no-ops on POSIX
         cdef int vfd = libev.vfd_open(fd)
-        libev.ev_io_init(&self._watcher, <void *>gevent_callback_io, fd, events)
+        libev.ev_io_init(&self._watcher, <void *>gevent_callback_io, vfd, events)
         self.__watcher = <libev.ev_watcher*>&self._watcher
 
     def __dealloc__(self):
