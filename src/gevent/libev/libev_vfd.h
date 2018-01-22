@@ -68,7 +68,7 @@ static CRITICAL_SECTION* vfd_make_lock()
  */
 static vfd_socket_t vfd_get(int fd)
 {
-	int handle = -1;
+	vfd_socket_t handle = -1;
 	VFD_LOCK_ENTER;
 	if (vfd_entries != NULL && fd >= 0 && fd < vfd_num)
 		handle = vfd_entries[fd].handle;
@@ -220,6 +220,6 @@ done:
  */
 typedef int vfd_socket_t;
 #define vfd_get(fd) (fd)
-#define vfd_open(fd) ((int)(fd))
+#define vfd_open(fd) (fd)
 #define vfd_free(fd)
 #endif /* _WIN32 */

@@ -1,19 +1,17 @@
 # From cython/includes/libc/stdint.pxd
-# Longness only used for type promotion.
-# Actual compile time size used for conversions.
-
-# 7.18 Integer types <stdint.h>
-cdef extern from "<stdint.h>" nogil:
-
-    # 7.18.1.4 Integer types capable of holding object pointers
-    ctypedef ssize_t intptr_t
+#   Longness only used for type promotion.
+#   Actual compile time size used for conversions.
+# We don't have stdint.h on visual studio 9.0 (2008) on windows, sigh,
+# so go with Py_ssize_t
+# ssize_t -> intptr_t
 
 cdef extern from "libev_vfd.h":
 # cython doesn't process pre-processor directives, so they
 # don't matter in this file. It just takes the last definition it sees.
+    ctypedef Py_ssize_t intptr_t
     ctypedef intptr_t vfd_socket_t
 
-    long vfd_get(int)
+    vfd_socket_t vfd_get(int)
     int vfd_open(long) except -1
     void vfd_free(int)
 
