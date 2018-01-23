@@ -1,18 +1,22 @@
+# From cython/includes/libc/stdint.pxd
+#   Longness only used for type promotion.
+#   Actual compile time size used for conversions.
+# We don't have stdint.h on visual studio 9.0 (2008) on windows, sigh,
+# so go with Py_ssize_t
+# ssize_t -> intptr_t
+
 cdef extern from "libev_vfd.h":
-#ifdef _WIN32
-#ifdef _WIN64
-    ctypedef long long vfd_socket_t
-#else
-    ctypedef long vfd_socket_t
-#endif
-#else
-    ctypedef int vfd_socket_t
-#endif
-    long vfd_get(int)
+# cython doesn't process pre-processor directives, so they
+# don't matter in this file. It just takes the last definition it sees.
+    ctypedef Py_ssize_t intptr_t
+    ctypedef intptr_t vfd_socket_t
+
+    vfd_socket_t vfd_get(int)
     int vfd_open(long) except -1
     void vfd_free(int)
 
-cdef extern from "libev.h":
+cdef extern from "libev.h" nogil:
+    int LIBEV_EMBED
     int EV_MINPRI
     int EV_MAXPRI
 
@@ -87,6 +91,9 @@ cdef extern from "libev.h":
         int sigfd
         unsigned int origflags
 
+    struct ev_watcher:
+        void* data;
+
     struct ev_io:
         int fd
         int events
@@ -124,6 +131,13 @@ cdef extern from "libev.h":
         stat attr
         stat prev
         double interval
+
+    union ev_any_watcher:
+        ev_watcher w
+        ev_io io
+        ev_timer timer
+        ev_signal signal
+        ev_idle idle
 
     int ev_version_major()
     int ev_version_minor()
@@ -203,6 +217,14 @@ cdef extern from "libev.h":
     void ev_break(ev_loop*, int)
     unsigned int ev_pending_count(ev_loop*)
 
+    # gevent extra functions. These are defined in libev.h.
     ev_loop* gevent_ev_default_loop(unsigned int flags)
     void gevent_install_sigchld_handler()
     void gevent_reset_sigchld_handler()
+
+    # These compensate for lack of access to ev_loop struct definition
+    # when LIBEV_EMBED is false.
+    unsigned int gevent_ev_loop_origflags(ev_loop*);
+    int gevent_ev_loop_sig_pending(ev_loop*);
+    int gevent_ev_loop_backend_fd(ev_loop*);
+    int gevent_ev_loop_activecnt(ev_loop*);

@@ -6,7 +6,10 @@
 # cython: auto_pickle=False
 cimport cares
 import sys
-from python cimport *
+
+from cpython.ref cimport Py_INCREF
+from cpython.ref cimport Py_DECREF
+
 from _socket import gaierror
 
 
@@ -207,7 +210,7 @@ cdef void gevent_ares_host_callback(void *arg, int status, int timeouts, hostent
     cdef channel channel
     cdef object callback
     channel, callback = <tuple>arg
-    Py_DECREF(<PyObjectPtr>arg)
+    Py_DECREF(<tuple>arg)
     cdef object host_result
     try:
         if status or not host:
@@ -227,7 +230,7 @@ cdef void gevent_ares_nameinfo_callback(void *arg, int status, int timeouts, cha
     cdef channel channel
     cdef object callback
     channel, callback = <tuple>arg
-    Py_DECREF(<PyObjectPtr>arg)
+    Py_DECREF(<tuple>arg)
     cdef object node
     cdef object service
     try:
@@ -408,7 +411,7 @@ cdef public class channel [object PyGeventAresChannelObject, type PyGeventAresCh
             raise gaierror(cares.ARES_EDESTRUCTION, 'this ares channel has been destroyed')
         # note that for file lookups still AF_INET can be returned for AF_INET6 request
         cdef object arg = (self, callback)
-        Py_INCREF(<PyObjectPtr>arg)
+        Py_INCREF(arg)
         cares.ares_gethostbyname(self.channel, name, family, <void*>gevent_ares_host_callback, <void*>arg)
 
     def gethostbyaddr(self, object callback, char* addr):
@@ -427,7 +430,7 @@ cdef public class channel [object PyGeventAresChannelObject, type PyGeventAresCh
         else:
             raise InvalidIP(repr(addr))
         cdef object arg = (self, callback)
-        Py_INCREF(<PyObjectPtr>arg)
+        Py_INCREF(arg)
         cares.ares_gethostbyaddr(self.channel, addr_packed, length, family, <void*>gevent_ares_host_callback, <void*>arg)
 
     cpdef _getnameinfo(self, object callback, tuple sockaddr, int flags):
@@ -447,7 +450,7 @@ cdef public class channel [object PyGeventAresChannelObject, type PyGeventAresCh
         if length <= 0:
             raise InvalidIP(repr(hostp))
         cdef object arg = (self, callback)
-        Py_INCREF(<PyObjectPtr>arg)
+        Py_INCREF(arg)
         cdef sockaddr_t* x = <sockaddr_t*>&sa6
         cares.ares_getnameinfo(self.channel, x, length, flags, <void*>gevent_ares_nameinfo_callback, <void*>arg)
 

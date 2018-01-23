@@ -11,20 +11,11 @@
     DEFINE_CALLBACK(check, Check);     \
     DEFINE_CALLBACK(fork, Fork);       \
     DEFINE_CALLBACK(async, Async);     \
-    DEFINE_CALLBACK(stat, Stat);
+    DEFINE_CALLBACK(stat, Stat);       \
+    DEFINE_CALLBACK(child, Child);
 
-
-#ifndef _WIN32
-
-#define DEFINE_CALLBACKS               \
-    DEFINE_CALLBACKS0                  \
-    DEFINE_CALLBACK(child, Child)
-
-#else
 
 #define DEFINE_CALLBACKS DEFINE_CALLBACKS0
-
-#endif
 
 
 DEFINE_CALLBACKS
@@ -36,8 +27,8 @@ static void gevent_handle_error(struct PyGeventLoopObject* loop, PyObject* conte
 struct PyGeventCallbackObject;
 static void gevent_call(struct PyGeventLoopObject* loop, struct PyGeventCallbackObject* cb);
 
-#if defined(_WIN32)
-static void gevent_periodic_signal_check(struct ev_loop *, void *, int);
-#endif
+static void gevent_noop(struct ev_loop *_loop, void *watcher, int revents) {
+}
 
-static void gevent_noop(struct ev_loop *_loop, void *watcher, int revents) { }
+/* Only used on Win32 */
+static void gevent_periodic_signal_check(struct ev_loop *, void *, int);

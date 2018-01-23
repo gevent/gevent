@@ -162,10 +162,11 @@ libuv
   - Using negative timeouts may behave differently from libev.
 
   - libuv blocks delivery of all signals, so signals are handled using
-    an (arbitrary) 1 second timer. This means that signal handling
+    an (arbitrary) 0.3 second timer. This means that signal handling
     will be delayed by up to that amount, and that the longest the
     event loop can sleep in the operating system's ``poll`` call is
-    that amount.
+    that amount. Note that this is what gevent does for libev on
+    Windows too.
 
   - libuv only supports one io watcher per file descriptor, whereas
     libev and gevent have always supported many watchers using
@@ -243,6 +244,27 @@ libuv
 
   See :issue:`790` for history and more in-depth discussion.
 
+libev
+-----
+
+- The C extension has been updated to use more modern Cython idioms
+  and generate less code for simplicity, faster compilation and better
+  cache usage. See :pr:`1077`.
+
+  - Watcher objects may be slightly larger. On a 64-bit platform, a
+    typical watcher may be 16 bytes (2 pointers) larger. This is
+    offset by slight performance gains.
+
+  - Cython is no longer preprocessed. Certain attributes that were
+    previously only defined in certain compilation modes (notably
+    LIBEV_EMBED) are now always defined, but will raise ``AttributeError``
+    or have a negative value when not available. In general these
+    attributes are not portable and not implemented by libuv or the
+    CFFI backend. See :issue:`1076`.
+
+  - The ``sigfd`` property that was only conditionally available on
+    certain platforms and when libev was embedded, and only in the C
+    implementation, not the CFFI implementation, has been removed.
 
 1.2.2 (2017-06-05)
 ==================

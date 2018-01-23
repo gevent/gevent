@@ -124,12 +124,13 @@ class loop(AbstractLoop):
         # XXX: Perhaps we could optimize this to notice when there are other
         # timers in the loop and start/stop it then. When we have a callback
         # scheduled, this should also be the same and unnecessary?
+        # libev does takes this basic approach on Windows.
         self._signal_idle = ffi.new("uv_timer_t*")
         libuv.uv_timer_init(self._ptr, self._signal_idle)
         self._signal_idle.data = self._handle_to_self
         libuv.uv_timer_start(self._signal_idle, libuv.python_check_callback,
-                             1000,
-                             1000)
+                             300,
+                             300)
         libuv.uv_unref(self._signal_idle)
 
     def _run_callbacks(self):

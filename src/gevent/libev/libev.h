@@ -1,13 +1,36 @@
 #if defined(LIBEV_EMBED)
 #include "ev.c"
-#else
+#undef LIBEV_EMBED
+#define LIBEV_EMBED 1
+#define gevent_ev_loop_origflags(loop) ((loop)->origflags)
+#define gevent_ev_loop_sig_pending(loop) ((loop))->sig_pending
+#define gevent_ev_loop_backend_fd(loop) ((loop))->backend_fd
+#define gevent_ev_loop_activecnt(loop) ((loop))->activecnt
+#else /* !LIBEV_EMBED */
 #include "ev.h"
+
+#define gevent_ev_loop_origflags(loop) -1
+#define gevent_ev_loop_sig_pending(loop) -1
+#define gevent_ev_loop_backend_fd(loop) -1
+#define gevent_ev_loop_activecnt(loop) -1
+
+#define LIBEV_EMBED 0
+#define EV_USE_FLOOR -1
+#define EV_USE_CLOCK_SYSCALL -1
+#define EV_USE_REALTIME -1
+#define EV_USE_MONOTONIC -1
+#define EV_USE_NANOSLEEP -1
+#define EV_USE_INOTIFY -1
+#define EV_USE_SIGNALFD -1
+#define EV_USE_EVENTFD -1
+#define EV_USE_4HEAP -1
+
 
 #ifndef _WIN32
 #include <signal.h>
-#endif
+#endif /* !_WIN32 */
 
-#endif
+#endif /* LIBEV_EMBED */
 
 #ifndef _WIN32
 
@@ -58,9 +81,14 @@ static void gevent_reset_sigchld_handler(void) {
    }
 }
 
-#else
+#else /* !_WIN32 */
 
 #define gevent_ev_default_loop ev_default_loop
 static void gevent_install_sigchld_handler(void) { }
+static void gevent_reset_sigchld_handler(void) { }
 
-#endif
+// Fake child functions that we can link to.
+static void ev_child_start(struct ev_loop* loop, ev_child* w) {};
+static void ev_child_stop(struct ev_loop* loop, ev_child* w) {};
+
+#endif /* _WIN32 */
