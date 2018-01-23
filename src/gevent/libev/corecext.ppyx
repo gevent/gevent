@@ -652,7 +652,6 @@ cdef void _libev_unref(watcher self):
         libev.ev_unref(self.loop._ptr)
         self._flags |= FLAG_WATCHER_NEEDS_EVREF
 
-
 cdef public class watcher [object PyGeventWatcherObject, type PyGeventWatcher_Type]:
     """Abstract base class for all the watchers"""
     cdef public loop loop
@@ -723,30 +722,35 @@ cdef public class watcher [object PyGeventWatcherObject, type PyGeventWatcher_Ty
         return True if libev.ev_is_pending(self.__watcher) else False
 
     def start(self, object callback, *args):
+        watcher._watcher_start(self, callback, args)
+
+    @staticmethod
+    cdef int _watcher_start(watcher self, object callback, tuple args) except -1:
         _check_loop(self.loop)
-        if callback is None:
-            raise TypeError("Expected a callable, not None")
-        self.callback = callback
+        if callback is None or not callable(callback):
+            raise TypeError("Expected callable, not %r" % (callback, ))
+        self._callback = callback
         self.args = args
         _libev_unref(self)
         self._do_libev_start()
         _python_incref(self)
+        return 1
 
     cdef void _do_libev_start(self):
         # This is not allowed to fail, and must be implemented by subclasses.
         return
 
-    def stop(self):
+    cpdef stop(self):
         _check_loop(self.loop)
-        if self._flags & 2:
+        if self._flags & FLAG_WATCHER_NEEDS_EVREF:
             libev.ev_ref(self.loop._ptr)
-            self._flags &= ~2
+            self._flags &= ~FLAG_WATCHER_NEEDS_EVREF
         self._do_libev_stop()
         self._callback = None
         self.args = None
-        if self._flags & 1:
+        if self._flags & FLAG_WATCHER_OWNS_PYREF:
             Py_DECREF(<PyObjectPtr>self)
-            self._flags &= ~1
+            self._flags &= ~FLAG_WATCHER_OWNS_PYREF
 
     cdef void _do_libev_stop(self):
         # like _do_libev_start
@@ -798,7 +802,7 @@ cdef public class io(watcher) [object PyGeventIOObject, type PyGeventIO_Type]:
     def start(self, object callback, *args, pass_events=False):
         if pass_events:
             args = (GEVENT_CORE_EVENTS, ) + args
-        watcher.start(self, callback, *args)
+        watcher._watcher_start(self, callback, args)
 
     def __init__(self, loop loop, libev.vfd_socket_t fd, int events, ref=True, priority=None):
         watcher.__init__(self, loop, ref, priority)
@@ -857,7 +861,7 @@ cdef public class timer(watcher) [object PyGeventTimerObject, type PyGeventTimer
             update = self.update_loop_time_on_start
         if update:
             libev.ev_now_update(self.loop._ptr)
-        watcher.start(self, callback, *args)
+        watcher._watcher_start(self, callback, args)
 
     def __cinit__(self, loop loop, double after=0.0, double repeat=0.0, ref=True, priority=None):
         if repeat < 0.0:
