@@ -249,7 +249,7 @@ libev
 
 - The C extension has been updated to use more modern Cython idioms
   and generate less code for simplicity, faster compilation and better
-  cache usage.
+  cache usage. See :pr:`1077`.
 
   - Watcher objects may be slightly larger. On a 64-bit platform, a
     typical watcher may be 16 bytes (2 pointers) larger. This is

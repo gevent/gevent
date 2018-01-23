@@ -14,8 +14,8 @@ export LC_ALL=C.UTF-8
 
 all: src/gevent/libev/gevent.corecext.c src/gevent/gevent.ares.c src/gevent/gevent._semaphore.c src/gevent/gevent._local.c
 
-src/gevent/libev/gevent.corecext.c: src/gevent/libev/corecext.ppyx src/gevent/libev/libev.pxd src/gevent/libev/libev.h
-	$(CYTHON) -o gevent.corecext.c src/gevent/libev/corecext.ppyx
+src/gevent/libev/gevent.corecext.c: src/gevent/libev/corecext.pyx src/gevent/libev/libev.pxd src/gevent/libev/libev.h
+	$(CYTHON) -o gevent.corecext.c src/gevent/libev/corecext.pyx
 	echo '#include "callbacks.c"' >> gevent.corecext.c
 	mv gevent.corecext.* src/gevent/libev/
 
@@ -40,7 +40,6 @@ src/gevent/gevent._local.c: src/gevent/local.py
 
 
 clean:
-	rm -f corecext.pyx src/gevent/libev/corecext.pyx
 	rm -f gevent.corecext.c gevent.corecext.h src/gevent/libev/gevent.corecext.c src/gevent/libev/gevent.corecext.h
 	rm -f gevent.ares.c gevent.ares.h src/gevent/gevent.ares.c src/gevent/gevent.ares.h
 	rm -f gevent._semaphore.c gevent._semaphore.h src/gevent/gevent._semaphore.c src/gevent/gevent._semaphore.h

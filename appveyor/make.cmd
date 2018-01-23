@@ -1,5 +1,5 @@
 IF "%PYTHON_EXE%" == "python" (
-    cython -o gevent.corecext.c src\gevent\libev\corecext.ppyx
+    cython -o gevent.corecext.c src\gevent\libev\corecext.pyx
 	type src\gevent\libev\callbacks.c >> gevent.corecext.c
     move gevent.corecext.* src\gevent\libev
 )
