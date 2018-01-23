@@ -8,7 +8,7 @@
 #include <netdb.h>
 #endif
 
-#include "ares.h"
+#include "cares.h"
 
 #include "cares_ntop.h"
 #include "cares_pton.h"

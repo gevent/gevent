@@ -12,8 +12,9 @@ import sys
 from subprocess import check_call
 from glob import glob
 
+from setuptools import Extension as _Extension
 from setuptools.command.build_ext import build_ext
-from setuptools.command.sdist import sdist
+
 
 ## Exported configurations
 
@@ -143,6 +144,35 @@ def system(cmd, cwd=None, env=None, **kwargs):
         sys.exit(1)
 
 
+# Cython
+
+
+try:
+    from Cython.Build import cythonize
+except ImportError:
+    # The .c files had better already exist. Based on code from
+    # http://cython.readthedocs.io/en/latest/src/reference/compilation.html#distributing-cython-modules
+    def cythonize(extensions):
+        for extension in extensions:
+            sources = []
+            for sfile in extension.sources:
+                path, ext = os.path.splitext(sfile)
+                if ext in ('.pyx', '.py'):
+                    ext = '.c'
+                    sfile = path + ext
+                sources.append(sfile)
+            extension.sources[:] = sources
+        return extensions
+
+def cythonize1(ext):
+    new_ext = cythonize([ext], include_path=['src/gevent', 'src/gevent/libev'])[0]
+    for optional_attr in ('configure', 'optional'):
+        if hasattr(ext, optional_attr):
+            setattr(new_ext, optional_attr,
+                    getattr(ext, optional_attr))
+    return new_ext
+
+
 ## Distutils extensions
 class BuildFailed(Exception):
     pass
@@ -170,55 +200,7 @@ class ConfiguringBuildExt(build_ext):
         return result
 
 
-class MakeSdist(sdist):
-    """
-    An sdist that runs make if needed, and makes sure
-    that the Makefile doesn't make it into the dist
-    archive.
-    """
 
-    _ran_make = False
-
-    @classmethod
-    def make(cls, targets=''):
-        # NOTE: We have two copies of the makefile, one
-        # for posix, one for windows. Our sdist command takes
-        # care of renaming the posix one so it doesn't get into
-        # the .tar.gz file (we don't want to re-run make in a released
-        # file). We trigger off the presence/absence of that file altogether
-        # to skip both posix and unix branches.
-        # See https://github.com/gevent/gevent/issues/757
-        if cls._ran_make:
-            return
-
-        if os.path.exists('Makefile'):
-            if WIN:
-                # make.cmd handles checking for PyPy and only making the
-                # right things, so we can ignore the targets
-                system("appveyor\\make.cmd")
-            else:
-                if "PYTHON" not in os.environ:
-                    os.environ["PYTHON"] = sys.executable
-                # Let the user specify the make program, helpful for BSD
-                # where GNU make might be called gmake
-                make_program = os.environ.get('MAKE', 'make')
-                system(make_program + ' ' + targets)
-        cls._ran_make = True
-
-    def run(self):
-        renamed = False
-        if os.path.exists('Makefile'):
-            self.make()
-            os.rename('Makefile', 'Makefile.ext')
-            renamed = True
-        try:
-            return sdist.run(self)
-        finally:
-            if renamed:
-                os.rename('Makefile.ext', 'Makefile')
-
-
-from setuptools import Extension as _Extension
 
 class Extension(_Extension):
     # This class exists currently mostly to make pylint

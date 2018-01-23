@@ -1,4 +1,4 @@
-cdef extern from "ares.h":
+cdef extern from "cares.h":
     struct ares_options:
         int flags
         void* sock_state_cb

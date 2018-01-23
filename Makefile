@@ -12,38 +12,11 @@ export PATH:=$(BUILD_RUNTIMES)/snakepit:$(TOOLS):$(PATH)
 export LC_ALL=C.UTF-8
 
 
-all: src/gevent/libev/gevent.corecext.c src/gevent/gevent.ares.c src/gevent/gevent._semaphore.c src/gevent/gevent._local.c
-
-src/gevent/libev/gevent.corecext.c: src/gevent/libev/corecext.pyx src/gevent/libev/libev.pxd src/gevent/libev/libev.h
-	$(CYTHON) -o gevent.corecext.c src/gevent/libev/corecext.pyx
-	echo '#include "callbacks.c"' >> gevent.corecext.c
-	mv gevent.corecext.* src/gevent/libev/
-
-src/gevent/gevent.ares.c: src/gevent/ares.pyx src/gevent/*.pxd
-	$(CYTHON) -o gevent.ares.c src/gevent/ares.pyx
-	mv gevent.ares.* src/gevent/
-
-src/gevent/gevent._semaphore.c: src/gevent/_semaphore.py src/gevent/_semaphore.pxd
-# On PyPy, if we wanted to use Cython to compile _semaphore.py, we'd
-# need to have _semaphore named as a .pyx file so it doesn't get
-# loaded in preference to the .so. (We want to keep the definitions
-# separate in a .pxd file for ease of reading, and that only works
-# with .py files, so we'd have to copy them back and forth.)
-#	cp src/gevent/_semaphore.pyx src/gevent/_semaphore.py
-	$(CYTHON) -o gevent._semaphore.c src/gevent/_semaphore.py
-	mv gevent._semaphore.* src/gevent/
-#	rm src/gevent/_semaphore.py
-
-src/gevent/gevent._local.c: src/gevent/local.py
-	$(CYTHON) -o gevent._local.c src/gevent/local.py
-	mv gevent._local.* src/gevent/
-
-
 clean:
-	rm -f gevent.corecext.c gevent.corecext.h src/gevent/libev/gevent.corecext.c src/gevent/libev/gevent.corecext.h
-	rm -f gevent.ares.c gevent.ares.h src/gevent/gevent.ares.c src/gevent/gevent.ares.h
-	rm -f gevent._semaphore.c gevent._semaphore.h src/gevent/gevent._semaphore.c src/gevent/gevent._semaphore.h
-	rm -f gevent._local.c gevent._local.h src/gevent/gevent._local.c src/gevent/gevent._local.h
+	rm -f src/gevent/libev/corecext.c src/gevent/libev/corecext.h
+	rm -f src/gevent/ares.c src/gevent/ares.h
+	rm -f src/gevent/_semaphore.c src/gevent/_semaphore.h
+	rm -f src/gevent/local.c src/gevent/local.h
 	rm -f src/gevent/*.so src/gevent/libev/*.so src/gevent/libuv/*.so
 	rm -rf src/gevent/libev/*.o src/gevent/libuv/*.o src/gevent/*.o
 	rm -rf src/gevent/__pycache__ src/greentest/__pycache__ src/gevent/libev/__pycache__

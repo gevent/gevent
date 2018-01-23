@@ -19,6 +19,7 @@ from _setuputils import DEFINE_MACROS
 from _setuputils import glob_many
 from _setuputils import dep_abspath
 from _setuputils import should_embed
+from _setuputils import cythonize1
 
 
 LIBEV_EMBED = should_embed('libev')
@@ -60,8 +61,8 @@ def configure_libev(bext, ext):
         os.chdir(cwd)
 
 CORE = Extension(name='gevent.libev.corecext',
-                 sources=['src/gevent/libev/gevent.corecext.c'],
-                 include_dirs=[dep_abspath('libev')] if LIBEV_EMBED else [],
+                 sources=['src/gevent/libev/corecext.pyx'],
+                 include_dirs=['src/gevent/libev'] + [dep_abspath('libev')] if LIBEV_EMBED else [],
                  libraries=list(LIBRARIES),
                  define_macros=list(DEFINE_MACROS),
                  depends=glob_many('src/gevent/libev/callbacks.*',
@@ -86,3 +87,15 @@ if LIBEV_EMBED:
         CORE.define_macros.append(('EV_VERIFY', os.environ['GEVENTSETUP_EV_VERIFY']))
 else:
     CORE.libraries.append('ev')
+
+CORE = cythonize1(CORE)
+
+# XXX The include of callbacks.c must go at the end of the
+# file because it references things cython generates.
+# How can we do this automatically, or relax that restriction?
+with open(CORE.sources[0]) as f:
+    core_data = f.read()
+
+if '#include "callbacks.c"' not in core_data:
+    with open(CORE.sources[0], 'a') as f:
+        f.write('\n#include "callbacks.c"\n')

@@ -165,8 +165,7 @@ test_script:
 after_test:
   # We already built the wheel during build_script, because it's
   # much faster to do that and install from the wheel than to
-  # rebuild it here (because we wind up re-building all the cython
-  # code, even though it's already built on disk; our make.cmd is not smart)
+  # rebuild it here
   #- "%CMD_IN_ENV% %PYEXE% setup.py bdist_wheel bdist_wininst"
   - ps: "ls dist"
 
