@@ -518,12 +518,8 @@ cdef public class loop [object PyGeventLoopObject, type PyGeventLoop_Type]:
         if self.default:
             msg += ' default'
         msg += ' pending=%s' % self.pendingcnt
-#ifdef LIBEV_EMBED
         msg += self._format_details()
-#endif
         return msg
-
-#ifdef LIBEV_EMBED
 
     def _format_details(self):
         cdef str msg = ''
@@ -546,31 +542,28 @@ cdef public class loop [object PyGeventLoopObject, type PyGeventLoop_Type]:
     def fileno(self):
         cdef int fd
         if self._ptr:
-            fd = self._ptr.backend_fd
+            fd = libev.gevent_ev_loop_backend_fd(self._ptr)
             if fd >= 0:
                 return fd
 
     @property
     def activecnt(self):
         _check_loop(self)
-        return self._ptr.activecnt
+        return libev.gevent_ev_loop_activecnt(self._ptr)
 
     @property
     def sig_pending(self):
         _check_loop(self)
-        return self._ptr.sig_pending
+        return libev.gevent_ev_loop_sig_pending(self._ptr)
 
     @property
     def origflags(self):
-        _check_loop(self)
-        return _flags_to_list(self._ptr.origflags)
+        return _flags_to_list(self.origflags_int)
 
     @property
     def origflags_int(self):
         _check_loop(self)
-        return self._ptr.origflags
-
-#endif
+        return libev.gevent_ev_loop_origflags(self._ptr)
 
 
 cdef public class callback [object PyGeventCallbackObject, type PyGeventCallback_Type]:
@@ -667,15 +660,29 @@ cdef start_and_stop make_ss(void* start, void* stop):
     cdef start_and_stop result = start_and_stop(<start_stop_func>start, <start_stop_func>stop)
     return result
 
+cdef bint _watcher_start(watcher self, object callback, tuple args) except -1:
+    # This method should be called by subclasses of watcher, if they
+    # override the python-level `start` function: they've already paid
+    # for argument unpacking, and `start` cannot be cpdef since it
+    # uses varargs.
+
+    # We keep this as a function, not a cdef method of watcher.
+    # If it's a cdef method, it could potentially be overridden
+    # by a subclass, which means that the watcher gains a pointer to a
+    # function table (vtable), making each object 8 bytes larger.
+
+    _check_loop(self.loop)
+    if callback is None or not callable(callback):
+        raise TypeError("Expected callable, not %r" % (callback, ))
+    self._callback = callback
+    self.args = args
+    _libev_unref(self)
+    _python_incref(self)
+    self.__ss.start(self.loop._ptr, self.__watcher)
+    return 1
 
 cdef public class watcher [object PyGeventWatcherObject, type PyGeventWatcher_Type]:
     """Abstract base class for all the watchers"""
-    # Our subclasses will declare the ev_X struct
-    # as an inline member. This is good for locality, but
-    # probably bad for alignment, as it will get tacked on
-    # immediately after our data.
-    cdef readonly unsigned int _flags
-
     ## pointer members
     cdef public loop loop
     cdef object _callback
@@ -707,6 +714,17 @@ cdef public class watcher [object PyGeventWatcherObject, type PyGeventWatcher_Ty
     # Right now we're going for size, so we use the pointer. IO/Timer objects
     # are then 144 bytes.
     cdef start_and_stop* __ss
+
+    ## Int members
+
+    # Our subclasses will declare the ev_X struct
+    # as an inline member. This is good for locality, but
+    # probably bad for alignment, as it will get tacked on
+    # immediately after our data.
+
+    # But all ev_watchers start with some ints, so maybe we can help that
+    # out by putting our ints here.
+    cdef readonly unsigned int _flags
 
     def __init__(self, loop loop, ref=True, priority=None):
         if not self.__watcher or not self.__ss.start or not self.__ss.stop:
@@ -771,23 +789,9 @@ cdef public class watcher [object PyGeventWatcherObject, type PyGeventWatcher_Ty
         return True if libev.ev_is_pending(self.__watcher) else False
 
     def start(self, object callback, *args):
-        self._watcher_start(callback, args)
+        _watcher_start(self, callback, args)
 
-    cdef bint _watcher_start(self, object callback, tuple args) except -1:
-        # This method should be called by subclasses if they override the python-level
-        # `start` function: they've already paid for argument unpacking, and
-        # `start` cannot be cpdef since it uses varargs
-        _check_loop(self.loop)
-        if callback is None or not callable(callback):
-            raise TypeError("Expected callable, not %r" % (callback, ))
-        self._callback = callback
-        self.args = args
-        _libev_unref(self)
-        _python_incref(self)
-        self.__ss.start(self.loop._ptr, self.__watcher)
-        return 1
-
-    cpdef stop(self):
+    def stop(self):
         _check_loop(self.loop)
         _libev_ref(self)
         # The callback cannot possibly fire while we are executing,
@@ -845,7 +849,7 @@ cdef public class io(watcher) [object PyGeventIOObject, type PyGeventIO_Type]:
     def start(self, object callback, *args, pass_events=False):
         if pass_events:
             args = (GEVENT_CORE_EVENTS, ) + args
-        self._watcher_start(callback, args)
+        _watcher_start(self, callback, args)
 
     def __init__(self, loop loop, libev.vfd_socket_t fd, int events, ref=True, priority=None):
         watcher.__init__(self, loop, ref, priority)
@@ -906,7 +910,7 @@ cdef public class timer(watcher) [object PyGeventTimerObject, type PyGeventTimer
             update = self.update_loop_time_on_start
         if update:
             libev.ev_now_update(self.loop._ptr)
-        self._watcher_start(callback, args)
+        _watcher_start(self, callback, args)
 
     def __cinit__(self, loop loop, double after=0.0, double repeat=0.0, ref=True, priority=None):
         if repeat < 0.0:
@@ -1147,8 +1151,8 @@ cpdef set_syserr_cb(callback):
         raise TypeError('Expected callable or None, got %r' % (callback, ))
 
 
-#ifdef LIBEV_EMBED
-LIBEV_EMBED = True
+
+LIBEV_EMBED = bool(libev.LIBEV_EMBED)
 EV_USE_FLOOR = libev.EV_USE_FLOOR
 EV_USE_CLOCK_SYSCALL = libev.EV_USE_CLOCK_SYSCALL
 EV_USE_REALTIME = libev.EV_USE_REALTIME
@@ -1158,6 +1162,3 @@ EV_USE_INOTIFY = libev.EV_USE_INOTIFY
 EV_USE_SIGNALFD = libev.EV_USE_SIGNALFD
 EV_USE_EVENTFD = libev.EV_USE_EVENTFD
 EV_USE_4HEAP = libev.EV_USE_4HEAP
-#else
-LIBEV_EMBED = False
-#endif

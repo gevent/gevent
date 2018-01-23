@@ -1,6 +1,23 @@
 #!/usr/bin/env python
 # Copyright (C) 2011-2012 Denis Bilenko (http://denisbilenko.com)
 # Copyright (C) 2015-2016 gevent contributors
+
+######################################
+######################################
+######################################
+### WARNING WARNING WARNING WARNING
+##
+## This script is unmaintained and no
+## longer in use in this project due to
+## bugs.
+## See https://github.com/gevent/gevent/issues/1076
+##
+### WARNING WARNING WARNING WARNING
+######################################
+######################################
+######################################
+
+
 from __future__ import print_function
 import sys
 import os

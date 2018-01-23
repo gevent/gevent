@@ -16,6 +16,7 @@ cdef extern from "libev_vfd.h":
     void vfd_free(int)
 
 cdef extern from "libev.h" nogil:
+    int LIBEV_EMBED
     int EV_MINPRI
     int EV_MAXPRI
 
@@ -216,6 +217,14 @@ cdef extern from "libev.h" nogil:
     void ev_break(ev_loop*, int)
     unsigned int ev_pending_count(ev_loop*)
 
+    # gevent extra functions. These are defined in libev.h.
     ev_loop* gevent_ev_default_loop(unsigned int flags)
     void gevent_install_sigchld_handler()
     void gevent_reset_sigchld_handler()
+
+    # These compensate for lack of access to ev_loop struct definition
+    # when LIBEV_EMBED is false.
+    unsigned int gevent_ev_loop_origflags(ev_loop*);
+    int gevent_ev_loop_sig_pending(ev_loop*);
+    int gevent_ev_loop_backend_fd(ev_loop*);
+    int gevent_ev_loop_activecnt(ev_loop*);

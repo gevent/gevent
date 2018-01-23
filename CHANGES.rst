@@ -249,11 +249,22 @@ libev
 
 - The C extension has been updated to use more modern Cython idioms
   and generate less code for simplicity, faster compilation and better
-  cache usage. See :issue:`1076`.
+  cache usage.
 
-- The ``sigfd`` property that was only conditionally available on
-  certain platforms and when libev was embedded, and only in the C
-  implementation, not the CFFI implementation, has been removed.
+  - Watcher objects may be slightly larger. On a 64-bit platform, a
+    typical watcher may be 16 bytes (2 pointers) larger. This is
+    offset by slight performance gains.
+
+  - Cython is no longer preprocessed. Certain attributes that were
+    previously only defined in certain compilation modes (notably
+    LIBEV_EMBED) are now always defined, but will raise ``AttributeError``
+    or have a negative value when not available. In general these
+    attributes are not portable and not implemented by libuv or the
+    CFFI backend. See :issue:`1076`.
+
+  - The ``sigfd`` property that was only conditionally available on
+    certain platforms and when libev was embedded, and only in the C
+    implementation, not the CFFI implementation, has been removed.
 
 1.2.2 (2017-06-05)
 ==================

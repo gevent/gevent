@@ -1,7 +1,30 @@
 #if defined(LIBEV_EMBED)
 #include "ev.c"
+#undef LIBEV_EMBED
+#define LIBEV_EMBED 1
+#define gevent_ev_loop_origflags(loop) ((loop)->origflags)
+#define gevent_ev_loop_sig_pending(loop) ((loop))->sig_pending
+#define gevent_ev_loop_backend_fd(loop) ((loop))->backend_fd
+#define gevent_ev_loop_activecnt(loop) ((loop))->activecnt
 #else /* !LIBEV_EMBED */
 #include "ev.h"
+
+#define gevent_ev_loop_origflags(loop) -1
+#define gevent_ev_loop_sig_pending(loop) -1
+#define gevent_ev_loop_backend_fd(loop) -1
+#define gevent_ev_loop_activecnt(loop) -1
+
+#define LIBEV_EMBED 0
+#define EV_USE_FLOOR -1
+#define EV_USE_CLOCK_SYSCALL -1
+#define EV_USE_REALTIME -1
+#define EV_USE_MONOTONIC -1
+#define EV_USE_NANOSLEEP -1
+#define EV_USE_INOTIFY -1
+#define EV_USE_SIGNALFD -1
+#define EV_USE_EVENTFD -1
+#define EV_USE_4HEAP -1
+
 
 #ifndef _WIN32
 #include <signal.h>
