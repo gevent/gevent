@@ -27,6 +27,7 @@ from cpython.ref cimport Py_INCREF
 from cpython.ref cimport Py_DECREF
 from cpython.mem cimport PyMem_Malloc
 from cpython.mem cimport PyMem_Free
+from libc.errno cimport errno
 
 cdef extern from "Python.h":
     int    Py_ReprEnter(object)
@@ -72,9 +73,6 @@ cdef extern from "callbacks.h":
     void gevent_periodic_signal_check(libev.ev_loop, void*, int)
     void gevent_call(loop, callback)
     void gevent_noop(libev.ev_loop, void*, int)
-
-cdef extern from *:
-    int errno
 
 cdef extern from "stathelper.c":
     object _pystat_fromstructstat(void*)
