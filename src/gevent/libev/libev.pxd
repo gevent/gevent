@@ -131,6 +131,13 @@ cdef extern from "libev.h" nogil:
         stat prev
         double interval
 
+    union ev_any_watcher:
+        ev_watcher w
+        ev_io io
+        ev_timer timer
+        ev_signal signal
+        ev_idle idle
+
     int ev_version_major()
     int ev_version_minor()
 
