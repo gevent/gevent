@@ -30,7 +30,8 @@ if RUNNING_ON_CI:
 # tests that don't do well when run on busy box
 RUN_ALONE = [
     'test__threadpool.py',
-    'test__examples.py'
+    'test__examples.py',
+    'test_threading.py',
 ]
 
 # tests that can't be run when coverage is enabled

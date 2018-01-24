@@ -69,6 +69,15 @@ if sys.platform == 'win32':
             'FLAKY test__fileobject.py',
         ]
 
+        if PYPY and LIBUV:
+            FAILING_TESTS += [
+                # This one sometimes seems to just stop right after
+                # patching is done. It passes on a local win 10 vm, and the main
+                # test_threading_2.py does as well.
+                # https://ci.appveyor.com/project/denik/gevent/build/1.0.1275/job/3uxm8y463v3p6d87#L1182
+                'FLAKY test_threading.py',
+            ]
+
         if PY3:
             FAILING_TESTS += [
                 # test_set_and_clear in Py3 relies on 5 threads all starting and
