@@ -1,5 +1,5 @@
 # Very rudimentary test of threading module
-
+print("GEVENT: Begin import")
 import test.test_support
 from test.test_support import verbose, cpython_only
 from test.script_helper import assert_python_ok
@@ -941,4 +941,5 @@ def test_main():
                                    )
 
 if __name__ == "__main__":
+    print("GEVENT: Begin main")
     test_main()

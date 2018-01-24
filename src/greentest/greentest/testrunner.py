@@ -31,7 +31,6 @@ if RUNNING_ON_CI:
 RUN_ALONE = [
     'test__threadpool.py',
     'test__examples.py',
-    'test_threading.py',
 ]
 
 # tests that can't be run when coverage is enabled
