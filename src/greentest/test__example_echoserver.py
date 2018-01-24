@@ -3,6 +3,7 @@ import greentest
 import gevent
 
 from greentest import util
+from greentest import params
 
 class Test(util.TestServer):
     server = 'echoserver.py'
@@ -14,7 +15,7 @@ class Test(util.TestServer):
             else:
                 kwargs = {'bufsize': 1}
             kwargs['mode'] = 'rb'
-            conn = create_connection(('127.0.0.1', 16000))
+            conn = create_connection((params.DEFAULT_LOCAL_HOST_ADDR, 16000))
             conn.settimeout(greentest.DEFAULT_XPC_SOCKET_TIMEOUT)
             rfile = conn.makefile(**kwargs)
 

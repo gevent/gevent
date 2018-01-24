@@ -1,3 +1,4 @@
+from __future__ import print_function
 import sys
 from time import time, sleep
 import contextlib
@@ -60,7 +61,7 @@ class PoolBasicTests(TestCase):
         pool.apply_async(r.append, (4, ))
         self.assertEqual(r, [1])
         gevent.sleep(0.01)
-        self.assertEqual(sorted(r), [1, 2, 3, 4])
+        self.assertEqualFlakyRaceCondition(sorted(r), [1, 2, 3, 4])
 
     def test_apply(self):
         self.pool = pool = ThreadPool(1)
@@ -143,6 +144,14 @@ class _AbstractPoolTest(TestCase):
         del self.pool
         del pmap
 
+SMALL_RANGE = 10
+LARGE_RANGE = 1000
+
+if greentest.PYPY and greentest.WIN:
+    # PyPy 5.9 is *really* slow at spawning or switching between threads on Windows
+    # Tests that happen instantaneously on other platforms
+    # time out due to the overhead
+    LARGE_RANGE = 50
 
 class TestPool(_AbstractPoolTest):
 
@@ -155,68 +164,70 @@ class TestPool(_AbstractPoolTest):
         res = self.pool.apply_async(sqr, (7, TIMEOUT1,))
         get = TimingWrapper(res.get)
         self.assertEqual(get(), 49)
-        self.assertAlmostEqual(get.elapsed, TIMEOUT1, 1)
+        self.assertTimeoutAlmostEqual(get.elapsed, TIMEOUT1, 1)
 
     def test_async_callback(self):
         result = []
         res = self.pool.apply_async(sqr, (7, TIMEOUT1,), callback=lambda x: result.append(x))
         get = TimingWrapper(res.get)
         self.assertEqual(get(), 49)
-        self.assertAlmostEqual(get.elapsed, TIMEOUT1, 1)
-        gevent.sleep(0)  # let's the callback run
+        self.assertTimeoutAlmostEqual(get.elapsed, TIMEOUT1, 1)
+        gevent.sleep(0)  # lets the callback run
         assert result == [49], result
 
     def test_async_timeout(self):
         res = self.pool.apply_async(sqr, (6, TIMEOUT2 + 0.2))
         get = TimingWrapper(res.get)
         self.assertRaises(gevent.Timeout, get, timeout=TIMEOUT2)
-        self.assertAlmostEqual(get.elapsed, TIMEOUT2, 1)
+        self.assertTimeoutAlmostEqual(get.elapsed, TIMEOUT2, 1)
         self.pool.join()
 
-    def test_imap(self):
-        it = self.pool.imap(sqr, range(10))
-        self.assertEqual(list(it), list(map(sqr, range(10))))
+    def test_imap_list_small(self):
+        it = self.pool.imap(sqr, range(SMALL_RANGE))
+        self.assertEqual(list(it), list(map(sqr, range(SMALL_RANGE))))
 
-        it = self.pool.imap(sqr, range(10))
-        for i in range(10):
+    def test_imap_it_small(self):
+        it = self.pool.imap(sqr, range(SMALL_RANGE))
+        for i in range(SMALL_RANGE):
             self.assertEqual(six.advance_iterator(it), i * i)
         self.assertRaises(StopIteration, lambda: six.advance_iterator(it))
 
-        it = self.pool.imap(sqr, range(1000))
-        for i in range(1000):
+    def test_imap_it_large(self):
+        it = self.pool.imap(sqr, range(LARGE_RANGE))
+        for i in range(LARGE_RANGE):
             self.assertEqual(six.advance_iterator(it), i * i)
         self.assertRaises(StopIteration, lambda: six.advance_iterator(it))
 
     def test_imap_gc(self):
-        it = self.pool.imap(sqr, range(10))
-        for i in range(10):
+        it = self.pool.imap(sqr, range(SMALL_RANGE))
+        for i in range(SMALL_RANGE):
             self.assertEqual(six.advance_iterator(it), i * i)
             gc.collect()
         self.assertRaises(StopIteration, lambda: six.advance_iterator(it))
 
     def test_imap_unordered_gc(self):
-        it = self.pool.imap_unordered(sqr, range(10))
+        it = self.pool.imap_unordered(sqr, range(SMALL_RANGE))
         result = []
-        for i in range(10):
+        for i in range(SMALL_RANGE):
             result.append(six.advance_iterator(it))
             gc.collect()
         self.assertRaises(StopIteration, lambda: six.advance_iterator(it))
-        self.assertEqual(sorted(result), [x * x for x in range(10)])
+        self.assertEqual(sorted(result), [x * x for x in range(SMALL_RANGE)])
 
     def test_imap_random(self):
-        it = self.pool.imap(sqr_random_sleep, range(10))
-        self.assertEqual(list(it), list(map(sqr, range(10))))
+        it = self.pool.imap(sqr_random_sleep, range(SMALL_RANGE))
+        self.assertEqual(list(it), list(map(sqr, range(SMALL_RANGE))))
 
     def test_imap_unordered(self):
-        it = self.pool.imap_unordered(sqr, range(1000))
-        self.assertEqual(sorted(it), list(map(sqr, range(1000))))
+        it = self.pool.imap_unordered(sqr, range(LARGE_RANGE))
+        self.assertEqual(sorted(it), list(map(sqr, range(LARGE_RANGE))))
 
-        it = self.pool.imap_unordered(sqr, range(1000))
-        self.assertEqual(sorted(it), list(map(sqr, range(1000))))
+        it = self.pool.imap_unordered(sqr, range(LARGE_RANGE))
+        self.assertEqual(sorted(it), list(map(sqr, range(LARGE_RANGE))))
 
     def test_imap_unordered_random(self):
-        it = self.pool.imap_unordered(sqr_random_sleep, range(10))
-        self.assertEqual(sorted(it), list(map(sqr, range(10))))
+        it = self.pool.imap_unordered(sqr_random_sleep, range(SMALL_RANGE))
+        self.assertEqual(sorted(it), list(map(sqr, range(SMALL_RANGE))))
 
     def test_terminate(self):
         size = self.size or 10
@@ -374,7 +385,7 @@ class TestMaxsize(TestCase):
         self.assertEqual(pool.size, 3)
         pool.maxsize = 0
         gevent.sleep(0.2)
-        self.assertEqual(pool.size, 0)
+        self.assertEqualFlakyRaceCondition(pool.size, 0)
 
 
 class TestSize(TestCase):

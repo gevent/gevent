@@ -301,7 +301,7 @@ if LIBUV:
             # That returns None when the underlying socket raises
             # EWOULDBLOCK, which it will do because it's set to non-blocking
             # both by gevent and by libuv (at the level below python's knowledge)
-            # I can *sometimes* reproduce these locally; it seems to be some sort
+            # I can *usually* reproduce these locally; it seems to be some sort
             # of race condition.
             'test_ftplib.TestFTPClass.test_acct',
             'test_ftplib.TestFTPClass.test_all_errors',
@@ -332,8 +332,14 @@ if LIBUV:
             'test_ftplib.TestFTPClass.test_storlines',
             'test_ftplib.TestFTPClass.test_storlines_too_long',
             'test_ftplib.TestFTPClass.test_voidcmd',
+            'test_ftplib.TestTLS_FTPClass.test_data_connection',
+            'test_ftplib.TestTLS_FTPClass.test_control_connection',
+            'test_ftplib.TestTLS_FTPClass.test_context',
+            'test_ftplib.TestTLS_FTPClass.test_check_hostname',
+            'test_ftplib.TestTLS_FTPClass.test_auth_ssl',
+            'test_ftplib.TestTLS_FTPClass.test_auth_issued_twice',
 
-            # This one times out
+            # This one times out, but it's still a non-blocking socket
             'test_ftplib.TestFTPClass.test_makeport',
 
             # More unexpected timeouts
@@ -345,13 +351,60 @@ if LIBUV:
 
             # A timeout, possibly because of the way we handle interrupts?
             'test_socketserver.SocketServerTest.test_InterruptedServerSelectCall',
+            'test_socketserver.SocketServerTest.test_InterruptServerSelectCall',
+
+            # times out with something about threading?
+            # The apparent hang is just after the print of "waiting for server"
+            'test_socketserver.SocketServerTest.test_ThreadingTCPServer',
+            'test_socketserver.SocketServerTest.test_ThreadingUDPServer',
+            'test_socketserver.SocketServerTest.test_TCPServer',
+            'test_socketserver.SocketServerTest.test_UDPServer',
 
             # This one might be like  'test_urllib2_localnet.TestUrlopen.test_https_with_cafile'?
+            # XXX: Look at newer pypy and verify our usage of drop/reuse matches
+            # theirs.
             'test_httpservers.BaseHTTPServerTestCase.test_command',
+            'test_httpservers.BaseHTTPServerTestCase.test_handler',
+            'test_httpservers.BaseHTTPServerTestCase.test_head_keep_alive',
+            'test_httpservers.BaseHTTPServerTestCase.test_head_via_send_error',
+            'test_httpservers.BaseHTTPServerTestCase.test_header_close',
+            'test_httpservers.BaseHTTPServerTestCase.test_internal_key_error',
+            'test_httpservers.BaseHTTPServerTestCase.test_request_line_trimming',
+            'test_httpservers.BaseHTTPServerTestCase.test_return_custom_status',
+            'test_httpservers.BaseHTTPServerTestCase.test_send_blank',
+            'test_httpservers.BaseHTTPServerTestCase.test_send_error',
+            'test_httpservers.BaseHTTPServerTestCase.test_version_bogus',
+            'test_httpservers.BaseHTTPServerTestCase.test_version_digits',
+            'test_httpservers.BaseHTTPServerTestCase.test_version_invalid',
+            'test_httpservers.BaseHTTPServerTestCase.test_version_none',
 
             # But on Windows, our gc fix for that doesn't work anyway
             # so we have to disable it.
             'test_urllib2_localnet.TestUrlopen.test_https_with_cafile',
+
+            # These tests hang. see above.
+            'test_threading.ThreadJoinOnShutdown.test_1_join_on_shutdown',
+            'test_threading.ThreadingExceptionTests.test_print_exception',
+
+            # Our copy of these in test__subprocess.py also hangs.
+            # Anything that uses Popen.communicate or directly uses
+            # Popen.stdXXX.read hangs. It's not clear why.
+            'test_subprocess.ProcessTestCase.test_communicate',
+            'test_subprocess.ProcessTestCase.test_cwd',
+            'test_subprocess.ProcessTestCase.test_env',
+            'test_subprocess.ProcessTestCase.test_stderr_pipe',
+            'test_subprocess.ProcessTestCase.test_stdout_pipe',
+            'test_subprocess.ProcessTestCase.test_stdout_stderr_pipe',
+            'test_subprocess.ProcessTestCase.test_stderr_redirect_with_no_stdout_redirect',
+            'test_subprocess.ProcessTestCase.test_stdout_filedes_of_stdout',
+            'test_subprocess.ProcessTestcase.test_stdout_none',
+            'test_subprocess.ProcessTestcase.test_universal_newlines',
+            'test_subprocess.ProcessTestcase.test_writes_before_communicate',
+            'test_subprocess.Win32ProcessTestCase._kill_process',
+            'test_subprocess.Win32ProcessTestCase._kill_dead_process',
+            'test_subprocess.Win32ProcessTestCase.test_shell_sequence',
+            'test_subprocess.Win32ProcessTestCase.test_shell_string',
+            'test_subprocess.CommandsWithSpaces.with_spaces',
         ]
 
     if WIN:
@@ -725,6 +778,7 @@ if PYPY:
         # we do the gc before we return.
         'test_urllib2_localnet.TestUrlopen.test_https_with_cafile': _gc_at_end,
     })
+
 
 if PY34 and sys.version_info[:3] < (3, 4, 4):
     # Older versions have some issues with the SSL tests. Seen on Appveyor

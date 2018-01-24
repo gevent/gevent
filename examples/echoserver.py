@@ -2,7 +2,7 @@
 """Simple server that listens on port 16000 and echos back every input to the client.
 
 Connect to it with:
-  telnet localhost 16000
+  telnet 127.0.0.1 16000
 
 Terminate the connection by terminating telnet (typically Ctrl-] and then 'quit').
 """
@@ -30,7 +30,7 @@ def echo(socket, address):
 
 if __name__ == '__main__':
     # to make the server use SSL, pass certfile and keyfile arguments to the constructor
-    server = StreamServer(('0.0.0.0', 16000), echo)
+    server = StreamServer(('127.0.0.1', 16000), echo)
     # to start the server asynchronously, use its start() method;
     # we use blocking serve_forever() here because we have no other jobs
     print('Starting echo server on port 16000')

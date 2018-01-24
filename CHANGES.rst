@@ -55,6 +55,9 @@ Platform Support
   been tested. This merely removes the supporting Trove classifier and
   remaining test code. See :issue:`997`.
 
+- PyPy is now known to run on Windows using the libuv backend, with
+  caveats. See the section on libuv for more information.
+
 - Due to security concerns, official support for Python 2.7.8 and
   earlier (without a modern SSL implementation) has been dropped.
   These versions are no longer tested with gevent, but gevent can
@@ -205,6 +208,14 @@ libuv
   - There may be occasional otherwise unexplained and hard to
     duplicate crashes. If you can duplicate a crash, **please** submit
     an issue.
+
+  - This is the only backend that PyPy can use on Windows. As of this
+    alpha, there are many known issues with non-blocking sockets
+    (e.g., as used by :mod:`asyncore`; see ``test_ftplib.py``) and
+    sometimes sockets not getting closed in a timely fashion
+    (apparently; see ``test_httpservers.py``) and communicating with
+    subprocesses (it always hangs). Help tracking those down would be
+    appreciated. Only PyPy2 is tested.
 
   Feedback and pull requests are welcome, especially to address the
   issues mentioned above.

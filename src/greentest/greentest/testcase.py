@@ -225,18 +225,18 @@ class TestCase(TestCaseMetaClass("NewBase", (BaseTestCase,), {})):
             self.assertIsInstance(econtext, where_type)
         return error
 
+    def assertTimeoutAlmostEqual(self, first, second, places=None, msg=None, delta=None):
+        try:
+            self.assertAlmostEqual(first, second, places=places, msg=msg, delta=delta)
+        except AssertionError:
+            flaky.reraiseFlakyTestTimeout()
+
+
     if sysinfo.EXPECT_POOR_TIMER_RESOLUTION:
         # pylint:disable=unused-argument
-        # appveyor timeouts are unreliable; seems to be very slow wakeups
-        def assertTimeoutAlmostEqual(self, *args, **kwargs):
-            return
-
         def assertTimeWithinRange(self, delay, min_time, max_time):
             return
     else:
-        def assertTimeoutAlmostEqual(self, *args, **kwargs):
-            self.assertAlmostEqual(*args, **kwargs)
-
         def assertTimeWithinRange(self, time_taken, min_time, max_time):
             self.assertLessEqual(time_taken, max_time)
             self.assertGreaterEqual(time_taken, min_time)

@@ -27,7 +27,7 @@ except ImportError:
     from urllib.parse import urlparse
     from urllib.parse import unquote
 
-LISTEN = ":8088"
+LISTEN = ('127.0.0.1', 8088)
 
 
 def _as_bytes(s):
@@ -147,5 +147,5 @@ FORM = b"""<html><head>
 
 if __name__ == '__main__':
     from gevent.pywsgi import WSGIServer
-    print('Serving on %s...' % LISTEN)
+    print('Serving on %s...' % (LISTEN,))
     WSGIServer(LISTEN, application).serve_forever()

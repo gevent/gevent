@@ -69,7 +69,7 @@ class Test(greentest.TestCase):
         num_after = greentest.get_number_open_files()
         self.assertEqual(num_before, num_after)
 
-
+    @greentest.skipOnLibuvOnPyPyOnWin("hangs")
     def test_communicate(self):
         p = subprocess.Popen([sys.executable, "-W", "ignore",
                               "-c",
@@ -113,6 +113,7 @@ class Test(greentest.TestCase):
         self.assertEqual(stderr,
                          'pineapple\n\xff\xff\xf2\xf9\n')
 
+    @greentest.skipOnLibuvOnPyPyOnWin("hangs")
     def test_universal1(self):
         p = subprocess.Popen([sys.executable, "-c",
                               'import sys,os;' + SETBINARY +
@@ -148,6 +149,7 @@ class Test(greentest.TestCase):
         finally:
             p.stdout.close()
 
+    @greentest.skipOnLibuvOnPyPyOnWin("hangs")
     def test_universal2(self):
         p = subprocess.Popen([sys.executable, "-c",
                               'import sys,os;' + SETBINARY +
@@ -213,6 +215,7 @@ class Test(greentest.TestCase):
             else:
                 raise AssertionError('must fail with ENOENT')
 
+    @greentest.skipOnLibuvOnPyPyOnWin("hangs")
     def test_check_output_keyword_error(self):
         try:
             subprocess.check_output([sys.executable, '-c', 'import sys; sys.exit(44)'])
@@ -261,6 +264,7 @@ class Test(greentest.TestCase):
 
         test_subprocess_in_native_thread.ignore_leakcheck = True
 
+    @greentest.skipOnLibuvOnPyPyOnWin("hangs")
     def __test_no_output(self, kwargs, kind):
         proc = subprocess.Popen([sys.executable, '-c', 'pass'],
                                 stdout=subprocess.PIPE,
@@ -327,16 +331,19 @@ class RunFuncTestCase(greentest.TestCase):
         with self.assertRaises(subprocess.TimeoutExpired):
             self.run_python("while True: pass", timeout=0.0001)
 
+    @greentest.skipOnLibuvOnPyPyOnWin("hangs")
     def test_capture_stdout(self):
         # capture stdout with zero return code
         cp = self.run_python("print('BDFL')", stdout=subprocess.PIPE)
         self.assertIn(b'BDFL', cp.stdout)
 
+    @greentest.skipOnLibuvOnPyPyOnWin("hangs")
     def test_capture_stderr(self):
         cp = self.run_python("import sys; sys.stderr.write('BDFL')",
                              stderr=subprocess.PIPE)
         self.assertIn(b'BDFL', cp.stderr)
 
+    @greentest.skipOnLibuvOnPyPyOnWin("hangs")
     def test_check_output_stdin_arg(self):
         # run() can be called with stdin set to a file
         with tempfile.TemporaryFile() as tf:
@@ -347,6 +354,7 @@ class RunFuncTestCase(greentest.TestCase):
                 stdin=tf, stdout=subprocess.PIPE)
             self.assertIn(b'PEAR', cp.stdout)
 
+    @greentest.skipOnLibuvOnPyPyOnWin("hangs")
     def test_check_output_input_arg(self):
         # check_output() can be called with input set to a string
         cp = self.run_python(
@@ -354,6 +362,7 @@ class RunFuncTestCase(greentest.TestCase):
             input=b'pear', stdout=subprocess.PIPE)
         self.assertIn(b'PEAR', cp.stdout)
 
+    @greentest.skipOnLibuvOnPyPyOnWin("hangs")
     def test_check_output_stdin_with_input_arg(self):
         # run() refuses to accept 'stdin' with 'input'
         with tempfile.TemporaryFile() as tf:
@@ -366,6 +375,7 @@ class RunFuncTestCase(greentest.TestCase):
             self.assertIn('stdin', c.exception.args[0])
             self.assertIn('input', c.exception.args[0])
 
+    @greentest.skipOnLibuvOnPyPyOnWin("hangs")
     def test_check_output_timeout(self):
         with self.assertRaises(subprocess.TimeoutExpired) as c:
             self.run_python(

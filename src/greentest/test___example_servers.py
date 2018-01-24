@@ -12,10 +12,11 @@ import ssl
 from greentest import DEFAULT_XPC_SOCKET_TIMEOUT
 from greentest import main
 from greentest import util
+from greentest import params
 
 class Test_wsgiserver(util.TestServer):
     server = 'wsgiserver.py'
-    URL = 'http://localhost:8088'
+    URL = 'http://%s:8088' % (params.DEFAULT_LOCAL_HOST_ADDR,)
     PORT = 8088
     not_found_message = b'<h1>Not Found</h1>'
     ssl_ctx = None
@@ -90,7 +91,7 @@ class Test_wsgiserver(util.TestServer):
 
 class Test_wsgiserver_ssl(Test_wsgiserver):
     server = 'wsgiserver_ssl.py'
-    URL = 'https://localhost:8443'
+    URL = 'https://%s:8443' % (params.DEFAULT_LOCAL_HOST_ADDR,)
     PORT = 8443
     _use_ssl = True
 

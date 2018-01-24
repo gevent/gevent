@@ -27,6 +27,9 @@ from gevent.util import dump_stacks
 from greentest import sysinfo
 from greentest import six
 
+class FlakyAssertionError(AssertionError):
+    "Re-raised so that we know it's a known-flaky test."
+
 # The next exceptions allow us to raise them in a highly
 # greppable way so that we can debug them later.
 
@@ -54,22 +57,37 @@ class FlakyTestCrashes(FlakyTest):
     """
 
 def reraiseFlakyTestRaceCondition():
-    six.reraise(*sys.exc_info())
+    six.reraise(FlakyAssertionError,
+                FlakyAssertionError(sys.exc_info()[1]),
+                sys.exc_info()[2])
 
 reraiseFlakyTestTimeout = reraiseFlakyTestRaceCondition
 reraiseFlakyTestRaceConditionLibuv = reraiseFlakyTestRaceCondition
 reraiseFlakyTestTimeoutLibuv = reraiseFlakyTestRaceCondition
 
-if sysinfo.RUNNING_ON_CI:
+if sysinfo.RUNNING_ON_CI or (sysinfo.PYPY and sysinfo.WIN):
     # pylint: disable=function-redefined
     def reraiseFlakyTestRaceCondition():
+        if sysinfo.PYPY and sysinfo.WIN:
+            # Getting stack traces is incredibly expensive
+            # in pypy on win, at least in test virtual machines.
+            # It can take minutes. The traceback consistently looks like
+            # the following when interrupted:
+
+            # dump_stacks -> traceback.format_stack
+            #    -> traceback.extract_stack -> linecache.checkcache
+            #    -> os.stat -> _structseq.structseq_new
+            msg = str(sys.exc_info()[1])
+        else:
+            msg = '\n'.join(dump_stacks())
         six.reraise(FlakyTestRaceCondition,
-                    FlakyTestRaceCondition('\n'.join(dump_stacks())),
+                    FlakyTestRaceCondition(msg),
                     sys.exc_info()[2])
 
     def reraiseFlakyTestTimeout():
+        msg = str(sys.exc_info()[1])
         six.reraise(FlakyTestTimeout,
-                    FlakyTestTimeout(),
+                    FlakyTestTimeout(msg),
                     sys.exc_info()[2])
 
     if sysinfo.LIBUV:

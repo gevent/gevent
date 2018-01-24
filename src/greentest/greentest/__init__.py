@@ -64,7 +64,7 @@ from greentest.skipping import skipIf
 from greentest.skipping import skipOnLibuv
 from greentest.skipping import skipOnLibuvOnCI
 from greentest.skipping import skipOnLibuvOnCIOnPyPy
-
+from greentest.skipping import skipOnLibuvOnPyPyOnWin
 
 
 from greentest.exception import ExpectedException

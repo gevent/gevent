@@ -339,6 +339,7 @@ class ThreadTests(unittest.TestCase):
             """ % setup_3])
         self.assertEqual(rc, 42)
 
+    @greentest.skipOnLibuvOnPyPyOnWin("hangs")
     def test_join_nondaemon_on_shutdown(self):
         # Issue 1722344
         # Raising SystemExit skipped threading._shutdown
@@ -439,6 +440,7 @@ class ThreadJoinOnShutdown(unittest.TestCase):
         self.assertNotEqual(rc, 2, b"interpreter was blocked")
         self.assertEqual(rc, 0, b"Unexpected error")
 
+    @greentest.skipOnLibuvOnPyPyOnWin("hangs")
     def test_1_join_on_shutdown(self):
         # The usual case: on exit, wait for a non-daemon thread
         script = """if 1:
@@ -594,7 +596,6 @@ def main():
     )
 
 if __name__ == "__main__":
-    import greentest
     if greentest.PYPY3 and greentest.RUNNING_ON_CI:
         print("SKIPPED: Timeout on PyPy3 on Travis")
     else:

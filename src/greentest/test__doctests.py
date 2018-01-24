@@ -10,6 +10,7 @@ import unittest
 import gevent
 from gevent import socket
 from greentest import walk_modules
+from greentest import sysinfo
 
 # Ignore tracebacks: ZeroDivisionError
 
@@ -36,6 +37,12 @@ class RENormalizingOutputChecker(doctest.OutputChecker):
 
         return doctest.OutputChecker.check_output(self, want, got, optionflags)
 
+FORBIDDEN_MODULES = set()
+if sysinfo.WIN:
+    FORBIDDEN_MODULES |= {
+        # Uses commands only found on posix
+        'gevent.subprocess',
+    }
 
 if __name__ == '__main__':
     cwd = os.getcwd()
@@ -52,6 +59,8 @@ if __name__ == '__main__':
 
         def add_module(name, path):
             if allowed_modules and name not in allowed_modules:
+                return
+            if name in FORBIDDEN_MODULES:
                 return
             modules.add((name, path))
 
