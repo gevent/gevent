@@ -668,21 +668,24 @@ def test_main(verbose=None):
     # tests are incredibly slow or hang in shutdown for unknown
     # reasons
     import greentest
+    MySimpleHTTPRequestHandlerTestCase = SimpleHTTPRequestHandlerTestCase
+    MySimpleHTTPServerTestCase = SimpleHTTPServerTestCase
+    MyCGIHTTPServerTestCase = CGIHTTPServerTestCase
     if greentest.PYPY and greentest.WIN:
-        class SimpleHTTPRequestHandlerTestCase(unittest.TestCase):
+        class MySimpleHTTPRequestHandlerTestCase(unittest.TestCase):
             def setUp(self):
                 raise unittest.SkipTest("gevent: Hangs")
             def test_empty(self):
                 return
-        SimpleHTTPServerTestCase = SimpleHTTPRequestHandlerTestCase
-        CGIHTTPServerTestCase = SimpleHTTPRequestHandlerTestCase
+        MySimpleHTTPServerTestCase = MySimpleHTTPRequestHandlerTestCase
+        MyCGIHTTPServerTestCase = MySimpleHTTPRequestHandlerTestCase
     try:
         cwd = os.getcwd()
         test_support.run_unittest(BaseHTTPRequestHandlerTestCase,
-                                  SimpleHTTPRequestHandlerTestCase,
+                                  MySimpleHTTPRequestHandlerTestCase,
                                   BaseHTTPServerTestCase,
-                                  SimpleHTTPServerTestCase,
-                                  CGIHTTPServerTestCase
+                                  MySimpleHTTPServerTestCase,
+                                  MyCGIHTTPServerTestCase
                                  )
     finally:
         os.chdir(cwd)

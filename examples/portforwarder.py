@@ -47,8 +47,15 @@ class PortForwarder(StreamServer):
 
 
 def forward(source, dest, server):
-    source_address = '%s:%s' % source.getpeername()[:2]
-    dest_address = '%s:%s' % dest.getpeername()[:2]
+    try:
+        source_address = '%s:%s' % source.getpeername()[:2]
+        dest_address = '%s:%s' % dest.getpeername()[:2]
+    except socket.error as e:
+        # We could be racing signals that close the server
+        # and hence a socket.
+        log("Failed to get all peer names: %s", e)
+        return
+
     try:
         while True:
             try:
