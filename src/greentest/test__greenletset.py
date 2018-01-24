@@ -1,5 +1,6 @@
 import time
 import greentest
+from greentest.flaky import reraiseFlakyTestRaceConditionLibuv
 import gevent
 from gevent import pool
 from gevent.timeout import Timeout
@@ -32,13 +33,16 @@ class Test(greentest.TestCase):
         DELAY = 0.05 if not greentest.RUNNING_ON_APPVEYOR else 0.1
         s = pool.Group()
         s.spawn(gevent.sleep, DELAY)
-        assert len(s) == 1, s
+        self.assertEqual(len(s), 1, s)
         s.spawn(gevent.sleep, DELAY * 2.)
-        assert len(s) == 2, s
+        self.assertEqual(len(s), 2, s)
         gevent.sleep(DELAY * 3. / 2.)
-        assert len(s) == 1, s
+        try:
+            self.assertEqual(len(s), 1, s)
+        except AssertionError:
+            reraiseFlakyTestRaceConditionLibuv()
         gevent.sleep(DELAY)
-        assert not s, s
+        self.assertFalse(s)
 
     def test_waitall(self):
         s = pool.Group()
@@ -48,8 +52,8 @@ class Test(greentest.TestCase):
         start = time.time()
         s.join(raise_error=True)
         delta = time.time() - start
-        assert not s, s
-        assert len(s) == 0, s
+        self.assertFalse(s)
+        self.assertEqual(len(s), 0)
         self.assertTimeWithinRange(delta, DELAY * 1.9, DELAY * 2.5)
 
     def test_kill_block(self):
@@ -59,8 +63,8 @@ class Test(greentest.TestCase):
         assert len(s) == 2, s
         start = time.time()
         s.kill()
-        assert not s, s
-        assert len(s) == 0, s
+        self.assertFalse(s)
+        self.assertEqual(len(s), 0)
         delta = time.time() - start
         assert delta < DELAY * 0.8, delta
 
@@ -72,8 +76,8 @@ class Test(greentest.TestCase):
         s.kill(block=False)
         assert len(s) == 2, s
         gevent.sleep(0.0001)
-        assert len(s) == 0, s
-        assert not s, s
+        self.assertFalse(s)
+        self.assertEqual(len(s), 0)
 
     def test_kill_fires_once(self):
         u1 = Undead()
