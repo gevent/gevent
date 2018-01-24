@@ -15,6 +15,7 @@ try:
 except ImportError:
     from test import test_support as support
 
+from greentest.testcase import TimeAssertMixin
 
 def _wait():
     # A crude wait/yield function not relying on synchronization primitives.
@@ -59,7 +60,7 @@ class Bunch(object):
         self._can_exit = True
 
 
-class BaseTestCase(unittest.TestCase):
+class BaseTestCase(TimeAssertMixin, unittest.TestCase):
     def setUp(self):
         self._threads = support.threading_setup()
 
@@ -306,7 +307,7 @@ class EventTests(BaseTestCase):
         self.assertEqual(results1, [False] * N)
         for r, dt in results2:
             self.assertFalse(r)
-            self.assertTrue(dt >= 0.19, dt) # XXX: libuv sometimes produces 0.19958
+            self.assertTimeWithinRange(dt, 0.18, 10)
         # The event is set
         results1 = []
         results2 = []

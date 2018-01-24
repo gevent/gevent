@@ -74,7 +74,9 @@ if sys.platform == 'win32':
                 # This one sometimes seems to just stop right after
                 # patching is done. It passes on a local win 10 vm, and the main
                 # test_threading_2.py does as well.
-                # https://ci.appveyor.com/project/denik/gevent/build/1.0.1275/job/3uxm8y463v3p6d87#L1182
+                # Based on the printouts we added, it appears to not even
+                # finish importing:
+                # https://ci.appveyor.com/project/denik/gevent/build/1.0.1277/job/tpvhesij5gldjxqw#L1190
                 'FLAKY test_threading.py',
             ]
 

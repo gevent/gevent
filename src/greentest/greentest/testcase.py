@@ -34,6 +34,22 @@ from greentest import flaky
 
 from greentest.patched_tests_setup import get_switch_expected
 
+class TimeAssertMixin(object):
+    def assertTimeoutAlmostEqual(self, first, second, places=None, msg=None, delta=None):
+        try:
+            self.assertAlmostEqual(first, second, places=places, msg=msg, delta=delta)
+        except AssertionError:
+            flaky.reraiseFlakyTestTimeout()
+
+
+    if sysinfo.EXPECT_POOR_TIMER_RESOLUTION:
+        # pylint:disable=unused-argument
+        def assertTimeWithinRange(self, delay, min_time, max_time):
+            return
+    else:
+        def assertTimeWithinRange(self, time_taken, min_time, max_time):
+            self.assertLessEqual(time_taken, max_time)
+            self.assertGreaterEqual(time_taken, min_time)
 
 
 
@@ -101,7 +117,7 @@ class TestCaseMetaClass(type):
 def _noop():
     return
 
-class TestCase(TestCaseMetaClass("NewBase", (BaseTestCase,), {})):
+class TestCase(TestCaseMetaClass("NewBase", (TimeAssertMixin, BaseTestCase,), {})):
     __timeout__ = params.LOCAL_TIMEOUT if not sysinfo.RUNNING_ON_CI else params.CI_TIMEOUT
 
     switch_expected = 'default'
@@ -224,23 +240,6 @@ class TestCase(TestCaseMetaClass("NewBase", (BaseTestCase,), {})):
         if where_type is not None:
             self.assertIsInstance(econtext, where_type)
         return error
-
-    def assertTimeoutAlmostEqual(self, first, second, places=None, msg=None, delta=None):
-        try:
-            self.assertAlmostEqual(first, second, places=places, msg=msg, delta=delta)
-        except AssertionError:
-            flaky.reraiseFlakyTestTimeout()
-
-
-    if sysinfo.EXPECT_POOR_TIMER_RESOLUTION:
-        # pylint:disable=unused-argument
-        def assertTimeWithinRange(self, delay, min_time, max_time):
-            return
-    else:
-        def assertTimeWithinRange(self, time_taken, min_time, max_time):
-            self.assertLessEqual(time_taken, max_time)
-            self.assertGreaterEqual(time_taken, min_time)
-
 
     def assertMonkeyPatchedFuncSignatures(self, mod_name, func_names=(), exclude=()):
         # We use inspect.getargspec because it's the only thing available
