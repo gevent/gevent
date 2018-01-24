@@ -565,6 +565,16 @@ cdef public class loop [object PyGeventLoopObject, type PyGeventLoop_Type]:
         _check_loop(self)
         return libev.gevent_ev_loop_origflags(self._ptr)
 
+    @property
+    def sigfd(self):
+        _check_loop(self)
+        fd = libev.gevent_ev_loop_sigfd(self._ptr)
+        if fd >= 0:
+            return fd
+
+        # Explicitly not EV_USE_SIGNALFD
+        raise AttributeError("sigfd")
+
 
 cdef public class callback [object PyGeventCallbackObject, type PyGeventCallback_Type]:
     cdef public object callback

@@ -272,9 +272,6 @@ libev
     attributes are not portable and not implemented by libuv or the
     CFFI backend. See :issue:`1076`.
 
-  - The ``sigfd`` property that was only conditionally available on
-    certain platforms and when libev was embedded, and only in the C
-    implementation, not the CFFI implementation, has been removed.
 
 1.2.2 (2017-06-05)
 ==================

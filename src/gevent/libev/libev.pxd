@@ -228,3 +228,4 @@ cdef extern from "libev.h" nogil:
     int gevent_ev_loop_sig_pending(ev_loop*);
     int gevent_ev_loop_backend_fd(ev_loop*);
     int gevent_ev_loop_activecnt(ev_loop*);
+    int gevent_ev_loop_sigfd(ev_loop*);

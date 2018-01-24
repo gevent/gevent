@@ -6,6 +6,11 @@
 #define gevent_ev_loop_sig_pending(loop) ((loop))->sig_pending
 #define gevent_ev_loop_backend_fd(loop) ((loop))->backend_fd
 #define gevent_ev_loop_activecnt(loop) ((loop))->activecnt
+#if EV_USE_SIGNALFD
+#define gevent_ev_loop_sigfd(loop) ((loop))->sigfd
+#else
+#define gevent_ev_loop_sigfd(loop) -1
+#endif /* !EV_USE_SIGNALFD */
 #else /* !LIBEV_EMBED */
 #include "ev.h"
 
@@ -13,6 +18,7 @@
 #define gevent_ev_loop_sig_pending(loop) -1
 #define gevent_ev_loop_backend_fd(loop) -1
 #define gevent_ev_loop_activecnt(loop) -1
+#define gevent_ev_loop_sigfd(loop) -1
 
 #define LIBEV_EMBED 0
 #define EV_USE_FLOOR -1
