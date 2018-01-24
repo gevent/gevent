@@ -3,6 +3,14 @@
 from __future__ import print_function
 import sys
 import os
+import os.path
+
+# setuptools is *required* on Windows
+# (https://bugs.python.org/issue23246) and for PyPy. No reason not to
+# use it everywhere. v24.2.0 is needed for python_requires
+from setuptools import Extension, setup
+from setuptools import find_packages
+
 
 from _setuputils import read
 from _setuputils import read_version
@@ -10,14 +18,10 @@ from _setuputils import system
 from _setuputils import PYPY, WIN
 from _setuputils import IGNORE_CFFI
 from _setuputils import ConfiguringBuildExt
-from _setuputils import MakeSdist
 from _setuputils import BuildFailed
+from _setuputils import cythonize1
 
-# setuptools is *required* on Windows
-# (https://bugs.python.org/issue23246) and for PyPy. No reason not to
-# use it everywhere. v24.2.0 is needed for python_requires
-from setuptools import Extension, setup
-from setuptools import find_packages
+
 
 if WIN:
     # Make sure the env vars that make.cmd needs are set
@@ -45,11 +49,14 @@ from _setupares import ARES
 
 
 SEMAPHORE = Extension(name="gevent._semaphore",
-                      sources=["src/gevent/gevent._semaphore.c"])
+                      sources=["src/gevent/_semaphore.py"],
+                      depends=['src/gevent/_semaphore.pxd'])
+SEMAPHORE = cythonize1(SEMAPHORE)
 
 LOCAL = Extension(name="gevent.local",
-                  sources=["src/gevent/gevent._local.c"])
-
+                  sources=["src/gevent/local.py"],
+                  depends=['src/gevent/local.pxd'])
+LOCAL = cythonize1(LOCAL)
 
 EXT_MODULES = [
     CORE,
@@ -140,8 +147,6 @@ def run_setup(ext_modules, run_make):
             if LIBEV_CFFI_MODULE in cffi_modules and not WIN:
                 system(libev_configure_command)
 
-        MakeSdist.make()
-
     setup(
         name='gevent',
         version=__version__,
@@ -158,7 +163,7 @@ def run_setup(ext_modules, run_make):
         packages=find_packages('src'),
         include_package_data=True,
         ext_modules=ext_modules,
-        cmdclass=dict(build_ext=ConfiguringBuildExt, sdist=MakeSdist),
+        cmdclass=dict(build_ext=ConfiguringBuildExt),
         install_requires=install_requires,
         setup_requires=setup_requires,
         # It's always safe to pass the CFFI keyword, even if

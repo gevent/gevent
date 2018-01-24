@@ -61,6 +61,22 @@ Platform Support
   still be installed on them. Supporting code will be removed in the
   next version of gevent. See :issue:`1073`.
 
+Build Changes
+-------------
+
+- When building gevent from a source checkout (*not* a distributed
+  source distribution), ``make`` is no longer required and the
+  ``Makefile`` is not used. Neither is an external ``cython`` command.
+  Instead, the ``cythonize`` function is used, as recommended by
+  Cython. See :issue:`1076`.
+
+- :class:`gevent.local.local` is compiled with Cython on CPython. It
+  was already 5 to 6 times faster due to the work on :issue:`1020`,
+  and compiling it with Cython makes it another 5 to 6 times faster, for a
+  total speed up of about 35 times. It is now in the same ballpark as
+  the native :class:`threading.local` class. See :pr:`1024`.
+
+
 Other Changes
 -------------
 
@@ -119,12 +135,6 @@ Other Changes
   getting, setting and deleting attributes on PyPy. This involved
   implementing more of the attribute protocols directly. Please open
   an issue if you have any compatibility problems. See :issue:`1020`.
-
-- :class:`gevent.local.local` is compiled with Cython on CPython. It
-  was already 5 to 6 times faster due to the work on :issue:`1020`,
-  and compiling it with Cython makes it another 5 to 6 times faster, for a
-  total speed up of about 35 times. It is now in the same ballpark as
-  the native :class:`threading.local` class. See :pr:`1024`.
 
 - More safely terminate subprocesses on Windows with
   :meth:`gevent.subprocess.Popen.terminate`. Reported in :issue:`1023`

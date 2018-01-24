@@ -1,7 +1,14 @@
 # cython: auto_pickle=False
+
+cimport cython
+
+@cython.final
+@cython.internal
 cdef class _wrefdict(dict):
    cdef object __weakref__
 
+@cython.final
+@cython.internal
 cdef class _localimpl:
     cdef str key
     cdef dict dicts

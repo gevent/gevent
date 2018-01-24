@@ -24,6 +24,7 @@ from _setuputils import DEFINE_MACROS
 from _setuputils import glob_many
 from _setuputils import dep_abspath
 from _setuputils import RUNNING_ON_CI
+from _setuputils import cythonize1
 
 
 CARES_EMBED = should_embed('c-ares')
@@ -79,8 +80,8 @@ def configure_ares(bext, ext):
 
 
 ARES = Extension(name='gevent.ares',
-                 sources=['src/gevent/gevent.ares.c'],
-                 include_dirs=[dep_abspath('c-ares')] if CARES_EMBED else [],
+                 sources=['src/gevent/ares.pyx'],
+                 include_dirs=['src/gevent'] + [dep_abspath('c-ares')] if CARES_EMBED else [],
                  libraries=list(LIBRARIES),
                  define_macros=list(DEFINE_MACROS),
                  depends=glob_many('src/gevent/dnshelper.c',
@@ -107,3 +108,5 @@ if CARES_EMBED:
 else:
     ARES.libraries.append('cares')
     ARES.define_macros += [('HAVE_NETDB_H', '')]
+
+ARES = cythonize1(ARES)
