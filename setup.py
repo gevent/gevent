@@ -49,11 +49,13 @@ from _setupares import ARES
 
 
 SEMAPHORE = Extension(name="gevent._semaphore",
-                      sources=["src/gevent/_semaphore.py"])
+                      sources=["src/gevent/_semaphore.py"],
+                      depends=['src/gevent/_semaphore.pxd'])
 SEMAPHORE = cythonize1(SEMAPHORE)
 
 LOCAL = Extension(name="gevent.local",
-                  sources=["src/gevent/local.py"])
+                  sources=["src/gevent/local.py"],
+                  depends=['src/gevent/local.pxd'])
 LOCAL = cythonize1(LOCAL)
 
 EXT_MODULES = [
