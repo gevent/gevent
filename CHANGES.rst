@@ -288,10 +288,10 @@ libev
     attributes are not portable and not implemented by libuv or the
     CFFI backend. See :issue:`1076`.
 
-  - Certain private helper functions (``gevent_handle_error``, part of
+  - Certain private helper functions (``gevent_handle_error``, and part of
     ``gevent_call``) are now implemented in Cython instead of C. This
     reduces our reliance on internal undocumented implementation
-    details of Cython and Python that could change.
+    details of Cython and Python that could change. See :pr:`1080`.
 
 
 1.2.2 (2017-06-05)
