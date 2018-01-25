@@ -81,7 +81,6 @@ Build Changes
   one pointer less memory per object, and one pointer less memory per
   greenlet. See :pr:`1024`.
 
-
 - The Cython ares 'channel' class is no longer declared to be publicly
   accessible from a named C structure. Doing so caused a conflict with
   the c-ares header files.
@@ -288,6 +287,11 @@ libev
     or have a negative value when not available. In general these
     attributes are not portable and not implemented by libuv or the
     CFFI backend. See :issue:`1076`.
+
+  - Certain private helper functions (``gevent_handle_error``, part of
+    ``gevent_call``) are now implemented in Cython instead of C. This
+    reduces our reliance on internal undocumented implementation
+    details of Cython and Python that could change.
 
 
 1.2.2 (2017-06-05)

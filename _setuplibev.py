@@ -61,7 +61,10 @@ def configure_libev(bext, ext):
         os.chdir(cwd)
 
 CORE = Extension(name='gevent.libev.corecext',
-                 sources=['src/gevent/libev/corecext.pyx'],
+                 sources=[
+                     'src/gevent/libev/corecext.pyx',
+                     'src/gevent/libev/callbacks.c',
+                 ],
                  include_dirs=['src/gevent/libev'] + [dep_abspath('libev')] if LIBEV_EMBED else [],
                  libraries=list(LIBRARIES),
                  define_macros=list(DEFINE_MACROS),
@@ -89,13 +92,3 @@ else:
     CORE.libraries.append('ev')
 
 CORE = cythonize1(CORE)
-
-# XXX The include of callbacks.c must go at the end of the
-# file because it references things cython generates.
-# How can we do this automatically, or relax that restriction?
-with open(CORE.sources[0]) as f:
-    core_data = f.read()
-
-if '#include "callbacks.c"' not in core_data:
-    with open(CORE.sources[0], 'a') as f:
-        f.write('\n#include "callbacks.c"\n')

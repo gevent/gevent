@@ -1172,3 +1172,51 @@ EV_USE_INOTIFY = libev.EV_USE_INOTIFY
 EV_USE_SIGNALFD = libev.EV_USE_SIGNALFD
 EV_USE_EVENTFD = libev.EV_USE_EVENTFD
 EV_USE_4HEAP = libev.EV_USE_4HEAP
+
+# Things used in callbacks.c
+
+from cpython cimport PyErr_Fetch
+from cpython cimport PyObject
+
+cdef public void gevent_handle_error(loop loop, object context):
+    cdef PyObject* typep
+    cdef PyObject* valuep
+    cdef PyObject* tracebackp
+
+    cdef object type
+    cdef object value = None
+    cdef object traceback = None
+    cdef object result
+
+    # If it was set, this will clear it, and we will own
+    # the references.
+    PyErr_Fetch(&typep, &valuep, &tracebackp)
+    # TODO: Should we call PyErr_Normalize? There's code in
+    # Hub.handle_error that works around what looks like an
+    # unnormalized exception.
+
+    if not typep:
+        return
+    # This assignment will do a Py_INCREF
+    # on the value. We already own the reference
+    # returned from PyErr_Fetch,
+    # so we must decref immediately
+    type = <object>typep
+    Py_DECREF(type)
+
+    if valuep:
+        value = <object>valuep
+        Py_DECREF(value)
+    if tracebackp:
+        traceback = <object>tracebackp
+        Py_DECREF(traceback)
+
+    # If this method fails by raising an exception,
+    # cython will print it for us because we don't return a
+    # Python object and we don't declare an `except` clause.
+    loop.handle_error(context, type, value, traceback)
+
+cdef public tuple _empty_tuple = ()
+
+cdef public object gevent_loop_run_callbacks(loop loop):
+    return loop._run_callbacks()

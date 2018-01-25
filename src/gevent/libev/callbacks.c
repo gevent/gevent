@@ -1,42 +1,29 @@
 /* Copyright (c) 2011-2012 Denis Bilenko. See LICENSE for details. */
+#include <stddef.h>
+#include "Python.h"
+#include "ev.h"
+#include "corecext.h"
+#include "callbacks.h"
 #ifdef Py_PYTHON_H
 
-/* the name changes depending on our file layout and --module-name option */
-#define _GEVENTLOOP struct __pyx_vtabstruct_6gevent_5libev_8corecext_loop
+#if PY_MAJOR_VERSION >= 3
+  #define PyInt_FromLong               PyLong_FromLong
+#endif
 
 
-static void gevent_handle_error(struct PyGeventLoopObject* loop, PyObject* context) {
-    PyThreadState *tstate;
-    PyObject *type, *value, *traceback, *result;
-    tstate = PyThreadState_GET();
-    type = tstate->curexc_type;
-    if (!type)
-        return;
-    value = tstate->curexc_value;
-    traceback = tstate->curexc_traceback;
-    if (!value) value = Py_None;
-    if (!traceback) traceback = Py_None;
-
-    Py_INCREF(type);
-    Py_INCREF(value);
-    Py_INCREF(traceback);
-
-    PyErr_Clear();
-
-    result = ((_GEVENTLOOP *)loop->__pyx_vtab)->handle_error(loop, context, type, value, traceback, 0);
-
-    if (result) {
-        Py_DECREF(result);
-    }
-    else {
-        PyErr_Print();
-        PyErr_Clear();
-    }
-
-    Py_DECREF(type);
-    Py_DECREF(value);
-    Py_DECREF(traceback);
-}
+#ifndef CYTHON_INLINE
+  #if defined(__clang__)
+    #define CYTHON_INLINE __inline__ __attribute__ ((__unused__))
+  #elif defined(__GNUC__)
+    #define CYTHON_INLINE __inline__
+  #elif defined(_MSC_VER)
+    #define CYTHON_INLINE __inline
+  #elif defined (__STDC_VERSION__) && __STDC_VERSION__ >= 199901L
+    #define CYTHON_INLINE inline
+  #else
+    #define CYTHON_INLINE
+  #endif
+#endif
 
 
 static CYTHON_INLINE void gevent_check_signals(struct PyGeventLoopObject* loop) {
@@ -69,7 +56,7 @@ static void gevent_stop(PyObject* watcher, struct PyGeventLoopObject* loop) {
     error = 1;
     method = PyObject_GetAttrString(watcher, "stop");
     if (method) {
-        result = PyObject_Call(method, __pyx_empty_tuple, NULL);
+        result = PyObject_Call(method, _empty_tuple, NULL);
         if (result) {
             Py_DECREF(result);
             error = 0;
@@ -94,7 +81,7 @@ static void gevent_callback(struct PyGeventLoopObject* loop, PyObject* callback,
     Py_INCREF(watcher);
     gevent_check_signals(loop);
     if (args == Py_None) {
-        args = __pyx_empty_tuple;
+        args = _empty_tuple;
     }
     length = PyTuple_Size(args);
     if (length < 0) {
@@ -143,7 +130,7 @@ end:
 }
 
 
-static void gevent_call(struct PyGeventLoopObject* loop, struct PyGeventCallbackObject* cb) {
+void gevent_call(struct PyGeventLoopObject* loop, struct PyGeventCallbackObject* cb) {
     /* no need for GIL here because it is only called from run_callbacks which already has GIL */
     PyObject *result, *callback, *args;
     if (!loop || !cb)
@@ -187,7 +174,7 @@ static void gevent_call(struct PyGeventLoopObject* loop, struct PyGeventCallback
 
 #undef DEFINE_CALLBACK
 #define DEFINE_CALLBACK(WATCHER_LC, WATCHER_TYPE) \
-    static void gevent_callback_##WATCHER_LC(struct ev_loop *_loop, void *c_watcher, int revents) {                  \
+    void gevent_callback_##WATCHER_LC(struct ev_loop *_loop, void *c_watcher, int revents) {                  \
         struct PyGeventWatcherObject* watcher = (struct PyGeventWatcherObject*)GET_OBJECT(PyGevent##WATCHER_TYPE##Object, c_watcher, _watcher);    \
         gevent_callback(watcher->loop, watcher->_callback, watcher->args, (PyObject*)watcher, c_watcher, revents); \
     }
@@ -196,7 +183,7 @@ static void gevent_call(struct PyGeventLoopObject* loop, struct PyGeventCallback
 DEFINE_CALLBACKS
 
 
-static void gevent_run_callbacks(struct ev_loop *_loop, void *watcher, int revents) {
+void gevent_run_callbacks(struct ev_loop *_loop, void *watcher, int revents) {
     struct PyGeventLoopObject* loop;
     PyObject *result;
     GIL_DECLARE;
@@ -204,7 +191,7 @@ static void gevent_run_callbacks(struct ev_loop *_loop, void *watcher, int reven
     loop = GET_OBJECT(PyGeventLoopObject, watcher, _prepare);
     Py_INCREF(loop);
     gevent_check_signals(loop);
-    result = ((_GEVENTLOOP *)loop->__pyx_vtab)->_run_callbacks(loop);
+    result = gevent_loop_run_callbacks(loop);
     if (result) {
         Py_DECREF(result);
     }
@@ -218,7 +205,7 @@ static void gevent_run_callbacks(struct ev_loop *_loop, void *watcher, int reven
 
 /* This is only used on Win32 */
 
-static void gevent_periodic_signal_check(struct ev_loop *_loop, void *watcher, int revents) {
+void gevent_periodic_signal_check(struct ev_loop *_loop, void *watcher, int revents) {
     GIL_DECLARE;
     GIL_ENSURE;
     gevent_check_signals(GET_OBJECT(PyGeventLoopObject, watcher, _periodic_signal_checker));

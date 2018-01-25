@@ -1,5 +1,9 @@
+struct ev_loop;
+struct PyGeventLoopObject;
+struct PyGeventCallbackObject;
+
 #define DEFINE_CALLBACK(WATCHER_LC, WATCHER_TYPE) \
-    static void gevent_callback_##WATCHER_LC(struct ev_loop *, void *, int);
+    void gevent_callback_##WATCHER_LC(struct ev_loop *, void *, int);
 
 
 #define DEFINE_CALLBACKS0              \
@@ -21,14 +25,14 @@
 DEFINE_CALLBACKS
 
 
-static void gevent_run_callbacks(struct ev_loop *, void *, int);
-struct PyGeventLoopObject;
-static void gevent_handle_error(struct PyGeventLoopObject* loop, PyObject* context);
-struct PyGeventCallbackObject;
-static void gevent_call(struct PyGeventLoopObject* loop, struct PyGeventCallbackObject* cb);
+void gevent_run_callbacks(struct ev_loop *, void *, int);
+
+
+
+void gevent_call(struct PyGeventLoopObject* loop, struct PyGeventCallbackObject* cb);
 
 static void gevent_noop(struct ev_loop *_loop, void *watcher, int revents) {
 }
 
 /* Only used on Win32 */
-static void gevent_periodic_signal_check(struct ev_loop *, void *, int);
+void gevent_periodic_signal_check(struct ev_loop *, void *, int);
