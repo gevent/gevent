@@ -163,6 +163,37 @@ __all__ = ["local"]
 class _wrefdict(dict):
     """A dict that can be weak referenced"""
 
+class _thread_deleted(object):
+    __slots__ = ('idt', 'wrdicts')
+
+    def __init__(self, idt, wrdicts):
+        self.idt = idt
+        self.wrdicts = wrdicts
+
+    def __call__(self, _unused):
+        dicts = self.wrdicts()
+        if dicts:
+            dicts.pop(self.idt, None)
+
+class _local_deleted(object):
+    __slots__ = ('key', 'wrthread', 'thread_deleted')
+
+    def __init__(self, key, wrthread, thread_deleted):
+        self.key = key
+        self.wrthread = wrthread
+        self.thread_deleted = thread_deleted
+
+    def __call__(self, _unused):
+        thread = self.wrthread()
+        if thread is not None:
+            try:
+                unlink = thread.unlink
+            except AttributeError:
+                pass
+            else:
+                unlink(self.thread_deleted)
+            del thread.__dict__[self.key]
+
 class _localimpl(object):
     """A class managing thread-local dicts"""
     __slots__ = ('key', 'dicts', 'localargs', '__weakref__',)
@@ -179,65 +210,71 @@ class _localimpl(object):
         # We need to create the thread dict in anticipation of
         # __init__ being called, to make sure we don't call it
         # again ourselves. MUST do this before setting any attributes.
-        self.create_dict()
+        _localimpl_create_dict(self)
 
-    def get_dict(self):
-        """Return the dict for the current thread. Raises KeyError if none
-        defined."""
-        thread = getcurrent()
-        return self.dicts[id(thread)][1]
+# We use functions instead of methods so that they can be cdef'd in
+# local.pxd; if they were cdef'd as methods, they would cause
+# the creation of a pointer and a vtable. This happens
+# even if we declare the class @cython.final. functions thus save memory overhead
+# (but not pointer chasing overhead; the vtable isn't used when we declare
+# the class final).
 
-    def create_dict(self):
-        """Create a new dict for the current thread, and return it."""
-        localdict = {}
-        key = self.key
-        thread = getcurrent()
-        idt = id(thread)
+def _localimpl_get_dict(self):
+    """Return the dict for the current thread. Raises KeyError if none
+    defined."""
+    thread = getcurrent()
+    return self.dicts[id(thread)][1]
 
-        wrdicts = ref(self.dicts)
+def _localimpl_create_dict(self):
+    """Create a new dict for the current thread, and return it."""
+    localdict = {}
+    key = self.key
+    thread = getcurrent()
+    idt = id(thread)
 
-        def thread_deleted(_, idt=idt, wrdicts=wrdicts):
-            # When the thread is deleted, remove the local dict.
-            # Note that this is suboptimal if the thread object gets
-            # caught in a reference loop. We would like to be called
-            # as soon as the OS-level thread ends instead.
+    wrdicts = ref(self.dicts)
 
-            # If we are working with a gevent.greenlet.Greenlet, we
-            # can pro-actively clear out with a link, avoiding the
-            # issue described above.Use rawlink to avoid spawning any
-            # more greenlets.
-            dicts = wrdicts()
-            if dicts:
-                dicts.pop(idt, None)
+    # When the thread is deleted, remove the local dict.
+    # Note that this is suboptimal if the thread object gets
+    # caught in a reference loop. We would like to be called
+    # as soon as the OS-level thread ends instead.
 
-        try:
-            rawlink = thread.rawlink
-        except AttributeError:
-            wrthread = ref(thread, thread_deleted)
-        else:
-            rawlink(thread_deleted)
-            wrthread = ref(thread)
+    # If we are working with a gevent.greenlet.Greenlet, we
+    # can pro-actively clear out with a link, avoiding the
+    # issue described above.Use rawlink to avoid spawning any
+    # more greenlets.
+    thread_deleted = _thread_deleted(idt, wrdicts)
 
-        def local_deleted(_, key=key, wrthread=wrthread, thread_deleted=thread_deleted):
-            # When the localimpl is deleted, remove the thread attribute.
-            thread = wrthread()
-            if thread is not None:
-                try:
-                    unlink = thread.unlink
-                except AttributeError:
-                    pass
-                else:
-                    unlink(thread_deleted)
-                del thread.__dict__[key]
+    try:
+        rawlink = thread.rawlink
+    except AttributeError:
+        wrthread = ref(thread, thread_deleted)
+    else:
+        rawlink(thread_deleted)
+        wrthread = ref(thread)
 
-        wrlocal = ref(self, local_deleted)
-        thread.__dict__[key] = wrlocal
+    # When the localimpl is deleted, remove the thread attribute.
+    local_deleted = _local_deleted(key, wrthread, thread_deleted)
 
-        self.dicts[idt] = wrthread, localdict
-        return localdict
+
+    wrlocal = ref(self, local_deleted)
+    thread.__dict__[key] = wrlocal
+
+    self.dicts[idt] = wrthread, localdict
+    return localdict
 
 
 _marker = object()
+
+def _local_get_dict(self):
+    impl = self._local__impl
+    try:
+        dct = _localimpl_get_dict(impl)
+    except KeyError:
+        dct = _localimpl_create_dict(impl)
+        args, kw = impl.localargs
+        self.__init__(*args, **kw)
+    return dct
 
 class local(object):
     """
@@ -259,17 +296,7 @@ class local(object):
             # they will be, and this will produce an error.
             return object.__getattribute__(self, name)
 
-        # Begin inlined function _get_dict()
-        # Using object.__getattribute__ here disables Cython knowing the
-        # type of the object and using cdef calls to it.
-        impl = self._local__impl
-        try:
-            dct = impl.get_dict()
-        except KeyError:
-            dct = impl.create_dict()
-            args, kw = impl.localargs
-            self.__init__(*args, **kw)
-        # End inlined function _get_dict
+        dct = _local_get_dict(self)
 
         if name == '__dict__':
             return dct
@@ -348,16 +375,7 @@ class local(object):
             object.__setattr__(self, '_local__impl', value)
             return
 
-        # Begin inlined function _get_dict()
-        impl = self._local__impl
-        try:
-            dct = impl.get_dict()
-        except KeyError:
-            dct = impl.create_dict()
-            args, kw = impl.localargs
-            self.__init__(*args, **kw)
-        # End inlined function _get_dict
-
+        dct = _local_get_dict(self)
 
         type_self = type(self)
         if type_self is local:
@@ -393,14 +411,7 @@ class local(object):
         # Otherwise it goes directly in the dict
 
         # Begin inlined function _get_dict()
-        impl = self._local__impl
-        try:
-            dct = impl.get_dict()
-        except KeyError:
-            dct = impl.create_dict()
-            args, kw = impl.localargs
-            self.__init__(*args, **kw)
-        # End inlined function _get_dict
+        dct = _local_get_dict(self)
 
         try:
             del dct[name]
@@ -410,22 +421,22 @@ class local(object):
     def __copy__(self):
         impl = self._local__impl
 
-        d = impl.get_dict()
+        d = _localimpl_get_dict(impl)
         duplicate = copy(d)
 
         cls = type(self)
         args, kw = impl.localargs
         instance = cls(*args, **kw)
-        local._local__copy_dict_from(instance, impl, duplicate)
+        _local__copy_dict_from(instance, impl, duplicate)
         return instance
 
-    def _local__copy_dict_from(self, impl, duplicate):
-        current = getcurrent()
-        currentId = id(current)
-        new_impl = self._local__impl
-        assert new_impl is not impl
-        tpl = new_impl.dicts[currentId]
-        new_impl.dicts[currentId] = (tpl[0], duplicate)
+def _local__copy_dict_from(self, impl, duplicate):
+    current = getcurrent()
+    currentId = id(current)
+    new_impl = self._local__impl
+    assert new_impl is not impl
+    tpl = new_impl.dicts[currentId]
+    new_impl.dicts[currentId] = (tpl[0], duplicate)
 
 
 

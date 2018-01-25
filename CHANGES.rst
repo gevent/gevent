@@ -75,9 +75,11 @@ Build Changes
 
 - :class:`gevent.local.local` is compiled with Cython on CPython. It
   was already 5 to 6 times faster due to the work on :issue:`1020`,
-  and compiling it with Cython makes it another 5 to 6 times faster, for a
-  total speed up of about 35 times. It is now in the same ballpark as
-  the native :class:`threading.local` class. See :pr:`1024`.
+  and compiling it with Cython makes it another 5 to 6 times faster,
+  for a total speed up of about 35 times. It is now in the same
+  ballpark as the native :class:`threading.local` class. It also uses
+  one pointer less memory per object, and one pointer less memory per
+  greenlet. See :pr:`1024`.
 
 
 Other Changes
