@@ -250,7 +250,7 @@ cdef void gevent_ares_nameinfo_callback(void *arg, int status, int timeouts, cha
         channel.loop.handle_error(callback, *sys.exc_info())
 
 
-cdef public class channel [object PyGeventAresChannelObject, type PyGeventAresChannel_Type]:
+cdef class channel:
 
     cdef public object loop
     cdef ares_channeldata* channel

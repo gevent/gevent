@@ -82,6 +82,10 @@ Build Changes
   greenlet. See :pr:`1024`.
 
 
+- The Cython ares 'channel' class is no longer declared to be publicly
+  accessible from a named C structure. Doing so caused a conflict with
+  the c-ares header files.
+
 Other Changes
 -------------
 
