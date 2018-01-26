@@ -40,6 +40,7 @@ sys = __import__('sys', level=0)
 os = __import__('os', level=0)
 traceback = __import__('traceback', level=0)
 signalmodule = __import__('signal', level=0)
+getswitchinterval = __import__('gevent', level=0).getswitchinterval
 
 
 __all__ = ['get_version',
@@ -261,24 +262,147 @@ cdef bint _check_loop(loop loop) except -1:
 cdef bint _default_loop_destroyed = False
 
 
+cdef public class callback [object PyGeventCallbackObject, type PyGeventCallback_Type]:
+    cdef public object callback
+    cdef public tuple args
+    cdef callback next
+
+    def __init__(self, callback, args):
+        self.callback = callback
+        self.args = args
+
+    def stop(self):
+        self.callback = None
+        self.args = None
+
+    close = stop
+
+    # Note, that __nonzero__ and pending are different
+    # nonzero is used in contexts where we need to know whether to schedule another callback,
+    # so it's true if it's pending or currently running
+    # 'pending' has the same meaning as libev watchers: it is cleared before entering callback
+
+    def __nonzero__(self):
+        # it's nonzero if it's pending or currently executing
+        return self.args is not None
+
+    @property
+    def pending(self):
+        return self.callback is not None
+
+    def __repr__(self):
+        if Py_ReprEnter(self) != 0:
+            return "<...>"
+        try:
+            format = self._format()
+            result = "<%s at 0x%x%s" % (self.__class__.__name__, id(self), format)
+            if self.pending:
+                result += " pending"
+            if self.callback is not None:
+                result += " callback=%r" % (self.callback, )
+            if self.args is not None:
+                result += " args=%r" % (self.args, )
+            if self.callback is None and self.args is None:
+                result += " stopped"
+            return result + ">"
+        finally:
+            Py_ReprLeave(self)
+
+    def _format(self):
+        return ''
+
+DEF CALLBACK_CHECK_COUNT = 50
+
+@cython.final
+@cython.internal
+cdef class CallbackFIFO(object):
+    cdef callback head
+    cdef callback tail
+
+    def __init__(self):
+        self.head = None
+        self.tail = None
+
+    cdef inline callback popleft(self):
+        cdef callback head = self.head
+        self.head = head.next
+        if self.head is self.tail or self.head is None:
+            self.tail = None
+        head.next = None
+        return head
+
+
+    cdef inline append(self, callback new_tail):
+        assert not new_tail.next
+        if self.tail is None:
+            if self.head is None:
+                # Completely empty, so this
+                # is now our head
+                self.head = new_tail
+                return
+            self.tail = self.head
+
+
+        assert self.head is not None
+        old_tail = self.tail
+        old_tail.next = new_tail
+        self.tail = new_tail
+
+    def __nonzero__(self):
+        return self.head is not None
+
+    def __len__(self):
+        cdef Py_ssize_t count = 0
+        head = self.head
+        while head is not None:
+            count += 1
+            head = head.next
+        return count
+
+    def __iter__(self):
+        cdef list objects = []
+        head = self.head
+        while head is not None:
+            objects.append(head)
+            head = head.next
+        return iter(objects)
+
+    cdef bint has_callbacks(self):
+        return self.head
+
+    def __repr__(self):
+        return "<callbacks@%r len=%d head=%r tail=%r>" % (id(self), len(self), self.head, self.tail)
+
 
 cdef public class loop [object PyGeventLoopObject, type PyGeventLoop_Type]:
-    cdef libev.ev_loop* _ptr
-    cdef public object error_handler
+    ## embedded struct members
     cdef libev.ev_prepare _prepare
-    cdef public list _callbacks
     cdef libev.ev_timer _timer0
     # We'll only actually start this timer if we're on Windows,
     # but it doesn't hurt to compile it in on all platforms.
     cdef libev.ev_timer _periodic_signal_checker
 
-    def __init__(self, object flags=None, object default=None, size_t ptr=0):
+    ## pointer members
+    cdef public object error_handler
+    cdef libev.ev_loop* _ptr
+    cdef public CallbackFIFO _callbacks
+
+    ## data members
+    cdef bint starting_timer_may_update_loop_time
+
+    def __cinit__(self, object flags=None, object default=None, libev.intptr_t ptr=0):
+        self.starting_timer_may_update_loop_time = 0
+        libev.ev_prepare_init(&self._prepare,
+                              <void*>gevent_run_callbacks)
+        libev.ev_timer_init(&self._periodic_signal_checker,
+                            <void*>gevent_periodic_signal_check,
+                            0.3, 0.3)
+        libev.ev_timer_init(&self._timer0,
+                            <void*>gevent_noop,
+                            0.0, 0.0)
+
         cdef unsigned int c_flags
         cdef object old_handler = None
-        libev.ev_prepare_init(&self._prepare, <void*>gevent_run_callbacks)
-        libev.ev_timer_init(&self._periodic_signal_checker, <void*>gevent_periodic_signal_check,
-                            0.3, 0.3)
-        libev.ev_timer_init(&self._timer0, <void*>gevent_noop, 0.0, 0.0)
         if ptr:
             self._ptr = <libev.ev_loop*>ptr
         else:
@@ -303,24 +427,47 @@ cdef public class loop [object PyGeventLoopObject, type PyGeventLoop_Type]:
                     raise SystemError("ev_loop_new(%s) failed" % (c_flags, ))
             if default or __SYSERR_CALLBACK is None:
                 set_syserr_cb(self._handle_syserr)
-            libev.ev_prepare_start(self._ptr, &self._prepare)
-            libev.ev_unref(self._ptr)
-        self._callbacks = []
+
+
+        libev.ev_prepare_start(self._ptr, &self._prepare)
+        libev.ev_unref(self._ptr)
+
+    def __init__(self, object flags=None, object default=None, libev.intptr_t ptr=0):
+        self._callbacks = CallbackFIFO()
 
     cdef _run_callbacks(self):
         cdef callback cb
         cdef object callbacks
-        cdef int count = 1000
-        libev.ev_timer_stop(self._ptr, &self._timer0)
-        while self._callbacks and count > 0:
-            callbacks = self._callbacks
-            self._callbacks = []
-            for cb in callbacks:
+        cdef int count = CALLBACK_CHECK_COUNT
+        self.starting_timer_may_update_loop_time = True
+        cdef libev.ev_tstamp now = libev.ev_now(self._ptr)
+        cdef libev.ev_tstamp expiration = now + <libev.ev_tstamp>getswitchinterval()
+
+        try:
+            libev.ev_timer_stop(self._ptr, &self._timer0)
+            while self._callbacks.head is not None:
+                cb = self._callbacks.popleft()
+
                 libev.ev_unref(self._ptr)
-                gevent_call(self, cb)
+                gevent_call(self, cb) # XXX: Why is this a C callback, not cython?
                 count -= 1
-        if self._callbacks:
-            libev.ev_timer_start(self._ptr, &self._timer0)
+
+                if count == 0 and self._callbacks.head is not None:
+                    # We still have more to run but we've reached
+                    # the end of one check group
+                    count = CALLBACK_CHECK_COUNT
+
+                    libev.ev_now_update(self._ptr)
+                    if libev.ev_now(self._ptr) >= expiration:
+                        now = 0
+                        break
+
+            if now != 0:
+                libev.ev_now_update(self._ptr)
+            if self._callbacks.head is not None:
+                libev.ev_timer_start(self._ptr, &self._timer0)
+        finally:
+            self.starting_timer_may_update_loop_time = False
 
     def _stop_watchers(self):
         if libev.ev_is_active(&self._prepare):
@@ -416,11 +563,11 @@ cdef public class loop [object PyGeventLoopObject, type PyGeventLoop_Type]:
         _check_loop(self)
         libev.ev_verify(self._ptr)
 
-    def now(self):
+    cpdef libev.ev_tstamp now(self) except *:
         _check_loop(self)
         return libev.ev_now(self._ptr)
 
-    def update_now(self):
+    cpdef void update_now(self) except *:
         _check_loop(self)
         libev.ev_now_update(self._ptr)
 
@@ -574,55 +721,6 @@ cdef public class loop [object PyGeventLoopObject, type PyGeventLoop_Type]:
 
         # Explicitly not EV_USE_SIGNALFD
         raise AttributeError("sigfd")
-
-
-cdef public class callback [object PyGeventCallbackObject, type PyGeventCallback_Type]:
-    cdef public object callback
-    cdef public tuple args
-
-    def __init__(self, callback, args):
-        self.callback = callback
-        self.args = args
-
-    def stop(self):
-        self.callback = None
-        self.args = None
-
-    close = stop
-
-    # Note, that __nonzero__ and pending are different
-    # nonzero is used in contexts where we need to know whether to schedule another callback,
-    # so it's true if it's pending or currently running
-    # 'pending' has the same meaning as libev watchers: it is cleared before entering callback
-
-    def __nonzero__(self):
-        # it's nonzero if it's pending or currently executing
-        return self.args is not None
-
-    @property
-    def pending(self):
-        return self.callback is not None
-
-    def __repr__(self):
-        if Py_ReprEnter(self) != 0:
-            return "<...>"
-        try:
-            format = self._format()
-            result = "<%s at 0x%x%s" % (self.__class__.__name__, id(self), format)
-            if self.pending:
-                result += " pending"
-            if self.callback is not None:
-                result += " callback=%r" % (self.callback, )
-            if self.args is not None:
-                result += " args=%r" % (self.args, )
-            if self.callback is None and self.args is None:
-                result += " stopped"
-            return result + ">"
-        finally:
-            Py_ReprLeave(self)
-
-    def _format(self):
-        return ''
 
 
 # about readonly _flags attribute:
@@ -913,15 +1011,6 @@ cdef public class timer(watcher) [object PyGeventTimerObject, type PyGeventTimer
 
     cdef libev.ev_timer _watcher
 
-    update_loop_time_on_start = False
-
-    def start(self, object callback, *args, update=None):
-        if update is None:
-            update = self.update_loop_time_on_start
-        if update:
-            libev.ev_now_update(self.loop._ptr)
-        _watcher_start(self, callback, args)
-
     def __cinit__(self, loop loop, double after=0.0, double repeat=0.0, ref=True, priority=None):
         if repeat < 0.0:
             raise ValueError("repeat must be positive or zero: %r" % repeat)
@@ -931,6 +1020,12 @@ cdef public class timer(watcher) [object PyGeventTimerObject, type PyGeventTimer
 
     def __init__(self, loop loop, double after=0.0, double repeat=0.0, ref=True, priority=None):
         watcher.__init__(self, loop, ref, priority)
+
+    def start(self, object callback, *args, update=None):
+        update = update if update is not None else self.loop.starting_timer_may_update_loop_time
+        if update:
+            self.loop.update_now()
+        _watcher_start(self, callback, args)
 
     @property
     def at(self):

@@ -22,24 +22,28 @@ version_info = _version_info(1, 3, 0, 'dev', 0)
 __version__ = '1.3.0.dev0'
 
 
-__all__ = ['get_hub',
-           'Greenlet',
-           'GreenletExit',
-           'spawn',
-           'spawn_later',
-           'spawn_raw',
-           'iwait',
-           'wait',
-           'killall',
-           'Timeout',
-           'with_timeout',
-           'getcurrent',
-           'sleep',
-           'idle',
-           'kill',
-           'signal',
-           'fork',
-           'reinit']
+__all__ = [
+    'get_hub',
+    'Greenlet',
+    'GreenletExit',
+    'spawn',
+    'spawn_later',
+    'spawn_raw',
+    'iwait',
+    'wait',
+    'killall',
+    'Timeout',
+    'with_timeout',
+    'getcurrent',
+    'sleep',
+    'idle',
+    'kill',
+    'signal',
+    'fork',
+    'reinit',
+    'getswitchinterval',
+    'setswitchinterval',
+]
 
 
 import sys
@@ -47,6 +51,26 @@ if sys.platform == 'win32':
     # trigger WSAStartup call
     import socket  # pylint:disable=unused-import,useless-suppression
     del socket
+
+try:
+    # Floating point number, in number of seconds,
+    # like time.time
+    getswitchinterval = sys.getswitchinterval
+    setswitchinterval = sys.setswitchinterval
+except AttributeError:
+    # Running on Python 2
+    _switchinterval = 0.005
+
+    def getswitchinterval():
+        return _switchinterval
+
+    def setswitchinterval(interval):
+        # Weed out None and non-numbers. This is not
+        # exactly exception compatible with the Python 3
+        # versions.
+        if interval > 0:
+            global _switchinterval
+            _switchinterval = interval
 
 from gevent.hub import get_hub, iwait, wait
 from gevent.greenlet import Greenlet, joinall, killall

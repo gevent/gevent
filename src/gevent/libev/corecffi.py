@@ -199,17 +199,6 @@ _default_loop_destroyed = False
 
 from gevent._ffi.loop import AbstractLoop
 
-# from gevent.libev.watcher import watcher
-# from gevent.libev.watcher import io
-# from gevent.libev.watcher import timer
-# from gevent.libev.watcher import signal
-# from gevent.libev.watcher import idle
-# from gevent.libev.watcher import prepare
-# from gevent.libev.watcher import check
-# from gevent.libev.watcher import fork
-# from gevent.libev.watcher import async
-# from gevent.libev.watcher import child
-# from gevent.libev.watcher import stat
 
 from gevent.libev import watcher as _watchers
 _events_to_str = _watchers._events_to_str # exported

@@ -160,6 +160,16 @@ Other Changes
 - gevent now uses cffi's "extern 'Python'" callbacks. These should be
   faster and more stable. This requires at least cffi 1.4.0. See :issue:`1049`.
 
+- gevent now approximately tries to stick to a scheduling interval
+  when running callbacks, instead of simply running a count of
+  callbacks. The interval is determined by
+  :func:`gevent.getswitchinterval`. On Python 3, this is the same as
+  the thread switch interval. On Python 2, this defaults to 0.005s and
+  can be changed with :func:`gevent.setswitchinterval`. This should
+  result in more fair "scheduling" of greenlets, especially when
+  ``gevent.sleep(0)`` or other busy callbacks are in use. The interval
+  is checked every 50 callbacks to keep overhead low. See
+  :issue:`1072`. With thanks to Arcadiy Ivanov and Antonio Cuni.
 
 libuv
 -----
@@ -238,6 +248,8 @@ libuv
     time updated, without cycling the event loop. See :issue:`1057`.
 
     libev has also been changed to follow this behaviour.
+
+    Also see :issue:`1072`.
 
   - Timers of zero duration do not necessarily cause the event loop to
     cycle, as they do in libev. Instead, they may be called

@@ -177,9 +177,6 @@ class io(_base.IoMixin, watcher):
 
 class timer(_base.TimerMixin, watcher):
 
-    def _update_now(self):
-        libev.ev_now_update(self.loop._ptr)
-
     @property
     def at(self):
         return self._watcher.at
