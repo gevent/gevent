@@ -173,23 +173,31 @@ class loop(AbstractLoop):
         # while True:
         #   uv__update_time(loop);
         #   uv__run_timers(loop);
+        #   # we don't use pending watchers. They are how libuv
+        #   # implements the pipe/udp/tcp streams.
         #   ran_pending = uv__run_pending(loop);
         #   uv__run_idle(loop);
         #   uv__run_prepare(loop);
         #   ...
-        #   uv__io_poll(loop, timeout);
+        #   uv__io_poll(loop, timeout); # <--- IO watchers run here!
         #   uv__run_check(loop);
 
         # libev looks something like this (pseudo code because the real code is
         # hard to read):
         #
         # do {
+        #    run_fork_callbacks();
         #    run_prepare_callbacks();
         #    timeout = min(time of all timers or normal block time)
-        #    io_poll()
+        #    io_poll() # <--- Only queues IO callbacks
         #    update_now(); calculate_expired_timers();
-        #    run_timers()
-        #    run_pending()
+        #    run callbacks in this order: (although specificying priorities changes it)
+        #        check
+        #        stat
+        #        child
+        #        signal
+        #        timer
+        #        io
         # }
 
         # So instead of running a no-op and letting the side-effect of spinning

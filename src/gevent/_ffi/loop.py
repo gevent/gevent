@@ -324,13 +324,17 @@ class AbstractLoop(object):
 
 
         # self._check is a watcher that runs in each iteration of the
-        # mainloop, just after the blocking call
+        # mainloop, just after the blocking call. It's point is to handle
+        # signals. It doesn't run watchers or callbacks, it just exists to give
+        # CFFI a chance to raise signal exceptions so we can handle them.
         self._check = self._ffi.new(self._CHECK_POINTER)
         self._check.data = self._handle_to_self
         self._init_and_start_check()
 
         # self._prepare is a watcher that runs in each iteration of the mainloop,
-        # just before the blocking call
+        # just before the blocking call. It's where we run deferred callbacks
+        # from self.run_callback. This cooperates with _setup_for_run_callback()
+        # to schedule self._timer0 if needed.
         self._prepare = self._ffi.new(self._PREPARE_POINTER)
         self._prepare.data = self._handle_to_self
         self._init_and_start_prepare()
@@ -589,6 +593,9 @@ class AbstractLoop(object):
         raise NotImplementedError()
 
     def run_callback(self, func, *args):
+        # If we happen to already be running callbacks (inside
+        # _run_callbacks), this could happen almost immediately,
+        # without the loop cycling.
         cb = callback(func, args)
         self._callbacks.append(cb)
         self._setup_for_run_callback()
