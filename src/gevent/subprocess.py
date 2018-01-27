@@ -423,7 +423,10 @@ class Popen(object):
             raise TypeError("Got unexpected keyword arguments", kwargs)
         pass_fds = kwargs.pop('pass_fds', ())
         start_new_session = kwargs.pop('start_new_session', False)
-        restore_signals = kwargs.pop('restore_signals', True)
+        if PY3:
+            restore_signals = kwargs.pop('restore_signals', True)
+        else:
+            restore_signals = False
         # Added in 3.6. These are kept as ivars
         encoding = self.encoding = kwargs.pop('encoding', None)
         errors = self.errors = kwargs.pop('errors', None)
