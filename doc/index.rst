@@ -8,7 +8,7 @@ event loop.
 
 Features include:
 
-* **Fast event loop** based on libev (epoll on Linux, kqueue on FreeBSD).
+* **Fast event loop** based on libev or libuv (epoll on Linux, kqueue on FreeBSD).
 * **Lightweight execution units** based on greenlet.
 * API that re-uses concepts from the Python standard library (for example there are :class:`gevent.event.Events` and :class:`gevent.queue.Queues`).
 * :doc:`Cooperative sockets with SSL support <networking>`
@@ -23,8 +23,12 @@ why others `use gevent
 <http://groups.google.com/group/gevent/browse_thread/thread/4de9703e5dca8271>`_
 and check out the list of the `open source projects based on gevent. <https://github.com/gevent/gevent/wiki/Projects>`_
 
-gevent is written and maintained by `Denis Bilenko
-<http://denisbilenko.com/>`_ with help from the `contributors <https://github.com/gevent/gevent/blob/master/AUTHORS#L1>`_ and is licensed under the MIT license.
+gevent was written by `Denis Bilenko <http://denisbilenko.com/>`_.
+
+Since version 1.1, gevent is maintained by `NextThought
+<https://nextthought.com>`_ with help from the `contributors
+<https://github.com/gevent/gevent/graphs/contributors>`_ and is
+licensed under the MIT license.
 
 :ref:`Continue reading <installation>` »
 

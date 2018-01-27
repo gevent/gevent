@@ -6,7 +6,7 @@ gevent_ is a coroutine-based Python networking library.
 
 Features include:
 
-* Fast event loop based on libev_.
+* Fast event loop based on libev_ or libuv_.
 * Lightweight execution units based on greenlet_.
 * Familiar API that re-uses concepts from the Python standard library.
 * Cooperative sockets with SSL support.
@@ -18,7 +18,12 @@ simpler implementation and better performance. Read why others `use
 gevent`_ and check out the list of the `open source projects based on
 gevent`_.
 
-gevent is licensed under the MIT license.
+gevent was written by `Denis Bilenko <http://denisbilenko.com/>`_.
+
+Since version 1.1, gevent is maintained by `NextThought
+<https://nextthought.com>`_ with help from the `contributors
+<https://github.com/gevent/gevent/graphs/contributors>`_ and is
+licensed under the MIT license.
 
 See `what's new`_ in the latest major release.
 
@@ -28,15 +33,17 @@ Get gevent
 ==========
 
 gevent runs on Python >= 2.7, Python >= 3.4, or PyPy >= 5.5 (including
-PyPy2 and PyPy3) (*Note*: PyPy is not supported in Windows). On all
-platforms, installing setuptools is required (this is done
-automatically if working in a virtual environment).
+PyPy2 and PyPy3). On all platforms, installing setuptools is required
+(this is done automatically if working in a virtual environment).
 
 You can use pip to install gevent::
 
     pip install gevent
 
 .. tip:: You need Pip 8.0 or later to install the binary wheels.
+
+.. tip:: You need to install from source, not the manylinux wheels, to
+         use the libuv backend.
 
 Download the latest release from `Python Package Index`_ or clone `the repository`_.
 
@@ -52,7 +59,7 @@ Development
 
 To install the latest development version::
 
-  pip install setuptools 'cython>=0.25' git+git://github.com/gevent/gevent.git#egg=gevent
+  pip install setuptools cffi 'cython>=0.27' git+git://github.com/gevent/gevent.git#egg=gevent
 
 To hack on gevent (using a virtualenv)::
 
@@ -64,21 +71,10 @@ To hack on gevent (using a virtualenv)::
 
 .. note::
 
-   You must have Cython, GNU Make, a C compiler, and the Python
-   development headers installed to build a checkout. Installing CFFI
-   on CPython (it's standard on PyPy) allows building the CFFI backend
-   for testing, and tox is the command used to test multiple versions
-   of Python.
-
-   BSD based systems like FreeBSD and OpenBSD often have BSD Make on
-   the PATH as the default ``make`` command, but building gevent from a
-   source checkout (not a source tarball distributed on PyPI) requires
-   GNU Make. GNU Make is often called ``gmake``. If you experience
-   Makefile-related problems building gevent from source on one of
-   these platforms, you can set the ``MAKE`` environment variable to
-   the executable that invokes GNU Make. For example::
-
-      $ MAKE=gmake python ./setup.py install
+   You must have a C compiler, Cython, and the Python development headers
+   installed to build a checkout. Installing CFFI on CPython (it's
+   standard on PyPy) allows building the CFFI backends for testing, and
+   tox is the command used to test multiple versions of Python.
 
 
 Running Tests
@@ -115,14 +111,6 @@ monitor test coverage.
 .. image:: https://coveralls.io/repos/gevent/gevent/badge.svg?branch=master&service=github
    :target: https://coveralls.io/github/gevent/gevent?branch=master
 
-Likewise, builds on Travis CI will automatically submit updates to
-`landscape.io`_ to monitor code health (adherence to PEP8, absence of
-common code smells, etc).
-
-.. image:: https://landscape.io/github/gevent/gevent/master/landscape.svg?style=flat
-   :target: https://landscape.io/github/gevent/gevent/master
-   :alt: Code Health
-
 .. note:: On Debian, you will probably need ``libpythonX.Y-testsuite``
           installed to run all the tests.
 
@@ -142,6 +130,7 @@ Windows.
 .. _gevent: http://www.gevent.org
 .. _greenlet: http://pypi.python.org/pypi/greenlet
 .. _libev: http://libev.schmorp.de/
+.. _libuv: http://libuv.org/
 .. _c-ares: http://c-ares.haxx.se/
 .. _inspired by eventlet: http://blog.gevent.org/2010/02/27/why-gevent/
 .. _use gevent: http://groups.google.com/group/gevent/browse_thread/thread/4de9703e5dca8271
@@ -155,6 +144,5 @@ Windows.
 .. _coverage.py: https://pypi.python.org/pypi/coverage/
 .. _coveralls.io: https://coveralls.io/github/gevent/gevent
 .. _AppVeyor: https://ci.appveyor.com/project/denik/gevent
-.. _what's new: http://www.gevent.org/whatsnew_1_2.html
+.. _what's new: http://www.gevent.org/whatsnew_1_3.html
 .. _changelog: http://www.gevent.org/changelog.html
-.. _landscape.io: https://landscape.io/github/gevent/gevent

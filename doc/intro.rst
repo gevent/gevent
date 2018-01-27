@@ -6,8 +6,8 @@ gevent is a coroutine-based Python networking library.
 
 Features include:
 
-* Fast event loop based on libev (epoll on Linux, kqueue on FreeBSD,
-  select on Mac OS X).
+* Fast event loop based on libev or libuv (epoll on Linux, kqueue on FreeBSD,
+  select on Mac OS X, IOCP on Windows).
 * Lightweight execution units based on greenlet.
 * API that re-uses concepts from the Python standard library (e.g. :class:`gevent.event.Event`, :class:`gevent.queue.Queue`).
 * Cooperative :mod:`socket` and :mod:`ssl` modules.
@@ -22,33 +22,31 @@ Features include:
 Installation and Requirements
 =============================
 
-`gevent 1.2`_ runs on Python 2 and Python 3. Version 2.7 of
-Python 2 is supported, and versions 3.4, 3.5 and 3.6 of Python 3 are
-supported. (Users of older versions of Python 2 need to install gevent
-1.0.x (2.5) or 1.1.x (2.6); Python 3 is not supported by 1.0.) gevent requires the
-greenlet__ library.
+`gevent 1.3`_ runs on Python 2 and Python 3. Version 2.7 of Python 2
+is supported, and versions 3.4, 3.5 and 3.6 of Python 3 are supported.
+(Users of older versions of Python 2 need to install gevent 1.0.x
+(2.5), 1.1.x (2.6) or 1.2.x (<=2.7.8); gevent 1.2 can be installed on
+Python 3.3.) gevent requires the greenlet__ library.
 
-.. note:: Python 3.3 is no longer actively supported since it is not
-          supported by the Python developers. However, it should
-          continue to work with gevent 1.2 with the same level of
-          support as gevent 1.1. For Python 3.3, version 3.3.5 or
-          newer is required to use the gevent's SSL support due to
-          bugs in the standard library of older versions. For Python
-          2, 2.7.9 or newer is recommended for the best SSL support;
-          2.7.8 is also tested although it offers a less-secure SSL
-          module.
+.. note:: Python 3.3 is no longer actively supported in gevent 1.3.
+          since it is not supported by the Python developers. However,
+          it should continue to work with gevent 1.2 with the same
+          level of support as gevent 1.1. For Python 3.3, version
+          3.3.5 or newer is required to use the gevent's SSL support
+          due to bugs in the standard library of older versions. For
+          Python 2, 2.7.9 or newer is required; 2.7.8 is not tested
+          but probably runs, albeit with a less secure SSL module.
 
-gevent 1.2 also runs on PyPy 2.6.1 and above, although 5.0 or above is
+gevent 1.3 also runs on PyPy 5.5 and above, although 5.9 or above is
 strongly recommended. On PyPy, there are no external dependencies.
 
 gevent is tested on Windows, OS X, and Linux, and should run on most
 other Unix-like operating systems (e.g., FreeBSD, Solaris, etc.)
 
-.. note:: gevent does *not* run on PyPy on Windows because the CFFI backend
-          does not build.
-
-.. note:: On Windows, gevent is limited to a maximum of 1024 open
-          sockets due to `limitations in libev`_.
+.. note:: On Windows using the default libev backend, gevent is
+          limited to a maximum of 1024 open sockets due to
+          `limitations in libev`_. This limitation should not exist
+          with the libuv backend.
 
 gevent and greenlet can both be installed with `pip`_, e.g., ``pip
 install gevent``. On Windows, OS X, and Linux, both gevent and greenlet are
@@ -57,7 +55,8 @@ as pip is at least version 8.0). For other platforms
 without pre-built wheels or if wheel installation is disabled, a C compiler
 (Xcode on OS X) and the Python development package are required.
 `cffi`_ can optionally be installed to build the CFFI backend in
-addition to the Cython backend on CPython.
+addition to the Cython backend on CPython; it is necessary to use the
+libuv backend.
 
 Development instructions (including building from a source checkout)
 can be found `on PyPI <https://pypi.python.org/pypi/gevent#development>`_.
@@ -65,7 +64,7 @@ can be found `on PyPI <https://pypi.python.org/pypi/gevent#development>`_.
 __ http://pypi.python.org/pypi/greenlet
 .. _`pip`: https://pip.pypa.io/en/stable/installing/
 .. _`wheels`: http://pythonwheels.com
-.. _`gevent 1.2`: whatsnew_1_2.html
+.. _`gevent 1.3`: whatsnew_1_3.html
 .. _`cffi`: https://cffi.readthedocs.io
 .. _`limitations in libev`: http://pod.tst.eu/http://cvs.schmorp.de/libev/ev.pod#WIN32_PLATFORM_LIMITATIONS_AND_WORKA
 
@@ -190,6 +189,8 @@ The event loop provided by libev uses the fastest polling mechanism
 available on the system by default. Please read the `libev documentation`_ for more
 information.
 
+.. 1.3: libuv update needed
+
 .. As of 1.1 or before, we set the EVFLAG_NOENV so this isn't possible any more.
 
    It is possible to command libev to
@@ -201,7 +202,9 @@ information.
 
 .. _`libev documentation`: http://pod.tst.eu/http://cvs.schmorp.de/libev/ev.pod#FUNCTIONS_CONTROLLING_EVENT_LOOPS
 
-The Libev API is available under the :mod:`gevent.core` module. Note that
+.. 1.3: libuv update needed
+
+The libev API is available under the :mod:`gevent.core` module. Note that
 the callbacks supplied to the libev API are run in the :class:`~gevent.hub.Hub`
 greenlet and thus cannot use the synchronous gevent API. It is possible to
 use the asynchronous API there, like :func:`gevent.spawn` and
