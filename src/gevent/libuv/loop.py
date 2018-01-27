@@ -382,7 +382,11 @@ class loop(AbstractLoop):
         return libuv.uv_run(self._ptr, mode)
 
     def now(self):
-        return libuv.uv_now(self._ptr)
+        # libuv's now is expressed as an integer number of
+        # milliseconds, so to get it compatible with time.time units
+        # that this method is supposed to return, we have to divide by 1000.0
+        now = libuv.uv_now(self._ptr)
+        return now / 1000.0
 
     def update_now(self):
         libuv.uv_update_time(self._ptr)

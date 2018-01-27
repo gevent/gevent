@@ -146,7 +146,9 @@ cdef extern from "libev.h" nogil:
     unsigned int ev_recommended_backends()
     unsigned int ev_embeddable_backends()
 
-    double ev_time()
+    ctypedef double ev_tstamp
+
+    ev_tstamp ev_time()
     void ev_set_syserr_cb(void *)
 
     int ev_priority(void*)
@@ -209,7 +211,7 @@ cdef extern from "libev.h" nogil:
     void ev_verify(ev_loop*)
     void ev_run(ev_loop*, int flags) nogil
 
-    double ev_now(ev_loop*)
+    ev_tstamp ev_now(ev_loop*)
     void ev_now_update(ev_loop*)
 
     void ev_ref(ev_loop*)

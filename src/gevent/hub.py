@@ -157,6 +157,10 @@ def sleep(seconds=0, ref=True):
     If *ref* is False, the greenlet running ``sleep()`` will not prevent :func:`gevent.wait`
     from exiting.
 
+    .. versionchanged:: 1.3a1
+       Sleeping with a value of 0 will now be bounded to approximately block the
+       loop for no longer than :func:`gevent.getswitchinterval`.
+
     .. seealso:: :func:`idle`
     """
     hub = get_hub()

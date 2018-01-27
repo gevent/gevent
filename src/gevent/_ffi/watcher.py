@@ -499,8 +499,6 @@ class IoMixin(object):
 class TimerMixin(object):
     _watcher_type = 'timer'
 
-    update_loop_time_on_start = False
-
     def __init__(self, loop, after=0.0, repeat=0.0, ref=True, priority=None):
         if repeat < 0.0:
             raise ValueError("repeat must be positive or zero: %r" % repeat)
@@ -509,7 +507,7 @@ class TimerMixin(object):
         super(TimerMixin, self).__init__(loop, ref=ref, priority=priority, args=(after, repeat))
 
     def start(self, callback, *args, **kw):
-        update = kw.get("update", self.update_loop_time_on_start)
+        update = kw.get("update", self.loop.starting_timer_may_update_loop_time)
         if update:
             # Quoth the libev doc: "This is a costly operation and is
             # usually done automatically within ev_run(). This
@@ -517,9 +515,12 @@ class TimerMixin(object):
             # runs for a very long time without entering the event
             # loop, updating libev's idea of the current time is a
             # good idea."
-            # 1.3 changed the default for this to False. Note that
+
+            # 1.3 changed the default for this to False *unless* the loop is
+            # running a callback; see libuv for details. Note that
             # starting Timeout objects internally still sets this to true.
-            self.loop.update()
+
+            self.loop.update_now()
         super(TimerMixin, self).start(callback, *args)
 
     def again(self, callback, *args, **kw):

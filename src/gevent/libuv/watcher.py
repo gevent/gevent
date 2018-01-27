@@ -618,8 +618,6 @@ class timer(_base.TimerMixin, watcher):
     # This ensures the loop cycles. Of course, the 'again' method does
     # nothing on them and doesn't exist. In practice that's not an issue.
 
-    update_loop_time_on_start = False
-
     _again = False
 
     def _watcher_ffi_init(self, args):

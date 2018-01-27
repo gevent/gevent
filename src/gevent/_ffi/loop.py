@@ -3,6 +3,8 @@ Basic loop implementation for ffi-based cores.
 """
 # pylint: disable=too-many-lines, protected-access, redefined-outer-name, not-callable
 from __future__ import absolute_import, print_function
+
+from collections import deque
 import sys
 import os
 import traceback
@@ -12,6 +14,8 @@ from gevent._ffi import GEVENT_DEBUG_LEVEL
 from gevent._ffi import TRACE
 from gevent._ffi import CRITICAL
 from gevent._ffi.callback import callback
+
+from gevent import getswitchinterval
 
 __all__ = [
     'AbstractLoop',
@@ -292,6 +296,7 @@ _default_loop_destroyed = False
 
 _NOARGS = ()
 
+CALLBACK_CHECK_COUNT = 50
 
 class AbstractLoop(object):
     # pylint:disable=too-many-public-methods,too-many-instance-attributes
@@ -305,6 +310,8 @@ class AbstractLoop(object):
 
     _PREPARE_POINTER = None
 
+    starting_timer_may_update_loop_time = False
+
     def __init__(self, ffi, lib, watchers, flags=None, default=None):
         self._ffi = ffi
         self._lib = lib
@@ -312,7 +319,7 @@ class AbstractLoop(object):
         self._handle_to_self = self._ffi.new_handle(self) # XXX: Reference cycle?
         self._watchers = watchers
         self._in_callback = False
-        self._callbacks = []
+        self._callbacks = deque()
         # Stores python watcher objects while they are started
         self._keepaliveset = set()
         self._init_loop_and_aux_watchers(flags, default)
@@ -379,23 +386,33 @@ class AbstractLoop(object):
     def _check_callback_handle_error(self, t, v, tb):
         self.handle_error(None, t, v, tb)
 
-    def _run_callbacks(self):
-        # libuv and libev have different signatures for their prepare/check/timer
-        # watchers, which is what calls this. We should probably have different methods.
-        count = 1000
-        self._stop_callback_timer()
-        while self._callbacks and count > 0:
-            callbacks = self._callbacks
-            self._callbacks = []
-            for cb in callbacks:
+    def _run_callbacks(self): # pylint:disable=too-many-branches
+        # When we're running callbacks, its safe for timers to
+        # update the notion of the current time (because if we're here,
+        # we're not running in a timer callback that may let other timers
+        # run; this is mostly an issue for libuv).
+
+        # That's actually a bit of a lie: on libev, self._timer0 really is
+        # a timer, and so sometimes this is running in a timer callback, not
+        # a prepare callback. But that's OK, libev doesn't suffer from cascading
+        # timer expiration and its safe to update the loop time at any
+        # moment there.
+        self.starting_timer_may_update_loop_time = True
+        try:
+            count = CALLBACK_CHECK_COUNT
+            now = self.now()
+            expiration = now + getswitchinterval()
+            self._stop_callback_timer()
+            while self._callbacks:
+                cb = self._callbacks.popleft()
+                count -= 1
                 self.unref() # XXX: libuv doesn't have a global ref count!
                 callback = cb.callback
+                cb.callback = None
                 args = cb.args
                 if callback is None or args is None:
                     # it's been stopped
                     continue
-
-                cb.callback = None
 
                 try:
                     callback(*args)
@@ -428,9 +445,26 @@ class AbstractLoop(object):
                     # the callback class so that bool(cb) of a callback that has been run
                     # becomes False
                     cb.args = None
-                    count -= 1
-        if self._callbacks:
-            self._start_callback_timer()
+
+                # We've finished running one group of callbacks
+                # but we may have more, so before looping check our
+                # switch interval.
+                if count == 0 and self._callbacks:
+                    count = CALLBACK_CHECK_COUNT
+                    self.update_now()
+                    if self.now() >= expiration:
+                        now = 0
+                        break
+
+            # Update the time before we start going again, if we didn't
+            # just do so.
+            if now != 0:
+                self.update_now()
+
+            if self._callbacks:
+                self._start_callback_timer()
+        finally:
+            self.starting_timer_may_update_loop_time = False
 
     def _stop_aux_watchers(self):
         raise NotImplementedError()
@@ -507,7 +541,13 @@ class AbstractLoop(object):
         pass
 
     def now(self):
-        "Return the loop's notion of the current time."
+        """
+        Return the loop's notion of the current time.
+
+        This may not necessarily be related to :func:`time.time` (it
+        may have a different starting point), but it must be expressed
+        in fractional seconds (the same *units* used by :func:`time.time`).
+        """
         raise NotImplementedError()
 
     def update_now(self):

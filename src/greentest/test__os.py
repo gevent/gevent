@@ -5,6 +5,7 @@ import gevent
 from gevent import os
 from greentest import TestCase, main, LARGE_TIMEOUT
 from gevent import Greenlet, joinall
+from greentest.skipping import skipOnLibuvOnPyPyOnWin
 
 
 class TestOS_tp(TestCase):
@@ -20,6 +21,7 @@ class TestOS_tp(TestCase):
     def write(self, *args):
         return os.tp_write(*args)
 
+    @skipOnLibuvOnPyPyOnWin("Sometimes times out")
     def _test_if_pipe_blocks(self, buffer_class):
         r, w = self.pipe()
         # set nbytes such that for sure it is > maximum pipe buffer
