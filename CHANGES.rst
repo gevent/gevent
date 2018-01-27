@@ -50,11 +50,11 @@ Platform Support
     on POSIX platforms under Python 3.6. Now it also works on Windows under
     Python 3.6 (as expected) and is backported to all previous versions.
 
-- Linux CI now tests on PyPy3 3.5-5.8.0, updated from PyPy3 3.5-5.7.1.
-  See :issue:`1001`. PyPy2 has been updated to 5.8.0 from 5.7.1,
+- Linux CI now tests on PyPy3 3.5-5.9.0, updated from PyPy3 3.5-5.7.1.
+  See :issue:`1001`. PyPy2 has been updated to 5.9.0 from 5.7.1,
   Python 2.7 has been updated to 2.7.14 from 2.7.13, Python 3.4 is
   updated to 3.4.7 from 3.4.5, Python 3.5 is now 3.5.4 from 3.5.3, and
-  Python 3.6 is now 3.6.2 from 3.6.0.
+  Python 3.6 is now 3.6.4 from 3.6.0.
 
 - Drop support for Python 3.3. The documentation has only claimed
   support for 3.4+ since gevent 1.2 was released, and only 3.4+ has
@@ -68,7 +68,7 @@ Platform Support
   earlier (without a modern SSL implementation) has been dropped.
   These versions are no longer tested with gevent, but gevent can
   still be installed on them. Supporting code will be removed in the
-  next version of gevent. See :issue:`1073`.
+  next major version of gevent. See :issue:`1073`.
 
 Build Changes
 -------------
@@ -77,51 +77,23 @@ Build Changes
   source distribution), ``make`` is no longer required and the
   ``Makefile`` is not used. Neither is an external ``cython`` command.
   Instead, the ``cythonize`` function is used, as recommended by
-  Cython. See :issue:`1076`.
+  Cython. (The external commands were never required by source
+  distributions.) See :issue:`1076`.
 
-- :class:`gevent.local.local` is compiled with Cython on CPython. It
-  was already 5 to 6 times faster due to the work on :issue:`1020`,
-  and compiling it with Cython makes it another 5 to 6 times faster,
-  for a total speed up of about 35 times. It is now in the same
-  ballpark as the native :class:`threading.local` class. It also uses
-  one pointer less memory per object, and one pointer less memory per
-  greenlet. See :pr:`1024`.
+- :class:`gevent.local.local` is compiled with Cython on CPython.
 
 - The Cython ares 'channel' class is no longer declared to be publicly
   accessible from a named C structure. Doing so caused a conflict with
   the c-ares header files.
 
-Other Changes
--------------
-
-- ``Pool.add`` now accepts ``blocking`` and ``timeout`` parameters,
-  which function similarly to their counterparts in ``Semaphore``.
-  See :pr:`1032` by Ron Rothman.
+Bug Fixes
+---------
 
 - If a single greenlet created and destroyed many
   :class:`gevent.local.local` objects without ever exiting, there
   would be a leak of the function objects intended to clean up the
   locals after the greenlet exited. Introduce a weak reference to
   avoid that. Reported in :issue:`981` by Heungsub Lee.
-
-- Defer adjusting the stdlib's list of active threads until
-  ``threading`` is monkey patched. Previously this was done when
-  :mod:`gevent.threading` was imported. That module is documented to
-  be used as a helper for monkey patching, so this should generally
-  function the same, but some applications ignore the documentation
-  and directly import that module anyway.
-
-  A positive consequence is that ``import gevent.threading, threading;
-  threading.current_thread()`` will no longer return a DummyThread
-  before monkey-patching. Another positive consequence is that PyPy
-  will no longer print a ``KeyError`` on exit if
-  :mod:`gevent.threading` was imported *without* monkey-patching.
-
-  See :issue:`984`.
-
-- Specify the Requires-Python metadata for improved installation
-  support in certain tools (setuptools v24.2.1 or newer is required).
-  See :issue:`995`.
 
 - pywsgi also catches and ignores by default
   :const:`errno.WSAECONNABORTED` on Windows. Initial patch in
@@ -142,18 +114,6 @@ Other Changes
   universal newline mode on Python 2. This is consistent with what
   :class:`.FileObjectThread` does. See :issue:`1039`.
 
-- Monkey-patching after the :mod:`ssl` module has been imported now
-  prints a warning because this can produce ``RecursionError``.
-
-- :class:`gevent.local.local` objects are now approximately 3.5 times faster
-  getting, setting and deleting attributes on PyPy. This involved
-  implementing more of the attribute protocols directly. Please open
-  an issue if you have any compatibility problems. See :issue:`1020`.
-
-- More safely terminate subprocesses on Windows with
-  :meth:`gevent.subprocess.Popen.terminate`. Reported in :issue:`1023`
-  by Giacomo Debidda.
-
 - ``socket.send()`` now catches ``EPROTOTYPE`` on macOS to handle a race
   condition during shutdown. Fixed in :pr:`1035` by Jay Oster.
 
@@ -162,6 +122,53 @@ Other Changes
   :exc:`KeyboardInterrupt`, :exc:`greenlet.GreenletExit` or
   :exc:`gevent.timeout.Timeout`. Reported in :issue:`1044` by
   kochelmonster.
+
+
+Other Changes
+-------------
+
+- ``Pool.add`` now accepts ``blocking`` and ``timeout`` parameters,
+  which function similarly to their counterparts in ``Semaphore``.
+  See :pr:`1032` by Ron Rothman.
+
+- Defer adjusting the stdlib's list of active threads until
+  ``threading`` is monkey patched. Previously this was done when
+  :mod:`gevent.threading` was imported. That module is documented to
+  be used as a helper for monkey patching, so this should generally
+  function the same, but some applications ignore the documentation
+  and directly import that module anyway.
+
+  A positive consequence is that ``import gevent.threading, threading;
+  threading.current_thread()`` will no longer return a DummyThread
+  before monkey-patching. Another positive consequence is that PyPy
+  will no longer print a ``KeyError`` on exit if
+  :mod:`gevent.threading` was imported *without* monkey-patching.
+
+  See :issue:`984`.
+
+- Specify the Requires-Python metadata for improved installation
+  support in certain tools (setuptools v24.2.1 or newer is required).
+  See :issue:`995`.
+
+- Monkey-patching after the :mod:`ssl` module has been imported now
+  prints a warning because this can produce ``RecursionError``.
+
+- :class:`gevent.local.local` objects are now approximately 3.5 times faster
+  getting, setting and deleting attributes on PyPy. This involved
+  implementing more of the attribute protocols directly. Please open
+  an issue if you have any compatibility problems. See :issue:`1020`.
+
+- :class:`gevent.local.local` is compiled with Cython on CPython. It
+  was already 5 to 6 times faster due to the work on :issue:`1020`,
+  and compiling it with Cython makes it another 5 to 6 times faster,
+  for a total speed up of about 35 times. It is now in the same
+  ballpark as the native :class:`threading.local` class. It also uses
+  one pointer less memory per object, and one pointer less memory per
+  greenlet. See :pr:`1024`.
+
+- More safely terminate subprocesses on Windows with
+  :meth:`gevent.subprocess.Popen.terminate`. Reported in :issue:`1023`
+  by Giacomo Debidda.
 
 - gevent now uses cffi's "extern 'Python'" callbacks. These should be
   faster and more stable. This requires at least cffi 1.4.0. See :issue:`1049`.
@@ -184,6 +191,11 @@ libuv
   instead of libev, controlled by setting the environment variable
   ``GEVENT_CORE_CFFI_ONLY=libuv`` before importing gevent. This
   suffers a number of limitations compared to libev, notably:
+
+  - libuv support is not available in the manylinux wheels uploaded to
+    PyPI. The manylinux specification requires glibc 2.5, while libuv
+    requires glibc 2.12. Install from source to access libuv on Linux
+    (e.g., pip's ``--no-binary`` option).
 
   - Timers (such as ``gevent.sleep`` and ``gevent.Timeout``) only
     support a resolution of 1ms (in practice, it's closer to 1.5ms).
@@ -212,10 +224,6 @@ libuv
     written (as works with libev) does not appear to work correctly on
     Linux when using ``gevent.select.poll`` or a monkey-patched
     ``selectors.PollSelector``.
-
-  - The implementation uses more reference cycles and weak references
-    than either of the libev implementations (cython or CFFI), so
-    pressure on the garbage collector will be higher.
 
   - The build system does not support using a system libuv; the
     embedded copy must be used. Using setuptools to compile libuv was
@@ -301,10 +309,10 @@ libev
 
   - Cython is no longer preprocessed. Certain attributes that were
     previously only defined in certain compilation modes (notably
-    LIBEV_EMBED) are now always defined, but will raise ``AttributeError``
-    or have a negative value when not available. In general these
-    attributes are not portable and not implemented by libuv or the
-    CFFI backend. See :issue:`1076`.
+    LIBEV_EMBED) are now always defined, but will raise
+    ``AttributeError`` or have a negative value when not available. In
+    general these attributes are not portable or documented and are
+    not implemented by libuv or the CFFI backend. See :issue:`1076`.
 
   - Certain private helper functions (``gevent_handle_error``, and part of
     ``gevent_call``) are now implemented in Cython instead of C. This
