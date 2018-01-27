@@ -20,10 +20,12 @@ from setuptools.command.build_ext import build_ext
 
 PYPY = hasattr(sys, 'pypy_version_info')
 WIN = sys.platform.startswith('win')
-CFFI_WIN_BUILD_ANYWAY = os.environ.get("PYPY_WIN_BUILD_ANYWAY")
+
 RUNNING_ON_TRAVIS = os.environ.get('TRAVIS')
 RUNNING_ON_APPVEYOR = os.environ.get('APPVEYOR')
 RUNNING_ON_CI = RUNNING_ON_TRAVIS or RUNNING_ON_APPVEYOR
+
+
 
 LIBRARIES = []
 DEFINE_MACROS = []
@@ -82,6 +84,7 @@ def _parse_environ(key):
                      'Please set it to 1, 0 or an empty string' % (key, value))
 
 IGNORE_CFFI = _parse_environ("GEVENT_NO_CFFI_BUILD")
+SKIP_LIBUV = _parse_environ('GEVENT_NO_LIBUV_BUILD')
 
 def _get_config_value(key, defkey, path=None):
     """

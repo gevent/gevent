@@ -14,7 +14,7 @@ if [ -d /gevent -a -d /opt/python ]; then
         rm -rf dist build *.egg-info
         make clean
         $variant/bin/pip install -U cython cffi setuptools greenlet wheel
-        PATH=$variant/bin:$PATH $variant/bin/python setup.py bdist_wheel
+        GEVENT_NO_LIBUV_BUILD=1 PATH=$variant/bin:$PATH $variant/bin/python setup.py bdist_wheel
         auditwheel repair dist/*.whl
     done
     rm -rf dist build *.egg-info
