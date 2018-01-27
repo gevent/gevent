@@ -152,7 +152,7 @@ try:
 except ImportError:
     # The .c files had better already exist. Based on code from
     # http://cython.readthedocs.io/en/latest/src/reference/compilation.html#distributing-cython-modules
-    def cythonize(extensions):
+    def cythonize(extensions, **_kwargs):
         for extension in extensions:
             sources = []
             for sfile in extension.sources:
