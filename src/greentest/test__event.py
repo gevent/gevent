@@ -102,25 +102,27 @@ class TestAsyncResult(greentest.TestCase):
 
     def test_set(self):
         event1 = AsyncResult()
-        event2 = AsyncResult()
-
         timer_exc = MyException('interrupted')
 
-        g = gevent.spawn_later(DELAY / 2.0, event1.set, 'hello event1')
+        # Notice that this test is racy
+        g = gevent.spawn_later(DELAY, event1.set, 'hello event1')
         t = gevent.Timeout.start_new(0, timer_exc)
         try:
             with self.assertRaises(MyException) as exc:
                 event1.get()
             self.assertEqual(timer_exc, exc.exception)
-
-            X = object()
-            result = gevent.with_timeout(DELAY, event2.get, timeout_value=X)
-            self.assertIs(
-                result, X,
-                'Nobody sent anything to event2 yet it received %r' % (result, ))
         finally:
             t.close()
             g.kill()
+
+    def test_set_with_timeout(self):
+        event2 = AsyncResult()
+
+        X = object()
+        result = gevent.with_timeout(DELAY, event2.get, timeout_value=X)
+        self.assertIs(
+            result, X,
+            'Nobody sent anything to event2 yet it received %r' % (result, ))
 
     def test_nonblocking_get(self):
         ar = AsyncResult()
