@@ -23,6 +23,9 @@
   They have always had the same default as Python 3, namely an empty
   tuple and false, but now are accessible to Python 2.
 
+- The internal, undocumented module ``gevent._threading`` has been
+  simplified.
+
 
 1.3a1 (2018-01-27)
 ==================
