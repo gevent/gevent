@@ -665,7 +665,7 @@ if hasattr(_socket, "socketpair"):
         b = socket(family, type, proto, b.detach())
         return a, b
 
-else:
+else: # pragma: no cover
     # Origin: https://gist.github.com/4325783, by Geert Jansen.  Public domain.
 
     # gevent: taken from 3.6 release. Expected to be used only on Win. Added to Win/3.5
@@ -1035,8 +1035,10 @@ class _basefileobject(object):
 
 try:
     from gevent.fileobject import FileObjectPosix
-except ImportError:
-    # Manual implementation
+except ImportError: # pragma: no cover
+    # Manual implementation, only on Windows
+    # XXX: I think we could simplify this using FileObjectCommon
+    # and just implementing the IOBase interface?
     _fileobject = _basefileobject
 else:
     class _fileobject(FileObjectPosix):

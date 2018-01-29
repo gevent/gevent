@@ -36,8 +36,7 @@ class _FakeTimer(object):
     def stop(self):
         return
 
-    def cancel(self):
-        return
+    cancel = stop
 
     stop = close = cancel
 

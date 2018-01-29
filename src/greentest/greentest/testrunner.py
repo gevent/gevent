@@ -49,7 +49,9 @@ IGNORE_COVERAGE = [
 
 if PYPY:
     IGNORE_COVERAGE += [
+        # Tends to timeout
         'test__refcount.py',
+        'test__greenletset.py,'
     ]
 
 
