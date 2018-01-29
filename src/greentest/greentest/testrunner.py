@@ -37,6 +37,10 @@ RUN_ALONE = [
 IGNORE_COVERAGE = [
     # Hangs forever
     'test__threading_vs_settrace.py',
+    # times out
+    'test_socket.py',
+    # Doesn't get the exceptions it expects
+    'test_selectors.py',
     # XXX ?
     'test__issue302monkey.py',
     "test_subprocess.py",
