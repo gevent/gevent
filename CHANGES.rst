@@ -26,6 +26,9 @@
 - The internal, undocumented module ``gevent._threading`` has been
   simplified.
 
+- The internal, undocumented class ``gevent._socket3._fileobject`` has
+  been removed. See :issue:`1084`.
+
 
 1.3a1 (2018-01-27)
 ==================
