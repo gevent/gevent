@@ -103,13 +103,6 @@ def only_if_watcher(func):
         return _NoWatcherResult
     return if_w
 
-def error_if_no_watcher(func):
-    @functools.wraps(func)
-    def no_w(self):
-        if not self._watcher:
-            raise ValueError("No watcher present", self)
-        func(self)
-    return no_w
 
 class LazyOnClass(object):
 
@@ -122,7 +115,7 @@ class LazyOnClass(object):
         self.func = func
 
     def __get__(self, inst, klass):
-        if inst is None:
+        if inst is None: # pragma: no cover
             return self
 
         val = self.func(inst)
@@ -147,7 +140,7 @@ class AbstractWatcherType(type):
     def __new__(cls, name, bases, cls_dict):
         if name != 'watcher' and not cls_dict.get('_watcher_skip_ffi'):
             cls._fill_watcher(name, bases, cls_dict)
-        if '__del__' in cls_dict and not ALLOW_WATCHER_DEL:
+        if '__del__' in cls_dict and not ALLOW_WATCHER_DEL: # pragma: no cover
             raise TypeError("CFFI watchers are not allowed to have __del__")
         return type.__new__(cls, name, bases, cls_dict)
 
@@ -166,7 +159,7 @@ class AbstractWatcherType(type):
                     return getattr(b, attr)
                 except AttributeError:
                     continue
-            if error:
+            if error: # pragma: no cover
                 raise AttributeError(attr)
         _watcher_prefix = cls_dict.get('_watcher_prefix') or _mro_get('_watcher_prefix', bases)
 

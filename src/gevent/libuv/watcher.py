@@ -135,10 +135,6 @@ class watcher(_base.watcher):
         _dbg("Creating", type(self), "with ref", ref)
         self.ref = ref
 
-    def _watcher_ffi_set_priority(self, priority):
-        # libuv has no concept of priority
-        pass
-
     def _watcher_ffi_init(self, args):
         # TODO: we could do a better job chokepointing this
         return self._watcher_init(self.loop.ptr,

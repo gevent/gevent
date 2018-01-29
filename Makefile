@@ -17,9 +17,9 @@ clean:
 	rm -f src/gevent/ares.c src/gevent/ares.h
 	rm -f src/gevent/_semaphore.c src/gevent/_semaphore.h
 	rm -f src/gevent/local.c src/gevent/local.h
-	rm -f src/gevent/*.so src/gevent/libev/*.so src/gevent/libuv/*.so
+	rm -f src/gevent/*.so src/gevent/*.pyd src/gevent/libev/*.so src/gevent/libuv/*.so src/gevent/libev/*.pyd src/gevent/libuv/*.pyd
 	rm -rf src/gevent/libev/*.o src/gevent/libuv/*.o src/gevent/*.o
-	rm -rf src/gevent/__pycache__ src/greentest/__pycache__ src/gevent/libev/__pycache__
+	rm -rf src/gevent/__pycache__ src/greentest/__pycache__ src/greentest/greentest/__pycache__ src/gevent/libev/__pycache__
 	rm -rf src/gevent/*.pyc src/greentest/*.pyc src/gevent/libev/*.pyc
 	rm -rf src/greentest/htmlcov src/greentest/.coverage
 	rm -rf build
@@ -80,13 +80,17 @@ threadfiletest:
 
 allbackendtest:
 	${PYTHON} scripts/travis.py fold_start default "Testing default backend"
-	GEVENT_CORE_CFFI_ONLY= make alltest
+	GEVENT_CORE_CFFI_ONLY= GEVENTTEST_COVERAGE=1 make alltest
 	${PYTHON} scripts/travis.py fold_end default
-	make cffibackendtest
+	GEVENTTEST_COVERAGE=1 make cffibackendtest
+# because we set parallel=true, each run produces new and different coverage files; they all need
+# to be combined
+	make coverage_combine
+
 
 cffibackendtest:
 	${PYTHON} scripts/travis.py fold_start libuv "Testing libuv backend"
-	GEVENT_CORE_CFFI_ONLY=libuv make alltest
+	GEVENT_CORE_CFFI_ONLY=libuv GEVENTTEST_COVERAGE=1 make alltest
 	${PYTHON} scripts/travis.py fold_end libuv
 	${PYTHON} scripts/travis.py fold_start libev "Testing libev CFFI backend"
 	GEVENT_CORE_CFFI_ONLY=libev make alltest
@@ -100,16 +104,15 @@ leaktest: test_prelim
 bench:
 	${PYTHON} src/greentest/bench_sendall.py
 
-
 travis_test_linters:
 	make lint
-	GEVENTTEST_COVERAGE=1 make leaktest
-	GEVENTTEST_COVERAGE=1 make cffibackendtest
-# because we set parallel=true, each run produces new and different coverage files; they all need
-# to be combined
+	make leaktest
+	make cffibackendtest
+
+coverage_combine:
 	coverage combine . src/greentest/
 
-	coveralls --rcfile=src/greentest/.coveragerc
+	-coveralls --rcfile=src/greentest/.coveragerc
 
 
 .PHONY: clean doc prospector lint travistest travis
@@ -176,11 +179,8 @@ develop:
 	GEVENTSETUP_EV_VERIFY=3 python -m pip install -U -r dev-requirements.txt
 	${PYTHON} scripts/travis.py fold_end install
 
-lint-py27: $(PY27)
-	PYTHON=python2.7.14 PATH=$(BUILD_RUNTIMES)/versions/python2.7.14/bin:$(PATH) make develop travis_test_linters
-
 test-py27: $(PY27)
-	PYTHON=python2.7.14 PATH=$(BUILD_RUNTIMES)/versions/python2.7.14/bin:$(PATH) make develop allbackendtest
+	PYTHON=python2.7.14 PATH=$(BUILD_RUNTIMES)/versions/python2.7.14/bin:$(PATH) make develop lint leaktest allbackendtest
 
 test-py34: $(PY34)
 	PYTHON=python3.4.7 PATH=$(BUILD_RUNTIMES)/versions/python3.4.7/bin:$(PATH) make develop allbackendtest
@@ -195,7 +195,7 @@ test-py37: $(PY37)
 	PYTHON=python3.7.0a3 PATH=$(BUILD_RUNTIMES)/versions/python3.7.0a3/bin:$(PATH) make develop allbackendtest
 
 test-pypy: $(PYPY)
-	PYTHON=$(PYPY) PATH=$(BUILD_RUNTIMES)/versions/pypy590/bin:$(PATH) make develop cffibackendtest
+	PYTHON=$(PYPY) PATH=$(BUILD_RUNTIMES)/versions/pypy590/bin:$(PATH) make develop cffibackendtest coverage_combine
 
 test-pypy3: $(PYPY3)
 	PYTHON=$(PYPY3) PATH=$(BUILD_RUNTIMES)/versions/pypy3.5_590/bin:$(PATH) make develop basictest

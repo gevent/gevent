@@ -1,10 +1,6 @@
 [run]
-# In coverage 4.0b3, concurrency=gevent is exactly equivalent to
-# concurrency=greenlet, except it causes coverage itself to import
-# gevent. That messes up our coverage numbers for top-level
-# statements, so we use greenlet instead. See https://github.com/gevent/gevent/pull/655#issuecomment-141198002
-# See also .coveragerc-pypy
-concurrency = greenlet
+# This is just like .coveragerc, but
+# used for PyPy running. pypy doesn't support concurrency=greenlet
 parallel = True
 source = gevent
 omit =
@@ -24,7 +20,9 @@ omit =
 
 
 [report]
-# Coverage is run on Linux under cPython 2/3 and pypy
+# Coverage is run on Linux under cPython 2/3 and pypy, so
+# exclude branches that are windows specific or pypy
+# specific
 exclude_lines =
     pragma: no cover
     def __repr__

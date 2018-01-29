@@ -462,7 +462,7 @@ try:
         local.__new__ = __new__
     else:
         local.__new__ = classmethod(__new__)
-except TypeError:
+except TypeError: # pragma: no cover
     pass
 finally:
     del sys
