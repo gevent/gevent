@@ -66,6 +66,8 @@ if sysinfo.PYPY3:
 else:
     skipOnPyPy3 = _do_not_skip
 
+skipUnderCoverage = unittest.skip if sysinfo.RUN_COVERAGE else _do_not_skip
+
 skipIf = unittest.skipIf
 
 

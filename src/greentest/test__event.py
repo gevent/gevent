@@ -1,7 +1,10 @@
 from __future__ import absolute_import, print_function, division
-import greentest
+
 import gevent
 from gevent.event import Event, AsyncResult
+
+import greentest
+from greentest.skipping import skipUnderCoverage
 from greentest.six import xrange
 
 DELAY = 0.01
@@ -100,6 +103,7 @@ class TestAsyncResult(greentest.TestCase):
         gevent.sleep(0)
         self.assertEqual(log, [('caught', obj)])
 
+    @skipUnderCoverage("This test is racy and sometimes fails")
     def test_set(self):
         event1 = AsyncResult()
         timer_exc = MyException('interrupted')
