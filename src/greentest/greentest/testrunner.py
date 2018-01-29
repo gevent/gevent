@@ -13,6 +13,7 @@ from multiprocessing import cpu_count
 from greentest import util
 from greentest.util import log
 from greentest.sysinfo import RUNNING_ON_CI
+from greentest.sysinfo import PYPY
 from greentest import six
 
 
@@ -45,6 +46,11 @@ IGNORE_COVERAGE = [
     'test__issue302monkey.py',
     "test_subprocess.py",
 ]
+
+if PYPY:
+    IGNORE_COVERAGE += [
+        'test__refcount.py',
+    ]
 
 
 def run_many(tests, expected=(), failfast=False, quiet=False):
@@ -287,6 +293,8 @@ def main():
         coverage = True
         # NOTE: This must be run from the greentest directory
         os.environ['COVERAGE_PROCESS_START'] = os.path.abspath(".coveragerc")
+        if PYPY:
+            os.environ['COVERAGE_PROCESS_START'] = os.path.abspath(".coveragerc-pypy")
         os.environ['PYTHONPATH'] = os.path.abspath("coveragesite") + os.pathsep + os.environ.get("PYTHONPATH", "")
         # We change directory often, use an absolute path to keep all the
         # coverage files (which will have distinct suffixes because of parallel=true in .coveragerc

@@ -10,6 +10,7 @@ env:
     matrix:
       # These are ordered to get as much diversity in the
       # first group of parallel runs (4) as posible
+      - TASK=test-py27
       - TASK=test-pypy
       - TASK=test-py36
       - TASK=test-py37

@@ -112,7 +112,7 @@ travis_test_linters:
 coverage_combine:
 	coverage combine . src/greentest/
 
-	-coveralls -v --rcfile=src/greentest/.coveragerc
+	-coveralls --rcfile=src/greentest/.coveragerc
 
 
 .PHONY: clean doc prospector lint travistest travis
@@ -195,7 +195,7 @@ test-py37: $(PY37)
 	PYTHON=python3.7.0a3 PATH=$(BUILD_RUNTIMES)/versions/python3.7.0a3/bin:$(PATH) make develop allbackendtest
 
 test-pypy: $(PYPY)
-	PYTHON=$(PYPY) PATH=$(BUILD_RUNTIMES)/versions/pypy590/bin:$(PATH) make develop cffibackendtest
+	PYTHON=$(PYPY) PATH=$(BUILD_RUNTIMES)/versions/pypy590/bin:$(PATH) make develop cffibackendtest coverage_combine
 
 test-pypy3: $(PYPY3)
 	PYTHON=$(PYPY3) PATH=$(BUILD_RUNTIMES)/versions/pypy3.5_590/bin:$(PATH) make develop basictest
