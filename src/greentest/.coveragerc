@@ -17,6 +17,9 @@ omit =
     # properly get covered.
 	src/gevent/_threading.py
     test_*
+    # local.so sometimes gets included, and it can't be parsed
+    # as source, so it fails the whole process.
+    *.so
 
 [report]
 # Coverage is run on Linux under cPython 2/3, so
