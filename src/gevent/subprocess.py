@@ -388,6 +388,9 @@ class Popen(object):
        Instances now save the ``args`` attribute under Python 2.7. Previously this was
        restricted to Python 3.
 
+    .. versionchanged:: 1.2b1
+        Add the ``encoding`` and ``errors`` parameters for Python 3.
+
     .. versionchanged:: 1.3a1
        Accept "path-like" objects for the *cwd* parameter on all platforms.
        This was added to Python 3.6. Previously with gevent, it only worked
@@ -396,48 +399,47 @@ class Popen(object):
     .. versionchanged:: 1.3a1
        Add the ``text`` argument as a synonym for ``universal_newlines``,
        as added on Python 3.7.
+
+    .. versionchanged:: 1.3a2
+       Allow the same keyword arguments under Python 2 as Python 3:
+       ``pass_fds``, ``start_new_session``, ``restore_signals``, ``encoding``
+       and ``errors``. Under Python 2, ``encoding`` and ``errors`` are ignored
+       because native handling of universal newlines is used.
+
+    .. versionchanged:: 1.3a2
+       Under Python 2, ``restore_signals`` defaults to ``False``. Previously it
+       defaulted to ``True``, the same as it did in Python 3.
     """
 
     # The value returned from communicate() when there was nothing to read.
     # Changes if we're in text mode or universal newlines mode.
     _communicate_empty_value = b''
 
-    def __init__(self, args, bufsize=None, executable=None,
+    def __init__(self, args,
+                 bufsize=-1 if PY3 else 0,
+                 executable=None,
                  stdin=None, stdout=None, stderr=None,
                  preexec_fn=None, close_fds=_PLATFORM_DEFAULT_CLOSE_FDS, shell=False,
                  cwd=None, env=None, universal_newlines=None,
-                 startupinfo=None, creationflags=0, threadpool=None,
-                 **kwargs):
-        """Create new Popen instance.
+                 startupinfo=None, creationflags=0,
+                 restore_signals=PY3, start_new_session=False,
+                 pass_fds=(),
+                 # Added in 3.6. These are kept as ivars
+                 encoding=None, errors=None,
+                 # Added in 3.7. Not an ivar directly.
+                 text=None,
+                 # gevent additions
+                 threadpool=None):
 
-        :param kwargs: *Only* allowed under Python 3; under Python 2, any
-          unrecognized keyword arguments will result in a :exc:`TypeError`.
-          Under Python 3, keyword arguments can include ``pass_fds``, ``start_new_session``,
-          ``restore_signals``, ``encoding`` and ``errors``
-
-        .. versionchanged:: 1.2b1
-           Add the ``encoding`` and ``errors`` parameters for Python 3.
-        """
-
-        if not PY3 and kwargs:
-            raise TypeError("Got unexpected keyword arguments", kwargs)
-        pass_fds = kwargs.pop('pass_fds', ())
-        start_new_session = kwargs.pop('start_new_session', False)
-        restore_signals = kwargs.pop('restore_signals', True)
-        # Added in 3.6. These are kept as ivars
-        encoding = self.encoding = kwargs.pop('encoding', None)
-        errors = self.errors = kwargs.pop('errors', None)
-        # Added in 3.7. Not an ivar directly
-        text = kwargs.pop("text", None)
+        self.encoding = encoding
+        self.errors = errors
 
         hub = get_hub()
 
         if bufsize is None:
-            # bufsize has different defaults on Py3 and Py2
-            if PY3:
-                bufsize = -1
-            else:
-                bufsize = 0
+            # Python 2 doesn't allow None at all, but Python 3 treats
+            # it the same as the default. We do as well.
+            bufsize = -1 if PY3 else 0
         if not isinstance(bufsize, integer_types):
             raise TypeError("bufsize must be an integer")
 
