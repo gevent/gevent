@@ -4,10 +4,24 @@
 
 .. currentmodule:: gevent
 
-1.3.0 (unreleased)
+1.3a2 (unreleased)
 ==================
 
-- Nothing changed yet.
+- Fix building from a source distribution without Cython installed.
+
+- Make :class:`gevnt.subprocess.Popen` accept the ``restore_signals``
+  keyword argument on all versions of Python, and on Python 2 have it
+  default to false. It previously defaulted to true on all versions;
+  now it only defaults to true on Python 3. The standard library in
+  Python 2 does not have this argument and its behaviour with regards
+  to signals is undocumented, but there is code known to rely on
+  signals not being restored under Python 2. Initial report and patch
+  in :pr:`1063` by Florian Margaine.
+
+- Allow :class:`gevent.subprocess.Popen` to accept the keyword
+  arguments ``pass_fds`` and ``start_new_session`` under Python 2.
+  They have always had the same default as Python 3, namely an empty
+  tuple and false, but now are accessible to Python 2.
 
 
 1.3a1 (2018-01-27)
