@@ -1,12 +1,19 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
+import gevent
+from gevent import monkey
+
+if ['gevent.resolver.dnspython.Resolver'] == gevent.get_hub().resolver_class:
+    # dnspython requires monkey-patching
+    monkey.patch_all()
+
+
 import re
 import greentest
 import unittest
 import socket
 from time import time
-import gevent
 import gevent.socket as gevent_socket
 from greentest.util import log
 from greentest import six
@@ -19,8 +26,10 @@ log('Resolver: %s', resolver)
 if getattr(resolver, 'pool', None) is not None:
     resolver.pool.size = 1
 
+from greentest.sysinfo import RESOLVER_NOT_SYSTEM
+from greentest.sysinfo import RESOLVER_DNSPYTHON
+from greentest.sysinfo import PY2
 
-RESOLVER_IS_ARES = 'ares' in gevent.get_hub().resolver_class.__module__
 
 assert gevent_socket.gaierror is socket.gaierror
 assert gevent_socket.error is socket.error
@@ -146,7 +155,10 @@ def relaxed_is_equal(a, b):
         return True
     if isinstance(a, six.string_types):
         return compare_relaxed(a, b)
-    if len(a) != len(b):
+    try:
+        if len(a) != len(b):
+            return False
+    except TypeError:
         return False
     if contains_5tuples(a) and contains_5tuples(b):
         # getaddrinfo results
@@ -219,7 +231,7 @@ class TestCase(greentest.TestCase):
 
     def _test(self, func, *args):
         gevent_func = getattr(gevent_socket, func)
-        real_func = getattr(socket, func)
+        real_func = monkey.get_original('socket', func)
         real_result, time_real = run(real_func, *args)
         gevent_result, time_gevent = run(gevent_func, *args)
         if not DEBUG and self.should_log_results(real_result, gevent_result):
@@ -251,7 +263,7 @@ class TestCase(greentest.TestCase):
         # can be in different orders if we're hitting different servers,
         # or using the native and ares resolvers due to load-balancing techniques.
         # We sort them.
-        if not RESOLVER_IS_ARES or isinstance(result, BaseException):
+        if not RESOLVER_NOT_SYSTEM or isinstance(result, BaseException):
             return result
         # result[1].sort() # we wind up discarding this
 
@@ -275,7 +287,7 @@ class TestCase(greentest.TestCase):
         return (result[0], [], ips)
 
     def _normalize_result_getaddrinfo(self, result):
-        if not RESOLVER_IS_ARES:
+        if not RESOLVER_NOT_SYSTEM:
             return result
         # On Python 3, the builtin resolver can return SOCK_RAW results, but
         # c-ares doesn't do that. So we remove those if we find them.
@@ -286,7 +298,7 @@ class TestCase(greentest.TestCase):
         return result
 
     def _normalize_result_gethostbyaddr(self, result):
-        if not RESOLVER_IS_ARES:
+        if not RESOLVER_NOT_SYSTEM:
             return result
 
         if isinstance(result, tuple):
@@ -316,7 +328,7 @@ class TestCase(greentest.TestCase):
         # If we're using the ares resolver, allow the real resolver to generate an
         # error that the ares resolver actually gets an answer to.
 
-        if (RESOLVER_IS_ARES
+        if (RESOLVER_NOT_SYSTEM
             and isinstance(real_result, errors)
             and not isinstance(gevent_result, errors)):
             return
@@ -334,6 +346,8 @@ add(TestTypeError, None)
 add(TestTypeError, 25)
 
 
+@unittest.skipIf(RESOLVER_DNSPYTHON,
+                 "This commonly needs /etc/hosts to function, and dnspython doesn't do that.")
 class TestHostname(TestCase):
     pass
 
@@ -348,13 +362,13 @@ class TestLocalhost(TestCase):
     # anymore.
 
     def _normalize_result_getaddrinfo(self, result):
-        if RESOLVER_IS_ARES:
+        if RESOLVER_NOT_SYSTEM:
             # We see that some impls (OS X) return extra results
             # like DGRAM that ares does not.
             return ()
         return super(TestLocalhost, self)._normalize_result_getaddrinfo(result)
 
-    if greentest.RUNNING_ON_TRAVIS and greentest.PY2 and RESOLVER_IS_ARES:
+    if greentest.RUNNING_ON_TRAVIS and greentest.PY2 and RESOLVER_NOT_SYSTEM:
         def _normalize_result_gethostbyaddr(self, result):
             # Beginning in November 2017 after an upgrade to Travis,
             # we started seeing ares return ::1 for localhost, but
@@ -398,8 +412,8 @@ if not greentest.RUNNING_ON_TRAVIS:
 class TestBroadcast(TestCase):
     switch_expected = False
 
-    if RESOLVER_IS_ARES:
-        # ares raises errors for broadcasthost/255.255.255.255
+    if RESOLVER_NOT_SYSTEM:
+        # ares and dnspython raises errors for broadcasthost/255.255.255.255
 
         @unittest.skip('ares raises errors for broadcasthost/255.255.255.255')
         def test__broadcast__gethostbyaddr(self):
@@ -410,6 +424,7 @@ class TestBroadcast(TestCase):
 add(TestBroadcast, '<broadcast>')
 
 
+@unittest.skipIf(RESOLVER_DNSPYTHON, "/etc/hosts completely ignored under dnspython")
 class TestEtcHosts(TestCase):
     pass
 
@@ -420,7 +435,7 @@ except IOError:
     etc_hosts = ''
 
 for ip, host in re.findall(r'^\s*(\d+\.\d+\.\d+\.\d+)\s+([^\s]+)', etc_hosts, re.M)[:10]:
-    if (RESOLVER_IS_ARES
+    if (RESOLVER_NOT_SYSTEM
         and (host.endswith('local') # ignore bonjour, ares can't find them
              # ignore common aliases that ares can't find
              or ip == '255.255.255.255'
@@ -521,6 +536,8 @@ class Test_getaddrinfo(TestCase):
     def test2(self):
         return self._test_getaddrinfo(TestGeventOrg.HOSTNAME, 53, socket.AF_INET, socket.SOCK_DGRAM, 17)
 
+    @unittest.skipIf(RESOLVER_DNSPYTHON,
+                     "dnspython only returns some of the possibilities")
     def test3(self):
         return self._test_getaddrinfo('google.com', 'http', socket.AF_INET6)
 
@@ -532,7 +549,8 @@ add(TestInternational, u'президент.рф', 'russian')
 add(TestInternational, u'президент.рф'.encode('idna'), 'idna')
 
 
-
+@unittest.skipIf(RESOLVER_DNSPYTHON and PY2,
+                 "dnspython has a bare except and we can't workaround it on Python 2.")
 class TestInterrupted_gethostbyname(greentest.GenericWaitTestCase):
 
     # There are refs to a Waiter in the C code that don't go
@@ -544,6 +562,7 @@ class TestInterrupted_gethostbyname(greentest.GenericWaitTestCase):
     def wait(self, timeout):
         with gevent.Timeout(timeout, False):
             for index in xrange(1000000):
+                print("Resolving", index)
                 try:
                     gevent_socket.gethostbyname('www.x%s.com' % index)
                 except socket.error:
@@ -604,7 +623,6 @@ add(TestBadIP, '1.2.3.400')
 class Test_getnameinfo_127001(TestCase):
 
     def test(self):
-        assert gevent_socket.getnameinfo is not socket.getnameinfo
         self._test('getnameinfo', ('127.0.0.1', 80), 0)
 
     def test_DGRAM(self):

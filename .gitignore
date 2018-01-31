@@ -13,8 +13,8 @@ src/gevent/libev/corecext.c
 src/gevent/libev/corecext.h
 src/gevent/libev/_corecffi.c
 src/gevent/libev/_corecffi.o
-src/gevent/ares.c
-src/gevent/ares.h
+src/gevent/resolver/cares.c
+
 Makefile.ext
 MANIFEST
 *_flymake.py

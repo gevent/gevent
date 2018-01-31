@@ -2,9 +2,12 @@
 # -*- coding: utf-8 -*-
 import greentest
 import socket
-from test__socket_dns import TestCase, add, RESOLVER_IS_ARES
+from test__socket_dns import TestCase, add
 
-if not greentest.RUNNING_ON_CI:
+from greentest.sysinfo import RESOLVER_NOT_SYSTEM
+from greentest.sysinfo import RESOLVER_DNSPYTHON
+
+if not greentest.RUNNING_ON_CI and not RESOLVER_DNSPYTHON:
 
 
     # We can't control the DNS servers we use there
@@ -46,7 +49,7 @@ if not greentest.RUNNING_ON_CI:
         host = 'ipv6.google.com'
 
         def _normalize_result_getnameinfo(self, result):
-            if greentest.RUNNING_ON_CI and RESOLVER_IS_ARES:
+            if greentest.RUNNING_ON_CI and RESOLVER_NOT_SYSTEM:
                 # Disabled, there are multiple possibilities
                 # and we can get different ones, rarely.
                 return ()

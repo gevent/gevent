@@ -450,9 +450,12 @@ def resolver_config(default, envvar):
     return [_resolvers.get(x, x) for x in result]
 
 
-_resolvers = {'ares': 'gevent.resolver_ares.Resolver',
-              'thread': 'gevent.resolver_thread.Resolver',
-              'block': 'gevent.socket.BlockingResolver'}
+_resolvers = {
+    'ares': 'gevent.resolver.ares.Resolver',
+    'thread': 'gevent.resolver.thread.Resolver',
+    'block': 'gevent.resolver.blocking.Resolver',
+    'dnspython': 'gevent.resolver.dnspython.Resolver',
+}
 
 
 _DEFAULT_LOOP_CLASS = 'gevent.core.loop'
@@ -494,9 +497,12 @@ class Hub(RawGreenlet):
     if loop_class == [_DEFAULT_LOOP_CLASS]:
         loop_class = [_import(loop_class)]
 
-    resolver_class = ['gevent.resolver_thread.Resolver',
-                      'gevent.resolver_ares.Resolver',
-                      'gevent.socket.BlockingResolver']
+    resolver_class = [
+        'gevent.resolver.thread.Resolver',
+        'gevent.resolver.dnspython.Resolver',
+        'gevent.resolver.ares.Resolver',
+        'gevent.resolver.blacking.Resolver',
+    ]
     #: The class or callable object, or the name of a factory function or class,
     #: that will be used to create :attr:`resolver`. By default, configured according to
     #: :doc:`dns`. If a list, a list of objects in preference order.
