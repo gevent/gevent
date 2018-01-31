@@ -8,12 +8,13 @@ if ['gevent.resolver.dnspython.Resolver'] == gevent.get_hub().resolver_class:
     # dnspython requires monkey-patching
     monkey.patch_all()
 
-
+import os
 import re
 import greentest
 import unittest
 import socket
 from time import time
+import traceback
 import gevent.socket as gevent_socket
 from greentest.util import log
 from greentest import six
@@ -34,7 +35,7 @@ from greentest.sysinfo import PY2
 assert gevent_socket.gaierror is socket.gaierror
 assert gevent_socket.error is socket.error
 
-DEBUG = False
+DEBUG = os.getenv('GEVENT_DEBUG', '') == 'trace'
 
 
 def _run(function, *args):
@@ -43,6 +44,8 @@ def _run(function, *args):
         assert not isinstance(result, BaseException), repr(result)
         return result
     except Exception as ex:
+        if DEBUG:
+            traceback.print_exc()
         return ex
 
 
@@ -545,12 +548,15 @@ class Test_getaddrinfo(TestCase):
 class TestInternational(TestCase):
     pass
 
-add(TestInternational, u'президент.рф', 'russian')
+if not (PY2 and RESOLVER_DNSPYTHON):
+    # dns python can actually resolve these: it uses
+    # the 2008 version of idna encoding, whereas on Python 2,
+    # with the default resolver, it tries to encode to ascii and
+    # raises a UnicodeEncodeError. So we get different results.
+    add(TestInternational, u'президент.рф', 'russian')
 add(TestInternational, u'президент.рф'.encode('idna'), 'idna')
 
 
-@unittest.skipIf(RESOLVER_DNSPYTHON and PY2,
-                 "dnspython has a bare except and we can't workaround it on Python 2.")
 class TestInterrupted_gethostbyname(greentest.GenericWaitTestCase):
 
     # There are refs to a Waiter in the C code that don't go
@@ -562,7 +568,6 @@ class TestInterrupted_gethostbyname(greentest.GenericWaitTestCase):
     def wait(self, timeout):
         with gevent.Timeout(timeout, False):
             for index in xrange(1000000):
-                print("Resolving", index)
                 try:
                     gevent_socket.gethostbyname('www.x%s.com' % index)
                 except socket.error:
