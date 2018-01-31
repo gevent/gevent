@@ -33,6 +33,7 @@ from greentest.sysinfo import LIBUV
 from greentest.sysinfo import CFFI_BACKEND
 from greentest.sysinfo import DEBUG
 from greentest.sysinfo import RUN_LEAKCHECKS
+from greentest.sysinfo import RUN_COVERAGE
 
 from greentest.sysinfo import PY2
 from greentest.sysinfo import PY3
