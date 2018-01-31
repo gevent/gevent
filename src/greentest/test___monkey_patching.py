@@ -32,11 +32,11 @@ def TESTRUNNER(tests=None):
     if preferred_version != version:
         util.log('WARNING: The tests in %s/ are from version %s and your Python is %s', directory, preferred_version, version)
 
+    version_tests = glob.glob('%s/test_*.py' % full_directory)
+    version_tests = sorted(version_tests)
     if not tests:
         tests = glob.glob('%s/test_*.py' % directory)
-        version_tests = glob.glob('%s/test_*.py' % full_directory)
         tests = sorted(tests)
-        version_tests = sorted(version_tests)
 
     PYTHONPATH = (os.getcwd() + os.pathsep + get_absolute_pythonpath()).rstrip(':')
 

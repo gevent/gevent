@@ -423,7 +423,8 @@ class ConditionTests(BaseTestCase):
         Bunch(f, N).wait_for_finished()
         self.assertEqual(len(results), 5)
         for dt in results:
-            self.assertTrue(dt >= 0.19, dt) # XXX: libuv sometimes produces 0.19958
+            # XXX: libuv sometimes produces 0.19958
+            self.assertTimeWithinRange(dt, 0.2, 2.0)
 
 
 class BaseSemaphoreTests(BaseTestCase):
