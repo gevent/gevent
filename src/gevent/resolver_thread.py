@@ -3,7 +3,7 @@
 Native thread-based hostname resolver.
 """
 import _socket
-from gevent._compat import text_type
+
 from gevent.hub import get_hub
 
 
@@ -11,7 +11,7 @@ __all__ = ['Resolver']
 
 
 # trigger import of encodings.idna to avoid https://github.com/gevent/gevent/issues/349
-text_type('foo').encode('idna')
+u'foo'.encode('idna')
 
 
 class Resolver(object):

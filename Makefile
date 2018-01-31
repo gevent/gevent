@@ -126,9 +126,9 @@ PY27=$(BUILD_RUNTIMES)/snakepit/python2.7.14
 PY34=$(BUILD_RUNTIMES)/snakepit/python3.4.7
 PY35=$(BUILD_RUNTIMES)/snakepit/python3.5.4
 PY36=$(BUILD_RUNTIMES)/snakepit/python3.6.4
-PY37=$(BUILD_RUNTIMES)/snakepit/python3.7.0a3
-PYPY=$(BUILD_RUNTIMES)/snakepit/pypy590
-PYPY3=$(BUILD_RUNTIMES)/snakepit/pypy3.5_590
+PY37=$(BUILD_RUNTIMES)/snakepit/python3.7.0a4
+PYPY=$(BUILD_RUNTIMES)/snakepit/pypy5100
+PYPY3=$(BUILD_RUNTIMES)/snakepit/pypy3.5_5101
 
 TOOLS=$(BUILD_RUNTIMES)/tools
 
@@ -140,8 +140,6 @@ TOOL_PYTHON=$(TOOL_VIRTUALENV)/bin/python
 TOOL_PIP=$(TOOL_VIRTUALENV)/bin/pip
 TOOL_INSTALL=$(TOOL_PIP) install --upgrade
 
-$(PY278):
-	scripts/install.sh 2.7.8
 
 $(PY27):
 	scripts/install.sh 2.7
@@ -176,7 +174,7 @@ develop:
 # Then start installing our deps so they can be cached. Note that use of --build-options / --global-options / --install-options
 # disables the cache.
 # We need wheel>=0.26 on Python 3.5. See previous revisions.
-	GEVENTSETUP_EV_VERIFY=3 python -m pip install -U -r dev-requirements.txt
+	GEVENTSETUP_EV_VERIFY=3 ${PYTHON} -m pip install -U -r dev-requirements.txt
 	${PYTHON} scripts/travis.py fold_end install
 
 test-py27: $(PY27)
@@ -192,13 +190,13 @@ test-py36: $(PY36)
 	PYTHON=python3.6.4 PATH=$(BUILD_RUNTIMES)/versions/python3.6.4/bin:$(PATH) make develop allbackendtest
 
 test-py37: $(PY37)
-	PYTHON=python3.7.0a3 PATH=$(BUILD_RUNTIMES)/versions/python3.7.0a3/bin:$(PATH) make develop allbackendtest
+	PYTHON=python3.7.0a4 PATH=$(BUILD_RUNTIMES)/versions/python3.7.0a4/bin:$(PATH) make develop allbackendtest
 
 test-pypy: $(PYPY)
-	PYTHON=$(PYPY) PATH=$(BUILD_RUNTIMES)/versions/pypy590/bin:$(PATH) make develop cffibackendtest coverage_combine
+	PYTHON=$(PYPY) PATH=$(BUILD_RUNTIMES)/versions/pypy5100/bin:$(PATH) make develop cffibackendtest coverage_combine
 
 test-pypy3: $(PYPY3)
-	PYTHON=$(PYPY3) PATH=$(BUILD_RUNTIMES)/versions/pypy3.5_590/bin:$(PATH) make develop basictest
+	PYTHON=$(PYPY3) PATH=$(BUILD_RUNTIMES)/versions/pypy3.5_5101/bin:$(PATH) make develop basictest
 
 test-py27-noembed: $(PY27)
 	cd deps/libev && ./configure --disable-dependency-tracking && make

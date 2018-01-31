@@ -74,12 +74,8 @@ class PoolBasicTests(TestCase):
         def raiser():
             raise ExpectedException()
 
-        try:
+        with self.assertRaises(ExpectedException):
             pool.apply(raiser)
-        except ExpectedException:
-            pass
-        else:
-            self.fail("Should have raised ExpectedException")
     # Don't let the metaclass automatically force any error
     # that reaches the hub from a spawned greenlet to become
     # fatal; that defeats the point of the test.
@@ -97,8 +93,8 @@ class PoolBasicTests(TestCase):
 
 class TimingWrapper(object):
 
-    def __init__(self, func):
-        self.func = func
+    def __init__(self, the_func):
+        self.func = the_func
         self.elapsed = None
 
     def __call__(self, *args, **kwds):
@@ -147,10 +143,10 @@ class _AbstractPoolTest(TestCase):
 SMALL_RANGE = 10
 LARGE_RANGE = 1000
 
-if greentest.PYPY and greentest.WIN:
-    # PyPy 5.9 is *really* slow at spawning or switching between threads on Windows
-    # Tests that happen instantaneously on other platforms
-    # time out due to the overhead
+if greentest.PYPY and (greentest.WIN or greentest.RUN_COVERAGE):
+    # PyPy 5.10 is *really* slow at spawning or switching between
+    # threads (especially on Windows or when coverage is enabled) Tests that happen
+    # instantaneously on other platforms time out due to the overhead
     LARGE_RANGE = 50
 
 class TestPool(_AbstractPoolTest):
@@ -168,7 +164,7 @@ class TestPool(_AbstractPoolTest):
 
     def test_async_callback(self):
         result = []
-        res = self.pool.apply_async(sqr, (7, TIMEOUT1,), callback=lambda x: result.append(x))
+        res = self.pool.apply_async(sqr, (7, TIMEOUT1,), callback=result.append)
         get = TimingWrapper(res.get)
         self.assertEqual(get(), 49)
         self.assertTimeoutAlmostEqual(get.elapsed, TIMEOUT1, 1)
@@ -208,10 +204,11 @@ class TestPool(_AbstractPoolTest):
     def test_imap_unordered_gc(self):
         it = self.pool.imap_unordered(sqr, range(SMALL_RANGE))
         result = []
-        for i in range(SMALL_RANGE):
+        for _ in range(SMALL_RANGE):
             result.append(six.advance_iterator(it))
             gc.collect()
-        self.assertRaises(StopIteration, lambda: six.advance_iterator(it))
+        with self.assertRaises(StopIteration):
+            six.advance_iterator(it)
         self.assertEqual(sorted(result), [x * x for x in range(SMALL_RANGE)])
 
     def test_imap_random(self):
@@ -439,9 +436,10 @@ class TestRef(TestCase):
             if PYPY:
                 gc.collect()
                 gc.collect()
-            for index, r in enumerate(refs):
-                assert r() is None, (index, r(), greentest.getrefcount(r()), refs)
-            assert len(refs) == 4, refs
+            for r in refs:
+                self.assertIsNone(r())
+
+            self.assertEqual(4, len(refs))
 
 
 class Object(object):
@@ -450,13 +448,15 @@ class Object(object):
 
 class SomeClass(object):
 
+    refs = None
+
     def func(self, arg1, kwarg1=None):
         result = Object()
         self.refs.extend([weakref.ref(x) for x in [arg1, kwarg1, result]])
         return result
 
 
-def func():
+def noop():
     pass
 
 
@@ -464,7 +464,7 @@ class TestRefCount(TestCase):
 
     def test(self):
         pool = ThreadPool(1)
-        pool.spawn(func)
+        pool.spawn(noop)
         gevent.sleep(0)
         pool.kill()
 
@@ -499,7 +499,7 @@ if hasattr(gevent.threadpool, 'ThreadPoolExecutor'):
 
             def callback(future):
                 future.calledback += 1
-                raise Exception("Expected, ignored")
+                raise greentest.ExpectedException("Expected, ignored")
 
             future = pool.submit(fn)
             future.calledback = 0

@@ -17,7 +17,7 @@ import weakref
 import os
 import subprocess
 
-from test import lock_tests
+import lock_tests # gevent: use our local copy
 from test import support
 
 
@@ -132,10 +132,10 @@ class ThreadTests(BaseTestCase):
         # Kill the "immortal" _DummyThread
         del threading._active[ident[0]]
 
-    # run with a small(ish) thread stack size (256kB)
+    # run with a small(ish) thread stack size (256 KiB)
     def test_various_ops_small_stack(self):
         if verbose:
-            print('with 256kB thread stack size...')
+            print('with 256 KiB thread stack size...')
         try:
             threading.stack_size(262144)
         except _thread.error:
@@ -144,10 +144,10 @@ class ThreadTests(BaseTestCase):
         self.test_various_ops()
         threading.stack_size(0)
 
-    # run with a large thread stack size (1MB)
+    # run with a large thread stack size (1 MiB)
     def test_various_ops_large_stack(self):
         if verbose:
-            print('with 1MB thread stack size...')
+            print('with 1 MiB thread stack size...')
         try:
             threading.stack_size(0x100000)
         except _thread.error:
@@ -427,7 +427,7 @@ class ThreadTests(BaseTestCase):
         t.daemon = True
         self.assertIn('daemon', repr(t))
 
-    def test_deamon_param(self):
+    def test_daemon_param(self):
         t = threading.Thread()
         self.assertFalse(t.daemon)
         t = threading.Thread(daemon=False)
@@ -1138,14 +1138,6 @@ class TimerTests(BaseTestCase):
 class LockTests(lock_tests.LockTests):
     locktype = staticmethod(threading.Lock)
 
-    @unittest.skip("not on gevent")
-    def test_locked_repr(self):
-        pass
-
-    @unittest.skip("not on gevent")
-    def test_repr(self):
-        pass
-
 class PyRLockTests(lock_tests.RLockTests):
     locktype = staticmethod(threading._PyRLock)
 
@@ -1155,11 +1147,6 @@ class CRLockTests(lock_tests.RLockTests):
 
 class EventTests(lock_tests.EventTests):
     eventtype = staticmethod(threading.Event)
-
-    @unittest.skip("not on gevent")
-    def test_reset_internal_locks(self):
-        # xxx: gevent: This uses an internal _cond attribute we don't have
-        pass
 
 class ConditionAsRLockTests(lock_tests.RLockTests):
     # Condition uses an RLock by default and exports its API.
