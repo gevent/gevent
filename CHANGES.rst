@@ -29,6 +29,8 @@
 - The internal, undocumented class ``gevent._socket3._fileobject`` has
   been removed. See :issue:`1084`.
 
+- Travis CI tests on Python 3.7.0a4 and PyPy 2.7 5.10.0 and PyPy 3.5
+  5.10.1.
 
 1.3a1 (2018-01-27)
 ==================
