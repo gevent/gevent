@@ -597,7 +597,6 @@ class TestInterrupted_gethostbyname(greentest.GenericWaitTestCase):
         try:
             gevent.get_hub().threadpool.join()
         except Exception: # pylint:disable=broad-except
-            import traceback
             traceback.print_exc()
 
 
@@ -681,6 +680,10 @@ class TestInvalidPort(TestCase):
     def test3(self):
         self._test('getnameinfo', ('www.gevent.org', 'x'), 0)
 
+    @unittest.skipIf(RESOLVER_DNSPYTHON,
+                     "System resolvers do funny things with this: macOS raises gaierror, "
+                     "Travis CI returns (readthedocs.org, '0'). It's hard to match that exactly. "
+                     "dnspython raises OverflowError.")
     def test4(self):
         self._test('getnameinfo', ('www.gevent.org', 65536), 0)
 
