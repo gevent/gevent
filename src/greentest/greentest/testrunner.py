@@ -141,7 +141,10 @@ def run_many(tests, expected=(), failfast=False, quiet=False):
 
 def discover(tests=None, ignore=(), coverage=False):
     if isinstance(ignore, six.string_types):
-        ignore = set(load_list_from_file(ignore))
+        ignore_files = ignore.split(',')
+        ignore = set()
+        for f in ignore_files:
+            ignore.update(set(load_list_from_file(f)))
 
     ignore = set(ignore or ())
     if coverage:

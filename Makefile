@@ -14,7 +14,7 @@ export LC_ALL=C.UTF-8
 
 clean:
 	rm -f src/gevent/libev/corecext.c src/gevent/libev/corecext.h
-	rm -f src/gevent/ares.c src/gevent/ares.h
+	rm -f src/gevent/resolver/cares.c src/gevent/resolver/cares.h
 	rm -f src/gevent/_semaphore.c src/gevent/_semaphore.h
 	rm -f src/gevent/local.c src/gevent/local.h
 	rm -f src/gevent/*.so src/gevent/*.pyd src/gevent/libev/*.so src/gevent/libuv/*.so src/gevent/libev/*.pyd src/gevent/libuv/*.pyd
@@ -33,7 +33,7 @@ doc:
 	cd doc && PYTHONPATH=.. make html
 
 whitespace:
-	! find . -not -path "*.pem" -not -path "./.eggs/*" -not -path "./src/greentest/htmlcov/*" -not -path "./src/greentest/.coverage.*" -not -path "./.tox/*" -not -path "*/__pycache__/*" -not -path "*.so" -not -path "*.pyc" -not -path "./.git/*" -not -path "./build/*"  -not -path "./src/gevent/libev/*" -not -path "./src/gevent.egg-info/*" -not -path "./dist/*" -not -path "./.DS_Store" -not -path "./deps/*" -not -path "./src/gevent/libev/corecext.*.[ch]" -not -path "./src/gevent/ares.*" -not -path "./doc/_build/*" -not -path "./doc/mytheme/static/*" -type f | xargs egrep -l " $$"
+	! find . -not -path "*.pem" -not -path "./.eggs/*" -not -path "./src/greentest/htmlcov/*" -not -path "./src/greentest/.coverage.*" -not -path "./.tox/*" -not -path "*/__pycache__/*" -not -path "*.so" -not -path "*.pyc" -not -path "./.git/*" -not -path "./build/*"  -not -path "./src/gevent/libev/*" -not -path "./src/gevent.egg-info/*" -not -path "./dist/*" -not -path "./.DS_Store" -not -path "./deps/*" -not -path "./src/gevent/libev/corecext.*.[ch]" -not -path "./src/gevent/resolver/cares.*" -not -path "./doc/_build/*" -not -path "./doc/mytheme/static/*" -type f | xargs egrep -l " $$"
 
 prospector:
 	which prospector
@@ -66,6 +66,9 @@ alltest: basictest
 	${PYTHON} scripts/travis.py fold_start ares "Running c-ares tests"
 	cd src/greentest && GEVENT_RESOLVER=ares GEVENTARES_SERVERS=8.8.8.8 ${PYTHON} testrunner.py --config known_failures.py --ignore tests_that_dont_use_resolver.txt --quiet
 	${PYTHON} scripts/travis.py fold_end ares
+	${PYTHON} scripts/travis.py fold_start dnspython "Running dnspython tests"
+	cd src/greentest && GEVENT_RESOLVER=dnspython ${PYTHON} testrunner.py --config known_failures.py --ignore tests_that_dont_use_resolver.txt,tests_that_dont_monkeypatch.txt --quiet
+	${PYTHON} scripts/travis.py fold_end dnspython
 # In the past, we included all test files that had a reference to 'subprocess'' somewhere in their
 # text. The monkey-patched stdlib tests were specifically included here.
 # However, we now always also test on AppVeyor (Windows) which only has GEVENT_FILE=thread,

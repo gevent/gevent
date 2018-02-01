@@ -15,7 +15,7 @@ import re
 
 from greentest.sysinfo import RUNNING_ON_APPVEYOR as APPVEYOR
 from greentest.sysinfo import RUNNING_ON_TRAVIS as TRAVIS
-from greentest.sysinfo import RESOLVER_ARES as ARES
+from greentest.sysinfo import RESOLVER_NOT_SYSTEM as ARES
 from greentest.sysinfo import RUN_COVERAGE
 
 

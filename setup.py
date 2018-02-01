@@ -169,6 +169,12 @@ def run_setup(ext_modules, run_make):
         cmdclass=dict(build_ext=ConfiguringBuildExt),
         install_requires=install_requires,
         setup_requires=setup_requires,
+        extras_require={
+            'dnspython': [
+                'dnspython',
+                'idna',
+            ],
+        },
         # It's always safe to pass the CFFI keyword, even if
         # cffi is not installed: it's just ignored in that case.
         cffi_modules=cffi_modules,

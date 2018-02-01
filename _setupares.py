@@ -79,13 +79,13 @@ def configure_ares(bext, ext):
         os.chdir(cwd)
 
 
-ARES = Extension(name='gevent.ares',
-                 sources=['src/gevent/ares.pyx'],
-                 include_dirs=['src/gevent'] + [dep_abspath('c-ares')] if CARES_EMBED else [],
+ARES = Extension(name='gevent.resolver.cares',
+                 sources=['src/gevent/resolver/cares.pyx'],
+                 include_dirs=['src/gevent/resolver'] + [dep_abspath('c-ares')] if CARES_EMBED else [],
                  libraries=list(LIBRARIES),
                  define_macros=list(DEFINE_MACROS),
-                 depends=glob_many('src/gevent/dnshelper.c',
-                                   'src/gevent/cares_*.[ch]'))
+                 depends=glob_many('src/gevent/resolver/dnshelper.c',
+                                   'src/gevent/resolver/cares_*.[ch]'))
 
 ARES.optional = not RUNNING_ON_CI
 

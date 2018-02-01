@@ -10,7 +10,7 @@ from greentest.sysinfo import RUNNING_ON_APPVEYOR as APPVEYOR
 from greentest.sysinfo import RUNNING_ON_TRAVIS as TRAVIS
 from greentest.sysinfo import RUN_LEAKCHECKS as LEAKTEST
 from greentest.sysinfo import RUN_COVERAGE as COVERAGE
-from greentest.sysinfo import RESOLVER_ARES
+from greentest.sysinfo import RESOLVER_NOT_SYSTEM
 
 from greentest.sysinfo import PYPY
 from greentest.sysinfo import PY3
@@ -145,7 +145,7 @@ if PYPY:
         'FLAKY test__backdoor.py',
     ]
 
-    if RESOLVER_ARES:
+    if RESOLVER_NOT_SYSTEM:
 
         FAILING_TESTS += [
             # A few errors and differences:

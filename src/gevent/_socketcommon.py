@@ -238,20 +238,6 @@ def cancel_wait(watcher, error=cancel_wait_ex):
     get_hub().cancel_wait(watcher, error)
 
 
-class BlockingResolver(object):
-
-    def __init__(self, hub=None):
-        pass
-
-    def close(self):
-        pass
-
-    for method in ['gethostbyname',
-                   'gethostbyname_ex',
-                   'getaddrinfo',
-                   'gethostbyaddr',
-                   'getnameinfo']:
-        locals()[method] = staticmethod(getattr(_socket, method))
 
 
 def gethostbyname(hostname):
