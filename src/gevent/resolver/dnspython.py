@@ -155,6 +155,9 @@ class Resolver(AbstractResolver):
         Windows). There are some measures in place to be able to resolve
         ``localhost`` related names and addresses through the system resolver.
 
+        Many of the same caveats about DNS results apply here as are documented
+        for :class:`gevent.resolver.ares.Resolver`.
+
     .. caution::
 
         This resolver is experimental. It may be removed or modified in

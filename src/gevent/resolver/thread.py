@@ -35,7 +35,7 @@ class Resolver(object):
         some reports of long delays, slow performance or even hangs,
         particularly in long-lived programs that make many, many DNS
         requests. If you suspect that may be happening to you, try the
-        ares resolver (and submit a bug report).
+        dnspython or ares resolver (and submit a bug report).
     """
     def __init__(self, hub=None):
         if hub is None:
