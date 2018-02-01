@@ -2,6 +2,8 @@
  :mod:`gevent.socket` -- Cooperative low-level networking interface
 ====================================================================
 
+.. module:: gevent.socket
+
 This module provides socket operations and some related functions. The
 API of the functions and classes matches the API of the corresponding
 items in the standard :mod:`socket` module exactly, but the
@@ -47,6 +49,10 @@ Gevent Extensions
 Beyond the basic standard library interface, ``gevent.socket``
 provides some extensions. These are identical and shared by all
 versions of Python.
+
+.. versionchanged:: 1.3a2
+   The undocumented class ``BlockingResolver`` has been documented
+   and moved to :class:`gevent.resolver.blocking.Resolver`.
 
 Waiting
 -------

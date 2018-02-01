@@ -125,19 +125,44 @@ def _getaddrinfo(host=None, service=None, family=socket.AF_UNSPEC, socktype=0,
 
 class Resolver(AbstractResolver):
     """
-    A resolver that uses dnspython.
+    An *experimental* resolver that uses `dnspython`_.
 
-    This completely ignores the contents of ``/etc/hosts``, but it is
-    configured by ``/etc/resolv.conf`` (on Unix) or the registry (on
-    Windows).
+    This is typically slower than the default threaded resolver
+    (unless there's a cache hit, in which case it can be much faster).
+    It is usually much faster than the c-ares resolver. It tends to
+    scale well as more concurrent resolutions are attempted.
 
-    This uses thread locks and sockets, so it only functions if the system
-    has been monkey-patched. Otherwise it will raise a ``ValueError``.
+    Under Python 2, if the ``idna`` package is installed, this
+    resolver can resolve Unicode host names that the system resolver
+    cannot.
 
-    Under Python 2, if the ``idna`` package is installed, this resolver
-    can resolve Unicode host names that the system resolver cannot.
+    This uses thread locks and sockets, so it only functions if the
+    system has been monkey-patched. Otherwise it will raise a
+    ``ValueError``.
+
+    This uses dnspython's default resolver object. This object has
+    several useful attributes that can be used to adjust the behaviour
+    of the DNS system; in particular, the ``cache`` attribute could be
+    set to an instance of :class:`dns.resolver.Cache` or
+    :class:`dns.resolver.LRUCache` (by default a ``LRUCache`` is
+    used), and ``nameservers`` controls which nameservers to talk to,
+    and ``lifetime`` configures a timeout for each individual query.
+
+    .. caution::
+
+        This completely ignores the contents of ``/etc/hosts``, but it is
+        configured by ``/etc/resolv.conf`` (on Unix) or the registry (on
+        Windows). There are some measures in place to be able to resolve
+        ``localhost`` related names and addresses through the system resolver.
+
+    .. caution::
+
+        This resolver is experimental. It may be removed or modified in
+        the future. As always, feedback is welcome.
 
     .. versionadded:: 1.3a2
+
+    .. _dnspython: http://www.dnspython.org
     """
 
     def __init__(self, hub=None): # pylint: disable=unused-argument
@@ -146,6 +171,8 @@ class Resolver(AbstractResolver):
             raise ValueError("Can only be used when monkey-patched")
         if resolver._resolver is None:
             resolver._resolver = resolver.get_default_resolver()
+            # Add a default cache
+            resolver._resolver.cache = resolver.LRUCache()
         if resolver._getaddrinfo is not _getaddrinfo:
             resolver._getaddrinfo = _getaddrinfo
 

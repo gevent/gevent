@@ -33,7 +33,7 @@
   5.10.1.
 
 - Add the ``dnspython`` resolver as a lightweight alternative to
-  c-ares.
+  c-ares. See :pr:`1088`.
 
 1.3a1 (2018-01-27)
 ==================

@@ -11,7 +11,7 @@ through the :attr:`resolver attribute <gevent.hub.Hub.resolver>` of the
 :mod:`gevent.socket` module.
 
 A resolver implements the 5 standandard functions from the
-:mod:`socket` module for resolving hostnames:
+:mod:`socket` module for resolving hostnames and addresses:
 
 * :func:`socket.gethostbyname`
 * :func:`socket.gethostbyname_ex`
@@ -35,8 +35,12 @@ variable. Specify ``ares``, ``thread``, ``dnspython``, or ``block`` to use the
 the fully-qualified name of an implementation of the standard
 functions.
 
+Please see the documentation for each resolver class to understand the
+relative performance and correctness tradeoffs.
+
 .. toctree::
 
    gevent.resolver.thread
    gevent.resolver.ares
    gevent.resolver.dnspython
+   gevent.resolver.blocking
