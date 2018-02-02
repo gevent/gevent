@@ -439,5 +439,15 @@ class TestFunctions(greentest.TestCase):
         self.assertMonkeyPatchedFuncSignatures('socket', exclude=exclude)
 
 
+class TestSocket(greentest.TestCase):
+
+    def test_shutdown_when_closed(self):
+        # https://github.com/gevent/gevent/issues/1089
+        # we once raised an AttributeError.
+        s = socket.socket()
+        s.close()
+        with self.assertRaises(socket.error):
+            s.shutdown(socket.SHUT_RDWR)
+
 if __name__ == '__main__':
     greentest.main()

@@ -679,8 +679,15 @@ class Hub(RawGreenlet):
 
         .. versionchanged:: 1.3a1
            Added the *close_watcher* parameter. If true, the watcher
-           will be closed after the exception is thrown.
+           will be closed after the exception is thrown. The watcher should then
+           be discarded. Closing the watcher is important to release native resources.
+        .. versionchanged:: 1.3a2
+           Allow the *watcher* to be ``None``. No action is taken in that case.
         """
+        if watcher is None:
+            # Presumably already closed.
+            # See https://github.com/gevent/gevent/issues/1089
+            return
         if watcher.callback is not None:
             self.loop.run_callback(self._cancel_wait, watcher, error, close_watcher)
         elif close_watcher:

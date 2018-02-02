@@ -35,6 +35,10 @@
 - Add the ``dnspython`` resolver as a lightweight alternative to
   c-ares. See :pr:`1088`.
 
+- Fix calling ``shutdown`` on a closed socket. It was raising
+  ``AttributeError``, now it once again raises the correct
+  ``socket.error``. Reported in :issue:`1089` by André Cimander.
+
 1.3a1 (2018-01-27)
 ==================
 
