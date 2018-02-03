@@ -168,7 +168,7 @@ except ImportError:
         return extensions
 
 def cythonize1(ext):
-    new_ext = cythonize([ext], include_path=['src/gevent', 'src/gevent/libev'])[0]
+    new_ext = cythonize([ext], include_path=['src/gevent', 'src/gevent/libev', 'src/gevent/resolver'])[0]
     for optional_attr in ('configure', 'optional'):
         if hasattr(ext, optional_attr):
             setattr(new_ext, optional_attr,

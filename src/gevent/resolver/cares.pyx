@@ -4,7 +4,7 @@
 # can't compile ("local variable 'result' referenced before assignment").
 # See https://github.com/cython/cython/issues/1786
 # cython: auto_pickle=False
-cimport cares
+cimport libcares as cares
 import sys
 
 from cpython.ref cimport Py_INCREF
