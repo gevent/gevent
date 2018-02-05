@@ -16,7 +16,8 @@ if hasattr(sys, 'pypy_version_info'):
 version = '%s.%s.%s' % sys.version_info[:3]
 if sys.version_info[3] == 'alpha':
     version += 'a%s' % sys.version_info[4]
-
+elif sys.version_info[3] == 'beta':
+    version += 'b%s' % sys.version_info[4]
 
 def get_absolute_pythonpath():
     paths = [os.path.abspath(p) for p in os.environ.get('PYTHONPATH', '').split(os.pathsep)]

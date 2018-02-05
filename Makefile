@@ -129,7 +129,7 @@ PY27=$(BUILD_RUNTIMES)/snakepit/python2.7.14
 PY34=$(BUILD_RUNTIMES)/snakepit/python3.4.7
 PY35=$(BUILD_RUNTIMES)/snakepit/python3.5.4
 PY36=$(BUILD_RUNTIMES)/snakepit/python3.6.4
-PY37=$(BUILD_RUNTIMES)/snakepit/python3.7.0a4
+PY37=$(BUILD_RUNTIMES)/snakepit/python3.7.0b1
 PYPY=$(BUILD_RUNTIMES)/snakepit/pypy5100
 PYPY3=$(BUILD_RUNTIMES)/snakepit/pypy3.5_5101
 
@@ -168,7 +168,6 @@ $(PYPY3):
 
 develop:
 	${PYTHON} scripts/travis.py fold_start install "Installing gevent"
-	ls -l $(BUILD_RUNTIMES)/snakepit/
 	echo python is at `which $(PYTHON)`
 # First install a newer pip so that it can use the wheel cache
 # (only needed until travis upgrades pip to 7.x; note that the 3.5
@@ -192,8 +191,11 @@ test-py35: $(PY35)
 test-py36: $(PY36)
 	PYTHON=python3.6.4 PATH=$(BUILD_RUNTIMES)/versions/python3.6.4/bin:$(PATH) make develop allbackendtest
 
-test-py37: $(PY37)
-	PYTHON=python3.7.0a4 PATH=$(BUILD_RUNTIMES)/versions/python3.7.0a4/bin:$(PATH) make develop allbackendtest
+# test-py37: $(PY37)
+# 	PYTHON=python3.7.0b1 PATH=$(BUILD_RUNTIMES)/versions/python3.7.0b1/bin:$(PATH) make develop allbackendtest
+
+test-py37:
+	PYTHON=python make develop allbackendtest
 
 test-pypy: $(PYPY)
 	PYTHON=$(PYPY) PATH=$(BUILD_RUNTIMES)/versions/pypy5100/bin:$(PATH) make develop cffibackendtest coverage_combine

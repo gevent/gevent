@@ -29,8 +29,11 @@
 - The internal, undocumented class ``gevent._socket3._fileobject`` has
   been removed. See :issue:`1084`.
 
-- Travis CI tests on Python 3.7.0a4 and PyPy 2.7 5.10.0 and PyPy 3.5
+- Travis CI tests on Python 3.7.0b1 and PyPy 2.7 5.10.0 and PyPy 3.5
   5.10.1.
+
+- Support the ``capture_output`` argument added to Python 3.7 in
+  :func:`gevent.subprocess.run`.
 
 - Add the ``dnspython`` resolver as a lightweight alternative to
   c-ares. See :pr:`1088`.

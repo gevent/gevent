@@ -26,6 +26,7 @@ from greentest.sysinfo import PY2
 from greentest.sysinfo import PY34
 from greentest.sysinfo import PY35
 from greentest.sysinfo import PY36
+from greentest.sysinfo import PY37
 
 from greentest.sysinfo import WIN
 from greentest.sysinfo import OSX
@@ -494,93 +495,6 @@ class _PatchedTest(object):
         return test
 
 
-if sys.version_info[:3] <= (2, 7, 8):
-
-    disabled_tests += [
-        # SSLv2 May or may not be available depending on the build
-        'test_ssl.BasicTests.test_constants',
-        'test_ssl.ThreadedTests.test_protocol_sslv23',
-        'test_ssl.ThreadedTests.test_protocol_sslv3',
-        'test_ssl.ThreadedTests.test_protocol_tlsv1',
-    ]
-
-    # Our 2.7 tests are from 2.7.11 so all the new SSLContext stuff
-    # has to go.
-    disabled_tests += [
-        'test_ftplib.TestTLS_FTPClass.test_check_hostname',
-        'test_ftplib.TestTLS_FTPClass.test_context',
-
-        'test_urllib2.TrivialTests.test_cafile_and_context',
-        'test_urllib2_localnet.TestUrlopen.test_https',
-        'test_urllib2_localnet.TestUrlopen.test_https_sni',
-        'test_urllib2_localnet.TestUrlopen.test_https_with_cadefault',
-        'test_urllib2_localnet.TestUrlopen.test_https_with_cafile',
-
-        'test_httplib.HTTPTest.testHTTPWithConnectHostPort',
-        'test_httplib.HTTPSTest.test_local_good_hostname',
-        'test_httplib.HTTPSTest.test_local_unknown_cert',
-        'test_httplib.HTTPSTest.test_networked_bad_cert',
-        'test_httplib.HTTPSTest.test_networked_good_cert',
-        'test_httplib.HTTPSTest.test_networked_noverification',
-        'test_httplib.HTTPSTest.test_networked',
-    ]
-
-    # Except for test_ssl, which is from 2.7.8. But it has some certificate problems
-    # due to age
-    disabled_tests += [
-        'test_ssl.NetworkedTests.test_connect',
-        'test_ssl.NetworkedTests.test_connect_ex',
-        'test_ssl.NetworkedTests.test_get_server_certificate',
-
-        # XXX: Not sure
-        'test_ssl.BasicSocketTests.test_unsupported_dtls',
-    ]
-
-    # These are also bugs fixed more recently
-    disabled_tests += [
-        'test_httpservers.CGIHTTPServerTestCase.test_nested_cgi_path_issue21323',
-        'test_httpservers.CGIHTTPServerTestCase.test_query_with_continuous_slashes',
-        'test_httpservers.CGIHTTPServerTestCase.test_query_with_multiple_question_mark',
-
-        'test_socket.GeneralModuleTests.test_weakref__sock',
-
-        'test_threading.ThreadingExceptionTests.test_print_exception_stderr_is_none_1',
-        'test_threading.ThreadingExceptionTests.test_print_exception_stderr_is_none_2',
-
-        'test_wsgiref.IntegrationTests.test_request_length',
-
-        'test_httplib.HeaderTests.test_content_length_0',
-        'test_httplib.HeaderTests.test_invalid_headers',
-        'test_httplib.HeaderTests.test_malformed_headers_coped_with',
-        'test_httplib.BasicTest.test_error_leak',
-        'test_httplib.BasicTest.test_too_many_headers',
-        'test_httplib.BasicTest.test_proxy_tunnel_without_status_line',
-        'test_httplib.TunnelTests.test_connect',
-
-        'test_smtplib.TooLongLineTests.testLineTooLong',
-        'test_smtplib.SMTPSimTests.test_quit_resets_greeting',
-
-        # features in test_support not available
-        'test_threading_local.ThreadLocalTests.test_derived',
-        'test_threading_local.PyThreadingLocalTests.test_derived',
-        'test_urllib.UtilityTests.test_toBytes',
-        'test_httplib.HTTPSTest.test_networked_trusted_by_default_cert',
-
-        # Exposed as broken with the update of test_httpservers.py to 2.7.13
-        'test_httpservers.SimpleHTTPRequestHandlerTestCase.test_windows_colon',
-        'test_httpservers.BaseHTTPServerTestCase.test_head_via_send_error',
-        'test_httpservers.BaseHTTPServerTestCase.test_send_error',
-        'test_httpservers.SimpleHTTPServerTestCase.test_path_without_leading_slash',
-    ]
-
-
-    # somehow these fail with "Permission denied" on travis
-    disabled_tests += [
-        'test_httpservers.CGIHTTPServerTestCase.test_post',
-        'test_httpservers.CGIHTTPServerTestCase.test_headers_and_content',
-        'test_httpservers.CGIHTTPServerTestCase.test_authorization',
-        'test_httpservers.SimpleHTTPServerTestCase.test_get'
-    ]
 
 if sys.version_info[:3] <= (2, 7, 11):
 
@@ -965,6 +879,19 @@ if PY36:
         'test_socket.LinuxKernelCryptoAPI.test_aead_aes_gcm',
     ]
 
+if PY37:
+    disabled_tests += [
+        # These want to use the private '_communicate' method, which
+        # our Popen doesn't have.
+        'test_subprocess.MiscTests.test_call_keyboardinterrupt_no_kill',
+        'test_subprocess.MiscTests.test_context_manager_keyboardinterrupt_no_kill',
+        'test_subprocess.MiscTests.test_run_keyboardinterrupt_no_kill',
+
+        # This wants to check that the underlying fileno is blocking,
+        # but it isn't.
+        'test_socket.NonBlockingTCPTests.testSetBlocking',
+    ]
+
 # if 'signalfd' in os.environ.get('GEVENT_BACKEND', ''):
 #     # tests that don't interact well with signalfd
 #     disabled_tests.extend([
@@ -1027,8 +954,8 @@ def disable_tests_in_source(source, filename):
         # If we do it on a def-by-def basis, we can break syntax
         # if the function is already decorated
         pattern = r'^import .*'
-        replacement = r'from greentest import patched_tests_setup as _GEVENT_PTS\n'
-        replacement += r'import unittest as _GEVENT_UTS\n'
+        replacement = r'from greentest import patched_tests_setup as _GEVENT_PTS;'
+        replacement += r'import unittest as _GEVENT_UTS;'
         replacement += r'\g<0>'
         source, n = re.subn(pattern, replacement, source, 1, re.MULTILINE)
 

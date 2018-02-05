@@ -88,3 +88,29 @@ except ImportError:
     # possible
     fspath = _fspath
     fspath.__name__ = 'fspath'
+
+try:
+    from os import fsencode # pylint: disable=unused-import,no-name-in-module
+except ImportError:
+    encoding = sys.getfilesystemencoding() or ('utf-8' if not WIN else 'mbcs')
+    errors = 'strict' if WIN and encoding == 'mbcs' else 'surrogateescape'
+
+    # Added in 3.2, so this is for Python 2.7. Note that it doesn't have
+    # sys.getfilesystemencodeerrors(), which was added in 3.6
+    def fsencode(filename):
+        """Encode filename (an os.PathLike, bytes, or str) to the filesystem
+        encoding with 'surrogateescape' error handler, return bytes unchanged.
+        On Windows, use 'strict' error handler if the file system encoding is
+        'mbcs' (which is the default encoding).
+        """
+        filename = fspath(filename)  # Does type-checking of `filename`.
+        if isinstance(filename, bytes):
+            return filename
+
+        try:
+            return filename.encode(encoding, errors)
+        except LookupError:
+            # Can't encode it, and the error handler doesn't
+            # exist. Probably on Python 2 with an astral character.
+            # Not sure how to handle this.
+            raise UnicodeEncodeError("Can't encode path to filesystem encoding")

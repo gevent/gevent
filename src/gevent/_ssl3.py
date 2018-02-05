@@ -569,7 +569,9 @@ class SSLSocket(socket):
                     raise
                 self._wait(self._write_event, timeout_exc=_SSLErrorHandshakeTimeout)
 
-        if self._context.check_hostname:
+        if sys.version_info[:2] < (3, 7) and self._context.check_hostname:
+            # In Python 3.7, the underlying OpenSSL name matching is used.
+            # The version implemented in Python doesn't understand IDNA encoding.
             if not self.server_hostname:
                 raise ValueError("check_hostname needs server_hostname "
                                  "argument")

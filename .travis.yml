@@ -1,7 +1,13 @@
 # .travis.yml based on https://github.com/DRMacIver/hypothesis/blob/master/.travis.yml
-language: c
+language: python
 sudo: false
-dist: trusty
+
+# Currently, pyenv cannot build 3.7b1 on Travis
+# https://github.com/travis-ci/travis-ci/issues/9069
+# But it looks like the backend process for Travis is updating the
+# dev branch appropriately? Lets find out.
+python:
+  - 3.7-dev
 
 env:
     global:
@@ -28,10 +34,10 @@ script:
 notifications:
   email: false
 
-# cache: pip seems not to work if `install` is replaced (https://github.com/travis-ci/travis-ci/issues/3239)
+
 cache:
+  pip: true
   directories:
-    - $HOME/.cache/pip
     - $HOME/.venv
     - $HOME/.runtimes
     - $HOME/.wheelhouse

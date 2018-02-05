@@ -74,13 +74,37 @@ class socket(object):
     # of _wrefsocket. (gevent internal usage only)
     _gevent_sock_class = _wrefsocket
 
-    def __init__(self, family=AF_INET, type=SOCK_STREAM, proto=0, fileno=None):
-        # Take the same approach as socket2: wrap a real socket object,
-        # don't subclass it. This lets code that needs the raw _sock (not tied to the hub)
-        # get it. This shows up in tests like test__example_udp_server.
-        self._sock = self._gevent_sock_class(family, type, proto, fileno)
-        self._io_refs = 0
-        self._closed = False
+    _io_refs = 0
+    _closed = False
+    _read_event = None
+    _write_event = None
+
+
+    # Take the same approach as socket2: wrap a real socket object,
+    # don't subclass it. This lets code that needs the raw _sock (not tied to the hub)
+    # get it. This shows up in tests like test__example_udp_server.
+
+    if sys.version_info[:2] < (3, 7):
+        def __init__(self, family=AF_INET, type=SOCK_STREAM, proto=0, fileno=None):
+            self._sock = self._gevent_sock_class(family, type, proto, fileno)
+            self.timeout = None
+            self.__init_common()
+    else:
+        # In 3.7, socket changed to auto-detecting family, type, and proto
+        # when given a fileno.
+        def __init__(self, family=-1, type=-1, proto=-1, fileno=None):
+            if fileno is None:
+                if family == -1:
+                    family = AF_INET
+                if type == -1:
+                    type = SOCK_STREAM
+                if proto == -1:
+                    proto = 0
+            self._sock = self._gevent_sock_class(family, type, proto, fileno)
+            self.timeout = None
+            self.__init_common()
+
+    def __init_common(self):
         _socket.socket.setblocking(self._sock, False)
         fileno = _socket.socket.fileno(self._sock)
         self.hub = get_hub()
@@ -100,6 +124,16 @@ class socket(object):
             if self.timeout != 0.0:
                 return self._sock.type & ~_socket.SOCK_NONBLOCK # pylint:disable=no-member
             return self._sock.type
+
+    def getblocking(self):
+        """
+        Returns whether the socket will approximate blocking
+        behaviour.
+
+        .. versionadded:: 1.3a2
+            Added in Python 3.7.
+        """
+        return self.timeout != 0.0
 
     def __enter__(self):
         return self
@@ -720,5 +754,9 @@ else: # pragma: no cover
             # ValueError
             __implements__.remove('socketpair')
 
+
+if sys.version_info[:2] >= (3, 7):
+    close = __socket__.close
+    __imports__ += ['close']
 
 __all__ = __implements__ + __extensions__ + __imports__

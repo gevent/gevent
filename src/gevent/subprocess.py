@@ -45,6 +45,7 @@ from gevent._compat import integer_types, string_types, xrange
 from gevent._compat import PY3
 from gevent._compat import reraise
 from gevent._compat import fspath
+from gevent._compat import fsencode
 from gevent._util import _NONE
 from gevent._util import copy_globals
 from gevent.fileobject import FileObject
@@ -1183,7 +1184,10 @@ class Popen(object):
             elif not PY3 and isinstance(args, string_types):
                 args = [args]
             else:
-                args = list(args)
+                try:
+                    args = list(args)
+                except TypeError:  # os.PathLike instead of a sequence?
+                    args = [fsencode(args)]  # os.PathLike -> [str]
 
             if shell:
                 args = ["/bin/sh", "-c"] + args
@@ -1516,15 +1520,28 @@ def run(*popenargs, **kwargs):
     .. versionadded:: 1.2a1
        This function first appeared in Python 3.5. It is available on all Python
        versions gevent supports.
+
+    .. versionchanged:: 1.3a2
+       Add the ``capture_output`` argument from Python 3.7. It automatically sets
+       ``stdout`` and ``stderr`` to ``PIPE``. It is an error to pass either
+       of those arguments along with ``capture_output``.
     """
     input = kwargs.pop('input', None)
     timeout = kwargs.pop('timeout', None)
     check = kwargs.pop('check', False)
+    capture_output = kwargs.pop('capture_output', False)
 
     if input is not None:
         if 'stdin' in kwargs:
             raise ValueError('stdin and input arguments may not both be used.')
         kwargs['stdin'] = PIPE
+
+    if capture_output:
+        if ('stdout' in kwargs) or ('stderr' in kwargs):
+            raise ValueError('stdout and stderr arguments may not be used '
+                             'with capture_output.')
+        kwargs['stdout'] = PIPE
+        kwargs['stderr'] = PIPE
 
     with Popen(*popenargs, **kwargs) as process:
         try:

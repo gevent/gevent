@@ -4,7 +4,7 @@ watchers will depend on the specific event loop.
 """
 # pylint:disable=not-callable
 from __future__ import absolute_import, print_function
-import sys
+
 import os
 import signal as signalmodule
 import functools
@@ -47,6 +47,8 @@ except ImportError: # Python < 3.4
 
         def tracemalloc(init):
             return init
+
+from gevent._compat import fsencode
 
 from gevent._ffi import _dbg
 from gevent._ffi import GEVENT_DEBUG_LEVEL
@@ -596,20 +598,7 @@ class StatMixin(object):
 
     @staticmethod
     def _encode_path(path):
-        if isinstance(path, bytes):
-            return path
-
-        # encode for the filesystem. Not all systems (e.g., Unix)
-        # will have an encoding specified
-        encoding = sys.getfilesystemencoding() or 'utf-8'
-        try:
-            path = path.encode(encoding, 'surrogateescape')
-        except LookupError:
-            # Can't encode it, and the error handler doesn't
-            # exist. Probably on Python 2 with an astral character.
-            # Not sure how to handle this.
-            raise UnicodeEncodeError("Can't encode path to filesystem encoding")
-        return path
+        return fsencode(path)
 
     def __init__(self, _loop, path, interval=0.0, ref=True, priority=None):
         # Store the encoded path in the same attribute that corecext does
