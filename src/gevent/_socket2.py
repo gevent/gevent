@@ -2,6 +2,8 @@
 """
 Python 2 socket module.
 """
+from __future__ import absolute_import
+
 # Our import magic sadly makes this warning useless
 # pylint: disable=undefined-variable
 
