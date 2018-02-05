@@ -17,8 +17,10 @@ from __future__ import absolute_import, print_function, division
 from gevent._compat import string_types
 from gevent.hub import getcurrent, _NONE, get_hub
 
-__all__ = ['Timeout',
-           'with_timeout']
+__all__ = [
+    'Timeout',
+    'with_timeout',
+]
 
 
 class _FakeTimer(object):
@@ -26,8 +28,22 @@ class _FakeTimer(object):
     # without allocating any native resources. This is useful for timeouts
     # that will never expire.
     # Also partially mimics the API of Timeout itself for use in _start_new_or_dummy
-    pending = False
-    active = False
+
+    # This object is used as a singleton, so it should be
+    # immutable.
+    __slots__ = ()
+
+    @property
+    def pending(self):
+        return False
+
+    active = pending
+
+    @property
+    def seconds(self):
+        return None
+
+    timer = exception = seconds
 
     def start(self, *args, **kwargs):
         # pylint:disable=unused-argument
@@ -51,23 +67,30 @@ _FakeTimer = _FakeTimer()
 
 class Timeout(BaseException):
     """
-    Raise *exception* in the current greenlet after given time period::
+    Timeout(seconds=None, exception=None, ref=True, priority=-1)
+
+    Raise *exception* in the current greenlet after *seconds*
+    have elapsed::
 
         timeout = Timeout(seconds, exception)
         timeout.start()
         try:
             ...  # exception will be raised here, after *seconds* passed since start() call
         finally:
-            timeout.cancel()
+            timeout.close()
 
-    .. note:: If the code that the timeout was protecting finishes
-       executing before the timeout elapses, be sure to ``cancel`` the
-       timeout so it is not unexpectedly raised in the future. Even if
-       it is raised, it is a best practice to cancel it. This
-       ``try/finally`` construct or a ``with`` statement is a
-       recommended pattern.
+    .. note::
 
-    When *exception* is omitted or ``None``, the :class:`Timeout` instance itself is raised:
+        If the code that the timeout was protecting finishes
+        executing before the timeout elapses, be sure to ``close`` the
+        timeout so it is not unexpectedly raised in the future. Even if it
+        is raised, it is a best practice to close it. This ``try/finally``
+        construct or a ``with`` statement is a recommended pattern. (If
+        the timeout object will be started again, use ``cancel`` instead
+        of ``close``; this is rare.)
+
+    When *exception* is omitted or ``None``, the ``Timeout`` instance
+    itself is raised::
 
         >>> import gevent
         >>> gevent.Timeout(0.1).start()
@@ -76,14 +99,41 @@ class Timeout(BaseException):
          ...
         Timeout: 0.1 seconds
 
-    To simplify starting and canceling timeouts, the ``with`` statement can be used::
+    If the *seconds* argument is not given or is ``None`` (e.g.,
+    ``Timeout()``), then the timeout will never expire and never raise
+    *exception*. This is convenient for creating functions which take
+    an optional timeout parameter of their own. (Note that this is **not**
+    the same thing as a *seconds* value of ``0``.)
+
+    ::
+
+       def function(args, timeout=None):
+          "A function with an optional timeout."
+          timer = Timeout(timeout)
+          with timer:
+             ...
+
+    .. caution::
+
+        A *seconds* value less than ``0.0`` (e.g., ``-1``) is poorly defined. In the future,
+        support for negative values is likely to do the same thing as a value
+        of ``None`` or ``0``
+
+    A *seconds* value of ``0`` requests that the event loop spin and poll for I/O;
+    it will immediately expire as soon as control returns to the event loop.
+
+    .. rubric:: Use As A Context Manager
+
+    To simplify starting and canceling timeouts, the ``with``
+    statement can be used::
 
         with gevent.Timeout(seconds, exception) as timeout:
             pass  # ... code block ...
 
-    This is equivalent to the try/finally block above with one additional feature:
-    if *exception* is the literal ``False``, the timeout is still raised, but the context manager
-    suppresses it, so the code outside the with-block won't see it.
+    This is equivalent to the try/finally block above with one
+    additional feature: if *exception* is the literal ``False``, the
+    timeout is still raised, but the context manager suppresses it, so
+    the code outside the with-block won't see it.
 
     This is handy for adding a timeout to the functions that don't
     support a *timeout* parameter themselves::
@@ -96,9 +146,14 @@ class Timeout(BaseException):
         else:
             ...  # a line was read within 5 seconds
 
-    .. caution:: If ``readline()`` above catches and doesn't re-raise :class:`BaseException`
-       (for example, with a bare ``except:``), then your timeout will fail to function and control
-       won't be returned to you when you expect.
+    .. caution::
+
+        If ``readline()`` above catches and doesn't re-raise
+        :exc:`BaseException` (for example, with a bare ``except:``), then
+        your timeout will fail to function and control won't be returned
+        to you when you expect.
+
+    .. rubric:: Catching Timeouts
 
     When catching timeouts, keep in mind that the one you catch may
     not be the one you have set (a calling function may have set its
@@ -112,41 +167,49 @@ class Timeout(BaseException):
         except Timeout as t:
             if t is not timeout:
                 raise # not my timeout
+        finally:
+            timeout.close()
 
-    If the *seconds* argument is not given or is ``None`` (e.g.,
-    ``Timeout()``), then the timeout will never expire and never raise
-    *exception*. This is convenient for creating functions which take
-    an optional timeout parameter of their own. (Note that this is not the same thing
-    as a *seconds* value of 0.)
-
-    .. caution::
-       A *seconds* value less than 0.0 (e.g., -1) is poorly defined. In the future,
-       support for negative values is likely to do the same thing as a value
-       of ``None``.
 
     .. versionchanged:: 1.1b2
-       If *seconds* is not given or is ``None``, no longer allocate a libev
-       timer that will never be started.
+
+        If *seconds* is not given or is ``None``, no longer allocate a
+        native timer object that will never be started.
+
     .. versionchanged:: 1.1
-       Add warning about negative *seconds* values.
+
+        Add warning about negative *seconds* values.
+
+    .. versionchanged:: 1.3a1
+
+        Timeout objects now have a :meth:`close`
+        method that must be called when the timeout will no longer be
+        used to properly clean up native resources.
+        The ``with`` statement does this automatically.
+
     """
 
+    # We inherit a __dict__ from BaseException, so __slots__ actually
+    # makes us larger.
+
     def __init__(self, seconds=None, exception=None, ref=True, priority=-1,
-                 _use_timer=True, _one_shot=False):
+                 _one_shot=False):
         BaseException.__init__(self)
         self.seconds = seconds
         self.exception = exception
         self._one_shot = _one_shot
-        if seconds is None or not _use_timer:
+        if seconds is None:
             # Avoid going through the timer codepath if no timeout is
             # desired; this avoids some CFFI interactions on PyPy that can lead to a
             # RuntimeError if this implementation is used during an `import` statement. See
             # https://bitbucket.org/pypy/pypy/issues/2089/crash-in-pypy-260-linux64-with-gevent-11b1
             # and https://github.com/gevent/gevent/issues/618.
             # Plus, in general, it should be more efficient
+
             self.timer = _FakeTimer
         else:
-            # XXX: A zero second timer could cause libuv to block the loop.
+            # XXX: A timer <= 0 could cause libuv to block the loop; we catch
+            # that case in libuv/loop.py
             self.timer = get_hub().loop.timer(seconds or 0.0, ref=ref, priority=priority)
 
     def start(self):
@@ -207,18 +270,29 @@ class Timeout(BaseException):
 
     @property
     def pending(self):
-        """Return True if the timeout is scheduled to be raised."""
+        """True if the timeout is scheduled to be raised."""
         return self.timer.pending or self.timer.active
 
     def cancel(self):
-        """If the timeout is pending, cancel it. Otherwise, do nothing."""
+        """
+        If the timeout is pending, cancel it. Otherwise, do nothing.
+
+        The timeout object can be :meth:`started <start>` again. If
+        you will not start the timeout again, you should use
+        :meth:`close` instead.
+        """
         self.timer.stop()
         if self._one_shot:
             self.close()
 
     def close(self):
+        """
+        Close the timeout and free resources. The timer cannot be started again
+        after this method has been used.
+        """
         self.timer.stop()
         self.timer.close()
+        self.timer = _FakeTimer
 
     def __repr__(self):
         classname = type(self).__name__
@@ -251,6 +325,9 @@ class Timeout(BaseException):
         return '%s second%s: %s' % (self.seconds, suffix, self.exception)
 
     def __enter__(self):
+        """
+        Start and return the timer. If the timer is already started, just return it.
+        """
         if not self.pending:
             self.start()
         return self
@@ -258,6 +335,7 @@ class Timeout(BaseException):
     def __exit__(self, typ, value, tb):
         """
         Stop the timer.
+
         .. versionchanged:: 1.3a1
            The underlying native timer is also stopped. This object cannot be
            used again.

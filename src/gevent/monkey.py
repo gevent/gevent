@@ -250,9 +250,7 @@ def patch_os():
 
 def patch_time():
     """Replace :func:`time.sleep` with :func:`gevent.sleep`."""
-    from gevent.hub import sleep
-    import time
-    patch_item(time, 'sleep', sleep)
+    patch_module('time')
 
 
 def _patch_existing_locks(threading):
