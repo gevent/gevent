@@ -18,16 +18,18 @@ __all__ = [
 
 # Import the DNS packages to use the gevent modules,
 # even if the system is not monkey-patched.
-dns = import_patched('dns')
+def _patch_dns():
+    top = import_patched('dns')
+    for pkg in ('dns',
+                'dns.rdtypes',
+                'dns.rdtypes.IN',
+                'dns.rdtypes.ANY'):
+        mod = import_patched(pkg)
+        for name in mod.__all__:
+            setattr(mod, name, import_patched(pkg + '.' + name))
+    return top
 
-for pkg in ('dns',
-            'dns.rdtypes',
-            'dns.rdtypes.IN',
-            'dns.rdtypes.ANY'):
-    mod = import_patched(pkg)
-    for name in mod.__all__:
-        setattr(mod, name, import_patched(pkg + '.' + name))
-
+dns = _patch_dns()
 
 def _dns_import_patched(name):
     assert name.startswith('dns')
