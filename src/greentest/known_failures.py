@@ -11,6 +11,7 @@ from greentest.sysinfo import RUNNING_ON_TRAVIS as TRAVIS
 from greentest.sysinfo import RUN_LEAKCHECKS as LEAKTEST
 from greentest.sysinfo import RUN_COVERAGE as COVERAGE
 from greentest.sysinfo import RESOLVER_NOT_SYSTEM
+from greentest.sysinfo import RESOLVER_DNSPYTHON
 
 from greentest.sysinfo import PYPY
 from greentest.sysinfo import PY3
@@ -156,6 +157,13 @@ if PYPY:
             #     (10, 1, 6, '', ('2607:f8b0:4004:805::200e', 80, 0, 0))
             'test__socket_dns.py',
         ]
+
+        if TRAVIS and RESOLVER_DNSPYTHON:
+            FAILING_TESTS += [
+                # This fails to get the correct results, sometimes. I can't reproduce locally
+                'FLAKY test__example_udp_server.py',
+                'FLAKY test__example_udp_client.py',
+            ]
 
     if PY3 and TRAVIS:
         FAILING_TESTS += [
