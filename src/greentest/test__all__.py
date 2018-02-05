@@ -7,21 +7,7 @@ import types
 from greentest.modules import walk_modules
 from greentest.sysinfo import PLATFORM_SPECIFIC_SUFFIXES
 
-
-MAPPING = {
-    'gevent.local': '_threading_local',
-    'gevent.socket': 'socket',
-    'gevent.select': 'select',
-    'gevent.ssl': 'ssl',
-    'gevent.thread': '_thread' if six.PY3 else 'thread',
-    'gevent.subprocess': 'subprocess',
-    'gevent.os': 'os',
-    'gevent.threading': 'threading',
-    'gevent.builtins': 'builtins' if six.PY3 else '__builtin__',
-    'gevent.signal': 'signal',
-    'gevent.time': 'time',
-}
-
+from gevent._patcher import MAPPING
 
 class ANY(object):
     def __contains__(self, item):
@@ -53,6 +39,7 @@ NO_ALL = [
     'gevent._fileobjectposix',
     'gevent._tblib',
     'gevent._corecffi',
+    'gevent._patcher',
 ]
 
 # A list of modules that may contain things that aren't actually, technically,
@@ -90,7 +77,8 @@ class Test(unittest.TestCase):
     def check_implements_presence_justified(self):
         "Check that __implements__ is present only if the module is modeled after a module from stdlib (like gevent.socket)."
         if self.__implements__ is not None and self.stdlib_module is None:
-            raise AssertionError('%r has __implements__ but no stdlib counterpart' % self.modname)
+            raise AssertionError('%r has __implements__ but no stdlib counterpart (%s)'
+                                 % (self.modname, self.stdlib_name))
 
     def set_stdlib_all(self):
         self.assertIsNotNone(self.stdlib_module)

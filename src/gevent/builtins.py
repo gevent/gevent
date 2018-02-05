@@ -14,15 +14,15 @@ from gevent.lock import RLock
 # So we test for the old, deprecated version first
 
 try: # Py2
-    import __builtin__ as builtins
+    import __builtin__ as __gbuiltins__
     _allowed_module_name_types = (basestring,) # pylint:disable=undefined-variable
     __target__ = '__builtin__'
 except ImportError:
-    import builtins # pylint: disable=import-error
+    import builtins as __gbuiltins__ # pylint: disable=import-error
     _allowed_module_name_types = (str,)
     __target__ = 'builtins'
 
-_import = builtins.__import__
+_import = __gbuiltins__.__import__
 
 # We need to protect imports both across threads and across greenlets.
 # And the order matters. Note that under 3.4, the global import lock
@@ -120,6 +120,13 @@ def _lock_imports():
 
 if sys.version_info[:2] >= (3, 3):
     __implements__ = []
+    __import__ = _import
 else:
     __implements__ = ['__import__']
 __all__ = __implements__
+
+
+from gevent._util import copy_globals
+
+__imports__ = copy_globals(__gbuiltins__, globals(),
+                           names_to_ignore=__implements__)

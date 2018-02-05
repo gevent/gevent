@@ -67,7 +67,7 @@ alltest: basictest
 	cd src/greentest && GEVENT_RESOLVER=ares GEVENTARES_SERVERS=8.8.8.8 ${PYTHON} testrunner.py --config known_failures.py --ignore tests_that_dont_use_resolver.txt --quiet
 	${PYTHON} scripts/travis.py fold_end ares
 	${PYTHON} scripts/travis.py fold_start dnspython "Running dnspython tests"
-	cd src/greentest && GEVENT_RESOLVER=dnspython ${PYTHON} testrunner.py --config known_failures.py --ignore tests_that_dont_use_resolver.txt,tests_that_dont_monkeypatch.txt --quiet
+	cd src/greentest && GEVENT_RESOLVER=dnspython ${PYTHON} testrunner.py --config known_failures.py --ignore tests_that_dont_use_resolver.txt --quiet
 	${PYTHON} scripts/travis.py fold_end dnspython
 # In the past, we included all test files that had a reference to 'subprocess'' somewhere in their
 # text. The monkey-patched stdlib tests were specifically included here.

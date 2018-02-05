@@ -1,5 +1,6 @@
 # Copyright (c) 2018  gevent contributors. See LICENSE for details.
 
+
 import _socket
 from _socket import AI_NUMERICHOST
 from _socket import error
@@ -9,13 +10,40 @@ import socket
 
 from . import AbstractResolver
 
-from dns import resolver
-import dns
-
+from gevent._patcher import import_patched
 
 __all__ = [
     'Resolver',
 ]
+
+# Import the DNS packages to use the gevent modules,
+# even if the system is not monkey-patched.
+dns = import_patched('dns')
+
+for pkg in ('dns',
+            'dns.rdtypes',
+            'dns.rdtypes.IN',
+            'dns.rdtypes.ANY'):
+    mod = import_patched(pkg)
+    for name in mod.__all__:
+        setattr(mod, name, import_patched(pkg + '.' + name))
+
+
+def _dns_import_patched(name):
+    assert name.startswith('dns')
+    import_patched(name)
+    return dns
+
+# This module tries to dynamically import classes
+# using __import__, and it's important that they match
+# the ones we just created, otherwise exceptions won't be caught
+# as expected. It uses a one-arg __import__ statement and then
+# tries to walk down the sub-modules using getattr, so we can't
+# directly use import_patched as-is.
+dns.rdata.__import__ = _dns_import_patched
+
+resolver = dns.resolver
+
 
 # This is a copy of resolver._getaddrinfo with the crucial change that it
 # doesn't have a bare except:, because that breaks Timeout and KeyboardInterrupt
@@ -123,6 +151,8 @@ def _getaddrinfo(host=None, service=None, family=socket.AF_UNSPEC, socktype=0,
     return tuples
 
 
+resolver._getaddrinfo = _getaddrinfo
+
 class Resolver(AbstractResolver):
     """
     An *experimental* resolver that uses `dnspython`_.
@@ -136,17 +166,15 @@ class Resolver(AbstractResolver):
     resolver can resolve Unicode host names that the system resolver
     cannot.
 
-    This uses thread locks and sockets, so it only functions if the
-    system has been monkey-patched. Otherwise it will raise a
-    ``ValueError``.
+    .. note::
 
-    This uses dnspython's default resolver object. This object has
-    several useful attributes that can be used to adjust the behaviour
-    of the DNS system; in particular, the ``cache`` attribute could be
-    set to an instance of :class:`dns.resolver.Cache` or
-    :class:`dns.resolver.LRUCache` (by default a ``LRUCache`` is
-    used), and ``nameservers`` controls which nameservers to talk to,
-    and ``lifetime`` configures a timeout for each individual query.
+        This **does not** use dnspython's default resolver object, or share any
+        classes with ``import dns``. A separate copy of the objects is imported to
+        be able to function in a non monkey-patched process. The documentation for the resolver
+        object still applies.
+
+        The resolver that we use is available as the :attr:`resolver` attribute
+        of this object (typically ``gevent.get_hub().resolver.resolver``).
 
     .. caution::
 
@@ -169,15 +197,25 @@ class Resolver(AbstractResolver):
     """
 
     def __init__(self, hub=None): # pylint: disable=unused-argument
-        from gevent import monkey
-        if not all(monkey.is_module_patched(m) for m in ['threading', 'socket', 'select']):
-            raise ValueError("Can only be used when monkey-patched")
         if resolver._resolver is None:
             resolver._resolver = resolver.get_default_resolver()
             # Add a default cache
             resolver._resolver.cache = resolver.LRUCache()
-        if resolver._getaddrinfo is not _getaddrinfo:
-            resolver._getaddrinfo = _getaddrinfo
+
+    @property
+    def resolver(self):
+        """
+        The dnspython resolver object we use.
+
+        This object has several useful attributes that can be used to
+        adjust the behaviour of the DNS system:
+
+        * ``cache`` is a :class:`dns.resolver.LRUCache`. Its maximum size
+           can be configured by calling :meth:`resolver.cache.set_max_size`
+        *  ``nameservers`` controls which nameservers to talk to
+        * ``lifetime`` configures a timeout for each individual query.
+        """
+        return resolver._resolver
 
     def close(self):
         pass
