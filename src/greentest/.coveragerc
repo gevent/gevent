@@ -21,6 +21,9 @@ omit =
     # local.so sometimes gets included, and it can't be parsed
     # as source, so it fails the whole process.
     *.so
+    src/gevent/libev/*.so
+    src/gevent/libuv/*.so
+    src/gevent/resolver/*.so
 
 
 [report]
