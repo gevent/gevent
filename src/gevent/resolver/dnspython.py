@@ -211,8 +211,8 @@ class Resolver(AbstractResolver):
         adjust the behaviour of the DNS system:
 
         * ``cache`` is a :class:`dns.resolver.LRUCache`. Its maximum size
-           can be configured by calling :meth:`resolver.cache.set_max_size`
-        *  ``nameservers`` controls which nameservers to talk to
+          can be configured by calling :meth:`resolver.cache.set_max_size`
+        * ``nameservers`` controls which nameservers to talk to
         * ``lifetime`` configures a timeout for each individual query.
         """
         return resolver._resolver
