@@ -755,8 +755,8 @@ else: # pragma: no cover
             __implements__.remove('socketpair')
 
 
-if sys.version_info[:2] >= (3, 7):
-    close = __socket__.close
+if hasattr(__socket__, 'close'): # Python 3.7b1+
+    close = __socket__.close # pylint:disable=no-member
     __imports__ += ['close']
 
 __all__ = __implements__ + __extensions__ + __imports__
