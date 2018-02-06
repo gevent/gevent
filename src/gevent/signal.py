@@ -33,7 +33,7 @@ _signal_getsignal = _signal.getsignal
 
 def getsignal(signalnum):
     """
-    Exactly the same as :func:`signal.signal` except where
+    Exactly the same as :func:`signal.getsignal` except where
     :const:`signal.SIGCHLD` is concerned.
 
     For :const:`signal.SIGCHLD`, this cooperates with :func:`signal`

@@ -40,6 +40,7 @@ extlinks = {'issue': ('https://github.com/gevent/gevent/issues/%s',
                    'pull request #')}
 
 autodoc_default_flags = ['members', 'show-inheritance']
+autodoc_member_order = 'bysource'
 autoclass_content = 'both'
 
 # Add any paths that contain templates here, relative to this directory.
@@ -226,25 +227,3 @@ del gevent.Greenlet.throw
 for item in gevent.socket.__all__[:]:
     if getattr(gevent.socket, item) is getattr(socket, item, None):
         gevent.socket.__all__.remove(item)
-
-
-# order the methods in the class documentation the same way they are ordered in the source code
-
-from sphinx.ext import autodoc
-from sphinx.ext.autodoc import ClassDocumenter
-
-
-class MyClassDocumenter(ClassDocumenter):
-
-    def get_object_members(self, want_all):
-        members_check_module, members = super(MyClassDocumenter, self).get_object_members(want_all)
-
-        def key((name, obj)):
-            try:
-                return obj.im_func.func_code.co_firstlineno
-            except AttributeError:
-                return 0
-        members.sort(key=key)
-        return members_check_module, members
-
-autodoc.ClassDocumenter = MyClassDocumenter

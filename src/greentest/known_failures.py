@@ -157,6 +157,13 @@ if PYPY:
             'test__socket_dns.py',
         ]
 
+        if TRAVIS:
+            FAILING_TESTS += [
+                # This fails to get the correct results, sometimes. I can't reproduce locally
+                'FLAKY test__example_udp_server.py',
+                'FLAKY test__example_udp_client.py',
+            ]
+
     if PY3 and TRAVIS:
         FAILING_TESTS += [
             ## ---

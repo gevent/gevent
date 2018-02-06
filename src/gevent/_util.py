@@ -29,21 +29,22 @@ def copy_globals(source,
                  dunder_names_to_keep=('__implements__', '__all__', '__imports__'),
                  cleanup_globs=True):
     """
-    Copy attributes defined in `source.__dict__` to the dictionary in globs
-    (which should be the caller's globals()).
+    Copy attributes defined in ``source.__dict__`` to the dictionary
+    in globs (which should be the caller's :func:`globals`).
 
-    Names that start with `__` are ignored (unless they are in
+    Names that start with ``__`` are ignored (unless they are in
     *dunder_names_to_keep*). Anything found in *names_to_ignore* is
     also ignored.
 
-    If *only_names* is given, only those attributes will be considered.
-    In this case, *ignore_missing_names* says whether or not to raise an AttributeError
-    if one of those names can't be found.
+    If *only_names* is given, only those attributes will be
+    considered. In this case, *ignore_missing_names* says whether or
+    not to raise an :exc:`AttributeError` if one of those names can't
+    be found.
 
-    If cleanup_globs has a true value, then common things imported but not used
-    at runtime are removed, including this function.
+    If *cleanup_globs* has a true value, then common things imported but
+    not used at runtime are removed, including this function.
 
-    Returns a list of the names copied
+    Returns a list of the names copied; this should be assigned to ``__imports__``.
     """
     if only_names:
         if ignore_missing_names:

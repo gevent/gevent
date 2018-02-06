@@ -360,11 +360,16 @@ if 'TimeoutExpired' not in globals():
 
         .. versionadded:: 1.2a1
         """
+
         def __init__(self, cmd, timeout, output=None):
-            _Timeout.__init__(self, timeout, _use_timer=False)
+            _Timeout.__init__(self, None)
             self.cmd = cmd
-            self.timeout = timeout
+            self.seconds = timeout
             self.output = output
+
+        @property
+        def timeout(self):
+            return self.seconds
 
         def __str__(self):
             return ("Command '%s' timed out after %s seconds" %
