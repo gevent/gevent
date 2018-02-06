@@ -1,5 +1,5 @@
 # Copyright (c) 2005-2009, eventlet contributors
-# Copyright (c) 2009-2015, gevent contributors
+# Copyright (c) 2009-2018, gevent contributors
 """
 A pure-Python, gevent-friendly WSGI server.
 
@@ -9,6 +9,8 @@ created for each request. The server can be customized to use
 different subclasses of :class:`WSGIHandler`.
 
 """
+from __future__ import absolute_import
+
 # FIXME: Can we refactor to make smallor?
 # pylint:disable=too-many-lines
 

@@ -42,7 +42,10 @@ from gevent.hub import get_hub, Waiter, getcurrent
 from gevent.hub import InvalidSwitchError
 
 
-__all__ = ['Empty', 'Full', 'Queue', 'PriorityQueue', 'LifoQueue', 'JoinableQueue', 'Channel']
+__implements__ = ['Queue', 'PriorityQueue', 'LifoQueue']
+__extensions__ = ['JoinableQueue', 'Channel']
+__imports__ = ['Empty', 'Full']
+__all__ = __implements__ + __extensions__ + __imports__
 
 
 def _safe_remove(deq, item):

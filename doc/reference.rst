@@ -21,5 +21,6 @@ API reference
    gevent.thread
    gevent.threading
    gevent.threadpool
+   gevent.time
    gevent.util
    lowlevel

@@ -188,5 +188,6 @@ Timeouts
 .. autoclass:: Timeout
     :members:
     :undoc-members:
+    :special-members: __enter__, __exit__
 
 .. autofunction:: with_timeout

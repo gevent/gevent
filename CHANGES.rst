@@ -42,6 +42,10 @@
   ``AttributeError``, now it once again raises the correct
   ``socket.error``. Reported in :issue:`1089` by André Cimander.
 
+- Add the module :mod:`gevent.time` that can be imported instead of
+  :mod:`time`, much like :mod:`gevent.socket` can be imported instead
+  of :mod:`socket`.
+
 1.3a1 (2018-01-27)
 ==================
 

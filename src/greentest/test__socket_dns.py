@@ -4,10 +4,6 @@
 import gevent
 from gevent import monkey
 
-if ['gevent.resolver.dnspython.Resolver'] == gevent.get_hub().resolver_class:
-    # dnspython requires monkey-patching
-    monkey.patch_all()
-
 import os
 import re
 import greentest

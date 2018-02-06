@@ -7,20 +7,7 @@ import types
 from greentest.modules import walk_modules
 from greentest.sysinfo import PLATFORM_SPECIFIC_SUFFIXES
 
-
-MAPPING = {
-    'gevent.local': '_threading_local',
-    'gevent.socket': 'socket',
-    'gevent.select': 'select',
-    'gevent.ssl': 'ssl',
-    'gevent.thread': '_thread' if six.PY3 else 'thread',
-    'gevent.subprocess': 'subprocess',
-    'gevent.os': 'os',
-    'gevent.threading': 'threading',
-    'gevent.builtins': 'builtins' if six.PY3 else '__builtin__',
-    'gevent.signal': 'signal',
-}
-
+from gevent._patcher import MAPPING
 
 class ANY(object):
     def __contains__(self, item):
@@ -43,13 +30,17 @@ COULD_BE_MISSING = {
     'subprocess': ['_posixsubprocess'],
 }
 
-NO_ALL = ['gevent.threading',
-          'gevent._util',
-          'gevent._compat',
-          'gevent._socketcommon',
-          'gevent._fileobjectcommon', 'gevent._fileobjectposix',
-          'gevent._tblib',
-          'gevent._corecffi']
+NO_ALL = [
+    'gevent.threading',
+    'gevent._util',
+    'gevent._compat',
+    'gevent._socketcommon',
+    'gevent._fileobjectcommon',
+    'gevent._fileobjectposix',
+    'gevent._tblib',
+    'gevent._corecffi',
+    'gevent._patcher',
+]
 
 # A list of modules that may contain things that aren't actually, technically,
 # extensions, but that need to be in __extensions__ anyway due to the way,
@@ -71,7 +62,7 @@ class Test(unittest.TestCase):
     def check_all(self):
         "Check that __all__ is present and does not contain invalid entries"
         if not hasattr(self.module, '__all__'):
-            assert self.modname in NO_ALL
+            self.assertIn(self.modname, NO_ALL)
             return
         names = {}
         six.exec_("from %s import *" % self.modname, names)
@@ -86,10 +77,11 @@ class Test(unittest.TestCase):
     def check_implements_presence_justified(self):
         "Check that __implements__ is present only if the module is modeled after a module from stdlib (like gevent.socket)."
         if self.__implements__ is not None and self.stdlib_module is None:
-            raise AssertionError('%r has __implements__ but no stdlib counterpart' % self.modname)
+            raise AssertionError('%r has __implements__ but no stdlib counterpart (%s)'
+                                 % (self.modname, self.stdlib_name))
 
     def set_stdlib_all(self):
-        assert self.stdlib_module is not None
+        self.assertIsNotNone(self.stdlib_module)
         self.stdlib_has_all = True
         self.stdlib_all = getattr(self.stdlib_module, '__all__', None)
         if self.stdlib_all is None:
@@ -115,7 +107,7 @@ class Test(unittest.TestCase):
             item = getattr(self.module, name)
             try:
                 stdlib_item = getattr(self.stdlib_module, name)
-                assert item is not stdlib_item, (name, item, stdlib_item)
+                self.assertIsNot(item, stdlib_item)
             except AttributeError:
                 if name not in COULD_BE_MISSING.get(self.stdlib_name, []):
                     raise
@@ -125,7 +117,7 @@ class Test(unittest.TestCase):
         for name in self.__imports__:
             item = getattr(self.module, name)
             stdlib_item = getattr(self.stdlib_module, name)
-            assert item is stdlib_item, (name, item, stdlib_item)
+            self.assertIs(item, stdlib_item)
 
     def check_extensions_actually_extend(self):
         """Check that the module actually defines new entries in __extensions__"""
