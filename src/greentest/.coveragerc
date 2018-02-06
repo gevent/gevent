@@ -35,3 +35,8 @@ exclude_lines =
     if sys.platform == 'win32':
     if mswindows:
     if is_windows:
+omit =
+    # local.so sometimes gets included, and it can't be parsed
+    # as source, so it fails the whole process.
+    # coverage 4.5 needs this specified here, 4.4.2 needed it in [run]
+    *.so

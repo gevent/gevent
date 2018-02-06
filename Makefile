@@ -114,7 +114,6 @@ travis_test_linters:
 
 coverage_combine:
 	coverage combine . src/greentest/
-
 	-coveralls --rcfile=src/greentest/.coveragerc
 
 
@@ -191,11 +190,8 @@ test-py35: $(PY35)
 test-py36: $(PY36)
 	PYTHON=python3.6.4 PATH=$(BUILD_RUNTIMES)/versions/python3.6.4/bin:$(PATH) make develop allbackendtest
 
-# test-py37: $(PY37)
-# 	PYTHON=python3.7.0b1 PATH=$(BUILD_RUNTIMES)/versions/python3.7.0b1/bin:$(PATH) make develop allbackendtest
-
-test-py37:
-	PYTHON=python make develop allbackendtest
+test-py37: $(PY37)
+	LD_LIBRARY_PATH=$(BUILD_RUNTIMES)/versions/python3.7.0b1/openssl/lib PYTHON=python3.7.0b1 PATH=$(BUILD_RUNTIMES)/versions/python3.7.0b1/bin:$(PATH) make develop allbackendtest
 
 test-pypy: $(PYPY)
 	PYTHON=$(PYPY) PATH=$(BUILD_RUNTIMES)/versions/pypy5100/bin:$(PATH) make develop cffibackendtest coverage_combine

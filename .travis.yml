@@ -2,10 +2,6 @@
 language: python
 sudo: false
 
-# Currently, pyenv cannot build 3.7b1 on Travis
-# https://github.com/travis-ci/travis-ci/issues/9069
-# But it looks like the backend process for Travis is updating the
-# dev branch appropriately? Lets find out.
 python:
   - 3.7-dev
 

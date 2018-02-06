@@ -47,16 +47,22 @@ trap "rm -rf $LOCKFILE" EXIT
 PYENV=$BASE/pyenv
 
 
+# The file for 3.7b1 shipped with pyenv on Feb 6 2018
+# won't compile on Travis. So we use a forked version that
+# compiles openssl for us.
+# https://github.com/travis-ci/travis-ci/issues/9069
+
 if [ ! -d "$PYENV/.git" ]; then
   rm -rf $PYENV
-  git clone https://github.com/yyuu/pyenv.git $BASE/pyenv
+  git clone https://github.com/gevent/pyenv.git $BASE/pyenv
 else
   back=$PWD
   cd $PYENV
-  git fetch || echo "Update failed to complete. Ignoring"
+  git fetch || echo "Fetch failed to complete. Ignoring"
   git reset --hard origin/master
   cd $back
 fi
+
 
 SNAKEPIT=$BASE/snakepit
 
@@ -66,15 +72,16 @@ install () {
   ALIAS="$2"
   mkdir -p $BASE/versions
   SOURCE=$BASE/versions/$ALIAS
+  OPENSSL_PATH=$SOURCE/openssl/lib
 
   if [ ! -e "$SOURCE" ]; then
     mkdir -p $SNAKEPIT
     mkdir -p $BASE/versions
-    $BASE/pyenv/plugins/python-build/bin/python-build $VERSION $SOURCE
+    LD_LIBRARY_PATH="$OPENSSL_PATH" $BASE/pyenv/plugins/python-build/bin/python-build $VERSION $SOURCE
   fi
  rm -f $SNAKEPIT/$ALIAS
  mkdir -p $SNAKEPIT
- $SOURCE/bin/python -m pip.__main__ install --upgrade pip wheel virtualenv
+ LD_LIBRARY_PATH="$OPENSSL_PATH" $SOURCE/bin/python -m pip.__main__ install --upgrade pip wheel virtualenv
  ln -s $SOURCE/bin/python $SNAKEPIT/$ALIAS
 }
 
