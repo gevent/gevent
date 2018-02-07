@@ -50,7 +50,7 @@ def format_call(function, args):
     if args.endswith(',)'):
         args = args[:-2] + ')'
     try:
-        module = function.__module__.replace('gevent.socket', 'gevent').replace('_socket', 'stdlib')
+        module = function.__module__.replace('gevent._socketcommon', 'gevent')
         name = function.__name__
         return '%s:%s%s' % (module, name, args)
     except AttributeError:
@@ -166,13 +166,16 @@ def relaxed_is_equal(a, b):
     return all(relaxed_is_equal(x, y) for (x, y) in zip(a, b))
 
 
-def add(klass, hostname, name=None):
+def add(klass, hostname, name=None,
+        skip=None, skip_reason=None):
 
     call = callable(hostname)
 
-    def _setattr(k, n, v):
+    def _setattr(k, n, func):
+        if skip:
+            func = greentest.skipIf(skip, skip_reason,)(func)
         if not hasattr(k, n):
-            setattr(k, n, v)
+            setattr(k, n, func)
 
     if name is None:
         if call:
@@ -283,7 +286,8 @@ class TestCase(greentest.TestCase):
         ips = result[2]
         if ips == ['127.0.0.1', '127.0.0.1']:
             ips = ['127.0.0.1']
-        return (result[0], [], ips)
+        # On some systems, the hostname can get caps
+        return (result[0].lower(), [], ips)
 
     def _normalize_result_getaddrinfo(self, result):
         if not RESOLVER_NOT_SYSTEM:
@@ -345,8 +349,6 @@ add(TestTypeError, None)
 add(TestTypeError, 25)
 
 
-@unittest.skipIf(RESOLVER_DNSPYTHON,
-                 "This commonly needs /etc/hosts to function, and dnspython doesn't do that.")
 class TestHostname(TestCase):
     pass
 
@@ -423,33 +425,45 @@ class TestBroadcast(TestCase):
 add(TestBroadcast, '<broadcast>')
 
 
-@unittest.skipIf(RESOLVER_DNSPYTHON, "/etc/hosts completely ignored under dnspython")
+from gevent.resolver.dnspython import HostsFile
+class SanitizedHostsFile(HostsFile):
+    def iter_all_host_addr_pairs(self):
+        for name, addr in super(SanitizedHostsFile, self).iter_all_host_addr_pairs():
+            if (RESOLVER_NOT_SYSTEM
+                    and (name.endswith('local') # ignore bonjour, ares can't find them
+                         # ignore common aliases that ares can't find
+                         or addr == '255.255.255.255'
+                         or name == 'broadcasthost'
+                         # We get extra results from some impls, like OS X
+                         # it returns DGRAM results
+                         or name == 'localhost')):
+                continue
+            if name.endswith('local'):
+                # These can only be found if bonjour is running,
+                # and are very slow to do so with the system resolver on OS X
+                continue
+            yield name, addr
+
 class TestEtcHosts(TestCase):
-    pass
 
-try:
-    with open('/etc/hosts') as f:
-        etc_hosts = f.read()
-except IOError:
-    etc_hosts = ''
+    MAX_HOSTS = os.getenv('GEVENTTEST_MAX_ETC_HOSTS', 10)
 
-for ip, host in re.findall(r'^\s*(\d+\.\d+\.\d+\.\d+)\s+([^\s]+)', etc_hosts, re.M)[:10]:
-    if (RESOLVER_NOT_SYSTEM
-        and (host.endswith('local') # ignore bonjour, ares can't find them
-             # ignore common aliases that ares can't find
-             or ip == '255.255.255.255'
-             or host == 'broadcasthost'
-             # We get extra results from some impls, like OS X
-             # it returns DGRAM results
-             or host == 'localhost')):
-        continue
-    if host.endswith('local'):
-        # These can only be found if bonjour is running,
-        # and are very slow to do so with the system resolver on OS X
-        continue
-    add(TestEtcHosts, host)
-    add(TestEtcHosts, ip)
-    del host, ip
+    @classmethod
+    def populate_tests(cls):
+        hf = SanitizedHostsFile(os.path.join(os.path.dirname(__file__),
+                                             'hosts_file.txt'))
+        all_etc_hosts = sorted(hf.iter_all_host_addr_pairs())
+        if len(all_etc_hosts) > cls.MAX_HOSTS and not DEBUG:
+            all_etc_hosts = all_etc_hosts[:cls.MAX_HOSTS]
+
+        for host, ip in all_etc_hosts:
+            add(cls, host)
+            add(cls, ip)
+
+
+
+TestEtcHosts.populate_tests()
+
 
 
 class TestGeventOrg(TestCase):
@@ -544,12 +558,12 @@ class Test_getaddrinfo(TestCase):
 class TestInternational(TestCase):
     pass
 
-if not (PY2 and RESOLVER_DNSPYTHON):
-    # dns python can actually resolve these: it uses
-    # the 2008 version of idna encoding, whereas on Python 2,
-    # with the default resolver, it tries to encode to ascii and
-    # raises a UnicodeEncodeError. So we get different results.
-    add(TestInternational, u'президент.рф', 'russian')
+# dns python can actually resolve these: it uses
+# the 2008 version of idna encoding, whereas on Python 2,
+# with the default resolver, it tries to encode to ascii and
+# raises a UnicodeEncodeError. So we get different results.
+add(TestInternational, u'президент.рф', 'russian',
+    skip=(PY2 and RESOLVER_DNSPYTHON), skip_reason="dnspython can actually resolve these")
 add(TestInternational, u'президент.рф'.encode('idna'), 'idna')
 
 

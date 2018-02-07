@@ -131,7 +131,7 @@ install:
   # pip will build them from source using the MSVC compiler matching the
   # target Python version and architecture
   # Note that psutil won't build under PyPy on Windows.
-  - "%CMD_IN_ENV% pip install -U setuptools wheel cython greenlet cffi"
+  - "%CMD_IN_ENV% pip install -U setuptools wheel cython greenlet cffi dnspython idna"
 
   - ps:
       if ("${env:PYTHON_ID}" -ne "pypy") {

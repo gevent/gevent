@@ -45,6 +45,9 @@ from gevent.hub import InvalidSwitchError
 __implements__ = ['Queue', 'PriorityQueue', 'LifoQueue']
 __extensions__ = ['JoinableQueue', 'Channel']
 __imports__ = ['Empty', 'Full']
+if hasattr(__queue__, 'SimpleQueue'):
+    __imports__.append('SimpleQueue') # New in 3.7
+    SimpleQueue = __queue__.SimpleQueue
 __all__ = __implements__ + __extensions__ + __imports__
 
 

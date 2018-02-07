@@ -63,8 +63,12 @@ def _lookup_port(port, socktype):
         socktypes.append(socktype)
     return port, socktypes
 
+hostname_types = tuple(set(string_types + (bytearray, bytes)))
 
 def _resolve_special(hostname, family):
+    if not isinstance(hostname, hostname_types):
+        raise TypeError("argument 1 must be str, bytes or bytearray, not %s" % (type(hostname),))
+
     if hostname == '':
         result = getaddrinfo(None, 0, family, SOCK_DGRAM, 0, AI_PASSIVE)
         if len(result) != 1:
@@ -80,7 +84,7 @@ class AbstractResolver(object):
         return self.gethostbyname_ex(hostname, family)[-1][0]
 
     def gethostbyname_ex(self, hostname, family=AF_INET):
-        aliases = []
+        aliases = self._getaliases(hostname, family)
         addresses = []
         tuples = self.getaddrinfo(hostname, 0, family,
                                   SOCK_STREAM,
@@ -93,3 +97,7 @@ class AbstractResolver(object):
 
     def getaddrinfo(self, host, port, family=0, socktype=0, proto=0, flags=0):
         raise NotImplementedError()
+
+    def _getaliases(self, hostname, family):
+        # pylint:disable=unused-argument
+        return []
