@@ -220,7 +220,7 @@ def _getaddrinfo(host=None, service=None, family=AF_UNSPEC, socktype=0,
             for socktype in socktypes:
                 for proto in resolver._protocols_for_socktype[socktype]:
                     tuples.append((socket.AF_INET6, socktype, proto,
-                                   cname, (addr, port, 0, 0)))
+                                   cname, (addr, port, 0, 0))) # XXX: gevent: this can get the scopeid wrong
     if family == socket.AF_INET or family == socket.AF_UNSPEC:
         for addr in v4addrs:
             for socktype in socktypes:
@@ -611,6 +611,8 @@ class Resolver(AbstractResolver):
             # an ipv4, and there *is* an ipv6 in the nameservers, we will return
             # both (from the first call). The system resolver on OS X only returns
             # the results from the hosts file. doubleclick.com is one example.
+
+            # See also https://github.com/gevent/gevent/issues/1012
             try:
                 return _getaddrinfo(host, port, family, socktype, proto, flags)
             except socket.gaierror:
