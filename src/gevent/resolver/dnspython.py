@@ -253,7 +253,9 @@ _is_ipv4_addr = _is_addr
 
 def _is_ipv6_addr(host):
     # Return True if host is a valid IPv6 address
-    host = host.split('%', 1)[0] if host else host
+    if host:
+        s = '%' if isinstance(host, str) else b'%'
+        host = host.split(s, 1)[0]
     return _is_addr(host, dns.ipv6.inet_aton)
 
 class HostsFile(object):

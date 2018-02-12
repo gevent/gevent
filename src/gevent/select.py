@@ -11,7 +11,6 @@ from gevent.hub import get_hub
 from gevent.hub import sleep as _g_sleep
 from gevent._compat import integer_types
 from gevent._compat import iteritems
-from gevent._compat import itervalues
 from gevent._util import copy_globals
 from gevent._util import _NONE
 
@@ -200,7 +199,11 @@ if original_poll is not None:
         .. versionadded:: 1.1b1
         """
         def __init__(self):
-            self.fds = {} # {int -> watcher}
+            # {int -> flags}
+            # We can't keep watcher objects in here because people commonly
+            # just drop the poll object when they're done, without calling
+            # unregister(). dnspython does this.
+            self.fds = {}
             self.loop = get_hub().loop
 
         def register(self, fd, eventmask=_NONE):
@@ -216,12 +219,7 @@ if original_poll is not None:
                 # that. Should we raise an error?
 
             fileno = get_fileno(fd)
-            if fileno in self.fds:
-                self.fds[fileno].close()
-
-            watcher = self.loop.io(fileno, flags)
-            watcher.priority = self.loop.MAXPRI
-            self.fds[fileno] = watcher
+            self.fds[fileno] = flags
 
         def modify(self, fd, eventmask):
             self.register(fd, eventmask)
@@ -234,16 +232,23 @@ if original_poll is not None:
                File descriptors that are closed are reported with POLLNVAL.
             """
             result = PollResult()
+            watchers = []
+            io = self.loop.io
+            MAXPRI = self.loop.MAXPRI
             try:
-                for fd, watcher in iteritems(self.fds):
+                for fd, flags in iteritems(self.fds):
+                    watcher = io(fd, flags)
+                    watchers.append(watcher)
+                    watcher.priority = MAXPRI
                     watcher.start(result.add_event, fd, pass_events=True)
                 if timeout is not None and timeout > -1:
                     timeout /= 1000.0
                 result.event.wait(timeout=timeout)
                 return list(result.events)
             finally:
-                for awatcher in itervalues(self.fds):
+                for awatcher in watchers:
                     awatcher.stop()
+                    awatcher.close()
 
         def unregister(self, fd):
             """
@@ -254,8 +259,6 @@ if original_poll is not None:
                library. Previously gevent did nothing.
             """
             fileno = get_fileno(fd)
-            io = self.fds[fileno]
-            io.close()
             del self.fds[fileno]
 
 del original_poll
