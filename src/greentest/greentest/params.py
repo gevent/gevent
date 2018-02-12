@@ -23,9 +23,11 @@ from greentest.sysinfo import PY3
 from greentest.sysinfo import PYPY
 from greentest.sysinfo import WIN
 from greentest.sysinfo import LIBUV
+from greentest.sysinfo import OSX
 
 from greentest.sysinfo import RUNNING_ON_TRAVIS
 from greentest.sysinfo import EXPECT_POOR_TIMER_RESOLUTION
+from greentest.sysinfo import RESOLVER_ARES
 
 
 # Travis is slow and overloaded; Appveyor used to be faster, but
@@ -58,6 +60,11 @@ if RUNNING_ON_TRAVIS:
     DEFAULT_LOCAL_HOST_ADDR6 = '::1'
     # Likewise, binding to '' appears to work, but it cannot be
     # connected to with the same error.
+    DEFAULT_BIND_ADDR = '127.0.0.1'
+
+if RESOLVER_ARES and OSX:
+    # Ares likes to raise "malformed domain name" on '', at least
+    # on OS X
     DEFAULT_BIND_ADDR = '127.0.0.1'
 
 # For in-process sockets

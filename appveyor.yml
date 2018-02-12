@@ -26,7 +26,7 @@ environment:
       PYTHON_VERSION: "3.6.x" # currently 3.6.0
       PYTHON_ARCH: "64"
       PYTHON_EXE: python
-      GEVENT_CORE_CFFI_ONLY: libuv
+      GEVENT_LOOP: libuv
 
     - PYTHON: "C:\\Python27-x64"
       PYTHON_VERSION: "2.7.x" # currently 2.7.13

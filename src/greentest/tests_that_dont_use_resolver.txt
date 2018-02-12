@@ -123,3 +123,5 @@ test_timeout.py
 # implicitly for localhost, which is covered well enough
 # elsewhere that we don't need to spend the 20s (*2)
 test_asyncore.py
+
+test___config.py

@@ -53,9 +53,6 @@ test_prelim:
 	make bench
 
 # Folding from https://github.com/travis-ci/travis-rubies/blob/9f7962a881c55d32da7c76baefc58b89e3941d91/build.sh#L38-L44
-# 	echo -e "travis_fold:start:${GEVENT_CORE_CFFI_ONLY}\033[33;1m${GEVENT_CORE_CFFI_ONLY}\033[0m"
-# Make calls /bin/echo, which doesn't support the -e option, which is part of the bash builtin.
-# we need a python script to do this, or possible the GNU make shell function
 
 basictest: test_prelim
 	${PYTHON} scripts/travis.py fold_start basictest "Running basic tests"
@@ -83,7 +80,7 @@ threadfiletest:
 
 allbackendtest:
 	${PYTHON} scripts/travis.py fold_start default "Testing default backend"
-	GEVENT_CORE_CFFI_ONLY= GEVENTTEST_COVERAGE=1 make alltest
+	GEVENTTEST_COVERAGE=1 make alltest
 	${PYTHON} scripts/travis.py fold_end default
 	GEVENTTEST_COVERAGE=1 make cffibackendtest
 # because we set parallel=true, each run produces new and different coverage files; they all need
@@ -93,10 +90,10 @@ allbackendtest:
 
 cffibackendtest:
 	${PYTHON} scripts/travis.py fold_start libuv "Testing libuv backend"
-	GEVENT_CORE_CFFI_ONLY=libuv GEVENTTEST_COVERAGE=1 make alltest
+	GEVENT_LOOP=libuv GEVENTTEST_COVERAGE=1 make alltest
 	${PYTHON} scripts/travis.py fold_end libuv
 	${PYTHON} scripts/travis.py fold_start libev "Testing libev CFFI backend"
-	GEVENT_CORE_CFFI_ONLY=libev make alltest
+	GEVENT_LOOP=libev-cffi make alltest
 	${PYTHON} scripts/travis.py fold_end libev
 
 leaktest: test_prelim
@@ -203,4 +200,4 @@ test-py27-noembed: $(PY27)
 	cd deps/libev && ./configure --disable-dependency-tracking && make
 	cd deps/c-ares && ./configure --disable-dependency-tracking && make
 	cd deps/libuv && ./autogen.sh && ./configure --disable-static && make
-	CPPFLAGS="-Ideps/libev -Ideps/c-ares -Ideps/libuv/include" LDFLAGS="-Ldeps/libev/.libs -Ldeps/c-ares/.libs -Ldeps/libuv/.libs" LD_LIBRARY_PATH="$(PWD)/deps/libev/.libs:$(PWD)/deps/c-ares/.libs:$(PWD)/deps/libuv/.libs" EMBED=0 GEVENT_CORE_CEXT_ONLY=1 PYTHON=python2.7.14 PATH=$(BUILD_RUNTIMES)/versions/python2.7.14/bin:$(PATH) make develop basictest
+	CPPFLAGS="-Ideps/libev -Ideps/c-ares -Ideps/libuv/include" LDFLAGS="-Ldeps/libev/.libs -Ldeps/c-ares/.libs -Ldeps/libuv/.libs" LD_LIBRARY_PATH="$(PWD)/deps/libev/.libs:$(PWD)/deps/c-ares/.libs:$(PWD)/deps/libuv/.libs" EMBED=0 GEVENT_LOOP=libev-cext PYTHON=python2.7.14 PATH=$(BUILD_RUNTIMES)/versions/python2.7.14/bin:$(PATH) make develop basictest

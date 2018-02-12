@@ -27,6 +27,9 @@ from gevent.socket import SOCK_DGRAM
 from gevent.socket import SOCK_RAW
 from gevent.socket import AI_NUMERICHOST
 
+from gevent._config import config
+from gevent._config import AresSettingMixin
+
 from .cares import channel, InvalidIP # pylint:disable=import-error,no-name-in-module
 from . import _lookup_port as lookup_port
 from . import _resolve_special
@@ -84,12 +87,11 @@ class Resolver(AbstractResolver):
             hub = get_hub()
         self.hub = hub
         if use_environ:
-            for key in os.environ:
-                if key.startswith('GEVENTARES_'):
-                    name = key[11:].lower()
-                    if name:
-                        value = os.environ[key]
-                        kwargs.setdefault(name, value)
+            for setting in config.settings.values():
+                if isinstance(setting, AresSettingMixin):
+                    value = setting.get()
+                    if value is not None:
+                        kwargs.setdefault(setting.kwarg_name, value)
         self.ares = self.ares_class(hub.loop, **kwargs)
         self.pid = os.getpid()
         self.params = kwargs

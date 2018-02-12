@@ -191,3 +191,9 @@ Timeouts
     :special-members: __enter__, __exit__
 
 .. autofunction:: with_timeout
+
+
+Configuration
+=============
+
+.. autoclass:: gevent._config.Config
