@@ -49,7 +49,10 @@ class SettingType(type):
             def getter(self):
                 return self.settings[setting_name].get()
 
-            def setter(self, value):
+            def setter(self, value): # pragma: no cover
+                # The setter should never be hit, Config has a
+                # __setattr__ that would override. But for the sake
+                # of consistency we provide one.
                 self.settings[setting_name].set(value)
 
             prop = property(getter, setter, doc=new_class.__doc__)
@@ -250,7 +253,7 @@ class ImportableSetting(object):
             if package_path:
                 try:
                     sys.path.remove(package_path)
-                except ValueError:
+                except ValueError: # pragma: no cover
                     pass
 
     shortname_map = {}

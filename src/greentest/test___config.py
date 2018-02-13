@@ -100,6 +100,10 @@ class TestConfig(unittest.TestCase):
         self.assertEqual(sorted(_config.config.settings),
                          sorted(dir(_config.config)))
 
+    def test_getattr(self):
+        # Bypass the property that might be set here
+        self.assertIsNotNone(_config.config.__getattr__('resolver'))
+
     def test__getattr__invalid(self):
         with self.assertRaises(AttributeError):
             getattr(_config.config, 'no_such_setting')
@@ -134,6 +138,10 @@ class TestImportableSetting(unittest.TestCase):
         self.assertEqual(len(w), 1)
         self.assertEqual(w[0].category, DeprecationWarning)
         self.assertIn('Absolute paths', str(w[0].message))
+
+    def test_non_string(self):
+        i = _config.ImportableSetting()
+        self.assertIs(i._import(self), self)
 
 if __name__ == '__main__':
     unittest.main()
