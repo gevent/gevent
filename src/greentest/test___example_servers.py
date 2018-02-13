@@ -101,7 +101,7 @@ class Test_wsgiserver_ssl(Test_wsgiserver):
         ssl_ctx = ssl._create_unverified_context()
 
 
-@greentest.skipOnLibuvOnCIOnPyPy("Timing issues sometimes lead to a connection refused")
+@greentest.skipOnCI("Timing issues sometimes lead to a connection refused")
 class Test_webproxy(Test_wsgiserver):
     server = 'webproxy.py'
 

@@ -16,11 +16,15 @@ class Test(TestCase):
         self.loop = config.loop(default=True)
         self.timer = self.loop.timer(0.001, repeat=self.repeat)
 
-    def tearDown(self):
+    def cleanup(self):
+        # cleanup instead of tearDown to cooperate well with
+        # leakcheck.py
         self.timer.close()
+        # cycle the loop so libuv close callbacks fire
+        self.loop.run()
         self.loop.destroy()
-        self.timer = None
         self.loop = None
+        self.timer = None
 
     def f(self, x=None):
         self.called.append(1)

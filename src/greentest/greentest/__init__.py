@@ -58,6 +58,7 @@ from greentest.sysinfo import CONN_ABORTED_ERRORS
 
 from greentest.skipping import skipOnWindows
 from greentest.skipping import skipOnAppVeyor
+from greentest.skipping import skipOnCI
 from greentest.skipping import skipOnPyPy3OnCI
 from greentest.skipping import skipOnPyPy
 from greentest.skipping import skipOnPyPy3
