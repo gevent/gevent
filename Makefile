@@ -45,43 +45,43 @@ prospector:
 lint: prospector
 
 test_prelim:
-	which ${PYTHON}
-	${PYTHON} --version
-	${PYTHON} -c 'import greenlet; print(greenlet, greenlet.__version__)'
-	${PYTHON} -c 'import gevent.core; print(gevent.core.loop)'
-	${PYTHON} -c 'import gevent.ares; print(gevent.ares)'
-	make bench
+	@which ${PYTHON}
+	@${PYTHON} --version
+	@${PYTHON} -c 'import greenlet; print(greenlet, greenlet.__version__)'
+	@${PYTHON} -c 'import gevent.core; print(gevent.core.loop)'
+	@${PYTHON} -c 'import gevent.ares; print(gevent.ares)'
+	@make bench
 
 # Folding from https://github.com/travis-ci/travis-rubies/blob/9f7962a881c55d32da7c76baefc58b89e3941d91/build.sh#L38-L44
 
 basictest: test_prelim
-	${PYTHON} scripts/travis.py fold_start basictest "Running basic tests"
+	@${PYTHON} scripts/travis.py fold_start basictest "Running basic tests"
 	cd src/greentest && GEVENT_RESOLVER=thread ${PYTHON} testrunner.py --config known_failures.py --quiet
-	${PYTHON} scripts/travis.py fold_end basictest
+	@${PYTHON} scripts/travis.py fold_end basictest
 
 alltest: basictest
-	${PYTHON} scripts/travis.py fold_start ares "Running c-ares tests"
+	@${PYTHON} scripts/travis.py fold_start ares "Running c-ares tests"
 	cd src/greentest && GEVENT_RESOLVER=ares GEVENTARES_SERVERS=8.8.8.8 ${PYTHON} testrunner.py --config known_failures.py --ignore tests_that_dont_use_resolver.txt --quiet
-	${PYTHON} scripts/travis.py fold_end ares
-	${PYTHON} scripts/travis.py fold_start dnspython "Running dnspython tests"
+	@${PYTHON} scripts/travis.py fold_end ares
+	@${PYTHON} scripts/travis.py fold_start dnspython "Running dnspython tests"
 	cd src/greentest && GEVENT_RESOLVER=dnspython ${PYTHON} testrunner.py --config known_failures.py --ignore tests_that_dont_use_resolver.txt --quiet
-	${PYTHON} scripts/travis.py fold_end dnspython
+	@${PYTHON} scripts/travis.py fold_end dnspython
 # In the past, we included all test files that had a reference to 'subprocess'' somewhere in their
 # text. The monkey-patched stdlib tests were specifically included here.
 # However, we now always also test on AppVeyor (Windows) which only has GEVENT_FILE=thread,
 # so we can save a lot of CI time by reducing the set and excluding the stdlib tests without
 # losing any coverage. See the `threadfiletest` for what command used to run.
-	${PYTHON} scripts/travis.py fold_start thread "Running GEVENT_FILE=thread tests"
+	@${PYTHON} scripts/travis.py fold_start thread "Running GEVENT_FILE=thread tests"
 	cd src/greentest && GEVENT_FILE=thread ${PYTHON} testrunner.py --config known_failures.py test__*subprocess*.py --quiet
-	${PYTHON} scripts/travis.py fold_end thread
+	@${PYTHON} scripts/travis.py fold_end thread
 
 threadfiletest:
 	cd src/greentest && GEVENT_FILE=thread ${PYTHON} testrunner.py --config known_failures.py `grep -l subprocess test_*.py` --quiet
 
 allbackendtest:
-	${PYTHON} scripts/travis.py fold_start default "Testing default backend"
+	@${PYTHON} scripts/travis.py fold_start default "Testing default backend"
 	GEVENTTEST_COVERAGE=1 make alltest
-	${PYTHON} scripts/travis.py fold_end default
+	@${PYTHON} scripts/travis.py fold_end default
 	GEVENTTEST_COVERAGE=1 make cffibackendtest
 # because we set parallel=true, each run produces new and different coverage files; they all need
 # to be combined
@@ -89,17 +89,17 @@ allbackendtest:
 
 
 cffibackendtest:
-	${PYTHON} scripts/travis.py fold_start libuv "Testing libuv backend"
+	@${PYTHON} scripts/travis.py fold_start libuv "Testing libuv backend"
 	GEVENT_LOOP=libuv GEVENTTEST_COVERAGE=1 make alltest
-	${PYTHON} scripts/travis.py fold_end libuv
-	${PYTHON} scripts/travis.py fold_start libev "Testing libev CFFI backend"
+	@${PYTHON} scripts/travis.py fold_end libuv
+	@${PYTHON} scripts/travis.py fold_start libev "Testing libev CFFI backend"
 	GEVENT_LOOP=libev-cffi make alltest
-	${PYTHON} scripts/travis.py fold_end libev
+	@${PYTHON} scripts/travis.py fold_end libev
 
 leaktest: test_prelim
-	${PYTHON} scripts/travis.py fold_start leaktest "Running leak tests"
+	@${PYTHON} scripts/travis.py fold_start leaktest "Running leak tests"
 	cd src/greentest && GEVENT_RESOLVER=thread GEVENTTEST_LEAKCHECK=1 ${PYTHON} testrunner.py --config known_failures.py --quiet --ignore tests_that_dont_do_leakchecks.txt
-	${PYTHON} scripts/travis.py fold_end leaktest
+	@${PYTHON} scripts/travis.py fold_end leaktest
 
 bench:
 	${PYTHON} src/greentest/bench_sendall.py
@@ -197,7 +197,13 @@ test-pypy3: $(PYPY3)
 	PYTHON=$(PYPY3) PATH=$(BUILD_RUNTIMES)/versions/pypy3.5_5101/bin:$(PATH) make develop basictest
 
 test-py27-noembed: $(PY27)
+	@${PYTHON} scripts/travis.py fold_start conf_libev "Configuring libev"
 	cd deps/libev && ./configure --disable-dependency-tracking && make
+	@${PYTHON} scripts/travis.py fold_end conf_libev
+	@${PYTHON} scripts/travis.py fold_start conf_cares "Configuring cares"
 	cd deps/c-ares && ./configure --disable-dependency-tracking && make
+	@${PYTHON} scripts/travis.py fold_end conf_cares
+	@${PYTHON} scripts/travis.py fold_start conf_libuv "Configuring libuv"
 	cd deps/libuv && ./autogen.sh && ./configure --disable-static && make
+	@${PYTHON} scripts/travis.py fold_end conf_libuv
 	CPPFLAGS="-Ideps/libev -Ideps/c-ares -Ideps/libuv/include" LDFLAGS="-Ldeps/libev/.libs -Ldeps/c-ares/.libs -Ldeps/libuv/.libs" LD_LIBRARY_PATH="$(PWD)/deps/libev/.libs:$(PWD)/deps/c-ares/.libs:$(PWD)/deps/libuv/.libs" EMBED=0 GEVENT_LOOP=libev-cext PYTHON=python2.7.14 PATH=$(BUILD_RUNTIMES)/versions/python2.7.14/bin:$(PATH) make develop basictest

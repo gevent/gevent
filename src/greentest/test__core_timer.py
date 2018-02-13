@@ -9,11 +9,12 @@ from greentest.sysinfo import CFFI_BACKEND
 
 class Test(TestCase):
     __timeout__ = LARGE_TIMEOUT
+
     repeat = 0
 
     def setUp(self):
         self.called = []
-        self.loop = config.loop(default=True)
+        self.loop = config.loop(default=False)
         self.timer = self.loop.timer(0.001, repeat=self.repeat)
 
     def cleanup(self):
@@ -74,6 +75,8 @@ class TestAgain(Test):
 
         self.assertEqual(x.args, (x,))
 
+        # XXX: On libev, this takes 1 second. On libuv,
+        # it takes the expected time.
         self.loop.run()
 
         self.assertEqual(self.called, [1])

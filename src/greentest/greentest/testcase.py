@@ -95,7 +95,9 @@ class TestCaseMetaClass(type):
             if sysinfo.RUN_LEAKCHECKS and timeout is not None:
                 timeout *= 6
         check_totalrefcount = _get_class_attr(classDict, bases, 'check_totalrefcount', True)
+
         error_fatal = _get_class_attr(classDict, bases, 'error_fatal', True)
+        uses_handle_error = _get_class_attr(classDict, bases, 'uses_handle_error', True)
         # Python 3: must copy, we mutate the classDict. Interestingly enough,
         # it doesn't actually error out, but under 3.6 we wind up wrapping
         # and re-wrapping the same items over and over and over.
@@ -108,7 +110,8 @@ class TestCaseMetaClass(type):
                 error_fatal = getattr(value, 'error_fatal', error_fatal)
                 if error_fatal:
                     value = errorhandler.wrap_error_fatal(value)
-                value = errorhandler.wrap_restore_handle_error(value)
+                if uses_handle_error:
+                    value = errorhandler.wrap_restore_handle_error(value)
                 if check_totalrefcount and sysinfo.RUN_LEAKCHECKS:
                     value = leakcheck.wrap_refcount(value)
                 classDict[key] = value
@@ -122,6 +125,7 @@ class TestCase(TestCaseMetaClass("NewBase", (TimeAssertMixin, BaseTestCase,), {}
 
     switch_expected = 'default'
     error_fatal = True
+    uses_handle_error = True
     close_on_teardown = ()
 
     def run(self, *args, **kwargs):

@@ -101,8 +101,6 @@ from greentest.openfiles import get_number_open_files
 from greentest.openfiles import get_open_files
 
 from greentest.testcase import TestCase
-from greentest.timing import AbstractGenericGetTestCase as GenericGetTestCase
-from greentest.timing import AbstractGenericWaitTestCase as GenericWaitTestCase
 
 from greentest.modules import walk_modules
 
