@@ -247,7 +247,7 @@ class ImportableSetting(object):
                 raise ImportError('Cannot import %r from %r' % (item, module))
             return x
         finally:
-            if '/' in path:
+            if package_path:
                 try:
                     sys.path.remove(package_path)
                 except ValueError:

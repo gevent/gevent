@@ -2,6 +2,7 @@
 
 import os
 import unittest
+import sys
 
 from gevent import _config
 
@@ -76,6 +77,63 @@ class TestResolver(unittest.TestCase):
 
         conf.resolver = 'block'
         self.assertEqual(conf.resolver, Resolver)
+
+class TestFunctions(unittest.TestCase):
+
+    def test_validate_bool(self):
+        self.assertTrue(_config.validate_bool('on'))
+        self.assertTrue(_config.validate_bool('1'))
+        self.assertFalse(_config.validate_bool('off'))
+        self.assertFalse(_config.validate_bool('0'))
+        self.assertFalse(_config.validate_bool(''))
+
+        with self.assertRaises(ValueError):
+            _config.validate_bool(' hmm ')
+
+    def test_validate_invalid(self):
+        with self.assertRaises(ValueError):
+            _config.validate_invalid(self)
+
+class TestConfig(unittest.TestCase):
+
+    def test__dir__(self):
+        self.assertEqual(sorted(_config.config.settings),
+                         sorted(dir(_config.config)))
+
+    def test__getattr__invalid(self):
+        with self.assertRaises(AttributeError):
+            getattr(_config.config, 'no_such_setting')
+
+    def test_set_invalid(self):
+        with self.assertRaises(AttributeError):
+            _config.config.set('no such setting', True)
+
+class TestImportableSetting(unittest.TestCase):
+
+    assertRaisesRegex = getattr(unittest.TestCase, 'assertRaisesRegex',
+                                unittest.TestCase.assertRaisesRegexp)
+    def test_empty_list(self):
+        i = _config.ImportableSetting()
+        with self.assertRaisesRegex(ImportError,
+                                    "Cannot import from empty list"):
+            i._import([])
+
+    def test_path(self):
+        import warnings
+        i = _config.ImportableSetting()
+        path = list(sys.path)
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always")
+            with self.assertRaisesRegex(ImportError,
+                                        "Cannot import 'no_such_module'"):
+                i._import('foo/bar/gevent.no_such_module')
+
+        # We restored the path
+        self.assertEqual(path, sys.path)
+
+        self.assertEqual(len(w), 1)
+        self.assertEqual(w[0].category, DeprecationWarning)
+        self.assertIn('Absolute paths', str(w[0].message))
 
 if __name__ == '__main__':
     unittest.main()
