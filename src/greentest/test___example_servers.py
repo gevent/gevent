@@ -88,7 +88,7 @@ class Test_wsgiserver(util.TestServer):
     def test_a_blocking_client(self):
         self._do_test_a_blocking_client()
 
-
+@greentest.skipOnCI("Timing issues sometimes lead to a connection refused")
 class Test_wsgiserver_ssl(Test_wsgiserver):
     server = 'wsgiserver_ssl.py'
     URL = 'https://%s:8443' % (params.DEFAULT_LOCAL_HOST_ADDR,)
