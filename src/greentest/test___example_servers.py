@@ -9,8 +9,8 @@ from unittest import SkipTest
 import socket
 import ssl
 
+import greentest
 from greentest import DEFAULT_XPC_SOCKET_TIMEOUT
-from greentest import main
 from greentest import util
 from greentest import params
 
@@ -101,6 +101,7 @@ class Test_wsgiserver_ssl(Test_wsgiserver):
         ssl_ctx = ssl._create_unverified_context()
 
 
+@greentest.skipOnCI("Timing issues sometimes lead to a connection refused")
 class Test_webproxy(Test_wsgiserver):
     server = 'webproxy.py'
 
@@ -136,4 +137,4 @@ class Test_webproxy(Test_wsgiserver):
 
 
 if __name__ == '__main__':
-    main()
+    greentest.main()

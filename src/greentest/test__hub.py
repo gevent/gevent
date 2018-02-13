@@ -20,6 +20,7 @@
 # THE SOFTWARE.
 
 import greentest
+import greentest.timing
 import time
 import re
 import gevent
@@ -71,7 +72,7 @@ class TestExceptionInMainloop(greentest.TestCase):
 
 
 
-class TestSleep(greentest.GenericWaitTestCase):
+class TestSleep(greentest.timing.AbstractGenericWaitTestCase):
 
     def wait(self, timeout):
         gevent.sleep(timeout)
@@ -80,7 +81,7 @@ class TestSleep(greentest.GenericWaitTestCase):
         gevent.sleep(0)
 
 
-class TestWaiterGet(greentest.GenericWaitTestCase):
+class TestWaiterGet(greentest.timing.AbstractGenericWaitTestCase):
 
     def setUp(self):
         super(TestWaiterGet, self).setUp()

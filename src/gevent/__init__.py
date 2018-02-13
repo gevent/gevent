@@ -4,6 +4,9 @@ gevent is a coroutine-based Python networking library that uses greenlet
 to provide a high-level synchronous API on top of libev event loop.
 
 See http://www.gevent.org/ for the documentation.
+
+.. versionchanged:: 1.3a2
+   Add the `config` object.
 """
 
 from __future__ import absolute_import
@@ -43,6 +46,8 @@ __all__ = [
     'reinit',
     'getswitchinterval',
     'setswitchinterval',
+    # Added in 1.3a2
+    'config',
 ]
 
 
@@ -72,11 +77,14 @@ except AttributeError:
             global _switchinterval
             _switchinterval = interval
 
+from gevent._config import config
 from gevent.hub import get_hub, iwait, wait
 from gevent.greenlet import Greenlet, joinall, killall
 joinall = joinall # export for pylint
 spawn = Greenlet.spawn
 spawn_later = Greenlet.spawn_later
+#: The singleton configuration object for gevent.
+config = config
 
 from gevent.timeout import Timeout, with_timeout
 from gevent.hub import getcurrent, GreenletExit, spawn_raw, sleep, idle, kill, reinit

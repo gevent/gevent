@@ -25,7 +25,9 @@ if getattr(resolver, 'pool', None) is not None:
 
 from greentest.sysinfo import RESOLVER_NOT_SYSTEM
 from greentest.sysinfo import RESOLVER_DNSPYTHON
+from greentest.sysinfo import RESOLVER_ARES
 from greentest.sysinfo import PY2
+import greentest.timing
 
 
 assert gevent_socket.gaierror is socket.gaierror
@@ -444,6 +446,8 @@ class SanitizedHostsFile(HostsFile):
                 continue
             yield name, addr
 
+@greentest.skipIf(greentest.RUNNING_ON_TRAVIS and RESOLVER_ARES,
+                  "This sometimes randomly fails on Travis with ares, beginning Feb 13, 2018")
 class TestEtcHosts(TestCase):
 
     MAX_HOSTS = os.getenv('GEVENTTEST_MAX_ETC_HOSTS', 10)
@@ -567,7 +571,7 @@ add(TestInternational, u'президент.рф', 'russian',
 add(TestInternational, u'президент.рф'.encode('idna'), 'idna')
 
 
-class TestInterrupted_gethostbyname(greentest.GenericWaitTestCase):
+class TestInterrupted_gethostbyname(greentest.timing.AbstractGenericWaitTestCase):
 
     # There are refs to a Waiter in the C code that don't go
     # away yet; one gc may or may not do it.

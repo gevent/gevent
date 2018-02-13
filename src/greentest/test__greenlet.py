@@ -19,7 +19,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
-import sys
+
 import greentest
 import gevent
 import re
@@ -27,6 +27,9 @@ from gevent import sleep, with_timeout, getcurrent
 from gevent import greenlet
 from gevent.event import AsyncResult
 from gevent.queue import Queue, Channel
+
+from greentest.timing import AbstractGenericWaitTestCase
+from greentest.timing import AbstractGenericGetTestCase
 
 DELAY = 0.01
 greentest.TestCase.error_fatal = False
@@ -38,25 +41,13 @@ class ExpectedError(greentest.ExpectedException):
 
 class TestLink(greentest.TestCase):
 
-    def assertRaises(self, err, func, *args, **kwargs):
-        try:
-            result = func(*args, **kwargs)
-        except:
-            ex = sys.exc_info()[1]
-            if ex is err:
-                return
-            if isinstance(ex, err):
-                return
-            raise
-        raise AssertionError('%s not raised, returned %r' % (err, result))
-
     def test_link_to_asyncresult(self):
         p = gevent.spawn(lambda: 100)
         event = AsyncResult()
         p.link(event)
         self.assertEqual(event.get(), 100)
 
-        for i in range(3):
+        for _ in range(3):
             event2 = AsyncResult()
             p.link(event2)
             self.assertEqual(event2.get(), 100)
@@ -66,12 +57,17 @@ class TestLink(greentest.TestCase):
         p = gevent.spawn(lambda: getcurrent().throw(err))
         event = AsyncResult()
         p.link(event)
-        self.assertRaises(err, event.get)
+        with self.assertRaises(ExpectedError) as exc:
+            event.get()
 
-        for i in range(3):
+        self.assertIs(exc.exception, err)
+
+        for _ in range(3):
             event2 = AsyncResult()
             p.link(event2)
-            self.assertRaises(err, event2.get)
+            with self.assertRaises(ExpectedError) as exc:
+                event2.get()
+            self.assertIs(exc.exception, err)
 
     def test_link_to_queue(self):
         p = gevent.spawn(lambda: 100)
@@ -79,7 +75,7 @@ class TestLink(greentest.TestCase):
         p.link(q.put)
         self.assertEqual(q.get().get(), 100)
 
-        for i in range(3):
+        for _ in range(3):
             p.link(q.put)
             self.assertEqual(q.get().get(), 100)
 
@@ -125,6 +121,8 @@ class TestUnlink(greentest.TestCase):
 
 class LinksTestCase(greentest.TestCase):
 
+    link_method = None
+
     def link(self, p, listener=None):
         getattr(p, self.link_method)(listener)
 
@@ -169,30 +167,33 @@ def sleep0():
 class TestReturn_link(LinksTestCase):
     link_method = 'link'
 
+    p = None
+
     def cleanup(self):
         while self.p._links:
             self.p._links.pop()
+        self.p = None
 
     def test_return(self):
         self.p = gevent.spawn(return25)
         for _ in range(3):
-            self._test_return(self.p, 25, sleep0)
+            self._test_return(self.p, 25)
         self.p.kill()
 
-    def _test_return(self, p, result, action):
+    def _test_return(self, p, result):
         event, queue, callback_flag = self.set_links(p)
 
         # stuff that will time out because there's no unhandled exception:
         xxxxx = self.set_links_timeout(p.link_exception)
 
         sleep(DELAY * 2)
-        assert not p, p
+        self.assertFalse(p)
 
         self.assertEqual(event.get(), result)
         self.assertEqual(queue.get().get(), result)
 
         sleep(DELAY)
-        assert not callback_flag, callback_flag
+        self.assertFalse(callback_flag)
 
         self.check_timed_out(*xxxxx)
 
@@ -202,13 +203,14 @@ class TestReturn_link(LinksTestCase):
 
         p.kill()
         sleep(DELAY)
-        assert not p, p
+        self.assertFalse(p)
 
-        assert isinstance(event.get(), greenlet.GreenletExit), event.get()
-        assert isinstance(queue.get().get(), greenlet.GreenletExit), queue.get().get()
+
+        self.assertIsInstance(event.get(), greenlet.GreenletExit)
+        self.assertIsInstance(queue.get().get(), greenlet.GreenletExit)
 
         sleep(DELAY)
-        assert not callback_flag, callback_flag
+        self.assertFalse(callback_flag)
 
         self.check_timed_out(*xxxxx)
 
@@ -240,7 +242,7 @@ class TestRaise_link(LinksTestCase):
         self.check_timed_out(*xxxxx)
 
     def test_raise(self):
-        p = self.p = gevent.spawn(lambda: getcurrent().throw(ExpectedError('test_raise')))
+        p = gevent.spawn(lambda: getcurrent().throw(ExpectedError('test_raise')))
         for _ in range(3):
             self._test_raise(p)
 
@@ -320,22 +322,22 @@ class TestStuff(greentest.TestCase):
         p = gevent.spawn(lambda: 5)
         results = []
 
-        def listener1(*args):
+        def listener1(*_args):
             results.append(10)
             raise ExpectedError('listener1')
 
-        def listener2(*args):
+        def listener2(*_args):
             results.append(20)
             raise ExpectedError('listener2')
 
-        def listener3(*args):
+        def listener3(*_args):
             raise ExpectedError('listener3')
 
         p.link(listener1)
         p.link(listener2)
         p.link(listener3)
         sleep(DELAY * 10)
-        assert results in [[10, 20], [20, 10]], results
+        self.assertIn(results, [[10, 20], [20, 10]])
 
         p = gevent.spawn(lambda: getcurrent().throw(ExpectedError('test_multiple_listeners_error')))
         results = []
@@ -343,7 +345,7 @@ class TestStuff(greentest.TestCase):
         p.link(listener2)
         p.link(listener3)
         sleep(DELAY * 10)
-        assert results in [[10, 20], [20, 10]], results
+        self.assertIn(results, [[10, 20], [20, 10]])
 
     class Results(object):
 
@@ -360,10 +362,10 @@ class TestStuff(greentest.TestCase):
             self.results.append(5)
             raise ExpectedError('listener2')
 
-        def listener3(self, p):
+        def listener3(self, _p):
             raise ExpectedError('listener3')
 
-    def _test_multiple_listeners_error_unlink(self, p, link):
+    def _test_multiple_listeners_error_unlink(self, _p, link):
         # notification must not happen after unlink even
         # though notification process has been already started
         results = self.Results()
@@ -388,20 +390,8 @@ class TestStuff(greentest.TestCase):
         gevent.spawn(e.set, 6)
         self._test_multiple_listeners_error_unlink(e, e.rawlink)
 
-    def test_killing_unlinked(self):
-        e = AsyncResult()
 
-        def func():
-            try:
-                raise ExpectedError('test_killing_unlinked')
-            except:
-                e.set_exception(sys.exc_info()[1])
-                gevent.sleep(0)
-
-        sleep(DELAY)
-
-
-def dummy_test_func(*args):
+def dummy_test_func(*_args):
     pass
 
 
@@ -436,7 +426,7 @@ class TestStr(greentest.TestCase):
         self.assertEqual(str_g, '<Greenlet at X: <bound method A.method of <module.A object at X>>>')
 
 
-class TestJoin(greentest.GenericWaitTestCase):
+class TestJoin(AbstractGenericWaitTestCase):
 
     def wait(self, timeout):
         g = gevent.spawn(gevent.sleep, 10)
@@ -446,7 +436,7 @@ class TestJoin(greentest.GenericWaitTestCase):
             g.kill()
 
 
-class TestGet(greentest.GenericGetTestCase):
+class TestGet(AbstractGenericGetTestCase):
 
     def wait(self, timeout):
         g = gevent.spawn(gevent.sleep, 10)
@@ -456,7 +446,7 @@ class TestGet(greentest.GenericGetTestCase):
             g.kill()
 
 
-class TestJoinAll0(greentest.GenericWaitTestCase):
+class TestJoinAll0(AbstractGenericWaitTestCase):
 
     g = gevent.Greenlet()
 
@@ -464,7 +454,7 @@ class TestJoinAll0(greentest.GenericWaitTestCase):
         gevent.joinall([self.g], timeout=timeout)
 
 
-class TestJoinAll(greentest.GenericWaitTestCase):
+class TestJoinAll(AbstractGenericWaitTestCase):
 
     def wait(self, timeout):
         g = gevent.spawn(gevent.sleep, 10)
@@ -550,7 +540,7 @@ class TestBasic(greentest.TestCase):
         def func(delay, return_value=4):
             gevent.sleep(delay)
             error = ExpectedError('test_error_exit')
-            error.myattr = return_value
+            setattr(error, 'myattr', return_value)
             raise error
 
         g = gevent.Greenlet(func, 0.001, return_value=5)
@@ -558,13 +548,14 @@ class TestBasic(greentest.TestCase):
         g.rawlink(link_test.append)
         g.start()
         gevent.sleep(0.1)
-        assert not g
-        assert g.dead
-        assert not g.started
-        assert g.ready()
-        assert not g.successful()
-        assert g.value is None  # not changed
-        assert g.exception.myattr == 5
+        self.assertFalse(g)
+        self.assertTrue(g.dead)
+        self.assertFalse(g.started)
+        self.assertTrue(g.ready())
+        self.assertFalse(g.successful())
+        self.assertIsNone(g.value) # not changed
+        self.assertEqual(g.exception.myattr, 5)
+
         assert link_test == [g] or greentest.RUNNING_ON_APPVEYOR, link_test
 
     def _assertKilled(self, g):
@@ -594,7 +585,7 @@ class TestBasic(greentest.TestCase):
         link_test = []
         result = []
         g = gevent.Greenlet(lambda: result.append(1))
-        g.link(lambda x: link_test.append(x))
+        g.link(link_test.append)
         self._test_kill(g, block=block)
         assert not result
         assert link_test == [g]
@@ -609,7 +600,7 @@ class TestBasic(greentest.TestCase):
         result = []
         link_test = []
         g = gevent.Greenlet(lambda: result.append(1))
-        g.link(lambda x: link_test.append(x))
+        g.link(link_test.append)
         g.start()
         self._test_kill(g, block=block)
         assert not result, result
@@ -625,7 +616,7 @@ class TestBasic(greentest.TestCase):
         result = []
         link_test = []
         g = gevent.Greenlet(lambda: result.append(1))
-        g.link(lambda x: link_test.append(x))
+        g.link(link_test.append)
         g.start_later(1)
         self._test_kill(g, block=block)
         assert not result
@@ -639,7 +630,7 @@ class TestBasic(greentest.TestCase):
     def _test_kill_running(self, block):
         link_test = []
         g = gevent.spawn(gevent.sleep, 10)
-        g.link(lambda x: link_test.append(x))
+        g.link(link_test.append)
         self._test_kill(g, block=block)
         gevent.sleep(0.01)
         assert link_test == [g]
@@ -706,6 +697,10 @@ class TestRef(greentest.TestCase):
 
 
 X = object()
+
+del AbstractGenericGetTestCase
+del AbstractGenericWaitTestCase
+
 
 if __name__ == '__main__':
     greentest.main()

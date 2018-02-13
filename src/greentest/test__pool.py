@@ -1,10 +1,11 @@
 from time import time
 import gevent
-from gevent import pool
+import gevent.pool
 from gevent.event import Event
 from gevent.queue import Queue
-from gevent.timeout import Timeout
+
 import greentest
+import greentest.timing
 import random
 from greentest import ExpectedException
 from greentest import six
@@ -13,12 +14,12 @@ import unittest
 
 
 class TestCoroutinePool(unittest.TestCase):
-    klass = pool.Pool
+    klass = gevent.pool.Pool
 
     def test_apply_async(self):
         done = Event()
 
-        def some_work(x):
+        def some_work(_):
             done.set()
 
         pool = self.klass(2)
@@ -125,18 +126,18 @@ class TestCoroutinePool(unittest.TestCase):
             pool.join()
 
 
-def crash(*args, **kw):
+def crash(*_args, **_kw):
     raise RuntimeError("Whoa")
 
 
 class FakeFile(object):
 
-    def write(*args):
+    def write(self, *_args):
         raise RuntimeError('Whaaa')
 
 
 class PoolBasicTests(greentest.TestCase):
-    klass = pool.Pool
+    klass = gevent.pool.Pool
 
     def test_execute_async(self):
         p = self.klass(size=2)
@@ -208,7 +209,7 @@ class PoolBasicTests(greentest.TestCase):
             second = gevent.spawn(gevent.sleep, 1000)
             try:
                 p.add(first)
-                with self.assertRaises(pool.PoolFull):
+                with self.assertRaises(gevent.pool.PoolFull):
                     p.add(second, blocking=False)
             finally:
                 second.kill()
@@ -223,7 +224,7 @@ class PoolBasicTests(greentest.TestCase):
             second = gevent.spawn(gevent.sleep, 1000)
             try:
                 p.add(first)
-                with self.assertRaises(pool.PoolFull):
+                with self.assertRaises(gevent.pool.PoolFull):
                     p.add(second, timeout=0.100)
             finally:
                 second.kill()
@@ -238,7 +239,7 @@ class PoolBasicTests(greentest.TestCase):
             second = gevent.Greenlet(gevent.sleep, 1000)
             try:
                 p.add(first)
-                with self.assertRaises(pool.PoolFull):
+                with self.assertRaises(gevent.pool.PoolFull):
                     p.start(second, timeout=0.100)
             finally:
                 second.kill()
@@ -304,13 +305,13 @@ if greentest.PYPY and greentest.WIN:
 elif greentest.RUNNING_ON_CI or greentest.EXPECT_POOR_TIMER_RESOLUTION:
     LARGE_RANGE = 100
 
-class TestPool(greentest.TestCase):
+class TestPool(greentest.TestCase): # pylint:disable=too-many-public-methods
     __timeout__ = greentest.LARGE_TIMEOUT
     size = 1
 
     def setUp(self):
         greentest.TestCase.setUp(self)
-        self.pool = pool.Pool(self.size)
+        self.pool = gevent.pool.Pool(self.size)
 
     def cleanup(self):
         self.pool.join()
@@ -438,17 +439,11 @@ class TestPool(greentest.TestCase):
 
         running = [0]
 
-        def short_running_func(i, j):
+        def short_running_func(i, _j):
             running[0] += 1
             return i
 
-        # Send two iterables to make sure varargs and kwargs are handled
-        # correctly
-        for meth in self.pool.imap_unordered, self.pool.imap:
-            running[0] = 0
-            mapping = meth(short_running_func, iterable, iterable,
-                           maxsize=1)
-
+        def make_reader(mapping):
             # Simulate a long running reader. No matter how many workers
             # we have, we will never have a queue more than size 1
             def reader():
@@ -459,7 +454,16 @@ class TestPool(greentest.TestCase):
                     gevent.sleep(0.01)
                     self.assertTrue(len(mapping.queue) <= 2, len(mapping.queue))
                 return result
+            return reader
 
+        # Send two iterables to make sure varargs and kwargs are handled
+        # correctly
+        for meth in self.pool.imap_unordered, self.pool.imap:
+            running[0] = 0
+            mapping = meth(short_running_func, iterable, iterable,
+                           maxsize=1)
+
+            reader = make_reader(mapping)
             l = reader()
             self.assertEqual(sorted(l), iterable)
 
@@ -484,16 +488,16 @@ class TestPool0(greentest.TestCase):
     size = 0
 
     def test_wait_full(self):
-        p = pool.Pool(size=0)
+        p = gevent.pool.Pool(size=0)
         self.assertEqual(0, p.free_count())
         self.assertTrue(p.full())
         self.assertEqual(0, p.wait_available(timeout=0.01))
 
 
-class TestJoinSleep(greentest.GenericWaitTestCase):
+class TestJoinSleep(greentest.timing.AbstractGenericWaitTestCase):
 
     def wait(self, timeout):
-        p = pool.Pool()
+        p = gevent.pool.Pool()
         g = p.spawn(gevent.sleep, 10)
         try:
             p.join(timeout=timeout)
@@ -501,10 +505,10 @@ class TestJoinSleep(greentest.GenericWaitTestCase):
             g.kill()
 
 
-class TestJoinSleep_raise_error(greentest.GenericWaitTestCase):
+class TestJoinSleep_raise_error(greentest.timing.AbstractGenericWaitTestCase):
 
     def wait(self, timeout):
-        p = pool.Pool()
+        p = gevent.pool.Pool()
         g = p.spawn(gevent.sleep, 10)
         try:
             p.join(timeout=timeout, raise_error=True)
@@ -516,7 +520,7 @@ class TestJoinEmpty(greentest.TestCase):
     switch_expected = False
 
     def test(self):
-        p = pool.Pool()
+        p = gevent.pool.Pool()
         res = p.join()
         self.assertTrue(res, "empty should return true")
 
@@ -525,7 +529,7 @@ class TestSpawn(greentest.TestCase):
     switch_expected = True
 
     def test(self):
-        p = pool.Pool(1)
+        p = gevent.pool.Pool(1)
         self.assertEqual(len(p), 0)
         p.spawn(gevent.sleep, 0.1)
         self.assertEqual(len(p), 1)
@@ -535,7 +539,7 @@ class TestSpawn(greentest.TestCase):
         self.assertEqual(len(p), 0)
 
     def testSpawnAndWait(self):
-        p = pool.Pool(1)
+        p = gevent.pool.Pool(1)
         self.assertEqual(len(p), 0)
         p.spawn(gevent.sleep, 0.1)
         self.assertEqual(len(p), 1)
@@ -555,12 +559,12 @@ class TestErrorInIterator(greentest.TestCase):
     error_fatal = False
 
     def test(self):
-        p = pool.Pool(3)
+        p = gevent.pool.Pool(3)
         self.assertRaises(ExpectedException, p.map, lambda x: None, error_iter())
         gevent.sleep(0.001)
 
     def test_unordered(self):
-        p = pool.Pool(3)
+        p = gevent.pool.Pool(3)
 
         def unordered():
             return list(p.imap_unordered(lambda x: None, error_iter()))
@@ -577,11 +581,11 @@ class TestErrorInHandler(greentest.TestCase):
     error_fatal = False
 
     def test_map(self):
-        p = pool.Pool(3)
+        p = gevent.pool.Pool(3)
         self.assertRaises(ZeroDivisionError, p.map, divide_by, [1, 0, 2])
 
     def test_imap(self):
-        p = pool.Pool(1)
+        p = gevent.pool.Pool(1)
         it = p.imap(divide_by, [1, 0, 2])
         self.assertEqual(next(it), 1.0)
         self.assertRaises(ZeroDivisionError, next, it)
@@ -589,7 +593,7 @@ class TestErrorInHandler(greentest.TestCase):
         self.assertRaises(StopIteration, next, it)
 
     def test_imap_unordered(self):
-        p = pool.Pool(1)
+        p = gevent.pool.Pool(1)
         it = p.imap_unordered(divide_by, [1, 0, 2])
         self.assertEqual(next(it), 1.0)
         self.assertRaises(ZeroDivisionError, next, it)

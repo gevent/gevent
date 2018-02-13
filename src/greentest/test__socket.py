@@ -9,6 +9,7 @@ import unittest
 import greentest
 from functools import wraps
 from greentest import six
+from greentest import LARGE_TIMEOUT
 
 # we use threading on purpose so that we can test both regular and gevent sockets with the same code
 from threading import Thread as _Thread
@@ -42,7 +43,7 @@ class TestTCP(greentest.TestCase):
     __timeout__ = None
     TIMEOUT_ERROR = socket.timeout
     long_data = ", ".join([str(x) for x in range(20000)])
-    if six.PY3:
+    if not isinstance(long_data, bytes):
         long_data = long_data.encode('ascii')
 
     def setUp(self):
@@ -341,7 +342,7 @@ def get_port():
 
 class TestCreateConnection(greentest.TestCase):
 
-    __timeout__ = 5
+    __timeout__ = LARGE_TIMEOUT
 
     def test_refuses(self):
         with self.assertRaises(socket.error) as cm:

@@ -58,6 +58,7 @@ class _DelayWaitMixin(object):
         # otherwise it's the raw number
         seconds = getattr(timeout, 'seconds', timeout)
 
+        gevent.get_hub().loop.update_now()
         start = time.time()
         try:
             result = self.wait(timeout)

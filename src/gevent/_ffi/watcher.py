@@ -10,14 +10,17 @@ import signal as signalmodule
 import functools
 import warnings
 
+from gevent._config import config
+
 try:
     from tracemalloc import get_object_traceback
 
     def tracemalloc(init):
-        # PYTHONTRACEMALLOC env var controls this.
+        # PYTHONTRACEMALLOC env var controls this on Python 3.
         return init
 except ImportError: # Python < 3.4
-    if os.getenv('PYTHONTRACEMALLOC'):
+
+    if config.trace_malloc:
         # Use the same env var to turn this on for Python 2
         import traceback
 

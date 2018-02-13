@@ -23,13 +23,12 @@ import unittest
 
 from greentest import sysinfo
 
+def _identity(f):
+    return f
 
 def _do_not_skip(reason):
     assert reason
-
-    def dec(f):
-        return f
-    return dec
+    return _identity
 
 
 if sysinfo.WIN:
@@ -49,6 +48,11 @@ if sysinfo.RUNNING_ON_APPVEYOR:
 
 else:
     skipOnAppVeyor = _do_not_skip
+
+if sysinfo.RUNNING_ON_CI:
+    skipOnCI = unittest.skip
+else:
+    skipOnCI = _do_not_skip
 
 if sysinfo.PYPY3 and sysinfo.RUNNING_ON_CI:
     # Same as above, for PyPy3.3-5.5-alpha and 3.5-5.7.1-beta and 3.5-5.8

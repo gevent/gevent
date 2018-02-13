@@ -6,11 +6,13 @@ from gevent.event import Event, AsyncResult
 import greentest
 from greentest.skipping import skipUnderCoverage
 from greentest.six import xrange
+from greentest.timing import AbstractGenericGetTestCase
+from greentest.timing import AbstractGenericWaitTestCase
 
 DELAY = 0.01
 
 
-class TestEventWait(greentest.GenericWaitTestCase):
+class TestEventWait(AbstractGenericWaitTestCase):
 
     def wait(self, timeout):
         Event().wait(timeout=timeout)
@@ -19,7 +21,7 @@ class TestEventWait(greentest.GenericWaitTestCase):
         str(Event())
 
 
-class TestWaitEvent(greentest.GenericWaitTestCase):
+class TestWaitEvent(AbstractGenericWaitTestCase):
 
     def wait(self, timeout):
         gevent.wait([Event()], timeout=timeout)
@@ -58,19 +60,19 @@ class TestWaitEvent(greentest.GenericWaitTestCase):
         gevent.spawn(waiter).join()
 
 
-class TestAsyncResultWait(greentest.GenericWaitTestCase):
+class TestAsyncResultWait(AbstractGenericWaitTestCase):
 
     def wait(self, timeout):
         AsyncResult().wait(timeout=timeout)
 
 
-class TestWaitAsyncResult(greentest.GenericWaitTestCase):
+class TestWaitAsyncResult(AbstractGenericWaitTestCase):
 
     def wait(self, timeout):
         gevent.wait([AsyncResult()], timeout=timeout)
 
 
-class TestAsyncResultGet(greentest.GenericGetTestCase):
+class TestAsyncResultGet(AbstractGenericGetTestCase):
 
     def wait(self, timeout):
         AsyncResult().get(timeout=timeout)
@@ -231,6 +233,9 @@ class TestWait_count1(TestWait):
 class TestWait_count2(TestWait):
     count = 2
 
+
+del AbstractGenericGetTestCase
+del AbstractGenericWaitTestCase
 
 if __name__ == '__main__':
     greentest.main()

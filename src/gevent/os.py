@@ -46,6 +46,7 @@ from __future__ import absolute_import
 import os
 import sys
 from gevent.hub import get_hub, reinit
+from gevent._config import config
 from gevent._compat import PY3
 from gevent._util import copy_globals
 import errno
@@ -418,7 +419,7 @@ if hasattr(os, 'fork'):
             __extensions__.append('forkpty_and_watch')
 
         # Watch children by default
-        if not os.getenv('GEVENT_NOWAITPID'):
+        if not config.disable_watch_children:
             # Broken out into separate functions instead of simple name aliases
             # for documentation purposes.
             def fork(*args, **kwargs):

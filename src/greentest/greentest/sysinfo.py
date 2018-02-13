@@ -30,8 +30,8 @@ LINUX = sys.platform.startswith('linux')
 OSX = sys.platform == 'darwin'
 
 # XXX: Formalize this better
-LIBUV = os.getenv('GEVENT_CORE_CFFI_ONLY') == 'libuv' or (PYPY and WIN) or hasattr(gevent.core, 'libuv')
-CFFI_BACKEND = bool(os.getenv('GEVENT_CORE_CFFI_ONLY')) or PYPY
+LIBUV = 'libuv' in gevent.core.loop.__module__ # pylint:disable=no-member
+CFFI_BACKEND = PYPY or LIBUV or 'cffi' in os.getenv('GEVENT_LOOP', '')
 
 if '--debug-greentest' in sys.argv:
     sys.argv.remove('--debug-greentest')

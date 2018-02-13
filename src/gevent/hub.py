@@ -26,6 +26,7 @@ __all__ = [
     'Waiter',
 ]
 
+from gevent._config import config
 from gevent._compat import string_types
 from gevent._compat import xrange
 from gevent._util import _NONE
@@ -389,89 +390,29 @@ def set_hub(hub):
     _threadlocal.hub = hub
 
 
-def _import(path):
-    # pylint:disable=too-many-branches
-    if isinstance(path, list):
-        if not path:
-            raise ImportError('Cannot import from empty list: %r' % (path, ))
-
-        for item in path[:-1]:
-            try:
-                return _import(item)
-            except ImportError:
-                pass
-
-        return _import(path[-1])
-
-    if not isinstance(path, string_types):
-        return path
-
-    if '.' not in path:
-        raise ImportError("Cannot import %r (required format: [path/][package.]module.class)" % path)
-
-    if '/' in path:
-        # This is dangerous, subject to race conditions, and
-        # may not work properly for things like namespace packages
-        import warnings
-        warnings.warn("Absolute paths are deprecated. Please put the package "
-                      "on sys.path first",
-                      DeprecationWarning)
-        package_path, path = path.rsplit('/', 1)
-        sys.path = [package_path] + sys.path
-    else:
-        package_path = None
-
-    try:
-        module, item = path.rsplit('.', 1)
-        x = __import__(module)
-        for attr in path.split('.')[1:]:
-            oldx = x
-            x = getattr(x, attr, _NONE)
-            if x is _NONE:
-                raise ImportError('Cannot import %r from %r' % (attr, oldx))
-        return x
-    finally:
-        if '/' in path:
-            try:
-                sys.path.remove(package_path)
-            except ValueError:
-                pass
 
 
-def config(default, envvar):
+def _config(default, envvar):
     result = os.environ.get(envvar) or default # absolute import gets confused pylint: disable=no-member
     if isinstance(result, string_types):
         return result.split(',')
     return result
 
 
-def resolver_config(default, envvar):
-    result = config(default, envvar)
-    return [_resolvers.get(x, x) for x in result]
-
-
-_resolvers = {
-    'ares': 'gevent.resolver.ares.Resolver',
-    'thread': 'gevent.resolver.thread.Resolver',
-    'block': 'gevent.resolver.blocking.Resolver',
-    'dnspython': 'gevent.resolver.dnspython.Resolver',
-}
-
-
-_DEFAULT_LOOP_CLASS = 'gevent.core.loop'
-
 
 class Hub(RawGreenlet):
-    """A greenlet that runs the event loop.
+    """
+    A greenlet that runs the event loop.
 
     It is created automatically by :func:`get_hub`.
 
-    **Switching**
+    .. rubric:: Switching
 
-    Every time this greenlet (i.e., the event loop) is switched *to*, if
-    the current greenlet has a ``switch_out`` method, it will be called. This
-    allows a greenlet to take some cleanup actions before yielding control. This method
-    should not call any gevent blocking functions.
+    Every time this greenlet (i.e., the event loop) is switched *to*,
+    if the current greenlet has a ``switch_out`` method, it will be
+    called. This allows a greenlet to take some cleanup actions before
+    yielding control. This method should not call any gevent blocking
+    functions.
     """
 
     #: If instances of these classes are raised into the event loop,
@@ -483,37 +424,8 @@ class Hub(RawGreenlet):
     #: do not get logged/printed when raised by the event loop.
     NOT_ERROR = (GreenletExit, SystemExit)
 
-    loop_class = config(_DEFAULT_LOOP_CLASS, 'GEVENT_LOOP')
-    # For the standard class, go ahead and import it when this class
-    # is defined. This is no loss of generality because the envvar is
-    # only read when this class is defined, and we know that the
-    # standard class will be available. This can solve problems with
-    # the class being imported from multiple threads at once, leading
-    # to one of the imports failing. Only do this for the object we
-    # need in the constructor, as the rest of the factories are
-    # themselves handled lazily. See #687. (People using a custom loop_class
-    # can probably manage to get_hub() from the main thread or otherwise import
-    # that loop_class themselves.)
-    if loop_class == [_DEFAULT_LOOP_CLASS]:
-        loop_class = [_import(loop_class)]
 
-    resolver_class = [
-        'gevent.resolver.thread.Resolver',
-        'gevent.resolver.dnspython.Resolver',
-        'gevent.resolver.ares.Resolver',
-        'gevent.resolver.blacking.Resolver',
-    ]
-    #: The class or callable object, or the name of a factory function or class,
-    #: that will be used to create :attr:`resolver`. By default, configured according to
-    #: :doc:`dns`. If a list, a list of objects in preference order.
-    resolver_class = resolver_config(resolver_class, 'GEVENT_RESOLVER')
-    threadpool_class = config('gevent.threadpool.ThreadPool', 'GEVENT_THREADPOOL')
-    backend = config(None, 'GEVENT_BACKEND')
     threadpool_size = 10
-
-    # using pprint.pformat can override custom __repr__ methods on dict/list
-    # subclasses, which can be a security concern
-    format_context = 'pprint.saferepr'
 
 
     def __init__(self, loop=None, default=None):
@@ -530,13 +442,21 @@ class Hub(RawGreenlet):
         else:
             if default is None and get_ident() != MAIN_THREAD:
                 default = False
-            loop_class = _import(self.loop_class)
+
             if loop is None:
                 loop = self.backend
-            self.loop = loop_class(flags=loop, default=default)
+            self.loop = self.loop_class(flags=loop, default=default) # pylint:disable=not-callable
         self._resolver = None
         self._threadpool = None
-        self.format_context = _import(self.format_context)
+        self.format_context = config.format_context
+
+    @property
+    def loop_class(self):
+        return config.loop
+
+    @property
+    def backend(self):
+        return config.libev_backend
 
     def __repr__(self):
         if self.loop is None:
@@ -787,11 +707,13 @@ class Hub(RawGreenlet):
         if _threadlocal.hub is self:
             _threadlocal.hub = None
 
+    @property
+    def resolver_class(self):
+        return config.resolver
+
     def _get_resolver(self):
         if self._resolver is None:
-            if self.resolver_class is not None:
-                self.resolver_class = _import(self.resolver_class)
-                self._resolver = self.resolver_class(hub=self)
+            self._resolver = self.resolver_class(hub=self) # pylint:disable=not-callable
         return self._resolver
 
     def _set_resolver(self, value):
@@ -802,11 +724,15 @@ class Hub(RawGreenlet):
 
     resolver = property(_get_resolver, _set_resolver, _del_resolver)
 
+
+    @property
+    def threadpool_class(self):
+        return config.threadpool
+
     def _get_threadpool(self):
         if self._threadpool is None:
-            if self.threadpool_class is not None:
-                self.threadpool_class = _import(self.threadpool_class)
-                self._threadpool = self.threadpool_class(self.threadpool_size, hub=self)
+            # pylint:disable=not-callable
+            self._threadpool = self.threadpool_class(self.threadpool_size, hub=self)
         return self._threadpool
 
     def _set_threadpool(self, value):

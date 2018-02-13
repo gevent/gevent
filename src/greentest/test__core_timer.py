@@ -1,5 +1,5 @@
 from __future__ import print_function
-from gevent import core
+from gevent import config
 
 from greentest import TestCase
 from greentest import main
@@ -9,15 +9,23 @@ from greentest.sysinfo import CFFI_BACKEND
 
 class Test(TestCase):
     __timeout__ = LARGE_TIMEOUT
+
     repeat = 0
 
     def setUp(self):
         self.called = []
-        self.loop = core.loop(default=True)
+        self.loop = config.loop(default=False)
         self.timer = self.loop.timer(0.001, repeat=self.repeat)
 
-    def tearDown(self):
+    def cleanup(self):
+        # cleanup instead of tearDown to cooperate well with
+        # leakcheck.py
         self.timer.close()
+        # cycle the loop so libuv close callbacks fire
+        self.loop.run()
+        self.loop.destroy()
+        self.loop = None
+        self.timer = None
 
     def f(self, x=None):
         self.called.append(1)
@@ -67,6 +75,8 @@ class TestAgain(Test):
 
         self.assertEqual(x.args, (x,))
 
+        # XXX: On libev, this takes 1 second. On libuv,
+        # it takes the expected time.
         self.loop.run()
 
         self.assertEqual(self.called, [1])

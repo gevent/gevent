@@ -58,6 +58,7 @@ from greentest.sysinfo import CONN_ABORTED_ERRORS
 
 from greentest.skipping import skipOnWindows
 from greentest.skipping import skipOnAppVeyor
+from greentest.skipping import skipOnCI
 from greentest.skipping import skipOnPyPy3OnCI
 from greentest.skipping import skipOnPyPy
 from greentest.skipping import skipOnPyPy3
@@ -100,8 +101,6 @@ from greentest.openfiles import get_number_open_files
 from greentest.openfiles import get_open_files
 
 from greentest.testcase import TestCase
-from greentest.timing import AbstractGenericGetTestCase as GenericGetTestCase
-from greentest.timing import AbstractGenericWaitTestCase as GenericWaitTestCase
 
 from greentest.modules import walk_modules
 

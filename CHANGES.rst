@@ -46,6 +46,18 @@
   :mod:`time`, much like :mod:`gevent.socket` can be imported instead
   of :mod:`socket`.
 
+- Centralize all gevent configuration in an object at
+  ``gevent.config``, allowing for gevent to be configured through code
+  and not *necessarily* environment variables, and also provide a
+  centralized place for documentation. See :issue:`1090`.
+
+  - The new ``GEVENT_CORE_CFFI_ONLY`` environment variable has been
+    replaced with the pre-existing ``GEVENT_LOOP`` environment
+    variable. That variable may take the values ``libev-cext``,
+    ``libev-cffi``, or ``libuv-cffi``, (or be a list in preference
+    order, or be a dotted name; it may also be assigned to an
+    object in Python code at ``gevent.config.loop``).
+
 1.3a1 (2018-01-27)
 ==================
 
