@@ -1,5 +1,5 @@
 from __future__ import print_function
-from gevent import core
+from gevent import config
 
 from greentest import TestCase
 from greentest import main
@@ -13,11 +13,14 @@ class Test(TestCase):
 
     def setUp(self):
         self.called = []
-        self.loop = core.loop(default=True)
+        self.loop = config.loop(default=True)
         self.timer = self.loop.timer(0.001, repeat=self.repeat)
 
     def tearDown(self):
         self.timer.close()
+        self.loop.destroy()
+        self.timer = None
+        self.loop = None
 
     def f(self, x=None):
         self.called.append(1)
