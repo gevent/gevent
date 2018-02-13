@@ -163,8 +163,8 @@ $(PYPY3):
 
 
 develop:
-	${PYTHON} scripts/travis.py fold_start install "Installing gevent"
-	echo python is at `which $(PYTHON)`
+	@${PYTHON} scripts/travis.py fold_start install "Installing gevent"
+	@echo python is at `which $(PYTHON)`
 # First install a newer pip so that it can use the wheel cache
 # (only needed until travis upgrades pip to 7.x; note that the 3.5
 # environment uses pip 7.1 by default)
@@ -173,7 +173,7 @@ develop:
 # disables the cache.
 # We need wheel>=0.26 on Python 3.5. See previous revisions.
 	GEVENTSETUP_EV_VERIFY=3 ${PYTHON} -m pip install -U -r dev-requirements.txt
-	${PYTHON} scripts/travis.py fold_end install
+	@${PYTHON} scripts/travis.py fold_end install
 
 test-py27: $(PY27)
 	PYTHON=python2.7.14 PATH=$(BUILD_RUNTIMES)/versions/python2.7.14/bin:$(PATH) make develop lint leaktest allbackendtest
@@ -197,13 +197,13 @@ test-pypy3: $(PYPY3)
 	PYTHON=$(PYPY3) PATH=$(BUILD_RUNTIMES)/versions/pypy3.5_5101/bin:$(PATH) make develop basictest
 
 test-py27-noembed: $(PY27)
-	@${PYTHON} scripts/travis.py fold_start conf_libev "Configuring libev"
+	@python2.7.14 scripts/travis.py fold_start conf_libev "Configuring libev"
 	cd deps/libev && ./configure --disable-dependency-tracking && make
-	@${PYTHON} scripts/travis.py fold_end conf_libev
-	@${PYTHON} scripts/travis.py fold_start conf_cares "Configuring cares"
+	@python2.7.14 scripts/travis.py fold_end conf_libev
+	@python2.7.14 scripts/travis.py fold_start conf_cares "Configuring cares"
 	cd deps/c-ares && ./configure --disable-dependency-tracking && make
-	@${PYTHON} scripts/travis.py fold_end conf_cares
-	@${PYTHON} scripts/travis.py fold_start conf_libuv "Configuring libuv"
+	@python2.7.14 scripts/travis.py fold_end conf_cares
+	@python2.7.14 scripts/travis.py fold_start conf_libuv "Configuring libuv"
 	cd deps/libuv && ./autogen.sh && ./configure --disable-static && make
-	@${PYTHON} scripts/travis.py fold_end conf_libuv
+	@python2.7.14 scripts/travis.py fold_end conf_libuv
 	CPPFLAGS="-Ideps/libev -Ideps/c-ares -Ideps/libuv/include" LDFLAGS="-Ldeps/libev/.libs -Ldeps/c-ares/.libs -Ldeps/libuv/.libs" LD_LIBRARY_PATH="$(PWD)/deps/libev/.libs:$(PWD)/deps/c-ares/.libs:$(PWD)/deps/libuv/.libs" EMBED=0 GEVENT_LOOP=libev-cext PYTHON=python2.7.14 PATH=$(BUILD_RUNTIMES)/versions/python2.7.14/bin:$(PATH) make develop basictest
