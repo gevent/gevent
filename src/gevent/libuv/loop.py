@@ -86,6 +86,7 @@ class loop(AbstractLoop):
         self._io_watchers = dict()
         self._fork_watchers = set()
         self._pid = os.getpid()
+        self._default = self._ptr == libuv.uv_default_loop()
 
     def _init_loop(self, flags, default):
         if default is None:
@@ -95,6 +96,8 @@ class loop(AbstractLoop):
             # closed.
 
         if default:
+            # XXX: If the default loop had been destroyed, this
+            # will create a new one, but we won't destroy it
             ptr = libuv.uv_default_loop()
         else:
             ptr = libuv.uv_loop_new()
@@ -102,6 +105,10 @@ class loop(AbstractLoop):
 
         if not ptr:
             raise SystemError("Failed to get loop")
+
+        # Track whether or not any object has destroyed
+        # this loop. See _can_destroy_default_loop
+        ptr.data = ptr
         return ptr
 
     _signal_idle = None
@@ -258,10 +265,15 @@ class loop(AbstractLoop):
     def destroy(self):
         if self._ptr:
             ptr = self._ptr
-            super(loop, self).destroy()
-
+            should_destroy = super(loop, self).destroy()
+            ptr.data = ffi.NULL
             assert self._ptr is None
             libuv.uv_stop(ptr)
+            if not should_destroy:
+                # The default loop has already been destroyed.
+                # libuv likes to abort() the process in this case.
+                return
+
             closed_failed = libuv.uv_loop_close(ptr)
             if closed_failed:
                 assert closed_failed == libuv.UV_EBUSY
@@ -284,8 +296,14 @@ class loop(AbstractLoop):
                 closed_failed = libuv.uv_loop_close(ptr)
                 assert closed_failed == 0, closed_failed
 
-            # XXX: Do we need to uv_loop_delete the non-default loop?
-            # Probably...
+    def _can_destroy_default_loop(self):
+        # We're being asked to destroy a loop that's,
+        # at the time it was constructed, was the default loop.
+        # If loop objects were constructed more than once,
+        # it may have already been destroyed, though.
+        # We track this in the data member.
+        return self._ptr.data
+
 
     def debug(self):
         """
@@ -390,10 +408,6 @@ class loop(AbstractLoop):
 
     def update_now(self):
         libuv.uv_update_time(self._ptr)
-
-    @property
-    def default(self):
-        return self._ptr == libuv.uv_default_loop()
 
     def fileno(self):
         if self._ptr:

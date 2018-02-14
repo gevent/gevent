@@ -312,6 +312,13 @@ class AbstractLoop(object):
 
     starting_timer_may_update_loop_time = False
 
+    # Subclasses should set this in __init__ to reflect
+    # whether they were the default loop.
+    _default = None
+
+    # A class variable.
+    _default_loop_destroyed = False
+
     def __init__(self, ffi, lib, watchers, flags=None, default=None):
         self._ffi = ffi
         self._lib = lib
@@ -470,12 +477,32 @@ class AbstractLoop(object):
         raise NotImplementedError()
 
     def destroy(self):
-        if self._ptr:
-            self._stop_aux_watchers()
+        """
+        Clean up resources used by this loop.
 
-            # not ffi.NULL, we don't want something that can be
-            # passed to C and crash later.
-            self._ptr = None
+        Note that, unlike the libev C loop implementation, this object
+        *does not* have a finalizer (``__del__``). If you create loops
+        (especially loops that are not the default) you *should* call
+        this method when you are done with the loop.
+        """
+        if self._ptr:
+            try:
+                if self._default:
+                    if not self._can_destroy_default_loop():
+                        return False
+                    type(self)._default_loop_destroyed = True
+
+                self._stop_aux_watchers()
+            finally:
+                # not ffi.NULL, we don't want something that can be
+                # passed to C and crash later. This will create nice friendly
+                # TypeError from CFFI.
+                self._ptr = None
+
+            return True
+
+    def _can_destroy_default_loop(self):
+        return not type(self)._default_loop_destroyed
 
     @property
     def ptr(self):
@@ -566,7 +593,7 @@ class AbstractLoop(object):
 
     @property
     def default(self):
-        pass
+        return self._default if self._ptr else False
 
     @property
     def iteration(self):
