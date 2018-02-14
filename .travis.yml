@@ -8,6 +8,11 @@ python:
 env:
     global:
         - BUILD_RUNTIMES=$HOME/.runtimes
+        - CC="ccache gcc"
+        - CCACHE_NOCPP2=true
+        - CCACHE_SLOPPINESS=file_macro,time_macros,include_file_ctime,include_file_mtime
+        - CCACHE_NOHASHDIR=true
+        - CFLAGS="-Ofast -pipe -fomit-frame-pointer -march=native -flto"
 
     matrix:
       # These are ordered to get as much diversity in the
@@ -37,6 +42,7 @@ cache:
     - $HOME/.venv
     - $HOME/.runtimes
     - $HOME/.wheelhouse
+    - $HOME/.ccache
 
 before_cache:
     - rm -f $HOME/.cache/pip/log/debug.log

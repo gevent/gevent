@@ -142,6 +142,7 @@ install:
 
 cache:
   - "%TMP%\\py\\"
+  - '%LOCALAPPDATA%\pip\Cache'
 
 build_script:
   # Build the compiled extension

@@ -137,8 +137,13 @@ def make_universal_header(filename, *defines):
 
 def _system(cmd, cwd=None, env=None, **kwargs):
     sys.stdout.write('Running %r in %s\n' % (cmd, cwd or os.getcwd()))
+    sys.stdout.flush()
     if 'shell' not in kwargs:
         kwargs['shell'] = True
+    env = env or os.environ.copy()
+    if env.get('CC', '').startswith('ccache '):
+        # Running configure scripts under ccache just adds overhead.
+        env['CC'] = env['CC'][7:]
     return check_call(cmd, cwd=cwd, env=env, **kwargs)
 
 
