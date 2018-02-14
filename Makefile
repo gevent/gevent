@@ -168,11 +168,13 @@ develop:
 # First install a newer pip so that it can use the wheel cache
 # (only needed until travis upgrades pip to 7.x; note that the 3.5
 # environment uses pip 7.1 by default)
-	python -m pip install -U pip setuptools
+	${PYTHON} -m pip install -U pip setuptools
 # Then start installing our deps so they can be cached. Note that use of --build-options / --global-options / --install-options
 # disables the cache.
 # We need wheel>=0.26 on Python 3.5. See previous revisions.
-	GEVENTSETUP_EV_VERIFY=3 ${PYTHON} -m pip install -U -r dev-requirements.txt
+	${PYTHON} -m pip install -U -r ci-requirements.txt
+	GEVENTSETUP_EV_VERIFY=3 time ${PYTHON} -m pip install -U -e .
+	ccache -s
 	@${PYTHON} scripts/travis.py fold_end install
 
 test-py27: $(PY27)
