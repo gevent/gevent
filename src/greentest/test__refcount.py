@@ -42,6 +42,7 @@ _socket.socket = Socket
 
 import greentest
 from gevent import monkey; monkey.patch_all()
+from greentest import flaky
 
 from pprint import pformat
 try:
@@ -137,16 +138,17 @@ def run_and_check(run_client):
         raise AssertionError('server should be dead by now')
 
 
-@greentest.skipOnAppVeyor("Often fail with timeouts or force closed connections; not sure why.")
-@greentest.skipOnPyPy3OnCI("Often fails with timeouts; not sure why.")
+@greentest.skipOnCI("Often fail with timeouts or force closed connections; not sure why.")
 class Test(greentest.TestCase):
 
-    __timeout__ = 10
+    __timeout__ = greentest.LARGE_TIMEOUT
 
+    @flaky.reraises_flaky_timeout(socket.timeout)
     def test_clean_exit(self):
         run_and_check(True)
         run_and_check(True)
 
+    @flaky.reraises_flaky_timeout(socket.timeout)
     def test_timeout_exit(self):
         run_and_check(False)
         run_and_check(False)
