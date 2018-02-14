@@ -64,6 +64,11 @@
   extension implementation only) deallocated (garbage collected). See
   :issue:`1098`.
 
+- Simplify handling of the libev default loop and the ``destroy()``
+  method. The default loop, when destroyed, can again be requested and
+  it will regenerate itself. The default loop is the only one that can
+  receive child events.
+
 
 1.3a1 (2018-01-27)
 ==================

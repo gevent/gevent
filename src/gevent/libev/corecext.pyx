@@ -259,8 +259,6 @@ cdef bint _check_loop(loop loop) except -1:
     return 1
 
 
-cdef bint _default_loop_destroyed = False
-
 
 cdef public class callback [object PyGeventCallbackObject, type PyGeventCallback_Type]:
     cdef public object callback
@@ -419,8 +417,6 @@ cdef public class loop [object PyGeventLoopObject, type PyGeventLoop_Type]:
             c_flags |= libev.EVFLAG_FORKCHECK
             if default is None:
                 default = True
-                if _default_loop_destroyed:
-                    default = False
             if default:
                 self._default = 1
                 self._ptr = libev.gevent_ev_default_loop(c_flags)
@@ -436,6 +432,8 @@ cdef public class loop [object PyGeventLoopObject, type PyGeventLoop_Type]:
             if default or __SYSERR_CALLBACK is None:
                 set_syserr_cb(self._handle_syserr)
 
+        # Mark as not destroyed
+        libev.ev_set_userdata(self._ptr, self._ptr)
 
         libev.ev_prepare_start(self._ptr, &self._prepare)
         libev.ev_unref(self._ptr)
@@ -489,36 +487,35 @@ cdef public class loop [object PyGeventLoopObject, type PyGeventLoop_Type]:
             libev.ev_timer_stop(ptr, &self._periodic_signal_checker)
 
     def destroy(self):
-        global _default_loop_destroyed
-
         cdef libev.ev_loop* ptr = self._ptr
         self._ptr = NULL
 
         if ptr:
-            if self._default and _default_loop_destroyed:
-                # Whoops! Program error. They destroyed the default loop,
+            if not libev.ev_userdata(ptr):
+                # Whoops! Program error. They destroyed the loop,
                 # using a different loop object. Our _ptr is still
                 # valid, but the libev loop is gone. Doing anything
                 # else with it will likely cause a crash.
                 return
+            # Mark as destroyed
+            libev.ev_set_userdata(ptr, NULL)
             self._stop_watchers(ptr)
             if __SYSERR_CALLBACK == self._handle_syserr:
                 set_syserr_cb(None)
-            if self._default:
-                _default_loop_destroyed = True
             libev.ev_loop_destroy(ptr)
 
     def __dealloc__(self):
         cdef libev.ev_loop* ptr = self._ptr
         self._ptr = NULL
         if ptr != NULL:
-            if self._default and _default_loop_destroyed:
+            if not libev.ev_userdata(ptr):
                 # See destroy(). This is a bug in the caller.
                 return
-
             self._stop_watchers(ptr)
             if not self._default:
                 libev.ev_loop_destroy(ptr)
+                # Mark as destroyed
+                libev.ev_set_userdata(ptr, NULL)
 
     @property
     def ptr(self):

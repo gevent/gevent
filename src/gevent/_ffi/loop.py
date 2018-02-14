@@ -487,12 +487,11 @@ class AbstractLoop(object):
         """
         if self._ptr:
             try:
-                if self._default:
-                    if not self._can_destroy_default_loop():
-                        return False
-                    type(self)._default_loop_destroyed = True
-
+                if not self._can_destroy_loop(self._ptr):
+                    return False
+                self._destroyed_loop(self._ptr)
                 self._stop_aux_watchers()
+
             finally:
                 # not ffi.NULL, we don't want something that can be
                 # passed to C and crash later. This will create nice friendly
@@ -501,8 +500,11 @@ class AbstractLoop(object):
 
             return True
 
-    def _can_destroy_default_loop(self):
-        return not type(self)._default_loop_destroyed
+    def _can_destroy_loop(self, ptr):
+        raise NotImplementedError()
+
+    def _destroyed_loop(self, ptr):
+        raise NotImplementedError()
 
     @property
     def ptr(self):

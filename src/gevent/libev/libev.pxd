@@ -202,6 +202,8 @@ cdef extern from "libev.h" nogil:
 
     ev_loop* ev_default_loop(unsigned int flags)
     ev_loop* ev_loop_new(unsigned int flags)
+    void* ev_userdata(ev_loop*)
+    void ev_set_userdata(ev_loop*, void*)
     void ev_loop_destroy(ev_loop*)
     void ev_loop_fork(ev_loop*)
     int ev_is_default_loop(ev_loop*)
