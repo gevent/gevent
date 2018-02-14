@@ -58,6 +58,13 @@
     order, or be a dotted name; it may also be assigned to an
     object in Python code at ``gevent.config.loop``).
 
+- Fix an interpreter crash that could happen if two or more ``loop``
+  objects referenced the default event loop and one of them was
+  destroyed and then the other one destroyed or (in the libev C
+  extension implementation only) deallocated (garbage collected). See
+  :issue:`1098`.
+
+
 1.3a1 (2018-01-27)
 ==================
 

@@ -125,3 +125,4 @@ test_timeout.py
 test_asyncore.py
 
 test___config.py
+test__destroy_default_loop.py

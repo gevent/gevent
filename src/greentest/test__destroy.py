@@ -1,43 +1,54 @@
+from __future__ import absolute_import, print_function
+
 import gevent
+import unittest
 
-# Loop of initial Hub is default loop.
-hub = gevent.get_hub()
-assert hub.loop.default, hub
+class TestDestroyHub(unittest.TestCase):
 
-# Save `gevent.core.loop` object for later comparison.
-initloop = hub.loop
+    def test_destroy_hub(self):
+        # Loop of initial Hub is default loop.
+        hub = gevent.get_hub()
+        self.assertTrue(hub.loop.default)
 
-# Increase test complexity via threadpool creation.
-# Implicitly creates fork watcher connected to the current event loop.
-tp = hub.threadpool
+        # Save `gevent.core.loop` object for later comparison.
+        initloop = hub.loop
 
-# Destroy hub. Does not destroy libev default loop if not explicitly told to.
-hub.destroy()
+        # Increase test complexity via threadpool creation.
+        # Implicitly creates fork watcher connected to the current event loop.
+        tp = hub.threadpool
+        self.assertIsNotNone(tp)
 
-# Create new hub. Must re-use existing libev default loop.
-hub = gevent.get_hub()
-assert hub.loop.default, hub
+        # Destroy hub. Does not destroy libev default loop if not explicitly told to.
+        hub.destroy()
 
-# Ensure that loop object is identical to the initial one.
-assert hub.loop is initloop
+        # Create new hub. Must re-use existing libev default loop.
+        hub = gevent.get_hub()
+        self.assertTrue(hub.loop.default)
 
-# Destroy hub including default loop.
-hub.destroy(destroy_loop=True)
+        # Ensure that loop object is identical to the initial one.
+        self.assertIs(hub.loop, initloop)
 
-# Create new hub and explicitly request creation of a new default loop.
-hub = gevent.get_hub(default=True)
-assert hub.loop.default, hub
+        # Destroy hub including default loop.
+        hub.destroy(destroy_loop=True)
 
-# `gevent.core.loop` objects as well as libev loop pointers must differ.
-assert hub.loop is not initloop
-assert hub.loop.ptr != initloop.ptr
+        # Create new hub and explicitly request creation of a new default loop.
+        hub = gevent.get_hub(default=True)
+        self.assertTrue(hub.loop.default)
 
-# Destroy hub including default loop, create new hub with non-default loop.
-hub.destroy(destroy_loop=True)
-hub = gevent.get_hub()
-if not getattr(hub.loop, 'DEFAULT_LOOP_REGENERATES', False):
-    assert not hub.loop.default, hub
-else:
-    assert hub.loop.default
+        # `gevent.core.loop` objects as well as libev loop pointers must differ.
+        self.assertIsNot(hub.loop, initloop)
+        self.assertIsNot(hub.loop.ptr, initloop.ptr)
+        self.assertNotEqual(hub.loop.ptr, initloop.ptr)
 
-hub.destroy()
+        # Destroy hub including default loop, create new hub with non-default loop.
+        hub.destroy(destroy_loop=True)
+        hub = gevent.get_hub()
+        if not getattr(hub.loop, 'DEFAULT_LOOP_REGENERATES', False):
+            self.assertFalse(hub.loop.default)
+        else:
+            self.assertTrue(hub.loop.default)
+
+        hub.destroy()
+
+if __name__ == '__main__':
+    unittest.main()

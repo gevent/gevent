@@ -389,9 +389,15 @@ cdef public class loop [object PyGeventLoopObject, type PyGeventLoop_Type]:
 
     ## data members
     cdef bint starting_timer_may_update_loop_time
+    # We must capture the 'default' state at initialiaztion
+    # time. Destroying the default loop in libev sets
+    # the libev internal pointer to 0, and ev_is_default_loop will
+    # no longer work.
+    cdef bint _default
 
     def __cinit__(self, object flags=None, object default=None, libev.intptr_t ptr=0):
         self.starting_timer_may_update_loop_time = 0
+        self._default = 0
         libev.ev_prepare_init(&self._prepare,
                               <void*>gevent_run_callbacks)
         libev.ev_timer_init(&self._periodic_signal_checker,
@@ -405,6 +411,7 @@ cdef public class loop [object PyGeventLoopObject, type PyGeventLoop_Type]:
         cdef object old_handler = None
         if ptr:
             self._ptr = <libev.ev_loop*>ptr
+            self._default = libev.ev_is_default_loop(self._ptr)
         else:
             c_flags = _flags_to_int(flags)
             _check_flags(c_flags)
@@ -415,6 +422,7 @@ cdef public class loop [object PyGeventLoopObject, type PyGeventLoop_Type]:
                 if _default_loop_destroyed:
                     default = False
             if default:
+                self._default = 1
                 self._ptr = libev.gevent_ev_default_loop(c_flags)
                 if not self._ptr:
                     raise SystemError("ev_default_loop(%s) failed" % (c_flags, ))
@@ -469,31 +477,48 @@ cdef public class loop [object PyGeventLoopObject, type PyGeventLoop_Type]:
         finally:
             self.starting_timer_may_update_loop_time = False
 
-    def _stop_watchers(self):
+    cdef _stop_watchers(self, libev.ev_loop* ptr):
+        if not ptr:
+            return
+
         if libev.ev_is_active(&self._prepare):
-            libev.ev_ref(self._ptr)
-            libev.ev_prepare_stop(self._ptr, &self._prepare)
+            libev.ev_ref(ptr)
+            libev.ev_prepare_stop(ptr, &self._prepare)
         if libev.ev_is_active(&self._periodic_signal_checker):
-            libev.ev_ref(self._ptr)
-            libev.ev_timer_stop(self._ptr, &self._periodic_signal_checker)
+            libev.ev_ref(ptr)
+            libev.ev_timer_stop(ptr, &self._periodic_signal_checker)
 
     def destroy(self):
         global _default_loop_destroyed
-        if self._ptr:
-            self._stop_watchers()
+
+        cdef libev.ev_loop* ptr = self._ptr
+        self._ptr = NULL
+
+        if ptr:
+            if self._default and _default_loop_destroyed:
+                # Whoops! Program error. They destroyed the default loop,
+                # using a different loop object. Our _ptr is still
+                # valid, but the libev loop is gone. Doing anything
+                # else with it will likely cause a crash.
+                return
+            self._stop_watchers(ptr)
             if __SYSERR_CALLBACK == self._handle_syserr:
                 set_syserr_cb(None)
-            if libev.ev_is_default_loop(self._ptr):
+            if self._default:
                 _default_loop_destroyed = True
-            libev.ev_loop_destroy(self._ptr)
-            self._ptr = NULL
+            libev.ev_loop_destroy(ptr)
 
     def __dealloc__(self):
-        if self._ptr:
-            self._stop_watchers()
-            if not libev.ev_is_default_loop(self._ptr):
-                libev.ev_loop_destroy(self._ptr)
-            self._ptr = NULL
+        cdef libev.ev_loop* ptr = self._ptr
+        self._ptr = NULL
+        if ptr != NULL:
+            if self._default and _default_loop_destroyed:
+                # See destroy(). This is a bug in the caller.
+                return
+
+            self._stop_watchers(ptr)
+            if not self._default:
+                libev.ev_loop_destroy(ptr)
 
     @property
     def ptr(self):
@@ -578,8 +603,9 @@ cdef public class loop [object PyGeventLoopObject, type PyGeventLoop_Type]:
 
     @property
     def default(self):
-        _check_loop(self)
-        return True if libev.ev_is_default_loop(self._ptr) else False
+        # If we're destroyed, we are not the default loop anymore,
+        # as far as Python is concerned.
+        return self._default if self._ptr else False
 
     @property
     def iteration(self):
@@ -662,7 +688,7 @@ cdef public class loop [object PyGeventLoopObject, type PyGeventLoop_Type]:
         if not self._ptr:
             return 'destroyed'
         cdef object msg = self.backend
-        if self.default:
+        if self._default:
             msg += ' default'
         msg += ' pending=%s' % self.pendingcnt
         msg += self._format_details()

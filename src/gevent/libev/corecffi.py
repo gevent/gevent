@@ -194,9 +194,6 @@ def embeddable_backends():
 def time():
     return libev.ev_time()
 
-_default_loop_destroyed = False
-
-
 from gevent._ffi.loop import AbstractLoop
 
 
@@ -216,6 +213,8 @@ class loop(AbstractLoop):
 
     def __init__(self, flags=None, default=None):
         AbstractLoop.__init__(self, ffi, libev, _watchers, flags, default)
+        self._default = True if libev.ev_is_default_loop(self._ptr) else False
+
 
     def _init_loop(self, flags, default):
         c_flags = _flags_to_int(flags)
@@ -224,7 +223,7 @@ class loop(AbstractLoop):
         c_flags |= libev.EVFLAG_FORKCHECK
         if default is None:
             default = True
-            if _default_loop_destroyed:
+            if loop._default_loop_destroyed:
                 default = False
 
         if default:
@@ -272,17 +271,16 @@ class loop(AbstractLoop):
         self.ref() # we should go through the loop now
 
     def destroy(self):
-        global _default_loop_destroyed
         if self._ptr:
             ptr = self._ptr
 
-            super(loop, self).destroy()
+            should_destroy_loop = super(loop, self).destroy()
 
             if globals()["__SYSERR_CALLBACK"] == self._handle_syserr:
                 set_syserr_cb(None)
-            if libev.ev_is_default_loop(ptr):
-                _default_loop_destroyed = True
-            libev.ev_loop_destroy(ptr)
+
+            if should_destroy_loop:
+                libev.ev_loop_destroy(ptr)
 
     @property
     def MAXPRI(self):
@@ -328,10 +326,6 @@ class loop(AbstractLoop):
 
     def __repr__(self):
         return '<%s at 0x%x %s>' % (self.__class__.__name__, id(self), self._format())
-
-    @property
-    def default(self):
-        return True if libev.ev_is_default_loop(self._ptr) else False
 
     @property
     def iteration(self):
