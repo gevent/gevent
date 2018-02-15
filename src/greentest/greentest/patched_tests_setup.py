@@ -643,6 +643,12 @@ if PYPY and sys.pypy_version_info[:4] in ( # pylint:disable=no-member
         # This has the wrong constants in 5.8 (but worked in 5.7), at least on
         # OS X. It finds "zlib compression" but expects "ZLIB".
         'test_ssl.ThreadedTests.test_compression',
+
+        # The below are new with 5.10.1
+        # This gets an EOF in violation of protocol; again, even without gevent
+        # (at least on OS X; it's less consistent about that on travis)
+        'test_ssl.NetworkedBIOTests.test_handshake',
+
     ]
 
     if OSX:
@@ -672,9 +678,6 @@ if PYPY and sys.pypy_version_info[:4] in ( # pylint:disable=no-member
             'test_ssl.ThreadedTests.test_protocol_sslv3',
             'test_ssl.ThreadedTests.test_protocol_tlsv1',
             'test_ssl.ThreadedTests.test_protocol_tlsv1_1',
-
-            # This gets an EOF in violation of protocol; again, even without gevent
-            'test_ssl.NetworkedBIOTests.test_handshake',
 
             # This gets None instead of http1.1, even without gevent
             'test_ssl.ThreadedTests.test_npn_protocols',
