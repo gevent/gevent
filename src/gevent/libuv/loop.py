@@ -68,8 +68,6 @@ class loop(AbstractLoop):
     # know this in general on libev
     min_sleep_time = 0.001 # 1ms
 
-    DEFAULT_LOOP_REGENERATES = True
-
     error_handler = None
 
     _CHECK_POINTER = 'uv_check_t *'
@@ -296,14 +294,16 @@ class loop(AbstractLoop):
                 closed_failed = libuv.uv_loop_close(ptr)
                 assert closed_failed == 0, closed_failed
 
-    def _can_destroy_default_loop(self):
+    def _can_destroy_loop(self, ptr):
         # We're being asked to destroy a loop that's,
         # at the time it was constructed, was the default loop.
         # If loop objects were constructed more than once,
         # it may have already been destroyed, though.
         # We track this in the data member.
-        return self._ptr.data
+        return ptr.data
 
+    def _destroyed_loop(self, ptr):
+        ptr.data = ffi.NULL
 
     def debug(self):
         """

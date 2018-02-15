@@ -20,6 +20,7 @@
 from __future__ import absolute_import, print_function, division
 
 import sys
+import functools
 import unittest
 
 from gevent.util import dump_stacks
@@ -93,3 +94,17 @@ if sysinfo.RUNNING_ON_CI or (sysinfo.PYPY and sysinfo.WIN):
     if sysinfo.LIBUV:
         reraiseFlakyTestRaceConditionLibuv = reraiseFlakyTestRaceCondition
         reraiseFlakyTestTimeoutLibuv = reraiseFlakyTestTimeout
+
+
+def reraises_flaky_timeout(exc_kind):
+
+    def wrapper(f):
+        @functools.wraps(f)
+        def m(*args):
+            try:
+                f(*args)
+            except exc_kind:
+                reraiseFlakyTestTimeout()
+        return m
+
+    return wrapper

@@ -1,4 +1,4 @@
-from __future__ import print_function
+from __future__ import print_function, absolute_import
 from gevent import monkey; monkey.patch_all(subprocess=True)
 import signal
 import sys
@@ -8,9 +8,10 @@ from time import sleep
 import gevent
 from gevent.server import StreamServer
 
+import greentest
 from greentest import util
 
-
+@greentest.skipOnLibuvOnCIOnPyPy("Timing issues sometimes lead to connection refused")
 class Test(util.TestServer):
     server = 'portforwarder.py'
     args = ['127.0.0.1:10011', '127.0.0.1:10012']
@@ -62,5 +63,4 @@ class Test(util.TestServer):
 
 
 if __name__ == '__main__':
-    from greentest import main
-    main()
+    greentest.main()

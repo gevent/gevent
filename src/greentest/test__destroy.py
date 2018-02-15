@@ -40,13 +40,10 @@ class TestDestroyHub(unittest.TestCase):
         self.assertIsNot(hub.loop.ptr, initloop.ptr)
         self.assertNotEqual(hub.loop.ptr, initloop.ptr)
 
-        # Destroy hub including default loop, create new hub with non-default loop.
+        # Destroy hub including default loop. The default loop regenerates.
         hub.destroy(destroy_loop=True)
         hub = gevent.get_hub()
-        if not getattr(hub.loop, 'DEFAULT_LOOP_REGENERATES', False):
-            self.assertFalse(hub.loop.default)
-        else:
-            self.assertTrue(hub.loop.default)
+        self.assertTrue(hub.loop.default)
 
         hub.destroy()
 

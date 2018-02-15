@@ -18,6 +18,7 @@ from greentest.sysinfo import PY35
 
 from greentest.sysinfo import LIBUV
 
+IGNORED_TESTS = []
 
 FAILING_TESTS = [
 
@@ -33,11 +34,14 @@ FAILING_TESTS = [
 
 
 if sys.platform == 'win32':
+    IGNORED_TESTS = [
+        # fork watchers don't get called on windows
+        # because fork is not a concept windows has.
+        # See this file for a detailed explanation.
+        'test__core_fork.py',
+    ]
     # other Windows-related issues (need investigating)
     FAILING_TESTS += [
-        # fork watchers don't get called in multithreaded programs on windows
-        # No idea why.
-        'test__core_fork.py',
         'FLAKY test__greenletset.py',
         # This has been seen to fail on Py3 and Py2 due to socket reuse
         # errors, probably timing related again.
@@ -70,14 +74,15 @@ if sys.platform == 'win32':
         ]
 
         if PYPY and LIBUV:
-            FAILING_TESTS += [
-                # This one sometimes seems to just stop right after
+            IGNORED_TESTS += [
+                # This one seems to just stop right after
                 # patching is done. It passes on a local win 10 vm, and the main
                 # test_threading_2.py does as well.
                 # Based on the printouts we added, it appears to not even
                 # finish importing:
                 # https://ci.appveyor.com/project/denik/gevent/build/1.0.1277/job/tpvhesij5gldjxqw#L1190
-                'FLAKY test_threading.py',
+                # Ignored because it takes two minutes to time out.
+                'test_threading.py',
             ]
 
         if PY3:
@@ -93,8 +98,8 @@ if sys.platform == 'win32':
 
     if not PY35:
         # Py35 added socket.socketpair, all other releases
-        # are missing it
-        FAILING_TESTS += [
+        # are missing it. No reason to even test it.
+        IGNORED_TESTS += [
             'test__socketpair.py',
         ]
 

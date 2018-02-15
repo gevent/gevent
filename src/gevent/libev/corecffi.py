@@ -223,9 +223,6 @@ class loop(AbstractLoop):
         c_flags |= libev.EVFLAG_FORKCHECK
         if default is None:
             default = True
-            if loop._default_loop_destroyed:
-                default = False
-
         if default:
             ptr = libev.gevent_ev_default_loop(c_flags)
             if not ptr:
@@ -237,6 +234,8 @@ class loop(AbstractLoop):
         if default or globals()["__SYSERR_CALLBACK"] is None:
             set_syserr_cb(self._handle_syserr)
 
+        # Mark this loop as being used.
+        libev.ev_set_userdata(ptr, ptr)
         return ptr
 
     def _init_and_start_check(self):
@@ -281,6 +280,14 @@ class loop(AbstractLoop):
 
             if should_destroy_loop:
                 libev.ev_loop_destroy(ptr)
+
+    def _can_destroy_loop(self, ptr):
+        # Is it marked as destroyed?
+        return libev.ev_userdata(ptr)
+
+    def _destroyed_loop(self, ptr):
+        # Mark as destroyed.
+        libev.ev_set_userdata(ptr, ffi.NULL)
 
     @property
     def MAXPRI(self):

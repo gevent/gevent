@@ -1,7 +1,8 @@
 # pylint:disable=no-member
 import sys
 import unittest
-from greentest import main, skipOnLibuv
+import greentest
+
 from gevent import core
 
 
@@ -19,6 +20,9 @@ class TestCore(unittest.TestCase):
 
 class TestWatchers(unittest.TestCase):
 
+    def makeOne(self):
+        return core.loop()
+
     def test_io(self):
         if sys.platform == 'win32':
             # libev raises IOError, libuv raises ValueError
@@ -28,17 +32,17 @@ class TestWatchers(unittest.TestCase):
             Error = ValueError
             win32 = False
         with self.assertRaises(Error):
-            core.loop().io(-1, 1)
+            self.makeOne().io(-1, 1)
         if hasattr(core, 'TIMER'):
             # libev
             with self.assertRaises(ValueError):
-                core.loop().io(1, core.TIMER)
+                self.makeOne().io(1, core.TIMER)
 
         # Test we can set events and io before it's started
         if not win32:
             # We can't do this with arbitrary FDs on windows;
             # see libev_vfd.h
-            io = core.loop().io(1, core.READ)
+            io = self.makeOne().io(1, core.READ)
             io.fd = 2
             self.assertEqual(io.fd, 2)
             io.events = core.WRITE
@@ -47,17 +51,33 @@ class TestWatchers(unittest.TestCase):
                 self.assertEqual(core._events_to_str(io.events), 'WRITE|_IOFDSET')
             else:
                 self.assertEqual(core._events_to_str(io.events), 'WRITE')
+            io.start(lambda: None)
             io.close()
 
     def test_timer_constructor(self):
         with self.assertRaises(ValueError):
-            core.loop().timer(1, -1)
+            self.makeOne().timer(1, -1)
 
     def test_signal_constructor(self):
         with self.assertRaises(ValueError):
-            core.loop().signal(1000)
+            self.makeOne().signal(1000)
 
-@skipOnLibuv("Tests for libev-only functions")
+class TestWatchersDefault(TestWatchers):
+
+    def makeOne(self):
+        return core.loop(default=True)
+
+@greentest.skipOnLibuvOnPyPyOnWin("This crashes with PyPy 5.10.0, only on Windows. "
+                                  "See https://ci.appveyor.com/project/denik/gevent/build/1.0.1380/job/lrlvid6mkjtyrhn5#L1103")
+class TestWatchersDefaultDestroyed(TestWatchers):
+
+    def makeOne(self):
+        l = core.loop(default=True)
+        l.destroy()
+        del l
+        return core.loop(default=True)
+
+@greentest.skipOnLibuv("Tests for libev-only functions")
 class TestLibev(unittest.TestCase):
 
     def test_flags_conversion(self):
@@ -81,4 +101,4 @@ class TestEvents(unittest.TestCase):
         self.assertEqual(repr(core.EVENTS), 'gevent.core.EVENTS')
 
 if __name__ == '__main__':
-    main()
+    greentest.main()

@@ -16,12 +16,15 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
+import sys
+
+import gevent
+from gevent import socket
 
 from greentest import TestCase, main, tcp_listener
 from greentest import skipOnPyPy
-import gevent
-from gevent import socket
-import sys
+from greentest import params
+
 
 
 PYPY = hasattr(sys, 'pypy_version_info')
@@ -45,7 +48,7 @@ class TestGreenIo(TestCase):
             # verify that the makefile and the socket are truly independent
             # by closing the socket prior to using the made file
             try:
-                conn, addr = listener.accept()
+                conn, _ = listener.accept()
                 fd = conn.makefile(mode='wb')
                 conn.close()
                 fd.write(b'hello\n')
@@ -59,7 +62,7 @@ class TestGreenIo(TestCase):
             # verify that the makefile and the socket are truly independent
             # by closing the made file and then sending a character
             try:
-                conn, addr = listener.accept()
+                conn, _ = listener.accept()
                 fd = conn.makefile(mode='wb')
                 fd.write(b'hello')
                 fd.close()
@@ -71,27 +74,25 @@ class TestGreenIo(TestCase):
                 listener.close()
 
         def did_it_work(server):
-            client = socket.create_connection(('127.0.0.1', server.getsockname()[1]))
+            client = socket.create_connection((params.DEFAULT_CONNECT, server.getsockname()[1]))
             fd = client.makefile(mode='rb')
             client.close()
-            assert fd.readline() == b'hello\n'
-            assert fd.read() == b''
+            self.assertEqual(fd.readline(), b'hello\n')
+            self.assertFalse(fd.read())
             fd.close()
 
-        server = tcp_listener(('0.0.0.0', 0))
+        server = tcp_listener()
         server_greenlet = gevent.spawn(accept_close_early, server)
         did_it_work(server)
         server_greenlet.kill()
 
-        server = tcp_listener(('0.0.0.0', 0))
+        server = tcp_listener()
         server_greenlet = gevent.spawn(accept_close_late, server)
         did_it_work(server)
         server_greenlet.kill()
 
     @skipOnPyPy("GC is different")
     def test_del_closes_socket(self):
-        timer = gevent.Timeout.start_new(0.5)
-
         def accept_once(listener):
             # delete/overwrite the original conn
             # object, only keeping the file object around
@@ -113,15 +114,15 @@ class TestGreenIo(TestCase):
                 if oconn is not None:
                     oconn.close()
 
-        server = tcp_listener(('0.0.0.0', 0))
+        server = tcp_listener()
         gevent.spawn(accept_once, server)
-        client = socket.create_connection(('127.0.0.1', server.getsockname()[1]))
-        fd = client.makefile()
-        client.close()
-        assert fd.read() == 'hello\n'
-        assert fd.read() == ''
+        client = socket.create_connection((params.DEFAULT_CONNECT, server.getsockname()[1]))
+        with gevent.Timeout.start_new(0.5):
+            fd = client.makefile()
+            client.close()
+            self.assertEqual(fd.read(), 'hello\n')
+            self.assertEqual(fd.read(), '')
 
-        timer.close()
 
 if __name__ == '__main__':
     main()

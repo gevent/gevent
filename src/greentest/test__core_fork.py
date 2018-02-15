@@ -2,7 +2,7 @@ from __future__ import print_function
 import gevent.monkey; gevent.monkey.patch_all()
 import gevent
 import os
-import sys
+
 import multiprocessing
 
 hub = gevent.get_hub()
@@ -48,4 +48,10 @@ if __name__ == '__main__':
     # fork watchers weren't firing in multi-threading processes.
     # This test is designed to prove that they are.
     # However, it fails on Windows: The fork watcher never runs!
+    # This makes perfect sense: on Windows, our patches to os.fork()
+    # that call gevent.hub.reinit() don't get used; os.fork doesn't
+    # exist and multiprocessing.Process uses the windows-specific _subprocess.CreateProcess()
+    # to create a whole new process that has no relation to the current process;
+    # that process then calls multiprocessing.forking.main() to do its work.
+    # Since no state is shared, a fork watcher cannot exist in that process.
     test()
