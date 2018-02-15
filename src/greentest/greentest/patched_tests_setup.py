@@ -630,7 +630,7 @@ if PYPY3:
 
 
 if PYPY and sys.pypy_version_info[:4] in ( # pylint:disable=no-member
-        (5, 8, 0, 'beta'), (5, 9, 0, 'beta'),):
+        (5, 8, 0, 'beta'), (5, 9, 0, 'beta'), (5, 10, 1, 'final')):
     # 3.5 is beta. Hard to say what are real bugs in us vs real bugs in pypy.
     # For that reason, we pin these patches exactly to the version in use.
 
@@ -653,6 +653,35 @@ if PYPY and sys.pypy_version_info[:4] in ( # pylint:disable=no-member
             'test_subprocess.POSIXProcessTestCase.test_pass_fds',
             'test_subprocess.POSIXProcessTestCase.test_pass_fds_inheritable',
             'test_subprocess.POSIXProcessTestCase.test_pipe_cloexec',
+
+            # The below are new with 5.10.1
+            # These fail with 'OSError: received malformed or improperly truncated ancillary data'
+            'test_socket.RecvmsgSCMRightsStreamTest.testCmsgTruncLen0',
+            'test_socket.RecvmsgSCMRightsStreamTest.testCmsgTruncLen0Plus1',
+            'test_socket.RecvmsgSCMRightsStreamTest.testCmsgTruncLen1',
+            'test_socket.RecvmsgSCMRightsStreamTest.testCmsgTruncLen2Minus1',
+
+            # Using the provided High Sierra binary, these fail with
+            # 'ValueError: invalid protocol version _SSLMethod.PROTOCOL_SSLv3'.
+            # gevent code isn't involved and running them unpatched has the same issue.
+            'test_ssl.ContextTests.test_constructor',
+            'test_ssl.ContextTests.test_protocol',
+            'test_ssl.ContextTests.test_session_stats',
+            'test_ssl.ThreadedTests.test_echo',
+            'test_ssl.ThreadedTests.test_protocol_sslv23',
+            'test_ssl.ThreadedTests.test_protocol_sslv3',
+            'test_ssl.ThreadedTests.test_protocol_tlsv1',
+            'test_ssl.ThreadedTests.test_protocol_tlsv1_1',
+
+            # This gets an EOF in violation of protocol; again, even without gevent
+            'test_ssl.NetworkedBIOTests.test_handshake',
+
+            # This gets None instead of http1.1, even without gevent
+            'test_ssl.ThreadedTests.test_npn_protocols',
+
+            # This fails to decode a filename even without gevent,
+            # at least on High Sierarr.
+            'test_httpservers.SimpleHTTPServerTestCase.test_undecodable_filename',
         ]
 
     disabled_tests += [

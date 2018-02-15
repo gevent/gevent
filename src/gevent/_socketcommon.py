@@ -68,7 +68,7 @@ __py3_imports__ = [
 
 __imports__.extend(__py3_imports__)
 
-
+import time
 import sys
 from gevent.hub import get_hub
 from gevent.hub import ConcurrentObjectUseError
@@ -349,3 +349,96 @@ def getfqdn(name=''):
         else:
             name = hostname
     return name
+
+def __send_chunk(socket, data_memory, flags, timeleft, end, timeout=_timeout_error):
+    """
+    Send the complete contents of ``data_memory`` before returning.
+    This is the core loop around :meth:`send`.
+
+    :param timeleft: Either ``None`` if there is no timeout involved,
+       or a float indicating the timeout to use.
+    :param end: Either ``None`` if there is no timeout involved, or
+       a float giving the absolute end time.
+    :return: An updated value for ``timeleft`` (or None)
+    :raises timeout: If ``timeleft`` was given and elapsed while
+       sending this chunk.
+    """
+    data_sent = 0
+    len_data_memory = len(data_memory)
+    started_timer = 0
+    while data_sent < len_data_memory:
+        chunk = data_memory[data_sent:]
+        if timeleft is None:
+            data_sent += socket.send(chunk, flags)
+        elif started_timer and timeleft <= 0:
+            # Check before sending to guarantee a check
+            # happens even if each chunk successfully sends its data
+            # (especially important for SSL sockets since they have large
+            # buffers). But only do this if we've actually tried to
+            # send something once to avoid spurious timeouts on non-blocking
+            # sockets.
+            raise timeout('timed out')
+        else:
+            started_timer = 1
+            data_sent += socket.send(chunk, flags, timeout=timeleft)
+            timeleft = end - time.time()
+
+    return timeleft
+
+def _sendall(socket, data_memory, flags,
+             SOL_SOCKET=__socket__.SOL_SOCKET,  # pylint:disable=no-member
+             SO_SNDBUF=__socket__.SO_SNDBUF):  # pylint:disable=no-member
+    """
+    Send the *data_memory* (which should be a memoryview)
+    using the gevent *socket*, performing well on PyPy.
+    """
+
+    # On PyPy up through 5.10.0, both PyPy2 and PyPy3, subviews
+    # (slices) of a memoryview() object copy the underlying bytes the
+    # first time the builtin socket.send() method is called. On a
+    # non-blocking socket (that thus calls socket.send() many times)
+    # with a large input, this results in many repeated copies of an
+    # ever smaller string, depending on the networking buffering. For
+    # example, if each send() can process 1MB of a 50MB input, and we
+    # naively pass the entire remaining subview each time, we'd copy
+    # 49MB, 48MB, 47MB, etc, thus completely killing performance. To
+    # workaround this problem, we work in reasonable, fixed-size
+    # chunks. This results in a 10x improvement to bench_sendall.py,
+    # while having no measurable impact on CPython (since it doesn't
+    # copy at all the only extra overhead is a few python function
+    # calls, which is negligible for large inputs).
+
+    # On one macOS machine, PyPy3 5.10.1 produced ~ 67.53 MB/s before this change,
+    # and ~ 616.01 MB/s after.
+
+    # See https://bitbucket.org/pypy/pypy/issues/2091/non-blocking-socketsend-slow-gevent
+
+    # Too small of a chunk (the socket's buf size is usually too
+    # small) results in reduced perf due to *too many* calls to send and too many
+    # small copies. With a buffer of 143K (the default on my system), for
+    # example, bench_sendall.py yields ~264MB/s, while using 1MB yields
+    # ~653MB/s (matching CPython). 1MB is arbitrary and might be better
+    # chosen, say, to match a page size?
+
+    len_data_memory = len(data_memory)
+    if not len_data_memory:
+        # Don't try to send empty data at all, no point, and breaks ssl
+        # See issue 719
+        return 0
+
+
+    chunk_size = max(socket.getsockopt(SOL_SOCKET, SO_SNDBUF), 1024 * 1024)
+
+    data_sent = 0
+    end = None
+    timeleft = None
+    if socket.timeout is not None:
+        timeleft = socket.timeout
+        end = time.time() + timeleft
+
+    while data_sent < len_data_memory:
+        chunk_end = min(data_sent + chunk_size, len_data_memory)
+        chunk = data_memory[data_sent:chunk_end]
+
+        timeleft = __send_chunk(socket, chunk, flags, timeleft, end)
+        data_sent += len(chunk) # Guaranteed it sent the whole thing

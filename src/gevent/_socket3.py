@@ -370,8 +370,9 @@ class socket(object):
                     raise
             self._wait(self._read_event)
 
-    if hasattr(_socket.socket, 'sendmsg'):
-        # Only on Unix
+    if hasattr(_socket.socket, 'recvmsg'):
+        # Only on Unix; PyPy 3.5 5.10.0 provides sendmsg and recvmsg, but not
+        # recvmsg_into (at least on os x)
 
         def recvmsg(self, *args):
             while True:
@@ -381,6 +382,8 @@ class socket(object):
                     if ex.args[0] != EWOULDBLOCK or self.timeout == 0.0:
                         raise
                 self._wait(self._read_event)
+
+    if hasattr(_socket.socket, 'recvmsg_into'):
 
         def recvmsg_into(self, *args):
             while True:
@@ -441,27 +444,7 @@ class socket(object):
         # PyPy2, so it's possibly premature to do this. However, there is a 3.5 test case that
         # possibly exposes this in a severe way.
         data_memory = _get_memory(data)
-        len_data_memory = len(data_memory)
-        if not len_data_memory:
-            # Don't try to send empty data at all, no point, and breaks ssl
-            # See issue 719
-            return 0
-
-        if self.timeout is None:
-            data_sent = 0
-            while data_sent < len_data_memory:
-                data_sent += self.send(data_memory[data_sent:], flags)
-        else:
-            timeleft = self.timeout
-            end = time.time() + timeleft
-            data_sent = 0
-            while True:
-                data_sent += self.send(data_memory[data_sent:], flags, timeout=timeleft)
-                if data_sent >= len_data_memory:
-                    break
-                timeleft = end - time.time()
-                if timeleft <= 0:
-                    raise timeout('timed out')
+        return _socketcommon._sendall(self, data_memory, flags)
 
     def sendto(self, *args):
         try:
