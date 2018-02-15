@@ -34,11 +34,14 @@ FAILING_TESTS = [
 
 
 if sys.platform == 'win32':
+    IGNORED_TESTS = [
+        # fork watchers don't get called on windows
+        # because fork is not a concept windows has.
+        # See this file for a detailed explanation.
+        'test__core_fork.py',
+    ]
     # other Windows-related issues (need investigating)
     FAILING_TESTS += [
-        # fork watchers don't get called in multithreaded programs on windows
-        # No idea why.
-        'test__core_fork.py',
         'FLAKY test__greenletset.py',
         # This has been seen to fail on Py3 and Py2 due to socket reuse
         # errors, probably timing related again.
@@ -95,8 +98,8 @@ if sys.platform == 'win32':
 
     if not PY35:
         # Py35 added socket.socketpair, all other releases
-        # are missing it
-        FAILING_TESTS += [
+        # are missing it. No reason to even test it.
+        IGNORED_TESTS += [
             'test__socketpair.py',
         ]
 
