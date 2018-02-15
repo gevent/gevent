@@ -55,7 +55,7 @@ if PYPY:
     ]
 
 
-def run_many(tests, expected=(), failfast=False, quiet=False):
+def run_many(tests, configured_failing_tests=(), failfast=False, quiet=False):
     # pylint:disable=too-many-locals
     global NWORKERS
     start = time.time()
@@ -127,7 +127,8 @@ def run_many(tests, expected=(), failfast=False, quiet=False):
                 reap_all()
             except KeyboardInterrupt:
                 pool.terminate()
-                report(total, failed, passed, exit=False, took=time.time() - start, expected=expected)
+                report(total, failed, passed, exit=False, took=time.time() - start,
+                       configured_failing_tests=configured_failing_tests)
                 log('(partial results)\n')
                 raise
     except:
@@ -136,17 +137,18 @@ def run_many(tests, expected=(), failfast=False, quiet=False):
         raise
 
     reap_all()
-    report(total, failed, passed, took=time.time() - start, expected=expected)
+    report(total, failed, passed, took=time.time() - start,
+           configured_failing_tests=configured_failing_tests)
 
 
-def discover(tests=None, ignore=(), coverage=False):
-    if isinstance(ignore, six.string_types):
-        ignore_files = ignore.split(',')
-        ignore = set()
+def discover(tests=None, ignore_files=None,
+             ignored=(), coverage=False):
+    ignore = set(ignored or ())
+    if ignore_files:
+        ignore_files = ignore_files.split(',')
         for f in ignore_files:
             ignore.update(set(load_list_from_file(f)))
 
-    ignore = set(ignore or ())
     if coverage:
         ignore.update(IGNORE_COVERAGE)
 
@@ -200,10 +202,10 @@ def load_list_from_file(filename):
     return result
 
 
-def matches(expected, command, include_flaky=True):
+def matches(possibilities, command, include_flaky=True):
     if isinstance(command, list):
         command = ' '.join(command)
-    for line in expected:
+    for line in possibilities:
         if not include_flaky and line.startswith('FLAKY '):
             continue
         if command.endswith(' ' + line.replace('FLAKY ', '')):
@@ -220,7 +222,8 @@ def format_seconds(seconds):
     return seconds
 
 
-def report(total, failed, passed, exit=True, took=None, expected=None):
+def report(total, failed, passed, exit=True, took=None,
+           configured_failing_tests=()):
     # pylint:disable=redefined-builtin,too-many-branches
     runtimelog = util.runtimelog
     if runtimelog:
@@ -240,7 +243,7 @@ def report(total, failed, passed, exit=True, took=None, expected=None):
     passed_unexpected = []
 
     for name in passed:
-        if matches(expected, name, include_flaky=False):
+        if matches(configured_failing_tests, name, include_flaky=False):
             passed_unexpected.append(name)
 
     if passed_unexpected:
@@ -249,9 +252,9 @@ def report(total, failed, passed, exit=True, took=None, expected=None):
 
     if failed:
         log('\n%s/%s tests failed%s', len(failed), total, took)
-        expected = set(expected or [])
+
         for name in failed:
-            if matches(expected, name, include_flaky=True):
+            if matches(configured_failing_tests, name, include_flaky=True):
                 failed_expected.append(name)
             else:
                 failed_unexpected.append(name)
@@ -293,6 +296,7 @@ def main():
     parser.add_argument('tests', nargs='*')
     options = parser.parse_args()
     FAILING_TESTS = []
+    IGNORED_TESTS = []
     coverage = False
     if options.coverage or os.environ.get("GEVENTTEST_COVERAGE"):
         coverage = True
@@ -312,6 +316,7 @@ def main():
             config_data = f.read()
         six.exec_(config_data, config)
         FAILING_TESTS = config['FAILING_TESTS']
+        IGNORED_TESTS = config['IGNORED_TESTS']
 
     if 'PYTHONWARNINGS' not in os.environ and not sys.warnoptions:
         # Enable default warnings such as ResourceWarning.
@@ -330,13 +335,16 @@ def main():
     if 'GEVENT_DEBUG' not in os.environ:
         os.environ['GEVENT_DEBUG'] = 'debug'
 
-    tests = discover(options.tests, options.ignore, coverage)
+    tests = discover(options.tests,
+                     ignore_files=options.ignore,
+                     ignored=IGNORED_TESTS,
+                     coverage=coverage)
     if options.discover:
         for cmd, options in tests:
             print(util.getname(cmd, env=options.get('env'), setenv=options.get('setenv')))
         print('%s tests found.' % len(tests))
     else:
-        run_many(tests, expected=FAILING_TESTS, failfast=options.failfast, quiet=options.quiet)
+        run_many(tests, configured_failing_tests=FAILING_TESTS, failfast=options.failfast, quiet=options.quiet)
 
 
 if __name__ == '__main__':

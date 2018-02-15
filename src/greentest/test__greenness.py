@@ -23,9 +23,11 @@
 To do that spawn a green server and then access it using a green socket.
 If either operation blocked the whole script would block and timeout.
 """
-import greentest
 from gevent import monkey
 monkey.patch_all()
+
+import greentest
+
 try:
     import urllib2
 except ImportError:
@@ -34,33 +36,37 @@ try:
     import BaseHTTPServer
 except ImportError:
     from http import server as BaseHTTPServer
+
 import gevent
+from greentest import params
 
 
 class TestGreenness(greentest.TestCase):
     check_totalrefcount = False
+
+    def setUp(self):
+        server_address = params.DEFAULT_BIND_ADDR_TUPLE
+        BaseHTTPServer.BaseHTTPRequestHandler.protocol_version = "HTTP/1.0"
+        self.httpd = BaseHTTPServer.HTTPServer(server_address, BaseHTTPServer.BaseHTTPRequestHandler)
+        self.httpd.request_count = 0
+
+    def tearDown(self):
+        self.httpd.server_close()
+        self.httpd = None
 
     def serve(self):
         self.httpd.handle_request()
         self.httpd.request_count += 1
 
     def test_urllib2(self):
-        server_address = ('', 0)
-        BaseHTTPServer.BaseHTTPRequestHandler.protocol_version = "HTTP/1.0"
-        self.httpd = BaseHTTPServer.HTTPServer(server_address, BaseHTTPServer.BaseHTTPRequestHandler)
-        self.httpd.request_count = 0
         server = gevent.spawn(self.serve)
 
         port = self.httpd.socket.getsockname()[1]
-        try:
+        with self.assertRaises(urllib2.HTTPError) as exc:
             urllib2.urlopen('http://127.0.0.1:%s' % port)
-            assert False, 'should not get there'
-        except urllib2.HTTPError as ex:
-            assert ex.code == 501, repr(ex)
+        self.assertEqual(exc.exception.code, 501)
         server.get(0.01)
         self.assertEqual(self.httpd.request_count, 1)
-        self.httpd.server_close()
-        self.httpd = None
 
 
 if __name__ == '__main__':

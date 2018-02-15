@@ -61,6 +61,7 @@ from greentest.skipping import skipOnAppVeyor
 from greentest.skipping import skipOnCI
 from greentest.skipping import skipOnPyPy3OnCI
 from greentest.skipping import skipOnPyPy
+from greentest.skipping import skipOnPyPyOnCI
 from greentest.skipping import skipOnPyPy3
 from greentest.skipping import skipIf
 from greentest.skipping import skipOnLibuv

@@ -18,6 +18,7 @@ from greentest.sysinfo import PY35
 
 from greentest.sysinfo import LIBUV
 
+IGNORED_TESTS = []
 
 FAILING_TESTS = [
 
@@ -70,14 +71,15 @@ if sys.platform == 'win32':
         ]
 
         if PYPY and LIBUV:
-            FAILING_TESTS += [
-                # This one sometimes seems to just stop right after
+            IGNORED_TESTS += [
+                # This one seems to just stop right after
                 # patching is done. It passes on a local win 10 vm, and the main
                 # test_threading_2.py does as well.
                 # Based on the printouts we added, it appears to not even
                 # finish importing:
                 # https://ci.appveyor.com/project/denik/gevent/build/1.0.1277/job/tpvhesij5gldjxqw#L1190
-                'FLAKY test_threading.py',
+                # Ignored because it takes two minutes to time out.
+                'test_threading.py',
             ]
 
         if PY3:

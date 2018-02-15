@@ -518,11 +518,14 @@ if WIN:
 
 if PYPY:
     disabled_tests += [
-        'test_subprocess.ProcessTestCase.test_failed_child_execute_fd_leak',
         # Does not exist in the CPython test suite, tests for a specific bug
         # in PyPy's forking. Only runs on linux and is specific to the PyPy
         # implementation of subprocess (possibly explains the extra parameter to
         # _execut_child)
+        'test_subprocess.ProcessTestCase.test_failed_child_execute_fd_leak',
+        # On some platforms, this returns "zlib_compression", but the test is looking for
+        # "ZLIB"
+        'test_ssl.ThreadedTests.test_compression',
     ]
 
 # Generic Python 3

@@ -31,10 +31,24 @@ def _do_not_skip(reason):
     return _identity
 
 
+skipOnWindows = _do_not_skip
+skipOnAppVeyor = _do_not_skip
+skipOnCI = _do_not_skip
+
+skipOnPyPy = _do_not_skip
+skipOnPyPyOnCI = _do_not_skip
+skipOnPyPy3OnCI = _do_not_skip
+skipOnPyPy3 = _do_not_skip
+
+skipOnLibuv = _do_not_skip
+skipOnLibuvOnCI = _do_not_skip
+skipOnLibuvOnCIOnPyPy = _do_not_skip
+skipOnLibuvOnPyPyOnWin = _do_not_skip
+
+
 if sysinfo.WIN:
     skipOnWindows = unittest.skip
-else:
-    skipOnWindows = _do_not_skip
+
 
 if sysinfo.RUNNING_ON_APPVEYOR:
     # See comments scattered around about timeouts and the timer
@@ -46,39 +60,28 @@ if sysinfo.RUNNING_ON_APPVEYOR:
     # separately on windows in a more stable environment.
     skipOnAppVeyor = unittest.skip
 
-else:
-    skipOnAppVeyor = _do_not_skip
 
 if sysinfo.RUNNING_ON_CI:
     skipOnCI = unittest.skip
-else:
-    skipOnCI = _do_not_skip
 
-if sysinfo.PYPY3 and sysinfo.RUNNING_ON_CI:
-    # Same as above, for PyPy3.3-5.5-alpha and 3.5-5.7.1-beta and 3.5-5.8
-    skipOnPyPy3OnCI = unittest.skip
-else:
-    skipOnPyPy3OnCI = _do_not_skip
 
 if sysinfo.PYPY:
     skipOnPyPy = unittest.skip
-else:
-    skipOnPyPy = _do_not_skip
+    if sysinfo.RUNNING_ON_CI:
+        skipOnPyPyOnCI = unittest.skip
 
-if sysinfo.PYPY3:
-    skipOnPyPy3 = unittest.skip
-else:
-    skipOnPyPy3 = _do_not_skip
+    if sysinfo.PYPY3:
+        skipOnPyPy3 = unittest.skip
+        if sysinfo.RUNNING_ON_CI:
+            # Same as above, for PyPy3.3-5.5-alpha and 3.5-5.7.1-beta and 3.5-5.8
+            skipOnPyPy3OnCI = unittest.skip
+
 
 skipUnderCoverage = unittest.skip if sysinfo.RUN_COVERAGE else _do_not_skip
 
 skipIf = unittest.skipIf
 
 
-skipOnLibuv = _do_not_skip
-skipOnLibuvOnCI = _do_not_skip
-skipOnLibuvOnCIOnPyPy = _do_not_skip
-skipOnLibuvOnPyPyOnWin = _do_not_skip
 
 if sysinfo.LIBUV:
     skipOnLibuv = unittest.skip

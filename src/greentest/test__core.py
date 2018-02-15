@@ -1,7 +1,8 @@
 # pylint:disable=no-member
 import sys
 import unittest
-from greentest import main, skipOnLibuv
+import greentest
+
 from gevent import core
 
 
@@ -66,6 +67,8 @@ class TestWatchersDefault(TestWatchers):
     def makeOne(self):
         return core.loop(default=True)
 
+@greentest.skipOnLibuvOnPyPyOnWin("This crashes with PyPy 5.10.0, only on Windows. "
+                                  "See https://ci.appveyor.com/project/denik/gevent/build/1.0.1380/job/lrlvid6mkjtyrhn5#L1103")
 class TestWatchersDefaultDestroyed(TestWatchers):
 
     def makeOne(self):
@@ -74,7 +77,7 @@ class TestWatchersDefaultDestroyed(TestWatchers):
         del l
         return core.loop(default=True)
 
-@skipOnLibuv("Tests for libev-only functions")
+@greentest.skipOnLibuv("Tests for libev-only functions")
 class TestLibev(unittest.TestCase):
 
     def test_flags_conversion(self):
@@ -98,4 +101,4 @@ class TestEvents(unittest.TestCase):
         self.assertEqual(repr(core.EVENTS), 'gevent.core.EVENTS')
 
 if __name__ == '__main__':
-    main()
+    greentest.main()

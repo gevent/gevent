@@ -26,6 +26,7 @@ from greentest.sysinfo import LIBUV
 from greentest.sysinfo import OSX
 
 from greentest.sysinfo import RUNNING_ON_TRAVIS
+from greentest.sysinfo import RUNNING_ON_APPVEYOR
 from greentest.sysinfo import EXPECT_POOR_TIMER_RESOLUTION
 from greentest.sysinfo import RESOLVER_ARES
 
@@ -62,10 +63,18 @@ if RUNNING_ON_TRAVIS:
     # connected to with the same error.
     DEFAULT_BIND_ADDR = '127.0.0.1'
 
+if RUNNING_ON_APPVEYOR:
+    DEFAULT_BIND_ADDR = '127.0.0.1'
+    DEFAULT_LOCAL_HOST_ADDR = '127.0.0.1'
+
+
 if RESOLVER_ARES and OSX:
     # Ares likes to raise "malformed domain name" on '', at least
     # on OS X
     DEFAULT_BIND_ADDR = '127.0.0.1'
+
+DEFAULT_CONNECT = DEFAULT_LOCAL_HOST_ADDR
+DEFAULT_BIND_ADDR_TUPLE = (DEFAULT_BIND_ADDR, 0)
 
 # For in-process sockets
 DEFAULT_SOCKET_TIMEOUT = 0.1 if not EXPECT_POOR_TIMER_RESOLUTION else 2.0

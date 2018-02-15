@@ -14,7 +14,7 @@ class Test_udp_client(TestCase):
             log.append(message)
             server.sendto(b'reply-from-server', address)
 
-        server = DatagramServer('127.0.0.1:9000', handle)
+        server = DatagramServer('127.0.0.1:9001', handle)
         server.start()
         try:
             run([sys.executable, '-W', 'ignore', '-u', 'udp_client.py', 'Test_udp_client'],

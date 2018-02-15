@@ -3,7 +3,7 @@
 
 Usage: python udp_client.py MESSAGE
 
-Make sure you're running a UDP server on port 9000 (see udp_server.py).
+Make sure you're running a UDP server on port 9001 (see udp_server.py).
 
 There's nothing gevent-specific here.
 """
@@ -11,7 +11,7 @@ from __future__ import print_function
 import sys
 from gevent import socket
 
-address = ('localhost', 9000)
+address = ('localhost', 9001)
 message = ' '.join(sys.argv[1:])
 sock = socket.socket(type=socket.SOCK_DGRAM)
 sock.connect(address)

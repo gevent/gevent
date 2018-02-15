@@ -90,7 +90,7 @@ allbackendtest:
 
 cffibackendtest:
 	@${PYTHON} scripts/travis.py fold_start libuv "Testing libuv backend"
-	GEVENT_LOOP=libuv GEVENTTEST_COVERAGE=1 make alltest
+	GEVENT_LOOP=libuv make alltest
 	@${PYTHON} scripts/travis.py fold_end libuv
 	@${PYTHON} scripts/travis.py fold_start libev "Testing libev CFFI backend"
 	GEVENT_LOOP=libev-cffi make alltest
@@ -193,7 +193,7 @@ test-py37: $(PY37)
 	LD_LIBRARY_PATH=$(BUILD_RUNTIMES)/versions/python3.7.0b1/openssl/lib PYTHON=python3.7.0b1 PATH=$(BUILD_RUNTIMES)/versions/python3.7.0b1/bin:$(PATH) make develop allbackendtest
 
 test-pypy: $(PYPY)
-	PYTHON=$(PYPY) PATH=$(BUILD_RUNTIMES)/versions/pypy5100/bin:$(PATH) make develop cffibackendtest coverage_combine
+	PYTHON=$(PYPY) PATH=$(BUILD_RUNTIMES)/versions/pypy5100/bin:$(PATH) make develop cffibackendtest
 
 test-pypy3: $(PYPY3)
 	PYTHON=$(PYPY3) PATH=$(BUILD_RUNTIMES)/versions/pypy3.5_5101/bin:$(PATH) make develop basictest
