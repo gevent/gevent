@@ -1,10 +1,9 @@
 setuptools
 wheel
-cython>=0.27.3 ; python_version < '3.7'
-# Thread state changes, especially in Pythran seem to need this,
-# which in turn requires CPython 3.7.0a3 or above
-git+https://github.com/cython/cython#egg=cython ; python_version >= '3.7' --install-option="--no-cython-compile"
-# Thread state changes again; requires 0.4.13, as yet unreleased
+# Python 3.7b1 requires at least this version.
+# 0.28 is preferred due to 3.7 specific changes.
+cython>=0.27.3
+# Python 3.7b1 requires this.
 greenlet>=0.4.13
 pylint>=1.8.0
 # pyyaml is included here and doesn't install on travis with 3.7a3
@@ -12,7 +11,7 @@ prospector[with_pyroma] ; python_version < '3.7'
 coverage>=4.0
 coveralls>=1.0
 # See version requirements in setup.py
-cffi
+cffi ; platform_python_implementation == "CPython"
 futures
 dnspython
 idna
