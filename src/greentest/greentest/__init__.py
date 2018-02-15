@@ -52,6 +52,10 @@ from greentest.sysinfo import RUNNING_ON_TRAVIS
 from greentest.sysinfo import RUNNING_ON_APPVEYOR
 from greentest.sysinfo import RUNNING_ON_CI
 
+from greentest.sysinfo import RESOLVER_NOT_SYSTEM
+from greentest.sysinfo import RESOLVER_DNSPYTHON
+from greentest.sysinfo import RESOLVER_ARES
+
 from greentest.sysinfo import EXPECT_POOR_TIMER_RESOLUTION
 
 from greentest.sysinfo import CONN_ABORTED_ERRORS

@@ -25,7 +25,6 @@ if getattr(resolver, 'pool', None) is not None:
 
 from greentest.sysinfo import RESOLVER_NOT_SYSTEM
 from greentest.sysinfo import RESOLVER_DNSPYTHON
-from greentest.sysinfo import RESOLVER_ARES
 from greentest.sysinfo import PY2
 import greentest.timing
 
@@ -446,8 +445,12 @@ class SanitizedHostsFile(HostsFile):
                 continue
             yield name, addr
 
-@greentest.skipIf(greentest.RUNNING_ON_TRAVIS and RESOLVER_ARES,
-                  "This sometimes randomly fails on Travis with ares, beginning Feb 13, 2018")
+@greentest.skipIf(greentest.RUNNING_ON_CI,
+                  "This sometimes randomly fails on Travis with ares and on appveyor, beginning Feb 13, 2018")
+# Probably due to round-robin DNS,
+# since this is not actually the system's etc hosts file.
+# TODO: Rethink this. We need something reliable. Go back to using
+# the system's etc hosts?
 class TestEtcHosts(TestCase):
 
     MAX_HOSTS = os.getenv('GEVENTTEST_MAX_ETC_HOSTS', 10)
