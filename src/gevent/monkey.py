@@ -482,7 +482,8 @@ def patch_ssl(_warnings=None):
     if 'ssl' in sys.modules and hasattr(sys.modules['ssl'], 'SSLContext'):
         _queue_warning('Monkey-patching ssl after ssl has already been imported '
                        'may lead to errors, including RecursionError on Python 3.6. '
-                       'Please monkey-patch earlier.',
+                       'Please monkey-patch earlier. '
+                       'See https://github.com/gevent/gevent/issues/1016',
                        _warnings)
     patch_module('ssl', _warnings=_warnings)
 
