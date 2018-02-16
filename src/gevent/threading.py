@@ -87,6 +87,10 @@ class _DummyThread(_DummyThread_):
     # For the same reason, instances of this class will cleanup their own entry
     # in ``threading._active``
 
+    # This class also solves a problem forking process with subprocess: after forking,
+    # Thread.__stop is called, which throws an exception when __block doesn't
+    # exist.
+
     # Capture the static things as class vars to save on memory/
     # construction time.
     # In Py2, they're all private; in Py3, they become protected
