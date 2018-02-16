@@ -72,6 +72,7 @@
 - Make :meth:`gevent.socket.socket.sendall` up to ten times faster on
   PyPy3, through the same change that was applied in gevent 1.1b3 for PyPy2.
 
+- Update c-ares to 1.14.0. See :issue:`1105`.
 
 1.3a1 (2018-01-27)
 ==================
