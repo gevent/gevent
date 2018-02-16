@@ -10,6 +10,7 @@ CYTHON?=cython
 
 export PATH:=$(BUILD_RUNTIMES)/snakepit:$(TOOLS):$(PATH)
 export LC_ALL=C.UTF-8
+export GEVENT_RESOLVER_NAMESERVERS=8.8.8.8
 
 
 clean:
@@ -61,7 +62,7 @@ basictest: test_prelim
 
 alltest: basictest
 	@${PYTHON} scripts/travis.py fold_start ares "Running c-ares tests"
-	cd src/greentest && GEVENT_RESOLVER=ares GEVENTARES_SERVERS=8.8.8.8 ${PYTHON} testrunner.py --config known_failures.py --ignore tests_that_dont_use_resolver.txt --quiet
+	cd src/greentest && GEVENT_RESOLVER=ares ${PYTHON} testrunner.py --config known_failures.py --ignore tests_that_dont_use_resolver.txt --quiet
 	@${PYTHON} scripts/travis.py fold_end ares
 	@${PYTHON} scripts/travis.py fold_start dnspython "Running dnspython tests"
 	cd src/greentest && GEVENT_RESOLVER=dnspython ${PYTHON} testrunner.py --config known_failures.py --ignore tests_that_dont_use_resolver.txt --quiet

@@ -36,7 +36,10 @@
   :func:`gevent.subprocess.run`.
 
 - Add the ``dnspython`` resolver as a lightweight alternative to
-  c-ares. See :pr:`1088`.
+  c-ares. See :pr:`1088` and :issue:`1103`.
+
+- The ``GEVENTARES_SERVERS`` environment variable is deprecated in
+  favor of ``GEVENT_RESOLVER_SERVERS``. See :issue:`1103`.
 
 - Fix calling ``shutdown`` on a closed socket. It was raising
   ``AttributeError``, now it once again raises the correct

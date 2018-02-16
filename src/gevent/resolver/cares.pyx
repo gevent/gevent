@@ -9,6 +9,8 @@ import sys
 
 from cpython.ref cimport Py_INCREF
 from cpython.ref cimport Py_DECREF
+from cpython.mem cimport PyMem_Malloc
+from cpython.mem cimport PyMem_Free
 
 from _socket import gaierror
 
@@ -58,8 +60,7 @@ cdef extern from "dnshelper.c":
         pass
     int gevent_make_sockaddr(char* hostp, int port, int flowinfo, int scope_id, sockaddr_in6* sa6)
 
-    void* malloc(int)
-    void free(void*)
+
     void memset(void*, int, int)
 
 
@@ -319,7 +320,7 @@ cdef class channel:
             cares.ares_destroy(self.channel)
             self.channel = NULL
 
-    def set_servers(self, servers=None):
+    cpdef set_servers(self, servers=None):
         if not self.channel:
             raise gaierror(cares.ARES_EDESTRUCTION, 'this ares channel has been destroyed')
         if not servers:
@@ -333,7 +334,7 @@ cdef class channel:
         if length <= 0:
             result = cares.ares_set_servers(self.channel, NULL)
         else:
-            c_servers = <cares.ares_addr_node*>malloc(sizeof(cares.ares_addr_node) * length)
+            c_servers = <cares.ares_addr_node*>PyMem_Malloc(sizeof(cares.ares_addr_node) * length)
             if not c_servers:
                 raise MemoryError
             try:
@@ -357,7 +358,7 @@ cdef class channel:
                 if index:
                     raise ValueError(strerror(index))
             finally:
-                free(c_servers)
+                PyMem_Free(c_servers)
 
     # this crashes c-ares
     #def cancel(self):

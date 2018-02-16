@@ -447,7 +447,67 @@ class AresServers(AresSettingMixin, Setting):
     name = 'ares_servers'
     default = None
     environment_key = 'GEVENTARES_SERVERS'
+    desc = """\
+    A list of strings giving the IP addresses of nameservers for the ares resolver.
 
+    In the environment variable, these strings are separated by commas.
+
+    .. deprecated:: 1.3a2
+       Prefer the :attr:`resolver_nameservers` setting. If both are set,
+       the results are not defined.
+    """
+
+# Generic nameservers, works for dnspython and ares.
+class ResolverNameservers(AresSettingMixin, Setting):
+    document = True
+    name = 'resolver_nameservers'
+    default = None
+    environment_key = 'GEVENT_RESOLVER_NAMESERVERS'
+    desc = """\
+    A list of strings giving the IP addresses of nameservers for the (non-system) resolver.
+
+    In the environment variable, these strings are separated by commas.
+
+    .. rubric:: Resolver Behaviour
+
+    * blocking
+
+      Ignored
+
+    * Threaded
+
+      Ignored
+
+    * dnspython
+
+      If this setting is not given, the dnspython resolver will
+      load nameservers to use from ``/etc/resolv.conf``
+      or the Windows registry. This setting replaces any nameservers read
+      from those means. Note that the file and registry are still read
+      for other settings.
+
+      .. caution:: dnspython does not validate the members of the list.
+         An improper address (such as a hostname instead of IP) has
+         undefined results, including hanging the process.
+
+    * ares
+
+      Similar to dnspython, but with more platform and compile-time
+      options. ares validates that the members of the list are valid
+      addresses.
+    """
+
+    # Normal string-to-list rules. But still validate_anything.
+    _convert = Setting._convert
+
+    # TODO: In the future, support reading a resolv.conf file
+    # *other* than /etc/resolv.conf, and do that both on Windows
+    # and other platforms. Also offer the option to disable the system
+    # configuration entirely.
+
+    @property
+    def kwarg_name(self):
+        return 'servers'
 
 config = Config()
 
