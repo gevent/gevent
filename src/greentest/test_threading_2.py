@@ -516,7 +516,7 @@ class ThreadJoinOnShutdown(unittest.TestCase):
             w = threading.Thread(target=worker)
             w.start()
             import sys
-            if sys.version_info[:2] >= (3, 7) or (sys.version_info[:2] >= (3, 5) and hasattr(sys, 'pypy_version_info')):
+            if sys.version_info[:2] >= (3, 7) or (sys.version_info[:2] >= (3, 5) and hasattr(sys, 'pypy_version_info') and sys.platform != 'darwin'):
                 w.join()
             """
         # In PyPy3 5.8.0, if we don't wait on this top-level "thread", 'w',
@@ -526,6 +526,8 @@ class ThreadJoinOnShutdown(unittest.TestCase):
         # the interpreter waiting on thread locks, like the issue described in threading.py
         # for Python 3.4? in any case, it doesn't hang in Python 2.) This changed in
         # 3.7a1 and waiting on it is again necessary and doesn't hang.
+        # PyPy3 5.10.1 is back to the "old" cpython behaviour, and waiting on it
+        # causes the whole process to hang, but apparently only on OS X---linux was fine without it
         self._run_and_join(script)
 
 

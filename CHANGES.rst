@@ -69,6 +69,9 @@
   it will regenerate itself. The default loop is the only one that can
   receive child events.
 
+- Make :meth:`gevent.socket.socket.sendall` up to ten times faster on
+  PyPy3, through the same change that was applied in gevent 1.1b3 for PyPy2.
+
 
 1.3a1 (2018-01-27)
 ==================
