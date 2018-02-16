@@ -176,8 +176,6 @@ if PYPY:
             ## Unknown; can't reproduce locally on OS X
             'FLAKY test_subprocess.py', # timeouts on one test.
 
-            ## PyPy3 5.9.0-beta seems to have dropped recvmsg_into?
-            'test_socket.py',
             'FLAKY test_ssl.py',
         ]
 
