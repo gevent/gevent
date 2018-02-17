@@ -1,5 +1,309 @@
    Changelog for the c-ares project. Generated with git2changes.pl
 
+Version 1.14.0 (16 Feb 2018)
+
+Daniel Stenberg (16 Feb 2018)
+- ares_android.c: fix warning: ISO C forbids an empty translation unit
+
+- RELEASE-NOTES: some more work we did and people who helped
+
+Brad House (16 Feb 2018)
+- travis: skip Autotools style testing for cmake
+  
+  Fix cmake test build by skipping autotools portion of test script.
+
+- travis: standardize CMake test off of Autotools tests
+  
+  Instead of running 'make test', run the tests directly like autotools
+  does.  It provides more verbose output.
+
+- travis: Enable building tests for CMake
+  
+  Travis should auto-build and run tests for cmake builds now that
+  PR #168 is merged.
+
+- fix version in pkgconfig
+
+- Add version update to CMakeLists in maketgz
+
+- Release prep.  Add support for pkgconfig in cmake, set versions appropriately
+
+Gregor Jasny (15 Feb 2018)
+- CMake: Add tests
+
+Brad House (14 Feb 2018)
+- [Gregor Jasny brought this change]
+
+  Use cmake3 package provided by Ubuntu (#182)
+
+- Cmake 3.1 instead of 3.2.1 should be the minimum
+
+- Update RELEASE-NOTES and RELEASE-PROCEDURE.md to prepare for next release
+
+- get rid of c++ style comments
+
+- Use trusty for all builds, precise is EOL.  Update clang and cmake versions.
+
+- Current CMakeLists.txt doesn't support 2.8.12 anymore, we need to bump the version to 3.2.1 minimum
+
+- Re-organize sections in INSTALL.md and add CMake section
+
+- [Sergey Kolomenkin brought this change]
+
+  remove compilation warnings in MSVC (#47)
+
+- document handling of timeouts for ares_process and ares_process_fd to close PR #57
+
+- As per Issue #155, since we do not require gethostname() during init, if it fails, there's no reason for init to fail as it is only used to populate the domain
+
+GitHub (7 Feb 2018)
+- [David Drysdale brought this change]
+
+  Document WSAStartup requirement (#180)
+
+David Drysdale (6 Feb 2018)
+- [Antonio Tajuelo brought this change]
+
+  Added coderelease.io badge to readme.md for letting people subscribe to new versions (#174)
+
+- [Sheel Bedi brought this change]
+
+  Update year in LICENSE.md to 2018 (#170)
+
+GitHub (4 Feb 2018)
+- [David Drysdale brought this change]
+
+  travis: use VM not container for {L,A}SAN builds (#177)
+  
+  As per https://github.com/travis-ci/travis-ci/issues/9033, container
+  based builds do not currently allow ptrace, which is used by LSAN and
+  ASAN.
+
+Brad House (3 Feb 2018)
+- [acthompson-google-com brought this change]
+
+  Android JNI code leaks local references in some cases (#175)
+  
+  * Add Google LLC to AUTHORS.
+  
+  * android: Explicitly delete all JNI local references, and cache JNI method IDs at initialization.
+  
+  * android: Only return ARES_ENOTINITIALIZED on failures in initialization code.
+
+Gregor Jasny (2 Jan 2018)
+- Embed fused Google Test 1.8.0
+
+Brad House (21 Dec 2017)
+- [John Schember brought this change]
+
+  android: Check returns for obj and classes are not NULL. Document API levels for various Android functions and objects used. (#166)
+
+- CARES_CHECK_TYPE should reference variable so a warning is not produced for -Werror compatibility
+
+- [Brad Spencer brought this change]
+
+  Fix computation of IPv6 blacklist mask for values of netmask > 8. (#164)
+
+David Drysdale (14 Dec 2017)
+- travis: Only do coverage/distcheck on normal build
+
+- travis: only do pip install on Linux
+
+- travis: only test in IPv4 mode
+  
+  Travis' Trusty environment does not support IPv6.
+
+- test: allow restriction to one IP address family
+
+- [Roman Teterin brought this change]
+
+  Fix a typo in init_by_resolv_conf (#160)
+
+Brad House (11 Dec 2017)
+- @gvanem says MSVC -RTCc option fails, looks erroneous to me, but the additional mask is harmless
+
+- Fix some other mingw warnings
+
+- Issue #143, get rid of windows build warning due to passing 'char **' to argument expecting 'const char **'
+
+- [Gregor Jasny brought this change]
+
+  Distribute CMake files (#130)
+
+- Android variants may not have __system_property_get
+  
+  Some android systems like ARM64 may not have the __system_property_get
+  symbol in libc (but still have it in the public headers).  Detect this
+  condition at build time.  The __system_property_get method of retrieving
+  name servers is deprecated as of Oreo so should strictly be a fallback
+  mechanism anyhow.
+
+David Drysdale (9 Nov 2017)
+- [David Hotham brought this change]
+
+  Wrong function name throughout man page (#154)
+
+- ares_data.c: iterate through substructs when freeing
+  
+  Previous code recursed into substructures, which makes it more likely
+  that large/heavily-nested responses could use up lots of stack.
+
+- test: test ares_free_data on long chain of structs
+
+- [Felix Yan brought this change]
+
+  Fix a typo in inet_ntop.c (#151)
+
+Daniel Stenberg (29 Sep 2017)
+- ares_gethostbyname.3: fix callback status values
+  
+  - ARES_ENOTFOUND means the _name_ wasn't found
+  
+  - ARES_ENODATA can be returned when a resolve fails
+  
+  Reported-by: Jakub Hrozek
+  Bug: https://c-ares.haxx.se/mail/c-ares-archive-2011-06/0012.shtml
+
+Brad House (28 Sep 2017)
+- [John Schember brought this change]
+
+  Fix DNS server lookup breaking with Android O due to Android removing access to net.dns# system properties. (#148)
+  
+  As of Android 8 (Oreo) access to net.dns# has been removed (https://developer.android.com/about/versions/oreo/android-8.0-changes.html). The reasoning given is that it, "improves privacy on the platform". Currently c-ares uses this to get the list of DNS servers.
+  
+  Now the only way to access the DNS server list is by using the Connectivity Manager though Java. This adds the necessary JNI code to use the Connectivity Manager and pull the DNS server list. The old way using __system_property_get with net.dns# remains for compatibilty.
+  
+  Using the Connectivity Manager requires the ACCESS_NETWORK_STATE permission to be set on the app. Existing applications most likely are not setting this and keeping the previous method as a fallback will at the very least ensure those apps don't break on older versions of Android. They will need to add this permission for Android 8 compatibility.
+  
+  Included in the patch are two initalization functions which are required. The JVM must be registered as well as the Connectivity Manager itself. There is no way to get the Connectivity Manager except though Java. Either being passed down to C directly or by passing in an Android Context which can be used to get the Connectivity Manager. Examples are provided in the documentation.
+
+- [Konstantinos Sofokleous brought this change]
+
+  allow linking against the static msvc runtime library (#133)
+  
+  allow linking against the static msvc runtime library
+
+- [Gergely Nagy brought this change]
+
+  Force using the ANSI versions of WinAPI functions (#142)
+  
+  When compiling c-ares with a build system that defines UNICODE,
+  bad versions of WinAPI functions are used causing failures or even
+  crashes. When windows.h is included in MBCS mode (like in the default
+  build system), the ..A versions are the same as using the one without
+  any suffix.
+
+- [cmake] build fix on Solaris
+
+GitHub (11 Sep 2017)
+- [Brad House brought this change]
+
+  Win32 exclude legacy ipv6 subnets (#144)
+  
+  win32 ipv6: add infrastructure to exclude ipv6 subnets that are known to cause issues
+
+- [David Drysdale brought this change]
+
+  windows: only look for ancient compilers (#146)
+  
+  Also drop the use of a versioned output directory; just use
+  .\msvc
+
+- [David Drysdale brought this change]
+
+  ares_init_options.3: match up sock_state_cb args (#141)
+  
+  Fixes #140
+
+Daniel Stenberg (25 Aug 2017)
+- [Anna Henningsen brought this change]
+
+  gethostbyaddr: fail with `ECANCELLED` for `ares_cancel()`
+  
+  When `ares_cancel()` was invoked, `ares_gethostbyaddr()`
+  queries would fail with `ENOTFOUND` instead of `ECANCELLED`.
+  
+  It seems appropriate to treat `ares_cancel()` like `ares_destroy()`,
+  but I would appreciate review of the correctness of this change.
+  
+  Ref: https://github.com/nodejs/node/issues/14814
+  
+  Closes #138
+
+David Drysdale (18 Aug 2017)
+- [David Hotham brought this change]
+
+  support most recent Visual Studio 2017
+
+Brad House (26 Jul 2017)
+- Preserve original DNS server order on Windows for equal metrics.
+  
+  qsort is not stable, in order to make it stable we need to record
+  the original index and add it as a secondary sort value when the
+  metrics are equal to prevent using DNS servers that may not work
+  at all as reported by some users.
+
+David Drysdale (15 Jul 2017)
+- [Anna Henningsen brought this change]
+
+  ares_parse_naptr_reply: make buffer length check more accurate
+  
+  9478908a490a6bf009ba58d81de8c1d06d50a117 introduced a length check
+  for records parsed by `ares_parse_naptr_reply()`. However, that
+  function is designed to parse replies which also contain non-NAPTR
+  records; for A records, the `rr_len > 7` check will fail as there
+  are only 4 bytes of payload.
+  In particular, parsing ANY replies for NAPTR records was broken
+  by that patch.
+  
+  Fix that by moving the check into the case in which it is already
+  known that the record is a NAPTR record.
+
+- appveyor: run dnsdump as a sanity check
+
+- travis: run dnsdump as a sanity check
+
+- test: use ares_free_string() throughout
+  
+  As pointed out by Gisle Vanem in #125.
+
+Daniel Stenberg (3 Jul 2017)
+- RELEASE-PROCEDURE.md: how to release
+  
+  Fixes #115
+  Closes #116
+
+David Drysdale (2 Jul 2017)
+- test: Build dnsdump on Windows too
+  
+  Thanks to Gisle Vanem for showing the way:
+  https://github.com/c-ares/c-ares/commit/b701af8a24cf9d173b1dbe5faedcea34642e92da#commitcomment-22830845
+
+Brad House (26 Jun 2017)
+- [Christian Ammer brought this change]
+
+  fix statement like #define - ares ssize_t define had a trailing semicolon (#120)
+
+David Drysdale (21 Jun 2017)
+- test: distribute the fuzzcheck.sh script
+  
+  The TESTS target runs fuzzcheck.sh so make sure it is included
+  in the distributed tarball.
+  
+  (The test itself will be pointless when run on a distribution, because
+  the fuzzing corpus directories are not shipped, but at least this
+  means that `make -C test test` should work.)
+
+- test: run the name-parsing corpus check too
+
+Daniel Stenberg (21 Jun 2017)
+- dist: don't build/ship PDF versions in release archives
+  
+  ... experience says very few read them and they can still get build by
+  those who want them.a
+
+- ares_version.h: bump version
+
 Version 1.13.0 (20 Jun 2017)
 
 Daniel Stenberg (20 Jun 2017)
@@ -3904,220 +4208,3 @@ Yang Tse (1 Nov 2008)
 
 - Initial attempt to detect at configuration time if the getaddrinfo()
   function returns an addrinfo with an unfreeable ai_addr member ptr.
-
-- icc adjustments:
-  
-    Select ANSI C89 dialect plus GNU extensions, again.
-
-- some more temporary magic for the icc seg-fault issue
-
-- icc permanent adjustment:
-  
-    Select precise floating-point model, otherwise doubles are less than 64-bit wide
-  
-  icc test adjustment:
-  
-    Select c89 dialect
-
-- icc adjustments:
-  
-    Enable more icc warnings.
-  
-    Optimization disabling options used only for icc 9.1
-
-- #include <stdlib.h> for exit() prototype
-
-- some more temporary magic for the icc seg-fault issue
-
-- remove from configure.ac temporary magic for the icc seg-fault issue
-
-- some more temporary magic for the icc seg-fault issue
-
-- Charles Hardin patch:
-  
-  - handles the EINPROGRESS for UDP connects
-  - uses closesocket instead of close on some paths that were noticed
-
-- some more temporary magic for the icc seg-fault issue
-
-- messages initially intended only for debug purposes, now become permanent
-  since these are extremely useful when compiler rejects a set of options.
-
-- fix compiler warning
-
-- fix missing double-quotes
-
-Daniel Stenberg (17 Oct 2008)
-- Charles Hardin made adig support a regular numerical dotted IP address for the
-  -s option as well.
-
-Yang Tse (16 Oct 2008)
-- some more temporary magic for the icc seg-fault issue
-
-- Ensure that shell variable contents which have active meaning
-  to the shell echo command are not interpreted when trying to
-  remove extra whitespace from shell variable content.
-
-- Adjust Watcom C warnings:
-  
-    Disable warnings on structure members padding.
-
-- With this change Solaris target builds will now be done with _REENTRANT defined.
-
-- Adjust Tiny C basic options:
-  
-    Remove -b from debug-enabled configuration, as Tiny C might have
-    been built without the memory and bounds checker support.
-
-- Adjust GCC warnings:
-  
-    Better disable following warnings when cross-compiling with a gcc older
-    than 3.0, to avoid warnings from third party system headers:
-  
-      -Wmissing-declarations
-      -Wmissing-prototypes
-      -Wunused
-      -Wshadow
-
-- fix syntax error
-
-- Initial attempt to detect Watcom C compiler
-
-- make naming scheme more consistent across whole file
-
-- Adjust GCC warnings:
-  
-    Disable following warnings when cross-compiling with a gcc older
-    than 3.0, to avoid warnings from third party system headers:
-  
-      -Wmissing-prototypes
-      -Wunused
-      -Wshadow
-
-- Adjust GCC --enable-warnings:
-  
-    Do not enable -pedantic when cross-compiling with a gcc older
-    than 3.0, to avoid warnings from third party system headers.
-
-- adjust SGI MIPSpro C detection
-
-- LCC compiler adjustments:
-  
-    Highest warning level is double -A, next is single -A.
-    Due to the big number of warnings these trigger on third
-    party header files it is impratical for us to use any of
-    them here. If you want them simply define it in CPPFLAGS.
-
-- remove extra space
-
-- split SGI compiler check. One for MIPS C and another for MIPSpro C
-
-- LCC compiler adjustments:
-  
-    Warning level reduced from double -A to single -A
-
-- Initial attempt to detect Tiny C compiler
-
-- Initial attempt to detect LCC compiler
-
-- 1) fix bug in CONVERT_INCLUDE_TO_ISYSTEM
-  
-  2) Disable SGI remark: controlling expression is constant
-
-- simplify SGI C compiler check
-
-- HP C adjustments:
-  
-    Due to the HP-UX socklen_t issue it is insane to use the +w1 warning level.
-    It generates more than 1100 warnings on socklen_t related statements.
-  
-    Until the issue is somehow fixed we will just use the +w2 warning level.
-
-- Add debug tracing for COMPILER_WORKS_IFELSE
-
-- configure will also warn on 'strict compiler warning' rejected options
-
-- convert rejected compiler options messages into a warnings
-
-- remove extra whitespace from string in SGI C check
-
-- oops
-
-- Initial attempt to detect SGI C compiler
-
-- HP C adjustments:
-  
-    Disallow run-time dereferencing of null pointers.
-  
-    Disable some remarks:
-  
-      #4227: padding struct with n bytes to align member.
-  
-      #4255: padding size of struct with n bytes to alignment boundary.
-
-- improve presentation of accepted/rejected debug/optimizer options
-
-- refactoring of COMPILER_BASIC_OPTS
-
-- Initial attempt to detect SUN C compiler
-
-- Initial attempt to detect HP C compiler
-
-- fix compiler warning: 'dot_4' may be used uninitialized in this function
-
-- adjust ICC_windows settings
-
-- fix VAR_STRIP
-
-- Sync up with reality
-
-- Initial attempt to support configure's --(dis|en)able-optimize
-  option to specify dis(activation) of compiler optimizations.
-  
-  If option is specified, it will be honored independant of the
-  --(dis|en)able-debug option.
-
-- fix comment
-
-- Initial attempt to support configure's --(dis|en)able-warnings
-  option to specify dis(activation) of picky compiler warnings.
-  
-  If option is specified, it will be honored independant of the
-  --(dis|en)able-debug option.
-  
-  If option is not specified, it will follow --(dis|en)able-debug
-  setting, whose default is disabled if not specified.
-
-- fix compiler warning: dereferencing type-punned pointer will break strict-aliasing rules
-
-- now compiler warnings are activated for all gcc builds, not only debug ones.
-
-- Use CFLAGS for icc linker options instead of LDFLAGS,
-  otherwise gethostbyname() is not detected.
-
-- use ac_cv_compiler and ac_cv_compiler_num to keep compiler ID and version number
-
-- Temporary icc adjustment:
-  
-    Disable floating point optimizations
-
-- HAVE_INET_PTON will only be defined when an IPv6 capable working
-  inet_pton function is available.
-
-- HAVE_INET_NTOP will only be defined when an IPv6 capable working
-  inet_ntop function is available.
-
-- ntoa() and inet_ntoa_r() no longer used
-
-- icc adjustments for icc 9.0 and prior versions:
-  
-    Disable remark #279: controlling expression is constant
-  
-        Remark triggered mostly on va_arg() and FD_ZERO() macros.
-
-- attempt to make work the gethostname function
-  check for winsock build target configurations
-
-Gisle Vanem (21 Sep 2008)
-- Added HAVE_NETDB_H, HAVE_ARPA_INET_H, HAVE_STRCASECMP
-  and HAVE_STRNCASECMP.
