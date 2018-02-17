@@ -107,7 +107,8 @@ Platform Support
   - Errors raised from :mod:`gevent.subprocess` will have a
     ``filename`` attribute set.
   - The :class:`threading.Timer` class is now monkey-patched and can
-    be joined.
+    be joined. Previously on Python 3.4 and above, joining a ``Timer``
+    would hang the process.
   - :meth:`gevent.ssl.SSLSocket.unwrap` behaves more like the standard
     library, including returning a SSLSocket and allowing certain
     timeout-related SSL errors to propagate. The added standard
