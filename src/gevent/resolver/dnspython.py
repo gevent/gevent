@@ -81,6 +81,7 @@ from . import hostname_types
 from gevent._compat import string_types
 from gevent._compat import iteritems
 from gevent._patcher import import_patched
+from gevent._config import config
 
 __all__ = [
     'Resolver',
@@ -553,6 +554,8 @@ class Resolver(AbstractResolver):
         self._resolver = _DualResolver()
         if resolver._resolver is None:
             resolver._resolver = self._resolver
+            if config.resolver_nameservers:
+                self._resolver.network_resolver.nameservers[:] = config.resolver_nameservers
         # Different hubs in different threads could be sharing the same
         # resolver.
         assert isinstance(resolver._resolver, _DualResolver)
