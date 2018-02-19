@@ -120,3 +120,23 @@ static void gevent_close_all_handles(uv_loop_t* loop)
 {
 	uv_walk(loop, gevent_uv_walk_callback_close, NULL);
 }
+
+static void gevent_zero_timer(uv_timer_t* handle)
+{
+	memset(handle, 0, sizeof(uv_timer_t));
+}
+
+static void gevent_zero_check(uv_check_t* handle)
+{
+	memset(handle, 0, sizeof(uv_check_t));
+}
+
+static void gevent_zero_prepare(uv_prepare_t* handle)
+{
+	memset(handle, 0, sizeof(uv_prepare_t));
+}
+
+static void gevent_zero_loop(uv_loop_t* handle)
+{
+	memset(handle, 0, sizeof(uv_loop_t));
+}

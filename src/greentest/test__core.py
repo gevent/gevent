@@ -88,11 +88,12 @@ class TestWatchersDefault(TestWatchers):
     def destroyOne(self, loop):
         return
 
+# XXX: This crash may be fixed
 @greentest.skipOnLibuvOnPyPyOnWin("This crashes with PyPy 5.10.0, only on Windows. "
                                   "See https://ci.appveyor.com/project/denik/gevent/build/1.0.1380/job/lrlvid6mkjtyrhn5#L1103")
 class TestWatchersDefaultDestroyed(TestWatchers):
 
-    def makeOne(self):
+    def _makeOne(self):
         # pylint: disable=no-member
         l = core.loop(default=True)
         l.destroy()

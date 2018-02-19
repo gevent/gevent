@@ -27,7 +27,7 @@ class _Callbacks(AbstractCallbacks):
 
     def _find_loop_from_c_watcher(self, watcher_ptr):
         loop_handle = ffi.cast('uv_handle_t*', watcher_ptr).data
-        return self.from_handle(loop_handle)
+        return self.from_handle(loop_handle) if loop_handle else None
 
     def python_sigchld_callback(self, watcher_ptr, _signum):
         self.from_handle(ffi.cast('uv_handle_t*', watcher_ptr).data)._sigchld_callback()
@@ -253,6 +253,7 @@ class loop(AbstractLoop):
         assert self._signal_idle
         libuv.uv_prepare_stop(self._prepare)
         libuv.uv_ref(self._prepare) # Why are we doing this?
+
         libuv.uv_check_stop(self._check)
         libuv.uv_ref(self._check)
 
@@ -277,15 +278,13 @@ class loop(AbstractLoop):
                 # libuv likes to abort() the process in this case.
                 return
 
+            libuv.gevent_close_all_handles(ptr)
+
             closed_failed = libuv.uv_loop_close(ptr)
             if closed_failed:
                 assert closed_failed == libuv.UV_EBUSY
-                # Walk the open handlers, close them, then
-                # run the loop once to clear them out and
-                # close again.
-
-                libuv.gevent_close_all_handles(ptr)
-
+                # We already closed all the handles. Run the loop
+                # once to let them be cut off from the loop.
                 ran_has_more_callbacks = libuv.uv_run(ptr, libuv.UV_RUN_ONCE)
                 if ran_has_more_callbacks:
                     libuv.uv_run(ptr, libuv.UV_RUN_NOWAIT)
@@ -295,10 +294,17 @@ class loop(AbstractLoop):
             # Destroy the native resources *after* we have closed
             # the loop. If we do it before, walking the handles
             # attached to the loop is likely to segfault.
-            del self._prepare
+
+            libuv.gevent_zero_check(self._check)
+            libuv.gevent_zero_check(self._timer0)
+            libuv.gevent_zero_prepare(self._prepare)
+            libuv.gevent_zero_timer(self._signal_idle)
             del self._check
+            del self._prepare
             del self._signal_idle
             del self._timer0
+
+            libuv.gevent_zero_loop(ptr)
 
             # Destroy any watchers we're still holding on to.
             del self._io_watchers

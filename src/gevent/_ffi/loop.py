@@ -236,6 +236,10 @@ class AbstractCallbacks(object):
 
     def python_prepare_callback(self, watcher_ptr):
         loop = self._find_loop_from_c_watcher(watcher_ptr)
+        if loop is None: # pragma: no cover
+            print("WARNING: gevent: running prepare callbacks from a destroyed handle: ",
+                  watcher_ptr)
+            return
         loop._run_callbacks()
 
     def check_callback_onerror(self, t, v, tb):
