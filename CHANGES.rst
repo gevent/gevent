@@ -77,6 +77,9 @@
 
 - Update c-ares to 1.14.0. See :issue:`1105`.
 
+- Be more careful about issuing a warning about patching SSL on
+  Python 2. See :issue:`1108`.
+
 1.3a1 (2018-01-27)
 ==================
 
