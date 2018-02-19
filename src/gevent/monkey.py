@@ -90,6 +90,14 @@ else:
 
 WIN = sys.platform.startswith("win")
 
+class MonkeyPatchWarning(RuntimeWarning):
+    """
+    The type of warnings we issue.
+
+    .. versionadded:: 1.3a2
+    """
+
+
 # maps module name -> {attribute name: original item}
 # e.g. "time" -> {"sleep": built-in function sleep}
 saved = {}
@@ -195,7 +203,7 @@ def _queue_warning(message, _warnings):
 def _process_warnings(_warnings):
     import warnings
     for warning in _warnings:
-        warnings.warn(warning, RuntimeWarning, stacklevel=3)
+        warnings.warn(warning, MonkeyPatchWarning, stacklevel=3)
 
 
 def _patch_sys_std(name):
@@ -295,6 +303,8 @@ def patch_thread(threading=True, _threading_local=True, Event=False, logging=Tru
                  existing_locks=True,
                  _warnings=None):
     """
+    patch_thread(threading=True, _threading_local=True, Event=False, logging=True, existing_lockes=True) -> None
+
     Replace the standard :mod:`thread` module to make it greenlet-based.
 
     - If *threading* is true (the default), also patch ``threading``.
@@ -474,17 +484,25 @@ def patch_dns():
     patch_module('socket', items=socket.__dns__) # pylint:disable=no-member
 
 
-def patch_ssl(_warnings=None):
-    """Replace SSLSocket object and socket wrapping functions in :mod:`ssl` with cooperative versions.
+def patch_ssl(_warnings=None, _first_time=True):
+    """
+    patch_ssl() -> None
+
+    Replace SSLSocket object and socket wrapping functions in
+    :mod:`ssl` with cooperative versions.
 
     This is only useful if :func:`patch_socket` has been called.
     """
-    if 'ssl' in sys.modules and hasattr(sys.modules['ssl'], 'SSLContext'):
-        _queue_warning('Monkey-patching ssl after ssl has already been imported '
-                       'may lead to errors, including RecursionError on Python 3.6. '
-                       'Please monkey-patch earlier. '
-                       'See https://github.com/gevent/gevent/issues/1016',
-                       _warnings)
+    if _first_time and 'ssl' in sys.modules and hasattr(sys.modules['ssl'], 'SSLContext'):
+        if sys.version_info[0] > 2 or ('pkg_resources' not in sys.modules):
+            # Don't warn on Python 2 if pkg_resources has been imported
+            # because that imports ssl and it's commonly used for namespace packages,
+            # which typically means we're still in some early part of the import cycle
+            _queue_warning('Monkey-patching ssl after ssl has already been imported '
+                           'may lead to errors, including RecursionError on Python 3.6. '
+                           'Please monkey-patch earlier. '
+                           'See https://github.com/gevent/gevent/issues/1016',
+                           _warnings)
     patch_module('ssl', _warnings=_warnings)
 
 
@@ -570,7 +588,7 @@ def patch_subprocess():
 
 def patch_builtins():
     """
-    Make the builtin __import__ function `greenlet safe`_ under Python 2.
+    Make the builtin :func:`__import__` function `greenlet safe`_ under Python 2.
 
     .. note::
        This does nothing under Python 3 as it is not necessary. Python 3 features
@@ -585,12 +603,12 @@ def patch_builtins():
 
 def patch_signal():
     """
-    Make the signal.signal function work with a monkey-patched os.
+    Make the :func:`signal.signal` function work with a :func:`monkey-patched os <patch_os>`.
 
-    .. caution:: This method must be used with :func:`patch_os` to have proper SIGCHLD
+    .. caution:: This method must be used with :func:`patch_os` to have proper ``SIGCHLD``
          handling. :func:`patch_all` calls both by default.
 
-    .. caution:: For proper SIGCHLD handling, you must yield to the event loop.
+    .. caution:: For proper ``SIGCHLD`` handling, you must yield to the event loop.
          Using :func:`patch_all` is the easiest way to ensure this.
 
     .. seealso:: :mod:`gevent.signal`
@@ -652,7 +670,7 @@ def patch_all(socket=True, dns=True, time=True, select=True, thread=True, os=Tru
     if select:
         patch_select(aggressive=aggressive)
     if ssl:
-        patch_ssl(_warnings=_warnings)
+        patch_ssl(_warnings=_warnings, _first_time=first_time)
     if httplib:
         raise ValueError('gevent.httplib is no longer provided, httplib must be False')
     if subprocess:
