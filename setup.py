@@ -82,8 +82,8 @@ if not WIN:
     )
 
 if not SKIP_LIBUV:
-    # libuv can't be built on manylinux because it needs glibc >= 2.12
-    # but manylinux has only 2.5, so we set SKIP_LIBUV in the script make-manylinux
+    # libuv can't be built on manylinux1 because it needs glibc >= 2.12
+    # but manylinux1 has only 2.5, so we set SKIP_LIBUV in the script make-manylinux
     cffi_modules.append(LIBUV_CFFI_MODULE)
 
 if PYPY:
