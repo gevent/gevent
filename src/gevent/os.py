@@ -323,6 +323,11 @@ if hasattr(os, 'fork'):
 
             if pid in _watched_children:
                 # yes, we're watching it
+
+                # Note that the remainder of this code must be careful to NOT
+                # yield to the event loop except at well known times, or
+                # we have a race condition between the _on_child callback and the
+                # code here that could lead to a process to hang.
                 if options & _WNOHANG or isinstance(_watched_children[pid], tuple):
                     # We're either asked not to block, or it already finished, in which
                     # case blocking doesn't matter
@@ -339,7 +344,10 @@ if hasattr(os, 'fork'):
                     # cooperative. We know it's our child, etc, so this should work.
                     watcher = _watched_children[pid]
                     # We can't start a watcher that's already started,
-                    # so we can't reuse the existing watcher.
+                    # so we can't reuse the existing watcher. Notice that the
+                    # old watcher must not have fired already, or during this time, but
+                    # only after we successfully `start()` the watcher. So this must
+                    # not yield to the event loop.
                     with watcher.loop.child(pid, False) as new_watcher:
                         get_hub().wait(new_watcher)
                     # Ok, so now the new watcher is done. That means

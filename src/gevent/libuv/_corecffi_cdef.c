@@ -380,3 +380,6 @@ typedef struct _gevent_fs_poll_s {
 } gevent_fs_poll_t;
 
 static void _gevent_fs_poll_callback3(void* handle, int status, const uv_stat_t* prev, const uv_stat_t* curr);
+
+static void gevent_uv_walk_callback_close(uv_handle_t* handle, void* arg);
+static void gevent_close_all_handles(uv_loop_t* loop);

@@ -108,3 +108,15 @@ static void _gevent_fs_poll_callback3(void* handlep, int status, const uv_stat_t
 
     _gevent_generic_callback1((uv_handle_t*)handle, 0);
 }
+
+static void gevent_uv_walk_callback_close(uv_handle_t* handle, void* arg)
+{
+	if( handle && !uv_is_closing(handle) ) {
+		uv_close(handle, NULL);
+	}
+}
+
+static void gevent_close_all_handles(uv_loop_t* loop)
+{
+	uv_walk(loop, gevent_uv_walk_callback_close, NULL);
+}
