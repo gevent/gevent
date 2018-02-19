@@ -1,3 +1,5 @@
+from subprocess import Popen
+
 from gevent import monkey
 monkey.patch_all()
 
@@ -58,6 +60,12 @@ class TestMonkey(unittest.TestCase):
 
             for objname in monkey.saved[modname]:
                 self.assertTrue(monkey.is_object_patched(modname, objname))
+
+    def test_patch_subprocess_twice(self):
+        self.assertNotIn('gevent', repr(Popen))
+        self.assertIs(Popen, monkey.get_original('subprocess', 'Popen'))
+        monkey.patch_subprocess()
+        self.assertIs(Popen, monkey.get_original('subprocess', 'Popen'))
 
     def test_patch_twice(self):
         import warnings

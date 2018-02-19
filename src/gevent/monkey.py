@@ -103,14 +103,29 @@ class MonkeyPatchWarning(RuntimeWarning):
 saved = {}
 
 
-def is_module_patched(modname):
-    """Check if a module has been replaced with a cooperative version."""
-    return modname in saved
+def is_module_patched(mod_name):
+    """
+    Check if a module has been replaced with a cooperative version.
+
+    :param str mod_name: The name of the standard library module,
+        e.g., ``'socket'``.
+
+    """
+    return mod_name in saved
 
 
-def is_object_patched(modname, objname):
-    """Check if an object in a module has been replaced with a cooperative version."""
-    return is_module_patched(modname) and objname in saved[modname]
+def is_object_patched(mod_name, item_name):
+    """
+    Check if an object in a module has been replaced with a
+    cooperative version.
+
+    :param str mod_name: The name of the standard library module,
+        e.g., ``'socket'``.
+    :param str item_name: The name of the attribute in the module,
+        e.g., ``'create_connection'``.
+
+    """
+    return is_module_patched(mod_name) and item_name in saved[mod_name]
 
 
 def _get_original(name, items):
@@ -128,14 +143,20 @@ def _get_original(name, items):
 
 
 def get_original(mod_name, item_name):
-    """Retrieve the original object from a module.
+    """
+    Retrieve the original object from a module.
 
-    If the object has not been patched, then that object will still be retrieved.
+    If the object has not been patched, then that object will still be
+    retrieved.
 
-    :param item_name: A string or sequence of strings naming the attribute(s) on the module
-        ``mod_name`` to return.
-    :return: The original value if a string was given for ``item_name`` or a sequence
-        of original values if a sequence was passed.
+    :param str mod_name: The name of the standard library module,
+        e.g., ``'socket'``.
+    :param item_name: A string or sequence of strings naming the
+        attribute(s) on the module ``mod_name`` to return.
+
+    :return: The original value if a string was given for
+             ``item_name`` or a sequence of original values if a
+             sequence was passed.
     """
     if isinstance(item_name, string_types):
         return _get_original(mod_name, [item_name])[0]
@@ -214,15 +235,19 @@ def _patch_sys_std(name):
 
 
 def patch_sys(stdin=True, stdout=True, stderr=True):
-    """Patch sys.std[in,out,err] to use a cooperative IO via a threadpool.
+    """
+    Patch sys.std[in,out,err] to use a cooperative IO via a
+    threadpool.
 
-    This is relatively dangerous and can have unintended consequences such as hanging
-    the process or `misinterpreting control keys`_ when ``input`` and ``raw_input``
-    are used.
+    This is relatively dangerous and can have unintended consequences
+    such as hanging the process or `misinterpreting control keys`_
+    when :func:`input` and :func:`raw_input` are used. :func:`patch_all`
+    does *not* call this function by default.
 
-    This method does nothing on Python 3. The Python 3 interpreter wants to flush
-    the TextIOWrapper objects that make up stderr/stdout at shutdown time, but
-    using a threadpool at that time leads to a hang.
+    This method does nothing on Python 3. The Python 3 interpreter
+    wants to flush the TextIOWrapper objects that make up
+    stderr/stdout at shutdown time, but using a threadpool at that
+    time leads to a hang.
 
     .. _`misinterpreting control keys`: https://github.com/gevent/gevent/issues/274
     """
@@ -246,18 +271,20 @@ def patch_os():
     environment variable ``GEVENT_NOWAITPID`` is not defined). Does
     nothing if fork is not available.
 
-    .. caution:: This method must be used with :func:`patch_signal` to have proper SIGCHLD
+    .. caution:: This method must be used with :func:`patch_signal` to have proper `SIGCHLD`
          handling and thus correct results from ``waitpid``.
          :func:`patch_all` calls both by default.
 
-    .. caution:: For SIGCHLD handling to work correctly, the event loop must run.
+    .. caution:: For `SIGCHLD` handling to work correctly, the event loop must run.
          The easiest way to help ensure this is to use :func:`patch_all`.
     """
     patch_module('os')
 
 
 def patch_time():
-    """Replace :func:`time.sleep` with :func:`gevent.sleep`."""
+    """
+    Replace :func:`time.sleep` with :func:`gevent.sleep`.
+    """
     patch_module('time')
 
 
@@ -303,17 +330,21 @@ def patch_thread(threading=True, _threading_local=True, Event=False, logging=Tru
                  existing_locks=True,
                  _warnings=None):
     """
-    patch_thread(threading=True, _threading_local=True, Event=False, logging=True, existing_lockes=True) -> None
+    patch_thread(threading=True, _threading_local=True, Event=False, logging=True, existing_locks=True) -> None
 
     Replace the standard :mod:`thread` module to make it greenlet-based.
 
-    - If *threading* is true (the default), also patch ``threading``.
-    - If *_threading_local* is true (the default), also patch ``_threading_local.local``.
-    - If *logging* is True (the default), also patch locks taken if the logging module has
-      been configured.
-    - If *existing_locks* is True (the default), and the process is still single threaded,
-      make sure than any :class:`threading.RLock` (and, under Python 3, :class:`importlib._bootstrap._ModuleLock`)
-      instances that are currently locked can be properly unlocked.
+    :keyword bool threading: When True (the default),
+        also patch :mod:`threading`.
+    :keyword bool _threading_local: When True (the default),
+        also patch :class:`_threading_local.local`.
+    :keyword bool logging: When True (the default), also patch locks
+        taken if the logging module has been configured.
+
+    :keyword bool existing_locks: When True (the default), and the
+        process is still single threaded, make sure that any
+        :class:`threading.RLock` (and, under Python 3, :class:`importlib._bootstrap._ModuleLock`)
+        instances that are currently locked can be properly unlocked.
 
     .. caution::
         Monkey-patching :mod:`thread` and using
@@ -454,9 +485,12 @@ def patch_thread(threading=True, _threading_local=True, Event=False, logging=Tru
 
 
 def patch_socket(dns=True, aggressive=True):
-    """Replace the standard socket object with gevent's cooperative sockets.
+    """
+    Replace the standard socket object with gevent's cooperative
+    sockets.
 
-    If ``dns`` is true, also patch dns functions in :mod:`socket`.
+    :keyword bool dns: When true (the default), also patch address
+        resolution functions in :mod:`socket`. See :doc:`dns` for details.
     """
     from gevent import socket
     # Note: although it seems like it's not strictly necessary to monkey patch 'create_connection',
@@ -475,10 +509,12 @@ def patch_socket(dns=True, aggressive=True):
 
 
 def patch_dns():
-    """Replace DNS functions in :mod:`socket` with cooperative versions.
+    """
+    Replace :doc:`DNS functions <dns>` in :mod:`socket` with
+    cooperative versions.
 
-    This is only useful if :func:`patch_socket` has been called and is done automatically
-    by that method if requested.
+    This is only useful if :func:`patch_socket` has been called and is
+    done automatically by that method if requested.
     """
     from gevent import socket
     patch_module('socket', items=socket.__dns__) # pylint:disable=no-member
@@ -488,7 +524,7 @@ def patch_ssl(_warnings=None, _first_time=True):
     """
     patch_ssl() -> None
 
-    Replace SSLSocket object and socket wrapping functions in
+    Replace :class:`ssl.SSLSocket` object and socket wrapping functions in
     :mod:`ssl` with cooperative versions.
 
     This is only useful if :func:`patch_socket` has been called.
