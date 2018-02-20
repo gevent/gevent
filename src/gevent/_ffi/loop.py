@@ -14,6 +14,7 @@ from gevent._ffi import GEVENT_DEBUG_LEVEL
 from gevent._ffi import TRACE
 from gevent._ffi import CRITICAL
 from gevent._ffi.callback import callback
+from gevent._compat import PYPY
 
 from gevent import getswitchinterval
 
@@ -225,14 +226,32 @@ class AbstractCallbacks(object):
         watcher = self.from_handle(handle)
         watcher.stop()
 
-    def python_check_callback(self, watcher_ptr):
-        # If we have the onerror callback, this is a no-op; all the real
-        # work to rethrow the exception is done by the onerror callback
+    if not PYPY:
+        def python_check_callback(self, watcher_ptr): # pylint:disable=unused-argument
+            # If we have the onerror callback, this is a no-op; all the real
+            # work to rethrow the exception is done by the onerror callback
 
-        # NOTE: Unlike the rest of the functions, this is called with a pointer
-        # to the C level structure, *not* a pointer to the void* that represents a
-        # <cdata> for the Python Watcher object.
-        pass
+            # NOTE: Unlike the rest of the functions, this is called with a pointer
+            # to the C level structure, *not* a pointer to the void* that represents a
+            # <cdata> for the Python Watcher object.
+            pass
+    else: # PyPy
+        # On PyPy, we need the function to have some sort of body, otherwise
+        # the signal exceptions don't always get caught, *especially* with
+        # libuv (however, there's no reason to expect this to only be a libuv
+        # issue; it's just that we don't depend on the periodic signal timer
+        # under libev, so the issue is much more pronounced under libuv)
+        # test_socket's test_sendall_interrupted can hang.
+        # See https://github.com/gevent/gevent/issues/1112
+
+        def python_check_callback(self, watcher_ptr): # pylint:disable=unused-argument
+            # Things we've tried that *don't* work:
+            # greenlet.getcurrent()
+            # 1 + 1
+            try:
+                raise MemoryError()
+            except MemoryError:
+                pass
 
     def python_prepare_callback(self, watcher_ptr):
         loop = self._find_loop_from_c_watcher(watcher_ptr)

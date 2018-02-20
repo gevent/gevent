@@ -82,6 +82,10 @@
 
 - Fix a race condition in libuv child callbacks. See :issue:`1104`.
 
+- Signal handling under PyPy with libuv is more reliable. See
+  :issue:`1112`.
+
+
 1.3a1 (2018-01-27)
 ==================
 
