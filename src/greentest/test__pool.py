@@ -184,16 +184,13 @@ class PoolBasicTests(greentest.TestCase):
                 self.assertEqual(p.free_count(), 1)
                 self.assertEqual(len(p), 0)
                 p.add(first)
-                timeout = gevent.Timeout(0.1)
-                timeout.start()
-                try:
-                    p.add(second)
-                except gevent.Timeout:
-                    pass
-                else:
-                    raise AssertionError('Expected timeout')
-                finally:
-                    timeout.close()
+                self.assertEqual(p.free_count(), 0)
+                self.assertEqual(len(p), 1)
+
+                with self.assertRaises(gevent.Timeout):
+                    with gevent.Timeout(0.1):
+                        p.add(second)
+
                 self.assertEqual(p.free_count(), 0)
                 self.assertEqual(len(p), 1)
             finally:
