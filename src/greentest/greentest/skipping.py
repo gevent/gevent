@@ -41,6 +41,7 @@ skipOnPyPy3OnCI = _do_not_skip
 skipOnPyPy3 = _do_not_skip
 
 skipOnLibuv = _do_not_skip
+skipOnLibuvOnWin = _do_not_skip
 skipOnLibuvOnCI = _do_not_skip
 skipOnLibuvOnCIOnPyPy = _do_not_skip
 skipOnLibuvOnPyPyOnWin = _do_not_skip
@@ -91,5 +92,7 @@ if sysinfo.LIBUV:
         if sysinfo.PYPY:
             skipOnLibuvOnCIOnPyPy = unittest.skip
 
-    if sysinfo.PYPY and sysinfo.WIN:
-        skipOnLibuvOnPyPyOnWin = unittest.skip
+    if sysinfo.WIN:
+        skipOnLibuvOnWin = unittest.skip
+        if sysinfo.PYPY:
+            skipOnLibuvOnPyPyOnWin = unittest.skip

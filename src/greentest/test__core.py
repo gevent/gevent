@@ -88,9 +88,13 @@ class TestWatchersDefault(TestWatchers):
     def destroyOne(self, loop):
         return
 
-# XXX: This crash may be fixed
-@greentest.skipOnLibuvOnPyPyOnWin("This crashes with PyPy 5.10.0, only on Windows. "
-                                  "See https://ci.appveyor.com/project/denik/gevent/build/1.0.1380/job/lrlvid6mkjtyrhn5#L1103")
+# XXX: The crash may be fixed? The hang showed up after the crash was
+# reproduced and fixed on linux and OS X.
+@greentest.skipOnLibuvOnWin(
+    "This crashes with PyPy 5.10.0, only on Windows. "
+    "See https://ci.appveyor.com/project/denik/gevent/build/1.0.1380/job/lrlvid6mkjtyrhn5#L1103 "
+    "It has also timed out, but only on Appveyor CPython 3.6; local CPython 3.6 does not. "
+    "See https://ci.appveyor.com/project/denik/gevent/build/1.0.1414/job/yn7yi8b53vtqs8lw#L1523")
 class TestWatchersDefaultDestroyed(TestWatchers):
 
     def _makeOne(self):
