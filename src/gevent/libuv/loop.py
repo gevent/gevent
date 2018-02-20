@@ -27,7 +27,7 @@ class _Callbacks(AbstractCallbacks):
 
     def _find_loop_from_c_watcher(self, watcher_ptr):
         loop_handle = ffi.cast('uv_handle_t*', watcher_ptr).data
-        return self.from_handle(loop_handle)
+        return self.from_handle(loop_handle) if loop_handle else None
 
     def python_sigchld_callback(self, watcher_ptr, _signum):
         self.from_handle(ffi.cast('uv_handle_t*', watcher_ptr).data)._sigchld_callback()
@@ -248,13 +248,19 @@ class loop(AbstractLoop):
 
 
     def _stop_aux_watchers(self):
+        assert self._prepare
+        assert self._check
+        assert self._signal_idle
         libuv.uv_prepare_stop(self._prepare)
         libuv.uv_ref(self._prepare) # Why are we doing this?
+
         libuv.uv_check_stop(self._check)
         libuv.uv_ref(self._check)
 
         libuv.uv_timer_stop(self._signal_idle)
         libuv.uv_ref(self._signal_idle)
+
+        libuv.uv_check_stop(self._timer0)
 
     def _setup_for_run_callback(self):
         self._start_callback_timer()
@@ -272,27 +278,39 @@ class loop(AbstractLoop):
                 # libuv likes to abort() the process in this case.
                 return
 
+            libuv.gevent_close_all_handles(ptr)
+
             closed_failed = libuv.uv_loop_close(ptr)
             if closed_failed:
                 assert closed_failed == libuv.UV_EBUSY
-                # Walk the open handlers, close them, then
-                # run the loop once to clear them out and
-                # close again.
-
-                def walk(handle, _arg):
-                    if not libuv.uv_is_closing(handle):
-                        libuv.uv_close(handle, ffi.NULL)
-
-                libuv.uv_walk(ptr,
-                              ffi.callback("void(*)(uv_handle_t*,void*)",
-                                           walk),
-                              ffi.NULL)
-
+                # We already closed all the handles. Run the loop
+                # once to let them be cut off from the loop.
                 ran_has_more_callbacks = libuv.uv_run(ptr, libuv.UV_RUN_ONCE)
                 if ran_has_more_callbacks:
                     libuv.uv_run(ptr, libuv.UV_RUN_NOWAIT)
                 closed_failed = libuv.uv_loop_close(ptr)
                 assert closed_failed == 0, closed_failed
+
+            # Destroy the native resources *after* we have closed
+            # the loop. If we do it before, walking the handles
+            # attached to the loop is likely to segfault.
+
+            libuv.gevent_zero_check(self._check)
+            libuv.gevent_zero_check(self._timer0)
+            libuv.gevent_zero_prepare(self._prepare)
+            libuv.gevent_zero_timer(self._signal_idle)
+            del self._check
+            del self._prepare
+            del self._signal_idle
+            del self._timer0
+
+            libuv.gevent_zero_loop(ptr)
+
+            # Destroy any watchers we're still holding on to.
+            del self._io_watchers
+            del self._fork_watchers
+            del self._child_watchers
+
 
     def _can_destroy_loop(self, ptr):
         # We're being asked to destroy a loop that's,
@@ -324,6 +342,7 @@ class loop(AbstractLoop):
                                    'closing'])
         handles = []
 
+        # XXX: Convert this to a modern callback.
         def walk(handle, _arg):
             data = handle.data
             if data:
@@ -446,6 +465,9 @@ class loop(AbstractLoop):
 
 
     def _sigchld_callback(self):
+        # Signals can arrive at (relatively) any time. To eliminate
+        # race conditions, and behave more like libev, we "queue"
+        # sigchld to run when we run callbacks.
         while True:
             try:
                 pid, status, _usage = os.wait3(os.WNOHANG)
@@ -457,8 +479,26 @@ class loop(AbstractLoop):
                 break
             children_watchers = self._child_watchers.get(pid, []) + self._child_watchers.get(0, [])
             for watcher in children_watchers:
-                watcher._set_status(status)
+                self.run_callback(watcher._set_waitpid_status, pid, status)
 
+            # Don't invoke child watchers for 0 more than once
+            self._child_watchers[0] = []
+
+    def _register_child_watcher(self, watcher):
+        self._child_watchers[watcher._pid].append(watcher)
+
+    def _unregister_child_watcher(self, watcher):
+        try:
+            # stop() should be idempotent
+            self._child_watchers[watcher._pid].remove(watcher)
+        except ValueError:
+            pass
+
+        # Now's a good time to clean up any dead lists we don't need
+        # anymore
+        for pid in list(self._child_watchers):
+            if not self._child_watchers[pid]:
+                del self._child_watchers[pid]
 
     def io(self, fd, events, ref=True, priority=None):
         # We rely on hard references here and explicit calls to

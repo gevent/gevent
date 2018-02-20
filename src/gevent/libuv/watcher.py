@@ -541,16 +541,13 @@ class child(_SimulatedWithAsyncMixin,
 
 
     def _register_loop_callback(self):
-        self.loop._child_watchers[self._pid].append(self)
+        self.loop._register_child_watcher(self)
 
     def _unregister_loop_callback(self):
-        try:
-            # stop() should be idempotent
-            self.loop._child_watchers[self._pid].remove(self)
-        except ValueError:
-            pass
+        self.loop._unregister_child_watcher(self)
 
-    def _set_status(self, status):
+    def _set_waitpid_status(self, pid, status):
+        self._rpid = pid
         self._rstatus = status
         self._async.send()
 

@@ -5,7 +5,6 @@ watchers will depend on the specific event loop.
 # pylint:disable=not-callable
 from __future__ import absolute_import, print_function
 
-import os
 import signal as signalmodule
 import functools
 import warnings
@@ -589,8 +588,10 @@ class ChildMixin(object):
 
     @property
     def rpid(self):
-        return os.getpid()
+        # The received pid, the result of the waitpid() call.
+        return self._rpid
 
+    _rpid = None
     _rstatus = 0
 
     @property

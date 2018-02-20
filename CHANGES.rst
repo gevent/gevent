@@ -80,6 +80,8 @@
 - Be more careful about issuing a warning about patching SSL on
   Python 2. See :issue:`1108`.
 
+- Fix a race condition in libuv child callbacks. See :issue:`1104`.
+
 1.3a1 (2018-01-27)
 ==================
 

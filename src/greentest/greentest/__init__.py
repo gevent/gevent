@@ -69,6 +69,7 @@ from greentest.skipping import skipOnPyPyOnCI
 from greentest.skipping import skipOnPyPy3
 from greentest.skipping import skipIf
 from greentest.skipping import skipOnLibuv
+from greentest.skipping import skipOnLibuvOnWin
 from greentest.skipping import skipOnLibuvOnCI
 from greentest.skipping import skipOnLibuvOnCIOnPyPy
 from greentest.skipping import skipOnLibuvOnPyPyOnWin
