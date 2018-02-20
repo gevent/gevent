@@ -265,29 +265,37 @@ class loop(AbstractLoop):
         if libev.ev_is_active(self._check):
             self.ref()
             libev.ev_check_stop(self._ptr, self._check)
+        if libev.ev_is_active(self._timer0):
+            libev.ev_timer_stop(self._timer0)
 
     def _setup_for_run_callback(self):
         self.ref() # we should go through the loop now
 
     def destroy(self):
         if self._ptr:
-            ptr = self._ptr
-
-            should_destroy_loop = super(loop, self).destroy()
+            super(loop, self).destroy()
 
             if globals()["__SYSERR_CALLBACK"] == self._handle_syserr:
                 set_syserr_cb(None)
 
-            if should_destroy_loop:
-                libev.ev_loop_destroy(ptr)
 
     def _can_destroy_loop(self, ptr):
         # Is it marked as destroyed?
         return libev.ev_userdata(ptr)
 
-    def _destroyed_loop(self, ptr):
+    def _destroy_loop(self, ptr):
         # Mark as destroyed.
         libev.ev_set_userdata(ptr, ffi.NULL)
+        libev.ev_loop_destroy(ptr)
+
+        libev.gevent_zero_prepare(self._prepare)
+        libev.gevent_zero_check(self._check)
+        libev.gevent_zero_timer(self._timer0)
+
+        del self._prepare
+        del self._check
+        del self._timer0
+
 
     @property
     def MAXPRI(self):

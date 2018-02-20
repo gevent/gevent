@@ -266,51 +266,6 @@ class loop(AbstractLoop):
         self._start_callback_timer()
         libuv.uv_ref(self._timer0)
 
-    def destroy(self):
-        if self._ptr:
-            ptr = self._ptr
-            should_destroy = super(loop, self).destroy()
-            ptr.data = ffi.NULL
-            assert self._ptr is None
-            libuv.uv_stop(ptr)
-            if not should_destroy:
-                # The default loop has already been destroyed.
-                # libuv likes to abort() the process in this case.
-                return
-
-            libuv.gevent_close_all_handles(ptr)
-
-            closed_failed = libuv.uv_loop_close(ptr)
-            if closed_failed:
-                assert closed_failed == libuv.UV_EBUSY
-                # We already closed all the handles. Run the loop
-                # once to let them be cut off from the loop.
-                ran_has_more_callbacks = libuv.uv_run(ptr, libuv.UV_RUN_ONCE)
-                if ran_has_more_callbacks:
-                    libuv.uv_run(ptr, libuv.UV_RUN_NOWAIT)
-                closed_failed = libuv.uv_loop_close(ptr)
-                assert closed_failed == 0, closed_failed
-
-            # Destroy the native resources *after* we have closed
-            # the loop. If we do it before, walking the handles
-            # attached to the loop is likely to segfault.
-
-            libuv.gevent_zero_check(self._check)
-            libuv.gevent_zero_check(self._timer0)
-            libuv.gevent_zero_prepare(self._prepare)
-            libuv.gevent_zero_timer(self._signal_idle)
-            del self._check
-            del self._prepare
-            del self._signal_idle
-            del self._timer0
-
-            libuv.gevent_zero_loop(ptr)
-
-            # Destroy any watchers we're still holding on to.
-            del self._io_watchers
-            del self._fork_watchers
-            del self._child_watchers
-
 
     def _can_destroy_loop(self, ptr):
         # We're being asked to destroy a loop that's,
@@ -320,8 +275,43 @@ class loop(AbstractLoop):
         # We track this in the data member.
         return ptr.data
 
-    def _destroyed_loop(self, ptr):
+    def _destroy_loop(self, ptr):
         ptr.data = ffi.NULL
+        libuv.uv_stop(ptr)
+
+        libuv.gevent_close_all_handles(ptr)
+
+        closed_failed = libuv.uv_loop_close(ptr)
+        if closed_failed:
+            assert closed_failed == libuv.UV_EBUSY
+            # We already closed all the handles. Run the loop
+            # once to let them be cut off from the loop.
+            ran_has_more_callbacks = libuv.uv_run(ptr, libuv.UV_RUN_ONCE)
+            if ran_has_more_callbacks:
+                libuv.uv_run(ptr, libuv.UV_RUN_NOWAIT)
+            closed_failed = libuv.uv_loop_close(ptr)
+            assert closed_failed == 0, closed_failed
+
+        # Destroy the native resources *after* we have closed
+        # the loop. If we do it before, walking the handles
+        # attached to the loop is likely to segfault.
+
+        libuv.gevent_zero_check(self._check)
+        libuv.gevent_zero_check(self._timer0)
+        libuv.gevent_zero_prepare(self._prepare)
+        libuv.gevent_zero_timer(self._signal_idle)
+        del self._check
+        del self._prepare
+        del self._signal_idle
+        del self._timer0
+
+        libuv.gevent_zero_loop(ptr)
+
+        # Destroy any watchers we're still holding on to.
+        del self._io_watchers
+        del self._fork_watchers
+        del self._child_watchers
+
 
     def debug(self):
         """

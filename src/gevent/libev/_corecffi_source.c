@@ -52,3 +52,18 @@ static void _gevent_generic_callback(struct ev_loop* loop,
             // closing the watcher?
     }
 }
+
+static void gevent_zero_timer(struct ev_timer* handle)
+{
+	memset(handle, 0, sizeof(struct ev_timer));
+}
+
+static void gevent_zero_check(struct ev_check* handle)
+{
+	memset(handle, 0, sizeof(struct ev_check));
+}
+
+static void gevent_zero_prepare(struct ev_prepare* handle)
+{
+	memset(handle, 0, sizeof(struct ev_prepare));
+}
