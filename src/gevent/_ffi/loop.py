@@ -295,8 +295,6 @@ else:
 
 
 
-_default_loop_destroyed = False
-
 
 _NOARGS = ()
 
@@ -319,9 +317,6 @@ class AbstractLoop(object):
     # Subclasses should set this in __init__ to reflect
     # whether they were the default loop.
     _default = None
-
-    # A class variable.
-    _default_loop_destroyed = False
 
     def __init__(self, ffi, lib, watchers, flags=None, default=None):
         self._ffi = ffi
@@ -493,21 +488,23 @@ class AbstractLoop(object):
             try:
                 if not self._can_destroy_loop(self._ptr):
                     return False
-                self._destroyed_loop(self._ptr)
                 self._stop_aux_watchers()
-
+                self._destroy_loop(self._ptr)
             finally:
                 # not ffi.NULL, we don't want something that can be
                 # passed to C and crash later. This will create nice friendly
                 # TypeError from CFFI.
                 self._ptr = None
+                del self._handle_to_self
+                del self._callbacks
+                del self._keepaliveset
 
             return True
 
     def _can_destroy_loop(self, ptr):
         raise NotImplementedError()
 
-    def _destroyed_loop(self, ptr):
+    def _destroy_loop(self, ptr):
         raise NotImplementedError()
 
     @property
