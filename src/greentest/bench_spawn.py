@@ -1,52 +1,58 @@
 """Benchmarking spawn() performance.
 """
-from __future__ import print_function
+from __future__ import print_function, absolute_import, division
 import sys
 import os
-import random
-from time import time
+import time
+
 try:
     xrange
 except NameError:
     xrange = range
 
+if hasattr(time, "perf_counter"):
+    curtime = time.perf_counter  # 3.3
+elif sys.platform.startswith('win'):
+    curtime = time.clock
+else:
+    curtime = time.time
 
-N = 10000
+N = 100000
 counter = 0
 
 
-def incr(sleep, **kwargs):
+def incr(sleep, **_kwargs):
     global counter
     counter += 1
     sleep(0)
 
 
-def noop(p):
+def noop(_p):
     pass
 
 
+def _report(name, delta):
+    print('%8s: %3.2f microseconds per greenlet' % (name, delta * 1000000.0 / N))
+
 def test(spawn, sleep, kwargs):
-    start = time()
+    start = curtime()
     for _ in xrange(N):
         spawn(incr, sleep, **kwargs)
-    delta = time() - start
-    print('spawning: %.1f microseconds per greenlet' % (delta * 1000000.0 / N))
+    _report('spawning', curtime() - start)
     assert counter == 0, counter
-    start = time()
+    start = curtime()
     sleep(0)
-    delta = time() - start
+    _report('sleep(0)', curtime() - start)
     assert counter == N, (counter, N)
-    print('sleep(0): %.1f microseconds per greenlet' % (delta * 1000000.0 / N))
 
 
 def bench_none(options):
     kwargs = options.kwargs
-    start = time()
+    start = curtime()
     for _ in xrange(N):
         incr(noop, **kwargs)
-    delta = time() - start
     assert counter == N, (counter, N)
-    print('%.2f microseconds' % (delta * 1000000.0 / N))
+    _report('noop', curtime() - start)
 
 
 def bench_gevent(options):
@@ -70,10 +76,12 @@ def bench_geventpool(options):
     from gevent.pool import Pool
     p = Pool()
     test(p.spawn, sleep, options.kwargs)
-    start = time()
+    start = curtime()
+
     p.join()
-    delta = time() - start
-    print('joining: %.1f microseconds per greenlet' % (delta * 1000000.0 / N))
+
+    _report('joining', curtime() - start)
+
 
 
 def bench_eventlet(options):
@@ -84,40 +92,24 @@ def bench_eventlet(options):
             return
         raise
     print('using eventlet from %s' % eventlet.__file__)
-    from eventlet.api import spawn, sleep, use_hub
+    from eventlet import spawn, sleep
+    from eventlet.hubs import use_hub
     if options.eventlet_hub is not None:
         use_hub(options.eventlet_hub)
     test(spawn, sleep, options.kwargs)
 
 
-def bench_eventlet1(options):
-    try:
-        import eventlet
-    except ImportError:
-        if options.ignore_import_errors:
-            return
-        raise
-    print('using eventlet from %s' % eventlet.__file__)
-    from eventlet.proc import spawn_greenlet as spawn
-    from eventlet.api import sleep, use_hub
-    if options.eventlet_hub:
-        use_hub(options.eventlet_hub)
-    if options.with_kwargs:
-        print('eventlet.proc.spawn_greenlet does support kwargs')
-        return
-    test(spawn, sleep, options.kwargs)
 
-
-def bench_all(options):
-    import time
+def bench_all():
+    from time import sleep
     error = 0
-    names = all()
-    random.shuffle(names)
+    names = sorted(all())
+
     for func in names:
         cmd = '%s %s %s --ignore-import-errors' % (sys.executable, __file__, func)
         print(cmd)
         sys.stdout.flush()
-        time.sleep(0.01)
+        sleep(0.01)
         if os.system(cmd):
             error = 1
             print('%s failed' % cmd)
@@ -148,7 +140,7 @@ def all_functions():
     return [globals()['bench_%s' % x] for x in all()]
 
 
-if __name__ == '__main__':
+def main():
     import argparse
     parser = argparse.ArgumentParser()
     parser.add_argument('--with-kwargs', default=False, action='store_true')
@@ -161,7 +153,10 @@ if __name__ == '__main__':
     else:
         options.kwargs = {}
     if options.benchmark == 'all':
-        bench_all(options)
+        bench_all()
     else:
         function = globals()['bench_' + options.benchmark]
         function(options)
+
+if __name__ == '__main__':
+    main()
