@@ -1,7 +1,14 @@
 # Copyright (c) 2009-2012 Denis Bilenko. See LICENSE for details.
 from __future__ import absolute_import
+
+from collections import deque
 import sys
+from weakref import ref as wref
+
+
 from greenlet import greenlet
+from greenlet import getcurrent
+
 from gevent._compat import PY3
 from gevent._compat import PYPY
 from gevent._compat import reraise
@@ -12,11 +19,10 @@ from gevent.hub import GreenletExit
 from gevent.hub import InvalidSwitchError
 from gevent.hub import Waiter
 from gevent.hub import get_hub
-from gevent.hub import getcurrent
 from gevent.hub import iwait
 from gevent.hub import wait
 from gevent.timeout import Timeout
-from collections import deque
+
 
 
 __all__ = [
@@ -87,10 +93,55 @@ class FailureSpawnedLink(SpawnedLink):
         if not source.successful():
             return SpawnedLink.__call__(self, source)
 
+
+class _Frame(object):
+
+    __slots__ = ('f_code', 'f_lineno', 'f_back')
+
+    def __init__(self, f_code, f_lineno):
+        self.f_code = f_code
+        self.f_lineno = f_lineno
+        self.f_back = None
+
+    f_globals = property(lambda _self: None)
+
 class Greenlet(greenlet):
-    """A light-weight cooperatively-scheduled execution unit.
+    """
+    A light-weight cooperatively-scheduled execution unit.
     """
     # pylint:disable=too-many-public-methods,too-many-instance-attributes
+
+    #: A dictionary that is shared between all the greenlets
+    #: in a "spawn tree", that is, a spawning greenlet and all
+    #: its descendent greenlets. All children of the main (root)
+    #: greenlet start their own spawn trees. Assign a new dictionary
+    #: to this attribute on an instance of this class to create a new
+    #: spawn tree (as far as locals are concerned).
+    #:
+    #: .. versionadded:: 1.3a2
+    spawn_tree_locals = None
+
+    #: A weak-reference to the greenlet that was current when this object
+    #: was created. Note that the :attr:`parent` attribute is always the
+    #: hub.
+    #:
+    #: .. versionadded:: 1.3a2
+    spawning_greenlet = None
+
+    #: A lightweight frame-like object capturing the stack when
+    #: this greenlet was created as well as the stack when the spawning
+    #: greenlet was created (if applicable). This can be passed to
+    #: :func:`traceback.print_stack`.
+    #:
+    #: .. versionadded:: 1.3a2
+    spawning_stack = None
+
+    #: A class attribute specifying how many levels of the spawning
+    #: stack will be kept. Specify a smaller number for higher performance,
+    #: specify a larger value for improved debugging.
+    #:
+    #: .. versionadded:: 1.3a2
+    spawning_stack_limit = 10
 
     value = None
     _exc_info = ()
@@ -128,6 +179,20 @@ class Greenlet(greenlet):
         # Python 3.4: 2.32usec with keywords vs 1.74usec with positional
         # Python 3.3: 2.55usec with keywords vs 1.92usec with positional
         # Python 2.7: 1.73usec with keywords vs 1.40usec with positional
+
+        # Timings taken Feb 21 2018 prior to integration of #755
+        # python -m perf timeit -s 'import gevent' 'gevent.Greenlet()'
+        # 3.6.4       : Mean +- std dev: 1.08 us +- 0.05 us
+        # 2.7.14      : Mean +- std dev: 1.44 us +- 0.06 us
+        # PyPy2 5.10.0: Mean +- std dev: 2.14 ns +- 0.08 ns
+
+        # After the integration of spawning_stack, spawning_greenlet,
+        # and spawn_tree_locals on that same date:
+        # 3.6.4       : Mean +- std dev: 8.92 us +- 0.36 us ->  8.2x
+        # 2.7.14      : Mean +- std dev: 14.8 us +- 0.5 us  -> 10.2x
+        # PyPy2 5.10.0: Mean +- std dev: 3.24 us +- 0.17 us ->  1.5x
+
+
         greenlet.__init__(self, None, get_hub())
 
         if run is not None:
@@ -143,6 +208,35 @@ class Greenlet(greenlet):
             self.args = args
         if kwargs:
             self._kwargs = kwargs
+
+        spawner = getcurrent()
+        self.spawning_greenlet = wref(spawner)
+        try:
+            self.spawn_tree_locals = spawner.spawn_tree_locals
+        except AttributeError:
+            self.spawn_tree_locals = {}
+            if spawner.parent:
+                # The main greenlet has no parent.
+                # Its children get separate locals.
+                spawner.spawn_tree_locals = self.spawn_tree_locals
+
+
+        frame = sys._getframe()
+        previous = None
+        limit = self.spawning_stack_limit
+        while limit and frame:
+            limit -= 1
+            next_frame = _Frame(frame.f_code, frame.f_lineno)
+            if previous:
+                previous.f_back = next_frame
+            else:
+                self.spawning_stack = next_frame
+            previous = next_frame
+
+            frame = frame.f_back
+
+        previous.f_back = getattr(spawner, 'spawning_stack', None)
+
 
     @property
     def kwargs(self):

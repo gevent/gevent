@@ -9,6 +9,7 @@ from functools import partial as _functools_partial
 import os
 import sys
 import traceback
+from weakref import ref as wref
 
 from greenlet import greenlet as RawGreenlet, getcurrent, GreenletExit
 
@@ -110,6 +111,10 @@ def spawn_raw(function, *args, **kwargs):
     occasionally be useful as an optimization if there are many
     greenlets involved.
 
+    .. versionchanged:: 1.1a3
+        Verify that ``function`` is callable, raising a TypeError if not. Previously,
+        the spawned greenlet would have failed the first time it was switched to.
+
     .. versionchanged:: 1.1b1
        If *function* is not callable, immediately raise a :exc:`TypeError`
        instead of spawning a greenlet that will raise an uncaught TypeError.
@@ -118,12 +123,15 @@ def spawn_raw(function, *args, **kwargs):
         Accept keyword arguments for ``function`` as previously (incorrectly)
         documented. Note that this may incur an additional expense.
 
-    .. versionchanged:: 1.1a3
-        Verify that ``function`` is callable, raising a TypeError if not. Previously,
-        the spawned greenlet would have failed the first time it was switched to.
+    .. versionchanged:: 1.3a2
+       Populate the ``spawning_greenlet`` and ``spawn_tree_locals``
+       attributes of the returned greenlet.
+
     """
     if not callable(function):
         raise TypeError("function must be callable")
+
+    # The hub is always the parent.
     hub = get_hub()
 
     # The callback class object that we use to run this doesn't
@@ -136,6 +144,19 @@ def spawn_raw(function, *args, **kwargs):
     else:
         g = RawGreenlet(function, hub)
         hub.loop.run_callback(g.switch, *args)
+
+    # See greenlet.py's Greenlet class. We capture the cheap
+    # parts to maintain the tree structure, but we do not capture
+    # the stack because that's too expensive.
+    current = getcurrent()
+    g.spawning_greenlet = wref(current)
+    # See Greenlet for how trees are maintained.
+    try:
+        g.spawn_tree_locals = current.spawn_tree_locals
+    except AttributeError:
+        g.spawn_tree_locals = {}
+        if current.parent:
+            current.spawn_tree_locals = g.spawn_tree_locals
     return g
 
 

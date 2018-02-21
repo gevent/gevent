@@ -47,6 +47,13 @@ generated.
              its value.
 
 .. autoattribute:: Greenlet.exception
+.. autoattribute:: Greenlet.spawn_tree_locals
+   :annotation: = {}
+.. autoattribute:: Greenlet.spawning_greenlet
+   :annotation: = weakref.ref()
+.. autoattribute:: Greenlet.spawning_stack
+   :annotation: = <Frame>
+.. autoattribute:: Greenlet.spawning_stack_limit
 
 .. automethod:: Greenlet.ready
 .. automethod:: Greenlet.successful
@@ -113,6 +120,8 @@ Spawn helpers
 
 Useful general functions
 ========================
+
+.. seealso:: :mod:`gevent.util`
 
 .. function:: getcurrent()
 

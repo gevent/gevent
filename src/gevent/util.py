@@ -3,11 +3,14 @@
 Low-level utilities.
 """
 
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, division
 
 import functools
 
-__all__ = ['wrap_errors']
+__all__ = [
+    'wrap_errors',
+    'format_run_info',
+]
 
 
 class wrap_errors(object):
@@ -59,7 +62,7 @@ class wrap_errors(object):
     def __getattr__(self, name):
         return getattr(self.__func, name)
 
-def dump_stacks():
+def format_run_info():
     """
     Request information about the running threads of the current process.
 
@@ -68,39 +71,82 @@ def dump_stacks():
 
     :return: A sequence of text lines detailing the stacks of running
             threads and greenlets. (One greenlet will duplicate one thread,
-            the current thread and greenlet.)
+            the current thread and greenlet.) Extra information about
+            :class:`gevent.greenlet.Greenlet` object will also be returned.
 
     .. versionadded:: 1.3a1
+    .. versionchanged:: 1.3a2
+       Renamed from ``dump_stacks`` to reflect the fact that this
+       prints additional information about greenlets, including their
+       spawning stack, parent, and any spawn tree locals.
     """
-    dump = []
 
-    # threads
-    import threading  # Late import this stuff because it may get monkey-patched
-    import traceback
+    lines = []
+
+    _format_thread_info(lines)
+    _format_greenlet_info(lines)
+    return lines
+
+def _format_thread_info(lines):
+    import threading
     import sys
-    import gc
-
-    from greenlet import greenlet
+    import traceback
 
     threads = {th.ident: th.name for th in threading.enumerate()}
 
+    lines.append('*' * 80)
+    lines.append('* Threads')
+
+    thread = None
+    frame = None
     for thread, frame in sys._current_frames().items():
-        dump.append('Thread 0x%x (%s)\n' % (thread, threads.get(thread)))
-        dump.append(''.join(traceback.format_stack(frame)))
-        dump.append('\n')
+        lines.append("*" * 80)
+        lines.append('Thread 0x%x (%s)\n' % (thread, threads.get(thread)))
+        lines.append(''.join(traceback.format_stack(frame)))
 
-    # greenlets
+    # We may have captured our own frame, creating a reference
+    # cycle, so clear it out.
+    del thread
+    del frame
+    del lines
+    del threads
 
-    # if greenlet is present, let's dump each greenlet stack
+def _format_greenlet_info(lines):
+    from greenlet import greenlet
+    import pprint
+    import traceback
+    import gc
+
+    def _noop():
+        return None
+
     # Use the gc module to inspect all objects to find the greenlets
     # since there isn't a global registry
+    lines.append('*' * 80)
+    lines.append('* Greenlets')
+    seen_locals = set() # {id}
     for ob in gc.get_objects():
         if not isinstance(ob, greenlet):
             continue
         if not ob:
             continue  # not running anymore or not started
-        dump.append('Greenlet %s\n' % ob)
-        dump.append(''.join(traceback.format_stack(ob.gr_frame)))
-        dump.append('\n')
+        lines.append('*' * 80)
+        lines.append('Greenlet %s\n' % ob)
+        lines.append(''.join(traceback.format_stack(ob.gr_frame)))
+        spawning_stack = getattr(ob, 'spawning_stack', None)
+        if spawning_stack:
+            lines.append("Spawned at: ")
+            lines.append(''.join(traceback.format_stack(spawning_stack)))
+        parent = getattr(ob, 'spawning_greenlet', _noop)()
+        if parent is not None:
+            lines.append("Parent greenlet: %s\n" % (parent,))
+        spawn_tree_locals = getattr(ob, 'spawn_tree_locals', None)
+        if spawn_tree_locals and id(spawn_tree_locals) not in seen_locals:
+            seen_locals.add(id(spawn_tree_locals))
+            lines.append("Spawn Tree Locals:\n")
+            lines.append(pprint.pformat(spawn_tree_locals))
 
-    return dump
+
+    del lines
+
+dump_stacks = format_run_info

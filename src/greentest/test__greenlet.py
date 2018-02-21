@@ -649,6 +649,29 @@ class TestBasic(greentest.TestCase):
         g.join()
         self.assertFalse(g.exc_info)
 
+    def test_tree_locals(self):
+        g = g2 = None
+        def func():
+            child = greenlet.Greenlet()
+            self.assertIs(child.spawn_tree_locals, getcurrent().spawn_tree_locals)
+            self.assertIs(child.spawning_greenlet(), getcurrent())
+        g = greenlet.Greenlet(func)
+        g2 = greenlet.Greenlet(func)
+        # Creating those greenlets did not give the main greenlet
+        # a locals dict.
+        self.assertFalse(hasattr(getcurrent(), 'spawn_tree_locals'),
+                         getcurrent())
+        self.assertIsNot(g.spawn_tree_locals, g2.spawn_tree_locals)
+        g.start()
+        g.join()
+
+        raw = gevent.spawn_raw(func)
+        self.assertIsNotNone(raw.spawn_tree_locals)
+        self.assertIsNot(raw.spawn_tree_locals, g.spawn_tree_locals)
+        self.assertIs(raw.spawning_greenlet(), getcurrent())
+        while not raw.dead:
+            gevent.sleep(0.01)
+
 
 class TestStart(greentest.TestCase):
 
