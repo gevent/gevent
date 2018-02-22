@@ -259,6 +259,7 @@ class TestStuff(greentest.TestCase):
         g = gevent.spawn(lambda: 1)
         self.assertGreaterEqual(g.minimal_ident, 0)
         self.assertGreaterEqual(g.parent.minimal_ident, 0)
+        g.join() # don't leave dangling, breaks the leak checks
 
     def test_wait_noerrors(self):
         x = gevent.spawn(lambda: 1)
