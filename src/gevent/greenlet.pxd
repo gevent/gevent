@@ -97,7 +97,7 @@ cdef wait
 cdef iwait
 cdef reraise
 cdef InvalidSwitchError
-cdef IdentRegistry ident_registry
+
 
 @cython.final
 @cython.internal
