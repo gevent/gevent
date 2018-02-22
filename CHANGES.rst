@@ -90,6 +90,9 @@
   a "spawn tree local" mapping. Based on a proposal from PayPal and
   comments by Mahmoud Hashemi and Kurt Rose. See :issue:`755`.
 
+- The :mod:`gevent.greenlet` module is now compiled with Cython to
+  offset any performance loss due to :issue:`755`.
+
 1.3a1 (2018-01-27)
 ==================
 

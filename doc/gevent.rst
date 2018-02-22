@@ -36,25 +36,7 @@ generated.
 
 .. automethod:: Greenlet.__init__
 
-.. attribute:: Greenlet.value
-
-    Holds the value returned by the function if the greenlet has
-    finished successfully. Until then, or if it finished in error, ``None``.
-
-    .. tip:: Recall that a greenlet killed with the default
-             :class:`GreenletExit` is considered to have finished
-             successfully, and the ``GreenletExit`` exception will be
-             its value.
-
 .. autoattribute:: Greenlet.exception
-.. autoattribute:: Greenlet.spawn_tree_locals
-   :annotation: = {}
-.. autoattribute:: Greenlet.spawning_greenlet
-   :annotation: = weakref.ref()
-.. autoattribute:: Greenlet.spawning_stack
-   :annotation: = <Frame>
-.. autoattribute:: Greenlet.spawning_stack_limit
-
 .. automethod:: Greenlet.ready
 .. automethod:: Greenlet.successful
 .. automethod:: Greenlet.start

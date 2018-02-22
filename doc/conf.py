@@ -223,7 +223,6 @@ latex_documents = [
 # prevent some stuff from showing up in docs
 import socket
 import gevent.socket
-del gevent.Greenlet.throw
 for item in gevent.socket.__all__[:]:
     if getattr(gevent.socket, item) is getattr(socket, item, None):
         gevent.socket.__all__.remove(item)

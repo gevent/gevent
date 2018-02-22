@@ -374,7 +374,8 @@ class TestStuff(greentest.TestCase):
         link(results.listener2)
         link(results.listener3)
         sleep(DELAY * 10)
-        assert results.results == [5], results.results
+        self.assertEqual([5], results.results)
+
 
     def test_multiple_listeners_error_unlink_Greenlet_link(self):
         p = gevent.spawn(lambda: 5)
@@ -515,14 +516,14 @@ class TestBasic(greentest.TestCase):
         assert g.exception is None
 
         gevent.sleep(0.001)
-        assert g
-        assert not g.dead
-        assert g.started
-        assert not g.ready()
-        assert not g.successful()
-        assert g.value is None
-        assert g.exception is None
-        assert not link_test
+        self.assertTrue(g)
+        self.assertFalse(g.dead, g)
+        self.assertTrue(g.started, g)
+        self.assertFalse(g.ready(), g)
+        self.assertFalse(g.successful(), g)
+        self.assertIsNone(g.value, g)
+        self.assertIsNone(g.exception, g)
+        self.assertFalse(link_test)
 
         gevent.sleep(0.02)
         assert not g

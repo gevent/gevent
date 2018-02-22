@@ -11,7 +11,7 @@ import greentest
 import gevent
 from gevent import util
 
-
+@greentest.skipOnPyPy("5.10.x is *very* slow formatting stacks")
 class TestFormat(greentest.TestCase):
 
     def test_basic(self):
