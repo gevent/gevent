@@ -674,6 +674,9 @@ class Greenlet(greenlet):
         # pylint: disable=method-hidden
         return
 
+    def has_links(self):
+        return len(self._links)
+
     def rawlink(self, callback):
         """Register a callable to be executed when the greenlet finishes execution.
 
@@ -707,6 +710,14 @@ class Greenlet(greenlet):
             self._links.remove(callback) # pylint:disable=no-member
         except ValueError:
             pass
+
+    def unlink_all(self):
+        """
+        Remove all the callbacks.
+
+        .. versionadded:: 1.3a2
+        """
+        del self._links[:]
 
     def link_value(self, callback, SpawnedLink=SuccessSpawnedLink):
         """

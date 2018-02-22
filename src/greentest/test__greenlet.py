@@ -96,14 +96,17 @@ class TestUnlink(greentest.TestCase):
 
     def _test_func(self, p, link):
         link(dummy_test_func)
-        assert len(p._links) == 1, p._links
+        self.assertEqual(1, p.has_links())
+
         p.unlink(dummy_test_func)
-        assert not p._links, p._links
+        self.assertEqual(0, p.has_links())
 
         link(self.setUp)
-        assert len(p._links) == 1, p._links
+        self.assertEqual(1, p.has_links())
+
         p.unlink(self.setUp)
-        assert not p._links, p._links
+        self.assertEqual(0, p.has_links())
+
         p.kill()
 
     def test_func_link(self):
@@ -170,8 +173,7 @@ class TestReturn_link(LinksTestCase):
     p = None
 
     def cleanup(self):
-        while self.p._links:
-            self.p._links.pop()
+        self.p.unlink_all()
         self.p = None
 
     def test_return(self):

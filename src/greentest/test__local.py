@@ -273,7 +273,7 @@ class GeventLocalTestCase(greentest.TestCase):
             self.assertEqual(count, len(deleted_sentinels))
 
             # The links were removed as well.
-            self.assertEqual(list(running_greenlet._links), [])
+            self.assertFalse(running_greenlet.has_links())
 
 
         running_greenlet = gevent.spawn(demonstrate_my_local)
