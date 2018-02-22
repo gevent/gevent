@@ -1,5 +1,5 @@
 [MASTER]
-extension-pkg-whitelist=gevent.libuv._corecffi,gevent.libev._corecffi,gevent.local
+extension-pkg-whitelist=gevent.libuv._corecffi,gevent.libev._corecffi,gevent.local,gevent._ident
 
 [MESSAGES CONTROL]
 

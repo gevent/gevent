@@ -146,6 +146,8 @@ class Greenlet(greenlet):
             object. Previously, passing a non-callable object would fail after the greenlet
             was spawned.
 
+        .. rubric:: Attributes
+
         .. attribute:: value
 
             Holds the value returned by the function if the greenlet has
@@ -245,6 +247,7 @@ class Greenlet(greenlet):
         self._notifier = None
         self._formatted_info = None
         self._links = []
+        self._ident = None
 
         # Initial state: None.
         # Completed successfully: (None, None, None)
@@ -266,6 +269,30 @@ class Greenlet(greenlet):
         self.spawning_stack = _extract_stack(self.spawning_stack_limit,
                                              getattr(spawner, 'spawning_stack', None))
 
+    def _get_minimal_ident(self):
+        reg = self.parent.ident_registry
+        return reg.get_ident(self)
+
+    @property
+    def minimal_ident(self):
+        """
+        A small, unique integer that identifies this object.
+
+        This is similar to :attr:`threading.Thread.ident` (and `id`)
+        in that as long as this object is alive, no other greenlet *in
+        this hub* will have the same id, but it makes a stronger
+        guarantee that the assigned values will be small and
+        sequential. Sometime after this object has died, the value
+        will be available for reuse.
+
+        To get ids that are unique across all hubs, combine this with
+        the hub's ``minimal_ident``.
+
+        .. versionadded:: 1.3a2
+        """
+        if self._ident is None:
+            self._ident = self._get_minimal_ident()
+        return self._ident
 
     @property
     def kwargs(self):

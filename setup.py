@@ -71,10 +71,23 @@ if os.path.exists(venv_include_dir):
 
 
 GREENLET = Extension(name="gevent.greenlet",
-                     sources=["src/gevent/greenlet.py"],
-                     depends=['src/gevent/greenlet.pxd'],
+                     sources=[
+                         "src/gevent/greenlet.py",
+                     ],
+                     depends=[
+                         'src/gevent/greenlet.pxd',
+                         'src/gevent/_ident.pxd',
+                         'src/gevent/_ident.py'
+                     ],
                      include_dirs=include_dirs)
 GREENLET = cythonize1(GREENLET)
+
+
+IDENT = Extension(name="gevent._ident",
+                  sources=["src/gevent/_ident.py"],
+                  depends=['src/gevent/_ident.pxd'],
+                  include_dirs=include_dirs)
+IDENT = cythonize1(IDENT)
 
 EXT_MODULES = [
     CORE,
@@ -82,6 +95,7 @@ EXT_MODULES = [
     SEMAPHORE,
     LOCAL,
     GREENLET,
+    IDENT,
 ]
 
 LIBEV_CFFI_MODULE = 'src/gevent/libev/_corecffi_build.py:ffi'
@@ -110,6 +124,7 @@ if PYPY:
     EXT_MODULES.remove(CORE)
     EXT_MODULES.remove(LOCAL)
     EXT_MODULES.remove(GREENLET)
+    EXT_MODULES.remove(IDENT)
     EXT_MODULES.remove(SEMAPHORE)
     # By building the semaphore with Cython under PyPy, we get
     # atomic operations (specifically, exiting/releasing), at the

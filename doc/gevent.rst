@@ -37,6 +37,10 @@ generated.
 .. automethod:: Greenlet.__init__
 
 .. autoattribute:: Greenlet.exception
+.. autoattribute:: Greenlet.minimal_ident
+
+.. rubric:: Methods
+
 .. automethod:: Greenlet.ready
 .. automethod:: Greenlet.successful
 .. automethod:: Greenlet.start
