@@ -4,6 +4,7 @@ from __future__ import print_function
 import sys
 import os
 import os.path
+import sysconfig
 
 # setuptools is *required* on Windows
 # (https://bugs.python.org/issue23246) and for PyPy. No reason not to
@@ -59,11 +60,28 @@ LOCAL = Extension(name="gevent.local",
                   depends=['src/gevent/local.pxd'])
 LOCAL = cythonize1(LOCAL)
 
+# The sysconfig dir is not enough if we're in a virtualenv
+# See https://github.com/pypa/pip/issues/4610
+include_dirs = [sysconfig.get_path("include")]
+venv_include_dir = os.path.join(sys.prefix, 'include', 'site',
+                                'python' + sysconfig.get_python_version())
+venv_include_dir = os.path.abspath(venv_include_dir)
+if os.path.exists(venv_include_dir):
+    include_dirs.append(venv_include_dir)
+
+
+GREENLET = Extension(name="gevent.greenlet",
+                     sources=["src/gevent/greenlet.py"],
+                     depends=['src/gevent/greenlet.pxd'],
+                     include_dirs=include_dirs)
+GREENLET = cythonize1(GREENLET)
+
 EXT_MODULES = [
     CORE,
     ARES,
     SEMAPHORE,
     LOCAL,
+    GREENLET,
 ]
 
 LIBEV_CFFI_MODULE = 'src/gevent/libev/_corecffi_build.py:ffi'
@@ -91,6 +109,7 @@ if PYPY:
     setup_requires = []
     EXT_MODULES.remove(CORE)
     EXT_MODULES.remove(LOCAL)
+    EXT_MODULES.remove(GREENLET)
     EXT_MODULES.remove(SEMAPHORE)
     # By building the semaphore with Cython under PyPy, we get
     # atomic operations (specifically, exiting/releasing), at the

@@ -96,14 +96,17 @@ class TestUnlink(greentest.TestCase):
 
     def _test_func(self, p, link):
         link(dummy_test_func)
-        assert len(p._links) == 1, p._links
+        self.assertEqual(1, p.has_links())
+
         p.unlink(dummy_test_func)
-        assert not p._links, p._links
+        self.assertEqual(0, p.has_links())
 
         link(self.setUp)
-        assert len(p._links) == 1, p._links
+        self.assertEqual(1, p.has_links())
+
         p.unlink(self.setUp)
-        assert not p._links, p._links
+        self.assertEqual(0, p.has_links())
+
         p.kill()
 
     def test_func_link(self):
@@ -170,8 +173,7 @@ class TestReturn_link(LinksTestCase):
     p = None
 
     def cleanup(self):
-        while self.p._links:
-            self.p._links.pop()
+        self.p.unlink_all()
         self.p = None
 
     def test_return(self):
@@ -374,7 +376,8 @@ class TestStuff(greentest.TestCase):
         link(results.listener2)
         link(results.listener3)
         sleep(DELAY * 10)
-        assert results.results == [5], results.results
+        self.assertEqual([5], results.results)
+
 
     def test_multiple_listeners_error_unlink_Greenlet_link(self):
         p = gevent.spawn(lambda: 5)
@@ -402,6 +405,8 @@ class A(object):
 
 hexobj = re.compile('-?0x[0123456789abcdef]+L?', re.I)
 
+class Subclass(gevent.Greenlet):
+    pass
 
 class TestStr(greentest.TestCase):
 
@@ -424,6 +429,17 @@ class TestStr(greentest.TestCase):
         str_g = hexobj.sub('X', str(g))
         str_g = str_g.replace(__name__, 'module')
         self.assertEqual(str_g, '<Greenlet at X: <bound method A.method of <module.A object at X>>>')
+
+    def test_subclass(self):
+        g = Subclass()
+        str_g = hexobj.sub('X', str(g))
+        str_g = str_g.replace(__name__, 'module')
+        self.assertEqual(str_g, '<Subclass at X: _run>')
+
+        g = Subclass(None, 'question', answer=42)
+        str_g = hexobj.sub('X', str(g))
+        str_g = str_g.replace(__name__, 'module')
+        self.assertEqual(str_g, "<Subclass at X: _run('question', answer=42)>")
 
 
 class TestJoin(AbstractGenericWaitTestCase):
@@ -515,14 +531,14 @@ class TestBasic(greentest.TestCase):
         assert g.exception is None
 
         gevent.sleep(0.001)
-        assert g
-        assert not g.dead
-        assert g.started
-        assert not g.ready()
-        assert not g.successful()
-        assert g.value is None
-        assert g.exception is None
-        assert not link_test
+        self.assertTrue(g)
+        self.assertFalse(g.dead, g)
+        self.assertTrue(g.started, g)
+        self.assertFalse(g.ready(), g)
+        self.assertFalse(g.successful(), g)
+        self.assertIsNone(g.value, g)
+        self.assertIsNone(g.exception, g)
+        self.assertFalse(link_test)
 
         gevent.sleep(0.02)
         assert not g
@@ -648,6 +664,29 @@ class TestBasic(greentest.TestCase):
         g.start()
         g.join()
         self.assertFalse(g.exc_info)
+
+    def test_tree_locals(self):
+        g = g2 = None
+        def func():
+            child = greenlet.Greenlet()
+            self.assertIs(child.spawn_tree_locals, getcurrent().spawn_tree_locals)
+            self.assertIs(child.spawning_greenlet(), getcurrent())
+        g = greenlet.Greenlet(func)
+        g2 = greenlet.Greenlet(func)
+        # Creating those greenlets did not give the main greenlet
+        # a locals dict.
+        self.assertFalse(hasattr(getcurrent(), 'spawn_tree_locals'),
+                         getcurrent())
+        self.assertIsNot(g.spawn_tree_locals, g2.spawn_tree_locals)
+        g.start()
+        g.join()
+
+        raw = gevent.spawn_raw(func)
+        self.assertIsNotNone(raw.spawn_tree_locals)
+        self.assertIsNot(raw.spawn_tree_locals, g.spawn_tree_locals)
+        self.assertIs(raw.spawning_greenlet(), getcurrent())
+        while not raw.dead:
+            gevent.sleep(0.01)
 
 
 class TestStart(greentest.TestCase):

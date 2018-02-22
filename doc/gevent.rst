@@ -36,18 +36,7 @@ generated.
 
 .. automethod:: Greenlet.__init__
 
-.. attribute:: Greenlet.value
-
-    Holds the value returned by the function if the greenlet has
-    finished successfully. Until then, or if it finished in error, ``None``.
-
-    .. tip:: Recall that a greenlet killed with the default
-             :class:`GreenletExit` is considered to have finished
-             successfully, and the ``GreenletExit`` exception will be
-             its value.
-
 .. autoattribute:: Greenlet.exception
-
 .. automethod:: Greenlet.ready
 .. automethod:: Greenlet.successful
 .. automethod:: Greenlet.start
@@ -113,6 +102,8 @@ Spawn helpers
 
 Useful general functions
 ========================
+
+.. seealso:: :mod:`gevent.util`
 
 .. function:: getcurrent()
 

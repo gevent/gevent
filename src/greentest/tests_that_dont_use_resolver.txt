@@ -126,3 +126,4 @@ test_asyncore.py
 
 test___config.py
 test__destroy_default_loop.py
+test__util.py
