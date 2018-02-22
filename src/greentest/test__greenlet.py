@@ -405,6 +405,8 @@ class A(object):
 
 hexobj = re.compile('-?0x[0123456789abcdef]+L?', re.I)
 
+class Subclass(gevent.Greenlet):
+    pass
 
 class TestStr(greentest.TestCase):
 
@@ -427,6 +429,17 @@ class TestStr(greentest.TestCase):
         str_g = hexobj.sub('X', str(g))
         str_g = str_g.replace(__name__, 'module')
         self.assertEqual(str_g, '<Greenlet at X: <bound method A.method of <module.A object at X>>>')
+
+    def test_subclass(self):
+        g = Subclass()
+        str_g = hexobj.sub('X', str(g))
+        str_g = str_g.replace(__name__, 'module')
+        self.assertEqual(str_g, '<Subclass at X: _run>')
+
+        g = Subclass(None, 'question', answer=42)
+        str_g = hexobj.sub('X', str(g))
+        str_g = str_g.replace(__name__, 'module')
+        self.assertEqual(str_g, "<Subclass at X: _run('question', answer=42)>")
 
 
 class TestJoin(AbstractGenericWaitTestCase):

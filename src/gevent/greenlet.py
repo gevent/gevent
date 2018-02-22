@@ -9,7 +9,6 @@ from weakref import ref as wref
 from greenlet import greenlet
 from greenlet import getcurrent
 
-from gevent._compat import PY3
 from gevent._compat import PYPY
 from gevent._compat import reraise
 from gevent._tblib import dump_traceback
@@ -244,6 +243,7 @@ class Greenlet(greenlet):
         self._kwargs = kwargs
         self.value = None
         self._notifier = None
+        self._formatted_info = None
         self._links = []
 
         # Initial state: None.
@@ -393,19 +393,24 @@ class Greenlet(greenlet):
             result += ': ' + formatted
         return result + '>'
 
-    _formatted_info = None
 
     def _formatinfo(self):
         info = self._formatted_info
         if info is not None:
             return info
 
-        try:
-            result = getfuncname(self.__dict__['_run'])
-        except Exception: # pylint:disable=broad-except
-            # Don't cache
-            return ''
+        # Are we running an arbitrary function provided to the constructor,
+        # or did a subclass override _run?
+        func = self._run
+        im_self = getattr(func, '__self__', None)
+        if im_self is self:
+            funcname = '_run'
+        elif im_self is not None:
+            funcname = repr(func)
+        else:
+            funcname = getattr(func, '__name__', '') or repr(func)
 
+        result = funcname
         args = []
         if self.args:
             args = [repr(x)[:50] for x in self.args]
@@ -672,7 +677,7 @@ class Greenlet(greenlet):
             self._report_result(result)
         finally:
             self.__dict__.pop('_run', None)
-            self.args = None
+            self.args = ()
             self._kwargs = None
 
     def _run(self):
@@ -880,21 +885,3 @@ def killall(greenlets, exception=GreenletExit, block=True, timeout=None):
             t.cancel()
     else:
         loop.run_callback(_killall, greenlets, exception)
-
-
-if PY3:
-    _meth_self = "__self__"
-else:
-    _meth_self = "im_self"
-
-
-def getfuncname(func):
-    if not hasattr(func, _meth_self):
-        try:
-            funcname = func.__name__
-        except AttributeError:
-            pass
-        else:
-            if funcname != '<lambda>':
-                return funcname
-    return repr(func)

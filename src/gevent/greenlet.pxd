@@ -49,12 +49,14 @@ cdef class Greenlet(greenlet):
     cdef object _notifier
     cdef object _start_event
     cdef dict _kwargs
+    cdef str _formatted_info
 
     cpdef bint has_links(self)
     cpdef join(self, timeout=*)
     cpdef bint ready(self)
     cpdef bint successful(self)
     cpdef rawlink(self, object callback)
+    cpdef str _formatinfo(self)
 
     cdef bint __started_but_aborted(self)
     cdef bint __start_cancelled_by_kill(self)
