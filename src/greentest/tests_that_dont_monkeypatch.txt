@@ -13,3 +13,4 @@ test__socket_errors.py
 test__socket_send_memoryview.py
 test__socket_timeout.py
 test__examples.py
+test__issue330.py

@@ -36,11 +36,11 @@ cdef class Greenlet(greenlet):
     cdef public dict spawn_tree_locals
 
     cdef readonly _Frame spawning_stack
-    # A test case reads these, otherwise they would
+    # A test case reads this, otherwise they would
     # be private
-    cdef readonly tuple _exc_info
     cdef readonly list _links
 
+    cdef object tuple _exc_info
     cdef object _notifier
     cdef object _start_event
     cdef dict _kwargs
