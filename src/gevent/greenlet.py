@@ -132,7 +132,8 @@ class Greenlet(greenlet):
 
     spawning_stack_limit = 10
 
-    def __init__(self, run=None, *args, **kwargs): # pylint:disable=keyword-arg-before-vararg
+    # pylint:disable=keyword-arg-before-vararg,super-init-not-called
+    def __init__(self, run=None, *args, **kwargs):
         """
         Greenlet(run=None, *args, **kwargs) -> Greenlet
 
