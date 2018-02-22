@@ -2,12 +2,10 @@
 
 cimport cython
 
-
 cdef extern from "greenlet/greenlet.h":
 
   ctypedef class greenlet.greenlet [object PyGreenlet]:
       pass
-
 
 cdef class SpawnedLink:
     cdef public object callback
@@ -29,6 +27,15 @@ cdef class _Frame:
     cdef public _Frame f_back
 
 
+@cython.final
+@cython.locals(
+               previous=_Frame,
+               first=_Frame,
+               next_frame=_Frame)
+cdef _Frame _extract_stack(int limit, _Frame f_back)
+
+
+
 cdef class Greenlet(greenlet):
     cdef readonly object value
     cdef readonly args
@@ -44,17 +51,46 @@ cdef class Greenlet(greenlet):
     cdef dict _kwargs
 
     cpdef bint has_links(self)
+    cpdef join(self, timeout=*)
+    cpdef bint ready(self)
+    cpdef bint successful(self)
+    cpdef rawlink(self, object callback)
 
     cdef bint __started_but_aborted(self)
     cdef bint __start_cancelled_by_kill(self)
     cdef bint __start_pending(self)
     cdef bint __never_started_or_killed(self)
     cdef bint __start_completed(self)
+    cdef __handle_death_before_start(self, tuple args)
 
     cdef __cancel_start(self)
 
     cdef _report_result(self, object result)
     cdef _report_error(self, tuple exc_info)
+    # This is used as the target of a callback
+    # from the loop, and so needs to be a cpdef
+    cpdef _notify_links(self)
+    # IMapUnordered greenlets in pools need to access this
+    # method
+    cpdef _raise_exception(self)
+
+# Declare a bunch of imports as cdefs so they can
+# be accessed directly as static vars without
+# doing a module global lookup. This is especially important
+# for spawning greenlets.
+cdef _greenlet__init__
+cdef get_hub
+cdef wref
+cdef getcurrent
+
+cdef Timeout
+cdef dump_traceback
+cdef load_traceback
+cdef Waiter
+cdef wait
+cdef iwait
+cdef reraise
+cdef InvalidSwitchError
 
 
 @cython.final

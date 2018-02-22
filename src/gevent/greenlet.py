@@ -1,5 +1,5 @@
 # Copyright (c) 2009-2012 Denis Bilenko. See LICENSE for details.
-# cython: auto_pickle=False
+# cython: auto_pickle=False,embedsignature=True,always_allow_keywords=False
 from __future__ import absolute_import
 
 import sys
@@ -102,6 +102,28 @@ class _Frame(object):
 
     f_globals = property(lambda _self: None)
 
+def _extract_stack(limit, f_back):
+    previous = None
+    frame = sys._getframe()
+    first = None
+
+    first = previous = _Frame(frame.f_code, frame.f_lineno)
+    limit -= 1
+    frame = frame.f_back
+
+    while limit and frame is not None:
+        limit -= 1
+        next_frame = _Frame(frame.f_code, frame.f_lineno)
+        previous.f_back = next_frame
+        previous = next_frame
+        frame = frame.f_back
+
+    previous.f_back = f_back
+    return first
+
+
+_greenlet__init__ = greenlet.__init__
+
 class Greenlet(greenlet):
     """
     A light-weight cooperatively-scheduled execution unit.
@@ -193,13 +215,13 @@ class Greenlet(greenlet):
         # PyPy2 5.10.0: Mean +- std dev: 3.24 us +- 0.17 us ->  1.5x
 
         # Compiling with Cython gets us to these numbers:
-        # 3.6.4        : Mean +- std dev: 4.36 us +- 0.23 us
-        # 2.7.12       : Mean +- std dev: 3.81 us +- 0.15 us
-        # PyPy2 5.10.0 : Mean +- std dev: 3.63 us +- 0.22 us
+        # 3.6.4        : Mean +- std dev: 3.63 us +- 0.14 us
+        # 2.7.14       : Mean +- std dev: 3.37 us +- 0.20 us
+        # PyPy2 5.10.0 : Mean +- std dev: 4.44 us +- 0.28 us
 
 
-        #greenlet.__init__(self, None, get_hub())
-        super(Greenlet, self).__init__(None, get_hub())
+        _greenlet__init__(self, None, get_hub())
+        #super(Greenlet, self).__init__(None, get_hub())
 
         if run is not None:
             self._run = run
@@ -220,11 +242,13 @@ class Greenlet(greenlet):
         self.args = args
         self._kwargs = kwargs
         self.value = None
-        self._exc_info = ()
         self._notifier = None
-
-
         self._links = []
+
+        # Initial state: None.
+        # Completed successfully: (None, None, None)
+        # Failed with exception: (t, v, dump_traceback(tb)))
+        self._exc_info = None
 
         spawner = getcurrent()
         self.spawning_greenlet = wref(spawner)
@@ -232,27 +256,14 @@ class Greenlet(greenlet):
             self.spawn_tree_locals = spawner.spawn_tree_locals
         except AttributeError:
             self.spawn_tree_locals = {}
-            if spawner.parent:
+            if spawner.parent is not None:
                 # The main greenlet has no parent.
                 # Its children get separate locals.
                 spawner.spawn_tree_locals = self.spawn_tree_locals
 
 
-        frame = sys._getframe()
-        previous = None
-        limit = self.spawning_stack_limit
-        while limit and frame:
-            limit -= 1
-            next_frame = _Frame(frame.f_code, frame.f_lineno)
-            if previous:
-                previous.f_back = next_frame
-            else:
-                self.spawning_stack = next_frame
-            previous = next_frame
-
-            frame = frame.f_back
-
-        previous.f_back = getattr(spawner, 'spawning_stack', None)
+        self.spawning_stack = _extract_stack(self.spawning_stack_limit,
+                                             getattr(spawner, 'spawning_stack', None))
 
 
     @property
@@ -268,7 +279,7 @@ class Greenlet(greenlet):
         return self.parent.loop
 
     def __nonzero__(self):
-        return self._start_event is not None and self._exc_info == ()
+        return self._start_event is not None and self._exc_info is None
     try:
         __bool__ = __nonzero__ # Python 3
     except NameError: # pragma: no cover
@@ -325,9 +336,9 @@ class Greenlet(greenlet):
         self._start_event.stop()
         self._start_event.close()
 
-    def __handle_death_before_start(self, *args):
+    def __handle_death_before_start(self, args):
         # args is (t, v, tb) or simply t or v
-        if self._exc_info == () and self.dead:
+        if self._exc_info is None and self.dead:
             # the greenlet was never switched to before and it will never be, _report_error was not called
             # the result was not set and the links weren't notified. let's do it here.
             # checking that self.dead is true is essential, because throw() does not necessarily kill the greenlet
@@ -357,7 +368,7 @@ class Greenlet(greenlet):
             This function is only guaranteed to return true or false *values*, not
             necessarily the literal constants ``True`` or ``False``.
         """
-        return self.dead or self._exc_info
+        return self.dead or self._exc_info is not None
 
     def successful(self):
         """
@@ -371,7 +382,7 @@ class Greenlet(greenlet):
         .. note:: This function is only guaranteed to return true or false *values*,
               not necessarily the literal constants ``True`` or ``False``.
         """
-        return self._exc_info and self._exc_info[1] is None
+        return self._exc_info is not None and self._exc_info[1] is None
 
     def __repr__(self):
         classname = self.__class__.__name__
@@ -411,7 +422,7 @@ class Greenlet(greenlet):
         Holds the exception instance raised by the function if the
         greenlet has finished with an error. Otherwise ``None``.
         """
-        return self._exc_info[1] if self._exc_info else None
+        return self._exc_info[1] if self._exc_info is not None else None
 
     @property
     def exc_info(self):
@@ -424,7 +435,7 @@ class Greenlet(greenlet):
         .. versionadded:: 1.1
         """
         e = self._exc_info
-        if e and e[0] is not None:
+        if e is not None and e[0] is not None:
             return (e[0], e[1], load_traceback(e[2]))
 
     def throw(self, *args):
@@ -447,7 +458,7 @@ class Greenlet(greenlet):
                 # LoopExit.
                 greenlet.throw(self, *args)
         finally:
-            self.__handle_death_before_start(*args)
+            self.__handle_death_before_start(args)
 
     def start(self):
         """Schedule the greenlet to run in this loop iteration"""
@@ -544,7 +555,7 @@ class Greenlet(greenlet):
         self.__cancel_start()
 
         if self.dead:
-            self.__handle_death_before_start(exception)
+            self.__handle_death_before_start((exception,))
         else:
             waiter = Waiter() if block else None
             self.parent.loop.run_callback(_kill, self, exception, waiter)
