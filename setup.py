@@ -143,9 +143,13 @@ if PYPY:
     # As of PyPy 5.10, this builds, but won't import (missing _Py_ReprEnter)
     EXT_MODULES.remove(CORE)
 
+    # This uses PyWeakReference and doesn't compile on PyPy
+    EXT_MODULES.remove(IDENT)
+
     _to_cythonize.remove(LOCAL)
     _to_cythonize.remove(GREENLET)
     _to_cythonize.remove(SEMAPHORE)
+    _to_cythonize.remove(IDENT)
 
 for mod in _to_cythonize:
     EXT_MODULES.remove(mod)
