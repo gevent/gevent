@@ -1,3 +1,4 @@
+# cython: auto_pickle=False,embedsignature=True,always_allow_keywords=False
 """
 Greenlet-local objects.
 
@@ -152,18 +153,32 @@ affects what we see:
 """
 from __future__ import print_function
 
+import sys
+_PYPY = hasattr(sys, 'pypy_version_info')
 from copy import copy
 from weakref import ref
-from gevent.hub import getcurrent
+
+locals()['getcurrent'] = __import__('greenlet').getcurrent
+locals()['greenlet_init'] = lambda: None
 
 
-__all__ = ["local"]
+__all__ = [
+    "local",
+]
 
 
 class _wrefdict(dict):
     """A dict that can be weak referenced"""
 
-class _thread_deleted(object):
+class _greenlet_deleted(object):
+    """
+    A weakref callback for when the greenlet
+    is deleted.
+
+    If the greenlet is a `gevent.greenlet.Greenlet` and
+    supplies ``rawlink``, that will be used instead of a
+    weakref.
+    """
     __slots__ = ('idt', 'wrdicts')
 
     def __init__(self, idt, wrdicts):
@@ -176,12 +191,12 @@ class _thread_deleted(object):
             dicts.pop(self.idt, None)
 
 class _local_deleted(object):
-    __slots__ = ('key', 'wrthread', 'thread_deleted')
+    __slots__ = ('key', 'wrthread', 'greenlet_deleted')
 
-    def __init__(self, key, wrthread, thread_deleted):
+    def __init__(self, key, wrthread, greenlet_deleted):
         self.key = key
         self.wrthread = wrthread
-        self.thread_deleted = thread_deleted
+        self.greenlet_deleted = greenlet_deleted
 
     def __call__(self, _unused):
         thread = self.wrthread()
@@ -191,7 +206,7 @@ class _local_deleted(object):
             except AttributeError:
                 pass
             else:
-                unlink(self.thread_deleted)
+                unlink(self.greenlet_deleted)
             del thread.__dict__[self.key]
 
 class _localimpl(object):
@@ -212,6 +227,19 @@ class _localimpl(object):
         # again ourselves. MUST do this before setting any attributes.
         _localimpl_create_dict(self)
 
+class _localimpl_dict_entry(object):
+    """
+    The object that goes in the ``dicts`` of ``_localimpl``
+    object for each thread.
+    """
+    # This is a class, not just a tuple, so that cython can optimize
+    # attribute access
+    __slots__ = ('wrgreenlet', 'localdict')
+
+    def __init__(self, wrgreenlet, localdict):
+        self.wrgreenlet = wrgreenlet
+        self.localdict = localdict
+
 # We use functions instead of methods so that they can be cdef'd in
 # local.pxd; if they were cdef'd as methods, they would cause
 # the creation of a pointer and a vtable. This happens
@@ -222,15 +250,16 @@ class _localimpl(object):
 def _localimpl_get_dict(self):
     """Return the dict for the current thread. Raises KeyError if none
     defined."""
-    thread = getcurrent()
-    return self.dicts[id(thread)][1]
+    greenlet = getcurrent() # pylint:disable=undefined-variable
+    entry = self.dicts[id(greenlet)]
+    return entry.localdict
 
 def _localimpl_create_dict(self):
     """Create a new dict for the current thread, and return it."""
     localdict = {}
     key = self.key
-    thread = getcurrent()
-    idt = id(thread)
+    greenlet = getcurrent() # pylint:disable=undefined-variable
+    idt = id(greenlet)
 
     wrdicts = ref(self.dicts)
 
@@ -243,24 +272,24 @@ def _localimpl_create_dict(self):
     # can pro-actively clear out with a link, avoiding the
     # issue described above.Use rawlink to avoid spawning any
     # more greenlets.
-    thread_deleted = _thread_deleted(idt, wrdicts)
+    greenlet_deleted = _greenlet_deleted(idt, wrdicts)
 
     try:
-        rawlink = thread.rawlink
+        rawlink = greenlet.rawlink
     except AttributeError:
-        wrthread = ref(thread, thread_deleted)
+        wrthread = ref(greenlet, greenlet_deleted)
     else:
-        rawlink(thread_deleted)
-        wrthread = ref(thread)
+        rawlink(greenlet_deleted)
+        wrthread = ref(greenlet)
 
     # When the localimpl is deleted, remove the thread attribute.
-    local_deleted = _local_deleted(key, wrthread, thread_deleted)
+    local_deleted = _local_deleted(key, wrthread, greenlet_deleted)
 
 
     wrlocal = ref(self, local_deleted)
-    thread.__dict__[key] = wrlocal
+    greenlet.__dict__[key] = wrlocal
 
-    self.dicts[idt] = wrthread, localdict
+    self.dicts[idt] = _localimpl_dict_entry(wrthread, localdict)
     return localdict
 
 
@@ -276,22 +305,45 @@ def _local_get_dict(self):
         self.__init__(*args, **kw)
     return dct
 
+def _init():
+    greenlet_init() # pylint:disable=undefined-variable
+
+_local_attrs = {
+    '_local__impl',
+    '_local_type_get_descriptors',
+    '_local_type_set_or_del_descriptors',
+    '_local_type_del_descriptors',
+    '_local_type_set_descriptors',
+    '_local_type',
+    '_local_type_vars',
+    '__class__',
+    '__cinit__',
+}
+
 class local(object):
     """
     An object whose attributes are greenlet-local.
     """
-    __slots__ = ('_local__impl',)
+    __slots__ = tuple(_local_attrs - {'__class__', '__cinit__'})
 
     def __cinit__(self, *args, **kw):
         if args or kw:
             if type(self).__init__ == object.__init__:
                 raise TypeError("Initialization arguments are not supported", args, kw)
         impl = _localimpl(args, kw)
-        self._local__impl = impl # pylint:disable=attribute-defined-outside-init
+        # pylint:disable=attribute-defined-outside-init
+        self._local__impl = impl
+        get, dels, sets_or_dels, sets = _local_find_descriptors(self)
+        self._local_type_get_descriptors = get
+        self._local_type_set_or_del_descriptors = sets_or_dels
+        self._local_type_del_descriptors = dels
+        self._local_type_set_descriptors = sets
+        self._local_type = type(self)
+        self._local_type_vars = set(dir(self._local_type))
 
     def __getattribute__(self, name): # pylint:disable=too-many-return-statements
-        if name in ('__class__', '_local__impl', '__cinit__'):
-            # The _local__impl and __cinit__ won't be hit by the
+        if name in _local_attrs:
+            # The _local__impl,  __cinit__, etc, won't be hit by the
             # Cython version, if we've done things right. If we haven't,
             # they will be, and this will produce an error.
             return object.__getattribute__(self, name)
@@ -311,11 +363,10 @@ class local(object):
         # Similarly, a __getattr__ will still be called by _oga() if needed
         # if it's not in the dict.
 
-        type_self = type(self)
         # Optimization: If we're not subclassed, then
         # there can be no descriptors except for methods, which will
         # never need to use __dict__.
-        if type_self is local:
+        if self._local_type is local:
             return dct[name] if name in dct else object.__getattribute__(self, name)
 
         # NOTE: If this is a descriptor, this will invoke its __get__.
@@ -323,9 +374,8 @@ class local(object):
         # a None for the instance argument could mess us up here.
         # But this is faster than a loop over mro() checking each class __dict__
         # manually.
-        type_attr = getattr(type_self, name, _marker)
         if name in dct:
-            if type_attr is _marker:
+            if name not in self._local_type_vars:
                 # If there is a dict value, and nothing in the type,
                 # it can't possibly be a descriptor, so it is just returned.
                 return dct[name]
@@ -337,33 +387,34 @@ class local(object):
             # descriptor at all (doesn't have __get__), the instance wins.
             # NOTE that the docs for descriptors say that these methods must be
             # defined on the *class* of the object in the type.
-            type_type_attr = type(type_attr)
-            if not hasattr(type_type_attr, '__get__'):
+            if name not in self._local_type_get_descriptors:
                 # Entirely not a descriptor. Instance wins.
                 return dct[name]
-            if hasattr(type_type_attr, '__set__') or hasattr(type_type_attr, '__delete__'):
+            if name in self._local_type_set_or_del_descriptors:
                 # A data descriptor.
                 # arbitrary code execution while these run. If they touch self again,
                 # they'll call back into us and we'll repeat the dance.
-                return type_type_attr.__get__(type_attr, self, type_self)
+                type_attr = getattr(self._local_type, name)
+                return type(type_attr).__get__(type_attr, self, self._local_type)
             # Last case is a non-data descriptor. Instance wins.
             return dct[name]
-        elif type_attr is not _marker:
+        elif name in self._local_type_vars:
+            type_attr = getattr(self._local_type, name)
+
             # It's not in the dict at all. Is it in the type?
-            type_type_attr = type(type_attr)
-            if not hasattr(type_type_attr, '__get__'):
+            if name not in self._local_type_get_descriptors:
                 # Not a descriptor, can't execute code
                 return type_attr
-            return type_type_attr.__get__(type_attr, self, type_self)
+            return type(type_attr).__get__(type_attr, self, self._local_type)
 
         # It wasn't in the dict and it wasn't in the type.
         # So the next step is to invoke type(self)__getattr__, if it
         # exists, otherwise raise an AttributeError.
         # we will invoke type(self).__getattr__ or raise an attribute error.
-        if hasattr(type_self, '__getattr__'):
-            return type_self.__getattr__(self, name)
+        if hasattr(self._local_type, '__getattr__'):
+            return self._local_type.__getattr__(self, name)
         raise AttributeError("%r object has no attribute '%s'"
-                             % (type_self.__name__, name))
+                             % (self._local_type.__name__, name))
 
     def __setattr__(self, name, value):
         if name == '__dict__':
@@ -371,25 +422,23 @@ class local(object):
                 "%r object attribute '__dict__' is read-only"
                 % type(self))
 
-        if name == '_local__impl':
-            object.__setattr__(self, '_local__impl', value)
+        if name in _local_attrs:
+            object.__setattr__(self, name, value)
             return
 
         dct = _local_get_dict(self)
 
-        type_self = type(self)
-        if type_self is local:
+        if self._local_type is local:
             # Optimization: If we're not subclassed, we can't
             # have data descriptors, so this goes right in the dict.
             dct[name] = value
             return
 
-        type_attr = getattr(type_self, name, _marker)
-        if type_attr is not _marker:
-            type_type_attr = type(type_attr)
-            if hasattr(type_type_attr, '__set__'):
+        if name in self._local_type_vars:
+            if name in self._local_type_set_descriptors:
+                type_attr = getattr(self._local_type, name, _marker)
                 # A data descriptor, like a property or a slot.
-                type_type_attr.__set__(type_attr, self, value)
+                type(type_attr).__set__(type_attr, self, value)
                 return
         # Otherwise it goes directly in the dict
         dct[name] = value
@@ -400,13 +449,11 @@ class local(object):
                 "%r object attribute '__dict__' is read-only"
                 % self.__class__.__name__)
 
-        type_self = type(self)
-        type_attr = getattr(type_self, name, _marker)
-        if type_attr is not _marker:
-            type_type_attr = type(type_attr)
-            if hasattr(type_type_attr, '__delete__'):
+        if name in self._local_type_vars:
+            if name in self._local_type_del_descriptors:
                 # A data descriptor, like a property or a slot.
-                type_type_attr.__delete__(type_attr, self)
+                type_attr = getattr(self._local_type, name, _marker)
+                type(type_attr).__delete__(type_attr, self)
                 return
         # Otherwise it goes directly in the dict
 
@@ -431,14 +478,32 @@ class local(object):
         return instance
 
 def _local__copy_dict_from(self, impl, duplicate):
-    current = getcurrent()
+    current = getcurrent() # pylint:disable=undefined-variable
     currentId = id(current)
     new_impl = self._local__impl
     assert new_impl is not impl
-    tpl = new_impl.dicts[currentId]
-    new_impl.dicts[currentId] = (tpl[0], duplicate)
+    entry = new_impl.dicts[currentId]
+    new_impl.dicts[currentId] = _localimpl_dict_entry(entry.wrgreenlet, duplicate)
 
+def _local_find_descriptors(self):
+    type_self = type(self)
+    gets = set()
+    dels = set()
+    set_or_del = set()
+    sets = set()
 
+    for attr_name in dir(type_self):
+        attr = getattr(type_self, attr_name)
+        type_attr = type(attr)
+        if hasattr(type_attr, '__get__'):
+            gets.add(attr_name)
+        if hasattr(type_attr, '__delete__'):
+            dels.add(attr_name)
+            set_or_del.add(attr_name)
+        if hasattr(type_attr, '__set__'):
+            sets.add(attr_name)
+
+    return (gets, dels, set_or_del, sets)
 
 # Cython doesn't let us use __new__, it requires
 # __cinit__. But we need __new__ if we're not compiled
@@ -457,8 +522,7 @@ try:
     # in different ways. In CPython and PyPy3, it must be wrapped with classmethod;
     # in PyPy2, it must not. In either case, the args that get passed to
     # it are stil wrong.
-    import sys
-    if hasattr(sys, 'pypy_version_info') and sys.version_info[:2] < (3, 0):
+    if _PYPY and sys.version_info[:2] < (3, 0):
         local.__new__ = __new__
     else:
         local.__new__ = classmethod(__new__)
@@ -466,3 +530,5 @@ except TypeError: # pragma: no cover
     pass
 finally:
     del sys
+
+_init()

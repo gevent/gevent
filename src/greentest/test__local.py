@@ -46,10 +46,20 @@ class Sentinel(object):
 
 
 class MyLocal(local):
+
+    CLASS_PROP = 42
+
     def __init__(self):
         local.__init__(self)
         self.sentinel = Sentinel()
         created_sentinels.append(id(self.sentinel))
+
+    @property
+    def desc(self):
+        return self
+
+class MyLocalSubclass(MyLocal):
+    pass
 
 class WithGetattr(local):
 
@@ -214,6 +224,22 @@ class GeventLocalTestCase(greentest.TestCase):
         b.path = '321'
 
         self.assertNotEqual(a.path, b.path, 'The values in the two objects must be different')
+
+    def test_class_attr(self, kind=MyLocal):
+        mylocal = kind()
+        self.assertEqual(42, mylocal.CLASS_PROP)
+
+        mylocal.CLASS_PROP = 1
+        self.assertEqual(1, mylocal.CLASS_PROP)
+        self.assertEqual(mylocal.__dict__['CLASS_PROP'], 1)
+
+        del mylocal.CLASS_PROP
+        self.assertEqual(42, mylocal.CLASS_PROP)
+
+        self.assertIs(mylocal, mylocal.desc)
+
+    def test_class_attr_subclass(self):
+        self.test_class_attr(kind=MyLocalSubclass)
 
     def test_locals_collected_when_greenlet_dead_but_still_referenced(self):
         # https://github.com/gevent/gevent/issues/387
