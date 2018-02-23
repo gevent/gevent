@@ -60,13 +60,12 @@ class TestTrace(unittest.TestCase):
             old = sys.gettrace()
         else:
             old = None
-        PYPY = hasattr(sys, 'pypy_version_info')
+
         lst = []
         try:
             def trace(frame, ev, _arg):
                 lst.append((frame.f_code.co_filename, frame.f_lineno, ev))
-                if not PYPY: # because we expect to trace on PyPy
-                    print("TRACE: %s:%s %s" % lst[-1])
+                print("TRACE: %s:%s %s" % lst[-1])
                 return trace
 
             with allocate_lock():
@@ -91,8 +90,7 @@ class TestTrace(unittest.TestCase):
             def trace(frame, ev, _arg):
                 with l:
                     lst.append((frame.f_code.co_filename, frame.f_lineno, ev))
-                if not PYPY: # because we expect to trace on PyPy
-                    print("TRACE: %s:%s %s" % lst[-1])
+                print("TRACE: %s:%s %s" % lst[-1])
                 return trace
 
             l2 = allocate_lock()
@@ -162,5 +160,4 @@ class TestTrace(unittest.TestCase):
 
 
 if __name__ == "__main__":
-    import greentest
     greentest.main()

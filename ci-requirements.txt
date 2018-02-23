@@ -6,7 +6,7 @@ wheel
 # name to be created so that we can have both foo.py and _foo.so
 # at the same time.
 # This is an arbitrary commit that seems to work well.
--e git+https://github.com/cython/cython.git@63cd3bbb5eac22b92808eeb90b512359e3def20a#egg=cython
+-e git+https://github.com/cython/cython.git@471025858954d5b8429a9361a77dc41c6650ac52#egg=cython
 
 # Python 3.7b1 requires this.
 greenlet>=0.4.13
