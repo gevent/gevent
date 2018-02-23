@@ -105,7 +105,8 @@
 
 - Simple subclasses of ``gevent.local.local`` now have the same
   (substantially improved) performance characteristics of plain
-  ``gevent.local.local`` itself. If there are any compatibility
+  ``gevent.local.local`` itself, making them 2 to 3 times faster than
+  before. See :pr:`1117`. If there are any compatibility
   problems, please open issues.
 
 
