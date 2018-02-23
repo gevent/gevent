@@ -22,12 +22,15 @@ import os
 import sys
 
 import gevent.core
+from gevent import _compat as gsysinfo
 
-PYPY = hasattr(sys, 'pypy_version_info')
+PYPY = gsysinfo.PYPY
 VERBOSE = sys.argv.count('-v') > 1
-WIN = sys.platform.startswith("win")
+WIN = gsysinfo.WIN
 LINUX = sys.platform.startswith('linux')
 OSX = sys.platform == 'darwin'
+
+PURE_PYTHON = gsysinfo.PURE_PYTHON
 
 # XXX: Formalize this better
 LIBUV = 'libuv' in gevent.core.loop.__module__ # pylint:disable=no-member

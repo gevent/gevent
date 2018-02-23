@@ -741,6 +741,25 @@ class TestRef(greentest.TestCase):
             g.kill()
 
 
+@greentest.skipOnPurePython("Needs C extension")
+class TestCExt(greentest.TestCase):
+
+    def test_c_extension(self):
+        self.assertEqual(greenlet.Greenlet.__module__,
+                         'gevent._greenlet')
+        self.assertEqual(greenlet.SpawnedLink.__module__,
+                         'gevent._greenlet')
+
+@greentest.skipWithCExtensions("Needs pure python")
+class TestPure(greentest.TestCase):
+
+    def test_pure(self):
+        self.assertEqual(greenlet.Greenlet.__module__,
+                         'gevent.greenlet')
+        self.assertEqual(greenlet.SpawnedLink.__module__,
+                         'gevent.greenlet')
+
+
 X = object()
 
 del AbstractGenericGetTestCase

@@ -101,6 +101,9 @@ leaktest: test_prelim
 	@${PYTHON} scripts/travis.py fold_start leaktest "Running leak tests"
 	cd src/greentest && GEVENT_RESOLVER=thread GEVENTTEST_LEAKCHECK=1 ${PYTHON} testrunner.py --config known_failures.py --quiet --ignore tests_that_dont_do_leakchecks.txt
 	@${PYTHON} scripts/travis.py fold_end leaktest
+	@${PYTHON} scripts/travis.py fold_start default "Testing default backend pure python"
+	PURE_PYTHON=1 GEVENTTEST_COVERAGE=1 make basictest
+	@${PYTHON} scripts/travis.py fold_end default
 
 bench:
 	${PYTHON} src/greentest/bench_sendall.py
@@ -179,7 +182,7 @@ develop:
 	@${PYTHON} scripts/travis.py fold_end install
 
 test-py27: $(PY27)
-	PYTHON=python2.7.14 PATH=$(BUILD_RUNTIMES)/versions/python2.7.14/bin:$(PATH) make develop lint leaktest allbackendtest
+	PYTHON=python2.7.14 PATH=$(BUILD_RUNTIMES)/versions/python2.7.14/bin:$(PATH) make develop lint leaktest cffibackendtest coverage_combine
 
 test-py34: $(PY34)
 	PYTHON=python3.4.7 PATH=$(BUILD_RUNTIMES)/versions/python3.4.7/bin:$(PATH) make develop basictest

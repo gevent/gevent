@@ -109,6 +109,11 @@
   before. See :pr:`1117`. If there are any compatibility
   problems, please open issues.
 
+- On CPython, allow the pure-Python implementations of
+  ``gevent.greenlet``, ``gevent.local`` and ``gevent.sempahore`` to be
+  used when the environment variable ``PURE_PYTHON`` is set. This is
+  not recommended except for debugging and testing. See :issue:`1118`.
+
 
 1.3a1 (2018-01-27)
 ==================

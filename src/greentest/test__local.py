@@ -308,6 +308,20 @@ class GeventLocalTestCase(greentest.TestCase):
 
         self.assertEqual(count, len(deleted_sentinels))
 
+@greentest.skipOnPurePython("Needs C extension")
+class TestCExt(greentest.TestCase):
+
+    def test_c_extension(self):
+        self.assertEqual(local.__module__,
+                         'gevent._local')
+
+@greentest.skipWithCExtensions("Needs pure-python")
+class TestPure(greentest.TestCase):
+
+    def test_extension(self):
+        self.assertEqual(local.__module__,
+                         'gevent.local')
+
 
 if __name__ == '__main__':
     greentest.main()

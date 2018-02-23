@@ -1,8 +1,13 @@
 setuptools
 wheel
-# Python 3.7b1 requires at least this version.
-# 0.28 is preferred due to 3.7 specific changes.
-cython>=0.27.3
+
+# Python 3.7 requires at least Cython 0.27.3.
+# 0.28 is faster, and (important!) lets us specify the target module
+# name to be created so that we can have both foo.py and _foo.so
+# at the same time.
+# This is an arbitrary commit that seems to work well.
+-e git+https://github.com/cython/cython.git@63cd3bbb5eac22b92808eeb90b512359e3def20a#egg=cython
+
 # Python 3.7b1 requires this.
 greenlet>=0.4.13
 pylint>=1.8.0

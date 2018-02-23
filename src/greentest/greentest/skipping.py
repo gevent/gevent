@@ -40,6 +40,9 @@ skipOnPyPyOnCI = _do_not_skip
 skipOnPyPy3OnCI = _do_not_skip
 skipOnPyPy3 = _do_not_skip
 
+skipOnPurePython = unittest.skip if sysinfo.PURE_PYTHON else _do_not_skip
+skipWithCExtensions = unittest.skip if not sysinfo.PURE_PYTHON else _do_not_skip
+
 skipOnLibuv = _do_not_skip
 skipOnLibuvOnWin = _do_not_skip
 skipOnLibuvOnCI = _do_not_skip

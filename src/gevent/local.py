@@ -532,3 +532,6 @@ finally:
     del sys
 
 _init()
+
+from gevent._util import import_c_accel
+import_c_accel(globals(), 'gevent._local')

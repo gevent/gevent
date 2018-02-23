@@ -73,6 +73,8 @@ from greentest.skipping import skipOnLibuvOnWin
 from greentest.skipping import skipOnLibuvOnCI
 from greentest.skipping import skipOnLibuvOnCIOnPyPy
 from greentest.skipping import skipOnLibuvOnPyPyOnWin
+from greentest.skipping import skipOnPurePython
+from greentest.skipping import skipWithCExtensions
 
 
 from greentest.exception import ExpectedException

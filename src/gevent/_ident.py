@@ -74,3 +74,7 @@ class IdentRegistry(object):
 
     def __len__(self):
         return len(self._registry)
+
+
+from gevent._util import import_c_accel
+import_c_accel(globals(), 'gevent.__ident')
