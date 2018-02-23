@@ -89,7 +89,7 @@
   and the code location that spawned them, in addition to maintaining
   a "spawn tree local" mapping. Based on a proposal from PayPal and
   comments by Mahmoud Hashemi and Kurt Rose. See :issue:`755` and
-  :pr:`1115`.
+  :pr:`1115`. As always, feedback is appreciated.
 
 - The :mod:`gevent.greenlet` module is now compiled with Cython to
   offset any performance decrease due to :issue:`755`. Please open
@@ -100,7 +100,8 @@
   greenlet object while it remains alive, and it can be reused after
   the greenlet object is dead. It is different in that it is small and
   sequential. Based on a proposal from PayPal and comments by Mahmoud
-  Hashemi and Kurt Rose. See :issue:`755`.
+  Hashemi and Kurt Rose. See :issue:`755`. As always, feedback is
+  appreciated.
 
 
 1.3a1 (2018-01-27)
