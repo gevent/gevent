@@ -1,6 +1,7 @@
 # cython: auto_pickle=False
 
 cimport cython
+from gevent._ident cimport IdentRegistry
 
 cdef extern from "greenlet/greenlet.h":
 
@@ -41,7 +42,6 @@ cdef class Greenlet(greenlet):
     cdef readonly args
     cdef readonly object spawning_greenlet
     cdef public dict spawn_tree_locals
-
     cdef readonly _Frame spawning_stack
 
     cdef list _links
@@ -50,6 +50,7 @@ cdef class Greenlet(greenlet):
     cdef object _start_event
     cdef dict _kwargs
     cdef str _formatted_info
+    cdef object _ident
 
     cpdef bint has_links(self)
     cpdef join(self, timeout=*)
@@ -57,6 +58,9 @@ cdef class Greenlet(greenlet):
     cpdef bint successful(self)
     cpdef rawlink(self, object callback)
     cpdef str _formatinfo(self)
+
+    @cython.locals(reg=IdentRegistry)
+    cdef _get_minimal_ident(self)
 
     cdef bint __started_but_aborted(self)
     cdef bint __start_cancelled_by_kill(self)

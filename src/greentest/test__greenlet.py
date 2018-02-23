@@ -255,6 +255,12 @@ class TestRaise_link_exception(TestRaise_link):
 
 class TestStuff(greentest.TestCase):
 
+    def test_minimal_id(self):
+        g = gevent.spawn(lambda: 1)
+        self.assertGreaterEqual(g.minimal_ident, 0)
+        self.assertGreaterEqual(g.parent.minimal_ident, 0)
+        g.join() # don't leave dangling, breaks the leak checks
+
     def test_wait_noerrors(self):
         x = gevent.spawn(lambda: 1)
         y = gevent.spawn(lambda: 2)

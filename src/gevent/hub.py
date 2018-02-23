@@ -32,6 +32,8 @@ from gevent._compat import string_types
 from gevent._compat import xrange
 from gevent._util import _NONE
 from gevent._util import readproperty
+from gevent._util import Lazy
+from gevent._ident import IdentRegistry
 
 if sys.version_info[0] <= 2:
     import thread # pylint:disable=import-error
@@ -419,7 +421,7 @@ def _config(default, envvar):
         return result.split(',')
     return result
 
-
+hub_ident_registry = IdentRegistry()
 
 class Hub(RawGreenlet):
     """
@@ -470,6 +472,11 @@ class Hub(RawGreenlet):
         self._resolver = None
         self._threadpool = None
         self.format_context = config.format_context
+        self.minimal_ident = hub_ident_registry.get_ident(self)
+
+    @Lazy
+    def ident_registry(self):
+        return IdentRegistry()
 
     @property
     def loop_class(self):

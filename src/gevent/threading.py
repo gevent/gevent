@@ -54,7 +54,7 @@ Lock = _allocate_lock
 
 
 def _cleanup(g):
-    __threading__._active.pop(id(g), None)
+    __threading__._active.pop(_get_ident(g), None)
 
 def _make_cleanup_id(gid):
     def _(_r):
@@ -111,10 +111,12 @@ class _DummyThread(_DummyThread_):
         # It'd be nice to use a pattern like "greenlet-%d", but maybe somebody out
         # there is checking thread names...
         self._name = self._Thread__name = __threading__._newname("DummyThread-%d")
+        # All dummy threads in the same native thread share the same ident
+        # (that of the native thread)
         self._set_ident()
 
         g = getcurrent()
-        gid = _get_ident(g) # same as id(g)
+        gid = _get_ident(g)
         __threading__._active[gid] = self
         rawlink = getattr(g, 'rawlink', None)
         if rawlink is not None:
