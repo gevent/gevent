@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 # Copyright 2018 gevent contributors. See LICENSE for details.
+# cython: auto_pickle=False,embedsignature=True,always_allow_keywords=False
 
 from __future__ import absolute_import
 from __future__ import division

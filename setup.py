@@ -55,11 +55,6 @@ SEMAPHORE = Extension(name="gevent._semaphore",
                       depends=['src/gevent/_semaphore.pxd'])
 SEMAPHORE = cythonize1(SEMAPHORE)
 
-LOCAL = Extension(name="gevent.local",
-                  sources=["src/gevent/local.py"],
-                  depends=['src/gevent/local.pxd'])
-LOCAL = cythonize1(LOCAL)
-
 # The sysconfig dir is not enough if we're in a virtualenv
 # See https://github.com/pypa/pip/issues/4610
 include_dirs = [sysconfig.get_path("include")]
@@ -68,6 +63,13 @@ venv_include_dir = os.path.join(sys.prefix, 'include', 'site',
 venv_include_dir = os.path.abspath(venv_include_dir)
 if os.path.exists(venv_include_dir):
     include_dirs.append(venv_include_dir)
+
+
+LOCAL = Extension(name="gevent.local",
+                  sources=["src/gevent/local.py"],
+                  depends=['src/gevent/local.pxd'],
+                  include_dirs=include_dirs)
+LOCAL = cythonize1(LOCAL)
 
 
 GREENLET = Extension(name="gevent.greenlet",

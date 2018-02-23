@@ -7,9 +7,7 @@ from weakref import ref as wref
 
 
 from greenlet import greenlet
-from greenlet import getcurrent
 
-from gevent._compat import PYPY
 from gevent._compat import reraise
 from gevent._tblib import dump_traceback
 from gevent._tblib import load_traceback
@@ -21,6 +19,9 @@ from gevent.hub import iwait
 from gevent.hub import wait
 from gevent.timeout import Timeout
 
+_PYPY = hasattr(sys, 'pypy_version_info')
+
+
 __all__ = [
     'Greenlet',
     'joinall',
@@ -28,7 +29,15 @@ __all__ = [
 ]
 
 
-if PYPY:
+
+# In Cython, we define these as 'cdef inline' functions. The
+# compilation unit cannot have a direct assignment to them (import
+# is assignment) without generating a 'lvalue is not valid target'
+# error.
+locals()['getcurrent'] = __import__('greenlet').getcurrent
+locals()['greenlet_init'] = lambda: None
+
+if _PYPY:
     import _continuation # pylint:disable=import-error
     _continulet = _continuation.continulet
 
@@ -254,7 +263,7 @@ class Greenlet(greenlet):
         # Failed with exception: (t, v, dump_traceback(tb)))
         self._exc_info = None
 
-        spawner = getcurrent()
+        spawner = getcurrent() # pylint:disable=undefined-variable
         self.spawning_greenlet = wref(spawner)
         try:
             self.spawn_tree_locals = spawner.spawn_tree_locals
@@ -317,7 +326,7 @@ class Greenlet(greenlet):
 
     ### Lifecycle
 
-    if PYPY:
+    if _PYPY:
         # oops - pypy's .dead relies on __nonzero__ which we overriden above
         @property
         def dead(self):
@@ -618,7 +627,7 @@ class Greenlet(greenlet):
         if not block:
             raise Timeout()
 
-        switch = getcurrent().switch
+        switch = getcurrent().switch # pylint:disable=undefined-variable
         self.rawlink(switch)
         try:
             t = Timeout._start_new_or_dummy(timeout)
@@ -652,7 +661,7 @@ class Greenlet(greenlet):
         if self.ready():
             return
 
-        switch = getcurrent().switch
+        switch = getcurrent().switch # pylint:disable=undefined-variable
         self.rawlink(switch)
         try:
             t = Timeout._start_new_or_dummy(timeout)
@@ -912,3 +921,8 @@ def killall(greenlets, exception=GreenletExit, block=True, timeout=None):
             t.cancel()
     else:
         loop.run_callback(_killall, greenlets, exception)
+
+def _init():
+    greenlet_init() # pylint:disable=undefined-variable
+
+_init()

@@ -2,11 +2,30 @@
 
 cimport cython
 from gevent._ident cimport IdentRegistry
+cdef bint _greenlet_imported
+cdef bint _PYPY
 
 cdef extern from "greenlet/greenlet.h":
 
-  ctypedef class greenlet.greenlet [object PyGreenlet]:
-      pass
+    ctypedef class greenlet.greenlet [object PyGreenlet]:
+        pass
+
+    # These are actually macros and so much be included
+    # (defined) in each .pxd, as are the two functions
+    # that call them.
+    greenlet PyGreenlet_GetCurrent()
+    void PyGreenlet_Import()
+
+cdef inline greenlet getcurrent():
+    return PyGreenlet_GetCurrent()
+
+cdef inline void greenlet_init():
+    global _greenlet_imported
+    if not _greenlet_imported:
+        PyGreenlet_Import()
+        _greenlet_imported = True
+
+cdef void _init()
 
 cdef class SpawnedLink:
     cdef public object callback
@@ -87,7 +106,6 @@ cdef class Greenlet(greenlet):
 cdef _greenlet__init__
 cdef get_hub
 cdef wref
-cdef getcurrent
 
 cdef Timeout
 cdef dump_traceback

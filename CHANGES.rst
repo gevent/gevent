@@ -103,6 +103,11 @@
   Hashemi and Kurt Rose. See :issue:`755`. As always, feedback is
   appreciated.
 
+- Simple subclasses of ``gevent.local.local`` now have the same
+  (substantially improved) performance characteristics of plain
+  ``gevent.local.local`` itself. If there are any compatibility
+  problems, please open issues.
+
 
 1.3a1 (2018-01-27)
 ==================

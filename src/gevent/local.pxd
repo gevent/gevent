@@ -2,6 +2,37 @@
 
 cimport cython
 
+cdef bint _PYPY
+cdef ref
+cdef copy
+
+cdef object _marker
+cdef bint _greenlet_imported
+
+
+cdef extern from "greenlet/greenlet.h":
+
+    ctypedef class greenlet.greenlet [object PyGreenlet]:
+        pass
+
+    # These are actually macros and so much be included
+    # (defined) in each .pxd, as are the two functions
+    # that call them.
+    greenlet PyGreenlet_GetCurrent()
+    void PyGreenlet_Import()
+
+cdef inline greenlet getcurrent():
+    return PyGreenlet_GetCurrent()
+
+cdef inline void greenlet_init():
+    global _greenlet_imported
+    if not _greenlet_imported:
+        PyGreenlet_Import()
+        _greenlet_imported = True
+
+
+cdef void _init()
+
 @cython.final
 @cython.internal
 cdef class _wrefdict(dict):
@@ -9,7 +40,7 @@ cdef class _wrefdict(dict):
 
 @cython.final
 @cython.internal
-cdef class _thread_deleted:
+cdef class _greenlet_deleted:
     cdef object idt
     cdef object wrdicts
 
@@ -19,7 +50,7 @@ cdef class _thread_deleted:
 cdef class _local_deleted:
     cdef str key
     cdef object wrthread
-    cdef _thread_deleted thread_deleted
+    cdef _greenlet_deleted greenlet_deleted
 
 @cython.final
 @cython.internal
@@ -30,13 +61,36 @@ cdef class _localimpl:
     cdef object __weakref__
 
 
+@cython.final
+@cython.internal
+cdef class _localimpl_dict_entry:
+    cdef object wrgreenlet
+    cdef dict localdict
+
+@cython.locals(localdict=dict, key=str, greenlet=greenlet,
+               greenlet_deleted=_greenlet_deleted,
+               local_deleted=_local_deleted)
 cdef dict _localimpl_create_dict(_localimpl self)
+
+@cython.locals(entry=_localimpl_dict_entry, greenlet=greenlet)
 cdef inline dict _localimpl_get_dict(_localimpl self)
 
+cdef set _local_attrs
 
 cdef class local:
     cdef _localimpl _local__impl
+    cdef set _local_type_get_descriptors
+    cdef set _local_type_set_or_del_descriptors
+    cdef set _local_type_del_descriptors
+    cdef set _local_type_set_descriptors
+    cdef set _local_type_vars
+    cdef type _local_type
 
+
+@cython.locals(impl=_localimpl,dct=dict)
 cdef inline dict _local_get_dict(local self)
 
+@cython.locals(entry=_localimpl_dict_entry)
 cdef _local__copy_dict_from(local self, _localimpl impl, dict duplicate)
+
+cdef tuple _local_find_descriptors(local self)
