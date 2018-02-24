@@ -2,13 +2,15 @@
 # cython: auto_pickle=False,embedsignature=True,always_allow_keywords=False
 from __future__ import absolute_import, print_function, division
 
-import sys
+from sys import _getframe as sys_getframe
+from sys import exc_info as sys_exc_info
 from weakref import ref as wref
 
 
 from greenlet import greenlet
 
 from gevent._compat import reraise
+from gevent._compat import PYPY as _PYPY
 from gevent._tblib import dump_traceback
 from gevent._tblib import load_traceback
 from gevent.hub import GreenletExit
@@ -18,8 +20,7 @@ from gevent.hub import get_hub
 from gevent.hub import iwait
 from gevent.hub import wait
 from gevent.timeout import Timeout
-
-_PYPY = hasattr(sys, 'pypy_version_info')
+from gevent._util import Lazy
 
 
 __all__ = [
@@ -108,26 +109,28 @@ class _Frame(object):
         self.f_lineno = f_lineno
         self.f_back = None
 
-    f_globals = property(lambda _self: None)
+    @property
+    def f_globals(self):
+        return None
 
-def _extract_stack(limit, f_back):
+def _Frame_from_list(frames):
     previous = None
-    frame = sys._getframe()
-    first = None
+    for frame in reversed(frames):
+        f = _Frame(*frame)
+        f.f_back = previous
+        previous = f
+    return previous
 
-    first = previous = _Frame(frame.f_code, frame.f_lineno)
-    limit -= 1
-    frame = frame.f_back
+def _extract_stack(limit):
+    frame = sys_getframe()
+    frames = []
 
     while limit and frame is not None:
         limit -= 1
-        next_frame = _Frame(frame.f_code, frame.f_lineno)
-        previous.f_back = next_frame
-        previous = next_frame
+        frames.append((frame.f_code, frame.f_lineno))
         frame = frame.f_back
 
-    previous.f_back = f_back
-    return first
+    return frames
 
 
 _greenlet__init__ = greenlet.__init__
@@ -274,9 +277,16 @@ class Greenlet(greenlet):
                 # Its children get separate locals.
                 spawner.spawn_tree_locals = self.spawn_tree_locals
 
+        self._spawning_stack_frames = _extract_stack(self.spawning_stack_limit)
+        self._spawning_stack_frames.extend(getattr(spawner, '_spawning_stack_frames', []))
 
-        self.spawning_stack = _extract_stack(self.spawning_stack_limit,
-                                             getattr(spawner, 'spawning_stack', None))
+    @Lazy
+    def spawning_stack(self):
+        # Store this in the __dict__. We don't use it from the C
+        # code. It's tempting to discard _spawning_stack_frames
+        # after this, but child greenlets may still be created
+        # that need it.
+        return _Frame_from_list(self._spawning_stack_frames)
 
     def _get_minimal_ident(self):
         reg = self.parent.ident_registry
@@ -476,9 +486,9 @@ class Greenlet(greenlet):
 
         .. versionadded:: 1.1
         """
-        exc_info = self._exc_info
-        if exc_info is not None and exc_info[0] is not None:
-            return (exc_info[0], exc_info[1], load_traceback(exc_info[2]))
+        ei = self._exc_info
+        if ei is not None and ei[0] is not None:
+            return (ei[0], ei[1], load_traceback(ei[2]))
 
     def throw(self, *args):
         """Immediately switch into the greenlet and raise an exception in it.
@@ -708,7 +718,7 @@ class Greenlet(greenlet):
             try:
                 result = self._run(*self.args, **self.kwargs)
             except: # pylint:disable=bare-except
-                self._report_error(sys.exc_info())
+                self._report_error(sys_exc_info())
                 return
             self._report_result(result)
         finally:
@@ -801,7 +811,7 @@ class Greenlet(greenlet):
             try:
                 link(self)
             except: # pylint:disable=bare-except
-                self.parent.handle_error((link, self), *sys.exc_info())
+                self.parent.handle_error((link, self), *sys_exc_info())
 
 
 class _dummy_event(object):
@@ -828,7 +838,7 @@ def _kill(glet, exception, waiter):
         glet.throw(exception)
     except: # pylint:disable=bare-except
         # XXX do we need this here?
-        glet.parent.handle_error(glet, *sys.exc_info())
+        glet.parent.handle_error(glet, *sys_exc_info())
     if waiter is not None:
         waiter.switch()
 
@@ -863,7 +873,7 @@ def _killall3(greenlets, exception, waiter):
             try:
                 g.throw(exception)
             except: # pylint:disable=bare-except
-                g.parent.handle_error(g, *sys.exc_info())
+                g.parent.handle_error(g, *sys_exc_info())
             if not g.dead:
                 diehards.append(g)
     waiter.switch(diehards)
@@ -875,7 +885,7 @@ def _killall(greenlets, exception):
             try:
                 g.throw(exception)
             except: # pylint:disable=bare-except
-                g.parent.handle_error(g, *sys.exc_info())
+                g.parent.handle_error(g, *sys_exc_info())
 
 
 def killall(greenlets, exception=GreenletExit, block=True, timeout=None):

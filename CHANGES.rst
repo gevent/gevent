@@ -87,13 +87,15 @@
 
 - Greenlet objects now keep track of their spawning parent greenlet
   and the code location that spawned them, in addition to maintaining
-  a "spawn tree local" mapping. Based on a proposal from PayPal and
-  comments by Mahmoud Hashemi and Kurt Rose. See :issue:`755` and
-  :pr:`1115`. As always, feedback is appreciated.
+  a "spawn tree local" mapping. This adds some runtime overhead in
+  relative terms, but absolute numbers are still relatively small.
+  Based on a proposal from PayPal and comments by Mahmoud Hashemi and
+  Kurt Rose. See :issue:`755` and :pr:`1115`. As always, feedback is
+  appreciated.
 
 - The :mod:`gevent.greenlet` module is now compiled with Cython to
   offset any performance decrease due to :issue:`755`. Please open
-  issues for any compatibility concerns. See :pr:`1115`.
+  issues for any compatibility concerns. See :pr:`1115` and :pr:`1120`.
 
 - Greenlet objects now have a ``minimal_ident`` property. It functions
   similarly to ``Thread.ident`` or ``id`` by uniquely identifying the
