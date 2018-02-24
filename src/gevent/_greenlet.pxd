@@ -4,6 +4,8 @@ cimport cython
 from gevent.__ident cimport IdentRegistry
 cdef bint _greenlet_imported
 cdef bint _PYPY
+cdef sys_getframe
+cdef sys_exc_info
 
 cdef extern from "greenlet/greenlet.h":
 
@@ -25,6 +27,23 @@ cdef inline void greenlet_init():
         PyGreenlet_Import()
         _greenlet_imported = True
 
+cdef extern from "Python.h":
+
+    ctypedef class types.CodeType [object PyCodeObject]:
+        pass
+
+cdef extern from "frameobject.h":
+
+    ctypedef class types.FrameType [object PyFrameObject]:
+        cdef CodeType f_code
+        cdef int f_lineno
+        # We can't declare this in the object, because it's
+        # allowed to be NULL, and Cython can't handle that.
+        # We have to go through the python machinery to get a
+        # proper None instead.
+        # cdef FrameType f_back
+
+
 cdef void _init()
 
 cdef class SpawnedLink:
@@ -42,18 +61,18 @@ cdef class FailureSpawnedLink(SpawnedLink):
 @cython.final
 @cython.internal
 cdef class _Frame:
-    cdef readonly object f_code
+    cdef readonly CodeType f_code
     cdef readonly int f_lineno
-    cdef public _Frame f_back
+    cdef readonly _Frame f_back
 
 
 @cython.final
-@cython.locals(
-               previous=_Frame,
-               first=_Frame,
-               next_frame=_Frame)
-cdef _Frame _extract_stack(int limit, _Frame f_back)
+@cython.locals(frames=list,frame=FrameType)
+cdef inline list _extract_stack(int limit)
 
+@cython.final
+@cython.locals(previous=_Frame, frame=tuple, f=_Frame)
+cdef _Frame _Frame_from_list(list frames)
 
 
 cdef class Greenlet(greenlet):
@@ -61,7 +80,10 @@ cdef class Greenlet(greenlet):
     cdef readonly args
     cdef readonly object spawning_greenlet
     cdef public dict spawn_tree_locals
-    cdef readonly _Frame spawning_stack
+
+    # This is accessed with getattr() dynamically so it
+    # must be visible to Python
+    cdef readonly list _spawning_stack_frames
 
     cdef list _links
     cdef tuple _exc_info
