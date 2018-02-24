@@ -70,5 +70,13 @@ class TestLock(greentest.TestCase):
         self.assertIsInstance(g_exc, type(std_exc))
 
 
+@greentest.skipOnPurePython("Needs C extension")
+class TestCExt(greentest.TestCase):
+
+    def test_c_extension(self):
+        self.assertEqual(Semaphore.__module__,
+                         'gevent.__semaphore')
+
+
 if __name__ == '__main__':
     greentest.main()

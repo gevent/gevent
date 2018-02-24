@@ -50,11 +50,6 @@ from _setuplibev import CORE
 from _setupares import ARES
 
 
-SEMAPHORE = Extension(name="gevent._semaphore",
-                      sources=["src/gevent/_semaphore.py"],
-                      depends=['src/gevent/_semaphore.pxd'])
-SEMAPHORE = cythonize1(SEMAPHORE)
-
 # The sysconfig dir is not enough if we're in a virtualenv
 # See https://github.com/pypa/pip/issues/4610
 include_dirs = [sysconfig.get_path("include")]
@@ -64,32 +59,41 @@ venv_include_dir = os.path.abspath(venv_include_dir)
 if os.path.exists(venv_include_dir):
     include_dirs.append(venv_include_dir)
 
+SEMAPHORE = Extension(name="gevent.__semaphore",
+                      sources=["src/gevent/_semaphore.py"],
+                      depends=['src/gevent/__semaphore.pxd'],
+                      include_dirs=include_dirs)
 
-LOCAL = Extension(name="gevent.local",
+
+LOCAL = Extension(name="gevent._local",
                   sources=["src/gevent/local.py"],
-                  depends=['src/gevent/local.pxd'],
+                  depends=['src/gevent/_local.pxd'],
                   include_dirs=include_dirs)
-LOCAL = cythonize1(LOCAL)
 
 
-GREENLET = Extension(name="gevent.greenlet",
+GREENLET = Extension(name="gevent._greenlet",
                      sources=[
                          "src/gevent/greenlet.py",
                      ],
                      depends=[
-                         'src/gevent/greenlet.pxd',
-                         'src/gevent/_ident.pxd',
+                         'src/gevent/_greenlet.pxd',
+                         'src/gevent/__ident.pxd',
                          'src/gevent/_ident.py'
                      ],
                      include_dirs=include_dirs)
-GREENLET = cythonize1(GREENLET)
 
 
-IDENT = Extension(name="gevent._ident",
+IDENT = Extension(name="gevent.__ident",
                   sources=["src/gevent/_ident.py"],
-                  depends=['src/gevent/_ident.pxd'],
+                  depends=['src/gevent/__ident.pxd'],
                   include_dirs=include_dirs)
-IDENT = cythonize1(IDENT)
+
+_to_cythonize = [
+    SEMAPHORE,
+    LOCAL,
+    GREENLET,
+    IDENT,
+]
 
 EXT_MODULES = [
     CORE,
@@ -120,28 +124,37 @@ if not SKIP_LIBUV:
     # but manylinux1 has only 2.5, so we set SKIP_LIBUV in the script make-manylinux
     cffi_modules.append(LIBUV_CFFI_MODULE)
 
+install_requires = [
+    # We need to watch our greenlet version fairly carefully,
+    # since we compile cython code that extends the greenlet object.
+    # Binary compatibility would break if the greenlet struct changes.
+    'greenlet >= 0.4.13; platform_python_implementation=="CPython"',
+]
+
+setup_requires = [
+]
+
 if PYPY:
-    install_requires = []
-    setup_requires = []
-    EXT_MODULES.remove(CORE)
+    # These use greenlet/greenlet.h, which doesn't exist on PyPy
     EXT_MODULES.remove(LOCAL)
     EXT_MODULES.remove(GREENLET)
-    EXT_MODULES.remove(IDENT)
     EXT_MODULES.remove(SEMAPHORE)
-    # By building the semaphore with Cython under PyPy, we get
-    # atomic operations (specifically, exiting/releasing), at the
-    # cost of some speed (one trivial semaphore micro-benchmark put the pure-python version
-    # at around 1s and the compiled version at around 4s). Some clever subclassing
-    # and having only the bare minimum be in cython might help reduce that penalty.
-    # NOTE: You must use version 0.23.4 or later to avoid a memory leak.
-    # https://mail.python.org/pipermail/cython-devel/2015-October/004571.html
-    # However, that's all for naught on up to and including PyPy 4.0.1 which
-    # have some serious crashing bugs with GC interacting with cython,
-    # so this is disabled
-else:
-    install_requires = ['greenlet >= 0.4.10'] # TODO: Replace this with platform markers?
-    setup_requires = []
 
+    # As of PyPy 5.10, this builds, but won't import (missing _Py_ReprEnter)
+    EXT_MODULES.remove(CORE)
+
+    # This uses PyWeakReference and doesn't compile on PyPy
+    EXT_MODULES.remove(IDENT)
+
+    _to_cythonize.remove(LOCAL)
+    _to_cythonize.remove(GREENLET)
+    _to_cythonize.remove(SEMAPHORE)
+    _to_cythonize.remove(IDENT)
+
+for mod in _to_cythonize:
+    EXT_MODULES.remove(mod)
+    EXT_MODULES.append(cythonize1(mod))
+del _to_cythonize
 
 try:
     cffi = __import__('cffi')

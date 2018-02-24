@@ -1,7 +1,7 @@
 # cython: auto_pickle=False
 
 cimport cython
-from gevent._ident cimport IdentRegistry
+from gevent.__ident cimport IdentRegistry
 cdef bint _greenlet_imported
 cdef bint _PYPY
 

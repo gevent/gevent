@@ -3,6 +3,7 @@ import sys
 import subprocess
 import unittest
 from gevent.thread import allocate_lock
+import greentest
 
 script = """
 from gevent import monkey
@@ -47,6 +48,7 @@ sys.stdout.write("..finishing..")
 
 
 class TestTrace(unittest.TestCase):
+    @greentest.skipOnPurePython("Locks can be traced in Pure Python")
     def test_untraceable_lock(self):
         # Untraceable locks were part of the solution to https://bugs.python.org/issue1733757
         # which details a deadlock that could happen if a trace function invoked
@@ -58,13 +60,12 @@ class TestTrace(unittest.TestCase):
             old = sys.gettrace()
         else:
             old = None
-        PYPY = hasattr(sys, 'pypy_version_info')
+
         lst = []
         try:
-            def trace(frame, ev, arg):
+            def trace(frame, ev, _arg):
                 lst.append((frame.f_code.co_filename, frame.f_lineno, ev))
-                if not PYPY: # because we expect to trace on PyPy
-                    print("TRACE: %s:%s %s" % lst[-1])
+                print("TRACE: %s:%s %s" % lst[-1])
                 return trace
 
             with allocate_lock():
@@ -72,28 +73,24 @@ class TestTrace(unittest.TestCase):
         finally:
             sys.settrace(old)
 
-        if not PYPY:
-            self.assertEqual(lst, [], "trace not empty")
-        else:
-            # Have an assert so that we know if we miscompile
-            self.assertTrue(len(lst) > 0, "should not compile on pypy")
+        self.assertEqual(lst, [], "trace not empty")
 
+    @greentest.skipOnPurePython("Locks can be traced in Pure Python")
     def test_untraceable_lock_uses_different_lock(self):
         if hasattr(sys, 'gettrace'):
             old = sys.gettrace()
         else:
             old = None
-        PYPY = hasattr(sys, 'pypy_version_info')
+
         PY3 = sys.version_info[0] > 2
         lst = []
         # we should be able to use unrelated locks from within the trace function
         l = allocate_lock()
         try:
-            def trace(frame, ev, arg):
+            def trace(frame, ev, _arg):
                 with l:
                     lst.append((frame.f_code.co_filename, frame.f_lineno, ev))
-                if not PYPY: # because we expect to trace on PyPy
-                    print("TRACE: %s:%s %s" % lst[-1])
+                print("TRACE: %s:%s %s" % lst[-1])
                 return trace
 
             l2 = allocate_lock()
@@ -105,20 +102,20 @@ class TestTrace(unittest.TestCase):
         finally:
             sys.settrace(old)
 
-        if not PYPY and not PY3:
+        if not PY3:
             # Py3 overrides acquire in Python to do argument checking
             self.assertEqual(lst, [], "trace not empty")
         else:
             # Have an assert so that we know if we miscompile
-            self.assertTrue(len(lst) > 0, "should not compile on pypy")
+            self.assertTrue(lst, "should not compile on pypy")
 
+    @greentest.skipOnPurePython("Locks can be traced in Pure Python")
     def test_untraceable_lock_uses_same_lock(self):
         from gevent.hub import LoopExit
         if hasattr(sys, 'gettrace'):
             old = sys.gettrace()
         else:
             old = None
-        PYPY = hasattr(sys, 'pypy_version_info')
         PY3 = sys.version_info[0] > 2
         lst = []
         e = None
@@ -126,7 +123,7 @@ class TestTrace(unittest.TestCase):
         # because it's over acquired but instead of deadlocking it raises an exception
         l = allocate_lock()
         try:
-            def trace(frame, ev, arg):
+            def trace(frame, ev, _arg):
                 with l:
                     lst.append((frame.f_code.co_filename, frame.f_lineno, ev))
                 return trace
@@ -140,12 +137,12 @@ class TestTrace(unittest.TestCase):
         finally:
             sys.settrace(old)
 
-        if not PYPY and not PY3:
+        if not PY3:
             # Py3 overrides acquire in Python to do argument checking
             self.assertEqual(lst, [], "trace not empty")
         else:
             # Have an assert so that we know if we miscompile
-            self.assertTrue(len(lst) > 0, "should not compile on pypy")
+            self.assertTrue(lst, "should not compile on pypy")
             self.assertTrue(isinstance(e, LoopExit))
 
     def run_script(self, more_args=()):
@@ -163,5 +160,4 @@ class TestTrace(unittest.TestCase):
 
 
 if __name__ == "__main__":
-    import greentest
     greentest.main()

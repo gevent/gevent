@@ -7,6 +7,8 @@ cdef extern from "Python.h":
 
 cdef heappop
 cdef heappush
+cdef object WeakKeyDictionary
+cdef type ref
 
 @cython.internal
 @cython.final

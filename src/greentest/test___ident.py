@@ -66,6 +66,14 @@ class TestIdent(greentest.TestCase):
             self.assertLessEqual(self.reg.get_ident(target), keep_count)
 
 
+@greentest.skipOnPurePython("Needs C extension")
+class TestCExt(greentest.TestCase):
+
+    def test_c_extension(self):
+        self.assertEqual(IdentRegistry.__module__,
+                         'gevent.__ident')
+
+
 
 
 if __name__ == '__main__':

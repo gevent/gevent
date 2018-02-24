@@ -71,6 +71,36 @@ def copy_globals(source,
 
     return copied
 
+def import_c_accel(globs, cname):
+    """
+    Import the C-accelerator for the __name__
+    and copy its globals.
+    """
+
+    name = globs.get('__name__')
+
+    if not name or name == cname:
+        # Do nothing if we're being exec'd as a file (no name)
+        # or we're running from the C extension
+        return
+
+    import importlib
+    from gevent._compat import PURE_PYTHON
+    if PURE_PYTHON:
+        return
+
+    mod = importlib.import_module(cname)
+
+    # By adopting the entire __dict__, we get a more accurate
+    # __file__ and module repr, plus we don't leak any imported
+    # things we no longer need.
+    globs.clear()
+    globs.update(mod.__dict__)
+
+    if 'import_c_accel' in globs:
+        del globs['import_c_accel']
+
+
 class Lazy(object):
     """
     A non-data descriptor used just like @property. The

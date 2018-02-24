@@ -6,12 +6,15 @@ internal gevent python 2/python 3 bridges. Not for external use.
 from __future__ import print_function, absolute_import, division
 
 import sys
+import os
 
 
 PY2 = sys.version_info[0] == 2
 PY3 = sys.version_info[0] >= 3
 PYPY = hasattr(sys, 'pypy_version_info')
 WIN = sys.platform.startswith("win")
+
+PURE_PYTHON = PYPY or os.getenv('PURE_PYTHON')
 
 ## Types
 

@@ -1,6 +1,6 @@
 # Copyright (c) 2009-2012 Denis Bilenko. See LICENSE for details.
 # cython: auto_pickle=False,embedsignature=True,always_allow_keywords=False
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function, division
 
 import sys
 from weakref import ref as wref
@@ -476,9 +476,9 @@ class Greenlet(greenlet):
 
         .. versionadded:: 1.1
         """
-        e = self._exc_info
-        if e is not None and e[0] is not None:
-            return (e[0], e[1], load_traceback(e[2]))
+        exc_info = self._exc_info
+        if exc_info is not None and exc_info[0] is not None:
+            return (exc_info[0], exc_info[1], load_traceback(exc_info[2]))
 
     def throw(self, *args):
         """Immediately switch into the greenlet and raise an exception in it.
@@ -926,3 +926,6 @@ def _init():
     greenlet_init() # pylint:disable=undefined-variable
 
 _init()
+
+from gevent._util import import_c_accel
+import_c_accel(globals(), 'gevent._greenlet')

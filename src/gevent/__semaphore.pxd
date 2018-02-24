@@ -1,7 +1,37 @@
 # cython: auto_pickle=False
+
+cdef Timeout
+cdef get_hub
+
+cdef bint _greenlet_imported
+
+cdef extern from "greenlet/greenlet.h":
+
+    ctypedef class greenlet.greenlet [object PyGreenlet]:
+        pass
+
+    # These are actually macros and so much be included
+    # (defined) in each .pxd, as are the two functions
+    # that call them.
+    greenlet PyGreenlet_GetCurrent()
+    void PyGreenlet_Import()
+
+cdef inline greenlet getcurrent():
+    return PyGreenlet_GetCurrent()
+
+cdef inline void greenlet_init():
+    global _greenlet_imported
+    if not _greenlet_imported:
+        PyGreenlet_Import()
+        _greenlet_imported = True
+
+
+cdef void _init()
+
+
 cdef class Semaphore:
     cdef public int counter
-    cdef readonly object _links
+    cdef readonly list _links
     cdef readonly object _notifier
     cdef public int _dirty
     cdef object __weakref__
