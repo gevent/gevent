@@ -1,23 +1,16 @@
 """Benchmarking spawn() performance.
 """
 from __future__ import print_function, absolute_import, division
-import sys
-import os
-import time
+
+import perf
 
 try:
     xrange
 except NameError:
     xrange = range
 
-if hasattr(time, "perf_counter"):
-    curtime = time.perf_counter  # 3.3
-elif sys.platform.startswith('win'):
-    curtime = time.clock
-else:
-    curtime = time.time
 
-N = 100000
+N = 1000
 counter = 0
 
 
@@ -30,133 +23,178 @@ def incr(sleep, **_kwargs):
 def noop(_p):
     pass
 
+class Options(object):
 
-def _report(name, delta):
-    print('%8s: %3.2f microseconds per greenlet' % (name, delta * 1000000.0 / N))
+    # TODO: Add back an argument for that
+    eventlet_hub = None
 
-def test(spawn, sleep, kwargs):
-    start = curtime()
+    loops = None
+
+    def __init__(self, sleep, join, **kwargs):
+        self.kwargs = kwargs
+        self.sleep = sleep
+        self.join = join
+
+class Times(object):
+
+    def __init__(self,
+                 spawn_duration,
+                 sleep_duration=-1,
+                 join_duration=-1):
+        self.spawn_duration = spawn_duration
+        self.sleep_duration = sleep_duration
+        self.join_duration = join_duration
+
+
+def _test(spawn, sleep, options):
+    global counter
+    counter = 0
+    before_spawn = perf.perf_counter()
     for _ in xrange(N):
-        spawn(incr, sleep, **kwargs)
-    _report('spawning', curtime() - start)
-    assert counter == 0, counter
-    start = curtime()
-    sleep(0)
-    _report('sleep(0)', curtime() - start)
-    assert counter == N, (counter, N)
+        spawn(incr, sleep, **options.kwargs)
 
+    before_sleep = perf.perf_counter()
+    if options.sleep:
+        assert counter == 0, counter
+        sleep(0)
+        after_sleep = perf.perf_counter()
+        assert counter == N, (counter, N)
+    else:
+        after_sleep = before_sleep
+
+
+    if options.join:
+        before_join = perf.perf_counter()
+        options.join()
+        after_join = perf.perf_counter()
+        join_duration = after_join - before_join
+    else:
+        join_duration = -1
+
+    return Times(before_sleep - before_spawn,
+                 after_sleep - before_sleep,
+                 join_duration)
+
+def test(spawn, sleep, options):
+    all_times = [_test(spawn, sleep, options)
+                 for _ in xrange(options.loops)]
+
+    spawn_duration = sum(x.spawn_duration for x in all_times)
+    sleep_duration = sum(x.sleep_duration for x in all_times)
+    join_duration = sum(x.sleep_duration for x in all_times
+                        if x != -1)
+
+    return Times(spawn_duration, sleep_duration, join_duration)
 
 def bench_none(options):
-    kwargs = options.kwargs
-    start = curtime()
-    for _ in xrange(N):
-        incr(noop, **kwargs)
-    assert counter == N, (counter, N)
-    _report('noop', curtime() - start)
+    options.sleep = False
+    def spawn(f, sleep, **kwargs):
+        return f(sleep, **kwargs)
+    from time import sleep
+    return test(spawn,
+                sleep,
+                options)
 
 
 def bench_gevent(options):
-    import gevent
-    print('using gevent from %s' % gevent.__file__)
     from gevent import spawn, sleep
-    test(spawn, sleep, options.kwargs)
+    return test(spawn, sleep, options)
 
 
 def bench_geventraw(options):
-    import gevent
-    print('using gevent from %s' % gevent.__file__)
     from gevent import sleep, spawn_raw
-    test(spawn_raw, sleep, options.kwargs)
+    return test(spawn_raw, sleep, options)
 
 
 def bench_geventpool(options):
-    import gevent
-    print('using gevent from %s' % gevent.__file__)
     from gevent import sleep
     from gevent.pool import Pool
     p = Pool()
-    test(p.spawn, sleep, options.kwargs)
-    start = curtime()
-
-    p.join()
-
-    _report('joining', curtime() - start)
+    if options.join:
+        options.join = p.join
+    times = test(p.spawn, sleep, options)
+    return times
 
 
 
 def bench_eventlet(options):
-    try:
-        import eventlet
-    except ImportError:
-        if options.ignore_import_errors:
-            return
-        raise
-    print('using eventlet from %s' % eventlet.__file__)
     from eventlet import spawn, sleep
     from eventlet.hubs import use_hub
     if options.eventlet_hub is not None:
         use_hub(options.eventlet_hub)
-    test(spawn, sleep, options.kwargs)
-
-
-
-def bench_all():
-    from time import sleep
-    error = 0
-    names = sorted(all())
-
-    for func in names:
-        cmd = '%s %s %s --ignore-import-errors' % (sys.executable, __file__, func)
-        print(cmd)
-        sys.stdout.flush()
-        sleep(0.01)
-        if os.system(cmd):
-            error = 1
-            print('%s failed' % cmd)
-        print('')
-    for func in names:
-        cmd = '%s %s --with-kwargs %s --ignore-import-errors' % (sys.executable, __file__, func)
-        print(cmd)
-        sys.stdout.flush()
-        if os.system(cmd):
-            error = 1
-            print('%s failed' % cmd)
-        print('')
-    if error:
-        sys.exit(1)
+    return test(spawn, sleep, options)
 
 
 def all():
     result = [x for x in globals() if x.startswith('bench_') and x != 'bench_all']
-    try:
-        result.sort(key=lambda x: globals()[x].func_code.co_firstlineno)
-    except AttributeError:
-        result.sort(key=lambda x: globals()[x].__code__.co_firstlineno)
+    result.sort()
     result = [x.replace('bench_', '') for x in result]
     return result
 
 
-def all_functions():
-    return [globals()['bench_%s' % x] for x in all()]
-
 
 def main():
-    import argparse
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--with-kwargs', default=False, action='store_true')
-    parser.add_argument('--eventlet-hub')
-    parser.add_argument('--ignore-import-errors', action='store_true')
-    parser.add_argument('benchmark', choices=all() + ['all'])
-    options = parser.parse_args()
-    if options.with_kwargs:
-        options.kwargs = {'foo': 1, 'bar': 'hello'}
+    def worker_cmd(cmd, args):
+        cmd.extend(args.benchmark)
+
+    runner = perf.Runner(add_cmdline_args=worker_cmd)
+    runner.argparser.add_argument('benchmark',
+                                  nargs='*',
+                                  default='all',
+                                  choices=all() + ['all'])
+
+    def spawn_time(loops, func, options):
+        options.loops = loops
+        times = func(options)
+        return times.spawn_duration
+
+    def sleep_time(loops, func, options):
+        options.loops = loops
+        times = func(options)
+        return times.sleep_duration
+
+    def join_time(loops, func, options):
+        options.loops = loops
+        times = func(options)
+        return times.join_duration
+
+    args = runner.parse_args()
+
+    if 'all' in args.benchmark or args.benchmark == 'all':
+        args.benchmark = ['all']
+        names = all()
     else:
-        options.kwargs = {}
-    if options.benchmark == 'all':
-        bench_all()
-    else:
-        function = globals()['bench_' + options.benchmark]
-        function(options)
+        names = args.benchmark
+
+    names = sorted(set(names))
+
+    for name in names:
+        runner.bench_time_func(name + ' spawn',
+                               spawn_time,
+                               globals()['bench_' + name],
+                               Options(False, False),
+                               inner_loops=N)
+
+        if name != 'none':
+            runner.bench_time_func(name + ' sleep',
+                                   sleep_time,
+                                   globals()['bench_' + name],
+                                   Options(True, False),
+                                   inner_loops=N)
+
+    if 'geventpool' in names:
+        runner.bench_time_func('geventpool join',
+                               join_time,
+                               bench_geventpool,
+                               Options(True, True),
+                               inner_loops=N)
+
+    for name in names:
+        runner.bench_time_func(name + ' spawn kwarg',
+                               spawn_time,
+                               globals()['bench_' + name],
+                               Options(False, False, foo=1, bar='hello'),
+                               inner_loops=N)
 
 if __name__ == '__main__':
     main()
