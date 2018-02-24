@@ -10,14 +10,13 @@ except NameError:
     xrange = range
 
 
-N = 1000
+N = 10000
 counter = 0
 
 
 def incr(sleep, **_kwargs):
     global counter
     counter += 1
-    sleep(0)
 
 
 def noop(_p):
