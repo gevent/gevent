@@ -41,7 +41,9 @@ prospector:
 	which pylint
 # debugging
 #	pylint --rcfile=.pylintrc --init-hook="import sys, code; sys.excepthook = lambda exc, exc_type, tb: print(tb.tb_next.tb_next.tb_next.tb_next.tb_next.tb_next.tb_next.tb_next.tb_next.tb_next.tb_frame.f_locals['self'])" gevent src/greentest/* || true
-	${PYTHON} scripts/gprospector.py -X
+# XXX: prospector is failing right now. I can't reproduce locally:
+# https://travis-ci.org/gevent/gevent/jobs/345474139
+#	${PYTHON} scripts/gprospector.py -X
 
 lint: prospector
 
@@ -109,9 +111,7 @@ bench:
 	${PYTHON} src/greentest/bench_sendall.py
 
 travis_test_linters:
-# XXX: prospector is failing right now. I can't reproduce locally:
-# https://travis-ci.org/gevent/gevent/jobs/345474139
-#	make lint
+	make lint
 	make leaktest
 	make cffibackendtest
 
