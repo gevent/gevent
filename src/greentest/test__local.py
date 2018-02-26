@@ -308,6 +308,21 @@ class GeventLocalTestCase(greentest.TestCase):
 
         self.assertEqual(count, len(deleted_sentinels))
 
+    def test_local_dicts_for_greenlet(self):
+        import gevent
+        from gevent.local import all_local_dicts_for_greenlet
+        x = MyLocal()
+        x.foo = 42
+        del x.sentinel
+
+        if greentest.PYPY:
+            import gc
+            gc.collect()
+
+        results = all_local_dicts_for_greenlet(gevent.getcurrent())
+        self.assertEqual(results,
+                         [((MyLocal, id(x)), {'foo': 42})])
+
 @greentest.skipOnPurePython("Needs C extension")
 class TestCExt(greentest.TestCase):
 

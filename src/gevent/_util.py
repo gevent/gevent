@@ -5,6 +5,8 @@ internal gevent utilities, not for external use.
 
 from __future__ import print_function, absolute_import, division
 
+from functools import update_wrapper
+
 from gevent._compat import iteritems
 
 
@@ -110,6 +112,7 @@ class Lazy(object):
     """
     def __init__(self, func):
         self.data = (func, func.__name__)
+        update_wrapper(self, func)
 
     def __get__(self, inst, class_):
         if inst is None:
@@ -129,6 +132,7 @@ class readproperty(object):
 
     def __init__(self, func):
         self.func = func
+        update_wrapper(self, func)
 
     def __get__(self, inst, class_):
         if inst is None:

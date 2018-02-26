@@ -78,7 +78,7 @@ def format_run_info():
     .. versionchanged:: 1.3a2
        Renamed from ``dump_stacks`` to reflect the fact that this
        prints additional information about greenlets, including their
-       spawning stack, parent, and any spawn tree locals.
+       spawning stack, parent, locals, and any spawn tree locals.
     """
 
     lines = []
@@ -112,10 +112,12 @@ def _format_thread_info(lines):
     del threads
 
 def _format_greenlet_info(lines):
+    # pylint:disable=too-many-locals
     from greenlet import greenlet
     import pprint
     import traceback
     import gc
+    from gevent.local import all_local_dicts_for_greenlet
 
     def _noop():
         return None
@@ -145,6 +147,12 @@ def _format_greenlet_info(lines):
             seen_locals.add(id(spawn_tree_locals))
             lines.append("Spawn Tree Locals:\n")
             lines.append(pprint.pformat(spawn_tree_locals))
+        gr_locals = all_local_dicts_for_greenlet(ob)
+        if gr_locals:
+            lines.append("Greenlet Locals:\n")
+            for (kind, idl), vals in gr_locals:
+                lines.append("\tLocal %s at %s\n" % (kind, hex(idl)))
+                lines.append("\t" + pprint.pformat(vals))
 
 
     del lines

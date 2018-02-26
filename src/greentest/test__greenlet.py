@@ -418,34 +418,36 @@ class TestStr(greentest.TestCase):
 
     def test_function(self):
         g = gevent.Greenlet.spawn(dummy_test_func)
-        self.assertEqual(hexobj.sub('X', str(g)), '<Greenlet at X: dummy_test_func>')
+        self.assertTrue(hexobj.sub('X', str(g)).endswith('at X: dummy_test_func>'))
         assert_not_ready(g)
         g.join()
         assert_ready(g)
-        self.assertEqual(hexobj.sub('X', str(g)), '<Greenlet at X: dummy_test_func>')
+        self.assertTrue(hexobj.sub('X', str(g)).endswith(' at X: dummy_test_func>'))
 
     def test_method(self):
         g = gevent.Greenlet.spawn(A().method)
         str_g = hexobj.sub('X', str(g))
         str_g = str_g.replace(__name__, 'module')
-        self.assertEqual(str_g, '<Greenlet at X: <bound method A.method of <module.A object at X>>>')
+        self.assertTrue(str_g.startswith('<Greenlet "Greenlet-'))
+        self.assertTrue(str_g.endswith('at X: <bound method A.method of <module.A object at X>>>'))
         assert_not_ready(g)
         g.join()
         assert_ready(g)
         str_g = hexobj.sub('X', str(g))
         str_g = str_g.replace(__name__, 'module')
-        self.assertEqual(str_g, '<Greenlet at X: <bound method A.method of <module.A object at X>>>')
+        self.assertTrue(str_g.endswith('at X: <bound method A.method of <module.A object at X>>>'))
 
     def test_subclass(self):
         g = Subclass()
         str_g = hexobj.sub('X', str(g))
         str_g = str_g.replace(__name__, 'module')
-        self.assertEqual(str_g, '<Subclass at X: _run>')
+        self.assertTrue(str_g.startswith('<Subclass '))
+        self.assertTrue(str_g.endswith('at X: _run>'))
 
         g = Subclass(None, 'question', answer=42)
         str_g = hexobj.sub('X', str(g))
         str_g = str_g.replace(__name__, 'module')
-        self.assertEqual(str_g, "<Subclass at X: _run('question', answer=42)>")
+        self.assertTrue(str_g.endswith(" at X: _run('question', answer=42)>"))
 
 
 class TestJoin(AbstractGenericWaitTestCase):

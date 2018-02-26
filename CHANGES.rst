@@ -117,6 +117,12 @@
   used when the environment variable ``PURE_PYTHON`` is set. This is
   not recommended except for debugging and testing. See :issue:`1118`.
 
+- Include the values of `gevent.local.local` objects associated with
+  each greenlet in `gevent.util.format_run_info`.
+
+- `gevent.Greenlet` objects now have a `gevent.Greenlet.name`
+  attribute that is included in the default repr.
+
 
 1.3a1 (2018-01-27)
 ==================

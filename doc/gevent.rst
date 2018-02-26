@@ -36,6 +36,7 @@ generated.
 
 .. autoattribute:: Greenlet.exception
 .. autoattribute:: Greenlet.minimal_ident
+.. autoattribute:: Greenlet.name
 
 .. rubric:: Methods
 
@@ -97,8 +98,8 @@ __ https://greenlet.readthedocs.io/en/latest/#instantiation
 Spawn helpers
 =============
 
-.. autofunction:: spawn(function, *args, **kwargs)
-.. autofunction:: spawn_later(seconds, function, *args, **kwargs)
+.. autofunction:: spawn
+.. autofunction:: spawn_later
 .. autofunction:: spawn_raw
 
 
