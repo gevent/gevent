@@ -158,13 +158,55 @@ _PYPY = hasattr(sys, 'pypy_version_info')
 from copy import copy
 from weakref import ref
 
+
 locals()['getcurrent'] = __import__('greenlet').getcurrent
 locals()['greenlet_init'] = lambda: None
-
 
 __all__ = [
     "local",
 ]
+
+# The key used in the Thread objects' attribute dicts.
+# We keep it a string for speed but make it unlikely to clash with
+# a "real" attribute.
+key_prefix = '_gevent_local_localimpl_'
+
+# The overall structure is as follows:
+# For each local() object:
+# greenlet.__dict__[key_prefix + str(id(local))]
+#    => _localimpl.dicts[id(greenlet)] => (ref(greenlet), {})
+
+# That final tuple is actually a localimpl_dict_entry object.
+
+def all_local_dicts_for_greenlet(greenlet):
+    """
+    Internal debug helper for getting the local values associated
+    with a greenlet. This is subject to change or removal at any time.
+
+    :return: A list of ((type, id), {}) pairs, where the first element
+      is the type and id of the local object and the second object is its
+      instance dictionary, as seen from this greenlet.
+
+    .. versionadded:: 1.3a2
+    """
+
+    result = []
+    id_greenlet = id(greenlet)
+    greenlet_dict = greenlet.__dict__
+    for k, v in greenlet_dict.items():
+        if not k.startswith(key_prefix):
+            continue
+        local_impl = v()
+        if local_impl is None:
+            continue
+        entry = local_impl.dicts.get(id_greenlet)
+        if entry is None:
+            # Not yet used in this greenlet.
+            continue
+        assert entry.wrgreenlet() is greenlet
+        result.append((local_impl.localtypeid, entry.localdict))
+
+    return result
 
 
 class _wrefdict(dict):
@@ -211,21 +253,24 @@ class _local_deleted(object):
 
 class _localimpl(object):
     """A class managing thread-local dicts"""
-    __slots__ = ('key', 'dicts', 'localargs', '__weakref__',)
+    __slots__ = ('key', 'dicts',
+                 'localargs', 'localkwargs',
+                 'localtypeid',
+                 '__weakref__',)
 
-    def __init__(self, args, kwargs):
-        # The key used in the Thread objects' attribute dicts.
-        # We keep it a string for speed but make it unlikely to clash with
-        # a "real" attribute.
-        self.key = '_threading_local._localimpl.' + str(id(self))
-        # { id(Thread) -> (ref(Thread), thread-local dict) }
+    def __init__(self, args, kwargs, local_type, id_local):
+        self.key = key_prefix + str(id(self))
+        # { id(greenlet) -> _localimpl_dict_entry(ref(greenlet), greenlet-local dict) }
         self.dicts = _wrefdict()
-        self.localargs = args, kwargs
+        self.localargs = args
+        self.localkwargs = kwargs
+        self.localtypeid = local_type, id_local
 
         # We need to create the thread dict in anticipation of
         # __init__ being called, to make sure we don't call it
         # again ourselves. MUST do this before setting any attributes.
-        _localimpl_create_dict(self)
+        greenlet = getcurrent() # pylint:disable=undefined-variable
+        _localimpl_create_dict(self, greenlet, id(greenlet))
 
 class _localimpl_dict_entry(object):
     """
@@ -247,40 +292,32 @@ class _localimpl_dict_entry(object):
 # (but not pointer chasing overhead; the vtable isn't used when we declare
 # the class final).
 
-def _localimpl_get_dict(self):
-    """Return the dict for the current thread. Raises KeyError if none
-    defined."""
-    greenlet = getcurrent() # pylint:disable=undefined-variable
-    entry = self.dicts[id(greenlet)]
-    return entry.localdict
 
-def _localimpl_create_dict(self):
+def _localimpl_create_dict(self, greenlet, id_greenlet):
     """Create a new dict for the current thread, and return it."""
     localdict = {}
     key = self.key
-    greenlet = getcurrent() # pylint:disable=undefined-variable
-    idt = id(greenlet)
 
     wrdicts = ref(self.dicts)
 
-    # When the thread is deleted, remove the local dict.
-    # Note that this is suboptimal if the thread object gets
+    # When the greenlet is deleted, remove the local dict.
+    # Note that this is suboptimal if the greenlet object gets
     # caught in a reference loop. We would like to be called
-    # as soon as the OS-level thread ends instead.
+    # as soon as the OS-level greenlet ends instead.
 
     # If we are working with a gevent.greenlet.Greenlet, we
     # can pro-actively clear out with a link, avoiding the
-    # issue described above.Use rawlink to avoid spawning any
+    # issue described above. Use rawlink to avoid spawning any
     # more greenlets.
-    greenlet_deleted = _greenlet_deleted(idt, wrdicts)
+    greenlet_deleted = _greenlet_deleted(id_greenlet, wrdicts)
 
-    try:
-        rawlink = greenlet.rawlink
-    except AttributeError:
-        wrthread = ref(greenlet, greenlet_deleted)
-    else:
+    rawlink = getattr(greenlet, 'rawlink', None)
+    if rawlink is not None:
         rawlink(greenlet_deleted)
         wrthread = ref(greenlet)
+    else:
+        wrthread = ref(greenlet, greenlet_deleted)
+
 
     # When the localimpl is deleted, remove the thread attribute.
     local_deleted = _local_deleted(key, wrthread, greenlet_deleted)
@@ -289,7 +326,7 @@ def _localimpl_create_dict(self):
     wrlocal = ref(self, local_deleted)
     greenlet.__dict__[key] = wrlocal
 
-    self.dicts[idt] = _localimpl_dict_entry(wrthread, localdict)
+    self.dicts[id_greenlet] = _localimpl_dict_entry(wrthread, localdict)
     return localdict
 
 
@@ -297,12 +334,15 @@ _marker = object()
 
 def _local_get_dict(self):
     impl = self._local__impl
+    # Cython can optimize dict[], but not dict.get()
+    greenlet = getcurrent() # pylint:disable=undefined-variable
+    idg = id(greenlet)
     try:
-        dct = _localimpl_get_dict(impl)
+        entry = impl.dicts[idg]
+        dct = entry.localdict
     except KeyError:
-        dct = _localimpl_create_dict(impl)
-        args, kw = impl.localargs
-        self.__init__(*args, **kw)
+        dct = _localimpl_create_dict(impl, greenlet, idg)
+        self.__init__(*impl.localargs, **impl.localkwargs)
     return dct
 
 def _init():
@@ -330,7 +370,7 @@ class local(object):
         if args or kw:
             if type(self).__init__ == object.__init__:
                 raise TypeError("Initialization arguments are not supported", args, kw)
-        impl = _localimpl(args, kw)
+        impl = _localimpl(args, kw, type(self), id(self))
         # pylint:disable=attribute-defined-outside-init
         self._local__impl = impl
         get, dels, sets_or_dels, sets = _local_find_descriptors(self)
@@ -467,13 +507,13 @@ class local(object):
 
     def __copy__(self):
         impl = self._local__impl
+        entry = impl.dicts[id(getcurrent())]  # pylint:disable=undefined-variable
 
-        d = _localimpl_get_dict(impl)
-        duplicate = copy(d)
+        dct = entry.localdict
+        duplicate = copy(dct)
 
         cls = type(self)
-        args, kw = impl.localargs
-        instance = cls(*args, **kw)
+        instance = cls(*impl.localargs, **impl.localkwargs)
         _local__copy_dict_from(instance, impl, duplicate)
         return instance
 

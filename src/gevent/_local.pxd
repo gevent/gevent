@@ -1,12 +1,14 @@
 # cython: auto_pickle=False
 
 cimport cython
+from gevent._greenlet cimport Greenlet
 
 cdef bint _PYPY
 cdef ref
 cdef copy
 
 cdef object _marker
+cdef str key_prefix
 cdef bint _greenlet_imported
 
 
@@ -56,8 +58,10 @@ cdef class _local_deleted:
 @cython.internal
 cdef class _localimpl:
     cdef str key
-    cdef _wrefdict dicts
+    cdef dict dicts
     cdef tuple localargs
+    cdef dict localkwargs
+    cdef tuple localtypeid
     cdef object __weakref__
 
 
@@ -67,13 +71,12 @@ cdef class _localimpl_dict_entry:
     cdef object wrgreenlet
     cdef dict localdict
 
-@cython.locals(localdict=dict, key=str, greenlet=greenlet,
+@cython.locals(localdict=dict, key=str,
                greenlet_deleted=_greenlet_deleted,
                local_deleted=_local_deleted)
-cdef dict _localimpl_create_dict(_localimpl self)
-
-@cython.locals(entry=_localimpl_dict_entry, greenlet=greenlet)
-cdef inline dict _localimpl_get_dict(_localimpl self)
+cdef dict _localimpl_create_dict(_localimpl self,
+                                 greenlet greenlet,
+                                 object idt)
 
 cdef set _local_attrs
 
@@ -86,11 +89,22 @@ cdef class local:
     cdef set _local_type_vars
     cdef type _local_type
 
+    @cython.locals(entry=_localimpl_dict_entry,
+                   dct=dict, duplicate=dict,
+                   instance=local)
+    cpdef local __copy__(local self)
 
-@cython.locals(impl=_localimpl,dct=dict)
+
+@cython.locals(impl=_localimpl,dct=dict,
+               dct=dict, entry=_localimpl_dict_entry)
 cdef inline dict _local_get_dict(local self)
 
 @cython.locals(entry=_localimpl_dict_entry)
 cdef _local__copy_dict_from(local self, _localimpl impl, dict duplicate)
 
 cdef tuple _local_find_descriptors(local self)
+
+@cython.locals(result=list, local_impl=_localimpl,
+               entry=_localimpl_dict_entry, k=str,
+               greenlet_dict=dict)
+cpdef all_local_dicts_for_greenlet(greenlet greenlet)

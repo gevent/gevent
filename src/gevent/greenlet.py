@@ -21,6 +21,7 @@ from gevent.hub import iwait
 from gevent.hub import wait
 from gevent.timeout import Timeout
 from gevent._util import Lazy
+from gevent._util import readproperty
 
 
 __all__ = [
@@ -312,6 +313,17 @@ class Greenlet(greenlet):
             self._ident = self._get_minimal_ident()
         return self._ident
 
+    @readproperty
+    def name(self):
+        """
+        The greenlet name. By default, a unique name is constructed using
+        the :attr:`minimal_ident`. You can assign a string to this
+        value to change it. It is shown in the `repr` of this object.
+
+        .. versionadded:: 1.3a2
+        """
+        return 'Greenlet-%d' % (self.minimal_ident)
+
     def _raise_exception(self):
         reraise(*self.exc_info)
 
@@ -428,7 +440,7 @@ class Greenlet(greenlet):
 
     def __repr__(self):
         classname = self.__class__.__name__
-        result = '<%s at %s' % (classname, hex(id(self)))
+        result = '<%s "%s" at %s' % (classname, self.name, hex(id(self)))
         formatted = self._formatinfo()
         if formatted:
             result += ': ' + formatted
@@ -526,6 +538,8 @@ class Greenlet(greenlet):
     @classmethod
     def spawn(cls, *args, **kwargs):
         """
+        spawn(function, *args, **kwargs) -> Greenlet
+
         Create a new :class:`Greenlet` object and schedule it to run ``function(*args, **kwargs)``.
         This can be used as ``gevent.spawn`` or ``Greenlet.spawn``.
 
@@ -542,8 +556,10 @@ class Greenlet(greenlet):
     @classmethod
     def spawn_later(cls, seconds, *args, **kwargs):
         """
-        Create and return a new Greenlet object scheduled to run ``function(*args, **kwargs)``
-        in the future loop iteration *seconds* later. This can be used as ``Greenlet.spawn_later``
+        spawn_later(seconds, function, *args, **kwargs) -> Greenlet
+
+        Create and return a new `Greenlet` object scheduled to run ``function(*args, **kwargs)``
+        in a future loop iteration *seconds* later. This can be used as ``Greenlet.spawn_later``
         or ``gevent.spawn_later``.
 
         The arguments are passed to :meth:`Greenlet.__init__`.
