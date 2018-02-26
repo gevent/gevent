@@ -25,10 +25,12 @@ from gevent._compat import PYPY
 from gevent._util import copy_globals
 
 
-__implements__ = ['SSLSocket',
-                  'wrap_socket',
-                  'get_server_certificate',
-                  'sslwrap_simple']
+__implements__ = [
+    'SSLSocket',
+    'wrap_socket',
+    'get_server_certificate',
+    'sslwrap_simple',
+]
 
 # Import all symbols from Python's ssl.py, except those that we are implementing
 # and "private" symbols.

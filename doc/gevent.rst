@@ -8,8 +8,6 @@ The most common functions and classes are available in the :mod:`gevent` top lev
 
 .. autodata:: __version__
 
-.. autodata:: version_info
-
 Greenlet objects
 ================
 

@@ -104,10 +104,10 @@ class _Frame(object):
 
     __slots__ = ('f_code', 'f_lineno', 'f_back')
 
-    def __init__(self, f_code, f_lineno):
+    def __init__(self, f_code, f_lineno, f_back):
         self.f_code = f_code
         self.f_lineno = f_lineno
-        self.f_back = None
+        self.f_back = f_back
 
     @property
     def f_globals(self):
@@ -116,8 +116,7 @@ class _Frame(object):
 def _Frame_from_list(frames):
     previous = None
     for frame in reversed(frames):
-        f = _Frame(*frame)
-        f.f_back = previous
+        f = _Frame(frame[0], frame[1], previous)
         previous = f
     return previous
 
@@ -146,11 +145,9 @@ class Greenlet(greenlet):
     # pylint:disable=keyword-arg-before-vararg,super-init-not-called
     def __init__(self, run=None, *args, **kwargs):
         """
-        Greenlet(run=None, *args, **kwargs) -> Greenlet
-
         :param args: The arguments passed to the ``run`` function.
         :param kwargs: The keyword arguments passed to the ``run`` function.
-        :keyword run: The callable object to run. If not given, this object's
+        :keyword callable run: The callable object to run. If not given, this object's
             `_run` method will be invoked (typically defined by subclasses).
 
         .. versionchanged:: 1.1b1
@@ -163,11 +160,11 @@ class Greenlet(greenlet):
         .. attribute:: value
 
             Holds the value returned by the function if the greenlet has
-            finished successfully. Until then, or if it finished in error, ``None``.
+            finished successfully. Until then, or if it finished in error, `None`.
 
             .. tip:: Recall that a greenlet killed with the default
                      :class:`GreenletExit` is considered to have finished
-                     successfully, and the ``GreenletExit`` exception will be
+                     successfully, and the `GreenletExit` exception will be
                      its value.
 
 
@@ -203,7 +200,7 @@ class Greenlet(greenlet):
 
             A class attribute specifying how many levels of the spawning
             stack will be kept. Specify a smaller number for higher performance,
-            specify a larger value for improved debugging.
+            spawning greenlets, specify a larger value for improved debugging.
 
             .. versionadded:: 1.3a2
         """
@@ -246,6 +243,10 @@ class Greenlet(greenlet):
         if not callable(self._run):
             raise TypeError("The run argument or self._run must be callable")
 
+        self.args = args
+        self.kwargs = kwargs
+        self.value = None
+
         #: An event, such as a timer or a callback that fires. It is established in
         #: start() and start_later() as those two objects, respectively.
         #: Once this becomes non-None, the Greenlet cannot be started again. Conversely,
@@ -253,9 +254,7 @@ class Greenlet(greenlet):
         #: scheduled for starting. A placeholder _dummy_event is assigned by them to prevent
         #: the greenlet from being started in the future, if necessary.
         self._start_event = None
-        self.args = args
-        self._kwargs = kwargs
-        self.value = None
+
         self._notifier = None
         self._formatted_info = None
         self._links = []
@@ -312,10 +311,6 @@ class Greenlet(greenlet):
         if self._ident is None:
             self._ident = self._get_minimal_ident()
         return self._ident
-
-    @property
-    def kwargs(self):
-        return self._kwargs or {}
 
     def _raise_exception(self):
         reraise(*self.exc_info)
@@ -460,8 +455,8 @@ class Greenlet(greenlet):
         args = []
         if self.args:
             args = [repr(x)[:50] for x in self.args]
-        if self._kwargs:
-            args.extend(['%s=%s' % (key, repr(value)[:50]) for (key, value) in self._kwargs.items()])
+        if self.kwargs:
+            args.extend(['%s=%s' % (key, repr(value)[:50]) for (key, value) in self.kwargs.items()])
         if args:
             result += '(' + ', '.join(args) + ')'
         # it is important to save the result here, because once the greenlet exits '_run' attribute will be removed
@@ -724,14 +719,17 @@ class Greenlet(greenlet):
         finally:
             self.__dict__.pop('_run', None)
             self.args = ()
-            self._kwargs = None
+            self.kwargs.clear()
 
     def _run(self):
-        """Subclasses may override this method to take any number of arguments and keyword arguments.
+        """
+        Subclasses may override this method to take any number of
+        arguments and keyword arguments.
 
         .. versionadded:: 1.1a3
-            Previously, if no callable object was passed to the constructor, the spawned greenlet would
-            later fail with an AttributeError.
+            Previously, if no callable object was
+            passed to the constructor, the spawned greenlet would later
+            fail with an AttributeError.
         """
         # We usually override this in __init__
         # pylint: disable=method-hidden
@@ -741,9 +739,12 @@ class Greenlet(greenlet):
         return len(self._links)
 
     def rawlink(self, callback):
-        """Register a callable to be executed when the greenlet finishes execution.
+        """
+        Register a callable to be executed when the greenlet finishes
+        execution.
 
-        The *callback* will be called with this instance as an argument.
+        The *callback* will be called with this instance as an
+        argument.
 
         .. caution:: The callable will be called in the HUB greenlet.
         """

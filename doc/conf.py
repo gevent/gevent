@@ -15,6 +15,10 @@ from __future__ import print_function
 import sys
 import os
 
+# Use the python versions instead of the cython compiled versions
+# for better documentation extraction and ease of tweaking docs.
+os.environ['PURE_PYTHON'] = '1'
+
 os.system('%s generate_rst.py generate' % sys.executable)
 
 sys.path.append('.')  # for mysphinxext
@@ -28,8 +32,14 @@ sys.path.append('.')  # for mysphinxext
 
 # Add any Sphinx extension module names here, as strings. They can be extensions
 # coming with Sphinx (named 'sphinx.ext.*') or your custom ones.
-extensions = ['sphinx.ext.autodoc', 'sphinx.ext.doctest', 'sphinx.ext.coverage', 'sphinx.ext.intersphinx', 'mysphinxext',
-              'sphinx.ext.extlinks']
+extensions = [
+    'sphinx.ext.autodoc',
+    'sphinx.ext.doctest',
+    'sphinx.ext.coverage',
+    'sphinx.ext.intersphinx',
+    'mysphinxext',
+    'sphinx.ext.extlinks',
+]
 
 intersphinx_mapping = {'http://docs.python.org/': None,
                        'https://greenlet.readthedocs.io/en/latest/': None}
@@ -152,6 +162,7 @@ html_short_title = 'Documentation'
 # typographically correct entities.
 # This is true by default in sphinx 1.6
 html_use_smartypants = True
+smartquotes = True # 1.7
 
 # Custom sidebar templates, maps document names to template names.
 html_sidebars = {}

@@ -60,6 +60,7 @@ cdef class FailureSpawnedLink(SpawnedLink):
 
 @cython.final
 @cython.internal
+@cython.freelist(1000)
 cdef class _Frame:
     cdef readonly CodeType f_code
     cdef readonly int f_lineno
@@ -77,7 +78,8 @@ cdef _Frame _Frame_from_list(list frames)
 
 cdef class Greenlet(greenlet):
     cdef readonly object value
-    cdef readonly args
+    cdef readonly tuple args
+    cdef readonly dict kwargs
     cdef readonly object spawning_greenlet
     cdef public dict spawn_tree_locals
 
@@ -89,7 +91,6 @@ cdef class Greenlet(greenlet):
     cdef tuple _exc_info
     cdef object _notifier
     cdef object _start_event
-    cdef dict _kwargs
     cdef str _formatted_info
     cdef object _ident
 
@@ -102,6 +103,7 @@ cdef class Greenlet(greenlet):
 
     @cython.locals(reg=IdentRegistry)
     cdef _get_minimal_ident(self)
+
 
     cdef bint __started_but_aborted(self)
     cdef bint __start_cancelled_by_kill(self)

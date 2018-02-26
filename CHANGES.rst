@@ -97,7 +97,8 @@
   offset any performance decrease due to :issue:`755`. Please open
   issues for any compatibility concerns. See :pr:`1115` and :pr:`1120`.
 
-- Greenlet objects now have a ``minimal_ident`` property. It functions
+- Greenlet objects now have a `minimal_ident
+  <gevent.Greenlet.minimal_ident>` property. It functions
   similarly to ``Thread.ident`` or ``id`` by uniquely identifying the
   greenlet object while it remains alive, and it can be reused after
   the greenlet object is dead. It is different in that it is small and
@@ -105,14 +106,14 @@
   Hashemi and Kurt Rose. See :issue:`755`. As always, feedback is
   appreciated.
 
-- Simple subclasses of ``gevent.local.local`` now have the same
+- Simple subclasses of `gevent.local.local` now have the same
   (substantially improved) performance characteristics of plain
-  ``gevent.local.local`` itself, making them 2 to 3 times faster than
+  `gevent.local.local` itself, making them 2 to 3 times faster than
   before. See :pr:`1117`. If there are any compatibility
   problems, please open issues.
 
 - On CPython, allow the pure-Python implementations of
-  ``gevent.greenlet``, ``gevent.local`` and ``gevent.sempahore`` to be
+  `gevent.Greenlet`, `gevent.local` and `gevent.lock` to be
   used when the environment variable ``PURE_PYTHON`` is set. This is
   not recommended except for debugging and testing. See :issue:`1118`.
 
