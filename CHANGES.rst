@@ -123,6 +123,8 @@
 - `gevent.Greenlet` objects now have a `gevent.Greenlet.name`
   attribute that is included in the default repr.
 
+- Add `gevent.util.GreenletTree` to visualize the greenlet tree. This
+  is used by `gevent.util.format_run_info`.
 
 1.3a1 (2018-01-27)
 ==================
