@@ -68,7 +68,7 @@ class WithGetattr(local):
             return 42
         return super(WithGetattr, self).__getattr__(name)
 
-class GeventLocalTestCase(greentest.TestCase):
+class TestGeventLocal(greentest.TestCase):
     # pylint:disable=attribute-defined-outside-init,blacklisted-name
 
     def setUp(self):
@@ -322,6 +322,36 @@ class GeventLocalTestCase(greentest.TestCase):
         results = all_local_dicts_for_greenlet(gevent.getcurrent())
         self.assertEqual(results,
                          [((MyLocal, id(x)), {'foo': 42})])
+
+try:
+    from zope import interface
+except ImportError:
+    interface = None
+
+@greentest.skipIf(interface is None, "Needs zope.interface")
+class TestLocalInterface(greentest.TestCase):
+    __timeout__ = None
+
+    @greentest.ignores_leakcheck
+    def test_provides(self):
+        # https://github.com/gevent/gevent/issues/1122
+
+        # pylint:disable=inherit-non-class
+        class IFoo(interface.Interface):
+            pass
+
+        @interface.implementer(IFoo)
+        class Base(object):
+            pass
+
+        class Derived(Base, local):
+            pass
+
+        d = Derived()
+        p = list(interface.providedBy(d))
+        self.assertEqual([IFoo], p)
+
+
 
 @greentest.skipOnPurePython("Needs C extension")
 class TestCExt(greentest.TestCase):
