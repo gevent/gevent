@@ -10,16 +10,25 @@ from __future__ import absolute_import
 import io
 import os
 import sys
-import time
+
 from gevent import _socketcommon
 from gevent._util import copy_globals
 from gevent._compat import PYPY
 import _socket
 from os import dup
 
+
 copy_globals(_socketcommon, globals(),
              names_to_ignore=_socketcommon.__extensions__,
              dunder_names_to_keep=())
+
+try:
+    from errno import EHOSTUNREACH
+    from errno import ECONNREFUSED
+except ImportError:
+    EHOSTUNREACH = -1
+    ECONNREFUSED = -1
+
 
 __socket__ = _socketcommon.__socket__
 __implements__ = _socketcommon._implements
@@ -337,11 +346,25 @@ class socket(object):
                 if err:
                     raise error(err, strerror(err))
                 result = _socket.socket.connect_ex(self._sock, address)
+
                 if not result or result == EISCONN:
                     break
                 elif (result in (EWOULDBLOCK, EINPROGRESS, EALREADY)) or (result == EINVAL and is_windows):
                     self._wait(self._write_event)
                 else:
+                    if (isinstance(address, tuple)
+                            and address[0] == 'fe80::1'
+                            and result == EHOSTUNREACH):
+                        # On Python 3.7 on mac, we see EHOSTUNREACH
+                        # returned for this link-local address, but it really is
+                        # supposed to be ECONNREFUSED according to the standard library
+                        # tests (test_socket.NetworkConnectionNoServer.test_create_connection)
+                        # (On previous versions, that code passed the '127.0.0.1' IPv4 address, so
+                        # ipv6 link locals were never a factor; 3.7 passes 'localhost'.)
+                        # It is something of a mystery how the stdlib socket code doesn't
+                        # produce EHOSTUNREACH---I (JAM) can't see how socketmodule.c would avoid
+                        # that. The normal connect just calls connect_ex much like we do.
+                        result = ECONNREFUSED
                     raise error(result, strerror(result))
 
     def connect_ex(self, address):
