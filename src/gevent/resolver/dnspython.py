@@ -116,6 +116,7 @@ def _dns_import_patched(name):
 dns.rdata.__import__ = _dns_import_patched
 
 resolver = dns.resolver
+dTimeout = dns.resolver.Timeout
 
 _exc_clear = getattr(sys, 'exc_clear', lambda: None)
 
@@ -551,14 +552,16 @@ class Resolver(AbstractResolver):
     """
 
     def __init__(self, hub=None): # pylint: disable=unused-argument
-        self._resolver = _DualResolver()
         if resolver._resolver is None:
-            resolver._resolver = self._resolver
+            _resolver = resolver._resolver = _DualResolver()
             if config.resolver_nameservers:
-                self._resolver.network_resolver.nameservers[:] = config.resolver_nameservers
+                _resolver.network_resolver.nameservers[:] = config.resolver_nameservers
+            if config.resolver_timeout:
+                _resolver.network_resolver.lifetime = config.resolver_timeout
         # Different hubs in different threads could be sharing the same
         # resolver.
         assert isinstance(resolver._resolver, _DualResolver)
+        self._resolver = resolver._resolver
 
     @property
     def resolver(self):
@@ -589,6 +592,8 @@ class Resolver(AbstractResolver):
             try:
                 ans = net_resolver.query(hostname, dns.rdatatype.CNAME, rdtype)
             except (dns.resolver.NoAnswer, dns.resolver.NXDOMAIN, dns.resolver.NoNameservers):
+                break
+            except dTimeout:
                 break
             else:
                 aliases.extend(str(rr.target) for rr in ans.rrset)

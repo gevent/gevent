@@ -418,9 +418,16 @@ class AresFlags(AresSettingMixin, Setting):
     environment_key = 'GEVENTARES_FLAGS'
 
 class AresTimeout(AresSettingMixin, Setting):
+    document = True
     name = 'ares_timeout'
     default = None
     environment_key = 'GEVENTARES_TIMEOUT'
+    desc = """\
+
+    .. deprecated:: 1.3a2
+       Prefer the :attr:`resolver_timeout` setting. If both are set,
+       the results are not defined.
+    """
 
 class AresTries(AresSettingMixin, Setting):
     name = 'ares_tries'
@@ -508,6 +515,27 @@ class ResolverNameservers(AresSettingMixin, Setting):
     @property
     def kwarg_name(self):
         return 'servers'
+
+# Generic timeout, works for dnspython and ares
+class ResolverTimeout(AresSettingMixin, Setting):
+    document = True
+    name = 'resolver_timeout'
+    environment_key = 'GEVENT_RESOLVER_TIMEOUT'
+    desc = """\
+    The total amount of time that the DNS resolver will spend making queries.
+
+    Only the ares and dnspython resolvers support this.
+
+    .. versionadded:: 1.3a2
+    """
+
+    def _convert(self, value):
+        if value:
+            return float(value)
+
+    @property
+    def kwarg_name(self):
+        return 'timeout'
 
 config = Config()
 

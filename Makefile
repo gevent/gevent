@@ -108,7 +108,7 @@ leaktest: test_prelim
 	@${PYTHON} scripts/travis.py fold_end default
 
 bench:
-	${PYTHON} src/greentest/bench_sendall.py
+	${PYTHON} benchmarks/bench_sendall.py --loops 3 --processes 2 --values 2 --warmups 2
 
 travis_test_linters:
 	make lint
