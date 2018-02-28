@@ -108,7 +108,7 @@ leaktest: test_prelim
 	@${PYTHON} scripts/travis.py fold_end default
 
 bench:
-	${PYTHON} benchmarks/bench_sendall.py --loops 3 --processes 2 --values 2 --warmups 2
+	${PYTHON} benchmarks/bench_sendall.py --loops 3 --processes 2 --values 2 --warmups 2 --quiet
 
 travis_test_linters:
 	make lint
@@ -180,6 +180,7 @@ develop:
 # We need wheel>=0.26 on Python 3.5. See previous revisions.
 	time ${PYTHON} -m pip install -U -r ci-requirements.txt
 	GEVENTSETUP_EV_VERIFY=3 time ${PYTHON} -m pip install -U -e .
+	${PYTHON} -m pip freeze
 	ccache -s
 	@${PYTHON} scripts/travis.py fold_end install
 

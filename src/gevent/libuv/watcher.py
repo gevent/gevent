@@ -725,16 +725,21 @@ class idle(_base.IdleMixin, watcher):
 class check(_base.CheckMixin, watcher):
     pass
 
+
 class OneShotCheck(check):
 
     _watcher_skip_ffi = True
 
+    def __make_cb(self, func):
+        stop = self.stop
+        @functools.wraps(func)
+        def cb(*args, _stop=stop):
+            _stop()
+            return func(*args)
+        return cb
+
     def start(self, callback, *args):
-        @functools.wraps(callback)
-        def _callback(*args):
-            self.stop()
-            return callback(*args)
-        return check.start(self, _callback, *args)
+        return check.start(self, self.__make_cb(callback), *args)
 
 class prepare(_base.PrepareMixin, watcher):
     pass

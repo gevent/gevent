@@ -128,3 +128,7 @@ test___config.py
 test__destroy_default_loop.py
 test__util.py
 test___ident.py
+test__issue639.py
+test__issue_728.py
+test__refcount_core.py
+test__api.py

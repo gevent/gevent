@@ -208,7 +208,10 @@ class AbstractCallbacks(object):
             watcher.loop.handle_error(None, t, v, tb)
             return 1
         else:
-            raise v
+            # Raising it causes a lot of noise from CFFI
+            print("WARNING: gevent: Unhandled error with no watcher",
+                  file=sys.stderr)
+            traceback.print_exception(t, v, tb)
 
     def python_stop(self, handle):
         if not handle: # pragma: no cover

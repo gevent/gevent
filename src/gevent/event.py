@@ -100,8 +100,7 @@ class _AbstractLinkable(object):
         switch = getcurrent().switch
         self.rawlink(switch)
         try:
-            timer = Timeout._start_new_or_dummy(timeout)
-            try:
+            with Timeout._start_new_or_dummy(timeout) as timer:
                 try:
                     result = self.hub.switch()
                     if result is not self: # pragma: no cover
@@ -113,8 +112,6 @@ class _AbstractLinkable(object):
                     # test_set_and_clear and test_timeout in test_threading
                     # rely on the exact return values, not just truthish-ness
                     return False
-            finally:
-                timer.close()
         finally:
             self.unlink(switch)
 
