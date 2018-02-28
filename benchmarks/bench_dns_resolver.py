@@ -76,7 +76,7 @@ def main():
     def worker_cmd(cmd, args):
         cmd.extend(args.benchmark)
 
-    runner = perf.Runner(processes=5,
+    runner = perf.Runner(processes=5, values=3,
                          add_cmdline_args=worker_cmd)
 
     all_names = 'dnspython', 'blocking', 'ares', 'thread'

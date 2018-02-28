@@ -22,6 +22,8 @@ dnspython
 idna
 # Makes tests faster
 psutil
+# benchmarks use this
+perf
 # Used in a test
 zope.interface
 # For viewing README.rst (restview --long-description),
