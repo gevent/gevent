@@ -14,6 +14,7 @@ from greentest import util
 from greentest.util import log
 from greentest.sysinfo import RUNNING_ON_CI
 from greentest.sysinfo import PYPY
+from greentest.sysinfo import RESOLVER_ARES
 from greentest import six
 
 
@@ -344,6 +345,10 @@ def main():
             print(util.getname(cmd, env=options.get('env'), setenv=options.get('setenv')))
         print('%s tests found.' % len(tests))
     else:
+        if PYPY and RESOLVER_ARES:
+            # XXX: Add a way to force these.
+            print("Not running tests on pypy with c-ares; not a supported configuration")
+            return
         run_many(tests, configured_failing_tests=FAILING_TESTS, failfast=options.failfast, quiet=options.quiet)
 
 
