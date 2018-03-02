@@ -1,3 +1,4 @@
+#include <string.h>
 #include "uv.h"
 
 static int python_callback(void* handle, int revents);

@@ -164,6 +164,8 @@ typedef struct uv_fs_event_s uv_fs_event_t;
 typedef struct uv_fs_poll_s uv_fs_poll_t;
 
 
+size_t uv_handle_size(uv_handle_type);
+
 // callbacks with the same signature
 // XXX: Note that these, and all callbacks, are defined to take
 // a void* or handle* instead of the more specific, correct,
@@ -338,6 +340,8 @@ int uv_fs_poll_start(void*, uv_fs_poll_cb, const char* path, unsigned int);
 int uv_fs_poll_stop(void*);
 
 
+/* Standard library */
+void* memset(void *b, int c, size_t len);
 
 
 /* gevent callbacks */

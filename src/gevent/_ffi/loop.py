@@ -223,8 +223,7 @@ class AbstractCallbacks(object):
             # NOTE: Raising exceptions here does nothing, they're swallowed by CFFI.
             # Since the C level passed in a null pointer, even dereferencing the handle
             # will just produce some exceptions.
-            if GEVENT_DEBUG_LEVEL < CRITICAL:
-                return
+            return
         _dbg("python_stop: stopping watcher with handle", handle)
         watcher = self.from_handle(handle)
         watcher.stop()
