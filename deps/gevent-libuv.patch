@@ -1,0 +1,43 @@
+diff --git a/deps/libuv/src/unix/loop-watcher.c b/deps/libuv/src/unix/loop-watcher.c
+index 340bb0df..ff92c8e3 100644
+--- a/deps/libuv/src/unix/loop-watcher.c
++++ b/deps/libuv/src/unix/loop-watcher.c
+@@ -22,6 +22,17 @@
+ #include "uv.h"
+ #include "internal.h"
+ 
++/*
++ * gevent: Fix for https://github.com/gevent/gevent/issues/1126
++ *
++ * Using a stack-based queue variable in uv__run_* badly breaks
++ * for certain stack manipulations when greenlets switch.
++ * Windows keeps the stack in the loop. In ordor to minimize changes,
++ * we move the stack to the heap by changing just this file. We can't
++ * use global static variables because of multiple threads.
++ */
++#include <stdlib.h>
++
+ #define UV_LOOP_WATCHER_DEFINE(name, type)                                    \
+   int uv_##name##_init(uv_loop_t* loop, uv_##name##_t* handle) {              \
+     uv__handle_init(loop, (uv_handle_t*)handle, UV_##type);                   \
+@@ -47,16 +58,17 @@
+                                                                               \
+   void uv__run_##name(uv_loop_t* loop) {                                      \
+     uv_##name##_t* h;                                                         \
+-    QUEUE queue;                                                              \
++    QUEUE* queue = malloc(sizeof(QUEUE));                                     \
+     QUEUE* q;                                                                 \
+-    QUEUE_MOVE(&loop->name##_handles, &queue);                                \
+-    while (!QUEUE_EMPTY(&queue)) {                                            \
++    QUEUE_MOVE(&loop->name##_handles, queue);                                 \
++    while (!QUEUE_EMPTY(queue)) {                                             \
+       q = QUEUE_HEAD(&queue);                                                 \
+       h = QUEUE_DATA(q, uv_##name##_t, queue);                                \
+       QUEUE_REMOVE(q);                                                        \
+       QUEUE_INSERT_TAIL(&loop->name##_handles, q);                            \
+       h->name##_cb(h);                                                        \
+     }                                                                         \
++    free(queue);                                                              \
+   }                                                                           \
+                                                                               \
+   void uv__##name##_close(uv_##name##_t* handle) {                            \

@@ -126,6 +126,11 @@
 - Add `gevent.util.GreenletTree` to visualize the greenlet tree. This
   is used by `gevent.util.format_run_info`.
 
+- gevent now **requires** the patched version of libuv it is
+  distributed with. Building gevent with a non-embedded libuv, while
+  not previously supported, is not possible now. See
+  :issue:`1226`.
+
 1.3a1 (2018-01-27)
 ==================
 

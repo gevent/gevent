@@ -372,7 +372,7 @@ class ProcessTestCase(BaseTestCase):
         # is relative.
         python_dir, python_base = self._split_python_path()
         rel_python = os.path.join(os.curdir, python_base)
-        with support.temp_cwd('test_cwd_with_relative_arg', quiet=True) as wrong_dir: # gevent: use distinct name, avoid Travis CI failure)
+        with support.temp_cwd('test_cwd_with_relative_arg' + str(os.getpid()), quiet=True) as wrong_dir: # gevent: use distinct name, avoid Travis CI failure)
             # Before calling with the correct cwd, confirm that the call fails
             # without cwd and with the wrong cwd.
             self.assertRaises(FileNotFoundError, subprocess.Popen,
@@ -389,7 +389,7 @@ class ProcessTestCase(BaseTestCase):
         python_dir, python_base = self._split_python_path()
         rel_python = os.path.join(os.curdir, python_base)
         doesntexist = "somethingyoudonthave"
-        with support.temp_cwd('test_cwd_with_relative_executable', quiet=True) as wrong_dir: # gevent: use distinct name, avoid Travis CI failure)
+        with support.temp_cwd('test_cwd_with_relative_executable' + str(os.getpid()), quiet=True) as wrong_dir: # gevent: use distinct name, avoid Travis CI failure)
             # Before calling with the correct cwd, confirm that the call fails
             # without cwd and with the wrong cwd.
             self.assertRaises(FileNotFoundError, subprocess.Popen,
@@ -407,7 +407,7 @@ class ProcessTestCase(BaseTestCase):
         python_dir, python_base = self._split_python_path()
         abs_python = os.path.join(python_dir, python_base)
         rel_python = os.path.join(os.curdir, python_base)
-        with support.temp_dir() as wrong_dir:
+        with support.temp_cwd('test_cwd_with_absolute_arg' + str(os.getpid()), quiet=True) as wrong_dir: # gevent: use distinct name, avoid Travis CI failure)
             # Before calling with an absolute path, confirm that using a
             # relative path fails.
             self.assertRaises(FileNotFoundError, subprocess.Popen,

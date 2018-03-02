@@ -13,12 +13,18 @@ libuv = _corecffi.lib
 from gevent._ffi import watcher as _base
 from gevent._ffi import _dbg
 
-_closing_handles = set()
+_closing_watchers = set()
 
-
-@ffi.def_extern()
-def _uv_close_callback(handle):
-    _closing_handles.remove(handle)
+# In debug mode, it would be nice to be able to clear the memory of
+# the watcher (its size determined by
+# libuv.uv_handle_size(ffi_watcher.type)) using memset so that if we
+# are using it after it's supposedly been closed and deleted, we'd
+# catch it sooner. BUT doing so breaks test__threadpool. We get errors
+# about `pthread_mutex_lock[3]: Invalid argument` (and sometimes we
+# crash) suggesting either that we're writing on memory that doesn't
+# belong to us, somehow, or that we haven't actually lost all
+# references...
+_uv_close_callback = ffi.def_extern(name='_uv_close_callback')(_closing_watchers.remove)
 
 
 _events = [(libuv.UV_READABLE, "READ"),
@@ -125,7 +131,7 @@ class watcher(_base.watcher):
             # Sigh. Same thing if it's already in the process of being
             # closed.
             _dbg("Closing handle", ffi_watcher)
-            _closing_handles.add(ffi_watcher)
+            _closing_watchers.add(ffi_watcher)
             libuv.uv_close(ffi_watcher, libuv._uv_close_callback)
 
         ffi_handle_watcher.data = ffi.NULL
