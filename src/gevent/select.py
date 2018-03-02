@@ -2,7 +2,7 @@
 """
 Waiting for I/O completion.
 """
-from __future__ import absolute_import
+from __future__ import absolute_import, division, print_function
 
 import sys
 
@@ -230,6 +230,10 @@ if original_poll is not None:
 
             .. versionchanged:: 1.2a1
                File descriptors that are closed are reported with POLLNVAL.
+
+            .. versionchanged:: 1.3a2
+               Under libuv, interpret *timeout* values less than 0 the same as *None*,
+               i.e., block. This was always the case with libev.
             """
             result = PollResult()
             watchers = []
@@ -241,8 +245,21 @@ if original_poll is not None:
                     watchers.append(watcher)
                     watcher.priority = MAXPRI
                     watcher.start(result.add_event, fd, pass_events=True)
-                if timeout is not None and timeout > -1:
-                    timeout /= 1000.0
+                if timeout is not None:
+                    if timeout < 0:
+                        # The docs only say specifically that -1 itself
+                        # is supposed to block forever. Many, but not all
+                        # OS's accept any negative number to mean that. Some
+                        # OS's raise errors for anything negative but not -1.
+                        # Python 3.7 changes to always pass exactly -1 in that
+                        # case from selectors.
+                        # Our Timeout class currently does not have a defined behaviour
+                        # for negative values. On libuv, it uses a check watcher and effectively
+                        # doesn't block. On libev, it seems to block. In either case, we
+                        # *want* to block, so turn this into the sure fire block request.
+                        timeout = None
+                    elif timeout:
+                        timeout /= 1000.0
                 result.event.wait(timeout=timeout)
                 return list(result.events)
             finally:

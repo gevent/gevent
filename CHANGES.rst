@@ -131,6 +131,12 @@
   not previously supported, is not possible now. See
   :issue:`1226`.
 
+- :meth:`gevent.select.poll.poll` now interprets a *timeout* of -1 the
+  same as a *timeout* of *None* as the standard requires. Previously,
+  on libuv this was interpreted the same as a *timeout* of 0. In
+  addition, all *timeout* values less than zero are interpreted like
+  *None* (as they always were under libev). See :issue:`1127`.
+
 1.3a1 (2018-01-27)
 ==================
 

@@ -270,18 +270,6 @@ if LIBUV:
             # crashes with EPERM, which aborts the epoll loop, even
             # though it was allowed in in the first place.
             'test_asyncore.FileWrapperTest.test_dispatcher',
-
-            # XXX Debug this.
-            # Fails on line 342:
-            #  self.assertEqual(1, len(s.select(-1)))
-            # AssertionError 1 != 0
-            # Is the negative time not letting the loop cycle or something?
-            # The -1 currently passes all the way through select.poll to
-            # gevent.event.Event.wait to gevent.timeout.Timeout to gevent.libuv.loop.timer
-            # to gevent.libuv.watchers.timer,  where I think it is reset to 0.001.
-            # Alternately, this comes right after a call to s.select(0); perhaps libuv
-            # isn't reporting twice? We cache the watchers, maybe we need a new watcher?
-            'test_selectors.PollSelectorTestCase.test_timeout',
         ]
 
 
