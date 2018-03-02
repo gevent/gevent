@@ -1562,6 +1562,7 @@ class TestInputRaw(greentest.BaseTestCase):
         i = self.make_input("2\r\n1", chunked_input=True)
         self.assertRaises(IOError, i.readline)
 
+    @greentest.skipOnLibuvOnCIOnPyPy("Crashes. See https://github.com/gevent/gevent/issues/1130")
     def test_32bit_overflow(self):
         # https://github.com/gevent/gevent/issues/289
         # Should not raise an OverflowError on Python 2
