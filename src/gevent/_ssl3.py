@@ -137,17 +137,23 @@ class _contextawaresock(socket._gevent_sock_class): # Python 2: pylint:disable=s
             pass
         raise AttributeError(name)
 
-_SSLObject_factory = SSLObject
-if hasattr(SSLObject, '_create'):
-    # 3.7 is making thing difficult and won't let you
-    # actually construct an object
-    def _SSLObject_factory(sslobj, owner=None, session=None):
-        s = SSLObject.__new__(SSLObject)
-        s._sslobj = sslobj
-        s._sslobj.owner = owner or s
-        if session is not None:
-            s._sslobj.session = session
-        return s
+try:
+    _SSLObject_factory = SSLObject
+except NameError:
+    # 3.4 and below do not have SSLObject, something
+    # we magically import through copy_globals
+    pass
+else:
+    if hasattr(SSLObject, '_create'):
+        # 3.7 is making thing difficult and won't let you
+        # actually construct an object
+        def _SSLObject_factory(sslobj, owner=None, session=None):
+            s = SSLObject.__new__(SSLObject)
+            s._sslobj = sslobj
+            s._sslobj.owner = owner or s
+            if session is not None:
+                s._sslobj.session = session
+            return s
 
 class SSLSocket(socket):
     """
