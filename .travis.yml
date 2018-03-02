@@ -13,6 +13,8 @@ env:
         - CCACHE_SLOPPINESS=file_macro,time_macros,include_file_ctime,include_file_mtime
         - CCACHE_NOHASHDIR=true
         - CFLAGS="-Ofast -pipe -fomit-frame-pointer -march=native"
+        - PYTHONTRACEMALLOC=10
+        - PYTHONFAULTHANDLER=1
 
     matrix:
       # These are ordered to get as much diversity in the
