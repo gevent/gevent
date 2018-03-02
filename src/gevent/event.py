@@ -114,7 +114,7 @@ class _AbstractLinkable(object):
                     # rely on the exact return values, not just truthish-ness
                     return False
             finally:
-                timer.cancel()
+                timer.close()
         finally:
             self.unlink(switch)
 
