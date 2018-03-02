@@ -276,7 +276,7 @@ class TestCase(greentest.TestCase):
         try:
             self.server.stop()
         finally:
-            timeout.cancel()
+            timeout.close()
         # XXX currently listening socket is kept open in gevent.wsgi
 
     def connect(self):
@@ -351,7 +351,7 @@ class CommonTests(TestCase):
                 read_http(fd, code=404, reason='Not Found', body='not found')
                 fd.close()
             finally:
-                timeout.cancel()
+                timeout.close()
         except AssertionError as ex:
             if ex is not exception:
                 raise
