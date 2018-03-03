@@ -15,6 +15,7 @@ from greentest.util import log
 from greentest.sysinfo import RUNNING_ON_CI
 from greentest.sysinfo import PYPY
 from greentest.sysinfo import RESOLVER_ARES
+from greentest.sysinfo import LIBUV
 from greentest import six
 
 
@@ -34,6 +35,12 @@ RUN_ALONE = [
     'test__threadpool.py',
     'test__examples.py',
 ]
+
+if RUNNING_ON_CI and PYPY and LIBUV:
+    RUN_ALONE += [
+        # https://bitbucket.org/pypy/pypy/issues/2769/systemerror-unexpected-internal-exception
+        'test__pywsgi.py',
+    ]
 
 # tests that can't be run when coverage is enabled
 IGNORE_COVERAGE = [
