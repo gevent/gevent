@@ -169,6 +169,16 @@ if PYPY:
             'FLAKY test__example_udp_client.py',
         ]
 
+        if LIBUV:
+            IGNORED_TESTS += [
+                # This has started crashing with a SystemError.
+                # I cannot reproduce with the same version on macOS
+                # and I cannot reproduce with the same version in a Linux vm.
+                # Commenting out individual tests just moves the crash around.
+                # https://bitbucket.org/pypy/pypy/issues/2769/systemerror-unexpected-internal-exception
+                'test__pywsgi.py',
+            ]
+
     if PY3 and TRAVIS:
         FAILING_TESTS += [
             ## ---

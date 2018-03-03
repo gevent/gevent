@@ -243,7 +243,12 @@ if LIBUV:
                 ]
 
             if PYPY:
-
+                disabled_tests += [
+                    # This seems to crash the interpreter. I cannot reproduce
+                    # on macOS or local Linux VM.
+                    # See https://travis-ci.org/gevent/gevent/jobs/348661604#L709
+                    'test_smtplib.TooLongLineTests.testLineTooLong',
+                ]
                 if ARES:
 
                     disabled_tests += [
