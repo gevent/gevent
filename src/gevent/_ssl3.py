@@ -87,6 +87,16 @@ class SSLContext(orig_SSLContext):
         def verify_mode(self, value):
             super(orig_SSLContext, orig_SSLContext).verify_mode.__set__(self, value)
 
+    if hasattr(orig_SSLContext, 'minimum_version'):
+        # Like the above, added in 3.7
+        @orig_SSLContext.minimum_version.setter
+        def minimum_version(self, value):
+            super(orig_SSLContext, orig_SSLContext).minimum_version.__set__(self, value)
+
+        @orig_SSLContext.maximum_version.setter
+        def maximum_version(self, value):
+            super(orig_SSLContext, orig_SSLContext).maximum_version.__set__(self, value)
+
 
 class _contextawaresock(socket._gevent_sock_class): # Python 2: pylint:disable=slots-on-old-class
     # We have to pass the raw stdlib socket to SSLContext.wrap_socket.
@@ -127,6 +137,23 @@ class _contextawaresock(socket._gevent_sock_class): # Python 2: pylint:disable=s
             pass
         raise AttributeError(name)
 
+try:
+    _SSLObject_factory = SSLObject
+except NameError:
+    # 3.4 and below do not have SSLObject, something
+    # we magically import through copy_globals
+    pass
+else:
+    if hasattr(SSLObject, '_create'):
+        # 3.7 is making thing difficult and won't let you
+        # actually construct an object
+        def _SSLObject_factory(sslobj, owner=None, session=None):
+            s = SSLObject.__new__(SSLObject)
+            s._sslobj = sslobj
+            s._sslobj.owner = owner or s
+            if session is not None:
+                s._sslobj.session = session
+            return s
 
 class SSLSocket(socket):
     """
@@ -224,8 +251,9 @@ class SSLSocket(socket):
             try:
                 self._sslobj = self._context._wrap_socket(self._sock, server_side,
                                                           server_hostname)
-                if _session is not None: # 3.6
-                    self._sslobj = SSLObject(self._sslobj, owner=self, session=self._session)
+                if _session is not None: # 3.6+
+                    self._sslobj = _SSLObject_factory(self._sslobj,  owner=self,
+                                                      session=self._session)
                 if do_handshake_on_connect:
                     timeout = self.gettimeout()
                     if timeout == 0.0:
@@ -585,8 +613,8 @@ class SSLSocket(socket):
         if self._connected:
             raise ValueError("attempt to connect already-connected SSLSocket!")
         self._sslobj = self._context._wrap_socket(self._sock, False, self.server_hostname)
-        if self._session is not None: # 3.6
-            self._sslobj = SSLObject(self._sslobj, owner=self, session=self._session)
+        if self._session is not None: # 3.6+
+            self._sslobj = _SSLObject_factory(self._sslobj, owner=self, session=self._session)
         try:
             if connect_ex:
                 rc = socket.connect_ex(self, addr)
@@ -629,6 +657,9 @@ class SSLSocket(socket):
         if the requested `cb_type` is not supported.  Return bytes of the data
         or None if the data is not available (e.g. before the handshake).
         """
+        if hasattr(self._sslobj, 'get_channel_binding'):
+            # 3.7+, and sslobj is not None
+            return self._sslobj.get_channel_binding(cb_type)
         if cb_type not in CHANNEL_BINDING_TYPES:
             raise ValueError("Unsupported channel binding type")
         if cb_type != "tls-unique":

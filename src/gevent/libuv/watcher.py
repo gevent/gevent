@@ -120,7 +120,7 @@ class watcher(_base.watcher):
         # Instead, this is arranged as a callback to GC when the
         # watcher class dies. Obviously it's important to keep the ffi
         # watcher alive.
-        _dbg("Request to close handle", ffi_watcher)
+        _dbg("Request to close handle", ffi.cast('void*', ffi_watcher), ffi_watcher)
         # We can pass in "subclasses" if uv_handle_t that line up at the C level,
         # but that don't in CFFI without a cast. But be careful what we use the cast
         # for, don't pass it back to C.
@@ -729,12 +729,16 @@ class OneShotCheck(check):
 
     _watcher_skip_ffi = True
 
+    def __make_cb(self, func):
+        stop = self.stop
+        @functools.wraps(func)
+        def cb(*args):
+            stop()
+            return func(*args)
+        return cb
+
     def start(self, callback, *args):
-        @functools.wraps(callback)
-        def _callback(*args):
-            self.stop()
-            return callback(*args)
-        return check.start(self, _callback, *args)
+        return check.start(self, self.__make_cb(callback), *args)
 
 class prepare(_base.PrepareMixin, watcher):
     pass

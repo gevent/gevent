@@ -1562,16 +1562,17 @@ class TestInputRaw(greentest.BaseTestCase):
         i = self.make_input("2\r\n1", chunked_input=True)
         self.assertRaises(IOError, i.readline)
 
-    @greentest.skipOnLibuvOnCIOnPyPy("Crashes. See https://github.com/gevent/gevent/issues/1130")
     def test_32bit_overflow(self):
         # https://github.com/gevent/gevent/issues/289
         # Should not raise an OverflowError on Python 2
+        print("BEGIN 32bit")
         data = b'asdf\nghij\n'
         long_data = b'a' * (pywsgi.MAX_REQUEST_LINE + 10)
         long_data += b'\n'
         data = data + long_data
         partial_data = b'qjk\n' # Note terminating \n
         n = 25 * 1000000000
+        print("N", n, "Data len", len(data))
         if hasattr(n, 'bit_length'):
             self.assertEqual(n.bit_length(), 35)
         if not PY3 and not PYPY:

@@ -157,15 +157,15 @@ def wait(io, timeout=None, timeout_exc=_NONE):
     """
     if io.callback is not None:
         raise ConcurrentObjectUseError('This socket is already used by another greenlet: %r' % (io.callback, ))
-    if timeout is not None:
-        timeout_exc = timeout_exc if timeout_exc is not _NONE else _timeout_error('timed out')
-        timeout = Timeout.start_new(timeout, timeout_exc)
+    timeout = Timeout._start_new_or_dummy(
+        timeout,
+        (timeout_exc
+         if timeout_exc is not _NONE or timeout is None
+         else _timeout_error('timed out')))
 
-    try:
+
+    with timeout:
         return get_hub().wait(io)
-    finally:
-        if timeout is not None:
-            timeout.cancel()
     # rename "io" to "watcher" because wait() works with any watcher
 
 

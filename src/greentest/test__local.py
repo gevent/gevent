@@ -274,7 +274,10 @@ class TestGeventLocal(greentest.TestCase):
         # The sentinels should be gone too
         self.assertEqual(len(deleted_sentinels), len(greenlets))
 
+    @greentest.skipOnLibuvOnPyPyOnWin("GC makes this non-deterministic, especially on Windows")
     def test_locals_collected_when_unreferenced_even_in_running_greenlet(self):
+        # In fact only on Windows do we see GC being an issue;
+        # pypy2 5.0 on macos and travis don't have a problem.
         # https://github.com/gevent/gevent/issues/981
         import gevent
         import gc
@@ -308,16 +311,15 @@ class TestGeventLocal(greentest.TestCase):
 
         self.assertEqual(count, len(deleted_sentinels))
 
+    @greentest.skipOnPyPy("GC makes this non-deterministic, especially on Windows")
     def test_local_dicts_for_greenlet(self):
+        # In fact, only on Windows do we see gc being an issue;
+        # pypy2 5.10 on macOS and Travis don't have a problem.
         import gevent
         from gevent.local import all_local_dicts_for_greenlet
         x = MyLocal()
         x.foo = 42
         del x.sentinel
-
-        if greentest.PYPY:
-            import gc
-            gc.collect()
 
         results = all_local_dicts_for_greenlet(gevent.getcurrent())
         self.assertEqual(results,

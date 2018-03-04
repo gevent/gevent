@@ -208,7 +208,10 @@ class AbstractCallbacks(object):
             watcher.loop.handle_error(None, t, v, tb)
             return 1
         else:
-            raise v
+            # Raising it causes a lot of noise from CFFI
+            print("WARNING: gevent: Unhandled error with no watcher",
+                  file=sys.stderr)
+            traceback.print_exception(t, v, tb)
 
     def python_stop(self, handle):
         if not handle: # pragma: no cover
@@ -220,8 +223,7 @@ class AbstractCallbacks(object):
             # NOTE: Raising exceptions here does nothing, they're swallowed by CFFI.
             # Since the C level passed in a null pointer, even dereferencing the handle
             # will just produce some exceptions.
-            if GEVENT_DEBUG_LEVEL < CRITICAL:
-                return
+            return
         _dbg("python_stop: stopping watcher with handle", handle)
         watcher = self.from_handle(handle)
         watcher.stop()
