@@ -5,11 +5,11 @@ wheel
 # 0.28 is faster, and (important!) lets us specify the target module
 # name to be created so that we can have both foo.py and _foo.so
 # at the same time.
-# This is an arbitrary commit that seems to work well.
--e git+https://github.com/cython/cython.git@471025858954d5b8429a9361a77dc41c6650ac52#egg=cython
+# 0.28b1 has been tagged but not uploaded to PyPI
+-e git+https://github.com/cython/cython.git@0.28b1#egg=cython
 
 # Python 3.7b1 requires this.
-greenlet>=0.4.13
+greenlet>=0.4.13 ; platform_python_implementation == "CPython"
 pylint>=1.8.0
 # pyyaml is included here and doesn't install on travis with 3.7a3
 prospector[with_pyroma] ; python_version < '3.7'

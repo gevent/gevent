@@ -7,7 +7,10 @@
 1.3a2 (unreleased)
 ==================
 
-- Fix building from a source distribution without Cython installed.
+- Fix building from a source distribution (PyPI) without Cython installed.
+
+- Cython 0.28b1 or later is now required to build gevent from a source
+  checkout.
 
 - Make :class:`gevnt.subprocess.Popen` accept the ``restore_signals``
   keyword argument on all versions of Python, and on Python 2 have it
