@@ -89,6 +89,7 @@ class TestCase(greentest.TestCase):
         sock = socket.socket()
         sock.bind(('127.0.0.1', 0))
         sock.listen(5)
+        self._close_on_teardown(sock)
         return sock
 
     def get_server_host_port_family(self):
@@ -314,9 +315,8 @@ class TestDefaultSpawn(TestCase):
         self.server = self.ServerClass((greentest.DEFAULT_BIND_ADDR, 0), lambda *args: [])
         self.server.start()
         conn = self.send_request()
-        timeout = gevent.Timeout.start_new(1)
         # use assert500 below?
-        try:
+        with gevent.Timeout._start_new_or_dummy(1) as timeout:
             try:
                 result = conn.read()
                 if result:
@@ -328,9 +328,9 @@ class TestDefaultSpawn(TestCase):
                     pass
                 else:
                     raise
-        finally:
-            timeout.cancel()
-            conn.close()
+            finally:
+                conn.close()
+
         self.stop_server()
 
     def init_server(self):
