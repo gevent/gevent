@@ -26,6 +26,7 @@ psutil
 perf
 # Used in a test
 zope.interface
+requests
 # For viewing README.rst (restview --long-description),
 # CONTRIBUTING.rst, etc.
 # https://github.com/mgedmin/restview

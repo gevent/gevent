@@ -121,7 +121,7 @@ def getname(command, env=None, setenv=None):
     return ' '.join(result)
 
 
-def start(command, **kwargs):
+def start(command, quiet=False, **kwargs):
     timeout = kwargs.pop('timeout', None)
     preexec_fn = None
     if not os.environ.get('DO_NOT_SETPGRP'):
@@ -138,7 +138,8 @@ def start(command, **kwargs):
             env = os.environ.copy()
         env.update(setenv)
 
-    log('+ %s', name)
+    if not quiet:
+        log('+ %s', name)
     popen = Popen(command, preexec_fn=preexec_fn, env=env, **kwargs)
     popen.name = name
     popen.setpgrp_enabled = preexec_fn is not None
@@ -176,11 +177,12 @@ def run(command, **kwargs):
     buffer_output = kwargs.pop('buffer_output', BUFFER_OUTPUT)
     quiet = kwargs.pop('quiet', QUIET)
     verbose = not quiet
+    nested = kwargs.pop('nested', False)
     if buffer_output:
         assert 'stdout' not in kwargs and 'stderr' not in kwargs, kwargs
         kwargs['stderr'] = subprocess.STDOUT
         kwargs['stdout'] = subprocess.PIPE
-    popen = start(command, **kwargs)
+    popen = start(command, quiet=nested, **kwargs)
     name = popen.name
     try:
         time_start = time.time()
@@ -195,7 +197,7 @@ def run(command, **kwargs):
     assert not err
     with lock: # pylint:disable=not-context-manager
         failed = bool(result)
-        if out and (failed or verbose):
+        if out and (failed or verbose or b'ResourceWarning' in out):
             out = out.strip().decode('utf-8', 'ignore')
             if out:
                 out = '  ' + out.replace('\n', '\n  ')
@@ -204,7 +206,7 @@ def run(command, **kwargs):
                 log('| %s\n%s', name, out)
         if result:
             log('! %s [code %s] [took %.1fs]', name, result, took)
-        else:
+        elif not nested:
             log('- %s [took %.1fs]', name, took)
     if took >= MIN_RUNTIME:
         runtimelog.append((-took, name))

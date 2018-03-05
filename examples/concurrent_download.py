@@ -9,26 +9,21 @@ from gevent import monkey
 # patches stdlib (including socket and ssl modules) to cooperate with other greenlets
 monkey.patch_all()
 
-import sys
+import requests
 
-# Note that all of these redirect to HTTPS, so
+# Note that we're using HTTPS, so
 # this demonstrates that SSL works.
 urls = [
-    'http://www.google.com',
-    'http://www.apple.com',
-    'http://www.python.org'
+    'https://www.google.com/',
+    'https://www.apple.com/',
+    'https://www.python.org/'
 ]
 
-
-if sys.version_info[0] == 3:
-    from urllib.request import urlopen # pylint:disable=import-error,no-name-in-module
-else:
-    from urllib2 import urlopen # pylint: disable=import-error
 
 
 def print_head(url):
     print('Starting %s' % url)
-    data = urlopen(url).read()
+    data = requests.get(url).text
     print('%s: %s bytes: %r' % (url, len(data), data[:50]))
 
 jobs = [gevent.spawn(print_head, _url) for _url in urls]

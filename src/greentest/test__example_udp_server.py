@@ -9,11 +9,13 @@ class Test(util.TestServer):
 
     def _run_all_tests(self):
         sock = socket.socket(type=socket.SOCK_DGRAM)
-        sock.connect(('127.0.0.1', 9000))
-        sock.send(b'Test udp_server')
-        data, _address = sock.recvfrom(8192)
-        self.assertEqual(data, b'Received 15 bytes')
-        sock.close()
+        try:
+            sock.connect(('127.0.0.1', 9000))
+            sock.send(b'Test udp_server')
+            data, _address = sock.recvfrom(8192)
+            self.assertEqual(data, b'Received 15 bytes')
+        finally:
+            sock.close()
 
 
 if __name__ == '__main__':

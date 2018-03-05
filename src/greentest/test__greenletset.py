@@ -1,11 +1,13 @@
+from __future__ import print_function, division, absolute_import
 import time
 import greentest
-from greentest.flaky import reraiseFlakyTestRaceConditionLibuv
+
+from greentest import timing
 import gevent
 from gevent import pool
 from gevent.timeout import Timeout
 
-DELAY = 0.1
+DELAY = timing.LARGE_TICK
 
 
 class SpecialError(Exception):
@@ -23,25 +25,23 @@ class Undead(object):
                 gevent.sleep(1)
             except SpecialError:
                 break
-            except:
+            except: # pylint:disable=bare-except
                 self.shot_count += 1
 
 
 class Test(greentest.TestCase):
 
+    __timeout__ = greentest.LARGE_TIMEOUT
+
     def test_basic(self):
-        DELAY = 0.05 if not greentest.RUNNING_ON_APPVEYOR else 0.1
         s = pool.Group()
-        s.spawn(gevent.sleep, DELAY)
+        s.spawn(gevent.sleep, timing.LARGE_TICK)
         self.assertEqual(len(s), 1, s)
-        s.spawn(gevent.sleep, DELAY * 2.)
+        s.spawn(gevent.sleep, timing.LARGE_TICK * 5)
         self.assertEqual(len(s), 2, s)
-        gevent.sleep(DELAY * 3. / 2.)
-        try:
-            self.assertEqual(len(s), 1, s)
-        except AssertionError:
-            reraiseFlakyTestRaceConditionLibuv()
-        gevent.sleep(DELAY)
+        gevent.sleep(timing.LARGE_TICK * 2 + timing.LARGE_TICK_MIN_ADJ)
+        self.assertEqual(len(s), 1, s)
+        gevent.sleep(timing.LARGE_TICK * 5 + timing.LARGE_TICK_MIN_ADJ)
         self.assertFalse(s)
 
     def test_waitall(self):
@@ -86,16 +86,16 @@ class Test(greentest.TestCase):
         p2 = gevent.spawn(u2)
 
         def check(count1, count2):
-            assert p1, p1
-            assert p2, p2
-            assert not p1.dead, p1
-            assert not p2.dead, p2
+            self.assertTrue(p1)
+            self.assertTrue(p2)
+            self.assertFalse(p1.dead, p1)
+            self.assertFalse(p2.dead, p2)
             self.assertEqual(u1.shot_count, count1)
             self.assertEqual(u2.shot_count, count2)
 
         gevent.sleep(0.01)
         s = pool.Group([p1, p2])
-        assert len(s) == 2, s
+        self.assertEqual(len(s), 2, s)
         check(0, 0)
         s.killone(p1, block=False)
         check(0, 0)

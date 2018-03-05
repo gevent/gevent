@@ -283,19 +283,22 @@ class socket(object):
         if self._closed:
             self.close()
 
-    def _real_close(self, _ss=_socket.socket, cancel_wait_ex=cancel_wait_ex):
-        # This function should not reference any globals. See Python issue #808164.
-
-        # Break any reference to the loop.io objects. Our fileno,
-        # which they were tied to, is now free to be reused, so these
-        # objects are no longer functional.
-
+    def _drop_events(self):
         if self._read_event is not None:
             self.hub.cancel_wait(self._read_event, cancel_wait_ex, True)
             self._read_event = None
         if self._write_event is not None:
             self.hub.cancel_wait(self._write_event, cancel_wait_ex, True)
             self._write_event = None
+
+    def _real_close(self, _ss=_socket.socket, cancel_wait_ex=cancel_wait_ex):
+        # This function should not reference any globals. See Python issue #808164.
+
+        # Break any reference to the loop.io objects. Our fileno,
+        # which they were tied to, is now free to be reused, so these
+        # objects are no longer functional.
+        self._drop_events()
+
         _ss.close(self._sock)
 
         # Break any references to the underlying socket object. Tested

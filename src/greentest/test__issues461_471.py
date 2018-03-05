@@ -85,6 +85,7 @@ else:
             # on Python 2). We still
             # count this as success.
             self.assertEqual(p.returncode if not WIN else 0, 0)
+            p.stdout.close()
 
     if __name__ == '__main__':
         greentest.main()

@@ -43,6 +43,7 @@ from greentest.sysinfo import PY37
 
 from greentest.sysinfo import PYPY
 from greentest.sysinfo import PYPY3
+from greentest.sysinfo import CPYTHON
 
 from greentest.sysinfo import PLATFORM_SPECIFIC_SUFFIXES
 from greentest.sysinfo import NON_APPLICABLE_SUFFIXES

@@ -8,6 +8,7 @@ import unittest
 import errno
 import weakref
 
+
 import greentest
 
 
@@ -17,6 +18,8 @@ pid = os.getpid()
 
 PY3 = greentest.PY3
 PYPY = greentest.PYPY
+CPYTHON = not PYPY
+PY2 = not PY3
 fd_types = int
 if PY3:
     long = int
@@ -115,16 +118,21 @@ class Test(greentest.TestCase):
         self.assert_open(s, s.fileno())
         return s
 
-    def _close_on_teardown(self, resource):
+    if CPYTHON and PY2:
         # Keeping raw sockets alive keeps SSL sockets
-        # from being closed too, at least on CPython, so we
-        # need to use weakrefs
-        self.close_on_teardown.append(weakref.ref(resource))
-        return resource
+        # from being closed too, at least on CPython2, so we
+        # need to use weakrefs.
 
-    def _tearDownCloseOnTearDown(self):
-        self.close_on_teardown = [r() for r in self.close_on_teardown if r() is not None]
-        super(Test, self)._tearDownCloseOnTearDown()
+        # In contrast, on PyPy, *only* having a weakref lets the
+        # original socket die and leak
+
+        def _close_on_teardown(self, resource):
+            self.close_on_teardown.append(weakref.ref(resource))
+            return resource
+
+        def _tearDownCloseOnTearDown(self):
+            self.close_on_teardown = [r() for r in self.close_on_teardown if r() is not None]
+            super(Test, self)._tearDownCloseOnTearDown()
 
 class TestSocket(Test):
 
@@ -272,7 +280,8 @@ class TestSSL(Test):
             # our socket first, so this fails.
             pass
         else:
-            self._close_on_teardown(x)
+            #self._close_on_teardown(x)
+            x.close()
 
     def _make_ssl_connect_task(self, connector, port):
         t = threading.Thread(target=self._ssl_connect_task, args=(connector, port))
@@ -299,6 +308,9 @@ class TestSSL(Test):
         task.join()
         for s in sockets:
             s.close()
+
+        del sockets
+        del task
 
     def test_simple_close(self):
         s = self.make_open_socket()
@@ -356,7 +368,7 @@ class TestSSL(Test):
 
         try:
             client_socket, _addr = listener.accept()
-            self._close_on_teardown(client_socket)
+            self._close_on_teardown(client_socket.close)
             client_socket = ssl.wrap_socket(client_socket, keyfile=certfile, certfile=certfile, server_side=True)
             self._close_on_teardown(client_socket)
             fileno = client_socket.fileno()
@@ -382,7 +394,7 @@ class TestSSL(Test):
 
         try:
             client_socket, _addr = listener.accept()
-            self._close_on_teardown(client_socket)
+            self._close_on_teardown(client_socket.close) # hard ref
             client_socket = ssl.wrap_socket(client_socket, keyfile=certfile, certfile=certfile, server_side=True)
             self._close_on_teardown(client_socket)
             fileno = client_socket.fileno()
@@ -432,6 +444,7 @@ class TestSSL(Test):
         listener.bind(('127.0.0.1', 0))
         port = listener.getsockname()[1]
         listener.listen(1)
+        self._close_on_teardown(listener)
         listener = ssl.wrap_socket(listener, keyfile=certfile, certfile=certfile)
 
         connector = socket.socket()
@@ -459,6 +472,7 @@ class TestSSL(Test):
                       "https://travis-ci.org/gevent/gevent/jobs/327357684")
     def test_serverssl_makefile2(self):
         listener = socket.socket()
+        self._close_on_teardown(listener)
         listener.bind(('127.0.0.1', 0))
         port = listener.getsockname()[1]
         listener.listen(1)

@@ -25,6 +25,7 @@ import gevent.core
 from gevent import _compat as gsysinfo
 
 PYPY = gsysinfo.PYPY
+CPYTHON = not PYPY
 VERBOSE = sys.argv.count('-v') > 1
 WIN = gsysinfo.WIN
 LINUX = sys.platform.startswith('linux')

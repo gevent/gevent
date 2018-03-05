@@ -413,6 +413,11 @@ def set_hub(hub):
     _threadlocal.hub = hub
 
 
+class _dummy_greenlet(object):
+    def throw(self):
+        pass
+
+_dummy_greenlet = _dummy_greenlet()
 
 
 def _config(default, envvar):
@@ -637,11 +642,12 @@ class Hub(RawGreenlet):
             # See https://github.com/gevent/gevent/issues/1089
             return
         if watcher.callback is not None:
+            print('Scheduling close for', watcher, close_watcher)
             self.loop.run_callback(self._cancel_wait, watcher, error, close_watcher)
         elif close_watcher:
             watcher.close()
 
-    def _cancel_wait(self, watcher, error, close_watcher):
+    def _cancel_wait(self, watcher, error, close_watcher, _dummy_greenlet=_dummy_greenlet):
         # We have to check again to see if it was still active by the time
         # our callback actually runs.
         active = watcher.active
@@ -649,11 +655,9 @@ class Hub(RawGreenlet):
         if close_watcher:
             watcher.close()
         if active:
-            switch = cb
-            if switch is not None:
-                greenlet = getattr(switch, '__self__', None)
-                if greenlet is not None:
-                    greenlet.throw(error)
+            # The callback should be greenlet.switch(). It may or may not be None.
+            greenlet = getattr(cb, '__self__', _dummy_greenlet)
+            greenlet.throw(error)
 
     def run(self):
         """

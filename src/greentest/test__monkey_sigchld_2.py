@@ -8,7 +8,7 @@ import sys
 import signal
 
 
-def handle(*args):
+def handle(*_args):
     if not pid:
         # We only do this is the child so our
         # parent's waitpid can get the status.

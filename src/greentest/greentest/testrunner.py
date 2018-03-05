@@ -14,16 +14,34 @@ from greentest import util
 from greentest.util import log
 from greentest.sysinfo import RUNNING_ON_CI
 from greentest.sysinfo import PYPY
+from greentest.sysinfo import PY3
 from greentest.sysinfo import RESOLVER_ARES
 from greentest.sysinfo import LIBUV
 from greentest import six
 
+# Import this while we're probably single-threaded/single-processed
+# to try to avoid issues with PyPy 5.10.
+# See https://bitbucket.org/pypy/pypy/issues/2769/systemerror-unexpected-internal-exception
+try:
+    __import__('_testcapi')
+except (ImportError, OSError, IOError):
+    # This can raise a wide variety of errors
+    pass
 
-
-TIMEOUT = 180
+TIMEOUT = 100
 NWORKERS = int(os.environ.get('NWORKERS') or max(cpu_count() - 1, 4))
 if NWORKERS > 10:
     NWORKERS = 10
+
+DEFAULT_RUN_OPTIONS = {
+    'timeout': TIMEOUT
+}
+
+# A mapping from test file basename to a dictionary of
+# options that will be applied on top of the DEFAULT_RUN_OPTIONS.
+TEST_FILE_OPTIONS = {
+
+}
 
 if RUNNING_ON_CI:
     # Too many and we get spurious timeouts
@@ -36,11 +54,26 @@ RUN_ALONE = [
     'test__examples.py',
 ]
 
-if RUNNING_ON_CI and PYPY and LIBUV:
+if RUNNING_ON_CI:
     RUN_ALONE += [
-        # https://bitbucket.org/pypy/pypy/issues/2769/systemerror-unexpected-internal-exception
-        'test__pywsgi.py',
+        # Partial workaround for the _testcapi issue on PyPy,
+        # but also because signal delivery can sometimes be slow, and this
+        # spawn processes of its own
+        'test_signal.py',
     ]
+    if PYPY:
+        # This often takes much longer on PyPy on CI.
+        TEST_FILE_OPTIONS['test__threadpool.py'] = {'timeout': 180}
+        if PY3:
+            RUN_ALONE += [
+                # Sometimes shows unexpected timeouts
+                'test_socket.py',
+            ]
+        if LIBUV:
+            RUN_ALONE += [
+                # https://bitbucket.org/pypy/pypy/issues/2769/systemerror-unexpected-internal-exception
+                'test__pywsgi.py',
+            ]
 
 # tests that can't be run when coverage is enabled
 IGNORE_COVERAGE = [
@@ -72,7 +105,7 @@ def run_many(tests, configured_failing_tests=(), failfast=False, quiet=False):
     passed = {}
 
     NWORKERS = min(len(tests), NWORKERS) or 1
-    print('thread pool size:', NWORKERS, '\n')
+
     pool = ThreadPool(NWORKERS)
     util.BUFFER_OUTPUT = NWORKERS > 1
 
@@ -116,6 +149,7 @@ def run_many(tests, configured_failing_tests=(), failfast=False, quiet=False):
 
     try:
         try:
+            log("Running tests in parallel with concurrency %s" % (NWORKERS,))
             for cmd, options in tests:
                 total += 1
                 options = options or {}
@@ -126,6 +160,7 @@ def run_many(tests, configured_failing_tests=(), failfast=False, quiet=False):
             pool.close()
             pool.join()
 
+            log("Running tests marked standalone")
             for cmd, options in run_alone:
                 run_one(cmd, **options)
 
@@ -174,7 +209,7 @@ def discover(tests=None, ignore_files=None,
     tests = sorted(tests)
 
     to_process = []
-    default_options = {'timeout': TIMEOUT}
+
 
     for filename in tests:
         with open(filename, 'rb') as f:
@@ -191,7 +226,9 @@ def discover(tests=None, ignore_files=None,
                 to_process.append((cmd, options))
         else:
             cmd = [sys.executable, '-u', filename]
-            to_process.append((cmd, default_options.copy()))
+            options = DEFAULT_RUN_OPTIONS.copy()
+            options.update(TEST_FILE_OPTIONS.get(filename, {}))
+            to_process.append((cmd, options))
 
     return to_process
 
@@ -297,10 +334,11 @@ def main():
     parser.add_argument('--ignore')
     parser.add_argument('--discover', action='store_true')
     parser.add_argument('--full', action='store_true')
-    parser.add_argument('--config')
+    parser.add_argument('--config', default='known_failures.py')
     parser.add_argument('--failfast', action='store_true')
     parser.add_argument("--coverage", action="store_true")
-    parser.add_argument("--quiet", action="store_true")
+    parser.add_argument("--quiet", action="store_true", default=True)
+    parser.add_argument("--verbose", action="store_false", dest='quiet')
     parser.add_argument('tests', nargs='*')
     options = parser.parse_args()
     FAILING_TESTS = []
@@ -318,13 +356,7 @@ def main():
         # in this directory; makes them easier to combine and use with coverage report)
         os.environ['COVERAGE_FILE'] = os.path.abspath(".") + os.sep + ".coverage"
         print("Enabling coverage to", os.environ['COVERAGE_FILE'])
-    if options.config:
-        config = {}
-        with open(options.config) as f:
-            config_data = f.read()
-        six.exec_(config_data, config)
-        FAILING_TESTS = config['FAILING_TESTS']
-        IGNORED_TESTS = config['IGNORED_TESTS']
+
 
     if 'PYTHONWARNINGS' not in os.environ and not sys.warnoptions:
         # Enable default warnings such as ResourceWarning.
@@ -337,11 +369,30 @@ def main():
         # back on __name__ and __path__". I have no idea what that means, but it seems harmless
         # and is annoying.
         os.environ['PYTHONWARNINGS'] = 'default,ignore:::site:,ignore:::importlib._bootstrap:,ignore:::importlib._bootstrap_external:'
+
     if 'PYTHONFAULTHANDLER' not in os.environ:
         os.environ['PYTHONFAULTHANDLER'] = 'true'
 
     if 'GEVENT_DEBUG' not in os.environ:
         os.environ['GEVENT_DEBUG'] = 'debug'
+
+    if 'PYTHONTRACEMALLOC' not in os.environ:
+        os.environ['PYTHONTRACEMALLOC'] = '10'
+
+    if 'PYTHONDEVMODE' not in os.environ:
+        # Python 3.7
+        os.environ['PYTHONDEVMODE'] = '1'
+
+
+    if options.config:
+        config = {}
+        with open(options.config) as f:
+            config_data = f.read()
+        six.exec_(config_data, config)
+        FAILING_TESTS = config['FAILING_TESTS']
+        IGNORED_TESTS = config['IGNORED_TESTS']
+
+
 
     tests = discover(options.tests,
                      ignore_files=options.ignore,

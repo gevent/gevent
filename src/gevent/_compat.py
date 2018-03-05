@@ -38,10 +38,13 @@ if PY3:
         if value.__traceback__ is not tb and tb is not None:
             raise value.with_traceback(tb)
         raise value
+    def exc_clear():
+        pass
 
 else:
     from gevent._util_py2 import reraise # pylint:disable=import-error,no-name-in-module
     reraise = reraise # export
+    exc_clear = sys.exc_clear
 
 ## Functions
 if PY3:
