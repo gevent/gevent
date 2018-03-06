@@ -22,7 +22,7 @@ _version_info = namedtuple('version_info',
 version_info = _version_info(1, 3, 0, 'dev', 0)
 
 #: The human-readable PEP 440 version identifier
-__version__ = '1.3.0.dev0'
+__version__ = '1.3a2'
 
 
 __all__ = [

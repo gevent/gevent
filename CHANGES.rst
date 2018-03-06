@@ -4,7 +4,7 @@
 
 .. currentmodule:: gevent
 
-1.3a2 (unreleased)
+1.3a2 (2018-03-06)
 ==================
 
 Dependencies
