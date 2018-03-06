@@ -24,7 +24,7 @@ include tox.ini
 include .pep8
 include .pylintrc
 recursive-include .github *.md
-recursive-include benchmarks *.sh
+recursive-include benchmarks *.sh *.py
 recursive-include appveyor *.cmd
 recursive-include appveyor *.ps1
 recursive-include scripts *.sh *.py
@@ -58,3 +58,6 @@ recursive-exclude src/gevent _corecffi.c
 exclude Makefile
 exclude configure-output
 include Makefile.ext
+recursive-exclude deps/c-ares .deps .libs
+recursive-exclude deps/libuv .deps .libs
+recursive-exclude deps/libev .deps .libs
