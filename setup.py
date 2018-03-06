@@ -124,15 +124,21 @@ if not SKIP_LIBUV:
     # but manylinux1 has only 2.5, so we set SKIP_LIBUV in the script make-manylinux
     cffi_modules.append(LIBUV_CFFI_MODULE)
 
-install_requires = [
+greenlet_requires = [
     # We need to watch our greenlet version fairly carefully,
     # since we compile cython code that extends the greenlet object.
     # Binary compatibility would break if the greenlet struct changes.
     'greenlet >= 0.4.13; platform_python_implementation=="CPython"',
 ]
 
-setup_requires = [
-]
+install_requires = greenlet_requires + []
+
+# We use headers from greenlet, so it needs to be installed before we can compile.
+# XXX: This doesn't quite seem to work: pip tries to build the wheel, which
+# fails because greenlet is not installed (it's in a .eggs/ directory in the
+# build directory, but that directory doesn't have includes). Then it installs greenlet,
+# and builds gevent again, which works.
+setup_requires = greenlet_requires + []
 
 if PYPY:
     # These use greenlet/greenlet.h, which doesn't exist on PyPy
