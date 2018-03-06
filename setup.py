@@ -59,6 +59,11 @@ venv_include_dir = os.path.abspath(venv_include_dir)
 if os.path.exists(venv_include_dir):
     include_dirs.append(venv_include_dir)
 
+# If we're installed via buildout, and buildout also installs
+# greenlet, we have *NO* access to greenlet.h at all. So include
+# our own copy as a fallback.
+include_dirs.append('deps')
+
 SEMAPHORE = Extension(name="gevent.__semaphore",
                       sources=["src/gevent/_semaphore.py"],
                       depends=['src/gevent/__semaphore.pxd'],
@@ -137,7 +142,8 @@ install_requires = greenlet_requires + []
 # XXX: This doesn't quite seem to work: pip tries to build the wheel, which
 # fails because greenlet is not installed (it's in a .eggs/ directory in the
 # build directory, but that directory doesn't have includes). Then it installs greenlet,
-# and builds gevent again, which works.
+# and builds gevent again, which works. Of course, now that we ship our own header,
+# this is probably not completely necessary at all.
 setup_requires = greenlet_requires + []
 
 if PYPY:
