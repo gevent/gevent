@@ -326,11 +326,11 @@ def _patch_existing_locks(threading):
                 o.owner = tid
 
 
-def patch_thread(threading=True, _threading_local=True, Event=False, logging=True,
+def patch_thread(threading=True, _threading_local=True, Event=True, logging=True,
                  existing_locks=True,
                  _warnings=None):
     """
-    patch_thread(threading=True, _threading_local=True, Event=False, logging=True, existing_locks=True) -> None
+    patch_thread(threading=True, _threading_local=True, Event=True, logging=True, existing_locks=True) -> None
 
     Replace the standard :mod:`thread` module to make it greenlet-based.
 
@@ -354,6 +354,8 @@ def patch_thread(threading=True, _threading_local=True, Event=False, logging=Tru
 
     .. versionchanged:: 1.1b1
         Add *logging* and *existing_locks* params.
+    .. versionchanged:: 1.3a2
+        ``Event`` defaults to True.
     """
     # XXX: Simplify
     # pylint:disable=too-many-branches,too-many-locals
@@ -666,7 +668,7 @@ def _check_repatching(**module_settings):
 
 
 def patch_all(socket=True, dns=True, time=True, select=True, thread=True, os=True, ssl=True, httplib=False,
-              subprocess=True, sys=False, aggressive=True, Event=False,
+              subprocess=True, sys=False, aggressive=True, Event=True,
               builtins=True, signal=True):
     """
     Do all of the default monkey patching (calls every other applicable
@@ -680,6 +682,8 @@ def patch_all(socket=True, dns=True, time=True, select=True, thread=True, os=Tru
        Issue a :mod:`warning <warnings>` if this function is called with ``os=False``
        and ``signal=True``. This will cause SIGCHLD handlers to not be called. This may
        be an error in the future.
+    .. versionchanged:: 1.3a2
+       ``Event`` defaults to True.
     """
     # pylint:disable=too-many-locals,too-many-branches
 

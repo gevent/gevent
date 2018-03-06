@@ -28,7 +28,7 @@ try:
     from urllib.parse import parse_qs
 except ImportError:
     # Python 2
-    from cgi import parse_qs
+    from urlparse import parse_qs
 import os
 import sys
 try:
@@ -155,7 +155,9 @@ class Response(object):
         assert self.body == body, 'Unexpected body: %r (expected %r)\n%s' % (self.body, body, self)
 
     @classmethod
-    def read(cls, fd, code=200, reason='default', version='1.1', body=None, chunks=None, content_length=None):
+    def read(cls, fd, code=200, reason='default', version='1.1',
+             body=None, chunks=None, content_length=None):
+        # pylint:disable=too-many-branches
         _status_line, headers = read_headers(fd)
         self = cls(_status_line, headers)
         if code is not None:
@@ -195,40 +197,9 @@ class Response(object):
 
 read_http = Response.read
 
-if not PY3:
-    # Under Python 3, socket.makefile does not use
-    # socket._fileobject; instead it uses the io package.
-    # We don't want to artificially interfere with that because
-    # then we won't be testing the actual code that's in use.
-    class DebugFileObject(object):
-
-        def __init__(self, obj):
-            self.obj = obj
-
-        def read(self, *args):
-            result = self.obj.read(*args)
-            if DEBUG:
-                print(repr(result))
-            return result
-
-        def readline(self, *args):
-            result = self.obj.readline(*args)
-            if DEBUG:
-                print(repr(result))
-            return result
-
-        def __getattr__(self, item):
-            assert item != 'obj'
-            return getattr(self.obj, item)
-
-    def makefile(self, mode='r', bufsize=-1):
-        return DebugFileObject(socket._fileobject(self.dup(), mode, bufsize))
-
-    socket.socket.makefile = makefile
-
 
 class TestCase(greentest.TestCase):
-
+    server = None
     validator = staticmethod(validator)
     application = None
 
@@ -257,31 +228,35 @@ class TestCase(greentest.TestCase):
         self.init_server(application)
         self.server.start()
         self.port = self.server.server_port
-        # We keep a list of sockets/files we need to close so we
-        # don't get ResourceWarnings under Py3
-        self.connected = list()
         greentest.TestCase.setUp(self)
 
-    def close_opened(self):
-        for x in self.connected:
-            x = x()
-            if x is not None:
-                x.close()
-        self.connected = list()
+    if greentest.CPYTHON and greentest.PY2:
+        # Keeping raw sockets alive keeps SSL sockets
+        # from being closed too, at least on CPython2, so we
+        # need to use weakrefs.
+
+        # In contrast, on PyPy, *only* having a weakref lets the
+        # original socket die and leak
+
+        def _close_on_teardown(self, resource):
+            self.close_on_teardown.append(weakref.ref(resource))
+            return resource
+
+        def _tearDownCloseOnTearDown(self):
+            self.close_on_teardown = [r() for r in self.close_on_teardown if r() is not None]
+            super(TestCase, self)._tearDownCloseOnTearDown()
 
     def tearDown(self):
-        self.close_opened()
         greentest.TestCase.tearDown(self)
-        timeout = gevent.Timeout.start_new(0.5)
-        try:
-            self.server.stop()
-        finally:
-            timeout.close()
-        # XXX currently listening socket is kept open in gevent.wsgi
+        if self.server is not None:
+            with gevent.Timeout.start_new(0.5):
+                self.server.stop()
+        self.server = None
+
 
     def connect(self):
         conn = socket.create_connection((self.connect_addr, self.port))
-        self.connected.append(weakref.ref(conn))
+        self._close_on_teardown(conn)
         result = conn
         if PY3:
             conn_makefile = conn.makefile
@@ -304,7 +279,7 @@ class TestCase(greentest.TestCase):
                         data = data.encode('ascii')
                     return _rconn_write(data)
                 rconn.write = write
-                self.connected.append(weakref.ref(rconn))
+                self._close_on_teardown(rconn)
                 return rconn
 
             class proxy(object):
@@ -380,7 +355,7 @@ class CommonTests(TestCase):
     def SKIP_test_006_reject_long_urls(self):
         fd = self.makefile()
         path_parts = []
-        for ii in range(3000):
+        for _ in range(3000):
             path_parts.append('path')
         path = '/'.join(path_parts)
         request = 'GET /%s HTTP/1.0\r\nHost: localhost\r\n\r\n' % path
@@ -402,15 +377,14 @@ class TestNoChunks(CommonTests):
         if path == '/':
             start_response('200 OK', [('Content-Type', 'text/plain')])
             return [b'hello ', b'world']
-        else:
-            start_response('404 Not Found', [('Content-Type', 'text/plain')])
-            return [b'not ', b'found']
+        start_response('404 Not Found', [('Content-Type', 'text/plain')])
+        return [b'not ', b'found']
 
     def test(self):
         fd = self.makefile()
         fd.write('GET / HTTP/1.1\r\nHost: localhost\r\n\r\n')
         response = read_http(fd, body='hello world')
-        assert response.chunks is False, response.chunks
+        self.assertFalse(response.chunks)
         response.assertHeader('Content-Length', '11')
 
         if not server_implements_pipeline:
@@ -418,12 +392,13 @@ class TestNoChunks(CommonTests):
 
         fd.write('GET /not-found HTTP/1.1\r\nHost: localhost\r\n\r\n')
         response = read_http(fd, code=404, reason='Not Found', body='not found')
-        assert response.chunks is False, response.chunks
+        self.assertFalse(response.chunks)
         response.assertHeader('Content-Length', '9')
 
 
-class TestExplicitContentLength(TestNoChunks):
-    # when returning a list of strings a shortcut is empoyed by the server - it caculates the content-length
+class TestExplicitContentLength(TestNoChunks): # pylint:disable=too-many-ancestors
+    # when returning a list of strings a shortcut is empoyed by the
+    # server - it caculates the content-length
 
     @staticmethod
     def application(env, start_response):
@@ -431,9 +406,9 @@ class TestExplicitContentLength(TestNoChunks):
         if path == '/':
             start_response('200 OK', [('Content-Type', 'text/plain'), ('Content-Length', '11')])
             return [b'hello ', b'world']
-        else:
-            start_response('404 Not Found', [('Content-Type', 'text/plain'), ('Content-Length', '9')])
-            return [b'not ', b'found']
+
+        start_response('404 Not Found', [('Content-Type', 'text/plain'), ('Content-Length', '9')])
+        return [b'not ', b'found']
 
 
 class TestYield(CommonTests):
@@ -459,9 +434,8 @@ class TestBytearray(CommonTests):
         if path == '/':
             start_response('200 OK', [('Content-Type', 'text/plain')])
             return [bytearray(b"hello "), bytearray(b"world")]
-        else:
-            start_response('404 Not Found', [('Content-Type', 'text/plain')])
-            return [bytearray(b"not found")]
+        start_response('404 Not Found', [('Content-Type', 'text/plain')])
+        return [bytearray(b"not found")]
 
 
 class MultiLineHeader(TestCase):
@@ -598,7 +572,7 @@ class TestChunkedPost(TestCase):
                 b'2\r\noh\r\n4\r\n hai\r\n0\r\n\r\n')
         fd.write(data)
         read_http(fd, body='oh hai')
-        self.close_opened()
+        # self.close_opened() # XXX: Why?
 
         fd = self.makefile()
         fd.write(data.replace(b'/a', b'/b'))
@@ -719,10 +693,10 @@ class HttpsTestCase(TestCase):
         self.server = pywsgi.WSGIServer((self.listen_addr, 0), application,
                                         certfile=self.certfile, keyfile=self.keyfile)
 
-    def urlopen(self, method='GET', post_body=None, **kwargs):
+    def urlopen(self, method='GET', post_body=None, **kwargs): # pylint:disable=arguments-differ
         import ssl
-        sock = self.connect()
-        sock = ssl.wrap_socket(sock)
+        raw_sock = self.connect()
+        sock = ssl.wrap_socket(raw_sock)
         fd = sock.makefile(bufsize=1)
         fd.write('%s / HTTP/1.1\r\nHost: localhost\r\n' % method)
         if post_body is not None:
@@ -733,19 +707,22 @@ class HttpsTestCase(TestCase):
         else:
             fd.write('\r\n')
         fd.flush()
-        return read_http(fd, **kwargs)
+        try:
+            return read_http(fd, **kwargs)
+        finally:
+            fd.close()
+            sock.close()
+            raw_sock.close()
 
     def application(self, environ, start_response):
         assert environ['wsgi.url_scheme'] == 'https', environ['wsgi.url_scheme']
         start_response('200 OK', [('Content-Type', 'text/plain')])
         return [environ['wsgi.input'].read(10)]
 
-try:
-    from gevent.ssl import create_default_context as _
-except ImportError:
-    HAVE_SSLCONTEXT = False
-else:
-    HAVE_SSLCONTEXT = True
+
+import gevent.ssl
+HAVE_SSLCONTEXT = getattr(gevent.ssl, 'create_default_context')
+if HAVE_SSLCONTEXT:
 
     class HttpsSslContextTestCase(HttpsTestCase):
         def init_server(self, application):
@@ -756,7 +733,7 @@ else:
             # `SSLError: [SSL: PEER_DID_NOT_RETURN_A_CERTIFICATE] peer did not return a certificate`
             # (Neither of which happens in Python 3.) But the unverified context
             # works both places. See also test___example_servers.py
-            from gevent.ssl import _create_unverified_context
+            from gevent.ssl import _create_unverified_context # pylint:disable=no-name-in-module
             context = _create_unverified_context()
             context.load_cert_chain(certfile=self.certfile, keyfile=self.keyfile)
             self.server = pywsgi.WSGIServer((self.listen_addr, 0),
@@ -768,14 +745,14 @@ class TestHttps(HttpsTestCase):
 
         def test_012_ssl_server(self):
             result = self.urlopen(method="POST", post_body='abc')
-            self.assertEquals(result.body, 'abc')
+            self.assertEqual(result.body, 'abc')
 
         def test_013_empty_return(self):
             result = self.urlopen()
-            self.assertEquals(result.body, '')
+            self.assertEqual(result.body, '')
 
 if HAVE_SSLCONTEXT:
-    class TestHttpsWithContext(HttpsSslContextTestCase, TestHttps):
+    class TestHttpsWithContext(HttpsSslContextTestCase, TestHttps): # pylint:disable=too-many-ancestors
         pass
 
 class TestInternational(TestCase):
@@ -809,9 +786,13 @@ class TestNonLatin1HeaderFromApplication(TestCase):
     header = b'\xe1\xbd\x8a3' # bomb in utf-8 bytes
     should_error = PY3 # non-native string under Py3
 
-    def init_server(self, app):
-        TestCase.init_server(self, app)
-        self.errors = list()
+    def setUp(self):
+        super(TestNonLatin1HeaderFromApplication, self).setUp()
+        self.errors = []
+
+    def tearDown(self):
+        self.errors = []
+        super(TestNonLatin1HeaderFromApplication, self).tearDown()
 
     def application(self, environ, start_response):
         # We return a header that cannot be encoded in latin-1
@@ -832,7 +813,7 @@ class TestNonLatin1HeaderFromApplication(TestCase):
             read_http(sock.makefile(), code=500, reason='Internal Server Error')
             self.assert_error(where_type=pywsgi.SecureEnviron)
             self.assertEqual(len(self.errors), 1)
-            t, v = self.errors[0]
+            _, v = self.errors[0]
             self.assertIsInstance(v, UnicodeError)
         else:
             read_http(sock.makefile(), code=200, reason='PASSED')
@@ -1042,6 +1023,7 @@ class TestBody304(TestCase):
 
 class TestWrite304(TestCase):
     validator = None
+    error_raised = None
 
     def application(self, env, start_response):
         write = start_response('304 Not modified', [])
@@ -1055,13 +1037,11 @@ class TestWrite304(TestCase):
     def test_err(self):
         fd = self.connect().makefile(bufsize=1)
         fd.write(b'GET / HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n')
-        try:
+        with self.assertRaises(AssertionError) as exc:
             read_http(fd)
-        except AssertionError as ex:
-            self.assertEqual(str(ex), 'The 304 response must have no body')
-        else:
-            raise AssertionError('write() must raise')
-        assert self.error_raised, 'write() must raise'
+        ex = exc.exception
+        self.assertEqual(str(ex), 'The 304 response must have no body')
+        self.assertTrue(self.error_raised, 'write() must raise')
 
 
 class TestEmptyWrite(TestEmptyYield):
@@ -1077,9 +1057,10 @@ class TestEmptyWrite(TestEmptyYield):
 class BadRequestTests(TestCase):
     validator = None
     # pywsgi checks content-length, but wsgi does not
+    content_length = None
 
     def application(self, env, start_response):
-        assert env['CONTENT_LENGTH'] == self.content_length, (env['CONTENT_LENGTH'], self.content_length)
+        self.assertEqual(env['CONTENT_LENGTH'], self.content_length)
         start_response('200 OK', [('Content-Type', 'text/plain')])
         return [b'hello']
 
@@ -1257,13 +1238,13 @@ class Expect100ContinueTests(TestCase):
         if content_length > 1024:
             start_response('417 Expectation Failed', [('Content-Length', '7'), ('Content-Type', 'text/plain')])
             return [b'failure']
-        else:
-            # pywsgi did sent a "100 continue" for each read
-            # see http://code.google.com/p/gevent/issues/detail?id=93
-            text = environ['wsgi.input'].read(1)
-            text += environ['wsgi.input'].read(content_length - 1)
-            start_response('200 OK', [('Content-Length', str(len(text))), ('Content-Type', 'text/plain')])
-            return [text]
+
+        # pywsgi did sent a "100 continue" for each read
+        # see http://code.google.com/p/gevent/issues/detail?id=93
+        text = environ['wsgi.input'].read(1)
+        text += environ['wsgi.input'].read(content_length - 1)
+        start_response('200 OK', [('Content-Length', str(len(text))), ('Content-Type', 'text/plain')])
+        return [text]
 
     def test_continue(self):
         fd = self.connect().makefile(bufsize=1)
@@ -1309,6 +1290,11 @@ class TestLeakInput(TestCase):
     _leak_wsgi_input = None
     _leak_environ = None
 
+    def tearDown(self):
+        TestCase.tearDown(self)
+        self._leak_wsgi_input = None
+        self._leak_environ = None
+
     def application(self, environ, start_response):
         pi = environ["PATH_INFO"]
         self._leak_wsgi_input = environ["wsgi.input"]
@@ -1324,13 +1310,13 @@ class TestLeakInput(TestCase):
         fd = self.connect().makefile(bufsize=1)
         fd.write(b"GET / HTTP/1.0\r\nConnection: close\r\n\r\n")
         d = fd.read()
-        assert d.startswith(b"HTTP/1.1 200 OK"), "bad response: %r" % d
+        self.assertTrue(d.startswith(b"HTTP/1.1 200 OK"), d)
 
     def test_connection_close_leak_frame(self):
         fd = self.connect().makefile(bufsize=1)
         fd.write(b"GET /leak-frame HTTP/1.0\r\nConnection: close\r\n\r\n")
         d = fd.read()
-        assert d.startswith(b"HTTP/1.1 200 OK"), "bad response: %r" % d
+        self.assertTrue(d.startswith(b"HTTP/1.1 200 OK"), d)
         self._leak_environ.pop('_leak')
 
 class TestHTTPResponseSplitting(TestCase):
@@ -1347,6 +1333,10 @@ class TestHTTPResponseSplitting(TestCase):
         self.start_exc = None
         self.status = TestHTTPResponseSplitting.status
         self.headers = TestHTTPResponseSplitting.headers
+
+    def tearDown(self):
+        TestCase.tearDown(self)
+        self.start_exc = None
 
     def application(self, environ, start_response):
         try:
@@ -1501,7 +1491,7 @@ class TestInputRaw(greentest.BaseTestCase):
         return Input(StringIO(data), content_length=content_length, chunked_input=chunked_input)
 
     if PY3:
-        def assertEqual(self, data, expected, *args):
+        def assertEqual(self, data, expected, *args): # pylint:disable=arguments-differ
             if isinstance(expected, str):
                 expected = expected.encode('ascii')
             super(TestInputRaw, self).assertEqual(data, expected, *args)

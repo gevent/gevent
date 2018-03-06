@@ -171,6 +171,7 @@ if PYPY:
 
         if LIBUV:
             IGNORED_TESTS += [
+                # XXX: Re-enable this when we can investigate more.
                 # This has started crashing with a SystemError.
                 # I cannot reproduce with the same version on macOS
                 # and I cannot reproduce with the same version in a Linux vm.
@@ -178,6 +179,18 @@ if PYPY:
                 # https://bitbucket.org/pypy/pypy/issues/2769/systemerror-unexpected-internal-exception
                 'test__pywsgi.py',
             ]
+
+        IGNORED_TESTS += [
+            # XXX Re-enable these when we have more time to investigate.
+            # This test, which normally takes ~60s, sometimes
+            # hangs forever after running several tests. I cannot reproduce,
+            # it seems highly load dependent. Observed with both libev and libuv.
+            'test__threadpool.py',
+            # This test, which normally takes 4-5s, sometimes
+            # hangs forever after running two tests. I cannot reproduce,
+            # it seems highly load dependent. Observed with both libev and libuv.
+            'test_threading_2.py',
+        ]
 
     if PY3 and TRAVIS:
         FAILING_TESTS += [
@@ -226,6 +239,15 @@ if sys.version_info[:2] >= (3, 4) and APPVEYOR:
     FAILING_TESTS += [
         # Timing issues on appveyor
         'FLAKY test_selectors.py'
+    ]
+
+if sys.version_info == (3, 7, 0, 'beta', 2) and os.environ.get("PYTHONDEVMODE"):
+    # These crash when in devmode.
+    # See https://twitter.com/ossmkitty/status/970693025130311680
+    # https://bugs.python.org/issue33005
+    FAILING_TESTS += [
+        'test__monkey_sigchld_2.py',
+        'test__monkey_sigchld_3.py'
     ]
 
 if COVERAGE:

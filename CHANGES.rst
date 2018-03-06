@@ -140,6 +140,8 @@
   addition, all *timeout* values less than zero are interpreted like
   *None* (as they always were under libev). See :issue:`1127`.
 
+- Monkey-patching now defaults to patching ``threading.Event``.
+
 1.3a1 (2018-01-27)
 ==================
 

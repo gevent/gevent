@@ -26,17 +26,23 @@ from greentest import sysinfo
 from greentest import leakcheck
 from greentest.testcase import TestCase
 
+SMALLEST_RELIABLE_DELAY = 0.001 # 1ms, because of libuv
+
+SMALL_TICK = 0.01
+SMALL_TICK_MIN_ADJ = SMALLEST_RELIABLE_DELAY
+SMALL_TICK_MAX_ADJ = 0.11
+if sysinfo.RUNNING_ON_APPVEYOR:
+    # Timing resolution is extremely poor on Appveyor
+    # and subject to jitter.
+    SMALL_TICK_MAX_ADJ = 1.5
+
+
 
 class _DelayWaitMixin(object):
 
-    _default_wait_timeout = 0.01
-    _default_delay_min_adj = 0.001
-    if not sysinfo.RUNNING_ON_APPVEYOR:
-        _default_delay_max_adj = 0.11
-    else:
-        # Timing resolution is extremely poor on Appveyor
-        # and subject to jitter.
-        _default_delay_max_adj = 1.5
+    _default_wait_timeout = SMALL_TICK
+    _default_delay_min_adj = SMALL_TICK_MIN_ADJ
+    _default_delay_max_adj = SMALL_TICK_MAX_ADJ
 
     def wait(self, timeout):
         raise NotImplementedError('override me in subclass')
@@ -69,7 +75,7 @@ class _DelayWaitMixin(object):
         return result
 
     def test_outer_timeout_is_not_lost(self):
-        timeout = gevent.Timeout.start_new(0.001, ref=False)
+        timeout = gevent.Timeout.start_new(SMALLEST_RELIABLE_DELAY, ref=False)
         try:
             with self.assertRaises(gevent.Timeout) as exc:
                 self.wait(timeout=1)
@@ -77,18 +83,16 @@ class _DelayWaitMixin(object):
         finally:
             timeout.close()
 
+LARGE_TICK = 0.2
+LARGE_TICK_MIN_ADJ = LARGE_TICK / 2.0
+LARGE_TICK_MAX_ADJ = SMALL_TICK_MAX_ADJ
 
 class AbstractGenericWaitTestCase(_DelayWaitMixin, TestCase):
     # pylint:disable=abstract-method
 
-    _default_wait_timeout = 0.2
-    _default_delay_min_adj = 0.1
-    if not sysinfo.RUNNING_ON_APPVEYOR:
-        _default_delay_max_adj = 0.11
-    else:
-        # Timing resolution is very poor on Appveyor
-        # and subject to jitter
-        _default_delay_max_adj = 1.5
+    _default_wait_timeout = LARGE_TICK
+    _default_delay_min_adj = LARGE_TICK_MIN_ADJ
+    _default_delay_max_adj = LARGE_TICK_MAX_ADJ
 
     @leakcheck.ignores_leakcheck # waiting checks can be very sensitive to timing
     def test_returns_none_after_timeout(self):
@@ -107,7 +111,7 @@ class AbstractGenericGetTestCase(_DelayWaitMixin, TestCase):
 
     def test_raises_timeout_number(self):
         with self.assertRaises(self.Timeout):
-            self._wait_and_check(timeout=0.01)
+            self._wait_and_check(timeout=SMALL_TICK)
         # get raises Timeout after timeout expired
         self.cleanup()
 

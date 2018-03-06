@@ -22,7 +22,7 @@ def wrap_error(func):
     def wrapper(*args, **kwargs):
         try:
             return func(*args, **kwargs)
-        except:
+        except: # pylint:disable=bare-except
             traceback.print_exc()
             os._exit(2)
 
@@ -278,8 +278,11 @@ class TestTCP(greentest.TestCase):
 
             s.setblocking(0)
             std_socket = monkey.get_original('socket', 'socket')(socket.AF_INET, socket.SOCK_DGRAM, 0)
-            std_socket.setblocking(0)
-            self.assertEqual(std_socket.type, s.type)
+            try:
+                std_socket.setblocking(0)
+                self.assertEqual(std_socket.type, s.type)
+            finally:
+                std_socket.close()
 
         s.close()
 
@@ -408,7 +411,7 @@ class TestFunctions(greentest.TestCase):
         orig_get_hub = gevent.socket.get_hub
 
         class get_hub(object):
-            def wait(self, io):
+            def wait(self, _io):
                 gevent.sleep(10)
 
         class io(object):

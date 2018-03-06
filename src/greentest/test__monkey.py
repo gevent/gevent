@@ -30,10 +30,7 @@ class TestMonkey(unittest.TestCase):
             from gevent import threading as gthreading
             self.assertIs(threading._sleep, gthreading._sleep)
 
-
-
-        self.assertFalse(monkey.is_object_patched('threading', 'Event'))
-        monkey.patch_thread(Event=True)
+        # Event patched by default
         self.assertTrue(monkey.is_object_patched('threading', 'Event'))
 
     def test_socket(self):

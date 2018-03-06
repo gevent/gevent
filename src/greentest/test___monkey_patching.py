@@ -49,6 +49,12 @@ def TESTRUNNER(tests=None):
         'timeout': TIMEOUT,
         'setenv': {
             'PYTHONPATH': PYTHONPATH,
+            # debug produces resource tracking warnings for the
+            # CFFI backends. On Python 2, many of the stdlib tests
+            # rely on refcounting to close sockets so they produce
+            # lots of noise. Python 3 is not completely immune;
+            # test_ftplib.py tends to produce warnings---and the Python 3
+            # test framework turns those into test failures!
             'GEVENT_DEBUG': 'error',
         }
     }
@@ -62,12 +68,10 @@ def TESTRUNNER(tests=None):
             util.log("Overriding %s from %s with file from %s", filename, directory, full_directory)
             continue
         yield basic_args + [filename], options.copy()
-        yield basic_args + ['--Event', filename], options.copy()
 
     options['cwd'] = full_directory
     for filename in version_tests:
         yield basic_args + [filename], options.copy()
-        yield basic_args + ['--Event', filename], options.copy()
 
 
 def main():

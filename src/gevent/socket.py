@@ -13,8 +13,8 @@ as well as the constants from the :mod:`socket` module are imported into this mo
 # Our import magic sadly makes this warning useless
 # pylint: disable=undefined-variable
 
-import sys
 from gevent._compat import PY3
+from gevent._compat import exc_clear
 from gevent._util import copy_globals
 
 
@@ -60,16 +60,21 @@ except AttributeError:
 
 
 def create_connection(address, timeout=_GLOBAL_DEFAULT_TIMEOUT, source_address=None):
-    """Connect to *address* and return the socket object.
+    """
+    create_connection(address, timeout=None, source_address=None) -> socket
 
-    Convenience function.  Connect to *address* (a 2-tuple ``(host,
-    port)``) and return the socket object.  Passing the optional
+    Connect to *address* and return the :class:`gevent.socket.socket`
+    object.
+
+    Convenience function. Connect to *address* (a 2-tuple ``(host,
+    port)``) and return the socket object. Passing the optional
     *timeout* parameter will set the timeout on the socket instance
-    before attempting to connect.  If no *timeout* is supplied, the
-    global default timeout setting returned by :func:`getdefaulttimeout`
-    is used. If *source_address* is set it must be a tuple of (host, port)
-    for the socket to bind as a source address before making the connection.
-    A host of '' or port 0 tells the OS to use the default.
+    before attempting to connect. If no *timeout* is supplied, the
+    global default timeout setting returned by
+    :func:`getdefaulttimeout` is used. If *source_address* is set it
+    must be a tuple of (host, port) for the socket to bind as a source
+    address before making the connection. A host of '' or port 0 tells
+    the OS to use the default.
     """
 
     host, port = address
@@ -102,12 +107,7 @@ def create_connection(address, timeout=_GLOBAL_DEFAULT_TIMEOUT, source_address=N
             # because _socket.socket.connect() is a built-in. this is
             # similar to "getnameinfo loses a reference" failure in
             # test_socket.py
-            try:
-                c = sys.exc_clear
-            except AttributeError:
-                pass # Python 3 doesn't have this
-            else:
-                c()
+            exc_clear()
         except BaseException:
             # Things like GreenletExit,  Timeout and KeyboardInterrupt.
             # These get raised immediately, being sure to
@@ -117,7 +117,10 @@ def create_connection(address, timeout=_GLOBAL_DEFAULT_TIMEOUT, source_address=N
             sock = None
             raise
         else:
-            return sock
+            try:
+                return sock
+            finally:
+                sock = None
 
 
 # This is promised to be in the __all__ of the _source, but, for circularity reasons,

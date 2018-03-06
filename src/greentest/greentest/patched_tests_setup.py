@@ -804,6 +804,13 @@ if PY34:
             'test_socket.InterruptedSendTimeoutTest.testInterruptedSendmsgTimeout',
         ]
 
+        if TRAVIS:
+            # This has been seen to produce "Inconsistency detected by
+            # ld.so: dl-open.c: 231: dl_open_worker: Assertion
+            # `_dl_debug_initialize (0, args->nsid)->r_state ==
+            # RT_CONSISTENT' failed!" and fail.
+            'test_threading.ThreadTests.test_is_alive_after_fork',
+
     if TRAVIS:
         disabled_tests += [
             'test_subprocess.ProcessTestCase.test_double_close_on_error',
