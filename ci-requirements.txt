@@ -6,7 +6,7 @@ wheel
 # name to be created so that we can have both foo.py and _foo.so
 # at the same time.
 # 0.28b1 has been tagged but not uploaded to PyPI
--e git+https://github.com/cython/cython.git@0.28b1#egg=cython
+-e git+https://github.com/cython/cython.git@bfa76156a76841b03a0e2821fd7cadbd2eeefcab#egg=cython
 
 # Python 3.7b1 requires this.
 greenlet>=0.4.13 ; platform_python_implementation == "CPython"
