@@ -7,10 +7,83 @@
 1.3a2 (unreleased)
 ==================
 
-- Fix building from a source distribution (PyPI) without Cython installed.
+Dependencies
+------------
 
 - Cython 0.28b1 or later is now required to build gevent from a source
-  checkout.
+  checkout (Cython is *not* required to build a source distribution
+  from PyPI).
+
+- Update c-ares to 1.14.0. See :issue:`1105`.
+
+- gevent now **requires** the patched version of libuv it is
+  distributed with. Building gevent with a non-embedded libuv, while
+  not previously supported, is not possible now. See
+  :issue:`1126`.
+
+
+Platform Support
+----------------
+
+- Travis CI tests on Python 3.7.0b2 and PyPy 2.7 5.10.0 and PyPy 3.5
+  5.10.1.
+
+Build Changes
+-------------
+
+- Fix building from a source distribution (PyPI) without Cython installed.
+
+Enhancements
+------------
+
+- Add the ``dnspython`` resolver as a lightweight alternative to
+  c-ares. It is generally faster than c-ares and is supported on PyPy.
+  c-ares may be deprecated in the future. See :pr:`1088` and
+  :issue:`1103`.
+
+- Add the module :mod:`gevent.time` that can be imported instead of
+  :mod:`time`, much like :mod:`gevent.socket` can be imported instead
+  of :mod:`socket`. It contains ``gevent.sleep``. This aids
+  monkey-patching.
+
+- Simple subclasses of `gevent.local.local` now have the same
+  (substantially improved) performance characteristics of plain
+  `gevent.local.local` itself, making them 2 to 3 times faster than
+  before. See :pr:`1117`. If there are any compatibility
+  problems, please open issues.
+
+Monitoring and Debugging
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+- Greenlet objects now keep track of their spawning parent greenlet
+  and the code location that spawned them, in addition to maintaining
+  a "spawn tree local" mapping. This adds some runtime overhead in
+  relative terms, but absolute numbers are still relatively small.
+  Based on a proposal from PayPal and comments by Mahmoud Hashemi and
+  Kurt Rose. See :issue:`755` and :pr:`1115`. As always, feedback is
+  appreciated.
+
+- Greenlet objects now have a `minimal_ident
+  <gevent.Greenlet.minimal_ident>` property. It functions
+  similarly to ``Thread.ident`` or ``id`` by uniquely identifying the
+  greenlet object while it remains alive, and it can be reused after
+  the greenlet object is dead. It is different in that it is small and
+  sequential. Based on a proposal from PayPal and comments by Mahmoud
+  Hashemi and Kurt Rose. See :issue:`755`. As always, feedback is
+  appreciated.
+
+- `gevent.Greenlet` objects now have a `gevent.Greenlet.name`
+  attribute that is included in the default repr.
+
+- Include the values of `gevent.local.local` objects associated with
+  each greenlet in `gevent.util.format_run_info`.
+
+- Add `gevent.util.GreenletTree` to visualize the greenlet tree. This
+  is used by `gevent.util.format_run_info`.
+
+
+Subprocess
+~~~~~~~~~~
 
 - Make :class:`gevnt.subprocess.Popen` accept the ``restore_signals``
   keyword argument on all versions of Python, and on Python 2 have it
@@ -26,31 +99,11 @@
   They have always had the same default as Python 3, namely an empty
   tuple and false, but now are accessible to Python 2.
 
-- The internal, undocumented module ``gevent._threading`` has been
-  simplified.
-
-- The internal, undocumented class ``gevent._socket3._fileobject`` has
-  been removed. See :issue:`1084`.
-
-- Travis CI tests on Python 3.7.0b2 and PyPy 2.7 5.10.0 and PyPy 3.5
-  5.10.1.
-
 - Support the ``capture_output`` argument added to Python 3.7 in
   :func:`gevent.subprocess.run`.
 
-- Add the ``dnspython`` resolver as a lightweight alternative to
-  c-ares. See :pr:`1088` and :issue:`1103`.
-
-- The ``GEVENTARES_SERVERS`` environment variable is deprecated in
-  favor of ``GEVENT_RESOLVER_SERVERS``. See :issue:`1103`.
-
-- Fix calling ``shutdown`` on a closed socket. It was raising
-  ``AttributeError``, now it once again raises the correct
-  ``socket.error``. Reported in :issue:`1089` by André Cimander.
-
-- Add the module :mod:`gevent.time` that can be imported instead of
-  :mod:`time`, much like :mod:`gevent.socket` can be imported instead
-  of :mod:`socket`.
+Configuration
+~~~~~~~~~~~~~
 
 - Centralize all gevent configuration in an object at
   ``gevent.config``, allowing for gevent to be configured through code
@@ -64,11 +117,33 @@
     order, or be a dotted name; it may also be assigned to an
     object in Python code at ``gevent.config.loop``).
 
+  - The ``GEVENTARES_SERVERS`` environment variable is deprecated in
+    favor of ``GEVENT_RESOLVER_SERVERS``. See :issue:`1103`.
+
+
+Bug Fixes
+---------
+
+- Fix calling ``shutdown`` on a closed socket. It was raising
+  ``AttributeError``, now it once again raises the correct
+  ``socket.error``. Reported in :issue:`1089` by André Cimander.
+
 - Fix an interpreter crash that could happen if two or more ``loop``
   objects referenced the default event loop and one of them was
   destroyed and then the other one destroyed or (in the libev C
   extension implementation only) deallocated (garbage collected). See
   :issue:`1098`.
+
+- Fix a race condition in libuv child callbacks. See :issue:`1104`.
+
+Other Changes
+-------------
+
+- The internal, undocumented module ``gevent._threading`` has been
+  simplified.
+
+- The internal, undocumented class ``gevent._socket3._fileobject`` has
+  been removed. See :issue:`1084`.
 
 - Simplify handling of the libev default loop and the ``destroy()``
   method. The default loop, when destroyed, can again be requested and
@@ -78,61 +153,20 @@
 - Make :meth:`gevent.socket.socket.sendall` up to ten times faster on
   PyPy3, through the same change that was applied in gevent 1.1b3 for PyPy2.
 
-- Update c-ares to 1.14.0. See :issue:`1105`.
-
 - Be more careful about issuing a warning about patching SSL on
   Python 2. See :issue:`1108`.
 
-- Fix a race condition in libuv child callbacks. See :issue:`1104`.
-
 - Signal handling under PyPy with libuv is more reliable. See
   :issue:`1112`.
-
-- Greenlet objects now keep track of their spawning parent greenlet
-  and the code location that spawned them, in addition to maintaining
-  a "spawn tree local" mapping. This adds some runtime overhead in
-  relative terms, but absolute numbers are still relatively small.
-  Based on a proposal from PayPal and comments by Mahmoud Hashemi and
-  Kurt Rose. See :issue:`755` and :pr:`1115`. As always, feedback is
-  appreciated.
 
 - The :mod:`gevent.greenlet` module is now compiled with Cython to
   offset any performance decrease due to :issue:`755`. Please open
   issues for any compatibility concerns. See :pr:`1115` and :pr:`1120`.
 
-- Greenlet objects now have a `minimal_ident
-  <gevent.Greenlet.minimal_ident>` property. It functions
-  similarly to ``Thread.ident`` or ``id`` by uniquely identifying the
-  greenlet object while it remains alive, and it can be reused after
-  the greenlet object is dead. It is different in that it is small and
-  sequential. Based on a proposal from PayPal and comments by Mahmoud
-  Hashemi and Kurt Rose. See :issue:`755`. As always, feedback is
-  appreciated.
-
-- Simple subclasses of `gevent.local.local` now have the same
-  (substantially improved) performance characteristics of plain
-  `gevent.local.local` itself, making them 2 to 3 times faster than
-  before. See :pr:`1117`. If there are any compatibility
-  problems, please open issues.
-
 - On CPython, allow the pure-Python implementations of
   `gevent.Greenlet`, `gevent.local` and `gevent.lock` to be
   used when the environment variable ``PURE_PYTHON`` is set. This is
   not recommended except for debugging and testing. See :issue:`1118`.
-
-- Include the values of `gevent.local.local` objects associated with
-  each greenlet in `gevent.util.format_run_info`.
-
-- `gevent.Greenlet` objects now have a `gevent.Greenlet.name`
-  attribute that is included in the default repr.
-
-- Add `gevent.util.GreenletTree` to visualize the greenlet tree. This
-  is used by `gevent.util.format_run_info`.
-
-- gevent now **requires** the patched version of libuv it is
-  distributed with. Building gevent with a non-embedded libuv, while
-  not previously supported, is not possible now. See
-  :issue:`1226`.
 
 - :meth:`gevent.select.poll.poll` now interprets a *timeout* of -1 the
   same as a *timeout* of *None* as the standard requires. Previously,

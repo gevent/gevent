@@ -6,30 +6,39 @@ Detailed information on what has changed is available in the
 :doc:`changelog`. This document summarizes the most important changes
 since :doc:`gevent 1.2 <whatsnew_1_2>`.
 
-.. caution:: This document has not yet been updated for gevent 1.3.
+.. caution:: This document has not yet been fully updated for gevent 1.3.
 
-In general, gevent 1.2 is a smaller update than gevent 1.1, focusing
-on platform support, standard library compatibility, security, bug
-fixes and consistency.
+gevent 1.3 is an important update for performance, debugging and
+monitoring, and platform support. It introduces an (optional) `libuv
+<http://libuv.org>`_ loop implementation and supports PyPy on Windows.
+See :ref:`gevent-configuration` for information on how to use libuv.
 
 Platform Support
 ================
 
-gevent 1.2 supports Python 2.7, 3.4, 3.5 and 3.6 on the CPython
-(`python.org`_) interpreter. It also supports `PyPy2`_ 4.0.1 and above
-(PyPy2 5.4 or higher is recommended) and PyPy3 5.5.0.
+gevent 1.3 supports Python 2.7, 3.4, 3.5, 3.6 and 3.7 on the CPython
+(`python.org`_) interpreter. It also supports `PyPy2`_ 5.8.0 and above
+(PyPy2 5.10 or higher is recommended) and PyPy3 5.10.0.
 
+.. caution:: Python 2.7.8 and below (Python 2.7 without a modern
+             ``ssl`` module), is no longer tested or supported. The
+             support code remains in this release and gevent can be
+             installed on such implementations, but such usage is not
+             supported.
 
-.. caution:: Support for Python 2.6 was removed. Support for Python 3.3 is only
-               tested on PyPy3.
+.. note:: PyPy is now supported on Windows with the libuv loop implementation.
 
-.. note:: PyPy is not supported on Windows. (gevent's CFFI backend is not
-         available on Windows.)
+Python 3.7 is in the process of release right now and gevent is tested
+with 3.7b2.
 
-Python 3.6 was released recently and is supported at the same level as 3.5.
-
-For ease of installation on Windows and OS X, gevent 1.2 is
+For ease of installation on Windows and OS X, gevent 1.3 is
 distributed as pre-compiled binary wheels, in addition to source code.
+
+.. note:: On Linux, you'll need to install gevent from source if you
+          wish to use the libuv loop implementation. This is because
+          the `manylinux1
+          <https://www.python.org/dev/peps/pep-0513/>`_ specification
+          for the distributed wheels does not support libuv.
 
 .. _python.org: http://www.python.org/downloads/
 .. _PyPy2: http://pypy.org
@@ -37,8 +46,8 @@ distributed as pre-compiled binary wheels, in addition to source code.
 Bug Fixes
 =========
 
-Since 1.1.2, gevent 1.2 contains over 240 commits from nine different
-dozen contributors. About two dozen pull requests were merged.
+TODO: How many commits and contributors? How many pull requests merged?
+
 
 New Pure-Python DNS Resolver
 ============================
@@ -57,8 +66,7 @@ Library Updates
 ===============
 
 One of the C libraries that are bundled with gevent have been updated.
-c-ares has been updated from 1.12.0 to 1.13.0 (`c-ares release notes`_).
-
+c-ares has been updated from 1.13.0 to 1.14.0 (`c-ares release notes`_).
 
 .. _c-ares release notes: https://c-ares.haxx.se/changelog.html
 

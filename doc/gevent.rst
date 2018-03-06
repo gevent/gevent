@@ -186,6 +186,7 @@ Timeouts
 
 .. autofunction:: with_timeout
 
+.. _gevent-configuration:
 
 Configuration
 =============
