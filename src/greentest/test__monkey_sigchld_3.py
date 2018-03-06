@@ -45,7 +45,8 @@ if hasattr(signal, 'SIGCHLD'):
         popen.stderr.read()
         popen.stdout.read()
         popen.wait() # This hangs if it doesn't.
-
+        popen.stderr.close()
+        popen.stdout.close()
         sys.exit(0)
 else:
     print("No SIGCHLD, not testing")

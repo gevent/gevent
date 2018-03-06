@@ -170,7 +170,27 @@ class RunResult(object):
         return self.code
 
 
-lock = threading.Lock()
+def _should_show_warning_output(out):
+    if b'Warning' in out:
+        # Strip out some patterns we specifically do not
+        # care about.
+        # from test.support for monkey-patched tests
+        out = out.replace(b'Warning -- reap_children', b'NADA')
+        out = out.replace(b"Warning -- threading_cleanup", b'NADA')
+
+        # The below *could* be done with sophisticated enough warning
+        # filters passed to the children
+
+        # collections.abc is the new home; setuptools uses the old one,
+        # as does dnspython
+        out = out.replace(b"DeprecationWarning: Using or importing the ABCs", b'NADA')
+        # libuv poor timer resolution
+        out = out.replace(b'UserWarning: libuv only supports', b'NADA')
+        # Packages on Python 2
+        out = out.replace(b'ImportWarning: Not importing directory', b'NADA')
+    return b'Warning' in out
+
+output_lock = threading.Lock()
 
 
 def run(command, **kwargs):
@@ -195,9 +215,9 @@ def run(command, **kwargs):
     finally:
         kill(popen)
     assert not err
-    with lock: # pylint:disable=not-context-manager
+    with output_lock: # pylint:disable=not-context-manager
         failed = bool(result)
-        if out and (failed or verbose or b'ResourceWarning' in out):
+        if out and (failed or verbose or _should_show_warning_output(out)):
             out = out.strip().decode('utf-8', 'ignore')
             if out:
                 out = '  ' + out.replace('\n', '\n  ')

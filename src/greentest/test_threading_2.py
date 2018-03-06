@@ -372,20 +372,24 @@ class ThreadTests(unittest.TestCase):
         # Try hard to trigger #1703448: a thread is still returned in
         # threading.enumerate() after it has been join()ed.
         enum = threading.enumerate
-        old_interval = sys.getcheckinterval()
-        try:
-            for i in xrange(1, 100):
-                # Try a couple times at each thread-switching interval
-                # to get more interleavings.
-                sys.setcheckinterval(i // 5)
-                t = threading.Thread(target=lambda: None)
-                t.start()
-                t.join()
-                l = enum()
-                self.assertFalse(t in l,
-                                 "#1703448 triggered after %d trials: %s" % (i, l))
-        finally:
-            sys.setcheckinterval(old_interval)
+        import warnings
+        with warnings.catch_warnings():
+            warnings.simplefilter('ignore', DeprecationWarning)
+            # get/set checkinterval are deprecated in Python 3
+            old_interval = sys.getcheckinterval()
+            try:
+                for i in xrange(1, 100):
+                    # Try a couple times at each thread-switching interval
+                    # to get more interleavings.
+                    sys.setcheckinterval(i // 5)
+                    t = threading.Thread(target=lambda: None)
+                    t.start()
+                    t.join()
+                    l = enum()
+                    self.assertFalse(t in l,
+                                     "#1703448 triggered after %d trials: %s" % (i, l))
+            finally:
+                sys.setcheckinterval(old_interval)
 
     if not hasattr(sys, 'pypy_version_info'):
         def test_no_refcycle_through_target(self):
@@ -436,6 +440,7 @@ class ThreadJoinOnShutdown(unittest.TestCase):
         p = subprocess.Popen([sys.executable, "-W", "ignore", "-c", script], stdout=subprocess.PIPE)
         rc = p.wait()
         data = p.stdout.read().replace(b'\r', b'')
+        p.stdout.close()
         self.assertEqual(data, b"end of main\nend of thread\n")
         self.assertNotEqual(rc, 2, b"interpreter was blocked")
         self.assertEqual(rc, 0, b"Unexpected error")

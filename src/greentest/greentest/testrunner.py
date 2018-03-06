@@ -15,6 +15,7 @@ from greentest.util import log
 from greentest.sysinfo import RUNNING_ON_CI
 from greentest.sysinfo import PYPY
 from greentest.sysinfo import PY3
+from greentest.sysinfo import PY2
 from greentest.sysinfo import RESOLVER_ARES
 from greentest.sysinfo import LIBUV
 from greentest import six
@@ -225,7 +226,11 @@ def discover(tests=None, ignore_files=None,
                     continue
                 to_process.append((cmd, options))
         else:
-            cmd = [sys.executable, '-u', filename]
+            cmd = [sys.executable, '-u']
+            if PYPY and PY2:
+                # Doesn't seem to be an env var for this
+                cmd.extend(('-X', 'track-resources'))
+            cmd.append(filename)
             options = DEFAULT_RUN_OPTIONS.copy()
             options.update(TEST_FILE_OPTIONS.get(filename, {}))
             to_process.append((cmd, options))
@@ -327,6 +332,42 @@ def print_list(lst):
     for name in lst:
         log(' - %s', name)
 
+def _setup_environ():
+    if 'PYTHONWARNINGS' not in os.environ and not sys.warnoptions:
+        # Enable default warnings such as ResourceWarning.
+        # On Python 3[.6], the system site.py module has
+        # "open(fullname, 'rU')" which produces the warning that
+        # 'U' is deprecated, so ignore warnings from site.py
+
+        # importlib/_bootstrap.py likes to spit out "ImportWarning:
+        # can't resolve package from __spec__ or __package__, falling
+        # back on __name__ and __path__". I have no idea what that means, but it seems harmless
+        # and is annoying.
+        os.environ['PYTHONWARNINGS'] = 'default,ignore:::site:,ignore:::importlib._bootstrap:,ignore:::importlib._bootstrap_external:'
+
+    if 'PYTHONFAULTHANDLER' not in os.environ:
+        os.environ['PYTHONFAULTHANDLER'] = 'true'
+
+    if 'GEVENT_DEBUG' not in os.environ:
+        os.environ['GEVENT_DEBUG'] = 'debug'
+
+    if 'PYTHONTRACEMALLOC' not in os.environ:
+        os.environ['PYTHONTRACEMALLOC'] = '10'
+
+    if 'PYTHONDEVMODE' not in os.environ:
+        # Python 3.7
+        os.environ['PYTHONDEVMODE'] = '1'
+
+    if 'PYTHONMALLOC' not in os.environ:
+        # Python 3.6
+        os.environ['PYTHONMALLOC'] = 'debug'
+
+    if (sys.version_info == (3, 7, 0, 'beta', 2)
+            and (os.environ.get("PYTHONDEVMODE") or os.environ.get('PYTHONMALLOC'))):
+        # See https://twitter.com/ossmkitty/status/970693025130311680
+        # https://bugs.python.org/issue33005
+        os.environ.pop('PYTHONDEVMODE', None)
+        os.environ.pop('PYTHONMALLOC', None)
 
 def main():
     import argparse
@@ -357,32 +398,7 @@ def main():
         os.environ['COVERAGE_FILE'] = os.path.abspath(".") + os.sep + ".coverage"
         print("Enabling coverage to", os.environ['COVERAGE_FILE'])
 
-
-    if 'PYTHONWARNINGS' not in os.environ and not sys.warnoptions:
-        # Enable default warnings such as ResourceWarning.
-        # On Python 3[.6], the system site.py module has
-        # "open(fullname, 'rU')" which produces the warning that
-        # 'U' is deprecated, so ignore warnings from site.py
-
-        # importlib/_bootstrap.py likes to spit out "ImportWarning:
-        # can't resolve package from __spec__ or __package__, falling
-        # back on __name__ and __path__". I have no idea what that means, but it seems harmless
-        # and is annoying.
-        os.environ['PYTHONWARNINGS'] = 'default,ignore:::site:,ignore:::importlib._bootstrap:,ignore:::importlib._bootstrap_external:'
-
-    if 'PYTHONFAULTHANDLER' not in os.environ:
-        os.environ['PYTHONFAULTHANDLER'] = 'true'
-
-    if 'GEVENT_DEBUG' not in os.environ:
-        os.environ['GEVENT_DEBUG'] = 'debug'
-
-    if 'PYTHONTRACEMALLOC' not in os.environ:
-        os.environ['PYTHONTRACEMALLOC'] = '10'
-
-    if 'PYTHONDEVMODE' not in os.environ:
-        # Python 3.7
-        os.environ['PYTHONDEVMODE'] = '1'
-
+    _setup_environ()
 
     if options.config:
         config = {}

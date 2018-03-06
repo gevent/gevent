@@ -46,6 +46,18 @@ else:
     reraise = reraise # export
     exc_clear = sys.exc_clear
 
+## import locks
+try:
+    # In Python 3.4 and newer in CPython and PyPy3,
+    # imp.acquire_lock and imp.release_lock are delegated to
+    # '_imp'. (Which is also used by importlib.) 'imp' itself is
+    # deprecated. Avoid that warning.
+    import _imp as imp
+except ImportError:
+    import imp
+imp_acquire_lock = imp.acquire_lock
+imp_release_lock = imp.release_lock
+
 ## Functions
 if PY3:
     iteritems = dict.items

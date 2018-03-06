@@ -2,10 +2,13 @@
 """gevent friendly implementations of builtin functions."""
 from __future__ import absolute_import
 
-import imp # deprecated since 3.4; issues PendingDeprecationWarning in 3.5
 import sys
 import weakref
+
 from gevent.lock import RLock
+from gevent._compat import imp_acquire_lock
+from gevent._compat import imp_release_lock
+
 
 # Normally we'd have the "expected" case inside the try
 # (Python 3, because Python 3 is the way forward). But
@@ -86,7 +89,7 @@ def __import__(*args, **kwargs):
         return _import(*args, **kwargs)
 
     module_lock = __module_lock(args[0]) # Get a lock for the module name
-    imp.acquire_lock()
+    imp_acquire_lock()
     try:
         module_lock.acquire()
         try:
@@ -94,7 +97,7 @@ def __import__(*args, **kwargs):
         finally:
             module_lock.release()
     finally:
-        imp.release_lock()
+        imp_release_lock()
     return result
 
 

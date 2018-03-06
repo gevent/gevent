@@ -27,10 +27,7 @@ python_universal_newlines = hasattr(sys.stdout, 'newlines')
 # The stdlib of Python 3 on Windows doesn't properly handle universal newlines
 # (it produces broken results compared to Python 2)
 # See gevent.subprocess for more details.
-if PY3 and subprocess.mswindows:
-    python_universal_newlines_broken = True
-else:
-    python_universal_newlines_broken = False
+python_universal_newlines_broken = PY3 and subprocess.mswindows
 
 
 class Test(greentest.TestCase):
@@ -61,6 +58,7 @@ class Test(greentest.TestCase):
         p = subprocess.Popen([sys.executable, "-c", "print()"],
                              stdout=subprocess.PIPE)
         p.wait()
+        p.stdout.close()
         del p
         if PYPY:
             gc.collect()
@@ -206,7 +204,7 @@ class Test(greentest.TestCase):
                 os.close(w)
 
     def test_issue148(self):
-        for i in range(7):
+        for _ in range(7):
             try:
                 subprocess.Popen('this_name_must_not_exist')
             except OSError as ex:

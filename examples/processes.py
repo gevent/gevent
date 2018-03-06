@@ -23,3 +23,6 @@ else:
         print('ls: %r' % p2.stdout.read())
     else:
         print('ls: job is still running')
+
+    p1.stdout.close()
+    p2.stdout.close()

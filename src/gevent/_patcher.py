@@ -9,12 +9,14 @@
 
 from __future__ import absolute_import, print_function
 
-import imp
 import importlib
 import sys
 
 from gevent._compat import PY3
 from gevent._compat import iteritems
+from gevent._compat import imp_acquire_lock
+from gevent._compat import imp_release_lock
+
 
 from gevent.builtins import __import__ as _import
 
@@ -92,10 +94,10 @@ class _SysModulesPatcher(object):
         try:
             self._restore()
         finally:
-            imp.release_lock()
+            imp_release_lock()
 
     def __enter__(self):
-        imp.acquire_lock()
+        imp_acquire_lock()
         self._save()
         self._replace()
 

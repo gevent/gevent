@@ -12,6 +12,12 @@ from greentest.sysinfo import PY3
 from greentest.flaky import reraiseFlakyTestRaceConditionLibuv
 from greentest.skipping import skipOnLibuvOnCIOnPyPy
 
+try:
+    ResourceWarning
+except NameError:
+    class ResourceWarning(Warning):
+        "Python 2 fallback"
+
 
 class Test(greentest.TestCase):
 
@@ -38,8 +44,12 @@ class Test(greentest.TestCase):
             import traceback
             traceback.print_exc()
 
-        del s # Deliberately getting ResourceWarning with FileObject(Thread) under Py3
-        gc.collect() # PyPy
+        import warnings
+        with warnings.catch_warnings():
+            warnings.simplefilter('ignore', ResourceWarning)
+            # Deliberately getting ResourceWarning with FileObject(Thread) under Py3
+            del s
+            gc.collect() # PyPy
 
         if kwargs.get("close", True):
             with self.assertRaises((OSError, IOError)):
@@ -71,11 +81,16 @@ class Test(greentest.TestCase):
                 self._test_del(close=False)
 
     def test_newlines(self):
+        import warnings
         r, w = os.pipe()
         lines = [b'line1\n', b'line2\r', b'line3\r\n', b'line4\r\nline5', b'\nline6']
         g = gevent.spawn(writer, FileObject(w, 'wb'), lines)
+
         try:
-            fobj = FileObject(r, 'rU')
+            with warnings.catch_warnings():
+                warnings.simplefilter('ignore', DeprecationWarning)
+                # U is deprecated in Python 3, shows up on FileObjectThread
+                fobj = FileObject(r, 'rU')
             result = fobj.read()
             fobj.close()
             self.assertEqual('line1\nline2\nline3\nline4\nline5\nline6', result)
