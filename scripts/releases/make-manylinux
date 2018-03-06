@@ -10,12 +10,14 @@ if [ -d /gevent -a -d /opt/python ]; then
     yum -y install libffi-devel
     cd /gevent
     rm -rf wheelhouse
-    for variant in `ls -d /opt/python/cp{27,3}*`; do
+    for variant in `ls -d /opt/python/cp{27,34,35,36}*`; do
         rm -rf dist build *.egg-info
         make clean
-        $variant/bin/pip install -U cython cffi setuptools greenlet wheel
+        $variant/bin/pip install -U -r ci-requirements.txt
         GEVENT_NO_LIBUV_BUILD=1 PATH=$variant/bin:$PATH $variant/bin/python setup.py bdist_wheel
         auditwheel repair dist/*.whl
+		$variant/bin/pip uninstall -y cython
+		rm -rf src/cython
     done
     rm -rf dist build *.egg-info
     exit 0
