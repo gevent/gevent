@@ -712,8 +712,10 @@ class Pool(Group):
 
     def full(self):
         """
-        Return a boolean indicating whether this pool has any room for
-        members. (True if it does, False if it doesn't.)
+        Return a boolean indicating whether this pool is full, e.g. if
+        :meth:`add` would block.
+
+        :return: False if there is room for new members, True if there isn't.
         """
         return self.free_count() <= 0
 
