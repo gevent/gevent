@@ -49,7 +49,7 @@ from _setuplibev import CORE
 
 from _setupares import ARES
 
-
+# Get access to the greenlet header file.
 # The sysconfig dir is not enough if we're in a virtualenv
 # See https://github.com/pypa/pip/issues/4610
 include_dirs = [sysconfig.get_path("include")]
@@ -138,13 +138,19 @@ greenlet_requires = [
 
 install_requires = greenlet_requires + []
 
-# We use headers from greenlet, so it needs to be installed before we can compile.
-# XXX: This doesn't quite seem to work: pip tries to build the wheel, which
-# fails because greenlet is not installed (it's in a .eggs/ directory in the
-# build directory, but that directory doesn't have includes). Then it installs greenlet,
-# and builds gevent again, which works. Of course, now that we ship our own header,
-# this is probably not completely necessary at all.
-setup_requires = greenlet_requires + []
+# We use headers from greenlet, so it needs to be installed before we
+# can compile. If it isn't already installed before we start
+# installing, and we say 'pip install gevent', a 'setup_requires'
+# doesn't save us: pip happily downloads greenlet and drops it in a
+# .eggs/ directory in the build directory, but that directory doesn't
+# have includes! So we fail to build a wheel, pip goes ahead and
+# installs greenlet, and builds gevent again, which works.
+
+# Since we ship the greenlet header for buildout support (which fails
+# to install the headers at all, AFAICS, we don't need to bother with
+# the buggy setup_requires.)
+
+setup_requires = []
 
 if PYPY:
     # These use greenlet/greenlet.h, which doesn't exist on PyPy

@@ -40,10 +40,6 @@ Build Changes
 - Fix building from a source distribution (PyPI) without Cython
   installed.
 
-- greenlet is now required at build time. If it is not installed
-  before gevent is installed, gevent will be built twice when
-  installing from source.
-
 Enhancements
 ------------
 
