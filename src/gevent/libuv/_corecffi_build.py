@@ -227,6 +227,7 @@ elif WIN:
     _define_macro('WIN32', 1)
     _define_macro('_CRT_SECURE_NO_DEPRECATE', 1)
     _define_macro('_CRT_NONSTDC_NO_DEPRECATE', 1)
+    _define_macro('_CRT_SECURE_NO_WARNINGS', 1)
     _define_macro('_WIN32_WINNT', '0x0600')
     _add_library('advapi32')
     _add_library('iphlpapi')
@@ -242,7 +243,8 @@ ffi.set_source('gevent.libuv._corecffi',
                sources=LIBUV_SOURCES,
                depends=LIBUV_SOURCES,
                include_dirs=LIBUV_INCLUDE_DIRS,
-               libraries=list(LIBUV_LIBRARIES))
+               libraries=list(LIBUV_LIBRARIES),
+               define_macros=list(LIBUV_MACROS))
 
 if __name__ == '__main__':
     ffi.compile()

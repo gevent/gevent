@@ -1,20 +1,21 @@
 #include <string.h>
 #include "uv.h"
 
-static int python_callback(void* handle, int revents);
-static void python_handle_error(void* handle, int revents);
-static void python_stop(void* handle);
+typedef void* GeventWatcherObject;
 
-static void _gevent_noop(void*handle) {}
+static int python_callback(GeventWatcherObject handle, int revents);
+static void python_handle_error(GeventWatcherObject handle, int revents);
+static void python_stop(GeventWatcherObject handle);
+
+static void _gevent_noop(void* handle) {}
 
 static void (*gevent_noop)(void* handle) = &_gevent_noop;
 
-static void _gevent_generic_callback1(void* vwatcher, int arg)
+static void _gevent_generic_callback1(uv_handle_t* watcher, int arg)
 {
-    const uv_handle_t* watcher = (uv_handle_t*)vwatcher;
     // Python code may set this to NULL or even change it
     // out from under us, which would tend to break things.
-    void* handle = watcher->data;
+    GeventWatcherObject handle = watcher->data;
     const int cb_result = python_callback(handle, arg);
     switch(cb_result) {
         case -1:
@@ -65,10 +66,41 @@ static void _gevent_generic_callback1(void* vwatcher, int arg)
 }
 
 
-static void _gevent_generic_callback0(void* handle)
+static void _gevent_generic_callback0(uv_handle_t* handle)
 {
     _gevent_generic_callback1(handle, 0);
 }
+
+static void _gevent_async_callback0(uv_async_t* handle)
+{
+    _gevent_generic_callback0((uv_handle_t*)handle);
+}
+
+static void _gevent_timer_callback0(uv_timer_t* handle)
+{
+    _gevent_generic_callback0((uv_handle_t*)handle);
+}
+
+static void _gevent_prepare_callback0(uv_prepare_t* handle)
+{
+    _gevent_generic_callback0((uv_handle_t*)handle);
+}
+
+static void _gevent_check_callback0(uv_check_t* handle)
+{
+    _gevent_generic_callback0((uv_handle_t*)handle);
+}
+
+static void _gevent_idle_callback0(uv_idle_t* handle)
+{
+    _gevent_generic_callback0((uv_handle_t*)handle);
+}
+
+static void _gevent_signal_callback1(uv_signal_t* handle, int signum)
+{
+    _gevent_generic_callback1((uv_handle_t*)handle, signum);
+}
+
 
 static void _gevent_poll_callback2(void* handle, int status, int events)
 {

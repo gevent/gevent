@@ -7,7 +7,8 @@
 1.3a3 (unreleased)
 ==================
 
-- Nothing changed yet.
+- Use strongly typed watcher callbacks in the libuv CFFI extensions.
+  This prevents dozens of compiler warnings.
 
 
 1.3a2 (2018-03-06)
