@@ -90,8 +90,6 @@ class watcher(_base.watcher):
 
     _watcher_prefix = 'uv'
     _watcher_struct_pattern = '%s_t'
-    _watcher_callback_name = '_gevent_generic_callback0'
-
 
     @classmethod
     def _watcher_ffi_close(cls, ffi_watcher):
@@ -559,6 +557,7 @@ class child(_SimulatedWithAsyncMixin,
 
 
 class async_(_base.AsyncMixin, watcher):
+    _watcher_callback_name = '_gevent_async_callback0'
 
     def _watcher_ffi_init(self, args):
         # It's dangerous to have a raw, non-initted struct
@@ -598,6 +597,8 @@ class async_(_base.AsyncMixin, watcher):
 locals()['async'] = async_
 
 class timer(_base.TimerMixin, watcher):
+
+    _watcher_callback_name = '_gevent_timer_callback0'
 
     # In libuv, timer callbacks continue running while any timer is
     # expired, including newly added timers. Newly added non-zero
@@ -703,8 +704,7 @@ class stat(_base.StatMixin, watcher):
 
 
 class signal(_base.SignalMixin, watcher):
-
-    _watcher_callback_name = '_gevent_generic_callback1'
+    _watcher_callback_name = '_gevent_signal_callback1'
 
     def _watcher_ffi_init(self, args):
         self._watcher_init(self.loop._ptr, self._watcher)
@@ -719,11 +719,11 @@ class signal(_base.SignalMixin, watcher):
 class idle(_base.IdleMixin, watcher):
     # Because libuv doesn't support priorities, idle watchers are
     # potentially quite a bit different than under libev
-    pass
+    _watcher_callback_name = '_gevent_idle_callback0'
 
 
 class check(_base.CheckMixin, watcher):
-    pass
+    _watcher_callback_name = '_gevent_check_callback0'
 
 class OneShotCheck(check):
 
@@ -741,4 +741,4 @@ class OneShotCheck(check):
         return check.start(self, self.__make_cb(callback), *args)
 
 class prepare(_base.PrepareMixin, watcher):
-    pass
+    _watcher_callback_name = '_gevent_prepare_callback0'

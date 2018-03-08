@@ -112,6 +112,7 @@ class LazyOnClass(object):
 
     @classmethod
     def lazy(cls, cls_dict, func):
+        "Put a LazyOnClass object in *cls_dict* with the same name as *func*"
         cls_dict[func.__name__] = cls(func)
 
     def __init__(self, func, name=None):

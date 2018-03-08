@@ -32,8 +32,13 @@ class _Callbacks(AbstractCallbacks):
     def python_sigchld_callback(self, watcher_ptr, _signum):
         self.from_handle(ffi.cast('uv_handle_t*', watcher_ptr).data)._sigchld_callback()
 
-_callbacks = assign_standard_callbacks(ffi, libuv, _Callbacks,
-                                       [('python_sigchld_callback', None)])
+    def python_timer0_callback(self, watcher_ptr):
+        return self.python_prepare_callback(watcher_ptr)
+
+_callbacks = assign_standard_callbacks(
+    ffi, libuv, _Callbacks,
+    [('python_sigchld_callback', None),
+     ('python_timer0_callback', None)])
 
 from gevent._ffi.loop import EVENTS
 GEVENT_CORE_EVENTS = EVENTS # export
@@ -133,7 +138,8 @@ class loop(AbstractLoop):
         self._signal_idle = ffi.new("uv_timer_t*")
         libuv.uv_timer_init(self._ptr, self._signal_idle)
         self._signal_idle.data = self._handle_to_self
-        libuv.uv_timer_start(self._signal_idle, libuv.python_check_callback,
+        libuv.uv_timer_start(self._signal_idle,
+                             ffi.cast('void(*)(uv_timer_t*)', libuv.python_check_callback),
                              300,
                              300)
         libuv.uv_unref(self._signal_idle)
@@ -244,7 +250,7 @@ class loop(AbstractLoop):
         # As a partial remedy to this, unlike libev, our timer watcher
         # class doesn't update the loop time by default.
 
-        libuv.uv_check_start(self._timer0, libuv.python_prepare_callback)
+        libuv.uv_check_start(self._timer0, libuv.python_timer0_callback)
 
 
     def _stop_aux_watchers(self):

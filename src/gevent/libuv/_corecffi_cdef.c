@@ -133,7 +133,7 @@ struct uv_async_s {
 	struct uv_loop_s* loop;
 	uv_handle_type type;
 	void *data;
-	void (*async_cb)(void*);
+	void (*async_cb)(struct uv_async_s *);
 	GEVENT_STRUCT_DONE _;
 };
 
@@ -167,29 +167,24 @@ typedef struct uv_fs_poll_s uv_fs_poll_t;
 size_t uv_handle_size(uv_handle_type);
 
 // callbacks with the same signature
-// XXX: Note that these, and all callbacks, are defined to take
-// a void* or handle* instead of the more specific, correct,
-// value. This allows us to use the same gevent_generic_callback
-// without having to do a bunch of casts everywhere. This does produce
-// minor warnings when compiling the CFFI extension, though.
 typedef void (*uv_close_cb)(uv_handle_t *handle);
-typedef void (*uv_idle_cb)(void *handle);
-typedef void (*uv_timer_cb)(void *handle);
-typedef void (*uv_check_cb)(void* handle);
-typedef void (*uv_async_cb)(void* handle);
-typedef void (*uv_prepare_cb)(void*handle);
+typedef void (*uv_idle_cb)(uv_idle_t *handle);
+typedef void (*uv_timer_cb)(uv_timer_t *handle);
+typedef void (*uv_check_cb)(uv_check_t* handle);
+typedef void (*uv_async_cb)(uv_async_t* handle);
+typedef void (*uv_prepare_cb)(uv_prepare_t *handle);
 
 // callbacks with distinct sigs
 typedef void (*uv_walk_cb)(uv_handle_t *handle, void *arg);
-typedef void (*uv_poll_cb)(void *handle, int status, int events);
-typedef void (*uv_signal_cb)(void *handle, int signum);
+typedef void (*uv_poll_cb)(uv_poll_t *handle, int status, int events);
+typedef void (*uv_signal_cb)(uv_signal_t *handle, int signum);
 
 // Callback passed to uv_fs_event_start() which will be called
 // repeatedly after the handle is started. If the handle was started
 // with a directory the filename parameter will be a relative path to
 // a file contained in the directory. The events parameter is an ORed
 // mask of uv_fs_event elements.
-typedef void (*uv_fs_event_cb)(void* handle, const char* filename, int events, int status);
+typedef void (*uv_fs_event_cb)(uv_fs_event_t* handle, const char* filename, int events, int status);
 
 typedef struct {
 	long tv_sec;
@@ -215,7 +210,7 @@ typedef struct {
 	uv_timespec_t st_birthtim;
 } uv_stat_t;
 
-typedef void (*uv_fs_poll_cb)(void* handle, int status, const uv_stat_t* prev, const uv_stat_t* curr);
+typedef void (*uv_fs_poll_cb)(uv_fs_poll_t* handle, int status, const uv_stat_t* prev, const uv_stat_t* curr);
 
 // loop functions
 uv_loop_t *uv_default_loop();
@@ -227,8 +222,10 @@ int uv_loop_close(uv_loop_t* loop);
 uint64_t uv_backend_timeout(uv_loop_t* loop);
 int uv_run(uv_loop_t *, uv_run_mode mode);
 int uv_backend_fd(const uv_loop_t* loop);
-void uv_update_time(const uv_loop_t* loop);
-uint64_t uv_now(const uv_loop_t* loop);
+// The narrative docs for the two time functions say 'const',
+// but the header does not.
+void uv_update_time(uv_loop_t* loop);
+uint64_t uv_now(uv_loop_t* loop);
 void uv_stop(uv_loop_t *);
 void uv_walk(uv_loop_t *loop, uv_walk_cb walk_cb, void *arg);
 
@@ -351,31 +348,32 @@ void* memset(void *b, int c, size_t len);
 // These will be created as static functions at the end of the
 // _source.c and must be pre-declared at the top of that file if we
 // call them
+typedef void* GeventWatcherObject;
 extern "Python" {
 	// Standard gevent._ffi.loop callbacks.
-	int python_callback(void* handle, int revents);
-	void python_handle_error(void* handle, int revents);
-	void python_stop(void* handle);
-	void python_check_callback(void* handle);
-	void python_prepare_callback(void* handle);
+	int python_callback(GeventWatcherObject handle, int revents);
+	void python_handle_error(GeventWatcherObject handle, int revents);
+	void python_stop(GeventWatcherObject handle);
+
+	void python_check_callback(uv_check_t* handle);
+	void python_prepare_callback(uv_prepare_t* handle);
+	void python_timer0_callback(uv_check_t* handle);
 
 	// libuv specific callback
 	void _uv_close_callback(uv_handle_t* handle);
-	void python_sigchld_callback(void* handle, int signum);
+	void python_sigchld_callback(uv_signal_t* handle, int signum);
 }
 // A variable we fill in.
 static void (*gevent_noop)(void* handle);
-/*
- * We use a single C callback for every watcher type that shares the same signature, which in turn calls the
- * Python callbacks. The uv_handle_t pointer type can be used for every watcher type
- * because they all start with the same members---libuv itself relies on this. Each
- * watcher types has a 'void* data' that stores the CFFI handle to the Python watcher
- * object.
- */
-static void _gevent_generic_callback0(void* handle); // no extra args
-static void _gevent_generic_callback1(void* handle, int arg); // one extra args. Everything will funnel through this
-static void _gevent_poll_callback2(void* handle, int status, int events);
-static void _gevent_fs_event_callback3(void* handle, const char* filename, int events, int status);
+
+static void _gevent_signal_callback1(uv_signal_t* handle, int arg);
+static void _gevent_async_callback0(uv_async_t* handle);
+static void _gevent_prepare_callback0(uv_prepare_t* handle);
+static void _gevent_timer_callback0(uv_timer_t* handle);
+static void _gevent_check_callback0(uv_check_t* handle);
+static void _gevent_idle_callback0(uv_idle_t* handle);
+static void _gevent_poll_callback2(uv_poll_t* handle, int status, int events);
+static void _gevent_fs_event_callback3(uv_fs_event_t* handle, const char* filename, int events, int status);
 
 typedef struct _gevent_fs_poll_s {
 	uv_fs_poll_t handle;
@@ -383,7 +381,7 @@ typedef struct _gevent_fs_poll_s {
 	uv_stat_t prev;
 } gevent_fs_poll_t;
 
-static void _gevent_fs_poll_callback3(void* handle, int status, const uv_stat_t* prev, const uv_stat_t* curr);
+static void _gevent_fs_poll_callback3(uv_fs_poll_t* handle, int status, const uv_stat_t* prev, const uv_stat_t* curr);
 
 static void gevent_uv_walk_callback_close(uv_handle_t* handle, void* arg);
 static void gevent_close_all_handles(uv_loop_t* loop);
