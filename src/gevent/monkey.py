@@ -405,6 +405,11 @@ def patch_thread(threading=True, _threading_local=True, Event=True, logging=True
         if Event:
             from gevent.event import Event
             patch_item(threading_mod, 'Event', Event)
+            # Python 2 had `Event` as a function returning
+            # the private class `_Event`. Some code may be relying
+            # on that.
+            if hasattr(threading_mod, '_Event'):
+                patch_item(threading_mod, '_Event', Event)
 
         if existing_locks:
             _patch_existing_locks(threading_mod)

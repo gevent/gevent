@@ -10,6 +10,10 @@
 - Use strongly typed watcher callbacks in the libuv CFFI extensions.
   This prevents dozens of compiler warnings.
 
+- On Python 2, when monkey-patching `threading.Event`, also
+  monkey-patch the underlying class, ``threading._Event``. Some code
+  may be type-checking for that. See :issue:`1136`.
+
 
 1.3a2 (2018-03-06)
 ==================
