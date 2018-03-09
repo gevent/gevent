@@ -26,12 +26,15 @@ class TestMonkey(unittest.TestCase):
         self.assertIs(thread.start_new_thread, gthread.start_new_thread)
         self.assertIs(threading._start_new_thread, gthread.start_new_thread)
 
-        if sys.version_info[0] == 2:
-            from gevent import threading as gthreading
-            self.assertIs(threading._sleep, gthreading._sleep)
-
         # Event patched by default
         self.assertTrue(monkey.is_object_patched('threading', 'Event'))
+
+        if sys.version_info[0] == 2:
+            from gevent import threading as gthreading
+            from gevent.event import Event as GEvent
+            self.assertIs(threading._sleep, gthreading._sleep)
+            self.assertTrue(monkey.is_object_patched('threading', '_Event'))
+            self.assertIs(threading._Event, GEvent)
 
     def test_socket(self):
         import socket
