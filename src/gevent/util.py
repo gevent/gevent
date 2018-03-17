@@ -283,6 +283,10 @@ class GreenletTree(object):
         tb = ''.join(traceback.format_stack(frame))
         tree.child_multidata(tb)
 
+    @staticmethod
+    def __spawning_parent(greenlet):
+        return (getattr(greenlet, 'spawning_greenlet', None) or _noop)()
+
     def __render_locals(self, tree):
         gr_locals = all_local_dicts_for_greenlet(self.greenlet)
         if gr_locals:
@@ -316,7 +320,7 @@ class GreenletTree(object):
         if spawning_stack and tree.details and tree.details['stacks']:
             self.__render_tb(tree, 'Spawned at:', spawning_stack)
 
-        spawning_parent = getattr(self.greenlet, 'spawning_greenlet', _noop)()
+        spawning_parent = self.__spawning_parent(self.greenlet)
         tree_locals = getattr(self.greenlet, 'spawn_tree_locals', None)
         if tree_locals and tree_locals is not getattr(spawning_parent, 'spawn_tree_locals', None):
             tree.child_data('Spawn Tree Locals')
@@ -377,7 +381,7 @@ class GreenletTree(object):
             if not isinstance(ob, RawGreenlet):
                 continue
 
-            spawn_parent = getattr(ob, 'spawning_greenlet', _noop)()
+            spawn_parent = cls.__spawning_parent(ob)
 
             if spawn_parent is None:
                 root = cls._root_greenlet(ob)

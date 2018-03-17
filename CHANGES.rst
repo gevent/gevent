@@ -14,6 +14,14 @@
   monkey-patch the underlying class, ``threading._Event``. Some code
   may be type-checking for that. See :issue:`1136`.
 
+- Introduce the configuration variable
+  `gevent.config.track_greenlet_tree` (aka
+  ``GEVENT_TRACK_GREENLET_TREE``) to allow disabling the greenlet tree
+  features for applications where greenlet spawning is performance
+  critical. This restores spawning performance to 1.2 levels.
+
+- Add additional optimizations for spawning greenlets, making it
+  faster than 1.3a2.
 
 1.3a2 (2018-03-06)
 ==================

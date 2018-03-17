@@ -16,10 +16,13 @@ from gevent._tblib import load_traceback
 from gevent.hub import GreenletExit
 from gevent.hub import InvalidSwitchError
 from gevent.hub import Waiter
-from gevent.hub import get_hub
+from gevent.hub import _threadlocal
+from gevent.hub import get_hub_class
 from gevent.hub import iwait
 from gevent.hub import wait
 from gevent.timeout import Timeout
+
+from gevent._config import config as GEVENT_CONFIG
 from gevent._util import Lazy
 from gevent._util import readproperty
 
@@ -38,6 +41,16 @@ __all__ = [
 # error.
 locals()['getcurrent'] = __import__('greenlet').getcurrent
 locals()['greenlet_init'] = lambda: None
+
+def get_hub():
+    # This is identical to gevent.hub._get_hub_noargs so that it
+    # can be inlined for greenlet spawning by cython.
+    hub = _threadlocal.hub
+    if hub is None:
+        hubtype = get_hub_class()
+        hub = _threadlocal.hub = hubtype()
+    return hub
+
 
 if _PYPY:
     import _continuation # pylint:disable=import-error
@@ -204,6 +217,12 @@ class Greenlet(greenlet):
             spawning greenlets, specify a larger value for improved debugging.
 
             .. versionadded:: 1.3a2
+
+        .. versionchanged:: 1.3b1
+           The ``GEVENT_TRACK_GREENLET_TREE`` configuration value may be set to
+           a false value to disable ``spawn_tree_locals``, ``spawning_greenlet``,
+           and ``spawning_stack``. The first two will be None in that case, and the
+           latter will be empty.
         """
         # greenlet.greenlet(run=None, parent=None)
         # Calling it with both positional arguments instead of a keyword
@@ -233,7 +252,6 @@ class Greenlet(greenlet):
 
 
         _greenlet__init__(self, None, get_hub())
-        #super(Greenlet, self).__init__(None, get_hub())
 
         if run is not None:
             self._run = run
@@ -266,19 +284,26 @@ class Greenlet(greenlet):
         # Failed with exception: (t, v, dump_traceback(tb)))
         self._exc_info = None
 
-        spawner = getcurrent() # pylint:disable=undefined-variable
-        self.spawning_greenlet = wref(spawner)
-        try:
-            self.spawn_tree_locals = spawner.spawn_tree_locals
-        except AttributeError:
-            self.spawn_tree_locals = {}
-            if spawner.parent is not None:
-                # The main greenlet has no parent.
-                # Its children get separate locals.
-                spawner.spawn_tree_locals = self.spawn_tree_locals
+        if GEVENT_CONFIG.track_greenlet_tree:
+            spawner = getcurrent() # pylint:disable=undefined-variable
+            self.spawning_greenlet = wref(spawner)
+            try:
+                self.spawn_tree_locals = spawner.spawn_tree_locals
+            except AttributeError:
+                self.spawn_tree_locals = {}
+                if spawner.parent is not None:
+                    # The main greenlet has no parent.
+                    # Its children get separate locals.
+                    spawner.spawn_tree_locals = self.spawn_tree_locals
 
-        self._spawning_stack_frames = _extract_stack(self.spawning_stack_limit)
-        self._spawning_stack_frames.extend(getattr(spawner, '_spawning_stack_frames', []))
+            self._spawning_stack_frames = _extract_stack(self.spawning_stack_limit)
+            self._spawning_stack_frames.extend(getattr(spawner, '_spawning_stack_frames', []))
+        else:
+            # None is the default for all of these in Cython, but we
+            # need to declare them for pure-Python mode.
+            self.spawning_greenlet = None
+            self.spawn_tree_locals = None
+            self._spawning_stack_frames = None
 
     @Lazy
     def spawning_stack(self):
@@ -286,7 +311,7 @@ class Greenlet(greenlet):
         # code. It's tempting to discard _spawning_stack_frames
         # after this, but child greenlets may still be created
         # that need it.
-        return _Frame_from_list(self._spawning_stack_frames)
+        return _Frame_from_list(self._spawning_stack_frames or [])
 
     def _get_minimal_ident(self):
         reg = self.parent.ident_registry

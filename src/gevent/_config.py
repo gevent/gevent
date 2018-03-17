@@ -109,6 +109,8 @@ def validate_bool(value):
 def validate_anything(value):
     return value
 
+convert_str_value_as_is = validate_anything
+
 class Setting(object):
     name = None
     value = None
@@ -396,6 +398,27 @@ class TraceMalloc(Setting):
     tracking information for FFI objects.
     """
 
+
+class TrackGreenletTree(Setting):
+    name = 'track_greenlet_tree'
+    environment_key = 'GEVENT_TRACK_GREENLET_TREE'
+    default = True
+
+    validate = staticmethod(validate_bool)
+    # Don't do string-to-list conversion.
+    _convert = staticmethod(convert_str_value_as_is)
+
+    desc = """\
+    Should `Greenlet` objects track their spawning tree?
+
+    Setting this to a false value will make spawning `Greenlet`
+    objects and using `spawn_raw` faster, but the
+    ``spawning_greenlet``, ``spawn_tree_locals`` and ``spawning_stack``
+    will not be captured.
+
+    .. versionadded:: 1.3b1
+    """
+
 # The ares settings are all interpreted by
 # gevent/resolver/ares.pyx, so we don't do
 # any validation here.
@@ -410,7 +433,7 @@ class AresSettingMixin(object):
 
     validate = staticmethod(validate_anything)
 
-    _convert = staticmethod(validate_anything)
+    _convert = staticmethod(convert_str_value_as_is)
 
 class AresFlags(AresSettingMixin, Setting):
     name = 'ares_flags'

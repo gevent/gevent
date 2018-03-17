@@ -75,6 +75,9 @@ cdef inline list _extract_stack(int limit)
 @cython.locals(previous=_Frame, frame=tuple, f=_Frame)
 cdef _Frame _Frame_from_list(list frames)
 
+@cython.final
+cdef inline get_hub()
+
 
 cdef class Greenlet(greenlet):
     cdef readonly object value
@@ -128,7 +131,8 @@ cdef class Greenlet(greenlet):
 # doing a module global lookup. This is especially important
 # for spawning greenlets.
 cdef _greenlet__init__
-cdef get_hub
+cdef _threadlocal
+cdef get_hub_class
 cdef wref
 
 cdef Timeout
@@ -139,6 +143,7 @@ cdef wait
 cdef iwait
 cdef reraise
 cdef InvalidSwitchError
+cpdef GEVENT_CONFIG
 
 
 @cython.final

@@ -27,7 +27,7 @@ __all__ = [
     'Waiter',
 ]
 
-from gevent._config import config
+from gevent._config import config as GEVENT_CONFIG
 from gevent._compat import string_types
 from gevent._compat import xrange
 from gevent._util import _NONE
@@ -63,8 +63,6 @@ get_ident = thread.get_ident
 MAIN_THREAD = get_ident()
 
 
-
-
 class LoopExit(Exception):
     """
     Exception thrown when the hub finishes running.
@@ -83,7 +81,6 @@ class LoopExit(Exception):
          affinity from a different thread
 
     """
-    pass
 
 
 class BlockingSwitchOutError(AssertionError):
@@ -100,6 +97,24 @@ class ConcurrentObjectUseError(AssertionError):
     # state by one greenlet and then another while still blocking in the
     # first one
     pass
+
+class TrackedRawGreenlet(RawGreenlet):
+
+    def __init__(self, function, parent):
+        RawGreenlet.__init__(self, function, parent)
+        # See greenlet.py's Greenlet class. We capture the cheap
+        # parts to maintain the tree structure, but we do not capture
+        # the stack because that's too expensive for 'spawn_raw'.
+
+        current = getcurrent()
+        self.spawning_greenlet = wref(current)
+        # See Greenlet for how trees are maintained.
+        try:
+            self.spawn_tree_locals = current.spawn_tree_locals
+        except AttributeError:
+            self.spawn_tree_locals = {}
+            if current.parent:
+                current.spawn_tree_locals = self.spawn_tree_locals
 
 
 def spawn_raw(function, *args, **kwargs):
@@ -129,36 +144,31 @@ def spawn_raw(function, *args, **kwargs):
        Populate the ``spawning_greenlet`` and ``spawn_tree_locals``
        attributes of the returned greenlet.
 
+    .. versionchanged:: 1.3b1
+       *Only* populate ``spawning_greenlet`` and ``spawn_tree_locals``
+       if ``GEVENT_TRACK_GREENLET_TREE`` is enabled (the default). If not enabled,
+       those attributes will not be set.
+
     """
     if not callable(function):
         raise TypeError("function must be callable")
 
     # The hub is always the parent.
-    hub = get_hub()
+    hub = _get_hub_noargs()
+
+    factory = TrackedRawGreenlet if GEVENT_CONFIG.track_greenlet_tree else RawGreenlet
 
     # The callback class object that we use to run this doesn't
     # accept kwargs (and those objects are heavily used, as well as being
     # implemented twice in core.ppyx and corecffi.py) so do it with a partial
     if kwargs:
         function = _functools_partial(function, *args, **kwargs)
-        g = RawGreenlet(function, hub)
+        g = factory(function, hub)
         hub.loop.run_callback(g.switch)
     else:
-        g = RawGreenlet(function, hub)
+        g = factory(function, hub)
         hub.loop.run_callback(g.switch, *args)
 
-    # See greenlet.py's Greenlet class. We capture the cheap
-    # parts to maintain the tree structure, but we do not capture
-    # the stack because that's too expensive.
-    current = getcurrent()
-    g.spawning_greenlet = wref(current)
-    # See Greenlet for how trees are maintained.
-    try:
-        g.spawn_tree_locals = current.spawn_tree_locals
-    except AttributeError:
-        g.spawn_tree_locals = {}
-        if current.parent:
-            current.spawn_tree_locals = g.spawn_tree_locals
     return g
 
 
@@ -187,7 +197,7 @@ def sleep(seconds=0, ref=True):
 
     .. seealso:: :func:`idle`
     """
-    hub = get_hub()
+    hub = _get_hub_noargs()
     loop = hub.loop
     if seconds <= 0:
         waiter = Waiter()
@@ -209,7 +219,7 @@ def idle(priority=0):
 
     .. seealso:: :func:`sleep`
     """
-    hub = get_hub()
+    hub = _get_hub_noargs()
     watcher = hub.loop.idle()
     if priority:
         watcher.priority = priority
@@ -243,7 +253,7 @@ def kill(greenlet, exception=GreenletExit):
             # after it's been killed
             greenlet.kill(exception=exception, block=False)
         else:
-            get_hub().loop.run_callback(greenlet.throw, exception)
+            _get_hub_noargs().loop.run_callback(greenlet.throw, exception)
 
 
 class signal(object):
@@ -274,7 +284,7 @@ class signal(object):
         if not callable(handler):
             raise TypeError("signal handler must be callable.")
 
-        self.hub = get_hub()
+        self.hub = _get_hub_noargs()
         self.watcher = self.hub.loop.signal(signalnum, ref=False)
         self.watcher.start(self._start)
         self.handler = handler
@@ -393,6 +403,12 @@ def get_hub(*args, **kwargs):
 
     If a hub does not exist in the current thread, a new one is
     created of the type returned by :func:`get_hub_class`.
+
+    .. deprecated:: 1.3b1
+       The ``*args`` and ``**kwargs`` arguments are deprecated. They were
+       only used when the hub was created, and so were non-deterministic---to be
+       sure they were used, *all* callers had to pass them, or they were order-dependent.
+       Use ``set_hub`` instead.
     """
     hub = _threadlocal.hub
     if hub is None:
@@ -400,6 +416,15 @@ def get_hub(*args, **kwargs):
         hub = _threadlocal.hub = hubtype(*args, **kwargs)
     return hub
 
+def _get_hub_noargs():
+    # Just like get_hub, but cheaper to call because it
+    # takes no arguments or kwargs. See also a copy in
+    # gevent/greenlet.py
+    hub = _threadlocal.hub
+    if hub is None:
+        hubtype = get_hub_class()
+        hub = _threadlocal.hub = hubtype()
+    return hub
 
 def _get_hub():
     """Return the hub for the current thread.
@@ -428,7 +453,7 @@ def _config(default, envvar):
 
 hub_ident_registry = IdentRegistry()
 
-class Hub(RawGreenlet):
+class Hub(TrackedRawGreenlet):
     """
     A greenlet that runs the event loop.
 
@@ -457,7 +482,7 @@ class Hub(RawGreenlet):
 
 
     def __init__(self, loop=None, default=None):
-        RawGreenlet.__init__(self)
+        TrackedRawGreenlet.__init__(self, None, None)
         if hasattr(loop, 'run'):
             if default is not None:
                 raise TypeError("Unexpected argument: default")
@@ -476,7 +501,7 @@ class Hub(RawGreenlet):
             self.loop = self.loop_class(flags=loop, default=default) # pylint:disable=not-callable
         self._resolver = None
         self._threadpool = None
-        self.format_context = config.format_context
+        self.format_context = GEVENT_CONFIG.format_context
         self.minimal_ident = hub_ident_registry.get_ident(self)
 
     @Lazy
@@ -485,11 +510,11 @@ class Hub(RawGreenlet):
 
     @property
     def loop_class(self):
-        return config.loop
+        return GEVENT_CONFIG.loop
 
     @property
     def backend(self):
-        return config.libev_backend
+        return GEVENT_CONFIG.libev_backend
 
     def __repr__(self):
         if self.loop is None:
@@ -741,7 +766,7 @@ class Hub(RawGreenlet):
 
     @property
     def resolver_class(self):
-        return config.resolver
+        return GEVENT_CONFIG.resolver
 
     def _get_resolver(self):
         if self._resolver is None:
@@ -759,7 +784,7 @@ class Hub(RawGreenlet):
 
     @property
     def threadpool_class(self):
-        return config.threadpool
+        return GEVENT_CONFIG.threadpool
 
     def _get_threadpool(self):
         if self._threadpool is None:
@@ -820,7 +845,7 @@ class Waiter(object):
     __slots__ = ['hub', 'greenlet', 'value', '_exception']
 
     def __init__(self, hub=None):
-        self.hub = get_hub() if hub is None else hub
+        self.hub = _get_hub_noargs() if hub is None else hub
         self.greenlet = None
         self.value = None
         self._exception = _NONE
@@ -963,7 +988,7 @@ def iwait(objects, timeout=None, count=None):
     """
     # QQQ would be nice to support iterable here that can be generated slowly (why?)
     if objects is None:
-        yield get_hub().join(timeout=timeout)
+        yield _get_hub_noargs().join(timeout=timeout)
         return
 
     count = len(objects) if count is None else min(count, len(objects))
@@ -971,7 +996,7 @@ def iwait(objects, timeout=None, count=None):
     switch = waiter.switch
 
     if timeout is not None:
-        timer = get_hub().loop.timer(timeout, priority=-1)
+        timer = _get_hub_noargs().loop.timer(timeout, priority=-1)
         timer.start(switch, _NONE)
 
     try:
@@ -1031,7 +1056,7 @@ def wait(objects=None, timeout=None, count=None):
     .. seealso:: :func:`iwait`
     """
     if objects is None:
-        return get_hub().join(timeout=timeout)
+        return _get_hub_noargs().join(timeout=timeout)
     return list(iwait(objects, timeout, count))
 
 
