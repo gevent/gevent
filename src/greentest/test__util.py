@@ -59,15 +59,22 @@ class TestFormat(greentest.TestCase):
 @greentest.skipOnPyPy("See TestFormat")
 class TestTree(greentest.TestCase):
 
-    @greentest.ignores_leakcheck
-    def test_tree(self):
+    def setUp(self):
+        super(TestTree, self).setUp()
+        self.track_greenlet_tree = gevent.config.track_greenlet_tree
+        gevent.config.track_greenlet_tree = True
+
+    def tearDown(self):
+        gevent.config.track_greenlet_tree = self.track_greenlet_tree
+        super(TestTree, self).tearDown()
+
+    def _build_tree(self):
         # pylint:disable=too-many-locals
         # Python 2.7 on Travis seems to show unexpected greenlet objects
         # so perhaps we need a GC?
-        gc.collect()
-        gc.collect()
+        for _ in range(3):
+            gc.collect()
 
-        import re
         glets = []
         l = MyLocal(42)
         assert l
@@ -96,7 +103,9 @@ class TestTree(greentest.TestCase):
             return s(t2)
 
         s3 = s(t3)
-        s3.spawn_tree_locals['stl'] = 'STL'
+        if s3.spawn_tree_locals is not None:
+            # Can only do this if we're tracking spawn trees
+            s3.spawn_tree_locals['stl'] = 'STL'
         s3.join()
 
 
@@ -104,10 +113,17 @@ class TestTree(greentest.TestCase):
         s4.join()
 
         tree = s4.value
+        return tree, str(tree), tree.format(details={'stacks': False})
+
+    @greentest.ignores_leakcheck
+    def test_tree(self):
+        import re
+        tree, str_tree, tree_format = self._build_tree()
+
         self.assertTrue(tree.root)
 
-        self.assertNotIn('Parent', str(tree)) # Simple output
-        value = tree.format(details={'stacks': False})
+        self.assertNotIn('Parent', str_tree) # Simple output
+        value = tree_format
         hexobj = re.compile('0x[0123456789abcdef]+L?', re.I)
         value = hexobj.sub('X', value)
         value = value.replace('epoll', 'select')
@@ -144,6 +160,12 @@ class TestTree(greentest.TestCase):
             Parent: <QuietHub at X default default pending=0 ref=0>
         """.strip()
         self.assertEqual(value, expected)
+
+    @greentest.ignores_leakcheck
+    def test_tree_no_track(self):
+        gevent.config.track_greenlet_tree = False
+        self._build_tree()
+
 
 if __name__ == '__main__':
     greentest.main()
