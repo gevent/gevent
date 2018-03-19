@@ -135,31 +135,32 @@ class TestTree(greentest.TestCase):
         self.maxDiff = None
         expected = """\
 <greenlet.greenlet object at X>
+ :    Parent: None
  :    Greenlet Locals:
  :      Local <class '__main__.MyLocal'> at X
  :        {'foo': 42}
- +--- <QuietHub at X default default pending=0 ref=0>
+ +--- <QuietHub '' at X default default pending=0 ref=0 thread_ident=X>
  :          Parent: <greenlet.greenlet object at X>
  +--- <Greenlet "Greenlet-1" at X: _run>; finished with value <Greenlet "Greenlet-0" at X
- :          Parent: <QuietHub at X default default pending=0 ref=0>
+ :          Parent: <QuietHub '' at X default default pending=0 ref=0 thread_ident=X>
  |    +--- <Greenlet "Greenlet-0" at X: _run>; finished with exception ExpectedException()
- :                Parent: <QuietHub at X default default pending=0 ref=0>
+ :                Parent: <QuietHub '' at X default default pending=0 ref=0 thread_ident=X>
  +--- <Greenlet "Greenlet-2" at X: _run>; finished with value <Greenlet "Greenlet-4" at X
- :          Parent: <QuietHub at X default default pending=0 ref=0>
+ :          Parent: <QuietHub '' at X default default pending=0 ref=0 thread_ident=X>
  |    +--- <Greenlet "Greenlet-4" at X: _run>; finished with exception ExpectedException()
- :                Parent: <QuietHub at X default default pending=0 ref=0>
+ :                Parent: <QuietHub '' at X default default pending=0 ref=0 thread_ident=X>
  +--- <Greenlet "Greenlet-3" at X: _run>; finished with value <Greenlet "Greenlet-5" at X
- :          Parent: <QuietHub at X default default pending=0 ref=0>
+ :          Parent: <QuietHub '' at X default default pending=0 ref=0 thread_ident=X>
  :          Spawn Tree Locals
  :          {'stl': 'STL'}
  |    +--- <Greenlet "Greenlet-5" at X: _run>; finished with value <Greenlet "Greenlet-6" at X
- :                Parent: <QuietHub at X default default pending=0 ref=0>
+ :                Parent: <QuietHub '' at X default default pending=0 ref=0 thread_ident=X>
  |         +--- <Greenlet "Greenlet-6" at X: _run>; finished with exception ExpectedException()
- :                      Parent: <QuietHub at X default default pending=0 ref=0>
+ :                      Parent: <QuietHub '' at X default default pending=0 ref=0 thread_ident=X>
  +--- <Greenlet "Greenlet-7" at X: _run>; finished with value <gevent.util.GreenletTree obje
-            Parent: <QuietHub at X default default pending=0 ref=0>
+            Parent: <QuietHub '' at X default default pending=0 ref=0 thread_ident=X>
         """.strip()
-        self.assertEqual(value, expected)
+        self.assertEqual(expected, value)
 
     @greentest.ignores_leakcheck
     def test_tree_no_track(self):

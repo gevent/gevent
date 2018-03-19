@@ -13,7 +13,6 @@ import traceback
 from greenlet import getcurrent
 from greenlet import greenlet as RawGreenlet
 
-from gevent.local import all_local_dicts_for_greenlet
 
 __all__ = [
     'wrap_errors',
@@ -76,8 +75,10 @@ class wrap_errors(object):
     def __getattr__(self, name):
         return getattr(self.__func, name)
 
-def format_run_info():
+def format_run_info(_current_thread_ident=None):
     """
+    format_run_info() -> []
+
     Request information about the running threads of the current process.
 
     This is a debugging utility. Its output has no guarantees other than being
@@ -85,7 +86,10 @@ def format_run_info():
 
     :return: A sequence of text lines detailing the stacks of running
             threads and greenlets. (One greenlet will duplicate one thread,
-            the current thread and greenlet.) Extra information about
+            the current thread and greenlet. If there are multiple running threads,
+            the stack for the current greenlet may be incorrectly duplicated in multiple
+            greenlets.)
+            Extra information about
             :class:`gevent.greenlet.Greenlet` object will also be returned.
 
     .. versionadded:: 1.3a1
@@ -97,24 +101,30 @@ def format_run_info():
 
     lines = []
 
-    _format_thread_info(lines)
+    _format_thread_info(lines, _current_thread_ident)
     _format_greenlet_info(lines)
     return lines
 
-def _format_thread_info(lines):
+def _format_thread_info(lines, current_thread_ident):
     import threading
     import sys
 
-    threads = {th.ident: th.name for th in threading.enumerate()}
+    threads = {th.ident: th for th in threading.enumerate()}
 
     lines.append('*' * 80)
     lines.append('* Threads')
 
     thread = None
     frame = None
-    for thread, frame in sys._current_frames().items():
+    for thread_ident, frame in sys._current_frames().items():
         lines.append("*" * 80)
-        lines.append('Thread 0x%x (%s)\n' % (thread, threads.get(thread)))
+        thread = threads.get(thread_ident)
+        name = thread.name if thread else None
+        if getattr(thread, 'gevent_monitoring_thread', None):
+            name = repr(thread.gevent_monitoring_thread())
+        if current_thread_ident == thread_ident:
+            name = '%s) (CURRENT' % (name,)
+        lines.append('Thread 0x%x (%s)\n' % (thread_ident, name))
         lines.append(''.join(traceback.format_stack(frame)))
 
     # We may have captured our own frame, creating a reference
@@ -288,6 +298,9 @@ class GreenletTree(object):
         return (getattr(greenlet, 'spawning_greenlet', None) or _noop)()
 
     def __render_locals(self, tree):
+        # Defer the import to avoid cycles
+        from gevent.local import all_local_dicts_for_greenlet
+
         gr_locals = all_local_dicts_for_greenlet(self.greenlet)
         if gr_locals:
             tree.child_data("Greenlet Locals:")
@@ -309,8 +322,10 @@ class GreenletTree(object):
                 label += '; not running'
         tree.node_label(label)
 
-        if self.greenlet.parent is not None:
-            tree.child_data('Parent: ' + repr(self.greenlet.parent))
+        tree.child_data('Parent: ' + repr(self.greenlet.parent))
+
+        if getattr(self.greenlet, 'gevent_monitoring_thread', None) is not None:
+            tree.child_data('Monitoring Thread:' + repr(self.greenlet.gevent_monitoring_thread()))
 
         if self.greenlet and tree.details and tree.details['stacks']:
             self.__render_tb(tree, 'Running:', self.greenlet.gr_frame)

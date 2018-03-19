@@ -197,13 +197,18 @@ class ThreadPool(GroupMappingMixin):
             with _lock:
                 self._size -= 1
 
-    _destroy_worker_hub = False
+    # XXX: This used to be false by default. It really seems like
+    # it should be true to avoid leaking resources.
+    _destroy_worker_hub = True
 
     def _worker(self):
         # pylint:disable=too-many-branches
         need_decrease = True
         try:
             while 1: # tiny bit faster than True on Py2
+                h = _get_hub()
+                if h is not None:
+                    h.name = 'ThreadPool Worker Hub'
                 task_queue = self.task_queue
                 task = task_queue.get()
                 try:

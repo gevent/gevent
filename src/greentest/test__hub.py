@@ -26,6 +26,7 @@ import re
 import gevent
 from gevent import socket
 from gevent.hub import Waiter, get_hub
+from gevent._compat import PYPY
 
 DELAY = 0.1
 
@@ -113,6 +114,58 @@ class TestWaiter(greentest.TestCase):
         self.assertTrue(str(waiter).startswith('<Waiter greenlet=<Greenlet "Greenlet-'))
 
         g.kill()
+
+
+class TestPeriodicMonitoringThread(greentest.TestCase):
+
+    def setUp(self):
+        super(TestPeriodicMonitoringThread, self).setUp()
+        self.monitor_thread = gevent.config.monitor_thread
+        gevent.config.monitor_thread = True
+        self.monitor_fired = 0
+
+    def tearDown(self):
+        if not self.monitor_thread and get_hub().periodic_monitoring_thread:
+            # If it was true, nothing to do. If it was false, tear things down.
+            get_hub().periodic_monitoring_thread.kill()
+            get_hub().periodic_monitoring_thread = None
+        gevent.config.monitor_thread = self.monitor_thread
+
+    def _monitor(self, _hub):
+        self.monitor_fired += 1
+
+    def test_config(self):
+        self.assertEqual(0.1, gevent.config.max_blocking_time)
+
+    def test_blocking(self):
+        import io
+        hub = get_hub()
+        monitor = hub.start_periodic_monitoring_thread()
+        self.assertIsNotNone(monitor)
+        before_funs = monitor._additional_monitoring_functions
+
+        monitor.add_monitoring_function(self._monitor, 0)
+        self.assertIn((self._monitor, 0), monitor.monitoring_functions())
+
+        # We must make sure we have switched greenlets at least once,
+        # otherwise we can't detect a failure.
+        gevent.sleep(0.01)
+        stream = hub.exception_stream = io.BytesIO() if str is bytes else io.StringIO()
+        assert hub.exception_stream is stream
+        try:
+            time.sleep(0.3) # Thrice the default; PyPy is very slow to format stacks
+            # XXX: This is racy even on CPython
+        finally:
+            monitor._additional_monitoring_functions = before_funs
+            assert hub.exception_stream is stream
+            del hub.exception_stream
+
+        if not PYPY:
+            # PyPy may still be formatting the stacks in the other thread.
+            self.assertGreaterEqual(self.monitor_fired, 1)
+            data = stream.getvalue()
+            self.assertIn('appears to be blocked', data)
+            self.assertIn('PeriodicMonitoringThread', data)
 
 
 if __name__ == '__main__':

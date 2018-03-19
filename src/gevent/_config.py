@@ -265,6 +265,30 @@ class ImportableSetting(object):
             return value
         return self._import([self.shortname_map.get(x, x) for x in value])
 
+class BoolSettingMixin(object):
+    validate = staticmethod(validate_bool)
+    # Don't do string-to-list conversion.
+    _convert = staticmethod(convert_str_value_as_is)
+
+class IntSettingMixin(object):
+    # Don't do string-to-list conversion.
+    def _convert(self, value):
+        if value:
+            return int(value)
+
+    validate = staticmethod(validate_anything)
+
+
+class FloatSettingMixin(object):
+    def _convert(self, value):
+        if value:
+            return float(value)
+
+    def validate(self, value):
+        if value is not None and value <= 0:
+            raise ValueError("Must be > 0")
+        return value
+
 
 class Resolver(ImportableSetting, Setting):
 
@@ -364,7 +388,7 @@ class FileObject(ImportableSetting, Setting):
     }
 
 
-class WatchChildren(Setting):
+class WatchChildren(BoolSettingMixin, Setting):
     desc = """\
     Should we *not* watch children with the event loop watchers?
 
@@ -376,14 +400,11 @@ class WatchChildren(Setting):
     environment_key = 'GEVENT_NOWAITPID'
     default = False
 
-    validate = staticmethod(validate_bool)
 
-
-class TraceMalloc(Setting):
+class TraceMalloc(IntSettingMixin, Setting):
     name = 'trace_malloc'
     environment_key = 'PYTHONTRACEMALLOC'
     default = False
-    validate = staticmethod(validate_bool)
 
     desc = """\
     Should FFI objects track their allocation?
@@ -399,14 +420,10 @@ class TraceMalloc(Setting):
     """
 
 
-class TrackGreenletTree(Setting):
+class TrackGreenletTree(BoolSettingMixin, Setting):
     name = 'track_greenlet_tree'
     environment_key = 'GEVENT_TRACK_GREENLET_TREE'
     default = True
-
-    validate = staticmethod(validate_bool)
-    # Don't do string-to-list conversion.
-    _convert = staticmethod(convert_str_value_as_is)
 
     desc = """\
     Should `Greenlet` objects track their spawning tree?
@@ -415,6 +432,57 @@ class TrackGreenletTree(Setting):
     objects and using `spawn_raw` faster, but the
     ``spawning_greenlet``, ``spawn_tree_locals`` and ``spawning_stack``
     will not be captured.
+
+    .. versionadded:: 1.3b1
+    """
+
+class MonitorThread(BoolSettingMixin, Setting):
+    name = 'monitor_thread'
+    environment_key = 'GEVENT_ENABLE_MONITOR_THREAD'
+    default = False
+
+    desc = """\
+    Should each hub start a native OS thread to monitor
+    for problems?
+
+    Such a thread will periodically check to see if the event loop
+    is blocked for longer than `max_blocking_time`, producing output on
+    the hub's exception stream (stderr by default) if it detects this condition.
+
+    If this setting is true, then this thread will be created
+    the first time the hub is switched to,
+    or you can call `gevent.hub.Hub.start_periodic_monitoring_thread` at any
+    time to create it (from the same thread that will run the hub). That function
+    will return an object with a method ``add_monitoring_function(function, period)``
+    that you can call to add your own periodic monitoring function. ``function``
+    will be called with one argument, the hub it is monitoring. It will be called
+    in a separate native thread than the one running the hub and **must not**
+    attempt to use the gevent asynchronous API.
+
+    .. seealso:: `max_blocking_time`
+
+    .. versionadded:: 1.3b1
+    """
+
+class MaxBlockingTime(FloatSettingMixin, Setting):
+    name = 'max_blocking_time'
+    environment_key = 'GEVENT_MAX_BLOCKING_TIME'
+    default = 0.1
+
+    desc = """\
+    If the `monitor_thread` is enabled, this is
+    approximately how long (in seconds)
+    the event loop will be allowed to block before a warning is issued.
+
+    This function depends on using `greenlet.settrace`, so installing
+    your own trace function after starting the monitoring thread will
+    cause this feature to misbehave unless you call the function
+    returned by `greenlet.settrace`. If you install a tracing function *before*
+    the monitoring thread is started, it will still be called.
+
+    .. note:: In the unlikely event of creating and using multiple different
+        gevent hubs in the same native thread in a short period of time,
+        especially without destroying the hubs, false positives may be reported.
 
     .. versionadded:: 1.3b1
     """
@@ -540,7 +608,7 @@ class ResolverNameservers(AresSettingMixin, Setting):
         return 'servers'
 
 # Generic timeout, works for dnspython and ares
-class ResolverTimeout(AresSettingMixin, Setting):
+class ResolverTimeout(FloatSettingMixin, AresSettingMixin, Setting):
     document = True
     name = 'resolver_timeout'
     environment_key = 'GEVENT_RESOLVER_TIMEOUT'
@@ -551,10 +619,6 @@ class ResolverTimeout(AresSettingMixin, Setting):
 
     .. versionadded:: 1.3a2
     """
-
-    def _convert(self, value):
-        if value:
-            return float(value)
 
     @property
     def kwarg_name(self):

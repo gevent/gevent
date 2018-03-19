@@ -83,7 +83,7 @@ class Condition(object):
         self.__waiters.append(waiter)
         saved_state = self._release_save()
         try:    # restore state no matter what (e.g., KeyboardInterrupt)
-            waiter.acquire()
+            waiter.acquire() # Block on the native lock
         finally:
             self._acquire_restore(saved_state)
 

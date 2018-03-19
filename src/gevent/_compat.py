@@ -23,6 +23,7 @@ if PY3:
     integer_types = (int,)
     text_type = str
     native_path_types = (str, bytes)
+    thread_mod_name = '_thread'
 
 else:
     import __builtin__ # pylint:disable=import-error
@@ -30,6 +31,7 @@ else:
     text_type = __builtin__.unicode
     integer_types = (int, __builtin__.long)
     native_path_types = string_types
+    thread_mod_name = 'thread'
 
 
 ## Exceptions
