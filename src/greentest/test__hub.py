@@ -137,6 +137,7 @@ class TestPeriodicMonitoringThread(greentest.TestCase):
     def test_config(self):
         self.assertEqual(0.1, gevent.config.max_blocking_time)
 
+    @greentest.ignores_leakcheck
     def test_blocking(self):
         import io
         hub = get_hub()
