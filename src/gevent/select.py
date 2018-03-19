@@ -7,7 +7,7 @@ from __future__ import absolute_import, division, print_function
 import sys
 
 from gevent.event import Event
-from gevent.hub import get_hub
+from gevent.hub import _get_hub_noargs as get_hub
 from gevent.hub import sleep as _g_sleep
 from gevent._compat import integer_types
 from gevent._compat import iteritems

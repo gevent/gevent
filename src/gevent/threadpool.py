@@ -3,7 +3,10 @@ from __future__ import absolute_import
 import sys
 import os
 from gevent._compat import integer_types
-from gevent.hub import get_hub, getcurrent, sleep, _get_hub
+from gevent.hub import _get_hub_noargs as get_hub
+from gevent.hub import getcurrent
+from gevent.hub import sleep
+from gevent.hub import _get_hub
 from gevent.event import AsyncResult
 from gevent.greenlet import Greenlet
 from gevent.pool import GroupMappingMixin
@@ -200,7 +203,7 @@ class ThreadPool(GroupMappingMixin):
         # pylint:disable=too-many-branches
         need_decrease = True
         try:
-            while True:
+            while 1: # tiny bit faster than True on Py2
                 task_queue = self.task_queue
                 task = task_queue.get()
                 try:

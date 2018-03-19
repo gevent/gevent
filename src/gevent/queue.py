@@ -38,7 +38,9 @@ Full = __queue__.Full
 Empty = __queue__.Empty
 
 from gevent.timeout import Timeout
-from gevent.hub import get_hub, Waiter, getcurrent
+from gevent.hub import _get_hub_noargs as get_hub
+from gevent.hub import Waiter
+from gevent.hub import getcurrent
 from gevent.hub import InvalidSwitchError
 
 

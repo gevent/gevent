@@ -100,7 +100,7 @@ def signal(signalnum, handler):
         # Note that this conflicts with gevent.subprocess and other users
         # of child watchers, until the next time gevent.subprocess/loop.install_sigchld()
         # is called.
-        from gevent import get_hub # Are we always safe to import here?
+        from gevent.hub import get_hub # Are we always safe to import here?
         _signal_signal(signalnum, handler)
         get_hub().loop.reset_sigchld()
     return old_handler

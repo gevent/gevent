@@ -2,7 +2,6 @@
 from __future__ import print_function, absolute_import, division
 import sys
 
-from gevent.hub import get_hub
 from gevent.timeout import Timeout
 
 
@@ -11,13 +10,13 @@ __all__ = [
     'BoundedSemaphore',
 ]
 
-# In Cython, we define these as 'cdef inline' functions. The
+# In Cython, we define these as 'cdef [inline]' functions. The
 # compilation unit cannot have a direct assignment to them (import
 # is assignment) without generating a 'lvalue is not valid target'
 # error.
 locals()['getcurrent'] = __import__('greenlet').getcurrent
 locals()['greenlet_init'] = lambda: None
-
+locals()['get_hub'] = __import__('gevent').get_hub
 
 class Semaphore(object):
     """
@@ -88,7 +87,8 @@ class Semaphore(object):
             # NOTE: Passing the bound method will cause a memory leak on PyPy
             # with Cython <= 0.23.3. You must use >= 0.23.4.
             # See  https://bitbucket.org/pypy/pypy/issues/2149/memory-leak-for-python-subclass-of-cpyext#comment-22371546
-            self._notifier = get_hub().loop.run_callback(self._notify_links)
+            hub = get_hub() # pylint:disable=undefined-variable
+            self._notifier = hub.loop.run_callback(self._notify_links)
 
     def _notify_links(self):
         # Subclasses CANNOT override. This is a cdef method.
@@ -176,7 +176,7 @@ class Semaphore(object):
             timer = Timeout._start_new_or_dummy(timeout)
             try:
                 try:
-                    result = get_hub().switch()
+                    result = get_hub().switch() # pylint:disable=undefined-variable
                     assert result is self, 'Invalid switch into Semaphore.wait/acquire(): %r' % (result, )
                 except Timeout as ex:
                     if ex is not timer:

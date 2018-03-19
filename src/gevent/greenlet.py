@@ -13,6 +13,7 @@ from gevent._compat import reraise
 from gevent._compat import PYPY as _PYPY
 from gevent._tblib import dump_traceback
 from gevent._tblib import load_traceback
+
 from gevent.hub import GreenletExit
 from gevent.hub import InvalidSwitchError
 from gevent.hub import Waiter
@@ -20,6 +21,7 @@ from gevent.hub import _threadlocal
 from gevent.hub import get_hub_class
 from gevent.hub import iwait
 from gevent.hub import wait
+
 from gevent.timeout import Timeout
 
 from gevent._config import config as GEVENT_CONFIG
@@ -45,6 +47,7 @@ locals()['greenlet_init'] = lambda: None
 def get_hub():
     # This is identical to gevent.hub._get_hub_noargs so that it
     # can be inlined for greenlet spawning by cython.
+    # It is also cimported in semaphore.pxd
     hub = _threadlocal.hub
     if hub is None:
         hubtype = get_hub_class()

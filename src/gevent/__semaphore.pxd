@@ -1,7 +1,7 @@
 # cython: auto_pickle=False
 
 cdef Timeout
-cdef get_hub
+from _greenlet cimport get_hub
 
 cdef bint _greenlet_imported
 
