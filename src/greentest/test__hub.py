@@ -176,12 +176,20 @@ class TestPeriodicMonitoringThread(greentest.TestCase):
         before_funs = monitor._additional_monitoring_functions
         monitor.add_monitoring_function(
             monitor_cond,
-            0)
+            0.01)
 
         cond.wait()
         cond.release()
         monitor._additional_monitoring_functions = before_funs
 
+    @greentest.ignores_leakcheck
+    def test_kill_removes_trace(self):
+        from greenlet import gettrace
+        hub = get_hub()
+        hub.start_periodic_monitoring_thread()
+        self.assertIsNotNone(gettrace())
+        hub.periodic_monitoring_thread.kill()
+        self.assertIsNone(gettrace())
 
     @greentest.ignores_leakcheck
     def test_blocking_this_thread(self):

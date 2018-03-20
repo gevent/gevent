@@ -468,7 +468,7 @@ class PeriodicMonitoringThread(object):
 
     # The trace function that was previously installed,
     # if any.
-    previous_trace_function = staticmethod(lambda _event, _args: None)
+    previous_trace_function = None
 
     # The absolute minimum we will sleep, regardless of
     # what particular monitoring functions want to say.
@@ -485,7 +485,7 @@ class PeriodicMonitoringThread(object):
         # the trace function is threadlocal
         assert get_thread_ident() == hub.thread_ident
         prev_trace = settrace(self.greenlet_trace)
-        self.previous_trace_function = prev_trace or self.previous_trace_function
+        self.previous_trace_function = prev_trace
 
         # Create the actual monitoring thread. This is effectively a "daemon"
         # thread.
@@ -500,7 +500,8 @@ class PeriodicMonitoringThread(object):
             self._active_greenlet = args[1]
         else:
             self._active_greenlet = None
-        self.previous_trace_function(event, args)
+        if self.previous_trace_function is not None:
+            self.previous_trace_function(event, args)
 
     def monitoring_functions(self):
         # Return a list of tuples: [(function, period)]
@@ -521,6 +522,8 @@ class PeriodicMonitoringThread(object):
     def kill(self):
         # Stop this monitoring thread from running.
         self.should_run = False
+        # Uninstall our tracing hook
+        settrace(self.previous_trace_function)
 
     def __call__(self):
         # The function that runs in the monitoring thread.
@@ -539,9 +542,13 @@ class PeriodicMonitoringThread(object):
                 # Make sure the hub is still around, and still active,
                 # and keep it around while we are here.
                 hub = self._hub_wref()
-                if hub and self.should_run:
-                    for f, _ in functions:
-                        f(hub)
+                if not hub:
+                    self.kill()
+
+                if self.should_run:
+                    for f, period in functions:
+                        if period:
+                            f(hub)
         except SystemExit:
             pass
         except: # pylint:disable=bare-except
