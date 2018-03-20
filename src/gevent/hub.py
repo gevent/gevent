@@ -539,7 +539,7 @@ class PeriodicMonitoringThread(object):
                 # Make sure the hub is still around, and still active,
                 # and keep it around while we are here.
                 hub = self._hub_wref()
-                if hub:
+                if hub and self.should_run:
                     for f, _ in functions:
                         f(hub)
         except SystemExit:
@@ -569,8 +569,9 @@ class PeriodicMonitoringThread(object):
 
         if did_switch or self._active_greenlet is None or isinstance(self._active_greenlet, Hub):
             # Either we switched, or nothing is running (we got a
-            # trace event we don't know about), or we spent the whole time in the hub,
-            # blocked for IO. Nothing to report.
+            # trace event we don't know about or were requested to
+            # ignore), or we spent the whole time in the hub, blocked
+            # for IO. Nothing to report.
             return
 
         if (self._active_greenlet is getcurrent()
@@ -596,6 +597,13 @@ class PeriodicMonitoringThread(object):
         report.append("Info:")
         report.extend(format_run_info(self.monitor_thread_ident))
         hub.exception_stream.write('\n'.join(report))
+
+    def ignore_current_greenlet_blocking(self):
+        # Don't pay attention to the current greenlet.
+        self._active_greenlet = None
+
+    def monitor_current_greenlet_blocking(self):
+        self._active_greenlet = getcurrent()
 
     def __repr__(self):
         return '<%s at %s in thread %s greenlet %r for %r>' % (
@@ -976,7 +984,7 @@ class Hub(TrackedRawGreenlet):
         self._resolver = value
 
     def _del_resolver(self):
-        del self._resolver
+        self._resolver = None
 
     resolver = property(_get_resolver, _set_resolver, _del_resolver)
 
@@ -995,7 +1003,7 @@ class Hub(TrackedRawGreenlet):
         self._threadpool = value
 
     def _del_threadpool(self):
-        del self._threadpool
+        self._threadpool = None
 
     threadpool = property(_get_threadpool, _set_threadpool, _del_threadpool)
 

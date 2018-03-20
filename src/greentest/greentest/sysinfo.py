@@ -28,8 +28,8 @@ PYPY = gsysinfo.PYPY
 CPYTHON = not PYPY
 VERBOSE = sys.argv.count('-v') > 1
 WIN = gsysinfo.WIN
-LINUX = sys.platform.startswith('linux')
-OSX = sys.platform == 'darwin'
+LINUX = gsysinfo.LINUX
+OSX = gsysinfo.OSX
 
 PURE_PYTHON = gsysinfo.PURE_PYTHON
 

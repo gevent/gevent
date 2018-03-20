@@ -13,12 +13,18 @@ import traceback
 from greenlet import getcurrent
 from greenlet import greenlet as RawGreenlet
 
+from gevent._compat import PYPY
 
 __all__ = [
     'wrap_errors',
     'format_run_info',
     'GreenletTree',
 ]
+
+# PyPy is very slow at formatting stacks
+# for some reason.
+_STACK_LIMIT = 20 if PYPY else None
+
 
 def _noop():
     return None
@@ -125,7 +131,7 @@ def _format_thread_info(lines, current_thread_ident):
         if current_thread_ident == thread_ident:
             name = '%s) (CURRENT' % (name,)
         lines.append('Thread 0x%x (%s)\n' % (thread_ident, name))
-        lines.append(''.join(traceback.format_stack(frame)))
+        lines.append(''.join(traceback.format_stack(frame, _STACK_LIMIT)))
 
     # We may have captured our own frame, creating a reference
     # cycle, so clear it out.
@@ -290,7 +296,7 @@ class GreenletTree(object):
     @staticmethod
     def __render_tb(tree, label, frame):
         tree.child_data(label)
-        tb = ''.join(traceback.format_stack(frame))
+        tb = ''.join(traceback.format_stack(frame, _STACK_LIMIT))
         tree.child_multidata(tb)
 
     @staticmethod

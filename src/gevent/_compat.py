@@ -13,6 +13,9 @@ PY2 = sys.version_info[0] == 2
 PY3 = sys.version_info[0] >= 3
 PYPY = hasattr(sys, 'pypy_version_info')
 WIN = sys.platform.startswith("win")
+LINUX = sys.platform.startswith('linux')
+OSX = sys.platform == 'darwin'
+
 
 PURE_PYTHON = PYPY or os.getenv('PURE_PYTHON')
 
@@ -33,6 +36,9 @@ else:
     native_path_types = string_types
     thread_mod_name = 'thread'
 
+def NativeStrIO():
+    import io
+    return io.BytesIO() if str is bytes else io.StringIO()
 
 ## Exceptions
 if PY3:
