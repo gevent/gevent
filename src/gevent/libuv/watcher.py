@@ -263,6 +263,8 @@ class io(_base.IoMixin, watcher):
             assert self._handle is not None
             self._watcher_start(self._watcher, self._events, self._watcher_callback)
 
+    events = property(_get_events, _set_events)
+
     def _watcher_ffi_start(self):
         _dbg("Starting watcher", self, "with events", self._events)
         self._watcher_start(self._watcher, self._events, self._watcher_callback)
@@ -326,8 +328,12 @@ class io(_base.IoMixin, watcher):
             self.args = args
 
             watcher = self._watcher_ref
-            if watcher is not None and not watcher.active:
-                watcher._io_start()
+            if watcher is not None:
+                if not watcher.active:
+                    watcher._io_start()
+                else:
+                    # Make sure we're in the event mask
+                    watcher._calc_and_update_events()
 
         def stop(self):
             _dbg("Stopping IO multiplex watcher for", self.fd,
@@ -360,6 +366,8 @@ class io(_base.IoMixin, watcher):
                       lambda self, nv: self._watcher_ref._set_fd(nv))
 
     def _io_maybe_stop(self):
+        _dbg("IO maybe stop on behalf of multiplex", self, "fd", self._fd, "events", self._events)
+        self._calc_and_update_events()
         for w in self._multiplex_watchers:
             if w.callback is not None:
                 # There's still a reference to it, and it's started,
@@ -371,12 +379,15 @@ class io(_base.IoMixin, watcher):
 
     def _io_start(self):
         _dbg("IO start on behalf of multiplex", self, "fd", self._fd, "events", self._events)
+        self._calc_and_update_events()
         self.start(self._io_callback, pass_events=True)
 
     def _calc_and_update_events(self):
         events = 0
         for watcher in self._multiplex_watchers:
-            events |= watcher.events
+            if watcher.callback is not None:
+                # Only ask for events that are active.
+                events |= watcher.events
         self._set_events(events)
 
 
