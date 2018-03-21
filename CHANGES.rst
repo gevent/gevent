@@ -38,6 +38,10 @@
 - Hub objects now include the value of their ``name`` attribute in
   their repr.
 
+- Fix libuv io watchers polling for events that only stopped watchers
+  are interested in, reducing CPU usage. Reported in :issue:`1144` by
+  wwqgtxx.
+
 1.3a2 (2018-03-06)
 ==================
 

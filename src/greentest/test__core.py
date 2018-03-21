@@ -71,6 +71,41 @@ class TestWatchers(unittest.TestCase):
             io.start(lambda: None)
             io.close()
 
+    @greentest.skipOnLibev("libuv-specific")
+    @greentest.skipOnWindows("Destroying the loop somehow fails")
+    def test_io_multiplex_events(self):
+        # pylint:disable=no-member
+        import socket
+        sock = socket.socket()
+        fd = sock.fileno()
+
+        read = self.loop.io(fd, core.READ)
+        write = self.loop.io(fd, core.WRITE)
+
+        try:
+            real_watcher = read._watcher_ref
+
+            read.start(lambda: None)
+            self.assertEqual(real_watcher.events, core.READ)
+
+            write.start(lambda: None)
+            self.assertEqual(real_watcher.events, core.READ | core.WRITE)
+
+            write.stop()
+            self.assertEqual(real_watcher.events, core.READ)
+
+            write.start(lambda: None)
+            self.assertEqual(real_watcher.events, core.READ | core.WRITE)
+
+            read.stop()
+            self.assertEqual(real_watcher.events, core.WRITE)
+
+            write.stop()
+            self.assertEqual(real_watcher.events, 0)
+        finally:
+            read.close()
+            write.close()
+            sock.close()
 
     def test_timer_constructor(self):
         with self.assertRaises(ValueError):

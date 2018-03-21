@@ -269,6 +269,15 @@ if LIBUV:
             'test_socket.GeneralModuleTests.test_uknown_socket_family_repr',
         ]
 
+        if RUN_COVERAGE:
+
+            disabled_tests += [
+                # Starting with #1145 this test (actually
+                # TestTLS_FTPClassMixin) becomes sensitive to timings
+                # under coverage.
+                'test_ftplib.TestFTPClass.test_storlines',
+            ]
+
 
     if sys.platform.startswith('linux'):
         disabled_tests += [
