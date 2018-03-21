@@ -14,8 +14,12 @@ module add timeouts to arbitrary code.
     which no switches occur, :class:`Timeout` is powerless.
 """
 from __future__ import absolute_import, print_function, division
+
 from gevent._compat import string_types
-from gevent.hub import getcurrent, _NONE, get_hub
+from gevent._util import _NONE
+
+from gevent.hub import getcurrent
+from gevent.hub import _get_hub_noargs as get_hub
 
 __all__ = [
     'Timeout',

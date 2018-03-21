@@ -11,7 +11,10 @@ import sys
 import traceback
 from weakref import ref as wref
 
-from greenlet import greenlet as RawGreenlet, getcurrent, GreenletExit
+from greenlet import greenlet as RawGreenlet
+from greenlet import getcurrent
+from greenlet import GreenletExit
+
 
 
 __all__ = [
@@ -30,37 +33,35 @@ __all__ = [
 from gevent._config import config as GEVENT_CONFIG
 from gevent._compat import string_types
 from gevent._compat import xrange
+from gevent._compat import thread_mod_name
 from gevent._util import _NONE
 from gevent._util import readproperty
 from gevent._util import Lazy
+from gevent._util import gmctime
 from gevent._ident import IdentRegistry
 
-if sys.version_info[0] <= 2:
-    import thread # pylint:disable=import-error
-else:
-    import _thread as thread # python 2 pylint:disable=import-error
+from gevent.monkey import get_original
+
+
 
 # These must be the "real" native thread versions,
 # not monkey-patched.
-threadlocal = thread._local
-
-
-class _threadlocal(threadlocal):
+class _Threadlocal(get_original(thread_mod_name, '_local')):
 
     def __init__(self):
         # Use a class with an initializer so that we can test
         # for 'is None' instead of catching AttributeError, making
         # the code cleaner and possibly solving some corner cases
         # (like #687)
-        threadlocal.__init__(self)
+        super(_Threadlocal, self).__init__()
         self.Hub = None
         self.loop = None
         self.hub = None
 
-_threadlocal = _threadlocal()
+_threadlocal = _Threadlocal()
 
-get_ident = thread.get_ident
-MAIN_THREAD = get_ident()
+get_thread_ident = get_original(thread_mod_name, 'get_ident')
+MAIN_THREAD = get_thread_ident() # XXX: Assuming import is done on the main thread.
 
 
 class LoopExit(Exception):
@@ -480,9 +481,22 @@ class Hub(TrackedRawGreenlet):
 
     threadpool_size = 10
 
+    # An instance of PeriodicMonitoringThread, if started.
+    periodic_monitoring_thread = None
+
+    # The ident of the thread we were created in, which should be the
+    # thread that we run in.
+    thread_ident = None
+
+    #: A string giving the name of this hub. Useful for associating hubs
+    #: with particular threads. Printed as part of the default repr.
+    #:
+    #: .. versionadded:: 1.3b1
+    name = ''
 
     def __init__(self, loop=None, default=None):
         TrackedRawGreenlet.__init__(self, None, None)
+        self.thread_ident = get_thread_ident()
         if hasattr(loop, 'run'):
             if default is not None:
                 raise TypeError("Unexpected argument: default")
@@ -493,7 +507,7 @@ class Hub(TrackedRawGreenlet):
             # loop. See #237 and #238.
             self.loop = _threadlocal.loop
         else:
-            if default is None and get_ident() != MAIN_THREAD:
+            if default is None and self.thread_ident != MAIN_THREAD:
                 default = False
 
             if loop is None:
@@ -516,6 +530,16 @@ class Hub(TrackedRawGreenlet):
     def backend(self):
         return GEVENT_CONFIG.libev_backend
 
+    @property
+    def main_hub(self):
+        """
+        Is this the hub for the main thread?
+
+        .. versionadded:: 1.3b1
+        """
+        return self.thread_ident == MAIN_THREAD
+
+
     def __repr__(self):
         if self.loop is None:
             info = 'destroyed'
@@ -524,11 +548,16 @@ class Hub(TrackedRawGreenlet):
                 info = self.loop._format()
             except Exception as ex: # pylint:disable=broad-except
                 info = str(ex) or repr(ex) or 'error'
-        result = '<%s at 0x%x %s' % (self.__class__.__name__, id(self), info)
+        result = '<%s %r at 0x%x %s' % (
+            self.__class__.__name__,
+            self.name,
+            id(self),
+            info)
         if self._resolver is not None:
             result += ' resolver=%r' % self._resolver
         if self._threadpool is not None:
             result += ' threadpool=%r' % self._threadpool
+        result += ' thread_ident=%s' % (hex(self.thread_ident), )
         return result + '>'
 
     def handle_error(self, context, type, value, tb):
@@ -602,8 +631,7 @@ class Hub(TrackedRawGreenlet):
         del tb
 
         try:
-            import time
-            errstream.write(time.ctime())
+            errstream.write(gmctime())
             errstream.write(' ' if context is not None else '\n')
         except: # pylint:disable=bare-except
             # Possible not safe to import under certain
@@ -695,7 +723,8 @@ class Hub(TrackedRawGreenlet):
            programming error.
         """
         assert self is getcurrent(), 'Do not call Hub.run() directly'
-        while True:
+        self.start_periodic_monitoring_thread()
+        while 1:
             loop = self.loop
             loop.error_handler = self
             try:
@@ -710,6 +739,20 @@ class Hub(TrackedRawGreenlet):
         # to return an unexpected value
         # It is still possible to kill this greenlet with throw. However, in that case
         # switching to it is no longer safe, as switch will return immediately
+
+    def start_periodic_monitoring_thread(self):
+        if self.periodic_monitoring_thread is None and GEVENT_CONFIG.monitor_thread:
+            # TODO: If we're the main thread, then add the memory monitoring
+            # function.
+
+            # Note that it is possible for one real thread to
+            # (temporarily) wind up with multiple monitoring threads,
+            # if hubs are started and stopped within the thread. This shows up
+            # in the threadpool tests. The monitoring threads will eventually notice their
+            # hub object is gone.
+            from gevent._monitor import PeriodicMonitoringThread
+            self.periodic_monitoring_thread = PeriodicMonitoringThread(self)
+        return self.periodic_monitoring_thread
 
     def join(self, timeout=None):
         """Wait for the event loop to finish. Exits only when there are
@@ -742,6 +785,9 @@ class Hub(TrackedRawGreenlet):
         return False
 
     def destroy(self, destroy_loop=None):
+        if self.periodic_monitoring_thread is not None:
+            self.periodic_monitoring_thread.kill()
+            self.periodic_monitoring_thread = None
         if self._resolver is not None:
             self._resolver.close()
             del self._resolver
@@ -764,6 +810,8 @@ class Hub(TrackedRawGreenlet):
         if _threadlocal.hub is self:
             _threadlocal.hub = None
 
+    # XXX: We can probably simplify the resolver and threadpool properties.
+
     @property
     def resolver_class(self):
         return GEVENT_CONFIG.resolver
@@ -777,7 +825,7 @@ class Hub(TrackedRawGreenlet):
         self._resolver = value
 
     def _del_resolver(self):
-        del self._resolver
+        self._resolver = None
 
     resolver = property(_get_resolver, _set_resolver, _del_resolver)
 
@@ -796,7 +844,7 @@ class Hub(TrackedRawGreenlet):
         self._threadpool = value
 
     def _del_threadpool(self):
-        del self._threadpool
+        self._threadpool = None
 
     threadpool = property(_get_threadpool, _set_threadpool, _del_threadpool)
 

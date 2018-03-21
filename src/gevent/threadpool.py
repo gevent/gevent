@@ -3,7 +3,10 @@ from __future__ import absolute_import
 import sys
 import os
 from gevent._compat import integer_types
-from gevent.hub import get_hub, getcurrent, sleep, _get_hub
+from gevent.hub import _get_hub_noargs as get_hub
+from gevent.hub import getcurrent
+from gevent.hub import sleep
+from gevent.hub import _get_hub
 from gevent.event import AsyncResult
 from gevent.greenlet import Greenlet
 from gevent.pool import GroupMappingMixin
@@ -19,6 +22,8 @@ class ThreadPool(GroupMappingMixin):
     """
     .. note:: The method :meth:`apply_async` will always return a new
        greenlet, bypassing the threadpool entirely.
+    .. caution:: Instances of this class are only true if they have
+       unfinished tasks.
     """
 
     def __init__(self, maxsize, hub=None):
@@ -57,6 +62,8 @@ class ThreadPool(GroupMappingMixin):
 
     def __len__(self):
         # XXX just do unfinished_tasks property
+        # Note that this becomes the boolean value of this class,
+        # that's probably not what we want!
         return self.task_queue.unfinished_tasks
 
     def _get_size(self):
@@ -162,7 +169,7 @@ class ThreadPool(GroupMappingMixin):
 
         :return: A :class:`gevent.event.AsyncResult`.
         """
-        while True:
+        while 1:
             semaphore = self._semaphore
             semaphore.acquire()
             if semaphore is self._semaphore:
@@ -194,14 +201,29 @@ class ThreadPool(GroupMappingMixin):
             with _lock:
                 self._size -= 1
 
-    _destroy_worker_hub = False
+    # XXX: This used to be false by default. It really seems like
+    # it should be true to avoid leaking resources.
+    _destroy_worker_hub = True
+
+
+    def __ignore_current_greenlet_blocking(self, hub):
+        if hub is not None and hub.periodic_monitoring_thread is not None:
+            hub.periodic_monitoring_thread.ignore_current_greenlet_blocking()
 
     def _worker(self):
         # pylint:disable=too-many-branches
         need_decrease = True
         try:
-            while True:
+            while 1: # tiny bit faster than True on Py2
+                h = _get_hub()
+                if h is not None:
+                    h.name = 'ThreadPool Worker Hub'
                 task_queue = self.task_queue
+                # While we block, don't let the monitoring thread, if any,
+                # report us as blocked. Indeed, so long as we never
+                # try to switch greenlets, don't report us as blocked---
+                # the threadpool is *meant* to run blocking tasks
+                self.__ignore_current_greenlet_blocking(h)
                 task = task_queue.get()
                 try:
                     if task is None:

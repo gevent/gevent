@@ -70,7 +70,7 @@ __imports__.extend(__py3_imports__)
 
 import time
 import sys
-from gevent.hub import get_hub
+from gevent.hub import _get_hub_noargs as get_hub
 from gevent.hub import ConcurrentObjectUseError
 from gevent.timeout import Timeout
 from gevent._compat import string_types, integer_types, PY3

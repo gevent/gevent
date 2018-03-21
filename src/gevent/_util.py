@@ -139,3 +139,10 @@ class readproperty(object):
             return self
 
         return self.func(inst)
+
+def gmctime():
+    """
+    Returns the current time as a string in RFC3339 format.
+    """
+    import time
+    return time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())

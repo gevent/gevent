@@ -75,9 +75,6 @@ cdef inline list _extract_stack(int limit)
 @cython.locals(previous=_Frame, frame=tuple, f=_Frame)
 cdef _Frame _Frame_from_list(list frames)
 
-@cython.final
-cdef inline get_hub()
-
 
 cdef class Greenlet(greenlet):
     cdef readonly object value
@@ -125,6 +122,12 @@ cdef class Greenlet(greenlet):
     # IMapUnordered greenlets in pools need to access this
     # method
     cpdef _raise_exception(self)
+
+@cython.final
+cdef greenlet get_hub()
+# XXX: TODO: Move the definition of TrackedRawGreenlet
+# into a file that can be cython compiled so get_hub can
+# return that.
 
 # Declare a bunch of imports as cdefs so they can
 # be accessed directly as static vars without

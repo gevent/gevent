@@ -15,3 +15,5 @@ test__socket_timeout.py
 test__examples.py
 test__issue330.py
 test___ident.py
+test___config.py
+test___monitor.py

@@ -19,13 +19,16 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
+import re
+import time
+
 import greentest
 import greentest.timing
-import time
-import re
+
 import gevent
 from gevent import socket
 from gevent.hub import Waiter, get_hub
+from gevent._compat import NativeStrIO
 
 DELAY = 0.1
 
@@ -113,6 +116,197 @@ class TestWaiter(greentest.TestCase):
         self.assertTrue(str(waiter).startswith('<Waiter greenlet=<Greenlet "Greenlet-'))
 
         g.kill()
+
+
+@greentest.skipOnCI("Racy on CI")
+class TestPeriodicMonitoringThread(greentest.TestCase):
+
+    def _reset_hub(self):
+        hub = get_hub()
+        try:
+            del hub.exception_stream
+        except AttributeError:
+            pass
+        if hub._threadpool is not None:
+            hub.threadpool.join()
+            hub.threadpool.kill()
+            del hub.threadpool
+
+
+    def setUp(self):
+        super(TestPeriodicMonitoringThread, self).setUp()
+        self.monitor_thread = gevent.config.monitor_thread
+        gevent.config.monitor_thread = True
+        self.monitor_fired = 0
+        self.monitored_hubs = set()
+        self._reset_hub()
+
+    def tearDown(self):
+        hub = get_hub()
+        if not self.monitor_thread and hub.periodic_monitoring_thread:
+            # If it was true, nothing to do. If it was false, tear things down.
+            hub.periodic_monitoring_thread.kill()
+            hub.periodic_monitoring_thread = None
+        gevent.config.monitor_thread = self.monitor_thread
+        self.monitored_hubs = None
+        self._reset_hub()
+
+    def _monitor(self, hub):
+        self.monitor_fired += 1
+        if self.monitored_hubs is not None:
+            self.monitored_hubs.add(hub)
+
+    def test_config(self):
+        self.assertEqual(0.1, gevent.config.max_blocking_time)
+
+    def _run_monitoring_threads(self, monitor, kill=True):
+        self.assertTrue(monitor.should_run)
+        from threading import Condition
+        cond = Condition()
+        cond.acquire()
+
+        def monitor_cond(_hub):
+            cond.acquire()
+            cond.notifyAll()
+            cond.release()
+            if kill:
+                # Only run once. Especially helpful on PyPy, where
+                # formatting stacks is expensive.
+                monitor.kill()
+
+        monitor.add_monitoring_function(monitor_cond, 0.01)
+
+        cond.wait()
+        cond.release()
+        monitor.add_monitoring_function(monitor_cond, None)
+
+    @greentest.ignores_leakcheck
+    def test_kill_removes_trace(self):
+        from greenlet import gettrace
+        hub = get_hub()
+        hub.start_periodic_monitoring_thread()
+        self.assertIsNotNone(gettrace())
+        hub.periodic_monitoring_thread.kill()
+        self.assertIsNone(gettrace())
+
+    @greentest.ignores_leakcheck
+    def test_blocking_this_thread(self):
+        hub = get_hub()
+        stream = hub.exception_stream = NativeStrIO()
+        monitor = hub.start_periodic_monitoring_thread()
+        self.assertIsNotNone(monitor)
+
+        self.assertEqual(1, len(monitor.monitoring_functions()))
+        monitor.add_monitoring_function(self._monitor, 0.1)
+        self.assertEqual(2, len(monitor.monitoring_functions()))
+        self.assertEqual(self._monitor, monitor.monitoring_functions()[1].function)
+        self.assertEqual(0.1, monitor.monitoring_functions()[1].period)
+
+        # We must make sure we have switched greenlets at least once,
+        # otherwise we can't detect a failure.
+        gevent.sleep(0.0001)
+        assert hub.exception_stream is stream
+        try:
+            time.sleep(0.3) # Thrice the default
+            self._run_monitoring_threads(monitor)
+        finally:
+            monitor.add_monitoring_function(self._monitor, None)
+            self.assertEqual(1, len(monitor._monitoring_functions))
+            assert hub.exception_stream is stream
+            monitor.kill()
+            del hub.exception_stream
+
+
+        self.assertGreaterEqual(self.monitor_fired, 1)
+        data = stream.getvalue()
+        self.assertIn('appears to be blocked', data)
+        self.assertIn('PeriodicMonitoringThread', data)
+
+    def _prep_worker_thread(self):
+        hub = get_hub()
+        threadpool = hub.threadpool
+
+        worker_hub = threadpool.apply(get_hub)
+        stream = worker_hub.exception_stream = NativeStrIO()
+
+        # It does not have a monitoring thread yet
+        self.assertIsNone(worker_hub.periodic_monitoring_thread)
+        # So switch to it and give it one.
+        threadpool.apply(gevent.sleep, (0.01,))
+        self.assertIsNotNone(worker_hub.periodic_monitoring_thread)
+        worker_monitor = worker_hub.periodic_monitoring_thread
+        worker_monitor.add_monitoring_function(self._monitor, 0.1)
+
+        return worker_hub, stream, worker_monitor
+
+    @greentest.ignores_leakcheck
+    def test_blocking_threadpool_thread_task_queue(self):
+        # A threadpool thread spends much of its time
+        # blocked on the native Lock object. Unless we take
+        # care, if that thread had created a hub, it will constantly
+        # be reported as blocked.
+
+        worker_hub, stream, worker_monitor = self._prep_worker_thread()
+
+        # Now wait until the monitoring threads have run.
+        self._run_monitoring_threads(worker_monitor)
+        worker_monitor.kill()
+
+        # We did run the monitor in the worker thread, but it
+        # did NOT report itself blocked by the worker thread sitting there.
+        self.assertIn(worker_hub, self.monitored_hubs)
+        self.assertEqual(stream.getvalue(), '')
+
+    @greentest.ignores_leakcheck
+    def test_blocking_threadpool_thread_one_greenlet(self):
+        # If the background threadpool thread has no other greenlets to run
+        # and never switches, then even if it has a hub
+        # we don't report it blocking. The threadpool is *meant* to run
+        # tasks that block.
+
+        hub = get_hub()
+        threadpool = hub.threadpool
+        worker_hub, stream, worker_monitor = self._prep_worker_thread()
+
+        task = threadpool.spawn(time.sleep, 0.3)
+        # Now wait until the monitoring threads have run.
+        self._run_monitoring_threads(worker_monitor)
+        # and be sure the task ran
+        task.get()
+        worker_monitor.kill()
+
+        # We did run the monitor in the worker thread, but it
+        # did NOT report itself blocked by the worker thread
+        self.assertIn(worker_hub, self.monitored_hubs)
+        self.assertEqual(stream.getvalue(), '')
+
+
+    @greentest.ignores_leakcheck
+    def test_blocking_threadpool_thread_multi_greenlet(self):
+        # If the background threadpool thread ever switches
+        # greenlets, monitoring goes into affect.
+
+        hub = get_hub()
+        threadpool = hub.threadpool
+        worker_hub, stream, worker_monitor = self._prep_worker_thread()
+
+        def task():
+            g = gevent.spawn(time.sleep, 0.7)
+            g.join()
+
+        task = threadpool.spawn(task)
+        # Now wait until the monitoring threads have run.
+        self._run_monitoring_threads(worker_monitor, kill=False)
+        # and be sure the task ran
+        task.get()
+        worker_monitor.kill()
+
+        # We did run the monitor in the worker thread, and it
+        # DID report itself blocked by the worker thread
+        self.assertIn(worker_hub, self.monitored_hubs)
+        data = stream.getvalue()
+        self.assertIn('appears to be blocked', data)
+        self.assertIn('PeriodicMonitoringThread', data)
 
 
 if __name__ == '__main__':

@@ -11,7 +11,7 @@ import functools
 import sys
 
 
-from gevent.hub import get_hub
+from gevent.hub import _get_hub_noargs as get_hub
 from gevent._compat import integer_types
 from gevent._compat import reraise
 from gevent.lock import Semaphore, DummySemaphore

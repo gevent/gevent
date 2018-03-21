@@ -13,13 +13,18 @@ import traceback
 from greenlet import getcurrent
 from greenlet import greenlet as RawGreenlet
 
-from gevent.local import all_local_dicts_for_greenlet
+from gevent._compat import PYPY
 
 __all__ = [
     'wrap_errors',
     'format_run_info',
     'GreenletTree',
 ]
+
+# PyPy is very slow at formatting stacks
+# for some reason.
+_STACK_LIMIT = 20 if PYPY else None
+
 
 def _noop():
     return None
@@ -76,8 +81,12 @@ class wrap_errors(object):
     def __getattr__(self, name):
         return getattr(self.__func, name)
 
-def format_run_info():
+def format_run_info(thread_stacks=True,
+                    greenlet_stacks=True,
+                    current_thread_ident=None):
     """
+    format_run_info(thread_stacks=True, greenlet_stacks=True) -> [str]
+
     Request information about the running threads of the current process.
 
     This is a debugging utility. Its output has no guarantees other than being
@@ -85,7 +94,10 @@ def format_run_info():
 
     :return: A sequence of text lines detailing the stacks of running
             threads and greenlets. (One greenlet will duplicate one thread,
-            the current thread and greenlet.) Extra information about
+            the current thread and greenlet. If there are multiple running threads,
+            the stack for the current greenlet may be incorrectly duplicated in multiple
+            greenlets.)
+            Extra information about
             :class:`gevent.greenlet.Greenlet` object will also be returned.
 
     .. versionadded:: 1.3a1
@@ -97,25 +109,34 @@ def format_run_info():
 
     lines = []
 
-    _format_thread_info(lines)
-    _format_greenlet_info(lines)
+    _format_thread_info(lines, thread_stacks, current_thread_ident)
+    _format_greenlet_info(lines, greenlet_stacks)
     return lines
 
-def _format_thread_info(lines):
+def _format_thread_info(lines, thread_stacks, current_thread_ident):
     import threading
     import sys
 
-    threads = {th.ident: th.name for th in threading.enumerate()}
+    threads = {th.ident: th for th in threading.enumerate()}
 
     lines.append('*' * 80)
     lines.append('* Threads')
 
     thread = None
     frame = None
-    for thread, frame in sys._current_frames().items():
+    for thread_ident, frame in sys._current_frames().items():
         lines.append("*" * 80)
-        lines.append('Thread 0x%x (%s)\n' % (thread, threads.get(thread)))
-        lines.append(''.join(traceback.format_stack(frame)))
+        thread = threads.get(thread_ident)
+        name = thread.name if thread else None
+        if getattr(thread, 'gevent_monitoring_thread', None):
+            name = repr(thread.gevent_monitoring_thread())
+        if current_thread_ident == thread_ident:
+            name = '%s) (CURRENT' % (name,)
+        lines.append('Thread 0x%x (%s)\n' % (thread_ident, name))
+        if thread_stacks:
+            lines.append(''.join(traceback.format_stack(frame, _STACK_LIMIT)))
+        else:
+            lines.append('\t...stack elided...')
 
     # We may have captured our own frame, creating a reference
     # cycle, so clear it out.
@@ -124,14 +145,14 @@ def _format_thread_info(lines):
     del lines
     del threads
 
-def _format_greenlet_info(lines):
+def _format_greenlet_info(lines, greenlet_stacks):
     # Use the gc module to inspect all objects to find the greenlets
     # since there isn't a global registry
     lines.append('*' * 80)
     lines.append('* Greenlets')
     lines.append('*' * 80)
     for tree in GreenletTree.forest():
-        lines.extend(tree.format_lines(details=True))
+        lines.extend(tree.format_lines(details={'running_stacks': greenlet_stacks}))
 
     del lines
 
@@ -250,6 +271,12 @@ class GreenletTree(object):
     def __getattr__(self, name):
         return getattr(self.greenlet, name)
 
+    DEFAULT_DETAILS = {
+        'running_stacks': True,
+        'spawning_stacks': True,
+        'locals': True,
+    }
+
     def format_lines(self, details=True):
         """
         Return a sequence of lines for the greenlet tree.
@@ -261,7 +288,11 @@ class GreenletTree(object):
             if not details:
                 details = {}
             else:
-                details = {'stacks': True, 'locals': True}
+                details = self.DEFAULT_DETAILS.copy()
+        else:
+            params = details
+            details = self.DEFAULT_DETAILS.copy()
+            details.update(params)
         tree = _TreeFormatter(details, depth=0)
         lines = [l[0] if isinstance(l, tuple) else l
                  for l in self._render(tree)]
@@ -280,7 +311,7 @@ class GreenletTree(object):
     @staticmethod
     def __render_tb(tree, label, frame):
         tree.child_data(label)
-        tb = ''.join(traceback.format_stack(frame))
+        tb = ''.join(traceback.format_stack(frame, _STACK_LIMIT))
         tree.child_multidata(tb)
 
     @staticmethod
@@ -288,6 +319,9 @@ class GreenletTree(object):
         return (getattr(greenlet, 'spawning_greenlet', None) or _noop)()
 
     def __render_locals(self, tree):
+        # Defer the import to avoid cycles
+        from gevent.local import all_local_dicts_for_greenlet
+
         gr_locals = all_local_dicts_for_greenlet(self.greenlet)
         if gr_locals:
             tree.child_data("Greenlet Locals:")
@@ -309,15 +343,17 @@ class GreenletTree(object):
                 label += '; not running'
         tree.node_label(label)
 
-        if self.greenlet.parent is not None:
-            tree.child_data('Parent: ' + repr(self.greenlet.parent))
+        tree.child_data('Parent: ' + repr(self.greenlet.parent))
 
-        if self.greenlet and tree.details and tree.details['stacks']:
+        if getattr(self.greenlet, 'gevent_monitoring_thread', None) is not None:
+            tree.child_data('Monitoring Thread:' + repr(self.greenlet.gevent_monitoring_thread()))
+
+        if self.greenlet and tree.details and tree.details['running_stacks']:
             self.__render_tb(tree, 'Running:', self.greenlet.gr_frame)
 
 
         spawning_stack = getattr(self.greenlet, 'spawning_stack', None)
-        if spawning_stack and tree.details and tree.details['stacks']:
+        if spawning_stack and tree.details and tree.details['spawning_stacks']:
             self.__render_tb(tree, 'Spawned at:', spawning_stack)
 
         spawning_parent = self.__spawning_parent(self.greenlet)

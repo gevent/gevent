@@ -23,6 +23,21 @@
 - Add additional optimizations for spawning greenlets, making it
   faster than 1.3a2.
 
+- Add an optional monitoring thread for each hub. When enabled, this
+  thread (by default) looks for greenlets that block the event loop
+  for more than 0.1s. You can add your own periodic monitoring
+  functions to this thread.
+
+- When gevent prints a timestamp as part of an error message, it is
+  now in UTC format as specified by RFC3339.
+
+- Threadpool threads that exit now always destroy their hub (if one
+  was created). This prevents some forms of resource leaks (notably
+  visible as blocking functions reported by the new monitoring abilities).
+
+- Hub objects now include the value of their ``name`` attribute in
+  their repr.
+
 1.3a2 (2018-03-06)
 ==================
 

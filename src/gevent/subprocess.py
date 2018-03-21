@@ -40,7 +40,10 @@ import signal
 import sys
 import traceback
 from gevent.event import AsyncResult
-from gevent.hub import get_hub, linkproxy, sleep, getcurrent
+from gevent.hub import _get_hub_noargs as get_hub
+from gevent.hub import linkproxy
+from gevent.hub import sleep
+from gevent.hub import getcurrent
 from gevent._compat import integer_types, string_types, xrange
 from gevent._compat import PY3
 from gevent._compat import reraise
