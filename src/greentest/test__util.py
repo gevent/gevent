@@ -113,7 +113,8 @@ class TestTree(greentest.TestCase):
         s4.join()
 
         tree = s4.value
-        return tree, str(tree), tree.format(details={'stacks': False})
+        return tree, str(tree), tree.format(details={'running_stacks': False,
+                                                     'spawning_stacks': False})
 
     @greentest.ignores_leakcheck
     def test_tree(self):

@@ -159,7 +159,7 @@ class TestPeriodicMonitoringThread(greentest.TestCase):
     def test_config(self):
         self.assertEqual(0.1, gevent.config.max_blocking_time)
 
-    def _run_monitoring_threads(self, monitor):
+    def _run_monitoring_threads(self, monitor, kill=True):
         self.assertTrue(monitor.should_run)
         from threading import Condition
         cond = Condition()
@@ -167,20 +167,18 @@ class TestPeriodicMonitoringThread(greentest.TestCase):
 
         def monitor_cond(_hub):
             cond.acquire()
-            # Only run once. Especially helpful on PyPy, where
-            # formatting stacks is expensive.
-            monitor.kill()
             cond.notifyAll()
             cond.release()
+            if kill:
+                # Only run once. Especially helpful on PyPy, where
+                # formatting stacks is expensive.
+                monitor.kill()
 
-        before_funs = monitor._additional_monitoring_functions
-        monitor.add_monitoring_function(
-            monitor_cond,
-            0.01)
+        monitor.add_monitoring_function(monitor_cond, 0.01)
 
         cond.wait()
         cond.release()
-        monitor._additional_monitoring_functions = before_funs
+        monitor.add_monitoring_function(monitor_cond, None)
 
     @greentest.ignores_leakcheck
     def test_kill_removes_trace(self):
@@ -197,10 +195,12 @@ class TestPeriodicMonitoringThread(greentest.TestCase):
         stream = hub.exception_stream = NativeStrIO()
         monitor = hub.start_periodic_monitoring_thread()
         self.assertIsNotNone(monitor)
-        before_funs = monitor._additional_monitoring_functions
 
+        self.assertEqual(1, len(monitor.monitoring_functions()))
         monitor.add_monitoring_function(self._monitor, 0.1)
-        self.assertIn((self._monitor, 0.1), monitor.monitoring_functions())
+        self.assertEqual(2, len(monitor.monitoring_functions()))
+        self.assertEqual(self._monitor, monitor.monitoring_functions()[1].function)
+        self.assertEqual(0.1, monitor.monitoring_functions()[1].period)
 
         # We must make sure we have switched greenlets at least once,
         # otherwise we can't detect a failure.
@@ -210,7 +210,8 @@ class TestPeriodicMonitoringThread(greentest.TestCase):
             time.sleep(0.3) # Thrice the default
             self._run_monitoring_threads(monitor)
         finally:
-            monitor._additional_monitoring_functions = before_funs
+            monitor.add_monitoring_function(self._monitor, None)
+            self.assertEqual(1, len(monitor._monitoring_functions))
             assert hub.exception_stream is stream
             monitor.kill()
             del hub.exception_stream
@@ -295,7 +296,7 @@ class TestPeriodicMonitoringThread(greentest.TestCase):
 
         task = threadpool.spawn(task)
         # Now wait until the monitoring threads have run.
-        self._run_monitoring_threads(worker_monitor)
+        self._run_monitoring_threads(worker_monitor, kill=False)
         # and be sure the task ran
         task.get()
         worker_monitor.kill()
