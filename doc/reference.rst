@@ -23,4 +23,5 @@ API reference
    gevent.threadpool
    gevent.time
    gevent.util
+   gevent.events
    lowlevel

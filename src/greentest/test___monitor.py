@@ -55,7 +55,6 @@ class TestPeriodicMonitoringThread(unittest.TestCase):
         self.assertIs(self.hub, self.pmt.hub)
         del self.hub
 
-        import gc
         gc.collect()
         self.assertIsNone(self.pmt.hub)
 
@@ -151,6 +150,12 @@ class TestPeriodicMonitoringThread(unittest.TestCase):
     def test_monitor_blocking(self):
         # Initially there's no active greenlet and no switches,
         # so nothing is considered blocked
+        from gevent.events import subscribers
+        from gevent.events import IEventLoopBlocked
+        from zope.interface.verify import verifyObject
+        events = []
+        subscribers.append(events.append)
+
         self.assertFalse(self.pmt.monitor_blocking(self.hub))
 
         # Give it an active greenlet
@@ -160,13 +165,18 @@ class TestPeriodicMonitoringThread(unittest.TestCase):
 
         # We've switched, so we're not blocked
         self.assertFalse(self.pmt.monitor_blocking(self.hub))
+        self.assertFalse(events)
 
         # Again without switching is a problem.
         self.assertTrue(self.pmt.monitor_blocking(self.hub))
+        self.assertTrue(events)
+        verifyObject(IEventLoopBlocked, events[0])
+        del events[:]
 
         # But we can order it not to be a problem
         self.pmt.ignore_current_greenlet_blocking()
         self.assertFalse(self.pmt.monitor_blocking(self.hub))
+        self.assertFalse(events)
 
         # And back again
         self.pmt.monitor_current_greenlet_blocking()

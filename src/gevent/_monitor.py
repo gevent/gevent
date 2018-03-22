@@ -12,9 +12,12 @@ from greenlet import getcurrent
 from gevent import config as GEVENT_CONFIG
 from gevent.monkey import get_original
 from gevent.util import format_run_info
+from gevent.events import notify
+from gevent.events import EventLoopBlocked
 
 from gevent._compat import thread_mod_name
 from gevent._util import gmctime
+
 
 # Clocks
 try:
@@ -268,7 +271,14 @@ class PeriodicMonitoringThread(object):
         report.extend(format_run_info(greenlet_stacks=False,
                                       current_thread_ident=self.monitor_thread_ident))
         report.append(report[0])
-        hub.exception_stream.write('\n'.join(report))
+        stream = hub.exception_stream
+        for line in report:
+            # Printing line by line may interleave with other things,
+            # but it should also prevent a "reentrant call to print"
+            # when the report is large.
+            print(line, file=stream)
+
+        notify(EventLoopBlocked(active_greenlet, GEVENT_CONFIG.max_blocking_time, report))
         return (active_greenlet, report)
 
     def ignore_current_greenlet_blocking(self):

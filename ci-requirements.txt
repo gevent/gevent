@@ -23,10 +23,15 @@ idna
 psutil
 # benchmarks use this
 perf
-# Used in a test
+# Events
+zope.event
 zope.interface
+
+# Tests
 requests
 # For viewing README.rst (restview --long-description),
 # CONTRIBUTING.rst, etc.
 # https://github.com/mgedmin/restview
 restview
+
+-r rtd-requirements.txt
