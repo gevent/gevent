@@ -4,12 +4,6 @@ import sys
 PY3 = sys.version_info[0] >= 3
 
 if PY3:
-    advance_iterator = next
-else:
-    def advance_iterator(it):
-        return it.next()
-
-if PY3:
     import builtins
     exec_ = getattr(builtins, "exec")
 

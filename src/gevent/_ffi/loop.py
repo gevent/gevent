@@ -12,7 +12,6 @@ import traceback
 from gevent._ffi import _dbg
 from gevent._ffi import GEVENT_DEBUG_LEVEL
 from gevent._ffi import TRACE
-from gevent._ffi import CRITICAL
 from gevent._ffi.callback import callback
 from gevent._compat import PYPY
 
@@ -75,9 +74,7 @@ class AbstractCallbacks(object):
             self.from_handle = ffi.from_handle
 
     def from_handle(self, handle): # pylint:disable=method-hidden
-        _dbg("Getting from handle", handle)
         x = self.ffi.from_handle(handle)
-        _dbg("Got from handle", handle, x)
         return x
 
     def python_callback(self, handle, revents):
@@ -224,7 +221,6 @@ class AbstractCallbacks(object):
             # Since the C level passed in a null pointer, even dereferencing the handle
             # will just produce some exceptions.
             return
-        _dbg("python_stop: stopping watcher with handle", handle)
         watcher = self.from_handle(handle)
         watcher.stop()
 

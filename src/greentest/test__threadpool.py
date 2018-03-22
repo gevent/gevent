@@ -1,17 +1,19 @@
 from __future__ import print_function
-import sys
+
 from time import time, sleep
 import contextlib
 import random
 import weakref
+import gc
+
 import greentest
 import gevent.threadpool
 from gevent.threadpool import ThreadPool
 import gevent
+
 from greentest import ExpectedException
-from greentest import six
 from greentest import PYPY
-import gc
+
 
 
 # pylint:disable=too-many-ancestors
@@ -33,20 +35,39 @@ class TestCase(greentest.TestCase):
     __timeout__ = greentest.LARGE_TIMEOUT
     pool = None
 
+    ClassUnderTest = ThreadPool
+    def _FUT(self):
+        return self.ClassUnderTest
+
+    def _makeOne(self, size, increase=greentest.RUN_LEAKCHECKS):
+        self.pool = pool = self._FUT()(size)
+        if increase:
+            # Max size to help eliminate false positives
+            self.pool.size = size
+        return pool
+
     def cleanup(self):
-        pool = getattr(self, 'pool', None)
+        pool = self.pool
         if pool is not None:
-            kill = getattr(pool, 'kill', None) or getattr(pool, 'shutdown', None)
+            kill = getattr(pool, 'kill', None) or getattr(pool, 'shutdown')
             kill()
             del kill
             del self.pool
 
+            if greentest.RUN_LEAKCHECKS:
+                # Each worker thread created a greenlet object and switched to it.
+                # It's a custom subclass, but even if it's not, it appears that
+                # the root greenlet for the new thread sticks around until there's a
+                # gc. Simply calling 'getcurrent()' is enough to "leak" a greenlet.greenlet
+                # and a weakref.
+                for _ in range(3):
+                    gc.collect()
 
 
 class PoolBasicTests(TestCase):
 
     def test_execute_async(self):
-        self.pool = pool = ThreadPool(2)
+        pool = self._makeOne(2)
         r = []
         first = pool.spawn(r.append, 1)
         first.get()
@@ -65,12 +86,12 @@ class PoolBasicTests(TestCase):
         self.assertEqualFlakyRaceCondition(sorted(r), [1, 2, 3, 4])
 
     def test_apply(self):
-        self.pool = pool = ThreadPool(1)
+        pool = self._makeOne(1)
         result = pool.apply(lambda a: ('foo', a), (1, ))
         self.assertEqual(result, ('foo', 1))
 
     def test_apply_raises(self):
-        self.pool = pool = ThreadPool(1)
+        pool = self._makeOne(1)
 
         def raiser():
             raise ExpectedException()
@@ -85,8 +106,7 @@ class PoolBasicTests(TestCase):
     def test_init_valueerror(self):
         self.switch_expected = False
         with self.assertRaises(ValueError):
-            ThreadPool(-1)
-        self.pool = None
+            self._makeOne(-1)
 
 #
 # tests from standard library test/test_multiprocessing.py
@@ -122,18 +142,17 @@ class _AbstractPoolTest(TestCase):
 
     size = 1
 
-    ClassUnderTest = ThreadPool
     MAP_IS_GEN = False
 
     def setUp(self):
         greentest.TestCase.setUp(self)
-        self.pool = self.ClassUnderTest(self.size)
+        self._makeOne(self.size)
 
     @greentest.ignores_leakcheck
     def test_map(self):
         pmap = self.pool.map
         if self.MAP_IS_GEN:
-            pmap = lambda *args: list(self.pool.map(*args))
+            pmap = lambda f, i: list(self.pool.map(f, i))
         self.assertEqual(pmap(sqr, range(10)), list(map(sqr, range(10))))
         self.assertEqual(pmap(sqr, range(100)), list(map(sqr, range(100))))
 
@@ -202,30 +221,30 @@ class TestPool(_AbstractPoolTest):
     def test_imap_it_small(self):
         it = self.pool.imap(sqr, range(SMALL_RANGE))
         for i in range(SMALL_RANGE):
-            self.assertEqual(six.advance_iterator(it), i * i)
-        self.assertRaises(StopIteration, lambda: six.advance_iterator(it))
+            self.assertEqual(next(it), i * i)
+        self.assertRaises(StopIteration, next, it)
 
     def test_imap_it_large(self):
         it = self.pool.imap(sqr, range(LARGE_RANGE))
         for i in range(LARGE_RANGE):
-            self.assertEqual(six.advance_iterator(it), i * i)
-        self.assertRaises(StopIteration, lambda: six.advance_iterator(it))
+            self.assertEqual(next(it), i * i)
+        self.assertRaises(StopIteration, next, it)
 
     def test_imap_gc(self):
         it = self.pool.imap(sqr, range(SMALL_RANGE))
         for i in range(SMALL_RANGE):
-            self.assertEqual(six.advance_iterator(it), i * i)
+            self.assertEqual(next(it), i * i)
             gc.collect()
-        self.assertRaises(StopIteration, lambda: six.advance_iterator(it))
+        self.assertRaises(StopIteration, next, it)
 
     def test_imap_unordered_gc(self):
         it = self.pool.imap_unordered(sqr, range(SMALL_RANGE))
         result = []
         for _ in range(SMALL_RANGE):
-            result.append(six.advance_iterator(it))
+            result.append(next(it))
             gc.collect()
         with self.assertRaises(StopIteration):
-            six.advance_iterator(it)
+            next(it)
         self.assertEqual(sorted(result), [x * x for x in range(SMALL_RANGE)])
 
     def test_imap_random(self):
@@ -253,7 +272,7 @@ class TestPool(_AbstractPoolTest):
         result.join()
 
     def sleep(self, x):
-        sleep(float(x) / 10.)
+        sleep(float(x) / 10.0)
         return str(x)
 
     def test_imap_unordered_sleep(self):
@@ -269,6 +288,7 @@ class TestPool(_AbstractPoolTest):
 class TestPool2(TestPool):
     size = 2
 
+    @greentest.ignores_leakcheck # Asking for the hub in the new thread shows up as a "leak"
     def test_recursive_apply(self):
         p = self.pool
 
@@ -285,8 +305,6 @@ class TestPool2(TestPool):
 
         result = p.apply(a)
         self.assertEqual(result, "B")
-    # Asking for the hub in the new thread shows up as a "leak"
-    test_recursive_apply.ignore_leakcheck = True
 
 
 class TestPool3(TestPool):
@@ -323,15 +341,15 @@ class TestJoinEmpty(TestCase):
     # Running this test standalone doesn't crash PyPy, only when it's run
     # as part of this whole file. Removing it does solve the crash though.
     def test(self):
-        self.pool = ThreadPool(1)
-        self.pool.join()
+        pool = self._makeOne(1)
+        pool.join()
 
 
 class TestSpawn(TestCase):
     switch_expected = True
 
     def test(self):
-        self.pool = pool = ThreadPool(1)
+        pool = self._makeOne(1)
         self.assertEqual(len(pool), 0)
         log = []
         sleep_n_log = lambda item, seconds: [sleep(seconds), log.append(item)]
@@ -360,12 +378,12 @@ class TestErrorInIterator(TestCase):
     error_fatal = False
 
     def test(self):
-        self.pool = ThreadPool(3)
+        self.pool = self._makeOne(3)
         self.assertRaises(greentest.ExpectedException, self.pool.map, lambda x: None, error_iter())
         gevent.sleep(0.001)
 
     def test_unordered(self):
-        self.pool = ThreadPool(3)
+        self.pool = self._makeOne(3)
 
         def unordered():
             return list(self.pool.imap_unordered(lambda x: None, error_iter()))
@@ -377,7 +395,7 @@ class TestErrorInIterator(TestCase):
 class TestMaxsize(TestCase):
 
     def test_inc(self):
-        self.pool = ThreadPool(0)
+        self.pool = self._makeOne(0)
         done = []
         # Try to be careful not to tick over the libuv timer.
         # See libuv/loop.py:_start_callback_timer
@@ -391,7 +409,7 @@ class TestMaxsize(TestCase):
         self.assertEqualFlakyRaceCondition(done, [1, 2])
 
     def test_setzero(self):
-        pool = self.pool = ThreadPool(3)
+        pool = self.pool = self._makeOne(3)
         pool.spawn(sleep, 0.1)
         pool.spawn(sleep, 0.2)
         pool.spawn(sleep, 0.3)
@@ -405,7 +423,7 @@ class TestMaxsize(TestCase):
 class TestSize(TestCase):
 
     def test(self):
-        pool = self.pool = ThreadPool(2)
+        pool = self.pool = self._makeOne(2, increase=False)
         self.assertEqual(pool.size, 0)
         pool.size = 1
         self.assertEqual(pool.size, 1)
@@ -414,15 +432,12 @@ class TestSize(TestCase):
         pool.size = 1
         self.assertEqual(pool.size, 1)
 
-        def set_neg():
+        with self.assertRaises(ValueError):
             pool.size = -1
 
-        self.assertRaises(ValueError, set_neg)
-
-        def set_too_big():
+        with self.assertRaises(ValueError):
             pool.size = 3
 
-        self.assertRaises(ValueError, set_too_big)
         pool.size = 0
         self.assertEqual(pool.size, 0)
         pool.size = 2
@@ -432,7 +447,7 @@ class TestSize(TestCase):
 class TestRef(TestCase):
 
     def test(self):
-        pool = self.pool = ThreadPool(2)
+        pool = self.pool = self._makeOne(2)
 
         refs = []
         obj = SomeClass()
@@ -480,7 +495,7 @@ def noop():
 class TestRefCount(TestCase):
 
     def test(self):
-        pool = ThreadPool(1)
+        pool = self._makeOne(1)
         pool.spawn(noop)
         gevent.sleep(0)
         pool.kill()
@@ -518,7 +533,7 @@ if hasattr(gevent.threadpool, 'ThreadPoolExecutor'):
                 future.calledback += 1
                 raise greentest.ExpectedException("Expected, ignored")
 
-            future = pool.submit(fn)
+            future = pool.submit(fn) # pylint:disable=no-member
             future.calledback = 0
             future.add_done_callback(callback)
             self.assertRaises(FutureTimeoutError, future.result, timeout=0.001)
@@ -574,7 +589,7 @@ if hasattr(gevent.threadpool, 'ThreadPoolExecutor'):
                 gevent.sleep(0.5)
                 return 42
 
-            future = pool.submit(fn)
+            future = pool.submit(fn) # pylint:disable=no-member
             if self.MONKEY_PATCHED:
                 # Things work as expected when monkey-patched
                 _done, not_done = cf_wait((future,), timeout=0.001)
@@ -609,7 +624,7 @@ if hasattr(gevent.threadpool, 'ThreadPoolExecutor'):
                 gevent.sleep(0.5)
                 return 42
 
-            future = pool.submit(fn)
+            future = pool.submit(fn) # pylint:disable=no-member
 
             def spawned():
                 return 2016

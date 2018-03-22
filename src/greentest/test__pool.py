@@ -8,7 +8,6 @@ import greentest
 import greentest.timing
 import random
 from greentest import ExpectedException
-from greentest import six
 
 import unittest
 
@@ -352,14 +351,14 @@ class TestPool(greentest.TestCase): # pylint:disable=too-many-public-methods
     def test_imap_it_small(self):
         it = self.pool.imap(sqr, range(SMALL_RANGE))
         for i in range(SMALL_RANGE):
-            self.assertEqual(six.advance_iterator(it), i * i)
-        self.assertRaises(StopIteration, lambda: six.advance_iterator(it))
+            self.assertEqual(next(it), i * i)
+        self.assertRaises(StopIteration, next, it)
 
     def test_imap_it_large(self):
         it = self.pool.imap(sqr, range(LARGE_RANGE))
         for i in range(LARGE_RANGE):
-            self.assertEqual(six.advance_iterator(it), i * i)
-        self.assertRaises(StopIteration, lambda: six.advance_iterator(it))
+            self.assertEqual(next(it), i * i)
+        self.assertRaises(StopIteration, next, it)
 
     def test_imap_random(self):
         it = self.pool.imap(sqr_random_sleep, range(SMALL_RANGE))

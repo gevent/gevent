@@ -52,7 +52,7 @@ except ImportError: # Python < 3.4
 
 from gevent._compat import fsencode
 
-from gevent._ffi import _dbg
+from gevent._ffi import _dbg # pylint:disable=unused-import
 from gevent._ffi import GEVENT_DEBUG_LEVEL
 from gevent._ffi import DEBUG
 from gevent._ffi.loop import GEVENT_CORE_EVENTS
@@ -438,13 +438,11 @@ class watcher(object):
         if self._callback is None:
             assert self.loop is None or self not in self.loop._keepaliveset
             return
-        _dbg("Main stop for", self, "keepalive?", self in self.loop._keepaliveset)
         self._watcher_ffi_stop_ref()
         self._watcher_ffi_stop()
         self.loop._keepaliveset.discard(self)
         self._handle = None
         self._watcher_set_data(self._watcher, self._FFI.NULL) # pylint:disable=no-member
-        _dbg("Finished main stop for", self, "keepalive?", self in self.loop._keepaliveset)
         self.callback = None
         self.args = None
 

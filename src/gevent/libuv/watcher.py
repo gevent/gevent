@@ -118,7 +118,6 @@ class watcher(_base.watcher):
         # Instead, this is arranged as a callback to GC when the
         # watcher class dies. Obviously it's important to keep the ffi
         # watcher alive.
-        _dbg("Request to close handle", ffi.cast('void*', ffi_watcher), ffi_watcher)
         # We can pass in "subclasses" if uv_handle_t that line up at the C level,
         # but that don't in CFFI without a cast. But be careful what we use the cast
         # for, don't pass it back to C.
@@ -128,7 +127,6 @@ class watcher(_base.watcher):
             # and trying to close it results in libuv terminating the process.
             # Sigh. Same thing if it's already in the process of being
             # closed.
-            _dbg("Closing handle", ffi_watcher)
             _closing_watchers.add(ffi_watcher)
             libuv.uv_close(ffi_watcher, libuv._uv_close_callback)
 
@@ -136,7 +134,6 @@ class watcher(_base.watcher):
 
 
     def _watcher_ffi_set_init_ref(self, ref):
-        _dbg("Creating", type(self), "with ref", ref)
         self.ref = ref
 
     def _watcher_ffi_init(self, args):
@@ -146,28 +143,22 @@ class watcher(_base.watcher):
                                   *args)
 
     def _watcher_ffi_start(self):
-        _dbg("Starting", self)
         self._watcher_start(self._watcher, self._watcher_callback)
-        _dbg("\tStarted", self)
 
     def _watcher_ffi_stop(self):
-        _dbg("Stopping", self, self._watcher_stop)
         if self._watcher:
             # The multiplexed io watcher deletes self._watcher
             # when it closes down. If that's in the process of
             # an error handler, AbstractCallbacks.unhandled_onerror
             # will try to close us again.
             self._watcher_stop(self._watcher)
-        _dbg("Stopped", self)
 
     @_base.only_if_watcher
     def _watcher_ffi_ref(self):
-        _dbg("Reffing", self)
         libuv.uv_ref(self._watcher)
 
     @_base.only_if_watcher
     def _watcher_ffi_unref(self):
-        _dbg("Unreffing", self)
         libuv.uv_unref(self._watcher)
 
     def _watcher_ffi_start_unref(self):
@@ -255,7 +246,6 @@ class io(_base.IoMixin, watcher):
     def _set_events(self, events):
         if events == self._events:
             return
-        _dbg("Changing event mask for", self, "from", self._events, "to", events)
         self._events = events
         if self.active:
             # We're running but libuv specifically says we can
@@ -266,7 +256,6 @@ class io(_base.IoMixin, watcher):
     events = property(_get_events, _set_events)
 
     def _watcher_ffi_start(self):
-        _dbg("Starting watcher", self, "with events", self._events)
         self._watcher_start(self._watcher, self._events, self._watcher_callback)
 
     if sys.platform.startswith('win32'):
@@ -320,9 +309,6 @@ class io(_base.IoMixin, watcher):
             _base.not_while_active(lambda self, nv: setattr(self, '_events', nv)))
 
         def start(self, callback, *args, **kwargs):
-            _dbg("Starting IO multiplex watcher for", self.fd,
-                 "callback", callback, "events", self.events,
-                 "owner", self._watcher_ref)
             self.pass_events = kwargs.get("pass_events")
             self.callback = callback
             self.args = args
@@ -336,9 +322,6 @@ class io(_base.IoMixin, watcher):
                     watcher._calc_and_update_events()
 
         def stop(self):
-            _dbg("Stopping IO multiplex watcher for", self.fd,
-                 "callback", self.callback, "events", self.events,
-                 "owner", self._watcher_ref)
             self.callback = None
             self.pass_events = None
             self.args = None
@@ -366,7 +349,6 @@ class io(_base.IoMixin, watcher):
                       lambda self, nv: self._watcher_ref._set_fd(nv))
 
     def _io_maybe_stop(self):
-        _dbg("IO maybe stop on behalf of multiplex", self, "fd", self._fd, "events", self._events)
         self._calc_and_update_events()
         for w in self._multiplex_watchers:
             if w.callback is not None:
@@ -378,7 +360,6 @@ class io(_base.IoMixin, watcher):
         self.stop()
 
     def _io_start(self):
-        _dbg("IO start on behalf of multiplex", self, "fd", self._fd, "events", self._events)
         self._calc_and_update_events()
         self.start(self._io_callback, pass_events=True)
 
@@ -404,7 +385,6 @@ class io(_base.IoMixin, watcher):
     def _multiplex_closed(self, watcher):
         self._multiplex_watchers.remove(watcher)
         if not self._multiplex_watchers:
-            _dbg("IO Watcher", self, "has no more multiplexes")
             self.stop() # should already be stopped
             self._no_more_watchers()
             # It is absolutely critical that we control when the call
@@ -420,8 +400,6 @@ class io(_base.IoMixin, watcher):
             self.close()
         else:
             self._calc_and_update_events()
-            _dbg("IO Watcher", self, "has remaining multiplex:",
-                 self._multiplex_watchers)
 
     def _no_more_watchers(self):
         # The loop sets this on an individual watcher to delete it from
@@ -448,14 +426,11 @@ class io(_base.IoMixin, watcher):
             # See test__makefile_ref.TestSSL for examples.
             # return
 
-        _dbg("Callback event for watcher", self._fd, "event", events)
         for watcher in self._multiplex_watchers:
             if not watcher.callback:
                 # Stopped
-                _dbg("Watcher", self, "has stopped multiplex", watcher)
                 continue
             assert watcher._watcher_ref is self, (self, watcher._watcher_ref)
-            _dbg("Event for watcher", self._fd, events, watcher.events, events & watcher.events)
 
             send_event = (events & watcher.events) or events < 0
             if send_event:

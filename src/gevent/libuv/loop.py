@@ -120,7 +120,6 @@ class loop(AbstractLoop):
         libuv.uv_check_init(self._ptr, self._check)
         libuv.uv_check_start(self._check, libuv.python_check_callback)
         libuv.uv_unref(self._check)
-        _dbg("Started check watcher", ffi.cast('void*', self._check))
 
         # We also have to have an idle watcher to be able to handle
         # signals in a timely manner. Without them, libuv won't loop again
@@ -393,7 +392,6 @@ class loop(AbstractLoop):
 
 
     def run(self, nowait=False, once=False):
-        _dbg("Entering libuv.uv_run")
         # we can only respect one flag or the other.
         # nowait takes precedence because it can't block
         mode = libuv.UV_RUN_DEFAULT
