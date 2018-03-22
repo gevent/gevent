@@ -39,8 +39,11 @@ class TestCloseSocketWhilePolling(greentest.TestCase):
         with self.assertRaises(Exception):
             sock = socket.socket()
             self._close_on_teardown(sock)
-            get_hub().loop.timer(0, sock.close)
-            sock.connect(('python.org', 81))
+            t = get_hub().loop.timer(0, sock.close)
+            try:
+                sock.connect(('python.org', 81))
+            finally:
+                t.close()
 
         gevent.sleep(0)
 

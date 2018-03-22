@@ -17,3 +17,4 @@ test__issue330.py
 test___ident.py
 test___config.py
 test___monitor.py
+test__events.py

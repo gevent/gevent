@@ -50,8 +50,12 @@ class Test(greentest.TestCase):
     def test2(self):
         timer = gevent.get_hub().loop.timer(0)
         timer.start(hello2)
-        gevent.sleep(0.1)
-        assert sys.exc_info() == (None, None, None), sys.exc_info()
+        try:
+            gevent.sleep(0.1)
+            self.assertEqual(sys.exc_info(), (None, None, None))
+        finally:
+            timer.close()
+
 
 
 if __name__ == '__main__':

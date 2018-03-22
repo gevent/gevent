@@ -436,9 +436,13 @@ class TrackGreenletTree(BoolSettingMixin, Setting):
     .. versionadded:: 1.3b1
     """
 
+
+## Monitoring settings
+# All env keys should begin with GEVENT_MONITOR
+
 class MonitorThread(BoolSettingMixin, Setting):
     name = 'monitor_thread'
-    environment_key = 'GEVENT_ENABLE_MONITOR_THREAD'
+    environment_key = 'GEVENT_MONITOR_THREAD_ENABLE'
     default = False
 
     desc = """\
@@ -466,6 +470,8 @@ class MonitorThread(BoolSettingMixin, Setting):
 
 class MaxBlockingTime(FloatSettingMixin, Setting):
     name = 'max_blocking_time'
+    # This environment key doesn't follow the convention because it's
+    # meant to match a key used by existing projects
     environment_key = 'GEVENT_MAX_BLOCKING_TIME'
     default = 0.1
 

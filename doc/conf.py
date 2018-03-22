@@ -39,10 +39,16 @@ extensions = [
     'sphinx.ext.intersphinx',
     'mysphinxext',
     'sphinx.ext.extlinks',
+    'sphinx.ext.viewcode',
+    'repoze.sphinx.autointerface',
 ]
 
-intersphinx_mapping = {'http://docs.python.org/': None,
-                       'https://greenlet.readthedocs.io/en/latest/': None}
+intersphinx_mapping = {
+    'http://docs.python.org/': None,
+    'https://greenlet.readthedocs.io/en/latest/': None,
+    'https://zopeevent.readthedocs.io/en/latest/': None,
+    'https://zopecomponent.readthedocs.io/en/latest/': None,
+}
 
 extlinks = {'issue': ('https://github.com/gevent/gevent/issues/%s',
                       'issue #'),

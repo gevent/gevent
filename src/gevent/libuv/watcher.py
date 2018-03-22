@@ -611,6 +611,8 @@ class timer(_base.TimerMixin, watcher):
         self._after, self._repeat = args
         if self._after and self._after < 0.001:
             import warnings
+            # XXX: The stack level is hard to determine, could be getting here
+            # through a number of different ways.
             warnings.warn("libuv only supports millisecond timer resolution; "
                           "all times less will be set to 1 ms",
                           stacklevel=6)

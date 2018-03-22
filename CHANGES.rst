@@ -26,7 +26,9 @@
 - Add an optional monitoring thread for each hub. When enabled, this
   thread (by default) looks for greenlets that block the event loop
   for more than 0.1s. You can add your own periodic monitoring
-  functions to this thread.
+  functions to this thread. Set ``GEVENT_MONITOR_THREAD_ENABLE`` to
+  use it, and ``GEVENT_MAX_BLOCKING_TIME`` to configure the blocking
+  interval.
 
 - When gevent prints a timestamp as part of an error message, it is
   now in UTC format as specified by RFC3339.
@@ -41,6 +43,11 @@
 - Fix libuv io watchers polling for events that only stopped watchers
   are interested in, reducing CPU usage. Reported in :issue:`1144` by
   wwqgtxx.
+
+- Add a simple event framework for decoupled communication. It uses
+  :mod:`zope.event` if that is installed. The monitoring thread emits
+  events when it detects certain conditions, like loop blocked or
+  memory limits exceeded.
 
 1.3a2 (2018-03-06)
 ==================

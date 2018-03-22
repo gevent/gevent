@@ -241,6 +241,10 @@ def run_setup(ext_modules, run_make):
                 'dnspython',
                 'idna',
             ],
+            'events': [
+                'zope.event',
+                'zope.interface',
+            ],
         },
         # It's always safe to pass the CFFI keyword, even if
         # cffi is not installed: it's just ignored in that case.

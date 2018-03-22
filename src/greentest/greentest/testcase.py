@@ -127,6 +127,7 @@ class TestCase(TestCaseMetaClass("NewBase", (TimeAssertMixin, BaseTestCase,), {}
     error_fatal = True
     uses_handle_error = True
     close_on_teardown = ()
+    __old_subscribers = ()
 
     def run(self, *args, **kwargs):
         # pylint:disable=arguments-differ
@@ -136,6 +137,8 @@ class TestCase(TestCaseMetaClass("NewBase", (TimeAssertMixin, BaseTestCase,), {}
 
     def setUp(self):
         super(TestCase, self).setUp()
+        from gevent import events
+        self.__old_subscribers = events.subscribers[:]
         # Especially if we're running in leakcheck mode, where
         # the same test gets executed repeatedly, we need to update the
         # current time. Tests don't always go through the full event loop,
@@ -148,6 +151,9 @@ class TestCase(TestCaseMetaClass("NewBase", (TimeAssertMixin, BaseTestCase,), {}
     def tearDown(self):
         if getattr(self, 'skipTearDown', False):
             return
+        from gevent import events
+        events.subscribers[:] = self.__old_subscribers
+
         cleanup = getattr(self, 'cleanup', _noop)
         cleanup()
         self._error = self._none
