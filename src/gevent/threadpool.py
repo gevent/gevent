@@ -2,6 +2,11 @@
 from __future__ import absolute_import
 import sys
 import os
+
+from weakref import ref as wref
+
+from greenlet import greenlet as RawGreenlet
+
 from gevent._compat import integer_types
 from gevent.hub import _get_hub_noargs as get_hub
 from gevent.hub import getcurrent
@@ -11,12 +16,39 @@ from gevent.event import AsyncResult
 from gevent.greenlet import Greenlet
 from gevent.pool import GroupMappingMixin
 from gevent.lock import Semaphore
-from gevent._threading import Lock, Queue, start_new_thread
+
+from gevent._threading import Lock
+from gevent._threading import Queue
+from gevent._threading import start_new_thread
+from gevent._threading import get_thread_ident
 
 
-__all__ = ['ThreadPool',
-           'ThreadResult']
+__all__ = [
+    'ThreadPool',
+    'ThreadResult',
+]
 
+
+class _WorkerGreenlet(RawGreenlet):
+    # Exists to produce a more useful repr for worker pool
+    # threads/greenlets.
+
+    def __init__(self, threadpool):
+        RawGreenlet.__init__(self, threadpool._worker)
+        self.thread_ident = get_thread_ident()
+        self._threadpool_wref = wref(threadpool)
+
+        # Inform the gevent.util.GreenletTree that this should be
+        # considered the root (for printing purposes) and to
+        # ignore the parent attribute. (We can't set parent to None.)
+        self.greenlet_tree_is_root = True
+        self.parent.greenlet_tree_is_ignored = True
+
+    def __repr__(self):
+        return "<ThreadPoolWorker at 0x%x thread_ident=0x%x %s>" % (
+            id(self),
+            self.thread_ident,
+            self._threadpool_wref())
 
 class ThreadPool(GroupMappingMixin):
     """
@@ -58,7 +90,11 @@ class ThreadPool(GroupMappingMixin):
     maxsize = property(_get_maxsize, _set_maxsize)
 
     def __repr__(self):
-        return '<%s at 0x%x %s/%s/%s>' % (self.__class__.__name__, id(self), len(self), self.size, self.maxsize)
+        return '<%s at 0x%x %s/%s/%s hub=<%s at 0x%x thread_ident=0x%s>>' % (
+            self.__class__.__name__,
+            id(self),
+            len(self), self.size, self.maxsize,
+            self.hub.__class__.__name__, id(self.hub), self.hub.thread_ident)
 
     def __len__(self):
         # XXX just do unfinished_tasks property
@@ -155,7 +191,7 @@ class ThreadPool(GroupMappingMixin):
         with self._lock:
             self._size += 1
         try:
-            start_new_thread(self._worker, ())
+            start_new_thread(self.__trampoline, ())
         except:
             with self._lock:
                 self._size -= 1
@@ -209,6 +245,13 @@ class ThreadPool(GroupMappingMixin):
     def __ignore_current_greenlet_blocking(self, hub):
         if hub is not None and hub.periodic_monitoring_thread is not None:
             hub.periodic_monitoring_thread.ignore_current_greenlet_blocking()
+
+    def __trampoline(self):
+        # The target that we create new threads with. It exists
+        # solely to create the _WorkerGreenlet and switch to it.
+        # (the __class__ of a raw greenlet cannot be changed.)
+        g = _WorkerGreenlet(self)
+        g.switch()
 
     def _worker(self):
         # pylint:disable=too-many-branches

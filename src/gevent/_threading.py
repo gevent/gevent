@@ -11,7 +11,7 @@ from collections import deque
 from itertools import islice as _islice
 
 from gevent import monkey
-from gevent._compat import PY3
+from gevent._compat import thread_mod_name
 
 
 __all__ = [
@@ -21,9 +21,8 @@ __all__ = [
 ]
 
 
-thread_name = '_thread' if PY3 else 'thread'
-start_new_thread, Lock, = monkey.get_original(thread_name, [
-    'start_new_thread', 'allocate_lock',
+start_new_thread, Lock, get_thread_ident, = monkey.get_original(thread_mod_name, [
+    'start_new_thread', 'allocate_lock', 'get_ident',
 ])
 
 

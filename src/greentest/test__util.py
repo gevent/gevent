@@ -14,6 +14,8 @@ import gevent
 from gevent import util
 from gevent import local
 
+from gevent._compat import NativeStrIO
+
 class MyLocal(local.local):
     def __init__(self, foo):
         self.foo = foo
@@ -40,14 +42,15 @@ class TestFormat(greentest.TestCase):
             l = MyLocal(42)
             assert l
             gevent.getcurrent().spawn_tree_locals['a value'] = 42
-            g = gevent.spawn(util.format_run_info)
+            io = NativeStrIO()
+            g = gevent.spawn(util.print_run_info, file=io)
             g.join()
-            return g.value
+            return io.getvalue()
 
         g = gevent.spawn(root)
         g.name = 'Printer'
         g.join()
-        value = '\n'.join(g.value)
+        value = g.value
 
         self.assertIn("Spawned at", value)
         self.assertIn("Parent:", value)
@@ -63,6 +66,7 @@ class TestTree(greentest.TestCase):
         super(TestTree, self).setUp()
         self.track_greenlet_tree = gevent.config.track_greenlet_tree
         gevent.config.track_greenlet_tree = True
+        self.maxDiff = None
 
     def tearDown(self):
         gevent.config.track_greenlet_tree = self.track_greenlet_tree
@@ -92,7 +96,9 @@ class TestTree(greentest.TestCase):
         def t2():
             l = MyLocal(16)
             assert l
-            return s(t1)
+            g = s(t1)
+            g.name = 'CustomName-' + str(g.minimal_ident)
+            return g
 
         s1 = s(t2)
         s1.join()
@@ -108,7 +114,6 @@ class TestTree(greentest.TestCase):
             s3.spawn_tree_locals['stl'] = 'STL'
         s3.join()
 
-
         s4 = s(util.GreenletTree.current_tree)
         s4.join()
 
@@ -116,15 +121,8 @@ class TestTree(greentest.TestCase):
         return tree, str(tree), tree.format(details={'running_stacks': False,
                                                      'spawning_stacks': False})
 
-    @greentest.ignores_leakcheck
-    def test_tree(self):
+    def _normalize_tree_format(self, value):
         import re
-        tree, str_tree, tree_format = self._build_tree()
-
-        self.assertTrue(tree.root)
-
-        self.assertNotIn('Parent', str_tree) # Simple output
-        value = tree_format
         hexobj = re.compile('0x[0123456789abcdef]+L?', re.I)
         value = hexobj.sub('X', value)
         value = value.replace('epoll', 'select')
@@ -132,8 +130,17 @@ class TestTree(greentest.TestCase):
         value = value.replace('test__util', '__main__')
         value = re.compile(' fileno=.').sub('', value)
         value = value.replace('ref=-1', 'ref=0')
+        return value
 
-        self.maxDiff = None
+    @greentest.ignores_leakcheck
+    def test_tree(self):
+        tree, str_tree, tree_format = self._build_tree()
+
+        self.assertTrue(tree.root)
+
+        self.assertNotIn('Parent', str_tree) # Simple output
+        value = self._normalize_tree_format(tree_format)
+
         expected = """\
 <greenlet.greenlet object at X>
  :    Parent: None
@@ -142,21 +149,21 @@ class TestTree(greentest.TestCase):
  :        {'foo': 42}
  +--- <QuietHub '' at X default default pending=0 ref=0 thread_ident=X>
  :          Parent: <greenlet.greenlet object at X>
- +--- <Greenlet "Greenlet-1" at X: _run>; finished with value <Greenlet "Greenlet-0" at X
+ +--- <Greenlet "Greenlet-1" at X: _run>; finished with value <Greenlet "CustomName-0" at 0x
  :          Parent: <QuietHub '' at X default default pending=0 ref=0 thread_ident=X>
- |    +--- <Greenlet "Greenlet-0" at X: _run>; finished with exception ExpectedException()
+ |    +--- <Greenlet "CustomName-0" at X: _run>; finished with exception ExpectedException()
  :                Parent: <QuietHub '' at X default default pending=0 ref=0 thread_ident=X>
- +--- <Greenlet "Greenlet-2" at X: _run>; finished with value <Greenlet "Greenlet-4" at X
+ +--- <Greenlet "Greenlet-2" at X: _run>; finished with value <Greenlet "CustomName-4" at 0x
  :          Parent: <QuietHub '' at X default default pending=0 ref=0 thread_ident=X>
- |    +--- <Greenlet "Greenlet-4" at X: _run>; finished with exception ExpectedException()
+ |    +--- <Greenlet "CustomName-4" at X: _run>; finished with exception ExpectedException()
  :                Parent: <QuietHub '' at X default default pending=0 ref=0 thread_ident=X>
  +--- <Greenlet "Greenlet-3" at X: _run>; finished with value <Greenlet "Greenlet-5" at X
  :          Parent: <QuietHub '' at X default default pending=0 ref=0 thread_ident=X>
  :          Spawn Tree Locals
  :          {'stl': 'STL'}
- |    +--- <Greenlet "Greenlet-5" at X: _run>; finished with value <Greenlet "Greenlet-6" at X
+ |    +--- <Greenlet "Greenlet-5" at X: _run>; finished with value <Greenlet "CustomName-6" at 0x
  :                Parent: <QuietHub '' at X default default pending=0 ref=0 thread_ident=X>
- |         +--- <Greenlet "Greenlet-6" at X: _run>; finished with exception ExpectedException()
+ |         +--- <Greenlet "CustomName-6" at X: _run>; finished with exception ExpectedException()
  :                      Parent: <QuietHub '' at X default default pending=0 ref=0 thread_ident=X>
  +--- <Greenlet "Greenlet-7" at X: _run>; finished with value <gevent.util.GreenletTree obje
             Parent: <QuietHub '' at X default default pending=0 ref=0 thread_ident=X>
@@ -168,6 +175,33 @@ class TestTree(greentest.TestCase):
         gevent.config.track_greenlet_tree = False
         self._build_tree()
 
+
+    @greentest.ignores_leakcheck
+    def test_forest_fake_parent(self):
+        from greenlet import greenlet as RawGreenlet
+
+        def t4():
+            # Ignore this one, make the child the parent,
+            # and don't be a child of the hub.
+            c = RawGreenlet(util.GreenletTree.current_tree)
+            c.parent.greenlet_tree_is_ignored = True
+            c.greenlet_tree_is_root = True
+            return c.switch()
+
+
+        g = RawGreenlet(t4)
+        tree = g.switch()
+
+        tree_format = tree.format(details={'running_stacks': False,
+                                           'spawning_stacks': False})
+        value = self._normalize_tree_format(tree_format)
+
+        expected = """\
+<greenlet.greenlet object at X>; not running
+ :    Parent: <greenlet.greenlet object at X>
+        """.strip()
+
+        self.assertEqual(expected, value)
 
 if __name__ == '__main__':
     greentest.main()

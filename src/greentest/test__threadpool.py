@@ -10,10 +10,11 @@ from gevent.threadpool import ThreadPool
 import gevent
 from greentest import ExpectedException
 from greentest import six
+from greentest import PYPY
 import gc
 
 
-PYPY = hasattr(sys, 'pypy_version_info')
+# pylint:disable=too-many-ancestors
 
 
 @contextlib.contextmanager
@@ -150,6 +151,22 @@ if greentest.PYPY and (greentest.WIN or greentest.RUN_COVERAGE):
     LARGE_RANGE = 50
 
 class TestPool(_AbstractPoolTest):
+
+    def test_greenlet_class(self):
+        from greenlet import getcurrent
+        from gevent.threadpool import _WorkerGreenlet
+        worker_greenlet = self.pool.apply(getcurrent)
+
+        self.assertIsInstance(worker_greenlet, _WorkerGreenlet)
+        r = repr(worker_greenlet)
+        self.assertIn('ThreadPoolWorker', r)
+        self.assertIn('thread_ident', r)
+        self.assertIn('hub=', r)
+
+        from gevent.util import format_run_info
+
+        info = '\n'.join(format_run_info())
+        self.assertIn("<ThreadPoolWorker", info)
 
     def test_apply(self):
         papply = self.pool.apply
