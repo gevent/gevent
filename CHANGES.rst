@@ -49,6 +49,10 @@
   events when it detects certain conditions, like loop blocked or
   memory limits exceeded.
 
+- Add settings for monitoring memory usage and emitting events when a
+  threshold is exceeded and then corrected. gevent currently supplies
+  no policy for what to do when memory exceeds the configured limit.
+
 1.3a2 (2018-03-06)
 ==================
 

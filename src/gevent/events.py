@@ -30,6 +30,10 @@ __all__ = [
     'subscribers',
     'IEventLoopBlocked',
     'EventLoopBlocked',
+    'IMemoryUsageThresholdExceeded',
+    'MemoryUsageThresholdExceeded',
+    'IMemoryUsageUnderThreshold',
+    'MemoryUsageUnderThreshold',
 ]
 
 try:
@@ -94,3 +98,70 @@ class EventLoopBlocked(object):
         self.greenlet = greenlet
         self.blocking_time = blocking_time
         self.info = info
+
+class IMemoryUsageThresholdExceeded(Interface):
+    """
+    The event emitted when the memory usage threshold is exceeded.
+
+    This event is emitted only while memory continues to grow
+    above the threshold. Only if the condition or stabilized is corrected (memory
+    usage drops) will the event be emitted in the future.
+
+    This event is emitted in the monitor thread.
+    """
+
+    mem_usage = Attribute("The current process memory usage, in bytes.")
+    max_allowed = Attribute("The maximum allowed memory usage, in bytes.")
+    memory_info = Attribute("The tuple of memory usage stats return by psutil.")
+
+class _AbstractMemoryEvent(object):
+
+    def __init__(self, mem_usage, max_allowed, memory_info):
+        self.mem_usage = mem_usage
+        self.max_allowed = max_allowed
+        self.memory_info = memory_info
+
+    def __repr__(self):
+        return "<%s used=%d max=%d details=%r>" % (
+            self.__class__.__name__,
+            self.mem_usage,
+            self.max_allowed,
+            self.memory_info,
+        )
+
+@implementer(IMemoryUsageThresholdExceeded)
+class MemoryUsageThresholdExceeded(_AbstractMemoryEvent):
+    """
+    Implementation of `IMemoryUsageThresholdExceeded`.
+    """
+
+
+class IMemoryUsageUnderThreshold(Interface):
+    """
+    The event emitted when the memory usage drops below the
+    threshold after having previously been above it.
+
+    This event is emitted only the first time memory usage is detected
+    to be below the threshold after having previously been above it.
+    If memory usage climbs again, a `IMemoryUsageThresholdExceeded`
+    event will be broadcast, and then this event could be broadcast again.
+
+    This event is emitted in the monitor thread.
+    """
+
+    mem_usage = Attribute("The current process memory usage, in bytes.")
+    max_allowed = Attribute("The maximum allowed memory usage, in bytes.")
+    max_memory_usage = Attribute("The memory usage that caused the previous "
+                                 "IMemoryUsageThresholdExceeded event.")
+    memory_info = Attribute("The tuple of memory usage stats return by psutil.")
+
+
+@implementer(IMemoryUsageUnderThreshold)
+class MemoryUsageUnderThreshold(_AbstractMemoryEvent):
+    """
+    Implementation of `IMemoryUsageUnderThreshold`.
+    """
+
+    def __init__(self, mem_usage, max_allowed, memory_info, max_usage):
+        super(MemoryUsageUnderThreshold, self).__init__(mem_usage, max_allowed, memory_info)
+        self.max_memory_usage = max_usage

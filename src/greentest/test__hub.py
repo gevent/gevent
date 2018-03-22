@@ -199,11 +199,11 @@ class TestPeriodicMonitoringThread(greentest.TestCase):
         monitor = hub.start_periodic_monitoring_thread()
         self.assertIsNotNone(monitor)
 
-        self.assertEqual(1, len(monitor.monitoring_functions()))
-        monitor.add_monitoring_function(self._monitor, 0.1)
         self.assertEqual(2, len(monitor.monitoring_functions()))
-        self.assertEqual(self._monitor, monitor.monitoring_functions()[1].function)
-        self.assertEqual(0.1, monitor.monitoring_functions()[1].period)
+        monitor.add_monitoring_function(self._monitor, 0.1)
+        self.assertEqual(3, len(monitor.monitoring_functions()))
+        self.assertEqual(self._monitor, monitor.monitoring_functions()[-1].function)
+        self.assertEqual(0.1, monitor.monitoring_functions()[-1].period)
 
         # We must make sure we have switched greenlets at least once,
         # otherwise we can't detect a failure.
@@ -214,7 +214,7 @@ class TestPeriodicMonitoringThread(greentest.TestCase):
             self._run_monitoring_threads(monitor)
         finally:
             monitor.add_monitoring_function(self._monitor, None)
-            self.assertEqual(1, len(monitor._monitoring_functions))
+            self.assertEqual(2, len(monitor._monitoring_functions))
             assert hub.exception_stream is stream
             monitor.kill()
             del hub.exception_stream
