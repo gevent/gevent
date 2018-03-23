@@ -140,3 +140,17 @@ except ImportError:
             # exist. Probably on Python 2 with an astral character.
             # Not sure how to handle this.
             raise UnicodeEncodeError("Can't encode path to filesystem encoding")
+
+
+## Clocks
+try:
+    # Python 3.3+ (PEP 418)
+    from time import perf_counter
+    perf_counter = perf_counter
+except ImportError:
+    import time
+
+    if sys.platform == "win32":
+        perf_counter = time.clock
+    else:
+        perf_counter = time.time

@@ -305,8 +305,8 @@ class ByteCountSettingMixin(_PositiveValueMixin):
     _SUFFIX_SIZE = 2
 
     def _convert(self, value):
-        if not value:
-            return
+        if not value or not isinstance(value, str):
+            return value
         value = value.lower()
         for s, m in self._MULTIPLES.items():
             if value[-self._SUFFIX_SIZE:] == s:

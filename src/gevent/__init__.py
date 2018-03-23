@@ -18,11 +18,16 @@ _version_info = namedtuple('version_info',
 
 #: The programatic version identifier. The fields have (roughly) the
 #: same meaning as :data:`sys.version_info`
-#: Deprecated in 1.2.
+#: .. deprecated:: 1.2
+#:  Use ``pkg_resources.parse_version(__version__)`` (or the equivalent
+#:  ``packaging.version.Version(__version__)``).
 version_info = _version_info(1, 3, 0, 'dev', 0)
 
-#: The human-readable PEP 440 version identifier
-__version__ = '1.3a3.dev0'
+#: The human-readable PEP 440 version identifier.
+#: Use ``pkg_resources.parse_version(__version__)`` or
+#: ``packaging.version.Version(__version__)`` to get a machine-usable
+#: value.
+__version__ = '1.3b1.dev0'
 
 
 __all__ = [

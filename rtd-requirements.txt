@@ -1,2 +1,2 @@
-cython >= 0.28
+cython >= 0.28.1
 repoze.sphinx.autointerface

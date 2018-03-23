@@ -4,31 +4,33 @@
 
 .. currentmodule:: gevent
 
-1.3a3 (unreleased)
+1.3b1 (unreleased)
 ==================
 
-- Use strongly typed watcher callbacks in the libuv CFFI extensions.
-  This prevents dozens of compiler warnings.
+Dependencies
+------------
+
+- Cython 0.28.1 is now used to build gevent from a source checkout.
+
+Bug Fixes
+---------
 
 - On Python 2, when monkey-patching `threading.Event`, also
   monkey-patch the underlying class, ``threading._Event``. Some code
   may be type-checking for that. See :issue:`1136`.
 
-- Introduce the configuration variable
-  `gevent.config.track_greenlet_tree` (aka
-  ``GEVENT_TRACK_GREENLET_TREE``) to allow disabling the greenlet tree
-  features for applications where greenlet spawning is performance
-  critical. This restores spawning performance to 1.2 levels.
+- Fix libuv io watchers polling for events that only stopped watchers
+  are interested in, reducing CPU usage. Reported in :issue:`1144` by
+  wwqgtxx.
+
+Enhancements
+------------
 
 - Add additional optimizations for spawning greenlets, making it
   faster than 1.3a2.
 
-- Add an optional monitoring thread for each hub. When enabled, this
-  thread (by default) looks for greenlets that block the event loop
-  for more than 0.1s. You can add your own periodic monitoring
-  functions to this thread. Set ``GEVENT_MONITOR_THREAD_ENABLE`` to
-  use it, and ``GEVENT_MAX_BLOCKING_TIME`` to configure the blocking
-  interval.
+- Use strongly typed watcher callbacks in the libuv CFFI extensions.
+  This prevents dozens of compiler warnings.
 
 - When gevent prints a timestamp as part of an error message, it is
   now in UTC format as specified by RFC3339.
@@ -40,9 +42,21 @@
 - Hub objects now include the value of their ``name`` attribute in
   their repr.
 
-- Fix libuv io watchers polling for events that only stopped watchers
-  are interested in, reducing CPU usage. Reported in :issue:`1144` by
-  wwqgtxx.
+Monitoring and Debugging
+------------------------
+
+- Introduce the configuration variable
+  `gevent.config.track_greenlet_tree` (aka
+  ``GEVENT_TRACK_GREENLET_TREE``) to allow disabling the greenlet tree
+  features for applications where greenlet spawning is performance
+  critical. This restores spawning performance to 1.2 levels.
+
+- Add an optional monitoring thread for each hub. When enabled, this
+  thread (by default) looks for greenlets that block the event loop
+  for more than 0.1s. You can add your own periodic monitoring
+  functions to this thread. Set ``GEVENT_MONITOR_THREAD_ENABLE`` to
+  use it, and ``GEVENT_MAX_BLOCKING_TIME`` to configure the blocking
+  interval.
 
 - Add a simple event framework for decoupled communication. It uses
   :mod:`zope.event` if that is installed. The monitoring thread emits
@@ -52,6 +66,8 @@
 - Add settings for monitoring memory usage and emitting events when a
   threshold is exceeded and then corrected. gevent currently supplies
   no policy for what to do when memory exceeds the configured limit.
+  ``psutil`` must be installed to use this. See :pr:`1150`.
+
 
 1.3a2 (2018-03-06)
 ==================
