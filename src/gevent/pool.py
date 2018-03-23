@@ -331,7 +331,17 @@ class GroupMappingMixin(object):
 
         .. seealso:: :meth:`imap`
         """
-        return list(self.imap(func, iterable))
+        # We can't return until they're all done, so it doesn't much matter
+        # what order we wait on them in.
+        # We used to do:
+        #    return list(self.imap(func, iterable))
+        # Which is concise but expensive.
+
+        # Must reify the list of tasks though, to get as many *actually* spawned
+        # as possible.
+        glets = [self.spawn(func, i) for i in iterable]
+        return [g.get() for g in glets]
+
 
     def map_cb(self, func, iterable, callback=None):
         result = self.map(func, iterable)

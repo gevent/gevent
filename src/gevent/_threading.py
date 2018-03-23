@@ -8,14 +8,12 @@ This module is missing 'Thread' class, but includes 'Queue'.
 from __future__ import absolute_import
 
 from collections import deque
-from itertools import islice as _islice
 
 from gevent import monkey
 from gevent._compat import thread_mod_name
 
 
 __all__ = [
-    'Condition',
     'Lock',
     'Queue',
 ]
@@ -26,14 +24,12 @@ start_new_thread, Lock, get_thread_ident, = monkey.get_original(thread_mod_name,
 ])
 
 
-class Condition(object):
+class _Condition(object):
     # pylint:disable=method-hidden
 
     def __init__(self, lock):
         self.__lock = lock
-        # Export the lock's acquire() and release() methods
-        self.acquire = lock.acquire
-        self.release = lock.release
+
         # If the lock defines _release_save() and/or _acquire_restore(),
         # these override the default implementations (which just call
         # release() and acquire() on the lock).  Ditto for _is_owned().
@@ -50,9 +46,13 @@ class Condition(object):
         except AttributeError:
             pass
         self.__waiters = []
+        # Capture the bound method to save some time returning it
+        self.__notify_one = self._notify_one
+        self.__wait = self._wait
 
     def __enter__(self):
-        return self.__lock.__enter__()
+        self.__lock.__enter__()
+        return self.__wait, self.__notify_one
 
     def __exit__(self, *args):
         return self.__lock.__exit__(*args)
@@ -74,9 +74,10 @@ class Condition(object):
             return False
         return True
 
-    def wait(self):
-        if not self._is_owned():
-            raise RuntimeError("cannot wait on un-acquired lock")
+    def _wait(self):
+        # The condition MUST be owned; the only way to get this
+        # method is through __enter__, so it is guaranteed and we don't
+        # need to check it.
         waiter = Lock()
         waiter.acquire()
         self.__waiters.append(waiter)
@@ -86,19 +87,17 @@ class Condition(object):
         finally:
             self._acquire_restore(saved_state)
 
-    def notify(self, n=1):
-        if not self._is_owned():
-            raise RuntimeError("cannot notify on un-acquired lock")
-        all_waiters = self.__waiters
-        waiters_to_notify = deque(_islice(all_waiters, n))
-        if not waiters_to_notify:
-            return
-        for waiter in waiters_to_notify:
+    def _notify_one(self):
+        # The condition MUST be owned; the only way to get this
+        # method is through __enter__, so it is guaranteed and we
+        # don't need to check it.
+        try:
+            waiter = self.__waiters.pop()
+        except IndexError:
+            # Nobody around
+            pass
+        else:
             waiter.release()
-            try:
-                all_waiters.remove(waiter)
-            except ValueError:
-                pass
 
 
 class Queue(object):
@@ -107,17 +106,18 @@ class Queue(object):
     The queue is always infinite size.
     """
 
+    __slots__ = ('_queue', '_mutex', '_not_empty', 'unfinished_tasks')
 
     def __init__(self):
-        self.queue = deque()
+        self._queue = deque()
         # mutex must be held whenever the queue is mutating.  All methods
         # that acquire mutex must release it before returning.  mutex
         # is shared between the three conditions, so acquiring and
         # releasing the conditions also acquires and releases mutex.
-        self.mutex = Lock()
+        self._mutex = Lock()
         # Notify not_empty whenever an item is added to the queue; a
         # thread waiting to get is notified then.
-        self.not_empty = Condition(self.mutex)
+        self._not_empty = _Condition(self._mutex)
 
         self.unfinished_tasks = 0
 
@@ -135,7 +135,7 @@ class Queue(object):
         Raises a ValueError if called more times than there were items
         placed in the queue.
         """
-        with self.mutex:
+        with self._mutex:
             unfinished = self.unfinished_tasks - 1
             if unfinished <= 0:
                 if unfinished < 0:
@@ -144,8 +144,7 @@ class Queue(object):
 
     def qsize(self, len=len):
         """Return the approximate size of the queue (not reliable!)."""
-        with self.mutex:
-            return len(self.queue)
+        return len(self._queue)
 
     def empty(self):
         """Return True if the queue is empty, False otherwise (not reliable!)."""
@@ -158,16 +157,16 @@ class Queue(object):
     def put(self, item):
         """Put an item into the queue.
         """
-        with self.mutex:
-            self.queue.append(item)
+        with self._not_empty as (_, notify_one):
+            self._queue.append(item)
             self.unfinished_tasks += 1
-            self.not_empty.notify()
+            notify_one()
 
     def get(self):
         """Remove and return an item from the queue.
         """
-        with self.mutex:
-            while not self.queue:
-                self.not_empty.wait()
-            item = self.queue.popleft()
+        with self._not_empty as (wait, _):
+            while not self._queue:
+                wait()
+            item = self._queue.popleft()
             return item
