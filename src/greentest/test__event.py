@@ -4,12 +4,14 @@ import gevent
 from gevent.event import Event, AsyncResult
 
 import greentest
-from greentest.skipping import skipUnderCoverage
+
 from greentest.six import xrange
 from greentest.timing import AbstractGenericGetTestCase
 from greentest.timing import AbstractGenericWaitTestCase
+from greentest.timing import SMALL_TICK
+from greentest.timing import SMALL_TICK_MAX_ADJ
 
-DELAY = 0.01
+DELAY = SMALL_TICK + SMALL_TICK_MAX_ADJ
 
 
 class TestEventWait(AbstractGenericWaitTestCase):
@@ -105,21 +107,20 @@ class TestAsyncResult(greentest.TestCase):
         gevent.sleep(0)
         self.assertEqual(log, [('caught', obj)])
 
-    @skipUnderCoverage("This test is racy and sometimes fails")
     def test_set(self):
         event1 = AsyncResult()
         timer_exc = MyException('interrupted')
 
-        # Notice that this test is racy
+        # Notice that this test is racy:
+        # After DELAY, we set the event. We also try to immediately
+        # raise the exception with a timer of 0 --- but that depends
+        # on cycling the loop. Hence the fairly large value for DELAY.
         g = gevent.spawn_later(DELAY, event1.set, 'hello event1')
-        t = gevent.Timeout.start_new(0, timer_exc)
-        try:
+        self._close_on_teardown(g.kill)
+        with gevent.Timeout.start_new(0, timer_exc):
             with self.assertRaises(MyException) as exc:
                 event1.get()
-            self.assertEqual(timer_exc, exc.exception)
-        finally:
-            t.close()
-            g.kill()
+            self.assertIs(timer_exc, exc.exception)
 
     def test_set_with_timeout(self):
         event2 = AsyncResult()
