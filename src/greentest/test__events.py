@@ -15,6 +15,19 @@ class TestImplements(unittest.TestCase):
     def test_event_loop_blocked(self):
         verify.verifyClass(events.IEventLoopBlocked, events.EventLoopBlocked)
 
+    def test_mem_threshold(self):
+        verify.verifyClass(events.IMemoryUsageThresholdExceeded,
+                           events.MemoryUsageThresholdExceeded)
+        verify.verifyObject(events.IMemoryUsageThresholdExceeded,
+                            events.MemoryUsageThresholdExceeded(0, 0, 0))
+
+    def test_mem_decreased(self):
+        verify.verifyClass(events.IMemoryUsageUnderThreshold,
+                           events.MemoryUsageUnderThreshold)
+        verify.verifyObject(events.IMemoryUsageUnderThreshold,
+                            events.MemoryUsageUnderThreshold(0, 0, 0, 0))
+
+
 class TestEvents(unittest.TestCase):
 
     def test_is_zope(self):

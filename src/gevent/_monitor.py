@@ -14,22 +14,13 @@ from gevent.monkey import get_original
 from gevent.util import format_run_info
 from gevent.events import notify
 from gevent.events import EventLoopBlocked
+from gevent.events import MemoryUsageThresholdExceeded
+from gevent.events import MemoryUsageUnderThreshold
 
 from gevent._compat import thread_mod_name
+from gevent._compat import perf_counter
 from gevent._util import gmctime
 
-
-# Clocks
-try:
-    # Python 3.3+ (PEP 418)
-    from time import perf_counter
-except ImportError:
-    import time
-
-    if sys.platform == "win32":
-        perf_counter = time.clock
-    else:
-        perf_counter = time.time
 
 __all__ = [
     'PeriodicMonitoringThread',
@@ -38,6 +29,24 @@ __all__ = [
 get_thread_ident = get_original(thread_mod_name, 'get_ident')
 start_new_thread = get_original(thread_mod_name, 'start_new_thread')
 thread_sleep = get_original('time', 'sleep')
+
+try:
+    # The standard library 'resource' module doesn't provide
+    # a standard way to get the RSS measure, only the maximum.
+    # You might be tempted to try to compute something by adding
+    # together text and data sizes, but on many systems those come back
+    # zero. So our only option is psutil.
+    from psutil import Process, AccessDenied
+    # Make sure it works (why would we be denied access to our own process?)
+    try:
+        Process().memory_full_info()
+    except AccessDenied: # pragma: no cover
+        Process = None
+except ImportError:
+    pass
+
+class MonitorWarning(RuntimeWarning):
+    """The type of warnings we emit."""
 
 class _MonitorEntry(object):
 
@@ -76,12 +85,21 @@ class PeriodicMonitoringThread(object):
     # what particular monitoring functions want to say.
     min_sleep_time = 0.005
 
+    # The minimum period in seconds at which we will check memory usage.
+    # Getting memory usage is fairly expensive.
+    min_memory_monitor_period = 2
+
     # A list of _MonitorEntry objects: [(function(hub), period, last_run_time))]
     # The first entry is always our entry for self.monitor_blocking
     _monitoring_functions = None
 
     # The calculated min sleep time for the monitoring functions list.
     _calculated_sleep_time = None
+
+    # A boolean value that also happens to capture the
+    # memory usage at the time we exceeded the threshold. Reset
+    # to 0 when we go back below.
+    _memory_exceeded = 0
 
     def __init__(self, hub):
         self._hub_wref = wref(hub, self._on_hub_gc)
@@ -287,6 +305,52 @@ class PeriodicMonitoringThread(object):
 
     def monitor_current_greenlet_blocking(self):
         self._active_greenlet = getcurrent()
+
+    def can_monitor_memory_usage(self):
+        return Process is not None
+
+    def install_monitor_memory_usage(self):
+        # Start monitoring memory usage, if possible.
+        # If not possible, emit a warning.
+        if not self.can_monitor_memory_usage():
+            import warnings
+            warnings.warn("Unable to monitor memory usage. Install psutil.",
+                          MonitorWarning)
+            return
+
+        self.add_monitoring_function(self.monitor_memory_usage,
+                                     max(GEVENT_CONFIG.memory_monitor_period,
+                                         self.min_memory_monitor_period))
+
+    def monitor_memory_usage(self, _hub):
+        max_allowed = GEVENT_CONFIG.max_memory_usage
+        if not max_allowed:
+            # They disabled it.
+            return -1 # value for tests
+
+        rusage = Process().memory_full_info()
+        # uss only documented available on Windows, Linux, and OS X.
+        # If not available, fall back to rss as an aproximation.
+        mem_usage = getattr(rusage, 'uss', 0) or rusage.rss
+
+        event = None # Return value for tests
+
+        if mem_usage > max_allowed:
+            if mem_usage > self._memory_exceeded:
+                # We're still growing
+                event = MemoryUsageThresholdExceeded(
+                    mem_usage, max_allowed, rusage)
+                notify(event)
+            self._memory_exceeded = mem_usage
+        else:
+            # we're below. Were we above it last time?
+            if self._memory_exceeded:
+                event = MemoryUsageUnderThreshold(
+                    mem_usage, max_allowed, rusage, self._memory_exceeded)
+                notify(event)
+            self._memory_exceeded = 0
+
+        return event
 
     def __repr__(self):
         return '<%s at %s in thread %s greenlet %r for %r>' % (

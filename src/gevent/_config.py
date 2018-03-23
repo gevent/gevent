@@ -279,15 +279,39 @@ class IntSettingMixin(object):
     validate = staticmethod(validate_anything)
 
 
-class FloatSettingMixin(object):
+class _PositiveValueMixin(object):
+
+    def validate(self, value):
+        if value is not None and value <= 0:
+            raise ValueError("Must be positive")
+        return value
+
+
+class FloatSettingMixin(_PositiveValueMixin):
     def _convert(self, value):
         if value:
             return float(value)
 
-    def validate(self, value):
-        if value is not None and value <= 0:
-            raise ValueError("Must be > 0")
-        return value
+
+class ByteCountSettingMixin(_PositiveValueMixin):
+
+    _MULTIPLES = {
+        # All keys must be the same size.
+        'kb': 1024,
+        'mb': 1024 * 1024,
+        'gb': 1024 * 1024 * 1024,
+    }
+
+    _SUFFIX_SIZE = 2
+
+    def _convert(self, value):
+        if not value or not isinstance(value, str):
+            return value
+        value = value.lower()
+        for s, m in self._MULTIPLES.items():
+            if value[-self._SUFFIX_SIZE:] == s:
+                return int(value[:-self._SUFFIX_SIZE]) * m
+        return int(value)
 
 
 class Resolver(ImportableSetting, Setting):
@@ -491,6 +515,36 @@ class MaxBlockingTime(FloatSettingMixin, Setting):
         especially without destroying the hubs, false positives may be reported.
 
     .. versionadded:: 1.3b1
+    """
+
+class MonitorMemoryPeriod(FloatSettingMixin, Setting):
+    name = 'memory_monitor_period'
+
+    environment_key = 'GEVENT_MONITOR_MEMORY_PERIOD'
+    default = 5
+
+    desc = """\
+    If `monitor_thread` is enabled, this is approximately how long
+    (in seconds) we will go between checking the processes memory usage.
+
+    Checking the memory usage is relatively expensive on some operating
+    systems, so this should not be too low. gevent will place a floor
+    value on it.
+    """
+
+class MonitorMemoryMaxUsage(ByteCountSettingMixin, Setting):
+    name = 'max_memory_usage'
+
+    environment_key = 'GEVENT_MONITOR_MEMORY_MAX'
+    default = None
+
+    desc = """\
+    If `monitor_thread` is enabled,
+    then if memory usage exceeds this amount (in bytes), events will
+    be emitted. See `gevent.events`.
+
+    There is no default value for this setting. If you wish to
+    cap memory usage, you must choose a value.
     """
 
 # The ares settings are all interpreted by

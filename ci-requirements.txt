@@ -5,7 +5,7 @@ wheel
 # 0.28 is faster, and (important!) lets us specify the target module
 # name to be created so that we can have both foo.py and _foo.so
 # at the same time.
-Cython >= 0.28
+Cython >= 0.28.1
 
 # Python 3.7b1 requires this.
 greenlet>=0.4.13 ; platform_python_implementation == "CPython"

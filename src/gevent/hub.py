@@ -61,7 +61,7 @@ class _Threadlocal(get_original(thread_mod_name, '_local')):
 _threadlocal = _Threadlocal()
 
 get_thread_ident = get_original(thread_mod_name, 'get_ident')
-MAIN_THREAD = get_thread_ident() # XXX: Assuming import is done on the main thread.
+MAIN_THREAD_IDENT = get_thread_ident() # XXX: Assuming import is done on the main thread.
 
 
 class LoopExit(Exception):
@@ -507,7 +507,7 @@ class Hub(TrackedRawGreenlet):
             # loop. See #237 and #238.
             self.loop = _threadlocal.loop
         else:
-            if default is None and self.thread_ident != MAIN_THREAD:
+            if default is None and self.thread_ident != MAIN_THREAD_IDENT:
                 default = False
 
             if loop is None:
@@ -537,7 +537,7 @@ class Hub(TrackedRawGreenlet):
 
         .. versionadded:: 1.3b1
         """
-        return self.thread_ident == MAIN_THREAD
+        return self.thread_ident == MAIN_THREAD_IDENT
 
 
     def __repr__(self):
@@ -742,9 +742,6 @@ class Hub(TrackedRawGreenlet):
 
     def start_periodic_monitoring_thread(self):
         if self.periodic_monitoring_thread is None and GEVENT_CONFIG.monitor_thread:
-            # TODO: If we're the main thread, then add the memory monitoring
-            # function.
-
             # Note that it is possible for one real thread to
             # (temporarily) wind up with multiple monitoring threads,
             # if hubs are started and stopped within the thread. This shows up
@@ -752,6 +749,10 @@ class Hub(TrackedRawGreenlet):
             # hub object is gone.
             from gevent._monitor import PeriodicMonitoringThread
             self.periodic_monitoring_thread = PeriodicMonitoringThread(self)
+
+            if self.main_hub:
+                self.periodic_monitoring_thread.install_monitor_memory_usage()
+
         return self.periodic_monitoring_thread
 
     def join(self, timeout=None):
