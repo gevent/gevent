@@ -29,6 +29,7 @@ class _Condition(object):
 
     def __init__(self, lock):
         self.__lock = lock
+        self.__waiters = []
 
         # If the lock defines _release_save() and/or _acquire_restore(),
         # these override the default implementations (which just call
@@ -45,17 +46,12 @@ class _Condition(object):
             self._is_owned = lock._is_owned
         except AttributeError:
             pass
-        self.__waiters = []
-        # Capture the bound method to save some time returning it
-        self.__notify_one = self._notify_one
-        self.__wait = self._wait
 
     def __enter__(self):
-        self.__lock.__enter__()
-        return self.__wait, self.__notify_one
+        return self.__lock.__enter__()
 
-    def __exit__(self, *args):
-        return self.__lock.__exit__(*args)
+    def __exit__(self, t, v, tb):
+        return self.__lock.__exit__(t, v, tb)
 
     def __repr__(self):
         return "<Condition(%s, %d)>" % (self.__lock, len(self.__waiters))
@@ -74,10 +70,8 @@ class _Condition(object):
             return False
         return True
 
-    def _wait(self):
-        # The condition MUST be owned; the only way to get this
-        # method is through __enter__, so it is guaranteed and we don't
-        # need to check it.
+    def wait(self):
+        # The condition MUST be owned, but we don't check that.
         waiter = Lock()
         waiter.acquire()
         self.__waiters.append(waiter)
@@ -87,10 +81,8 @@ class _Condition(object):
         finally:
             self._acquire_restore(saved_state)
 
-    def _notify_one(self):
-        # The condition MUST be owned; the only way to get this
-        # method is through __enter__, so it is guaranteed and we
-        # don't need to check it.
+    def notify_one(self):
+        # The condition MUST be owned, but we don't check that.
         try:
             waiter = self.__waiters.pop()
         except IndexError:
@@ -157,16 +149,16 @@ class Queue(object):
     def put(self, item):
         """Put an item into the queue.
         """
-        with self._not_empty as (_, notify_one):
+        with self._not_empty:
             self._queue.append(item)
             self.unfinished_tasks += 1
-            notify_one()
+            self._not_empty.notify_one()
 
     def get(self):
         """Remove and return an item from the queue.
         """
-        with self._not_empty as (wait, _):
+        with self._not_empty:
             while not self._queue:
-                wait()
+                self._not_empty.wait()
             item = self._queue.popleft()
             return item
