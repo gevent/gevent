@@ -11,6 +11,7 @@ src/gevent/_semaphore.c
 src/gevent/local.c
 src/gevent/greenlet.c
 src/gevent/_ident.c
+src/gevent/_imap.c
 src/gevent/libev/corecext.c
 src/gevent/libev/corecext.h
 src/gevent/libev/_corecffi.c

@@ -45,6 +45,10 @@ Enhancements
 - Pools for greenlets and threads have lower overhead, especially for
   ``map``. See :pr:`1153`.
 
+- The undocumented, internal implementation classes ``IMap`` and
+  ``IMapUnordered`` classes are now compiled with Cython, further
+  reducing the overhead of ``[Thread]Pool.imap``.
+
 Monitoring and Debugging
 ------------------------
 

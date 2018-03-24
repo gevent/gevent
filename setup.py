@@ -93,11 +93,18 @@ IDENT = Extension(name="gevent.__ident",
                   depends=['src/gevent/__ident.pxd'],
                   include_dirs=include_dirs)
 
+
+IMAP = Extension(name="gevent.__imap",
+                 sources=["src/gevent/_imap.py"],
+                 depends=['src/gevent/__imap.pxd'],
+                 include_dirs=include_dirs)
+
 _to_cythonize = [
     SEMAPHORE,
     LOCAL,
     GREENLET,
     IDENT,
+    IMAP,
 ]
 
 EXT_MODULES = [
@@ -107,6 +114,7 @@ EXT_MODULES = [
     LOCAL,
     GREENLET,
     IDENT,
+    IMAP,
 ]
 
 LIBEV_CFFI_MODULE = 'src/gevent/libev/_corecffi_build.py:ffi'
@@ -168,6 +176,7 @@ if PYPY:
     _to_cythonize.remove(GREENLET)
     _to_cythonize.remove(SEMAPHORE)
     _to_cythonize.remove(IDENT)
+
 
 for mod in _to_cythonize:
     EXT_MODULES.remove(mod)
