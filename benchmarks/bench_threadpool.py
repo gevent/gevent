@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Benchmarks for thread locals.
+Benchmarks for thread pool.
 
 """
 from __future__ import absolute_import

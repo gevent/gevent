@@ -375,13 +375,15 @@ class TestPool(greentest.TestCase): # pylint:disable=too-many-public-methods
         it = self.pool.imap_unordered(sqr_random_sleep, range(SMALL_RANGE))
         self.assertEqual(sorted(it), list(map(squared, range(SMALL_RANGE))))
 
-    def test_empty(self):
+    def test_empty_imap_unordered(self):
         it = self.pool.imap_unordered(sqr, [])
         self.assertEqual(list(it), [])
 
+    def test_empty_imap(self):
         it = self.pool.imap(sqr, [])
         self.assertEqual(list(it), [])
 
+    def test_empty_map(self):
         self.assertEqual(self.pool.map(sqr, []), [])
 
     def test_terminate(self):
