@@ -597,7 +597,7 @@ class Channel(object):
             self.getters.remove(waiter)
             raise
         finally:
-            timeout.cancel()
+            timeout.close()
 
     def get_nowait(self):
         return self.get(False)

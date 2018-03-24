@@ -13,8 +13,8 @@ provides a way to limit concurrency: its :meth:`spawn <Pool.spawn>`
 method blocks if the number of greenlets in the pool has already
 reached the limit, until there is a free slot.
 """
+from __future__ import print_function, absolute_import, division
 
-from bisect import insort_right
 try:
     from itertools import izip
 except ImportError:
@@ -28,7 +28,11 @@ from gevent.timeout import Timeout
 from gevent.event import Event
 from gevent.lock import Semaphore, DummySemaphore
 
-__all__ = ['Group', 'Pool', 'PoolFull']
+__all__ = [
+    'Group',
+    'Pool',
+    'PoolFull',
+]
 
 
 class IMapUnordered(Greenlet):
@@ -36,12 +40,11 @@ class IMapUnordered(Greenlet):
     At iterator of map results.
     """
 
-    _zipped = False
-
     def __init__(self, func, iterable, spawn=None, maxsize=None, _zipped=False):
         """
         An iterator that.
 
+        :keyword callable spawn: The function we use to
         :keyword int maxsize: If given and not-None, specifies the maximum number of
             finished results that will be allowed to accumulated awaiting the reader;
             more than that number of results will cause map function greenlets to begin
@@ -56,8 +59,7 @@ class IMapUnordered(Greenlet):
         Greenlet.__init__(self)
         if spawn is not None:
             self.spawn = spawn
-        if _zipped:
-            self._zipped = _zipped
+        self._zipped = _zipped
         self.func = func
         self.iterable = iterable
         self.queue = Queue()
@@ -82,19 +84,14 @@ class IMapUnordered(Greenlet):
             factory = DummySemaphore
         self._result_semaphore = factory(maxsize)
 
-        self.count = 0
+        self._outstanding_tasks = 0
+        # The index (zero based) of the maximum number of
+        # results we will have.
+        self._max_index = -1
         self.finished = False
-        # If the queue size is unbounded, then we want to call all
-        # the links (_on_finish and _on_result) directly in the hub greenlet
-        # for efficiency. However, if the queue is bounded, we can't do that if
-        # the queue might block (because if there's no waiter the hub can switch to,
-        # the queue simply raises Full). Therefore, in that case, we use
-        # the safer, somewhat-slower (because it spawns a greenlet) link() methods.
-        # This means that _on_finish and _on_result can be called and interleaved in any order
-        # if the call to self.queue.put() blocks..
-        # Note that right now we're not bounding the queue, instead using a semaphore.
-        self.rawlink(self._on_finish)
 
+
+    # We're iterating in a different greenlet than we're running.
     def __iter__(self):
         return self
 
@@ -109,10 +106,11 @@ class IMapUnordered(Greenlet):
     def _inext(self):
         return self.queue.get()
 
-    def _ispawn(self, func, item):
+    def _ispawn(self, func, item, item_index):
         self._result_semaphore.acquire()
-        self.count += 1
+        self._outstanding_tasks += 1
         g = self.spawn(func, item) if not self._zipped else self.spawn(func, *item)
+        g._imap_task_index = item_index
         g.rawlink(self._on_result)
         return g
 
@@ -120,23 +118,21 @@ class IMapUnordered(Greenlet):
         try:
             func = self.func
             for item in self.iterable:
-                self._ispawn(func, item)
+                self._max_index += 1
+                self._ispawn(func, item, self._max_index)
+            self._on_finish(None)
+        except BaseException as e:
+            self._on_finish(e)
+            raise
         finally:
             self.__dict__.pop('spawn', None)
             self.__dict__.pop('func', None)
             self.__dict__.pop('iterable', None)
 
     def _on_result(self, greenlet):
-        # This method can either be called in the hub greenlet (if the
-        # queue is unbounded) or its own greenlet. If it's called in
-        # its own greenlet, the calls to put() may block and switch
-        # greenlets, which in turn could mutate our state. So any
-        # state on this object that we need to look at, notably
-        # self.count, we need to capture or mutate *before* we put.
-        # (Note that right now we're not bounding the queue, but we may
-        # choose to do so in the future so this implementation will be left in case.)
-        self.count -= 1
-        count = self.count
+        # This method will be called in the hub greenlet (we rawlink)
+        self._outstanding_tasks -= 1
+        count = self._outstanding_tasks
         finished = self.finished
         ready = self.ready()
         put_finished = False
@@ -151,20 +147,21 @@ class IMapUnordered(Greenlet):
             self.queue.put(self._iqueue_value_for_failure(greenlet))
 
         if put_finished:
-            self.queue.put(self._iqueue_value_for_finished())
+            self.queue.put(self._iqueue_value_for_self_finished())
 
-    def _on_finish(self, _self):
+    def _on_finish(self, exception):
+        # Called in this greenlet.
         if self.finished:
             return
 
-        if not self.successful():
+        if exception is not None:
             self.finished = True
-            self.queue.put(self._iqueue_value_for_self_failure())
+            self.queue.put(self._iqueue_value_for_self_failure(exception))
             return
 
-        if self.count <= 0:
+        if self._outstanding_tasks <= 0:
             self.finished = True
-            self.queue.put(self._iqueue_value_for_finished())
+            self.queue.put(self._iqueue_value_for_self_finished())
 
     def _iqueue_value_for_success(self, greenlet):
         return greenlet.value
@@ -172,75 +169,91 @@ class IMapUnordered(Greenlet):
     def _iqueue_value_for_failure(self, greenlet):
         return Failure(greenlet.exception, getattr(greenlet, '_raise_exception'))
 
-    def _iqueue_value_for_finished(self):
+    def _iqueue_value_for_self_finished(self):
         return Failure(StopIteration)
 
-    def _iqueue_value_for_self_failure(self):
-        return Failure(self.exception, self._raise_exception)
+    def _iqueue_value_for_self_failure(self, exception):
+        return Failure(exception, self._raise_exception)
 
 
 class IMap(IMapUnordered):
     # A specialization of IMapUnordered that returns items
     # in the order in which they were generated, not
     # the order in which they finish.
-    # We do this by storing tuples (order, value) in the queue
-    # not just value.
 
     def __init__(self, *args, **kwargs):
-        self.waiting = []  # QQQ maybe deque will work faster there?
+        # The result dictionary: {index: value}
+        self._results = {}
+
+        # The index of the result to return next.
         self.index = 0
-        self.maxindex = -1
         IMapUnordered.__init__(self, *args, **kwargs)
 
     def _inext(self):
-        while True:
-            if self.waiting and self.waiting[0][0] <= self.index:
-                _, value = self.waiting.pop(0)
-            else:
+        try:
+            value = self._results.pop(self.index)
+        except KeyError:
+            # Wait for our index to finish.
+            while 1:
                 index, value = self.queue.get()
-                if index > self.index:
-                    insort_right(self.waiting, (index, value))
-                    continue
-            self.index += 1
-            return value
-
-    def _ispawn(self, func, item):
-        g = IMapUnordered._ispawn(self, func, item)
-        self.maxindex += 1
-        g.index = self.maxindex
-        return g
+                if index == self.index:
+                    break
+                else:
+                    self._results[index] = value
+        self.index += 1
+        return value
 
     def _iqueue_value_for_success(self, greenlet):
-        return (greenlet.index, IMapUnordered._iqueue_value_for_success(self, greenlet))
+        return (greenlet._imap_task_index, IMapUnordered._iqueue_value_for_success(self, greenlet))
 
     def _iqueue_value_for_failure(self, greenlet):
-        return (greenlet.index, IMapUnordered._iqueue_value_for_failure(self, greenlet))
+        return (greenlet._imap_task_index, IMapUnordered._iqueue_value_for_failure(self, greenlet))
 
-    def _iqueue_value_for_finished(self):
-        self.maxindex += 1
-        return (self.maxindex, IMapUnordered._iqueue_value_for_finished(self))
+    def _iqueue_value_for_self_finished(self):
+        return (self._max_index + 1, IMapUnordered._iqueue_value_for_self_finished(self))
 
-    def _iqueue_value_for_self_failure(self):
-        self.maxindex += 1
-        return (self.maxindex, IMapUnordered._iqueue_value_for_self_failure(self))
+    def _iqueue_value_for_self_failure(self, exception):
+        return (self._max_index + 1, IMapUnordered._iqueue_value_for_self_failure(self, exception))
 
 
 class GroupMappingMixin(object):
     # Internal, non-public API class.
     # Provides mixin methods for implementing mapping pools. Subclasses must define:
 
-    # - self.spawn(func, *args, **kwargs): a function that runs `func` with `args`
-    # and `awargs`, potentially asynchronously. Return a value with a `get` method that
-    # blocks until the results of func are available, and a `link` method.
+    def spawn(self, func, *args, **kwargs):
+        """
+        A function that runs *func* with *args* and *kwargs*, potentially
+        asynchronously. Return a value with a ``get`` method that blocks
+        until the results of func are available, and a ``rawlink`` method
+        that calls a callback when the results are available.
 
-    # - self._apply_immediately(): should the function passed to apply be called immediately,
-    # synchronously?
+        If this object has an upper bound on how many asyncronously executing
+        tasks can exist, this method may block until a slot becomes available.
+        """
+        raise NotImplementedError()
 
-    # - self._apply_async_use_greenlet(): Should apply_async directly call
-    # Greenlet.spawn(), bypassing self.spawn? Return true when self.spawn would block
+    def _apply_immediately(self):
+        """
+        should the function passed to apply be called immediately,
+        synchronously?
+        """
+        raise NotImplementedError()
 
-    # - self._apply_async_cb_spawn(callback, result): Run the given callback function, possiblly
-    # asynchronously, possibly synchronously.
+    def _apply_async_use_greenlet(self):
+        """
+        Should apply_async directly call Greenlet.spawn(), bypassing
+        `spawn`?
+
+        Return true when self.spawn would block.
+        """
+        raise NotImplementedError()
+
+    def _apply_async_cb_spawn(self, callback, result):
+        """
+        Run the given callback function, possibly
+        asynchronously, possibly synchronously.
+        """
+        raise NotImplementedError()
 
     def apply_cb(self, func, args=None, kwds=None, callback=None):
         """
@@ -325,13 +338,46 @@ class GroupMappingMixin(object):
             return func(*args, **kwds)
         return self.spawn(func, *args, **kwds).get()
 
+    def __map(self, func, iterable):
+        return [g.get() for g in
+                [self.spawn(func, i) for i in iterable]]
+
     def map(self, func, iterable):
         """Return a list made by applying the *func* to each element of
         the iterable.
 
         .. seealso:: :meth:`imap`
         """
-        return list(self.imap(func, iterable))
+        # We can't return until they're all done and in order. It
+        # wouldn't seem to much matter what order we wait on them in,
+        # so the simple, fast (50% faster than imap) solution would be:
+
+        # return [g.get() for g in
+        #           [self.spawn(func, i) for i in iterable]]
+
+        # If the pool size is unlimited (or more than the len(iterable)), this
+        # is equivalent to imap (spawn() will never block, all of them run concurrently,
+        # we call get() in the order the iterable was given).
+
+        # Now lets imagine the pool if is limited size. Suppose the
+        # func is time.sleep, our pool is limited to 3 threads, and
+        # our input is [10, 1, 10, 1, 1] We would start three threads,
+        # one to sleep for 10, one to sleep for 1, and the last to
+        # sleep for 10. We would block starting the fourth thread. At
+        # time 1, we would finish the second thread and start another
+        # one for time 1. At time 2, we would finish that one and
+        # start the last thread, and then begin executing get() on the first
+        # thread.
+
+        # Because it's spawn that blocks, this is *also* equivalent to what
+        # imap would do.
+
+        # The one remaining difference is that imap runs in its own
+        # greenlet, potentially changing the way the event loop runs.
+        # That's easy enough to do.
+
+        g = Greenlet.spawn(self.__map, func, iterable)
+        return g.get()
 
     def map_cb(self, func, iterable, callback=None):
         result = self.map(func, iterable)
@@ -503,12 +549,12 @@ class Group(GroupMappingMixin):
     def start(self, greenlet):
         """
         Add the **unstarted** *greenlet* to the collection of greenlets
-        this group is monitoring, nd then start it.
+        this group is monitoring, and then start it.
         """
         self.add(greenlet)
         greenlet.start()
 
-    def spawn(self, *args, **kwargs):
+    def spawn(self, *args, **kwargs): # pylint:disable=arguments-differ
         """
         Begin a new greenlet with the given arguments (which are passed
         to the greenlet constructor) and add it to the collection of greenlets
@@ -746,7 +792,8 @@ class Pool(Group):
         until space is available.
 
         Usually you should call :meth:`start` to track and start the greenlet
-        instead of using this lower-level method.
+        instead of using this lower-level method, or :meth:`spawn` to
+        also create the greenlet.
 
         :keyword bool blocking: If True (the default), this function
             will block until the pool has space or a timeout occurs.  If

@@ -219,7 +219,7 @@ class ThreadPool(GroupMappingMixin):
             # we get LoopExit (why?). Previously it was done with a rawlink on the
             # AsyncResult and the comment that it is "competing for order with get(); this is not
             # good, just make ThreadResult release the semaphore before doing anything else"
-            thread_result = ThreadResult(result, hub=self.hub, call_when_ready=semaphore.release)
+            thread_result = ThreadResult(result, self.hub, semaphore.release)
             task_queue.put((func, args, kwargs, thread_result))
             self.adjust()
         except:
@@ -333,6 +333,21 @@ class ThreadPool(GroupMappingMixin):
         # Always go to Greenlet because our self.spawn uses threads
         return True
 
+class _FakeAsync(object):
+
+    def send(self):
+        pass
+    close = stop = send
+
+    def __call_(self, result):
+        "fake out for 'receiver'"
+
+    def __bool__(self):
+        return False
+
+    __nonzero__ = __bool__
+
+_FakeAsync = _FakeAsync()
 
 class ThreadResult(object):
 
@@ -340,9 +355,7 @@ class ThreadResult(object):
     __slots__ = ('exc_info', 'async_watcher', '_call_when_ready', 'value',
                  'context', 'hub', 'receiver')
 
-    def __init__(self, receiver, hub=None, call_when_ready=None):
-        if hub is None:
-            hub = get_hub()
+    def __init__(self, receiver, hub, call_when_ready):
         self.receiver = receiver
         self.hub = hub
         self.context = None
@@ -359,48 +372,45 @@ class ThreadResult(object):
     def _on_async(self):
         self.async_watcher.stop()
         self.async_watcher.close()
-        if self._call_when_ready:
-            # Typically this is pool.semaphore.release and we have to
-            # call this in the Hub; if we don't we get the dreaded
-            # LoopExit (XXX: Why?)
-            self._call_when_ready()
+
+        # Typically this is pool.semaphore.release and we have to
+        # call this in the Hub; if we don't we get the dreaded
+        # LoopExit (XXX: Why?)
+        self._call_when_ready()
+
         try:
             if self.exc_info:
                 self.hub.handle_error(self.context, *self.exc_info)
             self.context = None
-            self.async_watcher = None
+            self.async_watcher = _FakeAsync
             self.hub = None
-            self._call_when_ready = None
-            if self.receiver is not None:
-                self.receiver(self)
+            self._call_when_ready = _FakeAsync
+
+            self.receiver(self)
         finally:
-            self.receiver = None
+            self.receiver = _FakeAsync
             self.value = None
             if self.exc_info:
                 self.exc_info = (self.exc_info[0], self.exc_info[1], None)
 
     def destroy(self):
-        if self.async_watcher is not None:
-            self.async_watcher.stop()
-            self.async_watcher.close()
-        self.async_watcher = None
+        self.async_watcher.stop()
+        self.async_watcher.close()
+        self.async_watcher = _FakeAsync
+
         self.context = None
         self.hub = None
-        self._call_when_ready = None
-        self.receiver = None
-
-    def _ready(self):
-        if self.async_watcher is not None:
-            self.async_watcher.send()
+        self._call_when_ready = _FakeAsync
+        self.receiver = _FakeAsync
 
     def set(self, value):
         self.value = value
-        self._ready()
+        self.async_watcher.send()
 
     def handle_error(self, context, exc_info):
         self.context = context
         self.exc_info = exc_info
-        self._ready()
+        self.async_watcher.send()
 
     # link protocol:
     def successful(self):
