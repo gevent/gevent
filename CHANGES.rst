@@ -49,6 +49,10 @@ Enhancements
   ``IMapUnordered`` classes are now compiled with Cython, further
   reducing the overhead of ``[Thread]Pool.imap``.
 
+- The classes `gevent.event.Event` and `gevent.event.AsyncResult`
+  are compiled with Cython for improved performance. Please report any
+  compatibility issues.
+
 Monitoring and Debugging
 ------------------------
 

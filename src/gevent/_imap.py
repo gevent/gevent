@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 # Copyright (c) 2018 gevent
-# cython: auto_pickle=False,embedsignature=True,always_allow_keywords=False
+# cython: auto_pickle=False,embedsignature=True,always_allow_keywords=False,infer_types=True
 
 """
 Iterators across greenlets or AsyncResult objects.
@@ -24,18 +24,19 @@ locals()['Semaphore'] = _semaphore.Semaphore
 
 
 class Failure(object):
-    __slots__ = ('exc', '_raise_exception')
+    __slots__ = ('exc', 'raise_exception')
 
     def __init__(self, exc, raise_exception=None):
         self.exc = exc
-        self._raise_exception = raise_exception
+        self.raise_exception = raise_exception
 
-    def raise_exc(self):
-        if self._raise_exception:
-            self._raise_exception()
-        else:
-            raise self.exc
 
+def _raise_exc(failure):
+    # For cython.
+    if failure.raise_exception:
+        failure.raise_exception()
+    else:
+        raise failure.exc
 
 class IMapUnordered(Greenlet): # pylint:disable=undefined-variable
     """
@@ -102,7 +103,7 @@ class IMapUnordered(Greenlet): # pylint:disable=undefined-variable
             self._result_semaphore.release()
         value = self._inext()
         if isinstance(value, Failure):
-            raise value.exc
+            _raise_exc(value)
         return value
 
     next = __next__ # Py2

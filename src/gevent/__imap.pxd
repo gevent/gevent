@@ -2,9 +2,12 @@ cimport cython
 from gevent._greenlet cimport Greenlet
 from gevent.__semaphore cimport Semaphore
 
+@cython.freelist(100)
 cdef class Failure:
     cdef readonly exc
-    cdef _raise_exception
+    cdef raise_exception
+
+cdef inline _raise_exc(Failure failure)
 
 cdef class IMapUnordered(Greenlet):
     cdef bint _zipped

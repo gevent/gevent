@@ -99,12 +99,19 @@ IMAP = Extension(name="gevent.__imap",
                  depends=['src/gevent/__imap.pxd'],
                  include_dirs=include_dirs)
 
+EVENT = Extension(name="gevent._event",
+                  sources=["src/gevent/event.py"],
+                  depends=['src/gevent/_event.pxd'],
+                  include_dirs=include_dirs)
+
+
 _to_cythonize = [
     SEMAPHORE,
     LOCAL,
     GREENLET,
     IDENT,
     IMAP,
+    EVENT,
 ]
 
 EXT_MODULES = [
@@ -115,6 +122,7 @@ EXT_MODULES = [
     GREENLET,
     IDENT,
     IMAP,
+    EVENT,
 ]
 
 LIBEV_CFFI_MODULE = 'src/gevent/libev/_corecffi_build.py:ffi'
@@ -176,6 +184,12 @@ if PYPY:
     _to_cythonize.remove(GREENLET)
     _to_cythonize.remove(SEMAPHORE)
     _to_cythonize.remove(IDENT)
+
+    EXT_MODULES.remove(IMAP)
+    _to_cythonize.remove(IMAP)
+
+    EXT_MODULES.remove(EVENT)
+    _to_cythonize.remove(EVENT)
 
 
 for mod in _to_cythonize:
