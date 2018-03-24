@@ -42,6 +42,9 @@ Enhancements
 - Hub objects now include the value of their ``name`` attribute in
   their repr.
 
+- Pools for greenlets and threads have lower overhead, especially for
+  ``map``. See :pr:`1153`.
+
 Monitoring and Debugging
 ------------------------
 
