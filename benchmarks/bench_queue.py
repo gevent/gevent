@@ -20,9 +20,9 @@ def _b_no_block(q):
 
     for i in range(N):
         j = q.get()
-        assert i == j
+        assert i == j, (i, j)
 
-def bench_unbounded_queue_noblock(kind=queue.Queue):
+def bench_unbounded_queue_noblock(kind=queue.UnboundQueue):
     _b_no_block(kind())
 
 def bench_bounded_queue_noblock(kind=queue.Queue):

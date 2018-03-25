@@ -2,6 +2,7 @@
 
 cimport cython
 from gevent.__ident cimport IdentRegistry
+from gevent.__hub_local cimport get_hub_noargs as get_hub
 cdef bint _greenlet_imported
 cdef bint _PYPY
 cdef sys_getframe
@@ -125,11 +126,6 @@ cdef class Greenlet(greenlet):
     # cpdef _raise_exception(self)
 
 
-@cython.final
-cdef greenlet get_hub()
-# XXX: TODO: Move the definition of TrackedRawGreenlet
-# into a file that can be cython compiled so get_hub can
-# return that.
 
 # Declare a bunch of imports as cdefs so they can
 # be accessed directly as static vars without

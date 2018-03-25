@@ -42,6 +42,10 @@ NO_ALL = [
     'gevent._patcher',
 ]
 
+ALLOW_IMPLEMENTS = [
+    'gevent._queue',
+]
+
 # A list of modules that may contain things that aren't actually, technically,
 # extensions, but that need to be in __extensions__ anyway due to the way,
 # for example, monkey patching, needs to work.
@@ -76,6 +80,8 @@ class Test(unittest.TestCase):
 
     def check_implements_presence_justified(self):
         "Check that __implements__ is present only if the module is modeled after a module from stdlib (like gevent.socket)."
+        if self.modname in ALLOW_IMPLEMENTS:
+            return
         if self.__implements__ is not None and self.stdlib_module is None:
             raise AssertionError('%r has __implements__ but no stdlib counterpart (%s)'
                                  % (self.modname, self.stdlib_name))

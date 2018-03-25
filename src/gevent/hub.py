@@ -6,7 +6,7 @@ from __future__ import absolute_import, print_function
 # XXX: FIXME: Refactor to make this smaller
 # pylint:disable=too-many-lines
 from functools import partial as _functools_partial
-import os
+
 import sys
 import traceback
 from weakref import ref as wref
@@ -31,7 +31,6 @@ __all__ = [
 ]
 
 from gevent._config import config as GEVENT_CONFIG
-from gevent._compat import string_types
 from gevent._compat import xrange
 from gevent._compat import thread_mod_name
 from gevent._util import _NONE
@@ -40,64 +39,26 @@ from gevent._util import Lazy
 from gevent._util import gmctime
 from gevent._ident import IdentRegistry
 
+from gevent._hub_local import get_hub
+from gevent._hub_local import get_loop
+from gevent._hub_local import set_hub
+from gevent._hub_local import set_loop
+from gevent._hub_local import get_hub_if_exists as _get_hub
+from gevent._hub_local import get_hub_noargs as _get_hub_noargs
+from gevent._hub_local import set_default_hub_class
+
 from gevent.monkey import get_original
 
+from gevent.exceptions import LoopExit
+from gevent.exceptions import BlockingSwitchOutError
+from gevent.exceptions import InvalidSwitchError
 
-
-# These must be the "real" native thread versions,
-# not monkey-patched.
-class _Threadlocal(get_original(thread_mod_name, '_local')):
-
-    def __init__(self):
-        # Use a class with an initializer so that we can test
-        # for 'is None' instead of catching AttributeError, making
-        # the code cleaner and possibly solving some corner cases
-        # (like #687)
-        super(_Threadlocal, self).__init__()
-        self.Hub = None
-        self.loop = None
-        self.hub = None
-
-_threadlocal = _Threadlocal()
+from gevent._waiter import Waiter
+from gevent._waiter import MultipleWaiter as _MultipleWaiter
 
 get_thread_ident = get_original(thread_mod_name, 'get_ident')
 MAIN_THREAD_IDENT = get_thread_ident() # XXX: Assuming import is done on the main thread.
 
-
-class LoopExit(Exception):
-    """
-    Exception thrown when the hub finishes running.
-
-    In a normal application, this is never thrown or caught
-    explicitly. The internal implementation of functions like
-    :func:`join` and :func:`joinall` may catch it, but user code
-    generally should not.
-
-    .. caution::
-       Errors in application programming can also lead to this exception being
-       raised. Some examples include (but are not limited too):
-
-       - greenlets deadlocking on a lock;
-       - using a socket or other gevent object with native thread
-         affinity from a different thread
-
-    """
-
-
-class BlockingSwitchOutError(AssertionError):
-    pass
-
-
-class InvalidSwitchError(AssertionError):
-    pass
-
-
-class ConcurrentObjectUseError(AssertionError):
-    # raised when an object is used (waited on) by two greenlets
-    # independently, meaning the object was entered into a blocking
-    # state by one greenlet and then another while still blocking in the
-    # first one
-    pass
 
 class TrackedRawGreenlet(RawGreenlet):
 
@@ -387,56 +348,6 @@ def reinit():
         #sleep(0.00001)
 
 
-def get_hub_class():
-    """Return the type of hub to use for the current thread.
-
-    If there's no type of hub for the current thread yet, 'gevent.hub.Hub' is used.
-    """
-    hubtype = _threadlocal.Hub
-    if hubtype is None:
-        hubtype = _threadlocal.Hub = Hub
-    return hubtype
-
-
-def get_hub(*args, **kwargs):
-    """
-    Return the hub for the current thread.
-
-    If a hub does not exist in the current thread, a new one is
-    created of the type returned by :func:`get_hub_class`.
-
-    .. deprecated:: 1.3b1
-       The ``*args`` and ``**kwargs`` arguments are deprecated. They were
-       only used when the hub was created, and so were non-deterministic---to be
-       sure they were used, *all* callers had to pass them, or they were order-dependent.
-       Use ``set_hub`` instead.
-    """
-    hub = _threadlocal.hub
-    if hub is None:
-        hubtype = get_hub_class()
-        hub = _threadlocal.hub = hubtype(*args, **kwargs)
-    return hub
-
-def _get_hub_noargs():
-    # Just like get_hub, but cheaper to call because it
-    # takes no arguments or kwargs. See also a copy in
-    # gevent/greenlet.py
-    hub = _threadlocal.hub
-    if hub is None:
-        hubtype = get_hub_class()
-        hub = _threadlocal.hub = hubtype()
-    return hub
-
-def _get_hub():
-    """Return the hub for the current thread.
-
-    Return ``None`` if no hub has been created yet.
-    """
-    return _threadlocal.hub
-
-
-def set_hub(hub):
-    _threadlocal.hub = hub
 
 
 class _dummy_greenlet(object):
@@ -445,12 +356,6 @@ class _dummy_greenlet(object):
 
 _dummy_greenlet = _dummy_greenlet()
 
-
-def _config(default, envvar):
-    result = os.environ.get(envvar) or default # absolute import gets confused pylint: disable=no-member
-    if isinstance(result, string_types):
-        return result.split(',')
-    return result
 
 hub_ident_registry = IdentRegistry()
 
@@ -501,11 +406,11 @@ class Hub(TrackedRawGreenlet):
             if default is not None:
                 raise TypeError("Unexpected argument: default")
             self.loop = loop
-        elif _threadlocal.loop is not None:
+        elif get_loop() is not None:
             # Reuse a loop instance previously set by
             # destroying a hub without destroying the associated
             # loop. See #237 and #238.
-            self.loop = _threadlocal.loop
+            self.loop = get_loop()
         else:
             if default is None and self.thread_ident != MAIN_THREAD_IDENT:
                 default = False
@@ -538,7 +443,6 @@ class Hub(TrackedRawGreenlet):
         .. versionadded:: 1.3b1
         """
         return self.thread_ident == MAIN_THREAD_IDENT
-
 
     def __repr__(self):
         if self.loop is None:
@@ -798,18 +702,20 @@ class Hub(TrackedRawGreenlet):
         if destroy_loop is None:
             destroy_loop = not self.loop.default
         if destroy_loop:
-            if _threadlocal.loop is self.loop:
+            if get_loop() is self.loop:
                 # Don't let anyone try to reuse this
-                _threadlocal.loop = None
+                set_loop(None)
             self.loop.destroy()
         else:
             # Store in case another hub is created for this
             # thread.
-            _threadlocal.loop = self.loop
+            set_loop(self.loop)
+
 
         self.loop = None
-        if _threadlocal.hub is self:
-            _threadlocal.hub = None
+        if _get_hub() is self:
+            set_hub(None)
+
 
     # XXX: We can probably simplify the resolver and threadpool properties.
 
@@ -850,167 +756,7 @@ class Hub(TrackedRawGreenlet):
     threadpool = property(_get_threadpool, _set_threadpool, _del_threadpool)
 
 
-class Waiter(object):
-    """
-    A low level communication utility for greenlets.
-
-    Waiter is a wrapper around greenlet's ``switch()`` and ``throw()`` calls that makes them somewhat safer:
-
-    * switching will occur only if the waiting greenlet is executing :meth:`get` method currently;
-    * any error raised in the greenlet is handled inside :meth:`switch` and :meth:`throw`
-    * if :meth:`switch`/:meth:`throw` is called before the receiver calls :meth:`get`, then :class:`Waiter`
-      will store the value/exception. The following :meth:`get` will return the value/raise the exception.
-
-    The :meth:`switch` and :meth:`throw` methods must only be called from the :class:`Hub` greenlet.
-    The :meth:`get` method must be called from a greenlet other than :class:`Hub`.
-
-        >>> result = Waiter()
-        >>> timer = get_hub().loop.timer(0.1)
-        >>> timer.start(result.switch, 'hello from Waiter')
-        >>> result.get() # blocks for 0.1 seconds
-        'hello from Waiter'
-        >>> timer.close()
-
-    If switch is called before the greenlet gets a chance to call :meth:`get` then
-    :class:`Waiter` stores the value.
-
-        >>> result = Waiter()
-        >>> timer = get_hub().loop.timer(0.1)
-        >>> timer.start(result.switch, 'hi from Waiter')
-        >>> sleep(0.2)
-        >>> result.get() # returns immediately without blocking
-        'hi from Waiter'
-        >>> timer.close()
-
-    .. warning::
-
-        This a limited and dangerous way to communicate between
-        greenlets. It can easily leave a greenlet unscheduled forever
-        if used incorrectly. Consider using safer classes such as
-        :class:`gevent.event.Event`, :class:`gevent.event.AsyncResult`,
-        or :class:`gevent.queue.Queue`.
-    """
-
-    __slots__ = ['hub', 'greenlet', 'value', '_exception']
-
-    def __init__(self, hub=None):
-        self.hub = _get_hub_noargs() if hub is None else hub
-        self.greenlet = None
-        self.value = None
-        self._exception = _NONE
-
-    def clear(self):
-        self.greenlet = None
-        self.value = None
-        self._exception = _NONE
-
-    def __str__(self):
-        if self._exception is _NONE:
-            return '<%s greenlet=%s>' % (type(self).__name__, self.greenlet)
-        if self._exception is None:
-            return '<%s greenlet=%s value=%r>' % (type(self).__name__, self.greenlet, self.value)
-        return '<%s greenlet=%s exc_info=%r>' % (type(self).__name__, self.greenlet, self.exc_info)
-
-    def ready(self):
-        """Return true if and only if it holds a value or an exception"""
-        return self._exception is not _NONE
-
-    def successful(self):
-        """Return true if and only if it is ready and holds a value"""
-        return self._exception is None
-
-    @property
-    def exc_info(self):
-        "Holds the exception info passed to :meth:`throw` if :meth:`throw` was called. Otherwise ``None``."
-        if self._exception is not _NONE:
-            return self._exception
-
-    def switch(self, value=None):
-        """Switch to the greenlet if one's available. Otherwise store the value."""
-        greenlet = self.greenlet
-        if greenlet is None:
-            self.value = value
-            self._exception = None
-        else:
-            assert getcurrent() is self.hub, "Can only use Waiter.switch method from the Hub greenlet"
-            switch = greenlet.switch
-            try:
-                switch(value)
-            except: # pylint:disable=bare-except
-                self.hub.handle_error(switch, *sys.exc_info())
-
-    def switch_args(self, *args):
-        return self.switch(args)
-
-    def throw(self, *throw_args):
-        """Switch to the greenlet with the exception. If there's no greenlet, store the exception."""
-        greenlet = self.greenlet
-        if greenlet is None:
-            self._exception = throw_args
-        else:
-            assert getcurrent() is self.hub, "Can only use Waiter.switch method from the Hub greenlet"
-            throw = greenlet.throw
-            try:
-                throw(*throw_args)
-            except: # pylint:disable=bare-except
-                self.hub.handle_error(throw, *sys.exc_info())
-
-    def get(self):
-        """If a value/an exception is stored, return/raise it. Otherwise until switch() or throw() is called."""
-        if self._exception is not _NONE:
-            if self._exception is None:
-                return self.value
-            else:
-                getcurrent().throw(*self._exception)
-        else:
-            if self.greenlet is not None:
-                raise ConcurrentObjectUseError('This Waiter is already used by %r' % (self.greenlet, ))
-            self.greenlet = getcurrent()
-            try:
-                return self.hub.switch()
-            finally:
-                self.greenlet = None
-
-    def __call__(self, source):
-        if source.exception is None:
-            self.switch(source.value)
-        else:
-            self.throw(source.exception)
-
-    # can also have a debugging version, that wraps the value in a tuple (self, value) in switch()
-    # and unwraps it in wait() thus checking that switch() was indeed called
-
-
-class _MultipleWaiter(Waiter):
-    """
-    An internal extension of Waiter that can be used if multiple objects
-    must be waited on, and there is a chance that in between waits greenlets
-    might be switched out. All greenlets that switch to this waiter
-    will have their value returned.
-
-    This does not handle exceptions or throw methods.
-    """
-    __slots__ = ['_values']
-
-    def __init__(self, *args, **kwargs):
-        Waiter.__init__(self, *args, **kwargs)
-        # we typically expect a relatively small number of these to be outstanding.
-        # since we pop from the left, a deque might be slightly
-        # more efficient, but since we're in the hub we avoid imports if
-        # we can help it to better support monkey-patching, and delaying the import
-        # here can be impractical (see https://github.com/gevent/gevent/issues/652)
-        self._values = list()
-
-    def switch(self, value): # pylint:disable=signature-differs
-        self._values.append(value)
-        Waiter.switch(self, True)
-
-    def get(self):
-        if not self._values:
-            Waiter.get(self)
-            Waiter.clear(self)
-
-        return self._values.pop(0)
+set_default_hub_class(Hub)
 
 
 def iwait(objects, timeout=None, count=None):

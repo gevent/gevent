@@ -1,7 +1,8 @@
 # cython: auto_pickle=False
 
+
+from gevent.__hub_local cimport get_hub_noargs as get_hub
 cdef Timeout
-from _greenlet cimport get_hub
 
 cdef bint _greenlet_imported
 

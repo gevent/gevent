@@ -13,6 +13,7 @@ import greentest
 import gevent
 from gevent import util
 from gevent import local
+from greenlet import getcurrent
 
 from gevent._compat import NativeStrIO
 
@@ -84,10 +85,12 @@ class TestTree(greentest.TestCase):
         assert l
 
         def s(f):
+            str(getcurrent())
             g = gevent.spawn(f)
             # Access this in spawning order for consistent sorting
             # at print time in the test case.
             getattr(g, 'minimal_ident')
+            str(g)
             return g
 
         def t1():
@@ -101,6 +104,7 @@ class TestTree(greentest.TestCase):
             return g
 
         s1 = s(t2)
+        #self.assertEqual(0, s1.minimal_ident)
         s1.join()
 
         glets.append(s(t2))
@@ -130,6 +134,7 @@ class TestTree(greentest.TestCase):
         value = value.replace('test__util', '__main__')
         value = re.compile(' fileno=.').sub('', value)
         value = value.replace('ref=-1', 'ref=0')
+        value = value.replace("type.current_tree", 'GreenletTree.current_tree')
         return value
 
     @greentest.ignores_leakcheck
@@ -149,23 +154,23 @@ class TestTree(greentest.TestCase):
  :        {'foo': 42}
  +--- <QuietHub '' at X default default pending=0 ref=0 thread_ident=X>
  :          Parent: <greenlet.greenlet object at X>
- +--- <Greenlet "Greenlet-1" at X: _run>; finished with value <Greenlet "CustomName-0" at 0x
+ +--- <Greenlet "Greenlet-1" at X: t2>; finished with value <Greenlet "CustomName-0" at 0x
  :          Parent: <QuietHub '' at X default default pending=0 ref=0 thread_ident=X>
- |    +--- <Greenlet "CustomName-0" at X: _run>; finished with exception ExpectedException()
+ |    +--- <Greenlet "CustomName-0" at X: t1>; finished with exception ExpectedException()
  :                Parent: <QuietHub '' at X default default pending=0 ref=0 thread_ident=X>
- +--- <Greenlet "Greenlet-2" at X: _run>; finished with value <Greenlet "CustomName-4" at 0x
+ +--- <Greenlet "Greenlet-2" at X: t2>; finished with value <Greenlet "CustomName-4" at 0x
  :          Parent: <QuietHub '' at X default default pending=0 ref=0 thread_ident=X>
- |    +--- <Greenlet "CustomName-4" at X: _run>; finished with exception ExpectedException()
+ |    +--- <Greenlet "CustomName-4" at X: t1>; finished with exception ExpectedException()
  :                Parent: <QuietHub '' at X default default pending=0 ref=0 thread_ident=X>
- +--- <Greenlet "Greenlet-3" at X: _run>; finished with value <Greenlet "Greenlet-5" at X
+ +--- <Greenlet "Greenlet-3" at X: t3>; finished with value <Greenlet "Greenlet-5" at X
  :          Parent: <QuietHub '' at X default default pending=0 ref=0 thread_ident=X>
  :          Spawn Tree Locals
  :          {'stl': 'STL'}
- |    +--- <Greenlet "Greenlet-5" at X: _run>; finished with value <Greenlet "CustomName-6" at 0x
+ |    +--- <Greenlet "Greenlet-5" at X: t2>; finished with value <Greenlet "CustomName-6" at 0x
  :                Parent: <QuietHub '' at X default default pending=0 ref=0 thread_ident=X>
- |         +--- <Greenlet "CustomName-6" at X: _run>; finished with exception ExpectedException()
+ |         +--- <Greenlet "CustomName-6" at X: t1>; finished with exception ExpectedException()
  :                      Parent: <QuietHub '' at X default default pending=0 ref=0 thread_ident=X>
- +--- <Greenlet "Greenlet-7" at X: _run>; finished with value <gevent.util.GreenletTree obje
+ +--- <Greenlet "Greenlet-7" at X: <bound method GreenletTree.current_tree of <class 'gevent.util.GreenletTree'>>>; finished with value <gevent.util.GreenletTree obje
             Parent: <QuietHub '' at X default default pending=0 ref=0 thread_ident=X>
         """.strip()
         self.assertEqual(expected, value)
