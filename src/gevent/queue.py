@@ -62,6 +62,20 @@ def _safe_remove(deq, item):
         pass
 
 
+class ItemWaiter(Waiter):
+    __slots__ = ['item', 'queue']
+
+    def __init__(self, item, queue):
+        Waiter.__init__(self)
+        self.item = item
+        self.queue = queue
+
+    def put_and_switch(self):
+        self.queue._put(self.item)
+        self.queue = None
+        self.item = None
+        return self.switch(self)
+
 class Queue(object):
     """
     Create a queue object with a given maximum size.
@@ -368,19 +382,6 @@ class Queue(object):
 
 
 
-class ItemWaiter(Waiter):
-    __slots__ = ['item', 'queue']
-
-    def __init__(self, item, queue):
-        Waiter.__init__(self)
-        self.item = item
-        self.queue = queue
-
-    def put_and_switch(self):
-        self.queue._put(self.item)
-        self.queue = None
-        self.item = None
-        return self.switch(self)
 
 
 class PriorityQueue(Queue):
@@ -513,7 +514,10 @@ class JoinableQueue(Queue):
 
 class Channel(object):
 
-    def __init__(self):
+    def __init__(self, maxsize=1):
+        # We take maxsize to simplify certain kinds of code
+        if maxsize != 1:
+            raise ValueError("Channels have a maxsize of 1")
         self.getters = collections.deque()
         self.putters = collections.deque()
         self.hub = get_hub()
