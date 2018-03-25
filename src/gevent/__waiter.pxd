@@ -6,6 +6,7 @@ cdef ConcurrentObjectUseError
 from gevent.__hub_local cimport get_hub_noargs as get_hub
 
 cdef bint _greenlet_imported
+cdef _NONE
 
 cdef extern from "greenlet/greenlet.h":
 
@@ -26,7 +27,6 @@ cdef inline void greenlet_init():
     if not _greenlet_imported:
         PyGreenlet_Import()
         _greenlet_imported = True
-
 
 cdef class Waiter:
     cdef readonly hub
