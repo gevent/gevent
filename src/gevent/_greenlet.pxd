@@ -43,7 +43,6 @@ cdef extern from "frameobject.h":
         # proper None instead.
         # cdef FrameType f_back
 
-
 cdef void _init()
 
 cdef class SpawnedLink:
@@ -119,9 +118,12 @@ cdef class Greenlet(greenlet):
     # This is used as the target of a callback
     # from the loop, and so needs to be a cpdef
     cpdef _notify_links(self)
-    # IMapUnordered greenlets in pools need to access this
-    # method
-    cpdef _raise_exception(self)
+
+    # Hmm, declaring _raise_exception causes issues when _imap
+    # is also compiled.
+    # TypeError: wrap() takes exactly one argument (0 given)
+    # cpdef _raise_exception(self)
+
 
 @cython.final
 cdef greenlet get_hub()

@@ -45,6 +45,14 @@ Enhancements
 - Pools for greenlets and threads have lower overhead, especially for
   ``map``. See :pr:`1153`.
 
+- The undocumented, internal implementation classes ``IMap`` and
+  ``IMapUnordered`` classes are now compiled with Cython, further
+  reducing the overhead of ``[Thread]Pool.imap``.
+
+- The classes `gevent.event.Event` and `gevent.event.AsyncResult`
+  are compiled with Cython for improved performance. Please report any
+  compatibility issues.
+
 Monitoring and Debugging
 ------------------------
 

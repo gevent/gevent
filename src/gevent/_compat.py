@@ -71,10 +71,14 @@ if PY3:
     iteritems = dict.items
     itervalues = dict.values
     xrange = range
+    izip = zip
+
 else:
     iteritems = dict.iteritems # python 3: pylint:disable=no-member
     itervalues = dict.itervalues # python 3: pylint:disable=no-member
     xrange = __builtin__.xrange
+    from itertools import izip # python 3: pylint:disable=no-member
+    izip = izip
 
 # fspath from 3.6 os.py, but modified to raise the same exceptions as the
 # real native implementation.
