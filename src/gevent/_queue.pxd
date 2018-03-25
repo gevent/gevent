@@ -7,7 +7,6 @@ cdef _heappop
 cdef _heapify
 
 @cython.final
-@cython.internal
 cdef _safe_remove(deq, item)
 
 @cython.final
