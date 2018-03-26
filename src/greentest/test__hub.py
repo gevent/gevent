@@ -95,7 +95,7 @@ class TestWaiterGet(greentest.timing.AbstractGenericWaitTestCase):
 
     def wait(self, timeout):
         with get_hub().loop.timer(timeout) as evt:
-            evt.start(self.waiter.switch)
+            evt.start(self.waiter.switch, None)
             return self.waiter.get()
 
 

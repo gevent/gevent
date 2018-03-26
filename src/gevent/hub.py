@@ -9,7 +9,7 @@ from functools import partial as _functools_partial
 
 import sys
 import traceback
-from weakref import ref as wref
+
 
 from greenlet import greenlet as RawGreenlet
 from greenlet import getcurrent
@@ -31,9 +31,7 @@ __all__ = [
 ]
 
 from gevent._config import config as GEVENT_CONFIG
-from gevent._compat import xrange
 from gevent._compat import thread_mod_name
-from gevent._util import _NONE
 from gevent._util import readproperty
 from gevent._util import Lazy
 from gevent._util import gmctime
@@ -47,36 +45,22 @@ from gevent._hub_local import get_hub_if_exists as _get_hub
 from gevent._hub_local import get_hub_noargs as _get_hub_noargs
 from gevent._hub_local import set_default_hub_class
 
+from gevent._greenlet_primitives import TrackedRawGreenlet
+from gevent._hub_primitives import WaitOperationsGreenlet
+
+# Export
+from gevent import _hub_primitives
+wait = _hub_primitives.wait
+iwait = _hub_primitives.iwait
+
 from gevent.monkey import get_original
 
 from gevent.exceptions import LoopExit
-from gevent.exceptions import BlockingSwitchOutError
-from gevent.exceptions import InvalidSwitchError
 
 from gevent._waiter import Waiter
-from gevent._waiter import MultipleWaiter as _MultipleWaiter
 
 get_thread_ident = get_original(thread_mod_name, 'get_ident')
 MAIN_THREAD_IDENT = get_thread_ident() # XXX: Assuming import is done on the main thread.
-
-
-class TrackedRawGreenlet(RawGreenlet):
-
-    def __init__(self, function, parent):
-        RawGreenlet.__init__(self, function, parent)
-        # See greenlet.py's Greenlet class. We capture the cheap
-        # parts to maintain the tree structure, but we do not capture
-        # the stack because that's too expensive for 'spawn_raw'.
-
-        current = getcurrent()
-        self.spawning_greenlet = wref(current)
-        # See Greenlet for how trees are maintained.
-        try:
-            self.spawn_tree_locals = current.spawn_tree_locals
-        except AttributeError:
-            self.spawn_tree_locals = {}
-            if current.parent:
-                current.spawn_tree_locals = self.spawn_tree_locals
 
 
 def spawn_raw(function, *args, **kwargs):
@@ -163,7 +147,7 @@ def sleep(seconds=0, ref=True):
     loop = hub.loop
     if seconds <= 0:
         waiter = Waiter(hub)
-        loop.run_callback(waiter.switch)
+        loop.run_callback(waiter.switch, None)
         waiter.get()
     else:
         with loop.timer(seconds, ref=ref) as t:
@@ -348,18 +332,9 @@ def reinit():
         #sleep(0.00001)
 
 
-
-
-class _dummy_greenlet(object):
-    def throw(self):
-        pass
-
-_dummy_greenlet = _dummy_greenlet()
-
-
 hub_ident_registry = IdentRegistry()
 
-class Hub(TrackedRawGreenlet):
+class Hub(WaitOperationsGreenlet):
     """
     A greenlet that runs the event loop.
 
@@ -400,7 +375,7 @@ class Hub(TrackedRawGreenlet):
     name = ''
 
     def __init__(self, loop=None, default=None):
-        TrackedRawGreenlet.__init__(self, None, None)
+        WaitOperationsGreenlet.__init__(self, None, None)
         self.thread_ident = get_thread_ident()
         if hasattr(loop, 'run'):
             if default is not None:
@@ -551,77 +526,13 @@ class Hub(TrackedRawGreenlet):
                     context = repr(context)
             errstream.write('%s failed with %s\n\n' % (context, getattr(type, '__name__', 'exception'), ))
 
-    def switch(self):
-        switch_out = getattr(getcurrent(), 'switch_out', None)
-        if switch_out is not None:
-            switch_out()
-        return RawGreenlet.switch(self)
-
-    def switch_out(self):
-        raise BlockingSwitchOutError('Impossible to call blocking function in the event loop callback')
-
-    def wait(self, watcher):
-        """
-        Wait until the *watcher* (which must not be started) is ready.
-
-        The current greenlet will be unscheduled during this time.
-
-        .. seealso:: :class:`gevent.core.io`, :class:`gevent.core.timer`,
-            :class:`gevent.core.signal`, :class:`gevent.core.idle`, :class:`gevent.core.prepare`,
-            :class:`gevent.core.check`, :class:`gevent.core.fork`, :class:`gevent.core.async`,
-            :class:`gevent.core.child`, :class:`gevent.core.stat`
-
-        """
-        waiter = Waiter(self)
-        unique = object()
-        watcher.start(waiter.switch, unique)
-        try:
-            result = waiter.get()
-            if result is not unique:
-                raise InvalidSwitchError('Invalid switch into %s: %r (expected %r)' % (getcurrent(), result, unique))
-        finally:
-            watcher.stop()
-
-    def cancel_wait(self, watcher, error, close_watcher=False):
-        """
-        Cancel an in-progress call to :meth:`wait` by throwing the given *error*
-        in the waiting greenlet.
-
-        .. versionchanged:: 1.3a1
-           Added the *close_watcher* parameter. If true, the watcher
-           will be closed after the exception is thrown. The watcher should then
-           be discarded. Closing the watcher is important to release native resources.
-        .. versionchanged:: 1.3a2
-           Allow the *watcher* to be ``None``. No action is taken in that case.
-        """
-        if watcher is None:
-            # Presumably already closed.
-            # See https://github.com/gevent/gevent/issues/1089
-            return
-        if watcher.callback is not None:
-            print('Scheduling close for', watcher, close_watcher)
-            self.loop.run_callback(self._cancel_wait, watcher, error, close_watcher)
-        elif close_watcher:
-            watcher.close()
-
-    def _cancel_wait(self, watcher, error, close_watcher, _dummy_greenlet=_dummy_greenlet):
-        # We have to check again to see if it was still active by the time
-        # our callback actually runs.
-        active = watcher.active
-        cb = watcher.callback
-        if close_watcher:
-            watcher.close()
-        if active:
-            # The callback should be greenlet.switch(). It may or may not be None.
-            greenlet = getattr(cb, '__self__', _dummy_greenlet)
-            greenlet.throw(error)
 
     def run(self):
         """
         Entry-point to running the loop. This method is called automatically
         when the hub greenlet is scheduled; do not call it directly.
 
-        :raises LoopExit: If the loop finishes running. This means
+        :raises gevent.exceptions.LoopExit: If the loop finishes running. This means
            that there are no other scheduled greenlets, and no active
            watchers or servers. In some situations, this indicates a
            programming error.
@@ -676,7 +587,7 @@ class Hub(TrackedRawGreenlet):
 
         if timeout is not None:
             timeout = self.loop.timer(timeout, ref=False)
-            timeout.start(waiter.switch)
+            timeout.start(waiter.switch, None)
 
         try:
             try:
@@ -758,102 +669,6 @@ class Hub(TrackedRawGreenlet):
 
 set_default_hub_class(Hub)
 
-
-def iwait(objects, timeout=None, count=None):
-    """
-    Iteratively yield *objects* as they are ready, until all (or *count*) are ready
-    or *timeout* expired.
-
-    :param objects: A sequence (supporting :func:`len`) containing objects
-        implementing the wait protocol (rawlink() and unlink()).
-    :keyword int count: If not `None`, then a number specifying the maximum number
-        of objects to wait for. If ``None`` (the default), all objects
-        are waited for.
-    :keyword float timeout: If given, specifies a maximum number of seconds
-        to wait. If the timeout expires before the desired waited-for objects
-        are available, then this method returns immediately.
-
-    .. seealso:: :func:`wait`
-
-    .. versionchanged:: 1.1a1
-       Add the *count* parameter.
-    .. versionchanged:: 1.1a2
-       No longer raise :exc:`LoopExit` if our caller switches greenlets
-       in between items yielded by this function.
-    """
-    # QQQ would be nice to support iterable here that can be generated slowly (why?)
-    hub = _get_hub_noargs()
-    if objects is None:
-        yield hub.join(timeout=timeout)
-        return
-
-    count = len(objects) if count is None else min(count, len(objects))
-    waiter = _MultipleWaiter(hub)
-    switch = waiter.switch
-
-    if timeout is not None:
-        timer = hub.loop.timer(timeout, priority=-1)
-        timer.start(switch, _NONE)
-
-    try:
-        for obj in objects:
-            obj.rawlink(switch)
-
-        for _ in xrange(count):
-            item = waiter.get()
-            waiter.clear()
-            if item is _NONE:
-                return
-            yield item
-    finally:
-        if timeout is not None:
-            timer.close()
-        for aobj in objects:
-            unlink = getattr(aobj, 'unlink', None)
-            if unlink:
-                try:
-                    unlink(switch)
-                except: # pylint:disable=bare-except
-                    traceback.print_exc()
-
-
-def wait(objects=None, timeout=None, count=None):
-    """
-    Wait for ``objects`` to become ready or for event loop to finish.
-
-    If ``objects`` is provided, it must be a list containing objects
-    implementing the wait protocol (rawlink() and unlink() methods):
-
-    - :class:`gevent.Greenlet` instance
-    - :class:`gevent.event.Event` instance
-    - :class:`gevent.lock.Semaphore` instance
-    - :class:`gevent.subprocess.Popen` instance
-
-    If ``objects`` is ``None`` (the default), ``wait()`` blocks until
-    the current event loop has nothing to do (or until ``timeout`` passes):
-
-    - all greenlets have finished
-    - all servers were stopped
-    - all event loop watchers were stopped.
-
-    If ``count`` is ``None`` (the default), wait for all ``objects``
-    to become ready.
-
-    If ``count`` is a number, wait for (up to) ``count`` objects to become
-    ready. (For example, if count is ``1`` then the function exits
-    when any object in the list is ready).
-
-    If ``timeout`` is provided, it specifies the maximum number of
-    seconds ``wait()`` will block.
-
-    Returns the list of ready objects, in the order in which they were
-    ready.
-
-    .. seealso:: :func:`iwait`
-    """
-    if objects is None:
-        return _get_hub_noargs().join(timeout=timeout)
-    return list(iwait(objects, timeout, count))
 
 
 class linkproxy(object):

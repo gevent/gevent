@@ -9,9 +9,9 @@ from gevent._util import _NONE
 from gevent._compat import reraise
 from gevent._tblib import dump_traceback, load_traceback
 
-from gevent.hub import _get_hub_noargs as get_hub
+from gevent._hub_local import get_hub_noargs as get_hub
 
-from gevent.hub import InvalidSwitchError
+from gevent.exceptions import InvalidSwitchError
 from gevent.timeout import Timeout
 
 
@@ -22,8 +22,6 @@ __all__ = [
 
 locals()['getcurrent'] = __import__('greenlet').getcurrent
 locals()['greenlet_init'] = lambda: None
-
-import cython
 
 
 class _AbstractLinkable(object):

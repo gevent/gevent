@@ -99,8 +99,14 @@ class Waiter(object):
         if self._exception is not _NONE:
             return self._exception
 
-    def switch(self, value=None):
-        """Switch to the greenlet if one's available. Otherwise store the value."""
+    def switch(self, value):
+        """
+        Switch to the greenlet if one's available. Otherwise store the
+        *value*.
+
+        .. versionchanged:: 1.3b1
+           The *value* is no longer optional.
+        """
         greenlet = self.greenlet
         if greenlet is None:
             self.value = value
@@ -178,7 +184,7 @@ class MultipleWaiter(Waiter):
         # here can be impractical (see https://github.com/gevent/gevent/issues/652)
         self._values = list()
 
-    def switch(self, value): # pylint:disable=signature-differs
+    def switch(self, value):
         self._values.append(value)
         Waiter.switch(self, True)
 

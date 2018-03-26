@@ -1,14 +1,11 @@
 cimport cython
 
-from gevent.__greenlet_primitives cimport SwitchOutGreenletWithLoop
-from gevent.__hub_local cimport get_hub_noargs as get_hub
+# This file must not cimport anything from gevent.
 
-cdef sys
-cdef ConcurrentObjectUseError
+cdef wref
 
+cdef BlockingSwitchOutError
 
-cdef bint _greenlet_imported
-cdef _NONE
 
 cdef extern from "greenlet/greenlet.h":
 
@@ -19,10 +16,14 @@ cdef extern from "greenlet/greenlet.h":
     # (defined) in each .pxd, as are the two functions
     # that call them.
     greenlet PyGreenlet_GetCurrent()
+    object PyGreenlet_Switch(greenlet self, void* args, void* kwargs)
     void PyGreenlet_Import()
 
+@cython.final
 cdef inline greenlet getcurrent():
     return PyGreenlet_GetCurrent()
+
+cdef bint _greenlet_imported
 
 cdef inline void greenlet_init():
     global _greenlet_imported
@@ -30,19 +31,14 @@ cdef inline void greenlet_init():
         PyGreenlet_Import()
         _greenlet_imported = True
 
-cdef class Waiter:
-    cdef readonly SwitchOutGreenletWithLoop hub
-    cdef readonly greenlet greenlet
-    cdef readonly value
-    cdef _exception
+cdef inline object _greenlet_switch(greenlet self):
+    return PyGreenlet_Switch(self, NULL, NULL)
 
-    cpdef get(self)
-    cpdef clear(self)
+cdef class TrackedRawGreenlet(greenlet):
+    pass
 
-    # cpdef of switch leads to parameter errors...
-    #cpdef switch(self, value)
+cdef class SwitchOutGreenletWithLoop(TrackedRawGreenlet):
+    cdef public loop
 
-@cython.final
-@cython.internal
-cdef class MultipleWaiter(Waiter):
-    cdef list _values
+    cpdef switch(self)
+    cpdef switch_out(self)

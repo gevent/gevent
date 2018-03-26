@@ -9,6 +9,8 @@ cdef bint _PYPY
 cdef sys_getframe
 cdef sys_exc_info
 cdef Timeout
+cdef GreenletExit
+cdef InvalidSwitchError
 
 cdef extern from "greenlet/greenlet.h":
 
@@ -141,14 +143,12 @@ cdef _threadlocal
 cdef get_hub_class
 cdef wref
 
-cdef Timeout
 cdef dump_traceback
 cdef load_traceback
 cdef Waiter
 cdef wait
 cdef iwait
 cdef reraise
-cdef InvalidSwitchError
 cpdef GEVENT_CONFIG
 
 

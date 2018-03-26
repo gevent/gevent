@@ -1,10 +1,13 @@
 cimport cython
 
+from gevent.__greenlet_primitives cimport SwitchOutGreenletWithLoop
+from gevent.__hub_local cimport get_hub_noargs as get_hub
+
 cdef _None
 cdef reraise
 cdef dump_traceback
 cdef load_traceback
-cdef get_hub
+
 
 cdef InvalidSwitchError
 cdef Timeout
@@ -35,7 +38,7 @@ cdef void _init()
 cdef class _AbstractLinkable:
    cdef _notifier
    cdef set _links
-   cdef readonly hub
+   cdef readonly SwitchOutGreenletWithLoop hub
 
    cpdef rawlink(self, callback)
    cpdef bint ready(self)

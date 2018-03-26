@@ -51,7 +51,8 @@ Enhancements
 
 - The classes `gevent.event.Event` and `gevent.event.AsyncResult`
   are compiled with Cython for improved performance, as is the
-  ``gevent.queue`` module and ``gevent.hub.Waiter``. Please report any
+  ``gevent.queue`` module and ``gevent.hub.Waiter`` and certain
+  time-sensitive parts of the hub itself. Please report any
   compatibility issues.
 
 Monitoring and Debugging

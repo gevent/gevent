@@ -7,16 +7,18 @@ from sys import _getframe as sys_getframe
 from sys import exc_info as sys_exc_info
 from weakref import ref as wref
 
-
+# XXX: How to get cython to let us rename this as RawGreenlet
+# like we prefer?
 from greenlet import greenlet
+from greenlet import GreenletExit
 
 from gevent._compat import reraise
 from gevent._compat import PYPY as _PYPY
 from gevent._tblib import dump_traceback
 from gevent._tblib import load_traceback
 
-from gevent.hub import GreenletExit
-from gevent.hub import InvalidSwitchError
+from gevent.exceptions import InvalidSwitchError
+
 from gevent.hub import iwait
 from gevent.hub import wait
 
@@ -875,7 +877,7 @@ def _kill(glet, exception, waiter):
         # XXX do we need this here?
         glet.parent.handle_error(glet, *sys_exc_info())
     if waiter is not None:
-        waiter.switch()
+        waiter.switch(None)
 
 
 def joinall(greenlets, timeout=None, raise_error=False, count=None):
