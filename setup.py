@@ -104,6 +104,21 @@ EVENT = Extension(name="gevent._event",
                   depends=['src/gevent/_event.pxd'],
                   include_dirs=include_dirs)
 
+QUEUE = Extension(name="gevent._queue",
+                  sources=["src/gevent/queue.py"],
+                  depends=['src/gevent/_queue.pxd'],
+                  include_dirs=include_dirs)
+
+HUB_LOCAL = Extension(name="gevent.__hub_local",
+                      sources=["src/gevent/_hub_local.py"],
+                      depends=['src/gevent/__hub_local.pxd'],
+                      include_dirs=include_dirs)
+
+WAITER = Extension(name="gevent.__waiter",
+                   sources=["src/gevent/_waiter.py"],
+                   depends=['src/gevent/__waiter.pxd'],
+                   include_dirs=include_dirs)
+
 
 _to_cythonize = [
     SEMAPHORE,
@@ -112,6 +127,9 @@ _to_cythonize = [
     IDENT,
     IMAP,
     EVENT,
+    QUEUE,
+    HUB_LOCAL,
+    WAITER,
 ]
 
 EXT_MODULES = [
@@ -123,6 +141,9 @@ EXT_MODULES = [
     IDENT,
     IMAP,
     EVENT,
+    QUEUE,
+    HUB_LOCAL,
+    WAITER,
 ]
 
 LIBEV_CFFI_MODULE = 'src/gevent/libev/_corecffi_build.py:ffi'
@@ -191,6 +212,14 @@ if PYPY:
     EXT_MODULES.remove(EVENT)
     _to_cythonize.remove(EVENT)
 
+    EXT_MODULES.remove(QUEUE)
+    _to_cythonize.remove(QUEUE)
+
+    EXT_MODULES.remove(HUB_LOCAL)
+    _to_cythonize.remove(HUB_LOCAL)
+
+    EXT_MODULES.remove(WAITER)
+    _to_cythonize.remove(WAITER)
 
 for mod in _to_cythonize:
     EXT_MODULES.remove(mod)

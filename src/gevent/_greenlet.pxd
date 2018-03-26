@@ -2,10 +2,13 @@
 
 cimport cython
 from gevent.__ident cimport IdentRegistry
-cdef bint _greenlet_imported
+from gevent.__hub_local cimport get_hub_noargs as get_hub
+from gevent.__waiter cimport Waiter
+
 cdef bint _PYPY
 cdef sys_getframe
 cdef sys_exc_info
+cdef Timeout
 
 cdef extern from "greenlet/greenlet.h":
 
@@ -18,8 +21,11 @@ cdef extern from "greenlet/greenlet.h":
     greenlet PyGreenlet_GetCurrent()
     void PyGreenlet_Import()
 
+@cython.final
 cdef inline greenlet getcurrent():
     return PyGreenlet_GetCurrent()
+
+cdef bint _greenlet_imported
 
 cdef inline void greenlet_init():
     global _greenlet_imported
@@ -125,11 +131,6 @@ cdef class Greenlet(greenlet):
     # cpdef _raise_exception(self)
 
 
-@cython.final
-cdef greenlet get_hub()
-# XXX: TODO: Move the definition of TrackedRawGreenlet
-# into a file that can be cython compiled so get_hub can
-# return that.
 
 # Declare a bunch of imports as cdefs so they can
 # be accessed directly as static vars without

@@ -12,6 +12,7 @@ from __future__ import print_function
 
 
 from gevent import _semaphore
+from gevent import queue
 
 
 __all__ = [
@@ -21,6 +22,7 @@ __all__ = [
 
 locals()['Greenlet'] = __import__('gevent').Greenlet
 locals()['Semaphore'] = _semaphore.Semaphore
+locals()['UnboundQueue'] = queue.UnboundQueue
 
 
 class Failure(object):
@@ -58,15 +60,14 @@ class IMapUnordered(Greenlet): # pylint:disable=undefined-variable
         .. versionchanged:: 1.1b3
             Added the *maxsize* parameter.
         """
-        from gevent.queue import Queue
-        super(IMapUnordered, self).__init__()
+        Greenlet.__init__(self) # pylint:disable=undefined-variable
         self.spawn = spawn
         self._zipped = _zipped
         self.func = func
         self.iterable = iterable
-        self.queue = Queue()
-        self._queue_get = self.queue.get
-        self._queue_put = self.queue.put
+        self.queue = UnboundQueue() # pylint:disable=undefined-variable
+
+
         if maxsize:
             # Bounding the queue is not enough if we want to keep from
             # accumulating objects; the result value will be around as
@@ -109,7 +110,7 @@ class IMapUnordered(Greenlet): # pylint:disable=undefined-variable
     next = __next__ # Py2
 
     def _inext(self):
-        return self._queue_get()
+        return self.queue.get()
 
     def _ispawn(self, func, item, item_index):
         if self._result_semaphore is not None:
@@ -149,12 +150,12 @@ class IMapUnordered(Greenlet): # pylint:disable=undefined-variable
             put_finished = True
 
         if greenlet.successful():
-            self._queue_put(self._iqueue_value_for_success(greenlet))
+            self.queue.put(self._iqueue_value_for_success(greenlet))
         else:
-            self._queue_put(self._iqueue_value_for_failure(greenlet))
+            self.queue.put(self._iqueue_value_for_failure(greenlet))
 
         if put_finished:
-            self._queue_put(self._iqueue_value_for_self_finished())
+            self.queue.put(self._iqueue_value_for_self_finished())
 
     def _on_finish(self, exception):
         # Called in this greenlet.
@@ -163,12 +164,12 @@ class IMapUnordered(Greenlet): # pylint:disable=undefined-variable
 
         if exception is not None:
             self.finished = True
-            self._queue_put(self._iqueue_value_for_self_failure(exception))
+            self.queue.put(self._iqueue_value_for_self_failure(exception))
             return
 
         if self._outstanding_tasks <= 0:
             self.finished = True
-            self._queue_put(self._iqueue_value_for_self_finished())
+            self.queue.put(self._iqueue_value_for_self_finished())
 
     def _iqueue_value_for_success(self, greenlet):
         return greenlet.value
@@ -202,7 +203,7 @@ class IMap(IMapUnordered):
         except KeyError:
             # Wait for our index to finish.
             while 1:
-                index, value = self._queue_get()
+                index, value = self.queue.get()
                 if index == self.index:
                     break
                 else:

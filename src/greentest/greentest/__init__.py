@@ -101,7 +101,8 @@ main = unittest.main
 from greentest.hub import QuietHub
 
 import gevent.hub
-gevent.hub.Hub = QuietHub
+gevent.hub.set_default_hub_class(QuietHub)
+
 
 
 from greentest.sockets import bind_and_listen

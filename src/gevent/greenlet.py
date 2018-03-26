@@ -17,9 +17,6 @@ from gevent._tblib import load_traceback
 
 from gevent.hub import GreenletExit
 from gevent.hub import InvalidSwitchError
-from gevent.hub import Waiter
-from gevent.hub import _threadlocal
-from gevent.hub import get_hub_class
 from gevent.hub import iwait
 from gevent.hub import wait
 
@@ -28,6 +25,8 @@ from gevent.timeout import Timeout
 from gevent._config import config as GEVENT_CONFIG
 from gevent._util import Lazy
 from gevent._util import readproperty
+from gevent._hub_local import get_hub_noargs as get_hub
+from gevent import _waiter
 
 
 __all__ = [
@@ -37,23 +36,13 @@ __all__ = [
 ]
 
 
-
 # In Cython, we define these as 'cdef inline' functions. The
 # compilation unit cannot have a direct assignment to them (import
 # is assignment) without generating a 'lvalue is not valid target'
 # error.
 locals()['getcurrent'] = __import__('greenlet').getcurrent
 locals()['greenlet_init'] = lambda: None
-
-def get_hub():
-    # This is identical to gevent.hub._get_hub_noargs so that it
-    # can be inlined for greenlet spawning by cython.
-    # It is also cimported in semaphore.pxd
-    hub = _threadlocal.hub
-    if hub is None:
-        hubtype = get_hub_class()
-        hub = _threadlocal.hub = hubtype()
-    return hub
+locals()['Waiter'] = _waiter.Waiter
 
 
 if _PYPY:
@@ -649,7 +638,7 @@ class Greenlet(greenlet):
         if self.dead:
             self.__handle_death_before_start((exception,))
         else:
-            waiter = Waiter() if block else None
+            waiter = Waiter() if block else None # pylint:disable=undefined-variable
             self.parent.loop.run_callback(_kill, self, exception, waiter)
             if block:
                 waiter.get()
@@ -966,7 +955,7 @@ def killall(greenlets, exception=GreenletExit, block=True, timeout=None):
         return
     loop = greenlets[0].loop
     if block:
-        waiter = Waiter()
+        waiter = Waiter() # pylint:disable=undefined-variable
         loop.run_callback(_killall3, greenlets, exception, waiter)
         t = Timeout._start_new_or_dummy(timeout)
         try:

@@ -31,7 +31,9 @@ class TestDestroyDefaultLoop(unittest.TestCase):
         # crash only happened when that greenlet object
         # was collected at exit time, which was most common
         # in CPython 3.5)
-        del gevent.hub._threadlocal.hub
+        from gevent._hub_local import set_hub
+        set_hub(None)
+
 
 
     def test_destroy_two(self):

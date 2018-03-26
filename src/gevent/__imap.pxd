@@ -1,8 +1,11 @@
 cimport cython
 from gevent._greenlet cimport Greenlet
 from gevent.__semaphore cimport Semaphore
+from gevent._queue cimport UnboundQueue
 
 @cython.freelist(100)
+@cython.internal
+@cython.final
 cdef class Failure:
     cdef readonly exc
     cdef raise_exception
@@ -17,10 +20,8 @@ cdef class IMapUnordered(Greenlet):
     cdef Semaphore _result_semaphore
     cdef int _outstanding_tasks
     cdef int _max_index
-    cdef _queue_get
-    cdef _queue_put
 
-    cdef readonly queue
+    cdef readonly UnboundQueue queue
     cdef readonly bint finished
 
     cdef _inext(self)
