@@ -134,96 +134,13 @@ del _name, _value
 
 _timeout_error = timeout # pylint: disable=undefined-variable
 
+from gevent import _hub_primitives
+_hub_primitives.set_default_timeout_error(_timeout_error)
 
-def wait(io, timeout=None, timeout_exc=_NONE):
-    """
-    Block the current greenlet until *io* is ready.
-
-    If *timeout* is non-negative, then *timeout_exc* is raised after
-    *timeout* second has passed. By default *timeout_exc* is
-    ``socket.timeout('timed out')``.
-
-    If :func:`cancel_wait` is called on *io* by another greenlet,
-    raise an exception in this blocking greenlet
-    (``socket.error(EBADF, 'File descriptor was closed in another
-    greenlet')`` by default).
-
-    :param io: A libev watcher, most commonly an IO watcher obtained from
-        :meth:`gevent.core.loop.io`
-    :keyword timeout_exc: The exception to raise if the timeout expires.
-        By default, a :class:`socket.timeout` exception is raised.
-        If you pass a value for this keyword, it is interpreted as for
-        :class:`gevent.timeout.Timeout`.
-    """
-    if io.callback is not None:
-        raise ConcurrentObjectUseError('This socket is already used by another greenlet: %r' % (io.callback, ))
-    timeout = Timeout._start_new_or_dummy(
-        timeout,
-        (timeout_exc
-         if timeout_exc is not _NONE or timeout is None
-         else _timeout_error('timed out')))
-
-
-    with timeout:
-        return get_hub().wait(io)
-    # rename "io" to "watcher" because wait() works with any watcher
-
-
-def wait_read(fileno, timeout=None, timeout_exc=_NONE):
-    """
-    Block the current greenlet until *fileno* is ready to read.
-
-    For the meaning of the other parameters and possible exceptions,
-    see :func:`wait`.
-
-    .. seealso:: :func:`cancel_wait`
-     """
-    io = get_hub().loop.io(fileno, 1)
-    try:
-        return wait(io, timeout, timeout_exc)
-    finally:
-        io.close()
-
-
-def wait_write(fileno, timeout=None, timeout_exc=_NONE, event=_NONE):
-    """
-    Block the current greenlet until *fileno* is ready to write.
-
-    For the meaning of the other parameters and possible exceptions,
-    see :func:`wait`.
-
-    :keyword event: Ignored. Applications should not pass this parameter.
-       In the future, it may become an error.
-
-    .. seealso:: :func:`cancel_wait`
-    """
-    # pylint:disable=unused-argument
-    io = get_hub().loop.io(fileno, 2)
-    try:
-        return wait(io, timeout, timeout_exc)
-    finally:
-        io.close()
-
-
-def wait_readwrite(fileno, timeout=None, timeout_exc=_NONE, event=_NONE):
-    """
-    Block the current greenlet until *fileno* is ready to read or
-    write.
-
-    For the meaning of the other parameters and possible exceptions,
-    see :func:`wait`.
-
-    :keyword event: Ignored. Applications should not pass this parameter.
-       In the future, it may become an error.
-
-    .. seealso:: :func:`cancel_wait`
-    """
-    # pylint:disable=unused-argument
-    io = get_hub().loop.io(fileno, 3)
-    try:
-        return wait(io, timeout, timeout_exc)
-    finally:
-        io.close()
+wait = _hub_primitives.wait_on_watcher
+wait_read = _hub_primitives.wait_read
+wait_write = _hub_primitives.wait_write
+wait_readwrite = _hub_primitives.wait_readwrite
 
 #: The exception raised by default on a call to :func:`cancel_wait`
 class cancel_wait_ex(error): # pylint: disable=undefined-variable
@@ -236,8 +153,6 @@ class cancel_wait_ex(error): # pylint: disable=undefined-variable
 def cancel_wait(watcher, error=cancel_wait_ex):
     """See :meth:`gevent.hub.Hub.cancel_wait`"""
     get_hub().cancel_wait(watcher, error)
-
-
 
 
 def gethostbyname(hostname):

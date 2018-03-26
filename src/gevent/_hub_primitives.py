@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 # copyright (c) 2018 gevent. See  LICENSE.
-# cython: auto_pickle=False,embedsignature=True,always_allow_keywords=False
+# cython: auto_pickle=False,embedsignature=True,always_allow_keywords=False,binding=True
 """
 A collection of primitives used by the hub, and suitable for
 compilation with Cython because of their frequency of use.
@@ -14,10 +14,13 @@ from __future__ import print_function
 import traceback
 
 from gevent.exceptions import InvalidSwitchError
+from gevent.exceptions import ConcurrentObjectUseError
 
 from gevent import _greenlet_primitives
 from gevent import _waiter
+from gevent._util import _NONE
 from gevent._hub_local import get_hub_noargs as get_hub
+from gevent.timeout import Timeout
 
 # In Cython, we define these as 'cdef inline' functions. The
 # compilation unit cannot have a direct assignment to them (import
@@ -31,8 +34,11 @@ locals()['SwitchOutGreenletWithLoop'] = _greenlet_primitives.SwitchOutGreenletWi
 
 __all__ = [
     'WaitOperationsGreenlet',
-    'iwait',
-    'wait',
+    'iwait_on_objects',
+    'wait_on_objects',
+    'wait_read',
+    'wait_write',
+    'wait_readwrite',
 ]
 
 class WaitOperationsGreenlet(SwitchOutGreenletWithLoop): # pylint:disable=undefined-variable
@@ -160,7 +166,7 @@ class _WaitIterator(object):
                     traceback.print_exc()
 
 
-def iwait(objects, timeout=None, count=None):
+def iwait_on_objects(objects, timeout=None, count=None):
     """
     Iteratively yield *objects* as they are ready, until all (or *count*) are ready
     or *timeout* expired.
@@ -189,7 +195,7 @@ def iwait(objects, timeout=None, count=None):
     return _WaitIterator(objects, hub, timeout, count)
 
 
-def wait(objects=None, timeout=None, count=None):
+def wait_on_objects(objects=None, timeout=None, count=None):
     """
     Wait for ``objects`` to become ready or for event loop to finish.
 
@@ -226,8 +232,131 @@ def wait(objects=None, timeout=None, count=None):
     if objects is None:
         hub = get_hub()
         return hub.join(timeout=timeout) # pylint:disable=
-    return list(iwait(objects, timeout, count))
+    return list(iwait_on_objects(objects, timeout, count))
 
+_timeout_error = Exception
+
+def set_default_timeout_error(e):
+    global _timeout_error
+    _timeout_error = e
+
+def _primitive_wait(watcher, timeout, timeout_exc, hub):
+    if watcher.callback is not None:
+        raise ConcurrentObjectUseError('This socket is already used by another greenlet: %r'
+                                       % (watcher.callback, ))
+
+    if hub is None:
+        hub = get_hub()
+
+    if timeout is None:
+        hub.wait(watcher)
+        return
+
+    timeout = Timeout._start_new_or_dummy(
+        timeout,
+        (timeout_exc
+         if timeout_exc is not _NONE or timeout is None
+         else _timeout_error('timed out')))
+
+    with timeout:
+        hub.wait(watcher)
+
+# Suitable to be bound as an instance method
+def wait_on_socket(socket, watcher, timeout_exc=None):
+    _primitive_wait(watcher, socket.timeout,
+                    timeout_exc if timeout_exc is not None else _NONE,
+                    socket.hub)
+
+def wait_on_watcher(watcher, timeout=None, timeout_exc=_NONE, hub=None):
+    """
+    wait(watcher, timeout=None, [timeout_exc=None]) -> None
+
+    Block the current greenlet until *watcher* is ready.
+
+    If *timeout* is non-negative, then *timeout_exc* is raised after
+    *timeout* second has passed.
+
+    If :func:`cancel_wait` is called on *io* by another greenlet,
+    raise an exception in this blocking greenlet
+    (``socket.error(EBADF, 'File descriptor was closed in another
+    greenlet')`` by default).
+
+    :param io: A libev watcher, most commonly an IO watcher obtained from
+        :meth:`gevent.core.loop.io`
+    :keyword timeout_exc: The exception to raise if the timeout expires.
+        By default, a :class:`socket.timeout` exception is raised.
+        If you pass a value for this keyword, it is interpreted as for
+        :class:`gevent.timeout.Timeout`.
+    """
+    _primitive_wait(watcher, timeout, timeout_exc, hub)
+
+
+def wait_read(fileno, timeout=None, timeout_exc=_NONE):
+    """
+    wait_read(fileno, timeout=None, [timeout_exc=None]) -> None
+
+    Block the current greenlet until *fileno* is ready to read.
+
+    For the meaning of the other parameters and possible exceptions,
+    see :func:`wait`.
+
+    .. seealso:: :func:`cancel_wait`
+    """
+    hub = get_hub()
+    io = hub.loop.io(fileno, 1)
+    try:
+        return wait_on_watcher(io, timeout, timeout_exc, hub)
+    finally:
+        io.close()
+
+
+def wait_write(fileno, timeout=None, timeout_exc=_NONE, event=_NONE):
+    """
+    wait_write(fileno, timeout=None, [timeout_exc=None]) -> None
+
+    Block the current greenlet until *fileno* is ready to write.
+
+    For the meaning of the other parameters and possible exceptions,
+    see :func:`wait`.
+
+    .. deprecated:: 1.1
+       The keyword argument *event* is ignored. Applications should not pass this parameter.
+       In the future, doing so will become an error.
+
+    .. seealso:: :func:`cancel_wait`
+    """
+    # pylint:disable=unused-argument
+    hub = get_hub()
+    io = hub.loop.io(fileno, 2)
+    try:
+        return wait_on_watcher(io, timeout, timeout_exc, hub)
+    finally:
+        io.close()
+
+
+def wait_readwrite(fileno, timeout=None, timeout_exc=_NONE, event=_NONE):
+    """
+    wait_readwrite(fileno, timeout=None, [timeout_exc=None]) -> None
+
+    Block the current greenlet until *fileno* is ready to read or
+    write.
+
+    For the meaning of the other parameters and possible exceptions,
+    see :func:`wait`.
+
+    .. deprecated:: 1.1
+       The keyword argument *event* is ignored. Applications should not pass this parameter.
+       In the future, doing so will become an error.
+
+    .. seealso:: :func:`cancel_wait`
+    """
+    # pylint:disable=unused-argument
+    hub = get_hub()
+    io = hub.loop.io(fileno, 3)
+    try:
+        return wait_on_watcher(io, timeout, timeout_exc, hub)
+    finally:
+        io.close()
 
 
 def _init():

@@ -103,6 +103,7 @@ class _closedsocket(object):
 
 timeout_default = object()
 
+from gevent._hub_primitives import wait_on_socket as _wait_on_socket
 
 class socket(object):
     """
@@ -180,22 +181,7 @@ class socket(object):
 
     ref = property(_get_ref, _set_ref)
 
-    def _wait(self, watcher, timeout_exc=timeout('timed out')):
-        """Block the current greenlet until *watcher* has pending events.
-
-        If *timeout* is non-negative, then *timeout_exc* is raised after *timeout* second has passed.
-        By default *timeout_exc* is ``socket.timeout('timed out')``.
-
-        If :func:`cancel_wait` is called, raise ``socket.error(EBADF, 'File descriptor was closed in another greenlet')``.
-        """
-        if watcher.callback is not None:
-            raise _socketcommon.ConcurrentObjectUseError('This socket is already used by another greenlet: %r' % (watcher.callback, ))
-
-        timeout = Timeout._start_new_or_dummy(self.timeout, timeout_exc, ref=False)
-        try:
-            self.hub.wait(watcher)
-        finally:
-            timeout.close()
+    _wait = _wait_on_socket
 
     def accept(self):
         sock = self._sock

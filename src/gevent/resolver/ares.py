@@ -347,7 +347,7 @@ class Values(object):
         else:
             self.error = source.exception
         if self.count <= 0:
-            self.waiter.switch()
+            self.waiter.switch(None)
 
     def get(self):
         self.waiter.get()

@@ -10,6 +10,8 @@ cdef InvalidSwitchError
 cdef _waiter
 cdef _greenlet_primitives
 cdef traceback
+cdef _timeout_error
+cdef Timeout
 
 
 cdef extern from "greenlet/greenlet.h":
@@ -56,5 +58,12 @@ cdef class _WaitIterator:
 
     cdef _cleanup(self)
 
-cpdef iwait(objects, timeout=*, count=*)
-cpdef wait(objects=*, timeout=*, count=*)
+cpdef iwait_on_objects(objects, timeout=*, count=*)
+cpdef wait_on_objects(objects=*, timeout=*, count=*)
+
+cdef _primitive_wait(watcher, timeout, timeout_exc, WaitOperationsGreenlet hub)
+cpdef wait_on_watcher(watcher, timeout=*, timeout_exc=*, WaitOperationsGreenlet hub=*)
+cpdef wait_read(fileno, timeout=*, timeout_exc=*)
+cpdef wait_write(fileno, timeout=*, timeout_exc=*, event=*)
+cpdef wait_readwrite(fileno, timeout=*, timeout_exc=*, event=*)
+cpdef wait_on_socket(socket, watcher, timeout_exc=*)

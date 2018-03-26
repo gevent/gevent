@@ -50,8 +50,8 @@ from gevent._hub_primitives import WaitOperationsGreenlet
 
 # Export
 from gevent import _hub_primitives
-wait = _hub_primitives.wait
-iwait = _hub_primitives.iwait
+wait = _hub_primitives.wait_on_objects
+iwait = _hub_primitives.iwait_on_objects
 
 from gevent.monkey import get_original
 
