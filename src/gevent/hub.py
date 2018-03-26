@@ -162,7 +162,7 @@ def sleep(seconds=0, ref=True):
     hub = _get_hub_noargs()
     loop = hub.loop
     if seconds <= 0:
-        waiter = Waiter()
+        waiter = Waiter(hub)
         loop.run_callback(waiter.switch)
         waiter.get()
     else:
@@ -672,7 +672,7 @@ class Hub(TrackedRawGreenlet):
         if self.dead:
             return True
 
-        waiter = Waiter()
+        waiter = Waiter(self)
 
         if timeout is not None:
             timeout = self.loop.timer(timeout, ref=False)
@@ -782,16 +782,17 @@ def iwait(objects, timeout=None, count=None):
        in between items yielded by this function.
     """
     # QQQ would be nice to support iterable here that can be generated slowly (why?)
+    hub = _get_hub_noargs()
     if objects is None:
-        yield _get_hub_noargs().join(timeout=timeout)
+        yield hub.join(timeout=timeout)
         return
 
     count = len(objects) if count is None else min(count, len(objects))
-    waiter = _MultipleWaiter()
+    waiter = _MultipleWaiter(hub)
     switch = waiter.switch
 
     if timeout is not None:
-        timer = _get_hub_noargs().loop.timer(timeout, priority=-1)
+        timer = hub.loop.timer(timeout, priority=-1)
         timer.start(switch, _NONE)
 
     try:

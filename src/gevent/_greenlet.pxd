@@ -3,10 +3,12 @@
 cimport cython
 from gevent.__ident cimport IdentRegistry
 from gevent.__hub_local cimport get_hub_noargs as get_hub
-cdef bint _greenlet_imported
+from gevent.__waiter cimport Waiter
+
 cdef bint _PYPY
 cdef sys_getframe
 cdef sys_exc_info
+cdef Timeout
 
 cdef extern from "greenlet/greenlet.h":
 
@@ -19,8 +21,11 @@ cdef extern from "greenlet/greenlet.h":
     greenlet PyGreenlet_GetCurrent()
     void PyGreenlet_Import()
 
+@cython.final
 cdef inline greenlet getcurrent():
     return PyGreenlet_GetCurrent()
+
+cdef bint _greenlet_imported
 
 cdef inline void greenlet_init():
     global _greenlet_imported
