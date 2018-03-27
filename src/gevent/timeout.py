@@ -18,8 +18,8 @@ from __future__ import absolute_import, print_function, division
 from gevent._compat import string_types
 from gevent._util import _NONE
 
-from gevent.hub import getcurrent
-from gevent.hub import _get_hub_noargs as get_hub
+from greenlet import getcurrent
+from gevent._hub_local import get_hub_noargs as get_hub
 
 __all__ = [
     'Timeout',

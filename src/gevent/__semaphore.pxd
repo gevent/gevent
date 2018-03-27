@@ -1,5 +1,4 @@
-# cython: auto_pickle=False
-
+cimport cython
 
 from gevent.__hub_local cimport get_hub_noargs as get_hub
 cdef Timeout

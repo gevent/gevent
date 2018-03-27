@@ -10,6 +10,9 @@
     :members:
     :undoc-members:
 
+    .. automethod:: wait
+    .. automethod:: cancel_wait
+
 .. autoclass:: Waiter
 
 .. autoclass:: LoopExit

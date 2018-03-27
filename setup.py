@@ -119,17 +119,32 @@ WAITER = Extension(name="gevent.__waiter",
                    depends=['src/gevent/__waiter.pxd'],
                    include_dirs=include_dirs)
 
+HUB_PRIMITIVES = Extension(name="gevent.__hub_primitives",
+                           sources=["src/gevent/_hub_primitives.py"],
+                           depends=['src/gevent/__hub_primitives.pxd'],
+                           include_dirs=include_dirs)
+
+GLT_PRIMITIVES = Extension(name="gevent.__greenlet_primitives",
+                           sources=["src/gevent/_greenlet_primitives.py"],
+                           depends=['src/gevent/__greenlet_primitives.pxd'],
+                           include_dirs=include_dirs)
+
+
 
 _to_cythonize = [
+    GLT_PRIMITIVES,
+    HUB_PRIMITIVES,
+    HUB_LOCAL,
+    WAITER,
+    GREENLET,
+
     SEMAPHORE,
     LOCAL,
-    GREENLET,
+
     IDENT,
     IMAP,
     EVENT,
     QUEUE,
-    HUB_LOCAL,
-    WAITER,
 ]
 
 EXT_MODULES = [
@@ -144,6 +159,8 @@ EXT_MODULES = [
     QUEUE,
     HUB_LOCAL,
     WAITER,
+    HUB_PRIMITIVES,
+    GLT_PRIMITIVES,
 ]
 
 LIBEV_CFFI_MODULE = 'src/gevent/libev/_corecffi_build.py:ffi'
@@ -220,6 +237,12 @@ if PYPY:
 
     EXT_MODULES.remove(WAITER)
     _to_cythonize.remove(WAITER)
+
+    EXT_MODULES.remove(GLT_PRIMITIVES)
+    _to_cythonize.remove(GLT_PRIMITIVES)
+    EXT_MODULES.remove(HUB_PRIMITIVES)
+    _to_cythonize.remove(HUB_PRIMITIVES)
+
 
 for mod in _to_cythonize:
     EXT_MODULES.remove(mod)

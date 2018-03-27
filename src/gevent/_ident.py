@@ -70,7 +70,11 @@ class IdentRegistry(object):
     def _return_ident(self, vref):
         # By the time this is called, self._registry has been
         # updated
-        heappush(self._available_idents, vref.value)
+        if heappush is not None:
+            # Under some circumstances we can get called
+            # when the interpreter is shutting down, and globals
+            # aren't available any more.
+            heappush(self._available_idents, vref.value)
 
     def __len__(self):
         return len(self._registry)

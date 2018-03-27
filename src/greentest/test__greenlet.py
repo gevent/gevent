@@ -208,8 +208,8 @@ class TestReturn_link(LinksTestCase):
         self.assertFalse(p)
 
 
-        self.assertIsInstance(event.get(), greenlet.GreenletExit)
-        self.assertIsInstance(queue.get().get(), greenlet.GreenletExit)
+        self.assertIsInstance(event.get(), gevent.GreenletExit)
+        self.assertIsInstance(queue.get().get(), gevent.GreenletExit)
 
         sleep(DELAY)
         self.assertFalse(callback_flag)

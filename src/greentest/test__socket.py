@@ -408,25 +408,15 @@ class TestFunctions(greentest.TestCase):
         # Issue #635
         import gevent.socket
         import gevent._socketcommon
-        orig_get_hub = gevent.socket.get_hub
-
-        class get_hub(object):
-            def wait(self, _io):
-                gevent.sleep(10)
 
         class io(object):
             callback = None
 
-        gevent._socketcommon.get_hub = get_hub
-        try:
-            try:
-                gevent.socket.wait(io(), timeout=0.01)
-            except gevent.socket.timeout:
-                pass
-            else:
-                self.fail("Should raise timeout error")
-        finally:
-            gevent._socketcommon.get_hub = orig_get_hub
+            def start(self, *_args):
+                gevent.sleep(10)
+
+        with self.assertRaises(gevent.socket.timeout):
+            gevent.socket.wait(io(), timeout=0.01)
 
 
     def test_signatures(self):

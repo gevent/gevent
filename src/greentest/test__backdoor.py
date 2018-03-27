@@ -6,8 +6,8 @@ from gevent import backdoor
 
 def read_until(conn, postfix):
     read = b''
-    if not isinstance(postfix, bytes):
-        postfix = postfix.encode('utf-8')
+    assert isinstance(postfix, bytes)
+
     while not read.endswith(postfix):
         result = conn.recv(1)
         if not result:
@@ -53,7 +53,9 @@ class Test(greentest.TestCase):
         conn.close()
         self.close_on_teardown.remove(conn)
 
-    @greentest.skipOnAppVeyor("Times out")
+    @greentest.skipOnLibuvOnTravisOnCPython27(
+        "segfaults; "
+        "See https://github.com/gevent/gevent/pull/1156")
     def test_multi(self):
         self._make_server()
 
@@ -100,7 +102,7 @@ class Test(greentest.TestCase):
         conn = self._create_connection()
         read_until(conn, b'>>> ')
         conn.sendall(b'locals()["__builtins__"]\r\n')
-        response = read_until(conn, '>>> ')
+        response = read_until(conn, b'>>> ')
         self.assertTrue(len(response) < 300, msg="locals() unusable: %s..." % response)
 
         self._close(conn)
@@ -123,7 +125,7 @@ class Test(greentest.TestCase):
         conn = self._create_connection()
         read_until(conn, b'>>> ')
         conn.sendall(b'bad()\r\n')
-        response = read_until(conn, '>>> ')
+        response = read_until(conn, b'>>> ')
         response = response.replace('\r\n', '\n')
         self.assertEqual('switching out, then throwing in\nGot Empty\nswitching out\nswitched in\n>>> ', response)
 
