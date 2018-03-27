@@ -87,6 +87,8 @@ elif sys.version_info[0] == 2:
 
 PYPY3 = PYPY and PY3
 
+PY27_ONLY = sys.version_info[0] == 2 and sys.version_info[1] == 7
+
 PYGTE279 = (
     sys.version_info[0] == 2
     and sys.version_info[1] >= 7
