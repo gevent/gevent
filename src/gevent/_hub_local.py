@@ -8,7 +8,7 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
-from gevent.monkey import get_original
+
 from gevent._compat import thread_mod_name
 
 __all__ = [
@@ -19,7 +19,9 @@ __all__ = [
 
 # These must be the "real" native thread versions,
 # not monkey-patched.
-class _Threadlocal(get_original(thread_mod_name, '_local')):
+# We are imported early enough (by gevent/__init__) that
+# we can rely on not being monkey-patched in any way yet.
+class _Threadlocal(__import__(thread_mod_name)._local):
 
     def __init__(self):
         # Use a class with an initializer so that we can test

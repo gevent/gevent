@@ -19,8 +19,8 @@ from gevent._tblib import load_traceback
 
 from gevent.exceptions import InvalidSwitchError
 
-from gevent.hub import iwait
-from gevent.hub import wait
+from gevent._hub_primitives import iwait_on_objects as iwait
+from gevent._hub_primitives import wait_on_objects as wait
 
 from gevent.timeout import Timeout
 

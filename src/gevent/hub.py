@@ -53,13 +53,14 @@ from gevent import _hub_primitives
 wait = _hub_primitives.wait_on_objects
 iwait = _hub_primitives.iwait_on_objects
 
-from gevent.monkey import get_original
 
 from gevent.exceptions import LoopExit
 
 from gevent._waiter import Waiter
 
-get_thread_ident = get_original(thread_mod_name, 'get_ident')
+# Need the real get_ident. We're imported early enough (by gevent/__init__.py)
+# that we can be sure nothing is monkey patched yet.
+get_thread_ident = __import__(thread_mod_name).get_ident
 MAIN_THREAD_IDENT = get_thread_ident() # XXX: Assuming import is done on the main thread.
 
 

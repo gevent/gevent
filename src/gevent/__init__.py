@@ -83,7 +83,10 @@ except AttributeError:
             _switchinterval = interval
 
 from gevent._config import config
-from gevent.hub import get_hub, iwait, wait
+from gevent._hub_local import get_hub
+from gevent._hub_primitives import iwait_on_objects as iwait
+from gevent._hub_primitives import wait_on_objects as wait
+
 from gevent.greenlet import Greenlet, joinall, killall
 joinall = joinall # export for pylint
 spawn = Greenlet.spawn
