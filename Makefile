@@ -131,7 +131,7 @@ PY27=$(BUILD_RUNTIMES)/snakepit/python2.7.14
 PY34=$(BUILD_RUNTIMES)/snakepit/python3.4.7
 PY35=$(BUILD_RUNTIMES)/snakepit/python3.5.4
 PY36=$(BUILD_RUNTIMES)/snakepit/python3.6.4
-PY37=$(BUILD_RUNTIMES)/snakepit/python3.7.0b2
+PY37=$(BUILD_RUNTIMES)/snakepit/python3.7.0b3
 PYPY=$(BUILD_RUNTIMES)/snakepit/pypy5100
 PYPY3=$(BUILD_RUNTIMES)/snakepit/pypy3.5_5101
 
@@ -197,7 +197,7 @@ test-py36: $(PY36)
 	PYTHON=python3.6.4 PATH=$(BUILD_RUNTIMES)/versions/python3.6.4/bin:$(PATH) make develop allbackendtest
 
 test-py37: $(PY37)
-	LD_LIBRARY_PATH=$(BUILD_RUNTIMES)/versions/python3.7.0b2/openssl/lib PYTHON=python3.7.0b2 PATH=$(BUILD_RUNTIMES)/versions/python3.7.0b2/bin:$(PATH) make develop allbackendtest
+	LD_LIBRARY_PATH=$(BUILD_RUNTIMES)/versions/python3.7.0b3/openssl/lib PYTHON=python3.7.0b3 PATH=$(BUILD_RUNTIMES)/versions/python3.7.0b3/bin:$(PATH) make develop allbackendtest
 
 test-pypy: $(PYPY)
 	PYTHON=$(PYPY) PATH=$(BUILD_RUNTIMES)/versions/pypy5100/bin:$(PATH) make develop cffibackendtest

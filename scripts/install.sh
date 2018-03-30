@@ -81,8 +81,12 @@ install () {
   fi
  rm -f $SNAKEPIT/$ALIAS
  mkdir -p $SNAKEPIT
- LD_LIBRARY_PATH="$OPENSSL_PATH" $SOURCE/bin/python -m pip.__main__ install --upgrade pip wheel virtualenv
+ ls -l $SNAKEPIT
+ ls -l $BASE/versions
+ ls -l $SOURCE/
+ ls -l $SOURCE/bin
  ln -s $SOURCE/bin/python $SNAKEPIT/$ALIAS
+ LD_LIBRARY_PATH="$OPENSSL_PATH" $SOURCE/bin/python -m pip.__main__ install --upgrade pip wheel virtualenv
 }
 
 
@@ -104,7 +108,7 @@ for var in "$@"; do
       install 3.6.4 python3.6.4
       ;;
     3.7)
-      install 3.7.0b2 python3.7.0b2
+      install 3.7.0b3 python3.7.0b3
       ;;
     pypy)
       install pypy2.7-5.10.0 pypy5100

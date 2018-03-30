@@ -12,6 +12,11 @@ Dependencies
 
 - Cython 0.28.1 is now used to build gevent from a source checkout.
 
+Platform Support
+----------------
+
+- Travis CI tests on Python 3.7.0b3.
+
 Bug Fixes
 ---------
 
