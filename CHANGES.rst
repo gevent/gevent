@@ -60,6 +60,10 @@ Enhancements
   time-sensitive parts of the hub itself. Please report any
   compatibility issues.
 
+- ``python -m gevent.monkey <script>`` accepts more values for
+  ``<script>``, including paths to packages or compiled bytecode.
+  Reported in :issue:`1157` by Eddie Linder.
+
 Monitoring and Debugging
 ------------------------
 

@@ -766,13 +766,13 @@ def main():
     patch_all(**args)
     if argv:
         sys.argv = argv
-        __package__ = None
-        assert __package__ is None
-        globals()['__file__'] = sys.argv[0]  # issue #302
-        globals()['__package__'] = None # issue #975: make script be its own package
-        with open(sys.argv[0]) as f:
-            # Be sure to exec in globals to avoid import pollution. Also #975.
-            exec(f.read(), globals())
+        import runpy
+        # Use runpy.run_path to closely (exactly) match what the
+        # interpreter does given 'python <path>'. This includes allowing
+        # passing .pyc/.pyo files and packages with a __main__ and
+        # potentially even zip files. Previously we used exec, which only
+        # worked if we directly read a python source file.
+        runpy.run_path(sys.argv[0], run_name='__main__')
     else:
         print(script_help)
 
@@ -794,6 +794,12 @@ If no OPTIONS present, monkey patches all the modules it can patch.
 You can exclude a module with --no-module, e.g. --no-thread. You can
 specify a module to patch with --module, e.g. --socket. In the latter
 case only the modules specified on the command line will be patched.
+
+.. versionchanged:: 1.3b1
+    The *script* argument can now be any argument that can be passed to `runpy.run_path`,
+    just like the interpreter itself does, for example a package directory containing ``__main__.py``.
+    Previously it had to be the path to
+    a .py source file.
 
 MONKEY OPTIONS: --verbose %s""" % ', '.join('--[no-]%s' % m for m in modules)
     return script_help, patch_all_args, modules
