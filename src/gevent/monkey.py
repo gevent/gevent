@@ -772,7 +772,8 @@ def main():
         # passing .pyc/.pyo files and packages with a __main__ and
         # potentially even zip files. Previously we used exec, which only
         # worked if we directly read a python source file.
-        runpy.run_path(sys.argv[0], run_name='__main__')
+        runpy.run_path(sys.argv[0],
+                       run_name='__main__')
     else:
         print(script_help)
 

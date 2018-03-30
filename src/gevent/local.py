@@ -153,8 +153,6 @@ affects what we see:
 """
 from __future__ import print_function
 
-import sys
-_PYPY = hasattr(sys, 'pypy_version_info')
 from copy import copy
 from weakref import ref
 
@@ -574,14 +572,20 @@ try:
     # in different ways. In CPython and PyPy3, it must be wrapped with classmethod;
     # in PyPy2, it must not. In either case, the args that get passed to
     # it are stil wrong.
-    if _PYPY and sys.version_info[:2] < (3, 0):
+    local.__new__ = 'None'
+except TypeError: # pragma: no cover
+    # Must be compiled
+    pass
+else:
+    from gevent._compat import PYPY
+    from gevent._compat import PY2
+    if PYPY and PY2:
         local.__new__ = __new__
     else:
         local.__new__ = classmethod(__new__)
-except TypeError: # pragma: no cover
-    pass
-finally:
-    del sys
+
+    del PYPY
+    del PY2
 
 _init()
 
