@@ -80,6 +80,7 @@ LIBUV_SOURCES = [
     _libuv_source('threadpool.c'),
     _libuv_source('uv-common.c'),
     _libuv_source('version.c'),
+    _libuv_source('uv-data-getter-setters.c'),
 ]
 
 if WIN:

@@ -4,7 +4,7 @@ import pickle
 import sys
 import greentest
 try:
-    from gevent.ares import ares_host_result
+    from gevent.resolver.cares import ares_host_result
 except ImportError as ex:
     print(ex)
     sys.exit(0)

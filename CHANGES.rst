@@ -12,6 +12,8 @@ Dependencies
 
 - Cython 0.28.1 is now used to build gevent from a source checkout.
 
+- The bundled libuv is now 1.19.2, up from 1.18.0.
+
 Platform Support
 ----------------
 
