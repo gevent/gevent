@@ -520,7 +520,7 @@ class Popen(object):
         # On POSIX, the child objects are file descriptors.  On
         # Windows, these are Windows file handles.  The parent objects
         # are file descriptors on both platforms.  The parent objects
-        # are None when not using PIPEs. The child objects are None
+        # are -1 when not using PIPEs. The child objects are -1
         # when not redirecting.
 
         (p2cread, p2cwrite,
@@ -531,11 +531,11 @@ class Popen(object):
         # quickly terminating child could make our fds unwrappable
         # (see #8458).
         if mswindows:
-            if p2cwrite is not None:
+            if p2cwrite != -1:
                 p2cwrite = msvcrt.open_osfhandle(p2cwrite.Detach(), 0)
-            if c2pread is not None:
+            if c2pread != -1:
                 c2pread = msvcrt.open_osfhandle(c2pread.Detach(), 0)
-            if errread is not None:
+            if errread != -1:
                 errread = msvcrt.open_osfhandle(errread.Detach(), 0)
 
         text_mode = PY3 and (self.encoding or self.errors or universal_newlines or text)
@@ -545,7 +545,7 @@ class Popen(object):
             # Python 3, so it's actually a unicode str
             self._communicate_empty_value = ''
 
-        if p2cwrite is not None:
+        if p2cwrite != -1:
             if PY3 and text_mode:
                 # Under Python 3, if we left on the 'b' we'd get different results
                 # depending on whether we used FileObjectPosix or FileObjectThread
@@ -556,7 +556,7 @@ class Popen(object):
                                               encoding=self.encoding, errors=self.errors)
             else:
                 self.stdin = FileObject(p2cwrite, 'wb', bufsize)
-        if c2pread is not None:
+        if c2pread != -1:
             if universal_newlines or text_mode:
                 if PY3:
                     # FileObjectThread doesn't support the 'U' qualifier
@@ -573,7 +573,7 @@ class Popen(object):
                     self.stdout = FileObject(c2pread, 'rU', bufsize)
             else:
                 self.stdout = FileObject(c2pread, 'rb', bufsize)
-        if errread is not None:
+        if errread != -1:
             if universal_newlines or text_mode:
                 if PY3:
                     self.stderr = FileObject(errread, 'rb', bufsize)
@@ -794,11 +794,11 @@ class Popen(object):
             p2cread, p2cwrite, c2pread, c2pwrite, errread, errwrite
             """
             if stdin is None and stdout is None and stderr is None:
-                return (None, None, None, None, None, None)
+                return (-1, -1, -1, -1, -1, -1)
 
-            p2cread, p2cwrite = None, None
-            c2pread, c2pwrite = None, None
-            errread, errwrite = None, None
+            p2cread, p2cwrite = -1, -1
+            c2pread, c2pwrite = -1, -1
+            errread, errwrite = -1, -1
 
             try:
                 DEVNULL
@@ -911,7 +911,7 @@ class Popen(object):
             # Process startup details
             if startupinfo is None:
                 startupinfo = STARTUPINFO()
-            if None not in (p2cread, c2pwrite, errwrite):
+            if -1 not in (p2cread, c2pwrite, errwrite):
                 startupinfo.dwFlags |= STARTF_USESTDHANDLES
                 startupinfo.hStdInput = p2cread
                 startupinfo.hStdOutput = c2pwrite
@@ -1062,9 +1062,9 @@ class Popen(object):
             """Construct and return tuple with IO objects:
             p2cread, p2cwrite, c2pread, c2pwrite, errread, errwrite
             """
-            p2cread, p2cwrite = None, None
-            c2pread, c2pwrite = None, None
-            errread, errwrite = None, None
+            p2cread, p2cwrite = -1, -1
+            c2pread, c2pwrite = -1, -1
+            errread, errwrite = -1, -1
 
             try:
                 DEVNULL
@@ -1102,7 +1102,10 @@ class Popen(object):
             elif stderr == PIPE:
                 errread, errwrite = self.pipe_cloexec()
             elif stderr == STDOUT:
-                errwrite = c2pwrite
+                if c2pwrite != -1:
+                    errwrite = c2pwrite
+                else: # child's stdout is not set, use parent's stdout
+                    errwrite = sys.__stdout__.fileno()
             elif stderr == _devnull:
                 errwrite = self._get_devnull()
             elif isinstance(stderr, int):
@@ -1234,11 +1237,11 @@ class Popen(object):
                         # Child
                         try:
                             # Close parent's pipe ends
-                            if p2cwrite is not None:
+                            if p2cwrite != -1:
                                 os.close(p2cwrite)
-                            if c2pread is not None:
+                            if c2pread != -1:
                                 os.close(c2pread)
-                            if errread is not None:
+                            if errread != -1:
                                 os.close(errread)
                             os.close(errpipe_read)
 
@@ -1247,7 +1250,7 @@ class Popen(object):
                             # is possible that it is overwritten (#12607).
                             if c2pwrite == 0:
                                 c2pwrite = os.dup(c2pwrite)
-                            if errwrite == 0 or errwrite == 1:
+                            while errwrite == 0 or errwrite == 1:
                                 errwrite = os.dup(errwrite)
 
                             # Dup fds for child
@@ -1257,9 +1260,15 @@ class Popen(object):
                                 # would be a no-op (issue #10806).
                                 if a == b:
                                     self._set_cloexec_flag(a, False)
-                                elif a is not None:
+                                elif a != -1:
                                     os.dup2(a, b)
-                                self._remove_nonblock_flag(b)
+                                try:
+                                    self._remove_nonblock_flag(b)
+                                except OSError:
+                                    # Ignore EBADF, it may not actually be
+                                    # open yet.
+                                    # Tested beginning in 3.7.0b3 test_subprocess.py
+                                    pass
                             _dup2(p2cread, 0)
                             _dup2(c2pwrite, 1)
                             _dup2(errwrite, 2)
@@ -1355,11 +1364,11 @@ class Popen(object):
 
                 # self._devnull is not always defined.
                 devnull_fd = getattr(self, '_devnull', None)
-                if p2cread is not None and p2cwrite is not None and p2cread != devnull_fd:
+                if p2cread != -1 and p2cwrite != -1 and p2cread != devnull_fd:
                     os.close(p2cread)
-                if c2pwrite is not None and c2pread is not None and c2pwrite != devnull_fd:
+                if c2pwrite != -1 and c2pread != -1 and c2pwrite != devnull_fd:
                     os.close(c2pwrite)
-                if errwrite is not None and errread is not None and errwrite != devnull_fd:
+                if errwrite != -1 and errread != -1 and errwrite != devnull_fd:
                     os.close(errwrite)
                 if devnull_fd is not None:
                     os.close(devnull_fd)
@@ -1379,7 +1388,7 @@ class Popen(object):
                 self.wait()
                 child_exception = pickle.loads(data)
                 for fd in (p2cwrite, c2pread, errread):
-                    if fd is not None:
+                    if fd is not None and fd != -1:
                         os.close(fd)
                 if isinstance(child_exception, OSError):
                     child_exception.filename = executable
