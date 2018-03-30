@@ -79,7 +79,6 @@ test__hub.py
 test__import_blocking_in_greenlet.py
 test__import_wait.py
 test__issue230.py
-test__issue302monkey.py
 test__issue330.py
 test__issue467.py
 test__issue6.py

@@ -86,12 +86,23 @@ def import_c_accel(globs, cname):
         # or we're running from the C extension
         return
 
-    import importlib
+
     from gevent._compat import PURE_PYTHON
     if PURE_PYTHON:
         return
 
-    mod = importlib.import_module(cname)
+    import importlib
+    import warnings
+    with warnings.catch_warnings():
+        # Python 3.7 likes to produce
+        # "ImportWarning: can't resolve
+        #   package from __spec__ or __package__, falling back on
+        #   __name__ and __path__"
+        # when we load cython compiled files. This is probably a bug in
+        # Cython, but it doesn't seem to have any consequences, it's
+        # just annoying to see and can mess up our unittests.
+        warnings.simplefilter('ignore', ImportWarning)
+        mod = importlib.import_module(cname)
 
     # By adopting the entire __dict__, we get a more accurate
     # __file__ and module repr, plus we don't leak any imported
