@@ -2,14 +2,13 @@ Table Of Contents
 =================
 
 .. toctree::
+   :maxdepth: 2
 
    intro
    whatsnew_1_3
-   reference
-   whatsnew_1_2
-   whatsnew_1_1
-   whatsnew_1_0
    changelog
+   reference
+   older_releases
 
 * :ref:`genindex`
 * :ref:`modindex`

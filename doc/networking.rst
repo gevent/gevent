@@ -1,5 +1,6 @@
-Networking interfaces
----------------------
+======================================
+ Networking interfaces (sockets, SSL)
+======================================
 
 .. toctree::
 

@@ -2,7 +2,14 @@
  What's new in gevent 1.0
 ==========================
 
-The detailed information is available in changelog. Below is the summary of all changes since 0.13.8.
+.. toctree::
+   :maxdepth: 2
+
+   changelog_1_0
+
+
+The detailed information is available in :doc:`changelog_1_0`. Below is the
+summary of all changes since 0.13.8.
 
 Gevent 1.0 supports Python 2.5 - 2.7. The version of greenlet required is 0.3.2. The source distribution
 now includes the dependencies (libev and c-ares) and has no dependencies other than greenlet.

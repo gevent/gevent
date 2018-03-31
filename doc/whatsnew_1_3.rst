@@ -2,6 +2,11 @@
  What's new in gevent 1.3
 ==========================
 
+.. toctree::
+   :maxdepth: 2
+
+   changelog
+
 Detailed information on what has changed is available in the
 :doc:`changelog`. This document summarizes the most important changes
 since :doc:`gevent 1.2 <whatsnew_1_2>`.
