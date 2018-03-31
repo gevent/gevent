@@ -301,17 +301,12 @@ if LIBUV:
 
 
 
-    if WIN and PYPY:
-        # From PyPy2-v5.9.0, using its version of tests,
+    if WIN and PY2:
+        # From PyPy2-v5.9.0 and CPython 2.7.14, using its version of tests,
         # which do work on darwin (and possibly linux?)
         # I can't produce them in a local VM running Windows 10
         # and the same pypy version.
         disabled_tests += [
-            # appears to timeout?
-            'test_threading.ThreadTests.test_finalize_with_trace',
-            'test_asyncore.DispatcherWithSendTests_UsePoll.test_send',
-            'test_asyncore.DispatcherWithSendTests.test_send',
-
             # These, which use asyncore, fail with
             # 'NoneType is not iterable' on 'conn, addr = self.accept()'
             # That returns None when the underlying socket raises
@@ -358,13 +353,6 @@ if LIBUV:
             # This one times out, but it's still a non-blocking socket
             'test_ftplib.TestFTPClass.test_makeport',
 
-            # More unexpected timeouts
-            'test_smtplib.TooLongLineTests.testLineTooLong',
-            'test_smtplib.GeneralTests.testTimeoutValue',
-            'test_ssl.ContextTests.test__https_verify_envvar',
-            'test_subprocess.ProcessTestCase.test_check_output',
-            'test_telnetlib.ReadTests.test_read_eager_A',
-
             # A timeout, possibly because of the way we handle interrupts?
             'test_socketserver.SocketServerTest.test_InterruptedServerSelectCall',
             'test_socketserver.SocketServerTest.test_InterruptServerSelectCall',
@@ -393,35 +381,63 @@ if LIBUV:
             'test_httpservers.BaseHTTPServerTestCase.test_version_digits',
             'test_httpservers.BaseHTTPServerTestCase.test_version_invalid',
             'test_httpservers.BaseHTTPServerTestCase.test_version_none',
+            'test_httpservers.SimpleHTTPServerTestCase.test_get',
+            'test_httpservers.SimpleHTTPServerTestCase.test_head',
+            'test_httpservers.SimpleHTTPServerTestCase.test_invalid_requests',
+            'test_httpservers.SimpleHTTPServerTestCase.test_path_without_leading_slash',
+            'test_httpservers.CGIHTTPServerTestCase.test_invaliduri',
+            'test_httpservers.CGIHTTPServerTestCase.test_issue19435',
 
-            # But on Windows, our gc fix for that doesn't work anyway
-            # so we have to disable it.
-            'test_urllib2_localnet.TestUrlopen.test_https_with_cafile',
+            # Sometimes raises LoopExit on CPython
+            'test_socket.BufferIOTest.testRecvFromIntoArray',
 
-            # These tests hang. see above.
-            'test_threading.ThreadJoinOnShutdown.test_1_join_on_shutdown',
-            'test_threading.ThreadingExceptionTests.test_print_exception',
+            # Unexpected timeouts sometimes
+            'test_smtplib.TooLongLineTests.testLineTooLong',
+            'test_smtplib.GeneralTests.testTimeoutValue',
 
-            # Our copy of these in test__subprocess.py also hangs.
-            # Anything that uses Popen.communicate or directly uses
-            # Popen.stdXXX.read hangs. It's not clear why.
-            'test_subprocess.ProcessTestCase.test_communicate',
-            'test_subprocess.ProcessTestCase.test_cwd',
-            'test_subprocess.ProcessTestCase.test_env',
-            'test_subprocess.ProcessTestCase.test_stderr_pipe',
-            'test_subprocess.ProcessTestCase.test_stdout_pipe',
-            'test_subprocess.ProcessTestCase.test_stdout_stderr_pipe',
-            'test_subprocess.ProcessTestCase.test_stderr_redirect_with_no_stdout_redirect',
-            'test_subprocess.ProcessTestCase.test_stdout_filedes_of_stdout',
-            'test_subprocess.ProcessTestcase.test_stdout_none',
-            'test_subprocess.ProcessTestcase.test_universal_newlines',
-            'test_subprocess.ProcessTestcase.test_writes_before_communicate',
-            'test_subprocess.Win32ProcessTestCase._kill_process',
-            'test_subprocess.Win32ProcessTestCase._kill_dead_process',
-            'test_subprocess.Win32ProcessTestCase.test_shell_sequence',
-            'test_subprocess.Win32ProcessTestCase.test_shell_string',
-            'test_subprocess.CommandsWithSpaces.with_spaces',
         ]
+
+        if PYPY:
+            disabled_tests += [
+                # appears to timeout?
+                'test_threading.ThreadTests.test_finalize_with_trace',
+                'test_asyncore.DispatcherWithSendTests_UsePoll.test_send',
+                'test_asyncore.DispatcherWithSendTests.test_send',
+
+                # More unexpected timeouts
+                'test_ssl.ContextTests.test__https_verify_envvar',
+                'test_subprocess.ProcessTestCase.test_check_output',
+                'test_telnetlib.ReadTests.test_read_eager_A',
+
+                # But on Windows, our gc fix for that doesn't work anyway
+                # so we have to disable it.
+                'test_urllib2_localnet.TestUrlopen.test_https_with_cafile',
+
+                # These tests hang. see above.
+                'test_threading.ThreadJoinOnShutdown.test_1_join_on_shutdown',
+                'test_threading.ThreadingExceptionTests.test_print_exception',
+
+                # Our copy of these in test__subprocess.py also hangs.
+                # Anything that uses Popen.communicate or directly uses
+                # Popen.stdXXX.read hangs. It's not clear why.
+                'test_subprocess.ProcessTestCase.test_communicate',
+                'test_subprocess.ProcessTestCase.test_cwd',
+                'test_subprocess.ProcessTestCase.test_env',
+                'test_subprocess.ProcessTestCase.test_stderr_pipe',
+                'test_subprocess.ProcessTestCase.test_stdout_pipe',
+                'test_subprocess.ProcessTestCase.test_stdout_stderr_pipe',
+                'test_subprocess.ProcessTestCase.test_stderr_redirect_with_no_stdout_redirect',
+                'test_subprocess.ProcessTestCase.test_stdout_filedes_of_stdout',
+                'test_subprocess.ProcessTestcase.test_stdout_none',
+                'test_subprocess.ProcessTestcase.test_universal_newlines',
+                'test_subprocess.ProcessTestcase.test_writes_before_communicate',
+                'test_subprocess.Win32ProcessTestCase._kill_process',
+                'test_subprocess.Win32ProcessTestCase._kill_dead_process',
+                'test_subprocess.Win32ProcessTestCase.test_shell_sequence',
+                'test_subprocess.Win32ProcessTestCase.test_shell_string',
+                'test_subprocess.CommandsWithSpaces.with_spaces',
+            ]
+
 
     if WIN:
 
@@ -831,7 +847,9 @@ if PY34:
             # ld.so: dl-open.c: 231: dl_open_worker: Assertion
             # `_dl_debug_initialize (0, args->nsid)->r_state ==
             # RT_CONSISTENT' failed!" and fail.
-            'test_threading.ThreadTests.test_is_alive_after_fork',
+            disabled_tests += [
+                'test_threading.ThreadTests.test_is_alive_after_fork',
+            ]
 
     if TRAVIS:
         disabled_tests += [
