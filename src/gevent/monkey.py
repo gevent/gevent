@@ -56,12 +56,15 @@ Functions
 """
 from __future__ import absolute_import
 from __future__ import print_function
+
 import sys
+from importlib import import_module
 
 __all__ = [
     'patch_all',
     'patch_builtins',
     'patch_dns',
+    'patch_multiprocessing',
     'patch_os',
     'patch_select',
     'patch_signal',
@@ -79,16 +82,17 @@ __all__ = [
     'main',
 ]
 
-
 if sys.version_info[0] >= 3:
     string_types = (str,)
     PY3 = True
 else:
-    import __builtin__ # pylint:disable=import-error
+    import __builtin__  # pylint:disable=import-error
+
     string_types = (__builtin__.basestring,)
     PY3 = False
 
 WIN = sys.platform.startswith("win")
+
 
 class MonkeyPatchWarning(RuntimeWarning):
     """
@@ -162,14 +166,21 @@ def get_original(mod_name, item_name):
         return _get_original(mod_name, [item_name])[0]
     return _get_original(mod_name, item_name)
 
+
 _NONE = object()
 
 
-def patch_item(module, attr, newitem):
+def patch_item(module, attr, newitem, rewrite_module=False):
     olditem = getattr(module, attr, _NONE)
     if olditem is not _NONE:
         saved.setdefault(module.__name__, {}).setdefault(attr, olditem)
     setattr(module, attr, newitem)
+    if rewrite_module:
+        if olditem is not None and newitem is not None:
+            try:
+                newitem.__module__ = olditem.__module__
+            except (TypeError, AttributeError):
+                pass
 
 
 def remove_item(module, attr):
@@ -189,13 +200,14 @@ def __call_module_hook(gevent_module, name, module, items, warn):
     else:
         func(module, items, warn)
 
-def patch_module(name, items=None, _warnings=None):
+
+def patch_module(name, items=None, _warnings=None, rewrite_module=False):
     def warn(message):
         _queue_warning(message, _warnings)
 
-    gevent_module = getattr(__import__('gevent.' + name), name)
+    gevent_module = import_module('gevent.' + name)
     module_name = getattr(gevent_module, '__target__', name)
-    module = __import__(module_name)
+    module = import_module(module_name)
     if items is None:
         items = getattr(gevent_module, '__implements__', None)
         if items is None:
@@ -204,7 +216,7 @@ def patch_module(name, items=None, _warnings=None):
     __call_module_hook(gevent_module, 'will', module, items, warn)
 
     for attr in items:
-        patch_item(module, attr, getattr(gevent_module, attr))
+        patch_item(module, attr, getattr(gevent_module, attr), rewrite_module=rewrite_module)
 
     __call_module_hook(gevent_module, 'did', module, items, warn)
 
@@ -302,7 +314,7 @@ def _patch_existing_locks(threading):
         class _ModuleLock(object):
             pass
     else:
-        _ModuleLock = importlib._bootstrap._ModuleLock # python 2 pylint: disable=no-member
+        _ModuleLock = importlib._bootstrap._ModuleLock  # python 2 pylint: disable=no-member
     # It might be possible to walk up all the existing stack frames to find
     # locked objects...at least if they use `with`. To be sure, we look at every object
     # Since we're supposed to be done very early in the process, there shouldn't be
@@ -315,7 +327,7 @@ def _patch_existing_locks(threading):
     gc = __import__('gc')
     for o in gc.get_objects():
         if isinstance(o, rlock_type):
-            if hasattr(o, '_owner'): # Py3
+            if hasattr(o, '_owner'):  # Py3
                 if o._owner is not None:
                     o._owner = tid
             else:
@@ -451,6 +463,7 @@ def patch_thread(threading=True, _threading_local=True, Event=True, logging=True
                 if end is not None and time() > end:
                     return
                 sleep(0.01)
+
         return join
 
     if threading:
@@ -506,12 +519,12 @@ def patch_socket(dns=True, aggressive=True):
     # However, because gevent.socket.socket.connect is a Python function, the exception raised by it causes
     # _socket object to be referenced by the frame, thus causing the next invocation of bind(source_address) to fail.
     if dns:
-        items = socket.__implements__ # pylint:disable=no-member
+        items = socket.__implements__  # pylint:disable=no-member
     else:
-        items = set(socket.__implements__) - set(socket.__dns__) # pylint:disable=no-member
+        items = set(socket.__implements__) - set(socket.__dns__)  # pylint:disable=no-member
     patch_module('socket', items=items)
     if aggressive:
-        if 'ssl' not in socket.__implements__: # pylint:disable=no-member
+        if 'ssl' not in socket.__implements__:  # pylint:disable=no-member
             remove_item(socket, 'ssl')
 
 
@@ -524,7 +537,7 @@ def patch_dns():
     done automatically by that method if requested.
     """
     from gevent import socket
-    patch_module('socket', items=socket.__dns__) # pylint:disable=no-member
+    patch_module('socket', items=socket.__dns__)  # pylint:disable=no-member
 
 
 def patch_ssl(_warnings=None, _first_time=True):
@@ -587,13 +600,14 @@ def patch_select(aggressive=True):
         # Note that this obviously only happens if selectors was imported after we had patched
         # select; but there is a code path that leads to it being imported first (but now we've
         # patched select---so we can't compare them identically)
-        select = __import__('select') # Should be gevent-patched now
+        select = __import__('select')  # Should be gevent-patched now
         orig_select_select = get_original('select', 'select')
         assert select.select is not orig_select_select
         selectors = __import__('selectors')
         if selectors.SelectSelector._select in (select.select, orig_select_select):
-            def _select(self, *args, **kwargs): # pylint:disable=unused-argument
+            def _select(self, *args, **kwargs):  # pylint:disable=unused-argument
                 return select.select(*args, **kwargs)
+
             selectors.SelectSelector._select = _select
             _select._gevent_monkey = True
 
@@ -659,6 +673,26 @@ def patch_signal():
     patch_module("signal")
 
 
+def patch_multiprocessing():
+    if sys.version_info[0] == 3:
+        patch_module("_mp.3._mp_spawn", rewrite_module=True)
+        patch_module("_mp.3._mp_util", rewrite_module=True)
+        patch_module("_mp.3._mp_connection", rewrite_module=True)
+        patch_module("_mp.3._mp_synchronize", rewrite_module=True)
+        patch_module("_mp.3._mp_sem_tracker", rewrite_module=True)
+        patch_module("_mp.3._mp_forkserver", rewrite_module=True)
+    else:
+        _mp = import_module("gevent._mp.2_7.__mp")
+        patch_module("_mp.2_7._mp_synchronize", rewrite_module=True)
+
+        sys.modules["__multiprocessing"] = sys.modules["_multiprocessing"]
+        sys.modules["_multiprocessing"] = _mp
+        for mod_name in ("multiprocessing.connection", "multiprocessing.heap",
+                         "multiprocessing.queues", "multiprocessing.reduction"):
+            mod = import_module(mod_name)
+            mod._multiprocessing = _mp
+
+
 def _check_repatching(**module_settings):
     _warnings = []
     key = '_gevent_saved_patch_all'
@@ -674,7 +708,7 @@ def _check_repatching(**module_settings):
 
 def patch_all(socket=True, dns=True, time=True, select=True, thread=True, os=True, ssl=True, httplib=False,
               subprocess=True, sys=False, aggressive=True, Event=True,
-              builtins=True, signal=True):
+              builtins=True, signal=True, multiprocessing=True):
     """
     Do all of the default monkey patching (calls every other applicable
     function in this module).
@@ -730,6 +764,8 @@ def patch_all(socket=True, dns=True, time=True, select=True, thread=True, os=Tru
                            ' error in the future.',
                            _warnings)
         patch_signal()
+    if multiprocessing:
+        patch_multiprocessing()
 
     _process_warnings(_warnings)
 
@@ -758,7 +794,7 @@ def main():
         import pprint
         import os
         print('gevent.monkey.patch_all(%s)' % ', '.join('%s=%s' % item for item in args.items()))
-        print('sys.version=%s' % (sys.version.strip().replace('\n', ' '), ))
+        print('sys.version=%s' % (sys.version.strip().replace('\n', ' '),))
         print('sys.path=%s' % pprint.pformat(sys.path))
         print('sys.modules=%s' % pprint.pformat(sorted(sys.modules.keys())))
         print('cwd=%s' % os.getcwd())
@@ -782,7 +818,7 @@ def _get_script_help():
     # pylint:disable=deprecated-method
     import inspect
     try:
-        getter = inspect.getfullargspec # deprecated in 3.5, un-deprecated in 3.6
+        getter = inspect.getfullargspec  # deprecated in 3.5, un-deprecated in 3.6
     except AttributeError:
         getter = inspect.getargspec
     patch_all_args = getter(patch_all)[0]
@@ -804,6 +840,7 @@ case only the modules specified on the command line will be patched.
 
 MONKEY OPTIONS: --verbose %s""" % ', '.join('--[no-]%s' % m for m in modules)
     return script_help, patch_all_args, modules
+
 
 main.__doc__ = _get_script_help()[0]
 
