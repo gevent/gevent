@@ -16,6 +16,7 @@ import sys
 import textwrap
 
 from gevent._compat import string_types
+from gevent._compat import WIN
 
 __all__ = [
     'config',
@@ -353,12 +354,19 @@ class Loop(ImportableSetting, Setting):
     desc = """\
     The kind of the loop we use.
 
+    On Windows, this defaults to libuv, while on
+    other platforms it defaults to libev.
+
     """
 
     default = [
         'libev-cext',
         'libev-cffi',
         'libuv-cffi',
+    ] if not WIN else [
+        'libuv-cffi',
+        'libev-cext',
+        'libev-cffi',
     ]
 
     shortname_map = {

@@ -19,6 +19,8 @@ Platform Support
 
 - Travis CI tests on Python 3.7.0b3.
 
+- Windows now defaults to the libuv backend. See :issue:`1163`.
+
 Bug Fixes
 ---------
 
