@@ -322,8 +322,7 @@ class TestGeventLocal(greentest.TestCase):
         del x.sentinel
 
         results = all_local_dicts_for_greenlet(gevent.getcurrent())
-        self.assertEqual(results,
-                         [((MyLocal, id(x)), {'foo': 42})])
+        self.assertTrue(((MyLocal, id(x)), {'foo': 42}) in results)
 
 try:
     from zope import interface
