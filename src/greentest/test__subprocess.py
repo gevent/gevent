@@ -33,6 +33,7 @@ python_universal_newlines_broken = PY3 and subprocess.mswindows
 class Test(greentest.TestCase):
 
     def setUp(self):
+        super(Test, self).setUp()
         gc.collect()
         gc.collect()
 

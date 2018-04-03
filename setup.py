@@ -344,6 +344,11 @@ def run_setup(ext_modules, run_make):
             "Development Status :: 4 - Beta"
         ],
         python_requires=">=2.7,!=3.0.*,!=3.1.*,!=3.2.*,!=3.3.*",
+        entry_points={
+            'gevent.plugins.monkey.will_patch_all': [
+                "signal_os_incompat = gevent.monkey:_subscribe_signal_os",
+            ],
+        },
     )
 
 # Tools like pyroma expect the actual call to `setup` to be performed

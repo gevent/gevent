@@ -487,13 +487,11 @@ class MonitorThread(BoolSettingMixin, Setting):
 
     If this setting is true, then this thread will be created
     the first time the hub is switched to,
-    or you can call `gevent.hub.Hub.start_periodic_monitoring_thread` at any
+    or you can call :meth:`gevent.hub.Hub.start_periodic_monitoring_thread` at any
     time to create it (from the same thread that will run the hub). That function
-    will return an object with a method ``add_monitoring_function(function, period)``
-    that you can call to add your own periodic monitoring function. ``function``
-    will be called with one argument, the hub it is monitoring. It will be called
-    in a separate native thread than the one running the hub and **must not**
-    attempt to use the gevent asynchronous API.
+    will return an instance of :class:`gevent.events.IPeriodicMonitorThread`
+    to which you can add your own monitoring functions. That function
+    also emits an event of :class:`gevent.events.PeriodicMonitorThreadStartedEvent`.
 
     .. seealso:: `max_blocking_time`
 

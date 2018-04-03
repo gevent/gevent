@@ -16,6 +16,8 @@ from gevent.events import notify
 from gevent.events import EventLoopBlocked
 from gevent.events import MemoryUsageThresholdExceeded
 from gevent.events import MemoryUsageUnderThreshold
+from gevent.events import IPeriodicMonitorThread
+from gevent.events import implementer
 
 from gevent._compat import thread_mod_name
 from gevent._compat import perf_counter
@@ -63,6 +65,7 @@ class _MonitorEntry(object):
     def __repr__(self):
         return repr((self.function, self.period, self.last_run_time))
 
+@implementer(IPeriodicMonitorThread)
 class PeriodicMonitoringThread(object):
 
     # The amount of seconds we will sleep when we think we have nothing
@@ -145,20 +148,6 @@ class PeriodicMonitoringThread(object):
         return self._monitoring_functions
 
     def add_monitoring_function(self, function, period):
-        """
-        Schedule the *function* to be called approximately every *period* fractional seconds.
-
-        The *function* receives one argument, the hub being monitored. It is called
-        in the monitoring thread, *not* the hub thread.
-
-        If the *function* is already a monitoring function, then its *period*
-        will be updated for future runs.
-
-        If the *period* is ``None``, then the function will be removed.
-
-        A *period* less than or equal to zero is not allowed.
-
-        """
         if not callable(function):
             raise ValueError("function must be callable")
 

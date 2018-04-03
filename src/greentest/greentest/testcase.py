@@ -120,7 +120,22 @@ class TestCaseMetaClass(type):
 def _noop():
     return
 
-class TestCase(TestCaseMetaClass("NewBase", (TimeAssertMixin, BaseTestCase,), {})):
+class SubscriberCleanupMixin(object):
+
+    def setUp(self):
+        super(SubscriberCleanupMixin, self).setUp()
+        from gevent import events
+        self.__old_subscribers = events.subscribers[:]
+
+    def tearDown(self):
+        from gevent import events
+        events.subscribers[:] = self.__old_subscribers
+        super(SubscriberCleanupMixin, self).tearDown()
+
+
+class TestCase(TestCaseMetaClass("NewBase",
+                                 (SubscriberCleanupMixin, TimeAssertMixin, BaseTestCase,),
+                                 {})):
     __timeout__ = params.LOCAL_TIMEOUT if not sysinfo.RUNNING_ON_CI else params.CI_TIMEOUT
 
     switch_expected = 'default'
@@ -137,8 +152,6 @@ class TestCase(TestCaseMetaClass("NewBase", (TimeAssertMixin, BaseTestCase,), {}
 
     def setUp(self):
         super(TestCase, self).setUp()
-        from gevent import events
-        self.__old_subscribers = events.subscribers[:]
         # Especially if we're running in leakcheck mode, where
         # the same test gets executed repeatedly, we need to update the
         # current time. Tests don't always go through the full event loop,
@@ -151,8 +164,6 @@ class TestCase(TestCaseMetaClass("NewBase", (TimeAssertMixin, BaseTestCase,), {}
     def tearDown(self):
         if getattr(self, 'skipTearDown', False):
             return
-        from gevent import events
-        events.subscribers[:] = self.__old_subscribers
 
         cleanup = getattr(self, 'cleanup', _noop)
         cleanup()

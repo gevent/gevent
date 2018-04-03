@@ -1,3 +1,5 @@
+import os
+import os.path
 import sys
 
 import unittest
@@ -6,10 +8,13 @@ from subprocess import Popen
 from subprocess import PIPE
 
 class TestRun(unittest.TestCase):
+    maxDiff = None
 
     def _run(self, script):
+        env = os.environ.copy()
+        env['PYTHONWARNINGS'] = 'ignore'
         args = [sys.executable, '-m', 'gevent.monkey', script, 'patched']
-        p = Popen(args, stdout=PIPE, stderr=PIPE)
+        p = Popen(args, stdout=PIPE, stderr=PIPE, env=env)
         gout, gerr = p.communicate()
         self.assertEqual(0, p.returncode, (gout, gerr))
 
@@ -27,7 +32,6 @@ class TestRun(unittest.TestCase):
         return glines, gerr
 
     def test_run_simple(self):
-        import os.path
         self._run(os.path.join('monkey_package', 'script.py'))
 
     def test_run_package(self):
@@ -38,7 +42,6 @@ class TestRun(unittest.TestCase):
         self.assertEqual(lines[1], '__main__')
 
     def test_issue_302(self):
-        import os
         lines, _ = self._run(os.path.join('monkey_package', 'issue302monkey.py'))
 
         self.assertEqual(lines[0], 'True')

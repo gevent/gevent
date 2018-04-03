@@ -13,6 +13,7 @@ class Test(TestCase):
     repeat = 0
 
     def setUp(self):
+        super(Test, self).setUp()
         self.called = []
         self.loop = config.loop(default=False)
         self.timer = self.loop.timer(0.001, repeat=self.repeat)
