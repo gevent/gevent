@@ -826,6 +826,7 @@ def patch_signal():
 def _check_repatching(**module_settings):
     _warnings = []
     key = '_gevent_saved_patch_all'
+    del module_settings['kwargs']
     if saved.get(key, module_settings) != module_settings:
         _queue_warning("Patching more than once will result in the union of all True"
                        " parameters being patched",
@@ -848,7 +849,8 @@ def _subscribe_signal_os(will_patch_all):
 def patch_all(socket=True, dns=True, time=True, select=True, thread=True, os=True, ssl=True,
               httplib=False, # Deprecated, to be removed.
               subprocess=True, sys=False, aggressive=True, Event=True,
-              builtins=True, signal=True):
+              builtins=True, signal=True,
+              **kwargs):
     """
     Do all of the default monkey patching (calls every other applicable
     function in this module).
@@ -868,6 +870,10 @@ def patch_all(socket=True, dns=True, time=True, select=True, thread=True, os=Tru
        ``Event`` defaults to True.
     .. versionchanged:: 1.3b1
        Defined the return values.
+    .. versionchanged:: 1.3b1
+       Add ``**kwargs`` for the benefit of event subscribers. CAUTION: gevent may add
+       and interpret additional arguments in the future, so it is suggested to use prefixes
+       for kwarg values to be interpreted by plugins, for example, `patch_all(mylib_futures=True)`.
     """
     # pylint:disable=too-many-locals,too-many-branches
 
@@ -880,7 +886,7 @@ def patch_all(socket=True, dns=True, time=True, select=True, thread=True, os=Tru
 
     from gevent import events
     try:
-        _notify_patch(events.GeventWillPatchAllEvent(modules_to_patch), _warnings)
+        _notify_patch(events.GeventWillPatchAllEvent(modules_to_patch, kwargs), _warnings)
     except events.DoNotPatch:
         return False
 
@@ -910,8 +916,8 @@ def patch_all(socket=True, dns=True, time=True, select=True, thread=True, os=Tru
     if signal:
         patch_signal()
 
-    _notify_patch(events.GeventDidPatchBuiltinModulesEvent(modules_to_patch), _warnings)
-    _notify_patch(events.GeventDidPatchAllEvent(), _warnings)
+    _notify_patch(events.GeventDidPatchBuiltinModulesEvent(modules_to_patch, kwargs), _warnings)
+    _notify_patch(events.GeventDidPatchAllEvent(modules_to_patch, kwargs), _warnings)
 
     _process_warnings(_warnings)
     return True

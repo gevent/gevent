@@ -398,7 +398,12 @@ class IGeventWillPatchAllEvent(IGeventWillPatchEvent):
     """
 
     patch_all_arguments = Attribute(
-        "A dictionary all the arguments to `gevent.monkey.patch_all`. "
+        "A dictionary of all the arguments to `gevent.monkey.patch_all`. "
+        "This dictionary should not be modified. "
+    )
+
+    patch_all_kwargs = Attribute(
+        "A dictionary of the extra arguments to `gevent.monkey.patch_all`. "
         "This dictionary should not be modified. "
     )
 
@@ -408,13 +413,18 @@ class IGeventWillPatchAllEvent(IGeventWillPatchEvent):
         """
 
 class _PatchAllMixin(object):
-    def __init__(self, patch_all_arguments):
+    def __init__(self, patch_all_arguments, patch_all_kwargs):
         super(_PatchAllMixin, self).__init__(None, None)
         self._patch_all_arguments = patch_all_arguments
+        self._patch_all_kwargs = patch_all_kwargs
 
     @property
     def patch_all_arguments(self):
         return self._patch_all_arguments.copy()
+
+    @property
+    def patch_all_kwargs(self):
+        return self._patch_all_kwargs.copy()
 
     def __repr__(self):
         return '<%s %r at %x>' % (self.__class__.__name__,
@@ -443,8 +453,15 @@ class IGeventDidPatchBuiltinModulesEvent(IGeventDidPatchEvent):
 
     patch_all_arguments = Attribute(
         "A dictionary of all the arguments to `gevent.monkey.patch_all`. "
+        "This dictionary should not be modified. "
     )
 
+    patch_all_kwargs = Attribute(
+        "A dictionary of the extra arguments to `gevent.monkey.patch_all`. "
+        "This dictionary should not be modified. "
+    )
+
+@implementer(IGeventDidPatchBuiltinModulesEvent)
 class GeventDidPatchBuiltinModulesEvent(_PatchAllMixin, GeventDidPatchEvent):
     """
     Implementation of `IGeventDidPatchBuiltinModulesEvent`.
@@ -463,7 +480,7 @@ class IGeventDidPatchAllEvent(IGeventDidPatchEvent):
     """
 
 @implementer(IGeventDidPatchAllEvent)
-class GeventDidPatchAllEvent(GeventDidPatchEvent):
+class GeventDidPatchAllEvent(_PatchAllMixin, GeventDidPatchEvent):
     """
     Implementation of `IGeventDidPatchAllEvent`.
     """
@@ -471,6 +488,3 @@ class GeventDidPatchAllEvent(GeventDidPatchEvent):
     #: The name of the setuptools entry point that is called when this
     #: event is emitted.
     ENTRY_POINT_NAME = 'gevent.plugins.monkey.did_patch_all'
-
-    def __init__(self):
-        super(GeventDidPatchAllEvent, self).__init__(None, None)
