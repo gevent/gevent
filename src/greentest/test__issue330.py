@@ -10,6 +10,7 @@ class MyException(Exception):
 class TestSwitch(greentest.TestCase):
 
     def setUp(self):
+        super(TestSwitch, self).setUp()
         self.switched_to = [False, False]
         self.caught = None
 

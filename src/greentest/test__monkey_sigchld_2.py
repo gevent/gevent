@@ -16,6 +16,12 @@ def handle(*_args):
         os.waitpid(-1, os.WNOHANG)
 # The signal watcher must be installed *before* monkey patching
 if hasattr(signal, 'SIGCHLD'):
+    # On Python 2, the signal handler breaks the platform
+    # module, because it uses os.popen. pkg_resources uses the platform
+    # module.
+    # Cache that info.
+    import platform
+    platform.uname()
     signal.signal(signal.SIGCHLD, handle)
 
     pid = os.fork()
@@ -28,15 +34,15 @@ if hasattr(signal, 'SIGCHLD'):
             _, stat = os.waitpid(pid, 0)
         assert stat == 0, stat
     else:
-        import gevent.monkey
-        gevent.monkey.patch_all()
-        signal.signal(signal.SIGCHLD, signal.SIG_DFL)
         # Under Python 2, os.popen() directly uses the popen call, and
         # popen's file uses the pclose() system call to
         # wait for the child. If it's already waited on,
         # it raises the same exception.
         # Python 3 uses the subprocess module directly which doesn't
         # have this problem.
+        import gevent.monkey
+        gevent.monkey.patch_all()
+        signal.signal(signal.SIGCHLD, signal.SIG_DFL)
         f = os.popen('true')
         f.close()
 

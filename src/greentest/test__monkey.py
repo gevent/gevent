@@ -5,8 +5,9 @@ monkey.patch_all()
 
 import sys
 import unittest
+from greentest.testcase import SubscriberCleanupMixin
 
-class TestMonkey(unittest.TestCase):
+class TestMonkey(SubscriberCleanupMixin, unittest.TestCase):
 
     maxDiff = None
 
@@ -48,9 +49,9 @@ class TestMonkey(unittest.TestCase):
         for name in ('fork', 'forkpty'):
             if hasattr(os, name):
                 attr = getattr(os, name)
-                assert 'built-in' not in repr(attr), repr(attr)
-                assert not isinstance(attr, types.BuiltinFunctionType), repr(attr)
-                assert isinstance(attr, types.FunctionType), repr(attr)
+                self.assertNotIn('built-in', repr(attr))
+                self.assertNotIsInstance(attr, types.BuiltinFunctionType)
+                self.assertIsInstance(attr, types.FunctionType)
                 self.assertIs(attr, getattr(gos, name))
 
     def test_saved(self):
@@ -67,17 +68,28 @@ class TestMonkey(unittest.TestCase):
         monkey.patch_subprocess()
         self.assertIs(Popen, monkey.get_original('subprocess', 'Popen'))
 
-    def test_patch_twice(self):
+    def test_patch_twice_warnings_events(self):
         import warnings
+        from zope.interface import verify
 
         orig_saved = {}
         for k, v in monkey.saved.items():
             orig_saved[k] = v.copy()
 
+        from gevent import events
+        all_events = []
+        events.subscribers.append(all_events.append)
+
+        def veto(event):
+            if isinstance(event, events.GeventWillPatchModuleEvent) and event.module_name == 'ssl':
+                raise events.DoNotPatch
+
+        events.subscribers.append(veto)
+
         with warnings.catch_warnings(record=True) as issued_warnings:
             # Patch again, triggering three warnings, one for os=False/signal=True,
             # one for repeated monkey-patching, one for patching after ssl (on python >= 2.7.9)
-            monkey.patch_all(os=False)
+            monkey.patch_all(os=False, extra_kwarg=42)
             self.assertGreaterEqual(len(issued_warnings), 2)
             self.assertIn('SIGCHLD', str(issued_warnings[-1].message))
             self.assertIn('more than once', str(issued_warnings[0].message))
@@ -101,6 +113,26 @@ class TestMonkey(unittest.TestCase):
         # NOTE: This was only a problem if threading was not previously imported.
         for k, v in monkey.saved['threading'].items():
             self.assertNotIn('gevent', str(v))
+
+        self.assertIsInstance(all_events[0], events.GeventWillPatchAllEvent)
+        self.assertEqual({'extra_kwarg': 42}, all_events[0].patch_all_kwargs)
+        verify.verifyObject(events.IGeventWillPatchAllEvent, all_events[0])
+
+        self.assertIsInstance(all_events[1], events.GeventWillPatchModuleEvent)
+        verify.verifyObject(events.IGeventWillPatchModuleEvent, all_events[1])
+
+        self.assertIsInstance(all_events[2], events.GeventDidPatchModuleEvent)
+        verify.verifyObject(events.IGeventWillPatchModuleEvent, all_events[1])
+
+        self.assertIsInstance(all_events[-2], events.GeventDidPatchBuiltinModulesEvent)
+        verify.verifyObject(events.IGeventDidPatchBuiltinModulesEvent, all_events[-2])
+
+        self.assertIsInstance(all_events[-1], events.GeventDidPatchAllEvent)
+        verify.verifyObject(events.IGeventDidPatchAllEvent, all_events[-1])
+
+        for e in all_events:
+            self.assertFalse(isinstance(e, events.GeventDidPatchModuleEvent)
+                             and e.module_name == 'ssl')
 
 
 if __name__ == '__main__':

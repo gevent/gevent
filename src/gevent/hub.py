@@ -564,10 +564,15 @@ class Hub(WaitOperationsGreenlet):
             # in the threadpool tests. The monitoring threads will eventually notice their
             # hub object is gone.
             from gevent._monitor import PeriodicMonitoringThread
+            from gevent.events import PeriodicMonitorThreadStartedEvent
+            from gevent.events import notify_and_call_entry_points
             self.periodic_monitoring_thread = PeriodicMonitoringThread(self)
 
             if self.main_hub:
                 self.periodic_monitoring_thread.install_monitor_memory_usage()
+
+            notify_and_call_entry_points(PeriodicMonitorThreadStartedEvent(
+                self.periodic_monitoring_thread))
 
         return self.periodic_monitoring_thread
 

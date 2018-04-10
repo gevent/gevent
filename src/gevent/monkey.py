@@ -3,9 +3,6 @@
 """
 Make the standard library cooperative.
 
-Patching
-========
-
 The primary purpose of this module is to carefully patch, in place,
 portions of the standard library with gevent-friendly functions that
 behave in the same way as the original (at least as closely as possible).
@@ -32,8 +29,13 @@ thread** and **should be done while the program is single-threaded**.
     Some frameworks, such as gunicorn, handle monkey-patching for you.
     Check their documentation to be sure.
 
+.. warning::
+
+    Patching too late can lead to unreliable behaviour (for example, some
+    modules may still use blocking sockets) or even errors.
+
 Querying
---------
+========
 
 Sometimes it is helpful to know if objects have been monkey-patched, and in
 advanced cases even to have access to the original standard library functions. This
@@ -43,6 +45,64 @@ module provides functions for that purpose.
 - :func:`is_object_patched`
 - :func:`get_original`
 
+Plugins
+=======
+
+Beginning in gevent 1.3, events are emitted during the monkey patching process.
+These events are delivered first to :mod:`gevent.events` subscribers, and then
+to `setuptools entry points`_.
+
+The following events are defined. They are listed in (roughly) the order
+that a call to :func:`patch_all` will emit them.
+
+- :class:`gevent.events.GeventWillPatchAllEvent`
+- :class:`gevent.events.GeventWillPatchModuleEvent`
+- :class:`gevent.events.GeventDidPatchModuleEvent`
+- :class:`gevent.events.GeventDidPatchBuiltinModulesEvent`
+- :class:`gevent.events.GeventDidPatchAllEvent`
+
+Each event class documents the corresponding setuptools entry point name. The
+entry points will be called with a single argument, the same instance of
+the class that was sent to the subscribers.
+
+You can subscribe to the events to monitor the monkey-patching process and
+to manipulate it, for example by raising :exc:`gevent.events.DoNotPatch`.
+
+You can also subscribe to the events to provide additional patching beyond what
+gevent distributes, either for additional standard library modules, or
+for third-party packages. The suggested time to do this patching is in
+the subscriber for :class:`gevent.events.GeventDidPatchBuiltinModulesEvent`.
+For example, to automatically patch `psycopg2`_ using `psycogreen`_
+when the call to :func:`patch_all` is made, you could write code like this::
+
+    # mypackage.py
+    def patch_psycopg(event):
+        from psycogreen.gevent import patch_psycopg
+        patch_psycopg()
+
+In your ``setup.py`` you would register it like this::
+
+    from setuptools import setup
+    setup(
+        ...
+        entry_points={
+            'gevent.plugins.monkey.did_patch_builtins': [
+                'psycopg2 = mypackage:patch_psycopg',
+            ],
+        },
+        ...
+    )
+
+For more complex patching, gevent provides a helper method
+that you can call to replace attributes of modules with attributes of your
+own modules. This function also takes care of emitting the appropriate events.
+
+- :func:`patch_module`
+
+.. _setuptools entry points: http://setuptools.readthedocs.io/en/latest/setuptools.html#dynamic-discovery-of-services-and-plugins
+.. _psycopg2: https://pypi.python.org/pypi/psycopg2
+.. _psycogreen: https://pypi.python.org/pypi/psycogreen
+
 Use as a module
 ===============
 
@@ -51,8 +111,8 @@ were not built to be gevent aware under gevent. To do so, this module
 can be run as the main module, passing the script and its arguments.
 For details, see the :func:`main` function.
 
-Functions
-=========
+.. versionchanged:: 1.3b1
+   Added support for plugins and began emitting will/did patch events.
 """
 from __future__ import absolute_import
 from __future__ import print_function
@@ -75,6 +135,8 @@ __all__ = [
     'get_original',
     'is_module_patched',
     'is_object_patched',
+    # plugin API
+    'patch_module',
     # module functions
     'main',
 ]
@@ -96,6 +158,27 @@ class MonkeyPatchWarning(RuntimeWarning):
 
     .. versionadded:: 1.3a2
     """
+
+def _notify_patch(event, _warnings=None):
+    # Raises DoNotPatch if we're not supposed to patch
+    from gevent.events import notify_and_call_entry_points
+
+    event._warnings = _warnings
+    notify_and_call_entry_points(event)
+
+def _ignores_DoNotPatch(func):
+
+    from functools import wraps
+
+    @wraps(func)
+    def ignores(*args, **kwargs):
+        from gevent.events import DoNotPatch
+        try:
+            return func(*args, **kwargs)
+        except DoNotPatch:
+            return False
+
+    return ignores
 
 
 # maps module name -> {attribute name: original item}
@@ -180,35 +263,94 @@ def remove_item(module, attr):
     delattr(module, attr)
 
 
-def __call_module_hook(gevent_module, name, module, items, warn):
+def __call_module_hook(gevent_module, name, module, items, _warnings):
+    # This function can raise DoNotPatch on 'will'
+
+    def warn(message):
+        _queue_warning(message, _warnings)
+
     func_name = '_gevent_' + name + '_monkey_patch'
     try:
         func = getattr(gevent_module, func_name)
     except AttributeError:
-        pass
-    else:
-        func(module, items, warn)
+        func = lambda *args: None
 
-def patch_module(name, items=None, _warnings=None):
-    def warn(message):
-        _queue_warning(message, _warnings)
+
+    func(module, items, warn)
+
+
+def patch_module(target_module, source_module, items=None,
+                 _warnings=None,
+                 _notify_did_subscribers=True):
+    """
+    patch_module(target_module, source_module, items=None)
+
+    Replace attributes in *target_module* with the attributes of the
+    same name in *source_module*.
+
+    The *source_module* can provide some attributes to customize the process:
+
+    * ``__implements__`` is a list of attribute names to copy; if not present,
+      the *items* keyword argument is mandatory.
+    * ``_gevent_will_monkey_patch(target_module, items, warn, **kwargs)``
+    * ``_gevent_did_monkey_patch(target_module, items, warn, **kwargs)``
+      These two functions in the *source_module* are called *if* they exist,
+      before and after copying attributes, respectively. The "will" function
+      may modify *items*. The value of *warn* is a function that should be called
+      with a single string argument to issue a warning to the user. If the "will"
+      function raises :exc:`gevent.events.DoNotPatch`, no patching will be done. These functions
+      are called before any event subscribers or plugins.
+
+    :keyword list items: A list of attribute names to replace. If
+       not given, this will be taken from the *source_module* ``__implements__``
+       attribute.
+    :return: A true value if patching was done, a false value if patching was canceled.
+
+    .. versionadded:: 1.3b1
+    """
+    from gevent import events
+
+    if items is None:
+        items = getattr(source_module, '__implements__', None)
+        if items is None:
+            raise AttributeError('%r does not have __implements__' % source_module)
+
+    try:
+        __call_module_hook(source_module, 'will', target_module, items, _warnings)
+        _notify_patch(
+            events.GeventWillPatchModuleEvent(target_module.__name__, source_module,
+                                              target_module, items),
+            _warnings)
+    except events.DoNotPatch:
+        return False
+
+    for attr in items:
+        patch_item(target_module, attr, getattr(source_module, attr))
+
+    __call_module_hook(source_module, 'did', target_module, items, _warnings)
+
+    if _notify_did_subscribers:
+        # We allow turning off the broadcast of the 'did' event for the benefit
+        # of our internal functions which need to do additional work (besides copying
+        # attributes) before their patch can be considered complete.
+        _notify_patch(
+            events.GeventDidPatchModuleEvent(target_module.__name__, source_module,
+                                             target_module)
+        )
+
+    return True
+
+def _patch_module(name, items=None, _warnings=None, _notify_did_subscribers=True):
 
     gevent_module = getattr(__import__('gevent.' + name), name)
     module_name = getattr(gevent_module, '__target__', name)
-    module = __import__(module_name)
-    if items is None:
-        items = getattr(gevent_module, '__implements__', None)
-        if items is None:
-            raise AttributeError('%r does not have __implements__' % gevent_module)
+    target_module = __import__(module_name)
 
-    __call_module_hook(gevent_module, 'will', module, items, warn)
+    patch_module(target_module, gevent_module, items=items,
+                 _warnings=_warnings,
+                 _notify_did_subscribers=_notify_did_subscribers)
 
-    for attr in items:
-        patch_item(module, attr, getattr(gevent_module, attr))
-
-    __call_module_hook(gevent_module, 'did', module, items, warn)
-
-    return module
+    return gevent_module, target_module
 
 
 def _queue_warning(message, _warnings):
@@ -233,7 +375,7 @@ def _patch_sys_std(name):
     if not isinstance(orig, FileObjectThread):
         patch_item(sys, name, FileObjectThread(orig))
 
-
+@_ignores_DoNotPatch
 def patch_sys(stdin=True, stdout=True, stderr=True):
     """
     Patch sys.std[in,out,err] to use a cooperative IO via a
@@ -254,16 +396,27 @@ def patch_sys(stdin=True, stdout=True, stderr=True):
     # test__issue6.py demonstrates the hang if these lines are removed;
     # strangely enough that test passes even without monkey-patching sys
     if PY3:
+        items = None
+    else:
+        items = set([('stdin' if stdin else None),
+                     ('stdout' if stdout else None),
+                     ('stderr' if stderr else None)])
+        items.discard(None)
+        items = list(items)
+
+    if not items:
         return
 
-    if stdin:
-        _patch_sys_std('stdin')
-    if stdout:
-        _patch_sys_std('stdout')
-    if stderr:
-        _patch_sys_std('stderr')
+    from gevent import events
+    _notify_patch(events.GeventWillPatchModuleEvent('sys', None, sys,
+                                                    items))
 
+    for item in items:
+        _patch_sys_std(item)
 
+    _notify_patch(events.GeventDidPatchModuleEvent('sys', None, sys))
+
+@_ignores_DoNotPatch
 def patch_os():
     """
     Replace :func:`os.fork` with :func:`gevent.fork`, and, on POSIX,
@@ -278,14 +431,15 @@ def patch_os():
     .. caution:: For `SIGCHLD` handling to work correctly, the event loop must run.
          The easiest way to help ensure this is to use :func:`patch_all`.
     """
-    patch_module('os')
+    _patch_module('os')
 
 
+@_ignores_DoNotPatch
 def patch_time():
     """
     Replace :func:`time.sleep` with :func:`gevent.sleep`.
     """
-    patch_module('time')
+    _patch_module('time')
 
 
 def _patch_existing_locks(threading):
@@ -325,7 +479,7 @@ def _patch_existing_locks(threading):
             if o.owner is not None:
                 o.owner = tid
 
-
+@_ignores_DoNotPatch
 def patch_thread(threading=True, _threading_local=True, Event=True, logging=True,
                  existing_locks=True,
                  _warnings=None):
@@ -395,12 +549,15 @@ def patch_thread(threading=True, _threading_local=True, Event=True, logging=True
         orig_current_thread = threading_mod.current_thread()
     else:
         threading_mod = None
+        gevent_threading_mod = None
         orig_current_thread = None
 
-    patch_module('thread', _warnings=_warnings)
+    gevent_thread_mod, thread_mod = _patch_module('thread',
+                                                  _warnings=_warnings, _notify_did_subscribers=False)
 
     if threading:
-        patch_module('threading', _warnings=_warnings)
+        gevent_threading_mod, _ = _patch_module('threading',
+                                                _warnings=_warnings, _notify_did_subscribers=False)
 
         if Event:
             from gevent.event import Event
@@ -490,7 +647,11 @@ def patch_thread(threading=True, _threading_local=True, Event=True, logging=True
                            "threading.main_thread().join() will hang from a greenlet",
                            _warnings)
 
+    from gevent import events
+    _notify_patch(events.GeventDidPatchModuleEvent('thread', gevent_thread_mod, thread_mod))
+    _notify_patch(events.GeventDidPatchModuleEvent('threading', gevent_threading_mod, threading_mod))
 
+@_ignores_DoNotPatch
 def patch_socket(dns=True, aggressive=True):
     """
     Replace the standard socket object with gevent's cooperative
@@ -509,12 +670,12 @@ def patch_socket(dns=True, aggressive=True):
         items = socket.__implements__ # pylint:disable=no-member
     else:
         items = set(socket.__implements__) - set(socket.__dns__) # pylint:disable=no-member
-    patch_module('socket', items=items)
+    _patch_module('socket', items=items)
     if aggressive:
         if 'ssl' not in socket.__implements__: # pylint:disable=no-member
             remove_item(socket, 'ssl')
 
-
+@_ignores_DoNotPatch
 def patch_dns():
     """
     Replace :doc:`DNS functions <dns>` in :mod:`socket` with
@@ -524,9 +685,9 @@ def patch_dns():
     done automatically by that method if requested.
     """
     from gevent import socket
-    patch_module('socket', items=socket.__dns__) # pylint:disable=no-member
+    _patch_module('socket', items=socket.__dns__) # pylint:disable=no-member
 
-
+@_ignores_DoNotPatch
 def patch_ssl(_warnings=None, _first_time=True):
     """
     patch_ssl() -> None
@@ -546,9 +707,9 @@ def patch_ssl(_warnings=None, _first_time=True):
                            'Please monkey-patch earlier. '
                            'See https://github.com/gevent/gevent/issues/1016',
                            _warnings)
-    patch_module('ssl', _warnings=_warnings)
+    _patch_module('ssl', _warnings=_warnings)
 
-
+@_ignores_DoNotPatch
 def patch_select(aggressive=True):
     """
     Replace :func:`select.select` with :func:`gevent.select.select`
@@ -567,9 +728,9 @@ def patch_select(aggressive=True):
     - :class:`selectors.DevpollSelector` (Python 3.5+)
     """
 
-    patch_module('select')
+    source_mod, target_mod = _patch_module('select', _notify_did_subscribers=False)
     if aggressive:
-        select = __import__('select')
+        select = target_mod
         # since these are blocking we're removing them here. This makes some other
         # modules (e.g. asyncore)  non-blocking, as they use select that we provide
         # when none of these are available.
@@ -587,7 +748,7 @@ def patch_select(aggressive=True):
         # Note that this obviously only happens if selectors was imported after we had patched
         # select; but there is a code path that leads to it being imported first (but now we've
         # patched select---so we can't compare them identically)
-        select = __import__('select') # Should be gevent-patched now
+        select = target_mod # Should be gevent-patched now
         orig_select_select = get_original('select', 'select')
         assert select.select is not orig_select_select
         selectors = __import__('selectors')
@@ -614,7 +775,10 @@ def patch_select(aggressive=True):
             remove_item(selectors, 'DevpollSelector')
             selectors.DefaultSelector = selectors.SelectSelector
 
+    from gevent import events
+    _notify_patch(events.GeventDidPatchModuleEvent('select', source_mod, target_mod))
 
+@_ignores_DoNotPatch
 def patch_subprocess():
     """
     Replace :func:`subprocess.call`, :func:`subprocess.check_call`,
@@ -626,9 +790,9 @@ def patch_subprocess():
        the standard library.
 
     """
-    patch_module('subprocess')
+    _patch_module('subprocess')
 
-
+@_ignores_DoNotPatch
 def patch_builtins():
     """
     Make the builtin :func:`__import__` function `greenlet safe`_ under Python 2.
@@ -641,9 +805,9 @@ def patch_builtins():
 
     """
     if sys.version_info[:2] < (3, 3):
-        patch_module('builtins')
+        _patch_module('builtins')
 
-
+@_ignores_DoNotPatch
 def patch_signal():
     """
     Make the :func:`signal.signal` function work with a :func:`monkey-patched os <patch_os>`.
@@ -656,12 +820,13 @@ def patch_signal():
 
     .. seealso:: :mod:`gevent.signal`
     """
-    patch_module("signal")
+    _patch_module("signal")
 
 
 def _check_repatching(**module_settings):
     _warnings = []
     key = '_gevent_saved_patch_all'
+    del module_settings['kwargs']
     if saved.get(key, module_settings) != module_settings:
         _queue_warning("Patching more than once will result in the union of all True"
                        " parameters being patched",
@@ -669,15 +834,29 @@ def _check_repatching(**module_settings):
 
     first_time = key not in saved
     saved[key] = module_settings
-    return _warnings, first_time
+    return _warnings, first_time, module_settings
 
 
-def patch_all(socket=True, dns=True, time=True, select=True, thread=True, os=True, ssl=True, httplib=False,
+def _subscribe_signal_os(will_patch_all):
+    if will_patch_all.will_patch_module('signal') and not will_patch_all.will_patch_module('os'):
+        warnings = will_patch_all._warnings # Internal
+        _queue_warning('Patching signal but not os will result in SIGCHLD handlers'
+                       ' installed after this not being called and os.waitpid may not'
+                       ' function correctly if gevent.subprocess is used. This may raise an'
+                       ' error in the future.',
+                       warnings)
+
+def patch_all(socket=True, dns=True, time=True, select=True, thread=True, os=True, ssl=True,
+              httplib=False, # Deprecated, to be removed.
               subprocess=True, sys=False, aggressive=True, Event=True,
-              builtins=True, signal=True):
+              builtins=True, signal=True,
+              **kwargs):
     """
     Do all of the default monkey patching (calls every other applicable
     function in this module).
+
+    :return: A true value if patching all modules wasn't cancelled, a false
+      value if it was.
 
     .. versionchanged:: 1.1
        Issue a :mod:`warning <warnings>` if this function is called multiple times
@@ -689,15 +868,27 @@ def patch_all(socket=True, dns=True, time=True, select=True, thread=True, os=Tru
        be an error in the future.
     .. versionchanged:: 1.3a2
        ``Event`` defaults to True.
+    .. versionchanged:: 1.3b1
+       Defined the return values.
+    .. versionchanged:: 1.3b1
+       Add ``**kwargs`` for the benefit of event subscribers. CAUTION: gevent may add
+       and interpret additional arguments in the future, so it is suggested to use prefixes
+       for kwarg values to be interpreted by plugins, for example, `patch_all(mylib_futures=True)`.
     """
     # pylint:disable=too-many-locals,too-many-branches
 
     # Check to see if they're changing the patched list
-    _warnings, first_time = _check_repatching(**locals())
+    _warnings, first_time, modules_to_patch = _check_repatching(**locals())
     if not _warnings and not first_time:
         # Nothing to do, identical args to what we just
         # did
         return
+
+    from gevent import events
+    try:
+        _notify_patch(events.GeventWillPatchAllEvent(modules_to_patch, kwargs), _warnings)
+    except events.DoNotPatch:
+        return False
 
     # order is important
     if os:
@@ -723,15 +914,13 @@ def patch_all(socket=True, dns=True, time=True, select=True, thread=True, os=Tru
     if builtins:
         patch_builtins()
     if signal:
-        if not os:
-            _queue_warning('Patching signal but not os will result in SIGCHLD handlers'
-                           ' installed after this not being called and os.waitpid may not'
-                           ' function correctly if gevent.subprocess is used. This may raise an'
-                           ' error in the future.',
-                           _warnings)
         patch_signal()
 
+    _notify_patch(events.GeventDidPatchBuiltinModulesEvent(modules_to_patch, kwargs), _warnings)
+    _notify_patch(events.GeventDidPatchAllEvent(modules_to_patch, kwargs), _warnings)
+
     _process_warnings(_warnings)
+    return True
 
 
 def main():
@@ -789,7 +978,7 @@ def _get_script_help():
     modules = [x for x in patch_all_args if 'patch_' + x in globals()]
     script_help = """gevent.monkey - monkey patch the standard modules to use gevent.
 
-USAGE: python -m gevent.monkey [MONKEY OPTIONS] script [SCRIPT OPTIONS]
+USAGE: ``python -m gevent.monkey [MONKEY OPTIONS] script [SCRIPT OPTIONS]``
 
 If no OPTIONS present, monkey patches all the modules it can patch.
 You can exclude a module with --no-module, e.g. --no-thread. You can
@@ -802,7 +991,7 @@ case only the modules specified on the command line will be patched.
     Previously it had to be the path to
     a .py source file.
 
-MONKEY OPTIONS: --verbose %s""" % ', '.join('--[no-]%s' % m for m in modules)
+MONKEY OPTIONS: ``--verbose %s``""" % ', '.join('--[no-]%s' % m for m in modules)
     return script_help, patch_all_args, modules
 
 main.__doc__ = _get_script_help()[0]

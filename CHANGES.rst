@@ -68,6 +68,14 @@ Enhancements
   ``<script>``, including paths to packages or compiled bytecode.
   Reported in :issue:`1157` by Eddie Linder.
 
+- Add a simple event framework for decoupled communication. It uses
+  :mod:`zope.event` if that is installed.
+
+- :mod:`gevent.monkey` has support for plugins in the form of event
+  subscribers and setuptools entry points. See :pr:`1158` and
+  :issue:`1162`. setuptools must be installed at runtime for its entry
+  points to function.
+
 Monitoring and Debugging
 ------------------------
 
@@ -84,10 +92,8 @@ Monitoring and Debugging
   use it, and ``GEVENT_MAX_BLOCKING_TIME`` to configure the blocking
   interval.
 
-- Add a simple event framework for decoupled communication. It uses
-  :mod:`zope.event` if that is installed. The monitoring thread emits
-  events when it detects certain conditions, like loop blocked or
-  memory limits exceeded.
+- The monitoring thread emits events when it detects certain
+  conditions, like loop blocked or memory limits exceeded.
 
 - Add settings for monitoring memory usage and emitting events when a
   threshold is exceeded and then corrected. gevent currently supplies
