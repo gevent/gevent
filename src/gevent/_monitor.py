@@ -45,7 +45,7 @@ try:
     except AccessDenied: # pragma: no cover
         Process = None
 except ImportError:
-    pass
+    Process = None
 
 class MonitorWarning(RuntimeWarning):
     """The type of warnings we emit."""
