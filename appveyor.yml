@@ -118,7 +118,7 @@ install:
 
   # Upgrade to the latest version of pip to avoid it displaying warnings
   # about it being out of date.
-  - "%CMD_IN_ENV% pip install --disable-pip-version-check --user --upgrade pip"
+  - "%CMD_IN_ENV% %PYEXE% -m pip install --disable-pip-version-check --user --upgrade pip"
 
   # Install the build dependencies of the project. If some dependencies contain
   # compiled extensions and are not provided as pre-built wheel packages,
@@ -142,7 +142,7 @@ build_script:
   # into a variable, using python to glob.
   - "%PYEXE% -c \"import glob; print(glob.glob('dist/*whl')[0])\" > whl.txt"
   - set /p PYWHL=<whl.txt
-  - pip install %PYWHL%
+  - "%PYEXE% -m pip install %PYWHL%"
 
 test_script:
   # Run the project tests
