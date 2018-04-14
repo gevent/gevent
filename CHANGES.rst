@@ -16,7 +16,7 @@
 Dependencies
 ------------
 
-- Cython 0.28.1 is now used to build gevent from a source checkout.
+- Cython 0.28.2 is now used to build gevent from a source checkout.
 
 - The bundled libuv is now 1.19.2, up from 1.18.0.
 
@@ -25,7 +25,8 @@ Platform Support
 
 - Travis CI tests on Python 3.7.0b3.
 
-- Windows now defaults to the libuv backend. See :issue:`1163`.
+- Windows now defaults to the libuv backend if CFFI is installed. See
+  :issue:`1163`.
 
 Bug Fixes
 ---------
