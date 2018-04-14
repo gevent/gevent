@@ -1,2 +1,3 @@
 -r ci-requirements.txt
+-r rtd-requirements.txt
 -e .
