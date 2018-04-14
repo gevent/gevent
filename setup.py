@@ -197,9 +197,10 @@ greenlet_requires = [
 # we need cffi 1.11.3 (on CPython 3) to avoid test errors.
 
 # The exception is on Windows, where we want the libuv backend we distribute
-# to be the default, and that requires cffi
+# to be the default, and that requires cffi; but don't try to install it
+# on PyPy or it messes up the build
 cffi_requires = [
-    "cffi >= 1.11.5 ; sys_platform == 'win32'",
+    "cffi >= 1.11.5 ; sys_platform == 'win32' and platform_python_implementation == 'CPython'",
 ]
 
 
