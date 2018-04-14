@@ -22,9 +22,13 @@ futures
 dnspython
 idna
 # Makes tests faster
-psutil
+# Fails to build on PyPy on Windows.
+psutil ; platform_python_implementation == "CPython" or sys_platform != "win32"
 # benchmarks use this
 perf
+# examples, called from tests, use this
+requests
+
 # Events
 zope.event
 zope.interface
