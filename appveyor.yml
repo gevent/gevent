@@ -125,8 +125,8 @@ install:
   # pip will build them from source using the MSVC compiler matching the
   # target Python version and architecture
   # Note that psutil won't build under PyPy on Windows.
-  - "%CMD_IN_ENV% pip install -U cython zope.interface zope.event"
-  - "%CMD_IN_ENV% pip install -U setuptools wheel greenlet cffi dnspython idna requests"
+  - "%CMD_IN_ENV% %PYEXE% -m pip install -U cython zope.interface zope.event"
+  - "%CMD_IN_ENV% %PYEXE% -m pip install -U setuptools wheel greenlet cffi dnspython idna requests"
 
   - ps:
       if ("${env:PYTHON_ID}" -ne "pypy") {
