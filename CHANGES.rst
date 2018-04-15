@@ -10,6 +10,18 @@
 - On Windows, CFFI is now a dependency so that the libuv backend
   really can be used by default.
 
+- Fix a bug detecting whether we can use the memory monitoring
+  features when psutil is not installed.
+
+- `gevent.subprocess.Popen` uses ``/proc/self/fd`` (on Linux) or
+  ``/dev/fd`` (on BSD, including macOS) to find the file descriptors
+  to close when ``close_fds`` is true. This matches an optimization
+  added to Python 3 (and backports it to Python 2.7), making process
+  spawning up to 9 times faster. Also, on Python 3, since Python 3.3
+  is no longer supported, we can also optimize the case where
+  ``close_fds`` is false (not the default), making process spawning up
+  to 38 times faster. Initially reported in :issue:`1172` by Ofer Koren.
+
 
 1.3b1 (2018-04-13)
 ==================
