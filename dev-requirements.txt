@@ -1,3 +1,8 @@
+# For viewing README.rst (restview --long-description),
+# CONTRIBUTING.rst, etc.
+# https://github.com/mgedmin/restview
+restview
+
 -r ci-requirements.txt
 -r rtd-requirements.txt
 -e .

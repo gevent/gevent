@@ -306,6 +306,11 @@ def run_setup(ext_modules, run_make):
         maintainer='Jason Madden',
         maintainer_email='jason@nextthought.com',
         url='http://www.gevent.org/',
+        project_urls={
+            'Bug Tracker': 'https://github.com/gevent/gevent/issues',
+            'Source Code': 'https://github.com/gevent/gevent/',
+            'Documentation': 'http://www.gevent.org',
+        },
         package_dir={'': 'src'},
         packages=find_packages('src'),
         include_package_data=True,
