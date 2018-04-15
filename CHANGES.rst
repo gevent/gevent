@@ -7,7 +7,8 @@
 1.3b2 (unreleased)
 ==================
 
-- Nothing changed yet.
+- On Windows, CFFI is now a dependency so that the libuv backend
+  really can be used by default.
 
 
 1.3b1 (2018-04-13)

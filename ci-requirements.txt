@@ -12,26 +12,23 @@ greenlet>=0.4.13 ; platform_python_implementation == "CPython"
 pylint>=1.8.0
 # pyyaml is included here and doesn't install on travis with 3.7a3
 prospector[with_pyroma] ; python_version < '3.7'
-coverage>=4.0
-coveralls>=1.0
+# We don't run coverage on Windows, and pypy can't build it there
+# anyway (coveralls -> cryptopgraphy -> openssl)
+coverage>=4.0 ; sys_platform != 'win32'
+coveralls>=1.0 ; sys_platform != 'win32'
 # See version requirements in setup.py
 cffi >= 1.11.5 ; platform_python_implementation == "CPython"
 futures
 dnspython
 idna
 # Makes tests faster
-psutil
+# Fails to build on PyPy on Windows.
+psutil ; platform_python_implementation == "CPython" or sys_platform != "win32"
 # benchmarks use this
 perf
+# examples, called from tests, use this
+requests
+
 # Events
 zope.event
 zope.interface
-
-# Tests
-requests
-# For viewing README.rst (restview --long-description),
-# CONTRIBUTING.rst, etc.
-# https://github.com/mgedmin/restview
-restview
-
--r rtd-requirements.txt

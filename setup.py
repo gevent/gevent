@@ -190,7 +190,21 @@ greenlet_requires = [
     'greenlet >= 0.4.13; platform_python_implementation=="CPython"',
 ]
 
-install_requires = greenlet_requires + []
+# Note that we don't add cffi to install_requires, it's
+# optional. We tend to build and distribute wheels with the CFFI
+# modules built and they can be imported if CFFI is installed.
+# We need cffi 1.4.0 for new style callbacks;
+# we need cffi 1.11.3 (on CPython 3) to avoid test errors.
+
+# The exception is on Windows, where we want the libuv backend we distribute
+# to be the default, and that requires cffi; but don't try to install it
+# on PyPy or it messes up the build
+cffi_requires = [
+    "cffi >= 1.11.5 ; sys_platform == 'win32' and platform_python_implementation == 'CPython'",
+]
+
+
+install_requires = greenlet_requires + cffi_requires
 
 # We use headers from greenlet, so it needs to be installed before we
 # can compile. If it isn't already installed before we start
@@ -204,7 +218,7 @@ install_requires = greenlet_requires + []
 # to install the headers at all, AFAICS, we don't need to bother with
 # the buggy setup_requires.)
 
-setup_requires = []
+setup_requires = cffi_requires + []
 
 if PYPY:
     # These use greenlet/greenlet.h, which doesn't exist on PyPy
@@ -249,18 +263,6 @@ for mod in _to_cythonize:
     EXT_MODULES.append(cythonize1(mod))
 del _to_cythonize
 
-try:
-    cffi = __import__('cffi')
-except ImportError:
-    pass
-else:
-    # Note that we don't add cffi to install_requires, it's
-    # optional. We tend to build and distribute wheels with the CFFI
-    # modules built and they can be imported if CFFI is installed.
-    # We need cffi 1.4.0 for new style callbacks;
-    # we need cffi 1.11.3 (on CPython 3) to avoid test errors
-    # install_requires.append('cffi >= 1.4.0')
-    pass
 
 if IGNORE_CFFI and not PYPY:
     # Allow distributors to turn off CFFI builds
