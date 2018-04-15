@@ -1,4 +1,4 @@
-.. implementing-servers:
+.. _implementing-servers:
 
 ======================
  Implementing servers
@@ -43,6 +43,17 @@ The :mod:`gevent.pywsgi` module contains an implementation of a :pep:`3333`
 :class:`WSGI server <gevent.pywsgi.WSGIServer>`. In addition,
 gunicorn_ is a stand-alone server that supports gevent.
 
+API Reference
+=============
+
+- :doc:`api/gevent.baseserver`
+- :doc:`api/gevent.server`
+- :doc:`api/gevent.pywsgi`
+
+
+Examples
+========
+
 More :doc:`examples <examples/index>` are available:
 
 - :doc:`examples/echoserver` - demonstrates :class:`gevent.server.StreamServer`
@@ -50,11 +61,5 @@ More :doc:`examples <examples/index>` are available:
 - :doc:`examples/wsgiserver_ssl` - demonstrates :class:`WSGIServer with ssl <gevent.pywsgi.WSGIServer>`
 
 
+
 .. _gunicorn: http://gunicorn.org
-
-.. toctree::
-
-   gevent.baseserver
-   gevent.server
-   gevent.pywsgi
-   gevent.wsgi

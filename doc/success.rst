@@ -1,13 +1,14 @@
-Success stories
-===============
+=================
+ Success stories
+=================
 
-If you have a success story for Gevent, contact denis.bilenko@gmail.com or post to the `google group`_.
+If you have a success story for gevent, contact post to the `google group`_.
 
 .. _google group: http://groups.google.com/group/gevent/
 
 
 Omegle_
--------
+=======
 
 I've been using gevent to power Omegle, my high-volume chat site,
 since 2010. Omegle is used by nearly half a million people every day,
@@ -32,7 +33,7 @@ library.
 
 
 Pediapress_
------------
+===========
 
 Pediapress_ powers Wikipedia_'s PDF rendering cluster. I've started using
 gevent in 2009 after our NFS based job queue showed serious performance
@@ -51,7 +52,7 @@ much cleaner and much more manageable then before.
 
 
 `ESN Social Software`_
-----------------------
+======================
 
 Wanting to avoid the ravages of asynchronous programming we choose to base
 our real-time web development framework Planet on gevent and Python. We’ve
@@ -64,7 +65,7 @@ enough for our needs and our customer’s requirements.
 
 
 `Blue Shell Games`_
--------------------
+===================
 
 At Blue Shell Games we use gevent to power the application servers that
 connect more than a million daily players of our social casino games.
@@ -83,7 +84,7 @@ of problems with ease.
 
 
 TellApart_
-----------
+==========
 
 At TellApart, we have been using gevent since 2010 as the underpinnings of
 our frontend servers. It enables us to serve millions of requests every hour
@@ -103,7 +104,7 @@ See also: `Gevent at TellApart`_
 
 
 Disqus
-------
+======
 
 See: `Making Disqus Realtime`_
 
@@ -111,7 +112,7 @@ See: `Making Disqus Realtime`_
 
 
 Pinterest
----------
+=========
 
 Pinterest is one of the biggest players of gevents. We started using gevent in
 2011 to query our mysql shards concurrently. It served us well so far. We run

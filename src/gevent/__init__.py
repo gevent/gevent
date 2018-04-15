@@ -46,7 +46,8 @@ __all__ = [
     'sleep',
     'idle',
     'kill',
-    'signal',
+    'signal', # deprecated
+    'signal_handler',
     'fork',
     'reinit',
     'getswitchinterval',
@@ -106,6 +107,7 @@ except ImportError:
 # to treat 'from gevent import signal' as a callable, to matter whether
 # the 'gevent.signal' module has been imported first
 from gevent.hub import signal as _signal_class
+signal_handler = _signal_class
 from gevent import signal as _signal_module
 
 # The object 'gevent.signal' must:

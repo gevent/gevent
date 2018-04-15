@@ -19,8 +19,6 @@ import os
 # for better documentation extraction and ease of tweaking docs.
 os.environ['PURE_PYTHON'] = '1'
 
-os.system('%s generate_rst.py generate' % sys.executable)
-
 sys.path.append('.')  # for mysphinxext
 
 # If extensions (or modules to document with autodoc) are in another directory,

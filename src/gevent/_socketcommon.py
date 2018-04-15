@@ -161,7 +161,7 @@ def gethostbyname(hostname):
 
     Return the IP address (a string of the form '255.255.255.255') for a host.
 
-    .. seealso:: :doc:`dns`
+    .. seealso:: :doc:`/dns`
     """
     return get_hub().resolver.gethostbyname(hostname)
 
@@ -174,7 +174,7 @@ def gethostbyname_ex(hostname):
     for a host.  The host argument is a string giving a host name or IP number.
     Resolve host and port into list of address info entries.
 
-    .. seealso:: :doc:`dns`
+    .. seealso:: :doc:`/dns`
     """
     return get_hub().resolver.gethostbyname_ex(hostname)
 
@@ -194,7 +194,7 @@ def getaddrinfo(host, port, family=0, socktype=0, proto=0, flags=0):
     narrow the list of addresses returned. Passing zero as a value for each of
     these arguments selects the full range of results.
 
-    .. seealso:: :doc:`dns`
+    .. seealso:: :doc:`/dns`
     """
     return get_hub().resolver.getaddrinfo(host, port, family, socktype, proto, flags)
 
@@ -220,7 +220,7 @@ def gethostbyaddr(ip_address):
     Return the true host name, a list of aliases, and a list of IP addresses,
     for a host.  The host argument is a string giving a host name or IP number.
 
-    .. seealso:: :doc:`dns`
+    .. seealso:: :doc:`/dns`
     """
     return get_hub().resolver.gethostbyaddr(ip_address)
 
@@ -231,7 +231,7 @@ def getnameinfo(sockaddr, flags):
 
     Get host and port for a sockaddr.
 
-    .. seealso:: :doc:`dns`
+    .. seealso:: :doc:`/dns`
     """
     return get_hub().resolver.getnameinfo(sockaddr, flags)
 

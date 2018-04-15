@@ -243,6 +243,7 @@ useful in the cooperative world:
   allows passing a value or an exception to the waiters.
 - :class:`~queue.Queue` and :class:`~queue.JoinableQueue`.
 
+.. _greenlet-basics:
 
 Lightweight pseudothreads
 =========================
@@ -277,30 +278,17 @@ The traceback is asynchronously printed to ``sys.stderr`` when the greenlet dies
 - :meth:`kill <gevent.Greenlet.kill>` -- interrupts greenlet's execution;
 - :meth:`get <gevent.Greenlet.get>`  -- returns the value returned by greenlet or re-raises the exception that killed it.
 
-It is possible to customize the string printed after the traceback by
-subclassing the :class:`~gevent.Greenlet` class and redefining its
-``__str__`` method.
+Greenlets can be subclassed with care. One use for this is to
+customize the string printed after the traceback by subclassing the
+:class:`~gevent.Greenlet` class and redefining its ``__str__`` method.
+For more information, see :ref:`subclassing-greenlet`.
 
-To subclass a :class:`gevent.Greenlet`, override its ``_run`` method
-and call ``Greenlet.__init__(self)`` in ``__init__``::
-
-    class MyNoopGreenlet(Greenlet):
-
-        def __init__(self, seconds):
-            Greenlet.__init__(self)
-            self.seconds = seconds
-
-        def _run(self):
-            gevent.sleep(self.seconds)
-
-        def __str__(self):
-            return 'MyNoopGreenlet(%s)' % self.seconds
 
 Greenlets can be killed synchronously from another greenlet. Killing
 will resume the sleeping greenlet, but instead of continuing
 execution, a :exc:`GreenletExit` will be raised.
 
-    >>> g = MyNoopGreenlet(4)
+    >>> g = Greenlet(gevent.sleep, 4)
     >>> g.start()
     >>> g.kill()
     >>> g.dead
@@ -315,12 +303,12 @@ raised.
 
 The :meth:`kill <gevent.Greenlet.kill>` method can accept a custom exception to be raised:
 
-    >>> g = MyNoopGreenlet.spawn(5) # spawn() creates a Greenlet and starts it
+    >>> g = Greenlet.spawn(gevent.sleep, 5) # spawn() creates a Greenlet and starts it
     >>> g.kill(Exception("A time to kill"))
     Traceback (most recent call last):
      ...
     Exception: A time to kill
-    MyNoopGreenlet(5) failed with Exception
+    Greenlet(5) failed with Exception
 
 The :meth:`kill <gevent.Greenlet.kill>` can also accept a *timeout*
 argument specifying the number of seconds to wait for the greenlet to
@@ -374,16 +362,27 @@ The :class:`socket <gevent.socket.socket>` and :class:`SSLObject
 <gevent.ssl.SSLObject>` instances can also have a timeout, set by the
 :meth:`settimeout <socket.socket.settimeout>` method.
 
-When these are not enough, the :class:`~gevent.Timeout` class can be used to
-add timeouts to arbitrary sections of (cooperative, yielding) code.
+When these are not enough, the :class:`gevent.Timeout` class and
+:func:`gevent.with_timeout` can be used to add timeouts to arbitrary
+sections of (cooperative, yielding) code.
 
 
-Further reading
+Further Reading
 ===============
 
-To limit concurrency, use the :class:`gevent.pool.Pool` class (see :doc:`examples/dns_mass_resolve`).
+To limit concurrency, use the :class:`gevent.pool.Pool` class (see
+:doc:`examples/dns_mass_resolve`).
 
 Gevent comes with TCP/SSL/HTTP/WSGI servers. See :doc:`servers`.
+
+There are a number of configuration options for gevent. See
+:ref:`gevent-configuration` for details. This document also explains how
+to enable gevent's builtin monitoring and debugging features.
+
+The objects in :mod:`gevent.util` may be helpful for monitoring and
+debugging purposes.
+
+See :doc:`api/index` for a complete API reference.
 
 
 External resources

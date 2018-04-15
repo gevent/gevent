@@ -34,16 +34,6 @@ src/greentest/.coverage
 
 doc/_build
 doc/__pycache__
-doc/gevent.*.rst
-!doc/gevent.core.rst
-!doc/gevent.event.rst
-!doc/gevent.hub.rst
-!doc/gevent.queue.rst
-!doc/gevent.pool.rst
-!doc/gevent.threadpool.rst
-!doc/gevent.socket.rst
-!doc/gevent.ssl.rst
-!doc/gevent.wsgi.rst
 
 # Artifacts of configuring in place
 deps/c-ares/config.log

@@ -10,8 +10,10 @@ Features include:
 
 * **Fast event loop** based on libev or libuv (epoll on Linux, kqueue on FreeBSD).
 * **Lightweight execution units** based on greenlet.
-* API that re-uses concepts from the Python standard library (for example there are :class:`gevent.event.Events` and :class:`gevent.queue.Queues`).
-* :doc:`Cooperative sockets with SSL support <networking>`
+* API that re-uses concepts from the Python standard library (for
+  examples there are :class:`events <gevent.event.Event>` and
+  :class:`queues <gevent.queue.Queue>`).
+* :ref:`Cooperative sockets with SSL support <networking>`
 * DNS queries performed through threadpool or c-ares.
 * :ref:`Monkey patching utility <monkey-patching>` to get 3rd party modules to become cooperative
 

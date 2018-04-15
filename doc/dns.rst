@@ -40,7 +40,7 @@ relative performance and correctness tradeoffs.
 
 .. toctree::
 
-   gevent.resolver.thread
-   gevent.resolver.ares
-   gevent.resolver.dnspython
-   gevent.resolver.blocking
+   api/gevent.resolver.thread
+   api/gevent.resolver.ares
+   api/gevent.resolver.dnspython
+   api/gevent.resolver.blocking

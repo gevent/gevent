@@ -1,0 +1,149 @@
+==================
+ Greenlet Objects
+==================
+
+.. currentmodule:: gevent
+
+:class:`gevent.Greenlet` is a light-weight cooperatively-scheduled
+execution unit. It is a more powerful version of
+:class:`greenlet.greenlet`. For general information, see :ref:`greenlet-basics`.
+
+You can retrieve the current greenlet at any time using
+:func:`gevent.getcurrent`.
+
+Starting Greenlets
+==================
+
+To start a new greenlet, pass the target function and its arguments to
+:class:`Greenlet` constructor and call :meth:`Greenlet.start`:
+
+>>> g = Greenlet(myfunction, 'arg1', 'arg2', kwarg1=1)
+>>> g.start()
+
+or use classmethod :meth:`Greenlet.spawn` which is a shortcut that
+does the same:
+
+>>> g = Greenlet.spawn(myfunction, 'arg1', 'arg2', kwarg1=1)
+
+There are also various spawn helpers in :mod:`gevent`, including:
+
+- :func:`gevent.spawn`
+- :func:`gevent.spawn_later`
+- :func:`gevent.spawn_raw`
+
+Stopping Greenlets
+==================
+
+You can forcibly stop a :class:`Greenlet` using its :meth:`Greenlet.kill`
+method. There are also helper functions that can be useful in limited
+circumstances (if you might have a :class:`raw greenlet <greenlet.greenlet>`):
+
+- :func:`gevent.kill`
+- :func:`gevent.killall`
+
+.. _subclassing-greenlet:
+
+Subclassing Greenlet
+====================
+
+To subclass a :class:`Greenlet`, override its ``_run()`` method and
+call ``Greenlet.__init__(self)`` in the subclass ``__init__``. This
+can be done to override :meth:`Greenlet.__str__`: if ``_run`` raises
+an exception, its string representation will be printed after the
+traceback it generated.
+
+::
+
+    class MyNoopGreenlet(Greenlet):
+
+        def __init__(self, seconds):
+            Greenlet.__init__(self)
+            self.seconds = seconds
+
+        def _run(self):
+            gevent.sleep(self.seconds)
+
+        def __str__(self):
+            return 'MyNoopGreenlet(%s)' % self.seconds
+
+
+.. important:: You *SHOULD NOT* attempt to override the ``run()`` method.
+
+
+Boolean Contexts
+================
+
+Greenlet objects have a boolean value (``__nonzero__`` or
+``__bool__``) which is true if it's active: started but not dead yet.
+
+It's possible to use it like this::
+
+    >>> g = gevent.spawn(...)
+    >>> while g:
+           # do something while g is alive
+
+The Greenlet's boolean value is an improvement on the raw
+:class:`greenlet's <greenlet.greenlet>` boolean value. The raw
+greenlet's boolean value returns False if the greenlet has not been
+switched to yet or is already dead. While the latter is OK, the former
+is not good, because a just spawned Greenlet has not been switched to
+yet and thus would evaluate to False.
+
+.. exception:: GreenletExit
+
+    A special exception that kills the greenlet silently.
+
+    When a greenlet raises :exc:`GreenletExit` or a subclass, the traceback is not
+    printed and the greenlet is considered :meth:`successful <Greenlet.successful>`.
+    The exception instance is available under :attr:`value <Greenlet.value>`
+    property as if it was returned by the greenlet, not raised.
+
+
+.. class:: Greenlet
+
+.. automethod:: Greenlet.__init__
+
+.. autoattribute:: Greenlet.exception
+.. autoattribute:: Greenlet.minimal_ident
+.. autoattribute:: Greenlet.name
+.. autoattribute:: Greenlet.dead
+
+.. rubric:: Methods
+
+.. automethod:: Greenlet.spawn
+.. automethod:: Greenlet.ready
+.. automethod:: Greenlet.successful
+.. automethod:: Greenlet.start
+.. automethod:: Greenlet.start_later
+.. automethod:: Greenlet.join
+.. automethod:: Greenlet.get
+.. automethod:: Greenlet.kill(exception=GreenletExit, block=True, timeout=None)
+.. automethod:: Greenlet.link(callback)
+.. automethod:: Greenlet.link_value(callback)
+.. automethod:: Greenlet.link_exception(callback)
+.. automethod:: Greenlet.rawlink
+.. automethod:: Greenlet.unlink
+.. automethod:: Greenlet.__str__
+
+
+Raw greenlet Methods
+====================
+
+Being a greenlet__ subclass, :class:`Greenlet` also has `switch()
+<switching>`_ and `throw() <throw>`_ methods. However, these should
+not be used at the application level as they can very easily lead to
+greenlets that are forever unscheduled. Prefer higher-level safe
+classes, like :class:`Event <gevent.event.Event>` and :class:`Queue
+<gevent.queue.Queue>`, instead.
+
+__ https://greenlet.readthedocs.io/en/latest/#instantiation
+.. _switching: https://greenlet.readthedocs.io/en/latest/#switching
+.. _throw: https://greenlet.readthedocs.io/en/latest/#methods-and-attributes-of-greenlets
+
+.. class:: greenlet.greenlet
+
+    The base class from which `Greenlet` descends.
+
+
+..  LocalWords:  Greenlet GreenletExit Greenlet's greenlet's
+..  LocalWords:  automethod

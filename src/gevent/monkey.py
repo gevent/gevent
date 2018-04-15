@@ -658,7 +658,7 @@ def patch_socket(dns=True, aggressive=True):
     sockets.
 
     :keyword bool dns: When true (the default), also patch address
-        resolution functions in :mod:`socket`. See :doc:`dns` for details.
+        resolution functions in :mod:`socket`. See :doc:`/dns` for details.
     """
     from gevent import socket
     # Note: although it seems like it's not strictly necessary to monkey patch 'create_connection',
@@ -678,7 +678,7 @@ def patch_socket(dns=True, aggressive=True):
 @_ignores_DoNotPatch
 def patch_dns():
     """
-    Replace :doc:`DNS functions <dns>` in :mod:`socket` with
+    Replace :doc:`DNS functions </dns>` in :mod:`socket` with
     cooperative versions.
 
     This is only useful if :func:`patch_socket` has been called and is
