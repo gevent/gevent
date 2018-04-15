@@ -201,6 +201,9 @@ class DummySemaphore(object):
 
 
 class RLock(object):
+    """
+    A mutex that can be acquired more than once by the same greenlet.
+    """
 
     def __init__(self):
         self._block = Semaphore(1)

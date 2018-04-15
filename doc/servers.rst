@@ -41,20 +41,16 @@ server is stopped.
 
 The :mod:`gevent.pywsgi` module contains an implementation of a :pep:`3333`
 :class:`WSGI server <gevent.pywsgi.WSGIServer>`. In addition,
-gunicorn_ is a stand-alone server that supports gevent. Gunicorn has
-its own HTTP parser but can also use :mod:`gevent.wsgi` module.
+gunicorn_ is a stand-alone server that supports gevent.
 
-More examples are available in the `code repository`_:
+More :doc:`examples <examples/index>` are available:
 
-- `echoserver.py`_ - demonstrates :class:`StreamServer`
-- `wsgiserver.py`_ - demonstrates :class:`wsgi.WSGIServer <gevent.wsgi.WSGIServer>`
-- `wsgiserver_ssl.py`_ - demonstrates :class:`pywsgi.WSGIServer <gevent.pywsgi.WSGIServer>`
+- :doc:`examples/echoserver` - demonstrates :class:`gevent.server.StreamServer`
+- :doc:`examples/wsgiserver` - demonstrates :class:`gevent.pywsgi.WSGIServer <gevent.pywsgi.WSGIServer>`
+- :doc:`examples/wsgiserver_ssl` - demonstrates :class:`WSGIServer with ssl <gevent.pywsgi.WSGIServer>`
 
-.. _`code repository`: https://github.com/gevent/gevent/tree/master/examples
+
 .. _gunicorn: http://gunicorn.org
-.. _`echoserver.py`: https://github.com/gevent/gevent/blob/master/examples/echoserver.py#L34
-.. _`wsgiserver.py`: https://github.com/gevent/gevent/blob/master/examples/wsgiserver.py#L18
-.. _`wsgiserver_ssl.py`: https://github.com/gevent/gevent/blob/master/examples/wsgiserver_ssl.py#L17
 
 .. toctree::
 

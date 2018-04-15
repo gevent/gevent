@@ -8,6 +8,7 @@ Table Of Contents
    whatsnew_1_3
    changelog
    reference
+   examples/index
    older_releases
 
 * :ref:`genindex`

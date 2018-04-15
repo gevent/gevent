@@ -133,7 +133,7 @@ in a multi-greenlet environment.
     >>> from gevent import monkey; monkey.patch_socket()
     >>> import urllib2 # it's usable from multiple greenlets now
 
-See `examples/concurrent_download.py`__
+See :doc:`examples/concurrent_download`.
 
 Beyond sockets
 --------------
@@ -159,7 +159,6 @@ modules using the :func:`gevent.monkey.patch_all` function::
    or sockets have been created, may lead to unpredictable
    results including unexpected :exc:`~gevent.hub.LoopExit` errors.
 
-__ https://github.com/gevent/gevent/blob/master/examples/concurrent_download.py#L1
 
 Event loop
 ==========
@@ -231,8 +230,8 @@ I/O functions that bypass the libev event loop.
 Synchronizing access to objects shared across the greenlets is
 unnecessary in most cases (because yielding control is usually
 explict), thus traditional synchronization devices like the
-:class:`~lock.BoundedSemaphore`, :class:`~lock.RLock` and
-:class:`~lock.Semaphore` classes, although present, aren't used very
+:class:`gevent.lock.BoundedSemaphore`, :class:`gevent.lock.RLock` and
+:class:`gevent.lock.Semaphore` classes, although present, aren't used very
 often. Other abstractions from threading and multiprocessing remain
 useful in the cooperative world:
 
@@ -244,9 +243,9 @@ useful in the cooperative world:
 Lightweight pseudothreads
 =========================
 
-.. currentmodule:: gevent.greenlet
+.. currentmodule:: gevent
 
-New greenlets are spawned by creating a :class:`~gevent.Greenlet` instance and calling its :meth:`start <gevent.Greenlet.start>`
+New greenlets are spawned by creating a :class:`~Greenlet` instance and calling its :meth:`start <gevent.Greenlet.start>`
 method. (The :func:`gevent.spawn` function is a shortcut that does exactly that). The :meth:`start <gevent.Greenlet.start>`
 method schedules a switch to the greenlet that will happen as soon as the current greenlet gives up control.
 If there is more than one active greenlet, they will be executed one
@@ -290,7 +289,7 @@ To subclass a :class:`gevent.Greenlet`, override its
             return 'MyNoopGreenlet(%s)' % self.seconds
 
 Greenlets can be killed synchronously from another greenlet. Killing will resume the sleeping greenlet, but instead
-of continuing execution, a :exc:`~gevent.greenlet.GreenletExit` will be raised.
+of continuing execution, a :exc:`GreenletExit` will be raised.
 
     >>> g = MyNoopGreenlet(4)
     >>> g.start()
@@ -298,9 +297,9 @@ of continuing execution, a :exc:`~gevent.greenlet.GreenletExit` will be raised.
     >>> g.dead
     True
 
-The :exc:`gevent.greenlet.GreenletExit` exception and its subclasses are handled differently than other exceptions.
-Raising :exc:`~gevent.greenlet.GreenletExit` is not considered an exceptional situation, so the traceback is not printed.
-The :exc:`~gevent.greenlet.GreenletExit` is returned by :meth:`get <gevent.Greenlet.get>` as if it were returned by the greenlet, not raised.
+The :exc:`GreenletExit` exception and its subclasses are handled differently than other exceptions.
+Raising :exc:`~GreenletExit` is not considered an exceptional situation, so the traceback is not printed.
+The :exc:`~GreenletExit` is returned by :meth:`get <gevent.Greenlet.get>` as if it were returned by the greenlet, not raised.
 
 The :meth:`kill <gevent.Greenlet.kill>` method can accept a custom exception to be raised:
 
@@ -370,11 +369,9 @@ add timeouts to arbitrary sections of (cooperative, yielding) code.
 Further reading
 ===============
 
-To limit concurrency, use the :class:`gevent.pool.Pool` class (see `example: dns_mass_resolve.py`_).
+To limit concurrency, use the :class:`gevent.pool.Pool` class (see :doc:`examples/dns_mass_resolve`).
 
 Gevent comes with TCP/SSL/HTTP/WSGI servers. See :doc:`servers`.
-
-.. _`example: dns_mass_resolve.py`: https://github.com/gevent/gevent/blob/master/examples/dns_mass_resolve.py#L17
 
 
 External resources
