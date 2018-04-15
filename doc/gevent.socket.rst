@@ -38,6 +38,14 @@ Python 2 and Python 3, respectively.
    Their organization is an implementation detail that may change at
    any time.
 
+.. autofunction:: gevent.socket.gethostbyname
+
+.. class:: socket
+
+    The cooperative socket object. See the version documentation for
+    specifics.
+
+
 .. toctree::
 
    Python 3 interface <gevent._socket3>

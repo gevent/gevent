@@ -13,18 +13,20 @@ Greenlet objects
 
 :class:`Greenlet` is a light-weight cooperatively-scheduled execution unit.
 
-To start a new greenlet, pass the target function and its arguments to :class:`Greenlet` constructor and call :meth:`start`:
+To start a new greenlet, pass the target function and its arguments to
+:class:`Greenlet` constructor and call :meth:`Greenlet.start`:
 
 >>> g = Greenlet(myfunction, 'arg1', 'arg2', kwarg1=1)
 >>> g.start()
 
-or use classmethod :meth:`spawn` which is a shortcut that does the same:
+or use classmethod :meth:`Greenlet.spawn` which is a shortcut that
+does the same:
 
 >>> g = Greenlet.spawn(myfunction, 'arg1', 'arg2', kwarg1=1)
 
 To subclass a :class:`Greenlet`, override its ``_run()`` method and
-call ``Greenlet.__init__(self)`` in :meth:`__init__`: It also a good
-idea to override :meth:`__str__`: if :meth:`_run` raises an exception,
+call ``Greenlet.__init__(self)`` in the subclass ``__init__``.  It also a good
+idea to override :meth:`Greenlet.__str__`: if ``_run`` raises an exception,
 its string representation will be printed after the traceback it
 generated.
 
@@ -37,9 +39,11 @@ generated.
 .. autoattribute:: Greenlet.exception
 .. autoattribute:: Greenlet.minimal_ident
 .. autoattribute:: Greenlet.name
+.. autoattribute:: Greenlet.dead
 
 .. rubric:: Methods
 
+.. automethod:: Greenlet.spawn
 .. automethod:: Greenlet.ready
 .. automethod:: Greenlet.successful
 .. automethod:: Greenlet.start
@@ -52,6 +56,7 @@ generated.
 .. automethod:: Greenlet.link_exception(callback)
 .. automethod:: Greenlet.rawlink
 .. automethod:: Greenlet.unlink
+.. automethod:: Greenlet.__str__
 
 Boolean Contexts
 ----------------
@@ -65,12 +70,12 @@ It's possible to use it like this::
     >>> while g:
            # do something while g is alive
 
-The Greenlet's ``__nonzero__`` is an improvement on greenlet's
-``__nonzero__``. The greenlet's :meth:`__nonzero__
-<greenlet.greenlet.__nonzero__>` returns False if greenlet has not
-been switched to yet or is already dead. While the latter is OK, the
-former is not good, because a just spawned Greenlet has not been
-switched to yet and thus would evaluate to False.
+The Greenlet's boolean value is an improvement on the raw
+:class:`greenlet's <greenlet.greenlet>` boolean value. The raw
+greenlet's boolean value returns False if the greenlet has not been
+switched to yet or is already dead. While the latter is OK, the former
+is not good, because a just spawned Greenlet has not been switched to
+yet and thus would evaluate to False.
 
 Raw greenlet Methods
 --------------------
@@ -85,6 +90,10 @@ classes, like :class:`Event <gevent.event.Event>` and :class:`Queue
 __ https://greenlet.readthedocs.io/en/latest/#instantiation
 .. _switching: https://greenlet.readthedocs.io/en/latest/#switching
 .. _throw: https://greenlet.readthedocs.io/en/latest/#methods-and-attributes-of-greenlets
+
+.. class:: greenlet.greenlet
+
+    The base class from which `Greenlet` descends.
 
 .. exception:: GreenletExit
 
@@ -192,3 +201,6 @@ Configuration
 =============
 
 .. autoclass:: gevent._config.Config
+
+..  LocalWords:  Greenlet GreenletExit Greenlet's greenlet's
+..  LocalWords:  automethod

@@ -2,6 +2,8 @@
  :mod:`gevent.ssl` -- Secure Sockets Layer (SSL/TLS) module
 ====================================================================
 
+.. module:: gevent.ssl
+
 This module provides SSL/TLS operations and some related functions. The
 API of the functions and classes matches the API of the corresponding
 items in the standard :mod:`ssl` module exactly, but the
@@ -16,6 +18,11 @@ Python 3, Python 2.7.9 and above, and Python 2.7.8 and below, respectively.
    ``gevent.ssl``, and *not* from their implementation modules.
    Their organization is an implementation detail that may change at
    any time.
+
+.. class:: SSLObject
+
+    The gevent-cooperative SSL object. See the version-specific
+    documentation for details.
 
 .. toctree::
 

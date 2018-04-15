@@ -1,10 +1,15 @@
 # Wrapper module for _ssl. Written by Bill Janssen.
 # Ported to gevent by Denis Bilenko.
-"""SSL wrapper for socket objects on Python 2.7.8 and below.
+"""
+SSL wrapper for socket objects on Python 2.7.8 and below.
 
 For the documentation, refer to :mod:`ssl` module manual.
 
 This module implements cooperative SSL socket wrappers.
+
+.. deprecated:: 1.3
+   This module is not secure. Support for Python versions
+   with only this level of SSL will be dropped in gevent 1.4.
 """
 
 from __future__ import absolute_import

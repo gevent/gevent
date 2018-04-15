@@ -243,3 +243,7 @@ import gevent.socket
 for item in gevent.socket.__all__[:]:
     if getattr(gevent.socket, item) is getattr(socket, item, None):
         gevent.socket.__all__.remove(item)
+
+if not hasattr(gevent.socket, '_fileobject'):
+    # Python 3 building Python 2 docs.
+    gevent.socket._fileobject = object()

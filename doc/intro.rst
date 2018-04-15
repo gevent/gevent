@@ -26,10 +26,11 @@ Installation and Requirements
 is supported, and versions 3.4, 3.5 and 3.6 of Python 3 are supported.
 (Users of older versions of Python 2 need to install gevent 1.0.x
 (2.5), 1.1.x (2.6) or 1.2.x (<=2.7.8); gevent 1.2 can be installed on
-Python 3.3.) gevent requires the greenlet__ library.
+Python 3.3.) gevent requires the greenlet__ library and will install
+the `cffi`_ library by default on Windows.
 
-.. note:: Python 3.3 is no longer actively supported in gevent 1.3.
-          since it is not supported by the Python developers. However,
+.. note:: Python 3.3 is no longer actively supported in gevent 1.2
+          because it is not supported by the Python developers. However,
           it should continue to work with gevent 1.2 with the same
           level of support as gevent 1.1. For Python 3.3, version
           3.3.5 or newer is required to use the gevent's SSL support
@@ -43,10 +44,10 @@ strongly recommended. On PyPy, there are no external dependencies.
 gevent is tested on Windows, OS X, and Linux, and should run on most
 other Unix-like operating systems (e.g., FreeBSD, Solaris, etc.)
 
-.. note:: On Windows using the default libev backend, gevent is
+.. note:: On Windows using the libev backend, gevent is
           limited to a maximum of 1024 open sockets due to
           `limitations in libev`_. This limitation should not exist
-          with the libuv backend.
+          with the default libuv backend.
 
 gevent and greenlet can both be installed with `pip`_, e.g., ``pip
 install gevent``. On Windows, OS X, and Linux, both gevent and greenlet are
@@ -188,7 +189,7 @@ The event loop provided by libev uses the fastest polling mechanism
 available on the system by default. Please read the `libev documentation`_ for more
 information.
 
-.. 1.3: libuv update needed
+.. caution:: This section needs to be updated for gevent 1.3 and libuv.
 
 .. As of 1.1 or before, we set the EVFLAG_NOENV so this isn't possible any more.
 
@@ -201,13 +202,14 @@ information.
 
 .. _`libev documentation`: http://pod.tst.eu/http://cvs.schmorp.de/libev/ev.pod#FUNCTIONS_CONTROLLING_EVENT_LOOPS
 
-.. 1.3: libuv update needed
 
-The libev API is available under the :mod:`gevent.core` module. Note that
-the callbacks supplied to the libev API are run in the :class:`~gevent.hub.Hub`
-greenlet and thus cannot use the synchronous gevent API. It is possible to
-use the asynchronous API there, like :func:`gevent.spawn` and
-:meth:`gevent.event.Event.set`.
+The libev API is available under the :mod:`gevent.core` module. Note
+that the callbacks supplied to the libev API are run in the
+:class:`~gevent.hub.Hub` greenlet and thus cannot use the synchronous
+gevent API. It is possible to use the asynchronous API there, like
+:func:`gevent.spawn` and :meth:`gevent.event.Event.set`.
+
+.. caution:: This section needs to be updated for gevent 1.3 and libuv.
 
 
 Cooperative multitasking
@@ -218,10 +220,10 @@ Cooperative multitasking
 The greenlets all run in the same OS thread and are scheduled
 cooperatively. This means that until a particular greenlet gives up
 control, (by calling a blocking function that will switch to the
-:class:`~gevent.hub.Hub`), other greenlets won't get a chance to run. This is
-typically not an issue for an I/O bound app, but one should be aware
-of this when doing something CPU intensive, or when calling blocking
-I/O functions that bypass the libev event loop.
+:class:`~gevent.hub.Hub`), other greenlets won't get a chance to run.
+This is typically not an issue for an I/O bound app, but one should be
+aware of this when doing something CPU intensive, or when calling
+blocking I/O functions that bypass the libev event loop.
 
 .. tip:: Even some apparently cooperative functions, like
 		 :func:`gevent.sleep`, can temporarily take priority over
@@ -235,8 +237,10 @@ explict), thus traditional synchronization devices like the
 often. Other abstractions from threading and multiprocessing remain
 useful in the cooperative world:
 
-- :class:`~event.Event` allows one to wake up a number of greenlets that are calling :meth:`~event.Event.wait` method.
-- :class:`~event.AsyncResult` is similar to :class:`~event.Event` but allows passing a value or an exception to the waiters.
+- :class:`~event.Event` allows one to wake up a number of greenlets
+  that are calling :meth:`~event.Event.wait` method.
+- :class:`~event.AsyncResult` is similar to :class:`~event.Event` but
+  allows passing a value or an exception to the waiters.
 - :class:`~queue.Queue` and :class:`~queue.JoinableQueue`.
 
 
@@ -245,14 +249,18 @@ Lightweight pseudothreads
 
 .. currentmodule:: gevent
 
-New greenlets are spawned by creating a :class:`~Greenlet` instance and calling its :meth:`start <gevent.Greenlet.start>`
-method. (The :func:`gevent.spawn` function is a shortcut that does exactly that). The :meth:`start <gevent.Greenlet.start>`
-method schedules a switch to the greenlet that will happen as soon as the current greenlet gives up control.
-If there is more than one active greenlet, they will be executed one
-by one, in an undefined order as they each give up control to the :class:`~gevent.hub.Hub`.
+New greenlets are spawned by creating a :class:`~Greenlet` instance
+and calling its :meth:`start <gevent.Greenlet.start>` method. (The
+:func:`gevent.spawn` function is a shortcut that does exactly that).
+The :meth:`start <gevent.Greenlet.start>` method schedules a switch to
+the greenlet that will happen as soon as the current greenlet gives up
+control. If there is more than one active greenlet, they will be
+executed one by one, in an undefined order as they each give up
+control to the :class:`~gevent.hub.Hub`.
 
-If there is an error during execution it won't escape the greenlet's boundaries. An unhandled error results
-in a stacktrace being printed, annotated by the failed function's signature and arguments:
+If there is an error during execution it won't escape the greenlet's
+boundaries. An unhandled error results in a stacktrace being printed,
+annotated by the failed function's signature and arguments:
 
     >>> gevent.spawn(lambda : 1/0)
     >>> gevent.sleep(1)
@@ -269,12 +277,12 @@ The traceback is asynchronously printed to ``sys.stderr`` when the greenlet dies
 - :meth:`kill <gevent.Greenlet.kill>` -- interrupts greenlet's execution;
 - :meth:`get <gevent.Greenlet.get>`  -- returns the value returned by greenlet or re-raises the exception that killed it.
 
-It is possible to customize the string printed after the traceback by subclassing the :class:`~gevent.Greenlet` class
-and redefining its ``__str__`` method.
+It is possible to customize the string printed after the traceback by
+subclassing the :class:`~gevent.Greenlet` class and redefining its
+``__str__`` method.
 
-To subclass a :class:`gevent.Greenlet`, override its
-:meth:`gevent.Greenlet._run` method and call
-``Greenlet.__init__(self)`` in ``__init__``::
+To subclass a :class:`gevent.Greenlet`, override its ``_run`` method
+and call ``Greenlet.__init__(self)`` in ``__init__``::
 
     class MyNoopGreenlet(Greenlet):
 
@@ -288,8 +296,9 @@ To subclass a :class:`gevent.Greenlet`, override its
         def __str__(self):
             return 'MyNoopGreenlet(%s)' % self.seconds
 
-Greenlets can be killed synchronously from another greenlet. Killing will resume the sleeping greenlet, but instead
-of continuing execution, a :exc:`GreenletExit` will be raised.
+Greenlets can be killed synchronously from another greenlet. Killing
+will resume the sleeping greenlet, but instead of continuing
+execution, a :exc:`GreenletExit` will be raised.
 
     >>> g = MyNoopGreenlet(4)
     >>> g.start()
@@ -297,9 +306,12 @@ of continuing execution, a :exc:`GreenletExit` will be raised.
     >>> g.dead
     True
 
-The :exc:`GreenletExit` exception and its subclasses are handled differently than other exceptions.
-Raising :exc:`~GreenletExit` is not considered an exceptional situation, so the traceback is not printed.
-The :exc:`~GreenletExit` is returned by :meth:`get <gevent.Greenlet.get>` as if it were returned by the greenlet, not raised.
+The :exc:`GreenletExit` exception and its subclasses are handled
+differently than other exceptions. Raising :exc:`~GreenletExit` is not
+considered an exceptional situation, so the traceback is not printed.
+The :exc:`~GreenletExit` is returned by :meth:`get
+<gevent.Greenlet.get>` as if it were returned by the greenlet, not
+raised.
 
 The :meth:`kill <gevent.Greenlet.kill>` method can accept a custom exception to be raised:
 
@@ -323,24 +335,24 @@ killing will remain blocked forever).
 		  <gevent.Greenlet.kill>` is not defined. See that function's
 		  documentation for more details.
 
-.. caution:: Use care when killing greenlets, especially arbitrary
-             greenlets spawned by a library or otherwise executing
-             code you are not familiar with. If the code being
-             executed is not prepared to deal with exceptions, object
-             state may be corrupted. For example, if it has acquired a
-             ``Lock`` but *does not* use a ``finally`` block to
-             release it, killing the greenlet at the wrong time could
-             result in the lock being permanently locked::
+.. caution::
+   Use care when killing greenlets, especially arbitrary
+   greenlets spawned by a library or otherwise executing code you are
+   not familiar with. If the code being executed is not prepared to
+   deal with exceptions, object state may be corrupted. For example,
+   if it has acquired a ``Lock`` but *does not* use a ``finally``
+   block to release it, killing the greenlet at the wrong time could
+   result in the lock being permanently locked::
 
-               def func():
-                   # DON'T DO THIS
-                   lock.acquire()
-                   socket.sendall(data) # This could raise many exceptions, including GreenletExit
-                   lock.release()
+     def func():
+         # DON'T DO THIS
+         lock.acquire()
+         socket.sendall(data) # This could raise many exceptions, including GreenletExit
+         lock.release()
 
-             `This document
-             <http://docs.oracle.com/javase/8/docs/technotes/guides/concurrency/threadPrimitiveDeprecation.html>`_
-             describes a similar situation for threads.
+   `This document
+   <http://docs.oracle.com/javase/8/docs/technotes/guides/concurrency/threadPrimitiveDeprecation.html>`_
+   describes a similar situation for threads.
 
 Timeouts
 ========
@@ -348,7 +360,7 @@ Timeouts
 Many functions in the gevent API are synchronous, blocking the current
 greenlet until the operation is done. For example, :meth:`kill
 <gevent.Greenlet.kill>` waits until the target greenlet is
-:attr:`~gevent.greenlet.Greenlet.dead` before returning [#f1]_. Many of
+:attr:`~gevent.Greenlet.dead` before returning [#f1]_. Many of
 those functions can be made asynchronous by passing the keyword argument
 ``block=False``.
 
@@ -360,9 +372,9 @@ argument, which specifies a limit on how long the function can block
 
 The :class:`socket <gevent.socket.socket>` and :class:`SSLObject
 <gevent.ssl.SSLObject>` instances can also have a timeout, set by the
-:meth:`settimeout <gevent.socket.socket.settimeout>` method.
+:meth:`settimeout <socket.socket.settimeout>` method.
 
-When these are not enough, the :class:`~gevent.timeout.Timeout` class can be used to
+When these are not enough, the :class:`~gevent.Timeout` class can be used to
 add timeouts to arbitrary sections of (cooperative, yielding) code.
 
 
@@ -383,4 +395,6 @@ __ http://sdiehl.github.io/gevent-tutorial/
 
 .. rubric:: Footnotes
 
-.. [#f1] This was not the case before 0.13.0, :meth:`kill <gevent.greenlet.Greenlet.kill>` method in 0.12.2 and older was asynchronous by default.
+.. [#f1] This was not the case before 0.13.0, :meth:`kill <gevent.Greenlet.kill>` method in 0.12.2 and older was asynchronous by default.
+
+..  LocalWords:  Greenlets

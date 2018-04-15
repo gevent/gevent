@@ -367,6 +367,7 @@ class Greenlet(greenlet):
         # oops - pypy's .dead relies on __nonzero__ which we overriden above
         @property
         def dead(self):
+            "Boolean indicating that the greenlet is dead and will not run again."
             if self._greenlet__main:
                 return False
             if self.__start_cancelled_by_kill() or self.__started_but_aborted():
@@ -376,6 +377,7 @@ class Greenlet(greenlet):
     else:
         @property
         def dead(self):
+            "Boolean indicating that the greenlet is dead and will not run again."
             return self.__start_cancelled_by_kill() or self.__started_but_aborted() or greenlet.dead.__get__(self)
 
     def __never_started_or_killed(self):
