@@ -24,16 +24,8 @@ Configuration
 
 gevent includes four implementations of resolvers, and applications
 can provide their own implementation. By default, gevent uses
-:class:`gevent.resolver.thread.Resolver`.
-
-Configuration can be done through the ``GEVENT_RESOLVER`` environment
-variable. Specify ``ares``, ``thread``, ``dnspython``, or ``block`` to use the
-:class:`gevent.resolver.ares.Resolver`,
-:class:`gevent.resolver.thread.Resolver`, or
-:class:`gevent.resolver.dnspython.Resolver`, or
-:class:`gevent.resolver.blocking.Resolver`, respectively, or set it to
-the fully-qualified name of an implementation of the standard
-functions.
+:class:`a threadpool <gevent.resolver.thread.Resolver>`. This can
+:attr:`be customized <gevent._config.Config.resolver>`.
 
 Please see the documentation for each resolver class to understand the
 relative performance and correctness tradeoffs.

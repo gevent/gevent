@@ -281,12 +281,15 @@ def wait_on_watcher(watcher, timeout=None, timeout_exc=_NONE, hub=None):
     (``socket.error(EBADF, 'File descriptor was closed in another
     greenlet')`` by default).
 
-    :param io: A libev watcher, most commonly an IO watcher obtained from
+    :param io: An event loop watcher, most commonly an IO watcher obtained from
         :meth:`gevent.core.loop.io`
     :keyword timeout_exc: The exception to raise if the timeout expires.
         By default, a :class:`socket.timeout` exception is raised.
         If you pass a value for this keyword, it is interpreted as for
         :class:`gevent.timeout.Timeout`.
+
+    :raises ~gevent.hub.ConcurrentObjectUseError: If the *watcher* is
+        already started.
     """
     _primitive_wait(watcher, timeout, timeout_exc, hub)
 

@@ -112,20 +112,10 @@ else:
             subscriber = plugin.load()
             subscriber(event)
 
-try:
-    from zope.interface import Interface
-    from zope.interface import implementer
-    from zope.interface import Attribute
-except ImportError:
-    class Interface(object):
-        pass
-    def implementer(_iface):
-        def dec(c):
-            return c
-        return dec
+from gevent._util import Interface
+from gevent._util import implementer
+from gevent._util import Attribute
 
-    def Attribute(s):
-        return s
 
 class IPeriodicMonitorThread(Interface):
     """

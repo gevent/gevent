@@ -14,6 +14,9 @@ __all__ = [
     'loop',
 ]
 
+from gevent._util import implementer
+from gevent._interfaces import ILoop
+
 import gevent.libev._corecffi as _corecffi # pylint:disable=no-name-in-module,import-error
 
 ffi = _corecffi.ffi # pylint:disable=no-member
@@ -200,6 +203,8 @@ from gevent._ffi.loop import AbstractLoop
 from gevent.libev import watcher as _watchers
 _events_to_str = _watchers._events_to_str # exported
 
+
+@implementer(ILoop)
 class loop(AbstractLoop):
     # pylint:disable=too-many-public-methods
 

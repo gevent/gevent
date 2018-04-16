@@ -19,7 +19,7 @@ import os
 # for better documentation extraction and ease of tweaking docs.
 os.environ['PURE_PYTHON'] = '1'
 
-sys.path.append('.')  # for mysphinxext
+sys.path.append(os.path.dirname(__file__))  # for mysphinxext
 
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
@@ -54,7 +54,7 @@ extlinks = {'issue': ('https://github.com/gevent/gevent/issues/%s',
                    'pull request #')}
 
 autodoc_default_flags = ['members', 'show-inheritance']
-autodoc_member_order = 'bysource'
+autodoc_member_order = 'groupwise'
 autoclass_content = 'both'
 
 # Add any paths that contain templates here, relative to this directory.

@@ -157,3 +157,22 @@ def gmctime():
     """
     import time
     return time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+
+try:
+    from zope.interface import Interface
+    from zope.interface import implementer
+    from zope.interface import Attribute
+except ImportError:
+    class Interface(object):
+        pass
+    def implementer(_iface):
+        def dec(c):
+            return c
+        return dec
+
+    def Attribute(s):
+        return s
+
+Interface = Interface
+implementer = implementer
+Attribute = Attribute

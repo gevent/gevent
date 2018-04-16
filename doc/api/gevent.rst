@@ -48,6 +48,33 @@ Sleeping
 
 .. autofunction:: idle
 
+Switching
+=========
+
+.. function:: getswitchinterval() -> current switch interval
+
+
+   See :func:`setswitchinterval`
+
+   .. versionadded:: 1.3
+
+
+.. function:: setswitchinterval(seconds)
+
+   Set the approximate maximum amount of time that callback functions
+   will be allowed to run before the event loop is cycled to
+   poll for events. This prevents code that does things like the
+   following from monopolizing the loop::
+
+       while True: # Burning CPU!
+           gevent.sleep(0) # But yield to other greenlets
+
+   Prior to this, this code could prevent the event loop from running.
+
+   On Python 3, this uses the native :func:`sys.setswitchinterval`
+   and :func:`sys.getswitchinterval`.
+
+   .. versionadded:: 1.3
 
 Waiting
 =======

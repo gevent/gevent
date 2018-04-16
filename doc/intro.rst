@@ -2,20 +2,32 @@
  Introduction
 ==============
 
-gevent is a coroutine-based Python networking library.
+gevent is a coroutine_ -based Python_ networking library that uses
+greenlet_ to provide a high-level synchronous API on top of the `libev`_
+or `libuv`_ event loop.
 
 Features include:
 
-* Fast event loop based on libev or libuv (epoll on Linux, kqueue on FreeBSD,
-  select on Mac OS X, IOCP on Windows).
-* Lightweight execution units based on greenlet.
-* API that re-uses concepts from the Python standard library (e.g. :class:`gevent.event.Event`, :class:`gevent.queue.Queue`).
-* Cooperative :mod:`socket` and :mod:`ssl` modules.
-* Ability to use standard library and 3rd party modules written for standard blocking sockets (:mod:`gevent.monkey`).
-* DNS queries performed through threadpool (default) or through c-ares (enabled via GEVENT_RESOLVER=ares env var).
+
+* Fast event loop based on `libev`_ or `libuv`_
+* Lightweight execution units based on greenlet_.
+* API that re-uses concepts from the Python standard library (for
+  examples there are :class:`events <gevent.event.Event>` and
+  :class:`queues <gevent.queue.Queue>`).
+* :ref:`Cooperative sockets with SSL support <networking>`
+* :doc:`Cooperative DNS queries <dns>` performed through a threadpool,
+  dnspython, or c-ares.
+* :ref:`Monkey patching utility <monkey-patching>` to get 3rd party modules to become cooperative
 * TCP/UDP/HTTP servers
 * Subprocess support (through :mod:`gevent.subprocess`)
 * Thread pools
+
+.. _coroutine: https://en.wikipedia.org/wiki/Coroutine
+.. _Python: http://python.org
+.. _greenlet: https://greenlet.readthedocs.io
+.. _libev: http://software.schmorp.de/pkg/libev.html
+.. _libuv: http://libuv.org
+
 
 .. _installation:
 
@@ -185,31 +197,20 @@ that the greenlet *yielded* control to the Hub). If there's no
          :class:`~gevent.hub.Hub`. This makes it possible to use the
          gevent blocking API from multiple threads (with care).
 
-The event loop provided by libev uses the fastest polling mechanism
-available on the system by default. Please read the `libev documentation`_ for more
-information.
+The event loop uses the best polling mechanism available on the system
+by default.
 
-.. caution:: This section needs to be updated for gevent 1.3 and libuv.
+.. note::
 
-.. As of 1.1 or before, we set the EVFLAG_NOENV so this isn't possible any more.
-
-   It is possible to command libev to
-   use a particular polling mechanism by setting the ``LIBEV_FLAGS``
-   environment variable. Possible values include ``LIBEV_FLAGS=1`` for
-   the select backend, ``LIBEV_FLAGS=2`` for the poll backend,
-   ``LIBEV_FLAGS=4`` for the epoll backend and ``LIBEV_FLAGS=8`` for the
-   kqueue backend.
-
-.. _`libev documentation`: http://pod.tst.eu/http://cvs.schmorp.de/libev/ev.pod#FUNCTIONS_CONTROLLING_EVENT_LOOPS
-
-
-The libev API is available under the :mod:`gevent.core` module. Note
-that the callbacks supplied to the libev API are run in the
-:class:`~gevent.hub.Hub` greenlet and thus cannot use the synchronous
-gevent API. It is possible to use the asynchronous API there, like
-:func:`gevent.spawn` and :meth:`gevent.event.Event.set`.
-
-.. caution:: This section needs to be updated for gevent 1.3 and libuv.
+   A low-level event loop API is available under the
+   :mod:`gevent.core` module. This module is not documented, not meant
+   for general purpose usage, and it's exact contents and semantics
+   change slightly depending on whether the libev or libuv event loop
+   is being used. The callbacks supplied to the event loop API are run
+   in the :class:`~gevent.hub.Hub` greenlet and thus cannot use the
+   synchronous gevent API. It is possible to use the asynchronous API
+   there, like :func:`gevent.spawn` and
+   :meth:`gevent.event.Event.set`.
 
 
 Cooperative multitasking
@@ -223,7 +224,7 @@ control, (by calling a blocking function that will switch to the
 :class:`~gevent.hub.Hub`), other greenlets won't get a chance to run.
 This is typically not an issue for an I/O bound app, but one should be
 aware of this when doing something CPU intensive, or when calling
-blocking I/O functions that bypass the libev event loop.
+blocking I/O functions that bypass the event loop.
 
 .. tip:: Even some apparently cooperative functions, like
 		 :func:`gevent.sleep`, can temporarily take priority over

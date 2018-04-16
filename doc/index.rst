@@ -3,19 +3,22 @@
 =================
 
 gevent is a coroutine_ -based Python_ networking library that uses
-greenlet_ to provide a high-level synchronous API on top of the libev
-event loop.
+greenlet_ to provide a high-level synchronous API on top of the `libev`_
+or `libuv`_ event loop.
 
 Features include:
 
-* **Fast event loop** based on libev or libuv (epoll on Linux, kqueue on FreeBSD).
-* **Lightweight execution units** based on greenlet.
+* Fast event loop based on `libev`_ or `libuv`_
+* Lightweight execution units based on greenlet_.
 * API that re-uses concepts from the Python standard library (for
   examples there are :class:`events <gevent.event.Event>` and
   :class:`queues <gevent.queue.Queue>`).
 * :ref:`Cooperative sockets with SSL support <networking>`
-* DNS queries performed through threadpool or c-ares.
+* :doc:`Cooperative DNS queries <dns>` performed through a threadpool, dnspython, or c-ares.
 * :ref:`Monkey patching utility <monkey-patching>` to get 3rd party modules to become cooperative
+* TCP/UDP/HTTP servers
+* Subprocess support (through :mod:`gevent.subprocess`)
+* Thread pools
 
 
 gevent is `inspired by eventlet
@@ -27,10 +30,11 @@ and check out the list of the `open source projects based on gevent. <https://gi
 
 gevent was written by `Denis Bilenko <http://denisbilenko.com/>`_.
 
-Since version 1.1, gevent is maintained by `NextThought
-<https://nextthought.com>`_ with help from the `contributors
-<https://github.com/gevent/gevent/graphs/contributors>`_ and is
-licensed under the MIT license.
+Since version 1.1, gevent is maintained by Jason Madden for
+`NextThought <https://nextthought.com>`_ with help from the
+`contributors <https://github.com/gevent/gevent/graphs/contributors>`_.
+
+gevent is licensed under the MIT license.
 
 :ref:`Continue reading <installation>` »
 
@@ -61,3 +65,5 @@ Mailing List
 .. _coroutine: https://en.wikipedia.org/wiki/Coroutine
 .. _Python: http://python.org
 .. _greenlet: https://greenlet.readthedocs.io
+.. _libev: http://software.schmorp.de/pkg/libev.html
+.. _libuv: http://libuv.org

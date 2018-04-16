@@ -69,14 +69,19 @@ These functions are used to block the current greenlet until an open
 file (socket) is ready to perform I/O operations. These are low-level
 functions not commonly used by many programs.
 
-.. note:: These use the underlying libev ``io`` watchers, which means
-          that they share the same implementation limits. For example,
-          on some platforms they can be used with more than just
-          sockets, while on others the applicability is more limited
-          (POSIX platforms like Linux and OS X can use pipes and fifos
-          but Windows is limited to sockets).
+.. note::
 
-.. note:: On Windows, gevent is limited to 1024 open sockets.
+   These use the underlying event loop ``io`` watchers, which means
+   that they share the same implementation limits. For example,
+   on some platforms they can be used with more than just
+   sockets, while on others the applicability is more limited
+   (POSIX platforms like Linux and OS X can use pipes and fifos
+   but Windows is limited to sockets).
+
+.. note::
+
+   On Windows with the libev event loop, gevent is limited to 1024
+   open sockets.
 
 .. autofunction:: gevent.socket.wait_read
 .. autofunction:: gevent.socket.wait_write

@@ -15,6 +15,8 @@ from gevent._ffi.loop import AbstractLoop
 from gevent.libuv import _corecffi # pylint:disable=no-name-in-module,import-error
 from gevent._ffi.loop import assign_standard_callbacks
 from gevent._ffi.loop import AbstractCallbacks
+from gevent._util import implementer
+from gevent._interfaces import ILoop
 
 ffi = _corecffi.ffi
 libuv = _corecffi.lib
@@ -66,7 +68,7 @@ def get_header_version():
 def supported_backends():
     return ['default']
 
-
+@implementer(ILoop)
 class loop(AbstractLoop):
 
     # XXX: Undocumented. Maybe better named 'timer_resolution'? We can't
