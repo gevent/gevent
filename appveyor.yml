@@ -142,7 +142,7 @@ build_script:
   # into a variable, using python to glob.
   - "%PYEXE% -c \"import glob; print(glob.glob('dist/*whl')[0])\" > whl.txt"
   - set /p PYWHL=<whl.txt
-  - "%PYEXE% -m pip install %PYWHL%"
+  - "%PYEXE% -m pip install %PYWHL%[test,events,dnspython]"
 
 test_script:
   # Run the project tests

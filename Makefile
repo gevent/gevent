@@ -179,7 +179,7 @@ develop:
 # disables the cache.
 # We need wheel>=0.26 on Python 3.5. See previous revisions.
 	time ${PYTHON} -m pip install -U -r ci-requirements.txt
-	GEVENTSETUP_EV_VERIFY=3 time ${PYTHON} -m pip install -U -e .
+	GEVENTSETUP_EV_VERIFY=3 time ${PYTHON} -m pip install -U -e .[test,dnspython,events]
 	${PYTHON} -m pip freeze
 	ccache -s
 	@${PYTHON} scripts/travis.py fold_end install

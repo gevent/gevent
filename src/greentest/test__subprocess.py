@@ -1,16 +1,20 @@
 import sys
 import os
 import errno
+import unittest
+
+import time
+import gc
+import tempfile
+
 import greentest
 import gevent
+from greentest import mock
 from gevent import subprocess
 
 if not hasattr(subprocess, 'mswindows'):
     # PyPy3, native python subprocess
     subprocess.mswindows = False
-import time
-import gc
-import tempfile
 
 
 PYPY = hasattr(sys, 'pypy_version_info')
@@ -236,32 +240,31 @@ class Test(greentest.TestCase):
         r = p.stdout.readline()
         self.assertEqual(r, b'foobar\n')
 
-    if sys.platform != 'win32':
+    @greentest.ignores_leakcheck
+    @greentest.skipOnWindows("Not sure why?")
+    def test_subprocess_in_native_thread(self):
+        # gevent.subprocess doesn't work from a background
+        # native thread. See #688
+        from gevent import monkey
 
-        def test_subprocess_in_native_thread(self):
-            # gevent.subprocess doesn't work from a background
-            # native thread. See #688
-            from gevent import monkey
+        # must be a native thread; defend against monkey-patching
+        ex = []
+        Thread = monkey.get_original('threading', 'Thread')
 
-            # must be a native thread; defend against monkey-patching
-            ex = []
-            Thread = monkey.get_original('threading', 'Thread')
+        def fn():
+            with self.assertRaises(TypeError) as exc:
+                gevent.subprocess.Popen('echo 123', shell=True)
+                raise AssertionError("Should not be able to construct Popen")
+            ex.append(exc.exception)
 
-            def fn():
-                with self.assertRaises(TypeError) as exc:
-                    gevent.subprocess.Popen('echo 123', shell=True)
-                    raise AssertionError("Should not be able to construct Popen")
-                ex.append(exc.exception)
+        thread = Thread(target=fn)
+        thread.start()
+        thread.join()
 
-            thread = Thread(target=fn)
-            thread.start()
-            thread.join()
+        self.assertEqual(len(ex), 1)
+        self.assertTrue(isinstance(ex[0], TypeError), ex)
+        self.assertEqual(ex[0].args[0], 'child watchers are only available on the default loop')
 
-            self.assertEqual(len(ex), 1)
-            self.assertTrue(isinstance(ex[0], TypeError), ex)
-            self.assertEqual(ex[0].args[0], 'child watchers are only available on the default loop')
-
-        test_subprocess_in_native_thread.ignore_leakcheck = True
 
     @greentest.skipOnLibuvOnPyPyOnWin("hangs")
     def __test_no_output(self, kwargs, kind):
@@ -294,6 +297,91 @@ class Test(greentest.TestCase):
         # there is no output.
         # https://github.com/gevent/gevent/pull/939
         self.__test_no_output({}, bytes)
+
+@greentest.skipOnWindows("Testing POSIX fd closing")
+class TestFDs(unittest.TestCase):
+
+    @mock.patch('os.closerange')
+    @mock.patch('gevent.subprocess._set_inheritable')
+    @mock.patch('os.close')
+    def test_close_fds_brute_force(self, close, set_inheritable, closerange):
+        keep = (
+            4, 5,
+            # Leave a hole
+            # 6,
+            7,
+        )
+        subprocess.Popen._close_fds_brute_force(keep, None)
+
+        closerange.assert_has_calls([
+            mock.call(3, 4),
+            mock.call(8, subprocess.MAXFD),
+        ])
+
+        set_inheritable.assert_has_calls([
+            mock.call(4, True),
+            mock.call(5, True),
+        ])
+
+        close.assert_called_once_with(6)
+
+    @mock.patch('gevent.subprocess.Popen._close_fds_brute_force')
+    @mock.patch('os.listdir')
+    def test_close_fds_from_path_bad_values(self, listdir, brute_force):
+        listdir.return_value = 'Not an Integer'
+
+        subprocess.Popen._close_fds_from_path('path', [], 42)
+        brute_force.assert_called_once_with([], 42)
+
+    @mock.patch('os.listdir')
+    @mock.patch('os.closerange')
+    @mock.patch('gevent.subprocess._set_inheritable')
+    @mock.patch('os.close')
+    def test_close_fds_from_path(self, close, set_inheritable, closerange, listdir):
+        keep = (
+            4, 5,
+            # Leave a hole
+            # 6,
+            7,
+        )
+        listdir.return_value = ['1', '6', '37']
+
+        subprocess.Popen._close_fds_from_path('path', keep, 5)
+
+        self.assertEqual([], closerange.mock_calls)
+
+        set_inheritable.assert_has_calls([
+            mock.call(4, True),
+            mock.call(7, True),
+        ])
+
+        close.assert_has_calls([
+            mock.call(6),
+            mock.call(37),
+        ])
+
+    @mock.patch('gevent.subprocess.Popen._close_fds_brute_force')
+    @mock.patch('os.path.isdir')
+    def test_close_fds_no_dir(self, isdir, brute_force):
+        isdir.return_value = False
+
+        subprocess.Popen._close_fds([], 42)
+        brute_force.assert_called_once_with([], 42)
+        isdir.assert_has_calls([
+            mock.call('/proc/self/fd'),
+            mock.call('/dev/fd'),
+        ])
+
+    @mock.patch('gevent.subprocess.Popen._close_fds_from_path')
+    @mock.patch('gevent.subprocess.Popen._close_fds_brute_force')
+    @mock.patch('os.path.isdir')
+    def test_close_fds_with_dir(self, isdir, brute_force, from_path):
+        isdir.return_value = True
+
+        subprocess.Popen._close_fds([7], 42)
+
+        self.assertEqual([], brute_force.mock_calls)
+        from_path.assert_called_once_with('/proc/self/fd', [7], 42)
 
 class RunFuncTestCase(greentest.TestCase):
     # Based on code from python 3.6

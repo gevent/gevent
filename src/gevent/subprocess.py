@@ -379,6 +379,12 @@ if 'TimeoutExpired' not in globals():
                     (self.cmd, self.timeout))
 
 
+if hasattr(os, 'set_inheritable'):
+    _set_inheritable = os.set_inheritable
+else:
+    _set_inheritable = lambda i, v: True
+
+
 class Popen(object):
     """
     The underlying process creation and management in this module is
@@ -1145,41 +1151,74 @@ class Popen(object):
             self._set_cloexec_flag(w)
             return r, w
 
-        def _close_fds(self, keep):
+        _POSSIBLE_FD_DIRS = (
+            '/proc/self/fd', # Linux
+            '/dev/fd', # BSD, including macOS
+        )
+
+        @classmethod
+        def _close_fds(cls, keep, errpipe_write):
+            # From the C code:
+            # errpipe_write is part of keep. It must be closed at
+            # exec(), but kept open in the child process until exec() is
+            # called.
+            for path in cls._POSSIBLE_FD_DIRS:
+                if os.path.isdir(path):
+                    return cls._close_fds_from_path(path, keep, errpipe_write)
+            return cls._close_fds_brute_force(keep, errpipe_write)
+
+        @classmethod
+        def _close_fds_from_path(cls, path, keep, errpipe_write):
+            # path names a directory whose only entries have
+            # names that are ascii strings of integers in base10,
+            # corresponding to the fds the current process has open
+            try:
+                fds = [int(fname) for fname in os.listdir(path)]
+            except (ValueError, OSError):
+                cls._close_fds_brute_force(keep, errpipe_write)
+            else:
+                for i in keep:
+                    if i == errpipe_write:
+                        continue
+                    _set_inheritable(i, True)
+
+                for fd in fds:
+                    if fd in keep or fd < 3:
+                        continue
+                    try:
+                        os.close(fd)
+                    except:
+                        pass
+
+        @classmethod
+        def _close_fds_brute_force(cls, keep, errpipe_write):
             # `keep` is a set of fds, so we
             # use os.closerange from 3 to min(keep)
             # and then from max(keep + 1) to MAXFD and
             # loop through filling in the gaps.
+
             # Under new python versions, we need to explicitly set
             # passed fds to be inheritable or they will go away on exec
-            if hasattr(os, 'set_inheritable'):
-                set_inheritable = os.set_inheritable
-            else:
-                set_inheritable = lambda i, v: True
-            if hasattr(os, 'closerange'):
-                keep = sorted(keep)
-                min_keep = min(keep)
-                max_keep = max(keep)
-                os.closerange(3, min_keep)
-                os.closerange(max_keep + 1, MAXFD)
-                for i in xrange(min_keep, max_keep):
-                    if i in keep:
-                        set_inheritable(i, True)
-                        continue
 
-                    try:
-                        os.close(i)
-                    except:
-                        pass
-            else:
-                for i in xrange(3, MAXFD):
-                    if i in keep:
-                        set_inheritable(i, True)
-                        continue
-                    try:
-                        os.close(i)
-                    except:
-                        pass
+            # XXX: Bug: We implicitly rely on errpipe_write being the largest open
+            # FD so that we don't change its cloexec flag.
+
+            assert hasattr(os, 'closerange') # Added in 2.7
+            keep = sorted(keep)
+            min_keep = min(keep)
+            max_keep = max(keep)
+            os.closerange(3, min_keep)
+            os.closerange(max_keep + 1, MAXFD)
+
+            for i in xrange(min_keep, max_keep):
+                if i in keep:
+                    _set_inheritable(i, True)
+                    continue
+
+                try:
+                    os.close(i)
+                except:
+                    pass
 
         def _execute_child(self, args, executable, preexec_fn, close_fds,
                            pass_fds, cwd, env, universal_newlines,
@@ -1235,6 +1274,13 @@ class Popen(object):
                         raise
                     if self.pid == 0:
                         # Child
+
+                        # XXX: Technically we're doing a lot of stuff here that
+                        # may not be safe to do before a exec(), depending on the OS.
+                        # CPython 3 goes to great lengths to precompute a lot
+                        # of this info before the fork and pass it all to C functions that
+                        # try hard not to call things like malloc(). (Of course,
+                        # CPython 2 pretty much did what we're doing.)
                         try:
                             # Close parent's pipe ends
                             if p2cwrite != -1:
@@ -1254,16 +1300,16 @@ class Popen(object):
                                 errwrite = os.dup(errwrite)
 
                             # Dup fds for child
-                            def _dup2(a, b):
+                            def _dup2(existing, desired):
                                 # dup2() removes the CLOEXEC flag but
                                 # we must do it ourselves if dup2()
                                 # would be a no-op (issue #10806).
-                                if a == b:
-                                    self._set_cloexec_flag(a, False)
-                                elif a != -1:
-                                    os.dup2(a, b)
+                                if existing == desired:
+                                    self._set_cloexec_flag(existing, False)
+                                elif existing != -1:
+                                    os.dup2(existing, desired)
                                 try:
-                                    self._remove_nonblock_flag(b)
+                                    self._remove_nonblock_flag(desired)
                                 except OSError:
                                     # Ignore EBADF, it may not actually be
                                     # open yet.
@@ -1296,21 +1342,7 @@ class Popen(object):
                             if close_fds:
                                 fds_to_keep = set(pass_fds)
                                 fds_to_keep.add(errpipe_write)
-                                self._close_fds(fds_to_keep)
-                            elif hasattr(os, 'get_inheritable'):
-                                # close_fds was false, and we're on
-                                # Python 3.4 or newer, so "all file
-                                # descriptors except standard streams
-                                # are closed, and inheritable handles
-                                # are only inherited if the close_fds
-                                # parameter is False."
-                                for i in xrange(3, MAXFD):
-                                    try:
-                                        if i == errpipe_write or os.get_inheritable(i):
-                                            continue
-                                        os.close(i)
-                                    except:
-                                        pass
+                                self._close_fds(fds_to_keep, errpipe_write)
 
                             if restore_signals:
                                 # restore the documented signals back to sig_dfl;

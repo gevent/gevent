@@ -119,3 +119,10 @@ BaseTestCase = unittest.TestCase
 
 from greentest.flaky import reraiseFlakyTestTimeout
 from greentest.flaky import reraiseFlakyTestRaceCondition
+
+try:
+    from unittest import mock
+except ImportError: # Python 2
+    import mock
+
+mock = mock
