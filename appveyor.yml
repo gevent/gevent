@@ -124,7 +124,7 @@ install:
   # compiled extensions and are not provided as pre-built wheel packages,
   # pip will build them from source using the MSVC compiler matching the
   # target Python version and architecture
-  - "%CMD_IN_ENV% %PYEXE% -m pip install -U -r ci-requirements.txt"
+  - "%CMD_IN_ENV% %PYEXE% -m pip install -U --upgrade-strategy=eager -r ci-requirements.txt"
 
   - ps: "if(Test-Path(\"${env:PYTHON}\\bin\")) {ls ${env:PYTHON}\\bin;}"
   - ps: "if(Test-Path(\"${env:PYTHON}\\Scripts\")) {ls ${env:PYTHON}\\Scripts;}"
@@ -142,7 +142,7 @@ build_script:
   # into a variable, using python to glob.
   - "%PYEXE% -c \"import glob; print(glob.glob('dist/*whl')[0])\" > whl.txt"
   - set /p PYWHL=<whl.txt
-  - "%PYEXE% -m pip install %PYWHL%[test,events,dnspython]"
+  - "%PYEXE% -m pip install -U --upgrade-strategy=eager %PYWHL%[test,events,dnspython]"
 
 test_script:
   # Run the project tests
