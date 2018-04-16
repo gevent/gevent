@@ -327,6 +327,27 @@ def run_setup(ext_modules, run_make):
                 'zope.event',
                 'zope.interface',
             ],
+            'doc': [
+                'repoze.sphinx.autointerface',
+            ],
+            'test': [
+                'zope.interface',
+                'zope.event',
+
+                # Makes tests faster
+                # Fails to build on PyPy on Windows.
+                'psutil ; platform_python_implementation == "CPython" or sys_platform != "win32"',
+                # examples, called from tests, use this
+                'requests',
+
+                # We don't run coverage on Windows, and pypy can't build it there
+                # anyway (coveralls -> cryptopgraphy -> openssl)
+                'coverage>=4.0 ; sys_platform != "win32"',
+                'coveralls>=1.0 ; sys_platform != "win32"',
+
+                'futures ; python_version == "2.7"',
+                'mock ; python_version == "2.7"',
+            ]
         },
         # It's always safe to pass the CFFI keyword, even if
         # cffi is not installed: it's just ignored in that case.

@@ -1151,27 +1151,31 @@ class Popen(object):
             self._set_cloexec_flag(w)
             return r, w
 
-        def _close_fds(self, keep, errpipe_write):
+        _POSSIBLE_FD_DIRS = (
+            '/proc/self/fd', # Linux
+            '/dev/fd', # BSD, including macOS
+        )
+
+        @classmethod
+        def _close_fds(cls, keep, errpipe_write):
             # From the C code:
             # errpipe_write is part of keep. It must be closed at
             # exec(), but kept open in the child process until exec() is
             # called.
+            for path in cls._POSSIBLE_FD_DIRS:
+                if os.path.isdir(path):
+                    return cls._close_fds_from_path(path, keep, errpipe_write)
+            return cls._close_fds_brute_force(keep, errpipe_write)
 
-            if os.path.isdir('/proc/self/fd'): # Linux
-                self._close_fds_from_path('/proc/self/fd', keep, errpipe_write)
-            elif os.path.isdir('/dev/fd'): # BSD, including macOS
-                self._close_fds_from_path('/dev/fd', keep, errpipe_write)
-            else:
-                self._close_fds_brute_force(keep, errpipe_write)
-
-        def _close_fds_from_path(self, path, keep, errpipe_write):
+        @classmethod
+        def _close_fds_from_path(cls, path, keep, errpipe_write):
             # path names a directory whose only entries have
             # names that are ascii strings of integers in base10,
             # corresponding to the fds the current process has open
             try:
                 fds = [int(fname) for fname in os.listdir(path)]
             except (ValueError, OSError):
-                self._close_fds_brute_force(keep, errpipe_write)
+                cls._close_fds_brute_force(keep, errpipe_write)
             else:
                 for i in keep:
                     if i == errpipe_write:
@@ -1186,7 +1190,8 @@ class Popen(object):
                     except:
                         pass
 
-        def _close_fds_brute_force(self, keep, errpipe_write):
+        @classmethod
+        def _close_fds_brute_force(cls, keep, errpipe_write):
             # `keep` is a set of fds, so we
             # use os.closerange from 3 to min(keep)
             # and then from max(keep + 1) to MAXFD and

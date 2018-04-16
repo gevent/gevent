@@ -4,5 +4,4 @@
 restview
 
 -r ci-requirements.txt
--r rtd-requirements.txt
--e .
+-e .[test,events,dnspython,doc]
