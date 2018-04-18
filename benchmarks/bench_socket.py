@@ -4,6 +4,10 @@ Basic socket benchmarks.
 """
 from __future__ import print_function, division, absolute_import
 
+import os
+import sys
+
+
 import perf
 
 import gevent
@@ -60,6 +64,23 @@ def bench_gevent_udp(loops):
     finally:
         conn.close()
 
+def _do_sendall(loops, send, recv):
+    for s in send, recv:
+        os.set_inheritable(s.fileno(), True)
+    pid = os.fork()
+    if not pid:
+        send.close()
+        recvall(recv, None)
+        recv.close()
+        sys.exit()
+        return 0
+    else:
+        try:
+            return _sendall(loops, send, BIG_DATA)
+        finally:
+            send.close()
+            recv.close()
+
 def bench_native_thread_default_socketpair(loops):
     send, recv = socket.socketpair()
     t = threading.Thread(target=recvall, args=(recv, None))
@@ -71,20 +92,53 @@ def bench_native_thread_default_socketpair(loops):
 def bench_gevent_greenlet_default_socketpair(loops):
     send, recv = gsocket.socketpair()
     gevent.spawn(recvall, recv, None)
-
     return _sendall(loops, send, BIG_DATA)
+
+def bench_gevent_forked_socketpair(loops):
+    send, recv = gsocket.socketpair()
+    return _do_sendall(loops, send, recv)
+
+def bench_native_forked_socketpair(loops):
+    send, recv = socket.socketpair()
+    return _do_sendall(loops, send, recv)
 
 
 def main():
+    if '--profile' in sys.argv:
+        import cProfile
+        import pstats
+        import io
+        pr = cProfile.Profile()
+        pr.enable()
+        for _ in range(2):
+            bench_gevent_forked_socketpair(2)
+        pr.disable()
+        s = io.StringIO()
+        sortby = 'cumulative'
+        ps = pstats.Stats(pr, stream=s).sort_stats(sortby)
+        ps.print_stats()
+        print(s.getvalue())
+        return
     runner = perf.Runner()
 
     runner.bench_time_func(
-        'native socketpair sendall',
+        'gevent socketpair sendall greenlet',
+        bench_gevent_greenlet_default_socketpair,
+        inner_loops=N)
+
+    runner.bench_time_func(
+        'native socketpair sendall thread',
         bench_native_thread_default_socketpair,
         inner_loops=N)
+
     runner.bench_time_func(
-        'gevent socketpair sendall',
-        bench_gevent_greenlet_default_socketpair,
+        'gevent socketpair sendall fork',
+        bench_gevent_forked_socketpair,
+        inner_loops=N)
+
+    runner.bench_time_func(
+        'native socketpair sendall fork',
+        bench_native_forked_socketpair,
         inner_loops=N)
 
     runner.bench_time_func(
