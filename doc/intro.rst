@@ -9,21 +9,12 @@
 Installation and Requirements
 =============================
 
-`gevent 1.3`_ runs on Python 2 and Python 3. Version 2.7 of Python 2
-is supported, and versions 3.4, 3.5 and 3.6 of Python 3 are supported.
-(Users of older versions of Python 2 need to install gevent 1.0.x
-(2.5), 1.1.x (2.6) or 1.2.x (<=2.7.8); gevent 1.2 can be installed on
-Python 3.3.) gevent requires the greenlet__ library and will install
-the `cffi`_ library by default on Windows.
-
-.. note:: Python 3.3 is no longer actively supported in gevent 1.2
-          because it is not supported by the Python developers. However,
-          it should continue to work with gevent 1.2 with the same
-          level of support as gevent 1.1. For Python 3.3, version
-          3.3.5 or newer is required to use the gevent's SSL support
-          due to bugs in the standard library of older versions. For
-          Python 2, 2.7.9 or newer is required; 2.7.8 is not tested
-          but probably runs, albeit with a less secure SSL module.
+`gevent 1.3`_ runs on Python 2.7 and Python 3. Releases 3.4, 3.5 and
+3.6 of Python 3 are supported. (Users of older versions of Python 2
+need to install gevent 1.0.x (2.5), 1.1.x (2.6) or 1.2.x (<=2.7.8);
+gevent 1.2 can be installed on Python 3.3.) gevent requires the
+greenlet__ library and will install the `cffi`_ library by default on
+Windows.
 
 gevent 1.3 also runs on PyPy 5.5 and above, although 5.9 or above is
 strongly recommended. On PyPy, there are no external dependencies.
@@ -45,6 +36,26 @@ without pre-built wheels or if wheel installation is disabled, a C compiler
 `cffi`_ can optionally be installed to build the CFFI backend in
 addition to the Cython backend on CPython; it is necessary to use the
 libuv backend.
+
+.. note::
+
+   On Linux, you'll need to install gevent from source if you wish to
+   use the libuv loop implementation. This is because the `manylinux1
+   <https://www.python.org/dev/peps/pep-0513/>`_ specification for the
+   distributed wheels does not support libuv. The `cffi`_ library
+   *must* be installed at build time.
+
+The `psutil <https://pypi.org/project/psutil>`_ library is needed to
+monitor memory usage.
+
+`zope.event <https://pypi.org/project/zope.event>`_ is highly
+recommended for configurable event support; it can be installed with
+the ``events`` extra, e.g., ``pip install gevent[events]``.
+
+`dnspython <https://pypi.org/project/dnspython>`_ is required for the
+new pure-Python resolver, and on Python 2, so is `idna
+<https://pypi.org/project/idna>`_. They can be installed with the
+``dnspython`` extra.
 
 Development instructions (including building from a source checkout)
 can be found `on PyPI <https://pypi.python.org/pypi/gevent#development>`_.

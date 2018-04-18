@@ -56,6 +56,9 @@ and their stack traces. The function
 information). The greenlets are organized into a tree based on the
 greenlet that spawned them.
 
+The ``print_run_info`` function is commonly hooked up to a signal
+handler to get the application state at any given time.
+
 For each greenlet the following information is printed:
 
 - Its current execution stack
@@ -74,7 +77,6 @@ For each greenlet the following information is printed:
 
 The greenlet tree itself is represented as an object that you can also
 use for your own purposes: :class:`gevent.util.GreenletTree`.
-
 
 Profiling
 =========

@@ -12,12 +12,16 @@ discussed here.
 
 .. autodata:: __version__
 
-See :class:`gevent.Greenlet` for information about greenlet objects.
-
 .. seealso:: :mod:`gevent.util`
 
+Working With Greenlets
+======================
+
+See :class:`gevent.Greenlet` for more information about greenlet
+objects.
+
 Creating Greenlets
-==================
+------------------
 
 .. autofunction:: spawn
 .. autofunction:: spawn_later
@@ -25,7 +29,7 @@ Creating Greenlets
 
 
 Getting Greenlets
-=================
+-----------------
 
 .. function:: getcurrent()
 
@@ -34,12 +38,11 @@ Getting Greenlets
    or :class:`greenlet.greenlet`.
 
 Stopping Greenlets
-==================
+------------------
 
 .. autofunction:: kill(greenlet, exception=GreenletExit)
 
 .. autofunction:: killall(greenlets, exception=GreenletExit, block=True, timeout=None)
-
 
 Sleeping
 ========

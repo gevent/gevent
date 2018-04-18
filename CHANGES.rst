@@ -24,6 +24,8 @@
 
 - The bundled libuv is now 1.20, up from 1.19.2. See :issue:`1177`.
 
+- The long-deprecated and undocumented module ``gevent.wsgi`` was removed.
+
 1.3b1 (2018-04-13)
 ==================
 

@@ -11,6 +11,7 @@ Introduction and Basics
    intro
    whatsnew_1_3
    api/gevent
+   api/gevent.greenlet
    servers
    dns
    monitoring

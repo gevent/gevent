@@ -1,5 +1,6 @@
-:mod:`gevent.event` -- Notifications of multiple listeners
-==========================================================
+============================================================
+ :mod:`gevent.event` -- Notifications of multiple listeners
+============================================================
 
 .. module:: gevent.event
 
