@@ -22,6 +22,7 @@
   ``close_fds`` is false (not the default), making process spawning up
   to 38 times faster. Initially reported in :issue:`1172` by Ofer Koren.
 
+- The bundled libuv is now 1.20, up from 1.19.2. See :issue:`1177`.
 
 1.3b1 (2018-04-13)
 ==================
