@@ -10,10 +10,11 @@ Introduction and Basics
 
    intro
    whatsnew_1_3
-   configuration
    api/gevent
    servers
    dns
+   monitoring
+   configuration
    changelog
 
 API Details

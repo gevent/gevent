@@ -103,10 +103,62 @@ yet and thus would evaluate to False.
 
 .. automethod:: Greenlet.__init__
 
+.. rubric:: Attributes
+
 .. autoattribute:: Greenlet.exception
 .. autoattribute:: Greenlet.minimal_ident
 .. autoattribute:: Greenlet.name
 .. autoattribute:: Greenlet.dead
+
+.. attribute:: Greenlet.value
+
+   Holds the value returned by the function if the greenlet has
+   finished successfully. Until then, or if it finished in error, `None`.
+
+   .. tip::
+
+      Recall that a greenlet killed with the default
+      :class:`GreenletExit` is considered to have finished
+      successfully, and the `GreenletExit` exception will be its
+      value.
+
+
+.. attribute:: Greenlet.spawn_tree_locals
+
+   A dictionary that is shared between all the greenlets in a "spawn
+   tree", that is, a spawning greenlet and all its descendent
+   greenlets. All children of the main (root) greenlet start their own
+   spawn trees. Assign a new dictionary to this attribute on an
+   instance of this class to create a new spawn tree (as far as locals
+   are concerned).
+
+   .. versionadded:: 1.3a2
+
+.. attribute:: Greenlet.spawning_greenlet
+
+   A weak-reference to the greenlet that was current when this object
+   was created. Note that the :attr:`parent` attribute is always the
+   hub.
+
+   .. versionadded:: 1.3a2
+
+.. attribute:: Greenlet.spawning_stack
+
+   A lightweight frame-like object capturing the stack when
+   this greenlet was created as well as the stack when the spawning
+   greenlet was created (if applicable). This can be passed to
+   :func:`traceback.print_stack`.
+
+   .. versionadded:: 1.3a2
+
+.. attribute:: Greenlet.spawning_stack_limit
+
+   A class attribute specifying how many levels of the spawning stack
+   will be kept. Specify a smaller number for higher performance,
+   spawning greenlets, specify a larger value for improved debugging.
+
+   .. versionadded:: 1.3a2
+
 
 .. rubric:: Methods
 

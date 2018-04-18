@@ -547,7 +547,9 @@ class MonitorMemoryMaxUsage(ByteCountSettingMixin, Setting):
     desc = """\
     If `monitor_thread` is enabled,
     then if memory usage exceeds this amount (in bytes), events will
-    be emitted. See `gevent.events`.
+    be emitted. See `gevent.events`. In the environment variable, you can use
+    a suffix of 'kb', 'mb' or 'gb' to specify the value in kilobytes, megabytes
+    or gigibytes.
 
     There is no default value for this setting. If you wish to
     cap memory usage, you must choose a value.
