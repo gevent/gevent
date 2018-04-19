@@ -16,7 +16,7 @@ since :doc:`gevent 1.2 <whatsnew_1_2>`.
 gevent 1.3 is an important update for performance, debugging and
 monitoring, and platform support. It introduces an (optional) `libuv
 <http://libuv.org>`_ loop implementation and supports PyPy on Windows.
-See :ref:`gevent-configuration` for information on how to use libuv.
+See :doc:`loop_impls` for more.
 
 Since gevent 1.2.2 there have been about 450 commits from a half-dozen
 contributors. Almost 100 pull requests and more than 100 issues have

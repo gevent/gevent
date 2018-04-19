@@ -81,10 +81,15 @@ use for your own purposes: :class:`gevent.util.GreenletTree`.
 Profiling
 =========
 
-The github repository `nylas/nylas-perftools <https://github.com/nylas/nylas-perftools>`_ has some
-gevent-compatible profilers. ``stacksampler`` is meant to be run in a
-greenlet in your server process and exposes data through an HTTP
-server. ``py2devtools`` is a greenlet-aware profiler that outputs data
-that can be used by the Chrome dev tools.
+The github repository `nylas/nylas-perftools
+<https://github.com/nylas/nylas-perftools>`_ has some
+gevent-compatible profilers.
+
+- ``stacksampler`` is a sampling profiler meant to be run in a
+  greenlet in your server process and exposes data through an HTTP
+  server; it is designed to be suitable for production usage.
+- ``py2devtools`` is a greenlet-aware tracing profiler that outputs data
+  that can be used by the Chrome dev tools; it is intended for
+  developer usage.
 
 ..  LocalWords:  greenlets gevent greenlet
