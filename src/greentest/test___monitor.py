@@ -50,7 +50,7 @@ class _AbstractTestPeriodicMonitoringThread(object):
     def tearDown(self):
         monitor.start_new_thread = self._orig_start_new_thread
         monitor.thread_sleep = self._orig_thread_sleep
-        prev = self.pmt.previous_trace_function
+        prev = self.pmt._greenlet_tracer.previous_trace_function
         self.pmt.kill()
         assert gettrace() is prev, (gettrace(), prev)
         settrace(None)
@@ -62,7 +62,7 @@ class TestPeriodicMonitoringThread(_AbstractTestPeriodicMonitoringThread,
 
     def test_constructor(self):
         self.assertEqual(0xDEADBEEF, self.pmt.monitor_thread_ident)
-        self.assertEqual(gettrace(), self.pmt.greenlet_trace)
+        self.assertEqual(gettrace(), self.pmt._greenlet_tracer)
 
     def test_hub_wref(self):
         self.assertIs(self.hub, self.pmt.hub)
@@ -178,31 +178,31 @@ class TestPeriodicMonitorBlocking(_AbstractTestPeriodicMonitoringThread,
         settrace(f)
 
         self.pmt = monitor.PeriodicMonitoringThread(self.hub)
-        self.assertEqual(gettrace(), self.pmt.greenlet_trace)
-        self.assertIs(self.pmt.previous_trace_function, f)
+        self.assertEqual(gettrace(), self.pmt._greenlet_tracer)
+        self.assertIs(self.pmt._greenlet_tracer.previous_trace_function, f)
 
-        self.pmt.greenlet_trace('event', 'args')
+        self.pmt._greenlet_tracer('event', 'args')
 
         self.assertEqual([('event', 'args')], called)
 
-    def test_greenlet_trace(self):
-        self.assertEqual(0, self.pmt._greenlet_switch_counter)
+    def test__greenlet_tracer(self):
+        self.assertEqual(0, self.pmt._greenlet_tracer.greenlet_switch_counter)
         # Unknown event still counts as a switch (should it?)
-        self.pmt.greenlet_trace('unknown', None)
-        self.assertEqual(1, self.pmt._greenlet_switch_counter)
-        self.assertIsNone(self.pmt._active_greenlet)
+        self.pmt._greenlet_tracer('unknown', None)
+        self.assertEqual(1, self.pmt._greenlet_tracer.greenlet_switch_counter)
+        self.assertIsNone(self.pmt._greenlet_tracer.active_greenlet)
 
         origin = object()
         target = object()
 
-        self.pmt.greenlet_trace('switch', (origin, target))
-        self.assertEqual(2, self.pmt._greenlet_switch_counter)
-        self.assertIs(target, self.pmt._active_greenlet)
+        self.pmt._greenlet_tracer('switch', (origin, target))
+        self.assertEqual(2, self.pmt._greenlet_tracer.greenlet_switch_counter)
+        self.assertIs(target, self.pmt._greenlet_tracer.active_greenlet)
 
         # Unknown event removes active greenlet
-        self.pmt.greenlet_trace('unknown', self)
-        self.assertEqual(3, self.pmt._greenlet_switch_counter)
-        self.assertIsNone(self.pmt._active_greenlet)
+        self.pmt._greenlet_tracer('unknown', self)
+        self.assertEqual(3, self.pmt._greenlet_tracer.greenlet_switch_counter)
+        self.assertIsNone(self.pmt._greenlet_tracer.active_greenlet)
 
     def test_monitor_blocking(self):
         # Initially there's no active greenlet and no switches,
@@ -218,7 +218,7 @@ class TestPeriodicMonitorBlocking(_AbstractTestPeriodicMonitoringThread,
         # Give it an active greenlet
         origin = object()
         target = object()
-        self.pmt.greenlet_trace('switch', (origin, target))
+        self.pmt._greenlet_tracer('switch', (origin, target))
 
         # We've switched, so we're not blocked
         self.assertFalse(self.pmt.monitor_blocking(self.hub))

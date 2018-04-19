@@ -7,6 +7,7 @@ from __future__ import division
 from __future__ import print_function
 
 import gc
+import unittest
 
 import greentest
 
@@ -207,6 +208,65 @@ class TestTree(greentest.TestCase):
         """.strip()
 
         self.assertEqual(expected, value)
+
+
+class TestAssertSwitches(unittest.TestCase):
+
+    def test_time_sleep(self):
+        # A real blocking function
+        from time import sleep
+        with self.assertRaises(util._FailedToSwitch):
+            with util.assert_switches():
+                sleep(0.001)
+
+        # Supply a max allowed and exceed it
+        with self.assertRaises(util._FailedToSwitch):
+            with util.assert_switches(0.001):
+                sleep(0.1)
+
+
+        # Stay within it, but don't switch to the hub
+        with self.assertRaises(util._FailedToSwitch):
+            with util.assert_switches(0.001, hub_only=True):
+                sleep(0)
+
+        # Stay within it, and we only watch for any switch
+        with util.assert_switches(0.001, hub_only=False):
+            sleep(0)
+
+
+    def test_no_switches_no_function(self):
+        # No blocking time given, no switch performed: exception
+        with self.assertRaises(util._FailedToSwitch):
+            with util.assert_switches():
+                pass
+
+        # blocking time given, for all greenlets, no switch performed: nothing
+        with util.assert_switches(max_blocking_time=1, hub_only=False):
+            pass
+
+    def test_exception_not_supressed(self):
+
+        with self.assertRaises(NameError):
+            with util.assert_switches():
+                raise NameError()
+
+    def test_nested(self):
+        from greenlet import gettrace
+        with util.assert_switches() as outer:
+            self.assertEqual(gettrace(), outer.tracer)
+            self.assertIsNotNone(outer.tracer.active_greenlet)
+
+            with util.assert_switches() as inner:
+                self.assertEqual(gettrace(), inner.tracer)
+                self.assertEqual(inner.tracer.previous_trace_function, outer.tracer)
+
+                inner.tracer('switch', (self, self))
+
+                self.assertIs(self, inner.tracer.active_greenlet)
+                self.assertIs(self, outer.tracer.active_greenlet)
+
+            self.assertEqual(gettrace(), outer.tracer)
 
 if __name__ == '__main__':
     greentest.main()
