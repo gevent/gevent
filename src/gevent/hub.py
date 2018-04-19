@@ -267,8 +267,10 @@ class signal(object):
             self.hub.handle_error(None, *sys.exc_info())
 
 
-def reinit():
+def reinit(hub=None):
     """
+    reinit() -> None
+
     Prepare the gevent hub to run in a new (forked) process.
 
     This should be called *immediately* after :func:`os.fork` in the
@@ -290,47 +292,47 @@ def reinit():
        if the fork process can be more smoothly managed.
 
     .. warning:: See remarks in :func:`gevent.os.fork` about greenlets
-       and libev watchers in the child process.
+       and event loop watchers in the child process.
     """
+    # Note the signature line in the docstring: hub is not a public param.
+
     # The loop reinit function in turn calls libev's ev_loop_fork
     # function.
-    hub = _get_hub()
+    hub = _get_hub() if hub is None else hub
+    if hub is None:
+        return
 
-    if hub is not None:
-        # Note that we reinit the existing loop, not destroy it.
-        # See https://github.com/gevent/gevent/issues/200.
-        hub.loop.reinit()
-        # libev's fork watchers are slow to fire because the only fire
-        # at the beginning of a loop; due to our use of callbacks that
-        # run at the end of the loop, that may be too late. The
-        # threadpool and resolvers depend on the fork handlers being
-        # run (specifically, the threadpool will fail in the forked
-        # child if there were any threads in it, which there will be
-        # if the resolver_thread was in use (the default) before the
-        # fork.)
-        #
-        # If the forked process wants to use the threadpool or
-        # resolver immediately (in a queued callback), it would hang.
-        #
-        # The below is a workaround. Fortunately, both of these
-        # methods are idempotent and can be called multiple times
-        # following a fork if the suddenly started working, or were
-        # already working on some platforms. Other threadpools and fork handlers
-        # will be called at an arbitrary time later ('soon')
-        if hasattr(hub.threadpool, '_on_fork'):
-            hub.threadpool._on_fork()
-        # resolver_ares also has a fork watcher that's not firing
-        if hasattr(hub.resolver, '_on_fork'):
-            hub.resolver._on_fork()
+    # Note that we reinit the existing loop, not destroy it.
+    # See https://github.com/gevent/gevent/issues/200.
+    hub.loop.reinit()
+    # libev's fork watchers are slow to fire because the only fire
+    # at the beginning of a loop; due to our use of callbacks that
+    # run at the end of the loop, that may be too late. The
+    # threadpool and resolvers depend on the fork handlers being
+    # run (specifically, the threadpool will fail in the forked
+    # child if there were any threads in it, which there will be
+    # if the resolver_thread was in use (the default) before the
+    # fork.)
+    #
+    # If the forked process wants to use the threadpool or
+    # resolver immediately (in a queued callback), it would hang.
+    #
+    # The below is a workaround. Fortunately, all of these
+    # methods are idempotent and can be called multiple times
+    # following a fork if the suddenly started working, or were
+    # already working on some platforms. Other threadpools and fork handlers
+    # will be called at an arbitrary time later ('soon')
+    for obj in (hub._threadpool, hub._resolver, hub.periodic_monitoring_thread):
+        getattr(obj, '_on_fork', lambda: None)()
 
-        # TODO: We'd like to sleep for a non-zero amount of time to force the loop to make a
-        # pass around before returning to this greenlet. That will allow any
-        # user-provided fork watchers to run. (Two calls are necessary.) HOWEVER, if
-        # we do this, certain tests that heavily mix threads and forking,
-        # like 2.7/test_threading:test_reinit_tls_after_fork, fail. It's not immediately clear
-        # why.
-        #sleep(0.00001)
-        #sleep(0.00001)
+    # TODO: We'd like to sleep for a non-zero amount of time to force the loop to make a
+    # pass around before returning to this greenlet. That will allow any
+    # user-provided fork watchers to run. (Two calls are necessary.) HOWEVER, if
+    # we do this, certain tests that heavily mix threads and forking,
+    # like 2.7/test_threading:test_reinit_tls_after_fork, fail. It's not immediately clear
+    # why.
+    #sleep(0.00001)
+    #sleep(0.00001)
 
 
 hub_ident_registry = IdentRegistry()

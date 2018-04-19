@@ -141,16 +141,18 @@ class Test(greentest.TestCase):
         timeout.start()
         timeout.cancel()
         gevent.sleep(SHOULD_NOT_EXPIRE)
-        assert not timeout.pending, timeout
+        self.assertFalse(timeout.pending, timeout)
         timeout.close()
 
+    @greentest.ignores_leakcheck
     def test_with_timeout(self):
-        self.assertRaises(gevent.Timeout, gevent.with_timeout, SHOULD_EXPIRE, gevent.sleep, SHOULD_NOT_EXPIRE)
+        with self.assertRaises(gevent.Timeout):
+            gevent.with_timeout(SHOULD_EXPIRE, gevent.sleep, SHOULD_NOT_EXPIRE)
         X = object()
         r = gevent.with_timeout(SHOULD_EXPIRE, gevent.sleep, SHOULD_NOT_EXPIRE, timeout_value=X)
-        assert r is X, (r, X)
+        self.assertIs(r, X)
         r = gevent.with_timeout(SHOULD_NOT_EXPIRE, gevent.sleep, SHOULD_EXPIRE, timeout_value=X)
-        assert r is None, r
+        self.assertIsNone(r)
 
 
 if __name__ == '__main__':
