@@ -237,6 +237,10 @@ differences in the way gevent behaves using libuv compared to libev.
   zero duration timers and turns them into a check watcher. check
   watchers do not support the ``again`` method.
 
+- There is no support for priorities within classes of watchers. libev
+  has some support for priorities and this is exposed in the low-level
+  gevent API, but it was never documented.
+
 Performance
 ===========
 
