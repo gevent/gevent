@@ -23,6 +23,7 @@ __all__ = [
     'print_run_info',
     'GreenletTree',
     'wrap_errors',
+    'assert_switches',
 ]
 
 # PyPy is very slow at formatting stacks
@@ -507,3 +508,85 @@ class GreenletTree(object):
         Returns the `GreenletTree` for the current thread.
         """
         return cls._forest()[1]
+
+class _FailedToSwitch(AssertionError):
+    pass
+
+class assert_switches(object):
+    """
+    A context manager for ensuring a block of code switches greenlets.
+
+    This performs a similar function as the :doc:`monitoring thread
+    </monitoring>`, but the scope is limited to the body of the with
+    statement. If the code within the body doesn't yield to the hub
+    (and doesn't raise an exception), then upon exiting the
+    context manager an :exc:`AssertionError` will be raised.
+
+    This is useful in unit tests and for debugging purposes.
+
+    :keyword float max_blocking_time: If given, the body is allowed
+        to block for up to this many fractional seconds before
+        an error is raised.
+    :keyword bool hub_only: If True, then *max_blocking_time* only
+        refers to the amount of time spent between switches into the
+        hub. If False, then it refers to the maximum time between
+        *any* switches. If *max_blocking_time* is not given, has no
+        effect.
+
+    Example::
+
+        # This will always raise an exception: nothing switched
+        with assert_switches():
+            pass
+
+        # This will never raise an exception; nothing switched,
+        # but it happened very fast
+        with assert_switches(max_blocking_time=1.0):
+            pass
+
+    .. versionadded:: 1.3
+    """
+
+    hub = None
+    tracer = None
+
+
+    def __init__(self, max_blocking_time=None, hub_only=False):
+        self.max_blocking_time = max_blocking_time
+        self.hub_only = hub_only
+
+    def __enter__(self):
+        from gevent import get_hub
+        from gevent import _monitor
+
+        self.hub = hub = get_hub()
+
+        # TODO: We could optimize this to use the GreenletTracer
+        # installed by the monitoring thread, if there is one.
+        # As it is, we will chain trace calls back to it.
+        if not self.max_blocking_time:
+            self.tracer = _monitor.GreenletTracer()
+        elif self.hub_only:
+            self.tracer = _monitor.HubSwitchTracer(hub, self.max_blocking_time)
+        else:
+            self.tracer = _monitor.MaxSwitchTracer(hub, self.max_blocking_time)
+
+        self.tracer.monitor_current_greenlet_blocking()
+        return self
+
+    def __exit__(self, t, v, tb):
+        self.tracer.kill()
+        hub = self.hub; self.hub = None
+        tracer = self.tracer; self.tracer = None
+
+        # Only check if there was no exception raised, we
+        # don't want to hide anything
+        if t is not None:
+            return
+
+
+        did_block = tracer.did_block_hub(hub)
+        if did_block:
+            active_greenlet = did_block[1]
+            report_lines = tracer.did_block_hub_report(hub, active_greenlet, {})
+            raise _FailedToSwitch('\n'.join(report_lines))

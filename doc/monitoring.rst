@@ -27,6 +27,9 @@ interval. When such a blocking greenlet is detected, it will print
 :attr:`~gevent.hub.Hub.exception_stream`. It will also emit the
 :class:`gevent.events.EventLoopBlocked` event.
 
+.. seealso:: :func:`gevent.util.assert_switches`
+
+   For a scoped version of this.
 
 Memory Usage
 ------------

@@ -26,6 +26,9 @@
 
 - The long-deprecated and undocumented module ``gevent.wsgi`` was removed.
 
+- Add `gevent.util.assert_switches` to build on the monitoring
+  functions. Fixes :issue:`1182`.
+
 1.3b1 (2018-04-13)
 ==================
 
