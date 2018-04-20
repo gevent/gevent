@@ -25,11 +25,14 @@
 /*
  * gevent: Fix for https://github.com/gevent/gevent/issues/1126
  *
- * Using a stack-based queue variable in uv__run_* badly breaks
- * for certain stack manipulations when greenlets switch.
- * Windows keeps the stack in the loop. In ordor to minimize changes,
- * we move the stack to the heap by changing just this file. We can't
- * use global static variables because of multiple threads.
+ * Using a stack-based queue variable in uv__run_* badly breaks for
+ * certain stack manipulations when greenlets switch. Windows keeps
+ * the stack in the loop. We originally used malloc/free in uv__run_
+ * to avoid changing any files but this one, but that benchmarked
+ * fairly slow and widely variable across processes
+ * (https://groups.google.com/d/msg/libuv/8BxOk40Dii4/Ke1yotOQBwAJ) so
+ * we moved them to the loop. We can't use global static variables
+ * because of multiple threads.
  */
 #include <stdlib.h>
 
@@ -58,7 +61,7 @@
                                                                               \
   void uv__run_##name(uv_loop_t* loop) {                                      \
     uv_##name##_t* h;                                                         \
-    QUEUE* queue = malloc(sizeof(QUEUE));                                     \
+    QUEUE* queue = &loop->name##_handles_queue;                               \
     QUEUE* q;                                                                 \
     QUEUE_MOVE(&loop->name##_handles, queue);                                 \
     while (!QUEUE_EMPTY(queue)) {                                             \
@@ -68,7 +71,6 @@
       QUEUE_INSERT_TAIL(&loop->name##_handles, q);                            \
       h->name##_cb(h);                                                        \
     }                                                                         \
-    free(queue);                                                              \
   }                                                                           \
                                                                               \
   void uv__##name##_close(uv_##name##_t* handle) {                            \
