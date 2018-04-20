@@ -82,6 +82,12 @@ class TestPeriodicMonitoringThread(_AbstractTestPeriodicMonitoringThread,
         self.assertEqual(0xDEADBEEF, self.pmt.monitor_thread_ident)
         self.assertEqual(gettrace(), self.pmt._greenlet_tracer)
 
+    @skipOnPyPyOnWindows("psutil doesn't install on PyPy on Win")
+    def test_get_process(self):
+        proc = self.pmt._get_process()
+        self.assertIsNotNone(proc)
+        self.assertIs(proc, self.pmt._get_process())
+
     def test_hub_wref(self):
         self.assertIs(self.hub, self.pmt.hub)
         del self.hub
@@ -299,11 +305,6 @@ class TestPeriodicMonitorMemory(_AbstractTestPeriodicMonitoringThread,
     def tearDown(self):
         GEVENT_CONFIG.max_memory_usage = self._old_max
         super(TestPeriodicMonitorMemory, self).tearDown()
-
-    def test_get_process(self):
-        proc = self.pmt._get_process()
-        self.assertIsNotNone(proc)
-        self.assertIs(proc, self.pmt._get_process())
 
     def test_can_monitor_and_install(self):
 
