@@ -19,6 +19,9 @@ from gevent import config as GEVENT_CONFIG
 get_ident = get_original(thread_mod_name, 'get_ident')
 
 class MockHub(object):
+    _threadpool = None
+    _resolver = None
+
     def __init__(self):
         self.thread_ident = get_ident()
         self.exception_stream = NativeStrIO()
@@ -32,7 +35,15 @@ class MockHub(object):
     def handle_error(self, *args): # pylint:disable=unused-argument
         raise # pylint:disable=misplaced-bare-raise
 
+    @property
+    def loop(self):
+        return self
+
+    def reinit(self):
+        "mock loop.reinit"
+
 class _AbstractTestPeriodicMonitoringThread(object):
+    # Makes sure we don't actually spin up a new monitoring thread.
 
     # pylint:disable=no-member
 
@@ -41,9 +52,16 @@ class _AbstractTestPeriodicMonitoringThread(object):
         self._orig_start_new_thread = monitor.start_new_thread
         self._orig_thread_sleep = monitor.thread_sleep
         monitor.thread_sleep = lambda _s: gc.collect() # For PyPy
-        monitor.start_new_thread = lambda _f, _a: 0xDEADBEEF
+        self.tid = 0xDEADBEEF
+        def start_new_thread(_f, _a):
+            r = self.tid
+            self.tid += 1
+            return r
+
+        monitor.start_new_thread = start_new_thread
         self.hub = MockHub()
         self.pmt = monitor.PeriodicMonitoringThread(self.hub)
+        self.hub.periodic_monitoring_thread = self.pmt
         self.pmt_default_funcs = self.pmt.monitoring_functions()[:]
         self.len_pmt_default_funcs = len(self.pmt_default_funcs)
 
@@ -63,6 +81,12 @@ class TestPeriodicMonitoringThread(_AbstractTestPeriodicMonitoringThread,
     def test_constructor(self):
         self.assertEqual(0xDEADBEEF, self.pmt.monitor_thread_ident)
         self.assertEqual(gettrace(), self.pmt._greenlet_tracer)
+
+    @skipOnPyPyOnWindows("psutil doesn't install on PyPy on Win")
+    def test_get_process(self):
+        proc = self.pmt._get_process()
+        self.assertIsNotNone(proc)
+        self.assertIs(proc, self.pmt._get_process())
 
     def test_hub_wref(self):
         self.assertIs(self.hub, self.pmt.hub)
@@ -162,6 +186,18 @@ class TestPeriodicMonitoringThread(_AbstractTestPeriodicMonitoringThread,
         self.pmt.add_monitoring_function(f, 0.1)
         with self.assertRaises(MyException):
             self.pmt()
+
+    def test_hub_reinit(self):
+        import os
+        from gevent.hub import reinit
+        self.pmt.pid = -1
+        old_tid = self.pmt.monitor_thread_ident
+
+        reinit(self.hub)
+
+        self.assertEqual(os.getpid(), self.pmt.pid)
+        self.assertEqual(old_tid + 1, self.pmt.monitor_thread_ident)
+
 
 
 class TestPeriodicMonitorBlocking(_AbstractTestPeriodicMonitoringThread,
@@ -264,12 +300,10 @@ class TestPeriodicMonitorMemory(_AbstractTestPeriodicMonitoringThread,
         self._old_max = GEVENT_CONFIG.max_memory_usage
         GEVENT_CONFIG.max_memory_usage = None
 
-        self._old_process = monitor.Process
-        monitor.Process = lambda: MockProcess(self.rss)
+        self.pmt._get_process = lambda: MockProcess(self.rss)
 
     def tearDown(self):
         GEVENT_CONFIG.max_memory_usage = self._old_max
-        monitor.Process = self._old_process
         super(TestPeriodicMonitorMemory, self).tearDown()
 
     def test_can_monitor_and_install(self):
@@ -284,7 +318,7 @@ class TestPeriodicMonitorMemory(_AbstractTestPeriodicMonitoringThread,
 
     def test_cannot_monitor_and_install(self):
         import warnings
-        monitor.Process = None
+        self.pmt._get_process = lambda: None
         self.assertFalse(self.pmt.can_monitor_memory_usage())
 
         # This emits a warning, visible by default

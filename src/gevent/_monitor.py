@@ -1,6 +1,7 @@
 # Copyright (c) 2018 gevent. See LICENSE for details.
 from __future__ import print_function, absolute_import, division
 
+import os
 import sys
 import traceback
 
@@ -32,20 +33,7 @@ get_thread_ident = get_original(thread_mod_name, 'get_ident')
 start_new_thread = get_original(thread_mod_name, 'start_new_thread')
 thread_sleep = get_original('time', 'sleep')
 
-try:
-    # The standard library 'resource' module doesn't provide
-    # a standard way to get the RSS measure, only the maximum.
-    # You might be tempted to try to compute something by adding
-    # together text and data sizes, but on many systems those come back
-    # zero. So our only option is psutil.
-    from psutil import Process, AccessDenied
-    # Make sure it works (why would we be denied access to our own process?)
-    try:
-        Process().memory_full_info()
-    except AccessDenied: # pragma: no cover
-        Process = None
-except ImportError:
-    Process = None
+
 
 class MonitorWarning(RuntimeWarning):
     """The type of warnings we emit."""
@@ -257,6 +245,17 @@ class PeriodicMonitoringThread(object):
         # thread.
         self.monitor_thread_ident = start_new_thread(self, ())
 
+        # We must track the PID to know if your thread has died after a fork
+        self.pid = os.getpid()
+
+    def _on_fork(self):
+        # Pseudo-standard method that resolver_ares and threadpool
+        # also have, called by hub.reinit()
+        pid = os.getpid()
+        if pid != self.pid:
+            self.pid = pid
+            self.monitor_thread_ident = start_new_thread(self, ())
+
     @property
     def hub(self):
         return self._hub_wref()
@@ -395,8 +394,28 @@ class PeriodicMonitoringThread(object):
     def monitor_current_greenlet_blocking(self):
         self._greenlet_tracer.monitor_current_greenlet_blocking()
 
+    def _get_process(self): # pylint:disable=method-hidden
+        try:
+            # The standard library 'resource' module doesn't provide
+            # a standard way to get the RSS measure, only the maximum.
+            # You might be tempted to try to compute something by adding
+            # together text and data sizes, but on many systems those come back
+            # zero. So our only option is psutil.
+            from psutil import Process, AccessDenied
+            # Make sure it works (why would we be denied access to our own process?)
+            try:
+                proc = Process()
+                proc.memory_full_info()
+            except AccessDenied: # pragma: no cover
+                proc = None
+        except ImportError:
+            proc = None
+
+        self._get_process = lambda: proc
+        return proc
+
     def can_monitor_memory_usage(self):
-        return Process is not None
+        return self._get_process() is not None
 
     def install_monitor_memory_usage(self):
         # Start monitoring memory usage, if possible.
@@ -417,7 +436,7 @@ class PeriodicMonitoringThread(object):
             # They disabled it.
             return -1 # value for tests
 
-        rusage = Process().memory_full_info()
+        rusage = self._get_process().memory_full_info()
         # uss only documented available on Windows, Linux, and OS X.
         # If not available, fall back to rss as an aproximation.
         mem_usage = getattr(rusage, 'uss', 0) or rusage.rss

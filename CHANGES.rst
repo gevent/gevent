@@ -29,6 +29,9 @@
 - Add `gevent.util.assert_switches` to build on the monitoring
   functions. Fixes :issue:`1182`.
 
+- A started monitor thread for the active hub now survives a fork. See
+  :issue:`1185`.
+
 1.3b1 (2018-04-13)
 ==================
 
