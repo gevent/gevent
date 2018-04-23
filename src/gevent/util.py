@@ -557,7 +557,7 @@ class assert_switches(object):
 
     def __enter__(self):
         from gevent import get_hub
-        from gevent import _monitor
+        from gevent import _tracer
 
         self.hub = hub = get_hub()
 
@@ -565,11 +565,11 @@ class assert_switches(object):
         # installed by the monitoring thread, if there is one.
         # As it is, we will chain trace calls back to it.
         if not self.max_blocking_time:
-            self.tracer = _monitor.GreenletTracer()
+            self.tracer = _tracer.GreenletTracer()
         elif self.hub_only:
-            self.tracer = _monitor.HubSwitchTracer(hub, self.max_blocking_time)
+            self.tracer = _tracer.HubSwitchTracer(hub, self.max_blocking_time)
         else:
-            self.tracer = _monitor.MaxSwitchTracer(hub, self.max_blocking_time)
+            self.tracer = _tracer.MaxSwitchTracer(hub, self.max_blocking_time)
 
         self.tracer.monitor_current_greenlet_blocking()
         return self

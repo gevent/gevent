@@ -13,7 +13,7 @@ import perf
 
 import greenlet
 import gevent
-from gevent import _monitor as monitor
+from gevent import _tracer as monitor
 
 N = 1000
 

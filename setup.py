@@ -129,6 +129,10 @@ GLT_PRIMITIVES = Extension(name="gevent.__greenlet_primitives",
                            depends=['src/gevent/__greenlet_primitives.pxd'],
                            include_dirs=include_dirs)
 
+TRACER = Extension(name="gevent.__tracer",
+                   sources=["src/gevent/_tracer.py"],
+                   depends=['src/gevent/__tracer.pxd'],
+                   include_dirs=include_dirs)
 
 
 _to_cythonize = [
@@ -137,6 +141,7 @@ _to_cythonize = [
     HUB_LOCAL,
     WAITER,
     GREENLET,
+    TRACER,
 
     SEMAPHORE,
     LOCAL,
@@ -161,6 +166,7 @@ EXT_MODULES = [
     WAITER,
     HUB_PRIMITIVES,
     GLT_PRIMITIVES,
+    TRACER,
 ]
 
 LIBEV_CFFI_MODULE = 'src/gevent/libev/_corecffi_build.py:ffi'
@@ -254,8 +260,12 @@ if PYPY:
 
     EXT_MODULES.remove(GLT_PRIMITIVES)
     _to_cythonize.remove(GLT_PRIMITIVES)
+
     EXT_MODULES.remove(HUB_PRIMITIVES)
     _to_cythonize.remove(HUB_PRIMITIVES)
+
+    EXT_MODULES.remove(TRACER)
+    _to_cythonize.remove(TRACER)
 
 
 for mod in _to_cythonize:

@@ -15,6 +15,7 @@ src/gevent/_imap.c
 src/gevent/event.c
 src/gevent/_hub_local.c
 src/gevent/_waiter.c
+src/gevent/_tracer.c
 src/gevent/queue.c
 src/gevent/_hub_primitives.c
 src/gevent/_greenlet_primitives.c

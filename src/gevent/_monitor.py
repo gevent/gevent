@@ -3,16 +3,13 @@ from __future__ import print_function, absolute_import, division
 
 import os
 import sys
-import traceback
 
 from weakref import ref as wref
 
-from greenlet import settrace
 from greenlet import getcurrent
 
 from gevent import config as GEVENT_CONFIG
 from gevent.monkey import get_original
-from gevent.util import format_run_info
 from gevent.events import notify
 from gevent.events import EventLoopBlocked
 from gevent.events import MemoryUsageThresholdExceeded
@@ -20,9 +17,10 @@ from gevent.events import MemoryUsageUnderThreshold
 from gevent.events import IPeriodicMonitorThread
 from gevent.events import implementer
 
+from gevent._tracer import GreenletTracer
 from gevent._compat import thread_mod_name
 from gevent._compat import perf_counter
-from gevent._util import gmctime
+
 
 
 __all__ = [
@@ -37,148 +35,6 @@ thread_sleep = get_original('time', 'sleep')
 
 class MonitorWarning(RuntimeWarning):
     """The type of warnings we emit."""
-
-
-class GreenletTracer(object):
-
-    # A counter, incremented by the greenlet trace function
-    # we install on every greenlet switch. This is reset when the
-    # periodic monitoring thread runs.
-    greenlet_switch_counter = 0
-
-    # The greenlet last switched to.
-    active_greenlet = None
-
-    # The trace function that was previously installed,
-    # if any.
-    previous_trace_function = None
-
-    def __init__(self):
-        prev_trace = settrace(self)
-        self.previous_trace_function = prev_trace
-
-    def kill(self): #  pylint:disable=method-hidden
-        # Must be called in the monitored thread.
-        settrace(self.previous_trace_function)
-        self.previous_trace_function = None
-        # Become a no-op
-        self.kill = lambda: None
-
-    def __call__(self, event, args):
-        # This function runs in the thread we are monitoring.
-        self.greenlet_switch_counter += 1
-        if event in ('switch', 'throw'):
-            # args is (origin, target). This is the only defined
-            # case
-            self.active_greenlet = args[1]
-        else:
-            self.active_greenlet = None
-        if self.previous_trace_function is not None:
-            self.previous_trace_function(event, args)
-
-    def did_block_hub(self, hub):
-        # Check to see if we have blocked since the last call to this
-        # method. Returns a true value if we blocked (not in the hub),
-        # a false value if everything is fine.
-
-        # This may be called in the same thread being traced or a
-        # different thread; if a different thread, there is a race
-        # condition with this being incremented in the thread we're
-        # monitoring, but probably not often enough to lead to
-        # annoying false positives.
-
-        active_greenlet = self.active_greenlet
-        did_switch = self.greenlet_switch_counter != 0
-        self.greenlet_switch_counter = 0
-
-        if did_switch or active_greenlet is None or active_greenlet is hub:
-            # Either we switched, or nothing is running (we got a
-            # trace event we don't know about or were requested to
-            # ignore), or we spent the whole time in the hub, blocked
-            # for IO. Nothing to report.
-            return False
-        return True, active_greenlet
-
-    def ignore_current_greenlet_blocking(self):
-        # Don't pay attention to the current greenlet.
-        self.active_greenlet = None
-
-    def monitor_current_greenlet_blocking(self):
-        self.active_greenlet = getcurrent()
-
-    def did_block_hub_report(self, hub, active_greenlet, format_kwargs):
-        report = ['=' * 80,
-                  '\n%s : Greenlet %s appears to be blocked' %
-                  (gmctime(), active_greenlet)]
-        report.append("    Reported by %s" % (self,))
-        try:
-            frame = sys._current_frames()[hub.thread_ident]
-        except KeyError:
-            # The thread holding the hub has died. Perhaps we shouldn't
-            # even report this?
-            stack = ["Unknown: No thread found for hub %r\n" % (hub,)]
-        else:
-            stack = traceback.format_stack(frame)
-        report.append('Blocked Stack (for thread id %s):' % (hex(hub.thread_ident),))
-        report.append(''.join(stack))
-        report.append("Info:")
-        report.extend(format_run_info(**format_kwargs))
-
-        return report
-
-class _HubTracer(GreenletTracer):
-    def __init__(self, hub, max_blocking_time):
-        GreenletTracer.__init__(self)
-        self.max_blocking_time = max_blocking_time
-        self.hub = hub
-
-    def kill(self): # pylint:disable=method-hidden
-        self.hub = None
-        GreenletTracer.kill(self)
-
-
-class HubSwitchTracer(_HubTracer):
-    # A greenlet tracer that records the last time we switched *into* the hub.
-
-    last_entered_hub = 0
-
-    def __call__(self, event, args):
-        GreenletTracer.__call__(self, event, args)
-        if self.active_greenlet is self.hub:
-            self.last_entered_hub = perf_counter()
-
-    def did_block_hub(self, hub):
-        if perf_counter() - self.last_entered_hub > self.max_blocking_time:
-            return True, self.active_greenlet
-
-
-class MaxSwitchTracer(_HubTracer):
-    # A greenlet tracer that records the maximum time between switches,
-    # not including time spent in the hub.
-
-    max_blocking = 0
-
-    def __init__(self, hub, max_blocking_time):
-        _HubTracer.__init__(self, hub, max_blocking_time)
-        self.last_switch = perf_counter()
-
-    def __call__(self, event, args):
-        old_active = self.active_greenlet
-        GreenletTracer.__call__(self, event, args)
-        if old_active is not self.hub and old_active is not None:
-            # If we're switching out of the hub, the blocking
-            # time doesn't count.
-            switched_at = perf_counter()
-            self.max_blocking = max(self.max_blocking,
-                                    switched_at - self.last_switch)
-
-    def did_block_hub(self, hub):
-        if self.max_blocking == 0:
-            # We never switched. Check the time now
-            self.max_blocking = perf_counter() - self.last_switch
-
-        if self.max_blocking > self.max_blocking_time:
-            return True, self.active_greenlet
 
 
 class _MonitorEntry(object):
