@@ -243,6 +243,10 @@ class RLock(object):
     def __exit__(self, typ, value, tb):
         self.release()
 
+    def locked(self):
+        """Return a boolean indicating whether the rlock can be acquired."""
+        return self._block.locked()
+
     # Internal methods used by condition variables
 
     def _acquire_restore(self, count_owner):
