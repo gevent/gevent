@@ -217,9 +217,9 @@ class TestPeriodicMonitorBlocking(_AbstractTestPeriodicMonitoringThread,
         self.assertEqual(gettrace(), self.pmt._greenlet_tracer)
         self.assertIs(self.pmt._greenlet_tracer.previous_trace_function, f)
 
-        self.pmt._greenlet_tracer('event', 'args')
+        self.pmt._greenlet_tracer('event', ('args',))
 
-        self.assertEqual([('event', 'args')], called)
+        self.assertEqual([('event', ('args',))], called)
 
     def test__greenlet_tracer(self):
         self.assertEqual(0, self.pmt._greenlet_tracer.greenlet_switch_counter)
@@ -236,7 +236,7 @@ class TestPeriodicMonitorBlocking(_AbstractTestPeriodicMonitoringThread,
         self.assertIs(target, self.pmt._greenlet_tracer.active_greenlet)
 
         # Unknown event removes active greenlet
-        self.pmt._greenlet_tracer('unknown', self)
+        self.pmt._greenlet_tracer('unknown', ())
         self.assertEqual(3, self.pmt._greenlet_tracer.greenlet_switch_counter)
         self.assertIsNone(self.pmt._greenlet_tracer.active_greenlet)
 

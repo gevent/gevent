@@ -18,12 +18,12 @@ from gevent import _tracer as monitor
 N = 1000
 
 @contextlib.contextmanager
-def tracer(func):
-    greenlet.settrace(func)
+def tracer(cls, *args):
+    inst = cls(*args)
     try:
         yield
     finally:
-        greenlet.settrace(None)
+        inst.kill()
 
 def _run(loops):
 
@@ -58,25 +58,28 @@ def bench_trivial_tracer(loops):
     def trivial(_event, _args):
         return
 
-    with tracer(trivial):
+    greenlet.settrace(trivial)
+    try:
         return _run(loops)
+    finally:
+        greenlet.settrace(None)
 
 
 def bench_monitor_tracer(loops):
-    with tracer(monitor.GreenletTracer()):
+    with tracer(monitor.GreenletTracer):
         return _run(loops)
 
 
 def bench_hub_switch_tracer(loops):
     # use current as the hub, since tracer fires
     # when we switch into that greenlet
-    with tracer(monitor.HubSwitchTracer(gevent.getcurrent(), 1)):
+    with tracer(monitor.HubSwitchTracer, gevent.getcurrent(), 1):
         return _run(loops)
 
 def bench_max_switch_tracer(loops):
     # use object() as the hub, since tracer fires
     # when switch into something that's *not* the hub
-    with tracer(monitor.MaxSwitchTracer(object, 1)):
+    with tracer(monitor.MaxSwitchTracer, object, 1):
         return _run(loops)
 
 def main():

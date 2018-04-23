@@ -1,4 +1,5 @@
 # Copyright (c) 2018 gevent. See LICENSE for details.
+# cython: auto_pickle=False,embedsignature=True,always_allow_keywords=False
 from __future__ import print_function, absolute_import, division
 
 import sys
@@ -19,33 +20,40 @@ __all__ = [
     'MaxSwitchTracer',
 ]
 
+# Recall these classes are cython compiled, so
+# class variable declarations are bad.
+
 
 class GreenletTracer(object):
-
-    # A counter, incremented by the greenlet trace function
-    # we install on every greenlet switch. This is reset when the
-    # periodic monitoring thread runs.
-    greenlet_switch_counter = 0
-
-    # The greenlet last switched to.
-    active_greenlet = None
-
-    # The trace function that was previously installed,
-    # if any.
-    previous_trace_function = None
-
     def __init__(self):
+        # A counter, incremented by the greenlet trace function
+        # we install on every greenlet switch. This is reset when the
+        # periodic monitoring thread runs.
+
+        self.greenlet_switch_counter = 0
+
+        # The greenlet last switched to.
+        self.active_greenlet = None
+
+        # The trace function that was previously installed,
+        # if any.
+        # NOTE: Calling a class instance is cheaper than
+        # calling a bound method (at least when compiled with cython)
+        # even when it redirects to another function.
         prev_trace = settrace(self)
+
         self.previous_trace_function = prev_trace
 
-    def kill(self): #  pylint:disable=method-hidden
-        # Must be called in the monitored thread.
-        settrace(self.previous_trace_function)
-        self.previous_trace_function = None
-        # Become a no-op
-        self.kill = lambda: None
+        self._killed = False
 
-    def __call__(self, event, args):
+    def kill(self):
+        # Must be called in the monitored thread.
+        if not self._killed:
+            self._killed = True
+            settrace(self.previous_trace_function)
+            self.previous_trace_function = None
+
+    def _trace(self, event, args):
         # This function runs in the thread we are monitoring.
         self.greenlet_switch_counter += 1
         if event in ('switch', 'throw'):
@@ -56,6 +64,9 @@ class GreenletTracer(object):
             self.active_greenlet = None
         if self.previous_trace_function is not None:
             self.previous_trace_function(event, args)
+
+    def __call__(self, event, args):
+        return self._trace(event, args)
 
     def did_block_hub(self, hub):
         # Check to see if we have blocked since the last call to this
@@ -107,13 +118,14 @@ class GreenletTracer(object):
 
         return report
 
+
 class _HubTracer(GreenletTracer):
     def __init__(self, hub, max_blocking_time):
         GreenletTracer.__init__(self)
         self.max_blocking_time = max_blocking_time
         self.hub = hub
 
-    def kill(self): # pylint:disable=method-hidden
+    def kill(self):
         self.hub = None
         GreenletTracer.kill(self)
 
@@ -121,10 +133,12 @@ class _HubTracer(GreenletTracer):
 class HubSwitchTracer(_HubTracer):
     # A greenlet tracer that records the last time we switched *into* the hub.
 
-    last_entered_hub = 0
+    def __init__(self, hub, max_blocking_time):
+        _HubTracer.__init__(self, hub, max_blocking_time)
+        self.last_entered_hub = 0
 
-    def __call__(self, event, args):
-        GreenletTracer.__call__(self, event, args)
+    def _trace(self, event, args):
+        GreenletTracer._trace(self, event, args)
         if self.active_greenlet is self.hub:
             self.last_entered_hub = perf_counter()
 
@@ -137,15 +151,14 @@ class MaxSwitchTracer(_HubTracer):
     # A greenlet tracer that records the maximum time between switches,
     # not including time spent in the hub.
 
-    max_blocking = 0
-
     def __init__(self, hub, max_blocking_time):
         _HubTracer.__init__(self, hub, max_blocking_time)
         self.last_switch = perf_counter()
+        self.max_blocking = 0
 
-    def __call__(self, event, args):
+    def _trace(self, event, args):
         old_active = self.active_greenlet
-        GreenletTracer.__call__(self, event, args)
+        GreenletTracer._trace(self, event, args)
         if old_active is not self.hub and old_active is not None:
             # If we're switching out of the hub, the blocking
             # time doesn't count.
