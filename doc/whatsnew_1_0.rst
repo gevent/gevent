@@ -25,7 +25,7 @@ rather than stdio file descriptors.).
 
 The signal handlers set with the standard signal module are no longer blocked by the event loop.
 
-The event loops are now pluggable. The GEVENT_LOOP enviroment variable can specify the alternative class to use (the default is ``gevent.core.loop``).
+The event loops are now pluggable. The GEVENT_LOOP environment variable can specify the alternative class to use (the default is ``gevent.core.loop``).
 
 The error handling is now done by Hub.handle_error().
 
