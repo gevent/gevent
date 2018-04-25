@@ -22,20 +22,6 @@
 #include "uv.h"
 #include "internal.h"
 
-/*
- * gevent: Fix for https://github.com/gevent/gevent/issues/1126
- *
- * Using a stack-based queue variable in uv__run_* badly breaks for
- * certain stack manipulations when greenlets switch. Windows keeps
- * the stack in the loop. We originally used malloc/free in uv__run_
- * to avoid changing any files but this one, but that benchmarked
- * fairly slow and widely variable across processes
- * (https://groups.google.com/d/msg/libuv/8BxOk40Dii4/Ke1yotOQBwAJ) so
- * we moved them to the loop. We can't use global static variables
- * because of multiple threads.
- */
-#include <stdlib.h>
-
 #define UV_LOOP_WATCHER_DEFINE(name, type)                                    \
   int uv_##name##_init(uv_loop_t* loop, uv_##name##_t* handle) {              \
     uv__handle_init(loop, (uv_handle_t*)handle, UV_##type);                   \
@@ -61,10 +47,10 @@
                                                                               \
   void uv__run_##name(uv_loop_t* loop) {                                      \
     uv_##name##_t* h;                                                         \
-    QUEUE* queue = &loop->name##_handles_queue;                               \
+    QUEUE queue;                                                              \
     QUEUE* q;                                                                 \
-    QUEUE_MOVE(&loop->name##_handles, queue);                                 \
-    while (!QUEUE_EMPTY(queue)) {                                             \
+    QUEUE_MOVE(&loop->name##_handles, &queue);                                \
+    while (!QUEUE_EMPTY(&queue)) {                                            \
       q = QUEUE_HEAD(&queue);                                                 \
       h = QUEUE_DATA(q, uv_##name##_t, queue);                                \
       QUEUE_REMOVE(q);                                                        \

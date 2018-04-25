@@ -404,6 +404,10 @@ class loop(AbstractLoop):
         self._queued_callbacks = []
         for watcher_ptr, arg in cbs:
             handle = watcher_ptr.data
+            if not handle:
+                # It's been stopped and possibly closed
+                assert not libuv.uv_is_active(watcher_ptr)
+                continue
             val = _callbacks.python_callback(handle, arg)
             if val == -1:
                 _callbacks.python_handle_error(handle, arg)
@@ -428,9 +432,10 @@ class loop(AbstractLoop):
 
         if mode == libuv.UV_RUN_DEFAULT:
             while self._ptr:
-                #print('Looping in python', self._ptr)
                 ran_status = libuv.uv_run(self._ptr, libuv.UV_RUN_ONCE)
-                #print("Looped in python", ran_status, self._queued_callbacks)
+                # XXX: This approach runs timer and prepare handles *after* polling for
+                # I/O is done. That's really not ideal, although it doesn't cause any test failures.
+                # Perhaps we need to implement those type of watchers directly in Python?
                 ran_callbacks = self.__run_queued_callbacks()
                 if not ran_status and not ran_callbacks:
                     # A return of 0 means there are no referenced and

@@ -207,11 +207,8 @@ typedef struct {
   uv_handle_t* closing_handles;                                               \
   void* process_handles[2];                                                   \
   void* prepare_handles[2];                                                   \
-  void* prepare_handles_queue[2];                                                     \
   void* check_handles[2];                                                     \
-  void* check_handles_queue[2];                                                     \
   void* idle_handles[2];                                                      \
-  void* idle_handles_queue[2];                                                     \
   void* async_handles[2];                                                     \
   void (*async_unused)(void);  /* TODO(bnoordhuis) Remove in libuv v2. */     \
   uv__io_t async_io_watcher;                                                  \
