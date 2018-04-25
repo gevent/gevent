@@ -37,10 +37,18 @@ class _Callbacks(AbstractCallbacks):
     def python_timer0_callback(self, watcher_ptr):
         return self.python_prepare_callback(watcher_ptr)
 
+    def python_queue_callback(self, watcher_ptr, revents):
+        watcher_handle = watcher_ptr.data
+        the_watcher = self.from_handle(watcher_handle)
+
+        the_watcher.loop._queue_callback(watcher_ptr, revents)
+
+
 _callbacks = assign_standard_callbacks(
     ffi, libuv, _Callbacks,
     [('python_sigchld_callback', None),
-     ('python_timer0_callback', None)])
+     ('python_timer0_callback', None),
+     ('python_queue_callback', None)])
 
 from gevent._ffi.loop import EVENTS
 GEVENT_CORE_EVENTS = EVENTS # export
@@ -92,6 +100,10 @@ class loop(AbstractLoop):
         self._fork_watchers = set()
         self._pid = os.getpid()
         self._default = self._ptr == libuv.uv_default_loop()
+        self._queued_callbacks = []
+
+    def _queue_callback(self, watcher_ptr, revents):
+        self._queued_callbacks.append((watcher_ptr, revents))
 
     def _init_loop(self, flags, default):
         if default is None:
@@ -324,15 +336,9 @@ class loop(AbstractLoop):
         """
         Return all the handles that are open and their ref status.
         """
-
-        # XXX: Disabled because, at least on Windows, the times this
-        # gets called often produce `SystemError: ffi.from_handle():
-        # dead or bogus handle object`, and sometimes that crashes the process.
-        return []
-
-    def _really_debug(self):
         handle_state = namedtuple("HandleState",
                                   ['handle',
+                                   'type',
                                    'watcher',
                                    'ref',
                                    'active',
@@ -347,6 +353,7 @@ class loop(AbstractLoop):
             else:
                 watcher = None
             handles.append(handle_state(handle,
+                                        ffi.string(libuv.uv_handle_type_name(handle.type)),
                                         watcher,
                                         libuv.uv_has_ref(handle),
                                         libuv.uv_is_active(handle),
@@ -392,6 +399,23 @@ class loop(AbstractLoop):
         # In 1.12, the uv_loop_fork function was added (by gevent!)
         libuv.uv_loop_fork(self._ptr)
 
+    def __run_queued_callbacks(self):
+        cbs = list(self._queued_callbacks)
+        self._queued_callbacks = []
+        for watcher_ptr, arg in cbs:
+            handle = watcher_ptr.data
+            val = _callbacks.python_callback(handle, arg)
+            if val == -1:
+                _callbacks.python_handle_error(handle, arg)
+            elif val == 1:
+                if not libuv.uv_is_active(watcher_ptr):
+                    if watcher_ptr.data != handle:
+                        if watcher_ptr.data:
+                            _callbacks.python_stop(None)
+                    else:
+                        _callbacks.python_stop(handle)
+        return bool(cbs)
+
 
     def run(self, nowait=False, once=False):
         # we can only respect one flag or the other.
@@ -402,17 +426,24 @@ class loop(AbstractLoop):
         if nowait:
             mode = libuv.UV_RUN_NOWAIT
 
-        # if mode == libuv.UV_RUN_DEFAULT:
-        #     print("looping in python")
-        #     ptr = self._ptr
-        #     ran_error = 0
-        #     while ran_error == 0:
-        #         ran_error = libuv.uv_run(ptr, libuv.UV_RUN_ONCE)
-        #     if ran_error != 0:
-        #         print("Error running loop", libuv.uv_err_name(ran_error),
-        #               libuv.uv_strerror(ran_error))
-        #     return ran_error
-        return libuv.uv_run(self._ptr, mode)
+        if mode == libuv.UV_RUN_DEFAULT:
+            while self._ptr:
+                #print('Looping in python', self._ptr)
+                ran_status = libuv.uv_run(self._ptr, libuv.UV_RUN_ONCE)
+                #print("Looped in python", ran_status, self._queued_callbacks)
+                ran_callbacks = self.__run_queued_callbacks()
+                if not ran_status and not ran_callbacks:
+                    # A return of 0 means there are no referenced and
+                    # active handles. The loop is over.
+                    # If we didn't run any callbacks, then we couldn't schedule
+                    # anything to switch in the future, so there's no point
+                    # running again.
+                    return ran_status
+            return 0 # Somebody closed the loop
+
+        result = libuv.uv_run(self._ptr, mode)
+        self.__run_queued_callbacks()
+        return result
 
     def now(self):
         # libuv's now is expressed as an integer number of

@@ -79,6 +79,7 @@ enum uv_fs_event_flags {
 const char* uv_strerror(int);
 const char* uv_err_name(int);
 const char* uv_version_string(void);
+const char* uv_handle_type_name(uv_handle_type type);
 
 // handle structs and types
 struct uv_loop_s {
@@ -362,6 +363,7 @@ extern "Python" {
 	// libuv specific callback
 	void _uv_close_callback(uv_handle_t* handle);
 	void python_sigchld_callback(uv_signal_t* handle, int signum);
+	void python_queue_callback(uv_handle_t* handle, int revents);
 }
 // A variable we fill in.
 static void (*gevent_noop)(void* handle);
