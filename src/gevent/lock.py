@@ -234,7 +234,7 @@ class RLock(object):
 
     def release(self):
         if self._owner is not getcurrent():
-            raise RuntimeError("cannot release un-aquired lock")
+            raise RuntimeError("cannot release un-acquired lock")
         self._count = count = self._count - 1
         if not count:
             self._owner = None
