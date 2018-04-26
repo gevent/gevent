@@ -113,12 +113,12 @@ class TestTimerResolution(Test):
         loop = self.loop
 
 
-        for _ in range(10):
+        for _ in range(15):
             # in libuv, our signal timer fires every 300ms; depending on
             # when this runs, we could artificially get a better
             # resolution than we expect. Run it multiple times to be more sure.
             io = loop.io(fd, 1)
-            io.start(lambda events: None)
+            io.start(lambda events=None: None)
 
 
             now = perf_counter()

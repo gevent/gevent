@@ -343,7 +343,17 @@ def _setup_environ():
         # can't resolve package from __spec__ or __package__, falling
         # back on __name__ and __path__". I have no idea what that means, but it seems harmless
         # and is annoying.
-        os.environ['PYTHONWARNINGS'] = 'default,ignore:::site:,ignore:::importlib._bootstrap:,ignore:::importlib._bootstrap_external:'
+
+        # pkgutil on Python 2 complains about missing __init__.py
+
+        # action:message:category:module:line
+        os.environ['PYTHONWARNINGS'] = ','.join([
+            'default',
+            'ignore:::site:',
+            'ignore:::pkgutil',
+            'ignore:::importlib._bootstrap:',
+            'ignore:::importlib._bootstrap_external:',
+        ])
 
     if 'PYTHONFAULTHANDLER' not in os.environ:
         os.environ['PYTHONFAULTHANDLER'] = 'true'

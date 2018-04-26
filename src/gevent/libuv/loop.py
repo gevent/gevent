@@ -443,7 +443,7 @@ class loop(AbstractLoop):
             mode = libuv.UV_RUN_NOWAIT
 
         if mode == libuv.UV_RUN_DEFAULT:
-            while self._ptr:
+            while self._ptr and self._ptr.data:
                 self._prepare_ran_callbacks = False
                 ran_status = libuv.uv_run(self._ptr, libuv.UV_RUN_ONCE)
                 # Note that we run queued callbacks when the prepare watcher runs,
