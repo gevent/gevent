@@ -150,7 +150,7 @@ def run_many(tests, configured_failing_tests=(), failfast=False, quiet=False):
 
     try:
         try:
-            log("Running tests in parallel with concurrency %s" % (NWORKERS,))
+            log("Running tests in parallel with concurrency %s" % (NWORKERS,),)
             for cmd, options in tests:
                 total += 1
                 options = options or {}
@@ -297,7 +297,7 @@ def report(total, failed, passed, exit=True, took=None,
             passed_unexpected.append(name)
 
     if passed_unexpected:
-        log('\n%s/%s unexpected passes', len(passed_unexpected), total)
+        log('\n%s/%s unexpected passes', len(passed_unexpected), total, color='error')
         print_list(passed_unexpected)
 
     if failed:
@@ -314,7 +314,7 @@ def report(total, failed, passed, exit=True, took=None,
             print_list(failed_expected)
 
         if failed_unexpected:
-            log('\n%s/%s unexpected failures', len(failed_unexpected), total)
+            log('\n%s/%s unexpected failures', len(failed_unexpected), total, color='error')
             print_list(failed_unexpected)
     else:
         log('\n%s tests passed%s', total, took)

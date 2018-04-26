@@ -24,7 +24,70 @@ class Popen(subprocess.Popen):
         kill(self)
 
 
-def log(message, *args):
+# Coloring code based on zope.testrunner
+
+# These colors are carefully chosen to have enough contrast
+# on terminals with both black and white background.
+_colorscheme = {
+    'normal': 'normal',
+    'default': 'default',
+    'info': 'normal',
+    'suboptimal-behaviour': 'magenta',
+    'error': 'brightred',
+    'number': 'green',
+    'slow-test': 'brightmagenta',
+    'ok-number': 'green',
+    'error-number': 'brightred',
+    'filename': 'lightblue',
+    'lineno': 'lightred',
+    'testname': 'lightcyan',
+    'failed-example': 'cyan',
+    'expected-output': 'green',
+    'actual-output': 'red',
+    'character-diffs': 'magenta',
+    'diff-chunk': 'magenta',
+    'exception': 'red',
+    'skipped': 'brightyellow',
+}
+
+_prefixes = [
+    ('dark', '0;'),
+    ('light', '1;'),
+    ('bright', '1;'),
+    ('bold', '1;'),
+]
+
+_colorcodes = {
+    'default': 0,
+    'normal': 0,
+    'black': 30,
+    'red': 31,
+    'green': 32,
+    'brown': 33, 'yellow': 33,
+    'blue': 34,
+    'magenta': 35,
+    'cyan': 36,
+    'grey': 37, 'gray': 37, 'white': 37
+}
+
+def _color_code(color):
+    prefix_code = ''
+    for prefix, code in _prefixes:
+        if color.startswith(prefix):
+            color = color[len(prefix):]
+            prefix_code = code
+            break
+    color_code = _colorcodes[color]
+    return '\033[%s%sm' % (prefix_code, color_code)
+
+def _color(what):
+    return _color_code(_colorscheme[what])
+
+def _colorize(what, message, normal='normal'):
+    return _color(what) + message + _color(normal)
+
+def log(message, *args, **kwargs):
+    color = kwargs.pop('color', 'normal')
     try:
         if args:
             string = message % args
@@ -37,10 +100,12 @@ def log(message, *args):
         except Exception:
             pass
         try:
+            string = _colorize('exception', string)
             sys.stderr.write(string)
         except Exception:
             traceback.print_exc()
     else:
+        string = _colorize(color, string)
         sys.stderr.write(string + '\n')
 
 
@@ -225,7 +290,7 @@ def run(command, **kwargs):
                 out += '\n'
                 log('| %s\n%s', name, out)
         if result:
-            log('! %s [code %s] [took %.1fs]', name, result, took)
+            log('! %s [code %s] [took %.1fs]', name, result, took, color='error')
         elif not nested:
             log('- %s [took %.1fs]', name, took)
     if took >= MIN_RUNTIME:
