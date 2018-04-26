@@ -162,6 +162,15 @@ if PYPY:
             'test__socket_dns.py',
         ]
 
+    if LIBUV:
+        IGNORED_TESTS += [
+            # This hangs for no apparent reason when run by the testrunner,
+            # even wher maked standalone
+            # when run standalone from the command line, it's fine.
+            # Issue in pypy2 6.0?
+            'test__monkey_sigchld_2.py',
+        ]
+
     if TRAVIS:
         FAILING_TESTS += [
             # This fails to get the correct results, sometimes. I can't reproduce locally

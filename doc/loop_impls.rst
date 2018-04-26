@@ -241,6 +241,9 @@ differences in the way gevent behaves using libuv compared to libev.
   has some support for priorities and this is exposed in the low-level
   gevent API, but it was never documented.
 
+- Low-level ``prepare`` watchers are not available. gevent uses
+  prepare watchers for internal purposes.
+
 Performance
 ===========
 

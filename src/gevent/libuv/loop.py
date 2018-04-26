@@ -140,7 +140,7 @@ class loop(AbstractLoop):
         # and call into its check and prepare handlers.
         # Note that this basically forces us into a busy-loop
         # XXX: As predicted, using an idle watcher causes our process
-        # to eat 100% CPU time. We instead use a timer with a max of a 1 second
+        # to eat 100% CPU time. We instead use a timer with a max of a .3 second
         # delay to notice signals. Note that this timeout also implements fork
         # watchers, effectively.
 
@@ -164,7 +164,13 @@ class loop(AbstractLoop):
             self._pid = curpid
             for watcher in self._fork_watchers:
                 watcher._on_fork()
+
         super(loop, self)._run_callbacks()
+        # XXX: It's not clear why we do this after running callback objects;
+        # the contents of queued_callbacks at this point should be timers
+        # that expired when the loop began along with any idle watchers.
+        # But moving it *up* causes a number of test failures.
+        self._prepare_ran_callbacks = self.__run_queued_callbacks()
 
     def _init_and_start_prepare(self):
         libuv.uv_prepare_init(self._ptr, self._prepare)
@@ -399,9 +405,15 @@ class loop(AbstractLoop):
         # In 1.12, the uv_loop_fork function was added (by gevent!)
         libuv.uv_loop_fork(self._ptr)
 
+    _prepare_ran_callbacks = False
+
     def __run_queued_callbacks(self):
+        if not self._queued_callbacks:
+            return False
+
         cbs = list(self._queued_callbacks)
         self._queued_callbacks = []
+
         for watcher_ptr, arg in cbs:
             handle = watcher_ptr.data
             if not handle:
@@ -418,7 +430,7 @@ class loop(AbstractLoop):
                             _callbacks.python_stop(None)
                     else:
                         _callbacks.python_stop(handle)
-        return bool(cbs)
+        return True
 
 
     def run(self, nowait=False, once=False):
@@ -432,12 +444,15 @@ class loop(AbstractLoop):
 
         if mode == libuv.UV_RUN_DEFAULT:
             while self._ptr:
+                self._prepare_ran_callbacks = False
                 ran_status = libuv.uv_run(self._ptr, libuv.UV_RUN_ONCE)
-                # XXX: This approach runs timer and prepare handles *after* polling for
-                # I/O is done. That's really not ideal, although it doesn't cause any test failures.
-                # Perhaps we need to implement those type of watchers directly in Python?
+                # Note that we run queued callbacks when the prepare watcher runs,
+                # thus accounting for timers that expired before polling for IO,
+                # and idle watchers. This next call should get IO callbacks and
+                # callbacks from timers that expired *after* polling for IO.
                 ran_callbacks = self.__run_queued_callbacks()
-                if not ran_status and not ran_callbacks:
+
+                if not ran_status and not ran_callbacks and not self._prepare_ran_callbacks:
                     # A return of 0 means there are no referenced and
                     # active handles. The loop is over.
                     # If we didn't run any callbacks, then we couldn't schedule
@@ -550,3 +565,13 @@ class loop(AbstractLoop):
             io_watcher._no_more_watchers = lambda: delitem(io_watchers, fd)
 
         return io_watcher.multiplex(events)
+
+    def prepare(self, ref=True, priority=None):
+        # We run arbitrary code in python_prepare_callback. That could switch
+        # greenlets. If it does that while also manipulating the active prepare
+        # watchers, we could corrupt the process state, since the prepare watcher
+        # queue is iterated on the stack (on unix). We could workaround this by implementing
+        # prepare watchers in pure Python.
+        # See https://github.com/gevent/gevent/issues/1126
+        raise TypeError("prepare watchers are not currently supported in libuv. "
+                        "If you need them, please contact the maintainers.")

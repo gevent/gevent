@@ -124,6 +124,8 @@ class ILoop(Interface):
         """
         Create and return a watcher that fires before the event loop
         polls for IO.
+
+        .. caution:: This method is not supported by libuv.
         """
 
     def check(ref=True, priority=None):
