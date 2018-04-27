@@ -165,12 +165,30 @@ class loop(AbstractLoop):
             for watcher in self._fork_watchers:
                 watcher._on_fork()
 
-        super(loop, self)._run_callbacks()
-        # XXX: It's not clear why we do this after running callback objects;
-        # the contents of queued_callbacks at this point should be timers
+
+        # The contents of queued_callbacks at this point should be timers
         # that expired when the loop began along with any idle watchers.
-        # But moving it *up* causes a number of test failures.
+        # We need to run them so that any manual callbacks they want to schedule
+        # get added to the list and ran next before we go on to poll for IO.
+        # This is critical for libuv on linux: closing a socket schedules some manual
+        # callbacks to actually stop the watcher; if those don't run before
+        # we poll for IO, then libuv can abort the process for the closed file descriptor.
+
+        # XXX: There's still a race condition here because we may not run *all* the manual
+        # callbacks. We need a way to prioritize those.
+
+        # Running these before the manual callbacks lead to some
+        # random test failures. In test__event.TestEvent_SetThenClear
+        # we would get a LoopExit sometimes. The problem occurred when
+        # a timer expired on entering the first loop; we would process
+        # it there, and then process the callback that it created
+        # below, leaving nothing for the loop to do. Having the
+        # self.run() manually process manual callbacks before
+        # continuing solves the problem. (But we must still run callbacks
+        # here again.)
         self._prepare_ran_callbacks = self.__run_queued_callbacks()
+
+        super(loop, self)._run_callbacks()
 
     def _init_and_start_prepare(self):
         libuv.uv_prepare_init(self._ptr, self._prepare)
@@ -444,6 +462,11 @@ class loop(AbstractLoop):
 
         if mode == libuv.UV_RUN_DEFAULT:
             while self._ptr and self._ptr.data:
+                # This is here to better preserve order guarantees. See _run_callbacks
+                # for details.
+                # It may get run again from the prepare watcher, so potentially we
+                # could take twice as long as the switch interval.
+                self._run_callbacks()
                 self._prepare_ran_callbacks = False
                 ran_status = libuv.uv_run(self._ptr, libuv.UV_RUN_ONCE)
                 # Note that we run queued callbacks when the prepare watcher runs,

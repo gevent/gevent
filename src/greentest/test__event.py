@@ -176,8 +176,8 @@ class TestEvent_SetThenClear(greentest.TestCase):
         gevent.sleep(0.001)
         e.set()
         e.clear()
-        for t in waiters:
-            t.join()
+        for greenlet in waiters:
+            greenlet.join()
 
 
 class TestEvent_SetThenClear100(TestEvent_SetThenClear):
