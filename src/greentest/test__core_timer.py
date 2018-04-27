@@ -112,6 +112,9 @@ class TestTimerResolution(Test):
 
         loop = self.loop
 
+        timer_multiplier = 11
+        max_time = self.timer_duration * timer_multiplier
+        assert max_time < 0.3
 
         for _ in range(150):
             # in libuv, our signal timer fires every 300ms; depending on
@@ -138,7 +141,7 @@ class TestTimerResolution(Test):
                 self.assertEqual(1, len(fired_at))
                 self.assertTimeWithinRange(fired_at[0] - now,
                                            0,
-                                           self.timer_duration * 5)
+                                           max_time)
 
 
         if not greentest.RUNNING_ON_CI:
