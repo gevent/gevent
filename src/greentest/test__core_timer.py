@@ -1,8 +1,8 @@
 from __future__ import print_function
 from gevent import config
 
+import greentest
 from greentest import TestCase
-from greentest import main
 from greentest import LARGE_TIMEOUT
 from greentest.sysinfo import CFFI_BACKEND
 
@@ -11,12 +11,14 @@ class Test(TestCase):
     __timeout__ = LARGE_TIMEOUT
 
     repeat = 0
+    timer_duration = 0.001
 
     def setUp(self):
         super(Test, self).setUp()
         self.called = []
         self.loop = config.loop(default=False)
-        self.timer = self.loop.timer(0.001, repeat=self.repeat)
+        self.timer = self.loop.timer(self.timer_duration, repeat=self.repeat)
+        assert not self.loop.default
 
     def cleanup(self):
         # cleanup instead of tearDown to cooperate well with
@@ -86,5 +88,67 @@ class TestAgain(Test):
         self.assertTimerNotInKeepalive()
 
 
+class TestTimerResolution(Test):
+
+
+    def test_resolution(self):
+        # Make sure that having an active IO watcher
+        # doesn't badly throw off our timer resolution.
+        # (This was a specific problem with libuv)
+
+        # https://github.com/gevent/gevent/pull/1194
+        from gevent._compat import perf_counter
+
+        import socket
+        s = socket.socket()
+        self._close_on_teardown(s)
+        fd = s.fileno()
+
+        ran_at_least_once = False
+        fired_at = []
+
+        def timer_counter():
+            fired_at.append(perf_counter())
+
+        loop = self.loop
+
+        timer_multiplier = 11
+        max_time = self.timer_duration * timer_multiplier
+        assert max_time < 0.3
+
+        for _ in range(150):
+            # in libuv, our signal timer fires every 300ms; depending on
+            # when this runs, we could artificially get a better
+            # resolution than we expect. Run it multiple times to be more sure.
+            io = loop.io(fd, 1)
+            io.start(lambda events=None: None)
+
+
+            now = perf_counter()
+            del fired_at[:]
+            timer = self.timer
+            timer.start(timer_counter)
+
+            loop.run(once=True)
+
+            io.stop()
+            io.close()
+
+            timer.stop()
+
+            if fired_at:
+                ran_at_least_once = True
+                self.assertEqual(1, len(fired_at))
+                self.assertTimeWithinRange(fired_at[0] - now,
+                                           0,
+                                           max_time)
+
+
+        if not greentest.RUNNING_ON_CI:
+            # Hmm, this always fires locally on mocOS but
+            # not an Travis?
+            self.assertTrue(ran_at_least_once)
+
+
 if __name__ == '__main__':
-    main()
+    greentest.main()

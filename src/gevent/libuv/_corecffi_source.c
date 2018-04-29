@@ -4,6 +4,7 @@
 typedef void* GeventWatcherObject;
 
 static int python_callback(GeventWatcherObject handle, int revents);
+static void python_queue_callback(uv_handle_t* watcher_ptr, int revents);
 static void python_handle_error(GeventWatcherObject handle, int revents);
 static void python_stop(GeventWatcherObject handle);
 
@@ -11,7 +12,7 @@ static void _gevent_noop(void* handle) {}
 
 static void (*gevent_noop)(void* handle) = &_gevent_noop;
 
-static void _gevent_generic_callback1(uv_handle_t* watcher, int arg)
+static void _gevent_generic_callback1_unused(uv_handle_t* watcher, int arg)
 {
     // Python code may set this to NULL or even change it
     // out from under us, which would tend to break things.
@@ -65,6 +66,11 @@ static void _gevent_generic_callback1(uv_handle_t* watcher, int arg)
     }
 }
 
+
+static void _gevent_generic_callback1(uv_handle_t* watcher, int arg)
+{
+	python_queue_callback(watcher, arg);
+}
 
 static void _gevent_generic_callback0(uv_handle_t* handle)
 {

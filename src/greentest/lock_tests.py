@@ -424,7 +424,7 @@ class ConditionTests(BaseTestCase):
         self.assertEqual(len(results), 5)
         for dt in results:
             # XXX: libuv sometimes produces 0.19958
-            self.assertTimeWithinRange(dt, 0.2, 2.0)
+            self.assertTimeWithinRange(dt, 0.19, 2.0)
 
 
 class BaseSemaphoreTests(BaseTestCase):

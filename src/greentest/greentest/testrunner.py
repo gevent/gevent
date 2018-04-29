@@ -332,23 +332,33 @@ def print_list(lst):
     for name in lst:
         log(' - %s', name)
 
-def _setup_environ():
+def _setup_environ(debug=False):
     if 'PYTHONWARNINGS' not in os.environ and not sys.warnoptions:
-        # Enable default warnings such as ResourceWarning.
-        # On Python 3[.6], the system site.py module has
-        # "open(fullname, 'rU')" which produces the warning that
-        # 'U' is deprecated, so ignore warnings from site.py
 
-        # importlib/_bootstrap.py likes to spit out "ImportWarning:
-        # can't resolve package from __spec__ or __package__, falling
-        # back on __name__ and __path__". I have no idea what that means, but it seems harmless
-        # and is annoying.
-        os.environ['PYTHONWARNINGS'] = 'default,ignore:::site:,ignore:::importlib._bootstrap:,ignore:::importlib._bootstrap_external:'
+        # action:message:category:module:line
+        os.environ['PYTHONWARNINGS'] = ','.join([
+            # Enable default warnings such as ResourceWarning.
+            'default',
+            # On Python 3[.6], the system site.py module has
+            # "open(fullname, 'rU')" which produces the warning that
+            # 'U' is deprecated, so ignore warnings from site.py
+            'ignore:::site:',
+            # pkgutil on Python 2 complains about missing __init__.py
+            'ignore:::pkgutil',
+            # importlib/_bootstrap.py likes to spit out "ImportWarning:
+            # can't resolve package from __spec__ or __package__, falling
+            # back on __name__ and __path__". I have no idea what that means, but it seems harmless
+            # and is annoying.
+            'ignore:::importlib._bootstrap:',
+            'ignore:::importlib._bootstrap_external:',
+            # importing ABCs from collections, not collections.abc
+            'ignore:::pkg_resources._vendor.pyparsing:',
+        ])
 
     if 'PYTHONFAULTHANDLER' not in os.environ:
         os.environ['PYTHONFAULTHANDLER'] = 'true'
 
-    if 'GEVENT_DEBUG' not in os.environ:
+    if 'GEVENT_DEBUG' not in os.environ and debug:
         os.environ['GEVENT_DEBUG'] = 'debug'
 
     if 'PYTHONTRACEMALLOC' not in os.environ:
@@ -380,6 +390,7 @@ def main():
     parser.add_argument("--coverage", action="store_true")
     parser.add_argument("--quiet", action="store_true", default=True)
     parser.add_argument("--verbose", action="store_false", dest='quiet')
+    parser.add_argument("--debug", action="store_true", default=False)
     parser.add_argument('tests', nargs='*')
     options = parser.parse_args()
     FAILING_TESTS = []
@@ -398,7 +409,7 @@ def main():
         os.environ['COVERAGE_FILE'] = os.path.abspath(".") + os.sep + ".coverage"
         print("Enabling coverage to", os.environ['COVERAGE_FILE'])
 
-    _setup_environ()
+    _setup_environ(debug=options.debug)
 
     if options.config:
         config = {}

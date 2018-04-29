@@ -98,6 +98,7 @@ class AbstractCallbacks(object):
         This function should never return 0, as that's the default value that
         Python exceptions will produce.
         """
+        #print("Running callback", handle)
         orig_ffi_watcher = None
         try:
             # Even dereferencing the handle needs to be inside the try/except;
@@ -121,6 +122,7 @@ class AbstractCallbacks(object):
                 args = _NOARGS
             if args and args[0] == GEVENT_CORE_EVENTS:
                 args = (revents, ) + args[1:]
+            #print("Calling function", the_watcher.callback, args)
             the_watcher.callback(*args)
         except: # pylint:disable=bare-except
             _dbg("Got exception servicing watcher with handle", handle, sys.exc_info())

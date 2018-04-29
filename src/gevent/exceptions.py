@@ -36,6 +36,17 @@ class LoopExit(Exception):
 
     """
 
+    def __repr__(self):
+        if len(self.args) == 3: # From the hub
+            import pprint
+            return "%s\n\tHub: %s\n\tHandles:\n%s" % (
+                self.args[0], self.args[1],
+                pprint.pformat(self.args[2])
+            )
+        return Exception.__repr__(self)
+
+    def __str__(self):
+        return repr(self)
 
 class BlockingSwitchOutError(AssertionError):
     """

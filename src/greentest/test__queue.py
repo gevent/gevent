@@ -351,18 +351,22 @@ class TestNoWait(TestCase):
         def store_result(func, *args):
             result.append(func(*args))
 
-        assert q.empty(), q
-        assert not q.full(), q
+        self.assertTrue(q.empty(), q)
+        self.assertFalse(q.full(), q)
         gevent.sleep(0.001)
-        assert q.empty(), q
-        assert not q.full(), q
+
+        self.assertTrue(q.empty(), q)
+        self.assertFalse(q.full(), q)
+
         get_hub().loop.run_callback(store_result, q.put_nowait, 10)
-        assert not p.ready(), p
+
+        self.assertFalse(p.ready(), p)
         gevent.sleep(0.001)
-        assert result == [None], result
-        assert p.ready(), p
-        assert not q.full(), q
-        assert q.empty(), q
+
+        self.assertEqual(result, [None])
+        self.assertTrue(p.ready(), p)
+        self.assertFalse(q.full(), q)
+        self.assertTrue(q.empty(), q)
 
 
 class TestJoinEmpty(TestCase):
