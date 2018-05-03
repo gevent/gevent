@@ -36,6 +36,9 @@
   the end of the loop iteration using UV_RUN_ONCE. This eliminates the
   need to patch libuv to be greenlet-safe.
 
+- Python 3.7.0b4 is now the tested and supported version of Python
+  3.7. PyPy 6.0 has been tested, although CI continues to use 5.10.
+
 1.3b1 (2018-04-13)
 ==================
 
