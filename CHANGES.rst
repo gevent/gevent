@@ -38,6 +38,10 @@
 - A started monitor thread for the active hub now survives a fork. See
   :issue:`1185`.
 
+- The greenlet tracer functions used for the various monitoring
+  capabilities are now compiled with Cython for substantially lower
+  overhead. See :pr:`1190`.
+
 - libuv now collects all pending watchers and runs their callbacks at
   the end of the loop iteration using UV_RUN_ONCE. This eliminates the
   need to patch libuv to be greenlet-safe.
