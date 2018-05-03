@@ -4,7 +4,7 @@
 
 .. currentmodule:: gevent
 
-1.3b2 (unreleased)
+1.3b2 (2018-05-03)
 ==================
 
 - On Windows, CFFI is now a dependency so that the libuv backend
