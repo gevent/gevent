@@ -68,6 +68,15 @@ if RUNNING_ON_CI:
         # spawn processes of its own
         'test_signal.py',
     ]
+
+    if RUN_LEAKCHECKS and PY3:
+        # On a heavily loaded box, these can all take upwards of 200s
+        RUN_ALONE += [
+            'test__pool.py',
+            'test__pywsgi.py',
+            'test__queue.py',
+        ]
+
     if PYPY:
         # This often takes much longer on PyPy on CI.
         TEST_FILE_OPTIONS['test__threadpool.py'] = {'timeout': 180}
