@@ -197,7 +197,7 @@ test-py36: $(PY36)
 	PYTHON=python3.6.4 PATH=$(BUILD_RUNTIMES)/versions/python3.6.4/bin:$(PATH) make develop allbackendtest
 
 test-py37: $(PY37)
-	LD_LIBRARY_PATH=$(BUILD_RUNTIMES)/versions/python3.7.0b4/openssl/lib PYTHON=python3.7.0b4 PATH=$(BUILD_RUNTIMES)/versions/python3.7.0b4/bin:$(PATH) make develop allbackendtest
+	LD_LIBRARY_PATH=$(BUILD_RUNTIMES)/versions/python3.7.0b4/openssl/lib PYTHON=python3.7.0b4 PATH=$(BUILD_RUNTIMES)/versions/python3.7.0b4/bin:$(PATH) make develop leaktest cffibackendtest coverage_combine
 
 test-pypy: $(PYPY)
 	PYTHON=$(PYPY) PATH=$(BUILD_RUNTIMES)/versions/pypy5100/bin:$(PATH) make develop cffibackendtest

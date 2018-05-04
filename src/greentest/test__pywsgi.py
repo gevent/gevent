@@ -899,10 +899,11 @@ class TestInputN(TestCase):
 
 class TestError(TestCase):
 
-    error = greentest.ExpectedException('TestError.application')
+    error = object()
     error_fatal = False
 
     def application(self, env, start_response):
+        self.error = greentest.ExpectedException('TestError.application')
         raise self.error
 
     def test(self):
@@ -913,9 +914,8 @@ class TestError(TestCase):
 
 class TestError_after_start_response(TestError):
 
-    error = greentest.ExpectedException('TestError_after_start_response.application')
-
     def application(self, env, start_response):
+        self.error = greentest.ExpectedException('TestError_after_start_response.application')
         start_response('200 OK', [('Content-Type', 'text/plain')])
         raise self.error
 

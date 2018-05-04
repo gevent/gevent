@@ -105,7 +105,12 @@ class TestTimers(greentest.TestCase):
             gevent.sleep(0.02)
 
         gevent.spawn(func)
+        # Func has not run yet
         self.assertEqual(lst, [1])
+        # Run callbacks but don't yield.
+        gevent.sleep()
+
+        # Let timers fire. Func should be done.
         gevent.sleep(0.1)
         self.assertEqual(lst, [])
 

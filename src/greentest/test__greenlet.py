@@ -30,8 +30,9 @@ from gevent.queue import Queue, Channel
 
 from greentest.timing import AbstractGenericWaitTestCase
 from greentest.timing import AbstractGenericGetTestCase
+from greentest import timing
 
-DELAY = 0.01
+DELAY = timing.SMALL_TICK
 greentest.TestCase.error_fatal = False
 
 
@@ -567,11 +568,12 @@ class TestBasic(greentest.TestCase):
             setattr(error, 'myattr', return_value)
             raise error
 
-        g = gevent.Greenlet(func, 0.001, return_value=5)
+        g = gevent.Greenlet(func, timing.SMALLEST_RELIABLE_DELAY, return_value=5)
         # use rawlink to avoid timing issues on Appveyor (not always successful)
         g.rawlink(link_test.append)
         g.start()
-        gevent.sleep(0.1)
+        gevent.sleep()
+        gevent.sleep(timing.LARGE_TICK)
         self.assertFalse(g)
         self.assertTrue(g.dead)
         self.assertFalse(g.started)

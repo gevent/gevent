@@ -7,7 +7,7 @@
 1.3.0rc1 (unreleased)
 =====================
 
-- Nothing changed yet.
+- Python 3.7 passes the automated memory leak checks. See :issue:`1197`.
 
 
 1.3b2 (2018-05-03)

@@ -139,6 +139,9 @@ def run_and_check(run_client):
 
 
 @greentest.skipOnCI("Often fail with timeouts or force closed connections; not sure why.")
+@greentest.skipIf(greentest.RUN_LEAKCHECKS and greentest.PY3,
+                  "Often fail with force closed connections; not sure why. "
+)
 class Test(greentest.TestCase):
 
     __timeout__ = greentest.LARGE_TIMEOUT

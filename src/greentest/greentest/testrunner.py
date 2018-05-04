@@ -18,6 +18,7 @@ from greentest.sysinfo import PY3
 from greentest.sysinfo import PY2
 from greentest.sysinfo import RESOLVER_ARES
 from greentest.sysinfo import LIBUV
+from greentest.sysinfo import RUN_LEAKCHECKS
 from greentest import six
 
 # Import this while we're probably single-threaded/single-processed
@@ -33,6 +34,11 @@ TIMEOUT = 100
 NWORKERS = int(os.environ.get('NWORKERS') or max(cpu_count() - 1, 4))
 if NWORKERS > 10:
     NWORKERS = 10
+
+if RUN_LEAKCHECKS:
+    # Capturing the stats takes time, and we run each
+    # test at least twice
+    TIMEOUT = 200
 
 DEFAULT_RUN_OPTIONS = {
     'timeout': TIMEOUT

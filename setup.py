@@ -357,6 +357,9 @@ def run_setup(ext_modules, run_make):
 
                 'futures ; python_version == "2.7"',
                 'mock ; python_version == "2.7"',
+
+                # leak checks. previously we had a hand-rolled version.
+                'objgraph',
             ]
         },
         # It's always safe to pass the CFFI keyword, even if
