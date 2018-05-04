@@ -9,6 +9,8 @@
 
 - Nothing changed yet.
 
+- Update autoconf's config.guess and config.sub to the latest versions
+  for c-ares and libev.
 
 1.3b2 (2018-05-03)
 ==================
