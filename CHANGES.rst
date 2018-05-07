@@ -12,6 +12,9 @@
 - Update autoconf's config.guess and config.sub to the latest versions
   for c-ares and libev.
 
+- :class:`gevent.local.local` subclasses that mix-in ABCs can be instantiated.
+  Reported in :issue:`1201` by Bob Jordan.
+
 1.3b2 (2018-05-03)
 ==================
 
