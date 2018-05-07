@@ -538,8 +538,9 @@ def _local_find_descriptors(self):
         # return other class attributes. So we can't use getattr, and instead
         # walk up the dicts
         for base in mro:
-            if attr_name in base.__dict__:
-                attr = base.__dict__[attr_name]
+            bd = base.__dict__
+            if attr_name in bd:
+                attr = bd[attr_name]
                 break
         else:
             raise AttributeError(attr_name)

@@ -102,7 +102,7 @@ cdef inline dict _local_get_dict(local self)
 @cython.locals(entry=_localimpl_dict_entry)
 cdef _local__copy_dict_from(local self, _localimpl impl, dict duplicate)
 
-@cython.locals(mro=list, base=type, gets=set, dels=set, set_or_del=set,
+@cython.locals(mro=list, gets=set, dels=set, set_or_del=set,
                type_self=type, type_attr=type,
                sets=set)
 cdef tuple _local_find_descriptors(local self)

@@ -7,6 +7,10 @@ from gevent import monkey; monkey.patch_all()
 from threading import local
 from threading import Thread
 
+try:
+    from collections.abc import Mapping
+except ImportError:
+    from collections import Mapping
 
 class ReadProperty(object):
     """A property that can be overridden"""
@@ -67,6 +71,18 @@ class WithGetattr(local):
         if name == 'foo':
             return 42
         return super(WithGetattr, self).__getattr__(name)
+
+class LocalWithABC(local, Mapping):
+
+    def __getitem__(self, name):
+        return self.d[name]
+
+    def __iter__(self):
+        return iter(self.d)
+
+    def __len__(self):
+        return len(self.d)
+
 
 class TestGeventLocal(greentest.TestCase):
     # pylint:disable=attribute-defined-outside-init,blacklisted-name
@@ -324,6 +340,17 @@ class TestGeventLocal(greentest.TestCase):
         results = all_local_dicts_for_greenlet(gevent.getcurrent())
         self.assertEqual(results,
                          [((MyLocal, id(x)), {'foo': 42})])
+
+    def test_local_with_abc(self):
+        # an ABC (or generally any non-exact-type) in the MRO doesn't
+        # break things. See https://github.com/gevent/gevent/issues/1201
+
+        x = LocalWithABC()
+        x.d = {'a': 1}
+        self.assertEqual({'a': 1}, x.d)
+        # The ABC part works
+        self.assertIn('a', x.d)
+        self.assertEqual(['a'], list(x.keys()))
 
 try:
     from zope import interface
