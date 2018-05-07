@@ -6,6 +6,11 @@ gevent applications are often long-running server processes. Beginning
 with version 1.3, gevent has special support for monitoring such
 applications and getting visibility into them.
 
+.. tip::
+
+   For some additional tools, see the comments on `issue 1021
+   <https://github.com/gevent/gevent/issues/1021>`_.
+
 The Monitor Thread
 ==================
 
