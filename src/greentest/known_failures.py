@@ -223,25 +223,6 @@ if PY3:
         'FLAKY test__socket_dns.py',
     ]
 
-    if LEAKTEST:
-        FAILING_TESTS += ['FLAKY test__threadpool.py']
-        # refcount problems:
-        FAILING_TESTS += [
-            'test__timeout.py',
-            'FLAKY test__greenletset.py',
-            'test__core.py',
-            'test__systemerror.py',
-            'test__exc_info.py',
-            'test__api_timeout.py',
-            'test__event.py',
-            'test__api.py',
-            'test__hub.py',
-            'test__queue.py',
-            'test__socket_close.py',
-            'test__select.py',
-            'test__greenlet.py',
-            'FLAKY test__socket.py',
-        ]
 
 
 if sys.version_info[:2] >= (3, 4) and APPVEYOR:

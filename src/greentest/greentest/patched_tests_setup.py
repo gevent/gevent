@@ -269,6 +269,14 @@ if LIBUV:
             'test_socket.GeneralModuleTests.test_uknown_socket_family_repr',
         ]
 
+        if PY37:
+
+            disabled_tests += [
+                # This test sometimes fails at line 358. It's apparently
+                # extremely sensitive to timing.
+                'test_selectors.PollSelectorTestCase.test_timeout',
+            ]
+
         if OSX:
             disabled_tests += [
                 # XXX: Starting when we upgraded from libuv 1.18.0

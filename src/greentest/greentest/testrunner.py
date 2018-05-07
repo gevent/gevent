@@ -18,6 +18,7 @@ from greentest.sysinfo import PY3
 from greentest.sysinfo import PY2
 from greentest.sysinfo import RESOLVER_ARES
 from greentest.sysinfo import LIBUV
+from greentest.sysinfo import RUN_LEAKCHECKS
 from greentest import six
 
 # Import this while we're probably single-threaded/single-processed
@@ -33,6 +34,11 @@ TIMEOUT = 100
 NWORKERS = int(os.environ.get('NWORKERS') or max(cpu_count() - 1, 4))
 if NWORKERS > 10:
     NWORKERS = 10
+
+if RUN_LEAKCHECKS:
+    # Capturing the stats takes time, and we run each
+    # test at least twice
+    TIMEOUT = 200
 
 DEFAULT_RUN_OPTIONS = {
     'timeout': TIMEOUT
@@ -62,6 +68,15 @@ if RUNNING_ON_CI:
         # spawn processes of its own
         'test_signal.py',
     ]
+
+    if RUN_LEAKCHECKS and PY3:
+        # On a heavily loaded box, these can all take upwards of 200s
+        RUN_ALONE += [
+            'test__pool.py',
+            'test__pywsgi.py',
+            'test__queue.py',
+        ]
+
     if PYPY:
         # This often takes much longer on PyPy on CI.
         TEST_FILE_OPTIONS['test__threadpool.py'] = {'timeout': 180}

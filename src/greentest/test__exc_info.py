@@ -2,50 +2,46 @@ import gevent
 import sys
 import greentest
 from greentest import six
+from greentest import ExpectedException as ExpectedError
 
 if not six.PY3:
     sys.exc_clear()
 
-
-class ExpectedError(Exception):
+class RawException(Exception):
     pass
 
 
-expected_error = ExpectedError('expected exception in hello')
-
-
-def hello():
+def hello(err):
     assert sys.exc_info() == (None, None, None), sys.exc_info()
-    raise expected_error
+    raise err
 
 
 def hello2():
     try:
-        hello()
+        hello(ExpectedError('expected exception in hello'))
     except ExpectedError:
         pass
-
-
-error = Exception('hello')
 
 
 class Test(greentest.TestCase):
 
     def test1(self):
+        error = RawException('hello')
+        expected_error = ExpectedError('expected exception in hello')
         try:
             raise error
-        except:
+        except RawException:
             self.expect_one_error()
-            g = gevent.spawn(hello)
+            g = gevent.spawn(hello, expected_error)
             g.join()
             self.assert_error(ExpectedError, expected_error)
             if not isinstance(g.exception, ExpectedError):
                 raise g.exception
             try:
                 raise
-            except Exception:
+            except: # pylint:disable=bare-except
                 ex = sys.exc_info()[1]
-                assert ex is error, (ex, error)
+                self.assertIs(ex, error)
 
     def test2(self):
         timer = gevent.get_hub().loop.timer(0)

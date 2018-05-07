@@ -39,6 +39,7 @@ class Test(greentest.TestCase):
         self.assertEqual(len(s), 1, s)
         s.spawn(gevent.sleep, timing.LARGE_TICK * 5)
         self.assertEqual(len(s), 2, s)
+        gevent.sleep()
         gevent.sleep(timing.LARGE_TICK * 2 + timing.LARGE_TICK_MIN_ADJ)
         self.assertEqual(len(s), 1, s)
         gevent.sleep(timing.LARGE_TICK * 5 + timing.LARGE_TICK_MIN_ADJ)

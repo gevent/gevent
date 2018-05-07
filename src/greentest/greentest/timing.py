@@ -37,6 +37,10 @@ if sysinfo.RUNNING_ON_APPVEYOR:
     SMALL_TICK_MAX_ADJ = 1.5
 
 
+LARGE_TICK = 0.2
+LARGE_TICK_MIN_ADJ = LARGE_TICK / 2.0
+LARGE_TICK_MAX_ADJ = SMALL_TICK_MAX_ADJ
+
 
 class _DelayWaitMixin(object):
 
@@ -83,9 +87,6 @@ class _DelayWaitMixin(object):
         finally:
             timeout.close()
 
-LARGE_TICK = 0.2
-LARGE_TICK_MIN_ADJ = LARGE_TICK / 2.0
-LARGE_TICK_MAX_ADJ = SMALL_TICK_MAX_ADJ
 
 class AbstractGenericWaitTestCase(_DelayWaitMixin, TestCase):
     # pylint:disable=abstract-method

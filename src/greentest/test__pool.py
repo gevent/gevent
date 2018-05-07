@@ -295,9 +295,9 @@ TIMEOUT1, TIMEOUT2, TIMEOUT3 = 0.082, 0.035, 0.14
 SMALL_RANGE = 10
 LARGE_RANGE = 1000
 
-if greentest.PYPY and greentest.WIN:
+if (greentest.PYPY and greentest.WIN) or greentest.RUN_LEAKCHECKS or greentest.RUN_COVERAGE:
     # See comments in test__threadpool.py.
-    LARGE_RANGE = 50
+    LARGE_RANGE = 25
 elif greentest.RUNNING_ON_CI or greentest.EXPECT_POOR_TIMER_RESOLUTION:
     LARGE_RANGE = 100
 
@@ -465,15 +465,15 @@ class TestPool(greentest.TestCase): # pylint:disable=too-many-public-methods
             l = reader()
             self.assertEqual(sorted(l), iterable)
 
-
+@greentest.ignores_leakcheck
 class TestPool2(TestPool):
     size = 2
 
-
+@greentest.ignores_leakcheck
 class TestPool3(TestPool):
     size = 3
 
-
+@greentest.ignores_leakcheck
 class TestPool10(TestPool):
     size = 10
 

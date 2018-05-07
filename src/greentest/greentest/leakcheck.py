@@ -17,54 +17,176 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
+from __future__ import print_function
 
 import sys
 import gc
-import collections
 import types
 from functools import wraps
+import unittest
+
+import objgraph
 
 import gevent
 import gevent.core
 
 
 def ignores_leakcheck(func):
+    """
+    Ignore the given object during leakchecks.
+
+    Can be applied to a method, in which case the method will run, but
+    will not be subject to leak checks.
+
+    If applied to a class, the entire class will be skipped during leakchecks. This
+    is intended to be used for classes that are very slow and cause problems such as
+    test timeouts; typically it will be used for classes that are subclasses of a base
+    class and specify variants of behaviour (such as pool sizes).
+    """
     func.ignore_leakcheck = True
     return func
 
-# Some builtin things that we ignore
-IGNORED_TYPES = (tuple, dict, types.FrameType, types.TracebackType)
-try:
-    callback_kind = gevent.core.callback
-except AttributeError:
-    # Must be using FFI.
-    from gevent._ffi.callback import callback as callback_kind
+class _RefCountChecker(object):
 
-def _type_hist():
-    d = collections.defaultdict(int)
-    for x in gc.get_objects():
-        k = type(x)
-        if k in IGNORED_TYPES:
-            continue
-        if k == callback_kind and x.callback is None and x.args is None:
+    # Some builtin things that we ignore
+    IGNORED_TYPES = (tuple, dict, types.FrameType, types.TracebackType)
+    try:
+        CALLBACK_KIND = gevent.core.callback
+    except AttributeError:
+        # Must be using FFI.
+        from gevent._ffi.callback import callback as CALLBACK_KIND
+
+
+    def __init__(self, testcase, function):
+        self.testcase = testcase
+        self.function = function
+        self.deltas = []
+        self.peak_stats = {}
+
+        # The very first time we are called, we have already been
+        # self.setUp() by the test runner, so we don't need to do it again.
+        self.needs_setUp = False
+
+    def _ignore_object_p(self, obj):
+        if obj is self or obj in self.__dict__.values() or obj == self._ignore_object_p:
+            return False
+        kind = type(obj)
+        if kind in self.IGNORED_TYPES:
+            return False
+        if kind is self.CALLBACK_KIND and obj.callback is None and obj.args is None:
             # these represent callbacks that have been stopped, but
             # the event loop hasn't cycled around to run them. The only
             # known cause of this is killing greenlets before they get a chance
             # to run for the first time.
-            continue
-        d[k] += 1
-    return d
+            return False
+        return True
 
-def _report_diff(a, b):
-    diff_lines = []
-    for k, v in sorted(a.items(), key=lambda i: i[0].__name__):
-        if b[k] != v:
-            diff_lines.append("%s: %s != %s" % (k, v, b[k]))
 
-    if not diff_lines:
-        return None
-    diff = '\n'.join(diff_lines)
-    return diff
+    def _growth(self):
+        return objgraph.growth(limit=None, peak_stats=self.peak_stats, filter=self._ignore_object_p)
+
+    def _report_diff(self, growth):
+        if not growth:
+            return "<Unable to calculate growth>"
+
+        lines = []
+        width = max(len(name) for name, _, _ in growth)
+        for name, count, delta in growth:
+            lines.append('%-*s%9d %+9d' % (width, name, count, delta))
+
+        diff = '\n'.join(lines)
+        return diff
+
+
+    def _run_test(self, args, kwargs):
+        gc_enabled = gc.isenabled()
+        gc.disable()
+
+        if self.needs_setUp:
+            self.testcase.setUp()
+            self.testcase.skipTearDown = False
+        try:
+            self.function(self.testcase, *args, **kwargs)
+        finally:
+            self.testcase.tearDown()
+            self.testcase.skipTearDown = True
+            self.needs_setUp = True
+            if gc_enabled:
+                gc.enable()
+
+    def _growth_after(self):
+        # Grab post snapshot
+        if 'urlparse' in sys.modules:
+            sys.modules['urlparse'].clear_cache()
+        if 'urllib.parse' in sys.modules:
+            sys.modules['urllib.parse'].clear_cache()
+
+        return self._growth()
+
+    def _check_deltas(self, growth):
+        # Return false when we have decided there is no leak,
+        # true if we should keep looping, raises an assertion
+        # if we have decided there is a leak.
+
+        deltas = self.deltas
+        if not deltas:
+            # We haven't run yet, no data, keep looping
+            return True
+
+        if gc.garbage:
+            raise AssertionError("Generated uncollectable garbage %r" % (gc.garbage,))
+
+
+        # the following configurations are classified as "no leak"
+        # [0, 0]
+        # [x, 0, 0]
+        # [... a, b, c, d]  where a+b+c+d = 0
+        #
+        # the following configurations are classified as "leak"
+        # [... z, z, z]  where z > 0
+
+        if deltas[-2:] == [0, 0] and len(deltas) in (2, 3):
+            return False
+
+        if deltas[-3:] == [0, 0, 0]:
+            return False
+
+        if len(deltas) >= 4 and sum(deltas[-4:]) == 0:
+            return False
+
+        if len(deltas) >= 3 and deltas[-1] > 0 and deltas[-1] == deltas[-2] and deltas[-2] == deltas[-3]:
+            diff = self._report_diff(growth)
+            raise AssertionError('refcount increased by %r\n%s' % (deltas, diff))
+
+        # OK, we don't know for sure yet. Let's search for more
+        if sum(deltas[-3:]) <= 0 or sum(deltas[-4:]) <= 0 or deltas[-4:].count(0) >= 2:
+            # this is suspicious, so give a few more runs
+            limit = 11
+        else:
+            limit = 7
+        if len(deltas) >= limit:
+            raise AssertionError('refcount increased by %r\n%s'
+                                 % (deltas,
+                                    self._report_diff(growth)))
+
+        # We couldn't decide yet, keep going
+        return True
+
+    def __call__(self, args, kwargs):
+        for _ in range(3):
+            gc.collect()
+
+        # Capture state before; the incremental will be
+        # updated by each call to _growth_after
+        growth = self._growth()
+
+        while self._check_deltas(growth):
+            self._run_test(args, kwargs)
+
+            growth = self._growth_after()
+
+            self.deltas.append(sum((stat[2] for stat in growth)))
+
 
 def wrap_refcount(method):
     if getattr(method, 'ignore_leakcheck', False):
@@ -73,74 +195,8 @@ def wrap_refcount(method):
 
     @wraps(method)
     def wrapper(self, *args, **kwargs): # pylint:disable=too-many-branches
-        gc.collect()
-        gc.collect()
-        gc.collect()
-        deltas = []
-        d = None
-        gc.disable()
-
-        # The very first time we are called, we have already been
-        # self.setUp() by the test runner, so we don't need to do it again.
-        needs_setUp = False
-
-        try:
-            while True:
-                # Grab current snapshot
-                hist_before = _type_hist()
-                d = sum(hist_before.values())
-
-                if needs_setUp:
-                    self.setUp()
-                    self.skipTearDown = False
-                try:
-                    method(self, *args, **kwargs)
-                finally:
-                    self.tearDown()
-                    self.skipTearDown = True
-                    needs_setUp = True
-
-                # Grab post snapshot
-                if 'urlparse' in sys.modules:
-                    sys.modules['urlparse'].clear_cache()
-                if 'urllib.parse' in sys.modules:
-                    sys.modules['urllib.parse'].clear_cache()
-                hist_after = _type_hist()
-                d = sum(hist_after.values()) - d
-                deltas.append(d)
-
-                # Reset and check for cycles
-                gc.collect()
-                if gc.garbage:
-                    raise AssertionError("Generated uncollectable garbage %r" % (gc.garbage,))
-
-                # the following configurations are classified as "no leak"
-                # [0, 0]
-                # [x, 0, 0]
-                # [... a, b, c, d]  where a+b+c+d = 0
-                #
-                # the following configurations are classified as "leak"
-                # [... z, z, z]  where z > 0
-                if deltas[-2:] == [0, 0] and len(deltas) in (2, 3):
-                    break
-                elif deltas[-3:] == [0, 0, 0]:
-                    break
-                elif len(deltas) >= 4 and sum(deltas[-4:]) == 0:
-                    break
-                elif len(deltas) >= 3 and deltas[-1] > 0 and deltas[-1] == deltas[-2] and deltas[-2] == deltas[-3]:
-                    diff = _report_diff(hist_before, hist_after)
-                    raise AssertionError('refcount increased by %r\n%s' % (deltas, diff))
-                # OK, we don't know for sure yet. Let's search for more
-                if sum(deltas[-3:]) <= 0 or sum(deltas[-4:]) <= 0 or deltas[-4:].count(0) >= 2:
-                    # this is suspicious, so give a few more runs
-                    limit = 11
-                else:
-                    limit = 7
-                if len(deltas) >= limit:
-                    raise AssertionError('refcount increased by %r\n%s'
-                                         % (deltas,
-                                            _report_diff(hist_before, hist_after)))
-        finally:
-            gc.enable()
+        if getattr(self, 'ignore_leakcheck', False):
+            raise unittest.SkipTest("This class ignored during leakchecks")
+        return _RefCountChecker(self, method)(args, kwargs)
 
     return wrapper

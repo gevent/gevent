@@ -163,10 +163,13 @@ class _AbstractPoolTest(TestCase):
 SMALL_RANGE = 10
 LARGE_RANGE = 1000
 
-if greentest.PYPY and (greentest.WIN or greentest.RUN_COVERAGE):
+if (greentest.PYPY and (greentest.WIN or greentest.RUN_COVERAGE)) or greentest.RUN_LEAKCHECKS:
     # PyPy 5.10 is *really* slow at spawning or switching between
     # threads (especially on Windows or when coverage is enabled) Tests that happen
-    # instantaneously on other platforms time out due to the overhead
+    # instantaneously on other platforms time out due to the overhead.
+
+    # Leakchecks also take much longer due to all the calls into the GC,
+    # most especially on Python 3
     LARGE_RANGE = 50
 
 class TestPool(_AbstractPoolTest):
@@ -307,10 +310,11 @@ class TestPool2(TestPool):
         self.assertEqual(result, "B")
 
 
+@greentest.ignores_leakcheck
 class TestPool3(TestPool):
     size = 3
 
-
+@greentest.ignores_leakcheck
 class TestPool10(TestPool):
     size = 10
 
@@ -348,6 +352,7 @@ class TestJoinEmpty(TestCase):
 class TestSpawn(TestCase):
     switch_expected = True
 
+    @greentest.ignores_leakcheck
     def test(self):
         pool = self._makeOne(1)
         self.assertEqual(len(pool), 0)
@@ -408,6 +413,7 @@ class TestMaxsize(TestCase):
 
         self.assertEqualFlakyRaceCondition(done, [1, 2])
 
+    @greentest.ignores_leakcheck
     def test_setzero(self):
         pool = self.pool = self._makeOne(3)
         pool.spawn(sleep, 0.1)
