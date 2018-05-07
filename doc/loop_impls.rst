@@ -216,33 +216,20 @@ differences in the way gevent behaves using libuv compared to libev.
 - The order in which timers and other callbacks are invoked may be
   different than in libev. In particular, timers and IO callbacks
   happen in a different order, and timers may easily be off by up to
-  half of the supposed 1ms resolution. See :issue:`1057`.
-
-- Starting a ``timer`` watcher does not update the loop's time by
-  default. This is because, unlike libev, a timer callback can cause
-  other timer callbacks to be run if they expire because the loop's
-  time updated, without cycling the event loop. See :issue:`1057`.
-
-  libev has also been changed to follow this behaviour.
-
-  Also see :issue:`1072`.
-
-- Timers of zero duration do not necessarily cause the event loop to
-  cycle, as they do in libev. Instead, they may be called
-  immediately. If zero duration timers are added from other zero
-  duration timer callbacks, this can lead the loop to appear to
-  hang, as no IO will actually be done.
-
-  To mitigate this issue, ``loop.timer()`` detects attempts to use
-  zero duration timers and turns them into a check watcher. check
-  watchers do not support the ``again`` method.
+  half of the nominal 1ms resolution. See :issue:`1057`.
 
 - There is no support for priorities within classes of watchers. libev
   has some support for priorities and this is exposed in the low-level
   gevent API, but it was never documented.
 
+- Low-level ``fork`` and ``child`` watchers are not available. gevent
+  emulates these in Python on platforms that supply :func:`os.fork`.
+  Child watchers use ``SIGCHLD``, just as on libev, so the same
+  caveats apply.
+
 - Low-level ``prepare`` watchers are not available. gevent uses
-  prepare watchers for internal purposes.
+  prepare watchers for internal purposes. If necessary, this could be
+  emulated in Python.
 
 Performance
 ===========

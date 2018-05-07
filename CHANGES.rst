@@ -49,7 +49,11 @@
 
 - libuv now collects all pending watchers and runs their callbacks at
   the end of the loop iteration using UV_RUN_ONCE. This eliminates the
-  need to patch libuv to be greenlet-safe.
+  need to patch libuv to be greenlet-safe. It also means that
+  zero-duration timer watchers are actual timer watchers again
+  (instead of being turned into check watchers); newly added
+  zero-duration timers cannot block the event loop because they won't
+  be run until a safe time.
 
 - Python 3.7.0b4 is now the tested and supported version of Python
   3.7. PyPy 6.0 has been tested, although CI continues to use 5.10.
