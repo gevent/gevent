@@ -190,7 +190,7 @@ by default.
 
    A low-level event loop API is available under the
    :mod:`gevent.core` module. This module is not documented, not meant
-   for general purpose usage, and it's exact contents and semantics
+   for general purpose usage, and its exact contents and semantics
    change slightly depending on whether the libev or libuv event loop
    is being used. The callbacks supplied to the event loop API are run
    in the :class:`~gevent.hub.Hub` greenlet and thus cannot use the

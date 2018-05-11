@@ -44,7 +44,7 @@ gevent 1.3 supports Python 2.7, 3.4, 3.5, 3.6 and 3.7 on the CPython
    implementation.
 
 Python 3.7 is in the process of release right now and gevent is tested
-with 3.7b3.
+with 3.7b4, the last scheduled beta for Python 3.7.
 
 For ease of installation on Windows, OS X and Linux, gevent 1.3 is
 distributed as pre-compiled binary wheels, in addition to source code.
@@ -67,20 +67,22 @@ Greenlet Attributes
 attributes:
 
 - :attr:`Greenlet.spawning_greenlet` is the greenlet that created this
-  greenlet. Since the ``parent`` is usually the hub, this can be more
-  useful.
+  greenlet. Since the ``parent`` of a greenlet is almost always gevent's
+  :class:`hub <gevent.hub.Hub>`, this can be more
+  useful to understand greenlet relationships.
 - :attr:`Greenlet.spawn_tree_locals` is a dictionary of values
-  maintained through the spawn tree. This is handy to share values
-  between a set of greenlets, for example, all those involved in
-  processing a request.
-- :attr:`Greenlet.spawning_stack` is a `frame` -like object that
-  captures where the greenlet was created.
+  maintained through the spawn tree (i.e., all descendents of a
+  particular greenlet based on ``spawning_greenlet``). This is
+  convenient to share values between a set of greenlets, for example,
+  all those involved in processing a request.
+- :attr:`Greenlet.spawning_stack` is a :obj:`frame <types.FrameType>` -like object that
+  captures where the greenlet was created and can be passed to :func:`traceback.print_stack`.
 - :attr:`Greenlet.minimal_ident` is a small integer unique across all
   greenlets.
 - :attr:`Greenlet.name` is a string printed in the greenlet's repr by default.
 
 "Raw" greenlets created with `spawn_raw` default to having the
-``spawning_parent`` and ``spawn_tree_locals``.
+``spawning_greenlet`` and ``spawn_tree_locals``.
 
 This extra data is printed by the new
 :func:`gevent.util.print_run_info` function.

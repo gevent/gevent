@@ -144,7 +144,7 @@ yet and thus would evaluate to False.
 
 .. attribute:: Greenlet.spawning_stack
 
-   A lightweight frame-like object capturing the stack when
+   A lightweight :obj:`frame <types.FrameType>`-like object capturing the stack when
    this greenlet was created as well as the stack when the spawning
    greenlet was created (if applicable). This can be passed to
    :func:`traceback.print_stack`.
