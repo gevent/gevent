@@ -4,8 +4,8 @@
 
 .. currentmodule:: gevent
 
-1.3.0rc1 (unreleased)
-=====================
+1.3.0 (2018-05-11)
+==================
 
 - Python 3.7 passes the automated memory leak checks. See :issue:`1197`.
 
