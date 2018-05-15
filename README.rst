@@ -45,6 +45,14 @@ You can use pip to install gevent::
 .. tip:: You need to install from source, not the manylinux wheels, to
          use the libuv backend.
 
+.. tip::
+
+   gevent uses :pep:`496` environment markers in ``setup.py``.
+   Consequently, you'll need a version of setuptools newer than 25
+   (mid 2016) to install gevent from source. Older versions of pipenv
+   may also `have issues installing gevent for this reason
+   <https://github.com/pypa/pipenv/issues/2113>`_.
+
 Download the latest release from `Python Package Index`_ or clone `the repository`_.
 
 Read the documentation online at http://www.gevent.org. Additional

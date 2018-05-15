@@ -45,6 +45,14 @@ libuv backend.
    distributed wheels does not support libuv. The `cffi`_ library
    *must* be installed at build time.
 
+.. note::
+
+   gevent uses :pep:`496` environment markers in ``setup.py``.
+   Consequently, you'll need a version of setuptools newer than 25
+   (mid 2016) to install gevent from source. Older versions of pipenv
+   may also `have issues installing gevent for this reason
+   <https://github.com/pypa/pipenv/issues/2113>`_.
+
 The `psutil <https://pypi.org/project/psutil>`_ library is needed to
 monitor memory usage.
 
@@ -58,7 +66,7 @@ new pure-Python resolver, and on Python 2, so is `idna
 ``dnspython`` extra.
 
 Development instructions (including building from a source checkout)
-can be found `on PyPI <https://pypi.python.org/pypi/gevent#development>`_.
+can be found `on PyPI <https://pypi.org/project/gevent#development>`_.
 
 __ http://pypi.python.org/pypi/greenlet
 .. _`pip`: https://pip.pypa.io/en/stable/installing/
