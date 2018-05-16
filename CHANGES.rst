@@ -9,6 +9,8 @@
 
 - Nothing changed yet.
 
+- Fix embedded uses of :func:`gevent.Greenlet.spawn`, especially under
+  uwsgi. Reported in :issue:`1212` by Kunal Gangakhedkar.
 
 1.3.0 (2018-05-11)
 ==================
