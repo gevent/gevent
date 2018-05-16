@@ -53,8 +53,8 @@ cdef class _AbstractLinkable:
 
 
 cdef class Event(_AbstractLinkable):
+   cdef object __weakref__
    cdef bint _flag
-
 
 cdef class AsyncResult(_AbstractLinkable):
     cdef readonly _value

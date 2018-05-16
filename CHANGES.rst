@@ -7,7 +7,9 @@
 1.3.1 (unreleased)
 ==================
 
-- Nothing changed yet.
+- Fix weak references to :class:`gevent.event.Event`. Reported in
+  :issue:`1211` by Matias Guijarro. Note that creating weak references
+  to Event objects may crash Python 3.7.
 
 
 1.3.0 (2018-05-11)
