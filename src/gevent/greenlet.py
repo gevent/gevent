@@ -130,7 +130,18 @@ def _Frame_from_list(frames):
     return previous
 
 def _extract_stack(limit):
-    frame = sys_getframe()
+    try:
+        frame = sys_getframe()
+    except ValueError:
+        # In certain embedded cases that directly use the Python C api
+        # to call Greenlet.spawn (e.g., uwsgi) this can raise
+        # `ValueError: call stack is not deep enough`. This is because
+        # the Cython stack frames for Greenlet.spawn ->
+        # Greenlet.__init__ -> _extract_stack are all on the C level,
+        # not the Python level.
+        # See https://github.com/gevent/gevent/issues/1212
+        frame = None
+
     frames = []
 
     while limit and frame is not None:

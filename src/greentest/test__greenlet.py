@@ -18,11 +18,12 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
-
+import re
+import unittest
 
 import greentest
 import gevent
-import re
+
 from gevent import sleep, with_timeout, getcurrent
 from gevent import greenlet
 from gevent.event import AsyncResult
@@ -697,6 +698,22 @@ class TestBasic(greentest.TestCase):
         self.assertIs(raw.spawning_greenlet(), getcurrent())
         while not raw.dead:
             gevent.sleep(0.01)
+
+
+    def test_getframe_value_error(self):
+        def get():
+            raise ValueError("call stack is not deep enough")
+        try:
+            ogf = greenlet.sys_getframe
+        except AttributeError:
+            # Must be running cython compiled
+            raise unittest.SkipTest("Cannot mock when Cython compiled")
+        greenlet.sys_getframe = get
+        try:
+            child = greenlet.Greenlet()
+            self.assertIsNone(child.spawning_stack)
+        finally:
+            greenlet.sys_getframe = ogf
 
 
 class TestStart(greentest.TestCase):
