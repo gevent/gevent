@@ -238,13 +238,13 @@ class TestWait_count2(TestWait):
 
 class TestEventBasics(greentest.TestCase):
 
-    @greentest.skipOnPy37("Cython crashes in this case. "
-                          "See https://github.com/cython/cython/issues/2270")
     def test_weakref(self):
         # Event objects should allow weakrefs
         e = Event()
         r = weakref.ref(e)
         self.assertIs(e, r())
+        del e
+        del r
 
 
 del AbstractGenericGetTestCase
