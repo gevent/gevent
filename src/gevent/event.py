@@ -157,7 +157,7 @@ class Event(_AbstractLinkable):
         the waiting greenlets being awakened. These details may change in the future.
     """
 
-    __slots__ = ('_flag',)
+    __slots__ = ('_flag', '__weakref__')
 
     def __init__(self):
         _AbstractLinkable.__init__(self)

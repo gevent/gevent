@@ -7,7 +7,8 @@
 1.3.1 (unreleased)
 ==================
 
-- Nothing changed yet.
+- Fix weak references to :class:`gevent.event.Event`. Reported in
+  :issue:`1211` by Matias Guijarro.
 
 - Fix embedded uses of :func:`gevent.Greenlet.spawn`, especially under
   uwsgi. Reported in :issue:`1212` by Kunal Gangakhedkar.

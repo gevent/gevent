@@ -36,6 +36,11 @@ cdef inline void greenlet_init():
 cdef void _init()
 
 cdef class _AbstractLinkable:
+   # We declare the __weakref__ here in the base (even though
+   # that's not really what we want) as a workaround for a Cython
+   # issue we see reliably on 3.7b4 and sometimes on 3.6. See
+   # https://github.com/cython/cython/issues/2270
+   cdef object __weakref__
    cdef _notifier
    cdef set _links
    cdef readonly SwitchOutGreenletWithLoop hub
@@ -54,7 +59,6 @@ cdef class _AbstractLinkable:
 
 cdef class Event(_AbstractLinkable):
    cdef bint _flag
-
 
 cdef class AsyncResult(_AbstractLinkable):
     cdef readonly _value
