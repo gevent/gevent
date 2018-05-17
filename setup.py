@@ -293,6 +293,17 @@ if ((len(sys.argv) >= 2
         or __name__ != '__main__'):
     _BUILDING = False
 
+def make_long_description():
+    readme = read('README.rst')
+    about = read('doc', '_about.rst')
+    install = read('doc', 'install.rst')
+    readme = readme.replace('.. include:: doc/_about.rst',
+                            about)
+    readme = readme.replace('.. include:: doc/install.rst',
+                            install)
+
+    return readme
+
 
 def run_setup(ext_modules, run_make):
     if run_make:
@@ -308,7 +319,7 @@ def run_setup(ext_modules, run_make):
         name='gevent',
         version=__version__,
         description='Coroutine-based network library',
-        long_description=read('README.rst'),
+        long_description=make_long_description(),
         license='MIT',
         keywords='greenlet coroutine cooperative multitasking light threads monkey',
         author='Denis Bilenko',

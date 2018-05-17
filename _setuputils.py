@@ -42,10 +42,10 @@ THIS_DIR = os.path.dirname(__file__)
 def quoted_abspath(*segments):
     return '"' + os.path.abspath(os.path.join(*segments)) + '"'
 
-def read(name, *args):
+def read(*names):
     """Read a file path relative to this file."""
-    with open(os.path.join(THIS_DIR, name)) as f:
-        return f.read(*args)
+    with open(os.path.join(THIS_DIR, *names)) as f:
+        return f.read()
 
 def read_version(name="src/gevent/__init__.py"):
     contents = read(name)

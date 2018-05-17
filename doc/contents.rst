@@ -8,6 +8,7 @@ Introduction and Basics
 .. toctree::
    :maxdepth: 2
 
+   install
    intro
    whatsnew_1_3
    api/gevent
