@@ -4,7 +4,7 @@
 
 .. currentmodule:: gevent
 
-1.3.1 (unreleased)
+1.3.1 (2018-05-18)
 ==================
 
 - Fix weak references to :class:`gevent.event.Event`. Reported in
