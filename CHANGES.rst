@@ -13,6 +13,10 @@
 - Fix embedded uses of :func:`gevent.Greenlet.spawn`, especially under
   uwsgi. Reported in :issue:`1212` by Kunal Gangakhedkar.
 
+- Fix :func:`gevent.os.nb_write` and :func:`gevent.os.nb_read` not
+  always closing the IO event they opened in the event of an
+  exception. This would be a problem especially for libuv.
+
 1.3.0 (2018-05-11)
 ==================
 

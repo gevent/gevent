@@ -74,61 +74,76 @@ if fcntl:
     __extensions__ += ['make_nonblocking', 'nb_read', 'nb_write']
 
     def make_nonblocking(fd):
-        """Put the file descriptor *fd* into non-blocking mode if possible.
+        """Put the file descriptor *fd* into non-blocking mode if
+        possible.
 
-        :return: A boolean value that evaluates to True if successful."""
+        :return: A boolean value that evaluates to True if successful.
+        """
         flags = fcntl.fcntl(fd, fcntl.F_GETFL, 0)
         if not bool(flags & os.O_NONBLOCK):
             fcntl.fcntl(fd, fcntl.F_SETFL, flags | os.O_NONBLOCK)
             return True
 
     def nb_read(fd, n):
-        """Read up to `n` bytes from file descriptor `fd`. Return a string
-        containing the bytes read. If end-of-file is reached, an empty string
-        is returned.
+        """
+        Read up to *n* bytes from file descriptor *fd*. Return a
+        byte string containing the bytes read, which may be shorter than
+        *n*. If end-of-file is reached, an empty string is returned.
 
         The descriptor must be in non-blocking mode.
         """
-        hub, event = None, None
-        while True:
-            try:
-                result = _read(fd, n)
-                if event is not None:
-                    event.close()
-                return result
-            except OSError as e:
-                if e.errno not in ignored_errors:
-                    raise
-                if not PY3:
-                    sys.exc_clear()
-            if hub is None:
-                hub = get_hub()
-                event = hub.loop.io(fd, 1)
-            hub.wait(event)
+        hub = None
+        event = None
+        try:
+            while 1:
+                try:
+                    result = _read(fd, n)
+                    return result
+                except OSError as e:
+                    if e.errno not in ignored_errors:
+                        raise
+                    if not PY3:
+                        sys.exc_clear()
+                if hub is None:
+                    hub = get_hub()
+                    event = hub.loop.io(fd, 1)
+                hub.wait(event)
+        finally:
+            if event is not None:
+                event.close()
+                event = None
+                hub = None
 
 
     def nb_write(fd, buf):
-        """Write bytes from buffer `buf` to file descriptor `fd`. Return the
-        number of bytes written.
+        """
+        Write some number of bytes from buffer *buf* to file
+        descriptor *fd*. Return the number of bytes written, which may
+        be less than the length of *buf*.
 
         The file descriptor must be in non-blocking mode.
         """
-        hub, event = None, None
-        while True:
-            try:
-                result = _write(fd, buf)
-                if event is not None:
-                    event.close()
-                return result
-            except OSError as e:
-                if e.errno not in ignored_errors:
-                    raise
-                if not PY3:
-                    sys.exc_clear()
-            if hub is None:
-                hub = get_hub()
-                event = hub.loop.io(fd, 2)
-            hub.wait(event)
+        hub = None
+        event = None
+        try:
+            while 1:
+                try:
+                    result = _write(fd, buf)
+                    return result
+                except OSError as e:
+                    if e.errno not in ignored_errors:
+                        raise
+                    if not PY3:
+                        sys.exc_clear()
+                if hub is None:
+                    hub = get_hub()
+                    event = hub.loop.io(fd, 2)
+                hub.wait(event)
+        finally:
+            if event is not None:
+                event.close()
+                event = None
+                hub = None
 
 
 def tp_read(fd, n):
