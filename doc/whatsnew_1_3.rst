@@ -168,15 +168,21 @@ Compatibility
 This release is intended to be compatible with 1.2.x with no changes
 to client source code, so long as only non-deprecated and supported
 interfaces were used (as always, internal, non-documented
-implementation details may have changed).
+implementation details may have changed). Here are some specific
+compatibility notes.
 
-The :doc:`resolvers <dns>` have been refactored. As a result,
-``gevent.ares``, ``gevent.resolver_ares`` and
-``gevent.resolver_thread`` have been deprecated. Choosing a resolver
-by alias (e.g., 'thread') in the ``GEVENT_RESOLVER`` environment
-variable continues to work as before.
+- The :doc:`resolvers <dns>` have been refactored. As a result,
+  ``gevent.ares``, ``gevent.resolver_ares`` and
+  ``gevent.resolver_thread`` have been deprecated. Choosing a resolver
+  by alias (e.g., 'thread') in the ``GEVENT_RESOLVER`` environment
+  variable continues to work as before.
 
-The internal module ``gevent._threading`` was significantly
-refactored. The long-deprecated module ``gevent.wsgi`` was removed.
+- The internal module ``gevent._threading`` was significantly
+  refactored. As the name indicates this is an internal module not
+  intended as part of the public API, but such uses have been observed.
+
+- The module ``gevent.wsgi`` was removed. Use :mod:`gevent.pywsgi`
+  instead. ``gevent.wsgi`` was nothing but an alias for
+  :mod:`gevent.pywsgi` since gevent 1.0a1 (2011).
 
 ..  LocalWords:  Greenlet

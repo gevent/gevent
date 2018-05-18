@@ -86,6 +86,7 @@ Deprecated Modules
 .. toctree::
 
    gevent.ares
+   gevent.wsgi
 
 Examples
 ========
