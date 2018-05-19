@@ -7,13 +7,14 @@
 1.3.2 (unreleased)
 ==================
 
-- Nothing changed yet.
+- Allow weak refeneces to :class:`gevent.queue.Queue`. Reported in
+  :issue:`1217` by githrdw.
 
 
 1.3.1 (2018-05-18)
 ==================
 
-- Fix weak references to :class:`gevent.event.Event`. Reported in
+- Allow weak references to :class:`gevent.event.Event`. Reported in
   :issue:`1211` by Matias Guijarro.
 
 - Fix embedded uses of :func:`gevent.Greenlet.spawn`, especially under
