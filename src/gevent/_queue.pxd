@@ -16,14 +16,15 @@ cdef class ItemWaiter(Waiter):
     cdef readonly queue
 
 cdef class Queue:
+    cdef __weakref__
     cdef readonly hub
     cdef readonly queue
 
-    cdef Py_ssize_t _maxsize
     cdef getters
     cdef putters
 
     cdef _event_unlock
+    cdef Py_ssize_t _maxsize
 
     cpdef _get(self)
     cpdef _put(self, item)
@@ -61,6 +62,7 @@ cdef class JoinableQueue(Queue):
 
 
 cdef class Channel:
+    cdef __weakref__
     cdef readonly getters
     cdef readonly putters
     cdef readonly hub

@@ -113,6 +113,7 @@ class Queue(object):
         'hub',
         '_event_unlock',
         'queue',
+        '__weakref__',
     )
 
     def __init__(self, maxsize=None, items=(), _warn_depth=2):
@@ -558,6 +559,7 @@ class Channel(object):
         'putters',
         'hub',
         '_event_unlock',
+        '__weakref__',
     )
 
     def __init__(self, maxsize=1):

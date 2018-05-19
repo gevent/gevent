@@ -377,8 +377,16 @@ class TestJoinEmpty(TestCase):
         q = queue.JoinableQueue()
         q.join()
 
+class AbstractTestWeakRefMixin(object):
 
-class TestGetInterrupt(AbstractGenericGetTestCase):
+    def test_weak_reference(self):
+        import weakref
+        one = self._makeOne()
+        ref = weakref.ref(one)
+        self.assertIs(one, ref())
+
+
+class TestGetInterrupt(AbstractTestWeakRefMixin, AbstractGenericGetTestCase):
 
     Timeout = Empty
 
