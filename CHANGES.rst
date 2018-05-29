@@ -4,7 +4,7 @@
 
 .. currentmodule:: gevent
 
-1.3.2 (unreleased)
+1.3.2 (2018-05-29)
 ==================
 
 - Allow weak refeneces to :class:`gevent.queue.Queue`. Reported in
