@@ -4,10 +4,10 @@
 
 .. currentmodule:: gevent
 
-1.3.3 (unreleased)
-==================
+1.3.2.post0 (unreleased)
+========================
 
-- Nothing changed yet.
+- Fix a packaging error in manylinux binary wheels.
 
 
 1.3.2 (2018-05-29)
