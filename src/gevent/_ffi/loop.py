@@ -206,11 +206,11 @@ class AbstractCallbacks(object):
         if watcher is not None:
             watcher.loop.handle_error(None, t, v, tb)
             return 1
-        else:
-            # Raising it causes a lot of noise from CFFI
-            print("WARNING: gevent: Unhandled error with no watcher",
-                  file=sys.stderr)
-            traceback.print_exception(t, v, tb)
+
+        # Raising it causes a lot of noise from CFFI
+        print("WARNING: gevent: Unhandled error with no watcher",
+              file=sys.stderr)
+        traceback.print_exception(t, v, tb)
 
     def python_stop(self, handle):
         if not handle: # pragma: no cover
@@ -270,8 +270,7 @@ class AbstractCallbacks(object):
             # in the main greenlet.
             loop.handle_error(None, t, v, tb)
             return None
-        else:
-            raise v # Let CFFI print
+        raise v # Let CFFI print
 
     def _find_loop_from_c_watcher(self, watcher_ptr):
         raise NotImplementedError()

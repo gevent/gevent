@@ -400,5 +400,5 @@ def _parse_address(address):
 def parse_address(address):
     try:
         return _parse_address(address)
-    except ValueError as ex:
+    except ValueError as ex: # pylint:disable=try-except-raise
         raise ValueError('Failed to parse address %r: %s' % (address, ex))

@@ -8,11 +8,12 @@ This module implements cooperative SSL socket wrappers.
 """
 # Our import magic sadly makes this warning useless
 # pylint: disable=undefined-variable
+# pylint:disable=no-member
 
 from __future__ import absolute_import
 import ssl as __ssl__
 
-_ssl = __ssl__._ssl # pylint:disable=no-member
+_ssl = __ssl__._ssl
 
 import errno
 from gevent.socket import socket, timeout_default
@@ -252,7 +253,7 @@ class SSLSocket(socket):
                 self._sslobj = self._context._wrap_socket(self._sock, server_side,
                                                           server_hostname)
                 if _session is not None: # 3.6+
-                    self._sslobj = _SSLObject_factory(self._sslobj,  owner=self,
+                    self._sslobj = _SSLObject_factory(self._sslobj, owner=self,
                                                       session=self._session)
                 if do_handshake_on_connect:
                     timeout = self.gettimeout()
@@ -339,8 +340,7 @@ class SSLSocket(socket):
                     if buffer is None:
                         return b''
                     return 0
-                else:
-                    raise
+                raise
 
     def write(self, data):
         """Write DATA to the underlying SSL channel.  Returns
@@ -489,8 +489,7 @@ class SSLSocket(socket):
                 # Python #23804
                 return b''
             return self.read(buflen)
-        else:
-            return socket.recv(self, buflen, flags)
+        return socket.recv(self, buflen, flags)
 
     def recv_into(self, buffer, nbytes=None, flags=0):
         self._checkClosed()
@@ -502,8 +501,7 @@ class SSLSocket(socket):
             if flags != 0:
                 raise ValueError("non-zero flags not allowed in calls to recv_into() on %s" % self.__class__)
             return self.read(nbytes, buffer)
-        else:
-            return socket.recv_into(self, buffer, nbytes, flags)
+        return socket.recv_into(self, buffer, nbytes, flags)
 
     def recvfrom(self, buflen=1024, flags=0):
         self._checkClosed()
@@ -541,40 +539,40 @@ class SSLSocket(socket):
         socket.shutdown(self, how)
 
     def unwrap(self):
-        if self._sslobj:
-            while True:
-                try:
-                    s = self._sslobj.shutdown()
-                    break
-                except SSLWantReadError:
-                    # Callers of this method expect to get a socket
-                    # back, so we can't simply return 0, we have
-                    # to let these be raised
-                    if self.timeout == 0.0:
-                        raise
-                    self._wait(self._read_event)
-                except SSLWantWriteError:
-                    if self.timeout == 0.0:
-                        raise
-                    self._wait(self._write_event)
-
-            self._sslobj = None
-
-            # The return value of shutting down the SSLObject is the
-            # original wrapped socket passed to _wrap_socket, i.e.,
-            # _contextawaresock. But that object doesn't have the
-            # gevent wrapper around it so it can't be used. We have to
-            # wrap it back up with a gevent wrapper.
-            assert s is self._sock
-            # In the stdlib, SSLSocket subclasses socket.socket and passes itself
-            # to _wrap_socket, so it gets itself back. We can't do that, we have to
-            # pass our subclass of _socket.socket, _contextawaresock.
-            # So ultimately we should return ourself.
-
-            # See test_ftplib.py:TestTLS_FTPClass.test_ccc
-            return self
-        else:
+        if not self._sslobj:
             raise ValueError("No SSL wrapper around " + str(self))
+
+        while True:
+            try:
+                s = self._sslobj.shutdown()
+                break
+            except SSLWantReadError:
+                # Callers of this method expect to get a socket
+                # back, so we can't simply return 0, we have
+                # to let these be raised
+                if self.timeout == 0.0:
+                    raise
+                self._wait(self._read_event)
+            except SSLWantWriteError:
+                if self.timeout == 0.0:
+                    raise
+                self._wait(self._write_event)
+
+        self._sslobj = None
+
+        # The return value of shutting down the SSLObject is the
+        # original wrapped socket passed to _wrap_socket, i.e.,
+        # _contextawaresock. But that object doesn't have the
+        # gevent wrapper around it so it can't be used. We have to
+        # wrap it back up with a gevent wrapper.
+        assert s is self._sock
+        # In the stdlib, SSLSocket subclasses socket.socket and passes itself
+        # to _wrap_socket, so it gets itself back. We can't do that, we have to
+        # pass our subclass of _socket.socket, _contextawaresock.
+        # So ultimately we should return ourself.
+
+        # See test_ftplib.py:TestTLS_FTPClass.test_ccc
+        return self
 
     def _real_close(self):
         self._sslobj = None

@@ -142,8 +142,7 @@ class Waiter(object):
         if self._exception is not _NONE:
             if self._exception is None:
                 return self.value
-            else:
-                getcurrent().throw(*self._exception) # pylint:disable=undefined-variable
+            getcurrent().throw(*self._exception) # pylint:disable=undefined-variable
         else:
             if self.greenlet is not None:
                 raise ConcurrentObjectUseError('This Waiter is already used by %r' % (self.greenlet, ))

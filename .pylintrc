@@ -37,6 +37,10 @@ extension-pkg-whitelist=gevent.libuv._corecffi,gevent.libev._corecffi,gevent.loc
 #  def foo():
 #    if baz:
 #      return 1
+# In Pylint 2dev1, needed for Python 3.7, we get spurious 'useless return' errors:
+# @property
+# def foo(self):
+#   return None # generates useless-return
 disable=wrong-import-position,
     wrong-import-order,
     missing-docstring,
@@ -55,7 +59,8 @@ disable=wrong-import-position,
     useless-suppression,
     duplicate-code,
     undefined-all-variable,
-    inconsistent-return-statements
+    inconsistent-return-statements,
+    useless-return
 
 
 [FORMAT]

@@ -130,6 +130,7 @@ def _getaddrinfo(host=None, service=None, family=AF_UNSPEC, socktype=0,
     # pylint:disable=too-many-locals,broad-except,too-many-statements
     # pylint:disable=too-many-branches
     # pylint:disable=redefined-argument-from-local
+    # pylint:disable=consider-using-in
     if flags & (socket.AI_ADDRCONFIG | socket.AI_V4MAPPED) != 0:
         raise NotImplementedError
     if host is None and service is None:

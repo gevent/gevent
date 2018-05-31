@@ -17,7 +17,7 @@ __all__ = [
 from gevent._util import implementer
 from gevent._interfaces import ILoop
 
-import gevent.libev._corecffi as _corecffi # pylint:disable=no-name-in-module,import-error
+from gevent.libev import _corecffi # pylint:disable=no-name-in-module,import-error
 
 ffi = _corecffi.ffi # pylint:disable=no-member
 libev = _corecffi.lib # pylint:disable=no-member

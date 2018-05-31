@@ -98,9 +98,8 @@ if hasattr(__thread__, 'stack_size'):
             return _original_stack_size()
         if size > _original_stack_size():
             return _original_stack_size(size)
-        else:
-            pass
-            # not going to decrease stack_size, because otherwise other greenlets in this thread will suffer
+        # not going to decrease stack_size, because otherwise other
+        # greenlets in this thread will suffer
 else:
     __implements__.remove('stack_size')
 

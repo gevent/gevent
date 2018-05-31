@@ -105,8 +105,8 @@ class _DummyThread(_DummyThread_):
     _Thread__started.set()
     _tstate_lock = None
 
-    def __init__(self):
-        #_DummyThread_.__init__(self) # pylint:disable=super-init-not-called
+    def __init__(self): # pylint:disable=super-init-not-called
+        #_DummyThread_.__init__(self)
 
         # It'd be nice to use a pattern like "greenlet-%d", but maybe somebody out
         # there is checking thread names...

@@ -512,7 +512,7 @@ def patch_thread(threading=True, _threading_local=True, Event=True, logging=True
         ``Event`` defaults to True.
     """
     # XXX: Simplify
-    # pylint:disable=too-many-branches,too-many-locals
+    # pylint:disable=too-many-branches,too-many-locals,too-many-statements
 
     # Description of the hang:
     # There is an incompatibility with patching 'thread' and the 'multiprocessing' module:

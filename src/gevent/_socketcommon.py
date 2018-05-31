@@ -71,11 +71,8 @@ __imports__.extend(__py3_imports__)
 import time
 import sys
 from gevent._hub_local import get_hub_noargs as get_hub
-from gevent.exceptions import ConcurrentObjectUseError
-from gevent.timeout import Timeout
 from gevent._compat import string_types, integer_types, PY3
 from gevent._util import copy_globals
-from gevent._util import _NONE
 
 is_windows = sys.platform == 'win32'
 is_macos = sys.platform == 'darwin'

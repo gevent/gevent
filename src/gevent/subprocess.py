@@ -1296,7 +1296,7 @@ class Popen(object):
                             # is possible that it is overwritten (#12607).
                             if c2pwrite == 0:
                                 c2pwrite = os.dup(c2pwrite)
-                            while errwrite == 0 or errwrite == 1:
+                            while errwrite in (0, 1):
                                 errwrite = os.dup(errwrite)
 
                             # Dup fds for child

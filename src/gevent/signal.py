@@ -95,7 +95,7 @@ def signal(signalnum, handler):
     old_handler = getsignal(signalnum)
     global _child_handler
     _child_handler = handler
-    if handler == _signal.SIG_IGN or handler == _signal.SIG_DFL:
+    if handler in (_signal.SIG_IGN, _signal.SIG_DFL):
         # Allow resetting/ignoring this signal at the process level.
         # Note that this conflicts with gevent.subprocess and other users
         # of child watchers, until the next time gevent.subprocess/loop.install_sigchld()
