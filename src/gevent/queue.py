@@ -35,7 +35,7 @@ from heapq import heapify as _heapify
 import collections
 
 if sys.version_info[0] == 2:
-    import Queue as __queue__
+    import Queue as __queue__ # python 3: pylint:disable=import-error
 else:
     import queue as __queue__ # python 2: pylint:disable=import-error
 Full = __queue__.Full
@@ -52,7 +52,7 @@ __extensions__ = ['JoinableQueue', 'Channel']
 __imports__ = ['Empty', 'Full']
 if hasattr(__queue__, 'SimpleQueue'):
     __imports__.append('SimpleQueue') # New in 3.7
-    SimpleQueue = __queue__.SimpleQueue
+    SimpleQueue = __queue__.SimpleQueue # pylint:disable=no-member
 __all__ = __implements__ + __extensions__ + __imports__
 
 
