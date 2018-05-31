@@ -7,7 +7,10 @@
 1.3.3 (unreleased)
 ==================
 
-- Nothing changed yet.
+- :func:`gevent.sleep` updates the loop's notion of the current time
+  before sleeping so that sleep duration corresponds more closely to
+  elapsed (wall clock) time. :class:`gevent.Timeout` does the same.
+  Reported by champax and FoP in :issue:`1227`.
 
 
 1.3.2.post0 (2018-05-30)

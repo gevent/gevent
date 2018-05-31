@@ -230,7 +230,7 @@ class ImportableSetting(object):
         if '.' not in path:
             raise ImportError("Cannot import %r. "
                               "Required format: [path/][package.]module.class. "
-                              "Or choice from %r"
+                              "Or choose from %r"
                               % (path, list(self.shortname_map)))
 
         if '/' in path:

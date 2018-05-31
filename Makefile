@@ -129,7 +129,7 @@ BUILD_RUNTIMES?=$(PWD)/.runtimes
 PY278=$(BUILD_RUNTIMES)/snakepit/python2.7.8
 PY27=$(BUILD_RUNTIMES)/snakepit/python2.7.14
 PY34=$(BUILD_RUNTIMES)/snakepit/python3.4.7
-PY35=$(BUILD_RUNTIMES)/snakepit/python3.5.4
+PY35=$(BUILD_RUNTIMES)/snakepit/python3.5.5
 PY36=$(BUILD_RUNTIMES)/snakepit/python3.6.4
 PY37=$(BUILD_RUNTIMES)/snakepit/python3.7.0b4
 PYPY=$(BUILD_RUNTIMES)/snakepit/pypy5100
@@ -191,7 +191,7 @@ test-py34: $(PY34)
 	PYTHON=python3.4.7 PATH=$(BUILD_RUNTIMES)/versions/python3.4.7/bin:$(PATH) make develop basictest
 
 test-py35: $(PY35)
-	PYTHON=python3.5.4 PATH=$(BUILD_RUNTIMES)/versions/python3.5.4/bin:$(PATH) make develop basictest
+	PYTHON=python3.5.5 PATH=$(BUILD_RUNTIMES)/versions/python3.5.5/bin:$(PATH) make develop basictest
 
 test-py36: $(PY36)
 	PYTHON=python3.6.4 PATH=$(BUILD_RUNTIMES)/versions/python3.6.4/bin:$(PATH) make develop allbackendtest

@@ -1,6 +1,6 @@
 from gevent import monkey; monkey.patch_all()
 import os
-import sys
+
 import socket
 import greentest
 # Be careful not to have TestTCP as a bare attribute in this module,
@@ -31,43 +31,42 @@ class TestSSL(test__socket.TestTCP):
     def create_connection(self, *args, **kwargs):
         return ssl.wrap_socket(super(TestSSL, self).create_connection(*args, **kwargs))
 
-    if not sys.platform.startswith('win32'):
+    # The SSL library can take a long time to buffer the large amount of data we're trying
+    # to send, so we can't compare to the timeout values
+    _test_sendall_timeout_check_time = False
 
-        # The SSL library can take a long time to buffer the large amount of data we're trying
-        # to send, so we can't compare to the timeout values
-        _test_sendall_timeout_check_time = False
+    # The SSL layer has extra buffering, so test_sendall needs
+    # to send a very large amount to make it timeout
+    _test_sendall_data = data_sent = b'hello' * 100000000
 
-        # The SSL layer has extra buffering, so test_sendall needs
-        # to send a very large amount to make it timeout
-        _test_sendall_data = data_sent = b'hello' * 100000000
+    @greentest.skipOnWindows("Not clear why we're skipping")
+    def test_ssl_sendall_timeout0(self):
+        # Issue #317: SSL_WRITE_PENDING in some corner cases
 
-        def test_ssl_sendall_timeout0(self):
-            # Issue #317: SSL_WRITE_PENDING in some corner cases
+        server_sock = []
+        acceptor = test__socket.Thread(target=lambda: server_sock.append(self.listener.accept()))
+        client = self.create_connection()
+        client.setblocking(False)
+        try:
+            # Python 3 raises ssl.SSLWantWriteError; Python 2 simply *hangs*
+            # on non-blocking sockets because it's a simple loop around
+            # send(). Python 2.6 doesn't have SSLWantWriteError
+            expected = getattr(ssl, 'SSLWantWriteError', ssl.SSLError)
+            with self.assertRaises(expected):
+                client.sendall(self._test_sendall_data)
+        finally:
+            acceptor.join()
+            client.close()
+            server_sock[0][0].close()
 
-            server_sock = []
-            acceptor = test__socket.Thread(target=lambda: server_sock.append(self.listener.accept()))
-            client = self.create_connection()
-            client.setblocking(False)
-            try:
-                # Python 3 raises ssl.SSLWantWriteError; Python 2 simply *hangs*
-                # on non-blocking sockets because it's a simple loop around
-                # send(). Python 2.6 doesn't have SSLWantWriteError
-                expected = getattr(ssl, 'SSLWantWriteError', ssl.SSLError)
-                with self.assertRaises(expected):
-                    client.sendall(self._test_sendall_data)
-            finally:
-                acceptor.join()
-                client.close()
-                server_sock[0][0].close()
-
-    elif greentest.LIBUV:
-
-        def test_fullduplex(self):
-            try:
-                super(TestSSL, self).test_fullduplex()
-            except LoopExit:
+    def test_fullduplex(self):
+        try:
+            super(TestSSL, self).test_fullduplex()
+        except LoopExit:
+            if greentest.LIBUV and greentest.WIN:
                 # XXX: Unable to duplicate locally
                 raise unittest.SkipTest("libuv on Windows sometimes raises LoopExit")
+            raise
 
 
     @greentest.ignores_leakcheck

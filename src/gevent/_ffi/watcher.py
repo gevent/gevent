@@ -514,7 +514,7 @@ class TimerMixin(object):
 
             # 1.3 changed the default for this to False *unless* the loop is
             # running a callback; see libuv for details. Note that
-            # starting Timeout objects internally still sets this to true.
+            # starting Timeout objects still sets this to true.
 
             self.loop.update_now()
         super(TimerMixin, self).start(callback, *args)
