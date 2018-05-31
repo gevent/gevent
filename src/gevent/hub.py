@@ -152,6 +152,10 @@ def sleep(seconds=0, ref=True):
         waiter.get()
     else:
         with loop.timer(seconds, ref=ref) as t:
+            # Sleeping is expected to be an "absolute" measure with
+            # respect to time.time(), not a relative measure, so it's
+            # important to update the loop's notion of now before we start
+            loop.update_now()
             hub.wait(t)
 
 

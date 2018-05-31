@@ -24,61 +24,125 @@ import greentest
 import weakref
 import time
 import gc
-from gevent import sleep, Timeout
-DELAY = 0.04
+
+from gevent import sleep
+from gevent import Timeout
+from gevent import get_hub
+
+
+from greentest.timing import SMALL_TICK as DELAY
 
 
 class Error(Exception):
     pass
 
 
+class _UpdateNowProxy(object):
+
+    update_now_calls = 0
+
+    def __init__(self, loop):
+        self.loop = loop
+
+    def __getattr__(self, name):
+        return getattr(self.loop, name)
+
+    def update_now(self):
+        self.update_now_calls += 1
+        self.loop.update_now()
+
+class _UpdateNowWithTimerProxy(_UpdateNowProxy):
+
+    def timer(self, *_args, **_kwargs):
+        return _Timer(self)
+
+class _Timer(object):
+
+    pending = False
+    active = False
+
+    def __init__(self, loop):
+        self.loop = loop
+
+    def start(self, *_args, **kwargs):
+        if kwargs.get("update"):
+            self.loop.update_now()
+        self.pending = self.active = True
+
+    def stop(self):
+        self.active = self.pending = False
+
+    def close(self):
+        "Does nothing"
+
+
 class Test(greentest.TestCase):
+
+    def test_timeout_calls_update_now(self):
+        hub = get_hub()
+        loop = hub.loop
+        proxy = _UpdateNowWithTimerProxy(loop)
+        hub.loop = proxy
+
+        try:
+            with Timeout(DELAY * 2) as t:
+                self.assertTrue(t.pending)
+        finally:
+            hub.loop = loop
+
+        self.assertEqual(1, proxy.update_now_calls)
+
+    def test_sleep_calls_update_now(self):
+        hub = get_hub()
+        loop = hub.loop
+        proxy = _UpdateNowProxy(loop)
+        hub.loop = proxy
+        try:
+            sleep(0.01)
+        finally:
+            hub.loop = loop
+
+        self.assertEqual(1, proxy.update_now_calls)
+
 
     @greentest.skipOnAppVeyor("Timing is flaky, especially under Py 3.4/64-bit")
     def test_api(self):
         # Nothing happens if with-block finishes before the timeout expires
         t = Timeout(DELAY * 2)
-        assert not t.pending, repr(t)
+        self.assertFalse(t.pending, t)
         with t:
-            assert t.pending, repr(t)
+            self.assertTrue(t.pending, t)
             sleep(DELAY)
         # check if timer was actually cancelled
-        assert not t.pending, repr(t)
+        self.assertFalse(t.pending, t)
         sleep(DELAY * 2)
 
         # An exception will be raised if it's not
-        try:
+        with self.assertRaises(Timeout) as exc:
             with Timeout(DELAY) as t:
                 sleep(DELAY * 10)
-        except Timeout as ex:
-            assert ex is t, (ex, t)
-        else:
-            raise AssertionError('must raise Timeout')
+
+        self.assertIs(exc.exception, t)
 
         # You can customize the exception raised:
-        try:
+        with self.assertRaises(IOError):
             with Timeout(DELAY, IOError("Operation takes way too long")):
                 sleep(DELAY * 10)
-        except IOError as ex:
-            assert str(ex) == "Operation takes way too long", repr(ex)
 
         # Providing classes instead of values should be possible too:
-        try:
+        with self.assertRaises(ValueError):
             with Timeout(DELAY, ValueError):
                 sleep(DELAY * 10)
-        except ValueError:
-            pass
+
 
         try:
             1 / 0
-        except:
-            try:
+        except ZeroDivisionError:
+            with self.assertRaises(ZeroDivisionError):
                 with Timeout(DELAY, sys.exc_info()[0]):
                     sleep(DELAY * 10)
                     raise AssertionError('should not get there')
                 raise AssertionError('should not get there')
-            except ZeroDivisionError:
-                pass
         else:
             raise AssertionError('should not get there')
 
@@ -107,7 +171,8 @@ class Test(greentest.TestCase):
             sleep(DELAY)
         del err
         gc.collect()
-        assert not err_ref(), repr(err_ref())
+        self.assertFalse(err_ref(), err_ref)
+
 
     def test_nested_timeout(self):
         with Timeout(DELAY, False):
@@ -117,23 +182,25 @@ class Test(greentest.TestCase):
 
         with Timeout(DELAY) as t1:
             with Timeout(DELAY * 20) as t2:
-                try:
+                with self.assertRaises(Timeout) as exc:
                     sleep(DELAY * 30)
-                except Timeout as ex:
-                    assert ex is t1, (ex, t1)
-                assert not t1.pending, t1
-                assert t2.pending, t2
-            assert not t2.pending, t2
+                self.assertIs(exc.exception, t1)
+
+                self.assertFalse(t1.pending, t1)
+                self.assertTrue(t2.pending, t2)
+
+            self.assertFalse(t2.pending)
 
         with Timeout(DELAY * 20) as t1:
             with Timeout(DELAY) as t2:
-                try:
+                with self.assertRaises(Timeout) as exc:
                     sleep(DELAY * 30)
-                except Timeout as ex:
-                    assert ex is t2, (ex, t2)
-                assert t1.pending, t1
-                assert not t2.pending, t2
-        assert not t1.pending, t1
+                self.assertIs(exc.exception, t2)
+
+                self.assertTrue(t1.pending, t1)
+                self.assertFalse(t2.pending, t2)
+
+        self.assertFalse(t1.pending)
 
 
 if __name__ == '__main__':

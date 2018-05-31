@@ -232,7 +232,9 @@ class Timeout(BaseException):
             # regular timeout with user-provided exception
             throws = self.exception
 
-        self.timer.start(getcurrent().throw, throws)
+        # Make sure the timer updates the current time so that we don't
+        # expire prematurely.
+        self.timer.start(getcurrent().throw, throws, update=True)
 
     @classmethod
     def start_new(cls, timeout=None, exception=None, ref=True, _one_shot=False):
