@@ -9,7 +9,8 @@ Cython >= 0.28.1
 
 # Python 3.7b1 requires this.
 greenlet>=0.4.13 ; platform_python_implementation == "CPython"
-pylint>=1.8.0
+pylint>=1.8.0 ; python_version < "3.4"
+pylint >= 2.0.0.dev1 ; python_version >= "3.4"
 # See version requirements in setup.py
 cffi >= 1.11.5 ; platform_python_implementation == "CPython"
 
