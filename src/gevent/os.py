@@ -355,25 +355,25 @@ if hasattr(os, 'fork'):
                         return result[:2]
                     # it's not finished
                     return (0, 0)
-                else:
-                    # Ok, we need to "block". Do so via a watcher so that we're
-                    # cooperative. We know it's our child, etc, so this should work.
-                    watcher = _watched_children[pid]
-                    # We can't start a watcher that's already started,
-                    # so we can't reuse the existing watcher. Notice that the
-                    # old watcher must not have fired already, or during this time, but
-                    # only after we successfully `start()` the watcher. So this must
-                    # not yield to the event loop.
-                    with watcher.loop.child(pid, False) as new_watcher:
-                        get_hub().wait(new_watcher)
-                    # Ok, so now the new watcher is done. That means
-                    # the old watcher's callback (_on_child) should
-                    # have fired, potentially taking this child out of
-                    # _watched_children (but that could depend on how
-                    # many callbacks there were to run, so use the
-                    # watcher object directly; libev sets all the
-                    # watchers at the same time).
-                    return watcher.rpid, watcher.rstatus
+
+                # Ok, we need to "block". Do so via a watcher so that we're
+                # cooperative. We know it's our child, etc, so this should work.
+                watcher = _watched_children[pid]
+                # We can't start a watcher that's already started,
+                # so we can't reuse the existing watcher. Notice that the
+                # old watcher must not have fired already, or during this time, but
+                # only after we successfully `start()` the watcher. So this must
+                # not yield to the event loop.
+                with watcher.loop.child(pid, False) as new_watcher:
+                    get_hub().wait(new_watcher)
+                # Ok, so now the new watcher is done. That means
+                # the old watcher's callback (_on_child) should
+                # have fired, potentially taking this child out of
+                # _watched_children (but that could depend on how
+                # many callbacks there were to run, so use the
+                # watcher object directly; libev sets all the
+                # watchers at the same time).
+                return watcher.rpid, watcher.rstatus
 
             # we're not watching it and it may not even  be our child,
             # so we must go to the OS to be sure to get the right semantics (exception)

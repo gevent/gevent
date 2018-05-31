@@ -326,8 +326,7 @@ class SSLSocket(socket):
                     if buffer is not None:
                         return 0
                     return b''
-                else:
-                    raise
+                raise
 
     def write(self, data):
         """Write DATA to the underlying SSL channel.  Returns
@@ -456,8 +455,7 @@ class SSLSocket(socket):
             if buflen == 0:
                 return b''
             return self.read(buflen)
-        else:
-            return socket.recv(self, buflen, flags)
+        return socket.recv(self, buflen, flags)
 
     def recv_into(self, buffer, nbytes=None, flags=0):
         self._checkClosed()
@@ -473,16 +471,14 @@ class SSLSocket(socket):
                     "non-zero flags not allowed in calls to recv_into() on %s" %
                     self.__class__)
             return self.read(nbytes, buffer)
-        else:
-            return socket.recv_into(self, buffer, nbytes, flags)
+        return socket.recv_into(self, buffer, nbytes, flags)
 
     def recvfrom(self, buflen=1024, flags=0):
         self._checkClosed()
         if self._sslobj:
             raise ValueError("recvfrom not allowed on instances of %s" %
                              self.__class__)
-        else:
-            return socket.recvfrom(self, buflen, flags)
+        return socket.recvfrom(self, buflen, flags)
 
     def recvfrom_into(self, buffer, nbytes=None, flags=0):
         self._checkClosed()
@@ -536,7 +532,7 @@ class SSLSocket(socket):
             except SSLError as ex:
                 if ex.args[0] == SSL_ERROR_EOF and self.suppress_ragged_eofs:
                     return ''
-                elif ex.args[0] == SSL_ERROR_WANT_READ:
+                if ex.args[0] == SSL_ERROR_WANT_READ:
                     if self.timeout == 0.0:
                         raise
                     sys.exc_clear()
@@ -550,15 +546,15 @@ class SSLSocket(socket):
                     raise
 
     def unwrap(self):
-        if self._sslobj:
-            s = self._sslobj_shutdown()
-            self._sslobj = None
-            # match _ssl2; critical to drop/reuse here on PyPy
-            # XXX: _ssl3 returns an SSLSocket. Is that what the standard lib does on
-            # Python 2? Should we do that?
-            return socket(_sock=s)
-        else:
+        if not self._sslobj:
             raise ValueError("No SSL wrapper around " + str(self))
+
+        s = self._sslobj_shutdown()
+        self._sslobj = None
+        # match _ssl2; critical to drop/reuse here on PyPy
+        # XXX: _ssl3 returns an SSLSocket. Is that what the standard lib does on
+        # Python 2? Should we do that?
+        return socket(_sock=s)
 
     def _real_close(self):
         self._sslobj = None

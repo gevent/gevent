@@ -14,6 +14,7 @@ import sys
 from gevent import _socketcommon
 from gevent._util import copy_globals
 from gevent._compat import PYPY
+from gevent.timeout import Timeout
 import _socket
 from os import dup
 
@@ -361,7 +362,7 @@ class socket(object):
             return self.connect(address) or 0
         except timeout:
             return EAGAIN
-        except gaierror:
+        except gaierror: # pylint:disable=try-except-raise
             # gaierror/overflowerror/typerror is not silenced by connect_ex;
             # gaierror extends OSError (aka error) so catch it first
             raise

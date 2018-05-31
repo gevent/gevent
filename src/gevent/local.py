@@ -436,7 +436,8 @@ class local(object):
                 return type(type_attr).__get__(type_attr, self, self._local_type)
             # Last case is a non-data descriptor. Instance wins.
             return dct[name]
-        elif name in self._local_type_vars:
+
+        if name in self._local_type_vars:
             type_attr = getattr(self._local_type, name)
 
             # It's not in the dict at all. Is it in the type?

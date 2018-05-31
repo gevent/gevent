@@ -5,7 +5,7 @@ from __future__ import absolute_import, print_function
 import functools
 import sys
 
-import gevent.libuv._corecffi as _corecffi # pylint:disable=no-name-in-module,import-error
+from gevent.libuv import _corecffi # pylint:disable=no-name-in-module,import-error
 
 ffi = _corecffi.ffi
 libuv = _corecffi.lib

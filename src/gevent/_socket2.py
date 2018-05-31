@@ -10,6 +10,7 @@ from __future__ import absolute_import
 from gevent import _socketcommon
 from gevent._util import copy_globals
 from gevent._compat import PYPY
+from gevent.timeout import Timeout
 
 copy_globals(_socketcommon, globals(),
              names_to_ignore=_socketcommon.__py3_imports__ + _socketcommon.__extensions__,
@@ -255,8 +256,7 @@ class socket(object):
         except error as ex:
             if type(ex) is error: # pylint:disable=unidiomatic-typecheck
                 return ex.args[0]
-            else:
-                raise  # gaierror is not silenced by connect_ex
+            raise  # gaierror is not silenced by connect_ex
 
     def dup(self):
         """dup() -> socket object

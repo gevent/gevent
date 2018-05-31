@@ -4,7 +4,7 @@
    Use :mod:`gevent.resolver.cares`
 """
 
-from gevent.resolver.cares import * # pylint:disable=wildcard-import,unused-wildcard-import
+from gevent.resolver.cares import * # pylint:disable=wildcard-import,unused-wildcard-import,
 import gevent.resolver.cares as _cares
-__all__ = _cares.__all__
+__all__ = _cares.__all__ # pylint:disable=c-extension-no-member
 del _cares

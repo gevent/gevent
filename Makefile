@@ -37,8 +37,8 @@ whitespace:
 	! find . -not -path "*.pem" -not -path "./.eggs/*" -not -path "./src/greentest/htmlcov/*" -not -path "./src/greentest/.coverage.*" -not -path "./.tox/*" -not -path "*/__pycache__/*" -not -path "*.so" -not -path "*.pyc" -not -path "./.git/*" -not -path "./build/*"  -not -path "./src/gevent/libev/*" -not -path "./src/gevent.egg-info/*" -not -path "./dist/*" -not -path "./.DS_Store" -not -path "./deps/*" -not -path "./src/gevent/libev/corecext.*.[ch]" -not -path "./src/gevent/resolver/cares.*" -not -path "./doc/_build/*" -not -path "./doc/mytheme/static/*" -type f | xargs egrep -l " $$"
 
 prospector:
-	which prospector
 	which pylint
+	pylint --rcfile=.pylintrc gevent
 # debugging
 #	pylint --rcfile=.pylintrc --init-hook="import sys, code; sys.excepthook = lambda exc, exc_type, tb: print(tb.tb_next.tb_next.tb_next.tb_next.tb_next.tb_next.tb_next.tb_next.tb_next.tb_next.tb_frame.f_locals['self'])" gevent src/greentest/* || true
 # XXX: prospector is failing right now. I can't reproduce locally:
@@ -185,7 +185,7 @@ develop:
 	@${PYTHON} scripts/travis.py fold_end install
 
 test-py27: $(PY27)
-	PYTHON=python2.7.14 PATH=$(BUILD_RUNTIMES)/versions/python2.7.14/bin:$(PATH) make develop lint leaktest cffibackendtest coverage_combine
+	PYTHON=python2.7.14 PATH=$(BUILD_RUNTIMES)/versions/python2.7.14/bin:$(PATH) make develop leaktest cffibackendtest coverage_combine
 
 test-py34: $(PY34)
 	PYTHON=python3.4.7 PATH=$(BUILD_RUNTIMES)/versions/python3.4.7/bin:$(PATH) make develop basictest
@@ -194,7 +194,7 @@ test-py35: $(PY35)
 	PYTHON=python3.5.5 PATH=$(BUILD_RUNTIMES)/versions/python3.5.5/bin:$(PATH) make develop basictest
 
 test-py36: $(PY36)
-	PYTHON=python3.6.4 PATH=$(BUILD_RUNTIMES)/versions/python3.6.4/bin:$(PATH) make develop allbackendtest
+	PYTHON=python3.6.4 PATH=$(BUILD_RUNTIMES)/versions/python3.6.4/bin:$(PATH) make develop lint allbackendtest
 
 test-py37: $(PY37)
 	LD_LIBRARY_PATH=$(BUILD_RUNTIMES)/versions/python3.7.0b4/openssl/lib PYTHON=python3.7.0b4 PATH=$(BUILD_RUNTIMES)/versions/python3.7.0b4/bin:$(PATH) make develop leaktest cffibackendtest coverage_combine

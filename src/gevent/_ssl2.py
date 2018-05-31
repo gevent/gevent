@@ -109,7 +109,7 @@ class SSLSocket(socket):
             except SSLError as ex:
                 if ex.args[0] == SSL_ERROR_EOF and self.suppress_ragged_eofs:
                     return ''
-                elif ex.args[0] == SSL_ERROR_WANT_READ:
+                if ex.args[0] == SSL_ERROR_WANT_READ:
                     if self.timeout == 0.0:
                         raise
                     sys.exc_clear()
@@ -211,8 +211,7 @@ class SSLSocket(socket):
                     self.__class__)
             # QQQ Shouldn't we wrap the SSL_WANT_READ errors as socket.timeout errors to match socket.recv's behavior?
             return self.read(buflen)
-        else:
-            return socket.recv(self, buflen, flags)
+        return socket.recv(self, buflen, flags)
 
     def recv_into(self, buffer, nbytes=None, flags=0):
         if buffer and (nbytes is None):
@@ -268,7 +267,7 @@ class SSLSocket(socket):
             except SSLError as ex:
                 if ex.args[0] == SSL_ERROR_EOF and self.suppress_ragged_eofs:
                     return ''
-                elif ex.args[0] == SSL_ERROR_WANT_READ:
+                if ex.args[0] == SSL_ERROR_WANT_READ:
                     if self.timeout == 0.0:
                         raise
                     sys.exc_clear()
@@ -282,12 +281,11 @@ class SSLSocket(socket):
                     raise
 
     def unwrap(self):
-        if self._sslobj:
-            s = self._sslobj_shutdown()
-            self._sslobj = None
-            return socket(_sock=s)
-        else:
+        if not self._sslobj:
             raise ValueError("No SSL wrapper around " + str(self))
+        s = self._sslobj_shutdown()
+        self._sslobj = None
+        return socket(_sock=s)
 
     def shutdown(self, how):
         self._sslobj = None

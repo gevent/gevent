@@ -353,6 +353,5 @@ class Values(object):
         self.waiter.get()
         if self.values:
             return self.values
-        else:
-            assert error is not None
-            raise self.error # pylint:disable=raising-bad-type
+        assert error is not None
+        raise self.error # pylint:disable=raising-bad-type
