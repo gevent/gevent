@@ -1,4 +1,5 @@
 from gevent import monkey; monkey.patch_all()
+
 import sys
 import os
 import array
@@ -200,32 +201,36 @@ class TestTCP(greentest.TestCase):
         client.close()
         client_sock[0][0].close()
 
-    # On Windows send() accepts whatever is thrown at it
-    if sys.platform != 'win32':
+    # Subclasses can disable  this
+    _test_sendall_timeout_check_time = True
 
-        _test_sendall_timeout_check_time = True
-        # Travis-CI container infrastructure is configured with
-        # large socket buffers, at least 2MB, as-of Jun 3, 2015,
-        # so we must be sure to send more data than that.
-        _test_sendall_data = b'hello' * 1000000
+    # Travis-CI container infrastructure is configured with
+    # large socket buffers, at least 2MB, as-of Jun 3, 2015,
+    # so we must be sure to send more data than that.
+    # In 2018, this needs to be increased *again* as a smaller value was
+    # still often being sent.
+    _test_sendall_data = b'hello' * 100000000
 
-        def test_sendall_timeout(self):
-            client_sock = []
-            acceptor = Thread(target=lambda: client_sock.append(self.listener.accept()))
-            client = self.create_connection()
-            time.sleep(0.1)
-            assert client_sock
-            client.settimeout(0.1)
-            start = time.time()
-            try:
-                self.assertRaises(self.TIMEOUT_ERROR, client.sendall, self._test_sendall_data)
-                if self._test_sendall_timeout_check_time:
-                    took = time.time() - start
-                    assert 0.09 <= took <= 0.2, took
-            finally:
-                acceptor.join()
-                client.close()
-                client_sock[0][0].close()
+    # This doesn't make much sense...why are we really skipping this?
+    @greentest.skipOnWindows("On Windows send() accepts whatever is thrown at it")
+    def test_sendall_timeout(self):
+        client_sock = []
+        acceptor = Thread(target=lambda: client_sock.append(self.listener.accept()))
+        client = self.create_connection()
+        time.sleep(0.1)
+        assert client_sock
+        client.settimeout(0.1)
+        start = time.time()
+        try:
+            with self.assertRaises(self.TIMEOUT_ERROR):
+                client.sendall(self._test_sendall_data)
+            if self._test_sendall_timeout_check_time:
+                took = time.time() - start
+                self.assertTimeWithinRange(took, 0.09, 0.2)
+        finally:
+            acceptor.join()
+            client.close()
+            client_sock[0][0].close()
 
     def test_makefile(self):
         def accept_once():
