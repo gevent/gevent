@@ -16,7 +16,8 @@
 1.3.2.post0 (2018-05-30)
 ========================
 
-- Fix a packaging error in manylinux binary wheels.
+- Fix a packaging error in manylinux binary wheels that prevented some
+  imports from working. See :issue:`1219`.
 
 
 1.3.2 (2018-05-29)
