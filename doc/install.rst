@@ -75,11 +75,12 @@ e.g., for libuv support on Linux), here are some things you need to know.
   packages.
 
 - Installing from source requires ``setuptools``. This is installed
-  automatically in virtual environments and by buildout. However, gevent uses
-  :pep:`496` environment markers in ``setup.py``. Consequently, you'll
-  need a version of setuptools newer than 25 (mid 2016) to install
-  gevent from source. Older versions of pipenv may also `have issues
-  installing gevent for this reason
+  automatically in virtual environments and by buildout. However,
+  gevent uses :pep:`496` environment markers in ``setup.py``.
+  Consequently, you'll need a version of setuptools newer than 25
+  (mid 2016) to install gevent from source; a version that's too old
+  will produce a ``ValueError``. Older versions of pipenv may also
+  `have issues installing gevent for this reason
   <https://github.com/pypa/pipenv/issues/2113>`_.
 
 - To build the libuv backend (which is required on Windows and
@@ -112,6 +113,12 @@ those compiling gevent from source.
   with gevent. See `Operating Systems
   <http://www.gevent.org/whatsnew_1_1.html#operating-systems-label>`_
   for more information.
+
+- If you see ``ValueError: ("Expected ',' or end-of-list in", "cffi >=
+  1.11.5 ; sys_platform == 'win32' and platform_python_implementation
+  == 'CPython'", 'at', " ; sys_platform == 'win32' and
+  platform_python_implementation == 'CPython'")``, the version of
+  setuptools is too old. Install a more recent version of setuptools.
 
 
 Extra Dependencies
