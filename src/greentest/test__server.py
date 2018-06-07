@@ -316,7 +316,7 @@ class TestDefaultSpawn(TestCase):
         self.server.start()
         conn = self.send_request()
         # use assert500 below?
-        with gevent.Timeout._start_new_or_dummy(1) as timeout:
+        with gevent.Timeout._start_new_or_dummy(1):
             try:
                 result = conn.read()
                 if result:
@@ -461,6 +461,11 @@ class TestSSLSocketNotAllowed(TestCase):
 def _file(name, here=os.path.dirname(__file__)):
     return os.path.abspath(os.path.join(here, name))
 
+
+class BadWrapException(BaseException):
+    pass
+
+
 class TestSSLGetCertificate(TestCase):
 
     def _create_server(self):
@@ -482,6 +487,22 @@ class TestSSLGetCertificate(TestCase):
 
         server_host, server_port, _family = self.get_server_host_port_family()
         ssl.get_server_certificate((server_host, server_port))
+
+
+    def test_wrap_socket_and_handle_wrap_failure(self):
+        # A failure to wrap the socket doesn't have follow on effects
+        # like failing with a UnboundLocalError.
+
+        # See https://github.com/gevent/gevent/issues/1236
+        self.init_server()
+
+        def bad_wrap(_client_socket, **_wrap_args):
+            raise BadWrapException()
+
+        self.server.wrap_socket = bad_wrap
+
+        with self.assertRaises(BadWrapException):
+            self.server._handle(None, None)
 
 # test non-socket.error exception in accept call: fatal
 # test error in spawn(): non-fatal
