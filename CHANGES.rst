@@ -12,6 +12,8 @@
   elapsed (wall clock) time. :class:`gevent.Timeout` does the same.
   Reported by champax and FoP in :issue:`1227`.
 
+- Fix an ``UnboundLocalError`` in SSL servers when wrapping a socket
+  throws an error. Reported in :issue:`1236` by kochelmonster.
 
 1.3.2.post0 (2018-05-30)
 ========================

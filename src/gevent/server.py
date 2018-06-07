@@ -1,5 +1,8 @@
 # Copyright (c) 2009-2012 Denis Bilenko. See LICENSE for details.
 """TCP/SSL server"""
+
+from contextlib import closing
+
 import sys
 
 from _socket import error as SocketError
@@ -21,6 +24,15 @@ if sys.platform == 'win32':
     DEFAULT_REUSE_ADDR = None
 else:
     DEFAULT_REUSE_ADDR = 1
+
+
+if PY3:
+    # sockets and SSL sockets are context managers on Python 3
+    def _closing_socket(sock):
+        return sock
+else:
+    # but they are not guaranteed to be so on Python 2
+    _closing_socket = closing
 
 
 class StreamServer(BaseServer):
@@ -73,7 +85,7 @@ class StreamServer(BaseServer):
        SSLContext, the resulting client sockets will not cooperate with gevent.
 
     Otherwise, keyword arguments are assumed to apply to :func:`ssl.wrap_socket`.
-    These keyword arguments bay include:
+    These keyword arguments may include:
 
     - keyfile
     - certfile
@@ -186,11 +198,8 @@ class StreamServer(BaseServer):
 
     def wrap_socket_and_handle(self, client_socket, address):
         # used in case of ssl sockets
-        try:
-            ssl_socket = self.wrap_socket(client_socket, **self.ssl_args)
+        with _closing_socket(self.wrap_socket(client_socket, **self.ssl_args)) as ssl_socket:
             return self.handle(ssl_socket, address)
-        finally:
-            ssl_socket.close()
 
 
 class DatagramServer(BaseServer):
