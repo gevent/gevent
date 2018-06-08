@@ -4,7 +4,7 @@
 
 .. currentmodule:: gevent
 
-1.3.3 (unreleased)
+1.3.3 (2018-06-08)
 ==================
 
 - :func:`gevent.sleep` updates the loop's notion of the current time
