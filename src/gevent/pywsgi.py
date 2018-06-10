@@ -790,7 +790,7 @@ class WSGIHandler(object):
         # "Servers should check for errors in the headers at the time
         # start_response is called, so that an error can be raised
         # while the application is still running." Here, we check the encoding.
-        # This aids debugging: headers especially are generated programatically
+        # This aids debugging: headers especially are generated programmatically
         # and an encoding error in a loop or list comprehension yields an opaque
         # UnicodeError without any clue which header was wrong.
         # Note that this results in copying the header list at this point, not modifying it,
