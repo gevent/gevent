@@ -7,7 +7,10 @@
 1.3.4 (unreleased)
 ==================
 
-- Nothing changed yet.
+- Be more careful about issuing ``MonkeyPatchWarning`` for ssl
+  imports. Now, we only issue it if we detect the one specific
+  condition that is known to lead to RecursionError. This may produce
+  false negatives, but should reduce or eliminate false positives.
 
 
 1.3.3 (2018-06-08)

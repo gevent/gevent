@@ -687,6 +687,34 @@ def patch_dns():
     from gevent import socket
     _patch_module('socket', items=socket.__dns__) # pylint:disable=no-member
 
+
+def _find_module_refs(to, excluding_names=()):
+    # Looks specifically for module-level references,
+    # i.e., 'from foo import Bar'. We define a module reference
+    # as a dict (subclass) that also has a __name__ attribute.
+    # This does not handle subclasses, but it does find them.
+    # Returns two sets. The first is modules (name, file) that were
+    # found. The second is subclasses that were found.
+    gc = __import__('gc')
+    direct_ref_modules = set()
+    subclass_modules = set()
+
+    def report(mod):
+        return mod['__name__'], mod.get('__file__', '<unknown>')
+
+    for r in gc.get_referrers(to):
+        if isinstance(r, dict) and '__name__' in r:
+            if r['__name__'] in excluding_names:
+                continue
+
+            for v in r.values():
+                if v is to:
+                    direct_ref_modules.add(report(r))
+        elif isinstance(r, type) and to in r.__bases__ and 'gevent.' not in r.__module__:
+            subclass_modules.add(r)
+
+    return direct_ref_modules, subclass_modules
+
 @_ignores_DoNotPatch
 def patch_ssl(_warnings=None, _first_time=True):
     """
@@ -697,17 +725,47 @@ def patch_ssl(_warnings=None, _first_time=True):
 
     This is only useful if :func:`patch_socket` has been called.
     """
-    if _first_time and 'ssl' in sys.modules and hasattr(sys.modules['ssl'], 'SSLContext'):
-        if sys.version_info[0] > 2 or ('pkg_resources' not in sys.modules):
-            # Don't warn on Python 2 if pkg_resources has been imported
-            # because that imports ssl and it's commonly used for namespace packages,
-            # which typically means we're still in some early part of the import cycle
-            _queue_warning('Monkey-patching ssl after ssl has already been imported '
-                           'may lead to errors, including RecursionError on Python 3.6. '
-                           'Please monkey-patch earlier. '
-                           'See https://github.com/gevent/gevent/issues/1016',
-                           _warnings)
-    _patch_module('ssl', _warnings=_warnings)
+    may_need_warning = (
+        _first_time
+        and sys.version_info[:2] >= (3, 6)
+        and 'ssl' in sys.modules
+        and hasattr(sys.modules['ssl'], 'SSLContext'))
+    # Previously, we didn't warn on Python 2 if pkg_resources has been imported
+    # because that imports ssl and it's commonly used for namespace packages,
+    # which typically means we're still in some early part of the import cycle.
+    # However, with our new more discriminating check, that no longer seems to be a problem.
+    # Prior to 3.6, we don't have the RecursionError problem, and prior to 3.7 we don't have the
+    # SSLContext.sslsocket_class/SSLContext.sslobject_class problem.
+
+    gevent_mod, _ = _patch_module('ssl', _warnings=_warnings)
+    if may_need_warning:
+        direct_ref_modules, subclass_modules = _find_module_refs(
+            gevent_mod.orig_SSLContext,
+            excluding_names=('ssl', 'gevent.ssl', 'gevent._ssl3', 'gevent._sslgte279'))
+        if direct_ref_modules or subclass_modules:
+            # Normally you don't want to have dynamic warning strings, because
+            # the cache in the warning module is based on the string. But we
+            # specifically only do this the first time we patch ourself, so it's
+            # ok.
+            direct_ref_mod_str = subclass_str = ''
+            if direct_ref_modules:
+                direct_ref_mod_str = 'Modules that had direct imports (NOT patched): %s. ' % ([
+                    "%s (%s)" % (name, fname)
+                    for name, fname in direct_ref_modules
+                ])
+            if subclass_modules:
+                subclass_str = 'Subclasses (NOT patched): %s. ' % ([
+                    str(t) for t in subclass_modules
+                ])
+            _queue_warning(
+                'Monkey-patching ssl after ssl has already been imported '
+                'may lead to errors, including RecursionError on Python 3.6. '
+                'It may also silently lead to incorrect behaviour on Python 3.7. '
+                'Please monkey-patch earlier. '
+                'See https://github.com/gevent/gevent/issues/1016. '
+                + direct_ref_mod_str + subclass_str,
+                _warnings)
+
 
 @_ignores_DoNotPatch
 def patch_select(aggressive=True):
