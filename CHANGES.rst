@@ -12,6 +12,9 @@
   condition that is known to lead to RecursionError. This may produce
   false negatives, but should reduce or eliminate false positives.
 
+- Based on measurements and discussion in :issue:`1233`, adjust the
+  way :mod:`gevent.pywsgi` generates HTTP chunks. This is intended to
+  reduce network overhead, especially for smaller chunk sizes.
 
 1.3.3 (2018-06-08)
 ==================
