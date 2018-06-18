@@ -16,6 +16,9 @@
   way :mod:`gevent.pywsgi` generates HTTP chunks. This is intended to
   reduce network overhead, especially for smaller chunk sizes.
 
+- Additional slight performance improvements in :mod:`gevent.pywsgi`.
+  See :pr:`1241`.
+
 1.3.3 (2018-06-08)
 ==================
 

@@ -733,9 +733,9 @@ class WSGIHandler(object):
                 towrite = _bytearray(header_str)
 
             # data
-            towrite.extend(data)
+            towrite += data
             # trailer
-            towrite.extend(b'\r\n')
+            towrite += b'\r\n'
             self._sendall(towrite)
         else:
             self._sendall(data)
@@ -756,21 +756,20 @@ class WSGIHandler(object):
             self._write_with_headers(data)
 
     def _write_with_headers(self, data):
-        towrite = bytearray()
         self.headers_sent = True
         self.finalize_headers()
 
         # self.response_headers and self.status are already in latin-1, as encoded by self.start_response
-        towrite.extend(b'HTTP/1.1 ')
-        towrite.extend(self.status)
-        towrite.extend(b'\r\n')
+        towrite = bytearray(b'HTTP/1.1 ')
+        towrite += self.status
+        towrite += b'\r\n'
         for header, value in self.response_headers:
-            towrite.extend(header)
-            towrite.extend(b': ')
-            towrite.extend(value)
-            towrite.extend(b"\r\n")
+            towrite += header
+            towrite += b': '
+            towrite += value
+            towrite += b"\r\n"
 
-        towrite.extend(b'\r\n')
+        towrite += b'\r\n'
         self._sendall(towrite)
         # No need to copy the data into towrite; we may make an extra syscall
         # but the copy time could be substantial too, and it reduces the chances
@@ -914,8 +913,8 @@ class WSGIHandler(object):
             # Trigger the flush of the headers.
             self.write(b'')
         if self.response_use_chunked:
-            self.socket.sendall(b'0\r\n\r\n')
-            self.response_length += 5
+            self._sendall(b'0\r\n\r\n')
+
 
     def run_application(self):
         assert self.result is None
