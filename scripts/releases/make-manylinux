@@ -1,6 +1,7 @@
 #!/bin/bash
 # Initially based on a snippet from the greenlet project.
 # This needs to be run from the root of the project.
+# To update: docker pull quay.io/pypa/manylinux1_x86_64
 set -e
 export PYTHONUNBUFFERED=1
 export PYTHONDONTWRITEBYTECODE=1
@@ -10,18 +11,20 @@ if [ -d /gevent -a -d /opt/python ]; then
     yum -y install libffi-devel
     cd /gevent
     rm -rf wheelhouse
-	mkdir wheelhouse
-    for variant in `ls -d /opt/python/cp{27,34,35,36}*`; do
+    mkdir wheelhouse
+    for variant in `ls -d /opt/python/cp{37,27,34,35,36}*`; do
+        echo "Building $variant"
         mkdir /tmp/build
-		cd /tmp/build
-		git clone /gevent gevent
-		cd gevent
+        cd /tmp/build
+        git clone /gevent gevent
+        cd gevent
         $variant/bin/pip install -U -r ci-requirements.txt
+        # manylinux 1 is too old to build libuv, don't even try.
         GEVENT_NO_LIBUV_BUILD=1 PATH=$variant/bin:$PATH $variant/bin/python setup.py bdist_wheel
         auditwheel repair dist/*.whl
-		cp wheelhouse/*.whl /gevent/wheelhouse
-		cd /gevent
-		rm -rf /tmp/build
+        cp wheelhouse/*.whl /gevent/wheelhouse
+        cd /gevent
+        rm -rf /tmp/build
     done
     rm -rf dist build *.egg-info
     exit 0
