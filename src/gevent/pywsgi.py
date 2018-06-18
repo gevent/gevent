@@ -708,7 +708,9 @@ class WSGIHandler(object):
             raise
         self.response_length += len(data)
 
-    def _write(self, data):
+    def _write(self, data,
+               _PY34_EXACTLY=(sys.version_info[:2] == (3, 4)),
+               _bytearray=bytearray):
         if not data:
             # The application/middleware are allowed to yield
             # empty bytestrings.
@@ -716,14 +718,25 @@ class WSGIHandler(object):
 
         if self.response_use_chunked:
             ## Write the chunked encoding
-            header = ("%x\r\n" % len(data)).encode('ascii')
-            # socket.sendall will slice these small strings, as [0:],
-            # but that's special cased to return the original string.
-            # They're small enough we probably expect them to go down to the network
-            # buffers in one go anyway.
-            self._sendall(header)
-            self._sendall(data)
-            self._sendall(b'\r\n') # trailer
+            # header
+            if _PY34_EXACTLY:
+                # This is the only version we support that doesn't
+                # allow % to be used with bytes. Passing a bytestring
+                # directly in to bytearray() is faster than passing a
+                # (unicode) str with encoding, which naturally is faster still
+                # than encoding first. Interestingly, byte formatting on Python 3
+                # is faster than str formatting.
+                header_str = '%x\r\n' % len(data)
+                towrite = _bytearray(header_str, 'ascii')
+            else:
+                header_str = b'%x\r\n' % len(data)
+                towrite = _bytearray(header_str)
+
+            # data
+            towrite.extend(data)
+            # trailer
+            towrite.extend(b'\r\n')
+            self._sendall(towrite)
         else:
             self._sendall(data)
 
