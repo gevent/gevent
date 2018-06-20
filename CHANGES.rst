@@ -4,7 +4,7 @@
 
 .. currentmodule:: gevent
 
-1.3.4 (unreleased)
+1.3.4 (2018-06-20)
 ==================
 
 - Be more careful about issuing ``MonkeyPatchWarning`` for ssl
