@@ -211,6 +211,8 @@ if sys.platform != 'win32':
 if sys.platform.startswith('linux'):
     _add_library('dl')
     _add_library('rt')
+    _define_macro('_GNU_SOURCE', 1)
+    _define_macro('_POSIX_C_SOURCE', '200112')
 elif sys.platform == 'darwin':
     _define_macro('_DARWIN_USE_64_BIT_INODE', 1)
     _define_macro('_DARWIN_UNLIMITED_SELECT', 1)
@@ -230,6 +232,7 @@ elif WIN:
     _define_macro('_CRT_NONSTDC_NO_DEPRECATE', 1)
     _define_macro('_CRT_SECURE_NO_WARNINGS', 1)
     _define_macro('_WIN32_WINNT', '0x0600')
+    _define_macro('WIN32_LEAN_AND_MEAN', 1)
     _add_library('advapi32')
     _add_library('iphlpapi')
     _add_library('psapi')
