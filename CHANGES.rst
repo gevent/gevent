@@ -16,6 +16,14 @@
   :class:`concurrent.futures.ThreadPoolExecutor` as well. Reported in
   :issue:`1248` by wwqgtxx and :issue:`1251` by pyld.
 
+- :meth:`gevent.socket.socket.connect` doesn't pass the port (service)
+  to :func:`socket.getaddrinfo` when it resolves an ``AF_INET`` or
+  ``AF_INET6`` address. This fixes an issue on Solaris. Reported in
+  :issue:`1252` by wiggin15.
+
+- :meth:`gevent.socket.socket.connect` works with more address
+  families, notably AF_TIPC, AF_NETLINK, AF_BLUETOOTH, AF_ALG and AF_VSOCK.
+
 
 1.3.4 (2018-06-20)
 ==================

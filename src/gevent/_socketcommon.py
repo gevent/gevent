@@ -354,3 +354,29 @@ def _sendall(socket, data_memory, flags,
 
         timeleft = __send_chunk(socket, chunk, flags, timeleft, end)
         data_sent += len(chunk) # Guaranteed it sent the whole thing
+
+# pylint:disable=no-member
+_RESOLVABLE_FAMILIES = (__socket__.AF_INET,)
+if __socket__.has_ipv6:
+    _RESOLVABLE_FAMILIES += (__socket__.AF_INET6,)
+
+def _resolve_addr(sock, address):
+    # Internal method: resolve the AF_INET[6] address using
+    # getaddrinfo.
+    if sock.family not in _RESOLVABLE_FAMILIES or not isinstance(address, tuple):
+        return address
+    # address is (host, port) (ipv4) or (host, port, flowinfo, scopeid) (ipv6).
+
+    # We don't pass the port to getaddrinfo because the C
+    # socket module doesn't either (on some systems its
+    # illegal to do that without also passing socket type and
+    # protocol). Instead we join the port back at the end.
+    # See https://github.com/gevent/gevent/issues/1252
+    host, port = address[:2]
+    r = getaddrinfo(host, None, sock.family)
+    address = r[0][-1]
+    if len(address) == 2:
+        address = (address[0], port)
+    else:
+        address = (address[0], port, address[2], address[3])
+    return address
