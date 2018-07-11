@@ -135,7 +135,13 @@ class TestMonkey(SubscriberCleanupMixin, unittest.TestCase):
                              and e.module_name == 'ssl')
 
     def test_patch_queue(self):
-        import queue
+        try:
+            import queue
+        except ImportError:
+            # Python 2 called this Queue. Note that having
+            # python-future installed gives us a queue module on
+            # Python 2 as well.
+            queue = None
         if not hasattr(queue, 'SimpleQueue'):
             raise unittest.SkipTest("Needs SimpleQueue")
         # pylint:disable=no-member
