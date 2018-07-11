@@ -428,7 +428,7 @@ class AbstractLoop(object):
             expiration = now + getswitchinterval()
             self._stop_callback_timer()
             while self._callbacks:
-                cb = self._callbacks.popleft()
+                cb = self._callbacks.popleft() # pylint:disable=assignment-from-no-return
                 count -= 1
                 self.unref() # XXX: libuv doesn't have a global ref count!
                 callback = cb.callback
@@ -686,7 +686,7 @@ class AbstractLoop(object):
 
     def _format_details(self):
         msg = ''
-        fileno = self.fileno()
+        fileno = self.fileno() # pylint:disable=assignment-from-none
         try:
             activecnt = self.activecnt
         except AttributeError:

@@ -279,7 +279,7 @@ class loop(AbstractLoop):
     def destroy(self):
         if self._ptr:
             super(loop, self).destroy()
-
+            # pylint:disable=comparison-with-callable
             if globals()["__SYSERR_CALLBACK"] == self._handle_syserr:
                 set_syserr_cb(None)
 

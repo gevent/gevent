@@ -30,6 +30,7 @@ Taken verbatim from Jinja2.
 
 https://github.com/mitsuhiko/jinja2/blob/master/jinja2/debug.py#L267
 """
+# pylint:disable=consider-using-dict-comprehension
 #import platform # XXX: gevent cannot import platform at the top level; interferes with monkey patching
 import sys
 

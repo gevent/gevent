@@ -24,6 +24,10 @@ start_new_thread, Lock, get_thread_ident, = monkey.get_original(thread_mod_name,
 ])
 
 
+# pylint 2.0.dev2 things collections.dequeue.popleft() doesn't return
+# pylint:disable=assignment-from-no-return
+
+
 class _Condition(object):
     # pylint:disable=method-hidden
 

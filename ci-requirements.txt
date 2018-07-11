@@ -10,7 +10,7 @@ Cython >= 0.28.1
 # Python 3.7b1 requires this.
 greenlet>=0.4.13 ; platform_python_implementation == "CPython"
 pylint>=1.8.0 ; python_version < "3.4"
-pylint >= 2.0.0.dev1 ; python_version >= "3.4"
+pylint >= 2.0.0.dev2 ; python_version >= "3.4"
 # pylint 2 needs astroid 2; unfortunately, it uses `typed_ast`
 # which has a C extension that doesn't build on PyPy
 astroid >= 2.0.0.dev1 ; python_version >= "3.4" and platform_python_implementation == "CPython"

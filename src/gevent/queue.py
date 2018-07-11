@@ -56,6 +56,9 @@ if hasattr(__queue__, 'SimpleQueue'):
 __all__ = __implements__ + __extensions__ + __imports__
 
 
+# pylint 2.0.dev2 things collections.dequeue.popleft() doesn't return
+# pylint:disable=assignment-from-no-return
+
 def _safe_remove(deq, item):
     # For when the item may have been removed by
     # Queue._unlock
