@@ -60,7 +60,8 @@ disable=wrong-import-position,
     duplicate-code,
     undefined-all-variable,
     inconsistent-return-statements,
-    useless-return
+    useless-return,
+    useless-object-inheritance
 
 
 [FORMAT]
