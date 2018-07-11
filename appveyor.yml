@@ -10,6 +10,10 @@ environment:
     # Pre-installed Python versions, which Appveyor may upgrade to
     # a later point release.
 
+    - PYTHON: "C:\\Python37-x64"
+      PYTHON_VERSION: "3.7.x"
+      PYTHON_ARCH: "64"
+      PYTHON_EXE: python
 
     - PYTHON: "C:\\Python27-x64"
       PYTHON_VERSION: "2.7.x" # currently 2.7.13
