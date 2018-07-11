@@ -81,6 +81,7 @@ LIBUV_SOURCES = [
     _libuv_source('uv-common.c'),
     _libuv_source('version.c'),
     _libuv_source('uv-data-getter-setters.c'),
+    _libuv_source('timer.c'),
 ]
 
 if WIN:
@@ -116,7 +117,6 @@ if WIN:
         _libuv_source('win/stream.c'),
         _libuv_source('win/tcp.c'),
         _libuv_source('win/thread.c'),
-        _libuv_source('win/timer.c'),
         _libuv_source('win/tty.c'),
         _libuv_source('win/udp.c'),
         _libuv_source('win/util.c'),
@@ -140,7 +140,6 @@ else:
         _libuv_source('unix/stream.c'),
         _libuv_source('unix/tcp.c'),
         _libuv_source('unix/thread.c'),
-        _libuv_source('unix/timer.c'),
         _libuv_source('unix/tty.c'),
         _libuv_source('unix/udp.c'),
     ]

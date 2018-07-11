@@ -7,7 +7,7 @@
 1.3.5 (unreleased)
 ==================
 
-- Update the bundled libuv from 1.20.1 to 1.21.0.
+- Update the bundled libuv from 1.20.1 to 1.22.0.
 
 - Update Python versions tested on Travis, including PyPy to 6.0. See :issue:`1195`.
 
