@@ -151,8 +151,9 @@ class loop(AbstractLoop):
         self._signal_idle = ffi.new("uv_timer_t*")
         libuv.uv_timer_init(self._ptr, self._signal_idle)
         self._signal_idle.data = self._handle_to_self
+        sig_cb = ffi.cast('void(*)(uv_timer_t*)', libuv.python_check_callback)
         libuv.uv_timer_start(self._signal_idle,
-                             ffi.cast('void(*)(uv_timer_t*)', libuv.python_check_callback),
+                             sig_cb,
                              300,
                              300)
         libuv.uv_unref(self._signal_idle)
