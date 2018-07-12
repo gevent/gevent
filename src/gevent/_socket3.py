@@ -326,9 +326,7 @@ class socket(object):
     def connect(self, address):
         if self.timeout == 0.0:
             return _socket.socket.connect(self._sock, address)
-        if isinstance(address, tuple):
-            r = getaddrinfo(address[0], address[1], self.family)
-            address = r[0][-1]
+        address = _socketcommon._resolve_addr(self._sock, address)
 
         with Timeout._start_new_or_dummy(self.timeout, timeout("timed out")):
             while True:
