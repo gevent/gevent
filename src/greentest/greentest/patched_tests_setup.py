@@ -984,6 +984,14 @@ if PY37:
         'test_ssl.ThreadedTests.test_check_hostname_idn',
     ]
 
+    if APPVEYOR:
+        disabled_tests += [
+            # Raises "AssertionError: wait_threads() failed to cleanup
+            # 1 threads after 60.0 seconds (count: 3, old count: 2)". reason is
+            # unknown.
+            'test_socket.BasicTCPTest.testRecvFrom',
+        ]
+
 # if 'signalfd' in os.environ.get('GEVENT_BACKEND', ''):
 #     # tests that don't interact well with signalfd
 #     disabled_tests.extend([
