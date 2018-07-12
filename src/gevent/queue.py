@@ -46,14 +46,16 @@ from gevent._hub_local import get_hub_noargs as get_hub
 from greenlet import getcurrent
 from gevent.exceptions import InvalidSwitchError
 
-
+__all__ = []
 __implements__ = ['Queue', 'PriorityQueue', 'LifoQueue']
 __extensions__ = ['JoinableQueue', 'Channel']
 __imports__ = ['Empty', 'Full']
 if hasattr(__queue__, 'SimpleQueue'):
-    __imports__.append('SimpleQueue') # New in 3.7
-    SimpleQueue = __queue__.SimpleQueue # pylint:disable=no-member
-__all__ = __implements__ + __extensions__ + __imports__
+    __all__.append('SimpleQueue') # New in 3.7
+    # SimpleQueue is implemented in C and directly allocates locks
+    # unaffected by monkey patching. We need the Python version.
+    SimpleQueue = __queue__._PySimpleQueue # pylint:disable=no-member
+__all__ += (__implements__ + __extensions__ + __imports__)
 
 
 # pylint 2.0.dev2 things collections.dequeue.popleft() doesn't return

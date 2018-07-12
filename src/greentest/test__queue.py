@@ -1,3 +1,5 @@
+import unittest
+
 import greentest
 from greentest import TestCase, main
 import gevent
@@ -442,6 +444,18 @@ class TestPutInterruptChannel(TestPutInterrupt):
 
     def _makeOne(self):
         return self.kind()
+
+
+if hasattr(queue, 'SimpleQueue'):
+
+    class TestGetInterruptSimpleQueue(TestGetInterrupt):
+        kind = queue.SimpleQueue
+
+        def test_raises_timeout_Timeout(self):
+            raise unittest.SkipTest("Not supported")
+
+        test_raises_timeout_Timeout_exc_customized = test_raises_timeout_Timeout
+        test_outer_timeout_is_not_lost = test_raises_timeout_Timeout
 
 
 del AbstractGenericGetTestCase

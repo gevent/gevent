@@ -123,6 +123,7 @@ __all__ = [
     'patch_builtins',
     'patch_dns',
     'patch_os',
+    'patch_queue',
     'patch_select',
     'patch_signal',
     'patch_socket',
@@ -244,6 +245,7 @@ def get_original(mod_name, item_name):
     if isinstance(item_name, string_types):
         return _get_original(mod_name, [item_name])[0]
     return _get_original(mod_name, item_name)
+
 
 _NONE = object()
 
@@ -432,6 +434,20 @@ def patch_os():
          The easiest way to help ensure this is to use :func:`patch_all`.
     """
     _patch_module('os')
+
+
+@_ignores_DoNotPatch
+def patch_queue():
+    """
+    On Python 3.7 and above, replace :class:`queue.SimpleQueue` (implemented
+    in C) with its Python counterpart.
+
+    .. versionadded:: 1.3.5
+    """
+
+    import gevent.queue
+    if 'SimpleQueue' in gevent.queue.__all__:
+        _patch_module('queue', items=['SimpleQueue'])
 
 
 @_ignores_DoNotPatch
@@ -908,6 +924,7 @@ def patch_all(socket=True, dns=True, time=True, select=True, thread=True, os=Tru
               httplib=False, # Deprecated, to be removed.
               subprocess=True, sys=False, aggressive=True, Event=True,
               builtins=True, signal=True,
+              queue=True,
               **kwargs):
     """
     Do all of the default monkey patching (calls every other applicable
@@ -932,6 +949,8 @@ def patch_all(socket=True, dns=True, time=True, select=True, thread=True, os=Tru
        Add ``**kwargs`` for the benefit of event subscribers. CAUTION: gevent may add
        and interpret additional arguments in the future, so it is suggested to use prefixes
        for kwarg values to be interpreted by plugins, for example, `patch_all(mylib_futures=True)`.
+    .. versionchanged:: 1.3.5
+       Add *queue*, defaulting to True, for Python 3.7.
     """
     # pylint:disable=too-many-locals,too-many-branches
 
@@ -973,6 +992,8 @@ def patch_all(socket=True, dns=True, time=True, select=True, thread=True, os=Tru
         patch_builtins()
     if signal:
         patch_signal()
+    if queue:
+        patch_queue()
 
     _notify_patch(events.GeventDidPatchBuiltinModulesEvent(modules_to_patch, kwargs), _warnings)
     _notify_patch(events.GeventDidPatchAllEvent(modules_to_patch, kwargs), _warnings)

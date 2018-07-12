@@ -7,9 +7,15 @@
 1.3.5 (unreleased)
 ==================
 
-- Nothing changed yet.
-
 - Update Python versions tested on Travis, including PyPy to 6.0. See :issue:`1195`.
+
+- :mod:`gevent.queue` imports ``_PySimpleQueue`` instead of
+  ``SimpleQueue`` so that it doesn't block the event loop.
+  :func:`gevent.monkey.patch_all` makes this same substitution in
+  :mod:`queue`. This fixes issues with
+  :class:`concurrent.futures.ThreadPoolExecutor` as well. Reported in
+  :issue:`1248` by wwqgtxx and :issue:`1251` by pyld.
+
 
 1.3.4 (2018-06-20)
 ==================
