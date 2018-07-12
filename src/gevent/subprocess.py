@@ -976,6 +976,7 @@ class Popen(object):
 
                     if handle_list:
                         if not close_fds:
+                            import warnings
                             warnings.warn("startupinfo.lpAttributeList['handle_list'] "
                                           "overriding close_fds", RuntimeWarning)
 
