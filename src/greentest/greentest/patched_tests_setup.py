@@ -990,6 +990,8 @@ if PY37:
             # 1 threads after 60.0 seconds (count: 3, old count: 2)". reason is
             # unknown.
             'test_socket.BasicTCPTest.testRecvFrom',
+            # Ditto.
+            'test_socket.BasicTCPTest2.testDetach',
         ]
 
 # if 'signalfd' in os.environ.get('GEVENT_BACKEND', ''):
