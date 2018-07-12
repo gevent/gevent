@@ -179,7 +179,7 @@ develop:
 # disables the cache.
 # We need wheel>=0.26 on Python 3.5. See previous revisions.
 	time ${PYTHON} -m pip install -U --upgrade-strategy=eager -r ci-requirements.txt
-	GEVENTSETUP_EV_VERIFY=3 time ${PYTHON} -m pip install -v -U --upgrade-strategy=eager -e .[test,dnspython,events]
+	GEVENTSETUP_EV_VERIFY=3 time ${PYTHON} -m pip install -U --upgrade-strategy=eager -e .[test,dnspython,events]
 	${PYTHON} -m pip freeze
 	ccache -s
 	@${PYTHON} scripts/travis.py fold_end install
