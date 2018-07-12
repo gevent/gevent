@@ -96,25 +96,25 @@ for var in "$@"; do
       install 2.7.8 python2.7.8
       ;;
     2.7)
-      install 2.7.14 python2.7.14
+      install 2.7.15 python2.7.15
       ;;
     3.4)
-      install 3.4.7 python3.4.7
+      install 3.4.8 python3.4.8
       ;;
     3.5)
       install 3.5.5 python3.5.5
       ;;
     3.6)
-      install 3.6.4 python3.6.4
+      install 3.6.6 python3.6.6
       ;;
     3.7)
-      install 3.7.0b4 python3.7.0b4
+      install 3.7.0 python3.7.0
       ;;
     pypy)
-      install pypy2.7-5.10.0 pypy5100
+      install pypy2.7-6.0.0 pypy600
       ;;
     pypy3)
-      install pypy3.5-5.10.1 pypy3.5_5101
+      install pypy3.5-6.0.0 pypy3.5_600
       ;;
   esac
 done

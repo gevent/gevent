@@ -9,6 +9,7 @@
 
 - Nothing changed yet.
 
+- Update Python versions tested on Travis, including PyPy to 6.0. See :issue:`1195`.
 
 1.3.4 (2018-06-20)
 ==================

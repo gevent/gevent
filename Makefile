@@ -127,13 +127,13 @@ coverage_combine:
 BUILD_RUNTIMES?=$(PWD)/.runtimes
 
 PY278=$(BUILD_RUNTIMES)/snakepit/python2.7.8
-PY27=$(BUILD_RUNTIMES)/snakepit/python2.7.14
-PY34=$(BUILD_RUNTIMES)/snakepit/python3.4.7
+PY27=$(BUILD_RUNTIMES)/snakepit/python2.7.15
+PY34=$(BUILD_RUNTIMES)/snakepit/python3.4.8
 PY35=$(BUILD_RUNTIMES)/snakepit/python3.5.5
-PY36=$(BUILD_RUNTIMES)/snakepit/python3.6.4
-PY37=$(BUILD_RUNTIMES)/snakepit/python3.7.0b4
-PYPY=$(BUILD_RUNTIMES)/snakepit/pypy5100
-PYPY3=$(BUILD_RUNTIMES)/snakepit/pypy3.5_5101
+PY36=$(BUILD_RUNTIMES)/snakepit/python3.6.6
+PY37=$(BUILD_RUNTIMES)/snakepit/python3.7.0
+PYPY=$(BUILD_RUNTIMES)/snakepit/pypy600
+PYPY3=$(BUILD_RUNTIMES)/snakepit/pypy3.5_600
 
 TOOLS=$(BUILD_RUNTIMES)/tools
 
@@ -185,34 +185,34 @@ develop:
 	@${PYTHON} scripts/travis.py fold_end install
 
 test-py27: $(PY27)
-	PYTHON=python2.7.14 PATH=$(BUILD_RUNTIMES)/versions/python2.7.14/bin:$(PATH) make develop leaktest cffibackendtest coverage_combine
+	PYTHON=python2.7.15 PATH=$(BUILD_RUNTIMES)/versions/python2.7.15/bin:$(PATH) make develop leaktest cffibackendtest coverage_combine
 
 test-py34: $(PY34)
-	PYTHON=python3.4.7 PATH=$(BUILD_RUNTIMES)/versions/python3.4.7/bin:$(PATH) make develop basictest
+	PYTHON=python3.4.8 PATH=$(BUILD_RUNTIMES)/versions/python3.4.8/bin:$(PATH) make develop basictest
 
 test-py35: $(PY35)
 	PYTHON=python3.5.5 PATH=$(BUILD_RUNTIMES)/versions/python3.5.5/bin:$(PATH) make develop basictest
 
 test-py36: $(PY36)
-	PYTHON=python3.6.4 PATH=$(BUILD_RUNTIMES)/versions/python3.6.4/bin:$(PATH) make develop lint allbackendtest
+	PYTHON=python3.6.6 PATH=$(BUILD_RUNTIMES)/versions/python3.6.6/bin:$(PATH) make develop lint allbackendtest
 
 test-py37: $(PY37)
-	LD_LIBRARY_PATH=$(BUILD_RUNTIMES)/versions/python3.7.0b4/openssl/lib PYTHON=python3.7.0b4 PATH=$(BUILD_RUNTIMES)/versions/python3.7.0b4/bin:$(PATH) make develop leaktest cffibackendtest coverage_combine
+	LD_LIBRARY_PATH=$(BUILD_RUNTIMES)/versions/python3.7.0/openssl/lib PYTHON=python3.7.0 PATH=$(BUILD_RUNTIMES)/versions/python3.7.0/bin:$(PATH) make develop leaktest cffibackendtest coverage_combine
 
 test-pypy: $(PYPY)
-	PYTHON=$(PYPY) PATH=$(BUILD_RUNTIMES)/versions/pypy5100/bin:$(PATH) make develop cffibackendtest
+	PYTHON=$(PYPY) PATH=$(BUILD_RUNTIMES)/versions/pypy600/bin:$(PATH) make develop cffibackendtest
 
 test-pypy3: $(PYPY3)
-	PYTHON=$(PYPY3) PATH=$(BUILD_RUNTIMES)/versions/pypy3.5_5101/bin:$(PATH) make develop basictest
+	PYTHON=$(PYPY3) PATH=$(BUILD_RUNTIMES)/versions/pypy3.5_600/bin:$(PATH) make develop basictest
 
 test-py27-noembed: $(PY27)
-	@python2.7.14 scripts/travis.py fold_start conf_libev "Configuring libev"
+	@python2.7.15 scripts/travis.py fold_start conf_libev "Configuring libev"
 	cd deps/libev && ./configure --disable-dependency-tracking && make
-	@python2.7.14 scripts/travis.py fold_end conf_libev
-	@python2.7.14 scripts/travis.py fold_start conf_cares "Configuring cares"
+	@python2.7.15 scripts/travis.py fold_end conf_libev
+	@python2.7.15 scripts/travis.py fold_start conf_cares "Configuring cares"
 	cd deps/c-ares && ./configure --disable-dependency-tracking && make
-	@python2.7.14 scripts/travis.py fold_end conf_cares
-	@python2.7.14 scripts/travis.py fold_start conf_libuv "Configuring libuv"
+	@python2.7.15 scripts/travis.py fold_end conf_cares
+	@python2.7.15 scripts/travis.py fold_start conf_libuv "Configuring libuv"
 	cd deps/libuv && ./autogen.sh && ./configure --disable-static && make
-	@python2.7.14 scripts/travis.py fold_end conf_libuv
-	CPPFLAGS="-Ideps/libev -Ideps/c-ares -Ideps/libuv/include" LDFLAGS="-Ldeps/libev/.libs -Ldeps/c-ares/.libs -Ldeps/libuv/.libs" LD_LIBRARY_PATH="$(PWD)/deps/libev/.libs:$(PWD)/deps/c-ares/.libs:$(PWD)/deps/libuv/.libs" EMBED=0 GEVENT_LOOP=libev-cext PYTHON=python2.7.14 PATH=$(BUILD_RUNTIMES)/versions/python2.7.14/bin:$(PATH) make develop basictest
+	@python2.7.15 scripts/travis.py fold_end conf_libuv
+	CPPFLAGS="-Ideps/libev -Ideps/c-ares -Ideps/libuv/include" LDFLAGS="-Ldeps/libev/.libs -Ldeps/c-ares/.libs -Ldeps/libuv/.libs" LD_LIBRARY_PATH="$(PWD)/deps/libev/.libs:$(PWD)/deps/c-ares/.libs:$(PWD)/deps/libuv/.libs" EMBED=0 GEVENT_LOOP=libev-cext PYTHON=python2.7.15 PATH=$(BUILD_RUNTIMES)/versions/python2.7.15/bin:$(PATH) make develop basictest
