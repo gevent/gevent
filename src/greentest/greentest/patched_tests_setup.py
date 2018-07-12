@@ -991,9 +991,10 @@ if PY37:
             # unknown.
             'test_socket.BasicTCPTest.testRecvFrom',
             # Ditto.
+            'test_socket.BasicTCPTest.testRecv',
             'test_socket.BasicTCPTest2.testDetach',
             'test_socket.BasicTCPTest2.testFromFd',
-            'test_socket.BasicTCPTest.testRecv',
+            'test_socket.BasicTCPTest2.testOverFlowRecvFrom',
         ]
 
 # if 'signalfd' in os.environ.get('GEVENT_BACKEND', ''):
