@@ -996,6 +996,7 @@ if PY37:
             'test_socket.BasicTCPTest2.testFromFd',
             'test_socket.BasicTCPTest2.testOverFlowRecvFrom',
             'test_socket.BasicTCPTest2.testDup',
+            'test_socket.BasicTCPTest2.testSendAll',
             'test_socket.NetworkConnectionAttributesTest.testTimeoutDefault',
         ]
 
