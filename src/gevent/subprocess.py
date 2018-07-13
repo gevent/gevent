@@ -151,6 +151,17 @@ if sys.version_info[:2] >= (3, 6):
     __extra__.remove('STARTUPINFO')
     __imports__.append('STARTUPINFO')
 
+if sys.version_info[:2] >= (3, 7):
+    __imports__.extend([
+        'ABOVE_NORMAL_PRIORITY_CLASS', 'BELOW_NORMAL_PRIORITY_CLASS',
+        'HIGH_PRIORITY_CLASS', 'IDLE_PRIORITY_CLASS',
+        'NORMAL_PRIORITY_CLASS',
+        'REALTIME_PRIORITY_CLASS',
+        'CREATE_NO_WINDOW', 'DETACHED_PROCESS',
+        'CREATE_DEFAULT_ERROR_MODE',
+        'CREATE_BREAKAWAY_FROM_JOB'
+    ])
+
 actually_imported = copy_globals(__subprocess__, globals(),
                                  only_names=__imports__,
                                  ignore_missing_names=True)
@@ -462,16 +473,20 @@ class Popen(object):
             if preexec_fn is not None:
                 raise ValueError("preexec_fn is not supported on Windows "
                                  "platforms")
-            any_stdio_set = (stdin is not None or stdout is not None or
-                             stderr is not None)
-            if close_fds is _PLATFORM_DEFAULT_CLOSE_FDS:
-                if any_stdio_set:
-                    close_fds = False
-                else:
+            if sys.version_info[:2] >= (3, 7):
+                if close_fds is _PLATFORM_DEFAULT_CLOSE_FDS:
                     close_fds = True
-            elif close_fds and any_stdio_set:
-                raise ValueError("close_fds is not supported on Windows "
-                                 "platforms if you redirect stdin/stdout/stderr")
+            else:
+                any_stdio_set = (stdin is not None or stdout is not None or
+                                 stderr is not None)
+                if close_fds is _PLATFORM_DEFAULT_CLOSE_FDS:
+                    if any_stdio_set:
+                        close_fds = False
+                    else:
+                        close_fds = True
+                elif close_fds and any_stdio_set:
+                    raise ValueError("close_fds is not supported on Windows "
+                                     "platforms if you redirect stdin/stdout/stderr")
             if threadpool is None:
                 threadpool = hub.threadpool
             self.threadpool = threadpool
@@ -900,6 +915,21 @@ class Popen(object):
                                        "shell or platform.")
             return w9xpopen
 
+
+        def _filter_handle_list(self, handle_list):
+            """Filter out console handles that can't be used
+            in lpAttributeList["handle_list"] and make sure the list
+            isn't empty. This also removes duplicate handles."""
+            # An handle with it's lowest two bits set might be a special console
+            # handle that if passed in lpAttributeList["handle_list"], will
+            # cause it to fail.
+            # Only works on 3.7+
+            return list({handle for handle in handle_list
+                         if handle & 0x3 != 0x3
+                         or _winapi.GetFileType(handle) !=
+                         _winapi.FILE_TYPE_CHAR})
+
+
         def _execute_child(self, args, executable, preexec_fn, close_fds,
                            pass_fds, cwd, env, universal_newlines,
                            startupinfo, creationflags, shell,
@@ -917,11 +947,43 @@ class Popen(object):
             # Process startup details
             if startupinfo is None:
                 startupinfo = STARTUPINFO()
-            if -1 not in (p2cread, c2pwrite, errwrite):
+            use_std_handles = -1 not in (p2cread, c2pwrite, errwrite)
+            if use_std_handles:
                 startupinfo.dwFlags |= STARTF_USESTDHANDLES
                 startupinfo.hStdInput = p2cread
                 startupinfo.hStdOutput = c2pwrite
                 startupinfo.hStdError = errwrite
+
+            if hasattr(startupinfo, 'lpAttributeList'):
+                # Support for Python >= 3.7
+
+                attribute_list = startupinfo.lpAttributeList
+                have_handle_list = bool(attribute_list and
+                                        "handle_list" in attribute_list and
+                                        attribute_list["handle_list"])
+
+                # If we were given an handle_list or need to create one
+                if have_handle_list or (use_std_handles and close_fds):
+                    if attribute_list is None:
+                        attribute_list = startupinfo.lpAttributeList = {}
+                    handle_list = attribute_list["handle_list"] = \
+                        list(attribute_list.get("handle_list", []))
+
+                    if use_std_handles:
+                        handle_list += [int(p2cread), int(c2pwrite), int(errwrite)]
+
+                    handle_list[:] = self._filter_handle_list(handle_list)
+
+                    if handle_list:
+                        if not close_fds:
+                            import warnings
+                            warnings.warn("startupinfo.lpAttributeList['handle_list'] "
+                                          "overriding close_fds", RuntimeWarning)
+
+                        # When using the handle_list we always request to inherit
+                        # handles but the only handles that will be inherited are
+                        # the ones in the handle_list
+                        close_fds = False
 
             if shell:
                 startupinfo.dwFlags |= STARTF_USESHOWWINDOW

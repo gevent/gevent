@@ -9,6 +9,9 @@
 
 - Update the bundled libuv from 1.20.1 to 1.22.0.
 
+- Test Python 3.7 on Appveyor. Fix the handling of Popen's
+  ``close_fds`` argument on 3.7.
+
 - Update Python versions tested on Travis, including PyPy to 6.0. See :issue:`1195`.
 
 - :mod:`gevent.queue` imports ``_PySimpleQueue`` instead of
