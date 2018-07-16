@@ -4,7 +4,7 @@
 
 .. currentmodule:: gevent
 
-1.3.5 (unreleased)
+1.3.5 (2018-07-16)
 ==================
 
 - Update the bundled libuv from 1.20.1 to 1.22.0.
@@ -23,8 +23,8 @@
 
 - :meth:`gevent.socket.socket.connect` doesn't pass the port (service)
   to :func:`socket.getaddrinfo` when it resolves an ``AF_INET`` or
-  ``AF_INET6`` address. This fixes an issue on Solaris. Reported in
-  :issue:`1252` by wiggin15.
+  ``AF_INET6`` address. (The standard library doesn't either.) This
+  fixes an issue on Solaris. Reported in :issue:`1252` by wiggin15.
 
 - :meth:`gevent.socket.socket.connect` works with more address
   families, notably AF_TIPC, AF_NETLINK, AF_BLUETOOTH, AF_ALG and AF_VSOCK.
