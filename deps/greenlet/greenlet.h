@@ -11,7 +11,11 @@
 extern "C" {
 #endif
 
-#define GREENLET_VERSION "0.4.13"
+#define GREENLET_VERSION "0.4.14"
+
+#if PY_VERSION_HEX >= 0x030700A3
+#  define GREENLET_USE_EXC_INFO
+#endif
 
 typedef struct _greenlet {
 	PyObject_HEAD
@@ -25,9 +29,14 @@ typedef struct _greenlet {
 	struct _frame* top_frame;
 	int recursion_depth;
 	PyObject* weakreflist;
+#ifdef GREENLET_USE_EXC_INFO
+	_PyErr_StackItem* exc_info;
+	_PyErr_StackItem exc_state;
+#else
 	PyObject* exc_type;
 	PyObject* exc_value;
 	PyObject* exc_traceback;
+#endif
 	PyObject* dict;
 } PyGreenlet;
 
