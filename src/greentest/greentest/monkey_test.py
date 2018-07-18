@@ -15,7 +15,8 @@ del sys.argv[1]
 print('Running with patch_all(%s): %s' % (','.join('%s=%r' % x for x in kwargs.items()), test_filename))
 
 from gevent import monkey; monkey.patch_all(**kwargs)
-
+from greentest.sysinfo import RUNNING_ON_APPVEYOR
+from greentest.sysinfo import PY37
 from greentest.patched_tests_setup import disable_tests_in_source
 try:
     from test import support
@@ -23,6 +24,16 @@ except ImportError:
     from test import test_support as support
 support.is_resource_enabled = lambda *args: True
 del support.use_resources
+if RUNNING_ON_APPVEYOR and PY37:
+    # 3.7 added a stricter mode for thread cleanup.
+    # It appears to be unstable on Windows (at least appveyor)
+    # and test_socket.py constantly fails with an extra thread
+    # on some random test. We disable it entirely.
+    import contextlib
+    @contextlib.contextmanager
+    def wait_threads_exit(timeout=None): # pylint:disable=unused-argument
+        yield
+    support.wait_threads_exit = wait_threads_exit
 
 
 __file__ = os.path.join(os.getcwd(), test_filename)

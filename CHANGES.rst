@@ -7,7 +7,10 @@
 1.3.6 (unreleased)
 ==================
 
-- Nothing changed yet.
+- gevent now depends on greenlet 0.4.14 or above. gevent binary wheels
+  for 1.3.5 and below must have greenlet 0.4.13 installed on Python
+  3.7 or they will crash. Reported by Alexey Stepanov in :issue:`1260`
+  and pkittenis in :issue:`1261`.
 
 
 1.3.5 (2018-07-16)
