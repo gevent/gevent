@@ -986,18 +986,7 @@ if PY37:
 
     if APPVEYOR:
         disabled_tests += [
-            # Raises "AssertionError: wait_threads() failed to cleanup
-            # 1 threads after 60.0 seconds (count: 3, old count: 2)". reason is
-            # unknown.
-            'test_socket.BasicTCPTest.testRecvFrom',
-            # Ditto.
-            'test_socket.BasicTCPTest.testRecv',
-            'test_socket.BasicTCPTest2.testDetach',
-            'test_socket.BasicTCPTest2.testFromFd',
-            'test_socket.BasicTCPTest2.testOverFlowRecvFrom',
-            'test_socket.BasicTCPTest2.testDup',
-            'test_socket.BasicTCPTest2.testSendAll',
-            'test_socket.NetworkConnectionAttributesTest.testTimeoutDefault',
+
         ]
 
 # if 'signalfd' in os.environ.get('GEVENT_BACKEND', ''):
