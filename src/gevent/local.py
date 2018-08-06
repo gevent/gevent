@@ -438,13 +438,23 @@ class local(object):
             return dct[name]
 
         if name in self._local_type_vars:
-            type_attr = getattr(self._local_type, name)
-
-            # It's not in the dict at all. Is it in the type?
+            # Not in the dictionary, but is found in the type. It could be
+            # a non-data descriptor still. Some descriptors, like @staticmethod,
+            # return objects (functions, in this case), that are *themselves*
+            # descriptors, which when invoked, again, would do the wrong thing.
+            # So we can't rely on getattr() on the type for them, we have to
+            # look through the MRO dicts ourself.
             if name not in self._local_type_get_descriptors:
-                # Not a descriptor, can't execute code
-                return type_attr
-            return type(type_attr).__get__(type_attr, self, self._local_type)
+                # Not a descriptor, can't execute code. So all we need is
+                # the return value of getattr() on our type.
+                return getattr(self._local_type, name)
+
+            for base in self._local_type.mro():
+                bd = base.__dict__
+                if name in bd:
+                    attr_on_type = bd[name]
+                    result = type(attr_on_type).__get__(attr_on_type, self, self._local_type)
+                    return result
 
         # It wasn't in the dict and it wasn't in the type.
         # So the next step is to invoke type(self)__getattr__, if it

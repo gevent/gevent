@@ -37,6 +37,7 @@ class LoopExit(Exception):
     """
 
     def __repr__(self):
+        # pylint:disable=unsubscriptable-object
         if len(self.args) == 3: # From the hub
             import pprint
             return "%s\n\tHub: %s\n\tHandles:\n%s" % (

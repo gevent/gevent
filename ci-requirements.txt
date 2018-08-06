@@ -5,15 +5,15 @@ wheel
 # 0.28 is faster, and (important!) lets us specify the target module
 # name to be created so that we can have both foo.py and _foo.so
 # at the same time.
-Cython >= 0.28.1
+Cython >= 0.28.5
 
 # Python 3.7 requires at least 0.4.14, which is ABI incompatible with earlier
 greenlet>=0.4.14 ; platform_python_implementation == "CPython"
 pylint>=1.8.0 ; python_version < "3.4"
-pylint >= 2.0.0.dev2 ; python_version >= "3.4"
 # pylint 2 needs astroid 2; unfortunately, it uses `typed_ast`
 # which has a C extension that doesn't build on PyPy
-astroid >= 2.0.0.dev1 ; python_version >= "3.4" and platform_python_implementation == "CPython"
+pylint >= 2.1.1 ; python_version >= "3.4"  and platform_python_implementation == "CPython"
+astroid >= 2.0.2 ; python_version >= "3.4" and platform_python_implementation == "CPython"
 # See version requirements in setup.py
 cffi >= 1.11.5 ; platform_python_implementation == "CPython"
 

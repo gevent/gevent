@@ -83,6 +83,20 @@ class LocalWithABC(local, Mapping):
     def __len__(self):
         return len(self.d)
 
+class LocalWithStaticMethod(local):
+
+    @staticmethod
+    def a_staticmethod():
+        return 42
+
+class LocalWithClassMethod(local):
+
+    @classmethod
+    def a_classmethod(cls):
+        return cls
+
+
+
 
 class TestGeventLocal(greentest.TestCase):
     # pylint:disable=attribute-defined-outside-init,blacklisted-name
@@ -351,6 +365,14 @@ class TestGeventLocal(greentest.TestCase):
         # The ABC part works
         self.assertIn('a', x.d)
         self.assertEqual(['a'], list(x.keys()))
+
+    def test_local_with_staticmethod(self):
+        x = LocalWithStaticMethod()
+        self.assertEqual(42, x.a_staticmethod())
+
+    def test_local_with_classmethod(self):
+        x = LocalWithClassMethod()
+        self.assertIs(LocalWithClassMethod, x.a_classmethod())
 
 try:
     from zope import interface
