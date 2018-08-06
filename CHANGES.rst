@@ -12,6 +12,10 @@
   3.7 or they will crash. Reported by Alexey Stepanov in :issue:`1260`
   and pkittenis in :issue:`1261`.
 
+- :class:`gevent.local.local` subclasses correctly supports
+  ``@staticmethod`` functions. Reported by Brendan Powers in
+  :issue:`1266`.
+
 
 1.3.5 (2018-07-16)
 ==================
