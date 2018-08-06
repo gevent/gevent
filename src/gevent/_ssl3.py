@@ -54,7 +54,7 @@ class SSLContext(orig_SSLContext):
                     suppress_ragged_eofs=True,
                     server_hostname=None,
                     session=None):
-        # pylint:disable=arguments-differ
+        # pylint:disable=arguments-differ,not-callable
         # (3.6 adds session)
         # Sadly, using *args and **kwargs doesn't work
         return self.sslsocket_class(
