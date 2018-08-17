@@ -4,7 +4,7 @@
 
 .. currentmodule:: gevent
 
-1.3.6 (unreleased)
+1.3.6 (2018-08-17)
 ==================
 
 - gevent now depends on greenlet 0.4.14 or above. gevent binary wheels
