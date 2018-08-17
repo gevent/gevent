@@ -27,7 +27,7 @@ version_info = _version_info(1, 3, 0, 'dev', 0)
 #: Use ``pkg_resources.parse_version(__version__)`` or
 #: ``packaging.version.Version(__version__)`` to get a machine-usable
 #: value.
-__version__ = '1.3.6'
+__version__ = '1.3.7.dev0'
 
 
 __all__ = [

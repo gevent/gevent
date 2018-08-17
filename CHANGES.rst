@@ -4,6 +4,12 @@
 
 .. currentmodule:: gevent
 
+1.3.7 (unreleased)
+==================
+
+- Nothing changed yet.
+
+
 1.3.6 (2018-08-17)
 ==================
 
