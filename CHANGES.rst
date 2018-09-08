@@ -7,7 +7,8 @@
 1.3.7 (unreleased)
 ==================
 
-- Nothing changed yet.
+- Formatting run info no longer includes ``gevent.local.local``
+  objects that have no value in the greenlet. See :issue:`1275`.
 
 
 1.3.6 (2018-08-17)

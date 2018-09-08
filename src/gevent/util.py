@@ -371,6 +371,8 @@ class GreenletTree(object):
         if gr_locals:
             tree.child_data("Greenlet Locals:")
             for (kind, idl), vals in gr_locals:
+                if not vals:
+                    continue # not set in this greenlet; ignore it.
                 tree.child_data("  Local %s at %s" % (kind, hex(idl)))
                 tree.child_multidata("    " + pprint.pformat(vals))
 
