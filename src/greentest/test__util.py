@@ -43,6 +43,9 @@ class TestFormat(greentest.TestCase):
         def root():
             l = MyLocal(42)
             assert l
+            # And an empty local.
+            l2 = local.local()
+            assert l2
             gevent.getcurrent().spawn_tree_locals['a value'] = 42
             io = NativeStrIO()
             g = gevent.spawn(util.print_run_info, file=io)
@@ -54,12 +57,15 @@ class TestFormat(greentest.TestCase):
         g.join()
         value = g.value
 
+
         self.assertIn("Spawned at", value)
         self.assertIn("Parent:", value)
         self.assertIn("Spawn Tree Locals", value)
         self.assertIn("Greenlet Locals:", value)
         self.assertIn('MyLocal', value)
         self.assertIn("Printer", value) # The name is printed
+        # Empty locals should not be printed
+        self.assertNotIn('{}', value)
 
 @greentest.skipOnPyPy("See TestFormat")
 class TestTree(greentest.TestCase):
