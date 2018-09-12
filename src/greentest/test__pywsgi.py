@@ -551,6 +551,58 @@ class TestBigChunks(TestChunkedApp):
     chunks = [b'a' * 8192] * 3
 
 
+class TestNegativeRead(TestCase):
+    @staticmethod
+    def application(env, start_response):
+        start_response('200 OK', [('Content-Type', 'text/plain')])
+        if env['PATH_INFO'] == '/read':
+            data = env['wsgi.input'].read(-1)
+            return [data]
+
+    def test_negative_chunked_read(self):
+        fd = self.makefile()
+        data = (b'POST /read HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n'
+                b'Transfer-Encoding: chunked\r\n\r\n'
+                b'2\r\noh\r\n4\r\n hai\r\n0\r\n\r\n')
+        fd.write(data)
+        read_http(fd, body='oh hai')
+
+    def test_negative_nonchunked_read(self):
+        fd = self.makefile()
+        data = (b'POST /read HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n'
+                b'Content-Length: 6\r\n\r\n'
+                b'oh hai')
+        fd.write(data)
+        read_http(fd, body='oh hai')
+
+
+class TestNegativeReadline(TestCase):
+    validator = None
+
+    @staticmethod
+    def application(env, start_response):
+        start_response('200 OK', [('Content-Type', 'text/plain')])
+        if env['PATH_INFO'] == '/readline':
+            data = env['wsgi.input'].readline(-1)
+            return [data]
+
+    def test_negative_chunked_readline(self):
+        fd = self.makefile()
+        data = (b'POST /readline HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n'
+                b'Transfer-Encoding: chunked\r\n\r\n'
+                b'2\r\noh\r\n4\r\n hai\r\n0\r\n\r\n')
+        fd.write(data)
+        read_http(fd, body='oh hai')
+
+    def test_negative_nonchunked_readline(self):
+        fd = self.makefile()
+        data = (b'POST /readline HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n'
+                b'Content-Length: 6\r\n\r\n'
+                b'oh hai')
+        fd.write(data)
+        read_http(fd, body='oh hai')
+
+
 class TestChunkedPost(TestCase):
 
     @staticmethod

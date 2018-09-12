@@ -9,7 +9,7 @@
 
 - Formatting run info no longer includes ``gevent.local.local``
   objects that have no value in the greenlet. See :issue:`1275`.
-
+- Fixed negative length in pywsgi's Input read functions for non chunked body.
 
 1.3.6 (2018-08-17)
 ==================
