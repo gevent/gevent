@@ -267,9 +267,6 @@ class Input(object):
         if length == 0:
             return b""
 
-        if length is not None and length < 0:
-            length = None
-
         if use_readline:
             reader = self.rfile.readline
         else:
@@ -312,11 +309,15 @@ class Input(object):
         return b''.join(response)
 
     def read(self, length=None):
+        if length is not None and length < 0:
+            length = None
         if self.chunked_input:
             return self._chunked_read(length)
         return self._do_read(length)
 
     def readline(self, size=None):
+        if size is not None and size < 0:
+            size = None
         if self.chunked_input:
             return self._chunked_read(size, True)
         return self._do_read(size, use_readline=True)
