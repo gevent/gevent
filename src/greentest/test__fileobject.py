@@ -3,6 +3,7 @@ import os
 import sys
 import tempfile
 import gc
+import unittest
 
 import gevent
 from gevent.fileobject import FileObject, FileObjectThread
@@ -170,6 +171,27 @@ def writer(fobj, line):
         fobj.write(character)
         fobj.flush()
     fobj.close()
+
+
+class TestTextMode(unittest.TestCase):
+
+    def test_default_mode_writes_linesep(self):
+        # See https://github.com/gevent/gevent/issues/1282
+        # libuv 1.x interferes with the default line mode on
+        # Windows.
+        fileno, path = tempfile.mkstemp('.gevent.test__fileobject.test_default')
+        self.addCleanup(os.remove, path)
+
+        os.close(fileno)
+
+        with open(path, "w") as f:
+            f.write("\n")
+
+        with open(path, "rb") as f:
+            data = f.read()
+
+        self.assertEqual(data, os.linesep.encode('ascii'))
+
 
 
 if __name__ == '__main__':
