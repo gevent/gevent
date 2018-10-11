@@ -190,6 +190,9 @@ class TestTextMode(unittest.TestCase):
         # See https://github.com/gevent/gevent/issues/1282
         # libuv 1.x interferes with the default line mode on
         # Windows.
+        # First, make sure we initialize gevent
+        gevent.get_hub()
+
         fileno, path = tempfile.mkstemp('.gevent.test__fileobject.test_default')
         self.addCleanup(os.remove, path)
 
