@@ -18,3 +18,4 @@ Updating libuv
   - rm -rf libuv/samples
   - rm -rf libuv/test
   - rm -rf libuv/tools
+  - rm -f libuv/android-configure*

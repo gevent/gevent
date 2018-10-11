@@ -98,6 +98,7 @@ set(uv_test_sources
     test/test-poll-closesocket.c
     test/test-poll-oob.c
     test/test-poll.c
+    test/test-process-priority.c
     test/test-process-title-threadsafe.c
     test/test-process-title.c
     test/test-queue-foreach-delete.c
@@ -192,7 +193,6 @@ if(WIN32)
        src/win/poll.c
        src/win/process.c
        src/win/process-stdio.c
-       src/win/req.c
        src/win/signal.c
        src/win/snprintf.c
        src/win/stream.c

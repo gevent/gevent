@@ -950,10 +950,16 @@ error:
 static void uv__write_callbacks(uv_stream_t* stream) {
   uv_write_t* req;
   QUEUE* q;
+  QUEUE pq;
 
-  while (!QUEUE_EMPTY(&stream->write_completed_queue)) {
+  if (QUEUE_EMPTY(&stream->write_completed_queue))
+    return;
+
+  QUEUE_MOVE(&stream->write_completed_queue, &pq);
+
+  while (!QUEUE_EMPTY(&pq)) {
     /* Pop a req off write_completed_queue. */
-    q = QUEUE_HEAD(&stream->write_completed_queue);
+    q = QUEUE_HEAD(&pq);
     req = QUEUE_DATA(q, uv_write_t, queue);
     QUEUE_REMOVE(q);
     uv__req_unregister(stream->loop, req);
@@ -969,8 +975,6 @@ static void uv__write_callbacks(uv_stream_t* stream) {
     if (req->cb)
       req->cb(req, req->error);
   }
-
-  assert(QUEUE_EMPTY(&stream->write_completed_queue));
 }
 
 
@@ -1672,6 +1676,7 @@ void uv__stream_close(uv_stream_t* handle) {
   uv__io_close(handle->loop, &handle->io_watcher);
   uv_read_stop(handle);
   uv__handle_stop(handle);
+  handle->flags &= ~(UV_HANDLE_READABLE | UV_HANDLE_WRITABLE);
 
   if (handle->io_watcher.fd != -1) {
     /* Don't close stdio file descriptors.  Nothing good comes from it. */

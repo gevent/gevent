@@ -111,7 +111,6 @@ if WIN:
         _libuv_source('win/poll.c'),
         _libuv_source('win/process-stdio.c'),
         _libuv_source('win/process.c'),
-        _libuv_source('win/req.c'),
         _libuv_source('win/signal.c'),
         _libuv_source('win/snprintf.c'),
         _libuv_source('win/stream.c'),
