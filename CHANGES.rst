@@ -9,9 +9,14 @@
 
 - Formatting run info no longer includes ``gevent.local.local``
   objects that have no value in the greenlet. See :issue:`1275`.
+
 - Fixed negative length in pywsgi's Input read functions for non chunked body.
   Reported in :issue:`1274` by tzickel.
-- Upgrabe libuv from 1.22.0 to 1.23.2.
+
+- Upgrade libuv from 1.22.0 to 1.23.2.
+
+- Fix opening files in text mode in CPython 2 on Windows by patching
+  libuv. See :issue:`1282` reported by wiggin15.
 
 1.3.6 (2018-08-17)
 ==================
