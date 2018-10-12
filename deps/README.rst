@@ -19,3 +19,6 @@ Updating libuv
   - rm -rf libuv/test
   - rm -rf libuv/tools
   - rm -f libuv/android-configure*
+
+- Apply the patches to libuv:
+  - git apply libuv-win-binary.patch

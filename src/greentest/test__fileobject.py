@@ -3,6 +3,7 @@ import os
 import sys
 import tempfile
 import gc
+import unittest
 
 import gevent
 from gevent.fileobject import FileObject, FileObjectThread
@@ -11,6 +12,7 @@ import greentest
 from greentest.sysinfo import PY3
 from greentest.flaky import reraiseFlakyTestRaceConditionLibuv
 from greentest.skipping import skipOnLibuvOnCIOnPyPy
+from greentest.skipping import skipOnWindows
 
 try:
     ResourceWarning
@@ -61,10 +63,20 @@ class Test(greentest.TestCase):
         with FileObject(r, 'rb') as fobj:
             self.assertEqual(fobj.read(), b'x')
 
+    # We only use FileObjectThread on Win32. Sometimes the
+    # visibility of the 'close' operation, which happens in a
+    # background thread, doesn't make it to the foreground
+    # thread in a timely fashion, leading to 'os.close(4) must
+    # not succeed' in test_del_close. We have the same thing
+    # with flushing and closing in test_newlines. Both of
+    # these are most commonly (only?) observed on Py27/64-bit.
+    # They also appear on 64-bit 3.6 with libuv
+    @skipOnWindows("Thread race conditions")
     def test_del(self):
         # Close should be true by default
         self._test_del()
 
+    @skipOnWindows("Thread race conditions")
     def test_del_close(self):
         self._test_del(close=True)
 
@@ -170,6 +182,30 @@ def writer(fobj, line):
         fobj.write(character)
         fobj.flush()
     fobj.close()
+
+
+class TestTextMode(unittest.TestCase):
+
+    def test_default_mode_writes_linesep(self):
+        # See https://github.com/gevent/gevent/issues/1282
+        # libuv 1.x interferes with the default line mode on
+        # Windows.
+        # First, make sure we initialize gevent
+        gevent.get_hub()
+
+        fileno, path = tempfile.mkstemp('.gevent.test__fileobject.test_default')
+        self.addCleanup(os.remove, path)
+
+        os.close(fileno)
+
+        with open(path, "w") as f:
+            f.write("\n")
+
+        with open(path, "rb") as f:
+            data = f.read()
+
+        self.assertEqual(data, os.linesep.encode('ascii'))
+
 
 
 if __name__ == '__main__':

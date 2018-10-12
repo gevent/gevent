@@ -135,7 +135,14 @@ const WCHAR UNC_PATH_PREFIX_LEN = 8;
 static int uv__file_symlink_usermode_flag = SYMBOLIC_LINK_FLAG_ALLOW_UNPRIVILEGED_CREATE;
 
 void uv_fs_init(void) {
-  _fmode = _O_BINARY;
+/* gevent: This breaks `open()` on CPython 2 by changing
+ * the default mode for file operations. Python 3 and PyPy
+ * ar unaffected. It was removed for the (unreleased) libuv 2.
+ * See https://github.com/gevent/gevent/issues/1282
+ */
+/*
+ * _fmode = _O_BINARY;
+ */
 }
 
 

@@ -62,15 +62,6 @@ if sys.platform == 'win32':
             # This one sometimes randomly closes connections, but no indication
             # of a server crash, only a client side close.
             'FLAKY test__server_pywsgi.py',
-            # We only use FileObjectThread on Win32. Sometimes the
-            # visibility of the 'close' operation, which happens in a
-            # background thread, doesn't make it to the foreground
-            # thread in a timely fashion, leading to 'os.close(4) must
-            # not succeed' in test_del_close. We have the same thing
-            # with flushing and closing in test_newlines. Both of
-            # these are most commonly (only?) observed on Py27/64-bit.
-            # They also appear on 64-bit 3.6 with libuv
-            'FLAKY test__fileobject.py',
         ]
 
         if PYPY and LIBUV:
