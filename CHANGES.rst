@@ -4,7 +4,7 @@
 
 .. currentmodule:: gevent
 
-1.3.7 (unreleased)
+1.3.7 (2018-10-12)
 ==================
 
 - Formatting run info no longer includes ``gevent.local.local``
