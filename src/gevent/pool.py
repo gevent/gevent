@@ -289,10 +289,15 @@ class Group(GroupMappingMixin):
     they can be tested to see if they contain a greenlet, and they know the
     number (len) of greenlets they are tracking. If they are not tracking any
     greenlets, they are False in a boolean context.
+
+    .. attribute:: greenlet_class
+
+        Either :class:`gevent.Greenlet` (the default) or a subclass.
+        These are the type of
+        object we will :meth:`spawn`. This can be
+        changed on an instance or in a subclass.
     """
 
-    #: The type of Greenlet object we will :meth:`spawn`. This can be changed
-    #: on an instance or in a subclass.
     greenlet_class = Greenlet
 
     def __init__(self, *args):
@@ -524,10 +529,14 @@ class Pool(Group):
             maximum count of active greenlets that will be allowed in
             this pool. A few values have special significance:
 
-            * ``None`` (the default) places no limit on the number of
-              greenlets. This is useful when you need to track, but not limit,
-              greenlets, as with :class:`gevent.pywsgi.WSGIServer`. A :class:`Group`
-              may be a more efficient way to achieve the same effect.
+            * `None` (the default) places no limit on the number of
+              greenlets. This is useful when you want to track, but not limit,
+              greenlets. In general, a :class:`Group`
+              may be a more efficient way to achieve the same effect, but some things
+              need the additional abilities of this class (one example being the *spawn*
+              parameter of :class:`gevent.baseserver.BaseServer` and
+              its subclass :class:`gevent.pywsgi.WSGIServer`).
+
             * ``0`` creates a pool that can never have any active greenlets. Attempting
               to spawn in this pool will block forever. This is only useful
               if an application uses :meth:`wait_available` with a timeout and checks
