@@ -107,29 +107,30 @@ class _WaitIterator(object):
         self._timer = None
         self._begun = False
 
-
         # Even if we're only going to return 1 object,
         # we must still rawlink() *all* of them, so that no
         # matter which one finishes first we find it.
         self._count = len(objects) if count is None else min(count, len(objects))
 
+    def _begin(self):
+        if self._begun:
+            return
+
+        self._begun = True
+
+        for obj in self._objects:
+            obj.rawlink(self._switch)
+
+        if self._timeout is not None:
+            self._timer = self._hub.loop.timer(self._timeout, priority=-1)
+            self._timer.start(self._switch, self)
 
     def __iter__(self):
-        # When we begin iterating, we begin the timer.
-        # XXX: If iteration doesn't actually happen, we
-        # could leave these links around!
-        if not self._begun:
-            self._begun = True
-
-            for obj in self._objects:
-                obj.rawlink(self._switch)
-
-            if self._timeout is not None:
-                self._timer = self._hub.loop.timer(self._timeout, priority=-1)
-                self._timer.start(self._switch, self)
         return self
 
     def __next__(self):
+        self._begin()
+
         if self._count == 0:
             # Exhausted
             self._cleanup()
