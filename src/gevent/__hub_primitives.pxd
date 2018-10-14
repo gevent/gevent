@@ -48,14 +48,13 @@ cdef class _WaitIterator:
     cdef SwitchOutGreenletWithLoop _hub
     cdef MultipleWaiter _waiter
     cdef _switch
-    cdef _timeout
     cdef _objects
     cdef _timer
     cdef Py_ssize_t _count
     cdef bint _begun
 
 
-
+    cdef _unlink(self, aobj)
     cdef _cleanup(self)
 
 cpdef iwait_on_objects(objects, timeout=*, count=*)

@@ -101,48 +101,47 @@ class _WaitIterator(object):
         self._hub = hub
         self._waiter = MultipleWaiter(hub) # pylint:disable=undefined-variable
         self._switch = self._waiter.switch
-        self._timeout = timeout
-        self._objects = objects
-
-        self._timer = None
+        self._timer = (
+            self._hub.loop.timer(timeout, priority=-1)
+            if timeout is not None else None
+        )
         self._begun = False
 
+        self._objects = set(objects)
+        for obj in self._objects:
+            obj.rawlink(self._switch)
+        self._count = count or len(objects)
 
-        # Even if we're only going to return 1 object,
-        # we must still rawlink() *all* of them, so that no
-        # matter which one finishes first we find it.
-        self._count = len(objects) if count is None else min(count, len(objects))
+    def _begin(self):
+        if self._begun:
+            return
 
+        self._begun = True
+        if self._timer is not None:
+            self._timer.start(self._switch, self)
 
     def __iter__(self):
-        # When we begin iterating, we begin the timer.
-        # XXX: If iteration doesn't actually happen, we
-        # could leave these links around!
-        if not self._begun:
-            self._begun = True
-
-            for obj in self._objects:
-                obj.rawlink(self._switch)
-
-            if self._timeout is not None:
-                self._timer = self._hub.loop.timer(self._timeout, priority=-1)
-                self._timer.start(self._switch, self)
         return self
 
     def __next__(self):
-        if self._count == 0:
+        self._begin()
+
+        if not self._objects or self._count == 0:
             # Exhausted
             self._cleanup()
-            raise StopIteration()
+            raise StopIteration
 
-        self._count -= 1
         try:
             item = self._waiter.get()
             self._waiter.clear()
             if item is self:
                 # Timer expired, no more
                 self._cleanup()
-                raise StopIteration()
+                raise StopIteration
+
+            self._count -= 1
+            self._objects.remove(item)
+            self._unlink(item)
             return item
         except:
             self._cleanup()
@@ -150,20 +149,23 @@ class _WaitIterator(object):
 
     next = __next__
 
+    def _unlink(self, aobj):
+        unlink = getattr(aobj, 'unlink', None)
+        if unlink is not None:
+            try:
+                unlink(self._switch)
+            except: # pylint:disable=bare-except
+                traceback.print_exc()
+
     def _cleanup(self):
         if self._timer is not None:
             self._timer.close()
             self._timer = None
 
-        objs = self._objects
-        self._objects = ()
-        for aobj in objs:
-            unlink = getattr(aobj, 'unlink', None)
-            if unlink is not None:
-                try:
-                    unlink(self._switch)
-                except: # pylint:disable=bare-except
-                    traceback.print_exc()
+        while self._objects:
+            item = self._objects.pop()
+            self._unlink(item)
+
 
 
 def iwait_on_objects(objects, timeout=None, count=None):
