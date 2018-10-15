@@ -538,7 +538,7 @@ class Greenlet(greenlet):
         .. versionadded:: 1.3.8
         """
         global _spawn_callbacks
-        if _spawn_callbacks is None:
+        if _spawn_callbacks is None:  # pylint:disable=used-before-assignment
             _spawn_callbacks = set()
         _spawn_callbacks.add(callback)
 
@@ -929,10 +929,10 @@ def _killall(greenlets, exception):
                 g.parent.handle_error(g, *sys_exc_info())
 
 
-def _call_spawn_callbacks(greenlet):
+def _call_spawn_callbacks(gr):
     if _spawn_callbacks is not None:
         for cb in _spawn_callbacks:
-            cb(greenlet)
+            cb(gr)
 
 
 _spawn_callbacks = None

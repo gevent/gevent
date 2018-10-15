@@ -174,4 +174,4 @@ cdef _killall(list greenlets, object exception)
 cpdef joinall(greenlets, timeout=*, raise_error=*, count=*)
 
 cdef set _spawn_callbacks = None
-cdef _call_spawn_callbacks(greenlet)
+cdef _call_spawn_callbacks(gr)
