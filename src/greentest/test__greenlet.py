@@ -704,16 +704,17 @@ class TestBasic(greentest.TestCase):
             gr._called_test = True
 
         gevent.Greenlet.add_spawn_callback(cb)
-        self.addCleanup(lambda: gevent.Greenlet.remove_spawn_callback(cb))
+        try:
+            g = gevent.spawn(lambda: None)
+            self.assertTrue(hasattr(g, '_called_test'))
+            g.join()
 
-        g = gevent.spawn(lambda: None)
-        self.assertTrue(hasattr(g, '_called_test'))
-        g.join()
-
-        gevent.Greenlet.remove_spawn_callback(cb)
-        g = gevent.spawn(lambda: None)
-        self.assertFalse(hasattr(g, '_called_test'))
-        g.join()
+            gevent.Greenlet.remove_spawn_callback(cb)
+            g = gevent.spawn(lambda: None)
+            self.assertFalse(hasattr(g, '_called_test'))
+            g.join()
+        finally:
+            gevent.Greenlet.remove_spawn_callback(cb)
 
     def test_getframe_value_error(self):
         def get():

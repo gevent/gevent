@@ -264,9 +264,6 @@ class Greenlet(greenlet):
             self.spawn_tree_locals = None
             self._spawning_stack_frames = None
 
-        if _spawn_callbacks is not None:
-            self.__call_spawn_callbacks()
-
     @Lazy
     def spawning_stack(self):
         # Store this in the __dict__. We don't use it from the C
@@ -346,11 +343,6 @@ class Greenlet(greenlet):
         def dead(self):
             "Boolean indicating that the greenlet is dead and will not run again."
             return self.__start_cancelled_by_kill() or self.__started_but_aborted() or greenlet.dead.__get__(self)
-
-    def __call_spawn_callbacks(self):
-        if _spawn_callbacks is not None:
-            for cb in _spawn_callbacks:
-                cb(self)
 
     def __never_started_or_killed(self):
         return self._start_event is None
@@ -534,8 +526,8 @@ class Greenlet(greenlet):
         """
         add_spawn_callback(callback) -> None
 
-        Set up a *callback* to be invoked when a new :class:`Greenlet`
-        object is instantiated.
+        Set up a *callback* to be invoked when :class:`Greenlet` objects
+        are started.
 
         The invocation order of spawn callbacks is unspecified.  Adding one
         callback more than one time will not cause it to be called more
@@ -579,6 +571,7 @@ class Greenlet(greenlet):
             instead of spawning a greenlet that will raise an uncaught TypeError.
         """
         g = cls(*args, **kwargs)
+        _call_spawn_callbacks(g)
         g.start()
         return g
 
@@ -602,6 +595,7 @@ class Greenlet(greenlet):
         if cls is Greenlet and not args and 'run' not in kwargs:
             raise TypeError("")
         g = cls(*args, **kwargs)
+        _call_spawn_callbacks(g)
         g.start_later(seconds)
         return g
 
@@ -934,6 +928,15 @@ def _killall(greenlets, exception):
                 g.parent.handle_error(g, *sys_exc_info())
 
 
+def _call_spawn_callbacks(greenlet):
+    if _spawn_callbacks is not None:
+        for cb in _spawn_callbacks:
+            cb(greenlet)
+
+
+_spawn_callbacks = None
+
+
 def killall(greenlets, exception=GreenletExit, block=True, timeout=None):
     """
     Forceably terminate all the ``greenlets`` by causing them to raise ``exception``.
@@ -982,8 +985,6 @@ def _init():
     greenlet_init() # pylint:disable=undefined-variable
 
 _init()
-
-_spawn_callbacks = None
 
 from gevent._util import import_c_accel
 import_c_accel(globals(), 'gevent._greenlet')
