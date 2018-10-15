@@ -221,6 +221,10 @@ def wait_on_objects(objects=None, timeout=None, count=None):
     ready. (For example, if count is ``1`` then the function exits
     when any object in the list is ready).
 
+    When ``count`` is ``None`` or ``count`` > 1, some kinds of objects (e.g
+    Event, Semaphore) may lose their readiness before this function returns. To
+    avoid this problem, use :func:`iwait` instead.
+
     If ``timeout`` is provided, it specifies the maximum number of
     seconds ``wait()`` will block.
 
