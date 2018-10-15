@@ -522,15 +522,15 @@ class Greenlet(greenlet):
             self._start_event.start(self.switch)
 
     @staticmethod
-    def add_spawn_callback(cb):
+    def add_spawn_callback(callback):
         """
         add_spawn_callback(callback) -> None
 
         Set up a *callback* to be invoked when :class:`Greenlet` objects
         are started.
 
-        The invocation order of spawn callbacks is unspecified.  Adding one
-        callback more than one time will not cause it to be called more
+        The invocation order of spawn callbacks is unspecified.  Adding the
+        same callback more than one time will not cause it to be called more
         than once.
 
         .. versionadded:: 1.3.8
@@ -538,21 +538,22 @@ class Greenlet(greenlet):
         global _spawn_callbacks
         if _spawn_callbacks is None:
             _spawn_callbacks = set()
-        _spawn_callbacks.add(cb)
+        _spawn_callbacks.add(callback)
 
     @staticmethod
-    def remove_spawn_callback(cb):
+    def remove_spawn_callback(callback):
         """
         remove_spawn_callback(callback) -> None
 
         Remove *callback* function added with :meth:`Greenlet.add_spawn_callback`.
-        This function will not fail if *callback* has been already removed.
+        This function will not fail if *callback* has been already removed or
+        if *callback* was never added.
 
         .. versionadded:: 1.3.8
         """
         global _spawn_callbacks
         if _spawn_callbacks is not None:
-            _spawn_callbacks.discard(cb)
+            _spawn_callbacks.discard(callback)
             if not _spawn_callbacks:
                 _spawn_callbacks = None
 
