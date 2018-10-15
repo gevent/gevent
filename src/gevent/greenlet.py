@@ -508,6 +508,7 @@ class Greenlet(greenlet):
     def start(self):
         """Schedule the greenlet to run in this loop iteration"""
         if self._start_event is None:
+            _call_spawn_callbacks(self)
             self._start_event = self.parent.loop.run_callback(self.switch)
 
     def start_later(self, seconds):
@@ -518,6 +519,7 @@ class Greenlet(greenlet):
         *seconds* later
         """
         if self._start_event is None:
+            _call_spawn_callbacks(self)
             self._start_event = self.parent.loop.timer(seconds)
             self._start_event.start(self.switch)
 
@@ -572,7 +574,6 @@ class Greenlet(greenlet):
             instead of spawning a greenlet that will raise an uncaught TypeError.
         """
         g = cls(*args, **kwargs)
-        _call_spawn_callbacks(g)
         g.start()
         return g
 
@@ -596,7 +597,6 @@ class Greenlet(greenlet):
         if cls is Greenlet and not args and 'run' not in kwargs:
             raise TypeError("")
         g = cls(*args, **kwargs)
-        _call_spawn_callbacks(g)
         g.start_later(seconds)
         return g
 
