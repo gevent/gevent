@@ -264,6 +264,9 @@ class Greenlet(greenlet):
             self.spawn_tree_locals = None
             self._spawning_stack_frames = None
 
+        if _spawn_callbacks is not None:
+            self.__call_spawn_callbacks()
+
     @Lazy
     def spawning_stack(self):
         # Store this in the __dict__. We don't use it from the C
@@ -343,6 +346,11 @@ class Greenlet(greenlet):
         def dead(self):
             "Boolean indicating that the greenlet is dead and will not run again."
             return self.__start_cancelled_by_kill() or self.__started_but_aborted() or greenlet.dead.__get__(self)
+
+    def __call_spawn_callbacks(self):
+        if _spawn_callbacks is not None:
+            for cb in _spawn_callbacks:
+                cb(self)
 
     def __never_started_or_killed(self):
         return self._start_event is None
@@ -520,6 +528,41 @@ class Greenlet(greenlet):
         if self._start_event is None:
             self._start_event = self.parent.loop.timer(seconds)
             self._start_event.start(self.switch)
+
+    @staticmethod
+    def add_spawn_callback(cb):
+        """
+        add_spawn_callback(callback) -> None
+
+        Set up a *callback* to be invoked when a new :class:`Greenlet`
+        object is instantiated.
+
+        The invocation order of spawn callbacks is unspecified.  Adding one
+        callback more than one time will not cause it to be called more
+        than once.
+
+        .. versionadded:: 1.3.8
+        """
+        global _spawn_callbacks
+        if _spawn_callbacks is None:
+            _spawn_callbacks = set()
+        _spawn_callbacks.add(cb)
+
+    @staticmethod
+    def remove_spawn_callback(cb):
+        """
+        remove_spawn_callback(callback) -> None
+
+        Remove *callback* function added with :meth:`Greenlet.add_spawn_callback`.
+        This function will not fail if *callback* has been already removed.
+
+        .. versionadded:: 1.3.8
+        """
+        global _spawn_callbacks
+        if _spawn_callbacks is not None:
+            _spawn_callbacks.discard(cb)
+            if not _spawn_callbacks:
+                _spawn_callbacks = None
 
     @classmethod
     def spawn(cls, *args, **kwargs):
@@ -939,6 +982,8 @@ def _init():
     greenlet_init() # pylint:disable=undefined-variable
 
 _init()
+
+_spawn_callbacks = None
 
 from gevent._util import import_c_accel
 import_c_accel(globals(), 'gevent._greenlet')

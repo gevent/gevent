@@ -176,6 +176,8 @@ yet and thus would evaluate to False.
 .. automethod:: Greenlet.rawlink
 .. automethod:: Greenlet.unlink
 .. automethod:: Greenlet.__str__
+.. automethod:: Greenlet.add_spawn_callback
+.. automethod:: Greenlet.remove_spawn_callback
 
 
 Raw greenlet Methods

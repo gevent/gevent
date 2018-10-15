@@ -117,6 +117,7 @@ cdef class Greenlet(greenlet):
     cdef bint __start_pending(self)
     cdef bint __never_started_or_killed(self)
     cdef bint __start_completed(self)
+    cdef __call_spawn_callbacks(self)
     cdef __handle_death_before_start(self, tuple args)
 
     cdef __cancel_start(self)
@@ -149,6 +150,7 @@ cdef Waiter
 cdef wait
 cdef iwait
 cdef reraise
+cdef set _spawn_callbacks = None
 cpdef GEVENT_CONFIG
 
 
