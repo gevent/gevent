@@ -168,6 +168,12 @@ class _WaitIterator(object):
                 except: # pylint:disable=bare-except
                     traceback.print_exc()
 
+    def __enter__(self):
+        return self
+
+    def __exit__(self, typ, value, tb):
+        self._cleanup()
+
 
 def iwait_on_objects(objects, timeout=None, count=None):
     """
