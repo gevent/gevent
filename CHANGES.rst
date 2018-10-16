@@ -18,6 +18,12 @@
 - Build with Cython 0.29 in '3str' mode.
 
 
+- There is new documentation on the possibility that `gevent.iwait` can produce
+  memory leaks when not fully consumed. To prevent such situations,
+  `gevent.iwait` now provides optional contextmanager support, which will ensure
+  that all resources are cleaned up. See :pr:`1290`, provided by Josh Snyder.
+
+
 1.3.7 (2018-10-12)
 ==================
 
