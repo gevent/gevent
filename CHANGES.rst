@@ -10,6 +10,12 @@
 - Add support for application-wide callbacks when ``Greenlet`` objects
   are started. See :pr:`1289`, provided by Yury Selivanov.
 
+- It is now possible to consume ready objects using `next(gevent.iwait(objs))`.
+  Previously such a construction would hang.
+
+- `gevent.iwait(objs)` will now return each ready object at most once.
+  Previously objects which could become ready multiple times could also be
+  returned by `gevent.iwait` multiple times.
 
 1.3.7 (2018-10-12)
 ==================
