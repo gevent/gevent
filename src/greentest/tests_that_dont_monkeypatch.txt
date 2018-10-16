@@ -19,3 +19,4 @@ test___config.py
 test___monitor.py
 test__events.py
 test__monkey_scope.py
+test__iwait.py
