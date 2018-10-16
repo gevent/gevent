@@ -180,10 +180,13 @@ def iwait_on_objects(objects, timeout=None, count=None):
     Iteratively yield *objects* as they are ready, until all (or *count*) are ready
     or *timeout* expired.
 
-    This function allocates resources which must be cleaned up. Consuming the
-    iterator until it is exhausted will automatically clean them up, and it is
-    also possible to use the returned object as a context manager to ensure
-    cleanup occurs.
+    If you will only be consuming a portion of the *objects*, you should
+    do so inside a ``with`` block on this object to avoid leaking resources::
+
+        with gevent.iwait((a, b, c)) as it:
+            for i in it:
+                if i is a:
+                    break
 
     :param objects: A sequence (supporting :func:`len`) containing objects
         implementing the wait protocol (rawlink() and unlink()).

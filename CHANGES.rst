@@ -7,21 +7,21 @@
 1.4.0 (unreleased)
 ==================
 
+- Build with Cython 0.29 in '3str' mode.
+
 - Add support for application-wide callbacks when ``Greenlet`` objects
   are started. See :pr:`1289`, provided by Yury Selivanov.
 
-- It is now possible to consume ready objects using `next(gevent.iwait(objs))`.
-  Previously such a construction would hang. See :pr:`1288`, provided by Josh
+- Fix consuming a single ready object using
+  ``next(gevent.iwait(objs))``. Previously such a construction would
+  hang because `iter` was not called. See :pr:`1288`, provided by Josh
   Snyder. This is not recommended, though, as unwaited objects will
-  have dangling links.
+  have dangling links (but see next item).
 
-- Build with Cython 0.29 in '3str' mode.
-
-
-- There is new documentation on the possibility that `gevent.iwait` can produce
-  memory leaks when not fully consumed. To prevent such situations,
-  `gevent.iwait` now provides optional contextmanager support, which will ensure
-  that all resources are cleaned up. See :pr:`1290`, provided by Josh Snyder.
+- Make `gevent.iwait` return an iterator that can now also be used as
+  a context manager. If you'll only be consuming part of the iterator,
+  use it in a ``with`` block to avoid leaking resources. See
+  :pr:`1290`, provided by Josh Snyder.
 
 
 1.3.7 (2018-10-12)
