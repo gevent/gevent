@@ -107,6 +107,8 @@ class _WaitIterator(object):
         )
         self._begun = False
 
+        # XXX: If iteration doesn't actually happen, we
+        # could leave these links around!
         self._objects = set(objects)
         for obj in self._objects:
             obj.rawlink(self._switch)
