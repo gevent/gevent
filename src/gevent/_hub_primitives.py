@@ -201,6 +201,8 @@ def iwait_on_objects(objects, timeout=None, count=None):
     .. versionchanged:: 1.1a2
        No longer raise :exc:`LoopExit` if our caller switches greenlets
        in between items yielded by this function.
+    .. versionchanged:: 1.4
+       Add support to use the returned object as a context manager.
     """
     # QQQ would be nice to support iterable here that can be generated slowly (why?)
     hub = get_hub()
