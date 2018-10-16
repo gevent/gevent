@@ -699,6 +699,38 @@ class TestBasic(greentest.TestCase):
         while not raw.dead:
             gevent.sleep(0.01)
 
+    def test_add_spawn_callback(self):
+        called = {'#': 0}
+
+        def cb(gr):
+            called['#'] += 1
+            gr._called_test = True
+
+        gevent.Greenlet.add_spawn_callback(cb)
+        try:
+            g = gevent.spawn(lambda: None)
+            self.assertTrue(hasattr(g, '_called_test'))
+            g.join()
+            self.assertEqual(called['#'], 1)
+
+            g = gevent.spawn_later(1e-5, lambda: None)
+            self.assertTrue(hasattr(g, '_called_test'))
+            g.join()
+            self.assertEqual(called['#'], 2)
+
+            g = gevent.Greenlet(lambda: None)
+            g.start()
+            self.assertTrue(hasattr(g, '_called_test'))
+            g.join()
+            self.assertEqual(called['#'], 3)
+
+            gevent.Greenlet.remove_spawn_callback(cb)
+            g = gevent.spawn(lambda: None)
+            self.assertFalse(hasattr(g, '_called_test'))
+            g.join()
+            self.assertEqual(called['#'], 3)
+        finally:
+            gevent.Greenlet.remove_spawn_callback(cb)
 
     def test_getframe_value_error(self):
         def get():

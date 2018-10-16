@@ -172,3 +172,6 @@ cdef _killall(list greenlets, object exception)
 
 @cython.locals(done=list)
 cpdef joinall(greenlets, timeout=*, raise_error=*, count=*)
+
+cdef set _spawn_callbacks = None
+cdef _call_spawn_callbacks(gr)
