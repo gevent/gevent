@@ -535,7 +535,7 @@ class Greenlet(greenlet):
         same callback more than one time will not cause it to be called more
         than once.
 
-        .. versionadded:: 1.3.8
+        .. versionadded:: 1.4.0
         """
         global _spawn_callbacks
         if _spawn_callbacks is None:  # pylint:disable=used-before-assignment
@@ -551,7 +551,7 @@ class Greenlet(greenlet):
         This function will not fail if *callback* has been already removed or
         if *callback* was never added.
 
-        .. versionadded:: 1.3.8
+        .. versionadded:: 1.4.0
         """
         global _spawn_callbacks
         if _spawn_callbacks is not None:

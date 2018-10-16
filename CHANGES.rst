@@ -4,10 +4,11 @@
 
 .. currentmodule:: gevent
 
-1.3.8 (unreleased)
+1.4.0 (unreleased)
 ==================
 
-- Nothing changed yet.
+- Add support for application-wide callbacks when ``Greenlet`` objects
+  are started. See :pr:`1289`, provided by Yury Selivanov.
 
 
 1.3.7 (2018-10-12)
