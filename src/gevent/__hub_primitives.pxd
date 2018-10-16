@@ -55,7 +55,7 @@ cdef class _WaitIterator:
     cdef bint _begun
 
 
-
+    cdef _begin(self)
     cdef _cleanup(self)
 
 cpdef iwait_on_objects(objects, timeout=*, count=*)
