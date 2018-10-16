@@ -14,6 +14,12 @@
   Previously such a construction would hang. See :pr:`1288`, provided by Josh
   Snyder.
 
+- There is new documentation on the possibility that `gevent.iwait` can produce
+  memory leaks when not fully consumed. To prevent such situations,
+  `gevent.iwait` now provides optional contextmanager support, which will ensure
+  that all resources are cleaned up. See :pr:`1290`, provided by Josh Snyder.
+
+
 1.3.7 (2018-10-12)
 ==================
 

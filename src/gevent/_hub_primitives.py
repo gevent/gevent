@@ -168,11 +168,22 @@ class _WaitIterator(object):
                 except: # pylint:disable=bare-except
                     traceback.print_exc()
 
+    def __enter__(self):
+        return self
+
+    def __exit__(self, typ, value, tb):
+        self._cleanup()
+
 
 def iwait_on_objects(objects, timeout=None, count=None):
     """
     Iteratively yield *objects* as they are ready, until all (or *count*) are ready
     or *timeout* expired.
+
+    This function allocates resources which must be cleaned up. Consuming the
+    iterator until it is exhausted will automatically clean them up, and it is
+    also possible to use the returned object as a context manager to ensure
+    cleanup occurs.
 
     :param objects: A sequence (supporting :func:`len`) containing objects
         implementing the wait protocol (rawlink() and unlink()).
@@ -190,6 +201,8 @@ def iwait_on_objects(objects, timeout=None, count=None):
     .. versionchanged:: 1.1a2
        No longer raise :exc:`LoopExit` if our caller switches greenlets
        in between items yielded by this function.
+    .. versionchanged:: 1.4
+       Add support to use the returned object as a context manager.
     """
     # QQQ would be nice to support iterable here that can be generated slowly (why?)
     hub = get_hub()
