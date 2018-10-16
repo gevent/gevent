@@ -58,6 +58,10 @@ cdef class _WaitIterator:
     cdef _begin(self)
     cdef _cleanup(self)
 
+    cpdef __enter__(self)
+    cpdef __exit__(self, typ, value, tb)
+
+
 cpdef iwait_on_objects(objects, timeout=*, count=*)
 cpdef wait_on_objects(objects=*, timeout=*, count=*)
 

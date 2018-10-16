@@ -16,5 +16,26 @@ class Testiwait(greentest.TestCase):
         ready = next(gevent.iwait((sem1, sem2)))
         self.assertEqual(sem1, ready)
 
+    def test_iwait_partial(self):
+        # Test that the iwait context manager allows the iterator to be
+        # consumed partially without a memory leak.
+
+        sem = Semaphore()
+        let = gevent.spawn(sem.release)
+        with gevent.iwait((sem,), timeout=0.01) as iterator:
+            self.assertEqual(sem, next(iterator))
+        let.get()
+
+    def test_iwait_nogarbage(self):
+        sem1 = Semaphore()
+        sem2 = Semaphore()
+        let = gevent.spawn(sem1.release)
+        with gevent.iwait((sem1, sem2)) as iterator:
+            self.assertEqual(sem1, next(iterator))
+            assert len(sem2._links) == 1
+        assert sem2._links is None or len(sem2._links) == 0
+        let.get()
+
+
 if __name__ == '__main__':
     greentest.main()
