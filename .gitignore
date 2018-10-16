@@ -25,6 +25,11 @@ src/gevent/libev/_corecffi.c
 src/gevent/libev/_corecffi.o
 src/gevent/resolver/cares.c
 
+# Cython annotations
+src/gevent/*.html
+src/gevent/libev/*.html
+src/gevent/resolver/*.html
+
 Makefile.ext
 MANIFEST
 *_flymake.py

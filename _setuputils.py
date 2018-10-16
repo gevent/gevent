@@ -154,26 +154,49 @@ def system(cmd, cwd=None, env=None, **kwargs):
 
 # Cython
 
+# Based on code from
+# http://cython.readthedocs.io/en/latest/src/reference/compilation.html#distributing-cython-modules
+def _dummy_cythonize(extensions, **_kwargs):
+    for extension in extensions:
+        sources = []
+        for sfile in extension.sources:
+            path, ext = os.path.splitext(sfile)
+            if ext in ('.pyx', '.py'):
+                ext = '.c'
+                sfile = path + ext
+            sources.append(sfile)
+        extension.sources[:] = sources
+    return extensions
 
 try:
     from Cython.Build import cythonize
 except ImportError:
-    # The .c files had better already exist. Based on code from
-    # http://cython.readthedocs.io/en/latest/src/reference/compilation.html#distributing-cython-modules
-    def cythonize(extensions, **_kwargs):
-        for extension in extensions:
-            sources = []
-            for sfile in extension.sources:
-                path, ext = os.path.splitext(sfile)
-                if ext in ('.pyx', '.py'):
-                    ext = '.c'
-                    sfile = path + ext
-                sources.append(sfile)
-            extension.sources[:] = sources
-        return extensions
+    # The .c files had better already exist.
+    cythonize = _dummy_cythonize
 
 def cythonize1(ext):
-    new_ext = cythonize([ext], include_path=['src/gevent', 'src/gevent/libev', 'src/gevent/resolver'])[0]
+    try:
+        new_ext = cythonize(
+            [ext],
+            include_path=['src/gevent', 'src/gevent/libev', 'src/gevent/resolver'],
+            annotate=True,
+            compiler_directives={
+                'language_level': '3str',
+                'always_allow_keywords': False,
+                'infer_types': True,
+                'nonecheck': False,
+            }
+        )[0]
+    except ValueError:
+        # 'invalid literal for int() with base 10: '3str'
+        # This is seen when an older version of Cython is installed.
+        # It's a bit of a chicken-and-egg, though, because installing
+        # from dev-requirements first scans this egg for its requirements
+        # before doing any updates.
+        import traceback
+        traceback.print_exc()
+        new_ext = _dummy_cythonize([ext])[0]
+
     for optional_attr in ('configure', 'optional'):
         if hasattr(ext, optional_attr):
             setattr(new_ext, optional_attr,
