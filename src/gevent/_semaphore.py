@@ -31,16 +31,19 @@ class Semaphore(AbstractLinkable): # pylint:disable=undefined-variable
 
     .. seealso:: :class:`BoundedSemaphore` for a safer version that prevents
        some classes of bugs.
+
+    .. versionchanged:: 1.4.0
+
+        The order in which waiters are awakened is not specified. It was not
+        specified previously, but usually went in FIFO order.
     """
 
     def __init__(self, value=1):
-        super(Semaphore, self).__init__()
         if value < 0:
             raise ValueError("semaphore initial value must be >= 0")
+        super(Semaphore, self).__init__()
         self.counter = value
-        self._notifier = None
         self._notify_all = False
-
 
     def __str__(self):
         params = (self.__class__.__name__, self.counter, self.linkcount())

@@ -27,7 +27,7 @@ class AbstractLinkable(object):
     # protocol common to both repeatable events (Event, Semaphore) and
     # one-time events (AsyncResult).
 
-    __slots__ = ('_links', 'hub', '_notifier', '_notify_all', '__weakref__')
+    __slots__ = ('hub', '_links', '_notifier', '_notify_all', '__weakref__')
 
     def __init__(self):
         # Before this implementation, AsyncResult and Semaphore
@@ -59,19 +59,19 @@ class AbstractLinkable(object):
         # by simply not declaring these objects in the pxd file, but that doesn't work for
         # CPython ("No attribute...")
         # See https://github.com/gevent/gevent/issues/660
-        self._links = None
-        # we don't want to do get_hub() here to allow defining module-level locks
-        # without initializing the hub
-        self.hub = None
+        self._links = set()
         self._notifier = None
         # This is conceptually a class attribute, defined here for ease of access in
         # cython. If it's true, when notifiers fire, all existing callbacks are called.
         # If its false, we only call callbacks as long as ready() returns true.
         self._notify_all = True
+        # we don't want to do get_hub() here to allow defining module-level objects
+        # without initializing the hub
+        self.hub = None
 
     def linkcount(self):
         # For testing: how many objects are linked to this one?
-        return len(self._links) if self._links is not None else 0
+        return len(self._links)
 
     def ready(self):
         # Instances must define this
@@ -79,80 +79,80 @@ class AbstractLinkable(object):
 
     def _check_and_notify(self):
         # If this object is ready to be notified, begin the process.
-        if self.ready():
-            if self._links and not self._notifier:
-                if self.hub is None:
-                    self.hub = get_hub()
-                self._notifier = self.hub.loop.run_callback(self._notify_links)
+        if self.ready() and self._links and not self._notifier:
+            if self.hub is None:
+                self.hub = get_hub()
+
+            self._notifier = self.hub.loop.run_callback(self._notify_links)
 
     def rawlink(self, callback):
         """
         Register a callback to call when this object is ready.
 
-        *callback* will be called in the :class:`Hub <gevent.hub.Hub>`, so it must not use blocking gevent API.
+        *callback* will be called in the :class:`Hub
+        <gevent.hub.Hub>`, so it must not use blocking gevent API.
         *callback* will be passed one argument: this instance.
         """
         if not callable(callback):
             raise TypeError('Expected callable: %r' % (callback, ))
-        if self._links is None:
-            self._links = [callback]
-        else:
-            self._links.append(callback)
 
+        self._links.add(callback)
         self._check_and_notify()
 
     def unlink(self, callback):
         """Remove the callback set by :meth:`rawlink`"""
-        if self._links is not None:
-            try:
-                self._links.remove(callback)
-            except ValueError:
-                pass
-            if not self._links:
-                self._links = None
-            # TODO: Cancel a notifier if there are no links?
+        self._links.discard(callback)
+
+        if not self._links and self._notifier is not None:
+            # If we currently have one queued, de-queue it.
+            # This will break a reference cycle.
+            # (self._notifier -> self._notify_links -> self)
+            # But we can't set it to None in case it was actually running.
+            self._notifier.stop()
+
 
     def _notify_links(self):
-        # Actually call the notification callbacks. Those callbacks in todo that are
-        # still in _links are called. This method is careful to avoid iterating
-        # over self._links, because links could be added or removed while this
-        # method runs. Only links present when this method begins running
-        # will be called; if a callback adds a new link, it will not run
-        # until the next time notify_links is activated
-
+        # We release self._notifier here. We are called by it
+        # at the end of the loop, and it is now false in a boolean way (as soon
+        # as this method returns).
         notifier = self._notifier
-        # We don't need to capture self._links as todo when establishing
-        # this callback; any links removed between now and then are handled
-        # by the `if` below; any links added are also grabbed; note that if
-        # unlink() was called while we were waiting for the notifier to run,
-        # self._links could have gone to None.
-        todo = list(self._links) if self._links is not None else []
+        # We were ready() at the time this callback was scheduled;
+        # we may not be anymore, and that status may change during
+        # callback processing. Some of our subclasses will want to
+        # notify everyone that the status was once true, even though not it
+        # may not be anymore.
+        todo = set(self._links)
         try:
             for link in todo:
-                # check that link was not notified yet and was not removed by the client
-                # We have to do this here, and not as part of the 'for' statement because
-                # a previous link(self) call might have altered self._links
                 if not self._notify_all and not self.ready():
                     break
-                if link in self._links:
-                    try:
-                        link(self)
-                    except: # pylint:disable=bare-except
-                        self.hub.handle_error((link, self), *sys.exc_info())
+
+                if link not in self._links:
+                    # Been removed already by some previous link. OK, fine.
+                    continue
+                try:
+                    link(self)
+                except: # pylint:disable=bare-except
+                    # We're running in the hub, so getcurrent() returns
+                    # a hub.
+                    self.hub.handle_error((link, self), *sys.exc_info()) # pylint:disable=undefined-variable
+                finally:
                     if getattr(link, 'auto_unlink', None):
                         # This attribute can avoid having to keep a reference to the function
                         # *in* the function, which is a cycle
                         self.unlink(link)
         finally:
-            # save a tiny bit of memory by letting _notifier be collected
-            # bool(self._notifier) would turn to False as soon as we exit this
-            # method anyway.
-            del todo
             # We should not have created a new notifier even if callbacks
             # released us because we loop through *all* of our links on the
             # same callback while self._notifier is still true.
             assert self._notifier is notifier
             self._notifier = None
+
+        # Our set of active links changed, and we were told to stop on the first
+        # time we went unready. See if we're ready, and if so, go around
+        # again.
+        if not self._notify_all and todo != self._links:
+            self._check_and_notify()
 
     def _wait_core(self, timeout, catch=Timeout):
         # The core of the wait implementation, handling

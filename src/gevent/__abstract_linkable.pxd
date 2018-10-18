@@ -36,17 +36,17 @@ cdef class AbstractLinkable(object):
    # https://github.com/cython/cython/issues/2270
    cdef object __weakref__
 
-   cdef _notifier
-   cdef list _links
-   cdef bint _notify_all
    cdef readonly SwitchOutGreenletWithLoop hub
+
+   cdef _notifier
+   cdef set _links
+   cdef bint _notify_all
 
    cpdef rawlink(self, callback)
    cpdef bint ready(self)
    cpdef unlink(self, callback)
 
    cdef _check_and_notify(self)
-   @cython.locals(todo=list)
    cpdef _notify_links(self)
    cdef _wait_core(self, timeout, catch=*)
    cdef _wait_return_value(self, waited, wait_success)

@@ -162,7 +162,7 @@ class TestCase(greentest.TestCase):
         conn = self.makefile()
         conn.write(b'GET / HTTP/1.0\r\n\r\n')
         conn.flush()
-        result = ''
+        result = b''
         try:
             while True:
                 data = conn._sock.recv(1)
@@ -170,9 +170,9 @@ class TestCase(greentest.TestCase):
                     break
                 result += data
         except socket.timeout:
-            assert not result, repr(result)
+            self.assertFalse(result)
             return
-        assert result.startswith('HTTP/1.0 500 Internal Server Error'), repr(result)
+        self.assertTrue(result.startswith(b'HTTP/1.0 500 Internal Server Error'), repr(result))
         conn.close()
 
     def assertRequestSucceeded(self, timeout=_DEFAULT_SOCKET_TIMEOUT):
@@ -259,7 +259,8 @@ class TestDefaultSpawn(TestCase):
 
     def test_backlog_is_not_accepted_for_socket(self):
         self.switch_expected = False
-        self.assertRaises(TypeError, self.ServerClass, self.get_listener(), backlog=25, handle=False)
+        with self.assertRaises(TypeError):
+            self.ServerClass(self.get_listener(), backlog=25, handle=False)
 
     def test_backlog_is_accepted_for_address(self):
         self.server = self.ServerSubClass((greentest.DEFAULT_BIND_ADDR, 0), backlog=25)

@@ -26,7 +26,8 @@ class TestSemaphore(greentest.TestCase):
         s.rawlink(lambda s: result.append('b'))
         s.release()
         gevent.sleep(0.001)
-        self.assertEqual(result, ['a', 'b'])
+        # The order, though, is not guaranteed.
+        self.assertEqual(sorted(result), ['a', 'b'])
 
     def test_semaphore_weakref(self):
         s = Semaphore()

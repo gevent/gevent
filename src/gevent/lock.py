@@ -108,7 +108,7 @@ if PYPY:
     Semaphore._py3k_acquire = Semaphore.acquire = _decorate(Semaphore.acquire, '_lock_locked')
     Semaphore.release = _decorate(Semaphore.release, '_lock_locked')
     Semaphore.wait = _decorate(Semaphore.wait, '_lock_locked')
-    Semaphore._do_wait = _decorate(Semaphore._do_wait, '_lock_unlocked')
+    Semaphore._wait = _decorate(Semaphore._wait, '_lock_unlocked')
 
     _Sem_init = Semaphore.__init__
 

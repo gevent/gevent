@@ -25,7 +25,8 @@
 
 - Fix semaphores to immediately notify links if they are ready and
   ``rawlink()`` is called. This behaves like ``Event`` and
-  ``AsyncEvent``. See :issue:`1287`, reported by Dan Milon.
+  ``AsyncEvent``. Note that the order in which semaphore links are
+  called is not specified. See :issue:`1287`, reported by Dan Milon.
 
 
 1.3.7 (2018-10-12)
