@@ -32,8 +32,9 @@ class Testiwait(greentest.TestCase):
         let = gevent.spawn(sem1.release)
         with gevent.iwait((sem1, sem2)) as iterator:
             self.assertEqual(sem1, next(iterator))
-            assert len(sem2._links) == 1
-        assert sem2._links is None or len(sem2._links) == 0
+            self.assertEqual(sem2.linkcount(), 1)
+
+        self.assertEqual(sem2.linkcount(), 0)
         let.get()
 
 

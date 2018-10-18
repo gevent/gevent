@@ -87,6 +87,11 @@ GREENLET = Extension(name="gevent._greenlet",
                      ],
                      include_dirs=include_dirs)
 
+ABSTRACT_LINKABLE = Extension(name="gevent.__abstract_linkable",
+                              sources=["src/gevent/_abstract_linkable.py"],
+                              depends=['src/gevent/__abstract_linkable.pxd'],
+                              include_dirs=include_dirs)
+
 
 IDENT = Extension(name="gevent.__ident",
                   sources=["src/gevent/_ident.py"],
@@ -143,6 +148,7 @@ _to_cythonize = [
     GREENLET,
     TRACER,
 
+    ABSTRACT_LINKABLE,
     SEMAPHORE,
     LOCAL,
 
@@ -155,6 +161,7 @@ _to_cythonize = [
 EXT_MODULES = [
     CORE,
     ARES,
+    ABSTRACT_LINKABLE,
     SEMAPHORE,
     LOCAL,
     GREENLET,
@@ -232,6 +239,7 @@ if PYPY:
     EXT_MODULES.remove(LOCAL)
     EXT_MODULES.remove(GREENLET)
     EXT_MODULES.remove(SEMAPHORE)
+    EXT_MODULES.remove(ABSTRACT_LINKABLE)
 
     # As of PyPy 5.10, this builds, but won't import (missing _Py_ReprEnter)
     EXT_MODULES.remove(CORE)
@@ -243,6 +251,7 @@ if PYPY:
     _to_cythonize.remove(GREENLET)
     _to_cythonize.remove(SEMAPHORE)
     _to_cythonize.remove(IDENT)
+    _to_cythonize.remove(ABSTRACT_LINKABLE)
 
     EXT_MODULES.remove(IMAP)
     _to_cythonize.remove(IMAP)
