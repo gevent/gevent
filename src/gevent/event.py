@@ -22,7 +22,10 @@ def _get_linkable():
 locals()['AbstractLinkable'] = _get_linkable()
 del _get_linkable
 
-
+# Sadly, something about the way we have to "import" AbstractLinkable
+# breaks pylint's inference of slots, even though they're declared
+# right here.
+# pylint:disable=assigning-non-slot
 
 class Event(AbstractLinkable): # pylint:disable=undefined-variable
     """A synchronization primitive that allows one greenlet to wake up one or more others.
