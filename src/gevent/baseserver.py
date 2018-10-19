@@ -329,6 +329,11 @@ class BaseServer(object):
                 self.__dict__.pop('full', None)
                 if self.pool is not None:
                     self.pool._semaphore.unlink(self._start_accepting_if_started)
+                    # If the pool's semaphore had a notifier already started,
+                    # there's a reference cycle we're a part of
+                    # (self->pool->semaphere-hub callback->semaphore)
+                    # But we can't destroy self.pool, because self.stop()
+                    # calls this method, and then wants to join self.pool()
 
     @property
     def closed(self):
@@ -354,6 +359,7 @@ class BaseServer(object):
         if self.pool:
             self.pool.join(timeout=timeout)
             self.pool.kill(block=True, timeout=1)
+
 
     def serve_forever(self, stop_timeout=None):
         """Start the server if it hasn't been already started and wait until it's stopped."""

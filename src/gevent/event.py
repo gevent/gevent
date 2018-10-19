@@ -3,15 +3,11 @@
 
 """Basic synchronization primitives: Event and AsyncResult"""
 from __future__ import print_function
-import sys
 
 from gevent._util import _NONE
 from gevent._compat import reraise
 from gevent._tblib import dump_traceback, load_traceback
 
-from gevent._hub_local import get_hub_noargs as get_hub
-
-from gevent.exceptions import InvalidSwitchError
 from gevent.timeout import Timeout
 
 
@@ -20,128 +16,18 @@ __all__ = [
     'AsyncResult',
 ]
 
-locals()['getcurrent'] = __import__('greenlet').getcurrent
-locals()['greenlet_init'] = lambda: None
+def _get_linkable():
+    x = __import__('gevent._abstract_linkable')
+    return x._abstract_linkable.AbstractLinkable
+locals()['AbstractLinkable'] = _get_linkable()
+del _get_linkable
 
+# Sadly, something about the way we have to "import" AbstractLinkable
+# breaks pylint's inference of slots, even though they're declared
+# right here.
+# pylint:disable=assigning-non-slot
 
-class _AbstractLinkable(object):
-    # Encapsulates the standard parts of the linking and notifying protocol
-    # common to both repeatable events and one-time events (AsyncResult).
-
-    __slots__ = ('_links', 'hub', '_notifier')
-
-    def __init__(self):
-        # Also previously, AsyncResult maintained the order of notifications, but Event
-        # did not; this implementation does not. (Event also only call callbacks one
-        # time (set), but AsyncResult permitted duplicates.)
-
-        # HOWEVER, gevent.queue.Queue does guarantee the order of getters relative
-        # to putters. Some existing documentation out on the net likes to refer to
-        # gevent as "deterministic", such that running the same program twice will
-        # produce results in the same order (so long as I/O isn't involved). This could
-        # be an argument to maintain order. (One easy way to do that while guaranteeing
-        # uniqueness would be with a 2.7+ OrderedDict.)
-        self._links = set()
-        self.hub = get_hub()
-        self._notifier = None
-
-    def ready(self):
-        # Instances must define this
-        raise NotImplementedError()
-
-    def _check_and_notify(self):
-        # If this object is ready to be notified, begin the process.
-        if self.ready():
-            if self._links and not self._notifier:
-                self._notifier = self.hub.loop.run_callback(self._notify_links)
-
-    def rawlink(self, callback):
-        """
-        Register a callback to call when this object is ready.
-
-        *callback* will be called in the :class:`Hub <gevent.hub.Hub>`, so it must not use blocking gevent API.
-        *callback* will be passed one argument: this instance.
-        """
-        if not callable(callback):
-            raise TypeError('Expected callable: %r' % (callback, ))
-        self._links.add(callback)
-        self._check_and_notify()
-
-    def unlink(self, callback):
-        """Remove the callback set by :meth:`rawlink`"""
-        try:
-            self._links.remove(callback)
-        except KeyError:
-            pass
-
-    def _notify_links(self):
-        # Actually call the notification callbacks. Those callbacks in todo that are
-        # still in _links are called. This method is careful to avoid iterating
-        # over self._links, because links could be added or removed while this
-        # method runs. Only links present when this method begins running
-        # will be called; if a callback adds a new link, it will not run
-        # until the next time notify_links is activated
-
-        # We don't need to capture self._links as todo when establishing
-        # this callback; any links removed between now and then are handled
-        # by the `if` below; any links added are also grabbed
-        todo = set(self._links)
-        for link in todo:
-            # check that link was not notified yet and was not removed by the client
-            # We have to do this here, and not as part of the 'for' statement because
-            # a previous link(self) call might have altered self._links
-            if link in self._links:
-                try:
-                    link(self)
-                except: # pylint:disable=bare-except
-                    self.hub.handle_error((link, self), *sys.exc_info())
-                if getattr(link, 'auto_unlink', None):
-                    # This attribute can avoid having to keep a reference to the function
-                    # *in* the function, which is a cycle
-                    self.unlink(link)
-
-        # save a tiny bit of memory by letting _notifier be collected
-        # bool(self._notifier) would turn to False as soon as we exit this
-        # method anyway.
-        del todo
-        self._notifier = None
-
-    def _wait_core(self, timeout, catch=Timeout):
-        # The core of the wait implementation, handling
-        # switching and linking. If *catch* is set to (),
-        # a timeout that elapses will be allowed to be raised.
-        # Returns a true value if the wait succeeded without timing out.
-        switch = getcurrent().switch # pylint:disable=undefined-variable
-        self.rawlink(switch)
-        try:
-            with Timeout._start_new_or_dummy(timeout) as timer:
-                try:
-                    result = self.hub.switch()
-                    if result is not self: # pragma: no cover
-                        raise InvalidSwitchError('Invalid switch into Event.wait(): %r' % (result, ))
-                    return True
-                except catch as ex:
-                    if ex is not timer:
-                        raise
-                    # test_set_and_clear and test_timeout in test_threading
-                    # rely on the exact return values, not just truthish-ness
-                    return False
-        finally:
-            self.unlink(switch)
-
-    def _wait_return_value(self, waited, wait_success):
-        # pylint:disable=unused-argument
-        return None
-
-    def _wait(self, timeout=None):
-        if self.ready():
-            return self._wait_return_value(False, False)
-
-        gotit = self._wait_core(timeout)
-        return self._wait_return_value(True, gotit)
-
-
-class Event(_AbstractLinkable):
+class Event(AbstractLinkable): # pylint:disable=undefined-variable
     """A synchronization primitive that allows one greenlet to wake up one or more others.
     It has the same interface as :class:`threading.Event` but works across greenlets.
 
@@ -157,14 +43,15 @@ class Event(_AbstractLinkable):
         the waiting greenlets being awakened. These details may change in the future.
     """
 
-    __slots__ = ('_flag', '__weakref__')
+    __slots__ = ('_flag',)
 
     def __init__(self):
-        _AbstractLinkable.__init__(self)
+        super(Event, self).__init__()
         self._flag = False
 
     def __str__(self):
-        return '<%s %s _links[%s]>' % (self.__class__.__name__, (self._flag and 'set') or 'clear', len(self._links))
+        return '<%s %s _links[%s]>' % (self.__class__.__name__, (self._flag and 'set') or 'clear',
+                                       self.linkcount())
 
     def is_set(self):
         """Return true if and only if the internal flag is true."""
@@ -246,7 +133,7 @@ class Event(_AbstractLinkable):
         pass
 
 
-class AsyncResult(_AbstractLinkable):
+class AsyncResult(AbstractLinkable): # pylint:disable=undefined-variable
     """A one-time event that stores a value or an exception.
 
     Like :class:`Event` it wakes up all the waiters when :meth:`set` or :meth:`set_exception`
@@ -299,7 +186,7 @@ class AsyncResult(_AbstractLinkable):
     __slots__ = ('_value', '_exc_info', '_imap_task_index')
 
     def __init__(self):
-        _AbstractLinkable.__init__(self)
+        super(AsyncResult, self).__init__()
         self._value = _NONE
         self._exc_info = ()
 
@@ -332,7 +219,7 @@ class AsyncResult(_AbstractLinkable):
             result += 'exception=%r ' % self._exception
         if self._exception is _NONE:
             result += 'unset '
-        return result + ' _links[%s]>' % len(self._links)
+        return result + ' _links[%s]>' % self.linkcount()
 
     def ready(self):
         """Return true if and only if it holds a value or an exception"""
@@ -470,11 +357,6 @@ class AsyncResult(_AbstractLinkable):
         return False
 
     # exception is a method, we use it as a property
-
-def _init():
-    greenlet_init() # pylint:disable=undefined-variable
-
-_init()
 
 
 from gevent._util import import_c_accel

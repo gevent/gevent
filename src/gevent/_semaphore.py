@@ -1,24 +1,19 @@
 # cython: auto_pickle=False,embedsignature=True,always_allow_keywords=False
 from __future__ import print_function, absolute_import, division
-import sys
-
-from gevent.timeout import Timeout
-
 
 __all__ = [
     'Semaphore',
     'BoundedSemaphore',
 ]
 
-# In Cython, we define these as 'cdef [inline]' functions. The
-# compilation unit cannot have a direct assignment to them (import
-# is assignment) without generating a 'lvalue is not valid target'
-# error.
-locals()['getcurrent'] = __import__('greenlet').getcurrent
-locals()['greenlet_init'] = lambda: None
-locals()['get_hub'] = __import__('gevent').get_hub
+def _get_linkable():
+    x = __import__('gevent._abstract_linkable')
+    return x._abstract_linkable.AbstractLinkable
+locals()['AbstractLinkable'] = _get_linkable()
+del _get_linkable
 
-class Semaphore(object):
+
+class Semaphore(AbstractLinkable): # pylint:disable=undefined-variable
     """
     Semaphore(value=1) -> Semaphore
 
@@ -36,33 +31,22 @@ class Semaphore(object):
 
     .. seealso:: :class:`BoundedSemaphore` for a safer version that prevents
        some classes of bugs.
+
+    .. versionchanged:: 1.4.0
+
+        The order in which waiters are awakened is not specified. It was not
+        specified previously, but usually went in FIFO order.
     """
 
     def __init__(self, value=1):
         if value < 0:
             raise ValueError("semaphore initial value must be >= 0")
+        super(Semaphore, self).__init__()
         self.counter = value
-        self._dirty = False
-        # In PyPy 2.6.1 with Cython 0.23, `cdef public` or `cdef
-        # readonly` or simply `cdef` attributes of type `object` can appear to leak if
-        # a Python subclass is used (this is visible simply
-        # instantiating this subclass if _links=[]). Our _links and
-        # _notifier are such attributes, and gevent.thread subclasses
-        # this class. Thus, we carefully manage the lifetime of the
-        # objects we put in these attributes so that, in the normal
-        # case of a semaphore used correctly (deallocated when it's not
-        # locked and no one is waiting), the leak goes away (because
-        # these objects are back to None). This can also be solved on PyPy
-        # by simply not declaring these objects in the pxd file, but that doesn't work for
-        # CPython ("No attribute...")
-        # See https://github.com/gevent/gevent/issues/660
-        self._links = None
-        self._notifier = None
-        # we don't want to do get_hub() here to allow defining module-level locks
-        # without initializing the hub
+        self._notify_all = False
 
     def __str__(self):
-        params = (self.__class__.__name__, self.counter, len(self._links) if self._links else 0)
+        params = (self.__class__.__name__, self.counter, self.linkcount())
         return '<%s counter=%s _links[%s]>' % params
 
     def locked(self):
@@ -75,117 +59,22 @@ class Semaphore(object):
         Release the semaphore, notifying any waiters if needed.
         """
         self.counter += 1
-        self._start_notify()
+        self._check_and_notify()
         return self.counter
 
+    def ready(self):
+        return self.counter > 0
+
     def _start_notify(self):
-        if self._links and self.counter > 0 and not self._notifier:
-            # We create a new self._notifier each time through the loop,
-            # if needed. (it has a __bool__ method that tells whether it has
-            # been run; once it's run once---at the end of the loop---it becomes
-            # false.)
-            # NOTE: Passing the bound method will cause a memory leak on PyPy
-            # with Cython <= 0.23.3. You must use >= 0.23.4.
-            # See  https://bitbucket.org/pypy/pypy/issues/2149/memory-leak-for-python-subclass-of-cpyext#comment-22371546
-            hub = get_hub() # pylint:disable=undefined-variable
-            self._notifier = hub.loop.run_callback(self._notify_links)
+        self._check_and_notify()
 
-    def _notify_links(self):
-        # Subclasses CANNOT override. This is a cdef method.
-
-        # We release self._notifier here. We are called by it
-        # at the end of the loop, and it is now false in a boolean way (as soon
-        # as this method returns).
-        # If we get acquired/released again, we will create a new one, but there's
-        # no need to keep it around until that point (making it potentially climb
-        # into older GC generations, notably on PyPy)
-        notifier = self._notifier
-        try:
-            while True:
-                self._dirty = False
-                if not self._links:
-                    # In case we were manually unlinked before
-                    # the callback. Which shouldn't happen
-                    return
-                for link in self._links:
-                    if self.counter <= 0:
-                        return
-                    try:
-                        link(self) # Must use Cython >= 0.23.4 on PyPy else this leaks memory
-                    except: # pylint:disable=bare-except
-                        getcurrent().handle_error((link, self), *sys.exc_info()) # pylint:disable=undefined-variable
-                    if self._dirty:
-                        # We mutated self._links so we need to start over
-                        break
-                if not self._dirty:
-                    return
-        finally:
-            # We should not have created a new notifier even if callbacks
-            # released us because we loop through *all* of our links on the
-            # same callback while self._notifier is still true.
-            assert self._notifier is notifier
-            self._notifier = None
-
-    def rawlink(self, callback):
-        """
-        rawlink(callback) -> None
-
-        Register a callback to call when a counter is more than zero.
-
-        *callback* will be called in the :class:`Hub <gevent.hub.Hub>`, so it must not use blocking gevent API.
-        *callback* will be passed one argument: this instance.
-
-        This method is normally called automatically by :meth:`acquire` and :meth:`wait`; most code
-        will not need to use it.
-        """
-        if not callable(callback):
-            raise TypeError('Expected callable:', callback)
-        if self._links is None:
-            self._links = [callback]
-        else:
-            self._links.append(callback)
-        self._dirty = True
-
-    def unlink(self, callback):
-        """
-        unlink(callback) -> None
-
-        Remove the callback set by :meth:`rawlink`.
-
-        This method is normally called automatically by :meth:`acquire`  and :meth:`wait`; most
-        code will not need to use it.
-        """
-        try:
-            self._links.remove(callback)
-            self._dirty = True
-        except (ValueError, AttributeError):
-            pass
-        if not self._links:
-            self._links = None
-            # TODO: Cancel a notifier if there are no links?
-
-    def _do_wait(self, timeout):
-        """
-        Wait for up to *timeout* seconds to expire. If timeout
-        elapses, return the exception. Otherwise, return None.
-        Raises timeout if a different timer expires.
-        """
-        switch = getcurrent().switch # pylint:disable=undefined-variable
-        self.rawlink(switch)
-        try:
-            timer = Timeout._start_new_or_dummy(timeout)
-            try:
-                try:
-                    result = get_hub().switch() # pylint:disable=undefined-variable
-                    assert result is self, 'Invalid switch into Semaphore.wait/acquire(): %r' % (result, )
-                except Timeout as ex:
-                    if ex is not timer:
-                        raise
-                    return ex
-            finally:
-                timer.cancel()
-        finally:
-            self.unlink(switch)
+    def _wait_return_value(self, waited, wait_success):
+        if waited:
+            return wait_success
+        # We didn't even wait, we must be good to go.
+        # XXX: This is probably dead code, we're careful not to go into the wait
+        # state if we don't expect to need to
+        return True
 
     def wait(self, timeout=None):
         """
@@ -205,7 +94,7 @@ class Semaphore(object):
         if self.counter > 0:
             return self.counter
 
-        self._do_wait(timeout) # return value irrelevant, whether we got it or got a timeout
+        self._wait(timeout) # return value irrelevant, whether we got it or got a timeout
         return self.counter
 
     def acquire(self, blocking=True, timeout=None):
@@ -236,8 +125,8 @@ class Semaphore(object):
         if not blocking:
             return False
 
-        timeout = self._do_wait(timeout)
-        if timeout is not None:
+        success = self._wait(timeout)
+        if not success:
             # Our timer expired.
             return False
 
@@ -282,10 +171,6 @@ class BoundedSemaphore(Semaphore):
         Semaphore.release(self)
 
 
-def _init():
-    greenlet_init() # pylint:disable=undefined-variable
-
-_init()
 
 # By building the semaphore with Cython under PyPy, we get
 # atomic operations (specifically, exiting/releasing), at the

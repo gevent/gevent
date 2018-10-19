@@ -8,6 +8,7 @@ try:
 except ImportError: # Py2
     from thread import allocate_lock as std_allocate_lock
 
+# pylint:disable=broad-except
 
 class TestSemaphore(greentest.TestCase):
 
@@ -25,7 +26,8 @@ class TestSemaphore(greentest.TestCase):
         s.rawlink(lambda s: result.append('b'))
         s.release()
         gevent.sleep(0.001)
-        self.assertEqual(result, ['a', 'b'])
+        # The order, though, is not guaranteed.
+        self.assertEqual(sorted(result), ['a', 'b'])
 
     def test_semaphore_weakref(self):
         s = Semaphore()
@@ -50,6 +52,13 @@ class TestSemaphore(greentest.TestCase):
 
     test_semaphore_in_class_with_del.ignore_leakcheck = True
 
+    def test_rawlink_on_unacquired_runs_notifiers(self):
+        # https://github.com/gevent/gevent/issues/1287
+
+        # Rawlinking a ready semaphore should fire immediately,
+        # not raise LoopExit
+        s = Semaphore()
+        gevent.wait([s])
 
 class TestLock(greentest.TestCase):
 
