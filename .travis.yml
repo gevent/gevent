@@ -1,8 +1,8 @@
 # .travis.yml based on https://github.com/DRMacIver/hypothesis/blob/master/.travis.yml
 language: python
-group: travis_latest
 # We have some unexpected failures on xenial
-#dist: xenial
+# dist: xenial
+# group: travis_latest
 python:
   - 3.7-dev
 
