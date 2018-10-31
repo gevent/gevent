@@ -137,7 +137,11 @@ class AbstractCallbacks(object):
             # Depending on when the exception happened, the watcher
             # may or may not have been stopped. We need to make sure its
             # memory stays valid so we can stop it at the ev level if needed.
-            the_watcher.loop._keepaliveset.add(the_watcher)
+            # If its loop is gone, it has already been stopped,
+            # see https://github.com/gevent/gevent/issues/1295 for a case where
+            # that happened
+            if the_watcher.loop is not None:
+                the_watcher.loop._keepaliveset.add(the_watcher)
             return -1
         else:
             if (the_watcher.loop is not None
