@@ -1,6 +1,6 @@
 # .travis.yml based on https://github.com/DRMacIver/hypothesis/blob/master/.travis.yml
 language: python
-sudo: false
+group: travis_latest
 
 python:
   - 3.7-dev
