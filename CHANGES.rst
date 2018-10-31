@@ -28,6 +28,9 @@
   ``AsyncEvent``. Note that the order in which semaphore links are
   called is not specified. See :issue:`1287`, reported by Dan Milon.
 
+- Improve safety of handling exceptions during interpreter shutdown.
+  See :issue:`1295` reported by BobDenar1212.
+
 
 1.3.7 (2018-10-12)
 ==================

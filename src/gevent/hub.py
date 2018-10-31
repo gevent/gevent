@@ -511,7 +511,9 @@ class Hub(WaitOperationsGreenlet):
         # Unwrap any FileObjectThread we have thrown around sys.stderr
         # (because it can't be used in the hub). Tricky because we are
         # called in error situations when it's not safe to import.
-        stderr = sys.stderr
+        # Be careful not to access sys if we're in the process of interpreter
+        # shutdown.
+        stderr = sys.stderr if sys else None # pylint:disable=using-constant-test
         if type(stderr).__name__ == 'FileObjectThread':
             stderr = stderr.io # pylint:disable=no-member
         return stderr
@@ -521,6 +523,12 @@ class Hub(WaitOperationsGreenlet):
         # traceback.print_exception() as previous versions did.
         # pylint:disable=no-member
         errstream = self.exception_stream
+        if not errstream: # pragma: no cover
+            # If the error stream is gone, such as when the sys dict
+            # gets cleared during interpreter shutdown,
+            # don't cause follow-on errors.
+            # See https://github.com/gevent/gevent/issues/1295
+            return
 
         if value is None:
             errstream.write('%s\n' % type.__name__)
