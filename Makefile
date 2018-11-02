@@ -130,8 +130,8 @@ PY278=$(BUILD_RUNTIMES)/snakepit/python2.7.8
 PY27=$(BUILD_RUNTIMES)/snakepit/python2.7.15
 PY34=$(BUILD_RUNTIMES)/snakepit/python3.4.8
 PY35=$(BUILD_RUNTIMES)/snakepit/python3.5.5
-PY36=$(BUILD_RUNTIMES)/snakepit/python3.6.6
-PY37=$(BUILD_RUNTIMES)/snakepit/python3.7.0
+PY36=$(BUILD_RUNTIMES)/snakepit/python3.6.7
+PY37=$(BUILD_RUNTIMES)/snakepit/python3.7.1
 PYPY=$(BUILD_RUNTIMES)/snakepit/pypy600
 PYPY3=$(BUILD_RUNTIMES)/snakepit/pypy3.5_600
 
@@ -194,10 +194,10 @@ test-py35: $(PY35)
 	PYTHON=python3.5.5 PATH=$(BUILD_RUNTIMES)/versions/python3.5.5/bin:$(PATH) make develop basictest
 
 test-py36: $(PY36)
-	PYTHON=python3.6.6 PATH=$(BUILD_RUNTIMES)/versions/python3.6.6/bin:$(PATH) make develop lint allbackendtest
+	PYTHON=python3.6.7 PATH=$(BUILD_RUNTIMES)/versions/python3.6.7/bin:$(PATH) make develop lint allbackendtest
 
 test-py37: $(PY37)
-	LD_LIBRARY_PATH=$(BUILD_RUNTIMES)/versions/python3.7.0/openssl/lib PYTHON=python3.7.0 PATH=$(BUILD_RUNTIMES)/versions/python3.7.0/bin:$(PATH) make develop leaktest cffibackendtest coverage_combine
+	LD_LIBRARY_PATH=$(BUILD_RUNTIMES)/versions/python3.7.1/openssl/lib PYTHON=python3.7.1 PATH=$(BUILD_RUNTIMES)/versions/python3.7.1/bin:$(PATH) make develop leaktest cffibackendtest coverage_combine
 
 test-pypy: $(PYPY)
 	PYTHON=$(PYPY) PATH=$(BUILD_RUNTIMES)/versions/pypy600/bin:$(PATH) make develop cffibackendtest

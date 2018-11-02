@@ -1,4 +1,5 @@
 # See issue #466
+import unittest
 import ctypes
 
 
@@ -20,15 +21,19 @@ def _send(socket):
         getattr(sock, meth)(anStructure)
         sock.close()
 
-def TestSendBuiltinSocket():
-    import socket
-    _send(socket)
+class TestSendBuiltinSocket(unittest.TestCase):
+
+    def test_send(self):
+        import socket
+        _send(socket)
 
 
-def TestSendGeventSocket():
-    import gevent.socket
-    _send(gevent.socket)
+class TestSendGeventSocket(unittest.TestCase):
+
+    def test_send(self):
+        import gevent.socket
+        _send(gevent.socket)
+
 
 if __name__ == '__main__':
-    TestSendBuiltinSocket()
-    TestSendGeventSocket()
+    unittest.main()

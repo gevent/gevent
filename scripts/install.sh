@@ -49,7 +49,7 @@ PYENV=$BASE/pyenv
 
 # The file for 3.7b1 shipped with pyenv on Feb 6 2018
 # won't compile on Travis. So we use a forked version that
-# compiles openssl for us. We also beat them to the punch for 3.7b2, b3, b4
+# compiles openssl for us. We also beat them to the punch for 3.7b2, b3, b4, .0, .1
 # https://github.com/travis-ci/travis-ci/issues/9069
 
 if [ ! -d "$PYENV/.git" ]; then
@@ -105,10 +105,10 @@ for var in "$@"; do
       install 3.5.5 python3.5.5
       ;;
     3.6)
-      install 3.6.6 python3.6.6
+      install 3.6.7 python3.6.7
       ;;
     3.7)
-      install 3.7.0 python3.7.0
+      install 3.7.1 python3.7.1
       ;;
     pypy)
       install pypy2.7-6.0.0 pypy600
