@@ -11,6 +11,7 @@ from __future__ import division
 from __future__ import print_function
 
 from weakref import ref as wref
+from gc import get_objects
 
 from greenlet import greenlet
 
@@ -64,6 +65,21 @@ class SwitchOutGreenletWithLoop(TrackedRawGreenlet):
 
     def switch_out(self):
         raise BlockingSwitchOutError('Impossible to call blocking function in the event loop callback')
+
+
+def get_reachable_greenlets():
+    # We compile this loop with Cython so that it's faster, and so that
+    # the GIL isn't dropped at unpredictable times during the loop.
+    # Dropping the GIL could lead to accessing partly constructed objects
+    # in undefined states (particularly, tuples). This helps close a hole
+    # where a `SystemError: Objects/tupleobject.c bad argument to internal function`
+    # could get raised. (Note that this probably doesn't completely close the hole,
+    # if other threads have dropped the GIL, but hopefully the speed makes that
+    # more rare.) See https://github.com/gevent/gevent/issues/1302
+    return [
+        x for x in get_objects()
+        if isinstance(x, greenlet) and not getattr(x, 'greenlet_tree_is_ignored', False)
+    ]
 
 def _init():
     greenlet_init() # pylint:disable=undefined-variable

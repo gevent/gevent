@@ -189,6 +189,10 @@ disabled_tests = [
     # The host this wants to use, sha256.tbs-internet.com, is not resolvable
     # right now (2015-10-10), and we need to get Windows wheels
 
+    # This started timing out randomly on Travis in oct/nov 2018. It appears
+    # to be something with random number generation taking too long.
+    'test_ssl.BasicSocketTests.test_random_fork',
+
     # Relies on the repr of objects (Py3)
     'test_ssl.BasicSocketTests.test_dealloc_warn',
 

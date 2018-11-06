@@ -6,13 +6,11 @@ Low-level utilities.
 from __future__ import absolute_import, print_function, division
 
 import functools
-import gc
 import pprint
 import sys
 import traceback
 
 from greenlet import getcurrent
-from greenlet import greenlet as RawGreenlet
 
 from gevent._compat import PYPY
 from gevent._compat import thread_mod_name
@@ -454,20 +452,16 @@ class GreenletTree(object):
 
     @classmethod
     def _forest(cls):
+        from gevent._greenlet_primitives import get_reachable_greenlets
         main_greenlet = cls._root_greenlet(getcurrent())
 
         trees = {}
         roots = {}
         current_tree = roots[main_greenlet] = trees[main_greenlet] = cls(main_greenlet)
 
+        glets = get_reachable_greenlets()
 
-
-        for ob in gc.get_objects():
-            if not isinstance(ob, RawGreenlet):
-                continue
-            if getattr(ob, 'greenlet_tree_is_ignored', False):
-                continue
-
+        for ob in glets:
             spawn_parent = cls.__spawning_parent(ob)
 
             if spawn_parent is None:
