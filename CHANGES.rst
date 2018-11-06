@@ -31,6 +31,11 @@
 - Improve safety of handling exceptions during interpreter shutdown.
   See :issue:`1295` reported by BobDenar1212.
 
+- Remove the deprecated ability to specify ``GEVENT_RESOLVER`` and
+  other importable settings as a ``path/to/a/package.module.item``.
+  This had race conditions and didn't work with complicated resolver
+  implementations. Place the required package or module on `sys.path`
+  first.
 
 1.3.7 (2018-10-12)
 ==================

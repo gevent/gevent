@@ -120,28 +120,35 @@ class TestImportableSetting(unittest.TestCase):
         i = _config.ImportableSetting()
         with self.assertRaisesRegex(ImportError,
                                     "Cannot import from empty list"):
-            i._import([])
+            i._import_one_of([])
 
-    def test_path(self):
+    def test_path_not_supported(self):
         import warnings
         i = _config.ImportableSetting()
         path = list(sys.path)
         with warnings.catch_warnings(record=True) as w:
             warnings.simplefilter("always")
             with self.assertRaisesRegex(ImportError,
-                                        "Cannot import 'no_such_module'"):
-                i._import('foo/bar/gevent.no_such_module')
+                                        "Cannot import 'foo/bar/gevent.no_such_module'"):
+                i._import_one('foo/bar/gevent.no_such_module')
 
         # We restored the path
         self.assertEqual(path, sys.path)
 
-        self.assertEqual(len(w), 1)
-        self.assertEqual(w[0].category, DeprecationWarning)
-        self.assertIn('Absolute paths', str(w[0].message))
+        # We did not issue a warning
+        self.assertEqual(len(w), 0)
 
     def test_non_string(self):
         i = _config.ImportableSetting()
-        self.assertIs(i._import(self), self)
+        self.assertIs(i._import_one(self), self)
+
+    def test_get_options(self):
+        i = _config.ImportableSetting()
+        self.assertEqual({}, i.get_options())
+
+        i.shortname_map = {'foo': 'bad/path'}
+        options = i.get_options()
+        self.assertIn('foo', options)
 
 if __name__ == '__main__':
     unittest.main()
