@@ -1,7 +1,7 @@
 cimport cython
 
 # This file must not cimport anything from gevent.
-
+cdef get_objects
 cdef wref
 
 cdef BlockingSwitchOutError
@@ -42,3 +42,6 @@ cdef class SwitchOutGreenletWithLoop(TrackedRawGreenlet):
 
     cpdef switch(self)
     cpdef switch_out(self)
+
+
+cpdef list get_reachable_greenlets()

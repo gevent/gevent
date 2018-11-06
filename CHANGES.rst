@@ -37,6 +37,11 @@
   implementations. Place the required package or module on `sys.path`
   first.
 
+- Reduce the chances that using the blocking monitor functionality
+  could result in apparently random ``SystemError:
+  Objects/tupleobject.c: bad argument to internal function``. Reported
+  in :issue:`1302` by Ulrich Petri.
+
 1.3.7 (2018-10-12)
 ==================
 
