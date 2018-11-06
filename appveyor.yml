@@ -138,13 +138,15 @@ cache:
   - '%LOCALAPPDATA%\pip\Cache'
 
 build_script:
-  # Build the compiled extension
-  - "%CMD_IN_ENV% %PYEXE% setup.py bdist_wheel bdist_wininst"
+  # Build the compiled extension. First we make an sdist, then
+  # we install from that, to test sdist building issues. Finally we
+  # build a wheel for downloading purposes
+  - "%CMD_IN_ENV% %PYEXE% setup.py sdist --formats=gztar"
   - ps: "ls dist"
-  # Now install the wheel.
+  # Now install the sdist.
   # I couldn't get wildcards to work for pip install, so stuff it
   # into a variable, using python to glob.
-  - "%PYEXE% -c \"import glob; print(glob.glob('dist/*whl')[0])\" > whl.txt"
+  - "%PYEXE% -c \"import glob; print(glob.glob('dist/*gz')[0])\" > whl.txt"
   - set /p PYWHL=<whl.txt
   - "%PYEXE% -m pip install -U --upgrade-strategy=eager %PYWHL%[test,events,dnspython]"
 
@@ -154,10 +156,7 @@ test_script:
   - "cd src/greentest && %PYEXE% testrunner.py --config known_failures.py --quiet && cd ../.."
 
 after_test:
-  # We already built the wheel during build_script, because it's
-  # much faster to do that and install from the wheel than to
-  # rebuild it here
-  #- "%CMD_IN_ENV% %PYEXE% setup.py bdist_wheel bdist_wininst"
+  - "%CMD_IN_ENV% %PYEXE% setup.py bdist_wheel"
   - ps: "ls dist"
 
 artifacts:
