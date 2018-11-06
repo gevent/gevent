@@ -12,7 +12,6 @@ from __future__ import print_function, absolute_import, division
 
 import importlib
 import os
-import sys
 import textwrap
 
 from gevent._compat import string_types
@@ -210,77 +209,59 @@ class Config(object):
 
 class ImportableSetting(object):
 
-    def _import(self, path, _NONE=object):
-        # pylint:disable=too-many-branches
-        if isinstance(path, list):
-            if not path:
-                raise ImportError('Cannot import from empty list: %r' % (path, ))
+    def _import_one_of(self, candidates):
+        assert isinstance(candidates, list)
+        if not candidates:
+            raise ImportError('Cannot import from empty list')
 
-            for item in path[:-1]:
-                try:
-                    return self._import(item)
-                except ImportError:
-                    pass
+        for item in candidates[:-1]:
+            try:
+                return self._import_one(item)
+            except ImportError:
+                pass
 
-            return self._import(path[-1])
+        return self._import_one(candidates[-1])
 
+    def _import_one(self, path, _MISSING=object()):
         if not isinstance(path, string_types):
             return path
 
-        if '.' not in path:
+        if '.' not in path or '/' in path:
             raise ImportError("Cannot import %r. "
-                              "Required format: [path/][package.]module.class. "
+                              "Required format: [package.]module.class. "
                               "Or choose from %r"
                               % (path, list(self.shortname_map)))
 
-        if '/' in path:
-            # This is dangerous, subject to race conditions, and
-            # may not work properly for things like namespace packages
-            import warnings
-            warnings.warn("Absolute paths are deprecated and will be removed in 1.4."
-                          "Please put the package on sys.path first",
-                          DeprecationWarning)
-            package_path, path = path.rsplit('/', 1)
-            sys.path = [package_path] + sys.path
-        else:
-            package_path = None
 
-        try:
-            module, item = path.rsplit('.', 1)
-            module = importlib.import_module(module)
-            x = getattr(module, item, _NONE)
-            if x is _NONE:
-                raise ImportError('Cannot import %r from %r' % (item, module))
-            return x
-        finally:
-            if package_path:
-                try:
-                    sys.path.remove(package_path)
-                except ValueError: # pragma: no cover
-                    pass
+        module, item = path.rsplit('.', 1)
+        module = importlib.import_module(module)
+        x = getattr(module, item, _MISSING)
+        if x is _MISSING:
+            raise ImportError('Cannot import %r from %r' % (item, module))
+        return x
 
     shortname_map = {}
 
     def validate(self, value):
         if isinstance(value, type):
             return value
-        return self._import([self.shortname_map.get(x, x) for x in value])
+        return self._import_one_of([self.shortname_map.get(x, x) for x in value])
 
     def get_options(self):
         result = {}
         for name, val in self.shortname_map.items():
             try:
-                result[name] = self._import(val)
+                result[name] = self._import_one(val)
             except ImportError as e:
-                import traceback
-                traceback.print_exc()
                 result[name] = e
         return result
+
 
 class BoolSettingMixin(object):
     validate = staticmethod(validate_bool)
     # Don't do string-to-list conversion.
     _convert = staticmethod(convert_str_value_as_is)
+
 
 class IntSettingMixin(object):
     # Don't do string-to-list conversion.
