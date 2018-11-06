@@ -162,7 +162,7 @@ after_test:
 
 artifacts:
   # Archive the generated wheel package in the ci.appveyor.com build report.
-  - path: dist\*
+  - path: dist\*whl
 
 #on_success:
 #  - TODO: upload the content of dist/*.whl to a public wheelhouse
