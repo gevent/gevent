@@ -153,6 +153,7 @@ build_script:
 test_script:
   # Run the project tests
   - "%PYEXE% -c \"import gevent.core; print(gevent.core.loop)\""
+  - "%PYEXE% -c \"import gevent; print(gevent.config.settings['resolver'].get_options())\""
   - "cd src/greentest && %PYEXE% testrunner.py --config known_failures.py --quiet && cd ../.."
 
 after_test:

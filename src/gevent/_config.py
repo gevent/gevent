@@ -266,6 +266,17 @@ class ImportableSetting(object):
             return value
         return self._import([self.shortname_map.get(x, x) for x in value])
 
+    def get_options(self):
+        result = {}
+        for name, val in self.shortname_map.items():
+            try:
+                result[name] = self._import(val)
+            except ImportError as e:
+                import traceback
+                traceback.print_exc()
+                result[name] = e
+        return result
+
 class BoolSettingMixin(object):
     validate = staticmethod(validate_bool)
     # Don't do string-to-list conversion.
