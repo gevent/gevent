@@ -1074,7 +1074,7 @@ def disable_tests_in_source(source, filename):
         # If we do it on a def-by-def basis, we can break syntax
         # if the function is already decorated
         pattern = r'^import .*'
-        replacement = r'from . import patched_tests_setup as _GEVENT_PTS;'
+        replacement = r'from gevent.testing import patched_tests_setup as _GEVENT_PTS;'
         replacement += r'import unittest as _GEVENT_UTS;'
         replacement += r'\g<0>'
         source, n = re.subn(pattern, replacement, source, 1, re.MULTILINE)
