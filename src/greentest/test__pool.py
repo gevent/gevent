@@ -170,7 +170,7 @@ class PoolBasicTests(greentest.TestCase):
         first = p.spawn(gevent.sleep, 1000)
         p.discard(first)
         first.kill()
-        assert not first, first
+        self.assertFalse(first)
         self.assertEqual(len(p), 0)
         self.assertEqual(p._semaphore.counter, 1)
 
@@ -335,7 +335,7 @@ class TestPool(greentest.TestCase): # pylint:disable=too-many-public-methods
         self.assertEqual(get(), 49)
         self.assertTimeoutAlmostEqual(get.elapsed, TIMEOUT1, 1)
         gevent.sleep(0)  # lets the callback run
-        assert result == [49], result
+        self.assertEqual(result, [49])
 
     def test_async_timeout(self):
         res = self.pool.apply_async(sqr, (6, TIMEOUT2 + 0.2))
@@ -391,7 +391,7 @@ class TestPool(greentest.TestCase): # pylint:disable=too-many-public-methods
         gevent.sleep(0.1)
         kill = TimingWrapper(self.pool.kill)
         kill()
-        assert kill.elapsed < 0.5, kill.elapsed
+        self.assertTimeWithinRange(kill.elapsed, 0.0, 0.5)
         result.join()
 
     def sleep(self, x):
