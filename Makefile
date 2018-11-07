@@ -194,7 +194,7 @@ test-py35: $(PY35)
 	PYTHON=python3.5.5 PATH=$(BUILD_RUNTIMES)/versions/python3.5.5/bin:$(PATH) make develop basictest
 
 test-py36: $(PY36)
-	PYTHON=python3.6.7 PATH=$(BUILD_RUNTIMES)/versions/python3.6.7/bin:$(PATH) make develop lint allbackendtest
+	PYTHON=python3.6.7 PATH=$(BUILD_RUNTIMES)/versions/python3.6.7/bin:$(PATH) make develop lint basictest
 
 test-py37: $(PY37)
 	LD_LIBRARY_PATH=$(BUILD_RUNTIMES)/versions/python3.7.1/openssl/lib PYTHON=python3.7.1 PATH=$(BUILD_RUNTIMES)/versions/python3.7.1/bin:$(PATH) make develop leaktest cffibackendtest coverage_combine

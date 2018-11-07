@@ -495,6 +495,20 @@ if RUN_COVERAGE and CFFI_BACKEND:
         'test_signal.InterProcessSignalTests.test_main',
     ]
 
+if PY2:
+    if TRAVIS:
+        disabled_tests += [
+            # When we moved to group:travis_latest and dist:xenial,
+            # this started returning a value (33554432L) != 0; presumably
+            # because of updated SSL library? Only on CPython.
+            'test_ssl.ContextTests.test_options',
+            # When we moved to group:travis_latest and dist:xenial,
+            # one of the values used started *working* when it was expected to fail.
+            # The list of values and systems is long and complex, so
+            # presumably something needs to be updated. Only on PyPy.
+            'test_ssl.ThreadedTests.test_alpn_protocols',
+        ]
+
 def _make_run_with_original(mod_name, func_name):
     @contextlib.contextmanager
     def with_orig():
