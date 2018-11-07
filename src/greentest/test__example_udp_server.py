@@ -1,7 +1,7 @@
 import socket
 
-from greentest import util
-from greentest import main
+from gevent.testing import util
+from gevent.testing import main
 
 
 class Test(util.TestServer):

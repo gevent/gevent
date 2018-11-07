@@ -1,6 +1,6 @@
 import socket
 
-import greentest
+import gevent.testing as greentest
 import gevent
 from gevent import pywsgi
 

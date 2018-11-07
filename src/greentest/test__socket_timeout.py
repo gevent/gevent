@@ -1,6 +1,6 @@
 import gevent
 from gevent import socket
-import greentest
+import gevent.testing as greentest
 
 
 class Test(greentest.TestCase):

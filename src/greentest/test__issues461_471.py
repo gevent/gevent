@@ -29,10 +29,10 @@ else:
     import time
 
     import unittest
-    import greentest
-    from greentest.sysinfo import CFFI_BACKEND
-    from greentest.sysinfo import RUN_COVERAGE
-    from greentest.sysinfo import WIN
+    import gevent.testing as greentest
+    from gevent.testing.sysinfo import CFFI_BACKEND
+    from gevent.testing.sysinfo import RUN_COVERAGE
+    from gevent.testing.sysinfo import WIN
 
     class Test(unittest.TestCase):
 

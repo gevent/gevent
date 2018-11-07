@@ -6,12 +6,12 @@ from os import pipe
 
 import gevent
 from gevent import os
-from greentest import TestCase, main, LARGE_TIMEOUT
+from gevent.testing import TestCase, main, LARGE_TIMEOUT
 from gevent import Greenlet, joinall
 
-from greentest import mock
-from greentest import six
-from greentest.skipping import skipOnLibuvOnPyPyOnWin
+from gevent.testing import mock
+from gevent.testing import six
+from gevent.testing.skipping import skipOnLibuvOnPyPyOnWin
 
 
 class TestOS_tp(TestCase):

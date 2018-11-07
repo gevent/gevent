@@ -9,10 +9,10 @@ from unittest import SkipTest
 import socket
 import ssl
 
-import greentest
-from greentest import DEFAULT_XPC_SOCKET_TIMEOUT
-from greentest import util
-from greentest import params
+import gevent.testing as greentest
+from gevent.testing import DEFAULT_XPC_SOCKET_TIMEOUT
+from gevent.testing import util
+from gevent.testing import params
 
 @greentest.skipOnCI("Timing issues sometimes lead to a connection refused")
 class Test_wsgiserver(util.TestServer):

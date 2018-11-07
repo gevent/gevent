@@ -1,11 +1,11 @@
 import unittest
 
-from greentest.modules import walk_modules
-from greentest import main
-from greentest.sysinfo import NON_APPLICABLE_SUFFIXES
+from gevent.testing.modules import walk_modules
+from gevent.testing import main
+from gevent.testing.sysinfo import NON_APPLICABLE_SUFFIXES
 
 
-from greentest import six
+from gevent.testing import six
 
 
 class TestExec(unittest.TestCase):

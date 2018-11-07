@@ -20,7 +20,7 @@
 # THE SOFTWARE.
 
 import sys
-import greentest
+import gevent.testing as greentest
 import weakref
 import time
 import gc
@@ -30,7 +30,7 @@ from gevent import Timeout
 from gevent import get_hub
 
 
-from greentest.timing import SMALL_TICK as DELAY
+from gevent.testing.timing import SMALL_TICK as DELAY
 
 
 class Error(Exception):

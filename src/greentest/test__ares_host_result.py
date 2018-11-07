@@ -2,7 +2,7 @@ from __future__ import print_function
 
 import pickle
 import sys
-import greentest
+import gevent.testing as greentest
 try:
     from gevent.resolver.cares import ares_host_result
 except ImportError as ex:

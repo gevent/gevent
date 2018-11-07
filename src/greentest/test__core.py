@@ -2,7 +2,7 @@
 from __future__ import absolute_import, print_function, division
 import sys
 import unittest
-import greentest
+import gevent.testing as greentest
 
 from gevent import core
 

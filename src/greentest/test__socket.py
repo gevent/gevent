@@ -7,10 +7,10 @@ import socket
 import traceback
 import time
 import unittest
-import greentest
+import gevent.testing as greentest
 from functools import wraps
-from greentest import six
-from greentest import LARGE_TIMEOUT
+from gevent.testing import six
+from gevent.testing import LARGE_TIMEOUT
 
 # we use threading on purpose so that we can test both regular and gevent sockets with the same code
 from threading import Thread as _Thread

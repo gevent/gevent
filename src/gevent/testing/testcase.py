@@ -26,13 +26,13 @@ from functools import wraps
 
 import gevent
 
-from greentest import sysinfo
-from greentest import params
-from greentest import leakcheck
-from greentest import errorhandler
-from greentest import flaky
+from . import sysinfo
+from . import params
+from . import leakcheck
+from . import errorhandler
+from . import flaky
 
-from greentest.patched_tests_setup import get_switch_expected
+from .patched_tests_setup import get_switch_expected
 
 class TimeAssertMixin(object):
     def assertTimeoutAlmostEqual(self, first, second, places=None, msg=None, delta=None):

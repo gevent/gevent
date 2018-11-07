@@ -19,7 +19,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
-import greentest
+import gevent.testing as greentest
 import gevent
 from gevent import util, socket
 

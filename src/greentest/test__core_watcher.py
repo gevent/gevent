@@ -1,8 +1,8 @@
 from __future__ import absolute_import, print_function
 
-import greentest
+import gevent.testing as greentest
 from gevent import config
-from greentest.sysinfo import CFFI_BACKEND
+from gevent.testing.sysinfo import CFFI_BACKEND
 
 from gevent.core import READ # pylint:disable=no-name-in-module
 from gevent.core import WRITE # pylint:disable=no-name-in-module

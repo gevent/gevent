@@ -1,4 +1,4 @@
-import greentest
+import gevent.testing as greentest
 from copy import copy
 # Comment the line below to see that the standard thread.local is working correct
 from gevent import monkey; monkey.patch_all()

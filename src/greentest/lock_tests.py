@@ -15,7 +15,7 @@ try:
 except ImportError:
     from test import test_support as support
 
-from greentest.testcase import TimeAssertMixin
+from gevent.testing.testcase import TimeAssertMixin
 
 def _wait():
     # A crude wait/yield function not relying on synchronization primitives.

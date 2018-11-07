@@ -5,7 +5,7 @@ import gevent.hub
 assert gevent.hub._get_hub() is None, 'monkey.patch_all() should not init hub'
 
 import gevent
-import greentest
+import gevent.testing as greentest
 import threading
 
 

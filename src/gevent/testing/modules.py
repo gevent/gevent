@@ -23,8 +23,8 @@ import os.path
 
 import gevent
 
-from greentest import sysinfo
-from greentest import six
+from . import sysinfo
+from . import six
 
 OPTIONAL_MODULES = ['resolver_ares']
 

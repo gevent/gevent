@@ -9,8 +9,8 @@ import unittest
 
 import gevent
 from gevent import socket
-from greentest import walk_modules
-from greentest import sysinfo
+from gevent.testing import walk_modules
+from gevent.testing import sysinfo
 
 # Ignore tracebacks: ZeroDivisionError
 

@@ -2,7 +2,7 @@ from gevent import monkey; monkey.patch_all()
 import os
 
 import socket
-import greentest
+import gevent.testing as greentest
 # Be careful not to have TestTCP as a bare attribute in this module,
 # even aliased, to avoid running duplicate tests
 import test__socket

@@ -1,9 +1,9 @@
 from gevent.socket import create_connection, timeout
-import greentest
+import gevent.testing as greentest
 import gevent
 
-from greentest import util
-from greentest import params
+from gevent.testing import util
+from gevent.testing import params
 
 class Test(util.TestServer):
     server = 'echoserver.py'

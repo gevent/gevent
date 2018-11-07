@@ -1,7 +1,7 @@
 import gevent
 from gevent import socket
 from gevent import server
-import greentest
+import gevent.testing as greentest
 
 # XXX also test: send, sendall, recvfrom, recvfrom_into, sendto
 

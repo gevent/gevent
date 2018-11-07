@@ -4,10 +4,10 @@ import gevent.pool
 from gevent.event import Event
 from gevent.queue import Queue
 
-import greentest
-import greentest.timing
+import gevent.testing as greentest
+import gevent.testing.timing
 import random
-from greentest import ExpectedException
+from gevent.testing import ExpectedException
 
 import unittest
 
@@ -492,7 +492,7 @@ class TestPool0(greentest.TestCase):
         self.assertEqual(0, p.wait_available(timeout=0.01))
 
 
-class TestJoinSleep(greentest.timing.AbstractGenericWaitTestCase):
+class TestJoinSleep(gevent.testing.timing.AbstractGenericWaitTestCase):
 
     def wait(self, timeout):
         p = gevent.pool.Pool()
@@ -503,7 +503,7 @@ class TestJoinSleep(greentest.timing.AbstractGenericWaitTestCase):
             g.kill()
 
 
-class TestJoinSleep_raise_error(greentest.timing.AbstractGenericWaitTestCase):
+class TestJoinSleep_raise_error(gevent.testing.timing.AbstractGenericWaitTestCase):
 
     def wait(self, timeout):
         p = gevent.pool.Pool()

@@ -1,5 +1,5 @@
 import gevent
-import greentest
+import gevent.testing as greentest
 from gevent.lock import Semaphore
 
 

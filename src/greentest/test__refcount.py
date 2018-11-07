@@ -40,9 +40,9 @@ else:
 import _socket
 _socket.socket = Socket
 
-import greentest
+import gevent.testing as greentest
 from gevent import monkey; monkey.patch_all()
-from greentest import flaky
+from gevent.testing import flaky
 
 from pprint import pformat
 try:

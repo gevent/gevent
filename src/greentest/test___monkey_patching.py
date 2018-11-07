@@ -5,7 +5,7 @@ import glob
 import atexit
 # subprocess: include in subprocess tests
 
-from greentest import util
+from gevent.testing import util
 
 TIMEOUT = 120
 directory = '%s.%s' % sys.version_info[:2]
@@ -62,7 +62,7 @@ def TESTRUNNER(tests=None):
     if tests and not sys.platform.startswith("win"):
         atexit.register(os.system, 'rm -f */@test*')
 
-    basic_args = [sys.executable, '-u', '-W', 'ignore', '-m' 'greentest.monkey_test']
+    basic_args = [sys.executable, '-u', '-W', 'ignore', '-m' 'gevent.testing.monkey_test']
     for filename in tests:
         if filename in version_tests:
             util.log("Overriding %s from %s with file from %s", filename, directory, full_directory)
@@ -75,7 +75,7 @@ def TESTRUNNER(tests=None):
 
 
 def main():
-    from greentest import testrunner
+    from gevent.testing import testrunner
     return testrunner.run_many(list(TESTRUNNER(sys.argv[1:])))
 
 

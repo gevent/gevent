@@ -18,9 +18,9 @@ print('Running with patch_all(%s): %s' % (','.join('%s=%r' % x for x in kwargs.i
 from gevent import monkey
 monkey.patch_all(**kwargs)
 
-from greentest.sysinfo import RUNNING_ON_APPVEYOR
-from greentest.sysinfo import PY37
-from greentest.patched_tests_setup import disable_tests_in_source
+from .sysinfo import RUNNING_ON_APPVEYOR
+from .sysinfo import PY37
+from .patched_tests_setup import disable_tests_in_source
 try:
     from test import support
 except ImportError:

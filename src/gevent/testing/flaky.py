@@ -25,8 +25,8 @@ import unittest
 
 from gevent.util import dump_stacks
 
-from greentest import sysinfo
-from greentest import six
+from . import sysinfo
+from . import six
 
 class FlakyAssertionError(AssertionError):
     "Re-raised so that we know it's a known-flaky test."

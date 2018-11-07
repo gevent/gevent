@@ -1,11 +1,11 @@
 """Check __all__, __implements__, __extensions__, __imports__ of the modules"""
 from __future__ import print_function
-from greentest import six
+from gevent.testing import six
 import sys
 import unittest
 import types
-from greentest.modules import walk_modules
-from greentest.sysinfo import PLATFORM_SPECIFIC_SUFFIXES
+from gevent.testing.modules import walk_modules
+from gevent.testing.sysinfo import PLATFORM_SPECIFIC_SUFFIXES
 
 from gevent._patcher import MAPPING
 

@@ -5,13 +5,13 @@ import weakref
 import gevent
 from gevent.event import Event, AsyncResult
 
-import greentest
+import gevent.testing as greentest
 
-from greentest.six import xrange
-from greentest.timing import AbstractGenericGetTestCase
-from greentest.timing import AbstractGenericWaitTestCase
-from greentest.timing import SMALL_TICK
-from greentest.timing import SMALL_TICK_MAX_ADJ
+from gevent.testing.six import xrange
+from gevent.testing.timing import AbstractGenericGetTestCase
+from gevent.testing.timing import AbstractGenericWaitTestCase
+from gevent.testing.timing import SMALL_TICK
+from gevent.testing.timing import SMALL_TICK_MAX_ADJ
 
 DELAY = SMALL_TICK + SMALL_TICK_MAX_ADJ
 

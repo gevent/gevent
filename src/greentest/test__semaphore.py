@@ -1,4 +1,4 @@
-import greentest
+import gevent.testing as greentest
 import gevent
 from gevent.lock import Semaphore
 from gevent.thread import allocate_lock

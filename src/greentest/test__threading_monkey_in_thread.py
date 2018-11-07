@@ -3,7 +3,7 @@ from __future__ import print_function
 import sys
 import threading
 from gevent import monkey
-import greentest
+import gevent.testing as greentest
 
 
 class Test(greentest.TestCase):

@@ -7,9 +7,9 @@ import time
 import gc
 import tempfile
 
-import greentest
+import gevent.testing as greentest
 import gevent
-from greentest import mock
+from gevent.testing import mock
 from gevent import subprocess
 
 if not hasattr(subprocess, 'mswindows'):

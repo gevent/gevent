@@ -1,15 +1,15 @@
-from greentest import six
+from gevent.testing import six
 import sys
 import os
 import errno
 from gevent import select, socket
 import gevent.core
-import greentest
-import greentest.timing
+import gevent.testing as greentest
+import gevent.testing.timing
 import unittest
 
 
-class TestSelect(greentest.timing.AbstractGenericWaitTestCase):
+class TestSelect(gevent.testing.timing.AbstractGenericWaitTestCase):
 
     def wait(self, timeout):
         select.select([], [], [], timeout)
@@ -17,7 +17,7 @@ class TestSelect(greentest.timing.AbstractGenericWaitTestCase):
 
 
 @greentest.skipOnWindows("Cant select on files")
-class TestSelectRead(greentest.timing.AbstractGenericWaitTestCase):
+class TestSelectRead(gevent.testing.timing.AbstractGenericWaitTestCase):
 
     def wait(self, timeout):
         r, w = os.pipe()
@@ -49,7 +49,7 @@ class TestSelectRead(greentest.timing.AbstractGenericWaitTestCase):
 
 @unittest.skipUnless(hasattr(select, 'poll'), "Needs poll")
 @greentest.skipOnWindows("Cant poll on files")
-class TestPollRead(greentest.timing.AbstractGenericWaitTestCase):
+class TestPollRead(gevent.testing.timing.AbstractGenericWaitTestCase):
     def wait(self, timeout):
         # On darwin, the read pipe is reported as writable
         # immediately, for some reason. So we carefully register

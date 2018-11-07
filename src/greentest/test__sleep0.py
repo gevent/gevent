@@ -1,5 +1,5 @@
 import gevent
-from greentest.util import alarm
+from gevent.testing.util import alarm
 
 
 alarm(3)

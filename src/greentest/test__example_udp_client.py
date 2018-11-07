@@ -2,8 +2,8 @@ from gevent import monkey; monkey.patch_all(subprocess=True)
 import sys
 from gevent.server import DatagramServer
 from unittest import TestCase
-from greentest.util import run
-from greentest import main
+from gevent.testing.util import run
+from gevent.testing import main
 
 class Test_udp_client(TestCase):
 

@@ -22,8 +22,8 @@
 import re
 import time
 
-import greentest
-import greentest.timing
+import gevent.testing as greentest
+import gevent.testing.timing
 
 import gevent
 from gevent import socket
@@ -78,7 +78,7 @@ class TestExceptionInMainloop(greentest.TestCase):
 
 
 
-class TestSleep(greentest.timing.AbstractGenericWaitTestCase):
+class TestSleep(gevent.testing.timing.AbstractGenericWaitTestCase):
 
     def wait(self, timeout):
         gevent.sleep(timeout)
@@ -87,7 +87,7 @@ class TestSleep(greentest.timing.AbstractGenericWaitTestCase):
         gevent.sleep(0)
 
 
-class TestWaiterGet(greentest.timing.AbstractGenericWaitTestCase):
+class TestWaiterGet(gevent.testing.timing.AbstractGenericWaitTestCase):
 
     def setUp(self):
         super(TestWaiterGet, self).setUp()

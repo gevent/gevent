@@ -1,5 +1,5 @@
 import sys
-import greentest
+import gevent.testing as greentest
 import gevent
 from gevent.hub import get_hub
 

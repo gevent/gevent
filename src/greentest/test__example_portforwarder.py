@@ -8,8 +8,8 @@ from time import sleep
 import gevent
 from gevent.server import StreamServer
 
-import greentest
-from greentest import util
+import gevent.testing as greentest
+from gevent.testing import util
 
 @greentest.skipOnLibuvOnCIOnPyPy("Timing issues sometimes lead to connection refused")
 class Test(util.TestServer):

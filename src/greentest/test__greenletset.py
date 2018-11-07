@@ -1,8 +1,8 @@
 from __future__ import print_function, division, absolute_import
 import time
-import greentest
+import gevent.testing as greentest
 
-from greentest import timing
+from gevent.testing import timing
 import gevent
 from gevent import pool
 from gevent.timeout import Timeout

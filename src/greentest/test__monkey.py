@@ -5,7 +5,7 @@ monkey.patch_all()
 
 import sys
 import unittest
-from greentest.testcase import SubscriberCleanupMixin
+from gevent.testing.testcase import SubscriberCleanupMixin
 
 class TestMonkey(SubscriberCleanupMixin, unittest.TestCase):
 

@@ -21,7 +21,7 @@ from __future__ import absolute_import, print_function, division
 
 import unittest
 
-from greentest import sysinfo
+from . import sysinfo
 
 def _identity(f):
     return f

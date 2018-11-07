@@ -7,8 +7,8 @@ import time
 import gevent
 import gevent.core
 
-import greentest
-import greentest.flaky
+import gevent.testing as greentest
+import gevent.testing.flaky
 
 #pylint: disable=protected-access
 
@@ -83,7 +83,7 @@ class TestCoreStat(greentest.TestCase):
 
         if reaction <= 0.0:
             # Sigh. This is especially true on PyPy on Windows
-            raise greentest.flaky.FlakyTestRaceCondition(
+            raise gevent.testing.flaky.FlakyTestRaceCondition(
                 "Bad timer resolution (on Windows?), test is useless. Start %s, now %s" % (start, now))
 
         self.assertGreaterEqual(

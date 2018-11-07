@@ -22,7 +22,7 @@ from __future__ import absolute_import, print_function, division
 
 from gevent.hub import Hub
 
-from greentest.exception import ExpectedException
+from .exception import ExpectedException
 
 class QuietHub(Hub):
 

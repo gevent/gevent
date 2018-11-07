@@ -1,7 +1,7 @@
 # A greenlet that's killed before it is ever started
 # should never be switched to
 import gevent
-import greentest
+import gevent.testing as greentest
 
 
 class MyException(Exception):

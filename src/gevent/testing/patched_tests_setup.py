@@ -1,4 +1,4 @@
-# pylint:disable=missing-docstring,invalid-name
+# pylint:disable=missing-docstring,invalid-name,too-many-lines
 from __future__ import print_function, absolute_import, division
 
 import collections
@@ -13,26 +13,26 @@ import os
 # import platform
 import re
 
-from greentest.sysinfo import RUNNING_ON_APPVEYOR as APPVEYOR
-from greentest.sysinfo import RUNNING_ON_TRAVIS as TRAVIS
-from greentest.sysinfo import RESOLVER_NOT_SYSTEM as ARES
-from greentest.sysinfo import RUN_COVERAGE
+from .sysinfo import RUNNING_ON_APPVEYOR as APPVEYOR
+from .sysinfo import RUNNING_ON_TRAVIS as TRAVIS
+from .sysinfo import RESOLVER_NOT_SYSTEM as ARES
+from .sysinfo import RUN_COVERAGE
 
 
-from greentest.sysinfo import PYPY
-from greentest.sysinfo import PYPY3
-from greentest.sysinfo import PY3
-from greentest.sysinfo import PY2
-from greentest.sysinfo import PY34
-from greentest.sysinfo import PY35
-from greentest.sysinfo import PY36
-from greentest.sysinfo import PY37
+from .sysinfo import PYPY
+from .sysinfo import PYPY3
+from .sysinfo import PY3
+from .sysinfo import PY2
+from .sysinfo import PY34
+from .sysinfo import PY35
+from .sysinfo import PY36
+from .sysinfo import PY37
 
-from greentest.sysinfo import WIN
-from greentest.sysinfo import OSX
+from .sysinfo import WIN
+from .sysinfo import OSX
 
-from greentest.sysinfo import LIBUV
-from greentest.sysinfo import CFFI_BACKEND
+from .sysinfo import LIBUV
+from .sysinfo import CFFI_BACKEND
 
 CPYTHON = not PYPY
 
@@ -1074,7 +1074,7 @@ def disable_tests_in_source(source, filename):
         # If we do it on a def-by-def basis, we can break syntax
         # if the function is already decorated
         pattern = r'^import .*'
-        replacement = r'from greentest import patched_tests_setup as _GEVENT_PTS;'
+        replacement = r'from . import patched_tests_setup as _GEVENT_PTS;'
         replacement += r'import unittest as _GEVENT_UTS;'
         replacement += r'\g<0>'
         source, n = re.subn(pattern, replacement, source, 1, re.MULTILINE)

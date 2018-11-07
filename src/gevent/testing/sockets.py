@@ -19,7 +19,7 @@
 # THE SOFTWARE.
 from __future__ import absolute_import, print_function, division
 
-from greentest.params import DEFAULT_BIND_ADDR_TUPLE
+from .params import DEFAULT_BIND_ADDR_TUPLE
 
 def bind_and_listen(sock, address=DEFAULT_BIND_ADDR_TUPLE, backlog=50, reuse_addr=True):
     from socket import SOL_SOCKET, SO_REUSEADDR, error

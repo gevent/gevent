@@ -1,6 +1,6 @@
 
 import sys
-import greentest
+import gevent.testing as greentest
 try:
     import selectors # Do this before the patch, just to force it
 except ImportError:

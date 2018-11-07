@@ -22,9 +22,9 @@ import time
 
 import gevent
 
-from greentest import sysinfo
-from greentest import leakcheck
-from greentest.testcase import TestCase
+from . import sysinfo
+from . import leakcheck
+from .testcase import TestCase
 
 SMALLEST_RELIABLE_DELAY = 0.001 # 1ms, because of libuv
 

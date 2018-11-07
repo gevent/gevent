@@ -3,7 +3,7 @@ import gevent
 import gevent.core
 from gevent.event import Event
 from time import time
-from greentest.six import xrange
+from gevent.testing.six import xrange
 
 
 SMALL = 0.1
@@ -12,7 +12,7 @@ FUZZY = SMALL / 2
 # setting up signal does not affect join()
 gevent.signal(1, lambda: None)  # wouldn't work on windows
 
-from greentest import EXPECT_POOR_TIMER_RESOLUTION
+from gevent.testing import EXPECT_POOR_TIMER_RESOLUTION
 EXPECT_POOR_TIMER_RESOLUTION = EXPECT_POOR_TIMER_RESOLUTION or hasattr(gevent.core, 'libuv')
 # We observe longer/jittery timeouts running on appveyor or running with libuv
 

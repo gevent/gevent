@@ -43,9 +43,9 @@ import weakref
 
 from wsgiref.validate import validator
 
-import greentest
+import gevent.testing as greentest
 import gevent
-from greentest import PY3, PYPY
+from gevent.testing import PY3, PYPY
 from gevent import socket
 from gevent import pywsgi
 from gevent.pywsgi import Input

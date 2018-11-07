@@ -8,11 +8,11 @@ import unittest
 import gevent
 from gevent.fileobject import FileObject, FileObjectThread
 
-import greentest
-from greentest.sysinfo import PY3
-from greentest.flaky import reraiseFlakyTestRaceConditionLibuv
-from greentest.skipping import skipOnLibuvOnCIOnPyPy
-from greentest.skipping import skipOnWindows
+import gevent.testing as greentest
+from gevent.testing.sysinfo import PY3
+from gevent.testing.flaky import reraiseFlakyTestRaceConditionLibuv
+from gevent.testing.skipping import skipOnLibuvOnCIOnPyPy
+from gevent.testing.skipping import skipOnWindows
 
 try:
     ResourceWarning

@@ -9,7 +9,7 @@ from __future__ import print_function
 import gc
 import unittest
 
-import greentest
+import gevent.testing as greentest
 
 import gevent
 from gevent import util

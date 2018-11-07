@@ -26,7 +26,7 @@ If either operation blocked the whole script would block and timeout.
 from gevent import monkey
 monkey.patch_all()
 
-import greentest
+import gevent.testing as greentest
 
 try:
     import urllib2
@@ -38,7 +38,7 @@ except ImportError:
     from http import server as BaseHTTPServer
 
 import gevent
-from greentest import params
+from gevent.testing import params
 
 
 class TestGreenness(greentest.TestCase):

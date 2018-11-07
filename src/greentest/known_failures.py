@@ -6,17 +6,17 @@ import os
 import sys
 import struct
 
-from greentest.sysinfo import RUNNING_ON_APPVEYOR as APPVEYOR
-from greentest.sysinfo import RUNNING_ON_TRAVIS as TRAVIS
-from greentest.sysinfo import RUN_LEAKCHECKS as LEAKTEST
-from greentest.sysinfo import RUN_COVERAGE as COVERAGE
-from greentest.sysinfo import RESOLVER_NOT_SYSTEM
+from gevent.testing.sysinfo import RUNNING_ON_APPVEYOR as APPVEYOR
+from gevent.testing.sysinfo import RUNNING_ON_TRAVIS as TRAVIS
+from gevent.testing.sysinfo import RUN_LEAKCHECKS as LEAKTEST
+from gevent.testing.sysinfo import RUN_COVERAGE as COVERAGE
+from gevent.testing.sysinfo import RESOLVER_NOT_SYSTEM
 
-from greentest.sysinfo import PYPY
-from greentest.sysinfo import PY3
-from greentest.sysinfo import PY35
+from gevent.testing.sysinfo import PYPY
+from gevent.testing.sysinfo import PY3
+from gevent.testing.sysinfo import PY35
 
-from greentest.sysinfo import LIBUV
+from gevent.testing.sysinfo import LIBUV
 
 IGNORED_TESTS = []
 

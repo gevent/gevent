@@ -5,7 +5,7 @@ import threading
 from gevent import monkey
 monkey.patch_all()
 
-import greentest
+import gevent.testing as greentest
 
 
 class Test(greentest.TestCase):

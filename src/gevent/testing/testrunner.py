@@ -10,16 +10,16 @@ from datetime import timedelta
 
 from multiprocessing.pool import ThreadPool
 from multiprocessing import cpu_count
-from greentest import util
-from greentest.util import log
-from greentest.sysinfo import RUNNING_ON_CI
-from greentest.sysinfo import PYPY
-from greentest.sysinfo import PY3
-from greentest.sysinfo import PY2
-from greentest.sysinfo import RESOLVER_ARES
-from greentest.sysinfo import LIBUV
-from greentest.sysinfo import RUN_LEAKCHECKS
-from greentest import six
+from . import util
+from .util import log
+from .sysinfo import RUNNING_ON_CI
+from .sysinfo import PYPY
+from .sysinfo import PY3
+from .sysinfo import PY2
+from .sysinfo import RESOLVER_ARES
+from .sysinfo import LIBUV
+from .sysinfo import RUN_LEAKCHECKS
+from . import six
 
 # Import this while we're probably single-threaded/single-processed
 # to try to avoid issues with PyPy 5.10.
@@ -113,7 +113,7 @@ if PYPY:
 
 
 def run_many(tests, configured_failing_tests=(), failfast=False, quiet=False):
-    # pylint:disable=too-many-locals
+    # pylint:disable=too-many-locals,too-many-statements
     global NWORKERS
     start = time.time()
     total = 0
@@ -158,8 +158,8 @@ def run_many(tests, configured_failing_tests=(), failfast=False, quiet=False):
                 r = pool.apply_async(run_one, (cmd, ), options or {})
                 results.append(r)
                 return
-            else:
-                time.sleep(0.1)
+
+            time.sleep(0.05)
 
     run_alone = []
 

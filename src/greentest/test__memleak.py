@@ -1,7 +1,7 @@
 import sys
 
 
-from greentest import TestCase, main
+from gevent.testing import TestCase, main
 import gevent
 from gevent.timeout import Timeout
 

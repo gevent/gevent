@@ -1,5 +1,5 @@
 from __future__ import print_function
-import greentest
+import gevent.testing as greentest
 import gevent
 from gevent import socket
 from gevent import backdoor

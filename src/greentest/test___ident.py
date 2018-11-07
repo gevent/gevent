@@ -8,7 +8,7 @@ from __future__ import print_function
 import gc
 
 
-import greentest
+import gevent.testing as greentest
 from gevent._ident import IdentRegistry
 from gevent._compat import PYPY
 

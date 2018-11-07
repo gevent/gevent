@@ -21,7 +21,7 @@
 import re
 import unittest
 
-import greentest
+import gevent.testing as greentest
 import gevent
 
 from gevent import sleep, with_timeout, getcurrent
@@ -29,9 +29,9 @@ from gevent import greenlet
 from gevent.event import AsyncResult
 from gevent.queue import Queue, Channel
 
-from greentest.timing import AbstractGenericWaitTestCase
-from greentest.timing import AbstractGenericGetTestCase
-from greentest import timing
+from gevent.testing.timing import AbstractGenericWaitTestCase
+from gevent.testing.timing import AbstractGenericGetTestCase
+from gevent.testing import timing
 
 DELAY = timing.SMALL_TICK
 greentest.TestCase.error_fatal = False

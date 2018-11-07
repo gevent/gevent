@@ -1,6 +1,6 @@
 from __future__ import print_function
 import signal
-import greentest
+import gevent.testing as greentest
 import gevent
 import pkg_resources
 

@@ -19,16 +19,16 @@
 # THE SOFTWARE.
 
 
-from greentest.sysinfo import PY3
-from greentest.sysinfo import PYPY
-from greentest.sysinfo import WIN
-from greentest.sysinfo import LIBUV
-from greentest.sysinfo import OSX
+from .sysinfo import PY3
+from .sysinfo import PYPY
+from .sysinfo import WIN
+from .sysinfo import LIBUV
+from .sysinfo import OSX
 
-from greentest.sysinfo import RUNNING_ON_TRAVIS
-from greentest.sysinfo import RUNNING_ON_APPVEYOR
-from greentest.sysinfo import EXPECT_POOR_TIMER_RESOLUTION
-from greentest.sysinfo import RESOLVER_ARES
+from .sysinfo import RUNNING_ON_TRAVIS
+from .sysinfo import RUNNING_ON_APPVEYOR
+from .sysinfo import EXPECT_POOR_TIMER_RESOLUTION
+from .sysinfo import RESOLVER_ARES
 
 
 # Travis is slow and overloaded; Appveyor used to be faster, but

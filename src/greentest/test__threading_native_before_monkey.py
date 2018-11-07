@@ -6,7 +6,7 @@
 import threading
 from time import sleep as time_sleep
 
-import greentest
+import gevent.testing as greentest
 
 class NativeThread(threading.Thread):
     do_run = True

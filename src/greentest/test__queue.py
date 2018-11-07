@@ -1,14 +1,14 @@
 import unittest
 
-import greentest
-from greentest import TestCase, main
+import gevent.testing as greentest
+from gevent.testing import TestCase, main
 import gevent
 from gevent.hub import get_hub, LoopExit
 from gevent import util
 from gevent import queue
 from gevent.queue import Empty, Full
 from gevent.event import AsyncResult
-from greentest.timing import AbstractGenericGetTestCase
+from gevent.testing.timing import AbstractGenericGetTestCase
 
 # pylint:disable=too-many-ancestors
 

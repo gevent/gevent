@@ -1,4 +1,4 @@
-import greentest
+import gevent.testing as greentest
 from gevent import socket
 import errno
 import sys

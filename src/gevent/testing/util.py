@@ -1,6 +1,6 @@
 import sys
 import os
-from greentest import six
+from . import six
 import traceback
 import unittest
 import threading

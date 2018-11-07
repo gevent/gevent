@@ -9,7 +9,7 @@ import errno
 import weakref
 
 
-import greentest
+import gevent.testing as greentest
 
 
 dirname = os.path.dirname(os.path.abspath(__file__))
@@ -26,7 +26,7 @@ if PY3:
 fd_types = (int, long)
 WIN = greentest.WIN
 
-from greentest import get_open_files
+from gevent.testing import get_open_files
 try:
     import psutil
 except ImportError:

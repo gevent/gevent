@@ -1,11 +1,11 @@
 from __future__ import print_function
 from gevent import config
 
-import greentest
-from greentest import TestCase
-from greentest import LARGE_TIMEOUT
-from greentest.sysinfo import CFFI_BACKEND
-from greentest.flaky import reraises_flaky_timeout
+import gevent.testing as greentest
+from gevent.testing import TestCase
+from gevent.testing import LARGE_TIMEOUT
+from gevent.testing.sysinfo import CFFI_BACKEND
+from gevent.testing.flaky import reraises_flaky_timeout
 
 
 class Test(TestCase):

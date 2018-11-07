@@ -6,13 +6,13 @@ import random
 import weakref
 import gc
 
-import greentest
+import gevent.testing as greentest
 import gevent.threadpool
 from gevent.threadpool import ThreadPool
 import gevent
 
-from greentest import ExpectedException
-from greentest import PYPY
+from gevent.testing import ExpectedException
+from gevent.testing import PYPY
 
 
 

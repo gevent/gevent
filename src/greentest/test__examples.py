@@ -3,8 +3,8 @@ import os
 import glob
 import time
 
-import greentest
-from greentest import util
+import gevent.testing as greentest
+from gevent.testing import util
 
 
 cwd = '../../examples/'

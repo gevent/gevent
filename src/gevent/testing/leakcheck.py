@@ -68,7 +68,11 @@ class _RefCountChecker(object):
         self.needs_setUp = False
 
     def _ignore_object_p(self, obj):
-        if obj is self or obj in self.__dict__.values() or obj == self._ignore_object_p:
+        if (
+                obj is self
+                or obj in self.__dict__.values()
+                or obj == self._ignore_object_p # pylint:disable=comparison-with-callable
+        ):
             return False
         kind = type(obj)
         if kind in self.IGNORED_TYPES:

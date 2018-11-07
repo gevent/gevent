@@ -1,5 +1,5 @@
 # A greenlet that's killed with an exception should fail.
-import greentest
+import gevent.testing as greentest
 import gevent
 
 

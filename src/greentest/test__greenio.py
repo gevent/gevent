@@ -21,9 +21,9 @@ import sys
 import gevent
 from gevent import socket
 
-from greentest import TestCase, main, tcp_listener
-from greentest import skipOnPyPy
-from greentest import params
+from gevent.testing import TestCase, main, tcp_listener
+from gevent.testing import skipOnPyPy
+from gevent.testing import params
 
 
 

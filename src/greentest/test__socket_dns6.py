@@ -1,11 +1,11 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
-import greentest
+import gevent.testing as greentest
 import socket
 from test__socket_dns import TestCase, add
 
-from greentest.sysinfo import RESOLVER_NOT_SYSTEM
-from greentest.sysinfo import RESOLVER_DNSPYTHON
+from gevent.testing.sysinfo import RESOLVER_NOT_SYSTEM
+from gevent.testing.sysinfo import RESOLVER_DNSPYTHON
 
 if not greentest.RUNNING_ON_CI and not RESOLVER_DNSPYTHON:
 

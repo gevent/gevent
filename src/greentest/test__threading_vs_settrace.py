@@ -3,7 +3,7 @@ import sys
 import subprocess
 import unittest
 from gevent.thread import allocate_lock
-import greentest
+import gevent.testing as greentest
 
 script = """
 from gevent import monkey

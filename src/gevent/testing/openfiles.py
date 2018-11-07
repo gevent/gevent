@@ -23,7 +23,7 @@ import os
 import unittest
 import re
 
-from greentest import sysinfo
+from . import sysinfo
 
 # Linux/OS X/BSD platforms can implement this by calling out to lsof
 
@@ -75,11 +75,11 @@ def default_get_number_open_files():
         # Linux only
         fd_directory = '/proc/%d/fd' % os.getpid()
         return len(os.listdir(fd_directory))
-    else:
-        try:
-            return len(get_open_files(pipes=True)) - 1
-        except (OSError, AssertionError, unittest.SkipTest):
-            return 0
+
+    try:
+        return len(get_open_files(pipes=True)) - 1
+    except (OSError, AssertionError, unittest.SkipTest):
+        return 0
 
 lsof_get_open_files = default_get_open_files
 

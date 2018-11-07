@@ -11,7 +11,7 @@ from gevent.monkey import get_original
 from gevent._compat import thread_mod_name
 from gevent._compat import NativeStrIO
 
-from greentest.skipping import skipOnPyPyOnWindows
+from gevent.testing.skipping import skipOnPyPyOnWindows
 
 from gevent import _monitor as monitor
 from gevent import config as GEVENT_CONFIG

@@ -6,15 +6,15 @@ from gevent import monkey
 
 import os
 import re
-import greentest
+import gevent.testing as greentest
 import unittest
 import socket
 from time import time
 import traceback
 import gevent.socket as gevent_socket
-from greentest.util import log
-from greentest import six
-from greentest.six import xrange
+from gevent.testing.util import log
+from gevent.testing import six
+from gevent.testing.six import xrange
 
 
 resolver = gevent.get_hub().resolver
@@ -23,10 +23,10 @@ log('Resolver: %s', resolver)
 if getattr(resolver, 'pool', None) is not None:
     resolver.pool.size = 1
 
-from greentest.sysinfo import RESOLVER_NOT_SYSTEM
-from greentest.sysinfo import RESOLVER_DNSPYTHON
-from greentest.sysinfo import PY2
-import greentest.timing
+from gevent.testing.sysinfo import RESOLVER_NOT_SYSTEM
+from gevent.testing.sysinfo import RESOLVER_DNSPYTHON
+from gevent.testing.sysinfo import PY2
+import gevent.testing.timing
 
 
 assert gevent_socket.gaierror is socket.gaierror
@@ -574,7 +574,7 @@ add(TestInternational, u'президент.рф', 'russian',
 add(TestInternational, u'президент.рф'.encode('idna'), 'idna')
 
 
-class TestInterrupted_gethostbyname(greentest.timing.AbstractGenericWaitTestCase):
+class TestInterrupted_gethostbyname(gevent.testing.timing.AbstractGenericWaitTestCase):
 
     # There are refs to a Waiter in the C code that don't go
     # away yet; one gc may or may not do it.

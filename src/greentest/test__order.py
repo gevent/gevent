@@ -1,6 +1,6 @@
 import gevent
-import greentest
-from greentest.six import xrange
+import gevent.testing as greentest
+from gevent.testing.six import xrange
 
 
 class appender(object):
