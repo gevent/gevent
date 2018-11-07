@@ -16,8 +16,17 @@ if PY2:
         # We're just about to import ssl anyway so it's fine to import it here, just
         # don't pollute the namespace
         from gevent import _sslgte279 as _source
-    else:
-        from gevent import _ssl2 as _source # pragma: no cover
+    else: # pragma: no cover
+        from gevent import _ssl2 as _source
+        import warnings
+        warnings.warn(
+            "This version of Python has an insecure SSL implementation. "
+            "gevent is no longer tested with it, and support will be removed "
+            "in gevent 1.5. Please use Python 2.7.9 or newer.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        del warnings
 else:
     # Py3
     from gevent import _ssl3 as _source # pragma: no cover
