@@ -153,6 +153,10 @@ disabled_tests = [
     'test_asyncore.BaseTestAPI.test_handle_expt',
     # sends some OOB data and expect it to be detected as such; gevent.select.select does not support that
 
+    # This one likes to check its own filename, but we rewrite
+    # the file to a temp location during patching.
+    'test_asyncore.HelperFunctionTests.test_compact_traceback',
+
     'test_signal.WakeupSignalTests.test_wakeup_fd_early',
     # expects time.sleep() to return prematurely in case of a signal;
     # gevent.sleep() is better than that and does not get interrupted (unless signal handler raises an error)
@@ -1048,6 +1052,7 @@ _wrapped_tests_by_file = _build_test_structure(wrapped_tests)
 
 
 def disable_tests_in_source(source, filename):
+    # Source and filename are both native strings.
 
     if filename.startswith('./'):
         # turn "./test_socket.py" (used for auto-complete) into "test_socket.py"
