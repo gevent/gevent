@@ -6,7 +6,8 @@ import gevent.core
 from gevent.event import Event
 
 from gevent.testing.testcase import TimeAssertMixin
-from gevent.testing.timing import SMALL_TICK
+
+SMALL_TICK = 0.05
 
 # setting up signal does not affect join()
 gevent.signal(1, lambda: None)  # wouldn't work on windows

@@ -64,7 +64,9 @@ class TimeAssertMixin(object):
         start = time()
         yield
         elapsed = time() - start
-        self.assertTimeWithinRange(elapsed, expected - fuzzy, expected + fuzzy)
+        self.assertTrue(
+            expected - fuzzy <= elapsed <= expected + fuzzy,
+            'Expected: %r; elapsed: %r; fuzzy %r' % (expected, elapsed, fuzzy))
 
     def runs_in_no_time(
             self,
