@@ -12,11 +12,11 @@ omit =
     src/gevent/_ssl2.py
     src/gevent/libev/_corecffi_build.py
     src/gevent/libuv/_corecffi_build.py
-	src/gevent/win32util.py
+    src/gevent/win32util.py
     # having concurrency=greenlet means that the Queue class
     # which is used from multiple real threads doesn't
     # properly get covered.
-	src/gevent/_threading.py
+    src/gevent/_threading.py
     test_*
     # local.so sometimes gets included, and it can't be parsed
     # as source, so it fails the whole process.
@@ -43,3 +43,4 @@ omit =
     # as source, so it fails the whole process.
     # coverage 4.5 needs this specified here, 4.4.2 needed it in [run]
     *.so
+    test_*
