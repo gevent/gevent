@@ -112,7 +112,8 @@ travis_test_linters:
 
 coverage_combine:
 	coverage combine . src/gevent/tests/
-	-coveralls --rcfile=src/gevent/tests/.coveragerc
+	coverage report -i
+	-coveralls -v --rcfile=src/gevent/tests/.coveragerc
 
 
 .PHONY: clean doc prospector lint travistest travis
@@ -186,7 +187,7 @@ test-py34: $(PY34)
 	PYTHON=python3.4.8 PATH=$(BUILD_RUNTIMES)/versions/python3.4.8/bin:$(PATH) make develop basictest
 
 test-py35: $(PY35)
-	PYTHON=python3.5.5 PATH=$(BUILD_RUNTIMES)/versions/python3.5.5/bin:$(PATH) make develop basictest
+	PYTHON=python3.5.5 PATH=$(BUILD_RUNTIMES)/versions/python3.5.5/bin:$(PATH) GEVENTTEST_COVERAGE=1 make develop basictest coverage_combine
 
 test-py36: $(PY36)
 	PYTHON=python3.6.7 PATH=$(BUILD_RUNTIMES)/versions/python3.6.7/bin:$(PATH) make develop lint basictest

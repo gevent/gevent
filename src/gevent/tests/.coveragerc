@@ -43,4 +43,4 @@ omit =
     # as source, so it fails the whole process.
     # coverage 4.5 needs this specified here, 4.4.2 needed it in [run]
     *.so
-    test_*
+    /tmp/test_*
