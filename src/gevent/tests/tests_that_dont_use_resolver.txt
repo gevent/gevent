@@ -33,7 +33,7 @@ test__greenletset.py
 test__hub_join.py
 test__hub_join_timeout.py
 # uses socket test__hub.py
-test_issue112.py
+test__issue112.py
 test__joinall.py
 test__local.py
 test__loop_callback.py
@@ -45,7 +45,7 @@ test__os.py
 test__pool.py
 # uses socket test__pywsgi.py
 test__queue.py
-test_queue.py
+test__monkey_queue.py
 # uses socket test__refcount.py
 test__select.py
 test__semaphore.py
@@ -62,7 +62,7 @@ test__signal.py
 test__subprocess_interrupted.py
 test__subprocess.py
 test__systemerror.py
-test_threading_2.py
+test__threading_2.py
 test__threading_patched_local.py
 test__threading_vs_settrace.py
 test__threadpool.py

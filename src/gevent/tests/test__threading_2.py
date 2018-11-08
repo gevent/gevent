@@ -1,5 +1,6 @@
 # testing gevent's Event, Lock, RLock, Semaphore, BoundedSemaphore with standard test_threading
 from __future__ import print_function
+
 from gevent.testing.six import xrange
 import gevent.testing as greentest
 
@@ -29,10 +30,8 @@ setup_4 = '\n'.join('                %s' % line for line in setup_.split('\n'))
 
 
 try:
-    from test import support
     from test.support import verbose
 except ImportError:
-    from test import test_support as support
     from test.test_support import verbose
 import random
 import re
@@ -50,6 +49,11 @@ import lock_tests
 
 # A trivial mutable counter.
 
+def skipDueToHang(cls):
+    return unittest.skipIf(
+        greentest.PYPY3 and greentest.RUNNING_ON_CI,
+        "SKIPPED: Timeout on PyPy3 on Travis"
+    )(cls)
 
 class Counter(object):
     def __init__(self):
@@ -97,7 +101,7 @@ class TestThread(threading.Thread):
                     print('%s is finished. %d tasks are running' % (
                         self.name, self.nrunning.get()))
 
-
+@skipDueToHang
 class ThreadTests(unittest.TestCase):
 
     # Create a bunch of threads, let each do some work, wait until all are
@@ -429,7 +433,7 @@ class ThreadTests(unittest.TestCase):
                               msg=('%d references still around' %
                                    sys.getrefcount(weak_raising_cyclic_object())))
 
-
+@skipDueToHang
 class ThreadJoinOnShutdown(unittest.TestCase):
 
     def _run_and_join(self, script):
@@ -542,6 +546,7 @@ class ThreadJoinOnShutdown(unittest.TestCase):
         self._run_and_join(script)
 
 
+@skipDueToHang
 class ThreadingExceptionTests(unittest.TestCase):
     # A RuntimeError should be raised if Thread.start() is called
     # multiple times.
@@ -565,52 +570,41 @@ class ThreadingExceptionTests(unittest.TestCase):
         self.assertRaises(RuntimeError, setattr, thread_, "daemon", True)
 
 
+@skipDueToHang
 class LockTests(lock_tests.LockTests):
     locktype = staticmethod(threading.Lock)
 
-
+@skipDueToHang
 class RLockTests(lock_tests.RLockTests):
     locktype = staticmethod(threading.RLock)
 
+@skipDueToHang
 class NativeRLockTests(lock_tests.RLockTests):
     # See comments at the top of the file for the difference
     # between this and RLockTests, and why they both matter
     locktype = staticmethod(threading.NativeRLock)
 
+@skipDueToHang
 class EventTests(lock_tests.EventTests):
     eventtype = staticmethod(threading.Event)
 
-
+@skipDueToHang
 class ConditionAsRLockTests(lock_tests.RLockTests):
     # An Condition uses an RLock by default and exports its API.
     locktype = staticmethod(threading.Condition)
 
-
+@skipDueToHang
 class ConditionTests(lock_tests.ConditionTests):
     condtype = staticmethod(threading.Condition)
 
-
+@skipDueToHang
 class SemaphoreTests(lock_tests.SemaphoreTests):
     semtype = staticmethod(threading.Semaphore)
 
-
+@skipDueToHang
 class BoundedSemaphoreTests(lock_tests.BoundedSemaphoreTests):
     semtype = staticmethod(threading.BoundedSemaphore)
 
 
-def main():
-    support.run_unittest(
-        LockTests, RLockTests, EventTests,
-        ConditionAsRLockTests, ConditionTests,
-        SemaphoreTests, BoundedSemaphoreTests,
-        ThreadTests,
-        ThreadJoinOnShutdown,
-        ThreadingExceptionTests,
-        NativeRLockTests,
-    )
-
 if __name__ == "__main__":
-    if greentest.PYPY3 and greentest.RUNNING_ON_CI:
-        print("SKIPPED: Timeout on PyPy3 on Travis")
-    else:
-        greentest.main()
+    greentest.main()

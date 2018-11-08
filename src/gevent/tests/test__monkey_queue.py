@@ -1,6 +1,8 @@
 # Some simple queue module tests, plus some failure conditions
 # to ensure the Queue locks remain stable.
-from gevent import monkey; monkey.patch_all()
+from gevent import monkey
+monkey.patch_all()
+
 from gevent import queue as Queue
 import threading
 import time

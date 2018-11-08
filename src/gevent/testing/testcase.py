@@ -68,7 +68,7 @@ class TimeAssertMixin(object):
 
     def runs_in_no_time(
             self,
-            fuzzy=(0.001 if not sysinfo.EXPECT_POOR_TIMER_RESOLUTION and not sysinfo.LIBUV else 1.0)):
+            fuzzy=(0.01 if not sysinfo.EXPECT_POOR_TIMER_RESOLUTION and not sysinfo.LIBUV else 1.0)):
         return self.runs_in_given_time(0.0, fuzzy)
 
 
