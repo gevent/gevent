@@ -2,7 +2,7 @@ test__all__.py
 #uses socket test__api.py
 test__api_timeout.py
 test__ares_host_result.py
-test_ares_timeout.py  # explicitly uses ares resolver
+test__ares_timeout.py  # explicitly uses ares resolver
 # uses socket test__backdoor.py
 test_close_backend_fd.py
 test__core_async.py
