@@ -138,17 +138,7 @@ cache:
   - '%LOCALAPPDATA%\pip\Cache'
 
 build_script:
-  # Build the compiled extension. First we make an sdist, then
-  # we install from that, to test sdist building issues. Finally we
-  # build a wheel for downloading purposes
-  - "%CMD_IN_ENV% %PYEXE% setup.py sdist --formats=gztar"
-  - ps: "ls dist"
-  # Now install the sdist.
-  # I couldn't get wildcards to work for pip install, so stuff it
-  # into a variable, using python to glob.
-  - "%PYEXE% -c \"import glob; print(glob.glob('dist/*gz')[0])\" > whl.txt"
-  - set /p PYWHL=<whl.txt
-  - "%PYEXE% -m pip install -U --upgrade-strategy=eager %PYWHL%[test,events,dnspython]"
+  - "%PYEXE% -m pip install -U --upgrade-strategy=eager -e .[test,events,dnspython]"
 
 test_script:
   # Run the project tests
