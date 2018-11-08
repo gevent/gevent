@@ -113,7 +113,7 @@ travis_test_linters:
 coverage_combine:
 	coverage combine . src/gevent/tests/
 	coverage report -i
-	-coveralls -v --rcfile=src/gevent/tests/.coveragerc
+	-coveralls --rcfile=src/gevent/tests/.coveragerc
 
 
 .PHONY: clean doc prospector lint travistest travis
