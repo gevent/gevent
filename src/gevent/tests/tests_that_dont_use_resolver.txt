@@ -31,7 +31,7 @@ test__greenlet.py
 test__greenletset.py
 # uses socket test__greenness.py
 test__hub_join.py
-test_hub_join_timeout.py
+test__hub_join_timeout.py
 # uses socket test__hub.py
 test_issue112.py
 test__joinall.py

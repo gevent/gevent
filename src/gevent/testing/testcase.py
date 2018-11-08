@@ -20,7 +20,9 @@
 from __future__ import absolute_import, print_function, division
 
 import sys
+from time import time
 import os.path
+from contextlib import contextmanager
 from unittest import TestCase as BaseTestCase
 from functools import wraps
 
@@ -51,6 +53,23 @@ class TimeAssertMixin(object):
             self.assertLessEqual(time_taken, max_time)
             self.assertGreaterEqual(time_taken, min_time)
 
+    @contextmanager
+    def runs_in_given_time(self, expected, fuzzy=None):
+        if fuzzy is None:
+            if sysinfo.EXPECT_POOR_TIMER_RESOLUTION or sysinfo.LIBUV:
+                # The noted timer jitter issues on appveyor/pypy3
+                fuzzy = expected * 5.0
+            else:
+                fuzzy = expected / 2.0
+        start = time()
+        yield
+        elapsed = time() - start
+        self.assertTimeWithinRange(elapsed, expected - fuzzy, expected + fuzzy)
+
+    def runs_in_no_time(
+            self,
+            fuzzy=(0.001 if not sysinfo.EXPECT_POOR_TIMER_RESOLUTION and not sysinfo.LIBUV else 1.0)):
+        return self.runs_in_given_time(0.0, fuzzy)
 
 
 def _wrap_timeout(timeout, method):
