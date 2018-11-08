@@ -222,7 +222,7 @@ class Test(greentest.TestCase):
     def test_check_output_keyword_error(self):
         try:
             subprocess.check_output([sys.executable, '-c', 'import sys; sys.exit(44)'])
-        except subprocess.CalledProcessError as e:
+        except subprocess.CalledProcessError as e: # pylint:disable=no-member
             self.assertEqual(e.returncode, 44)
         else:
             raise AssertionError('must fail with CalledProcessError')
@@ -282,7 +282,6 @@ class Test(greentest.TestCase):
         # If the file is in universal_newlines mode, we should always get a str when
         # there is no output.
         # https://github.com/gevent/gevent/pull/939
-        kwargs = {'universal_newlines': True}
         self.__test_no_output({'universal_newlines': True}, str)
 
     @greentest.skipIf(sys.version_info[:2] < (3, 6), "Need encoding argument")
@@ -397,11 +396,11 @@ class RunFuncTestCase(greentest.TestCase):
         # call() function with sequence argument
         cp = self.run_python("import sys; sys.exit(47)")
         self.assertEqual(cp.returncode, 47)
-        with self.assertRaises(subprocess.CalledProcessError):
+        with self.assertRaises(subprocess.CalledProcessError): # pylint:disable=no-member
             cp.check_returncode()
 
     def test_check(self):
-        with self.assertRaises(subprocess.CalledProcessError) as c:
+        with self.assertRaises(subprocess.CalledProcessError) as c: # pylint:disable=no-member
             self.run_python("import sys; sys.exit(47)", check=True)
         self.assertEqual(c.exception.returncode, 47)
 

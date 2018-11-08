@@ -1,12 +1,16 @@
 import sys
-
+import unittest
 
 from gevent.testing import TestCase, main
 import gevent
 from gevent.timeout import Timeout
 
-
+@unittest.skipUnless(
+    hasattr(sys, 'gettotalrefcount'),
+    "Needs debug build"
+)
 class TestQueue(TestCase):
+    # pylint:disable=bare-except,no-member
 
     def test(self):
         result = ''
@@ -43,12 +47,10 @@ class TestQueue(TestCase):
 
         result += '%s' % sys.gettotalrefcount()
 
-        a, b, c = result.split()
+        _, b, c = result.split()
         assert b == c, 'total refcount mismatch: %s' % result
 
 
-if not hasattr(sys, 'gettotalrefcount'):
-    del TestQueue
 
 if __name__ == '__main__':
     main()

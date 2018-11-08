@@ -1,6 +1,6 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
-
+# pylint:disable=broad-except
 import gevent
 from gevent import monkey
 
@@ -83,9 +83,9 @@ def run(function, *args):
     return result, delta
 
 
-def log_call(result, time, function, *args):
+def log_call(result, runtime, function, *args):
     log(format_call(function, args))
-    log_fresult(result, time)
+    log_fresult(result, runtime)
 
 
 def compare_relaxed(a, b):
@@ -332,9 +332,11 @@ class TestCase(greentest.TestCase):
         # If we're using the ares resolver, allow the real resolver to generate an
         # error that the ares resolver actually gets an answer to.
 
-        if (RESOLVER_NOT_SYSTEM
-            and isinstance(real_result, errors)
-            and not isinstance(gevent_result, errors)):
+        if (
+                RESOLVER_NOT_SYSTEM
+                and isinstance(real_result, errors)
+                and not isinstance(gevent_result, errors)
+        ):
             return
 
         # From 2.7 on, assertEqual does a better job highlighting the results than we would
@@ -453,7 +455,7 @@ class SanitizedHostsFile(HostsFile):
 # the system's etc hosts?
 class TestEtcHosts(TestCase):
 
-    MAX_HOSTS = os.getenv('GEVENTTEST_MAX_ETC_HOSTS', 10)
+    MAX_HOSTS = int(os.getenv('GEVENTTEST_MAX_ETC_HOSTS', '10'))
 
     @classmethod
     def populate_tests(cls):
@@ -493,7 +495,7 @@ class TestFamily(TestCase):
             cls._result = getattr(socket, 'getaddrinfo')(TestGeventOrg.HOSTNAME, None)
         return cls._result
 
-    def assert_error(self, error, function, *args):
+    def assert_error(self, error, function, *args): # pylint:disable=arguments-differ
         try:
             result = function(*args)
             raise AssertionError('%s: Expected to raise %s, instead returned %r' % (function, error, result))

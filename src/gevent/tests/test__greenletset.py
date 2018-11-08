@@ -142,7 +142,7 @@ class Test(greentest.TestCase):
         def f():
             try:
                 gevent.sleep(1.5)
-            except:
+            except: # pylint:disable=bare-except
                 gevent.sleep(1)
         p1 = GreenletSubclass.spawn(f)
         p2 = GreenletSubclass.spawn(f)

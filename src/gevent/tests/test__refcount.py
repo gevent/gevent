@@ -23,7 +23,7 @@
 are not leaked by the hub.
 """
 from __future__ import print_function
-from _socket import socket
+from _socket import socket as c_socket
 import sys
 if sys.version_info[0] >= 3:
     # Python3 enforces that __weakref__ appears only once,
@@ -32,9 +32,9 @@ if sys.version_info[0] >= 3:
     # (because socket.socket defines __slots__ with __weakref__),
     # so import socket.socket before that can happen.
     __import__('socket')
-    Socket = socket
+    Socket = c_socket
 else:
-    class Socket(socket):
+    class Socket(c_socket):
         "Something we can have a weakref to"
 
 import _socket
@@ -117,7 +117,7 @@ def run_interaction(run_client):
         # strong refs to the socket still around.
         try:
             sleep(0.1 + SOCKET_TIMEOUT)
-        except Exception:
+        except Exception: # pylint:disable=broad-except
             pass
 
     return w
@@ -139,8 +139,9 @@ def run_and_check(run_client):
 
 
 @greentest.skipOnCI("Often fail with timeouts or force closed connections; not sure why.")
-@greentest.skipIf(greentest.RUN_LEAKCHECKS and greentest.PY3,
-                  "Often fail with force closed connections; not sure why. "
+@greentest.skipIf(
+    greentest.RUN_LEAKCHECKS and greentest.PY3,
+    "Often fail with force closed connections; not sure why. "
 )
 class Test(greentest.TestCase):
 

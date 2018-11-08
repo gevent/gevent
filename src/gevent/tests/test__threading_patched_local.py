@@ -1,6 +1,7 @@
 from gevent import monkey; monkey.patch_all()
 import threading
 
+
 localdata = threading.local()
 localdata.x = "hello"
 assert localdata.x == 'hello'
@@ -9,7 +10,7 @@ success = []
 
 def func():
     try:
-        localdata.x
+        getattr(localdata, 'x')
         raise AssertionError('localdata.x must raise AttributeError')
     except AttributeError:
         pass

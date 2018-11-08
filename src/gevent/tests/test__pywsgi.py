@@ -611,10 +611,12 @@ class TestChunkedPost(TestCase):
         if env['PATH_INFO'] == '/a':
             data = env['wsgi.input'].read(6)
             return [data]
-        elif env['PATH_INFO'] == '/b':
+
+        if env['PATH_INFO'] == '/b':
             lines = [x for x in iter(lambda: env['wsgi.input'].read(6), b'')]
             return lines
-        elif env['PATH_INFO'] == '/c':
+
+        if env['PATH_INFO'] == '/c':
             return [x for x in iter(lambda: env['wsgi.input'].read(1), b'')]
 
     def test_014_chunked_post(self):

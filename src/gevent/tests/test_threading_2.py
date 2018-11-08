@@ -231,6 +231,9 @@ class ThreadTests(unittest.TestCase):
         worker_saw_exception = threading.Event()
 
         class Worker(threading.Thread):
+            id = None
+            finished = False
+
             def run(self):
                 self.id = thread.get_ident()
                 self.finished = False
@@ -278,7 +281,7 @@ class ThreadTests(unittest.TestCase):
 
     def test_limbo_cleanup(self):
         # Issue 7481: Failure to start thread should cleanup the limbo map.
-        def fail_new_thread(*args):
+        def fail_new_thread(*_args):
             raise thread.error()
         _start_new_thread = threading._start_new_thread
         threading._start_new_thread = fail_new_thread
@@ -406,7 +409,7 @@ class ThreadTests(unittest.TestCase):
                                                    kwargs={'yet_another': self})
                     self.thread.start()
 
-                def _run(self, other_ref, yet_another):
+                def _run(self, _other_ref, _yet_another):
                     if self.should_raise:
                         raise SystemExit
 
@@ -542,23 +545,24 @@ class ThreadJoinOnShutdown(unittest.TestCase):
 class ThreadingExceptionTests(unittest.TestCase):
     # A RuntimeError should be raised if Thread.start() is called
     # multiple times.
+    # pylint:disable=bad-thread-instantiation
     def test_start_thread_again(self):
-        thread = threading.Thread()
-        thread.start()
-        self.assertRaises(RuntimeError, thread.start)
+        thread_ = threading.Thread()
+        thread_.start()
+        self.assertRaises(RuntimeError, thread_.start)
 
     def test_joining_current_thread(self):
         current_thread = threading.current_thread()
         self.assertRaises(RuntimeError, current_thread.join)
 
     def test_joining_inactive_thread(self):
-        thread = threading.Thread()
-        self.assertRaises(RuntimeError, thread.join)
+        thread_ = threading.Thread()
+        self.assertRaises(RuntimeError, thread_.join)
 
     def test_daemonize_active_thread(self):
-        thread = threading.Thread()
-        thread.start()
-        self.assertRaises(RuntimeError, setattr, thread, "daemon", True)
+        thread_ = threading.Thread()
+        thread_.start()
+        self.assertRaises(RuntimeError, setattr, thread_, "daemon", True)
 
 
 class LockTests(lock_tests.LockTests):

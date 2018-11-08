@@ -14,7 +14,7 @@ from gevent.server import StreamServer
 
 class SimpleStreamServer(StreamServer):
 
-    def handle(self, client_socket, _address):
+    def handle(self, client_socket, _address): # pylint:disable=method-hidden
         fd = client_socket.makefile()
         try:
             request_line = fd.readline()
@@ -487,7 +487,7 @@ class TestSSLGetCertificate(TestCase):
         self.init_server()
 
         server_host, server_port, _family = self.get_server_host_port_family()
-        ssl.get_server_certificate((server_host, server_port))
+        ssl.get_server_certificate((server_host, server_port)) # pylint:disable=no-member
 
 
     def test_wrap_socket_and_handle_wrap_failure(self):

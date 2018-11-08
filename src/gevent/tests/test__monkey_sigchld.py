@@ -11,7 +11,7 @@ pid = None
 awaiting_child = []
 
 
-def handle_sigchld(*args):
+def handle_sigchld(*_args):
     # Make sure we can do a blocking operation
     gevent.sleep()
     # Signal completion

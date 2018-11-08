@@ -94,7 +94,7 @@ class TestTimerResolution(Test):
     # On CI, with *all* backends, sometimes we get timer values of
     # 0.02 or higher.
     @reraises_flaky_timeout(AssertionError)
-    def test_resolution(self):
+    def test_resolution(self): # pylint:disable=too-many-locals
         # Make sure that having an active IO watcher
         # doesn't badly throw off our timer resolution.
         # (This was a specific problem with libuv)

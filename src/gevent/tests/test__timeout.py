@@ -89,7 +89,7 @@ class Test(greentest.TestCase):
         except TypeError as ex:
             self.assertTrue(greentest.PY3, "Py3 raises a TypeError for non-BaseExceptions")
             self.assert_type_err(ex)
-        except:
+        except: # pylint:disable=bare-except
             self.assertTrue(greentest.PY2, "Old style classes can only be raised on Py2")
             t = sys.exc_info()[0]
             self.assertEqual(t, OldStyle)
@@ -103,7 +103,7 @@ class Test(greentest.TestCase):
         except TypeError as ex:
             self.assertTrue(greentest.PY3, "Py3 raises a TypeError for non-BaseExceptions")
             self.assert_type_err(ex)
-        except:
+        except: # pylint:disable=bare-except
             self.assertTrue(greentest.PY2, "Old style classes can only be raised on Py2")
             t = sys.exc_info()[0]
             self.assertEqual(t, OldStyle)

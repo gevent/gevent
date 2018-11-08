@@ -6,7 +6,7 @@ import pkg_resources
 
 try:
     cffi_version = pkg_resources.get_distribution('cffi').parsed_version
-except Exception:
+except Exception: # pylint:disable=broad-except
     # No cffi installed. Shouldn't happen to gevent standard tests,
     # but maybe some downstream distributor removed it.
     cffi_version = None
@@ -50,7 +50,7 @@ if hasattr(signal, 'SIGALRM'):
                 except Expected as ex:
                     assert str(ex) == 'TestSignal', ex
             finally:
-                sig.cancel()
+                sig.cancel() # pylint:disable=no-member
 
 
         @greentest.skipIf((greentest.PY3

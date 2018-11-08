@@ -36,10 +36,10 @@ class Test(greentest.TestCase):
             try:
                 state.append('start')
                 gevent.sleep(DELAY * 3.0)
-            except:
+            except: # pylint:disable=bare-except
                 state.append('except')
                 # catching GreenletExit
-                pass
+
             state.append('finished')
 
         g = gevent.spawn(test)
@@ -68,7 +68,9 @@ class Test(greentest.TestCase):
         def _test_wait_read_invalid_switch(self, sleep):
             sock1, sock2 = socket.socketpair()
             try:
-                p = gevent.spawn(util.wrap_errors(AssertionError, socket.wait_read), sock1.fileno())
+                p = gevent.spawn(util.wrap_errors(AssertionError,
+                                                  socket.wait_read), # pylint:disable=no-member
+                                 sock1.fileno())
                 gevent.get_hub().loop.run_callback(switch_None, p)
                 if sleep is not None:
                     gevent.sleep(sleep)

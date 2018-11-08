@@ -16,12 +16,12 @@ import sys
 import signal
 import subprocess
 
-def _waitpid(pid):
+def _waitpid(p):
     try:
-        _, stat = os.waitpid(pid, 0)
+        _, stat = os.waitpid(p, 0)
     except OSError:
         # Interrupted system call
-        _, stat = os.waitpid(pid, 0)
+        _, stat = os.waitpid(p, 0)
     assert stat == 0, stat
 
 if hasattr(signal, 'SIGCHLD'):

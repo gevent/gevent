@@ -133,7 +133,7 @@ class Test(unittest.TestCase):
             if hasattr(self.stdlib_module, name):
                 raise AssertionError("'%r' is not an extension, it is found in %r" % (name, self.stdlib_module))
 
-    def check_completeness(self):
+    def check_completeness(self): # pylint:disable=too-many-branches
         """Check that __all__ (or dir()) of the corresponsing stdlib is a subset of __all__ of this module"""
         missed = []
         for name in self.stdlib_all:

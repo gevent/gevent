@@ -23,7 +23,7 @@ def main():
 
     workers = [gevent.spawn(worker, i) for i in range(3)]
     workers.append(done_worker)
-    for g in gevent.iwait(workers):
+    for _ in gevent.iwait(workers):
         finished += 1
         # Simulate doing something that causes greenlets to switch;
         # a non-zero timeout is crucial

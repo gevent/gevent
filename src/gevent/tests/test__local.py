@@ -160,7 +160,7 @@ class TestGeventLocal(greentest.TestCase):
         self.assertEqual(a.initialized, 2)
 
         # The slot overrides dict values
-        a.__dict__['initialized'] = 42
+        a.__dict__['initialized'] = 42 # pylint:disable=unsupported-assignment-operation
         self.assertEqual(a.initialized, 2)
 
         # Deleting the slot deletes the slot, but not the dict

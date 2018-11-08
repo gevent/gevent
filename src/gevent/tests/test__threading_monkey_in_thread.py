@@ -35,7 +35,7 @@ class Test(greentest.TestCase):
         thread.start()
         try:
             thread.join()
-        except:
+        except: # pylint:disable=bare-except
             # XXX: This can raise LoopExit in some cases.
             greentest.reraiseFlakyTestRaceCondition()
 

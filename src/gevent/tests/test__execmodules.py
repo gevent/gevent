@@ -14,7 +14,7 @@ class TestExec(unittest.TestCase):
 
 def make_exec_test(path, module):
 
-    def test(self):
+    def test(_):
         #sys.stderr.write('%s %s\n' % (module, path))
         with open(path, 'rb') as f:
             src = f.read()
@@ -24,18 +24,20 @@ def make_exec_test(path, module):
     test.__name__ = name
     setattr(TestExec, name, test)
 
+def make_all_tests():
+    for path, module in walk_modules():
+        ignored = False
+        for x in NON_APPLICABLE_SUFFIXES:
+            if module.endswith(x):
+                ignored = True
+                break
+        if ignored:
+            continue
 
-for path, module in walk_modules():
-    ignored = False
-    for x in NON_APPLICABLE_SUFFIXES:
-        if module.endswith(x):
-            ignored = True
-            break
-    if ignored:
-        continue
+        make_exec_test(path, module)
 
-    make_exec_test(path, module)
 
+make_all_tests()
 
 if __name__ == '__main__':
     main()

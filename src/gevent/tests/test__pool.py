@@ -78,7 +78,7 @@ class TestCoroutinePool(unittest.TestCase):
             timer_fired.append(True)
 
         def some_work():
-            gevent.timer(0, fire_timer)
+            gevent.timer(0, fire_timer) # pylint:disable=no-member
 
         pool = self.klass(2)
         pool.apply(some_work)

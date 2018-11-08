@@ -16,7 +16,7 @@ def _inner_lock(lock):
 
 def checkLocks(kind, ignore_none=True):
     handlers = logging._handlerList
-    assert len(handlers) > 0
+    assert handlers
 
     for weakref in handlers:
         # In py26, these are actual handlers, not weakrefs

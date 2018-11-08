@@ -320,7 +320,7 @@ class TestTCP(greentest.TestCase):
         # Issue 944
         # If we have SOCK_CLOEXEC or similar, we shouldn't be passing
         # them through to the getaddrinfo call that connect() makes
-        SOCK_CLOEXEC = socket.SOCK_CLOEXEC
+        SOCK_CLOEXEC = socket.SOCK_CLOEXEC # pylint:disable=no-member
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM | SOCK_CLOEXEC)
 
         def accept_once():
@@ -421,7 +421,7 @@ class TestFunctions(greentest.TestCase):
                 gevent.sleep(10)
 
         with self.assertRaises(gevent.socket.timeout):
-            gevent.socket.wait(io(), timeout=0.01)
+            gevent.socket.wait(io(), timeout=0.01) # pylint:disable=no-member
 
 
     def test_signatures(self):

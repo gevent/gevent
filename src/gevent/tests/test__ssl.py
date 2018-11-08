@@ -28,7 +28,7 @@ class TestSSL(test__socket.TestTCP):
         self._close_on_teardown(raw_listener)
         return listener
 
-    def create_connection(self, *args, **kwargs):
+    def create_connection(self, *args, **kwargs): # pylint:disable=arguments-differ
         return ssl.wrap_socket(super(TestSSL, self).create_connection(*args, **kwargs))
 
     # The SSL library can take a long time to buffer the large amount of data we're trying

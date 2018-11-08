@@ -1,6 +1,7 @@
 """
 Various tests for synchronization primitives.
 """
+# pylint:disable=no-member,abstract-method
 import sys
 import time
 try:
@@ -131,7 +132,7 @@ class BaseLockTests(BaseTestCase):
         def _with(err=None):
             with lock:
                 if err is not None:
-                    raise err
+                    raise err # pylint:disable=raising-bad-type
         _with()
         # Check the lock is unacquired
         Bunch(f, 1).wait_for_finished()
@@ -153,7 +154,7 @@ class BaseLockTests(BaseTestCase):
         self.assertEqual(n, len(threading.enumerate()))
 
 
-class LockTests(BaseLockTests):
+class LockTests(BaseLockTests): # pylint:disable=abstract-method
     """
     Tests for non-recursive, weak locks
     (which can be acquired and released from different threads).
@@ -168,7 +169,7 @@ class LockTests(BaseLockTests):
             lock.acquire()
             phase.append(None)
         start_new_thread(f, ())
-        while len(phase) == 0:
+        while not phase:
             _wait()
         _wait()
         self.assertEqual(len(phase), 1)
@@ -436,9 +437,10 @@ class BaseSemaphoreTests(BaseTestCase):
         raise NotImplementedError()
 
     def test_constructor(self):
-        self.assertRaises(ValueError, self.semtype, value = -1)
+        self.assertRaises(ValueError, self.semtype, value=-1)
         # Py3 doesn't have sys.maxint
-        self.assertRaises(ValueError, self.semtype, value = -getattr(sys, 'maxint', getattr(sys, 'maxsize', None)))
+        self.assertRaises(ValueError, self.semtype,
+                          value=-getattr(sys, 'maxint', getattr(sys, 'maxsize', None)))
 
     def test_acquire(self):
         sem = self.semtype(1)
@@ -509,7 +511,7 @@ class BaseSemaphoreTests(BaseTestCase):
         # There can be a thread switch between acquiring the semaphore and
         # appending the result, therefore results will not necessarily be
         # ordered.
-        self.assertEqual(sorted(results), [False] * 7 + [True] *  3 )
+        self.assertEqual(sorted(results), [False] * 7 + [True] *  3)
 
     def test_default_value(self):
         # The default initial value is 1.
@@ -534,7 +536,7 @@ class BaseSemaphoreTests(BaseTestCase):
                 with sem:
                     self.assertFalse(sem.acquire(False))
                     if err:
-                        raise err
+                        raise err # pylint:disable=raising-bad-type
         _with()
         self.assertTrue(sem.acquire(False))
         sem.release()
@@ -603,7 +605,7 @@ class BarrierTests(BaseTestCase):
         """
         Test that a barrier is passed in lockstep
         """
-        results = [[],[]]
+        results = [[], []]
         def f():
             self.multipass(results, passes)
         self.run_threads(f)
@@ -657,7 +659,6 @@ class BarrierTests(BaseTestCase):
                 results2.append(True)
             except RuntimeError:
                 self.barrier.abort()
-                pass
 
         self.run_threads(f)
         self.assertEqual(len(results1), 0)
@@ -713,7 +714,7 @@ class BarrierTests(BaseTestCase):
                 results2.append(True)
             except RuntimeError:
                 self.barrier.abort()
-                pass
+
             # Synchronize and reset the barrier.  Must synchronize first so
             # that everyone has left it when we reset, and after so that no
             # one enters it before the reset.

@@ -1,17 +1,22 @@
 #!/usr/bin/python
-from gevent import monkey; monkey.patch_all()
-import sys
-import gevent.testing as greentest
+from gevent import monkey
+monkey.patch_all()
+
+import unittest
 try:
     import httplib
 except ImportError:
     from http import client as httplib
 import socket
 
-if not hasattr(socket, 'ssl'):
-    sys.exit(0)
+
+import gevent.testing as greentest
 
 
+@unittest.skipUnless(
+    hasattr(socket, 'ssl'),
+    "Needs socket.ssl"
+)
 class AmazonHTTPSTests(greentest.TestCase):
 
     __timeout__ = 30
@@ -25,7 +30,7 @@ class AmazonHTTPSTests(greentest.TestCase):
     def test_str_and_repr(self):
         conn = socket.socket()
         conn.connect(('sdb.amazonaws.com', 443))
-        ssl_conn = socket.ssl(conn)
+        ssl_conn = socket.ssl(conn) # pylint:disable=no-member
         assert str(ssl_conn)
         assert repr(ssl_conn)
 
