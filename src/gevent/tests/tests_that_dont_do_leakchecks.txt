@@ -3,3 +3,4 @@ test__monkey_ssl_warning.py
 test___monitor.py
 test__monkey_scope.py
 test__ares_timeout.py
+test__close_backend_fd.py

@@ -4,7 +4,7 @@ test__api_timeout.py
 test__ares_host_result.py
 test__ares_timeout.py  # explicitly uses ares resolver
 # uses socket test__backdoor.py
-test_close_backend_fd.py
+test__close_backend_fd.py
 test__core_async.py
 test__core_callback.py
 test__core_loop_run.py
