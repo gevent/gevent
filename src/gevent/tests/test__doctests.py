@@ -1,21 +1,22 @@
 from __future__ import print_function
+
 import doctest
 import functools
 import os
 import re
 import sys
-import traceback
 import unittest
 
 import gevent
 from gevent import socket
 from gevent.testing import walk_modules
 from gevent.testing import sysinfo
+from gevent.testing import util
 
 # Ignore tracebacks: ZeroDivisionError
 
 
-def myfunction(*args, **kwargs):
+def myfunction(*_args, **_kwargs):
     pass
 
 
@@ -44,29 +45,44 @@ if sysinfo.WIN:
         'gevent.subprocess',
     }
 
-if __name__ == '__main__':
+class Modules(object):
+
+    def __init__(self, allowed_modules):
+        self.allowed_modules = allowed_modules
+        self.modules = set()
+
+        for path, module in walk_modules():
+            self.add_module(module, path)
+
+
+    def add_module(self, name, path):
+        if self.allowed_modules and name not in self.allowed_modules:
+            return
+        if name in FORBIDDEN_MODULES:
+            return
+        self.modules.add((name, path))
+
+    def __bool__(self):
+        return bool(self.modules)
+
+    __nonzero__ = __bool__
+
+    def __iter__(self):
+        return iter(self.modules)
+
+
+def main():
     cwd = os.getcwd()
     try:
         allowed_modules = sys.argv[1:]
         sys.path.append('.')
-        base = os.path.dirname(gevent.__file__)
-        print(base)
-        os.chdir('../..')
+        os.chdir(util.find_setup_py_above(__file__))
 
         globs = {'myfunction': myfunction, 'gevent': gevent, 'socket': socket}
 
-        modules = set()
+        modules = Modules(allowed_modules)
 
-        def add_module(name, path):
-            if allowed_modules and name not in allowed_modules:
-                return
-            if name in FORBIDDEN_MODULES:
-                return
-            modules.add((name, path))
-
-        for path, module in walk_modules():
-            add_module(module, path)
-        add_module('setup', 'setup.py')
+        modules.add_module('setup', 'setup.py')
 
         if not modules:
             sys.exit('No modules found matching %s' % ' '.join(allowed_modules))
@@ -88,18 +104,18 @@ if __name__ == '__main__':
             with open(path, 'rb') as f:
                 contents = f.read()
             if re.search(br'^\s*>>> ', contents, re.M):
-                try:
-                    s = doctest.DocTestSuite(m, extraglobs=globs, checker=checker)
-                    test_count = len(s._tests) # pylint: disable=W0212
-                    print('%s (from %s): %s tests' % (m, path, test_count))
-                    suite.addTest(s)
-                    modules_count += 1
-                    tests_count += test_count
-                except Exception:
-                    traceback.print_exc()
-                    sys.stderr.write('Failed to process %s\n\n' % path)
+                s = doctest.DocTestSuite(m, extraglobs=globs, checker=checker)
+                test_count = len(s._tests)
+                print('%s (from %s): %s tests' % (m, path, test_count))
+                suite.addTest(s)
+                modules_count += 1
+                tests_count += test_count
         print('Total: %s tests in %s modules' % (tests_count, modules_count))
+        # TODO: Pass this off to unittest.main()
         runner = unittest.TextTestRunner(verbosity=2)
         runner.run(suite)
     finally:
         os.chdir(cwd)
+
+if __name__ == '__main__':
+    main()

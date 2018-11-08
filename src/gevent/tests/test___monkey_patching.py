@@ -7,12 +7,20 @@ import atexit
 
 from gevent.testing import util
 
+# XXX: Generalize this so other packages can use it.
+setup_py = util.find_setup_py_above(__file__)
+greentest = os.path.join(setup_py, 'src', 'greentest')
+
 TIMEOUT = 120
 directory = '%s.%s' % sys.version_info[:2]
 full_directory = '%s.%s.%s' % sys.version_info[:3]
 if hasattr(sys, 'pypy_version_info'):
     directory += 'pypy'
     full_directory += 'pypy'
+
+directory = os.path.join(greentest, directory)
+full_directory = os.path.join(greentest, full_directory)
+
 version = '%s.%s.%s' % sys.version_info[:3]
 if sys.version_info[3] == 'alpha':
     version += 'a%s' % sys.version_info[4]

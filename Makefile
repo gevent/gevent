@@ -22,7 +22,7 @@ clean:
 	rm -rf src/gevent/libev/*.o src/gevent/libuv/*.o src/gevent/*.o
 	rm -rf src/gevent/__pycache__ src/greentest/__pycache__ src/greentest/greentest/__pycache__ src/gevent/libev/__pycache__
 	rm -rf src/gevent/*.pyc src/greentest/*.pyc src/gevent/libev/*.pyc
-	rm -rf src/greentest/htmlcov src/greentest/.coverage
+	rm -rf htmlcov .coverage
 	rm -rf build
 
 distclean: clean
@@ -57,27 +57,24 @@ test_prelim:
 
 basictest: test_prelim
 	@${PYTHON} scripts/travis.py fold_start basictest "Running basic tests"
-	cd src/greentest && GEVENT_RESOLVER=thread ${PYTHON} testrunner.py --config known_failures.py --quiet
+	GEVENT_RESOLVER=thread ${PYTHON} -mgevent.tests --config known_failures.py --quiet
 	@${PYTHON} scripts/travis.py fold_end basictest
 
 alltest: basictest
 	@${PYTHON} scripts/travis.py fold_start ares "Running c-ares tests"
-	cd src/greentest && GEVENT_RESOLVER=ares ${PYTHON} testrunner.py --config known_failures.py --ignore tests_that_dont_use_resolver.txt --quiet
+	GEVENT_RESOLVER=ares ${PYTHON} -mgevent.tests --config known_failures.py --ignore tests_that_dont_use_resolver.txt --quiet
 	@${PYTHON} scripts/travis.py fold_end ares
 	@${PYTHON} scripts/travis.py fold_start dnspython "Running dnspython tests"
-	cd src/greentest && GEVENT_RESOLVER=dnspython ${PYTHON} testrunner.py --config known_failures.py --ignore tests_that_dont_use_resolver.txt --quiet
+	GEVENT_RESOLVER=dnspython ${PYTHON} -mgevent.tests --config known_failures.py --ignore tests_that_dont_use_resolver.txt --quiet
 	@${PYTHON} scripts/travis.py fold_end dnspython
 # In the past, we included all test files that had a reference to 'subprocess'' somewhere in their
 # text. The monkey-patched stdlib tests were specifically included here.
 # However, we now always also test on AppVeyor (Windows) which only has GEVENT_FILE=thread,
 # so we can save a lot of CI time by reducing the set and excluding the stdlib tests without
-# losing any coverage. See the `threadfiletest` for what command used to run.
+# losing any coverage.
 	@${PYTHON} scripts/travis.py fold_start thread "Running GEVENT_FILE=thread tests"
-	cd src/greentest && GEVENT_FILE=thread ${PYTHON} testrunner.py --config known_failures.py test__*subprocess*.py --quiet
+	cd src/gevent/tests && GEVENT_FILE=thread ${PYTHON} -mgevent.tests --config known_failures.py test__*subprocess*.py --quiet
 	@${PYTHON} scripts/travis.py fold_end thread
-
-threadfiletest:
-	cd src/greentest && GEVENT_FILE=thread ${PYTHON} testrunner.py --config known_failures.py `grep -l subprocess test_*.py` --quiet
 
 allbackendtest:
 	@${PYTHON} scripts/travis.py fold_start default "Testing default backend"
@@ -99,7 +96,7 @@ cffibackendtest:
 
 leaktest: test_prelim
 	@${PYTHON} scripts/travis.py fold_start leaktest "Running leak tests"
-	cd src/greentest && GEVENT_RESOLVER=thread GEVENTTEST_LEAKCHECK=1 ${PYTHON} testrunner.py --config known_failures.py --quiet --ignore tests_that_dont_do_leakchecks.txt
+	GEVENT_RESOLVER=thread GEVENTTEST_LEAKCHECK=1 ${PYTHON} -mgevent.tests --config known_failures.py --quiet --ignore tests_that_dont_do_leakchecks.txt
 	@${PYTHON} scripts/travis.py fold_end leaktest
 	@${PYTHON} scripts/travis.py fold_start default "Testing default backend pure python"
 	PURE_PYTHON=1 GEVENTTEST_COVERAGE=1 make basictest
@@ -114,8 +111,8 @@ travis_test_linters:
 	make cffibackendtest
 
 coverage_combine:
-	coverage combine . src/greentest/
-	-coveralls --rcfile=src/greentest/.coveragerc
+	coverage combine . src/gevent/tests/
+	-coveralls --rcfile=src/gevent/tests/.coveragerc
 
 
 .PHONY: clean doc prospector lint travistest travis

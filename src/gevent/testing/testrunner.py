@@ -235,6 +235,7 @@ def discover(tests=None, ignore_files=None,
             # Thus, be sure to open and compare in binary mode.
             contents = f.read()
         if b'TESTRUNNER' in contents: # test__monkey_patching.py
+            # XXX: Rework this to avoid importing.
             module = __import__(filename.rsplit('.', 1)[0])
             for cmd, options in module.TESTRUNNER():
                 if remove_options(cmd)[-1] in ignore:
@@ -260,10 +261,11 @@ def remove_options(lst):
 def load_list_from_file(filename):
     result = []
     if filename:
-        for x in open(filename):
-            x = x.split('#', 1)[0].strip()
-            if x:
-                result.append(x)
+        with open(filename) as f:
+            for x in f:
+                x = x.split('#', 1)[0].strip()
+                if x:
+                    result.append(x)
     return result
 
 

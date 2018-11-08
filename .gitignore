@@ -35,9 +35,9 @@ Makefile.ext
 MANIFEST
 *_flymake.py
 
-src/greentest/.coverage\.*
-src/greentest/htmlcov
-src/greentest/.coverage
+src/gevent/tests/.coverage\.*
+htmlcov/
+.coverage
 
 doc/_build
 doc/__pycache__

@@ -13,7 +13,7 @@ import gevent.testing as greentest
 
 
 dirname = os.path.dirname(os.path.abspath(__file__))
-certfile = os.path.join(dirname, '2.7/keycert.pem')
+certfile = os.path.join(dirname, '2_7_keycert.pem')
 pid = os.getpid()
 
 PY3 = greentest.PY3

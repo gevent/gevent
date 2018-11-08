@@ -298,14 +298,37 @@ def run(command, **kwargs):
     return RunResult(result, out, name)
 
 
+def find_setup_py_above(a_file):
+    "Return the directory containing setup.py somewhere above *a_file*"
+    root = os.path.dirname(os.path.abspath(a_file))
+    while not os.path.exists(os.path.join(root, 'setup.py')):
+        prev, root = root, os.path.dirname(root)
+        if root == prev:
+            # Let's avoid infinite loops at root
+            raise AssertionError('could not find my setup.py')
+    return root
+
+
 class TestServer(unittest.TestCase):
-    cwd = '../../examples/'
     args = []
     before_delay = 3
     after_delay = 0.5
     popen = None
     server = None # subclasses define this to be the path to the server.py
     start_kwargs = None
+
+    def find_setup_py(self):
+        "Return the directory containing setup.py"
+        return find_setup_py_above(__file__)
+        # XXX: We need to extend this if we want it to be useful
+        # for other packages; our __file__ won't work for them.
+        # We can look at the CWD, and we can look at the __file__ of the
+        # sys.modules[type(self).__module__].
+
+    @property
+    def cwd(self):
+        root = self.find_setup_py()
+        return os.path.join(root, 'examples')
 
     def start(self):
         kwargs = self.start_kwargs or {}
