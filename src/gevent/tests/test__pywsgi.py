@@ -751,7 +751,7 @@ class HttpsTestCase(TestCase):
         import ssl
         raw_sock = self.connect()
         sock = ssl.wrap_socket(raw_sock)
-        fd = sock.makefile(bufsize=1)
+        fd = sock.makefile(bufsize=1) # pylint:disable=unexpected-keyword-arg
         fd.write('%s / HTTP/1.1\r\nHost: localhost\r\n' % method)
         if post_body is not None:
             fd.write('Content-Length: %s\r\n\r\n' % len(post_body))
