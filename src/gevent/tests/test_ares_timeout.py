@@ -1,38 +1,52 @@
 from __future__ import print_function
-import sys
+
 import errno
+import unittest
+
 import gevent
 try:
-    from gevent.resolver_ares import Resolver
+    from gevent.resolver.ares import Resolver
 except ImportError as ex:
-    print(ex)
-    sys.exit(0)
+    Resolver = None
 from gevent import socket
-print(gevent.__file__)
 
-address = ('', 7153)
-listener = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+import gevent.testing as greentest
 
-try:
-    listener.bind(address)
-except socket.error as ex:
-    if ex.errno in (errno.EPERM, errno.EADDRNOTAVAIL) or 'permission denied' in str(ex).lower():
-        sys.stderr.write('This test binds on port a port that was already in use or not allowed.\n')
-        sys.exit(0)
-    raise
+@unittest.skipIf(
+    Resolver is None,
+    "Needs ares resolver"
+)
+class TestTimeout(greentest.TestCase):
+
+    __timeout__ = 30
+
+    address = ('', 7153)
+
+    def test(self):
+        listener = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+
+        try:
+            listener.bind(self.address)
+        except socket.error as ex:
+            if ex.errno in (errno.EPERM, errno.EADDRNOTAVAIL) or 'permission denied' in str(ex).lower():
+                raise unittest.SkipTest(
+                    'This test binds on port a port that was already in use or not allowed.\n'
+                )
+            raise
 
 
-def reader():
-    while True:
-        print(listener.recvfrom(10000))
+        def reader():
+            while True:
+                listener.recvfrom(10000)
 
-gevent.spawn(reader)
+        gevent.spawn(reader)
 
-r = gevent.get_hub().resolver = Resolver(servers=['127.0.0.1'], timeout=0.001, tries=1, udp_port=address[-1])
-try:
-    result = r.gethostbyname('www.google.com')
-except socket.gaierror as ex:
-    if 'ARES_ETIMEOUT' not in str(ex):
-        raise
-else:
-    raise AssertionError('Expected timeout, got %r' % (result, ))
+        r = Resolver(servers=['127.0.0.1'], timeout=0.001, tries=1,
+                     udp_port=self.address[-1])
+
+        with self.assertRaisesRegex(socket.gaierror, "ARES_ETIMEOUT"):
+            r.gethostbyname('www.google.com')
+
+
+if __name__ == '__main__':
+    greentest.main()

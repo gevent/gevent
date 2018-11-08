@@ -2,3 +2,4 @@ test___monkey_patching.py
 test__monkey_ssl_warning.py
 test___monitor.py
 test__monkey_scope.py
+test_ares_timeout.py
