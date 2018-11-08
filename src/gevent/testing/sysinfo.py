@@ -60,10 +60,10 @@ PY35 = None
 PY36 = None
 PY37 = None
 
-NON_APPLICABLE_SUFFIXES = []
+NON_APPLICABLE_SUFFIXES = ()
 if sys.version_info[0] == 3:
     # Python 3
-    NON_APPLICABLE_SUFFIXES.extend(('2', '279'))
+    NON_APPLICABLE_SUFFIXES += ('2', '279')
     PY2 = False
     PY3 = True
     if sys.version_info[1] >= 4:
@@ -79,11 +79,11 @@ elif sys.version_info[0] == 2:
     # Any python 2
     PY3 = False
     PY2 = True
-    NON_APPLICABLE_SUFFIXES.append('3')
+    NON_APPLICABLE_SUFFIXES += ('3',)
     if (sys.version_info[1] < 7
             or (sys.version_info[1] == 7 and sys.version_info[2] < 9)):
         # Python 2, < 2.7.9
-        NON_APPLICABLE_SUFFIXES.append('279')
+        NON_APPLICABLE_SUFFIXES += ('279',)
 
 PYPY3 = PYPY and PY3
 
@@ -96,9 +96,9 @@ PYGTE279 = (
 )
 
 if WIN:
-    NON_APPLICABLE_SUFFIXES.append("posix")
+    NON_APPLICABLE_SUFFIXES += ("posix",)
     # This is intimately tied to FileObjectPosix
-    NON_APPLICABLE_SUFFIXES.append("fileobject2")
+    NON_APPLICABLE_SUFFIXES += ("fileobject2",)
     SHARED_OBJECT_EXTENSION = ".pyd"
 else:
     SHARED_OBJECT_EXTENSION = ".so"
@@ -111,7 +111,7 @@ RUNNING_ON_CI = RUNNING_ON_TRAVIS or RUNNING_ON_APPVEYOR
 if RUNNING_ON_APPVEYOR:
     # We can't exec corecext on appveyor if we haven't run setup.py in
     # 'develop' mode (i.e., we install)
-    NON_APPLICABLE_SUFFIXES.append('corecext')
+    NON_APPLICABLE_SUFFIXES += ('corecext',)
 
 EXPECT_POOR_TIMER_RESOLUTION = (PYPY3
                                 or RUNNING_ON_APPVEYOR

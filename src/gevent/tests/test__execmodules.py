@@ -26,14 +26,8 @@ def make_exec_test(path, module):
 
 def make_all_tests():
     for path, module in walk_modules():
-        ignored = False
-        for x in NON_APPLICABLE_SUFFIXES:
-            if module.endswith(x):
-                ignored = True
-                break
-        if ignored:
+        if module.endswith(NON_APPLICABLE_SUFFIXES):
             continue
-
         make_exec_test(path, module)
 
 
