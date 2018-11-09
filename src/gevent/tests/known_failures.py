@@ -215,7 +215,7 @@ if PYPY:
             # This test, which normally takes 4-5s, sometimes
             # hangs forever after running two tests. I cannot reproduce,
             # it seems highly load dependent. Observed with both libev and libuv.
-            'test_threading_2.py',
+            'test__threading_2.py',
         ]
 
     if PY3 and TRAVIS:

@@ -341,19 +341,26 @@ class TestGeventLocal(greentest.TestCase):
 
         self.assertEqual(count, len(deleted_sentinels))
 
-    @greentest.skipOnPyPy("GC makes this non-deterministic, especially on Windows")
+    @greentest.ignores_leakcheck
     def test_local_dicts_for_greenlet(self):
-        # In fact, only on Windows do we see gc being an issue;
-        # pypy2 5.10 on macOS and Travis don't have a problem.
         import gevent
         from gevent.local import all_local_dicts_for_greenlet
-        x = MyLocal()
-        x.foo = 42
-        del x.sentinel
 
-        results = all_local_dicts_for_greenlet(gevent.getcurrent())
-        self.assertEqual(results,
-                         [((MyLocal, id(x)), {'foo': 42})])
+        class MyGreenlet(gevent.Greenlet):
+            results = None
+            id_x = None
+            def _run(self): # pylint:disable=method-hidden
+                x = local()
+                x.foo = 42
+                self.id_x = id(x)
+                self.results = all_local_dicts_for_greenlet(self)
+
+        g = MyGreenlet()
+        g.start()
+        g.join()
+        self.assertTrue(g.successful, g)
+        self.assertEqual(g.results,
+                         [((local, g.id_x), {'foo': 42})])
 
     def test_local_with_abc(self):
         # an ABC (or generally any non-exact-type) in the MRO doesn't

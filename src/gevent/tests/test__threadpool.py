@@ -428,6 +428,7 @@ class TestMaxsize(TestCase):
 
 class TestSize(TestCase):
 
+    @greentest.reraises_flaky_race_condition()
     def test(self):
         pool = self.pool = self._makeOne(2, increase=False)
         self.assertEqual(pool.size, 0)
