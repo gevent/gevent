@@ -301,7 +301,12 @@ def matches(possibilities, command, include_flaky=True):
     for line in possibilities:
         if not include_flaky and line.startswith('FLAKY '):
             continue
-        if command.endswith(' ' + line.replace('FLAKY ', '')):
+        line = line.replace('FLAKY ', '')
+        # Our configs are still mostly written in terms of file names,
+        # but the non-monkey tests are now using package names.
+        # Strip off '.py' from filenames to see if we match a module.
+        # XXX: This could be much better. Our command needs better structure.
+        if command.endswith(' ' + line) or command.endswith(line.replace(".py", '')):
             return True
     return False
 
