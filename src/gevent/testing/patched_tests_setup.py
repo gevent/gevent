@@ -587,9 +587,11 @@ if WIN:
         'test_ssl.ThreadedTests.test_socketserver',
     ]
 
+    # These are a problem on 3.5; on 3.6+ they wind up getting (accidentally) disabled.
     wrapped_tests.update({
         'test_socket.SendfileUsingSendTest.testWithTimeout': _flaky_socket_timeout,
         'test_socket.SendfileUsingSendTest.testOffset': _flaky_socket_timeout,
+        'test_socket.SendfileUsingSendTest.testRegularFile': _flaky_socket_timeout,
     })
 
 if PYPY:
