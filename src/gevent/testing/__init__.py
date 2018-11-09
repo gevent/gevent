@@ -119,6 +119,7 @@ BaseTestCase = unittest.TestCase
 
 from .flaky import reraiseFlakyTestTimeout
 from .flaky import reraiseFlakyTestRaceCondition
+from .flaky import reraises_flaky_timeout
 
 try:
     from unittest import mock

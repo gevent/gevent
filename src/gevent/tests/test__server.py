@@ -286,6 +286,7 @@ class TestDefaultSpawn(TestCase):
     def test_invalid_callback(self):
         self._test_invalid_callback()
 
+    @greentest.reraises_flaky_timeout(socket.timeout)
     def _test_serve_forever(self):
         g = gevent.spawn(self.server.serve_forever)
         try:

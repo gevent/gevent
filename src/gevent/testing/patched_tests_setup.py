@@ -705,12 +705,7 @@ if PYPY3:
     ]
 
 
-if PYPY and sys.pypy_version_info[:4] in ( # pylint:disable=no-member
-        (5, 8, 0, 'beta'), (5, 9, 0, 'beta'), (5, 10, 1, 'final')):
-    # 3.5 is beta. Hard to say what are real bugs in us vs real bugs in pypy.
-    # For that reason, we pin these patches exactly to the version in use.
-
-
+if PYPY and PY3:
     disabled_tests += [
         # This fails to close all the FDs, at least on CI. On OS X, many of the
         # POSIXProcessTestCase fd tests have issues.
