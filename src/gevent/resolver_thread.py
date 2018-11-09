@@ -7,7 +7,8 @@ import warnings
 warnings.warn(
     "gevent.resolver_thread is deprecated and will be removed in 1.5. "
     "Use gevent.resolver.thread instead.",
-    DeprecationWarning
+    DeprecationWarning,
+    stacklevel=2
 )
 del warnings
 from gevent.resolver.thread import * # pylint:disable=wildcard-import,unused-wildcard-import

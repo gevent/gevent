@@ -49,9 +49,9 @@ RUN_COVERAGE = os.getenv("COVERAGE_PROCESS_START") or os.getenv("GEVENTTEST_COVE
 # Generally, ignore the portions that are only implemented
 # on particular platforms; they generally contain partial
 # implementations completed in different modules.
-PLATFORM_SPECIFIC_SUFFIXES = ['2', '279', '3']
+PLATFORM_SPECIFIC_SUFFIXES = ('2', '279', '3')
 if WIN:
-    PLATFORM_SPECIFIC_SUFFIXES.append('posix')
+    PLATFORM_SPECIFIC_SUFFIXES += ('posix',)
 
 PY2 = None
 PY3 = None

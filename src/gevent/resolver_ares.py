@@ -7,7 +7,8 @@ import warnings
 warnings.warn(
     "gevent.resolver_ares is deprecated and will be removed in 1.5. "
     "Use gevent.resolver.ares instead.",
-    DeprecationWarning
+    DeprecationWarning,
+    stacklevel=2
 )
 del warnings
 from gevent.resolver.ares import * # pylint:disable=wildcard-import,unused-wildcard-import

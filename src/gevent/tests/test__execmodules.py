@@ -1,4 +1,5 @@
 import unittest
+import warnings
 
 from gevent.testing.modules import walk_modules
 from gevent.testing import main
@@ -15,17 +16,18 @@ class TestExec(unittest.TestCase):
 def make_exec_test(path, module):
 
     def test(_):
-        #sys.stderr.write('%s %s\n' % (module, path))
         with open(path, 'rb') as f:
             src = f.read()
-        six.exec_(src, {'__file__': path})
+        with warnings.catch_warnings():
+            warnings.simplefilter('ignore', DeprecationWarning)
+            six.exec_(src, {'__file__': path})
 
     name = "test_" + module.replace(".", "_")
     test.__name__ = name
     setattr(TestExec, name, test)
 
 def make_all_tests():
-    for path, module in walk_modules():
+    for path, module in walk_modules(recursive=True):
         if module.endswith(NON_APPLICABLE_SUFFIXES):
             continue
         make_exec_test(path, module)

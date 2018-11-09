@@ -16,6 +16,8 @@ from gevent.socket import EAI_SERVICE
 from gevent.socket import AF_INET
 from gevent.socket import AI_PASSIVE
 
+# Nothing public here.
+__all__ = []
 
 def _lookup_port(port, socktype):
     # pylint:disable=too-many-branches

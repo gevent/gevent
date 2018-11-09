@@ -19,12 +19,14 @@
 # THE SOFTWARE.
 from __future__ import absolute_import, print_function, division
 
+import importlib
 import os.path
+import warnings
 
 import gevent
 
 from . import sysinfo
-from . import six
+
 
 OPTIONAL_MODULES = ['resolver_ares']
 
@@ -45,6 +47,8 @@ def walk_modules(basedir=None, modpath=None, include_so=False, recursive=False):
         if os.path.isdir(path):
             if not recursive:
                 continue
+            if fn in ['testing', 'tests']:
+                continue
             pkg_init = os.path.join(path, '__init__.py')
             if os.path.exists(pkg_init):
                 yield pkg_init, modpath + fn
@@ -60,7 +64,9 @@ def walk_modules(basedir=None, modpath=None, include_so=False, recursive=False):
                 continue
             if x in OPTIONAL_MODULES:
                 try:
-                    six.exec_("import %s" % x, {})
+                    with warnings.catch_warnings():
+                        warnings.simplefilter('ignore', DeprecationWarning)
+                        importlib.import_module(modpath + x)
                 except ImportError:
                     continue
             yield path, modpath + x

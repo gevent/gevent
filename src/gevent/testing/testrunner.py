@@ -15,10 +15,8 @@ from . import util
 from .util import log
 from .sysinfo import RUNNING_ON_CI
 from .sysinfo import PYPY
-from .sysinfo import PY3
 from .sysinfo import PY2
 from .sysinfo import RESOLVER_ARES
-from .sysinfo import LIBUV
 from .sysinfo import RUN_LEAKCHECKS
 from . import six
 
@@ -45,72 +43,13 @@ DEFAULT_RUN_OPTIONS = {
     'timeout': TIMEOUT
 }
 
-# A mapping from test file basename to a dictionary of
-# options that will be applied on top of the DEFAULT_RUN_OPTIONS.
-TEST_FILE_OPTIONS = {
-
-}
 
 if RUNNING_ON_CI:
     # Too many and we get spurious timeouts
     NWORKERS = 4
 
 
-# tests that don't do well when run on busy box
-RUN_ALONE = [
-    'test__threadpool.py',
-    'test__examples.py',
-]
 
-if RUNNING_ON_CI:
-    RUN_ALONE += [
-        # Partial workaround for the _testcapi issue on PyPy,
-        # but also because signal delivery can sometimes be slow, and this
-        # spawn processes of its own
-        'test_signal.py',
-    ]
-
-    if RUN_LEAKCHECKS and PY3:
-        # On a heavily loaded box, these can all take upwards of 200s
-        RUN_ALONE += [
-            'test__pool.py',
-            'test__pywsgi.py',
-            'test__queue.py',
-        ]
-
-    if PYPY:
-        # This often takes much longer on PyPy on CI.
-        TEST_FILE_OPTIONS['test__threadpool.py'] = {'timeout': 180}
-        if PY3:
-            RUN_ALONE += [
-                # Sometimes shows unexpected timeouts
-                'test_socket.py',
-            ]
-        if LIBUV:
-            RUN_ALONE += [
-                # https://bitbucket.org/pypy/pypy/issues/2769/systemerror-unexpected-internal-exception
-                'test__pywsgi.py',
-            ]
-
-# tests that can't be run when coverage is enabled
-IGNORE_COVERAGE = [
-    # Hangs forever
-    'test__threading_vs_settrace.py',
-    # times out
-    'test_socket.py',
-    # Doesn't get the exceptions it expects
-    'test_selectors.py',
-    # XXX ?
-    'test__issue302monkey.py',
-    "test_subprocess.py",
-]
-
-if PYPY:
-    IGNORE_COVERAGE += [
-        # Tends to timeout
-        'test__refcount.py',
-        'test__greenletset.py'
-    ]
 
 def _package_relative_filename(filename, package):
     if not os.path.isfile(filename) and package:
@@ -125,7 +64,11 @@ def _dir_from_package_name(package):
     return package_dir
 
 
-def run_many(tests, configured_failing_tests=(), failfast=False, quiet=False):
+def run_many(tests,
+             configured_failing_tests=(),
+             failfast=False,
+             quiet=False,
+             configured_run_alone_tests=()):
     # pylint:disable=too-many-locals,too-many-statements
     global NWORKERS
     start = time.time()
@@ -182,7 +125,7 @@ def run_many(tests, configured_failing_tests=(), failfast=False, quiet=False):
             for cmd, options in tests:
                 total += 1
                 options = options or {}
-                if matches(RUN_ALONE, cmd):
+                if matches(configured_run_alone_tests, cmd):
                     run_alone.append((cmd, options))
                 else:
                     spawn(cmd, options)
@@ -212,10 +155,15 @@ def run_many(tests, configured_failing_tests=(), failfast=False, quiet=False):
     report(total, failed, passed, took=time.time() - start,
            configured_failing_tests=configured_failing_tests)
 
-def discover(tests=None, ignore_files=None,
-             ignored=(), coverage=False,
-             package=None):
+def discover(
+        tests=None, ignore_files=None,
+        ignored=(), coverage=False,
+        package=None,
+        configured_ignore_coverage=(),
+        configured_test_options=None,
+):
     # pylint:disable=too-many-locals,too-many-branches
+    configured_test_options = configured_test_options or {}
     olddir = os.getcwd()
     ignore = set(ignored or ())
 
@@ -225,7 +173,7 @@ def discover(tests=None, ignore_files=None,
             ignore.update(set(load_list_from_file(f, package)))
 
     if coverage:
-        ignore.update(IGNORE_COVERAGE)
+        ignore.update(configured_ignore_coverage)
 
     if package:
         package_dir = _dir_from_package_name(package)
@@ -280,7 +228,7 @@ def discover(tests=None, ignore_files=None,
                 cmd.append(filename)
 
             options = DEFAULT_RUN_OPTIONS.copy()
-            options.update(TEST_FILE_OPTIONS.get(filename, {}))
+            options.update(configured_test_options.get(filename, {}))
             to_process.append((cmd, options))
 
     os.chdir(olddir)
@@ -429,6 +377,7 @@ def _setup_environ(debug=False):
 
 
 def main():
+    # pylint:disable=too-many-locals,too-many-statements
     import argparse
     parser = argparse.ArgumentParser()
     parser.add_argument('--ignore')
@@ -445,6 +394,9 @@ def main():
     options = parser.parse_args()
     FAILING_TESTS = []
     IGNORED_TESTS = []
+    RUN_ALONE = []
+    TEST_FILE_OPTIONS = {}
+
     coverage = False
     if options.coverage or os.environ.get("GEVENTTEST_COVERAGE"):
         coverage = True
@@ -471,14 +423,20 @@ def main():
         six.exec_(config_data, config)
         FAILING_TESTS = config['FAILING_TESTS']
         IGNORED_TESTS = config['IGNORED_TESTS']
+        RUN_ALONE = config['RUN_ALONE']
+        TEST_FILE_OPTIONS = config['TEST_FILE_OPTIONS']
+        IGNORE_COVERAGE = config['IGNORE_COVERAGE']
 
 
-
-    tests = discover(options.tests,
-                     ignore_files=options.ignore,
-                     ignored=IGNORED_TESTS,
-                     coverage=coverage,
-                     package=options.package)
+    tests = discover(
+        options.tests,
+        ignore_files=options.ignore,
+        ignored=IGNORED_TESTS,
+        coverage=coverage,
+        package=options.package,
+        configured_ignore_coverage=IGNORE_COVERAGE,
+        configured_test_options=TEST_FILE_OPTIONS,
+    )
     if options.discover:
         for cmd, options in tests:
             print(util.getname(cmd, env=options.get('env'), setenv=options.get('setenv')))
@@ -492,7 +450,13 @@ def main():
             # Put this directory on the path so relative imports work.
             package_dir = _dir_from_package_name(options.package)
             os.environ['PYTHONPATH'] = os.environ.get('PYTHONPATH', "") + os.pathsep + package_dir
-        run_many(tests, configured_failing_tests=FAILING_TESTS, failfast=options.failfast, quiet=options.quiet)
+        run_many(
+            tests,
+            configured_failing_tests=FAILING_TESTS,
+            failfast=options.failfast,
+            quiet=options.quiet,
+            configured_run_alone_tests=RUN_ALONE,
+        )
 
 
 if __name__ == '__main__':

@@ -262,5 +262,71 @@ if COVERAGE:
 FAILING_TESTS = [x.strip() for x in set(FAILING_TESTS) if x.strip()]
 
 
+# A mapping from test file basename to a dictionary of
+# options that will be applied on top of the DEFAULT_RUN_OPTIONS.
+TEST_FILE_OPTIONS = {
+
+}
+
+
+# tests that don't do well when run on busy box
+RUN_ALONE = [
+    'test__threadpool.py',
+    'test__examples.py',
+]
+
+
+
+if APPVEYOR or TRAVIS:
+    RUN_ALONE += [
+        # Partial workaround for the _testcapi issue on PyPy,
+        # but also because signal delivery can sometimes be slow, and this
+        # spawn processes of its own
+        'test_signal.py',
+    ]
+
+    if LEAKTEST and PY3:
+        # On a heavily loaded box, these can all take upwards of 200s
+        RUN_ALONE += [
+            'test__pool.py',
+            'test__pywsgi.py',
+            'test__queue.py',
+        ]
+
+    if PYPY:
+        # This often takes much longer on PyPy on CI.
+        TEST_FILE_OPTIONS['test__threadpool.py'] = {'timeout': 180}
+        TEST_FILE_OPTIONS['test__threading_2.py'] = {'timeout': 180}
+        if PY3:
+            RUN_ALONE += [
+                # Sometimes shows unexpected timeouts
+                'test_socket.py',
+            ]
+        if LIBUV:
+            RUN_ALONE += [
+                # https://bitbucket.org/pypy/pypy/issues/2769/systemerror-unexpected-internal-exception
+                'test__pywsgi.py',
+            ]
+
+# tests that can't be run when coverage is enabled
+IGNORE_COVERAGE = [
+    # Hangs forever
+    'test__threading_vs_settrace.py',
+    # times out
+    'test_socket.py',
+    # Doesn't get the exceptions it expects
+    'test_selectors.py',
+    # XXX ?
+    'test__issue302monkey.py',
+    "test_subprocess.py",
+]
+
+if PYPY:
+    IGNORE_COVERAGE += [
+        # Tends to timeout
+        'test__refcount.py',
+        'test__greenletset.py'
+    ]
+
 if __name__ == '__main__':
     print('known_failures:\n', FAILING_TESTS)

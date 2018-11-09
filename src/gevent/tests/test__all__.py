@@ -1,9 +1,13 @@
 """Check __all__, __implements__, __extensions__, __imports__ of the modules"""
 from __future__ import print_function
-from gevent.testing import six
+
 import sys
 import unittest
 import types
+import importlib
+import warnings
+
+from gevent.testing import six
 from gevent.testing.modules import walk_modules
 from gevent.testing.sysinfo import PLATFORM_SPECIFIC_SUFFIXES
 
@@ -30,7 +34,9 @@ COULD_BE_MISSING = {
     'subprocess': ['_posixsubprocess'],
 }
 
-NO_ALL = [
+# Things without an __all__ should generally be internal implementation
+# helpers
+NO_ALL = {
     'gevent.threading',
     'gevent._util',
     'gevent._compat',
@@ -40,7 +46,8 @@ NO_ALL = [
     'gevent._tblib',
     'gevent._corecffi',
     'gevent._patcher',
-]
+    'gevent._ffi',
+}
 
 ALLOW_IMPLEMENTS = [
     'gevent._queue',
@@ -175,13 +182,13 @@ are missing from %r:
             raise AssertionError(msg)
 
     def _test(self, modname):
-        for x in PLATFORM_SPECIFIC_SUFFIXES:
-            if modname.endswith(x):
-                return
+        if modname.endswith(PLATFORM_SPECIFIC_SUFFIXES):
+            return
 
         self.modname = modname
-        six.exec_("import %s" % modname, {})
-        self.module = sys.modules[modname]
+        with warnings.catch_warnings():
+            warnings.simplefilter('ignore', DeprecationWarning)
+            self.module = importlib.import_module(modname)
 
         self.check_all()
 
@@ -216,14 +223,17 @@ are missing from %r:
 
     path = modname = orig_modname = None
 
-    for path, modname in walk_modules(include_so=True):
+    for path, modname in walk_modules(include_so=False, recursive=True):
         orig_modname = modname
         modname = modname.replace('gevent.', '').split('.')[0]
         if not modname:
             print("WARNING: No such module '%s' at '%s'" % (orig_modname, path),
                   file=sys.stderr)
             continue
-        exec('''def test_%s(self): self._test("gevent.%s")''' % (modname, modname))
+        exec(
+            '''def test_%s(self): self._test("%s")''' % (
+                orig_modname.replace('.', '_').replace('-', '_'), orig_modname)
+        )
     del path, modname, orig_modname
 
 

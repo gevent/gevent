@@ -5,6 +5,10 @@ import sys
 
 from gevent.libev import _corecffi # pylint:disable=no-name-in-module,import-error
 
+# Nothing public here
+__all__ = []
+
+
 ffi = _corecffi.ffi # pylint:disable=no-member
 libev = _corecffi.lib # pylint:disable=no-member
 

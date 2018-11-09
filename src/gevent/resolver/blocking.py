@@ -2,6 +2,10 @@
 
 import _socket
 
+__all__ = [
+    'Resolver',
+]
+
 class Resolver(object):
     """
     A resolver that directly uses the system's resolver functions.
