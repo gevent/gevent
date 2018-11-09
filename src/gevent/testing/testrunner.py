@@ -200,6 +200,11 @@ def run_many(tests, configured_failing_tests=(), failfast=False, quiet=False):
     report(total, failed, passed, took=time.time() - start,
            configured_failing_tests=configured_failing_tests)
 
+def _dir_from_package_name(package):
+    package_mod = importlib.import_module(package)
+    package_dir = os.path.dirname(package_mod.__file__)
+    return package_dir
+
 
 def discover(tests=None, ignore_files=None,
              ignored=(), coverage=False,
@@ -215,12 +220,12 @@ def discover(tests=None, ignore_files=None,
     if coverage:
         ignore.update(IGNORE_COVERAGE)
 
+    if package:
+        package_dir = _dir_from_package_name(package)
+        # We need to glob relative names, our config is based on filenames still
+        os.chdir(package_dir)
+
     if not tests:
-        if package:
-            package_mod = importlib.import_module(package)
-            package_dir = os.path.dirname(package_mod.__file__)
-            # We need to glob relative names, our config is based on filenames still
-            os.chdir(package_dir)
         tests = set(glob.glob('test_*.py')) - set(['test_support.py'])
     else:
         tests = set(tests)
@@ -437,21 +442,27 @@ def main():
     coverage = False
     if options.coverage or os.environ.get("GEVENTTEST_COVERAGE"):
         coverage = True
-        # NOTE: This must be run from the greentest directory
         os.environ['COVERAGE_PROCESS_START'] = os.path.abspath(".coveragerc")
         if PYPY:
             os.environ['COVERAGE_PROCESS_START'] = os.path.abspath(".coveragerc-pypy")
-        os.environ['PYTHONPATH'] = os.path.abspath("coveragesite") + os.pathsep + os.environ.get("PYTHONPATH", "")
+        this_dir = os.path.dirname(__file__)
+        site_dir = os.path.join(this_dir, 'coveragesite')
+        site_dir = os.path.abspath(site_dir)
+        os.environ['PYTHONPATH'] = site_dir + os.pathsep + os.environ.get("PYTHONPATH", "")
         # We change directory often, use an absolute path to keep all the
         # coverage files (which will have distinct suffixes because of parallel=true in .coveragerc
         # in this directory; makes them easier to combine and use with coverage report)
         os.environ['COVERAGE_FILE'] = os.path.abspath(".") + os.sep + ".coverage"
-        print("Enabling coverage to", os.environ['COVERAGE_FILE'])
+        print("Enabling coverage to", os.environ['COVERAGE_FILE'], "with site", site_dir)
 
     _setup_environ(debug=options.debug)
 
     if options.config:
         config = {}
+        if not os.path.isfile(options.config) and options.package:
+            # Ok, try to locate it as a module in the package
+            package_dir = _dir_from_package_name(options.package)
+            options.config = os.path.join(package_dir, options.config)
         with open(options.config) as f:
             config_data = f.read()
         six.exec_(config_data, config)

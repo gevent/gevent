@@ -111,9 +111,9 @@ travis_test_linters:
 	make cffibackendtest
 
 coverage_combine:
-	coverage combine . src/gevent/tests/
+	coverage combine .
 	coverage report -i
-	-coveralls --rcfile=src/gevent/tests/.coveragerc
+	-coveralls
 
 
 .PHONY: clean doc prospector lint travistest travis
