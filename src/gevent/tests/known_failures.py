@@ -85,6 +85,32 @@ if sys.platform == 'win32':
                 # too tight for appveyor. This happens even if Event isn't
                 # monkey-patched
                 'FLAKY test_threading.py',
+
+                # Starting in November 2018, on Python 3.7.0, we observe this test crashing.
+                # I can't reproduce locally.
+                # | C:\Python37-x64\python.exe -u -mgevent.tests.test__greenness
+                #   127.0.0.1 - - [09/Nov/2018 16:34:12] code 501, message Unsupported method ('GET')
+                #   127.0.0.1 - - [09/Nov/2018 16:34:12] "GET / HTTP/1.1" 501 -
+                #   .
+                #   ----------------------------------------------------------------------
+                #   Ran 1 test in 0.031s
+
+                #   OK
+                #   Windows fatal exception: access violation
+
+                #   Current thread 0x000003c8 (most recent call first):
+                #     File "c:\projects\gevent\src\gevent\threadpool.py", line 261 in _worker
+
+                #   Thread 0x00000600 (most recent call first):
+                #     File "c:\projects\gevent\src\gevent\libuv\watcher.py", line 577 in send
+                #     File "c:\projects\gevent\src\gevent\threadpool.py", line 408 in set
+                #     File "c:\projects\gevent\src\gevent\threadpool.py", line 290 in _worker
+
+                #   Thread 0x000007d4 (most recent call first):
+                #     File "C:\Python37-x64\lib\weakref.py", line 356 in remove
+
+                # ! C:\Python37-x64\python.exe -u -mgevent.tests.test__greenness [code 3221225477] [took 1.3s]
+                'FLAKY test__greenness.py',
             ]
 
     if not PY35:

@@ -34,6 +34,8 @@ from .sysinfo import OSX
 from .sysinfo import LIBUV
 from .sysinfo import CFFI_BACKEND
 
+from . import flaky
+
 CPYTHON = not PYPY
 
 # By default, test cases are expected to switch and emit warnings if there was none
@@ -536,6 +538,14 @@ def _gc_at_end():
         gc.collect()
         gc.collect()
 
+@contextlib.contextmanager
+def _flaky_socket_timeout():
+    import socket
+    try:
+        yield
+    except socket.timeout:
+        flaky.reraiseFlakyTestTimeout()
+
 # Map from FQN to a context manager that will be wrapped around
 # that test.
 wrapped_tests = {
@@ -576,6 +586,10 @@ if WIN:
         # Issue with Unix vs DOS newlines in the file vs from the server
         'test_ssl.ThreadedTests.test_socketserver',
     ]
+
+    wrapped_tests.update({
+        'test_socket.SendfileUsingSendTest.testWithTimeout': _flaky_socket_timeout
+    })
 
 if PYPY:
     disabled_tests += [
@@ -1085,9 +1099,10 @@ def disable_tests_in_source(source, filename):
     # so use [ \t]+. Without indentation, test_main, commonly used as the
     # __main__ function at the top level, could get matched. \s matches
     # newlines even in MULTILINE mode so it would still match that.
-
+    my_disabled_testcases = set()
     for test in my_disabled_tests:
         testcase = test.split('.')[-1]
+        my_disabled_testcases.add(testcase)
         # def foo_bar(self)
         # ->
         # @_GEVENT_UTS.skip('Removed by patched_tests_setup')
@@ -1101,6 +1116,10 @@ def disable_tests_in_source(source, filename):
 
     for test in my_wrapped_tests:
         testcase = test.split('.')[-1]
+        if testcase in my_disabled_testcases:
+            print("Not wrapping %s because it is skipped" % (test,))
+            continue
+
         # def foo_bar(self)
         # ->
         # @_GEVENT_PTS._PatchedTest('file.Case.name')

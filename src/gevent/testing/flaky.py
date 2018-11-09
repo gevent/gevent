@@ -96,7 +96,7 @@ if sysinfo.RUNNING_ON_CI or (sysinfo.PYPY and sysinfo.WIN):
         reraiseFlakyTestTimeoutLibuv = reraiseFlakyTestTimeout
 
 
-def reraises_flaky_timeout(exc_kind):
+def reraises_flaky_timeout(exc_kind=AssertionError, _func=reraiseFlakyTestTimeout):
 
     def wrapper(f):
         @functools.wraps(f)
@@ -104,7 +104,10 @@ def reraises_flaky_timeout(exc_kind):
             try:
                 f(*args)
             except exc_kind:
-                reraiseFlakyTestTimeout()
+                _func()
         return m
 
     return wrapper
+
+def reraises_flaky_race_condition(exc_kind=AssertionError):
+    return reraises_flaky_timeout(exc_kind, _func=reraiseFlakyTestRaceCondition)

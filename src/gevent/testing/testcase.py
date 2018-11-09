@@ -37,6 +37,7 @@ from . import flaky
 from .patched_tests_setup import get_switch_expected
 
 class TimeAssertMixin(object):
+    @flaky.reraises_flaky_timeout()
     def assertTimeoutAlmostEqual(self, first, second, places=None, msg=None, delta=None):
         try:
             self.assertAlmostEqual(first, second, places=places, msg=msg, delta=delta)
@@ -64,9 +65,12 @@ class TimeAssertMixin(object):
         start = time()
         yield
         elapsed = time() - start
-        self.assertTrue(
-            expected - fuzzy <= elapsed <= expected + fuzzy,
-            'Expected: %r; elapsed: %r; fuzzy %r' % (expected, elapsed, fuzzy))
+        try:
+            self.assertTrue(
+                expected - fuzzy <= elapsed <= expected + fuzzy,
+                'Expected: %r; elapsed: %r; fuzzy %r' % (expected, elapsed, fuzzy))
+        except AssertionError:
+            flaky.reraiseFlakyTestRaceCondition()
 
     def runs_in_no_time(
             self,

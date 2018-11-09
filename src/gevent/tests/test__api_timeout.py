@@ -31,6 +31,7 @@ from gevent import get_hub
 
 
 from gevent.testing.timing import SMALL_TICK as DELAY
+from gevent.testing import flaky
 
 
 class Error(Exception):
@@ -174,7 +175,7 @@ class Test(greentest.TestCase):
         gc.collect()
         self.assertFalse(err_ref(), err_ref)
 
-
+    @flaky.reraises_flaky_race_condition()
     def test_nested_timeout(self):
         with Timeout(DELAY, False):
             with Timeout(DELAY * 10, False):

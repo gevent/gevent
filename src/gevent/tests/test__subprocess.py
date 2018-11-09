@@ -385,7 +385,7 @@ class TestFDs(unittest.TestCase):
 class RunFuncTestCase(greentest.TestCase):
     # Based on code from python 3.6
 
-    __timeout__ = 6
+    __timeout__ = greentest.LARGE_TIMEOUT
 
     def run_python(self, code, **kwargs):
         """Run Python code in a subprocess using subprocess.run"""
