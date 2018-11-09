@@ -28,7 +28,12 @@ import gevent
 from . import sysinfo
 
 
-OPTIONAL_MODULES = ['resolver_ares']
+OPTIONAL_MODULES = [
+    'gevent.resolver_ares',
+    'gevent.resolver.ares',
+    'gevent.libev',
+    'gevent.libev.watcher',
+]
 
 
 def walk_modules(basedir=None, modpath=None, include_so=False, recursive=False):
@@ -62,14 +67,15 @@ def walk_modules(basedir=None, modpath=None, include_so=False, recursive=False):
             if x in ['__init__', 'core', 'ares', '_util', '_semaphore',
                      'corecffi', '_corecffi', '_corecffi_build']:
                 continue
-            if x in OPTIONAL_MODULES:
+            modname = modpath + x
+            if modname in OPTIONAL_MODULES:
                 try:
                     with warnings.catch_warnings():
                         warnings.simplefilter('ignore', DeprecationWarning)
-                        importlib.import_module(modpath + x)
+                        importlib.import_module(modname)
                 except ImportError:
                     continue
-            yield path, modpath + x
+            yield path, modname
         elif include_so and fn.endswith(sysinfo.SHARED_OBJECT_EXTENSION):
             if '.pypy-' in fn:
                 continue
