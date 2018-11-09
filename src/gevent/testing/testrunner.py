@@ -415,12 +415,7 @@ def _setup_environ(debug=False):
         # Python 3.6
         os.environ['PYTHONMALLOC'] = 'debug'
 
-    if (sys.version_info == (3, 7, 0, 'beta', 2)
-            and (os.environ.get("PYTHONDEVMODE") or os.environ.get('PYTHONMALLOC'))):
-        # See https://twitter.com/ossmkitty/status/970693025130311680
-        # https://bugs.python.org/issue33005
-        os.environ.pop('PYTHONDEVMODE', None)
-        os.environ.pop('PYTHONMALLOC', None)
+
 
 def main():
     import argparse
@@ -485,6 +480,10 @@ def main():
             # XXX: Add a way to force these.
             print("Not running tests on pypy with c-ares; not a supported configuration")
             return
+        if options.package:
+            # Put this directory on the path so relative imports work.
+            package_dir = _dir_from_package_name(options.package)
+            os.environ['PYTHONPATH'] = os.environ.get('PYTHONPATH', "") + os.pathsep + package_dir
         run_many(tests, configured_failing_tests=FAILING_TESTS, failfast=options.failfast, quiet=options.quiet)
 
 

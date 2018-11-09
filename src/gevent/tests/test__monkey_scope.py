@@ -10,6 +10,13 @@ from subprocess import PIPE
 class TestRun(unittest.TestCase):
     maxDiff = None
 
+    def setUp(self):
+        self.cwd = os.getcwd()
+        os.chdir(os.path.dirname(__file__))
+
+    def tearDown(self):
+        os.chdir(self.cwd)
+
     def _run(self, script):
         env = os.environ.copy()
         env['PYTHONWARNINGS'] = 'ignore'
