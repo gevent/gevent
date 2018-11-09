@@ -588,7 +588,8 @@ if WIN:
     ]
 
     wrapped_tests.update({
-        'test_socket.SendfileUsingSendTest.testWithTimeout': _flaky_socket_timeout
+        'test_socket.SendfileUsingSendTest.testWithTimeout': _flaky_socket_timeout,
+        'test_socket.SendfileUsingSendTest.testOffset': _flaky_socket_timeout,
     })
 
 if PYPY:
