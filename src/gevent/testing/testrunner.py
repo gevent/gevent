@@ -6,6 +6,7 @@ import os
 import glob
 import traceback
 import time
+import importlib
 from datetime import timedelta
 
 from multiprocessing.pool import ThreadPool
@@ -201,7 +202,10 @@ def run_many(tests, configured_failing_tests=(), failfast=False, quiet=False):
 
 
 def discover(tests=None, ignore_files=None,
-             ignored=(), coverage=False):
+             ignored=(), coverage=False,
+             package=None):
+    # pylint:disable=too-many-locals,too-many-branches
+    olddir = os.getcwd()
     ignore = set(ignored or ())
     if ignore_files:
         ignore_files = ignore_files.split(',')
@@ -212,6 +216,11 @@ def discover(tests=None, ignore_files=None,
         ignore.update(IGNORE_COVERAGE)
 
     if not tests:
+        if package:
+            package_mod = importlib.import_module(package)
+            package_dir = os.path.dirname(package_mod.__file__)
+            # We need to glob relative names, our config is based on filenames still
+            os.chdir(package_dir)
         tests = set(glob.glob('test_*.py')) - set(['test_support.py'])
     else:
         tests = set(tests)
@@ -228,15 +237,20 @@ def discover(tests=None, ignore_files=None,
 
 
     for filename in tests:
-        with open(filename, 'rb') as f:
+        module_name = os.path.splitext(filename)[0]
+        qualified_name = package + '.' + module_name if package else module_name
+        with open(os.path.abspath(filename), 'rb') as f:
             # Some of the test files (e.g., test__socket_dns) are
             # UTF8 encoded. Depending on the environment, Python 3 may
             # try to decode those as ASCII, which fails with UnicodeDecodeError.
             # Thus, be sure to open and compare in binary mode.
+            # Open the absolute path to make errors more clear,
+            # but we can't store the absolute path, our configuration is based on
+            # relative file names.
             contents = f.read()
         if b'TESTRUNNER' in contents: # test__monkey_patching.py
             # XXX: Rework this to avoid importing.
-            module = __import__(filename.rsplit('.', 1)[0])
+            module = importlib.import_module(qualified_name)
             for cmd, options in module.TESTRUNNER():
                 if remove_options(cmd)[-1] in ignore:
                     continue
@@ -246,11 +260,18 @@ def discover(tests=None, ignore_files=None,
             if PYPY and PY2:
                 # Doesn't seem to be an env var for this
                 cmd.extend(('-X', 'track-resources'))
-            cmd.append(filename)
+            if package:
+                # Using a package is the best way to work with coverage 5
+                # when we specify 'source = <package>'
+                cmd.append('-m' + qualified_name)
+            else:
+                cmd.append(filename)
+
             options = DEFAULT_RUN_OPTIONS.copy()
             options.update(TEST_FILE_OPTIONS.get(filename, {}))
             to_process.append((cmd, options))
 
+    os.chdir(olddir)
     return to_process
 
 
@@ -408,6 +429,7 @@ def main():
     parser.add_argument("--quiet", action="store_true", default=True)
     parser.add_argument("--verbose", action="store_false", dest='quiet')
     parser.add_argument("--debug", action="store_true", default=False)
+    parser.add_argument("--package", default="gevent.tests")
     parser.add_argument('tests', nargs='*')
     options = parser.parse_args()
     FAILING_TESTS = []
@@ -441,7 +463,8 @@ def main():
     tests = discover(options.tests,
                      ignore_files=options.ignore,
                      ignored=IGNORED_TESTS,
-                     coverage=coverage)
+                     coverage=coverage,
+                     package=options.package)
     if options.discover:
         for cmd, options in tests:
             print(util.getname(cmd, env=options.get('env'), setenv=options.get('setenv')))
