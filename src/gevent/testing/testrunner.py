@@ -112,6 +112,18 @@ if PYPY:
         'test__greenletset.py'
     ]
 
+def _package_relative_filename(filename, package):
+    if not os.path.isfile(filename) and package:
+        # Ok, try to locate it as a module in the package
+        package_dir = _dir_from_package_name(package)
+        return os.path.join(package_dir, filename)
+    return filename
+
+def _dir_from_package_name(package):
+    package_mod = importlib.import_module(package)
+    package_dir = os.path.dirname(package_mod.__file__)
+    return package_dir
+
 
 def run_many(tests, configured_failing_tests=(), failfast=False, quiet=False):
     # pylint:disable=too-many-locals,too-many-statements
@@ -200,22 +212,17 @@ def run_many(tests, configured_failing_tests=(), failfast=False, quiet=False):
     report(total, failed, passed, took=time.time() - start,
            configured_failing_tests=configured_failing_tests)
 
-def _dir_from_package_name(package):
-    package_mod = importlib.import_module(package)
-    package_dir = os.path.dirname(package_mod.__file__)
-    return package_dir
-
-
 def discover(tests=None, ignore_files=None,
              ignored=(), coverage=False,
              package=None):
     # pylint:disable=too-many-locals,too-many-branches
     olddir = os.getcwd()
     ignore = set(ignored or ())
+
     if ignore_files:
         ignore_files = ignore_files.split(',')
         for f in ignore_files:
-            ignore.update(set(load_list_from_file(f)))
+            ignore.update(set(load_list_from_file(f, package)))
 
     if coverage:
         ignore.update(IGNORE_COVERAGE)
@@ -283,11 +290,10 @@ def discover(tests=None, ignore_files=None,
 def remove_options(lst):
     return [x for x in lst if x and not x.startswith('-')]
 
-
-def load_list_from_file(filename):
+def load_list_from_file(filename, package):
     result = []
     if filename:
-        with open(filename) as f:
+        with open(_package_relative_filename(filename, package)) as f:
             for x in f:
                 x = x.split('#', 1)[0].strip()
                 if x:
@@ -459,10 +465,7 @@ def main():
 
     if options.config:
         config = {}
-        if not os.path.isfile(options.config) and options.package:
-            # Ok, try to locate it as a module in the package
-            package_dir = _dir_from_package_name(options.package)
-            options.config = os.path.join(package_dir, options.config)
+        options.config = _package_relative_filename(options.config, options.package)
         with open(options.config) as f:
             config_data = f.read()
         six.exec_(config_data, config)
