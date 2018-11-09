@@ -34,11 +34,11 @@ from .sysinfo import RESOLVER_ARES
 # Travis is slow and overloaded; Appveyor used to be faster, but
 # as of Dec 2015 it's almost always slower and/or has much worse timer
 # resolution
-CI_TIMEOUT = 10
+CI_TIMEOUT = 15
 if (PY3 and PYPY) or (PYPY and WIN and LIBUV):
     # pypy3 is very slow right now,
     # as is PyPy2 on windows (which only has libuv)
-    CI_TIMEOUT = 15
+    CI_TIMEOUT = 20
 if PYPY and LIBUV:
     # slow and flaky timeouts
     LOCAL_TIMEOUT = CI_TIMEOUT
