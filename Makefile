@@ -22,7 +22,7 @@ clean:
 	rm -rf src/gevent/libev/*.o src/gevent/libuv/*.o src/gevent/*.o
 	rm -rf src/gevent/__pycache__ src/greentest/__pycache__ src/greentest/greentest/__pycache__ src/gevent/libev/__pycache__
 	rm -rf src/gevent/*.pyc src/greentest/*.pyc src/gevent/libev/*.pyc
-	rm -rf src/greentest/htmlcov src/greentest/.coverage
+	rm -rf htmlcov .coverage
 	rm -rf build
 
 distclean: clean
@@ -33,8 +33,6 @@ distclean: clean
 doc:
 	cd doc && PYTHONPATH=.. make html
 
-whitespace:
-	! find . -not -path "*.pem" -not -path "./.eggs/*" -not -path "./src/greentest/htmlcov/*" -not -path "./src/greentest/.coverage.*" -not -path "./.tox/*" -not -path "*/__pycache__/*" -not -path "*.so" -not -path "*.pyc" -not -path "./.git/*" -not -path "./build/*"  -not -path "./src/gevent/libev/*" -not -path "./src/gevent.egg-info/*" -not -path "./dist/*" -not -path "./.DS_Store" -not -path "./deps/*" -not -path "./src/gevent/libev/corecext.*.[ch]" -not -path "./src/gevent/resolver/cares.*" -not -path "./doc/_build/*" -not -path "./doc/mytheme/static/*" -type f | xargs egrep -l " $$"
 
 prospector:
 	which pylint
@@ -59,27 +57,24 @@ test_prelim:
 
 basictest: test_prelim
 	@${PYTHON} scripts/travis.py fold_start basictest "Running basic tests"
-	cd src/greentest && GEVENT_RESOLVER=thread ${PYTHON} testrunner.py --config known_failures.py --quiet
+	GEVENT_RESOLVER=thread ${PYTHON} -mgevent.tests --config known_failures.py --quiet
 	@${PYTHON} scripts/travis.py fold_end basictest
 
 alltest: basictest
 	@${PYTHON} scripts/travis.py fold_start ares "Running c-ares tests"
-	cd src/greentest && GEVENT_RESOLVER=ares ${PYTHON} testrunner.py --config known_failures.py --ignore tests_that_dont_use_resolver.txt --quiet
+	GEVENT_RESOLVER=ares ${PYTHON} -mgevent.tests --config known_failures.py --ignore tests_that_dont_use_resolver.txt --quiet
 	@${PYTHON} scripts/travis.py fold_end ares
 	@${PYTHON} scripts/travis.py fold_start dnspython "Running dnspython tests"
-	cd src/greentest && GEVENT_RESOLVER=dnspython ${PYTHON} testrunner.py --config known_failures.py --ignore tests_that_dont_use_resolver.txt --quiet
+	GEVENT_RESOLVER=dnspython ${PYTHON} -mgevent.tests --config known_failures.py --ignore tests_that_dont_use_resolver.txt --quiet
 	@${PYTHON} scripts/travis.py fold_end dnspython
 # In the past, we included all test files that had a reference to 'subprocess'' somewhere in their
 # text. The monkey-patched stdlib tests were specifically included here.
 # However, we now always also test on AppVeyor (Windows) which only has GEVENT_FILE=thread,
 # so we can save a lot of CI time by reducing the set and excluding the stdlib tests without
-# losing any coverage. See the `threadfiletest` for what command used to run.
+# losing any coverage.
 	@${PYTHON} scripts/travis.py fold_start thread "Running GEVENT_FILE=thread tests"
-	cd src/greentest && GEVENT_FILE=thread ${PYTHON} testrunner.py --config known_failures.py test__*subprocess*.py --quiet
+	cd src/gevent/tests && GEVENT_FILE=thread ${PYTHON} -mgevent.tests --config known_failures.py test__*subprocess*.py --quiet
 	@${PYTHON} scripts/travis.py fold_end thread
-
-threadfiletest:
-	cd src/greentest && GEVENT_FILE=thread ${PYTHON} testrunner.py --config known_failures.py `grep -l subprocess test_*.py` --quiet
 
 allbackendtest:
 	@${PYTHON} scripts/travis.py fold_start default "Testing default backend"
@@ -101,7 +96,7 @@ cffibackendtest:
 
 leaktest: test_prelim
 	@${PYTHON} scripts/travis.py fold_start leaktest "Running leak tests"
-	cd src/greentest && GEVENT_RESOLVER=thread GEVENTTEST_LEAKCHECK=1 ${PYTHON} testrunner.py --config known_failures.py --quiet --ignore tests_that_dont_do_leakchecks.txt
+	GEVENT_RESOLVER=thread GEVENTTEST_LEAKCHECK=1 ${PYTHON} -mgevent.tests --config known_failures.py --quiet --ignore tests_that_dont_do_leakchecks.txt
 	@${PYTHON} scripts/travis.py fold_end leaktest
 	@${PYTHON} scripts/travis.py fold_start default "Testing default backend pure python"
 	PURE_PYTHON=1 GEVENTTEST_COVERAGE=1 make basictest
@@ -116,8 +111,9 @@ travis_test_linters:
 	make cffibackendtest
 
 coverage_combine:
-	coverage combine . src/greentest/
-	-coveralls --rcfile=src/greentest/.coveragerc
+	coverage combine .
+	coverage report -i
+	-coveralls
 
 
 .PHONY: clean doc prospector lint travistest travis
@@ -191,7 +187,7 @@ test-py34: $(PY34)
 	PYTHON=python3.4.8 PATH=$(BUILD_RUNTIMES)/versions/python3.4.8/bin:$(PATH) make develop basictest
 
 test-py35: $(PY35)
-	PYTHON=python3.5.5 PATH=$(BUILD_RUNTIMES)/versions/python3.5.5/bin:$(PATH) make develop basictest
+	PYTHON=python3.5.5 PATH=$(BUILD_RUNTIMES)/versions/python3.5.5/bin:$(PATH) GEVENTTEST_COVERAGE=1 make develop basictest coverage_combine
 
 test-py36: $(PY36)
 	PYTHON=python3.6.7 PATH=$(BUILD_RUNTIMES)/versions/python3.6.7/bin:$(PATH) make develop lint basictest

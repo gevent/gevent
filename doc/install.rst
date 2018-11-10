@@ -177,8 +177,7 @@ tests on one version of Python during development, begin with the
 above instructions to install gevent in a virtual environment and then
 run::
 
-  (env) $ cd src/greentest
-  (env) $ python ./testrunner.py
+  (env) $ python -mgevent.tests
 
 Before submitting a pull request, it's a good idea to run the tests
 across all supported versions of Python, and to check the code quality
@@ -192,8 +191,7 @@ The testrunner accepts a ``--coverage`` argument to enable code
 coverage metrics through the `coverage.py`_ package. That would go
 something like this::
 
-  cd src/greentest
-  python testrunner.py --coverage
+  python -m gevent.tests --coverage
   coverage combine
   coverage html -i
   <open htmlcov/index.html>

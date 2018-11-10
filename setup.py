@@ -373,7 +373,7 @@ def run_setup(ext_modules, run_make):
 
                 # We don't run coverage on Windows, and pypy can't build it there
                 # anyway (coveralls -> cryptopgraphy -> openssl)
-                'coverage>=4.0 ; sys_platform != "win32"',
+                'coverage>=5.0a3 ; sys_platform != "win32"',
                 'coveralls>=1.0 ; sys_platform != "win32"',
 
                 'futures ; python_version == "2.7"',

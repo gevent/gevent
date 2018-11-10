@@ -42,6 +42,10 @@
   Objects/tupleobject.c: bad argument to internal function``. Reported
   in :issue:`1302` by Ulrich Petri.
 
+- Refactored the gevent test runner and test suite to make them more
+  reusable. In particular, the tests are now run with ``python -m
+  gevent.tests``. See :issue:`1293`.
+
 1.3.7 (2018-10-12)
 ==================
 

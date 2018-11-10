@@ -75,8 +75,8 @@ from _socket import AF_UNSPEC
 
 import socket
 
-from . import AbstractResolver
-from . import hostname_types
+from gevent.resolver import AbstractResolver
+from gevent.resolver import hostname_types
 
 from gevent._compat import string_types
 from gevent._compat import iteritems
