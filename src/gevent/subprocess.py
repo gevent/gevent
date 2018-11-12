@@ -26,8 +26,6 @@ Cooperative ``subprocess`` module.
 from __future__ import absolute_import, print_function
 # Can we split this up to make it cleaner? See https://github.com/gevent/gevent/issues/748
 # pylint: disable=too-many-lines
-# Import magic
-# pylint: disable=undefined-all-variable,undefined-variable
 # Most of this we inherit from the standard lib
 # pylint: disable=bare-except,too-many-locals,too-many-statements,attribute-defined-outside-init
 # pylint: disable=too-many-branches,too-many-instance-attributes
@@ -51,7 +49,7 @@ from gevent._compat import fspath
 from gevent._compat import fsencode
 from gevent._util import _NONE
 from gevent._util import copy_globals
-from gevent.fileobject import FileObject
+
 from gevent.greenlet import Greenlet, joinall
 spawn = Greenlet.spawn
 import subprocess as __subprocess__
@@ -274,7 +272,7 @@ def check_call(*popenargs, **kwargs):
         cmd = kwargs.get("args")
         if cmd is None:
             cmd = popenargs[0]
-        raise CalledProcessError(retcode, cmd)
+        raise CalledProcessError(retcode, cmd) # pylint:disable=undefined-variable
     return 0
 
 def check_output(*popenargs, **kwargs):
@@ -297,10 +295,10 @@ def check_output(*popenargs, **kwargs):
 
     To capture standard error in the result, use ``stderr=STDOUT``::
 
-        >>> check_output(["/bin/sh", "-c",
+        >>> print(check_output(["/bin/sh", "-c",
         ...               "ls -l non_existent_file ; exit 0"],
-        ...              stderr=STDOUT)
-        'ls: non_existent_file: No such file or directory\n'
+        ...              stderr=STDOUT).decode('ascii').strip())
+        ls: non_existent_file: No such file or directory
 
     There is an additional optional argument, "input", allowing you to
     pass a string to the subprocess's stdin.  If you use this argument
@@ -346,6 +344,7 @@ def check_output(*popenargs, **kwargs):
             raise
         retcode = process.poll()
         if retcode:
+            # pylint:disable=undefined-variable
             raise CalledProcessError(retcode, process.args, output=output)
     return output
 
@@ -395,6 +394,13 @@ if hasattr(os, 'set_inheritable'):
 else:
     _set_inheritable = lambda i, v: True
 
+
+def FileObject(*args):
+    # Defer importing FileObject until we need it
+    # to allow it to be configured more easily.
+    from gevent.fileobject import FileObject as _FileObject
+    globals()['FileObject'] = _FileObject
+    return _FileObject(*args)
 
 class Popen(object):
     """
@@ -516,6 +522,7 @@ class Popen(object):
         # Validate the combinations of text and universal_newlines
         if (text is not None and universal_newlines is not None
                 and bool(universal_newlines) != bool(text)):
+            # pylint:disable=undefined-variable
             raise SubprocessError('Cannot disambiguate when both text '
                                   'and universal_newlines are supplied but '
                                   'different. Pass one or the other.')
@@ -565,6 +572,7 @@ class Popen(object):
             # str type is bytes. Additionally, text_mode is only true under
             # Python 3, so it's actually a unicode str
             self._communicate_empty_value = ''
+
 
         if p2cwrite != -1:
             if PY3 and text_mode:
@@ -814,6 +822,7 @@ class Popen(object):
             """Construct and return tuple with IO objects:
             p2cread, p2cwrite, c2pread, c2pwrite, errread, errwrite
             """
+            # pylint:disable=undefined-variable
             if stdin is None and stdout is None and stderr is None:
                 return (-1, -1, -1, -1, -1, -1)
 
@@ -896,12 +905,14 @@ class Popen(object):
 
         def _make_inheritable(self, handle):
             """Return a duplicate of handle, which is inheritable"""
+            # pylint:disable=undefined-variable
             return DuplicateHandle(GetCurrentProcess(),
                                    handle, GetCurrentProcess(), 0, 1,
                                    DUPLICATE_SAME_ACCESS)
 
         def _find_w9xpopen(self):
             """Find and return absolute path to w9xpopen.exe"""
+            # pylint:disable=undefined-variable
             w9xpopen = os.path.join(os.path.dirname(GetModuleFileName(0)),
                                     "w9xpopen.exe")
             if not os.path.exists(w9xpopen):
@@ -938,7 +949,7 @@ class Popen(object):
                            errread, errwrite,
                            unused_restore_signals, unused_start_new_session):
             """Execute program (MS Windows version)"""
-
+            # pylint:disable=undefined-variable
             assert not pass_fds, "pass_fds not supported on Windows."
 
             if not isinstance(args, string_types):
@@ -1053,6 +1064,7 @@ class Popen(object):
             """Check if child process has terminated.  Returns returncode
             attribute.
             """
+            # pylint:disable=undefined-variable
             if self.returncode is None:
                 if WaitForSingleObject(self._handle, 0) == WAIT_OBJECT_0:
                     self.returncode = GetExitCodeProcess(self._handle)
@@ -1067,6 +1079,7 @@ class Popen(object):
             # XXX unlink
 
         def _blocking_wait(self):
+            # pylint:disable=undefined-variable
             WaitForSingleObject(self._handle, INFINITE)
             self.returncode = GetExitCodeProcess(self._handle)
             return self.returncode
@@ -1098,6 +1111,7 @@ class Popen(object):
         def terminate(self):
             """Terminates the process
             """
+            # pylint:disable=undefined-variable
             # Don't terminate a process that we know has already died.
             if self.returncode is not None:
                 return
@@ -1169,7 +1183,7 @@ class Popen(object):
                 pass
             elif stderr == PIPE:
                 errread, errwrite = self.pipe_cloexec()
-            elif stderr == STDOUT:
+            elif stderr == STDOUT: # pylint:disable=undefined-variable
                 if c2pwrite != -1:
                     errwrite = c2pwrite
                 else: # child's stdout is not set, use parent's stdout
@@ -1599,6 +1613,7 @@ class CompletedProcess(object):
     def check_returncode(self):
         """Raise CalledProcessError if the exit code is non-zero."""
         if self.returncode:
+            # pylint:disable=undefined-variable
             raise _with_stdout_stderr(CalledProcessError(self.returncode, self.args, self.stdout), self.stderr)
 
 
@@ -1667,6 +1682,7 @@ def run(*popenargs, **kwargs):
             raise
         retcode = process.poll()
         if check and retcode:
+            # pylint:disable=undefined-variable
             raise _with_stdout_stderr(CalledProcessError(retcode, process.args, stdout), stderr)
 
     return CompletedProcess(process.args, retcode, stdout, stderr)

@@ -138,7 +138,7 @@ cache:
   - '%LOCALAPPDATA%\pip\Cache'
 
 build_script:
-  - "%PYEXE% -m pip install -U --upgrade-strategy=eager -e .[test,events,dnspython]"
+  - "%PYEXE% -m pip install -U --upgrade-strategy=eager -v .[test,events,dnspython]"
 
 test_script:
   # Run the project tests

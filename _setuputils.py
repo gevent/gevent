@@ -15,6 +15,7 @@ from glob import glob
 from setuptools import Extension as _Extension
 from setuptools.command.build_ext import build_ext
 
+THIS_DIR = os.path.dirname(__file__)
 
 ## Exported configurations
 
@@ -24,7 +25,7 @@ WIN = sys.platform.startswith('win')
 RUNNING_ON_TRAVIS = os.environ.get('TRAVIS')
 RUNNING_ON_APPVEYOR = os.environ.get('APPVEYOR')
 RUNNING_ON_CI = RUNNING_ON_TRAVIS or RUNNING_ON_APPVEYOR
-
+RUNNING_FROM_CHECKOUT = os.path.isdir(os.path.join(THIS_DIR, ".git"))
 
 
 LIBRARIES = []
@@ -36,8 +37,6 @@ if WIN:
     DEFINE_MACROS += [('FD_SETSIZE', '1024'), ('_WIN32', '1')]
 
 ### File handling
-
-THIS_DIR = os.path.dirname(__file__)
 
 def quoted_abspath(*segments):
     return '"' + os.path.abspath(os.path.join(*segments)) + '"'
@@ -78,7 +77,7 @@ def _parse_environ(key):
     value = value.lower().strip()
     if value in ('1', 'true', 'on', 'yes'):
         return True
-    elif value in ('0', 'false', 'off', 'no'):
+    if value in ('0', 'false', 'off', 'no'):
         return False
     raise ValueError('Environment variable %r has invalid value %r. '
                      'Please set it to 1, 0 or an empty string' % (key, value))

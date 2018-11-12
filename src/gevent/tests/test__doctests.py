@@ -7,11 +7,7 @@ import re
 import sys
 import unittest
 
-import gevent
-from gevent import socket
-from gevent.testing import walk_modules
-from gevent.testing import sysinfo
-from gevent.testing import util
+
 
 # Ignore tracebacks: ZeroDivisionError
 
@@ -39,19 +35,16 @@ class RENormalizingOutputChecker(doctest.OutputChecker):
         return doctest.OutputChecker.check_output(self, want, got, optionflags)
 
 FORBIDDEN_MODULES = set()
-if sysinfo.WIN:
-    FORBIDDEN_MODULES |= {
-        # Uses commands only found on posix
-        'gevent.subprocess',
-    }
+
 
 class Modules(object):
 
     def __init__(self, allowed_modules):
+        from gevent.testing import walk_modules
         self.allowed_modules = allowed_modules
         self.modules = set()
 
-        for path, module in walk_modules():
+        for path, module in walk_modules(recursive=True):
             self.add_module(module, path)
 
 
@@ -71,18 +64,35 @@ class Modules(object):
         return iter(self.modules)
 
 
-def main():
+def main(): # pylint:disable=too-many-locals
     cwd = os.getcwd()
+    # Use pure_python to get the correct module source and docstrings
+    os.environ['PURE_PYTHON'] = '1'
+
+    import gevent
+    from gevent import socket
+
+
+    from gevent.testing import util
+    from gevent.testing import sysinfo
+
+    if sysinfo.WIN:
+        FORBIDDEN_MODULES.update({
+            # Uses commands only found on posix
+            'gevent.subprocess',
+        })
+
     try:
         allowed_modules = sys.argv[1:]
         sys.path.append('.')
-        os.chdir(util.find_setup_py_above(__file__))
 
-        globs = {'myfunction': myfunction, 'gevent': gevent, 'socket': socket}
+        globs = {
+            'myfunction': myfunction,
+            'gevent': gevent,
+            'socket': socket,
+        }
 
         modules = Modules(allowed_modules)
-
-        modules.add_module('setup', 'setup.py')
 
         if not modules:
             sys.exit('No modules found matching %s' % ' '.join(allowed_modules))
@@ -91,8 +101,9 @@ def main():
         checker = RENormalizingOutputChecker((
             # Normalize subprocess.py: BSD ls is in the example, gnu ls outputs
             # 'cannot access'
-            (re.compile('cannot access non_existent_file: No such file or directory'),
-             'non_existent_file: No such file or directory'),
+            (re.compile(
+                "ls: cannot access 'non_existent_file': No such file or directory"),
+             "ls: non_existent_file: No such file or directory"),
             # Python 3 bytes add a "b".
             (re.compile(r'b(".*?")'), r"\1"),
             (re.compile(r"b('.*?')"), r"\1"),
@@ -106,11 +117,12 @@ def main():
             if re.search(br'^\s*>>> ', contents, re.M):
                 s = doctest.DocTestSuite(m, extraglobs=globs, checker=checker)
                 test_count = len(s._tests)
-                print('%s (from %s): %s tests' % (m, path, test_count))
+                util.log('%s (from %s): %s tests', m, path, test_count)
                 suite.addTest(s)
                 modules_count += 1
                 tests_count += test_count
-        print('Total: %s tests in %s modules' % (tests_count, modules_count))
+
+        util.log('Total: %s tests in %s modules', tests_count, modules_count)
         # TODO: Pass this off to unittest.main()
         runner = unittest.TextTestRunner(verbosity=2)
         runner.run(suite)
