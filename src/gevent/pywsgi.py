@@ -1119,6 +1119,10 @@ class WSGIHandler(object):
         chunked = env.get('HTTP_TRANSFER_ENCODING', '').lower() == 'chunked'
         self.wsgi_input = Input(self.rfile, self.content_length, socket=sock, chunked_input=chunked)
         env['wsgi.input'] = self.wsgi_input
+        # This is a non-standard flag indicating that our input stream is
+        # self-terminated (returns EOF when consumed).
+        # See https://github.com/gevent/gevent/issues/1308
+        env['wsgi.input_terminated'] = True
         return env
 
 

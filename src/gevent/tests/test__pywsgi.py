@@ -371,8 +371,8 @@ class TestNoChunks(CommonTests):
     # it calculates the content-length and joins all the chunks before sending
     validator = None
 
-    @staticmethod
-    def application(env, start_response):
+    def application(self, env, start_response):
+        self.assertTrue(env.get('wsgi.input_terminated'))
         path = env['PATH_INFO']
         if path == '/':
             start_response('200 OK', [('Content-Type', 'text/plain')])
@@ -400,8 +400,8 @@ class TestExplicitContentLength(TestNoChunks): # pylint:disable=too-many-ancesto
     # when returning a list of strings a shortcut is empoyed by the
     # server - it caculates the content-length
 
-    @staticmethod
-    def application(env, start_response):
+    def application(self, env, start_response):
+        self.assertTrue(env.get('wsgi.input_terminated'))
         path = env['PATH_INFO']
         if path == '/':
             start_response('200 OK', [('Content-Type', 'text/plain'), ('Content-Length', '11')])
@@ -520,6 +520,7 @@ class TestChunkedApp(TestCase):
         return b''.join(self.chunks)
 
     def application(self, env, start_response):
+        self.assertTrue(env.get('wsgi.input_terminated'))
         start_response('200 OK', [('Content-Type', 'text/plain')])
         for chunk in self.chunks:
             yield chunk
@@ -552,8 +553,9 @@ class TestBigChunks(TestChunkedApp):
 
 
 class TestNegativeRead(TestCase):
-    @staticmethod
-    def application(env, start_response):
+
+    def application(self, env, start_response):
+        self.assertTrue(env.get('wsgi.input_terminated'))
         start_response('200 OK', [('Content-Type', 'text/plain')])
         if env['PATH_INFO'] == '/read':
             data = env['wsgi.input'].read(-1)
@@ -605,8 +607,9 @@ class TestNegativeReadline(TestCase):
 
 class TestChunkedPost(TestCase):
 
-    @staticmethod
-    def application(env, start_response):
+
+    def application(self, env, start_response):
+        self.assertTrue(env.get('wsgi.input_terminated'))
         start_response('200 OK', [('Content-Type', 'text/plain')])
         if env['PATH_INFO'] == '/a':
             data = env['wsgi.input'].read(6)
