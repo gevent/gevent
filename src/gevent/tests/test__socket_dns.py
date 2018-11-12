@@ -412,7 +412,8 @@ add(Test1234, '1.2.3.4')
 class Test127001(TestCase):
     pass
 
-add(Test127001, '127.0.0.1',
+add(
+    Test127001, '127.0.0.1',
     skip=greentest.RUNNING_ON_TRAVIS,
     skip_reason="Beginning Dec 1 2017, ares started returning ip6-localhost "
     "instead of localhost"
@@ -621,7 +622,7 @@ class TestInterrupted_gethostbyname(gevent.testing.timing.AbstractGenericWaitTes
         # gaierror: [Errno -2] Name or service not known
         try:
             gevent.get_hub().threadpool.join()
-        except Exception: # pylint:disable=broad-except pragma: no cover
+        except Exception: # pragma: no cover pylint:disable=broad-except
             traceback.print_exc()
 
 

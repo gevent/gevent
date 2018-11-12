@@ -50,6 +50,9 @@
   enums instead of plain integers for the socket type and address
   family on Python 3. See :issue:`1310` reported by TheYOSH.
 
+- Make gevent's pywsgi server set the non-standard environment value
+  ``wsgi.input_terminated`` to True. See :issue:`1308`.
+
 1.3.7 (2018-10-12)
 ==================
 
