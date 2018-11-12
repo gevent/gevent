@@ -285,7 +285,7 @@ def _find_test_status(took, out):
     return status, run_count, skipped_count
 
 
-def run(command, **kwargs):
+def run(command, **kwargs): # pylint:disable=too-many-locals
     buffer_output = kwargs.pop('buffer_output', BUFFER_OUTPUT)
     quiet = kwargs.pop('quiet', QUIET)
     verbose = not quiet

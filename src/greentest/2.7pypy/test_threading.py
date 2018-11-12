@@ -24,7 +24,7 @@ except:
     # some lib_pypy/_testcapimodule.o file is truncated
     _testcapi = None
 
-import lock_tests # gevent: use local copy
+from gevent.tests import lock_tests # gevent: use local copy
 
 # A trivial mutable counter.
 class Counter(object):
