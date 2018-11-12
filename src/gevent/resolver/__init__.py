@@ -4,17 +4,17 @@ from _socket import gaierror
 from _socket import error
 from _socket import getservbyname
 from _socket import getaddrinfo
+from _socket import SOCK_STREAM
+from _socket import SOCK_DGRAM
+from _socket import SOL_TCP
+from _socket import AI_CANONNAME
+from _socket import EAI_SERVICE
+from _socket import AF_INET
+from _socket import AI_PASSIVE
+
 
 from gevent._compat import string_types
 from gevent._compat import integer_types
-
-from gevent.socket import SOCK_STREAM
-from gevent.socket import SOCK_DGRAM
-from gevent.socket import SOL_TCP
-from gevent.socket import AI_CANONNAME
-from gevent.socket import EAI_SERVICE
-from gevent.socket import AF_INET
-from gevent.socket import AI_PASSIVE
 
 # Nothing public here.
 __all__ = []

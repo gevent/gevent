@@ -204,10 +204,29 @@ if PY3:
     # the deprecation warning.
     d = getaddrinfo.__doc__
 
-    def getaddrinfo(host, port, family=0, type=0, proto=0, flags=0): # pylint:disable=function-redefined
-        return get_hub().resolver.getaddrinfo(host, port, family, type, proto, flags)
+    def getaddrinfo(host, port, family=0, type=0, proto=0, flags=0):
+        # pylint:disable=function-redefined, undefined-variable
+        # Also, on Python 3, we need to translate into the special enums.
+        # Our lower-level resolvers, including the thread and blocking, which use _socket,
+        # function simply with integers.
+        addrlist = get_hub().resolver.getaddrinfo(host, port, family, type, proto, flags)
+        result = [
+            (_intenum_converter(af, AddressFamily),
+             _intenum_converter(socktype, SocketKind),
+             proto, canonname, sa)
+            for af, socktype, proto, canonname, sa
+            in addrlist
+        ]
+        return result
+
     getaddrinfo.__doc__ = d
     del d
+
+    def _intenum_converter(value, enum_klass):
+        try:
+            return enum_klass(value)
+        except ValueError: # pragma: no cover
+            return value
 
 
 def gethostbyaddr(ip_address):

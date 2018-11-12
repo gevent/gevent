@@ -46,6 +46,10 @@
   reusable. In particular, the tests are now run with ``python -m
   gevent.tests``. See :issue:`1293`.
 
+- Make a monkey-patched ``socket.getaddrinfo`` return socket module
+  enums instead of plain integers for the socket type and address
+  family on Python 3. See :issue:`1310` reported by TheYOSH.
+
 1.3.7 (2018-10-12)
 ==================
 
