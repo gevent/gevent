@@ -564,6 +564,20 @@ class Test_getaddrinfo(TestCase):
         return self._test_getaddrinfo('google.com', 'http', socket.AF_INET6)
 
 
+    @greentest.skipIf(PY2, "Enums only on Python 3.4+")
+    def test_enums(self):
+        # https://github.com/gevent/gevent/issues/1310
+
+        # On Python 3, getaddrinfo does special things to make sure that
+        # the fancy enums are returned.
+
+        gai = gevent_socket.getaddrinfo('example.com', 80,
+                                        socket.AF_INET,
+                                        socket.SOCK_STREAM, socket.IPPROTO_TCP)
+        af, socktype, _proto, _canonname, _sa = gai[0]
+        self.assertIs(socktype, socket.SOCK_STREAM)
+        self.assertIs(af, socket.AF_INET)
+
 class TestInternational(TestCase):
     pass
 
