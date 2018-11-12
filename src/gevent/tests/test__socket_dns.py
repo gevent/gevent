@@ -383,13 +383,18 @@ class TestLocalhost(TestCase):
             return result
 
 
-if not greentest.RUNNING_ON_TRAVIS:
-    # ares fails here, for some reason, presumably a badly
-    # configured /etc/hosts
-    add(TestLocalhost, 'ip6-localhost')
-    # Beginning Dec 1 2017, ares started returning ip6-localhost
-    # instead of localhost
-    add(TestLocalhost, 'localhost')
+add(
+    TestLocalhost, 'ip6-localhost',
+    skip=greentest.RUNNING_ON_TRAVIS,
+    skip_reason="ares fails here, for some reason, presumably a badly "
+    "configured /etc/hosts"
+)
+add(
+    TestLocalhost, 'localhost',
+    skip=greentest.RUNNING_ON_TRAVIS,
+    skip_reason="Beginning Dec 1 2017, ares started returning ip6-localhost "
+    "instead of localhost"
+)
 
 
 class TestNonexistent(TestCase):
@@ -407,10 +412,12 @@ add(Test1234, '1.2.3.4')
 class Test127001(TestCase):
     pass
 
-if not greentest.RUNNING_ON_TRAVIS:
-    # Beginning Dec 1 2017, ares started returning ip6-localhost
-    # instead of localhost
-    add(Test127001, '127.0.0.1')
+add(Test127001, '127.0.0.1',
+    skip=greentest.RUNNING_ON_TRAVIS,
+    skip_reason="Beginning Dec 1 2017, ares started returning ip6-localhost "
+    "instead of localhost"
+)
+
 
 
 class TestBroadcast(TestCase):
@@ -440,7 +447,7 @@ class SanitizedHostsFile(HostsFile):
                          # We get extra results from some impls, like OS X
                          # it returns DGRAM results
                          or name == 'localhost')):
-                continue
+                continue # pragma: no cover
             if name.endswith('local'):
                 # These can only be found if bonjour is running,
                 # and are very slow to do so with the system resolver on OS X
@@ -494,21 +501,6 @@ class TestFamily(TestCase):
         if not hasattr(cls, '_result'):
             cls._result = getattr(socket, 'getaddrinfo')(TestGeventOrg.HOSTNAME, None)
         return cls._result
-
-    def assert_error(self, error, function, *args): # pylint:disable=arguments-differ
-        try:
-            result = function(*args)
-            raise AssertionError('%s: Expected to raise %s, instead returned %r' % (function, error, result))
-        except Exception as ex:
-            if isinstance(error, six.string_types):
-                repr_error = error
-            else:
-                repr_error = repr(error)
-                if type(ex) is not type(error):
-                    raise
-            if repr(ex) == repr_error:
-                return
-            raise
 
     def test_inet(self):
         self.assertEqualResults(self.getresult(),
@@ -629,7 +621,7 @@ class TestInterrupted_gethostbyname(gevent.testing.timing.AbstractGenericWaitTes
         # gaierror: [Errno -2] Name or service not known
         try:
             gevent.get_hub().threadpool.join()
-        except Exception: # pylint:disable=broad-except
+        except Exception: # pylint:disable=broad-except pragma: no cover
             traceback.print_exc()
 
 

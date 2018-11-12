@@ -225,7 +225,7 @@ if PY3:
     def _intenum_converter(value, enum_klass):
         try:
             return enum_klass(value)
-        except ValueError:
+        except ValueError: # pragma: no cover
             return value
 
 

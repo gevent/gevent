@@ -1,8 +1,10 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
+from __future__ import print_function, absolute_import, division
+
 import gevent.testing as greentest
 import socket
-from test__socket_dns import TestCase, add
+from gevent.tests.test__socket_dns import TestCase, add
 
 from gevent.testing.sysinfo import RESOLVER_NOT_SYSTEM
 from gevent.testing.sysinfo import RESOLVER_DNSPYTHON
