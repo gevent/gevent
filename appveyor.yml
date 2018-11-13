@@ -1,3 +1,4 @@
+clone_depth: 50
 environment:
   global:
     # SDK v7.0 MSVC Express 2008's SetEnv.cmd script will fail if the
@@ -9,6 +10,11 @@ environment:
 
     # Pre-installed Python versions, which Appveyor may upgrade to
     # a later point release.
+    - PYTHON: "C:\\pypy2-v6.0.0-win32"
+      PYTHON_ID: "pypy"
+      PYTHON_EXE: pypy
+      PYTHON_VERSION: "2.7.x"
+      PYTHON_ARCH: "32"
 
     - PYTHON: "C:\\Python37-x64"
       PYTHON_VERSION: "3.7.x"
@@ -24,12 +30,6 @@ environment:
       PYTHON_VERSION: "3.6.x" # currently 3.6.0
       PYTHON_ARCH: "64"
       PYTHON_EXE: python
-
-    - PYTHON: "C:\\pypy2-v6.0.0-win32"
-      PYTHON_ID: "pypy"
-      PYTHON_EXE: pypy
-      PYTHON_VERSION: "2.7.x"
-      PYTHON_ARCH: "32"
 
     - PYTHON: "C:\\Python34-x64"
       PYTHON_VERSION: "3.4.x" # currently 3.4.4
@@ -138,7 +138,15 @@ cache:
   - '%LOCALAPPDATA%\pip\Cache'
 
 build_script:
-  - "%PYEXE% -m pip install -U --upgrade-strategy=eager .[test,events,dnspython]"
+  # Build the compiled extension
+  - "%CMD_IN_ENV% %PYEXE% -m pip wheel . -w dist"
+  - ps: "ls dist"
+  # Now install the wheel.
+  # I couldn't get wildcards to work for pip install, so stuff it
+  # into a variable, using python to glob.
+  - "%PYEXE% -c \"import glob; print(glob.glob('dist/gevent*whl')[0])\" > whl.txt"
+  - set /p PYWHL=<whl.txt
+  - "%PYEXE% -m pip install -U --upgrade-strategy=eager %PYWHL%[test,events,dnspython]"
 
 test_script:
   # Run the project tests
@@ -147,12 +155,15 @@ test_script:
   - "%PYEXE% -mgevent.tests --config known_failures.py --quiet"
 
 after_test:
-  - "%CMD_IN_ENV% %PYEXE% setup.py bdist_wheel"
+  # We already built the wheel during build_script, because it's
+  # much faster to do that and install from the wheel than to
+  # rebuild it here
+  #- "%CMD_IN_ENV% %PYEXE% setup.py bdist_wheel bdist_wininst"
   - ps: "ls dist"
 
 artifacts:
   # Archive the generated wheel package in the ci.appveyor.com build report.
-  - path: dist\*whl
+  - path: dist\gevent*whl
 
 #on_success:
 #  - TODO: upload the content of dist/*.whl to a public wheelhouse
