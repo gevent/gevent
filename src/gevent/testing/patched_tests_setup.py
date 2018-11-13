@@ -593,6 +593,7 @@ if WIN:
         'test_socket.SendfileUsingSendTest.testWithTimeout': _flaky_socket_timeout,
         'test_socket.SendfileUsingSendTest.testOffset': _flaky_socket_timeout,
         'test_socket.SendfileUsingSendTest.testRegularFile': _flaky_socket_timeout,
+        'test_socket.SendfileUsingSendTest.testCount': _flaky_socket_timeout,
     })
 
 if PYPY:
