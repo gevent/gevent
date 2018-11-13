@@ -55,6 +55,9 @@
 - Make gevent's pywsgi server set the non-standard environment value
   ``wsgi.input_terminated`` to True. See :issue:`1308`.
 
+- Make `gevent.util.assert_switches` produce more informative messages
+  when the assertion fails.
+
 1.3.7 (2018-10-12)
 ==================
 

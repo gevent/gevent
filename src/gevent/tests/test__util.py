@@ -221,23 +221,37 @@ class TestAssertSwitches(unittest.TestCase):
     def test_time_sleep(self):
         # A real blocking function
         from time import sleep
-        with self.assertRaises(util._FailedToSwitch):
+
+        # No time given, we detect the failure to switch immediately
+        with self.assertRaises(util._FailedToSwitch) as exc:
             with util.assert_switches():
                 sleep(0.001)
 
-        # Supply a max allowed and exceed it
+        message = str(exc.exception)
+        self.assertIn('To any greenlet in', message)
+
+        # Supply a max blocking allowed and exceed it
         with self.assertRaises(util._FailedToSwitch):
             with util.assert_switches(0.001):
                 sleep(0.1)
 
 
-        # Stay within it, but don't switch to the hub
-        with self.assertRaises(util._FailedToSwitch):
+        # Supply a max blocking allowed, and exit before that happens,
+        # but don't switch to the hub as requested
+        with self.assertRaises(util._FailedToSwitch) as exc:
             with util.assert_switches(0.001, hub_only=True):
                 sleep(0)
 
-        # Stay within it, and we only watch for any switch
-        with util.assert_switches(0.001, hub_only=False):
+        message = str(exc.exception)
+        self.assertIn('To the hub in', message)
+        self.assertIn('(max allowed 0.0010 seconds)', message)
+
+        # Supply a max blocking allowed, and exit before that happens,
+        # and allow any switch (or no switch).
+        # Note that we need to use a relatively long duration;
+        # sleep(0) on Windows can actually take a substantial amount of time
+        # sometimes (more than 0.001s)
+        with util.assert_switches(1.0, hub_only=False):
             sleep(0)
 
 

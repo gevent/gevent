@@ -10,11 +10,8 @@ environment:
 
     # Pre-installed Python versions, which Appveyor may upgrade to
     # a later point release.
-    - PYTHON: "C:\\pypy2-v6.0.0-win32"
-      PYTHON_ID: "pypy"
-      PYTHON_EXE: pypy
-      PYTHON_VERSION: "2.7.x"
-      PYTHON_ARCH: "32"
+
+    # 64-bit
 
     - PYTHON: "C:\\Python37-x64"
       PYTHON_VERSION: "3.7.x"
@@ -31,30 +28,27 @@ environment:
       PYTHON_ARCH: "64"
       PYTHON_EXE: python
 
-    - PYTHON: "C:\\Python34-x64"
-      PYTHON_VERSION: "3.4.x" # currently 3.4.4
-      PYTHON_ARCH: "64"
-      PYTHON_EXE: python
-
     - PYTHON: "C:\\Python35-x64"
       PYTHON_VERSION: "3.5.x" # currently 3.5.2
       PYTHON_ARCH: "64"
       PYTHON_EXE: python
 
-    - PYTHON: "C:\\Python35"
-      PYTHON_VERSION: "3.5.x" # currently 3.5.2
-      PYTHON_ARCH: "32"
+    - PYTHON: "C:\\Python34-x64"
+      PYTHON_VERSION: "3.4.x" # currently 3.4.4
+      PYTHON_ARCH: "64"
       PYTHON_EXE: python
-      GWHEEL_ONLY: true
 
-    - PYTHON: "C:\\Python27"
-      PYTHON_VERSION: "2.7.x" # currently 2.7.13
+    # 32-bit
+    - PYTHON: "C:\\pypy2-v6.0.0-win32"
+      PYTHON_ID: "pypy"
+      PYTHON_EXE: pypy
+      PYTHON_VERSION: "2.7.x"
       PYTHON_ARCH: "32"
-      PYTHON_EXE: python
-      GWHEEL_ONLY: true
 
-    - PYTHON: "C:\\Python34"
-      PYTHON_VERSION: "3.4.x" # currently 3.4.3
+    # 32-bit, wheel only (no testing)
+
+    - PYTHON: "C:\\Python37"
+      PYTHON_VERSION: "3.7.x"
       PYTHON_ARCH: "32"
       PYTHON_EXE: python
       GWHEEL_ONLY: true
@@ -65,12 +59,23 @@ environment:
       PYTHON_EXE: python
       GWHEEL_ONLY: true
 
-    - PYTHON: "C:\\Python37"
-      PYTHON_VERSION: "3.7.x"
+    - PYTHON: "C:\\Python35"
+      PYTHON_VERSION: "3.5.x" # currently 3.5.2
       PYTHON_ARCH: "32"
       PYTHON_EXE: python
       GWHEEL_ONLY: true
 
+    - PYTHON: "C:\\Python34"
+      PYTHON_VERSION: "3.4.x" # currently 3.4.3
+      PYTHON_ARCH: "32"
+      PYTHON_EXE: python
+      GWHEEL_ONLY: true
+
+    - PYTHON: "C:\\Python27"
+      PYTHON_VERSION: "2.7.x" # currently 2.7.13
+      PYTHON_ARCH: "32"
+      PYTHON_EXE: python
+      GWHEEL_ONLY: true
 
     # Also test a Python version not pre-installed
     # See: https://github.com/ogrisel/python-appveyor-demo/issues/10
