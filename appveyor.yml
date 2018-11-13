@@ -25,7 +25,7 @@ environment:
       PYTHON_ARCH: "64"
       PYTHON_EXE: python
 
-    - PYTHON: "C:\\pypy2-v5.10.0-win32"
+    - PYTHON: "C:\\pypy2-v6.0.0-win32"
       PYTHON_ID: "pypy"
       PYTHON_EXE: pypy
       PYTHON_VERSION: "2.7.x"
@@ -99,10 +99,10 @@ install:
         New-Item -ItemType directory -Path "$env:PYTMP" | Out-Null;
       }
       if ("${env:PYTHON_ID}" -eq "pypy") {
-        if (!(Test-Path "${env:PYTMP}\pypy2-v5.10.0-win32.zip")) {
-          (New-Object Net.WebClient).DownloadFile('https://bitbucket.org/pypy/pypy/downloads/pypy2-v5.10.0-win32.zip', "${env:PYTMP}\pypy2-v5.10.0-win32.zip");
+        if (!(Test-Path "${env:PYTMP}\pypy2-v6.0.0-win32.zip")) {
+          (New-Object Net.WebClient).DownloadFile('https://bitbucket.org/pypy/pypy/downloads/pypy2-v6.0.0-win32.zip', "${env:PYTMP}\pypy2-v6.0.0-win32.zip");
         }
-        7z x -y "${env:PYTMP}\pypy2-v5.10.0-win32.zip" -oC:\ | Out-Null;
+        7z x -y "${env:PYTMP}\pypy2-v6.0.0-win32.zip" -oC:\ | Out-Null;
         & "${env:PYTHON}\pypy.exe" "-mensurepip";
 
       }

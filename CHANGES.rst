@@ -9,6 +9,8 @@
 
 - Build with Cython 0.29 in '3str' mode.
 
+- Test with PyPy 6.0 on Windows.
+
 - Add support for application-wide callbacks when ``Greenlet`` objects
   are started. See :pr:`1289`, provided by Yury Selivanov.
 
