@@ -45,7 +45,7 @@ import time
 import unittest
 import weakref
 
-import lock_tests
+from gevent.tests import lock_tests
 
 # A trivial mutable counter.
 

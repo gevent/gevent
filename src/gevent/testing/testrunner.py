@@ -75,11 +75,13 @@ def run_many(tests,
     total = 0
     failed = {}
     passed = {}
+    total_cases = [0]
+    total_skipped = [0]
 
     NWORKERS = min(len(tests), NWORKERS) or 1
 
     pool = ThreadPool(NWORKERS)
-    util.BUFFER_OUTPUT = NWORKERS > 1
+    util.BUFFER_OUTPUT = NWORKERS > 1 or quiet
 
     def run_one(cmd, **kwargs):
         kwargs['quiet'] = quiet
@@ -90,6 +92,8 @@ def run_many(tests,
             failed[result.name] = [cmd, kwargs]
         else:
             passed[result.name] = True
+        total_cases[0] += result.run_count
+        total_skipped[0] += result.skipped_count
 
     results = []
 
@@ -143,7 +147,8 @@ def run_many(tests,
             except KeyboardInterrupt:
                 pool.terminate()
                 report(total, failed, passed, exit=False, took=time.time() - start,
-                       configured_failing_tests=configured_failing_tests)
+                       configured_failing_tests=configured_failing_tests,
+                       total_cases=total_cases[0], total_skipped=total_skipped[0])
                 log('(partial results)\n')
                 raise
     except:
@@ -153,7 +158,8 @@ def run_many(tests,
 
     reap_all()
     report(total, failed, passed, took=time.time() - start,
-           configured_failing_tests=configured_failing_tests)
+           configured_failing_tests=configured_failing_tests,
+           total_cases=total_cases[0], total_skipped=total_skipped[0])
 
 def discover(
         tests=None, ignore_files=None,
@@ -194,7 +200,7 @@ def discover(
     tests = sorted(tests)
 
     to_process = []
-
+    to_import = []
 
     for filename in tests:
         module_name = os.path.splitext(filename)[0]
@@ -210,11 +216,7 @@ def discover(
             contents = f.read()
         if b'TESTRUNNER' in contents: # test__monkey_patching.py
             # XXX: Rework this to avoid importing.
-            module = importlib.import_module(qualified_name)
-            for cmd, options in module.TESTRUNNER():
-                if remove_options(cmd)[-1] in ignore:
-                    continue
-                to_process.append((cmd, options))
+            to_import.append(qualified_name)
         else:
             cmd = [sys.executable, '-u']
             if PYPY and PY2:
@@ -232,6 +234,15 @@ def discover(
             to_process.append((cmd, options))
 
     os.chdir(olddir)
+    # When we actually execute, do so from the original directory,
+    # this helps find setup.py
+    for qualified_name in to_import:
+        module = importlib.import_module(qualified_name)
+        for cmd, options in module.TESTRUNNER():
+            if remove_options(cmd)[-1] in ignore:
+                continue
+            to_process.append((cmd, options))
+
     return to_process
 
 
@@ -275,8 +286,9 @@ def format_seconds(seconds):
 
 
 def report(total, failed, passed, exit=True, took=None,
-           configured_failing_tests=()):
-    # pylint:disable=redefined-builtin,too-many-branches
+           configured_failing_tests=(),
+           total_cases=0, total_skipped=0):
+    # pylint:disable=redefined-builtin,too-many-branches,too-many-locals
     runtimelog = util.runtimelog
     if runtimelog:
         log('\nLongest-running tests:')
@@ -319,7 +331,13 @@ def report(total, failed, passed, exit=True, took=None,
             log('\n%s/%s unexpected failures', len(failed_unexpected), total, color='error')
             print_list(failed_unexpected)
     else:
-        log('\n%s tests passed%s', total, took)
+        log(
+            '\nRan %s tests%s in %s files%s',
+            total_cases,
+            util._colorize('skipped', " (skipped=%d)" % total_skipped) if total_skipped else '',
+            total,
+            took,
+        )
 
     if exit:
         if failed_unexpected:

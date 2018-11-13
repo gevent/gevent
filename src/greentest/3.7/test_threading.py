@@ -17,7 +17,7 @@ import weakref
 import os
 import subprocess
 
-import lock_tests # gevent: use our local copy
+from gevent.tests import lock_tests # gevent: use our local copy
 from test import support
 
 

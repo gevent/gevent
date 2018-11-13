@@ -24,6 +24,7 @@ from _setuputils import DEFINE_MACROS
 from _setuputils import glob_many
 from _setuputils import dep_abspath
 from _setuputils import RUNNING_ON_CI
+from _setuputils import RUNNING_FROM_CHECKOUT
 from _setuputils import cythonize1
 
 
@@ -51,14 +52,19 @@ ares_configure_command = ' '.join([
 
 
 def configure_ares(bext, ext):
+    print("Embedding c-ares", bext, ext)
     bdir = os.path.join(bext.build_temp, 'c-ares')
     ext.include_dirs.insert(0, bdir)
+    print("Inserted ", bdir, "in include dirs", ext.include_dirs)
 
     if not os.path.isdir(bdir):
         os.makedirs(bdir)
 
     if WIN:
-        shutil.copy("deps\\c-ares\\ares_build.h.dist", os.path.join(bdir, "ares_build.h"))
+        src = "deps\\c-ares\\ares_build.h.dist"
+        dest = os.path.join(bdir, "ares_build.h")
+        print("Copying %r to %r" % (src, dest))
+        shutil.copy(src, dest)
         return
 
     cwd = os.getcwd()
@@ -87,7 +93,8 @@ ARES = Extension(name='gevent.resolver.cares',
                  depends=glob_many('src/gevent/resolver/dnshelper.c',
                                    'src/gevent/resolver/cares_*.[ch]'))
 
-ARES.optional = not RUNNING_ON_CI
+ares_required = RUNNING_ON_CI and RUNNING_FROM_CHECKOUT
+ARES.optional = not ares_required
 
 
 if CARES_EMBED:
@@ -108,5 +115,6 @@ if CARES_EMBED:
 else:
     ARES.libraries.append('cares')
     ARES.define_macros += [('HAVE_NETDB_H', '')]
+    ARES.configure = lambda bext, ext: print("c-ares not embedded, not configuring", bext, ext)
 
 ARES = cythonize1(ARES)

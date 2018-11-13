@@ -406,9 +406,6 @@ if LIBUV:
             'test_httpservers.CGIHTTPServerTestCase.test_invaliduri',
             'test_httpservers.CGIHTTPServerTestCase.test_issue19435',
 
-            # Sometimes raises LoopExit on CPython
-            'test_socket.BufferIOTest.testRecvFromIntoArray',
-
             # Unexpected timeouts sometimes
             'test_smtplib.TooLongLineTests.testLineTooLong',
             'test_smtplib.GeneralTests.testTimeoutValue',
@@ -463,6 +460,10 @@ if LIBUV:
             # This test winds up hanging a long time.
             # Inserting GCs doesn't fix it.
             'test_ssl.ThreadedTests.test_handshake_timeout',
+
+            # These sometimes raise LoopExit, for no apparent reason.
+            'test_socket.BufferIOTest.testRecvFromIntoBytearray',
+            'test_socket.BufferIOTest.testRecvFromIntoArray',
         ]
 
         if PY3:

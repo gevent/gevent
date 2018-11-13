@@ -7,25 +7,34 @@ import atexit
 
 from gevent.testing import util
 
-# XXX: Generalize this so other packages can use it.
-setup_py = util.find_setup_py_above(__file__)
-greentest = os.path.join(setup_py, 'src', 'greentest')
-
 TIMEOUT = 120
-directory = '%s.%s' % sys.version_info[:2]
-full_directory = '%s.%s.%s' % sys.version_info[:3]
-if hasattr(sys, 'pypy_version_info'):
-    directory += 'pypy'
-    full_directory += 'pypy'
 
-directory = os.path.join(greentest, directory)
-full_directory = os.path.join(greentest, full_directory)
+# XXX: Generalize this so other packages can use it.
 
-version = '%s.%s.%s' % sys.version_info[:3]
-if sys.version_info[3] == 'alpha':
-    version += 'a%s' % sys.version_info[4]
-elif sys.version_info[3] == 'beta':
-    version += 'b%s' % sys.version_info[4]
+def find_stdlib_tests():
+    setup_py = util.search_for_setup_py(a_file=__file__)
+    greentest = os.path.join(setup_py, 'src', 'greentest')
+
+
+    directory = '%s.%s' % sys.version_info[:2]
+    full_directory = '%s.%s.%s' % sys.version_info[:3]
+    if hasattr(sys, 'pypy_version_info'):
+        directory += 'pypy'
+        full_directory += 'pypy'
+
+    directory = os.path.join(greentest, directory)
+    full_directory = os.path.join(greentest, full_directory)
+
+    return directory, full_directory
+
+def get_python_version():
+    version = '%s.%s.%s' % sys.version_info[:3]
+    if sys.version_info[3] == 'alpha':
+        version += 'a%s' % sys.version_info[4]
+    elif sys.version_info[3] == 'beta':
+        version += 'b%s' % sys.version_info[4]
+
+    return version
 
 def get_absolute_pythonpath():
     paths = [os.path.abspath(p) for p in os.environ.get('PYTHONPATH', '').split(os.pathsep)]
@@ -33,18 +42,31 @@ def get_absolute_pythonpath():
 
 
 def TESTRUNNER(tests=None):
-    if not os.path.exists(directory):
-        util.log('WARNING: No test directory found at %s', directory)
+    try:
+        test_dir, version_test_dir = find_stdlib_tests()
+    except util.NoSetupPyFound as e:
+        util.log("WARNING: No setup.py and src/greentest found: %r", e,
+                 color="suboptimal-behaviour")
         return
-    with open(os.path.join(directory, 'version')) as f:
-        preferred_version = f.read().strip()
-    if preferred_version != version:
-        util.log('WARNING: The tests in %s/ are from version %s and your Python is %s', directory, preferred_version, version)
 
-    version_tests = glob.glob('%s/test_*.py' % full_directory)
+    if not os.path.exists(test_dir):
+        util.log('WARNING: No test directory found at %s', test_dir,
+                 color="suboptimal-behaviour")
+        return
+
+    with open(os.path.join(test_dir, 'version')) as f:
+        preferred_version = f.read().strip()
+
+    running_version = get_python_version()
+    if preferred_version != running_version:
+        util.log('WARNING: The tests in %s/ are from version %s and your Python is %s',
+                 test_dir, preferred_version, running_version,
+                 color="suboptimal-behaviour")
+
+    version_tests = glob.glob('%s/test_*.py' % version_test_dir)
     version_tests = sorted(version_tests)
     if not tests:
-        tests = glob.glob('%s/test_*.py' % directory)
+        tests = glob.glob('%s/test_*.py' % test_dir)
         tests = sorted(tests)
 
     PYTHONPATH = (os.getcwd() + os.pathsep + get_absolute_pythonpath()).rstrip(':')
@@ -53,7 +75,7 @@ def TESTRUNNER(tests=None):
     version_tests = [os.path.basename(x) for x in version_tests]
 
     options = {
-        'cwd': directory,
+        'cwd': test_dir,
         'timeout': TIMEOUT,
         'setenv': {
             'PYTHONPATH': PYTHONPATH,
@@ -73,11 +95,11 @@ def TESTRUNNER(tests=None):
     basic_args = [sys.executable, '-u', '-W', 'ignore', '-m' 'gevent.testing.monkey_test']
     for filename in tests:
         if filename in version_tests:
-            util.log("Overriding %s from %s with file from %s", filename, directory, full_directory)
+            util.log("Overriding %s from %s with file from %s", filename, test_dir, version_test_dir)
             continue
         yield basic_args + [filename], options.copy()
 
-    options['cwd'] = full_directory
+    options['cwd'] = version_test_dir
     for filename in version_tests:
         yield basic_args + [filename], options.copy()
 

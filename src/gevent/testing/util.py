@@ -1,3 +1,5 @@
+from __future__ import print_function, absolute_import, division
+import re
 import sys
 import os
 from . import six
@@ -220,10 +222,14 @@ def start(command, quiet=False, **kwargs):
 
 class RunResult(object):
 
-    def __init__(self, code, output=None, name=None):
+    def __init__(self, code,
+                 output=None, name=None,
+                 run_count=0, skipped_count=0):
         self.code = code
         self.output = output
         self.name = name
+        self.run_count = run_count
+        self.skipped_count = skipped_count
 
 
     def __bool__(self):
@@ -236,29 +242,50 @@ class RunResult(object):
 
 
 def _should_show_warning_output(out):
-    if b'Warning' in out:
+    if 'Warning' in out:
         # Strip out some patterns we specifically do not
         # care about.
         # from test.support for monkey-patched tests
-        out = out.replace(b'Warning -- reap_children', b'NADA')
-        out = out.replace(b"Warning -- threading_cleanup", b'NADA')
+        out = out.replace('Warning -- reap_children', 'NADA')
+        out = out.replace("Warning -- threading_cleanup", 'NADA')
 
         # The below *could* be done with sophisticated enough warning
         # filters passed to the children
 
         # collections.abc is the new home; setuptools uses the old one,
         # as does dnspython
-        out = out.replace(b"DeprecationWarning: Using or importing the ABCs", b'NADA')
+        out = out.replace("DeprecationWarning: Using or importing the ABCs", 'NADA')
         # libuv poor timer resolution
-        out = out.replace(b'UserWarning: libuv only supports', b'NADA')
+        out = out.replace('UserWarning: libuv only supports', 'NADA')
         # Packages on Python 2
-        out = out.replace(b'ImportWarning: Not importing directory', b'NADA')
-    return b'Warning' in out
+        out = out.replace('ImportWarning: Not importing directory', 'NADA')
+    return 'Warning' in out
 
 output_lock = threading.Lock()
 
+def _find_test_status(took, out):
+    status = '[took %.1fs%s]'
+    skipped = ''
+    run_count = 0
+    skipped_count = 0
+    if out:
+        m = re.search(r"Ran (\d+) tests in", out)
+        if m:
+            result = out[m.start():m.end()]
+            status = status.replace('took', result)
+            run_count = int(out[m.start(1):m.end(1)])
 
-def run(command, **kwargs):
+        m = re.search(r' \(skipped=(\d+)\)$', out)
+        if m:
+            skipped = _colorize('skipped', out[m.start():m.end()])
+            skipped_count = int(out[m.start(1):m.end(1)])
+    status = status % (took, skipped)
+    if took > 10:
+        status = _colorize('slow-test', status)
+    return status, run_count, skipped_count
+
+
+def run(command, **kwargs): # pylint:disable=too-many-locals
     buffer_output = kwargs.pop('buffer_output', BUFFER_OUTPUT)
     quiet = kwargs.pop('quiet', QUIET)
     verbose = not quiet
@@ -282,21 +309,27 @@ def run(command, **kwargs):
     assert not err
     with output_lock: # pylint:disable=not-context-manager
         failed = bool(result)
+        if out:
+            out = out.strip()
+            out = out if isinstance(out, str) else out.decode('utf-8', 'ignore')
         if out and (failed or verbose or _should_show_warning_output(out)):
-            out = out.strip().decode('utf-8', 'ignore')
             if out:
                 out = '  ' + out.replace('\n', '\n  ')
                 out = out.rstrip()
                 out += '\n'
                 log('| %s\n%s', name, out)
+        status, run_count, skipped_count = _find_test_status(took, out)
         if result:
-            log('! %s [code %s] [took %.1fs]', name, result, took, color='error')
+            log('! %s [code %s] %s', name, result, status, color='error')
         elif not nested:
-            log('- %s [took %.1fs]', name, took)
+            log('- %s %s', name, status)
     if took >= MIN_RUNTIME:
         runtimelog.append((-took, name))
-    return RunResult(result, out, name)
+    return RunResult(result, out, name, run_count, skipped_count)
 
+
+class NoSetupPyFound(Exception):
+    "Raised by find_setup_py_above"
 
 def find_setup_py_above(a_file):
     "Return the directory containing setup.py somewhere above *a_file*"
@@ -305,11 +338,55 @@ def find_setup_py_above(a_file):
         prev, root = root, os.path.dirname(root)
         if root == prev:
             # Let's avoid infinite loops at root
-            raise AssertionError('could not find my setup.py')
+            raise NoSetupPyFound('could not find my setup.py above %r' % (a_file,))
     return root
 
+def search_for_setup_py(a_file=None, a_module_name=None, a_class=None, climb_cwd=True):
+    if a_file is not None:
+        try:
+            return find_setup_py_above(a_file)
+        except NoSetupPyFound:
+            pass
 
-class TestServer(unittest.TestCase):
+    if a_class is not None:
+        try:
+            return find_setup_py_above(sys.modules[a_class.__module__].__file__)
+        except NoSetupPyFound:
+            pass
+
+    if a_module_name is not None:
+        try:
+            return find_setup_py_above(sys.modules[a_module_name].__file__)
+        except NoSetupPyFound:
+            pass
+
+    if climb_cwd:
+        return find_setup_py_above("./dne")
+
+    raise NoSetupPyFound("After checking %r" % (locals(),))
+
+
+class ExampleMixin(object):
+    "Something that uses the examples/ directory"
+
+    def find_setup_py(self):
+        "Return the directory containing setup.py"
+        return search_for_setup_py(
+            a_file=__file__,
+            a_class=type(self)
+        )
+
+    @property
+    def cwd(self):
+        try:
+            root = self.find_setup_py()
+        except NoSetupPyFound as e:
+            raise unittest.SkipTest("Unable to locate file/dir to run: %s" % (e,))
+
+        return os.path.join(root, 'examples')
+
+class TestServer(ExampleMixin,
+                 unittest.TestCase):
     args = []
     before_delay = 3
     after_delay = 0.5
@@ -317,22 +394,12 @@ class TestServer(unittest.TestCase):
     server = None # subclasses define this to be the path to the server.py
     start_kwargs = None
 
-    def find_setup_py(self):
-        "Return the directory containing setup.py"
-        return find_setup_py_above(__file__)
-        # XXX: We need to extend this if we want it to be useful
-        # for other packages; our __file__ won't work for them.
-        # We can look at the CWD, and we can look at the __file__ of the
-        # sys.modules[type(self).__module__].
-
-    @property
-    def cwd(self):
-        root = self.find_setup_py()
-        return os.path.join(root, 'examples')
-
     def start(self):
-        kwargs = self.start_kwargs or {}
-        return start([sys.executable, '-u', self.server] + self.args, cwd=self.cwd, **kwargs)
+        try:
+            kwargs = self.start_kwargs or {}
+            return start([sys.executable, '-u', self.server] + self.args, cwd=self.cwd, **kwargs)
+        except NoSetupPyFound as e:
+            raise unittest.SkipTest("Unable to locate file/dir to run: %s" % (e,))
 
     def running_server(self):
         from contextlib import contextmanager
