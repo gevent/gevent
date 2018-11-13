@@ -115,8 +115,11 @@ class TestWaiter(greentest.TestCase):
 
         waiter = Waiter()
         g = gevent.spawn(waiter.get)
+        g.name = 'AName'
         gevent.sleep(0)
-        self.assertTrue(str(waiter).startswith('<Waiter greenlet=<Greenlet "Greenlet-'))
+        str_waiter = str(waiter)
+        self.assertTrue(str_waiter.startswith('<Waiter greenlet=<Greenlet "AName'),
+                        str_waiter)
 
         g.kill()
 

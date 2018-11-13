@@ -5,6 +5,8 @@ environment:
     # /E:ON and /V:ON options are not enabled in the batch script interpreter
     # See: http://stackoverflow.com/a/13751649/163740
     CMD_IN_ENV: "cmd /E:ON /V:ON /C .\\appveyor\\run_with_env.cmd"
+    # Use a fixed hash seed for reproducability
+    PYTHONHASHSEED: 8675309
 
   matrix:
 

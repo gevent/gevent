@@ -424,13 +424,24 @@ class TestStr(greentest.TestCase):
         assert_not_ready(g)
         g.join()
         assert_ready(g)
-        self.assertTrue(hexobj.sub('X', str(g)).endswith(' at X: dummy_test_func>'))
+        self.assertTrue(hexobj.sub('X', str(g)).endswith(' at X: dummy_test_func>'), str(g))
 
     def test_method(self):
         g = gevent.Greenlet.spawn(A().method)
         str_g = hexobj.sub('X', str(g))
         str_g = str_g.replace(__name__, 'module')
-        self.assertTrue(str_g.startswith('<Greenlet "Greenlet-'))
+        self.assertTrue(str_g.startswith('<Greenlet at X:'), str_g)
+        # Accessing the name to generate a minimal_ident will cause it to be included.
+        getattr(g, 'name')
+        str_g = hexobj.sub('X', str(g))
+        str_g = str_g.replace(__name__, 'module')
+        self.assertTrue(str_g.startswith('<Greenlet "Greenlet-'), str_g)
+        # Assigning to the name changes it
+        g.name = 'Foo'
+        str_g = hexobj.sub('X', str(g))
+        str_g = str_g.replace(__name__, 'module')
+        self.assertTrue(str_g.startswith('<Greenlet "Foo"'), str_g)
+
         self.assertTrue(str_g.endswith('at X: <bound method A.method of <module.A object at X>>>'))
         assert_not_ready(g)
         g.join()
@@ -443,7 +454,7 @@ class TestStr(greentest.TestCase):
         g = Subclass()
         str_g = hexobj.sub('X', str(g))
         str_g = str_g.replace(__name__, 'module')
-        self.assertTrue(str_g.startswith('<Subclass '))
+        self.assertTrue(str_g.startswith('<Subclass '), str_g)
         self.assertTrue(str_g.endswith('at X: _run>'))
 
         g = Subclass(None, 'question', answer=42)

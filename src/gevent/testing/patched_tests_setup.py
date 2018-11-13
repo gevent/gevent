@@ -461,9 +461,11 @@ if LIBUV:
             # Inserting GCs doesn't fix it.
             'test_ssl.ThreadedTests.test_handshake_timeout',
 
-            # These sometimes raise LoopExit, for no apparent reason.
+            # These sometimes raise LoopExit, for no apparent reason,
+            # mostly but not exclusively on Python 2.
             'test_socket.BufferIOTest.testRecvFromIntoBytearray',
             'test_socket.BufferIOTest.testRecvFromIntoArray',
+            'test_socket.BufferIOTest.testRecvFromIntoEmptyBuffer',
         ]
 
         if PY3:
