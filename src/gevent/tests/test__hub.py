@@ -36,10 +36,11 @@ DELAY = 0.1
 class TestCloseSocketWhilePolling(greentest.TestCase):
 
     def test(self):
-        with self.assertRaises(Exception):
-            sock = socket.socket()
-            self._close_on_teardown(sock)
-            t = get_hub().loop.timer(0, sock.close)
+        sock = socket.socket()
+        self._close_on_teardown(sock)
+        t = get_hub().loop.timer(0)
+        t.start(sock.close)
+        with self.assertRaises(socket.error):
             try:
                 sock.connect(('python.org', 81))
             finally:

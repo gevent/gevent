@@ -106,7 +106,7 @@ class TestPeriodicMonitoringThread(_AbstractTestPeriodicMonitoringThread,
         self.assertRaises(ValueError, self.pmt.add_monitoring_function, lambda: None, -1)
 
         def f():
-            pass
+            "Does nothing"
 
         # Add
         self.pmt.add_monitoring_function(f, 1)

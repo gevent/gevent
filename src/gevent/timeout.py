@@ -45,7 +45,7 @@ class _FakeTimer(object):
 
     @property
     def seconds(self):
-        return None
+        "Always returns None"
 
     timer = exception = seconds
 

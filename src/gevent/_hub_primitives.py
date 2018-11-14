@@ -282,6 +282,10 @@ def _primitive_wait(watcher, timeout, timeout_exc, hub):
 
 # Suitable to be bound as an instance method
 def wait_on_socket(socket, watcher, timeout_exc=None):
+    if socket is None or watcher is None:
+        # test__hub TestCloseSocketWhilePolling, on Python 2; Python 3
+        # catches the EBADF differently.
+        raise ConcurrentObjectUseError("The socket has already been closed by another greenlet")
     _primitive_wait(watcher, socket.timeout,
                     timeout_exc if timeout_exc is not None else _NONE,
                     socket.hub)

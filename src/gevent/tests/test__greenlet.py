@@ -165,9 +165,6 @@ def return25():
     return 25
 
 
-def sleep0():
-    return sleep(0)
-
 
 class TestReturn_link(LinksTestCase):
     link_method = 'link'
@@ -748,7 +745,7 @@ class TestBasic(greentest.TestCase):
             raise ValueError("call stack is not deep enough")
         try:
             ogf = greenlet.sys_getframe
-        except AttributeError:
+        except AttributeError: # pragma: no cover
             # Must be running cython compiled
             raise unittest.SkipTest("Cannot mock when Cython compiled")
         greenlet.sys_getframe = get
@@ -806,7 +803,7 @@ class TestRef(greentest.TestCase):
 
 
 @greentest.skipOnPurePython("Needs C extension")
-class TestCExt(greentest.TestCase):
+class TestCExt(greentest.TestCase): # pragma: no cover (we only do coverage on pure-Python)
 
     def test_c_extension(self):
         self.assertEqual(greenlet.Greenlet.__module__,

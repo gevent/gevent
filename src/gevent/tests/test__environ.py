@@ -8,7 +8,7 @@ if sys.argv[1:] == []:
     os.environ['GEVENT_BACKEND'] = 'select'
     popen = subprocess.Popen([sys.executable, __file__, '1'])
     assert popen.wait() == 0, popen.poll()
-else:
+else: # pragma: no cover
     hub = gevent.get_hub()
     if 'select' in gevent.core.supported_backends():
         assert hub.loop.backend == 'select', hub.loop.backend

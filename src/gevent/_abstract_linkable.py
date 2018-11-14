@@ -181,7 +181,9 @@ class AbstractLinkable(object):
 
     def _wait_return_value(self, waited, wait_success):
         # pylint:disable=unused-argument
-        return None
+        # Subclasses should override this to return a value from _wait.
+        # By default we return None.
+        return None # pragma: no cover all extent subclasses override
 
     def _wait(self, timeout=None):
         if self.ready():

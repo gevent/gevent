@@ -68,6 +68,7 @@ from .skipping import skipOnPyPy
 from .skipping import skipOnPyPyOnCI
 from .skipping import skipOnPyPy3
 from .skipping import skipIf
+from .skipping import skipUnless
 from .skipping import skipOnLibev
 from .skipping import skipOnLibuv
 from .skipping import skipOnLibuvOnWin
@@ -121,6 +122,12 @@ from .flaky import reraiseFlakyTestTimeout
 from .flaky import reraiseFlakyTestRaceCondition
 from .flaky import reraises_flaky_timeout
 from .flaky import reraises_flaky_race_condition
+
+def gc_collect_if_needed():
+    "Collect garbage if necessary for destructors to run"
+    import gc
+    if PYPY: # pragma: no cover
+        gc.collect()
 
 try:
     from unittest import mock

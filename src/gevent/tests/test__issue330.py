@@ -14,7 +14,7 @@ class TestSwitch(greentest.TestCase):
         self.switched_to = [False, False]
         self.caught = None
 
-    def runner(self, i):
+    def should_never_run(self, i): # pragma: no cover
         self.switched_to[i] = True
 
     def check(self, g, g2):
@@ -33,8 +33,8 @@ class TestSwitch(greentest.TestCase):
 
 
     def test_gevent_kill(self):
-        g = gevent.spawn(self.runner, 0) # create but do not switch to
-        g2 = gevent.spawn(self.runner, 1) # create but do not switch to
+        g = gevent.spawn(self.should_never_run, 0) # create but do not switch to
+        g2 = gevent.spawn(self.should_never_run, 1) # create but do not switch to
         # Using gevent.kill
         gevent.kill(g)
         gevent.kill(g2)
@@ -42,16 +42,16 @@ class TestSwitch(greentest.TestCase):
 
     def test_greenlet_kill(self):
         # killing directly
-        g = gevent.spawn(self.runner, 0)
-        g2 = gevent.spawn(self.runner, 1)
+        g = gevent.spawn(self.should_never_run, 0)
+        g2 = gevent.spawn(self.should_never_run, 1)
         g.kill()
         g2.kill()
         self.check(g, g2)
 
     def test_throw(self):
         # throwing
-        g = gevent.spawn(self.runner, 0)
-        g2 = gevent.spawn(self.runner, 1)
+        g = gevent.spawn(self.should_never_run, 0)
+        g2 = gevent.spawn(self.should_never_run, 1)
         g.throw(gevent.GreenletExit)
         g2.throw(gevent.GreenletExit)
         self.check(g, g2)

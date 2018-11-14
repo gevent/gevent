@@ -8,7 +8,7 @@ import gevent.testing as greentest
 
 def readall(sock, _):
     while sock.recv(1024):
-        pass
+        pass # pragma: no cover we never actually send the data
     sock.close()
 
 

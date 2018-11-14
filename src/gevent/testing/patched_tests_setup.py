@@ -466,6 +466,8 @@ if LIBUV:
             'test_socket.BufferIOTest.testRecvFromIntoBytearray',
             'test_socket.BufferIOTest.testRecvFromIntoArray',
             'test_socket.BufferIOTest.testRecvFromIntoEmptyBuffer',
+            'test_socket.BufferIOTest.testRecvFromIntoMemoryview',
+            'test_socket.BufferIOTest.testRecvFromIntoSmallBuffer',
         ]
 
         if PY3:

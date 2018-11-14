@@ -35,8 +35,8 @@ class Test(greentest.TestCase):
             g = gevent.spawn(hello, expected_error)
             g.join()
             self.assert_error(ExpectedError, expected_error)
-            if not isinstance(g.exception, ExpectedError):
-                raise g.exception
+            self.assertIsInstance(g.exception, ExpectedError)
+
             try:
                 raise
             except: # pylint:disable=bare-except
