@@ -8,7 +8,7 @@ handling of KeyboardInterrupt.
 
 import sys
 
-if sys.argv[1:] == ['subprocess']:
+if sys.argv[1:] == ['subprocess']: # pragma: no cover
     import gevent
 
     def task():

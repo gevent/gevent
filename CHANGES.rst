@@ -58,6 +58,11 @@
 - Make `gevent.util.assert_switches` produce more informative messages
   when the assertion fails.
 
+- Python 2: If a `gevent.socket` was closed asynchronously (in a
+  different greenlet or a hub callback), `AttributeError` could result
+  if the socket was already in use. Now the correct socket.error
+  should be raised.
+
 1.3.7 (2018-10-12)
 ==================
 

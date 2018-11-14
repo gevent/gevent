@@ -185,10 +185,9 @@ class socket(object):
     _wait = _wait_on_socket
 
     def accept(self):
-        sock = self._sock
-        while True:
+        while 1:
             try:
-                client_socket, address = sock.accept()
+                client_socket, address = self._sock.accept()
                 break
             except error as ex:
                 if ex.args[0] != EWOULDBLOCK or self.timeout == 0.0:
@@ -212,10 +211,17 @@ class socket(object):
     def close(self, _closedsocket=_closedsocket):
         # This function should not reference any globals. See Python issue #808164.
 
-        # Also break any reference to the loop.io objects. Our fileno, which they were
-        # tied to, is now free to be reused, so these objects are no longer functional.
+        # Also break any reference to the loop.io objects. Our fileno,
+        # which they were tied to, is now free to be reused, so these
+        # objects are no longer functional.
         self._drop_events()
         s = self._sock
+
+        # Note that we change self._sock at this point. Methods *must not*
+        # cache `self._sock` separately from self._write_event/self._read_event,
+        # or they will be out of sync and we may get inappropriate errors.
+        # (See test__hub:TestCloseSocketWhilePolling for an example).
+
         self._sock = _closedsocket()
         if PYPY:
             s._drop()
@@ -227,16 +233,16 @@ class socket(object):
     def connect(self, address):
         if self.timeout == 0.0:
             return self._sock.connect(address)
-        sock = self._sock
-        address = _socketcommon._resolve_addr(sock, address)
+
+        address = _socketcommon._resolve_addr(self._sock, address)
 
         timer = Timeout._start_new_or_dummy(self.timeout, timeout('timed out'))
         try:
-            while True:
-                err = sock.getsockopt(SOL_SOCKET, SO_ERROR)
+            while 1:
+                err = self._sock.getsockopt(SOL_SOCKET, SO_ERROR)
                 if err:
                     raise error(err, strerror(err))
-                result = sock.connect_ex(address)
+                result = self._sock.connect_ex(address)
                 if not result or result == EISCONN:
                     break
                 elif (result in (EWOULDBLOCK, EINPROGRESS, EALREADY)) or (result == EINVAL and is_windows):
@@ -283,10 +289,9 @@ class socket(object):
         return fobj
 
     def recv(self, *args):
-        sock = self._sock  # keeping the reference so that fd is not closed during waiting
-        while True:
+        while 1:
             try:
-                return sock.recv(*args)
+                return self._sock.recv(*args)
             except error as ex:
                 if ex.args[0] != EWOULDBLOCK or self.timeout == 0.0:
                     raise
@@ -295,10 +300,9 @@ class socket(object):
             self._wait(self._read_event)
 
     def recvfrom(self, *args):
-        sock = self._sock
-        while True:
+        while 1:
             try:
-                return sock.recvfrom(*args)
+                return self._sock.recvfrom(*args)
             except error as ex:
                 if ex.args[0] != EWOULDBLOCK or self.timeout == 0.0:
                     raise
@@ -306,10 +310,9 @@ class socket(object):
             self._wait(self._read_event)
 
     def recvfrom_into(self, *args):
-        sock = self._sock
-        while True:
+        while 1:
             try:
-                return sock.recvfrom_into(*args)
+                return self._sock.recvfrom_into(*args)
             except error as ex:
                 if ex.args[0] != EWOULDBLOCK or self.timeout == 0.0:
                     raise
@@ -317,10 +320,9 @@ class socket(object):
             self._wait(self._read_event)
 
     def recv_into(self, *args):
-        sock = self._sock
-        while True:
+        while 1:
             try:
-                return sock.recv_into(*args)
+                return self._sock.recv_into(*args)
             except error as ex:
                 if ex.args[0] != EWOULDBLOCK or self.timeout == 0.0:
                     raise
@@ -328,18 +330,17 @@ class socket(object):
             self._wait(self._read_event)
 
     def send(self, data, flags=0, timeout=timeout_default):
-        sock = self._sock
         if timeout is timeout_default:
             timeout = self.timeout
         try:
-            return sock.send(data, flags)
+            return self._sock.send(data, flags)
         except error as ex:
             if ex.args[0] not in _socketcommon.GSENDAGAIN or timeout == 0.0:
                 raise
             sys.exc_clear()
             self._wait(self._write_event)
             try:
-                return sock.send(data, flags)
+                return self._sock.send(data, flags)
             except error as ex2:
                 if ex2.args[0] == EWOULDBLOCK:
                     return 0
@@ -354,16 +355,15 @@ class socket(object):
         return _socketcommon._sendall(self, data_memory, flags)
 
     def sendto(self, *args):
-        sock = self._sock
         try:
-            return sock.sendto(*args)
+            return self._sock.sendto(*args)
         except error as ex:
             if ex.args[0] != EWOULDBLOCK or self.timeout == 0.0:
                 raise
             sys.exc_clear()
             self._wait(self._write_event)
             try:
-                return sock.sendto(*args)
+                return self._sock.sendto(*args)
             except error as ex2:
                 if ex2.args[0] == EWOULDBLOCK:
                     return 0

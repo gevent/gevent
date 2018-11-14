@@ -149,13 +149,11 @@ class Test(greentest.TestCase):
         s = set()
         s.add(p1)
         s.add(p2)
-        try:
+        with self.assertRaises(Timeout):
             gevent.killall(s, timeout=0.5)
-        except Timeout:
-            for g in s:
-                assert not g.dead
-        else:
-            self.fail("Should raise timeout")
+
+        for g in s:
+            self.assertFalse(g.dead, g)
 
 
 class GreenletSubclass(gevent.Greenlet):

@@ -1,6 +1,6 @@
 import sys
 
-if 'runtestcase' in sys.argv[1:]:
+if 'runtestcase' in sys.argv[1:]: # pragma: no cover
     import gevent
     import gevent.subprocess
     gevent.spawn(sys.exit, 'bye')
@@ -15,6 +15,6 @@ else:
                                      __file__, 'runtestcase'],
                                     stderr=subprocess.PIPE).communicate()
         if b'refs' in err: # Something to do with debug mode python builds?
-            assert err.startswith(b'bye'), repr(err)
+            assert err.startswith(b'bye'), repr(err) # pragma: no cover
         else:
             assert err.strip() == b'bye', repr(err)

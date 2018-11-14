@@ -16,7 +16,7 @@ if not sys.argv[1:]:
     #    or __package__, falling back on __name__ and __path__\n  return f(*args, **kwds)\n'
     assert err == b'' or b'sys.excepthook' in err or b'Warning' in err, (out, err, code)
 
-elif sys.argv[1:] == ['subprocess']:
+elif sys.argv[1:] == ['subprocess']: # pragma: no cover
     import gevent
     import gevent.monkey
     gevent.monkey.patch_all(sys=True)
@@ -30,5 +30,5 @@ elif sys.argv[1:] == ['subprocess']:
 
     gevent.spawn(printline).join()
 
-else:
+else: # pragma: no cover
     sys.exit('Invalid arguments: %r' % (sys.argv, ))

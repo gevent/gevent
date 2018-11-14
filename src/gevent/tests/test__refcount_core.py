@@ -14,7 +14,7 @@ try:
     s.close()
     del s
     assert r() is None
-except AssertionError:
+except AssertionError: # pragma: no cover
     import sys
     if hasattr(sys, 'pypy_version_info'):
         # PyPy uses a non refcounted GC which may defer

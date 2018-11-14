@@ -9,7 +9,7 @@ from gevent.timeout import Timeout
     hasattr(sys, 'gettotalrefcount'),
     "Needs debug build"
 )
-class TestQueue(TestCase):
+class TestQueue(TestCase): # pragma: no cover
     # pylint:disable=bare-except,no-member
 
     def test(self):

@@ -122,6 +122,12 @@ from .flaky import reraiseFlakyTestRaceCondition
 from .flaky import reraises_flaky_timeout
 from .flaky import reraises_flaky_race_condition
 
+def gc_collect_if_needed():
+    "Collect garbage if necessary for destructors to run"
+    import gc
+    if PYPY: # pragma: no cover
+        gc.collect()
+
 try:
     from unittest import mock
 except ImportError: # Python 2

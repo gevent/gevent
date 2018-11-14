@@ -159,8 +159,10 @@ del sys
 
 # the following makes hidden imports visible to freezing tools like
 # py2exe. see https://github.com/gevent/gevent/issues/181
+# This is not well maintained or tested, though, so it likely becomes
+# outdated on each major release.
 
-def __dependencies_for_freezing():
+def __dependencies_for_freezing(): # pragma: no cover
     # pylint:disable=unused-variable
     from gevent import core
     from gevent import resolver_thread

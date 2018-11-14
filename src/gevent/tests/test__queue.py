@@ -140,7 +140,7 @@ class TestQueue(TestCase):
             with gevent.Timeout(0, RuntimeError()):
                 try:
                     result = q.get()
-                    evt.set(result)
+                    evt.set(result) # pragma: no cover (should have raised)
                 except RuntimeError:
                     evt.set('timed out')
 
@@ -169,7 +169,7 @@ class TestQueue(TestCase):
             with gevent.Timeout(0, RuntimeError()):
                 try:
                     result = q.get()
-                    evt.set(result)
+                    evt.set(result) # pragma: no cover (should have raised)
                 except RuntimeError:
                     evt.set('timed out')
 
@@ -188,7 +188,7 @@ class TestQueue(TestCase):
             with gevent.Timeout(0, RuntimeError()):
                 try:
                     result = q.get()
-                    evt.set(result)
+                    evt.set(result) # pragma: no cover (should have raised)
                 except RuntimeError:
                     evt.set('timed out')
 

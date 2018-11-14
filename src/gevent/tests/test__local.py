@@ -277,9 +277,8 @@ class TestGeventLocal(greentest.TestCase):
 
         my_local = MyLocal()
         my_local.sentinel = None
-        if greentest.PYPY:
-            import gc
-            gc.collect()
+        greentest.gc_collect_if_needed()
+
         del created_sentinels[:]
         del deleted_sentinels[:]
 
@@ -298,8 +297,7 @@ class TestGeventLocal(greentest.TestCase):
         for g in greenlets:
             assert not g.is_alive()
         gevent.sleep() # let the callbacks run
-        if greentest.PYPY:
-            gc.collect()
+        greentest.gc_collect_if_needed()
 
         # The sentinels should be gone too
         self.assertEqual(len(deleted_sentinels), len(greenlets))
@@ -412,7 +410,7 @@ class TestLocalInterface(greentest.TestCase):
 
 
 @greentest.skipOnPurePython("Needs C extension")
-class TestCExt(greentest.TestCase):
+class TestCExt(greentest.TestCase): # pragma: no cover
 
     def test_c_extension(self):
         self.assertEqual(local.__module__,
