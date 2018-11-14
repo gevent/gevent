@@ -92,6 +92,7 @@ if sysinfo.PYPY:
 skipUnderCoverage = unittest.skip if sysinfo.RUN_COVERAGE else _do_not_skip
 
 skipIf = unittest.skipIf
+skipUnless = unittest.skipUnless
 
 
 

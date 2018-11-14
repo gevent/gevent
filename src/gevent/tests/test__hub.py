@@ -36,8 +36,6 @@ DELAY = 0.1
 class TestCloseSocketWhilePolling(greentest.TestCase):
 
     def test(self):
-        from gevent.exceptions import ConcurrentObjectUseError
-
         sock = socket.socket()
         self._close_on_teardown(sock)
         t = get_hub().loop.timer(0)

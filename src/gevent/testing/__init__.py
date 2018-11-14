@@ -68,6 +68,7 @@ from .skipping import skipOnPyPy
 from .skipping import skipOnPyPyOnCI
 from .skipping import skipOnPyPy3
 from .skipping import skipIf
+from .skipping import skipUnless
 from .skipping import skipOnLibev
 from .skipping import skipOnLibuv
 from .skipping import skipOnLibuvOnWin
