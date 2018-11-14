@@ -9,6 +9,8 @@
 
 - Build with Cython 0.29 in '3str' mode.
 
+- Test with PyPy 6.0 on Windows.
+
 - Add support for application-wide callbacks when ``Greenlet`` objects
   are started. See :pr:`1289`, provided by Yury Selivanov.
 
@@ -52,6 +54,9 @@
 
 - Make gevent's pywsgi server set the non-standard environment value
   ``wsgi.input_terminated`` to True. See :issue:`1308`.
+
+- Make `gevent.util.assert_switches` produce more informative messages
+  when the assertion fails.
 
 1.3.7 (2018-10-12)
 ==================

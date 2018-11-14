@@ -110,7 +110,73 @@ if sys.platform == 'win32':
                 #     File "C:\Python37-x64\lib\weakref.py", line 356 in remove
 
                 # ! C:\Python37-x64\python.exe -u -mgevent.tests.test__greenness [code 3221225477] [took 1.3s]
-                'FLAKY test__greenness.py',
+                # We have also seen this for Python 3.6.6 Nov 13 2018:
+                # | C:\Python36-x64\python.exe -u -mgevent.tests.test__backdoor
+                #   ss.s.s
+                #   ----------------------------------------------------------------------
+                #   Ran 6 tests in 0.953s
+
+                #   OK (skipped=4)
+                #   Windows fatal exception: access violation
+
+                #   Thread 0x00000aec (most recent call first):
+                #     File "C:\Python36-x64\lib\site-packages\gevent\_threading.py", line 84 in wait
+                #     File "C:\Python36-x64\lib\site-packages\gevent\_threading.py", line 166 in get
+                #     File "C:\Python36-x64\lib\site-packages\gevent\threadpool.py", line 270 in _worker
+
+                #   Thread 0x00000548 (most recent call first):
+
+                #   Thread 0x000003d0 (most recent call first):
+                #     File "C:\Python36-x64\lib\site-packages\gevent\_threading.py", line 84 in wait
+                #     File "C:\Python36-x64\lib\site-packages\gevent\_threading.py", line 166 in get
+                #     File "C:\Python36-x64\lib\site-packages\gevent\threadpool.py", line 270 in _worker
+
+                #   Thread 0x00000ad0 (most recent call first):
+
+                #   Thread 0x00000588 (most recent call first):
+                #     File "C:\Python36-x64\lib\site-packages\gevent\_threading.py", line 84 in wait
+                #     File "C:\Python36-x64\lib\site-packages\gevent\_threading.py", line 166 in get
+                #     File "C:\Python36-x64\lib\site-packages\gevent\threadpool.py", line 270 in _worker
+
+                #   Thread 0x00000a54 (most recent call first):
+
+                #   Thread 0x00000768 (most recent call first):
+                #     File "C:\Python36-x64\lib\site-packages\gevent\_threading.py", line 84 in wait
+                #     File "C:\Python36-x64\lib\site-packages\gevent\_threading.py", line 166 in get
+                #     File "C:\Python36-x64\lib\site-packages\gevent\threadpool.py", line 270 in _worker
+
+                #   Current thread 0x00000894 (most recent call first):
+                #     File "C:\Python36-x64\lib\site-packages\gevent\threadpool.py", line 261 in _worker
+
+                #   Thread 0x00000634 (most recent call first):
+                #     File "C:\Python36-x64\lib\site-packages\gevent\_threading.py", line 84 in wait
+                #     File "C:\Python36-x64\lib\site-packages\gevent\_threading.py", line 166 in get
+                #     File "C:\Python36-x64\lib\site-packages\gevent\threadpool.py", line 270 in _worker
+
+                #   Thread 0x00000538 (most recent call first):
+
+                #   Thread 0x0000049c (most recent call first):
+                #     File "C:\Python36-x64\lib\weakref.py", line 356 in remove
+
+                # ! C:\Python36-x64\python.exe -u -mgevent.tests.test__backdoor [code 3221225477] [Ran 6 tests in 2.1s]
+
+                # Note the common factors:
+                # - The test is finished (successfully) and we're apparently exiting the VM,
+                #   doing GC
+                # - A weakref is being cleaned up
+
+                # weakref.py line 356 remove() is in WeakKeyDictionary. We only use WeakKeyDictionary
+                # in gevent._ident.IdentRegistry, which is only used in two places:
+                # gevent.hub.hub_ident_registry, which has weak references to Hub objects,
+                # and gevent.greenlet.Greenlet.minimal_ident, which uses its parent Hub's
+                # IdentRegistry to get its own identifier. So basically they have weak references
+                # to Hub and arbitrary Greenlets.
+
+                # Our attempted solution: stop using a module-level IdentRegistry to get
+                # Hub idents, and reduce how often we auto-generate one for greenlets.
+                # Commenting out the tests, lets see if it works.
+                #'FLAKY test__greenness.py',
+                #'FLAKY test__backdoor.py',
             ]
 
     if not PY35:

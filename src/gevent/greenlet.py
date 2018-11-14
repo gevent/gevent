@@ -302,11 +302,16 @@ class Greenlet(greenlet):
         """
         The greenlet name. By default, a unique name is constructed using
         the :attr:`minimal_ident`. You can assign a string to this
-        value to change it. It is shown in the `repr` of this object.
+        value to change it. It is shown in the `repr` of this object if it
+        has been assigned to or if the `minimal_ident` has already been generated.
 
         .. versionadded:: 1.3a2
+        .. versionchanged:: 1.4
+           Stop showing generated names in the `repr` when the ``minimal_ident``
+           hasn't been requested. This reduces overhead and may be less confusing,
+           since ``minimal_ident`` can get reused.
         """
-        return 'Greenlet-%d' % (self.minimal_ident)
+        return 'Greenlet-%d' % (self.minimal_ident,)
 
     def _raise_exception(self):
         reraise(*self.exc_info)
@@ -426,7 +431,14 @@ class Greenlet(greenlet):
 
     def __repr__(self):
         classname = self.__class__.__name__
-        result = '<%s "%s" at %s' % (classname, self.name, hex(id(self)))
+        # If no name has been assigned, don't generate one, including a minimal_ident,
+        # if not necessary. This reduces the use of weak references and associated
+        # overhead.
+        if 'name' not in self.__dict__ and self._ident is None:
+            name = ' '
+        else:
+            name = ' "%s" ' % (self.name,)
+        result = '<%s%sat %s' % (classname, name, hex(id(self)))
         formatted = self._formatinfo()
         if formatted:
             result += ': ' + formatted
