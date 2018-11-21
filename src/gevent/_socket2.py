@@ -70,12 +70,16 @@ else:
 
 def _get_memory(data):
     try:
-        mv = memoryview(data)
-        if mv.shape:
-            return mv
+        if not isinstance(data, memoryview):
+            # To work around a memory management bug in Python 2.7, we should
+            # not re-wrap a memoryview.
+            # https://github.com/gevent/gevent/issues/1318
+            data = memoryview(data)
+        if data.shape:
+            return data
         # No shape, probably working with a ctypes object,
         # or something else exotic that supports the buffer interface
-        return mv.tobytes()
+        return data.tobytes()
     except TypeError:
         # fixes "python2.7 array.array doesn't support memoryview used in
         # gevent.socket.send" issue
