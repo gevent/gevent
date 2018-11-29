@@ -21,6 +21,7 @@
 
 import re
 import time
+import unittest
 
 import gevent.testing as greentest
 import gevent.testing.timing
@@ -211,7 +212,7 @@ class TestPeriodicMonitoringThread(greentest.TestCase):
 
         # We must make sure we have switched greenlets at least once,
         # otherwise we can't detect a failure.
-        gevent.sleep(0.0001)
+        gevent.sleep(hub.loop.approx_timer_resolution)
         assert hub.exception_stream is stream
         try:
             time.sleep(0.3) # Thrice the default
@@ -314,6 +315,17 @@ class TestPeriodicMonitoringThread(greentest.TestCase):
         data = stream.getvalue()
         self.assertIn('appears to be blocked', data)
         self.assertIn('PeriodicMonitoringThread', data)
+
+
+class TestLoopInterface(unittest.TestCase):
+
+    def test_implemensts_ILoop(self):
+        from zope.interface import verify
+        from gevent._interfaces import ILoop
+
+        loop = get_hub().loop
+
+        verify.verifyObject(ILoop, loop)
 
 
 if __name__ == '__main__':

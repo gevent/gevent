@@ -158,7 +158,6 @@ class DummySemaphore(object):
         .. versionchanged:: 1.1rc3
             Accept and ignore a *value* argument for compatibility with Semaphore.
         """
-        pass
 
     def __str__(self):
         return '<%s>' % self.__class__.__name__
@@ -169,7 +168,6 @@ class DummySemaphore(object):
 
     def release(self):
         """Releasing a dummy semaphore does nothing."""
-        pass
 
     def rawlink(self, callback):
         # XXX should still work and notify?
@@ -180,7 +178,6 @@ class DummySemaphore(object):
 
     def wait(self, timeout=None):
         """Waiting for a DummySemaphore returns immediately."""
-        pass
 
     def acquire(self, blocking=True, timeout=None):
         """

@@ -14,6 +14,7 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
+import sys
 
 from gevent._util import Interface
 from gevent._util import Attribute
@@ -45,6 +46,13 @@ class ILoop(Interface):
     """
 
     default = Attribute("Boolean indicating whether this is the default loop")
+
+    approx_timer_resolution = Attribute(
+        "Floating point number of seconds giving (approximately) the minimum "
+        "resolution of a timer (and hence the minimun value the sleep can sleep for). "
+        "On libuv, this is fixed by the library, but on libev it is just a guess "
+        "and the actual value is system dependent."
+    )
 
     def run(nowait=False, once=False):
         """
@@ -153,12 +161,14 @@ class ILoop(Interface):
            it will be removed in the future.
         """
 
-    def child(pid, trace=0, ref=True):
-        """
-        Create a watcher that fires for events on the child with process ID *pid*.
+    if sys.platform != "win32":
 
-        This is platform specific.
-        """
+        def child(pid, trace=0, ref=True):
+            """
+            Create a watcher that fires for events on the child with process ID *pid*.
+
+            This is platform specific and not available on Windows.
+            """
 
     def stat(path, interval=0.0, ref=True, priority=None):
         """

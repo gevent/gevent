@@ -392,6 +392,7 @@ cdef public class loop [object PyGeventLoopObject, type PyGeventLoop_Type]:
     # the libev internal pointer to 0, and ev_is_default_loop will
     # no longer work.
     cdef bint _default
+    cdef readonly double approx_timer_resolution
 
     def __cinit__(self, object flags=None, object default=None, libev.intptr_t ptr=0):
         self.starting_timer_may_update_loop_time = 0
@@ -440,6 +441,8 @@ cdef public class loop [object PyGeventLoopObject, type PyGeventLoop_Type]:
 
     def __init__(self, object flags=None, object default=None, libev.intptr_t ptr=0):
         self._callbacks = CallbackFIFO()
+        # See libev.corecffi for this attribute.
+        self.approx_timer_resolution = 0.00001
 
     cdef _run_callbacks(self):
         cdef callback cb
@@ -745,6 +748,15 @@ cdef public class loop [object PyGeventLoopObject, type PyGeventLoop_Type]:
         # Explicitly not EV_USE_SIGNALFD
         raise AttributeError("sigfd")
 
+try:
+    from zope.interface import classImplements
+except ImportError:
+    pass
+else:
+    # XXX: This invokes the side-table lookup, we would
+    # prefer to have it stored directly on the class.
+    from gevent._interfaces import ILoop
+    classImplements(loop, ILoop)
 
 # about readonly _flags attribute:
 # bit #1 set if object owns Python reference to itself (Py_INCREF was

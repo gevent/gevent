@@ -114,7 +114,7 @@ class ThreadPool(GroupMappingMixin):
             self.manager.kill()
         while self._size < size:
             self._add_thread()
-        delay = getattr(self.hub.loop, 'min_sleep_time', 0.0001) # For libuv
+        delay = self.hub.loop.approx_timer_resolution
         while self._size > size:
             while self._size - size > self.task_queue.unfinished_tasks:
                 self.task_queue.put(None)
@@ -150,7 +150,7 @@ class ThreadPool(GroupMappingMixin):
 
     def join(self):
         """Waits until all outstanding tasks have been completed."""
-        delay = 0.0005
+        delay = max(0.0005, self.hub.loop.approx_timer_resolution)
         while self.task_queue.unfinished_tasks > 0:
             sleep(delay)
             delay = min(delay * 2, .05)

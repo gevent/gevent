@@ -79,9 +79,10 @@ def supported_backends():
 @implementer(ILoop)
 class loop(AbstractLoop):
 
-    # XXX: Undocumented. Maybe better named 'timer_resolution'? We can't
-    # know this in general on libev
-    min_sleep_time = 0.001 # 1ms
+    # libuv parameters simply won't accept anything lower than 1ms. In
+    # practice, looping on gevent.sleep(0.001) takes about 0.00138 s
+    # (+- 0.000036s)
+    approx_timer_resolution = 0.001 # 1ms
 
     error_handler = None
 

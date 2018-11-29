@@ -1188,7 +1188,6 @@ class LoggingLogAdapter(object):
 
     def flush(self):
         "No-op; required to be a file-like object"
-        pass
 
     def writelines(self, lines):
         for line in lines:
