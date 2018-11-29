@@ -46,6 +46,13 @@ class ILoop(Interface):
 
     default = Attribute("Boolean indicating whether this is the default loop")
 
+    approx_timer_resolution = Attribute(
+        "Floating point number of seconds giving (approximately) the minimum "
+        "resolution of a timer (and hence the minimun value the sleep can sleep for). "
+        "On libuv, this is fixed by the library, but on libev it is just a guess "
+        "and the actual value is system dependent."
+    )
+
     def run(nowait=False, once=False):
         """
         Run the event loop.

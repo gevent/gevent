@@ -208,6 +208,17 @@ _events_to_str = _watchers._events_to_str # exported
 class loop(AbstractLoop):
     # pylint:disable=too-many-public-methods
 
+    # libuv parameters simply won't accept anything lower than 1ms
+    # (0.001s), but libev takes fractional seconds. In practice, on
+    # one machine, libev can sleep for very small periods of time:
+    #
+    # sleep(0.00001) -> 0.000024
+    # sleep(0.0001)  -> 0.000156
+    # sleep(0.001)   -> 0.00136 (which is comparable to libuv)
+
+    approx_timer_resolution = 0.00001
+
+
     error_handler = None
 
     _CHECK_POINTER = 'struct ev_check *'

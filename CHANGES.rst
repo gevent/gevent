@@ -63,6 +63,10 @@
   if the socket was already in use. Now the correct socket.error
   should be raised.
 
+- Fix :meth:`gevent.threadpool.ThreadPool.join` raising a
+  `UserWarning` when using the libuv backend. Reported in
+  :issue:`1321` by ZeroNet.
+
 1.3.7 (2018-10-12)
 ==================
 
