@@ -1,5 +1,6 @@
 from __future__ import absolute_import
 import os
+import sys
 import io
 from io import BufferedReader
 from io import BufferedWriter
@@ -8,6 +9,7 @@ from io import DEFAULT_BUFFER_SIZE
 from io import RawIOBase
 from io import UnsupportedOperation
 
+from gevent._compat import PY3, reraise
 from gevent._fileobjectcommon import cancel_wait_ex
 from gevent._fileobjectcommon import FileObjectBase
 from gevent.hub import get_hub
@@ -140,7 +142,16 @@ class GreenFileDescriptorIO(RawIOBase):
             self.hub.wait(self._write_event)
 
     def seek(self, offset, whence=0):
-        return os.lseek(self._fileno, offset, whence)
+        try:
+            return os.lseek(self._fileno, offset, whence)
+        except OSError as ex:
+            if not PY3:
+                # Python 2.x
+                # make sure on Python 2.x we raise an IOError
+                exc_info = sys.exc_info()
+                reraise(IOError, IOError(*ex.args), tb=exc_info[2])
+            # otherwise just re-raise the original exception
+            raise
 
 class FlushingBufferedWriter(BufferedWriter):
 

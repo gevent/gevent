@@ -13,6 +13,7 @@ from gevent.testing.sysinfo import PY3
 from gevent.testing.flaky import reraiseFlakyTestRaceConditionLibuv
 from gevent.testing.skipping import skipOnLibuvOnCIOnPyPy
 from gevent.testing.skipping import skipOnWindows
+from gevent.testing.skipping import skipOnPy37
 
 try:
     ResourceWarning
@@ -143,6 +144,25 @@ class Test(greentest.TestCase):
 
         self.assertEqual(native_data, s)
         self.assertEqual(native_data, fileobj_data)
+
+    @skipOnPy37
+    @skipOnWindows("FileObject not used on Win32")
+    def test_seek_raises_ioerror(self):
+        # Issue #1323
+        fd = sys.stdout
+        with self.assertRaises(OSError) as ctx:
+            os.lseek(fd.fileno(), 0, 0)
+        os_ex = ctx.exception
+
+        with self.assertRaises(IOError) as ctx:
+            f = FileObject(fd, 'r')
+            f.seek(0)
+        io_ex = ctx.exception
+
+        self.assertEqual(io_ex.args, os_ex.args)
+        self.assertEqual(io_ex.errno, os_ex.errno)
+        self.assertEqual(io_ex.strerror, os_ex.strerror)
+        self.assertEqual(str(io_ex), str(os_ex))
 
     def test_close_pipe(self):
         # Issue #190, 203
